@@ -225,7 +225,12 @@
     </UserControl.Resources>
 
     <DockPanel Margin="6">
-        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+        <!-- LastChildFill off, and every child given an explicit Dock, so the empty space stays on the
+             far left instead of the filter box stretching to fill it. All three groups dock Right, in
+             reverse visual order (DockPanel stacks same-edge children innermost-last), so the filter
+             ends up sitting directly left of the Save controls: filter label, then its box, then the
+             Save group, declared bottom-up. -->
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8" LastChildFill="False">
             <StackPanel DockPanel.Dock="Right" Orientation="Horizontal">
                 <Button Content="Save" Click="Save_Click" Padding="10,5" IsEnabled="{Binding CanSave}" />
                 <TextBlock Text="Saving…" VerticalAlignment="Center" Margin="0,0,10,0"
@@ -244,9 +249,9 @@
                     <Run Text="{Binding InvalidFieldCount, Mode=OneWay}" /><Run Text=" field(s) need fixing before saving" />
                 </TextBlock>
             </StackPanel>
-            <TextBlock DockPanel.Dock="Left" Text="Outline filter:" Margin="0,0,6,0" VerticalAlignment="Center" />
-            <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
-                     VerticalAlignment="Center" Padding="4,2" />
+            <TextBox DockPanel.Dock="Right" Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
+                     Width="250" VerticalAlignment="Center" Padding="4,2" Margin="0,0,16,0" />
+            <TextBlock DockPanel.Dock="Right" Text="Outline filter:" Margin="0,0,6,0" VerticalAlignment="Center" />
         </DockPanel>
 
         <Grid>
@@ -288,7 +293,7 @@
                 </Grid.RowDefinitions>
 
                 <TextBlock Grid.Row="0" Grid.RowSpan="2" Text="Pick an object on the left to see its fields."
-                           Foreground="#888" VerticalAlignment="Top">
+                           Foreground="#888" VerticalAlignment="Top" Margin="12,10">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Visibility" Value="Collapsed" />
@@ -317,7 +322,22 @@
                     </Grid>
                 </Border>
 
-                <Border Grid.Row="1" BorderBrush="#CCC" BorderThickness="1,0,1,1">
+                <Border Grid.Row="1">
+                    <Border.Style>
+                        <!-- Default has no top edge - the header Border above supplies it when it's
+                             visible. That header is Collapsed while nothing is selected (see its own
+                             HasSelection binding), which left this row's top edge missing entirely;
+                             the trigger below fills it back in for that case. -->
+                        <Style TargetType="Border">
+                            <Setter Property="BorderBrush" Value="#CCC" />
+                            <Setter Property="BorderThickness" Value="1,0,1,1" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding HasSelection}" Value="False">
+                                    <Setter Property="BorderThickness" Value="1,1,1,1" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
                     <!-- Horizontal scrolling off (not just unset-defaults-to-off - it genuinely
                          defaults to enabled): with it available, the ScrollViewer measures its content
                          with unbounded width, so the Value column's "*" share of the Grid has nothing

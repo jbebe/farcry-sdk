@@ -690,6 +690,66 @@ public partial class MainWindow : Window
         }
     }
 
+    private void Mirror_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm.SelectedFile is not { } file)
+        {
+            Warn("Pick a file first.");
+            return;
+        }
+
+        if (!ConfirmWorkspaceOverwrite(file)) return;
+
+        try
+        {
+            _vm.Replace(file, _vm.Read(file));
+            _vm.Status = $"{file.FileName} mirrored into your workspace. Press Deploy all mods to put it into the game.";
+        }
+        catch (Exception ex)
+        {
+            Warn($"Couldn't mirror '{file.FileName}': {ex.Message}");
+        }
+    }
+
+    private void MirrorOriginal_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm.SelectedFile is not { } file)
+        {
+            Warn("Pick a file first.");
+            return;
+        }
+
+        byte[]? original = _vm.ReadOriginal(file);
+        if (original is null)
+        {
+            Warn($"'{file.FileName}' has no base game version to mirror - it was added entirely by a mod.");
+            return;
+        }
+
+        if (!ConfirmWorkspaceOverwrite(file)) return;
+
+        try
+        {
+            _vm.Replace(file, original);
+            _vm.Status = $"{file.FileName} (original) mirrored into your workspace. Press Deploy all mods to put it into the game.";
+        }
+        catch (Exception ex)
+        {
+            Warn($"Couldn't mirror '{file.FileName}': {ex.Message}");
+        }
+    }
+
+    /// <summary>Shared by Mirror_Click/MirrorOriginal_Click: true to proceed (nothing staged there
+    /// yet, or the user confirmed overwriting what already is), false to back out untouched.</summary>
+    private bool ConfirmWorkspaceOverwrite(VfsFile file)
+    {
+        if (!_vm.IsStagedInWorkspace(file)) return true;
+
+        return MessageBox.Show(this,
+            $"'{file.FileName}' is already staged in your workspace. Overwrite it?",
+            "Mirror to workspace", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+    }
+
     private void Revert_Click(object sender, RoutedEventArgs e)
     {
         if (_vm.SelectedFile is not { } file) return;
@@ -750,5 +810,29 @@ public partial class MainWindow : Window
     {
         if (_vm.SelectedSave is not { } save || _vm.SelectedSaveDetails?.DocumentXml is not { } xml) return;
         OpenSaveXmlEditorTab(save, xml);
+    }
+
+    private void DeleteSave_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm.SelectedSave is not { } save) return;
+
+        if (MessageBox.Show(this,
+                $"Permanently delete '{save.FileName}'?\n\nThis deletes the actual save file from disk - it cannot be undone.",
+                "Delete save", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
+        {
+            return;
+        }
+
+        try
+        {
+            File.Delete(save.Info.FilePath);
+        }
+        catch (Exception ex)
+        {
+            Warn($"Couldn't delete '{save.FileName}': {ex.Message}");
+            return;
+        }
+
+        _vm.RemoveSaveRow(save);
     }
 }
