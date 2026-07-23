@@ -389,14 +389,21 @@
                                     <TextBlock Text="{Binding SelectedSaveDetails.StatusText}" Foreground="#666"
                                                TextWrapping="Wrap" Margin="0,0,0,8" />
 
-                                    <!-- Opens the same tree/property-grid editor tab the Files tab's
-                                         fragments use (XmlEditorTabView) over this save's PersistenceDB
-                                         tree - editable there too, writing straight back into this
-                                         save's own .sav file, see MainWindow.xaml.cs's
-                                         OpenSaveXmlEditorTab. -->
-                                    <Button Content="Open in XML Editor…" HorizontalAlignment="Left" Padding="10,5"
-                                            Margin="0,0,0,10" Click="OpenSaveXmlEditor_Click"
-                                            Visibility="{Binding SelectedSaveDetails.ShowDocument, Converter={StaticResource BoolToVis}}" />
+                                    <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                                        <!-- Deletes the actual .sav file from disk - see DeleteSave_Click's
+                                             confirmation prompt before this runs. -->
+                                        <Button Content="Delete…" Padding="10,5" Margin="0,0,6,0"
+                                                Click="DeleteSave_Click" />
+
+                                        <!-- Opens the same tree/property-grid editor tab the Files tab's
+                                             fragments use (XmlEditorTabView) over this save's PersistenceDB
+                                             tree - editable there too, writing straight back into this
+                                             save's own .sav file, see MainWindow.xaml.cs's
+                                             OpenSaveXmlEditorTab. -->
+                                        <Button Content="Open value editor…" Padding="10,5"
+                                                Click="OpenSaveXmlEditor_Click"
+                                                Visibility="{Binding SelectedSaveDetails.ShowDocument, Converter={StaticResource BoolToVis}}" />
+                                    </StackPanel>
                                 </StackPanel>
                             </DockPanel>
                         </Border>
@@ -582,18 +589,17 @@
                                     <Run Text="{Binding SizeText, Mode=OneWay}" /><Run Text="  •  " /><Run Text="{Binding OriginText, Mode=OneWay}" />
                                 </TextBlock>
 
-                                <DockPanel Margin="0,0,0,6">
-                                    <Button DockPanel.Dock="Right" Content="&#128203;"
-                                            Click="CopyHash_Click" Padding="4,0" MinWidth="0" Margin="6,0,0,0" />
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                     <TextBlock Text="{Binding HashText}" VerticalAlignment="Center"
                                                FontFamily="Consolas" TextTrimming="CharacterEllipsis" />
-                                </DockPanel>
+                                    <Button Content="Copy" Click="CopyHash_Click" Padding="6,0" Margin="6,0,0,0" />
+                                </StackPanel>
 
-                                <DockPanel Margin="0,0,0,6">
-                                    <Button DockPanel.Dock="Right" Content="&#128203;"
-                                            Click="CopyPath_Click" Padding="4,0" MinWidth="0" Margin="6,0,0,0" />
+                                <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                     <TextBlock Text="{Binding PathText}" VerticalAlignment="Top" TextWrapping="Wrap" />
-                                </DockPanel>
+                                    <Button Content="Copy" Click="CopyPath_Click" Padding="6,0" Margin="6,0,0,0"
+                                            VerticalAlignment="Top" />
+                                </StackPanel>
 
                                 <TextBlock Text="{Binding ModOrigin}" TextWrapping="Wrap" Margin="0,0,0,6"
                                            Visibility="{Binding CanRevert, Converter={StaticResource BoolToVis}}" />
@@ -608,7 +614,19 @@
                                             Visibility="{Binding HasOriginal, Converter={StaticResource BoolToVis}}" />
                                     <Button Content="Replace…" Click="Replace_Click" Margin="0,0,6,0" Padding="8,6" />
                                     <Button Content="Revert" Click="Revert_Click" Padding="8,6"
-                                            IsEnabled="{Binding CanRevert}" />
+                                            Visibility="{Binding CanRevertFromWorkspace, Converter={StaticResource BoolToVis}}" />
+                                </StackPanel>
+
+                                <!-- Same content Export/Export original would write to a file, but staged
+                                     straight into the workspace instead - a shortcut for "pin this exact
+                                     version so it wins over everything below it" without a round trip
+                                     through the filesystem. -->
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                    <Button Content="Mirror…" Click="Mirror_Click" Margin="0,0,6,0" Padding="8,6"
+                                            ToolTip="Copy the asset while keeping the folder structure" />
+                                    <Button Content="Mirror original…" Click="MirrorOriginal_Click" Padding="8,6"
+                                            Visibility="{Binding HasOriginal, Converter={StaticResource BoolToVis}}"
+                                            ToolTip="Copy the asset while keeping the folder structure" />
                                 </StackPanel>
                             </StackPanel>
 

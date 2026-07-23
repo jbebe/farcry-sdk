@@ -5,7 +5,7 @@
     <DockPanel Margin="16">
         <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,12"
                    Text="This is one piece of a splitting .fcb - open it in the XML editor to browse and edit its structure." />
-        <Button DockPanel.Dock="Top" Content="Open in XML Editor…" Click="OpenEditor_Click"
+        <Button DockPanel.Dock="Top" Content="Open value editor…" Click="OpenEditor_Click"
                 Padding="10,6" HorizontalAlignment="Left" Margin="0,0,0,16" />
 
         <TextBlock x:Name="PreviewUnavailableNotice" DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="#888"

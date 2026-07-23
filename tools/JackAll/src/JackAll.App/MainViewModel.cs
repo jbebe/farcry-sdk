@@ -406,6 +406,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged(nameof(HasSelection));
             OnPropertyChanged(nameof(NoSelection));
             OnPropertyChanged(nameof(CanRevert));
+            OnPropertyChanged(nameof(CanRevertFromWorkspace));
             OnPropertyChanged(nameof(SizeText));
             OnPropertyChanged(nameof(OriginText));
             OnPropertyChanged(nameof(HashText));
@@ -426,10 +427,20 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public bool IsMultiSelection => SelectedCount > 1;
     public bool CanRevert => SelectedFile?.IsModded == true;
 
-    /// <summary>Whether "Export original…" has anything to export - a mod-added file (or, for a
-    /// fragment, one whose container itself was added entirely by a mod) has no base game version to
-    /// compare against or fall back to.</summary>
-    public bool HasOriginal => SelectedFile is { } f && ReadOriginal(f) is not null;
+    /// <summary>Whether the Revert button can actually act on this row - the underlying
+    /// <see cref="Workspace"/>.Unstage only ever removes the workspace's own whole-file override (see
+    /// <see cref="Revert"/>), so this is narrower than <see cref="CanRevert"/> in two ways: a row whose
+    /// only "modded" signal is a fragment inside it (<see cref="VfsFile.FragmentOverrideSource"/>) has
+    /// nothing of its own to unstage, and a row overridden by some other mod zip isn't the workspace's
+    /// to remove - see Revert_Click's own messages for what each of those cases tells the user instead.</summary>
+    public bool CanRevertFromWorkspace => SelectedFile is { FragmentOverrideSource: null, SourceName: "workspace" };
+
+    /// <summary>Whether "Export original…" has anything worth exporting separately from "Export" -
+    /// requires <see cref="CanRevert"/> (an unmodded file's original is identical to what "Export"
+    /// already produces, so the second button would just be a duplicate) and an actual base-game
+    /// version to fall back to: a mod-added file (or, for a fragment, one whose container itself was
+    /// added entirely by a mod) can be modded with nothing to compare against.</summary>
+    public bool HasOriginal => CanRevert && SelectedFile is { } f && ReadOriginal(f) is not null;
 
     public string MultiSelectCountText => $"{SelectedCount:N0} files selected";
     public string MultiSelectSizeText => FormatSize(_selectedFiles.Sum(f => f.Size));
@@ -670,6 +681,22 @@ public sealed class MainViewModel : INotifyPropertyChanged
             ? $"No saves found in {SaveGameLocator.SavedGamesFolder}"
             : $"{Saves.Count:N0} save(s) found"
               + (failed > 0 ? $"  •  {failed} couldn't be read" : string.Empty);
+    }
+
+    /// <summary>Drops one save from the list after its file has been deleted from disk (see
+    /// MainWindow.xaml.cs's DeleteSave_Click) - lighter than a full <see cref="LoadSavesAsync"/>
+    /// reload, and keeps the rest of the list/selection undisturbed.</summary>
+    public void RemoveSaveRow(SaveRow row)
+    {
+        Saves.Remove(row);
+        if (ReferenceEquals(SelectedSave, row))
+        {
+            SelectedSave = null;
+        }
+
+        SavesStatus = Saves.Count == 0
+            ? $"No saves found in {SaveGameLocator.SavedGamesFolder}"
+            : $"{Saves.Count:N0} save(s) found";
     }
 
     /// <summary>Re-reads one save's own metadata off disk and swaps its <see cref="SaveRow"/> in
@@ -1060,6 +1087,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
         => file.IsFragment
             ? (ReadOriginalFragment(file) is { } xml ? new UTF8Encoding(false).GetBytes(xml) : null)
             : _vfs!.ReadOriginal(file.Hash);
+
+    /// <summary>Whether the workspace already carries its own override for this exact file - queried
+    /// before Mirror/Mirror original overwrite it (see MainWindow.xaml.cs's Mirror_Click/
+    /// MirrorOriginal_Click), so the user gets a chance to back out first. Checks
+    /// <see cref="IModLayer.FragmentOverrides"/> for a fragment row and <see cref="IModLayer.Hashes"/>
+    /// otherwise, matching how <see cref="Replace"/> itself (via <c>FolderModLayer.Stage</c>) files a
+    /// new override under one or the other.</summary>
+    public bool IsStagedInWorkspace(VfsFile file) => file.IsFragment
+        ? Workspace!.FragmentOverrides.TryGetValue(file.ContainerHash!.Value, out var fragments)
+          && fragments.Any(f => f.EntryHash == file.Hash)
+        : Workspace!.Hashes.Contains(file.Hash);
 
     /// <summary>
     /// Puts a replacement file into the workspace, so it wins over everything below it. For a
