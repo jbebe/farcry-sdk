@@ -777,6 +777,19 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public void Reindex() => _ = ReindexAsync(includeFragments: true);
 
     /// <summary>
+    /// Re-reads every configured mod's zip from disk (see <see cref="LoadModsFromConfig"/>) and
+    /// re-scans the workspace folder (via <see cref="Reindex"/>'s own <c>Workspace.Rescan</c> call) -
+    /// picks up a mod zip replaced/edited outside the app while it was running, without needing a
+    /// restart. Drops any mod whose file has since vanished, same as startup does.
+    /// </summary>
+    public void RescanMods()
+    {
+        LoadModsFromConfig();
+        Reindex();
+        Status = "Mods rescanned from disk.";
+    }
+
+    /// <summary>
     /// <paramref name="includeFragments"/> is only ever false for <see cref="InitializeAsync"/>'s
     /// phase-1 call — it still needs the *real* layers applied (a workspace/mod edit staged in a
     /// previous session must show as modded the moment the window opens, not only after the first

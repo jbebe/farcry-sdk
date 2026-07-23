@@ -419,6 +419,8 @@ public partial class MainWindow : Window
         }
     }
 
+    private void RescanMods_Click(object sender, RoutedEventArgs e) => _vm.RescanMods();
+
     private void RemoveMod_Click(object sender, RoutedEventArgs e)
     {
         if (SelectedMod() is not { IsWorkspace: false } row)

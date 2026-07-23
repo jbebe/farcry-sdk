@@ -129,6 +129,8 @@
                             <StackPanel Orientation="Horizontal">
                                 <Button Content="Import mod" Click="AddMod_Click" Style="{StaticResource Toolbar}" />
                                 <Button Content="Import legacy mod" Click="ImportLegacy_Click" Style="{StaticResource Toolbar}" />
+                                <Button Content="Rescan mods" Click="RescanMods_Click" Style="{StaticResource Toolbar}"
+                                        ToolTip="Re-reads every mod's zip and the workspace folder from disk - picks up a mod replaced or edited outside JackAll without needing a restart." />
                             </StackPanel>
                         </DockPanel>
                     </Border>
