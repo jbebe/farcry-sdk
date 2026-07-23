@@ -1,0 +1,86 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <ItemGroup>
+    <ProjectReference Include="..\JackAll.Core\JackAll.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="AvalonEdit" Version="6.3.1.120" />
+    <PackageReference Include="BCnEncoder.Net" Version="2.3.0" />
+    <PackageReference Include="DiffPlex" Version="1.9.0" />
+    <PackageReference Include="FFMpegCore" Version="5.1.0" />
+    <PackageReference Include="ini-parser-netstandard" Version="2.5.3" />
+  </ItemGroup>
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net10.0-windows</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <AssemblyName>JackAll</AssemblyName>
+    <RootNamespace>JackAll.App</RootNamespace>
+    <ApplicationIcon>Icon.ico</ApplicationIcon>
+    <Product>JackAll</Product>
+    <Description>A jack of all trades for Far Cry 2 modding. Named for the Jackal.</Description>
+  </PropertyGroup>
+
+  <!--
+    What a user unzips is JackAll.exe, a config.ini, a data folder, and a workspace folder - nothing
+    else. No runtime to install, no loose NuGet DLLs to lose track of, no .pdb sitting next to the exe.
+
+    Gated on _IsPublishing so this only costs anything at `dotnet publish`; a plain `dotnet build`
+    stays a fast framework-dependent build, and `dotnet test` doesn't drag a whole runtime along.
+
+    Trimming is deliberately absent: WPF doesn't support it, and turning it on produces an exe that
+    builds fine and then dies on the first XAML load.
+  -->
+  <PropertyGroup Condition="'$(_IsPublishing)' == 'true'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <DebugType>none</DebugType>
+    <!-- DebugType only silences this project's own pdb; this drops the referenced projects' too. -->
+    <AllowedReferenceRelatedFileExtensions>none</AllowedReferenceRelatedFileExtensions>
+  </PropertyGroup>
+
+  <!--
+    The name dictionary ships in data\. Without it the tool still works, but every file shows up as
+    a bare hash - so it is part of the product, not an optional extra.
+  -->
+  <ItemGroup>
+    <Content Include="..\..\assets\fc2.hashlist" Link="data\.itemhashes">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\binary_classes.xml" Link="data\.fcbclasses">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\vanilla_hashes.ini" Link="data\.archivehashes">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\savegame_field_names.tsv" Link="data\.savegamefieldnames">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="Icon.ico" />
+  </ItemGroup>
+
+  <!-- Bundled so .sbao import/export/preview works out of the box - no separate ffmpeg install to ask users for. -->
+  <ItemGroup>
+    <Content Include="..\..\assets\ffmpeg.exe" Link="data\ffmpeg.exe">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+  <!-- Baked into the assembly rather than shipped alongside it, like everything else this exe needs. -->
+  <ItemGroup>
+    <EmbeddedResource Include="FileHandlers\Text\Lua.xshd" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="Properties\" />
+  </ItemGroup>
+
+</Project>

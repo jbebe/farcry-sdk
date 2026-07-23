@@ -1,0 +1,7 @@
+<UserControl x:Class="JackAll.App.FileHandlers.Mgb.MgbFileHandler"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ScrollViewer Margin="16" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
+        <TextBlock x:Name="StatusText" FontFamily="Consolas" FontSize="12" TextWrapping="NoWrap" />
+    </ScrollViewer>
+</UserControl>

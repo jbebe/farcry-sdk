@@ -1,0 +1,2 @@
+Lets us parse knowledge from far cry related discord servers.  
+The tool that creates the raw json that this script transforms is called [Discord Chat Exporter](https://github.com/Tyrrrz/DiscordChatExporter/releases).

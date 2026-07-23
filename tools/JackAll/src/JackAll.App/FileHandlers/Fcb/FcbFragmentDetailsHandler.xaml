@@ -1,0 +1,18 @@
+<UserControl x:Class="JackAll.App.FileHandlers.Fcb.FcbFragmentDetailsHandler"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:text="clr-namespace:JackAll.App.FileHandlers.Text">
+    <DockPanel Margin="16">
+        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,12"
+                   Text="This is one piece of a splitting .fcb - open it in the XML editor to browse and edit its structure." />
+        <Button DockPanel.Dock="Top" Content="Open in XML Editor…" Click="OpenEditor_Click"
+                Padding="10,6" HorizontalAlignment="Left" Margin="0,0,0,16" />
+
+        <TextBlock x:Name="PreviewUnavailableNotice" DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="#888"
+                   FontStyle="Italic" Visibility="Collapsed" />
+
+        <Border x:Name="PreviewBorder" Background="#FAFAFA" BorderBrush="#DDD" BorderThickness="1">
+            <text:TextFileHandler x:Name="Preview" Extension="xml" />
+        </Border>
+    </DockPanel>
+</UserControl>

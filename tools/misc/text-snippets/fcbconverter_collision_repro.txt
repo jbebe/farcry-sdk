@@ -1,0 +1,48 @@
+This is strange behavior:
+```
+C:\temp\fc2test>call fcbconverter "d:\games\Far Cry 2\Data_Win32\common.fat" "C:\temp\fc2test\common" "levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector23.data.fcb"
+*******************************************************************************************
+**** FCBConverter v20210624-0000
+****   Author: ArmanIII
+****   Based on: Gibbed's Dunia Tools
+****   Special thanks to: Fireboyd78 (FCBastard), xBaebsae, Ekey (FC5 Unpacker), Gibbed,
+****      id-daemon
+*******************************************************************************************
+
+Compression disabled.
+
+Files loaded: 158565
+File levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector23.data.fcb was not found in d:\games\Far Cry 2\Data_Win32\common.fat
+FIN
+
+C:\temp\fc2test>call fcbconverter "d:\games\Far Cry 2\Data_Win32\orig_patch.fat" "C:\temp\fc2test\orig_patch" "levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector23.data.fcb"
+*******************************************************************************************
+**** FCBConverter v20210624-0000
+****   Author: ArmanIII
+****   Based on: Gibbed's Dunia Tools
+****   Special thanks to: Fireboyd78 (FCBastard), xBaebsae, Ekey (FC5 Unpacker), Gibbed,
+****      id-daemon
+*******************************************************************************************
+
+Compression disabled.
+
+Files loaded: 158565
+File levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector23.data.fcb was not found in d:\games\Far Cry 2\Data_Win32\orig_patch.fat
+FIN
+
+C:\temp\fc2test>call fcbconverter "d:\games\Far Cry 2\Data_Win32\shadersobj.fat" "C:\temp\fc2test\shadersobj" "levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector23.data.fcb"
+*******************************************************************************************
+**** FCBConverter v20210624-0000
+****   Author: ArmanIII
+****   Based on: Gibbed's Dunia Tools
+****   Special thanks to: Fireboyd78 (FCBastard), xBaebsae, Ekey (FC5 Unpacker), Gibbed,
+****      id-daemon
+*******************************************************************************************
+
+Compression disabled.
+
+Files loaded: 158565
+[Unpacking]: __Unknown\000050FC
+[Unpacking]: __Unknown\00007A5D
+[Unpacking]: __Unknown\0000D21F
+```

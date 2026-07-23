@@ -1,0 +1,8 @@
+{
+  "label": "Engine Internals",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "Reverse-engineering notes on Dunia.dll and the FarCry2 executables, traced from disassembly."
+  }
+}

@@ -1,0 +1,19 @@
+<UserControl x:Class="JackAll.App.FileHandlers.Xbt.XbtFileHandler"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <DockPanel Margin="16">
+        <TextBlock x:Name="StatusText" DockPanel.Dock="Top" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" />
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,16,0,0">
+            <Button x:Name="ExportButton" Content="Export DDS + XML…" Click="Export_Click"
+                    Padding="8,6" Margin="0,0,8,0" IsEnabled="False" />
+            <Button x:Name="ImportButton" Content="Import DDS + XML…" Click="Import_Click"
+                    Padding="8,6" />
+        </StackPanel>
+
+        <!-- Fills whatever space DockPanel has left; Stretch=Uniform keeps the DDS preview inside it, aspect intact. -->
+        <Border Margin="0,16,0,0" Background="#ECECEC" BorderBrush="#DDD" BorderThickness="1">
+            <Image x:Name="Preview" Stretch="Uniform" />
+        </Border>
+    </DockPanel>
+</UserControl>

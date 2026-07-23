@@ -1,0 +1,4 @@
+# Since these files are owned by Ubisoft, I don't want to publish them.
+**/*
+
+!.gitignore

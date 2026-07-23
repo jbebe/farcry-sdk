@@ -1,0 +1,140 @@
+To display help on a specific plugin, type:
+
+> Tool pluginname help
+
+
+> Available plugins:
+
+> AIWorkspaceCompiler           This program forward calls to the AIWorkspace compiler.
+
+> AnimConverter                 This program forward calls to the anim binarizers.
+
+> AnimationTrackCollectionCompilerThis plugin compiles an animation track collection file to its binary version.
+
+> Batch                         This program executes a list of plugins.
+
+> CopyCompiler                  Copies a source file at a destination and add source as a compile dependency
+
+> CrcCheck                      This program validate that there is no crc clash in a list of string.
+
+> DLCBuilder                    This program forward calls to the Downloadable Content Builder.
+
+> DialogCompiler                Unknown description
+
+> DiskLayoutReordering          This program reorder files for optimal streaming performances.
+
+> DominoCompiler                This program forwards calls to the Domino compiler (BlackBox2).
+
+> DotNomadToMax
+
+> EntityArchetypeCompiler       This program forward calls to the ReadonlyXml compiler.
+
+> Export                        This program forward calls to the Tool Framework Export plugin.
+
+> ExtractDareInfo               This program extracts required data from DARE.
+
+> ExtractScriptFiles            This plugin generates a new set of bigfiles with all .lua files removed, plus a new script bigfile containing those .lua files from bigfiles (this is for PS3 TRC).
+
+> ExtractSoundInfo              This program generate some files containing all the relevant sound information.
+
+> FaceAnimationGenerator        This plug-in generates facial animations from audio and, optionally, text files. The generated files extension is .animset.
+
+> FileArchiver                  This plugin manipulates big files
+
+> FireUICompiler                This plugin compiles a FireUI resource to its binary version.
+
+> GeomCompiler                  This program forward calls to the GLM compiler.
+
+> GeomMerger                    This program is used to merge glms.
+
+> GlobalIlluminationCompiler    This program generates global illumination dependencies.
+
+> HIKCharacterizationCompiler   This program processes HIK characterization binary file
+
+> HIKSkelBoneMappingCompiler    This program processes HIK skeleton bone mapping xml file
+
+> InstallPackageBuilder         This program forward calls to the Install Package Builder.
+
+> LuaCompiler                   This program forward calls to the LUA compiler.
+
+> MakeShpFromFile               Makes .shp file(s) (PEL profiles) to visualize BinaryNode contents inside of binary file(s).  (This is meant for debugging and size optimization.)
+
+> MaterialCompiler              This plugin compiles a material file to its binary version.
+
+> MaterialConverter             This plugin converts old .mlm files to .material.xml files.
+
+> MaxShaderGenerator            This program forward calls to the maxscript shader generator.
+
+> MotionClothCompiler           This program updates motion cloth files.
+
+> MoveBuild                     This program forward calls to the move binarizer.
+
+> NewParticlesCompiler          This program generates particles dependencies (new particles).
+
+> NomadDBCompiler               This plugin compiles a nomadDB file.
+
+> NomadResourceCompiler         This plugin compiles a material file to its binary version.
+
+> OasisLanguageCompiler         This program forward calls to the oasis language compiler.
+
+> PackageSmallFiles             This program generate big files containing all small files of a folder.
+
+> PackageValidator              This program validates a package.
+
+> Packman                       This program forward calls to the anim binarizers.
+
+> ParseSoundFromResDump         This program parse a resource dump and extract sound information.
+
+> PatchAnimationSound           This program replace empty events and deprecated dialog by a place holder sound.
+
+> PhysCompiler                  This program forward calls to the havok filter managers.
+
+> PoseAnimationCompiler         This plugin compiles a pose animation file to its binary version.
+
+> PoseDefinitionCompiler        This plugin compiles a pose definition file to its binary version.
+
+> ReadonlyXmlCompiler           This program forward calls to the RealTree compiler.
+
+> RealTreeCompiler              This program forward calls to the RealTree compiler.
+
+> RecastNavmeshCompiler         This program compiles a navmesh using the Recast library.
+
+> RecastNavmeshExporter         This program exports a navmesh to sector resources for the runtime.
+
+> RoadNetworkSplineCompiler     This program forward calls to the RoadNetworkSpline compiler.
+
+> Scene2Skeleton                This program forward calls to the skeleton binarizer.
+
+> SectorDataCompiler            This program compile the sectorData for a given sector.
+
+> SectorDescCompiler            This program compile the sector descriptor for a given sector.
+
+> SequenceCompiler              This plugin compiles a sequence file to its binary version.
+
+> ShaderGenerator               This program generates shader variations based on the input metashaders
+
+> ShaderIdInfo                  This program returns shader variation info for a shaderID
+
+> ShaderStatsCompiler           This program crunches a shader stats file to help in shader preloading at runtime
+
+> SoundCoherency                This validate the sound coherency between the platforms.
+
+> SoundDependencies             This program generates dependencies for a sound package.
+
+> SoundHighLevelDep             This program generates dependencies for the sounds packages that are not handled by entities.
+
+> SoundPackaging                This program generates sound packages.
+
+> SoundRegionWorld              This program validate sound region in an entire world.
+
+> SpeedTreeConverter            Extract source files from a speedtree source
+
+> StateMachineCompiler          This program generates state machine dependencies.
+
+> TerrainCompiler               This program forward calls to the Terrain compiler.
+
+> TexCompiler                   This program forward calls to the texture compiler.
+
+> VistaCompiler                 This program forward calls to the vista compiler.
+
+> XmlLoadDependencies           This program generates depload files and auto-compiles encountered resources.
