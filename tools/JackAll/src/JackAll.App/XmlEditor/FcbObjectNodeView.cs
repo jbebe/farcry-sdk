@@ -15,6 +15,7 @@ namespace JackAll.App.XmlEditor;
 public sealed class FcbObjectNodeView : INotifyPropertyChanged
 {
     private static readonly uint NameFieldHash = FcbClassDefinitions.Crc32Ascii("Name");
+    private static readonly uint ValueFieldHash = FcbClassDefinitions.Crc32Ascii("Value");
 
     public FcbObject Object { get; }
 
@@ -68,15 +69,22 @@ public sealed class FcbObjectNodeView : INotifyPropertyChanged
     private IReadOnlyList<PropertyRow>? _rows;
     private readonly IReadOnlyDictionary<uint, FcbXmlNameHarvest.Entry>? _extraNames;
 
+    /// <summary>Per-nameHash dropdown choices for this node's own "selXxx" values, found by
+    /// <see cref="FindEnumChoices"/> - see its remarks for the "selXxx"/"enumXxx" data convention this
+    /// backs.</summary>
+    private readonly IReadOnlyDictionary<uint, IReadOnlyList<string>> _enumChoices;
+
     private FcbObjectNodeView(
         FcbObject obj, FcbObject? original, FcbClass ownClass, string label,
-        IReadOnlyDictionary<uint, FcbXmlNameHarvest.Entry>? extraNames)
+        IReadOnlyDictionary<uint, FcbXmlNameHarvest.Entry>? extraNames,
+        IReadOnlyDictionary<uint, IReadOnlyList<string>> enumChoices)
     {
         Object = obj;
         Original = original;
         OwnClass = ownClass;
         Label = label;
         _extraNames = extraNames;
+        _enumChoices = enumChoices;
     }
 
     public IReadOnlyList<PropertyRow> Rows => _rows ??= BuildRows();
@@ -120,9 +128,10 @@ public sealed class FcbObjectNodeView : INotifyPropertyChanged
                 && _extraNames.TryGetValue(nameHash, out FcbXmlNameHarvest.Entry found) ? found : null;
             byte[]? originalBytes = null;
             Original?.Values.TryGetValue(nameHash, out originalBytes);
+            _enumChoices.TryGetValue(nameHash, out IReadOnlyList<string>? enumChoices);
             PropertyRow row = PropertyRow.Build(
                 nameHash, member?.Name ?? extra?.Name, member?.Type ?? extra?.ValueType ?? FcbMemberType.BinHex,
-                bytes, originalBytes);
+                bytes, originalBytes, enumChoices);
             row.ChangedFromVanillaFlagChanged += r => OnOwnChangedDelta(r.IsChangedFromVanilla ? 1 : -1);
             rows.Add(row);
         }
@@ -174,15 +183,26 @@ public sealed class FcbObjectNodeView : INotifyPropertyChanged
             (null, _) => $"hash {obj.TypeHash:X8}",
         };
 
-        var view = new FcbObjectNodeView(obj, original, ownClass, label, extraNames)
+        (Dictionary<uint, IReadOnlyList<string>> enumChoices, HashSet<string> hiddenChildTypeNames) = FindEnumChoices(obj, ownClass);
+
+        var view = new FcbObjectNodeView(obj, original, ownClass, label, extraNames, enumChoices)
         {
             _ownChangedCount = CountOwnChanges(obj, original),
         };
 
-        for (int i = 0; i < obj.Children.Count; i++)
+        // Filtered independently (not "skip while walking obj.Children, reuse the same index into
+        // original.Children") so the position-based obj/original pairing below stays 1:1 once some
+        // children are hidden - both lists drop the same "enumXxx" groups, so the Nth *visible* child
+        // of one still lines up with the Nth *visible* child of the other.
+        List<FcbObject> visibleChildren = [.. obj.Children.Where(c => !IsHidden(c))];
+        List<FcbObject>? visibleOriginalChildren = original is null ? null : [.. original.Children.Where(c => !IsHidden(c))];
+
+        for (int i = 0; i < visibleChildren.Count; i++)
         {
-            FcbObject? originalChild = original is not null && i < original.Children.Count ? original.Children[i] : null;
-            FcbObjectNodeView child = BuildNode(obj.Children[i], originalChild, ownClass, extraNames);
+            FcbObject? originalChild = visibleOriginalChildren is not null && i < visibleOriginalChildren.Count
+                ? visibleOriginalChildren[i]
+                : null;
+            FcbObjectNodeView child = BuildNode(visibleChildren[i], originalChild, ownClass, extraNames);
             child.Parent = view;
             view.Children.Add(child);
             if (child.ContainsChange)
@@ -191,6 +211,64 @@ public sealed class FcbObjectNodeView : INotifyPropertyChanged
             }
         }
         return view;
+
+        bool IsHidden(FcbObject child) => hiddenChildTypeNames.Contains(ownClass.Resolve(child.TypeHash).Name ?? string.Empty);
+    }
+
+    /// <summary>
+    /// Detects the base game's own "selXxx"/"enumXxx" data convention: a UInt32 value named e.g.
+    /// "selType" paired with a sibling child object named "enumType", whose own children (each an
+    /// "enum" object) hold one ordered String "Value" apiece - the option list the original Far Cry 2
+    /// editor rendered as a dropdown, baked directly into the instance data rather than declared in
+    /// binary_classes.xml (every "selXxx" member seen there is plain UInt32 - see
+    /// docs/docs/modding/gotchas.md's <c>selCategory</c> note). Index i's plain integer value is i
+    /// itself - <see cref="ScalarField.SelectedEnumIndex"/> relies on that.
+    /// </summary>
+    /// <returns>The dropdown choices per "selXxx" value's name hash, and the resolved type names of
+    /// the "enumXxx" child objects that supplied one - <see cref="BuildNode"/> hides exactly those from
+    /// the tree, since they're the raw form of what the returned choices already expose.</returns>
+    private static (Dictionary<uint, IReadOnlyList<string>> Choices, HashSet<string> GroupTypeNames) FindEnumChoices(
+        FcbObject obj, FcbClass ownClass)
+    {
+        var choices = new Dictionary<uint, IReadOnlyList<string>>();
+        var groupTypeNames = new HashSet<string>();
+
+        foreach ((uint nameHash, byte[] _) in obj.Values)
+        {
+            if (ownClass.FindMember(nameHash) is not { Name: { Length: > 3 } name, Type: FcbMemberType.UInt32 }
+                || !name.StartsWith("sel", StringComparison.Ordinal) || !char.IsUpper(name[3]))
+            {
+                continue;
+            }
+
+            string expectedGroupName = "enum" + name[3..];
+            FcbObject? group = obj.Children.FirstOrDefault(
+                child => ownClass.Resolve(child.TypeHash).Name == expectedGroupName);
+            if (group is null)
+            {
+                continue;
+            }
+
+            var names = new List<string>(group.Children.Count);
+            foreach (FcbObject entry in group.Children)
+            {
+                if (entry.Values.TryGetValue(ValueFieldHash, out byte[]? valueBytes)
+                    && FcbValueCodec.TryDecode(FcbMemberType.String, valueBytes, out object decoded))
+                {
+                    names.Add((string)decoded);
+                }
+            }
+
+            if (names.Count == 0)
+            {
+                continue; // malformed/empty - fall back to the plain integer field instead of an empty dropdown
+            }
+
+            choices[nameHash] = names;
+            groupTypeNames.Add(expectedGroupName);
+        }
+
+        return (choices, groupTypeNames);
     }
 
     /// <summary>A cheap, decode-free "does this object differ from vanilla" count - just how many of

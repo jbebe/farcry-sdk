@@ -83,6 +83,11 @@
                                     <DataTrigger Binding="{Binding Type}" Value="Rml">
                                         <Setter Property="Visibility" Value="Collapsed" />
                                     </DataTrigger>
+                                    <!-- A "selXxx" field backed by a sibling "enumXxx" object shows the
+                                         dropdown below instead - see FcbObjectNodeView.BuildNode. -->
+                                    <DataTrigger Binding="{Binding HasEnumChoices}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
                                 </Style.Triggers>
                             </Style>
                         </TextBox.Style>
@@ -108,6 +113,29 @@
                             </Style>
                         </xmlEditor:RmlTextEditor.Style>
                     </xmlEditor:RmlTextEditor>
+
+                    <!-- A "selXxx" field with a known option list (see FcbObjectNodeView.BuildNode's
+                         "selXxx"/"enumXxx" convention) - only a fixed dropdown selection reaches
+                         SelectedEnumIndex, so unlike the TextBox above, this can't actually go invalid;
+                         the red-border trigger is here purely for parity/defense-in-depth. -->
+                    <ComboBox ItemsSource="{Binding EnumChoices}" SelectedIndex="{Binding SelectedEnumIndex}"
+                              Padding="3,1">
+                        <ComboBox.Style>
+                            <Style TargetType="ComboBox">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsValid}" Value="False">
+                                        <Setter Property="BorderBrush" Value="Red" />
+                                        <Setter Property="BorderThickness" Value="1.5" />
+                                        <Setter Property="Background" Value="#FFF0F0" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding HasEnumChoices}" Value="True">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ComboBox.Style>
+                    </ComboBox>
                 </Grid>
             </DockPanel>
         </DataTemplate>
