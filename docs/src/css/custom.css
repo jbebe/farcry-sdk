@@ -6,25 +6,41 @@
 
 /* You can override the default Infima variables here. */
 :root {
-  --ifm-color-primary: #2e8555;
-  --ifm-color-primary-dark: #29784c;
-  --ifm-color-primary-darker: #277148;
-  --ifm-color-primary-darkest: #205d3b;
-  --ifm-color-primary-light: #33925d;
-  --ifm-color-primary-lighter: #359962;
-  --ifm-color-primary-lightest: #3cad6e;
+  --ifm-color-primary: hsla(30, 77%, 59%, 1); /* golden-apricot */
+  --ifm-color-primary-dark: hsla(25, 61%, 45%, 1); /* burnt-caramel */
+  --ifm-color-primary-darker: hsla(28, 74%, 25%, 1); /* walnut */
+  --ifm-color-primary-darkest: hsla(20, 60%, 1%, 1); /* black */
+  --ifm-color-primary-light: hsla(38, 94%, 69%, 1); /* sunflower-gold */
+  --ifm-color-primary-lighter: hsla(55, 90%, 77%, 1); /* light-gold */
+  --ifm-color-primary-lightest: hsla(143, 50%, 97%, 1); /* mint-cream */
   --ifm-code-font-size: 95%;
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.1);
 }
 
+.alert--info {
+  --ifm-alert-background-color: #e1f1f3;
+  --ifm-alert-border-color: #a1c1c7;
+}
+
+[data-theme='dark'] .alert--info {
+  --ifm-alert-background-color: #6d8a8f;
+  --ifm-alert-border-color: #a6d3db;
+}
+
+/* Infima's .footer--dark hardcodes its own background color locally,
+   which wins over a plain :root override — so override it here instead. */
+.footer--dark {
+  --ifm-footer-background-color: hsla(20, 60%, 1%, 1); /* black */
+}
+
 /* For readability concerns, you should choose a lighter palette in dark mode. */
 [data-theme='dark'] {
-  --ifm-color-primary: #25c2a0;
-  --ifm-color-primary-dark: #21af90;
-  --ifm-color-primary-darker: #1fa588;
-  --ifm-color-primary-darkest: #1a8870;
-  --ifm-color-primary-light: #29d5b0;
-  --ifm-color-primary-lighter: #32d8b4;
-  --ifm-color-primary-lightest: #4fddbf;
+  --ifm-color-primary: hsla(30, 77%, 59%, 1); /* golden-apricot */
+  --ifm-color-primary-dark: hsla(25, 61%, 45%, 1); /* burnt-caramel */
+  --ifm-color-primary-darker: hsla(28, 74%, 25%, 1); /* walnut */
+  --ifm-color-primary-darkest: hsla(20, 60%, 1%, 1); /* black */
+  --ifm-color-primary-light: hsla(38, 94%, 69%, 1); /* sunflower-gold */
+  --ifm-color-primary-lighter: hsla(55, 90%, 77%, 1); /* light-gold */
+  --ifm-color-primary-lightest: hsla(143, 50%, 97%, 1); /* mint-cream */
   --docusaurus-highlighted-code-line-bg: rgba(0, 0, 0, 0.3);
 }
