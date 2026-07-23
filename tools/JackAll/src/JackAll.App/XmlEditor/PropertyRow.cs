@@ -180,8 +180,12 @@ public sealed class PropertyRow : INotifyPropertyChanged
     /// say another" case <see cref="FcbXml.WriteValueEntry"/> falls back on, so a slightly-wrong
     /// binary_classes.xml entry never blocks editing a real value, it just shows the bytes plainly.
     /// </summary>
+    /// <param name="enumChoices">Non-null only for a "selXxx" value with a sibling "enumXxx" object in
+    /// the data (see <see cref="FcbObjectNodeView.BuildNode"/>'s remarks) - renders as a dropdown of
+    /// these names instead of a plain integer box (see <see cref="ScalarField.SelectedEnumIndex"/>).</param>
     public static PropertyRow Build(
-        uint nameHash, string? name, FcbMemberType declaredType, byte[] rawBytes, byte[]? originalBytes)
+        uint nameHash, string? name, FcbMemberType declaredType, byte[] rawBytes, byte[]? originalBytes,
+        IReadOnlyList<string>? enumChoices = null)
     {
         FcbMemberType type = declaredType != FcbMemberType.BinHex && FcbValueCodec.TryDecode(declaredType, rawBytes, out _)
             ? declaredType
@@ -226,7 +230,7 @@ public sealed class PropertyRow : INotifyPropertyChanged
                 break;
             default:
                 // String, Hash, Enum, every plain integer/Float, BinHex/Rml.
-                row.Scalar = new ScalarField(type, decoded);
+                row.Scalar = new ScalarField(type, decoded, enumChoices: enumChoices);
                 break;
         }
 
