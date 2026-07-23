@@ -21,9 +21,18 @@ for how that differs from the community-sourced pages elsewhere in this section.
 
 1. **Long audio (music, dialogue)** — an **Ogg Vorbis** stream in a thin wrapper. This is the one
    documented here and supported by `sbao_tool.py`.
-2. **Short SFX** — a Ubisoft ADPCM codec (`ubi_v3`/`v5`/`v6`/interleaved variants), first byte is the
-   stream-version number, no `OggS`. Decodable (read-only) by Ubitunedec; **not** covered here.
-   (Sample: `research/reference-files/format-samples/004ae237.sbao`, starts `8d 06 08 02`, no Ogg.)
+2. **Short SFX** — no `OggS` signature. (Sample: `tools/misc/format-samples/004ae237.sbao`, starts
+   `8d 06 08 02`.) **Correction:** an earlier pass through this file assumed this was a Ubisoft ADPCM
+   codec (`ubi_v3`/`v5`/`v6`/interleaved) decodable by Ubitunedec, matching the "first byte is the
+   stream-version number" signature scheme documented on [the `.spk`
+   page](./spk.md#a-side-investigation-does-ubitunedec-know-more-than-we-do). That assumption doesn't
+   survive contact with the actual tool: running `UbitunedecCMD.exe`'s structural validators
+   (`ubi_v3`/`v5`/`v6`, `ubi_iv2`, `ubi_6or4`) against this real sample rejects it as every one of them
+   ("File does not have the correct signature..."), and `-S`/`--scan` (which walks the whole buffer
+   looking for a recognized chunk anywhere, not just at offset 0) finds zero matches — while the same
+   scan correctly finds the `OggS` chunk in a real Ogg-backed `.sbao` at its documented offset 40,
+   confirming the tool itself works. This format is **not** Ubitunedec-decodable and remains
+   undocumented; not covered here.
 
 ## The Ogg-backed layout: `[40-byte header][verbatim Ogg Vorbis bitstream]`
 

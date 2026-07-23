@@ -192,3 +192,35 @@ mutually exclusive storage paths for the same id-space, not a referencing relati
   already documented in [the archives page](./archives-fat-dat.md) can already override `.spk` (and,
   per this update, standalone `.sbao`/`.bao`) files today — plausible given it's the same resolver, not
   independently verified for these specific file types.
+
+## A side investigation: does Ubitunedec know more than we do?
+
+`tools/third-party/Ubitunedec` (`ldeon/Ubitunedec`, aka `DecUbiSnd`) is a third-party decoder for an
+**older generation** of Ubisoft's audio middleware ("Ubi Sound Tools" — the ADPCM/interleaved/6-or-4-bit
+chunk formats used in titles like *XIII*, *Splinter Cell* (PC), and *Rainbow Six*), identified by a
+one-byte version tag (`2`/`3`/`5`/`6`/`7`/`8`/`9`) at the very start of a stream, or a plain `OggS`
+signature. Worth checking whether its codec knowledge extends any further into `.spk`'s still-opaque
+per-record payload (the fields listed above as not yet identified) or its "not yet traced" sub-header
+contents.
+
+**It doesn't — verified by actually running the tool, not just reading its source:**
+
+- `UbitunedecCMD.exe -S` (`--scan`, which walks an entire buffer looking for a recognized chunk
+  starting anywhere, not just at offset 0) finds **zero** matches in any of the six real `.spk`
+  fixtures in `Fixtures/Spk`, and zero in the one real short-SFX `.sbao` sample
+  (`tools/misc/format-samples/004ae237.sbao`, see [the `.sbao` page](./sbao.md) for why that sample is
+  relevant here).
+- Forcing each structural decoder directly (`--input-type ubi_v3`/`v5`/`v6`/`iv2`/`6or4`) against that
+  same `.sbao` sample, every one **rejects it** on its own signature check (e.g. "File does not have
+  the correct signature (should be 03, 05, or 06)").
+- Sanity check that the tool and invocation are actually working: the same `-S` scan correctly finds
+  the real `OggS` chunk at byte offset 40 in a known Ogg-backed `.sbao` fixture — exactly matching this
+  page's and [the `.sbao` page](./sbao.md)'s independently-confirmed 40-byte header size.
+
+This makes sense in hindsight: `.spk`'s 40-byte record core (`02 1F 00 10` magic, declared-size field,
+type tag, the same shape `.sbao` shares) is a **DARE** structure (Far Cry 2's actual audio middleware,
+per `Data_Win32/SoundBinary/DARE.INI`) — a different, later engine generation than the one Ubitunedec
+targets, not a variant of it. Ubitunedec's only genuine overlap with anything in this codebase is
+decoding the Ogg Vorbis bitstream inside music/dialogue `.sbao` files — and that case is already fully
+handled by `SbaoAudio`/`SbaoFileHandler` (split/combine/Vorbis-ID/playback/export/import), independently
+of Ubitunedec. No change was made to `SpkPackage.cs`/`SpkFileHandler` as a result of this investigation.
