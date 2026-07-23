@@ -328,10 +328,18 @@ public partial class MainWindow : Window
 
     // ----------------------------------------------------------------- Mods tab
 
-    private void OpenWorkspace_Click(object sender, RoutedEventArgs e)
+    /// <summary>Opens the selected mod's containing folder - the workspace's own staging folder for
+    /// that row, or the folder holding the zip for any other.</summary>
+    private void OpenModLocation_Click(object sender, RoutedEventArgs e)
     {
-        Directory.CreateDirectory(AppConfig.WorkspaceDir);
-        Process.Start(new ProcessStartInfo(AppConfig.WorkspaceDir) { UseShellExecute = true });
+        if (_vm.SelectedMod is not { } mod) return;
+
+        string folder = mod.IsWorkspace
+            ? AppConfig.WorkspaceDir
+            : Path.GetDirectoryName(((ZipModLayer)mod.Layer).ZipPath)!;
+
+        Directory.CreateDirectory(folder);
+        Process.Start(new ProcessStartInfo(folder) { UseShellExecute = true });
     }
 
     private void AddMod_Click(object sender, RoutedEventArgs e)
@@ -512,6 +520,9 @@ public partial class MainWindow : Window
     }
 
     private ModRow? SelectedMod() => ModGrid.SelectedItem as ModRow;
+
+    private void ModGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        => _vm.SelectedMod = ModGrid.SelectedItem as ModRow;
 
     // ---------------------------------------------------------------- Files tab
 

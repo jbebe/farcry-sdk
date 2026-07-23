@@ -43,6 +43,25 @@ public sealed class FolderNode(string name, string fullPath)
     public override string ToString() => Name;
 }
 
+/// <summary>
+/// One node in the Mods tab's per-mod file tree (see <see cref="MainViewModel.SelectedModFiles"/>) —
+/// either a folder or a leaf override/fragment entry. Rebuilt from scratch on every selection, unlike
+/// <see cref="FolderNode"/>'s whole-VFS tree: a single mod's file count is small enough that there's
+/// no expansion state worth preserving across rebuilds.
+/// </summary>
+public sealed class ModFileNode(string name, bool isFile)
+{
+    public string Name { get; } = name;
+    public bool IsFile { get; } = isFile;
+    public ObservableCollection<ModFileNode> Children { get; } = [];
+
+    /// <summary>Only used while building the tree, to find an existing child by name in O(1) instead
+    /// of scanning <see cref="Children"/>.</summary>
+    internal Dictionary<string, ModFileNode> ChildIndex { get; } = new(StringComparer.OrdinalIgnoreCase);
+
+    public override string ToString() => Name;
+}
+
 /// <summary>A mod row in the Mods tab — a zip, or the pinned workspace.</summary>
 public sealed class ModRow(IModLayer layer, bool isWorkspace) : INotifyPropertyChanged
 {
@@ -212,11 +231,135 @@ public sealed class MainViewModel : INotifyPropertyChanged
         // Reordering only means something with two or more movable mods - drives the Mods grid's
         // per-row up/down buttons (see MainWindow.xaml), which would otherwise be redundant clutter
         // on a single-mod list.
-        Mods.CollectionChanged += (_, _) => OnPropertyChanged(nameof(HasMultipleMods));
+        Mods.CollectionChanged += (_, e) =>
+        {
+            OnPropertyChanged(nameof(HasMultipleMods));
+
+            if (e.OldItems is not null)
+            {
+                foreach (ModRow row in e.OldItems)
+                {
+                    row.PropertyChanged -= ModRow_PropertyChanged;
+                }
+            }
+            if (e.NewItems is not null)
+            {
+                foreach (ModRow row in e.NewItems)
+                {
+                    row.PropertyChanged += ModRow_PropertyChanged;
+                }
+            }
+        };
+    }
+
+    // Toggling a mod's checkbox should stick across restarts immediately, same as every other
+    // Mods-tab action (add/remove/reorder) - rather than only on window close, where an unclean
+    // exit would silently drop it.
+    private void ModRow_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(ModRow.Enabled))
+        {
+            SaveConfig();
+        }
+
+        // The workspace row's file set changes live as the user stages/unstages files on the Files
+        // tab (see ModRow.NotifyFileCountChanged) - if it's the one showing in the details panel right
+        // now, that panel would otherwise go stale until the user clicks away and back.
+        if (e.PropertyName == nameof(ModRow.FileCount) && sender is ModRow row && ReferenceEquals(row, SelectedMod))
+        {
+            SelectedModFiles = BuildModFileTree(row.Layer);
+        }
     }
 
     /// <summary>True once there are at least two non-workspace mods, i.e. reordering is possible.</summary>
     public bool HasMultipleMods => Mods.Count(m => !m.IsWorkspace) > 1;
+
+    private ModRow? _selectedMod;
+    public ModRow? SelectedMod
+    {
+        get => _selectedMod;
+        set
+        {
+            if (_selectedMod == value) return;
+            _selectedMod = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasSelectedMod));
+            OnPropertyChanged(nameof(NoSelectedMod));
+            SelectedModFiles = value is null ? [] : BuildModFileTree(value.Layer);
+        }
+    }
+
+    public bool HasSelectedMod => SelectedMod is not null;
+    public bool NoSelectedMod => SelectedMod is null;
+
+    private ObservableCollection<ModFileNode> _selectedModFiles = [];
+    public ObservableCollection<ModFileNode> SelectedModFiles
+    {
+        get => _selectedModFiles;
+        private set { _selectedModFiles = value; OnPropertyChanged(); }
+    }
+
+    /// <summary>
+    /// Every file this layer overrides, as a folder tree — plain overrides at their real (or
+    /// <c>_hash\</c>-addressed, see <see cref="IModLayer"/>) path, and each splitting-.fcb fragment
+    /// override nested one level under its container. Rebuilt fresh on every call: cheap, since a
+    /// single mod's file count is orders of magnitude smaller than the whole VFS tree
+    /// <see cref="BuildTree"/> maintains incrementally.
+    /// </summary>
+    private static ObservableCollection<ModFileNode> BuildModFileTree(IModLayer layer)
+    {
+        var root = new ModFileNode("", isFile: false);
+
+        foreach (uint hash in layer.Hashes)
+        {
+            InsertModFilePath(root, layer.PathOf(hash) ?? $"_hash\\{hash:x8}");
+        }
+
+        foreach ((uint containerHash, IReadOnlyList<FragmentOverride> fragments) in layer.FragmentOverrides)
+        {
+            string containerPath = layer.PathOf(containerHash) ?? $"_hash\\{containerHash:x8}.fcb";
+            foreach (FragmentOverride fragment in fragments)
+            {
+                InsertModFilePath(root, $"{containerPath}\\{fragment.FragmentId}");
+            }
+        }
+
+        SortModFileNodesRecursively(root);
+        return root.Children;
+    }
+
+    private static void InsertModFilePath(ModFileNode root, string path)
+    {
+        ModFileNode current = root;
+        string[] segments = path.Split('\\');
+        for (int i = 0; i < segments.Length; i++)
+        {
+            bool isLeaf = i == segments.Length - 1;
+            if (!current.ChildIndex.TryGetValue(segments[i], out ModFileNode? next))
+            {
+                next = new ModFileNode(segments[i], isLeaf);
+                current.ChildIndex[segments[i]] = next;
+                current.Children.Add(next);
+            }
+            current = next;
+        }
+    }
+
+    /// <summary>Folders before files, alphabetical within each group - same convention as the Files
+    /// tab's own tree (<see cref="SortRecursively"/>).</summary>
+    private static void SortModFileNodesRecursively(ModFileNode node)
+    {
+        List<ModFileNode> sorted = [.. node.Children
+            .OrderBy(c => c.IsFile)
+            .ThenBy(c => c.Name, StringComparer.OrdinalIgnoreCase)];
+
+        node.Children.Clear();
+        foreach (ModFileNode child in sorted)
+        {
+            node.Children.Add(child);
+            SortModFileNodesRecursively(child);
+        }
+    }
 
     public string Status
     {
@@ -585,6 +728,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         if (Workspace is not null)
         {
+            Workspace.Enabled = Config.WorkspaceEnabled;
             Mods.Add(new ModRow(Workspace, isWorkspace: true));
         }
     }
@@ -1021,6 +1165,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             Config.Mods.Add(new AppConfig.ModEntry(((ZipModLayer)row.Layer).ZipPath, row.Enabled));
         }
+        Config.WorkspaceEnabled = Mods.FirstOrDefault(m => m.IsWorkspace)?.Enabled ?? Config.WorkspaceEnabled;
         Config.Save();
     }
 
