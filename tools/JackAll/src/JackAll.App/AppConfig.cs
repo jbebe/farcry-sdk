@@ -79,6 +79,14 @@ public sealed class AppConfig
     /// <summary>Mod zip paths in apply order — later ones win.</summary>
     public List<ModEntry> Mods { get; init; } = [];
 
+    /// <summary>
+    /// The workspace layer's own on/off state — stored separately from <see cref="Mods"/> because the
+    /// workspace isn't a zip path, it's the always-last staging folder (see
+    /// <see cref="MainViewModel.LoadModsFromConfig"/>). Persisted under the reserved "0" key in
+    /// <see cref="ModsSection"/>, ahead of the numbered ("1", "2", …) mod entries.
+    /// </summary>
+    public bool WorkspaceEnabled { get; set; } = true;
+
     public sealed record ModEntry(string Path, bool Enabled);
 
     public static AppConfig Load()
@@ -97,9 +105,18 @@ public sealed class AppConfig
             GamePath = data[GameSection]["path"]?.Trim() ?? string.Empty,
         };
 
+        string workspaceValue = data[ModsSection]["0"]?.Trim() ?? string.Empty;
+        if (workspaceValue.Length > 0)
+        {
+            config.WorkspaceEnabled = workspaceValue[0] != DisabledMarker;
+        }
+
         // Keys are ordinals ("1", "2", …) purely so the file reads as an ordered list; the numbers
-        // themselves carry no meaning beyond sort order.
-        foreach (KeyData key in data[ModsSection].OrderBy(k => int.TryParse(k.KeyName, out int n) ? n : int.MaxValue))
+        // themselves carry no meaning beyond sort order. "0" is reserved for WorkspaceEnabled above,
+        // not a mod entry.
+        foreach (KeyData key in data[ModsSection]
+                     .Where(k => k.KeyName != "0")
+                     .OrderBy(k => int.TryParse(k.KeyName, out int n) ? n : int.MaxValue))
         {
             string value = key.Value.Trim();
             if (value.Length == 0)
@@ -130,7 +147,10 @@ public sealed class AppConfig
         [
             " Applied top to bottom - if two mods change the same file, the lower one wins.",
             $" Put a {DisabledMarker} in front of a path to turn that mod off without losing it.",
+            " \"0\" is the workspace (staging area) toggle, always applied last - not a mod path.",
         ]);
+
+        data[ModsSection]["0"] = WorkspaceEnabled ? "workspace" : DisabledMarker + "workspace";
 
         int index = 1;
         foreach (ModEntry mod in Mods)

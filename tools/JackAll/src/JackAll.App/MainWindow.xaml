@@ -61,6 +61,28 @@
                 <TextBlock Text="{Binding Name}" />
             </StackPanel>
         </HierarchicalDataTemplate>
+
+        <!-- The Mods tab's per-mod details tree (see MainViewModel.SelectedModFiles) - no
+             grey/black "contains changes" coloring here, unlike FolderTemplate above: every node in
+             this tree is already part of the selected mod's own overrides. -->
+        <HierarchicalDataTemplate x:Key="ModFileTemplate" DataType="{x:Type local:ModFileNode}"
+                                  ItemsSource="{Binding Children}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Margin="0,0,4,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="&#128196;" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsFile}" Value="False">
+                                    <Setter Property="Text" Value="&#128193;" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="{Binding Name}" />
+            </StackPanel>
+        </HierarchicalDataTemplate>
     </Window.Resources>
 
     <DockPanel>
@@ -82,27 +104,32 @@
                 <DockPanel Margin="6">
                     <Border DockPanel.Dock="Bottom" Padding="0,10,0,0">
                         <DockPanel>
-                            <Button DockPanel.Dock="Right" Content="Deploy all mods" Click="BuildAndApply_Click"
+                            <Button DockPanel.Dock="Right" Content="Deploy mods" Click="BuildAndApply_Click"
                                     Padding="16,7" FontWeight="SemiBold" MinWidth="130" />
-                            <Button DockPanel.Dock="Right" Content="Remove all mods" Click="RestoreVanilla_Click"
+                            <Button DockPanel.Dock="Right" Content="Revert to original" Click="RestoreVanilla_Click"
                                     Style="{StaticResource Toolbar}" Margin="0,0,16,0" />
                             <StackPanel Orientation="Horizontal">
-                                <Button Content="Open workspace" Click="OpenWorkspace_Click" Style="{StaticResource Toolbar}" />
-                                <Button Content="Add mod zip…" Click="AddMod_Click" Style="{StaticResource Toolbar}" />
-                                <Button Content="Import legacy…" Click="ImportLegacy_Click" Style="{StaticResource Toolbar}"
-                                        ToolTip="Convert an old-style mod (a zip carrying a full patch.dat/patch.fat) into your workspace, keeping only what it actually changed." />
-                                <Button Content="Remove" Click="RemoveMod_Click" Style="{StaticResource Toolbar}" />
+                                <Button Content="Import mod" Click="AddMod_Click" Style="{StaticResource Toolbar}" />
+                                <Button Content="Import legacy mod" Click="ImportLegacy_Click" Style="{StaticResource Toolbar}" />
                             </StackPanel>
                         </DockPanel>
                     </Border>
 
                     <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" Foreground="#555" TextWrapping="Wrap"
-                               Text="Mods are applied top to bottom - if two of them change the same file, the lower one wins. Your own edits (workspace) always go last." />
+                               Text="Mods are applied top to bottom - if two of them change the same file, the lower one wins. Workspace (staging are for new mods) always go last." />
 
-                    <DataGrid x:Name="ModGrid" ItemsSource="{Binding Mods}" AutoGenerateColumns="False"
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" MinWidth="300" />
+                            <ColumnDefinition Width="4" />
+                            <ColumnDefinition Width="320" MinWidth="240" />
+                        </Grid.ColumnDefinitions>
+
+                    <DataGrid x:Name="ModGrid" Grid.Column="0" ItemsSource="{Binding Mods}" AutoGenerateColumns="False"
                               CanUserAddRows="False" CanUserReorderColumns="False" CanUserSortColumns="False"
                               HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                              SelectionMode="Single" RowHeight="30">
+                              SelectionMode="Single" RowHeight="30"
+                              SelectionChanged="ModGrid_SelectionChanged">
                         <DataGrid.Columns>
                             <!-- Reorder controls only make sense on the row currently selected, so they
                                  live in their own cell instead of the toolbar and stay hidden otherwise
@@ -134,11 +161,15 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridCheckBoxColumn Header="On"
-                                                    Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
-                                                    Width="40" />
+                            <DataGridTemplateColumn Header="Active" Width="50">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <CheckBox IsChecked="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
+                                                  HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
                             <DataGridTextColumn Header="Mod" Binding="{Binding Name}" Width="*" IsReadOnly="True" />
-                            <DataGridTextColumn Header="Files" Binding="{Binding FileCountText}" Width="100" IsReadOnly="True" />
                         </DataGrid.Columns>
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow">
@@ -151,6 +182,59 @@
                             </Style>
                         </DataGrid.RowStyle>
                     </DataGrid>
+
+                        <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="Transparent" />
+
+                        <!-- ==================== Details sidebar: selected mod's files ==================== -->
+                        <Border Grid.Column="2" BorderBrush="#DDD" BorderThickness="1,0,0,0" Padding="12,0,0,0">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="Pick a mod to see its files." Foreground="#888"
+                                           Visibility="{Binding NoSelectedMod, Converter={StaticResource BoolToVis}}" />
+
+                                <DockPanel DockPanel.Dock="Top" Visibility="{Binding HasSelectedMod, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock DockPanel.Dock="Top" Text="{Binding SelectedMod.Name}" FontWeight="Bold" FontSize="14"
+                                               TextWrapping="Wrap" Margin="0,0,0,4" />
+                                    <TextBlock DockPanel.Dock="Top" Text="{Binding SelectedMod.FileCountText}" Foreground="#777"
+                                               Margin="0,0,0,8" />
+
+                                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
+                                        <!-- A zip mod opens the folder it's sitting in; the workspace row opens
+                                             the staging folder itself - same destination OpenWorkspace_Click
+                                             used to go to before this button replaced it. -->
+                                        <Button Content="Open location" Click="OpenModLocation_Click"
+                                                Padding="10,5" Margin="0,0,6,0" />
+
+                                        <!-- The workspace holds the user's own edits and can't be removed -
+                                             see RemoveMod_Click's guard. -->
+                                        <Button Content="Remove" Click="RemoveMod_Click" Padding="10,5">
+                                            <Button.Style>
+                                                <Style TargetType="Button">
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding SelectedMod.IsWorkspace}" Value="True">
+                                                            <Setter Property="Visibility" Value="Collapsed" />
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Button.Style>
+                                        </Button>
+                                    </StackPanel>
+
+                                    <TreeView x:Name="ModFileTree" ItemsSource="{Binding SelectedModFiles}"
+                                              ItemTemplate="{StaticResource ModFileTemplate}"
+                                              BorderThickness="0" Background="Transparent">
+                                        <TreeView.Resources>
+                                            <!-- Declared here (not ItemContainerStyle) so it applies at every
+                                                 depth - same single-click-to-toggle behavior as FolderTree,
+                                                 reusing its handler since the logic doesn't depend on FolderNode. -->
+                                            <Style TargetType="{x:Type TreeViewItem}">
+                                                <EventSetter Event="PreviewMouseLeftButtonDown" Handler="FolderTree_ItemClicked" />
+                                            </Style>
+                                        </TreeView.Resources>
+                                    </TreeView>
+                                </DockPanel>
+                            </DockPanel>
+                        </Border>
+                    </Grid>
                 </DockPanel>
             </TabItem>
 
