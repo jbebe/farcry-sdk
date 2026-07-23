@@ -14,6 +14,24 @@
             <Setter Property="MinWidth" Value="86" />
         </Style>
 
+        <!-- The Saves grid's cell template sets its own local Foreground on the muted lines below the
+             save name (FileName, DLC) rather than relying on DataGridRow's inherited value - a local
+             value always wins over the row's own Foreground setter/trigger, so without this style
+             those two lines would stay grey-on-blue (unreadable) even once the row goes white-on-blue
+             selected. Same selected+focused trigger shape as FolderTemplate/FileGrid's RowStyle. -->
+        <Style x:Key="MutedSaveText" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="#888" />
+            <Style.Triggers>
+                <MultiDataTrigger>
+                    <MultiDataTrigger.Conditions>
+                        <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True" />
+                        <Condition Binding="{Binding Path=(Selector.IsSelectionActive), RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True" />
+                    </MultiDataTrigger.Conditions>
+                    <Setter Property="Foreground" Value="White" />
+                </MultiDataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <!--
             One grey/black convention, applied in two places: a folder in the tree (grey = nothing
             changed anywhere inside it, black = it contains at least one changed file — see
@@ -299,31 +317,16 @@
                                                         <Run Text=" — " />
                                                         <Run Text="{Binding WorldName, Mode=OneWay}" />
                                                     </TextBlock>
-                                                    <TextBlock Text="{Binding FileName}" Foreground="#888" FontSize="11" Margin="0,2,0,4" />
+                                                    <TextBlock Text="{Binding FileName}" Style="{StaticResource MutedSaveText}" FontSize="11" Margin="0,2,0,4" />
                                                     <TextBlock Text="{Binding LastWriteTimeText}" Margin="0,0,0,2" />
                                                     <TextBlock Margin="0,0,0,2">
                                                         <Run Text="{Binding PersistedObjectCountText, Mode=OneWay}" />
                                                     </TextBlock>
-                                                    <TextBlock Foreground="#888" FontSize="11">
+                                                    <TextBlock Style="{StaticResource MutedSaveText}" FontSize="11">
                                                         <Run Text="DLC: " /><Run Text="{Binding DlcText, Mode=OneWay}" />
                                                     </TextBlock>
                                                 </StackPanel>
                                             </StackPanel>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-
-                                <!--
-                                    Visual only for now, no logic behind it yet - a future "deploy" step
-                                    would also patch this save's own persisted entities (not just
-                                    patch.dat) for whichever saves are checked here.
-                                -->
-                                <DataGridTemplateColumn Header="Deploy" Width="66" CanUserResize="False">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate>
-                                            <CheckBox IsChecked="{Binding IsSelectedForDeploy, UpdateSourceTrigger=PropertyChanged}"
-                                                      HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                      ToolTip="Also apply mod changes to this save's own persisted entities when deploying, not just to patch.dat. Not wired up yet - this is a placeholder for that." />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>

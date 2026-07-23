@@ -124,14 +124,6 @@ public sealed class SaveRow(SaveGameInfo info)
     public string DlcText => Info.ActiveDlcIds.Count > 0 ? string.Join(", ", Info.ActiveDlcIds) : "none";
 
     /// <summary>
-    /// The "deploy to this save too" checkbox — visual only for now, plain get/set with no backing
-    /// logic. Nothing reads this yet: it exists so the intended shape of a future "also patch the
-    /// selected saves' own persisted entities, not just patch.dat" feature is visible in the UI before
-    /// that feature itself is built.
-    /// </summary>
-    public bool IsSelectedForDeploy { get; set; }
-
-    /// <summary>
     /// Null if the thumbnail couldn't be decoded — shown as "no preview" rather than failing the
     /// whole row, since the thumbnail is the one part of the format
     /// (reverse/dunia/savegame_format.md, Section 3) whose exact pixel layout is a best guess, not
