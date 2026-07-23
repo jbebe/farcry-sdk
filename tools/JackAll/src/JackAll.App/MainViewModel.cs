@@ -215,8 +215,38 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public SaveDetailsViewModel? SelectedSaveDetails
     {
         get => _selectedSaveDetails;
-        private set { _selectedSaveDetails = value; OnPropertyChanged(); }
+        private set
+        {
+            if (_selectedSaveDetails is not null)
+            {
+                _selectedSaveDetails.PropertyChanged -= SelectedSaveDetails_PropertyChanged;
+            }
+            _selectedSaveDetails = value;
+            if (_selectedSaveDetails is not null)
+            {
+                _selectedSaveDetails.PropertyChanged += SelectedSaveDetails_PropertyChanged;
+            }
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(SavesGridEnabled));
+        }
     }
+
+    // While the newly-selected save's PersistenceDB tree is still decoding (SaveDetailsViewModel's
+    // own background load - can be genuinely slow, see its class remarks), the grid and Delete button
+    // stay disabled (see SavesGridEnabled) so that's visibly true, not just a status line easy to miss.
+    private void SelectedSaveDetails_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(SaveDetailsViewModel.IsLoading))
+        {
+            OnPropertyChanged(nameof(SavesGridEnabled));
+        }
+    }
+
+    /// <summary>False while the selected save's details are still decoding - disables the saves grid
+    /// and its Delete button for that stretch (see MainWindow.xaml) so a slow decode reads as "loading",
+    /// not as an unresponsive UI the user might click through (switching selection or deleting the file
+    /// mid-decode).</summary>
+    public bool SavesGridEnabled => SelectedSaveDetails is not { IsLoading: true };
 
     public MainViewModel()
     {

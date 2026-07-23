@@ -286,6 +286,7 @@
                              before (widest, expands), column 2 is the fixed-width "deploy" checkbox. -->
                         <DataGrid x:Name="SavesGrid" Grid.Column="0" ItemsSource="{Binding Saves}"
                                   SelectionChanged="SavesGrid_SelectionChanged"
+                                  IsEnabled="{Binding SavesGridEnabled}"
                                   AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
                                   HeadersVisibility="Column" GridLinesVisibility="Horizontal" RowHeight="106"
                                   CanUserAddRows="False" CanUserResizeRows="False">
@@ -395,7 +396,7 @@
                                         <!-- Deletes the actual .sav file from disk - see DeleteSave_Click's
                                              confirmation prompt before this runs. -->
                                         <Button Content="Delete…" Padding="10,5" Margin="0,0,6,0"
-                                                Click="DeleteSave_Click" />
+                                                Click="DeleteSave_Click" IsEnabled="{Binding SavesGridEnabled}" />
 
                                         <!-- Opens the same tree/property-grid editor tab the Files tab's
                                              fragments use (XmlEditorTabView) over this save's PersistenceDB
