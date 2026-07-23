@@ -78,7 +78,7 @@ const config = {
         title: 'Far Cry 2 Modding',
         logo: {
           alt: 'Far Cry 2 Modding',
-          src: 'img/logo.svg',
+          src: 'img/logo.png',
         },
         items: [
           {
