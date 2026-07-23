@@ -158,10 +158,21 @@ public sealed class FcbObjectNodeView : INotifyPropertyChanged
         IReadOnlyDictionary<uint, FcbXmlNameHarvest.Entry>? extraNames)
     {
         FcbClass ownClass = scope.Resolve(obj.TypeHash);
-        string typeLabel = ownClass.Name
-            ?? (extraNames is not null && extraNames.TryGetValue(obj.TypeHash, out var entry) ? entry.Name : null)
-            ?? $"hash {obj.TypeHash:X8}";
-        string label = FindIdentifyingText(obj, ownClass) is { Length: > 0 } text ? $"{typeLabel} - {text}" : typeLabel;
+        string? resolvedTypeName = ownClass.Name
+            ?? (extraNames is not null && extraNames.TryGetValue(obj.TypeHash, out var entry) ? entry.Name : null);
+        string? identifyingText = FindIdentifyingText(obj, ownClass);
+
+        // An unresolved class has no name of its own to lead with, so the object's own identifying
+        // text (its "Name" field, or the fallback FindIdentifyingText finds) takes that spot instead,
+        // with the type hash alongside it in parens rather than spelled out as "hash 1A2B3C4D - Text" -
+        // redundant once the parens already say it's a hash.
+        string label = (resolvedTypeName, identifyingText) switch
+        {
+            (not null, { Length: > 0 } text) => $"{resolvedTypeName} - {text}",
+            (not null, _) => resolvedTypeName,
+            (null, { Length: > 0 } text) => $"{text} ({obj.TypeHash:X8})",
+            (null, _) => $"hash {obj.TypeHash:X8}",
+        };
 
         var view = new FcbObjectNodeView(obj, original, ownClass, label, extraNames)
         {

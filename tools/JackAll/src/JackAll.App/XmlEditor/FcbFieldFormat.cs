@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Xml;
+using System.Xml.Linq;
 using JackAll.Core.Format.Fcb;
 
 namespace JackAll.App.XmlEditor;
@@ -26,7 +28,14 @@ public static class FcbFieldFormat
         FcbMemberType.UInt32 => ((uint)value).ToString(CultureInfo.InvariantCulture),
         FcbMemberType.Int64 => ((long)value).ToString(CultureInfo.InvariantCulture),
         FcbMemberType.UInt64 => ((ulong)value).ToString(CultureInfo.InvariantCulture),
-        FcbMemberType.BinHex or FcbMemberType.Rml => Convert.ToHexString((byte[])value),
+        FcbMemberType.BinHex => Convert.ToHexString((byte[])value),
+        // Same nested-document convention FcbXml.ToXml uses for its own <value type="Rml"> text: shown
+        // indented in the multi-line RmlTextEditor (see XmlEditorTabView's ScalarField template) when
+        // the bytes decode as a well-formed .rml document, opaque hex otherwise (a value that isn't
+        // actually an embedded document, or was hand-edited into something else).
+        FcbMemberType.Rml => FcbXml.TryDecodeRmlValue((byte[])value) is { } rml
+            ? rml.ToString()
+            : Convert.ToHexString((byte[])value),
         FcbMemberType.Vector2 or FcbMemberType.Vector3 or FcbMemberType.Vector4
             => string.Join(", ", ((float[])value).Select(v => v.ToString(CultureInfo.InvariantCulture))),
         _ => throw new NotSupportedException($"'{type}' is not a scalar text field."),
@@ -187,24 +196,49 @@ public static class FcbFieldFormat
                 error = null;
                 return true;
 
-            case FcbMemberType.BinHex or FcbMemberType.Rml:
-                if (text.Length % 2 != 0)
+            case FcbMemberType.BinHex:
+                return TryParseHex(text, out value, out error);
+
+            case FcbMemberType.Rml:
+                // Mirrors FcbXml.ReadRml's own dual shape: text that looks like an XML document is
+                // parsed and re-encoded as one (always in the base game's padded shape - see
+                // FcbXml.TryDecodeRmlValue's remarks), anything else falls back to the same opaque-hex
+                // editing BinHex uses.
+                if (text.StartsWith('<'))
                 {
-                    return Fail(out value, out error, "Hex data needs an even number of digits.");
+                    try
+                    {
+                        value = FcbXml.EncodeRmlValue(XElement.Parse(text));
+                        error = null;
+                        return true;
+                    }
+                    catch (XmlException)
+                    {
+                        return Fail(out value, out error, "Not valid XML.");
+                    }
                 }
-                try
-                {
-                    value = Convert.FromHexString(text);
-                    error = null;
-                    return true;
-                }
-                catch (FormatException)
-                {
-                    return Fail(out value, out error, "Not valid hex - use only 0-9 and A-F.");
-                }
+                return TryParseHex(text, out value, out error);
 
             default:
                 throw new NotSupportedException($"'{type}' is not a scalar text field.");
+        }
+    }
+
+    private static bool TryParseHex(string text, out object value, out string? error)
+    {
+        if (text.Length % 2 != 0)
+        {
+            return Fail(out value, out error, "Hex data needs an even number of digits.");
+        }
+        try
+        {
+            value = Convert.FromHexString(text);
+            error = null;
+            return true;
+        }
+        catch (FormatException)
+        {
+            return Fail(out value, out error, "Not valid hex - use only 0-9 and A-F.");
         }
     }
 

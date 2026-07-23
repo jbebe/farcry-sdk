@@ -579,6 +579,25 @@ public static class FcbXml
         => TryDecodeRmlShape(value, stripPadByte: true, out element)
         || TryDecodeRmlShape(value, stripPadByte: false, out element);
 
+    /// <summary>Public entry point onto <see cref="TryDecodeRml"/> for callers that want the decoded
+    /// .rml document itself rather than embedded in this class's own <c>&lt;value type="Rml"&gt;</c>
+    /// text wrapper - currently the interactive property grid's Rml field (see
+    /// JackAll.App.XmlEditor.FcbFieldFormat), which shows/edits it as a plain XML string instead of
+    /// opaque hex. Null for the opaque-hex fallback shape (see <see cref="TryDecodeRml"/>'s remarks).</summary>
+    public static XElement? TryDecodeRmlValue(byte[] value) => TryDecodeRml(value, out XElement? element) ? element : null;
+
+    /// <summary>Reverse of <see cref="TryDecodeRmlValue"/>: encodes an .rml document back to a
+    /// Rml-typed value's raw bytes, always in the base game's padded shape (see
+    /// <see cref="TryDecodeRml"/>'s remarks) - shared with <see cref="ReadRml"/>'s own nested-element
+    /// branch so the two paths can't drift apart.</summary>
+    public static byte[] EncodeRmlValue(XElement root)
+    {
+        byte[] rml = RmlDocument.Serialize(root);
+        byte[] value = new byte[rml.Length + 1]; // trailing byte is already 0 from the allocation
+        rml.CopyTo(value, 0);
+        return value;
+    }
+
     private static bool TryDecodeRmlShape(byte[] value, bool stripPadByte, out XElement? element)
     {
         if (stripPadByte && (value.Length < 1 || value[^1] != 0))
@@ -607,15 +626,7 @@ public static class FcbXml
     private static byte[] ReadRml(XElement el)
     {
         XElement? nested = el.Elements().FirstOrDefault();
-        if (nested is null)
-        {
-            return Convert.FromHexString(el.Value.Trim());
-        }
-
-        byte[] rml = RmlDocument.Serialize(nested);
-        byte[] value = new byte[rml.Length + 1]; // trailing byte is already 0 from the allocation
-        rml.CopyTo(value, 0);
-        return value;
+        return nested is null ? Convert.FromHexString(el.Value.Trim()) : EncodeRmlValue(nested);
     }
 
     private static byte[] Float(XElement el, string childName)

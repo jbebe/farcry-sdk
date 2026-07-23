@@ -56,26 +56,59 @@
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
-                <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Padding="3,1">
-                    <TextBox.Style>
-                        <!-- Width lives in a Setter (not a local attribute), same reason as
-                             PropertyRowTemplate's Border above - a local value would always beat the
-                             Label trigger below. -->
-                        <Style TargetType="TextBox">
-                            <Setter Property="Width" Value="180" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsValid}" Value="False">
-                                    <Setter Property="BorderBrush" Value="Red" />
-                                    <Setter Property="BorderThickness" Value="1.5" />
-                                    <Setter Property="Background" Value="#FFF0F0" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Label}" Value="{x:Null}">
-                                    <Setter Property="Width" Value="NaN" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBox.Style>
-                </TextBox>
+                <!-- The Grid (not the TextBox/RmlTextEditor directly) is what DockPanel's LastChildFill
+                     stretches to fill the value column's remaining width - both children then stretch
+                     to the Grid's own width the normal Grid-cell way, whichever of them Visibility
+                     leaves showing. -->
+                <Grid>
+                    <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Padding="3,1">
+                        <TextBox.Style>
+                            <!-- Width lives in a Setter (not a local attribute), same reason as
+                                 PropertyRowTemplate's Border above - a local value would always beat the
+                                 Label trigger below. -->
+                            <Style TargetType="TextBox">
+                                <Setter Property="Width" Value="180" />
+                                <Setter Property="HorizontalAlignment" Value="Left" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsValid}" Value="False">
+                                        <Setter Property="BorderBrush" Value="Red" />
+                                        <Setter Property="BorderThickness" Value="1.5" />
+                                        <Setter Property="Background" Value="#FFF0F0" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Label}" Value="{x:Null}">
+                                        <Setter Property="Width" Value="NaN" />
+                                        <Setter Property="HorizontalAlignment" Value="Stretch" />
+                                    </DataTrigger>
+                                    <!-- A Rml field shows the editor below instead. -->
+                                    <DataTrigger Binding="{Binding Type}" Value="Rml">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBox.Style>
+                    </TextBox>
+
+                    <!-- A decoded .rml document is nested XML, not a one-line value - only shown (and
+                         only takes up any space) for a Rml field; every other scalar type keeps the
+                         plain TextBox above. -->
+                    <xmlEditor:RmlTextEditor Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Margin="0,1">
+                        <xmlEditor:RmlTextEditor.Style>
+                            <Style TargetType="xmlEditor:RmlTextEditor">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsValid}" Value="False">
+                                        <Setter Property="BorderBrush" Value="Red" />
+                                        <Setter Property="BorderThickness" Value="1.5" />
+                                        <Setter Property="Background" Value="#FFF0F0" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Type}" Value="Rml">
+                                        <Setter Property="Visibility" Value="Visible" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </xmlEditor:RmlTextEditor.Style>
+                    </xmlEditor:RmlTextEditor>
+                </Grid>
             </DockPanel>
         </DataTemplate>
 
