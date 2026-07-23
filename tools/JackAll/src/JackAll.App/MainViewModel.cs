@@ -298,7 +298,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// single mod's file count is orders of magnitude smaller than the whole VFS tree
     /// <see cref="BuildTree"/> maintains incrementally.
     /// </summary>
-    private static ObservableCollection<ModFileNode> BuildModFileTree(IModLayer layer)
+    private ObservableCollection<ModFileNode> BuildModFileTree(IModLayer layer)
     {
         var root = new ModFileNode("", isFile: false);
 
@@ -309,7 +309,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         foreach ((uint containerHash, IReadOnlyList<FragmentOverride> fragments) in layer.FragmentOverrides)
         {
-            string containerPath = layer.PathOf(containerHash) ?? $"_hash\\{containerHash:x8}.fcb";
+            // layer.PathOf(containerHash) is always null here, never a "this name isn't known"
+            // signal: IModLayer.PathOf resolves a *whole-file* override by its own hash (see
+            // FolderModLayer's _absolutePaths, keyed by each staged entry's own hash), and a
+            // fragment-only override never adds its container's hash there - only the fragment's
+            // own hash goes in. The container's real name still has to come from the game's own
+            // name database, same as everywhere else that resolves a container's path.
+            string containerPath = (_names is not null && _names.TryResolve(containerHash, out string? named))
+                ? named
+                : $"_hash\\{containerHash:x8}.fcb";
             foreach (FragmentOverride fragment in fragments)
             {
                 InsertModFilePath(root, $"{containerPath}\\{fragment.FragmentId}");
