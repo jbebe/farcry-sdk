@@ -1,0 +1,6 @@
+<Solution>
+  <Project Path="src/JackAll.Core/JackAll.Core.csproj" />
+  <Project Path="src/JackAll.App/JackAll.App.csproj" />
+  <Project Path="src/JackAll.Cli/JackAll.Cli.csproj" />
+  <Project Path="src/JackAll.Core.Tests/JackAll.Core.Tests.csproj" />
+</Solution>

@@ -1,0 +1,103 @@
+Far Cry 2 file differences over releases, compared 20220714:
+============================================================
+
+Sources compared:
+* DVD release, incrementally updated from 1.0 to 1.03
+* Uplay release, updated to 1.03
+* GOG release, updated to 1.03
+* Steam release, updated to 1.03
+
+    Filesize      CRC32     Source                 File
+-------------------------------------------------------------------------------
+      18731656    B7886D5B  Far Cry 2 DVD   1.00   bin\Dunia.dll
+      18735240    1DB8DED0  Far Cry 2 DVD   1.01   bin\Dunia.dll
+      19397256    71CFD197  Far Cry 2 DVD   1.02   bin\Dunia.dll
+      19412104    4AD2DCB2  Far Cry 2 DVD   1.03   bin\Dunia.dll
+      19412104    4AD2DCB2  Far Cry 2 GOG   1.03   bin\Dunia.dll
+      20184168    8B59C458  Far Cry 2 Uplay 1.03   bin\Dunia.dll
+      20183176    B96BE214  Far Cry 2 Steam 1.03   bin\Dunia.dll
+
+      14007112    C1953841  Far Cry 2 DVD   1.00   bin\FarCry2.exe
+      14007112    C1953841  Far Cry 2 DVD   1.01   bin\FarCry2.exe
+       5205640    1344DDEA  Far Cry 2 DVD   1.02   bin\farcry2.exe
+         28296    0FC58B66  Far Cry 2 DVD   1.03   bin\farcry2.exe
+         28296    0FC58B66  Far Cry 2 GOG   1.03   bin\farcry2.exe
+         29864    8CF778F0  Far Cry 2 Uplay 1.03   bin\FarCry2.exe
+
+       2301952    BD900310  Far Cry 2 DVD   1.00   bin\FC2BenchmarkTool.exe
+       5165056    A52C21E7  Far Cry 2 DVD   1.01   bin\FC2BenchmarkTool.exe
+       5160960    12DBA4D4  Far Cry 2 DVD   1.02   bin\FC2BenchmarkTool.exe
+       5160960    43190B0C  Far Cry 2 DVD   1.03   bin\FC2BenchmarkTool.exe
+       5160960    43190B0C  Far Cry 2 GOG   1.03   bin\FC2BenchmarkTool.exe
+       5170792    065EE2D6  Far Cry 2 Uplay 1.03   bin\FC2BenchmarkTool.exe
+
+       1175552    E2CAB269  Far Cry 2 DVD   1.00   bin\FC2Editor.exe
+       1175552    B41493E3  Far Cry 2 DVD   1.01   bin\FC2Editor.exe
+       1171456    0E657D9D  Far Cry 2 DVD   1.02   bin\FC2Editor.exe
+       1171456    34505DF1  Far Cry 2 DVD   1.03   bin\FC2Editor.exe
+       1171456    34505DF1  Far Cry 2 GOG   1.03   bin\FC2Editor.exe
+       1181288    91ACC8DF  Far Cry 2 Uplay 1.03   bin\FC2Editor.exe
+
+        794624    92B6508C  Far Cry 2 DVD   1.00   bin\FC2ServerLauncher.exe
+        802816    C928E830  Far Cry 2 DVD   1.01   bin\FC2ServerLauncher.exe
+        798720    3C623830  Far Cry 2 DVD   1.02   bin\FC2ServerLauncher.exe
+      13744640    1BDD88B0  Far Cry 2 DVD   1.03   bin\FC2ServerLauncher.exe
+      13744640    1BDD88B0  Far Cry 2 GOG   1.03   bin\FC2ServerLauncher.exe
+      13760616    E9A619FC  Far Cry 2 Uplay 1.03   bin\FC2ServerLauncher.exe
+
+          6267    6DC1BC4F  Far Cry 2 DVD   1.03   bin\FC2ServerLauncher_ReadMe.txt
+          6267    6DC1BC4F  Far Cry 2 GOG   1.03   bin\FC2ServerLauncher_ReadMe.txt
+         10364    F23E6709  Far Cry 2 Uplay 1.03   bin\FC2ServerLauncher_ReadMe.txt
+
+         12424    8C58C3AA  Far Cry 2 GOG   1.03   bin\gpudatabase.dll
+         13416    9A9F90ED  Far Cry 2 Uplay 1.03   bin\gpudatabase.dll
+
+        178402    E45CA6B0  Far Cry 2 DVD   1.01   Data_Win32\patch.dat
+       8772481    2717F70A  Far Cry 2 DVD   1.02   Data_Win32\patch.dat
+       9305468    E4EF54E7  Far Cry 2 DVD   1.03   Data_Win32\patch.dat
+       9305468    E4EF54E7  Far Cry 2 GOG   1.03   Data_Win32\patch.dat
+      10258369    C4AFF19F  Far Cry 2 Uplay 1.03   Data_Win32\patch.dat
+      20183176    B96BE214  Far Cry 2 Steam 1.03   Data_Win32\patch.dat
+
+           180    BF562B85  Far Cry 2 DVD   1.01   Data_Win32\patch.fat
+          2852    CCB5E0AB  Far Cry 2 DVD   1.02   Data_Win32\patch.fat
+          3460    5650D0C2  Far Cry 2 DVD   1.03   Data_Win32\patch.fat
+          3460    5650D0C2  Far Cry 2 GOG   1.03   Data_Win32\patch.fat
+          3476    720A1A3F  Far Cry 2 Uplay 1.03   Data_Win32\patch.fat
+          3476    720A1A3F  Far Cry 2 Steam 1.03   Data_Win32\patch.fat
+
+         26353    F9BF079E  Far Cry 2 DVD   1.00   ReadMe.txt
+         29370    EB5810E6  Far Cry 2 DVD   1.01   ReadMe.txt
+         29370    EB5810E6  Far Cry 2 DVD   1.02   ReadMe.txt
+         31710    668F1065  Far Cry 2 DVD   1.03   ReadMe.txt
+         32791    BAE1973D  Far Cry 2 Uplay 1.03   ReadMe.txt
+
+        258048    EC3C3925  Far Cry 2 DVD   1.03   bin\SandBar.dll
+        258048    EC3C3925  Far Cry 2 GOG   1.03   bin\SandBar.dll
+        263784    79A111A0  Far Cry 2 Uplay 1.03   bin\SandBar.dll
+
+        237568    33573A80  Far Cry 2 DVD   1.03   bin\SandDock.dll
+        237568    33573A80  Far Cry 2 GOG   1.03   bin\SandDock.dll
+        243304    E3677A72  Far Cry 2 Uplay 1.03   bin\SandDock.dll
+
+Findings:
+=========
+GOG release is based on the DVD release. These 1.03 releases seem equivalent.
+The UPlay 1.03 and Steam 1.03 releases are largely equivalent too.
+
+Compared to the UPlay/Steam release, the GOG/DVD release has a different patch.dat:
+---------------------------------------------
+ui\localized\pcwidescreen\eng\ui\options.mgb
+ui\localized\pcwidescreen\eng\ui\mp_menus.mgb.desc
+ui\localized\pcwidescreen\eng\ui\mp_menus.mgb
+ui\localized\pcwidescreen\eng\ui\common.mgb
+ui\localized\pc\eng\ui\options.mgb
+ui\localized\pc\eng\ui\mp_menus.mgb.desc
+ui\localized\pc\eng\ui\mp_menus.mgb
+ui\localized\pc\eng\ui\common.mgb
+languages\english\oasisstrings.rml
+generated\entitylibrarypatchoverride.fcb (missing in GOG/DVD release)
+---------------------------------------------
+The localization files have had multiplayer-related strings removed.
+But more importantly, the missing entitylibrarypatchoverride.fcb file 
+means that DVD/GOG releases will not benefit from updates to entities. 

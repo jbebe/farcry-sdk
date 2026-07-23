@@ -1,0 +1,34 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>JackAll.Cli</RootNamespace>
+    <AssemblyName>jackall</AssemblyName>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JackAll.Core\JackAll.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Spectre.Console.Cli" Version="0.55.0" />
+  </ItemGroup>
+
+  <!--
+    Same assets the App ships: the hash dictionary gives an unpacked archive real filenames where
+    they're known, and the class config is what lets deep unpack resolve an .fcb's field names when
+    decoding it to XML instead of just BinHex/hash-only.
+  -->
+  <ItemGroup>
+    <Content Include="..\..\assets\fc2.hashlist" Link=".itemhashes">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\binary_classes.xml" Link=".fcbclasses">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>

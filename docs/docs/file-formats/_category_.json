@@ -1,0 +1,8 @@
+{
+  "label": "File Formats",
+  "position": 2,
+  "link": {
+    "type": "generated-index",
+    "description": "Every known FC2 container/asset format, merged from community findings and reverse engineering."
+  }
+}

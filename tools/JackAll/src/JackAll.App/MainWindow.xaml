@@ -1,0 +1,550 @@
+<Window x:Class="JackAll.App.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:JackAll.App"
+        Title="JackAll - Far Cry 2 Mod Manager" Height="720" Width="1180"
+        WindowStartupLocation="CenterScreen">
+
+    <Window.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+
+        <Style x:Key="Toolbar" TargetType="Button">
+            <Setter Property="Padding" Value="10,5" />
+            <Setter Property="Margin" Value="0,0,6,0" />
+            <Setter Property="MinWidth" Value="86" />
+        </Style>
+
+        <!--
+            One grey/black convention, applied in two places: a folder in the tree (grey = nothing
+            changed anywhere inside it, black = it contains at least one changed file — see
+            FolderTemplate below) and a row in the Files tab's grid (grey = untouched base game,
+            black = a mod or the workspace changed this exact file — see FileGrid's RowStyle).
+        -->
+
+        <HierarchicalDataTemplate x:Key="FolderTemplate" DataType="{x:Type local:FolderNode}"
+                                  ItemsSource="{Binding Children}">
+            <StackPanel Orientation="Horizontal">
+                <StackPanel.Style>
+                    <Style TargetType="StackPanel">
+                        <Setter Property="TextElement.Foreground" Value="Gray" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ContainsMods}" Value="True">
+                                <Setter Property="TextElement.Foreground" Value="Black" />
+                            </DataTrigger>
+                            <!-- Wins over the ContainsMods setter above so selected text stays readable on the blue highlight. -->
+                            <MultiDataTrigger>
+                                <MultiDataTrigger.Conditions>
+                                    <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True" />
+                                    <Condition Binding="{Binding Path=(Selector.IsSelectionActive), RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True" />
+                                </MultiDataTrigger.Conditions>
+                                <Setter Property="TextElement.Foreground" Value="White" />
+                            </MultiDataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </StackPanel.Style>
+                <TextBlock Margin="0,0,4,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Text" Value="&#128193;" />
+                            <Style.Triggers>
+                                <!-- No subfolders and no files at all — shown open since there's nothing to reveal. -->
+                                <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                    <Setter Property="Text" Value="&#128194;" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding IsExpanded, RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True">
+                                    <Setter Property="Text" Value="&#128194;" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <TextBlock Text="{Binding Name}" />
+            </StackPanel>
+        </HierarchicalDataTemplate>
+    </Window.Resources>
+
+    <DockPanel>
+        <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#DDD" BorderThickness="0,1,0,0">
+            <Grid>
+                <DockPanel Margin="8,5,24,5">
+                    <ProgressBar DockPanel.Dock="Right" Width="120" Height="12" IsIndeterminate="True"
+                                 Visibility="{Binding Busy, Converter={StaticResource BoolToVis}}" />
+                    <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
+                </DockPanel>
+                <ResizeGrip HorizontalAlignment="Right" VerticalAlignment="Bottom" />
+            </Grid>
+        </Border>
+
+        <TabControl x:Name="MainTabs" Margin="8">
+
+            <!-- ============================= MODS ============================= -->
+            <TabItem Header="Mods">
+                <DockPanel Margin="6">
+                    <Border DockPanel.Dock="Bottom" Padding="0,10,0,0">
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Deploy all mods" Click="BuildAndApply_Click"
+                                    Padding="16,7" FontWeight="SemiBold" MinWidth="130" />
+                            <Button DockPanel.Dock="Right" Content="Remove all mods" Click="RestoreVanilla_Click"
+                                    Style="{StaticResource Toolbar}" Margin="0,0,16,0" />
+                            <StackPanel Orientation="Horizontal">
+                                <Button Content="Open workspace" Click="OpenWorkspace_Click" Style="{StaticResource Toolbar}" />
+                                <Button Content="Add mod zip…" Click="AddMod_Click" Style="{StaticResource Toolbar}" />
+                                <Button Content="Import legacy…" Click="ImportLegacy_Click" Style="{StaticResource Toolbar}"
+                                        ToolTip="Convert an old-style mod (a zip carrying a full patch.dat/patch.fat) into your workspace, keeping only what it actually changed." />
+                                <Button Content="Remove" Click="RemoveMod_Click" Style="{StaticResource Toolbar}" />
+                            </StackPanel>
+                        </DockPanel>
+                    </Border>
+
+                    <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" Foreground="#555" TextWrapping="Wrap"
+                               Text="Mods are applied top to bottom - if two of them change the same file, the lower one wins. Your own edits (workspace) always go last." />
+
+                    <DataGrid x:Name="ModGrid" ItemsSource="{Binding Mods}" AutoGenerateColumns="False"
+                              CanUserAddRows="False" CanUserReorderColumns="False" CanUserSortColumns="False"
+                              HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                              SelectionMode="Single" RowHeight="30">
+                        <DataGrid.Columns>
+                            <!-- Reorder controls only make sense on the row currently selected, so they
+                                 live in their own cell instead of the toolbar and stay hidden otherwise
+                                 (and never show on the workspace row, which is pinned last). -->
+                            <DataGridTemplateColumn Header="" Width="56" CanUserResize="False">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                            <StackPanel.Style>
+                                                <Style TargetType="StackPanel">
+                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True" />
+                                                                <Condition Binding="{Binding IsWorkspace}" Value="False" />
+                                                                <Condition Binding="{Binding DataContext.HasMultipleMods, RelativeSource={RelativeSource AncestorType=DataGrid}}" Value="True" />
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Visible" />
+                                                        </MultiDataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </StackPanel.Style>
+                                            <Button Content="&#9650;" Click="MoveUp_Click"
+                                                    Padding="0" MinWidth="0" Width="22" Height="22" Margin="0,0,2,0" />
+                                            <Button Content="&#9660;" Click="MoveDown_Click"
+                                                    Padding="0" MinWidth="0" Width="22" Height="22" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridCheckBoxColumn Header="On"
+                                                    Binding="{Binding Enabled, UpdateSourceTrigger=PropertyChanged}"
+                                                    Width="40" />
+                            <DataGridTextColumn Header="Mod" Binding="{Binding Name}" Width="*" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Files" Binding="{Binding FileCountText}" Width="100" IsReadOnly="True" />
+                        </DataGrid.Columns>
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsWorkspace}" Value="True">
+                                        <Setter Property="Background" Value="#F5F7FA" />
+                                        <Setter Property="FontStyle" Value="Italic" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
+                    </DataGrid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ============================= SAVES ============================= -->
+            <TabItem Header="Saves">
+                <DockPanel Margin="6">
+                    <Border DockPanel.Dock="Top" Background="#FFF7E0" BorderBrush="#E0C060" BorderThickness="1"
+                            Padding="10,8" Margin="0,0,0,8">
+                        <TextBlock TextWrapping="Wrap" Foreground="#5A4A00">
+                            <Run FontWeight="Bold" Text="Mods and existing saves: " />
+                            <Run Text="a save file persists values overlapping with almost every entity-library." />
+                            <LineBreak />
+                            <Run Text="This means .fcb files cannot override values already stored in the savegame." />
+                            <LineBreak />
+                            <Run Text="That's why modding requires the player to start a new game every time they install a mod that touches .fcb files." />
+                        </TextBlock>
+                    </Border>
+
+                    <TextBlock DockPanel.Dock="Top" Text="{Binding SavesStatus}" Foreground="#666" Margin="0,0,0,8" />
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="400" MinWidth="300" />
+                            <ColumnDefinition Width="4" />
+                            <ColumnDefinition Width="*" MinWidth="280" />
+                        </Grid.ColumnDefinitions>
+
+                        <!-- The list, as a table: column 1 is the same thumbnail+details view as
+                             before (widest, expands), column 2 is the fixed-width "deploy" checkbox. -->
+                        <DataGrid x:Name="SavesGrid" Grid.Column="0" ItemsSource="{Binding Saves}"
+                                  SelectionChanged="SavesGrid_SelectionChanged"
+                                  AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
+                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" RowHeight="106"
+                                  CanUserAddRows="False" CanUserResizeRows="False">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn Header="Save" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <StackPanel Orientation="Horizontal" Margin="0,8">
+                                                <Border Width="128" Height="90" Background="#222" BorderBrush="#999" BorderThickness="1">
+                                                    <Grid>
+                                                        <Image Source="{Binding Thumbnail}" Stretch="Uniform"
+                                                               Visibility="{Binding HasThumbnail, Converter={StaticResource BoolToVis}}" />
+                                                        <TextBlock Text="no preview" Foreground="#AAA" FontSize="10"
+                                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                            <TextBlock.Style>
+                                                                <Style TargetType="TextBlock">
+                                                                    <Setter Property="Visibility" Value="Collapsed" />
+                                                                    <Style.Triggers>
+                                                                        <DataTrigger Binding="{Binding HasThumbnail}" Value="False">
+                                                                            <Setter Property="Visibility" Value="Visible" />
+                                                                        </DataTrigger>
+                                                                    </Style.Triggers>
+                                                                </Style>
+                                                            </TextBlock.Style>
+                                                        </TextBlock>
+                                                    </Grid>
+                                                </Border>
+                                                <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
+                                                    <TextBlock FontWeight="Bold" FontSize="13">
+                                                        <Run Text="{Binding PlayerName, Mode=OneWay}" />
+                                                        <Run Text=" — " />
+                                                        <Run Text="{Binding WorldName, Mode=OneWay}" />
+                                                    </TextBlock>
+                                                    <TextBlock Text="{Binding FileName}" Foreground="#888" FontSize="11" Margin="0,2,0,4" />
+                                                    <TextBlock Text="{Binding LastWriteTimeText}" Margin="0,0,0,2" />
+                                                    <TextBlock Margin="0,0,0,2">
+                                                        <Run Text="{Binding PersistedObjectCountText, Mode=OneWay}" />
+                                                    </TextBlock>
+                                                    <TextBlock Foreground="#888" FontSize="11">
+                                                        <Run Text="DLC: " /><Run Text="{Binding DlcText, Mode=OneWay}" />
+                                                    </TextBlock>
+                                                </StackPanel>
+                                            </StackPanel>
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+
+                                <!--
+                                    Visual only for now, no logic behind it yet - a future "deploy" step
+                                    would also patch this save's own persisted entities (not just
+                                    patch.dat) for whichever saves are checked here.
+                                -->
+                                <DataGridTemplateColumn Header="Deploy" Width="66" CanUserResize="False">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate>
+                                            <CheckBox IsChecked="{Binding IsSelectedForDeploy, UpdateSourceTrigger=PropertyChanged}"
+                                                      HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                      ToolTip="Also apply mod changes to this save's own persisted entities when deploying, not just to patch.dat. Not wired up yet - this is a placeholder for that." />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+
+                        <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="Transparent" />
+
+                        <!-- ==================== Details sidebar ==================== -->
+                        <Border Grid.Column="2" BorderBrush="#DDD" BorderThickness="1,0,0,0" Padding="12,0,0,0">
+                            <DockPanel>
+                                <TextBlock DockPanel.Dock="Top" Text="Pick a save to see its details." Foreground="#888"
+                                           Visibility="{Binding NoSelectedSave, Converter={StaticResource BoolToVis}}" />
+
+                                <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelectedSave, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding SelectedSave.FileName}" FontWeight="Bold" FontSize="14"
+                                               TextWrapping="Wrap" Margin="0,0,0,8" />
+
+                                    <!-- Every known header field - see reverse/dunia/savegame_format.md
+                                         for what each one actually is. -->
+                                    <Grid Margin="0,0,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="Auto" MinWidth="90" />
+                                            <ColumnDefinition Width="*" />
+                                        </Grid.ColumnDefinitions>
+                                        <Grid.RowDefinitions>
+                                            <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                                            <RowDefinition /><RowDefinition /><RowDefinition />
+                                        </Grid.RowDefinitions>
+
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="World" Foreground="#777" />
+                                        <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedSave.WorldName}" TextWrapping="Wrap" />
+
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Player" Foreground="#777" />
+                                        <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedSave.PlayerName}" TextWrapping="Wrap" />
+
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Saved" Foreground="#777" />
+                                        <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedSave.LastWriteTimeText}" TextWrapping="Wrap" />
+
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Thumbnail" Foreground="#777" />
+                                        <TextBlock Grid.Row="3" Grid.Column="1" TextWrapping="Wrap">
+                                            <Run Text="{Binding SelectedSave.Info.ThumbnailWidth, Mode=OneWay}" />
+                                            <Run Text="×" />
+                                            <Run Text="{Binding SelectedSave.Info.ThumbnailHeight, Mode=OneWay}" />
+                                        </TextBlock>
+
+                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Persisted" Foreground="#777" />
+                                        <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedSave.PersistedObjectCountText}" TextWrapping="Wrap" />
+
+                                        <TextBlock Grid.Row="5" Grid.Column="0" Text="DLC" Foreground="#777" />
+                                        <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedSave.DlcText}" TextWrapping="Wrap" />
+
+                                        <TextBlock Grid.Row="6" Grid.Column="0" Text="File" Foreground="#777" />
+                                        <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedSave.Info.FilePath}"
+                                                   TextWrapping="Wrap" FontSize="11" Foreground="#888" />
+                                    </Grid>
+
+                                    <Separator Margin="0,0,0,10" />
+
+                                    <TextBlock Text="{Binding SelectedSaveDetails.StatusText}" Foreground="#666"
+                                               TextWrapping="Wrap" Margin="0,0,0,8" />
+
+                                    <!-- Opens the same tree/property-grid editor tab the Files tab's
+                                         fragments use (XmlEditorTabView) over this save's PersistenceDB
+                                         tree - editable there too, writing straight back into this
+                                         save's own .sav file, see MainWindow.xaml.cs's
+                                         OpenSaveXmlEditorTab. -->
+                                    <Button Content="Open in XML Editor…" HorizontalAlignment="Left" Padding="10,5"
+                                            Margin="0,0,0,10" Click="OpenSaveXmlEditor_Click"
+                                            Visibility="{Binding SelectedSaveDetails.ShowDocument, Converter={StaticResource BoolToVis}}" />
+                                </StackPanel>
+                            </DockPanel>
+                        </Border>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+
+            <!-- ============================= FILES ============================= -->
+            <TabItem Header="Files">
+                <DockPanel Margin="6">
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                        <CheckBox DockPanel.Dock="Left" Margin="0,0,16,0" Content="Show only mod files"
+                                  IsChecked="{Binding OnlyMods}" VerticalAlignment="Center" />
+                        <TextBlock DockPanel.Dock="Left" Text="Filter:" Margin="0,0,6,0" VerticalAlignment="Center" />
+                        <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
+                                 VerticalAlignment="Center" Padding="4,2">
+                            <!--
+                                WPF's TextBox has no native placeholder property, so the hint is faked
+                                the standard way: swap in a VisualBrush of the hint text as the
+                                Background while empty, and revert to the normal one once there's real
+                                content - the default chrome (border, focus outline) is untouched since
+                                Background is the only thing being swapped.
+                            -->
+                            <TextBox.Style>
+                                <Style TargetType="TextBox">
+                                    <Style.Triggers>
+                                        <Trigger Property="Text" Value="">
+                                            <Setter Property="Background">
+                                                <Setter.Value>
+                                                    <VisualBrush AlignmentX="Left" AlignmentY="Center" Stretch="None">
+                                                        <VisualBrush.Visual>
+                                                            <TextBlock Margin="4,0,0,0" Foreground="#999" FontStyle="Italic">
+                                                                <Run Text="Matches any word - narrow by type with " />
+                                                                <Run Text="ext:&lt;type&gt;" FontStyle="Normal" FontFamily="Consolas" />
+                                                            </TextBlock>
+                                                        </VisualBrush.Visual>
+                                                    </VisualBrush>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBox.Style>
+                        </TextBox>
+                    </DockPanel>
+
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="230" MinWidth="160" />
+                        <ColumnDefinition Width="4" />
+                        <ColumnDefinition Width="630" MinWidth="300" />
+                        <ColumnDefinition Width="4" />
+                        <ColumnDefinition Width="*" MinWidth="230" />
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Virtualized: the merged view is >150,000 files. -->
+                    <TreeView x:Name="FolderTree" Grid.Column="0"
+                              ItemsSource="{Binding Roots}"
+                              ItemTemplate="{StaticResource FolderTemplate}"
+                              SelectedItemChanged="FolderTree_SelectedItemChanged"
+                              VirtualizingStackPanel.IsVirtualizing="True"
+                              VirtualizingStackPanel.VirtualizationMode="Recycling"
+                              ScrollViewer.CanContentScroll="True">
+                        <TreeView.Resources>
+                            <!--
+                                Declared here rather than as TreeView.ItemContainerStyle so it applies
+                                at every depth, not just the roots.
+
+                                A single click anywhere on the row expands or collapses the folder, the
+                                way VS Code's explorer does — hunting for the chevron is a needless
+                                precision task when the whole row is a valid target. The default
+                                expander triangle is dropped from the template below, since the folder
+                                emoji already marks a row as expandable and the triangle duplicated it.
+                            -->
+                            <Style TargetType="{x:Type TreeViewItem}">
+                                <EventSetter Event="PreviewMouseLeftButtonDown" Handler="FolderTree_ItemClicked" />
+                                <Setter Property="Padding" Value="2" />
+                                <!-- Round-trips expand/collapse to FolderNode.IsExpanded, so a tree
+                                     rebuild (every edit rebuilds it from scratch) can restore what was
+                                     open instead of collapsing everything back down. -->
+                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                <Setter Property="Template">
+                                    <Setter.Value>
+                                        <ControlTemplate TargetType="{x:Type TreeViewItem}">
+                                            <StackPanel>
+                                                <Border x:Name="Bd"
+                                                        Padding="{TemplateBinding Padding}"
+                                                        Background="{TemplateBinding Background}"
+                                                        BorderBrush="{TemplateBinding BorderBrush}"
+                                                        BorderThickness="{TemplateBinding BorderThickness}"
+                                                        SnapsToDevicePixels="True">
+                                                    <ContentPresenter x:Name="PART_Header"
+                                                                      ContentSource="Header"
+                                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                                                </Border>
+                                                <ItemsPresenter x:Name="ItemsHost" Margin="19,0,0,0" Visibility="Collapsed" />
+                                            </StackPanel>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsExpanded" Value="True">
+                                                    <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible" />
+                                                </Trigger>
+                                                <Trigger Property="IsSelected" Value="True">
+                                                    <Setter TargetName="Bd" Property="Background"
+                                                            Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />
+                                                </Trigger>
+                                                <MultiTrigger>
+                                                    <MultiTrigger.Conditions>
+                                                        <Condition Property="IsSelected" Value="True" />
+                                                        <Condition Property="Selector.IsSelectionActive" Value="True" />
+                                                    </MultiTrigger.Conditions>
+                                                    <Setter TargetName="Bd" Property="Background"
+                                                            Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}" />
+                                                </MultiTrigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Setter.Value>
+                                </Setter>
+                            </Style>
+                        </TreeView.Resources>
+                    </TreeView>
+
+                    <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="Transparent" />
+
+                    <DockPanel Grid.Column="2" Margin="6,0">
+                        <DataGrid x:Name="FileGrid" ItemsSource="{Binding VisibleFiles}"
+                                  SelectionChanged="FileGrid_SelectionChanged"
+                                  AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended"
+                                  GridLinesVisibility="None" HeadersVisibility="Column"
+                                  EnableRowVirtualization="True" EnableColumnVirtualization="True">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Name" Binding="{Binding FileName}" Width="*" />
+                                <DataGridTextColumn Header="Size" Binding="{Binding Size, StringFormat={}{0:N0}}" Width="80" />
+                                <DataGridTextColumn Header="Source" Binding="{Binding SourceName}" Width="110" />
+                                <DataGridTextColumn Header="Hash" Binding="{Binding Hash, StringFormat=X8}" Width="80" />
+                            </DataGrid.Columns>
+                            <!-- Same grey/black convention as the tree (see the note above FolderTemplate):
+                                 grey = untouched base game, black = a mod or the workspace changed it. -->
+                            <DataGrid.RowStyle>
+                                <Style TargetType="DataGridRow">
+                                    <Setter Property="Foreground" Value="Gray" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsModded}" Value="True">
+                                            <Setter Property="Foreground" Value="Black" />
+                                        </DataTrigger>
+                                        <!-- Wins over the IsModded setter above so selected text stays readable on the blue highlight. -->
+                                        <MultiTrigger>
+                                            <MultiTrigger.Conditions>
+                                                <Condition Property="IsSelected" Value="True" />
+                                                <Condition Property="Selector.IsSelectionActive" Value="True" />
+                                            </MultiTrigger.Conditions>
+                                            <Setter Property="Foreground" Value="White" />
+                                        </MultiTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </DataGrid.RowStyle>
+                        </DataGrid>
+                    </DockPanel>
+
+                    <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Stretch" Background="Transparent" />
+
+                    <Border Grid.Column="4" BorderBrush="#DDD" BorderThickness="1,0,0,0" Padding="12,0,0,0">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Bottom" Foreground="#888" TextWrapping="Wrap" FontSize="11"
+                                       Margin="0,10,0,0"
+                                       Text="Replacing a file stages it in your workspace. Nothing reaches the game until you press Deploy all mods on the Mods tab." />
+
+                            <TextBlock DockPanel.Dock="Top" Text="Nothing selected." Foreground="#888"
+                                       Visibility="{Binding NoSelection, Converter={StaticResource BoolToVis}}" />
+
+                            <StackPanel DockPanel.Dock="Top" Visibility="{Binding IsMultiSelection, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding MultiSelectCountText}" FontWeight="Bold" FontSize="14"
+                                           TextWrapping="Wrap" Margin="0,0,0,8" />
+                                <TextBlock Text="{Binding MultiSelectSizeText}" Margin="0,0,0,12" />
+                                <Button Content="Export all…" Click="ExportAll_Click"
+                                        HorizontalAlignment="Left" Padding="8,6" />
+                            </StackPanel>
+
+                            <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="{Binding SelectedFile.FileName}" FontWeight="Bold" FontSize="14"
+                                           TextWrapping="Wrap" Margin="0,0,0,8" />
+
+                                <TextBlock TextWrapping="Wrap" Margin="0,0,0,6">
+                                    <Run Text="{Binding SizeText, Mode=OneWay}" /><Run Text="  •  " /><Run Text="{Binding OriginText, Mode=OneWay}" />
+                                </TextBlock>
+
+                                <DockPanel Margin="0,0,0,6">
+                                    <Button DockPanel.Dock="Right" Content="&#128203;"
+                                            Click="CopyHash_Click" Padding="4,0" MinWidth="0" Margin="6,0,0,0" />
+                                    <TextBlock Text="{Binding HashText}" VerticalAlignment="Center"
+                                               FontFamily="Consolas" TextTrimming="CharacterEllipsis" />
+                                </DockPanel>
+
+                                <DockPanel Margin="0,0,0,6">
+                                    <Button DockPanel.Dock="Right" Content="&#128203;"
+                                            Click="CopyPath_Click" Padding="4,0" MinWidth="0" Margin="6,0,0,0" />
+                                    <TextBlock Text="{Binding PathText}" VerticalAlignment="Top" TextWrapping="Wrap" />
+                                </DockPanel>
+
+                                <TextBlock Text="{Binding ModOrigin}" TextWrapping="Wrap" Margin="0,0,0,6"
+                                           Visibility="{Binding CanRevert, Converter={StaticResource BoolToVis}}" />
+
+                                <TextBlock Text="{Binding NamingNote}" TextWrapping="Wrap" Foreground="#888"
+                                           FontSize="11" Margin="0,0,0,6"
+                                           Visibility="{Binding HasNamingNote, Converter={StaticResource BoolToVis}}" />
+
+                                <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
+                                    <Button Content="Export…" Click="Export_Click" Margin="0,0,6,0" Padding="8,6" />
+                                    <Button Content="Export original…" Click="ExportOriginal_Click" Margin="0,0,6,0" Padding="8,6"
+                                            Visibility="{Binding HasOriginal, Converter={StaticResource BoolToVis}}" />
+                                    <Button Content="Replace…" Click="Replace_Click" Margin="0,0,6,0" Padding="8,6" />
+                                    <Button Content="Revert" Click="Revert_Click" Padding="8,6"
+                                            IsEnabled="{Binding CanRevert}" />
+                                </StackPanel>
+                            </StackPanel>
+
+                            <!-- Filled in by MainWindow.xaml.cs — FileHandlerCatalog picks the view for the selected file's type. -->
+                            <Grid Margin="0,10,0,0">
+                                <ContentControl x:Name="PreviewHost" Visibility="Collapsed" />
+
+                                <!-- Shown instead of PreviewHost when the file's type has no handler. -->
+                                <Border x:Name="NoPreviewPanel" Visibility="Collapsed" Background="#ECECEC">
+                                    <Border BorderBrush="#808080" BorderThickness="1,1,0,0">
+                                        <Border BorderBrush="White" BorderThickness="0,0,1,1" Padding="16">
+                                            <TextBlock Text="No preview available for this file type." Foreground="#666"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       TextAlignment="Center" TextWrapping="Wrap" />
+                                        </Border>
+                                    </Border>
+                                </Border>
+                            </Grid>
+                        </DockPanel>
+                    </Border>
+                    </Grid>
+                </DockPanel>
+            </TabItem>
+        </TabControl>
+    </DockPanel>
+</Window>

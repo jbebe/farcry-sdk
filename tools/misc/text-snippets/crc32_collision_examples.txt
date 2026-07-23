@@ -1,0 +1,23 @@
+```
+	4A724578	levels\ige_map\generated\sdat\sd10_shadow.xbt	scripts\game\barkdata\1436645.bank
+	4AF13E66	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector47.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3800.data.fcb
+	4D869F1B	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector26.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3861.data.fcb
+	4E04EE5B	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector45.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3802.data.fcb
+	6A218B9F	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector33.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3874.data.fcb
+	8C0840DB	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector36.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3871.data.fcb
+	8F8A319B	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector55.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3812.data.fcb
+	63CA2BE5	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector37.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3870.data.fcb
+	64BD8A98	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector56.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3811.data.fcb
+	88FD90E6	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector34.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3873.data.fcb
+	431A9E1C	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector43.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3804.data.fcb
+	673FFBD8	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector35.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3872.data.fcb
+	49734F26	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector24.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3863.data.fcb
+	60485AA5	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector54.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3813.data.fcb
+	1668579A	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector65.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3822.data.fcb
+	A1C68565	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector44.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3803.data.fcb
+	A6B12418	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector25.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3862.data.fcb
+	A5335558	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector46.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3801.data.fcb
+	ABAF545F	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector23.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3864.data.fcb
+	D0912927	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector14.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3853.data.fcb
+	F9AA3CA4	levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector64.data.fcb	levels\w2_e_5\generated\worldsectors\landmarknear3823.data.fcb
+```
