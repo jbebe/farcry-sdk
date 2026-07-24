@@ -16,8 +16,9 @@ running inside the game process — and the mods it produces are ordinary patch 
 with people who don't use this tool at all.
 
 Source: [`tools/JackAll`](https://github.com/jbebe/farcry-sdk/tree/main/tools/JackAll) — see its
-[README](https://github.com/jbebe/farcry-sdk/tree/main/tools/JackAll) for build/test instructions.
-For the archive format it reads and writes, see [.fat/.dat — Archive
+[README](https://github.com/jbebe/farcry-sdk/tree/main/tools/JackAll) for build/test instructions
+and its [CHANGELOG](https://github.com/jbebe/farcry-sdk/blob/main/tools/JackAll/CHANGELOG.md) for
+version history. For the archive format it reads and writes, see [.fat/.dat — Archive
 Loading](/docs/file-formats/archives-fat-dat).
 
 ## What it can do
