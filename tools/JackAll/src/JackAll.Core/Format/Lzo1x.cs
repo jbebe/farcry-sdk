@@ -219,10 +219,23 @@ public static class Lzo1x
     }
 
     /// <summary>
-    /// Copies <paramref name="count"/> bytes from <paramref name="back"/> bytes earlier in the
-    /// output. Deliberately byte-at-a-time: LZO matches routinely overlap the write cursor — that
-    /// is how it encodes runs — so a bulk copy would read bytes that haven't been written yet.
+    /// Copies <paramref name="count"/> bytes from <paramref name="back"/> bytes earlier in the output.
     /// </summary>
+    /// <remarks>
+    /// Two genuinely different cases, not just a style choice: when <paramref name="back"/> &gt;=
+    /// <paramref name="count"/>, the source range ends at or before <paramref name="op"/> - it can't
+    /// overlap the destination at all, so a single bulk <see cref="Span{T}.CopyTo"/> (a vectorized
+    /// <see cref="Buffer.Memmove"/>, not a per-byte bounds-checked loop) is both correct and, per
+    /// perf.txt, the dominant cost in this whole decoder before this fast path existed - one profiled
+    /// trace spent 10s+ of self time purely in <c>Span&lt;T&gt;.get_Item</c> inside this loop.
+    ///
+    /// When <paramref name="back"/> &lt; <paramref name="count"/>, the ranges genuinely overlap - this
+    /// is how LZO encodes a repeating run (e.g. <c>back: 1</c> repeats the immediately preceding byte
+    /// <paramref name="count"/> times). A bulk copy is wrong there, not just unsafe: <c>Memmove</c>'s
+    /// overlap handling preserves the *original* bytes' relative order (like shifting a buffer), which
+    /// is a different result than each new byte re-reading the one just written a moment ago. That case
+    /// must stay a forward byte-at-a-time loop, deliberately - do not "simplify" it into a bulk copy.
+    /// </remarks>
     private static void CopyMatch(Span<byte> output, ref int op, int back, int count)
     {
         int src = op - back;
@@ -231,6 +244,14 @@ public static class Lzo1x
             throw new InvalidDataException(
                 "Corrupt LZO stream: back-reference points before the start of the output.");
         }
+
+        if (back >= count)
+        {
+            output.Slice(src, count).CopyTo(output.Slice(op, count));
+            op += count;
+            return;
+        }
+
         for (int i = 0; i < count; i++)
         {
             output[op++] = output[src++];
