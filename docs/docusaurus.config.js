@@ -93,6 +93,11 @@ const config = {
             label: 'Tools',
           },
           {
+            to: '/jackall',
+            position: 'left',
+            label: 'JackAll',
+          },
+          {
             to: '/todos',
             position: 'left',
             label: 'Todos',

@@ -10,13 +10,14 @@ for this project, plus every third-party tool kept around for reference or as a 
 
 ## Built for this project
 
-- **[JackAll](https://github.com/jbebe/farcry-sdk/tree/main/tools/JackAll)** — a full mod manager
+- **[JackAll](/jackall)** — a full mod manager
   for Far Cry 2. Presents every game archive as one browsable filesystem, lets you stage edits or
   drop in existing community mod zips, and compiles the result into a real `patch.dat`/`patch.fat`
   that the stock engine loads directly — no DLL injection, no modified executable. Builds are
   reproducible (rebuilding twice yields byte-identical output) and tested against the real shipped
-  archives rather than fixtures. See [.fat/.dat — Archive Loading](/docs/file-formats/archives-fat-dat)
-  for the format background.
+  archives rather than fixtures. See the [JackAll page](/jackall) for the full feature list and
+  usage tutorial, and [.fat/.dat — Archive Loading](/docs/file-formats/archives-fat-dat) for the
+  format background.
 - **[compact_export.py](https://github.com/jbebe/farcry-sdk/tree/main/tools/misc/DiscordChatExporter)**
   — post-processes raw JSON exports from the third-party [DiscordChatExporter](https://github.com/Tyrrrz/DiscordChatExporter)
   into a compact form usable for research, so full modding-Discord history can be searched/grepped

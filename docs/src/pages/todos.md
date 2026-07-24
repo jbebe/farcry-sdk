@@ -5,25 +5,20 @@ description: Open tasks across the repository, docs, JackAll, and mod work.
 
 # Todos
 
-A running task list across the whole project. Check items off as they're done — this page is
-plain markdown, edit it directly at `docs/src/pages/todos.md`.
+A running task list across the whole project.
 
-## Repository todos
-
-*nothing*
-
-## Docs todos
+## Repository
 
 *nothing*
 
-## JackAll/Tools todos
+## Docs
+
+- [ ] Improve JackAll docs
+
+## JackAll/Tools
 
 - [ ] Pipe the converters to the CLI tool to please the die-hard modders
-- Finalize UX before release
-  - [ ] Verify mods tab
-  - [ ] Verify saves tab
-  - [ ] Verify files tab
 
-## Mod todos
+## Mod
 
-*nothing*
+- [ ] Create our first mod because that was the original plan
