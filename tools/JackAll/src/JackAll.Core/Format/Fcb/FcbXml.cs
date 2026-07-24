@@ -13,8 +13,8 @@ namespace JackAll.Core.Format.Fcb;
 /// </summary>
 public sealed record FcbXmlExport(string IndexXml, IReadOnlyDictionary<string, string> ExternalFiles);
 
-/// <summary>One fragment's <see cref="FcbXml.ToXml"/>-assigned id, paired with the byte length of
-/// its rendered XML — see <see cref="FcbXml.ListFragmentsWithSize"/>.</summary>
+/// <summary>One fragment's <see cref="FcbXml.ToXml"/>-assigned id, paired with its raw binary size —
+/// see <see cref="FcbXml.ListFragmentsWithSize"/>.</summary>
 public readonly record struct FcbFragmentInfo(string Id, long Size);
 
 /// <summary>
@@ -93,13 +93,17 @@ public static class FcbXml
         => TryGetFragmentIds(root, out IReadOnlyList<string> ids) ? ids : [];
 
     /// <summary>
-    /// Every fragment id <see cref="ToXml"/> would produce, paired with the byte length (UTF-8, no
-    /// BOM — matching exactly what <see cref="ExtractFragment"/>'s callers actually return) of its
-    /// rendered XML. Unlike <see cref="ListFragmentIds"/>, this needs <see cref="FcbClassDefinitions"/>
-    /// and does the full per-child render, so it costs what <see cref="ToXml"/> costs — worth it once
-    /// (and worth caching), not worth doing just to decide whether something splits.
+    /// Every fragment id <see cref="ToXml"/> would produce, paired with that child's raw on-disk byte
+    /// size as reported by <see cref="FcbDocument.DeserializeWithChildSizes"/> — not the rendered XML a
+    /// mod override actually edits/stores, and not even a re-encoded size; the real number of bytes
+    /// that child occupied in the file this <paramref name="root"/> came from (as little as 5 for an
+    /// object-level backreference - see that method's remarks). A display number for the file browser's
+    /// size column, nothing more (see <c>GameVfs</c>): unlike a full per-child XML render, reading it
+    /// off the decode that already had to happen costs nothing extra, where the old XML-rendering
+    /// approach used to be about half of a cold <c>GameVfs.MergeFragments</c> pass (see perf.txt) for a
+    /// number nobody was relying on for anything but display.
     /// </summary>
-    public static IReadOnlyList<FcbFragmentInfo> ListFragmentsWithSize(FcbObject root, FcbClassDefinitions defs)
+    public static IReadOnlyList<FcbFragmentInfo> ListFragmentsWithSize(FcbObject root, IReadOnlyList<long> childByteSizes)
     {
         if (!TryGetFragmentIds(root, out IReadOnlyList<string> ids))
         {
@@ -109,9 +113,7 @@ public static class FcbXml
         var result = new List<FcbFragmentInfo>(ids.Count);
         for (int i = 0; i < ids.Count; i++)
         {
-            (XElement el, _) = WriteObject(root.Children[i], defs);
-            long size = Encoding.UTF8.GetByteCount(Render(el));
-            result.Add(new FcbFragmentInfo(ids[i], size));
+            result.Add(new FcbFragmentInfo(ids[i], childByteSizes[i]));
         }
         return result;
     }

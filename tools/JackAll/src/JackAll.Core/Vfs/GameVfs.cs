@@ -644,7 +644,7 @@ public sealed class GameVfs : IDisposable
     /// been seen) or a `.fcb` currently overridden by a mod (including living in the volatile
     /// `patch.dat`), whose structure isn't a fixed fact about the game and so is never written to the
     /// on-disk <see cref="_cache"/>. It's still worth the full
-    /// <see cref="FcbXml.ListFragmentsWithSize"/> render (accurate sizes, not just
+    /// <see cref="FcbXml.ListFragmentsWithSize"/> pass (accurate sizes, not just
     /// <see cref="FcbXml.ListFragmentIds"/>) even for a non-cacheable entry: the in-memory
     /// <see cref="_fragmentMemo"/> already keeps this from being redone on every call — it's correctly
     /// invalidated only when that hash's winning source actually changes (kind or name), which is
@@ -657,8 +657,8 @@ public sealed class GameVfs : IDisposable
         IReadOnlyList<FcbFragmentInfo> fragments;
         try
         {
-            FcbObject root = FcbDocument.Deserialize(ReadFromSource(container));
-            fragments = FcbXml.ListFragmentsWithSize(root, _fcbDefinitions);
+            (FcbObject root, IReadOnlyList<long> childByteSizes) = FcbDocument.DeserializeWithChildSizes(ReadFromSource(container));
+            fragments = FcbXml.ListFragmentsWithSize(root, childByteSizes);
         }
         catch
         {

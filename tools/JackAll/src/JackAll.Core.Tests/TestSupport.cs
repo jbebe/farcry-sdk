@@ -20,6 +20,18 @@ internal static class TestSupport
         return NameDatabase.Load(Path.Combine(dir!, "assets", "fc2.hashlist"));
     }
 
+    /// <summary>What <paramref name="obj"/> would serialize to on its own, fully expanded (no
+    /// backreference dedup - <see cref="FcbDocument.Serialize"/> never emits it). Reuses the public
+    /// <see cref="FcbDocument.Serialize"/>/<see cref="FcbDocument.Deserialize"/> pair rather than a
+    /// dedicated size-computing method in <see cref="FcbDocument"/> itself, since this is only ever
+    /// needed as a test oracle - production code gets a fragment's real on-disk size straight off
+    /// <see cref="FcbDocument.DeserializeWithChildSizes"/> instead, which this exists to check against.
+    /// 16 is the fixed "FCbn" file header's size (4-byte signature + 2-byte version + 2-byte flags +
+    /// two 4-byte counts - see <see cref="FcbDocument"/>'s own remarks); <c>Serialize</c> always writes
+    /// it once per call, so it has to be subtracted back out to get just <paramref name="obj"/>'s own
+    /// bytes.</summary>
+    public static long FullyExpandedFcbSize(FcbObject obj) => FcbDocument.Serialize(obj).Length - 16;
+
     /// <summary>Sets one value on the child at <paramref name="childIndex"/>, leaving every other
     /// child (and the fragment's own top-level values) byte-for-byte untouched — used by the
     /// Milestone 3 merge tests (docs/design/fcb-fragment-overlays.md) to build two mods' edits that
