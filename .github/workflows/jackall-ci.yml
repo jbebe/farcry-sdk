@@ -1,0 +1,41 @@
+name: JackAll build and test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/JackAll/**'
+      - '.github/workflows/jackall-ci.yml'
+  pull_request:
+    paths:
+      - 'tools/JackAll/**'
+      - '.github/workflows/jackall-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    # net10.0-windows (JackAll.App, WPF) only builds on Windows.
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tools/JackAll
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Restore
+        run: dotnet restore JackAll.slnx
+
+      - name: Build
+        run: dotnet build JackAll.slnx --configuration Release --no-restore
+
+      - name: Test
+        # Only JackAll.Core.Tests has tests; App/Cli/Core are exercised by the build above.
+        # Tests that need a real Far Cry 2 install or the (gitignored) archive fixtures no-op
+        # gracefully when they're absent, which is always the case on this runner.
+        run: dotnet test src/JackAll.Core.Tests/JackAll.Core.Tests.csproj --configuration Release --no-build
