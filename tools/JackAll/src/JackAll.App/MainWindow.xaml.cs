@@ -272,7 +272,7 @@ public partial class MainWindow : Window
 
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
-        if (GameInstall.TryOpen(_vm.Config.GamePath, out _) is null && !PromptForGameFolder())
+        if (GameInstall.TryOpen(_vm.Config.GamePath, out _) is null && !await PromptForGameFolderAsync())
         {
             Close();
             return;
@@ -283,20 +283,15 @@ public partial class MainWindow : Window
         _ = _vm.LoadSavesAsync();
 
         await _vm.InitializeAsync();
-
-        if (_vm.ArchiveHashMismatches.Count > 0)
-        {
-            Warn("Some of this install's game files don't match the known hashes for a clean, " +
-                 "Steam-patched-to-1.03 Far Cry 2:\n\n" +
-                 string.Join('\n', _vm.ArchiveHashMismatches) +
-                 "\n\nThis usually means a different game version, a corrupted download, or files " +
-                 "already modified by something else. JackAll will still work, but its \"vanilla\" " +
-                 "baseline may not be what you expect - verifying game files in Steam is the safest fix.");
-        }
     }
 
-    /// <summary>First run: find the game, or there is nothing to manage.</summary>
-    private bool PromptForGameFolder()
+    /// <summary>First run: find the game, or there is nothing to manage. Also the one and only place
+    /// the vanilla-hash check (<see cref="MainViewModel.CheckVanillaHashesAsync"/>) runs - this is the
+    /// one moment the folder's identity actually changes, so it's the only moment worth re-verifying
+    /// its archives; an already-configured install's files can't change out from under it between one
+    /// launch and the next, so <see cref="MainViewModel.InitializeAsync"/> no longer re-hashes them
+    /// itself every time.</summary>
+    private async Task<bool> PromptForGameFolderAsync()
     {
         while (true)
         {
@@ -311,10 +306,22 @@ public partial class MainWindow : Window
                 return false;
             }
 
-            if (GameInstall.TryOpen(dialog.FolderName, out string error) is not null)
+            if (GameInstall.TryOpen(dialog.FolderName, out string error) is { } install)
             {
                 _vm.Config.GamePath = dialog.FolderName;
                 _vm.Config.Save();
+
+                await _vm.CheckVanillaHashesAsync(install);
+                if (_vm.ArchiveHashMismatches.Count > 0)
+                {
+                    Warn("Some of this install's game files don't match the known hashes for a clean, " +
+                         "Steam-patched-to-1.03 Far Cry 2:\n\n" +
+                         string.Join('\n', _vm.ArchiveHashMismatches) +
+                         "\n\nThis usually means a different game version, a corrupted download, or files " +
+                         "already modified by something else. JackAll will still work, but its \"vanilla\" " +
+                         "baseline may not be what you expect - verifying game files in Steam is the safest fix.");
+                }
+
                 return true;
             }
 
