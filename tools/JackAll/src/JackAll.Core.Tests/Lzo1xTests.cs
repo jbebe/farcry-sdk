@@ -8,6 +8,7 @@ namespace JackAll.Core.Tests;
 /// the length the .fat index independently recorded. A decoder with a bit-level bug does not
 /// survive that many real streams agreeing on their output size.
 /// </summary>
+[Trait("Category", "RequiresFixture")]
 public class Lzo1xTests
 {
     private const string FixturesDir = "Fixtures/Patch";

@@ -56,6 +56,7 @@ public class GameCacheTests : IDisposable
     // ------------------------------------------------------------------ type section
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void A_warm_cache_yields_the_identical_merged_view_and_skips_the_header_reads()
     {
         string sandbox = Path.Combine(Path.GetTempPath(), "jackall-cache-install", Guid.NewGuid().ToString("N"));
@@ -108,6 +109,7 @@ public class GameCacheTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void Saving_over_an_existing_cache_leaves_no_temp_file_behind()
     {
         string sandbox = Path.Combine(Path.GetTempPath(), "jackall-cache-install", Guid.NewGuid().ToString("N"));
@@ -181,6 +183,7 @@ public class GameCacheTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void A_warm_cache_yields_identical_fragment_rows_to_a_cold_decode()
     {
         // A real install has tens of thousands of files across every archive, far more than this

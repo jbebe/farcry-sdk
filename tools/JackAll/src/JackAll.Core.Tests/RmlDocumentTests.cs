@@ -16,6 +16,7 @@ public class RmlDocumentTests
     private const string FixturesDir = "Fixtures/Rml";
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void The_fixture_files_were_actually_found()
         => Assert.True(
             Directory.Exists(FixturesDir) && Directory.EnumerateFiles(FixturesDir, "*.rml").Any(),
@@ -38,6 +39,7 @@ public class RmlDocumentTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void Reserializing_a_shipped_rml_reproduces_it_byte_for_byte(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -50,6 +52,7 @@ public class RmlDocumentTests
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void Decoding_the_jungle_dlc_manifest_produces_the_expected_content()
     {
         byte[] original = File.ReadAllBytes(Path.Combine(FixturesDir, "dlc_jungle_toc.rml"));
@@ -79,6 +82,7 @@ public class RmlDocumentTests
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void Reserializing_the_real_oasisstrings_rml_reproduces_it_byte_for_byte()
     {
         string? dataDir = FindDataDir();

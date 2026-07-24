@@ -32,6 +32,7 @@ public class XbtTextureTests
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void The_sample_files_were_actually_found()
     {
         Assert.True(
@@ -42,6 +43,7 @@ public class XbtTextureTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void Splitting_then_combining_a_shipped_xbt_reproduces_it_byte_for_byte(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -56,6 +58,7 @@ public class XbtTextureTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void The_dds_payload_starts_with_a_real_dds_signature(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -67,6 +70,7 @@ public class XbtTextureTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void Header_survives_an_xml_round_trip(string path)
     {
         if (string.IsNullOrEmpty(path)) return;

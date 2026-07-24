@@ -35,6 +35,7 @@ public class FcbDocumentTests
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void The_fixture_files_were_actually_found()
         => Assert.True(
             Directory.Exists(FixturesDir) && Directory.EnumerateFiles(FixturesDir, "*.fcb").Any(),
@@ -42,6 +43,7 @@ public class FcbDocumentTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void Deserializing_a_real_shipped_fcb_produces_the_expected_root_shape(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -61,6 +63,7 @@ public class FcbDocumentTests
     /// </summary>
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void The_headers_object_count_matches_the_number_of_distinct_parsed_objects(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -78,6 +81,7 @@ public class FcbDocumentTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void Deserializing_then_serializing_a_real_shipped_fcb_reproduces_the_same_tree(string path)
     {
         if (string.IsNullOrEmpty(path)) return;

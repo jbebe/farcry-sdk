@@ -7,6 +7,7 @@ namespace JackAll.Core.Tests;
 /// byte-for-byte identical - the strongest available check that <see cref="FcbValueCodec"/>'s byte
 /// layouts actually match <see cref="FcbDocument"/>'s binary format, not just each other.
 /// </summary>
+[Trait("Category", "RequiresFixture")]
 public class FcbValueCodecTests
 {
     private const string FixturesDir = "Fixtures/Fcb";

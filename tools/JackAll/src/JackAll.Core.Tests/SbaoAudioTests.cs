@@ -38,6 +38,7 @@ public class SbaoAudioTests
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void The_fixture_files_were_actually_found()
         => Assert.True(
             Directory.Exists(FixturesDir) && Directory.EnumerateFiles(FixturesDir, "*.sbao").Any(),
@@ -45,6 +46,7 @@ public class SbaoAudioTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void Splitting_then_combining_a_real_shipped_sbao_reproduces_the_original_bytes(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -59,6 +61,7 @@ public class SbaoAudioTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void TryReadVorbisId_reads_the_real_sample_rate_and_channels(string path)
     {
         if (string.IsNullOrEmpty(path)) return;

@@ -51,12 +51,14 @@ public class LegacyPatchImporterTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void The_fixture_files_were_actually_found()
         => Assert.True(
             File.Exists(Path.Combine(FixturesDir, "patch.fat")) && File.Exists(Path.Combine(FixturesDir, "patch.dat")),
             $"{FixturesDir} had no patch.fat/patch.dat, so every test in this class silently no-opped.");
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void Only_the_whole_file_and_fragment_changes_survive_the_import()
     {
         if (_legacySourceInstall is null || _cleanInstall is null) return;

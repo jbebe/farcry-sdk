@@ -13,6 +13,7 @@ public class MgbHeaderTests
     private const string FixturesDir = "Fixtures/Patch";
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void Decodes_a_real_mgb_files_header_and_type_table()
     {
         string fatPath = Path.Combine(FixturesDir, "patch.fat");

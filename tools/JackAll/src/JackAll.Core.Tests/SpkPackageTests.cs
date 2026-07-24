@@ -35,6 +35,7 @@ public class SpkPackageTests
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void The_sample_files_were_actually_found()
     {
         Assert.True(
@@ -45,6 +46,7 @@ public class SpkPackageTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void A_shipped_spk_parses_with_at_least_one_record(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -56,6 +58,7 @@ public class SpkPackageTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void Every_record_payload_is_fully_consumed_within_the_file(string path)
     {
         if (string.IsNullOrEmpty(path)) return;

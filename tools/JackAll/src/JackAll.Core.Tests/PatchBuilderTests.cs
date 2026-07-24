@@ -15,6 +15,7 @@ namespace JackAll.Core.Tests;
 /// the output depends only on the vanilla backup and the enabled layers, never on what is currently
 /// sitting in patch.dat.
 /// </summary>
+[Trait("Category", "RequiresFixture")]
 public class PatchBuilderTests : IDisposable
 {
     private const string FixturesDir = "Fixtures/Patch";

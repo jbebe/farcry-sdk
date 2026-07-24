@@ -5,6 +5,7 @@ using Xunit.Abstractions;
 namespace JackAll.Core.Tests;
 
 /// <summary>Throwaway diagnostic over a folder of real .mgb files - not part of the real suite.</summary>
+[Trait("Category", "RequiresFixture")]
 public class MgbSurveyTests(ITestOutputHelper output)
 {
     [Fact]

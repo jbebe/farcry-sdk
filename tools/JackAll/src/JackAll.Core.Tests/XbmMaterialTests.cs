@@ -34,6 +34,7 @@ public class XbmMaterialTests
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void The_sample_files_were_actually_found()
     {
         Assert.True(
@@ -44,6 +45,7 @@ public class XbmMaterialTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void A_shipped_xbm_parses_with_a_non_empty_name_and_template(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -56,6 +58,7 @@ public class XbmMaterialTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void Every_texture_slot_points_at_an_xbt(string path)
     {
         if (string.IsNullOrEmpty(path)) return;

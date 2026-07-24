@@ -37,6 +37,7 @@ public class FcbXmlTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void A_real_shipped_fcb_converts_to_xml_and_back_to_the_same_tree(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -63,6 +64,7 @@ public class FcbXmlTests
     /// </summary>
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void Every_real_Rml_typed_value_decodes_to_nested_xml_not_hex(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -86,6 +88,7 @@ public class FcbXmlTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void Every_entitylibrary_fixture_splits_into_at_least_one_external_file(string path)
     {
         // All 5 real fixtures share the EntityLibrary-of-groups root shape (confirmed separately in
@@ -101,6 +104,7 @@ public class FcbXmlTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void ListFragmentIds_matches_ToXmls_external_file_names(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -115,6 +119,7 @@ public class FcbXmlTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void ExtractFragment_reproduces_the_same_content_ToXml_put_in_that_external_file(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
@@ -135,6 +140,7 @@ public class FcbXmlTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
     public void ListFragmentsWithSize_reports_each_childs_real_on_disk_size(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
