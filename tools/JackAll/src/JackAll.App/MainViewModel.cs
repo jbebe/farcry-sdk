@@ -156,7 +156,6 @@ public sealed class SaveRow(SaveGameInfo info)
 public sealed class MainViewModel : INotifyPropertyChanged
 {
     private GameVfs? _vfs;
-    private Lazy<FcbStringCorpus>? _entityLibraryCorpus;
     private GameCache _cache = new();
     private NameDatabase? _names;
     private readonly Dictionary<string, FolderNode> _folderIndex = new(StringComparer.OrdinalIgnoreCase);
@@ -218,7 +217,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasSelectedSave));
             OnPropertyChanged(nameof(NoSelectedSave));
-            SelectedSaveDetails = value is null ? null : new SaveDetailsViewModel(value, GetEntityLibraryCorpus);
+            SelectedSaveDetails = value is null ? null : new SaveDetailsViewModel(value);
         }
     }
 
@@ -631,53 +630,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
         BuildTree();
         Status = $"{vfs.Files.Count:N0} files across {vfs.Archives.Count} archives"
                + $"  •  {vfs.UnnamedCount:N0} with unknown names";
-    }
-
-    /// <summary>
-    /// The reverse hash -&gt; string dictionary <see cref="SaveGames.SaveGameReferenceResolver"/> resolves
-    /// a selected save's remaining hashes against - built once per session, on first use, and cached
-    /// (see <see cref="_entityLibraryCorpus"/>): harvesting is a real cost (tens of thousands of
-    /// strings across several multi-MB files), and the entitylibrary set essentially never changes
-    /// mid-session. Empty (not null) before <see cref="_vfs"/> is loaded, so a save opened before the
-    /// game install finishes indexing just shows no extra resolutions yet rather than failing.
-    /// </summary>
-    private FcbStringCorpus GetEntityLibraryCorpus()
-    {
-        if (_vfs is not { } vfs)
-        {
-            return new FcbStringCorpus();
-        }
-
-        _entityLibraryCorpus ??= new Lazy<FcbStringCorpus>(() => BuildEntityLibraryCorpus(vfs));
-        return _entityLibraryCorpus.Value;
-    }
-
-    /// <summary>Harvests every non-fragment <c>.fcb</c> whose filename contains "entitylibrary" out of
-    /// the merged view - base game, every DLC, and any patch/mod override, exactly as the engine would
-    /// currently see them. See <see cref="SaveGames.SaveGameReferenceResolver"/> for why this specific
-    /// file set is the target.</summary>
-    private static FcbStringCorpus BuildEntityLibraryCorpus(GameVfs vfs)
-    {
-        var corpus = new FcbStringCorpus();
-        foreach (VfsFile file in vfs.Files.Values)
-        {
-            if (file.IsFragment || file.Type.Extension != "fcb"
-                || !file.FileName.Contains("entitylibrary", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            try
-            {
-                FcbObject root = FcbDocument.Deserialize(vfs.Read(file.Hash));
-                corpus.AddTree(root, vfs.Definitions);
-            }
-            catch (InvalidDataException)
-            {
-                // Corrupt/unreadable entry - skip it rather than losing the whole corpus over one file.
-            }
-        }
-        return corpus;
     }
 
     /// <summary>

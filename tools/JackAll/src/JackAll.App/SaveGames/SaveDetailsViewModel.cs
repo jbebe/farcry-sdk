@@ -107,23 +107,13 @@ public sealed class SaveDetailsViewModel : INotifyPropertyChanged
 
     public SaveRow Save { get; }
 
-    private readonly Func<FcbStringCorpus> _resolveEntityLibraryCorpus;
-
     private bool _isLoading = true;
     private string _statusText = "Decoding this save's data…";
     private string? _documentXml;
 
-    /// <param name="resolveEntityLibraryCorpus">
-    /// Supplies the reverse hash -&gt; string dictionary <see cref="SaveGameReferenceResolver"/> uses
-    /// (see that class's remarks) - a delegate rather than the corpus itself so the caller can build it
-    /// lazily/once per session (harvesting it is a real cost) without this view model needing to know
-    /// how or when that happens. Called on the same background thread the rest of <see cref="LoadAsync"/>
-    /// already runs on.
-    /// </param>
-    public SaveDetailsViewModel(SaveRow save, Func<FcbStringCorpus> resolveEntityLibraryCorpus)
+    public SaveDetailsViewModel(SaveRow save)
     {
         Save = save;
-        _resolveEntityLibraryCorpus = resolveEntityLibraryCorpus;
         _ = LoadAsync();
     }
 
@@ -152,8 +142,7 @@ public sealed class SaveDetailsViewModel : INotifyPropertyChanged
         try
         {
             FcbObject root = await Task.Run(() => SaveGameDocument.ReadFcbRoot(Save.Info));
-            string xml = await Task.Run(
-                () => SaveGameXmlRenderer.Render(root, Definitions.Value, _resolveEntityLibraryCorpus()));
+            string xml = await Task.Run(() => SaveGameXmlRenderer.Render(root, Definitions.Value));
             DocumentXml = xml;
             StatusText = "Ready.";
         }

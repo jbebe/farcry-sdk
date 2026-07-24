@@ -45,14 +45,14 @@ namespace JackAll.App.SaveGames;
 /// </remarks>
 internal static class SaveGameXmlRenderer
 {
-    public static string Render(FcbObject root, FcbClassDefinitions entityDefs, FcbStringCorpus refCorpus)
+    public static string Render(FcbObject root, FcbClassDefinitions entityDefs)
     {
         FcbClass rootClass = entityDefs.GetClass(root.TypeHash);
-        XElement el = WriteObject(root, rootClass, refCorpus);
+        XElement el = WriteObject(root, rootClass);
         return new XDocument(el).ToString();
     }
 
-    private static XElement WriteObject(FcbObject obj, FcbClass ownClass, FcbStringCorpus refCorpus)
+    private static XElement WriteObject(FcbObject obj, FcbClass ownClass)
     {
         var el = new XElement("object");
 
@@ -72,18 +72,18 @@ internal static class SaveGameXmlRenderer
 
         foreach ((uint nameHash, byte[] value) in obj.Values)
         {
-            el.Add(WriteValue(nameHash, value, ownClass, refCorpus));
+            el.Add(WriteValue(nameHash, value, ownClass));
         }
 
         foreach (FcbObject child in obj.Children)
         {
-            el.Add(WriteObject(child, ownClass.Resolve(child.TypeHash), refCorpus));
+            el.Add(WriteObject(child, ownClass.Resolve(child.TypeHash)));
         }
 
         return el;
     }
 
-    private static XElement WriteValue(uint nameHash, byte[] value, FcbClass ownClass, FcbStringCorpus refCorpus)
+    private static XElement WriteValue(uint nameHash, byte[] value, FcbClass ownClass)
     {
         // 1) a real, class-scoped entitylibrary member - the same resolution + encoding FcbXml.RenderObject
         //    itself uses for an ordinary .fcb (walks ownClass's own superclass chain).
@@ -119,12 +119,10 @@ internal static class SaveGameXmlRenderer
             el.SetAttributeValue("hash", nameHash.ToString("X8"));
         }
 
-        // 4) content-sniffed guesses for whatever's still opaque. Printable-ASCII+NUL reads as String -
+        // 4) a content-sniffed guess for whatever's still opaque. Printable-ASCII+NUL reads as String -
         //    the same type FcbXml.TryWriteValue itself would produce for a declared String member, so
         //    this still matches the base .fcb shape even though the name/type pairing wasn't declared
-        //    anywhere. A still-BinHex 4-byte payload gets checked against the entitylibrary string corpus
-        //    as a candidate Hash reference - additive only (a `ref` attribute has no equivalent in the
-        //    base .fcb format; there's no declared type to replace the way name replaces hash above).
+        //    anywhere.
         if (SaveGameValueDecoder.TryDecodeReadableString(value, out string text))
         {
             el.SetAttributeValue("type", nameof(FcbMemberType.String));
@@ -134,16 +132,6 @@ internal static class SaveGameXmlRenderer
 
         el.SetAttributeValue("type", nameof(FcbMemberType.BinHex));
         el.Value = Convert.ToHexString(value);
-
-        if (value.Length == 4)
-        {
-            uint asHash = BitConverter.ToUInt32(value, 0);
-            if (SaveGameReferenceResolver.TryResolve(refCorpus, asHash, out string? refName))
-            {
-                el.SetAttributeValue("ref", refName);
-            }
-        }
-
         return el;
     }
 
