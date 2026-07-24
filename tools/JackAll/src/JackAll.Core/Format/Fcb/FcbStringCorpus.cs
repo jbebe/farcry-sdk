@@ -64,11 +64,43 @@ public sealed class FcbStringCorpus
     }
 
     /// <summary>Harvests one already-parsed tree, for a caller that wants to build a corpus from
-    /// something other than a plain directory scan (e.g. files pulled out of the game's VFS).</summary>
-    public void AddTree(FcbObject root, IFcbClassScope scope) => Walk(root, scope);
+    /// something other than a plain directory scan (e.g. files pulled out of the game's VFS). Fresh
+    /// per-tree <paramref name="root"/>-scoped visited set - see <see cref="Walk"/>'s remarks for why
+    /// one is needed at all, and why it doesn't need to survive past this one call.</summary>
+    public void AddTree(FcbObject root, IFcbClassScope scope)
+        => Walk(root, scope, new HashSet<FcbObject>(ReferenceEqualityComparer.Instance));
 
-    private void Walk(FcbObject obj, IFcbClassScope scope)
+    /// <remarks>
+    /// <paramref name="visited"/> guards against re-walking a shared subtree: <see cref="FcbDocument"/>'s
+    /// object-level backreference dedup means the *same* <see cref="FcbObject"/> instance can sit at
+    /// several places in one tree (confirmed directly - see <c>FcbDocumentTests.An_object_level_backreference_returns_the_same_shared_subtree</c>),
+    /// and real shipped files lean on that dedup heavily (one sample balloons 2.5 MiB on disk to ~11 MB
+    /// once fully flattened - see <see cref="FcbDocument"/>'s own remarks). Without this guard, a
+    /// shared subtree referenced N times gets harvested N times over - not just wasted work, but
+    /// multiplicatively wasted if a shared node's own children are themselves shared elsewhere too.
+    /// Reference equality, not content equality: skip only the exact aliased instance, not two
+    /// separately-decoded objects that just happen to look the same.
+    ///
+    /// Scoped per <see cref="AddTree"/> call (one file), not shared across every file this corpus ever
+    /// sees: a backreference only ever aliases within the one <see cref="FcbDocument.Deserialize"/>
+    /// call that produced it (each file gets its own fresh object graph), so nothing outside that one
+    /// tree could ever hit the same instance again - carrying the set further would only cost memory
+    /// for no correctness or performance benefit.
+    ///
+    /// One accepted imprecision: <see cref="FcbClass.Resolve"/> means the *same* shared object could in
+    /// principle resolve to a different declaring class depending on which parent reaches it first
+    /// (nested-class shadowing is rare - see <see cref="FcbClass.Resolve"/>'s remarks - but possible).
+    /// Skipping a re-visit means only the first path's interpretation ever gets harvested. Acceptable
+    /// here: this corpus is already explicitly best-effort (see <see cref="Ambiguous"/>), not a
+    /// from-scratch source of truth.
+    /// </remarks>
+    private void Walk(FcbObject obj, IFcbClassScope scope, HashSet<FcbObject> visited)
     {
+        if (!visited.Add(obj))
+        {
+            return;
+        }
+
         FcbClass ownClass = scope.Resolve(obj.TypeHash);
 
         foreach ((uint nameHash, byte[] value) in obj.Values)
@@ -87,7 +119,7 @@ public sealed class FcbStringCorpus
 
         foreach (FcbObject child in obj.Children)
         {
-            Walk(child, ownClass);
+            Walk(child, ownClass, visited);
         }
     }
 
