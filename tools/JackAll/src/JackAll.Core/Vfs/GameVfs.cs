@@ -493,21 +493,43 @@ public sealed class GameVfs : IDisposable
             }
         }
 
-        var uncached = new Dictionary<uint, IReadOnlyList<FcbFragmentInfo>>();
-        int decoded = 0;
+        // Decoding is the expensive part (an .fcb deserialize each) and every entry is independent, so
+        // fan it out across cores. DecodeFragments is pure - it only reads archive/mod bytes, which is
+        // lock-free (see DuniaArchive/ZipModLayer) - so this needs no shared mutable state. The results
+        // are folded back on this one thread below, keeping the non-thread-safe _cache writes serialized.
+        //
+        // Progress is reported from inside the parallel body, not the fold below: ToArray() blocks
+        // until every item is decoded, so the fold only starts once the expensive phase is already
+        // over - reporting there would leave the bar frozen through the slow part and then jump
+        // straight to done. The counter needs Interlocked since many threads hit it at once; IProgress
+        // is safe to call concurrently (WPF's Progress<T> marshals each post to the UI thread itself).
         const int ReportEvery = 1_000;
-        foreach ((VfsFile c, bool cacheable) in needsDecode)
+        int decodedCount = 0;
+        int total = needsDecode.Count;
+        var decodedResults = needsDecode
+            .AsParallel()
+            .Select(item =>
+            {
+                IReadOnlyList<FcbFragmentInfo> fragments = DecodeFragments(item.Container);
+                int done = Interlocked.Increment(ref decodedCount);
+                if (done % ReportEvery == 0)
+                {
+                    progress?.Report($"Indexing .fcb structure… ({done:N0} / {total:N0})");
+                }
+                return (item.Container, item.Cacheable, Fragments: fragments);
+            })
+            .ToArray();
+
+        var uncached = new Dictionary<uint, IReadOnlyList<FcbFragmentInfo>>();
+        foreach ((VfsFile c, bool cacheable, IReadOnlyList<FcbFragmentInfo> decodedFragments) in decodedResults)
         {
-            IReadOnlyList<FcbFragmentInfo> decodedFragments = DecodeFragments(c, cacheable);
-            if (!cacheable)
+            if (cacheable)
+            {
+                _cache.Set(c.Hash, decodedFragments);
+            }
+            else
             {
                 uncached[c.Hash] = decodedFragments;
-            }
-
-            decoded++;
-            if (decoded % ReportEvery == 0)
-            {
-                progress?.Report($"Indexing .fcb structure… ({decoded:N0} / {needsDecode.Count:N0})");
             }
         }
 
@@ -651,25 +673,23 @@ public sealed class GameVfs : IDisposable
     /// exactly when a mod starts or stops overriding it — so this only ever runs once per real change,
     /// not once per edit. An unreadable/corrupt entry is treated as "doesn't split", matching
     /// <see cref="GameCache.Sniff"/>'s "unreadable -&gt; Unknown" precedent.
+    ///
+    /// Deliberately pure - no <see cref="_cache"/> write here, unlike before parallelization. Callers
+    /// (currently just <see cref="MergeFragments"/>'s decode fan-out) run many of these concurrently
+    /// across cores; the one call site is expected to fold anything that needs writing back into shared
+    /// state (like <c>_cache.Set</c>, which isn't thread-safe) on a single thread afterward.
     /// </summary>
-    private IReadOnlyList<FcbFragmentInfo> DecodeFragments(VfsFile container, bool cacheable)
+    private IReadOnlyList<FcbFragmentInfo> DecodeFragments(VfsFile container)
     {
-        IReadOnlyList<FcbFragmentInfo> fragments;
         try
         {
             (FcbObject root, IReadOnlyList<long> childByteSizes) = FcbDocument.DeserializeWithChildSizes(ReadFromSource(container));
-            fragments = FcbXml.ListFragmentsWithSize(root, childByteSizes);
+            return FcbXml.ListFragmentsWithSize(root, childByteSizes);
         }
         catch
         {
-            fragments = [];
+            return [];
         }
-
-        if (cacheable)
-        {
-            _cache.Set(container.Hash, fragments);
-        }
-        return fragments;
     }
 
     /// <summary>
