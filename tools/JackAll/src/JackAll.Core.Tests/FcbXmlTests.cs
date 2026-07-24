@@ -135,25 +135,25 @@ public class FcbXmlTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
-    public void ListFragmentsWithSize_reports_the_exact_byte_length_ExtractFragment_returns(string path)
+    public void ListFragmentsWithSize_reports_each_childs_real_on_disk_size(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
 
-        FcbClassDefinitions defs = File.Exists(ClassesPath)
-            ? FcbClassDefinitions.Load(ClassesPath)
-            : FcbClassDefinitions.Empty;
-
-        FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
-        IReadOnlyList<FcbFragmentInfo> fragments = FcbXml.ListFragmentsWithSize(original, defs);
+        (FcbObject original, IReadOnlyList<long> childByteSizes) = FcbDocument.DeserializeWithChildSizes(File.ReadAllBytes(path));
+        IReadOnlyList<FcbFragmentInfo> fragments = FcbXml.ListFragmentsWithSize(original, childByteSizes);
 
         Assert.NotEmpty(fragments);
-        foreach (FcbFragmentInfo fragment in fragments)
+        Assert.Equal(original.Children.Count, fragments.Count);
+        for (int i = 0; i < fragments.Count; i++)
         {
-            Assert.True(fragment.Size > 0, $"'{fragment.Id}' reported a size of 0.");
-
-            string? xml = FcbXml.ExtractFragment(original, fragment.Id, defs);
-            Assert.NotNull(xml);
-            Assert.Equal(System.Text.Encoding.UTF8.GetByteCount(xml), fragment.Size);
+            // The real on-disk span can only ever be <= the fully-expanded size (equal unless this
+            // particular child leans on the format's backreference dedup somewhere inside it) - see
+            // TestSupport.FullyExpandedFcbSize's remarks.
+            Assert.True(fragments[i].Size > 0, $"'{fragments[i].Id}' reported a size of 0.");
+            Assert.True(
+                fragments[i].Size <= TestSupport.FullyExpandedFcbSize(original.Children[i]),
+                $"'{fragments[i].Id}' reported {fragments[i].Size} bytes on disk but only " +
+                $"{TestSupport.FullyExpandedFcbSize(original.Children[i])} fully expanded - dedup can only shrink, never grow.");
         }
     }
 

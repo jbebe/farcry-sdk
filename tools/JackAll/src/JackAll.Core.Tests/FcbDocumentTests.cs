@@ -142,6 +142,61 @@ public class FcbDocumentTests
     }
 
     [Fact]
+    public void DeserializeWithChildSizes_matches_the_fully_expanded_size_when_nothing_is_deduped()
+    {
+        // A tree built purely through FcbDocument.Serialize is guaranteed backreference-free (the
+        // writer always emits the fully-expanded form - see class remarks), so the root's own children
+        // should occupy exactly their fully-expanded size on disk, no smaller.
+        var root = new FcbObject { TypeHash = 0xCAFEBABE };
+        var childA = new FcbObject { TypeHash = 0x11111111 };
+        childA.Values.Add(0x00000001, [0x01, 0x02, 0x03]);
+        var childB = new FcbObject { TypeHash = 0x22222222 };
+        childB.Values.Add(0x00000002, Encoding.UTF8.GetBytes("hello\0"));
+        var grandchild = new FcbObject { TypeHash = 0x33333333 };
+        grandchild.Values.Add(0x00000003, [0xFF]);
+        childB.Children.Add(grandchild);
+        root.Children.Add(childA);
+        root.Children.Add(childB);
+
+        (FcbObject reparsed, IReadOnlyList<long> childByteSizes) =
+            FcbDocument.DeserializeWithChildSizes(FcbDocument.Serialize(root));
+
+        Assert.Equal(2, childByteSizes.Count);
+        Assert.Equal(TestSupport.FullyExpandedFcbSize(reparsed.Children[0]), childByteSizes[0]);
+        Assert.Equal(TestSupport.FullyExpandedFcbSize(reparsed.Children[1]), childByteSizes[1]);
+    }
+
+    [Fact]
+    public void DeserializeWithChildSizes_reports_just_the_backreference_marker_size_for_a_shared_child()
+    {
+        // Same shape as An_object_level_backreference_returns_the_same_shared_subtree: root's second
+        // child is a backreference to the first, not its own copy of the bytes.
+        using var body = new MemoryStream();
+        body.WriteByte(0x02);              // root childCount = 2
+        WriteU32(body, 0xAAAAAAAA);         // root TypeHash
+        body.WriteByte(0x00);              // root valueCount = 0
+
+        body.WriteByte(0x00);              // child A: childCount = 0
+        WriteU32(body, 0x11111111);         // child A TypeHash
+        body.WriteByte(0x00);              // child A valueCount = 0
+        // Child A's literal encoding above is 1 + 4 + 1 = 6 bytes.
+
+        body.WriteByte(0xFE);              // child B: backreference marker
+        WriteU32(body, 1);                  // pointer index 1 = child A (index 0 is the root itself)
+        // Child B's on-disk encoding is just the marker + index = 5 bytes, regardless of how big
+        // whatever it points at is.
+
+        byte[] fcb = WrapWithHeader(body.ToArray());
+
+        (FcbObject root, IReadOnlyList<long> childByteSizes) = FcbDocument.DeserializeWithChildSizes(fcb);
+
+        Assert.Equal(2, childByteSizes.Count);
+        Assert.Equal(6, childByteSizes[0]);
+        Assert.Equal(5, childByteSizes[1]);
+        Assert.Same(root.Children[0], root.Children[1]); // still the same shared object either way
+    }
+
+    [Fact]
     public void A_value_level_backward_offset_reuses_an_earlier_values_bytes()
     {
         // Root has two values; the second's size field is a backward byte offset to the first's,
