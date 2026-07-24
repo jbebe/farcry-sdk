@@ -173,13 +173,27 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public FolderModLayer? Workspace { get; private set; }
 
     /// <summary>
-    /// Archives (relative to <c>Data_Win32</c>) whose hash didn't match <see cref="VanillaHashes"/>
-    /// on this session's <see cref="InitializeAsync"/> — empty when everything checked out. Left for
-    /// code-behind to notice and show as a dialog: <see cref="MainViewModel"/> otherwise has no WPF
-    /// dependency, and a warning that matters this much shouldn't ride on <see cref="Status"/>, which
-    /// this same method immediately overwrites a few lines further down.
+    /// Archives (relative to <c>Data_Win32</c>) whose hash didn't match <see cref="VanillaHashes"/>,
+    /// as of the last <see cref="CheckVanillaHashesAsync"/> call — empty when everything checked out.
+    /// Left for code-behind to notice and show as a dialog: <see cref="MainViewModel"/> otherwise has
+    /// no WPF dependency.
     /// </summary>
     public IReadOnlyList<string> ArchiveHashMismatches { get; private set; } = [];
+
+    /// <summary>
+    /// Hashes <paramref name="install"/>'s base archives against the known-good reference set. Meant
+    /// to run once, right when the user picks this game folder (<c>MainWindow.PromptForGameFolder</c>)
+    /// — not on every launch via <see cref="InitializeAsync"/> like it used to: the archives' contents
+    /// can't change out from under an already-configured install between one launch and the next
+    /// (nothing here writes to them), so re-hashing potentially gigabytes of data on every startup was
+    /// pure waste once the folder had already been validated.
+    /// </summary>
+    public async Task CheckVanillaHashesAsync(GameInstall install)
+    {
+        ArchiveHashMismatches = await Task.Run(() =>
+            VanillaHashesProvider.Value.Value
+                .FindMismatches(install.DataDir, install.EnumerateBaseArchiveRelativePaths()));
+    }
 
     public ObservableCollection<ModRow> Mods { get; } = [];
     public ObservableCollection<FolderNode> Roots { get; } = [];
@@ -545,10 +559,6 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
             Install = install;
             Directory.CreateDirectory(AppConfig.WorkspaceDir);
-
-            ArchiveHashMismatches = await Task.Run(() =>
-                VanillaHashesProvider.Value.Value
-                    .FindMismatches(install.DataDir, install.EnumerateBaseArchiveRelativePaths()));
 
             var progress = new Progress<string>(s => Status = s);
             var names = await Task.Run(() => NameDatabase.Load(AppConfig.NamesFile));
