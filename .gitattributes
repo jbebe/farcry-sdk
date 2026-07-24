@@ -4,8 +4,8 @@
 # checkout and back on commit. That silently mangles anything it wrongly guesses is text - and this
 # repo is full of things it would guess wrong about: game archives, .fcb/.xbt/.dat binaries, hash
 # lists, tool executables.
-#
 # core.autocrlf is per-machine, so it cannot be relied on to travel with the repo. This file can.
 # `-text` disables the conversion entirely, for every file, for every clone.
 * -text
 reverse/ghidra/*.gzf filter=lfs diff=lfs merge=lfs -text
+tools/JackAll/assets/ffmpeg.exe filter=lfs diff=lfs merge=lfs -text

@@ -540,7 +540,6 @@
                                 <DataGridTextColumn Header="Name" Binding="{Binding FileName}" Width="*" />
                                 <DataGridTextColumn Header="Size" Binding="{Binding Size, StringFormat={}{0:N0}}" Width="80" />
                                 <DataGridTextColumn Header="Source" Binding="{Binding SourceName}" Width="110" />
-                                <DataGridTextColumn Header="Hash" Binding="{Binding Hash, StringFormat=X8}" Width="80" />
                             </DataGrid.Columns>
                             <!-- Same grey/black convention as the tree (see the note above FolderTemplate):
                                  grey = untouched base game, black = a mod or the workspace changed it. -->
