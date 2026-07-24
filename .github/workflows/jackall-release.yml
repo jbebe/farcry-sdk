@@ -1,0 +1,46 @@
+name: JackAll release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version - used as the git tag and as jackall-{version}.zip'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # net10.0-windows (JackAll.App, WPF) only builds on Windows.
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tools/JackAll
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Publish JackAll.App
+        # Self-contained single-file win-x64 publish (see JackAll.App.csproj's _IsPublishing
+        # group): output is just JackAll.exe plus data\ (hash dictionary, .fcb class config,
+        # bundled ffmpeg.exe) - no loose DLLs, no .deps.json/.runtimeconfig.json, no config.ini
+        # (that's only ever written by the app itself, at first run).
+        run: dotnet publish src/JackAll.App/JackAll.App.csproj --configuration Release --runtime win-x64 --output publish
+
+      - name: Zip release
+        shell: pwsh
+        run: Compress-Archive -Path "publish\*" -DestinationPath "jackall-${{ inputs.version }}.zip"
+
+      - name: Tag and publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag "${{ inputs.version }}"
+          git push origin "${{ inputs.version }}"
+          gh release create "${{ inputs.version }}" "jackall-${{ inputs.version }}.zip" --title "JackAll ${{ inputs.version }}" --generate-notes

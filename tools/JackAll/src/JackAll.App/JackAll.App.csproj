@@ -78,10 +78,19 @@
     <Content Include="Icon.ico" />
   </ItemGroup>
 
-  <!-- Bundled so .sbao import/export/preview works out of the box - no separate ffmpeg install to ask users for. -->
+  <!--
+    Bundled so .sbao import/export/preview works out of the box - no separate ffmpeg install to ask
+    users for. ExcludeFromSingleFile is required despite this being a plain Content item: with
+    IncludeNativeLibrariesForSelfExtract=true (below), the single-file publisher auto-detects any
+    native PE - including a Content-linked one like this, not just actual native dependencies - and
+    bundles it into the exe instead of leaving it on disk. FfmpegAudio shells out to a real file at
+    data\ffmpeg.exe, so it must stay loose; without this, a self-contained publish silently produces
+    an exe with no ffmpeg.exe next to it and every .sbao import/export throws at runtime.
+  -->
   <ItemGroup>
     <Content Include="..\..\assets\ffmpeg.exe" Link="data\ffmpeg.exe">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <ExcludeFromSingleFile>true</ExcludeFromSingleFile>
     </Content>
   </ItemGroup>
 
