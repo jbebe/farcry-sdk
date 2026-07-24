@@ -1,15 +1,23 @@
+using Microsoft.Win32.SafeHandles;
+
 namespace JackAll.Core.Format;
 
 /// <summary>
 /// A mounted .fat/.dat pair, opened read-only. Entry data is read on demand — the .dat files run to
 /// gigabytes and are never loaded whole.
 /// </summary>
+/// <remarks>
+/// <c>_data</c> is a <see cref="SafeFileHandle"/> read via <see cref="RandomAccess"/> rather than a
+/// <see cref="FileStream"/>: a <c>FileStream</c> has one shared position, so reading it from more than
+/// one thread needs a lock around every seek+read pair. <c>RandomAccess.Read</c> takes the offset as a
+/// per-call argument instead of mutating shared state, so concurrent reads against the same handle need
+/// no lock at all — each caller just passes its own <see cref="FatEntry.Offset"/>.
+/// </remarks>
 public sealed class DuniaArchive : IDisposable
 {
-    private readonly FileStream _data;
+    private readonly SafeFileHandle _data;
     private readonly FatArchive _index;
     private readonly Dictionary<uint, FatEntry> _byHash;
-    private readonly Lock _readLock = new();
 
     /// <summary>Archive name as the user sees it, e.g. "worlds" or "patch".</summary>
     public string Name { get; }
@@ -17,7 +25,7 @@ public sealed class DuniaArchive : IDisposable
 
     public IReadOnlyList<FatEntry> Entries => _index.Entries;
 
-    private DuniaArchive(string name, string fatPath, FatArchive index, FileStream data)
+    private DuniaArchive(string name, string fatPath, FatArchive index, SafeFileHandle data)
     {
         Name = name;
         FatPath = fatPath;
@@ -69,8 +77,8 @@ public sealed class DuniaArchive : IDisposable
         // mounted this archive and might outlive a PatchBuilder.Build against the same install.PatchFat
         // MUST re-open it afterward - see GameVfs.ReloadPatchArchive, which JackAll.App's
         // MainViewModel.BuildPatch calls right after a successful build for exactly this reason.
-        var data = new FileStream(
-            datPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete, bufferSize: 64 * 1024);
+        SafeFileHandle data = File.OpenHandle(
+            datPath, FileMode.Open, FileAccess.Read, FileShare.ReadWrite | FileShare.Delete);
 
         return new DuniaArchive(
             Path.GetFileNameWithoutExtension(fatPath), fatPath, index, data);
@@ -106,11 +114,7 @@ public sealed class DuniaArchive : IDisposable
     public byte[] ReadStored(FatEntry entry)
     {
         var buffer = new byte[entry.StoredSize];
-        lock (_readLock)
-        {
-            _data.Seek(entry.Offset, SeekOrigin.Begin);
-            _data.ReadExactly(buffer);
-        }
+        ReadExactlyAt(_data, buffer, entry.Offset);
         return buffer;
     }
 
@@ -127,12 +131,28 @@ public sealed class DuniaArchive : IDisposable
 
         int toRead = Math.Min(count, entry.StoredSize);
         var buffer = new byte[toRead];
-        lock (_readLock)
-        {
-            _data.Seek(entry.Offset, SeekOrigin.Begin);
-            _data.ReadExactly(buffer);
-        }
+        ReadExactlyAt(_data, buffer, entry.Offset);
         return buffer;
+    }
+
+    /// <summary>
+    /// <see cref="RandomAccess.Read(SafeFileHandle, Span{byte}, long)"/> is free to return fewer bytes
+    /// than requested, same as <see cref="Stream.Read(Span{byte})"/> — this loops until
+    /// <paramref name="buffer"/> is full, same contract as <see cref="Stream.ReadExactly(Span{byte})"/>,
+    /// which isn't available on a bare handle.
+    /// </summary>
+    private static void ReadExactlyAt(SafeFileHandle handle, Span<byte> buffer, long offset)
+    {
+        while (buffer.Length > 0)
+        {
+            int read = RandomAccess.Read(handle, buffer, offset);
+            if (read == 0)
+            {
+                throw new EndOfStreamException();
+            }
+            buffer = buffer[read..];
+            offset += read;
+        }
     }
 
     private static byte[] DecompressZlib(byte[] stored, int expectedSize)
