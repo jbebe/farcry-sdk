@@ -18,6 +18,16 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <UseWPF>true</UseWPF>
+    <!--
+      Server GC: the first-launch .fcb pass (GameVfs.MergeFragments) decodes tens of thousands of
+      containers in parallel across every core, and each one allocates. Under the default Workstation
+      GC every gen0 collection is stop-the-world across all those threads, so the parallel decode
+      barely beats the old serial pass. Server GC gives each logical core its own heap and a dedicated
+      background collector, which is what lets that allocation-bound fan-out actually scale.
+      Background collection stays on (default under Server GC) so the UI thread isn't paused during
+      steady-state use.
+    -->
+    <ServerGarbageCollection>true</ServerGarbageCollection>
     <AssemblyName>JackAll</AssemblyName>
     <RootNamespace>JackAll.App</RootNamespace>
     <ApplicationIcon>Icon.ico</ApplicationIcon>
