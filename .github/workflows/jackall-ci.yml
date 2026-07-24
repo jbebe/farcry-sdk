@@ -36,6 +36,8 @@ jobs:
 
       - name: Test
         # Only JackAll.Core.Tests has tests; App/Cli/Core are exercised by the build above.
-        # Tests that need a real Far Cry 2 install or the (gitignored) archive fixtures no-op
-        # gracefully when they're absent, which is always the case on this runner.
-        run: dotnet test src/JackAll.Core.Tests/JackAll.Core.Tests.csproj --configuration Release --no-build
+        # Tests that need a real Far Cry 2 install or the (gitignored) archive fixtures are tagged
+        # [Trait("Category", "RequiresFixture")] and excluded here, since this runner has neither -
+        # some of them assert outright (rather than silently no-op) when their fixture is missing,
+        # specifically to catch a local run silently skipping them.
+        run: dotnet test src/JackAll.Core.Tests/JackAll.Core.Tests.csproj --configuration Release --no-build --filter "Category!=RequiresFixture"

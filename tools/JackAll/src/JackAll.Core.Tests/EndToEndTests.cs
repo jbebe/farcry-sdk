@@ -16,6 +16,7 @@ namespace JackAll.Core.Tests;
 /// every file we did *not* touch must still decompress. That is what proves the builder's
 /// copy-through path doesn't quietly corrupt the 213 LZO-compressed entries it shuffles around.
 /// </summary>
+[Trait("Category", "RequiresFixture")]
 public class EndToEndTests : IDisposable
 {
     private readonly string _sandbox;

@@ -7,6 +7,7 @@ namespace JackAll.Core.Tests;
 /// strongest available check that splicing a fragment override back into a container reproduces
 /// exactly the container the game would have if you replaced that one child by hand and recompiled.
 /// </summary>
+[Trait("Category", "RequiresFixture")]
 public class FcbAssemblerTests
 {
     private const string FixturesDir = "Fixtures/Fcb";

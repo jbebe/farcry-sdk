@@ -14,6 +14,7 @@ namespace JackAll.Core.Tests;
 /// by hand against this exact file's own <c>.mgb.desc</c> sidecar (its <c>&lt;CTextureResource&gt;</c>
 /// dependency list names the same two textures).
 /// </summary>
+[Trait("Category", "RequiresFixture")]
 public class MgbBodyTests
 {
     private const string FixturesDir = "Fixtures/Patch";

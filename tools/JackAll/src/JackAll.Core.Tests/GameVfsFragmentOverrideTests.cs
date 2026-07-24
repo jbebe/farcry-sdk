@@ -14,6 +14,7 @@ namespace JackAll.Core.Tests;
 /// attribution and <see cref="GameVfs.Read"/> — leaving the on-disk build itself to
 /// <c>PatchBuilderTests</c>.
 /// </summary>
+[Trait("Category", "RequiresFixture")]
 public class GameVfsFragmentOverrideTests : IDisposable
 {
     private const string FixturesDir = "Fixtures/Patch";

@@ -51,6 +51,7 @@ public class FatArchiveTests
     private static bool GameNotInstalled(string fatPath) => string.IsNullOrEmpty(fatPath);
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void The_shipped_archives_were_actually_found()
     {
         Assert.True(
@@ -61,6 +62,7 @@ public class FatArchiveTests
 
     [Theory]
     [MemberData(nameof(ShippedFats))]
+    [Trait("Category", "RequiresFixture")]
     public void Reserializing_a_shipped_fat_reproduces_it_byte_for_byte(string fatPath)
     {
         if (GameNotInstalled(fatPath)) return;
@@ -77,6 +79,7 @@ public class FatArchiveTests
 
     [Theory]
     [MemberData(nameof(ShippedFats))]
+    [Trait("Category", "RequiresFixture")]
     public void Shipped_entries_are_sorted_by_hash_and_obey_the_engines_invariants(string fatPath)
     {
         if (GameNotInstalled(fatPath)) return;
