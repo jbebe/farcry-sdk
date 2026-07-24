@@ -104,6 +104,9 @@ in the author's own words:
 
 ### First run
 
+`JackAll.exe` is a single self-contained file — no .NET runtime install required, just unzip and
+run it alongside its `config.ini` and `data\` folder.
+
 Point it at your Far Cry 2 install (needs `bin\FarCry2.exe` and `Data_Win32\patch.fat`) — it writes
 that path into `config.ini` next to the exe and hashes the base archives against a known-good 1.03
 set, flagging anything mismatched before you start. First launch sniffs every unnamed archive
