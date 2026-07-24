@@ -13,6 +13,16 @@ app.Configure(config =>
                 "hash->string dictionary harvested from String-typed values in a directory of .fcb " +
                 "files (e.g. entitylibrary).");
     });
+    config.AddBranch("system", system =>
+    {
+        system.AddBranch("hash", hash =>
+        {
+            hash.AddCommand<HashArchiveItemsCommand>("archiveitems")
+                .WithDescription(
+                    "Rehashes every line of assets/fc2.hashlist in place to HHHHHHHH<TAB>name. Append " +
+                    "new entries as a bare name on their own line, then run this to fill in the hash.");
+        });
+    });
 });
 
 return app.Run(args);

@@ -547,7 +547,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             Directory.CreateDirectory(AppConfig.WorkspaceDir);
 
             ArchiveHashMismatches = await Task.Run(() =>
-                VanillaHashes.Load(AppConfig.VanillaHashesFile)
+                VanillaHashesProvider.Value.Value
                     .FindMismatches(install.DataDir, install.EnumerateBaseArchiveRelativePaths()));
 
             var progress = new Progress<string>(s => Status = s);

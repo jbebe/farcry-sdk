@@ -508,7 +508,7 @@ public partial class MainWindow : Window
         install.RestoreVanilla();
         _vm.ReloadPatchArchive();
 
-        IReadOnlyList<string> patchMismatches = VanillaHashes.Load(AppConfig.VanillaHashesFile)
+        IReadOnlyList<string> patchMismatches = VanillaHashesProvider.Value.Value
             .FindMismatches(install.DataDir, install.PatchArchiveRelativePaths());
         if (patchMismatches.Count > 0)
         {

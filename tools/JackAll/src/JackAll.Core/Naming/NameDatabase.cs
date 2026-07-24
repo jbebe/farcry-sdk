@@ -1,3 +1,4 @@
+using System.Globalization;
 using JackAll.Core.Format;
 
 namespace JackAll.Core.Naming;
@@ -13,6 +14,11 @@ namespace JackAll.Core.Naming;
 /// The list is deliberately FC2-only. CRC32 over a multi-game path list collides in practice — the
 /// FCBConverter authors hit exactly this, and it silently mis-identifies files. First one wins here
 /// too, matching what the engine's own index would do.
+///
+/// The on-disk file is pre-hashed (<c>HHHHHHHH\tname</c>, one entry per line) rather than a bare path
+/// list: computing <see cref="NameHash"/> for every one of its ~180,000 entries on every app launch
+/// used to cost several seconds (see perf.txt). Hashing is now a one-time, explicit step — the
+/// <c>jackall system hash archiveitems</c> CLI command — instead of paid here on every load.
 /// </remarks>
 public sealed class NameDatabase
 {
@@ -35,22 +41,37 @@ public sealed class NameDatabase
         return LoadFrom(File.ReadLines(namesFilePath));
     }
 
-    public static NameDatabase LoadFrom(IEnumerable<string> paths)
+    /// <summary>Parses the pre-hashed <c>HHHHHHHH\tname</c> format the file ships in. Lines that
+    /// aren't a valid "hash, tab, name" triple (blank, a comment, or malformed) are skipped rather
+    /// than failing the whole load.</summary>
+    public static NameDatabase LoadFrom(IEnumerable<string> lines)
     {
         var byHash = new Dictionary<uint, string>();
 
-        foreach (string raw in paths)
+        foreach (string raw in lines)
         {
-            string path = raw.Trim();
-            if (path.Length == 0 || path[0] is ';' or '#')
+            string line = raw.Trim();
+            if (line.Length == 0 || line[0] is ';' or '#')
             {
                 continue;
             }
 
-            string normalized = NameHash.Normalize(path);
-            uint hash = NameHash.Compute(normalized);
+            int tab = line.IndexOf('\t');
+            if (tab < 0)
+            {
+                continue;
+            }
 
-            byHash.TryAdd(hash, normalized);
+            if (!uint.TryParse(line[..tab], NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint hash))
+            {
+                continue;
+            }
+
+            string name = line[(tab + 1)..];
+            if (name.Length > 0)
+            {
+                byHash.TryAdd(hash, name);
+            }
         }
 
         return new NameDatabase(byHash);
