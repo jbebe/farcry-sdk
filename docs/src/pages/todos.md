@@ -17,7 +17,7 @@ A running task list across the whole project.
 
 ## Tools/JackAll
 
-- [ ] Pipe the converters to the CLI tool to please the die-hard modders
+- [x] Pipe the converters to the CLI tool to please the die-hard modders
 
 ## Tools/"dll plugins"
 
