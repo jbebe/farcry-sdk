@@ -1,4 +1,5 @@
 using System.Windows.Controls;
+using JackAll.App.FileHandlers.DepLoad;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.FileHandlers.Mgb;
 using JackAll.App.FileHandlers.Rml;
@@ -40,17 +41,25 @@ public static class FileHandlerCatalog
     /// <paramref name="readOriginal"/> is used by the text and fragment cases, by the fcb case for a
     /// root that doesn't split into sub-files, and by the rml case, to diff a modded file against its
     /// base game version (see <see cref="BuildTextHandler"/>, <see cref="BuildFragmentHandler"/>,
-    /// <see cref="FcbFileHandler"/> and <see cref="RmlFileHandler"/>).
+    /// <see cref="FcbFileHandler"/> and <see cref="RmlFileHandler"/>). <paramref name="resolveByHash"/>
+    /// and <paramref name="navigateTo"/> are only used by the dependency-link case, to look up what a
+    /// link points to and jump the main tree/grid selection to it (see
+    /// <see cref="DependencyLinkHandler"/>).
     /// </summary>
     public static UserControl? CreateView(
         VfsFile file, Func<byte[]> readContent, Action<byte[]> replaceContent, Action openEditor,
-        Func<byte[]?> readOriginal)
+        Func<byte[]?> readOriginal, Func<uint, VfsFile?> resolveByHash, Action<VfsFile> navigateTo)
         => file switch
         {
             // Checked before the plain "xml" case below - a fragment's own VfsFile.Type.Extension is
             // also "xml" (see GameVfs.MergeFragments), but it needs the dedicated editor tab, not the
             // generic read-only text viewer.
             { IsFragment: true } => BuildFragmentHandler(file, readContent, readOriginal, openEditor),
+            // Same precedence reasoning as the fragment case above: a dependency-link row's own Type
+            // is whatever its resolved target's type is (or Unknown), but it always needs its own
+            // "what does this point to" mini view, never the type-based handler for that Type.
+            { IsDependencyLink: true }
+                => new DependencyLinkHandler(file, resolveByHash(file.LinkTargetHash!.Value), navigateTo),
             // "desc" is a known-path .mgb.desc (Path.GetExtension only keeps the last segment);
             // "mgb.desc" is the same file content-sniffed by its "<package>" root (see
             // FileTypeSniffer.IdentifyByContent) when no filelist entry named it. Both are plain XML.
@@ -64,6 +73,12 @@ public static class FileHandlerCatalog
             { Type.Extension: "sdat" } => new SdatFileHandler(file.FileName, readContent()),
             { Type.Extension: "spk" } => new SpkFileHandler(file.FileName, readContent()),
             { Type.Extension: "mgb" } => new MgbFileHandler(file.FileName, readContent()),
+            // Matched by filename suffix, not bare extension - "dat" alone is also the archive-container
+            // extension, so this must not fire for anything else that happens to carry a literal .dat
+            // extension in the VFS content tree. Sibling "_deploadnewparticles.rml" files are unaffected
+            // (routed by their own "rml" extension, checked above).
+            { Type.Extension: "dat" } when file.FileName.EndsWith("_depload.dat", StringComparison.OrdinalIgnoreCase)
+                => new DepLoadFileHandler(file.FileName, readContent()),
             _ => null,
         };
 

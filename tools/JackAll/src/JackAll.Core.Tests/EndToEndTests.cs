@@ -61,7 +61,10 @@ public class EndToEndTests : IDisposable
         Assert.Contains(named, f => f.Path.StartsWith("ui\\", StringComparison.Ordinal));
 
         // And the ones that don't resolve still get a usable identity rather than becoming opaque.
-        foreach (VfsFile unnamed in vfs.Files.Values.Where(f => !f.NameIsKnown))
+        // Dependency-link rows are exempt: they're synthetic references nested under their owning
+        // depload.dat's own path (see GameVfs.MergeDependencyLinks), not real archive/mod entries, so
+        // an unresolved one's identity is legitimately "<owner path>\0x<hash>", not "_unknown\...".
+        foreach (VfsFile unnamed in vfs.Files.Values.Where(f => !f.NameIsKnown && !f.IsDependencyLink))
         {
             Assert.StartsWith("_unknown\\", unnamed.Path, StringComparison.Ordinal);
             Assert.NotEqual(string.Empty, unnamed.Type.Extension);
@@ -82,10 +85,12 @@ public class EndToEndTests : IDisposable
         {
             target = vfs.Files.Values.First(f => f.NameIsKnown && f.Size > 0);
 
-            // Fragment rows are synthetic (one `.fcb` decoded into several virtual entries for the
-            // tree/file view) and were never real archive entries, so they don't belong in a
-            // "nothing else moved in the rebuilt archive" check.
-            before = vfs.Files.Values.Where(f => !f.IsFragment).ToDictionary(f => f.Hash, f => vfs.Read(f.Hash));
+            // Fragment and dependency-link rows are both synthetic (one `.fcb` decoded into several
+            // virtual entries, or one depload.dat decoded into its parent/children entries — see
+            // GameVfs.MergeFragments/MergeDependencyLinks) and were never real archive entries, so they
+            // don't belong in a "nothing else moved in the rebuilt archive" check.
+            before = vfs.Files.Values.Where(f => !f.IsFragment && !f.IsDependencyLink)
+                .ToDictionary(f => f.Hash, f => vfs.Read(f.Hash));
         }
 
         byte[] replacement = "this is my modded file"u8.ToArray();

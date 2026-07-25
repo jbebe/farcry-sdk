@@ -108,7 +108,7 @@ public partial class MainWindow : Window
         UserControl? view = file is not null
             ? FileHandlerCatalog.CreateView(
                 file, () => _vm.Read(file), bytes => _vm.Replace(file, bytes), () => OpenXmlEditorTab(file),
-                () => _vm.ReadOriginal(file))
+                () => _vm.ReadOriginal(file), _vm.FindByHash, _vm.NavigateTo)
             : null;
 
         PreviewHost.Content = view;

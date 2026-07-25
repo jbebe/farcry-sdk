@@ -36,7 +36,22 @@ public sealed record VfsFile(
     /// fragment override never has a whole-file entry for this hash to read. This field exists purely
     /// so <see cref="IsModded"/> and the UI's attribution text can tell "this file's build output
     /// differs from vanilla because of a fragment edit" apart from "unmodified.".</summary>
-    string? FragmentOverrideSource = null)
+    string? FragmentOverrideSource = null,
+    /// <summary>The owning `depload.dat`'s hash, set only on a synthetic dependency-link row (one
+    /// entry of a depload's parent/children list, browsable the same way an `.fcb` fragment is - see
+    /// <see cref="IsDependencyLink"/>). Deliberately a separate field from <see cref="ContainerHash"/>:
+    /// that one is read elsewhere with `.fcb`-fragment-specific meaning baked in (fragment XML
+    /// extraction, fragment-override lookup), which a depload link is not.</summary>
+    uint? LinkOwnerHash = null,
+    /// <summary>The resource CRC32 this dependency link refers to - always set alongside
+    /// <see cref="LinkOwnerHash"/>, whether or not it resolves to a known VFS entry (look it up in
+    /// <see cref="GameVfs.Files"/> to tell resolved from unresolved).</summary>
+    uint? LinkTargetHash = null,
+    /// <summary>The dependency's resolved type hash (looked up via the depload's own small deduplicated
+    /// type table - see <see cref="Format.DepLoadDocument"/>), set only when this link is a depload
+    /// *child* entry - null for a parent entry, which doubles as how a link row's own kind is told
+    /// apart. Semantic meaning of the type hash itself isn't yet confirmed.</summary>
+    uint? LinkChildTypeHash = null)
 {
     /// <summary>True when a mod (or the workspace) supplies this file, whole or in part (a fragment
     /// override counts even without a whole-file replace) — drives Revert and the "only mods" filter.</summary>
@@ -45,6 +60,10 @@ public sealed record VfsFile(
     /// <summary>True for a synthetic row representing one piece of a splitting `.fcb`, rather than a
     /// real archive/mod entry.</summary>
     public bool IsFragment => ContainerHash is not null;
+
+    /// <summary>True for a synthetic row representing one entry (a parent or a child) of a
+    /// `depload.dat`'s dependency list, rather than a real archive/mod entry.</summary>
+    public bool IsDependencyLink => LinkOwnerHash is not null;
 
     public string Directory => System.IO.Path.GetDirectoryName(Path)?.Replace('/', '\\') ?? string.Empty;
     public string FileName => System.IO.Path.GetFileName(Path);
@@ -273,6 +292,7 @@ public sealed class GameVfs : IDisposable
             if (includeFragments)
             {
                 MergeFragments(files, progress);
+                MergeDependencyLinks(files, progress);
             }
             _files = files;
         }
@@ -325,6 +345,7 @@ public sealed class GameVfs : IDisposable
         {
             var files = new Dictionary<uint, VfsFile>(_files);
             MergeFragments(files, progress);
+            MergeDependencyLinks(files, progress);
             _files = files;
         }
     }
@@ -661,6 +682,100 @@ public sealed class GameVfs : IDisposable
     }
 
     /// <summary>
+    /// Adds dependency-link rows for every `depload.dat` — a per-world/per-DLC dependency-preload
+    /// index (see docs/docs/file-formats/depload.md), not a container — so its parent/children entries
+    /// browse the same way an `.fcb`'s fragments do: one synthetic row per entry, nested under the
+    /// depload file's own path (and, for a child, under its parent's own synthetic row - the format's
+    /// real two-level shape). Mutates <paramref name="files"/> in place.
+    /// </summary>
+    /// <remarks>
+    /// Unlike <see cref="MergeFragments"/> (~46,000 `.fcb` entries across the game, needs
+    /// caching/parallelism to stay fast), there are only a handful of `depload.dat` files total — a
+    /// single synchronous pass with no caching is fast enough.
+    /// </remarks>
+    private void MergeDependencyLinks(Dictionary<uint, VfsFile> files, IProgress<string>? progress)
+    {
+        List<VfsFile> containers = [.. files.Values
+            .Where(f => f.FileName.EndsWith("_depload.dat", StringComparison.OrdinalIgnoreCase))];
+        if (containers.Count == 0)
+        {
+            return;
+        }
+
+        var links = new Dictionary<uint, VfsFile>();
+        foreach (VfsFile container in containers)
+        {
+            DepLoadFile depLoad;
+            try
+            {
+                depLoad = DepLoadDocument.Decode(ReadFromSource(container));
+            }
+            catch
+            {
+                continue; // unreadable/corrupt - treat as having no links, same as GameCache's "unreadable -> Unknown" precedent
+            }
+
+            foreach (DepLoadParent parent in depLoad.Parents)
+            {
+                VfsFile parentLink = MakeDependencyLinkRow(container, container.Path, files, links, parent.Hash);
+                links[parentLink.Hash] = parentLink;
+
+                foreach (DepLoadChild child in parent.Children)
+                {
+                    VfsFile childLink = MakeDependencyLinkRow(
+                        container, parentLink.Path, files, links, child.Hash, child.TypeHash);
+                    links[childLink.Hash] = childLink;
+                }
+            }
+        }
+
+        foreach ((uint hash, VfsFile link) in links)
+        {
+            files[hash] = link;
+        }
+        progress?.Report($"Indexing depload.dat links… ({links.Count:N0})");
+    }
+
+    /// <summary>One parent or child entry of a `depload.dat`, as a browsable row nested under
+    /// <paramref name="parentPath"/> - the container's own path for a parent entry, or the parent's own
+    /// just-built row path for one of its children.</summary>
+    private static VfsFile MakeDependencyLinkRow(
+        VfsFile container, string parentPath, Dictionary<uint, VfsFile> files, Dictionary<uint, VfsFile> linksSoFar,
+        uint targetHash, uint? childTypeHash = null)
+    {
+        files.TryGetValue(targetHash, out VfsFile? target);
+        string label = target?.Path ?? $"0x{targetHash:X8}";
+        string linkPath = parentPath + "\\" + label;
+        uint linkHash = NameHash.Compute(linkPath);
+
+        // A single large depload.dat can mint tens of thousands of these synthetic hashes (a real one
+        // observed had 25,000+ children) - enough for an actual CRC32 collision against the shared
+        // hash space to happen in practice, unlike the much smaller handful of .fcb fragments any one
+        // container ever produces. Deterministically disambiguate rather than risk silently clobbering
+        // a real file's row (or an earlier link's, in the rare case of a duplicate child within one
+        // parent's own slice).
+        int suffix = 0;
+        while (files.ContainsKey(linkHash) || linksSoFar.ContainsKey(linkHash))
+        {
+            suffix++;
+            linkHash = NameHash.Compute($"{linkPath}#{suffix}");
+        }
+
+        return new VfsFile(
+            Hash: linkHash,
+            Path: linkPath,
+            Type: target?.Type ?? FileType.Unknown,
+            Size: 0,
+            SourceName: container.SourceName,
+            SourceKind: container.SourceKind,
+            IsOverriding: false,
+            NameIsKnown: target is not null,
+            LinkOwnerHash: container.Hash,
+            LinkTargetHash: targetHash,
+            LinkChildTypeHash: childTypeHash);
+    }
+
+    /// <summary>
     /// The rare path: an `.fcb` whose fragments weren't already resolved by <see cref="_cache"/> or
     /// <see cref="_fragmentMemo"/> — either a genuine cache miss (first time this game install has
     /// been seen) or a `.fcb` currently overridden by a mod (including living in the volatile
@@ -703,6 +818,26 @@ public sealed class GameVfs : IDisposable
         if (!_files.TryGetValue(hash, out var file))
         {
             throw new KeyNotFoundException($"No file with hash {hash:X8}.");
+        }
+
+        if (file.IsDependencyLink)
+        {
+            // A dependency-link row has no bytes of its own - it's a reference, not content (see
+            // docs/docs/file-formats/depload.md) - so this synthesizes a small human-readable summary
+            // on demand, purely so the generic Export/Mirror actions have something sensible to do.
+            _files.TryGetValue(file.LinkOwnerHash!.Value, out VfsFile? owner);
+            string ownerLabel = owner?.Path ?? $"0x{file.LinkOwnerHash:X8}";
+            uint targetHash = file.LinkTargetHash!.Value;
+            string resolved = _files.TryGetValue(targetHash, out VfsFile? target)
+                ? target.Path
+                : "not resolved - no archive/mod entry has this hash";
+
+            var summary = new StringBuilder();
+            summary.AppendLine($"Dependency link (from {ownerLabel})");
+            summary.AppendLine($"Hash: 0x{targetHash:X8}");
+            summary.AppendLine($"Resolved: {resolved}");
+            if (file.LinkChildTypeHash is { } typeHash) summary.AppendLine($"Type hash: 0x{typeHash:X8}");
+            return new UTF8Encoding(false).GetBytes(summary.ToString());
         }
 
         if (file.IsFragment)

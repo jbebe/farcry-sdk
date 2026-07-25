@@ -72,39 +72,47 @@ array by CRC32 on load (`LoadBinaryFile`'s embedded `while (0 < iVar16) { ... pu
 loop) — a binary search only works correctly if the array is actually kept sorted, so the engine
 itself depends on this invariant, not just tooling built to read the file.
 
-## The "children chunk" — now confirmed (previously an open question)
+## The "children chunk" — now confirmed against real shipped files
 
-Immediately after the parents array, three more length-prefixed arrays follow — a struct-of-arrays,
-each with its **own independent `u32` count prefix** (not a single shared count, even though in every
-valid file all three ultimately hold one entry per flattened child):
+Immediately after the parents array, three more length-prefixed arrays follow, each with its **own
+independent `u32` count prefix**:
 
 ```
-u32       childHashCount  (M_A)
-M_A × u32 childHash[]         — CPathID hash (CRC32) of the child (dependency) resource's path
+u32       childHashCount    (M_A)
+M_A × u32 childHash[]           — CPathID hash (CRC32) of the child (dependency) resource's path
 
-u32       childFlagCount  (M_B)
-M_B × u8  childFlag[]         — one byte per child; meaning not yet determined (see below)
+u32       childTypeIndexCount (M_B, == M_A)
+M_B × u8  childTypeIndex[]      — one byte per child: an index into the type table below
 
-u32       childTypeCount  (M_C)
-M_C × u32 childTypeHash[]     — a second CRC32 per child; meaning not yet determined (see below)
+u32       typeTableCount    (M_C, independent — much smaller than M_A/M_B in practice)
+M_C × u32 typeHash[]            — a small deduplicated table of distinct type CRC32s
 ```
 
-A parent's children are `childHash[childIndex .. childIndex+childCount)` (and the parallel slices of
-`childFlag`/`childTypeHash`) — i.e. `childIndex` is a slice start into these three parallel arrays,
-not a byte offset, confirmed directly from the load loop: it indexes `childHash` as
-`childHash[parent.childIndex + i]` while iterating `i` from `0` to `parent.childCount`.
+A parent's children are `childHash[childIndex .. childIndex+childCount)` (and the parallel slice of
+`childTypeIndex`) — i.e. `childIndex` is a slice start into the two per-child arrays, not a byte
+offset, confirmed directly from the load loop: it indexes `childHash` as
+`childHash[parent.childIndex + i]` while iterating `i` from `0` to `parent.childCount`. Each child's
+actual type hash is `typeHash[childTypeIndex[i]]`.
 
-**Not yet determined**: what `childFlag` (the per-child byte) and `childTypeHash` (the per-child
-second CRC32) actually mean semantically. What *is* confirmed is that neither is a small interned
-lookup table — both arrays are exactly as long as `childHash`, one entry per child, not per distinct
-value. (A superficially similar-looking dedup/interning step does happen in `LoadBinaryFile`, folding
-repeated `childTypeHash` values into a compact runtime table with a per-child byte index — but this
-happens only to the in-memory structure *after* the file is fully read; it is not reflected in the
-file's own bytes, so it doesn't change the layout above.) Plausible guesses — `childTypeHash` as a
-resource-type CRC (e.g. "this dependency is an `.xbg`" vs "an `.fcb`") and `childFlag` as some
-load-priority or optional/required bit — are unconfirmed; would need either a struct definition
-recovered from the type that consumes `CResourceDataBase`'s parsed arrays, or empirical correlation
-against known resource types across several real `depload.dat` files.
+**Correction from an earlier pass at this format**: this was first written up (from the disassembly
+alone, before a real sample was available to check against) as *three* parallel per-child arrays —
+`childHash`, a per-child flag byte, and a per-child second CRC32, all the same length. Decoding a real
+shipped `entitylibrary_depload.dat` (433 parents, 1314 children) and a real
+`worlds/tmpla/generated/tmpla_depload.dat` (9134 parents, 25838 children) immediately falsified that:
+in both files the third array's own count-prefix is nowhere near the child count (8 and a comparably
+small number respectively), and every observed "flag" byte fell inside `[0, thirdArrayCount)` —
+conclusive for "the third array is a small deduplicated type-hash table indexed by the second array,"
+not a third per-child field. (`LoadBinaryFile` *also* does its own runtime interning of type hashes
+into an in-memory table with a per-child byte index, after the file is read — a second, unrelated
+dedup pass over already-parsed data, at a different granularity, likely to merge multiple loaded
+depload files' type tables into one shared runtime table. It happens to look structurally similar to
+the file's own interned table, which is almost certainly why that first pass conflated the two.)
+
+**Still not yet determined**: the semantic meaning of the resolved `typeHash` itself (e.g. "this
+dependency is a texture" vs "a mesh") — only that it's now confirmed to be a per-resource-*type*
+value shared by many children, not a per-child one. Would need either a struct definition recovered
+from the type that consumes `CResourceDataBase`'s parsed arrays, or empirical correlation against
+known resource types across several real `depload.dat` files.
 
 ## Concrete gotcha for anyone hand-editing this file
 
@@ -116,7 +124,7 @@ misbehave — not a hard crash, so the corruption is easy to miss until playtest
 
 ## Open questions
 
-- Semantic meaning of `childFlag` (u8) and `childTypeHash` (u32) — see above.
+- Semantic meaning of the resolved per-child `typeHash` (u32) — see above.
 - The `_depload.xml` fallback path exists in the loader (`CWorldDescriptorImpl::LoadDep`'s
   `CFileManager::FileOpen` failure branch parses `<name>_depload.xml` via `XmlParser::parse`
   instead) but no real example of this XML form was located in this pass — worth a follow-up if one

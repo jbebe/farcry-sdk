@@ -1079,6 +1079,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     public byte[] Read(VfsFile file) => _vfs!.Read(file.Hash);
 
+    /// <summary>Looks up any VfsFile by hash — used by a dependency-link row's "Go to file" jump (see
+    /// <see cref="FileHandlers.FileHandlerCatalog"/>'s dependency-link case) to resolve what a link
+    /// points to.</summary>
+    public VfsFile? FindByHash(uint hash) => _vfs?.Files.GetValueOrDefault(hash);
+
+    /// <summary>Selects <paramref name="file"/> as if the user had clicked it directly — used by a
+    /// dependency-link row's "Go to file" button. Goes through <see cref="SetSelectedFiles"/> (not a
+    /// bare <see cref="SelectedFile"/> assignment) so the Files tab's own multi-select state stays
+    /// consistent with the new single selection.</summary>
+    public void NavigateTo(VfsFile file) => SetSelectedFiles([file]);
+
     /// <summary>The vanilla text of a fragment row, ignoring mods/workspace - null when there's
     /// nothing to compare against (a mod-added container). <paramref name="file"/> must be a fragment
     /// (<see cref="VfsFile.IsFragment"/>).</summary>
