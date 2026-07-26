@@ -1,6 +1,7 @@
 using System.IO;
 using FFMpegCore;
 using FFMpegCore.Enums;
+using JackAll.Core.Format;
 
 namespace JackAll.App.Audio;
 
@@ -32,16 +33,25 @@ public static class FfmpegAudio
         _configured = true;
     }
 
-    /// <summary>Transcodes any ffmpeg-readable audio file to 48 kHz stereo Ogg Vorbis.</summary>
+    /// <summary>Transcodes any ffmpeg-readable audio file to 48 kHz stereo Ogg Vorbis - Far Cry 2's
+    /// one fixed requirement for `.sbao` music.</summary>
     public static Task TranscodeToOggAsync(string inputPath, string outputPath, int quality = 6)
+        => TranscodeToOggAsync(inputPath, outputPath, RequiredSampleRate, RequiredChannels, quality);
+
+    /// <summary>Transcodes any ffmpeg-readable audio file to Ogg Vorbis at a specific sample rate and
+    /// channel count - used when replacing an Ogg-backed `.spk` `FlatCopy` record (see
+    /// <see cref="SbaoAudio.TryReadVorbisId"/>'s use in `SpkFileHandler`), which - unlike `.sbao` music
+    /// - has no single required rate; the replacement is transcoded to match whatever the record being
+    /// replaced already used.</summary>
+    public static Task TranscodeToOggAsync(string inputPath, string outputPath, int sampleRate, int channels, int quality = 6)
     {
         EnsureConfigured();
         return FFMpegArguments
             .FromFileInput(inputPath)
             .OutputToFile(outputPath, overwrite: true, addArguments: options => options
                 .WithAudioCodec(AudioCodec.LibVorbis)
-                .WithAudioSamplingRate(RequiredSampleRate)
-                .WithCustomArgument($"-ac {RequiredChannels}")
+                .WithAudioSamplingRate(sampleRate)
+                .WithCustomArgument($"-ac {channels}")
                 .WithCustomArgument($"-q:a {quality}"))
             .ProcessAsynchronously();
     }

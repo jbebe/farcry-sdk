@@ -2,6 +2,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Data;
 using System.Windows.Input;
 using System.Windows.Threading;
 using JackAll.App.Audio;
@@ -12,30 +13,43 @@ using Microsoft.Win32;
 namespace JackAll.App.FileHandlers.Spk;
 
 /// <summary>
-/// The file handler for .spk sound-bank containers. One row per record in a plain, decoded table -
-/// no raw hex up front: a `FlatCopy` record (the one holding actual audio) shows its format/duration/
-/// size, and each metadata record (`SimpleFixed68`/`TransformedFixed128`) shows which other record it
-/// points to and its gain, in plain language. Every record's own byte-level fields (the confirmed
-/// constants, the four still-unidentified core fields, full sub-header words, preamble) are still
-/// available - just behind the "Show raw technical details" checkbox for the currently selected row,
-/// rather than always on screen. See <see cref="SpkPackage"/>'s remarks for what each field means and
-/// how confident that meaning is.
+/// The file handler for .spk sound-bank containers. Grouped, not flat: each `FlatCopy` record (the one
+/// holding actual audio) is its own group header, with any `SimpleFixed68`/`TransformedFixed128` record
+/// that chains back to it (directly or through one hop, following the same `LinkedId`/
+/// `FlatCopySiblingId` cross-reference the "Go to" button below uses) nested under it as an indented
+/// child row - a real bank is almost always exactly one such group, so this usually turns "three
+/// disconnected hex rows" into "one sound, with its own parameters right underneath it." Anything that
+/// doesn't chain to an audio record actually present in this file (an orphaned metadata record, a rare
+/// type, or one of the no-audio-of-its-own "alias" banks - see docs/docs/file-formats/spk.md) falls
+/// into a trailing "Other records" group instead of being force-fit somewhere misleading.
 ///
-/// Selecting a row with audio drives the play/export/import panel directly (no separate picker) -
-/// decoded and encoded on the fly with <see cref="ImaAdpcm"/>, the same pattern <c>SbaoFileHandler</c>
-/// uses for Ogg-backed `.sbao`, with ffmpeg doing only format/rate/channel transcoding to and from raw
-/// PCM. Importing replaces only the selected record's payload via
-/// <see cref="SpkPackage.ReplaceRecordPayload"/> - everything else in the file is carried forward
-/// byte-for-byte, and the replacement audio is transcoded to whatever sample rate/channel count that
-/// record already used.
+/// Every row is still decoded in plain language rather than raw hex - format/duration/size for audio,
+/// which other record it points to plus its gain for the two metadata types. Every record's own
+/// byte-level fields (the confirmed constants, the four still-unidentified core fields, full
+/// sub-header words, preamble) are still available - just behind the "Show raw technical details"
+/// checkbox for the currently selected row, rather than always on screen. See
+/// <see cref="SpkPackage"/>'s remarks for what each field means and how confident that meaning is.
 ///
-/// A `SimpleFixed68`/`TransformedFixed128` row's own cross-reference (`LinkedId`/`FlatCopySiblingId`)
-/// gets a "Go to" action, the same jump mechanism <c>DependencyLinkHandler</c> uses for `.fcb`
-/// references: if the id matches another record already in this same bank, it just selects that row;
-/// otherwise it's looked up VFS-wide (<c>resolveByHash</c>) - this is exactly how the no-audio-of-its-
-/// own "alias" banks work (see docs/docs/file-formats/spk.md), which point at a completely different
-/// `.spk` file's `TransformedFixed128`/`FlatCopy` pair rather than anything in their own single-record
-/// bank.
+/// Selecting a row with audio drives the play/export/import panel directly (no separate picker).
+/// `FlatCopy` turns out to hold either of two codecs, not just one - real files split roughly
+/// 74%/26% Ogg Vorbis / IMA-ADPCM - detected per record by whether its bytes parse as a Vorbis
+/// identification header (<see cref="SbaoAudio.TryReadVorbisId"/>, the exact same check
+/// <c>SbaoFileHandler</c> uses for `.sbao`'s own Ogg payload) before falling back to
+/// <see cref="ImaAdpcm"/>. An Ogg-backed stream is already a complete file - preview/export/import
+/// just shells out to ffmpeg (transcode-to-wav for preview, verbatim bytes for export, transcode-to-
+/// Ogg-at-the-same-rate for import); an IMA-ADPCM stream is decoded/encoded natively, with ffmpeg only
+/// doing format/rate/channel transcoding to and from raw PCM. Importing replaces only the selected
+/// record's payload via <see cref="SpkPackage.ReplaceRecordPayload"/> - everything else in the file is
+/// carried forward byte-for-byte, and the replacement audio is transcoded to whatever codec/sample
+/// rate/channel count that record already used (there's no single required format the way `.sbao`
+/// music has one).
+///
+/// A `SimpleFixed68`/`TransformedFixed128` row's own cross-reference gets a "Go to" action too, the
+/// same jump mechanism <c>DependencyLinkHandler</c> uses for `.fcb` references: if the id matches
+/// another record already in this same bank, it just selects that row (typically a no-op click for a
+/// grouped child, since it's already visible right there - the real value is for a reference that
+/// *isn't* grouped, i.e. doesn't resolve within this file); otherwise it's looked up VFS-wide
+/// (<c>resolveByHash</c>) and jumps to that other file entirely.
 /// </summary>
 public partial class SpkFileHandler : UserControl
 {
@@ -71,6 +85,11 @@ public partial class SpkFileHandler : UserControl
         public required bool LinkedInSameFile { get; init; }
         public required VfsFile? LinkedExternalFile { get; init; }
 
+        /// <summary>The DataGrid's own grouping key (see <see cref="BuildRows"/>) - the owning
+        /// `FlatCopy` record's own group label for anything that chains back to one, or the fixed
+        /// "Other records" label for anything that doesn't.</summary>
+        public required string GroupKey { get; init; }
+
         public bool HasLink => LinkedId is not null;
         public bool CanNavigateLink => LinkedInSameFile || LinkedExternalFile is not null;
         public string LinkButtonText => LinkedId is null ? "" : (CanNavigateLink ? "Go to →" : "Not found");
@@ -103,7 +122,10 @@ public partial class SpkFileHandler : UserControl
 
             _rows = BuildRows(_package);
             HeaderText.Text = $"{_fileName} — {_package.Records.Count} record(s)";
-            RecordsGrid.ItemsSource = _rows;
+
+            var groupedView = new ListCollectionView(_rows);
+            groupedView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(Row.GroupKey)));
+            RecordsGrid.ItemsSource = groupedView;
             AudioPanel.Visibility = _rows.Any(r => r.IsPlayable) ? Visibility.Visible : Visibility.Collapsed;
 
             Row? toSelect = reselectRecordId is { } id
@@ -123,27 +145,89 @@ public partial class SpkFileHandler : UserControl
         }
     }
 
+    private const string OtherRecordsGroup = "Other records";
+
+    /// <summary>
+    /// Builds one row per record, ordered and keyed for grouping: every `FlatCopy` record starts its
+    /// own group, immediately followed by any record that chains back to it - directly (a
+    /// `TransformedFixed128` whose own `FlatCopySiblingId` matches it) or one hop further (a
+    /// `SimpleFixed68` linked to that `TransformedFixed128`) - via ids actually present in this file.
+    /// Anything that never reaches a local `FlatCopy` (an orphaned metadata record, a rare/unknown
+    /// type, or a no-audio "alias" bank whose only record's link points entirely outside this file)
+    /// goes in a trailing <see cref="OtherRecordsGroup"/> bucket instead.
+    /// </summary>
     private List<Row> BuildRows(SpkPackage package)
     {
-        var rows = new List<Row>(package.Records.Count);
-        for (int i = 0; i < package.Records.Count; i++)
+        Dictionary<uint, SpkRecord> byId = package.Records
+            .GroupBy(r => r.Id).ToDictionary(g => g.Key, g => g.First()); // ids should be unique; first-wins if not
+        Dictionary<uint, int> originalIndex = package.Records
+            .Select((r, i) => (r, i)).GroupBy(x => x.r.Id).ToDictionary(g => g.Key, g => g.First().i);
+
+        // Which local FlatCopy (if any) does this record ultimately point to? One hop for
+        // TransformedFixed128->FlatCopy, two hops for SimpleFixed68->TransformedFixed128->FlatCopy.
+        uint? FindGroupRoot(SpkRecord r, HashSet<uint> visited)
         {
-            SpkRecord r = package.Records[i];
+            if (r.Core?.Type == SpkRecordType.FlatCopy)
+            {
+                return r.Id;
+            }
+
+            uint? next = r.TransformedFixed128?.FlatCopySiblingId ?? r.SimpleFixed68?.LinkedId;
+            if (next is not { } nextId || !visited.Add(nextId) || !byId.TryGetValue(nextId, out SpkRecord? target))
+            {
+                return null;
+            }
+
+            return FindGroupRoot(target, visited);
+        }
+
+        var ordered = new List<(SpkRecord Record, bool IsChild, string GroupKey)>();
+        var handled = new HashSet<uint>();
+        int soundNumber = 0;
+
+        foreach (SpkRecord audio in package.Records.Where(r => r.Core?.Type == SpkRecordType.FlatCopy))
+        {
+            soundNumber++;
+            string groupKey = $"Sound {soundNumber} — 0x{audio.Id:x8}";
+            ordered.Add((audio, false, groupKey));
+            handled.Add(audio.Id);
+
+            foreach (SpkRecord child in package.Records.Where(r => r.Id != audio.Id))
+            {
+                if (handled.Contains(child.Id) || FindGroupRoot(child, [child.Id]) != audio.Id)
+                {
+                    continue;
+                }
+
+                ordered.Add((child, true, groupKey));
+                handled.Add(child.Id);
+            }
+        }
+
+        foreach (SpkRecord r in package.Records.Where(r => !handled.Contains(r.Id)))
+        {
+            ordered.Add((r, false, OtherRecordsGroup));
+        }
+
+        var rows = new List<Row>(ordered.Count);
+        foreach ((SpkRecord r, bool isChild, string groupKey) in ordered)
+        {
             uint? linkedId = r.TransformedFixed128?.FlatCopySiblingId ?? r.SimpleFixed68?.LinkedId;
-            bool linkedInSameFile = linkedId is { } id && package.Records.Any(other => other.Id == id);
+            bool linkedInSameFile = linkedId is { } id && byId.ContainsKey(id);
             VfsFile? linkedExternalFile = linkedId is { } id2 && !linkedInSameFile ? _resolveByHash(id2) : null;
 
             rows.Add(new Row
             {
-                DisplayIndex = i + 1,
+                DisplayIndex = originalIndex[r.Id] + 1,
                 IdHex = $"0x{r.Id:x8}",
-                Kind = DescribeKind(r),
+                Kind = (isChild ? "↳ " : "") + DescribeKind(r),
                 Summary = DescribeSummary(package, r),
                 Record = r,
                 IsPlayable = r.FlatCopyAudioStream is not null,
                 LinkedId = linkedId,
                 LinkedInSameFile = linkedInSameFile,
                 LinkedExternalFile = linkedExternalFile,
+                GroupKey = groupKey,
             });
         }
 
@@ -181,6 +265,12 @@ public partial class SpkFileHandler : UserControl
     {
         if (r.FlatCopyAudioStream is { } audio)
         {
+            if (SbaoAudio.TryReadVorbisId(audio) is { } vorbis)
+            {
+                string channelLabel = vorbis.Channels == 2 ? "Stereo" : vorbis.Channels == 1 ? "Mono" : $"{vorbis.Channels}ch";
+                return $"{channelLabel} · {vorbis.SampleRate} Hz · Ogg Vorbis · {FormatBytes(audio.Length)}";
+            }
+
             try
             {
                 ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(audio);
@@ -189,7 +279,7 @@ public partial class SpkFileHandler : UserControl
                 int frames = decoded.Samples.Length / decoded.Channels;
                 string channelLabel = decoded.Channels == 2 ? "Stereo" : "Mono";
                 string rateLabel = sampleRate is { } hz ? $"{hz} Hz" : $"~{FallbackSampleRateHz} Hz (no rate on record)";
-                return $"{channelLabel} · {rateLabel} · {FormatTime(TimeSpan.FromSeconds((double)frames / rate))} · {FormatBytes(audio.Length)}";
+                return $"{channelLabel} · {rateLabel} · IMA-ADPCM · {FormatTime(TimeSpan.FromSeconds((double)frames / rate))} · {FormatBytes(audio.Length)}";
             }
             catch (Exception ex)
             {
@@ -309,7 +399,10 @@ public partial class SpkFileHandler : UserControl
 
         if (r.FlatCopyAudioStream is { } audio)
         {
-            sb.Append($"FlatCopy audio stream: {audio.Length:N0} bytes (28-byte TImaAdpcm header + nibbles)");
+            string codec = SbaoAudio.TryReadVorbisId(audio) is { } v
+                ? $"Ogg Vorbis, {v.SampleRate} Hz {v.Channels}ch"
+                : "TImaAdpcm (28-byte header + nibbles)";
+            sb.Append($"FlatCopy audio stream: {audio.Length:N0} bytes ({codec})");
         }
         else
         {
@@ -329,11 +422,26 @@ public partial class SpkFileHandler : UserControl
         ExportAudioButton.IsEnabled = false;
         AudioStatusText.Text = "";
 
+        byte[] stream = record.FlatCopyAudioStream!;
+        string? tempOgg = null;
         try
         {
-            byte[] wav = DecodeToWav(record, out _);
             _tempWavPath = Path.Combine(Path.GetTempPath(), $"jackall_spk_{Guid.NewGuid():N}.wav");
-            await File.WriteAllBytesAsync(_tempWavPath, wav);
+
+            if (SbaoAudio.TryReadVorbisId(stream) is not null)
+            {
+                // Already a complete Ogg Vorbis bitstream (see class remarks) - ffmpeg can transcode
+                // it to wav for preview directly, the same way SbaoFileHandler previews its own Ogg
+                // payload; no codec work of our own needed here.
+                tempOgg = Path.Combine(Path.GetTempPath(), $"jackall_spk_{Guid.NewGuid():N}.ogg");
+                await File.WriteAllBytesAsync(tempOgg, stream);
+                await FfmpegAudio.TranscodeToWavAsync(tempOgg, _tempWavPath);
+            }
+            else
+            {
+                byte[] wav = DecodeImaAdpcmToWav(record, out _);
+                await File.WriteAllBytesAsync(_tempWavPath, wav);
+            }
 
             Player.Source = new Uri(_tempWavPath);
             PlayButton.IsEnabled = true;
@@ -343,9 +451,13 @@ public partial class SpkFileHandler : UserControl
         {
             AudioStatusText.Text = $"Couldn't decode this record's audio: {ex.Message}";
         }
+        finally
+        {
+            TryDelete(tempOgg);
+        }
     }
 
-    private byte[] DecodeToWav(SpkRecord record, out int sampleRate)
+    private byte[] DecodeImaAdpcmToWav(SpkRecord record, out int sampleRate)
     {
         byte[] stream = record.FlatCopyAudioStream
             ?? throw new InvalidOperationException("Selected record has no FlatCopy audio stream.");
@@ -362,11 +474,14 @@ public partial class SpkFileHandler : UserControl
         }
 
         SpkRecord record = row.Record;
+        byte[] stream = record.FlatCopyAudioStream!;
+        bool isOgg = SbaoAudio.TryReadVorbisId(stream) is not null;
+
         var dialog = new SaveFileDialog
         {
             Title = "Export audio",
-            FileName = $"{record.Id:x8}.wav",
-            Filter = "WAV file|*.wav",
+            FileName = isOgg ? $"{record.Id:x8}.ogg" : $"{record.Id:x8}.wav",
+            Filter = isOgg ? "Ogg Vorbis file|*.ogg" : "WAV file|*.wav",
         };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true)
         {
@@ -375,9 +490,19 @@ public partial class SpkFileHandler : UserControl
 
         try
         {
-            byte[] wav = DecodeToWav(record, out int sampleRate);
-            File.WriteAllBytes(dialog.FileName, wav);
-            AudioStatusText.Text = $"Exported to:\n{dialog.FileName}\n({sampleRate} Hz)";
+            if (isOgg)
+            {
+                // The record's own bytes already are a complete Ogg Vorbis file - export verbatim
+                // rather than re-encoding through anything lossy.
+                File.WriteAllBytes(dialog.FileName, stream);
+                AudioStatusText.Text = $"Exported to:\n{dialog.FileName}";
+            }
+            else
+            {
+                byte[] wav = DecodeImaAdpcmToWav(record, out int sampleRate);
+                File.WriteAllBytes(dialog.FileName, wav);
+                AudioStatusText.Text = $"Exported to:\n{dialog.FileName}\n({sampleRate} Hz)";
+            }
         }
         catch (Exception ex)
         {
@@ -395,6 +520,9 @@ public partial class SpkFileHandler : UserControl
         }
 
         SpkRecord record = row.Record;
+        byte[] currentStream = record.FlatCopyAudioStream!;
+        (int SampleRate, int Channels)? currentVorbis = SbaoAudio.TryReadVorbisId(currentStream);
+
         var dialog = new OpenFileDialog
         {
             Title = "Import replacement audio - any format ffmpeg supports",
@@ -406,22 +534,36 @@ public partial class SpkFileHandler : UserControl
         }
 
         ImportAudioButton.IsEnabled = false;
-        string tempWav = Path.Combine(Path.GetTempPath(), $"jackall_spk_import_{Guid.NewGuid():N}.wav");
+        string tempBase = Path.Combine(Path.GetTempPath(), $"jackall_spk_import_{Guid.NewGuid():N}");
+        string tempOgg = tempBase + ".ogg";
+        string tempWav = tempBase + ".wav";
         try
         {
-            // Preserve this record's own current rate/channel count rather than imposing a fixed
-            // target - there's no single required format the way .sbao has one, and every other
-            // record's metadata (which describes THIS record) would otherwise go stale.
-            int channels = ImaAdpcm.Decode(record.FlatCopyAudioStream!).Channels;
-            int sampleRate = _package.TryGetFlatCopySampleRate(record) ?? FallbackSampleRateHz;
+            byte[] newAudioStream;
 
-            AudioStatusText.Text = $"Transcoding to {sampleRate} Hz, {channels}-channel PCM…";
-            await FfmpegAudio.TranscodeToPcmWavAsync(dialog.FileName, tempWav, sampleRate, channels);
+            // Preserve this record's own current format (codec, rate, channel count) rather than
+            // imposing a fixed target - there's no single required format the way .sbao music has
+            // one, and every other record's metadata (which describes THIS record) would otherwise
+            // go stale.
+            if (currentVorbis is { } vorbis)
+            {
+                AudioStatusText.Text = $"Transcoding to {vorbis.SampleRate} Hz, {vorbis.Channels}-channel Ogg Vorbis…";
+                await FfmpegAudio.TranscodeToOggAsync(dialog.FileName, tempOgg, vorbis.SampleRate, vorbis.Channels);
+                newAudioStream = await File.ReadAllBytesAsync(tempOgg);
+            }
+            else
+            {
+                int channels = ImaAdpcm.Decode(currentStream).Channels;
+                int sampleRate = _package.TryGetFlatCopySampleRate(record) ?? FallbackSampleRateHz;
 
-            WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(await File.ReadAllBytesAsync(tempWav));
-            byte[] encoded = ImaAdpcm.Encode(pcm.Samples, pcm.Channels);
-            byte[] newPayload = [.. record.Payload[..SpkRecordCore.Size], .. encoded];
+                AudioStatusText.Text = $"Transcoding to {sampleRate} Hz, {channels}-channel PCM…";
+                await FfmpegAudio.TranscodeToPcmWavAsync(dialog.FileName, tempWav, sampleRate, channels);
 
+                WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(await File.ReadAllBytesAsync(tempWav));
+                newAudioStream = ImaAdpcm.Encode(pcm.Samples, pcm.Channels);
+            }
+
+            byte[] newPayload = [.. record.Payload[..SpkRecordCore.Size], .. newAudioStream];
             byte[] patched = SpkPackage.ReplaceRecordPayload(_originalContent, record.Id, newPayload);
 
             // Round-trips the freshly built file back through Parse as a validity check.
@@ -438,6 +580,7 @@ public partial class SpkFileHandler : UserControl
         }
         finally
         {
+            TryDelete(tempOgg);
             TryDelete(tempWav);
             ImportAudioButton.IsEnabled = true;
         }

@@ -57,6 +57,15 @@
                       CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False"
                       CanUserResizeRows="False" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
                       SelectionMode="Single" SelectionChanged="RecordsGrid_SelectionChanged">
+                <DataGrid.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" FontWeight="Bold" Margin="0,12,0,4" />
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </DataGrid.GroupStyle>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="#" Binding="{Binding DisplayIndex}" Width="40" />
                     <DataGridTextColumn Header="Id" Binding="{Binding IdHex}" Width="110">
