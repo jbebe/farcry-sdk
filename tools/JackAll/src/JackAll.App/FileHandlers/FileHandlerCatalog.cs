@@ -42,9 +42,10 @@ public static class FileHandlerCatalog
     /// root that doesn't split into sub-files, and by the rml case, to diff a modded file against its
     /// base game version (see <see cref="BuildTextHandler"/>, <see cref="BuildFragmentHandler"/>,
     /// <see cref="FcbFileHandler"/> and <see cref="RmlFileHandler"/>). <paramref name="resolveByHash"/>
-    /// and <paramref name="navigateTo"/> are only used by the dependency-link case, to look up what a
-    /// link points to and jump the main tree/grid selection to it (see
-    /// <see cref="DependencyLinkHandler"/>).
+    /// and <paramref name="navigateTo"/> are used by the dependency-link case, to look up what a link
+    /// points to and jump the main tree/grid selection to it (see <see cref="DependencyLinkHandler"/>),
+    /// and by the spk case, for a `SimpleFixed68`/`TransformedFixed128` row's own cross-reference to a
+    /// different bank entirely (see <see cref="SpkFileHandler"/>).
     /// </summary>
     public static UserControl? CreateView(
         VfsFile file, Func<byte[]> readContent, Action<byte[]> replaceContent, Action openEditor,
@@ -71,7 +72,7 @@ public static class FileHandlerCatalog
             { Type.Extension: "fcb" } => new FcbFileHandler(file, readContent(), replaceContent, readOriginal),
             { Type.Extension: "rml" } => new RmlFileHandler(file, readContent(), replaceContent, readOriginal),
             { Type.Extension: "sdat" } => new SdatFileHandler(file.FileName, readContent()),
-            { Type.Extension: "spk" } => new SpkFileHandler(file.FileName, readContent(), replaceContent),
+            { Type.Extension: "spk" } => new SpkFileHandler(file.FileName, readContent(), replaceContent, resolveByHash, navigateTo),
             { Type.Extension: "mgb" } => new MgbFileHandler(file.FileName, readContent()),
             // Matched by filename suffix, not bare extension - "dat" alone is also the archive-container
             // extension, so this must not fire for anything else that happens to carry a literal .dat

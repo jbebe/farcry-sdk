@@ -6,24 +6,36 @@ using System.Windows.Input;
 using System.Windows.Threading;
 using JackAll.App.Audio;
 using JackAll.Core.Format;
+using JackAll.Core.Vfs;
 using Microsoft.Win32;
 
 namespace JackAll.App.FileHandlers.Spk;
 
 /// <summary>
-/// The file handler for .spk sound-bank containers. Shows every record's id, preamble words, 40-byte
-/// core fields, and (for the two most common types) sub-header fields - all confirmed by tracing
-/// Dunia.dll's real sound-bank loader and codec in Ghidra (see <see cref="SpkPackage"/>'s remarks).
-/// `FlatCopy` records (the ones holding actual compressed audio) get a play/export/import preview,
-/// decoded and encoded on the fly with <see cref="ImaAdpcm"/> - the same pattern <c>SbaoFileHandler</c>
-/// uses for Ogg-backed `.sbao`, with ffmpeg doing only format/rate/channel transcoding to and from raw
-/// PCM (there's no container-level codec to shell out to here the way there is for Ogg Vorbis).
+/// The file handler for .spk sound-bank containers. One row per record in a plain, decoded table -
+/// no raw hex up front: a `FlatCopy` record (the one holding actual audio) shows its format/duration/
+/// size, and each metadata record (`SimpleFixed68`/`TransformedFixed128`) shows which other record it
+/// points to and its gain, in plain language. Every record's own byte-level fields (the confirmed
+/// constants, the four still-unidentified core fields, full sub-header words, preamble) are still
+/// available - just behind the "Show raw technical details" checkbox for the currently selected row,
+/// rather than always on screen. See <see cref="SpkPackage"/>'s remarks for what each field means and
+/// how confident that meaning is.
 ///
-/// Importing replaces only the selected record's payload - the rest of the file (ids, preamble words,
-/// every other record, and this record's own 40-byte core) is carried forward byte-for-byte via
-/// <see cref="SpkPackage.ReplaceRecordPayload"/>, and the replacement audio is transcoded to whatever
-/// sample rate/channel count that record already used (read from its own current stream and its
-/// `TransformedFixed128` sibling), so nothing else about the bank needs to change to match it.
+/// Selecting a row with audio drives the play/export/import panel directly (no separate picker) -
+/// decoded and encoded on the fly with <see cref="ImaAdpcm"/>, the same pattern <c>SbaoFileHandler</c>
+/// uses for Ogg-backed `.sbao`, with ffmpeg doing only format/rate/channel transcoding to and from raw
+/// PCM. Importing replaces only the selected record's payload via
+/// <see cref="SpkPackage.ReplaceRecordPayload"/> - everything else in the file is carried forward
+/// byte-for-byte, and the replacement audio is transcoded to whatever sample rate/channel count that
+/// record already used.
+///
+/// A `SimpleFixed68`/`TransformedFixed128` row's own cross-reference (`LinkedId`/`FlatCopySiblingId`)
+/// gets a "Go to" action, the same jump mechanism <c>DependencyLinkHandler</c> uses for `.fcb`
+/// references: if the id matches another record already in this same bank, it just selects that row;
+/// otherwise it's looked up VFS-wide (<c>resolveByHash</c>) - this is exactly how the no-audio-of-its-
+/// own "alias" banks work (see docs/docs/file-formats/spk.md), which point at a completely different
+/// `.spk` file's `TransformedFixed128`/`FlatCopy` pair rather than anything in their own single-record
+/// bank.
 /// </summary>
 public partial class SpkFileHandler : UserControl
 {
@@ -32,19 +44,47 @@ public partial class SpkFileHandler : UserControl
 
     private readonly string _fileName;
     private readonly Action<byte[]> _replaceContent;
+    private readonly Func<uint, VfsFile?> _resolveByHash;
+    private readonly Action<VfsFile> _navigateTo;
     private readonly DispatcherTimer _timer;
     private SpkPackage? _package;
     private byte[]? _originalContent;
-    private List<SpkRecord> _audioRecords = [];
+    private List<Row> _rows = [];
     private string? _tempWavPath;
     private bool _isUserSeeking;
     private bool _updatingSlider;
 
-    public SpkFileHandler(string fileName, byte[] content, Action<byte[]> replaceContent)
+    /// <summary>One row of the records grid - a plain-language view of a single record, decoded as far
+    /// as we understand its type. <see cref="LinkedId"/> is this record's own outgoing cross-reference
+    /// (a `SimpleFixed68`'s `LinkedId` or a `TransformedFixed128`'s `FlatCopySiblingId`), if it has one;
+    /// <see cref="LinkedInSameFile"/>/<see cref="LinkedExternalFile"/> say where (if anywhere) it
+    /// actually resolves to, computed once when the row is built.</summary>
+    private sealed class Row
+    {
+        public required int DisplayIndex { get; init; }
+        public required string IdHex { get; init; }
+        public required string Kind { get; init; }
+        public required string Summary { get; init; }
+        public required SpkRecord Record { get; init; }
+        public required bool IsPlayable { get; init; }
+        public required uint? LinkedId { get; init; }
+        public required bool LinkedInSameFile { get; init; }
+        public required VfsFile? LinkedExternalFile { get; init; }
+
+        public bool HasLink => LinkedId is not null;
+        public bool CanNavigateLink => LinkedInSameFile || LinkedExternalFile is not null;
+        public string LinkButtonText => LinkedId is null ? "" : (CanNavigateLink ? "Go to →" : "Not found");
+    }
+
+    public SpkFileHandler(
+        string fileName, byte[] content, Action<byte[]> replaceContent,
+        Func<uint, VfsFile?> resolveByHash, Action<VfsFile> navigateTo)
     {
         InitializeComponent();
         _fileName = fileName;
         _replaceContent = replaceContent;
+        _resolveByHash = resolveByHash;
+        _navigateTo = navigateTo;
 
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         _timer.Tick += OnTimerTick;
@@ -60,106 +100,226 @@ public partial class SpkFileHandler : UserControl
         {
             _package = SpkPackage.Parse(content);
             _originalContent = content;
-            _audioRecords = _package.Records.Where(r => r.FlatCopyAudioStream is not null).ToList();
 
-            StatusText.Text = Describe(_fileName, _package);
+            _rows = BuildRows(_package);
+            HeaderText.Text = $"{_fileName} — {_package.Records.Count} record(s)";
+            RecordsGrid.ItemsSource = _rows;
+            AudioPanel.Visibility = _rows.Any(r => r.IsPlayable) ? Visibility.Visible : Visibility.Collapsed;
 
-            if (_audioRecords.Count > 0)
-            {
-                AudioPanel.Visibility = Visibility.Visible;
-                AudioRecordCombo.ItemsSource = _audioRecords
-                    .Select(r => $"0x{r.Id:x8}  ({r.FlatCopyAudioStream!.Length:N0} bytes)")
-                    .ToList();
-                int index = reselectRecordId is { } id ? _audioRecords.FindIndex(r => r.Id == id) : -1;
-                AudioRecordCombo.SelectedIndex = index >= 0 ? index : 0; // triggers SelectionChanged -> loads the preview
-            }
-            else
-            {
-                AudioPanel.Visibility = Visibility.Collapsed;
-            }
+            Row? toSelect = reselectRecordId is { } id
+                ? _rows.FirstOrDefault(r => r.Record.Id == id)
+                : _rows.FirstOrDefault(r => r.IsPlayable);
+            RecordsGrid.SelectedItem = toSelect; // triggers SelectionChanged -> loads the preview, if any
         }
         catch (Exception ex)
         {
             _package = null;
             _originalContent = null;
-            _audioRecords = [];
+            _rows = [];
+            HeaderText.Text = $"Couldn't read this file: {ex.Message}";
+            RecordsGrid.ItemsSource = null;
             AudioPanel.Visibility = Visibility.Collapsed;
-            StatusText.Text = $"Couldn't read this file: {ex.Message}";
+            ResetPlayer();
         }
     }
 
-    private string Describe(string fileName, SpkPackage package)
+    private List<Row> BuildRows(SpkPackage package)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine(fileName);
-        sb.AppendLine();
-        sb.AppendLine($"Records: {package.Records.Count}");
-        sb.AppendLine();
-
+        var rows = new List<Row>(package.Records.Count);
         for (int i = 0; i < package.Records.Count; i++)
         {
             SpkRecord r = package.Records[i];
-            sb.AppendLine($"[{i}] id=0x{r.Id:x8}  preamble=[{string.Join(", ", r.PreambleWords.Select(w => $"0x{w:x8}"))}]  size={r.Payload.Length:N0}");
+            uint? linkedId = r.TransformedFixed128?.FlatCopySiblingId ?? r.SimpleFixed68?.LinkedId;
+            bool linkedInSameFile = linkedId is { } id && package.Records.Any(other => other.Id == id);
+            VfsFile? linkedExternalFile = linkedId is { } id2 && !linkedInSameFile ? _resolveByHash(id2) : null;
 
-            if (r.Core is not { } core)
+            rows.Add(new Row
             {
-                sb.AppendLine("      (too short for the 40-byte record core)");
-                continue;
+                DisplayIndex = i + 1,
+                IdHex = $"0x{r.Id:x8}",
+                Kind = DescribeKind(r),
+                Summary = DescribeSummary(package, r),
+                Record = r,
+                IsPlayable = r.FlatCopyAudioStream is not null,
+                LinkedId = linkedId,
+                LinkedInSameFile = linkedInSameFile,
+                LinkedExternalFile = linkedExternalFile,
+            });
+        }
+
+        return rows;
+    }
+
+    private void GoToLink_Click(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).DataContext is not Row row)
+        {
+            return;
+        }
+
+        if (row.LinkedInSameFile && row.LinkedId is { } id)
+        {
+            RecordsGrid.SelectedItem = _rows.FirstOrDefault(r => r.Record.Id == id);
+        }
+        else if (row.LinkedExternalFile is { } file)
+        {
+            _navigateTo(file);
+        }
+    }
+
+    private static string DescribeKind(SpkRecord r) => r.Core switch
+    {
+        null => "(malformed)",
+        { Type: SpkRecordType.FlatCopy } => "▶ Audio",
+        { Type: SpkRecordType.TransformedFixed128 } => "Audio params",
+        { Type: SpkRecordType.SimpleFixed68 } => "Sound params",
+        { Type: { } t } => t.ToString(),
+        _ => $"Unknown (0x{r.Core.RawType:x8})",
+    };
+
+    private string DescribeSummary(SpkPackage package, SpkRecord r)
+    {
+        if (r.FlatCopyAudioStream is { } audio)
+        {
+            try
+            {
+                ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(audio);
+                int? sampleRate = package.TryGetFlatCopySampleRate(r);
+                int rate = sampleRate ?? FallbackSampleRateHz;
+                int frames = decoded.Samples.Length / decoded.Channels;
+                string channelLabel = decoded.Channels == 2 ? "Stereo" : "Mono";
+                string rateLabel = sampleRate is { } hz ? $"{hz} Hz" : $"~{FallbackSampleRateHz} Hz (no rate on record)";
+                return $"{channelLabel} · {rateLabel} · {FormatTime(TimeSpan.FromSeconds((double)frames / rate))} · {FormatBytes(audio.Length)}";
             }
-
-            string typeName = core.Type?.ToString() ?? $"unknown (0x{core.RawType:x8})";
-            sb.AppendLine(
-                $"      type={typeName}" +
-                (core.HasStandardDeclaredSize ? "" : $"  !! declaredSize=0x{core.DeclaredSize:x} (expected 0x28)") +
-                $"  unknown=[0x{core.Unknown08:x8}, 0x{core.Unknown0C:x8}, 0x{core.Unknown10:x8}, 0x{core.Unknown14:x8}]");
-
-            if (r.SimpleFixed68 is { } s68)
+            catch (Exception ex)
             {
-                sb.AppendLine(
-                    $"      SimpleFixed68: linkedId=0x{s68.LinkedId:x8}  categoryId=0x{s68.CategoryId:x8}  " +
-                    $"gain={FormatQ16_16(unchecked((int)s68.IdentityGainQ16_16))}  variant={s68.VariantOrVoiceCount}  " +
-                    $"flag100={s68.SignedHundredFlag}  bool={s68.BoolFlag}");
-            }
-
-            if (r.TransformedFixed128 is { } t128)
-            {
-                sb.AppendLine(
-                    $"      TransformedFixed128: flatCopySibling=0x{t128.FlatCopySiblingId:x8}  " +
-                    $"gain={FormatQ16_16(t128.GainQ16_16)}  channelsGuess={t128.ChannelCountGuess}  " +
-                    $"sampleRate={t128.SampleRate} Hz  word20={t128.Word20}  word25={t128.Word25}  " +
-                    $"word28={t128.Word28}  word31=0x{t128.Word31:x8}");
-            }
-
-            if (r.FlatCopyAudioStream is { } audio)
-            {
-                int? rate = package.TryGetFlatCopySampleRate(r);
-                sb.AppendLine($"      FlatCopy audio: {audio.Length:N0} bytes" +
-                               (rate is { } hz ? $"  (sibling reports {hz} Hz)" : "  (no sibling rate found)"));
-            }
-            else
-            {
-                int previewLen = Math.Min(PayloadPreviewBytes, r.Payload.Length);
-                string hex = string.Join(" ", r.Payload.Take(previewLen).Select(b => b.ToString("x2")));
-                sb.AppendLine($"      {hex}{(previewLen < r.Payload.Length ? " ..." : "")}");
+                return $"⚠ couldn't decode: {ex.Message}";
             }
         }
 
-        return sb.ToString();
+        if (r.TransformedFixed128 is { } t128)
+        {
+            return $"→ audio 0x{t128.FlatCopySiblingId:x8} · {t128.SampleRate} Hz · gain {FormatQ16_16(t128.GainQ16_16)}";
+        }
+
+        if (r.SimpleFixed68 is { } s68)
+        {
+            var extras = new List<string>();
+            if (s68.SignedHundredFlag != 0)
+            {
+                extras.Add($"flag {s68.SignedHundredFlag}");
+            }
+
+            if (s68.BoolFlag != 0)
+            {
+                extras.Add("flagged");
+            }
+
+            string extra = extras.Count > 0 ? " · " + string.Join(" · ", extras) : "";
+            return $"→ 0x{s68.LinkedId:x8} · gain {FormatQ16_16(unchecked((int)s68.IdentityGainQ16_16))}{extra}";
+        }
+
+        return r.Core is null
+            ? "too short for the 40-byte record core"
+            : $"{r.Payload.Length:N0} bytes";
     }
 
     private static string FormatQ16_16(int fixedPoint) => (fixedPoint / 65536.0).ToString("0.###");
 
-    private void AudioRecordCombo_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private static string FormatBytes(long bytes)
     {
-        int index = AudioRecordCombo.SelectedIndex;
-        if (index < 0 || index >= _audioRecords.Count)
+        if (bytes >= 1024 * 1024)
         {
+            return $"{bytes / (1024.0 * 1024.0):0.#} MB";
+        }
+
+        if (bytes >= 1024)
+        {
+            return $"{bytes / 1024.0:0.#} KB";
+        }
+
+        return $"{bytes} B";
+    }
+
+    private void RecordsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        Row? row = RecordsGrid.SelectedItem as Row;
+        UpdateRawDetails(row);
+
+        if (row is not { IsPlayable: true })
+        {
+            ResetPlayer();
             ImportAudioButton.IsEnabled = false;
+            ExportAudioButton.IsEnabled = false;
             return;
         }
 
         ImportAudioButton.IsEnabled = true;
-        _ = PreparePreviewAsync(_audioRecords[index]);
+        _ = PreparePreviewAsync(row.Record);
+    }
+
+    private void ShowRawDetailsCheckBox_Changed(object sender, RoutedEventArgs e)
+    {
+        RawDetailsPanel.Visibility = ShowRawDetailsCheckBox.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private void UpdateRawDetails(Row? row)
+    {
+        RawDetailsText.Text = row is null ? "(no record selected)" : BuildRawDetails(row.DisplayIndex - 1, row.Record);
+    }
+
+    /// <summary>The full byte-level breakdown for one record - every core/sub-header field (including
+    /// the ones folded into <see cref="DescribeSummary"/> already, plus the still-unidentified ones),
+    /// preamble words, and a hex preview for anything we don't have a decoded meaning for at all.</summary>
+    private static string BuildRawDetails(int index, SpkRecord r)
+    {
+        var sb = new StringBuilder();
+        sb.AppendLine($"[{index}] id=0x{r.Id:x8}  size={r.Payload.Length:N0}");
+        sb.AppendLine($"preamble=[{string.Join(", ", r.PreambleWords.Select(w => $"0x{w:x8}"))}]");
+
+        if (r.Core is not { } core)
+        {
+            sb.Append("(too short for the 40-byte record core)");
+            return sb.ToString();
+        }
+
+        string typeName = core.Type?.ToString() ?? $"unknown (0x{core.RawType:x8})";
+        sb.AppendLine(
+            $"type={typeName}" +
+            (core.HasStandardDeclaredSize ? "" : $"  !! declaredSize=0x{core.DeclaredSize:x} (expected 0x28)") +
+            $"  unknown=[0x{core.Unknown08:x8}, 0x{core.Unknown0C:x8}, 0x{core.Unknown10:x8}, 0x{core.Unknown14:x8}]" +
+            $"  reserved=[0x{core.ReservedZero18:x8}, 0x{core.ReservedZero1C:x8}, 0x{core.ReservedTwo24:x8}]");
+
+        if (r.SimpleFixed68 is { } s68)
+        {
+            sb.AppendLine(
+                $"SimpleFixed68: ownId=0x{s68.OwnId:x8}  linkedId=0x{s68.LinkedId:x8}  categoryId=0x{s68.CategoryId:x8}  " +
+                $"gain={FormatQ16_16(unchecked((int)s68.IdentityGainQ16_16))}  variant={s68.VariantOrVoiceCount}  " +
+                $"flag100={s68.SignedHundredFlag}  bool={s68.BoolFlag}");
+        }
+
+        if (r.TransformedFixed128 is { } t128)
+        {
+            sb.AppendLine(
+                $"TransformedFixed128: ownId=0x{t128.OwnId:x8}  flatCopySibling=0x{t128.FlatCopySiblingId:x8}  " +
+                $"gain={FormatQ16_16(t128.GainQ16_16)}  channelsGuess={t128.ChannelCountGuess}  " +
+                $"sampleRate={t128.SampleRate} Hz  word20={t128.Word20}  word25={t128.Word25}  " +
+                $"word28={t128.Word28}  word31=0x{t128.Word31:x8}");
+        }
+
+        if (r.FlatCopyAudioStream is { } audio)
+        {
+            sb.Append($"FlatCopy audio stream: {audio.Length:N0} bytes (28-byte TImaAdpcm header + nibbles)");
+        }
+        else
+        {
+            byte[] remainder = r.Payload[SpkRecordCore.Size..];
+            int previewLen = Math.Min(PayloadPreviewBytes, remainder.Length);
+            string hex = string.Join(" ", remainder.Take(previewLen).Select(b => b.ToString("x2")));
+            sb.Append($"payload (after core): {hex}{(previewLen < remainder.Length ? " ..." : "")}");
+        }
+
+        return sb.ToString();
     }
 
     private async Task PreparePreviewAsync(SpkRecord record)
@@ -167,6 +327,7 @@ public partial class SpkFileHandler : UserControl
         ResetPlayer();
         DeleteTempFile();
         ExportAudioButton.IsEnabled = false;
+        AudioStatusText.Text = "";
 
         try
         {
@@ -180,7 +341,7 @@ public partial class SpkFileHandler : UserControl
         }
         catch (Exception ex)
         {
-            StatusText.Text += $"\n\nCouldn't decode this record's audio: {ex.Message}";
+            AudioStatusText.Text = $"Couldn't decode this record's audio: {ex.Message}";
         }
     }
 
@@ -195,13 +356,12 @@ public partial class SpkFileHandler : UserControl
 
     private void ExportAudio_Click(object sender, RoutedEventArgs e)
     {
-        int index = AudioRecordCombo.SelectedIndex;
-        if (index < 0 || index >= _audioRecords.Count)
+        if (RecordsGrid.SelectedItem is not Row { IsPlayable: true } row)
         {
             return;
         }
 
-        SpkRecord record = _audioRecords[index];
+        SpkRecord record = row.Record;
         var dialog = new SaveFileDialog
         {
             Title = "Export audio",
@@ -217,7 +377,7 @@ public partial class SpkFileHandler : UserControl
         {
             byte[] wav = DecodeToWav(record, out int sampleRate);
             File.WriteAllBytes(dialog.FileName, wav);
-            StatusText.Text += $"\n\nExported to:\n{dialog.FileName}\n({sampleRate} Hz)";
+            AudioStatusText.Text = $"Exported to:\n{dialog.FileName}\n({sampleRate} Hz)";
         }
         catch (Exception ex)
         {
@@ -228,13 +388,13 @@ public partial class SpkFileHandler : UserControl
 
     private async void ImportAudio_Click(object sender, RoutedEventArgs e)
     {
-        int index = AudioRecordCombo.SelectedIndex;
-        if (_package is null || _originalContent is null || index < 0 || index >= _audioRecords.Count)
+        if (_package is null || _originalContent is null ||
+            RecordsGrid.SelectedItem is not Row { IsPlayable: true } row)
         {
             return;
         }
 
-        SpkRecord record = _audioRecords[index];
+        SpkRecord record = row.Record;
         var dialog = new OpenFileDialog
         {
             Title = "Import replacement audio - any format ffmpeg supports",
@@ -255,7 +415,7 @@ public partial class SpkFileHandler : UserControl
             int channels = ImaAdpcm.Decode(record.FlatCopyAudioStream!).Channels;
             int sampleRate = _package.TryGetFlatCopySampleRate(record) ?? FallbackSampleRateHz;
 
-            StatusText.Text += $"\n\nTranscoding to {sampleRate} Hz, {channels}-channel PCM…";
+            AudioStatusText.Text = $"Transcoding to {sampleRate} Hz, {channels}-channel PCM…";
             await FfmpegAudio.TranscodeToPcmWavAsync(dialog.FileName, tempWav, sampleRate, channels);
 
             WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(await File.ReadAllBytesAsync(tempWav));
@@ -269,7 +429,7 @@ public partial class SpkFileHandler : UserControl
 
             _replaceContent(patched);
             Load(patched, reselectRecordId: record.Id);
-            StatusText.Text += $"\n\nImported from:\n{dialog.FileName}\n\nStaged in your workspace.";
+            AudioStatusText.Text = $"Imported from:\n{dialog.FileName}\n\nStaged in your workspace.";
         }
         catch (Exception ex)
         {

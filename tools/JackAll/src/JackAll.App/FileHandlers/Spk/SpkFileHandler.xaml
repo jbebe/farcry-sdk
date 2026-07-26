@@ -1,19 +1,19 @@
 <UserControl x:Class="JackAll.App.FileHandlers.Spk.SpkFileHandler"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+    </UserControl.Resources>
     <DockPanel Margin="16">
         <Border x:Name="AudioPanel" DockPanel.Dock="Bottom" Margin="0,16,0,0" Background="#ECECEC"
                 BorderBrush="#DDD" BorderThickness="1" Padding="12" Visibility="Collapsed">
             <StackPanel>
-                <TextBlock Text="Audio preview (FlatCopy / IMA-ADPCM)" FontWeight="Bold" Margin="0,0,0,8" />
+                <TextBlock Text="Audio preview" FontWeight="Bold" Margin="0,0,0,8" />
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                    <TextBlock Text="Record:" VerticalAlignment="Center" Margin="0,0,8,0" />
-                    <ComboBox x:Name="AudioRecordCombo" Width="320" VerticalAlignment="Center"
-                              SelectionChanged="AudioRecordCombo_SelectionChanged" />
                     <Button x:Name="ExportAudioButton" Content="Export as .wav…" Click="ExportAudio_Click"
-                            Padding="8,6" Margin="16,0,0,0" IsEnabled="False" />
+                            Padding="8,6" Margin="0,0,8,0" IsEnabled="False" />
                     <Button x:Name="ImportAudioButton" Content="Import…" Click="ImportAudio_Click"
-                            Padding="8,6" Margin="8,0,0,0" IsEnabled="False" />
+                            Padding="8,6" IsEnabled="False" />
                 </StackPanel>
                 <StackPanel Orientation="Horizontal">
                     <Button x:Name="PlayButton" Content="▶ Play" Click="Play_Click" Padding="8,6" Margin="0,0,8,0" IsEnabled="False" />
@@ -35,11 +35,51 @@
                 <MediaElement x:Name="Player" Visibility="Collapsed"
                               LoadedBehavior="Manual" UnloadedBehavior="Manual"
                               MediaOpened="Player_MediaOpened" MediaEnded="Player_MediaEnded" />
+                <TextBlock x:Name="AudioStatusText" Margin="0,8,0,0" FontFamily="Consolas" FontSize="11"
+                           TextWrapping="Wrap" Foreground="#555" />
             </StackPanel>
         </Border>
 
-        <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Auto">
-            <TextBlock x:Name="StatusText" FontFamily="Consolas" FontSize="12" TextWrapping="NoWrap" />
-        </ScrollViewer>
+        <TextBlock x:Name="HeaderText" DockPanel.Dock="Top" FontWeight="Bold" Margin="0,0,0,8" />
+
+        <CheckBox x:Name="ShowRawDetailsCheckBox" DockPanel.Dock="Top" Content="Show raw technical details"
+                  Margin="0,0,0,8" Checked="ShowRawDetailsCheckBox_Changed" Unchecked="ShowRawDetailsCheckBox_Changed" />
+
+        <DockPanel LastChildFill="True">
+            <Border x:Name="RawDetailsPanel" DockPanel.Dock="Bottom" Margin="0,8,0,0" Background="#F7F7F7"
+                    BorderBrush="#DDD" BorderThickness="1" Padding="10" MaxHeight="220" Visibility="Collapsed">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <TextBlock x:Name="RawDetailsText" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" />
+                </ScrollViewer>
+            </Border>
+
+            <DataGrid x:Name="RecordsGrid" AutoGenerateColumns="False" IsReadOnly="True"
+                      CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False"
+                      CanUserResizeRows="False" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+                      SelectionMode="Single" SelectionChanged="RecordsGrid_SelectionChanged">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="#" Binding="{Binding DisplayIndex}" Width="40" />
+                    <DataGridTextColumn Header="Id" Binding="{Binding IdHex}" Width="110">
+                        <DataGridTextColumn.ElementStyle>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="FontFamily" Value="Consolas" />
+                            </Style>
+                        </DataGridTextColumn.ElementStyle>
+                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="120" />
+                    <DataGridTextColumn Header="Summary" Binding="{Binding Summary}" Width="*" />
+                    <DataGridTemplateColumn Header="" Width="90">
+                        <DataGridTemplateColumn.CellTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding LinkButtonText}" Click="GoToLink_Click"
+                                        IsEnabled="{Binding CanNavigateLink}"
+                                        Visibility="{Binding HasLink, Converter={StaticResource BoolToVis}}"
+                                        Padding="6,2" FontSize="11" />
+                            </DataTemplate>
+                        </DataGridTemplateColumn.CellTemplate>
+                    </DataGridTemplateColumn>
+                </DataGrid.Columns>
+            </DataGrid>
+        </DockPanel>
     </DockPanel>
 </UserControl>
