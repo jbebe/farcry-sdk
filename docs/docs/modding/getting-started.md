@@ -223,18 +223,26 @@ A minority of the material mined from Discord exports while researching this pro
 be primary-source files worth keeping independently of the (disposable, since-deleted) raw Discord
 export: tool archives not hosted on GitHub, concrete format samples, community-maintained hash
 lists, and leaked internal build-tool output. These live in `research/reference-files/`, organized
-as:
+as (one exception: the FC2Editor source below has since been unpacked and moved to
+`tools/third-party/FC2Editor_Source/`, alongside this repo's other third-party tool sources, rather
+than staying zipped in this reference tree):
 
-- **`fc2editor-source/FC2Editor_Source.zip`** — genuine, substantial, working-looking C# source (422
-  entries) for a WinForms application named `FC2Editor`, built on a custom **"Nomad" engine layer**
-  (`FC2Editor.Nomad` namespace: `Camera`, `Engine`, `Render`, `EditorObject`/`EditorObjectPivot`/
-  `EditorObjectSelection`, `Gizmo`/`GizmoHelper`, `TerrainManager`/`TerrainManipulator`,
-  `TextureManipulator`, `SplineManager`/`SplineRoad`/`SplineZone`, `UndoManager`/
-  `EditorEventUndo`, `Validation`/`ValidationReport`, `CollectionManager`/`CollectionManipulator`),
-  plus a separate typed **`FC2Editor.Parameters`** framework (`ParamBool`, `ParamFloat`,
-  `ParamEnum<T>`, `ParamButton`, `ParamPickButton`). Either the actual stock map editor's source or
-  a very close community-built equivalent — the first real (non-reverse-engineered) source-level
-  view into how the editor's object/gizmo/undo/validation systems are structured.
+- **`tools/third-party/FC2Editor_Source/`** (unpacked from the originally-preserved
+  `FC2Editor_Source.zip`; not actually under this `research/reference-files/` tree anymore — see
+  below) — genuine, substantial, working C# source (422 entries, half of which is a byte-identical
+  `Backup/` duplicate not worth reading twice) for a WinForms application named `FC2Editor`, built on
+  a custom **"Nomad" engine layer** (`FC2Editor.Nomad` namespace: `Camera`, `Engine`, `Render`,
+  `EditorObject`/`EditorObjectPivot`/`EditorObjectSelection`, `Gizmo`/`GizmoHelper`,
+  `TerrainManager`/`TerrainManipulator`, `TextureManipulator`, `SplineManager`/`SplineRoad`/
+  `SplineZone`, `UndoManager`/`EditorEventUndo`, `Validation`/`ValidationReport`,
+  `CollectionManager`/`CollectionManipulator`), plus a separate typed **`FC2Editor.Parameters`**
+  framework (`ParamBool`, `ParamFloat`, `ParamEnum<T>`, `ParamButton`, `ParamPickButton`).
+  **Confirmed genuine** (not a community equivalent) via `AssemblyInfo.cs`'s Ubisoft 2008 copyright
+  and via its ~338 `Dunia.dll` P/Invoke declarations matching named exports already in the Ghidra
+  project — the first real (non-reverse-engineered) source-level view into how the editor's
+  object/gizmo/undo/validation systems are structured, and a ground-truth source for correct
+  function prototypes on the native side; see the [engine-internals editor API surface
+  page](../engine-internals/editor-api-surface.md).
 - **`hash-lists/`** — community-maintained CRC32→filename lookup lists: `worlds.filelist` (+ two
   earlier revisions `worlds_v2`/`worlds_v3`), `worlds_english.filelist`, `entitylibrary.filelist`,
   `dlc1.filelist`, `dlc_jungle.filelist`, `patch.filelist`, `map_files.filelist`, and two early

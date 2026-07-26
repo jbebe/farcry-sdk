@@ -62,7 +62,11 @@ sidebar for the full engine-internals note set.
   here, not a general authoring layer. **The `AddFunctionCB`/`FunctionRegistry_Invoke` mechanism
   documented in [the function-registry notes](./function-registry.md) is entirely separate from
   this Lua layer** — pure native C++, CRC32-hash-keyed, no Lua involvement in anything traced so
-  far. Two independent extension mechanisms coexisting in the same binary.
+  far. Two independent extension mechanisms coexisting in the same binary — plus a third, unrelated to
+either: a large flat C export surface (~338 `FCE_*`-prefixed functions) that the stock map editor
+(`FC2Editor.exe`) drives directly via P/Invoke, not scripting at all. See [the editor-facing API
+surface notes](./editor-api-surface.md) for the full map, built from that editor's own decompiled
+interop layer.
 
 ## A second binary lives in the same Ghidra project: `FarCry2_server`
 
