@@ -7,6 +7,7 @@
 
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <local:ModuleNameMultiConverter x:Key="ModuleNameConverter" />
 
         <Style x:Key="Toolbar" TargetType="Button">
             <Setter Property="Padding" Value="10,5" />
@@ -420,6 +421,9 @@
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                         <CheckBox DockPanel.Dock="Left" Margin="0,0,16,0" Content="Show only mod files"
                                   IsChecked="{Binding OnlyMods}" VerticalAlignment="Center" />
+                        <CheckBox DockPanel.Dock="Left" Margin="0,0,16,0" Content="Include links"
+                                  IsChecked="{Binding IncludeLinks}" VerticalAlignment="Center"
+                                  ToolTip="Show depload.dat dependency-link rows in the file list. Off by default - they duplicate hits on the target file's own name/hash and swamp an ordinary search." />
                         <TextBlock DockPanel.Dock="Left" Text="Filter:" Margin="0,0,6,0" VerticalAlignment="Center" />
                         <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
                                  VerticalAlignment="Center" Padding="4,2">
@@ -439,8 +443,12 @@
                                                     <VisualBrush AlignmentX="Left" AlignmentY="Center" Stretch="None">
                                                         <VisualBrush.Visual>
                                                             <TextBlock Margin="4,0,0,0" Foreground="#999" FontStyle="Italic">
-                                                                <Run Text="Matches any word - narrow by type with " />
+                                                                <Run Text="Matches any word - narrow with " />
                                                                 <Run Text="ext:&lt;type&gt;" FontStyle="Normal" FontFamily="Consolas" />
+                                                                <Run Text=", " />
+                                                                <Run Text="arch:&lt;module&gt;" FontStyle="Normal" FontFamily="Consolas" />
+                                                                <Run Text=", " />
+                                                                <Run Text="hash:&lt;hex&gt;" FontStyle="Normal" FontFamily="Consolas" />
                                                             </TextBlock>
                                                         </VisualBrush.Visual>
                                                     </VisualBrush>
@@ -539,7 +547,16 @@
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Name" Binding="{Binding FileName}" Width="*" />
                                 <DataGridTextColumn Header="Size" Binding="{Binding Size, StringFormat={}{0:N0}}" Width="80" />
-                                <DataGridTextColumn Header="Source" Binding="{Binding SourceName}" Width="110" />
+                                <DataGridTextColumn Header="Source" Width="110">
+                                    <!-- Disambiguates a colliding archive name with its parent folder
+                                         (e.g. "dlc1/menus") - see ModuleNameMultiConverter. -->
+                                    <DataGridTextColumn.Binding>
+                                        <MultiBinding Converter="{StaticResource ModuleNameConverter}">
+                                            <Binding />
+                                            <Binding Path="DataContext" RelativeSource="{RelativeSource AncestorType=DataGrid}" />
+                                        </MultiBinding>
+                                    </DataGridTextColumn.Binding>
+                                </DataGridTextColumn>
                             </DataGrid.Columns>
                             <!-- Same grey/black convention as the tree (see the note above FolderTemplate):
                                  grey = untouched base game, black = a mod or the workspace changed it. -->

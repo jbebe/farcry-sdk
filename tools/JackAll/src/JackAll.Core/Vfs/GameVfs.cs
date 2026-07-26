@@ -107,6 +107,13 @@ public sealed class GameVfs : IDisposable
     /// <see cref="IsVolatile"/> that often would just be repeated path normalization.</summary>
     private Dictionary<string, bool> _archiveIsVolatile = [];
 
+    /// <summary>Archive bare name -&gt; every mounted archive with that name (almost always just one)
+    /// — computed once at <see cref="Load"/>, alongside <see cref="_archiveIsVolatile"/>. Drives
+    /// <see cref="DisplayModuleName"/>, which needs this grouping to pick the right one of several
+    /// same-named archives (e.g. dlc1 and dlc_jungle each ship their own "menus.fat") without a full
+    /// linear scan of <see cref="_archives"/> for every file.</summary>
+    private Dictionary<string, DuniaArchive[]> _archivesByName = [];
+
     /// <summary>
     /// Fragment rows already synthesized for a container, keyed by the container's hash — reused
     /// across <see cref="Rebuild"/>/<see cref="LoadFragments"/> calls as long as that container's
@@ -217,6 +224,10 @@ public sealed class GameVfs : IDisposable
         vfs._archiveIsVolatile = vfs._archives
             .GroupBy(a => a.Name)
             .ToDictionary(g => g.Key, g => g.Any(vfs.IsVolatile));
+
+        vfs._archivesByName = vfs._archives
+            .GroupBy(a => a.Name)
+            .ToDictionary(g => g.Key, g => g.ToArray());
 
         // No cache invalidation check here on purpose - the base game's archives never change for
         // the life of an install, so a cache that loaded without error is trusted outright. If the
@@ -878,6 +889,42 @@ public sealed class GameVfs : IDisposable
         Dictionary<string, string> xmlByFragment = byFragment.ToDictionary(
             kv => kv.Key, kv => ResolveFragment(container.Hash, kv.Key, kv.Value));
         return FcbAssembler.Apply(baseBytes, xmlByFragment);
+    }
+
+    /// <summary>
+    /// The name to show a modder for where a file came from. A base-game archive (one sitting
+    /// directly in Data_Win32) shows as its bare <see cref="VfsFile.SourceName"/>; a DLC archive
+    /// always shows with its parent folder too - "dlc1/entitylibrary", "dlc_jungle/menus" - even when
+    /// that bare name happens to be unique, since "which DLC" is exactly what a modder can't tell from
+    /// the bare name alone. Mod-sourced files are returned unchanged - this distinction only applies
+    /// to archives.
+    /// </summary>
+    public string DisplayModuleName(VfsFile file)
+    {
+        if (file.SourceKind != SourceKind.Archive
+            || !_archivesByName.TryGetValue(file.SourceName, out DuniaArchive[]? candidates)
+            || candidates.Length == 0)
+        {
+            return file.SourceName;
+        }
+
+        DuniaArchive archive;
+        if (candidates.Length == 1)
+        {
+            archive = candidates[0];
+        }
+        else
+        {
+            // Several archives share this bare name - a fragment/link row's own hash is synthetic
+            // (not a real archive entry), so probe with whichever ancestor hash actually lives in one
+            // of their FAT indexes instead.
+            uint probeHash = file.ContainerHash ?? file.LinkOwnerHash ?? file.Hash;
+            archive = candidates.FirstOrDefault(a => a.Contains(probeHash)) ?? candidates[0];
+        }
+
+        return archive.Folder.Equals("base", StringComparison.OrdinalIgnoreCase)
+            ? file.SourceName
+            : $"{archive.Folder}/{archive.Name}";
     }
 
     private byte[] ReadFromSource(VfsFile file)

@@ -1,5 +1,6 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Globalization;
 using System.IO;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -164,6 +165,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private IReadOnlyList<VfsFile> _selectedFiles = [];
     private bool _onlyMods;
     private string _filterText = "";
+    private bool _includeLinks;
     private string _status = "Starting…";
     private bool _busy;
 
@@ -441,6 +443,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
         set { _filterText = value; OnPropertyChanged(); RefreshFileList(debounce: true); }
     }
 
+    /// <summary>Whether depload.dat link rows (see <see cref="VfsFile.IsDependencyLink"/>) show up
+    /// in the file list at all. Off by default - a link row exists for every parent/child entry of
+    /// every depload.dat (tens of thousands on a real install), and it duplicates a hit on the
+    /// target's own name/hash, so leaving them in swamps an ordinary text search.</summary>
+    public bool IncludeLinks
+    {
+        get => _includeLinks;
+        set { _includeLinks = value; OnPropertyChanged(); RefreshFileList(); }
+    }
+
     public FolderNode? SelectedFolder
     {
         get => _selectedFolder;
@@ -514,8 +526,13 @@ public sealed class MainViewModel : INotifyPropertyChanged
     {
         null => string.Empty,
         { IsModded: true } => "mod",
-        var f => $"archive: {f.SourceName}",
+        var f => $"archive: {ModuleNameFor(f)}",
     };
+
+    /// <summary>The archive name to show for <paramref name="file"/> - disambiguated with its parent
+    /// folder when another mounted archive shares the same bare name (see
+    /// <see cref="GameVfs.DisplayModuleName"/>), without exposing <see cref="_vfs"/> itself.</summary>
+    public string ModuleNameFor(VfsFile file) => _vfs?.DisplayModuleName(file) ?? file.SourceName;
 
     /// <summary>Which mod supplied this file, and whether that meant overriding the base game.</summary>
     public string ModOrigin => SelectedFile switch
@@ -981,9 +998,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
 
         GameVfs vfs = _vfs;
-        (string[] includes, string[] excludes, string? extFilter) = ParseFilter(_filterText);
+        (string[] includes, string[] excludes, string? extFilter, string? archFilter, uint? hashFilter) = ParseFilter(_filterText);
         string? folderPath = SelectedFolder?.FullPath;
         bool onlyMods = OnlyMods;
+        bool includeLinks = IncludeLinks;
 
         List<VfsFile>? matches;
         try
@@ -994,7 +1012,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
             matches = await Task.Run(() =>
             {
                 IEnumerable<VfsFile> files;
-                if (includes.Length > 0 || excludes.Length > 0 || extFilter is not null)
+                if (includes.Length > 0 || excludes.Length > 0 || extFilter is not null || archFilter is not null || hashFilter is not null)
                 {
                     files = vfs.Files.Values.Where(f =>
                     {
@@ -1002,11 +1020,17 @@ public sealed class MainViewModel : INotifyPropertyChanged
                         // Filter for exclusion first, skip file early
                         if (excludes.Length > 0 && excludes.Any(x => normalizedPath.Contains(x, StringComparison.OrdinalIgnoreCase)))
                             return false;
-                        
+
+                        if (hashFilter is { } hash && f.Hash != hash)
+                            return false;
+
+                        if (archFilter is not null && !vfs.DisplayModuleName(f).Contains(archFilter, StringComparison.OrdinalIgnoreCase))
+                            return false;
+
                         // Include and extension comes after that
                         var extMatch = extFilter is null || string.Equals(f.Type.Extension, extFilter, StringComparison.OrdinalIgnoreCase);
                         var includesMatch = includes.Length == 0 || includes.All(x => normalizedPath.Contains(x, StringComparison.OrdinalIgnoreCase));
-                        
+
                         return extMatch && includesMatch;
                     });
                 }
@@ -1023,6 +1047,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
                 if (onlyMods)
                 {
                     files = files.Where(f => f.IsModded);
+                }
+
+                if (!includeLinks)
+                {
+                    files = files.Where(f => !f.IsDependencyLink);
                 }
 
                 token.ThrowIfCancellationRequested();
@@ -1049,14 +1078,20 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private static string NormalizeSlashes(string path) => path.Replace('/', '\\');
 
     /// <summary>
-    /// Pulls an <c>ext:xbt</c>-shaped token (matched against <see cref="VfsFile.Type"/>'s already
-    /// lowercased, dot-less extension - see <c>FileTypeSniffer.Identify</c>) out of the filter text,
-    /// leaving whatever's left as the ordinary path substring needle. Whitespace-delimited, so
-    /// <c>"ext:xbt cliff"</c> combines both: only .xbt files whose path also contains "cliff".
+    /// Pulls the special <c>ext:xbt</c>/<c>arch:dlc1</c>/<c>hash:1a2b3c4d</c>-shaped tokens out of the
+    /// filter text, leaving whatever's left as the ordinary path substring needle. Whitespace-delimited
+    /// and freely combinable, e.g. <c>"ext:xbt cliff"</c>: only .xbt files whose path also contains
+    /// "cliff". <c>arch:</c> matches against <see cref="GameVfs.DisplayModuleName"/> (so both the bare
+    /// archive name and, for a colliding one, its disambiguated "folder/name" form work); <c>hash:</c>
+    /// takes a hex CRC32 (with or without a leading "0x") and matches <see cref="VfsFile.Hash"/> exactly
+    /// - an unparsable hash: value is dropped rather than falling back to a literal text match, since a
+    /// mistyped hash is never a meaningful path substring.
     /// </summary>
-    private static (string[] Includes, string[] Excludes, string? Extension) ParseFilter(string filterText)
+    private static (string[] Includes, string[] Excludes, string? Extension, string? Archive, uint? Hash) ParseFilter(string filterText)
     {
         string? extension = null;
+        string? archive = null;
+        uint? hash = null;
         var includes = new List<string>();
         var excludes = new List<string>();
 
@@ -1064,6 +1099,16 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             if (token.StartsWith("ext:", StringComparison.OrdinalIgnoreCase))
                 extension = token[4..].TrimStart('.');
+            else if (token.StartsWith("arch:", StringComparison.OrdinalIgnoreCase))
+                archive = token[5..];
+            else if (token.StartsWith("hash:", StringComparison.OrdinalIgnoreCase))
+            {
+                string hex = token[5..];
+                if (hex.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                    hex = hex[2..];
+                if (uint.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint parsed))
+                    hash = parsed;
+            }
             else if (token.StartsWith("-", StringComparison.OrdinalIgnoreCase) && token.Length > 1)
                 excludes.Add(token[1..]);
             else
@@ -1071,9 +1116,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
 
         return (
-            includes.Select(NormalizeSlashes).ToArray(), 
-            excludes.Select(NormalizeSlashes).ToArray(), 
-            extension is { Length: > 0 } ? extension : null
+            includes.Select(NormalizeSlashes).ToArray(),
+            excludes.Select(NormalizeSlashes).ToArray(),
+            extension is { Length: > 0 } ? extension : null,
+            archive is { Length: > 0 } ? archive : null,
+            hash
         );
     }
 

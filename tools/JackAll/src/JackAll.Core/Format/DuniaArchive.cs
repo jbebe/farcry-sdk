@@ -23,12 +23,20 @@ public sealed class DuniaArchive : IDisposable
     public string Name { get; }
     public string FatPath { get; }
 
+    /// <summary>The immediate directory this archive's .fat lives in (e.g. "dlc1" for
+    /// <c>downloadcontent\dlc1\entitylibrary.fat</c>), or "base" for one sitting directly in
+    /// Data_Win32 — exists purely to disambiguate archives whose bare <see cref="Name"/> collides
+    /// (e.g. dlc1 and dlc_jungle each ship their own "menus.fat"); see
+    /// <see cref="Vfs.GameVfs.DisplayModuleName"/>.</summary>
+    public string Folder { get; }
+
     public IReadOnlyList<FatEntry> Entries => _index.Entries;
 
     private DuniaArchive(string name, string fatPath, FatArchive index, SafeFileHandle data)
     {
         Name = name;
         FatPath = fatPath;
+        Folder = ComputeFolder(fatPath);
         _index = index;
         _data = data;
 
@@ -82,6 +90,14 @@ public sealed class DuniaArchive : IDisposable
 
         return new DuniaArchive(
             Path.GetFileNameWithoutExtension(fatPath), fatPath, index, data);
+    }
+
+    private static string ComputeFolder(string fatPath)
+    {
+        string? parent = Path.GetFileName(Path.GetDirectoryName(Path.GetFullPath(fatPath)));
+        return string.IsNullOrEmpty(parent) || parent.Equals("Data_Win32", StringComparison.OrdinalIgnoreCase)
+            ? "base"
+            : parent;
     }
 
     public bool TryGetEntry(uint hash, out FatEntry entry) => _byHash.TryGetValue(hash, out entry);
