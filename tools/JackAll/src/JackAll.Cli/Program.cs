@@ -3,6 +3,7 @@ using JackAll.Cli.Commands.Archive;
 using JackAll.Cli.Commands.Fcb;
 using JackAll.Cli.Commands.Rml;
 using JackAll.Cli.Commands.Sbao;
+using JackAll.Cli.Commands.Spk;
 using JackAll.Cli.Commands.Xbg;
 using JackAll.Cli.Commands.Xbt;
 using Spectre.Console.Cli;
@@ -10,7 +11,7 @@ using Spectre.Console.Cli;
 var app = new CommandApp();
 app.Configure(config =>
 {
-    config.SetApplicationName("jackall");
+    config.SetApplicationName("jackall-cli");
 
     // --- Maintenance -----------------------------------------------------
     config.AddBranch("system", system =>
@@ -60,6 +61,20 @@ app.Configure(config =>
         sbao.AddCommand<SbaoBuildCommand>("build")
             .WithDescription("Reassemble an .sbao from a .ogg and its .sbaoheader.")
             .WithExample("sbao", "build", "music.ogg", "music.sbaoheader");
+    });
+
+    // --- .spk sound banks --------------------------------------------------
+    config.AddBranch("spk", spk =>
+    {
+        spk.AddCommand<SpkListCommand>("list")
+            .WithDescription("List an .spk bank's records - id, type, and a decoded summary.")
+            .WithExample("spk", "list", "004e1c52.spk");
+        spk.AddCommand<SpkExtractCommand>("extract")
+            .WithDescription("Extract one record's audio (Ogg Vorbis or IMA-ADPCM, detected automatically) as .ogg/.wav.")
+            .WithExample("spk", "extract", "004e1c52.spk", "0x004e1c50");
+        spk.AddCommand<SpkImportCommand>("import")
+            .WithDescription("Replace one record's audio with an already-encoded .ogg/.wav file.")
+            .WithExample("spk", "import", "004e1c52.spk", "0x004e1c50", "replacement.wav");
     });
 
     // --- .fcb object trees ----------------------------------------------

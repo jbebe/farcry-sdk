@@ -6,7 +6,29 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>JackAll.Cli</RootNamespace>
-    <AssemblyName>jackall</AssemblyName>
+    <!-- Not "jackall": Windows filesystems are case-insensitive, so that would collide with the
+         App's JackAll.exe if a user ever put both in the same folder or on PATH. -->
+    <AssemblyName>jackall-cli</AssemblyName>
+  </PropertyGroup>
+
+  <!--
+    Same self-contained single-file publish as JackAll.App (see that csproj for the full rationale):
+    a user should be able to run jackall.exe with no .NET runtime installed and nothing loose beside
+    it. Gated on _IsPublishing so `dotnet build`/`dotnet test` stay fast framework-dependent builds.
+    Trimming is left off even though this is a plain console app (no WPF constraint here) because
+    Spectre.Console.Cli's command discovery relies on reflection that trimming isn't guaranteed to
+    preserve without explicit annotations.
+  -->
+  <PropertyGroup Condition="'$(_IsPublishing)' == 'true'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <PublishReadyToRun>true</PublishReadyToRun>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <DebugType>none</DebugType>
+    <AllowedReferenceRelatedFileExtensions>none</AllowedReferenceRelatedFileExtensions>
   </PropertyGroup>
 
   <ItemGroup>

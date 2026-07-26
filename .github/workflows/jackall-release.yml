@@ -30,11 +30,19 @@ jobs:
         # group): output is just JackAll.exe plus data\ (hash dictionary, .fcb class config,
         # bundled ffmpeg.exe) - no loose DLLs, no .deps.json/.runtimeconfig.json, no config.ini
         # (that's only ever written by the app itself, at first run).
-        run: dotnet publish src/JackAll.App/JackAll.App.csproj --configuration Release --runtime win-x64 --output publish
+        run: dotnet publish src/JackAll.App/JackAll.App.csproj --configuration Release --runtime win-x64 --output publish/app
+
+      - name: Publish JackAll.Cli
+        # Same self-contained single-file deal as the App (see JackAll.Cli.csproj's _IsPublishing
+        # group): output is jackall-cli.exe plus .itemhashes/.fcbclasses - no .NET runtime install
+        # required.
+        run: dotnet publish src/JackAll.Cli/JackAll.Cli.csproj --configuration Release --runtime win-x64 --output publish/cli
 
       - name: Zip release
         shell: pwsh
-        run: Compress-Archive -Path "publish\*" -DestinationPath "jackall-${{ inputs.version }}.zip"
+        run: |
+          Compress-Archive -Path "publish\app\*" -DestinationPath "jackall-${{ inputs.version }}.zip"
+          Compress-Archive -Path "publish\cli\*" -DestinationPath "jackall-cli-${{ inputs.version }}.zip"
 
       - name: Tag and publish GitHub release
         shell: pwsh
@@ -43,4 +51,4 @@ jobs:
         run: |
           git tag "${{ inputs.version }}"
           git push origin "${{ inputs.version }}"
-          gh release create "${{ inputs.version }}" "jackall-${{ inputs.version }}.zip" --title "JackAll ${{ inputs.version }}" --generate-notes
+          gh release create "${{ inputs.version }}" "jackall-${{ inputs.version }}.zip" "jackall-cli-${{ inputs.version }}.zip" --title "JackAll ${{ inputs.version }}" --generate-notes
