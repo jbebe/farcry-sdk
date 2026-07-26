@@ -30,6 +30,49 @@ for the full provenance note.
 - **The "Jackal Tape Glitch" / "boots bug"** (the same collectible-tape audio recording plays repeatedly instead of advancing) was investigated multiple times across multiple years (2011 and again 2016) and **never solved**. It's known to be tied to the game being patched to v1.3+ (only present on 1.3+; playing on 1.2 avoids it, but 1.2 is incompatible with the modding tools) — a real modding-vs-correctness trade-off with no resolution found. (Small consolation for going to 1.3: it also removes the SecuROM DRM, per guru3D's general FC2 thread.) One theory (unconfirmed): a broken start/end pointer into a single concatenated audio file.
 - **A leaked FC2 press-review (pre-release) build partially breaks FCBConverter**: "Lasercar" tested a leaked 3.4GB press-review archive (Discord, `🔩-tools-talking`, 2022-11-05/06) — it unpacks, but many files come out with "incorrect data," possibly because FCBConverter misdetects the archive version; some files (e.g. `missions/missions.xml`) extract fine because their position happens to match the retail layout, others don't. The press-review's `version.ini` differs from retail's. ArmanIII's working theories (unresolved): a different fat data layout, or a different compression method. Low-priority — only matters if this specific leaked build ever needs mining.
 - **Object draw-distance was reportedly never successfully modded, as of 2023**: *"I know FC2 modders would love to increase draw distance on objects too. So far I don't think anyone pulled it off."* (Discord, `🔨-fc4-and-p-modding`, 2023-02-02, from "Steve64b"). Distinct from the LOD/terrain/tree/cluster distance settings in `defaultrenderconfig.xml` that [the Almost Complete Guide](./guide/graphics.md) already documents (`LodScale`, `TerrainDetailBlendViewDistance`, `RealTreesLodScale`, etc.) — this claim is specifically about ordinary placed *objects*, which apparently don't share those same scalable settings. Not independently re-verified since 2023; worth a fresh check before assuming it's still true.
+
+  :::info[Verified via reverse engineering]
+  The stock map editor's decompiled source (`ToolObject.cs`, see [Getting
+  Started](./getting-started.md)) confirms placed objects have an explicit **"Occlusion" category**,
+  flagged by a specific hash ID (`0xC3C41DC8`) on the object's inventory folder — a distinct
+  perf-culling mechanism from the LOD-distance settings above, and a plausible reason ordinary
+  per-object draw-distance tuning doesn't have an obvious data-driven knob: culling may be
+  occlusion/category-driven rather than pure distance-driven for placed objects.
+  :::
+
+Map-editor tool quirks, confirmed directly from the same decompiled source referenced above
+(`tools/third-party/FC2Editor_Source/FC2Editor.Tools/`):
+
+- **Every paint-brush tool (terrain sculpt, texture, foliage) shares one input scheme**, inherited
+  from a common base class (`ToolPaint.cs`): Shift+drag doesn't paint at all — it resizes the brush
+  live (0.5 units per pixel of the dominant drag axis). Easy to trigger by accident expecting it to
+  paint at a larger size.
+- **Ctrl+brush doesn't erase generically on the Texture or Foliage painters** (`ToolTexture.cs`,
+  `ToolCollection.cs`) — it hardcodes the painted ID to a reserved "slot 0"/"empty" ID rather than
+  inverting brush strength. If texture slot 0 holds a real assigned texture, "erasing" with Ctrl
+  paints *that* texture instead of clearing to nothing.
+- **The Noise terrain tool's third dropdown mode ("Raise/Lower" combined) looks non-functional in the
+  shipped editor code** (`ToolTerrainNoise.cs`) — the underlying enum-value array never assigns it a
+  distinct value from plain "Raise," so it's likely aliased rather than genuinely combining both
+  directions. Worth confirming visually before relying on it for precision work.
+- **Roads and the Playable Zone boundary share a hard 100-point cap per spline** (`ToolSpline.cs`),
+  enforced in code, not just a soft UI limit — a long winding road or an intricate zone boundary can
+  hit this ceiling.
+- **Water Level's valid range is -1 to 255, and -1 specifically means "no water"** (`ToolEnvironment.cs`)
+  — distinct from setting an actual height of 0.
+- **Arrow keys in Move mode have an easy-to-trigger modifier trap** (`ToolObject.cs`): unmodified
+  arrows nudge the object 1 unit/degree per tick (Shift = 1/4 speed, i.e. finer control), but
+  Ctrl+Left/Right *rotates* around Z instead of moving, and Ctrl+Up/Down moves *vertically* instead of
+  horizontally — an asymmetric scheme that isn't obvious from the UI.
+- **Object Snap mode's "Preserve Orientation" and angle-snap are mutually exclusive, not combinable**
+  (`ToolObject.cs`) — turning on Preserve Orientation silently disables the angle-snap fields rather
+  than just ignoring them (Snap mode itself works by dragging from one object's nearest anchor/pivot
+  point to another's).
+- **The Move/Rotate tools' anchor-point snapping is driven by per-object-type "pivot" data baked into
+  the global object database, not per-map data** (`ToolObject.cs`) — editable only via a hidden 6th
+  Object-tool mode gated behind the `-editobjectdb` command-line flag, which the editor's own source
+  explicitly labels *"used only for development purposes... will not be included in retail."* This
+  explains why ordinary map editing can't customize an object's snap-anchor points.
 - **The hang glider was never successfully modded** — flight time, agility, and glider-based actions (e.g. dropping grenades while gliding) all remained unrealized wishlist items despite searching the (very large) vehicle data file.
 - **Stuck-on-splash-screen boot failure, fixed by swapping `systemdetection.dll` from Far Cry 3** (Discord, Far Cry Modding Community, "Splash screen crash or wont launch" thread, Aug 2021): a Steam copy that had previously run fine started hanging on the splash screen after a reinstall — no window, no error, nothing after the splash. Verifying file integrity, reinstalling, trying Windows compatibility modes, and clearing the Documents profile/XML data all failed to fix it. The working fix (found via a Steam Discussions post, reproduced here): install Far Cry 3, copy **its** `systemdetection.dll` over Far Cry 2's own copy of the file — game then booted to the title screen normally. Cause unconfirmed (bad/outdated hardware-detection logic in FC2's own DLL is the working theory), but the fix itself was directly confirmed working by the reporter. Two other boot-failure causes mentioned in the same thread, unconfirmed/situational: a damaged profile XML in the Documents save folder, and the separate, unrelated **"infinite fire" bug when hosting a dedicated server**, which is worked around by setting Windows compatibility mode to **Vista SP1** (not a general fix for the splash-screen hang — SP-hosting-specific).
 - **Vehicle max-HP modding is unreliable**: changing a ground vehicle's `fHealth` (Chassis section) and recompiling reliably crashes the game (on load or on vehicle-spawn), even though the base game's multiplayer vehicle files are modified by the default patch without issue — suspected DLC-folder conflict, never resolved.

@@ -175,23 +175,20 @@ the editor UI.
 mapCallback, errorCallback)`, `RunScriptEntry(entry)`. `WildernessInventory`: catalog tree of saved
 Wilderness scripts.
 
-## Open lead: a self-documenting script-reflection API
+## Resolved: the self-documenting script-reflection API
 
 `Wilderness.cs` also exposes a small, separate reflection surface: `NumFunctions` (get) →
 `FCE_Script_GetNumFunctions`, and `GetFunction(index)` → `FCE_Script_GetFunction`, returning a
 `FunctionDef` handle whose `.Name` / `.Prototype` / `.Description` properties are backed by
 `FCE_ScriptFunction_GetName` / `FCE_ScriptFunction_GetPrototype` / `FCE_ScriptFunction_GetDescription`.
-
 This is distinct from the `RegisterLuaBinding` mission-scripting surface in
-[lua-api-surface.md](./lua-api-surface.md) — it's the introspection API for whatever language drives
-`FCE_Wilderness_Script`/`RunScriptBuffer` procedural terrain generation. `GetName` and `GetDescription`
-now have confirmed prototypes in Ghidra; `GetPrototype` wasn't found under that exact name (see below).
+[lua-api-surface.md](./lua-api-surface.md) — it's the introspection API for a separate procedural
+terrain-generation language, "Wilderness Script".
 
-**Not attempted yet, but worth a dedicated session**: calling `FCE_Script_GetNumFunctions` and
-iterating `FCE_Script_GetFunction` would enumerate every built-in Wilderness-script function by name,
-signature, *and description* straight out of the running engine — a complete language reference
-without touching a single script file, the same way the editor itself must populate a
-function-autocomplete/help panel.
+Traced fully via Ghidra (no game/editor execution needed) — the table this reflection API walks is
+built by one function containing all 37 builtin functions' names, full call prototypes, and
+descriptions as literal strings, compiled directly into the binary. **See [the dedicated page on this
+language](./wilderness-script-language.md) for the complete function reference.**
 
 ## Not found in the binary
 

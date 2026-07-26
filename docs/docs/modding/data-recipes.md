@@ -59,3 +59,47 @@ Concrete data recipes found by the community:
 - **Full-auto conversion + sound looping is its own separate gotcha, distinct from the `iBurstLength`/`selFireRateMode` sound-silencing issue above**: a `.spk` sound authored for a 3-round burst, when used as the fire sound for a weapon modded to genuinely full-auto, was observed to audibly "repeat 3 times with a pause" instead of looping smoothly — the burst-length baked into the sound asset itself doesn't automatically stretch to match a changed fire-rate/mode. The fix demonstrated was manually re-editing the sound to loop seamlessly as a short burst rather than relying on the original burst-length audio.
 - **Vehicle armor**: reliability-degradation "manuals" (bought from the arms dealer) pushed toward 100% can make a vehicle nearly immune to mortar/rocket fire while you're inside it (mercs' shots visibly bounce off / do nothing, though bullets were observed passing straight through the windshield into the seats — the "armor" is not a real collision simulation, more a damage-immunity flag); you still take minor chip damage if caught on foot nearby. This bonus was independently confirmed to also reduce damage the *player* takes while inside the vehicle, not just the vehicle's own durability.
 - **Mortar/weapon neutering**: setting a weapon's damage/range/accuracy/reliability/firerate all to `0.1` (must be nonzero — `0` still deals damage in at least one tested case) leaves the sound/visual effect intact while making it nearly harmless — used by the community to "de-fang" the mortar-guy NPCs specifically.
+
+Concrete map-editor tool mechanics, confirmed directly from the stock map editor's decompiled source
+(`tools/third-party/FC2Editor_Source/FC2Editor.Tools/` — see [Getting Started](./getting-started.md)
+for provenance, [the engine-internals editor API surface page](../engine-internals/editor-api-surface.md)
+for the underlying native calls these tools drive):
+
+- **Brush mechanics shared by every terrain/texture/foliage paint tool** (`ToolPaint.cs`, the common
+  base class): radius is clamped **1–128** world units; the Distortion slider isn't a raw jitter
+  amount, it scales to `distortion × radius × 0.7` (max jitter offset is always 70% of the current
+  radius).
+- **Texture Painter tuning** (`ToolTexture.cs`): default brush hardness is **0.85** (harder-edged than
+  the shared 0.4 base default); paint accumulates at `strength × 512 × dt` per second; auto-texture-
+  by-constraint ranges are Min/MaxHeight **0–255**, Height Fuzziness **0–32**, Min/MaxSlope **0–90°**.
+- **There's an 8th terrain tool beyond the documented F1–F7 set**: Terrain Terrace (toolbar-only, no
+  hotkey found in the decompiled source) steps terrain into level bands — default step height **2**
+  (range 0–32), with its Strength slider scaled far gentler than the other brushes
+  (`opacity = strength × 0.04`, ~25× softer than a typical paint tool).
+- **Flatten (F3) has a hidden eyedropper**: Ctrl+click samples the terrain height under the cursor
+  straight into the Height field instead of painting — a fast way to match an existing elevation
+  before flattening elsewhere. Its Height range is 0–256 (default 32); Raise/Lower (F2)'s delta range
+  is a separate, smaller **-32 to +32** (default 5), since it's relative rather than absolute.
+- **Erosion (F7)'s four knobs**, not previously named anywhere: Density, Deformation, Channel Depth,
+  Randomness (all 0–1, defaults 0.5/0.5/0.5/0).
+- **Ramp (F5) is exactly two mouse-*up* clicks** (release, not press) — the first sets the start
+  point, the second executes the ramp. It forcibly disables the square-brush and Distortion options
+  (circle-only), using Hardness purely as edge-blend width.
+- **Road width is clamped 4–16 world units** (default 8) in the road-authoring tool. While drawing a
+  spline, a new point only auto-inserts once the cursor moves more than 15 world units from the last
+  one; clicking to insert a point mid-segment has a 4-unit hit tolerance.
+- **Object placement/move mechanics** (`ToolObject.cs`, by far the largest pure-logic file in the
+  editor source, ~3,500 lines): auto-orientation tilts a placed object to match the raycast surface
+  normal, not just camera yaw. Ctrl+drag while placing or moving performs a freehand yaw rotation at a
+  fixed **0.025 rad (~1.43°) per pixel** of horizontal mouse movement — the same constant reused
+  across three separate placement/drag code paths. **Shift+drag duplicates the current selection in
+  place** and immediately lets you drag the copy away, leaving the original untouched — the editor's
+  built-in "duplicate-drag" idiom, not documented in any tutorial reviewed so far.
+- **Move mode's grid-snap size is 1–16 world units** (default 1, step 0.25); enabling "Snap Object
+  Size" instead snaps movement to increments equal to the selected object's own bounding-box
+  dimensions — the practical way to butt identical modular pieces (fences, wall segments) together
+  with zero gaps. "Grab Anchor" (when enabled) grabs an object by its nearest pivot/anchor point
+  instead of its geometric center when you click-drag it. Rotation angle-snap (default 90°) advances
+  one notch per 25 units of accumulated perpendicular mouse movement; "Reset Tilt" zeroes pitch/roll
+  only, preserving yaw — a quick way to level a knocked-over object without changing which way it
+  faces.
