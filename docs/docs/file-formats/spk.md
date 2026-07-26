@@ -96,7 +96,7 @@ The type tag at core offset `0x20` selects one of seven handlers:
 |---|---|---|---|
 | `0x10000000` | `SimpleFixed68` | Fixed 68-byte sub-header, remainder (if any) copied verbatim. | 34% |
 | `0x20000000` | `TransformedFixed128` | Fixed 128-byte sub-header, then a dedicated post-load transform — the only fixed-size type that does more than copy. | 39% |
-| `0x30000000` | `FlatCopy` | No sub-header — the entire remainder is copied verbatim. This is where the actual compressed audio bytes live (see "The audio codec" below). | 27% |
+| `0x30000000` | `FlatCopy` | No sub-header — the entire remainder is copied verbatim. This is where the actual compressed audio bytes live, as either of two codecs (see "The audio codec(s)" below). | 27% |
 | `0x40000000` | `LargeFixed256` | Fixed 256-byte sub-header, plain copy. | never seen in a real install |
 | `0x50000000` | `Streamed` | Rejected outright when loading atomic/bank data ("*Can't load atomic object id (0x%X) because it's a streamed sound data*"). Streamed sounds are never packed into a `.spk` bank's records — they exist exclusively as standalone `<id>.sbao`/`<id>.bao` files (see below). | 0% (by definition) |
 | `0x60000000` | `CountPrefixedList` | Reads a leading count from the raw data and consumes `count*4 + 4` bytes before the remainder — a count-prefixed list of references rather than a single sound. Likely a randomized-variation group. | never seen in a real install |
@@ -167,11 +167,34 @@ ids and real `.sbao` file ids overlap at only ~0.01% (noise level) across a whol
 are mutually exclusive storage paths for the same id-space, not a referencing relationship. See
 [the `.sbao` page](./sbao.md) for that format's own layout.
 
-## The audio codec: IMA-ADPCM
+## The audio codec(s): Ogg Vorbis and IMA-ADPCM
 
 `FlatCopy`'s payload (no sub-header, the entire remainder copied verbatim) is where the actual
-compressed audio bytes live — up to 2.67 MB observed in a single record, with no `RIFF`/`OggS`
-signature anywhere in it.
+compressed audio bytes live — up to 2.67 MB observed in a single record. It's not one fixed codec:
+real records split roughly **74%/26% Ogg Vorbis / IMA-ADPCM**, distinguished per record by whether the
+payload's own bytes parse as a valid Ogg Vorbis identification header.
+
+### Ogg Vorbis variant (~74%)
+
+The majority case: the `FlatCopy` payload *is* a complete, standard Ogg container — starting directly
+with an `OggS` page-magic first page, whose first packet is a standard Vorbis identification header
+(`0x01` + `"vorbis"` + version/channel-count/sample-rate fields). Unlike the Ogg-backed variant of
+[`.sbao`](./sbao.md) (see "Relationship to `.sbao`" above), there's no extra engine header wrapping it
+here — the record's own 40-byte core is immediately followed by Ogg bytes, full stop. Sample rate and
+channel count are read straight out
+of the embedded Vorbis ID packet rather than needing the sibling `TransformedFixed128` record's own
+(possibly redundant, unconfirmed-in-this-case) sample-rate field.
+
+Since it's a complete, independently-valid audio file, no proprietary decode work was needed here
+beyond detecting it — any standard Ogg Vorbis decoder handles it directly, and replacing one is just a
+matter of dropping in a different valid Ogg Vorbis stream of the same sample rate/channel count (no
+playback-length metadata to keep in sync — the container is self-describing; contrast with the
+IMA-ADPCM variant below, which does require that).
+
+### IMA-ADPCM variant (~26%)
+
+The minority case, and the one with no `RIFF`/`OggS` signature anywhere in it — this is a proprietary
+raw `TImaAdpcm` stream, requiring the full trace below to decode.
 
 The codec is **standard IMA-ADPCM**. Found by pulling `Dunia.dll` off disk and byte-searching it
 directly for the canonical reference tables every textbook IMA-ADPCM implementation ships with —
@@ -208,8 +231,8 @@ header** once, at the very start of a stream, before switching into steady-state
 
 After the header, the rest of the stream is packed IMA-ADPCM nibbles as described above.
 
-**Verified against real data:** checked this exact layout against two real `FlatCopy` payloads (one
-mono, one stereo) — the version byte was `5` in both, and the channel-mode flag correctly predicted
+**Verified against real data:** checked this exact layout against two real IMA-ADPCM-variant
+`FlatCopy` payloads (one mono, one stereo) — the version byte was `5` in both, and the channel-mode flag correctly predicted
 mono vs. stereo (matching, independently, the `TransformedFixed128` word `[17]` channel-count
 correlation found from statistics alone). Reimplementing the decode loop directly (a plain Python
 port of the two decoder functions above) and running it against both payloads end to end consumed
@@ -229,6 +252,48 @@ counts above 2 are supported somewhere, presumably by combining multiple mono/st
 rather than a single stream with a channel-mode byte above 1 — not verified against a real sample,
 since none appeared in the corpus scan.
 
+## Playback length: shorter IMA-ADPCM replacements decode as trailing noise
+
+Modding symptom: replace a `FlatCopy` record's IMA-ADPCM audio with a shorter clip (payload bytes +
+container `size` field both correctly rewritten to the new, smaller length) and the game plays your
+replacement correctly for its own duration, then keeps going — decoding a burst of noise for the
+*remainder of the original clip's duration* instead of stopping cleanly or going silent. This means
+whatever governs total playback length is not simply "walk the IMA-ADPCM stream until the reader
+runs out of input bytes," despite that being all that's structurally required to decode a stream on
+its own (see above).
+
+**First hypothesis, tested and falsified:** `TImaAdpcm_DecodeStream` (`0x10a7f9e0`, the method behind
+the `"TImaAdpcm: Incoherency in IMA-ADPCM resource header"` error strings) decodes through a
+`TImaAdpcm` object that carries a counter at offset `+0x30`, decremented every decode call. On first
+read this looked like a "total remaining samples in the clip" gate seeded once at load time from the
+sibling `TransformedFixed128` record's word `[20]` (`+0x50`) — plausible, since that word was already
+flagged above as "reads more like a decoded sample/frame count than a second rate field" from
+statistics alone. A fix built on that theory (patching word `[20]` to the replacement's real sample
+count after every swap) was shipped and then **empirically failed to change the symptom at all**.
+
+Re-reading `TImaAdpcm_DecodeStream` more carefully after that failure showed why: `+0x30` is actually
+an internal look-ahead **buffer** counter — how many already-decoded samples are sitting in a scratch
+buffer waiting to be handed to the caller this call — refilled from the byte-stream reader (`+0x24`)
+and drained every streaming call. It has nothing to do with total clip length; the "seeded from
+word `[20]` at load" theory doesn't hold up. That patch was reverted.
+
+The real mechanism traces further than this: `TImaAdpcm` construction goes through a codec-selector
+dispatch (`FUN_10a7ae40`) reached from a generic multi-stage "voice" construction function
+(`FUN_10a6ff20`) that wires up several DARE-pipeline sub-objects (decoder, and at least three more
+unidentified stages) — shared machinery across all its codecs, not something specific to `.spk`. The
+trace was not carried further into that pipeline to find where (or whether) an actual total-length
+value gets set.
+
+**Practical workaround, not a root-cause fix:** JackAll's `.spk` audio importer
+(`SpkFileHandler.ImportAudio_Click`) now pads a shorter IMA-ADPCM replacement with trailing digital
+silence (real zero-valued PCM samples run through the same encoder, so the predictor decays cleanly)
+up to the original clip's own sample count before encoding, rather than trying to declare the new,
+shorter length anywhere. This keeps the encoded byte length from ever shrinking below the original,
+so whatever the real length-governing mechanism turns out to be, it can't run past a same-or-longer
+buffer — trading "properly detecting and declaring the new duration" for "never giving the engine
+less data than before." Ogg Vorbis–backed records need no such workaround — that container is
+self-describing.
+
 ## Open questions
 
 - The four unidentified 40-byte-core fields (`0x08`-`0x14`) — confirmed not a checksum of the payload,
@@ -237,7 +302,11 @@ since none appeared in the corpus scan.
   3D-positioned sounds, etc.) and most of `TransformedFixed128`'s untabulated sub-header words.
 - What `SimpleFixed68` word `[7]`'s small cluster of heavily-reused "category" ids actually represents.
 - The unidentified bytes in the 28-byte ADPCM stream header (`0x01`-`0x0B`, `0x0D`-`0x0F`,
-  `0x17`-`0x1B`) — a total-sample-count field likely lives among them, though it isn't needed for
-  decoding since that just runs until the input bytes are exhausted.
+  `0x17`-`0x1B`).
 - Whether the channel-mode byte can represent channel counts above 2 directly, or whether >2-channel
   audio is always built from multiple sub-streams instead.
+- What actually governs an IMA-ADPCM `FlatCopy` record's total playback length (see "Playback length"
+  above) — confirmed *not* to be `TransformedFixed128` word `[20]`, and traced as far as a generic
+  multi-stage DARE "voice" construction pipeline (`FUN_10a6ff20` → codec-selector `FUN_10a7ae40`) with
+  several still-unidentified sub-objects, but not resolved to a concrete field or instruction. What
+  `TransformedFixed128` word `[20]` itself actually represents, if not this, is also still open.

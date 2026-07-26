@@ -131,8 +131,10 @@ public sealed class TransformedFixed128SubHeader
 /// non-`FlatCopy` types additionally have a further fixed-size sub-header, parsed into
 /// <see cref="SimpleFixed68"/>/<see cref="TransformedFixed128"/> when the type and payload length
 /// match. <see cref="FlatCopy"/> records have no sub-header at all - their remainder
-/// (<see cref="FlatCopyAudioStream"/>) is a raw `TImaAdpcm` stream, decodable with
-/// <see cref="ImaAdpcm"/>.</summary>
+/// (<see cref="FlatCopyAudioStream"/>) holds either of two codecs, split ~74%/26% across a real
+/// install: a complete Ogg Vorbis bitstream (detected by <see cref="SbaoAudio.TryReadVorbisId"/>
+/// parsing a valid Vorbis identification header directly at the start), or a raw `TImaAdpcm` stream,
+/// decodable with <see cref="ImaAdpcm"/>.</summary>
 public sealed class SpkRecord
 {
     public required uint Id { get; init; }
@@ -143,7 +145,9 @@ public sealed class SpkRecord
     public TransformedFixed128SubHeader? TransformedFixed128 { get; init; }
 
     /// <summary>For a <see cref="SpkRecordType.FlatCopy"/> record, the raw bytes after the 40-byte
-    /// core - a `TImaAdpcm` stream, ready for <see cref="ImaAdpcm.Decode"/>. Null for any other type.</summary>
+    /// core - either a complete Ogg Vorbis bitstream (check with
+    /// <see cref="SbaoAudio.TryReadVorbisId"/> first) or, if not, a `TImaAdpcm` stream ready for
+    /// <see cref="ImaAdpcm.Decode"/>. Null for any other record type.</summary>
     public byte[]? FlatCopyAudioStream =>
         Core?.Type == SpkRecordType.FlatCopy ? Payload[SpkRecordCore.Size..] : null;
 }
@@ -171,8 +175,10 @@ public sealed class SpkRecord
 /// that's always exactly 40, four still-unidentified fields, two always-zero fields, a type tag, and
 /// a field that's always `2`) - see <see cref="SpkRecordCore"/>. The type tag selects one of seven
 /// handlers (see <see cref="SpkRecordType"/>); <see cref="SpkRecordType.FlatCopy"/> is the one with no
-/// further sub-header - its remainder is the actual compressed audio, a `TImaAdpcm` (IMA-ADPCM) stream
-/// decodable with <see cref="ImaAdpcm"/>. The other two common types
+/// further sub-header - its remainder is the actual compressed audio, split ~74%/26% across a real
+/// install between a complete Ogg Vorbis bitstream and a raw `TImaAdpcm` (IMA-ADPCM) stream decodable
+/// with <see cref="ImaAdpcm"/> (see <see cref="SpkRecord.FlatCopyAudioStream"/>'s remarks). The other
+/// two common types
 /// (<see cref="SpkRecordType.SimpleFixed68"/>/<see cref="SpkRecordType.TransformedFixed128"/>) have
 /// their own fixed-size sub-headers, parsed into <see cref="SimpleFixed68SubHeader"/>/
 /// <see cref="TransformedFixed128SubHeader"/>.

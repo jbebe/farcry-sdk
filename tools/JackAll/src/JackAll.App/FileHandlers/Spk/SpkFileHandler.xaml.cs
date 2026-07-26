@@ -560,14 +560,33 @@ public partial class SpkFileHandler : UserControl
             }
             else
             {
-                int channels = ImaAdpcm.Decode(currentStream).Channels;
+                ImaAdpcm.DecodedAudio currentDecoded = ImaAdpcm.Decode(currentStream);
+                int channels = currentDecoded.Channels;
                 int sampleRate = _package.TryGetFlatCopySampleRate(record) ?? FallbackSampleRateHz;
 
                 AudioStatusText.Text = $"Transcoding to {sampleRate} Hz, {channels}-channel PCM…";
                 await FfmpegAudio.TranscodeToPcmWavAsync(dialog.FileName, tempWav, sampleRate, channels);
 
                 WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(await File.ReadAllBytesAsync(tempWav));
-                newAudioStream = ImaAdpcm.Encode(pcm.Samples, pcm.Channels);
+
+                // Pad with trailing silence (zero PCM samples, through the same encoder) up to the
+                // original clip's own sample count if the replacement decodes shorter. What actually
+                // governs the engine's total playback length isn't fully traced - it isn't simply "walk
+                // the IMA-ADPCM stream to its natural end" (see spk.md's "Playback length" section for
+                // what was and wasn't confirmed), and it lives deep in generic DARE voice-construction
+                // plumbing several objects past what's been mapped so far. Never shrinking the encoded
+                // byte length below the original sidesteps that uncertainty entirely: whatever the real
+                // mechanism turns out to be, it can't run past a same-or-longer buffer. The audible
+                // result is "your replacement, then silence" instead of "your replacement, then noise."
+                short[] samples = pcm.Samples;
+                if (samples.Length < currentDecoded.Samples.Length)
+                {
+                    var padded = new short[currentDecoded.Samples.Length];
+                    samples.CopyTo(padded, 0);
+                    samples = padded;
+                }
+
+                newAudioStream = ImaAdpcm.Encode(samples, pcm.Channels);
             }
 
             byte[] newPayload = [.. record.Payload[..SpkRecordCore.Size], .. newAudioStream];
