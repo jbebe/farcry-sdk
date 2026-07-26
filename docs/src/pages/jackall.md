@@ -63,7 +63,7 @@ Loading](/docs/file-formats/archives-fat-dat).
 | `.xbm` (materials) | Shows shader template, every texture slot binding, and every shader parameter. |
 | `.xbg` (3D meshes) | Orbitable 3D preview, per-LOD, per-submesh coloring. |
 | `.sdat` (terrain sectors) | Grayscale heightmap viewer. |
-| `.spk` (sound banks) | Structural viewer (record table, ids, payload sizes). |
+| `.spk` (sound banks) | Structural viewer and replacer (record table, ids, payload sizes). |
 | `.mgb` (Magma UI binaries) | Header/type-table and widget/animation tree viewer. |
 | `.sav` (save games) | Browse world/player/DLC metadata and the persisted-entity tree; delete saves from the same tab. |
 
@@ -76,6 +76,8 @@ because nobody's cracked its name yet.
 ![A .xbg mesh, orbitable and split per submesh with its bound materials listed](/img/screenshots/files_3d.png)
 
 ![A .sbao entry — header vs. Ogg payload breakdown, with playback preview and export/import](/img/screenshots/files_audio.png)
+
+![A .spk entry — with playback preview and export/import](/img/screenshots/files_spk.png)
 
 ## Where it's going
 

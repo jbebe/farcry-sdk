@@ -82,7 +82,7 @@
                             <DataTemplate>
                                 <Button Content="{Binding LinkButtonText}" Click="GoToLink_Click"
                                         IsEnabled="{Binding CanNavigateLink}"
-                                        Visibility="{Binding HasLink, Converter={StaticResource BoolToVis}}"
+                                        Visibility="{Binding ShowLinkButton, Converter={StaticResource BoolToVis}}"
                                         Padding="6,2" FontSize="11" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>

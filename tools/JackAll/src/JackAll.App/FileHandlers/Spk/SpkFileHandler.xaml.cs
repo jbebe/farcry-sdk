@@ -85,14 +85,20 @@ public partial class SpkFileHandler : UserControl
         public required bool LinkedInSameFile { get; init; }
         public required VfsFile? LinkedExternalFile { get; init; }
 
+        /// <summary>Whether this row is nested under an audio group's <c>FlatCopy</c> parent (see
+        /// <see cref="BuildRows"/>) rather than being a top-level/ungrouped entry. A grouped child's
+        /// own link target is already visible right there, so its "Go to" button would be a no-op -
+        /// only entries with no parent in this file get one (see <see cref="ShowLinkButton"/>).</summary>
+        public required bool IsChild { get; init; }
+
         /// <summary>The DataGrid's own grouping key (see <see cref="BuildRows"/>) - the owning
         /// `FlatCopy` record's own group label for anything that chains back to one, or the fixed
         /// "Other records" label for anything that doesn't.</summary>
         public required string GroupKey { get; init; }
 
-        public bool HasLink => LinkedId is not null;
         public bool CanNavigateLink => LinkedInSameFile || LinkedExternalFile is not null;
-        public string LinkButtonText => LinkedId is null ? "" : (CanNavigateLink ? "Go to →" : "Not found");
+        public bool ShowLinkButton => LinkedId is not null && !IsChild;
+        public string LinkButtonText => ShowLinkButton ? (CanNavigateLink ? "Go to →" : "Not found") : "";
     }
 
     public SpkFileHandler(
@@ -227,6 +233,7 @@ public partial class SpkFileHandler : UserControl
                 LinkedId = linkedId,
                 LinkedInSameFile = linkedInSameFile,
                 LinkedExternalFile = linkedExternalFile,
+                IsChild = isChild,
                 GroupKey = groupKey,
             });
         }
