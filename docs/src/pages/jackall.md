@@ -89,9 +89,10 @@ in the author's own words:
   distribution/UX path for actually installing mods, it just hasn't been built yet.
 - **JackAll itself stays** — as the file explorer/editor, not the installer. That part of the job
   moving to Vortex doesn't retire the tool; it narrows what it's for.
-- **A CLI interface, for faster iteration.** Right now the `jackall` CLI only maintains the hash
-  list (`system hash archiveitems`) — every format conversion and build step is GUI-only (also
-  tracked in [Todos](/todos)).
+- **A CLI interface, for faster iteration.** `jackall-cli` now covers every format conversion
+  (archives, `.xbt`, `.xbg`, `.sbao`, `.spk`, `.fcb`, `.rml`) alongside the hash-list maintenance it
+  started with — see [CLI](#cli) below. Mod management (staging, building `patch.dat`/`patch.fat`,
+  fragment merging) stays GUI-only for now (also tracked in [Todos](/todos)).
 - **More tooling beyond file editing** — for Lua, for 3D — and where a dedicated tool isn't the
   right shape for something, tutorials and explanations instead. All of it needs a centralized
   home: this repo (`farcry-sdk`) for now, eventually a community repo with at least two admins and
@@ -196,6 +197,39 @@ One important gotcha the tool surfaces directly: **a save persists values overla
 every entity library**, so a `.fcb`-based mod's changes can't override what a save already has
 baked in. In practice, that means starting a new game after installing (or updating) any mod that
 touches `.fcb` data — an existing save just won't pick the change up.
+
+## CLI
+
+`jackall-cli.exe` is a thin, scriptable sibling to the GUI — same self-contained single-file
+publish (no .NET runtime needed), same bundled hash list and `.fcb` class config. It only does
+format conversions and the hash-list maintenance job; mod staging/building is GUI-only (see
+[Where it's going](#where-its-going) above).
+
+```
+jackall-cli system hash archiveitems
+
+jackall-cli archive extract worlds.fat --names
+
+jackall-cli xbt extract texture.xbt
+jackall-cli xbt build texture.dds texture.xml
+
+jackall-cli xbg export mesh.xbg
+
+jackall-cli sbao extract music.sbao
+jackall-cli sbao build music.ogg music.sbaoheader
+
+jackall-cli spk list 004e1c52.spk
+jackall-cli spk extract 004e1c52.spk 0x004e1c50
+jackall-cli spk import 004e1c52.spk 0x004e1c50 replacement.wav
+
+jackall-cli fcb decode entitylibrary.fcb
+jackall-cli fcb encode entitylibrary/entitylibrary.xml
+
+jackall-cli rml decode toc.rml
+jackall-cli rml encode toc.xml
+```
+
+`--help` on any command or branch (e.g. `jackall-cli fcb --help`) lists its own options.
 
 ## A word on intellectual property
 

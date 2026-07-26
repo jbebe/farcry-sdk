@@ -9,7 +9,7 @@ The Ogg-backed layout is derived by direct byte-analysis of 54 real music `.sbao
 `sound_english.dat`), cross-checked against the community workflow in the [FarCry2Crew Steam
 guide](https://steamcommunity.com/groups/FarCry2Crew/discussions/6/3182361055544934985/). Tooling
 lives in `tools/sbao/sbao_tool.py`. The short-SFX codec is identified via GhidraMCP against
-`Dunia.dll` — see [the `.spk` page](./spk.md#the-audio-codec-ima-adpcm) for the full writeup, since
+`Dunia.dll` — see [the `.spk` page](./spk.md#the-audio-codecs-ogg-vorbis-and-ima-adpcm) for the full writeup, since
 it's the same underlying DARE data reached through a different container path.
 :::
 
@@ -61,7 +61,7 @@ The codec itself is confirmed: **standard IMA-ADPCM**, the same DARE `TImaAdpcm`
 `FlatCopy` records, found via direct byte-search of `Dunia.dll` for the canonical IMA-ADPCM tables and
 verified by decoding real payloads end-to-end into playable audio. Full writeup — table addresses,
 the two decoder functions, the 28-byte per-stream header layout, and the verification — is on
-[the `.spk` page](./spk.md#the-audio-codec-ima-adpcm).
+[the `.spk` page](./spk.md#the-audio-codecs-ogg-vorbis-and-ima-adpcm).
 
 This is a different, unrelated codec family from Ubisoft's older in-house "Ubi Sound Tools" ADPCM
 dialects (`ubi_v3`/`v5`/`v6`/interleaved, decodable by the third-party tool `Ubitunedec` and used in
