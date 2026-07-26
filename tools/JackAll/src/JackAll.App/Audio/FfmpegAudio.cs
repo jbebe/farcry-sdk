@@ -6,10 +6,12 @@ namespace JackAll.App.Audio;
 
 /// <summary>
 /// Thin wrapper around the bundled ffmpeg.exe (shipped at data\ffmpeg.exe next to the app) for
-/// everything the .sbao handler needs: any input format -> 48 kHz stereo Ogg Vorbis for repacking
-/// (Far Cry 2 plays music at a fixed 48 kHz; anything else plays at the wrong speed), Ogg -> mp3 for
-/// export, and Ogg -> wav for preview playback, since WPF's MediaElement has no built-in Ogg Vorbis
-/// decoder and can't be relied on to find one on the host.
+/// everything the .sbao and .spk handlers need: any input format -> 48 kHz stereo Ogg Vorbis for
+/// .sbao repacking (Far Cry 2 plays music at a fixed 48 kHz; anything else plays at the wrong speed),
+/// Ogg -> mp3 for export, Ogg -> wav for preview playback (WPF's MediaElement has no built-in Ogg
+/// Vorbis decoder and can't be relied on to find one on the host), and any input format -> raw PCM wav
+/// at an arbitrary rate/channel count for .spk's `FlatCopy` audio-replace flow, which encodes that PCM
+/// itself rather than shelling out to ffmpeg for the actual codec (see <see cref="Format.ImaAdpcm"/>).
 /// </summary>
 public static class FfmpegAudio
 {
@@ -63,6 +65,22 @@ public static class FfmpegAudio
         return FFMpegArguments
             .FromFileInput(inputPath)
             .OutputToFile(outputPath, overwrite: true, addArguments: options => options.WithCustomArgument("-vn"))
+            .ProcessAsynchronously();
+    }
+
+    /// <summary>Transcodes any ffmpeg-readable audio file to uncompressed 16-bit PCM wav at a specific
+    /// sample rate and channel count - used by the .spk `FlatCopy` audio-replace flow, which needs raw
+    /// samples to feed <see cref="Format.ImaAdpcm.Encode"/>, at whatever rate/channel count the record
+    /// being replaced already uses (there's no single fixed target the way `.sbao` has one).</summary>
+    public static Task TranscodeToPcmWavAsync(string inputPath, string outputPath, int sampleRate, int channels)
+    {
+        EnsureConfigured();
+        return FFMpegArguments
+            .FromFileInput(inputPath)
+            .OutputToFile(outputPath, overwrite: true, addArguments: options => options
+                .WithAudioSamplingRate(sampleRate)
+                .WithCustomArgument($"-ac {channels}")
+                .WithCustomArgument("-c:a pcm_s16le"))
             .ProcessAsynchronously();
     }
 }

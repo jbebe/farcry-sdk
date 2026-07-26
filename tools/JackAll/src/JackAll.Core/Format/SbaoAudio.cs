@@ -13,8 +13,10 @@ namespace JackAll.Core.Format;
 /// giving the payload offset (always 40 in retail files, but read rather than assumed, matching
 /// sbao_tool.py).
 ///
-/// The short-SFX .sbao variant (Ubisoft ADPCM, no Ogg bitstream) is a different, undocumented layout
-/// and is deliberately not handled here — <see cref="Split"/> throws for it.
+/// The short-SFX .sbao variant (no Ogg bitstream) uses the same DARE `TImaAdpcm`/IMA-ADPCM codec as
+/// `.spk`'s `FlatCopy` records (see <see cref="ImaAdpcm"/>) - but its outer file envelope hasn't been
+/// confirmed to match `.spk`'s 40-byte-core-plus-stream shape (a real sample starts with different
+/// bytes entirely), so it's deliberately not handled here — <see cref="Split"/> throws for it.
 /// </remarks>
 public static class SbaoAudio
 {
@@ -80,7 +82,8 @@ public static class SbaoAudio
         if (idx < 0)
         {
             throw new InvalidDataException(
-                "No Ogg bitstream found - not an Ogg-backed .sbao (short SFX .sbao use Ubi ADPCM codecs, unsupported here).");
+                "No Ogg bitstream found - not an Ogg-backed .sbao (short SFX .sbao use IMA-ADPCM " +
+                "in a still-unconfirmed envelope, unsupported here).");
         }
         return idx;
     }

@@ -71,6 +71,121 @@ public class SpkPackageTests
         Assert.All(package.Records, r => Assert.True(r.Payload.Length >= 0));
     }
 
+    [Theory]
+    [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
+    public void Every_real_records_core_declares_the_standard_forty_byte_size(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+
+        SpkPackage package = SpkPackage.Parse(File.ReadAllBytes(path));
+
+        Assert.All(package.Records, r =>
+        {
+            Assert.NotNull(r.Core);
+            Assert.True(r.Core!.HasStandardDeclaredSize, $"record 0x{r.Id:x8} declared 0x{r.Core.DeclaredSize:x}, not 0x28");
+        });
+    }
+
+    [Theory]
+    [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
+    public void Every_real_records_type_tag_is_one_of_the_seven_known_constants(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+
+        SpkPackage package = SpkPackage.Parse(File.ReadAllBytes(path));
+
+        Assert.All(package.Records, r => Assert.NotNull(r.Core!.Type));
+    }
+
+    [Theory]
+    [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
+    public void SubHeaders_echo_their_own_records_id_when_present(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+
+        SpkPackage package = SpkPackage.Parse(File.ReadAllBytes(path));
+
+        foreach (SpkRecord r in package.Records)
+        {
+            if (r.SimpleFixed68 is { } s68)
+            {
+                Assert.Equal(r.Id, s68.OwnId);
+            }
+
+            if (r.TransformedFixed128 is { } t128)
+            {
+                Assert.Equal(r.Id, t128.OwnId);
+            }
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_FlatCopy_records_sibling_TransformedFixed128_links_back_to_it_with_a_real_sample_rate()
+    {
+        string path = "Fixtures/Spk/004e1ccc_1644b214.spk";
+        if (!File.Exists(path)) return;
+
+        SpkPackage package = SpkPackage.Parse(File.ReadAllBytes(path));
+        SpkRecord flatCopy = package.Records.Single(r => r.Core!.Type == SpkRecordType.FlatCopy);
+
+        Assert.NotNull(flatCopy.FlatCopyAudioStream);
+
+        SpkRecord sibling = package.Records.Single(
+            r => r.TransformedFixed128?.FlatCopySiblingId == flatCopy.Id);
+        Assert.Equal(44100, (int)sibling.TransformedFixed128!.SampleRate);
+        Assert.Equal(44100, package.TryGetFlatCopySampleRate(flatCopy));
+    }
+
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void ReplaceRecordPayload_swaps_only_the_target_records_bytes()
+    {
+        string path = "Fixtures/Spk/004e1ccc_1644b214.spk";
+        if (!File.Exists(path)) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        SpkPackage before = SpkPackage.Parse(original);
+        SpkRecord flatCopy = before.Records.Single(r => r.Core!.Type == SpkRecordType.FlatCopy);
+
+        byte[] newPayload = [.. flatCopy.Payload[..SpkRecordCore.Size], .. new byte[3]]; // shorter, arbitrary replacement
+        byte[] patched = SpkPackage.ReplaceRecordPayload(original, flatCopy.Id, newPayload);
+
+        SpkPackage after = SpkPackage.Parse(patched);
+        Assert.Equal(before.Records.Count, after.Records.Count);
+
+        for (int i = 0; i < before.Records.Count; i++)
+        {
+            SpkRecord b = before.Records[i];
+            SpkRecord a = after.Records[i];
+            Assert.Equal(b.Id, a.Id);
+            Assert.Equal(b.PreambleWords, a.PreambleWords);
+
+            if (b.Id == flatCopy.Id)
+            {
+                Assert.Equal(newPayload, a.Payload);
+            }
+            else
+            {
+                Assert.Equal(b.Payload, a.Payload); // every other record's bytes are untouched
+            }
+        }
+    }
+
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void ReplaceRecordPayload_rejects_an_id_not_present_in_the_file()
+    {
+        string path = "Fixtures/Spk/004e1ccc_1644b214.spk";
+        if (!File.Exists(path)) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        Assert.Throws<InvalidDataException>(() => SpkPackage.ReplaceRecordPayload(original, 0xdeadbeef, []));
+    }
+
     [Fact]
     public void Parse_rejects_a_file_without_the_SPK_header()
         => Assert.Throws<InvalidDataException>(() => SpkPackage.Parse("not an spk file at all!!"u8.ToArray()));
