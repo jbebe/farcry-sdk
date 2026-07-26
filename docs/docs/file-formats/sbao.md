@@ -31,8 +31,16 @@ for how that differs from the community-sourced pages elsewhere in this section.
    ("File does not have the correct signature..."), and `-S`/`--scan` (which walks the whole buffer
    looking for a recognized chunk anywhere, not just at offset 0) finds zero matches — while the same
    scan correctly finds the `OggS` chunk in a real Ogg-backed `.sbao` at its documented offset 40,
-   confirming the tool itself works. This format is **not** Ubitunedec-decodable and remains
-   undocumented; not covered here.
+   confirming the tool itself works. This format is **not** Ubitunedec-decodable — it's Ubisoft's own
+   older in-house ADPCM dialect, an unrelated codec family entirely.
+
+   **Update: the actual codec is now identified — standard IMA-ADPCM**, found via direct byte-search
+   of `Dunia.dll` for the canonical IMA-ADPCM tables (exact matches, both stored as `int32` arrays)
+   and confirmed via two decompiled decoder functions implementing the textbook algorithm verbatim.
+   Full writeup, addresses, and the (still-open) framing questions are on [the `.spk`
+   page](./spk.md#update-the-codec-is-standard-ima-adpcm--found-by-byte-search-not-string-search) —
+   the same "atomic object" `.spk` payload and this short-SFX `.sbao` sub-type are the same underlying
+   DARE `TImaAdpcm` data, just reached through two different container paths.
 
 ## The Ogg-backed layout: `[40-byte header][verbatim Ogg Vorbis bitstream]`
 

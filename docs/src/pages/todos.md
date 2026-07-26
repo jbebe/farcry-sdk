@@ -18,6 +18,10 @@ A running task list across the whole project.
 ## Tools/JackAll
 
 - [x] Pipe the converters to the CLI tool to please the die-hard modders
+- [ ] Extend filtering
+  - Add parent folder name to modules (e.g. dlc1/entitylibrary) otherwise it's confusing
+  - Add module search
+  - Add checkbox to filter to include links too (they are really annoying if you're not searching for them)
 
 ## Tools/"dll plugins"
 
