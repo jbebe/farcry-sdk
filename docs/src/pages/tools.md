@@ -18,6 +18,11 @@ for this project, plus every third-party tool kept around for reference or as a 
   archives rather than fixtures. See the [JackAll page](/jackall) for the full feature list and
   usage tutorial, and [.fat/.dat — Archive Loading](/docs/file-formats/archives-fat-dat) for the
   format background.
+- **[FCSE](/fcse)** — an SKSE-style DLL plugin loader for Far Cry 2. A separate launcher,
+  `FCSE.exe`, that loads third-party plugin DLLs from `bin\plugins\` before the engine spins up, so
+  multiple mods can each change behavior that only lives in `Dunia.dll` itself — something that
+  otherwise requires shipping a patched copy of that file, which only one mod at a time can do. See
+  the [FCSE page](/fcse) for the full plugin API and how conflicts between plugins are handled.
 - **[compact_export.py](https://github.com/jbebe/farcry-sdk/tree/main/tools/misc/DiscordChatExporter)**
   — post-processes raw JSON exports from the third-party [DiscordChatExporter](https://github.com/Tyrrrz/DiscordChatExporter)
   into a compact form usable for research, so full modding-Discord history can be searched/grepped

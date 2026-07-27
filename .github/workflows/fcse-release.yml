@@ -1,0 +1,60 @@
+name: FCSE release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version - used as the git tag (fcse-{version}) and as fcse-{version}.zip'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # FCSE.exe and its plugins are 32-bit MSVC/CMake builds (Far Cry 2 is a 32-bit process) - see
+    # tools/FCSE/build.ps1, which this reuses as-is rather than re-deriving the vcvarsall dance.
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tools/FCSE
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build FCSE.exe and the example plugin
+        shell: pwsh
+        run: .\build.ps1 -Config release
+
+      - name: Stage release contents
+        shell: pwsh
+        # Two separate staging folders -> two separate zips (see the "Zip release artifacts" step
+        # below): the main FCSE download, and the example plugin as an opt-in extra for anyone who
+        # wants a working starting point to write their own plugin from. conflict_plugin is a
+        # smoke-test fixture only (see its own source comment) - deliberately not shipped here.
+        run: |
+          $build = "out\build\x86-release"
+
+          New-Item -ItemType Directory -Force -Path "stage\fcse" | Out-Null
+          Copy-Item "$build\FCSE.exe" "stage\fcse\FCSE.exe"
+          Copy-Item "README-release.md" "stage\fcse\README.md"
+
+          New-Item -ItemType Directory -Force -Path "stage\example-plugin" | Out-Null
+          Copy-Item "$build\example_plugin\example_plugin.dll" "stage\example-plugin\example_plugin.dll"
+          Copy-Item "example_plugin\example_plugin.cpp" "stage\example-plugin\example_plugin.cpp"
+          Copy-Item "include\plugin_api.h" "stage\example-plugin\plugin_api.h"
+
+      - name: Zip release artifacts
+        shell: pwsh
+        run: |
+          Compress-Archive -Path "stage\fcse\*" -DestinationPath "fcse-${{ inputs.version }}.zip"
+          Compress-Archive -Path "stage\example-plugin\*" -DestinationPath "fcse-example-plugin-${{ inputs.version }}.zip"
+
+      - name: Tag and publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag "fcse-${{ inputs.version }}"
+          git push origin "fcse-${{ inputs.version }}"
+          gh release create "fcse-${{ inputs.version }}" "fcse-${{ inputs.version }}.zip" "fcse-example-plugin-${{ inputs.version }}.zip" --title "FCSE ${{ inputs.version }}" --generate-notes

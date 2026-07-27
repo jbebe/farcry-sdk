@@ -1,0 +1,172 @@
+# FCSE (Far Cry Script Extender)
+
+An SKSE-style DLL plugin loader for Far Cry 2 - see [`docs/docs/todos.md`](../../docs/docs/todos.md)'s
+`Tools/"dll plugins"` entry for the motivating problem: some engine behavior only lives in
+`Dunia.dll` itself, and until now the only way to change it was to ship your own patched copy of
+that DLL - which works for exactly one mod at a time, since two patched copies can't coexist.
+
+This README is for people building/maintaining the loader itself. If you just want to write a
+plugin, see [`include/plugin_api.h`](include/plugin_api.h) (the full ABI, documented inline) and
+[`example_plugin/example_plugin.cpp`](example_plugin/example_plugin.cpp) (a working, minimal one).
+If you just want to install plugins into the game, see [`plugins/README.md`](plugins/README.md).
+
+## How it works
+
+Ships as a separate exe, `FCSE.exe`, dropped into the game's `bin\` folder next to the untouched
+`FarCry2.exe`. Reimplements `FarCry2.exe`'s own `WinMain` - which is, in its entirety,
+
+```c
+RegisterGameFunctionProvider(&RegisterDebugCommands);
+RunGame(hInstance, cmdLine);
+```
+
+(see [`docs/docs/engine-internals/launcher-exe.md`](../../docs/docs/engine-internals/launcher-exe.md))
+- both calls resolve to plain **exports of `Dunia.dll`**, not anything statically bound into the
+exe. `AddFunctionCB` (also a `Dunia.dll` export) is the third piece: the function-registry insert
+that `RegisterDebugCommands` calls 15 times. All three are resolved by name via `GetProcAddress`
+(`src/dunia_api.cpp`) - confirmed live against the Steam v1.03 build's export table
+(`RegisterGameFunctionProvider`/`AddFunctionCB` are plain undecorated C exports; `RunGame` needs
+its mangled name, `?RunGame@@YA_NPAUHINSTANCE__@@PBD@Z`) - so, unlike
+[`tools/misc/modpatcher`](../misc/modpatcher), this loader has **no hardcoded-RVA dependency on a
+specific `Dunia.dll` build**. Only plugins that choose to hook/patch internals need their own
+version gate (`FCSE_PluginAPI::duniaSize` is provided for exactly that).
+
+### Startup sequence (`src/main.cpp`)
+
+1. Resolve `Dunia.dll` next to the loader, `GetProcAddress` the 3 exports above
+   (`src/dunia_api.cpp`).
+2. Read the real `MalariaCurve`/`PlayerSPFinalize` constants straight out of the real
+   `FarCry2.exe` (`src/stock_constants.cpp`) - see "Reimplementing the 12 stock handlers" below for
+   why this is read at runtime instead of hardcoded.
+3. `MH_Initialize()` (MinHook, vendored via `CMakeLists.txt`'s `FetchContent`, same pattern as
+   `tools/misc/modpatcher`).
+4. Build the `FCSE_PluginAPI` struct and load every `*.dll` in `bin\plugins\`
+   (`src/plugin_loader.cpp`), calling each one's required `FCSE_Load` export. This is the earliest
+   safe point for a plugin to install `Hook()`/`Patch()` calls - nothing in `Dunia.dll` beyond its
+   own `DllMain`/CRT init has run yet.
+5. `RegisterGameFunctionProvider(&DebugCommands::Provider)` - `Provider()` is the callback
+   `Dunia.dll` invokes later, from inside `RunGame`, once `InitDuniaEngine` has succeeded (the only
+   point at which `Dunia.dll`'s function registry is guaranteed constructed). It runs, **in this
+   order**:
+   a. every loaded plugin's optional `FCSE_OnRegisterFunctions` export, then
+   b. this loader's own reimplementation of the 12 stock handlers.
+
+   The order matters: `FunctionRegistry_Insert` (confirmed via live decompile, `0x10299430`) is a
+   find-first insert - the *first* registrant for a name wins, a second registration of an
+   already-claimed name is a **silent no-op** inside `Dunia.dll` itself. Running plugins first is
+   what lets a plugin override one of the 12 stock names (e.g. change `AddDiamond`'s effect) -
+   registering stock handlers first would make that impossible.
+6. `RunGame(hInstance, cmdLine)` - the game proceeds normally from here.
+
+### Reimplementing the 12 stock handlers (`src/debug_commands.cpp`)
+
+`RegisterDebugCommands` isn't a config table, it's a callback registry bootstrap - and
+[`docs/docs/engine-internals/function-registry.md`](../../docs/docs/engine-internals/function-registry.md)
+confirms several of its 12 handlers are live gameplay hooks (diamond pickups, malaria progression,
+main-menu construction, loading-screen text), not just QA stubs. `FCSE.exe` reproduces all 12
+byte-for-byte so nothing regresses versus the stock exe. Two of them (`MalariaCurve`,
+`PlayerSPFinalize`) depend on float/int constants baked into `FarCry2.exe`'s own data section
+that were never RE'd to an exact value - rather than hardcode a guess, `src/stock_constants.cpp`
+maps the real `FarCry2.exe` (via `LoadLibraryExW(..., DONT_RESOLVE_DLL_REFERENCES)`) and reads
+them directly by VA at startup, so the reimplementation is exactly as faithful as whatever build
+is actually installed.
+
+## The plugin API - three tiers
+
+See `include/plugin_api.h` for the authoritative, documented ABI. Summary, from "no RE required" to
+"full control":
+
+1. **`AddFunctionCB(fn, name)`** - claim one of `Dunia.dll`'s named callback slots. Zero address
+   knowledge needed, and version-independent (it's a string key). `function-registry.md` already
+   documents ~17 real gameplay call sites reachable this way.
+2. **`Hook(target, detour, &original)`** - MinHook-backed function detouring, for internals with no
+   existing named-callback seam. `target` is `duniaBase + <an RVA you found via your own Ghidra
+   work>` (or any other module's export, like `example_plugin`'s kernel32 demo).
+3. **`Patch(address, data, size)`** - direct byte patching (`VirtualProtect` → `memcpy` → restore →
+   `FlushInstructionCache`), for the same kind of small constant/branch-flip edit
+   `reverse/patch_toRed.py`/`patch_incHB.py`/`patch_carJoke.py` apply *statically* to `Dunia.dll` on
+   disk today - this applies the same kind of edit live, in-process, so any number of plugins can
+   each patch their own byte ranges without needing one shared pre-patched file.
+
+### Conflict handling
+
+Two plugins can legitimately target the same name/address. Rather than build a composable
+hook-chaining dispatcher, **FCSE tracks per-resource ownership and rejects the second claimant**,
+logging both plugin names - loud and debuggable instead of silently misbehaving:
+
+- `AddFunctionCB`: `src/function_registry.cpp` tracks name → owning module, independent of (and in
+  addition to) `Dunia.dll`'s own silent no-op.
+- `Hook`: `src/hook.cpp` tracks target address → owning module, on top of MinHook's own
+  `MH_ERROR_ALREADY_CREATED` rejection.
+- `Patch`: `src/patch.cpp` tracks claimed `(address, size)` ranges; a new claim overlapping a
+  *different* module's existing claim is rejected. Overlap with your own earlier claim is fine.
+
+In every case, "which module is calling" is resolved automatically via
+`GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS, _ReturnAddress(), ...)`
+(`src/caller_identity.cpp`) - no plugin ever passes its own identity into an API call, so it can't
+get the tag wrong, and this loader's own stock registrations (tagged `FCSE`, since the call site is
+inside `FCSE.exe`'s own module) go through the exact same conflict-tracking as any plugin.
+
+### Logging
+
+Every run (over)writes `bin\fcse.log`. Every line - whether from the loader itself or from a
+plugin via `FCSE_PluginAPI::Log` - goes through the one writer in `src/log.cpp`, so the format can
+never drift between the two sources:
+
+```
+[2026-07-27 06:04:03.12341234][fcse] Dunia.dll resolved, base=0x10000000 size=20183176 bytes
+[2026-07-27 06:04:03.12341235][example_plugin] example_plugin loaded
+```
+
+Timestamps are local time at Windows' native 100ns `FILETIME` resolution (via
+`GetSystemTimePreciseAsFileTime`), formatted as 8 fractional digits (7 real + 1 padding zero) - fine
+enough to disambiguate lines from the loader and multiple plugins landing within the same
+millisecond, which plain millisecond timestamps aren't.
+
+## Building
+
+Requires the `x86-debug` or `x86-release` CMake preset - **never `x64-*`**: Far Cry 2 is a 32-bit
+process, and neither `FCSE.exe` nor a plugin DLL built for it can load as 64-bit.
+
+```
+.\build.ps1            # release (default)
+.\build.ps1 -Config debug
+```
+
+Same `vswhere`/`vcvarsall.bat x86` dance as `tools/misc/modpatcher/build.ps1`. Builds `FCSE.exe`
+plus `example_plugin.dll`/`conflict_plugin.dll` (see "Verification" below).
+
+## Installing
+
+1. Build produces `FCSE.exe` (see the build output directory for the preset you used).
+2. Copy it into the game's `bin\` folder, next to the existing `FarCry2.exe` - leave that file
+   alone, `FCSE.exe` is a separate, additional way to launch the game, not a replacement.
+3. Drop plugin DLLs into `bin\plugins\` (created automatically on first run if missing).
+4. Launch `FCSE.exe` instead of `FarCry2.exe`. Check `bin\fcse.log` to confirm `Dunia.dll` resolved,
+   which plugins loaded, and whether anything was rejected as a conflict.
+
+## Verification
+
+- `cmake --preset x86-release` + build succeeds, produces a genuinely 32-bit `FCSE.exe` with
+  `/LARGEADDRESSAWARE` set - confirm via `dumpbin /headers` showing
+  `Application can handle large (>2GB) addresses`.
+- Without the real game present: point `FCSE.exe` at a folder with no `Dunia.dll` and confirm it
+  logs a clear failure (`fcse.log`) and shows a message box instead of crashing.
+- Drop `example_plugin.dll` alone into `bin\plugins\`: `fcse.log` should show it discovered, loaded,
+  its `GetTickCount` hook installed, its demo buffer patched, and (later, from inside `Provider()`)
+  its `toRed` registration accepted.
+- Drop `example_plugin.dll` **and** `conflict_plugin.dll` together (either load order - `bin\
+  plugins\` is scanned via `FindFirstFileW`/`FindNextFileW`, so order follows normal directory
+  enumeration, not necessarily alphabetical): `fcse.log` should show exactly one of them win the
+  `GetTickCount` hook and the `toRed` registration, and the other's attempt logged as a rejected
+  conflict naming both plugins. This is the two tiers with the clearest, safest cross-plugin demo;
+  `Patch()`'s overlap-rejection path is exercised by `example_plugin` alone (against its own local
+  buffer) and reviewed by inspection (`src/patch.cpp`'s interval-overlap check is a few lines) -
+  it doesn't have an equally safe, generic **cross**-plugin demo target the way a real Windows API
+  export does for `Hook()`.
+- **Real in-game verification is on you** - same as `tools/misc/modpatcher`'s own README status
+  section, whose live-launch testing was done against a real Steam install, not by an agent. A
+  real launch + gameplay pass (menu loads, a diamond pickup still increments, malaria curve still
+  behaves, and - with `example_plugin` installed - the HUD actually renders red-channel-only) is
+  the remaining step to confirm full behavioral parity with the stock exe plus the plugin
+  mechanism actually reaching real gameplay code.

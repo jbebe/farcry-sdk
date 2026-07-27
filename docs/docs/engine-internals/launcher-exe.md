@@ -99,6 +99,23 @@ Three addresses answer to two registered names each (`LoadGame_Stub`, `Initializ
 `SaveGame_Stub`) — one stub implementation wired to multiple debug-console command names, consistent
 with these being disabled/no-op paths in the shipped build rather than active dispatchers.
 
+## `tools/FCSE`: a reimplementation of this exe's own `WinMain`
+
+`tools/FCSE` (see its `README.md`, and [the FCSE flagship page](/fcse) for the player-facing
+summary) is a from-scratch reimplementation of this file's own `WinMain` as a
+separate launcher exe, `FCSE.exe`, that adds SKSE-style third-party DLL plugin loading in between
+the two calls documented above. It confirmed two things about this exe's export-table dependencies
+that weren't nailed down before:
+
+- `RegisterGameFunctionProvider` and `AddFunctionCB` are both **plain, undecorated `Dunia.dll`
+  exports** (confirmed via live `list_exports`) — `GetProcAddress` resolves them by their literal
+  names, no C++ decoration involved, unlike `RunGame` (which does need its mangled name,
+  `?RunGame@@YA_NPAUHINSTANCE__@@PBD@Z`, also confirmed present in the export table alongside a
+  plain `RunGame` alias entry).
+- `FunctionRegistry_Insert` (`0x10299430`) is a find-first insert: decompiling it directly confirms
+  the existing entry is **never overwritten** if the name is already present — the call is a silent
+  no-op. First registrant for a given name always wins at the engine level.
+
 ## Open threads / next steps
 
 - `Dunia.dll`'s side of most of these is now mapped — see [the function-registry

@@ -98,6 +98,11 @@ const config = {
             label: 'JackAll',
           },
           {
+            to: '/fcse',
+            position: 'left',
+            label: 'FCSE',
+          },
+          {
             to: '/todos',
             position: 'left',
             label: 'Todos',
