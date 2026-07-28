@@ -15,6 +15,15 @@ A running task list across the whole project.
 
 - [ ] Improve JackAll docs
 
+## Reverse
+
+- [ ] Reverse Far Cry 2 Xbox360 prototypes with XEX decompiler
+- [ ] Reverse other similar Ubisoft titles:
+  - https://hiddenpalace.org/Far_Cry_4_(Oct_25,_2014_prototype)
+  - https://hiddenpalace.org/Tom_Clancy%27s_Splinter_Cell:_Chaos_Theory_(Jan_18,_2005_Multiplayer_prototype)
+  - https://hiddenpalace.org/Tom_Clancy%27s_Rainbow_Six:_Lockdown_(Jan_16,_2006_demo)
+  - https://hiddenpalace.org/Assassin%27s_Creed_(Feb_15,_2008_prototype)
+
 ## Tools/JackAll
 
 - [x] Pipe the converters to the CLI tool to please the die-hard modders
