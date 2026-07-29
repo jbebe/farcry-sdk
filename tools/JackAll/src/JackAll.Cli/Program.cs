@@ -1,6 +1,7 @@
 using JackAll.Cli.Commands;
 using JackAll.Cli.Commands.Archive;
 using JackAll.Cli.Commands.Fcb;
+using JackAll.Cli.Commands.Mod;
 using JackAll.Cli.Commands.Rml;
 using JackAll.Cli.Commands.Sbao;
 using JackAll.Cli.Commands.Spk;
@@ -23,6 +24,29 @@ app.Configure(config =>
                     "Rehashes every line of assets/fc2.hashlist in place to HHHHHHHH<TAB>name. Append " +
                     "new entries as a bare name on their own line, then run this to fill in the hash.");
         });
+    });
+
+    // --- Mods -------------------------------------------------------------
+    // The headless half of JackAll.App's Mods tab, and the whole surface a mod manager driving
+    // JackAll needs. Every one of these takes --json: exactly one object on stdout, progress on
+    // stderr, so a caller never has to scrape human-readable text.
+    config.AddBranch("mod", mod =>
+    {
+        mod.AddCommand<ModStatusCommand>("status")
+            .WithDescription("Report whether a folder is a Far Cry 2 install and what state its patch archive is in.")
+            .WithExample("mod", "status", "--game", @"C:\Games\Far Cry 2", "--json");
+        mod.AddCommand<ModInspectCommand>("inspect")
+            .WithDescription("Say whether a folder/zip is a mod layer or a legacy full-patch mod, and where its tree starts.")
+            .WithExample("mod", "inspect", "coolmod.zip", "--game", @"C:\Games\Far Cry 2");
+        mod.AddCommand<ModImportLegacyCommand>("import-legacy")
+            .WithDescription("Convert a legacy replacement patch.dat/patch.fat mod into an ordinary layer folder.")
+            .WithExample("mod", "import-legacy", "--game", @"C:\Games\Far Cry 2", "--from", "oldmod.zip", "--out", "oldmod");
+        mod.AddCommand<ModBuildCommand>("build")
+            .WithDescription("Compile the vanilla patch plus the given layers into the game's patch.dat/patch.fat.")
+            .WithExample("mod", "build", "--game", @"C:\Games\Far Cry 2", "--layer", "mods\\a", "--layer", "mods\\b");
+        mod.AddCommand<ModRestoreCommand>("restore")
+            .WithDescription("Put the pristine patch.dat/patch.fat back, undoing every build.")
+            .WithExample("mod", "restore", "--game", @"C:\Games\Far Cry 2");
     });
 
     // --- Archives (.fat/.dat) -------------------------------------------

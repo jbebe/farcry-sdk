@@ -1,0 +1,26 @@
+{
+  "name": "vortex-farcry2",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Far Cry 2 support for the Vortex mod manager, backed by JackAll",
+  "license": "MIT",
+  "main": "dist/index.js",
+  "scripts": {
+    "build": "webpack --mode production",
+    "watch": "webpack --mode development --watch",
+    "typecheck": "tsc --noEmit",
+    "test": "node test/smoke.js"
+  },
+  "dependencies": {
+    "bluebird": "3.7.2"
+  },
+  "devDependencies": {
+    "@nexusmods/vortex-api": "^2.4.0",
+    "@types/bluebird": "3.5.20",
+    "@types/node": "^22.10.2",
+    "ts-loader": "^9.5.1",
+    "typescript": "^5.7.2",
+    "webpack": "^5.97.1",
+    "webpack-cli": "^6.0.1"
+  }
+}

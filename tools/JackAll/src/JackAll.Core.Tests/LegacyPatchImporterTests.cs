@@ -132,6 +132,85 @@ public class LegacyPatchImporterTests : IDisposable
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Importing_an_extracted_folder_matches_importing_the_same_mod_as_a_zip()
+    {
+        if (_legacySourceInstall is null || _cleanInstall is null) return;
+
+        NameDatabase names = TestSupport.LoadNames();
+        const string wholeFilePath = "engine/gamemodes/gamemodesconfig.xml";
+        byte[] wholeFileContent = "legacy whole-file change"u8.ToArray();
+
+        var mod = MakeZipMod("folder_vs_zip_source", (wholeFilePath, wholeFileContent));
+        using (var vfsForRead = GameVfs.Load(_legacySourceInstall, names))
+        {
+            PatchBuilder.Build(_legacySourceInstall, [mod], vfsForRead.ReadOriginal);
+        }
+
+        // The same built patch, offered two ways: still zipped, and already extracted the way a mod
+        // manager hands it over. The directory overload is the real body now, so this pins that the
+        // zip wrapper didn't grow a behaviour of its own.
+        string legacyZipPath = Path.Combine(_sandbox, "folder_vs_zip.zip");
+        using (var zip = ZipFile.Open(legacyZipPath, ZipArchiveMode.Create))
+        {
+            zip.CreateEntryFromFile(_legacySourceInstall.PatchFat, "Data_Win32/patch.fat");
+            zip.CreateEntryFromFile(_legacySourceInstall.PatchDat, "Data_Win32/patch.dat");
+        }
+
+        string extractedDir = Path.Combine(_sandbox, "extracted", "Data_Win32");
+        Directory.CreateDirectory(extractedDir);
+        File.Copy(_legacySourceInstall.PatchFat, Path.Combine(extractedDir, "patch.fat"));
+        File.Copy(_legacySourceInstall.PatchDat, Path.Combine(extractedDir, "patch.dat"));
+
+        using var cleanVfs = GameVfs.Load(_cleanInstall, names);
+
+        LegacyImportResult fromZip = LegacyPatchImporter.Import(
+            legacyZipPath, MakeWorkspace("ws_zip"), names, FcbClassDefinitions.Empty, cleanVfs.ReadOriginal);
+
+        (string Fat, string Dat)? pair = LegacyPatchImporter.FindPatchPair(Path.Combine(_sandbox, "extracted"));
+        Assert.NotNull(pair);
+
+        FolderModLayer folderWorkspace = MakeWorkspace("ws_folder");
+        LegacyImportResult fromFolder = LegacyPatchImporter.Import(
+            pair!.Value.Fat, pair.Value.Dat, folderWorkspace, names, FcbClassDefinitions.Empty,
+            cleanVfs.ReadOriginal);
+
+        Assert.Equal(fromZip, fromFolder);
+        Assert.Equal(1, fromFolder.Imported);
+
+        folderWorkspace.Rescan();
+        Assert.Equal(wholeFileContent, folderWorkspace.Read(NameHash.Compute(wholeFilePath)));
+    }
+
+    [Fact]
+    public void A_folder_with_no_patch_pair_is_reported_as_not_being_a_legacy_mod()
+    {
+        string dir = Path.Combine(_sandbox, "plain_mod", "worlds", "world1");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "foo.xml"), "hi");
+
+        Assert.Null(LegacyPatchImporter.FindPatchPair(Path.Combine(_sandbox, "plain_mod")));
+        Assert.Null(LegacyPatchImporter.FindPatchPair(Path.Combine(_sandbox, "does_not_exist")));
+    }
+
+    [Fact]
+    public void A_lone_patch_fat_with_no_matching_dat_is_not_mistaken_for_a_legacy_mod()
+    {
+        string dir = Path.Combine(_sandbox, "half_patch", "Data_Win32");
+        Directory.CreateDirectory(dir);
+        File.WriteAllText(Path.Combine(dir, "patch.fat"), "not really an index");
+
+        Assert.Null(LegacyPatchImporter.FindPatchPair(Path.Combine(_sandbox, "half_patch")));
+    }
+
+    private FolderModLayer MakeWorkspace(string name)
+    {
+        string dir = Path.Combine(_sandbox, name);
+        Directory.CreateDirectory(dir);
+        return new FolderModLayer(dir, name);
+    }
+
+    [Fact]
     public void A_zip_with_no_patch_pair_is_rejected_rather_than_silently_no_opping()
     {
         Directory.CreateDirectory(_sandbox);

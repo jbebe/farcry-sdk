@@ -1,27 +1,27 @@
 ---
-sidebar_position: 5
+sidebar_position: 6
 ---
 
-# Dunia.dll — The Lua-Exposed API Surface
+# `Dunia.dll` — The Lua-Exposed API Surface
 
-Part of the Dunia.dll note set — see [the overview](./overview.md) for the binary identification
-(including the embedded Lua 4.1 (alpha) interpreter confirmation).
-
-## Confirmed behavior: the Lua-exposed API surface
+:::info[Verified via reverse engineering]
+See [the overview](./overview.md) for binary identification, including the embedded Lua 4.1 (alpha)
+interpreter confirmation.
+:::
 
 Every C++ function/method exposed to the embedded Lua interpreter goes through one choke point:
-`RegisterLuaBinding(namespace_or_0, "Name", handlerPtr)` (`0x102aa850`, renamed from `FUN_102aa850`).
-`namespace_or_0 == 0` registers a **global** Lua function callable from anywhere; a class-name string
-(e.g. `"CBuddiesManager"`) registers a **method scoped to that manager's Lua handle**, typically
-obtained via a `GetXxxManager()` global first (several of which are themselves in the global list
-below, e.g. `GetBuddiesManager`, `GetFCXMissionManager`).
+`RegisterLuaBinding(namespace_or_0, "Name", handlerPtr)` (`0x102aa850`). `namespace_or_0 == 0`
+registers a global Lua function callable from anywhere; a class-name string (e.g. `"CBuddiesManager"`)
+registers a method scoped to that manager's Lua handle, typically obtained via a `GetXxxManager()`
+global first (several of which are themselves in the global list below, e.g. `GetBuddiesManager`,
+`GetFCXMissionManager`).
 
-Surveyed **every one of the ~260 call sites** (`get_xrefs_to` on `0x102aa850`, fully enumerated — no
-more exist beyond what's listed here) across ~30 distinct registration functions, each corresponding
-to one exposed class or global batch. This is now the authoritative map of the engine's scripting
-surface; source for `SCRIPTS\MissionTools.lua` and friends.
+Surveyed every one of the ~260 call sites (`get_xrefs_to` on `0x102aa850`, fully enumerated) across
+~30 distinct registration functions, each corresponding to one exposed class or global batch. This is
+the authoritative map of the engine's Lua scripting surface — the source for `SCRIPTS\MissionTools.lua`
+and friends.
 
-### Global functions (namespace = 0, callable from anywhere)
+## Global functions (namespace = 0, callable from anywhere)
 
 **Entity/utility** (`0x10591120`, 22 fns): `GetInvalidEntityId`, `GetLocalPlayerId`, `GetEntityName`,
 `IsEntityLoaded`, `IsEntityValid`, `AttachAnchor`, `ValidateSyncAnim`, `GetEntityInPrefab`,
@@ -63,7 +63,7 @@ almost certainly backing `SCRIPTS\MissionTools.lua`): `SpawnPickupMissionItem`, 
 
 **Sound** (`0x10629290`, 2 fns): `StartSoundMixingFromLua`, `StopSoundMixingFromLua`.
 
-### Class-scoped methods (manager singletons, obtained via a `GetXxx()`/instance accessor)
+## Class-scoped methods (manager singletons, obtained via a `GetXxx()`/instance accessor)
 
 | Class | Method count | Methods |
 |---|---|---|
@@ -94,13 +94,15 @@ almost certainly backing `SCRIPTS\MissionTools.lua`): `SpawnPickupMissionItem`, 
 | `CFCXGameplayManager` | 1 | `SetMapArmy` |
 | `CJackalTapeManager` | 1 | `StopTape` |
 
-Each of these manager classes also exposes a much larger set of **plain data properties** (not
+Each of these manager classes also exposes a much larger set of plain data **properties** (not
 functions) through a separate, parallel reflection mechanism (`FUN_1029b000`/property-descriptor
 structs with `GetNameHash("PropertyName", ...)`, visible interleaved in the same registration
 functions — e.g. `CFCXMissionManager` also exposes `CurrentAct`, `MissionTime`,
-`InfMinCoefficient`, etc. as readable/writable fields). Those aren't part of this Lua *function*
-survey but are readable from the same decompiled registration functions if needed later.
+`InfMinCoefficient`, etc. as readable/writable fields). Those aren't part of this function survey but
+are readable from the same decompiled registration functions if needed.
 
-**Not yet explored**: one registration call site (`0x10738c38`) sits outside any function Ghidra has
-identified as a `Function` object — needs a manual Disassemble+Create-Function pass in the GUI before
-it's readable via MCP. Every other one of the ~260 sites has been surveyed.
+## Unknowns
+
+- One registration call site (`0x10738c38`) sits outside any function Ghidra has identified as a
+  `Function` object — needs a manual Disassemble+Create-Function pass in the GUI before it's readable
+  via MCP. Every other one of the ~260 sites has been surveyed.

@@ -18,6 +18,15 @@ for this project, plus every third-party tool kept around for reference or as a 
   archives rather than fixtures. See the [JackAll page](/jackall) for the full feature list and
   usage tutorial, and [.fat/.dat — Archive Loading](/docs/file-formats/archives-fat-dat) for the
   format background.
+- **[Vortex extension](/docs/modding/vortex)** — Far Cry 2 support for
+  [Vortex](https://www.nexusmods.com/about/vortex/), so mods install from Nexus like they do for any
+  other game. It's a front-end rather than a second implementation: Vortex handles downloading,
+  staging, enabling and load order, each mod deploys into its own layer folder, and `jackall-cli mod
+  build` compiles those layers into `patch.dat` on every deploy — so the mod semantics stay in one
+  place and can't drift. Existing legacy mods (a whole replacement `patch.dat`/`patch.fat`, which is
+  how most Far Cry 2 mods are distributed) are converted into ordinary layers at install time.
+  Bundles the CLI, so there's nothing else to install. See the
+  [Vortex page](/docs/modding/vortex) for the pipeline and the `jackall-cli mod` reference.
 - **[FCSE](/fcse)** — an SKSE-style DLL plugin loader for Far Cry 2. A separate launcher,
   `FCSE.exe`, that loads third-party plugin DLLs from `bin\plugins\` before the engine spins up, so
   multiple mods can each change behavior that only lives in `Dunia.dll` itself — something that
@@ -62,4 +71,4 @@ structure and any `README`/notes are tracked in the repo unless noted otherwise.
 | **Far Cry 2 Xbox (debug)** | Debug/dev Xbox 360 build (`.xex`/`.xdb` symbols, `.nfo` manifests) — source of the Domino Lua mission-scripting system and QA cheat-script findings documented in [Engine Internals](/docs/category/engine-internals). | community-shared debug build, not publicly linked |
 
 For the full research trail behind this list — forum threads, Discord provenance, and tools not
-yet pulled into the repo — see [Sources](/docs/modding/sources#tools-beyond-whats-already-in-the-mods-survey).
+yet pulled into the repo — see [Sources](/docs/modding/sources#tools).

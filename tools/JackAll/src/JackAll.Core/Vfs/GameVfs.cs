@@ -157,6 +157,18 @@ public sealed class GameVfs : IDisposable
     /// does (see docs/design/fcb-fragment-overlays.md Milestone 3).</summary>
     public FcbClassDefinitions Definitions => _fcbDefinitions;
 
+    /// <summary>
+    /// The sniffed-type/`.fcb`-structure cache this instance is reading through and adding to (see
+    /// <see cref="GameCache"/>). Exposed rather than saved automatically on <see cref="Dispose"/>,
+    /// since not every caller wants that: JackAll.App manages its own cache's lifetime independently
+    /// (loaded once at startup, saved on its own schedule) rather than tying it to any one
+    /// <see cref="GameVfs"/> instance's lifetime, which a mod toggle can recreate repeatedly in a
+    /// single session. A caller that wants the persistence checks <see cref="GameCache.IsDirty"/> and
+    /// calls <see cref="GameCache.Save"/> itself once it's done - see <c>ModLayerLoading.LoadVfs</c>'s
+    /// callers for the CLI's case.
+    /// </summary>
+    public GameCache Cache => _cache;
+
     /// <summary>Entries whose filename nobody has recovered yet — still fully usable.</summary>
     public int UnnamedCount { get; private set; }
 
@@ -365,6 +377,8 @@ public sealed class GameVfs : IDisposable
     /// part of the merged view that's cheap once the type cache is warm. Sets <see cref="UnnamedCount"/>.</summary>
     private Dictionary<uint, VfsFile> BuildMergedFiles(IProgress<string>? progress)
     {
+        PreSniffUncachedTypes(progress);
+
         var files = new Dictionary<uint, VfsFile>();
         int unnamed = 0;
 
@@ -446,6 +460,62 @@ public sealed class GameVfs : IDisposable
         }
 
         return files;
+    }
+
+    /// <summary>
+    /// The expensive half of <see cref="BuildMergedFiles"/>, done first and off to the side of its
+    /// single-threaded, order-dependent fold: every unnamed, cacheable entry whose type isn't already
+    /// known gets sniffed — an archive header read each, ~50,000 of them across a real install's
+    /// unnamed entries — in parallel, and the results are folded into <see cref="_cache"/> afterward on
+    /// one thread. <see cref="GameCache"/>'s writes aren't thread-safe, so the memoization itself can't
+    /// happen inside the parallel step - the same split <see cref="MergeFragments"/> already uses for
+    /// `.fcb` structure, and for the identical reason.
+    ///
+    /// <see cref="BuildMergedFiles"/>'s own loop can't simply run in parallel instead: its override
+    /// resolution reads whatever the (single, shared, non-thread-safe) <c>files</c> dictionary
+    /// currently holds for a hash and depends on archives being visited in a stable order to get
+    /// patch.dat's priority right. None of that is touched here - this only ever populates
+    /// <see cref="_cache"/>, which <see cref="ResolveType"/> then reads back through in the normal,
+    /// sequential pass exactly as before, just always warm.
+    ///
+    /// A cache hit short-circuits before any of this runs, so once <see cref="GameCache"/> is warm
+    /// (a second CLI invocation against the same install, or JackAll.App's second load) this is a
+    /// near-instant no-op - the parallel sniff only ever does real work on a genuinely cold cache.
+    /// </summary>
+    private void PreSniffUncachedTypes(IProgress<string>? progress)
+    {
+        var needsSniff = new List<(DuniaArchive Archive, FatEntry Entry)>();
+        foreach (var archive in _archives)
+        {
+            if (IsVolatile(archive))
+            {
+                continue; // never cached (see ResolveType) - rare enough not to bother parallelizing
+            }
+            foreach (var entry in archive.Entries)
+            {
+                if (_names.TryResolve(entry.Hash, out _) || _cache.TryGetType(entry.Hash, out _))
+                {
+                    continue; // settles for free, or already known - nothing to sniff
+                }
+                needsSniff.Add((archive, entry));
+            }
+        }
+
+        if (needsSniff.Count == 0)
+        {
+            return;
+        }
+
+        progress?.Report($"Identifying {needsSniff.Count:N0} unnamed file(s)…");
+        var sniffed = needsSniff
+            .AsParallel()
+            .Select(item => (item.Entry.Hash, Type: GameCache.Sniff(item.Archive, item.Entry)))
+            .ToArray();
+
+        foreach ((uint hash, FileType type) in sniffed)
+        {
+            _cache.SetType(hash, type);
+        }
     }
 
     /// <summary>

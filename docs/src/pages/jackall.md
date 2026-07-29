@@ -84,15 +84,15 @@ because nobody's cracked its name yet.
 Not a committed roadmap with dates — the actual stated direction the project is trending toward,
 in the author's own words:
 
-- **The mod-installer role transitions to a Vortex game extension.** `patch.dat`/`patch.fat`
-  building via JackAll is a stepping stone, not the end state — a Vortex extension is the cleanest
-  distribution/UX path for actually installing mods, it just hasn't been built yet.
+- **The mod-installer role transitions to a Vortex game extension.** Now built — see
+  [Mod Manager (Vortex)](/docs/modding/vortex). It doesn't reimplement any of this: Vortex handles
+  downloading, staging, enabling and ordering, and shells out to `jackall-cli mod build` for the
+  part that actually matters, so the two can't drift apart.
 - **JackAll itself stays** — as the file explorer/editor, not the installer. That part of the job
   moving to Vortex doesn't retire the tool; it narrows what it's for.
 - **A CLI interface, for faster iteration.** `jackall-cli` now covers every format conversion
   (archives, `.xbt`, `.xbg`, `.sbao`, `.spk`, `.fcb`, `.rml`) alongside the hash-list maintenance it
-  started with — see [CLI](#cli) below. Mod management (staging, building `patch.dat`/`patch.fat`,
-  fragment merging) stays GUI-only for now (also tracked in [Todos](/todos)).
+  started with, plus the whole mod pipeline under `mod` — see [CLI](#cli) below.
 - **More tooling beyond file editing** — for Lua, for 3D — and where a dedicated tool isn't the
   right shape for something, tutorials and explanations instead. All of it needs a centralized
   home: this repo (`farcry-sdk`) for now, eventually a community repo with at least two admins and
@@ -201,11 +201,21 @@ touches `.fcb` data — an existing save just won't pick the change up.
 ## CLI
 
 `jackall-cli.exe` is a thin, scriptable sibling to the GUI — same self-contained single-file
-publish (no .NET runtime needed), same bundled hash list and `.fcb` class config. It only does
-format conversions and the hash-list maintenance job; mod staging/building is GUI-only (see
-[Where it's going](#where-its-going) above).
+publish (no .NET runtime needed), same bundled hash list and `.fcb` class config. Format
+conversions, hash-list maintenance, and the whole mod pipeline.
+
+The `mod` branch is what the [Vortex extension](/docs/modding/vortex) drives, so every one of those
+commands also takes `--json`: exactly one object on stdout, progress on stderr, and
+`{"ok":false,"error":"…"}` with a non-zero exit on failure. Full reference on the
+[Vortex page](/docs/modding/vortex#jackall-cli-mod-reference).
 
 ```
+jackall-cli mod status --game "C:\Games\Far Cry 2"
+jackall-cli mod inspect coolmod.zip --game "C:\Games\Far Cry 2"
+jackall-cli mod import-legacy --game "C:\Games\Far Cry 2" --from oldmod.zip --out oldmod
+jackall-cli mod build --game "C:\Games\Far Cry 2" --layer mods\a --layer mods\b
+jackall-cli mod restore --game "C:\Games\Far Cry 2"
+
 jackall-cli system hash archiveitems
 
 jackall-cli archive extract worlds.fat --names

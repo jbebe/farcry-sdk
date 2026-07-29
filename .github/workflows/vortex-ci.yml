@@ -1,0 +1,54 @@
+name: Vortex extension build and test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/vortex-farcry2/**'
+      - 'tools/JackAll/**'
+      - '.github/workflows/vortex-ci.yml'
+  pull_request:
+    paths:
+      - 'tools/vortex-farcry2/**'
+      - 'tools/JackAll/**'
+      - '.github/workflows/vortex-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    # The extension bundles a win-x64 jackall-cli.exe, so there's no point building it anywhere else.
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tools/vortex-farcry2
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        # --legacy-peer-deps: @nexusmods/vortex-api declares Vortex's whole runtime (React, Redux,
+        # …) as peer dependencies because the host provides them. We only need its type
+        # declarations, so installing that tree would be pure waste.
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Build
+        # Publishes jackall-cli from this repo's own source into dist\bin, then bundles the
+        # extension - the same script used locally, so CI can't build something different.
+        run: pwsh ./build.ps1
+
+      - name: Smoke test
+        # Loads the built bundle against a stubbed vortex-api and checks it registers a usable game
+        # extension. Catches "doesn't even load" without needing a Vortex install.
+        run: npm test

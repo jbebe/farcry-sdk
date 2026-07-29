@@ -63,8 +63,18 @@ internal static class ModPathHashing
 {
     public const string HashFolder = "_hash";
 
+    /// <summary>
+    /// Vortex's own placeholder, dropped into any directory its deployment method would otherwise
+    /// leave empty (hardlink/symlink deployment can't represent an empty folder, so it needs some
+    /// file there to preserve it). It can land anywhere in a deployed mod's tree, including inside a
+    /// fragment-override folder that has no real overrides staged in it (an empty `NN_Name.fcb\`) -
+    /// treating it as content there means handing raw junk to <c>FcbXml.FromXml</c>. Not a mod file
+    /// under any convention this class knows, so it's filtered before anything else runs.
+    /// </summary>
+    private const string VortexEmptyFolderMarker = "__folder_managed_by_vortex";
+
     /// <summary>Resolves a relative path to what it overrides. Null for paths that are not overrides
-    /// at all (readme files and the like).</summary>
+    /// at all (readme files, Vortex's own deployment bookkeeping, and the like).</summary>
     public static ModPathTarget? Resolve(string relativePath)
     {
         string normalized = NameHash.Normalize(relativePath);
@@ -74,6 +84,11 @@ internal static class ModPathHashing
         }
 
         string[] segments = normalized.Split('\\');
+
+        if (segments[^1].Equals(VortexEmptyFolderMarker, StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
 
         if (segments[0] == HashFolder)
         {

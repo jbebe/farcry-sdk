@@ -20,6 +20,16 @@ public sealed class GameInstall
     public string VanillaPatchFat => PatchFat + VanillaSuffix;
     public string VanillaPatchDat => PatchDat + VanillaSuffix;
 
+    /// <summary>
+    /// Sniffed archive-entry file types plus decoded `.fcb` fragment structure (see
+    /// <see cref="Vfs.GameCache"/>) - a pure optimization over this specific install's own archive
+    /// bytes, so it belongs beside them rather than tied to any particular tool's own folder. At the
+    /// game root rather than under <see cref="DataDir"/>, matching every other JackAll-owned file
+    /// here (see the Vortex extension's own <c>vortex-staging\</c>): JackAll finds the game's archives
+    /// by globbing Data_Win32 for <c>*.fat</c>, so nothing of ours belongs inside it that isn't one.
+    /// </summary>
+    public string CacheFile => Path.Combine(RootPath, ".jackallcache");
+
     public bool HasVanillaBackup => File.Exists(VanillaPatchFat) && File.Exists(VanillaPatchDat);
 
     private GameInstall(string rootPath) => RootPath = rootPath;

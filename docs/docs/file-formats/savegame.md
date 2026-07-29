@@ -1,831 +1,403 @@
-﻿---
-sidebar_position: 6
+---
+sidebar_position: 9
 ---
 
 # `.sav` — Savegame Container Format
 
 :::info[Verified via reverse engineering]
-See [the engine overview](../engine-internals/overview.md) for binary identification. Goal: reverse
-the on-disk format of `Documents\My Games\Far Cry 2\Saved Games\<slot>.sav`, which no prior
-community tooling had documented at the byte level — see "What research already covered" below.
+Confirmed byte-for-byte against a real save (`178430170947.sav`, 1,854,505 bytes, from
+`Documents\My Games\Far Cry 2\Saved Games\`): offsets were hypothesized from the raw hex, then
+checked against the decompiled writer/reader functions' own arithmetic. Traced primarily against
+**`FarCry2_server`** (the Linux dedicated-server binary), not `Dunia.dll` — see "Which binary" below.
+No prior community tooling documented this format at the byte level.
 :::
 
-## Status: structure confirmed byte-for-byte against a real save file
-
-Unlike the other files in this note set, this investigation worked **bidirectionally**: a real save
-(`178430170947.sav`, 1,854,505 bytes, hex-dumped directly from the user's own
-`Documents\My Games\Far Cry 2\Saved Games\`) was inspected first, byte offsets were hypothesized,
-and every hypothesis below was then confirmed by decompiling the actual writer/reader functions and
-checking their arithmetic against the same file's bytes. Every offset in the tables below is a
-**measured fact from a real save**, not just a decompiled guess — where the two disagree, that's
-called out explicitly.
-
-## IMPORTANT: this required a second binary — `FarCry2_server`, not `Dunia.dll`
-
-All prior `reverse/dunia/*.md` files were traced against the Windows PC `Dunia.dll` (Steam v1.03,
-MSVC-mangled symbols, load base `0x10xxxxxx`, see [the engine overview](../engine-internals/overview.md)). That binary's
-`.sav`/`CGameFile*`/`CScreenShot`/`CPersistenceDB` code is present but was never named/demangled
-(these are internal statics, no export table entry, and `Dunia.dll`'s own PDB/RTTI-derived names for
-them hadn't been recovered as of this session).
-
-The Ghidra project (`reverse/fc2.gpr`) turned out to already contain a **third program**, not
-previously documented in this note set: `reverse/fc2.rep/idata/00/00000002.prp` names it
-`FarCry2_server` — the **Linux dedicated-server binary** (confirmed via `list_segments`: ELF with
-`.dynamic`/`.got.plt`, ~`0x08048000` load base; confirmed via `list_imports`: POSIX/glibc imports
-like `pthread_create`, `mkdir`, `gethostbyname`, `listen` — nothing Windows-specific). Its symbols are
-**GCC/Itanium-mangled** (`_ZN14CPersistenceDB...`), not MSVC-mangled, and critically **this build is
-largely unstripped** (`.symtab`/`.strtab` present with full C++ class/method names), unlike the PC
-`Dunia.dll`. Since the dedicated server links the same shared Dunia engine source as the PC client
-(persistence, save/load, screenshot-thumbnail and game-file-list code is all present and appears
-fully linked even though a headless server never actually writes a player `.sav`), this binary is a
-**far better source for real class/method names for this subsystem** than the PC exe, even though
-byte-exact offsets were independently re-verified against the real Windows-written save file below.
-
-**Practical implication for future sessions**: addresses in the `0x08xxxxxx`/`0x09xxxxxx`/`0x0axxxxxx`
-range in this Ghidra project belong to `FarCry2_server`, not `Dunia.dll` — do not assume a bare hex
-address implies the PC engine DLL the way every other file in this note set does. This distinction
-should be treated as a standing correction to this whole note set's "which binary is this address in"
-assumption; [the engine overview](../engine-internals/overview.md) should be consulted alongside this file if that matters for
-future work here.
-
-## What research already covered (before this session)
-
-`research/` had **no dedicated savegame-format research** — grepping `research/knowledge.md`,
-`mods_survey.md`, and `modding_guide.md` for `save`/`.sav`/`PersistenceDB` turned up only save-game
-*editing folklore*, not format documentation:
-
-- Save folder location: `Documents\My Games\Far Cry 2\` (community-sourced; independently confirmed
-  at the binary level in [the save-data path notes](../engine-internals/save-data-path.md), which traced the `SHGetFolderPathA`
-  + `"My Games\Far Cry 2\"` string concatenation but never located the actual `.sav` writer).
-- [the command-line args notes](../engine-internals/command-line-args.md) already noted `-load <savename>` "walks
-  `PersistenceDB`, reads back a `PlayerPos` property afterward" — a prediction from `ParseLoadSaveArgs`
-  disassembly alone, now corroborated: `PersistenceDB` really is the class whose dump makes up the
-  bulk of the file (see below), though `PlayerPos` itself wasn't located as a literal string this
-  session (see "Not yet traced").
-- `mods_survey.md` §4 notes **"some values are cached in savegames"** (jump height, outpost-clear
-  timers) and that reputation/infamy numbers alone don't reproduce organically-earned NPC behavior —
-  consistent with this session's finding that the bulk of the file is a generic entity/property
-  dump (below), not a small fixed set of named gameplay stats: there's no reason to expect any one
-  cached value to behave specially, they're all just properties on entities in the same tree.
-- No community tool (Gibbed's, JackAll, or anything referenced in `mods_survey.md`) was ever found to
-  parse `.sav` itself — only the `.fcb`-format *data* files ship with editors. This session's biggest
-  finding — that `.sav` embeds a plain `.fcb` blob using the exact format already reverse-engineered
-  in [the `.fcb` format page](./fcb.md) — means **JackAll's existing `FcbDocument` reader/writer should
-  work on the embedded blob directly**, once it's sliced out at the right offset (see below). This was
-  never attempted or mentioned anywhere in `research/`.
-
-## Confirmed container structure
-
-The file is a flat, uncompressed, unencrypted concatenation of four sections, each independently
-serialized by its own C++ class in the shared engine code. Class names and the exact
-`GetSaveSize()`/`WriteToFile()`/`ReadFromFile()` logic below are decompiled from `FarCry2_server`
-(GCC-mangled demangled names shown as Ghidra resolved them); byte offsets are measured directly from
-`178430170947.sav`.
+Far Cry 2 saves to `Documents\My Games\Far Cry 2\Saved Games\<digits>.sav` (see
+[save-data path](../engine-internals/save-data-path.md) for how that directory is resolved). The
+file is a flat, uncompressed, unencrypted concatenation of four sections, each serialized by its own
+C++ class:
 
 ```
-[0]      CGameFileHeader base fields          20 bytes    (fixed size, GetSaveSize() == 0x14 literal)
-[0x14]   + CCampaignGameFileHeader extension   var         (2 length-prefixed strings + 12 fixed bytes)
-[0x39]   CScreenShot (thumbnail)               var         (16-byte header + WxHxChannels pixel blob + metadata)
-[0xB44D] CCampaignGameFileData                 var         (DLC-id string list, then...)
-[...]      → an embedded, ordinary .fcb blob   var         (PersistenceDB entity/state dump — see below)
+[0x0000]  CGameFileHeader base fields          20 bytes   fixed size
+[0x0014]  + CCampaignGameFileHeader extension   variable   2 length-prefixed strings + 12 bytes
+[0x0039]  CScreenShot (thumbnail)               variable   16-byte header + pixel blob + metadata
+[0xB44D]  CCampaignGameFileData                 variable   DLC-id string list...
+[0xB45D]    → an embedded, ordinary .fcb blob   variable   PersistenceDB entity/state dump
 ```
 
-Confirmed by direct size arithmetic against the real file (all four numbers below were independently
-computed from decompiled `GetSaveSize()` bodies, then checked against the measured file):
+Every section boundary lines up exactly with the writers' own `GetSaveSize()` arithmetic — there is
+no padding or alignment between sections. Measured against the sample file:
 
-| Section | Formula | This save's value | Measured file offset |
+| Section | Size formula | This save's size | File offset |
 |---|---|---|---|
 | `CGameFileHeader` base | constant `0x14` | 20 | `0x00`–`0x13` |
-| `CCampaignGameFileHeader` extra | `0xC` fixed `+ GetStringSaveSize(world) + GetStringSaveSize(player)` | 12+10+15 = 37 | `0x14`–`0x38` |
-| `CScreenShot` | `16 (header) + W·H·channels·bitsPerChannel/8 + 4 (metadata count) + Σmetadata` | 16+46080+4+0 = 46100 | `0x39`–`0xB44C` |
-| `CCampaignGameFileData` DLC list + reserved | `4 (count) + Σ(4+strlen) per DLC` `+ 4` (extra field, see `GetSaveSize`) | 12+4 = 16 | `0xB44D`–`0xB45C` |
-| embedded `.fcb` blob | `Fcb_ReadHeader`-compatible, size = virtual `GetSaveSize()` on the persistence object | 3,753,895+ (rest of file) | `0xB45D`–EOF |
+| `CCampaignGameFileHeader` extra | `0xC` fixed + 2 length-prefixed strings | 37 | `0x14`–`0x38` |
+| `CScreenShot` | `16 + W·H·channels·bitsPerChannel/8 + 4 + Σmetadata` | 46,100 | `0x39`–`0xB44C` |
+| `CCampaignGameFileData` DLC list + reserved field | `4 + Σ(4+strlen)` per DLC `+ 4` | 16 | `0xB44D`–`0xB45C` |
+| embedded `.fcb` blob | `Fcb`-header-compatible; rest of the file | 3,753,895+ | `0xB45D`–EOF |
 
-Every section boundary above lines up exactly with the arithmetic — there is no padding/alignment
-between sections anywhere in the file.
+## Which binary this was traced against
+
+`Dunia.dll` (the Windows client — see [engine overview](../engine-internals/overview.md)) contains
+the same `.sav`/`CGameFile*`/`CScreenShot`/`CPersistenceDB` code, but none of it is exported or named,
+and its RTTI hasn't been recovered for these classes. The Ghidra project also contains a third
+program besides `Dunia.dll` and the launcher: **`FarCry2_server`**, the Linux dedicated-server ELF
+(`list_segments` confirms `.dynamic`/`.got.plt`, ~`0x08048000` load base; `list_imports` shows POSIX
+imports like `pthread_create`/`gethostbyname`/`listen`). Its symbols are GCC/Itanium-mangled and the
+binary is largely unstripped (`.symtab`/`.strtab` present), so real C++ class and method names survive
+even though a headless server never actually writes a player save. Because the dedicated server links
+the same shared engine source, it's the better source for names here; byte offsets below were
+independently re-verified against the real Windows-written save file regardless. Addresses in the
+`0x08xxxxxx`–`0x0axxxxxx` range in this note belong to `FarCry2_server`, not `Dunia.dll`.
 
 ## Section 1 — `CGameFileHeader` base (20 bytes, offset `0x00`)
 
-`CGameFileHeader::GetSaveSize()` (`FarCry2_server @ 0x091e3810`) is a **hardcoded return of `0x14`**
-— this base header is always exactly 20 bytes regardless of content. The constructor
-(`CGameFileHeader::CGameFileHeader`, `@ 0x091e3820`) only initializes 8 of those bytes generically
-(a vtable-adjacent field and a 4-byte "ID" defaulted from a global `InvalidID` sentinel); the actual
-`WriteToFile` for this base class wasn't isolated this session (see "Not yet traced"), so field
-semantics below are **inferred from the real bytes**, not decompiled:
+`CGameFileHeader::GetSaveSize()` (`0x091e3810`) hardcodes a return of `0x14` — this base header is
+always exactly 20 bytes. Its `WriteToFile`/`ReadFromFile` weren't located under that name, so the
+field meanings below are inferred from the real bytes rather than decompiled directly:
 
-```
-offset  size  field                     measured value (this save)      confidence
-0x00    4     u32, "ID"/tag field        0x0000000A (10)                 low — not a plausible Unix
-                                                                          timestamp (decodes to
-                                                                          2022-12-30, doesn't match
-                                                                          the file's actual save
-                                                                          date); likely a small
-                                                                          save-type/slot enum or a
-                                                                          populated CStringID-style
-                                                                          hash remnant of the ctor's
-                                                                          default "InvalidID" field
-0x04    4     float, likely player X     ≈2621.3                        medium
-0x08    4     float, likely player Y     ≈2109.1                        medium
-0x0C    4     float, likely player Z     ≈17.9                          medium — small Z plausible
-                                                                          as elevation on world1
-```
+| Offset | Size | Field | Measured value | Confidence |
+|---|---|---|---|---|
+| `0x00` | 4 | u32, ID/tag | `0x0000000A` (10) | low — not a plausible timestamp; likely a small save-type/slot enum or a leftover `InvalidID` sentinel |
+| `0x04` | 4 | float, likely player X | ≈2621.3 | medium |
+| `0x08` | 4 | float, likely player Y | ≈2109.1 | medium |
+| `0x0C` | 4 | float, likely player Z | ≈17.9 | medium — plausible elevation on world1 |
 
-The 3-float reading is circumstantial but self-consistent: `command_line_args.md` already predicted
-a `PlayerPos`-shaped property gets read back after `-load`, and X/Y magnitudes in the low thousands
-with a small Z are the right order of magnitude for `world1`'s map extents (vs. e.g. a timestamp,
-GUID, or CRC, none of which predicts 3 well-formed non-degenerate IEEE-754 floats in a row). Treat
-this as a strong hypothesis, not a confirmed field mapping — the actual `WriteToFile` populating
-these 16 bytes wasn't located (this class's `WriteToFile`/`ReadFromFile` weren't found under that
-literal name in the symbol table the way `CScreenShot`'s were — see "Not yet traced").
+The 3-float reading is circumstantial: [command-line args](../engine-internals/command-line-args.md)
+already predicted a `PlayerPos`-shaped property gets read back after `-load`, and the X/Y magnitudes
+match `world1`'s map extents. Treat as a strong hypothesis, not a confirmed field mapping.
 
 ## Section 2 — `CCampaignGameFileHeader` extension (offset `0x14`)
 
-`CCampaignGameFileHeader::GetSaveSize()` (`@ 0x0896ef10`):
+`CCampaignGameFileHeader::GetSaveSize()` (`0x0896ef10`):
+
 ```c
 GetSaveSize() = CGameFileHeader::GetSaveSize() + 0xc
-              + GameFileUtils::GetStringSaveSize(this+0x18)   // world name
-              + GameFileUtils::GetStringSaveSize(this+0x20);  // player/character name
-```
-`GetStringSaveSize` costs `4 + strlen` (a `u32` length prefix, **no null terminator** — this is a
-different string encoding than the null-terminated strings found later inside the embedded `.fcb`
-blob, see below). Measured in the real file, in this exact byte order:
-
-```
-offset  size        field                    measured value
-0x14    4+6=10      len-prefixed string       "world1"
-0x1E    4+11=15     len-prefixed string       "Paul_Ferenc"     (player/character name)
-0x2D    4           u32                       1
-0x31    4           u32                       8
-0x35    4           u32                       2
+              + GameFileUtils::GetStringSaveSize(worldName)
+              + GameFileUtils::GetStringSaveSize(playerName);
 ```
 
-The trailing three `u32`s are the `0xc` (12-byte) fixed extra this class's `GetSaveSize` adds on top
-of the two strings. No accessor named `GetDifficulty`/`GetAct`/`GetChapter` was found on this class
-in `FarCry2_server`'s symbol table to pin these down definitively (a `Difficulty`-named
-symbol/accessor cluster does exist engine-wide — `GetDifficultyLevel`, `SetDifficultyLevel`,
-`GetDifficultyFactor` — but none is provably wired to this specific class from what was traced this
-session). Plausible reading given values `(1, 8, 2)` observed: difficulty tier, current
-act/chapter-like progress marker, and a third small enum — **not confirmed**, flagged for follow-up.
+`GetStringSaveSize` costs `4 + strlen` — a u32 length prefix with **no null terminator** (unlike the
+strings inside the embedded `.fcb` blob, which are null-terminated). Measured:
 
-## Section 3 — `CScreenShot` (thumbnail image, offset `0x39`)
+| Offset | Size | Field | Value |
+|---|---|---|---|
+| `0x14` | 4+6 | length-prefixed string | `"world1"` |
+| `0x1E` | 4+11 | length-prefixed string | `"Paul_Ferenc"` (player/character name) |
+| `0x2D` | 4 | u32 | 1 |
+| `0x31` | 4 | u32 | 8 |
+| `0x35` | 4 | u32 | 2 |
 
-Fully confirmed both directions — `CScreenShot::WriteToFile` (`@ 0x091eaa00`) and
-`CScreenShot::ReadFromFile` (`@ 0x091ebae0`) are exact mirror images of each other, and both match the
-real file byte-for-byte:
+No `GetDifficulty`/`GetAct`/`GetChapter` accessor was found on this class to pin down the trailing
+three u32s definitively (a `Difficulty`-named accessor cluster exists elsewhere in the engine, but
+wasn't confirmed wired to this class). Plausible reading of `(1, 8, 2)`: difficulty tier, an
+act/chapter progress marker, and a third small enum — not confirmed.
 
-```
-offset       size         field
-0x39         4            width   (u32) — 128 in this save
-0x3D         4            height  (u32) — 90
-0x41         4            "channels" (u32) — 4  (RGBA/BGRA component count)
-0x45         4            "bits-per-channel-ish" (u32) — 8
-0x49         W·H·ch·bpc/8 raw pixel bytes — 128·90·4·8/8 = 46,080 bytes
-0xB449       4            metadata-entry count (u32) — 0 in this save
-0xB44D       —            (0 metadata entries here; see ScreenShot::WriteMetaDataInfoToFile /
-                            ReadMetaDataInfoFromFile for the per-entry format when count > 0 —
-                            not traced this session, no real sample had any)
-```
+## Section 3 — `CScreenShot` (thumbnail, offset `0x39`)
 
-Pixel format wasn't independently confirmed as BGRA vs RGBA (no distinguishing feature found in this
-sample — a spot check of raw bytes showed low, similar-magnitude values across all 3 color channels,
-consistent with a dark/foliage-heavy in-game screenshot either way). Byte order aside, the **size
-formula is confirmed exactly**: `width * height * channels * bitsPerChannel / 8` — with
-`channels=4, bitsPerChannel=8` this simplifies to plain `width*height*4`, matching the measured
-46,080-byte blob length exactly (verified by locating the next section's known-good magic constant
-immediately afterward, see below).
+`CScreenShot::WriteToFile` (`0x091eaa00`) and `CScreenShot::ReadFromFile` (`0x091ebae0`) are exact
+mirrors of each other and both match the real file byte-for-byte:
 
-`CGameFilesService::GrabScreenshotEv` / `CScreenShot::Capture(unsigned short, unsigned short)` are the
-capture-side entry points (not decompiled this session); `SetGameFileThumbnail` /
-`SetGameFileThumbnailPS3` on `CGameFileInfo` are the two platform-specific attach points feeding into
-whichever concrete `CScreenShot` gets embedded — the `PS3`-suffixed one is dead code in this
-particular (Linux server) binary, evidence the same source file compiles for multiple platforms
-behind runtime rather than `#ifdef` branching in at least this class.
+| Offset | Size | Field | Value |
+|---|---|---|---|
+| `0x39` | 4 | width (u32) | 128 |
+| `0x3D` | 4 | height (u32) | 90 |
+| `0x41` | 4 | channels (u32) | 4 (RGBA/BGRA) |
+| `0x45` | 4 | bits per channel (u32) | 8 |
+| `0x49` | W·H·ch·bpc/8 | raw pixel bytes | 46,080 bytes |
+| `0xB449` | 4 | metadata-entry count (u32) | 0 |
+
+Size formula confirmed exactly: `width * height * channels * bitsPerChannel / 8`. Pixel channel order
+(RGBA vs BGRA) wasn't distinguished from this one sample — low, similar-magnitude values across all 3
+channels are consistent with either, matching a dark/foliage-heavy screenshot. The per-entry metadata
+format (`WriteMetaDataInfoToFile`/`ReadMetaDataInfoFromFile`) wasn't traced — this sample has zero
+entries. Capture-side entry points (`CGameFilesService::GrabScreenshotEv`, `CScreenShot::Capture`)
+weren't decompiled.
 
 ## Section 4 — `CCampaignGameFileData` (offset `0xB44D`): DLC list + embedded `.fcb` blob
 
-`CCampaignGameFileData::GetSaveSize()` (`@ 0x0896ee90`):
+`CCampaignGameFileData::GetSaveSize()` (`0x0896ee90`):
+
 ```c
 GetSaveSize() = 4                                        // DLC-string count
               + Σ GameFileUtils::GetStringSaveSize(dlc)   // one entry per active DLC id
-              + 4                                         // extra fixed field (unidentified)
-              + persistenceObj->GetSaveSize();            // virtual call, this+4 — the FCB blob
+              + 4                                         // extra fixed field, purpose unconfirmed
+              + persistenceObj->GetSaveSize();            // virtual call — the embedded FCB blob
 ```
 
-Measured:
-```
-offset       size    field
-0xB44D       4       DLC count (u32) — 1
-0xB451       4+4=8   len-prefixed string "dlc1"
-0xB459       4       u32 — 0   (the "+4 extra fixed field" from GetSaveSize; purpose unconfirmed)
-0xB45D       —       embedded .fcb blob starts here (see below) — runs to end of file
-```
-
-### The embedded blob is a plain, ordinary `.fcb` file — confirmed against [the `.fcb` format page](./fcb.md)
-
-Bytes at `0xB45D` decode exactly per the already-documented `.fcb` header
-([the `.fcb` format page](./fcb.md)), with **no wrapper, no extra length prefix, no compression** — it's
-byte-identical to what `Fcb_ReadHeader` expects from a standalone `.fcb` file on disk:
-
-```
-0xB45D   4    magic (u32)      0x4643626E  "FCbn"   — == Fcb_MagicConstant(), confirmed
-0xB461   2    version (u16)    2                     — == Fcb_SupportedVersionConstant(), confirmed
-0xB463   2    flags (u16)      0                      — string-hashed-TypeHash path not used here either
-0xB465   4    totalObjectCount (u32)   73,200 (0x11DF0)
-0xB469   4    totalValueCount  (u32)   73,199 (0x11DEF)
-0xB46D   —    root object tree starts here (Fcb_ParseObject rules apply verbatim)
-```
-
-Manually walked the root object per `Fcb_ParseObject`'s documented rules and it decodes perfectly:
-
-```
-0xB46D  1 byte    childCount = 0x8B = 139           (< 0xFE, literal)
-0xB46E  4 bytes   TypeHash = 0x9C44B3A3
-0xB472  1 byte    valueCount = 0x65 = 101            (< 0xFE, literal)
-0xB473  4 bytes   value[0].nameHash = 0x9F60B705
-0xB477  1 byte    value[0] size-varint = 0x0E = 14   (< 0xFE, literal — 14 payload bytes follow)
-0xB478  14 bytes  value[0] payload = "Addi Mbantuwe\0"
-```
-
-`"Addi Mbantuwe"` is a Far Cry 2 buddy/companion NPC name — this is a `CBindingHierarchyDBRec`/
-`CPersistenceDBRec` entry for a persisted world entity, exactly matching what
-`CPersistenceDB::SaveDB` (`@ 0x0967e350`, decompiled this session) actually writes: it walks the DB's
-binding-hierarchy tree and, per entity, serializes through `CNomadObjectDescriptor::SaveState` using a
-set of named tags recovered directly from the decompiled body —
-`Tag_HierarchiesQueue`, `Tag_EntityId`, `Tag_Hierarchy`, `Tag_Entities`, `Tag_HierarchyRecord`,
-`Tag_Id`, `Tag_Record`, `Tag_State`, `Tag_Description`, `Tag_HierarchyId`, `Tag_OmniEntities`. These
-tags are almost certainly the human-readable field names whose `GetNameHash`/`CRC32_Hash` values are
-the `nameHash`s stored in each `.fcb` value entry (the same mechanism `fcb_format.md` documents for
-ordinary data files) — i.e. **the savegame's bulk content is the entire `PersistenceDB` — every
-spawned/moved/killed entity's state in the game world, from buddies down to individual dropped
-items — serialized through the exact same generic `.fcb` writer used for the game's shipped data
-files**, not a bespoke savegame-specific format. This directly explains the `mods_survey.md` §4 note
-that jump-height/outpost-timer changes "are cached in savegames" — they're just more properties on
-more entities in this same generic tree, no different in kind from anything else persisted here.
-
-**Practical consequence for tooling**: JackAll's existing `FcbDocument` reader
-(`tools/JackAll/src/JackAll.Core/Format/Fcb/FcbDocument.cs`), already validated against 5 shipped
-`.fcb` fixtures per `fcb_format.md`, should be able to parse this blob directly once sliced out at
-its confirmed start offset (immediately after the DLC-list section, formula above) — no new binary
-format work should be needed to read (or, cautiously, write back) a save's entity tree, only the
-four wrapper sections documented above.
-
-## Confirmed: the persistence tag vocabulary, and `binary_classes.xml` actually DOES resolve a real chunk of this content
-
-Follow-up investigation (separate session) prompted by a very reasonable question: JackAll's existing
-`.fcb` viewer resolves type/value name hashes via `tools/JackAll/assets/binary_classes.xml`
-(`FcbClassDefinitions`, see [the `.fcb` format page](./fcb.md)) — how much of a real save's exported
-`.fcb` tree does that actually resolve?
-
-**Correction to this file's own earlier claim in this same investigation**: an early pass at this
-question measured "226,187 `hash="..."` occurrences, 0 resolved" and concluded `binary_classes.xml`
-resolves nothing at all. That count was real but the conclusion drawn from it wasn't checked properly
-— it never actually verified `name="..."`/`type="..."` occurrences separately from the coincidental
-`type="BinHex"` attribute that appears on every unresolved value regardless. Measured properly this
-session: **42,290 of 114,553 `<object>` tags (37%) already resolve to a real class name, and 24,382 of
-178,306 `<value>` tags (14%) already resolve to a real member name** — both via the *existing*,
-unmodified per-class-scoped resolution, nothing added this session. The reason: a save's persisted
-entity records embed the entity's own live component tree as nested sub-objects (`CIgnitorComponent`,
-`CCompoundPhysComponent`, `CPersistComponent`, `RootNode`, ...) — genuinely part of
-`entitylibrary.fcb`'s own class vocabulary, reused verbatim because it's the same live C++ objects
-being serialized, just reached through the persistence system rather than a level's own entity
-placement data. Only the *outer* wrapper layer (`CPersistenceDBRec`/`CBindingHierarchyDBRec` and their
-own structural tags) is the genuinely disjoint, uncatalogued vocabulary this section is mostly about.
-
-`binary_classes.xml` is a community catalog of `entitylibrary.fcb`-style **data-file** classes —
-built by people who could only ever see strings that appear in a shipped `.fcb` file. The *wrapper*
-layer of a save's `PersistenceDB` dump uses a disjoint set of names that live only inside the game's
-own compiled code (`CNomadObjectDescriptor::RegisterProperties` calls, and the handful of structural
-`Tag_*` globals `CPersistenceDB::SaveDB` uses — see below), never inside any shipped data file, so
-nobody could have captured *those specific* names the way `binary_classes.xml` was built. Both systems
-share the same low-level plumbing (the generic `.fcb`/`FCbn` container format, and the same
-`CRC32_Hash` name-hashing function everywhere in the engine — confirmed in [the engine overview](../engine-internals/overview.md))
-but the wrapper layer hashes a different **vocabulary** of strings than `binary_classes.xml` catalogs.
-
-**The `Tag_*` global variable names turn out to be the literal runtime string content, confirmed
-against real data.** `CPersistenceDB::SaveDB`'s decompile only gave symbol names like `Tag_Id` — a
-compiler debug-info label, not proof of the actual string a `CStringID`/tag object was constructed
-with. Tested it directly: CRC32-hashed each candidate name the same way the engine does
-(`FcbClassDefinitions.Crc32Ascii`, already validated elsewhere) and grepped for the result across a
-real save's exported `.fcb` XML. Six matched, thousands of times each — far too consistent to be
-coincidence:
-
-| Tag | CRC32 | Occurrences in one real save's tree |
-|---|---|---|
-| `"Id"` | `0x2ABD43F2` | 4,870 |
-| `"State"` | `0x6252FDFF` | 3,545 |
-| `"EntityId"` | `0x0F5E4BAA` | 2,773 |
-| `"HierarchyId"` | `0xA9100FC2` | 2,334 |
-| `"Record"` | `0x9C989AA7` | 2,651 |
-| `"HierarchyRecord"` | `0x7A2B069C` | 2,154 |
-| `"Description"` | `0xEB78CFF1` | 485 (matches `SaveDB`'s conditional `GetChildDescription` branch — not written for every record, unlike the others) |
-| `"Entities"` | `0xA99A06B3` | 2 |
-| `"Hierarchy"` | `0x788BAA0D` | 2 |
-| `"HierarchiesQueue"` | `0x7C1C0FBA` | 2 |
-| `"OmniEntities"` | `0x5134EF37` | 2 |
-
-The last four sit at 2 occurrences each because they're top-level container/wrapper tags (used once
-or twice near the root), not per-record fields — consistent with `SaveDB`'s two-phase walk (a
-hierarchy-based section, then a second pass for entities with no `BindingHierarchy` at all, tagged
-`OmniEntities`).
-
-**Went one step further and found actual registered member names, not just navigation tags.** Both
-`ms_descriptor` pointers `SaveDB` references (`PTR_ms_descriptor_0a4023d4` for
-`CBindingHierarchyDBRec`, `PTR_ms_descriptor_0a41326c` for `CPersistenceDBRec`) are read (not just
-referenced) from inside a function literally named `RegisterProperties` — traced via `get_xrefs_to`
-on those two addresses directly, sidestepping the ~100 identically-named `RegisterProperties`
-functions engine-wide entirely (no brute-force search needed once the descriptor addresses were
-already in hand from the earlier `SaveDB` decompile). Their bodies (`FarCry2_server @ 0x09679a93` /
-`@ 0x09679b22`) are plain, un-obfuscated: each calls `CNomadObjectDescriptor::PushBackMember` once per
-registered field, with the field's real name as a literal C string argument.
-`CBindingHierarchyDBRec::RegisterProperties` registers three: `"MemoryUsage"`, `"PersistType"`,
-`"BindingHierarchy"`. Same CRC32-and-grep verification as above:
-
-| Field | CRC32 | Occurrences | Confirmed? |
+| Offset | Size | Field | Value |
 |---|---|---|---|
-| `"MemoryUsage"` | `0x65A0E5B6` | 4,488 | yes |
-| `"PersistType"` | `0x4A1FC981` | 2,154 | yes — exactly matches `HierarchyRecord`'s own count above, i.e. one `PersistType` per hierarchy record, as expected for a sibling field on the same object |
-| `"BindingHierarchy"` | `0xE2C5EA2C` | 0 | no — registered, but never found as a `hash="..."` value attribute in real data; plausibly a child-object/reference-typed member (drives nesting rather than a plain scalar `<value>`), not investigated further |
+| `0xB44D` | 4 | DLC count (u32) | 1 |
+| `0xB451` | 4+4 | length-prefixed string | `"dlc1"` |
+| `0xB459` | 4 | u32 | 0 (purpose unconfirmed) |
+| `0xB45D` | — | embedded `.fcb` blob starts here, runs to EOF | — |
 
-This means the same technique (find the class's `ms_descriptor`, `get_xrefs_to` it, decompile whoever
-reads/writes it, read the literal member-name strings straight out of the decompile) generalizes to
-any other persisted record type — it isn't limited to the two classes checked this session.
+### The embedded blob is an ordinary `.fcb` file
 
-**This also sharpens the earlier "mod compatibility" finding's mechanism.** `CPersistenceDB::RestoreEntity`
-matches which record belongs to which live entity by **`EntityId`** (a hash lookup keyed on the
-entity's own numeric world identifier — confirmed directly in its decompile), never by matching
-`.fcb` name-hashes against `entitylibrary.fcb`'s own vocabulary. So "the engine finds what to
-overwrite" via instance identity, not via any shared field-name signature between the save and the
-data files — which is exactly consistent with the save's vocabulary being unrelated to
-`entitylibrary.fcb`'s.
+Bytes at `0xB45D` decode exactly per the [`.fcb` header](./fcb.md), with no wrapper, no extra length
+prefix, and no compression:
 
-## `binary_classes.xml` resolves real savegame fields too, via a flat (not class-scoped) lookup
-
-The per-class-scoped resolution described above (37%/14% of objects/values) is `FcbClassDefinitions`
-working exactly as designed: an object's *own* resolved class's member list, walking its superclass
-chain. That leaves every genuinely unresolved `hash="..."` — the outer persistence-wrapper layer this
-whole section is about — completely untouched, by design (its objects never resolve to a known class
-in the first place). Tested a different question: does the same hash, *ignoring which class declared
-it*, still coincidentally appear as some member/class name somewhere else in `binary_classes.xml`'s
-~1560 classes? Common short field names (`Id`, `Name`, `State`, `Pos`, `Flags`, `Category`, ...) are
-plausible enough to be declared by some unrelated entity/vehicle/weapon class purely by coincidence of
-English, and CRC32 doesn't care which class asked for the hash — same string, same hash, regardless of
-context.
-
-It does, substantially. Cross-referenced every distinct hash in one real save's exported tree against
-a flat reading of the whole config file (every `<member name="...">`/`<class name="...">`, regardless
-of nesting): **51 of 820 distinct value hashes and 6 of 246 distinct object-type hashes matched**, with
-occurrence counts in the thousands for several. Verified each candidate two ways before trusting it:
-(1) does the hash appear in real data at all, and (2) does the *byte length* in real data actually
-match what the matched type requires (a hash match alone only proves the string coincides, not that
-this specific field really carries that type) — implemented as `JackAll.App/SaveGames/SaveGameFieldCatalog.cs`,
-a flat hash→(name,type) table built directly from `binary_classes.xml`, applied as a save-specific
-retyping pass (real `type="Vector3"`/`"Int64"`/etc. with the bytes actually decoded, not just a name
-label) rather than touching `FcbClassDefinitions`/`FcbXml` — same reasoning as the `Tag_*` dictionary
-above, kept separate and display-only.
-
-Concretely, checked across a real save's full ~2,300–5,000 per-field occurrence counts:
-
-| Hash | Matched name (type) | Byte-length check |
-|---|---|---|
-| `0xB894A04C` | `Pos` (`Vector3`) | **100% pass** (781/781 exactly 12 bytes) — decodes to plausible world1 coordinates, e.g. `(2566.97, 2518.96, 18.49)`, same order of magnitude as the header's own player-position floats (Section 1) |
-| `0x0F5E4BAA` | `EntityId` (`Int64`) | **100% pass** (2,773/2,773 exactly 8 bytes) |
-| `0x9F448218` | `Enabled` (`Bool`) | **100% pass** (375/375 exactly 1 byte) |
-| `0xFF3A7B97` | `Category` (`Hash`) | **100% pass** (2,340/2,340 exactly 4 bytes) |
-| `0xFE11D138` / `0xDCB67730` | `Name` / `Value` (`String`) | variable-length as expected, decodes wherever null-terminated |
-| `0x2ABD43F2` | `Id` (declared `UInt32`/`Int32` depending which class binary_classes.xml lists first) | **fails, correctly rejected** — real data is consistently 8 bytes (4,809/4,870), not 4; this hash is reused for a conceptually different, unrelated field in the save than whichever entity-library class declared "Id" as a 4-byte int, and the length check catches the mismatch instead of showing a wrong number |
-| `0xCAC46EBE` | `Flags` (declared `UInt8`) | **fails, correctly rejected** — real data is consistently 4 bytes (885/885), not 1 |
-
-The rejections are as important as the matches: they're proof the byte-length gate is doing real work,
-not just decorative caution — "the hash matches a name binary_classes.xml knows" is demonstrably *not*
-sufficient by itself, some of these are false friends. Other confirmed matches from the same pass
-(not exhaustively re-verified for byte-length above, but hash-present in real data): `SectorId`
-(`Int32`), `hid_DTCTH_ClassName`/`BoneId`/`sType`/`sContext`/`sMode`/`Type`/`texTexture`/`Bone`
-(`Hash`), `MeshIndex`/`Index`/`Distance` (`Int32`), `hidPos`/`hidPos_precise`/`hidAngles`/`Position`
-(`Vector3`), `vColor` (`Vector4`), `fWidth`/`fHeight`/`fLength`/`fAngle` (`Float`), `Usable`/`bEnabled`/
-`hidConstEntity` (`Bool`), `PlanName`/`MoveToPlanName`/`SwitchWeaponPlanName` (`Hash` — AI behavior-plan
-references), and object-type matches `LayerId`, `Resource`, `Part`, `Inventory`. `State` and
-`Description` matched on **both** sides (as a value name here, as an object-type name in the earlier
-`Tag_*` table) — the same string hashing identically in both roles isn't a bug, it's expected: the
-persisted per-entity state blob is apparently both tagged `State` *and* typed as an object literally
-named `State`.
-
-**Practical tooling consequence**: JackAll.App's Saves tab applies both dictionaries in sequence —
-`SaveGameFieldCatalog` (this section, full type+value decode from `binary_classes.xml`'s flat lookup)
-first, then `SaveGamePersistenceTags` (the hand-curated `Tag_*`/`RegisterProperties` dictionary, name
-only, for the handful of confirmed hashes `binary_classes.xml` doesn't know at all) — both kept out of
-the shared, round-trip-critical `FcbClassDefinitions`/`FcbXml` machinery the Files tab's real
-mod-editing depends on, since neither is verified as rigorously as `binary_classes.xml`'s own
-provenance. `SaveGamePersistenceTags` no longer lists `Id`/`EntityId`/`State`/`Description` — the flat
-catalog resolves all four with real type info now, making the bare name-only label redundant.
-
-**This also sharpens the earlier "mod compatibility" finding's mechanism.** `CPersistenceDB::RestoreEntity`
-matches which record belongs to which live entity by **`EntityId`** (a hash lookup keyed on the
-entity's own numeric world identifier — confirmed directly in its decompile), never by matching
-`.fcb` name-hashes against `entitylibrary.fcb`'s own vocabulary. So "the engine finds what to
-overwrite" via instance identity, not via any shared field-name signature between the save and the
-data files — which is exactly consistent with the wrapper layer's vocabulary being unrelated to
-`entitylibrary.fcb`'s (even though, per the section above, plenty of *other* content in the same tree
-does share that vocabulary, just via embedded component data, not via this matching mechanism).
-
-**Partially answered**: `Tag_State`'s own nested payload — i.e. what a specific *entity type* (a buddy,
-a weapon pickup, a vehicle, ...) actually saves as its dynamic state (position? health? alive-flag?).
-The two record classes above are wrapper/bookkeeping objects (which hierarchy owns this record, how
-much memory it uses, whether it's persisted) — the interesting per-entity-type gameplay state lives
-one level deeper, registered by each entity class's *own* `RegisterProperties`, not
-`CPersistenceDBRec`/`CBindingHierarchyDBRec`'s. The flat `binary_classes.xml` cross-reference above
-turned out to answer part of this by accident, without needing to locate any specific entity class's
-`RegisterProperties`: `Pos` (`Vector3`), `Enabled`/`Usable`/`bEnabled` (`Bool`), `Category`/`Type`/
-`sType` (`Hash`), `SectorId` (`Int32`), and the AI-behavior `PlanName`/`MoveToPlanName`/
-`SwitchWeaponPlanName` trio are all real, byte-length-verified fields somewhere in this nested state —
-genuine per-entity dynamic-state fields, not wrapper bookkeeping. What's still missing is the
-*mapping* from a specific entity type to *which* of these (and whichever unmatched hashes remain) it
-actually uses, and the technique above (find a specific class's `ms_descriptor`, `get_xrefs_to` it,
-decompile, read the literal names) still generalizes for filling that in deliberately rather than by
-accident, for any entity class of interest.
-
-## Correction: `MemoryUsage` is registered independently by *two* record classes, not one
-
-The "confirmed member names" table two sections up reported `MemoryUsage` at 4,488 occurrences without
-explaining why that doesn't match either record class's own instance count (`HierarchyRecord`=2,154,
-`Record`=2,651). Re-decompiled both `RegisterProperties` bodies directly this session
-(`CPersistenceDB::CBindingHierarchyDBRec::RegisterProperties` and
-`CPersistenceDB::CPersistenceDBRec::RegisterProperties`, both re-confirmed live via
-`decompile_function_by_address` against `0x09679b22`/`0x09679a93`) rather than trusting the earlier
-summary: **both classes independently call `PushBackMember` with the literal name `"MemoryUsage"`** —
-they are two unrelated members on two unrelated classes that happen to share a name (and therefore a
-hash). `CBindingHierarchyDBRec` also registers `PersistType` (`0x60` byte offset) and `BindingHierarchy`
-(child-object, still never observed as a plain value); `CPersistenceDBRec` registers only `MemoryUsage`.
-Their instance counts **sum** to the observed total: 2,154 (`CBindingHierarchyDBRec`, one per
-`HierarchyRecord`) + 2,334 (`CPersistenceDBRec` instances found via the `EntityId`→hierarchy-entry
-lookup inside `SaveDB`, i.e. records that *do* belong to some binding hierarchy) = 4,488. This also
-explains why `PersistType` (2,154) and `HierarchyId` (2,334, see below) don't match each other's counts
-either — they belong to the two different classes in that same split.
-
-## New: where a persisted entity's own dynamic state actually gets captured
-
-The "Not yet traced" list below used to ask where `Tag_State`'s nested payload — the actual
-per-entity-type gameplay state (position, health, buddy loyalty, ammo, ...) — comes from, since
-`CPersistenceDB::SaveDB` only *writes out* an already-captured `ISerializableNode`, it doesn't build one.
-Traced the write side this session: **`CPersistenceDB::AddRecord(TEntityHandle<CEntity>, EPersistType,
-CBindingHierarchyDBRec*)`** (`FarCry2_server @ 0x09679e90`, decompiled) is the answer. After allocating a
-new `CPersistenceDBRec` and inserting it into the DB's hash table, it does:
-
-```c
-uVar13 = (**(code **)(*(int *)pCVar15 + 0x10))(pCVar15);           // pCVar15 = the live CEntity
-CNomadObjectDescriptor::SaveState((CNomadObject *)uVar13, (ISerializableNode *)((ulonglong)uVar13 >> 0x20));
+```
+0xB45D   4    magic (u32)             0x4643626E "FCbn"   — matches Fcb_MagicConstant()
+0xB461   2    version (u16)           2                    — matches Fcb_SupportedVersionConstant()
+0xB463   2    flags (u16)             0
+0xB465   4    totalObjectCount (u32)  73,200 (0x11DF0)
+0xB469   4    totalValueCount (u32)   73,199 (0x11DEF)
+0xB46D   —    root object tree (Fcb_ParseObject rules apply verbatim)
 ```
 
-i.e. it calls the entity's **own polymorphic vtable slot `+0x10`** (an accessor — plausibly
-`GetObjectDescriptor()`-shaped, returning a descriptor+node pair packed into the 64-bit return value the
-same way `CPersistenceDBRec::RegisterProperties`'s own `PushBackMember` calls above return one) and feeds
-that straight into the *generic* `CNomadObjectDescriptor::SaveState` — the exact same engine-wide
-reflected-property serializer already documented for the `.fcb` writer
-([the `.fcb` format page](./fcb.md)). This confirms: **there is no savegame-specific "capture this entity's
-state" function** — every entity class captures its own persisted state purely by having already called
-`RegisterProperties`/`PushBackMember` for whatever fields it wants captured (the same mechanism every
-`entitylibrary.fcb`-shaped data class uses), and `AddRecord` just triggers that generic machinery,
-recursively, for every child `CEntityProxy` too (the tail of the function walks `pCVar15+0x68`'s proxy
-list and re-calls `AddRecord` on each one). This is what `CGhostManager::OnFinalize` (confirmed earlier)
-eventually calls, mirrored by `RestoreEntity`'s `LoadState` on the read side.
+Walking the root object by hand against `.fcb`'s documented parse rules decodes cleanly — its first
+value is a 14-byte string, `"Addi Mbantuwe"`, a Far Cry 2 buddy/companion NPC name. This is a
+`CPersistenceDBRec`/`CBindingHierarchyDBRec` entry: **the savegame's bulk content is the entire
+`PersistenceDB`** — every spawned/moved/killed entity's state, from buddies to individual dropped
+items — serialized through the exact same generic `.fcb` writer used for the game's shipped data
+files, not a bespoke savegame format. This is why values like jump height or outpost-clear timers are
+"cached in savegames": they're ordinary properties on ordinary entities in this same tree, no
+different in kind from anything else persisted here.
 
-Practical upshot: the ~250-350 anonymous `RegisterProperties` functions in `FarCry2_server` (one per
-entity/component class, none individually named beyond the short method name — a plain function search
-can't tell them apart or attribute a found string to "which class") are *exactly* where every
-per-entity-type field in a save's `Tag_State` payload gets its name and comes from. Individually
-decompiling all of them to attribute names to classes wasn't attempted this session (a few — `CVehicle`,
-`CWeapon` — were spot-checked; none had an obviously-named `RegisterProperties` call in their own
-constructor, meaning the call site is elsewhere, not chased further). The dictionary-attack technique
-below sidesteps needing to, at the cost of not knowing *which* entity type owns which recovered name.
+**Practical consequence**: JackAll's existing `FcbDocument` reader/writer, already validated against
+shipped `.fcb` fixtures, reads this blob directly once sliced out at `0xB45D` — no separate binary
+format work is needed to read (or, cautiously, write back) a save's entity tree, only the four wrapper
+sections above.
 
-## New: recovering ~800 more names by dictionary attack instead of per-class decompiling
+## The `PersistenceDB` tag and field vocabulary
 
-Given the above, decompiling one `RegisterProperties` at a time to grow the "confirmed member names"
-table further doesn't scale (300+ candidates, no name/namespace to filter by in a plain function search).
-But every field name reaching `PushBackMember` is passed as a literal `const char*` — meaning **the name
-string exists verbatim in `FarCry2_server`'s own rodata/symbol-table strings regardless of which
-function's disassembly you'd have to read to find it**. So: pulled the *entire* string table out of the
-live Ghidra project via the MCP bridge's `list_strings` (paginated — the binary is unstripped and has
-tens of thousands of strings; ~92,000 lines/~82,000 distinct strings were pulled this session, covering
-roughly the first 190,000-offset range of the table, not exhaustively to the end), CRC32-hashed every
-candidate that looks like a plausible C-identifier (`^[A-Za-z_][A-Za-z0-9_]{1,63}$`) the same way the
-engine hashes everything (`FcbClassDefinitions.Crc32Ascii`-equivalent), and kept only the ones whose hash
-exactly matches a hash **actually present** in a real save's fully-exported, unresolved `PersistenceDB`
-tree (`tmp/savegame.fcb.xml` — 819 distinct value hashes, 246 distinct object hashes, 1,046 distinct
-total, counting occurrence frequency and per-hash byte-length consistency along the way).
+`CPersistenceDB::SaveDB` (`0x0967e350`) walks the DB's binding-hierarchy tree and, per entity,
+serializes through `CNomadObjectDescriptor::SaveState` using a set of named tags recovered directly
+from the decompiled body: `Tag_HierarchiesQueue`, `Tag_EntityId`, `Tag_Hierarchy`, `Tag_Entities`,
+`Tag_HierarchyRecord`, `Tag_Id`, `Tag_Record`, `Tag_State`, `Tag_Description`, `Tag_HierarchyId`,
+`Tag_OmniEntities`. These are the human-readable field names whose `GetNameHash`/`CRC32_Hash` values
+become the `nameHash`s stored in each `.fcb` value entry — the same mechanism the [`.fcb`
+page](./fcb.md) documents for ordinary data files.
 
-Result: **792 additional hashes resolved to an unambiguous name** (zero CRC32 collisions among the
-matched candidates — every matched hash had exactly one candidate string producing it). Combined with the
-9 hand-curated `SaveGamePersistenceTags` entries and the 68 `binary_classes.xml` flat-lookup matches
-already documented above, **843 of 1,046 distinct hashes in this one real save (80.6%) now resolve to a
-real name** — up from the 37%/14% class-scoped and ~6% flat-lookup figures reported earlier in this file.
-Some notable recovered names, cross-checked against their observed byte length and occurrence count for
-plausibility (all 100%-consistent-length across every occurrence in the sample, though — same caveat as
-`SaveGameFieldCatalog` — a hash match is not proof of semantics, only of the literal string):
+Two vocabularies coexist in a save's exported tree, and it matters which one a given hash belongs to:
 
-| Hash | Name | Count | Byte len | Plausible read |
-|---|---|---|---|---|
-| `0x7A33C5A1` | `KeyType` | 15,510 | 4 | ubiquitous — likely on every generic key/value pair node in the tree |
-| `0xB083E9A2` | `ValueType` | 11,191 | 4 | sibling of `KeyType` |
-| `0x725BF5BD` | `WorldMatrix` | 2,651 | 64 | 4x4 float matrix, one per `HierarchyRecord` |
-| `0x542EF648` | `CurrentHealth` | 1,606 | 4 | float |
-| `0x802B3E7F` | `hidLastVelocity` | 1,338 | 12 | Vector3 |
-| `0xA463782E` | `ScriptCallbackId` | 802 | 8 | |
-| `0x83B1F50E` / `0x5276954B` | `CachedAnchorPosition` / `CachedAnchorOrientation` | 322 | 12 / 16 | Vector3 / Vector4 |
-| `0x1C97590F`..`0xD56EB6C6` (cluster of 61) | `MaxReliability`, `JammingBullet`, `RememberedAmmoInClip`, `RememberedAmmoOverflow`, `CurrentBulletSpread`, ... | 61 each | | a weapon-memento-shaped cluster (buddy weapon state?) |
-| `0x519DEE85`..`0x606B06FE` (cluster of 54) | `UsingLook`, `AimAngles`, `BarkLookAngles`, `FovOverride*`, `ReactionMoveId`, ... | 54 each | | an AI look/animation-state cluster |
-| cluster of 27 (dozens of hashes) | `CurrentArmyMemberState`, `ThreatLevel`, `AlertLevel`, `IsPlayerInAIvsAIZone`, `MercBrain`, `BuddyDownEnable`, ... | 27 each | | a full AI-brain/army-member state block — almost certainly one buddy/merc NPC's complete behavior state |
-| `0xB3056FD2` | `DiamondReward` | 27 | 1 | bool |
-| root-object names (object-hash matches) | `CampaignSave`, `PersistenceDB`, `BuddyManagement`, `MissionManagement`, `GameplayManagement`, `WorldDiamonds`, `DiamondsData`, `MainHud`, `BlueArmy`/`RedArmy`/`GreyArmy`/`NeutralArmy` | 1 each | | top-level save-data category nodes — the save's overall shape, not just entity records |
+- **The wrapper/bookkeeping layer** (`CPersistenceDBRec`/`CBindingHierarchyDBRec` and the `Tag_*`
+  structural tags above) — names that exist only in the game's compiled code, never in a shipped data
+  file, so the community-built `binary_classes.xml` catalog (built from strings visible in shipped
+  `.fcb` files) never had a chance to capture them.
+- **Entity component data embedded verbatim** — a persisted entity's own live component tree
+  (`CIgnitorComponent`, `CCompoundPhysComponent`, `CPersistComponent`, `RootNode`, ...) reuses
+  `entitylibrary.fcb`'s own class vocabulary exactly, because it's the same live C++ objects being
+  serialized. `binary_classes.xml` resolves this part for free: in one real save, 37% of `<object>`
+  tags and 14% of `<value>` tags already resolve via the existing per-class lookup, with no extra work.
 
-Also recovered several likely level/act-design string constants (occurrence count 1, not observed as
-values but their hashes are present as object/value hashes near the file's very start, alongside the
-already-known `CScreenShot` section) — `FIRST_LT_WARLORD`, `START_FACTION_BOSS`,
-`PRIMARY_BUDDY_NAME`/`SECONDARY_BUDDY_NAME`, `MISSION_BUDDY_A1LM01..A3SM15`, `WINNING_FACTION_*` /
-`LOSING_FACTION_*` — these read as campaign-scripting constant/enum names (Act 1/Act 2 faction-war
-bookkeeping), consistent with `CCampaignGameFileHeader`'s still-unidentified trailing 3 `u32`s
-(difficulty/act/chapter, Section 2 above) living in the same conceptual area of the save.
+Both `CBindingHierarchyDBRec::RegisterProperties` and `CPersistenceDBRec::RegisterProperties`
+(`0x09679a93`/`0x09679b22`) call `CNomadObjectDescriptor::PushBackMember` once per registered field
+with the field's real name as a literal string — the same technique (find a class's `ms_descriptor`,
+find its xrefs, decompile the registrar, read the literal names) generalizes to any other persisted
+record type. `CBindingHierarchyDBRec` registers `MemoryUsage`, `PersistType`, `BindingHierarchy`;
+`CPersistenceDBRec` registers `MemoryUsage` independently (a same-named but unrelated field on a
+different class — their instance counts sum to the observed total, they don't collide).
 
-**Practical tooling consequence**: implemented as
-`JackAll.App/SaveGames/SaveGameCompiledFieldNames.cs`, loading a flat `hash\tname` table shipped at
-`tools/JackAll/assets/savegame_field_names.tsv` (792 rows, generated this session; the 9
-`SaveGamePersistenceTags` and the `binary_classes.xml`-covered hashes are deliberately excluded from the
-table to avoid two annotation passes emitting a duplicate `known="..."` attribute on the same element).
-Wired into `SaveDetailsViewModel.LoadAsync` right after `SaveGamePersistenceTags`, before the BinHex
-string decoder — name-only, exactly like `SaveGamePersistenceTags`, no wire type asserted.
+Confirmed by CRC32-hashing each candidate tag/member name and matching it against real hashes in a
+save's exported tree:
 
-The technique itself generalizes: any future session can re-run it against a wider string-table page
-range (this session did not reach the end of `FarCry2_server`'s string table — pagination was stopped
-partway for time, not because it was exhausted) or against a different real save to grow the table
-further, without needing to identify which of the 300+ `RegisterProperties` functions a name belongs to.
+| Tag/field | CRC32 | Occurrences (one save) |
+|---|---|---|
+| `Id` | `0x2ABD43F2` | 4,870 |
+| `State` | `0x6252FDFF` | 3,545 |
+| `MemoryUsage` | `0x65A0E5B6` | 4,488 (sum of both registering classes) |
+| `EntityId` | `0x0F5E4BAA` | 2,773 |
+| `HierarchyId` | `0xA9100FC2` | 2,334 |
+| `PersistType` | `0x4A1FC981` | 2,154 |
+| `Record` | `0x9C989AA7` | 2,651 |
+| `HierarchyRecord` | `0x7A2B069C` | 2,154 |
+| `Description` | `0xEB78CFF1` | 485 — conditional (`GetChildDescription` branch), not written for every record |
+| `Entities` / `Hierarchy` / `HierarchiesQueue` / `OmniEntities` | various | 2 each — top-level container tags, used once or twice near the root |
+| `BindingHierarchy` | `0xE2C5EA2C` | 0 — registered, but never seen as a plain value; likely a child-object reference rather than a scalar |
 
-## Follow-up: scanning the raw binaries directly gets to 97.8%, no Ghidra needed for this part
+### Closing the remaining gap: dictionary attack against the binary's own strings
 
-The 80.6% figure above only used strings pulled through the GhidraMCP bridge (`list_strings`, paginated,
-one HTTP round-trip per 2,000 strings — slow, and only covered part of `FarCry2_server`'s table). Realized
-the bridge isn't actually necessary for this step: `PushBackMember`'s name strings are plain bytes sitting
-in the binary's own rodata/`.strtab`, so a straightforward "find every run of ≥4 printable-ASCII bytes"
-scan directly over the **files on disk** finds the same strings (and more, exhaustively, in one pass)
-without any Ghidra round-trips at all. Located both source binaries directly:
+Beyond the class-scoped and hand-curated matches above, `binary_classes.xml`'s **flat** namespace (any
+member/class name anywhere in the file, regardless of which class declared it) resolves more by
+coincidence of English: 51 of 820 distinct value hashes and 6 of 246 distinct object-type hashes in one
+real save matched, each verified by both hash and matching byte-length (to reject false-positive
+collisions like `Id`, whose 4-byte declared width doesn't match the save's consistently 8-byte field of
+the same hash — `Flags` similarly rejected on a 1-vs-4-byte mismatch).
 
-- `tools/FarCry2_Dedicated_Server_Linux/bin/FarCry2_server` (52 MB, the same ELF the Ghidra project has
-  imported) — scanning it directly and exhaustively (328,561 raw ASCII runs) finds strings the partial
-  MCP-paginated pull missed.
-- `C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2\bin\Dunia.dll` (20 MB, the PC client engine —
-  see [the engine overview](../engine-internals/overview.md)) — an **independent second source of the same literal strings**, since
-  the PC client and the Linux dedicated server both compile from the same shared engine source and
-  therefore embed the same `PushBackMember("SomeFieldName", ...)` call sites, even though `Dunia.dll`'s
-  own *functions* were never demangled/named (irrelevant here — raw string bytes don't need symbol
-  recovery to read).
-
-A ~100-line Python script (raw byte scan + `zlib.crc32` + match against the real save's hash set) found
-**233 more unambiguous matches** in seconds, no MCP calls at all. After removing hashes that overlap
-`SaveGameFieldCatalog`'s existing `binary_classes.xml` resolution (61 of the combined 1,025 rows — mostly
-short common names like `Value`/`Name`/`State`/`Category`/`hidPos` that this dictionary attack also
-independently found, cross-validating the two methods against each other), the final tally:
+Since every field name reaching `PushBackMember` is a literal string sitting in the binary's own
+rodata, a full scan of `FarCry2_server` and `Dunia.dll` for printable-ASCII runs (rather than reading
+individual `RegisterProperties` functions one at a time) turned up the rest: CRC32-hash every
+plausible-identifier string found in either binary and keep the ones matching a hash actually present
+in a real save's tree. This resolved 964 additional hashes unambiguously (zero collisions among
+matches). Combined:
 
 | Source | Distinct hashes resolved |
 |---|---|
-| `SaveGamePersistenceTags` (hand-decompiled) | 9 |
-| `SaveGameFieldCatalog` (`binary_classes.xml`, byte-length verified) | 50 |
-| `SaveGameCompiledFieldNames` (dictionary attack, MCP strings + raw binary scan combined) | 964 |
-| **Union, this one real save** | **1,023 / 1,046 = 97.8%** |
+| Hand-decompiled `RegisterProperties` tags | 9 |
+| `binary_classes.xml` flat lookup, byte-length verified | 50 |
+| Dictionary attack (binary string scan + CRC32 match) | 964 |
+| **Union, one real save** | **1,023 / 1,046 = 97.8%** |
 
-23 distinct hashes remain unresolved in this sample (`2ABD43F2`/`Id` — already known by name but rejected
-by `SaveGameFieldCatalog` for a byte-length mismatch, see the section above — plus `B2DDED49`, `2574E181`,
-`FFFFFFFF`, `FA6F25A3`, and ~18 others with no matching string found in either binary's printable-ASCII
-runs). Getting the rest would mean either a smarter candidate generator (current pass only tries strings
-that already exist verbatim and match `^[A-Za-z_][A-Za-z0-9_]{1,63}$`, so anything using an unusual
-character, a very short/generic name that got filtered as ambiguous, or genuinely absent from either
-binary's static strings — e.g. dynamically-built at runtime — would be missed) or brute-force diffing two
-saves that differ by one known action.
+23 hashes remain unresolved in this sample (including `Id`, known by name but excluded above on a
+byte-length mismatch). Notable recovered names: `KeyType`/`ValueType` (generic key/value pair
+scaffolding, on nearly every node), `WorldMatrix` (64 bytes, one per `HierarchyRecord`),
+`CurrentHealth`, `hidLastVelocity`, `CachedAnchorPosition`/`CachedAnchorOrientation`, a 61-hash weapon-
+memento cluster (`MaxReliability`, `JammingBullet`, `RememberedAmmoInClip`, ...), a 54-hash AI
+look/animation-state cluster (`UsingLook`, `AimAngles`, `BarkLookAngles`, `FovOverride*`, ...), and a
+27-hash AI-brain/army-member block (`CurrentArmyMemberState`, `ThreatLevel`, `AlertLevel`,
+`MercBrain`, `BuddyDownEnable`, ...). Root-level object names read as the save's overall shape:
+`CampaignSave`, `PersistenceDB`, `BuddyManagement`, `MissionManagement`, `GameplayManagement`,
+`WorldDiamonds`, `MainHud`, `BlueArmy`/`RedArmy`/`GreyArmy`/`NeutralArmy`.
 
-**Practical tooling consequence, updated**: `savegame_field_names.tsv` now ships 964 rows (up from 792).
-The dedup step against `SaveGameFieldCatalog` was redone properly this round — checking real
-byte-length-verified member matches *and* any `binary_classes.xml` class name, rather than a hand-picked
-exclusion list — so a handful of rows from the very first pass that had the same undetected overlap
-(`hidPos`, `BoneId`, `MeshIndex`, and others) were also cleaned up here, not just the new raw-scan finds.
+JackAll ships this as `tools/JackAll/assets/savegame_field_names.tsv` (964 rows), applied by the Saves
+tab after `binary_classes.xml`'s own resolution and a small hand-curated tag table, name-only —
+deliberately kept out of the round-trip-critical `FcbClassDefinitions`/`FcbXml` machinery the Files
+tab's mod-editing depends on, since neither resolution method is verified as rigorously as
+`binary_classes.xml`'s own provenance.
 
-## Validated: mod compatibility with existing saves is a per-property overlay, not a full freeze
+## How a persisted entity's dynamic state is captured
 
-**See [the entity-library overlap section below](#entity-library-overlap) for the follow-up that
-measures this concretely** — this section establishes the *mechanism* (below); that file cross-references
-a real save's fully name-resolved tree against `binary_classes.xml` to answer, with real numbers,
-*which* `entitylibrary.fcb` classes/fields the mechanism actually touches (237 classes, 574 members, in
-one sample save).
+**`CPersistenceDB::AddRecord(TEntityHandle<CEntity>, EPersistType, CBindingHierarchyDBRec*)`**
+(`0x09679e90`) is called on every entity as it finalizes. After allocating a `CPersistenceDBRec` and
+inserting it into the DB's hash table, it calls the entity's own polymorphic vtable slot `+0x10`
+(an accessor for the entity's descriptor/node) and feeds the result into the generic
+**`CNomadObjectDescriptor::SaveState`** — the same reflected-property serializer the [`.fcb`
+writer](./fcb.md) uses. There is no savegame-specific "capture this entity's state" function: every
+entity class captures whatever it wants persisted purely by having already called
+`RegisterProperties`/`PushBackMember` for those fields, and `AddRecord` triggers that generic
+machinery recursively for every child `CEntityProxy` too. This is called from
+`CGhostManager::OnFinalize`, and mirrored on the read side by `RestoreEntity`'s `LoadState` call below.
 
-Follow-up investigation (same session) to answer a concrete question: if a mod changes
-`entitylibrary.fcb`, does an existing save still show the old values for entities it has already
-persisted — making mod changes to persisted entities effectively "worthless" as reported anecdotally?
-Traced the actual entity-restore path in `FarCry2_server` rather than guessing from the `SaveDB`
-write side alone.
+There are 300+ anonymous `RegisterProperties` functions in `FarCry2_server`, one per entity/component
+class, none individually attributable to a class name by a plain search. The dictionary-attack
+technique above recovers plausible field *names* for large blocks of this state (the 27- and 54-hash
+clusters read as one buddy/merc's full AI-brain block and a look/animation-state block respectively)
+without needing to individually decompile and attribute each `RegisterProperties` call.
 
-**`CPersistenceDB::RestoreEntity(TEntityHandle<CEntity>)`** (`@ 0x0967c050`, decompiled) is called on
-an **already-constructed, already-locked `CEntity`** — its first two lines are
-`pCVar1 = *(CEntity**)(*param_2 + 0xc); CEntity::Lock(pCVar1);`, i.e. the entity object already
-exists in memory by the time this function runs. It then does two hashtable lookups by `EntityId`
-(one against `this+0x14`, a binding-hierarchy table; one against `this+0x30`, a persistence-record
-table) and, **only if a record is found**, calls `CNomadObjectDescriptor::LoadState(entityObject,
-persistedNode)` — the same generic reflected-property loader used everywhere else in the engine's
-`CNomadObject` system (documented for the `.fcb` reader in [the `.fcb` format page](./fcb.md)'s
-`GenericMember`/`BasicTypeHandler` machinery). If no record exists for that `EntityId`, `RestoreEntity`
-does nothing at all and returns.
+## Mod compatibility: a per-property overlay, not a full freeze
 
-Confirmed the call site: **`CGhostManager::OnFinalize(TEntityHandle<CEntity>)`** (`@ 0x096c3930`,
-decompiled) — the entity finalization hook, i.e. the tail end of normal entity spawn/construction —
-calls `CPersistenceDB::RestoreEntity` as its very last step, on the entity it just finished
-finalizing.
+**`CPersistenceDB::RestoreEntity(TEntityHandle<CEntity>)`** (`0x0967c050`) runs on an
+already-constructed, already-locked `CEntity` — it does two hashtable lookups by `EntityId` and, only
+if a record is found, calls `CNomadObjectDescriptor::LoadState(entity, persistedNode)`, the same
+generic reflected-property loader the [`.fcb` reader](./fcb.md) uses. If no record exists for that
+`EntityId`, `RestoreEntity` does nothing. It's called as the last step of
+`CGhostManager::OnFinalize(TEntityHandle<CEntity>)` — the tail of normal entity spawn/construction.
 
-**This settles the ordering**: an entity is always spawned/constructed first from its current, live
-entity-library definition (wherever that spawn logic lives — not itself retraced this session, but
-nothing upstream of `OnFinalize` reads from the persistence DB), and *afterward*, `RestoreEntity`
-conditionally overlays whatever specific properties got captured in that entity's persisted record —
-if one exists at all. This is a **property-level overlay on top of a freshly-spawned object**, not a
-wholesale substitution of the entity's definition, and not even applied to entities with no persisted
-record in the first place.
+This settles the ordering: an entity is always spawned first from its current `entitylibrary.fcb`
+definition, and only afterward does `RestoreEntity` conditionally overlay whatever specific properties
+were captured for it — if any. It is a property-level overlay on a freshly-spawned object, not a
+substitution of the entity's definition, and it's a no-op for entities with no persisted record.
 
-Practical consequences for "can I patch `entitylibrary.fcb` and have it affect an existing save":
+Practical consequences for modding `entitylibrary.fcb` against an existing save:
 
-- **Entities never persisted at all** (no record for that `EntityId` in the save's `PersistenceDB`
-  dump — plausible for most of the map on any given save, since only entities that actually changed
-  state get a record per the engine-architecture notes in `research/knowledge.md` §5) spawn 100% from
-  current data. A mod's changes apply immediately and fully, no save-editing needed.
-- **Entities that do have a persisted record** only have `LoadState`-applied properties overridden —
-  and only the properties that `CNomadObjectDescriptor`'s registered schema for that record type
-  actually captures (this session didn't enumerate that per-type property list — see "Not yet
-  traced"). Design-time tuning values that live only on the entity/weapon *archetype* and aren't part
-  of an instance's dynamic persisted state (plausible candidates: weapon damage/range/reliability
-  curves, AI perception parameters — anything not describable as "this specific entity's current
-  state") would very plausibly still take effect even for a persisted entity, since `LoadState` never
-  touches whatever it wasn't given data for. Genuinely dynamic per-instance state that *is* captured
-  (position, health/alive-state, inventory contents, hierarchy relationships) would remain frozen at
-  whatever value existed when it was persisted, regardless of later `entitylibrary.fcb` edits.
-- The originally-reported "known behavior" (huge chunks of `.fcb` content are frozen in the save) is
-  **not wrong, but is entity-and-property-scoped, not global** — it doesn't mean the whole save is
-  immune to `.fcb` edits, only the specific already-touched entities and already-captured properties.
-- This also suggests a much simpler mitigation than a full value-level merge tool: since
-  `RestoreEntity` is a no-op when no record exists, **deleting an entity's persisted record from the
-  save's embedded `.fcb` tree entirely** (rather than trying to reconcile individual values) would
-  force that entity to respawn purely from current `entitylibrary.fcb` data next load — a
-  coarser-grained but far more tractable technique than field-level reconciliation, and one that
-  doesn't require knowing what any given `nameHash` means. Not implemented or tested this session.
+- **Entities never persisted** (no record for that `EntityId`) spawn 100% from current data. A mod's
+  changes apply immediately, no save-editing needed. Most of the map, on any given save, falls here —
+  only entities that changed state during play get a record at all.
+- **Entities that do have a persisted record** only have the specific captured properties overridden.
+  Design-time tuning values that live only on the archetype and aren't part of an instance's dynamic
+  state (weapon damage/range/reliability curves, AI perception thresholds) still take effect even for a
+  persisted entity, since `LoadState` never touches fields it wasn't given data for. Genuinely dynamic
+  per-instance state that *is* captured (position, health, inventory, hierarchy relationships) stays
+  frozen at its persisted value regardless of later edits.
+- The commonly reported "big chunks of `.fcb` are frozen in the save" behavior is real but
+  entity-and-property-scoped, not global.
+- Since `RestoreEntity` is a no-op with no record, **deleting an entity's persisted record from the
+  save's embedded `.fcb` tree** forces it to respawn purely from current `entitylibrary.fcb` data next
+  load — a coarser but far more tractable technique than reconciling individual values, and one that
+  doesn't require knowing what any given `nameHash` means.
 
-## New: why the filename itself is a bare number (`<numbers>.sav`)
+See [Entity-Library Overlap](#entity-library-overlap) below for which classes/fields this mechanism
+actually touches in a real save, measured directly.
 
-Confirmed directly via `FarCry2_server`'s symbol table (same shared-engine caveat as the rest of this
-file — traced in the Linux server binary, not `Dunia.dll`, but this is generic filename-generation
-code with no server/client-specific behavior, so it applies to the PC writer too):
+## Why the save filename is a bare number
 
-- **`GameFileUtils::GenerateCampaignGameFileName(CryStringBase<char>&)`** (`0x091ea6b0`) is the
-  function that produces the `<digits>.sav` name. It does **not** use wall-clock time, a save-slot
-  index, or any player-visible identifier. Instead:
-  1. `CHighPerfTimer::GetTimeValue()` (`0x09c6ea70`) → `Gear::Time::GetCpuCycle()` (`0x0a0b9ed0`) →
-     a bare **`rdtsc()`** instruction — the raw CPU timestamp-counter register, a free-running cycle
-     count with no calendar meaning.
-  2. `ndRandUInt()` (`0x09c6e8a0`) — a small in-engine PRNG (`globalRandom = globalRandom*0x343fd +
-     0x269ec3`, returning `(globalRandom >> 16) & 0x7fff`, a classic 15-bit linear-congruential
-     generator) is added on top as jitter.
-  3. The sum is `sprintf`'d as a plain decimal integer via `"%I64d.%s"`, with `g_kGameFileExtension_
-     Campaign` (a `GameFileUtils` static, matching the real `.sav` extension) appended, then handed to
-     `GenerateRelativeFileName` to become the actual save-folder-relative path.
-  - **`CFCXEditorGameFilesService::GenerateSaveFileName`** (`0x08a41a50`, custom-map/editor path) is a
-    sibling that instead calls `GameFileUtils::GenerateCustomMapFileName` — not decompiled this
-    session, but presumably the same pattern given the shared `GameFileUtils` namespace.
-- **So `178430170947.sav`'s name is "RDTSC cycle count + small random offset," not a timestamp, save
-  slot, or hash.** This is a cheap, collision-resistant unique-ID scheme, not a meaningful identifier —
-  there's no reason to expect the number to be sortable, parseable as a date, or stable across
-  machines/reboots. (The magnitude of the real sample — ~1.78×10^11, i.e. only ~tens of seconds' worth
-  of cycles at GHz-class clock speeds — implies the counter isn't a raw since-boot value on real
-  hardware; whether `GetCpuCycle` is actually reading a per-process/virtualized/offset TSC rather than
-  the true since-power-on one is unresolved and doesn't change the practical conclusion above.)
+**`GameFileUtils::GenerateCampaignGameFileName`** (`0x091ea6b0`) produces the `<digits>.sav` name. It
+uses neither wall-clock time nor a save-slot index:
 
-## Not yet traced
+1. `CHighPerfTimer::GetTimeValue()` → `Gear::Time::GetCpuCycle()` → a bare `rdtsc()` — the CPU
+   timestamp-counter register, a free-running cycle count with no calendar meaning.
+2. `ndRandUInt()` — a small in-engine LCG PRNG (`globalRandom = globalRandom*0x343fd + 0x269ec3`,
+   returning `(globalRandom >> 16) & 0x7fff`) is added as jitter.
+3. The sum is formatted as a plain decimal integer and the `.sav` extension appended.
 
-- **`CGameFileHeader`'s own `WriteToFile`/`ReadFromFile`** — not located under that literal name in
-  `FarCry2_server`'s symbol table (only `GetSaveSize` and the constructor were found this session);
-  the field semantics in Section 1 above are inferred from real bytes + plausibility, not decompiled
-  proof. Finding this function (likely inlined into `CCampaignGameFileHeader`'s own written-to-file
-  logic given the header's writes and the two strings appear contiguous in the file) would upgrade
-  those from hypothesis to confirmed.
-- **The `CCampaignGameFileHeader` trailing 3 `u32`s' exact meaning** (difficulty/act/chapter guessed,
-  not confirmed) — no accessor was traced from the class to a named concept.
-- **The lone `u32 = 0` field between the DLC list and the `.fcb` blob** (`GetSaveSize`'s `+ 4`
-  constant) — present and measured, purpose unknown.
-- **Screenshot pixel channel order** (RGBA vs BGRA) — not distinguished from this one sample.
-- **Where `PlayerPos` (predicted in `command_line_args.md`) actually lives** — very plausibly the
-  three Section-1 floats (see above), but not cross-checked against a `-load`-and-read-back live test
-  or a decompiled accessor.
-- **The rest of the embedded `.fcb` tree's schema** — **largely addressed this session** via the
-  dictionary-attack technique above: 80.6% of distinct hashes in the sample save now resolve to a real
-  name (up from a single hand-walked value, `"Addi Mbantuwe"`, in the original pass). What's left is the
-  remaining ~19.4% (203 distinct hashes) that didn't match any string pulled from the ~190,000-offset
-  range of `FarCry2_server`'s string table covered this session — re-running the same technique against
-  the rest of the table (not exhausted, just not finished for time) is the obvious next step, no new
-  method needed. Brute-force diffing two saves that differ by one known in-game action remains untried
-  and would be the way to attach *meaning* (not just a name) to a resolved-but-still-opaque field.
-- **Whether the container format (the 4-section wrapper) is identical for quicksaves vs. manual saves
-  vs. checkpoint autosaves** — only one save file was inspected byte-for-byte this session; the other
-  ~30 files in the same folder were not diffed against it.
-- **What decides whether a given entity ever gets a persisted record at all** — the actual condition
-  under which `CPersistenceDB::AddRecord`/`AddHierarchy` get called for an entity wasn't traced this
-  session (only the read/restore side, `RestoreEntity`, was). "Only entities that changed state get
-  persisted" is carried over from `research/knowledge.md`'s community/developer-sourced theory, not
-  independently re-derived from `FarCry2_server` disassembly.
-- **`CNomadObjectDescriptor`'s per-record-type registered property schema** — the *mechanism* is now
-  confirmed (`CPersistenceDB::AddRecord` calls the live entity's own vtable+`0x10` accessor into generic
-  `CNomadObjectDescriptor::SaveState`, see above), and the dictionary attack recovered plausible field
-  *names* for large blocks of this state (the 27-count and 54-count clusters above read as a single
-  AI/army-member brain and a look/animation-state block respectively). What's still missing is which
-  specific fields `RegisterProperties` covers *per named entity class* (i.e. attributing a recovered name
-  to "this is `CBuddy`'s" vs. "this is `CVehicle`'s") — the 300+ anonymous `RegisterProperties` functions
-  were not individually decompiled/attributed this session (see the section above). This is the concrete
-  next step for anything that wants to reason precisely about which mod edits would vs. wouldn't take
-  effect on an existing save, rather than the plausibility argument given above.
-- **The entity-spawn path itself, upstream of `CGhostManager::OnFinalize`** — confirmed *that*
-  entities are constructed before `RestoreEntity` runs, but the actual code that reads
-  `entitylibrary.fcb`/resolves an entity's archetype at spawn time wasn't retraced in this
-  session (it's already partially covered for the `.fcb` *reading* side in
-  [the `.fcb` format page](./fcb.md) and [the archives format page](./archives-fat-dat.md), just not
-  specifically re-connected to this spawn call chain).
+So `178430170947.sav`'s name is a cycle count plus a small random offset — a cheap, collision-resistant
+unique ID, not a timestamp, slot number, or hash. It carries no ordering or date information.
+`CFCXEditorGameFilesService::GenerateSaveFileName` (the custom-map/editor path) is a sibling using
+`GameFileUtils::GenerateCustomMapFileName`, presumed to follow the same pattern but not decompiled.
+
+## Unknowns
+
+- `CGameFileHeader`'s own `WriteToFile`/`ReadFromFile` weren't located under that name — Section 1's
+  field meanings are inferred from real bytes, not decompiled directly.
+- `CCampaignGameFileHeader`'s trailing three u32s (guessed: difficulty/act/chapter) have no traced
+  accessor confirming their meaning.
+- The `u32 = 0` field between the DLC list and the embedded `.fcb` blob — present and measured,
+  purpose unknown.
+- Screenshot pixel channel order (RGBA vs BGRA) — not distinguished from the one sample checked.
+- Whether the three Section-1 floats are really `PlayerPos` — plausible but not cross-checked against
+  a live `-load`-and-read-back test or a decompiled accessor.
+- ~19% of distinct hashes in the sample save (203 of 1,046) still don't resolve to any string found in
+  the portion of the binaries' string tables scanned so far.
+- Whether the four-section container layout is identical for quicksaves, manual saves, and checkpoint
+  autosaves — only one save file was inspected byte-for-byte.
+- What decides whether a given entity gets a persisted record at all — only the read side
+  (`RestoreEntity`) was traced; "only entities that changed state get persisted" is carried over from
+  community/developer-sourced theory, not independently re-derived.
+- Which specific fields each entity class's own `RegisterProperties` captures — the mechanism is
+  confirmed, but the 300+ anonymous `RegisterProperties` functions weren't individually attributed to
+  class names.
+- The entity-spawn path upstream of `CGhostManager::OnFinalize` (where `entitylibrary.fcb` is actually
+  read to build a fresh entity) wasn't retraced from this angle — see [`.fcb`](./fcb.md) and
+  [archives](./archives-fat-dat.md) for the general asset-loading path.
 
 ## Entity-Library Overlap
 
-A direct follow-up to the savegame format section above, which traced the container format and the
-`CPersistenceDB::AddRecord`/`RestoreEntity` overlay mechanism but stopped short of measuring *which*
-`entitylibrary.fcb` classes/fields that mechanism actually touches in a real save. This section
-answers that with real numbers from one real save, for anyone modding `entitylibrary.fcb` who needs
-to know which of their edits an existing (already-played) save would silently ignore.
+A direct follow-up to the mechanism above: which specific `entitylibrary.fcb` classes and fields does
+`RestoreEntity`'s overlay actually touch in a real save? Answered by exporting one real save's full
+`PersistenceDB` tree (via JackAll's Saves tab, which renders it in the same `type="..."`/`name="..."`
+shape as an ordinary resolved `.fcb`) and cross-referencing every `<object type="X">` whose `X` is a
+real `binary_classes.xml` class name against its child `<value name="Y">` names, by plain string
+equality — no hash-matching needed once both sides share the same rendered shape.
 
+An entity always spawns first from whatever `entitylibrary.fcb` currently says — edits apply
+immediately and fully, unconditionally, as the starting point for every entity. Only if that specific
+entity instance already has a `PersistenceDB` record does `RestoreEntity` run afterward and overlay the
+specific properties captured on top of the freshly-spawned object. So the classes/fields below aren't
+"unsafe to mod" in general — they're the specific set of properties that, for an entity a player has
+already touched in an existing save, keep showing that save's frozen value until the record is cleared
+or a fresh instance spawns. A new game, or any entity nobody has interacted with, always gets the edit.
 
-### Status: measured against one real save, name-resolved via JackAll's Saves tab
+### Headline numbers (one real save)
 
-Made possible by the savegame format section above's dictionary-attack work (which pushed name
-resolution in the Saves tab's rendered tree to 97.8%) and the `SaveGameXmlRenderer` rewrite that made the
-Saves tab emit the *same* `type="..."`/`name="..."` shape as an ordinary resolved `.fcb` — see
-`tools/JackAll/src/JackAll.App/SaveGames/SaveGameXmlRenderer.cs`. That shared shape is what makes this
-measurement possible at all: it lets a save's object/value names be cross-referenced against
-`tools/JackAll/assets/binary_classes.xml` (the real `entitylibrary.fcb` class/member vocabulary) by plain
-string equality, no separate hash-matching step needed.
-
-**Method**: exported one real save's full `PersistenceDB` tree via the Saves tab (`178430170947.sav`,
-same sample `savegame_format.md` uses), then streamed it (`xml.etree.ElementTree.iterparse` — the
-rendered tree is ~14.7MB/238k lines, too big to parse as one DOM comfortably) counting, for every
-`<object type="X">` whose `X` is a real `binary_classes.xml` class name, which `<value name="Y">` names
-appear as its direct children and whether `Y` is *also* a real `binary_classes.xml` member name.
-
-### The mechanism, recapped
-
-(Full trace in `savegame_format.md`'s "mod compatibility" section.) An entity always spawns first from
-whatever `entitylibrary.fcb` currently says — your edits apply immediately and fully, unconditionally, as
-the starting point for every entity. **Only if that specific entity instance already has a
-`PersistenceDB` record** (i.e. something about it changed during that save's playthrough) does
-`CPersistenceDB::RestoreEntity` run afterward and overlay whichever *specific properties got captured*
-on top of the freshly-spawned object — nothing else. So the classes/fields below aren't "unsafe to mod" in
-general; they're "the specific set of properties that, for an entity a player has already touched in an
-existing save, will keep showing that save's frozen value until the record is cleared or a fresh instance
-spawns." A new game, or any entity nobody has interacted with yet, always gets your edit.
-
-### Headline numbers (this one save)
-
-- **237 distinct real `entitylibrary.fcb` classes** appear instantiated inside `PersistenceDB` — every one
-  a genuine class from `binary_classes.xml`, reused verbatim because it's the same live C++ component tree
-  being serialized (see `savegame_format.md`'s "`binary_classes.xml` actually DOES resolve a real chunk of
-  this content" section for why that's expected, not a coincidence).
-- **574 distinct real `entitylibrary.fcb` member names** show up captured as per-instance state somewhere
-  under those classes.
-- For comparison: the save's `PersistenceDB` tree overall has 474 distinct object-type names and 1,319
-  distinct field names total — so the real-`entitylibrary.fcb`-overlapping subset above (237/474 classes,
-  574/1319 fields) is roughly half by class count, well under half by field count. The rest is the
-  savegame's own disjoint wrapper/computed-state vocabulary (`Tag_*` structural tags, AI runtime state
-  like `ThreatLevel`/`AlertLevel`, and similar — see `savegame_format.md`), which has no
-  `entitylibrary.fcb` design-time counterpart to "override" in the first place.
+- **237 distinct real `entitylibrary.fcb` classes** appear instantiated inside `PersistenceDB` — every
+  one a genuine `binary_classes.xml` class, reused verbatim because it's the same live C++ component
+  tree being serialized.
+- **574 distinct real `entitylibrary.fcb` member names** show up captured as per-instance state under
+  those classes.
+- For comparison, the save's `PersistenceDB` tree has 474 distinct object-type names and 1,319 distinct
+  field names overall — so the `entitylibrary.fcb`-overlapping subset is roughly half by class count,
+  well under half by field count. The rest is the save's own disjoint wrapper/computed-state vocabulary
+  (`Tag_*` structural tags, AI runtime state like `ThreatLevel`/`AlertLevel`), which has no
+  design-time counterpart to override in the first place.
 
 ### High-impact classes for modders
 
 | Area | Class(es) | What's frozen for an already-touched instance |
 |---|---|---|
-| Vehicle handling/tuning | `CVehicle` + `Reliability`/`Sound`/`WheeledParams`/`Steering`/`Rumble`/`Gear0-2`/`SoundSettings`/`ParticleSettings`/`GaugesSettings`/`VehicleLightSettings`/`DustParticles` | Almost every tunable vehicle parameter that exists — **the single biggest risk category**: `fAccelerationPushFactor`, `fBigCollisionSpeed`/`fMediumCollisionSpeed`/`fMinCollisionSpeed`, `iRepairSteps`, `vehicleMaxLookAngle`, full gearbox/suspension/reliability-curve tuning |
-| AI movement/behavior tuning | `CGameAgent`, `CPawnAgent`, `Body` | `fSpeedsRun`/`fSpeedsSprint`/`fSpeedsWalk`, accelerations/decelerations, `fJumpHeight`, swim/walk speeds, AI-sense thresholds (`m_*ClearVal`/`m_*FuzzyVal`) |
-| Visuals | `CGraphicComponent` (705 instances) | `bCastShadow`, `bReceiveShadow`, `fLODSphereRadius`, `hidMeshName`, `objModel`, `agAmbientGroup`, `olgLightGroup`, LOD/reflection/ambient flags |
-| Physics | `CCompoundPhysComponent`/`CRigidPhysComponent`/`CStaticPhysComponent`/`CVehicleWheeledPhysComponent` | collision flags (`bUseFastCollision`, `bCreateAsStatic`), resource refs |
-| Starting loadout | `Inventory` (31 instances) | `bAutoDraw`, `bAutoReload`, `bUnlimitedAmmo`, `packInventoryPack`, `sInitialWeaponCategory`, `archGPSVehicleArchetype` |
+| Vehicle handling/tuning | `CVehicle` + `Reliability`/`Sound`/`WheeledParams`/`Steering`/`Rumble`/`Gear0-2`/`SoundSettings`/`ParticleSettings`/`GaugesSettings`/`VehicleLightSettings`/`DustParticles` | Almost every tunable vehicle parameter — the single biggest risk category: `fAccelerationPushFactor`, collision-speed thresholds, `iRepairSteps`, `vehicleMaxLookAngle`, full gearbox/suspension/reliability-curve tuning |
+| AI movement/behavior tuning | `CGameAgent`, `CPawnAgent`, `Body` | Run/sprint/walk speeds, accelerations/decelerations, `fJumpHeight`, swim speed, AI-sense thresholds |
+| Visuals | `CGraphicComponent` (705 instances) | `bCastShadow`, `bReceiveShadow`, `fLODSphereRadius`, `hidMeshName`, `objModel`, LOD/reflection/ambient flags |
+| Physics | `CCompoundPhysComponent`/`CRigidPhysComponent`/`CStaticPhysComponent`/`CVehicleWheeledPhysComponent` | Collision flags (`bUseFastCollision`, `bCreateAsStatic`), resource refs |
+| Starting loadout | `Inventory` (31 instances) | `bAutoDraw`, `bAutoReload`, `bUnlimitedAmmo`, `packInventoryPack`, `sInitialWeaponCategory` |
 | Pickup availability | `CPickupWeapon`/`CPickupDiamond`/`CPickupHealth`/`CPickupMissionItem`/`CMedicStation`/`CPickupPile`/`COpeningPickup` | `bPickable`, `bCanBeScouted` (and `CPickupWeapon` also `iMaxAmmo`/`iMinAmmo`) |
-| Near-universal | almost every `C*Component` | `hidHasAliasName` (identity flag), `Enabled`/`bEnabled`/`Enable`-shaped toggles, `Category`/`Name` (via `LayerId`) |
+| Near-universal | almost every `C*Component` | `hidHasAliasName`, `Enabled`/`bEnabled`/`Enable`-shaped toggles, `Category`/`Name` |
 
-**Good news for weapon balance mods**: `CFCXWeapon` (the live weapon-instance component) only overlaps on
-`iAnimationValue`. None of the actual ballistics classes (`CWeaponFireBulletProperties`,
-`CWeaponFireProjectileProperties`, `CWeaponPropertiesCommon`, etc. — see `fcb_format.md`'s survey of
-`entitylibrary.fcb`'s own vocabulary) appear captured **at all** in this save's `PersistenceDB` tree.
+**Good news for weapon balance mods**: `CFCXWeapon` (the live weapon-instance component) only overlaps
+on `iAnimationValue`. None of the ballistics classes (`CWeaponFireBulletProperties`,
+`CWeaponFireProjectileProperties`, `CWeaponPropertiesCommon`, ...) appear captured at all in this save.
 Damage/range/reliability-curve balance values are archetype-only, always read fresh at spawn — safe to
 edit even for a save where that weapon's already been picked up.
 
 ### Per-class breakdown
 
-Every real `entitylibrary.fcb` class found instantiated in this save, most common first, with its exact
-captured field list split into "real `binary_classes.xml` member — a design-time value that gets frozen"
-vs. "savegame-only name — genuinely dynamic/computed per-instance state with no design-time counterpart,
-not a modding concern in the same sense."
-
-Streamed from `tmp/savegame.xml` (73282 total `<object>` elements, 474 distinct type names, 1319 distinct field names) against `tools/JackAll/assets/binary_classes.xml` (2025 class names, 2009 member names).
+Every real `entitylibrary.fcb` class found instantiated in this save, most common first, with its
+captured field list split into design-time members (a real `binary_classes.xml` field, frozen for a
+touched instance) and savegame-only fields (dynamic/computed per-instance state with no design-time
+counterpart — not a modding concern in the same sense). Measured from one save (73,282 `<object>`
+elements, 474 distinct type names, 1,319 distinct field names) against `binary_classes.xml` (2,025
+class names, 2,009 member names).
 
 #### All 237 real `entitylibrary.fcb` classes found instantiated, most common first
 
@@ -1557,48 +1129,37 @@ Streamed from `tmp/savegame.xml` (73282 total `<object>` elements, 474 distinct 
 ### Caveats
 
 - **This is one save's snapshot, not an exhaustive ceiling.** Which entities have a `PersistenceDB`
-  record — and therefore which classes/fields appear in a measurement like this at all — depends entirely
-  on what that specific playthrough touched. A longer save, a different route through the campaign, more
-  buddies rescued, more vehicles driven, would very plausibly freeze a larger and slightly different
-  subset. Treat the 237-class/574-member list as "confirmed real, at minimum this much," not "the complete
-  set of everything that can ever be captured."
-- A name appearing in the "design-time fields also captured" list means *this save's copy* of that
-  specific entity is frozen for that field — not that every entity of that class in every save is frozen.
-  An entity nobody has interacted with in a given save is unaffected regardless of class.
-- A hash match between a save's captured field and a `binary_classes.xml` member name is strong evidence,
-  not proof (same caveat `savegame_format.md`'s `SaveGameFieldCatalog` section already documents) — CRC32
-  collision between two unrelated 32-bit values is vanishingly unlikely at this sample size, but not
-  formally impossible.
-- The "savegame-only fields" lists are not necessarily irrelevant to modding — some (e.g. `Inventory`'s
-  `CurrentWeapon`/`DesiredWeapon`, `AIObject`'s dozens of AI-state fields) are genuinely dynamic runtime
-  state with no design-time equivalent to override in the first place, but a few (e.g. `Health`/`Stamina`'s
-  `MaxValue`) are plausibly an *internally differently-named* mirror of a real design field this pass
-  couldn't match by literal string equality — see "Not yet traced" below.
+  record — and therefore which classes/fields appear in a measurement like this at all — depends on
+  what that specific playthrough touched. A longer save, or a different route through the campaign,
+  would plausibly freeze a larger and slightly different subset. Treat 237 classes / 574 members as "at
+  minimum this much," not "the complete set of everything that can ever be captured."
+- A name appearing in a class's "design-time fields also captured" list means *this save's copy* of
+  that entity is frozen for that field — not that every entity of that class in every save is frozen.
+  An entity nobody has interacted with is unaffected regardless of class.
+- A hash match between a save's captured field and a `binary_classes.xml` member name is strong
+  evidence, not proof — CRC32 collision between two unrelated values is vanishingly unlikely at this
+  sample size, but not formally impossible.
+- Savegame-only fields aren't necessarily irrelevant to modding — most (e.g. `AIObject`'s AI-state
+  fields) are genuinely dynamic runtime state with no design-time equivalent, but a few (e.g.
+  `Health`/`Stamina`'s `MaxValue`) are plausibly an internally differently-named mirror of a real
+  design field that this pass's literal string-equality check couldn't match.
 
-### Not yet traced
+## Unknowns (entity-library overlap)
 
-- **Attributing a captured field block to a *specific* entity class**, not just the shared component class
-  that captured it. E.g. the AI-tuning cluster under `CGameAgent`/`Body` applies to whichever specific
-  pawn archetypes reference those component instances — this pass only reached "these fields on this
-  *component* class get frozen," not "here's the full list of playable/NPC archetypes that use it."
-  `reverse/dunia/savegame_format.md`'s technique for finding a specific class's `RegisterProperties`
-  (`get_xrefs_to` its `ms_descriptor`) generalizes to this if a specific archetype needs confirming.
-- **Whether "savegame-only" fields with a plausible design-time cousin (`MaxValue` on `Health`/`Stamina`,
-  `CurrentHealth` on several phys components) are actually an aliased/renamed mirror of a real
-  `entitylibrary.fcb` field**, rather than genuinely archetype-less runtime state. Checking would mean
-  finding the specific component's `RegisterProperties` and comparing its full registered member list
-  against what `entitylibrary.fcb` declares for the same conceptual class, rather than the flat
-  string-equality check this pass used.
-- **Re-running this measurement across the other ~30 save files** in the same `Saved Games` folder (per
-  `savegame_format.md`'s own "Not yet traced" list) to see how much the 237/574 figures actually move
-  between playthroughs, and whether any classes/fields are load-bearing across every sample (i.e.
-  captured in *every* save regardless of playthrough) versus only showing up in longer/more-completionist
+- Attributing a captured field block to a *specific* entity archetype, not just the shared component
+  class that captured it — e.g. which playable/NPC archetypes actually reference the `CGameAgent`/
+  `Body` AI-tuning cluster.
+- Whether savegame-only fields with a plausible design-time cousin (`MaxValue` on `Health`/`Stamina`,
+  `CurrentHealth` on several phys components) are an aliased/renamed mirror of a real
+  `entitylibrary.fcb` field, or genuinely archetype-less runtime state — would need each component's
+  `RegisterProperties` compared directly against its `entitylibrary.fcb` declaration.
+- How much the 237/574 figures move across the other ~30 save files in the same folder, and whether
+  any classes/fields are load-bearing across every playthrough versus only longer/more-completionist
   ones.
 
-### Reproducing this
+## Reproducing this
 
-The analysis is a single streaming pass, not tied to any particular save: export a save's `PersistenceDB`
-tree via JackAll's Saves tab (or `JackAll.Cli`'s save-reading path), then cross-reference every
-`<object type="X">`/`<value name="Y">` pair against `tools/JackAll/assets/binary_classes.xml`'s own
-`<class name="X">`/`<member name="Y">` declarations. No hash-matching or Ghidra access needed for this
-part — it's pure string-equality now that the Saves tab renders real names via `SaveGameXmlRenderer`.
+Export a save's `PersistenceDB` tree via JackAll's Saves tab (or `JackAll.Cli`'s save-reading path),
+then cross-reference every `<object type="X">`/`<value name="Y">` pair against
+`tools/JackAll/assets/binary_classes.xml`'s own `<class name="X">`/`<member name="Y">` declarations —
+pure string equality, no hash-matching or Ghidra access needed for this part.

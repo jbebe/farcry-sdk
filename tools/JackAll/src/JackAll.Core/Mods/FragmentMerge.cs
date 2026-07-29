@@ -4,6 +4,16 @@ using JackAll.Core.Format.Fcb;
 namespace JackAll.Core.Mods;
 
 /// <summary>
+/// One fragment where two mods' edits genuinely collided and <see cref="FragmentMerge.Resolve"/> was
+/// told to fall back to load order instead of throwing — see that parameter's remarks. Recorded so a
+/// caller that asked for the lenient mode (currently only <c>jackall-cli mod build</c>, which has no
+/// interactive way to ask a user to hand-fix one) can still surface that it happened, rather than the
+/// build silently picking a winner with no trace.
+/// </summary>
+public readonly record struct FragmentConflict(
+    string FragmentId, bool IsNewEntry, string WinningLayer, IReadOnlyList<string> EarlierLayers);
+
+/// <summary>
 /// The Milestone 3 (docs/design/fcb-fragment-overlays.md) fragment-merge machinery shared by
 /// <see cref="JackAll.Core.Vfs.GameVfs"/> and <see cref="PatchBuilder"/>. Neither the override index
 /// nor the merge fold itself needs anything specific to either caller — only *obtaining* the vanilla
@@ -64,8 +74,24 @@ public static class FragmentMerge
     /// so different content from two mods adding the same id is a real conflict, not one silently
     /// clobbering the other.
     /// </summary>
+    /// <param name="conflicts">
+    /// Null (the default) keeps the original behavior: a genuine collision throws
+    /// <see cref="InvalidDataException"/>, which is right for <see cref="JackAll.Core.Vfs.GameVfs"/> -
+    /// JackAll.App has an interactive row to hand-fix a conflict on, so silently picking a winner there
+    /// would hide a real authoring decision from the person best placed to make it (and
+    /// <c>GameVfsFragmentOverrideTests</c> pins exactly this throw).
+    ///
+    /// Non-null switches to "load order wins, but tell someone": the same rule whole-file overrides
+    /// already follow (later layer replaces earlier, no questions asked) is applied to the fragment
+    /// too, and one <see cref="FragmentConflict"/> is appended per collision instead of throwing. This
+    /// is what <c>jackall-cli mod build</c> passes - a headless run driven by a mod manager (Vortex)
+    /// has nobody to ask and no "Replace on that row" UI to point at, so refusing to build over a
+    /// conflict it can't ask a human to resolve on the spot is worse than building with a flagged
+    /// warning the mod manager can surface after the fact.
+    /// </param>
     public static string Resolve(FcbObject vanillaRoot, string fragmentId,
-        IReadOnlyList<(IModLayer Layer, uint EntryHash)> layers, FcbClassDefinitions defs)
+        IReadOnlyList<(IModLayer Layer, uint EntryHash)> layers, FcbClassDefinitions defs,
+        List<FragmentConflict>? conflicts = null)
     {
         string? vanillaXml = FcbXml.ExtractFragment(vanillaRoot, fragmentId, defs);
         bool isNewEntry = vanillaXml is null;
@@ -75,7 +101,25 @@ public static class FragmentMerge
         for (int i = 0; i < layers.Count; i++)
         {
             (IModLayer layer, uint entryHash) = layers[i];
-            string theirs = FcbXml.CanonicalizeFragment(Encoding.UTF8.GetString(layer.Read(entryHash)), defs);
+            string theirs;
+            try
+            {
+                theirs = FcbXml.CanonicalizeFragment(Encoding.UTF8.GetString(layer.Read(entryHash)), defs);
+            }
+            catch (Exception ex) when (ex is not InvalidDataException)
+            {
+                // FcbXml.FromXml (via CanonicalizeFragment) throws a bare XmlException - "Data at the
+                // root level is invalid. Line 1, position 1." for an empty file, and similarly opaque
+                // messages for other malformed content - with no indication of which mod or file it
+                // came from. This is user-supplied content (unlike ancestor/result below, which only
+                // ever comes from the vanilla archive or a prior successful fold), so it's the one
+                // spot in this loop actually worth naming a path for.
+                string where = layer.PathOf(entryHash) ?? fragmentId;
+                throw new InvalidDataException(
+                    $"'{layer.Name}' has an unreadable fragment override at '{where}': {ex.Message} " +
+                    "Check that file's contents in the mod - it's expected to be JackAll-exported " +
+                    "fragment XML, not raw/binary data.", ex);
+            }
 
             if (isNewEntry && i == 0)
             {
@@ -84,8 +128,14 @@ public static class FragmentMerge
             }
 
             string ours = FcbXml.CanonicalizeFragment(result, defs);
-            (result, bool conflict) = Diff3.Merge(ancestor, ours, theirs);
-            if (conflict)
+            (string merged, bool conflict) = Diff3.Merge(ancestor, ours, theirs);
+            if (!conflict)
+            {
+                result = merged;
+                continue;
+            }
+
+            if (conflicts is null)
             {
                 throw new InvalidDataException(isNewEntry
                     ? $"'{layer.Name}' conflicts with another enabled mod, both adding a new entry " +
@@ -95,6 +145,13 @@ public static class FragmentMerge
                       "Hand-fix the fragment (Replace on that row) and re-stage it - your fix wins outright " +
                       "since the workspace is always highest priority.");
             }
+
+            // Lenient mode: load order wins outright, exactly like a whole-file override - "theirs" (the
+            // higher-priority layer) replaces the failed 3-way merge rather than keeping whatever partial
+            // result Diff3 produced.
+            conflicts.Add(new FragmentConflict(
+                fragmentId, isNewEntry, layer.Name, [.. layers.Take(i).Select(l => l.Layer.Name).Distinct()]));
+            result = theirs;
         }
         return result;
     }

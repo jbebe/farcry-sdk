@@ -2,6 +2,28 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **`mod` CLI branch** — the mod pipeline, previously GUI-only, is now drivable headlessly:
+  `mod status`, `mod inspect`, `mod import-legacy`, `mod build` and `mod restore`. Every one takes
+  `--json` (one object on stdout, progress on stderr, `{"ok":false,"error":"…"}` and a non-zero exit
+  on failure), which is what the [Vortex extension](../vortex-farcry2) is written against.
+- **`ModLayerInspector`** — works out whether a folder/zip is a mod layer and, crucially, where its
+  tree really starts, by scoring every candidate root against the entries the game actually has.
+  Community zips almost always wrap their tree in a folder named after the mod, and stripping the
+  wrong number of levels produces a mod that installs cleanly and applies nothing.
+- **`LegacyPatchImporter.Import(fatPath, datPath, …)`** — the same import against an
+  already-extracted patch pair rather than a zip, for callers handed a folder. The zip entry point
+  is now a wrapper over it. `FindPatchPair`/`FindPatchPairInZip` answer "is this a legacy mod?"
+  without committing to an import.
+
+### Fixed
+- `mod build` refuses to run when `patch.dat` already looks modded and no `patch.dat.vanilla` exists,
+  unless `--force` is passed. `PatchBuilder.Build` doesn't guard this itself — `EnsureVanillaBackup()`
+  only refuses when given a confirmation callback that returns false, so every headless caller would
+  otherwise have baked someone else's mod in as the install's permanent baseline.
+
 ## [1.0.0] - 2026-07-24
 
 First tagged version. Built up over ~20 commits before this tag existed, so this entry summarizes

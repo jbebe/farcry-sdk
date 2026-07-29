@@ -115,19 +115,31 @@ public sealed class GameCache
     /// <summary>The entry's type — from the cache, or by reading its header and remembering it.</summary>
     public FileType TypeOf(DuniaArchive archive, FatEntry entry)
     {
-        if (TryGetCachedType(entry.Hash, out FileType cached))
-        {
-            return cached;
-        }
-        if (_newTypes.TryGetValue(entry.Hash, out cached))
+        if (TryGetType(entry.Hash, out FileType cached))
         {
             return cached;
         }
 
         FileType sniffed = Sniff(archive, entry);
-        _newTypes[entry.Hash] = sniffed;
-        IsDirty = true;
+        SetType(entry.Hash, sniffed);
         return sniffed;
+    }
+
+    /// <summary>The query half of a split sniff: whether <paramref name="hash"/>'s type is already
+    /// known, without sniffing it if not. Lets a caller (<see cref="Vfs.GameVfs.BuildMergedFiles"/>)
+    /// find exactly which entries still need the expensive part before doing any of it, the same way
+    /// <see cref="TryGet"/> already does for `.fcb` structure.</summary>
+    public bool TryGetType(uint hash, out FileType type)
+        => TryGetCachedType(hash, out type) || _newTypes.TryGetValue(hash, out type);
+
+    /// <summary>The write half of a split sniff: records a type sniffed elsewhere (typically off-thread,
+    /// in parallel) — mirrors <see cref="Set"/> on the fragment side. Not thread-safe, same as every
+    /// other mutator here; the caller is responsible for only ever calling it from one thread at a
+    /// time (see <see cref="Vfs.GameVfs.BuildMergedFiles"/>'s parallel-sniff/serial-fold split).</summary>
+    public void SetType(uint hash, FileType type)
+    {
+        _newTypes[hash] = type;
+        IsDirty = true;
     }
 
     private bool TryGetCachedType(uint hash, out FileType type)

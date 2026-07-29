@@ -1,0 +1,126 @@
+using JackAll.Core.Format;
+using JackAll.Core.Mods;
+
+namespace JackAll.Core.Tests;
+
+/// <summary>
+/// Root detection is the whole reason <see cref="ModLayerInspector"/> exists, and it's a silent
+/// failure when it's wrong — a mod with a misread root hashes to nothing, installs cleanly, and
+/// simply doesn't apply. So the interesting cases are all about which prefix wins.
+/// </summary>
+public class ModLayerInspectorTests
+{
+    private const string RealFileA = @"engine\gamemodes\gamemodesconfig.xml";
+    private const string RealFileB = @"config\inputactionmapcommon.xml";
+
+    /// <summary>Stands in for the game's archives: only the two paths above (and nothing under any
+    /// wrapper folder) are entries the engine actually has.</summary>
+    private static readonly HashSet<uint> GameHashes =
+        [NameHash.Compute(RealFileA), NameHash.Compute(RealFileB)];
+
+    private static ModLayerReport Inspect(params string[] paths)
+        => ModLayerInspector.Inspect(paths, GameHashes.Contains);
+
+    [Fact]
+    public void An_already_rooted_mod_keeps_the_top_level_as_its_root()
+    {
+        ModLayerReport report = Inspect(RealFileA, RealFileB);
+
+        Assert.Equal("", report.Root);
+        Assert.Equal(2, report.WholeFileOverrides);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+
+    [Fact]
+    public void A_wrapper_folder_is_stripped()
+    {
+        ModLayerReport report = Inspect($@"MyCoolMod v1.2\{RealFileA}", $@"MyCoolMod v1.2\{RealFileB}");
+
+        // Normalized, so lowercase - callers matching this back against real entry names have to do
+        // it case-insensitively, which is how Windows paths compare anyway.
+        Assert.Equal("mycoolmod v1.2", report.Root);
+        Assert.Equal(2, report.WholeFileOverrides);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+
+    [Fact]
+    public void Two_nested_wrapper_folders_are_stripped_together()
+    {
+        ModLayerReport report = Inspect($@"MyMod v1.2\MyMod\{RealFileA}");
+
+        Assert.Equal(@"mymod v1.2\mymod", report.Root);
+        Assert.Equal(1, report.WholeFileOverrides);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+
+    [Fact]
+    public void A_readme_beside_the_wrapper_does_not_drag_the_root_back_to_the_top()
+    {
+        ModLayerReport report = Inspect("readme.txt", $@"MyCoolMod\{RealFileA}", $@"MyCoolMod\{RealFileB}");
+
+        Assert.Equal("mycoolmod", report.Root);
+        // The readme sits outside the winning root, so it isn't counted at all - which is right: it
+        // was never going to reach the engine either way.
+        Assert.Equal(2, report.WholeFileOverrides);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+
+    [Fact]
+    public void A_correctly_rooted_mod_is_never_pushed_down_into_one_of_its_own_folders()
+    {
+        // 'engine\' is a genuine top-level game folder and also a candidate root. Descending into it
+        // would score strictly worse (one recognized file becomes zero), so the tie-break must not
+        // take it.
+        ModLayerReport report = Inspect(RealFileA, RealFileB);
+
+        Assert.Equal("", report.Root);
+    }
+
+    [Fact]
+    public void Hash_addressed_entries_are_counted_and_still_resolve_without_a_recovered_name()
+    {
+        uint hash = NameHash.Compute(RealFileA);
+        ModLayerReport report = Inspect($@"_hash\{hash:x8}.xbt");
+
+        Assert.Equal("", report.Root);
+        Assert.Equal(1, report.WholeFileOverrides);
+        Assert.Equal(1, report.HashAddressed);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+
+    [Fact]
+    public void An_fcb_fragment_is_reported_separately_and_judged_by_its_container()
+    {
+        // The fragment's own path hashes to nothing the game has; it's the container that must exist.
+        string container = @"generated\entitylibrarypatchoverride.fcb";
+        var hashes = new HashSet<uint> { NameHash.Compute(container) };
+
+        ModLayerReport report = ModLayerInspector.Inspect(
+            [$@"{container}\03_Foo.xml"], hashes.Contains);
+
+        Assert.Equal(0, report.WholeFileOverrides);
+        Assert.Equal(1, report.FragmentOverrides);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+
+    [Fact]
+    public void Something_that_is_not_a_mod_at_all_reports_nothing_recognizable()
+    {
+        ModLayerReport report = Inspect("readme.txt", @"screenshots\one.png");
+
+        // Every path hashes to *something*, so these do count as overrides - of files the game
+        // doesn't have. "every override is unknown" is exactly the signal a caller uses to say
+        // "this isn't a Far Cry 2 mod" rather than "it's a mod that adds files".
+        Assert.Equal(2, report.WholeFileOverrides);
+        Assert.Equal(report.TotalOverrides, report.UnknownEntries);
+    }
+
+    [Fact]
+    public void Without_a_game_to_check_against_the_tree_is_reported_as_given()
+    {
+        ModLayerReport report = ModLayerInspector.Inspect([$@"MyCoolMod\{RealFileA}"]);
+
+        Assert.Equal("", report.Root);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+}

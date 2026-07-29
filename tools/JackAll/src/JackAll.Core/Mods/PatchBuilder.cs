@@ -8,7 +8,8 @@ public sealed record BuildResult(
     int VanillaEntries,
     int OverriddenEntries,
     int AddedEntries,
-    long OutputBytes);
+    long OutputBytes,
+    IReadOnlyList<FragmentConflict> Conflicts);
 
 /// <summary>
 /// Compiles the vanilla patch archive plus the enabled mod layers into a new patch.dat/patch.fat.
@@ -47,13 +48,22 @@ public static class PatchBuilder
     /// with a live <see cref="JackAll.Core.Vfs.GameVfs"/> pass its own <c>Definitions</c> so a
     /// fragment's ancestor text decodes the same way <c>GameVfs.Read</c> would show it.
     /// </summary>
+    /// <param name="resolveFragmentConflictsWithLoadOrder">
+    /// Forwarded to every <see cref="FragmentMerge.Resolve"/> call - see that parameter's remarks.
+    /// False (the default) matches every caller before this option existed: a genuine fragment
+    /// collision throws rather than silently picking a side. <c>jackall-cli mod build</c> is the one
+    /// caller that passes true, since a mod-manager-driven build has no interactive way to ask a user
+    /// to hand-fix a conflict on the spot.
+    /// </param>
     public static BuildResult Build(
         GameInstall install,
         IReadOnlyList<IModLayer> layers,
         Func<uint, byte[]?>? readArchiveOriginal = null,
-        FcbClassDefinitions? fcbDefinitions = null)
+        FcbClassDefinitions? fcbDefinitions = null,
+        bool resolveFragmentConflictsWithLoadOrder = false)
     {
         FcbClassDefinitions defs = fcbDefinitions ?? FcbClassDefinitions.Empty;
+        var conflicts = new List<FragmentConflict>();
 
         install.EnsureVanillaBackup();
 
@@ -106,7 +116,8 @@ public static class PatchBuilder
                 : vanillaBytes;
 
             Dictionary<string, string> xmlByFragment = byFragment.ToDictionary(
-                kv => kv.Key, kv => FragmentMerge.Resolve(vanillaRoot, kv.Key, kv.Value, defs));
+                kv => kv.Key, kv => FragmentMerge.Resolve(vanillaRoot, kv.Key, kv.Value, defs,
+                    resolveFragmentConflictsWithLoadOrder ? conflicts : null));
             replacements[containerHash] = FcbAssembler.Apply(baseBytes, xmlByFragment);
         }
 
@@ -178,7 +189,8 @@ public static class PatchBuilder
             VanillaEntries: vanillaIndex.Entries.Count - overridden,
             OverriddenEntries: overridden,
             AddedEntries: added,
-            OutputBytes: new FileInfo(install.PatchDat).Length);
+            OutputBytes: new FileInfo(install.PatchDat).Length,
+            Conflicts: conflicts);
     }
 
     /// <summary>

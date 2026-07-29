@@ -66,49 +66,95 @@ public static class LegacyPatchImporter
                 datEntry.ExtractToFile(tempDat, overwrite: true);
             }
 
-            using DuniaArchive legacy = DuniaArchive.Open(tempFat);
-
-            int imported = 0, fragmentsImported = 0, skipped = 0, processed = 0;
-            foreach (FatEntry entry in legacy.Entries)
-            {
-                processed++;
-                if (processed % 2_000 == 0)
-                {
-                    progress?.Report($"Comparing against the base game… ({processed:N0} / {legacy.Entries.Count:N0})");
-                }
-
-                byte[] legacyBytes = legacy.Read(entry);
-                byte[]? vanillaBytes = readOriginal(entry.Hash);
-                bool named = names.TryResolve(entry.Hash, out string path);
-
-                FileType type = named
-                    ? FileTypeSniffer.Identify(ReadOnlySpan<byte>.Empty, path)
-                    : FileTypeSniffer.IdentifyByContent(
-                        legacyBytes.AsSpan(0, Math.Min(legacyBytes.Length, FileTypeSniffer.HeaderBytes)));
-
-                if (type.Extension.Equals("fcb", StringComparison.OrdinalIgnoreCase)
-                    && TryImportFcb(entry.Hash, legacyBytes, vanillaBytes, named ? path : null,
-                        workspace, fcbDefinitions, ref imported, ref fragmentsImported, ref skipped))
-                {
-                    continue;
-                }
-
-                if (vanillaBytes is not null && legacyBytes.AsSpan().SequenceEqual(vanillaBytes))
-                {
-                    skipped++;
-                    continue;
-                }
-
-                workspace.Stage(entry.Hash, named ? path : null, type.Extension, legacyBytes);
-                imported++;
-            }
-
-            return new LegacyImportResult(legacy.Entries.Count, imported, fragmentsImported, skipped);
+            return Import(tempFat, tempDat, workspace, names, fcbDefinitions, readOriginal, progress);
         }
         finally
         {
             Directory.Delete(tempDir, recursive: true);
         }
+    }
+
+    /// <summary>
+    /// The same import, against a patch.fat/patch.dat pair already sitting on disk rather than one
+    /// still inside a zip.
+    /// </summary>
+    /// <remarks>
+    /// This is the real body; the zip overload is a thin unpack-then-call wrapper. It exists as its
+    /// own entry point because not every caller starts from a zip: a mod manager driving JackAll
+    /// (the Vortex extension calls this through <c>jackall-cli mod import-legacy</c>) is handed an
+    /// archive someone else has already extracted, and re-zipping it just to hand it back would be
+    /// pure ceremony.
+    /// </remarks>
+    public static LegacyImportResult Import(
+        string fatPath,
+        string datPath,
+        FolderModLayer workspace,
+        NameDatabase names,
+        FcbClassDefinitions fcbDefinitions,
+        Func<uint, byte[]?> readOriginal,
+        IProgress<string>? progress = null)
+    {
+        using DuniaArchive legacy = DuniaArchive.Open(fatPath, datPath);
+
+        int imported = 0, fragmentsImported = 0, skipped = 0, processed = 0;
+        foreach (FatEntry entry in legacy.Entries)
+        {
+            processed++;
+            if (processed % 2_000 == 0)
+            {
+                progress?.Report($"Comparing against the base game… ({processed:N0} / {legacy.Entries.Count:N0})");
+            }
+
+            byte[] legacyBytes = legacy.Read(entry);
+            byte[]? vanillaBytes = readOriginal(entry.Hash);
+            bool named = names.TryResolve(entry.Hash, out string path);
+
+            FileType type = named
+                ? FileTypeSniffer.Identify(ReadOnlySpan<byte>.Empty, path)
+                : FileTypeSniffer.IdentifyByContent(
+                    legacyBytes.AsSpan(0, Math.Min(legacyBytes.Length, FileTypeSniffer.HeaderBytes)));
+
+            if (type.Extension.Equals("fcb", StringComparison.OrdinalIgnoreCase)
+                && TryImportFcb(entry.Hash, legacyBytes, vanillaBytes, named ? path : null,
+                    workspace, fcbDefinitions, ref imported, ref fragmentsImported, ref skipped))
+            {
+                continue;
+            }
+
+            if (vanillaBytes is not null && legacyBytes.AsSpan().SequenceEqual(vanillaBytes))
+            {
+                skipped++;
+                continue;
+            }
+
+            workspace.Stage(entry.Hash, named ? path : null, type.Extension, legacyBytes);
+            imported++;
+        }
+
+        return new LegacyImportResult(legacy.Entries.Count, imported, fragmentsImported, skipped);
+    }
+
+    /// <summary>
+    /// Finds the patch.fat/patch.dat pair inside an already-extracted mod folder, the directory
+    /// counterpart of <see cref="FindPatchEntries"/>. Returns null when there isn't one — the signal
+    /// that this is an ordinary path-tree mod rather than a legacy full patch.
+    /// </summary>
+    public static (string Fat, string Dat)? FindPatchPair(string directory)
+    {
+        if (!Directory.Exists(directory))
+        {
+            return null;
+        }
+
+        foreach (string fat in Directory.EnumerateFiles(directory, "patch.fat", SearchOption.AllDirectories))
+        {
+            string dat = Path.Combine(Path.GetDirectoryName(fat)!, "patch.dat");
+            if (File.Exists(dat))
+            {
+                return (fat, dat);
+            }
+        }
+        return null;
     }
 
     /// <summary>
@@ -181,25 +227,50 @@ public static class LegacyPatchImporter
         return true;
     }
 
+    /// <summary>
+    /// The patch.fat/patch.dat pair's entry names inside <paramref name="zipPath"/>, or null when
+    /// there isn't one — the non-throwing counterpart of <see cref="FindPatchEntries"/>, for callers
+    /// asking "which kind of mod is this?" rather than committing to an import.
+    /// </summary>
+    public static (string Fat, string Dat)? FindPatchPairInZip(string zipPath)
+    {
+        using var zip = ZipFile.OpenRead(zipPath);
+        (ZipArchiveEntry? fat, ZipArchiveEntry? dat) = LocatePatchEntries(zip);
+        return fat is not null && dat is not null ? (fat.FullName, dat.FullName) : null;
+    }
+
     private static (ZipArchiveEntry Fat, ZipArchiveEntry Dat) FindPatchEntries(ZipArchive zip)
     {
-        ZipArchiveEntry? fat = zip.Entries.FirstOrDefault(
-            e => string.Equals(Path.GetFileName(e.FullName), "patch.fat", StringComparison.OrdinalIgnoreCase));
+        (ZipArchiveEntry? fat, ZipArchiveEntry? dat) = LocatePatchEntries(zip);
         if (fat is null)
         {
             throw new InvalidDataException(
                 "No patch.fat found in this zip - this doesn't look like a legacy full-patch mod. " +
                 "Use \"Add mod zip…\" instead for an ordinary community mod (a tree of relative game paths).");
         }
+        if (dat is null)
+        {
+            throw new InvalidDataException($"Found '{fat.FullName}' in the zip but no matching patch.dat alongside it.");
+        }
+
+        return (fat, dat);
+    }
+
+    /// <summary>The pair if both are there, whichever half was found if not — the caller decides
+    /// whether a half-match is an error or just a "no".</summary>
+    private static (ZipArchiveEntry? Fat, ZipArchiveEntry? Dat) LocatePatchEntries(ZipArchive zip)
+    {
+        ZipArchiveEntry? fat = zip.Entries.FirstOrDefault(
+            e => string.Equals(Path.GetFileName(e.FullName), "patch.fat", StringComparison.OrdinalIgnoreCase));
+        if (fat is null)
+        {
+            return (null, null);
+        }
 
         string? dir = Path.GetDirectoryName(fat.FullName);
         ZipArchiveEntry? dat = zip.Entries.FirstOrDefault(e =>
             string.Equals(Path.GetFileName(e.FullName), "patch.dat", StringComparison.OrdinalIgnoreCase)
             && string.Equals(Path.GetDirectoryName(e.FullName), dir, StringComparison.OrdinalIgnoreCase));
-        if (dat is null)
-        {
-            throw new InvalidDataException($"Found '{fat.FullName}' in the zip but no matching patch.dat alongside it.");
-        }
 
         return (fat, dat);
     }

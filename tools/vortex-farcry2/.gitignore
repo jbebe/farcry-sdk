@@ -1,0 +1,5 @@
+node_modules/
+# The assembled extension: the webpack bundle plus a published jackall-cli.exe (~50 MB). Rebuilt by
+# build.ps1 from this repo's own sources, so there is nothing here worth committing.
+dist/
+vortex-farcry2-*.zip

@@ -2,43 +2,43 @@
 sidebar_position: 7
 ---
 
-# Dunia.dll — The Editor-Facing API Surface (`FCE_*`)
+# `Dunia.dll` — The Editor-Facing API Surface (`FCE_*`)
 
-Part of the Dunia.dll note set — see [the overview](./overview.md) for the binary identification.
-Companion to [the Lua-exposed API surface](./lua-api-surface.md): that page maps the *mission/gameplay*
-scripting surface (`RegisterLuaBinding`); this page maps a completely different, non-scripted surface
-— the flat C API the stock map editor (`FC2Editor.exe`) uses to drive the engine directly via P/Invoke.
+:::info[Verified via reverse engineering]
+See [the overview](./overview.md) for binary identification. Companion to [the Lua-exposed API
+surface](./lua-api-surface.md): that page maps the mission/gameplay scripting surface
+(`RegisterLuaBinding`); this page maps a completely different, non-scripted surface — the flat C API
+the stock map editor (`FC2Editor.exe`) uses to drive the engine directly via P/Invoke.
+:::
 
 ## Source: the stock editor's own decompiled interop layer
 
 [`tools/third-party/FC2Editor_Source/`](../modding/sources.md) is decompiled C# source for the actual
 shipped Far Cry 2 map editor — confirmed genuine via `AssemblyInfo.cs`'s
-`AssemblyCopyright("Copyright (C) 2008 Ubisoft Entertainment")`, not a community reimplementation.
-It's a thin WinForms shell: every `FC2Editor.Nomad` class is a managed wrapper around
+`AssemblyCopyright("Copyright (C) 2008 Ubisoft Entertainment")`, not a community reimplementation. It's
+a thin WinForms shell: every `FC2Editor.Nomad` class is a managed wrapper around
 `[DllImport("Dunia.dll")] private static extern ...` declarations, all named with an `FCE_` prefix
 (`F`ar`C`ry`E`ditor). **338 such externs exist**, exclusively in `FC2Editor.Nomad` (`FC2Editor.Tools`
 has none — its classes only call up into the `Nomad` wrappers).
 
-**Confirmed behavior**: all 338 names already exist as correctly-named exports in this project's
-`Dunia.dll` — the PC binary's export table itself carries these names, independent of anything in the
-C# source. What it *didn't* have was correct signatures: every one of these functions decompiled as
-a bare `undefined FCE_Xxx(void)` regardless of its real parameter count (e.g.
-`FCE_CollectionManager_WriteMaskCircle` showed as taking no arguments, despite genuinely taking five:
-`cx, cy, radius, id, update`). Since the C# `extern` declarations are Microsoft's own P/Invoke
-marshaling — i.e. ground truth for the real calling convention, parameter count, order, and types —
-they were used to set a correct typed prototype on every matching Ghidra function.
+All 338 names already exist as correctly-named exports in `Dunia.dll` — the PC binary's export table
+carries these names independent of anything in the C# source. What it didn't have was correct
+signatures: every one of these functions decompiled as a bare `undefined FCE_Xxx(void)` regardless of
+its real parameter count (e.g. `FCE_CollectionManager_WriteMaskCircle` showed as taking no arguments,
+despite genuinely taking five: `cx, cy, radius, id, update`). Since the C# `extern` declarations are
+Microsoft's own P/Invoke marshaling — ground truth for the real calling convention, parameter count,
+order, and types — they were used to set a correct typed prototype on every matching Ghidra function.
 
 **Result**: 317 of 338 addresses updated (316 unique names; `FCE_Document_Export` exists at two
-separate addresses in the binary, `0x1082b750` and `0x10a21200`, both updated identically). 100% of
-resolved addresses took their new prototype without error. 22 names from the C# source have no
-matching export in this binary at all — see [Not found](#not-found-in-the-binary) below; no address
-was guessed for any of them. Two exports exist in the binary that this particular editor build never
-calls (`ShutdownDuniaEngine`, `FCE_ObjectRenderer_SetActive`) — left untouched, confirming the export
-table is a superset of what this WinForms shell consumes.
+separate addresses, `0x1082b750` and `0x10a21200`, both updated identically). 100% of resolved
+addresses took their new prototype without error. 22 names from the C# source have no matching export
+in this binary — see [Not found](#not-found-in-the-binary); no address was guessed for any of them.
+Two exports exist in the binary that this particular editor build never calls (`ShutdownDuniaEngine`,
+`FCE_ObjectRenderer_SetActive`) — left untouched, confirming the export table is a superset of what
+this WinForms shell consumes.
 
-This means every function below now has a **decompiler-confirmed, source-verified signature** in the
-Ghidra project — not inferred from disassembly, but taken directly from the original developers' own
-interop layer.
+Every function below now has a decompiler-confirmed, source-verified signature — not inferred from
+disassembly, but taken directly from the original developers' own interop layer.
 
 ## The API, grouped by subsystem
 
@@ -68,10 +68,10 @@ Map lifecycle: `Load`/`Save(mapPath, mapName)`, `Reset`, `Validate`, `FinalizeMa
 (`AssignTextureId`/`ClearTextureId`/`GetTextureEntryFromId`).
 
 `TerrainManipulator` — the terrain sculpting brushes (each a `Begin`/apply/`End` triple, matching the
-brush-model hotkeys F1–F7 already documented in [engine-theory](../modding/engine-theory.md)):
-`Bump`, `Erosion(radius, density, deformation, channelDepth, randomness)`, `Grab(ratio)`,
-`Noise(numOctaves, noiseSize, persistence, NoiseType)`, `RaiseLower`, `Ramp(ptStart, ptEnd, radius,
-hardness)`, `SetHeight`, `Smooth`, `Terrace(height, falloff)`.
+brush-model hotkeys F1–F7 documented in [Engine Theory](../modding/engine-theory.md)): `Bump`,
+`Erosion(radius, density, deformation, channelDepth, randomness)`, `Grab(ratio)`, `Noise(numOctaves,
+noiseSize, persistence, NoiseType)`, `RaiseLower`, `Ramp(ptStart, ptEnd, radius, hardness)`,
+`SetHeight`, `Smooth`, `Terrace(height, falloff)`.
 
 ### Collections (foliage/prop scattering)
 `CollectionInventory`: tree navigation (`GetRoot/GetChild/GetChildCount/GetDisplay/GetParent`) plus a
@@ -115,8 +115,8 @@ SoundEnabled, CameraClippedTerrain, `EngineQuality`: Low…UltraHigh/Optimal/Cus
 
 ### Gizmo
 The 3D move/rotate manipulator widget. `Create`/`Destroy`, `Position`, `Axis` (3-basis-vector frame),
-`Active` (`FC2Editor.Nomad.Axis` enum: X/Y/Z/XY/XZ/YZ), `Redraw`, `Hide`,
-`HitTest(raySrc, rayDir) → Axis`.
+`Active` (`FC2Editor.Nomad.Axis` enum: X/Y/Z/XY/XZ/YZ), `Redraw`, `Hide`, `HitTest(raySrc, rayDir) →
+Axis`.
 
 ### Small value-type helpers
 `ImageMapEngine`: `GetSize`, `ConvertTo24bit(data, stride, min, max)`, `Clone`. `Points`:
@@ -169,26 +169,15 @@ checks referenced by `ToolValidation.cs`. `ValidationReport`: `GetCount`, `GetRe
 `MemoryUsage` (int) / `ObjectUsage` (float, fraction-of-budget) — the resource-budget meters shown in
 the editor UI.
 
-### Wilderness (procedural terrain generation) — see below
+### Wilderness (procedural terrain generation)
 `GenerateDesert(gradientWidth, gradientHeight, distorsion, noiseAdd, blurRadius)`. Three ways to run a
-**"Wilderness script"** against the terrain: `RunScript(scriptName)`, `RunScriptBuffer(buffer,
+"Wilderness script" against the terrain: `RunScript(scriptName)`, `RunScriptBuffer(buffer,
 mapCallback, errorCallback)`, `RunScriptEntry(entry)`. `WildernessInventory`: catalog tree of saved
-Wilderness scripts.
-
-## Resolved: the self-documenting script-reflection API
-
-`Wilderness.cs` also exposes a small, separate reflection surface: `NumFunctions` (get) →
-`FCE_Script_GetNumFunctions`, and `GetFunction(index)` → `FCE_Script_GetFunction`, returning a
-`FunctionDef` handle whose `.Name` / `.Prototype` / `.Description` properties are backed by
-`FCE_ScriptFunction_GetName` / `FCE_ScriptFunction_GetPrototype` / `FCE_ScriptFunction_GetDescription`.
-This is distinct from the `RegisterLuaBinding` mission-scripting surface in
-[lua-api-surface.md](./lua-api-surface.md) — it's the introspection API for a separate procedural
-terrain-generation language, "Wilderness Script".
-
-Traced fully via Ghidra (no game/editor execution needed) — the table this reflection API walks is
-built by one function containing all 37 builtin functions' names, full call prototypes, and
-descriptions as literal strings, compiled directly into the binary. **See [the dedicated page on this
-language](./wilderness-script-language.md) for the complete function reference.**
+Wilderness scripts. This is also a small, self-documenting reflection surface —
+`NumFunctions`/`GetFunction(index)` walk a table of all 37 builtin functions' names, call prototypes,
+and descriptions, compiled directly into the binary as literal strings. See [the dedicated page on this
+language](./wilderness-script-language.md) for the full reference, recovered entirely from static data
+with no game/editor execution needed.
 
 ## Not found in the binary
 
@@ -211,7 +200,7 @@ Most cluster into two shapes: pure mutators on inventory entries (`SetPivot`, `S
 siblings of functions that *were* found right next to them in the same class. Reads as the linker
 folding/deduplicating near-identical destructor or trivial-getter stubs across the four parallel
 inventory classes (Object/Spline/Texture/Wilderness all share the same shape) — plausible, but
-unconfirmed; genuinely absent under this exact name either way, not chased further here.
+unconfirmed; genuinely absent under this exact name either way, not chased further.
 
 A quirk worth remembering when reading other decompiled signatures in this DLL: a `void`-looking C#
 wrapper doesn't always mean the native function is `void` — `FCE_SplineZone_Reset` and the

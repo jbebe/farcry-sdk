@@ -1,0 +1,6 @@
+{
+  "name": "Game: Far Cry 2",
+  "author": "Bálint Juhász",
+  "version": "1.0.0",
+  "description": "Far Cry 2 support. Installs mods as JackAll layers and recompiles patch.dat/patch.fat on every deploy."
+}

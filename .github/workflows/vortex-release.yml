@@ -1,0 +1,62 @@
+name: Vortex extension release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version - used as the git tag and as vortex-farcry2-{version}.zip'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tools/vortex-farcry2
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund --legacy-peer-deps
+
+      - name: Stamp the version into info.json
+        # Vortex reads the version from info.json, so the tag and what users see in the extension
+        # list have to agree - stamping it here means there's no second place to remember to bump.
+        shell: pwsh
+        run: |
+          $info = Get-Content info.json -Raw | ConvertFrom-Json
+          $info.version = '${{ inputs.version }}'
+          $info | ConvertTo-Json -Depth 5 | Set-Content info.json -Encoding utf8
+
+      - name: Build
+        run: pwsh ./build.ps1
+
+      - name: Smoke test
+        run: npm test
+
+      - name: Zip the extension
+        # The zip's *contents* are what Vortex installs, so info.json/index.js/gameart.jpg/bin\ have
+        # to be at its top level, not inside a folder.
+        shell: pwsh
+        run: Compress-Archive -Path dist\* -DestinationPath "vortex-farcry2-${{ inputs.version }}.zip"
+
+      - name: Tag and publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          git tag "vortex-${{ inputs.version }}"
+          git push origin "vortex-${{ inputs.version }}"
+          gh release create "vortex-${{ inputs.version }}" "vortex-farcry2-${{ inputs.version }}.zip" --title "Vortex Far Cry 2 extension ${{ inputs.version }}" --generate-notes

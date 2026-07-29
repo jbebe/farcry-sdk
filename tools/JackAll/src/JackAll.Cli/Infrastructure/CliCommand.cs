@@ -10,6 +10,10 @@ namespace JackAll.Cli.Infrastructure;
 /// produces a clean one-liner rather than a stack trace. Every format class in JackAll.Core already
 /// throws <see cref="InvalidDataException"/> with a specific message on a bad/unsupported file, so the
 /// message alone is genuinely the useful part.
+///
+/// When the command's settings implement <see cref="IJsonOutputSettings"/> and <c>--json</c> was
+/// given, the same failure comes out as <c>{"ok":false,"error":"…"}</c> instead — a caller parsing
+/// stdout must not have to tell a red markup line apart from a JSON document.
 /// </summary>
 public abstract class CliCommand<TSettings> : Command<TSettings>
     where TSettings : CommandSettings
@@ -22,7 +26,14 @@ public abstract class CliCommand<TSettings> : Command<TSettings>
         }
         catch (Exception ex)
         {
-            AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
+            if (settings is IJsonOutputSettings { Json: true })
+            {
+                JsonOutput.WriteError(ex.Message);
+            }
+            else
+            {
+                AnsiConsole.MarkupLine($"[red]Error:[/] {ex.Message.EscapeMarkup()}");
+            }
             return 1;
         }
     }

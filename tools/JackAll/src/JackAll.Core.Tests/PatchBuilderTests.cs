@@ -330,6 +330,87 @@ public class PatchBuilderTests : IDisposable
         Assert.Equal([0x02, 0x00, 0x00, 0x00], rebuiltFragment.Children[1].Values[0xAAAA0002]);
     }
 
+    /// <summary>
+    /// <c>jackall-cli mod build</c> is the one caller with nobody to ask when two mods genuinely
+    /// collide inside the same fragment - unlike JackAll.App, which has an interactive row to hand-fix
+    /// one on (<see cref="GameVfsFragmentOverrideTests.Two_mods_editing_the_same_field_differently_throws_a_conflict_naming_the_mod"/>
+    /// pins that throw). <see cref="PatchBuilder.Build"/>'s <c>resolveFragmentConflictsWithLoadOrder</c>
+    /// makes the build succeed anyway - the higher-priority layer's edit wins outright, same as a
+    /// whole-file override - and records what happened on <see cref="BuildResult.Conflicts"/> instead.
+    /// </summary>
+    [Fact]
+    public void Lenient_mode_resolves_a_genuine_fragment_conflict_with_load_order_and_reports_it()
+    {
+        if (_install is null) return;
+
+        NameDatabase names = TestSupport.LoadNames();
+        VfsFile container;
+        string fragmentId;
+        int fragmentIndex;
+        FcbObject vanillaFragment;
+        using (var vfs = GameVfs.Load(_install, names))
+        {
+            VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+            container = vfs.Files[fragment.ContainerHash!.Value];
+            fragmentId = fragment.FragmentId!;
+
+            FcbObject baseTree = FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!);
+            fragmentIndex = FcbXml.ListFragmentIds(baseTree).ToList().IndexOf(fragmentId);
+            vanillaFragment = baseTree.Children[fragmentIndex];
+        }
+        if (vanillaFragment.Values.Count == 0) return; // fixture has nothing existing to collide on
+
+        // Same existing field, different content from both mods - a genuine collision, not two
+        // independent, non-overlapping edits (which Milestone 3 already merges cleanly).
+        uint existingHash = vanillaFragment.Values.Keys.First();
+        string fragmentPath = $"{container.Path}\\{fragmentId}";
+        var modA = MakeZipMod("mod_a",
+            (fragmentPath, RenderWithTopLevelValueSet(vanillaFragment, existingHash, [0x01, 0x00, 0x00, 0x00])));
+        var modB = MakeZipMod("mod_b",
+            (fragmentPath, RenderWithTopLevelValueSet(vanillaFragment, existingHash, [0x02, 0x00, 0x00, 0x00])));
+
+        BuildResult result;
+        using (var vfsForRead = GameVfs.Load(_install, names))
+        {
+            result = PatchBuilder.Build(_install, [modA, modB], vfsForRead.ReadOriginal,
+                resolveFragmentConflictsWithLoadOrder: true);
+        }
+
+        FragmentConflict conflict = Assert.Single(result.Conflicts);
+        Assert.Equal(fragmentId, conflict.FragmentId, ignoreCase: true);
+        Assert.Equal("mod_b", conflict.WinningLayer);
+        Assert.Contains("mod_a", conflict.EarlierLayers);
+
+        var patchIndex = FatArchive.Read(_install.PatchFat);
+        var entry = patchIndex.Entries.First(e => e.Hash == container.Hash);
+        using var rebuilt = DuniaArchive.Open(_install.PatchFat);
+        FcbObject rebuiltContainer = FcbDocument.Deserialize(rebuilt.Read(entry));
+
+        // mod_b (later in the layer list, so higher priority) won outright - not some Diff3 partial
+        // merge of the two, and not mod_a's value either.
+        Assert.Equal([0x02, 0x00, 0x00, 0x00], rebuiltContainer.Children[fragmentIndex].Values[existingHash]);
+    }
+
+    /// <summary>Mirrors <see cref="TestSupport.RenderWithChildValueSet"/> but edits one of
+    /// <paramref name="vanilla"/>'s own top-level values instead of a child's - what a genuine
+    /// same-field collision between two mods needs (two edits to a different child, or to different
+    /// fields, are non-overlapping and merge cleanly instead).</summary>
+    private static byte[] RenderWithTopLevelValueSet(FcbObject vanilla, uint valueHash, byte[] value)
+    {
+        var edited = new FcbObject { TypeHash = vanilla.TypeHash };
+        foreach ((uint hash, byte[] existing) in vanilla.Values)
+        {
+            edited.Values[hash] = existing;
+        }
+        edited.Values[valueHash] = value;
+        foreach (FcbObject child in vanilla.Children)
+        {
+            edited.Children.Add(child);
+        }
+        string xml = FcbXml.ToXml(edited, FcbClassDefinitions.Empty).IndexXml;
+        return System.Text.Encoding.UTF8.GetBytes(xml);
+    }
+
     [Fact]
     public void A_GameVfs_kept_open_across_two_builds_can_still_read_the_patch_archive_afterward()
     {

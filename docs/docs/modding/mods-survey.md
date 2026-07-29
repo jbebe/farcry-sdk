@@ -1,5 +1,5 @@
 ﻿---
-sidebar_position: 6
+sidebar_position: 7
 ---
 
 # Mods Survey
@@ -9,7 +9,12 @@ Sourced from Nexus Mods, ModDB, and the OWG forum — see [Getting Started](./ge
 for the full provenance note.
 :::
 
-Purpose: figure out which existing mods/tools are worth studying before we build anything, vs. dead ends (pure shader presets, cheats, etc). Sources: [Nexus Mods](https://www.nexusmods.com/games/farcry2/mods) (67 mods), [ModDB](https://www.moddb.com/games/far-cry-2/mods) (60 mods), surveyed 2026-07-09, plus a handful of mods surfaced while reading the [OpenWorldGames forum](https://www.openworldgames.org/owg/forums/index.php?board=169.0) for technical knowledge (see [Getting Started](./getting-started.md)). ~22 Nexus/ModDB mods are cross-posted to both — those are listed once with both links.
+A catalog of which existing mods and tools are worth studying, as distinct from dead ends (pure
+shader presets, cheats, etc). Sources: [Nexus Mods](https://www.nexusmods.com/games/farcry2/mods)
+(67 mods), [ModDB](https://www.moddb.com/games/far-cry-2/mods) (60 mods), plus a handful of mods
+surfaced while reading the [OpenWorldGames forum](https://www.openworldgames.org/owg/forums/index.php?board=169.0)
+(see [Getting Started](./getting-started.md)). ~22 Nexus/ModDB mods are cross-posted to both — those
+are listed once with both links.
 
 ## Key technical facts surfaced by this survey (not just mod recommendations)
 - **Archive format confirmed**: multiple mod descriptions reference `patch.dat` / `patch.fat` as the pair of files that hold the game's packed assets — "Far Cry 2 Rewards" explicitly warns Desura users to back these up before installing. This is the pak format to target for extraction tooling.
