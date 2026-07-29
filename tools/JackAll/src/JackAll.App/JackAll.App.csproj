@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\JackAll.Core\JackAll.Core.csproj" />
+    <ProjectReference Include="..\Domino.Core\Domino.Core.csproj" />
   </ItemGroup>
 
   <ItemGroup>

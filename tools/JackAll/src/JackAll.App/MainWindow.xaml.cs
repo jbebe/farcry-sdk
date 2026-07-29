@@ -7,6 +7,7 @@ using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Input;
 using System.Windows.Media;
+using JackAll.App.Domino;
 using JackAll.App.FileHandlers;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.SaveGames;
@@ -108,7 +109,7 @@ public partial class MainWindow : Window
         UserControl? view = file is not null
             ? FileHandlerCatalog.CreateView(
                 file, () => _vm.Read(file), bytes => _vm.Replace(file, bytes), () => OpenXmlEditorTab(file),
-                () => _vm.ReadOriginal(file), _vm.FindByHash, _vm.NavigateTo)
+                () => _vm.ReadOriginal(file), _vm.FindByHash, _vm.NavigateTo, () => OpenDominoEditorTab(file))
             : null;
 
         PreviewHost.Content = view;
@@ -207,6 +208,70 @@ public partial class MainWindow : Window
         _openSaveEditors[key] = (tab, vm);
         MainTabs.Items.Add(tab);
         MainTabs.SelectedItem = tab;
+    }
+
+    // ------------------------------------------------------------ domino graph editor tabs
+
+    /// <summary>Open Domino editor tabs, keyed by the file's own hash - same dedup-by-focusing-the-
+    /// existing-tab behavior as <see cref="_openEditors"/>. No dirty-tracking to plumb through here:
+    /// unlike the XML editor, there's no write path yet, so a Domino tab is pure view.</summary>
+    private readonly Dictionary<uint, TabItem> _openDominoEditors = [];
+
+    private void OpenDominoEditorTab(VfsFile file)
+    {
+        if (_openDominoEditors.TryGetValue(file.Hash, out var existingTab))
+        {
+            MainTabs.SelectedItem = existingTab;
+            return;
+        }
+
+        string source;
+        try
+        {
+            source = new UTF8Encoding(false).GetString(_vm.Read(file)).TrimStart((char)0xFEFF);
+        }
+        catch (Exception ex)
+        {
+            Warn($"Couldn't open '{file.FileName}': {ex.Message}");
+            return;
+        }
+
+        var vm = new DominoTabViewModel(file.FileName, source);
+        var view = new DominoTabView(vm);
+        var tab = new TabItem { Content = view };
+        tab.Header = BuildClosableDominoTabHeader(vm.Title, () =>
+        {
+            _openDominoEditors.Remove(file.Hash);
+            MainTabs.Items.Remove(tab);
+        });
+
+        _openDominoEditors[file.Hash] = tab;
+        MainTabs.Items.Add(tab);
+        MainTabs.SelectedItem = tab;
+    }
+
+    /// <summary>Title plus a small "×" close button - the Domino tab's counterpart to
+    /// <see cref="BuildClosableTabHeader"/>, minus the dirty-tracking that has nothing to track yet
+    /// (read-only, no save) and the unsaved-changes prompt that comes with it.</summary>
+    private static FrameworkElement BuildClosableDominoTabHeader(string title, Action onClose)
+    {
+        var text = new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
+        var close = new Button
+        {
+            Content = "×",
+            Padding = new Thickness(4, 0, 4, 0),
+            MinWidth = 0,
+            Margin = new Thickness(0),
+            VerticalAlignment = VerticalAlignment.Center,
+            Focusable = false,
+            ToolTip = "Close",
+        };
+        close.Click += (_, _) => onClose();
+
+        var panel = new StackPanel { Orientation = Orientation.Horizontal };
+        panel.Children.Add(text);
+        panel.Children.Add(close);
+        return panel;
     }
 
     /// <summary>Title plus a small "×" close button, since the two static tabs (Mods/Files) are the

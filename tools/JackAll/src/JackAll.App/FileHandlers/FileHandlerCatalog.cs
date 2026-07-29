@@ -1,5 +1,6 @@
 using System.Windows.Controls;
 using JackAll.App.FileHandlers.DepLoad;
+using JackAll.App.FileHandlers.Domino;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.FileHandlers.Mgb;
 using JackAll.App.FileHandlers.Rml;
@@ -45,11 +46,14 @@ public static class FileHandlerCatalog
     /// and <paramref name="navigateTo"/> are used by the dependency-link case, to look up what a link
     /// points to and jump the main tree/grid selection to it (see <see cref="DependencyLinkHandler"/>),
     /// and by the spk case, for a `SimpleFixed68`/`TransformedFixed128` row's own cross-reference to a
-    /// different bank entirely (see <see cref="SpkFileHandler"/>).
+    /// different bank entirely (see <see cref="SpkFileHandler"/>). <paramref name="openDominoEditor"/>
+    /// is the domino\user\ case's counterpart to <paramref name="openEditor"/>, handing off to the
+    /// graph-reconstruction tab (see <see cref="DominoFilePreviewHandler"/>).
     /// </summary>
     public static UserControl? CreateView(
         VfsFile file, Func<byte[]> readContent, Action<byte[]> replaceContent, Action openEditor,
-        Func<byte[]?> readOriginal, Func<uint, VfsFile?> resolveByHash, Action<VfsFile> navigateTo)
+        Func<byte[]?> readOriginal, Func<uint, VfsFile?> resolveByHash, Action<VfsFile> navigateTo,
+        Action openDominoEditor)
         => file switch
         {
             // Checked before the plain "xml" case below - a fragment's own VfsFile.Type.Extension is
@@ -61,6 +65,10 @@ public static class FileHandlerCatalog
             // "what does this point to" mini view, never the type-based handler for that Type.
             { IsDependencyLink: true }
                 => new DependencyLinkHandler(file, resolveByHash(file.LinkTargetHash!.Value), navigateTo),
+            // Only user\ graphs reconstruct into a box graph worth viewing - a system\ node's own body
+            // is just a small hand-written function, already well served by the plain text/diff view.
+            { Type.Extension: "lua" } when file.Directory.StartsWith(@"domino\user", StringComparison.OrdinalIgnoreCase)
+                => BuildDominoHandler(file, readContent, readOriginal, openDominoEditor),
             // "desc" is a known-path .mgb.desc (Path.GetExtension only keeps the last segment);
             // "mgb.desc" is the same file content-sniffed by its "<package>" root (see
             // FileTypeSniffer.IdentifyByContent) when no filelist entry named it. Both are plain XML.
@@ -142,6 +150,34 @@ public static class FileHandlerCatalog
         string current = DecodeText(currentBytes);
         string? originalText = originalBytes is null ? null : DecodeText(originalBytes);
         return new FcbFragmentDetailsHandler(openEditor, current, originalText, previewUnavailableText: null);
+    }
+
+    /// <summary>
+    /// The Files tab's preview for a `domino\user\*.lua` mission graph: the "Open in Domino Editor…"
+    /// launcher, plus underneath the same trimmed diff-against-vanilla (or plain text, for a mod-added
+    /// file with nothing to diff against) view a plain lua file gets from <see cref="BuildTextHandler"/> -
+    /// same size-gate reasoning as <see cref="BuildFragmentHandler"/>, since a mission graph's generated
+    /// Lua can run to several thousand lines.
+    /// </summary>
+    private static DominoFilePreviewHandler BuildDominoHandler(
+        VfsFile file, Func<byte[]> readContent, Func<byte[]?> readOriginal, Action openEditor)
+    {
+        byte[]? currentBytes = TryRead(readContent, out string? readError);
+        if (currentBytes is null)
+        {
+            return new DominoFilePreviewHandler(openEditor, currentText: null, originalText: null, readError!);
+        }
+
+        byte[]? originalBytes = TryReadOriginalBytes(file, readOriginal);
+        if (ExceedsPreviewLimit(currentBytes) || (originalBytes is not null && ExceedsPreviewLimit(originalBytes)))
+        {
+            return new DominoFilePreviewHandler(openEditor, currentText: null, originalText: null,
+                TooLargeMessage(Math.Max(currentBytes.Length, originalBytes?.Length ?? 0)));
+        }
+
+        string current = DecodeText(currentBytes);
+        string? originalText = originalBytes is null ? null : DecodeText(originalBytes);
+        return new DominoFilePreviewHandler(openEditor, current, originalText, previewUnavailableText: null);
     }
 
     /// <summary>Null when <paramref name="file"/> isn't modded, has no base game version at all, or

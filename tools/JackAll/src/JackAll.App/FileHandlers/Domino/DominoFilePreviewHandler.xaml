@@ -1,0 +1,18 @@
+<UserControl x:Class="JackAll.App.FileHandlers.Domino.DominoFilePreviewHandler"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:text="clr-namespace:JackAll.App.FileHandlers.Text">
+    <DockPanel Margin="16">
+        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,12"
+                   Text="A Domino mission-graph script - open it in the graph editor to see it as boxes and connections instead of generated Lua." />
+        <Button DockPanel.Dock="Top" Content="Open in Domino Editor…" Click="OpenEditor_Click"
+                Padding="10,6" HorizontalAlignment="Left" Margin="0,0,0,16" />
+
+        <TextBlock x:Name="PreviewUnavailableNotice" DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="#888"
+                   FontStyle="Italic" Visibility="Collapsed" />
+
+        <Border x:Name="PreviewBorder" Background="#FAFAFA" BorderBrush="#DDD" BorderThickness="1">
+            <text:TextFileHandler x:Name="Preview" Extension="lua" />
+        </Border>
+    </DockPanel>
+</UserControl>
