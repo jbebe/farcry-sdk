@@ -32,6 +32,9 @@ A running task list across the whole project.
   - Add parent folder name to modules (e.g. dlc1/entitylibrary) otherwise it's confusing
   - Add module search
   - Add checkbox to filter to include links too (they are really annoying if you're not searching for them)
+- [ ] Review the Domino viewer because it needs a lot of improvements
+  - Review code
+  - Revamp the visual interface, find a good graph wpf package
 
 ## Tools/"dll plugins"
 
