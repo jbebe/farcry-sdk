@@ -17,6 +17,10 @@ app.Configure(config =>
     config.AddCommand<ClassifyGraphsCommand>("classify-graphs")
         .WithDescription("Classify every user\\ mission graph's statements and report the unclassified fraction.")
         .WithExample("classify-graphs", @"tmp\fc2-archives\extracted\domino\user");
+
+    config.AddCommand<BuildGraphsCommand>("build-graphs")
+        .WithDescription("Reconstruct every user\\ mission graph's boxes/pins/connections and report node/edge stats.")
+        .WithExample("build-graphs", @"tmp\fc2-archives\extracted\domino\user");
 });
 
 return app.Run(args);
