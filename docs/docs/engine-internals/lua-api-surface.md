@@ -6,7 +6,9 @@ sidebar_position: 6
 
 :::info[Verified via reverse engineering]
 See [the overview](./overview.md) for binary identification, including the embedded Lua 4.1 (alpha)
-interpreter confirmation.
+interpreter confirmation. This page covers what C++ exposes *to* Lua; see [Domino
+Scripts](./domino-scripts.md) for what the actual `.lua` script files built on top of it look like and
+cover.
 :::
 
 Every C++ function/method exposed to the embedded Lua interpreter goes through one choke point:

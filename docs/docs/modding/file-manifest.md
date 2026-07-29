@@ -78,11 +78,22 @@ bare heightmap array).
 
 A Blender plugin can reportedly read *and* edit these directly. Whether the 8×8 sector grid itself can be enlarged is unresolved.
 
+Two sibling per-sector files, `.srl` (sound regions) and `.zsr` (gameplay zones), were hash-list-only
+until now — see [`.srl`/`.zsr`](../file-formats/srl-zsr.md) for the confirmed container level (fixed
+1024/4096-byte raw dumps, no header).
+
 ## 6. Navigation Mesh (.nvm) — Locked
 
 AI pathfinding navmesh data, compiled from level geometry (`worlds.fat/**/*.nvm`).
 
 Confirmed built on the open-source **Recast** library (via a leaked internal build-tool plugin list — `RecastNavmeshCompiler`/`Exporter`), but no FC2-specific decode/edit tool has surfaced in this research.
+
+:::info[Verified via reverse engineering]
+The container/file-structure level is now reverse-engineered — see [the `.nvm` format
+page](../file-formats/nvm.md): a two-tier scheme (one level file plus per-sector satellite files),
+distinct from every other per-sector format in this manifest. Still no tool, and the actual per-sector
+mesh/triangle payload isn't decoded yet, so this stays **Locked** in practice.
+:::
 
 ## 7. Audio — Partial
 
@@ -219,3 +230,21 @@ Root-level housekeeping files, not part of the runtime data pipeline.
 - `19900_install.vdf`, `21960_install.vdf` — Steam depot manifests
 
 Reference-only; safe to ignore for modding purposes.
+
+## 17. Editor/Pipeline-Only Formats — Out of scope (not present in the shipped install)
+
+Four extensions confirmed only via literal path strings in `FarCry2_server`'s string table (see
+[Engine Architecture](../engine-internals/architecture.md)) — the engine code that reads them exists,
+but **none of the four appear anywhere in the real Steam install's archive filelists**. These are
+build-time/editor artifacts, not retail content; don't expect to find them by unpacking the shipped
+`.fat`/`.dat` pairs.
+
+- `.nomad` — `Levels\%s\%s.nomad`, a per-level master descriptor. Named after the `CNomadObject`/
+  `CNomadPath` classes seen throughout the engine's reflection/persistence layer.
+- `.raw` — `%sheightmap.raw`, a raw heightmap distinct from the runtime `.sdat` chunked format — most
+  likely a pipeline intermediate before terrain gets baked into `.sdat`.
+- `.mask` — `%stexture.mask` / `%scollection.mask`, editor-side painting masks (texture-slot and
+  prefab-collection placement), referenced alongside an otherwise-undocumented in-engine
+  terrain-generation scripting API (procedural noise/heightmap/erosion functions).
+- `.png` — `mapcompass.png`, `worlds\%s\smallscreenshot.png` — lightweight UI/thumbnail images, separate
+  from the `.xbt` texture pipeline used for actual in-game textures.

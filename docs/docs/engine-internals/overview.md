@@ -78,6 +78,22 @@ unless it says otherwise. Its better symbol coverage is worth cross-referencing 
 going forward: it can name a PC-side function whose Windows binary only has a bare `FUN_`/`DAT_`
 address.
 
+**Not a stripped-down server SKU — the full game with only the renderer compiled out.**
+`SceneRendererFacade::HasRenderer()` is hardcoded to `return 0` (a compile-time constant, not a
+runtime `-dedicated` check) — the rendering backend itself isn't linked in. Everything else looks
+fully present *and self-registered*: `CGameModeManager`'s constructor builds a name-keyed factory
+table of `CGameModeDesc*`, and `CFCXGameModeSingle` (single-player) sits in it as a real linked class
+right alongside every multiplayer mode, `CFCXGameModeEditor`, and `CFCXGameModeBenchmark` — the
+self-registration pattern (see `RegisterCreatorFuncPreMain`/`GetPreMainClassInfoVector`) means the
+linker can't dead-strip an unused mode even on a dedicated-server build. Mission/campaign classes
+(`CBaseMission`, `CObjective`) and debug exports (`SelectStoryMission`, `SelectLibraryMission`,
+`LoadGame`/`SaveGame`) are linked in too. Practical effect: physics, entities, AI, animation, Domino
+mission scripting, sound-object model, and save/load are genuinely shared source with the PC
+single-player build and safe to trace here — only the actual rendering pipeline (shaders, D3D state,
+the real `SceneRendererFacade` implementation) has to fall back to `Dunia.dll` instead, since it was
+never compiled into this binary at all. See [Engine Architecture](./architecture.md) for the traced
+main loop.
+
 :::note[Community-reported]
 The Linux dedicated server was reportedly shipped as an accidental debug build (Discord, 2022-07-13) —
 consistent with the unstripped `.symtab`/`.strtab` confirmed above. Separately, a community member

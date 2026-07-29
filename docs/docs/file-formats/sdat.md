@@ -145,6 +145,14 @@ examined so far, implying this container may be shared with other platforms' bui
 whether [`.fcb`](./fcb.md) reuses this same class — its header as documented there doesn't obviously
 match this 20-byte shape, so likely a separate format.
 
+## Sibling per-sector files: `.srl` and `.zsr`
+
+Every world sector has two companion files alongside its `.sdat` (a hash-list count match confirmed
+earlier: 14,964 of each across the whole install — `generated\worldsectors\sectorN.srl` and
+`generated\worldsectors\zonesectorN.zsr`, versus `generated\sdat\sdN.sdat` in a sibling folder, not
+literally co-located). Unlike this page's chunked container, both turn out to be raw fixed-size
+per-sector memory dumps with no header at all — see [`.srl`/`.zsr`](./srl-zsr.md) for the full writeup.
+
 ## Unknowns
 
 - Exact value of the height scale constant `DAT_0a15babc` — address confirmed via PIC-relative

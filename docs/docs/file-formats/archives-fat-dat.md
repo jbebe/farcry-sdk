@@ -132,9 +132,32 @@ whose uncompressed-size bits are non-zero — a 3-way dispatch on a 2-bit scheme
 
 | Scheme | Handler | Status |
 |---|---|---|
-| 0 | `0x10258c50` | Unreachable in practice — real `Compression=None` entries always carry `UncompressedSize=0`, so they never reach the dispatcher. Parses its own variable-length prefix; not investigated further. |
+| 0 | `0x10258c50` | Unreachable in practice — real `Compression=None` entries always carry `UncompressedSize=0`, so they never reach the dispatcher. Parses its own variable-length prefix; not investigated further in `Dunia.dll` itself — but see the `FarCry2_server` cross-reference below, which names this handler's likely real codec. |
 | 1 | `ArchiveEntry_DecompressLzo1x` (`0x10258d60`) → `Lzo1x_Decompress` (`0x1025a620`) | Confirmed LZO1X — matches JackAll's `Lzo1x.cs` state machine constant-for-constant. |
 | 2 | `ArchiveEntry_DecompressZlib` (`0x10258d00`) → `Zlib_DecompressChunked` (`0x1025d1c0`) → `Zlib_InflateRawBlock` (`0x1025d110`) | Confirmed real zlib (raw DEFLATE, `windowBits=-15`), unrelated to the separate Quazal-networking zlib instance elsewhere in the binary. |
+
+### Cross-reference: the same dispatch, named, in `FarCry2_server`
+
+`FarCry2_server` (see [Overview](../engine-internals/overview.md) for why it's the better-symbolized
+binary of the two) names the actual archive class this whole page was reverse-engineered blind: real
+strings confirm the container class is **`CCryArchive`**, with a `CFatItem`
+(`FatLessThanCrc`/`FatLessThanSeekPos`-sorted, matching the CRC32-keyed `.fat` layout already documented
+above) and a `CNfoItem` (the plaintext `.nfo` sidecar manifest — see the community-reported note in
+[Getting Started](../modding/getting-started.md)), managed by `CCryArchiveManager`.
+
+`CCryArchive::Decompress(IFile*, uint size, uint scheme)` (`0x09c70c00`) is the same 3-way scheme
+dispatch, and it names real codecs for all three branches: **`scheme == 0` → `LZMA_DecompressInPlace`**,
+`scheme == 1` → `LZO_DecompressInPlace` (matches scheme 1 above), `scheme == 2` →
+`EdgeZlib_DecompressInPlace` (Sony's SPU-accelerated, bitstream-compatible reimplementation of zlib —
+consistent with, not a contradiction of, the "confirmed real zlib" finding for scheme 2 above; it's the
+same DEFLATE bitstream, a different concrete library backing it, plausible given this source tree is
+shared across platforms). Scheme 0 dispatching to a real codec (LZMA) rather than "no compression" lines
+up with what `Dunia.dll` already established: the actual "uncompressed" case is signaled by
+`UncompressedSize=0` and short-circuits before this dispatch ever runs, so scheme value `0` itself was
+never confirmed to mean "none" — `Dunia.dll`'s own scheme-0 handler (`0x10258c50`) was left
+un-investigated for exactly this reason. Treat "scheme 0 is LZMA" as a strong lead, not a final
+confirmation — the two binaries' scheme dispatchers weren't cross-checked byte-for-byte against each
+other, only reasoned about via matching structure and consistent behavior.
 
 Every shipped FC2 archive (~215k entries scanned via JackAll) uses only schemes 0 and 1 — scheme 2
 never appears in real data, so this had to be settled by disassembly rather than sampling.
