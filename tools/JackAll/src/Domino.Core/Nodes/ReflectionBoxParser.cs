@@ -1,5 +1,7 @@
 using System.Text.RegularExpressions;
-using Domino.Core.Lua;
+using Loretta.CodeAnalysis;
+using Loretta.CodeAnalysis.Lua;
+using Loretta.CodeAnalysis.Lua.Syntax;
 
 namespace Domino.Core.Nodes;
 
@@ -9,7 +11,8 @@ namespace Domino.Core.Nodes;
 /// palette. Confirmed present, exactly once, in all 233 real `system\*.lua` files; whitespace inside a
 /// tag (spaces vs. tabs, alignment padding) varies file to file but the tag/attribute vocabulary itself
 /// is closed (six tags, seven attribute names total) — a handful of regexes are simpler and just as
-/// robust as a general XML parser here.
+/// robust as a general XML parser here. Comments come in as single-line (`--`) leading trivia on
+/// whatever token follows them, per Loretta's Roslyn-style trivia model.
 /// </summary>
 public static partial class ReflectionBoxParser
 {
@@ -36,9 +39,9 @@ public static partial class ReflectionBoxParser
 
     private static bool IsTrue(string? value) => string.Equals(value, "true", StringComparison.OrdinalIgnoreCase);
 
-    /// <summary>Returns null if <paramref name="chunk"/> has no reflection box (only expected for
+    /// <summary>Returns null if <paramref name="root"/> has no reflection box (only expected for
     /// `user\` graph files, never for a real `system\` node).</summary>
-    public static NodeReflection? Parse(LuaChunk chunk)
+    public static NodeReflection? Parse(CompilationUnitSyntax root)
     {
         NodeDisplay? display = null;
         var controlIns = new List<ControlInPin>();
@@ -49,14 +52,15 @@ public static partial class ReflectionBoxParser
         bool inBox = false;
         bool found = false;
 
-        foreach (var stmt in chunk.Statements)
-        {
-            if (stmt is not CommentStmt comment)
-            {
-                continue;
-            }
+        var comments = root.DescendantTokens()
+            .SelectMany(t => t.LeadingTrivia)
+            .Where(t => t.Kind() == SyntaxKind.SingleLineCommentTrivia);
 
-            string text = comment.Text.Trim();
+        foreach (SyntaxTrivia trivia in comments)
+        {
+            string raw = trivia.ToString();
+            string text = (raw.StartsWith("--", StringComparison.Ordinal) ? raw[2..] : raw).Trim();
+
             if (text == StartMarker)
             {
                 inBox = true;

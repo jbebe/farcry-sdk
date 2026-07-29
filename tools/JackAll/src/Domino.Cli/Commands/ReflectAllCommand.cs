@@ -1,5 +1,5 @@
 using System.ComponentModel;
-using Domino.Core.Lua;
+using Domino.Core;
 using Domino.Core.Nodes;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -34,8 +34,8 @@ public sealed class ReflectAllCommand : Command<ReflectAllCommand.Settings>
             string source = File.ReadAllText(file);
             try
             {
-                var chunk = LuaParser.Parse(source);
-                var reflection = ReflectionBoxParser.Parse(chunk);
+                var root = DominoLuaSource.Parse(source);
+                var reflection = ReflectionBoxParser.Parse(root);
                 if (reflection is null)
                 {
                     missing++;

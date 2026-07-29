@@ -10,4 +10,8 @@
     <ProjectReference Include="..\JackAll.Core\JackAll.Core.csproj" />
   </ItemGroup>
 
+  <ItemGroup>
+    <PackageReference Include="Loretta.CodeAnalysis.Lua" Version="0.2.13" />
+  </ItemGroup>
+
 </Project>

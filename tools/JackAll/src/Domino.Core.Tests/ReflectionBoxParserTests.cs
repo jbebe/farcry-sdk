@@ -1,4 +1,4 @@
-using Domino.Core.Lua;
+using Domino.Core;
 using Domino.Core.Nodes;
 
 namespace Domino.Core.Tests;
@@ -22,7 +22,7 @@ public class ReflectionBoxParserTests
             end
             """;
 
-        var reflection = ReflectionBoxParser.Parse(LuaParser.Parse(source));
+        var reflection = ReflectionBoxParser.Parse(DominoLuaSource.Parse(source));
 
         Assert.NotNull(reflection);
         Assert.Equal(new NodeDisplay("Change Variables", "ForEach"), reflection.Display);
@@ -47,7 +47,7 @@ public class ReflectionBoxParserTests
             -- DOMINO REFLECTION BOX END
             """;
 
-        var reflection = ReflectionBoxParser.Parse(LuaParser.Parse(source));
+        var reflection = ReflectionBoxParser.Parse(DominoLuaSource.Parse(source));
 
         Assert.NotNull(reflection);
         Assert.True(reflection.Stateless);
@@ -57,7 +57,7 @@ public class ReflectionBoxParserTests
     [Fact]
     public void Returns_null_when_no_reflection_box_is_present()
     {
-        var reflection = ReflectionBoxParser.Parse(LuaParser.Parse("x = 1"));
+        var reflection = ReflectionBoxParser.Parse(DominoLuaSource.Parse("x = 1"));
         Assert.Null(reflection);
     }
 
@@ -75,7 +75,7 @@ public class ReflectionBoxParserTests
         {
             try
             {
-                var reflection = ReflectionBoxParser.Parse(LuaParser.Parse(File.ReadAllText(file)));
+                var reflection = ReflectionBoxParser.Parse(DominoLuaSource.Parse(File.ReadAllText(file)));
                 if (reflection is null)
                 {
                     failures.Add($"{file}: no reflection box found");

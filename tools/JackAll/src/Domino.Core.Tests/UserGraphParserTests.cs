@@ -1,10 +1,14 @@
+using Domino.Core;
 using Domino.Core.Graphs;
-using Domino.Core.Lua;
+using Loretta.CodeAnalysis.Lua;
+using Loretta.CodeAnalysis.Lua.Syntax;
 
 namespace Domino.Core.Tests;
 
 public class UserGraphParserTests
 {
+    private static UserGraph Classify(string source) => UserGraphParser.Parse(DominoLuaSource.Parse(source));
+
     [Fact]
     public void Recognizes_register_box_in_create()
     {
@@ -15,7 +19,7 @@ public class UserGraphParserTests
             end;
             """;
 
-        var graph = UserGraphParser.Parse(LuaParser.Parse(source));
+        var graph = Classify(source);
 
         var create = Assert.Single(graph.Functions, f => f.Name == "Create");
         Assert.Equal(
@@ -37,7 +41,7 @@ public class UserGraphParserTests
             end;
             """;
 
-        var graph = UserGraphParser.Parse(LuaParser.Parse(source));
+        var graph = Classify(source);
         var fn = Assert.Single(graph.Functions);
 
         var box = new PooledBoxRef("Domino/System/SetEntity.lua");
@@ -68,14 +72,13 @@ public class UserGraphParserTests
     [Fact]
     public void Recognizes_both_instance_box_forms()
     {
-        var chunk = LuaParser.Parse("""
+        var graph = Classify("""
             function export:Create(cbox)
                 self[5] = cbox:CreateBox("Domino/System/SimpleNode.lua");
                 self.box_HealthEvents_5 = cbox:CreateBox("Domino/System/HealthEvents.lua");
             end;
             """);
 
-        var graph = UserGraphParser.Parse(chunk);
         var create = Assert.Single(graph.Functions);
 
         var numeric = Assert.IsType<CreateBoxStmt>(create.Body[0]);
@@ -88,8 +91,7 @@ public class UserGraphParserTests
     [Fact]
     public void Recognizes_dummy_function_as_an_unwired_pin()
     {
-        var chunk = LuaParser.Parse("function export:Init(cbox) self[5].Out = DummyFunction; end;");
-        var graph = UserGraphParser.Parse(chunk);
+        var graph = Classify("function export:Init(cbox) self[5].Out = DummyFunction; end;");
         var wire = Assert.IsType<WireControlOutStmt>(Assert.Single(graph.Functions).Body[0]);
         Assert.Null(wire.TargetHandler);
     }
@@ -97,14 +99,13 @@ public class UserGraphParserTests
     [Fact]
     public void Recognizes_dynamic_indexed_control_out_wiring()
     {
-        var chunk = LuaParser.Parse("""
+        var graph = Classify("""
             function export:Init(cbox)
                 self[218].Output[0] = self._type.f_218_Output_0;
                 self[218].Output[1] = DummyFunction;
             end;
             """);
 
-        var graph = UserGraphParser.Parse(chunk);
         var fn = Assert.Single(graph.Functions);
 
         var wired = Assert.IsType<WireControlOutStmt>(fn.Body[0]);
@@ -119,14 +120,13 @@ public class UserGraphParserTests
     [Fact]
     public void Recognizes_own_handler_calls_and_own_pin_fires()
     {
-        var chunk = LuaParser.Parse("""
+        var graph = Classify("""
             function export:f_0_Out()
                 self._type.en_3(self);
                 self:Out();
             end;
             """);
 
-        var graph = UserGraphParser.Parse(chunk);
         var fn = Assert.Single(graph.Functions);
 
         var own = Assert.IsType<CallOwnHandlerStmt>(fn.Body[0]);
@@ -139,30 +139,24 @@ public class UserGraphParserTests
     [Fact]
     public void Recognizes_plain_graph_field_init()
     {
-        var chunk = LuaParser.Parse("""
+        var graph = Classify("""
             function export:Init(cbox)
                 self.Merc01 = nil;
                 self.WagerStart = 0;
             end;
             """);
 
-        var graph = UserGraphParser.Parse(chunk);
         var fn = Assert.Single(graph.Functions);
 
         var f1 = Assert.IsType<SetGraphFieldStmt>(fn.Body[0]);
         Assert.Equal("Merc01", f1.FieldName);
-        Assert.IsType<NilExpr>(f1.Value);
+        var nilValue = Assert.IsType<LiteralExpressionSyntax>(f1.Value);
+        Assert.Equal(SyntaxKind.NilLiteralExpression, nilValue.Kind());
 
         var f2 = Assert.IsType<SetGraphFieldStmt>(fn.Body[1]);
         Assert.Equal("WagerStart", f2.FieldName);
     }
 
-    /// <summary>
-    /// Not a strict 100% gate like <see cref="LuaParserTests.Every_real_extracted_domino_file_parses_without_error"/>
-    /// - a handful of `OtherStmt` (comments, `LuaDependencies`' `return {};`) is expected and correct, not
-    /// a parsing gap. This pins the unclassified fraction to a small ceiling so a real regression (an
-    /// idiom silently falling through to `OtherStmt` again) shows up as a failing test.
-    /// </summary>
     [Fact]
     public void Real_corpus_statements_are_almost_entirely_classified()
     {
@@ -175,7 +169,7 @@ public class UserGraphParserTests
         long total = 0, other = 0;
         foreach (var file in files)
         {
-            var graph = UserGraphParser.Parse(LuaParser.Parse(File.ReadAllText(file)));
+            var graph = Classify(File.ReadAllText(file));
             foreach (var fn in graph.Functions)
             {
                 foreach (var stmt in fn.Body)

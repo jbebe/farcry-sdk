@@ -1,4 +1,4 @@
-using Domino.Core.Lua;
+using Loretta.CodeAnalysis.Lua.Syntax;
 
 namespace Domino.Core.Graphs;
 
@@ -33,7 +33,7 @@ public static class GraphBuilder
         public required string NodeTypePath;
         public required BoxInstanceKind Kind;
         public required string OwnerFunction;
-        public readonly Dictionary<string, LuaExpr> Params = new();
+        public readonly Dictionary<string, ExpressionSyntax> Params = new();
     }
 
     private enum EntryEventKind { Node, Redirect, GraphExit }

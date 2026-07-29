@@ -1,6 +1,6 @@
 using System.ComponentModel;
+using Domino.Core;
 using Domino.Core.Graphs;
-using Domino.Core.Lua;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -35,8 +35,8 @@ public sealed class BuildGraphsCommand : Command<BuildGraphsCommand.Settings>
         {
             try
             {
-                var chunk = LuaParser.Parse(File.ReadAllText(file));
-                var userGraph = UserGraphParser.Parse(chunk);
+                var root = DominoLuaSource.Parse(File.ReadAllText(file));
+                var userGraph = UserGraphParser.Parse(root);
                 var graph = GraphBuilder.Build(userGraph);
                 filesOk++;
 

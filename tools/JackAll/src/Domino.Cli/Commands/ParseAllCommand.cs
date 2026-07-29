@@ -1,5 +1,5 @@
 using System.ComponentModel;
-using Domino.Core.Lua;
+using Domino.Core;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -34,7 +34,7 @@ public sealed class ParseAllCommand : Command<ParseAllCommand.Settings>
             string source = File.ReadAllText(file);
             try
             {
-                LuaParser.Parse(source);
+                DominoLuaSource.Parse(source);
                 ok++;
             }
             catch (Exception ex)

@@ -1,11 +1,10 @@
 using Domino.Core.Graphs;
-using Domino.Core.Lua;
 
 namespace Domino.Core.Tests;
 
 public class UserGraphWriterTests
 {
-    private static UserGraph Classify(string source) => UserGraphParser.Parse(LuaParser.Parse(source));
+    private static UserGraph Classify(string source) => UserGraphParser.Parse(DominoLuaSource.Parse(source));
 
     [Fact]
     public void Round_trips_the_full_pooled_box_configure_and_fire_sequence()

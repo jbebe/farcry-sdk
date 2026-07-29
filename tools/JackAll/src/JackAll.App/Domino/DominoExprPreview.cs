@@ -1,21 +1,19 @@
-using Domino.Core.Lua;
+using Loretta.CodeAnalysis.Lua;
+using Loretta.CodeAnalysis.Lua.Syntax;
 
 namespace JackAll.App.Domino;
 
 /// <summary>A short, single-line rendering of a parameter value for a node box label - not a real
-/// pretty-printer (see the Domino.Cli diagnostic tool for that), just enough to distinguish
-/// "Entity: 205..." from "Command: BuddyUnlock" at a glance.</summary>
+/// pretty-printer, just enough to distinguish "Entity: 205..." from "Command: BuddyUnlock" at a
+/// glance.</summary>
 internal static class DominoExprPreview
 {
-    public static string Short(LuaExpr expr) => Truncate(expr switch
+    public static string Short(ExpressionSyntax expr) => Truncate(expr switch
     {
-        StringExpr e => $"\"{e.Value}\"",
-        NumberExpr e => e.Raw,
-        NameExpr e => e.Name,
-        NilExpr => "nil",
-        TrueExpr => "true",
-        FalseExpr => "false",
-        FieldAccessExpr e => $"{Short(e.Target)}.{e.Field}",
+        LiteralExpressionSyntax lit when lit.Kind() == SyntaxKind.StringLiteralExpression => $"\"{lit.Token.ValueText}\"",
+        LiteralExpressionSyntax lit => lit.Token.Text, // number / nil / true / false - raw token text reads fine as-is
+        IdentifierNameSyntax e => e.Name,
+        MemberAccessExpressionSyntax e => $"{Short(e.Expression)}.{e.MemberName.Text}",
         _ => expr.GetType().Name,
     });
 

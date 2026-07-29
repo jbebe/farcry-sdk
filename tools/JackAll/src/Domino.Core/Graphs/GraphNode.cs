@@ -1,4 +1,4 @@
-using Domino.Core.Lua;
+using Loretta.CodeAnalysis.Lua.Syntax;
 
 namespace Domino.Core.Graphs;
 
@@ -22,7 +22,7 @@ public sealed record GraphNode(
     string NodeTypePath,
     BoxInstanceKind Kind,
     string OwnerFunction,
-    IReadOnlyDictionary<string, LuaExpr> Params)
+    IReadOnlyDictionary<string, ExpressionSyntax> Params)
 {
     /// <summary>True when this node's type path points at another `user\` graph rather than a
     /// `system\` node - i.e. it's a sub-graph used as a box, and should be rendered as a nestable/

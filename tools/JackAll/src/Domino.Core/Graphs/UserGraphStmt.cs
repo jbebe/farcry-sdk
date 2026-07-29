@@ -1,4 +1,4 @@
-using Domino.Core.Lua;
+using Loretta.CodeAnalysis.Lua.Syntax;
 
 namespace Domino.Core.Graphs;
 
@@ -22,7 +22,7 @@ public sealed record RebindSelfToGraphStmt : UserGraphStmt;
 public sealed record SetGraphBackrefStmt(BoxRef Box) : UserGraphStmt;
 
 /// <summary>`Box.ParamName = value;` — sets a data-in parameter on a box instance before firing it.</summary>
-public sealed record SetParamStmt(BoxRef Box, string ParamName, LuaExpr Value) : UserGraphStmt;
+public sealed record SetParamStmt(BoxRef Box, string ParamName, ExpressionSyntax Value) : UserGraphStmt;
 
 /// <summary>`Box.PinName = self._type.f_N_...;` (or `DummyFunction` when unconnected) — a graph edge:
 /// wires a box's control-out pin to the handler that runs next. <see cref="TargetHandler"/> is null for
@@ -61,29 +61,34 @@ public sealed record TraceConnectionStmt(
     string DocumentContainer,
     string SourcePinLabel,
     string TargetPinLabel,
-    LuaExpr SourceBoxExpr,
-    LuaExpr TargetBoxExpr) : UserGraphStmt;
+    ExpressionSyntax SourceBoxExpr,
+    ExpressionSyntax TargetBoxExpr) : UserGraphStmt;
 
 /// <summary>`Target = Box.PinName;` — reads a box's data-out pin value into a graph-level variable
 /// (<paramref name="Target"/> is typically `self.SomeField`, kept as a raw expression for flexibility).</summary>
-public sealed record ReadDataStmt(LuaExpr Target, BoxRef Box, string PinName) : UserGraphStmt;
+public sealed record ReadDataStmt(ExpressionSyntax Target, BoxRef Box, string PinName) : UserGraphStmt;
 
 /// <summary>`self.FieldName = value;` — initializes a plain graph-level variable (as opposed to a box's
 /// data-in parameter, see <see cref="SetParamStmt"/>), typically in `Init()`.</summary>
-public sealed record SetGraphFieldStmt(string FieldName, LuaExpr Value) : UserGraphStmt;
+public sealed record SetGraphFieldStmt(string FieldName, ExpressionSyntax Value) : UserGraphStmt;
 
 /// <summary>Anything that doesn't match one of the recognized shapes — preserved verbatim rather than
 /// dropped, so a file with an unanticipated idiom still round-trips.</summary>
-public sealed record OtherStmt(LuaStmt Statement) : UserGraphStmt;
+public sealed record OtherStmt(StatementSyntax Statement) : UserGraphStmt;
 
-/// <summary>One `function export:Name(...) ... end` handler, its body statements classified.</summary>
+/// <summary>One `function export:Name(...) ... end` handler, its body statements classified.
+/// <paramref name="SpanStart"/> is the function declaration's original position in the source file -
+/// carried through purely so <c>UserGraphWriter</c> can interleave regenerated functions back among
+/// <see cref="UserGraph.TopLevelOther"/> statements in their original relative order (a stray comment
+/// is another statement's leading trivia, so reordering statements can visibly relocate it).</summary>
 public sealed record UserGraphFunction(
     string Name,
     IReadOnlyList<string> Parameters,
-    IReadOnlyList<UserGraphStmt> Body);
+    IReadOnlyList<UserGraphStmt> Body,
+    int SpanStart);
 
 /// <summary>A fully classified `user\` mission graph file. <see cref="TopLevelOther"/> holds everything
 /// outside a function body — the auto-generated header comment, `export = {};`, `_compilerVersion = 3;`.</summary>
 public sealed record UserGraph(
     IReadOnlyList<UserGraphFunction> Functions,
-    IReadOnlyList<LuaStmt> TopLevelOther);
+    IReadOnlyList<StatementSyntax> TopLevelOther);

@@ -1,5 +1,5 @@
+using Domino.Core;
 using Domino.Core.Graphs;
-using Domino.Core.Lua;
 
 namespace JackAll.App.Domino;
 
@@ -24,8 +24,8 @@ public sealed class DominoTabViewModel
 
         try
         {
-            var chunk = LuaParser.Parse(sourceText);
-            var userGraph = UserGraphParser.Parse(chunk);
+            var root = DominoLuaSource.Parse(sourceText);
+            var userGraph = UserGraphParser.Parse(root);
             Graph = GraphBuilder.Build(userGraph);
             Nodes = DominoGraphLayout.Layout(Graph);
         }

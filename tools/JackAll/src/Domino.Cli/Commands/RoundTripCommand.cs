@@ -1,6 +1,6 @@
 using System.ComponentModel;
+using Domino.Core;
 using Domino.Core.Graphs;
-using Domino.Core.Lua;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -35,10 +35,10 @@ public sealed class RoundTripCommand : Command<RoundTripCommand.Settings>
             try
             {
                 string source = File.ReadAllText(file);
-                var graph1 = UserGraphParser.Parse(LuaParser.Parse(source));
+                var graph1 = UserGraphParser.Parse(DominoLuaSource.Parse(source));
                 string generated1 = UserGraphWriter.Write(graph1);
 
-                var graph2 = UserGraphParser.Parse(LuaParser.Parse(generated1));
+                var graph2 = UserGraphParser.Parse(DominoLuaSource.Parse(generated1));
                 string generated2 = UserGraphWriter.Write(graph2);
 
                 if (generated1 == generated2)

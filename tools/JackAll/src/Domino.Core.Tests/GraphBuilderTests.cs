@@ -1,12 +1,21 @@
+using Domino.Core;
 using Domino.Core.Graphs;
-using Domino.Core.Lua;
+using Loretta.CodeAnalysis.Lua;
+using Loretta.CodeAnalysis.Lua.Syntax;
 
 namespace Domino.Core.Tests;
 
 public class GraphBuilderTests
 {
     private static ReconstructedGraph BuildFrom(string source) =>
-        GraphBuilder.Build(UserGraphParser.Parse(LuaParser.Parse(source)));
+        GraphBuilder.Build(UserGraphParser.Parse(DominoLuaSource.Parse(source)));
+
+    private static string StringValue(ExpressionSyntax expr)
+    {
+        var lit = Assert.IsType<LiteralExpressionSyntax>(expr);
+        Assert.Equal(SyntaxKind.StringLiteralExpression, lit.Kind());
+        return lit.Token.ValueText;
+    }
 
     [Fact]
     public void Builds_one_node_per_pooled_configure_and_fire_occurrence()
@@ -27,7 +36,7 @@ public class GraphBuilderTests
         var node = Assert.Single(graph.Nodes);
         Assert.Equal(BoxInstanceKind.Pooled, node.Kind);
         Assert.Equal("Domino/System/SetEntity.lua", node.NodeTypePath);
-        Assert.Equal("123", Assert.IsType<StringExpr>(node.Params["Entity"]).Value);
+        Assert.Equal("123", StringValue(node.Params["Entity"]));
 
         var edge = Assert.Single(graph.Edges);
         Assert.Equal(EdgeTarget.DeadEnd, edge.Target); // f_0_Out fires nothing further
@@ -71,7 +80,7 @@ public class GraphBuilderTests
         var node = Assert.Single(graph.Nodes);
         Assert.Equal(BoxInstanceKind.Persistent, node.Kind);
         Assert.Equal("p:5", node.Id);
-        Assert.Equal("abc", Assert.IsType<StringExpr>(node.Params["Entity"]).Value);
+        Assert.Equal("abc", StringValue(node.Params["Entity"]));
 
         // Nothing wires *into* ShutDown here (it's an engine lifecycle hook, not a pin target), so
         // there's no WireControlOutStmt to produce an edge from.

@@ -1,6 +1,6 @@
 using System.ComponentModel;
+using Domino.Core;
 using Domino.Core.Graphs;
-using Domino.Core.Lua;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -40,8 +40,8 @@ public sealed class ClassifyGraphsCommand : Command<ClassifyGraphsCommand.Settin
             string source = File.ReadAllText(file);
             try
             {
-                var chunk = LuaParser.Parse(source);
-                var graph = UserGraphParser.Parse(chunk);
+                var root = DominoLuaSource.Parse(source);
+                var graph = UserGraphParser.Parse(root);
                 filesOk++;
 
                 foreach (var fn in graph.Functions)
@@ -56,7 +56,7 @@ public sealed class ClassifyGraphsCommand : Command<ClassifyGraphsCommand.Settin
                             otherByType[key] = otherByType.GetValueOrDefault(key) + 1;
                             if (settings.ShowOther)
                             {
-                                Console.WriteLine($"{file} {fn.Name}: {LuaDump.Stmt(other.Statement)}");
+                                Console.WriteLine($"{file} {fn.Name}: {other.Statement}");
                             }
                         }
                     }
