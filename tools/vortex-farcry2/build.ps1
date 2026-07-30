@@ -70,10 +70,10 @@ Write-Host 'Building the extension bundle...' -ForegroundColor Cyan
 npm run build
 if ($LASTEXITCODE -ne 0) { throw 'webpack build failed.' }
 
-# Vortex reads info.json to identify the extension and gameart.jpg for the game tile; index.js is
+# Vortex reads info.json to identify the extension and gameart.png for the game tile; index.js is
 # whatever webpack just wrote. They have to sit at the top of the same folder as bin\.
 Copy-Item (Join-Path $root 'info.json') $dist -Force
-Copy-Item (Join-Path $root 'gameart.jpg') $dist -Force
+Copy-Item (Join-Path $root 'gameart.png') $dist -Force
 
 $size = (Get-ChildItem $dist -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB
 Write-Host ("Extension assembled in {0} ({1:N1} MB)" -f $dist, $size) -ForegroundColor Green
