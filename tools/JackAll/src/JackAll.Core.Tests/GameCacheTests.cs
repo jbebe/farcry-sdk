@@ -256,6 +256,85 @@ public class GameCacheTests : IDisposable
         }
     }
 
+    // ------------------------------------------------------------------ content hash section
+
+    [Fact]
+    public void SetContentHash_then_TryGetContentHash_round_trips()
+    {
+        var cache = new GameCache();
+
+        cache.SetContentHash(0x11111111, 0xAAAABBBBCCCCDDDD);
+        cache.SetContentHash(0x22222222, 0);
+
+        Assert.True(cache.TryGetContentHash(0x11111111, out ulong first));
+        Assert.Equal(0xAAAABBBBCCCCDDDDUL, first);
+
+        Assert.True(cache.TryGetContentHash(0x22222222, out ulong second));
+        Assert.Equal(0UL, second); // zero is a real, cacheable hash value, not "missing"
+
+        Assert.False(cache.TryGetContentHash(0x33333333, out _));
+        Assert.True(cache.IsDirty);
+    }
+
+    [Fact]
+    public void Save_then_Load_reproduces_the_exact_same_content_hashes()
+    {
+        var cache = new GameCache();
+        cache.SetContentHash(0xDEADBEEF, 0x0102030405060708);
+        cache.SetContentHash(0xCAFEF00D, 0xFFEEDDCCBBAA9988);
+        cache.Save(_cachePath);
+
+        var reloaded = GameCache.Load(_cachePath);
+
+        Assert.Equal(cache.ContentHashCount, reloaded.ContentHashCount);
+        Assert.True(reloaded.TryGetContentHash(0xDEADBEEF, out ulong first));
+        Assert.Equal(0x0102030405060708UL, first);
+        Assert.True(reloaded.TryGetContentHash(0xCAFEF00D, out ulong second));
+        Assert.Equal(0xFFEEDDCCBBAA9988UL, second);
+        Assert.False(reloaded.IsDirty);
+    }
+
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_warm_content_hash_cache_lets_GameVfs_ReadOriginalHash_skip_decompression()
+    {
+        string sandbox = Path.Combine(Path.GetTempPath(), "jackall-hashcache-install", Guid.NewGuid().ToString("N"));
+        var install = OpenFixtureInstall(sandbox);
+        if (install is null) return;
+
+        try
+        {
+            NameDatabase names = TestSupport.LoadNames();
+
+            uint someHash;
+            ulong coldHash;
+            var cold = GameCache.Load(_cachePath);
+            using (var vfs = GameVfs.Load(install, names, cold))
+            {
+                someHash = vfs.Files.Keys.First();
+                Assert.True(vfs.ReadOriginalHash(someHash) is { } h);
+                coldHash = vfs.ReadOriginalHash(someHash)!.Value;
+            }
+            Assert.True(cold.IsDirty, "A cold ReadOriginalHash call must have computed something worth writing down.");
+            cold.Save(_cachePath);
+
+            var warm = GameCache.Load(_cachePath);
+            Assert.True(warm.TryGetContentHash(someHash, out ulong cachedHash));
+            Assert.Equal(coldHash, cachedHash);
+
+            using var warmVfs = GameVfs.Load(install, names, warm);
+            Assert.Equal(coldHash, warmVfs.ReadOriginalHash(someHash));
+            // A warm hit must not have dirtied the cache further - if it had, SetContentHash ran again,
+            // meaning ReadOriginalHash silently fell through to decompressing instead of trusting the
+            // cache, defeating the entire point.
+            Assert.False(warm.IsDirty, "A warm ReadOriginalHash call re-decompressed instead of trusting the cache.");
+        }
+        finally
+        {
+            Directory.Delete(sandbox, recursive: true);
+        }
+    }
+
     // ------------------------------------------------------------------ shared persistence behavior
 
     [Fact]

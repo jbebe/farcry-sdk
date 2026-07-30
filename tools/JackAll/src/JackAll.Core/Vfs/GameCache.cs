@@ -1,3 +1,4 @@
+using System.IO.Hashing;
 using System.Runtime.InteropServices;
 using System.Text;
 using JackAll.Core.Format;
@@ -7,31 +8,34 @@ using JackAll.Core.Naming;
 namespace JackAll.Core.Vfs;
 
 /// <summary>
-/// The one on-disk cache file: sniffed archive-entry types plus decoded `.fcb` fragment structure.
+/// The one on-disk cache file: sniffed archive-entry types, decoded `.fcb` fragment structure, and
+/// each entry's own content hash.
 /// </summary>
 /// <remarks>
-/// Two answers, one file, because they share the same lifecycle end to end: both are pure, re-derivable
-/// facts about bytes that never change for the life of an install (see the class remarks that used to
-/// live on <c>ArchiveTypeCache</c>/<c>FcbStructureCache</c> — a quarter of the game's entries have no
-/// recovered filename, so identifying them means ~50,000 random header reads; a `.fcb` that splits
-/// needs a full decode to know its pieces), both are trusted outright with no invalidation logic if
-/// they load without error, and both are the user's to delete (one file now, not two) if the game is
-/// reinstalled or patched underneath us. **patch.dat is deliberately not cached** in either section —
-/// it's the one archive the tool itself rewrites on every Build &amp; Apply, so sniffing/decoding it
-/// fresh every launch (~216 entries) is what lets everything else be cached with no invalidation
-/// machinery at all.
+/// Three answers, one file, because they share the same lifecycle end to end: all three are pure,
+/// re-derivable facts about bytes that never change for the life of an install (see the class remarks
+/// that used to live on <c>ArchiveTypeCache</c>/<c>FcbStructureCache</c> — a quarter of the game's
+/// entries have no recovered filename, so identifying them means ~50,000 random header reads; a `.fcb`
+/// that splits needs a full decode to know its pieces; and telling a legacy mod's repacked entry apart
+/// from the base game's own means decompressing the vanilla side just to compare, unless that
+/// comparison can be made against a hash instead — see <see cref="TryGetContentHash"/>), all three are
+/// trusted outright with no invalidation logic if they load without error, and all three are the
+/// user's to delete (one file, not three) if the game is reinstalled or patched underneath us.
+/// **patch.dat is deliberately not cached** in any section — it's the one archive the tool itself
+/// rewrites on every Build &amp; Apply, so sniffing/decoding/hashing it fresh every launch (~216
+/// entries) is what lets everything else be cached with no invalidation machinery at all.
 ///
-/// Both sections are laid out so the on-disk bytes double as the runtime lookup structure: the whole
-/// file is read once into <see cref="_fileBytes"/> and kept alive, and every record array is a
+/// All three sections are laid out so the on-disk bytes double as the runtime lookup structure: the
+/// whole file is read once into <see cref="_fileBytes"/> and kept alive, and every record array is a
 /// <see cref="MemoryMarshal.Cast{TFrom,TTo}(System.ReadOnlySpan{TFrom})"/> view straight over a slice
 /// of it — never copied into a parallel managed structure. Records are sorted by hash, so a lookup is
 /// a binary search directly over that span. There is deliberately no step that copies these records
 /// into a <c>Dictionary</c> at load: for the ~50,000-record type section, building one would mean
 /// rehashing every entry into a different bookkeeping structure on every single launch, for data this
 /// class already holds in the exact shape a lookup needs. A small in-memory overlay
-/// (<see cref="_newTypes"/>/<see cref="_newFragments"/>) holds only what got sniffed/decoded *this*
-/// session — the rare, dirty path — and is folded back into the byte-backed arrays only when
-/// <see cref="Save"/> runs.
+/// (<see cref="_newTypes"/>/<see cref="_newFragments"/>/<see cref="_newContentHashes"/>) holds only
+/// what got sniffed/decoded/hashed *this* session — the rare, dirty path — and is folded back into the
+/// byte-backed arrays only when <see cref="Save"/> runs.
 ///
 /// The `.fcb` section can't use one flat record type the way the type section does — a container's
 /// fragment list is variable-length — so it goes one level deeper with the same idea: a sorted
@@ -40,11 +44,18 @@ namespace JackAll.Core.Vfs;
 /// via <c>BinaryReader.ReadString</c>. A container's fragments are decoded into
 /// <see cref="FcbFragmentInfo"/> objects only when actually asked for (<see cref="TryGet"/>), not for
 /// the whole file up front.
+///
+/// The content-hash section is a flat <c>HashRecord[]</c>, same shape as the type section - one fixed
+/// 16-byte record per entry, sorted by hash, no variable-length data to point into.
 /// </remarks>
 public sealed class GameCache
 {
     private const uint Magic = 0x3143414A; // 'JAC1'
-    private const int Version = 1;
+
+    // v2 adds the content-hash section (see HashRecord) - a v1 file loaded by this version simply
+    // fails the version check below and resets to empty, same as any other unparseable cache; nothing
+    // here tries to upgrade one in place.
+    private const int Version = 2;
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     private struct TypeRecord
@@ -70,9 +81,20 @@ public sealed class GameCache
         public long Size;
     }
 
+    /// <summary>An entry hash paired with the xxHash64 of that entry's own *decompressed* content -
+    /// see <see cref="TryGetContentHash"/>.</summary>
+    [StructLayout(LayoutKind.Sequential, Pack = 8)]
+    private struct HashRecord
+    {
+        public uint Hash;
+        public uint Padding;
+        public ulong ContentHash;
+    }
+
     private static readonly int TypeRecordSize = Marshal.SizeOf<TypeRecord>();
     private static readonly int ContainerRecordSize = Marshal.SizeOf<ContainerRecord>();
     private static readonly int FragmentRecordSize = Marshal.SizeOf<FragmentRecord>();
+    private static readonly int HashRecordSize = Marshal.SizeOf<HashRecord>();
 
     /// <summary>The whole file, read once and kept alive — every span below is a zero-copy window
     /// into this buffer. Empty for a cache that was never loaded from (or saved to) disk yet.</summary>
@@ -83,9 +105,11 @@ public sealed class GameCache
     private (int Offset, int Count) _containers;        // byte offset, record count
     private (int Offset, int Count) _fragmentRecords;   // byte offset, record count
     private (int Offset, int Length) _nameBlob;          // byte offset, byte length
+    private (int Offset, int Count) _hashRecords;        // byte offset, record count
 
     private readonly Dictionary<uint, FileType> _newTypes = [];
     private readonly Dictionary<uint, FcbFragmentInfo[]> _newFragments = [];
+    private readonly Dictionary<uint, ulong> _newContentHashes = [];
 
     /// <summary>True when something was sniffed or decoded afresh this session and the file on disk
     /// is now out of date.</summary>
@@ -93,6 +117,7 @@ public sealed class GameCache
 
     public int TypeCount => _typeRecords.Count + _newTypes.Count;
     public int FragmentContainerCount => _containers.Count + _newFragments.Count;
+    public int ContentHashCount => _hashRecords.Count + _newContentHashes.Count;
 
     private ReadOnlySpan<TypeRecord> TypeRecordSpan => _typeRecords.Count == 0
         ? default
@@ -109,6 +134,10 @@ public sealed class GameCache
     private ReadOnlySpan<byte> NameBlobSpan => _nameBlob.Length == 0
         ? default
         : _fileBytes.AsSpan(_nameBlob.Offset, _nameBlob.Length);
+
+    private ReadOnlySpan<HashRecord> HashRecordSpan => _hashRecords.Count == 0
+        ? default
+        : MemoryMarshal.Cast<byte, HashRecord>(_fileBytes.AsSpan(_hashRecords.Offset, _hashRecords.Count * HashRecordSize));
 
     // ------------------------------------------------------------------ type lookups
 
@@ -225,6 +254,44 @@ public sealed class GameCache
         return result;
     }
 
+    // ------------------------------------------------------------------ content hash lookups
+
+    /// <summary>
+    /// The xxHash64 of an entry's own decompressed content, keyed by the same entry hash every other
+    /// section uses. Content hashes never mix across archives - it's the caller's job to decide which
+    /// entry (typically <see cref="Vfs.GameVfs.ReadOriginal"/>'s answer for a given hash) this is a
+    /// hash *of*; this class only ever remembers what it's told.
+    /// </summary>
+    public bool TryGetContentHash(uint hash, out ulong contentHash)
+        => TryGetCachedContentHash(hash, out contentHash) || _newContentHashes.TryGetValue(hash, out contentHash);
+
+    /// <summary>Records a hash computed elsewhere. Not thread-safe, same as every other mutator here -
+    /// see <see cref="SetType"/>'s remarks for the parallel-compute/serial-fold split this expects.</summary>
+    public void SetContentHash(uint hash, ulong contentHash)
+    {
+        _newContentHashes[hash] = contentHash;
+        IsDirty = true;
+    }
+
+    private bool TryGetCachedContentHash(uint hash, out ulong contentHash)
+    {
+        ReadOnlySpan<HashRecord> records = HashRecordSpan;
+        int lo = 0, hi = records.Length - 1;
+        while (lo <= hi)
+        {
+            int mid = (lo + hi) / 2;
+            uint midHash = records[mid].Hash;
+            if (midHash == hash)
+            {
+                contentHash = records[mid].ContentHash;
+                return true;
+            }
+            if (midHash < hash) lo = mid + 1; else hi = mid - 1;
+        }
+        contentHash = default;
+        return false;
+    }
+
     // ------------------------------------------------------------------ persistence
 
     /// <summary>
@@ -289,6 +356,12 @@ public sealed class GameCache
 
         int nameBlobLength = reader.ReadInt32();
         cache._nameBlob = ((int)stream.Position, nameBlobLength);
+        stream.Position += nameBlobLength;
+
+        // ---- content hash section ----
+        int hashRecordCount = reader.ReadInt32();
+        cache._hashRecords = ((int)stream.Position, hashRecordCount);
+        stream.Position += hashRecordCount * HashRecordSize;
 
         return cache;
     }
@@ -364,6 +437,23 @@ public sealed class GameCache
             };
         }
 
+        // ---- content hash section: same merge, flat records like the type section ----
+        var allHashes = new Dictionary<uint, ulong>(_hashRecords.Count + _newContentHashes.Count);
+        foreach (HashRecord record in HashRecordSpan)
+        {
+            allHashes[record.Hash] = record.ContentHash;
+        }
+        foreach ((uint hash, ulong contentHash) in _newContentHashes)
+        {
+            allHashes[hash] = contentHash;
+        }
+        var newHashRecords = new HashRecord[allHashes.Count];
+        int h = 0;
+        foreach ((uint hash, ulong contentHash) in allHashes.OrderBy(kv => kv.Key))
+        {
+            newHashRecords[h++] = new HashRecord { Hash = hash, ContentHash = contentHash };
+        }
+
         byte[] fileBytes;
         using (var buffer = new MemoryStream())
         {
@@ -388,6 +478,9 @@ public sealed class GameCache
                 writer.Write((int)nameBlobStream.Length);
                 nameBlobStream.Position = 0;
                 nameBlobStream.CopyTo(buffer);
+
+                writer.Write(newHashRecords.Length);
+                writer.Write(MemoryMarshal.AsBytes<HashRecord>(newHashRecords));
             }
             fileBytes = buffer.ToArray();
         }
@@ -404,8 +497,10 @@ public sealed class GameCache
         _containers = reparsed._containers;
         _fragmentRecords = reparsed._fragmentRecords;
         _nameBlob = reparsed._nameBlob;
+        _hashRecords = reparsed._hashRecords;
         _newTypes.Clear();
         _newFragments.Clear();
+        _newContentHashes.Clear();
 
         IsDirty = false;
     }

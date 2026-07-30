@@ -1222,7 +1222,8 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
         var progress = new Progress<string>(s => Status = s);
         LegacyImportResult result = await Task.Run(() =>
-            LegacyPatchImporter.Import(zipPath, workspace, names, vfs.Definitions, vfs.ReadOriginal, progress));
+            LegacyPatchImporter.Import(
+                zipPath, workspace, names, vfs.Definitions, vfs.ReadOriginal, vfs.ReadOriginalHash, progress));
         Reindex();
         return result;
     }

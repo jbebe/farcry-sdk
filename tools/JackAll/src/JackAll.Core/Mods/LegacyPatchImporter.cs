@@ -1,4 +1,5 @@
 using System.IO.Compression;
+using System.IO.Hashing;
 using System.Text;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
@@ -51,6 +52,7 @@ public static class LegacyPatchImporter
         NameDatabase names,
         FcbClassDefinitions fcbDefinitions,
         Func<uint, byte[]?> readOriginal,
+        Func<uint, ulong?> readOriginalHash,
         IProgress<string>? progress = null)
     {
         string tempDir = Path.Combine(Path.GetTempPath(), "jackall-legacy-" + Guid.NewGuid().ToString("N"));
@@ -66,7 +68,7 @@ public static class LegacyPatchImporter
                 datEntry.ExtractToFile(tempDat, overwrite: true);
             }
 
-            return Import(tempFat, tempDat, workspace, names, fcbDefinitions, readOriginal, progress);
+            return Import(tempFat, tempDat, workspace, names, fcbDefinitions, readOriginal, readOriginalHash, progress);
         }
         finally
         {
@@ -92,6 +94,7 @@ public static class LegacyPatchImporter
         NameDatabase names,
         FcbClassDefinitions fcbDefinitions,
         Func<uint, byte[]?> readOriginal,
+        Func<uint, ulong?> readOriginalHash,
         IProgress<string>? progress = null)
     {
         using DuniaArchive legacy = DuniaArchive.Open(fatPath, datPath);
@@ -106,7 +109,29 @@ public static class LegacyPatchImporter
             }
 
             byte[] legacyBytes = legacy.Read(entry);
-            byte[]? vanillaBytes = readOriginal(entry.Hash);
+            ulong legacyHash = XxHash64.HashToUInt64(legacyBytes);
+            ulong? vanillaHash = readOriginalHash(entry.Hash);
+
+            // A hash match is exactly as conclusive as the byte match it replaces (see
+            // GameCache.TryGetContentHash's remarks on trusting a 64-bit content hash outright), .fcb
+            // included - decoding both sides to compare can only confirm what this already knows for
+            // free. Crucially, unlike a byte compare, this never has to decompress the vanilla side to
+            // reach that conclusion: readOriginalHash answers from GameCache's persisted table when
+            // warm, so this is what makes a second mod install against the same game cheaper than the
+            // first, not just this one. This is *not* the same shortcut the class remarks warn against:
+            // that's about a byte *mismatch* not implying a real change (a legacy tool can re-encode
+            // `.fcb` content losing the original's dedup, without the modder having touched it), which
+            // this doesn't touch at all - a mismatch still falls through to the full decoded comparison
+            // below, exactly as before, now paying for the vanilla decompress only when it's actually
+            // needed.
+            if (vanillaHash == legacyHash)
+            {
+                skipped++;
+                continue;
+            }
+
+            byte[]? vanillaBytes = vanillaHash is not null ? readOriginal(entry.Hash) : null;
+
             bool named = names.TryResolve(entry.Hash, out string path);
 
             FileType type = named
@@ -118,12 +143,6 @@ public static class LegacyPatchImporter
                 && TryImportFcb(entry.Hash, legacyBytes, vanillaBytes, named ? path : null,
                     workspace, fcbDefinitions, ref imported, ref fragmentsImported, ref skipped))
             {
-                continue;
-            }
-
-            if (vanillaBytes is not null && legacyBytes.AsSpan().SequenceEqual(vanillaBytes))
-            {
-                skipped++;
                 continue;
             }
 

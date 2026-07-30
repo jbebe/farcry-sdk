@@ -86,8 +86,9 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
         var progress = new ImmediateProgress(JsonOutput.Report);
         var importStopwatch = Stopwatch.StartNew();
         LegacyImportResult result = isZip
-            ? LegacyPatchImporter.Import(settings.From, workspace, names, definitions, vfs.ReadOriginal, progress)
-            : ImportFromDirectory(settings.From, workspace, names, definitions, vfs.ReadOriginal, progress);
+            ? LegacyPatchImporter.Import(
+                settings.From, workspace, names, definitions, vfs.ReadOriginal, vfs.ReadOriginalHash, progress)
+            : ImportFromDirectory(settings.From, workspace, names, definitions, vfs.ReadOriginal, vfs.ReadOriginalHash, progress);
         importStopwatch.Stop();
         JsonOutput.Report($"Diffed against the base game in {importStopwatch.ElapsedMilliseconds:N0} ms.");
 
@@ -127,6 +128,7 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
         NameDatabase names,
         FcbClassDefinitions definitions,
         Func<uint, byte[]?> readOriginal,
+        Func<uint, ulong?> readOriginalHash,
         IProgress<string> progress)
     {
         (string Fat, string Dat) pair = LegacyPatchImporter.FindPatchPair(directory)
@@ -134,6 +136,7 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
                 $"No patch.fat/patch.dat pair under '{directory}' - this isn't a legacy full-patch mod. "
                 + "An ordinary community mod (a tree of relative game paths) is used as a layer directly.");
 
-        return LegacyPatchImporter.Import(pair.Fat, pair.Dat, workspace, names, definitions, readOriginal, progress);
+        return LegacyPatchImporter.Import(
+            pair.Fat, pair.Dat, workspace, names, definitions, readOriginal, readOriginalHash, progress);
     }
 }

@@ -107,7 +107,7 @@ public class LegacyPatchImporterTests : IDisposable
 
         using var cleanVfs = GameVfs.Load(_cleanInstall, names);
         LegacyImportResult result = LegacyPatchImporter.Import(
-            legacyZipPath, workspace, names, FcbClassDefinitions.Empty, cleanVfs.ReadOriginal);
+            legacyZipPath, workspace, names, FcbClassDefinitions.Empty, cleanVfs.ReadOriginal, cleanVfs.ReadOriginalHash);
 
         // Exactly the whole-file change and the one touched fragment get staged - every other archive
         // entry, plus every untouched sibling fragment of the container that was touched, is identical
@@ -165,7 +165,8 @@ public class LegacyPatchImporterTests : IDisposable
         using var cleanVfs = GameVfs.Load(_cleanInstall, names);
 
         LegacyImportResult fromZip = LegacyPatchImporter.Import(
-            legacyZipPath, MakeWorkspace("ws_zip"), names, FcbClassDefinitions.Empty, cleanVfs.ReadOriginal);
+            legacyZipPath, MakeWorkspace("ws_zip"), names, FcbClassDefinitions.Empty, cleanVfs.ReadOriginal,
+            cleanVfs.ReadOriginalHash);
 
         (string Fat, string Dat)? pair = LegacyPatchImporter.FindPatchPair(Path.Combine(_sandbox, "extracted"));
         Assert.NotNull(pair);
@@ -173,7 +174,7 @@ public class LegacyPatchImporterTests : IDisposable
         FolderModLayer folderWorkspace = MakeWorkspace("ws_folder");
         LegacyImportResult fromFolder = LegacyPatchImporter.Import(
             pair!.Value.Fat, pair.Value.Dat, folderWorkspace, names, FcbClassDefinitions.Empty,
-            cleanVfs.ReadOriginal);
+            cleanVfs.ReadOriginal, cleanVfs.ReadOriginalHash);
 
         Assert.Equal(fromZip, fromFolder);
         Assert.Equal(1, fromFolder.Imported);
@@ -227,7 +228,7 @@ public class LegacyPatchImporterTests : IDisposable
         var workspace = new FolderModLayer(workspaceDir, "workspace");
 
         Assert.Throws<InvalidDataException>(() => LegacyPatchImporter.Import(
-            zipPath, workspace, NameDatabase.LoadFrom([]), FcbClassDefinitions.Empty, _ => null));
+            zipPath, workspace, NameDatabase.LoadFrom([]), FcbClassDefinitions.Empty, _ => null, _ => null));
     }
 
     private ZipModLayer MakeZipMod(string name, params (string Path, byte[] Content)[] files)

@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.IO.Hashing;
 using System.Text;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
@@ -1080,6 +1081,39 @@ public sealed class GameVfs : IDisposable
             .FirstOrDefault();
 
         return winner?.Read(hash);
+    }
+
+    /// <summary>
+    /// The content hash of <see cref="ReadOriginal"/>'s answer for <paramref name="hash"/>, without
+    /// necessarily decompressing anything to get it: a cache hit returns immediately, and only a miss
+    /// falls back to <see cref="ReadOriginal"/> itself (paying for the decompress it already has to do)
+    /// to compute and remember one. Null exactly when <see cref="ReadOriginal"/> would return null - no
+    /// archive currently provides this hash.
+    /// </summary>
+    /// <remarks>
+    /// This is what lets <see cref="Mods.LegacyPatchImporter.Import"/> tell "genuinely differs from the
+    /// base game" apart from "same as the base game" without ever touching the vanilla side's bytes for
+    /// the (overwhelmingly common) case where nothing changed - only a real difference needs the actual
+    /// bytes <see cref="ReadOriginal"/> provides. The first CLI run against a given install still pays
+    /// full decompression cost to populate this, same as <see cref="GameCache"/>'s other sections; every
+    /// later run reads it back from <see cref="GameInstall.CacheFile"/> in one gulp.
+    /// </remarks>
+    public ulong? ReadOriginalHash(uint hash)
+    {
+        if (_cache.TryGetContentHash(hash, out ulong cached))
+        {
+            return cached;
+        }
+
+        byte[]? original = ReadOriginal(hash);
+        if (original is null)
+        {
+            return null;
+        }
+
+        ulong computed = XxHash64.HashToUInt64(original);
+        _cache.SetContentHash(hash, computed);
+        return computed;
     }
 
     /// <summary>
