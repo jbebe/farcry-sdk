@@ -321,7 +321,6 @@ public sealed class SpkPackage
             int sizeFieldPos = pos;
             uint size = ReadU32(originalFile, ref pos);
             pos += (int)size;
-            int payloadEnd = pos;
             pos += PadLength(pos); // next record (or end of file) is 4-byte aligned
 
             if (id != recordId)

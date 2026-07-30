@@ -37,8 +37,7 @@ internal static class ModLayerLoading
     /// caller ever browses the merged file index or fragment tree — both only ever call
     /// <c>ReadOriginal</c>/<c>ReadOriginalHash</c> — so this goes through
     /// <see cref="GameVfs.OpenForOriginalsOnly"/> rather than <see cref="GameVfs.Load"/>, skipping
-    /// the <c>BuildMergedFiles</c> pass entirely instead of merely trimming it (its old
-    /// <c>includeFragments: false</c>, which only skipped the `.fcb` fragment half of that pass).
+    /// the <c>BuildMergedFiles</c> pass nothing here would read.
     /// </summary>
     /// <remarks>
     /// Every CLI invocation is a fresh process with nothing warm to reuse, unlike JackAll.App (one

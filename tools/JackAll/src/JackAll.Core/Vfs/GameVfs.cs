@@ -1,4 +1,3 @@
-using System.Diagnostics;
 using System.IO.Hashing;
 using System.Text;
 using JackAll.Core.Format;
@@ -201,10 +200,7 @@ public sealed class GameVfs : IDisposable
         // No cache invalidation check here on purpose - the base game's archives never change for
         // the life of an install, so a cache that loaded without error is trusted outright. If the
         // game is reinstalled or patched, the user deletes the cache file themselves.
-        var rebuildStopwatch = Stopwatch.StartNew();
         vfs.Rebuild([], includeFragments, progress);
-        rebuildStopwatch.Stop();
-        progress?.Report($"Built the merged file index in {rebuildStopwatch.ElapsedMilliseconds:N0} ms.");
         return vfs;
     }
 
@@ -239,7 +235,6 @@ public sealed class GameVfs : IDisposable
         var vfs = new GameVfs(names, cache ?? new GameCache(), fcbDefinitions ?? FcbClassDefinitions.Empty);
         vfs._volatileFat = Path.GetFullPath(install.PatchFat);
 
-        var openStopwatch = Stopwatch.StartNew();
         foreach (string fat in install.EnumerateArchiveFats())
         {
             // The .vanilla backup is not a mountable archive, and mounting the live patch.dat is
@@ -283,8 +278,6 @@ public sealed class GameVfs : IDisposable
         vfs._archivesByName = vfs._archives
             .GroupBy(a => a.Name)
             .ToDictionary(g => g.Key, g => g.ToArray());
-        openStopwatch.Stop();
-        progress?.Report($"Opened {vfs._archives.Count:N0} archive(s) in {openStopwatch.ElapsedMilliseconds:N0} ms.");
 
         return vfs;
     }

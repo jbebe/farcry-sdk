@@ -1,5 +1,4 @@
 using System.ComponentModel;
-using System.Diagnostics;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
 using JackAll.Core.Format.Fcb;
@@ -78,19 +77,13 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
         NameDatabase names = CliAssets.LoadNames();
 
         JsonOutput.Report("Mounting the game's archives to diff against…");
-        var mountStopwatch = Stopwatch.StartNew();
         using GameVfs vfs = ModLayerLoading.LoadVfs(install, names);
-        mountStopwatch.Stop();
-        JsonOutput.Report($"Mounted the game's archives in {mountStopwatch.ElapsedMilliseconds:N0} ms.");
 
         var progress = new ImmediateProgress(JsonOutput.Report);
-        var importStopwatch = Stopwatch.StartNew();
         LegacyImportResult result = isZip
             ? LegacyPatchImporter.Import(
                 settings.From, workspace, names, definitions, vfs.ReadOriginal, vfs.ReadOriginalHash, progress)
             : ImportFromDirectory(settings.From, workspace, names, definitions, vfs.ReadOriginal, vfs.ReadOriginalHash, progress);
-        importStopwatch.Stop();
-        JsonOutput.Report($"Diffed against the base game in {importStopwatch.ElapsedMilliseconds:N0} ms.");
 
         // See ModBuildCommand's identical save - persisting what this run sniffed/decoded means the
         // next CLI invocation against this install doesn't pay for it again.

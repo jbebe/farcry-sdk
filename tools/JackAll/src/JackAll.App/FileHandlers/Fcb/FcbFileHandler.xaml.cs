@@ -1,7 +1,6 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using JackAll.App.FileHandlers;
 using JackAll.App.FileHandlers.Text;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Vfs;

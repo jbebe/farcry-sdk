@@ -1,4 +1,3 @@
-using JackAll.Core;
 using JackAll.Core.Format;
 using JackAll.Core.Mods;
 using JackAll.Core.Naming;

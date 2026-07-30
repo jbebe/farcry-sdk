@@ -1,5 +1,4 @@
 using System.IO.Compression;
-using JackAll.Core;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;

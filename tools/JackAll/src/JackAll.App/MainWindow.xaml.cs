@@ -10,7 +10,6 @@ using System.Windows.Media;
 using JackAll.App.Domino;
 using JackAll.App.FileHandlers;
 using JackAll.App.FileHandlers.Fcb;
-using JackAll.App.SaveGames;
 using JackAll.App.XmlEditor;
 using JackAll.Core;
 using JackAll.Core.Format.Fcb;

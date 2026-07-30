@@ -1,4 +1,3 @@
-using JackAll.Core;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;

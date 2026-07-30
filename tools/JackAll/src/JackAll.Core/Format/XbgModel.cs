@@ -482,7 +482,9 @@ public sealed class XbgModel
     {
         foreach (MeshEntry mesh in meshes)
         {
-            foreach ((int _, int lodGrp, int subIdxVal, int idxOffset, int idxCount) in mesh.MatListInfo)
+            // The submesh header's own FaceCount is what drives the read below, not the tuple's
+            // idxCount - hence discarding it here.
+            foreach ((int _, int lodGrp, int subIdxVal, int idxOffset, int _) in mesh.MatListInfo)
             {
                 int? dnksPos = ResolveDnksPos(lodGrp, subIdxVal, mesh.NameIndex, subMeshList);
                 if (dnksPos is null)

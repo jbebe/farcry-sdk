@@ -1,4 +1,3 @@
-using System.IO.Hashing;
 using System.Runtime.InteropServices;
 using System.Text;
 using JackAll.Core.Format;

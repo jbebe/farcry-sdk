@@ -1,6 +1,5 @@
 using System.Globalization;
 using System.IO.Hashing;
-using System.Text;
 using System.Xml.Linq;
 
 namespace JackAll.Core.Format.Fcb;

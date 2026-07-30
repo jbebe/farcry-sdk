@@ -70,10 +70,6 @@ public sealed class MgbReader(byte[] data, int start)
     /// format is a plain narrow string (file paths, resource names), never UTF-8.</summary>
     public static string DecodeAnsi(byte[] bytes) => Encoding.Latin1.GetString(bytes);
 
-    public bool AtEnd => Position >= data.Length;
-
-    public int BytesRemaining => data.Length - Position;
-
     private uint ReadU32Core()
     {
         EnsureAvailable(4);

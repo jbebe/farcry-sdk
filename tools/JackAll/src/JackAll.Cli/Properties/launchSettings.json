@@ -1,8 +1,0 @@
-{
-  "profiles": {
-    "JackAll.Cli": {
-      "commandName": "Project",
-      "commandLineArgs": "mod import-legacy --game \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Far Cry 2\" --from \"C:\\Users\\bebe\\Downloads\\Scubrah's Patch-328-3-7-1759230303.zip\" --out \"C:\\temp\\scubrah-import-test\" --json"
-    }
-  }
-}
