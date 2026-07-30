@@ -77,3 +77,12 @@ Copy-Item (Join-Path $root 'gameart.png') $dist -Force
 
 $size = (Get-ChildItem $dist -Recurse -File | Measure-Object -Property Length -Sum).Sum / 1MB
 Write-Host ("Extension assembled in {0} ({1:N1} MB)" -f $dist, $size) -ForegroundColor Green
+
+Write-Host 'Zipping the extension...' -ForegroundColor Cyan
+$version = (Get-Content (Join-Path $root 'info.json') -Raw | ConvertFrom-Json).version
+$zipPath = Join-Path $root "vortex-farcry2-$version.zip"
+if (Test-Path $zipPath) {
+    Remove-Item $zipPath -Force
+}
+Compress-Archive -Path (Join-Path $dist '*') -DestinationPath $zipPath
+Write-Host ("Zipped to {0}" -f $zipPath) -ForegroundColor Green
