@@ -305,9 +305,12 @@ async function installLegacyPatch(
   const outDir = path.join(util.getVortexPath('temp'), `jackall-legacy-${Date.now().toString(36)}`);
   try {
     const result = await jackall.importLegacy(gameRoot, sourceRoot, outDir, modName, {
-      onProgress: message => notify(api, {
-        id: notificationId, type: 'activity', title: 'Converting a Far Cry 2 patch mod', message,
-      }),
+      onProgress: message => {
+        log('info', `Far Cry 2 (jackall-cli): ${message}`);
+        notify(api, {
+          id: notificationId, type: 'activity', title: 'Converting a Far Cry 2 patch mod', message,
+        });
+      },
     });
 
     const staged = await listFilesRecursive(outDir);

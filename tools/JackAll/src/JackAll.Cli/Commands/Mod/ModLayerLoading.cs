@@ -1,7 +1,6 @@
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
 using JackAll.Core.Format;
-using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
@@ -34,29 +33,29 @@ internal static class ModLayerLoading
     }
 
     /// <summary>
-    /// Mounts the game's archives so <see cref="GameVfs.ReadOriginal"/> is available.
-    /// <paramref name="includeFragments"/> stays off for every CLI caller: the expensive pass exists
-    /// to populate a browsable tree, and nothing here browses — <c>ReadOriginal</c> works off the
-    /// mounted archives alone.
+    /// Mounts the game's archives so <see cref="GameVfs.ReadOriginal"/> is available. Neither CLI
+    /// caller ever browses the merged file index or fragment tree — both only ever call
+    /// <c>ReadOriginal</c>/<c>ReadOriginalHash</c> — so this goes through
+    /// <see cref="GameVfs.OpenForOriginalsOnly"/> rather than <see cref="GameVfs.Load"/>, skipping
+    /// the <c>BuildMergedFiles</c> pass entirely instead of merely trimming it (its old
+    /// <c>includeFragments: false</c>, which only skipped the `.fcb` fragment half of that pass).
     /// </summary>
     /// <remarks>
     /// Every CLI invocation is a fresh process with nothing warm to reuse, unlike JackAll.App (one
     /// long-lived session, one in-memory <see cref="GameCache"/> for its whole lifetime) - so without
-    /// a persistent cache, every single <c>mod build</c>/<c>mod import-legacy</c> run re-sniffs every
-    /// unnamed archive entry's type from scratch (~50,000 header reads; see <see cref="GameCache"/>'s
-    /// own remarks). Loading <see cref="GameInstall.CacheFile"/> here instead of an empty
-    /// <see cref="GameCache"/> means only the *first* CLI run against a given install pays that cost;
-    /// every later one reads it back from disk in one gulp. Saving it back is the caller's job (see
-    /// <see cref="GameVfs.Cache"/>'s remarks) - this method only loads.
+    /// a persistent cache, every single <c>mod build</c>/<c>mod import-legacy</c> run would re-hash
+    /// every vanilla entry <see cref="GameVfs.ReadOriginalHash"/> is asked for from scratch. Loading
+    /// <see cref="GameInstall.CacheFile"/> here instead of an empty <see cref="GameCache"/> means only
+    /// the *first* CLI run against a given install pays that cost; every later one reads it back from
+    /// disk in one gulp. Saving it back is the caller's job (see <see cref="GameVfs.Cache"/>'s
+    /// remarks) - this method only loads.
     /// </remarks>
-    public static GameVfs LoadVfs(GameInstall install, FcbClassDefinitions definitions, NameDatabase names)
-        => GameVfs.Load(
+    public static GameVfs LoadVfs(GameInstall install, NameDatabase names)
+        => GameVfs.OpenForOriginalsOnly(
             install,
             names,
             cache: GameCache.Load(install.CacheFile),
-            fcbDefinitions: definitions,
-            progress: new ImmediateProgress(JsonOutput.Report),
-            includeFragments: false);
+            progress: new ImmediateProgress(JsonOutput.Report));
 
     /// <summary>
     /// Every entry hash the *base game* has, read straight off the <c>.fat</c> indices — far cheaper

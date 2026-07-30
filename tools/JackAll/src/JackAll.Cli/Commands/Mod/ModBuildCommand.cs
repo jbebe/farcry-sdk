@@ -1,4 +1,5 @@
 using System.ComponentModel;
+using System.Diagnostics;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
 using JackAll.Core.Format.Fcb;
@@ -57,9 +58,12 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
             if (needsOriginals)
             {
                 JsonOutput.Report("A mod overrides part of an .fcb - mounting the game's archives for the originals…");
+                var mountStopwatch = Stopwatch.StartNew();
                 definitions = CliAssets.LoadFcbClasses();
-                vfs = ModLayerLoading.LoadVfs(install, definitions, CliAssets.LoadNames());
+                vfs = ModLayerLoading.LoadVfs(install, CliAssets.LoadNames());
                 readOriginal = vfs.ReadOriginal;
+                mountStopwatch.Stop();
+                JsonOutput.Report($"Mounted the game's archives in {mountStopwatch.ElapsedMilliseconds:N0} ms.");
             }
 
             JsonOutput.Report($"Building patch.dat from {layers.Count} layer(s)…");
@@ -67,8 +71,12 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
             // conflict row lets a person do, so load order wins outright (same rule a whole-file
             // override already follows) and the collision is reported below instead of aborting the
             // build over it.
+            var buildStopwatch = Stopwatch.StartNew();
             result = PatchBuilder.Build(install, layers, readOriginal, definitions,
                 resolveFragmentConflictsWithLoadOrder: true);
+            buildStopwatch.Stop();
+            JsonOutput.Report($"Compiled patch.dat in {buildStopwatch.ElapsedMilliseconds:N0} ms "
+                + $"(needed originals: {needsOriginals}).");
         }
         finally
         {

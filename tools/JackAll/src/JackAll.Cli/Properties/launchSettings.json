@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "JackAll.Cli": {
+      "commandName": "Project",
+      "commandLineArgs": "mod build --game \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Far Cry 2\" --layer \"C:\\Program Files (x86)\\Steam\\steamapps\\common\\Far Cry 2\\vortex-staging\\Scubrah's Patch-328-3-7-1759230303\" --json\r\n"
+    }
+  }
+}

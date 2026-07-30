@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using System.Text;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
@@ -194,9 +195,50 @@ public sealed class GameVfs : IDisposable
         IProgress<string>? progress = null,
         bool includeFragments = true)
     {
+        GameVfs vfs = OpenArchives(install, names, cache, fcbDefinitions, progress);
+
+        // No cache invalidation check here on purpose - the base game's archives never change for
+        // the life of an install, so a cache that loaded without error is trusted outright. If the
+        // game is reinstalled or patched, the user deletes the cache file themselves.
+        var rebuildStopwatch = Stopwatch.StartNew();
+        vfs.Rebuild([], includeFragments, progress);
+        rebuildStopwatch.Stop();
+        progress?.Report($"Built the merged file index in {rebuildStopwatch.ElapsedMilliseconds:N0} ms.");
+        return vfs;
+    }
+
+    /// <summary>
+    /// Opens every archive without building the merged file index — everything <see cref="Load"/>
+    /// does except the final <see cref="Rebuild"/> call. For a caller that only ever needs
+    /// <see cref="ReadOriginal"/> (both CLI mod commands: neither browses <see cref="Files"/> or the
+    /// fragment-override index, they just diff or splice against the archives' own bytes),
+    /// <see cref="Rebuild"/>'s <c>BuildMergedFiles</c> pass is pure waste — a `VfsFile` record
+    /// allocated for every entry in every mounted archive, on every single invocation, to populate a
+    /// dictionary nobody reads. <see cref="ReadOriginal"/> only touches <see cref="_archives"/>/
+    /// <see cref="_vanillaPatchArchive"/>, both fully populated by the time this returns, so it works
+    /// identically to a <see cref="Load"/>'d instance — just without the unused index. <paramref
+    /// name="cache"/> is still accepted and exposed via <see cref="Cache"/>: it's never touched by
+    /// <c>BuildMergedFiles</c>'s type-sniffing here (that pass doesn't run), but <see
+    /// cref="ReadOriginalHash"/> still reads and writes through it.
+    /// </summary>
+    public static GameVfs OpenForOriginalsOnly(
+        GameInstall install,
+        NameDatabase names,
+        GameCache? cache = null,
+        IProgress<string>? progress = null)
+        => OpenArchives(install, names, cache, fcbDefinitions: null, progress);
+
+    private static GameVfs OpenArchives(
+        GameInstall install,
+        NameDatabase names,
+        GameCache? cache,
+        FcbClassDefinitions? fcbDefinitions,
+        IProgress<string>? progress)
+    {
         var vfs = new GameVfs(names, cache ?? new GameCache(), fcbDefinitions ?? FcbClassDefinitions.Empty);
         vfs._volatileFat = Path.GetFullPath(install.PatchFat);
 
+        var openStopwatch = Stopwatch.StartNew();
         foreach (string fat in install.EnumerateArchiveFats())
         {
             // The .vanilla backup is not a mountable archive, and mounting the live patch.dat is
@@ -240,11 +282,9 @@ public sealed class GameVfs : IDisposable
         vfs._archivesByName = vfs._archives
             .GroupBy(a => a.Name)
             .ToDictionary(g => g.Key, g => g.ToArray());
+        openStopwatch.Stop();
+        progress?.Report($"Opened {vfs._archives.Count:N0} archive(s) in {openStopwatch.ElapsedMilliseconds:N0} ms.");
 
-        // No cache invalidation check here on purpose - the base game's archives never change for
-        // the life of an install, so a cache that loaded without error is trusted outright. If the
-        // game is reinstalled or patched, the user deletes the cache file themselves.
-        vfs.Rebuild([], includeFragments, progress);
         return vfs;
     }
 

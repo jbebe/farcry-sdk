@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Text;
 using JackAll.Core.Format.Fcb;
 
@@ -83,15 +84,18 @@ public static class FragmentMerge
     ///
     /// Non-null switches to "load order wins, but tell someone": the same rule whole-file overrides
     /// already follow (later layer replaces earlier, no questions asked) is applied to the fragment
-    /// too, and one <see cref="FragmentConflict"/> is appended per collision instead of throwing. This
+    /// too, and one <see cref="FragmentConflict"/> is enqueued per collision instead of throwing. This
     /// is what <c>jackall-cli mod build</c> passes - a headless run driven by a mod manager (Vortex)
     /// has nobody to ask and no "Replace on that row" UI to point at, so refusing to build over a
     /// conflict it can't ask a human to resolve on the spot is worse than building with a flagged
-    /// warning the mod manager can surface after the fact.
+    /// warning the mod manager can surface after the fact. <see cref="ConcurrentQueue{T}"/> rather than
+    /// a plain list because <see cref="PatchBuilder"/> resolves every fragment across every container
+    /// in one flat parallel pass - <c>Resolve</c> itself has to tolerate being called concurrently for
+    /// different fragments sharing the same queue.
     /// </param>
     public static string Resolve(FcbObject vanillaRoot, string fragmentId,
         IReadOnlyList<(IModLayer Layer, uint EntryHash)> layers, FcbClassDefinitions defs,
-        List<FragmentConflict>? conflicts = null)
+        ConcurrentQueue<FragmentConflict>? conflicts = null)
     {
         string? vanillaXml = FcbXml.ExtractFragment(vanillaRoot, fragmentId, defs);
         bool isNewEntry = vanillaXml is null;
@@ -121,8 +125,17 @@ public static class FragmentMerge
                     "fragment XML, not raw/binary data.", ex);
             }
 
-            if (isNewEntry && i == 0)
+            if (i == 0)
             {
+                // Diff3.Merge(ancestor, ancestor, theirs) is documented (Diff3.cs's remarks, pinned by
+                // Diff3Tests.Ours_unchanged_from_ancestor_means_theirs_wins_outright_with_no_conflict)
+                // to always resolve to theirs with no conflict whenever "ours" equals "ancestor" - true
+                // here unconditionally at i == 0: either there's no ancestor at all (a brand-new entry),
+                // or "ours" would just be CanonicalizeFragment(ancestor), which is ancestor's own text
+                // back again (ancestor already went through this same WriteObject/Render pipeline via
+                // ExtractFragment). Take that documented outcome directly instead of spending a real
+                // XML round-trip and a full 3-way text diff to re-derive it - this is the dominant cost
+                // for a fragment touched by exactly one layer, the overwhelmingly common case.
                 result = theirs;
                 continue;
             }
@@ -149,7 +162,7 @@ public static class FragmentMerge
             // Lenient mode: load order wins outright, exactly like a whole-file override - "theirs" (the
             // higher-priority layer) replaces the failed 3-way merge rather than keeping whatever partial
             // result Diff3 produced.
-            conflicts.Add(new FragmentConflict(
+            conflicts.Enqueue(new FragmentConflict(
                 fragmentId, isNewEntry, layer.Name, [.. layers.Take(i).Select(l => l.Layer.Name).Distinct()]));
             result = theirs;
         }

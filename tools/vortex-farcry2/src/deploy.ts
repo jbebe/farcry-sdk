@@ -66,6 +66,7 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
     return;
   }
 
+  const rebuildStart = Date.now();
   try {
     const status = await jackall.status(gameRoot);
     if (!status.valid) {
@@ -103,11 +104,18 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
       message: `Applying ${layers.length} mod(s)…`,
     });
 
-    const result = await jackall.build(gameRoot, layers, {
-      onProgress: message => notify(api, {
-        id: NOTIFICATION_ID, type: 'activity', title: 'Building patch.dat', message,
-      }),
+    const beforeBuild = Date.now();
+    log('info', 'Far Cry 2: pre-build work finished, starting jackall.build', {
+      ms: beforeBuild - rebuildStart,
     });
+
+    const result = await jackall.build(gameRoot, layers, {
+      onProgress: message => {
+        log('info', `Far Cry 2 (jackall-cli): ${message}`);
+        notify(api, { id: NOTIFICATION_ID, type: 'activity', title: 'Building patch.dat', message });
+      },
+    });
+    log('info', 'Far Cry 2: jackall.build finished', { ms: Date.now() - beforeBuild });
     lastBuildSignature = signature;
 
     dismiss(api, NOTIFICATION_ID);
