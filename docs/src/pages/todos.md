@@ -26,12 +26,6 @@ A running task list across the whole project.
 
 ## Tools/JackAll
 
-- [x] Pipe the converters to the CLI tool to please the die-hard modders
-- [x] Extend filtering
-  - let me search for a file by hash too
-  - Add parent folder name to modules (e.g. dlc1/entitylibrary) otherwise it's confusing
-  - Add module search
-  - Add checkbox to filter to include links too (they are really annoying if you're not searching for them)
 - [ ] Review the Domino viewer because it needs a lot of improvements
   - Review code
   - Revamp the visual interface, find a good graph wpf package
@@ -43,6 +37,7 @@ A running task list across the whole project.
 
 ## Tools/vortex-farcry2
 
+- [ ] Test whether the two performance improvements helped or not at all.
 - [ ] Validate against a real Vortex install: install→enable→deploy→purge with a mod from each of the three buckets (legacy patch, FCSE plugin, asset mod), the vanilla-baseline confirmation dialog, and a genuine load-order conflict. `npm test` only proves the bundle loads against a stubbed API, not that any of this actually works.
 - [ ] Resolve `gameart.jpg`: the extension's README calls it a placeholder ("replace with real key art before publishing"), but the committed file is official Far Cry 2 promotional art (Ubisoft-owned) at 1438x810, not the stated 640x360 tile. Decide whether it's cleared to redistribute, or source a clean replacement.
 
