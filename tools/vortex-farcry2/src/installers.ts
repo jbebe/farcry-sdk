@@ -11,6 +11,7 @@ import { ask, dismiss, notify } from './ui';
 const FCSE_LOADER = 'fcse.exe';
 const PLUGINS_DIR = 'plugins';
 const DATA_WIN32_DIR = 'data_win32';
+const FCSE_PAGE_URL = 'https://jbebe.github.io/farcry-sdk/fcse';
 
 /** The game's own binaries. No content mod, FCSE loader or plugin has any reason to ship these. */
 const SUSPICIOUS_BINARIES = ['farcry2.exe', 'dunia.dll', 'fc2.dll'];
@@ -73,6 +74,7 @@ export function makeInstaller(api: types.IExtensionApi) {
 
     const pluginRoot = findPluginsRoot(plainFiles);
     if (pluginRoot !== undefined) {
+      await warnIfFcseMissing(api, gamePath(api));
       return withModType(rebase(plainFiles, pluginRoot), MODTYPE_FCSE_PLUGIN);
     }
 
@@ -152,6 +154,28 @@ async function warnIfBundlingGameBinaries(
     + 'Installing it as-is will not do anything useful through this extension, and overwriting your '
     + 'own FarCry2.exe/Dunia.dll with an unknown copy is risky on its own. Only continue if you '
     + 'understand exactly what this file changes and trust where it came from.');
+}
+
+/**
+ * Detects the file on disk rather than checking mod state, so this catches FCSE installed by hand
+ * (outside Vortex) just as well as FCSE installed as a mod.
+ */
+async function warnIfFcseMissing(api: types.IExtensionApi, gameRoot: string | undefined): Promise<void> {
+  if (gameRoot === undefined || nodeFs.existsSync(path.join(gameRoot, 'bin', FCSE_LOADER))) {
+    return;
+  }
+
+  const result = await ask(api, 'question', 'Far Cry Script Extender (FCSE) not found', {
+    text: 'This mod is an FCSE plugin, but FCSE itself doesn\'t look installed - without it, plugin '
+      + 'DLLs are deployed but never loaded by the game.',
+  }, [
+    { label: 'Download' },
+    { label: 'Continue' },
+  ]);
+
+  if (result.action === 'Open FCSE page') {
+    await util.opn(FCSE_PAGE_URL).catch(() => undefined);
+  }
 }
 
 /** Real downloads bundle readmes and screenshots alongside the pair, and only the pair converts. */

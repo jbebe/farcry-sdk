@@ -90,7 +90,7 @@ export function gameDefinition(api: types.IExtensionApi): types.IGame {
   return {
     id: GAME_ID,
     name: 'Far Cry 2',
-    logo: 'gameart.jpg',
+    logo: 'gameart.png',
     queryPath: findGame,
     queryModPath: () => LAYERS_FOLDER,
     executable: () => path.join('bin', 'FarCry2.exe'),
