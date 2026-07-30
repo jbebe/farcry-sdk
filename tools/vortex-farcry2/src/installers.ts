@@ -33,7 +33,7 @@ export function testSupported(files: string[], gameId: string): Promise<types.IS
  *   3. Asset mod - rooted under a literal Data_Win32\ folder. Strict on purpose: a mod either uses
  *      the convention or it doesn't, with no guessing in between.
  *
- * Only the legacy bucket touches jackall-cli, because converting one means diffing against the game's
+ * Only the legacy bucket touches jackall-mi, because converting one means diffing against the game's
  * own archives. The other two are pure string work over the file list.
  */
 export function makeInstaller(api: types.IExtensionApi) {
@@ -236,7 +236,7 @@ async function installLegacyPatch(
   try {
     const result = await jackall.importLegacy(gameRoot, sourceRoot, outDir, modName, {
       onProgress: message => {
-        log('info', `Far Cry 2 (jackall-cli): ${message}`);
+        log('info', `Far Cry 2 (jackall-mi): ${message}`);
         notify(api, { id, type: 'activity', title, message });
       },
     });

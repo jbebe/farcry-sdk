@@ -3,22 +3,26 @@
     Assembles the Vortex extension into dist\ - the folder you drop into Vortex.
 
 .DESCRIPTION
-    Two halves get built here: the JavaScript bundle (webpack, from src\), and the JackAll CLI the
-    extension shells out to for every piece of Far Cry 2 mod logic. The CLI is published straight
-    from tools\JackAll in this repo rather than downloaded, so the extension can never ship against
-    a JackAll it wasn't built with.
+    Two halves get built here: the JavaScript bundle (webpack, from src\), and jackall-mi - the mod
+    installer the extension shells out to for every piece of Far Cry 2 mod logic. It's published
+    straight from tools\JackAll in this repo rather than downloaded, so the extension can never ship
+    against a JackAll it wasn't built with.
+
+    jackall-mi rather than the full jackall-cli on purpose: it carries only the four mod commands, has
+    no Spectre.Console, and so publishes trimmed - about 12 MB against jackall-cli's 37. Users download
+    this, so that difference is the whole reason the project exists.
 
     The result is self-contained: no .NET runtime needed on the user's machine, no network access at
     install or deploy time.
 
 .PARAMETER SkipCli
-    Reuse whatever is already in dist\bin instead of republishing the CLI. Publishing it takes far
+    Reuse whatever is already in dist\bin instead of republishing jackall-mi. Publishing takes far
     longer than the JS build, so this is what you want while iterating on the extension itself.
 
 .PARAMETER ReadyToRun
-    Publish the CLI with ahead-of-time compilation. Roughly doubles the exe (about 20 MB to 40 MB)
-    to save a few hundred milliseconds of startup on a process that runs a handful of times per
-    session - which is a bad trade for something users have to download, so it's off by default.
+    Publish with ahead-of-time compilation. Costs a good deal of size to save a few hundred
+    milliseconds of startup on a process that runs a handful of times per session - a bad trade for
+    something users have to download, so it's off by default.
 #>
 [CmdletBinding()]
 param(
@@ -29,7 +33,7 @@ param(
 $ErrorActionPreference = 'Stop'
 $root = $PSScriptRoot
 $dist = Join-Path $root 'dist'
-$cliProject = Join-Path $root '..\JackAll\src\JackAll.Cli\JackAll.Cli.csproj'
+$cliProject = Join-Path $root '..\JackAll\src\JackAll.ModInstaller\JackAll.ModInstaller.csproj'
 
 if (Test-Path $dist) {
     if ($SkipCli) {
@@ -45,7 +49,7 @@ if (Test-Path $dist) {
 }
 
 if (-not $SkipCli) {
-    Write-Host 'Publishing jackall-cli...' -ForegroundColor Cyan
+    Write-Host 'Publishing jackall-mi...' -ForegroundColor Cyan
     $cliOut = Join-Path $dist 'bin'
     dotnet publish $cliProject `
         --configuration Release `

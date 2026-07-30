@@ -41,9 +41,9 @@ export class JackAllError extends Error {
   }
 }
 
-/** JACKALL_CLI points at a local `dotnet build` output instead of the bundled exe. */
+/** JACKALL_MI points at a local `dotnet build` output instead of the bundled exe. */
 function cliPath(): string {
-  return process.env.JACKALL_CLI ?? path.join(__dirname, 'bin', 'jackall-cli.exe');
+  return process.env.JACKALL_MI ?? path.join(__dirname, 'bin', 'jackall-mi.exe');
 }
 
 export interface RunOptions {
@@ -77,7 +77,7 @@ async function run<T extends Envelope>(args: string[], options: RunOptions = {})
     });
 
     child.on('error', err => reject(
-      new JackAllError(`Couldn't run jackall-cli (${cliPath()}): ${err.message}`)));
+      new JackAllError(`Couldn't run jackall-mi (${cliPath()}): ${err.message}`)));
 
     child.on('close', () => {
       let parsed: T;
@@ -87,11 +87,11 @@ async function run<T extends Envelope>(args: string[], options: RunOptions = {})
         // No document means the CLI died before writing one - a crash, a missing dependency, a
         // truncated pipe. Whatever it last managed to say is the only evidence there is.
         reject(new JackAllError(
-          `jackall-cli produced no result. ${tail.trim() || last || 'No output.'}`));
+          `jackall-mi produced no result. ${tail.trim() || last || 'No output.'}`));
         return;
       }
       if (!parsed.ok) {
-        reject(new JackAllError(parsed.error ?? 'jackall-cli reported an unspecified failure.'));
+        reject(new JackAllError(parsed.error ?? 'jackall-mi reported an unspecified failure.'));
         return;
       }
       resolve(parsed);

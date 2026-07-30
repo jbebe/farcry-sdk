@@ -207,7 +207,11 @@ conversions, hash-list maintenance, and the whole mod pipeline.
 The `mod` branch is what the [Vortex extension](/docs/modding/vortex) drives, so every one of those
 commands also takes `--json`: exactly one object on stdout, progress on stderr, and
 `{"ok":false,"error":"…"}` with a non-zero exit on failure. Full reference on the
-[Vortex page](/docs/modding/vortex#jackall-cli-mod-reference).
+[Vortex page](/docs/modding/vortex#jackall-mi-mod-reference).
+
+The extension actually ships `jackall-mi.exe`, a mod-installer-only build of that same `mod` branch —
+identical output, but ~12 MB instead of ~37 because it drops the asset-format commands and publishes
+trimmed. `jackall-cli` remains the one to reach for by hand, since it has everything.
 
 ```
 jackall-cli mod status --game "C:\Games\Far Cry 2"

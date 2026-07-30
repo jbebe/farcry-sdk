@@ -18,7 +18,7 @@ pair** (see [Getting Started](./getting-started.md) for why
 
 So the Vortex extension is a front-end, not an implementation: Vortex handles downloading, staging,
 enabling and ordering, and everything that actually needs the game's own archives — converting a
-legacy patch, compiling the final `patch.dat` — goes to `jackall-cli`. Deciding *what kind* of mod an
+legacy patch, compiling the final `patch.dat` — goes to `jackall-mi`. Deciding *what kind* of mod an
 archive is happens first, though, and deliberately doesn't: it's three plain, string-only checks (see
 "What gets recognised" below), not a call out to JackAll. There's nothing to hash or score once an
 archive either does or doesn't have a literal `Data_Win32\` folder.
@@ -29,8 +29,8 @@ archive either does or doesn't have a literal `Data_Win32\` folder.
 2. Deployment puts each mod in its own folder under `<game>\vortex-staging\` — one folder per mod,
    which is exactly JackAll's notion of a **layer**. At this point the game still can't see any of
    it.
-3. `did-deploy` runs `jackall-cli mod build`, compiling those layers into `patch.dat`.
-4. Purging runs `jackall-cli mod restore`, putting the pristine archive pair back.
+3. `did-deploy` runs `jackall-mi mod build`, compiling those layers into `patch.dat`.
+4. Purging runs `jackall-mi mod restore`, putting the pristine archive pair back.
 
 `vortex-staging\` sits at the game root and not under `Data_Win32` on purpose: JackAll finds the
 game's archives by globbing `*.fat` recursively under `Data_Win32`, so a legacy mod's `patch.fat`
@@ -61,7 +61,7 @@ An archive is exactly one of three buckets, checked in this order:
 `FCSE.exe` itself (the loader/host program, not a plugin) is recognized separately and deployed to
 `bin\`.
 
-None of this calls `jackall-cli` — it's plain string matching over the file list. Only bucket 1 ever
+None of this calls `jackall-mi` — it's plain string matching over the file list. Only bucket 1 ever
 reaches into JackAll (`mod import-legacy`), since converting a legacy patch genuinely requires
 diffing against the game's own archives; buckets 2 and 3 don't need the game discovered at all.
 
@@ -72,7 +72,7 @@ disk. That's what makes builds idempotent and disabling a mod a true removal —
 whatever gets captured as "vanilla" is baked into every future build. Capture *someone else's mod*
 as the baseline and there is no way back short of reinstalling the game.
 
-`jackall-cli mod status` reports exactly this state as `needsVanillaConfirmation`, and both the
+`jackall-mi mod status` reports exactly this state as `needsVanillaConfirmation`, and both the
 extension and the CLI refuse to build while it holds. The fix is to restore the original files
 (Steam: right-click the game → *Verify integrity of game files*) before modding.
 
@@ -80,14 +80,19 @@ extension and the CLI refuse to build while it holds. The fix is to restore the 
 `PatchBuilder.Build` does **not** guard against this by itself. `EnsureVanillaBackup()` only refuses
 when it's given a confirmation callback that returns false, so with no callback — which is every
 headless caller — it backs the modded patch up regardless. The JackAll app never hits it because it
-always passes a callback; `jackall-cli mod build` has its own check for the same reason.
+always passes a callback; `jackall-mi mod build` has its own check for the same reason.
 :::
 
-## `jackall-cli mod` reference
+## `jackall-mi mod` reference
 
 Every command takes `--json`: exactly one object on stdout, progress on stderr, non-zero exit with
 `{"ok":false,"error":"…"}` on failure. That's what makes the CLI drivable by a program rather than
 just a person.
+
+`jackall-mi` carries the four commands the extension actually drives — `status`, `build`,
+`import-legacy`, `restore` — and nothing else. That's what lets it publish trimmed at ~12 MB instead
+of `jackall-cli`'s ~37 MB, which matters because users download it. `jackall-cli` still accepts all
+four with identical output, plus `mod inspect` and every asset-format command.
 
 ### `mod status --game <dir>`
 
@@ -95,7 +100,7 @@ Whether a folder is a usable install, and what state its patch archive is in. Re
 folder as data (`valid: false` plus a reason), not as an error.
 
 ```console
-$ jackall-cli mod status --game "C:\Games\Far Cry 2" --json
+$ jackall-mi mod status --game "C:\Games\Far Cry 2" --json
 {"ok":true,"gamePath":"…","valid":true,"hasVanillaBackup":true,"looksModded":false,
  "patchEntries":216,"needsVanillaConfirmation":false}
 ```
@@ -104,7 +109,8 @@ A stock 1.03 `patch.fat` has **216 entries**; `looksModded` is a heuristic on th
 
 ### `mod inspect <path> [--game <dir>]`
 
-What a folder or zip actually is, and where its tree starts.
+What a folder or zip actually is, and where its tree starts. **`jackall-cli` only** — the extension
+classifies archives itself (see "What gets recognised"), so `jackall-mi` leaves this out.
 
 ```console
 $ jackall-cli mod inspect coolmod.zip --game "C:\Games\Far Cry 2" --json
@@ -132,7 +138,7 @@ The deploy. `--layer` is repeatable and **order-significant — later wins**. No
 deduplicates it.
 
 ```console
-$ jackall-cli mod build --game "C:\Games\Far Cry 2" --layer mods\a --layer mods\b --json
+$ jackall-mi mod build --game "C:\Games\Far Cry 2" --layer mods\a --layer mods\b --json
 {"ok":true,"totalEntries":231,"vanillaEntries":210,"overriddenEntries":6,"addedEntries":15,
  "outputBytes":10402118,"layers":[…]}
 ```
@@ -153,5 +159,5 @@ exists, rather than pretending to succeed.
 ## Getting it
 
 The extension is published as `vortex-farcry2-<version>.zip`. In Vortex, go to **Extensions**, drop
-the zip on the "drag a file here" area, and restart. It bundles `jackall-cli.exe` (self-contained —
+the zip on the "drag a file here" area, and restart. It bundles `jackall-mi.exe` (self-contained —
 no .NET runtime needed), so there's nothing else to install.

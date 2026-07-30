@@ -12,12 +12,12 @@ folder. "Installing a mod" means **recompiling that archive pair** with the mod'
 
 [JackAll](../JackAll) already does that, correctly and reversibly. So this extension doesn't
 reimplement any of it — anything that actually needs the game's own archives shells out to
-`jackall-cli`, and confines itself to the parts Vortex is actually good at. Classifying *what kind*
+`jackall-mi`, and confines itself to the parts Vortex is actually good at. Classifying *what kind*
 of mod an archive is happens first, though, and is deliberately plain string matching, not a call to
 JackAll - see "What it installs" below.
 
 ```
-Vortex                                  jackall-cli
+Vortex                                  jackall-mi
 ──────                                  ───────────
 download, extract, stage      ──────>   (classified locally - no CLI call)
 install a legacy patch mod    ──────>   mod import-legacy diff it against the base game
@@ -58,7 +58,7 @@ Entries aren't individually toggleable: Vortex's own enable/disable already deci
 ## What it installs
 
 An archive is exactly one of three buckets, checked in this order - plain string matching over the
-file list, no `jackall-cli` round trip involved:
+file list, no `jackall-mi` round trip involved:
 
 | # | Archive shape | Handling |
 | --- | --- | --- |
@@ -68,13 +68,13 @@ file list, no `jackall-cli` round trip involved:
 
 `FCSE.exe` itself (the loader, not a plugin) is recognized separately and deployed to `bin\`.
 
-Only bucket 1 ever calls `jackall-cli` (`mod import-legacy`) - converting a legacy patch genuinely
+Only bucket 1 ever calls `jackall-mi` (`mod import-legacy`) - converting a legacy patch genuinely
 needs the game's archives to diff against. Buckets 2 and 3 don't need the game discovered at all.
 
 ## Building
 
 ```powershell
-./build.ps1              # publishes jackall-cli into dist\bin, then bundles the extension
+./build.ps1              # publishes jackall-mi into dist\bin, then bundles the extension
 ./build.ps1 -SkipCli     # JS only - much faster while iterating
 npm run typecheck
 npm test                 # loads the built bundle against a stubbed vortex-api
@@ -83,7 +83,7 @@ npm test                 # loads the built bundle against a stubbed vortex-api
 `dist\` is the extension folder: drop it (or a zip of its *contents*) into Vortex via
 **Extensions → drag a file here**, then restart Vortex.
 
-Set `JACKALL_CLI` to an absolute path to point a running Vortex at a local `dotnet build` of the CLI
+Set `JACKALL_MI` to an absolute path to point a running Vortex at a local `dotnet build` of the CLI
 instead of the bundled copy — the fast loop when you're changing JackAll and the extension together.
 
 ## Layout
@@ -93,7 +93,7 @@ info.json          extension manifest Vortex reads
 index.js           the whole extension, bundled (webpack)
 gameart.jpg        640x360 tile - placeholder; replace with real key art before publishing
 bin\
-  jackall-cli.exe  self-contained, no .NET runtime needed
+  jackall-mi.exe  self-contained, no .NET runtime needed
   .itemhashes      hash -> filename dictionary
   .fcbclasses      .fcb class/member name-and-type config
 ```
@@ -104,7 +104,7 @@ bin\
 | --- | --- |
 | `src/index.ts` | wiring: what gets registered |
 | `src/game.ts` | discovery, `requiredFiles`, setup, the vanilla-baseline dialog |
-| `src/jackall.ts` | the only place that runs `jackall-cli` and parses its `--json` output |
+| `src/jackall.ts` | the only place that runs `jackall-mi` and parses its `--json` output |
 | `src/installers.ts` | classifying an archive and turning it into install instructions |
 | `src/loadOrder.ts` | the load order page, and the ordered layer list the build consumes |
 | `src/deploy.ts` | `did-deploy` → build, `did-purge` → restore |

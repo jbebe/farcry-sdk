@@ -73,13 +73,14 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
             ?? Path.GetFileName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(settings.Out)));
         var workspace = new FolderModLayer(settings.Out, name);
 
-        FcbClassDefinitions definitions = CliAssets.LoadFcbClasses();
-        NameDatabase names = CliAssets.LoadNames();
+        FcbClassDefinitions definitions = BundledAssets.LoadFcbClasses();
+        NameDatabase names = BundledAssets.LoadNames();
+
+        var progress = new SyncProgress(JsonOutput.Report);
 
         JsonOutput.Report("Mounting the game's archives to diff against…");
-        using GameVfs vfs = ModLayerLoading.LoadVfs(install, names);
+        using GameVfs vfs = ModPipeline.OpenOriginals(install, names, progress);
 
-        var progress = new ImmediateProgress(JsonOutput.Report);
         LegacyImportResult result = isZip
             ? LegacyPatchImporter.Import(
                 settings.From, workspace, names, definitions, vfs.ReadOriginal, vfs.ReadOriginalHash, progress)

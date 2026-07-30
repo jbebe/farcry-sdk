@@ -1,10 +1,11 @@
-using System.ComponentModel;
-using System.Text;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core.Format;
 using JackAll.Core.Naming;
-using Spectre.Console;
+using JackAll.Core;
 using Spectre.Console.Cli;
+using Spectre.Console;
+using System.ComponentModel;
+using System.Text;
 
 namespace JackAll.Cli.Commands.Archive;
 
@@ -45,7 +46,7 @@ public sealed class ArchiveExtractCommand : CliCommand<ArchiveExtractCommand.Set
         }
 
         using var archive = DuniaArchive.Open(settings.Input);
-        NameDatabase? names = settings.Names ? CliAssets.LoadNames() : null;
+        NameDatabase? names = settings.Names ? BundledAssets.LoadNames() : null;
         string outDir = settings.OutDir ?? Path.Combine(
             Path.GetDirectoryName(Path.GetFullPath(settings.Input)) ?? ".", archive.Name);
 

@@ -3,5 +3,6 @@
   <Project Path="src/JackAll.Tools/JackAll.Tools.csproj" />
   <Project Path="src/JackAll.App/JackAll.App.csproj" />
   <Project Path="src/JackAll.Cli/JackAll.Cli.csproj" />
+  <Project Path="src/JackAll.ModInstaller/JackAll.ModInstaller.csproj" />
   <Project Path="src/JackAll.Core.Tests/JackAll.Core.Tests.csproj" />
 </Solution>

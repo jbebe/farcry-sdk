@@ -1,8 +1,9 @@
-using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core.Format.Fcb;
-using Spectre.Console;
+using JackAll.Core;
 using Spectre.Console.Cli;
+using Spectre.Console;
+using System.ComponentModel;
 
 namespace JackAll.Cli.Commands.Fcb;
 
@@ -35,7 +36,7 @@ public sealed class FcbDecodeCommand : CliCommand<FcbDecodeCommand.Settings>
         byte[] data = CliIO.ReadInput(settings.Input);
         FcbObject root = FcbDocument.Deserialize(data);
 
-        FcbClassDefinitions defs = settings.NoClasses ? FcbClassDefinitions.Empty : CliAssets.LoadFcbClasses();
+        FcbClassDefinitions defs = settings.NoClasses ? FcbClassDefinitions.Empty : BundledAssets.LoadFcbClasses();
         FcbXmlExport export = FcbXml.ToXml(root, defs);
 
         string baseName = Path.GetFileNameWithoutExtension(settings.Input);

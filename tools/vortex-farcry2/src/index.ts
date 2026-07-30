@@ -9,7 +9,7 @@ import { loadOrderInfo } from './loadOrder';
 /**
  * Far Cry 2 has no loose-file loading and no plugin list - everything a mod changes has to be
  * compiled into Data_Win32\patch.dat. So Vortex handles downloading, staging, enabling and ordering,
- * and jackall-cli answers every question about what a file means to the game.
+ * and jackall-mi answers every question about what a file means to the game.
  */
 function main(context: types.IExtensionContext): boolean {
   context.registerGame(gameDefinition(context.api));

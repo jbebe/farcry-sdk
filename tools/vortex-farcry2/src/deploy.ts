@@ -82,7 +82,7 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
 
     const result = await jackall.build(gameRoot, layers, {
       onProgress: message => {
-        log('info', `Far Cry 2 (jackall-cli): ${message}`);
+        log('info', `Far Cry 2 (jackall-mi): ${message}`);
         notify(api, { id: NOTIFICATION_ID, type: 'activity', title: 'Building patch.dat', message });
       },
     });

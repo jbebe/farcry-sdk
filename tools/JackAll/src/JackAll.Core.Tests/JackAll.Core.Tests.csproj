@@ -22,6 +22,8 @@
   <ItemGroup>
     <ProjectReference Include="..\JackAll.Core\JackAll.Core.csproj" />
     <ProjectReference Include="..\JackAll.Tools\JackAll.Tools.csproj" />
+    <!-- For CommandLineTests only: jackall-mi's argument parser. -->
+    <ProjectReference Include="..\JackAll.ModInstaller\JackAll.ModInstaller.csproj" />
   </ItemGroup>
 
   <ItemGroup>

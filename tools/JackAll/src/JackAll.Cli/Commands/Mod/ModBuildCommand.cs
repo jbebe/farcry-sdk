@@ -41,7 +41,7 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
         GameInstall install = settings.OpenInstall();
         GuardVanillaBackup(install, settings.Force);
 
-        List<IModLayer> layers = [.. settings.Layers.Select(ModLayerLoading.Open)];
+        List<IModLayer> layers = [.. settings.Layers.Select(ModPipeline.OpenLayer)];
 
         // Reading the archives is only needed to resolve a container a layer overrides *part* of -
         // both as the base to splice onto and as the ancestor each contributor is merged against.
@@ -57,8 +57,9 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
             if (needsOriginals)
             {
                 JsonOutput.Report("A mod overrides part of an .fcb - mounting the game's archives for the originals…");
-                definitions = CliAssets.LoadFcbClasses();
-                vfs = ModLayerLoading.LoadVfs(install, CliAssets.LoadNames());
+                definitions = BundledAssets.LoadFcbClasses();
+                vfs = ModPipeline.OpenOriginals(
+                    install, BundledAssets.LoadNames(), new SyncProgress(JsonOutput.Report));
                 readOriginal = vfs.ReadOriginal;
             }
 

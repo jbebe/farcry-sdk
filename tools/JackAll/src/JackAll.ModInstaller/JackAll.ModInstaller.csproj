@@ -1,0 +1,68 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    jackall-mi - the mod installer. The four commands a mod manager actually drives (status, build,
+    import-legacy, restore), and nothing else.
+
+    This exists separately from jackall-cli because it's what ships inside the Vortex extension, where
+    every megabyte is something a user downloads. Two things make it small: it references JackAll.Core
+    alone (no JackAll.Tools, so no asset-format code and no Loretta), and it has no Spectre.Console -
+    which is what lets PublishTrimmed work at all, since Spectre.Console.Cli discovers commands by
+    reflection. Arguments are parsed by hand in CommandLine.cs; the whole surface is a handful of
+    fixed flags, so there was nothing for a parser library to buy.
+
+    The JSON contract is identical to jackall-cli's `mod` branch, on purpose: the extension can point
+    at either. Payload shapes live in JsonPayloads.cs and are serialized through a source-generated
+    context rather than reflection, which is the one part of this that trimming would otherwise break.
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <RootNamespace>JackAll.ModInstaller</RootNamespace>
+    <AssemblyName>jackall-mi</AssemblyName>
+    <InvariantGlobalization>true</InvariantGlobalization>
+  </PropertyGroup>
+
+  <PropertyGroup Condition="'$(_IsPublishing)' == 'true'">
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
+    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+    <DebugType>none</DebugType>
+    <AllowedReferenceRelatedFileExtensions>none</AllowedReferenceRelatedFileExtensions>
+    <!--
+      The whole point of this project. Warnings are errors here so a future change that reintroduces
+      reflection fails the publish instead of producing an exe that dies at runtime on a trimmed path.
+    -->
+    <PublishTrimmed>true</PublishTrimmed>
+    <TrimMode>full</TrimMode>
+    <TrimmerSingleWarn>false</TrimmerSingleWarn>
+    <WarningsAsErrors>IL2026;IL2067;IL2072;IL2075;IL2087;IL2091;IL3050</WarningsAsErrors>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JackAll.Core\JackAll.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- CommandLine is the one piece here with no coverage anywhere else, and a parser bug that
+         dropped a layer flag would silently build a patch missing a mod. -->
+    <InternalsVisibleTo Include="JackAll.Core.Tests" />
+  </ItemGroup>
+
+  <!-- The same two assets jackall-cli ships: the hash dictionary gives entries real filenames, and
+       the class config lets a fragment merge resolve .fcb member names instead of raw BinHex. -->
+  <ItemGroup>
+    <Content Include="..\..\assets\fc2.hashlist" Link=".itemhashes">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\assets\binary_classes.xml" Link=".fcbclasses">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+  </ItemGroup>
+
+</Project>
