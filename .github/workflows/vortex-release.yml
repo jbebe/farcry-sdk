@@ -2,11 +2,6 @@ name: Vortex extension release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version - used as the git tag and as vortex-farcry2-{version}.zip'
-        required: true
-        type: string
 
 permissions:
   contents: write
@@ -31,14 +26,26 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund --legacy-peer-deps
 
-      - name: Stamp the version into info.json
-        # Vortex reads the version from info.json, so the tag and what users see in the extension
-        # list have to agree - stamping it here means there's no second place to remember to bump.
+      - name: Read the version from info.json
+        # info.json is what Vortex reads the version from, so it's the single source of truth -
+        # the tag and release are derived from it instead of taken as a separate input.
+        id: version
         shell: pwsh
         run: |
           $info = Get-Content info.json -Raw | ConvertFrom-Json
-          $info.version = '${{ inputs.version }}'
-          $info | ConvertTo-Json -Depth 5 | Set-Content info.json -Encoding utf8
+          "version=$($info.version)" >> $env:GITHUB_OUTPUT
+
+      - name: Fail if the tag already exists
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          $tag = "vortex-${{ steps.version.outputs.version }}"
+          $existing = git ls-remote --tags origin "refs/tags/$tag"
+          if ($existing) {
+            Write-Error "Tag $tag already exists - bump the version in info.json before releasing."
+            exit 1
+          }
 
       - name: Build
         run: pwsh ./build.ps1
@@ -46,17 +53,12 @@ jobs:
       - name: Smoke test
         run: npm test
 
-      - name: Zip the extension
-        # The zip's *contents* are what Vortex installs, so info.json/index.js/gameart.jpg/bin\ have
-        # to be at its top level, not inside a folder.
-        shell: pwsh
-        run: Compress-Archive -Path dist\* -DestinationPath "vortex-farcry2-${{ inputs.version }}.zip"
-
       - name: Tag and publish GitHub release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git tag "vortex-${{ inputs.version }}"
-          git push origin "vortex-${{ inputs.version }}"
-          gh release create "vortex-${{ inputs.version }}" "vortex-farcry2-${{ inputs.version }}.zip" --title "Vortex Far Cry 2 extension ${{ inputs.version }}" --generate-notes
+          $tag = "vortex-${{ steps.version.outputs.version }}"
+          git tag $tag
+          git push origin $tag
+          gh release create $tag "vortex-farcry2-${{ steps.version.outputs.version }}.zip" --title "Vortex Far Cry 2 extension ${{ steps.version.outputs.version }}" --generate-notes
