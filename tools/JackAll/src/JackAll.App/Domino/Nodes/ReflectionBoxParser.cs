@@ -3,7 +3,7 @@ using Loretta.CodeAnalysis;
 using Loretta.CodeAnalysis.Lua;
 using Loretta.CodeAnalysis.Lua.Syntax;
 
-namespace Domino.Core.Nodes;
+namespace JackAll.App.Domino.Nodes;
 
 /// <summary>
 /// Extracts a `system\` node's pin signature from its `-- DOMINO REFLECTION BOX START ... END` comment

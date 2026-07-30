@@ -1,6 +1,7 @@
-using Domino.Core.Graphs;
+using JackAll.App.Domino;
+using JackAll.App.Domino.Graphs;
 
-namespace Domino.Core.Tests;
+namespace JackAll.Core.Tests;
 
 public class UserGraphWriterTests
 {

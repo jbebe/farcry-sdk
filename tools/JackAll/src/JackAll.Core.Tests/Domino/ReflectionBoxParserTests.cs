@@ -1,6 +1,7 @@
-using Domino.Core.Nodes;
+using JackAll.App.Domino;
+using JackAll.App.Domino.Nodes;
 
-namespace Domino.Core.Tests;
+namespace JackAll.Core.Tests;
 
 public class ReflectionBoxParserTests
 {

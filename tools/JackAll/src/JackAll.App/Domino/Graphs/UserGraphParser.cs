@@ -1,7 +1,7 @@
 using Loretta.CodeAnalysis.Lua;
 using Loretta.CodeAnalysis.Lua.Syntax;
 
-namespace Domino.Core.Graphs;
+namespace JackAll.App.Domino.Graphs;
 
 /// <summary>
 /// Classifies a `user\` mission graph's parsed <see cref="CompilationUnitSyntax"/> into the closed set of

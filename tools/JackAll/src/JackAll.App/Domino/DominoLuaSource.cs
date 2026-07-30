@@ -2,7 +2,7 @@ using Loretta.CodeAnalysis;
 using Loretta.CodeAnalysis.Lua;
 using Loretta.CodeAnalysis.Lua.Syntax;
 
-namespace Domino.Core;
+namespace JackAll.App.Domino;
 
 /// <summary>The one place that turns Domino Lua source text into a syntax tree - every parser in this
 /// project (<see cref="Nodes.ReflectionBoxParser"/>, <see cref="Graphs.UserGraphParser"/>) starts here,

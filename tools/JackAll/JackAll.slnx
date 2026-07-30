@@ -3,6 +3,4 @@
   <Project Path="src/JackAll.App/JackAll.App.csproj" />
   <Project Path="src/JackAll.Cli/JackAll.Cli.csproj" />
   <Project Path="src/JackAll.Core.Tests/JackAll.Core.Tests.csproj" />
-  <Project Path="src/Domino.Core/Domino.Core.csproj" />
-  <Project Path="src/Domino.Core.Tests/Domino.Core.Tests.csproj" />
 </Solution>

@@ -1,6 +1,6 @@
 using Loretta.CodeAnalysis.Lua.Syntax;
 
-namespace Domino.Core.Graphs;
+namespace JackAll.App.Domino.Graphs;
 
 /// <summary>One classified statement from inside a `user\` graph's generated function body. Every real
 /// statement is one of these seven mechanical shapes or, if not, falls back to <see cref="OtherStmt"/> so

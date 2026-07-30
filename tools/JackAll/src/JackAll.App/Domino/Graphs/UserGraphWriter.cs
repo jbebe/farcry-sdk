@@ -1,6 +1,6 @@
 using System.Text;
 
-namespace Domino.Core.Graphs;
+namespace JackAll.App.Domino.Graphs;
 
 /// <summary>
 /// Renders a classified <see cref="UserGraph"/> back to Lua source text - the reverse of

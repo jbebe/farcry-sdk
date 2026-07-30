@@ -1,8 +1,9 @@
-using Domino.Core.Graphs;
+using JackAll.App.Domino;
+using JackAll.App.Domino.Graphs;
 using Loretta.CodeAnalysis.Lua;
 using Loretta.CodeAnalysis.Lua.Syntax;
 
-namespace Domino.Core.Tests;
+namespace JackAll.Core.Tests;
 
 public class GraphBuilderTests
 {

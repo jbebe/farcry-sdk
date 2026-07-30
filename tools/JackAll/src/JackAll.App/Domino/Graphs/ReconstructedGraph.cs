@@ -1,4 +1,4 @@
-namespace Domino.Core.Graphs;
+namespace JackAll.App.Domino.Graphs;
 
 /// <summary>The rebuilt visual graph for one `user\` mission graph file - boxes, typed connections, and
 /// the file-level metadata (`Create()`'s dependency declarations, direct resource loads) that don't

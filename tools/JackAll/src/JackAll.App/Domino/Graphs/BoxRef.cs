@@ -1,4 +1,4 @@
-namespace Domino.Core.Graphs;
+namespace JackAll.App.Domino.Graphs;
 
 /// <summary>Identifies which box instance a `user\` graph statement is operating on.</summary>
 public abstract record BoxRef;

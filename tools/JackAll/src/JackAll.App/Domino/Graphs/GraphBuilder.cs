@@ -1,6 +1,6 @@
 using Loretta.CodeAnalysis.Lua.Syntax;
 
-namespace Domino.Core.Graphs;
+namespace JackAll.App.Domino.Graphs;
 
 /// <summary>
 /// Rebuilds a <see cref="ReconstructedGraph"/> (boxes, typed pins, connections) from a

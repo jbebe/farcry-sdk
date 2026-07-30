@@ -1,4 +1,4 @@
-namespace Domino.Core.Graphs;
+namespace JackAll.App.Domino.Graphs;
 
 public enum EdgeTarget
 {

@@ -1,4 +1,4 @@
-namespace Domino.Core.Nodes;
+namespace JackAll.App.Domino.Nodes;
 
 /// <summary>The editor-facing label a `system\` node shows, from `&lt;Display Category="..." Text="..."/&gt;`.</summary>
 public sealed record NodeDisplay(string Category, string Text);
