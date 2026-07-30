@@ -1,4 +1,5 @@
 using JackAll.Core.Format;
+using JackAll.Tools.Format;
 
 namespace JackAll.Core.Tests;
 

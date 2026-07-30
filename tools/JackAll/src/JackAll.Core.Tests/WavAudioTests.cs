@@ -1,5 +1,5 @@
+using JackAll.Tools.Format;
 using System.Buffers.Binary;
-using JackAll.Core.Format;
 
 namespace JackAll.Core.Tests;
 

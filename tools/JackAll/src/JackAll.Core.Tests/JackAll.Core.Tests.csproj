@@ -1,14 +1,7 @@
 <Project Sdk="Microsoft.NET.Sdk">
 
-  <!--
-    net10.0-windows only because the Domino\ tests cover code that lives in JackAll.App (see that
-    csproj for why Domino sits there rather than in JackAll.Core), and referencing a WPF exe means
-    matching its target framework. Deliberately *not* UseWPF: nothing here uses WPF, and turning it
-    on swaps the SDK's implicit-usings set for the desktop one, which drops System.IO and breaks
-    every test in this project that touches a Stream.
-  -->
   <PropertyGroup>
-    <TargetFramework>net10.0-windows</TargetFramework>
+    <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -28,7 +21,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\JackAll.Core\JackAll.Core.csproj" />
-    <ProjectReference Include="..\JackAll.App\JackAll.App.csproj" />
+    <ProjectReference Include="..\JackAll.Tools\JackAll.Tools.csproj" />
   </ItemGroup>
 
   <ItemGroup>

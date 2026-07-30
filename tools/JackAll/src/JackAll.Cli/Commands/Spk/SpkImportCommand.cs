@@ -1,8 +1,8 @@
-using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
-using JackAll.Core.Format;
-using Spectre.Console;
+using JackAll.Tools.Format;
 using Spectre.Console.Cli;
+using Spectre.Console;
+using System.ComponentModel;
 
 namespace JackAll.Cli.Commands.Spk;
 

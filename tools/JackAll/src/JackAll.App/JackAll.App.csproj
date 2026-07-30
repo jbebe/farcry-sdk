@@ -2,6 +2,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\JackAll.Core\JackAll.Core.csproj" />
+    <ProjectReference Include="..\JackAll.Tools\JackAll.Tools.csproj" />
   </ItemGroup>
 
   <ItemGroup>
@@ -10,8 +11,8 @@
     <PackageReference Include="DiffPlex" Version="1.9.0" />
     <PackageReference Include="FFMpegCore" Version="5.1.0" />
     <PackageReference Include="ini-parser-netstandard" Version="2.5.3" />
-    <!-- Parses the game's Domino mission-graph Lua (Domino\). Deliberately here and not in
-         JackAll.Core: nothing else reads Domino, and JackAll.Core is what jackall-cli publishes. -->
+    <!-- Transitive via JackAll.Core, but declared because Domino\DominoExprPreview.cs compiles
+         against Loretta's syntax types directly. -->
     <PackageReference Include="Loretta.CodeAnalysis.Lua" Version="0.2.13" />
   </ItemGroup>
 

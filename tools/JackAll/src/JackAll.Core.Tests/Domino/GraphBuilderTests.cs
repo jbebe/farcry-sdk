@@ -1,5 +1,5 @@
-using JackAll.App.Domino;
-using JackAll.App.Domino.Graphs;
+using JackAll.Tools.Domino;
+using JackAll.Tools.Domino.Graphs;
 using Loretta.CodeAnalysis.Lua;
 using Loretta.CodeAnalysis.Lua.Syntax;
 

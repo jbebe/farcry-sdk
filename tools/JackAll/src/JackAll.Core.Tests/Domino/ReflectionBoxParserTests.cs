@@ -1,5 +1,5 @@
-using JackAll.App.Domino;
-using JackAll.App.Domino.Nodes;
+using JackAll.Tools.Domino;
+using JackAll.Tools.Domino.Nodes;
 
 namespace JackAll.Core.Tests;
 

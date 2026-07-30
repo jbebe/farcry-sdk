@@ -1,10 +1,10 @@
+using JackAll.Cli.Infrastructure;
+using JackAll.Tools.Format;
+using Spectre.Console.Cli;
 using System.ComponentModel;
 using System.Globalization;
 using System.Numerics;
 using System.Text;
-using JackAll.Cli.Infrastructure;
-using JackAll.Core.Format;
-using Spectre.Console.Cli;
 
 namespace JackAll.Cli.Commands.Xbg;
 

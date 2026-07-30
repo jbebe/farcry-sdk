@@ -33,6 +33,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\JackAll.Core\JackAll.Core.csproj" />
+    <ProjectReference Include="..\JackAll.Tools\JackAll.Tools.csproj" />
   </ItemGroup>
 
   <ItemGroup>

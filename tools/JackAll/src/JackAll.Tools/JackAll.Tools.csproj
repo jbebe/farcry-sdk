@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Everything you inspect or convert one file at a time: the standalone asset formats (textures,
+    models, audio, terrain, savegames) and the Domino mission-graph Lua.
+
+    Split out of JackAll.Core so the mod pipeline doesn't drag it along. Core is what the lean
+    `jackall-mod` CLI publishes, and none of this is reachable from `mod build`/`mod import-legacy` -
+    keeping it here is what lets that exe stay trimmable and Loretta-free.
+  -->
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\JackAll.Core\JackAll.Core.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Parses the game's Domino mission-graph Lua (Domino\). -->
+    <PackageReference Include="Loretta.CodeAnalysis.Lua" Version="0.2.13" />
+  </ItemGroup>
+
+</Project>

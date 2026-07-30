@@ -3,7 +3,7 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
 using System.Windows.Shapes;
-using JackAll.App.Domino.Graphs;
+using JackAll.Tools.Domino.Graphs;
 
 namespace JackAll.App.Domino;
 

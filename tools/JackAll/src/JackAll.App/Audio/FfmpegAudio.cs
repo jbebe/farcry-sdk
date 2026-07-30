@@ -1,7 +1,6 @@
 using System.IO;
 using FFMpegCore;
 using FFMpegCore.Enums;
-using JackAll.Core.Format;
 
 namespace JackAll.App.Audio;
 

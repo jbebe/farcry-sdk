@@ -1,13 +1,13 @@
-using System.IO;
-using System.Windows;
-using System.Windows.Controls;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
 using BCnEncoder.Decoder;
 using BCnEncoder.Shared;
 using CommunityToolkit.HighPerformance;
-using JackAll.Core.Format;
+using JackAll.Tools.Format;
 using Microsoft.Win32;
+using System.IO;
+using System.Windows.Controls;
+using System.Windows.Media.Imaging;
+using System.Windows.Media;
+using System.Windows;
 
 namespace JackAll.App.FileHandlers.Xbt;
 

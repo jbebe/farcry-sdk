@@ -1,5 +1,5 @@
+using JackAll.Tools.Format;
 using System.Globalization;
-using JackAll.Core.Format;
 
 namespace JackAll.Cli.Infrastructure;
 

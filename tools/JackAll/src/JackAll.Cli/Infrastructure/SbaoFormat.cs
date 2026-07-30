@@ -1,4 +1,4 @@
-using JackAll.Core.Format;
+using JackAll.Tools.Format;
 using Spectre.Console;
 
 namespace JackAll.Cli.Infrastructure;

@@ -1,6 +1,6 @@
+using JackAll.Tools.Format;
 using System.Text;
 using System.Windows.Controls;
-using JackAll.Core.Format;
 
 namespace JackAll.App.FileHandlers.Xbm;
 

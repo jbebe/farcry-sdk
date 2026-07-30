@@ -1,4 +1,4 @@
-using JackAll.App.Domino.Graphs;
+using JackAll.Tools.Domino.Graphs;
 
 namespace JackAll.App.Domino;
 
