@@ -31,10 +31,22 @@ $root = $PSScriptRoot
 $dist = Join-Path $root 'dist'
 $cliProject = Join-Path $root '..\JackAll\src\JackAll.Cli\JackAll.Cli.csproj'
 
+if (Test-Path $dist) {
+    if ($SkipCli) {
+        # Keep bin\ around since SkipCli means "reuse the CLI that's already there".
+        Write-Host 'Cleaning dist\ (keeping bin\)...' -ForegroundColor Cyan
+        Get-ChildItem $dist -Force | Where-Object { $_.Name -ne 'bin' } | Remove-Item -Recurse -Force
+    } else {
+        Write-Host 'Cleaning dist\...' -ForegroundColor Cyan
+        Get-ChildItem $dist -Force | Remove-Item -Recurse -Force
+    }
+} else {
+    New-Item -ItemType Directory -Force -Path $dist | Out-Null
+}
+
 if (-not $SkipCli) {
     Write-Host 'Publishing jackall-cli...' -ForegroundColor Cyan
     $cliOut = Join-Path $dist 'bin'
-    if (Test-Path $cliOut) { Remove-Item -Recurse -Force $cliOut }
     dotnet publish $cliProject `
         --configuration Release `
         --runtime win-x64 `
