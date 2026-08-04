@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-#define FCSE_API_VERSION 1
+#define FCSE_API_VERSION 2
 
 // Matches Dunia.dll's own AddFunctionCB(void* fn, const char* name) signature exactly - the
 // function pointer stored is called later, by engine code, with whatever argument count/types
@@ -46,6 +46,23 @@ typedef bool (*FCSE_PatchFn)(void* address, const void* data, size_t size);
 // automatically - no need to pass an identifier). See the FCSE README for the exact line format.
 typedef void (*FCSE_LogFn)(const char* message);
 
+// Tier 4: one row in the in-game "Mods" tab (spliced into the Options menu's own tab list - see
+// the FCSE README's "Mod Configuration Menu" section for the underlying mechanism). Deliberately
+// bools only, no other form types - a plain on/off toggle is all this tier supports.
+typedef struct FCSE_ConfigBool {
+    const char* label;                 // shown next to the plugin's name on its row
+    bool* value;                       // read/written directly - FCSE never copies this
+    void (*onChanged)(void* userdata); // optional, called right after the player toggles this row
+    void* userdata;                    // opaque, passed back to onChanged unmodified
+} FCSE_ConfigBool;
+
+// Registers one plugin's config page under the "Mods" tab, `fields` in display order. Valid to
+// call from FCSE_Load. `fields` must stay valid for the plugin's entire lifetime - FCSE reads
+// straight from plugin-owned memory each time the tab is (re)built, no copy is made. Returns false
+// (and logs why) if `pluginName`/`fields` is null or `fieldCount` is 0.
+typedef bool (*FCSE_RegisterConfigPageFn)(const char* pluginName, const FCSE_ConfigBool* fields,
+                                           size_t fieldCount);
+
 typedef struct FCSE_PluginAPI {
     uint32_t apiVersion; // Always FCSE_API_VERSION for this struct layout - compare before using
                          // any field below, in case a future loader version adds/reorders fields.
@@ -69,6 +86,9 @@ typedef struct FCSE_PluginAPI {
     // Tier 2/3: valid to call from FCSE_Load (or later).
     FCSE_HookFn Hook;
     FCSE_PatchFn Patch;
+
+    // Tier 4: valid to call from FCSE_Load. See FCSE_RegisterConfigPageFn above.
+    FCSE_RegisterConfigPageFn RegisterConfigPage;
 } FCSE_PluginAPI;
 
 // Required export. Called once per plugin, right after FCSE.exe loads Dunia.dll and before any

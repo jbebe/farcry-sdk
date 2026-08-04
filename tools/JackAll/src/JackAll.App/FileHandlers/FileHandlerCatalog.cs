@@ -81,7 +81,7 @@ public static class FileHandlerCatalog
             { Type.Extension: "rml" } => new RmlFileHandler(file, readContent(), replaceContent, readOriginal),
             { Type.Extension: "sdat" } => new SdatFileHandler(file.FileName, readContent()),
             { Type.Extension: "spk" } => new SpkFileHandler(file.FileName, readContent(), replaceContent, resolveByHash, navigateTo),
-            { Type.Extension: "mgb" } => new MgbFileHandler(file.FileName, readContent()),
+            { Type.Extension: "mgb" } => new MgbFileHandler(file.FileName, readContent(), replaceContent),
             // Matched by filename suffix, not bare extension - "dat" alone is also the archive-container
             // extension, so this must not fire for anything else that happens to carry a literal .dat
             // extension in the VFS content tree. Sibling "_deploadnewparticles.rml" files are unaffected

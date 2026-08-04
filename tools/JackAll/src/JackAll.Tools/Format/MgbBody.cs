@@ -24,12 +24,42 @@ namespace JackAll.Tools.Format;
 /// Both failure modes throw a clear <see cref="NotSupportedException"/>/<see cref="InvalidDataException"/>
 /// naming exactly what wasn't understood and at what byte offset, rather than silently guessing further.
 /// The <c>ActionExecuter</c> family (attached via <c>ActionCaller</c> to any <c>Area</c>/<c>Element</c>/
-/// <c>Keyframe</c>) isn't decoded at all yet - it's a different subsystem from widget geometry, out of
-/// scope for this decoder for now (see the doc's "Not yet traced").
+/// <c>Keyframe</c>) is decoded (see <see cref="ReadActionCallerField"/>/<see cref="ParseAction"/>,
+/// 2026-08-02) for the shapes confirmed via decompile (the flat action-list base, and the
+/// <c>ActionExecuterEvent</c>/<c>Inputable</c> named-event variant on top of it) - an executer class
+/// resolving to anything else still throws rather than guessing.
 /// </remarks>
+/// <summary>One <see cref="MgbBody.ParseArea"/> call's byte-offset bookkeeping - not part of the
+/// display tree, only populated when a caller passes a trace list into
+/// <see cref="MgbBody.ParsePackage(byte[], MgbHeader, List{MgbAreaLocation}?)"/>. Exists so
+/// <c>MgbPageEditor</c> can locate exactly where to splice a new child element into an already-real
+/// file's byte stream without re-implementing this parser's own grammar a second time. Recorded in
+/// parse (post-order, children-before-parent) order, but <see cref="IsTopLevel"/> entries are still in
+/// left-to-right document order relative to each other, since <see cref="MgbBody.ParsePackage"/>'s own
+/// top-level loop visits areas strictly one at a time.</summary>
+public readonly record struct MgbAreaLocation(
+    string Kind,
+    uint NameHash,
+    bool IsTopLevel,
+    /// <summary>File offset of the 4-byte <c>elementCount</c> field itself - overwrite these 4 bytes
+    /// (little-endian) when the child count changes.</summary>
+    int ElementCountFieldOffset,
+    /// <summary>File offset right after the last existing child element's own bytes end, i.e. exactly
+    /// where a new child's bytes should be inserted (this is also where the trailing <c>StaticBox</c>
+    /// starts today).</summary>
+    int ChildrenEndOffset,
+    uint ElementCount);
+
 public static class MgbBody
 {
-    public static MgbNode ParsePackage(byte[] data, MgbHeader header)
+    public static MgbNode ParsePackage(byte[] data, MgbHeader header) => ParsePackage(data, header, null);
+
+    /// <summary>Same decode as the 2-arg overload, but also records every <see cref="MgbAreaLocation"/>
+    /// encountered (Area/Page/CheckBox/Button/Cursor - anything that goes through
+    /// <see cref="ParseArea"/>) into <paramref name="trace"/>, for editors that need real byte offsets
+    /// rather than just the display tree. <c>null</c> is the default and costs nothing extra - existing
+    /// callers are unaffected.</summary>
+    public static MgbNode ParsePackage(byte[] data, MgbHeader header, List<MgbAreaLocation>? trace)
     {
         var reader = new MgbReader(data, header.HeaderLength);
         var fields = new List<MgbField>();
@@ -102,37 +132,53 @@ public static class MgbBody
         // honest result is far more useful here than an all-or-nothing exception, especially while
         // MgbTypeTable's class-name coverage is incomplete (see reverse/dunia/mgb_format.md).
         var areas = new List<MgbNode>();
-        for (uint i = 0; i < areaCount; i++)
+        try
         {
-            try
+            for (uint i = 0; i < areaCount; i++)
             {
-                areas.Add(ParseTypedElement(reader, header));
+                try
+                {
+                    areas.Add(ParseTypedTopLevelArea(reader, header, trace));
+                }
+                catch (Exception ex)
+                {
+                    fields.Add(new MgbField("StoppedDecoding", $"after area {i}/{areaCount}: {ex.Message}"));
+                    children.Add(new MgbNode("Areas", [], areas));
+                    fields.Add(new MgbField("BytesConsumed", $"{reader.Position - header.HeaderLength:N0} (file has {data.Length - header.HeaderLength:N0} body bytes total)"));
+                    return new MgbNode("Package", fields, children);
+                }
             }
-            catch (Exception ex)
+            children.Add(new MgbNode("Areas", [], areas));
+
+            // 10. Optional named special areas (not counted in areaCount). Decompiled 2026-08-02
+            // (magma::BinaryLoadVisitor::VisitPackage @ 0xa0619e0 on FarCry2_server): neither of these
+            // reads a type-id byte at all - each bool, if true, directly calls a *fixed* Factory vtable
+            // slot (+0x18 for the first, +0x20 for the second) with no ObjectTypeInfo argument, i.e. a
+            // hardcoded concrete class construction, not a per-file type-table lookup. Which concrete
+            // class those fixed slots construct isn't identified yet - stop cleanly rather than guess.
+            if (reader.ReadBool())
             {
-                fields.Add(new MgbField("StoppedDecoding", $"after area {i}/{areaCount}: {ex.Message}"));
-                children.Add(new MgbNode("Areas", [], areas));
-                fields.Add(new MgbField("BytesConsumed", $"{reader.Position - header.HeaderLength:N0} (file has {data.Length - header.HeaderLength:N0} body bytes total)"));
-                return new MgbNode("Package", fields, children);
+                throw new NotSupportedException(
+                    "This package has a GlobalFocusArea (a fixed, non-type-table-driven Area construction " +
+                    "confirmed via decompile but not identified yet - see reverse/dunia/mgb_format.md).");
+            }
+            if (reader.ReadBool())
+            {
+                throw new NotSupportedException(
+                    "This package has a SecondArea (a fixed, non-type-table-driven Area construction " +
+                    "confirmed via decompile but not identified yet - see reverse/dunia/mgb_format.md).");
+            }
+
+            // 11. Default material.
+            uint defaultMatLen = reader.ReadInt();
+            if (defaultMatLen != 0)
+            {
+                fields.Add(new MgbField("DefaultMaterial", MgbReader.DecodeAnsi(reader.ReadBytes((int)defaultMatLen))));
             }
         }
-        children.Add(new MgbNode("Areas", [], areas));
-
-        // 10. Optional named special areas (not counted in areaCount).
-        if (reader.ReadBool())
+        catch (Exception ex)
         {
-            children.Add(new MgbNode("GlobalFocusArea", [], [ParseTypedElement(reader, header)]));
-        }
-        if (reader.ReadBool())
-        {
-            children.Add(new MgbNode("SecondArea", [], [ParseTypedElement(reader, header)]));
-        }
-
-        // 11. Default material.
-        uint defaultMatLen = reader.ReadInt();
-        if (defaultMatLen != 0)
-        {
-            fields.Add(new MgbField("DefaultMaterial", MgbReader.DecodeAnsi(reader.ReadBytes((int)defaultMatLen))));
+            fields.Add(new MgbField("StoppedDecoding", $"after all {areaCount} top-level areas: {ex.Message}"));
         }
 
         fields.Add(new MgbField("BytesConsumed", $"{reader.Position - header.HeaderLength:N0} (file has {data.Length - header.HeaderLength:N0} body bytes total)"));
@@ -142,65 +188,137 @@ public static class MgbBody
 
     // --- Type dispatch -------------------------------------------------
 
-    /// <summary>Reads a type-id byte (an index into the file's own header type table), resolves it to
-    /// a class name, and parses that element. Used everywhere an Area's child list, or the package's
-    /// own top-level area list, names a typed sub-object.</summary>
-    private static MgbNode ParseTypedElement(MgbReader reader, MgbHeader header)
+    /// <summary>The package's own top-level area list (<c>VisitPackage</c>'s <c>areaCount</c> loop)
+    /// dispatches through <b>a different factory than every other typed slot in this format</b>:
+    /// decompiled 2026-08-02, <c>magma::BinaryLoadVisitor::VisitPackage</c> @ <c>0xa0619e0</c> calls
+    /// <c>Factory::MakeArea</c> (@ <c>0xa0480a0</c> on <c>FarCry2_server</c>) here, not the general
+    /// <c>Factory::MakeElement</c> every other typed slot in this format uses (including an <c>Area</c>'s
+    /// own children - see <see cref="ParseTypedElement"/>, called from <see cref="ParseArea"/>, which
+    /// does confirm <c>MakeElement</c>).
+    /// <para>
+    /// <c>MakeArea</c>'s decompile shows an ancestor-walk (like <c>MakeElement</c>'s own, not a flat
+    /// switch) against 4 specific type markers (<c>Page</c>/<c>CheckBox</c>/<c>Button</c>/<c>Cursor</c>,
+    /// inferred from every real type-id byte previously observed live at this exact consumption point -
+    /// <c>44/68/99/100/101</c>) plus a broader fallback branch, first-checked in the loop, whose type
+    /// marker (<c>PTR_Type_0xa405b88</c>) is cross-referenced by totally unrelated subsystems (`Init`,
+    /// `Find`, `GetMapperObject`, `ReadPackage`, `FetchMagmaElements`) - strong evidence it's a
+    /// universal root marker (matching every class's ancestor walk eventually), not a specific widget
+    /// category. <b>Confirmed empirically</b> (2026-08-02): a real shipped file's top-level area list
+    /// includes a byte that resolves to <c>Placeholder</c> (confirmed <c>Widget</c>-derived via its own
+    /// constructor - not <c>Area</c>-derived at all) at this exact slot, and treating it as the generic
+    /// fallback (plain <c>Area</c> shape, keeping the resolved class name only as a label) is what lets
+    /// real files parse further instead of stopping — the concrete evidence a pure "5-class" model
+    /// (this page's own earlier framing) was too narrow.
+    /// </para></summary>
+    private static MgbNode ParseTypedTopLevelArea(MgbReader reader, MgbHeader header, List<MgbAreaLocation>? trace = null)
     {
         int typeIdOffset = reader.Position;
-        byte typeIndex = reader.ReadByte();
+        byte rawByte = reader.ReadByte();
+        MgbTypeEntry? entry = ResolveTypeTableEntry(header, rawByte, typeIdOffset);
+        if (entry is null)
+        {
+            return MgbNode.Leaf("(empty)");
+        }
+        string className = entry.Value.Name ?? throw new InvalidDataException(
+            $"Type-id byte {rawByte} at offset 0x{typeIdOffset:X} resolves to an unrecognized class (crc32=0x{entry.Value.RawId:X8}) - " +
+            "MgbTypeTable doesn't have a name for it yet, so this element's field layout is unknown.");
+        return className switch
+        {
+            "Page" => ParsePage(reader, header, trace, isTopLevel: true),
+            "CheckBox" => ParseAreaFixedFloats(reader, header, "CheckBox", 12, trace, isTopLevel: true),
+            "Button" => ParseAreaFixedFloats(reader, header, "Button", 6, trace, isTopLevel: true),
+            "Cursor" => ParseCursor(reader, header, trace, isTopLevel: true),
+            // Any other resolved class (including "Area" itself) falls through to the generic
+            // MakeArea fallback branch - a plain Area wire shape, labeled with its own resolved class
+            // name purely for display (the constructed object is still Area-shaped regardless of the
+            // more specific, unmatched requested type - see this method's remarks).
+            _ => ParseArea(reader, header, className, trace, isTopLevel: true),
+        };
+    }
 
-        // RawId == 0 is the header spec's documented "left unresolved/skipped" case - a real, legal
-        // empty slot in the file's own type table (not a class we're just missing a name for). An
-        // element referencing it is a genuine null/empty placeholder: no further bytes to read.
-        if (typeIndex < header.Types.Count && header.Types[typeIndex].RawId == 0)
+    /// <summary>Reads a type-id byte (an index into the file's own header type table), resolves it to
+    /// a class name, and parses that element. Used for an <c>Area</c>'s own child list (
+    /// <c>Factory::MakeElement</c> - the broad, ~11-category factory) - <b>not</b> the package's
+    /// top-level area list, which uses the much narrower <c>Factory::MakeArea</c> instead (see
+    /// <see cref="ParseTypedTopLevelArea"/>).</summary>
+    private static MgbNode ParseTypedElement(MgbReader reader, MgbHeader header, List<MgbAreaLocation>? trace = null)
+    {
+        int typeIdOffset = reader.Position;
+        byte rawByte = reader.ReadByte();
+
+        MgbTypeEntry? entry = ResolveTypeTableEntry(header, rawByte, typeIdOffset);
+        if (entry is null)
         {
             return MgbNode.Leaf("(empty)");
         }
 
-        string className = ResolveTypeOrThrow(header, typeIndex, typeIdOffset);
-        return ParseElement(reader, header, className);
+        string className = entry.Value.Name ?? throw new InvalidDataException(
+            $"Type-id byte {rawByte} at offset 0x{typeIdOffset:X} resolves to an unrecognized class (crc32=0x{entry.Value.RawId:X8}) - " +
+            "MgbTypeTable doesn't have a name for it yet, so this element's field layout is unknown.");
+        return ParseElement(reader, header, className, trace);
     }
 
-    private static string ResolveTypeOrThrow(MgbHeader header, byte typeIndex, int atOffset)
+    /// <summary>Resolves a body type-id <b>byte</b> to its type-table entry, applying the file
+    /// format's confirmed off-by-one convention (see mgb.md, "How a body type-id byte maps back to a
+    /// type-table entry", confirmed 2026-08-02 on both binaries): raw byte <c>B</c> refers to
+    /// type-table entry <c>B-1</c> (0-based) - the loader's own remap-building loop counts from 1, so
+    /// every body read indexes that same remap array directly by its raw byte with no adjustment, but
+    /// a parser that skips building the remap array needs this -1 itself. Byte <c>0</c>, or a resolved
+    /// entry whose own <c>RawId</c> is <c>0</c>, are both the format's genuine "empty/unresolved"
+    /// sentinel (a real, legal empty slot - not a class this decoder is just missing a name for) -
+    /// returns <see langword="null"/> for either; only a genuinely out-of-range index throws.</summary>
+    private static MgbTypeEntry? ResolveTypeTableEntry(MgbHeader header, byte rawByte, int atOffset)
     {
-        if (typeIndex >= header.Types.Count)
+        if (rawByte == 0)
         {
-            throw new InvalidDataException($"Type index {typeIndex} at offset 0x{atOffset:X} is out of range (file only declares {header.Types.Count} types).");
+            return null;
         }
-        MgbTypeEntry entry = header.Types[typeIndex];
-        return entry.Name ?? throw new InvalidDataException(
-            $"Type index {typeIndex} at offset 0x{atOffset:X} resolves to an unrecognized class (crc32=0x{entry.RawId:X8}) - " +
-            "MgbTypeTable doesn't have a name for it yet, so this element's field layout is unknown.");
+        int index = rawByte - 1;
+        if (index >= header.Types.Count)
+        {
+            throw new InvalidDataException(
+                $"Type-id byte {rawByte} (-> table entry {index}) at offset 0x{atOffset:X} is out of range " +
+                $"(file only declares {header.Types.Count} types).");
+        }
+        MgbTypeEntry entry = header.Types[index];
+        return entry.RawId == 0 ? null : entry;
     }
 
     /// <summary>A type-index resolution that's purely a display label and never gates further byte
     /// reads (e.g. a font's type-id - the recursion it would trigger is a confirmed zero-byte no-op
-    /// regardless of which class it resolves to) - so unlike <see cref="ResolveTypeOrThrow"/>, this
-    /// never throws.</summary>
-    private static string DescribeType(MgbHeader header, byte typeIndex)
+    /// regardless of which class it resolves to) - so unlike the throwing paths above, this never
+    /// throws.</summary>
+    private static string DescribeType(MgbHeader header, byte rawByte, int atOffset)
     {
-        if (typeIndex >= header.Types.Count)
+        try
         {
-            return $"(index {typeIndex} out of range)";
+            MgbTypeEntry? entry = ResolveTypeTableEntry(header, rawByte, atOffset);
+            if (entry is null) return "(empty slot)";
+            return entry.Value.Name ?? $"(unrecognized, crc32=0x{entry.Value.RawId:X8})";
         }
-        MgbTypeEntry entry = header.Types[typeIndex];
-        if (entry.Name is not null) return entry.Name;
-        return entry.RawId == 0 ? "(empty slot)" : $"(unrecognized, crc32=0x{entry.RawId:X8})";
+        catch (InvalidDataException)
+        {
+            return $"(byte {rawByte} out of range)";
+        }
     }
 
-    private static MgbNode ParseElement(MgbReader reader, MgbHeader header, string className) => className switch
+    private static MgbNode ParseElement(MgbReader reader, MgbHeader header, string className, List<MgbAreaLocation>? trace = null) => className switch
     {
-        "Area" => ParseArea(reader, header, "Area"),
-        "Page" => ParsePage(reader, header),
-        "CheckBox" => ParseAreaFixedFloats(reader, header, "CheckBox", 12),
-        "Button" => ParseAreaFixedFloats(reader, header, "Button", 6),
-        "Cursor" => ParseCursor(reader, header),
+        "Area" => ParseArea(reader, header, "Area", trace),
+        "Page" => ParsePage(reader, header, trace),
+        "CheckBox" => ParseAreaFixedFloats(reader, header, "CheckBox", 12, trace),
+        "Button" => ParseAreaFixedFloats(reader, header, "Button", 6, trace),
+        "Cursor" => ParseCursor(reader, header, trace),
         "Element" => ParseBareElement(reader, header),
-        // Unconfirmed: treated as a bare Element (no fields of its own) since it plays the same
-        // "minimal root placeholder" role - the very first top-level area in several real files that
-        // don't use bare "Element" for that slot. If real files desync shortly after this, that
-        // hypothesis is wrong and needs revisiting (see reverse/dunia/mgb_format.md).
+        // Likely never actually reached: magma::AnonymousType is a type-erased generic property
+        // value wrapper (confirmed via FarCry2_server RTTI, 2026-07-31 - every class's every
+        // reflected field goes through InternalGet*/InternalSet*(AnonymousType const&)), not a
+        // widget/Element-tree class. Re-parsing all 4 locally available real files with the current
+        // MgbTypeTable never hit this case at all - every stop was CRC32=0x86F001E3 instead. Its real
+        // type-id-byte use is almost certainly VisitFullLink (BinaryLoadVisitor vtable +0xb0, which
+        // ReadFullLink below already handles harmlessly regardless of whether the type resolves).
+        // Left as a bare-Element fallback in case some untested file's real .mgb genuinely does
+        // reference it as an Element - see docs/docs/file-formats/mgb.md's Unknowns section.
         "AnonymousType" => ParseBareElement(reader, header) with { Kind = "AnonymousType" },
         "RectShape" => ParseRectShape(reader, header),
         "TextBase" => ParseTextBase(reader, header, "TextBase"),
@@ -211,13 +329,29 @@ public static class MgbBody
         "Slider" => ParseSlider(reader, header),
         "EditBox" => ParseEditBox(reader, header),
         "Focusable" => ParseFocusable(reader, header),
-        "Placeholder" or "AreaLinkTags" => MgbNode.Leaf(className), // confirmed no-ops, 0 bytes
+        // Confirmed no-ops, 0 bytes: Placeholder/AreaLinkTags were already known; Handler/AreaHandler/
+        // PageHandler/DrawHandler confirmed 2026-08-02 - magma::Visitor::VisitAreaHandler (0x09606b60)
+        // and VisitDrawHandler (0x09606b80) both sit in the same tight no-op address cluster as the
+        // already-confirmed VisitPlaceholder/VisitAreaLinkTags and are themselves empty bodies on the
+        // abstract base Visitor class (never overridden by BinaryLoadVisitor).
+        "Placeholder" or "AreaLinkTags" or "Handler" or "AreaHandler" or "PageHandler" or "DrawHandler"
+            => MgbNode.Leaf(className),
         "AreaInstance" => ParseAreaInstance(reader, header, "AreaInstance"),
         "AutonomousAreaInstance" => ParseAreaInstance(reader, header, "AutonomousAreaInstance"),
         "ButtonInstance" => ParseAreaInstance(reader, header, "ButtonInstance"),
         "CheckBoxInstance" => ParseAreaInstance(reader, header, "CheckBoxInstance"),
         "RadioButtonInstance" => ParseAreaInstance(reader, header, "RadioButtonInstance"),
         "PageInstance" => ParsePageInstance(reader, header),
+        // The ActionExecuter family can also appear as a plain tree element, not just attached via
+        // ActionCaller (confirmed 2026-08-02: a real file's own Page has one directly as a child) -
+        // Factory::MakeElement's ancestor-walk apparently accepts this family too. Reuses the exact
+        // same shape already implemented for the ActionCaller-attached case (see
+        // ReadActionCallerField's remarks) - Accept() dispatches to the identical Visit slot either way.
+        "ActionExecuterPage" or "ActionExecuterFocusable" or "ActionExecuterEditbox" or
+        "ActionExecuterPageInstance" or "ActionExecuterSlider" or "ActionExecuterListbox"
+            => ParseActionExecuterFlat(reader, header, className),
+        "ActionExecuterEvent" or "ActionExecuterInputable"
+            => ParseActionExecuterEvent(reader, header, className),
         _ => throw new NotSupportedException($"Element class '{className}' isn't implemented by this decoder yet."),
     };
 
@@ -225,29 +359,148 @@ public static class MgbBody
 
     private static MgbField ReadNamedObject(MgbReader reader) => new("NameHash", $"0x{reader.ReadInt():X8}");
 
-    /// <summary>The +0xec slot every Area/Element/Keyframe calls first. The ActionExecuter family
-    /// itself isn't decoded yet (different subsystem, see the doc) - if one is actually attached, this
-    /// throws rather than silently desyncing.</summary>
-    private static MgbField ReadActionCaller(MgbReader reader, MgbHeader header)
+    /// <summary>What <c>Area</c>'s and <c>Element</c>'s own base call actually reads - corrected
+    /// 2026-08-02. Both <c>magma::BinaryLoadVisitor::VisitArea</c> (<c>0xa05f4b0</c>) and
+    /// <c>VisitElement</c> (<c>0xa060290</c>) call <c>this-&gt;vtable[0x10]</c> (<c>VisitUserData</c>)
+    /// as their very first step - <b>not</b> <c>vtable[0xc]</c> (bare <c>VisitNamedObject</c>), despite
+    /// the previously-documented/-implemented "VisitNamedObject -&gt; VisitActionCaller -&gt; ..."
+    /// summary. <c>VisitUserData</c> itself starts with the identical <c>NamedObject</c> read
+    /// (confirmed via its own decompile), so the net wire shape is <c>NamedObject</c> followed by a
+    /// full <c>UserData</c> property count/loop - previously missing entirely, silently desyncing any
+    /// real element that has 1+ properties attached (which most do). <c>Keyframe</c>
+    /// (<c>VisitKeyframe</c> @ <c>0xa05ea90</c>) is unaffected - confirmed calling the bare
+    /// <c>vtable[0xc]</c> directly, no embedded <c>UserData</c>.</summary>
+    private static uint ReadUserDataBase(MgbReader reader, MgbHeader header, List<MgbField> fields)
+    {
+        uint nameHash = reader.ReadInt();
+        fields.Add(new MgbField("NameHash", $"0x{nameHash:X8}"));
+        ReadUserDataProperties(reader, header, fields);
+        return nameHash;
+    }
+
+    /// <summary>The +0xec slot every Area/Element/Keyframe calls first: reads the attached
+    /// <c>ActionExecuter</c>, if any (resolved via the file's normal per-file type-table byte, same
+    /// scheme as element type-ids). Decompiled 2026-08-02 (<c>magma::BinaryLoadVisitor::
+    /// VisitActionExecuter</c> @ <c>0xa05f870</c> on <c>FarCry2_server</c>, plus every
+    /// <c>VisitActionExecuterXxx</c> override): every concrete subclass either reads exactly the shared
+    /// base shape (a flat action list - <see cref="ParseActionExecuterFlat"/>) or that same base list
+    /// plus an extra named-event index table (<c>ActionExecuterEvent</c>/<c>ActionExecuterInputable</c>
+    /// - <see cref="ParseActionExecuterEvent"/>). No concrete <c>Action</c> opcode
+    /// (<c>ActionContinue</c>/<c>ActionStop</c>/<c>ActionPopPage</c>/<c>ActionPushPage</c>/
+    /// <c>ActionGotoFrameIndex</c>/<c>ActionGotoKeyFrame</c>) has its own vtable override - none turned
+    /// up in an exhaustive vtable-name search - so every action's payload is the plain, already-understood
+    /// <c>UserData</c> property-list shape regardless of which opcode it is (<c>VisitAction</c> forwards
+    /// straight to <c>VisitUserData</c>).</summary>
+    private static MgbField ReadActionCallerField(MgbReader reader, MgbHeader header, out MgbNode? executer)
     {
         bool hasExecuter = reader.ReadBool();
         if (!hasExecuter)
         {
+            executer = null;
             return new MgbField("Action", "(none)");
         }
-        byte typeIndex = reader.ReadByte();
-        string className = DescribeType(header, typeIndex);
-        throw new NotSupportedException(
-            $"This element has an attached action ('{className}') - the ActionExecuter family isn't decoded yet (see reverse/dunia/mgb_format.md).");
+        int typeIdOffset = reader.Position;
+        byte rawByte = reader.ReadByte();
+        MgbTypeEntry? entry = ResolveTypeTableEntry(header, rawByte, typeIdOffset)
+            ?? throw new InvalidDataException(
+                $"Type-id byte {rawByte} at offset 0x{typeIdOffset:X} resolves to the format's empty/unresolved " +
+                "sentinel, but this element claims to have an attached action executer - contradictory, likely a desync.");
+        string className = entry.Value.Name ?? throw new InvalidDataException(
+            $"Type-id byte {rawByte} at offset 0x{typeIdOffset:X} resolves to an unrecognized action executer class (crc32=0x{entry.Value.RawId:X8}).");
+        executer = className switch
+        {
+            "ActionExecuterPage" or "ActionExecuterFocusable" or "ActionExecuterEditbox" or
+            "ActionExecuterPageInstance" or "ActionExecuterSlider" or "ActionExecuterListbox"
+                => ParseActionExecuterFlat(reader, header, className),
+            "ActionExecuterEvent" or "ActionExecuterInputable"
+                => ParseActionExecuterEvent(reader, header, className),
+            _ => throw new NotSupportedException(
+                $"Attached action executer '{className}' isn't one of the shapes decoded yet (see reverse/dunia/mgb_format.md)."),
+        };
+        return new MgbField("Action", "(attached, see child node)");
     }
 
-    /// <summary>NamedObject + ActionCaller + 2 flags + category + keyframe list - the base every
-    /// leaf widget type (RectShape, TextBase, Image, ListBox, Window, Slider, EditBox) chains through,
-    /// inferred from every other subclass in this format explicitly restating its base-slot call (see
-    /// the remarks on this class).</summary>
+    /// <summary>The shared <c>ActionExecuter</c> base shape (<c>magma::BinaryLoadVisitor::
+    /// VisitActionExecuter</c>): a flat list of <c>Action</c> objects, each identified by a raw
+    /// CRC32(name) <c>Id</c> read directly (<b>not</b> a per-file type-table byte - <c>Factory::MakeAction</c>
+    /// takes the hash straight, confirmed via decompile) and then read as a plain <c>UserData</c> record.
+    /// Used as-is by <c>ActionExecuterPage</c>/<c>Focusable</c>/<c>Editbox</c>/<c>PageInstance</c>/
+    /// <c>Slider</c>/<c>Listbox</c> - none of them add fields of their own.</summary>
+    private static MgbNode ParseActionExecuterFlat(MgbReader reader, MgbHeader header, string kind)
+    {
+        uint actionCount = reader.ReadInt();
+        var actions = new List<MgbNode>();
+        for (uint i = 0; i < actionCount; i++)
+        {
+            actions.Add(ParseAction(reader, header));
+        }
+        return new MgbNode(kind, [], actions);
+    }
+
+    /// <summary><c>ActionExecuterEvent</c>/<c>ActionExecuterInputable</c>: the same flat action list as
+    /// <see cref="ParseActionExecuterFlat"/> first, then a named-event index table on top (
+    /// <c>magma::BinaryLoadVisitor::VisitActionExecuterEvent</c> @ <c>0xa05e840</c>): <c>[u32 eventCount]</c>,
+    /// per event <c>[u32 indexCount][indexCount x u32 actionIndex]</c> - references into the flat list
+    /// already read, not new actions.</summary>
+    private static MgbNode ParseActionExecuterEvent(MgbReader reader, MgbHeader header, string kind)
+    {
+        MgbNode flat = ParseActionExecuterFlat(reader, header, kind);
+        uint eventCount = reader.ReadInt();
+        var fields = new List<MgbField>();
+        for (uint e = 0; e < eventCount; e++)
+        {
+            uint indexCount = reader.ReadInt();
+            var indices = new uint[indexCount];
+            for (uint i = 0; i < indexCount; i++)
+            {
+                indices[i] = reader.ReadInt();
+            }
+            fields.Add(new MgbField($"Event[{e}]", string.Join(", ", indices)));
+        }
+        return flat with { Fields = fields };
+    }
+
+    /// <summary>One entry in an <c>ActionExecuter</c>'s flat action list: <c>[u32 actionTypeHash]</c>
+    /// (a raw <c>CRC32(ClassName)</c>, resolved via the same static dictionary as element classes even
+    /// though it's never looked up through the per-file type table) followed by a plain <c>UserData</c>
+    /// record (<c>VisitAction</c> forwards straight to <c>VisitUserData</c> for every opcode).</summary>
+    private static MgbNode ParseAction(MgbReader reader, MgbHeader header)
+    {
+        uint actionTypeHash = reader.ReadInt();
+        string actionName = MgbTypeTable.Resolve(actionTypeHash) is { } name
+            ? name
+            : $"(unresolved action, crc32=0x{actionTypeHash:X8})";
+        var fields = new List<MgbField> { ReadNamedObject(reader) };
+        ReadUserDataProperties(reader, header, fields);
+        return new MgbNode(actionName, fields, []);
+    }
+
+    /// <summary>The +0xec slot every Area/Element/Keyframe calls first.</summary>
+    private static MgbField ReadActionCaller(MgbReader reader, MgbHeader header, List<MgbNode> children)
+    {
+        MgbField field = ReadActionCallerField(reader, header, out MgbNode? executer);
+        if (executer is not null)
+        {
+            children.Add(executer);
+        }
+        return field;
+    }
+
+    /// <summary>(NamedObject + UserData properties) + ActionCaller + 2 flags + category + keyframe
+    /// list - the base every leaf widget type (RectShape, TextBase, Image, ListBox, Window, Slider,
+    /// EditBox) chains through. Corrected 2026-08-02: <c>magma::BinaryLoadVisitor::VisitElement</c>
+    /// (<c>0xa060290</c>) calls <c>this-&gt;vtable[0x10]</c> (<c>VisitUserData</c>) first, <b>not</b>
+    /// <c>vtable[0xc]</c> (bare <c>VisitNamedObject</c>) as previously documented/implemented - since
+    /// <c>VisitUserData</c> itself starts with the same <c>NamedObject</c> read, the net effect is a
+    /// full <c>UserData</c> property count/loop tacked onto every Element's base, previously missing
+    /// entirely (silently desyncing any real element with 1+ properties). See
+    /// <see cref="ReadUserDataBase"/>.</summary>
     private static (List<MgbField> Fields, List<MgbNode> Children) ReadElementBase(MgbReader reader, MgbHeader header, string ownerClassName)
     {
-        var fields = new List<MgbField> { ReadNamedObject(reader), ReadActionCaller(reader, header) };
+        var children = new List<MgbNode>();
+        var fields = new List<MgbField>();
+        ReadUserDataBase(reader, header, fields);
+        fields.Add(ReadActionCaller(reader, header, children));
         bool hidden = reader.ReadBool();
         bool secondFlag = reader.ReadBool();
         fields.Add(new MgbField("Hidden", (!hidden).ToString())); // doc: flag is inverted into SetVisible
@@ -260,14 +513,19 @@ public static class MgbBody
         {
             keyframes.Add(ParseKeyframe(reader, header, ownerClassName));
         }
-        return (fields, keyframes.Count > 0 ? [new MgbNode("Keyframes", [], keyframes)] : []);
+        if (keyframes.Count > 0) children.Add(new MgbNode("Keyframes", [], keyframes));
+        return (fields, children);
     }
 
-    private static MgbNode ParseArea(MgbReader reader, MgbHeader header, string kind)
+    private static MgbNode ParseArea(MgbReader reader, MgbHeader header, string kind, List<MgbAreaLocation>? trace = null, bool isTopLevel = false)
     {
-        var fields = new List<MgbField> { ReadNamedObject(reader), ReadActionCaller(reader, header) };
+        var children = new List<MgbNode>();
+        var fields = new List<MgbField>();
+        uint nameHash = ReadUserDataBase(reader, header, fields);
+        fields.Add(ReadActionCaller(reader, header, children));
         uint ticksDenom = reader.ReadValue();
         uint durationMult = reader.ReadValue();
+        int elementCountFieldOffset = reader.Position;
         uint elementCount = reader.ReadValue();
         fields.Add(new MgbField("TicksDenominator", ticksDenom.ToString()));
         fields.Add(new MgbField("DurationMultiplier", durationMult.ToString()));
@@ -275,19 +533,22 @@ public static class MgbBody
         var elements = new List<MgbNode>();
         for (uint i = 0; i < elementCount; i++)
         {
-            elements.Add(ParseTypedElement(reader, header));
+            elements.Add(ParseTypedElement(reader, header, trace));
         }
+        int childrenEndOffset = reader.Position;
 
         ushort left = reader.ReadU16(), top = reader.ReadU16(), right = reader.ReadU16(), bottom = reader.ReadU16();
         fields.Add(new MgbField("StaticBox", $"({left}, {top}, {right}, {bottom})"));
 
-        var children = elements.Count > 0 ? new List<MgbNode> { new("Elements", [], elements) } : [];
+        trace?.Add(new MgbAreaLocation(kind, nameHash, isTopLevel, elementCountFieldOffset, childrenEndOffset, elementCount));
+
+        if (elements.Count > 0) children.Add(new MgbNode("Elements", [], elements));
         return new MgbNode(kind, fields, children);
     }
 
-    private static MgbNode ParsePage(MgbReader reader, MgbHeader header)
+    private static MgbNode ParsePage(MgbReader reader, MgbHeader header, List<MgbAreaLocation>? trace = null, bool isTopLevel = false)
     {
-        MgbNode area = ParseArea(reader, header, "Page");
+        MgbNode area = ParseArea(reader, header, "Page", trace, isTopLevel);
         uint tagCount = reader.ReadInt();
         var tags = new List<MgbField>();
         for (uint i = 0; i < tagCount; i++)
@@ -302,9 +563,9 @@ public static class MgbBody
         return area with { Fields = fields };
     }
 
-    private static MgbNode ParseAreaFixedFloats(MgbReader reader, MgbHeader header, string kind, int floatCount)
+    private static MgbNode ParseAreaFixedFloats(MgbReader reader, MgbHeader header, string kind, int floatCount, List<MgbAreaLocation>? trace = null, bool isTopLevel = false)
     {
-        MgbNode area = ParseArea(reader, header, kind);
+        MgbNode area = ParseArea(reader, header, kind, trace, isTopLevel);
         var values = new float[floatCount];
         for (int i = 0; i < floatCount; i++)
         {
@@ -314,9 +575,9 @@ public static class MgbBody
         return area with { Fields = fields };
     }
 
-    private static MgbNode ParseCursor(MgbReader reader, MgbHeader header)
+    private static MgbNode ParseCursor(MgbReader reader, MgbHeader header, List<MgbAreaLocation>? trace = null, bool isTopLevel = false)
     {
-        MgbNode area = ParseArea(reader, header, "Cursor");
+        MgbNode area = ParseArea(reader, header, "Cursor", trace, isTopLevel);
         short hotspotY = (short)-reader.ReadU16();
         short hotspotX = (short)-reader.ReadU16();
         var fields = new List<MgbField>(area.Fields) { new("Hotspot", $"({hotspotX}, {hotspotY})") };
@@ -506,7 +767,8 @@ public static class MgbBody
 
     private static MgbNode ParseKeyframe(MgbReader reader, MgbHeader header, string ownerClassName)
     {
-        var fields = new List<MgbField> { ReadNamedObject(reader), ReadActionCaller(reader, header) };
+        var children = new List<MgbNode>();
+        var fields = new List<MgbField> { ReadNamedObject(reader), ReadActionCaller(reader, header, children) };
         // Both time and value are read via the same +0x8 (4-byte) slot - time's upper bytes are
         // discarded, per the doc's "2x chained +0x8: first -> u16 time, second -> u32 value".
         ushort time = (ushort)reader.ReadValue();
@@ -525,7 +787,8 @@ public static class MgbBody
                 "states are inferred from the element's own class name - the generic transform states " +
                 "Pos/Rotation/Scale/Rect aren't reachable this way, see reverse/dunia/mgb_format.md)."),
         };
-        return new MgbNode("Keyframe", fields, [state]);
+        children.Add(state);
+        return new MgbNode("Keyframe", fields, children);
     }
 
     private static List<MgbField> ReadState(MgbReader reader)
@@ -605,6 +868,15 @@ public static class MgbBody
     private static MgbNode ParseUserData(MgbReader reader, MgbHeader header)
     {
         var fields = new List<MgbField> { ReadNamedObject(reader) };
+        ReadUserDataProperties(reader, header, fields);
+        return new MgbNode("UserData", fields, []);
+    }
+
+    /// <summary>The property-count-then-loop body of <c>VisitUserData</c> (everything past its own
+    /// leading <c>NamedObject</c> read) - factored out so <see cref="ParseAction"/> can reuse the exact
+    /// same shape, since <c>VisitAction</c> forwards straight to <c>VisitUserData</c> for every opcode.</summary>
+    private static void ReadUserDataProperties(MgbReader reader, MgbHeader header, List<MgbField> fields)
+    {
         uint count = reader.ReadInt();
         for (uint i = 0; i < count; i++)
         {
@@ -613,17 +885,35 @@ public static class MgbBody
             string value = typeTag switch
             {
                 2 => reader.ReadReal().ToString("0.###"),
+                // Confirmed 2026-08-03 via Ghidra's own switch-recovered decompile of Dunia.dll's real
+                // VisitUserData (0x10aca130) PLUS raw disassembly of this exact case (MOVSS at
+                // 0x10aca237/0x10aca24c) - type 7 reads a real 4-byte float payload via a distinct reader
+                // vtable slot (+0x8, vs type 2's +0x20) - it is NOT a no-payload tag. Previously silently
+                // treated as no-payload (fell through to the range-check wildcard below, correct only for
+                // *out-of-range* tags), consuming 0 bytes instead of 4 - a real, silent desync bug for any
+                // file with a tag-7 property, independent of the out-of-range-tag fix already documented
+                // above. Does NOT explain options.mgb's own area-7 mystery (see mgb.md/mgb_parsing_progress
+                // memory) - confirmed this file's area 7 has zero tag-7 properties among its 389 entries.
+                7 => reader.ReadReal().ToString("0.###"),
                 0xc => reader.ReadBool().ToString(),
                 0x10 => ReadLengthPrefixedAnsi(reader),
                 0x11 or 0x12 or 0x15 => ReadFullLink(reader, header),
                 0x13 => ReadStringResourceExternalId(reader),
                 0x14 => "(null)",
+                // Confirmed 2026-08-03 via direct disassembly of Dunia.dll's real VisitUserData
+                // (0x10aca130): the type-tag dispatch is `if ((uint)(typeTag - 2) > 0x13) goto
+                // noPayload;` - i.e. a plain range check, not an exhaustive enumeration. Any tag
+                // outside [2, 0x15] (not just the specific small values previously enumerated here)
+                // falls through to the identical "no extra payload" path the recognized no-payload
+                // tags already use - the real game never throws or treats this as an error. Previously
+                // this threw NotSupportedException for anything outside the enumerated set, which
+                // desynced every file with a property using an unenumerated tag (the actual blocker
+                // for options.mgb reaching past its own top-level area 7).
                 0 or 1 or 3 or 4 or 5 or 6 or 8 or 9 or 10 or 0xb or 0xd or 0xe or 0xf => "(no payload)",
-                _ => throw new NotSupportedException($"Unknown UserData property type tag 0x{typeTag:X} for key 0x{key:X8}."),
+                _ => "(no payload - out of [2,0x15] range, confirmed real behavior)",
             };
             fields.Add(new MgbField($"Property[0x{key:X8}] (type 0x{typeTag:X})", value));
         }
-        return new MgbNode("UserData", fields, []);
     }
 
     /// <summary>
@@ -631,15 +921,25 @@ public static class MgbBody
     /// <c>UserData</c> property types <c>0x11</c>/<c>0x12</c>/<c>0x15</c>, decompiled after this
     /// decoder's original "reads nothing" assumption (matching the source RE investigation's own
     /// unresolved gap) turned out to desync real files. Wire record:
-    /// <c>[u16 count][byte typeId][count x u32 id]</c>.
+    /// <c>[u16 count][byte typeId][count x u32 id]</c> - <b>except when count is 0</b>: confirmed via
+    /// raw disassembly of the real function (Dunia.dll <c>0x10ac9ef0</c>, ported from FarCry2_server
+    /// <c>0xa0604d0</c>) 2026-08-03 - a zero count short-circuits to an immediate return (`CMP
+    /// word ptr[...],0x0; JZ &lt;epilogue&gt;`), consuming only the 2-byte count and never touching
+    /// <c>typeId</c> or any ids at all. Previously this always read the extra <c>typeId</c> byte
+    /// regardless of count - a 1-byte overread for every empty <c>FullLink</c>. Doesn't explain
+    /// options.mgb's own area-7 mystery (see mgb.md/mgb_parsing_progress memory) - confirmed this
+    /// file's 4 real <c>FullLink</c> properties all have count 2, never 0.
     /// </summary>
     private static string ReadFullLink(MgbReader reader, MgbHeader header)
     {
         ushort count = reader.ReadU16B();
-        byte typeIndex = reader.ReadByte();
-        string typeLabel = typeIndex < header.Types.Count
-            ? header.Types[typeIndex].Name ?? $"(unresolved, crc32=0x{header.Types[typeIndex].RawId:X8})"
-            : $"(index {typeIndex} out of range)";
+        if (count == 0)
+        {
+            return "FullLink<empty>[]";
+        }
+        int typeIdOffset = reader.Position;
+        byte rawByte = reader.ReadByte();
+        string typeLabel = DescribeType(header, rawByte, typeIdOffset);
         var ids = new uint[count];
         for (int i = 0; i < count; i++)
         {
@@ -673,14 +973,38 @@ public static class MgbBody
 
     private static MgbNode ParseFontEntry(MgbReader reader, MgbHeader header, string kind)
     {
-        byte typeIndex = reader.ReadByte();
-        string typeName = DescribeType(header, typeIndex);
+        int typeIdOffset = reader.Position;
+        byte rawByte = reader.ReadByte();
+        string typeName = DescribeType(header, rawByte, typeIdOffset);
         string s1 = ReadLengthPrefixedAnsi(reader);
         string s2 = ReadLengthPrefixedAnsi(reader);
         return new MgbNode(kind, [new("FontType", typeName), new("String1", s1), new("String2", s2)], []);
     }
 
-    private static MgbNode ParseFontFamily(MgbReader reader) => MgbNode.Leaf("FontFamily", ReadNamedObject(reader));
+    /// <summary>Corrected 2026-08-02: this page previously documented (and this decoder previously
+    /// implemented) <c>VisitFontFamily</c> as "just a <c>u32 nameHash</c> - the entire record" - that's
+    /// wrong. Decompile of <c>VisitFontFamily</c> (<c>0xa0615a0</c>) shows it also calls
+    /// <c>BinaryLoadVisitor::LoadFont</c> (<c>0xa061300</c>), which reads via the reader too (its
+    /// <c>param_1</c> is the visitor itself, same <c>this+0x20</c> reader-pointer pattern as every
+    /// other method here) - not the pure in-memory lookup its name suggests. <c>LoadFont</c> reads a
+    /// length-prefixed string (the font name), then a *second*, optional length-prefixed string
+    /// (skipped entirely if its length is <c>0</c>) - a dependency path, per <c>GetDependency</c>'s
+    /// call on it. Found by manually cross-checking a real file's raw bytes byte-for-byte
+    /// (<c>fonts.mgb</c>, whose 2 non-trivial <c>FontFamily</c> entries are the first real content this
+    /// decoder has seen with <c>fontFamilyCount &gt; 0</c> - every previously-tested sample file had
+    /// zero, which is why this went uncaught) - the first entry's <c>NamedObject</c> hash independently
+    /// matches <c>CRC32("Page")</c> exactly once the file is re-read with this corrected shape, mirroring
+    /// the same "unnamed instance defaults to its own class hash" pattern already confirmed for
+    /// <c>Cursor</c> elsewhere in this format.</summary>
+    private static MgbNode ParseFontFamily(MgbReader reader)
+    {
+        var fields = new List<MgbField> { ReadNamedObject(reader) };
+        string name = ReadLengthPrefixedAnsi(reader);
+        if (name.Length > 0) fields.Add(new MgbField("Name", name));
+        string dependencyPath = ReadLengthPrefixedAnsi(reader);
+        if (dependencyPath.Length > 0) fields.Add(new MgbField("DependencyPath", dependencyPath));
+        return new MgbNode("FontFamily", fields, []);
+    }
 
     private static string ReadLengthPrefixedAnsi(MgbReader reader)
     {
@@ -689,10 +1013,27 @@ public static class MgbBody
     }
 
     /// <summary>
-    /// <c>LoadMaterial</c>/<c>LoadFontFamily</c> - never traced to byte level in the source RE
-    /// investigation, inferred to follow this format's universal length-prefixed-ANSI-string pattern.
-    /// See this class's remarks.
+    /// Corrected 2026-08-02: this decoder previously implemented <c>LoadMaterial</c>/
+    /// <c>LoadFontFamily</c> as a plain length-prefixed string (this class's own now-stale remarks
+    /// called that an inferred guess) - that's missing a leading bool and an extra u32, both already
+    /// documented in mgb.md's own "LoadMaterial" entry (resolved via decompile of <c>0x10acb900</c> on
+    /// <c>Dunia.dll</c>) but never actually applied here. Real shape: <c>1×+0x24</c>-equivalent bool
+    /// "has explicit resource?" - if false, done (1 byte total, no further reads). If true:
+    /// <c>1×+0xc</c>-equivalent u32 (purpose still unclear, doesn't gate further reads) then
+    /// <c>1×+0xc</c>-equivalent u32 <c>nameLen</c>, then <c>nameLen</c> raw ANSI bytes if
+    /// <c>nameLen != 0</c> (falls back to an already-set default resource pointer otherwise). Found by
+    /// manually cross-checking a real file's raw bytes (<c>weapon_bazaar.mgb</c>'s own <c>Image</c>
+    /// element, whose material-name length was being misread as a huge/negative byte count from what
+    /// was actually the bool+unclear-u32 pair).
     /// </summary>
     private static MgbField ReadResourceRef(MgbReader reader, string label)
-        => new(label, ReadLengthPrefixedAnsi(reader) is { Length: > 0 } s ? s : "(none)");
+    {
+        if (!reader.ReadBool())
+        {
+            return new MgbField(label, "(none)");
+        }
+        reader.ReadInt(); // purpose unclear, doesn't gate further reads - see remarks above
+        string name = ReadLengthPrefixedAnsi(reader);
+        return new MgbField(label, name.Length > 0 ? name : "(none, falls back to a default resource)");
+    }
 }

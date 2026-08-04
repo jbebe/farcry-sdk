@@ -15,6 +15,8 @@
 #include "function_registry.h"
 #include "hook.h"
 #include "log.h"
+#include "mods_registry.h"
+#include "mods_tab.h"
 #include "patch.h"
 #include "plugin_loader.h"
 
@@ -59,6 +61,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
                     "plugin this run; tier-1/tier-3 are unaffected");
     }
 
+    // FCSE's own hook, not a plugin's - installed here so it's in place well before the player
+    // could ever reach the Options screen. See mods_tab.h for the full mechanism.
+    ModsTab::Install();
+
     FCSE_PluginAPI api{};
     api.apiVersion = FCSE_API_VERSION;
     api.duniaModule = DuniaApi::Module();
@@ -68,6 +74,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     api.AddFunctionCB = &PluginAddFunctionCBShim;
     api.Hook = &HookManager::Hook;
     api.Patch = &PatchManager::Patch;
+    api.RegisterConfigPage = &ModsRegistry::RegisterConfigPage;
+
+    // Always first in the "Mods" tab, through the exact same path a plugin would use - guarantees
+    // the tab is never empty and doubles as the whole pipeline's smoke test.
+    ModsRegistry::RegisterBuiltIn();
 
     std::wstring pluginsDirectory = directory + L"plugins\\";
     PluginLoader::LoadAll(&api, pluginsDirectory);

@@ -1,0 +1,509 @@
+---
+sidebar_position: 11
+---
+
+# The Menu System — `CGameMenu`, Magma Pages, and Building a Mod Configuration Menu
+
+:::info[Verified via reverse engineering]
+Traced live via GhidraMCP across two binaries: `Dunia.dll` (Steam v1.03, stripped function names but
+retained RTTI/class-name strings) and `FarCry2_server` (the unstripped Linux dedicated-server build,
+which links the same portable menu/UI code with full real symbols — see
+[Overview](./overview.md)). Where a fact is confirmed on one binary only, that's stated explicitly.
+Everything under "Confirmed facts" was checked against live, running code (decompiles, disassembly,
+or an actual working/shipped feature) — not inference alone.
+:::
+
+This page exists because FCSE (`tools/FCSE`) needed a way to let plugins expose simple config UI
+in-game, and building that required reverse-engineering a good chunk of Far Cry 2's native menu
+system (distinct from the `.mgb`/Magma *binary format* itself, which [its own page](../file-formats/mgb.md)
+already covers). That work shipped a real, working feature — plugin-registered bool rows appended to
+the Options screen — but also opened up the *real* menu-navigation machinery (`CGameMenu`, page
+switching, the Magma resource loader) further than the shipped feature actually needed. This page
+collects everything confirmed along the way, organized so a future attempt at a genuinely separate
+"Mods" page (not just extra rows on an existing screen) has a running start instead of repeating the
+same dead ends.
+
+## Class hierarchy
+
+Confirmed via `FarCry2_server`'s real class-hierarchy-info construction code (the `sm_HierarchyInfo`
+lazy-init pattern every page class has, one link in the chain built per class the first time it's
+touched):
+
+```
+CUIPageBase
+  └─ CMenuPage
+       └─ CListMenuPage            (adds AddButton - the row-list primitive)
+            └─ CSettingsPage       (adds AddBoolSetting/AddSliderSetting/AddValueListSetting<T>/AddUISetting<T>)
+                 └─ CFCXBaseOptionPage
+                      ├─ CFCXOptionGamePage        ("Game" tab)
+                      ├─ CFCXConsoleOptionDisplayPage → CFCXOptionDisplayPage   ("Display" tab)
+                      ├─ CFCXOptionSoundPage        ("Sound" tab)
+                      ├─ CFCXConsoleControllerOptionPage → CFCXControllerOptionPage ("Controller" tab)
+                      └─ CFCXOptionNetworkPage      ("Network" tab)
+```
+
+`CFCXOptionPage` itself (the tab-*selector* page — the screen showing the row of category buttons)
+sits at the same level as the leaf tabs conceptually but is its own class, extending
+`CFCXBaseOptionPage`. Its whole job is building that row of buttons; each leaf class above builds its
+*own* actual settings content (sliders, checkboxes) when the player navigates into it.
+
+`CGameMenu` is a separate, non-page class that owns page instances and drives switching between them
+(see below) — every top-level main-menu screen (Story Mode/Multiplayer/Options/Credits/Exclusive
+Content) is a page registered with one top-level `CGameMenu`, and `CFCXOptionPage` internally uses the
+exact same `AddButton`/handler pattern to build its own row of five category buttons.
+
+## Confirmed facts
+
+### Building a row of buttons (the mechanism FCSE's shipped feature uses)
+
+Every button-list screen in the game (`BuildMainMenu`'s six main-menu buttons, `CFCXOptionPage`'s five
+category buttons) is built with the identical repeated pattern:
+
+```cpp
+handler = new CSetNextPageMenuHandler(ownerPage, &targetCStringId, /*handler=*/nullptr, /*flag=*/true);
+label   = /* build a wchar_t* label - see below */;
+CListMenuPage::AddButton(ownerPage, label, /*visible=*/true, handler);
+```
+
+| Symbol | `Dunia.dll` (Steam v1.03) | `FarCry2_server` |
+|---|---|---|
+| `BuildMainMenu` | `0x108c8830` | — |
+| `CFCXOptionPage::Setup` | `0x1081aee0` | `0x08ad4590` |
+| `CListMenuPage::AddButton` | `0x10cdbb80` | (real signature confirmed via mangled symbol) |
+| `CSetNextPageMenuHandler::CSetNextPageMenuHandler` | `0x10188ea0` | `0x0912ebc0`/`0x0912ec10` |
+| `CBaseCommandMenuItemHandler::CBaseCommandMenuItemHandler` (base ctor) | `0x10188e20` | — |
+| `CMemMng::NMalloc` (generic allocator) | `0x10228f30` | — |
+| `CSetNextPageMenuHandler::SwitchPage` (the real click-time page switch) | not found | `0x0912ec60` |
+
+**`CListMenuPage::AddButton`** real signature (confirmed via `FarCry2_server`'s mangled symbol
+`_ZN13CListMenuPage9AddButtonEPKwbP16IMenuItemHandler`):
+`void* __thiscall AddButton(CListMenuPage* this, wchar_t const* label, bool visible, IMenuItemHandler* handler)`.
+
+**Critical, empirically confirmed constraint**: `AddButton` is only safe to call with a `this` whose
+real object layout matches what it reads/writes (`+0xc` null-check guard, `+0xd4`, `+0x168`/`+0x16c`
+row array). It is safe when called with `BuildMainMenu`'s own menu-list object, or with
+`CFCXOptionPage::Setup`'s own `this` (exactly what that function itself does, 5 times, every time
+Options opens) — **and it crashes the game** if called with `CFCXOptionPage`'s own top-level pointer
+instead (a different, incompatible class layout). This was hit and diagnosed live this session before
+landing on the correct target.
+
+**`0x1084fa90` is *not* `CFCXOptionPage::Setup`**, despite superficially similar code (it also calls a
+chain of get-or-create tab-descriptor getters). It fires eagerly, before intro videos even play, and
+hooking it to call `AddButton` crashes the game. Confirmed via live crash-testing; a decompiler comment
+is already left on this address in the shared Ghidra project warning against reuse. The *real*
+`Setup()` (`0x1081aee0`) is invoked only via a data/vtable xref (never a direct `CALL` anywhere in the
+binary) — i.e. genuine lazy virtual dispatch, fired only when Options is actually opened. This is
+confirmed by the "Mods" row-append log line appearing exactly once per session, only once Options is
+opened, not at boot.
+
+### Building the click-handler yourself (`IMenuItemHandler`)
+
+Confirmed via `FarCry2_server`'s mangled symbols: `IMenuItemHandler` is a tiny interface —
+`Activate(unsigned int)`, `ActivateParent(unsigned int)`, plus a virtual destructor. **Not** part of
+the `CMenuPage` class hierarchy above.
+
+FCSE does **not** reuse the engine's own `CSetNextPageMenuHandler` for its click handling — it builds
+its own hand-rolled object instead (`tools/FCSE/src/menu_handler.cpp`, `ModsMenuHandler`): a plain
+struct whose first member is a `void**` vtable pointer, with a small hand-built vtable array (one real
+slot pointing at our handler function, the rest safe no-ops). **`kActivateSlot = 1` was correct on the
+first empirical try** — confirmed live, no iteration needed. This was never derived from a real,
+confirmed Windows/MSVC vtable layout (no tool to read raw vtable data was available this session) —
+it's an empirically-verified guess, documented as such in `menu_handler.cpp`.
+
+### Page switching — `CGameMenu`
+
+Fully decompiled on `FarCry2_server`. **All `Dunia.dll` addresses for `GetPage`/`SetNextPage`/
+`SwitchPage`/the ctor+dtor/`Shutdown` are now found and structurally confirmed** — started from an
+unverified name→address candidate list (produced by some external structural-matching pass, not
+100% trusted going in — two of its `CGameMenu` candidates turned out to be wrong, see below), then
+closed the one real gap (`SetNextPage`) by tracing `GetPage`'s callers directly.
+
+| Method | `FarCry2_server` address | `Dunia.dll` address | What it does |
+|---|---|---|---|
+| `CGameMenu::GetPage(CStringID const&)` | `0x0912b860` | `0x101d1b90` | Pure hashtable **lookup** — returns 0 if not found. Does **not** create on demand. Confirmed: `Dunia.dll` version calls a lookup helper then compares against the same end-sentinel field (`this+0x14`) `Shutdown` (below) also uses, returning `*(node+0xc)` on a hit or 0 otherwise. |
+| `CGameMenu::SetNextPage(CStringID const&)` | `0x0912b940` | `0x101d1bc0` | The candidate-list guess (`FUN_1071ab20`) was **wrong** (an unrelated `CFCXScoreboardService` singleton accessor, rejected). Found instead by tracing `GetPage`'s own callers: runs the identical hashtable-lookup helper `GetPage` uses (`FUN_101f7a90`, same `+0x14` sentinel check), and stores the hit into `this+0x3c` — precisely the field `SwitchPage` reads as "next page". Confirmed. |
+| `CGameMenu::SwitchPage()` | `0x0912b5e0` | `0x101d1990` | The real transition. Confirmed structurally: old page (`this+0x40`) gets a vtable call first, then new page (`this+0x3c`) gets its owning-`CGameMenu` backpointer set (`+0x20`) and a vtable call, then current/next pointers are swapped. **Vtable slot numbers differ from the Linux server build** — here it's slot `+0xc` on the *old* page (deactivate) and slot `+0x8` on the *new* page (activate), vs. `+0x10`/`+0xc` on `FarCry2_server`. Expected: different compilers (MSVC vs. GCC/Itanium ABI) place virtuals at different indices, not a contradiction. |
+| `CGameMenu::CGameMenu()` (ctor) | — | `0x101d1d70` | Confirmed via matching field layout: zeroes the same `+0x38`/`+0x3c`/`+0x40` fields `SwitchPage`/`Shutdown` operate on, then allocates and registers a small self-registration helper object stored at `+0x34` (torn down by the dtor). The candidate list's second ctor guess (`FUN_1011cec0`) is **wrong** — different vtable, different field layout (no `0x38/0x3c/0x40`), looks like an unrelated container copy-ctor; only called from one unrelated site (`FUN_106a9e30`). Rejected. |
+| `CGameMenu::~CGameMenu()` (dtor) | — | `0x101d1ce0` | Confirmed: same vtable pointer as the ctor sets, tears down the `+0x34` helper object. |
+| `CGameMenu::Shutdown()` | — | `0x101d1b20` | Confirmed, and a strong cross-check: walks the page hashtable (same `+0x14` sentinel `GetPage` uses) and calls `FUN_10108990`... actually `FUN_101088f0` on every entry — which is *exactly* the candidate list's own separate mapping for `CUIPageBase::Shutdown`. Two independent candidate-list entries corroborate each other here. |
+| `CSetNextPageMenuHandler::SwitchPage()` | `0x0912ec60` | `0x10188d00` | What a real button's click ultimately calls: `GetPage` + `SetNextPage` + `CGameMenu::SwitchPage` (in that exact call order), plus a `"default_ui_transition"` sound/effect trigger. Found by tracing `GetPage`'s callers, not from the original candidate list — a bonus find; the doc previously had this marked "not found" on `Dunia.dll`. |
+| `CGameMenu::AddPage<T>()` (one compiled instantiation per class `T`) | e.g. `0x0897be50` for `<CFCXOptionPage>` | — | **Compile-time template** — get-or-create a page instance in `CGameMenu`'s own hashtable. Only works for classes the game itself was compiled with; there is no generic runtime "create by name" factory. **Field offsets corrected 2026-08-03** (this row previously guessed `this+0x10`/`+0x14`=bucket base/end, `this+0x1c`=count - wrong, superseded by the rigorous decompile-based mapping in "`CGameMenu`'s page hashtable" below: `+0x10`=miss sentinel, `+0x14`=internal list sentinel *pointer* (not a bucket bound), `+0x1c`=node array base, `+0x28`=bucket mask, `+0x2c`=element count). |
+| `CGameMenu::GetCurrentPage()` | not in this table before | rejected | The candidate list also offered `FUN_10a5a680` for a never-before-documented `GetCurrentPage`. Decompiled and **rejected** — completely different field layout (no `CGameMenu` fields at all), almost certainly a false positive from name-only fuzzy matching. |
+
+**Also newly found this session (candidate list, not yet independently decompiled/verified beyond
+name-plausibility): a near-complete `CUIPageBase` method table on `Dunia.dll`** — `Init`
+(`0x10109410`), `Shutdown` (`0x10108990`... `0x101088f0`, see cross-check above), `Display`
+(`0x10109490`), `Hide` (`0x101095c0`), `PushPage`/`PopPage` (`0x10108e70`/`0x10109010`), `SetPage`
+(`0x101090d0`), `ConfigPage` (`0x10109f00`), `RegisterModule`/`UnRegisterModule`
+(`0x102ffdb0`/`0x104fb660`), `AddListener`/`RemoveListener` (`0x10720790`/`0x10503880`),
+`AddCommand`/`ExecuteCommands` (`0x10108ba0`/`0x10108b40`), `OnActionSignal` (`0x10108990`),
+`Update` (`0x10108c10`), `GetLayer` (`0x10a962e0`), `Unload` (`0x10108760`). Cross-checked one data
+point: `Display`'s and `Hide`'s vtable-slot data xrefs sit exactly 4 bytes apart in every vtable that
+contains them (`0x10e1e2bc`/`0x10e1e2c0`, `0x10e25114`/`0x10e25118`, `0x10eabe3c`/`0x10eabe40`),
+confirming they're adjacent slots — but the absolute slot offset from vtable base (needed to know
+whether `Display`/`Hide` *are* `SwitchPage`'s activate/deactivate slots, or something else entirely)
+wasn't pinned down. Not chased further this session.
+
+**Implication for building a genuinely new page**: since `AddPage<T>` is compile-time-only, a truly
+new C++ page class can't be registered through the normal path. But `CGameMenu`'s hashtable is just a
+plain data structure — nothing stops inserting a hand-built object directly (the same trick already
+used successfully for `ModsMenuHandler`) under an invented `CStringID`, *if* that object's vtable slots
+`+0xc`/`+0x10` do something sane when called. This was identified as viable and **attempted live**
+2026-08-02/2026-08-03 (`tools/FCSE/src/mod_page.cpp`) — see the next section for what that found.
+
+### `CGameMenu`'s page hashtable — `Find`/`GetOrCreatePageSlot`/`InsertNode` (2026-08-02/03)
+
+The three functions `GetPage`/`SetNextPage`/`Shutdown` all share underneath them, fully decompiled and
+now given real names in the shared Ghidra project (`Dunia.dll` addresses):
+
+| Function | `Dunia.dll` address | Role |
+|---|---|---|
+| `CGameMenu_PageTable_Find` | `0x101f7a90` | The shared read-only lookup every one of `GetPage`/`SetNextPage`/`GetOrCreatePageSlot` calls into (previously referenced only as `FUN_101f7a90`). Signature `(CGameMenu* this, void** outNode, uint32_t* key)`: hashes `*key` (an `ldiv`-based scramble, **not** CRC32), walks the bucket at `this+0x1c` indexed by `(hash & this+0x28)` with a wraparound correction against `this+0x2c` (element count), compares each node's own `[2]` field against `*key`, writes the hit node or the `this+0x10` miss-sentinel into `*outNode`. **Confirmed safe to call live** — used as a diagnostic probe against a real, live `CGameMenu*` (see below) and completed cleanly, returning the correct miss sentinel. |
+| `CGameMenu_GetOrCreatePageSlot` | `0x107813e0` | The get-or-create wrapper `AddPage<T>` itself calls. Runs `Find`; on a miss, calls `InsertNode` to insert a fresh node, then returns a pointer to the node's value slot (`&node[3]`) for the caller to write its own page pointer into. **This is the function real tab descriptors' compile-time `AddPage<T>` calls rely on — an earlier pass of this doc called it "already confirmed working," which was wrong; it was never actually called live until 2026-08-02, and it crashes.** |
+| `CGameMenu_PageTable_InsertNode` | `0x10206020` | A full Dinkumware/MSVC-STL-style hashtable insert-with-rehash implementation (bucket growth, node splicing, `std::logic_error("list<T> too long")` on overflow via `_CxxThrowException`) — matches classic `stdext::hash_map`/`_Hash` internals almost line for line. **This is where the live crash happens.** |
+
+**Confirmed node shape** (from `Find`'s own field accesses): each node is (at least) 4 `uint32`-sized
+slots — `[0]`/`[1]` unresolved (list-linkage, `[1]` is read as the node's own "next" pointer during
+insert), `[2]` = the stored key, `[3]` = the caller's own value (what `GetOrCreatePageSlot` hands back
+a pointer to).
+
+**Live crash, reproduced twice** (2026-08-02 and 2026-08-03, `tools/FCSE/src/mod_page.cpp`, hooked from
+inside `CFCXOptionPage::Setup`, same hook point `mods_tab.cpp`'s already-shipped feature uses): calling
+`GetOrCreatePageSlot` on a real, live `CGameMenu*` (obtained via `ownerPage+0x140`, see below) raises
+`STATUS_ACCESS_VIOLATION` (`0xC0000005`) inside `InsertNode`, caught cleanly by wrapping every native
+call in SEH (`__try`/`__except`) so the game keeps running either way. This was actually first hit
+2026-07-31 (a fact that had only ever been recorded as a Ghidra decompiler comment on these three
+addresses, not written to this doc until now) — meaning it was independently re-discovered on
+2026-08-02 before that context was found.
+
+**What's independently confirmed correct** (so not worth re-litigating): `ownerPage+0x140` really is
+the owning `CGameMenu*` — confirmed twofold: (1) disassembly of `CSetNextPageMenuHandler::SwitchPage`
+(`0x10188d00`, the real click-time entry point every button uses) shows it reading `ownerPage+0x140`
+itself before calling `GetPage`/`SetNextPage`/`SwitchPage`; (2) a live dump of the candidate pointer's
+fields looked structurally sane where it mattered (`+0x2c` read back as a small integer, `7`, a
+plausible live element count).
+
+**The concrete crash mechanism, worked out from the decompile**: `InsertNode`'s own pre-check block
+(`if (count <= *(uint*)(this+0x14) >> 2)`) reads `this+0x14` **as an integer capacity** and, when it's
+garbage-large (which it always is against a real `CGameMenu`, see below), always evaluates true — which
+means the "maybe grow the bucket array" bookkeeping that follows always runs, including a line
+(`index = (count - (mask >> 1)) - 1; node = nodeArray[index];`) that isn't gated by whether growth
+was actually needed. With a mask value that isn't small, `index` wraps to something astronomically
+large, and indexing `nodeArray[index]` is what segfaults.
+
+**Why `this+0x14` is garbage as an integer**: it isn't one. `CGameMenu::Shutdown`'s own decompile
+(`0x101d1b20`, already independently cross-validated in the table above) reads the *identical* offset
+as a genuine pointer — `puVar1 = *(undefined4**)(this+0x14);` — then walks it as a circular
+sentinel-node linked list (`for (node = *puVar1; node != puVar1; node = *node)`). That's the standard
+Dinkumware/MSVC `_List_nod`-style sentinel pattern, and it's independently confirmed (this function was
+already cross-validated via a separate `CUIPageBase::Shutdown` candidate-list match). `InsertNode`'s own
+decompile treats the *same* field two more ways within its own body (`>>2` as a byte-length capacity,
+then later `!= 0x1fffffff` as if it were an integer compared against Dinkumware's classic `max_size()`
+sentinel) — three incompatible readings of one field, all within functions operating on the same struct.
+This is very likely a Ghidra decompiler type-recovery failure on genuinely tricky hand-tuned STL pointer
+arithmetic, not three actually-different real fields at the same offset — but which of the three (if
+any) reflects the real compiled logic wasn't resolved this session.
+
+**Debugging technique worth reusing**: before attempting any risky native call live, add a strictly
+*read-only* probe through the identical code path first (here: calling `Find` with a key that's known
+not to be present, expecting a clean miss) and log whether it completes at all. A clean pass rules out
+"the object isn't safely readable yet" (a timing/initialization-order theory) independently of whatever
+the *next*, riskier call does — cheap, safe, and was what let this session narrow the crash from
+"somewhere in this whole chain" down to one specific ~15-line block using one specific ambiguous field,
+without ever needing another blind crash-and-diagnose cycle. Every native-pointer touchpoint should be
+wrapped in SEH (`__try`/`__except`) regardless — this is what let both live attempts keep the game
+running afterward instead of hard-crashing.
+
+**Status**: unresolved. Calling `GetOrCreatePageSlot`/`InsertNode` live against a real `CGameMenu` is
+not currently safe. See "If you want to build a real, separate Mods page" below for the resulting
+strategic reassessment (pivoting toward Magma-side interception instead of fighting this further).
+
+### Loading Magma resources (`.mgb`/`.mgb.desc`)
+
+Fully decompiled on `FarCry2_server` this session (`mgb.md` only had these as addresses/summary before
+now). **`Dunia.dll` addresses found and structurally confirmed this session** too, from the same
+candidate list referenced above — both held up on decompile, and cross-validate each other (one calls
+the other directly, matching the documented "binary is always the last thing loaded" relationship).
+
+- **`CMagmaConfigUIResource::LoadResourceInMagma()`** — `FarCry2_server` `0x096077a0`, `Dunia.dll`
+  `0x10554a40`. Walks its own `<dependencies>` child array (`this+0x28` base/`this+0x2c` count),
+  **recursing only into nested `CMagmaConfigUIResource` children first** (depth-first, confirmed on
+  `Dunia.dll` via a direct self-recursive call), then as the final step calls
+  `CMagmaUIResource::LoadPackageInMagma` on its own paired binary resource (`this+0x4c`) — confirms
+  `mgb.md`'s existing claim that the `.mgb` binary is always the last thing loaded for a given `.desc`.
+- **`CMagmaUIResource::LoadPackageInMagma(char const*)`** — `FarCry2_server` `0x0961ee70`, `Dunia.dll`
+  `0x105f3960`. Cache-check (`this+0x44`), builds a `CFileNameNomad` from the resource's own stored
+  path (`this+0x1c`, set at construction from the `.desc`'s `ID=` attribute) plus a `"UI\\"` prefix,
+  then calls a **virtual** `LoadPackage` method on the global `CEngineNomad` singleton — `vtable+0x14`
+  on `FarCry2_server`, **`vtable+0x8` on `Dunia.dll`** (same ABI/compiler-driven slot-numbering
+  difference noted for `CGameMenu::SwitchPage` above) — which returns the `Package*`, and caches it.
+
+### `magma::objecttypemanager` — `Dunia.dll` addresses found
+
+Not previously covered in this doc at all (only referenced speculatively in Open question 1 below, as
+an untried debugging angle). The candidate list included this whole family; decompiling disambiguated
+two internally-inconsistent duplicate guesses:
+
+| Method | `Dunia.dll` address | Confirmed via |
+|---|---|---|
+| `Register(ObjectTypeInfo*)` | `0x10a982b0` | Decompile matches exactly: linear scan for an existing duplicate, append-and-increment-count if new, with one special-cased sentinel type (`&DAT_1165f4c4`). |
+| `Initialize()` | `0x10a98ad0` | Decompile calls `FUN_10aa7150` — the already-confirmed `magma::Id::Hash` — once per registered type, building a hash-sorted lookup table at `DAT_1165f4c0`. The candidate list also offered this same address for `Register` and vice versa; the decompile is what disambiguates them. |
+| `GetCount()` | `0x10a98290` | Trivial one-line accessor over `GetInternalRegisteredCount()` — matches. |
+| `GetTypeIdFromId(...)` | `0x10a986a0` | Looks up a hash in the exact same `DAT_1165f4c0` table `Initialize` builds — matches. |
+| `UnInitialize()` | `0x10a98a40` | Tears down the same `DAT_1165f4c0` table — matches. |
+
+**This unblocks Open question 1(b) below**: hooking `Register` (address now known) to log every
+`ObjectTypeInfo*`'s class name as it's registered — no hash computation involved at the registration
+call site itself — was floated last session as a way to catch the still-unidentified `0x86F001E3`
+class without depending on `Id::Hash` ever being called for it. **Attempted 2026-08-02, see Open
+question 1's update and [`mgb.md`](../file-formats/mgb.md)** — resolved 98 real class names but not
+this one; the hunt moved to `GetTypeIdFromId` and the header/body parser instead.
+
+### `.mgb` header/body parsing entry points — `Dunia.dll` addresses found (2026-08-02)
+
+Found while live-tracing a `0x86F001E3` lookup failure end-to-end (see Open question 1's update). Not
+previously documented on either binary.
+
+| Function | `Dunia.dll` address | What it does |
+|---|---|---|
+| `BinaryLoadVisitor::ReadHeader` equivalent | `FUN_10ac7a30` | Checks the `"MAGMA"` magic, the `0xAB` sentinel byte, and the `0x1eab90` version, then walks the type table: reads each raw hash, calls `GetTypeIdFromId`, and stores the result byte unconditionally into the per-`this`-instance remap array at `this+0x34+slotIndex` — no branch on found-vs-not-found. |
+| Its caller/wrapper | `FUN_10ac9180` | Opens the archive/file, `memset`s the 255-byte remap array (`this+0x34`) to `0`, calls `ReadHeader`, and on success calls into `FUN_10a99230` next. |
+| Body/`VisitPackage` dispatch trampoline | `FUN_10a99230` | A thin, reused/folded thunk (fires from multiple unrelated call sites — do not trust a single hit's target as "the" body dispatcher, learned the hard way this session): loads an arg, tail-jumps through `[[this+0x5c]]+8`. |
+
+**Follow-up (2026-08-02), resolved via Ghidra Version Tracking** — rather than chasing virtual dispatch
+targets live, the user ran a Version Tracking correlation between `FarCry2_server` (real symbols) and
+`Dunia.dll`, and renamed the matched functions directly in the shared Ghidra project. This is by far the
+most reliable way to bridge the two binaries and is now confirmed to work well — all of the following
+were found this way, then independently confirmed by decompile:
+
+| Function | `Dunia.dll` address | Confirmed via |
+|---|---|---|
+| `BinaryLoadVisitor::VisitArea` equivalent | `0x10AC9520` | Decompile 1:1 matches `FarCry2_server`'s `VisitArea` (`0xa05f4b0`): reads a raw type-id byte, indexes the remap array, calls `GetType`, calls the `MakeElement` equivalent, dereferences the result's vtable with **zero NULL check** — same crash-risk shape on both binaries. |
+| `objecttypemanager::GetType(byte)` equivalent | `0x10AC9140` | 1:1 match to `FarCry2_server`'s `GetType` (`0xa075fa0`): `return TypeArray[index];`, no bounds check. |
+| `Factory::MakeElement` equivalent | `0x10ABF0E0` (from `VisitArea`'s children loop) / `0x10ABED20` (from `VisitPackage`'s own `areaCount` loop — a different call site, not necessarily a different function) | 1:1 match to `FarCry2_server`'s `MakeElement` (`0xa0481a0`): ancestor-walk against ~11 hardcoded `PTR_DAT_*` leaf-category globals, returns `0` if none match. |
+| `VisitPackage`'s `areaCount` loop | inside `0x10ACA570` (`VisitPackage` itself), loop body at `0x10ACAE60`–`0x10ACAEAA` | The real top-level-`Area` constructor loop — distinct from `VisitArea`'s own *children* loop; conflating the two wastes a lot of live-debugging time (see `mgb.md`'s `0x86F001E3` write-up). |
+| `VisitAreaLink` | `0x10AC9710` | Same `GetType`/`MakeElement` shape, raw byte held in `ECX` not `EAX` at the resolved-value read. |
+| `VisitFullLink` | `0x10AC9EF0` (call to `GetType` at `0x10AC9F29`) | Same shape, `EAX`. |
+| "Has global focus area?" / "has second area?" special slot | `0x10AC97C0` | Matches `mgb.md`'s documented bool-gated single-`Area` slots (separate from `areaCount`'s loop entirely) — a call site not previously identified on either binary. |
+| `LoadMaterial` | `0x10ACB900` | Resolved its full byte format this session — see `mgb.md`. |
+
+The reader/`BinaryLoadVisitor`-equivalent object is **pooled and reused** across `.mgb` loads (confirmed
+live: `FUN_10ac9180`'s `memset` fires again, at the same heap address, for a later, different file's
+load) — worth knowing before trying to track one via a fixed address across more than one load. A
+hardware watchpoint on a *heap* address (the reader object's own fields) is fragile for exactly this
+reason; a breakpoint on a *code* address (like the ones in the table above) is not, and is the better
+tool once the real function is known.
+
+### Two separate CRC-32 implementations — do not confuse them
+
+This was the single biggest source of wasted effort this session. Far Cry 2 has **two independent**
+CRC-32 implementations, both the same algorithm (CRC-32/ISO-HDLC: poly `0xEDB88320` reflected, init
+`0xFFFFFFFF`, final complement — confirmed byte-for-byte identical to Python's `zlib.crc32`), but
+**completely separate code and separate lookup tables**:
+
+| | Native engine hash (`GetNameHash`/`CRC32_Hash`) | Magma widget-class hash (`magma::Id::Hash`) |
+|---|---|---|
+| `Dunia.dll` address | `CRC32_Hash` @ `0x10229400`, `GetNameHash` wrapper @ `0x10228380` | `0x10aa7150` (found live in a debugger by inspection, not derived statically) |
+| `FarCry2_server` address | — | `0xa0782a0` |
+| Lookup table | Shared, precomputed constant `DAT_10f95388` | **Own separate table**, lazily generated on first call into `DAT_1165ff80` |
+| Used for | Native C++ class/page navigation hashes (e.g. `CRC32("CFCXOptionPage")` = `0x977107FF`, used by `CGameMenu`-style page lookup) | The `.mgb` type-table class hashes (`RectShape`, `CheckBox`, `Page`, etc. — [see `mgb.md`](../file-formats/mgb.md)) |
+| Confirmed via | A live hook logging ~1.7M real calls over a full session | Live capture (both an FCSE hook and, more successfully, a live IDA debugger session with an IDC script) confirming real class names like `CActionSignalBase`, `StretchableWindowSection` |
+
+`GetNameHash`'s real signature: `void __thiscall GetNameHash(uint* outSlot, char* str, bool
+useAltHashFn)` — if `useAltHashFn` is true it calls a different function (`FUN_10229440`, not
+investigated) instead of `CRC32_Hash`.
+
+**`FUN_10aa7150`'s signature**: `void __cdecl(unsigned int* outHash, const char* str)` — confirmed via
+raw disassembly (`MOV EDX,[ESP+8]` for the string, plain `RET`, no stack-cleanup immediate = genuine
+`__cdecl`, not `__thiscall`/`__fastcall`).
+
+### The `.mgb` byte format — hands-on validated this session
+
+[`mgb.md`](../file-formats/mgb.md) already has the full documented spec. This session additionally
+confirmed, byte-for-byte, against the four real sample files in `tmp/menu/` (`common.mgb`,
+`common_mp.mgb`, `options.mgb`, `sp_menus.mgb`):
+
+- **The entire header + 166-entry type table (bytes `0`–`0x2A6`) is byte-for-byte identical across all
+  four files** (confirmed via `md5sum` of the first 679 bytes of each) — it's a fixed, engine-wide
+  constant for a given build, not per-file content. A future `.mgb` writer can copy this prefix
+  verbatim rather than reconstructing the type table.
+- `PAGESIZE`/`DISPLAYOFFSET`/materials/`VisitUserData` all decode correctly via JackAll's existing
+  `MgbReader`/`MgbBody` parser (`tools/JackAll/src/JackAll.Tools/Format/`), matching real,
+  cross-checkable content (e.g. `sp_menus.mgb`'s materials decode to real texture paths matching its
+  own `.desc` sidecar exactly).
+- All four sample files still hit the known `0x86F001E3`-unresolved-class wall a few areas in (area
+  index 2–3) — this is **not** a blocker for authoring a *new* file using only already-documented
+  classes (`Page`/`Text`/`CheckBox`/`RectShape`/etc.), only for fully decoding these particular shipped
+  files.
+
+## What FCSE actually shipped
+
+The working feature (confirmed live, in-game, end to end) does **not** use a separate page, real
+checkbox widgets, or `CGameMenu`'s page-switching machinery at all — it appends plain toggle-button
+rows directly to the Options category-button screen, reusing only the confirmed-safe
+`AddButton`/`ModsMenuHandler` mechanism above:
+
+- `tools/FCSE/include/plugin_api.h` — `FCSE_ConfigBool` (label, `bool*`, optional `onChanged`),
+  `FCSE_RegisterConfigPageFn`, `FCSE_API_VERSION` bumped 1→2.
+- `tools/FCSE/src/mods_registry.cpp`/`.h` — flat registry of `(pluginName, FCSE_ConfigBool[])`; FCSE
+  always registers one built-in dummy bool under `"FCSE"` through the same path a plugin would use.
+- `tools/FCSE/src/menu_handler.cpp`/`.h` — `ModsMenuHandler`, the hand-built `IMenuItemHandler`.
+- `tools/FCSE/src/mods_tab.cpp`/`.h` — hooks `CFCXOptionPage::Setup` (`0x1081aee0`), calls through to
+  the original first, then appends one row per registered bool via `AddButton`.
+
+Confirmed live: rows render as real, selectable buttons; clicking one plays the normal menu-select
+sound, toggles the backing `bool`, and fires the plugin's `onChanged`. **Known cosmetic gap**: the
+on-screen label doesn't live-refresh to show `[ON]`/`[OFF]` after a click, because `Setup()` only runs
+once per session (confirmed — re-running it would duplicate the 5 real category buttons, since it has
+no internal "already built" guard).
+
+## If you want to build a real, separate "Mods" page
+
+This is the actual goal that prompted this whole investigation, and it's **not done** — the shipped
+feature is the pragmatic fallback. Two paths have been explored:
+
+### Path A: hand-rolled `CGameMenu` page — attempted, currently blocked
+
+1. ~~Find `Dunia.dll` addresses for `CGameMenu::GetPage`/`SetNextPage`/`SwitchPage`.~~ **Done.**
+   `GetPage` (`0x101d1b90`), `SetNextPage` (`0x101d1bc0`), `SwitchPage` (`0x101d1990`), the ctor/dtor,
+   `Shutdown`, and `CSetNextPageMenuHandler::SwitchPage` (`0x10188d00`, the real click-time entry
+   point) are all found and structurally confirmed (see the table above).
+2. ~~Build a hand-rolled "page" object and insert it into `CGameMenu`'s hashtable.~~ **Attempted,
+   currently blocked.** `tools/FCSE/src/mod_page.{h,cpp}` implements exactly this (vtable-pointer-first
+   struct, `+0x8`=activate/`+0xc`=deactivate, SEH-wrapped around every native touchpoint) and is wired
+   up live in `mods_tab.cpp`. The insert step (`GetOrCreatePageSlot`/`InsertNode`) crashes against a
+   real, live `CGameMenu*` — see "`CGameMenu`'s page hashtable" above for the full mechanism and status.
+   Everything *else* in this step (the vtable slot numbers, the invented `CStringID` via native
+   `CRC32_Hash`, the hashtable being a plain insertable data structure) is confirmed correct; only the
+   insert call itself is blocked.
+3. **Point a real `CSetNextPageMenuHandler`** (built via the confirmed ctor at `0x10188ea0`) at that
+   invented `CStringID`, wired to a new "Mod Configuration Menu" row appended the same way the shipped
+   feature already does. Not reachable yet since step 2 blocks first.
+4. **The open question this doesn't answer**: what backs the new page's actual *visuals*, even once step
+   2 is unblocked. Two options, neither attempted: (a) have the hand-rolled page's "activate" slot just
+   call the same `AddButton`-based row-building the shipped feature already does (correct `CGameMenu`
+   bookkeeping, but no visually distinct new screen); or (b) a real, separate Magma `Page*` — see Path B.
+
+### Path B: intercept `.mgb` loading instead — the current preferred direction (2026-08-03)
+
+Scoped out this session as a way to sidestep Path A's blocker entirely, by working inside the
+already-well-understood, data-driven Magma system instead of fighting `CGameMenu`'s native C++
+internals. Rather than inserting a hand-rolled page into `CGameMenu`, intercept
+`CMagmaUIResource::LoadPackageInMagma` (or whatever lower-level file-read call it makes - not yet
+found) for the Options screen's own `.mgb` resource path, and hand back a modified/extended version
+(with new `Button` elements added to the real `Page`) instead of the original bytes. This avoids
+`CGameMenu`'s hashtable entirely - the new content just becomes part of an already-loading, already-
+working page.
+
+**What this needs, concretely, none of it done yet:**
+- **A real `.mgb` editor with a writer**, not just the read-only inspector `tools/JackAll` has today
+  (see [`mgb.md`](../file-formats/mgb.md)) - needs an editing UI in `JackAll.App` (currently a
+  read-only `TextBlock`) and a serializer (`MgbBody` currently only has `ParsePackage`, no
+  `WritePackage`/equivalent). Doesn't need the format to be 100% understood first: a byte-preserving
+  design (parse what's understood into an editable tree, keep anything not understood as an opaque
+  blob, splice edits back in) can support well-scoped edits like "add a `Button` to a `Page`'s element
+  list" - one of the best-validated, most cross-checked parts of the whole format - without first
+  resolving the format's remaining open questions (`Keyframe` state-type selection, the `Placeholder`-
+  as-`Factory::MakeArea`-fallback shape - see `mgb.md`'s own Unknowns).
+- **Finding the file-load interception point** - not yet reverse-engineered on either binary. Likely a
+  similar-difficulty task to what's already been done elsewhere in this doc, just not started.
+- **Reverse-engineering `Action` *execution*, not just its file format.** Everything documented in
+  `mgb.md`'s `ActionExecuter`/`Action` section is about how actions are *serialized* - nothing is known
+  yet about how a live button click actually *dispatches and executes* one at runtime, which is what
+  "hook it to call FCSE functions" needs. This is a separate, unstarted RE thread and the single
+  biggest unknown in this path.
+- **A possible shortcut for that last point, not yet verified**: while investigating `Handler`-family
+  classes for `mgb.md`, script/console-callback registration machinery was spotted in the binary
+  (`CDominoConsoleCommandManager::RegisterConsoleCommand`-style templates). If an existing native
+  `Action` type can invoke a named, registerable callback (rather than only navigating between pages),
+  FCSE could register a real native handler through it without reverse-engineering raw `Action`
+  dispatch internals at all. Flagged as worth checking before assuming the full dispatch mechanism
+  needs reversing from scratch.
+
+An alternative, lower-risk path that was scoped but not attempted: skip `CGameMenu` entirely, and
+instead find and hook one of the *existing* leaf pages' own `Setup()` (e.g. `CFCXOptionNetworkPage`,
+the least-missed real tab in single-player) to inject Mods content into an already-real, already-
+navigable, already-visually-distinct screen.
+
+## Open questions — the real gaps
+
+1. **What string hashes to `0x86F001E3`?** Still unknown, despite: ~900 manually-tried candidates,
+   a ~12,000-candidate automated sweep of every mangled `magma::`-namespaced symbol in
+   `FarCry2_server`, a live FCSE hook logging ~1.7M `CRC32_Hash` calls, and a live IDA debugger capture
+   of 2580+ real `magma::Id::Hash` inputs (which *did* newly resolve `CActionSignalBase` and
+   `StretchableWindowSection`, but not this one). Leading theories, none confirmed: (a) computed too
+   early for any hook installed after process start to observe (possibly during `Dunia.dll`'s own
+   static initializers, before even a from-the-start IDA capture could attach — this contradicts the
+   IDA capture apparently working for other classes, so it's not a clean explanation); (b) a
+   hardcoded/precomputed hash that never passes through a runtime `Id::Hash(name)` call at all,
+   registered some other way (a real, live line of investigation floated but not yet executed: break
+   on `magma::objecttypemanager::Register` instead — it takes the `ObjectTypeInfo*` directly, so the
+   class name is readable regardless of whether/how a hash gets computed at that call site); (c) a
+   stale hash from a class that no longer exists in this build, left over in shipped content from an
+   earlier engine version.
+
+   **Update (2026-08-02) — extensive live + static investigation, still unresolved but much narrower.**
+   Full write-up lives in [`mgb.md`](../file-formats/mgb.md#unknowns), this is the summary. Theory (b)'s
+   `Register` hook was finally run live (98 real class names captured, no match). Static analysis on
+   `FarCry2_server` then proved the class **must be real and currently registered** — `GetType(0)`
+   resolves to `BaseObject` (not `AnonymousType`), and the real element-construction loops dereference
+   `Factory::MakeElement`'s result with zero NULL check, so an unresolved type at real construction time
+   would crash the shipped game every time, and it doesn't — which weakens theory (c) (stale/removed)
+   considerably. But a comprehensive live capture covering all four real body-side consumption points
+   (confirmed via Ghidra Version Tracking — see the address table above) across a full session, with the
+   debugger attached before process start and the in-game pause menu opened (both explicitly verified,
+   ruling out the two most obvious "we just didn't observe the right window" explanations), never once
+   saw the specific type-id byte value this hash needs (`3`, per `mgb.md`'s off-by-one formula). A
+   from-scratch static re-implementation of the format got close to settling it independently but hit an
+   undiagnosed field-layout bug in `VisitArea`'s own byte layout before it could search a real file
+   end-to-end. Net: still open, theory (b) (early-bootstrap registration, or a body path not yet covered)
+   is the leading explanation, and the concrete next step is finishing that static parser rather than more
+   live debugging — see `mgb.md` for exactly where it stopped.
+2. **Why does hooking `magma::Id::Hash` (`0x10aa7150`) crash unless the detour takes almost no action?**
+   A pure no-op passthrough is safe; a version that only *compares* the hash and takes action (file
+   I/O, even a `MessageBoxA`) **only on an exact, rare match** is safe and ran full sessions with zero
+   crashes; but *any* version that did unconditional per-call work — file I/O, a CRT-free hand-rolled
+   memory buffer, even just logging the first ~30 calls — crashed deterministically (same crash point
+   every time, ruling out a timing race). A `CRITICAL_SECTION` around all file I/O made zero difference,
+   ruling out unsynchronized concurrent access too. The real mechanism was never found. The empirically-
+   safe workaround (act only on a rare match) is documented in `tools/FCSE/hash_logger_plugin/` and
+   works, but doesn't explain *why*.
+3. **`Dunia.dll` addresses — resolved this session.** `CGameMenu::GetPage`/`SetNextPage`/`SwitchPage`,
+   `CSetNextPageMenuHandler::SwitchPage`, `CMagmaUIResource::LoadPackageInMagma`,
+   `CMagmaConfigUIResource::LoadResourceInMagma`, and `magma::objecttypemanager::Register`/
+   `Initialize` are all now found and structurally confirmed (see the tables above). What's left:
+   the absolute vtable-slot-to-named-method mapping for `CUIPageBase` on `Dunia.dll` (i.e., which real
+   method — `Display`? `Hide`? something else? — actually lives at the `+0x8`/`+0xc` slots
+   `SwitchPage` calls) wasn't pinned down; not required to build the hand-rolled page (which only
+   needs to fill those slots, not identify what real code used to occupy them), but would close Open
+   question 5 below if chased.
+4. **`IMenuItemHandler`'s real vtable slot layout on Windows/MSVC is unconfirmed.** `ModsMenuHandler`'s
+   `kActivateSlot = 1` works empirically (confirmed live, first try) but was never derived from an
+   actually-read vtable — no tool was available this session to read raw vtable data out of
+   `Dunia.dll`. If a future session gets debugger or memory-dump access to a real
+   `CSetNextPageMenuHandler` instance's vtable, confirming this properly (and finding `ActivateParent`'s
+   slot too) would remove the last "confirmed by luck" piece of the shipped feature.
+5. **What actually determines the Options tab-selector's on-screen row order/membership at a lower
+   level** (is there a real child-page array analogous to `CUIPageBase::Display`'s `this+0x40`/`+0x44`
+   iteration found on the server, and does `CFCXOptionPage::Setup`'s flat `AddButton` sequence fully
+   explain it, or is something else also involved)? Not needed for the shipped feature, but relevant if
+   a future page needs to insert itself *into* that existing row rather than appending after it.
+6. **`CGameMenu_PageTable_InsertNode`'s real field-usage for `this+0x14` — added 2026-08-03.** The
+   single blocker on Path A above. Confirmed to be a genuine pointer (a linked-list sentinel, via
+   `CGameMenu::Shutdown`'s own decompile) but `InsertNode`'s own decompile treats it as an integer
+   twice, in two different ways, within the same function — almost certainly a Ghidra type-recovery
+   failure on hand-tuned Dinkumware/MSVC STL pointer arithmetic rather than a real inconsistency in the
+   compiled code, but which (if either) reading is correct wasn't resolved. See "`CGameMenu`'s page
+   hashtable" above for the full mechanism. Next step, not yet tried: a live memory watch on a *real*
+   insert during normal boot (e.g. one of the five real Options category tabs registering itself via
+   the compiled-in `AddPage<T>`) to observe confirmed-correct values for this field in a genuinely
+   working call, rather than inferring from decompiled pseudocode alone.
+7. **How does `Action` *execution* work at runtime? — added 2026-08-03.** Everything currently known
+   about the `ActionExecuter`/`Action` family (see [`mgb.md`](../file-formats/mgb.md)) is about how
+   actions are *serialized in the file* - nothing has been reverse-engineered yet about how a live
+   button click actually dispatches and runs one, which blocks Path B's "hooks replaced to call FCSE
+   functions" goal. A possibly-real shortcut, not yet verified: console/script-callback registration
+   machinery (`CDominoConsoleCommandManager::RegisterConsoleCommand`-style templates) was spotted in
+   the binary while investigating something unrelated - worth checking whether an existing native
+   `Action` type can invoke a named, registerable callback before assuming the full dispatch mechanism
+   needs reversing from scratch.

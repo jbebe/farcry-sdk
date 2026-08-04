@@ -31,11 +31,15 @@ public class MgbHeaderTests
         Assert.Equal(166, header.Types.Count); // count byte 0xA7 (167) - 1, confirmed against the raw hex
         Assert.Equal(0x2A7, header.HeaderLength);
 
-        // The format-level investigation matched 91/128 non-zero entries in this exact file, but
-        // against a larger candidate list than MgbTypeTable's currently-confirmed names - so this is
-        // the correct, current expectation given today's dictionary, not the eventual ceiling.
+        // The format-level investigation matched 91/128 non-zero entries in this exact file (a first
+        // pass against hand-guessed candidates); a second pass (2026-07-31), cross-referencing real
+        // RTTI class names recovered from Dunia.dll against every entry in this file's own type table,
+        // brought MgbTypeTable's own count up to 84/128. A third pass (2026-08-02) added 14 more
+        // classes confirmed via a live Register() hook in an earlier session but never actually added
+        // to MgbTypeTable's dictionary until now (a previous-session omission) - 8 of those 14 turned
+        // out to be present in this exact file's own type table, bringing the count to 92/128.
         int resolved = header.Types.Count(t => t.Name is not null);
-        Assert.Equal(43, resolved);
+        Assert.Equal(92, resolved);
 
         // Every widget class this file's own UI actually uses (per its .mgb.desc sibling: a
         // brightness slider page) should be nameable.

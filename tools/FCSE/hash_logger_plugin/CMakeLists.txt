@@ -1,0 +1,5 @@
+add_library(hash_logger_plugin SHARED hash_logger_plugin.cpp)
+target_include_directories(hash_logger_plugin PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../include")
+if (CMAKE_VERSION VERSION_GREATER 3.12)
+  set_property(TARGET hash_logger_plugin PROPERTY CXX_STANDARD 20)
+endif()

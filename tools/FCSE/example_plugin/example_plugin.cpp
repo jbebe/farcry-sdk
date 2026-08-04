@@ -33,6 +33,16 @@ namespace {
         *reinterpret_cast<int*>(param1) = 0;
         return 0;
     }
+
+    // Tier 4 demo target: one bool, shown as a row in the "Mods" tab under Options.
+    bool g_demoBool = false;
+
+    void __cdecl OnDemoBoolChanged(void* /*userdata*/) {
+        if (g_api != nullptr) {
+            g_api->Log(g_demoBool ? "example_plugin: demo bool toggled ON"
+                                   : "example_plugin: demo bool toggled OFF");
+        }
+    }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
@@ -53,6 +63,15 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     unsigned char patchBytes[4] = {1, 2, 3, 4};
     if (api->Patch(g_demoBuffer, patchBytes, sizeof(patchBytes))) {
         api->Log("example_plugin: demo buffer patched");
+    }
+
+    static FCSE_ConfigBool demoField{};
+    demoField.label = "Demo bool";
+    demoField.value = &g_demoBool;
+    demoField.onChanged = &OnDemoBoolChanged;
+    demoField.userdata = nullptr;
+    if (api->RegisterConfigPage("example_plugin", &demoField, 1)) {
+        api->Log("example_plugin: registered a Mods tab entry");
     }
 
     return true;

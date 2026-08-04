@@ -49,6 +49,14 @@ add_executable(FCSE WIN32
   "src/function_registry.h"
   "src/hook.cpp"
   "src/hook.h"
+  "src/menu_handler.cpp"
+  "src/menu_handler.h"
+  "src/mod_page.cpp"
+  "src/mod_page.h"
+  "src/mods_registry.cpp"
+  "src/mods_registry.h"
+  "src/mods_tab.cpp"
+  "src/mods_tab.h"
   "src/patch.cpp"
   "src/patch.h"
   "src/plugin_loader.cpp"
@@ -70,3 +78,4 @@ endif()
 
 add_subdirectory(example_plugin)
 add_subdirectory(conflict_plugin)
+add_subdirectory(hash_logger_plugin)
