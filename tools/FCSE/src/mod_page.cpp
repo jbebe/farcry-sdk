@@ -1,206 +1,106 @@
 #include "mod_page.h"
 
 #include "dunia_api.h"
+#include "hook.h"
 #include "log.h"
+#include "menu_handler.h"
+#include "mods_registry.h"
 
 #include <cstdint>
 #include <cstdio>
+#include <string>
+#include <vector>
 #include <windows.h>
 
 // All addresses below are Dunia.dll (Steam v1.03) RVAs, same base-plus-RVA convention
-// mods_tab.cpp already uses. See mod_page.h for what this proves and how success is judged, and
-// docs/docs/engine-internals/magma-menu-system.md for the full RE trail (GhidraMCP decompiles +
-// disassembly against the live Dunia.dll project) each address/offset below was confirmed from.
-//
-// First live attempt (see the plan file) crashed the game right after the splash screen, with no
-// log output at all from this file - meaning it crashed on the very first new memory access
-// (optionsMenuThis+0x140), before a single Log::Loader call executed. That access assumed
-// "ownerPage" (the pointer CSetNextPageMenuHandler stores at its own +0x8, confirmed via
-// disassembly of 0x10188d00) is simply optionsMenuThis itself - never independently verified.
-// Every native-pointer touchpoint below is now wrapped in SEH (__try/__except) and logged step by
-// step, so a wrong offset guess produces a precise diagnostic instead of another blind crash, and
-// the game keeps running either way.
+// mods_tab.cpp already uses. See mod_page.h for the overall approach and
+// docs/docs/engine-internals/magma-menu-system.md for the full RE trail each address/offset below
+// was confirmed from (GhidraMCP decompiles + disassembly against the live Dunia.dll project,
+// sessions 2026-08-04).
 namespace FCSE {
 
 namespace {
     constexpr uintptr_t kDuniaPreferredBase = 0x10000000;
 
-    // CGameMenu's get-or-create hashtable-slot helper. Confirmed via decompile: runs the
-    // identical lookup GetPage/SetNextPage use (FUN_101f7a90), and on a miss inserts a fresh
-    // empty node for the key before returning a pointer to its value slot - i.e. the same runtime
-    // primitive CGameMenu::AddPage<T>() uses internally, minus the compile-time type restriction
-    // (see the doc's "Page switching" section). The caller writes its own page pointer into *slot
-    // afterwards; this function does not validate or use it.
-    //
-    // 2026-08-02 live test: this crashed with STATUS_ACCESS_VIOLATION (0xC0000005), caught cleanly
-    // by SEH - the *same* crash a 2026-07-31 session already hit and left a full diagnosis for in
-    // the shared Ghidra project (this address is already renamed CGameMenu_GetOrCreatePageSlot
-    // there, with a comment covering everything below). The live dump this time added one new data
-    // point: the candidate CGameMenu's own +0x2c (element count) read back as a small, sane value
-    // (7), but +0x28 (bucket mask, used as a bitwise AND in both this function and the read-only
-    // Find helper - CGameMenu_PageTable_Find, 0x101f7a90) read back as 0x1851AFD4, nowhere near a
-    // power-of-two-minus-one shape a real bucket mask needs to be. A garbage mask this large would
-    // produce a wildly out-of-bounds node-array index in InsertNode - matching the crash mechanism
-    // exactly. Two live-testable explanations, not yet distinguished: (a) the hashtable genuinely
-    // isn't finished initializing yet at the exact moment CFCXOptionPage::Setup fires (this hook's
-    // own timing), or (b) a remaining field-offset error specific to the insert/rehash path (which
-    // reads +0x14/+0x20/+0x10 in addition to +0x28/+0x2c/+0x1c - the *read-only* Find/GetPage path
-    // only ever touches the latter three, which is exactly why real button clicks have never hit
-    // this). The `+0x140`-as-owning-CGameMenu assumption itself is independently confirmed correct
-    // (matches CSetNextPageMenuHandler::SwitchPage's own disassembly, 0x10188d00) - not a suspect.
-    // Do not call this again without first trying the read-only `Find` probe below.
-    constexpr uintptr_t kGetOrCreatePageSlotRva = 0x107813e0;
-
-    // CGameMenu_PageTable_Find - the shared, read-only lookup GetPage/SetNextPage already call
-    // safely on every real button click, live-tested for years across every player who's ever
-    // opened this menu. Same struct, same fields (+0x1c/+0x28/+0x2c), a strict subset of what the
-    // insert path touches. Used here purely as a diagnostic: if this also crashes or misbehaves
-    // against our own candidate CGameMenu pointer, the object itself isn't safely readable yet
-    // (points at explanation (a) above); if it completes cleanly, the object's basic hash-lookup
-    // state is trustworthy and the bug is isolated to InsertNode's own extra fields (explanation
-    // (b)). Either way, strictly safer to run first than another insert attempt.
-    constexpr uintptr_t kFindPageRva = 0x101f7a90;
-
-    // CSetNextPageMenuHandler's real ctor - address already known from a previous session
-    // (matches FarCry2_server's demangled symbol), confirmed live on Dunia.dll this session via
-    // decompile (recovered as a real demangled symbol, not a bare FUN_ address): stores the
-    // target CStringID hash at this+0x74 and a flag byte at this+0x78 - exactly the fields
-    // CSetNextPageMenuHandler::SwitchPage (0x10188d00, confirmed via disassembly) reads at click
-    // time via ESI+0x74/ESI+0x78.
-    constexpr uintptr_t kCtorRva = 0x10188ea0;
-
-    // Same AddButton already proven safe in mods_tab.cpp, called with the identical
-    // optionsMenuThis - resolved independently here rather than reaching into mods_tab.cpp's
-    // anonymous-namespace g_addButton.
+    // CListMenuPage::AddButton - confirmed safe on any CListMenuPage-derived `this` (the fields it
+    // touches, +0xc/+0xd4/+0x168/+0x16c, belong to CListMenuPage's own base-class layout, identical
+    // for every subclass instance, not overridden per leaf class). Already proven live on
+    // CFCXOptionPage's own `this`.
     constexpr uintptr_t kAddButtonRva = 0x10cdbb80;
 
-    // What CGameMenu's own hashtable actually keys on: the *native* CRC-32 (GetNameHash/
-    // CRC32_Hash), not magma::Id::Hash - confirmed via FUN_101f7a90 (the shared lookup helper
-    // GetPage/SetNextPage/the get-or-create helper all call into): it hashes/compares a single
-    // dereferenced 32-bit value, nothing string-shaped at that layer. The native hash is confirmed
-    // byte-for-byte identical to Python's zlib.crc32 (see the doc's CRC-32 section), so this is
-    // precomputed offline (zlib.crc32(b"FCSE_ModConfigPage")) rather than calling the native
-    // GetNameHash at runtime: GetNameHash's own calling convention wasn't fully pinned down this
-    // session (its RET immediate didn't cleanly match the expected 2-stack-arg __thiscall shape) -
-    // avoiding the call entirely removes that uncertainty from a path that would otherwise fail
-    // silently (wrong hash -> button does nothing) rather than crash.
-    constexpr uint32_t kModPageId = 0xbeeb1688;
+    // CGameMenu::SetNextPage - fully decompiled: runs the shared CGameMenu_PageTable_Find lookup
+    // (this+0x14 miss sentinel, same as GetPage) and, on a hit, copies the found node's own value
+    // (node+0xc - the real, already-constructed page pointer the engine's own boot sequence put
+    // there) into this+0x3c ("next page"). Takes `(CGameMenu* this, uint32_t* key)` - a pointer to
+    // the target CStringID, not by value (confirmed: the decompile passes its own param_2 straight
+    // through to Find's own key parameter, which every other confirmed caller in this codebase
+    // passes a pointer for).
+    constexpr uintptr_t kSetNextPageRva = 0x101d1bc0;
 
-    using GetOrCreatePageSlotFn = uint32_t*(__thiscall*)(void* gameMenuThis, uint32_t* key);
-    using CtorFn = void*(__thiscall*)(void* thisPtr, void* ownerPage, uint32_t* targetId,
-                                       void* handler, unsigned char flag);
+    // CGameMenu::SwitchPage - fully decompiled: reads/writes this+0x3c ("next")/this+0x40
+    // ("current") and calls two vtable slots (deactivate old, activate new) - the real transition.
+    // __fastcall, one param (this in ECX).
+    constexpr uintptr_t kSwitchPageRva = 0x101d1990;
+
+    // CFCXOptionGamePage::RefreshOptionList - the real per-page content builder, found 2026-08-04
+    // by hooking AddButton globally (logging every caller) after FCSE's rows appended right after
+    // page construction turned out to have zero visible effect - traced one level up from the
+    // native AddBoolSetting/AddValueListSetting calls it makes
+    // (0x10cde0d0/0x1081d660) to this function via CGameMenu-shared xrefs. Unlike
+    // CFCXOptionPage::Setup (fires once per session), this one is named "Refresh" for a reason: it
+    // opens with a virtual call through `*this+0x40` (almost certainly a "clear my rows" call) and
+    // rebuilds all ~9 native rows from scratch, every time the page is (re)displayed - including via
+    // the stock "Game" button. Hooked once, globally, gated by g_appendPending (see below) rather
+    // than by `this`, since both the stock "Game" button and FCSE's own button now land on the
+    // exact same real page object. __fastcall, one param (this in ECX, no stack args).
+    constexpr uintptr_t kRefreshOptionListRva = 0x10820160;
+
+    // The existing, compiled-in Game tab's own CStringID (native CRC-32 of "CFCXOptionGamePage",
+    // verified against the engine's CRC32_Hash algorithm).
+    constexpr uint32_t kGameOptionsPageId = 0xe0d85c6e;
+
+    // ownerPage+0x140 = the owning CGameMenu* - confirmed via CSetNextPageMenuHandler::SwitchPage's
+    // own disassembly (0x10188d00), which reads this exact offset before calling GetPage/
+    // SetNextPage/SwitchPage. optionsMenuThis is a valid ownerPage for the same reason it's already
+    // a valid AddButton `this`.
+    constexpr ptrdiff_t kOwnerPageToGameMenuOffset = 0x140;
+
+    // The virtual slot RefreshOptionList itself calls first, unconditionally, before building any
+    // native rows (`(**(code **)(*param_1 + 0x40))();` in its own decompile - see
+    // kRefreshOptionListRva's comment). Never independently named/confirmed as "ClearRows" - only
+    // inferred from its position (right before the row-building calls) - but it's the exact
+    // mechanism the engine itself already trusts to reset the row list, so reusing it (called a
+    // second time, after the native rows are built) to hide them for FCSE's own page view is lower-
+    // risk than trying to zero/patch the row-array fields directly.
+    constexpr ptrdiff_t kClearRowsVtableOffset = 0x40;
+
     using AddButtonFn = void*(__thiscall*)(void* thisPtr, const wchar_t* label, char visible,
                                             void* handler);
-    // (this, outNode, key) - matches CGameMenu_PageTable_Find's decompiled signature exactly
-    // (param_1=this via ECX, param_2=outNode, param_3=key, both passed on the stack).
-    using FindPageFn = void(__thiscall*)(void* gameMenuThis, void** outNode, uint32_t* key);
+    using SetNextPageFn = void(__thiscall*)(void* gameMenuThis, uint32_t* key);
+    using SwitchPageFn = void(__thiscall*)(void* gameMenuThis);
+    using RefreshOptionListFn = void(__thiscall*)(void* thisPtr);
+    using ClearRowsFn = void(__thiscall*)(void* thisPtr);
 
-    // Generous, mostly-safe-no-op vtable. CUIPageBase has ~19 real virtual methods (Init/
-    // Shutdown/Display/Hide/PushPage/PopPage/SetPage/ConfigPage/RegisterModule/UnRegisterModule/
-    // AddListener/RemoveListener/AddCommand/ExecuteCommands/OnActionSignal/Update/GetLayer/
-    // Unload/dtor - see the doc's CUIPageBase table). Whether any of these get called on the
-    // *current* page every frame (not just the two CGameMenu::SwitchPage is confirmed, via
-    // disassembly of 0x101d1990, to call directly) is NOT confirmed. Every slot defaults to a
-    // no-op that touches nothing, specifically so an unexpected per-frame call lands harmlessly
-    // instead of reading a garbage function pointer.
-    constexpr int kVtableSlotCount = 32;
-    constexpr int kActivateSlot = 2;   // vtable+0x8 - confirmed via SwitchPage disassembly
-    constexpr int kDeactivateSlot = 3; // vtable+0xc - confirmed via SwitchPage disassembly
+    AddButtonFn g_addButton = nullptr;
+    SetNextPageFn g_setNextPage = nullptr;
+    SwitchPageFn g_switchPage = nullptr;
+    RefreshOptionListFn g_originalRefreshOptionList = nullptr;
 
-    struct ModPageObject {
-        void** vtable; // must stay first - what CGameMenu::SwitchPage reads through
-
-        // Absorbs any native code that reads/writes page fields directly rather than through the
-        // vtable. Confirmed necessary for at least one field: SwitchPage itself writes a
-        // CGameMenu backpointer to +0x20 before calling activate (disassembly-confirmed). Sized
-        // with real margin since other direct field accesses, if any, aren't ruled out.
-        unsigned char reserved[252];
-
-        void SafeNoOp() {}
-
-        void OnActivate() {
-            Log::Loader("ModPage: ACTIVATED - CGameMenu::SwitchPage called our vtable+0x8. Hand-"
-                        "rolled page switch confirmed working end to end.");
-        }
-
-        void OnDeactivate() { Log::Loader("ModPage: deactivated"); }
-    };
-
-    using MemberFn = void (ModPageObject::*)();
-
-    void* RawFunctionPointer(MemberFn fn) {
-        union {
-            MemberFn member;
-            void* raw;
-        } converter;
-        converter.member = fn;
-        return converter.raw;
-    }
-
-    void* g_vtable[kVtableSlotCount];
-    bool g_vtableReady = false;
-
-    void** EnsureVtable() {
-        if (!g_vtableReady) {
-            void* noOp = RawFunctionPointer(&ModPageObject::SafeNoOp);
-            for (void*& slot : g_vtable) {
-                slot = noOp;
-            }
-            g_vtable[kActivateSlot] = RawFunctionPointer(&ModPageObject::OnActivate);
-            g_vtable[kDeactivateSlot] = RawFunctionPointer(&ModPageObject::OnDeactivate);
-            g_vtableReady = true;
-        }
-        return g_vtable;
-    }
+    // Set by FCSE's own click handler right before it triggers the switch to the Game page; checked
+    // (and cleared) once by the RefreshOptionList hook. This is the entire mechanism that makes the
+    // stock "Game" button and FCSE's "Mod Configuration Menu" button - which land on the exact same
+    // real page object - show different content.
+    bool g_appendPending = false;
 
     bool g_installed = false; // guards against double-install if this ever runs more than once
 
-    // Every function below wraps exactly one native-pointer touchpoint in SEH and contains no
-    // C++ objects with destructors (MSVC disallows mixing __try/__except with automatic object
+    // Every function below wraps exactly one native-pointer touchpoint in SEH and contains no C++
+    // objects with destructors (MSVC disallows mixing __try/__except with automatic object
     // unwinding in the same function) - callers do all string/logging work outside these.
 
     bool SafeReadPointer(void* base, ptrdiff_t offset, void** outValue, DWORD* outCode = nullptr) {
         __try {
             *outValue = *reinterpret_cast<void**>(reinterpret_cast<char*>(base) + offset);
-            return true;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            if (outCode != nullptr) {
-                *outCode = GetExceptionCode();
-            }
-            return false;
-        }
-    }
-
-    bool SafeConstructHandler(CtorFn ctor, void* handlerStorage, void* ownerPage,
-                               uint32_t* targetId, DWORD* outCode = nullptr) {
-        __try {
-            ctor(handlerStorage, ownerPage, targetId, nullptr, 1);
-            return true;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            if (outCode != nullptr) {
-                *outCode = GetExceptionCode();
-            }
-            return false;
-        }
-    }
-
-    bool SafeFindPage(FindPageFn fn, void* gameMenu, uint32_t* key, void** outNode,
-                       DWORD* outCode = nullptr) {
-        __try {
-            fn(gameMenu, outNode, key);
-            return true;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            if (outCode != nullptr) {
-                *outCode = GetExceptionCode();
-            }
-            return false;
-        }
-    }
-
-    bool SafeGetOrCreateSlot(GetOrCreatePageSlotFn fn, void* gameMenu, uint32_t* key,
-                              uint32_t** outSlot, DWORD* outCode = nullptr) {
-        __try {
-            *outSlot = fn(gameMenu, key);
             return true;
         } __except (EXCEPTION_EXECUTE_HANDLER) {
             if (outCode != nullptr) {
@@ -223,10 +123,47 @@ namespace {
         }
     }
 
-    void LogPtr(const char* what, void* value) {
-        char buf[128];
-        std::snprintf(buf, sizeof(buf), "ModPage: %s = 0x%p", what, value);
-        Log::Loader(buf);
+    bool SafeSetNextPage(SetNextPageFn fn, void* gameMenu, uint32_t* key, DWORD* outCode = nullptr) {
+        __try {
+            fn(gameMenu, key);
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            if (outCode != nullptr) {
+                *outCode = GetExceptionCode();
+            }
+            return false;
+        }
+    }
+
+    bool SafeSwitchPage(SwitchPageFn fn, void* gameMenu, DWORD* outCode = nullptr) {
+        __try {
+            fn(gameMenu);
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            if (outCode != nullptr) {
+                *outCode = GetExceptionCode();
+            }
+            return false;
+        }
+    }
+
+    // Calls the real page's own vtable+0x40 slot on itself - the same call RefreshOptionList makes
+    // on itself before building native rows (see kClearRowsVtableOffset's comment). Reads the
+    // vtable pointer fresh from `gamePage` rather than assuming any fixed vtable address, since it's
+    // always the real, natively-constructed page.
+    bool SafeClearRows(void* gamePage, DWORD* outCode = nullptr) {
+        __try {
+            void* vtable = *reinterpret_cast<void**>(gamePage);
+            auto fn = *reinterpret_cast<ClearRowsFn*>(reinterpret_cast<char*>(vtable) +
+                                                        kClearRowsVtableOffset);
+            fn(gamePage);
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            if (outCode != nullptr) {
+                *outCode = GetExceptionCode();
+            }
+            return false;
+        }
     }
 
     void LogFailed(const char* what, DWORD code) {
@@ -236,32 +173,185 @@ namespace {
         Log::Loader(buf);
     }
 
-    // Independent sanity check on a candidate CGameMenu* using fields already confirmed from
-    // other decompiles this session (not FUN_107813e0 itself, so this corroborates or refutes
-    // that helper's own success/failure with separate evidence): +0x10/+0x14 (end-sentinel
-    // fields FUN_101f7a90/GetPage compare against), +0x1c (node array base pointer
-    // FUN_101f7a90 indexes into), +0x28/+0x2c (bucket mask/bound used in the same hash lookup),
-    // +0x34 (the ctor's self-registration helper pointer). A real CGameMenu should show small,
-    // sane-looking values for the mask/count fields and plausible pointers for the rest; garbage
-    // here means the candidate pointer isn't really a CGameMenu at all.
-    void DumpCandidateGameMenu(void* candidate) {
-        struct { const char* name; ptrdiff_t offset; } fields[] = {
-            {"+0x10", 0x10}, {"+0x14", 0x14}, {"+0x1c", 0x1c},
-            {"+0x28", 0x28}, {"+0x2c", 0x2c}, {"+0x34", 0x34},
-        };
-        for (const auto& field : fields) {
-            void* value = nullptr;
-            DWORD code = 0;
-            if (SafeReadPointer(candidate, field.offset, &value, &code)) {
-                char label[32];
-                std::snprintf(label, sizeof(label), "candidate%s", field.name);
-                LogPtr(label, value);
-            } else {
-                char what[32];
-                std::snprintf(what, sizeof(what), "reading candidate%s", field.name);
-                LogFailed(what, code);
+    std::wstring WidenAscii(const std::string& s) {
+        std::wstring wide;
+        wide.reserve(s.size());
+        for (char c : s) {
+            wide.push_back(static_cast<wchar_t>(static_cast<unsigned char>(c)));
+        }
+        return wide;
+    }
+
+    // Owns every label buffer ever handed to AddButton - never freed, same accepted one-time-per-
+    // session tradeoff already used elsewhere (AddButton's real parameter type is a raw wchar_t*,
+    // not confirmed to be copied internally). Grows every single time RefreshOptionList fires with
+    // g_appendPending set (not just once) - see kRefreshOptionListRva's comment for why.
+    std::vector<std::wstring>& LabelStorage() {
+        static std::vector<std::wstring> storage;
+        return storage;
+    }
+
+    // Appends FCSE's content onto the real CFCXOptionGamePage instance: an unclickable header row
+    // (stands in for a real native title change, not pursued this session - see mod_page.h), one
+    // disabled row per loaded plugin name, then one toggle row per registered FCSE_ConfigBool
+    // (identical mechanism to what mods_tab.cpp already ships on the Options screen itself). Must
+    // run *after* CFCXOptionGamePage::RefreshOptionList's own native row-building.
+    void AppendModContent(AddButtonFn addButton, void* gamePage) {
+        DWORD code = 0;
+
+        LabelStorage().push_back(L"=== Mod Configuration Menu ===");
+        if (!SafeAddButton(addButton, gamePage, LabelStorage().back().c_str(),
+                            ModsMenuHandler::Create(nullptr), &code)) {
+            LogFailed("AddButton (header row)", code);
+            return;
+        }
+
+        size_t rowCount = 0;
+        for (const ModsRegistry::Page& page : ModsRegistry::Pages()) {
+            LabelStorage().push_back(L"-- " + WidenAscii(page.pluginName) + L" --");
+            if (!SafeAddButton(addButton, gamePage, LabelStorage().back().c_str(),
+                                ModsMenuHandler::Create(nullptr), &code)) {
+                LogFailed("AddButton (plugin name row)", code);
+                return;
+            }
+            ++rowCount;
+
+            for (const FCSE_ConfigBool& field : page.fields) {
+                std::wstring label = L"   " + WidenAscii(field.label != nullptr ? field.label : "?") +
+                                      ((field.value != nullptr && *field.value) ? L" [ON]" : L" [OFF]");
+                LabelStorage().push_back(std::move(label));
+
+                ModsMenuHandler* handler =
+                    ModsMenuHandler::Create(const_cast<FCSE_ConfigBool*>(&field));
+                if (!SafeAddButton(addButton, gamePage, LabelStorage().back().c_str(), handler,
+                                    &code)) {
+                    LogFailed("AddButton (toggle row)", code);
+                    return;
+                }
+                ++rowCount;
             }
         }
+
+        Log::Loader("ModPage: appended " + std::to_string(rowCount) +
+                     " row(s) to the Game tab (header row not counted)");
+    }
+
+    // Hand-rolled IMenuItemHandler for the Options row's click - same shape/technique as
+    // ModsMenuHandler (menu_handler.h): a plain struct whose first member is a vtable pointer, one
+    // real slot (kActivateSlot, empirically confirmed correct - see menu_handler.h), the rest safe
+    // no-ops. Reaches the real Game page directly via SetNextPage+SwitchPage (the same two native
+    // calls CSetNextPageMenuHandler::SwitchPage itself makes) rather than owning a real
+    // CSetNextPageMenuHandler instance - simpler, and this is the one place that needs to also set
+    // g_appendPending right before the switch.
+    struct McmNavigationHandler {
+        void** vtable; // must stay first - what the engine's click-dispatch code reads
+        void* ownerPage; // the Options page - ownerPage+0x140 gives the live CGameMenu* at click time
+
+        unsigned int SafeNoOp(unsigned int /*arg*/) { return 0; }
+
+        unsigned int OnActivate(unsigned int /*arg*/) {
+            DWORD code = 0;
+            void* gameMenu = nullptr;
+            if (!SafeReadPointer(ownerPage, kOwnerPageToGameMenuOffset, &gameMenu, &code)) {
+                LogFailed("reading ownerPage+0x140 at click time", code);
+                return 0;
+            }
+            if (gameMenu == nullptr || g_setNextPage == nullptr || g_switchPage == nullptr) {
+                Log::Loader("ModPage: no CGameMenu* or navigation functions unavailable, click "
+                            "ignored");
+                return 0;
+            }
+
+            g_appendPending = true;
+
+            static uint32_t s_pageId = kGameOptionsPageId;
+            if (!SafeSetNextPage(g_setNextPage, gameMenu, &s_pageId, &code)) {
+                LogFailed("CGameMenu::SetNextPage", code);
+                g_appendPending = false;
+                return 0;
+            }
+            if (!SafeSwitchPage(g_switchPage, gameMenu, &code)) {
+                LogFailed("CGameMenu::SwitchPage", code);
+                g_appendPending = false;
+                return 0;
+            }
+            Log::Loader("ModPage: switched to the Game tab via Mod Configuration Menu");
+            return 0;
+        }
+
+        static McmNavigationHandler* Create(void* ownerPage);
+    };
+
+    constexpr int kVtableSlotCount = 8;
+    constexpr int kActivateSlot = 1; // matches menu_handler.cpp's empirically-confirmed slot
+
+    using McmHandlerMemberFn = unsigned int (McmNavigationHandler::*)(unsigned int);
+
+    void* RawFunctionPointer(McmHandlerMemberFn fn) {
+        union {
+            McmHandlerMemberFn member;
+            void* raw;
+        } converter;
+        converter.member = fn;
+        return converter.raw;
+    }
+
+    void* g_mcmHandlerVtable[kVtableSlotCount];
+    bool g_mcmHandlerVtableReady = false;
+
+    void** EnsureMcmHandlerVtable() {
+        if (!g_mcmHandlerVtableReady) {
+            void* noOp = RawFunctionPointer(&McmNavigationHandler::SafeNoOp);
+            for (void*& slot : g_mcmHandlerVtable) {
+                slot = noOp;
+            }
+            g_mcmHandlerVtable[kActivateSlot] = RawFunctionPointer(&McmNavigationHandler::OnActivate);
+            g_mcmHandlerVtableReady = true;
+        }
+        return g_mcmHandlerVtable;
+    }
+
+    McmNavigationHandler* McmNavigationHandler::Create(void* ownerPage) {
+        auto* handler = new McmNavigationHandler();
+        handler->vtable = EnsureMcmHandlerVtable();
+        handler->ownerPage = ownerPage;
+        return handler;
+    }
+
+    // MSVC won't let a free function be declared __thiscall (only real member functions), but the
+    // hook target genuinely is __thiscall-with-no-stack-args (this in ECX only) - same pattern
+    // mods_tab.cpp already uses for CFCXOptionPage::Setup.
+    struct RefreshDetourThunk {
+        void Detour();
+    };
+
+    void RefreshDetourThunk::Detour() {
+        void* gamePage = reinterpret_cast<void*>(this);
+        g_originalRefreshOptionList(gamePage); // let the native build run fully either way
+        if (g_appendPending) {
+            // Only when the switch was triggered by FCSE's own button - the stock "Game" button
+            // never touches this flag, so it always keeps native rows and never reaches here.
+            g_appendPending = false;
+
+            DWORD code = 0;
+            if (!SafeClearRows(gamePage, &code)) {
+                LogFailed("clearing native rows before mod content", code);
+                // Fall through and append anyway - worst case FCSE's rows sit below native ones,
+                // same as before this change, rather than losing FCSE's content entirely.
+            }
+            AppendModContent(g_addButton, gamePage);
+        }
+    }
+
+    using RefreshDetourMemberFn = void (RefreshDetourThunk::*)();
+
+    void* RawFunctionPointer(RefreshDetourMemberFn fn) {
+        union {
+            RefreshDetourMemberFn member;
+            void* raw;
+        } converter;
+        converter.member = fn;
+        return converter.raw;
     }
 } // namespace
 
@@ -277,116 +367,30 @@ void ModPage::Install(void* optionsMenuThis) {
         return;
     }
 
-    LogPtr("optionsMenuThis", optionsMenuThis);
+    g_addButton = reinterpret_cast<AddButtonFn>(base + (kAddButtonRva - kDuniaPreferredBase));
+    g_setNextPage = reinterpret_cast<SetNextPageFn>(base + (kSetNextPageRva - kDuniaPreferredBase));
+    g_switchPage = reinterpret_cast<SwitchPageFn>(base + (kSwitchPageRva - kDuniaPreferredBase));
 
-    auto getOrCreateSlot = reinterpret_cast<GetOrCreatePageSlotFn>(
-        base + (kGetOrCreatePageSlotRva - kDuniaPreferredBase));
-    auto ctor = reinterpret_cast<CtorFn>(base + (kCtorRva - kDuniaPreferredBase));
-    auto addButton = reinterpret_cast<AddButtonFn>(base + (kAddButtonRva - kDuniaPreferredBase));
+    // Hook RefreshOptionList so FCSE's content gets appended every time the Game tab is displayed
+    // via FCSE's own button - not once, early - and never when reached via the stock "Game" button.
+    void* refreshTarget =
+        reinterpret_cast<void*>(base + (kRefreshOptionListRva - kDuniaPreferredBase));
+    if (!HookManager::Hook(refreshTarget, RawFunctionPointer(&RefreshDetourThunk::Detour),
+                            reinterpret_cast<void**>(&g_originalRefreshOptionList))) {
+        Log::Loader("ModPage: failed to install RefreshOptionList hook - no mod content on the "
+                    "Game tab this session");
+        return;
+    }
+    Log::Loader("ModPage: RefreshOptionList hook installed");
 
-    static uint32_t s_pageId = kModPageId;
-
-    // Build the real handler first, using the doc's already-confirmed
-    // "CSetNextPageMenuHandler(ownerPage, &targetId, nullptr, true)" construction pattern (the
-    // same one the engine's own 5 real category buttons use) with ownerPage=optionsMenuThis -
-    // that part matches AddButton's own already-safe `this`. Then read back what the ctor's base
-    // class actually stored at +0x8, rather than assuming it equals optionsMenuThis (that
-    // assumption is the prime suspect for the previous crash).
-    void* handlerStorage = new unsigned char[256]();
+    McmNavigationHandler* handler = McmNavigationHandler::Create(optionsMenuThis);
     DWORD code = 0;
-    if (!SafeConstructHandler(ctor, handlerStorage, optionsMenuThis, &s_pageId, &code)) {
-        LogFailed("CSetNextPageMenuHandler ctor", code);
-        Log::Loader("ModPage: not installed this session, game continues normally");
+    if (!SafeAddButton(g_addButton, optionsMenuThis, L"Mod Configuration Menu", handler, &code)) {
+        LogFailed("AddButton (Options row)", code);
+        Log::Loader("ModPage: Options row was not added this session");
         return;
     }
-    Log::Loader("ModPage: handler constructed OK");
-
-    void* ownerPageFromHandler = nullptr;
-    if (!SafeReadPointer(handlerStorage, 0x8, &ownerPageFromHandler, &code)) {
-        LogFailed("reading handler+0x8", code);
-        Log::Loader("ModPage: not installed this session, game continues normally");
-        return;
-    }
-    LogPtr("handler+0x8 (ownerPage)", ownerPageFromHandler);
-    Log::Loader(ownerPageFromHandler == optionsMenuThis
-                    ? "ModPage: ownerPage MATCHES optionsMenuThis"
-                    : "ModPage: ownerPage MISMATCHES optionsMenuThis - assumption was wrong");
-
-    // Try the empirically-found ownerPage first; if it mismatched optionsMenuThis, also try
-    // optionsMenuThis directly, purely for comparison data in the log (whichever one produces a
-    // sane-looking pointer is the one to trust next time).
-    void* gameMenu = nullptr;
-    bool haveGameMenu = SafeReadPointer(ownerPageFromHandler, 0x140, &gameMenu, &code);
-    if (haveGameMenu) {
-        LogPtr("ownerPage+0x140 (CGameMenu*)", gameMenu);
-    } else {
-        LogFailed("reading ownerPage+0x140", code);
-    }
-
-    if (ownerPageFromHandler != optionsMenuThis) {
-        void* altGameMenu = nullptr;
-        if (SafeReadPointer(optionsMenuThis, 0x140, &altGameMenu, &code)) {
-            LogPtr("optionsMenuThis+0x140 (for comparison)", altGameMenu);
-        } else {
-            LogFailed("reading optionsMenuThis+0x140", code);
-        }
-    }
-
-    if (!haveGameMenu || gameMenu == nullptr) {
-        Log::Loader("ModPage: no usable CGameMenu pointer found - Mods page not installed this "
-                    "session, game continues normally");
-        return;
-    }
-
-    // Independent corroboration before trusting FUN_107813e0 with this pointer - see
-    // DumpCandidateGameMenu's own comment for what "sane" looks like here.
-    DumpCandidateGameMenu(gameMenu);
-
-    // Read-only probe BEFORE the risky insert - see kFindPageRva's own comment for why this
-    // specific ordering distinguishes "object not ready yet" from "insert-path-specific bug".
-    // Querying our own kModPageId (never yet inserted) should cleanly report a miss; what matters
-    // is whether the call completes at all.
-    auto findPage = reinterpret_cast<FindPageFn>(base + (kFindPageRva - kDuniaPreferredBase));
-    void* findResult = nullptr;
-    if (!SafeFindPage(findPage, gameMenu, &s_pageId, &findResult, &code)) {
-        LogFailed("CGameMenu_PageTable_Find (read-only probe)", code);
-        Log::Loader("ModPage: the CGameMenu object itself isn't safely readable yet at this hook "
-                    "point (crashed on a plain lookup, not just insert) - not installed this "
-                    "session, game continues normally");
-        return;
-    }
-    LogPtr("Find probe result (expect a miss/sentinel, not null)", findResult);
-    Log::Loader("ModPage: read-only Find completed without crashing - object's basic hash-lookup "
-                "state is trustworthy, proceeding to the actual insert");
-
-    uint32_t* slot = nullptr;
-    if (!SafeGetOrCreateSlot(getOrCreateSlot, gameMenu, &s_pageId, &slot, &code)) {
-        LogFailed("FUN_107813e0 (get-or-create slot)", code);
-        Log::Loader("ModPage: not installed this session, game continues normally");
-        return;
-    }
-    if (slot == nullptr) {
-        Log::Loader("ModPage: get-or-create slot returned null (no exception) - Mods page not "
-                    "installed this session, game continues normally");
-        return;
-    }
-    LogPtr("get-or-create slot", slot);
-
-    // Allocated oversized and never freed - same accepted one-time-per-session tradeoff as
-    // ModsMenuHandler (menu_handler.cpp).
-    auto* page = new ModPageObject();
-    page->vtable = EnsureVtable();
-    *slot = reinterpret_cast<uint32_t>(page);
-
-    if (!SafeAddButton(addButton, optionsMenuThis, L"Mod Configuration Menu (experimental)",
-                       handlerStorage, &code)) {
-        LogFailed("AddButton", code);
-        Log::Loader("ModPage: page registered but no button to reach it this session");
-        return;
-    }
-
-    Log::Loader("ModPage: hand-rolled page registered, button appended to Options - click it "
-                "in-game to verify (watch for \"ModPage: ACTIVATED\" in this log)");
+    Log::Loader("ModPage: added \"Mod Configuration Menu\" row to Options");
 }
 
 } // namespace FCSE

@@ -3,13 +3,9 @@
 #include "dunia_api.h"
 #include "hook.h"
 #include "log.h"
-#include "menu_handler.h"
 #include "mod_page.h"
-#include "mods_registry.h"
 
 #include <cstdint>
-#include <string>
-#include <vector>
 
 namespace FCSE {
 
@@ -44,26 +40,7 @@ namespace {
     AddButtonFn g_addButton = nullptr;
     bool g_appended = false; // guards against double-appending if this ever runs more than once
 
-    std::wstring WidenAscii(const std::string& s) {
-        std::wstring wide;
-        wide.reserve(s.size());
-        for (char c : s) {
-            wide.push_back(static_cast<wchar_t>(static_cast<unsigned char>(c)));
-        }
-        return wide;
-    }
-
-    // Owns every label buffer ever handed to AddButton. Never freed/shrunk: AddButton's real
-    // parameter type is a raw wchar_t* (confirmed against FarCry2_server's demangled signature),
-    // and it's not confirmed whether Dunia.dll copies the string internally the way the engine's
-    // own CStringTableMgr::Localize results are - safer to keep every buffer alive for the rest of
-    // the process than risk the engine holding a dangling pointer.
-    std::vector<std::wstring>& LabelStorage() {
-        static std::vector<std::wstring> storage;
-        return storage;
-    }
-
-    void AppendModsRows(void* optionsMenuThis) {
+    void AppendModConfigurationMenu(void* optionsMenuThis) {
         if (g_appended) {
             Log::Loader("Mods tab: options menu built again - skipping re-append (see "
                         "mods_tab.cpp's g_appended guard)");
@@ -76,26 +53,8 @@ namespace {
             return;
         }
 
-        size_t rowCount = 0;
-        for (const ModsRegistry::Page& page : ModsRegistry::Pages()) {
-            for (const FCSE_ConfigBool& field : page.fields) {
-                std::wstring label = WidenAscii(page.pluginName) + L": " +
-                                      WidenAscii(field.label != nullptr ? field.label : "?") +
-                                      ((field.value != nullptr && *field.value) ? L" [ON]" : L" [OFF]");
-                LabelStorage().push_back(std::move(label));
-                const wchar_t* labelPtr = LabelStorage().back().c_str();
-
-                ModsMenuHandler* handler = ModsMenuHandler::Create(const_cast<FCSE_ConfigBool*>(&field));
-                g_addButton(optionsMenuThis, labelPtr, /*visible=*/1, handler);
-                ++rowCount;
-            }
-        }
-
-        Log::Loader("Mods tab: appended " + std::to_string(rowCount) + " row(s) to Options");
-
-        // Experimental: also register the hand-rolled CGameMenu page and its own button - see
-        // mod_page.h. Intentionally separate from the per-plugin bool rows above (different
-        // mechanism entirely: a real page-switch, not just more AddButton rows on this screen).
+        // Plugin config registrations are intentionally not rendered here. Options gets one
+        // navigation row only; the page opened by it will become the configuration surface.
         ModPage::Install(optionsMenuThis);
     }
 
@@ -113,7 +72,7 @@ namespace {
     void SetupDetourThunk::Detour() {
         void* optionsMenuThis = reinterpret_cast<void*>(this);
         g_originalOptionsMenu(optionsMenuThis); // real category buttons first, unmodified
-        AppendModsRows(optionsMenuThis);
+        AppendModConfigurationMenu(optionsMenuThis);
     }
 
     using SetupDetourMemberFn = void (SetupDetourThunk::*)();

@@ -16,12 +16,13 @@ or an actual working/shipped feature) — not inference alone.
 This page exists because FCSE (`tools/FCSE`) needed a way to let plugins expose simple config UI
 in-game, and building that required reverse-engineering a good chunk of Far Cry 2's native menu
 system (distinct from the `.mgb`/Magma *binary format* itself, which [its own page](../file-formats/mgb.md)
-already covers). That work shipped a real, working feature — plugin-registered bool rows appended to
-the Options screen — but also opened up the *real* menu-navigation machinery (`CGameMenu`, page
-switching, the Magma resource loader) further than the shipped feature actually needed. This page
-collects everything confirmed along the way, organized so a future attempt at a genuinely separate
-"Mods" page (not just extra rows on an existing screen) has a running start instead of repeating the
-same dead ends.
+already covers). Two dead/superseded approaches were tried along the way (a hand-rolled page inserted
+into `CGameMenu`'s hashtable, which crashed; intercepting `.mgb` loading, never started) before
+landing on what's actually implemented now: a genuinely separate page, built by privately
+constructing a second instance of a real compiled page class and reaching it without touching
+`CGameMenu`'s hashtable at all. This page collects everything confirmed along the way - see
+"Building a real, separate 'Mods' page" below for the three paths (A/B/C) in order, and "What FCSE
+actually shipped" for the current implementation.
 
 ## Class hierarchy
 
@@ -133,7 +134,7 @@ closed the one real gap (`SetNextPage`) by tracing `GetPage`'s callers directly.
 **Also newly found this session (candidate list, not yet independently decompiled/verified beyond
 name-plausibility): a near-complete `CUIPageBase` method table on `Dunia.dll`** — `Init`
 (`0x10109410`), `Shutdown` (`0x10108990`... `0x101088f0`, see cross-check above), `Display`
-(`0x10109490`), `Hide` (`0x101095c0`), `PushPage`/`PopPage` (`0x10108e70`/`0x10109010`), `SetPage`
+(`0x10109490`), `Hide` (`0x101095c0`), ~~`PushPage`/`PopPage` (`0x10108e70`/`0x10109010`)~~, `SetPage`
 (`0x101090d0`), `ConfigPage` (`0x10109f00`), `RegisterModule`/`UnRegisterModule`
 (`0x102ffdb0`/`0x104fb660`), `AddListener`/`RemoveListener` (`0x10720790`/`0x10503880`),
 `AddCommand`/`ExecuteCommands` (`0x10108ba0`/`0x10108b40`), `OnActionSignal` (`0x10108990`),
@@ -143,6 +144,20 @@ contains them (`0x10e1e2bc`/`0x10e1e2c0`, `0x10e25114`/`0x10e25118`, `0x10eabe3c
 confirming they're adjacent slots — but the absolute slot offset from vtable base (needed to know
 whether `Display`/`Hide` *are* `SwitchPage`'s activate/deactivate slots, or something else entirely)
 wasn't pinned down. Not chased further this session.
+
+**Correction, 2026-08-04**: the `PushPage`/`PopPage` guess above (`0x10108e70`/`0x10109010`) is
+**wrong** — this was an unverified name-plausibility match from the original candidate list, and
+decompiling both addresses this session shows neither is page-stack navigation.
+`CUIPageBase::GetTopLevel` (`0x10108e70`, real name recovered via an independent `string_vote`
+import pass, not this session's own work) reads a `"TOPLEVEL"` attribute off some
+document/config-node interface; `0x10109010` reads a `"LAYER"` attribute the same way (and itself
+calls the already-documented `GetLayer`, `0x10a962e0` — so it's some other layer-related accessor,
+not `GetLayer` itself). The only real `PushPage` in this binary is `magma::ActionPushPage`
+(`~ActionPushPage` dtor at `0x10ad6360`, confirmed via RTTI strings) — a `.mgb`-file `Action` class,
+not a native `CUIPageBase` method. Reaching it means reverse-engineering `Action` *execution* (Open
+question 7 below), not a simple vtable call. If page-stack push/pop semantics are needed in a future
+session, this pair of addresses is not the way in — start over from `CUIPageBase`'s real vtable
+instead of trusting the candidate list here.
 
 **Implication for building a genuinely new page**: since `AddPage<T>` is compile-time-only, a truly
 new C++ page class can't be registered through the normal path. But `CGameMenu`'s hashtable is just a
@@ -338,31 +353,32 @@ confirmed, byte-for-byte, against the four real sample files in `tmp/menu/` (`co
 
 ## What FCSE actually shipped
 
-The working feature (confirmed live, in-game, end to end) does **not** use a separate page, real
-checkbox widgets, or `CGameMenu`'s page-switching machinery at all — it appends plain toggle-button
-rows directly to the Options category-button screen, reusing only the confirmed-safe
-`AddButton`/`ModsMenuHandler` mechanism above:
+**Status as of 2026-08-04: a real, separate page, built via Path C below — not yet live-tested
+in-game.** Earlier sessions shipped a simpler fallback first (plain toggle-button rows appended
+directly to the Options category-button screen, no separate page at all); that code is gone,
+replaced by the current version described in Path C. The rows themselves still use the same
+underlying primitive:
 
 - `tools/FCSE/include/plugin_api.h` — `FCSE_ConfigBool` (label, `bool*`, optional `onChanged`),
   `FCSE_RegisterConfigPageFn`, `FCSE_API_VERSION` bumped 1→2.
 - `tools/FCSE/src/mods_registry.cpp`/`.h` — flat registry of `(pluginName, FCSE_ConfigBool[])`; FCSE
   always registers one built-in dummy bool under `"FCSE"` through the same path a plugin would use.
-- `tools/FCSE/src/menu_handler.cpp`/`.h` — `ModsMenuHandler`, the hand-built `IMenuItemHandler`.
+- `tools/FCSE/src/menu_handler.cpp`/`.h` — `ModsMenuHandler`, the hand-built `IMenuItemHandler` used
+  for each row's click (toggles the backing `bool`, fires `onChanged`).
 - `tools/FCSE/src/mods_tab.cpp`/`.h` — hooks `CFCXOptionPage::Setup` (`0x1081aee0`), calls through to
-  the original first, then appends one row per registered bool via `AddButton`.
+  the original first, then calls `ModPage::Install` (below) to build the separate page and its
+  navigation button.
+- `tools/FCSE/src/mod_page.cpp`/`.h` — Path C's implementation, see below.
 
-Confirmed live: rows render as real, selectable buttons; clicking one plays the normal menu-select
-sound, toggles the backing `bool`, and fires the plugin's `onChanged`. **Known cosmetic gap**: the
-on-screen label doesn't live-refresh to show `[ON]`/`[OFF]` after a click, because `Setup()` only runs
-once per session (confirmed — re-running it would duplicate the 5 real category buttons, since it has
-no internal "already built" guard).
+**Known cosmetic gap carried over from the earlier version**: row labels don't live-refresh to show
+`[ON]`/`[OFF]` after a click, since they're only built once, when the page is constructed.
 
-## If you want to build a real, separate "Mods" page
+## Building a real, separate "Mods" page
 
-This is the actual goal that prompted this whole investigation, and it's **not done** — the shipped
-feature is the pragmatic fallback. Two paths have been explored:
+This was the actual goal from the start. Three paths were explored across several sessions — A and
+B are both dead/superseded, kept here for the record; **C is what's actually implemented**.
 
-### Path A: hand-rolled `CGameMenu` page — attempted, currently blocked
+### Path A: hand-rolled `CGameMenu` page — dead, do not re-attempt
 
 1. ~~Find `Dunia.dll` addresses for `CGameMenu::GetPage`/`SetNextPage`/`SwitchPage`.~~ **Done.**
    `GetPage` (`0x101d1b90`), `SetNextPage` (`0x101d1bc0`), `SwitchPage` (`0x101d1990`), the ctor/dtor,
@@ -384,46 +400,66 @@ feature is the pragmatic fallback. Two paths have been explored:
    call the same `AddButton`-based row-building the shipped feature already does (correct `CGameMenu`
    bookkeeping, but no visually distinct new screen); or (b) a real, separate Magma `Page*` — see Path B.
 
-### Path B: intercept `.mgb` loading instead — the current preferred direction (2026-08-03)
+### Path B: intercept `.mgb` loading instead — scoped out 2026-08-03, superseded, never started
 
-Scoped out this session as a way to sidestep Path A's blocker entirely, by working inside the
-already-well-understood, data-driven Magma system instead of fighting `CGameMenu`'s native C++
-internals. Rather than inserting a hand-rolled page into `CGameMenu`, intercept
-`CMagmaUIResource::LoadPackageInMagma` (or whatever lower-level file-read call it makes - not yet
-found) for the Options screen's own `.mgb` resource path, and hand back a modified/extended version
-(with new `Button` elements added to the real `Page`) instead of the original bytes. This avoids
-`CGameMenu`'s hashtable entirely - the new content just becomes part of an already-loading, already-
-working page.
+Scoped out as a way to sidestep Path A's blocker by working inside the data-driven Magma system
+instead of fighting `CGameMenu`'s native C++ internals: intercept `CMagmaUIResource::LoadPackageInMagma`
+(or a lower-level file-read call - never found) for the Options screen's own `.mgb` resource, and hand
+back a modified/extended version instead of the original bytes. Needed, none of it ever started: a
+real `.mgb` *writer* (`tools/JackAll` was read-only at the time; a writer exists now, see
+[`mgb.md`](../file-formats/mgb.md)), finding the file-load interception point, and — the single
+biggest blocker — reverse-engineering `Action` **execution** (not just its file format; everything
+`mgb.md`'s `ActionExecuter`/`Action` section covers is how actions are *serialized*, nothing about
+how a live click *dispatches and runs* one). **Superseded by Path C** (2026-08-04), which reaches a
+real, separate page using zero `.mgb`/`Action` knowledge at all - this path is not being pursued
+further, but the `.mgb` writer it would have needed exists anyway for unrelated JackAll-editing
+reasons (see [[mgb_parsing_progress]] in memory).
 
-**What this needs, concretely, none of it done yet:**
-- **A real `.mgb` editor with a writer**, not just the read-only inspector `tools/JackAll` has today
-  (see [`mgb.md`](../file-formats/mgb.md)) - needs an editing UI in `JackAll.App` (currently a
-  read-only `TextBlock`) and a serializer (`MgbBody` currently only has `ParsePackage`, no
-  `WritePackage`/equivalent). Doesn't need the format to be 100% understood first: a byte-preserving
-  design (parse what's understood into an editable tree, keep anything not understood as an opaque
-  blob, splice edits back in) can support well-scoped edits like "add a `Button` to a `Page`'s element
-  list" - one of the best-validated, most cross-checked parts of the whole format - without first
-  resolving the format's remaining open questions (`Keyframe` state-type selection, the `Placeholder`-
-  as-`Factory::MakeArea`-fallback shape - see `mgb.md`'s own Unknowns).
-- **Finding the file-load interception point** - not yet reverse-engineered on either binary. Likely a
-  similar-difficulty task to what's already been done elsewhere in this doc, just not started.
-- **Reverse-engineering `Action` *execution*, not just its file format.** Everything documented in
-  `mgb.md`'s `ActionExecuter`/`Action` section is about how actions are *serialized* - nothing is known
-  yet about how a live button click actually *dispatches and executes* one at runtime, which is what
-  "hook it to call FCSE functions" needs. This is a separate, unstarted RE thread and the single
-  biggest unknown in this path.
-- **A possible shortcut for that last point, not yet verified**: while investigating `Handler`-family
-  classes for `mgb.md`, script/console-callback registration machinery was spotted in the binary
-  (`CDominoConsoleCommandManager::RegisterConsoleCommand`-style templates). If an existing native
-  `Action` type can invoke a named, registerable callback (rather than only navigating between pages),
-  FCSE could register a real native handler through it without reverse-engineering raw `Action`
-  dispatch internals at all. Flagged as worth checking before assuming the full dispatch mechanism
-  needs reversing from scratch.
+### Path C: a private, second instance of a real compiled page class — implemented 2026-08-04
 
-An alternative, lower-risk path that was scoped but not attempted: skip `CGameMenu` entirely, and
-instead find and hook one of the *existing* leaf pages' own `Setup()` (e.g. `CFCXOptionNetworkPage`,
-the least-missed real tab in single-player) to inject Mods content into an already-real, already-
-navigable, already-visually-distinct screen.
+The idea that actually worked, evolving out of an earlier "skip `CGameMenu` entirely, hook an
+*existing* leaf page's own `Setup()`" suggestion. Two findings this session made it concrete:
+
+1. **`CGameMenu::AddPage<T>()` is a per-class get-or-create, not a one-shot constructor.** Found
+   `AddPage<CFCXOptionGamePage>` at `Dunia.dll 0x107d7ab0` (via the `"CFCXOptionGamePage"` RTTI
+   string → its one non-getter xref → decompile) and its real ctor at `0x1081e9c0` (confirmed
+   beyond doubt via literal loc keys `"GAMEOPTION_TITLE"`/`"MAINMENU_OPTIONGAME_PAGE_PC"` in its
+   body). Calling either of these again, later, doesn't require the page to not already exist.
+2. **`CGameMenu::SwitchPage()` (`0x101d1990`) never touches the page hashtable at all.** Fully
+   decompiled: it only reads/writes two plain fields on the `CGameMenu` object itself (`+0x3c` =
+   next page, `+0x40` = current page) and calls two vtable slots (deactivate old at `(*old)+0xc`,
+   activate new at `(*new)+0x8`). The hashtable lookup that crashes in Path A
+   (`CGameMenu_PageTable_Find`/`InsertNode`) only happens in the separate `SetNextPage` function,
+   which normal buttons reach via `CSetNextPageMenuHandler`. **`SwitchPage` itself was never the
+   blocker** — only inserting a *new key* into the hashtable was, and Path C never needs to.
+
+**What's implemented** (`tools/FCSE/src/mod_page.{h,cpp}`): construct a **second, private,
+heap-allocated instance** of `CFCXOptionGamePage` (the real ctor, `0x1081e9c0`, called on a
+zero-initialized `new unsigned char[0x210]` — `0x210` is the object size confirmed from
+`AddPage<T>`'s own allocation, and the buffer is zero-initialized because the ctor's own visible
+field-writes never touch `CListMenuPage`'s base-class fields that `AddButton` needs, `+0xc`/`+0xd4`/
+`+0x168`/`+0x16c` — reasoned to default correctly from zero, not independently confirmed). This
+private object is **never registered in `CGameMenu`'s hashtable** — the real, shared "Game" tab is
+completely untouched. FCSE's content (a header row, one disabled row per plugin name, one toggle row
+per `FCSE_ConfigBool`) is appended onto the private copy via the already-proven-safe `AddButton`
+(safe on any `CListMenuPage`-derived `this` for the same base-class-layout reason it's safe on
+`CFCXOptionPage`'s own `this`). The Options screen's navigation button uses a new hand-rolled
+`IMenuItemHandler` (`PagePushHandler`, same fake-vtable/`kActivateSlot=1` technique as
+`ModsMenuHandler`) whose `Activate()`: reads `ownerPage+0x140` fresh for the live `CGameMenu*` (the
+same field `CSetNextPageMenuHandler::SwitchPage` itself reads), writes the private page's pointer
+directly into `CGameMenu+0x3c`, then calls `CGameMenu::SwitchPage` directly - never calling
+`SetNextPage`, never touching the hashtable.
+
+**Not yet live-tested.** Two things to check first if it misbehaves: whether the zero-initialized
+`CListMenuPage` fields really are sufficient (see above), and whether `CGameMenu+0x40` ("current
+page") reliably holds a sane value at click time for `SwitchPage`'s deactivate-old step - expected
+yes (the engine's own normal navigation to Options should already maintain it), but this exact
+call path (triggering `SwitchPage` directly rather than via `CSetNextPageMenuHandler`) is new.
+
+**Reusable beyond this specific page**: this "construct a private instance of any compiled page
+class, append content via `AddButton`, reach it by writing `CGameMenu+0x3c` and calling
+`SwitchPage` directly" recipe works for any real page class, not just `CFCXOptionGamePage` - no
+hashtable-insert risk, no `Action`-dispatch RE needed.
 
 ## Open questions — the real gaps
 
@@ -488,20 +524,23 @@ navigable, already-visually-distinct screen.
    iteration found on the server, and does `CFCXOptionPage::Setup`'s flat `AddButton` sequence fully
    explain it, or is something else also involved)? Not needed for the shipped feature, but relevant if
    a future page needs to insert itself *into* that existing row rather than appending after it.
-6. **`CGameMenu_PageTable_InsertNode`'s real field-usage for `this+0x14` — added 2026-08-03.** The
-   single blocker on Path A above. Confirmed to be a genuine pointer (a linked-list sentinel, via
-   `CGameMenu::Shutdown`'s own decompile) but `InsertNode`'s own decompile treats it as an integer
-   twice, in two different ways, within the same function — almost certainly a Ghidra type-recovery
-   failure on hand-tuned Dinkumware/MSVC STL pointer arithmetic rather than a real inconsistency in the
-   compiled code, but which (if either) reading is correct wasn't resolved. See "`CGameMenu`'s page
-   hashtable" above for the full mechanism. Next step, not yet tried: a live memory watch on a *real*
-   insert during normal boot (e.g. one of the five real Options category tabs registering itself via
-   the compiled-in `AddPage<T>`) to observe confirmed-correct values for this field in a genuinely
+6. **`CGameMenu_PageTable_InsertNode`'s real field-usage for `this+0x14` — added 2026-08-03, no
+   longer blocking anything (added 2026-08-04).** Originally the single blocker on Path A. Confirmed
+   to be a genuine pointer (a linked-list sentinel, via `CGameMenu::Shutdown`'s own decompile) but
+   `InsertNode`'s own decompile treats it as an integer twice, in two different ways, within the same
+   function — almost certainly a Ghidra type-recovery failure on hand-tuned Dinkumware/MSVC STL
+   pointer arithmetic rather than a real inconsistency in the compiled code, but which (if either)
+   reading is correct was never resolved. **Path C (above) sidesteps this entirely** - it never calls
+   `InsertNode`/`GetOrCreatePageSlot` at all, so this is now a pure curiosity rather than a blocker.
+   Still open if anyone wants it for its own sake: a live memory watch on a *real* insert during
+   normal boot (e.g. one of the five real Options category tabs registering itself via the
+   compiled-in `AddPage<T>`) to observe confirmed-correct values for this field in a genuinely
    working call, rather than inferring from decompiled pseudocode alone.
-7. **How does `Action` *execution* work at runtime? — added 2026-08-03.** Everything currently known
-   about the `ActionExecuter`/`Action` family (see [`mgb.md`](../file-formats/mgb.md)) is about how
-   actions are *serialized in the file* - nothing has been reverse-engineered yet about how a live
-   button click actually dispatches and runs one, which blocks Path B's "hooks replaced to call FCSE
+7. **How does `Action` *execution* work at runtime? — added 2026-08-03, no longer blocking anything
+   (added 2026-08-04).** Everything currently known about the `ActionExecuter`/`Action` family (see
+   [`mgb.md`](../file-formats/mgb.md)) is about how actions are *serialized in the file* - nothing
+   has been reverse-engineered yet about how a live button click actually dispatches and runs one,
+   which would have blocked Path B's "hooks replaced to call FCSE
    functions" goal. A possibly-real shortcut, not yet verified: console/script-callback registration
    machinery (`CDominoConsoleCommandManager::RegisterConsoleCommand`-style templates) was spotted in
    the binary while investigating something unrelated - worth checking whether an existing native

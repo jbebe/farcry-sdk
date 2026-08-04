@@ -25,22 +25,25 @@ namespace {
     }
 
     // Tier 1 demo: overrides the stock "toRed" handler. Stock behavior writes 1 (normal RGB);
-    // this plugin writes 0 instead, which docs/docs/engine-internals/function-registry.md and
-    // reverse/patch_toRed.py confirm live in-game switches all 2D UI/HUD rendering to
-    // red-channel-only. Needs zero Dunia.dll address knowledge - just claim the name before
+    // docs/docs/engine-internals/function-registry.md and reverse/patch_toRed.py confirm live
+    // in-game that writing 0 instead switches all 2D UI/HUD rendering to red-channel-only. "toRed"
+    // is called every frame (FunctionRegistry_Invoke's normal dispatch), so this override just
+    // reads g_toRedEnabled fresh each call - no re-hooking needed to react to the Tier 4 checkbox
+    // below toggling it live. Needs zero Dunia.dll address knowledge - just claim the name before
     // FCSE's own stock registration runs (see debug_commands.cpp's Provider()).
+    bool g_toRedEnabled = false;
+
     int __cdecl ToRedOverride(void* param1, void* /*param2*/) {
-        *reinterpret_cast<int*>(param1) = 0;
+        *reinterpret_cast<int*>(param1) = g_toRedEnabled ? 0 : 1;
         return 0;
     }
 
-    // Tier 4 demo target: one bool, shown as a row in the "Mods" tab under Options.
-    bool g_demoBool = false;
-
-    void __cdecl OnDemoBoolChanged(void* /*userdata*/) {
+    // Tier 4 demo target: one bool, shown as a row in FCSE's Mod Configuration Menu, wired
+    // straight to g_toRedEnabled above - toggling it in-game flips the toRed effect live.
+    void __cdecl OnToRedToggled(void* /*userdata*/) {
         if (g_api != nullptr) {
-            g_api->Log(g_demoBool ? "example_plugin: demo bool toggled ON"
-                                   : "example_plugin: demo bool toggled OFF");
+            g_api->Log(g_toRedEnabled ? "example_plugin: toRed toggled ON"
+                                       : "example_plugin: toRed toggled OFF");
         }
     }
 }
@@ -65,13 +68,13 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         api->Log("example_plugin: demo buffer patched");
     }
 
-    static FCSE_ConfigBool demoField{};
-    demoField.label = "Demo bool";
-    demoField.value = &g_demoBool;
-    demoField.onChanged = &OnDemoBoolChanged;
-    demoField.userdata = nullptr;
-    if (api->RegisterConfigPage("example_plugin", &demoField, 1)) {
-        api->Log("example_plugin: registered a Mods tab entry");
+    static FCSE_ConfigBool toRedField{};
+    toRedField.label = "Toggle toRed";
+    toRedField.value = &g_toRedEnabled;
+    toRedField.onChanged = &OnToRedToggled;
+    toRedField.userdata = nullptr;
+    if (api->RegisterConfigPage("example_plugin", &toRedField, 1)) {
+        api->Log("example_plugin: registered a Mod Configuration Menu entry");
     }
 
     return true;
