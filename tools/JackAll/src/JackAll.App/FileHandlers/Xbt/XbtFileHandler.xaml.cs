@@ -1,12 +1,7 @@
-using BCnEncoder.Decoder;
-using BCnEncoder.Shared;
-using CommunityToolkit.HighPerformance;
 using JackAll.Tools.Format;
 using Microsoft.Win32;
 using System.IO;
 using System.Windows.Controls;
-using System.Windows.Media.Imaging;
-using System.Windows.Media;
 using System.Windows;
 
 namespace JackAll.App.FileHandlers.Xbt;
@@ -46,7 +41,11 @@ public partial class XbtFileHandler : UserControl
                 "Ready to export.";
             ExportButton.IsEnabled = true;
 
-            ShowPreview(dds);
+            Preview.Source = XbtImage.TryDecode(content, out string? previewError);
+            if (previewError is not null)
+            {
+                StatusText.Text += $"\n\nNo preview available: {previewError}";
+            }
         }
         catch (Exception ex)
         {
@@ -56,47 +55,6 @@ public partial class XbtFileHandler : UserControl
             ExportButton.IsEnabled = false;
             Preview.Source = null;
         }
-    }
-
-    private void ShowPreview(byte[] dds)
-    {
-        try
-        {
-            var decoder = new BcDecoder();
-            using var stream = new MemoryStream(dds);
-            Preview.Source = ToBitmap(decoder.Decode2D(stream));
-        }
-        catch (Exception ex)
-        {
-            Preview.Source = null;
-            StatusText.Text += $"\n\nNo preview available: {ex.Message}";
-        }
-    }
-
-    private static WriteableBitmap ToBitmap(Memory2D<ColorRgba32> pixels)
-    {
-        int width = pixels.Width;
-        int height = pixels.Height;
-        ColorRgba32[,] rows = pixels.ToArray();
-
-        byte[] buffer = new byte[width * height * 4];
-        int i = 0;
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                ColorRgba32 c = rows[y, x];
-                buffer[i++] = c.b;
-                buffer[i++] = c.g;
-                buffer[i++] = c.r;
-                buffer[i++] = c.a;
-            }
-        }
-
-        var bitmap = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);
-        bitmap.WritePixels(new Int32Rect(0, 0, width, height), buffer, width * 4, 0);
-        bitmap.Freeze();
-        return bitmap;
     }
 
     private void Export_Click(object sender, RoutedEventArgs e)

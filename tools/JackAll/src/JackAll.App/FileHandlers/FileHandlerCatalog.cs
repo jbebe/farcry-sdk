@@ -48,12 +48,14 @@ public static class FileHandlerCatalog
     /// and by the spk case, for a `SimpleFixed68`/`TransformedFixed128` row's own cross-reference to a
     /// different bank entirely (see <see cref="SpkFileHandler"/>). <paramref name="openDominoEditor"/>
     /// is the domino\user\ case's counterpart to <paramref name="openEditor"/>, handing off to the
-    /// graph-reconstruction tab (see <see cref="DominoFilePreviewHandler"/>).
+    /// graph-reconstruction tab (see <see cref="DominoFilePreviewHandler"/>), and
+    /// <paramref name="openMgbEditor"/> is the mgb case's, handing off to the Magma UI package editor
+    /// tab (see <see cref="MgbFilePreviewHandler"/>).
     /// </summary>
     public static UserControl? CreateView(
         VfsFile file, Func<byte[]> readContent, Action<byte[]> replaceContent, Action openEditor,
         Func<byte[]?> readOriginal, Func<uint, VfsFile?> resolveByHash, Action<VfsFile> navigateTo,
-        Action openDominoEditor)
+        Action openDominoEditor, Action openMgbEditor)
         => file switch
         {
             // Checked before the plain "xml" case below - a fragment's own VfsFile.Type.Extension is
@@ -81,7 +83,7 @@ public static class FileHandlerCatalog
             { Type.Extension: "rml" } => new RmlFileHandler(file, readContent(), replaceContent, readOriginal),
             { Type.Extension: "sdat" } => new SdatFileHandler(file.FileName, readContent()),
             { Type.Extension: "spk" } => new SpkFileHandler(file.FileName, readContent(), replaceContent, resolveByHash, navigateTo),
-            { Type.Extension: "mgb" } => new MgbFileHandler(file.FileName, readContent(), replaceContent),
+            { Type.Extension: "mgb" } => new MgbFilePreviewHandler(readContent(), openMgbEditor),
             // Matched by filename suffix, not bare extension - "dat" alone is also the archive-container
             // extension, so this must not fire for anything else that happens to carry a literal .dat
             // extension in the VFS content tree. Sibling "_deploadnewparticles.rml" files are unaffected

@@ -1,6 +1,7 @@
 using JackAll.App.Domino;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.FileHandlers;
+using JackAll.App.Mgb;
 using JackAll.App.XmlEditor;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
@@ -108,7 +109,8 @@ public partial class MainWindow : Window
         UserControl? view = file is not null
             ? FileHandlerCatalog.CreateView(
                 file, () => _vm.Read(file), bytes => _vm.Replace(file, bytes), () => OpenXmlEditorTab(file),
-                () => _vm.ReadOriginal(file), _vm.FindByHash, _vm.NavigateTo, () => OpenDominoEditorTab(file))
+                () => _vm.ReadOriginal(file), _vm.FindByHash, _vm.NavigateTo, () => OpenDominoEditorTab(file),
+                () => OpenMgbEditorTab(file))
             : null;
 
         PreviewHost.Content = view;
@@ -238,23 +240,93 @@ public partial class MainWindow : Window
         var vm = new DominoTabViewModel(file.FileName, source);
         var view = new DominoTabView(vm);
         var tab = new TabItem { Content = view };
-        tab.Header = BuildClosableDominoTabHeader(vm.Title, () =>
+        // No dirty-tracking wrapper like the two editors below get: this tab is read-only, so there is
+        // never anything to prompt about on the way out.
+        tab.Header = BuildClosableTabHeader(vm.Title, () =>
         {
             _openDominoEditors.Remove(file.Hash);
             MainTabs.Items.Remove(tab);
-        });
+        }, out _);
 
         _openDominoEditors[file.Hash] = tab;
         MainTabs.Items.Add(tab);
         MainTabs.SelectedItem = tab;
     }
 
-    /// <summary>Title plus a small "×" close button - the Domino tab's counterpart to
-    /// <see cref="BuildClosableTabHeader"/>, minus the dirty-tracking that has nothing to track yet
-    /// (read-only, no save) and the unsaved-changes prompt that comes with it.</summary>
-    private static FrameworkElement BuildClosableDominoTabHeader(string title, Action onClose)
+    // ------------------------------------------------------------ mgb package editor tabs
+
+    /// <summary>Open Magma UI package editor tabs, keyed by the file's own hash - same
+    /// dedup-by-focusing-the-existing-tab behavior as <see cref="_openEditors"/>.</summary>
+    private readonly Dictionary<uint, TabItem> _openMgbEditors = [];
+
+    /// <summary>The Files tab's "Open in MGB Editor…" launcher. Unlike the fragment and save editors
+    /// there's no XML in between: <see cref="MgbTabView"/> edits the decoded package model directly and
+    /// its own Save reserialises it straight into the workspace via <see cref="MainViewModel.Replace"/>.</summary>
+    private void OpenMgbEditorTab(VfsFile file)
     {
-        var text = new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
+        if (_openMgbEditors.TryGetValue(file.Hash, out TabItem? existingTab))
+        {
+            MainTabs.SelectedItem = existingTab;
+            return;
+        }
+
+        byte[] content;
+        try
+        {
+            content = _vm.Read(file);
+        }
+        catch (Exception ex)
+        {
+            Warn($"Couldn't open '{file.FileName}': {ex.Message}");
+            return;
+        }
+
+        var view = new MgbTabView(file.FileName, content, bytes => _vm.Replace(file, bytes), _vm.ReadByPath);
+        var tab = new TabItem { Content = view };
+        tab.Header = BuildClosableTabHeader(view.Title,
+            () => CloseMgbEditorTab(tab, view, () => _openMgbEditors.Remove(file.Hash)),
+            out TextBlock title);
+        view.DirtyChanged += () => title.Text = view.IsDirty ? $"{view.Title} *" : view.Title;
+
+        _openMgbEditors[file.Hash] = tab;
+        MainTabs.Items.Add(tab);
+        MainTabs.SelectedItem = tab;
+    }
+
+    /// <summary>The <see cref="MgbTabView"/> counterpart to <see cref="CloseEditorTabAsync"/>: same
+    /// prompt, same leave-the-tab-open-on-failure rule, just against the package editor's own
+    /// synchronous <see cref="MgbTabView.Save"/>.</summary>
+    private void CloseMgbEditorTab(TabItem tab, MgbTabView view, Action onRemoved)
+    {
+        if (view.IsDirty)
+        {
+            MessageBoxResult choice = MessageBox.Show(this,
+                $"'{view.Title}' has unsaved changes.\n\nSave before closing?",
+                "Unsaved changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+
+            if (choice == MessageBoxResult.Cancel) return;
+
+            if (choice == MessageBoxResult.Yes && view.Save() is { } error)
+            {
+                Warn(error);
+                return;
+            }
+        }
+
+        onRemoved();
+        MainTabs.Items.Remove(tab);
+    }
+
+    // ------------------------------------------------------------ tab chrome
+
+    /// <summary>Title plus a small "×" close button, since the three static tabs (Mods/Saves/Files) are
+    /// the only ones that don't need one - matches the plain-code-behind tab management above rather
+    /// than pulling in a DataTemplate/ItemsSource restructuring for a TabControl that otherwise stays as
+    /// declared in XAML. <paramref name="titleText"/> comes back out so a caller whose content tracks
+    /// unsaved changes can retitle it; a read-only tab just discards it.</summary>
+    private static FrameworkElement BuildClosableTabHeader(string title, Action onClose, out TextBlock titleText)
+    {
+        titleText = new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
         var close = new Button
         {
             Content = "×",
@@ -268,42 +340,27 @@ public partial class MainWindow : Window
         close.Click += (_, _) => onClose();
 
         var panel = new StackPanel { Orientation = Orientation.Horizontal };
-        panel.Children.Add(text);
+        panel.Children.Add(titleText);
         panel.Children.Add(close);
         return panel;
     }
 
-    /// <summary>Title plus a small "×" close button, since the two static tabs (Mods/Files) are the
-    /// only ones that don't need one - matches the plain-code-behind tab management above rather than
-    /// pulling in a DataTemplate/ItemsSource restructuring for a TabControl that otherwise stays as
-    /// declared in XAML.</summary>
+    /// <summary>The XML editor's header: <see cref="BuildClosableTabHeader"/> plus the dirty marker and
+    /// the unsaved-changes prompt its two (fragment and savegame) tab flavours both need.</summary>
     private FrameworkElement BuildClosableTabHeader(TabItem tab, XmlEditorTabViewModel vm, Action onRemoved)
     {
-        var text = new TextBlock { Text = vm.Title, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
+        FrameworkElement header = BuildClosableTabHeader(vm.Title,
+            async () => await CloseEditorTabAsync(tab, vm, onRemoved),
+            out TextBlock title);
+
         vm.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(XmlEditorTabViewModel.IsDirty))
             {
-                text.Text = vm.IsDirty ? $"{vm.Title} *" : vm.Title;
+                title.Text = vm.IsDirty ? $"{vm.Title} *" : vm.Title;
             }
         };
-
-        var close = new Button
-        {
-            Content = "×",
-            Padding = new Thickness(4, 0, 4, 0),
-            MinWidth = 0,
-            Margin = new Thickness(0),
-            VerticalAlignment = VerticalAlignment.Center,
-            Focusable = false,
-            ToolTip = "Close",
-        };
-        close.Click += async (_, _) => await CloseEditorTabAsync(tab, vm, onRemoved);
-
-        var panel = new StackPanel { Orientation = Orientation.Horizontal };
-        panel.Children.Add(text);
-        panel.Children.Add(close);
-        return panel;
+        return header;
     }
 
     /// <summary>Prompts for unsaved changes before closing - Save runs the exact same
@@ -345,6 +402,11 @@ public partial class MainWindow : Window
         // Independent of the game install (a save lives in Documents, not the install folder) - runs
         // alongside InitializeAsync rather than waiting on it.
         _ = _vm.LoadSavesAsync();
+
+        // Points the process-wide oasis string table at the merged filesystem, so a mod that
+        // overrides oasisstrings.xml resolves through its version. Nothing is read here - the table
+        // parses on the first lookup that wants it (see OasisStringTable's remarks).
+        OasisStringTable.UseSource(_vm.ReadByPath);
 
         await _vm.InitializeAsync();
     }

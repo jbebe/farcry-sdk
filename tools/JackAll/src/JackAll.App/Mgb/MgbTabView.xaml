@@ -1,0 +1,236 @@
+<UserControl x:Class="JackAll.App.Mgb.MgbTabView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:JackAll.App.Mgb">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
+
+        <Style x:Key="ValueBox" TargetType="TextBox">
+            <Setter Property="FontFamily" Value="Consolas" />
+            <Setter Property="FontSize" Value="12" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsValid}" Value="False">
+                    <Setter Property="Background" Value="#FFF0F0" />
+                    <Setter Property="BorderBrush" Value="#C00" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <!-- One template per leaf kind (see MgbRowTemplateSelector). Every one of these binds the
+             same MgbPropertyRow; they differ only in how its value is presented. -->
+
+        <DataTemplate x:Key="TextEditor">
+            <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                     Style="{StaticResource ValueBox}" ToolTip="{Binding Error}" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="BoolEditor">
+            <CheckBox IsChecked="{Binding BoolValue}" VerticalAlignment="Center" />
+        </DataTemplate>
+
+        <!-- Read-only covers two things: a byte blob there is no useful editor for, and a class name
+             the record's layout is fixed by (see MgbPropertyRow.ClassNameNote). The second gets a
+             tooltip saying why, and a "fixed" hint so it doesn't just look like a dead field. -->
+        <DataTemplate x:Key="ReadOnlyEditor">
+            <StackPanel Orientation="Horizontal" ToolTip="{Binding Note}">
+                <TextBox Text="{Binding Text, Mode=OneWay}" IsReadOnly="True" IsReadOnlyCaretVisible="False"
+                         FontFamily="Consolas" FontSize="12" Foreground="#777" Background="#F4F4F4"
+                         BorderBrush="#E0E0E0" MinWidth="140" VerticalAlignment="Center" />
+                <TextBlock Text="fixed at creation" Foreground="#AAA" FontSize="10" FontStyle="Italic"
+                           VerticalAlignment="Center" Margin="8,0,0,0"
+                           Visibility="{Binding HasNote, Converter={StaticResource BoolToVisibility}}" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- An enumeration the XML loader authors by name (Util::GetType's tag table). The raw value
+             box stays alongside the dropdown, not behind it: the tables don't always cover every
+             value a file can hold, and one that falls outside still has to be visible and editable. -->
+        <DataTemplate x:Key="EnumEditor">
+            <StackPanel Orientation="Horizontal">
+                <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding SelectedChoice}"
+                          FontFamily="Consolas" FontSize="12" MinWidth="150" VerticalAlignment="Center" />
+                <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Width="52"
+                         Style="{StaticResource ValueBox}" ToolTip="{Binding Error}"
+                         VerticalAlignment="Center" Margin="6,0,0,0" />
+            </StackPanel>
+        </DataTemplate>
+
+        <!-- Colour: the exact 0xAARRGGBB word stays editable as text (these are hand-authored values
+             and a picker alone would make an exact one awkward to type), with a swatch that opens
+             per-channel sliders. The swatch sits on a checkerboard so alpha reads as translucency
+             rather than as some arbitrary flat colour. -->
+        <DataTemplate x:Key="ColorEditor">
+            <StackPanel Orientation="Horizontal">
+                <!-- Stretch both content alignments: the button's own theme style centres its content,
+                     and a Rectangle that fills rather than carrying a size measures to 0x0 under a
+                     centring parent - which collapses the whole swatch and leaves the bare grey
+                     button chrome showing instead of the colour. -->
+                <ToggleButton x:Name="SwatchButton" Width="34" Height="20" Padding="0" Margin="0,0,6,0"
+                              HorizontalContentAlignment="Stretch" VerticalContentAlignment="Stretch"
+                              VerticalAlignment="Center" ToolTip="Edit channels">
+                    <Grid>
+                        <Rectangle>
+                            <Rectangle.Fill>
+                                <DrawingBrush TileMode="Tile" Viewport="0,0,8,8" ViewportUnits="Absolute">
+                                    <DrawingBrush.Drawing>
+                                        <DrawingGroup>
+                                            <GeometryDrawing Brush="White" Geometry="M0,0 H2 V2 H0 Z" />
+                                            <GeometryDrawing Brush="#CCC" Geometry="M0,0 H1 V1 H0 Z M1,1 H2 V2 H1 Z" />
+                                        </DrawingGroup>
+                                    </DrawingBrush.Drawing>
+                                </DrawingBrush>
+                            </Rectangle.Fill>
+                        </Rectangle>
+                        <Rectangle Fill="{Binding ColorBrush}" />
+                    </Grid>
+                </ToggleButton>
+
+                <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Width="96"
+                         Style="{StaticResource ValueBox}" ToolTip="{Binding Error}"
+                         VerticalAlignment="Center" />
+
+                <TextBlock Text="{Binding ColorDescription}" Foreground="#999" FontFamily="Consolas"
+                           FontSize="11" VerticalAlignment="Center" Margin="8,0,0,0"
+                           ToolTip="The authored &quot;A R G B&quot; form" />
+
+                <Popup IsOpen="{Binding IsChecked, ElementName=SwatchButton, Mode=TwoWay}"
+                       PlacementTarget="{Binding ElementName=SwatchButton}" Placement="Bottom"
+                       StaysOpen="False" AllowsTransparency="True">
+                    <Border Background="White" BorderBrush="#AAA" BorderThickness="1" Padding="10">
+                        <Grid Width="230">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <Grid.RowDefinitions>
+                                <RowDefinition /><RowDefinition /><RowDefinition /><RowDefinition />
+                            </Grid.RowDefinitions>
+
+                            <TextBlock Grid.Row="0" Text="A" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <Slider Grid.Row="0" Grid.Column="1" Minimum="0" Maximum="255" SmallChange="1"
+                                    IsSnapToTickEnabled="True" TickFrequency="1"
+                                    Value="{Binding ColorA, Mode=TwoWay}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="0" Grid.Column="2" Text="{Binding ColorA}" Width="30"
+                                       TextAlignment="Right" FontFamily="Consolas" VerticalAlignment="Center" />
+
+                            <TextBlock Grid.Row="1" Text="R" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <Slider Grid.Row="1" Grid.Column="1" Minimum="0" Maximum="255" SmallChange="1"
+                                    IsSnapToTickEnabled="True" TickFrequency="1"
+                                    Value="{Binding ColorR, Mode=TwoWay}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="1" Grid.Column="2" Text="{Binding ColorR}" Width="30"
+                                       TextAlignment="Right" FontFamily="Consolas" VerticalAlignment="Center" />
+
+                            <TextBlock Grid.Row="2" Text="G" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <Slider Grid.Row="2" Grid.Column="1" Minimum="0" Maximum="255" SmallChange="1"
+                                    IsSnapToTickEnabled="True" TickFrequency="1"
+                                    Value="{Binding ColorG, Mode=TwoWay}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="2" Grid.Column="2" Text="{Binding ColorG}" Width="30"
+                                       TextAlignment="Right" FontFamily="Consolas" VerticalAlignment="Center" />
+
+                            <TextBlock Grid.Row="3" Text="B" Margin="0,0,6,0" VerticalAlignment="Center" />
+                            <Slider Grid.Row="3" Grid.Column="1" Minimum="0" Maximum="255" SmallChange="1"
+                                    IsSnapToTickEnabled="True" TickFrequency="1"
+                                    Value="{Binding ColorB, Mode=TwoWay}" VerticalAlignment="Center" />
+                            <TextBlock Grid.Row="3" Grid.Column="2" Text="{Binding ColorB}" Width="30"
+                                       TextAlignment="Right" FontFamily="Consolas" VerticalAlignment="Center" />
+                        </Grid>
+                    </Border>
+                </Popup>
+            </StackPanel>
+        </DataTemplate>
+
+        <local:MgbRowTemplateSelector x:Key="EditorSelector"
+                                      Text="{StaticResource TextEditor}"
+                                      Bool="{StaticResource BoolEditor}"
+                                      ReadOnly="{StaticResource ReadOnlyEditor}"
+                                      Color="{StaticResource ColorEditor}"
+                                      Enum="{StaticResource EnumEditor}" />
+
+        <DataTemplate x:Key="PropertyRowTemplate">
+            <Grid Margin="0,1,0,1">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="190" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Text="{Binding Name}" VerticalAlignment="Center" Margin="0,0,8,0"
+                           Foreground="#444" ToolTip="{Binding Name}" TextTrimming="CharacterEllipsis" />
+
+                <ContentControl Grid.Column="1" Content="{Binding}"
+                                ContentTemplateSelector="{StaticResource EditorSelector}" />
+
+                <!-- Anything a stored value resolves to, under the editor it belongs to. Each stays
+                     collapsed unless it actually resolved, so an ordinary row is still one line. -->
+                <StackPanel Grid.Row="1" Grid.Column="1">
+                    <TextBlock Text="{Binding ResolvedText}" TextWrapping="Wrap" Margin="0,2,0,0"
+                               Foreground="#2A6B2A" FontStyle="Italic" FontSize="11"
+                               Visibility="{Binding HasResolvedText, Converter={StaticResource BoolToVisibility}}"
+                               ToolTip="Resolved through languages\english\oasisstrings.xml" />
+
+                    <TextBlock Text="{Binding TexturePathNote}" TextWrapping="Wrap" Margin="0,2,0,0"
+                               Foreground="#999" FontFamily="Consolas" FontSize="10"
+                               Visibility="{Binding HasTexturePathNote, Converter={StaticResource BoolToVisibility}}" />
+
+                    <Border BorderBrush="#DDD" BorderThickness="1" Margin="0,4,0,6" Padding="2"
+                            HorizontalAlignment="Left" Background="#F6F6F6"
+                            Visibility="{Binding HasTextureImage, Converter={StaticResource BoolToVisibility}}">
+                        <Image Source="{Binding TextureImage}" MaxHeight="200" Stretch="Uniform"
+                               StretchDirection="DownOnly" HorizontalAlignment="Left" />
+                    </Border>
+                </StackPanel>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <DockPanel Margin="12">
+        <TextBlock x:Name="HeaderText" DockPanel.Dock="Top" FontFamily="Consolas" FontSize="12"
+                   TextWrapping="Wrap" Margin="0,0,0,8" />
+
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
+            <Button x:Name="AddButton" Content="Add…" Click="AddButton_Click" Padding="8,3" Margin="0,0,6,0" />
+            <Button x:Name="DuplicateButton" Content="Duplicate" Click="DuplicateButton_Click" Padding="8,3" Margin="0,0,6,0" />
+            <Button x:Name="DeleteButton" Content="Delete" Click="DeleteButton_Click" Padding="8,3" Margin="0,0,6,0" />
+            <Button x:Name="MoveUpButton" Content="↑" Click="MoveUpButton_Click" Padding="10,3" Margin="0,0,6,0" />
+            <Button x:Name="MoveDownButton" Content="↓" Click="MoveDownButton_Click" Padding="10,3" Margin="0,0,18,0" />
+            <Button x:Name="SaveButton" Content="Save changes" Click="SaveButton_Click" Padding="10,3" FontWeight="Bold" />
+            <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap" />
+        </StackPanel>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="2*" MinWidth="220" />
+                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="3*" MinWidth="260" />
+            </Grid.ColumnDefinitions>
+
+            <TreeView x:Name="Tree" SelectedItemChanged="Tree_SelectedItemChanged" BorderThickness="1"
+                      BorderBrush="#DDD">
+                <TreeView.ItemContainerStyle>
+                    <Style TargetType="TreeViewItem">
+                        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                    </Style>
+                </TreeView.ItemContainerStyle>
+                <TreeView.ItemTemplate>
+                    <HierarchicalDataTemplate ItemsSource="{Binding Children}">
+                        <TextBlock Text="{Binding Label}" FontFamily="Consolas" FontSize="12" />
+                    </HierarchicalDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+
+            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="Transparent" />
+
+            <DockPanel Grid.Column="2">
+                <TextBlock x:Name="SelectionText" DockPanel.Dock="Top" FontWeight="Bold" Margin="8,0,0,6" />
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <ItemsControl x:Name="Properties" Margin="8,0,0,0"
+                                  ItemTemplate="{StaticResource PropertyRowTemplate}" />
+                </ScrollViewer>
+            </DockPanel>
+        </Grid>
+    </DockPanel>
+</UserControl>

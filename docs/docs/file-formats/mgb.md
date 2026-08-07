@@ -126,8 +126,8 @@ name is used instead.
 
 A handful of classes still carry names inferred from their XML vocabulary rather than the per-field
 join — `ListBox`, `Slider`, `EditBox` and a few package-level records. Those are marked in
-`research/mgb-field-names.md`, which holds the full working notes including each class's known XML
-vocabulary. Their *widths and order* are offset-verified like everything else; only the labels are
+[the field-names companion page](./mgb-field-names.md), which holds the full per-offset join
+including each class's known XML vocabulary. Their *widths and order* are offset-verified like everything else; only the labels are
 provisional.
 
 ## Header (`magma::BinaryLoadVisitor::ReadHeader` @ `0x0a05fef0`)
@@ -453,7 +453,7 @@ State  (8)  ──▶ RotationState (16) ──┬─▶ PosState  (20) ──�
 
 | Class | `Visit*` | Own fields (after its base) |
 |---|---|---|
-| `State` | `0x0a05dc90` | `INTERPOLATIONFLAGS` u32, `STATECOLOR` u32 (packed RGBA) |
+| `State` | `0x0a05dc90` | `INTERPOLATIONFLAGS` u32, `STATECOLOR` u32 (packed ARGB) |
 | `RotationState` | `0x0a060460` | `ROTATION` float, `ORIGIN` x/y (2× u16) |
 | `PosState` | `0x0a060180` | `POSITION` x/y (2× u16) |
 | `ScaleState` | `0x0a05dcd0` | `SCALEX`, `SCALEY` (2× float) |
@@ -470,6 +470,10 @@ Note `RectState`'s order — **left, right, top, bottom**, not the l/t/r/b anyon
 `TEXTCOLOR` (alias `COLOR`) in the XML writes the inherited `STATECOLOR` field rather than being a
 field of its own. When `COLORn` (n>1) is absent from the XML the loader copies `COLOR1`, which is
 what identifies those four as the corner colours of a gradient quad.
+
+Every colour word in this hierarchy is **ARGB** (`0xAARRGGBB`), authored `A R G B` — see the
+correction under [`State` in the field-name join](./mgb-field-names.md#state--readstate--0x0a066400)
+for the packing and the corpus evidence.
 
 Note `PosState` and `RectState` are **siblings** under `RotationState`, not a chain — both write their
 own fields starting at object offset `+0x24`, and `RectState` is not `PosState`-derived despite

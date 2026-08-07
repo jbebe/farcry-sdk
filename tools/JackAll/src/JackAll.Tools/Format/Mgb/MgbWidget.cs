@@ -244,7 +244,7 @@ public sealed class MgbPageInstance() : MgbAreaInstance("PageInstance")
 /// vocabulary (<c>AUTOCENTER</c>, <c>BUTTONCOUNT</c>, <c>HEADERFOOTERPOS</c>, <c>ITEMSPACING</c>,
 /// <c>SLIDESELITEM</c>, <c>VERTICALSPACING</c>, <c>WRAPAROUND</c>, and the three link elements)
 /// rather than from the per-field offset join, which was not run for this class. See
-/// research/mgb-field-names.md.
+/// docs/docs/file-formats/mgb-field-names.md.
 /// </remarks>
 public sealed class MgbListBox : MgbWidget
 {

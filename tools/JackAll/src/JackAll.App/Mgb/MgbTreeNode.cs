@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using JackAll.Tools.Format.Mgb;
 
-namespace JackAll.App.FileHandlers.Mgb;
+namespace JackAll.App.Mgb;
 
 /// <summary>
 /// One row of the <c>.mgb</c> tree. Wraps a live <see cref="MgbRecord"/> (or the package itself) so

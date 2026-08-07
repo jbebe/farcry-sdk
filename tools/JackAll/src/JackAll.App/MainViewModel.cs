@@ -1,5 +1,6 @@
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.SaveGames;
+using JackAll.Core.Format;
 using JackAll.Core.Mods;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
@@ -1128,6 +1129,22 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// <see cref="FileHandlers.FileHandlerCatalog"/>'s dependency-link case) to resolve what a link
     /// points to.</summary>
     public VfsFile? FindByHash(uint hash) => _vfs?.Files.GetValueOrDefault(hash);
+
+    /// <summary>The merged filesystem's copy of <paramref name="path"/>, or null when no layer
+    /// provides it (or it can't be read). For callers that know a game-relative path rather than a
+    /// file they already have in hand - the .mgb editor resolving a material's texture, and the
+    /// oasis string table finding its own source file.</summary>
+    public byte[]? ReadByPath(string path)
+    {
+        try
+        {
+            return FindByHash(NameHash.Compute(path)) is { } file ? Read(file) : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
 
     /// <summary>Selects <paramref name="file"/> as if the user had clicked it directly — used by a
     /// dependency-link row's "Go to file" button. Goes through <see cref="SetSelectedFiles"/> (not a

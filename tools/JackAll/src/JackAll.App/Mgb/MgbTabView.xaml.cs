@@ -1,14 +1,15 @@
 using System.Collections;
+using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using JackAll.Tools.Format.Mgb;
 
-namespace JackAll.App.FileHandlers.Mgb;
+namespace JackAll.App.Mgb;
 
 /// <summary>
-/// The <c>.mgb</c> (Magma UI) editor: a tree of the whole package on the left, a generated property
-/// grid for the selected record on the right, and structural operations across the top.
+/// One <c>.mgb</c> (Magma UI) editor tab: a tree of the whole package on the left, a generated
+/// property grid for the selected record on the right, and structural operations across the top.
 /// </summary>
 /// <remarks>
 /// Everything the format can express is reachable, without a bespoke form per widget type, because
@@ -20,31 +21,67 @@ namespace JackAll.App.FileHandlers.Mgb;
 /// Saving reserialises the whole package rather than splicing bytes, so edits that change sizes -
 /// adding an element, retyping a string, declaring a new class in the type table - are ordinary
 /// operations rather than the impossible cases they were for the previous editor.
+///
+/// This lives in its own tab rather than the Files tab's preview column (where
+/// <see cref="FileHandlers.Mgb.MgbFilePreviewHandler"/> now just launches it) for the same reason the
+/// fragment XML and Domino editors do: a tree plus a property grid plus a command bar needs real
+/// room, and an editor with pending unsaved changes must not be thrown away by clicking the next row
+/// in the file list.
 /// </remarks>
-public partial class MgbFileHandler : UserControl
+public partial class MgbTabView : UserControl
 {
     private readonly string _fileName;
     private readonly Action<byte[]> _replaceContent;
+    private readonly MgbTextureResolver? _textures;
     private MgbPackage? _package;
     private MgbNameLookup _names = new();
     private MgbTreeNode? _selected;
-    private readonly List<MgbPropertyRow> _rows = [];
-    private int _invalidRows;
 
-    public MgbFileHandler(string fileName, byte[] content, Action<byte[]> replaceContent)
+    /// <summary>Replaced wholesale on every selection, never cleared and refilled - see
+    /// <see cref="ShowProperties"/> for why that distinction is load-bearing.</summary>
+    private List<MgbPropertyRow> _rows = [];
+    private int _invalidRows;
+    private bool _isDirty;
+
+    /// <summary><paramref name="readByPath"/> is the merged filesystem, used to resolve a material's
+    /// texture path to the <c>.xbt</c> it names so the grid can preview it. Null leaves those rows
+    /// as plain text - every other part of the editor works without it.</summary>
+    public MgbTabView(string fileName, byte[] content, Action<byte[]> replaceContent,
+                      Func<string, byte[]?>? readByPath = null)
     {
         InitializeComponent();
         _fileName = fileName;
         _replaceContent = replaceContent;
+        _textures = readByPath is null ? null : new MgbTextureResolver(readByPath);
         Load(content);
     }
+
+    /// <summary>The tab title, which the host decorates with a "*" while <see cref="IsDirty"/>.</summary>
+    public string Title => _fileName;
+
+    /// <summary>Whether the in-memory package has edits that <see cref="Save"/> hasn't staged yet.
+    /// Structural operations and property-grid edits both write straight into the model, so this is
+    /// the only thing standing between an unnoticed tab close and losing them.</summary>
+    public bool IsDirty
+    {
+        get => _isDirty;
+        private set
+        {
+            if (_isDirty == value)
+            {
+                return;
+            }
+            _isDirty = value;
+            DirtyChanged?.Invoke();
+        }
+    }
+
+    public event Action? DirtyChanged;
 
     private void Load(byte[] content)
     {
         Tree.ItemsSource = null;
-        Properties.ItemsSource = null;
-        _rows.Clear();
-        _invalidRows = 0;
+        ShowProperties(null);
         _selected = null;
 
         try
@@ -61,30 +98,61 @@ public partial class MgbFileHandler : UserControl
             HeaderText.Text = $"{_fileName}\n\nCouldn't read this file: {ex.Message}";
             SetStatus(ex.Message, ok: false);
         }
+        IsDirty = false;
         UpdateCommandStates();
     }
 
     private void Tree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         _selected = e.NewValue as MgbTreeNode;
-        foreach (MgbPropertyRow row in _rows)
-        {
-            row.ValidityChanged -= OnRowValidityChanged;
-        }
-        _rows.Clear();
-        _invalidRows = 0;
-
-        _rows.AddRange(MgbPropertyRow.For(_selected?.Target));
-        foreach (MgbPropertyRow row in _rows)
-        {
-            row.ValidityChanged += OnRowValidityChanged;
-        }
+        ShowProperties(_selected?.Target);
 
         SelectionText.Text = _selected is null
             ? string.Empty
             : $"{_selected.Label}   ({_rows.Count} field(s))";
-        Properties.ItemsSource = _rows;
         UpdateCommandStates();
+    }
+
+    /// <summary>
+    /// Points the property grid at <paramref name="target"/>'s fields, moving the row subscriptions
+    /// across with it.
+    /// </summary>
+    /// <remarks>
+    /// The new rows go into a *fresh* list every time, deliberately. <see cref="ItemsControl.ItemsSource"/>
+    /// is a dependency property, so assigning it the same <see cref="List{T}"/> instance again is a
+    /// no-op - and a plain List raises no collection-changed notification either. Clearing and
+    /// refilling one long-lived list therefore left the grid showing the first selection's rows
+    /// forever, no matter what was clicked afterwards.
+    /// </remarks>
+    private void ShowProperties(object? target)
+    {
+        foreach (MgbPropertyRow row in _rows)
+        {
+            row.ValidityChanged -= OnRowValidityChanged;
+            row.PropertyChanged -= OnRowEdited;
+        }
+
+        // Rows never write a value they failed to parse, so the outgoing selection's invalid ones
+        // left nothing behind in the model - the count (and the message about it) go with them.
+        bool hadInvalidRows = _invalidRows > 0;
+        _invalidRows = 0;
+
+        _rows = MgbPropertyRow.For(target, new MgbRowContext
+        {
+            ResolveTexture = _textures is null ? null : _textures.Resolve,
+            ResolveOasis = OasisStringTable.Resolve,
+        });
+        foreach (MgbPropertyRow row in _rows)
+        {
+            row.ValidityChanged += OnRowValidityChanged;
+            row.PropertyChanged += OnRowEdited;
+        }
+
+        Properties.ItemsSource = _rows;
+        if (hadInvalidRows)
+        {
+            SetStatus(null, ok: true);
+        }
     }
 
     private void OnRowValidityChanged(MgbPropertyRow row)
@@ -100,6 +168,10 @@ public partial class MgbFileHandler : UserControl
             SetStatus(null, ok: true);
         }
     }
+
+    /// <summary>A row writes through to the model as it is typed, so any change it reports is already
+    /// a pending edit - no need to distinguish which property moved.</summary>
+    private void OnRowEdited(object? sender, PropertyChangedEventArgs e) => IsDirty = true;
 
     // --- structural operations -------------------------------------------------------------
 
@@ -232,14 +304,23 @@ public partial class MgbFileHandler : UserControl
 
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
+        if (Save() is { } error)
+        {
+            SetStatus(error, ok: false);
+        }
+    }
+
+    /// <summary>Reserialises the package and stages it in the workspace, or returns why it couldn't -
+    /// the same path the Save button and the host's close-with-unsaved-changes prompt both take.</summary>
+    public string? Save()
+    {
         if (_package is null)
         {
-            return;
+            return null;
         }
         if (_invalidRows > 0)
         {
-            SetStatus($"{_invalidRows} field(s) need fixing first.", ok: false);
-            return;
+            return $"{_invalidRows} field(s) need fixing first.";
         }
         try
         {
@@ -247,10 +328,11 @@ public partial class MgbFileHandler : UserControl
             _replaceContent(bytes);
             Load(bytes);
             SetStatus($"Saved - {bytes.Length:N0} bytes.", ok: true);
+            return null;
         }
         catch (Exception ex)
         {
-            SetStatus($"Couldn't write this package: {ex.Message}", ok: false);
+            return $"Couldn't write this package: {ex.Message}";
         }
     }
 
@@ -261,11 +343,10 @@ public partial class MgbFileHandler : UserControl
             return;
         }
         Tree.ItemsSource = new[] { MgbTreeNode.Build(_package, _names) };
-        Properties.ItemsSource = null;
-        _rows.Clear();
-        _invalidRows = 0;
+        ShowProperties(null);
         _selected = null;
         SelectionText.Text = string.Empty;
+        IsDirty = true;
         SetStatus(message + " Not written to the file until you press Save.", ok: true);
         UpdateCommandStates();
     }

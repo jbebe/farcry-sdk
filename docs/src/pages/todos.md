@@ -42,7 +42,7 @@ A running task list across the whole project.
   no sample `.mgm` exists anywhere in the game data so the document shape has to be reconstructed from
   the parser rather than checked against a real file, and the XML reader treats every element as
   optional so an incomplete `.mgm` degrades silently instead of erroring. Field names are already
-  recovered (see `research/mgb-field-names.md`).
+  recovered (see [`.mgb` field names](/docs/file-formats/mgb-field-names)).
 
 ## Tools/"dll plugins"
 

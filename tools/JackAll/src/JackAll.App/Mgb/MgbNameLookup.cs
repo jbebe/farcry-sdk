@@ -1,6 +1,6 @@
 using JackAll.Tools.Format.Mgb;
 
-namespace JackAll.App.FileHandlers.Mgb;
+namespace JackAll.App.Mgb;
 
 /// <summary>
 /// Turns the CRC32 name hashes that fill a <c>.mgb</c> back into readable names.

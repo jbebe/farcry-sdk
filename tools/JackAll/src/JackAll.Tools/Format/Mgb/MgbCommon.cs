@@ -10,7 +10,7 @@ namespace JackAll.Tools.Format.Mgb;
 /// directly (the same shape the FCB editor in JackAll.App/XmlEditor already uses).
 ///
 /// Field names are the authored names recovered from <c>magma::LoadVisitor</c>'s XML twin, in
-/// PascalCase - see research/mgb-field-names.md.
+/// PascalCase - see docs/docs/file-formats/mgb-field-names.md.
 /// </remarks>
 public abstract class MgbRecord
 {
