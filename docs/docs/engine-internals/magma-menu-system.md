@@ -359,10 +359,20 @@ directly to the Options category-button screen, no separate page at all); that c
 replaced by the current version described in Path C. The rows themselves still use the same
 underlying primitive:
 
-- `tools/FCSE/include/plugin_api.h` — `FCSE_ConfigBool` (label, `bool*`, optional `onChanged`),
-  `FCSE_RegisterConfigPageFn`, `FCSE_API_VERSION` bumped 1→2.
-- `tools/FCSE/src/mods_registry.cpp`/`.h` — flat registry of `(pluginName, FCSE_ConfigBool[])`; FCSE
-  always registers one built-in dummy bool under `"FCSE"` through the same path a plugin would use.
+- `tools/FCSE/include/plugin_api.h` — `FCSE_Setting` (name, `FCSE_SettingValue` default carrying its
+  own `FCSE_SettingType`, optional `onChanged` callback), `FCSE_RegisterSettingsFn`,
+  `FCSE_API_VERSION` bumped 2→3. This replaced a `bool*`-based `FCSE_ConfigBool`/
+  `FCSE_RegisterConfigPageFn` pair (API v2): FCSE now owns the value and hands it to the plugin
+  through the callback, which is what lets settings persist — the old shape only knew *where* a
+  plugin's bool lived, never what to call it in a file.
+- `tools/FCSE/src/settings_registry.cpp`/`.h` (was `mods_registry`) — registry of
+  `(pluginName, FCSE_Setting[])` groups backed by `bin\fcse.ini` (`src/ini_file.cpp`, tested by
+  `tests/ini_file_tests.cpp`).
+- The page lists **every loaded plugin** (`PluginLoader::LoadedNames`), not just the ones that
+  registered settings — a plugin with none still gets a row, marked `(no settings)`. Settings are
+  matched to plugins by name, and since a plugin picks its own registration name and may not use
+  its module name, any group matching no loaded plugin is appended in its own block rather than
+  hidden.
 - `tools/FCSE/src/menu_handler.cpp`/`.h` — `ModsMenuHandler`, the hand-built `IMenuItemHandler` used
   for each row's click (toggles the backing `bool`, fires `onChanged`).
 - `tools/FCSE/src/mods_tab.cpp`/`.h` — hooks `CFCXOptionPage::Setup` (`0x1081aee0`), calls through to
@@ -370,8 +380,14 @@ underlying primitive:
   navigation button.
 - `tools/FCSE/src/mod_page.cpp`/`.h` — Path C's implementation, see below.
 
-**Known cosmetic gap carried over from the earlier version**: row labels don't live-refresh to show
-`[ON]`/`[OFF]` after a click, since they're only built once, when the page is constructed.
+**Row labels live-refresh after a click** (fixed; this page previously recorded the stale
+`[ON]`/`[OFF]` label as a known cosmetic gap). Because `RefreshOptionList` rebuilds every row from
+the registry's current values, updating a label needs no new mechanism — a row's click handler
+re-enters that same rebuild (`ModPage::RefreshRows`) after flipping the value. The cost is that the
+rebuild now happens from inside the engine's own click dispatch, destroying the clicked row while
+the engine may still hold it; the handler objects themselves are heap-allocated and never freed, so
+they survive it, and every native call in the path is SEH-wrapped. **Not yet live-tested** — this
+re-entry is the most likely thing to misbehave in-game.
 
 ## Building a real, separate "Mods" page
 
@@ -441,7 +457,7 @@ field-writes never touch `CListMenuPage`'s base-class fields that `AddButton` ne
 `+0x168`/`+0x16c` — reasoned to default correctly from zero, not independently confirmed). This
 private object is **never registered in `CGameMenu`'s hashtable** — the real, shared "Game" tab is
 completely untouched. FCSE's content (a header row, one disabled row per plugin name, one toggle row
-per `FCSE_ConfigBool`) is appended onto the private copy via the already-proven-safe `AddButton`
+per registered setting) is appended onto the private copy via the already-proven-safe `AddButton`
 (safe on any `CListMenuPage`-derived `this` for the same base-class-layout reason it's safe on
 `CFCXOptionPage`'s own `this`). The Options screen's navigation button uses a new hand-rolled
 `IMenuItemHandler` (`PagePushHandler`, same fake-vtable/`kActivateSlot=1` technique as

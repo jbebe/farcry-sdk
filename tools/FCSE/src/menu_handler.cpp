@@ -1,8 +1,6 @@
 #include "menu_handler.h"
 
-#include "log.h"
-
-#include <string>
+#include "mod_page.h"
 
 namespace FCSE {
 
@@ -47,25 +45,25 @@ namespace {
 unsigned int ModsMenuHandler::SafeNoOp(unsigned int /*arg*/) { return 0; }
 
 unsigned int ModsMenuHandler::OnActivate(unsigned int /*arg*/) {
-    if (field == nullptr || field->value == nullptr) {
+    // Header and plugin-name rows carry a null setting - they exist to be looked at, not clicked,
+    // and must not trigger a rebuild.
+    if (setting == nullptr) {
         return 0;
     }
 
-    *field->value = !*field->value;
-
-    Log::Loader(std::string("Mods: '") + (field->label != nullptr ? field->label : "?") +
-                "' toggled to " + (*field->value ? "ON" : "OFF"));
-
-    if (field->onChanged != nullptr) {
-        field->onChanged(field->userdata);
-    }
+    // The registry owns the flip, the plugin callback and the write to fcse.ini; this handler's
+    // only job is to say which row was hit, then have the page redraw so the row's [ON]/[OFF]
+    // reflects the value that just changed. Row labels are built from the registry's live values,
+    // so rebuilding is all it takes - see ModPage::RefreshRows for what that re-entry costs.
+    SettingsRegistry::ToggleCheckbox(setting);
+    ModPage::RefreshRows();
     return 0;
 }
 
-ModsMenuHandler* ModsMenuHandler::Create(FCSE_ConfigBool* field) {
+ModsMenuHandler* ModsMenuHandler::Create(SettingsRegistry::Setting* setting) {
     auto* handler = new ModsMenuHandler();
     handler->vtable = EnsureVtable();
-    handler->field = field;
+    handler->setting = setting;
     return handler;
 }
 

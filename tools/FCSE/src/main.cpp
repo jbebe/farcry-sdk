@@ -15,10 +15,10 @@
 #include "function_registry.h"
 #include "hook.h"
 #include "log.h"
-#include "mods_registry.h"
 #include "mods_tab.h"
 #include "patch.h"
 #include "plugin_loader.h"
+#include "settings_registry.h"
 
 #include <windows.h>
 
@@ -65,6 +65,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     // could ever reach the Options screen. See mods_tab.h for the full mechanism.
     ModsTab::Install();
 
+    // Before any plugin can register: registration resolves each setting against what this loads,
+    // and fires the plugin's callback with the result, so the file has to be in memory first.
+    SettingsRegistry::Init(directory + L"fcse.ini");
+
     FCSE_PluginAPI api{};
     api.apiVersion = FCSE_API_VERSION;
     api.duniaModule = DuniaApi::Module();
@@ -74,14 +78,15 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     api.AddFunctionCB = &PluginAddFunctionCBShim;
     api.Hook = &HookManager::Hook;
     api.Patch = &PatchManager::Patch;
-    api.RegisterConfigPage = &ModsRegistry::RegisterConfigPage;
-
-    // Always first in the "Mods" tab, through the exact same path a plugin would use - guarantees
-    // the tab is never empty and doubles as the whole pipeline's smoke test.
-    ModsRegistry::RegisterBuiltIn();
+    api.RegisterSettings = &SettingsRegistry::RegisterSettings;
 
     std::wstring pluginsDirectory = directory + L"plugins\\";
     PluginLoader::LoadAll(&api, pluginsDirectory);
+
+    // Every plugin has now declared what it has, so the file can be completed in one write:
+    // newly-added settings get their defaults, and a first run produces a fully hand-editable
+    // fcse.ini without the player ever opening the menu.
+    SettingsRegistry::Flush();
 
     DuniaApi::RegisterGameFunctionProvider()(reinterpret_cast<void*>(&DebugCommands::Provider));
 

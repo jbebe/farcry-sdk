@@ -38,12 +38,14 @@ namespace {
         return 0;
     }
 
-    // Tier 4 demo target: one bool, shown as a row in FCSE's Mod Configuration Menu, wired
-    // straight to g_toRedEnabled above - toggling it in-game flips the toRed effect live.
-    void __cdecl OnToRedToggled(void* /*userdata*/) {
+    // Tier 4 demo target: one Checkbox, persisted in bin\fcse.ini under [example_plugin] and shown
+    // as a row in FCSE's Mod Configuration Menu. FCSE owns the stored value, so this callback is
+    // the only way the plugin learns it - which is also what makes the setting survive a restart:
+    // it fires once during FCSE_Load carrying whatever the file held, and again on every toggle.
+    void __cdecl OnToRedChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
+        g_toRedEnabled = value->asCheckbox;
         if (g_api != nullptr) {
-            g_api->Log(g_toRedEnabled ? "example_plugin: toRed toggled ON"
-                                       : "example_plugin: toRed toggled OFF");
+            g_api->Log(g_toRedEnabled ? "example_plugin: toRed is ON" : "example_plugin: toRed is OFF");
         }
     }
 }
@@ -68,12 +70,12 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         api->Log("example_plugin: demo buffer patched");
     }
 
-    static FCSE_ConfigBool toRedField{};
-    toRedField.label = "Toggle toRed";
-    toRedField.value = &g_toRedEnabled;
-    toRedField.onChanged = &OnToRedToggled;
-    toRedField.userdata = nullptr;
-    if (api->RegisterConfigPage("example_plugin", &toRedField, 1)) {
+    // OnToRedChanged fires before RegisterSettings returns, so g_toRedEnabled already reflects
+    // fcse.ini by the time this call is done - no separate "read my config" step.
+    static const FCSE_Setting settings[] = {
+        {"Toggle toRed", FCSE_CHECKBOX(false), &OnToRedChanged, nullptr},
+    };
+    if (api->RegisterSettings("example_plugin", settings, 1)) {
         api->Log("example_plugin: registered a Mod Configuration Menu entry");
     }
 

@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-#define FCSE_API_VERSION 2
+#define FCSE_API_VERSION 3
 
 // Matches Dunia.dll's own AddFunctionCB(void* fn, const char* name) signature exactly - the
 // function pointer stored is called later, by engine code, with whatever argument count/types
@@ -46,22 +46,70 @@ typedef bool (*FCSE_PatchFn)(void* address, const void* data, size_t size);
 // automatically - no need to pass an identifier). See the FCSE README for the exact line format.
 typedef void (*FCSE_LogFn)(const char* message);
 
-// Tier 4: one row in the in-game "Mods" tab (spliced into the Options menu's own tab list - see
-// the FCSE README's "Mod Configuration Menu" section for the underlying mechanism). Deliberately
-// bools only, no other form types - a plain on/off toggle is all this tier supports.
-typedef struct FCSE_ConfigBool {
-    const char* label;                 // shown next to the plugin's name on its row
-    bool* value;                       // read/written directly - FCSE never copies this
-    void (*onChanged)(void* userdata); // optional, called right after the player toggles this row
-    void* userdata;                    // opaque, passed back to onChanged unmodified
-} FCSE_ConfigBool;
+// Tier 4: persistent, player-editable settings.
+//
+// Every setting a plugin registers becomes one line in bin\fcse.ini - inside a group named after
+// the plugin - and one row in the in-game Mod Configuration Menu (spliced into the Options menu's
+// own tab list; see the FCSE README's "Mod Configuration Menu" section for the mechanism). A
+// plugin that registers nothing gets no group in the file: there is nothing to toggle, so nothing
+// is written.
+//
+// FCSE owns the stored value - a plugin never holds a pointer to it. Changes arrive through the
+// callback below, twice over: once during registration (before any Dunia.dll engine code runs)
+// carrying whatever the config file holds, and again after every in-game toggle.
+typedef enum FCSE_SettingType {
+    FCSE_SettingType_Checkbox = 0, // a bool; serialized as `true`/`false`
+} FCSE_SettingType;
 
-// Registers one plugin's config page under the "Mods" tab, `fields` in display order. Valid to
-// call from FCSE_Load. `fields` must stay valid for the plugin's entire lifetime - FCSE reads
-// straight from plugin-owned memory each time the tab is (re)built, no copy is made. Returns false
-// (and logs why) if `pluginName`/`fields` is null or `fieldCount` is 0.
-typedef bool (*FCSE_RegisterConfigPageFn)(const char* pluginName, const FCSE_ConfigBool* fields,
-                                           size_t fieldCount);
+// A setting's value, tagged with its own type so this one callback signature keeps working as the
+// enum above grows. Read the member matching `type`; reading any other member is undefined.
+typedef struct FCSE_SettingValue {
+    FCSE_SettingType type;
+    union {
+        bool asCheckbox;
+    };
+} FCSE_SettingValue;
+
+// Convenience initializer for a Checkbox default, e.g.
+//   { "Verbose logging", FCSE_CHECKBOX(false), &OnVerboseChanged, NULL }
+#define FCSE_CHECKBOX(defaultValue)                                                                \
+    {                                                                                              \
+        FCSE_SettingType_Checkbox, { (defaultValue) }                                              \
+    }
+
+// Called with the setting's resolved value: once from inside RegisterSettings (synchronously,
+// before that call returns), then again after each player toggle. `value` points at FCSE-owned
+// storage that is only valid for the duration of the call - copy anything you need to keep.
+typedef void (*FCSE_SettingChangedFn)(const FCSE_SettingValue* value, void* userdata);
+
+// One registered setting. `name` is the key inside the plugin's own group, so it only has to be
+// unique within that plugin - two plugins can each have a "Verbose logging". It must be non-empty
+// and contain none of '=', '[', ']', CR or LF, since it becomes an INI key verbatim.
+//
+// `defaultValue.type` IS the setting's type - there is no separate type field that could drift out
+// of sync with it. The default applies whenever the config file has no usable value for this
+// setting (a fresh install, a newly added setting, or a value stored in an unparseable form), and
+// is written back to the file so the player can see and edit it.
+typedef struct FCSE_Setting {
+    const char* name;
+    FCSE_SettingValue defaultValue;
+    FCSE_SettingChangedFn onChanged; // optional; NULL means "store it, just don't tell me"
+    void* userdata;                  // opaque, passed back to onChanged unmodified
+} FCSE_Setting;
+
+// Registers `settingCount` settings under `pluginName`, in display order. Valid to call from
+// FCSE_Load. `settings` is fully copied, so it does not need to outlive the call.
+//
+// `pluginName` scopes every setting in the call and names the group in bin\fcse.ini; it must be
+// non-empty and free of '[', ']', CR and LF. Calling more than once with the same name appends to
+// that plugin's existing group rather than starting a second one.
+//
+// Each setting's onChanged fires before this call returns - see FCSE_SettingChangedFn. Returns
+// false (and logs why) if `pluginName`/`settings` is null, `settingCount` is 0, or `pluginName` is
+// malformed. Individual settings that fail validation are skipped and logged, leaving the rest of
+// the batch registered - so a true return means "at least one setting landed", not "all did".
+typedef bool (*FCSE_RegisterSettingsFn)(const char* pluginName, const FCSE_Setting* settings,
+                                         size_t settingCount);
 
 typedef struct FCSE_PluginAPI {
     uint32_t apiVersion; // Always FCSE_API_VERSION for this struct layout - compare before using
@@ -87,8 +135,8 @@ typedef struct FCSE_PluginAPI {
     FCSE_HookFn Hook;
     FCSE_PatchFn Patch;
 
-    // Tier 4: valid to call from FCSE_Load. See FCSE_RegisterConfigPageFn above.
-    FCSE_RegisterConfigPageFn RegisterConfigPage;
+    // Tier 4: valid to call from FCSE_Load. See FCSE_RegisterSettingsFn above.
+    FCSE_RegisterSettingsFn RegisterSettings;
 } FCSE_PluginAPI;
 
 // Required export. Called once per plugin, right after FCSE.exe loads Dunia.dll and before any

@@ -49,18 +49,20 @@ add_executable(FCSE WIN32
   "src/function_registry.h"
   "src/hook.cpp"
   "src/hook.h"
+  "src/ini_file.cpp"
+  "src/ini_file.h"
   "src/menu_handler.cpp"
   "src/menu_handler.h"
   "src/mod_page.cpp"
   "src/mod_page.h"
-  "src/mods_registry.cpp"
-  "src/mods_registry.h"
   "src/mods_tab.cpp"
   "src/mods_tab.h"
   "src/patch.cpp"
   "src/patch.h"
   "src/plugin_loader.cpp"
   "src/plugin_loader.h"
+  "src/settings_registry.cpp"
+  "src/settings_registry.h"
   "include/plugin_api.h"
 )
 
@@ -79,3 +81,21 @@ endif()
 add_subdirectory(example_plugin)
 add_subdirectory(conflict_plugin)
 add_subdirectory(hash_logger_plugin)
+
+# Tests for the pieces that are pure logic and can run without the game attached - currently just
+# the config file's reader/writer, whose failure mode (silently mangling the player's fcse.ini) is
+# worth catching at build time rather than in-game. Plain console exe, no test framework.
+enable_testing()
+
+add_executable(ini_file_tests
+  "tests/ini_file_tests.cpp"
+  "src/ini_file.cpp"
+  "src/ini_file.h"
+)
+target_include_directories(ini_file_tests PRIVATE "src")
+
+if (CMAKE_VERSION VERSION_GREATER 3.12)
+  set_property(TARGET ini_file_tests PROPERTY CXX_STANDARD 20)
+endif()
+
+add_test(NAME ini_file_tests COMMAND ini_file_tests)

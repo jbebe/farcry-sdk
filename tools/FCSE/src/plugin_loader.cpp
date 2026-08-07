@@ -17,6 +17,7 @@ namespace {
     };
 
     std::vector<LoadedPlugin> g_plugins;
+    std::vector<std::string> g_loadedNames; // parallel to g_plugins, for LoadedNames()
     const FCSE_PluginAPI* g_api = nullptr;
 
     std::string Narrow(const std::wstring& wide) {
@@ -78,6 +79,7 @@ void PluginLoader::LoadAll(const FCSE_PluginAPI* api, const std::wstring& plugin
             GetProcAddress(hPlugin, "FCSE_OnRegisterFunctions"));
 
         g_plugins.push_back({hPlugin, name, onRegister});
+        g_loadedNames.push_back(name);
         Log::Loader("plugin '" + name + "' loaded" +
                     (onRegister == nullptr ? " (no FCSE_OnRegisterFunctions export)" : ""));
     } while (FindNextFileW(hFind, &findData));
@@ -92,5 +94,7 @@ void PluginLoader::RunOnRegisterFunctions() {
         }
     }
 }
+
+const std::vector<std::string>& PluginLoader::LoadedNames() { return g_loadedNames; }
 
 } // namespace FCSE

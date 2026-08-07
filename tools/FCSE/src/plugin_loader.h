@@ -3,6 +3,7 @@
 #include "../include/plugin_api.h"
 
 #include <string>
+#include <vector>
 
 // Discovers and loads plugin DLLs from bin\plugins\, and owns the two-stage lifecycle every
 // plugin gets: FCSE_Load (required, called immediately after Dunia.dll is resolved - safe timing
@@ -24,6 +25,11 @@ public:
     // RegisterGameFunctionProvider callback (see debug_commands.h), and before FCSE's own stock
     // registrations, so a plugin can claim a name first.
     static void RunOnRegisterFunctions();
+
+    // Every successfully loaded plugin's name, in load order - the same module-derived name used to
+    // tag its log lines. This is what the in-game menu lists, so a plugin appears there whether or
+    // not it registered any settings; the settings registry only knows about the ones that did.
+    static const std::vector<std::string>& LoadedNames();
 };
 
 } // namespace FCSE

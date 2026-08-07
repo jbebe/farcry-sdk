@@ -8,16 +8,25 @@
     each time. Must be x86, never x64 - Far Cry 2 is a 32-bit process and neither FCSE.exe nor a
     plugin DLL built for it can load as 64-bit.
 
+    Runs the test suite (ctest) after a successful build, since ctest also only resolves from the
+    developer environment this script already sets up.
+
 .PARAMETER Config
     "release" or "debug" - selects the x86-release/x86-debug CMake preset. Defaults to "release".
+
+.PARAMETER SkipTests
+    Build only, don't run ctest.
 
 .EXAMPLE
     .\build.ps1
     .\build.ps1 -Config debug
+    .\build.ps1 -SkipTests
 #>
 param(
     [ValidateSet("release", "debug")]
-    [string]$Config = "release"
+    [string]$Config = "release",
+
+    [switch]$SkipTests
 )
 
 $ErrorActionPreference = "Stop"
@@ -49,3 +58,10 @@ if ($LASTEXITCODE -ne 0) { throw "Build failed (exit $LASTEXITCODE)." }
 
 $OutputExe = Join-Path $BuildDir "FCSE.exe"
 Write-Host "Build succeeded: $OutputExe" -ForegroundColor Green
+
+if (-not $SkipTests) {
+    Write-Host "Testing ($Preset)..." -ForegroundColor Cyan
+    & cmd /c "`"$VcVarsAll`" x86 >nul 2>nul && cd /d `"$BuildDir`" && ctest --output-on-failure"
+    if ($LASTEXITCODE -ne 0) { throw "Tests failed (exit $LASTEXITCODE)." }
+    Write-Host "Tests passed." -ForegroundColor Green
+}

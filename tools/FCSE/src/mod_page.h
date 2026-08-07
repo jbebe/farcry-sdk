@@ -34,6 +34,16 @@ public:
     // hook. Call once, from the same hook context mods_tab.cpp already uses. Safe to call more than
     // once (no-ops after the first successful install).
     static void Install(void* optionsMenuThis);
+
+    // Rebuilds the page's rows against the registry's current values - what makes a toggled row's
+    // [ON]/[OFF] suffix update on the spot instead of only on the next visit. Runs the exact same
+    // clear-and-append the engine's own display path runs, against the live page instance cached
+    // when RefreshOptionList last fired. No-ops (logged) if that instance isn't known yet.
+    //
+    // Called from a row's click handler, so it re-enters the engine's row list from inside the
+    // engine's own click dispatch - see mod_page.cpp for why that's the risky part and what it's
+    // guarded with.
+    static void RefreshRows();
 };
 
 } // namespace FCSE

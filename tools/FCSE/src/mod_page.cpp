@@ -4,7 +4,8 @@
 #include "hook.h"
 #include "log.h"
 #include "menu_handler.h"
-#include "mods_registry.h"
+#include "plugin_loader.h"
+#include "settings_registry.h"
 
 #include <cstdint>
 #include <cstdio>
@@ -86,6 +87,13 @@ namespace {
     SwitchPageFn g_switchPage = nullptr;
     RefreshOptionListFn g_originalRefreshOptionList = nullptr;
 
+    // The live CFCXOptionGamePage instance, captured from the RefreshOptionList detour's own `this`
+    // the first time it fires. There is exactly one such object for the session (the engine's boot
+    // path constructs it once and keeps it in CGameMenu's hashtable), so caching it is sound -
+    // and it is the only way ModPage::RefreshRows can reach the page from a click handler, which
+    // has no page pointer of its own.
+    void* g_gamePage = nullptr;
+
     // Set by FCSE's own click handler right before it triggers the switch to the Game page; checked
     // (and cleared) once by the RefreshOptionList hook. This is the entire mechanism that makes the
     // stock "Game" button and FCSE's "Mod Configuration Menu" button - which land on the exact same
@@ -147,6 +155,22 @@ namespace {
         }
     }
 
+    // The engine drives this call itself on a normal display, where a fault would be the engine's
+    // own to raise. RefreshRows re-enters it from a click handler instead, which is a call site the
+    // engine never makes - so it's wrapped here rather than called bare, and both paths share the
+    // wrapper so there's only one behaviour to reason about.
+    bool SafeRefreshOptionList(void* gamePage, DWORD* outCode = nullptr) {
+        __try {
+            g_originalRefreshOptionList(gamePage);
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            if (outCode != nullptr) {
+                *outCode = GetExceptionCode();
+            }
+            return false;
+        }
+    }
+
     // Calls the real page's own vtable+0x40 slot on itself - the same call RefreshOptionList makes
     // on itself before building native rows (see kClearRowsVtableOffset's comment). Reads the
     // vtable pointer fresh from `gamePage` rather than assuming any fixed vtable address, since it's
@@ -182,58 +206,127 @@ namespace {
         return wide;
     }
 
-    // Owns every label buffer ever handed to AddButton - never freed, same accepted one-time-per-
-    // session tradeoff already used elsewhere (AddButton's real parameter type is a raw wchar_t*,
-    // not confirmed to be copied internally). Grows every single time RefreshOptionList fires with
-    // g_appendPending set (not just once) - see kRefreshOptionListRva's comment for why.
+    // Owns every label buffer ever handed to AddButton - never freed, because AddButton's real
+    // parameter type is a raw wchar_t* and it has never been confirmed whether the engine copies
+    // the text or keeps the pointer. Freeing on the second reading would hand the engine a dangling
+    // buffer, so the whole history is kept.
+    //
+    // That means it grows on every rebuild: once per visit to the page, and now also once per
+    // toggle (ModPage::RefreshRows). One rebuild is a header row plus a row per plugin and per
+    // setting - a few hundred bytes with a realistic plugin set - so a session of heavy toggling
+    // costs kilobytes. Bounded enough to accept; not bounded enough to leave undocumented.
     std::vector<std::wstring>& LabelStorage() {
         static std::vector<std::wstring> storage;
         return storage;
     }
 
-    // Appends FCSE's content onto the real CFCXOptionGamePage instance: an unclickable header row
-    // (stands in for a real native title change, not pursued this session - see mod_page.h), one
-    // disabled row per loaded plugin name, then one toggle row per registered FCSE_ConfigBool
-    // (identical mechanism to what mods_tab.cpp already ships on the Options screen itself). Must
-    // run *after* CFCXOptionGamePage::RefreshOptionList's own native row-building.
-    void AppendModContent(AddButtonFn addButton, void* gamePage) {
-        DWORD code = 0;
+    // Renders one setting's row label. Reads the registry's own live value rather than any cached
+    // copy, so the [ON]/[OFF] suffix is correct every time the page is rebuilt.
+    std::wstring RowLabel(const SettingsRegistry::Setting& setting) {
+        std::wstring label = L"   " + WidenAscii(setting.name);
+        switch (setting.value.type) {
+        case FCSE_SettingType_Checkbox:
+            label += setting.value.asCheckbox ? L" [ON]" : L" [OFF]";
+            break;
+        }
+        return label;
+    }
 
-        LabelStorage().push_back(L"=== Mod Configuration Menu ===");
+    // Adds a row with no handler behind it - a caption the player can see but not act on.
+    bool AppendCaption(AddButtonFn addButton, void* gamePage, std::wstring text, const char* what) {
+        DWORD code = 0;
+        LabelStorage().push_back(std::move(text));
         if (!SafeAddButton(addButton, gamePage, LabelStorage().back().c_str(),
                             ModsMenuHandler::Create(nullptr), &code)) {
-            LogFailed("AddButton (header row)", code);
+            LogFailed(what, code);
+            return false;
+        }
+        return true;
+    }
+
+    // One plugin's block: its name, then a row per setting - or a caption saying it has none, so a
+    // plugin without settings still shows up as installed rather than vanishing. `group` is null
+    // for exactly that case. Returns false if an AddButton failed, which aborts the whole build.
+    bool AppendPluginBlock(AddButtonFn addButton, void* gamePage, const std::string& displayName,
+                            const SettingsRegistry::Group* group, size_t* rowCount) {
+        if (!AppendCaption(addButton, gamePage, L"-- " + WidenAscii(displayName) + L" --",
+                            "AddButton (plugin name row)")) {
+            return false;
+        }
+        ++*rowCount;
+
+        if (group == nullptr || group->settings.empty()) {
+            return AppendCaption(addButton, gamePage, L"   (no settings)",
+                                  "AddButton (no-settings row)");
+        }
+
+        DWORD code = 0;
+        for (const std::unique_ptr<SettingsRegistry::Setting>& setting : group->settings) {
+            LabelStorage().push_back(RowLabel(*setting));
+
+            ModsMenuHandler* handler = ModsMenuHandler::Create(setting.get());
+            if (!SafeAddButton(addButton, gamePage, LabelStorage().back().c_str(), handler, &code)) {
+                LogFailed("AddButton (toggle row)", code);
+                return false;
+            }
+            ++*rowCount;
+        }
+        return true;
+    }
+
+    // Appends FCSE's content onto the real CFCXOptionGamePage instance: an unclickable header row
+    // (stands in for a real native title change, not pursued this session - see mod_page.h), then
+    // one block per loaded plugin (identical mechanism to what mods_tab.cpp already ships on the
+    // Options screen itself). Must run *after* CFCXOptionGamePage::RefreshOptionList's own native
+    // row-building.
+    //
+    // The list is driven by what actually loaded, not by what registered settings, so the page
+    // answers "which mods do I have?" as well as "what can I change?". A plugin with no settings
+    // still gets a row.
+    void AppendModContent(AddButtonFn addButton, void* gamePage) {
+        if (!AppendCaption(addButton, gamePage, L"=== Mod Configuration Menu ===",
+                            "AddButton (header row)")) {
+            return;
+        }
+
+        const std::vector<std::string>& plugins = PluginLoader::LoadedNames();
+        if (plugins.empty()) {
+            AppendCaption(addButton, gamePage, L"   (no plugins installed)",
+                           "AddButton (empty-list row)");
+            Log::Loader("ModPage: no plugins loaded, nothing to list");
             return;
         }
 
         size_t rowCount = 0;
-        for (const ModsRegistry::Page& page : ModsRegistry::Pages()) {
-            LabelStorage().push_back(L"-- " + WidenAscii(page.pluginName) + L" --");
-            if (!SafeAddButton(addButton, gamePage, LabelStorage().back().c_str(),
-                                ModsMenuHandler::Create(nullptr), &code)) {
-                LogFailed("AddButton (plugin name row)", code);
+        for (const std::string& plugin : plugins) {
+            if (!AppendPluginBlock(addButton, gamePage, plugin, SettingsRegistry::FindGroup(plugin),
+                                    &rowCount)) {
                 return;
             }
-            ++rowCount;
+        }
 
-            for (const FCSE_ConfigBool& field : page.fields) {
-                std::wstring label = L"   " + WidenAscii(field.label != nullptr ? field.label : "?") +
-                                      ((field.value != nullptr && *field.value) ? L" [ON]" : L" [OFF]");
-                LabelStorage().push_back(std::move(label));
-
-                ModsMenuHandler* handler =
-                    ModsMenuHandler::Create(const_cast<FCSE_ConfigBool*>(&field));
-                if (!SafeAddButton(addButton, gamePage, LabelStorage().back().c_str(), handler,
-                                    &code)) {
-                    LogFailed("AddButton (toggle row)", code);
-                    return;
+        // A plugin picks its own registration name and is free to make it something other than its
+        // module name ("example_plugin" vs "Example Mod"). Those groups match no entry in the list
+        // above, so they get their own blocks here - showing them under a name the player won't
+        // recognise beats silently hiding settings that exist and are in fcse.ini.
+        for (const SettingsRegistry::Group& group : SettingsRegistry::Groups()) {
+            bool named = false;
+            for (const std::string& plugin : plugins) {
+                if (plugin == group.pluginName) {
+                    named = true;
+                    break;
                 }
-                ++rowCount;
+            }
+            if (named) {
+                continue;
+            }
+            if (!AppendPluginBlock(addButton, gamePage, group.pluginName, &group, &rowCount)) {
+                return;
             }
         }
 
         Log::Loader("ModPage: appended " + std::to_string(rowCount) +
-                     " row(s) to the Game tab (header row not counted)");
+                     " row(s) to the Game tab (captions not counted)");
     }
 
     // Hand-rolled IMenuItemHandler for the Options row's click - same shape/technique as
@@ -325,22 +418,37 @@ namespace {
         void Detour();
     };
 
+    // The whole row-building sequence, shared by the engine's own display path (the detour below)
+    // and FCSE's post-toggle refresh (ModPage::RefreshRows). Consumes g_appendPending.
+    void RebuildRows(void* gamePage) {
+        // Consumed up front, not after the native build: this transition's intent is spent either
+        // way, and leaving the flag set through a failure would make the *next* display show FCSE's
+        // rows - including one reached by the stock "Game" button, which never sets it.
+        bool withModContent = g_appendPending;
+        g_appendPending = false;
+
+        DWORD code = 0;
+        if (!SafeRefreshOptionList(gamePage, &code)) { // native build runs fully either way
+            LogFailed("CFCXOptionGamePage::RefreshOptionList", code);
+            return; // the row list is in an unknown state - appending onto it would compound that
+        }
+
+        if (!withModContent) {
+            return;
+        }
+
+        if (!SafeClearRows(gamePage, &code)) {
+            LogFailed("clearing native rows before mod content", code);
+            // Fall through and append anyway - worst case FCSE's rows sit below native ones,
+            // rather than losing FCSE's content entirely.
+        }
+        AppendModContent(g_addButton, gamePage);
+    }
+
     void RefreshDetourThunk::Detour() {
         void* gamePage = reinterpret_cast<void*>(this);
-        g_originalRefreshOptionList(gamePage); // let the native build run fully either way
-        if (g_appendPending) {
-            // Only when the switch was triggered by FCSE's own button - the stock "Game" button
-            // never touches this flag, so it always keeps native rows and never reaches here.
-            g_appendPending = false;
-
-            DWORD code = 0;
-            if (!SafeClearRows(gamePage, &code)) {
-                LogFailed("clearing native rows before mod content", code);
-                // Fall through and append anyway - worst case FCSE's rows sit below native ones,
-                // same as before this change, rather than losing FCSE's content entirely.
-            }
-            AppendModContent(g_addButton, gamePage);
-        }
+        g_gamePage = gamePage; // the only place a real page pointer is ever handed to us
+        RebuildRows(gamePage);
     }
 
     using RefreshDetourMemberFn = void (RefreshDetourThunk::*)();
@@ -391,6 +499,28 @@ void ModPage::Install(void* optionsMenuThis) {
         return;
     }
     Log::Loader("ModPage: added \"Mod Configuration Menu\" row to Options");
+}
+
+void ModPage::RefreshRows() {
+    if (g_gamePage == nullptr || g_originalRefreshOptionList == nullptr) {
+        Log::Loader("ModPage: refresh requested before the Game page was ever displayed, ignored");
+        return;
+    }
+
+    // This re-enters the engine's row list from inside its own click dispatch: the row that was
+    // just clicked is destroyed by the clear below, while the engine may still be holding it. The
+    // handler object itself survives (menu_handler.h's handlers are heap-allocated and never
+    // freed), which removes the most obvious hazard, but the engine's own post-Activate bookkeeping
+    // is not something FCSE controls. Every native touchpoint inside RebuildRows is SEH-wrapped, so
+    // the failure mode is a logged, caught exception and a stale label rather than a hard crash.
+    //
+    // If this ever does prove unsafe in practice, the fallback needing no engine re-entry at all is
+    // to overwrite the label buffer in place: LabelStorage() owns those strings and AddButton was
+    // handed a raw wchar_t* into them. That needs the [ON]/[OFF] suffixes padded to equal length so
+    // the buffer never reallocates, and only works if the engine stored the pointer rather than
+    // copying the text - which is exactly the thing that has never been confirmed either way.
+    g_appendPending = true;
+    RebuildRows(g_gamePage);
 }
 
 } // namespace FCSE

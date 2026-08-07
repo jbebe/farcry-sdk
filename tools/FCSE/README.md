@@ -40,11 +40,17 @@ version gate (`FCSE_PluginAPI::duniaSize` is provided for exactly that).
    why this is read at runtime instead of hardcoded.
 3. `MH_Initialize()` (MinHook, vendored via `CMakeLists.txt`'s `FetchContent`, same pattern as
    `tools/misc/modpatcher`).
-4. Build the `FCSE_PluginAPI` struct and load every `*.dll` in `bin\plugins\`
+4. Read `bin\fcse.ini` into memory (`src/settings_registry.cpp`). Must happen before any plugin
+   loads: registration resolves each setting against this file and calls the plugin back with the
+   result, so the file has to be there first. A missing file is the normal first-run case.
+5. Build the `FCSE_PluginAPI` struct and load every `*.dll` in `bin\plugins\`
    (`src/plugin_loader.cpp`), calling each one's required `FCSE_Load` export. This is the earliest
    safe point for a plugin to install `Hook()`/`Patch()` calls - nothing in `Dunia.dll` beyond its
-   own `DllMain`/CRT init has run yet.
-5. `RegisterGameFunctionProvider(&DebugCommands::Provider)` - `Provider()` is the callback
+   own `DllMain`/CRT init has run yet, and it's where plugins declare their settings.
+6. Write `bin\fcse.ini` back if anything changed. Every plugin has now declared what it has, so
+   one write completes the file - a first run leaves a fully hand-editable config without the
+   player ever opening the in-game menu.
+7. `RegisterGameFunctionProvider(&DebugCommands::Provider)` - `Provider()` is the callback
    `Dunia.dll` invokes later, from inside `RunGame`, once `InitDuniaEngine` has succeeded (the only
    point at which `Dunia.dll`'s function registry is guaranteed constructed). It runs, **in this
    order**:
@@ -56,7 +62,7 @@ version gate (`FCSE_PluginAPI::duniaSize` is provided for exactly that).
    already-claimed name is a **silent no-op** inside `Dunia.dll` itself. Running plugins first is
    what lets a plugin override one of the 12 stock names (e.g. change `AddDiamond`'s effect) -
    registering stock handlers first would make that impossible.
-6. `RunGame(hInstance, cmdLine)` - the game proceeds normally from here.
+8. `RunGame(hInstance, cmdLine)` - the game proceeds normally from here.
 
 ### Reimplementing the 12 stock handlers (`src/debug_commands.cpp`)
 
@@ -71,7 +77,7 @@ maps the real `FarCry2.exe` (via `LoadLibraryExW(..., DONT_RESOLVE_DLL_REFERENCE
 them directly by VA at startup, so the reimplementation is exactly as faithful as whatever build
 is actually installed.
 
-## The plugin API - three tiers
+## The plugin API - four tiers
 
 See `include/plugin_api.h` for the authoritative, documented ABI. Summary, from "no RE required" to
 "full control":
@@ -87,6 +93,50 @@ See `include/plugin_api.h` for the authoritative, documented ABI. Summary, from 
    `reverse/patch_toRed.py`/`patch_incHB.py`/`patch_carJoke.py` apply *statically* to `Dunia.dll` on
    disk today - this applies the same kind of edit live, in-process, so any number of plugins can
    each patch their own byte ranges without needing one shared pre-patched file.
+4. **`RegisterSettings(pluginName, settings, count)`** - persistent, player-editable settings, both
+   in `bin\fcse.ini` and as rows in the in-game Mod Configuration Menu. Zero address knowledge
+   needed. See below.
+
+### Settings and `bin\fcse.ini`
+
+A plugin declares what it has - a name, a type (`FCSE_SettingType`, currently just `Checkbox`), a
+default, and a callback - and FCSE owns the stored value from there. Registration is valid from
+`FCSE_Load`:
+
+```c
+static const FCSE_Setting settings[] = {
+    {"Toggle toRed", FCSE_CHECKBOX(false), &OnToRedChanged, NULL},
+};
+api->RegisterSettings("example_plugin", settings, 1);
+```
+
+Which produces, and thereafter reads back from, a group named after the plugin:
+
+```ini
+[example_plugin]
+Toggle toRed = false
+```
+
+Three properties worth knowing:
+
+- **The callback is the only channel.** It fires once from inside `RegisterSettings` - synchronously,
+  before that call returns, and therefore before any `Dunia.dll` engine code runs - carrying
+  whatever the file held (or the declared default if it held nothing usable). It fires again after
+  every in-game toggle. A plugin never needs a separate "read my config" step, and never holds a
+  pointer into FCSE's storage.
+- **A plugin that registers nothing gets no group** in the file - there is nothing to toggle, so
+  nothing is written. It still appears in the in-game menu, marked `(no settings)`: that page lists
+  what actually loaded, so it answers "which mods do I have?" as well as "what can I change?".
+- **Groups for plugins you no longer have installed are kept, not deleted.** The file is the union
+  of every plugin that has ever run, but a given launch only sees what's installed now; `src/ini_file.cpp`
+  is order- and comment-preserving specifically so uninstalling a plugin for one session doesn't
+  discard its settings. `tests/ini_file_tests.cpp` covers that, plus the load/save fixed point (the
+  whole file is rewritten on every toggle, so anything the writer synthesises and the reader keeps
+  would otherwise accumulate without bound).
+
+This replaced a `bool*`-based API in `FCSE_API_VERSION` 3. The inversion is what made persistence
+possible at all: the old version only knew *where* a plugin's bool lived, never what it meant or
+what to call it in a file, so it could never write one back.
 
 ### Conflict handling
 
@@ -129,12 +179,15 @@ Requires the `x86-debug` or `x86-release` CMake preset - **never `x64-*`**: Far 
 process, and neither `FCSE.exe` nor a plugin DLL built for it can load as 64-bit.
 
 ```
-.\build.ps1            # release (default)
+.\build.ps1            # release (default), then runs the tests
 .\build.ps1 -Config debug
+.\build.ps1 -SkipTests
 ```
 
 Same `vswhere`/`vcvarsall.bat x86` dance as `tools/misc/modpatcher/build.ps1`. Builds `FCSE.exe`
-plus `example_plugin.dll`/`conflict_plugin.dll` (see "Verification" below).
+plus `example_plugin.dll`/`conflict_plugin.dll` (see "Verification" below), then runs `ctest`.
+Use `build.ps1` rather than calling `ctest` directly - like `cmake`, it only resolves from the
+developer environment this script sets up.
 
 ## Installing
 
@@ -152,9 +205,18 @@ plus `example_plugin.dll`/`conflict_plugin.dll` (see "Verification" below).
   `Application can handle large (>2GB) addresses`.
 - Without the real game present: point `FCSE.exe` at a folder with no `Dunia.dll` and confirm it
   logs a clear failure (`fcse.log`) and shows a message box instead of crashing.
+- `.\build.ps1` runs `tests/ini_file_tests.cpp` (the config file's reader/writer) via `ctest`. It
+  needs neither the game nor `Dunia.dll`.
 - Drop `example_plugin.dll` alone into `bin\plugins\`: `fcse.log` should show it discovered, loaded,
   its `GetTickCount` hook installed, its demo buffer patched, and (later, from inside `Provider()`)
   its `toRed` registration accepted.
+- Settings round trip: with `example_plugin.dll` installed, a first launch should create
+  `bin\fcse.ini` containing an `[example_plugin]` group. Toggle "Toggle toRed" in the Mod
+  Configuration Menu, confirm the row's `[ON]`/`[OFF]` flips on the spot and the file updates, then
+  relaunch and confirm `fcse.log` shows `example_plugin: toRed is ON` during load - i.e. the value
+  came back from the file before the game started, not from the plugin's own default.
+- Plugin listing: with `conflict_plugin.dll` installed too (it registers no settings), the menu
+  should list it with `(no settings)` under it, while `example_plugin` shows its toggle row.
 - Drop `example_plugin.dll` **and** `conflict_plugin.dll` together (either load order - `bin\
   plugins\` is scanned via `FindFirstFileW`/`FindNextFileW`, so order follows normal directory
   enumeration, not necessarily alphabetical): `fcse.log` should show exactly one of them win the
