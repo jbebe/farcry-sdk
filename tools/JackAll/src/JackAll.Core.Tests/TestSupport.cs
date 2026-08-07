@@ -6,6 +6,22 @@ namespace JackAll.Core.Tests;
 /// <summary>Shared setup helpers with no natural home in any one test class.</summary>
 internal static class TestSupport
 {
+    /// <summary>The repo root, found by walking up from the test runner's output directory until a
+    /// <c>tools\JackAll\assets</c> is in sight — same search-don't-assume approach as
+    /// <see cref="LoadNames"/>, since the output path depends on configuration and TFM.</summary>
+    public static string RepositoryRoot
+    {
+        get
+        {
+            string? dir = AppContext.BaseDirectory;
+            while (dir is not null && !Directory.Exists(Path.Combine(dir, "tools", "JackAll", "assets")))
+            {
+                dir = Path.GetDirectoryName(dir);
+            }
+            return dir ?? AppContext.BaseDirectory;
+        }
+    }
+
     /// <summary>Walks up from the test runner's own output directory (e.g. bin\Debug\net10.0) to
     /// find the repo's checked-in <c>assets\fc2.hashlist</c> — it only ever lives under
     /// JackAll.App's output, not this project's own, so every caller needs to search for it rather

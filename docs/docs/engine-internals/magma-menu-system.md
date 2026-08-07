@@ -495,6 +495,15 @@ hashtable-insert risk, no `Action`-dispatch RE needed.
    end-to-end. Net: still open, theory (b) (early-bootstrap registration, or a body path not yet covered)
    is the leading explanation, and the concrete next step is finishing that static parser rather than more
    live debugging — see `mgb.md` for exactly where it stopped.
+
+   **Update (2026-08-07) — the static parser is finished, and this question is no longer blocking
+   anything.** The `.mgb` format is now fully decoded and the reimplementation parses the whole 50-file
+   corpus byte-exactly (see [`mgb.md`](../file-formats/mgb.md#validation)). That settles the part of this
+   question that mattered: `0x86F001E3` **never appears as a live type byte** in any shipped file — it
+   exists only as a type-table entry, alongside ~35 other unresolved hashes per file. The reason no live
+   capture ever saw type-id byte `3` is simply that no file ever uses it. The class's *name* is still
+   unidentified, but nothing depends on it: the body's type bytes only ever resolve to the small closed
+   sets the three `Factory` dispatchers accept.
 2. **Why does hooking `magma::Id::Hash` (`0x10aa7150`) crash unless the detour takes almost no action?**
    A pure no-op passthrough is safe; a version that only *compares* the hash and takes action (file
    I/O, even a `MessageBoxA`) **only on an exact, rare match** is safe and ran full sessions with zero

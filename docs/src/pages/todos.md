@@ -29,6 +29,20 @@ A running task list across the whole project.
 - [ ] Review the Domino viewer because it needs a lot of improvements
   - Review code
   - Revamp the visual interface, find a good graph wpf package
+- [ ] `.mgm` transpilation for `.mgb` packages — a text interchange format for the Magma UI editor.
+  `.mgm` is Magma's own XML source format: `CFileNameNomad::GetFileType` returns `1` for `.mgm` and
+  `2` for `.mgb`, and `Engine::LoadPackage` picks `Factory::MakeLoadVisitor` (the `CMarkupSTL` XML
+  parser) for type `1`. It is not dead code in the retail client — `Dunia.dll` has
+  `magma::LoadVisitor::vftable` @ `0x10eea404` and `magma::PackageMarkupSTL::vftable` linked in, and
+  `magma::LoadVisitor` has a complete 1:1 `ReadX` per class mirroring `BinaryLoadVisitor`. Two payoffs:
+  a diffable, reviewable text form for the editor, and — since dispatch is purely by extension and
+  `.mgb.desc` is already plain editable XML naming its own `.mgb` — a possible fully data-driven path
+  where a mod ships a `.mgm` and the retail engine parses it directly, with no binary writer involved.
+  Risks to settle first: linked ≠ exercised (Ubisoft may never have run this path in a retail build),
+  no sample `.mgm` exists anywhere in the game data so the document shape has to be reconstructed from
+  the parser rather than checked against a real file, and the XML reader treats every element as
+  optional so an incomplete `.mgm` degrades silently instead of erroring. Field names are already
+  recovered (see `research/mgb-field-names.md`).
 
 ## Tools/"dll plugins"
 
