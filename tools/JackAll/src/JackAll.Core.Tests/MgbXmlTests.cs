@@ -301,9 +301,33 @@ public sealed class MgbXmlTests
             Assert.Contains(property.Link.Ids[2], elementNames);
         }
 
-        // The slot count is capped by the nav list's own viewport (common.mgb 36150990 declares 20
+        // Two banks of the same size, one cell of each kind at every row position: FCSE_SLOT_nn is
+        // the value spinner (a checkbox or an N-option dropdown) and FCSE_SLIDER_nn is the slider.
+        // A row's type is not known until a plugin registers its settings, so both have to exist
+        // everywhere and FCSE binds whichever the row turns out to need.
+        //
+        // The row count is capped by the nav list's own viewport (common.mgb 36150990 declares 20
         // visible rows); the controls do not scroll with the list, so more would misalign.
-        Assert.Equal(20, linked.Count - 1);
+        static HashSet<uint> Bank(string prefix) =>
+            Enumerable.Range(1, 20).Select(i => MgbTypeTable.Hash($"{prefix}{i:00}")).ToHashSet();
+
+        HashSet<uint> valueBank = Bank("FCSE_SLOT_");
+        HashSet<uint> sliderBank = Bank("FCSE_SLIDER_");
+
+        Assert.Equal(20, linked.Count(p => valueBank.Contains(p.Key)));
+        Assert.Equal(20, linked.Count(p => sliderBank.Contains(p.Key)));
+        Assert.Equal(41, linked.Count); // the two banks plus SETTING_LABEL_LIST, and nothing else
+
+        // The slider cells must be authored hidden. An unbound value cell is an empty ListBox and
+        // draws nothing, but a Slider has a TRACKLINK and would draw its track at every row that
+        // did not turn out to be a slider.
+        var sliderElements = linked.Where(p => sliderBank.Contains(p.Key))
+                                   .Select(p => p.Link!.Ids[2])
+                                   .ToHashSet();
+        foreach (MgbElement element in page.Elements.Where(e => sliderElements.Contains(e.UserData.NameId)))
+        {
+            Assert.True(element.Hidden, "a slider cell is authored visible");
+        }
     }
 
     [Fact]

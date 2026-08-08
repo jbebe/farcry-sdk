@@ -16,28 +16,32 @@
 // its own to put content on, and it came with a permanent cost: the stock Game tab and FCSE's menu
 // were the same screen, so anything FCSE did there had to be undone for the next visitor.
 //
-// FCSE now leaves the stock page completely alone; the RefreshOptionList hook forwards untouched
-// for any page that is not this one.
+// FCSE now leaves the stock page completely alone, and not by checking: the page is given a private
+// copy of CFCXOptionGamePage's vtable with the three Game-tab-specific slots replaced (Display, and
+// the apply/refresh pair that dereferences a null when a row it did not build is activated). The
+// stock Game tab still points at the engine's own table, so it cannot be affected. Nothing in the
+// process is patched - the global hook on RefreshOptionList this replaced is gone. The full trail is
+// in the vtable comment at the top of fcse_page.cpp.
 namespace FCSE {
 
 class FcsePage {
 public:
-    // Constructs the page, binds it to FCSE_PAGE, and adds the Options row that opens it. Requires
-    // MagmaPackage::Load() to have succeeded - without the package the name does not resolve and a
-    // displayed page would show nothing, so this declines rather than offering a dead row.
+    // Constructs the page, gives it FCSE's vtable, binds it to FCSE_PAGE, and adds the Options row
+    // that opens it. Requires MagmaPackage::Load() to have succeeded - without the package the name
+    // does not resolve and a displayed page would show nothing, so this declines rather than
+    // offering a dead row.
     //
     // Call once, from the Options-screen hook in mods_tab.cpp. Returns false (logged) whenever it
     // declines; never fatal.
     static bool Install(void* optionsMenuThis);
 
-    // Whether `page` is our private instance. CFCXOptionGamePage::RefreshOptionList runs on the
-    // stock Game tab too - same class, same vtable - so the detour uses this to tell whose page it
-    // is looking at, and forwards untouched for anything that is not ours.
+    // Whether `page` is our private instance. No longer load-bearing now that the vtable is private
+    // rather than shared - kept as a cheap assertion for anything that wants to be sure.
     static bool OwnsPage(void* page);
 
-    // Appends FCSE's rows. Must be called from inside the per-display rebuild: RefreshOptionList
-    // clears the row list every time the page is shown, so anything added at construction time is
-    // wiped before the player ever sees it.
+    // Appends FCSE's rows. Must be called from inside the per-display rebuild: the row list is
+    // cleared every time the page is shown, so anything added at construction time is wiped before
+    // the player ever sees it.
     static void AppendRows(void* page);
 };
 

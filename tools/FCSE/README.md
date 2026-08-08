@@ -99,15 +99,19 @@ See `include/plugin_api.h` for the authoritative, documented ABI. Summary, from 
 
 ### Settings and `bin\fcse.ini`
 
-A plugin declares what it has - a name, a type (`FCSE_SettingType`, currently just `Checkbox`), a
-default, and a callback - and FCSE owns the stored value from there. Registration is valid from
-`FCSE_Load`:
+A plugin declares what it has - a name, a type, a default, and a callback - and FCSE owns the stored
+value from there. Registration is valid from `FCSE_Load`:
 
 ```c
+static const char* const kVerbosity[] = {"Quiet", "Normal", "Verbose"};
+
 static const FCSE_Setting settings[] = {
-    {"Toggle toRed", FCSE_CHECKBOX(false), &OnToRedChanged, NULL},
+    {"Toggle toRed",  FCSE_CHECKBOX(false), &OnToRedChanged, NULL},
+    {"Log verbosity", FCSE_CHOICE(1),       &OnChanged, NULL, kVerbosity, 3},
+    {"Demo slider",   FCSE_SLIDER(5),       &OnChanged, NULL, NULL, 0, 0, 10},
+    {"Demo text",     FCSE_TEXT(),          &OnChanged, NULL, NULL, 0, 0, 0, "kilimanjaro", 24},
 };
-api->RegisterSettings("example_plugin", settings, 1);
+api->RegisterSettings("example_plugin", settings, 4);
 ```
 
 Which produces, and thereafter reads back from, a group named after the plugin:
@@ -115,7 +119,25 @@ Which produces, and thereafter reads back from, a group named after the plugin:
 ```ini
 [example_plugin]
 Toggle toRed = false
+Log verbosity = Normal
+Demo slider = 5
+Demo text = kilimanjaro
 ```
+
+Four types, each rendering as the control the game's own settings pages use, so a mod's page looks
+like a stock one:
+
+| Type | Control | Serialized as |
+|---|---|---|
+| `Checkbox` | a YES/NO spinner | `true` / `false` |
+| `Choice` | a `< value >` spinner over `choices` | the chosen **label**, so the file stays readable; an index is accepted on read |
+| `Slider` | a draggable slider over `[minValue, maxValue]` | the integer |
+| `Text` | **not yet editable in-game** - the row shows the value; edit it in `fcse.ini` | the raw string |
+
+Everything after `userdata` in `FCSE_Setting` is per-type configuration, ignored by the types that
+do not use it - which is why a `Checkbox` never has to mention any of it. A `Choice` needs at least
+two labels and a `Slider` needs `minValue < maxValue`, or the setting is rejected and logged; a
+default that is merely out of range is clamped rather than costing the plugin its row.
 
 Three properties worth knowing:
 
@@ -136,7 +158,8 @@ Three properties worth knowing:
 
 This replaced a `bool*`-based API in `FCSE_API_VERSION` 3. The inversion is what made persistence
 possible at all: the old version only knew *where* a plugin's bool lived, never what it meant or
-what to call it in a file, so it could never write one back.
+what to call it in a file, so it could never write one back. `FCSE_API_VERSION` 4 added the three
+types beyond `Checkbox`, which grew `FCSE_Setting` - so a plugin built against 3 must be rebuilt.
 
 ### Conflict handling
 

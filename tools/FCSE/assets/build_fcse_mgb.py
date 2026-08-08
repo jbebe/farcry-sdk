@@ -22,7 +22,15 @@ into `common.mgb`, which is always loaded by the time the Options screen appears
                           it rather than be a direct child.
   * `p_slot_NN`        -> common area 652FD37C - one value-list cell, the control half of a settings
                           row. `CSettingsPage::AddBoolSetting(label, "SETTING_LABEL_LIST",
-                          "FCSE_SLOT_NN", ...)` binds one of these per row.
+                          "FCSE_SLOT_NN", ...)` binds one of these per row, and
+                          `AddValueListSetting` binds the same cell for an N-option row: it is a
+                          BUTTONCOUNT=1 ListBox, so two items is a YES/NO toggle and four is a
+                          dropdown.
+  * `p_slider_NN`      -> common area 62EA6603 - a slider cell, for `AddSliderSetting`. A second
+                          bank at the *same* row positions, because a row's type is not known until
+                          a plugin registers. Authored HIDDEN, unlike the value cells: an unbound
+                          ListBox draws nothing, but a Slider has a TRACKLINK and would draw its
+                          track. FCSE shows the ones it binds.
   * `p_prompts_navbar` -> common area E58F0F6C - the B/Back prompt strip.
 
 Row count
@@ -64,6 +72,12 @@ NAV_LIST_WIDGET = "l_menu_nav_list"
 VALUE_CELL_AREA = "#652FD37C"
 VALUE_CELL_WIDGET = "#D240E092"
 PROMPTS_AREA = "p_prompts_navbar"
+
+# The slider cell, which `CSettingsPage::AddSliderSetting` binds instead of the value spinner. Read
+# off the Game tab's SETTING_SENSITIVITY link, whose IDS chain ends `... #62EA6603 #CFC71007`; the
+# area is a Page holding one `Slider` (RANGEMIN 0, RANGEMAX 10, a TRACKLINK into common #D0466EF1).
+SLIDER_CELL_AREA = "#62EA6603"
+SLIDER_CELL_WIDGET = "#CFC71007"
 
 SLOT_COUNT = 20             # == the nav ListBox's BUTTONCOUNT viewport
 
@@ -127,10 +141,17 @@ def element_named(area: ET.Element, name: str) -> ET.Element:
 
 
 def instance_element(template: ET.Element, name: str, target_area: str,
-                     pos: tuple[int, int], keyframe_name: str) -> ET.Element:
-    """A copy of a shipped PageInstance element, renamed, repositioned and re-targeted."""
+                     pos: tuple[int, int], keyframe_name: str,
+                     hidden: bool = False) -> ET.Element:
+    """A copy of a shipped PageInstance element, renamed, repositioned and re-targeted.
+
+    The value cell and the slider cell are byte-identical as elements - same slot, same
+    PageInstance/FOCUSABLE shape - and differ only in the area their LINK points at, so one template
+    serves both.
+    """
     el = ET.fromstring(ET.tostring(template))
     el.find("USERDATA").set("name", name)
+    el.set("HIDDEN", "true" if hidden else "false")
 
     keyframes = el.findall("KEYFRAMES/Keyframe")
     keyframes[0].set("name", keyframe_name)
@@ -224,6 +245,11 @@ def build(options_root: ET.Element) -> ET.Element:
     add_link("SETTING_LABEL_LIST", "p_menu_nav", NAV_LIST_AREA, NAV_LIST_WIDGET)
     for i in range(1, SLOT_COUNT + 1):
         add_link(f"FCSE_SLOT_{i:02}", f"p_slot_{i:02}", VALUE_CELL_AREA, VALUE_CELL_WIDGET)
+    # A second bank at the same row positions. A row's *type* is not known until a plugin registers
+    # its settings, so every row needs both a value cell and a slider cell authored; FCSE binds one
+    # of the two per row and the other stays hidden.
+    for i in range(1, SLOT_COUNT + 1):
+        add_link(f"FCSE_SLIDER_{i:02}", f"p_slider_{i:02}", SLIDER_CELL_AREA, SLIDER_CELL_WIDGET)
 
     # --- the elements ------------------------------------------------------------------------
     # Order is draw order, and is kept identical to the stock settings pages.
@@ -253,6 +279,16 @@ def build(options_root: ET.Element) -> ET.Element:
         elements.append(instance_element(
             slot_template, f"p_slot_{i:02}", VALUE_CELL_AREA,
             (row_x, row_y0 + ROW_STEP * (i - 1)), f"kf_slot_{i:02}"))
+
+    # The slider bank, authored HIDDEN. A value cell is an empty ListBox until something adds items
+    # to it, so an unbound one draws nothing and the twenty above cost nothing when unused - but a
+    # Slider has a TRACKLINK and would draw its track regardless. Starting hidden means FCSE only
+    # ever has to *show* the ones it binds, and it can do that from the element pointer
+    # AddSliderSetting already resolved into the setting object, with no lookup by name.
+    for i in range(1, SLOT_COUNT + 1):
+        elements.append(instance_element(
+            slot_template, f"p_slider_{i:02}", SLIDER_CELL_AREA,
+            (row_x, row_y0 + ROW_STEP * (i - 1)), f"kf_slider_{i:02}", hidden=True))
 
     elements.append(carry(CHROME_MID))
 

@@ -429,6 +429,96 @@ clipping.
 disappears on the next `Display()` — the trap FCSE hit twice.
 :::
 
+## Settings rows
+
+Every options screen is a `CSettingsPage`, and its rows are not built widget by widget. Three calls
+each produce a complete row — a label in the page's row `ListBox` plus a bound control — and they
+are the whole vocabulary:
+
+| Call | `Dunia.dll` | Control | Cell area |
+|---|---|---|---|
+| `CSettingsPage::AddBoolSetting` | `0x10cde0d0` | YES/NO spinner | `common #652FD37C` |
+| `CSettingsPage::AddValueListSetting<unsigned>` | `0x1081d660` | `‹ value ›` spinner over N options | `common #652FD37C` |
+| `CSettingsPage::AddSliderSetting` | `0x10cddff0` | draggable slider | `common #62EA6603` |
+
+```c
+CUISettingBase* AddBoolSetting      (page, const wchar_t* label, const char* labelListParam,
+                                     const char* slotParam, const wchar_t* yes, const wchar_t* no,
+                                     int enabled, void* handler);
+CUISettingBase* AddValueListSetting (page, const wchar_t* label, const char* labelListParam,
+                                     const char* slotParam, unsigned count,
+                                     const wchar_t* const* itemLabels, const unsigned* itemValues,
+                                     int enabled, void* handler);
+CUISettingBase* AddSliderSetting    (page, const wchar_t* label, const char* labelListParam,
+                                     const char* slotParam, int min, int max,
+                                     int enabled, void* handler);
+```
+
+Three things are worth reading off that table.
+
+**The bool row and the dropdown are the same widget.** `#652FD37C` is a `ListBox` with
+`BUTTONCOUNT="1"` — a one-item viewport that scrolls whatever was added to it. Two items is a
+toggle, four is the Difficulty row. A layout that declares one kind of cell per row already supports
+both.
+
+**`labelListParam` and `slotParam` are `UserData` property names on the page's own area**, not
+widget names: each is a `FullLink` the page resolves through `CUISettingBase::FetchMagmaElements`.
+This is the [name contract](#the-name-contract-in-both-directions) in its most concrete form — the
+layout publishes `SETTING_DIFFICULTY`, the code asks for it by that string.
+
+**Every stock call site passes `handler = 0`.** A settings row is driven by the `CUISettingBase`
+attached to it and by widget events, not by a menu-item handler. The setting caches its value and
+exposes it through vtable slots 13 and 14 (`+0x34` `SetValue`, `+0x38` `GetValue`), both taking and
+returning a *pointer* to the value — one byte for the bool variant, four for the others. The slider
+stores an `int` and converts to float inside `magma::Slider::SetValue`.
+
+Field layout differs by variant, which matters if you inspect a setting to check its slot resolved:
+a `CValueListSetting` puts its element at `+0x48` and its widget at `+0x44` (plus the value array at
+`+0x4c`/`+0x50`), while `CSliderSetting::FetchMagmaElements` (`0x10cde3c0`) uses `+0x4c` and `+0x48`.
+An unresolved `slotParam` is silent: the item-adds are guarded on the widget being non-null, so the
+row appears with no control rather than failing.
+
+### The page owns its rows by button id
+
+`CListMenuPage::AddButton` returns an **int**, and `CSettingsPage` keeps a
+`std::map<int, CUISettingBase*>` at `page+0x190` mapping that id to the setting. A derived page then
+stores the ids of the rows it cares about in its own members and looks them up later.
+
+That last step is where reusing a shipped page class for a mod's own screen goes wrong.
+`CFCXOptionGamePage` holds ten such ids at `+0x1d8 … +0x1fc`, and two functions walk them —
+`0x1081f800` (options → settings) and `0x1081fd10` (settings → options). Both do:
+
+```c
+setting = m_settings[id];                       // operator[] inserts a null for a missing key
+if (setting && !IsKindOf(setting, ExpectedType))
+    setting = NULL;                             // the guard nulls it…
+value = (*(setting->vtable + 0x38))(setting);   // …and the call dereferences it anyway
+```
+
+On the page they were written for the ids always resolve to a setting of the expected type, so the
+shipped bug never fires. Replace that page's rows with your own and it fires immediately: the new
+rows are handed the same button ids back with the wrong types. Clearing the ids does not help —
+`operator[]` inserts a null and the same dereference follows.
+
+### Reusing a concrete page class safely
+
+The fix generalises past this one class. Both walkers are reachable only through **vtable slots**:
+`+0x08` `Display` (whose whole body is `RefreshOptionList(); this+0x200 = 0;
+CFCXBaseOptionPage::Display();`), and the `+0x50`/`+0x54` apply/refresh pair. So a mod can construct
+the real class — which is what correctly initialises the settings map, the embedded strings and the
+secondary vptrs — and then point the object at a **private copy of its vtable** with those slots
+replaced.
+
+Nothing is patched, so the stock screen that shares the class is unaffected *by construction* rather
+than by a `this`-comparison inside a global hook, and the option ids simply stay at the `-1` the
+constructor left them at, because only `RefreshOptionList` ever fills them. Hand-rolling a page class
+from scratch instead is the tempting alternative and the wrong one: `CFCXBaseOptionPage` is abstract,
+and constructing it works right up until the input path calls one of its pure virtuals and the
+process dies with R6025.
+
+Get the vtable's size right — it is 26 slots for `CFCXOptionGamePage`, and the bytes after it are
+string data, not a 27th entry.
+
 ## Element names are indirected through XML config
 
 The name a page looks up is not always a literal in the binary. Two cooperating systems put an XML

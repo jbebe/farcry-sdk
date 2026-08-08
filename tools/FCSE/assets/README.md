@@ -71,7 +71,18 @@ area, and `common.mgb` is always loaded by the time the Options screen appears:
   requires this exact name and requires `l_menu_nav_list` to live *inside* it rather than be a direct
   child. `a_title_bar`/`t_page_title` are inside that same template, so `CMenuPage::SetTitle` works
   with nothing authored here.
-- **`p_slot_01` … `p_slot_20`** → common `652FD37C`, the value-list cell. One per settings row.
+- **`p_slot_01` … `p_slot_20`** → common `652FD37C`, the value-list cell. One per settings row. It is
+  a `ListBox` with `BUTTONCOUNT="1"` — a one-item viewport that scrolls through however many items
+  were added — so the *same* cell serves a checkbox (two items, YES/NO) and a dropdown (N items).
+  That is why `Choice` settings needed no layout work at all.
+- **`p_slider_01` … `p_slider_20`** → common `62EA6603`, the slider cell, for `AddSliderSetting`. A
+  second bank at the **same** row positions, because a row's type is not known until a plugin
+  registers its settings — every row therefore has one cell of each kind and FCSE binds whichever it
+  needs. Authored `HIDDEN="true"`, unlike the value cells: an unbound `ListBox` has no items and
+  draws nothing, but a `Slider` has a `TRACKLINK` and would draw its track at every row that did not
+  turn out to be a slider. FCSE shows the ones it binds and hides them again on the next rebuild,
+  using the element pointer `AddSliderSetting` already resolved into the setting object — so no
+  lookup by name is needed.
 - **`p_prompts_navbar`** → common `E58F0F6C`, the B/Back prompt strip.
 - Five decorative elements carried verbatim from the stock pages. They appear on all four shipped
   settings pages (Game, Display, Sound, Network), so they are options-screen chrome rather than
@@ -96,11 +107,14 @@ those names are `UserData` properties on the page area, each holding a `FullLink
 
 ### The 20-row ceiling
 
-`common.mgb` `36150990`'s ListBox declares a 20-row viewport, and the value controls are absolutely
+`common.mgb` `36150990`'s ListBox declares a 20-row viewport, and the controls are absolutely
 positioned siblings that **do not scroll with the list**. Past 20 rows the labels slide out from
-under their controls. So 20 is the cap, and FCSE should log an overflow rather than call
-`AddBoolSetting` with a `FCSE_SLOT_nn` this file does not declare — `GetUserDataElement` would miss
-and the row would silently have no control.
+under their controls. So 20 is the cap — per bank, at the same positions — and FCSE logs an overflow
+rather than calling `AddBoolSetting` with an `FCSE_SLOT_nn` this file does not declare;
+`GetUserDataElement` would miss and the row would silently have no control.
+
+Both banks are indexed by **row**, not by setting: a caption row consumes an index exactly like a
+settings row does, because the cell sits at that row's y coordinate whether or not anything binds it.
 
 Geometry is the Network tab's, the highest-anchored stock settings page and therefore the one with
 the most usable rows: nav at `(83,111)`, controls at `x=552` from `y=158`, stepping 28. Twenty rows
@@ -137,6 +151,9 @@ things here.
   the `.mgb` directly through `CEngineNomad::LoadPackage` rather than through
   `CMagmaConfigUIResource`, so a `.desc` would never be read on that path. Revisit if the Back
   prompt does not appear.
-- **Slider and choice rows.** `AddSliderSetting` wants common `62EA6603` rather than `652FD37C`.
-  Adding a second bank of slots is a small edit to `build_fcse_mgb.py`; it is left out until
-  something needs it.
+- **A text-entry cell.** There is deliberately no third bank. A `Text` setting is meant to open
+  `CGameMessageBoxEditBox`, the game's own modal text prompt, whose layout `MESSAGEBOX_EDIT_BOX` is
+  declared in `common.mgb` — verified by probing `CRC32("MESSAGEBOX_EDIT_BOX") = 0xA98A4F3F` against
+  every shipped menu package, where it appears in `common.mgb` and nowhere else. So the prompt is
+  reachable from this page with no layout of our own; what is still missing is native, not
+  authored — see `fcse_page.cpp`'s `FCSE_SettingType_Text` case.

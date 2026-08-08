@@ -4,6 +4,7 @@
 #include "ini_file.h"
 #include "log.h"
 
+#include <cstdlib>
 #include <intrin.h>
 
 namespace FCSE {
@@ -34,12 +35,44 @@ namespace {
                name.back() != '\t';
     }
 
-    bool IsKnownType(FCSE_SettingType type) { return type == FCSE_SettingType_Checkbox; }
+    // FCSE's own ceiling on a Text setting, applied when a plugin does not name one. Sized to fit
+    // comfortably in a menu row rather than to any engine limit.
+    constexpr size_t kDefaultMaxTextLength = 64;
 
-    std::string FormatValue(const FCSE_SettingValue& value) {
-        switch (value.type) {
+    bool IsKnownType(FCSE_SettingType type) {
+        switch (type) {
         case FCSE_SettingType_Checkbox:
-            return value.asCheckbox ? "true" : "false";
+        case FCSE_SettingType_Choice:
+        case FCSE_SettingType_Slider:
+        case FCSE_SettingType_Text:
+            return true;
+        }
+        return false;
+    }
+
+    // A Text value is delivered as a pointer into the setting's own storage, so it has to be
+    // re-pointed whenever that string is assigned - std::string may have reallocated.
+    void RefreshTextPointer(SettingsRegistry::Setting& setting) {
+        if (setting.value.type == FCSE_SettingType_Text) {
+            setting.value.asText = setting.text.c_str();
+        }
+    }
+
+    // A Choice is written as its label, not its index: the point of the file is that a player can
+    // read and edit it, and `Difficulty = Hardcore` says something that `Difficulty = 2` does not.
+    // The index is the fallback for a label FCSE cannot render as a distinct token.
+    std::string FormatValue(const SettingsRegistry::Setting& setting) {
+        switch (setting.value.type) {
+        case FCSE_SettingType_Checkbox:
+            return setting.value.asCheckbox ? "true" : "false";
+        case FCSE_SettingType_Choice:
+            return setting.value.asChoice < setting.choices.size()
+                       ? setting.choices[setting.value.asChoice]
+                       : std::to_string(setting.value.asChoice);
+        case FCSE_SettingType_Slider:
+            return std::to_string(setting.value.asSlider);
+        case FCSE_SettingType_Text:
+            return setting.text;
         }
         return std::string();
     }
@@ -54,11 +87,26 @@ namespace {
         return lowered;
     }
 
-    // Accepts the spellings a player might reasonably hand-write. Anything else is a parse failure,
-    // which the caller reports and recovers from by falling back to the plugin's default - never by
-    // guessing.
-    bool ParseValue(FCSE_SettingType type, const std::string& text, FCSE_SettingValue* out) {
-        switch (type) {
+    // Whole-string integer parse - "3x" and "" are failures, not 3 and 0.
+    bool ParseInt(const std::string& text, long* out) {
+        if (text.empty()) {
+            return false;
+        }
+        char* end = nullptr;
+        long parsed = std::strtol(text.c_str(), &end, 10);
+        if (end == nullptr || *end != '\0') {
+            return false;
+        }
+        *out = parsed;
+        return true;
+    }
+
+    // Accepts the spellings a player might reasonably hand-write, and writes straight into the
+    // setting so the per-type storage (a Choice's index, a Text's string) stays consistent with the
+    // value. Anything else is a parse failure, which the caller reports and recovers from by falling
+    // back to the plugin's default - never by guessing. `setting` is left untouched on failure.
+    bool ParseInto(SettingsRegistry::Setting& setting, const std::string& text) {
+        switch (setting.value.type) {
         case FCSE_SettingType_Checkbox: {
             std::string lowered = ToLowerAscii(text);
             bool isTrue = lowered == "true" || lowered == "1" || lowered == "yes" || lowered == "on";
@@ -67,12 +115,76 @@ namespace {
             if (!isTrue && !isFalse) {
                 return false;
             }
-            out->type = FCSE_SettingType_Checkbox;
-            out->asCheckbox = isTrue;
+            setting.value.asCheckbox = isTrue;
+            return true;
+        }
+        case FCSE_SettingType_Choice: {
+            std::string lowered = ToLowerAscii(text);
+            for (size_t i = 0; i < setting.choices.size(); ++i) {
+                if (ToLowerAscii(setting.choices[i]) == lowered) {
+                    setting.value.asChoice = static_cast<uint32_t>(i);
+                    return true;
+                }
+            }
+            long index = 0;
+            if (!ParseInt(text, &index) || index < 0 ||
+                static_cast<size_t>(index) >= setting.choices.size()) {
+                return false;
+            }
+            setting.value.asChoice = static_cast<uint32_t>(index);
+            return true;
+        }
+        case FCSE_SettingType_Slider: {
+            long parsed = 0;
+            if (!ParseInt(text, &parsed)) {
+                return false;
+            }
+            // Clamped rather than rejected: a plugin narrowing its range in a later version would
+            // otherwise throw away a value the player deliberately chose.
+            if (parsed < setting.minValue) {
+                parsed = setting.minValue;
+            }
+            if (parsed > setting.maxValue) {
+                parsed = setting.maxValue;
+            }
+            setting.value.asSlider = static_cast<int32_t>(parsed);
+            return true;
+        }
+        case FCSE_SettingType_Text: {
+            if (text.size() > setting.maxTextLength) {
+                return false; // reported as unusable, same as any other value that does not fit
+            }
+            setting.text = text;
+            RefreshTextPointer(setting);
             return true;
         }
         }
         return false;
+    }
+
+    // Structural problems with a declaration - the ones that would produce a row the player cannot
+    // use. Returns an empty string when the declaration is fine. A default value that is merely out
+    // of range is not here: that is clamped on the way in rather than costing the plugin its row.
+    std::string DeclarationProblem(const FCSE_Setting& declared) {
+        switch (declared.defaultValue.type) {
+        case FCSE_SettingType_Choice:
+            if (declared.choices == nullptr || declared.choiceCount < 2) {
+                return "a Choice needs at least two labels in `choices`";
+            }
+            for (uint32_t i = 0; i < declared.choiceCount; ++i) {
+                if (declared.choices[i] == nullptr || declared.choices[i][0] == '\0') {
+                    return "a Choice label is null or empty";
+                }
+            }
+            return std::string();
+        case FCSE_SettingType_Slider:
+            if (declared.minValue >= declared.maxValue) {
+                return "a Slider needs minValue < maxValue";
+            }
+            return std::string();
+        default:
+            return std::string();
+        }
     }
 
     SettingsRegistry::Group& EnsureGroup(const std::string& pluginName) {
@@ -160,7 +272,13 @@ bool SettingsRegistry::RegisterSettings(const char* pluginName, const FCSE_Setti
             Log::FromCaller(caller, "RegisterSettings(\"" + groupName + "\") skipped \"" + name +
                                          "\" - unknown setting type " +
                                          std::to_string(static_cast<int>(declared.defaultValue.type)) +
-                                         ", this FCSE build only knows Checkbox");
+                                         "; this FCSE build knows Checkbox, Choice, Slider and Text");
+            continue;
+        }
+        std::string problem = DeclarationProblem(declared);
+        if (!problem.empty()) {
+            Log::FromCaller(caller, "RegisterSettings(\"" + groupName + "\") skipped \"" + name +
+                                         "\" - " + problem);
             continue;
         }
         if (GroupHasSetting(group, name)) {
@@ -175,15 +293,46 @@ bool SettingsRegistry::RegisterSettings(const char* pluginName, const FCSE_Setti
         setting->value = declared.defaultValue;
         setting->onChanged = declared.onChanged;
         setting->userdata = declared.userdata;
+        setting->minValue = declared.minValue;
+        setting->maxValue = declared.maxValue;
+        setting->maxTextLength =
+            declared.maxTextLength != 0 ? declared.maxTextLength : kDefaultMaxTextLength;
+        for (uint32_t choice = 0; choice < declared.choiceCount; ++choice) {
+            setting->choices.push_back(declared.choices[choice]);
+        }
+        if (declared.defaultValue.type == FCSE_SettingType_Text) {
+            setting->text = declared.defaultText != nullptr ? declared.defaultText : std::string();
+            if (setting->text.size() > setting->maxTextLength) {
+                setting->text.resize(setting->maxTextLength);
+            }
+            RefreshTextPointer(*setting);
+        }
+
+        // A default the plugin got wrong is clamped rather than fatal - the row is still usable, and
+        // the corrected value is written back where the author will see it.
+        if (declared.defaultValue.type == FCSE_SettingType_Choice &&
+            setting->value.asChoice >= setting->choices.size()) {
+            Log::FromCaller(caller, "RegisterSettings(\"" + groupName + "\") \"" + name +
+                                         "\" has a default choice index past the end of its label "
+                                         "list - using the first label");
+            setting->value.asChoice = 0;
+        }
+        if (declared.defaultValue.type == FCSE_SettingType_Slider &&
+            (setting->value.asSlider < setting->minValue ||
+             setting->value.asSlider > setting->maxValue)) {
+            Log::FromCaller(caller, "RegisterSettings(\"" + groupName + "\") \"" + name +
+                                         "\" has a default outside its own slider range - clamping");
+            setting->value.asSlider = setting->value.asSlider < setting->minValue
+                                          ? setting->minValue
+                                          : setting->maxValue;
+        }
 
         // The file is the source of truth where it has an answer; the plugin's default is the
         // fallback, and gets written back so the player can see the setting exists.
         const std::string* stored = g_ini.Find(groupName, name);
         bool wroteDefault = true;
         if (stored != nullptr) {
-            FCSE_SettingValue parsed{};
-            if (ParseValue(declared.defaultValue.type, *stored, &parsed)) {
-                setting->value = parsed;
+            if (ParseInto(*setting, *stored)) {
                 wroteDefault = false;
             } else {
                 Log::FromCaller(caller, "settings: [" + groupName + "] " + name + " = \"" + *stored +
@@ -192,7 +341,7 @@ bool SettingsRegistry::RegisterSettings(const char* pluginName, const FCSE_Setti
             }
         }
         if (wroteDefault) {
-            g_ini.Set(groupName, name, FormatValue(setting->value));
+            g_ini.Set(groupName, name, FormatValue(*setting));
             g_dirty = true;
         }
 
@@ -222,6 +371,72 @@ const SettingsRegistry::Group* SettingsRegistry::FindGroup(const std::string& pl
     return nullptr;
 }
 
+bool SettingsRegistry::SetValue(Setting* setting, const FCSE_SettingValue& next) {
+    if (setting == nullptr) {
+        return false;
+    }
+    if (next.type != setting->value.type) {
+        Log::Loader("settings: ignoring a value of type " +
+                    std::to_string(static_cast<int>(next.type)) + " for [" + setting->groupName +
+                    "] " + setting->name + ", which is type " +
+                    std::to_string(static_cast<int>(setting->value.type)));
+        return false;
+    }
+
+    std::string before = FormatValue(*setting);
+
+    switch (next.type) {
+    case FCSE_SettingType_Checkbox:
+        // Through asNumber, not asCheckbox: a bool write only touches the low byte of the union, so
+        // assigning the named member would leave whatever the other three bytes previously held.
+        setting->value.asNumber = next.asCheckbox ? 1 : 0;
+        break;
+    case FCSE_SettingType_Choice:
+        if (next.asChoice >= setting->choices.size()) {
+            Log::Loader("settings: ignoring choice index " + std::to_string(next.asChoice) +
+                        " for [" + setting->groupName + "] " + setting->name + " - it has only " +
+                        std::to_string(setting->choices.size()) + " option(s)");
+            return false;
+        }
+        setting->value.asChoice = next.asChoice;
+        break;
+    case FCSE_SettingType_Slider:
+        if (next.asSlider < setting->minValue || next.asSlider > setting->maxValue) {
+            Log::Loader("settings: ignoring slider value " + std::to_string(next.asSlider) +
+                        " for [" + setting->groupName + "] " + setting->name + " - its range is " +
+                        std::to_string(setting->minValue) + ".." +
+                        std::to_string(setting->maxValue));
+            return false;
+        }
+        setting->value.asSlider = next.asSlider;
+        break;
+    case FCSE_SettingType_Text: {
+        std::string text = next.asText != nullptr ? next.asText : std::string();
+        if (text.size() > setting->maxTextLength) {
+            Log::Loader("settings: truncating [" + setting->groupName + "] " + setting->name +
+                        " to its " + std::to_string(setting->maxTextLength) + "-character limit");
+            text.resize(setting->maxTextLength);
+        }
+        setting->text = text;
+        RefreshTextPointer(*setting);
+        break;
+    }
+    }
+
+    std::string after = FormatValue(*setting);
+    if (after == before) {
+        return false; // the page reads every control back on every display; unchanged is the norm
+    }
+
+    g_ini.Set(setting->groupName, setting->name, after);
+    g_dirty = true;
+    Log::Loader("settings: [" + setting->groupName + "] " + setting->name + " = " + after);
+
+    Notify(*setting);
+    Flush();
+    return true;
+}
+
 void SettingsRegistry::ToggleCheckbox(Setting* setting) {
     if (setting == nullptr) {
         return;
@@ -232,15 +447,10 @@ void SettingsRegistry::ToggleCheckbox(Setting* setting) {
         return;
     }
 
-    setting->value.asCheckbox = !setting->value.asCheckbox;
-    g_ini.Set(setting->groupName, setting->name, FormatValue(setting->value));
-    g_dirty = true;
-
-    Log::Loader("settings: [" + setting->groupName + "] " + setting->name + " toggled to " +
-                (setting->value.asCheckbox ? "true" : "false"));
-
-    Notify(*setting);
-    Flush();
+    FCSE_SettingValue next{};
+    next.type = FCSE_SettingType_Checkbox;
+    next.asNumber = setting->value.asCheckbox ? 0 : 1;
+    SetValue(setting, next);
 }
 
 void SettingsRegistry::Flush() {

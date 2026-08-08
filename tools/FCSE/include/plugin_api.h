@@ -20,7 +20,7 @@
 extern "C" {
 #endif
 
-#define FCSE_API_VERSION 3
+#define FCSE_API_VERSION 4
 
 // Matches Dunia.dll's own AddFunctionCB(void* fn, const char* name) signature exactly - the
 // function pointer stored is called later, by engine code, with whatever argument count/types
@@ -49,32 +49,62 @@ typedef void (*FCSE_LogFn)(const char* message);
 // Tier 4: persistent, player-editable settings.
 //
 // Every setting a plugin registers becomes one line in bin\fcse.ini - inside a group named after
-// the plugin - and one row in the in-game Mod Configuration Menu (spliced into the Options menu's
-// own tab list; see the FCSE README's "Mod Configuration Menu" section for the mechanism). A
-// plugin that registers nothing gets no group in the file: there is nothing to toggle, so nothing
-// is written.
+// the plugin - and one row on FCSE's own Mod Configuration Menu page, reached from the Options
+// screen (see the FCSE README's "Mod Configuration Menu" section for the mechanism). A plugin that
+// registers nothing gets no group in the file: there is nothing to configure, so nothing is written.
 //
 // FCSE owns the stored value - a plugin never holds a pointer to it. Changes arrive through the
 // callback below, twice over: once during registration (before any Dunia.dll engine code runs)
-// carrying whatever the config file holds, and again after every in-game toggle.
+// carrying whatever the config file holds, and again after every in-game change.
+//
+// Each type maps onto a control the game's own settings pages already use, so a mod's page looks
+// like a stock one. The row a type produces, and where its extra configuration comes from, is
+// documented on FCSE_Setting below.
 typedef enum FCSE_SettingType {
-    FCSE_SettingType_Checkbox = 0, // a bool; serialized as `true`/`false`
+    FCSE_SettingType_Checkbox = 0, // a bool; a YES/NO spinner. Serialized as `true`/`false`
+    FCSE_SettingType_Choice = 1,   // one of `choices`; a < value > spinner. Serialized as the label
+    FCSE_SettingType_Slider = 2,   // an int in [minValue, maxValue]; a slider. Serialized as itself
+    FCSE_SettingType_Text = 3,     // a string; a row opening the game's text prompt. Serialized raw
 } FCSE_SettingType;
 
 // A setting's value, tagged with its own type so this one callback signature keeps working as the
 // enum above grows. Read the member matching `type`; reading any other member is undefined.
+//
+// `asNumber` is deliberately first and deliberately overlaps the three numeric members: a braced
+// initializer writes the first member only (designated initializers are C99/C++20 and this header
+// has to work in neither), so it is what the FCSE_* macros below set, and the named member is what
+// you read. That aliasing assumes a little-endian 32-bit target, which Far Cry 2 always is.
 typedef struct FCSE_SettingValue {
     FCSE_SettingType type;
     union {
-        bool asCheckbox;
+        int32_t asNumber;   // what the initializer macros write; rarely what you want to read
+        bool asCheckbox;    // Checkbox
+        uint32_t asChoice;  // Choice - an index into FCSE_Setting::choices
+        int32_t asSlider;   // Slider
+        const char* asText; // Text - NUL-terminated UTF-8, FCSE-owned, valid for the call only
     };
 } FCSE_SettingValue;
 
-// Convenience initializer for a Checkbox default, e.g.
+// Convenience initializers for a default value, e.g.
 //   { "Verbose logging", FCSE_CHECKBOX(false), &OnVerboseChanged, NULL }
+//
+// A Text setting's default is FCSE_Setting::defaultText rather than part of the value, because a
+// pointer cannot be written through the integer member a braced initializer reaches.
 #define FCSE_CHECKBOX(defaultValue)                                                                \
     {                                                                                              \
-        FCSE_SettingType_Checkbox, { (defaultValue) }                                              \
+        FCSE_SettingType_Checkbox, { (defaultValue) ? 1 : 0 }                                      \
+    }
+#define FCSE_CHOICE(defaultIndex)                                                                  \
+    {                                                                                              \
+        FCSE_SettingType_Choice, { (int32_t)(defaultIndex) }                                       \
+    }
+#define FCSE_SLIDER(defaultValue)                                                                  \
+    {                                                                                              \
+        FCSE_SettingType_Slider, { (int32_t)(defaultValue) }                                       \
+    }
+#define FCSE_TEXT()                                                                                \
+    {                                                                                              \
+        FCSE_SettingType_Text, { 0 }                                                               \
     }
 
 // Called with the setting's resolved value: once from inside RegisterSettings (synchronously,
@@ -90,11 +120,37 @@ typedef void (*FCSE_SettingChangedFn)(const FCSE_SettingValue* value, void* user
 // of sync with it. The default applies whenever the config file has no usable value for this
 // setting (a fresh install, a newly added setting, or a value stored in an unparseable form), and
 // is written back to the file so the player can see and edit it.
+// Everything past `userdata` is per-type configuration rather than a value: it is fixed for the
+// life of the setting, where the value changes every time the player touches the row. Fields that
+// do not apply to this setting's type are ignored, and C's trailing zero-initialization means a
+// Checkbox declaration never has to mention any of them:
+//
+//   { "Verbose logging", FCSE_CHECKBOX(false), &OnVerboseChanged, NULL }
+//   { "Difficulty", FCSE_CHOICE(1), &OnDifficulty, NULL, kLabels, 3 }
+//   { "Draw distance", FCSE_SLIDER(6), &OnDrawDistance, NULL, NULL, 0, 1, 10 }
+//   { "Server name", FCSE_TEXT(), &OnServerName, NULL, NULL, 0, 0, 0, "kilimanjaro", 24 }
 typedef struct FCSE_Setting {
     const char* name;
     FCSE_SettingValue defaultValue;
     FCSE_SettingChangedFn onChanged; // optional; NULL means "store it, just don't tell me"
     void* userdata;                  // opaque, passed back to onChanged unmodified
+
+    // Choice: the option labels, in the order the player cycles through them, and how many there
+    // are. Both are copied during registration, so neither has to outlive the call. A Choice with
+    // fewer than two labels is rejected - it would be a row the player cannot change.
+    const char* const* choices;
+    uint32_t choiceCount;
+
+    // Slider: the inclusive bounds. minValue must be < maxValue; the stored value is clamped into
+    // range on load, so narrowing the range in a later version of a plugin cannot produce an
+    // out-of-range value.
+    int32_t minValue;
+    int32_t maxValue;
+
+    // Text: the initial string, and the longest the player may type. NULL defaultText means empty.
+    // maxTextLength of 0 means FCSE's own cap applies.
+    const char* defaultText;
+    uint32_t maxTextLength;
 } FCSE_Setting;
 
 // Registers `settingCount` settings under `pluginName`, in display order. Valid to call from

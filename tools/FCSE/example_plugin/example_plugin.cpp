@@ -3,6 +3,7 @@
 // much as a smoke test for FCSE.exe itself.
 #include "../include/plugin_api.h"
 
+#include <cstdio>
 #include <windows.h>
 
 namespace {
@@ -48,6 +49,33 @@ namespace {
             g_api->Log(g_toRedEnabled ? "example_plugin: toRed is ON" : "example_plugin: toRed is OFF");
         }
     }
+
+    // The other three setting types, present only to demonstrate what a row of each looks like and
+    // to give the menu something to exercise. None of them drives anything in this plugin.
+    const char* const kVerbosityChoices[] = {"Quiet", "Normal", "Verbose"};
+
+    void __cdecl OnDemoSettingChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
+        if (g_api == nullptr) {
+            return;
+        }
+        char message[160];
+        switch (value->type) {
+        case FCSE_SettingType_Choice:
+            sprintf_s(message, "example_plugin: verbosity is %s",
+                      kVerbosityChoices[value->asChoice]);
+            break;
+        case FCSE_SettingType_Slider:
+            sprintf_s(message, "example_plugin: demo slider is %d", value->asSlider);
+            break;
+        case FCSE_SettingType_Text:
+            sprintf_s(message, "example_plugin: demo text is \"%s\"",
+                      value->asText != nullptr ? value->asText : "");
+            break;
+        default:
+            return;
+        }
+        g_api->Log(message);
+    }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
@@ -72,11 +100,20 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 
     // OnToRedChanged fires before RegisterSettings returns, so g_toRedEnabled already reflects
     // fcse.ini by the time this call is done - no separate "read my config" step.
+    //
+    // One row of each type, so the Mod Configuration Menu has something of every shape to show.
+    // Everything after `userdata` is per-type configuration and is ignored by the types that do not
+    // use it, which is why the Checkbox line does not have to mention any of it.
     static const FCSE_Setting settings[] = {
         {"Toggle toRed", FCSE_CHECKBOX(false), &OnToRedChanged, nullptr},
+        {"Log verbosity", FCSE_CHOICE(1), &OnDemoSettingChanged, nullptr, kVerbosityChoices, 3},
+        {"Demo slider", FCSE_SLIDER(5), &OnDemoSettingChanged, nullptr, nullptr, 0, 0, 10},
+        {"Demo text", FCSE_TEXT(), &OnDemoSettingChanged, nullptr, nullptr, 0, 0, 0, "kilimanjaro",
+         24},
     };
-    if (api->RegisterSettings("example_plugin", settings, 1)) {
-        api->Log("example_plugin: registered a Mod Configuration Menu entry");
+    if (api->RegisterSettings("example_plugin", settings,
+                              sizeof(settings) / sizeof(settings[0]))) {
+        api->Log("example_plugin: registered its Mod Configuration Menu entries");
     }
 
     return true;

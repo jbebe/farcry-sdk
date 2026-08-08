@@ -17,6 +17,7 @@ import zlib
 import xml.etree.ElementTree as ET
 
 PAGE_NAME = "FCSE_PAGE"
+SLOT_COUNT = 20  # must match build_fcse_mgb.py and kSlotCount in fcse_page.cpp
 
 
 def h(name: str) -> str:
@@ -70,8 +71,26 @@ def main() -> int:
             problems.append(f"element {ids[2]} does not exist in the area")
         check(not problems, f"{key} -> {ids[2]} " + ("; ".join(problems) or "resolves"))
 
-    slots = [k for k, _ in links if h(k) != h("SETTING_LABEL_LIST")]
-    print(f"\n  {len(slots)} value-control slot(s) declared")
+    value_slots = [k for k, _ in links if k.startswith("FCSE_SLOT_")]
+    slider_slots = [(k, link) for k, link in links if k.startswith("FCSE_SLIDER_")]
+    print()
+    check(len(value_slots) == SLOT_COUNT,
+          f"{SLOT_COUNT} value-cell slots declared (found {len(value_slots)})")
+    check(len(slider_slots) == SLOT_COUNT,
+          f"{SLOT_COUNT} slider slots declared (found {len(slider_slots)})")
+
+    # The slider bank has to start hidden: an unbound value cell is an empty ListBox and draws
+    # nothing, but an unbound Slider would still draw its track at every row FCSE did not use.
+    visible = [k for k, link in slider_slots
+               if elements.get(h(link.get("IDS").split()[2]), ET.Element("x")).get("HIDDEN") != "true"]
+    check(not visible, "every slider cell is authored HIDDEN" +
+          (f" (visible: {', '.join(visible)})" if visible else ""))
+
+    unaccounted = [k for k, _ in links
+                   if h(k) != h("SETTING_LABEL_LIST") and not k.startswith("FCSE_SLOT_")
+                   and not k.startswith("FCSE_SLIDER_")]
+    check(not unaccounted, "no unrecognised slot properties" +
+          (f" (found: {', '.join(unaccounted)})" if unaccounted else ""))
 
     if len(sys.argv) > 2:
         print("\nGame-tab elements not carried over (decoration unless proven otherwise):")

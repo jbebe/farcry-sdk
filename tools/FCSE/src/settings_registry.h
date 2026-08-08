@@ -29,6 +29,14 @@ public:
         FCSE_SettingValue value; // FCSE-owned and authoritative; the file is its serialization
         FCSE_SettingChangedFn onChanged;
         void* userdata;
+
+        // Per-type configuration, copied out of the FCSE_Setting the plugin declared so nothing
+        // here points into the plugin's memory. Only the fields matching `value.type` are set.
+        std::vector<std::string> choices; // Choice - the option labels, in cycle order
+        int minValue;                     // Slider
+        int maxValue;                     // Slider
+        std::string text;                 // Text - the value itself; value.asText points at this
+        size_t maxTextLength;             // Text
     };
 
     struct Group {
@@ -55,8 +63,20 @@ public:
     // than its module name - see fcse_page.cpp's AppendRows for how the menu reconciles the two.
     static const Group* FindGroup(const std::string& pluginName);
 
-    // Flips a Checkbox, fires its callback and persists the file. What an in-game row's click
-    // handler calls; no-ops (and logs) for any other setting type.
+    // Stores a new value, fires the setting's callback and persists the file. What the in-game page
+    // calls when a control moves.
+    //
+    // `next.type` must match the setting's own type, and the value is validated against the
+    // setting's configuration - a Choice index past the end of `choices`, or a Slider outside
+    // [minValue, maxValue], is rejected rather than clamped, because either means the caller and
+    // the registry disagree about the setting and quietly storing something else would hide it.
+    // A no-op change is dropped, so calling this on every display costs nothing.
+    //
+    // Returns whether the value actually changed. Rejections are logged.
+    static bool SetValue(Setting* setting, const FCSE_SettingValue& next);
+
+    // Flips a Checkbox. Shorthand for SetValue with the negated value; no-ops (and logs) for any
+    // other setting type.
     static void ToggleCheckbox(Setting* setting);
 
     // Writes the file if anything changed since the last write. Call after plugin loading, so a
