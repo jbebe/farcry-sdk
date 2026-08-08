@@ -6,6 +6,37 @@ if (POLICY CMP0141)
   set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
 endif()
 
+# Static CRT (/MT), not the default /MD - so FCSE.exe and its plugins depend on nothing but
+# KERNEL32/USER32 and run on any machine that runs the game.
+#
+# With /MD the loader imports MSVCP140.dll, VCRUNTIME140.dll and the UCRT stubs, so a player without
+# the VS 2015-2022 x86 redistributable gets a missing-DLL box *before any of our code runs* - no
+# fcse.log, nothing to diagnose from, and no way for the player to tell it apart from FCSE being
+# broken. Verify with `dumpbin /dependents`; see README.md's Verification section.
+#
+# This is about the C runtime, not about matching the compiler Far Cry 2 itself was built with.
+# FCSE shares no C++ objects with Dunia.dll - it calls engine functions through hand-declared
+# __thiscall signatures and reads engine structs by byte offset, so the engine's own layout rules
+# apply regardless of which compiler built this exe. The plugin ABI (include/plugin_api.h) is pure C
+# for the same reason. Building against the game's own 2008-era toolchain would buy none of that and
+# cost the C++20 the sources are written in.
+#
+# Each module getting its own CRT copy is the one constraint /MT adds: memory allocated in one
+# module must not be freed in another. Nothing here does that - the plugin API passes const char*
+# and callbacks, never ownership.
+#
+# MUST be set before project(): with CMP0091 OLD, project() bakes /MD straight into
+# CMAKE_<LANG>_FLAGS_<CONFIG> and CMAKE_MSVC_RUNTIME_LIBRARY is then ignored entirely - a silent
+# no-op that still builds and still links the dynamic CRT.
+#
+# A build tree configured before this landed keeps that baked-in /MD in its cache and will warn
+# `D9025: overriding '/MDd' with '/MTd'` on every file. Harmless - /MT still wins - but delete
+# out/build/<preset> once to clear it.
+if (POLICY CMP0091)
+  cmake_policy(SET CMP0091 NEW)
+  set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
+endif()
+
 project ("FCSE")
 
 # For the embedded .mgb resources below. project() enables C and CXX only, and a .rc added to a

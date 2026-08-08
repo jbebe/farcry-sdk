@@ -162,3 +162,18 @@ typedef void (*FCSE_OnRegisterFunctionsFn)(const FCSE_PluginAPI* api);
 // extern "C" and the exact names below):
 //   extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api);
 //   extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI* api); // optional
+//
+// Build requirements, in full:
+//
+//   - 32-bit (x86). Far Cry 2 is a 32-bit process; a 64-bit DLL cannot load into it.
+//   - Any compiler, any version. This whole header is deliberately pure C - POD structs, function
+//     pointers, const char* - with no std:: types, no virtuals and no exceptions crossing the
+//     boundary, so a plugin never has to match the toolchain FCSE.exe was built with. (Nor the one
+//     the game was built with: FCSE reaches engine internals through hand-declared __thiscall
+//     signatures and byte offsets, so Dunia's own layout rules apply regardless.)
+//   - /MT (static CRT) is recommended, not required. FCSE.exe uses it so players need no Visual
+//     C++ redistributable installed; a /MD plugin works fine but reintroduces that requirement for
+//     anyone who installs it. Either way each module carries its own CRT, so the usual rule holds:
+//     never free in one module what another allocated. Nothing in this API transfers ownership -
+//     strings passed in are copied, and callbacks hand back values, not buffers - so there is no
+//     way to trip over that through the API itself.
