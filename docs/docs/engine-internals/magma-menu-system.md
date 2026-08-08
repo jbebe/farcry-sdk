@@ -29,6 +29,10 @@ private page was unreachable.
 Current state and the full trail: `tools/FCSE/PLAN-own-page.md`.
 :::
 
+For the data side of the same problem — authoring the `.mgb` a page binds to — see
+[Magma UI](../magma-ui/index.md), in particular
+[binding a page to native code](../magma-ui/patterns.md#binding-a-page-to-native-code).
+
 This page exists because FCSE (`tools/FCSE`) needed a way to let plugins expose simple config UI
 in-game, and building that required reverse-engineering a good chunk of Far Cry 2's native menu
 system (distinct from the `.mgb`/Magma *binary format* itself, which [its own page](../file-formats/mgb.md)
@@ -704,3 +708,18 @@ hashtable-insert risk, no `Action`-dispatch RE needed.
    the binary while investigating something unrelated - worth checking whether an existing native
    `Action` type can invoke a named, registerable callback before assuming the full dispatch mechanism
    needs reversing from scratch.
+
+   **Update (2026-08-08) — mostly answered; full write-up on
+   [Interop with the Dunia engine](../magma-ui/engine-interop.md).** `magma::ActionServer` is a
+   name-hash → factory table filled at startup by two functions only:
+   `magma::ActionServer::RegisterStandardActions` (`0x09fdb500` / `Dunia.dll 0x10ab8000`, the six
+   magma built-ins — `Stop`, `Continue`, `GotoFrameIndex`, `GotoKeyframe`, `PushPage`, `PopPage`) and
+   `CMagmaActionDispatcher::RegisterCustomActions` (`0x095f47f0` / `Dunia.dll 0x105031b0`, **81**
+   `RegisterAction` calls, each a literal string plus a `CreateObject` pointer). Each game action is a
+   `CActionSignal<&_magmaactiondispatcher_X>` or `CInputAction<&_magmaactiondispatcher_X>`
+   instantiation; firing runs `CActionSignalBase::Execute` (`0x095f9630`), and the receiving side is
+   the ~40 game classes implementing `OnActionSignal` (`CFCXBaseOptionPage`, `CBazaarComputerUI`,
+   `CLoadOutUI`, `CFCXMainHudUI`, …). The registry has **no data path into it**, which settles Path
+   B's "hooks replaced to call FCSE functions" idea: a new action name cannot be added from a `.mgb`.
+   Still untraced is the *routing* step — how a raised signal reaches one particular listener
+   (`CUIPageBase::RegisterModule`/`AddListener` are the likely mechanism, not followed).

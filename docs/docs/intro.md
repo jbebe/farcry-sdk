@@ -15,6 +15,8 @@ formats, and engine internals — in one place.
 - **[File Formats](/docs/category/file-formats)** — every known FC2 container/asset format. Where a format
   has been independently confirmed by reverse engineering the engine, that's marked; where a claim
   is community-reported and not yet RE-verified, that's marked too.
+- **[Magma UI](/docs/category/magma-ui)** — how to author Far Cry 2's UI: the Magma model, the XML
+  vocabulary you write, the patterns shipped screens are built from, and the limits of the format.
 - **[Engine Internals](/docs/category/engine-internals)** — notes from reverse-engineering `Dunia.dll` and
   the `FarCry2`/`FarCry2_server` executables: the function-callback registry, command-line parsing,
   the Lua API surface exposed to mods, and more.

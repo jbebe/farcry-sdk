@@ -16,6 +16,12 @@ Corrects an existing community claim: the [Almost Complete Guide](../modding/gui
 of `.mgb` — see "The file pair" below.
 :::
 
+:::tip[Authoring, not parsing?]
+This page is the wire format — what a *tool* needs. If you want to build or edit a screen, start at
+[Magma UI](../magma-ui/index.md): the model, the XML vocabulary, the patterns shipped screens use,
+and the limits of the format.
+:::
+
 FC2's UI screens are built on **Magma**, an in-house UI engine. Each screen is a pair of files: a
 `.mgb.desc` (plain XML — text bindings, nav-bar prompts, and a dependency manifest of the other
 resources the screen needs) and a `.mgb` (binary — the actual widget tree: layout, geometry, keyframe

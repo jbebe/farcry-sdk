@@ -1,0 +1,8 @@
+{
+  "label": "Magma UI",
+  "position": 3,
+  "link": {
+    "type": "generated-index",
+    "description": "How to author Far Cry 2 UI: the Magma model, the XML vocabulary, the patterns shipped screens are built from, and the limits of the format."
+  }
+}

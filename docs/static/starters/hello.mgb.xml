@@ -1,0 +1,255 @@
+<MagmaPackage sentinel="CD0000AB" version="2010000" flag="false" POOLCOUNTS="0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0" PAGESIZE.w="1280" PAGESIZE.h="800" DISPLAYOFFSET.x="160" DISPLAYOFFSET.y="40" DEFAULTMATERIAL="">
+  <TYPES>
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#86F001E3" />
+    <TYPE id="#8392CBAC" />
+    <TYPE id="#22845C29" />
+    <TYPE id="#00000000" />
+    <TYPE id="#1E6BEA67" />
+    <TYPE id="#E29283B9" />
+    <TYPE id="#272C32D8" />
+    <TYPE id="#A54413C0" />
+    <TYPE id="#1226E666" />
+    <TYPE id="#529B8BE3" />
+    <TYPE id="#57E31259" />
+    <TYPE id="#B2762C3B" />
+    <TYPE id="#E171A548" />
+    <TYPE id="#96084622" />
+    <TYPE id="#64B8633A" />
+    <TYPE id="#D6A34D1D" />
+    <TYPE id="#AC89C8A0" />
+    <TYPE id="#09E7E1DF" />
+    <TYPE id="#794D8252" />
+    <TYPE id="#7A3E7B7B" />
+    <TYPE id="#14DE1E75" />
+    <TYPE id="#D7C90C7E" />
+    <TYPE id="#4129C7AD" />
+    <TYPE id="#7ADB61D6" />
+    <TYPE id="#BA876240" />
+    <TYPE id="#9B9628D5" />
+    <TYPE id="#1C426558" />
+    <TYPE id="#23F5F070" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="AreaInstance" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="Font" />
+    <TYPE id="ExternalFont" />
+    <TYPE id="NamedObject" />
+    <TYPE id="#00000000" />
+    <TYPE id="EngineObject" />
+    <TYPE id="Acceptor" />
+    <TYPE id="Area" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="UserData" />
+    <TYPE id="ActionCaller" />
+    <TYPE id="Text" />
+    <TYPE id="#00000000" />
+    <TYPE id="Widget" />
+    <TYPE id="TextBase" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="IScrollable" />
+    <TYPE id="AutonomousAreaInstance" />
+    <TYPE id="PageInstance" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="ListBox" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="Slider" />
+    <TYPE id="#00000000" />
+    <TYPE id="Focusable" />
+    <TYPE id="AreaLink" />
+    <TYPE id="Cursor" />
+    <TYPE id="Element" />
+    <TYPE id="#00000000" />
+    <TYPE id="PageFocusable" />
+    <TYPE id="Checkable" />
+    <TYPE id="Radioable" />
+    <TYPE id="Image" />
+    <TYPE id="#00000000" />
+    <TYPE id="RectShape" />
+    <TYPE id="Placeholder" />
+    <TYPE id="ButtonInstance" />
+    <TYPE id="CheckBoxInstance" />
+    <TYPE id="RadioButtonInstance" />
+    <TYPE id="Material" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="FontFamily" />
+    <TYPE id="ScaleState" />
+    <TYPE id="State" />
+    <TYPE id="#00000000" />
+    <TYPE id="RotationState" />
+    <TYPE id="PosState" />
+    <TYPE id="RectState" />
+    <TYPE id="EditBox" />
+    <TYPE id="#00000000" />
+    <TYPE id="TextBaseState" />
+    <TYPE id="ImageState" />
+    <TYPE id="RectShapeState" />
+    <TYPE id="Window" />
+    <TYPE id="TextState" />
+    <TYPE id="Button" />
+    <TYPE id="CheckBox" />
+    <TYPE id="Page" />
+    <TYPE id="AnonymousType" />
+    <TYPE id="SpecificType&lt;void&gt;" />
+    <TYPE id="GlyphFont" />
+    <TYPE id="StringResource" />
+    <TYPE id="PixmapFont" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="EngineObjectGroup" />
+    <TYPE id="Package" />
+    <TYPE id="StringTable" />
+    <TYPE id="EngineRoot" />
+    <TYPE id="#6086515F" />
+    <TYPE id="#407D2196" />
+    <TYPE id="#63CFB207" />
+    <TYPE id="#BEA83FA8" />
+    <TYPE id="#1E730145" />
+    <TYPE id="#4775F8CE" />
+    <TYPE id="Keyframe" />
+    <TYPE id="DisplayConfiguration" />
+    <TYPE id="Action" />
+    <TYPE id="Texture" />
+    <TYPE id="#00000000" />
+    <TYPE id="FullLink" />
+    <TYPE id="WindowSection" />
+    <TYPE id="ActionExecuter" />
+    <TYPE id="UserDataItem" />
+    <TYPE id="StretchableWindowSection" />
+    <TYPE id="ActionExecuterEvent" />
+    <TYPE id="ActionExecuterInputable" />
+    <TYPE id="ActionExecuterFocusable" />
+    <TYPE id="ActionExecuterEditbox" />
+    <TYPE id="ActionExecuterListbox" />
+    <TYPE id="ActionExecuterPage" />
+    <TYPE id="ActionExecuterPageInstance" />
+    <TYPE id="ActionExecuterSlider" />
+    <TYPE id="AreaHandler" />
+    <TYPE id="PageHandler" />
+    <TYPE id="Handler" />
+    <TYPE id="DrawHandler" />
+    <TYPE id="GenericObject" />
+    <TYPE id="EventTriggeredTimingStrategy" />
+    <TYPE id="TickTimingStrategy" />
+    <TYPE id="NoTimingStrategy" />
+    <TYPE id="SyncTimingStrategy" />
+    <TYPE id="TextScrollerPageHandler" />
+    <TYPE id="TextScrollerEventHandler" />
+    <TYPE id="TextScrollerDrawHandler" />
+    <TYPE id="EventHandler" />
+    <TYPE id="TimingStrategy" />
+    <TYPE id="ActionContinue" />
+    <TYPE id="ActionStop" />
+    <TYPE id="ActionPopPage" />
+    <TYPE id="ActionPushPage" />
+    <TYPE id="ActionGotoFrameIndex" />
+    <TYPE id="ActionGotoKeyFrame" />
+    <TYPE id="#51352634" />
+    <TYPE id="#65AFFFFD" />
+    <TYPE id="#995B0CF8" />
+  </TYPES>
+  <USERDATA name="hello"><PROPERTIES /></USERDATA>
+  <MATERIALS materialExtra="0" />
+  <FONTSUBSTS />
+  <FONTS />
+  <FONTFAMILIES />
+  <CHILDREN>
+    <Area slot="101" type="Page" FRAMERATE="30" CURRENTFRAME="0" STATICBOX="0 1280 0 800" SINGLE_GLOBAL_SELECTION="true">
+      <USERDATA name="HELLO_PAGE">
+        <PROPERTIES>
+          <PROPERTY key="LAYER" type="2" value="10" />
+        </PROPERTIES>
+      </USERDATA>
+      <CHILDREN>
+        <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="root"><PROPERTIES /></USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_root" IDX="0" INTERPOLATION="None">
+              <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+            </Keyframe>
+          </KEYFRAMES>
+          <Placeholder />
+        </Element>
+        <Element slot="76" type="RectShape" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="panel"><PROPERTIES /></USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_panel_in" IDX="0" INTERPOLATION="Linear">
+              <RectShapeState INTERPOLATIONFLAGS="0" STATECOLOR="00FFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="240" RIGHT="1040" TOP="180" BOTTOM="620" OUTLINEWEIGHT="1" OUTLINECOLOR="FF9EB9C0" FILLCOLOR1="C0101010" FILLCOLOR2="C0101010" FILLCOLOR3="C0101010" FILLCOLOR4="C0101010" SHADOWCOLOR="00000000" SHADOWOFFSETX="0" SHADOWOFFSETY="0" />
+            </Keyframe>
+            <Keyframe name="kf_panel_hold" IDX="10" INTERPOLATION="None">
+              <RectShapeState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="240" RIGHT="1040" TOP="180" BOTTOM="620" OUTLINEWEIGHT="1" OUTLINECOLOR="FF9EB9C0" FILLCOLOR1="C0101010" FILLCOLOR2="C0101010" FILLCOLOR3="C0101010" FILLCOLOR4="C0101010" SHADOWCOLOR="00000000" SHADOWOFFSETX="0" SHADOWOFFSETY="0" />
+              <ACTIONEXECUTER slot="133" type="ActionExecuter">
+                <ACTIONS>
+                  <ACTION ACTIONNAME="Stop">
+                    <USERDATA name="#00000000">
+                      <PROPERTIES>
+                        <PROPERTY key="Area to stop" type="17">
+                          <LINK slot="101" LASTOBJECTTYPE="Page" IDS="hello HELLO_PAGE" />
+                        </PROPERTY>
+                      </PROPERTIES>
+                    </USERDATA>
+                  </ACTION>
+                </ACTIONS>
+              </ACTIONEXECUTER>
+            </Keyframe>
+          </KEYFRAMES>
+          <RectShape ISOUTLINED="true" ISFILLED="true" BLENDINGMODE="Normal" />
+        </Element>
+        <Element slot="50" type="Text" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="t_title"><PROPERTIES /></USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_title" IDX="0" INTERPOLATION="None">
+              <TextState INTERPOLATIONFLAGS="0" STATECOLOR="FF9EB9C0" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="260" RIGHT="1020" TOP="200" BOTTOM="240" OFFSETY="0" ABSOFFSETY="0" SHADOWCOLOR="00000000" HEIGHT="24" SHADOWOFFSETX="0" SHADOWOFFSETY="0" LEADING="0" TRACKING="0" />
+            </Keyframe>
+          </KEYFRAMES>
+          <Text useStringTable="false" STRING="HELLO MAGMA" ALIGNMENTX="LEFT" ALIGNMENTY="TOP" WRAPPING="false" CLIPPING="false" ELLIPSIS="true" AUTOSIZED="false" BOLD="false" ITALICS="false" UNDERLINED="false" BLENDINGMODE="Normal" ALPHABLENDFIRST="false">
+            <FONTFAMILY present="true" id="Farcry2_25" PACKAGE="\fonts.mgb" />
+          </Text>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_prompts_navbar"><PROPERTIES /></USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_navbar" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="0" POSITION.y="0" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#E58F0F6C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255"><NEIGHBORS /></FOCUSABLE>
+        </Element>
+      </CHILDREN>
+      <DEFAULT_ELEMENTS>
+        <DEFAULT_ELEMENT CONTROLLER="255" ID="p_prompts_navbar" />
+      </DEFAULT_ELEMENTS>
+    </Area>
+  </CHILDREN>
+  <GENERICOBJECTTABLE name="hello">
+    <GENERICOBJECTS>
+      <GENERICOBJECT name="HELLO_PAGE">
+        <LINK slot="101" LASTOBJECTTYPE="Page" IDS="hello HELLO_PAGE" />
+      </GENERICOBJECT>
+    </GENERICOBJECTS>
+  </GENERICOBJECTTABLE>
+</MagmaPackage>
