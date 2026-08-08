@@ -29,20 +29,48 @@ A running task list across the whole project.
 - [ ] Review the Domino viewer because it needs a lot of improvements
   - Review code
   - Revamp the visual interface, find a good graph wpf package
-- [ ] `.mgm` transpilation for `.mgb` packages — a text interchange format for the Magma UI editor.
-  `.mgm` is Magma's own XML source format: `CFileNameNomad::GetFileType` returns `1` for `.mgm` and
-  `2` for `.mgb`, and `Engine::LoadPackage` picks `Factory::MakeLoadVisitor` (the `CMarkupSTL` XML
-  parser) for type `1`. It is not dead code in the retail client — `Dunia.dll` has
-  `magma::LoadVisitor::vftable` @ `0x10eea404` and `magma::PackageMarkupSTL::vftable` linked in, and
-  `magma::LoadVisitor` has a complete 1:1 `ReadX` per class mirroring `BinaryLoadVisitor`. Two payoffs:
-  a diffable, reviewable text form for the editor, and — since dispatch is purely by extension and
-  `.mgb.desc` is already plain editable XML naming its own `.mgb` — a possible fully data-driven path
-  where a mod ships a `.mgm` and the retail engine parses it directly, with no binary writer involved.
-  Risks to settle first: linked ≠ exercised (Ubisoft may never have run this path in a retail build),
-  no sample `.mgm` exists anywhere in the game data so the document shape has to be reconstructed from
-  the parser rather than checked against a real file, and the XML reader treats every element as
-  optional so an incomplete `.mgm` degrades silently instead of erroring. Field names are already
-  recovered (see [`.mgb` field names](/docs/file-formats/mgb-field-names)).
+- [x] A diffable text form for `.mgb` packages — shipped as JackAll's XML interchange format
+  (`jackall mgb decode` / `mgb encode`, plus Export/Import XML in the editor tab). Deliberately its
+  own schema rather than `.mgm`, borrowing only `.mgm`'s recovered vocabulary for element and
+  attribute names. `.mgm` was ruled out because it *cannot* round-trip a shipped `.mgb`: it has no
+  construct for the per-file type table, the pool-count block, header bytes 5–7/13, or embedded font
+  blobs; it parses floats through `atof`; and it authors names as strings the loader CRC32s, which
+  does not invert — so exporting an existing package would mean inventing names and breaking every
+  cross-reference. See [`.mgb`](/docs/file-formats/mgb#the-xml-interchange-format).
+- [ ] `.mgm` emission for `.mgb` packages — the *other* half of the original idea, still open. Since
+  dispatch is purely by extension and `.mgb.desc` is already plain editable XML naming its own
+  `.mgb`, a mod could in principle ship a `.mgm` the retail engine parses directly, with no binary
+  writer involved: `CFileNameNomad::GetFileType` returns `1` for `.mgm` and `2` for `.mgb`, and
+  `Engine::LoadPackage` picks `Factory::MakeLoadVisitor` (the `CMarkupSTL` XML parser) for type `1`.
+  Not dead code in the retail client — `Dunia.dll` has `magma::LoadVisitor::vftable` @ `0x10eea404`
+  and `magma::PackageMarkupSTL::vftable` linked in, with a complete 1:1 `ReadX` per class mirroring
+  `BinaryLoadVisitor`. Now cheap to attempt: it would be a third `IMgbCodec` implementation over the
+  same `Serialize` descriptions. Risks to settle first: linked ≠ exercised (Ubisoft may never have
+  run this path in a retail build); no sample `.mgm` exists anywhere in the game data, so the
+  document shape — attribute-vs-element text, and how a class is named — has to be reconstructed from
+  `ReadPackage` (`0x0a0688e0`) and `ReadArea`'s child loop rather than checked against a real file;
+  and the XML reader treats every element as optional, so an incomplete `.mgm` degrades silently
+  instead of erroring. Only viable for **newly authored** packages, never for round-tripping a
+  shipped one — the hash problem above is unavoidable. Field names are already recovered (see
+  [`.mgb` field names](/docs/file-formats/mgb-field-names)).
+
+## Tools/FCSE
+
+- [x] Give FCSE its own settings page instead of borrowing the stock Game tab. Delivered
+  2026-08-08 — FCSE authors its own Magma package, feeds it to the engine through a hooked file
+  reader, and binds a private page to it by name. Full trail in `tools/FCSE/PLAN-own-page.md`; the
+  status block at the top lists the six findings that cost the most time, several of
+  which generalise well beyond this feature (vtable slot indices not porting between the ELF and
+  `Dunia.dll`; magma resolving resources by path *hash* so no loose file can be reached by name; a
+  package's identity doubling as its texture root).
+- [ ] Native YES/NO controls on that page via `CSettingsPage::AddBoolSetting`. The rows build
+  correctly — the slot resolves, the widget binds, both entries are added — but clicking one crashes
+  inside the engine's own handling of the `CValueListSetting`, with no FCSE code in the path. Parked
+  behind `Own page native toggles` in `fcse.ini`; the unexplored thread is that object's event slot
+  2 (`0x1081c260`), which keys on magma hash `0x61904E45` and dereferences `setting+0x48`.
+- [ ] Slider and choice settings (`FCSE_SettingType_Slider` / `_Choice` in `include/plugin_api.h`).
+  Needs `AddSliderSetting`/`AddValueListSetting` and a second slot bank in `fcse.mgb` pointing at
+  `common.mgb` area `62EA6603` rather than `652FD37C`.
 
 ## Tools/"dll plugins"
 

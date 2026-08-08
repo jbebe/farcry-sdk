@@ -288,7 +288,12 @@ The whole file body, in order. Everything past the last line is in-memory post-p
 [variable]   UserData        — the Package's own property list (record format below).
 [4 bytes]    PAGESIZE        — u16 width, u16 height
 [4 bytes]    DISPLAYOFFSET   — u16 x, u16 y
-[8 bytes]    u32 materialCount, u32 (forwarded to a setter, not a loop count)
+[8 bytes]    u32 materialCount, u32 distinctTextureCount (a setter argument, not a loop count)
+             The second `u32` is **the number of distinct `texture` paths among the materials that
+             follow** — it equals that count in all 50 corpus files, while equalling `materialCount`
+             in only 45. `ps3.mgb` settles it: 30 materials sharing 1 texture, and the field is 1.
+             Materials that differ only in their UV `REGION` share a texture, which is exactly the
+             gap in `common.mgb` (56 materials, 54 textures) and `loadout.mgb` (40 / 36).
   × materialCount: Material (VisitMaterial @ 0x0a0606a0)
     [4]        u32 nameHash                         (VisitNamedObject)
     [4+n]      u32 texNameLen + n raw ANSI bytes    → Material::LoadTexture
@@ -416,10 +421,28 @@ comes **after** the widget body:
 | `AreaInstance` | `0x0a060a80` | `LABEL` (u32 char count + UTF-16 — the target area's name), `MATERIALLINK`, gate bool → `LINK` (`AreaLink`), `INDEXOFFSET` u32 |
 | `AutonomousAreaInstance`, `ButtonInstance`, `CheckBoxInstance`, `RadioButtonInstance` | — | pure forwards; no fields of their own |
 | `PageInstance` | `0x0a05f3f0` | base `AreaInstance`, then `u32 count` + that many `DEFAULTFOCUS` entries of `DEFAULT_FROM_DIRECTION` u8, `DEFAULT_FROM_DIRECTION_2` u8, id u32 |
-| `ListBox` | `0x0a05f680` | `u8 sortMode`, `4 × bool`, `u8 timingSlot`, `u32 metrics`, `bool` → `u32`, then `3 × [bool → AreaLink]` |
+| `ListBox` | `0x0a05f680` | `u8 sortMode`, `4 × bool`, `u8 timingSlot`, `u32 metrics`, `bool` → `SLIDERLINK` u32, then `3 × [bool → AreaLink]` — the first `AreaLink` is the per-item row template (always `isDuplicate`), see below |
 | `EditBox` | `0x0a05ec80` | `u32 maxLength`, `bool hasPasswordChar` → 1 UTF-16 unit, then `2 × [bool → AreaLink]` |
 | `Slider` | `0x0a05eb10` | `5 × u32` (`SetRange` takes the first two), `bool`, then `4 × [bool → AreaLink]` |
 | `Window` | `0x0a060d70` | `2 × bool` (stretch H/V), then nine 9-patch sections: index 0 and 5–8 stretchable, 1–4 plain |
+
+**`ListBox`'s optional `u32` is a `SLIDERLINK`** — the name hash of a sibling `Slider` element that
+acts as the list's scrollbar, exactly like `TextBase`'s own `SLIDERLINK`. Confirmed by hash identity
+in shipped data: `common.mgb` area `6155790C` (`COMMON_SAVELOADPAGE`, the Save/Load list) has a
+`ListBox` whose optional value is `0xEC6561E0`, and the `Slider` element beside it in that same area
+is named `0xEC6561E0`.
+
+**A scrollbar is authored, not intrinsic — but scrolling is.** Only `COMMON_SAVELOADPAGE` sets this
+field. Every options-family nav list (`common.mgb 36150990`, used by Game/Sound/Display/Network and
+the MP menus) leaves it unset and has no `Slider` at all. Confirmed live by appending 30 rows to one:
+the list keeps a **viewport** and moves it with the selection, clamped at both ends rather than
+wrapping — so a long list scrolls correctly with no scrollbar present, and the `Slider` is purely a
+visual indicator plus drag target.
+
+**The first of the three `AreaLink`s is the row template.** It is `isDuplicate` in every `ListBox` in
+the corpus, pointing at the small area duplicated once per item (`0x1E77C7D0` for most lists,
+`0xCD5A24AE` for `36150990`). The value-list cell `652FD37C` is the only widget in the corpus that
+sets all three.
 
 **Window sections** — `ReadWindowSection` (`0x0a060c40`): `LoadMaterial`, `u32 blendingMode`,
 `ALPHABLENDFIRST`/`FLIPHORIZONTAL`/`FLIPVERTICAL`/`ROTATED` (4× bool).
@@ -522,6 +545,10 @@ Against the 50-file corpus in `tmp/menu/` (gitignored):
   same width reproduces the bytes perfectly while labelling both wrong.
 - **Every corpus file reserialises byte for byte** under the C# codec (`MgbRoundTripTests`), which
   proves reader and writer simultaneously.
+- **Every corpus file survives a round trip through XML byte for byte** (`MgbXmlTests`). This is a
+  strictly stronger check than the binary one: a field can read and write correctly as bytes while
+  being unrepresentable as text, and float bit patterns, non-text string bytes and null-versus-zero
+  each fail here and nowhere else.
 - **Decoded content is semantically real**, not merely structurally plausible: material paths match
   the `.desc` sidecar's `<CTextureResource>` entries byte for byte; `options.mgb`'s string table
   decodes to `"0123456789"`; all 72 `AreaInstance` target names across the corpus are printable and
@@ -540,20 +567,28 @@ Two independent implementations of this spec live in the repo, and they check ea
 - **`tools/JackAll/src/JackAll.Tools/Format/mgb_parser.py`** — the reference decoder, and the
   implementation the live-trace validation above was done against. Read-only.
 - **`tools/JackAll/src/JackAll.Tools/Format/Mgb/`** — the production C# codec and object model,
-  used by JackAll's `.mgb` editor.
+  used by JackAll's `.mgb` editor, its `mgb decode`/`mgb encode` CLI verbs, and the XML interchange
+  format below.
 
 The C# side describes each record's wire format **once**, in a `Serialize(IMgbCodec, MgbContext)`
-method that both the reader and the writer drive. That is not a stylistic choice: the obvious
-alternative (a `Read` and a matching `Write` per record) relies on a human keeping ~40 pairs in step,
-and this format punishes one mismatched width by silently corrupting everything after it. With a
-shared description, `Write(Read(x)) == x` becomes a property the code either has or doesn't.
+method that every codec drives — the binary reader and writer, and both directions of the XML
+interchange format below. That is not a stylistic choice: the obvious alternative (a `Read` and a
+matching `Write` per record) relies on a human keeping ~40 pairs in step, and this format punishes
+one mismatched width by silently corrupting everything after it. With a shared description,
+`Write(Read(x)) == x` becomes a property the code either has or doesn't.
+
+`IMgbCodec` carries structural operations (`Scope`, `Item`, `ListScope`, `Gate`) alongside the field
+primitives. The binary codecs implement them as no-ops, because in a `.mgb` nesting is implied by
+the order of reads and nothing more. They exist so a text codec can recover the tree that the binary
+format expresses only through the shape of the call graph.
 
 Three rules make byte-exact round-tripping work, and are worth repeating for anyone writing a third
 implementation:
 
 - **Derive counts, don't store them.** List lengths come from the live collection on write, so an
-  edited tree can't disagree with its own counts. The one exception is the unexplained `u32` after
-  `materialCount`, which is forwarded to a setter rather than used as a loop bound — preserve it.
+  edited tree can't disagree with its own counts. The one exception is the `u32` after
+  `materialCount`, which is a setter argument rather than a loop bound — preserve it rather than
+  recomputing, since nothing checks it and a future model of it may be wrong.
 - **Keep strings as raw bytes.** ANSI and UTF-16 payloads round-trip as `byte[]`, decoded only for
   display. Going through a `string` risks a non-reversible encoding on unexpected content.
 - **Keep floats as raw bits.** Store the `u32` and reinterpret for display, so NaN payloads and
@@ -569,6 +604,64 @@ The editor derives what it offers from the three `Factory` dispatchers above: th
 package's area list is `MakeArea`'s five classes, and for an area's element list `MakeElement`'s
 fourteen. Since those sets are exactly what the engine can construct, an editor constrained to them
 cannot produce a package the game would reject.
+
+### The XML interchange format
+
+`jackall mgb decode` renders a package as XML and `mgb encode` builds it back; the JackAll editor
+offers the same pair as Export/Import XML. This is the relationship `.fcb` has with the XML Gibbed's
+converter produces — **the game never loads it**. It exists so a package can be diffed, reviewed,
+and edited with ordinary text tools.
+
+It is deliberately **not** `.mgm`, Magma's own XML source format, even though `LoadVisitor` is linked
+into the retail client. `.mgm` is a *source* format that compiles into a `.mgb`, so the two loaders
+are siblings rather than inverses, and it cannot round-trip one:
+
+- No construct exists for the per-file **type table** (a link-order-dependent intern table holding
+  ~35 ids no name is known for), the 260-byte **pool-count block**, header bytes 5–7 and 13, or the
+  **embedded font blobs** in `FONTSUBST`.
+- It parses floats through `atof`, losing NaN payloads and denormals, and cannot express the
+  discarded high bits of the truncating fields (`IDX` u32→u16, `MASKMODE`'s low 3 bits).
+- Most decisively, **`.mgm` authors names as strings that the loader CRC32s, and the binary keeps
+  only the hash.** CRC32 does not invert, so exporting a shipped package to strict `.mgm` means
+  inventing names — which changes every hash and breaks every cross-reference.
+
+What the format does borrow is `.mgm`'s **vocabulary**: element and attribute names are the engine's
+own authored names, from the `BinaryLoadVisitor`↔`LoadVisitor` join in
+[the field-names companion page](./mgb-field-names.md). Structure is elements, leaf fields are
+attributes:
+
+```xml
+<Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+  <USERDATA name="#0BA6368A"><PROPERTIES /></USERDATA>
+  <KEYFRAMES>
+    <Keyframe name="#5264ED6A" IDX="0" INTERPOLATION="None">
+      <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" LEFT="0" RIGHT="32" TOP="0" BOTTOM="32"
+                  TILING.x="1" TILING.y="1" FLIPHORIZONTAL="false" COLOR1="FFFFFFFF" />
+    </Keyframe>
+  </KEYFRAMES>
+  <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+    <MATERIALLINK present="true" id="#C57F6A8E" PACKAGE="\common.mgb" />
+  </Image>
+</Element>
+```
+
+Three substitutions make it readable, and each one **provably reverses** — that is the line, and
+nothing that fails it is substituted:
+
+- **Enum names** come from `magma::Util`'s `ms_tagTable`, so they are engine constants. A value the
+  table doesn't contain stays a bare number, which is what keeps `BLENDINGMODE` (low byte only) and
+  `MASKMODE` (low 3 bits) from silently losing their high bits.
+- **Name hashes** render as the recovered name only when re-hashing it reproduces the stored value,
+  otherwise as `#XXXXXXXX`. A wrong candidate cannot get written.
+- **`type="Image"` beside `slot="74"`** is decoration; **the slot stays authoritative**, because
+  several slots can resolve to one class and rebuilding from the name alone would not reproduce the
+  file.
+
+The escape hatches matter as much as the pretty forms. A float whose decimal spelling isn't bit-exact
+is written as `0x…`; string bytes that can't survive an XML attribute become `base64:…`; and an
+absent optional is an omitted attribute, never an empty one, because `null` and present-with-zero are
+different bytes. Reading is strict — a misspelled attribute or an undefined element is an error
+naming the offender, rather than the silent degradation Magma's own XML loader does.
 
 ### Corrections to earlier revisions
 
@@ -640,8 +733,7 @@ structural:
 
 - **Field semantics.** Many fields are decoded at the right width and position but their meaning is
   inferred from setter names rather than confirmed — e.g. `Button`/`CheckBox`'s 6 and 12 `u32`
-  "timings", `Element`'s 3-bit category enum, `Keyframe`'s `value`, and the second `u32` after
-  `materialCount`.
+  "timings", `Element`'s 3-bit category enum, and `Keyframe`'s `value`.
 - **Header byte 13's flag**, and bytes 5–7 (consumed by the sentinel check but never examined).
 - **`.desc`'s `crc_ID` attribute** — confirmed not to be a CRC32 that the `.mgb` load path checks
   anywhere, which rules out one hypothesis but not what it actually is. Plausibly a build-time-only

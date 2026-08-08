@@ -4,6 +4,7 @@
 #include "hook.h"
 #include "log.h"
 #include "menu_handler.h"
+#include "page_spike.h"
 #include "plugin_loader.h"
 #include "settings_registry.h"
 
@@ -421,10 +422,15 @@ namespace {
     // The whole row-building sequence, shared by the engine's own display path (the detour below)
     // and FCSE's post-toggle refresh (ModPage::RefreshRows). Consumes g_appendPending.
     void RebuildRows(void* gamePage) {
+        // The page-spike diagnostic (page_spike.h, off unless bin\fcse.ini opts in) owns a private
+        // page of the same class, so this same hook fires for it. Its rows go through the identical
+        // rebuild-then-clear-then-append sequence, just with different content.
+        bool spike = PageSpike::OwnsPage(gamePage);
+
         // Consumed up front, not after the native build: this transition's intent is spent either
         // way, and leaving the flag set through a failure would make the *next* display show FCSE's
         // rows - including one reached by the stock "Game" button, which never sets it.
-        bool withModContent = g_appendPending;
+        bool withModContent = g_appendPending || spike;
         g_appendPending = false;
 
         DWORD code = 0;
@@ -442,12 +448,21 @@ namespace {
             // Fall through and append anyway - worst case FCSE's rows sit below native ones,
             // rather than losing FCSE's content entirely.
         }
-        AppendModContent(g_addButton, gamePage);
+        if (spike) {
+            PageSpike::AppendRows(gamePage);
+        } else {
+            AppendModContent(g_addButton, gamePage);
+        }
     }
 
     void RefreshDetourThunk::Detour() {
         void* gamePage = reinterpret_cast<void*>(this);
-        g_gamePage = gamePage; // the only place a real page pointer is ever handed to us
+        // Deliberately not cached when it's the spike's private page: g_gamePage is what
+        // ModPage::RefreshRows rebuilds against, and pointing that at a diagnostic page would make
+        // a Mod Configuration Menu toggle redraw the wrong screen.
+        if (!PageSpike::OwnsPage(gamePage)) {
+            g_gamePage = gamePage; // the only place a real page pointer is ever handed to us
+        }
         RebuildRows(gamePage);
     }
 

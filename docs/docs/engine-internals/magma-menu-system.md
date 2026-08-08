@@ -13,6 +13,22 @@ Everything under "Confirmed facts" was checked against live, running code (decom
 or an actual working/shipped feature) — not inference alone.
 :::
 
+:::caution[Superseded 2026-08-08 — this page records how the problem was solved, not the shipping code]
+FCSE no longer borrows the stock Game tab. It now authors its **own** Magma package, feeds it to the
+engine through a hooked file reader, and binds a private page to it by name — so the "shared page,
+tell the two visits apart with a flag" design this page describes at length is gone, along with the
+files it names. `tools/FCSE/src/mod_page.{h,cpp}` and `menu_handler.{h,cpp}` **no longer exist**;
+their roles live in `src/fcse_page.{h,cpp}`, `src/magma_package.{h,cpp}` and
+`src/page_assets.{h,cpp}`.
+
+The engine facts below — `CGameMenu`'s page table, `CUIPageBase::Init`, the `IMenuItemHandler`
+shape, the `AddButton`/`RefreshOptionList` behaviour — all still hold and are what the current
+implementation is built on. What is stale is which FCSE file does what, and the conclusion that a
+private page was unreachable.
+
+Current state and the full trail: `tools/FCSE/PLAN-own-page.md`.
+:::
+
 This page exists because FCSE (`tools/FCSE`) needed a way to let plugins expose simple config UI
 in-game, and building that required reverse-engineering a good chunk of Far Cry 2's native menu
 system (distinct from the `.mgb`/Magma *binary format* itself, which [its own page](../file-formats/mgb.md)
@@ -351,13 +367,123 @@ confirmed, byte-for-byte, against the four real sample files in `tmp/menu/` (`co
   classes (`Page`/`Text`/`CheckBox`/`RectShape`/etc.), only for fully decoding these particular shipped
   files.
 
+## How a page binds to its Magma layout — the missing link (2026-08-07)
+
+:::info[Live-confirmed]
+Traced on `FarCry2_server`, ported and verified by decompile on `Dunia.dll`, then **exercised live
+in-game** by a private page that initialises and displays correctly. Full plan and evidence:
+`tools/FCSE/PLAN-own-page.md`.
+:::
+
+Everything further down this page that describes a hand-built page as missing "some unidentified
+piece of state" is superseded. There was exactly one missing piece, and it was a call, not a field.
+
+**A page class binds to its Magma layout by *name*, and that name resolves through the `.mgb`'s
+`GenericObjectTable`.** A page ctor takes `(char const* pageName, wchar_t const* title)` —
+`CFCXOptionGamePage` passes `"MAINMENU_OPTIONGAME_PAGE_PC"` — and `CUIPageBase::Init()` turns the
+string into a live widget tree:
+
+```
+Id::Hash(pageName)                                   FUN_10aa7150 (the magma-side CRC32)
+  -> GenericObjectServer::FindGenericObject          folded into 0x10108860
+  -> FullLink::GetLastObject, IsKindOf(magma::Page)
+  -> CUIPageBase::SetPage         0x101090d0         writes this+0x14
+  -> ConfigPage (vtable +0x20), DoInit (vtable +0x14)
+       -> CUIPageBase::FetchMagmaElements   0x10109150
+  -> this+0x68 = 1
+```
+
+| Symbol | `Dunia.dll` | `FarCry2_server` |
+|---|---|---|
+| `CUIPageBase::Init` | `0x10109410` | `0x09129c30` |
+| `CUIPageBase::FetchMagmaElements` | `0x10109150` | `0x0912a7f0` |
+| `CUIPageBase::SetPage` | `0x101090d0` | `0x09129590` |
+| `GenericObjectServer::FindGenericObject` (+ `GetLastObject`/`IsKindOf`) | `0x10108860` | `0x0a05aa50` |
+| `CMagmaElementFactory::GetPage` (fallback path) | `0x10187700` | `0x09283040` |
+| `CMenuPage::DoInit` / `CListMenuPage::DoInit` | `0x10cdb5a0` / `0x10cdbe20` | — / `0x0912d660` |
+| `CMenuPage::SetTitle` | not found | `0x09131710` |
+
+`magma::Engine::LoadPackage` (`FarCry2_server 0x0a03fc90`) registers each loaded package's
+`GenericObjectTable` into the global `GenericObjectServer`, so **any** package can contribute names.
+Confirmed in shipped data: `options.mgb`'s table maps `MAINMENU_OPTIONGAME_PAGE_PC` → its `Page`
+area `C16854EF`, `MAINMENU_OPTION_NETWORK` → `400736ED`, and so on for every Options tab.
+
+**Nothing in the engine calls `Init()` implicitly** — not `CGameMenu::AddPage<T>`, not `SwitchPage`.
+A hand-built page therefore has no bound `magma::Page`, no row `ListBox` and no title `Text`, which
+is what killed every earlier attempt at one. An **empty** name string short-circuits `Init`
+harmlessly: no page, no crash, nothing drawn.
+
+`CUIPageBase` field layout on `Dunia.dll`, read straight off `Init`'s decompile — the page-name
+string is a plain MSVC `std::string`, not an opaque `CryStringBase`:
+
+```
++0x08 / +0x0c / +0x10   row-list Element / magma::ListBox / title magma::TextBase
++0x14                   bound magma::Page*
++0x24                   CStringID of the page name (feeds the GetPage fallback only)
++0x2c                   page-name chars: inline while capacity < 0x10, else a heap pointer
++0x3c  size      +0x40  capacity
++0x68                   inited flag (byte)
+```
+
+A name of 15 characters or fewer lives in the object's own SSO buffer, so setting it is a `memcpy`
+plus two integer writes — no allocation, no refcount emulation.
+
+### What a `CListMenuPage`/`CSettingsPage` layout must contain
+
+`FetchMagmaElements` looks these up by hardcoded name inside the bound page. Miss them and the page
+renders empty rather than crashing: `AddButton` returns `-1` and does nothing when `+0xc` is null.
+
+| Name | Found via | Stored at |
+|---|---|---|
+| `p_menu_nav` → `l_menu_nav_list` | `AreaInstance` → `ListBox` | `+0x8`, `+0xc` |
+| `a_title_bar` → `t_page_title` | `AreaInstance` → `Text` | `+0x10` |
+
+`CListMenuPage::AddButton` is then just `magma::ListBox::AddItem(this+0xc, label, 0)` plus a parallel
+handler vector.
+
+Each settings **row's value control** is a separate pre-authored widget, named by a `UserData`
+property on the page's own Area — those are the two `char const*` arguments to
+`AddBoolSetting`/`AddSliderSetting`/`AddValueListSetting<T>`. Dumped from the real `options.mgb`, the
+Game page declares `SETTING_LABEL_LIST` (the shared label list) plus `SETTING_MOUSE_SMOOTH`,
+`SETTING_INVERTYAXIS`, `SETTING_SENSITIVITY`, `SETTING_CROSSHAIR`, `SETTING_DIFFICULTY`,
+`SETTING_SUBTITLE`, `SETTING_AMBX` and `SETTING_MACHETE`. **A settings page has a fixed, authored
+number of setting slots** — eight here.
+
+Every template those slots instantiate lives in `common.mgb` (`CRC32("common") = E5EC7051`;
+`CRC32("options") = D035FA87`), which is always loaded: `36150990` = nav list + title bar,
+`652FD37C` = one value-list cell, `62EA6603` = slider cell, `E58F0F6C` = navbar prompts. A new page
+package therefore needs no materials, fonts or textures of its own.
+
+Dump any of this from a real file with
+`tools/JackAll/src/JackAll.Tools/Format/mgb_dump_generic_objects.py` and `mgb_dump_area.py`, which
+resolve the stored name hashes by CRC32-ing every ASCII run in `Dunia.dll`.
+
+### Confirmed live: a private page that works
+
+`tools/FCSE/src/page_spike.{h,cpp}` — a diagnostic, off unless `bin\fcse.ini` sets
+`[FCSE] Page spike = true` — constructs a private `CFCXOptionGamePage`, overwrites its name string
+to point at an already-shipped Magma page, calls `Init()`, and reaches it by writing
+`CGameMenu+0x3c` and calling `SwitchPage`. In-game result: a genuinely separate screen, all four
+bindings non-null, FCSE's own rows and nothing else, no exception across repeated entries.
+
+Two behaviours that generalise to any page built this way:
+
+- **The title comes from the page object, not the layout.** The spike borrowed the Network layout and
+  displayed `"Game options"` — the string `CFCXOptionGamePage`'s ctor stored — pushed into the shared
+  `t_page_title` widget. A title cannot be baked into a custom `.mgb`, because that widget lives in
+  `common.mgb`'s shared `a_title_bar`; it must be set on the page object.
+- **Rows survive only if appended from inside the per-display rebuild.** `RefreshOptionList` clears
+  the row list every time the page displays, so anything added at construction is wiped — observed
+  directly on the first spike run, and the same trap the shipped feature hit in 2026-08.
+
 ## What FCSE actually shipped
 
-**Status as of 2026-08-04: a real, separate page, built via Path C below — not yet live-tested
-in-game.** Earlier sessions shipped a simpler fallback first (plain toggle-button rows appended
-directly to the Options category-button screen, no separate page at all); that code is gone,
-replaced by the current version described in Path C. The rows themselves still use the same
-underlying primitive:
+**Status as of 2026-08-04: the real, shared `CFCXOptionGamePage`, reached two ways and gated by a
+flag** — see "Path C" below for the privately-constructed variant that was written, crashed and
+abandoned, and the 2026-08-07 section above for why it crashed and what the working version of that
+same idea looks like. Earlier sessions shipped a simpler fallback first (plain toggle-button rows
+appended directly to the Options category-button screen, no separate page at all); that code is
+gone. The rows themselves still use the same underlying primitive:
 
 - `tools/FCSE/include/plugin_api.h` — `FCSE_Setting` (name, `FCSE_SettingValue` default carrying its
   own `FCSE_SettingType`, optional `onChanged` callback), `FCSE_RegisterSettingsFn`,
@@ -535,9 +661,12 @@ hashtable-insert risk, no `Action`-dispatch RE needed.
    `Initialize` are all now found and structurally confirmed (see the tables above). What's left:
    the absolute vtable-slot-to-named-method mapping for `CUIPageBase` on `Dunia.dll` (i.e., which real
    method — `Display`? `Hide`? something else? — actually lives at the `+0x8`/`+0xc` slots
-   `SwitchPage` calls) wasn't pinned down; not required to build the hand-rolled page (which only
-   needs to fill those slots, not identify what real code used to occupy them), but would close Open
-   question 5 below if chased.
+   `SwitchPage` calls) wasn't pinned down. **Resolved 2026-08-07: they are `Display` (activate) and
+   `Hide` (deactivate).** `CGameMenu::SwitchPage` on `FarCry2_server` (`0x0912b5e0`) calls the old
+   page's vtable `+0x10` and the new page's `+0xc`, and `CUIPageBase::Hide` (`0x09129e00`) is
+   referenced from vtables only — never by a direct call — matching pure activate/deactivate
+   dispatch. `Display` null-guards the bound `magma::Page` at `this+0x14`, so an unbound page draws
+   nothing rather than faulting at this level.
 4. **`IMenuItemHandler`'s real vtable slot layout on Windows/MSVC is unconfirmed.** `ModsMenuHandler`'s
    `kActivateSlot = 1` works empirically (confirmed live, first try) but was never derived from an
    actually-read vtable — no tool was available this session to read raw vtable data out of
@@ -549,6 +678,11 @@ hashtable-insert risk, no `Action`-dispatch RE needed.
    iteration found on the server, and does `CFCXOptionPage::Setup`'s flat `AddButton` sequence fully
    explain it, or is something else also involved)? Not needed for the shipped feature, but relevant if
    a future page needs to insert itself *into* that existing row rather than appending after it.
+   **Partly answered 2026-08-07**: a page's row list is a real `magma::ListBox` (`l_menu_nav_list`,
+   bound at `this+0xc`) and `AddButton` is a plain `ListBox::AddItem` on it — so ordering is just
+   insertion order into that one widget, and inserting *into* the middle means going at the `ListBox`
+   directly rather than through `AddButton`. What still isn't resolved is whether anything besides
+   `Setup`'s flat `AddButton` sequence contributes rows to the tab selector specifically.
 6. **`CGameMenu_PageTable_InsertNode`'s real field-usage for `this+0x14` — added 2026-08-03, no
    longer blocking anything (added 2026-08-04).** Originally the single blocker on Path A. Confirmed
    to be a genuine pointer (a linked-list sentinel, via `CGameMenu::Shutdown`'s own decompile) but

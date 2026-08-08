@@ -19,7 +19,7 @@ public class MgbState : MgbRecord
 {
     public uint InterpolationFlags;
 
-    /// <summary>Packed RGBA (authored as <c>%d %d %d %d</c>).</summary>
+    /// <summary>Packed ARGB, <c>0xAARRGGBB</c> (authored as <c>%d %d %d %d</c>, A first).</summary>
     public uint StateColor;
 
     /// <summary>The concrete class name, which the owning widget's class decides via
@@ -29,7 +29,7 @@ public class MgbState : MgbRecord
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
         c.U32("INTERPOLATIONFLAGS", ref InterpolationFlags);
-        c.U32("STATECOLOR", ref StateColor);
+        c.ColorU32("STATECOLOR", ref StateColor);
     }
 
     /// <summary>Builds the concrete state a keyframe on <paramref name="stateTypeName"/>'s owner
@@ -179,7 +179,7 @@ public sealed class MgbTextState : MgbTextBaseState
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
         base.Serialize(c, ctx);
-        c.U32("SHADOWCOLOR", ref ShadowColor);
+        c.ColorU32("SHADOWCOLOR", ref ShadowColor);
         c.U16("HEIGHT", ref Height);
         c.U8("SHADOWOFFSETX", ref ShadowOffsetX);
         c.U8("SHADOWOFFSETY", ref ShadowOffsetY);
@@ -210,7 +210,7 @@ public sealed class MgbImageState : MgbRectState
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
         base.Serialize(c, ctx);
-        c.U32("SHADOWCOLOR", ref ShadowColor);
+        c.ColorU32("SHADOWCOLOR", ref ShadowColor);
         c.U8("SHADOWOFFSETX", ref ShadowOffsetX);
         c.U8("SHADOWOFFSETY", ref ShadowOffsetY);
         c.F32Bits("TILING.x", ref TilingXBits);
@@ -222,7 +222,7 @@ public sealed class MgbImageState : MgbRectState
         c.Bool("ACTUALSIZE", ref ActualSize);
         for (int i = 0; i < 4; i++)
         {
-            c.U32($"COLOR{i + 1}", ref Colors[i]);
+            c.ColorU32($"COLOR{i + 1}", ref Colors[i]);
         }
     }
 }
@@ -246,12 +246,12 @@ public sealed class MgbRectShapeState : MgbRectState
     {
         base.Serialize(c, ctx);
         c.U8("OUTLINEWEIGHT", ref OutlineWeight);
-        c.U32("OUTLINECOLOR", ref OutlineColor);
+        c.ColorU32("OUTLINECOLOR", ref OutlineColor);
         for (int i = 0; i < 4; i++)
         {
-            c.U32($"FILLCOLOR{i + 1}", ref FillColors[i]);
+            c.ColorU32($"FILLCOLOR{i + 1}", ref FillColors[i]);
         }
-        c.U32("SHADOWCOLOR", ref ShadowColor);
+        c.ColorU32("SHADOWCOLOR", ref ShadowColor);
         c.U8("SHADOWOFFSETX", ref ShadowOffsetX);
         c.U8("SHADOWOFFSETY", ref ShadowOffsetY);
     }
@@ -269,8 +269,8 @@ public sealed class MgbKeyframe : MgbRecord
     /// <c>u16</c>.</summary>
     public uint Idx;
 
-    /// <summary>A timing-strategy type id. The XML authors it as a class name resolved through
-    /// <c>Util::GetType</c>.</summary>
+    /// <summary>The easing curve, a plain <c>Util::GetType</c> group-0 value. Not a timing-strategy
+    /// type id - that is <see cref="MgbAreaLink.TimingSlot"/>.</summary>
     public uint Interpolation;
 
     public MgbState State = new();
@@ -281,14 +281,17 @@ public sealed class MgbKeyframe : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U32("name", ref NameId);
+        c.NameId("name", ref NameId);
         Action.Serialize(c, ctx);
         c.U32("IDX", ref Idx);
-        c.U32("INTERPOLATION", ref Interpolation);
+        c.EnumU32("INTERPOLATION", ref Interpolation, MgbEnums.Interpolation);
         if (c.IsReading)
         {
             State = MgbState.Create(StateTypeName);
         }
-        State.Serialize(c, ctx);
+        using (c.Scope(StateTypeName))
+        {
+            State.Serialize(c, ctx);
+        }
     }
 }

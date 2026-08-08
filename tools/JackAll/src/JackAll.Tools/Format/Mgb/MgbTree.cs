@@ -11,7 +11,7 @@ public sealed class MgbNeighbor : MgbRecord
     {
         c.U8("CONTROLLER", ref Controller);
         c.U8("DIRECTION", ref Direction);
-        c.U32("ID", ref Id);
+        c.NameId("ID", ref Id);
     }
 }
 
@@ -29,7 +29,7 @@ public sealed class MgbFocusableTail : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        SerializeList(c, ctx, Neighbors);
+        SerializeList(c, ctx, "NEIGHBORS", "NEIGHBOR", Neighbors);
         c.U8("INPUTFILTER", ref InputFilter);
     }
 }
@@ -71,38 +71,52 @@ public sealed class MgbElement : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        UserData.Serialize(c, ctx);
+        using (c.Scope("USERDATA"))
+        {
+            UserData.Serialize(c, ctx);
+        }
         Action.Serialize(c, ctx);
         c.Bool("HIDDEN", ref Hidden);
         c.Bool("ISDUPLICATABLE", ref IsDuplicatable);
-        c.U32("MASKMODE", ref MaskMode);
+        c.EnumU32("MASKMODE", ref MaskMode, MgbEnums.MaskMode);
 
         int n = Keyframes.Count;
-        c.Count(ref n);
-        if (c.IsReading)
+        using (c.ListScope("KEYFRAMES", ref n))
         {
-            Keyframes.Clear();
-            for (int i = 0; i < n; i++)
+            if (c.IsReading)
             {
-                Keyframes.Add(new MgbKeyframe { StateTypeName = StateTypeName });
+                Keyframes.Clear();
+                for (int i = 0; i < n; i++)
+                {
+                    Keyframes.Add(new MgbKeyframe { StateTypeName = StateTypeName });
+                }
             }
-        }
-        foreach (MgbKeyframe keyframe in Keyframes)
-        {
-            keyframe.StateTypeName = StateTypeName;
-            keyframe.Serialize(c, ctx);
+            foreach (MgbKeyframe keyframe in Keyframes)
+            {
+                keyframe.StateTypeName = StateTypeName;
+                using (c.Item("Keyframe"))
+                {
+                    keyframe.Serialize(c, ctx);
+                }
+            }
         }
 
         if (c.IsReading)
         {
             Widget = MgbWidget.Create(WidgetTypeName);
         }
-        Widget.Serialize(c, ctx);
+        using (c.Scope(WidgetTypeName))
+        {
+            Widget.Serialize(c, ctx);
+        }
 
         if (MgbSchema.WrapperHasFocusableTail(WidgetTypeName))
         {
             Focusable ??= new MgbFocusableTail();
-            Focusable.Serialize(c, ctx);
+            using (c.Scope("FOCUSABLE"))
+            {
+                Focusable.Serialize(c, ctx);
+            }
         }
         else if (c.IsReading)
         {
@@ -114,32 +128,40 @@ public sealed class MgbElement : MgbRecord
     public static void SerializeElementList(IMgbCodec c, MgbContext ctx, List<MgbElement> elements)
     {
         int n = elements.Count;
-        c.Count(ref n);
-        if (c.IsReading)
+        using (c.ListScope("CHILDREN", ref n))
         {
-            elements.Clear();
-            for (int i = 0; i < n; i++)
+            if (c.IsReading)
             {
-                byte slot = 0;
-                c.U8("type", ref slot);
-                string? name = ctx.Types.NameForSlot(slot);
-                if (!MgbSchema.IsWidgetType(name))
+                elements.Clear();
+                for (int i = 0; i < n; i++)
                 {
-                    throw new MgbFormatException(
-                        $"element type slot {slot} resolves to '{name ?? "<unnamed>"}', which is not one " +
-                        $"of the 14 widget classes Factory::MakeElement can construct, at offset {c.Position - 1}");
+                    using (c.Item("Element"))
+                    {
+                        byte slot = 0;
+                        c.TypeSlot("slot", "type", ref slot, ctx.Types);
+                        string? name = ctx.Types.NameForSlot(slot);
+                        if (!MgbSchema.IsWidgetType(name))
+                        {
+                            throw new MgbFormatException(
+                                $"element type slot {slot} resolves to '{name ?? "<unnamed>"}', which is not one " +
+                                $"of the 14 widget classes Factory::MakeElement can construct, at offset {c.Position - 1}");
+                        }
+                        var element = new MgbElement { TypeSlot = slot, WidgetTypeName = name! };
+                        element.Serialize(c, ctx);
+                        elements.Add(element);
+                    }
                 }
-                var element = new MgbElement { TypeSlot = slot, WidgetTypeName = name! };
-                element.Serialize(c, ctx);
-                elements.Add(element);
+                return;
             }
-            return;
-        }
-        foreach (MgbElement element in elements)
-        {
-            byte slot = element.TypeSlot;
-            c.U8("type", ref slot);
-            element.Serialize(c, ctx);
+            foreach (MgbElement element in elements)
+            {
+                using (c.Item("Element"))
+                {
+                    byte slot = element.TypeSlot;
+                    c.TypeSlot("slot", "type", ref slot, ctx.Types);
+                    element.Serialize(c, ctx);
+                }
+            }
         }
     }
 }
@@ -153,7 +175,7 @@ public sealed class MgbElementTag : MgbRecord
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
         c.U8("CONTROLLER", ref Controller);
-        c.U32("ID", ref Id);
+        c.NameId("ID", ref Id);
     }
 }
 
@@ -195,22 +217,22 @@ public sealed class MgbArea : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        UserData.Serialize(c, ctx);
+        using (c.Scope("USERDATA"))
+        {
+            UserData.Serialize(c, ctx);
+        }
         Action.Serialize(c, ctx);
         c.U32("FRAMERATE", ref FrameRate);
         c.U32("CURRENTFRAME", ref CurrentFrame);
         MgbElement.SerializeElementList(c, ctx, Elements);
-        for (int i = 0; i < 4; i++)
-        {
-            c.U16($"STATICBOX[{i}]", ref StaticBox[i]);
-        }
+        c.U16Array("STATICBOX", StaticBox);
 
         switch (TypeName)
         {
             case "Area":
                 break;
             case "Page":
-                SerializeList(c, ctx, DefaultElementTags);
+                SerializeList(c, ctx, "DEFAULT_ELEMENTS", "DEFAULT_ELEMENT", DefaultElementTags);
                 c.Bool("SINGLE_GLOBAL_SELECTION", ref SingleGlobalSelection);
                 break;
             case "Cursor":
@@ -224,10 +246,7 @@ public sealed class MgbArea : MgbRecord
                 {
                     Array.Resize(ref Timings, count);
                 }
-                for (int i = 0; i < count; i++)
-                {
-                    c.U32($"TIMINGS[{i}]", ref Timings[i]);
-                }
+                c.U32Array("TIMINGS", Timings);
                 break;
             default:
                 throw new MgbFormatException($"'{TypeName}' is not an Area subtype");
@@ -238,32 +257,40 @@ public sealed class MgbArea : MgbRecord
     public static void SerializeAreaList(IMgbCodec c, MgbContext ctx, List<MgbArea> areas)
     {
         int n = areas.Count;
-        c.Count(ref n);
-        if (c.IsReading)
+        using (c.ListScope("CHILDREN", ref n))
         {
-            areas.Clear();
-            for (int i = 0; i < n; i++)
+            if (c.IsReading)
             {
-                byte slot = 0;
-                c.U8("type", ref slot);
-                string? name = ctx.Types.NameForSlot(slot);
-                if (!MgbSchema.IsAreaType(name))
+                areas.Clear();
+                for (int i = 0; i < n; i++)
                 {
-                    throw new MgbFormatException(
-                        $"area type slot {slot} resolves to '{name ?? "<unnamed>"}', which is not one of " +
-                        $"the 5 classes Factory::MakeArea can construct, at offset {c.Position - 1}");
+                    using (c.Item("Area"))
+                    {
+                        byte slot = 0;
+                        c.TypeSlot("slot", "type", ref slot, ctx.Types);
+                        string? name = ctx.Types.NameForSlot(slot);
+                        if (!MgbSchema.IsAreaType(name))
+                        {
+                            throw new MgbFormatException(
+                                $"area type slot {slot} resolves to '{name ?? "<unnamed>"}', which is not one of " +
+                                $"the 5 classes Factory::MakeArea can construct, at offset {c.Position - 1}");
+                        }
+                        var area = new MgbArea { TypeSlot = slot, TypeName = name! };
+                        area.Serialize(c, ctx);
+                        areas.Add(area);
+                    }
                 }
-                var area = new MgbArea { TypeSlot = slot, TypeName = name! };
-                area.Serialize(c, ctx);
-                areas.Add(area);
+                return;
             }
-            return;
-        }
-        foreach (MgbArea area in areas)
-        {
-            byte slot = area.TypeSlot;
-            c.U8("type", ref slot);
-            area.Serialize(c, ctx);
+            foreach (MgbArea area in areas)
+            {
+                using (c.Item("Area"))
+                {
+                    byte slot = area.TypeSlot;
+                    c.TypeSlot("slot", "type", ref slot, ctx.Types);
+                    area.Serialize(c, ctx);
+                }
+            }
         }
     }
 }

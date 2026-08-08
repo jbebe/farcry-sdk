@@ -1,9 +1,11 @@
 using System.Collections;
 using System.ComponentModel;
+using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
 using JackAll.Tools.Format.Mgb;
+using Microsoft.Win32;
 
 namespace JackAll.App.Mgb;
 
@@ -302,6 +304,88 @@ public partial class MgbTabView : UserControl
         Rebuild(delta < 0 ? "Moved up." : "Moved down.");
     }
 
+    /// <summary>
+    /// Writes the package out as XML for editing elsewhere.
+    /// </summary>
+    /// <remarks>
+    /// An extra way in and out, not a replacement for the tree: the tab still edits the decoded
+    /// model directly. XML earns its place for the things a tree is bad at - diffing two packages,
+    /// reviewing a change, or a find-and-replace across hundreds of elements.
+    /// </remarks>
+    private void ExportXmlButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_package is null)
+        {
+            return;
+        }
+
+        var dialog = new SaveFileDialog
+        {
+            Title = "Export this package as XML…",
+            FileName = Path.GetFileNameWithoutExtension(_fileName) + ".xml",
+            Filter = "XML file|*.xml",
+        };
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true)
+        {
+            return;
+        }
+
+        try
+        {
+            File.WriteAllText(dialog.FileName, MgbXml.ToXml(_package));
+            SetStatus($"Exported to {dialog.FileName}", ok: true);
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Couldn't export: {ex.Message}", ok: false);
+        }
+    }
+
+    /// <summary>Replaces the open package with one built from an XML document, leaving it staged as
+    /// an unsaved edit so it can still be reviewed - or abandoned - before it touches the file.</summary>
+    private void ImportXmlButton_Click(object sender, RoutedEventArgs e)
+    {
+        var dialog = new OpenFileDialog
+        {
+            Title = "Import a (possibly edited) exported .xml",
+            Filter = "XML file|*.xml",
+        };
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true)
+        {
+            return;
+        }
+
+        if (IsDirty && MessageBox.Show(
+                Window.GetWindow(this),
+                "This tab has unsaved changes. Importing replaces the whole package and discards them.\n\nContinue?",
+                "JackAll", MessageBoxButton.OKCancel, MessageBoxImage.Warning) != MessageBoxResult.OK)
+        {
+            return;
+        }
+
+        MgbPackage imported;
+        try
+        {
+            imported = MgbXml.FromXml(File.ReadAllText(dialog.FileName));
+        }
+        catch (Exception ex)
+        {
+            SetStatus($"Couldn't import: {ex.Message}", ok: false);
+            return;
+        }
+
+        _package = imported;
+        _names = MgbNameLookup.For(imported);
+        Tree.ItemsSource = new[] { MgbTreeNode.Build(imported, _names) };
+        ShowProperties(null);
+        _selected = null;
+        SelectionText.Text = string.Empty;
+        IsDirty = true;
+        UpdateCommandStates();
+        SetStatus($"Imported {Path.GetFileName(dialog.FileName)}. Not written to the file until you press Save.",
+            ok: true);
+    }
+
     private void SaveButton_Click(object sender, RoutedEventArgs e)
     {
         if (Save() is { } error)
@@ -360,6 +444,7 @@ public partial class MgbTabView : UserControl
         DeleteButton.IsEnabled = loaded && listMember;
         MoveUpButton.IsEnabled = loaded && listMember;
         MoveDownButton.IsEnabled = loaded && listMember;
+        ExportXmlButton.IsEnabled = loaded;
         SaveButton.IsEnabled = loaded && _invalidRows == 0;
     }
 

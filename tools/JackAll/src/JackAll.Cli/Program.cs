@@ -1,6 +1,7 @@
 using JackAll.Cli.Commands;
 using JackAll.Cli.Commands.Archive;
 using JackAll.Cli.Commands.Fcb;
+using JackAll.Cli.Commands.Mgb;
 using JackAll.Cli.Commands.Mod;
 using JackAll.Cli.Commands.Rml;
 using JackAll.Cli.Commands.Sbao;
@@ -110,6 +111,17 @@ app.Configure(config =>
         fcb.AddCommand<FcbEncodeCommand>("encode")
             .WithDescription("Re-encode an XML index folder back into an .fcb.")
             .WithExample("fcb", "encode", "entitylibrary/entitylibrary.xml");
+    });
+
+    // --- .mgb Magma UI packages -----------------------------------------
+    config.AddBranch("mgb", mgb =>
+    {
+        mgb.AddCommand<MgbDecodeCommand>("decode")
+            .WithDescription("Decode a binary .mgb (Magma UI package) to editable XML.")
+            .WithExample("mgb", "decode", "options.mgb");
+        mgb.AddCommand<MgbEncodeCommand>("encode")
+            .WithDescription("Build an XML document back into a binary .mgb.")
+            .WithExample("mgb", "encode", "options.xml");
     });
 
     // --- .rml resource manifests ----------------------------------------

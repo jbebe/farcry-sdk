@@ -24,12 +24,9 @@ public sealed class MgbMaterial : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U32("name", ref NameId);
+        c.NameId("name", ref NameId);
         c.AnsiString("texture", ref TextureName);
-        for (int i = 0; i < 4; i++)
-        {
-            c.F32Bits($"region[{i}]", ref RegionBits[i]);
-        }
+        c.F32BitsArray("REGION", RegionBits);
     }
 }
 
@@ -44,7 +41,7 @@ public sealed class MgbFontSubst : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U8("type", ref TypeSlot);
+        c.TypeSlot("slot", "type", ref TypeSlot, ctx.Types);
         c.AnsiString("fontData", ref FontData);
         c.AnsiString("FONTSUBST", ref SubstName);
     }
@@ -60,7 +57,7 @@ public sealed class MgbFontRef : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U8("type", ref TypeSlot);
+        c.TypeSlot("slot", "type", ref TypeSlot, ctx.Types);
         c.AnsiString("name", ref Name);
         c.AnsiString("file", ref FileName);
     }
@@ -77,7 +74,7 @@ public sealed class MgbFontFamily : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U32("name", ref NameId);
+        c.NameId("name", ref NameId);
         c.AnsiString("font", ref FontName);
         if (FontName.Length != 0)
         {
@@ -106,7 +103,7 @@ public sealed class MgbStringResource : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U32("name", ref NameId);
+        c.NameId("name", ref NameId);
         c.Utf16String("STRINGRESOURCE", ref Value);
     }
 }
@@ -127,8 +124,8 @@ public sealed class MgbStringTable : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U32("name", ref NameId);
-        SerializeList(c, ctx, Strings);
+        c.NameId("name", ref NameId);
+        SerializeList(c, ctx, "STRINGS", "STRING", Strings);
     }
 }
 
@@ -141,8 +138,11 @@ public sealed class MgbGenericObject : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U32("name", ref NameId);
-        Link.Serialize(c, ctx);
+        c.NameId("name", ref NameId);
+        using (c.Scope("LINK"))
+        {
+            Link.Serialize(c, ctx);
+        }
     }
 }
 
@@ -155,8 +155,8 @@ public sealed class MgbGenericObjectTable : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U32("name", ref NameId);
-        SerializeList(c, ctx, Objects);
+        c.NameId("name", ref NameId);
+        SerializeList(c, ctx, "GENERICOBJECTS", "GENERICOBJECT", Objects);
     }
 }
 
@@ -244,7 +244,7 @@ public sealed class MgbPackage
         byte[] scratch = [];
         codec.Blob("magic", ref scratch, 9); // magic + sentinel, already validated above
 
-        package.SerializeAfterMagic(codec);
+        package.SerializeBody(codec);
 
         if (codec.Remaining != 0)
         {
@@ -260,13 +260,13 @@ public sealed class MgbPackage
         var codec = new MgbWriteCodec(Invert);
         byte[] magic = [.. Magic, .. Sentinel];
         codec.Blob("magic", ref magic, 9);
-        SerializeAfterMagic(codec);
+        SerializeBody(codec);
         return codec.ToArray();
     }
 
     /// <summary>The single description of everything past the 9-byte magic+sentinel prefix, shared
-    /// by <see cref="Read"/> and <see cref="Write"/>.</summary>
-    private void SerializeAfterMagic(IMgbCodec c)
+    /// by <see cref="Read"/>, <see cref="Write"/> and both directions of <see cref="MgbXml"/>.</summary>
+    internal void SerializeBody(IMgbCodec c)
     {
         c.U32("version", ref Version);
         if (Version != ExpectedVersion)
@@ -279,31 +279,39 @@ public sealed class MgbPackage
 
         // A single count byte, then count-1 raw ids: the fill loop runs slots 1..N-1, so slot 0 is
         // never populated and a body type byte B names table entry B-1.
-        byte typeCount = checked((byte)(Types.RawIds.Count + 1));
-        c.U8("typeCount", ref typeCount);
-        if (c.IsReading)
+        int typeCount = Types.RawIds.Count;
+        using (c.ListScope("TYPES", ref typeCount, MgbCountWidth.U8Plus1))
         {
-            Types.RawIds.Clear();
-            for (int i = 0; i < typeCount - 1; i++)
+            if (c.IsReading)
             {
-                Types.RawIds.Add(0);
+                Types.RawIds.Clear();
+                for (int i = 0; i < typeCount; i++)
+                {
+                    Types.RawIds.Add(0);
+                }
             }
-        }
-        for (int i = 0; i < Types.RawIds.Count; i++)
-        {
-            uint id = Types.RawIds[i];
-            c.U32($"type[{i + 1}]", ref id);
-            Types.RawIds[i] = id;
+            for (int i = 0; i < Types.RawIds.Count; i++)
+            {
+                using (c.Item("TYPE"))
+                {
+                    // A class name is a CRC32 of a string exactly like an object name, so the same
+                    // verified name-or-hash rendering covers both - which is also why the ~35 ids
+                    // no name is known for survive as #XXXXXXXX rather than being lost.
+                    uint id = Types.RawIds[i];
+                    c.NameId("id", ref id);
+                    Types.RawIds[i] = id;
+                }
+            }
         }
 
         var ctx = new MgbContext(Types);
 
-        for (int i = 0; i < PoolCounts.Length; i++)
-        {
-            c.U32($"pool[{i}]", ref PoolCounts[i]);
-        }
+        c.U32Array("POOLCOUNTS", PoolCounts);
 
-        UserData.Serialize(c, ctx);
+        using (c.Scope("USERDATA"))
+        {
+            UserData.Serialize(c, ctx);
+        }
 
         c.U16("PAGESIZE.w", ref PageWidth);
         c.U16("PAGESIZE.h", ref PageHeight);
@@ -311,24 +319,31 @@ public sealed class MgbPackage
         c.U16("DISPLAYOFFSET.y", ref DisplayOffsetY);
 
         int materialCount = Materials.Count;
-        c.Count(ref materialCount);
-        c.U32("materialExtra", ref MaterialExtra);
-        if (c.IsReading)
+        using (c.ListScope("MATERIALS", ref materialCount))
         {
-            Materials.Clear();
-            for (int i = 0; i < materialCount; i++)
+            // Sits between the count and the items on the wire, so it belongs to the list element
+            // rather than to the package.
+            c.U32("materialExtra", ref MaterialExtra);
+            if (c.IsReading)
             {
-                Materials.Add(new MgbMaterial());
+                Materials.Clear();
+                for (int i = 0; i < materialCount; i++)
+                {
+                    Materials.Add(new MgbMaterial());
+                }
+            }
+            foreach (MgbMaterial material in Materials)
+            {
+                using (c.Item("Material"))
+                {
+                    material.Serialize(c, ctx);
+                }
             }
         }
-        foreach (MgbMaterial material in Materials)
-        {
-            material.Serialize(c, ctx);
-        }
 
-        MgbRecordHelpers.List(c, ctx, FontSubsts);
-        MgbRecordHelpers.List(c, ctx, FontRefs);
-        MgbRecordHelpers.List(c, ctx, FontFamilies);
+        MgbRecordHelpers.List(c, ctx, "FONTSUBSTS", "FONTSUBST", FontSubsts);
+        MgbRecordHelpers.List(c, ctx, "FONTS", "FONT", FontRefs);
+        MgbRecordHelpers.List(c, ctx, "FONTFAMILIES", "FONTFAMILY", FontFamilies);
 
         MgbArea.SerializeAreaList(c, ctx, Areas);
 
@@ -344,39 +359,4 @@ public sealed class MgbPackage
         $"page {PageWidth}x{PageHeight}, {Materials.Count} material(s), " +
         $"{FontSubsts.Count}/{FontRefs.Count}/{FontFamilies.Count} font records, " +
         $"{Areas.Count} area(s), {byteLength:N0} bytes";
-}
-
-/// <summary>The list/optional helpers <see cref="MgbRecord"/> keeps <c>protected</c>, exposed for
-/// <see cref="MgbPackage"/> which is not itself a record.</summary>
-internal static class MgbRecordHelpers
-{
-    public static void List<T>(IMgbCodec c, MgbContext ctx, List<T> items) where T : MgbRecord, new()
-    {
-        int n = items.Count;
-        c.Count(ref n);
-        if (c.IsReading)
-        {
-            items.Clear();
-            for (int i = 0; i < n; i++)
-            {
-                items.Add(new T());
-            }
-        }
-        foreach (T item in items)
-        {
-            item.Serialize(c, ctx);
-        }
-    }
-
-    public static void Optional<T>(IMgbCodec c, MgbContext ctx, string name, ref T? item)
-        where T : MgbRecord, new()
-    {
-        bool present = item is not null;
-        c.Bool(name, ref present);
-        if (c.IsReading)
-        {
-            item = present ? new T() : null;
-        }
-        item?.Serialize(c, ctx);
-    }
 }

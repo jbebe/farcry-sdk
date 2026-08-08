@@ -1,6 +1,4 @@
-using JackAll.Tools.Format.Mgb;
-
-namespace JackAll.App.Mgb;
+namespace JackAll.Tools.Format.Mgb;
 
 /// <summary>
 /// Turns the CRC32 name hashes that fill a <c>.mgb</c> back into readable names.
@@ -15,6 +13,10 @@ namespace JackAll.App.Mgb;
 /// of the area it points at, so hashing the labels a file already contains resolves the areas in
 /// that same file. That plus the known class names covers the common cases with no external data.
 /// Anything still unresolved shows as <c>#XXXXXXXX</c> rather than a guess.
+///
+/// Nothing here is ever trusted on its own: <see cref="MgbXml"/> writes a resolved name only after
+/// re-hashing it and confirming the result matches, so a name that reached the dictionary by a
+/// coincidence cannot survive into an exported document.
 /// </remarks>
 public sealed class MgbNameLookup
 {

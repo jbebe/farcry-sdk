@@ -20,37 +20,63 @@ public abstract class MgbRecord
 
     /// <summary>A count-prefixed list of homogeneous records. The count is derived from the live
     /// collection on write, so the two can never disagree.</summary>
-    protected static void SerializeList<T>(IMgbCodec c, MgbContext ctx, List<T> items)
+    protected static void SerializeList<T>(
+        IMgbCodec c, MgbContext ctx, string listName, string itemName, List<T> items)
         where T : MgbRecord, new()
-    {
-        int n = items.Count;
-        c.Count(ref n);
-        if (c.IsReading)
-        {
-            items.Clear();
-            for (int i = 0; i < n; i++)
-            {
-                items.Add(new T());
-            }
-        }
-        foreach (T item in items)
-        {
-            item.Serialize(c, ctx);
-        }
-    }
+        => MgbRecordHelpers.List(c, ctx, listName, itemName, items);
 
     /// <summary>An optional sub-record behind a <c>bool</c> gate. On write the gate is derived from
     /// whether the record is present.</summary>
     protected static void SerializeOptional<T>(IMgbCodec c, MgbContext ctx, string name, ref T? item)
         where T : MgbRecord, new()
+        => MgbRecordHelpers.Optional(c, ctx, name, ref item);
+}
+
+/// <summary>The list/optional helpers, also reachable from <see cref="MgbPackage"/> which is not
+/// itself a record.</summary>
+internal static class MgbRecordHelpers
+{
+    public static void List<T>(
+        IMgbCodec c, MgbContext ctx, string listName, string itemName, List<T> items)
+        where T : MgbRecord, new()
     {
-        bool present = item is not null;
-        c.Bool(name, ref present);
+        int n = items.Count;
+        using (c.ListScope(listName, ref n))
+        {
+            if (c.IsReading)
+            {
+                items.Clear();
+                for (int i = 0; i < n; i++)
+                {
+                    items.Add(new T());
+                }
+            }
+            foreach (T item in items)
+            {
+                using (c.Item(itemName))
+                {
+                    item.Serialize(c, ctx);
+                }
+            }
+        }
+    }
+
+    public static void Optional<T>(IMgbCodec c, MgbContext ctx, string name, ref T? item)
+        where T : MgbRecord, new()
+    {
+        bool present = c.Gate(name, item is not null);
         if (c.IsReading)
         {
             item = present ? new T() : null;
         }
-        item?.Serialize(c, ctx);
+        if (item is null)
+        {
+            return;
+        }
+        using (c.Scope(name))
+        {
+            item.Serialize(c, ctx);
+        }
     }
 }
 
@@ -72,12 +98,14 @@ public sealed class MgbResourceRef : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
+        // Not a Gate: the owning record always writes this one as a named scope, so absence has to
+        // be spelled out rather than implied by a missing element.
         c.Bool("present", ref Present);
         if (!Present)
         {
             return;
         }
-        c.U32("id", ref Id);
+        c.NameId("id", ref Id);
         c.AnsiString("PACKAGE", ref PackageName);
     }
 }
@@ -96,8 +124,7 @@ public sealed class MgbFullLink : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        ushort count = (ushort)Ids.Count;
-        c.U16("count", ref count);
+        int count = c.Count("IDS", Ids.Count, MgbCountWidth.U16);
         if (count == 0)
         {
             if (c.IsReading)
@@ -106,7 +133,7 @@ public sealed class MgbFullLink : MgbRecord
             }
             return;
         }
-        c.U8("LASTOBJECTTYPE", ref TypeSlot);
+        c.TypeSlot("slot", "LASTOBJECTTYPE", ref TypeSlot, ctx.Types);
         if (c.IsReading)
         {
             Ids.Clear();
@@ -115,12 +142,7 @@ public sealed class MgbFullLink : MgbRecord
                 Ids.Add(0);
             }
         }
-        for (int i = 0; i < Ids.Count; i++)
-        {
-            uint id = Ids[i];
-            c.U32("id", ref id);
-            Ids[i] = id;
-        }
+        c.NameIdItems("IDS", Ids);
     }
 }
 
@@ -133,8 +155,8 @@ public sealed class MgbStringResourceExternalId : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U32("TABLEID", ref TableId);
-        c.U32("RESOURCEID", ref ResourceId);
+        c.NameId("TABLEID", ref TableId);
+        c.NameId("RESOURCEID", ref ResourceId);
     }
 }
 
@@ -171,7 +193,7 @@ public sealed class MgbProperty : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U32("key", ref Key);
+        c.NameId("key", ref Key);
         c.U32("type", ref TypeTag);
         switch (TypeTag)
         {
@@ -179,6 +201,7 @@ public sealed class MgbProperty : MgbRecord
                 c.U32("value", ref ScalarValue);
                 break;
             case TagFloat:
+                // The one field whose kind is decided by a sibling rather than by its own name.
                 c.F32Bits("value", ref ScalarValue);
                 break;
             case TagBool:
@@ -191,11 +214,17 @@ public sealed class MgbProperty : MgbRecord
             case TagFullLinkB:
             case TagFullLinkC:
                 Link ??= new MgbFullLink();
-                Link.Serialize(c, ctx);
+                using (c.Scope("LINK"))
+                {
+                    Link.Serialize(c, ctx);
+                }
                 break;
             case TagStringResource:
                 StringResource ??= new MgbStringResourceExternalId();
-                StringResource.Serialize(c, ctx);
+                using (c.Scope("STRINGRESOURCE"))
+                {
+                    StringResource.Serialize(c, ctx);
+                }
                 break;
             default:
                 // Every other tag - enumerated in the engine's switch or not - carries nothing.
@@ -215,8 +244,8 @@ public sealed class MgbUserData : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U32("name", ref NameId);
-        SerializeList(c, ctx, Properties);
+        c.NameId("name", ref NameId);
+        SerializeList(c, ctx, "PROPERTIES", "PROPERTY", Properties);
     }
 }
 
@@ -236,22 +265,9 @@ public sealed class MgbAreaLink : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U8("TIMING", ref TimingSlot);
-        c.U32("PACKAGE", ref Package);
-
-        bool hasArea = Area.HasValue;
-        c.Bool("hasArea", ref hasArea);
-        if (hasArea)
-        {
-            uint area = Area ?? 0;
-            c.U32("AREA", ref area);
-            Area = area;
-        }
-        else if (c.IsReading)
-        {
-            Area = null;
-        }
-
+        c.TypeSlot("slot", "TIMING", ref TimingSlot, ctx.Types);
+        c.NameId("PACKAGE", ref Package);
+        c.OptionalNameId("AREA", ref Area);
         c.Bool("ISUSINGDUPLICATEDAREA", ref IsUsingDuplicatedArea);
     }
 }

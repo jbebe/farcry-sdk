@@ -23,8 +23,11 @@ public sealed class MgbAction : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        c.U32("ACTIONNAME", ref ActionId);
-        Body.Serialize(c, ctx);
+        c.NameId("ACTIONNAME", ref ActionId);
+        using (c.Scope("USERDATA"))
+        {
+            Body.Serialize(c, ctx);
+        }
     }
 }
 
@@ -60,8 +63,7 @@ public sealed class MgbActionIndexGroup : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        int n = Indices.Count;
-        c.Count(ref n);
+        int n = c.Count("ACTIONINDEX", Indices.Count);
         if (c.IsReading)
         {
             Indices.Clear();
@@ -70,12 +72,7 @@ public sealed class MgbActionIndexGroup : MgbRecord
                 Indices.Add(0);
             }
         }
-        for (int i = 0; i < Indices.Count; i++)
-        {
-            uint v = Indices[i];
-            c.U32("ACTIONINDEX", ref v);
-            Indices[i] = v;
-        }
+        c.U32Items("ACTIONINDEX", Indices);
     }
 }
 
@@ -99,10 +96,10 @@ public sealed class MgbActionExecuter : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        SerializeList(c, ctx, Actions);
+        SerializeList(c, ctx, "ACTIONS", "ACTION", Actions);
         if (HasEventTail)
         {
-            SerializeList(c, ctx, EventGroups);
+            SerializeList(c, ctx, "EVENTS", "EVENT", EventGroups);
         }
     }
 }
@@ -122,8 +119,7 @@ public sealed class MgbActionCaller : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        bool present = Executer is not null;
-        c.Bool("ACTIONEXECUTER", ref present);
+        bool present = c.Gate("ACTIONEXECUTER", Executer is not null);
         if (!present)
         {
             if (c.IsReading)
@@ -133,27 +129,30 @@ public sealed class MgbActionCaller : MgbRecord
             return;
         }
 
-        c.U8("type", ref TypeSlot);
-        if (c.IsReading)
+        using (c.Scope("ACTIONEXECUTER"))
         {
-            string? name = ctx.Types.NameForSlot(TypeSlot);
-            // An unresolved or type-0 slot lands on bare ActionExecuter's shape - the only one of
-            // the nine with no extra tail. A slot that resolves to a real class outside the nine
-            // would mean Factory::MakeActionExecuter returned null and the game crashed, so it
-            // cannot occur in a loadable file.
-            if (name is not null && !MgbSchema.ActionExecuterTypes.Contains(name))
+            c.TypeSlot("slot", "type", ref TypeSlot, ctx.Types);
+            if (c.IsReading)
             {
-                throw new MgbFormatException(
-                    $"ActionCaller type slot {TypeSlot} resolves to '{name}', which " +
-                    $"Factory::MakeActionExecuter cannot construct, at offset {c.Position}");
+                string? name = ctx.Types.NameForSlot(TypeSlot);
+                // An unresolved or type-0 slot lands on bare ActionExecuter's shape - the only one
+                // of the nine with no extra tail. A slot that resolves to a real class outside the
+                // nine would mean Factory::MakeActionExecuter returned null and the game crashed,
+                // so it cannot occur in a loadable file.
+                if (name is not null && !MgbSchema.ActionExecuterTypes.Contains(name))
+                {
+                    throw new MgbFormatException(
+                        $"ActionCaller type slot {TypeSlot} resolves to '{name}', which " +
+                        $"Factory::MakeActionExecuter cannot construct, at offset {c.Position}");
+                }
+                Executer = new MgbActionExecuter
+                {
+                    TypeName = name is not null && MgbSchema.ActionExecuterTypes.Contains(name)
+                        ? name
+                        : "ActionExecuter",
+                };
             }
-            Executer = new MgbActionExecuter
-            {
-                TypeName = name is not null && MgbSchema.ActionExecuterTypes.Contains(name)
-                    ? name
-                    : "ActionExecuter",
-            };
+            Executer!.Serialize(c, ctx);
         }
-        Executer!.Serialize(c, ctx);
     }
 }

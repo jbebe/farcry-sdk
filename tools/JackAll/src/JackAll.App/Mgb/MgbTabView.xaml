@@ -197,6 +197,10 @@
             <Button x:Name="DeleteButton" Content="Delete" Click="DeleteButton_Click" Padding="8,3" Margin="0,0,6,0" />
             <Button x:Name="MoveUpButton" Content="↑" Click="MoveUpButton_Click" Padding="10,3" Margin="0,0,6,0" />
             <Button x:Name="MoveDownButton" Content="↓" Click="MoveDownButton_Click" Padding="10,3" Margin="0,0,18,0" />
+            <Button x:Name="ExportXmlButton" Content="Export XML…" Click="ExportXmlButton_Click" Padding="8,3" Margin="0,0,6,0"
+                    ToolTip="Write this package out as editable XML." />
+            <Button x:Name="ImportXmlButton" Content="Import XML…" Click="ImportXmlButton_Click" Padding="8,3" Margin="0,0,18,0"
+                    ToolTip="Replace this package with one built from an XML document." />
             <Button x:Name="SaveButton" Content="Save changes" Click="SaveButton_Click" Padding="10,3" FontWeight="Bold" />
             <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="12,0,0,0" TextWrapping="Wrap" />
         </StackPanel>

@@ -56,7 +56,7 @@ public sealed class MgbRectShape : MgbWidget
     {
         c.Bool("ISOUTLINED", ref IsOutlined);
         c.Bool("ISFILLED", ref IsFilled);
-        c.U32("BLENDINGMODE", ref BlendingMode);
+        c.EnumU32("BLENDINGMODE", ref BlendingMode, MgbEnums.BlendingMode);
     }
 }
 
@@ -75,11 +75,14 @@ public sealed class MgbImage : MgbWidget
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        Material.Serialize(c, ctx);
-        c.U32("BLENDINGMODE", ref BlendingMode);
+        using (c.Scope("MATERIALLINK"))
+        {
+            Material.Serialize(c, ctx);
+        }
+        c.EnumU32("BLENDINGMODE", ref BlendingMode, MgbEnums.BlendingMode);
         c.Bool("ALPHABLENDFIRST", ref AlphaBlendFirst);
-        c.U32("ADDRESSINGMODEU", ref AddressingModeU);
-        c.U32("ADDRESSINGMODEV", ref AddressingModeV);
+        c.EnumU32("ADDRESSINGMODEU", ref AddressingModeU, MgbEnums.AddressingMode);
+        c.EnumU32("ADDRESSINGMODEV", ref AddressingModeV, MgbEnums.AddressingMode);
     }
 }
 
@@ -121,32 +124,22 @@ public abstract class MgbTextBase : MgbWidget
         c.Bool("useStringTable", ref UseStringTable);
         if (UseStringTable)
         {
-            c.U32("TABLEID", ref TableId);
-            c.U32("RESOURCEID", ref ResourceId);
+            // The same pair MgbStringResourceExternalId carries: a StringTable's name hash and a
+            // StringResource's, both NamedObject ids.
+            c.NameId("TABLEID", ref TableId);
+            c.NameId("RESOURCEID", ref ResourceId);
         }
         else
         {
             c.Utf16String("STRING", ref String);
         }
-        c.U32("ALIGNMENTX", ref AlignmentX);
-        c.U32("ALIGNMENTY", ref AlignmentY);
+        c.EnumU32("ALIGNMENTX", ref AlignmentX, MgbEnums.AlignmentX);
+        c.EnumU32("ALIGNMENTY", ref AlignmentY, MgbEnums.AlignmentY);
         c.Bool("WRAPPING", ref Wrapping);
         c.Bool("CLIPPING", ref Clipping);
         c.Bool("ELLIPSIS", ref Ellipsis);
         c.Bool("AUTOSIZED", ref AutoSized);
-
-        bool hasSliderLink = SliderLink.HasValue;
-        c.Bool("hasSliderLink", ref hasSliderLink);
-        if (hasSliderLink)
-        {
-            uint link = SliderLink ?? 0;
-            c.U32("SLIDERLINK", ref link);
-            SliderLink = link;
-        }
-        else if (c.IsReading)
-        {
-            SliderLink = null;
-        }
+        c.OptionalNameId("SLIDERLINK", ref SliderLink);
     }
 }
 
@@ -166,11 +159,14 @@ public sealed class MgbTextWidget : MgbTextBase
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
         base.Serialize(c, ctx);
-        FontFamily.Serialize(c, ctx);
+        using (c.Scope("FONTFAMILY"))
+        {
+            FontFamily.Serialize(c, ctx);
+        }
         c.Bool("BOLD", ref Bold);
         c.Bool("ITALICS", ref Italics);
         c.Bool("UNDERLINED", ref Underlined);
-        c.U32("BLENDINGMODE", ref BlendingMode);
+        c.EnumU32("BLENDINGMODE", ref BlendingMode, MgbEnums.BlendingMode);
         c.Bool("ALPHABLENDFIRST", ref AlphaBlendFirst);
     }
 }
@@ -202,8 +198,11 @@ public class MgbAreaInstance(string typeName) : MgbWidget
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
         c.Utf16String("LABEL", ref Label);
-        Material.Serialize(c, ctx);
-        SerializeOptional(c, ctx, "hasLink", ref Link);
+        using (c.Scope("MATERIALLINK"))
+        {
+            Material.Serialize(c, ctx);
+        }
+        SerializeOptional(c, ctx, "LINK", ref Link);
         c.U32("INDEXOFFSET", ref IndexOffset);
     }
 }
@@ -219,7 +218,7 @@ public sealed class MgbFocusTag : MgbRecord
     {
         c.U8("DEFAULT_FROM_DIRECTION", ref FromDirection);
         c.U8("DEFAULT_FROM_DIRECTION_2", ref FromDirection2);
-        c.U32("DEFAULTFOCUS", ref Id);
+        c.NameId("DEFAULTFOCUS", ref Id);
     }
 }
 
@@ -232,7 +231,7 @@ public sealed class MgbPageInstance() : MgbAreaInstance("PageInstance")
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
         base.Serialize(c, ctx);
-        SerializeList(c, ctx, FocusTags);
+        SerializeList(c, ctx, "DEFAULTFOCUSES", "DEFAULTFOCUS", FocusTags);
     }
 }
 
@@ -266,6 +265,9 @@ public sealed class MgbListBox : MgbWidget
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
+        // HEADERFOOTERPOS is deliberately not rendered through MgbEnums.HeaderFooterPos: the byte
+        // holds values a two-entry table cannot be, so this is probably not that field. See the
+        // remarks on MgbEnums.HeaderFooterPos.
         c.U8("HEADERFOOTERPOS", ref HeaderFooterPos);
         c.Bool("AUTOCENTER", ref AutoCenter);
         c.Bool("WRAPAROUND", ref WrapAround);
@@ -273,19 +275,7 @@ public sealed class MgbListBox : MgbWidget
         c.Bool("flag4", ref Flag4);
         c.U8("BUTTONCOUNT", ref ButtonCount);
         c.U32("ITEMSPACING", ref ItemSpacing);
-
-        bool hasSliderLink = SliderLink.HasValue;
-        c.Bool("hasSliderLink", ref hasSliderLink);
-        if (hasSliderLink)
-        {
-            uint link = SliderLink ?? 0;
-            c.U32("SLIDERLINK", ref link);
-            SliderLink = link;
-        }
-        else if (c.IsReading)
-        {
-            SliderLink = null;
-        }
+        c.OptionalNameId("SLIDERLINK", ref SliderLink);
 
         string[] names = ["HEADERLINK", "ITEMLINK", "FOOTERLINK"];
         for (int i = 0; i < 3; i++)
@@ -314,19 +304,7 @@ public sealed class MgbEditBox : MgbWidget
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
         c.U32("maxLength", ref MaxLength);
-
-        bool hasPasswordChar = PasswordChar is not null;
-        c.Bool("hasPasswordChar", ref hasPasswordChar);
-        if (hasPasswordChar)
-        {
-            byte[] ch = PasswordChar ?? new byte[2];
-            c.Blob("passwordChar", ref ch, 2);
-            PasswordChar = ch;
-        }
-        else if (c.IsReading)
-        {
-            PasswordChar = null;
-        }
+        c.OptionalBlob("passwordChar", ref PasswordChar, 2);
 
         string[] names = ["FIELDLINK", "CURSORLINK"];
         for (int i = 0; i < 2; i++)
@@ -392,8 +370,11 @@ public sealed class MgbWindowSection : MgbRecord
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
-        Material.Serialize(c, ctx);
-        c.U32("BLENDINGMODE", ref BlendingMode);
+        using (c.Scope("MATERIAL"))
+        {
+            Material.Serialize(c, ctx);
+        }
+        c.EnumU32("BLENDINGMODE", ref BlendingMode, MgbEnums.BlendingMode);
         c.Bool("ALPHABLENDFIRST", ref AlphaBlendFirst);
         c.Bool("FLIPHORIZONTAL", ref FlipHorizontal);
         c.Bool("FLIPVERTICAL", ref FlipVertical);
@@ -432,7 +413,10 @@ public sealed class MgbWindow : MgbWidget
         for (int i = 0; i < 9; i++)
         {
             Sections[i].Stretchable = IsStretchable(i);
-            Sections[i].Serialize(c, ctx);
+            using (c.Scope(SectionNames[i]))
+            {
+                Sections[i].Serialize(c, ctx);
+            }
         }
     }
 }

@@ -57,6 +57,8 @@ add_executable(FCSE WIN32
   "src/mod_page.h"
   "src/mods_tab.cpp"
   "src/mods_tab.h"
+  "src/page_spike.cpp"
+  "src/page_spike.h"
   "src/patch.cpp"
   "src/patch.h"
   "src/plugin_loader.cpp"
