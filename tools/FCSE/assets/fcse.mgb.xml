@@ -1,0 +1,756 @@
+<?xml version='1.0' encoding='utf-8'?>
+<MagmaPackage sentinel="CD0000AB" version="2010000" flag="false" POOLCOUNTS="9 13 14 1 1 224 23 3 0 0 0 246 150 109 0 260 109 88 44 0 42 6 3 7 30 0 20 0 7 3 0 556 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 68 68 133 142 166 111 0 0 10 0 6 3 22 4 719" PAGESIZE.w="1024" PAGESIZE.h="768" DISPLAYOFFSET.x="32" DISPLAYOFFSET.y="24" DEFAULTMATERIAL="">
+  <TYPES>
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#86F001E3" />
+    <TYPE id="#8392CBAC" />
+    <TYPE id="#22845C29" />
+    <TYPE id="#00000000" />
+    <TYPE id="#1E6BEA67" />
+    <TYPE id="#E29283B9" />
+    <TYPE id="#272C32D8" />
+    <TYPE id="#A54413C0" />
+    <TYPE id="#1226E666" />
+    <TYPE id="#529B8BE3" />
+    <TYPE id="#57E31259" />
+    <TYPE id="#B2762C3B" />
+    <TYPE id="#E171A548" />
+    <TYPE id="#96084622" />
+    <TYPE id="#64B8633A" />
+    <TYPE id="#D6A34D1D" />
+    <TYPE id="#AC89C8A0" />
+    <TYPE id="#09E7E1DF" />
+    <TYPE id="#794D8252" />
+    <TYPE id="#7A3E7B7B" />
+    <TYPE id="#14DE1E75" />
+    <TYPE id="#D7C90C7E" />
+    <TYPE id="#4129C7AD" />
+    <TYPE id="#7ADB61D6" />
+    <TYPE id="#BA876240" />
+    <TYPE id="#9B9628D5" />
+    <TYPE id="#1C426558" />
+    <TYPE id="#23F5F070" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="AreaInstance" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="Font" />
+    <TYPE id="ExternalFont" />
+    <TYPE id="NamedObject" />
+    <TYPE id="#00000000" />
+    <TYPE id="EngineObject" />
+    <TYPE id="Acceptor" />
+    <TYPE id="Area" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="UserData" />
+    <TYPE id="ActionCaller" />
+    <TYPE id="Text" />
+    <TYPE id="#00000000" />
+    <TYPE id="Widget" />
+    <TYPE id="TextBase" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="IScrollable" />
+    <TYPE id="AutonomousAreaInstance" />
+    <TYPE id="PageInstance" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="ListBox" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="Slider" />
+    <TYPE id="#00000000" />
+    <TYPE id="Focusable" />
+    <TYPE id="AreaLink" />
+    <TYPE id="Cursor" />
+    <TYPE id="Element" />
+    <TYPE id="#00000000" />
+    <TYPE id="PageFocusable" />
+    <TYPE id="Checkable" />
+    <TYPE id="Radioable" />
+    <TYPE id="Image" />
+    <TYPE id="#00000000" />
+    <TYPE id="RectShape" />
+    <TYPE id="Placeholder" />
+    <TYPE id="ButtonInstance" />
+    <TYPE id="CheckBoxInstance" />
+    <TYPE id="RadioButtonInstance" />
+    <TYPE id="Material" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="FontFamily" />
+    <TYPE id="ScaleState" />
+    <TYPE id="State" />
+    <TYPE id="#00000000" />
+    <TYPE id="RotationState" />
+    <TYPE id="PosState" />
+    <TYPE id="RectState" />
+    <TYPE id="EditBox" />
+    <TYPE id="#00000000" />
+    <TYPE id="TextBaseState" />
+    <TYPE id="ImageState" />
+    <TYPE id="RectShapeState" />
+    <TYPE id="Window" />
+    <TYPE id="TextState" />
+    <TYPE id="Button" />
+    <TYPE id="CheckBox" />
+    <TYPE id="Page" />
+    <TYPE id="AnonymousType" />
+    <TYPE id="SpecificType&lt;void&gt;" />
+    <TYPE id="GlyphFont" />
+    <TYPE id="StringResource" />
+    <TYPE id="PixmapFont" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="#00000000" />
+    <TYPE id="EngineObjectGroup" />
+    <TYPE id="Package" />
+    <TYPE id="StringTable" />
+    <TYPE id="EngineRoot" />
+    <TYPE id="#6086515F" />
+    <TYPE id="#407D2196" />
+    <TYPE id="#63CFB207" />
+    <TYPE id="#BEA83FA8" />
+    <TYPE id="#1E730145" />
+    <TYPE id="#4775F8CE" />
+    <TYPE id="Keyframe" />
+    <TYPE id="DisplayConfiguration" />
+    <TYPE id="Action" />
+    <TYPE id="Texture" />
+    <TYPE id="#00000000" />
+    <TYPE id="FullLink" />
+    <TYPE id="WindowSection" />
+    <TYPE id="ActionExecuter" />
+    <TYPE id="UserDataItem" />
+    <TYPE id="StretchableWindowSection" />
+    <TYPE id="ActionExecuterEvent" />
+    <TYPE id="ActionExecuterInputable" />
+    <TYPE id="ActionExecuterFocusable" />
+    <TYPE id="ActionExecuterEditbox" />
+    <TYPE id="ActionExecuterListbox" />
+    <TYPE id="ActionExecuterPage" />
+    <TYPE id="ActionExecuterPageInstance" />
+    <TYPE id="ActionExecuterSlider" />
+    <TYPE id="AreaHandler" />
+    <TYPE id="PageHandler" />
+    <TYPE id="Handler" />
+    <TYPE id="DrawHandler" />
+    <TYPE id="GenericObject" />
+    <TYPE id="EventTriggeredTimingStrategy" />
+    <TYPE id="TickTimingStrategy" />
+    <TYPE id="NoTimingStrategy" />
+    <TYPE id="SyncTimingStrategy" />
+    <TYPE id="TextScrollerPageHandler" />
+    <TYPE id="TextScrollerEventHandler" />
+    <TYPE id="TextScrollerDrawHandler" />
+    <TYPE id="EventHandler" />
+    <TYPE id="TimingStrategy" />
+    <TYPE id="ActionContinue" />
+    <TYPE id="ActionStop" />
+    <TYPE id="ActionPopPage" />
+    <TYPE id="ActionPushPage" />
+    <TYPE id="ActionGotoFrameIndex" />
+    <TYPE id="ActionGotoKeyFrame" />
+    <TYPE id="#51352634" />
+    <TYPE id="#65AFFFFD" />
+    <TYPE id="#995B0CF8" />
+  </TYPES>
+  <USERDATA name="fcse">
+    <PROPERTIES />
+  </USERDATA>
+  <MATERIALS materialExtra="2">
+    <Material name="notebook" texture="\textures\hud\notebook.png" REGION="0 0 1 1" />
+    <Material name="frame_color_scratch" texture="\textures\common\frame_color_scratch.png" REGION="0 0 1 1" />
+  </MATERIALS>
+  <FONTSUBSTS />
+  <FONTS />
+  <FONTFAMILIES />
+  <CHILDREN>
+    <Area slot="101" type="Page" FRAMERATE="30" CURRENTFRAME="0" STATICBOX="0 0 0 0" SINGLE_GLOBAL_SELECTION="true">
+      <USERDATA name="FCSE_PAGE">
+        <PROPERTIES>
+          <PROPERTY key="LAYER" type="2" value="10" />
+          <PROPERTY key="SETTING_LABEL_LIST" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_menu_nav #36150990 l_menu_nav_list" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_01" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_01 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_02" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_02 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_03" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_03 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_04" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_04 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_05" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_05 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_06" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_06 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_07" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_07 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_08" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_08 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_09" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_09 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_10" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_10 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_11" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_11 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_12" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_12 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_13" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_13 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_14" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_14 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_15" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_15 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_16" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_16 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_17" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_17 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_18" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_18 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_19" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_19 #652FD37C #D240E092" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_SLOT_20" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slot_20 #652FD37C #D240E092" />
+          </PROPERTY>
+        </PROPERTIES>
+      </USERDATA>
+      <CHILDREN>
+        <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="#47CC8C92">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="#D427AD4D" IDX="0" INTERPOLATION="None">
+              <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+            </Keyframe>
+            <Keyframe name="#D74F9662" IDX="30" INTERPOLATION="None">
+              <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+            </Keyframe>
+          </KEYFRAMES>
+          <Placeholder />
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="#B21251FF">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="#179BA834" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="0" POSITION.y="0" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#EB3BB25F" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="#684AC59C">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="#6AB877EE" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="65355" POSITION.y="65490" SCALEX="1.0292028" SCALEY="0.992891" />
+            </Keyframe>
+          </KEYFRAMES>
+          <AreaInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="151" TIMING="NoTimingStrategy" PACKAGE="common" AREA="#A5D8B868" ISUSINGDUPLICATEDAREA="false" />
+          </AreaInstance>
+        </Element>
+        <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="#F0CC8C29">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="#76F0C034" IDX="0" INTERPOLATION="Linear">
+              <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="65478" RIGHT="1039" TOP="65535" BOTTOM="981" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+            </Keyframe>
+          </KEYFRAMES>
+          <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+            <MATERIALLINK present="true" id="#F67D9A2B" PACKAGE="" />
+          </Image>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_menu_nav">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_menu_nav" IDX="0" INTERPOLATION="Linear">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="83" POSITION.y="111" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#36150990" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_01">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_01" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="158" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_02">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_02" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="186" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_03">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_03" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="214" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_04">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_04" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="242" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_05">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_05" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="270" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_06">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_06" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="298" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_07">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_07" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="326" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_08">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_08" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="354" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_09">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_09" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="382" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_10">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_10" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="410" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_11">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_11" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="438" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_12">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_12" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="466" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_13">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_13" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="494" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_14">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_14" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="522" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_15">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_15" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="550" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_16">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_16" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="578" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_17">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_17" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="606" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_18">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_18" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="634" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_19">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_19" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="662" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_slot_20">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_slot_20" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="552" POSITION.y="690" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#652FD37C" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="33" type="AreaInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="#5B36589B">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="#D05B167C" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="65509" POSITION.y="65512" SCALEX="1" SCALEY="1.0390625" />
+            </Keyframe>
+          </KEYFRAMES>
+          <AreaInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="152" TIMING="SyncTimingStrategy" PACKAGE="common" AREA="#5B36589B" ISUSINGDUPLICATEDAREA="false" />
+          </AreaInstance>
+        </Element>
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="#E58F0F6C">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="#807379A8" IDX="0" INTERPOLATION="Linear">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="00FFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="0" POSITION.y="0" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+            <Keyframe name="#354DB6C3" IDX="10" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="00FFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="0" POSITION.y="0" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+            <Keyframe name="#DC2E13F6" IDX="16" INTERPOLATION="Root">
+              <ScaleState INTERPOLATIONFLAGS="1" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="0" POSITION.y="0" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <PageInstance LABEL="" INDEXOFFSET="0">
+            <MATERIALLINK present="false" />
+            <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="p_prompts_navbar" ISUSINGDUPLICATEDAREA="true" />
+            <DEFAULTFOCUSES />
+          </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="#E82DE1C0">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="#D4BBAE6B" IDX="0" INTERPOLATION="Linear">
+              <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="65504" RIGHT="992" TOP="65512" BOTTOM="744" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+            </Keyframe>
+          </KEYFRAMES>
+          <Image BLENDINGMODE="Modulate" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+            <MATERIALLINK present="true" id="#E82DE1C0" PACKAGE="" />
+          </Image>
+        </Element>
+      </CHILDREN>
+      <DEFAULT_ELEMENTS>
+        <DEFAULT_ELEMENT CONTROLLER="255" ID="p_menu_nav" />
+      </DEFAULT_ELEMENTS>
+    </Area>
+  </CHILDREN>
+  <GENERICOBJECTTABLE name="fcse">
+    <GENERICOBJECTS>
+      <GENERICOBJECT name="FCSE_PAGE">
+        <LINK slot="101" LASTOBJECTTYPE="Page" IDS="fcse FCSE_PAGE" />
+      </GENERICOBJECT>
+      <GENERICOBJECT name="MAINMENU_FCSE_PAGE_PC">
+        <LINK slot="101" LASTOBJECTTYPE="Page" IDS="fcse FCSE_PAGE" />
+      </GENERICOBJECT>
+    </GENERICOBJECTS>
+  </GENERICOBJECTTABLE>
+</MagmaPackage>

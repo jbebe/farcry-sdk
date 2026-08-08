@@ -1,10 +1,10 @@
-#include "mods_tab.h"
+﻿#include "mods_tab.h"
 
 #include "dunia_api.h"
+#include "fcse_page.h"
 #include "hook.h"
 #include "log.h"
-#include "mod_page.h"
-#include "page_spike.h"
+#include "magma_package.h"
 
 #include <cstdint>
 
@@ -54,13 +54,15 @@ namespace {
             return;
         }
 
-        // Plugin config registrations are intentionally not rendered here. Options gets one
-        // navigation row only; the page opened by it will become the configuration surface.
-        ModPage::Install(optionsMenuThis);
+        // Load FCSE's own page layout. This is the right moment: the Options screen is built
+        // lazily, well after common.mgb is up, which is what the layout's PageInstances point into.
+        // Failure is not fatal - it just means no private page this run - so it is logged and the
+        // existing shared-Game-tab mechanism below carries on unchanged.
+        MagmaPackage::Load();
 
-        // Off unless bin\fcse.ini opts in, and appended after the shipped feature so a fault in the
-        // diagnostic can never cost the working menu its row. See page_spike.h.
-        PageSpike::Install(optionsMenuThis);
+        // Plugin config registrations are intentionally not rendered here. Options gets one
+        // navigation row only; the page opened by it is the configuration surface.
+        FcsePage::Install(optionsMenuThis);
     }
 
     // MSVC won't let a free function be declared __thiscall (only real member functions), but the

@@ -1,4 +1,4 @@
-# CMakeLists.txt for FCSE (Far Cry Script Extender) - see README.md for the design.
+﻿# CMakeLists.txt for FCSE (Far Cry Script Extender) - see README.md for the design.
 cmake_minimum_required (VERSION 3.10)
 
 if (POLICY CMP0141)
@@ -51,14 +51,14 @@ add_executable(FCSE WIN32
   "src/hook.h"
   "src/ini_file.cpp"
   "src/ini_file.h"
-  "src/menu_handler.cpp"
-  "src/menu_handler.h"
-  "src/mod_page.cpp"
-  "src/mod_page.h"
+  "src/fcse_page.cpp"
+  "src/fcse_page.h"
+  "src/magma_package.cpp"
+  "src/magma_package.h"
   "src/mods_tab.cpp"
   "src/mods_tab.h"
-  "src/page_spike.cpp"
-  "src/page_spike.h"
+  "src/page_assets.cpp"
+  "src/page_assets.h"
   "src/patch.cpp"
   "src/patch.h"
   "src/plugin_loader.cpp"
@@ -71,6 +71,33 @@ add_executable(FCSE WIN32
 target_link_libraries(FCSE PRIVATE minhook)
 
 set_target_properties(FCSE PROPERTIES OUTPUT_NAME "FCSE")
+
+# FCSE's own Magma UI package, staged where page_assets.cpp looks for it. It ships as a loose file
+# next to the loader, and magma_package.cpp feeds it to the engine through a hooked file reader -
+# see assets/README.md for why neither an absolute nor a relative path can reach it otherwise.
+#
+# Deliberately an OUTPUT rule with a DEPENDS on the asset, not a POST_BUILD step: POST_BUILD only
+# runs when the target relinks, so editing just the .mgb left the previous build's copy staged and
+# silently shipped stale layout data.
+# A literal path, not $<TARGET_FILE_DIR:FCSE>: generator expressions are not usable in an
+# add_custom_command OUTPUT here, and FCSE.exe lands in the build directory root anyway.
+# Both aspect variants: the UI ships as `pc` and `pcwidescreen` sets whose pages differ in size and
+# geometry, and page_assets.cpp picks between these two using the engine's own widescreen flag.
+set(FCSE_STAGED_ASSETS "")
+foreach(mgb "fcse.mgb" "fcse_widescreen.mgb")
+  set(staged "${CMAKE_CURRENT_BINARY_DIR}/fcse/ui/${mgb}")
+  add_custom_command(
+    OUTPUT "${staged}"
+    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
+            "${CMAKE_CURRENT_SOURCE_DIR}/assets/${mgb}" "${staged}"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/${mgb}"
+    COMMENT "Staging ${mgb} (FCSE's settings-page layout)"
+    VERBATIM
+  )
+  list(APPEND FCSE_STAGED_ASSETS "${staged}")
+endforeach()
+add_custom_target(fcse_assets ALL DEPENDS ${FCSE_STAGED_ASSETS})
+add_dependencies(FCSE fcse_assets)
 
 # The whole point of this loader per docs/docs/todos.md's "Tools/dll plugins" entry: enough
 # simultaneously-loaded plugins can otherwise run a 32-bit process out of address space.
