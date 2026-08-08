@@ -108,6 +108,12 @@
         <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#DDD" BorderThickness="0,1,0,0">
             <Grid>
                 <DockPanel Margin="8,5,24,5">
+                    <!-- Only a folder export is interruptible - it's the one operation that can run
+                         for minutes writing gigabytes, and stopping it early still leaves everything
+                         it already wrote on disk. -->
+                    <Button DockPanel.Dock="Right" Content="Cancel" Padding="8,0" Margin="8,0,0,0"
+                            Click="CancelExport_Click"
+                            Visibility="{Binding IsExporting, Converter={StaticResource BoolToVis}}" />
                     <ProgressBar DockPanel.Dock="Right" Width="120" Height="12" IsIndeterminate="True"
                                  Visibility="{Binding Busy, Converter={StaticResource BoolToVis}}" />
                     <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" />
@@ -478,6 +484,17 @@
                               VirtualizingStackPanel.IsVirtualizing="True"
                               VirtualizingStackPanel.VirtualizationMode="Recycling"
                               ScrollViewer.CanContentScroll="True">
+                        <!-- One menu for the whole tree, not one per row: a ContextMenu is a single
+                             element with a single logical parent, so putting it in the TreeViewItem
+                             style below would hand the same instance to every row and throw the
+                             moment a second one was realized. It acts on the selected folder, which
+                             right-clicking a row has just made the row under the cursor (see
+                             FolderTree_ItemRightClicked). -->
+                        <TreeView.ContextMenu>
+                            <ContextMenu>
+                                <MenuItem Header="Export folder…" Click="ExportFolder_Click" />
+                            </ContextMenu>
+                        </TreeView.ContextMenu>
                         <TreeView.Resources>
                             <!--
                                 Declared here rather than as TreeView.ItemContainerStyle so it applies
@@ -491,6 +508,11 @@
                             -->
                             <Style TargetType="{x:Type TreeViewItem}">
                                 <EventSetter Event="PreviewMouseLeftButtonDown" Handler="FolderTree_ItemClicked" />
+                                <!-- Right-click selects the row before its menu opens, so the menu (and
+                                     the details pane, and the file list) all act on the folder actually
+                                     under the cursor - WPF's TreeView doesn't select on right-click by
+                                     itself, which would otherwise export whatever was selected before. -->
+                                <EventSetter Event="PreviewMouseRightButtonDown" Handler="FolderTree_ItemRightClicked" />
                                 <Setter Property="Padding" Value="2" />
                                 <!-- Round-trips expand/collapse to FolderNode.IsExpanded, so a tree
                                      rebuild (every edit rebuilds it from scratch) can restore what was
@@ -589,8 +611,25 @@
                                        Margin="0,10,0,0"
                                        Text="Replacing a file stages it in your workspace. Nothing reaches the game until you press Deploy all mods on the Mods tab." />
 
-                            <TextBlock DockPanel.Dock="Top" Text="Nothing selected." Foreground="#888"
-                                       Visibility="{Binding NoSelection, Converter={StaticResource BoolToVis}}" />
+                            <!-- Browsing to a folder leaves the grid with nothing selected, so this is
+                                 where the folder you're standing in gets its own actions rather than
+                                 dead space. -->
+                            <StackPanel DockPanel.Dock="Top"
+                                        Visibility="{Binding NoSelection, Converter={StaticResource BoolToVis}}">
+                                <TextBlock Text="Nothing selected." Foreground="#888"
+                                           Visibility="{Binding NoSelectedFolder, Converter={StaticResource BoolToVis}}" />
+
+                                <StackPanel Visibility="{Binding HasSelectedFolder, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding SelectedFolder.Name}" FontWeight="Bold" FontSize="14"
+                                               TextWrapping="Wrap" Margin="0,0,0,8" />
+                                    <TextBlock Text="{Binding SelectedFolder.FullPath}" TextWrapping="Wrap"
+                                               Margin="0,0,0,12" />
+                                    <Button Content="Export folder…" Click="ExportFolder_Click"
+                                            HorizontalAlignment="Left" Padding="8,6" />
+                                    <TextBlock Foreground="#888" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"
+                                               Text="Writes every file at or below this folder to disk, keeping the folder structure. Honours the 'only mod files' switch, but not the search box." />
+                                </StackPanel>
+                            </StackPanel>
 
                             <StackPanel DockPanel.Dock="Top" Visibility="{Binding IsMultiSelection, Converter={StaticResource BoolToVis}}">
                                 <TextBlock Text="{Binding MultiSelectCountText}" FontWeight="Bold" FontSize="14"

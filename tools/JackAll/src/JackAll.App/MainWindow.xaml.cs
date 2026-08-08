@@ -700,6 +700,83 @@ public partial class MainWindow : Window
     }
 
     /// <summary>
+    /// Writes the whole subtree under the selected folder to disk, folder structure and all — the bulk
+    /// counterpart of <see cref="Export_Click"/>, reached from the details pane or the tree's own
+    /// right-click menu (both act on <see cref="MainViewModel.SelectedFolder"/>; right-clicking a row
+    /// selects it first, see <see cref="FolderTree_ItemRightClicked"/>).
+    /// </summary>
+    private async void ExportFolder_Click(object sender, RoutedEventArgs e)
+    {
+        if (_vm.SelectedFolder is not { } folder)
+        {
+            Warn("Pick a folder in the tree first.");
+            return;
+        }
+
+        if (_vm.IsExporting)
+        {
+            Warn("A folder export is already running. Wait for it to finish, or cancel it from the status bar.");
+            return;
+        }
+
+        IReadOnlyList<VfsFile> files = _vm.FilesUnder(folder);
+        if (files.Count == 0)
+        {
+            Warn($"There's nothing to export under '{folder.FullPath}'.");
+            return;
+        }
+
+        var dialog = new OpenFolderDialog { Title = $"Export {folder.FullPath} to…" };
+        if (dialog.ShowDialog(this) != true) return;
+
+        // A subtree near the top of the tree is tens of thousands of files and gigabytes of data, and
+        // the destination is somewhere the user picked - worth stating both before writing into it.
+        string destination = dialog.FolderName;
+        long totalBytes = files.Sum(f => f.Size);
+        if (MessageBox.Show(this,
+                $"Export {files.Count:N0} file(s) ({MainViewModel.FormatSize(totalBytes)}) from " +
+                $"'{folder.FullPath}' into:\n\n{destination}\n\n" +
+                "The folder structure is recreated there, and files already at those paths are overwritten.",
+                "Export folder", MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
+        {
+            return;
+        }
+
+        _vm.Busy = true;
+        _vm.Status = $"Exporting {files.Count:N0} file(s) from {folder.FullPath}…";
+        try
+        {
+            FolderExportResult result = await _vm.ExportFolderAsync(folder, files, destination);
+
+            string skipped = result.Failed > 0 ? $" {result.Failed:N0} couldn't be read and were skipped." : string.Empty;
+            _vm.Status = result.Cancelled
+                ? $"Export cancelled - {result.Written:N0} of {files.Count:N0} file(s) had already been " +
+                  $"written to {destination}.{skipped}"
+                : $"Exported {result.Written:N0} file(s) from {folder.FullPath} to {destination}.{skipped}";
+
+            if (result.FirstError is { } error)
+            {
+                Warn($"{result.Failed:N0} file(s) couldn't be exported. The first one was:\n\n{error}");
+            }
+        }
+        catch (Exception ex)
+        {
+            _vm.Status = "Export failed.";
+            Warn($"Couldn't export '{folder.FullPath}': {ex.Message}");
+        }
+        finally
+        {
+            _vm.Busy = false;
+        }
+    }
+
+    private void CancelExport_Click(object sender, RoutedEventArgs e)
+    {
+        _vm.CancelExport();
+        _vm.Status = "Stopping the export…";
+    }
+
+    /// <summary>
     /// Expands or collapses a folder on a single click anywhere on its row, like VS Code's explorer.
     /// Selection is left to the TreeView's own handling, which runs right after this.
     /// </summary>
@@ -724,6 +801,17 @@ public partial class MainWindow : Window
         }
 
         item.IsExpanded = !item.IsExpanded;
+    }
+
+    /// <summary>Selects the row under the cursor so the context menu that's about to open acts on it
+    /// (see the style's ContextMenu in MainWindow.xaml) — a TreeView selects on left-click only.
+    /// Same innermost-item guard as <see cref="FolderTree_ItemClicked"/>, for the same reason.</summary>
+    private void FolderTree_ItemRightClicked(object sender, MouseButtonEventArgs e)
+    {
+        if (sender is not TreeViewItem item) return;
+        if (Ancestor<TreeViewItem>(e.OriginalSource as DependencyObject) != item) return;
+
+        item.IsSelected = true;
     }
 
     private static T? Ancestor<T>(DependencyObject? node) where T : DependencyObject

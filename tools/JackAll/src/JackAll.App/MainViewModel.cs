@@ -43,6 +43,12 @@ public sealed class FolderNode(string name, string fullPath)
     public override string ToString() => Name;
 }
 
+/// <summary>What one <see cref="MainViewModel.ExportFolderAsync"/> run actually did.
+/// <paramref name="FirstError"/> is only the first failure's message: a subtree can be tens of
+/// thousands of files, and a per-file dialog (or a wall of them at the end) is unreadable — the count
+/// says how bad it was, the message says what kind of bad.</summary>
+public sealed record FolderExportResult(int Written, int Failed, string? FirstError, bool Cancelled);
+
 /// <summary>
 /// One node in the Mods tab's per-mod file tree (see <see cref="MainViewModel.SelectedModFiles"/>) —
 /// either a folder or a leaf override/fragment entry. Rebuilt from scratch on every selection, unlike
@@ -167,6 +173,11 @@ public sealed class MainViewModel : INotifyPropertyChanged
     private bool _includeLinks;
     private string _status = "Starting…";
     private bool _busy;
+    private CancellationTokenSource? _exportCts;
+
+    /// <summary>How often <see cref="ExportFiles"/> updates <see cref="Status"/> — often enough to
+    /// look alive on a big subtree, rarely enough not to spend the export marshalling to the UI thread.</summary>
+    private const int ExportReportEvery = 100;
 
     public AppConfig Config { get; private set; } = AppConfig.Load();
     public GameInstall? Install { get; private set; }
@@ -455,8 +466,21 @@ public sealed class MainViewModel : INotifyPropertyChanged
     public FolderNode? SelectedFolder
     {
         get => _selectedFolder;
-        set { _selectedFolder = value; OnPropertyChanged(); RefreshFileList(); }
+        set
+        {
+            _selectedFolder = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasSelectedFolder));
+            OnPropertyChanged(nameof(NoSelectedFolder));
+            RefreshFileList();
+        }
     }
+
+    /// <summary>Whether the details pane has a folder to offer "Export folder…" for. Only consulted
+    /// while nothing is selected in the file grid (see <see cref="NoSelection"/>), which is exactly
+    /// the state browsing to a folder leaves you in.</summary>
+    public bool HasSelectedFolder => SelectedFolder is not null;
+    public bool NoSelectedFolder => SelectedFolder is null;
 
     public VfsFile? SelectedFile
     {
@@ -903,6 +927,135 @@ public sealed class MainViewModel : INotifyPropertyChanged
         }
         return chain;
     }
+
+    /// <summary>
+    /// Every file "Export folder…" would write for <paramref name="folder"/>: everything at or below
+    /// it in the tree.
+    /// </summary>
+    /// <remarks>
+    /// Honours the same two view switches the file list itself does — <see cref="OnlyMods"/> (which
+    /// already pruned the tree you clicked in, so exporting vanilla files out of a mods-only view
+    /// would contradict it) and <see cref="IncludeLinks"/> — but deliberately not
+    /// <see cref="FilterText"/>: this action is "everything down this path", not "everything down
+    /// this path that also happens to match what I last typed in the search box".
+    /// </remarks>
+    public IReadOnlyList<VfsFile> FilesUnder(FolderNode folder)
+    {
+        if (_vfs is null) return [];
+
+        string root = folder.FullPath;
+        string prefix = PathPrefixOf(root);
+
+        return _vfs.Files.Values
+            .Where(f => IsUnder(f, root, prefix) && (!OnlyMods || f.IsModded) && (IncludeLinks || !f.IsDependencyLink))
+            .OrderBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>What every path at or below <paramref name="root"/> starts with — empty for the
+    /// (unselectable) tree root, so it matches the whole VFS rather than nothing.</summary>
+    private static string PathPrefixOf(string root) => root.Length == 0 ? string.Empty : root + "\\";
+
+    private static bool IsUnder(VfsFile file, string root, string prefix)
+    {
+        // A synthetic row — an .fcb fragment, a depload.dat link — lives *inside* its container's own
+        // path, which on disk is a file, not a directory. Sweeping one up from an ancestor folder
+        // would mean writing worlds\…\foo.fcb as both a file and a folder in the same export, so
+        // they're only in scope when the folder asked for is the one they sit in directly (i.e. you
+        // pointed at the container itself, where there's nothing else to export anyway).
+        if (file.IsFragment || file.IsDependencyLink)
+        {
+            return string.Equals(file.Directory, root, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return root.Length == 0
+               || string.Equals(file.Directory, root, StringComparison.OrdinalIgnoreCase)
+               || file.Directory.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Writes <paramref name="files"/> under <paramref name="destination"/>, recreating the folder
+    /// structure they have below <paramref name="folder"/>. Runs on a background thread and can be
+    /// stopped mid-run with <see cref="CancelExport"/>; a file that can't be read is counted and
+    /// skipped rather than abandoning the rest of the subtree.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="files"/> is what <see cref="FilesUnder"/> returned rather than something this
+    /// recomputes, so what lands on disk is exactly the count and size the caller put in front of the
+    /// user before they agreed to it.
+    /// </remarks>
+    public async Task<FolderExportResult> ExportFolderAsync(
+        FolderNode folder, IReadOnlyList<VfsFile> files, string destination)
+    {
+        string prefix = PathPrefixOf(folder.FullPath);
+        var progress = new Progress<string>(s => Status = s);
+
+        var cts = new CancellationTokenSource();
+        _exportCts = cts;
+        OnPropertyChanged(nameof(IsExporting));
+        try
+        {
+            return await Task.Run(() => ExportFiles(files, prefix, destination, progress, cts.Token));
+        }
+        finally
+        {
+            _exportCts = null;
+            cts.Dispose();
+            OnPropertyChanged(nameof(IsExporting));
+        }
+    }
+
+    private FolderExportResult ExportFiles(
+        IReadOnlyList<VfsFile> files, string prefix, string destination,
+        IProgress<string> progress, CancellationToken token)
+    {
+        int written = 0, failed = 0;
+        string? firstError = null;
+
+        // One CreateDirectory per file would be tens of thousands of syscalls for a subtree that only
+        // has a few hundred distinct folders in it.
+        var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        for (int i = 0; i < files.Count; i++)
+        {
+            if (token.IsCancellationRequested)
+            {
+                return new FolderExportResult(written, failed, firstError, Cancelled: true);
+            }
+
+            VfsFile file = files[i];
+            try
+            {
+                string target = Path.Combine(destination, OutputPath.Relative(file.Path[prefix.Length..]));
+                string directory = Path.GetDirectoryName(target)!;
+                if (created.Add(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+                File.WriteAllBytes(target, Read(file));
+                written++;
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                firstError ??= $"{file.Path}: {ex.Message}";
+            }
+
+            if ((i + 1) % ExportReportEvery == 0)
+            {
+                progress.Report($"Exporting… ({i + 1:N0} / {files.Count:N0})");
+            }
+        }
+
+        return new FolderExportResult(written, failed, firstError, Cancelled: false);
+    }
+
+    /// <summary>Stops the running <see cref="ExportFolderAsync"/> after the file it's on — a subtree
+    /// can be gigabytes, and there's no undoing bytes already written, only stopping more of them.</summary>
+    public void CancelExport() => _exportCts?.Cancel();
+
+    /// <summary>Whether a folder export is running, so the status bar can offer to cancel it.</summary>
+    public bool IsExporting => _exportCts is not null;
 
     /// <summary>Drops every branch that carries no mod content, for the "Show only mod files" filter.</summary>
     private static void PruneToModsOnly(FolderNode node)

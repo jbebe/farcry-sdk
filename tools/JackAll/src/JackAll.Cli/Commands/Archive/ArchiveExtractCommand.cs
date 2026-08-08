@@ -5,7 +5,6 @@ using JackAll.Core;
 using Spectre.Console.Cli;
 using Spectre.Console;
 using System.ComponentModel;
-using System.Text;
 
 namespace JackAll.Cli.Commands.Archive;
 
@@ -91,7 +90,7 @@ public sealed class ArchiveExtractCommand : CliCommand<ArchiveExtractCommand.Set
     {
         if (resolvedName is not null)
         {
-            return SafeRelativePath(resolvedName);
+            return OutputPath.Relative(resolvedName);
         }
 
         string ext = FileTypeSniffer.IdentifyByContent(bytes.AsSpan(0, Math.Min(FileTypeSniffer.HeaderBytes, bytes.Length))).Extension;
@@ -99,34 +98,5 @@ public sealed class ArchiveExtractCommand : CliCommand<ArchiveExtractCommand.Set
         // With --names, unnamed entries mirror the App's _unknown\ bucket; without it, everything is
         // hash-named anyway, so a flat layout is tidier than burying it all under _unknown\.
         return namesRequested ? Path.Combine("_unknown", fileName) : fileName;
-    }
-
-    /// <summary>Turns a recovered archive path (normalized, backslash-separated) into a safe relative
-    /// path under the output folder — segment separators normalized, empty/'.'/'..' segments dropped so
-    /// a stray name can't escape the output directory.</summary>
-    private static string SafeRelativePath(string name)
-    {
-        string[] segments = name.Split('\\', '/');
-        var kept = new List<string>(segments.Length);
-        foreach (string segment in segments)
-        {
-            if (segment.Length == 0 || segment is "." or "..")
-            {
-                continue;
-            }
-            kept.Add(Sanitize(segment));
-        }
-        return kept.Count == 0 ? name.Replace('\\', '_').Replace('/', '_') : Path.Combine([.. kept]);
-    }
-
-    private static string Sanitize(string segment)
-    {
-        char[] invalid = Path.GetInvalidFileNameChars();
-        var sb = new StringBuilder(segment.Length);
-        foreach (char c in segment)
-        {
-            sb.Append(Array.IndexOf(invalid, c) >= 0 ? '_' : c);
-        }
-        return sb.ToString();
     }
 }
