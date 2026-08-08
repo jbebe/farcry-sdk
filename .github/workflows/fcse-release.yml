@@ -22,9 +22,52 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build FCSE.exe and the example plugin
+      - name: Build and test FCSE.exe and the example plugin
         shell: pwsh
-        run: .\build.ps1 -Config release
+        # -Tests runs tests/ini_file_tests.cpp through ctest (see build.ps1). It's the one piece
+        # here that runs with no game attached, and its failure mode is silently mangling a
+        # player's fcse.ini, so a release shouldn't go out without it.
+        run: .\build.ps1 -Config release -Tests
+
+      - name: Verify the release build
+        shell: pwsh
+        # Two properties of this build fail *silently* - the exe still builds, still runs on a dev
+        # machine, and only breaks on a player's install - so they're gated here instead of left to
+        # a manual pass before each release (both are in README.md's "Verification" section):
+        #
+        #   - Static CRT (/MT). If the CMP0091 setting stops applying, FCSE.exe imports
+        #     MSVCP140/VCRUNTIME140/the UCRT apisets, and a player without the VS 2015-2022 x86
+        #     redistributable gets a missing-DLL box before any of our code runs - no fcse.log,
+        #     nothing to diagnose from.
+        #   - The embedded .mgb layouts. A .rc added to a project without enable_language(RC) is
+        #     skipped without a word, producing an FCSE.exe whose settings page has no layout.
+        #
+        # Both are read straight out of the built image rather than through dumpbin, which isn't on
+        # PATH here - build.ps1 sets up the developer environment inside its own `cmd /c` and this
+        # step doesn't inherit it. The CRT names and the RCDATA payloads are plain bytes in the
+        # file; a static-CRT build contains none of the former (checked against a real build, not
+        # assumed), and matching the payloads byte-for-byte also catches an embedded copy that went
+        # stale against assets\.
+        run: |
+          $exePath = "out\build\x86-release\FCSE.exe"
+          # 28591 = Latin-1: one byte <-> one char, so a byte search is a plain string search.
+          $latin1 = [System.Text.Encoding]::GetEncoding(28591)
+          $exe = $latin1.GetString([System.IO.File]::ReadAllBytes((Resolve-Path $exePath)))
+
+          $crt = @("MSVCP140", "VCRUNTIME140", "api-ms-win-crt-", "ucrtbase") |
+                 Where-Object { $exe.Contains($_) }
+          if ($crt) {
+            throw "$exePath links the dynamic CRT (found: $($crt -join ', ')) - it must build /MT. See the CMP0091 note in CMakeLists.txt."
+          }
+
+          foreach ($mgb in "assets\fcse.mgb", "assets\fcse_widescreen.mgb") {
+            $payload = $latin1.GetString([System.IO.File]::ReadAllBytes((Resolve-Path $mgb)))
+            if ($exe.IndexOf($payload, [System.StringComparison]::Ordinal) -lt 0) {
+              throw "$mgb is not embedded in $exePath, or the embedded copy is stale - check that enable_language(RC) ran and that the generated fcse.rc reached the link."
+            }
+          }
+
+          Write-Host "FCSE.exe: static CRT, both .mgb layouts embedded." -ForegroundColor Green
 
       - name: Stage release contents
         shell: pwsh
