@@ -20,12 +20,10 @@ public:
     // to its existing behaviour rather than try to display a page that would not resolve.
     static bool Load();
 
-    // True once Load() has succeeded, i.e. once "FCSE_PAGE" resolves.
+    // True once Load() has succeeded, i.e. once "FCSE_PAGE" resolves. The magma::Package* itself is
+    // deliberately not exposed: FCSE reaches the page through the name registry, never through that
+    // pointer.
     static bool Loaded();
-
-    // The magma::Package* the engine handed back, or null. Diagnostics only - FCSE reaches the page
-    // through the name registry, not through this pointer.
-    static void* Package();
 };
 
 } // namespace FCSE

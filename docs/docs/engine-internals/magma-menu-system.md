@@ -653,8 +653,7 @@ hashtable-insert risk, no `Action`-dispatch RE needed.
    memory buffer, even just logging the first ~30 calls — crashed deterministically (same crash point
    every time, ruling out a timing race). A `CRITICAL_SECTION` around all file I/O made zero difference,
    ruling out unsynchronized concurrent access too. The real mechanism was never found. The empirically-
-   safe workaround (act only on a rare match) is documented in `tools/FCSE/hash_logger_plugin/` and
-   works, but doesn't explain *why*.
+   safe workaround (act only on a rare match) works, but doesn't explain *why*.
 3. **`Dunia.dll` addresses — resolved this session.** `CGameMenu::GetPage`/`SetNextPage`/`SwitchPage`,
    `CSetNextPageMenuHandler::SwitchPage`, `CMagmaUIResource::LoadPackageInMagma`,
    `CMagmaConfigUIResource::LoadResourceInMagma`, and `magma::objecttypemanager::Register`/

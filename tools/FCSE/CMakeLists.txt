@@ -8,6 +8,12 @@ endif()
 
 project ("FCSE")
 
+# For the embedded .mgb resources below. project() enables C and CXX only, and a .rc added to a
+# target of a project without RC enabled is skipped *silently* - the build would succeed and produce
+# an FCSE.exe with no settings-page layout in it. page_assets.cpp's FindResource failure path names
+# this line for that reason.
+enable_language(RC)
+
 if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "FCSE must be built 32-bit (x86) - Far Cry 2 is a 32-bit process and a "
                        "64-bit FCSE.exe cannot load Dunia.dll or run plugin DLLs built for it. "
@@ -33,7 +39,24 @@ add_library(minhook STATIC
 target_include_directories(minhook PUBLIC "${minhook_SOURCE_DIR}/include")
 target_include_directories(minhook PRIVATE "${minhook_SOURCE_DIR}/src")
 
+# FCSE's own Magma UI package, embedded into the exe as an RCDATA resource so the loader installs as
+# a single file - see PLAN-embed-assets.md. Both aspect variants: the UI ships as `pc` and
+# `pcwidescreen` sets whose pages differ in size and geometry, and page_assets.cpp picks between them
+# at runtime using the engine's own widescreen flag.
+set(FCSE_MGB            "${CMAKE_CURRENT_SOURCE_DIR}/assets/fcse.mgb")
+set(FCSE_MGB_WIDESCREEN "${CMAKE_CURRENT_SOURCE_DIR}/assets/fcse_widescreen.mgb")
+configure_file("assets/fcse.rc.in" "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc" @ONLY)
+
+# rc.exe does not report what a resource statement pulled in and CMake does not scan .rc files for
+# RCDATA dependencies, so without this, editing a .mgb would relink the previous build's bytes and
+# silently ship stale layout data. (configure_file already re-runs CMake when the .rc.in template
+# changes - it says nothing about the files that template names.) Same staleness class as the
+# POST_BUILD problem the staging rule this replaced was written to avoid.
+set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc"
+             APPEND PROPERTY OBJECT_DEPENDS "${FCSE_MGB}" "${FCSE_MGB_WIDESCREEN}")
+
 add_executable(FCSE WIN32
+  "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc"
   "src/main.cpp"
   "src/log.cpp"
   "src/log.h"
@@ -72,33 +95,6 @@ target_link_libraries(FCSE PRIVATE minhook)
 
 set_target_properties(FCSE PROPERTIES OUTPUT_NAME "FCSE")
 
-# FCSE's own Magma UI package, staged where page_assets.cpp looks for it. It ships as a loose file
-# next to the loader, and magma_package.cpp feeds it to the engine through a hooked file reader -
-# see assets/README.md for why neither an absolute nor a relative path can reach it otherwise.
-#
-# Deliberately an OUTPUT rule with a DEPENDS on the asset, not a POST_BUILD step: POST_BUILD only
-# runs when the target relinks, so editing just the .mgb left the previous build's copy staged and
-# silently shipped stale layout data.
-# A literal path, not $<TARGET_FILE_DIR:FCSE>: generator expressions are not usable in an
-# add_custom_command OUTPUT here, and FCSE.exe lands in the build directory root anyway.
-# Both aspect variants: the UI ships as `pc` and `pcwidescreen` sets whose pages differ in size and
-# geometry, and page_assets.cpp picks between these two using the engine's own widescreen flag.
-set(FCSE_STAGED_ASSETS "")
-foreach(mgb "fcse.mgb" "fcse_widescreen.mgb")
-  set(staged "${CMAKE_CURRENT_BINARY_DIR}/fcse/ui/${mgb}")
-  add_custom_command(
-    OUTPUT "${staged}"
-    COMMAND "${CMAKE_COMMAND}" -E copy_if_different
-            "${CMAKE_CURRENT_SOURCE_DIR}/assets/${mgb}" "${staged}"
-    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/assets/${mgb}"
-    COMMENT "Staging ${mgb} (FCSE's settings-page layout)"
-    VERBATIM
-  )
-  list(APPEND FCSE_STAGED_ASSETS "${staged}")
-endforeach()
-add_custom_target(fcse_assets ALL DEPENDS ${FCSE_STAGED_ASSETS})
-add_dependencies(FCSE fcse_assets)
-
 # The whole point of this loader per docs/docs/todos.md's "Tools/dll plugins" entry: enough
 # simultaneously-loaded plugins can otherwise run a 32-bit process out of address space.
 target_link_options(FCSE PRIVATE "/LARGEADDRESSAWARE")
@@ -108,8 +104,6 @@ if (CMAKE_VERSION VERSION_GREATER 3.12)
 endif()
 
 add_subdirectory(example_plugin)
-add_subdirectory(conflict_plugin)
-add_subdirectory(hash_logger_plugin)
 
 # Tests for the pieces that are pure logic and can run without the game attached - currently just
 # the config file's reader/writer, whose failure mode (silently mangling the player's fcse.ini) is

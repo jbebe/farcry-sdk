@@ -4,16 +4,15 @@
 #include "log.h"
 
 #include <cstdint>
-#include <vector>
 #include <windows.h>
 
 namespace FCSE {
 
 namespace {
-    // Relative to the loader's own directory (bin\). Kept under a subfolder rather than dropped
-    // beside FCSE.exe so a future package - or a plugin's own - has somewhere obvious to live.
-    constexpr wchar_t kNormalPath[] = L"fcse\\ui\\fcse.mgb";
-    constexpr wchar_t kWidescreenPath[] = L"fcse\\ui\\fcse_widescreen.mgb";
+    // Resource names, not paths. Embedded by CMake from assets/fcse.rc.in; unquoted non-numeric
+    // names in a .rc are string names, so there is no resource.h to keep in sync.
+    constexpr wchar_t kNormalResource[] = L"FCSE_MGB";
+    constexpr wchar_t kWidescreenResource[] = L"FCSE_MGB_WIDESCREEN";
 
     // How the engine itself chooses between the `pc` and `pcwidescreen` UI sets.
     //
@@ -30,31 +29,16 @@ namespace {
 
     using DisplayConfigFn = unsigned char*(__cdecl*)();
 
-    // magma::BinaryLoadVisitor::ReadHeader's own first two checks. Anything that fails these would
-    // fail inside the engine too, so failing here turns a silent black screen into a log line.
+    // magma::BinaryLoadVisitor::ReadHeader's own first two checks. These used to guard against a
+    // player's loose file being the wrong one; with the package embedded they instead catch a build
+    // that embedded something wrong, which is worth the same few lines.
     constexpr char kMagic[] = {'M', 'A', 'G', 'M', 'A'};
     constexpr uint32_t kExpectedVersion = 0x1EAB90;
-    constexpr size_t kHeaderPrefix = 13; // magic(5) + sentinel(4) + version(4)
+    constexpr size_t kVersionOffset = 9;  // magic(5) + sentinel(4)
+    constexpr size_t kHeaderPrefix = 13;  // ... + version(4)
 
     bool g_attempted = false;
-    bool g_available = false;
-    std::string g_path;
-    std::wstring g_pathWide;
-
-    std::string Narrow(const std::wstring& text) {
-        if (text.empty()) {
-            return {};
-        }
-        int size = WideCharToMultiByte(CP_ACP, 0, text.c_str(), static_cast<int>(text.size()),
-                                       nullptr, 0, nullptr, nullptr);
-        if (size <= 0) {
-            return {};
-        }
-        std::string narrow(static_cast<size_t>(size), '\0');
-        WideCharToMultiByte(CP_ACP, 0, text.c_str(), static_cast<int>(text.size()), narrow.data(),
-                            size, nullptr, nullptr);
-        return narrow;
-    }
+    PackageBytes g_package;
 
     bool SafeReadWidescreenFlag(bool* outWidescreen, DWORD* outCode) {
         uintptr_t base = DuniaApi::Base();
@@ -74,39 +58,34 @@ namespace {
         }
     }
 
-    // Reads just the header. The rest of the file is the engine's problem; JackAll's MgbXmlTests
-    // already prove the shipped package round-trips and that its page resolves by name.
-    bool ReadHeader(const std::wstring& path, std::vector<uint8_t>& header) {
-        HANDLE file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
-                                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-        if (file == INVALID_HANDLE_VALUE) {
-            Log::Loader("Page assets: cannot open " + Narrow(path) + " (error " +
-                        std::to_string(GetLastError()) + ")");
-            return false;
+    // The resource lives in FCSE.exe's own image, not in Dunia.dll - hence GetModuleHandleW(nullptr).
+    // Nothing here needs freeing: LockResource hands back a pointer into the mapped image, valid as
+    // long as the module is loaded, which for our own exe is the process lifetime.
+    PackageBytes FindEmbedded(const wchar_t* name) {
+        HMODULE self = GetModuleHandleW(nullptr);
+        // MAKEINTRESOURCEW(10), not RT_RCDATA: this target does not define UNICODE, so RT_RCDATA
+        // expands to the ANSI form and will not pass to FindResourceW. Same reason the rest of this
+        // codebase names the W functions explicitly.
+        HRSRC found = FindResourceW(self, name, MAKEINTRESOURCEW(10));
+        if (found == nullptr) {
+            return {};
         }
-        header.assign(kHeaderPrefix, 0);
-        DWORD read = 0;
-        bool ok = ReadFile(file, header.data(), static_cast<DWORD>(header.size()), &read, nullptr) &&
-                  read == header.size();
-        CloseHandle(file);
-        if (!ok) {
-            Log::Loader("Page assets: " + Narrow(path) + " is too small to be a .mgb package");
+        HGLOBAL block = LoadResource(self, found);
+        if (block == nullptr) {
+            return {};
         }
-        return ok;
+        PackageBytes bytes;
+        bytes.data = static_cast<const unsigned char*>(LockResource(block));
+        bytes.size = SizeofResource(self, found);
+        return bytes;
     }
 }
 
-bool PageAssets::Locate() {
+PackageBytes PageAssets::Locate() {
     if (g_attempted) {
-        return g_available;
+        return g_package;
     }
     g_attempted = true;
-
-    const std::wstring& directory = Log::LoaderDirectory();
-    if (directory.empty()) {
-        Log::Loader("Page assets: loader directory unknown, cannot locate fcse.mgb");
-        return false;
-    }
 
     bool widescreen = false;
     DWORD code = 0;
@@ -119,58 +98,44 @@ bool PageAssets::Locate() {
     Log::Loader(std::string("Page assets: engine reports ") +
                 (widescreen ? "widescreen (pcwidescreen)" : "4:3 (pc)") + " UI");
 
-    std::wstring path = directory + (widescreen ? kWidescreenPath : kNormalPath);
-
-    std::vector<uint8_t> header;
-    if (!ReadHeader(path, header)) {
-        return false;
+    const wchar_t* name = widescreen ? kWidescreenResource : kNormalResource;
+    PackageBytes bytes = FindEmbedded(name);
+    if (!bytes) {
+        // Overwhelmingly the build's fault rather than the machine's: a .rc added to a project
+        // without enable_language(RC) is skipped without a word, producing exactly this.
+        Log::Loader("Page assets: this FCSE.exe was built without its embedded UI package - check "
+                    "enable_language(RC) and assets/fcse.rc.in in CMakeLists.txt");
+        return {};
     }
 
-    if (memcmp(header.data(), kMagic, sizeof(kMagic)) != 0) {
-        Log::Loader("Page assets: " + Narrow(path) + " is not a .mgb package (no \"MAGMA\" magic)");
-        return false;
+    if (bytes.size < kHeaderPrefix) {
+        Log::Loader("Page assets: the embedded package is too small to be a .mgb");
+        return {};
+    }
+    if (memcmp(bytes.data, kMagic, sizeof(kMagic)) != 0) {
+        Log::Loader("Page assets: the embedded package is not a .mgb (no \"MAGMA\" magic)");
+        return {};
     }
 
     uint32_t version = 0;
-    memcpy(&version, header.data() + 9, sizeof(version));
+    memcpy(&version, bytes.data + kVersionOffset, sizeof(version));
     if (version != kExpectedVersion) {
         // The .mgb and .mgb.desc formats share one version epoch, and the engine rejects a
         // mismatch outright - so a package built for a different Magma build is worth naming here
         // rather than letting it fail deep inside the loader.
         char message[128];
-        sprintf_s(message, "Page assets: fcse.mgb is version 0x%06X, this engine wants 0x%06X",
-                  version, kExpectedVersion);
+        sprintf_s(message, "Page assets: the embedded package is version 0x%06X, this engine wants "
+                           "0x%06X", version, kExpectedVersion);
         Log::Loader(message);
-        return false;
+        return {};
     }
 
-    // The engine takes `char const*`. An install path with characters the active ANSI code page
-    // cannot represent would arrive mangled, so decline rather than hand over a path that opens the
-    // wrong file or nothing at all.
-    std::string narrow = Narrow(path);
-    if (narrow.empty() || narrow.find('?') != std::string::npos) {
-        Log::Loader("Page assets: the path to fcse.mgb cannot be represented in the system ANSI "
-                    "code page - move the game to a path without such characters");
-        return false;
-    }
+    char message[96];
+    sprintf_s(message, "Page assets: using the embedded package (%zu bytes)", bytes.size);
+    Log::Loader(message);
 
-    g_path = std::move(narrow);
-    g_pathWide = std::move(path);
-    g_available = true;
-    Log::Loader("Page assets: fcse.mgb located at " + g_path);
-    return true;
-}
-
-bool PageAssets::Available() {
-    return g_available;
-}
-
-const std::string& PageAssets::PackagePath() {
-    return g_path;
-}
-
-const std::wstring& PageAssets::PackagePathWide() {
-    return g_pathWide;
+    g_package = bytes;
+    return g_package;
 }
 
 } // namespace FCSE

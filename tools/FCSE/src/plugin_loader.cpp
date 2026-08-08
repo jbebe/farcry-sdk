@@ -10,14 +10,11 @@
 namespace FCSE {
 
 namespace {
-    struct LoadedPlugin {
-        HMODULE module;
-        std::string name;
-        FCSE_OnRegisterFunctionsFn onRegister;
-    };
-
-    std::vector<LoadedPlugin> g_plugins;
-    std::vector<std::string> g_loadedNames; // parallel to g_plugins, for LoadedNames()
+    // Only the callback is retained per plugin. The HMODULE is deliberately never released - a
+    // plugin's hooks and patches outlive FCSE's own loading phase - and nothing needs the handle
+    // back to arrange that, so there is nothing else worth keeping.
+    std::vector<FCSE_OnRegisterFunctionsFn> g_onRegisterCallbacks;
+    std::vector<std::string> g_loadedNames;
     const FCSE_PluginAPI* g_api = nullptr;
 
     std::string Narrow(const std::wstring& wide) {
@@ -78,7 +75,9 @@ void PluginLoader::LoadAll(const FCSE_PluginAPI* api, const std::wstring& plugin
         auto onRegister = reinterpret_cast<FCSE_OnRegisterFunctionsFn>(
             GetProcAddress(hPlugin, "FCSE_OnRegisterFunctions"));
 
-        g_plugins.push_back({hPlugin, name, onRegister});
+        if (onRegister != nullptr) {
+            g_onRegisterCallbacks.push_back(onRegister);
+        }
         g_loadedNames.push_back(name);
         Log::Loader("plugin '" + name + "' loaded" +
                     (onRegister == nullptr ? " (no FCSE_OnRegisterFunctions export)" : ""));
@@ -88,10 +87,8 @@ void PluginLoader::LoadAll(const FCSE_PluginAPI* api, const std::wstring& plugin
 }
 
 void PluginLoader::RunOnRegisterFunctions() {
-    for (const LoadedPlugin& plugin : g_plugins) {
-        if (plugin.onRegister != nullptr) {
-            plugin.onRegister(g_api);
-        }
+    for (FCSE_OnRegisterFunctionsFn onRegister : g_onRegisterCallbacks) {
+        onRegister(g_api);
     }
 }
 

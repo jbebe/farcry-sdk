@@ -35,7 +35,6 @@ StockConstants LoadStockConstants(const std::wstring& directory) {
 
     result.malariaCurveMultiplier = *malariaCurve;
     result.playerSPFinalizeValue = *playerSPFinalize;
-    result.resolvedFromRealExe = true;
 
     Log::Loader("Read stock constants from FarCry2.exe: MalariaCurve multiplier=" +
                 std::to_string(result.malariaCurveMultiplier) +

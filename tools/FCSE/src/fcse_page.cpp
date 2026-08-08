@@ -16,7 +16,7 @@
 #include <vector>
 #include <windows.h>
 
-// Dunia.dll (Steam v1.03) RVAs, same base-plus-RVA convention mod_page.cpp uses. Every address and
+// Dunia.dll (Steam v1.03) RVAs, same base-plus-RVA convention mods_tab.cpp uses. Every address and
 // offset below was confirmed by decompile and then exercised in-game during the 2026-08-07 spike;
 // the trail is in tools/FCSE/PLAN-own-page.md.
 namespace FCSE {
@@ -464,17 +464,15 @@ namespace {
     // The click handler for toggle rows: flip the value, then rebuild the page so the row's
     // [ON]/[OFF] reflects it immediately.
     //
-    // The rebuild re-enters the engine's row list from inside its own click dispatch, which
-    // mod_page.cpp's RefreshRows comment flags as a hazard - the row being dispatched is destroyed
-    // while the engine may still hold it. It is used anyway because it is the only thing that
-    // actually refreshes the label, and because the evidence exonerates it: the crash this page hit
-    // earlier came from native AddBoolSetting rows, where FCSE had no code in the click path at
-    // all, and toggling with a rebuild is the mechanism the shipped Mod Configuration Menu has
-    // always used. Two alternatives were tried and rejected - deferring the refresh to the next
-    // display (correct, but the label visibly lags a click behind) and rewriting the label buffer
-    // in place (no engine re-entry at all, but nothing redraws, so the engine copies the text at
-    // AddButton time rather than storing the pointer - which settles a question mod_page.cpp had
-    // left open).
+    // The rebuild re-enters the engine's row list from inside its own click dispatch, which is a
+    // known hazard - the row being dispatched is destroyed while the engine may still hold it. It
+    // is used anyway because it is the only thing that actually refreshes the label, and because
+    // the evidence exonerates it: the crash this page hit earlier came from native AddBoolSetting
+    // rows, where FCSE had no code in the click path at all, and toggling with a rebuild is the
+    // mechanism the shipped Mod Configuration Menu has always used. Two alternatives were tried and
+    // rejected - deferring the refresh to the next display (correct, but the label visibly lags a
+    // click behind) and rewriting the label buffer in place (no engine re-entry at all, but nothing
+    // redraws, so the engine copies the text at AddButton time rather than storing the pointer).
     struct ToggleHandler {
         void** vtable; // must stay first
         SettingsRegistry::Setting* setting;
@@ -845,7 +843,7 @@ bool FcsePage::Install(void* optionsMenuThis) {
     // appended now is wiped first. AppendRows runs from inside that rebuild instead.
 
     NavigationHandler* handler = NavigationHandler::Create(optionsMenuThis, page);
-    if (!SafeAddButton(optionsMenuThis, L"Mod Configuration (own page)", handler, &code)) {
+    if (!SafeAddButton(optionsMenuThis, L"Mod Configuration Menu", handler, &code)) {
         LogFailed("AddButton (Options row)", code);
         return false;
     }

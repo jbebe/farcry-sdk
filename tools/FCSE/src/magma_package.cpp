@@ -6,7 +6,6 @@
 #include "page_assets.h"
 
 #include <cstdint>
-#include <vector>
 #include <windows.h>
 
 namespace FCSE {
@@ -122,8 +121,18 @@ namespace {
 
     bool g_armed = false;
     uint32_t g_armedPathId = 0;
-    void* g_servedReader = nullptr;         // the one instance we answered Open for
-    std::vector<unsigned char> g_fileBytes; // kept for the process lifetime, see Load()
+    void* g_servedReader = nullptr; // the one instance we answered Open for
+
+    // The package, embedded in FCSE.exe and pointing into its own image - see page_assets.h. Valid
+    // for the process lifetime with nothing to free, which is what the reader below needs: the
+    // visitor copies what it wants during the load, but the package keeps no reference we can prove
+    // is absent.
+    //
+    // These bytes are read-only (an image mapping, where this used to be a heap buffer). Safe,
+    // because they are only ever a memcpy *source*: CFileReaderNomad::Read copies out of the cursor
+    // and advances the reader's own fields, so BinaryLoadVisitor parses its own copies and is never
+    // handed a pointer into ours to fix up in place.
+    PackageBytes g_bytes;
 
     // MSVC will not let a free function be __thiscall, so the detours are real member functions on
     // a throwaway type - `this` is the engine's reader, never an instance of these. Same trick
@@ -142,8 +151,7 @@ namespace {
                                                       kFileNamePathIdOffset);
                 if (pathId == g_armedPathId) {
                     *reinterpret_cast<const unsigned char**>(reinterpret_cast<char*>(self) +
-                                                             kReaderCursorOffset) =
-                        g_fileBytes.data();
+                                                             kReaderCursorOffset) = g_bytes.data;
                     *reinterpret_cast<uint32_t*>(reinterpret_cast<char*>(self) +
                                                  kReaderConsumedOffset) = 0;
                     matched = true;
@@ -166,7 +174,7 @@ namespace {
     uint32_t ReaderGetFileSizeThunk::Detour() {
         void* self = reinterpret_cast<void*>(this);
         if (g_armed && self == g_servedReader) {
-            return static_cast<uint32_t>(g_fileBytes.size());
+            return static_cast<uint32_t>(g_bytes.size);
         }
         return g_originalReaderGetFileSize(self);
     }
@@ -183,7 +191,7 @@ namespace {
 
     // Each function below wraps exactly one native touchpoint in SEH and holds no C++ object with a
     // destructor - MSVC disallows mixing __try/__except with automatic unwinding in one function,
-    // the same constraint mod_page.cpp already works within.
+    // the same constraint fcse_page.cpp works within.
 
     bool SafeReadPointer(void* address, void** outValue, DWORD* outCode) {
         __try {
@@ -258,24 +266,6 @@ namespace {
         return buffer;
     }
 
-    bool ReadWholeFile(const std::wstring& path, std::vector<unsigned char>* out) {
-        HANDLE file = CreateFileW(path.c_str(), GENERIC_READ, FILE_SHARE_READ, nullptr,
-                                  OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, nullptr);
-        if (file == INVALID_HANDLE_VALUE) {
-            return false;
-        }
-        LARGE_INTEGER size{};
-        if (!GetFileSizeEx(file, &size) || size.HighPart != 0 || size.LowPart == 0) {
-            CloseHandle(file);
-            return false;
-        }
-        out->assign(size.LowPart, 0);
-        DWORD read = 0;
-        bool ok = ReadFile(file, out->data(), size.LowPart, &read, nullptr) && read == size.LowPart;
-        CloseHandle(file);
-        return ok;
-    }
-
     bool InstallReaderHooks(uintptr_t slide) {
         if (g_readerHooksInstalled) {
             return true;
@@ -305,7 +295,8 @@ bool MagmaPackage::Load() {
     }
     g_attempted = true;
 
-    if (!PageAssets::Locate()) {
+    g_bytes = PageAssets::Locate();
+    if (!g_bytes) {
         return false; // PageAssets already logged the specific reason
     }
 
@@ -359,12 +350,6 @@ bool MagmaPackage::Load() {
         return false;
     }
 
-    // Held for the process lifetime. The visitor copies what it needs during the load, but the
-    // package keeps no reference we can prove is absent, and 4 KB is not worth the risk.
-    if (!ReadWholeFile(PageAssets::PackagePathWide(), &g_fileBytes)) {
-        Log::Loader("Magma package: could not read fcse.mgb into memory");
-        return false;
-    }
     if (!InstallReaderHooks(slide)) {
         return false;
     }
@@ -414,10 +399,6 @@ bool MagmaPackage::Load() {
 
 bool MagmaPackage::Loaded() {
     return g_package != nullptr;
-}
-
-void* MagmaPackage::Package() {
-    return g_package;
 }
 
 } // namespace FCSE

@@ -26,8 +26,8 @@ public:
     // MagmaPackage::Load() to have succeeded - without the package the name does not resolve and a
     // displayed page would show nothing, so this declines rather than offering a dead row.
     //
-    // Call once, after ModPage::Install, from the same Options-screen hook. Returns false (logged)
-    // whenever it declines; never fatal.
+    // Call once, from the Options-screen hook in mods_tab.cpp. Returns false (logged) whenever it
+    // declines; never fatal.
     static bool Install(void* optionsMenuThis);
 
     // Whether `page` is our private instance. CFCXOptionGamePage::RefreshOptionList runs on the

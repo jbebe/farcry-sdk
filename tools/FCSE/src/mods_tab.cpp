@@ -25,20 +25,14 @@ namespace {
     // eagerly before intro videos even play and is NOT this one - see the plan file for the full
     // trail of both the wrong hook and how this one was found.
     //
-    // kAddButtonRva = 0x10cdbb80 - the real "add one row" call. Confirmed unsafe when called with
-    // CFCXOptionPage's own pointer as `this` (crashes regardless of label/handler content) but
-    // confirmed SAFE when called with kOptionsMenuRva's own `this` (exactly what that function
-    // itself does, 5 times, successfully, every time Options opens today).
+    // The row itself is added by fcse_page.cpp, which resolves CListMenuPage::AddButton for
+    // itself - this file only owns the hook and the `this` to hand it.
     constexpr uintptr_t kDuniaPreferredBase = 0x10000000;
     constexpr uintptr_t kOptionsMenuRva = 0x1081aee0;
-    constexpr uintptr_t kAddButtonRva = 0x10cdbb80;
 
     using OptionsMenuFn = void(__thiscall*)(void* thisPtr);
-    using AddButtonFn = void*(__thiscall*)(void* thisPtr, const wchar_t* label, char visible,
-                                            void* handler);
 
     OptionsMenuFn g_originalOptionsMenu = nullptr;
-    AddButtonFn g_addButton = nullptr;
     bool g_appended = false; // guards against double-appending if this ever runs more than once
 
     void AppendModConfigurationMenu(void* optionsMenuThis) {
@@ -48,11 +42,6 @@ namespace {
             return;
         }
         g_appended = true;
-
-        if (g_addButton == nullptr) {
-            Log::Loader("Mods tab: AddButton address unavailable, cannot append rows");
-            return;
-        }
 
         // Load FCSE's own page layout. This is the right moment: the Options screen is built
         // lazily, well after common.mgb is up, which is what the layout's PageInstances point into.
@@ -103,7 +92,6 @@ bool ModsTab::Install() {
 
     void* optionsMenuTarget =
         reinterpret_cast<void*>(base + (kOptionsMenuRva - kDuniaPreferredBase));
-    g_addButton = reinterpret_cast<AddButtonFn>(base + (kAddButtonRva - kDuniaPreferredBase));
 
     if (!HookManager::Hook(optionsMenuTarget, RawFunctionPointer(&SetupDetourThunk::Detour),
                             reinterpret_cast<void**>(&g_originalOptionsMenu))) {

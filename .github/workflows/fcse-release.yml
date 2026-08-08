@@ -30,8 +30,7 @@ jobs:
         shell: pwsh
         # Two separate staging folders -> two separate zips (see the "Zip release artifacts" step
         # below): the main FCSE download, and the example plugin as an opt-in extra for anyone who
-        # wants a working starting point to write their own plugin from. conflict_plugin is a
-        # smoke-test fixture only (see its own source comment) - deliberately not shipped here.
+        # wants a working starting point to write their own plugin from.
         run: |
           $build = "out\build\x86-release"
 

@@ -44,6 +44,13 @@ python build_fcse_mgb.py options_ws.xml -o fcse_widescreen.mgb.xml
 Any language works as the source — only geometry and the type table are taken from it, never text.
 The generator prints the page size and measured geometry so a mismatched source is obvious.
 
+**A rebuilt `.mgb` reaches the game by rebuilding `FCSE.exe`, not by being dropped in.** Both
+variants are embedded into the exe as `RCDATA` resources (`fcse.rc.in`), and there is deliberately
+no loose-file path — the game folder is irrelevant to which layout loads, so a stale file can never
+shadow the real one. Editing an `.mgb` does relink the exe on its own, without touching any `.cpp`;
+see [`../PLAN-embed-assets.md`](../PLAN-embed-assets.md) for why that dependency needs stating
+explicitly in CMake.
+
 ### Aspect
 
 `CMagmaLocalizationUtil::GetLocalizedPackageName` (`0x10554fc0`) builds `"\pc"`, appends

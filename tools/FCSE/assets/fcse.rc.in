@@ -1,0 +1,14 @@
+// Both aspect variants of FCSE's settings-page layout, embedded into FCSE.exe so the loader ships
+// as a single file - see PLAN-embed-assets.md. page_assets.cpp picks between them at runtime using
+// the engine's own widescreen flag, and magma_package.cpp serves the bytes to the engine through a
+// hooked file reader (nothing in Dunia will open a loose file by path).
+//
+// Generated from assets/fcse.rc.in by CMake. The paths are absolute and CMake-substituted because
+// rc.exe resolves a relative filename against its working directory, not against this file's own
+// location; CMake writes them forward-slashed, which rc.exe accepts, so nothing needs escaping.
+//
+// Unquoted, non-numeric resource names are string names, so these are found with
+// FindResourceW(module, L"FCSE_MGB", RT_RCDATA) and there is no resource.h to keep in sync.
+
+FCSE_MGB            RCDATA "@FCSE_MGB@"
+FCSE_MGB_WIDESCREEN RCDATA "@FCSE_MGB_WIDESCREEN@"

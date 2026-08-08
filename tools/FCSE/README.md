@@ -179,15 +179,32 @@ Requires the `x86-debug` or `x86-release` CMake preset - **never `x64-*`**: Far 
 process, and neither `FCSE.exe` nor a plugin DLL built for it can load as 64-bit.
 
 ```
-.\build.ps1            # release (default), then runs the tests
+.\build.ps1            # release (default), build only
 .\build.ps1 -Config debug
-.\build.ps1 -SkipTests
+.\build.ps1 -Tests     # also run ctest
+.\build.ps1 -Zip       # also package out\fcse-release.zip
 ```
 
 Same `vswhere`/`vcvarsall.bat x86` dance as `tools/misc/modpatcher/build.ps1`. Builds `FCSE.exe`
-plus `example_plugin.dll`/`conflict_plugin.dll` (see "Verification" below), then runs `ctest`.
-Use `build.ps1` rather than calling `ctest` directly - like `cmake`, it only resolves from the
-developer environment this script sets up.
+plus `example_plugin.dll`. Tests are opt-in via `-Tests`; run them through `build.ps1` rather than
+calling `ctest` directly - like `cmake`, it only resolves from the developer environment this
+script sets up.
+
+`-Zip` packages `out\fcse-{Config}.zip` in the install layout below, so its contents extract
+straight into the game's `bin\`:
+
+```
+FCSE.exe
+plugins\example_plugin.dll
+```
+
+FCSE's settings-page layout isn't in that list because it's *inside* `FCSE.exe`: both `.mgb`
+variants are embedded as `RCDATA` resources at build time (`assets/fcse.rc.in`, wired up in
+`CMakeLists.txt`), so installing the loader is copying one file and there's no second file to
+forget, mismatch, or lose. See [`PLAN-embed-assets.md`](PLAN-embed-assets.md).
+
+This is a local convenience package - it includes `example_plugin.dll`, which the GitHub release
+workflow (`.github/workflows/fcse-release.yml`) deliberately ships as a *separate* download.
 
 ## Installing
 
@@ -205,8 +222,8 @@ developer environment this script sets up.
   `Application can handle large (>2GB) addresses`.
 - Without the real game present: point `FCSE.exe` at a folder with no `Dunia.dll` and confirm it
   logs a clear failure (`fcse.log`) and shows a message box instead of crashing.
-- `.\build.ps1` runs `tests/ini_file_tests.cpp` (the config file's reader/writer) via `ctest`. It
-  needs neither the game nor `Dunia.dll`.
+- `.\build.ps1 -Tests` runs `tests/ini_file_tests.cpp` (the config file's reader/writer) via
+  `ctest`. It needs neither the game nor `Dunia.dll`.
 - Drop `example_plugin.dll` alone into `bin\plugins\`: `fcse.log` should show it discovered, loaded,
   its `GetTickCount` hook installed, its demo buffer patched, and (later, from inside `Provider()`)
   its `toRed` registration accepted.
@@ -215,17 +232,14 @@ developer environment this script sets up.
   Configuration Menu, confirm the row's `[ON]`/`[OFF]` flips on the spot and the file updates, then
   relaunch and confirm `fcse.log` shows `example_plugin: toRed is ON` during load - i.e. the value
   came back from the file before the game started, not from the plugin's own default.
-- Plugin listing: with `conflict_plugin.dll` installed too (it registers no settings), the menu
-  should list it with `(no settings)` under it, while `example_plugin` shows its toggle row.
-- Drop `example_plugin.dll` **and** `conflict_plugin.dll` together (either load order - `bin\
-  plugins\` is scanned via `FindFirstFileW`/`FindNextFileW`, so order follows normal directory
-  enumeration, not necessarily alphabetical): `fcse.log` should show exactly one of them win the
-  `GetTickCount` hook and the `toRed` registration, and the other's attempt logged as a rejected
-  conflict naming both plugins. This is the two tiers with the clearest, safest cross-plugin demo;
-  `Patch()`'s overlap-rejection path is exercised by `example_plugin` alone (against its own local
-  buffer) and reviewed by inspection (`src/patch.cpp`'s interval-overlap check is a few lines) -
-  it doesn't have an equally safe, generic **cross**-plugin demo target the way a real Windows API
-  export does for `Hook()`.
+- Conflict rejection: install a second copy of `example_plugin.dll` under a different filename.
+  Both are loaded (`bin\plugins\` is scanned via `FindFirstFileW`/`FindNextFileW`, so order follows
+  normal directory enumeration, not necessarily alphabetical), and `fcse.log` should show exactly
+  one of them win the `GetTickCount` hook and the `toRed` registration, with the other's attempt
+  logged as a rejected conflict naming both. `Patch()`'s overlap-rejection path is exercised by
+  `example_plugin` alone (against its own local buffer) and reviewed by inspection
+  (`src/patch.cpp`'s interval-overlap check is a few lines) - it doesn't have an equally safe,
+  generic **cross**-plugin demo target the way a real Windows API export does for `Hook()`.
 - **Real in-game verification is on you** - same as `tools/misc/modpatcher`'s own README status
   section, whose live-launch testing was done against a real Steam install, not by an agent. A
   real launch + gameplay pass (menu loads, a diamond pickup still increments, malaria curve still

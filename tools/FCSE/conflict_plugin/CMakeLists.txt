@@ -1,5 +1,0 @@
-add_library(conflict_plugin SHARED conflict_plugin.cpp)
-target_include_directories(conflict_plugin PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../include")
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET conflict_plugin PROPERTY CXX_STANDARD 20)
-endif()

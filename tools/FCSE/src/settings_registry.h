@@ -22,7 +22,7 @@ class SettingsRegistry {
 public:
     // One registered setting, plus FCSE's own copy of its current value. Allocated individually and
     // never moved or freed, so a pointer handed to a menu row stays valid for the whole session
-    // even as later plugins register more settings (see menu_handler.h).
+    // even as later plugins register more settings (see fcse_page.cpp's ToggleHandler).
     struct Setting {
         std::string groupName; // the owning plugin's name - the [group] this writes back into
         std::string name;
@@ -47,12 +47,12 @@ public:
     static bool RegisterSettings(const char* pluginName, const FCSE_Setting* settings,
                                   size_t settingCount);
 
-    // Every group, in registration order. Read by mod_page.cpp each time the menu is rebuilt.
+    // Every group, in registration order. Read by fcse_page.cpp each time the menu is rebuilt.
     static const std::vector<Group>& Groups();
 
     // The group registered under `pluginName`, or nullptr if that plugin registered no settings.
     // Note this matches on the name the plugin *chose*, which it is free to make something other
-    // than its module name - see mod_page.cpp for how the menu reconciles the two.
+    // than its module name - see fcse_page.cpp's AppendRows for how the menu reconciles the two.
     static const Group* FindGroup(const std::string& pluginName);
 
     // Flips a Checkbox, fires its callback and persists the file. What an in-game row's click

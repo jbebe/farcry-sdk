@@ -18,7 +18,6 @@ struct StockConstants {
     // PlayerSPFinalize's simplest not-holding-a-guessed-status-code default.
     float malariaCurveMultiplier = 1.0f;
     int32_t playerSPFinalizeValue = 0;
-    bool resolvedFromRealExe = false;
 };
 
 // Maps FarCry2.exe (expected next to `directory`, i.e. bin\) with DONT_RESOLVE_DLL_REFERENCES (no
