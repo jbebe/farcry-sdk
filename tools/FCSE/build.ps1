@@ -80,9 +80,9 @@ if ($Zip) {
     # Mirrors the install layout from README.md's "Installing" section, so the zip's contents drop
     # straight into the game's bin\ folder with no rearranging:
     #
-    #   FCSE.exe                             next to the untouched FarCry2.exe
-    #   plugins\example_plugin.dll           "plugins", not "plugin" - main.cpp scans bin\plugins\ by name
-    #   scripts\example_script\main.lua      "scripts" - lua_host.cpp scans bin\scripts\ by name
+    #   FCSE.exe                       next to the untouched FarCry2.exe
+    #   plugins\example_plugin.dll     "plugins", not "plugin" - main.cpp scans bin\plugins\ by name
+    #   plugins\example_script.lua     Lua mods live in that same folder; both are found recursively
     #
     # The settings-page layout is not here because it is inside FCSE.exe - both .mgb variants are
     # embedded as RCDATA resources at build time (assets\fcse.rc.in, wired up in CMakeLists.txt), so
@@ -98,8 +98,6 @@ if ($Zip) {
     if (Test-Path $StageDir) { Remove-Item -Recurse -Force $StageDir }
     if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
     New-Item -ItemType Directory -Force -Path (Join-Path $StageDir "plugins") | Out-Null
-    New-Item -ItemType Directory -Force -Path (Join-Path $StageDir "scripts\example_script") | Out-Null
-
     Copy-Item $OutputExe (Join-Path $StageDir "FCSE.exe")
     Copy-Item (Join-Path $BuildDir "example_plugin\example_plugin.dll") `
               (Join-Path $StageDir "plugins\example_plugin.dll")
@@ -107,8 +105,8 @@ if ($Zip) {
     # Copied from source, not from the build tree: a script is not compiled, and the runtime it calls
     # into (src\lua\runtime\fcse.lua) is already inside FCSE.exe as a resource, so there is nothing to
     # build and nothing else to ship alongside it.
-    Copy-Item (Join-Path $ProjectRoot "example_script\main.lua") `
-              (Join-Path $StageDir "scripts\example_script\main.lua")
+    Copy-Item (Join-Path $ProjectRoot "example_script\example_script.lua") `
+              (Join-Path $StageDir "plugins\example_script.lua")
 
     Compress-Archive -Path (Join-Path $StageDir "*") -DestinationPath $ZipPath
     Write-Host "Packaged: $ZipPath" -ForegroundColor Green

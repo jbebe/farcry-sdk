@@ -154,22 +154,35 @@ namespace {
         std::wstring path;
     };
 
-    // Finds scripts under `directory`, in two accepted shapes:
+    // Finds scripts under `directory` - bin\plugins\, the same folder the plugin DLLs live in -
+    // recursively, in two accepted shapes:
     //
-    //   scripts\my_mod\main.lua   a folder per mod - room for extra files alongside
-    //   scripts\quick_tweak.lua   a single file - the whole point of scripting being cheap
+    //   plugins\quick_tweak.lua        a single file - the whole point of scripting being cheap
+    //   plugins\my_mod\main.lua        a folder per mod - room for extra files alongside
+    //
+    // Sharing the folder with the DLLs is deliberate: a player installs a mod by dropping it into
+    // bin\plugins\ and should not have to know which language it happens to be written in. The two
+    // scans cannot fight over anything - PluginLoader matches *.dll and this matches *.lua.
+    //
+    // A directory containing main.lua is one mod, not a bag of scripts: only its main.lua is run,
+    // and the walk does not descend past it. Without that rule a mod shipping helper files would
+    // have every one of them executed as a separate script - out of order, and with the libraries
+    // running before the file that was supposed to require them. Helpers stay reachable through
+    // require, which is what they are for.
+    //
+    // Any other directory is just a container and is walked through, so mods can be grouped into
+    // folders without that changing what runs.
     //
     // The name is the folder or file stem, and is what fcse.ini groups, log tags and the Mod
-    // Configuration Menu use, so it is what a player sees.
-    std::vector<ScriptFile> Discover(const std::wstring& directory) {
-        std::vector<ScriptFile> found;
-
+    // Configuration Menu use - so it is what a player sees.
+    void Discover(const std::wstring& directory, std::vector<ScriptFile>& found) {
         WIN32_FIND_DATAW entry;
         HANDLE search = FindFirstFileW((directory + L"*").c_str(), &entry);
         if (search == INVALID_HANDLE_VALUE) {
-            return found;
+            return;
         }
 
+        std::vector<std::wstring> subdirectories;
         do {
             std::wstring name = entry.cFileName;
             if (name == L"." || name == L"..") {
@@ -177,9 +190,12 @@ namespace {
             }
 
             if (entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                std::wstring main = directory + name + L"\\main.lua";
+                std::wstring folder = directory + name + L"\\";
+                std::wstring main = folder + L"main.lua";
                 if (GetFileAttributesW(main.c_str()) != INVALID_FILE_ATTRIBUTES) {
-                    found.push_back({Narrow(name), main});
+                    found.push_back({Narrow(name), main}); // a mod: stop here
+                } else {
+                    subdirectories.push_back(folder); // a container: keep walking
                 }
                 continue;
             }
@@ -190,8 +206,11 @@ namespace {
             }
         } while (FindNextFileW(search, &entry));
 
-        FindClose(search);
-        return found;
+        FindClose(search); // before recursing, rather than held open across the whole tree
+
+        for (const std::wstring& subdirectory : subdirectories) {
+            Discover(subdirectory, found);
+        }
     }
 
     // Runs one script in an environment of its own.
@@ -341,7 +360,7 @@ namespace {
     }
 }
 
-bool LuaHost::Init(const std::wstring& scriptsDirectory) {
+bool LuaHost::Init(const std::wstring& pluginsDirectory) {
     if (g_state != nullptr) {
         return true;
     }
@@ -363,12 +382,13 @@ bool LuaHost::Init(const std::wstring& scriptsDirectory) {
         return false;
     }
 
-    // Fine if it already exists; a missing scripts\ folder just means none are installed yet.
-    CreateDirectoryW(scriptsDirectory.c_str(), nullptr);
+    // PluginLoader has already created it by this point; harmless either way.
+    CreateDirectoryW(pluginsDirectory.c_str(), nullptr);
 
-    std::vector<ScriptFile> scripts = Discover(scriptsDirectory);
+    std::vector<ScriptFile> scripts;
+    Discover(pluginsDirectory, scripts);
     if (scripts.empty()) {
-        Log::Loader("Lua: no scripts found in " + Narrow(scriptsDirectory));
+        Log::Loader("Lua: no scripts found in " + Narrow(pluginsDirectory));
         return true;
     }
 

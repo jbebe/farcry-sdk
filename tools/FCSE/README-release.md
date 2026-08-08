@@ -10,8 +10,8 @@ DLLs**, for anything that needs real native code.
 1. Copy `FCSE.exe` into the game's `bin\` folder, next to the existing `FarCry2.exe` - that file
    is left completely untouched; `FCSE.exe` is an additional way to launch the game, not a
    replacement.
-2. Drop Lua mods into `bin\scripts\` and plugin `.dll` files into `bin\plugins\` (both folders are
-   created automatically the first time you launch `FCSE.exe` if they don't exist yet).
+2. Drop mods into `bin\plugins\` - Lua scripts and plugin `.dll` files both go there (the folder is
+   created automatically the first time you launch `FCSE.exe` if it doesn't exist yet).
 3. Launch `FCSE.exe` instead of `FarCry2.exe`.
 
 Check `bin\fcse.log` afterward to confirm what happened - it records every script and plugin
@@ -34,7 +34,10 @@ fcse.on('update', function()
 end)
 ```
 
-Save it as `bin\scripts\my_mod\main.lua` (or `bin\scripts\my_mod.lua`) and launch. Scripts can read
+Save it as `bin\plugins\my_mod.lua` and launch. A mod that needs more than one file can instead be a
+folder with a `main.lua` inside it (`bin\plugins\my_mod\main.lua`) - the files beside that `main.lua`
+are then libraries to `require`, not scripts that run on their own. Both forms are found at any depth
+under `bin\plugins\`, so mods can be grouped into folders freely. Scripts can read
 and write engine memory, scan for byte signatures, detour functions and add their own rows to the
 in-game Mod Configuration Menu - no compiler, no build step. The separate `fcse-example-script`
 download is a working, commented starting point.

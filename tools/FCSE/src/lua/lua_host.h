@@ -2,7 +2,8 @@
 
 #include <string>
 
-// Owns FCSE's embedded LuaJIT interpreter and the scripts in bin\scripts\.
+// Owns FCSE's embedded LuaJIT interpreter and the Lua mods in bin\plugins\ - the same folder the
+// plugin DLLs load from, so installing a mod is one instruction regardless of what it is written in.
 //
 // Deliberately its own state, unrelated to the Lua that Dunia.dll itself carries. The engine embeds
 // a fork of Lua 4.1-alpha - an unreleased 2002 prototype with tag methods instead of metatables and
@@ -18,13 +19,13 @@ namespace FCSE {
 class LuaHost {
 public:
     // Creates the interpreter, installs the API, then loads and runs every script in
-    // `scriptsDirectory`, firing their 'load' handlers. Returns false (logged) if the interpreter
+    // `pluginsDirectory`, firing their 'load' handlers. Returns false (logged) if the interpreter
     // could not be created; a script failing to load is not a failure of this call, since one bad
     // script should not cost the others their run.
     //
     // Call after the plugin DLLs have loaded, so a compiled plugin keeps first claim on anything
     // contested, and before any engine code runs.
-    static bool Init(const std::wstring& scriptsDirectory);
+    static bool Init(const std::wstring& pluginsDirectory);
 
     // Fires 'register_functions'. Call from the function-registry provider callback - the only point
     // at which Dunia's registry exists and accepts new names.

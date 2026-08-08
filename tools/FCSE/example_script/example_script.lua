@@ -1,9 +1,12 @@
 -- example_script - a working starting point for an FCSE Lua script, and a smoke test for the host.
 --
--- Install by copying this folder into the game's bin\scripts\, so the file ends up at
---   bin\scripts\example_script\main.lua
--- A single file at bin\scripts\example_script.lua works too; the folder form just leaves room for
--- other files next to it.
+-- Install by copying this file into the game's bin\plugins\, next to the plugin DLLs - one place
+-- for mods, whatever they are written in.
+--
+-- A single .lua file is a mod on its own, which is all this needs. A mod that wants more files can
+-- instead be a folder with a main.lua in it (bin\plugins\my_mod\main.lua); everything beside that
+-- main.lua is then a library to require, not a script that runs on its own. Both forms are found at
+-- any depth under bin\plugins\.
 --
 -- Everything here is read-only or self-contained. Nothing patches engine memory, so it is safe to
 -- leave installed while you work on something else.

@@ -94,12 +94,12 @@ jobs:
           Copy-Item "example_plugin\example_plugin.cpp" "stage\example-plugin\example_plugin.cpp"
           Copy-Item "include\plugin_api.h" "stage\example-plugin\plugin_api.h"
 
-          # Laid out as scripts\example_script\ so the zip extracts straight into the game's bin\,
-          # matching the plugin extra and README.md's "Installing" section. Nothing is copied from
-          # the build tree: a script is not compiled, and the API it calls into is already embedded
-          # in FCSE.exe as a resource.
-          New-Item -ItemType Directory -Force -Path "stage\example-script\scripts\example_script" | Out-Null
-          Copy-Item "example_script\main.lua" "stage\example-script\scripts\example_script\main.lua"
+          # Laid out as plugins\example_script.lua so the zip extracts straight into the game's bin\.
+          # Lua mods share bin\plugins\ with the DLLs - one install location whatever a mod is
+          # written in. Nothing is copied from the build tree: a script is not compiled, and the API
+          # it calls into is already embedded in FCSE.exe as a resource.
+          New-Item -ItemType Directory -Force -Path "stage\example-script\plugins" | Out-Null
+          Copy-Item "example_script\example_script.lua" "stage\example-script\plugins\example_script.lua"
 
       - name: Zip release artifacts
         shell: pwsh

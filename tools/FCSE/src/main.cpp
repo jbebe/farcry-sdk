@@ -90,7 +90,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     // function registry is first-claimant-wins) and existing installs behave exactly as before.
     // Before SettingsRegistry::Flush below, so settings a script registers reach fcse.ini in the
     // same single write as the plugins'.
-    LuaHost::Init(directory + L"scripts\\");
+    // Same bin\plugins\ folder the DLLs come from - one place to install a mod, whichever form it
+    // takes. The two scans cannot collide: PluginLoader takes *.dll, LuaHost takes *.lua and
+    // subfolders holding a main.lua.
+    LuaHost::Init(pluginsDirectory);
 
     // Drives the scripts' 'update' event off the engine's own frame loop. After LuaHost::Init so
     // there is an interpreter to tick.

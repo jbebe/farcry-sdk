@@ -73,7 +73,7 @@ add_library(minhook STATIC
 target_include_directories(minhook PUBLIC "${minhook_SOURCE_DIR}/include")
 target_include_directories(minhook PRIVATE "${minhook_SOURCE_DIR}/src")
 
-# LuaJIT - the interpreter behind bin\scripts\. Kept in its own module because, unlike MinHook, it
+# LuaJIT - the interpreter behind the Lua mods in bin\plugins\. Kept in its own module because, unlike MinHook, it
 # cannot be expressed as a list of .c files: LuaJIT's build is a bootstrap that generates headers and
 # lj_vm.obj with tools it compiles first.
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/luajit.cmake")
