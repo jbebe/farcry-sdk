@@ -14,7 +14,10 @@
 #include "dunia_api.h"
 #include "function_registry.h"
 #include "hook.h"
+#include "ini_file.h"
 #include "log.h"
+#include "lua/lua_host.h"
+#include "lua/tick_source.h"
 #include "mods_tab.h"
 #include "patch.h"
 #include "plugin_loader.h"
@@ -83,6 +86,28 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     std::wstring pluginsDirectory = directory + L"plugins\\";
     PluginLoader::LoadAll(&api, pluginsDirectory);
 
+    // After the plugin DLLs, so a compiled plugin keeps first claim on anything contested (the
+    // function registry is first-claimant-wins) and existing installs behave exactly as before.
+    // Before SettingsRegistry::Flush below, so settings a script registers reach fcse.ini in the
+    // same single write as the plugins'.
+    LuaHost::Init(directory + L"scripts\\");
+
+    // Drives the scripts' 'update' event off the engine's own frame loop. After LuaHost::Init so
+    // there is an interpreter to tick.
+    //
+    // `Tick self check frames` under [fcse] in fcse.ini changes how many frames the one-off rate
+    // check waits for (0 silences it). Read straight from the file rather than registered as a
+    // setting: it is meaningless to toggle mid-run, and the Mod Configuration Menu has only 20 rows
+    // to spend on things players actually want.
+    {
+        IniFile diagnostics;
+        diagnostics.Load(directory + L"fcse.ini");
+        if (const std::string* frames = diagnostics.Find("fcse", "Tick self check frames")) {
+            TickSource::SetSelfCheckTicks(std::atoi(frames->c_str()));
+        }
+    }
+    TickSource::Install();
+
     // Every plugin has now declared what it has, so the file can be completed in one write:
     // newly-added settings get their defaults, and a first run produces a fully hand-editable
     // fcse.ini without the player ever opening the menu.
@@ -94,6 +119,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     bool ok = DuniaApi::RunGame()(hInstance, lpCmdLine);
     Log::Loader(std::string("RunGame returned ") + (ok ? "true" : "false"));
 
+    // Before the interpreter closes: a session where the frame hook never fired ends silently
+    // otherwise, and that is the one outcome worth saying out loud.
+    TickSource::Finish();
+    LuaHost::Shutdown();
     HookManager::Shutdown();
     Log::Shutdown();
     return ok ? 0 : 1;

@@ -57,7 +57,10 @@ FetchContent_Declare(
   GIT_REPOSITORY https://github.com/TsudaKageyu/minhook.git
   GIT_TAG        v1.3.3
 )
-FetchContent_Populate(minhook)
+# See the note in cmake/luajit.cmake: Populate is deprecated as of CMake 4.x and its warning goes to
+# stderr, which is fatal under build.ps1. MinHook ships no CMakeLists.txt either, so MakeAvailable
+# populates and stops rather than adding a subdirectory.
+FetchContent_MakeAvailable(minhook)
 
 # Upstream MinHook ships only Visual Studio project files, no CMake support - same minimal
 # from-source static-library target as tools/misc/modpatcher/CMakeLists.txt.
@@ -70,12 +73,21 @@ add_library(minhook STATIC
 target_include_directories(minhook PUBLIC "${minhook_SOURCE_DIR}/include")
 target_include_directories(minhook PRIVATE "${minhook_SOURCE_DIR}/src")
 
+# LuaJIT - the interpreter behind bin\scripts\. Kept in its own module because, unlike MinHook, it
+# cannot be expressed as a list of .c files: LuaJIT's build is a bootstrap that generates headers and
+# lj_vm.obj with tools it compiles first.
+include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/luajit.cmake")
+
 # FCSE's own Magma UI package, embedded into the exe as an RCDATA resource so the loader installs as
-# a single file - see PLAN-embed-assets.md. Both aspect variants: the UI ships as `pc` and
-# `pcwidescreen` sets whose pages differ in size and geometry, and page_assets.cpp picks between them
-# at runtime using the engine's own widescreen flag.
+# a single file. Both aspect variants: the UI ships as `pc` and `pcwidescreen` sets whose pages
+# differ in size and geometry, and page_assets.cpp picks between them at runtime using the engine's
+# own widescreen flag.
 set(FCSE_MGB            "${CMAKE_CURRENT_SOURCE_DIR}/assets/fcse.mgb")
 set(FCSE_MGB_WIDESCREEN "${CMAKE_CURRENT_SOURCE_DIR}/assets/fcse_widescreen.mgb")
+
+# The Lua script API, embedded alongside them - see the note in assets/fcse.rc.in.
+set(FCSE_LUA_RUNTIME    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/runtime/fcse.lua")
+
 configure_file("assets/fcse.rc.in" "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc" @ONLY)
 
 # rc.exe does not report what a resource statement pulled in and CMake does not scan .rc files for
@@ -84,7 +96,8 @@ configure_file("assets/fcse.rc.in" "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc" @ONLY)
 # changes - it says nothing about the files that template names.) Same staleness class as the
 # POST_BUILD problem the staging rule this replaced was written to avoid.
 set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc"
-             APPEND PROPERTY OBJECT_DEPENDS "${FCSE_MGB}" "${FCSE_MGB_WIDESCREEN}")
+             APPEND PROPERTY OBJECT_DEPENDS "${FCSE_MGB}" "${FCSE_MGB_WIDESCREEN}"
+                                            "${FCSE_LUA_RUNTIME}")
 
 add_executable(FCSE WIN32
   "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc"
@@ -119,10 +132,26 @@ add_executable(FCSE WIN32
   "src/plugin_loader.h"
   "src/settings_registry.cpp"
   "src/settings_registry.h"
+  "src/lua/lua_api.cpp"
+  "src/lua/lua_api.h"
+  "src/lua/lua_host.cpp"
+  "src/lua/lua_host.h"
+  "src/lua/tick_source.cpp"
+  "src/lua/tick_source.h"
+  "src/lua/runtime/fcse.lua"
   "include/plugin_api.h"
 )
 
-target_link_libraries(FCSE PRIVATE minhook)
+# Listed in the target so it shows up in an IDE next to the code that embeds it, but it is data for
+# rc.exe, not something to hand the C++ compiler.
+set_source_files_properties("${FCSE_LUA_RUNTIME}" PROPERTIES HEADER_FILE_ONLY TRUE)
+
+target_link_libraries(FCSE PRIVATE minhook luajit)
+
+# luajit is an IMPORTED target, so linking it creates no build-order edge on the command that
+# produces lua51.lib - CMake would happily start the link before LuaJIT finished building. This is
+# what actually sequences the two.
+add_dependencies(FCSE luajit_build)
 
 set_target_properties(FCSE PROPERTIES OUTPUT_NAME "FCSE")
 
@@ -136,9 +165,11 @@ endif()
 
 add_subdirectory(example_plugin)
 
-# Tests for the pieces that are pure logic and can run without the game attached - currently just
-# the config file's reader/writer, whose failure mode (silently mangling the player's fcse.ini) is
-# worth catching at build time rather than in-game. Plain console exe, no test framework.
+# Tests for the pieces that are pure logic and can run without the game attached: the config file's
+# reader/writer, whose failure mode (silently mangling the player's fcse.ini) is worth catching at
+# build time rather than in-game, and the Lua runtime, whose failure mode is worse - a mistake in
+# fcse.lua breaks every script at once, and the only place that would otherwise surface is a
+# player's log. Plain console exe / plain script, no test framework.
 enable_testing()
 
 add_executable(ini_file_tests
@@ -153,3 +184,14 @@ if (CMAKE_VERSION VERSION_GREATER 3.12)
 endif()
 
 add_test(NAME ini_file_tests COMMAND ini_file_tests)
+
+# Runs the real src/lua/runtime/fcse.lua against a stubbed native table, in the very interpreter this
+# build produced - so the dialect, the FFI behaviour and the runtime under test are all the ones that
+# will ship, not an approximation of them.
+#
+# Uses luajit.exe out of the LuaJIT build rather than a system Lua: there is no system Lua to rely on
+# here, and a different interpreter would not be a meaningful test of a LuaJIT-only runtime.
+add_test(NAME lua_runtime_tests
+         COMMAND "${LUAJIT_SRC_DIR}/luajit.exe"
+                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/lua_runtime_tests.lua"
+                 "${FCSE_LUA_RUNTIME}")

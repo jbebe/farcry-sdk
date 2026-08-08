@@ -6,7 +6,7 @@
 //
 // The package is embedded in FCSE.exe as an RCDATA resource, so installing the loader is copying
 // one file and there is no loose layout that can go missing, get stale, or be replaced with one
-// built for a different engine build. See PLAN-embed-assets.md.
+// built for a different engine build.
 //
 // These bytes are FCSE's own to read, not the engine's: nothing in Dunia will open a loose file by
 // path either (see magma_package.cpp's note on CFileReaderNomad::Open), so MagmaPackage serves them

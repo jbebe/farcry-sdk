@@ -18,7 +18,7 @@
 
 // Dunia.dll (Steam v1.03) RVAs, same base-plus-RVA convention mods_tab.cpp uses. Every address and
 // offset below was confirmed by decompile and then exercised in-game during the 2026-08-07 spike;
-// the trail is in tools/FCSE/PLAN-own-page.md.
+// the trail is in PLAN-own-page.md (git history, removed in cf13c2b).
 namespace FCSE {
 
 namespace {
@@ -747,7 +747,8 @@ namespace {
     // AddBoolSetting overwrites whatever handler it is given with that setting object, so FCSE has
     // no code in that path at all.
     //
-    // Everything needed to pick this back up is in PLAN-own-page.md; it is one unknown away.
+    // Everything needed to pick this back up is in PLAN-own-page.md (git history, removed in
+    // cf13c2b); it is one unknown away.
     bool NativeToggles() { return ReadFlag("Own page native toggles"); }
 
 }

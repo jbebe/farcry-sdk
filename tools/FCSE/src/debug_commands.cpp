@@ -2,6 +2,7 @@
 
 #include "function_registry.h"
 #include "log.h"
+#include "lua/lua_host.h"
 #include "plugin_loader.h"
 #include "stock_constants.h"
 
@@ -82,8 +83,10 @@ void __cdecl DebugCommands::Provider() {
                 "stock handlers");
 
     // Plugins first: FunctionRegistry_Insert is first-claimant-wins, so this is what lets a
-    // plugin override one of the 12 stock names below (e.g. its own AddDiamond).
+    // plugin override one of the 12 stock names below (e.g. its own AddDiamond). Scripts come
+    // after the compiled plugins for the same reason, and both come before the stock handlers.
     PluginLoader::RunOnRegisterFunctions();
+    LuaHost::OnRegisterFunctions();
 
     FunctionRegistry::Register(reinterpret_cast<void*>(&ToRed), "toRed");
     FunctionRegistry::Register(reinterpret_cast<void*>(&MenuJoke), "menuJoke");

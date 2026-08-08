@@ -4,8 +4,9 @@
 Why this exists
 ---------------
 A private page cannot borrow a shipped layout: it would share that layout's `magma::Page` with the
-stock class that also binds it, and the two screens become one screen (see PLAN-own-page.md, work
-item 0.5). A layout nothing else binds is the only way a private page can own its own widget tree.
+stock class that also binds it, and the two screens become one screen (see PLAN-own-page.md work
+item 0.5, in git history - removed in cf13c2b). A layout nothing else binds is the only way a
+private page can own its own widget tree.
 
 `CUIPageBase::Init` resolves a page by `FindGenericObject(Id::Hash(pageName))` against the global
 registry that `magma::Engine::LoadPackage` populates from every loaded package's GenericObjectTable.

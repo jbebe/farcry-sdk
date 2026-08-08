@@ -3,10 +3,10 @@
 ## `fcse.mgb` — FCSE's own Magma settings page
 
 A standalone Magma UI package (4,421 bytes) declaring one `Page` area, `FCSE_PAGE`, with a row list
-and 20 value-control slots. It is work item 1 of [`../PLAN-own-page.md`](../PLAN-own-page.md), and it
-is the prerequisite for FCSE having a settings page at all: a private page bound to a *shipped*
-layout shares that layout's `magma::Page` with the stock class that also binds it, so the two screens
-become one screen. A layout nothing else binds is the only way out.
+and 20 value-control slots. It is work item 1 of `PLAN-own-page.md` (git history: removed in
+`cf13c2b`), and it is the prerequisite for FCSE having a settings page at all: a private page bound
+to a *shipped* layout shares that layout's `magma::Page` with the stock class that also binds it, so
+the two screens become one screen. A layout nothing else binds is the only way out.
 
 Two variants ship, because the UI does: Far Cry 2 has a `pc` set and a `pcwidescreen` set whose
 pages differ in size and geometry (`1024x768` / nav at x=83 versus `1280x800` / nav at x=74).
@@ -48,8 +48,8 @@ The generator prints the page size and measured geometry so a mismatched source 
 variants are embedded into the exe as `RCDATA` resources (`fcse.rc.in`), and there is deliberately
 no loose-file path — the game folder is irrelevant to which layout loads, so a stale file can never
 shadow the real one. Editing an `.mgb` does relink the exe on its own, without touching any `.cpp`;
-see [`../PLAN-embed-assets.md`](../PLAN-embed-assets.md) for why that dependency needs stating
-explicitly in CMake.
+see the `OBJECT_DEPENDS` note in [`../CMakeLists.txt`](../CMakeLists.txt) for why that dependency
+needs stating explicitly in CMake.
 
 ### Aspect
 

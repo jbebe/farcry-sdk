@@ -13,7 +13,8 @@ namespace FCSE {
 namespace {
     // Dunia.dll (Steam v1.03) RVAs against the preferred image base, same convention as
     // mods_tab.cpp. Every one of these was read off the MSVC build directly - see
-    // PLAN-own-page.md work item 3, which records how each was confirmed.
+    // PLAN-own-page.md work item 3 (git history, removed in cf13c2b), which records how each was
+    // confirmed.
     constexpr uintptr_t kDuniaPreferredBase = 0x10000000;
 
     // magma::CFileNameNomad - 0x24 bytes: vtable, CPathID at +0x04, the path string at +0x08

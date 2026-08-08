@@ -1,23 +1,53 @@
 # FCSE (Far Cry Script Extender)
 
-An SKSE-style DLL plugin loader for Far Cry 2 - lets any number of third-party plugin DLLs change
-engine behavior that normally only lives in `Dunia.dll` itself, without needing to ship (or fight
-over) a shared patched copy of that file.
+An SKSE-style loader for Far Cry 2 - lets third-party mods change engine behavior that normally only
+lives in `Dunia.dll` itself, without needing to ship (or fight over) a shared patched copy of that
+file. Mods come in two forms: **Lua scripts**, which need nothing but a text editor, and **plugin
+DLLs**, for anything that needs real native code.
 
 ## Installing
 
 1. Copy `FCSE.exe` into the game's `bin\` folder, next to the existing `FarCry2.exe` - that file
    is left completely untouched; `FCSE.exe` is an additional way to launch the game, not a
    replacement.
-2. Drop plugin `.dll` files into `bin\plugins\` (created automatically the first time you launch
-   `FCSE.exe` if it doesn't exist yet).
+2. Drop Lua mods into `bin\scripts\` and plugin `.dll` files into `bin\plugins\` (both folders are
+   created automatically the first time you launch `FCSE.exe` if they don't exist yet).
 3. Launch `FCSE.exe` instead of `FarCry2.exe`.
 
-Check `bin\fcse.log` afterward to confirm what happened - it records every plugin found/loaded,
-what each one registered/hooked/patched, and any conflicts between plugins.
+Check `bin\fcse.log` afterward to confirm what happened - it records every script and plugin
+found/loaded, what each one registered/hooked/patched, and any conflicts between them.
 
-## Writing your own plugin
+## Writing a mod
 
-See the separate `fcse-example-plugin` download for a minimal, complete, working plugin (source +
-compiled DLL) to start from, and the full writeup at https://jbebe.github.io/farcry-sdk/fcse for
-how the plugin API works and what you can do with it.
+**In Lua** - the quickest route, and enough for most mods. A script is one file:
+
+```lua
+local fcse = require 'fcse'
+
+fcse.log('hello from Lua')
+
+fcse.setting{ name = 'Enabled', default = true,
+              on_changed = function(value) enabled = value end }
+
+fcse.on('update', function()
+  -- runs every frame
+end)
+```
+
+Save it as `bin\scripts\my_mod\main.lua` (or `bin\scripts\my_mod.lua`) and launch. Scripts can read
+and write engine memory, scan for byte signatures, detour functions and add their own rows to the
+in-game Mod Configuration Menu - no compiler, no build step. The separate `fcse-example-script`
+download is a working, commented starting point.
+
+Note the dialect is **Lua 5.1** (LuaJIT), not 5.4 - the same flavor used by most other game modding
+frameworks. This is unrelated to the ancient Lua that Far Cry 2 itself contains internally.
+
+**In C++** - for anything Lua cannot reach. See the separate `fcse-example-plugin` download for a
+minimal, complete, working plugin (source + compiled DLL) to start from.
+
+Full writeup for both at https://jbebe.github.io/farcry-sdk/fcse.
+
+## Safety
+
+A Lua script and a plugin DLL have the same power over the game and over your machine - a `.lua`
+file is code, not configuration. Install mods only from sources you trust.

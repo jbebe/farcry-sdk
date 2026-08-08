@@ -1,7 +1,7 @@
 // Both aspect variants of FCSE's settings-page layout, embedded into FCSE.exe so the loader ships
-// as a single file - see PLAN-embed-assets.md. page_assets.cpp picks between them at runtime using
-// the engine's own widescreen flag, and magma_package.cpp serves the bytes to the engine through a
-// hooked file reader (nothing in Dunia will open a loose file by path).
+// as a single file. page_assets.cpp picks between them at runtime using the engine's own widescreen
+// flag, and magma_package.cpp serves the bytes to the engine through a hooked file reader (nothing
+// in Dunia will open a loose file by path).
 //
 // Generated from assets/fcse.rc.in by CMake. The paths are absolute and CMake-substituted because
 // rc.exe resolves a relative filename against its working directory, not against this file's own
@@ -12,3 +12,8 @@
 
 FCSE_MGB            RCDATA "@FCSE_MGB@"
 FCSE_MGB_WIDESCREEN RCDATA "@FCSE_MGB_WIDESCREEN@"
+
+// The script API (src/lua/runtime/fcse.lua), embedded for the same reason as the layouts above:
+// there is no loose file for a player to delete or for an installer to leave stale against the exe
+// that reads it. lua_host.cpp resolves it as FCSE_LUA_RUNTIME and hands it to require 'fcse'.
+FCSE_LUA_RUNTIME    RCDATA "@FCSE_LUA_RUNTIME@"

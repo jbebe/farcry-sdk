@@ -201,7 +201,7 @@ plugins\example_plugin.dll
 FCSE's settings-page layout isn't in that list because it's *inside* `FCSE.exe`: both `.mgb`
 variants are embedded as `RCDATA` resources at build time (`assets/fcse.rc.in`, wired up in
 `CMakeLists.txt`), so installing the loader is copying one file and there's no second file to
-forget, mismatch, or lose. See [`PLAN-embed-assets.md`](PLAN-embed-assets.md).
+forget, mismatch, or lose.
 
 This is a local convenience package - it includes `example_plugin.dll`, which the GitHub release
 workflow (`.github/workflows/fcse-release.yml`) deliberately ships as a *separate* download.

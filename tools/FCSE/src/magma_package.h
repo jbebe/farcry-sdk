@@ -9,7 +9,7 @@
 //
 // A private page cannot instead borrow a shipped layout: it would share that layout's magma::Page
 // with the stock class that also binds it, and the two screens become one screen. See
-// PLAN-own-page.md work item 0.5 for the trail on that.
+// PLAN-own-page.md work item 0.5 (git history, removed in cf13c2b) for the trail on that.
 namespace FCSE {
 
 class MagmaPackage {

@@ -15,4 +15,29 @@ namespace FCSE {
 // _ReturnAddress() at a real API call site.
 std::string ResolveCallerModuleName(void* returnAddress);
 
+// Makes ResolveCallerModuleName report `name` instead of resolving the address, for as long as this
+// object is alive.
+//
+// Exists for Lua scripts. Every script reaches Hook()/Patch()/RegisterSettings through the same C
+// shim compiled into FCSE.exe, so address-based resolution names all of them "fcse" - which would
+// both mistag their log lines and, worse, defeat the per-owner conflict checks in HookManager and
+// PatchManager: two scripts patching the same bytes would look like one owner patching twice, which
+// is explicitly allowed. Naming the script restores the distinction the compiled-plugin case gets
+// for free.
+//
+// Scoped rather than a setter so an early return or a longjmp out of Lua cannot leave the override
+// stuck on. Nests correctly: the previous value is restored, not cleared.
+class ScopedCallerIdentity {
+public:
+    explicit ScopedCallerIdentity(const std::string& name);
+    ~ScopedCallerIdentity();
+
+    ScopedCallerIdentity(const ScopedCallerIdentity&) = delete;
+    ScopedCallerIdentity& operator=(const ScopedCallerIdentity&) = delete;
+
+private:
+    std::string previous_;
+    bool hadPrevious_;
+};
+
 } // namespace FCSE

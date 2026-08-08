@@ -60,20 +60,28 @@ jobs:
             throw "$exePath links the dynamic CRT (found: $($crt -join ', ')) - it must build /MT. See the CMP0091 note in CMakeLists.txt."
           }
 
-          foreach ($mgb in "assets\fcse.mgb", "assets\fcse_widescreen.mgb") {
-            $payload = $latin1.GetString([System.IO.File]::ReadAllBytes((Resolve-Path $mgb)))
+          # The Lua runtime is embedded the same way and fails the same way - a missing RCDATA
+          # resource still builds and still launches, and only shows up as every script in the
+          # install failing to require 'fcse'.
+          foreach ($asset in "assets\fcse.mgb", "assets\fcse_widescreen.mgb", "src\lua\runtime\fcse.lua") {
+            $payload = $latin1.GetString([System.IO.File]::ReadAllBytes((Resolve-Path $asset)))
             if ($exe.IndexOf($payload, [System.StringComparison]::Ordinal) -lt 0) {
-              throw "$mgb is not embedded in $exePath, or the embedded copy is stale - check that enable_language(RC) ran and that the generated fcse.rc reached the link."
+              throw "$asset is not embedded in $exePath, or the embedded copy is stale - check that enable_language(RC) ran and that the generated fcse.rc reached the link."
             }
           }
 
-          Write-Host "FCSE.exe: static CRT, both .mgb layouts embedded." -ForegroundColor Green
+          Write-Host "FCSE.exe: static CRT, both .mgb layouts and the Lua runtime embedded." -ForegroundColor Green
 
       - name: Stage release contents
         shell: pwsh
-        # Two separate staging folders -> two separate zips (see the "Zip release artifacts" step
-        # below): the main FCSE download, and the example plugin as an opt-in extra for anyone who
-        # wants a working starting point to write their own plugin from.
+        # Three separate staging folders -> three separate zips (see the "Zip release artifacts" step
+        # below): the main FCSE download, and two opt-in extras for anyone who wants a working
+        # starting point - one for each way of writing a mod.
+        #
+        # The two extras are deliberately not merged: a compiled plugin and a Lua script have
+        # entirely different prerequisites (an x86 MSVC toolchain vs. a text editor), and pairing
+        # them in one download would imply the C++ one is a prerequisite for the other. It is not -
+        # scripting exists precisely so a small change needs no compiler.
         run: |
           $build = "out\build\x86-release"
 
@@ -86,11 +94,19 @@ jobs:
           Copy-Item "example_plugin\example_plugin.cpp" "stage\example-plugin\example_plugin.cpp"
           Copy-Item "include\plugin_api.h" "stage\example-plugin\plugin_api.h"
 
+          # Laid out as scripts\example_script\ so the zip extracts straight into the game's bin\,
+          # matching the plugin extra and README.md's "Installing" section. Nothing is copied from
+          # the build tree: a script is not compiled, and the API it calls into is already embedded
+          # in FCSE.exe as a resource.
+          New-Item -ItemType Directory -Force -Path "stage\example-script\scripts\example_script" | Out-Null
+          Copy-Item "example_script\main.lua" "stage\example-script\scripts\example_script\main.lua"
+
       - name: Zip release artifacts
         shell: pwsh
         run: |
           Compress-Archive -Path "stage\fcse\*" -DestinationPath "fcse-${{ inputs.version }}.zip"
           Compress-Archive -Path "stage\example-plugin\*" -DestinationPath "fcse-example-plugin-${{ inputs.version }}.zip"
+          Compress-Archive -Path "stage\example-script\*" -DestinationPath "fcse-example-script-${{ inputs.version }}.zip"
 
       - name: Tag and publish GitHub release
         shell: pwsh
@@ -99,4 +115,4 @@ jobs:
         run: |
           git tag "fcse-${{ inputs.version }}"
           git push origin "fcse-${{ inputs.version }}"
-          gh release create "fcse-${{ inputs.version }}" "fcse-${{ inputs.version }}.zip" "fcse-example-plugin-${{ inputs.version }}.zip" --title "FCSE ${{ inputs.version }}" --generate-notes
+          gh release create "fcse-${{ inputs.version }}" "fcse-${{ inputs.version }}.zip" "fcse-example-plugin-${{ inputs.version }}.zip" "fcse-example-script-${{ inputs.version }}.zip" --title "FCSE ${{ inputs.version }}" --generate-notes

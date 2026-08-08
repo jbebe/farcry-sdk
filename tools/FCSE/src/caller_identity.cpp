@@ -6,7 +6,30 @@
 
 namespace FCSE {
 
+namespace {
+    // Thread-local, though the Lua interpreter only ever runs on the game thread: an override left
+    // visible to another thread would silently mistag that thread's log lines, and the cost of
+    // ruling that out is one keyword.
+    thread_local std::string g_identityOverride;
+    thread_local bool g_hasIdentityOverride = false;
+}
+
+ScopedCallerIdentity::ScopedCallerIdentity(const std::string& name)
+    : previous_(g_identityOverride), hadPrevious_(g_hasIdentityOverride) {
+    g_identityOverride = name;
+    g_hasIdentityOverride = true;
+}
+
+ScopedCallerIdentity::~ScopedCallerIdentity() {
+    g_identityOverride = previous_;
+    g_hasIdentityOverride = hadPrevious_;
+}
+
 std::string ResolveCallerModuleName(void* returnAddress) {
+    if (g_hasIdentityOverride) {
+        return g_identityOverride;
+    }
+
     HMODULE hModule = nullptr;
     BOOL ok = GetModuleHandleExW(
         GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS | GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
