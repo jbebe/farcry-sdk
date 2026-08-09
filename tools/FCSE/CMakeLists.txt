@@ -137,10 +137,16 @@ add_custom_target(fcse_mgb DEPENDS "${FCSE_MGB}" "${FCSE_MGB_WIDESCREEN}")
 # The Lua script API, embedded alongside them - see the note in assets/fcse.rc.in.
 set(FCSE_LUA_RUNTIME    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/runtime/fcse.lua")
 
+# The application icon. Committed rather than built from assets/logo.png the way the layouts above
+# are built from their XML: resampling an image needs a library the toolchain does not already
+# carry, and making that a prerequisite for compiling a mod loader costs more than a 15 KB artifact
+# in the tree. assets/make_icon.py regenerates it when the logo changes.
+set(FCSE_ICON           "${CMAKE_CURRENT_SOURCE_DIR}/assets/fcse.ico")
+
 configure_file("assets/fcse.rc.in" "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc" @ONLY)
 
 # rc.exe does not report what a resource statement pulled in and CMake does not scan .rc files for
-# RCDATA dependencies, so without this, editing an .mgb.xml would relink the previous build's bytes
+# the files they name, so without this, editing an .mgb.xml would relink the previous build's bytes
 # and silently ship stale layout data. (configure_file already re-runs CMake when the .rc.in template
 # changes - it says nothing about the files that template names.) Same staleness class as the
 # POST_BUILD problem the staging rule this replaced was written to avoid.
@@ -149,7 +155,7 @@ configure_file("assets/fcse.rc.in" "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc" @ONLY)
 # naming them here is what makes the resource compile wait for - and re-run after - fcse_build_mgb.
 set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc"
              APPEND PROPERTY OBJECT_DEPENDS "${FCSE_MGB}" "${FCSE_MGB_WIDESCREEN}"
-                                            "${FCSE_LUA_RUNTIME}")
+                                            "${FCSE_LUA_RUNTIME}" "${FCSE_ICON}")
 
 # Grouped by what a file talks to: engine/ reaches into the running game, api/ is what plugins and
 # Lua scripts both call, ui/ is FCSE's own settings page, lua/ is the script host. What is left at

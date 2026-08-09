@@ -1,18 +1,24 @@
-// Both aspect variants of FCSE's settings-page layout, embedded into FCSE.exe so the loader ships
-// as a single file. page_assets.cpp picks between them at runtime using the engine's own widescreen
-// flag, and magma_package.cpp serves the bytes to the engine through a hooked file reader (nothing
-// in Dunia will open a loose file by path).
+// Everything FCSE.exe carries inside itself, so the loader ships as a single file.
 //
 // Generated from assets/fcse.rc.in by CMake. The paths are absolute and CMake-substituted because
 // rc.exe resolves a relative filename against its working directory, not against this file's own
 // location; CMake writes them forward-slashed, which rc.exe accepts, so nothing needs escaping.
 //
-// The two .mgb paths are in the build tree, not in assets/: the layouts are built from
-// assets/*.mgb.xml by JackAll's mgb encoder each build, so nothing binary is committed.
-//
-// Unquoted, non-numeric resource names are string names, so these are found with
+// Unquoted, non-numeric resource names are string names, so the RCDATA entries below are found with
 // FindResourceW(module, L"FCSE_MGB", RT_RCDATA) and there is no resource.h to keep in sync.
 
+// The application icon, built from assets/logo.png by assets/make_icon.py - see that file for which
+// sizes it contains and why. It is the one *numeric* resource id here, and it is 1: nothing in FCSE
+// looks this up, the shell does, and the shell shows the lowest-numbered RT_GROUP_ICON in the file
+// as the exe's icon. A string name would leave that to chance.
+1                   ICON   "@FCSE_ICON@"
+
+// Both aspect variants of FCSE's settings-page layout. page_assets.cpp picks between them at runtime
+// using the engine's own widescreen flag, and magma_package.cpp serves the bytes to the engine
+// through a hooked file reader (nothing in Dunia will open a loose file by path).
+//
+// These two paths are in the build tree, not in assets/: the layouts are built from
+// assets/*.mgb.xml by JackAll's mgb encoder each build, so no built layout is committed.
 FCSE_MGB            RCDATA "@FCSE_MGB@"
 FCSE_MGB_WIDESCREEN RCDATA "@FCSE_MGB_WIDESCREEN@"
 

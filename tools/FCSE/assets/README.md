@@ -245,3 +245,39 @@ author it here.
   prompt, whose layout `MESSAGEBOX_EDIT_BOX` is declared in `common.mgb` — verified by probing
   `CRC32("MESSAGEBOX_EDIT_BOX") = 0xA98A4F3F` against every shipped menu package, where it appears
   in `common.mgb` and nowhere else. `src/text_prompt.cpp` raises it.
+
+## `fcse.ico` — the application icon
+
+What Explorer, the taskbar and Alt-Tab show for `FCSE.exe`. Embedded as resource id **`1`**, which is
+the whole reason it is numeric: nothing in FCSE looks it up, the shell does, and the shell shows the
+lowest-numbered `RT_GROUP_ICON` in the file.
+
+| File | Role |
+|---|---|
+| `logo.png` | The source artwork, 688×688 RGBA. |
+| `make_icon.py` | Builds the `.ico` from it. Needs [Pillow](https://python-pillow.org/). |
+| `fcse.ico` | **Committed**, 15 KB, three sizes: 16, 32, 48 — 32bpp DIBs with a real `AND` mask. |
+
+The classic triple: 16 for the title bar, tray and small-icon views, 32 for the taskbar and Alt-Tab,
+48 for medium icons. Every other size the shell wants it synthesises by resampling the nearest of
+these at display time, so the DPI variants come off 16 and 32 and Explorer's large views come off
+48 — a deliberate trade of sharpness in the views nobody launches from for ~55 KB of exe. Adding a
+size back is one entry in `make_icon.py`'s `SIZES`, which already switches to PNG-compressed entries
+at 96 and up.
+
+Unlike the layouts above it is a committed binary rather than a build product: resampling an image
+needs a library the toolchain does not already carry, and Pillow is not worth making a prerequisite
+for compiling a mod loader. Regenerate it by hand after changing `logo.png`:
+
+```
+python make_icon.py logo.png fcse.ico
+```
+
+`CMakeLists.txt` names it in the `.rc`'s `OBJECT_DEPENDS` alongside the layouts, so the rebuilt file
+relinks `FCSE.exe` on its own.
+
+:::note[The artwork is a black silhouette]
+`logo.png` is `#000000` throughout and carries its entire shape in the alpha channel, so the icon is
+invisible-ish against a dark background — Windows 11's dark-mode taskbar is `#202020`. Fixing that is
+an artwork change (a lighter fill, or a backplate the gear sits on), not an `.ico` one.
+:::
