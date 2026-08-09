@@ -49,6 +49,10 @@ public partial class DominoInspector : UserControl
 
     public void ShowNode(DominoNodeViewModel? vm)
     {
+        // The graph-level sections are the fallback view. Once a box is selected they'd just be noise
+        // above the thing actually being inspected.
+        GraphSection.Visibility = vm?.Node is null ? Visibility.Visible : Visibility.Collapsed;
+
         if (vm?.Node is not { } node)
         {
             Details.Visibility = Visibility.Collapsed;

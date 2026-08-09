@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Windows;
 using System.Windows.Controls;
+using Nodify;
 
 namespace JackAll.App.Domino;
 
@@ -29,6 +30,7 @@ public partial class DominoTabView : UserControl
         SourceView.ShowPlainText(vm.SourceText);
         StatusText.Text = vm.StatusText;
         Inspector.ShowGraph(vm.Graph, vm.Twin, vm.StatusText);
+        NodifyEditor.AutoFocusFirstElement = false;
 
         if (vm.Canvas is null)
         {

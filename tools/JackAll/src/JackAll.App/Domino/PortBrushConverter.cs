@@ -15,23 +15,27 @@ namespace JackAll.App.Domino;
 /// </summary>
 public sealed class PortBrushConverter : IValueConverter
 {
-    private static readonly SolidColorBrush Control = Frozen(0x5A, 0x64, 0x72);
-    private static readonly SolidColorBrush Undeclared = Frozen(0xC0, 0x8A, 0x00);
-    private static readonly SolidColorBrush Unknown = Frozen(0x78, 0x78, 0x78);
+    // Deliberately dark. These are label colours as much as dot colours, and the labels sit on the
+    // node's own light fill - cream, pale blue, pale green - not on white. Anything lighter than this
+    // drops under a 4.5:1 contrast ratio there and stops being comfortably readable; the earlier,
+    // brighter palette measured as low as 3.22:1.
+    private static readonly SolidColorBrush Control = Frozen(0x3A, 0x42, 0x4D);
+    private static readonly SolidColorBrush Undeclared = Frozen(0x7A, 0x58, 0x00);
+    private static readonly SolidColorBrush Unknown = Frozen(0x4A, 0x4A, 0x4A);
 
     private static readonly Dictionary<string, SolidColorBrush> ByType = new(StringComparer.OrdinalIgnoreCase)
     {
-        ["Nomad|entity"] = Frozen(0x2E, 0x7D, 0x32),      // green - by far the most common
-        ["Core|string"] = Frozen(0xA8, 0x43, 0x00),       // burnt orange
-        ["Core|int"] = Frozen(0x15, 0x65, 0xC0),          // blue
-        ["Core|float"] = Frozen(0x00, 0x83, 0x8F),        // teal
-        ["Core|bool"] = Frozen(0x6A, 0x1B, 0x9A),         // purple
-        ["Nomad|animation"] = Frozen(0xAD, 0x14, 0x57),   // magenta
-        ["Nomad|Sound"] = Frozen(0xB7, 0x8A, 0x00),
-        ["Nomad|SoundType"] = Frozen(0xB7, 0x8A, 0x00),
-        ["Nomad|SoundMixing"] = Frozen(0xB7, 0x8A, 0x00),
-        ["Nomad|texture"] = Frozen(0x5D, 0x40, 0x37),
-        ["Core|boxclass"] = Frozen(0x45, 0x5A, 0x64),
+        ["Nomad|entity"] = Frozen(0x1B, 0x5E, 0x20),      // green - by far the most common
+        ["Core|string"] = Frozen(0x7A, 0x31, 0x00),       // burnt orange
+        ["Core|int"] = Frozen(0x0D, 0x47, 0xA1),          // blue
+        ["Core|float"] = Frozen(0x00, 0x56, 0x5E),        // teal
+        ["Core|bool"] = Frozen(0x4A, 0x14, 0x8C),         // purple
+        ["Nomad|animation"] = Frozen(0x7B, 0x0F, 0x3E),   // magenta
+        ["Nomad|Sound"] = Frozen(0x6E, 0x53, 0x00),
+        ["Nomad|SoundType"] = Frozen(0x6E, 0x53, 0x00),
+        ["Nomad|SoundMixing"] = Frozen(0x6E, 0x53, 0x00),
+        ["Nomad|texture"] = Frozen(0x4E, 0x34, 0x2E),
+        ["Core|boxclass"] = Frozen(0x2F, 0x3E, 0x46),
     };
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)

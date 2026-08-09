@@ -59,14 +59,14 @@
                         <DataTemplate>
                             <Grid Margin="0,0,0,3">
                                 <Grid.ColumnDefinitions>
-                                    <ColumnDefinition Width="Auto" MinWidth="52" />
+                                    <ColumnDefinition Width="Auto" MinWidth="56" />
                                     <ColumnDefinition Width="*" />
                                     <ColumnDefinition Width="Auto" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{Binding Direction}" FontSize="9" Foreground="#999" />
+                                <TextBlock Text="{Binding Direction}" FontSize="11" Foreground="#8A8A8A" />
                                 <TextBlock Grid.Column="1" Text="{Binding Name}" FontFamily="Consolas" FontSize="11"
                                            TextWrapping="Wrap" />
-                                <TextBlock Grid.Column="2" Text="{Binding Detail}" FontSize="9" Foreground="#888"
+                                <TextBlock Grid.Column="2" Text="{Binding Detail}" FontSize="10" Foreground="#888"
                                            Margin="6,0,0,0" />
                             </Grid>
                         </DataTemplate>
@@ -74,30 +74,34 @@
                 </ItemsControl>
             </StackPanel>
 
-            <TextBlock Text="GRAPH" Style="{StaticResource SectionHeader}" />
-            <TextBlock x:Name="GraphSummary" Style="{StaticResource FieldValue}" Foreground="#555" />
+            <!-- Whole-file facts. Hidden while a node is selected: at that point the question is about
+                 the box, not the script it lives in. -->
+            <StackPanel x:Name="GraphSection">
+                <TextBlock Text="GRAPH" Style="{StaticResource SectionHeader}" />
+                <TextBlock x:Name="GraphSummary" Style="{StaticResource FieldValue}" Foreground="#555" />
 
-            <TextBlock x:Name="DepsHeader" Text="REGISTERED NODE TYPES" Style="{StaticResource SectionHeader}"
-                       Visibility="Collapsed" />
-            <ItemsControl x:Name="DepList">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="10" Foreground="#555"
-                                   TextWrapping="Wrap" Margin="0,0,0,2" />
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                <TextBlock x:Name="DepsHeader" Text="REGISTERED NODE TYPES" Style="{StaticResource SectionHeader}"
+                           Visibility="Collapsed" />
+                <ItemsControl x:Name="DepList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="10" Foreground="#555"
+                                       TextWrapping="Wrap" Margin="0,0,0,2" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
 
-            <TextBlock x:Name="ResourcesHeader" Text="LOADED RESOURCES" Style="{StaticResource SectionHeader}"
-                       Visibility="Collapsed" />
-            <ItemsControl x:Name="ResourceList">
-                <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="10" Foreground="#555"
-                                   TextWrapping="Wrap" Margin="0,0,0,2" />
-                    </DataTemplate>
-                </ItemsControl.ItemTemplate>
-            </ItemsControl>
+                <TextBlock x:Name="ResourcesHeader" Text="LOADED RESOURCES" Style="{StaticResource SectionHeader}"
+                           Visibility="Collapsed" />
+                <ItemsControl x:Name="ResourceList">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="10" Foreground="#555"
+                                       TextWrapping="Wrap" Margin="0,0,0,2" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

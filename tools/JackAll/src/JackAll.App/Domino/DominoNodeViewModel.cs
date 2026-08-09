@@ -39,7 +39,9 @@ public sealed class DominoNodeViewModel : DominoObservable
         Node = null;
         Role = NodeRole.Boundary;
         _location = location;
-        Width = 150;
+        // Measured like any other node: a graph input named PrimaryBuddy_Entity does not fit in a
+        // fixed-width box, and an overflowing port drags its wire's anchor outside the node.
+        Width = Math.Clamp(TextMetrics.Width(title, 11) + 70, 150, 320);
         Title = title;
         Subtitle = subtitle;
         Category = null;
