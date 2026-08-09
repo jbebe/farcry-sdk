@@ -64,8 +64,9 @@ two committed artifacts ever disagree, so a forgotten `mgb encode` cannot ship.
 
 ### What the page is made of
 
-Nothing of its own — no materials, fonts or textures. Every visual is an instance of a `common.mgb`
-area, and `common.mgb` is always loaded by the time the Options screen appears:
+No areas or fonts of its own — every widget is an instance of a `common.mgb` area, and `common.mgb`
+is always loaded by the time the Options screen appears. The only local declarations are the three
+decoration materials described below:
 
 - **`p_menu_nav`** → common `36150990`, the row list and title bar. `CUIPageBase::FetchMagmaElements`
   requires this exact name and requires `l_menu_nav_list` to live *inside* it rather than be a direct
@@ -157,13 +158,14 @@ Geometry is the Network tab's, the highest-anchored stock settings page and ther
 the most usable rows: nav at `(83,111)`, controls at `x=552` from `y=158`, stepping 28. Twenty rows
 end at `y=690` on a 768px page.
 
-### The two decoration layers, and why the package is named `UI\fcse.mgb`
+### The three decoration layers, and why the package is named `UI\fcse.mgb`
 
-Two `Image` elements provide the page's paper and frame:
+Three `Image` elements provide the page's paper, its smudge and its frame, in draw order:
 
 | Element | Material | Texture |
 |---|---|---|
 | `#F0CC8C29` (Normal blend) | `notebook` | `\textures\hud\notebook.png` |
+| `jackal_track` (Multiply blend, 30%) | `jackal_track` | `\textures\common\jackal_track.png` |
 | `#E82DE1C0` (Modulate blend) | `frame_color_scratch` | `\textures\common\frame_color_scratch.png` |
 
 Unlike the chrome *areas*, these reference **materials**. The shipped options pages reach across to
@@ -181,6 +183,55 @@ The fix is in `magma_package.cpp`: the package tells the engine it is **`UI\fcse
 a shipped one. Nothing needs to exist at that path, because the reader hook matches on the `CPathID`
 computed from the string and serves FCSE's own bytes. Identity and storage are simply different
 things here.
+
+#### `jackal_track`
+
+The tyre-track smudge on the right-hand side of the page. Everything about it — the layer position
+(straight on top of the notebook paper, under all content), the blend mode, and the rect — is copied
+from `sp_menus.mgb`, the main menu, which draws the same texture over the same
+backdrop/frame/notebook stack:
+
+| UI set | Page | `LEFT RIGHT TOP BOTTOM` |
+|---|---|---|
+| `pc` | 1024×768 | `713 969 373 629` |
+| `pcwidescreen` | 1280×800 | `711 967 382 638` |
+
+256×256 in both, which is the texture's native size (DXT1, no mips), so it draws at 1:1. It clears
+the control column — the value cells sit at `x=552` and are roughly 66px wide — so it occupies empty
+page rather than sitting behind a row.
+
+`options.mgb` has no copy of this element, so unlike every other geometry in the generator these
+rects are constants rather than measurements; `JACKAL_TRACK_RECT` is keyed by page size and the
+generator refuses an aspect it has no entry for.
+
+**Multiply is load-bearing.** The texture is dark marks on white paper with no useful alpha, so
+under `Normal` it would draw a white square with a track on it; multiplied, white is the identity
+and only the marks darken what is underneath. It also makes the failure mode benign — an unresolved
+texture renders as an untextured white quad, and a white quad under Multiply is invisible rather
+than a block over the page.
+
+**Opacity is `COLOR1`–`COLOR4`, not `STATECOLOR`.** All 4,011 `ImageState`s in the shipped menu
+corpus leave `STATECOLOR` at `FFFFFFFF` and express opacity through the four corner colours instead
+(ARGB; equal on all four corners is a flat tint, varying them is a gradient). This layer uses
+`4CFFFFFF` — 76/255 = 30%, white so Multiply stays untinted. The nearest shipped value is
+`ige_menus`' `50FFFFFF` (31%) on a Multiply image.
+
+**`ALPHABLENDFIRST` has to be `false` for that alpha to mean anything.** Of the 33 Multiply-blended
+`Image`s in the corpus, all 13 translucent ones set it `false`; the only one that sets it `true` is
+stock `jackal_track` itself, which is opaque. So `true` is the opaque-multiply convention, and the
+first version of this layer inherited it by copying that element. Asking for corner alpha while
+leaving it `true` would be authoring the one combination nothing ships.
+
+:::note[Its texture is not in any `.desc` this package's load path reads]
+`notebook` and `frame_color_scratch` are both preloaded by `common.mgb.desc`, which is loaded well
+before the Options screen. `ui\textures\common\jackal_track.xbt` appears only in `sp_menus.mgb.desc`.
+Since FCSE loads its package through `CEngineNomad::LoadPackage`, no `.desc` of its own is ever
+read — so this layer relies on the texture already being resident from the main menu, which is up at
+the moment `MagmaPackage::Load()` runs. Whether `magma::Material::LoadTexture` (`0x10ab8460`) would
+have loaded it on demand anyway was not traced. If the smudge is missing, that is the reason, and
+the fix is to build the material at runtime with `CreateTexture` + `SetMaterial` rather than to
+author it here.
+:::
 
 ### Not done here
 

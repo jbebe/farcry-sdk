@@ -14,8 +14,9 @@ So a one-area package with a one-entry GenericObjectTable is the whole trick.
 
 What the page contains
 ----------------------
-Nothing of its own - no materials, no fonts, no textures. Every visual is a `PageInstance` pointing
-into `common.mgb`, which is always loaded by the time the Options screen appears:
+No areas and no fonts of its own: every widget is a `PageInstance` pointing into `common.mgb`, which
+is always loaded by the time the Options screen appears. The only local declarations are the
+decoration materials in LOCAL_MATERIALS, which cannot be reached cross-package.
 
   * `p_menu_nav`       -> common area 36150990 - the row list + title bar. `FetchMagmaElements`
                           requires exactly this name, and requires `l_menu_nav_list` to sit *inside*
@@ -116,7 +117,7 @@ CHROME_BEFORE = ["#B21251FF", "#684AC59C", "#F0CC8C29"]   # backdrop, frame, not
 CHROME_MID = "#5B36589B"                                   # sits between the rows and the prompts
 CHROME_AFTER = "#E82DE1C0"                                 # modulate-blended scratch frame, drawn last
 
-# The two chrome Images reference materials rather than areas. The shipped *options* pages reach
+# The chrome Images reference materials rather than areas. The shipped *options* pages reach
 # across to `\common.mgb` for them, which does not resolve from a package the engine did not ship -
 # but that is not the pattern to copy anyway. Every page inside common.mgb that draws these layers
 # declares the material in its *own* package (`PACKAGE=""`), so that is what this does too.
@@ -124,10 +125,34 @@ CHROME_AFTER = "#E82DE1C0"                                 # modulate-blended sc
 # The texture paths are UI-root-relative, exactly as common.mgb stores them. That only resolves
 # because magma_package.cpp names this package "UI\fcse.mgb" rather than its real absolute path -
 # an earlier attempt with the absolute path made both images render as untextured white quads.
+#
+# The `.png` extension is what the shipped packages store; the resource system resolves it to the
+# `.xbt` the archives actually carry (`ui\textures\common\jackal_track.xbt`, 256x256 DXT1).
 LOCAL_MATERIALS = [
     ("notebook", "\\textures\\hud\\notebook.png"),
     ("frame_color_scratch", "\\textures\\common\\frame_color_scratch.png"),
+    ("jackal_track", "\\textures\\common\\jackal_track.png"),
 ]
+
+# The tyre-track smudge on the right-hand side of the page, layered on top of the notebook paper.
+#
+# options.mgb has no copy of this element to measure, so unlike every other geometry in this file
+# the rects are constants - read off `ui\localized\{pc,pcwidescreen}\eng\ui\sp_menus.mgb`, the main
+# menu, which draws the same texture in the same place in the same layer position. 256x256 in both,
+# so the texture is drawn at 1:1 with no scaling.
+#
+# Keyed by page size because that is what tells the two UI sets apart, and missing rather than
+# guessed for anything else: a wrong-aspect source should fail loudly, not draw the smudge somewhere
+# arbitrary.
+JACKAL_TRACK_RECT = {
+    (1024, 768): (713, 373, 969, 629),
+    (1280, 800): (711, 382, 967, 638),
+}
+
+# ARGB, applied to all four corners. 0x4C = 76/255 = 30% opacity; the rest is white, which is the
+# identity under Multiply, so this fades the smudge without tinting it. The nearest shipped value
+# is ige_menus' 0x50 (31%) on a Multiply image, which is the pattern this follows.
+JACKAL_TRACK_COLOR = "4CFFFFFF"
 
 
 # Comfortably above anything this package authors (20 of any one control type, 68 elements total),
@@ -189,6 +214,49 @@ def instance_element(template: ET.Element, name: str, target_area: str,
     return el
 
 
+def image_element(template: ET.Element, name: str, material: str,
+                  rect: tuple[int, int, int, int], keyframe_name: str,
+                  blending: str, alpha_blend_first: bool,
+                  color: str = "FFFFFFFF") -> ET.Element:
+    """A copy of a shipped Image element, renamed, re-rected and pointed at a local material.
+
+    The same trick `instance_element` plays for PageInstances. An Image's element shape - slot
+    number, the single Linear keyframe, the full ImageState field set - is identical wherever one
+    appears, so copying a shipped one and overwriting the four fields that differ avoids authoring
+    twenty attributes whose defaults are not documented anywhere.
+    """
+    el = ET.fromstring(ET.tostring(template))
+    el.find("USERDATA").set("name", name)
+
+    keyframe = el.find("KEYFRAMES/Keyframe")
+    keyframe.set("name", keyframe_name)
+    state = keyframe.find("ImageState")
+    for attribute, value in zip(("LEFT", "TOP", "RIGHT", "BOTTOM"), rect):
+        state.set(attribute, str(value))
+
+    # ORIGIN is the pivot ROTATION turns about, so it is inert at ROTATION=0 - but the template
+    # carries whatever the source aspect's element happened to use (0,0 in pc, 7,10 in
+    # pcwidescreen), and letting that through would make the two variants differ for no reason.
+    # Every shipped jackal_track element uses 0,0.
+    state.set("ORIGIN.x", "0")
+    state.set("ORIGIN.y", "0")
+
+    # The four corner colours, ARGB, and the only opacity knob an Image has: all 4011 ImageStates
+    # in the shipped menu corpus leave STATECOLOR at FFFFFFFF and vary these instead. Setting all
+    # four to the same value is a flat tint; the shipped translucent images that vary them per
+    # corner are authoring a gradient fade, which is not what this is for.
+    for i in (1, 2, 3, 4):
+        state.set(f"COLOR{i}", color)
+
+    image = el.find("Image")
+    image.set("BLENDINGMODE", blending)
+    image.set("ALPHABLENDFIRST", "true" if alpha_blend_first else "false")
+    link = image.find("MATERIALLINK")
+    link.set("id", material)
+    link.set("PACKAGE", "")   # "the package this element lives in"
+    return el
+
+
 def full_link(slot: str, last_type: str, ids: list[str]) -> ET.Element:
     return ET.Element("LINK", {"slot": slot, "LASTOBJECTTYPE": last_type, "IDS": " ".join(ids)})
 
@@ -220,6 +288,12 @@ def build(options_root: ET.Element) -> ET.Element:
     game = find_area(options_root, GAME_PAGE_AREA)
     network = find_area(options_root, NETWORK_PAGE_AREA)
     nav_pos, row_x, row_y0 = measure_geometry(options_root)
+
+    page_size = (int(options_root.get("PAGESIZE.w")), int(options_root.get("PAGESIZE.h")))
+    if page_size not in JACKAL_TRACK_RECT:
+        raise SystemExit(f"no jackal_track placement recorded for a {page_size[0]}x{page_size[1]} "
+                         "page - measure it from that aspect's sp_menus.mgb and add it to "
+                         "JACKAL_TRACK_RECT")
 
     root = ET.Element("MagmaPackage", {
         "sentinel": options_root.get("sentinel"),
@@ -308,6 +382,26 @@ def build(options_root: ET.Element) -> ET.Element:
 
     for name in CHROME_BEFORE:
         elements.append(carry(name))
+
+    # Straight on top of the notebook paper and under everything else, which is exactly where
+    # sp_menus.mgb puts it: after the same backdrop/frame/notebook stack, before any content.
+    #
+    # Multiply is what makes it read as a smudge. The texture is dark marks on white paper with no
+    # useful alpha, so under Normal blending it would draw as a white square with a tyre track on
+    # it; multiplied, the white is the identity and only the marks darken what is underneath. It
+    # also means the failure mode is benign - an unresolved texture renders as an untextured white
+    # quad, and a white quad under Multiply is invisible rather than a block over the page.
+    #
+    # Drawn at 30% so it reads as a hint rather than competing with the rows. Two things carry that:
+    # the corner colours (0x4C = 76/255) and ALPHABLENDFIRST=false. The second is not cosmetic - of
+    # the 33 Multiply-blended Images in the shipped menu corpus, all 13 translucent ones set it
+    # false, and the single one that sets it true is stock jackal_track itself, which is opaque. So
+    # true is the convention for an opaque multiply, and copying it while asking for alpha would be
+    # asking for the one combination nothing ships.
+    elements.append(image_element(
+        element_named(game, "#F0CC8C29"), "jackal_track", "jackal_track",
+        JACKAL_TRACK_RECT[page_size], "kf_jackal_track",
+        blending="Multiply", alpha_blend_first=False, color=JACKAL_TRACK_COLOR))
 
     nav_template = element_named(game, "p_menu_nav")
     elements.append(instance_element(nav_template, "p_menu_nav", NAV_LIST_AREA, nav_pos, "kf_menu_nav"))

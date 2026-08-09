@@ -1934,8 +1934,6 @@ void FcsePage::AppendRows(void* page) {
     // settings row does - counting only the settings would slide every control up past its label.
     size_t row = 0;
 
-    AppendCaption(page, L"Mods", &row);
-
     const std::vector<std::string>& plugins = PluginLoader::LoadedNames();
     if (plugins.empty()) {
         AppendCaption(page, L"   (no plugins installed)", &row);

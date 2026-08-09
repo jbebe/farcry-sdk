@@ -171,9 +171,10 @@
   <USERDATA name="fcse">
     <PROPERTIES />
   </USERDATA>
-  <MATERIALS materialExtra="2">
+  <MATERIALS materialExtra="3">
     <Material name="notebook" texture="\textures\hud\notebook.png" REGION="0 0 1 1" />
     <Material name="frame_color_scratch" texture="\textures\common\frame_color_scratch.png" REGION="0 0 1 1" />
+    <Material name="jackal_track" texture="\textures\common\jackal_track.png" REGION="0 0 1 1" />
   </MATERIALS>
   <FONTSUBSTS />
   <FONTS />
@@ -426,6 +427,19 @@
           </KEYFRAMES>
           <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
             <MATERIALLINK present="true" id="#F67D9A2B" PACKAGE="" />
+          </Image>
+        </Element>
+        <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="jackal_track">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="kf_jackal_track" IDX="0" INTERPOLATION="Linear">
+              <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" LEFT="713" RIGHT="969" TOP="373" BOTTOM="629" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="4CFFFFFF" COLOR2="4CFFFFFF" COLOR3="4CFFFFFF" COLOR4="4CFFFFFF" />
+            </Keyframe>
+          </KEYFRAMES>
+          <Image BLENDINGMODE="Multiply" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+            <MATERIALLINK present="true" id="jackal_track" PACKAGE="" />
           </Image>
         </Element>
         <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
