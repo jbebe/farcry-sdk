@@ -191,6 +191,15 @@ public static class UserGraphParser
         }
     }
 
+    /// <summary>Recognizes a `Box.PinName` read - the value side of both `self.Var = self[N].Pin;` and
+    /// the rarer direct `self[14].Entity = self[8].ObjectEntity;`. Shared with
+    /// <see cref="DataFlowResolver"/> so the box-reference grammar is stated once.</summary>
+    internal static (BoxRef Box, string Pin)? TryParseBoxPinRead(ExpressionSyntax expr) =>
+        expr is MemberAccessExpressionSyntax { MemberName.Text: var pin } access
+        && TryParseBoxRef(access.Expression) is { } box
+            ? (box, pin)
+            : null;
+
     /// <summary>Recognizes `self[N]`, `self.box_TypeName_N`, or `Boxes[PathID("path")]`.</summary>
     private static BoxRef? TryParseBoxRef(ExpressionSyntax expr) => expr switch
     {

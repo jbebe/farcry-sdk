@@ -1,3 +1,4 @@
+using JackAll.Tools.Domino.Nodes;
 using Loretta.CodeAnalysis.Lua.Syntax;
 
 namespace JackAll.Tools.Domino.Graphs;
@@ -44,12 +45,18 @@ public static class GraphBuilder
 
     private sealed record PendingEdge(string SourceNodeId, string SourcePin, int? Index, string? TargetHandler);
 
-    public static ReconstructedGraph Build(UserGraph graph)
+    /// <param name="catalog">Resolves each box's node type to its pin interface. Optional: without one
+    /// the graph still reconstructs, the nodes just carry no <see cref="GraphNode.Signature"/>.</param>
+    /// <param name="twin">The graph's parsed `*.debug.lua`, when available - supplies each persistent
+    /// box's original editor name.</param>
+    public static ReconstructedGraph Build(UserGraph graph, DominoNodeCatalog? catalog = null, DominoDebugTwin? twin = null)
     {
         var nodesByRef = new Dictionary<BoxRef, NodeBuilder>();
         var allNodes = new List<NodeBuilder>();
         var registeredDeps = new List<string>();
         var loadedResources = new List<(string, string)>();
+        var dataEvents = new List<DataEvent>();
+        int statementOrder = 0;
 
         // Pass 0: register every persistent box instance up front, so any function can reference one by
         // BoxRef regardless of which function it happens to be manipulated from.
@@ -111,8 +118,31 @@ public static class GraphBuilder
                 return nb;
             }
 
+            // A `Box.Param = value;` is a data connection when the value reads something rather than
+            // stating a literal: usually a graph variable (`self.BuddyPawn`), occasionally another box's
+            // data-out pin directly. Literals aren't edges - they're just the box's settings.
+            void RecordParamDataEvent(NodeBuilder consumer, SetParamStmt p, string functionName, int order)
+            {
+                var (variable, direct) = DataFlowResolver.ClassifyParamValue(p.Value);
+                if (variable is not null)
+                {
+                    dataEvents.Add(new DataEvent(
+                        DataEventKind.Consume, consumer.Id, p.ParamName, variable,
+                        null, null, functionName, order));
+                }
+                else if (direct is { } source && nodesByRef.TryGetValue(source.Box, out NodeBuilder? sourceNode))
+                {
+                    // Looked up rather than resolved, so reading a pooled box's pin here can't silently
+                    // open a fresh occurrence of it as a side effect.
+                    dataEvents.Add(new DataEvent(
+                        DataEventKind.DirectConsume, consumer.Id, p.ParamName, null,
+                        sourceNode.Id, source.Pin, functionName, order));
+                }
+            }
+
             foreach (var stmt in fn.Body)
             {
+                statementOrder++;
                 switch (stmt)
                 {
                     case RegisterBoxStmt r:
@@ -127,6 +157,21 @@ public static class GraphBuilder
                         if (ResolveBoxNode(p.Box) is { } paramNode)
                         {
                             paramNode.Params[p.ParamName] = p.Value;
+                            RecordParamDataEvent(paramNode, p, fn.Name, statementOrder);
+                        }
+                        break;
+
+                    // `self.Var = self[N].Pin;` - a box's data-out feeding a graph variable, which is
+                    // how nearly all data reaches its consumer (see DataFlowResolver).
+                    case ReadDataStmt read when DominoNodeCatalog.GraphFieldName(read.Target) is { } variable:
+                        if (ResolveBoxNode(read.Box) is { } producerNode)
+                        {
+                            dataEvents.Add(new DataEvent(
+                                DataEventKind.Produce, producerNode.Id, read.PinName, variable,
+                                null, null, fn.Name, statementOrder)
+                            {
+                                NodeTypePath = producerNode.NodeTypePath,
+                            });
                         }
                         break;
 
@@ -195,12 +240,38 @@ public static class GraphBuilder
             }
         }
 
+        IReadOnlyDictionary<long, string>? twinNames = twin?.BoxNamesById;
+
         var finalNodes = allNodes
-            .Select(nb => new GraphNode(nb.Id, nb.Ref, nb.NodeTypePath, nb.Kind, nb.OwnerFunction, nb.Params))
+            .Select(nb => new GraphNode(nb.Id, nb.Ref, nb.NodeTypePath, nb.Kind, nb.OwnerFunction, nb.Params)
+            {
+                Signature = catalog?.Resolve(nb.NodeTypePath),
+                OriginalName = OriginalNameFor(nb.Ref, twinNames),
+            })
             .ToList();
 
-        return new ReconstructedGraph(finalNodes, edges, registeredDeps, loadedResources);
+        // Data attribution leans on control flow to tell which of several writers of a graph variable
+        // actually reached a given consumer, so the resolver needs the edges this pass just produced.
+        var controlAdjacency = edges
+            .Where(e => e.Target == EdgeTarget.Node && e.TargetNodeId is not null)
+            .Select(e => (e.SourceNodeId, e.TargetNodeId!))
+            .Distinct()
+            .ToList();
+
+        return new ReconstructedGraph(
+            finalNodes, edges, DataFlowResolver.Resolve(dataEvents, controlAdjacency), registeredDeps, loadedResources);
     }
+
+    /// <summary>A persistent box's `self[N]` slot is its original editor box ID, which is what the debug
+    /// twin's `box_&lt;Display&gt;_&lt;N&gt;` names are keyed on. The named form already carries that name
+    /// verbatim. Pooled occurrences get nothing: the twin numbers them with editor IDs the release file
+    /// discarded when it collapsed them onto one shared slot.</summary>
+    private static string? OriginalNameFor(BoxRef box, IReadOnlyDictionary<long, string>? twinNames) => box switch
+    {
+        NamedInstanceBoxRef named => named.FieldName,
+        InstanceBoxRef instance when twinNames?.TryGetValue(instance.Slot, out string? name) == true => name,
+        _ => null,
+    };
 
     /// <summary>Expands a handler function name into every terminal (box fire / graph exit) it and
     /// anything it redirects through eventually reach, in order. A cyclic redirect chain contributes

@@ -143,8 +143,7 @@ public class UserGraphWriterTests
     [Fact]
     public void Every_real_extracted_user_graph_round_trips_stably_through_the_writer()
     {
-        string dir = Path.Combine("Fixtures", "Domino", "user");
-        if (!Directory.Exists(dir)) return;
+        if (DominoCorpus.UserDirectory is not { } dir) return;
 
         var files = Directory.EnumerateFiles(dir, "*.lua", SearchOption.AllDirectories).ToList();
         Assert.True(files.Count > 0, "Fixture corpus is present but empty.");

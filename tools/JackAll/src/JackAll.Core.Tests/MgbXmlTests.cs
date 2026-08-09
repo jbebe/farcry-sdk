@@ -313,10 +313,21 @@ public sealed class MgbXmlTests
 
         HashSet<uint> valueBank = Bank("FCSE_SLOT_");
         HashSet<uint> sliderBank = Bank("FCSE_SLIDER_");
+        HashSet<uint> editBank = Bank("FCSE_EDIT_");
 
         Assert.Equal(20, linked.Count(p => valueBank.Contains(p.Key)));
         Assert.Equal(20, linked.Count(p => sliderBank.Contains(p.Key)));
-        Assert.Equal(41, linked.Count); // the two banks plus SETTING_LABEL_LIST, and nothing else
+        Assert.Equal(20, linked.Count(p => editBank.Contains(p.Key)));
+        Assert.Equal(61, linked.Count); // three banks plus SETTING_LABEL_LIST, and nothing else
+
+        // The text fields are bare EditBox elements rather than instances of a cell area - there is
+        // no edit-box cell in common.mgb and no AddEditBoxSetting in CSettingsPage, so this is the
+        // shape the stock Options > Network page uses. Their links therefore name the element and
+        // stop: three ids where a cell bank needs five.
+        foreach (MgbProperty property in linked.Where(p => editBank.Contains(p.Key)))
+        {
+            Assert.Equal(3, property.Link!.Ids.Count);
+        }
 
         // Both banks must be authored visible. Authoring the slider bank hidden and revealing only
         // the bound cells was tried and does not work: HIDDEN and Element::SetVisible are different
@@ -324,7 +335,7 @@ public sealed class MgbXmlTests
         // anything with bit 1 set - so a "shown" cell was still not drawn, and the engine
         // dereferenced a null the frame after. There is no data-only way to author a cell that code
         // can reveal later, which is what this assert is really pinning down.
-        var cellElements = linked.Where(p => sliderBank.Contains(p.Key) || valueBank.Contains(p.Key))
+        var cellElements = linked.Where(p => !p.Key.Equals(MgbTypeTable.Hash("SETTING_LABEL_LIST")))
                                  .Select(p => p.Link!.Ids[2])
                                  .ToHashSet();
         foreach (MgbElement element in page.Elements.Where(e => cellElements.Contains(e.UserData.NameId)))

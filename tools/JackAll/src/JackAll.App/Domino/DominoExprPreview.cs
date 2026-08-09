@@ -8,14 +8,18 @@ namespace JackAll.App.Domino;
 /// glance.</summary>
 internal static class DominoExprPreview
 {
-    public static string Short(ExpressionSyntax expr) => Truncate(expr switch
+    public static string Short(ExpressionSyntax expr) => Truncate(Full(expr));
+
+    /// <summary>The untruncated rendering, for the inspector - a node label has to fit in a box, but a
+    /// property row can wrap, and a truncated entity ID or bark tag is no use to anyone.</summary>
+    public static string Full(ExpressionSyntax expr) => expr switch
     {
         LiteralExpressionSyntax lit when lit.Kind() == SyntaxKind.StringLiteralExpression => $"\"{lit.Token.ValueText}\"",
         LiteralExpressionSyntax lit => lit.Token.Text, // number / nil / true / false - raw token text reads fine as-is
         IdentifierNameSyntax e => e.Name,
-        MemberAccessExpressionSyntax e => $"{Short(e.Expression)}.{e.MemberName.Text}",
-        _ => expr.GetType().Name,
-    });
+        MemberAccessExpressionSyntax e => $"{Full(e.Expression)}.{e.MemberName.Text}",
+        _ => expr.ToString(),
+    };
 
     private static string Truncate(string s) => s.Length > 40 ? s[..37] + "..." : s;
 }

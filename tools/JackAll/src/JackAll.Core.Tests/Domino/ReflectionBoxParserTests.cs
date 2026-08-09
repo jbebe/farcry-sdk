@@ -64,8 +64,7 @@ public class ReflectionBoxParserTests
     [Fact]
     public void Every_real_system_node_has_a_reflection_box_that_parses()
     {
-        string dir = Path.Combine("Fixtures", "Domino", "system");
-        if (!Directory.Exists(dir)) return;
+        if (DominoCorpus.SystemDirectory is not { } dir) return;
 
         var files = Directory.EnumerateFiles(dir, "*.lua", SearchOption.AllDirectories).ToList();
         Assert.True(files.Count > 0, "Fixture corpus is present but empty.");

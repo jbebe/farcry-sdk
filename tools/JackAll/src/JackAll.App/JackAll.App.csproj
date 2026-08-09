@@ -14,6 +14,13 @@
     <!-- Transitive via JackAll.Core, but declared because Domino\DominoExprPreview.cs compiles
          against Loretta's syntax types directly. -->
     <PackageReference Include="Loretta.CodeAnalysis.Lua" Version="0.2.13" />
+    <!--
+      The node-graph canvas behind the Domino mission-graph viewer. Chosen over the other WPF node
+      editors because it ships a real net10.0-windows target (matching this project's TFM exactly)
+      and has no dependencies of its own beyond WPF - it is a control library, not a framework, so
+      it binds to our own view models and imposes no document model on ReconstructedGraph.
+    -->
+    <PackageReference Include="Nodify" Version="7.3.0" />
   </ItemGroup>
 
   <PropertyGroup>

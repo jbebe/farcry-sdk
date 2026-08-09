@@ -237,7 +237,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        var vm = new DominoTabViewModel(file.FileName, source);
+        // The tab resolves two more things through the VFS: every node type the graph refers to (for
+        // pin signatures) and the graph's own `*.debug.lua` twin (for the editor's original box and pin
+        // names). Both are optional - a null return just means that enrichment is skipped.
+        var vm = new DominoTabViewModel(file.FileName, source, file.NameIsKnown ? file.Path : null, ReadDominoText);
         var view = new DominoTabView(vm);
         var tab = new TabItem { Content = view };
         // No dirty-tracking wrapper like the two editors below get: this tab is read-only, so there is
@@ -251,6 +254,22 @@ public partial class MainWindow : Window
         _openDominoEditors[file.Hash] = tab;
         MainTabs.Items.Add(tab);
         MainTabs.SelectedItem = tab;
+    }
+
+    /// <summary>Reads a Domino script by its game-relative path, for the node catalog and debug-twin
+    /// lookups. Returns null for anything the VFS can't resolve, which is the normal outcome for a mod
+    /// that references a node type this install doesn't have.</summary>
+    private string? ReadDominoText(string gameRelativePath)
+    {
+        try
+        {
+            byte[]? bytes = _vm.ReadByPath(gameRelativePath);
+            return bytes is null ? null : new UTF8Encoding(false).GetString(bytes).TrimStart((char)0xFEFF);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     // ------------------------------------------------------------ mgb package editor tabs

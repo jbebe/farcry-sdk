@@ -160,8 +160,7 @@ public class UserGraphParserTests
     [Fact]
     public void Real_corpus_statements_are_almost_entirely_classified()
     {
-        string dir = Path.Combine("Fixtures", "Domino", "user");
-        if (!Directory.Exists(dir)) return;
+        if (DominoCorpus.UserDirectory is not { } dir) return;
 
         var files = Directory.EnumerateFiles(dir, "*.lua", SearchOption.AllDirectories).ToList();
         Assert.True(files.Count > 0, "Fixture corpus is present but empty.");

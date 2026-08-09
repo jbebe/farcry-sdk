@@ -223,8 +223,7 @@ public class GraphBuilderTests
     [Fact]
     public void Real_corpus_graphs_build_without_error_and_mostly_resolve_to_real_targets()
     {
-        string dir = Path.Combine("Fixtures", "Domino", "user");
-        if (!Directory.Exists(dir)) return;
+        if (DominoCorpus.UserDirectory is not { } dir) return;
 
         var files = Directory.EnumerateFiles(dir, "*.lua", SearchOption.AllDirectories).ToList();
         Assert.True(files.Count > 0, "Fixture corpus is present but empty.");

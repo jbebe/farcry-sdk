@@ -1,39 +1,202 @@
 <UserControl x:Class="JackAll.App.Domino.DominoTabView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:nodify="clr-namespace:Nodify;assembly=Nodify"
+             xmlns:domino="clr-namespace:JackAll.App.Domino"
              xmlns:text="clr-namespace:JackAll.App.FileHandlers.Text">
+    <UserControl.Resources>
+        <domino:PortBrushConverter x:Key="PortBrush" />
+        <domino:NodeBrushConverter x:Key="NodeBrush" />
+
+        <!-- Ports. The connector dot is nodify's own; the label carries the type color, which is what
+             makes an entity wire distinguishable from a float wire without reading either end. -->
+        <DataTemplate x:Key="InputPortTemplate" DataType="{x:Type domino:DominoConnectorViewModel}">
+            <nodify:NodeInput IsConnected="{Binding IsConnected}"
+                              Anchor="{Binding Anchor, Mode=OneWayToSource}"
+                              ToolTip="{Binding Tooltip}">
+                <nodify:NodeInput.Header>
+                    <TextBlock Text="{Binding Title}" FontSize="10"
+                               Foreground="{Binding Converter={StaticResource PortBrush}}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="120" />
+                </nodify:NodeInput.Header>
+            </nodify:NodeInput>
+        </DataTemplate>
+
+        <DataTemplate x:Key="OutputPortTemplate" DataType="{x:Type domino:DominoConnectorViewModel}">
+            <nodify:NodeOutput IsConnected="{Binding IsConnected}"
+                               Anchor="{Binding Anchor, Mode=OneWayToSource}"
+                               ToolTip="{Binding Tooltip}">
+                <nodify:NodeOutput.Header>
+                    <TextBlock Text="{Binding Title}" FontSize="10"
+                               Foreground="{Binding Converter={StaticResource PortBrush}}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="120" />
+                </nodify:NodeOutput.Header>
+            </nodify:NodeOutput>
+        </DataTemplate>
+
+        <!-- Wires -->
+        <DataTemplate x:Key="ControlWireTemplate" DataType="{x:Type domino:DominoConnectionViewModel}">
+            <nodify:StepConnection Source="{Binding Source.Anchor}" Target="{Binding Target.Anchor}"
+                                   Stroke="#5A6472" StrokeThickness="1.6"
+                                   Direction="Forward" ArrowSize="7,7" />
+        </DataTemplate>
+
+        <DataTemplate x:Key="DataWireTemplate" DataType="{x:Type domino:DominoConnectionViewModel}">
+            <nodify:Connection Source="{Binding Source.Anchor}" Target="{Binding Target.Anchor}"
+                               Stroke="{Binding Source, Converter={StaticResource PortBrush}}"
+                               StrokeThickness="1.1" Direction="Forward" ArrowSize="5,5"
+                               Text="{Binding Label}" FontSize="9"
+                               Foreground="#666" TextBackground="#F0F7F7F7" />
+        </DataTemplate>
+
+        <!-- Dashed: several handlers write the variable this value travels through, so the producer is
+             one of these candidates rather than provably this one. -->
+        <DataTemplate x:Key="AmbiguousDataWireTemplate" DataType="{x:Type domino:DominoConnectionViewModel}">
+            <nodify:Connection Source="{Binding Source.Anchor}" Target="{Binding Target.Anchor}"
+                               Stroke="#B08A3C" StrokeThickness="1.1" StrokeDashArray="3 3"
+                               Direction="Forward" ArrowSize="5,5"
+                               Text="{Binding Label}" FontSize="9"
+                               Foreground="#8A6A20" TextBackground="#F0F7F7F7" />
+        </DataTemplate>
+
+        <!--
+          One template, switching shape by trigger, rather than a ConnectionTemplateSelector:
+          NodifyEditor.ConnectionTemplateSelector is declared but never actually consulted in Nodify
+          7.3.0 (verified - the selector's SelectTemplate is not called even once), so setting it alone
+          silently leaves every wire on the library's default template, drawn with unbound Source/Target
+          at the origin. ConnectionTemplate is the path Nodify's own examples use and does work.
+        -->
+        <DataTemplate x:Key="WireTemplate" DataType="{x:Type domino:DominoConnectionViewModel}">
+            <ContentControl Content="{Binding}">
+                <ContentControl.Style>
+                    <Style TargetType="ContentControl">
+                        <Setter Property="ContentTemplate" Value="{StaticResource ControlWireTemplate}" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding Kind}" Value="Data">
+                                <Setter Property="ContentTemplate" Value="{StaticResource DataWireTemplate}" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding Ambiguous}" Value="True">
+                                <Setter Property="ContentTemplate" Value="{StaticResource AmbiguousDataWireTemplate}" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </ContentControl.Style>
+            </ContentControl>
+        </DataTemplate>
+    </UserControl.Resources>
+
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="2*" MinWidth="240" />
+            <ColumnDefinition Width="3*" MinWidth="240" />
             <ColumnDefinition Width="Auto" />
-            <ColumnDefinition Width="1*" MinWidth="240" />
+            <ColumnDefinition Width="1*" MinWidth="260" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="#F3F3F3" BorderBrush="#DDD" BorderThickness="0,0,1,0" ClipToBounds="True">
+        <Border Grid.Column="0" Background="#F7F7F7" BorderBrush="#DDD" BorderThickness="0,0,1,0" ClipToBounds="True">
             <Grid>
-                <Canvas x:Name="GraphCanvas" Background="Transparent"
-                        MouseDown="GraphCanvas_MouseDown" MouseUp="GraphCanvas_MouseUp"
-                        MouseMove="GraphCanvas_MouseMove" MouseWheel="GraphCanvas_MouseWheel">
-                    <Canvas.RenderTransform>
-                        <TransformGroup>
-                            <ScaleTransform x:Name="GraphScale" ScaleX="1" ScaleY="1" />
-                            <TranslateTransform x:Name="GraphTranslate" X="20" Y="20" />
-                        </TransformGroup>
-                    </Canvas.RenderTransform>
-                </Canvas>
+                <nodify:NodifyEditor x:Name="Editor"
+                                     ItemsSource="{Binding Nodes}"
+                                     Connections="{Binding Connections}"
+                                     SelectedItem="{Binding SelectedNode, Mode=TwoWay}"
+                                     ConnectionTemplate="{StaticResource WireTemplate}"
+                                     Background="Transparent"
+                                     GridCellSize="16"
+                                     DisplayConnectionsOnTop="False">
+                    <nodify:NodifyEditor.ItemContainerStyle>
+                        <Style TargetType="{x:Type nodify:ItemContainer}">
+                            <Setter Property="Location" Value="{Binding Location, Mode=TwoWay}" />
+                            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+                        </Style>
+                    </nodify:NodifyEditor.ItemContainerStyle>
 
-                <Border Background="#DDFFFFFF" BorderBrush="#CCC" BorderThickness="1" CornerRadius="3"
+                    <nodify:NodifyEditor.ItemTemplate>
+                        <DataTemplate DataType="{x:Type domino:DominoNodeViewModel}">
+                            <nodify:Node Input="{Binding Input}"
+                                         Output="{Binding Output}"
+                                         InputConnectorTemplate="{StaticResource InputPortTemplate}"
+                                         OutputConnectorTemplate="{StaticResource OutputPortTemplate}"
+                                         Width="{Binding Width}"
+                                         ToolTip="{Binding Subtitle}"
+                                         Background="{Binding Converter={StaticResource NodeBrush}}"
+                                         HeaderBrush="{Binding Converter={StaticResource NodeBrush}}"
+                                         ContentBrush="Transparent"
+                                         BorderBrush="{Binding Converter={StaticResource NodeBrush}, ConverterParameter=border}"
+                                         BorderThickness="1">
+                                <nodify:Node.Header>
+                                    <StackPanel Margin="2,1">
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" FontSize="12"
+                                                   TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding Subtitle}" FontSize="9" Foreground="#777"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </nodify:Node.Header>
+                            </nodify:Node>
+                        </DataTemplate>
+                    </nodify:NodifyEditor.ItemTemplate>
+                </nodify:NodifyEditor>
+
+                <!-- Status strip -->
+                <Border Background="#E8FFFFFF" BorderBrush="#CCC" BorderThickness="1" CornerRadius="3"
                         HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Padding="8,4">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="StatusText" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" MaxWidth="480" />
-                        <Button x:Name="ResetViewButton" Content="Reset view" Margin="12,0,0,0" Padding="6,2" Click="ResetViewButton_Click" />
+                        <TextBlock x:Name="StatusText" FontFamily="Consolas" FontSize="11"
+                                   TextWrapping="Wrap" MaxWidth="620" VerticalAlignment="Center" />
+                        <Button x:Name="FitButton" Content="Fit" Margin="12,0,0,0" Padding="8,2" Click="FitButton_Click" />
                     </StackPanel>
                 </Border>
+
+                <!-- Legend -->
+                <Border Background="#E8FFFFFF" BorderBrush="#CCC" BorderThickness="1" CornerRadius="3"
+                        HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8" Padding="8,5">
+                    <StackPanel>
+                        <TextBlock Text="BOXES" FontSize="8" Foreground="#888" FontWeight="SemiBold" Margin="0,0,0,3" />
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
+                            <Border Width="10" Height="10" Background="#E8F0FE" BorderBrush="#9AA6B8" BorderThickness="1" />
+                            <TextBlock Text="persistent" FontSize="9" Margin="4,0,10,0" />
+                            <Border Width="10" Height="10" Background="#FCF3E3" BorderBrush="#C6A87A" BorderThickness="1" />
+                            <TextBlock Text="pooled" FontSize="9" Margin="4,0,10,0" />
+                            <Border Width="10" Height="10" Background="#E6F7E9" BorderBrush="#8FBF98" BorderThickness="1" />
+                            <TextBlock Text="sub-graph" FontSize="9" Margin="4,0,10,0" />
+                            <Border Width="10" Height="10" Background="#EFEFEF" BorderBrush="#AAA" BorderThickness="1" />
+                            <TextBlock Text="graph boundary" FontSize="9" Margin="4,0,0,0" />
+                        </StackPanel>
+                        <TextBlock Text="WIRES" FontSize="8" Foreground="#888" FontWeight="SemiBold" Margin="0,4,0,3" />
+                        <StackPanel Orientation="Horizontal">
+                            <Rectangle Width="14" Height="2" Fill="#5A6472" VerticalAlignment="Center" />
+                            <TextBlock Text="control" FontSize="9" Margin="4,0,10,0" />
+                            <Rectangle Width="14" Height="2" Fill="#2E7D32" VerticalAlignment="Center" />
+                            <TextBlock Text="data (colored by type)" FontSize="9" Margin="4,0,10,0" />
+                            <Rectangle Width="14" Height="2" Fill="#B08A3C" VerticalAlignment="Center" />
+                            <TextBlock Text="ambiguous producer" FontSize="9" Margin="4,0,0,0" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <nodify:Minimap HorizontalAlignment="Right" VerticalAlignment="Top" Margin="8"
+                                Width="190" Height="130"
+                                Background="#DDFFFFFF" BorderBrush="#CCC" BorderThickness="1"
+                                ItemsSource="{Binding Nodes}"
+                                ViewportLocation="{Binding ElementName=Editor, Path=ViewportLocation, Mode=TwoWay}"
+                                ViewportSize="{Binding ElementName=Editor, Path=ViewportSize}">
+                    <nodify:Minimap.ItemContainerStyle>
+                        <Style TargetType="{x:Type nodify:MinimapItem}">
+                            <Setter Property="Location" Value="{Binding Location}" />
+                            <Setter Property="Background" Value="{Binding Converter={StaticResource NodeBrush}, ConverterParameter=border}" />
+                        </Style>
+                    </nodify:Minimap.ItemContainerStyle>
+                </nodify:Minimap>
             </Grid>
         </Border>
 
         <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="#DDD" />
 
-        <text:TextFileHandler x:Name="SourceView" Grid.Column="2" Extension="lua" />
+        <TabControl Grid.Column="2">
+            <TabItem Header="Inspector">
+                <domino:DominoInspector x:Name="Inspector" />
+            </TabItem>
+            <TabItem Header="Lua source">
+                <text:TextFileHandler x:Name="SourceView" Extension="lua" />
+            </TabItem>
+        </TabControl>
     </Grid>
 </UserControl>
