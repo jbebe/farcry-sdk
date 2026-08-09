@@ -47,7 +47,11 @@ public static class MgbXml
     }
 
     /// <summary>Rebuilds a package from a document produced by <see cref="ToXml"/>.</summary>
-    public static MgbPackage FromXml(string xml)
+    /// <param name="xml">The document.</param>
+    /// <param name="names">Optional: collects the names the document spelled out. The package it
+    /// builds keeps only their hashes, so a caller that wants to report on it in the author's own
+    /// words has to catch them on the way past.</param>
+    public static MgbPackage FromXml(string xml, MgbNameLookup? names = null)
     {
         XDocument document;
         try
@@ -73,7 +77,10 @@ public static class MgbXml
             Invert = (string?)root.Attribute(BigEndianAttribute) == "true",
         };
 
-        var codec = new MgbXmlReadCodec(root, SentinelAttribute, BigEndianAttribute);
+        var codec = new MgbXmlReadCodec(root, SentinelAttribute, BigEndianAttribute)
+        {
+            CollectNamesInto = names,
+        };
         package.SerializeBody(codec);
         codec.Finish();
         return package;
@@ -83,7 +90,7 @@ public static class MgbXml
     public static string Decode(byte[] mgb) => ToXml(MgbPackage.Read(mgb));
 
     /// <summary>Convenience for the common build path: XML in, binary out.</summary>
-    public static byte[] Encode(string xml) => FromXml(xml).Write();
+    public static byte[] Encode(string xml, MgbNameLookup? names = null) => FromXml(xml, names).Write();
 
     private static byte[] ParseSentinel(string? text)
     {

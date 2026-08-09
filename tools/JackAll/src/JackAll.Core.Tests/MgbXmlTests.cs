@@ -248,25 +248,28 @@ public sealed class MgbXmlTests
     }
 
     /// <summary>
-    /// FCSE's settings-page package is committed as both XML and binary. This is the one mgb test
-    /// that needs no game corpus, so it runs on a fresh checkout - and it is the only thing keeping
-    /// the two committed artifacts from drifting apart if someone edits one and forgets the other.
+    /// FCSE's settings-page package is committed as XML only - its build encodes it with
+    /// <c>mgb encode</c> - so this checks the source still builds into the package FCSE's native
+    /// code expects to find. It is the one mgb test that needs no game corpus, so it runs on a
+    /// fresh checkout.
     /// </summary>
+    /// <remarks>
+    /// The wiring these assertions cover generically - that every link resolves to something the
+    /// package declares - is <see cref="MgbVerify"/>'s job, and FCSE's build runs
+    /// <c>mgb verify --page FCSE_PAGE</c> before every encode. What is left here is the part no
+    /// general checker can know: the shape FCSE's own C++ was written against.
+    /// </remarks>
     [Theory]
     [InlineData("fcse", 1024, 768)]              // the `pc` UI set
     [InlineData("fcse_widescreen", 1280, 800)]   // the `pcwidescreen` set
-    public void The_committed_fcse_page_package_builds_from_its_committed_xml(
+    public void The_fcse_page_package_builds_from_its_xml_in_the_shape_fcse_expects(
         string stem, ushort pageWidth, ushort pageHeight)
     {
-        string assets = Path.Combine(TestSupport.RepositoryRoot, "tools", "FCSE", "assets");
-        string xmlPath = Path.Combine(assets, $"{stem}.mgb.xml");
-        string mgbPath = Path.Combine(assets, $"{stem}.mgb");
+        string xmlPath = Path.Combine(
+            TestSupport.RepositoryRoot, "tools", "FCSE", "assets", $"{stem}.mgb.xml");
         Assert.True(File.Exists(xmlPath), $"missing {xmlPath}");
-        Assert.True(File.Exists(mgbPath), $"missing {mgbPath}");
 
         byte[] built = MgbXml.Encode(File.ReadAllText(xmlPath));
-        Assert.True(built.AsSpan().SequenceEqual(File.ReadAllBytes(mgbPath)),
-            $"{stem}.mgb is not what {stem}.mgb.xml builds - regenerate with `jackall mgb encode`");
 
         // The page is only reachable if CUIPageBase::Init can resolve it: it hashes the page name
         // and looks that up in the GenericObjectTable every loaded package registers.
@@ -281,7 +284,7 @@ public sealed class MgbXmlTests
 
         // Both chrome materials are declared locally. They cannot be reached cross-package, and a
         // material missing here renders as an untextured white quad over the whole page.
-        Assert.Equal(2, package.Materials.Count);
+        Assert.Equal(3, package.Materials.Count);
 
         MgbGenericObjectTable table = Assert.IsType<MgbGenericObjectTable>(package.GenericObjectTable);
         MgbGenericObject entry = Assert.Single(

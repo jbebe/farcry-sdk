@@ -2,7 +2,7 @@
 
 ## `fcse.mgb` — FCSE's own Magma settings page
 
-A standalone Magma UI package (4,421 bytes) declaring one `Page` area, `FCSE_PAGE`, with a row list
+A standalone Magma UI package (11,690 bytes built) declaring one `Page` area, `FCSE_PAGE`, with a row list
 and 20 value-control slots. It is work item 1 of `PLAN-own-page.md` (git history: removed in
 `cf13c2b`), and it is the prerequisite for FCSE having a settings page at all: a private page bound
 to a *shipped* layout shares that layout's `magma::Page` with the stock class that also binds it, so
@@ -14,42 +14,42 @@ pages differ in size and geometry (`1024x768` / nav at x=83 versus `1280x800` / 
 
 | File | Role |
 |---|---|
-| `fcse.mgb.xml`, `fcse_widescreen.mgb.xml` | **The sources.** Reviewable, diffable, and the thing to edit. |
-| `fcse.mgb`, `fcse_widescreen.mgb` | The binaries FCSE ships. Built from the XML; do not hand-edit. |
-| `build_fcse_mgb.py` | Regenerates one XML from a shipped `options.mgb` export. Run it once per variant. |
-| `verify_fcse_mgb.py` | Checks the names line up with what FCSE's native code asks for. |
+| `fcse.mgb.xml`, `fcse_widescreen.mgb.xml` | **The package**, one per aspect. The only form it exists in here — nothing binary is committed. |
+| `fcse.rc.in` | The resource script CMake fills in, naming the two `.mgb`s the build produced. |
 
-### Rebuilding
+### Building
 
-Editing the XML needs no game files:
+The build does it. CMake runs JackAll's `.mgb` encoder over each XML and writes the binary into the
+build tree, so editing an XML relinks `FCSE.exe` on its own without touching any `.cpp` — see
+`fcse_build_mgb` and the `OBJECT_DEPENDS` note in [`../CMakeLists.txt`](../CMakeLists.txt) for why
+that dependency needs stating explicitly. This is also why the `.NET` SDK is a build prerequisite
+alongside the MSVC toolchain: this project owns no second implementation of the format.
 
-```
-jackall mgb encode fcse.mgb.xml            -o fcse.mgb
-jackall mgb encode fcse_widescreen.mgb.xml -o fcse_widescreen.mgb
-```
-
-Regenerating the XML from scratch does, because the type table, pool counts and *all geometry* are
-measured from a shipped package — run it once per aspect, against that aspect's `options.mgb`:
+By hand, it is the same two commands the build runs, and neither needs game files:
 
 ```
-Gibbed.Dunia.Unpack.exe "<install>/Data_Win32/patch.fat" <out>
-
-jackall mgb decode "<out>/ui/localized/pc/eng/ui/options.mgb"            -o options.xml
-jackall mgb decode "<out>/ui/localized/pcwidescreen/eng/ui/options.mgb"  -o options_ws.xml
-
-python build_fcse_mgb.py options.xml    -o fcse.mgb.xml
-python build_fcse_mgb.py options_ws.xml -o fcse_widescreen.mgb.xml
+jackall mgb verify fcse.mgb.xml --page FCSE_PAGE
+jackall mgb encode fcse.mgb.xml -o fcse.mgb
 ```
 
-Any language works as the source — only geometry and the type table are taken from it, never text.
-The generator prints the page size and measured geometry so a mismatched source is obvious.
+`mgb encode` reads its own output back, which proves the bytes are loadable. `mgb verify` is the
+step that matters for an authored package: `Package::ResolveLinks` drops a reference it cannot find
+without failing the load, so a `FullLink` naming an element that does not exist is a perfectly valid
+package that produces a page with a control missing. `--page` additionally demands a
+`GenericObjectTable` entry keyed with the name `fcse_page.cpp` asks for — without one the page is
+authored, laid out, and unreachable. The build runs `verify` *before* each `encode`, so either
+failure stops the build rather than waiting for someone to run the test suite.
 
 **A rebuilt `.mgb` reaches the game by rebuilding `FCSE.exe`, not by being dropped in.** Both
 variants are embedded into the exe as `RCDATA` resources (`fcse.rc.in`), and there is deliberately
 no loose-file path — the game folder is irrelevant to which layout loads, so a stale file can never
-shadow the real one. Editing an `.mgb` does relink the exe on its own, without touching any `.cpp`;
-see the `OBJECT_DEPENDS` note in [`../CMakeLists.txt`](../CMakeLists.txt) for why that dependency
-needs stating explicitly in CMake.
+shadow the real one.
+
+The XML itself was originally generated from a shipped `options.mgb` export, which is where the type
+table, the pool counts and all the geometry came from; it has been the source of truth since, and
+that generator is gone. Regenerating from scratch would mean decoding an `options.mgb` for the
+aspect in question (`jackall mgb decode`) and lifting those three things across again — only
+geometry and the type table ever came from it, never text, so any language works as the source.
 
 ### Aspect
 
@@ -59,8 +59,9 @@ that same byte, so its page can never disagree with the rest of the menu about w
 is running. If the read faults, it falls back to the 4:3 layout — slightly wrong decoration geometry
 beats no page at all.
 
-`MgbXmlTests.The_committed_fcse_page_package_builds_from_its_committed_xml` fails the build if the
-two committed artifacts ever disagree, so a forgotten `mgb encode` cannot ship.
+`MgbXmlTests.The_fcse_page_package_builds_from_its_xml_in_the_shape_fcse_expects` covers what a
+general checker cannot know — the slot banks, the link arities, the per-aspect page size — by
+building both XMLs and asserting the shape `fcse_page.cpp` was written against.
 
 ### What the page is made of
 
@@ -98,7 +99,7 @@ decoration materials described below:
 All three banks are authored **visible**, and FCSE hides the cells a display does not use. That
 ordering is not a preference, it is the only one that works — see "Showing and hiding cells" below.
 
-`POOLCOUNTS` is no longer copied verbatim from `options.mgb` either. Those 65 counts are per-type
+`POOLCOUNTS` is not copied verbatim from `options.mgb` either. Those 65 counts are per-type
 memory-pool pre-reservation indexed by the engine's own pool order, not by the type table, so there
 is no way to tell which entry is `EditBox` — and this package authors twenty where `options.mgb` has
 six. Every entry is raised to a floor instead, which is safe because over-reserving has no effect on
@@ -200,9 +201,9 @@ backdrop/frame/notebook stack:
 the control column — the value cells sit at `x=552` and are roughly 66px wide — so it occupies empty
 page rather than sitting behind a row.
 
-`options.mgb` has no copy of this element, so unlike every other geometry in the generator these
-rects are constants rather than measurements; `JACKAL_TRACK_RECT` is keyed by page size and the
-generator refuses an aspect it has no entry for.
+`options.mgb` has no copy of this element, so unlike every other geometry here these rects were
+copied from `sp_menus.mgb` rather than measured off the page this one was built from — which is why
+they are the one thing a third aspect could not be derived from an `options.mgb` alone.
 
 **Multiply is load-bearing.** The texture is dark marks on white paper with no useful alpha, so
 under `Normal` it would draw a white square with a track on it; multiplied, white is the identity

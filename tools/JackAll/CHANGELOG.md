@@ -5,6 +5,15 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **`mgb verify`** — checks that a `.mgb`, or the XML it is built from, references only names it
+  declares. `mgb encode` proves a package is loadable; this catches the failure that *is* loadable,
+  where `Package::ResolveLinks` silently drops a link to an element that does not exist and the
+  screen simply misses a control. `--page <NAME>` also requires a `GenericObjectTable` entry keyed
+  with the name native code looks the page up under. References into other packages are left alone —
+  they are the engine's to resolve — and the reported count of what *was* resolved is how you tell a
+  real pass from a vacuous one. Every one of the 50 shipped menu packages verifies clean.
+  `MgbVerify` is the reusable core; FCSE's build runs the command over its own layouts before
+  encoding them.
 - **`mod` CLI branch** — the mod pipeline, previously GUI-only, is now drivable headlessly:
   `mod status`, `mod inspect`, `mod import-legacy`, `mod build` and `mod restore`. Every one takes
   `--json` (one object on stdout, progress on stderr, `{"ok":false,"error":"…"}` and a non-zero exit

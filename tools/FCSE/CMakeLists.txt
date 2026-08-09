@@ -82,8 +82,57 @@ include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/luajit.cmake")
 # a single file. Both aspect variants: the UI ships as `pc` and `pcwidescreen` sets whose pages
 # differ in size and geometry, and page_assets.cpp picks between them at runtime using the engine's
 # own widescreen flag.
-set(FCSE_MGB            "${CMAKE_CURRENT_SOURCE_DIR}/assets/fcse.mgb")
-set(FCSE_MGB_WIDESCREEN "${CMAKE_CURRENT_SOURCE_DIR}/assets/fcse_widescreen.mgb")
+#
+# assets/ holds the XML and nothing else. The binaries are built here, into the build tree, by the
+# .mgb encoder in tools/JackAll - the same one that decodes the game's own packages, so this project
+# owns no second implementation of the format and there is no committed artifact to go stale against
+# the source it was built from.
+set(FCSE_MGB_XML            "${CMAKE_CURRENT_SOURCE_DIR}/assets/fcse.mgb.xml")
+set(FCSE_MGB_WIDESCREEN_XML "${CMAKE_CURRENT_SOURCE_DIR}/assets/fcse_widescreen.mgb.xml")
+set(FCSE_MGB            "${CMAKE_CURRENT_BINARY_DIR}/assets/fcse.mgb")
+set(FCSE_MGB_WIDESCREEN "${CMAKE_CURRENT_BINARY_DIR}/assets/fcse_widescreen.mgb")
+
+find_program(DOTNET_EXECUTABLE NAMES dotnet)
+if (NOT DOTNET_EXECUTABLE)
+  message(FATAL_ERROR "dotnet was not found on PATH. FCSE's settings-page layout is built from "
+                      "assets/*.mgb.xml by tools/JackAll's CLI, which needs the .NET SDK "
+                      "(https://dotnet.microsoft.com/download). Install it and re-configure.")
+endif()
+
+# `dotnet run` builds the CLI if it has to and forwards the app's exit code, so a failed encode
+# fails the build. Release rather than the default Debug: this is a tool being used, not debugged,
+# and it keeps the run out of whatever configuration a JackAll developer has in their tree.
+set(JACKALL_CLI "${DOTNET_EXECUTABLE}" run
+                --project "${CMAKE_CURRENT_SOURCE_DIR}/../JackAll/src/JackAll.Cli/JackAll.Cli.csproj"
+                --configuration Release --verbosity quiet --)
+
+# Verify before encoding, and as part of producing the binary rather than as a test: `mgb encode`
+# proves the bytes are loadable, but a link naming an element that does not exist is a perfectly
+# valid package that gives FCSE a page with no controls on it, and that failure should stop a build
+# rather than wait for someone to run the suite. --page is the name fcse_page.cpp's kPageName asks
+# GenericObjectServer::FindGenericObject for; without a registry entry under it the page is
+# authored, laid out, and unreachable.
+#
+# DEPENDS names the XML and not the encoder that reads it: `mgb encode` is byte-deterministic for a
+# given document (JackAll's own round-trip tests are what hold that), so re-encoding because JackAll
+# changed would rewrite identical bytes. If it ever isn't, delete the build tree.
+function(fcse_build_mgb xml mgb)
+  get_filename_component(name "${mgb}" NAME)
+  add_custom_command(
+    OUTPUT "${mgb}"
+    COMMAND ${JACKALL_CLI} mgb verify "${xml}" --page FCSE_PAGE
+    COMMAND ${JACKALL_CLI} mgb encode "${xml}" -o "${mgb}"
+    DEPENDS "${xml}"
+    COMMENT "Building ${name} from ${xml}"
+    VERBATIM)
+endfunction()
+
+fcse_build_mgb("${FCSE_MGB_XML}"            "${FCSE_MGB}")
+fcse_build_mgb("${FCSE_MGB_WIDESCREEN_XML}" "${FCSE_MGB_WIDESCREEN}")
+
+# The .rc's OBJECT_DEPENDS below is what actually re-runs these when an XML changes; the target is
+# what orders them ahead of the link under generators that don't infer it from that dependency.
+add_custom_target(fcse_mgb DEPENDS "${FCSE_MGB}" "${FCSE_MGB_WIDESCREEN}")
 
 # The Lua script API, embedded alongside them - see the note in assets/fcse.rc.in.
 set(FCSE_LUA_RUNTIME    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/runtime/fcse.lua")
@@ -91,10 +140,13 @@ set(FCSE_LUA_RUNTIME    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/runtime/fcse.lua")
 configure_file("assets/fcse.rc.in" "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc" @ONLY)
 
 # rc.exe does not report what a resource statement pulled in and CMake does not scan .rc files for
-# RCDATA dependencies, so without this, editing a .mgb would relink the previous build's bytes and
-# silently ship stale layout data. (configure_file already re-runs CMake when the .rc.in template
+# RCDATA dependencies, so without this, editing an .mgb.xml would relink the previous build's bytes
+# and silently ship stale layout data. (configure_file already re-runs CMake when the .rc.in template
 # changes - it says nothing about the files that template names.) Same staleness class as the
 # POST_BUILD problem the staging rule this replaced was written to avoid.
+#
+# It is also what pulls the two layouts into the build at all: they are custom-command outputs, so
+# naming them here is what makes the resource compile wait for - and re-run after - fcse_build_mgb.
 set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc"
              APPEND PROPERTY OBJECT_DEPENDS "${FCSE_MGB}" "${FCSE_MGB_WIDESCREEN}"
                                             "${FCSE_LUA_RUNTIME}")
@@ -149,6 +201,11 @@ add_executable(FCSE WIN32
 set_source_files_properties("${FCSE_LUA_RUNTIME}" PROPERTIES HEADER_FILE_ONLY TRUE)
 
 target_link_libraries(FCSE PRIVATE minhook luajit)
+
+# Ordering only - OBJECT_DEPENDS above already handles staleness. Without this the resource compile
+# and the .mgb encode are two independent leaves of the graph under generators that do not derive an
+# order from a source-level dependency on a generated file.
+add_dependencies(FCSE fcse_mgb)
 
 # luajit is an IMPORTED target, so linking it creates no build-order edge on the command that
 # produces lua51.lib - CMake would happily start the link before LuaJIT finished building. This is

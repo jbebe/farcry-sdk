@@ -7,6 +7,9 @@
 // rc.exe resolves a relative filename against its working directory, not against this file's own
 // location; CMake writes them forward-slashed, which rc.exe accepts, so nothing needs escaping.
 //
+// The two .mgb paths are in the build tree, not in assets/: the layouts are built from
+// assets/*.mgb.xml by JackAll's mgb encoder each build, so nothing binary is committed.
+//
 // Unquoted, non-numeric resource names are string names, so these are found with
 // FindResourceW(module, L"FCSE_MGB", RT_RCDATA) and there is no resource.h to keep in sync.
 

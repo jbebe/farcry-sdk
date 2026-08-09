@@ -306,6 +306,10 @@ public sealed class MgbXmlReadCodec : IMgbCodec
     private readonly HashSet<XElement> _visited = [];
     private readonly Dictionary<XElement, HashSet<string>> _used = [];
 
+    /// <summary>When set, every name the document spells out is offered to it as the walk goes by.
+    /// The binary keeps only hashes, so this is the one chance to keep them.</summary>
+    public MgbNameLookup? CollectNamesInto { get; init; }
+
     /// <param name="root">The document element.</param>
     /// <param name="rootAttributes">Attributes the caller handles itself, exempted from the
     /// leftover check <see cref="Finish"/> runs.</param>
@@ -503,7 +507,17 @@ public sealed class MgbXmlReadCodec : IMgbCodec
             ? Convert.FromBase64String(text[MgbXmlValue.Base64Prefix.Length..])
             : throw new FormatException();
 
-    public void NameId(string name, ref uint hash) => hash = Guard(name, MgbXmlValue.ParseName);
+    public void NameId(string name, ref uint hash) => hash = Guard(name, ParseName);
+
+    /// <summary>Parses a name-or-hash, remembering the name when it was written as one.</summary>
+    private uint ParseName(string text)
+    {
+        if (!text.StartsWith('#'))
+        {
+            CollectNamesInto?.Offer(text);
+        }
+        return MgbXmlValue.ParseName(text);
+    }
 
     public void EnumU32(string name, ref uint value, MgbEnum group)
         => value = Guard(name, t => MgbXmlValue.ParseEnum(t, group));
@@ -527,7 +541,7 @@ public sealed class MgbXmlReadCodec : IMgbCodec
     public void OptionalNameId(string name, ref uint? value)
     {
         string? text = ReadOptional(name);
-        value = text is null ? null : MgbXmlValue.ParseName(text);
+        value = text is null ? null : ParseName(text);
     }
 
     public void OptionalBlob(string name, ref byte[]? value, int byteCount)
@@ -560,7 +574,7 @@ public sealed class MgbXmlReadCodec : IMgbCodec
         values[i] = MgbXmlValue.ParseInteger(text));
 
     public void NameIdItems(string name, List<uint> values) => FillArray(name, values.Count, (i, text) =>
-        values[i] = MgbXmlValue.ParseName(text));
+        values[i] = ParseName(text));
 
     private void FillArray(string name, int expected, Action<int, string> assign)
     {

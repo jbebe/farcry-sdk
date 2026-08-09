@@ -85,8 +85,9 @@ if ($Zip) {
     #   plugins\example_script.lua     Lua mods live in that same folder; both are found recursively
     #
     # The settings-page layout is not here because it is inside FCSE.exe - both .mgb variants are
-    # embedded as RCDATA resources at build time (assets\fcse.rc.in, wired up in CMakeLists.txt), so
-    # there is no second file to copy, forget, or let go stale against the exe that reads it.
+    # built from assets\*.mgb.xml and embedded as RCDATA resources at build time (assets\fcse.rc.in,
+    # wired up in CMakeLists.txt), so there is no second file to copy, forget, or let go stale
+    # against the exe that reads it.
     #
     # Staged to a folder first rather than zipped from the build tree directly: the build directory
     # also holds object files, the test exe, and the plugin's .lib/.exp, none of which ship.

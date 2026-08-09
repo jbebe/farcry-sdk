@@ -213,6 +213,12 @@ plus `example_plugin.dll`. Tests are opt-in via `-Tests`; run them through `buil
 calling `ctest` directly - like `cmake`, it only resolves from the developer environment this
 script sets up.
 
+The [.NET SDK](https://dotnet.microsoft.com/download) is a build prerequisite alongside the MSVC
+toolchain: the settings-page layouts are built from `assets/*.mgb.xml` by `tools/JackAll`'s CLI as
+part of the CMake build (`jackall mgb verify`, then `mgb encode`), so this project owns no second
+implementation of the `.mgb` format and no binary layout is committed. Configure fails with a
+message naming this if `dotnet` isn't on `PATH`.
+
 `-Zip` packages `out\fcse-{Config}.zip` in the install layout below, so its contents extract
 straight into the game's `bin\`:
 
@@ -249,9 +255,9 @@ workflow (`.github/workflows/fcse-release.yml`) deliberately ships as a *separat
   before a single line of FCSE runs - no `fcse.log`, nothing to diagnose from. See the `CMP0091`
   note in `CMakeLists.txt` for the failure mode that produces exactly that.
 - Both `.mgb` variants are really embedded: `FindResourceW(exe, L"FCSE_MGB", RT_RCDATA)` and
-  `FCSE_MGB_WIDESCREEN` return blobs byte-identical to `assets/*.mgb`. A `.rc` added to a project
-  without `enable_language(RC)` is skipped silently, so a build with no settings page in it looks
-  perfectly healthy until the game runs.
+  `FCSE_MGB_WIDESCREEN` return blobs byte-identical to the `.mgb`s the build encoded into
+  `<build-dir>/assets/`. A `.rc` added to a project without `enable_language(RC)` is skipped
+  silently, so a build with no settings page in it looks perfectly healthy until the game runs.
 - Without the real game present: point `FCSE.exe` at a folder with no `Dunia.dll` and confirm it
   logs a clear failure (`fcse.log`) and shows a message box instead of crashing.
 - `.\build.ps1 -Tests` runs `tests/ini_file_tests.cpp` (the config file's reader/writer) via

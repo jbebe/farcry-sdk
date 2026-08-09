@@ -43,6 +43,10 @@ public sealed class MgbNameLookup
         _names.TryAdd(MgbTypeTable.Hash(candidate), candidate);
     }
 
+    /// <summary>Every name this lookup knows, for handing to another one - the XML reader collects
+    /// the names a document spells out, which no amount of hashing could recover from the binary.</summary>
+    public IReadOnlyCollection<string> Names => _names.Values;
+
     /// <summary>The name for a hash, or a <c>#</c>-prefixed hex form when it is unknown.</summary>
     public string Describe(uint hash) =>
         _names.TryGetValue(hash, out string? name) ? name : $"#{hash:X8}";

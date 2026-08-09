@@ -122,6 +122,9 @@ app.Configure(config =>
         mgb.AddCommand<MgbEncodeCommand>("encode")
             .WithDescription("Build an XML document back into a binary .mgb.")
             .WithExample("mgb", "encode", "options.xml");
+        mgb.AddCommand<MgbVerifyCommand>("verify")
+            .WithDescription("Check that a .mgb, or the XML it is built from, references only names it declares.")
+            .WithExample("mgb", "verify", "fcse.mgb.xml", "--page", "FCSE_PAGE");
     });
 
     // --- .rml resource manifests ----------------------------------------

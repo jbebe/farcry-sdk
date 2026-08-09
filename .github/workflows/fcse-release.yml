@@ -22,6 +22,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # FCSE's settings-page layouts are built from assets/*.mgb.xml by tools/JackAll's CLI during
+      # the CMake build (see the fcse_build_mgb note in tools/FCSE/CMakeLists.txt), so the .NET SDK
+      # is a build prerequisite here exactly as the MSVC toolchain is.
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
       - name: Build and test FCSE.exe and the example plugin
         shell: pwsh
         # -Tests runs tests/ini_file_tests.cpp through ctest (see build.ps1). It's the one piece
@@ -47,7 +54,7 @@ jobs:
         # step doesn't inherit it. The CRT names and the RCDATA payloads are plain bytes in the
         # file; a static-CRT build contains none of the former (checked against a real build, not
         # assumed), and matching the payloads byte-for-byte also catches an embedded copy that went
-        # stale against assets\.
+        # stale against the layout this build just encoded.
         run: |
           $exePath = "out\build\x86-release\FCSE.exe"
           # 28591 = Latin-1: one byte <-> one char, so a byte search is a plain string search.
@@ -63,7 +70,13 @@ jobs:
           # The Lua runtime is embedded the same way and fails the same way - a missing RCDATA
           # resource still builds and still launches, and only shows up as every script in the
           # install failing to require 'fcse'.
-          foreach ($asset in "assets\fcse.mgb", "assets\fcse_widescreen.mgb", "src\lua\runtime\fcse.lua") {
+          #
+          # The layouts are read from the build tree because that is where they exist: they are
+          # built from assets\*.mgb.xml by JackAll's mgb encoder during the CMake build, and no
+          # binary .mgb is committed.
+          foreach ($asset in "out\build\x86-release\assets\fcse.mgb",
+                             "out\build\x86-release\assets\fcse_widescreen.mgb",
+                             "src\lua\runtime\fcse.lua") {
             $payload = $latin1.GetString([System.IO.File]::ReadAllBytes((Resolve-Path $asset)))
             if ($exe.IndexOf($payload, [System.StringComparison]::Ordinal) -lt 0) {
               throw "$asset is not embedded in $exePath, or the embedded copy is stale - check that enable_language(RC) ran and that the generated fcse.rc reached the link."

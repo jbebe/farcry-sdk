@@ -107,6 +107,12 @@ draws the wrong thing*, not an error:
 | Colour read as RGBA instead of ARGB | `00FFFFFF` looks like opaque cyan instead of transparent white |
 | A name that collides under CRC32 within a scope | Undefined which object a reference finds |
 
+`jackall mgb verify <file.mgb\|.xml>` catches the rows above that a single file can answer for: every
+reference to a name the package itself declares, and — with `--page <NAME>` — whether that page is
+registered in the `GenericObjectTable` under the name the native side will ask for. References into
+another package are the engine's to resolve against whatever else is loaded, so it says nothing
+about those.
+
 ## Failures that crash
 
 Short list, and all of them are prevented by using the encoder rather than splicing bytes:

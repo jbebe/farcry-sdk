@@ -68,6 +68,7 @@ everything after it. You do not hand-write it — you write the **XML interchang
 jackall mgb decode "<extracted>/ui/localized/pcwidescreen/eng/ui/options.mgb" -o options.xml
 
 # edit options.xml, then
+jackall mgb verify options.xml
 jackall mgb encode options.xml -o options.mgb
 ```
 
@@ -75,6 +76,13 @@ jackall mgb encode options.xml -o options.mgb
 command is at least structurally loadable. The XML reader is deliberately strict: a misspelled
 attribute or an element in the wrong place is an error naming the offender, rather than the silent
 degradation Magma's own XML loader does.
+
+`mgb verify` covers the class of mistake that *is* loadable: a reference to a name the package never
+declares. `Package::ResolveLinks` drops one it cannot find without failing the load, so a link to a
+missing element is a valid package that draws a screen with something absent — see
+[Limits](./limits.md#failures-that-are-silent). It takes either the XML or the built `.mgb`, and
+`--page <NAME>` additionally checks that a page is reachable by the name native code will look it up
+under.
 
 Getting the `.mgb` into the game is a separate problem with two answers:
 
