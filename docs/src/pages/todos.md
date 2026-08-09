@@ -29,7 +29,6 @@ A running task list across the whole project.
 - [ ] Review the Domino viewer because it needs a lot of improvements
   - Review code
   - Revamp the visual interface, find a good graph wpf package
-- [ ] Export button for folders that export everything down the path into a folder
 
 ## Tools/FCSE
 
