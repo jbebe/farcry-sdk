@@ -13,7 +13,9 @@ namespace JackAll.Tests;
 /// writes correctly in binary but is unrepresentable in text shows up here and nowhere else -
 /// float bit patterns, non-text string bytes, and null-versus-zero being the ones that bite.
 ///
-/// Shares the corpus, and the skip-when-absent behaviour, with <see cref="MgbRoundTripTests"/>.
+/// Shares the corpus, and the skip-when-absent behaviour, with <see cref="MgbRoundTripTests"/>. The
+/// tests that reach for one named corpus file rather than enumerating what is there have nothing to
+/// skip on, so they carry <c>Category=RequiresFixture</c> instead and CI filters them out.
 /// </remarks>
 public sealed class MgbXmlTests
 {
@@ -64,6 +66,7 @@ public sealed class MgbXmlTests
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void Resolves_names_only_when_they_re_hash_to_the_stored_value()
     {
         // Every name the exporter writes must survive being hashed again - that verification is
@@ -208,6 +211,7 @@ public sealed class MgbXmlTests
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void Names_the_missing_field_when_one_is_misspelled()
     {
         // The reader must survive its own unwinding: an earlier revision validated leftovers from
@@ -220,6 +224,7 @@ public sealed class MgbXmlTests
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void Rejects_an_attribute_the_format_does_not_define()
     {
         string xml = MgbXml.Decode(Corpus("options.mgb"))
@@ -230,6 +235,7 @@ public sealed class MgbXmlTests
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void Rejects_an_element_the_format_does_not_define()
     {
         string xml = MgbXml.Decode(Corpus("options.mgb"))
@@ -348,6 +354,7 @@ public sealed class MgbXmlTests
     }
 
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void An_edit_made_in_xml_survives_the_rebuild()
     {
         byte[] original = Corpus("options.mgb");

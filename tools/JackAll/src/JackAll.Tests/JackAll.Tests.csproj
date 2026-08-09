@@ -34,12 +34,4 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-
-  <ItemGroup>
-    <Folder Include="Fixtures\Sbao\" />
-    <Folder Include="Fixtures\Rml\" />
-    <Folder Include="Fixtures\Xbm\" />
-    <Folder Include="Fixtures\Spk\" />
-  </ItemGroup>
-
 </Project>
