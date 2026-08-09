@@ -21,6 +21,7 @@ public sealed class DominoNodeViewModel : DominoObservable
 {
     private Point _location;
     private bool _isSelected;
+    private bool _isFaded;
 
     public DominoNodeViewModel(GraphNode node, PositionedNode positioned)
     {
@@ -85,6 +86,26 @@ public sealed class DominoNodeViewModel : DominoObservable
         get => _isSelected;
         set => Set(ref _isSelected, value);
     }
+
+    /// <summary>Identifies this node for focus-mode traversal. Boundary nodes have no reconstructed box
+    /// behind them, so they key off their title instead.</summary>
+    public string Key => Node?.Id ?? $"boundary:{Subtitle}:{Title}";
+
+    /// <summary>Outside the focus radius: still drawn, but pushed back so the neighbourhood in focus
+    /// reads clearly. Hiding outright would make the graph jump around as the selection moves.</summary>
+    public bool IsFaded
+    {
+        get => _isFaded;
+        set
+        {
+            if (Set(ref _isFaded, value))
+            {
+                OnPropertyChanged(nameof(Opacity));
+            }
+        }
+    }
+
+    public double Opacity => _isFaded ? 0.1 : 1.0;
 
     public bool IsPooled => Node?.Kind == BoxInstanceKind.Pooled;
     public bool IsSubGraph => Node?.IsSubGraph == true;

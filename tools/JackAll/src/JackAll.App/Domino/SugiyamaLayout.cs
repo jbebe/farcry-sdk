@@ -6,17 +6,23 @@ namespace JackAll.App.Domino;
 public sealed record PositionedNode(GraphNode Node, double X, double Y, double Width, double Height);
 
 /// <summary>
-/// Layered ("Sugiyama") graph layout: assign each node to a column, order the nodes within each column
-/// to minimize edge crossings, then give them coordinates.
+/// Layered ("Sugiyama") graph layout, run once per connected component.
 ///
-/// The ordering pass is the part that matters. The original box positions are gone with the
-/// `.domino.xml` that held them, so everything here is generated - and simply stacking each column in
-/// declaration order (what this replaced) crosses badly on anything past a dozen boxes, which is most
-/// of the corpus. Sweeping the median heuristic up and down the layers a few times fixes that cheaply.
+/// The per-component part matters as much as the layering. A big mission graph is not one graph:
+/// `a1bu00_storymission` is 23 disconnected islands - one blob of 582 boxes, three of exactly 46 (the
+/// four repeated story branches), and 14 lone boxes. Laying the whole node set out in one shared set of
+/// columns interleaves those islands, stacking unrelated logic on top of each other for no reason. Each
+/// component gets its own band instead, largest first, with the lone boxes packed into a grid at the
+/// bottom rather than each claiming a band of its own.
 ///
-/// Cycles are real in mission logic - a gameplay loop wiring back to an earlier box - so back-edges are
-/// detected up front and reversed for the duration of layering, then flipped back. Without that, layer
-/// assignment either doesn't terminate or silently truncates the graph.
+/// Within a component: longest-path layering for columns, then median-heuristic sweeps to cut edge
+/// crossings, then coordinates. Cycles are real in mission logic - a gameplay loop wiring back to an
+/// earlier box - so back-edges are found and removed before layering, which would otherwise not
+/// terminate.
+///
+/// High fan-out data sources are excluded from the constraint set, matching the fact that they are not
+/// drawn as wires either (see <see cref="DataHubs"/>); letting one box that 41 others read pull all 41
+/// into alignment with it is precisely the distortion that makes these graphs unreadable.
 /// </summary>
 public static class SugiyamaLayout
 {
@@ -26,6 +32,12 @@ public static class SugiyamaLayout
     private const double HeaderHeight = 34;
     private const double PortHeight = 17;
     private const double MinNodeHeight = 56;
+
+    /// <summary>Vertical space between one component's band and the next.</summary>
+    private const double BandGap = 140;
+
+    /// <summary>Lone boxes are packed into rows this wide instead of getting a band each.</summary>
+    private const int SingletonsPerRow = 10;
 
     /// <summary>How many up-and-down ordering sweeps to run. Crossing counts fall off fast and are
     /// essentially settled by four; more just costs time on the 232-box graphs. Measured on the corpus:
@@ -43,17 +55,31 @@ public static class SugiyamaLayout
         var index = graph.Nodes.Select((node, i) => (node, i)).ToDictionary(t => t.node.Id, t => t.i, StringComparer.Ordinal);
         List<(int From, int To)> edges = CollectEdges(graph, index);
 
-        // Layering has to run on a DAG, so take back-edges out first.
-        HashSet<(int, int)> backEdges = FindBackEdges(graph.Nodes.Count, edges);
-        var forward = edges.Where(e => !backEdges.Contains(e)).ToList();
+        List<List<int>> components = FindComponents(graph.Nodes.Count, edges);
 
-        int[] layer = AssignLayers(graph.Nodes.Count, forward);
-        List<List<int>> layers = GroupIntoLayers(layer);
-        ReduceCrossings(layers, forward);
+        // Largest first, so the graph's main body is at the top rather than buried under fragments.
+        var bands = components.Where(c => c.Count > 1).OrderByDescending(c => c.Count).ToList();
+        var singletons = components.Where(c => c.Count == 1).Select(c => c[0]).ToList();
 
-        return AssignCoordinates(graph, layers);
+        var positioned = new List<PositionedNode>(graph.Nodes.Count);
+        double bandTop = 0;
+
+        foreach (List<int> component in bands)
+        {
+            List<PositionedNode> laid = LayoutComponent(graph, component, edges);
+            foreach (PositionedNode p in laid)
+            {
+                positioned.Add(p with { Y = p.Y + bandTop });
+            }
+            bandTop += laid.Max(p => p.Y + p.Height) + BandGap;
+        }
+
+        positioned.AddRange(PackSingletons(graph, singletons, bandTop));
+        return positioned;
     }
 
+    /// <summary>The edges layout is allowed to constrain on: control flow, plus the data flow that is
+    /// actually drawn as wires.</summary>
     private static List<(int From, int To)> CollectEdges(ReconstructedGraph graph, Dictionary<string, int> index)
     {
         var edges = new HashSet<(int, int)>();
@@ -70,11 +96,13 @@ public static class SugiyamaLayout
             }
         }
 
-        // Data edges pull a producer left of its consumer too - without them a box that only supplies a
-        // value (and never fires anything) floats in column 0 far from everything that uses it.
+        // Ordinary data edges pull a producer left of its consumer, so a box that only supplies a value
+        // sits near what uses it. Hub pins are left out - see this class's remarks.
+        HashSet<(string, string)> hubs = DataHubs.Find(graph);
         foreach (DataEdge edge in graph.DataEdges)
         {
             if (edge.SourceNodeId is not null
+                && !edge.IsHub(hubs)
                 && index.TryGetValue(edge.SourceNodeId, out int from)
                 && index.TryGetValue(edge.TargetNodeId, out int to)
                 && from != to)
@@ -86,6 +114,72 @@ public static class SugiyamaLayout
         return [.. edges];
     }
 
+    /// <summary>Weakly-connected components - edge direction ignored, since two boxes joined by a wire
+    /// belong on the same band whichever way it points.</summary>
+    private static List<List<int>> FindComponents(int nodeCount, List<(int From, int To)> edges)
+    {
+        var neighbours = new List<int>[nodeCount];
+        for (int i = 0; i < nodeCount; i++)
+        {
+            neighbours[i] = [];
+        }
+        foreach ((int from, int to) in edges)
+        {
+            neighbours[from].Add(to);
+            neighbours[to].Add(from);
+        }
+
+        var seen = new bool[nodeCount];
+        var components = new List<List<int>>();
+
+        for (int start = 0; start < nodeCount; start++)
+        {
+            if (seen[start])
+            {
+                continue;
+            }
+
+            var component = new List<int>();
+            var stack = new Stack<int>();
+            stack.Push(start);
+            seen[start] = true;
+
+            while (stack.Count > 0)
+            {
+                int node = stack.Pop();
+                component.Add(node);
+                foreach (int next in neighbours[node])
+                {
+                    if (!seen[next])
+                    {
+                        seen[next] = true;
+                        stack.Push(next);
+                    }
+                }
+            }
+
+            components.Add(component);
+        }
+
+        return components;
+    }
+
+    /// <summary>Lays one component out with its top-left at (0,0).</summary>
+    private static List<PositionedNode> LayoutComponent(ReconstructedGraph graph, List<int> component, List<(int From, int To)> allEdges)
+    {
+        var members = component.ToHashSet();
+        var edges = allEdges.Where(e => members.Contains(e.From) && members.Contains(e.To)).ToList();
+
+        HashSet<(int, int)> backEdges = FindBackEdges(graph.Nodes.Count, edges);
+        var forward = edges.Where(e => !backEdges.Contains(e)).ToList();
+
+        Dictionary<int, int> layer = AssignLayers(component, forward);
+        List<List<int>> layers = GroupIntoLayers(component, layer);
+        ReduceCrossings(layers, forward);
+
+        return AssignCoordinates(graph, layers);
+    }
+
     /// <summary>Edges that close a cycle, found by depth-first search: an edge into a node currently on
     /// the recursion stack is a back-edge. Iterative rather than recursive because the deepest chains in
     /// this corpus run to a few hundred boxes.</summary>
@@ -95,7 +189,7 @@ public static class SugiyamaLayout
         var back = new HashSet<(int, int)>();
         var state = new byte[nodeCount]; // 0 = unvisited, 1 = on stack, 2 = done
 
-        for (int root = 0; root < nodeCount; root++)
+        foreach (int root in edges.Select(e => e.From).Concat(edges.Select(e => e.To)).Distinct())
         {
             if (state[root] != 0)
             {
@@ -135,10 +229,10 @@ public static class SugiyamaLayout
 
     /// <summary>Longest-path layering: a node sits one column right of the furthest-right thing feeding
     /// it. Processed in topological order so each node's predecessors are final before it is read.</summary>
-    private static int[] AssignLayers(int nodeCount, List<(int From, int To)> edges)
+    private static Dictionary<int, int> AssignLayers(List<int> component, List<(int From, int To)> edges)
     {
-        var layer = new int[nodeCount];
-        var indegree = new int[nodeCount];
+        var layer = component.ToDictionary(n => n, _ => 0);
+        var indegree = component.ToDictionary(n => n, _ => 0);
         var outgoing = edges.ToLookup(e => e.From, e => e.To);
 
         foreach ((_, int to) in edges)
@@ -146,7 +240,7 @@ public static class SugiyamaLayout
             indegree[to]++;
         }
 
-        var queue = new Queue<int>(Enumerable.Range(0, nodeCount).Where(n => indegree[n] == 0));
+        var queue = new Queue<int>(component.Where(n => indegree[n] == 0));
         while (queue.Count > 0)
         {
             int node = queue.Dequeue();
@@ -163,15 +257,15 @@ public static class SugiyamaLayout
         return layer;
     }
 
-    private static List<List<int>> GroupIntoLayers(int[] layer)
+    private static List<List<int>> GroupIntoLayers(List<int> component, Dictionary<int, int> layer)
     {
-        int layerCount = layer.Length == 0 ? 0 : layer.Max() + 1;
+        int layerCount = component.Max(n => layer[n]) + 1;
         var layers = new List<List<int>>(layerCount);
         for (int i = 0; i < layerCount; i++)
         {
             layers.Add([]);
         }
-        for (int node = 0; node < layer.Length; node++)
+        foreach (int node in component)
         {
             layers[layer[node]].Add(node);
         }
@@ -234,14 +328,12 @@ public static class SugiyamaLayout
 
     private static List<PositionedNode> AssignCoordinates(ReconstructedGraph graph, List<List<int>> layers)
     {
-        var positioned = new List<PositionedNode>(graph.Nodes.Count);
+        var positioned = new List<PositionedNode>();
         double x = 0;
 
         foreach (List<int> layer in layers)
         {
             double y = 0;
-            double widest = NodeWidth;
-
             foreach (int nodeIndex in layer)
             {
                 GraphNode node = graph.Nodes[nodeIndex];
@@ -249,18 +341,17 @@ public static class SugiyamaLayout
                 positioned.Add(new PositionedNode(node, x, y, NodeWidth, height));
                 y += height + RowGap;
             }
-
-            x += widest + ColumnGap;
+            x += NodeWidth + ColumnGap;
         }
 
-        return CenterColumnsVertically(positioned, layers.Count);
+        return CenterColumnsVertically(positioned);
     }
 
     /// <summary>Tall columns otherwise hang off the bottom while short ones sit at the top; centering
     /// each column on the same axis keeps an edge between them roughly horizontal.</summary>
-    private static List<PositionedNode> CenterColumnsVertically(List<PositionedNode> positioned, int layerCount)
+    private static List<PositionedNode> CenterColumnsVertically(List<PositionedNode> positioned)
     {
-        if (layerCount == 0)
+        if (positioned.Count == 0)
         {
             return positioned;
         }
@@ -276,6 +367,19 @@ public static class SugiyamaLayout
             centered.AddRange(column.Select(p => p with { Y = p.Y + offset }));
         }
         return centered;
+    }
+
+    /// <summary>Boxes connected to nothing at all - 14 of them in `a1bu00_storymission`. A band each
+    /// would be absurd, so they go in a grid under everything else.</summary>
+    private static IEnumerable<PositionedNode> PackSingletons(ReconstructedGraph graph, List<int> singletons, double top)
+    {
+        for (int i = 0; i < singletons.Count; i++)
+        {
+            GraphNode node = graph.Nodes[singletons[i]];
+            double x = (i % SingletonsPerRow) * (NodeWidth + ColumnGap);
+            double y = top + ((i / SingletonsPerRow) * (MinNodeHeight + RowGap));
+            yield return new PositionedNode(node, x, y, NodeWidth, HeightOf(node));
+        }
     }
 
     /// <summary>Tall enough for every port to get its own row, since nodify anchors each connector at

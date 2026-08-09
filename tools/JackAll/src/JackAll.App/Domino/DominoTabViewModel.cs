@@ -86,8 +86,9 @@ public sealed class DominoTabViewModel
             int boxes = Graph.Nodes.Count;
             string twin = Twin is null ? "no debug twin" : $"{Twin.Connections.Count} traced connections";
             string ambiguous = Canvas.AmbiguousDataWireCount > 0 ? $", {Canvas.AmbiguousDataWireCount} ambiguous" : "";
+            string chips = Canvas.ChipCount > 0 ? $" (+{Canvas.ChipCount} via variable chips)" : "";
 
-            return $"{boxes} boxes · {Canvas.ControlWireCount} control wires · {Canvas.DataWireCount} data wires{ambiguous} · "
+            return $"{boxes} boxes · {Canvas.ControlWireCount} control wires · {Canvas.DataWireCount} data wires{ambiguous}{chips} · "
                  + $"{Canvas.UnwiredPinCount} unwired, {Canvas.DeadEndPinCount} dead-end pins · {twin}";
         }
     }

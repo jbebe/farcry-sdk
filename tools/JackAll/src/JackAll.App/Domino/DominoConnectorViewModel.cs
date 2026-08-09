@@ -63,7 +63,54 @@ public sealed class DominoConnectorViewModel : DominoObservable
         set => Set(ref _isConnected, value);
     }
 
+    /// <summary>
+    /// Marks this consumer port as fed by a suppressed hub source, naming the graph variable the value
+    /// arrives through so a chip can be shown in place of a canvas-spanning wire.
+    ///
+    /// Set on the existing port rather than swapping in a replacement instance: a wire holds a direct
+    /// reference to its connector, and replacing the object would leave any wire already attached to
+    /// this port pointing at an orphan whose anchor never updates again - which renders as a stray
+    /// line at the origin. A parameter really can be both wired and chip-fed, since an ambiguous data
+    /// edge emits one edge per candidate producer.
+    /// </summary>
+    public void SupplyFrom(string variable, string? supplierNodeId)
+    {
+        SuppliedByVariable = variable;
+        SupplierNodeId = supplierNodeId;
+        OnPropertyChanged(nameof(SuppliedByVariable));
+        OnPropertyChanged(nameof(HasSupplier));
+        OnPropertyChanged(nameof(ChipText));
+        OnPropertyChanged(nameof(Tooltip));
+    }
+
+    /// <summary>Records how many consumers read this producer port, so a hub still announces its reach
+    /// even though its wires aren't drawn.</summary>
+    public void MarkAsHub(int fanOut)
+    {
+        FanOut = fanOut;
+        OnPropertyChanged(nameof(FanOut));
+        OnPropertyChanged(nameof(IsHub));
+        OnPropertyChanged(nameof(Tooltip));
+    }
+
+    /// <summary>The graph variable a chip-fed value arrives through; null for an ordinary port.</summary>
+    public string? SuppliedByVariable { get; private set; }
+
+    /// <summary>The node the chip stands for, so clicking it can take you to the real producer.</summary>
+    public string? SupplierNodeId { get; private set; }
+
+    public bool HasSupplier => SuppliedByVariable is not null;
+
+    /// <summary>For a producer port whose wires are suppressed: how many consumers read it.</summary>
+    public int FanOut { get; private set; }
+
+    public bool IsHub => FanOut > 0;
+
+    public string ChipText => $"self.{SuppliedByVariable}";
+
     public string Tooltip => Kind == PortKind.Data
         ? $"{Name}{(Type is null ? "" : $"  :  {Type}")}"
+          + (HasSupplier ? $"\nSupplied through self.{SuppliedByVariable} - click the chip to go to its source." : "")
+          + (IsHub ? $"\nRead by {FanOut} boxes; wires are suppressed to keep the graph readable." : "")
         : $"{Name}{(Delayed ? "  (delayed)" : "")}";
 }

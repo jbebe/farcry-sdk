@@ -24,7 +24,9 @@ public sealed class DominoGraphViewModel : DominoObservable
     private readonly Dictionary<string, DominoNodeViewModel> _byNodeId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DominoNodeViewModel> _graphInputs = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DominoNodeViewModel> _graphExits = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, List<string>> _neighbours = new(StringComparer.Ordinal);
     private DominoNodeViewModel? _selectedNode;
+    private int _focusHops;
 
     public ObservableCollection<DominoNodeViewModel> Nodes { get; } = [];
     public ObservableCollection<DominoConnectionViewModel> Connections { get; } = [];
@@ -33,8 +35,32 @@ public sealed class DominoGraphViewModel : DominoObservable
     public DominoNodeViewModel? SelectedNode
     {
         get => _selectedNode;
-        set => Set(ref _selectedNode, value);
+        set
+        {
+            if (Set(ref _selectedNode, value))
+            {
+                ApplyFocus();
+            }
+        }
     }
+
+    /// <summary>How many hops from the selected node stay in focus; 0 turns focus mode off and shows
+    /// everything. A 752-box graph is not navigable whole, so this is the difference between reading a
+    /// mission's logic and staring at a wall.</summary>
+    public int FocusHops
+    {
+        get => _focusHops;
+        set
+        {
+            if (Set(ref _focusHops, value))
+            {
+                ApplyFocus();
+            }
+        }
+    }
+
+    /// <summary>How many nodes are currently in focus, for the status line.</summary>
+    public int NodesInFocus { get; private set; }
 
     public int ControlWireCount { get; private set; }
     public int DataWireCount { get; private set; }
@@ -62,6 +88,8 @@ public sealed class DominoGraphViewModel : DominoObservable
         AddControlWires(graph, labels, maxX, midY);
         AddDataWires(graph, minX, midY);
         MarkConnectedPorts();
+        BuildAdjacency(graph);
+        NodesInFocus = Nodes.Count;
     }
 
     // ------------------------------------------------------------------ ports
@@ -150,6 +178,8 @@ public sealed class DominoGraphViewModel : DominoObservable
                         Source = Port(source.Output, edge.SourcePin, PortKind.Control),
                         Target = Port(target.Input, edge.TargetPin, PortKind.Control),
                         Kind = PortKind.Control,
+                        SourceNode = source,
+                        TargetNode = target,
                     });
                     ControlWireCount++;
                     break;
@@ -161,6 +191,8 @@ public sealed class DominoGraphViewModel : DominoObservable
                         Source = Port(source.Output, edge.SourcePin, PortKind.Control),
                         Target = exit.Input[0],
                         Kind = PortKind.Control,
+                        SourceNode = source,
+                        TargetNode = exit,
                     });
                     ControlWireCount++;
                     break;
@@ -181,6 +213,12 @@ public sealed class DominoGraphViewModel : DominoObservable
 
     private void AddDataWires(ReconstructedGraph graph, double inputX, double midY)
     {
+        HashSet<(string NodeId, string Pin)> hubs = DataHubs.Find(graph);
+        var fanOut = graph.DataEdges
+            .Where(e => e.SourceNodeId is not null && e.SourcePin is not null)
+            .GroupBy(e => (NodeId: e.SourceNodeId!, Pin: e.SourcePin!))
+            .ToDictionary(g => g.Key, g => g.Select(e => e.TargetNodeId).Distinct().Count());
+
         foreach (DataEdge edge in graph.DataEdges)
         {
             if (!_byNodeId.TryGetValue(edge.TargetNodeId, out DominoNodeViewModel? target))
@@ -188,26 +226,38 @@ public sealed class DominoGraphViewModel : DominoObservable
                 continue;
             }
 
-            DominoConnectorViewModel? sourcePort = edge.Kind switch
+            // A hub source is shown as a chip on each consumer naming the variable the value travels
+            // through, instead of a wire crossing the whole canvas to reach it.
+            if (edge.IsHub(hubs) && edge.ViaVariable is not null)
             {
-                DataEdgeKind.GraphInput when edge.ViaVariable is not null =>
-                    BoundaryInput(edge.ViaVariable, inputX, midY).Output[0],
+                AddSupplierChip(target, edge, fanOut);
+                continue;
+            }
+
+            DominoNodeViewModel? sourceNode = edge.Kind switch
+            {
+                DataEdgeKind.GraphInput when edge.ViaVariable is not null => BoundaryInput(edge.ViaVariable, inputX, midY),
                 DataEdgeKind.NodeToNode when edge.SourceNodeId is not null && edge.SourcePin is not null
-                                          && _byNodeId.TryGetValue(edge.SourceNodeId, out DominoNodeViewModel? source) =>
-                    Port(source.Output, edge.SourcePin, PortKind.Data),
+                    => _byNodeId.GetValueOrDefault(edge.SourceNodeId),
                 _ => null,
             };
 
-            if (sourcePort is null)
+            if (sourceNode is null)
             {
                 continue;
             }
+
+            DominoConnectorViewModel sourcePort = edge.Kind == DataEdgeKind.GraphInput
+                ? sourceNode.Output[0]
+                : Port(sourceNode.Output, edge.SourcePin!, PortKind.Data);
 
             Connections.Add(new DominoConnectionViewModel
             {
                 Source = sourcePort,
                 Target = Port(target.Input, edge.TargetPin, PortKind.Data),
                 Kind = PortKind.Data,
+                SourceNode = sourceNode,
+                TargetNode = target,
                 Ambiguous = edge.Ambiguous,
                 Label = edge.ViaVariable,
                 SourceOccurrences = edge.SourceOccurrences,
@@ -219,6 +269,28 @@ public sealed class DominoGraphViewModel : DominoObservable
             }
         }
     }
+
+    /// <summary>Replaces one hub wire with a chip on the consumer port, and records the fan-out on the
+    /// producer port so the source still says how far it reaches.</summary>
+    private void AddSupplierChip(
+        DominoNodeViewModel target,
+        DataEdge edge,
+        Dictionary<(string NodeId, string Pin), int> fanOut)
+    {
+        Port(target.Input, edge.TargetPin, PortKind.Data).SupplyFrom(edge.ViaVariable!, edge.SourceNodeId);
+        ChipCount++;
+
+        if (edge.SourceNodeId is not null
+            && edge.SourcePin is not null
+            && _byNodeId.TryGetValue(edge.SourceNodeId, out DominoNodeViewModel? source))
+        {
+            Port(source.Output, edge.SourcePin, PortKind.Data)
+                .MarkAsHub(fanOut.GetValueOrDefault((edge.SourceNodeId, edge.SourcePin)));
+        }
+    }
+
+    /// <summary>How many hub wires were replaced by chips, for the status line.</summary>
+    public int ChipCount { get; private set; }
 
     private DominoNodeViewModel BoundaryInput(string variable, double x, double midY)
     {
@@ -252,6 +324,107 @@ public sealed class DominoGraphViewModel : DominoObservable
         {
             connection.Source.IsConnected = true;
             connection.Target.IsConnected = true;
+        }
+    }
+
+    // ------------------------------------------------------------------ focus
+
+    /// <summary>
+    /// Undirected adjacency for focus traversal. Deliberately includes the hub connections that are
+    /// drawn as chips rather than wires: suppressing a wire is a rendering decision, and a box you can
+    /// reach through `self.Player` is still a neighbour when you ask what a node is connected to.
+    /// </summary>
+    private void BuildAdjacency(ReconstructedGraph graph)
+    {
+        void Link(string a, string b)
+        {
+            if (!_neighbours.TryGetValue(a, out List<string>? forward))
+            {
+                _neighbours[a] = forward = [];
+            }
+            forward.Add(b);
+
+            if (!_neighbours.TryGetValue(b, out List<string>? backward))
+            {
+                _neighbours[b] = backward = [];
+            }
+            backward.Add(a);
+        }
+
+        foreach (DominoConnectionViewModel connection in Connections)
+        {
+            Link(connection.SourceNode.Key, connection.TargetNode.Key);
+        }
+
+        foreach (DataEdge edge in graph.DataEdges)
+        {
+            if (edge.SourceNodeId is not null
+                && _byNodeId.ContainsKey(edge.SourceNodeId)
+                && _byNodeId.ContainsKey(edge.TargetNodeId))
+            {
+                Link(edge.SourceNodeId, edge.TargetNodeId);
+            }
+        }
+    }
+
+    /// <summary>Fades everything more than <see cref="FocusHops"/> steps from the selection. With focus
+    /// off, or nothing selected, everything is shown.</summary>
+    private void ApplyFocus()
+    {
+        if (_focusHops <= 0 || _selectedNode is null)
+        {
+            foreach (DominoNodeViewModel node in Nodes)
+            {
+                node.IsFaded = false;
+            }
+            foreach (DominoConnectionViewModel connection in Connections)
+            {
+                connection.IsFaded = false;
+            }
+            NodesInFocus = Nodes.Count;
+            OnPropertyChanged(nameof(NodesInFocus));
+            return;
+        }
+
+        var inFocus = new HashSet<string>(StringComparer.Ordinal) { _selectedNode.Key };
+        var frontier = new List<string> { _selectedNode.Key };
+
+        for (int hop = 0; hop < _focusHops && frontier.Count > 0; hop++)
+        {
+            var next = new List<string>();
+            foreach (string key in frontier)
+            {
+                foreach (string neighbour in _neighbours.TryGetValue(key, out List<string>? list) ? list : [])
+                {
+                    if (inFocus.Add(neighbour))
+                    {
+                        next.Add(neighbour);
+                    }
+                }
+            }
+            frontier = next;
+        }
+
+        foreach (DominoNodeViewModel node in Nodes)
+        {
+            node.IsFaded = !inFocus.Contains(node.Key);
+        }
+        foreach (DominoConnectionViewModel connection in Connections)
+        {
+            connection.IsFaded = !inFocus.Contains(connection.SourceNode.Key) || !inFocus.Contains(connection.TargetNode.Key);
+        }
+
+        NodesInFocus = inFocus.Count;
+        OnPropertyChanged(nameof(NodesInFocus));
+    }
+
+    /// <summary>Selects the node a supplier chip stands for, so a suppressed hub wire is still one
+    /// click from its source.</summary>
+    public void SelectSupplier(DominoConnectorViewModel chip)
+    {
+        if (chip.SupplierNodeId is not null && _byNodeId.TryGetValue(chip.SupplierNodeId, out DominoNodeViewModel? supplier))
+        {
+            SelectedNode = supplier;
         }
     }
 

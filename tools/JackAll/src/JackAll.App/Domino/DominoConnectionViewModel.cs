@@ -3,11 +3,18 @@ namespace JackAll.App.Domino;
 /// <summary>One wire between two ports. Both endpoints are always real connectors - a graph-boundary
 /// connection gets a <see cref="NodeRole.Boundary"/> node to attach to rather than a dangling end, so
 /// nodify always has two anchors to draw between.</summary>
-public sealed class DominoConnectionViewModel
+public sealed class DominoConnectionViewModel : DominoObservable
 {
+    private bool _isFaded;
+
     public required DominoConnectorViewModel Source { get; init; }
     public required DominoConnectorViewModel Target { get; init; }
     public required PortKind Kind { get; init; }
+
+    /// <summary>The nodes this wire runs between, so focus mode can fade a wire whose endpoints are
+    /// outside the neighbourhood in view.</summary>
+    public required DominoNodeViewModel SourceNode { get; init; }
+    public required DominoNodeViewModel TargetNode { get; init; }
 
     /// <summary>True for a data wire whose producer couldn't be pinned to one box - several handlers
     /// write the variable it travels through, so every candidate is drawn and all of them are marked.
@@ -21,6 +28,20 @@ public sealed class DominoConnectionViewModel
     /// <summary>How many interchangeable occurrences of this same operation write the variable - more
     /// than one when a mission repeats a sequence per branch. The wire points at the nearest.</summary>
     public int SourceOccurrences { get; init; } = 1;
+
+    public bool IsFaded
+    {
+        get => _isFaded;
+        set
+        {
+            if (Set(ref _isFaded, value))
+            {
+                OnPropertyChanged(nameof(Opacity));
+            }
+        }
+    }
+
+    public double Opacity => _isFaded ? 0.06 : 1.0;
 
     public string Tooltip => Kind == PortKind.Control
         ? $"{Source.Name} → {Target.Name}"

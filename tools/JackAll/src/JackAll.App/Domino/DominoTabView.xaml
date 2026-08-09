@@ -7,6 +7,7 @@
     <UserControl.Resources>
         <domino:PortBrushConverter x:Key="PortBrush" />
         <domino:NodeBrushConverter x:Key="NodeBrush" />
+        <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
         <!-- Ports. The connector dot is nodify's own; the label carries the type color, which is what
              makes an entity wire distinguishable from a float wire without reading either end. -->
@@ -15,9 +16,21 @@
                               Anchor="{Binding Anchor, Mode=OneWayToSource}"
                               ToolTip="{Binding Tooltip}">
                 <nodify:NodeInput.Header>
-                    <TextBlock Text="{Binding Title}" FontSize="10"
-                               Foreground="{Binding Converter={StaticResource PortBrush}}"
-                               TextTrimming="CharacterEllipsis" MaxWidth="120" />
+                    <StackPanel Orientation="Horizontal">
+                        <!-- Stands in for a suppressed hub wire: names the graph variable the value
+                             arrives through, and clicks through to the box that produced it. -->
+                        <Button Click="SupplierChip_Click" Cursor="Hand" Padding="0" BorderThickness="0"
+                                Background="Transparent" Margin="0,0,4,0"
+                                Visibility="{Binding HasSupplier, Converter={StaticResource BoolToVisibility}}">
+                            <Border Background="#ECEFF4" BorderBrush="#B8C2CE" BorderThickness="1"
+                                    CornerRadius="7" Padding="5,0">
+                                <TextBlock Text="{Binding ChipText}" FontSize="9" Foreground="#3B4A5A" />
+                            </Border>
+                        </Button>
+                        <TextBlock Text="{Binding Title}" FontSize="10"
+                                   Foreground="{Binding Converter={StaticResource PortBrush}}"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="120" />
+                    </StackPanel>
                 </nodify:NodeInput.Header>
             </nodify:NodeInput>
         </DataTemplate>
@@ -27,9 +40,19 @@
                                Anchor="{Binding Anchor, Mode=OneWayToSource}"
                                ToolTip="{Binding Tooltip}">
                 <nodify:NodeOutput.Header>
-                    <TextBlock Text="{Binding Title}" FontSize="10"
-                               Foreground="{Binding Converter={StaticResource PortBrush}}"
-                               TextTrimming="CharacterEllipsis" MaxWidth="120" />
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="{Binding Title}" FontSize="10"
+                                   Foreground="{Binding Converter={StaticResource PortBrush}}"
+                                   TextTrimming="CharacterEllipsis" MaxWidth="120" />
+                        <!-- A hub announces its reach, since its wires aren't drawn. -->
+                        <Border Background="#FFF3D6" BorderBrush="#D9B45F" BorderThickness="1"
+                                CornerRadius="7" Padding="5,0" Margin="4,0,0,0"
+                                Visibility="{Binding IsHub, Converter={StaticResource BoolToVisibility}}">
+                            <TextBlock FontSize="9" Foreground="#7A5A10">
+                                <Run Text="→" /><Run Text="{Binding FanOut, Mode=OneWay}" />
+                            </TextBlock>
+                        </Border>
+                    </StackPanel>
                 </nodify:NodeOutput.Header>
             </nodify:NodeOutput>
         </DataTemplate>
@@ -67,7 +90,7 @@
           at the origin. ConnectionTemplate is the path Nodify's own examples use and does work.
         -->
         <DataTemplate x:Key="WireTemplate" DataType="{x:Type domino:DominoConnectionViewModel}">
-            <ContentControl Content="{Binding}">
+            <ContentControl Content="{Binding}" Opacity="{Binding Opacity}">
                 <ContentControl.Style>
                     <Style TargetType="ContentControl">
                         <Setter Property="ContentTemplate" Value="{StaticResource ControlWireTemplate}" />
@@ -106,6 +129,7 @@
                         <Style TargetType="{x:Type nodify:ItemContainer}">
                             <Setter Property="Location" Value="{Binding Location, Mode=TwoWay}" />
                             <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+                            <Setter Property="Opacity" Value="{Binding Opacity}" />
                         </Style>
                     </nodify:NodifyEditor.ItemContainerStyle>
 
@@ -140,8 +164,23 @@
                         HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Padding="8,4">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock x:Name="StatusText" FontFamily="Consolas" FontSize="11"
-                                   TextWrapping="Wrap" MaxWidth="620" VerticalAlignment="Center" />
+                                   TextWrapping="Wrap" MaxWidth="560" VerticalAlignment="Center" />
                         <Button x:Name="FitButton" Content="Fit" Margin="12,0,0,0" Padding="8,2" Click="FitButton_Click" />
+
+                        <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="10,2" />
+
+                        <TextBlock Text="Focus" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <ComboBox x:Name="FocusSelector" Width="96" SelectedIndex="0"
+                                  SelectionChanged="FocusSelector_SelectionChanged"
+                                  ToolTip="Fade everything more than N steps from the selected box.">
+                            <ComboBoxItem Content="off" />
+                            <ComboBoxItem Content="1 hop" />
+                            <ComboBoxItem Content="2 hops" />
+                            <ComboBoxItem Content="3 hops" />
+                            <ComboBoxItem Content="5 hops" />
+                        </ComboBox>
+                        <TextBlock x:Name="FocusStatus" FontSize="11" Foreground="#666"
+                                   VerticalAlignment="Center" Margin="8,0,0,0" />
                     </StackPanel>
                 </Border>
 
