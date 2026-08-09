@@ -1,0 +1,175 @@
+[size=5][b]What this is[/b][/size]
+
+Far Cry 2 mods come in two shapes. [b]Most change the game's content:[/b] weapon stats, enemy tuning, textures, sounds, maps. That lives in data files inside the game's archives, and installing it is a mod manager's job. If that's what you're after, you want the [b]Far Cry 2 Vortex extension[/b]. [b]FCSE is not a replacement for it.[/b]
+
+[b]FCSE covers the rest:[/b] the behaviour compiled into the engine itself ([b]bin\Dunia.dll[/b]), like how weapons jam or how enemies decide to chase you. No data file can reach it. A plugin runs inside the game as real code, so it changes the behaviour rather than the numbers fed into it. Writing one takes a programmer, but almost nothing about the game is off limits.
+The two work together and touch different files. The Vortex extension will even install FCSE plugins for you.
+
+[size=5][b]Why it exists[/b][/size]
+
+Until now, changing anything inside Dunia.dll meant shipping a modified copy of that file. Anything engine level has therefore always been all or nothing.
+FCSE is a separate launcher that loads plugins into the game as it starts. Any number of them can change engine behaviour at once, and none of them has to replace a single game file.
+[quote][b]Heads up:[/b] FCSE doesn't change anything on its own. It's the foundation other plugins are built on. Install it if a plugin you want lists it as a requirement, or if you want to write one yourself. This is a new framework, so that list is still short.[/quote]
+
+[size=5][b]What you get[/b][/size]
+
+[list]
+[*][b]Plugins that stack.[/b] Install as many as you like. They don't fight over game files, because they don't touch any.[/*]
+[*][b]An in game plugin menu.[/b] A real page on the Options screen, suspiciously named [i]Mod Configuration Manager[/i].[/*]
+[*][b]A plain text config file.[/b] Everything in that menu is also in [b]bin\fcse.ini[/b], written for you on first launch and safe to edit by hand. Your comments and layout are preserved. Uninstalling a plugin for a session doesn't wipe its settings.[/*]
+[*][b]A log that tells you what happened.[/b] [b]bin\fcse.log[/b] records every plugin found, everything it changed, and anything that was refused.[/*]
+[*][b]Conflict detection.[/b] If two plugins try to change the same thing, the second one is refused and both are named in the log, instead of the two of them quietly corrupting each other.[/*]
+[*][b]Crash logging.[/b] If the game does go down, FCSE writes the exact instruction it died on. That's the difference between a bug report the author can act on and "it crashed".[/*]
+[*][b]No prerequisites.[/b] No .NET, no msvcrt, no drivers, just one file.[/*]
+[/list]
+
+[size=5][b]➡️Installation⬅️[/b][/size]
+
+[list=1]
+[*]Open your Far Cry 2 folder and go into [b]bin\[/b], the one with [b]FarCry2.exe[/b] and [b]Dunia.dll[/b] in it.[/*]
+[*]Copy [b]FCSE.exe[/b] in there. [b]Don't delete or overwrite anything.[/b] FCSE.exe sits [i]next to[/i] FarCry2.exe. It's an extra way to start the game, not a replacement.[/*]
+[*]Put your plugins in [b]bin\plugins\[/b]. Both [b].lua[/b] scripts and [b].dll[/b] plugins go in that same folder, which is created for you the first time you run FCSE.[/*]
+[*]Launch [b]FCSE.exe[/b] instead of FarCry2.exe.[/*]
+[/list]
+
+To confirm it worked: start the game, go to [b]Options[/b], and you should see a row for FCSE's plugin menu. [b]bin\fcse.log[/b] lists everything that loaded.
+
+[b]To uninstall:[/b] delete FCSE.exe. That's the whole procedure, because nothing else was ever modified.
+
+[b]Steam and other launchers:[/b] FCSE is an ordinary executable, so anything that can launch FarCry2.exe can launch FCSE.exe instead. Add it as a non Steam game, repoint your shortcut, add as the default launcher in Vortex, or just run it directly.
+
+[b][size=5]Compatibility[/size][/b]
+
+[b]Required:[/b] Far Cry 2 [b]Fortune's Edition, patch 1.03[/b], which is the Steam version. To check: [b]bin\Dunia.dll[/b] should be [b]20,183,176 bytes[/b].
+Other builds (retail DVD, GOG, Uplay, and patches 1.00 through 1.02) are compiled differently and are [b]not supported[/b]. FCSE reaches into specific places inside the engine, and those places move between builds.
+[b]Mods that patch Dunia.dll:[/b] most of them edit a handful of bytes in place without changing the file's size or layout, and those work fine alongside FCSE, which loads whichever Dunia.dll is sitting there. A mod that ships a [i]differently built[/i] Dunia.dll is another matter and isn't covered.
+[b]Everything else is unaffected.[/b] Content mods, texture and sound packs, mod managers, dgVoodoo and other wrappers, the map editor. FCSE doesn't touch any of it.
+
+[size=5][b]Before you start[/b][/size]
+
+You should [b]only install plugins from sources you trust[/b].
+FCSE itself is [b]open source and public domain[/b]. Every line of it is on GitHub, linked at the bottom of this page.
+
+[line]
+
+[center][b][size=6]For plugin authors[/size][/b]
+[i]Everything below is about writing plugins, not installing them.[/i][/center]
+
+[size=5][b]How it works[/b][/size]
+
+FarCry2.exe's [font=Courier New]WinMain[/font] is, in full:
+
+[code]RegisterGameFunctionProvider(&RegisterDebugCommands);
+RunGame(hInstance, cmdLine);[/code]
+
+Both are plain exports of Dunia.dll. Nothing meaningful is statically bound into the launcher. FCSE.exe reimplements that entry point, resolves the three exports it needs and inserts a plugin loading step in the middle, before any engine code beyond Dunia's own [font=Courier New]DllMain[/font] and CRT init has run. That's the earliest point at which a plugin can install a hook and be certain nothing it cares about has happened yet.
+
+It also reimplements all 12 of [font=Courier New]RegisterDebugCommands[/font]' handlers byte for byte, so nothing regresses versus the stock launcher. Several of them are live gameplay hooks (diamond pickups, malaria progression, main menu construction), not QA stubs. The two that depend on constants baked into FarCry2.exe's data section are read out of the real executable at startup rather than hardcoded, so the reimplementation is exactly as faithful as whichever build is installed.
+
+Plugins register [i]before[/i] the stock handlers do, and the engine's registry is first claimant wins. That ordering is what lets a plugin take over one of the 12 stock names instead of being locked out of them.
+
+[size=5][b]Two ways to write a plugin[/b][/size]
+
+[b]Lua[/b] is the quickest route and enough for most plugins. A text editor and one file:
+
+[code]local fcse = require 'fcse'
+
+fcse.log('hello from Lua')
+
+fcse.setting{ name = 'Enabled', default = true,
+              on_changed = function(value) enabled = value end }
+
+fcse.on('update', function(dt)
+  -- runs every frame, dt is the engine's own frame delta in seconds
+end)[/code]
+
+Save that as [b]bin\plugins\my_mod.lua[/b] and launch. There is no build step.
+Something that needs more than one file can be a folder with a [b]main.lua[/b] inside it ([b]bin\plugins\my_mod\main.lua[/b]); the files beside that main.lua are then libraries to [font=Courier New]require[/font], not scripts that run on their own. Both forms are discovered at any depth under [b]plugins\[/b], so you can group things into folders however you like.
+
+The dialect is [b]Lua 5.1 (LuaJIT)[/b], the same flavour most game modding frameworks use, and not 5.4. It's also unrelated to the ancient Lua 4.1 interpreter compiled into Dunia.dll itself. That one is the engine's own and FCSE doesn't go near it.
+
+[b]C++[/b] is for anything Lua can't reach. The [b]fcse-example-plugin[/b] download is a complete, commented, working plugin: source, header, and a compiled DLL. The ABI is documented inline in [font=Courier New]plugin_api.h[/font].
+
+The two example downloads are deliberately separate, because their prerequisites are. One needs a text editor, the other needs an x86 MSVC toolchain. Scripting exists precisely so that a small change doesn't need a compiler.
+
+[size=5][b]What a script can actually do[/b][/size]
+
+The Lua API is built on LuaJIT's FFI, which keeps the native surface small and composes everything else on top of it:
+
+[list]
+[*][b]Memory.[/b] [font=Courier New]fcse.mem.read_u32/f32/ptr/string/bytes[/font] and their [font=Courier New]write_[/font] counterparts. Reads go straight through FFI. Writes are routed through FCSE's patch manager, which handles [font=Courier New]VirtualProtect[/font], logs the change against your script, and refuses it if another script already claimed those bytes.[/*]
+[*][b]Addresses.[/b] [font=Courier New]fcse.base[/font], [font=Courier New]fcse.size[/font], [font=Courier New]fcse.rva(offset)[/font] and [font=Courier New]fcse.to_rva(address)[/font]. Dunia's load base isn't fixed, so an RVA from your notes has to be rebased at runtime.[/*]
+[*][b]Signature scanning.[/b] [font=Courier New]fcse.mem.scan('8B 44 24 ?? 85 C0')[/font] and [font=Courier New]scan_all[/font], done natively over Dunia's [font=Courier New].text[/font]. Prefer a signature over a hardcoded RVA for anything meant to survive a game patch.[/*]
+[*][b]Calling engine functions.[/b] [font=Courier New]fcse.fn('void(__thiscall*)(void*, int)', fcse.rva(0x59F210))[/font] gives you a callable. Engine methods are [font=Courier New]__thiscall[/font] and the signature has to say so.[/*]
+[*][b]Detouring.[/b] [font=Courier New]fcse.hook(address, signature, handler)[/font] returns a callable trampoline to the original. MinHook underneath.[/*]
+[*][b]Named callbacks.[/b] [font=Courier New]fcse.command('toRed', handler)[/font] claims one of Dunia's own registry slots by name. No address knowledge at all, and it's a string key, so it doesn't care what build you're on. The cheapest real hook available.[/*]
+[*][b]Settings.[/b] [font=Courier New]fcse.setting{...}[/font] becomes a line in fcse.ini and a row in the in game menu.[/*]
+[*][b]Events.[/b] [font=Courier New]load[/font] (before any engine code runs; hook and patch here), [font=Courier New]register_functions[/font] (Dunia's registry exists, and this is the only valid time to call [font=Courier New]fcse.command[/font]), and [font=Courier New]update[/font] (once per frame, from [font=Courier New]CXGame::Update[/font], handed the real frame delta).[/*]
+[*][b]Debugging.[/b] [font=Courier New]fcse.log(...)[/font] takes print's argument list, and [font=Courier New]fcse.hex(address, count)[/font] dumps bytes with an ASCII column straight into the log.[/*]
+[/list]
+
+A script that throws is named in a traceback, and one that keeps failing is dropped rather than allowed to spam every frame.
+
+[size=5][b]The plugin API, four tiers[/b][/size]
+
+From "no reverse engineering required" to "full control":
+
+[list=1]
+[*][font=Courier New]AddFunctionCB(fn, name)[/font] claims a named callback slot. Zero address knowledge, version independent. Around 17 known gameplay call sites are reachable this way.[/*]
+[*][font=Courier New]Hook(target, detour, &original)[/font] is MinHook backed detouring, for internals with no named seam. [font=Courier New]target[/font] is [font=Courier New]duniaBase[/font] plus an RVA you found yourself.[/*]
+[*][font=Courier New]Patch(address, data, size)[/font] is direct byte patching, applied live and in process. The same kind of edit that used to require shipping a pre patched Dunia.dll, except any number of plugins can now each patch their own ranges.[/*]
+[*][font=Courier New]RegisterSettings(name, settings, count)[/font] gives you persistent, player editable settings. Zero address knowledge.[/*]
+[/list]
+
+[font=Courier New]FCSE_PluginAPI::duniaSize[/font] is provided so a plugin using tiers 2 or 3 can gate itself on the build it was written against. The loader core has no hardcoded RVA dependency of its own; only plugins that reach into internals do.
+
+[size=5][b]Settings and the plugin menu[/b][/size]
+
+A plugin declares what it has (a name, a type, a default and a callback) and FCSE owns the stored value from there:
+
+[code]static const FCSE_Setting settings[] = {
+    {"Toggle toRed",  FCSE_CHECKBOX(false), &OnToRedChanged, NULL},
+    {"Log verbosity", FCSE_CHOICE(1),       &OnChanged, NULL, kVerbosity, 3},
+    {"Demo slider",   FCSE_SLIDER(5),       &OnChanged, NULL, NULL, 0, 0, 10},
+};
+api->RegisterSettings("example_plugin", settings, 3);[/code]
+
+Which produces, and thereafter reads back from:
+
+[code][example_plugin]
+Toggle toRed = false
+Log verbosity = Normal
+Demo slider = 5[/code]
+
+Four types are available to C++ plugins. [b]Checkbox[/b] is a YES/NO spinner, [b]Choice[/b] is a [font=Courier New]< value >[/font] spinner serialized as its label so the file stays readable, [b]Slider[/b] is a draggable range, and [b]Text[/b] opens the game's own modal text prompt. Each renders as the control the game's own settings pages use, so a plugin's page looks like a stock one. The Lua API currently exposes booleans only.
+
+[b]The callback is the only channel.[/b] It fires once from inside registration, synchronously, before any engine code runs, carrying whatever the config file held or your declared default if it held nothing usable. It fires again after every in game toggle. A plugin never needs a separate "read my config" step and never holds a pointer into FCSE's storage.
+
+The page holds [b]20 rows[/b]. That's a hard limit from the engine's own list widget, and FCSE logs an overflow rather than producing rows with no controls under them.
+
+[size=5][b]Conflicts[/b][/size]
+
+Two plugins can legitimately want the same name, address or byte range. Rather than build a hook chaining dispatcher, FCSE tracks per resource ownership and [b]rejects the second claimant[/b], logging both names. Loud and debuggable beats silently wrong.
+
+Which plugin is calling is resolved automatically from the return address, so a plugin never passes its own identity into an API call and therefore can't get it wrong. FCSE's own stock registrations go through exactly the same tracking as anyone else's.
+
+[size=5][b]Logs[/b][/size]
+
+Every run rewrites [b]bin\fcse.log[/b]. Loader lines and plugin lines go through one writer, so the format can't drift between them:
+
+[code][2026-07-27 06:04:03.12341234][fcse] Dunia.dll resolved, base=0x10000000 size=20183176 bytes
+[2026-07-27 06:04:03.12341235][example_plugin] example_plugin loaded[/code]
+
+Timestamps are at Windows' native 100ns resolution, fine enough to order lines from the loader and several plugins landing inside the same millisecond.
+
+A crash handler is installed before anything else runs. It logs the faulting instruction as [font=Courier New]module+RVA[/font], which pastes straight into Ghidra or IDA, along with registers and a scanned return address chain. It's purely an observer: it logs and returns [font=Courier New]EXCEPTION_CONTINUE_SEARCH[/font], so it doesn't turn crashes into non crashes and doesn't interfere with the game's own handling.
+
+[size=5][b]Documentation and source[/b][/size]
+
+[list]
+[*][b]Full documentation:[/b] [url=https://jbebe.github.io/farcry-sdk/fcse]jbebe.github.io/farcry-sdk/fcse[/url][/*]
+[*][b]Source:[/b] [url=https://github.com/jbebe/farcry-sdk]github.com/jbebe/farcry-sdk[/url][/*]
+[*][b]Far Cry 2 Vortex extension:[/b] [url=https://jbebe.github.io/farcry-sdk/modding/vortex]jbebe.github.io/farcry-sdk/modding/vortex[/url][/*]
+[*][b]Modding and reverse engineering notes:[/b] [url=https://jbebe.github.io/farcry-sdk/]jbebe.github.io/farcry-sdk[/url], covering file formats, engine internals and practical recipes, with every claim marked as either reverse engineered or community reported.[/*]
+[/list]
+
