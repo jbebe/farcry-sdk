@@ -1,4 +1,4 @@
-using JackAll.Tools.Format;
+using JackAll.Tools.Xbm;
 using System.Text;
 using System.Windows.Controls;
 

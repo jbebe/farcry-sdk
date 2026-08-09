@@ -406,12 +406,12 @@
                                                 Click="DeleteSave_Click" IsEnabled="{Binding SavesGridEnabled}" />
 
                                         <!-- Opens the same tree/property-grid editor tab the Files tab's
-                                             fragments use (XmlEditorTabView) over this save's PersistenceDB
+                                             fragments use (FcbEditorTabView) over this save's PersistenceDB
                                              tree - editable there too, writing straight back into this
                                              save's own .sav file, see MainWindow.xaml.cs's
-                                             OpenSaveXmlEditorTab. -->
+                                             OpenSaveFcbEditorTab. -->
                                         <Button Content="Open value editor…" Padding="10,5"
-                                                Click="OpenSaveXmlEditor_Click"
+                                                Click="OpenSaveFcbEditor_Click"
                                                 Visibility="{Binding SelectedSaveDetails.ShowDocument, Converter={StaticResource BoolToVis}}" />
                                     </StackPanel>
                                 </StackPanel>

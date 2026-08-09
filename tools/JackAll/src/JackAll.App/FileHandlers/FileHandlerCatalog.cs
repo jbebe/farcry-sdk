@@ -133,7 +133,7 @@ public static class FileHandlerCatalog
         if (!file.IsModded)
         {
             return new FcbFragmentDetailsHandler(openEditor, currentXml: null, originalXml: null,
-                "No changes from the base game - not shown here since a fragment can be huge. Open in XML Editor to browse it.");
+                "No changes from the base game - not shown here since a fragment can be huge. Open in FCB Editor to browse it.");
         }
 
         byte[]? currentBytes = TryRead(readContent, out string? readError);

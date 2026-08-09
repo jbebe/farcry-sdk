@@ -1,12 +1,11 @@
 using JackAll.App.FileHandlers.Fcb;
-using JackAll.App.SaveGames;
+using JackAll.App.FileHandlers.Sav;
 using JackAll.Core.Format;
 using JackAll.Core.Mods;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 using JackAll.Core;
-using JackAll.Tools.Format.Sav;
-using JackAll.Tools.SaveGames;
+using JackAll.Tools.Sav;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Globalization;
@@ -741,7 +740,7 @@ public sealed class MainViewModel : INotifyPropertyChanged
 
     /// <summary>Re-reads one save's own metadata off disk and swaps its <see cref="SaveRow"/> in
     /// <see cref="Saves"/> for a fresh one - called after writing edits back into that save's file (see
-    /// <c>MainWindow.xaml.cs</c>'s <c>OpenSaveXmlEditorTab</c>), so the sidebar's persisted-object-count/
+    /// <c>MainWindow.xaml.cs</c>'s <c>OpenSaveFcbEditorTab</c>), so the sidebar's persisted-object-count/
     /// thumbnail/etc. don't keep showing stale pre-edit values. Narrower than re-running
     /// <see cref="LoadSavesAsync"/> (which would reset the whole list and selection for an unrelated
     /// reason) - re-selects the refreshed row only if it was already selected, which also re-triggers

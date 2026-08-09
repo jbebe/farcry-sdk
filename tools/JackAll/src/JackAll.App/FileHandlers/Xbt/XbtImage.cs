@@ -1,7 +1,7 @@
 using BCnEncoder.Decoder;
 using BCnEncoder.Shared;
 using CommunityToolkit.HighPerformance;
-using JackAll.Tools.Format;
+using JackAll.Tools.Xbt;
 using System.IO;
 using System.Windows;
 using System.Windows.Media;

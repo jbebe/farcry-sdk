@@ -584,7 +584,7 @@ public static class FcbXml
     /// <summary>Public entry point onto <see cref="TryDecodeRml"/> for callers that want the decoded
     /// .rml document itself rather than embedded in this class's own <c>&lt;value type="Rml"&gt;</c>
     /// text wrapper - currently the interactive property grid's Rml field (see
-    /// JackAll.App.XmlEditor.FcbFieldFormat), which shows/edits it as a plain XML string instead of
+    /// JackAll.App.FileHandlers.Fcb.FcbEditor.FcbFieldFormat), which shows/edits it as a plain XML string instead of
     /// opaque hex. Null for the opaque-hex fallback shape (see <see cref="TryDecodeRml"/>'s remarks).</summary>
     public static XElement? TryDecodeRmlValue(byte[] value) => TryDecodeRml(value, out XElement? element) ? element : null;
 

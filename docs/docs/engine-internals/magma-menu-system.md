@@ -363,7 +363,7 @@ confirmed, byte-for-byte, against the four real sample files in `tmp/menu/` (`co
   constant for a given build, not per-file content. A future `.mgb` writer can copy this prefix
   verbatim rather than reconstructing the type table.
 - `PAGESIZE`/`DISPLAYOFFSET`/materials/`VisitUserData` all decode correctly via JackAll's existing
-  `MgbReader`/`MgbBody` parser (`tools/JackAll/src/JackAll.Tools/Format/`), matching real,
+  `MgbReader`/`MgbBody` parser (`tools/JackAll/src/JackAll.Tools/Mgb/`), matching real,
   cross-checkable content (e.g. `sp_menus.mgb`'s materials decode to real texture paths matching its
   own `.desc` sidecar exactly).
 - All four sample files still hit the known `0x86F001E3`-unresolved-class wall a few areas in (area
@@ -459,7 +459,7 @@ Every template those slots instantiate lives in `common.mgb` (`CRC32("common") =
 package therefore needs no materials, fonts or textures of its own.
 
 Dump any of this from a real file with
-`tools/JackAll/src/JackAll.Tools/Format/mgb_dump_generic_objects.py` and `mgb_dump_area.py`, which
+`tools/JackAll/src/JackAll.Tools/Mgb/mgb_dump_generic_objects.py` and `mgb_dump_area.py`, which
 resolve the stored name hashes by CRC32-ing every ASCII run in `Dunia.dll`.
 
 ### Confirmed live: a private page that works

@@ -8,7 +8,7 @@ sidebar_position: 7
 Traced live via GhidraMCP against **`Dunia.dll`** (the same code exists but is stubbed out in the
 Linux dedicated server, which never plays audio). Confirmed against every real `.spk` file in a Steam
 v1.03 install (8,282 files, 42,215 records, zero parse failures) via a standalone parser
-(`tools/JackAll/src/JackAll.Core/Format/SpkPackage.cs`) and cross-checked against a hand-written Python
+(`tools/JackAll/src/JackAll.Tools/Spk/SpkPackage.cs`) and cross-checked against a hand-written Python
 decoder run against real extracted payloads. Companion page: [`.sbao`](./sbao.md), the standalone
 (non-bank) sibling format sharing the same DARE data.
 :::

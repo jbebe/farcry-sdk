@@ -4,9 +4,9 @@ using System.Windows.Controls;
 namespace JackAll.App.FileHandlers.Fcb;
 
 /// <summary>
-/// The Files tab's preview for a `.fcb` fragment row: the "Open in XML Editor…" launcher on top -
+/// The Files tab's preview for a `.fcb` fragment row: the "Open in FCB Editor…" launcher on top -
 /// fragments can be huge and need real navigation to be useful, which is a job for a dedicated editor
-/// tab (<see cref="JackAll.App.XmlEditor.XmlEditorTabView"/>), not this compact detail column - plus,
+/// tab (<see cref="JackAll.App.FileHandlers.Fcb.FcbEditor.FcbEditorTabView"/>), not this compact detail column - plus,
 /// underneath it, either the trimmed diff-against-vanilla view (<see cref="Text.TextFileHandler.ApplyDiff"/>)
 /// a modded fragment gets, or its full content when it's modded but has no base game version to diff
 /// against (a mod-added fragment). Nothing is shown - just <paramref name="previewUnavailableText"/> in

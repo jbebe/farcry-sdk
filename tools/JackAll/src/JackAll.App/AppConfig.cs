@@ -66,7 +66,7 @@ public sealed class AppConfig
     public static string VanillaHashesFile => Path.Combine(DataDir, ".archivehashes");
 
     /// <summary>
-    /// A savegame-specific hash -> name table (see <see cref="JackAll.App.SaveGames.SaveGameCompiledFieldNames"/>)
+    /// A savegame-specific hash -> name table (see <see cref="JackAll.App.FileHandlers.Sav.SaveGameCompiledFieldNames"/>)
     /// recovered by CRC32 dictionary-matching every string constant in the game's Linux dedicated-server
     /// binary against the exact hashes a real save's <c>PersistenceDB</c> tree uses - a fixed part of the
     /// product, same reasoning as <see cref="BinaryClassesFile"/>. Missing is not fatal: those hashes

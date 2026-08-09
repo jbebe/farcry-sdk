@@ -16,6 +16,9 @@ x64/
 [Bb]in/
 [Oo]bj/
 
+# The tracked mgb_*.py reference decoders regenerate this whenever they're run.
+__pycache__/
+
 # MSTest test Results
 [Tt]est[Rr]esult*/
 [Bb]uild[Ll]og.*

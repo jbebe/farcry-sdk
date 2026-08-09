@@ -11,8 +11,8 @@
     <PackageReference Include="DiffPlex" Version="1.9.0" />
     <PackageReference Include="FFMpegCore" Version="5.1.0" />
     <PackageReference Include="ini-parser-netstandard" Version="2.5.3" />
-    <!-- Transitive via JackAll.Core, but declared because Domino\DominoExprPreview.cs compiles
-         against Loretta's syntax types directly. -->
+    <!-- Transitive via JackAll.Core, but declared because FileHandlers\Domino\DominoExprPreview.cs
+         compiles against Loretta's syntax types directly. -->
     <PackageReference Include="Loretta.CodeAnalysis.Lua" Version="0.2.13" />
     <!--
       The node-graph canvas behind the Domino mission-graph viewer. Chosen over the other WPF node

@@ -112,7 +112,7 @@ Active community `.spk` editing exists ("enough to mod them, but not everything"
 page](../file-formats/spk.md): magic `0x53504B01`, a record count, an id table, then
 variable-length `{preamble, size, payload}` records, 4-byte aligned. Verified byte-for-byte against
 every `.spk` in a real install (8,282 files, 42,215 records, zero failures) and implemented in
-`tools/JackAll/src/JackAll.Core/Format/SpkPackage.cs` / `JackAll.App`'s `SpkFileHandler`. This
+`tools/JackAll/src/JackAll.Tools/Spk/SpkPackage.cs` / `JackAll.App`'s `SpkFileHandler`. This
 matches Gabor's "enough to mod them, but not everything": each record's own payload is registered
 by the engine as an opaque `{id, pointer, size}` triple at load time and only interpreted later, at
 actual playback — see [the `.sbao` format page](../file-formats/sbao.md) for the standalone-file

@@ -51,7 +51,7 @@
   <ItemGroup>
     <!-- CommandLine is the one piece here with no coverage anywhere else, and a parser bug that
          dropped a layer flag would silently build a patch missing a mod. -->
-    <InternalsVisibleTo Include="JackAll.Core.Tests" />
+    <InternalsVisibleTo Include="JackAll.Tests" />
   </ItemGroup>
 
   <!-- The same two assets jackall-cli ships: the hash dictionary gives entries real filenames, and

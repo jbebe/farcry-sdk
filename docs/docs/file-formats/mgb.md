@@ -529,7 +529,7 @@ flat action list already read, not new actions.
 
 ## Validation
 
-`tools/JackAll/src/JackAll.Tools/Format/mgb_parser.py` is a direct transcription of this page.
+`tools/JackAll/src/JackAll.Tools/Mgb/mgb_parser.py` is a direct transcription of this page.
 Against the 50-file corpus in `tmp/menu/` (gitignored):
 
 - **50/50 files parse to exactly `file_size`**, every declared area consumed, zero bytes left over and
@@ -570,9 +570,9 @@ bytes while reporting success. Several earlier revisions of this page did exactl
 
 Two independent implementations of this spec live in the repo, and they check each other:
 
-- **`tools/JackAll/src/JackAll.Tools/Format/mgb_parser.py`** — the reference decoder, and the
+- **`tools/JackAll/src/JackAll.Tools/Mgb/mgb_parser.py`** — the reference decoder, and the
   implementation the live-trace validation above was done against. Read-only.
-- **`tools/JackAll/src/JackAll.Tools/Format/Mgb/`** — the production C# codec and object model,
+- **`tools/JackAll/src/JackAll.Tools/Mgb/`** — the production C# codec and object model,
   used by JackAll's `.mgb` editor, its `mgb decode`/`mgb encode` CLI verbs, and the XML interchange
   format below.
 

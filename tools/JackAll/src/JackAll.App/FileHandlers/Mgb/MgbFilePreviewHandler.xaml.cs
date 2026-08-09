@@ -1,7 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using JackAll.Tools.Format.Mgb;
+using JackAll.Tools.Mgb;
 
 namespace JackAll.App.FileHandlers.Mgb;
 
