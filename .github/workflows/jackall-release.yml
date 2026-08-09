@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version - used as the git tag and as jackall-{version}.zip'
+        description: 'Release version - used as the git tag (jackall-{version}) and as jackall-{version}.zip'
         required: true
         type: string
 
@@ -49,6 +49,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          git tag "${{ inputs.version }}"
-          git push origin "${{ inputs.version }}"
-          gh release create "${{ inputs.version }}" "jackall-${{ inputs.version }}.zip" "jackall-cli-${{ inputs.version }}.zip" --title "JackAll ${{ inputs.version }}" --generate-notes
+          git tag "jackall-${{ inputs.version }}"
+          git push origin "jackall-${{ inputs.version }}"
+          gh release create "jackall-${{ inputs.version }}" "jackall-${{ inputs.version }}.zip" "jackall-cli-${{ inputs.version }}.zip" --title "JackAll ${{ inputs.version }}" --generate-notes
