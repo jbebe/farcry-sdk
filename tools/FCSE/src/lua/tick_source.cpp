@@ -1,9 +1,9 @@
-#include "tick_source.h"
+#include "lua/tick_source.h"
 
-#include "../dunia_api.h"
-#include "../hook.h"
-#include "../log.h"
-#include "lua_host.h"
+#include "engine/dunia_api.h"
+#include "api/hook.h"
+#include "log.h"
+#include "lua/lua_host.h"
 
 #include <cstdint>
 #include <cstdio>

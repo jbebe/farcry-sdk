@@ -1,4 +1,4 @@
-#include "plugin_loader.h"
+#include "api/plugin_loader.h"
 
 #include "caller_identity.h"
 #include "log.h"

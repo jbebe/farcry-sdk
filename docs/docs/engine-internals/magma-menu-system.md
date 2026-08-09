@@ -18,8 +18,8 @@ FCSE no longer borrows the stock Game tab. It now authors its **own** Magma pack
 engine through a hooked file reader, and binds a private page to it by name — so the "shared page,
 tell the two visits apart with a flag" design this page describes at length is gone, along with the
 files it names. `tools/FCSE/src/mod_page.{h,cpp}` and `menu_handler.{h,cpp}` **no longer exist**;
-their roles live in `src/fcse_page.{h,cpp}`, `src/magma_package.{h,cpp}` and
-`src/page_assets.{h,cpp}`.
+their roles live in `src/ui/fcse_page.{h,cpp}`, `src/ui/magma_package.{h,cpp}` and
+`src/ui/page_assets.{h,cpp}`.
 
 The engine facts below — `CGameMenu`'s page table, `CUIPageBase::Init`, the `IMenuItemHandler`
 shape, the `AddButton`/`RefreshOptionList` behaviour — all still hold and are what the current
@@ -495,7 +495,7 @@ gone. The rows themselves still use the same underlying primitive:
   `FCSE_RegisterConfigPageFn` pair (API v2): FCSE now owns the value and hands it to the plugin
   through the callback, which is what lets settings persist — the old shape only knew *where* a
   plugin's bool lived, never what to call it in a file.
-- `tools/FCSE/src/settings_registry.cpp`/`.h` (was `mods_registry`) — registry of
+- `tools/FCSE/src/api/settings_registry.cpp`/`.h` (was `mods_registry`) — registry of
   `(pluginName, FCSE_Setting[])` groups backed by `bin\fcse.ini` (`src/ini_file.cpp`, tested by
   `tests/ini_file_tests.cpp`).
 - The page lists **every loaded plugin** (`PluginLoader::LoadedNames`), not just the ones that
@@ -505,7 +505,7 @@ gone. The rows themselves still use the same underlying primitive:
   hidden.
 - `tools/FCSE/src/menu_handler.cpp`/`.h` — `ModsMenuHandler`, the hand-built `IMenuItemHandler` used
   for each row's click (toggles the backing `bool`, fires `onChanged`).
-- `tools/FCSE/src/mods_tab.cpp`/`.h` — hooks `CFCXOptionPage::Setup` (`0x1081aee0`), calls through to
+- `tools/FCSE/src/ui/mods_tab.cpp`/`.h` — hooks `CFCXOptionPage::Setup` (`0x1081aee0`), calls through to
   the original first, then calls `ModPage::Install` (below) to build the separate page and its
   navigation button.
 - `tools/FCSE/src/mod_page.cpp`/`.h` — Path C's implementation, see below.

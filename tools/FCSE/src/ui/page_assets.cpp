@@ -1,6 +1,6 @@
-#include "page_assets.h"
+#include "ui/page_assets.h"
 
-#include "dunia_api.h"
+#include "engine/dunia_api.h"
 #include "log.h"
 
 #include <cstdint>

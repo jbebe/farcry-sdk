@@ -1,10 +1,10 @@
-#include "debug_commands.h"
+#include "engine/debug_commands.h"
 
-#include "function_registry.h"
+#include "api/function_registry.h"
 #include "log.h"
 #include "lua/lua_host.h"
-#include "plugin_loader.h"
-#include "stock_constants.h"
+#include "api/plugin_loader.h"
+#include "engine/stock_constants.h"
 
 #include <cstdint>
 

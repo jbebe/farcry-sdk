@@ -1,7 +1,7 @@
-#include "lua_host.h"
+#include "lua/lua_host.h"
 
-#include "../log.h"
-#include "lua_api.h"
+#include "log.h"
+#include "lua/lua_api.h"
 
 extern "C" {
 #include "lauxlib.h"

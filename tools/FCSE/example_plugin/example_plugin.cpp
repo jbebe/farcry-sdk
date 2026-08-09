@@ -1,7 +1,7 @@
 // example_plugin - minimal, self-contained FCSE plugin demonstrating all three tiers of the
 // plugin API (see tools/FCSE/README.md). Meant as a copy-from starting point for real plugins as
 // much as a smoke test for FCSE.exe itself.
-#include "../include/plugin_api.h"
+#include "plugin_api.h"
 
 #include <cstdio>
 #include <windows.h>

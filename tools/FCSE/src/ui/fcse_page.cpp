@@ -1,11 +1,11 @@
-﻿#include "fcse_page.h"
+﻿#include "ui/fcse_page.h"
 
-#include "dunia_api.h"
+#include "engine/dunia_api.h"
 #include "ini_file.h"
 #include "log.h"
-#include "magma_package.h"
-#include "plugin_loader.h"
-#include "settings_registry.h"
+#include "ui/magma_package.h"
+#include "api/plugin_loader.h"
+#include "api/settings_registry.h"
 
 #include <cstdint>
 #include <cstdio>

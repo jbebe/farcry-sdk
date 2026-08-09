@@ -151,6 +151,9 @@ set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc"
              APPEND PROPERTY OBJECT_DEPENDS "${FCSE_MGB}" "${FCSE_MGB_WIDESCREEN}"
                                             "${FCSE_LUA_RUNTIME}")
 
+# Grouped by what a file talks to: engine/ reaches into the running game, api/ is what plugins and
+# Lua scripts both call, ui/ is FCSE's own settings page, lua/ is the script host. What is left at
+# the top of src/ is the loader entry point and the utilities every group uses.
 add_executable(FCSE WIN32
   "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc"
   "src/main.cpp"
@@ -160,32 +163,32 @@ add_executable(FCSE WIN32
   "src/caller_identity.h"
   "src/crash_log.cpp"
   "src/crash_log.h"
-  "src/dunia_api.cpp"
-  "src/dunia_api.h"
-  "src/stock_constants.cpp"
-  "src/stock_constants.h"
-  "src/debug_commands.cpp"
-  "src/debug_commands.h"
-  "src/function_registry.cpp"
-  "src/function_registry.h"
-  "src/hook.cpp"
-  "src/hook.h"
   "src/ini_file.cpp"
   "src/ini_file.h"
-  "src/fcse_page.cpp"
-  "src/fcse_page.h"
-  "src/magma_package.cpp"
-  "src/magma_package.h"
-  "src/mods_tab.cpp"
-  "src/mods_tab.h"
-  "src/page_assets.cpp"
-  "src/page_assets.h"
-  "src/patch.cpp"
-  "src/patch.h"
-  "src/plugin_loader.cpp"
-  "src/plugin_loader.h"
-  "src/settings_registry.cpp"
-  "src/settings_registry.h"
+  "src/engine/dunia_api.cpp"
+  "src/engine/dunia_api.h"
+  "src/engine/stock_constants.cpp"
+  "src/engine/stock_constants.h"
+  "src/engine/debug_commands.cpp"
+  "src/engine/debug_commands.h"
+  "src/api/plugin_loader.cpp"
+  "src/api/plugin_loader.h"
+  "src/api/function_registry.cpp"
+  "src/api/function_registry.h"
+  "src/api/hook.cpp"
+  "src/api/hook.h"
+  "src/api/patch.cpp"
+  "src/api/patch.h"
+  "src/api/settings_registry.cpp"
+  "src/api/settings_registry.h"
+  "src/ui/fcse_page.cpp"
+  "src/ui/fcse_page.h"
+  "src/ui/magma_package.cpp"
+  "src/ui/magma_package.h"
+  "src/ui/mods_tab.cpp"
+  "src/ui/mods_tab.h"
+  "src/ui/page_assets.cpp"
+  "src/ui/page_assets.h"
   "src/lua/lua_api.cpp"
   "src/lua/lua_api.h"
   "src/lua/lua_host.cpp"
@@ -194,6 +197,15 @@ add_executable(FCSE WIN32
   "src/lua/tick_source.h"
   "src/lua/runtime/fcse.lua"
   "include/plugin_api.h"
+)
+
+# Both source roots on the include path, so every #include is written from the root of the tree it
+# lives in - "engine/hook.h", never "../engine/hook.h" - and a file moving between folders doesn't
+# rewrite the includes of everything that reaches it. include/ is here for the same reason a plugin
+# gets it: plugin_api.h is spelled "plugin_api.h" from inside FCSE exactly as it is from outside.
+target_include_directories(FCSE PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include"
 )
 
 # Listed in the target so it shows up in an IDE next to the code that embeds it, but it is data for
@@ -224,33 +236,9 @@ endif()
 
 add_subdirectory(example_plugin)
 
-# Tests for the pieces that are pure logic and can run without the game attached: the config file's
-# reader/writer, whose failure mode (silently mangling the player's fcse.ini) is worth catching at
-# build time rather than in-game, and the Lua runtime, whose failure mode is worse - a mistake in
-# fcse.lua breaks every script at once, and the only place that would otherwise surface is a
-# player's log. Plain console exe / plain script, no test framework.
+# Tests for the pieces that are pure logic and can run without the game attached - see
+# tests/CMakeLists.txt for what is covered and what each suite is built out of. enable_testing() has
+# to be called from here rather than from there: ctest looks for its test list in the top of the
+# build tree, which is this directory's.
 enable_testing()
-
-add_executable(ini_file_tests
-  "tests/ini_file_tests.cpp"
-  "src/ini_file.cpp"
-  "src/ini_file.h"
-)
-target_include_directories(ini_file_tests PRIVATE "src")
-
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET ini_file_tests PROPERTY CXX_STANDARD 20)
-endif()
-
-add_test(NAME ini_file_tests COMMAND ini_file_tests)
-
-# Runs the real src/lua/runtime/fcse.lua against a stubbed native table, in the very interpreter this
-# build produced - so the dialect, the FFI behaviour and the runtime under test are all the ones that
-# will ship, not an approximation of them.
-#
-# Uses luajit.exe out of the LuaJIT build rather than a system Lua: there is no system Lua to rely on
-# here, and a different interpreter would not be a meaningful test of a LuaJIT-only runtime.
-add_test(NAME lua_runtime_tests
-         COMMAND "${LUAJIT_SRC_DIR}/luajit.exe"
-                 "${CMAKE_CURRENT_SOURCE_DIR}/tests/lua_runtime_tests.lua"
-                 "${FCSE_LUA_RUNTIME}")
+add_subdirectory(tests)

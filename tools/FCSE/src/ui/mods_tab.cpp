@@ -1,10 +1,10 @@
-﻿#include "mods_tab.h"
+﻿#include "ui/mods_tab.h"
 
-#include "dunia_api.h"
-#include "fcse_page.h"
-#include "hook.h"
+#include "engine/dunia_api.h"
+#include "ui/fcse_page.h"
+#include "api/hook.h"
 #include "log.h"
-#include "magma_package.h"
+#include "ui/magma_package.h"
 
 #include <cstdint>
 

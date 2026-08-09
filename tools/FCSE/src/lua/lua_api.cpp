@@ -1,12 +1,12 @@
-#include "lua_api.h"
+#include "lua/lua_api.h"
 
-#include "../caller_identity.h"
-#include "../dunia_api.h"
-#include "../function_registry.h"
-#include "../hook.h"
-#include "../log.h"
-#include "../patch.h"
-#include "../settings_registry.h"
+#include "caller_identity.h"
+#include "engine/dunia_api.h"
+#include "api/function_registry.h"
+#include "api/hook.h"
+#include "log.h"
+#include "api/patch.h"
+#include "api/settings_registry.h"
 
 extern "C" {
 #include "lauxlib.h"

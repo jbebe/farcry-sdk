@@ -1,7 +1,7 @@
-#include "function_registry.h"
+#include "api/function_registry.h"
 
 #include "caller_identity.h"
-#include "dunia_api.h"
+#include "engine/dunia_api.h"
 #include "log.h"
 
 #include <string>

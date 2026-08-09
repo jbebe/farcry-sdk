@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../include/plugin_api.h"
+#include "plugin_api.h"
 
 #include <memory>
 #include <string>

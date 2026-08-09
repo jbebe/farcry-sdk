@@ -1,9 +1,9 @@
-#include "magma_package.h"
+#include "ui/magma_package.h"
 
-#include "dunia_api.h"
-#include "hook.h"
+#include "engine/dunia_api.h"
+#include "api/hook.h"
 #include "log.h"
-#include "page_assets.h"
+#include "ui/page_assets.h"
 
 #include <cstdint>
 #include <windows.h>

@@ -8,21 +8,21 @@
 // engine code beyond its own DllMain/CRT init has run. Ships as a separate exe next to the
 // untouched FarCry2.exe - see tools/FCSE/README.md for the full design and install instructions.
 
-#include "../include/plugin_api.h"
+#include "plugin_api.h"
 #include "caller_identity.h"
 #include "crash_log.h"
-#include "debug_commands.h"
-#include "dunia_api.h"
-#include "function_registry.h"
-#include "hook.h"
+#include "engine/debug_commands.h"
+#include "engine/dunia_api.h"
+#include "api/function_registry.h"
+#include "api/hook.h"
 #include "ini_file.h"
 #include "log.h"
 #include "lua/lua_host.h"
 #include "lua/tick_source.h"
-#include "mods_tab.h"
-#include "patch.h"
-#include "plugin_loader.h"
-#include "settings_registry.h"
+#include "ui/mods_tab.h"
+#include "api/patch.h"
+#include "api/plugin_loader.h"
+#include "api/settings_registry.h"
 
 #include <windows.h>
 
