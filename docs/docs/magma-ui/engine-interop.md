@@ -415,9 +415,25 @@ What the game does instead, in descending order of how much you get for free:
    pass to `AddItem` round-trips back to you, which is how rows carry a payload pointer.
 2. **`AreaInstance` stamping.** Instantiate an authored area repeatedly and override labels and
    materials per instance, as above.
-3. **Pre-authored slots.** Author more widgets than you need, hide them, and reveal the ones you
-   use. This is the standard trick for a variable-length screen that is not a list — and it is what
-   FCSE does: ship a layout declaring 20 `FCSE_SLOT_nn` widgets, then drive them by name.
+3. **Pre-authored slots.** Author more widgets than you need and drive the ones you use by name.
+   This is the standard trick for a variable-length screen that is not a list — and it is what FCSE
+   does: ship a layout declaring 20 `FCSE_SLOT_nn` widgets, then bind them one per row.
+
+:::danger[Authoring a slot `HIDDEN` and revealing it from code does not work]
+It is the obvious way to build such a bank, and it fails in a way that costs a debugging session.
+`HIDDEN` and `magma::Element::SetVisible` are **different bits of the same flags byte** at
+`element+0x34`: `SetVisible` (`0x10ab13f0`) writes bit 0, while the authored `HIDDEN` flag is bit 1 —
+and magma's draw collection (`0x10ad3fb0`) skips any element whose bit 1 is set. So `SetVisible(true)`
+on an authored-hidden element leaves it in a state that is neither drawn nor inert, and the engine
+dereferences a null shortly after.
+
+Author every slot visible and hide the unused ones at runtime instead. That only ever moves bit 0,
+which is what `ShowElementNomad` and `HideElementNomad` do, so it is a path the engine already
+exercises. To reach a slot's element without binding anything to it, resolve the page's own
+`FullLink` property by name with `magma::UserData::GetUserDataElement` (`0x10a963a0`,
+`bool(const std::string&, Element*&)`) — the same lookup `CUISettingBase::FetchMagmaElements`
+performs. Resolve once after the page's `Init`, cache the pointers, and toggle them per rebuild.
+:::
 
 `Area::SetDynamicSize()` and `Area::SetStaticBox(const Rect2D<short>&)` control whether the
 container re-measures itself after its contents change, which is what keeps a rebuilt list from
@@ -478,6 +494,62 @@ a `CValueListSetting` puts its element at `+0x48` and its widget at `+0x44` (plu
 An unresolved `slotParam` is silent: the item-adds are guarded on the widget being non-null, so the
 row appears with no control rather than failing.
 
+### Text entry is an authored element, not a dialog
+
+Worth stating plainly because the obvious guess is wrong: **`CGameMessageBoxEditBox` is not a text
+prompt.** Raising it live produces the "you have unsaved changes" confirmation, not something a
+player can type into. The message-box family is for confirmations.
+
+The way the game actually takes text is far simpler, and the stock **Options → Network** page is the
+reference: it authors bare **`EditBox` elements directly on the page area**, six of them, at the row
+positions immediately below its four spinner rows. Each is a top-level element of type `EditBox`
+carrying:
+
+- a `FIELDLINK` and a `CURSORLINK` into `common.mgb` (the field backing and the caret),
+- its own `ActionExecuterEditbox` raising an action on the `enter` trigger,
+- a `FOCUSABLE`, so the player can reach and type into it.
+
+Two consequences for a mod. First, no modal and no new engine call are needed — text entry is
+authoring. Second, those elements are **not** reachable through the page's `SETTING_*` links: the
+stock page resolves them through the XML element factory, which is why their name hashes appear
+nowhere in `Dunia.dll`. A layout you own can do better by giving each one a `FullLink` property like
+any other slot — but note that every `FullLink` in the shipped corpus is a 5-id chain *through an
+instanced area* (package, page, element, area, widget); a 3-id chain naming a direct element is
+unattested. The safe shape is therefore a small local area holding the `EditBox`, instanced once per
+row, exactly like the value and slider cells.
+
+### Modal dialogs
+
+The game carries a family of modal boxes and **all of their layouts live in `common.mgb`**, which is
+loaded whenever a menu is up. So any screen — including a mod's own — can raise one with no layout of
+its own. (Verified by probing each page name's CRC32 against every shipped menu package:
+`MESSAGEBOX_EDIT_BOX` (`0xA98A4F3F`), `MESSAGEBOXLIST`, `MESSAGEBOX` and `MESSAGEBOX_SINGLEBTN`
+appear in `common.mgb` and nowhere else.)
+
+`CGameMessageBoxHelper`'s constructor (`0x1004cc10`) registers one factory per box type —
+`CGameMessageBox`, `CGameMessageBoxList`, `CGameMessageBoxListSingleButton`,
+`CGameMessageBoxEditBox`, its password variant, and one more. Raising one is four steps:
+
+1. **Build a `CGameMessageBoxParam`** on the stack with `0x1004d9b0`
+   (`ctor(const wstring& title, const wstring& text, int flags)`; `0x11` is the stock two-button
+   shape). Its destructor is `0x1003d5e0`.
+2. **Choose the class** by overwriting the registration handle at `param+0x10`, which the
+   constructor defaults to the plain box.
+3. **Caption the buttons** with `0x1004d890` (`SetButtonCaption(int buttonBit, const wstring&)`);
+   the stock caller uses bit `0x01` and bit `0x10`.
+4. **Show it** with `CGameMessageBoxHelper::Show` (`0x1004cd50`,
+   `__thiscall(T** out, Listener*, const Param&)` on the singleton at `*(void**)0x10fded3c`).
+
+The **listener** is where the answer comes back, and its contract is small enough to read off the
+one call site that uses it (`0x1004c6a7`): `this` is the listener, and the engine calls
+**slot `+0x04` with exactly one argument, the page**. The word at `listener+0x04` is not a virtual
+at all — the adapter constructor (`0x1004c2b0`) writes the box's token into it, so a listener is
+`{ vptr; token; }`.
+
+`0x10ab2900` narrows a `wstring` into a `std::string` (truncating each unit to a byte, `0x7f` above
+`0xFF`), and `CFCXCustomMapService::DisplayDeleteMessageBox` (`0x107b5810`) is the complete worked
+example.
+
 ### The page owns its rows by button id
 
 `CListMenuPage::AddButton` returns an **int**, and `CSettingsPage` keeps a
@@ -502,12 +574,36 @@ rows are handed the same button ids back with the wrong types. Clearing the ids 
 
 ### Reusing a concrete page class safely
 
-The fix generalises past this one class. Both walkers are reachable only through **vtable slots**:
-`+0x08` `Display` (whose whole body is `RefreshOptionList(); this+0x200 = 0;
-CFCXBaseOptionPage::Display();`), and the `+0x50`/`+0x54` apply/refresh pair. So a mod can construct
-the real class — which is what correctly initialises the settings map, the embedded strings and the
-secondary vptrs — and then point the object at a **private copy of its vtable** with those slots
-replaced.
+The fix generalises past this one class, but only if you find *all* of the walkers. Scanning the
+class's translation unit for instructions that form the address of anything in the id block turns up
+24 of them, in five functions, and each is reachable through exactly one vtable slot:
+
+| Slot | Reaches | What it is |
+|---|---|---|
+| `+0x08` | `RefreshOptionList` | `Display` — `RefreshOptionList(); this+0x200 = 0; CFCXBaseOptionPage::Display();` |
+| `+0x10` | `FUN_1081f4f0` | `Update(float)` — base tick, then a switch on `this+0x200` |
+| `+0x4c` | `FUN_1081f6c0` | `OnSettingChanged(Action*)` — see below |
+| `+0x50` | `ApplyOptionsFromSettings` | apply |
+| `+0x54` | `UpdateSettingsFromOptions` | refresh |
+
+So a mod can construct the real class — which is what correctly initialises the settings map, the
+embedded strings and the secondary vptrs — and then point the object at a **private copy of its
+vtable** with those five slots replaced. Replacing only some of them is not a partial fix, it is a
+delayed crash: an earlier attempt at this replaced three, and the two it missed surfaced as an
+access violation the first time a player changed a value.
+
+`+0x4c` is worth calling out, because it is the hook such a page actually wants.
+`CSettingsPage::OnActionSignal` (`0x10cdde80`) offers each incoming action to every setting it owns,
+and when one **consumes** it — which is how a row's value changes at all — it calls this slot through
+the primary vtable. The setting has already updated itself by then, so this is a clean "a value just
+changed" notification.
+
+Two other pieces of `CFCXBaseOptionPage` state matter to a page that does its own persistence. The
+byte at `page+0x1B8` is the "unsaved changes" flag: `SetDirty` (`0x1087eb50`) raises it,
+`ApplyIfDirty` (`0x1087eb10`) calls `+0x50` and clears it, and the Back path reads it to decide
+whether to warn. A page that writes its changes immediately should clear it rather than answer the
+prompt. And `this+0x200` is a small state machine whose *only* reader is the `Update` slot, so
+neutralising that slot makes it inert no matter what writes it.
 
 Nothing is patched, so the stock screen that shares the class is unaffected *by construction* rather
 than by a `this`-comparison inside a global hook, and the option ids simply stay at the `-1` the

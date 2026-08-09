@@ -32,9 +32,18 @@ A running task list across the whole project.
 
 ## Tools/FCSE
 
-- [ ] Slider and choice settings (`FCSE_SettingType_Slider` / `_Choice` in `include/plugin_api.h`).
-  Needs `AddSliderSetting`/`AddValueListSetting` and a second slot bank in `fcse.mgb` pointing at
-  `common.mgb` area `62EA6603` rather than `652FD37C`.
+- [ ] **Known bug: pressing Enter in a text field does nothing.** On the stock Options → Network
+  page that commits the value and refreshes the page. The `ActionExecuterEditbox` on the element only
+  *raises* an action on the `enter` trigger — committing is the page's response to it, not something
+  the widget does — and FCSE's page never sees that action: the inherited handler
+  (`CFCXBaseOptionPage::OnActionSignal`, `0x1087f1f0`) early-returns unless the dirty flag at
+  `page+0x1B8` is set, and FCSE clears that flag every frame to suppress the "unsaved changes"
+  prompt. The two needs conflict, so the fix is FCSE registering its own `IMagmaActionListener`
+  rather than relying on the inherited one — and probably narrowing the dirty-flag clear at the same
+  time. Values still save; only the Enter gesture is missing.
+- [ ] **Known bug: no mouse cursor on the Mod Configuration page.**
+- [ ] Two faults seen in `fcse.log` and not yet chased: `FCSE.exe+0x14ABB` (in FCSE's own code) and
+  a recurring `Dunia.dll+0xAD4095` in magma's draw-collection walk.
 
 ## Tools/"dll plugins"
 

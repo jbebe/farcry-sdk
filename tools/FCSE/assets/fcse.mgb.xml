@@ -1,5 +1,5 @@
 <?xml version='1.0' encoding='utf-8'?>
-<MagmaPackage sentinel="CD0000AB" version="2010000" flag="false" POOLCOUNTS="9 13 14 1 1 224 23 3 0 0 0 246 150 109 0 260 109 88 44 0 42 6 3 7 30 0 20 0 7 3 0 556 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 1 68 68 133 142 166 111 0 0 10 0 6 3 22 4 719" PAGESIZE.w="1024" PAGESIZE.h="768" DISPLAYOFFSET.x="32" DISPLAYOFFSET.y="24" DEFAULTMATERIAL="">
+<MagmaPackage sentinel="CD0000AB" version="2010000" flag="false" POOLCOUNTS="64 64 64 64 64 224 64 64 64 64 64 246 150 109 64 260 109 88 64 64 64 64 64 64 64 64 64 64 64 64 64 556 64 64 64 64 64 64 64 64 64 64 64 64 64 64 64 64 64 64 68 68 133 142 166 111 64 64 64 64 64 64 64 64 719" PAGESIZE.w="1024" PAGESIZE.h="768" DISPLAYOFFSET.x="32" DISPLAYOFFSET.y="24" DEFAULTMATERIAL="">
   <TYPES>
     <TYPE id="#00000000" />
     <TYPE id="#00000000" />
@@ -305,6 +305,66 @@
           </PROPERTY>
           <PROPERTY key="FCSE_SLIDER_20" type="18">
             <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_slider_20 #62EA6603 #CFC71007" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_01" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_01" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_02" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_02" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_03" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_03" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_04" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_04" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_05" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_05" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_06" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_06" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_07" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_07" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_08" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_08" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_09" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_09" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_10" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_10" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_11" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_11" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_12" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_12" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_13" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_13" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_14" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_14" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_15" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_15" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_16" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_16" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_17" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_17" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_18" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_18" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_19" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_19" />
+          </PROPERTY>
+          <PROPERTY key="FCSE_EDIT_20" type="18">
+            <LINK slot="66" LASTOBJECTTYPE="Focusable" IDS="fcse FCSE_PAGE p_edit_20" />
           </PROPERTY>
         </PROPERTIES>
       </USERDATA>
@@ -746,7 +806,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_01">
             <PROPERTIES />
           </USERDATA>
@@ -764,7 +824,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_02">
             <PROPERTIES />
           </USERDATA>
@@ -782,7 +842,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_03">
             <PROPERTIES />
           </USERDATA>
@@ -800,7 +860,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_04">
             <PROPERTIES />
           </USERDATA>
@@ -818,7 +878,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_05">
             <PROPERTIES />
           </USERDATA>
@@ -836,7 +896,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_06">
             <PROPERTIES />
           </USERDATA>
@@ -854,7 +914,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_07">
             <PROPERTIES />
           </USERDATA>
@@ -872,7 +932,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_08">
             <PROPERTIES />
           </USERDATA>
@@ -890,7 +950,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_09">
             <PROPERTIES />
           </USERDATA>
@@ -908,7 +968,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_10">
             <PROPERTIES />
           </USERDATA>
@@ -926,7 +986,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_11">
             <PROPERTIES />
           </USERDATA>
@@ -944,7 +1004,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_12">
             <PROPERTIES />
           </USERDATA>
@@ -962,7 +1022,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_13">
             <PROPERTIES />
           </USERDATA>
@@ -980,7 +1040,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_14">
             <PROPERTIES />
           </USERDATA>
@@ -998,7 +1058,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_15">
             <PROPERTIES />
           </USERDATA>
@@ -1016,7 +1076,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_16">
             <PROPERTIES />
           </USERDATA>
@@ -1034,7 +1094,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_17">
             <PROPERTIES />
           </USERDATA>
@@ -1052,7 +1112,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_18">
             <PROPERTIES />
           </USERDATA>
@@ -1070,7 +1130,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_19">
             <PROPERTIES />
           </USERDATA>
@@ -1088,7 +1148,7 @@
             <NEIGHBORS />
           </FOCUSABLE>
         </Element>
-        <Element slot="58" type="PageInstance" HIDDEN="true" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+        <Element slot="58" type="PageInstance" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
           <USERDATA name="p_slider_20">
             <PROPERTIES />
           </USERDATA>
@@ -1102,6 +1162,966 @@
             <LINK slot="150" TIMING="TickTimingStrategy" PACKAGE="common" AREA="#62EA6603" ISUSINGDUPLICATEDAREA="true" />
             <DEFAULTFOCUSES />
           </PageInstance>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_01">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_01" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="158" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_02">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_02" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="186" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_03">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_03" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="214" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_04">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_04" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="242" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_05">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_05" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="270" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_06">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_06" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="298" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_07">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_07" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="326" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_08">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_08" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="354" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_09">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_09" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="382" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_10">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_10" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="410" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_11">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_11" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="438" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_12">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_12" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="466" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_13">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_13" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="494" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_14">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_14" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="522" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_15">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_15" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="550" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_16">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_16" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="578" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_17">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_17" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="606" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_18">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_18" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="634" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_19">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_19" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="662" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
+          <FOCUSABLE INPUTFILTER="255">
+            <NEIGHBORS />
+          </FOCUSABLE>
+        </Element>
+        <Element slot="92" type="EditBox" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="p_edit_20">
+            <PROPERTIES>
+              </PROPERTIES>
+          </USERDATA>
+          <ACTIONEXECUTER slot="139" type="ActionExecuterEditbox">
+            <ACTIONS>
+              <ACTION ACTIONNAME="#69BE84E9">
+                <USERDATA name="#69BE84E9">
+                  <PROPERTIES>
+                    <PROPERTY key="#D5D636C1" type="16" value="enter" />
+                  </PROPERTIES>
+                </USERDATA>
+              </ACTION>
+            </ACTIONS>
+            <EVENTS>
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="0" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+              <EVENT ACTIONINDEX="" />
+            </EVENTS>
+          </ACTIONEXECUTER>
+          <KEYFRAMES>
+            <Keyframe name="kf_edit_20" IDX="0" INTERPOLATION="None">
+              <ScaleState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="0" ORIGIN.y="0" POSITION.x="556" POSITION.y="690" SCALEX="1" SCALEY="1" />
+            </Keyframe>
+          </KEYFRAMES>
+          <EditBox maxLength="15">
+            <FIELDLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#60444211" ISUSINGDUPLICATEDAREA="true" />
+            <CURSORLINK slot="150" TIMING="TickTimingStrategy" PACKAGE="#E5EC7051" AREA="#9C8DD060" ISUSINGDUPLICATEDAREA="true" />
+          </EditBox>
           <FOCUSABLE INPUTFILTER="255">
             <NEIGHBORS />
           </FOCUSABLE>

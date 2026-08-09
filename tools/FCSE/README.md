@@ -132,7 +132,7 @@ like a stock one:
 | `Checkbox` | a YES/NO spinner | `true` / `false` |
 | `Choice` | a `< value >` spinner over `choices` | the chosen **label**, so the file stays readable; an index is accepted on read |
 | `Slider` | a draggable slider over `[minValue, maxValue]` | the integer |
-| `Text` | **not yet editable in-game** - the row shows the value; edit it in `fcse.ini` | the raw string |
+| `Text` | a row showing the value; activating it opens the game's own modal text prompt | the raw string |
 
 Everything after `userdata` in `FCSE_Setting` is per-type configuration, ignored by the types that
 do not use it - which is why a `Checkbox` never has to mention any of it. A `Choice` needs at least

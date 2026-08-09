@@ -10,6 +10,7 @@
 
 #include "../include/plugin_api.h"
 #include "caller_identity.h"
+#include "crash_log.h"
 #include "debug_commands.h"
 #include "dunia_api.h"
 #include "function_registry.h"
@@ -45,6 +46,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
 
     Log::Init(GetModuleHandleW(nullptr));
     Log::Loader("FCSE starting");
+
+    // Immediately after the log opens and before anything else: this is what turns a
+    // crash-to-desktop into an address, and the things most likely to fault are the engine
+    // touchpoints installed below.
+    CrashLog::Install();
 
     const std::wstring& directory = Log::LoaderDirectory();
 
@@ -127,6 +133,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     TickSource::Finish();
     LuaHost::Shutdown();
     HookManager::Shutdown();
+    CrashLog::Shutdown();
     Log::Shutdown();
     return ok ? 0 : 1;
 }

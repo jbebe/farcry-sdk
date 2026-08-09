@@ -78,11 +78,48 @@ area, and `common.mgb` is always loaded by the time the Options screen appears:
 - **`p_slider_01` … `p_slider_20`** → common `62EA6603`, the slider cell, for `AddSliderSetting`. A
   second bank at the **same** row positions, because a row's type is not known until a plugin
   registers its settings — every row therefore has one cell of each kind and FCSE binds whichever it
-  needs. Authored `HIDDEN="true"`, unlike the value cells: an unbound `ListBox` has no items and
-  draws nothing, but a `Slider` has a `TRACKLINK` and would draw its track at every row that did not
-  turn out to be a slider. FCSE shows the ones it binds and hides them again on the next rebuild,
-  using the element pointer `AddSliderSetting` already resolved into the setting object — so no
-  lookup by name is needed.
+  needs.
+
+- **`p_edit_01` … `p_edit_20`** → **no cell at all**: a bare `EditBox` element authored straight onto
+  the page, copied from the stock Options → Network page (element `#285CF86D`), which is the only
+  shape the engine actually uses for typed text. There is no `AddEditBoxSetting` in `CSettingsPage`
+  and no edit-box cell in `common.mgb`. The element brings its own `FIELDLINK`/`CURSORLINK` into
+  `common.mgb`, an `ActionExecuterEditbox` on the `enter` trigger, and a `FOCUSABLE`; the stock
+  page's OASIS label property is dropped so ours starts empty.
+
+  Its `FullLink` is the one unattested thing in the package. Every link in the shipped corpus is a
+  5-id chain *through an instanced area* (package, page, element, area, widget); a bare element needs
+  only three. That is safe to try — the engine resolves these with a call returning a bool, so a
+  chain it dislikes costs the row its text box and nothing else, and `fcse_page.cpp` logs the miss.
+  If it does not resolve, the fallback is to wrap the `EditBox` in a local area and instance it like
+  the other two banks.
+
+All three banks are authored **visible**, and FCSE hides the cells a display does not use. That
+ordering is not a preference, it is the only one that works — see "Showing and hiding cells" below.
+
+`POOLCOUNTS` is no longer copied verbatim from `options.mgb` either. Those 65 counts are per-type
+memory-pool pre-reservation indexed by the engine's own pool order, not by the type table, so there
+is no way to tell which entry is `EditBox` — and this package authors twenty where `options.mgb` has
+six. Every entry is raised to a floor instead, which is safe because over-reserving has no effect on
+any file offset.
+
+### Showing and hiding cells
+
+Forty cells at twenty positions means thirty-nine of them are wrong on any given row, so the unused
+ones have to come off screen. FCSE resolves all forty once after `Init`, through
+`magma::UserData::GetUserDataElement` (`0x10a963a0`) against the page's own `FCSE_SLOT_nn` /
+`FCSE_SLIDER_nn` properties — the same lookup `CUISettingBase::FetchMagmaElements` uses — and caches
+the `magma::Element*`s. Each rebuild then hides all forty and lets every row re-reveal its own as it
+binds, so a row that changes type between displays cannot leave its old control behind.
+
+:::warning[Author the cells visible, not hidden]
+The obvious arrangement — author the bank `HIDDEN` and reveal only what you bind — does not work,
+and it does not fail quietly. `HIDDEN` and `magma::Element::SetVisible` are **different bits of the
+flags byte at `element+0x34`**: `SetVisible` writes bit 0, the authored flag is bit 1, and magma's
+draw collection (`0x10ad3fb0`) skips any element with bit 1 set. A "shown" cell was therefore never
+drawn, and the engine dereferenced a null the frame after. Authored visible plus runtime hiding only
+ever moves bit 0 — exactly what `ShowElementNomad` / `HideElementNomad` do.
+:::
 - **`p_prompts_navbar`** → common `E58F0F6C`, the B/Back prompt strip.
 - Five decorative elements carried verbatim from the stock pages. They appear on all four shipped
   settings pages (Game, Display, Sound, Network), so they are options-screen chrome rather than
@@ -151,9 +188,8 @@ things here.
   the `.mgb` directly through `CEngineNomad::LoadPackage` rather than through
   `CMagmaConfigUIResource`, so a `.desc` would never be read on that path. Revisit if the Back
   prompt does not appear.
-- **A text-entry cell.** There is deliberately no third bank. A `Text` setting is meant to open
-  `CGameMessageBoxEditBox`, the game's own modal text prompt, whose layout `MESSAGEBOX_EDIT_BOX` is
-  declared in `common.mgb` — verified by probing `CRC32("MESSAGEBOX_EDIT_BOX") = 0xA98A4F3F` against
-  every shipped menu package, where it appears in `common.mgb` and nowhere else. So the prompt is
-  reachable from this page with no layout of our own; what is still missing is native, not
-  authored — see `fcse_page.cpp`'s `FCSE_SettingType_Text` case.
+- **A text-entry cell.** There is deliberately no third bank, and there does not need to be. A
+  `Text` setting is an ordinary row that opens `CGameMessageBoxEditBox`, the game's own modal text
+  prompt, whose layout `MESSAGEBOX_EDIT_BOX` is declared in `common.mgb` — verified by probing
+  `CRC32("MESSAGEBOX_EDIT_BOX") = 0xA98A4F3F` against every shipped menu package, where it appears
+  in `common.mgb` and nowhere else. `src/text_prompt.cpp` raises it.

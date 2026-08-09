@@ -79,6 +79,23 @@ PROMPTS_AREA = "p_prompts_navbar"
 SLIDER_CELL_AREA = "#62EA6603"
 SLIDER_CELL_WIDGET = "#CFC71007"
 
+# The text field. Unlike the other two controls this is not a cell instanced from common.mgb - it is
+# a bare `EditBox` element authored straight onto the page, which is what the stock Options > Network
+# page does: six of them, at the row positions below its four spinner rows. There is no
+# "AddEditBoxSetting" in CSettingsPage and no edit-box cell in common.mgb, so this is the only shape
+# the engine actually uses for typed text.
+#
+# The template carries its own FIELDLINK/CURSORLINK into common.mgb (the field backing and the
+# caret), an ActionExecuterEditbox that fires on the `enter` trigger, and a FOCUSABLE.
+NETWORK_EDIT_ELEMENT = "#285CF86D"
+
+# Every FullLink in the shipped corpus is a 5-id chain *through an instanced area* (package, page,
+# element, area, widget). A bare element needs only three - package, page, element - which nothing
+# ships, so this is the one unattested thing in the file. It is also a safe thing to try: the engine
+# resolves these links with a call that returns a bool, so a chain it dislikes costs the row its text
+# box and nothing else. fcse_page.cpp logs the miss.
+EDIT_LINK_IDS = 3
+
 SLOT_COUNT = 20             # == the nav ListBox's BUTTONCOUNT viewport
 
 # Geometry is measured from the Network tab in whatever options.mgb is passed in, never hardcoded:
@@ -111,6 +128,15 @@ LOCAL_MATERIALS = [
     ("notebook", "\\textures\\hud\\notebook.png"),
     ("frame_color_scratch", "\\textures\\common\\frame_color_scratch.png"),
 ]
+
+
+# Comfortably above anything this package authors (20 of any one control type, 68 elements total),
+# and small enough that the pools stay trivial.
+POOL_COUNT_FLOOR = 64
+
+
+def floored_pool_counts(counts: str) -> str:
+    return " ".join(str(max(int(value), POOL_COUNT_FLOOR)) for value in counts.split())
 
 
 def find_area(root: ET.Element, name: str) -> ET.Element:
@@ -192,16 +218,23 @@ def measure_geometry(options_root: ET.Element) -> tuple[tuple[int, int], int, in
 
 def build(options_root: ET.Element) -> ET.Element:
     game = find_area(options_root, GAME_PAGE_AREA)
+    network = find_area(options_root, NETWORK_PAGE_AREA)
     nav_pos, row_x, row_y0 = measure_geometry(options_root)
 
     root = ET.Element("MagmaPackage", {
         "sentinel": options_root.get("sentinel"),
         "version": options_root.get("version"),
         "flag": options_root.get("flag"),
-        # Pool pre-reservation. Copied wholesale from options.mgb: these size the Allocate*PoolChunk
-        # sweep and have no effect on any file offset, so over-reserving for a 23-element package is
-        # harmless while under-reserving would not be.
-        "POOLCOUNTS": options_root.get("POOLCOUNTS"),
+        # Pool pre-reservation: 65 per-type instance counts feeding the engine's Allocate*PoolChunk
+        # sweep. They size memory pools and have no effect on any file offset, so over-reserving is
+        # harmless while under-reserving is not.
+        #
+        # Taken from options.mgb and then floored, rather than copied verbatim. The counts are
+        # indexed by the engine's own pool order, not by the type table, so there is no way to tell
+        # which entry is `EditBox` - and this package authors twenty of those where options.mgb has
+        # six. Raising every entry to a floor sidesteps the question entirely at a cost of a few
+        # pooled objects.
+        "POOLCOUNTS": floored_pool_counts(options_root.get("POOLCOUNTS")),
         "PAGESIZE.w": options_root.get("PAGESIZE.w"),
         "PAGESIZE.h": options_root.get("PAGESIZE.h"),
         "DISPLAYOFFSET.x": options_root.get("DISPLAYOFFSET.x"),
@@ -251,6 +284,11 @@ def build(options_root: ET.Element) -> ET.Element:
     for i in range(1, SLOT_COUNT + 1):
         add_link(f"FCSE_SLIDER_{i:02}", f"p_slider_{i:02}", SLIDER_CELL_AREA, SLIDER_CELL_WIDGET)
 
+    # The text fields, linked by the short chain described at EDIT_LINK_IDS.
+    for i in range(1, SLOT_COUNT + 1):
+        prop = ET.SubElement(properties, "PROPERTY", {"key": f"FCSE_EDIT_{i:02}", "type": "18"})
+        prop.append(full_link("66", "Focusable", [PACKAGE, PAGE, f"p_edit_{i:02}"]))
+
     # --- the elements ------------------------------------------------------------------------
     # Order is draw order, and is kept identical to the stock settings pages.
     elements = ET.SubElement(area, "CHILDREN")
@@ -280,15 +318,40 @@ def build(options_root: ET.Element) -> ET.Element:
             slot_template, f"p_slot_{i:02}", VALUE_CELL_AREA,
             (row_x, row_y0 + ROW_STEP * (i - 1)), f"kf_slot_{i:02}"))
 
-    # The slider bank, authored HIDDEN. A value cell is an empty ListBox until something adds items
-    # to it, so an unbound one draws nothing and the twenty above cost nothing when unused - but a
-    # Slider has a TRACKLINK and would draw its track regardless. Starting hidden means FCSE only
-    # ever has to *show* the ones it binds, and it can do that from the element pointer
-    # AddSliderSetting already resolved into the setting object, with no lookup by name.
+    # The slider bank, authored visible exactly like the value cells.
+    #
+    # It was authored HIDDEN at first, on the theory that FCSE would reveal only the cells it bound.
+    # That does not work, and the way it fails is worth recording: `HIDDEN` and
+    # `magma::Element::SetVisible` are *different bits* of the flags byte at element+0x34 - bit 1 is
+    # the authored flag, bit 0 is the one SetVisible writes - and magma's draw collection skips any
+    # element with bit 1 set. So a "shown" cell was still not drawn, and the engine dereferenced a
+    # null the frame after. There is no data-only way to author a cell that code can reveal later.
     for i in range(1, SLOT_COUNT + 1):
         elements.append(instance_element(
             slot_template, f"p_slider_{i:02}", SLIDER_CELL_AREA,
-            (row_x, row_y0 + ROW_STEP * (i - 1)), f"kf_slider_{i:02}", hidden=True))
+            (row_x, row_y0 + ROW_STEP * (i - 1)), f"kf_slider_{i:02}"))
+
+    # The text fields, one per row, at the same rows as the two cell banks. Authored visible like
+    # them; fcse_page.cpp hides whichever a display does not use.
+    edit_template = element_named(network, NETWORK_EDIT_ELEMENT)
+    edit_x = int(edit_template.find("KEYFRAMES/Keyframe/ScaleState").get("POSITION.x"))
+    for i in range(1, SLOT_COUNT + 1):
+        el = ET.fromstring(ET.tostring(edit_template))
+        el.find("USERDATA").set("name", f"p_edit_{i:02}")
+        el.set("HIDDEN", "false")
+
+        # The stock element carries an OASIS string resource - the Network page's own field label.
+        # Dropped so ours starts empty and shows only what a plugin put in it.
+        props = el.find("USERDATA/PROPERTIES")
+        for stale in list(props):
+            props.remove(stale)
+
+        keyframe = el.find("KEYFRAMES/Keyframe")
+        keyframe.set("name", f"kf_edit_{i:02}")
+        state = keyframe.find("ScaleState")
+        state.set("POSITION.x", str(edit_x))
+        state.set("POSITION.y", str(row_y0 + ROW_STEP * (i - 1)))
+        elements.append(el)
 
     elements.append(carry(CHROME_MID))
 

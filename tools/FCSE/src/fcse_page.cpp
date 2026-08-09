@@ -46,9 +46,18 @@ namespace {
     // (0x10820160), and the reason is worth stating: everything about this class that is specific to
     // the *Game tab* hangs off exactly these three slots, and nothing reaches it any other way.
     //
-    //   +0x08  Display   0x108211c0  { RefreshOptionList(); this+0x200 = 0; CFCXBaseOptionPage::Display(); }
-    //   +0x50  apply     0x108200d0  -> CFCXOptionGamePage::ApplyOptionsFromSettings  (0x1081fd10)
-    //   +0x54  refresh   0x108200e0  -> CFCXOptionGamePage::UpdateSettingsFromOptions (0x1081f800)
+    //   +0x08  Display          0x108211c0  { RefreshOptionList(); this+0x200 = 0; base::Display(); }
+    //   +0x10  Update(float)    0x10820100  base update, then a switch on this+0x200
+    //   +0x4c  OnSettingChanged 0x10820150  -> FUN_1081f6c0
+    //   +0x50  apply            0x108200d0  -> CFCXOptionGamePage::ApplyOptionsFromSettings  (0x1081fd10)
+    //   +0x54  refresh          0x108200e0  -> CFCXOptionGamePage::UpdateSettingsFromOptions (0x1081f800)
+    //
+    // That list is not a guess and not a sample. Scanning this class's whole translation unit for
+    // instructions that form the address of anything in the id block found 24 of them, in exactly
+    // five functions - RefreshOptionList, FUN_1081f4f0, FUN_1081f6c0, and the apply/refresh pair -
+    // and each of those five is reachable only through one of the five slots above. Replace the
+    // five and nothing can touch the ids at all. An earlier version of this code replaced only
+    // three, and the two it missed were found the way such things always are: the game crashed.
     //
     // The last two are why the native-control path used to crash on a click. The page stores ten
     // *button ids* at +0x1d8..+0x1fc, one per Game-tab option, and both functions do:
@@ -76,13 +85,19 @@ namespace {
     // "MAINMENU_OPTIONGAME_PAGE_PC" string the constructor pushes.
     constexpr uintptr_t kPageVtableRva = 0x10ead9d8;
     constexpr size_t kPageVtableSlots = 26;
-    constexpr size_t kDisplaySlot = 2;  // +0x08
-    constexpr size_t kApplySlot = 20;   // +0x50
-    constexpr size_t kRefreshSlot = 21; // +0x54
+    constexpr size_t kDisplaySlot = 2;        // +0x08
+    constexpr size_t kUpdateSlot = 4;         // +0x10
+    constexpr size_t kSettingChangedSlot = 19; // +0x4c
+    constexpr size_t kApplySlot = 20;         // +0x50
+    constexpr size_t kRefreshSlot = 21;       // +0x54
 
     // What our Display chains to once it has built its own rows - the rest of the stock Display,
     // minus the RefreshOptionList call that opens it.
     constexpr uintptr_t kBaseOptionPageDisplayRva = 0x1087ed50;
+
+    // What the stock Update calls before its own state machine - the base class's per-frame tick,
+    // which is the only part of that slot a page like ours still wants.
+    constexpr uintptr_t kBaseUpdateRva = 0x10108c10;
 
     // Cleared by the stock Display on every display; mirrored so ours behaves identically.
     constexpr ptrdiff_t kDisplayResetFieldOffset = 0x200;
@@ -131,11 +146,57 @@ namespace {
     // 13/14 the other settings use work here unchanged.
     constexpr uintptr_t kAddSliderSettingRva = 0x10cddff0;
 
-    // magma::Element::SetVisible(bool) - stores the flag in bit 0 of the byte at element+0x34.
-    // Identified from CMagmaActionDispatcher::OnActionSignal, which handles HideElementNomad
-    // (CRC32 0x4A5A04D2) itself by resolving the action's "Target element" link and calling this
-    // with 0. Needed because the slider cells are authored hidden - see AppendSliderRow.
+    // magma::UserData::GetUserDataElement(const std::string& name, Element*& out) - resolves one of
+    // the page area's FullLink properties to the element it names, which is exactly how the engine
+    // finds FCSE_SLOT_nn itself (CUISettingBase::FetchMagmaElements calls this).
+    //
+    // Used to get all 40 cell elements up front so the unused ones can be hidden. Without it a cell
+    // is only reachable by binding a setting to it, which is the one thing we do not want to do to
+    // a row that is not using it.
+    constexpr uintptr_t kGetUserDataElementRva = 0x10a963a0;
+
+    // magma::Element::SetVisible(bool) - bit 0 of the flags byte at element+0x34, and the same call
+    // the dispatcher makes for ShowElementNomad / HideElementNomad. Safe in this direction: the
+    // cells are authored visible, so their sub-areas exist and only the draw flag moves. (Going the
+    // other way - authored HIDDEN, revealed by code - is bit 1 and does not work; see the note by
+    // the slot-cell comment.)
     constexpr uintptr_t kElementSetVisibleRva = 0x10ab13f0;
+
+    // The empty-string constant this build's std::string points its proxy field at. Copied so a
+    // forged string looks exactly like one the engine made.
+    constexpr uintptr_t kEmptyStringProxyRva = 0x10fd42d1;
+
+    // CFCXBaseOptionPage's "the player changed something and has not applied it" flag.
+    //
+    // CFCXBaseOptionPage::SetDirty (0x1087eb50) sets it when a row changes; ApplyIfDirty
+    // (0x1087eb10) calls vtable +0x50 and clears it; the Back path reads it and puts up the
+    // "you have unsaved changes" prompt. That prompt is right for a stock options page, which
+    // batches edits until Apply - and wrong for this one, which writes fcse.ini on the change
+    // itself. So FCSE clears the flag rather than answering the question: there is genuinely
+    // nothing pending.
+    constexpr ptrdiff_t kDirtyFlagOffset = 0x1b8;
+
+    // magma::Page::SetSelected(int controller, Focusable* element) - moves input focus to an
+    // element. This is exactly what the dispatcher does for the SetFocusNomad action: resolve the
+    // target and call this on the owning page. Needed because an EditBox authored beside the row
+    // list has no NEIGHBORS, so nothing routes focus into it on its own.
+    //
+    // 255 is the "any controller" value the layout's own DEFAULT_ELEMENT uses. The engine's own call
+    // site passes the real main-controller id (from 0x104fe5a0) instead; if 255 turns out not to
+    // take, that is the next thing to try.
+    // magma::EditBox::SetText(const std::wstring&, bool) - the EditBox's own setter, not
+    // TextBase's. An EditBox derives from Widget, so magma::TextBase::SetText writes through the
+    // wrong layout: that was tried, and it corrupted the widget badly enough that the CRT faulted
+    // and then magma's draw pass did.
+    //
+    // The engine clamps to the layout's maxLength itself (a u16 at widget+0x18), and the trailing
+    // bool copies the value into the committed string beside the displayed one - which is what a
+    // caller seeding a field wants, so FCSE passes true. It ends by marking the text dirty, which is
+    // what actually makes the field re-render; writing the string in memory would not have.
+    constexpr uintptr_t kEditBoxSetTextRva = 0x10ab0220;
+
+    constexpr uintptr_t kPageSetSelectedRva = 0x10aa5180;
+    constexpr int kAnyController = 255;
 
     // The localised "YES"/"NO" strings, as raw wchar_t*. RefreshOptionList fills these lazily, once
     // per process, guarded by bits 1 and 2 of the flag word at 0x1164fca8 - so now that FCSE's page
@@ -222,6 +283,34 @@ namespace {
     using SwitchPageFn = void(__thiscall*)(void* gameMenuThis);
     using SetTextFn = void(__thiscall*)(void* textBase, const wchar_t* text);
     using DisplayFn = void(__thiscall*)(void* thisPtr);
+    using UpdateFn = void(__thiscall*)(void* thisPtr, float deltaTime);
+    using ElementSetVisibleFn = void(__thiscall*)(void* element, int visible);
+    using PageSetSelectedFn = void(__thiscall*)(void* magmaPage, int controller, void* focusable);
+
+    // MSVC's std::wstring as this build lays it out - the same shape fcse_page's page-title writer
+    // already relies on: proxy pointer, 8 inline wchar_t while capacity is under 8, size, capacity.
+    struct WideString {
+        const void* proxy;
+        wchar_t buffer[8];
+        uint32_t size;
+        uint32_t capacity;
+    };
+
+    using EditBoxSetTextFn = void(__thiscall*)(void* editBox, const WideString* text, char commit);
+
+    // MSVC's std::string as this build lays it out: an allocator/proxy pointer, then a 16-byte
+    // buffer holding the characters inline while capacity is under 0x10, then size, then capacity.
+    // Confirmed from two directions - it is what the UserData getter reads (capacity at +0x18,
+    // characters at +0x04) and what CFCXOptionGamePage's own constructor builds for its page name.
+    struct NarrowString {
+        const void* proxy;
+        char buffer[16];
+        uint32_t size;
+        uint32_t capacity;
+    };
+
+    using GetUserDataElementFn = char(__thiscall*)(void* userData, const NarrowString* name,
+                                                   void** outElement);
     using ClearRowsFn = void(__thiscall*)(void* thisPtr);
     using AddBoolSettingFn = void*(__thiscall*)(void* page, const wchar_t* label,
                                                 const char* labelListParam, const char* settingParam,
@@ -237,7 +326,6 @@ namespace {
                                                   const char* labelListParam,
                                                   const char* settingParam, int minValue,
                                                   int maxValue, int enabled, void* handler);
-    using ElementSetVisibleFn = void(__thiscall*)(void* element, int visible);
 
     GamePageCtorFn g_gamePageCtor = nullptr;
     InitFn g_init = nullptr;
@@ -245,10 +333,15 @@ namespace {
     SwitchPageFn g_switchPage = nullptr;
     SetTextFn g_textBaseSetText = nullptr;
     DisplayFn g_baseOptionPageDisplay = nullptr;
+    UpdateFn g_baseUpdate = nullptr;
     AddBoolSettingFn g_addBoolSetting = nullptr;
     AddValueListSettingFn g_addValueListSetting = nullptr;
     AddSliderSettingFn g_addSliderSetting = nullptr;
     ElementSetVisibleFn g_elementSetVisible = nullptr;
+    PageSetSelectedFn g_pageSetSelected = nullptr;
+    EditBoxSetTextFn g_editBoxSetText = nullptr;
+    GetUserDataElementFn g_getUserDataElement = nullptr;
+    const void* g_emptyStringProxy = nullptr;
     const wchar_t** g_yesText = nullptr;
     const wchar_t** g_noText = nullptr;
 
@@ -264,6 +357,11 @@ namespace {
     // widgets are still being bound - so the Display override chains straight to the base until the
     // page is fully built, rather than calling AddButton against half-bound state.
     bool g_pageReady = false;
+
+    // Set when something asks for the page to be rebuilt, and acted on at the top of the next
+    // Update. Deferred rather than immediate because every requester is itself running inside a walk
+    // of the rows that a rebuild destroys.
+    bool g_rebuildRequested = false;
 
     // Each SEH wrapper holds exactly one native touchpoint and no C++ object with a destructor -
     // MSVC forbids mixing __try/__except with automatic unwinding in one function.
@@ -311,6 +409,16 @@ namespace {
     bool SafeBaseDisplay(void* page, DWORD* outCode) {
         __try {
             g_baseOptionPageDisplay(page);
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            *outCode = GetExceptionCode();
+            return false;
+        }
+    }
+
+    bool SafeBaseUpdate(void* page, float deltaTime, DWORD* outCode) {
+        __try {
+            g_baseUpdate(page, deltaTime);
             return true;
         } __except (EXCEPTION_EXECUTE_HANDLER) {
             *outCode = GetExceptionCode();
@@ -664,6 +772,46 @@ namespace {
         }
     }
 
+    bool SafeGetUserDataElement(void* userData, const NarrowString* name, void** outElement,
+                                DWORD* outCode) {
+        __try {
+            return g_getUserDataElement(userData, name, outElement) != 0;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            *outCode = GetExceptionCode();
+            return false;
+        }
+    }
+
+    bool SafeEditBoxSetText(void* editBox, const WideString* text, DWORD* outCode) {
+        __try {
+            g_editBoxSetText(editBox, text, 1);
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            *outCode = GetExceptionCode();
+            return false;
+        }
+    }
+
+    bool SafeSetSelected(void* magmaPage, void* focusable, DWORD* outCode) {
+        __try {
+            g_pageSetSelected(magmaPage, kAnyController, focusable);
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            *outCode = GetExceptionCode();
+            return false;
+        }
+    }
+
+    bool SafeClearDirtyFlag(void* page, DWORD* outCode) {
+        __try {
+            *(reinterpret_cast<unsigned char*>(page) + kDirtyFlagOffset) = 0;
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            *outCode = GetExceptionCode();
+            return false;
+        }
+    }
+
     // Owns every label ever handed to the engine. Never freed, because AddButton is only known to
     // store the pointer rather than copy the text.
     //
@@ -686,6 +834,11 @@ namespace {
     }
 
     void RebuildRows(void* page); // defined below, next to the Display override
+    void BindEditCell(SettingsRegistry::Setting* setting, size_t row); // defined with the slot cells
+    // Which of the three banks a row's control lives in. Defined up here because the row handlers
+    // below need it before the cache itself is declared.
+    enum class CellKind { Value, Slider, Edit };
+    void* SlotCellElement(size_t row, CellKind kind);
 
     // The click handler for toggle rows: flip the value, then rebuild the page so the row's
     // [ON]/[OFF] reflects it immediately.
@@ -753,6 +906,80 @@ namespace {
         return handler;
     }
 
+    // Activating a Text row hands input focus to its EditBox, which is the only way in: the field is
+    // authored beside the row list with empty NEIGHBORS, so no amount of arrow-key navigation
+    // reaches it. This is the same move the engine makes for the SetFocusNomad action - resolve the
+    // target element and call magma::Page::SetSelected on the owning page.
+    struct FocusHandler {
+        void** vtable; // must stay first
+        size_t row;
+
+        unsigned int SafeNoOp(unsigned int /*arg*/) { return 0; }
+
+        unsigned int OnActivate(unsigned int /*arg*/) {
+            void* element = SlotCellElement(row, CellKind::Edit);
+            DWORD code = 0;
+            void* magmaPage = nullptr;
+            if (element == nullptr || g_page == nullptr ||
+                !SafeReadPointer(g_page, kBoundMagmaPageOffset, &magmaPage, &code) ||
+                magmaPage == nullptr) {
+                return 0;
+            }
+            if (!SafeSetSelected(magmaPage, element, &code)) {
+                LogFailed("magma::Page::SetSelected", code);
+            }
+            return 0;
+        }
+
+        static FocusHandler* Create(size_t row);
+    };
+
+    using FocusHandlerMemberFn = unsigned int (FocusHandler::*)(unsigned int);
+
+    void* RawFocusHandlerPointer(FocusHandlerMemberFn fn) {
+        union {
+            FocusHandlerMemberFn member;
+            void* raw;
+        } converter;
+        converter.member = fn;
+        return converter.raw;
+    }
+
+    void* g_focusVtable[kVtableSlotCount];
+    bool g_focusVtableReady = false;
+
+    FocusHandler* FocusHandler::Create(size_t row) {
+        if (!g_focusVtableReady) {
+            void* noOp = RawFocusHandlerPointer(&FocusHandler::SafeNoOp);
+            for (void*& slot : g_focusVtable) {
+                slot = noOp;
+            }
+            g_focusVtable[kActivateSlot] = RawFocusHandlerPointer(&FocusHandler::OnActivate);
+            g_focusVtableReady = true;
+        }
+        auto* handler = new FocusHandler();
+        handler->vtable = g_focusVtable;
+        handler->row = row;
+        return handler;
+    }
+
+    // A Text row: a label, and an EditBox cell the player types into.
+    //
+    // The row itself carries no handler and no CUISettingBase - there is no "string setting" in
+    // CSettingsPage - so the label is a plain button and the editing happens entirely in the cell.
+    // This mirrors the stock Options > Network page, which authors bare EditBox elements at its row
+    // positions rather than routing text through a dialog.
+    bool AppendTextRow(void* page, SettingsRegistry::Setting* setting, size_t row) {
+        LabelStorage().push_back(L"   " + WidenAscii(setting->name));
+        DWORD code = 0;
+        if (!SafeAddButton(page, LabelStorage().back().c_str(), FocusHandler::Create(row), &code)) {
+            LogFailed("AddButton (text row)", code);
+            return false;
+        }
+        BindEditCell(setting, row);
+        return true;
+    }
+
     // NOTE: the native AddBoolSetting path below has no handler of its own. An earlier version made
     // one here and passed it to AddBoolSetting; clicking a row then crashed the game to desktop,
     // before any FCSE code ran - the instrumented log showed the handler was never entered. Every
@@ -765,6 +992,12 @@ namespace {
     struct LiveRow {
         SettingsRegistry::Setting* setting;
         void* settingObject;
+
+        // Text rows only: the EditBox's committed string as it was when the row was built. The
+        // engine copies the live text into it when the player presses Enter and at no other time,
+        // so a change here is precisely an Enter - which is what the stock Network page treats as
+        // "commit and refresh the page".
+        std::wstring committed;
     };
 
     std::vector<LiveRow>& LiveRows() {
@@ -772,26 +1005,250 @@ namespace {
         return rows;
     }
 
-    // The slider cells shown on the current display. The bank is authored HIDDEN (an unbound Slider
-    // would otherwise draw its track at every row FCSE did not use), so a bound row has to reveal
-    // its own cell - and hide it again on the next rebuild, or a row that used to be a slider would
-    // leave a stale control behind when the layout changes.
+    // Every cell of both banks, resolved once and cached, so the ones a display does not use can be
+    // hidden. Indexed by row; null for anything that did not resolve.
     //
-    // Only elements FCSE resolved itself go in here, which is what makes this work without any
-    // lookup by name: AddSliderSetting has already put the element at settingObject+0x4c.
-    std::vector<void*>& ShownSliderElements() {
-        static std::vector<void*> elements;
-        return elements;
+    // The layout authors 20 value cells and 20 slider cells at the *same* twenty row positions,
+    // because a row's type is not known until a plugin registers. Without this, all forty draw at
+    // once and every row shows a slider sitting on top of a spinner.
+    //
+    // Both banks are authored visible, and this only ever moves bit 0 of element+0x34 - the same bit
+    // ShowElementNomad and HideElementNomad move. The opposite arrangement (author HIDDEN, reveal
+    // from code) was tried and does not work: `HIDDEN` is bit *1* of that byte, magma's draw
+    // collection skips any element with bit 1 set (`(flags & 2) == 0`, at 0x10ad3fb0), and
+    // SetVisible cannot clear it - so the cell was never drawn and the engine dereferenced a null
+    // the frame after it was "shown".
+    struct SlotCells {
+        void* value[kSlotCount];
+        void* slider[kSlotCount];
+        void* edit[kSlotCount];
+    };
+
+    SlotCells g_slotCells{};
+    bool g_slotCellsCached = false;
+
+    bool MakeNarrowString(NarrowString* out, const char* text) {
+        size_t length = std::strlen(text);
+        if (length >= sizeof(out->buffer)) {
+            return false; // every slot name is well inside the SSO buffer; nothing else is passed
+        }
+        std::memset(out, 0, sizeof(*out));
+        out->proxy = g_emptyStringProxy;
+        std::memcpy(out->buffer, text, length + 1);
+        out->size = static_cast<uint32_t>(length);
+        out->capacity = static_cast<uint32_t>(sizeof(out->buffer) - 1);
+        return true;
     }
 
-    void HideShownSliders() {
-        for (void* element : ShownSliderElements()) {
+    void* ResolveSlotCell(void* magmaPage, const char* slotParam) {
+        NarrowString name{};
+        if (!MakeNarrowString(&name, slotParam)) {
+            return nullptr;
+        }
+        void* element = nullptr;
+        DWORD code = 0;
+        if (!SafeGetUserDataElement(magmaPage, &name, &element, &code)) {
+            if (code != 0) {
+                LogFailed("magma::UserData::GetUserDataElement", code);
+            }
+            return nullptr;
+        }
+        return element;
+    }
+
+    // Resolves all forty cells against the page's own UserData. Runs once, after Init has bound the
+    // magma page - before that there is nothing to resolve against.
+    void CacheSlotCells(void* page) {
+        DWORD code = 0;
+        void* magmaPage = nullptr;
+        if (!SafeReadPointer(page, kBoundMagmaPageOffset, &magmaPage, &code) ||
+            magmaPage == nullptr) {
+            Log::Loader("FcsePage: no magma::Page to resolve slot cells against - unused cells will "
+                        "stay on screen");
+            return;
+        }
+
+        size_t resolved = 0;
+        for (size_t i = 0; i < kSlotCount; ++i) {
+            char slotParam[24];
+            sprintf_s(slotParam, "FCSE_SLOT_%02zu", i + 1);
+            g_slotCells.value[i] = ResolveSlotCell(magmaPage, slotParam);
+            sprintf_s(slotParam, "FCSE_SLIDER_%02zu", i + 1);
+            g_slotCells.slider[i] = ResolveSlotCell(magmaPage, slotParam);
+            sprintf_s(slotParam, "FCSE_EDIT_%02zu", i + 1);
+            g_slotCells.edit[i] = ResolveSlotCell(magmaPage, slotParam);
+            resolved += (g_slotCells.value[i] != nullptr) + (g_slotCells.slider[i] != nullptr) +
+                        (g_slotCells.edit[i] != nullptr);
+        }
+        g_slotCellsCached = true;
+        Log::Loader("FcsePage: resolved " + std::to_string(resolved) + " of " +
+                    std::to_string(kSlotCount * 3) +
+                    " slot cells - the unused ones are hidden per display");
+
+        // Called out because it is the one link shape nothing in the shipped corpus uses: the text
+        // fields are bare EditBox elements, so their links are a 3-id chain rather than the 5-id
+        // through-an-instance form. If they did not resolve, that is why, and the fix is to wrap the
+        // EditBox in a local area and instance it like the other two banks.
+        if (g_slotCells.edit[0] == nullptr) {
+            Log::Loader("FcsePage: FCSE_EDIT_01 did not resolve - the engine does not accept a "
+                        "3-id FullLink to a bare element. Text rows will show their value but not "
+                        "be editable.");
+        }
+    }
+
+    void HideAllSlotCells() {
+        if (!g_slotCellsCached) {
+            return;
+        }
+        for (size_t i = 0; i < kSlotCount; ++i) {
             DWORD code = 0;
-            if (!SafeSetElementVisible(element, false, &code)) {
-                LogFailed("magma::Element::SetVisible(false)", code);
+            if (g_slotCells.value[i] != nullptr) {
+                SafeSetElementVisible(g_slotCells.value[i], false, &code);
+            }
+            if (g_slotCells.slider[i] != nullptr) {
+                SafeSetElementVisible(g_slotCells.slider[i], false, &code);
+            }
+            if (g_slotCells.edit[i] != nullptr) {
+                SafeSetElementVisible(g_slotCells.edit[i], false, &code);
             }
         }
-        ShownSliderElements().clear();
+    }
+
+    void* SlotCellElement(size_t row, CellKind kind) {
+        if (!g_slotCellsCached || row >= kSlotCount) {
+            return nullptr;
+        }
+        switch (kind) {
+        case CellKind::Value:
+            return g_slotCells.value[row];
+        case CellKind::Slider:
+            return g_slotCells.slider[row];
+        case CellKind::Edit:
+            return g_slotCells.edit[row];
+        }
+        return nullptr;
+    }
+
+    // `row` is the zero-based row index, which is also the slot index - see AppendPluginBlock.
+    void ShowSlotCell(size_t row, CellKind kind) {
+        void* element = SlotCellElement(row, kind);
+        if (element == nullptr) {
+            return;
+        }
+        DWORD code = 0;
+        if (!SafeSetElementVisible(element, true, &code)) {
+            LogFailed("magma::Element::SetVisible(true)", code);
+        }
+    }
+
+    // An EditBox holds its text as a std::wstring at widget+0x8c - the same offset the shipped
+    // listener at 0x108fe850 reads out of the message-box edit box. Read into a fixed buffer inside
+    // the guard, because nothing with a destructor may live in a function that uses __try.
+    constexpr ptrdiff_t kElementWidgetOffset = 0x14;
+
+    // A magma::EditBox keeps several std::wstrings. Two matter, and both offsets are *observed*, not
+    // derived: a probe that scanned the widget for string-shaped members while a player typed showed
+    //
+    //     +0x8C="kilimanjaro"   +0xA8="kilimanjaro"
+    //     +0x8C="kilimanjaroa"  +0xA8="kilimanjaro"
+    //
+    // so +0x8c is the live text the player is editing and +0xa8 is the committed copy.
+    //
+    // Worth stating because it was got wrong twice. The server build lays these out as three
+    // consecutive strings, and it is tempting to convert an ELF offset by scaling for MSVC's 0x1c
+    // -byte wstring - that gives +0x70 here, and it is wrong, because the surrounding sub-objects
+    // hold strings too and therefore differ in size by different amounts. Nothing about that
+    // mistake is loud: +0x70 reads as a perfectly valid empty string, so the symptom was a setting
+    // that silently saved as blank rather than anything that faulted.
+    constexpr ptrdiff_t kEditBoxDisplayedTextOffset = 0x8c;
+    constexpr ptrdiff_t kEditBoxCommittedTextOffset = 0xa8;
+    constexpr size_t kEditTextMax = 64;
+
+    // Reads one candidate std::wstring at `offset` into `out`, reporting whether it looks like a
+    // string at all. Used by the probe below, which exists because the displayed-text offset was
+    // derived arithmetically from the committed one rather than observed - and a wrong offset here
+    // fails silently, returning a stale value instead of faulting.
+    bool SafeReadStringAt(void* widget, ptrdiff_t offset, wchar_t* out, size_t max, DWORD* outCode) {
+        __try {
+            auto text = reinterpret_cast<const char*>(widget) + offset;
+            uint32_t size = *reinterpret_cast<const uint32_t*>(text + 0x14);
+            uint32_t capacity = *reinterpret_cast<const uint32_t*>(text + 0x18);
+            // What an MSVC wstring always satisfies, and arbitrary memory rarely does.
+            if (capacity < 7 || size > capacity || capacity > 0x10000) {
+                return false;
+            }
+            const wchar_t* characters = capacity < 8
+                                             ? reinterpret_cast<const wchar_t*>(text + 4)
+                                             : *reinterpret_cast<const wchar_t* const*>(text + 4);
+            if (characters == nullptr) {
+                return false;
+            }
+            if (size >= max) {
+                size = static_cast<uint32_t>(max) - 1;
+            }
+            for (uint32_t i = 0; i < size; ++i) {
+                out[i] = characters[i];
+            }
+            out[size] = L'\0';
+            return true;
+        } __except (EXCEPTION_EXECUTE_HANDLER) {
+            *outCode = GetExceptionCode();
+            return false;
+        }
+    }
+
+    bool SafeReadEditText(void* widget, wchar_t* out, DWORD* outCode) {
+        return SafeReadStringAt(widget, kEditBoxDisplayedTextOffset, out, kEditTextMax, outCode);
+    }
+
+    // Seeds a Text row's field from the registry and reveals it. The widget hangs off the element at
+    // +0x14, same as every other magma widget.
+    void BindEditCell(SettingsRegistry::Setting* setting, size_t row) {
+        void* element = SlotCellElement(row, CellKind::Edit);
+        if (element == nullptr) {
+            return; // logged once at cache time
+        }
+
+        DWORD code = 0;
+        void* widget = nullptr;
+        if (!SafeReadPointer(element, kElementWidgetOffset, &widget, &code) || widget == nullptr) {
+            Log::Loader("FcsePage: text field for row " + std::to_string(row + 1) +
+                        " has no widget - leaving it hidden");
+            return;
+        }
+
+        // Seeded through the EditBox's own setter. The first attempt used
+        // magma::TextBase::SetText and took the game down twice over - an EditBox derives from
+        // Widget, not TextBase, so that wrote through the wrong layout and the fault surfaced once
+        // in the CRT's string code and once in magma's draw pass.
+        WideString seed{};
+        std::wstring wide = WidenAscii(setting->text);
+        if (wide.size() < 8) {
+            seed.proxy = g_emptyStringProxy;
+            std::memcpy(seed.buffer, wide.c_str(), (wide.size() + 1) * sizeof(wchar_t));
+            seed.size = static_cast<uint32_t>(wide.size());
+            seed.capacity = 7;
+        } else {
+            // Longer than the inline buffer, so the string has to point at a heap block. Leaked
+            // deliberately: the engine copies out of it and never owns it, and a settings value is a
+            // few bytes once per display.
+            auto* buffer = new wchar_t[wide.size() + 1];
+            std::memcpy(buffer, wide.c_str(), (wide.size() + 1) * sizeof(wchar_t));
+            seed.proxy = g_emptyStringProxy;
+            *reinterpret_cast<wchar_t**>(&seed.buffer[0]) = buffer;
+            seed.size = static_cast<uint32_t>(wide.size());
+            seed.capacity = static_cast<uint32_t>(wide.size());
+        }
+        if (!SafeEditBoxSetText(widget, &seed, &code)) {
+            LogFailed("magma::EditBox::SetText", code);
+        }
+
+        ShowSlotCell(row, CellKind::Edit);
+
+        wchar_t committed[kEditTextMax] = {};
+        DWORD probeCode = 0;
+        SafeReadStringAt(widget, kEditBoxCommittedTextOffset, committed, kEditTextMax, &probeCode);
+        LiveRows().push_back({setting, widget, committed});
     }
 
     // Persistence, without a click handler. The engine owns the control and changes it in place;
@@ -843,6 +1300,39 @@ namespace {
                 }
                 shown.asSlider = static_cast<int32_t>(value);
                 break;
+            }
+            case FCSE_SettingType_Text: {
+                // For a Text row the "setting object" is the EditBox widget itself: a string has no
+                // CUISettingBase, so BindEditCell records the widget here instead.
+                wchar_t typed[kEditTextMax] = {};
+                if (!SafeReadEditText(row.settingObject, typed, &code)) {
+                    if (code != 0) {
+                        LogFailed("reading an EditBox's text", code);
+                    }
+                    continue;
+                }
+                std::string narrowed;
+                for (const wchar_t* c = typed; *c != L'\0'; ++c) {
+                    narrowed.push_back(*c < 0x100 ? static_cast<char>(*c) : '?');
+                }
+                shown.asText = narrowed.c_str();
+                if (!SafeSetValue(row.setting, shown, &code)) {
+                    LogFailed("SettingsRegistry::SetValue", code);
+                }
+
+                // Enter: the engine has copied the live text into the committed string, which it
+                // does at no other time. The stock Network page answers that by rebuilding itself,
+                // so this does the same - deferred by a frame rather than done here, because
+                // rebuilding tears down the very rows this loop is walking.
+                wchar_t committed[kEditTextMax] = {};
+                if (SafeReadStringAt(row.settingObject, kEditBoxCommittedTextOffset, committed,
+                                     kEditTextMax, &code) &&
+                    committed != row.committed) {
+                    Log::Loader("FcsePage: \"" + row.setting->name +
+                                "\" committed with Enter - refreshing the page");
+                    g_rebuildRequested = true;
+                }
+                continue; // asText points at a local, so it must not fall through to the shared call
             }
             default:
                 continue; // a type with no control to read back
@@ -905,7 +1395,8 @@ namespace {
     // Each returns whether a row was added, which is what the caller counts - a row that was added
     // but failed to bind its control still occupies a slot.
 
-    bool AppendCheckboxRow(void* page, SettingsRegistry::Setting* setting, const char* slotParam) {
+    bool AppendCheckboxRow(void* page, SettingsRegistry::Setting* setting, const char* slotParam,
+                           size_t row) {
         LabelStorage().push_back(L"   " + WidenAscii(setting->name));
 
         void* settingObject = nullptr;
@@ -925,11 +1416,13 @@ namespace {
             LogFailed("CValueListSetting<bool>::SetValue", code);
             return true;
         }
+        ShowSlotCell(row, CellKind::Value);
         LiveRows().push_back({setting, settingObject});
         return true;
     }
 
-    bool AppendChoiceRow(void* page, SettingsRegistry::Setting* setting, const char* slotParam) {
+    bool AppendChoiceRow(void* page, SettingsRegistry::Setting* setting, const char* slotParam,
+                           size_t row) {
         LabelStorage().push_back(L"   " + WidenAscii(setting->name));
         const wchar_t* label = LabelStorage().back().c_str();
 
@@ -965,11 +1458,13 @@ namespace {
             LogFailed("CValueListSetting<unsigned>::SetValue", code);
             return true;
         }
+        ShowSlotCell(row, CellKind::Value);
         LiveRows().push_back({setting, settingObject});
         return true;
     }
 
-    bool AppendSliderRow(void* page, SettingsRegistry::Setting* setting, const char* slotParam) {
+    bool AppendSliderRow(void* page, SettingsRegistry::Setting* setting, const char* slotParam,
+                           size_t row) {
         LabelStorage().push_back(L"   " + WidenAscii(setting->name));
 
         void* settingObject = nullptr;
@@ -1000,19 +1495,12 @@ namespace {
             return true;
         }
 
-        // The cell is authored hidden; revealing it is what makes a bound slider row appear at all.
-        void* element = reinterpret_cast<void*>(fields.element);
-        if (!SafeSetElementVisible(element, true, &code)) {
-            LogFailed("magma::Element::SetVisible(true)", code);
-            return true;
-        }
-        ShownSliderElements().push_back(element);
-
         if (!SafeSetSettingValueDword(settingObject, static_cast<uint32_t>(setting->value.asSlider),
                                       &code)) {
             LogFailed("CSliderSetting::SetValue", code);
             return true;
         }
+        ShowSlotCell(row, CellKind::Slider);
         LiveRows().push_back({setting, settingObject});
         return true;
     }
@@ -1057,7 +1545,7 @@ namespace {
 
     void AppendPluginBlock(void* page, const std::string& displayName,
                            const SettingsRegistry::Group* group, size_t* row) {
-        AppendCaption(page, L"-- " + WidenAscii(displayName) + L" --", row);
+        AppendCaption(page, L"Plugin: " + WidenAscii(displayName), row);
 
         if (group == nullptr || group->settings.empty()) {
             AppendCaption(page, L"   (no settings)", row);
@@ -1090,27 +1578,18 @@ namespace {
             } else {
                 switch (setting->value.type) {
                 case FCSE_SettingType_Checkbox:
-                    added = AppendCheckboxRow(page, setting.get(), slotParam);
+                    added = AppendCheckboxRow(page, setting.get(), slotParam, *row);
                     break;
                 case FCSE_SettingType_Choice:
-                    added = AppendChoiceRow(page, setting.get(), slotParam);
+                    added = AppendChoiceRow(page, setting.get(), slotParam, *row);
                     break;
                 case FCSE_SettingType_Slider:
-                    added = AppendSliderRow(page, setting.get(), sliderSlotParam);
+                    added = AppendSliderRow(page, setting.get(), sliderSlotParam, *row);
                     break;
                 case FCSE_SettingType_Text:
-                    // Shows the value, but is not editable in-game yet: the row is meant to open
-                    // CGameMessageBoxEditBox, the game's own text prompt, whose layout
-                    // (MESSAGEBOX_EDIT_BOX) is declared in common.mgb and so is reachable from here.
-                    // What is not yet read out of the binary is how the entered string comes back -
-                    // CGameMessageBoxHelper::Show (0x1004cd50) takes an out pointer, a listener and
-                    // a CGameMessageBoxParam, and it is the listener's interface that is still
-                    // unknown. Rendering the value read-only beats pushing a page onto the engine's
-                    // stack with a callback shape that was guessed at.
-                    //
-                    // Until then a Text setting is fully usable from fcse.ini, which is where its
-                    // value lives either way.
-                    added = AppendPlainRow(page, setting.get());
+                    // No slot cell: a string has no CUISettingBase behind it, so this is a plain
+                    // button showing its value, and clicking it opens the game's own text prompt.
+                    added = AppendTextRow(page, setting.get(), *row);
                     break;
                 default:
                     AppendCaption(page, L"   " + WidenAscii(setting->name) + L" (unsupported type)",
@@ -1149,7 +1628,11 @@ namespace {
         // - but it is the backstop for a change the engine did not announce.
         SyncValuesFromControls();
         LiveRows().clear();
-        HideShownSliders();
+
+        // Every cell off, then each row turns its own back on as it binds. Doing it this way round
+        // means a row that changes type between displays - or disappears when a plugin is removed -
+        // cannot leave its old control behind.
+        HideAllSlotCells();
 
         DWORD code = 0;
         if (!SafeClearRows(page, &code)) {
@@ -1163,8 +1646,14 @@ namespace {
     // real member function on a throwaway type - `this` is the engine's page, never an instance of
     // this struct. Reached only through g_pageVtable, which only FCSE's own page points at, so
     // unlike the hook these replaced there is no other instance to tell apart.
+    // Each signature has to match the slot it replaces exactly, because __thiscall is
+    // callee-cleanup: a thunk declaring the wrong number of stack arguments unbalances the caller's
+    // stack rather than merely misbehaving. Display takes none (the stock body ends in a plain
+    // RET); Update and OnSettingChanged take one each (both stock bodies end in RET 4).
     struct PageVtableThunk {
         void Display();
+        void Update(float deltaTime);
+        void OnSettingChanged(void* action);
         void ApplySettings();
         void RefreshSettings();
     };
@@ -1187,9 +1676,66 @@ namespace {
         }
     }
 
+    // Slot +0x10. The stock body is the base class's per-frame tick followed by a switch on
+    // this+0x200 that drives the Game tab's difficulty/machete message-box flow - and one of that
+    // switch's three branches reaches the option ids. Forwarding to the base and stopping is what
+    // makes that state field inert: several functions in this class write it, but this slot is its
+    // only reader, so with the switch gone it does not matter who sets it.
+    void PageVtableThunk::Update(float deltaTime) {
+        void* page = reinterpret_cast<void*>(this);
+        DWORD code = 0;
+
+        // Also where the "unsaved changes" flag is kept clear. Doing it here rather than only in
+        // OnSettingChanged means it does not matter whether CFCXBaseOptionPage::SetDirty runs before
+        // or after the change notification, or which other path might set it - by the time the
+        // player can press Back, a frame has gone by and the flag is false. One byte a frame.
+        SafeClearDirtyFlag(page, &code);
+
+        // And where typed text is captured. Every other control announces itself through the
+        // OnSettingChanged slot, but a Text row has no CUISettingBase behind it, so the engine has
+        // nothing to announce - and a player who types and then backs out never triggers the rebuild
+        // that would otherwise read the field. Polling is the only thing that sees those edits.
+        //
+        // Cheap despite the frequency: SetValue drops a value that has not changed, so a frame where
+        // nothing moved costs one read per live row and touches neither the registry nor the file.
+        SyncValuesFromControls();
+
+        // Acted on here, one frame after it was asked for, so the rows a requester was walking are
+        // long since out of scope.
+        if (g_rebuildRequested) {
+            g_rebuildRequested = false;
+            RebuildRows(page);
+        }
+
+        if (!SafeBaseUpdate(page, deltaTime, &code)) {
+            LogFailed("CUIPageBase::Update", code);
+        }
+    }
+
+    // Slot +0x4c, and the one that was crashing the game on every value change.
+    //
+    // CSettingsPage::OnActionSignal (0x10cdde80) offers each incoming action to every setting on the
+    // page; when one consumes it - which is how a row's value actually changes - the base calls this
+    // slot through the *primary* vtable, with the action. The stock body forwards to FUN_1081f6c0,
+    // which looks up SETTING_DIFFICULTY's button id, gets a setting of the wrong type back, nulls
+    // the pointer and dereferences it anyway.
+    //
+    // So this slot is both the fault and the fix: it is the engine telling us, at exactly the right
+    // moment, that a value changed. The setting has already updated itself by the time we are
+    // called, so reading the controls back here is all that is needed.
+    void PageVtableThunk::OnSettingChanged(void* /*action*/) {
+        SyncValuesFromControls();
+
+        // The change is already in fcse.ini by the line above, so the page has nothing pending and
+        // must not claim otherwise when the player backs out. Update() clears this too, belt and
+        // braces - see the comment there.
+        DWORD code = 0;
+        SafeClearDirtyFlag(reinterpret_cast<void*>(this), &code);
+    }
+
     // Slots +0x50 and +0x54 - the engine's "apply my settings to the game options" and "reload my
     // settings from the game options". Both are meaningless for a page whose settings are FCSE's,
-    // and both are the crash: see the vtable comment at the top of this file.
+    // and both walk the same option ids: see the vtable comment at the top of this file.
     //
     // Apply is not merely dropped, it is repurposed. It is the engine telling us a value changed,
     // which is exactly when fcse.ini should be written - so this is also what makes a toggle persist
@@ -1203,11 +1749,13 @@ namespace {
         // from it when the rows were built.
     }
 
-    using PageVtableMemberFn = void (PageVtableThunk::*)();
-
-    void* RawThunkPointer(PageVtableMemberFn fn) {
+    // Templated because the five thunks no longer share one signature. Safe for the same reason the
+    // non-templated version was: PageVtableThunk has no bases and no virtuals, so MSVC represents a
+    // pointer-to-member-function of it as a single code address.
+    template <typename Fn>
+    void* RawThunkPointer(Fn fn) {
         union {
-            PageVtableMemberFn member;
+            Fn member;
             void* raw;
         } converter;
         converter.member = fn;
@@ -1230,6 +1778,8 @@ namespace {
         }
 
         g_pageVtable[kDisplaySlot] = RawThunkPointer(&PageVtableThunk::Display);
+        g_pageVtable[kUpdateSlot] = RawThunkPointer(&PageVtableThunk::Update);
+        g_pageVtable[kSettingChangedSlot] = RawThunkPointer(&PageVtableThunk::OnSettingChanged);
         g_pageVtable[kApplySlot] = RawThunkPointer(&PageVtableThunk::ApplySettings);
         g_pageVtable[kRefreshSlot] = RawThunkPointer(&PageVtableThunk::RefreshSettings);
 
@@ -1238,8 +1788,8 @@ namespace {
             return false;
         }
         Log::Loader("FcsePage: installed a private " + std::to_string(kPageVtableSlots) +
-                    "-slot vtable - Display, apply and refresh are FCSE's; the stock Game tab keeps "
-                    "the engine's table");
+                    "-slot vtable - Display, Update, OnSettingChanged, apply and refresh are "
+                    "FCSE's; the stock Game tab keeps the engine's table");
         return true;
     }
 
@@ -1283,8 +1833,14 @@ bool FcsePage::Install(void* optionsMenuThis) {
     g_addValueListSetting =
         reinterpret_cast<AddValueListSettingFn>(resolve(kAddValueListSettingRva));
     g_addSliderSetting = reinterpret_cast<AddSliderSettingFn>(resolve(kAddSliderSettingRva));
-    g_elementSetVisible = reinterpret_cast<ElementSetVisibleFn>(resolve(kElementSetVisibleRva));
     g_baseOptionPageDisplay = reinterpret_cast<DisplayFn>(resolve(kBaseOptionPageDisplayRva));
+    g_baseUpdate = reinterpret_cast<UpdateFn>(resolve(kBaseUpdateRva));
+    g_elementSetVisible = reinterpret_cast<ElementSetVisibleFn>(resolve(kElementSetVisibleRva));
+    g_pageSetSelected = reinterpret_cast<PageSetSelectedFn>(resolve(kPageSetSelectedRva));
+    g_editBoxSetText = reinterpret_cast<EditBoxSetTextFn>(resolve(kEditBoxSetTextRva));
+    g_getUserDataElement =
+        reinterpret_cast<GetUserDataElementFn>(resolve(kGetUserDataElementRva));
+    g_emptyStringProxy = reinterpret_cast<const void*>(resolve(kEmptyStringProxyRva));
     g_yesText = reinterpret_cast<const wchar_t**>(resolve(kYesTextGlobalRva));
     g_noText = reinterpret_cast<const wchar_t**>(resolve(kNoTextGlobalRva));
 
@@ -1341,6 +1897,11 @@ bool FcsePage::Install(void* optionsMenuThis) {
     }
 
     g_page = page;
+
+    // After Init, because these resolve against the magma::Page it binds; before the first display,
+    // so the very first rebuild can hide the cells it does not use.
+    CacheSlotCells(page);
+
     g_pageReady = true; // from here on the Display override builds content rather than deferring
     SetPageTitle(page, kTitle);
 

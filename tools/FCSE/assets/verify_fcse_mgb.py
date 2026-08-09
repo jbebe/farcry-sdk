@@ -73,22 +73,39 @@ def main() -> int:
 
     value_slots = [k for k, _ in links if k.startswith("FCSE_SLOT_")]
     slider_slots = [(k, link) for k, link in links if k.startswith("FCSE_SLIDER_")]
+    edit_slots = [(k, link) for k, link in links if k.startswith("FCSE_EDIT_")]
     print()
     check(len(value_slots) == SLOT_COUNT,
           f"{SLOT_COUNT} value-cell slots declared (found {len(value_slots)})")
     check(len(slider_slots) == SLOT_COUNT,
           f"{SLOT_COUNT} slider slots declared (found {len(slider_slots)})")
+    check(len(edit_slots) == SLOT_COUNT,
+          f"{SLOT_COUNT} text-field slots declared (found {len(edit_slots)})")
 
-    # The slider bank has to start hidden: an unbound value cell is an empty ListBox and draws
-    # nothing, but an unbound Slider would still draw its track at every row FCSE did not use.
-    visible = [k for k, link in slider_slots
-               if elements.get(h(link.get("IDS").split()[2]), ET.Element("x")).get("HIDDEN") != "true"]
-    check(not visible, "every slider cell is authored HIDDEN" +
-          (f" (visible: {', '.join(visible)})" if visible else ""))
+    # The text fields are bare EditBox elements on the page, not instances of a cell area, so their
+    # links name the element directly and stop there - three ids, where the two cell banks need five.
+    short = [k for k, link in edit_slots if len(link.get("IDS").split()) != 3]
+    check(not short, "every text-field link is a 3-id chain (package, page, element)" +
+          (f" (wrong: {', '.join(short)})" if short else ""))
+
+    edit_elements = [k for k, link in edit_slots
+                     if elements.get(h(link.get("IDS").split()[2]), ET.Element("x")).get("type")
+                     != "EditBox"]
+    check(not edit_elements, "every text-field link names an EditBox element" +
+          (f" (wrong: {', '.join(edit_elements)})" if edit_elements else ""))
+
+    # Both banks are authored visible. Authoring the slider bank HIDDEN and revealing bound cells
+    # from code was tried and crashes: HIDDEN is bit 1 of the element's flag byte and
+    # magma::Element::SetVisible writes bit 0, and magma's draw collection skips anything with bit 1
+    # set - so the cell was never drawn and the engine faulted the frame after it was "shown".
+    hidden = [k for k, link in links
+              if elements.get(h(link.get("IDS").split()[2]), ET.Element("x")).get("HIDDEN") == "true"]
+    check(not hidden, "no control cell is authored HIDDEN" +
+          (f" (hidden: {', '.join(hidden)})" if hidden else ""))
 
     unaccounted = [k for k, _ in links
                    if h(k) != h("SETTING_LABEL_LIST") and not k.startswith("FCSE_SLOT_")
-                   and not k.startswith("FCSE_SLIDER_")]
+                   and not k.startswith("FCSE_SLIDER_") and not k.startswith("FCSE_EDIT_")]
     check(not unaccounted, "no unrecognised slot properties" +
           (f" (found: {', '.join(unaccounted)})" if unaccounted else ""))
 

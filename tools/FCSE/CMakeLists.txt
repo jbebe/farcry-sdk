@@ -106,6 +106,8 @@ add_executable(FCSE WIN32
   "src/log.h"
   "src/caller_identity.cpp"
   "src/caller_identity.h"
+  "src/crash_log.cpp"
+  "src/crash_log.h"
   "src/dunia_api.cpp"
   "src/dunia_api.h"
   "src/stock_constants.cpp"

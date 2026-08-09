@@ -318,15 +318,18 @@ public sealed class MgbXmlTests
         Assert.Equal(20, linked.Count(p => sliderBank.Contains(p.Key)));
         Assert.Equal(41, linked.Count); // the two banks plus SETTING_LABEL_LIST, and nothing else
 
-        // The slider cells must be authored hidden. An unbound value cell is an empty ListBox and
-        // draws nothing, but a Slider has a TRACKLINK and would draw its track at every row that
-        // did not turn out to be a slider.
-        var sliderElements = linked.Where(p => sliderBank.Contains(p.Key))
-                                   .Select(p => p.Link!.Ids[2])
-                                   .ToHashSet();
-        foreach (MgbElement element in page.Elements.Where(e => sliderElements.Contains(e.UserData.NameId)))
+        // Both banks must be authored visible. Authoring the slider bank hidden and revealing only
+        // the bound cells was tried and does not work: HIDDEN and Element::SetVisible are different
+        // bits of the element's flag byte (bit 1 and bit 0), and magma's draw collection skips
+        // anything with bit 1 set - so a "shown" cell was still not drawn, and the engine
+        // dereferenced a null the frame after. There is no data-only way to author a cell that code
+        // can reveal later, which is what this assert is really pinning down.
+        var cellElements = linked.Where(p => sliderBank.Contains(p.Key) || valueBank.Contains(p.Key))
+                                 .Select(p => p.Link!.Ids[2])
+                                 .ToHashSet();
+        foreach (MgbElement element in page.Elements.Where(e => cellElements.Contains(e.UserData.NameId)))
         {
-            Assert.True(element.Hidden, "a slider cell is authored visible");
+            Assert.False(element.Hidden, "a control cell is authored hidden");
         }
     }
 
