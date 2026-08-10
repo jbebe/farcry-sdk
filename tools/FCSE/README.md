@@ -157,6 +157,9 @@ Three properties worth knowing:
 - **A plugin that registers nothing gets no group** in the file - there is nothing to toggle, so
   nothing is written. It still appears in the in-game menu, marked `(no settings)`: that page lists
   what actually loaded, so it answers "which mods do I have?" as well as "what can I change?".
+  Lua scripts reach the page through their settings group rather than through the loaded-module
+  list, so a script appears once it registers at least one setting - unlike a DLL, one that
+  registers nothing is not listed.
 - **Groups for plugins you no longer have installed are kept, not deleted.** The file is the union
   of every plugin that has ever run, but a given launch only sees what's installed now; `src/ini_file.cpp`
   is order- and comment-preserving specifically so uninstalling a plugin for one session doesn't

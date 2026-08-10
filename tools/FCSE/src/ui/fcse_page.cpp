@@ -1942,17 +1942,20 @@ void FcsePage::AppendRows(void* page) {
     size_t row = 0;
 
     const std::vector<std::string>& plugins = PluginLoader::LoadedNames();
-    if (plugins.empty()) {
-        AppendCaption(page, L"   (no plugins installed)", &row);
-        return;
-    }
 
     for (const std::string& plugin : plugins) {
         AppendPluginBlock(page, plugin, SettingsRegistry::FindGroup(plugin), &row);
     }
 
-    // A plugin may register under a name other than its module name, so those groups match nothing
-    // above. Showing them under the name they chose beats hiding settings that exist in fcse.ini.
+    // A mod can reach this page without being a loaded DLL at all. LoadedNames() is plugin modules
+    // only, so every Lua script's group arrives here instead - and a plugin is free to register
+    // under a name other than its module name, which lands here too. Either way the group matched
+    // nothing above, and showing it under the name it chose beats hiding settings that exist in
+    // fcse.ini.
+    //
+    // This loop must run even when `plugins` is empty: returning early on "no DLLs" is what used to
+    // make a script-only install look like an empty page, with the script's rows sitting in the
+    // registry unread.
     for (const SettingsRegistry::Group& group : SettingsRegistry::Groups()) {
         bool alreadyShown = false;
         for (const std::string& plugin : plugins) {
@@ -1964,6 +1967,12 @@ void FcsePage::AppendRows(void* page) {
         if (!alreadyShown) {
             AppendPluginBlock(page, group.pluginName, &group, &row);
         }
+    }
+
+    // Nothing from either source. AppendPluginBlock always emits at least a caption per mod, so a
+    // zero row count here means there is genuinely nothing installed rather than nothing configurable.
+    if (row == 0) {
+        AppendCaption(page, L"   (no mods installed)", &row);
     }
 
     Log::Loader("FcsePage: built " + std::to_string(row) + " row(s) of " +
