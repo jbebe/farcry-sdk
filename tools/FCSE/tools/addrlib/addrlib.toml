@@ -1,0 +1,127 @@
+# Configuration for the FCSE address-library generator.
+#
+# Every threshold the pipeline uses lives here. Nothing that decides whether a
+# match ships is a magic number in code, so broadening the accepted-match bar is
+# an edit to this file plus a re-run of the offline stages -- which costs
+# seconds, because the expensive Ghidra extraction is cached.
+
+[project]
+# An existing Ghidra project holding both DLLs, already imported and analysed.
+# Re-importing would take hours and throw away the naming work already done in
+# reverse/ghidra, so the tool reuses what is there and refuses to guess.
+location = "reverse/ghidra/project"
+name = "fc2"
+
+# The build every ID is minted against. Its RVAs are the registry's anchor
+# column, and all 27 FCSE addresses plus the ~157 addresses in
+# docs/docs/engine-internals are already expressed in this address space.
+[builds.reference]
+id = "fc2_103_uplay"
+program = "Dunia.dll-Steam"
+size_of_image = 27164672
+time_date_stamp = 0x4AAE9636
+# Checked against the Ghidra program's own recorded hash before anything is
+# extracted. Building a mapping from a mislabelled program would be silent and
+# catastrophic, and the sampled files proved the labels are not trustworthy.
+sha256 = "6353936a54aa841350bb30ff005727859cdef1aa10c209209b220b399e862765"
+# Read directly by validate.py to build export ground truth from the PE export
+# directory -- a channel that owes nothing to Ghidra or to this pipeline.
+dll = "tmp/compare-dlls/dlls/1.03.steam.Dunia.dll"
+
+[builds.target]
+id = "fc2_103_retail"
+program = "Dunia.dll-GOG"
+size_of_image = 26386432
+time_date_stamp = 0x49FB4BF6
+sha256 = "7b82f20088e5c046a99fcaed65dc8bbb8202fd622a69737be83e00686b172d53"
+dll = "tmp/compare-dlls/dlls/1.03.gog.Dunia.dll"
+
+[stages]
+exact_bytes = true
+exact_instructions = true
+exact_mnemonics = false      # operands ignored entirely; too loose to ship from
+propagate = true
+bsim = true
+data_resolution = true
+
+[extract]
+# Extract *every* function regardless of size. Tiny functions are ambiguous on
+# their own -- a 6-byte import thunk has thousands of look-alikes -- but they
+# are the most reliable propagation pins there are, because a thunk to
+# `CreateFileA` is unmistakable on both sides. Filtering them out here would
+# quietly remove the best evidence the call-graph stage has. Size-based
+# rejection belongs at accept time, not extract time.
+min_function_bytes = 0
+max_callees_recorded = 512
+
+[propagate]
+# Call-graph propagation from confirmed anchors. A segment between two pinned
+# call sites is only aligned when both sides have the same number of remaining
+# callees -- an unequal segment is left alone rather than guessed at, because a
+# wrong guess here becomes a pin for the next hop and compounds.
+max_rounds = 12
+min_seed_confidence = 0.9
+hop_decay = 0.98
+multi_caller_bonus = 0.01
+
+[bsim]
+# BSim signatures are decompiler-derived feature vectors, so they are robust to
+# register reallocation and small codegen differences by construction. This is
+# the "exact in a broader sense" tier.
+template = "medium_nosize"
+self_significance_min = 15.0
+similarity_min = 0.98
+significance_min = 20.0
+# Candidates are drawn from the call-graph neighbourhood of already-matched
+# functions rather than all-pairs: 185k x 185k is not tractable, and a
+# neighbourhood candidate is a far better prior than a global scan anyway.
+max_candidates_per_function = 24
+candidate_size_ratio = 0.25   # skip pairs whose body sizes differ by more than this
+
+[data]
+# Globals and vtables are mapped by agreement between the functions that touch
+# them, positionally, in reference order.
+#
+# min_votes = 1 is safe here *because* of exact_functions_only below: when the
+# two functions are byte- or instruction-identical and their data-reference
+# lists are the same length, the Nth reference is the Nth reference, and a
+# second witness adds little. Measured, not assumed -- validate.py checks every
+# pairing where both addresses hold a string literal and the literals must
+# match:
+#
+#   min_votes = 2 : 10,505 addresses,  1,805 checkable, 0 wrong
+#   min_votes = 1 : 41,630 addresses, 14,027 checkable, 0 wrong
+#
+# Before the string filter below existed, min_votes = 1 produced exactly one
+# wrong pairing (an interior pointer into a character table opposite the
+# table's start). Raise this back to 2 to trade ~31k addresses for a smaller
+# unverified surface.
+min_votes = 1
+# Only let byte/instruction-identical function pairs vote. An inferred function
+# pair would otherwise seed a whole family of inferred data addresses.
+exact_functions_only = true
+# Anything below the first section is PE header, not a symbol. Code legitimately
+# references it (MSVC's __ImageBase sits at RVA 0), and those references map
+# consistently, but handing out an ID that resolves to the MZ header is a
+# footgun: it returns a plausible non-null pointer instead of failing.
+min_data_rva = 0x1000
+
+[accept]
+# A runner-up within this margin of the winner means neither is unique enough.
+uniqueness_margin = 0.02
+# Guards applied to every non-exact match before it may ship.
+require_callee_correspondence = true
+max_body_size_ratio = 0.20
+require_equal_call_count = true
+
+[validate]
+# The 404 exports shared by both builds form a labelled test set derived
+# independently of any matcher. A single wrong answer in a shipping tier fails
+# the run; these are not advisory numbers.
+max_wrong_exact = 0
+max_wrong_near_exact = 0
+min_export_coverage = 0.80
+
+[emit]
+mapping_version = "1.0"
+table_header = "../../src/engine/address_table.inc"

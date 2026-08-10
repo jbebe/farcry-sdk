@@ -1,0 +1,6 @@
+# Generated. The committed artifacts are registry.csv, overrides.csv,
+# addrlib.toml and the emitted src/engine/address_table.inc -- everything else
+# is reproducible from those plus the two DLLs.
+cache/
+out/
+*.log
