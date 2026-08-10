@@ -14,7 +14,6 @@ Stages, in order:
     score       re-run, now including BSim anchors
     data        map globals and vtables via the functions that touch them
     validate    score against export and string-literal ground truth  [GATE]
-    mint        assign append-only numeric IDs
     emit        write the C++ table and the manifest
 
 Only `extract` and `bsim` need Ghidra, and both refuse to run while the GUI
@@ -33,7 +32,7 @@ import common
 HERE = os.path.dirname(os.path.abspath(__file__))
 
 STAGES = ["extract", "match", "score", "candidates", "bsim", "rescore",
-          "data", "validate", "mint", "emit"]
+          "data", "validate", "emit"]
 
 COMMANDS = {
     "extract":    ["ghidra_extract.py"],
@@ -44,7 +43,6 @@ COMMANDS = {
     "rescore":    ["score.py"],
     "data":       ["match_data.py"],
     "validate":   ["validate.py"],
-    "mint":       ["mint_ids.py"],
     "emit":       ["emit.py"],
 }
 

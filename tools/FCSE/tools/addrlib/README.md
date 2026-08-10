@@ -5,7 +5,7 @@ place the same code at different addresses. FCSE historically baked Steam RVAs
 directly into its sources, which made it silently Steam-only. This tool builds
 the mapping that lets one binary support both.
 
-Ghidra plus two DLLs in; a stable ID → per-build address table out.
+Ghidra plus two DLLs in; a per-build address table out.
 
 ```
 python build_addrlib.py              # full run
@@ -17,10 +17,11 @@ python build_addrlib.py --calibrate  # + measure precision on held-out ground tr
 
 | path | committed | what it is |
 |---|---|---|
-| `registry.csv` | **yes** | `id → reference RVA`. Append-only; the plugin ABI. |
+| `names.csv` | **yes** | Names for the addresses FCSE itself uses. Hand-curated. |
 | `overrides.csv` | **yes** | Hand-verified corrections. Always win. |
 | `addrlib.toml` | **yes** | Every threshold. No magic numbers in code. |
-| `../../src/engine/address_table.inc` | **yes** | Generated C++ table FCSE compiles in. |
+| `../../assets/address_table.bin` | **yes** | The mapping, embedded in FCSE.exe as a resource. |
+| `../../src/engine/address_symbols.h` | **yes** | Generated from `names.csv`. |
 | `cache/` | no | Ghidra extraction, keyed by DLL SHA-256. |
 | `out/` | no | Intermediate maps and all reports. |
 
@@ -83,27 +84,36 @@ as an audit.
 `validate.py` exits non-zero when a shipping tier produces a wrong answer, so it
 can gate a release.
 
-## The ID contract
+## There are no IDs
 
-`registry.csv` is append-only and **never renumbered**. A plugin compiled against
-ID 4711 must resolve the same function after any future regeneration, so
-`mint_ids.py` aborts rather than write a changed `(id, reference_rva)` pair. IDs
-are dense from 0, which lets the emitted table be a flat array indexed by ID —
-one bounds check and one load at runtime, no search.
+An address is named by its RVA **in a specific build**, and that is the only key.
+No id space, no registry, no renumbering — because both 1.03 builds are frozen, so
+an RVA is already a permanent name for a function. Unlike an opaque id it can also
+be pasted straight into Ghidra and checked.
 
-An entry that stops matching keeps its ID forever and resolves to
-`kFcseRvaMissing`. Reusing the ID would silently repoint every plugin that ever
-baked it.
+SKSE needs ids because Skyrim has many versions and no privileged one. Far Cry 2
+has two, forever, so that layer would solve a problem this game does not have.
+
+## How lookups work
+
+Two columns sorted by the reference build's RVA, delta+varint encoded. Both are
+decoded at load and each gets a sort index, so a lookup in either direction is a
+binary search over ~89k entries — about 17 comparisons, done once per address and
+cached by `FCSE::Relocation`.
+
+Both columns are kept even though only one build runs: someone holding a GOG
+address needs the GOG column to look it up while Steam is running, and that
+reverse direction is the point of the by-build API.
 
 ## Correcting a bad entry
 
 Wrong entries are isolated outliers, not corruption: fixing one does not disturb
 any other. Add a line to `overrides.csv`, bump `mapping_version` in
-`addrlib.toml`, re-run from `mint`:
+`addrlib.toml`, and re-run `python emit.py`:
 
 ```csv
 steam_rva,gog_rva,reason
-0x005E8CE0,0x005DB3E0,"kFileNameSetIdentifierRva confirmed by decompile-diff"
+0x005E8CE0,0x005DB3C0,"CFileNameNomad::SetIdentifier confirmed by decompile-diff"
 ```
 
 ## Requirements

@@ -1,5 +1,6 @@
 #include "engine/address_library.h"
 
+#include <algorithm>
 #include <cstring>
 #include <vector>
 
@@ -32,12 +33,34 @@ namespace {
 #pragma pack(pop)
     static_assert(sizeof(Header) == 84, "address table header layout changed");
 
+    // Column order in the encoded table: 0 is the reference build
+    // (fc2_103_uplay), whose RVAs are the lookup key, 1 is the other.
+    constexpr int kColumnCount = 2;
+
     struct State {
         bool ready = false;
-        std::vector<uint32_t> rva;      // indexed by ID
+
+        // *Both* columns are always decoded, not just the running one. Someone
+        // holding a GOG address needs the GOG column to look it up even while
+        // Steam is running, and vice versa - that reverse direction is the
+        // whole point of the by-build API. Two columns plus their sort indices
+        // is about 1.4 MB, which is nothing next to being unable to answer.
+        std::vector<uint32_t> column[kColumnCount];   // by row
+        std::vector<uint32_t> sorted[kColumnCount];   // rows, ordered by that column
+
+        int running = -1;                             // which column is live
         std::string mappingVersion;
         uintptr_t base = 0;
     };
+
+    // DuniaBuild -> column index, or -1 for a build this table has no column for.
+    int ColumnFor(DuniaBuild build) {
+        switch (build) {
+            case DuniaBuild::Uplay103:  return 0;
+            case DuniaBuild::Retail103: return 1;
+            default:                    return -1;
+        }
+    }
 
     State& Get() {
         static State state;
@@ -112,15 +135,24 @@ bool AddressLibrary::LoadFromMemory(const void* data, size_t size,
         return false;
     }
 
-    // Column order is fixed by the generator: 0 is the reference build the IDs
-    // were minted against, 1 is the other. Match on the recorded id rather than
-    // assuming, so a regenerated table that swapped them cannot go unnoticed.
+    // Column order is fixed by the generator, but verify it rather than assume:
+    // a regenerated table that swapped the two columns would otherwise resolve
+    // every address to the other build's layout, silently.
     const std::string wanted = ToString(build.build);
     int column = -1;
-    for (int i = 0; i < 2; ++i) {
-        if (Field(header.buildId[i], sizeof(header.buildId[i])) == wanted) {
+    for (int i = 0; i < kColumnCount; ++i) {
+        const std::string name = Field(header.buildId[i], sizeof(header.buildId[i]));
+        const int expected = ColumnFor(
+            name == "fc2_103_uplay" ? DuniaBuild::Uplay103
+                                    : (name == "fc2_103_retail" ? DuniaBuild::Retail103
+                                                                : DuniaBuild::Unknown));
+        if (expected != i) {
+            Log::Loader("address library: embedded table column " + std::to_string(i) +
+                        " is '" + name + "', which is not where this build expects it");
+            return false;
+        }
+        if (name == wanted) {
             column = i;
-            break;
         }
     }
     if (column < 0) {
@@ -155,59 +187,75 @@ bool AddressLibrary::LoadFromMemory(const void* data, size_t size,
         return static_cast<int64_t>(v >> 1) ^ -static_cast<int64_t>(v & 1);
     };
 
-    state.rva.assign(header.entryCount, 0);
+    for (int c = 0; c < kColumnCount; ++c) {
+        state.column[c].assign(header.entryCount, 0);
+    }
     int64_t reference = 0;
     int64_t slide = 0;
     uint32_t absent = 0;
 
+    const auto fail = [&state](const std::string& why) {
+        Log::Loader("address library: " + why);
+        for (int c = 0; c < kColumnCount; ++c) {
+            state.column[c].clear();
+        }
+        return false;
+    };
+
     for (uint32_t i = 0; i < header.entryCount; ++i) {
         uint64_t raw = 0;
         if (!readVarint(&raw)) {
-            Log::Loader("address library: payload ended early at entry " +
-                        std::to_string(i));
-            state.rva.clear();
-            return false;
+            return fail("payload ended early at entry " + std::to_string(i));
         }
         reference += unzigzag(raw);
+        if (reference <= 0 || reference > 0xFFFFFFFF) {
+            return fail("entry " + std::to_string(i) +
+                        " decoded to an impossible reference RVA");
+        }
+        state.column[0][i] = static_cast<uint32_t>(reference);
 
         if (!readVarint(&raw)) {
-            Log::Loader("address library: payload ended early at entry " +
-                        std::to_string(i));
-            state.rva.clear();
-            return false;
+            return fail("payload ended early at entry " + std::to_string(i));
         }
         if (raw == 0) {
-            // "Absent" describes the *target* build only: the ID was minted
-            // against the reference build, so a reference RVA always exists for
-            // it. Treating this as absent for column 0 would blank out every
-            // entry the other build happens to lack.
-            if (column == 0) {
-                state.rva[i] = static_cast<uint32_t>(reference);
-            } else {
-                state.rva[i] = 0;   // 0 cannot be a valid RVA, so it marks absence
-                ++absent;
-            }
+            // "Absent" describes the second column only: the reference column is
+            // the key, so it always has a value. 0 cannot be a valid RVA, so it
+            // marks absence.
+            state.column[1][i] = 0;
+            ++absent;
             continue;
         }
         slide += unzigzag(raw - 1);
         const int64_t target = reference + slide;
-
-        // Both columns are stored as one stream, so which one this entry wants
-        // is a choice between the reference RVA and the reference plus slide.
-        const int64_t chosen = (column == 0) ? reference : target;
-        if (chosen <= 0 || chosen > 0xFFFFFFFF) {
-            Log::Loader("address library: entry " + std::to_string(i) +
+        if (target <= 0 || target > 0xFFFFFFFF) {
+            return fail("entry " + std::to_string(i) +
                         " decoded to an impossible RVA");
-            state.rva.clear();
-            return false;
         }
-        state.rva[i] = static_cast<uint32_t>(chosen);
+        state.column[1][i] = static_cast<uint32_t>(target);
+    }
+
+    // Sort indices for the lookups. The reference column arrives ascending, but
+    // is sorted anyway rather than trusted - and the target column genuinely is
+    // reordered, by the layout differences this whole library exists to bridge.
+    for (int c = 0; c < kColumnCount; ++c) {
+        std::vector<uint32_t>& order = state.sorted[c];
+        order.clear();
+        order.reserve(header.entryCount);
+        for (uint32_t i = 0; i < header.entryCount; ++i) {
+            if (state.column[c][i] != 0) {
+                order.push_back(i);
+            }
+        }
+        const std::vector<uint32_t>& col = state.column[c];
+        std::sort(order.begin(), order.end(),
+                  [&col](uint32_t a, uint32_t b) { return col[a] < col[b]; });
     }
 
     state.ready = true;
+    state.running = column;
     state.base = duniaBase;
     Log::Loader("address library: mapping v" + state.mappingVersion + ", " +
-                std::to_string(header.entryCount) + " ids for " + wanted + ", " +
+                std::to_string(header.entryCount) + " addresses for " + wanted + ", " +
                 std::to_string(absent) + " absent on this build (" +
                 std::to_string(sizeof(Header) + header.payloadBytes) +
                 " bytes embedded)");
@@ -239,7 +287,11 @@ bool AddressLibrary::Init(HMODULE duniaModule, const BuildInfo& build) {
 void AddressLibrary::Reset() {
     State& state = Get();
     state.ready = false;
-    state.rva.clear();
+    for (int c = 0; c < kColumnCount; ++c) {
+        state.column[c].clear();
+        state.sorted[c].clear();
+    }
+    state.running = -1;
     state.mappingVersion.clear();
     state.base = 0;
 }
@@ -248,34 +300,66 @@ bool AddressLibrary::Ready() {
     return Get().ready;
 }
 
-uint32_t AddressLibrary::Rva(uint32_t id) {
+namespace {
+
+    // Row index whose `sourceBuild` RVA is `rva`, or -1. The encoded table is
+    // sorted by the reference column, and each column carries its own sort
+    // order, so both directions are a binary search over ~89k entries.
+    int IndexOf(DuniaBuild sourceBuild, uint32_t rva) {
+        const State& state = Get();
+        const int c = ColumnFor(sourceBuild);
+        if (!state.ready || c < 0 || rva == 0) {
+            return -1;
+        }
+        const std::vector<uint32_t>& col = state.column[c];
+        const std::vector<uint32_t>& order = state.sorted[c];
+        const auto it = std::lower_bound(order.begin(), order.end(), rva,
+                                         [&col](uint32_t row, uint32_t value) {
+                                             return col[row] < value;
+                                         });
+        if (it == order.end() || col[*it] != rva) {
+            return -1;
+        }
+        return static_cast<int>(*it);
+    }
+
+} // namespace
+
+uintptr_t AddressLibrary::AddressFrom(DuniaBuild sourceBuild, uint32_t rva) {
     const State& state = Get();
-    if (!state.ready || id >= state.rva.size()) {
+    const int row = IndexOf(sourceBuild, rva);
+    if (row < 0 || state.running < 0 || state.base == 0) {
         return 0;
     }
-    return state.rva[id];
+    const uint32_t here = state.column[state.running][row];
+    return here == 0 ? 0 : state.base + here;
 }
 
-uintptr_t AddressLibrary::Address(uint32_t id) {
+uintptr_t AddressLibrary::Address(uint32_t referenceRva) {
+    return AddressFrom(DuniaBuild::Uplay103, referenceRva);
+}
+
+uint32_t AddressLibrary::RvaIn(DuniaBuild build, uint32_t referenceRva) {
     const State& state = Get();
-    const uint32_t rva = Rva(id);
-    if (rva == 0 || state.base == 0) {
+    const int row = IndexOf(DuniaBuild::Uplay103, referenceRva);
+    const int c = ColumnFor(build);
+    if (row < 0 || c < 0) {
         return 0;
     }
-    return state.base + rva;
+    return state.column[c][row];
 }
 
 uint32_t AddressLibrary::Count() {
-    return static_cast<uint32_t>(Get().rva.size());
+    return static_cast<uint32_t>(Get().column[0].size());
 }
 
 const std::string& AddressLibrary::MappingVersion() {
     return Get().mappingVersion;
 }
 
-bool AddressLibrary::ResolveAll(const uint32_t* ids, size_t count) {
+bool AddressLibrary::ResolveAll(const uint32_t* referenceRvas, size_t count) {
     for (size_t i = 0; i < count; ++i) {
-        if (Address(ids[i]) == 0) {
+        if (Address(referenceRvas[i]) == 0) {
             return false;
         }
     }

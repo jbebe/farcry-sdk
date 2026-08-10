@@ -20,7 +20,36 @@
 extern "C" {
 #endif
 
-#define FCSE_API_VERSION 4
+#define FCSE_API_VERSION 5
+
+// Which Dunia.dll the game is running. Far Cry 2 v1.03 shipped as two different PC builds whose
+// images place the same code at different addresses, so a raw RVA is only ever true of one of them.
+// A plugin that resolves everything through ResolveFrom() below never has to look at this; it is
+// here for plugins that genuinely need to branch on the build.
+typedef enum FCSE_GameBuild {
+    FCSE_GAME_BUILD_UNKNOWN = 0,
+    FCSE_GAME_BUILD_103_RETAIL = 1,  // GOG (Fortune's Edition) / patched retail
+    FCSE_GAME_BUILD_103_UPLAY = 2,   // Steam / Ubisoft Connect re-release
+} FCSE_GameBuild;
+
+// Resolves an address you confirmed in ONE SPECIFIC BUILD to the equivalent address in whichever
+// build is running. Returns 0 if that RVA is not one the address library knows.
+//
+// This is the entry point most plugins should use, and the one that matches how addresses are
+// actually obtained. You open a Dunia.dll in Ghidra, IDA or Cheat Engine, you find a function, and
+// what you have is an address *in the build you opened* - so say which build that was:
+//
+//     api->ResolveFrom(FCSE_GAME_BUILD_103_UPLAY,  0x0081E9C0)   // found in Steam's DLL
+//     api->ResolveFrom(FCSE_GAME_BUILD_103_RETAIL, 0x00811C00)   // found in GOG's DLL
+//
+// Both name the same function, and both work whichever build the player is on. You need only the
+// copy of the game you already have.
+//
+// The two builds are NOT a fixed distance apart - the offset between them takes 2,608 different
+// values across the mapping - so this lookup is the only correct way to translate. Pass the RVA
+// (0x0081E9C0) or the VA at Dunia's preferred base (0x1081E9C0); both are accepted, since no real
+// RVA reaches 0x10000000.
+typedef uintptr_t (*FCSE_ResolveFromFn)(FCSE_GameBuild sourceBuild, uint32_t rva);
 
 // Matches Dunia.dll's own AddFunctionCB(void* fn, const char* name) signature exactly - the
 // function pointer stored is called later, by engine code, with whatever argument count/types
@@ -176,12 +205,26 @@ typedef struct FCSE_PluginAPI {
 #else
     void* duniaModule;
 #endif
-    uintptr_t duniaBase; // Dunia.dll's load base - add your own confirmed RVA to get a live VA.
-    size_t duniaSize;    // On-disk size of the loaded Dunia.dll, for your own version gate (only
-                         // trust hardcoded RVAs against the exact build you confirmed them on -
-                         // see docs/docs/engine-internals/overview.md for known build sizes).
+    // Dunia.dll's load base and on-disk size. Still here, and still correct, but adding your own
+    // hardcoded RVA to duniaBase is what makes a plugin work on one build and crash on the other -
+    // and duniaSize is no longer the right version gate, because two files of different sizes can
+    // be the same image. Prefer ResolveFrom(), and read gameBuild if you must branch.
+    uintptr_t duniaBase;
+    size_t duniaSize;
 
     FCSE_LogFn Log;
+
+    // --- address library (API v5) --------------------------------------------------------------
+    // What makes a plugin build-agnostic: hand it an address as you found it in one build, get the
+    // equivalent in the build that is running. There is deliberately only one way to do this - an
+    // address in a build you have open is the only handle a plugin author actually possesses.
+    //
+    // fcse_relocation.h wraps it as typed, lazily-resolved function pointers.
+    FCSE_ResolveFromFn ResolveFrom;
+
+    FCSE_GameBuild gameBuild;      // which build this is
+    const char* gameBuildId;       // e.g. "fc2_103_uplay" - stable, loggable
+    const char* addressMapping;    // address-mapping version, e.g. "1.0"
 
     // Tier 1: valid to call ONLY from FCSE_OnRegisterFunctions (the only point at which Dunia's
     // function registry is guaranteed constructed). Calling it from FCSE_Load is undefined.
@@ -197,7 +240,7 @@ typedef struct FCSE_PluginAPI {
 
 // Required export. Called once per plugin, right after FCSE.exe loads Dunia.dll and before any
 // Dunia.dll engine code runs. Install Hook()/Patch() calls here. Return false to abort loading
-// this plugin (e.g. an apiVersion or duniaSize you don't support) - FCSE logs the refusal and
+// this plugin (e.g. an apiVersion or gameBuild you don't support) - FCSE logs the refusal and
 // continues with the remaining plugins.
 typedef bool (*FCSE_LoadFn)(const FCSE_PluginAPI* api);
 

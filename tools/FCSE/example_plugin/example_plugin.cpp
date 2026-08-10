@@ -2,6 +2,7 @@
 // plugin API (see tools/FCSE/README.md). Meant as a copy-from starting point for real plugins as
 // much as a smoke test for FCSE.exe itself.
 #include "plugin_api.h"
+#include "fcse_relocation.h"
 
 #include <cstdio>
 #include <windows.h>
@@ -86,6 +87,46 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     }
 
     api->Log("example_plugin loaded");
+
+    // --- engine addresses, the build-agnostic way ----------------------------------------------
+    // Far Cry 2 v1.03 ships as two PC builds that place the same code at different addresses, so
+    // `api->duniaBase + <some RVA you found>` works on exactly one of them. Bind() wires up the
+    // address library, and the two relocations below name the same kind of thing the two supported
+    // ways: by stable ID, and by an address confirmed on Steam (which is what nearly every Far Cry 2
+    // address ever written down is). Both resolve correctly on GOG and on Steam.
+    if (FCSE::Bind(api)) {
+        char line[192];
+        std::snprintf(line, sizeof(line),
+                      "example_plugin: game build %s, address mapping v%s",
+                      api->gameBuildId, api->addressMapping);
+        api->Log(line);
+
+        // magma::CFileNameNomad's constructor, named two ways: as it appears in Steam's DLL, and
+        // as it appears in GOG's. Both must resolve to the same live address on whichever build is
+        // running - that is the entire promise of this API, and checking it is the point of the
+        // example.
+        //
+        // Note the two RVAs are nothing like each other. There is no offset that turns one into the
+        // other; only the lookup does.
+        static FCSE::Relocation<void*> fromUplay{FCSE::Uplay(0x005E8800)};
+        static FCSE::Relocation<void*> fromRetail{FCSE::Retail(0x005DAF20)};
+        if (fromUplay && fromRetail) {
+            const bool agree = fromUplay.address() == fromRetail.address();
+            std::snprintf(line, sizeof(line),
+                          "example_plugin: CFileNameNomad::ctor -> 0x%08zX from Steam rva, "
+                          "0x%08zX from GOG rva - %s",
+                          static_cast<size_t>(fromUplay.address()),
+                          static_cast<size_t>(fromRetail.address()),
+                          agree ? "agree" : "DISAGREE");
+            api->Log(line);
+        } else {
+            // The honest response to a missing address: say so and do without it.
+            api->Log("example_plugin: that address is not available on this build - skipping");
+        }
+    } else {
+        api->Log("example_plugin: this FCSE predates the address library (API v5); engine "
+                 "addresses unavailable");
+    }
 
     void* target = GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "GetTickCount");
     if (api->Hook(target, reinterpret_cast<void*>(&GetTickCountDetour),
