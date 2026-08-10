@@ -24,6 +24,13 @@ _FCSE_NATIVE = {
   dunia_base = function() return 0x10000000 end,
   dunia_size = function() return 20183176 end,
   current_script = function() return 'test_script' end,
+  -- Stands in for the address library: 0x005FA9C0 is mapped from either build (to different
+  -- live addresses, as the real table would give), everything else is unmapped.
+  resolve = function(build, rva)
+    calls[#calls + 1] = { 'resolve', build, rva }
+    if rva == 0x005FA9C0 then return build == 'uplay' and 0x105FA9C0 or 0x105FA000 end
+    return 0
+  end,
   patch = function(address, bytes)
     calls[#calls + 1] = { 'patch', address, bytes }
     -- Emulate the real patch: write the bytes so read-back assertions are meaningful.
@@ -68,6 +75,19 @@ end)
 check("rva / to_rva round-trip", function()
   assert(fcse.rva(0x1000) == 0x10001000)
   assert(fcse.to_rva(0x10001000) == 0x1000)
+end)
+
+check("uplay / retail forward the source build to resolve", function()
+  calls = {}
+  assert(fcse.uplay(0x005FA9C0) == 0x105FA9C0)
+  assert(calls[1][2] == 'uplay' and calls[1][3] == 0x005FA9C0, 'wrong forward')
+  assert(fcse.retail(0x005FA9C0) == 0x105FA000, 'retail resolved to the uplay address')
+  assert(calls[2][2] == 'retail', 'wrong build tag')
+end)
+
+check("an unmapped address is nil, not 0", function()
+  -- A feature checks this once and disables itself; 0 would become a jump to the DOS header.
+  assert(fcse.uplay(0x00BADBAD) == nil, 'unmapped address did not come back nil')
 end)
 
 check("log concatenates like print", function()

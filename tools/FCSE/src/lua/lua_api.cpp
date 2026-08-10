@@ -1,6 +1,8 @@
 #include "lua/lua_api.h"
 
 #include "caller_identity.h"
+#include "engine/address_library.h"
+#include "engine/build_id.h"
 #include "engine/dunia_api.h"
 #include "api/function_registry.h"
 #include "api/hook.h"
@@ -14,6 +16,7 @@ extern "C" {
 }
 
 #include <cstdint>
+#include <cstring>
 #include <string>
 #include <vector>
 #include <windows.h>
@@ -72,6 +75,37 @@ namespace {
 
     int Api_CurrentScript(lua_State* L) {
         lua_pushlstring(L, g_currentScript.data(), g_currentScript.size());
+        return 1;
+    }
+
+    // Backs fcse.uplay / fcse.retail: an RVA confirmed in one specific build, translated to the
+    // live address of the same code in whichever build is running. The script side has had only
+    // fcse.rva() until now, which is duniaBase + the number and therefore correct on exactly one
+    // of the two shipped builds - a script using it on the other jumps into unrelated code.
+    int Api_Resolve(lua_State* L) {
+        const char* buildName = luaL_checkstring(L, 1);
+        DuniaBuild source;
+        if (std::strcmp(buildName, "uplay") == 0) {
+            source = DuniaBuild::Uplay103;
+        } else if (std::strcmp(buildName, "retail") == 0) {
+            source = DuniaBuild::Retail103;
+        } else {
+            return luaL_error(L, "resolve: unknown build '%s', expected 'uplay' or 'retail'",
+                              buildName);
+        }
+
+        auto rva = static_cast<uint32_t>(CheckAddress(L, 2, "resolve"));
+
+        // Accept a VA at Dunia's preferred base as well as an RVA, exactly as the C API's
+        // ResolveFrom does: Ghidra shows 0x105FA9C0, this project's notes mostly write
+        // 0x005FA9C0, and no real RVA reaches the preferred base, so the two cannot be confused.
+        constexpr uint32_t kPreferredBase = 0x10000000u;
+        if (rva >= kPreferredBase) {
+            rva -= kPreferredBase;
+        }
+
+        // 0 for "this build has no counterpart", which the Lua wrapper turns into nil.
+        lua_pushnumber(L, static_cast<lua_Number>(AddressLibrary::AddressFrom(source, rva)));
         return 1;
     }
 
@@ -328,6 +362,7 @@ namespace {
         {"dunia_base", &Api_DuniaBase},
         {"dunia_size", &Api_DuniaSize},
         {"current_script", &Api_CurrentScript},
+        {"resolve", &Api_Resolve},
         {"patch", &Api_Patch},
         {"hook", &Api_Hook},
         {"add_function_cb", &Api_AddFunctionCB},

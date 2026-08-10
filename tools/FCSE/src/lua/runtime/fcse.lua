@@ -55,6 +55,36 @@ function fcse.to_rva(address)
   return address - fcse.base
 end
 
+-- An address as you found it in one specific build, resolved to wherever that same code lives in
+-- the build the player is actually running:
+--
+--   local BeginPageRendering = fcse.uplay(0x005FA9C0)    -- read off Steam's Dunia.dll
+--   local BeginPageRendering = fcse.retail(0x005ED140)   -- ...or GOG's. The same function.
+--
+-- Far Cry 2 v1.03 shipped as two PC builds that place the same code at different addresses, and
+-- they are not a fixed distance apart - the offset takes 2,608 different values across the mapping
+-- - so this lookup is the only correct way to translate. Which build an address came from is the
+-- only thing you have to know about it, and you always do: it is the copy of the game you opened.
+--
+-- Prefer these over rva(). `fcse.rva(0x005FA9C0)` is duniaBase plus the number, which is the right
+-- answer on exactly one of the two builds and unrelated code on the other.
+--
+-- Returns nil when the mapping has no counterpart for that address, so a script can disable the
+-- feature rather than hook a wild pointer. A byte signature (mem.scan) is the fallback for builds
+-- the mapping has never seen.
+local function resolver(build)
+  return function(rva)
+    local address = C.resolve(build, rva)
+    if address == 0 then
+      return nil
+    end
+    return address
+  end
+end
+
+fcse.uplay = resolver('uplay')
+fcse.retail = resolver('retail')
+
 --------------------------------------------------------------------------------
 -- Types and calls
 --------------------------------------------------------------------------------

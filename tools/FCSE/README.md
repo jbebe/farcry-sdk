@@ -7,7 +7,10 @@ that DLL - which works for exactly one mod at a time, since two patched copies c
 
 This README is for people building/maintaining the loader itself. If you just want to write a
 plugin, see [`include/fcse_api.h`](include/fcse_api.h) (the full ABI, documented inline) and
-[`example_plugin/example_plugin.cpp`](example_plugin/example_plugin.cpp) (a working, minimal one).
+[`example_plugin/example_plugin.cpp`](example_plugin/example_plugin.cpp) - a working mod that adds
+two toggleable rendering effects (shake the UI, and render it red-channel-only).
+[`example_script/example_script.lua`](example_script/example_script.lua) is the same mod in Lua;
+the two are written to be read side by side.
 If you just want to install plugins into the game, see [`include/README.md`](include/README.md).
 
 ## How it works
@@ -86,8 +89,10 @@ See `include/fcse_api.h` for the authoritative, documented ABI. Summary, from "n
    knowledge needed, and version-independent (it's a string key). `function-registry.md` already
    documents ~17 real gameplay call sites reachable this way.
 2. **`Hook(target, detour, &original)`** - MinHook-backed function detouring, for internals with no
-   existing named-callback seam. `target` is `duniaBase + <an RVA you found via your own Ghidra
-   work>` (or any other module's export, like `example_plugin`'s kernel32 demo).
+   existing named-callback seam. `target` is an address you found via your own Ghidra work, named
+   through `ResolveFrom`/`FCSE::Relocation` so it stays correct on both shipped builds - as
+   `example_plugin` does for `magma::CRenderNomadImpl::BeginPageRendering`. Any other module's
+   exports work too.
 3. **`Patch(address, data, size)`** - direct byte patching (`VirtualProtect` → `memcpy` → restore →
    `FlushInstructionCache`), for the same kind of small constant/branch-flip edit
    `reverse/patch_toRed.py`/`patch_incHB.py`/`patch_carJoke.py` apply *statically* to `Dunia.dll` on
@@ -106,23 +111,26 @@ value from there. Registration is valid from `FCSE_Load`:
 static const char* const kVerbosity[] = {"Quiet", "Normal", "Verbose"};
 
 static const FCSE_Setting settings[] = {
-    {"Toggle toRed",  FCSE_CHECKBOX(false), &OnToRedChanged, NULL},
+    {"Shake the UI",  FCSE_CHECKBOX(false), &OnShakeChanged, NULL},
     {"Log verbosity", FCSE_CHOICE(1),       &OnChanged, NULL, kVerbosity, 3},
-    {"Demo slider",   FCSE_SLIDER(5),       &OnChanged, NULL, NULL, 0, 0, 10},
-    {"Demo text",     FCSE_TEXT(),          &OnChanged, NULL, NULL, 0, 0, 0, "kilimanjaro", 24},
+    {"Draw distance", FCSE_SLIDER(5),       &OnChanged, NULL, NULL, 0, 0, 10},
+    {"Server name",   FCSE_TEXT(),          &OnChanged, NULL, NULL, 0, 0, 0, "kilimanjaro", 24},
 };
-api->RegisterSettings("example_plugin", settings, 4);
+api->RegisterSettings("my_mod", settings, 4);
 ```
 
 Which produces, and thereafter reads back from, a group named after the plugin:
 
 ```ini
-[example_plugin]
-Toggle toRed = false
+[my_mod]
+Shake the UI = false
 Log verbosity = Normal
-Demo slider = 5
-Demo text = kilimanjaro
+Draw distance = 5
+Server name = kilimanjaro
 ```
+
+(`example_plugin` itself registers two checkboxes, so its real group is smaller than this - the
+four types are shown together here because this is the reference for them.)
 
 Four types, each rendering as the control the game's own settings pages use, so a mod's page looks
 like a stock one:
@@ -266,24 +274,29 @@ workflow (`.github/workflows/fcse-release.yml`) deliberately ships as a *separat
   `tests/lua_runtime_tests.lua` (the script API, in this build's own LuaJIT) via `ctest`. Neither
   needs the game or `Dunia.dll`.
 - Drop `example_plugin.dll` alone into `bin\plugins\`: `fcse.log` should show it discovered, loaded,
-  its `GetTickCount` hook installed, its demo buffer patched, and (later, from inside `Provider()`)
-  its `toRed` registration accepted.
+  the running build and mapping version, its hook on
+  `magma::CRenderNomadImpl::BeginPageRendering` installed at a named address, and (later, from
+  inside `Provider()`) its `toRed` registration accepted.
 - Settings round trip: with `example_plugin.dll` installed, a first launch should create
-  `bin\fcse.ini` containing an `[example_plugin]` group. Toggle "Toggle toRed" in the Mod
-  Configuration Menu, confirm the row's `[ON]`/`[OFF]` flips on the spot and the file updates, then
-  relaunch and confirm `fcse.log` shows `example_plugin: toRed is ON` during load - i.e. the value
-  came back from the file before the game started, not from the plugin's own default.
+  `bin\fcse.ini` containing an `[example_plugin]` group. Toggle "Shake the UI" in the Mod
+  Configuration Menu, confirm the row's `[ON]`/`[OFF]` flips on the spot, the menu around it starts
+  jittering immediately, and the file updates; then relaunch and confirm `fcse.log` shows
+  `example_plugin: UI shake is ON` during load - i.e. the value came back from the file before the
+  game started, not from the plugin's own default.
+- Same mod, two languages: `example_script/example_script.lua` implements exactly the same two
+  effects. Installed on its own it should behave identically; installed *alongside* the DLL, the
+  DLL loads first and keeps both the hook and the `toRed` name, and the script's attempts at each
+  are logged as rejected conflicts naming both.
 - Conflict rejection: install a second copy of `example_plugin.dll` under a different filename.
   Both are loaded (`bin\plugins\` is scanned via `FindFirstFileW`/`FindNextFileW`, so order follows
   normal directory enumeration, not necessarily alphabetical), and `fcse.log` should show exactly
-  one of them win the `GetTickCount` hook and the `toRed` registration, with the other's attempt
-  logged as a rejected conflict naming both. `Patch()`'s overlap-rejection path is exercised by
-  `example_plugin` alone (against its own local buffer) and reviewed by inspection
-  (`src/api/patch.cpp`'s interval-overlap check is a few lines) - it doesn't have an equally safe,
-  generic **cross**-plugin demo target the way a real Windows API export does for `Hook()`.
+  one of them win the `BeginPageRendering` hook and the `toRed` registration, with the other's
+  attempt logged as a rejected conflict naming both. `Patch()`'s overlap-rejection path has no
+  demo in the example any more - it's covered by `tests/` and by inspection (`src/api/patch.cpp`'s
+  interval-overlap check is a few lines).
 - **Real in-game verification is on you** - same as `tools/misc/modpatcher`'s own README status
   section, whose live-launch testing was done against a real Steam install, not by an agent. A
   real launch + gameplay pass (menu loads, a diamond pickup still increments, malaria curve still
-  behaves, and - with `example_plugin` installed - the HUD actually renders red-channel-only) is
-  the remaining step to confirm full behavioral parity with the stock exe plus the plugin
-  mechanism actually reaching real gameplay code.
+  behaves, and - with `example_plugin` installed - the UI actually shakes and the HUD actually
+  renders red-channel-only) is the remaining step to confirm full behavioral parity with the stock
+  exe plus the plugin mechanism actually reaching real gameplay code.

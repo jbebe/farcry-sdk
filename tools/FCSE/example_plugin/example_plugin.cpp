@@ -1,80 +1,128 @@
-// example_plugin - minimal, self-contained FCSE plugin demonstrating all three tiers of the
-// plugin API (see tools/FCSE/README.md). Meant as a copy-from starting point for real plugins as
-// much as a smoke test for FCSE.exe itself.
+// example_plugin - a complete, working FCSE plugin in one file: two toggleable rendering effects,
+// both reachable from the in-game Mod Configuration Menu, both surviving a restart.
+//
+//   Shake the UI    every menu, the HUD and the map jitter a few pixels each frame
+//   Red UI          the entire 2D layer renders red-channel-only
+//
+// `example_script/example_script.lua` is the same mod written in Lua. The two files are meant to
+// be read side by side - they use the same seams in the same order, so the comparison answers
+// "what does the script API give up?" directly. (For this mod: nothing.)
+//
+// Copy this file as a starting point for a real plugin; `include/fcse_api.h` is the only header
+// you need, and it documents the whole ABI inline.
 #include "fcse_api.h"
 
+#include <cstdint>
 #include <cstdio>
-#include <windows.h>
 
 namespace {
     const FCSE_PluginAPI* g_api = nullptr;
 
-    // Tier 3 demo target: a small buffer inside this plugin's own module - never touches Dunia.dll
-    // or any shared/system code, so this is always safe to run regardless of what's installed.
-    unsigned char g_demoBuffer[4] = {0, 0, 0, 0};
+    // ==========================================================================================
+    // Effect 1 - shake the UI (Tier 2: a hook on an engine method)
+    // ==========================================================================================
+    //
+    // `magma::CRenderNomadImpl` is the vertex sink for Far Cry 2's entire 2D layer: HUD, map,
+    // weapon wheel, and every menu. Each widget quad is emitted as BeginQuad -> SetVertex x4 ->
+    // EndQuad, and EndQuad finishes each of the four corners with
+    //
+    //     x' = (x + m_originX) / m_width * m_scaleX + m_biasX
+    //     y' = (y + m_originY) / m_height
+    //
+    // so m_originX/m_originY are a pixel-space translation added to every vertex the UI draws.
+    // `BeginPageRendering()` refills both from the current viewport at the start of every page,
+    // which is what makes them a good thing for a mod to touch: adding a random offset just after
+    // it runs shakes the whole interface, and switching the effect off restores the game exactly,
+    // because the engine overwrites both fields again on the very next frame. Nothing is saved,
+    // nothing is unpatched, and a crash mid-shake leaves no trace on disk.
+    constexpr uintptr_t kOriginX = 0xE0; // float, magma::CRenderNomadImpl
+    constexpr uintptr_t kOriginY = 0xE4; // float, the next one along
 
-    // Tier 2 demo target: kernel32's GetTickCount. Chosen because it's a trivial, extremely
-    // well-known __stdcall export with no side effects to preserve beyond "return the real tick
-    // count" - safe to detour as a mechanism demo without needing any Dunia.dll-specific RE work.
-    // The detour is a transparent passthrough; the interesting log output is FCSE's own
-    // install/conflict messages in hook.cpp, not anything this function does per call.
-    using GetTickCountFn = DWORD(WINAPI*)();
-    GetTickCountFn g_originalGetTickCount = nullptr;
+    // Screen pixels - m_originX/Y are in viewport pixels, so this is literal distance.
+    constexpr float kShakeAmplitude = 6.0f;
 
-    DWORD WINAPI GetTickCountDetour() {
-        return g_originalGetTickCount();
+    bool g_shakeEnabled = false;
+
+    // `magma::CRenderNomadImpl::BeginPageRendering`, named as it appears in Steam's Dunia.dll.
+    // Naming it from GOG's instead - FCSE::Retail(0x005ED140) - is the same function and resolves
+    // just as correctly on either build; only one of the two is ever needed. Note the two numbers
+    // are nothing like each other, and no arithmetic turns one into the other: only the lookup
+    // does. FCSE::Pattern("..") is the third way, for builds the address library has never seen.
+    //
+    // The method is __thiscall (`this` in ECX, no stack arguments). MSVC will not let a free
+    // function be declared __thiscall, so the detour below is __fastcall with an unused second
+    // parameter - for a method that takes nothing, the two are the same ABI: ECX carries `this`,
+    // EDX is ignored, and neither convention cleans any stack.
+    using BeginPageRenderingFn = void(__fastcall*)(void* self, void* unused);
+
+    FCSE::Relocation<BeginPageRenderingFn> g_beginPageRendering{FCSE::Uplay(0x005FA9C0)};
+    BeginPageRenderingFn g_originalBeginPageRendering = nullptr;
+
+    // A private generator rather than rand(): the game uses the CRT's global one, and stepping it
+    // from a render callback on every frame would quietly shift the game's own random sequence.
+    // A mod should not have side effects it did not ask for.
+    uint32_t g_rng = 0x9E3779B9u;
+
+    float NextJitter() {
+        g_rng ^= g_rng << 13;
+        g_rng ^= g_rng >> 17;
+        g_rng ^= g_rng << 5;
+        // Top 24 bits as [0,1), then rescaled to [-kShakeAmplitude, +kShakeAmplitude].
+        const float unit = static_cast<float>(g_rng >> 8) * (1.0f / 16777216.0f);
+        return (unit * 2.0f - 1.0f) * kShakeAmplitude;
     }
 
-    // Tier 1 demo: overrides the stock "toRed" handler. Stock behavior writes 1 (normal RGB);
-    // docs/docs/engine-internals/function-registry.md and reverse/patch_toRed.py confirm live
-    // in-game that writing 0 instead switches all 2D UI/HUD rendering to red-channel-only. "toRed"
-    // is called every frame (FunctionRegistry_Invoke's normal dispatch), so this override just
-    // reads g_toRedEnabled fresh each call - no re-hooking needed to react to the Tier 4 checkbox
-    // below toggling it live. Needs zero Dunia.dll address knowledge - just claim the name before
-    // FCSE's own stock registration runs (see debug_commands.cpp's Provider()).
-    bool g_toRedEnabled = false;
+    void __fastcall BeginPageRenderingDetour(void* self, void* unused) {
+        // Let the engine set the real viewport origin first, then perturb it. Doing it in this
+        // order is what makes the effect self-restoring - the value we modify is written fresh
+        // every frame, so we are never responsible for putting anything back.
+        g_originalBeginPageRendering(self, unused);
+
+        if (!g_shakeEnabled || self == nullptr) {
+            return;
+        }
+
+        // A direct store, deliberately *not* api->Patch(): Patch is for editing code and static
+        // data once, and it logs and overlap-checks every call. This is a per-frame write into a
+        // live engine object, which is ordinary memory this plugin is already allowed to touch.
+        auto* base = static_cast<char*>(self);
+        *reinterpret_cast<float*>(base + kOriginX) += NextJitter();
+        *reinterpret_cast<float*>(base + kOriginY) += NextJitter();
+    }
+
+    void __cdecl OnShakeChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
+        g_shakeEnabled = value->asCheckbox;
+        if (g_api != nullptr) {
+            g_api->Log(g_shakeEnabled ? "example_plugin: UI shake is ON"
+                                      : "example_plugin: UI shake is OFF");
+        }
+    }
+
+    // ==========================================================================================
+    // Effect 2 - red UI (Tier 1: claiming one of Dunia's named callbacks)
+    // ==========================================================================================
+    //
+    // The cheapest real hook there is: no address at all, just a name claimed before FCSE's own
+    // stock registration runs (see the loader's debug_commands.cpp). `FarCry2.exe` ships a "toRed"
+    // handler that writes 1; the engine calls it once from
+    // magma::CRenderNomadImpl::BeginRendering and keeps the answer in the renderer's "full colour"
+    // field. Writing 0 instead makes the whole 2D layer render red-channel-only.
+    //
+    // Because the name is a string key rather than an address, this half of the plugin needs no
+    // address library, no pattern, and no per-build knowledge whatsoever.
+    bool g_redEnabled = false;
 
     int __cdecl ToRedOverride(void* param1, void* /*param2*/) {
-        *reinterpret_cast<int*>(param1) = g_toRedEnabled ? 0 : 1;
+        *reinterpret_cast<int*>(param1) = g_redEnabled ? 0 : 1;
         return 0;
     }
 
-    // Tier 4 demo target: one Checkbox, persisted in bin\fcse.ini under [example_plugin] and shown
-    // as a row in FCSE's Mod Configuration Menu. FCSE owns the stored value, so this callback is
-    // the only way the plugin learns it - which is also what makes the setting survive a restart:
-    // it fires once during FCSE_Load carrying whatever the file held, and again on every toggle.
-    void __cdecl OnToRedChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-        g_toRedEnabled = value->asCheckbox;
+    void __cdecl OnRedChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
+        g_redEnabled = value->asCheckbox;
         if (g_api != nullptr) {
-            g_api->Log(g_toRedEnabled ? "example_plugin: toRed is ON" : "example_plugin: toRed is OFF");
+            g_api->Log(g_redEnabled ? "example_plugin: red UI is ON"
+                                    : "example_plugin: red UI is OFF");
         }
-    }
-
-    // The other three setting types, present only to demonstrate what a row of each looks like and
-    // to give the menu something to exercise. None of them drives anything in this plugin.
-    const char* const kVerbosityChoices[] = {"Quiet", "Normal", "Verbose"};
-
-    void __cdecl OnDemoSettingChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-        if (g_api == nullptr) {
-            return;
-        }
-        char message[160];
-        switch (value->type) {
-        case FCSE_SettingType_Choice:
-            sprintf_s(message, "example_plugin: verbosity is %s",
-                      kVerbosityChoices[value->asChoice]);
-            break;
-        case FCSE_SettingType_Slider:
-            sprintf_s(message, "example_plugin: demo slider is %d", value->asSlider);
-            break;
-        case FCSE_SettingType_Text:
-            sprintf_s(message, "example_plugin: demo text is \"%s\"",
-                      value->asText != nullptr ? value->asText : "");
-            break;
-        default:
-            return;
-        }
-        g_api->Log(message);
     }
 }
 
@@ -87,80 +135,45 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 
     api->Log("example_plugin loaded");
 
-    // --- engine addresses, the build-agnostic way ----------------------------------------------
-    // Far Cry 2 v1.03 ships as two PC builds that place the same code at different addresses, so
-    // `api->duniaBase + <some RVA you found>` works on exactly one of them. Bind() wires up the
-    // address library, and the three relocations below name the very same function three ways: by
-    // its address in Steam's DLL, by its address in GOG's, and by a byte pattern. All three resolve
-    // correctly whichever build the player is on.
-    if (FCSE::Bind(api)) {
+    // Wires up the address library behind FCSE::Relocation. Without it every Relocation stays
+    // unresolved, which is why this is the first thing FCSE_Load does.
+    if (!FCSE::Bind(api)) {
+        api->Log("example_plugin: this FCSE predates the address library (API v5) - the UI shake "
+                 "needs it, so only the red-UI effect will work");
+    } else {
         char line[192];
-        std::snprintf(line, sizeof(line),
-                      "example_plugin: game build %s, address mapping v%s",
+        std::snprintf(line, sizeof(line), "example_plugin: game build %s, address mapping v%s",
                       api->gameBuildId, api->addressMapping);
         api->Log(line);
 
-        // magma::CFileNameNomad's constructor, named two ways: as it appears in Steam's DLL, and
-        // as it appears in GOG's. Both must resolve to the same live address on whichever build is
-        // running - that is the entire promise of this API, and checking it is the point of the
-        // example.
-        //
-        // Note the two RVAs are nothing like each other. There is no offset that turns one into the
-        // other; only the lookup does.
-        static FCSE::Relocation<void*> fromUplay{FCSE::Uplay(0x005E8800)};
-        static FCSE::Relocation<void*> fromRetail{FCSE::Retail(0x005DAF20)};
-
-        // And the old-school way, for code that has to run on builds the address library has never
-        // seen. The wildcards cover the two operands that legitimately differ between builds - the
-        // vtable pointer this ctor stores, and a call displacement - which is exactly why the same
-        // pattern matches both. Note it is *not* verified by anything: a pattern is only as good as
-        // its uniqueness, so FCSE returns 0 rather than guessing if it matches more than once.
-        static FCSE::Relocation<void*> byPattern{
-            FCSE::Pattern("51 56 8B F1 8D 4E 04 C7 06 ?? ?? ?? ?? E8 ?? ?? ?? ?? 33 C0")};
-
-        if (fromUplay && fromRetail && byPattern) {
-            const bool agree = fromUplay.address() == fromRetail.address() &&
-                               fromUplay.address() == byPattern.address();
+        // A missing address must never become a jump: check once, here, and disable the feature
+        // rather than discovering it halfway through a frame.
+        if (!g_beginPageRendering) {
+            api->Log("example_plugin: BeginPageRendering is not mapped on this build - UI shake "
+                     "disabled");
+        } else if (api->Hook(reinterpret_cast<void*>(g_beginPageRendering.address()),
+                             reinterpret_cast<void*>(&BeginPageRenderingDetour),
+                             reinterpret_cast<void**>(&g_originalBeginPageRendering))) {
             std::snprintf(line, sizeof(line),
-                          "example_plugin: CFileNameNomad::ctor -> 0x%08zX from Steam rva, "
-                          "0x%08zX from GOG rva, 0x%08zX by pattern - %s",
-                          static_cast<size_t>(fromUplay.address()),
-                          static_cast<size_t>(fromRetail.address()),
-                          static_cast<size_t>(byPattern.address()),
-                          agree ? "all agree" : "DISAGREE");
+                          "example_plugin: hooked magma::CRenderNomadImpl::BeginPageRendering at "
+                          "0x%08zX",
+                          static_cast<size_t>(g_beginPageRendering.address()));
             api->Log(line);
-        } else {
-            // The honest response to a missing address: say so and do without it.
-            api->Log("example_plugin: that address is not available on this build - skipping");
         }
-    } else {
-        api->Log("example_plugin: this FCSE predates the address library (API v5); engine "
-                 "addresses unavailable");
+        // Hook() having failed is already logged by FCSE, naming the plugin that won the address.
+        // g_originalBeginPageRendering stays null in that case, which is exactly why the detour is
+        // never reached: it is only ever called through the hook that failed to install.
     }
 
-    void* target = GetProcAddress(GetModuleHandleW(L"kernel32.dll"), "GetTickCount");
-    if (api->Hook(target, reinterpret_cast<void*>(&GetTickCountDetour),
-                  reinterpret_cast<void**>(&g_originalGetTickCount))) {
-        api->Log("example_plugin: GetTickCount hook installed");
-    }
-
-    unsigned char patchBytes[4] = {1, 2, 3, 4};
-    if (api->Patch(g_demoBuffer, patchBytes, sizeof(patchBytes))) {
-        api->Log("example_plugin: demo buffer patched");
-    }
-
-    // OnToRedChanged fires before RegisterSettings returns, so g_toRedEnabled already reflects
-    // fcse.ini by the time this call is done - no separate "read my config" step.
+    // Tier 4. Each callback fires once from inside this call carrying whatever bin\fcse.ini holds,
+    // so both flags already reflect the player's saved choices by the time RegisterSettings
+    // returns - there is no separate "read my config" step - and again on every in-game toggle.
     //
-    // One row of each type, so the Mod Configuration Menu has something of every shape to show.
-    // Everything after `userdata` is per-type configuration and is ignored by the types that do not
-    // use it, which is why the Checkbox line does not have to mention any of it.
+    // Both rows are checkboxes; a plugin can also declare Choice, Slider and Text rows, which take
+    // their extra configuration from the fields after `userdata` (see FCSE_Setting in fcse_api.h).
     static const FCSE_Setting settings[] = {
-        {"Toggle toRed", FCSE_CHECKBOX(false), &OnToRedChanged, nullptr},
-        {"Log verbosity", FCSE_CHOICE(1), &OnDemoSettingChanged, nullptr, kVerbosityChoices, 3},
-        {"Demo slider", FCSE_SLIDER(5), &OnDemoSettingChanged, nullptr, nullptr, 0, 0, 10},
-        {"Demo text", FCSE_TEXT(), &OnDemoSettingChanged, nullptr, nullptr, 0, 0, 0, "kilimanjaro",
-         24},
+        {"Shake the UI", FCSE_CHECKBOX(false), &OnShakeChanged, nullptr},
+        {"Red UI", FCSE_CHECKBOX(false), &OnRedChanged, nullptr},
     };
     if (api->RegisterSettings("example_plugin", settings,
                               sizeof(settings) / sizeof(settings[0]))) {
@@ -171,8 +184,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 }
 
 extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI* api) {
-    // AddFunctionCB is void by design (it matches Dunia.dll's own AddFunctionCB signature exactly
-    // - see fcse_api.h) - whether this claim actually won is only visible in fcse.log, via
+    // AddFunctionCB is void by design - it matches Dunia.dll's own AddFunctionCB signature exactly
+    // (see fcse_api.h) - so whether this claim actually won is only visible in fcse.log, via
     // FCSE's own function_registry.cpp logging, not through a return value here.
     api->AddFunctionCB(reinterpret_cast<void*>(&ToRedOverride), "toRed");
     api->Log("example_plugin: toRed registration attempted, see fcse.log for whether it won");
