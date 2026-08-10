@@ -173,6 +173,19 @@ public sealed class GameVfs : IDisposable
     /// <summary>Entries whose filename nobody has recovered yet — still fully usable.</summary>
     public int UnnamedCount { get; private set; }
 
+    /// <summary>
+    /// Whether <paramref name="file"/>'s winning bytes come from an archive that never changes for
+    /// the life of the install — i.e. an archive other than the one this tool itself rewrites on
+    /// every Build &amp; Apply. This is the same "is it cacheable" test <see cref="MergeFragments"/>
+    /// already applies before consulting <see cref="GameCache"/>, exposed because
+    /// <see cref="Xrefs.ReferenceIndexer"/> needs exactly the same answer to decide what it may
+    /// persist: a mod-supplied or patch-supplied file's references are only valid for this session's
+    /// layer stack, so they must never reach the on-disk index.
+    /// </summary>
+    public bool IsStableSource(VfsFile file)
+        => file.SourceKind == SourceKind.Archive
+        && !_archiveIsVolatile.GetValueOrDefault(file.SourceName, defaultValue: true);
+
     private GameVfs(NameDatabase names, GameCache cache, FcbClassDefinitions fcbDefinitions)
     {
         _names = names;

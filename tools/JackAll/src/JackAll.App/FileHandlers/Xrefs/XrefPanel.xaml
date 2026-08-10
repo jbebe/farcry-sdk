@@ -1,0 +1,73 @@
+<UserControl x:Class="JackAll.App.FileHandlers.Xrefs.XrefPanel"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <UserControl.Resources>
+        <!-- A dangling reference stays visible but reads as unavailable: "points at something this
+             install doesn't ship" is a real finding, and hiding those rows would quietly turn a
+             broken reference into a missing one. -->
+        <Style x:Key="XrefGrid" TargetType="DataGrid">
+            <Setter Property="AutoGenerateColumns" Value="False" />
+            <Setter Property="IsReadOnly" Value="True" />
+            <Setter Property="HeadersVisibility" Value="Column" />
+            <Setter Property="GridLinesVisibility" Value="None" />
+            <Setter Property="MaxHeight" Value="190" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="RowHeight" Value="19" />
+            <Setter Property="EnableRowVirtualization" Value="True" />
+            <Setter Property="VirtualizingPanel.IsVirtualizing" Value="True" />
+            <Setter Property="VirtualizingPanel.VirtualizationMode" Value="Recycling" />
+        </Style>
+
+        <Style x:Key="XrefRowStyle" TargetType="DataGridRow">
+            <EventSetter Event="MouseDoubleClick" Handler="Row_Activated" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding CanNavigate}" Value="False">
+                    <Setter Property="Foreground" Value="#999" />
+                    <Setter Property="ToolTip" Value="Nothing in the merged filesystem has this hash - a reference to content this install doesn't ship." />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <StackPanel>
+        <!-- Shown instead of the lists until the background index finishes, so an empty list can
+             never be mistaken for "this file references nothing". -->
+        <TextBlock x:Name="StatusLine" Foreground="#888" FontSize="11" TextWrapping="Wrap"
+                   Margin="0,0,0,4" />
+
+        <Expander x:Name="IncomingExpander" IsExpanded="True" Margin="0,0,0,4">
+            <DataGrid x:Name="IncomingGrid" Style="{StaticResource XrefGrid}"
+                      RowStyle="{StaticResource XrefRowStyle}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="from" Binding="{Binding Display}" Width="*" />
+                    <DataGridTextColumn Header="site" Binding="{Binding Site}" Width="Auto" />
+                    <DataGridTextColumn Header="kind" Binding="{Binding Kind}" Width="Auto" />
+                </DataGrid.Columns>
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Copy hash" Click="CopyHash_Click" />
+                        <MenuItem Header="Filter files by this hash" Click="FilterByHash_Click" />
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
+            </DataGrid>
+        </Expander>
+
+        <Expander x:Name="OutgoingExpander" IsExpanded="True">
+            <DataGrid x:Name="OutgoingGrid" Style="{StaticResource XrefGrid}"
+                      RowStyle="{StaticResource XrefRowStyle}">
+                <DataGrid.Columns>
+                    <DataGridTextColumn Header="to" Binding="{Binding Display}" Width="*" />
+                    <DataGridTextColumn Header="space" Binding="{Binding SpaceLabel}" Width="Auto" />
+                    <DataGridTextColumn Header="site" Binding="{Binding Site}" Width="Auto" />
+                    <DataGridTextColumn Header="kind" Binding="{Binding Kind}" Width="Auto" />
+                </DataGrid.Columns>
+                <DataGrid.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Copy hash" Click="CopyHash_Click" />
+                        <MenuItem Header="Filter files by this hash" Click="FilterByHash_Click" />
+                    </ContextMenu>
+                </DataGrid.ContextMenu>
+            </DataGrid>
+        </Expander>
+    </StackPanel>
+</UserControl>

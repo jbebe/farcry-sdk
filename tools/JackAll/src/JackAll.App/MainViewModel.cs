@@ -158,7 +158,7 @@ public sealed class SaveRow(SaveGameInfo info)
     }
 }
 
-public sealed class MainViewModel : INotifyPropertyChanged
+public sealed partial class MainViewModel : INotifyPropertyChanged
 {
     private GameVfs? _vfs;
     private GameCache _cache = new();
@@ -669,6 +669,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         BuildTree();
         Status = $"{vfs.Files.Count:N0} files across {vfs.Archives.Count} archives"
                + $"  •  {vfs.UnnamedCount:N0} with unknown names";
+
+        // Phase 3, once the tree the user is actually looking at is complete. See BuildXrefsAsync's
+        // remarks for why this follows the fragment pass rather than running beside it.
+        await BuildXrefsAsync();
     }
 
     /// <summary>
@@ -857,6 +861,10 @@ public sealed class MainViewModel : INotifyPropertyChanged
         {
             row.NotifyFileCountChanged();
         }
+
+        // The layer stack just changed, so the xref overlay describing it is stale. Only the overlay
+        // is rebuilt - the base-archive index underneath it is unaffected by any mod toggle.
+        await RefreshXrefOverlayAsync();
     }
 
     private void BuildTree()
@@ -1302,7 +1310,15 @@ public sealed class MainViewModel : INotifyPropertyChanged
     /// dependency-link row's "Go to file" button. Goes through <see cref="SetSelectedFiles"/> (not a
     /// bare <see cref="SelectedFile"/> assignment) so the Files tab's own multi-select state stays
     /// consistent with the new single selection.</summary>
-    public void NavigateTo(VfsFile file) => SetSelectedFiles([file]);
+    public void NavigateTo(VfsFile file)
+    {
+        // Recorded before the move, so Back returns to where the jump started. Only jumps go through
+        // here (an xref row, a depload link, an .spk cross-reference) - an ordinary click in the file
+        // grid doesn't, which is deliberate: the history is for following references, and mixing
+        // scroll-and-click browsing into it would bury the one step the user actually wants back.
+        PushNavigationHistory(SelectedFile);
+        SetSelectedFiles([file]);
+    }
 
     /// <summary>The vanilla text of a fragment row, ignoring mods/workspace - null when there's
     /// nothing to compare against (a mod-added container). <paramref name="file"/> must be a fragment

@@ -51,6 +51,16 @@ public sealed class AppConfig
     public static string CacheFile => Path.Combine(DataDir, ".appcache");
 
     /// <summary>
+    /// The built hash reference graph (see <see cref="JackAll.Core.Xrefs.ReferenceIndex"/>) — same
+    /// lifecycle and same recovery story as <see cref="CacheFile"/>: safe to delete at any time,
+    /// rebuilt on the next launch, and deleting it is how you recover if the game is reinstalled or
+    /// patched underneath us. Its own file rather than another section of the cache because it is an
+    /// order of magnitude larger (tens of MB against tens of KB), which makes it the one piece
+    /// someone might want to delete on its own to reclaim the space.
+    /// </summary>
+    public static string XrefFile => Path.Combine(DataDir, ".xrefs");
+
+    /// <summary>
     /// Far Cry 2's .fcb class/member name-and-type config (wobatt's improved binary_classes.xml) — a
     /// fixed part of the product, same reasoning as <see cref="NamesFile"/>. Missing is not fatal: the
     /// .fcb handler falls back to hash-only/BinHex for everything (see <c>FcbClassDefinitions.Empty</c>).

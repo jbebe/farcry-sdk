@@ -8,6 +8,7 @@ using JackAll.Cli.Commands.Sbao;
 using JackAll.Cli.Commands.Spk;
 using JackAll.Cli.Commands.Xbg;
 using JackAll.Cli.Commands.Xbt;
+using JackAll.Cli.Commands.Xref;
 using Spectre.Console.Cli;
 
 var app = new CommandApp();
@@ -136,6 +137,22 @@ app.Configure(config =>
         rml.AddCommand<RmlEncodeCommand>("encode")
             .WithDescription("Re-encode an XML document back into a binary .rml.")
             .WithExample("rml", "encode", "toc.xml");
+    });
+
+    // --- Hash reference graph --------------------------------------------
+    // The headless half of the app's Xrefs panel. `build` is also the only way to see what the
+    // index actually costs - counts, timing, and how many file references resolve to a real entry.
+    config.AddBranch("xref", xref =>
+    {
+        xref.AddCommand<XrefBuildCommand>("build")
+            .WithDescription("Index every hash reference in the game's archives, beside the install.")
+            .WithExample("xref", "build", "--game", @"C:\Games\Far Cry 2");
+        xref.AddCommand<XrefToCommand>("to")
+            .WithDescription("List everything that references a path or hash.")
+            .WithExample("xref", "to", @"graphics\_common\weapons\ak47\ak47_d.xbt", "--game", @"C:\Games\Far Cry 2");
+        xref.AddCommand<XrefFromCommand>("from")
+            .WithDescription("List everything a file references.")
+            .WithExample("xref", "from", @"graphics\_common\weapons\ak47\ak47.xbm", "--game", @"C:\Games\Far Cry 2");
     });
 });
 

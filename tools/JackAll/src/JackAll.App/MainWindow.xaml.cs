@@ -25,6 +25,12 @@ public partial class MainWindow : Window
 {
     private readonly MainViewModel _vm = new();
 
+    /// <summary>Alt+Left / Alt+Right, for stepping back and forth through followed references. Static
+    /// so the XAML <c>KeyBinding</c>s can name them with <c>x:Static</c>; the handlers are wired per
+    /// instance in the constructor.</summary>
+    public static readonly RoutedCommand NavigateBackCommand = new();
+    public static readonly RoutedCommand NavigateForwardCommand = new();
+
     public MainWindow()
     {
         InitializeComponent();
@@ -32,6 +38,15 @@ public partial class MainWindow : Window
         Loaded += OnLoaded;
         Closing += (_, _) => _vm.SaveConfig();
         _vm.PropertyChanged += OnViewModelPropertyChanged;
+
+        CommandBindings.Add(new CommandBinding(
+            NavigateBackCommand,
+            (_, _) => _vm.NavigateBack(),
+            (_, e) => e.CanExecute = _vm.CanNavigateBack));
+        CommandBindings.Add(new CommandBinding(
+            NavigateForwardCommand,
+            (_, _) => _vm.NavigateForward(),
+            (_, e) => e.CanExecute = _vm.CanNavigateForward));
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -40,6 +55,12 @@ public partial class MainWindow : Window
         {
             RefreshPreview();
             RevealSelectedFileInTree();
+        }
+        else if (e.PropertyName is nameof(MainViewModel.XrefsReady) or nameof(MainViewModel.XrefStatus))
+        {
+            // The background index just finished (or advanced): the panel is showing a status line
+            // for the current file and needs to become the real lists.
+            RefreshPreview();
         }
     }
 
@@ -116,6 +137,10 @@ public partial class MainWindow : Window
         PreviewHost.Content = view;
         PreviewHost.Visibility = view is null ? Visibility.Collapsed : Visibility.Visible;
         NoPreviewPanel.Visibility = file is not null && view is null ? Visibility.Visible : Visibility.Collapsed;
+
+        // Outside the catalog switch above on purpose - the xref lists are worth showing even for a
+        // file whose type has no handler, which is exactly when they're the only thing on offer.
+        XrefsPanel.Show(_vm, file);
     }
 
     // ------------------------------------------------------------ fragment XML editor tabs
