@@ -5,7 +5,9 @@ description: Open tasks across the repository, docs, JackAll, and mod work.
 
 # Todos
 
-A running task list across the whole project.
+A running task list across the whole project. For the reasoning behind the JackAll entries — what's
+already covered by parsers and editors, what's missing, and which direction needs the most
+implementation — see the [Tooling roadmap](/todos/roadmap).
 
 ## Repository
 
@@ -25,6 +27,10 @@ A running task list across the whole project.
   - https://hiddenpalace.org/Assassin%27s_Creed_(Feb_15,_2008_prototype)
 
 ## Tools/JackAll
+
+Prioritized in the [Tooling roadmap](/todos/roadmap), which reorders the Domino entry below: the
+visual revamp is cosmetic next to wiring up the existing `UserGraphWriter`, and swapping the graph
+package won't fix the real problem (20,228 wire crossings after layout).
 
 - [ ] Review the Domino viewer because it needs a lot of improvements
   - Review code
