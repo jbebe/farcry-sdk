@@ -1,5 +1,7 @@
 ﻿#include "ui/mods_tab.h"
 
+#include "engine/address_library.h"
+#include "engine/address_symbols.h"
 #include "engine/dunia_api.h"
 #include "ui/fcse_page.h"
 #include "api/hook.h"
@@ -27,9 +29,6 @@ namespace {
     //
     // The row itself is added by fcse_page.cpp, which resolves CListMenuPage::AddButton for
     // itself - this file only owns the hook and the `this` to hand it.
-    constexpr uintptr_t kDuniaPreferredBase = 0x10000000;
-    constexpr uintptr_t kOptionsMenuRva = 0x1081aee0;
-
     using OptionsMenuFn = void(__thiscall*)(void* thisPtr);
 
     OptionsMenuFn g_originalOptionsMenu = nullptr;
@@ -91,7 +90,12 @@ bool ModsTab::Install() {
     }
 
     void* optionsMenuTarget =
-        reinterpret_cast<void*>(base + (kOptionsMenuRva - kDuniaPreferredBase));
+        reinterpret_cast<void*>(AddressLibrary::Address(Symbols::kOptionsMenu));
+    if (optionsMenuTarget == nullptr) {
+        Log::Loader("Mods tab: the options-menu setup function has no address on this game build "
+                    "- no \"Mods\" tab this run");
+        return false;
+    }
 
     if (!HookManager::Hook(optionsMenuTarget, RawFunctionPointer(&SetupDetourThunk::Detour),
                             reinterpret_cast<void**>(&g_originalOptionsMenu))) {

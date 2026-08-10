@@ -1,5 +1,7 @@
 ﻿#include "ui/fcse_page.h"
 
+#include "engine/address_library.h"
+#include "engine/address_symbols.h"
 #include "engine/dunia_api.h"
 #include "ini_file.h"
 #include "log.h"
@@ -21,7 +23,10 @@
 namespace FCSE {
 
 namespace {
-    constexpr uintptr_t kDuniaPreferredBase = 0x10000000;
+    // Engine addresses are resolved through the address library by the Symbols::k* IDs named in the
+    // comments below, not baked in: the two shipped v1.03 builds place them differently, and the
+    // hex quoted alongside each name is only correct on fc2_103_uplay (Steam/Uplay). The prose is
+    // kept because it is the record of how each was identified.
 
     // CFCXOptionGamePage's real ctor, and the allocation size AddPage<CFCXOptionGamePage> uses.
     //
@@ -30,18 +35,15 @@ namespace {
     // and the page displays, but Back kills the process with R6025 "pure virtual function call".
     // Its content-build slot at vtable+0x3c being a plain RET says nothing about the rest of the
     // table; do not read that as "concrete" again.
-    constexpr uintptr_t kGamePageCtorRva = 0x1081e9c0;
+    // Symbols::kGamePageCtor (0x1081e9c0 on fc2_103_uplay).
     constexpr size_t kPageSize = 0x210;
 
     // CUIPageBase::Init - turns the page's authored name into a bound magma::Page and its widgets.
     // Nothing in the engine calls it implicitly, which is why every earlier hand-built page
     // displayed nothing and then faulted.
-    constexpr uintptr_t kUiPageBaseInitRva = 0x10109410;
-
-    constexpr uintptr_t kAddButtonRva = 0x10cdbb80;
-    constexpr uintptr_t kSwitchPageRva = 0x101d1990;
-
-    // CFCXOptionGamePage's primary vtable, and the three slots FCSE replaces in its own private
+    // Symbols::kUiPageBaseInit (0x10109410 on fc2_103_uplay).
+    // Symbols::kAddButton (0x10cdbb80 on fc2_103_uplay).
+    // Symbols::kSwitchPage (0x101d1990 on fc2_103_uplay). // CFCXOptionGamePage's primary vtable, and the three slots FCSE replaces in its own private
     // copy of it. This is what replaced the old global hook on CFCXOptionGamePage::RefreshOptionList
     // (0x10820160), and the reason is worth stating: everything about this class that is specific to
     // the *Game tab* hangs off exactly these three slots, and nothing reaches it any other way.
@@ -83,7 +85,7 @@ namespace {
     //
     // 26 slots is exact, not a guess: 0x10eada40 is not a 27th entry, it is the
     // "MAINMENU_OPTIONGAME_PAGE_PC" string the constructor pushes.
-    constexpr uintptr_t kPageVtableRva = 0x10ead9d8;
+    // Symbols::kPageVtable (0x10ead9d8 on fc2_103_uplay).
     constexpr size_t kPageVtableSlots = 26;
     constexpr size_t kDisplaySlot = 2;        // +0x08
     constexpr size_t kUpdateSlot = 4;         // +0x10
@@ -93,13 +95,9 @@ namespace {
 
     // What our Display chains to once it has built its own rows - the rest of the stock Display,
     // minus the RefreshOptionList call that opens it.
-    constexpr uintptr_t kBaseOptionPageDisplayRva = 0x1087ed50;
-
-    // What the stock Update calls before its own state machine - the base class's per-frame tick,
+    // Symbols::kBaseOptionPageDisplay (0x1087ed50 on fc2_103_uplay). // What the stock Update calls before its own state machine - the base class's per-frame tick,
     // which is the only part of that slot a page like ours still wants.
-    constexpr uintptr_t kBaseUpdateRva = 0x10108c10;
-
-    // Cleared by the stock Display on every display; mirrored so ours behaves identically.
+    // Symbols::kBaseUpdate (0x10108c10 on fc2_103_uplay). // Cleared by the stock Display on every display; mirrored so ours behaves identically.
     constexpr ptrdiff_t kDisplayResetFieldOffset = 0x200;
 
     // CSettingsPage::ClearSettings (0x10cddf20) - the engine's own "drop my rows and delete their
@@ -118,9 +116,7 @@ namespace {
     // type. It then binds the value widget with
     // CUISettingBase::FetchMagmaElements(page->m_magmaPage, labelListParam, settingParam), which is
     // the lookup that resolves "FCSE_SLOT_nn" against this page's own UserData.
-    constexpr uintptr_t kAddBoolSettingRva = 0x10cde0d0;
-
-    // CSettingsPage::AddValueListSetting<unsigned> - the N-option form of the same row, and what a
+    // Symbols::kAddBoolSetting (0x10cde0d0 on fc2_103_uplay). // CSettingsPage::AddValueListSetting<unsigned> - the N-option form of the same row, and what a
     // Choice setting renders as. The Game tab's Difficulty (4 options) and Machete (3) rows are this.
     //
     //   AddValueListSetting(this, label, labelListParam, settingParam, count, itemLabels,
@@ -133,9 +129,7 @@ namespace {
     // itemLabels is an array of plain wchar_t*, not of engine string objects: the stock caller fills
     // it from Oasis::GetLocalizedString, which returns exactly that. So our own strings work, as long
     // as they outlive the row - see LabelStorage.
-    constexpr uintptr_t kAddValueListSettingRva = 0x1081d660;
-
-    // CSettingsPage::AddSliderSetting - a label plus a draggable slider, bound through the second
+    // Symbols::kAddValueListSetting (0x1081d660 on fc2_103_uplay). // CSettingsPage::AddSliderSetting - a label plus a draggable slider, bound through the second
     // slot bank (FCSE_SLIDER_nn -> common.mgb #62EA6603) rather than the value cell.
     //
     //   AddSliderSetting(this, label, labelListParam, settingParam, min, max, enabled, handler)
@@ -144,29 +138,21 @@ namespace {
     // magma::Slider::SetValue, which takes an int and converts to float itself, and GetValue
     // (0x10cde240) reads the widget's float back, adds 0.5 and truncates. So the same vtable slots
     // 13/14 the other settings use work here unchanged.
-    constexpr uintptr_t kAddSliderSettingRva = 0x10cddff0;
-
-    // magma::UserData::GetUserDataElement(const std::string& name, Element*& out) - resolves one of
+    // Symbols::kAddSliderSetting (0x10cddff0 on fc2_103_uplay). // magma::UserData::GetUserDataElement(const std::string& name, Element*& out) - resolves one of
     // the page area's FullLink properties to the element it names, which is exactly how the engine
     // finds FCSE_SLOT_nn itself (CUISettingBase::FetchMagmaElements calls this).
     //
     // Used to get all 40 cell elements up front so the unused ones can be hidden. Without it a cell
     // is only reachable by binding a setting to it, which is the one thing we do not want to do to
     // a row that is not using it.
-    constexpr uintptr_t kGetUserDataElementRva = 0x10a963a0;
-
-    // magma::Element::SetVisible(bool) - bit 0 of the flags byte at element+0x34, and the same call
+    // Symbols::kGetUserDataElement (0x10a963a0 on fc2_103_uplay). // magma::Element::SetVisible(bool) - bit 0 of the flags byte at element+0x34, and the same call
     // the dispatcher makes for ShowElementNomad / HideElementNomad. Safe in this direction: the
     // cells are authored visible, so their sub-areas exist and only the draw flag moves. (Going the
     // other way - authored HIDDEN, revealed by code - is bit 1 and does not work; see the note by
     // the slot-cell comment.)
-    constexpr uintptr_t kElementSetVisibleRva = 0x10ab13f0;
-
-    // The empty-string constant this build's std::string points its proxy field at. Copied so a
+    // Symbols::kElementSetVisible (0x10ab13f0 on fc2_103_uplay). // The empty-string constant this build's std::string points its proxy field at. Copied so a
     // forged string looks exactly like one the engine made.
-    constexpr uintptr_t kEmptyStringProxyRva = 0x10fd42d1;
-
-    // CFCXBaseOptionPage's "the player changed something and has not applied it" flag.
+    // Symbols::kEmptyStringProxy (0x10fd42d1 on fc2_103_uplay). // CFCXBaseOptionPage's "the player changed something and has not applied it" flag.
     //
     // CFCXBaseOptionPage::SetDirty (0x1087eb50) sets it when a row changes; ApplyIfDirty
     // (0x1087eb10) calls vtable +0x50 and clears it; the Back path reads it and puts up the
@@ -193,9 +179,8 @@ namespace {
     // bool copies the value into the committed string beside the displayed one - which is what a
     // caller seeding a field wants, so FCSE passes true. It ends by marking the text dirty, which is
     // what actually makes the field re-render; writing the string in memory would not have.
-    constexpr uintptr_t kEditBoxSetTextRva = 0x10ab0220;
-
-    constexpr uintptr_t kPageSetSelectedRva = 0x10aa5180;
+    // Symbols::kEditBoxSetText (0x10ab0220 on fc2_103_uplay).
+    // Symbols::kPageSetSelected (0x10aa5180 on fc2_103_uplay).
     constexpr int kAnyController = 255;
 
     // The localised "YES"/"NO" strings, as raw wchar_t*. RefreshOptionList fills these lazily, once
@@ -216,8 +201,8 @@ namespace {
     // the function reads capacity at +0x18, and takes the characters from +0x04 when it is < 0x10.
     // Left undone because it is 40 lines of string marshalling for a cosmetic gain, and every other
     // label on this page is plugin-supplied English anyway.
-    constexpr uintptr_t kYesTextGlobalRva = 0x1164fca4;
-    constexpr uintptr_t kNoTextGlobalRva = 0x1164fca0;
+    // Symbols::kYesTextGlobal (0x1164fca4 on fc2_103_uplay).
+    // Symbols::kNoTextGlobal (0x1164fca0 on fc2_103_uplay).
     constexpr wchar_t kYesFallback[] = L"YES";
     constexpr wchar_t kNoFallback[] = L"NO";
 
@@ -235,9 +220,7 @@ namespace {
     constexpr size_t kSettingGetValueSlot = 14; // vtable +0x38
 
     // magma::TextBase::SetText - takes a RAW wchar_t*, so no string object has to be forged.
-    constexpr uintptr_t kTextBaseSetTextRva = 0x1007d770;
-
-    // CUIPageBase's page-name std::string. The object starts at +0x28 with its embedded allocator;
+    // Symbols::kTextBaseSetText (0x1007d770 on fc2_103_uplay). // CUIPageBase's page-name std::string. The object starts at +0x28 with its embedded allocator;
     // these three are the fields Init itself reads, so overwriting only them leaves the ctor's
     // allocator in place. Init branches on `capacity < 0x10` to decide whether the characters live
     // inline at +0x2c or behind a pointer there - which is why the name is kept short.
@@ -1823,26 +1806,50 @@ bool FcsePage::Install(void* optionsMenuThis) {
         return false;
     }
 
-    auto resolve = [base](uintptr_t rva) { return base + (rva - kDuniaPreferredBase); };
-    g_gamePageCtor = reinterpret_cast<GamePageCtorFn>(resolve(kGamePageCtorRva));
-    g_init = reinterpret_cast<InitFn>(resolve(kUiPageBaseInitRva));
-    g_addButton = reinterpret_cast<AddButtonFn>(resolve(kAddButtonRva));
-    g_switchPage = reinterpret_cast<SwitchPageFn>(resolve(kSwitchPageRva));
-    g_textBaseSetText = reinterpret_cast<SetTextFn>(resolve(kTextBaseSetTextRva));
-    g_addBoolSetting = reinterpret_cast<AddBoolSettingFn>(resolve(kAddBoolSettingRva));
+    // Every address this page needs, checked as a set before a single one is used. The page is
+    // built by calling eighteen engine functions in sequence against an object this file allocates
+    // itself; discovering a missing address partway through would leave a half-constructed
+    // CFCXOptionGamePage installed in the menu, which is far worse than not offering the page.
+    static constexpr uint32_t kRequired[] = {
+        Symbols::kGamePageCtor,        Symbols::kUiPageBaseInit,
+        Symbols::kAddButton,           Symbols::kSwitchPage,
+        Symbols::kTextBaseSetText,     Symbols::kAddBoolSetting,
+        Symbols::kAddValueListSetting, Symbols::kAddSliderSetting,
+        Symbols::kBaseOptionPageDisplay, Symbols::kBaseUpdate,
+        Symbols::kElementSetVisible,   Symbols::kPageSetSelected,
+        Symbols::kEditBoxSetText,      Symbols::kGetUserDataElement,
+        Symbols::kEmptyStringProxy,    Symbols::kYesTextGlobal,
+        Symbols::kNoTextGlobal,        Symbols::kPageVtable,
+    };
+    if (!AddressLibrary::ResolveAll(kRequired, sizeof(kRequired) / sizeof(kRequired[0]))) {
+        Log::Loader("FcsePage: this game build is missing at least one address the settings page "
+                    "needs (address mapping v" + AddressLibrary::MappingVersion() +
+                    ") - not offering a page that could not be built safely");
+        return false;
+    }
+
+    g_gamePageCtor = AddressLibrary::Function<GamePageCtorFn>(Symbols::kGamePageCtor);
+    g_init = AddressLibrary::Function<InitFn>(Symbols::kUiPageBaseInit);
+    g_addButton = AddressLibrary::Function<AddButtonFn>(Symbols::kAddButton);
+    g_switchPage = AddressLibrary::Function<SwitchPageFn>(Symbols::kSwitchPage);
+    g_textBaseSetText = AddressLibrary::Function<SetTextFn>(Symbols::kTextBaseSetText);
+    g_addBoolSetting = AddressLibrary::Function<AddBoolSettingFn>(Symbols::kAddBoolSetting);
     g_addValueListSetting =
-        reinterpret_cast<AddValueListSettingFn>(resolve(kAddValueListSettingRva));
-    g_addSliderSetting = reinterpret_cast<AddSliderSettingFn>(resolve(kAddSliderSettingRva));
-    g_baseOptionPageDisplay = reinterpret_cast<DisplayFn>(resolve(kBaseOptionPageDisplayRva));
-    g_baseUpdate = reinterpret_cast<UpdateFn>(resolve(kBaseUpdateRva));
-    g_elementSetVisible = reinterpret_cast<ElementSetVisibleFn>(resolve(kElementSetVisibleRva));
-    g_pageSetSelected = reinterpret_cast<PageSetSelectedFn>(resolve(kPageSetSelectedRva));
-    g_editBoxSetText = reinterpret_cast<EditBoxSetTextFn>(resolve(kEditBoxSetTextRva));
+        AddressLibrary::Function<AddValueListSettingFn>(Symbols::kAddValueListSetting);
+    g_addSliderSetting = AddressLibrary::Function<AddSliderSettingFn>(Symbols::kAddSliderSetting);
+    g_baseOptionPageDisplay =
+        AddressLibrary::Function<DisplayFn>(Symbols::kBaseOptionPageDisplay);
+    g_baseUpdate = AddressLibrary::Function<UpdateFn>(Symbols::kBaseUpdate);
+    g_elementSetVisible =
+        AddressLibrary::Function<ElementSetVisibleFn>(Symbols::kElementSetVisible);
+    g_pageSetSelected = AddressLibrary::Function<PageSetSelectedFn>(Symbols::kPageSetSelected);
+    g_editBoxSetText = AddressLibrary::Function<EditBoxSetTextFn>(Symbols::kEditBoxSetText);
     g_getUserDataElement =
-        reinterpret_cast<GetUserDataElementFn>(resolve(kGetUserDataElementRva));
-    g_emptyStringProxy = reinterpret_cast<const void*>(resolve(kEmptyStringProxyRva));
-    g_yesText = reinterpret_cast<const wchar_t**>(resolve(kYesTextGlobalRva));
-    g_noText = reinterpret_cast<const wchar_t**>(resolve(kNoTextGlobalRva));
+        AddressLibrary::Function<GetUserDataElementFn>(Symbols::kGetUserDataElement);
+    g_emptyStringProxy =
+        reinterpret_cast<const void*>(AddressLibrary::Address(Symbols::kEmptyStringProxy));
+    g_yesText = reinterpret_cast<const wchar_t**>(AddressLibrary::Address(Symbols::kYesTextGlobal));
+    g_noText = reinterpret_cast<const wchar_t**>(AddressLibrary::Address(Symbols::kNoTextGlobal));
 
     // Zero-initialized: CListMenuPage's own base-class fields (the row array and friends) are never
     // written by the ctor, and zero is what "empty row list" means.
@@ -1870,7 +1877,7 @@ bool FcsePage::Install(void* optionsMenuThis) {
     // Before Init, not after: Init triggers a display, and the stock Display is what would build the
     // Game tab's eight rows and bind their button ids into +0x1d8..+0x1fc. Taking the table over
     // first is what keeps those ids at the -1 the constructor left them at, for good.
-    if (!InstallPageVtable(page, resolve(kPageVtableRva))) {
+    if (!InstallPageVtable(page, AddressLibrary::Address(Symbols::kPageVtable))) {
         Log::Loader("FcsePage: could not install the private vtable - the page would run the Game "
                     "tab's own content build and crash on the first click, so it is not offered "
                     "this session");

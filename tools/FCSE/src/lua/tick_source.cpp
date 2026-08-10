@@ -1,5 +1,7 @@
 #include "lua/tick_source.h"
 
+#include "engine/address_library.h"
+#include "engine/address_symbols.h"
 #include "engine/dunia_api.h"
 #include "api/hook.h"
 #include "log.h"
@@ -13,16 +15,14 @@
 namespace FCSE {
 
 namespace {
-    constexpr uintptr_t kDuniaPreferredBase = 0x10000000;
-
-    // CXGame::Update - the frame loop body. See the header for how it was identified.
-    constexpr uintptr_t kUpdateRva = 0x1065AEA0;
-
-    // The global holding the engine's timing block; the frame delta is the double at +0x38.
-    // CXGame::Update reads it as `(float)*(double *)(DAT_11606360 + 0x38)` and passes it to
-    // CGame::Update as that call's time argument, which is what identifies it as the frame delta
-    // rather than an absolute clock.
-    constexpr uintptr_t kTimeBlockRva = 0x11606360;
+    // CXGame::Update is Symbols::kUpdate, the frame loop body - see the header for how it was
+    // identified. Symbols::kTimeBlock is the global holding the engine's timing block; the frame
+    // delta is the double at +0x38. CXGame::Update reads it as
+    // `(float)*(double *)(DAT_11606360 + 0x38)` and passes it to CGame::Update as that call's time
+    // argument, which is what identifies it as the frame delta rather than an absolute clock.
+    //
+    // Both come from the address library rather than a baked RVA: the two shipped v1.03 builds put
+    // them at different addresses, and 0x1065AEA0 is only correct on Steam/Uplay.
     constexpr ptrdiff_t kFrameDeltaOffset = 0x38;
 
     // One int parameter in ecx, which is what __fastcall expresses in a free function - the unused
@@ -94,9 +94,19 @@ bool TickSource::Install() {
         return false;
     }
 
-    g_timeBlock = base + (kTimeBlockRva - kDuniaPreferredBase);
+    // Resolve everything before touching anything. A half-installed tick source would hook the
+    // frame loop and then read a frame delta from address 0 on every frame.
+    const uintptr_t update = AddressLibrary::Address(Symbols::kUpdate);
+    const uintptr_t timeBlock = AddressLibrary::Address(Symbols::kTimeBlock);
+    if (update == 0 || timeBlock == 0) {
+        Log::Loader("Tick: CXGame::Update or the engine timing block has no address on this game "
+                    "build - no script 'update' events this run");
+        return false;
+    }
 
-    void* target = reinterpret_cast<void*>(base + (kUpdateRva - kDuniaPreferredBase));
+    g_timeBlock = timeBlock;
+
+    void* target = reinterpret_cast<void*>(update);
     if (!HookManager::Hook(target, reinterpret_cast<void*>(&UpdateDetour),
                             reinterpret_cast<void**>(&g_original))) {
         Log::Loader("Tick: could not hook CXGame::Update - no script 'update' events this run");
@@ -105,7 +115,7 @@ bool TickSource::Install() {
 
     char line[128];
     std::snprintf(line, sizeof(line), "Tick: hooked CXGame::Update at 0x%08zX",
-                   static_cast<size_t>(base + (kUpdateRva - kDuniaPreferredBase)));
+                   static_cast<size_t>(update));
     Log::Loader(line);
     return true;
 }
@@ -113,8 +123,8 @@ bool TickSource::Install() {
 void TickSource::Finish() {
     if (g_ticks == 0) {
         Log::Loader("Tick: CXGame::Update never fired this session - no script 'update' events ran. "
-                    "If the game did reach gameplay, the hooked RVA does not match this Dunia.dll "
-                    "build (see docs/docs/engine-internals/overview.md for known build sizes).");
+                    "If the game did reach gameplay, the address library resolved CXGame::Update to "
+                    "the wrong function on this build - report the build line above.");
         return;
     }
     Log::Loader("Tick: " + std::to_string(g_ticks) + " frame(s) dispatched this session");

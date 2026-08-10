@@ -1,5 +1,7 @@
 #include "ui/page_assets.h"
 
+#include "engine/address_library.h"
+#include "engine/address_symbols.h"
 #include "engine/dunia_api.h"
 #include "log.h"
 
@@ -23,8 +25,6 @@ namespace {
     //
     // Reading the same byte means FCSE's page can never disagree with the rest of the menu about
     // which aspect the game is running.
-    constexpr uintptr_t kDuniaPreferredBase = 0x10000000;
-    constexpr uintptr_t kDisplayConfigRva = 0x1032D910;
     constexpr ptrdiff_t kWidescreenFlagOffset = 1;
 
     using DisplayConfigFn = unsigned char*(__cdecl*)();
@@ -41,13 +41,11 @@ namespace {
     PackageBytes g_package;
 
     bool SafeReadWidescreenFlag(bool* outWidescreen, DWORD* outCode) {
-        uintptr_t base = DuniaApi::Base();
-        if (base == 0) {
+        auto getConfig = AddressLibrary::Function<DisplayConfigFn>(Symbols::kDisplayConfig);
+        if (getConfig == nullptr) {
             *outCode = 0;
             return false;
         }
-        auto getConfig = reinterpret_cast<DisplayConfigFn>(
-            base + (kDisplayConfigRva - kDuniaPreferredBase));
         __try {
             unsigned char* config = getConfig();
             *outWidescreen = config != nullptr && config[kWidescreenFlagOffset] != 0;

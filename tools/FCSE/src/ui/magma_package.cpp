@@ -1,5 +1,7 @@
 #include "ui/magma_package.h"
 
+#include "engine/address_library.h"
+#include "engine/address_symbols.h"
 #include "engine/dunia_api.h"
 #include "api/hook.h"
 #include "log.h"
@@ -11,16 +13,15 @@
 namespace FCSE {
 
 namespace {
-    // Dunia.dll (Steam v1.03) RVAs against the preferred image base, same convention as
-    // mods_tab.cpp. Every one of these was read off the MSVC build directly - see
-    // PLAN-own-page.md work item 3 (git history, removed in cf13c2b), which records how each was
-    // confirmed.
-    constexpr uintptr_t kDuniaPreferredBase = 0x10000000;
-
+    // Engine addresses come from the address library (Symbols::k*), because the two shipped v1.03
+    // builds place them differently - the Steam RVAs this file used to bake in are wrong on GOG.
+    // Every one was originally read off the MSVC build directly; see PLAN-own-page.md work item 3
+    // (git history, removed in cf13c2b) for how each was confirmed, and registry.csv for the ID
+    // each now has.
+    //
     // magma::CFileNameNomad - 0x24 bytes: vtable, CPathID at +0x04, the path string at +0x08
-    // (its inline character buffer at +0x0c, size +0x1c, capacity +0x20).
-    constexpr uintptr_t kFileNameCtorRva = 0x105E8800;
-    constexpr uintptr_t kFileNameSetIdentifierRva = 0x105E8CE0; // SetIdentifier(char const*)
+    // (its inline character buffer at +0x0c, size +0x1c, capacity +0x20). Built by
+    // Symbols::kFileNameCtor, then named by Symbols::kFileNameSetIdentifier(char const*).
     constexpr size_t kFileNameSize = 0x24;
 
     // The path string object begins at +0x08, and its first member is the *allocator* - the ELF
@@ -44,9 +45,9 @@ namespace {
     // enough to have spilled out of the string's inline buffer. That is strictly better than
     // calling an unidentified function on a live engine object.
 
-    // The magma engine singleton *pointer*. Confirmed by EngineRoot::FindPackage being called as
-    // FindPackage(DAT_10fe3178 + 0xd4, &fileName), +0xd4 being the package-list root.
-    constexpr uintptr_t kEngineSingletonRva = 0x10FE3178;
+    // Symbols::kEngineSingleton is the magma engine singleton *pointer*. Confirmed by
+    // EngineRoot::FindPackage being called as FindPackage(DAT_10fe3178 + 0xd4, &fileName), +0xd4
+    // being the package-list root.
 
     // magma::Engine::LoadPackage(FileName const*, FileName const*, LoadErrorId&), dispatched at
     // vtable +0xc. NOTE this is slot 3 on MSVC where the ELF build uses slot 5 (+0x14): gcc and
@@ -65,8 +66,9 @@ namespace {
     // cursor at +0x0c and advances it, which is exactly what it would do for a real resource.
     //
     //   +0x00 vtable   +0x04 resource   +0x08 flag   +0x0c cursor   +0x10 bytes consumed
-    constexpr uintptr_t kReaderOpenRva = 0x1061D480;    // vtable +0x04
-    constexpr uintptr_t kReaderGetFileSizeRva = 0x1061D3F0; // vtable +0x10, reads *(res + 0x4c)
+    // Symbols::kReaderOpen is that vtable's +0x04; Symbols::kReaderGetFileSize is +0x10, which
+    // reads *(res + 0x4c). Neither is a defined function in Ghidra on either build - both were
+    // recovered from the vtable itself, which is why they carry hand-verified overrides.
     constexpr ptrdiff_t kReaderCursorOffset = 0x0c;
     constexpr ptrdiff_t kReaderConsumedOffset = 0x10;
     constexpr ptrdiff_t kFileNamePathIdOffset = 0x04;
@@ -267,12 +269,18 @@ namespace {
         return buffer;
     }
 
-    bool InstallReaderHooks(uintptr_t slide) {
+    bool InstallReaderHooks() {
         if (g_readerHooksInstalled) {
             return true;
         }
-        void* openTarget = reinterpret_cast<void*>(kReaderOpenRva + slide);
-        void* sizeTarget = reinterpret_cast<void*>(kReaderGetFileSizeRva + slide);
+        void* openTarget = reinterpret_cast<void*>(AddressLibrary::Address(Symbols::kReaderOpen));
+        void* sizeTarget =
+            reinterpret_cast<void*>(AddressLibrary::Address(Symbols::kReaderGetFileSize));
+        if (openTarget == nullptr || sizeTarget == nullptr) {
+            Log::Loader("Magma package: the file-reader functions have no address on this game "
+                        "build - cannot serve fcse.mgb");
+            return false;
+        }
         if (!HookManager::Hook(openTarget, RawFunctionPointer(&ReaderOpenThunk::Detour),
                                reinterpret_cast<void**>(&g_originalReaderOpen))) {
             Log::Loader("Magma package: could not hook CFileReaderNomad::Open");
@@ -306,11 +314,22 @@ bool MagmaPackage::Load() {
         Log::Loader("Magma package: Dunia.dll not resolved, cannot load fcse.mgb");
         return false;
     }
-    const uintptr_t slide = base - kDuniaPreferredBase;
+
+    // Everything this function needs, resolved before it touches any of it - a partially resolved
+    // run would build a CFileNameNomad with a null constructor and fault inside the engine.
+    const uintptr_t enginePtr = AddressLibrary::Address(Symbols::kEngineSingleton);
+    auto ctor = AddressLibrary::Function<FileNameCtorFn>(Symbols::kFileNameCtor);
+    auto setIdentifier =
+        AddressLibrary::Function<FileNameSetIdentifierFn>(Symbols::kFileNameSetIdentifier);
+    if (enginePtr == 0 || ctor == nullptr || setIdentifier == nullptr) {
+        Log::Loader("Magma package: the magma engine singleton or CFileNameNomad functions have no "
+                    "address on this game build - cannot load fcse.mgb");
+        return false;
+    }
 
     void* engine = nullptr;
     DWORD code = 0;
-    if (!SafeReadPointer(reinterpret_cast<void*>(kEngineSingletonRva + slide), &engine, &code)) {
+    if (!SafeReadPointer(reinterpret_cast<void*>(enginePtr), &engine, &code)) {
         Log::Loader("Magma package: faulted reading the engine singleton (" + Hex(code) + ")");
         return false;
     }
@@ -320,9 +339,6 @@ bool MagmaPackage::Load() {
         Log::Loader("Magma package: the magma engine singleton is null - too early to load fcse.mgb");
         return false;
     }
-
-    auto ctor = reinterpret_cast<FileNameCtorFn>(kFileNameCtorRva + slide);
-    auto setIdentifier = reinterpret_cast<FileNameSetIdentifierFn>(kFileNameSetIdentifierRva + slide);
 
     // The engine reads the extension off this identifier to choose its parser: GetFileType
     // lowercases and compares, "mgb" -> 2 -> BinaryLoadVisitor. The real file is read separately,
@@ -351,7 +367,7 @@ bool MagmaPackage::Load() {
         return false;
     }
 
-    if (!InstallReaderHooks(slide)) {
+    if (!InstallReaderHooks()) {
         return false;
     }
 
