@@ -11,6 +11,8 @@
 #include "plugin_api.h"
 #include "caller_identity.h"
 #include "crash_log.h"
+#include "engine/address_library.h"
+#include "engine/build_id.h"
 #include "engine/debug_commands.h"
 #include "engine/dunia_api.h"
 #include "api/function_registry.h"
@@ -58,6 +60,31 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
         MessageBoxW(nullptr,
                      L"FCSE could not resolve Dunia.dll next to this loader - see bin\\fcse.log "
                      L"for details.",
+                     L"FCSE", MB_ICONERROR | MB_OK);
+        Log::Shutdown();
+        return 1;
+    }
+
+    // Which Dunia.dll build this is, and therefore which addresses are valid. Everything FCSE
+    // installs below reaches into the engine at addresses that differ between the two shipped v1.03
+    // builds, so this has to settle before any of it runs. Refusing here is deliberate: continuing
+    // would install hooks at addresses belonging to a different build, and the resulting crash would
+    // land far from its cause.
+    const BuildInfo build = IdentifyDuniaBuild(DuniaApi::Module());
+    if (!build.supported) {
+        Log::Loader(std::string("unsupported game build (") + build.id + ") - refusing to start");
+        const std::string text =
+            build.reason + "\n\nFCSE has not started, and your game has not been modified.";
+        MessageBoxA(nullptr, text.c_str(), "FCSE - unsupported Far Cry 2 version",
+                    MB_ICONERROR | MB_OK);
+        Log::Shutdown();
+        return 1;
+    }
+
+    if (!AddressLibrary::Init(DuniaApi::Module(), build)) {
+        MessageBoxW(nullptr,
+                     L"FCSE could not load its address library - see bin\\fcse.log for details.\n\n"
+                     L"FCSE has not started, and your game has not been modified.",
                      L"FCSE", MB_ICONERROR | MB_OK);
         Log::Shutdown();
         return 1;

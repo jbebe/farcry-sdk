@@ -26,3 +26,13 @@ FCSE_MGB_WIDESCREEN RCDATA "@FCSE_MGB_WIDESCREEN@"
 // there is no loose file for a player to delete or for an installer to leave stale against the exe
 // that reads it. lua_host.cpp resolves it as FCSE_LUA_RUNTIME and hands it to require 'fcse'.
 FCSE_LUA_RUNTIME    RCDATA "@FCSE_LUA_RUNTIME@"
+
+// The address library: which RVA each stable address ID has in each supported Dunia.dll build.
+// Far Cry 2 v1.03 ships as two PC builds with different layouts, so this is what lets one FCSE.exe
+// run on both. address_library.cpp expands it once at startup.
+//
+// A resource rather than a compiled-in array: delta+varint encoded it is ~233 KB against 715 KB of
+// raw pairs, and a 2.2 MB translation unit of hex literals was the slowest thing in the build for
+// no benefit. Unlike the layouts above this one *is* committed, because building it needs Ghidra
+// and both DLLs - see tools/FCSE/tools/addrlib/README.md.
+FCSE_ADDRLIB        RCDATA "@FCSE_ADDRLIB@"

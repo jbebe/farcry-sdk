@@ -143,6 +143,17 @@ set(FCSE_LUA_RUNTIME    "${CMAKE_CURRENT_SOURCE_DIR}/src/lua/runtime/fcse.lua")
 # in the tree. assets/make_icon.py regenerates it when the logo changes.
 set(FCSE_ICON           "${CMAKE_CURRENT_SOURCE_DIR}/assets/fcse.ico")
 
+# The address library. Committed rather than built, for the same reason as the icon and unlike the
+# layouts: regenerating it needs Ghidra plus a copy of both Dunia.dll builds, which is not something
+# a build of this project can require. tools/FCSE/tools/addrlib rebuilds it when the mapping changes.
+set(FCSE_ADDRLIB        "${CMAKE_CURRENT_SOURCE_DIR}/assets/address_table.bin")
+if (NOT EXISTS "${FCSE_ADDRLIB}")
+  message(FATAL_ERROR "assets/address_table.bin is missing. It maps each address ID to its RVA in "
+                      "each supported Dunia.dll build, and without it FCSE cannot resolve a single "
+                      "engine address. Regenerate it with tools/FCSE/tools/addrlib "
+                      "(python build_addrlib.py) - see that directory's README.md.")
+endif()
+
 configure_file("assets/fcse.rc.in" "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc" @ONLY)
 
 # rc.exe does not report what a resource statement pulled in and CMake does not scan .rc files for
@@ -155,7 +166,8 @@ configure_file("assets/fcse.rc.in" "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc" @ONLY)
 # naming them here is what makes the resource compile wait for - and re-run after - fcse_build_mgb.
 set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc"
              APPEND PROPERTY OBJECT_DEPENDS "${FCSE_MGB}" "${FCSE_MGB_WIDESCREEN}"
-                                            "${FCSE_LUA_RUNTIME}" "${FCSE_ICON}")
+                                            "${FCSE_LUA_RUNTIME}" "${FCSE_ICON}"
+                                            "${FCSE_ADDRLIB}")
 
 # Grouped by what a file talks to: engine/ reaches into the running game, api/ is what plugins and
 # Lua scripts both call, ui/ is FCSE's own settings page, lua/ is the script host. What is left at
@@ -171,6 +183,10 @@ add_executable(FCSE WIN32
   "src/crash_log.h"
   "src/ini_file.cpp"
   "src/ini_file.h"
+  "src/engine/build_id.cpp"
+
+  "src/engine/address_library.cpp"
+
   "src/engine/dunia_api.cpp"
   "src/engine/dunia_api.h"
   "src/engine/stock_constants.cpp"

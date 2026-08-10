@@ -47,6 +47,35 @@ endif()
 # failed in ctest's own output without having to go read the exe's.
 gtest_discover_tests(ini_file_tests)
 
+# The address-library decoder, run against the very table assets/address_table.bin ships. The
+# encoder is Python in tools/addrlib and the decoder is C++ here, so nothing else in the build would
+# notice the two drifting apart - and the failure would not announce itself at runtime either: a
+# mis-decoded entry is a perfectly plausible address that happens to be the wrong one.
+#
+# Needs no Dunia.dll: the tests decode into memory and never dereference what they resolve, so a
+# fabricated module base is enough to check the arithmetic. log.cpp is linked in because the decoder
+# reports failures through it, and it no-ops safely when Log::Init was never called.
+add_executable(address_library_tests
+  "address_library_tests.cpp"
+  "../src/engine/address_library.cpp"
+  "../src/engine/build_id.cpp"
+  "../src/log.cpp"
+  "../src/caller_identity.cpp"
+)
+target_include_directories(address_library_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../src")
+target_link_libraries(address_library_tests PRIVATE GTest::gtest_main)
+
+# ctest runs from the build tree, so the relative paths the test tries first will not resolve;
+# this is the one that always does.
+target_compile_definitions(address_library_tests PRIVATE
+  FCSE_TEST_ADDRESS_TABLE="${FCSE_ADDRLIB}")
+
+if (CMAKE_VERSION VERSION_GREATER 3.12)
+  set_property(TARGET address_library_tests PROPERTY CXX_STANDARD 20)
+endif()
+
+gtest_discover_tests(address_library_tests)
+
 # Runs the real src/lua/runtime/fcse.lua against a stubbed native table, in the very interpreter
 # this build produced - so the dialect, the FFI behaviour and the runtime under test are all the
 # ones that will ship, not an approximation of them. Not wrapped in GoogleTest: the thing under test

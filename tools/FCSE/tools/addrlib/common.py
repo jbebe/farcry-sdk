@@ -131,12 +131,13 @@ def write_csv_rows(path, fieldnames, rows):
 
 
 def parse_rva(text):
-    """Accept 0x-prefixed RVAs, bare hex, or VAs at Dunia's preferred base."""
-    if isinstance(text, int):
-        value = text
-    else:
-        text = text.strip()
-        value = int(text, 16) if text.lower().startswith("0x") else int(text, 16)
+    """Accept an RVA or a VA at Dunia's preferred base, with or without '0x'.
+
+    Always hex: every address in this project, in FCSE's sources and in the
+    engine-internals docs is written in hex, so treating a bare '5E8CE0' as
+    decimal would silently accept a wrong address rather than fail.
+    """
+    value = text if isinstance(text, int) else int(text.strip(), 16)
     if value >= PREFERRED_BASE:
         value -= PREFERRED_BASE
     return value
