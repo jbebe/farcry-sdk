@@ -8,7 +8,7 @@
 // engine code beyond its own DllMain/CRT init has run. Ships as a separate exe next to the
 // untouched FarCry2.exe - see tools/FCSE/README.md for the full design and install instructions.
 
-#include "plugin_api.h"
+#include "fcse_api.h"
 #include "caller_identity.h"
 #include "crash_log.h"
 #include "engine/address_library.h"
@@ -23,6 +23,7 @@
 #include "lua/tick_source.h"
 #include "ui/mods_tab.h"
 #include "api/patch.h"
+#include "api/pattern_scan.h"
 #include "api/plugin_loader.h"
 #include "api/settings_registry.h"
 
@@ -53,6 +54,12 @@ namespace {
             case FCSE_GAME_BUILD_103_UPLAY:  return DuniaBuild::Uplay103;
             default:                         return DuniaBuild::Unknown;
         }
+    }
+
+    uintptr_t __cdecl PluginFindPatternShim(const char* pattern, uint32_t* outMatchCount) {
+        // _ReturnAddress so a rejected pattern is logged against the plugin that wrote it, not
+        // against FCSE - same reason PluginLogShim does it.
+        return PatternScan::Find(pattern, outMatchCount, _ReturnAddress());
     }
 
     uintptr_t __cdecl PluginResolveFromShim(FCSE_GameBuild sourceBuild, uint32_t rva) {
@@ -141,6 +148,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     // The address library, handed to plugins so they can be build-agnostic the same way FCSE now
     // is. Without these a plugin has no choice but to bake an RVA and work on one build only.
     api.ResolveFrom = &PluginResolveFromShim;
+    api.FindPattern = &PluginFindPatternShim;
     api.gameBuild = ToPluginBuild(build.build);
     api.gameBuildId = build.id;
     api.addressMapping = AddressLibrary::MappingVersion().c_str();

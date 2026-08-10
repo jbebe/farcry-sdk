@@ -76,6 +76,26 @@ endif()
 
 gtest_discover_tests(address_library_tests)
 
+# The byte-pattern compiler and search. Pure logic over buffers, so no game is needed - and worth
+# testing precisely because both halves fail quietly: a compiler that reads "??" as two wildcards
+# shifts every byte after it, and a search that mis-anchors reports matches at the wrong offset.
+# Neither shows up as a crash anywhere near the mistake.
+add_executable(pattern_scan_tests
+  "pattern_scan_tests.cpp"
+  "../src/api/pattern_scan.cpp"
+  "../src/engine/dunia_api.cpp"
+  "../src/log.cpp"
+  "../src/caller_identity.cpp"
+)
+target_include_directories(pattern_scan_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../src")
+target_link_libraries(pattern_scan_tests PRIVATE GTest::gtest_main)
+
+if (CMAKE_VERSION VERSION_GREATER 3.12)
+  set_property(TARGET pattern_scan_tests PROPERTY CXX_STANDARD 20)
+endif()
+
+gtest_discover_tests(pattern_scan_tests)
+
 # Runs the real src/lua/runtime/fcse.lua against a stubbed native table, in the very interpreter
 # this build produced - so the dialect, the FFI behaviour and the runtime under test are all the
 # ones that will ship, not an approximation of them. Not wrapped in GoogleTest: the thing under test

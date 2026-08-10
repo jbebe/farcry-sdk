@@ -148,7 +148,7 @@ export. Watch `FCE_BudgetManager_*` and validation rejecting campaign densities.
 bounds in `ExportWorldSectors` @ `0x107E2E20`.
 
 If it needs patching, do it as an **FCSE plugin**, not a static `Dunia.dll` patch — FCSE already has
-MinHook, a VirtualProtect-safe `Patch` tier, per-build address resolution via `fcse_relocation.h`,
+MinHook, a VirtualProtect-safe `Patch` tier, per-build address resolution via `fcse_api.h`,
 and a crash logger, whereas a static patch breaks FC2MPPatcher compatibility with no toggle. Start
 with the in-game editor, which lives in the same `Dunia.dll` FCSE already hosts; targeting
 `FC2Editor.exe` needs a small `FCSEEditor.exe` launcher (`CREATE_SUSPENDED` + inject +

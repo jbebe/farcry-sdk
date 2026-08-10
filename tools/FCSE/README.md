@@ -6,7 +6,7 @@ An SKSE-style DLL plugin loader for Far Cry 2 - see [`docs/docs/todos.md`](../..
 that DLL - which works for exactly one mod at a time, since two patched copies can't coexist.
 
 This README is for people building/maintaining the loader itself. If you just want to write a
-plugin, see [`include/plugin_api.h`](include/plugin_api.h) (the full ABI, documented inline) and
+plugin, see [`include/fcse_api.h`](include/fcse_api.h) (the full ABI, documented inline) and
 [`example_plugin/example_plugin.cpp`](example_plugin/example_plugin.cpp) (a working, minimal one).
 If you just want to install plugins into the game, see [`include/README.md`](include/README.md).
 
@@ -79,7 +79,7 @@ the reimplementation is exactly as faithful as whatever build is actually instal
 
 ## The plugin API - four tiers
 
-See `include/plugin_api.h` for the authoritative, documented ABI. Summary, from "no RE required" to
+See `include/fcse_api.h` for the authoritative, documented ABI. Summary, from "no RE required" to
 "full control":
 
 1. **`AddFunctionCB(fn, name)`** - claim one of `Dunia.dll`'s named callback slots. Zero address

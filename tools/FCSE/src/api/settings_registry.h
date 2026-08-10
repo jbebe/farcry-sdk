@@ -1,6 +1,6 @@
 #pragma once
 
-#include "plugin_api.h"
+#include "fcse_api.h"
 
 #include <memory>
 #include <string>
@@ -49,7 +49,7 @@ public:
     // leaves an empty document that Flush() creates.
     static void Init(const std::wstring& configPath);
 
-    // Backs FCSE_PluginAPI::RegisterSettings - see plugin_api.h for the contract. Captures caller
+    // Backs FCSE_PluginAPI::RegisterSettings - see fcse_api.h for the contract. Captures caller
     // identity itself via _ReturnAddress(), same convention as FunctionRegistry::Register and
     // HookManager::Hook.
     static bool RegisterSettings(const char* pluginName, const FCSE_Setting* settings,

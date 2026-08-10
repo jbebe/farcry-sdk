@@ -22,7 +22,7 @@ Source: [`tools/FCSE`](https://github.com/jbebe/farcry-sdk/tree/main/tools/FCSE)
 [README](https://github.com/jbebe/farcry-sdk/tree/main/tools/FCSE) for the full technical design
 (exactly how it reimplements `FarCry2.exe`'s own `WinMain`, resolves `Dunia.dll`'s exports by name,
 and orders plugin registration around a confirmed engine quirk) and
-[`plugin_api.h`](https://github.com/jbebe/farcry-sdk/blob/main/tools/FCSE/include/plugin_api.h) for
+[`fcse_api.h`](https://github.com/jbebe/farcry-sdk/blob/main/tools/FCSE/include/fcse_api.h) for
 the full plugin ABI, documented inline. For the underlying reverse-engineering this is built on,
 see [Engine Internals](/docs/category/engine-internals) — particularly the [launcher
 exe](/docs/engine-internals/launcher-exe) and [function registry](/docs/engine-internals/function-registry)

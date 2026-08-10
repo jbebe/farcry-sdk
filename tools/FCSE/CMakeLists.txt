@@ -17,7 +17,7 @@ endif()
 # This is about the C runtime, not about matching the compiler Far Cry 2 itself was built with.
 # FCSE shares no C++ objects with Dunia.dll - it calls engine functions through hand-declared
 # __thiscall signatures and reads engine structs by byte offset, so the engine's own layout rules
-# apply regardless of which compiler built this exe. The plugin ABI (include/plugin_api.h) is pure C
+# apply regardless of which compiler built this exe. The plugin ABI (include/fcse_api.h) is pure C
 # for the same reason. Building against the game's own 2008-era toolchain would buy none of that and
 # cost the C++20 the sources are written in.
 #
@@ -200,6 +200,8 @@ add_executable(FCSE WIN32
   "src/api/hook.cpp"
   "src/api/hook.h"
   "src/api/patch.cpp"
+
+  "src/api/pattern_scan.cpp"
   "src/api/patch.h"
   "src/api/settings_registry.cpp"
   "src/api/settings_registry.h"
@@ -218,13 +220,13 @@ add_executable(FCSE WIN32
   "src/lua/tick_source.cpp"
   "src/lua/tick_source.h"
   "src/lua/runtime/fcse.lua"
-  "include/plugin_api.h"
+  "include/fcse_api.h"
 )
 
 # Both source roots on the include path, so every #include is written from the root of the tree it
 # lives in - "engine/hook.h", never "../engine/hook.h" - and a file moving between folders doesn't
 # rewrite the includes of everything that reaches it. include/ is here for the same reason a plugin
-# gets it: plugin_api.h is spelled "plugin_api.h" from inside FCSE exactly as it is from outside.
+# gets it: fcse_api.h is spelled "fcse_api.h" from inside FCSE exactly as it is from outside.
 target_include_directories(FCSE PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
   "${CMAKE_CURRENT_SOURCE_DIR}/include"

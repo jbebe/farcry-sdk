@@ -1,6 +1,6 @@
 # FCSE plugins
 
-This folder is the whole plugin-facing surface of FCSE: [`plugin_api.h`](plugin_api.h) is the entire
+This folder is the whole plugin-facing surface of FCSE: [`fcse_api.h`](fcse_api.h) is the entire
 ABI, it has no dependency on anything else in this tree, and copying that one file into your own
 project is the whole setup. Below is what a player does with the result.
 
@@ -29,7 +29,7 @@ doesn't lose how you had it set up.
 
 ## Writing a plugin
 
-See [`plugin_api.h`](plugin_api.h) for the full API (documented inline) and
+See [`fcse_api.h`](fcse_api.h) for the full API (documented inline) and
 [`../example_plugin/example_plugin.cpp`](../example_plugin/example_plugin.cpp) for a minimal
 working one covering all four tiers of the API: overriding a named engine callback, detouring a
 function, patching bytes directly, and registering a persistent setting. See

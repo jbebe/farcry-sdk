@@ -1,8 +1,7 @@
 // example_plugin - minimal, self-contained FCSE plugin demonstrating all three tiers of the
 // plugin API (see tools/FCSE/README.md). Meant as a copy-from starting point for real plugins as
 // much as a smoke test for FCSE.exe itself.
-#include "plugin_api.h"
-#include "fcse_relocation.h"
+#include "fcse_api.h"
 
 #include <cstdio>
 #include <windows.h>
@@ -91,9 +90,9 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // --- engine addresses, the build-agnostic way ----------------------------------------------
     // Far Cry 2 v1.03 ships as two PC builds that place the same code at different addresses, so
     // `api->duniaBase + <some RVA you found>` works on exactly one of them. Bind() wires up the
-    // address library, and the two relocations below name the same kind of thing the two supported
-    // ways: by stable ID, and by an address confirmed on Steam (which is what nearly every Far Cry 2
-    // address ever written down is). Both resolve correctly on GOG and on Steam.
+    // address library, and the three relocations below name the very same function three ways: by
+    // its address in Steam's DLL, by its address in GOG's, and by a byte pattern. All three resolve
+    // correctly whichever build the player is on.
     if (FCSE::Bind(api)) {
         char line[192];
         std::snprintf(line, sizeof(line),
@@ -110,14 +109,25 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         // other; only the lookup does.
         static FCSE::Relocation<void*> fromUplay{FCSE::Uplay(0x005E8800)};
         static FCSE::Relocation<void*> fromRetail{FCSE::Retail(0x005DAF20)};
-        if (fromUplay && fromRetail) {
-            const bool agree = fromUplay.address() == fromRetail.address();
+
+        // And the old-school way, for code that has to run on builds the address library has never
+        // seen. The wildcards cover the two operands that legitimately differ between builds - the
+        // vtable pointer this ctor stores, and a call displacement - which is exactly why the same
+        // pattern matches both. Note it is *not* verified by anything: a pattern is only as good as
+        // its uniqueness, so FCSE returns 0 rather than guessing if it matches more than once.
+        static FCSE::Relocation<void*> byPattern{
+            FCSE::Pattern("51 56 8B F1 8D 4E 04 C7 06 ?? ?? ?? ?? E8 ?? ?? ?? ?? 33 C0")};
+
+        if (fromUplay && fromRetail && byPattern) {
+            const bool agree = fromUplay.address() == fromRetail.address() &&
+                               fromUplay.address() == byPattern.address();
             std::snprintf(line, sizeof(line),
                           "example_plugin: CFileNameNomad::ctor -> 0x%08zX from Steam rva, "
-                          "0x%08zX from GOG rva - %s",
+                          "0x%08zX from GOG rva, 0x%08zX by pattern - %s",
                           static_cast<size_t>(fromUplay.address()),
                           static_cast<size_t>(fromRetail.address()),
-                          agree ? "agree" : "DISAGREE");
+                          static_cast<size_t>(byPattern.address()),
+                          agree ? "all agree" : "DISAGREE");
             api->Log(line);
         } else {
             // The honest response to a missing address: say so and do without it.
@@ -162,7 +172,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 
 extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI* api) {
     // AddFunctionCB is void by design (it matches Dunia.dll's own AddFunctionCB signature exactly
-    // - see plugin_api.h) - whether this claim actually won is only visible in fcse.log, via
+    // - see fcse_api.h) - whether this claim actually won is only visible in fcse.log, via
     // FCSE's own function_registry.cpp logging, not through a return value here.
     api->AddFunctionCB(reinterpret_cast<void*>(&ToRedOverride), "toRed");
     api->Log("example_plugin: toRed registration attempted, see fcse.log for whether it won");

@@ -489,7 +489,7 @@ same idea looks like. Earlier sessions shipped a simpler fallback first (plain t
 appended directly to the Options category-button screen, no separate page at all); that code is
 gone. The rows themselves still use the same underlying primitive:
 
-- `tools/FCSE/include/plugin_api.h` — `FCSE_Setting` (name, `FCSE_SettingValue` default carrying its
+- `tools/FCSE/include/fcse_api.h` — `FCSE_Setting` (name, `FCSE_SettingValue` default carrying its
   own `FCSE_SettingType`, optional `onChanged` callback), `FCSE_RegisterSettingsFn`,
   `FCSE_API_VERSION` bumped 2→3. This replaced a `bool*`-based `FCSE_ConfigBool`/
   `FCSE_RegisterConfigPageFn` pair (API v2): FCSE now owns the value and hands it to the plugin
