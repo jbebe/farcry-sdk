@@ -193,6 +193,8 @@ add_executable(FCSE WIN32
   "src/engine/stock_constants.h"
   "src/engine/debug_commands.cpp"
   "src/engine/debug_commands.h"
+  "src/engine/splash.cpp"
+  "src/engine/splash.h"
   "src/api/plugin_loader.cpp"
   "src/api/plugin_loader.h"
   "src/api/function_registry.cpp"

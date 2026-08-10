@@ -15,6 +15,7 @@
 #include "engine/build_id.h"
 #include "engine/debug_commands.h"
 #include "engine/dunia_api.h"
+#include "engine/splash.h"
 #include "api/function_registry.h"
 #include "api/hook.h"
 #include "ini_file.h"
@@ -135,6 +136,11 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     // FCSE's own hook, not a plugin's - installed here so it's in place well before the player
     // could ever reach the Options screen. See mods_tab.h for the full mechanism.
     ModsTab::Install();
+
+    // Also FCSE's own, and the earliest-firing thing this loader installs: the splash is built
+    // inside RunGame below, before InitDuniaEngine, so this has to be in place before the handoff.
+    // See splash.h for why it detours a gdiplus import rather than anything in the game.
+    Splash::Install();
 
     // Before any plugin can register: registration resolves each setting against what this loads,
     // and fires the plugin's callback with the result, so the file has to be in memory first.
