@@ -1,30 +1,28 @@
-[size=5][b]What this is[/b][/size]
+[size=4][b]What this is[/b][/size]
 
 Far Cry 2 mods come in two shapes. Most change the game's content: weapon stats, enemy AI, textures, sounds, maps. That lives in data files inside the game's archives, and installing it is a mod manager's job. If that's what you're after, you want the [b]Far Cry 2 Vortex extension[/b]. FCSE is [b]not[/b] a replacement for it.
 
-FCSE covers the rest: the behaviour compiled into the engine itself (bin\Dunia.dll), like how assets are loaded, how the graphics behave, kind of like a meta level of modifications, that no data file can reach. Writing one takes a programmer (or just a clever Cheat Engine user), but almost anything is possible with it.
+FCSE covers the rest: the behaviour compiled into the engine itself (bin\Dunia.dll), like how assets are loaded, how the graphics behave, kind of like a meta level of modifications, that no data file can reach. Creating a plugin takes a programmer (or even just a clever Cheat Engine user), but almost anything is possible with it.
 FCSE and the Vortex extension work together and touch different files. Moreover, the Vortex extension will even install FCSE plugins for you!
 
-[size=5][b]What does it solve[/b][/size]
+[size=4][b]What it solves[/b][/size]
 
 Until now, changing anything inside Dunia.dll meant shipping a modified copy, or a modified FarCry2.exe. Anything engine level has therefore always been all or nothing.
 FCSE is a separate launcher that loads plugins into the game as it starts. Any number of them can change engine behaviour at once, and none of them has to replace a single game file.
 
-[quote][b]Heads up:[/b] FCSE doesn't change anything on its own. It's the foundation other plugins are built on. Install it if a plugin you want lists it as a requirement, or if you want to write one yourself. This is a new framework, so that list is still short.[/quote]
+[quote][b]Heads up:[/b] FCSE doesn't change anything on its own. It's the foundation other plugins are built on. Install it if a plugin you want lists it as a requirement, or if you want to write one yourself. This is a new framework, so the list of supported plugins is practically empty now.[/quote]
 
-[size=5][b]What you get[/b][/size]
+[size=4][b]What you get[/b][/size]
+
 [list]
 [*]Ability to load plugins. Install as many as you like. They don't fight over game files, because they don't touch any.[/*]
 [*]One download for both PC versions. FCSE supports both GOG and Steam versions.[/*]
-[*]An in game plugin menu. A real page on the Options screen, named [i]Mod Configuration Manager[/i].[/*]
-[*]A plain text config file. Everything in the menu is also in bin\fcse.ini, written for you on first launch and safe to edit by hand. Your comments and layout are preserved. Uninstalling a plugin for a session doesn't wipe its settings.[/*]
+[*]An in game plugin menu. A real page on the Options screen, named Mod Configuration Manager.[/*]
 [*]A log that tells you what happened. [font=Courier New]bin\fcse.log[/font] records every plugin found, everything it changed, and anything that was refused.[/*]
-[*]Conflict detection. If two plugins try to change the same thing, the second one is refused and both are named in the log, instead of the two of them quietly corrupting each other.[/*]
 [*]Crash logging. If the game does go down, FCSE writes the exact instruction it died on to [font=Courier New]fcse.log[/font], so you can send it to me if you suspect that there's a bug in FCSE or in one of the plugins.[/*]
-[*]No prerequisites. No .NET, no msvcrt, no drivers.[/*]
 [/list]
 
-[size=5][b]➡️Installation⬅️[/b][/size]
+[b][size=4]➡️ Installation[/size][/b]
 
 [list=1]
 [*]Open your Far Cry 2 folder and go into [font=Courier New]bin\[/font], the one with [font=Courier New]FarCry2.exe[/font] and [font=Courier New]Dunia.dll[/font] in it.[/*]
@@ -32,35 +30,33 @@ FCSE is a separate launcher that loads plugins into the game as it starts. Any n
 [*]Put your plugins in b[font=Courier New]in\plugins\[/font]. Both .lua scripts and .dll plugins go in that same folder, which is created for you the first time you run FCSE.[/*]
 [*]Launch [font=Courier New]FCSE.exe[/font] instead of [font=Courier New]FarCry2.exe[/font].[/*]
 [/list]
-To confirm it worked: start the game, go to Options, and you should see a row for FCSE's plugin menu. bin\fcse.log lists everything that loaded.
+To confirm it worked: start the game, the splash screen is black and white and if you go to Options, you should see a row for FCSE's plugin menu. bin\fcse.log lists everything that loaded.
 
-To [b]uninstall[/b]: delete [font=Courier New]FCSE.exe[/font]. That's the whole procedure, because nothing else was ever modified.
+To [b]uninstall[/b]: delete [font=Courier New]FCSE.exe[/font].
 
-Steam and other launchers: FCSE is an ordinary executable, so anything that can launch FarCry2.exe can launch FCSE.exe instead. Add it as a non Steam game, repoint your shortcut, add as the default launcher in Vortex, or just run it directly.
+Steam and other launchers: FCSE is an ordinary executable, so anything that can launch FarCry2.exe can launch FCSE.exe instead. Add it as a non Steam game, repoint your shortcut, add as the default launcher in Vortex, or just run it directly. 
 
-[b][size=5]Compatibility[/size][/b]
+[b][size=4]Compatibility[/size][/b]
 
 Required: Far Cry 2 patch 1.03, in either of the two forms it shipped in on PC:
 [list]
 [*]Steam / Ubisoft Connect[/*]
 [*]GOG, and a retail DVD install patched up to 1.03[/*]
 [/list]
-Those two aren't the same file in different wrapping, they're separately compiled builds of the engine. Everything FCSE does reaches into specific places inside it, and those places move between the two, so supporting both means knowing where roughly 89,000 of them went. That mapping is what's inside FCSE.exe, and it's why one download covers both. FCSE works out which one you have by reading the engine as the game loads it.
+[b]Patches 1.00 through 1.02 are not supported. [/b]
 
-Patches 1.00 through 1.02 are not supported. 
-Everything else is unaffected. Content mods, texture and sound packs, mod managers, dgVoodoo and other wrappers, the map editor. FCSE doesn't touch it.
-
-[size=5][b]Before you start[/b][/size]
+[size=4][b]Before you start[/b][/size]
 
 You should only install plugins or scripts from sources you trust.
 FCSE itself is open source. Every line of it is on GitHub, linked at the bottom of this page.
+No game file is affected by FCSE. Content mods, texture and sound packs, mod managers, dgVoodoo and other wrappers, the map editor. FCSE doesn't touch it.
 
 [line]
 
 [center][b][size=6]For plugin authors[/size][/b]
 [i]Everything below is about writing plugins, not installing them.[/i][/center]
 
-[size=5][b]How it works[/b][/size]
+[size=4][b]How it works[/b][/size]
 
 FarCry2.exe's [font=Courier New]WinMain[/font] is, in full:
 
@@ -75,7 +71,7 @@ Plugins register [i]before[/i] the stock handlers do, and the engine's registry 
 
 [quote]One difference from the stock launcher that isn't a reimplementation: [b]FCSE.exe is linked [font=Courier New]/LARGEADDRESSAWARE[/font][/b], which FarCry2.exe is not, on either build. The flag lives on the executable and governs the whole process, so starting the game through FCSE gives it the full 4 GB of user address space on 64 bit Windows instead of the 2 GB it is otherwise capped at. This let's you add as much content as possible.[/quote]
 
-[size=5][b]One address, two builds[/b][/size]
+[size=4][b]One address, two builds[/b][/size]
 
 Patch 1.03 shipped as two separately compiled builds of the engine on PC. The same function sits at a different address in each, and they are not a fixed distance apart: the offset between them isn't one number, it's [b]thousands of different ones[/b]. No arithmetic turns one address into the other. That is the real reason engine level modding has historically picked one store and ignored the other.
 
@@ -97,7 +93,7 @@ The mapping isn't hand written. It's generated from both DLLs by a pipeline buil
 
 The trade against the address library is a clean one. The table is exact and verified but only knows the two builds it was generated from; a pattern is unverified but works on anything whose code still looks the same, including builds nobody has ever mapped. Trying the table first and falling back to a pattern is a reasonable thing for a plugin to do.
 
-[size=5][b]Two ways to write a plugin[/b][/size]
+[size=4][b]Two ways to write a plugin[/b][/size]
 
 [b]Lua[/b] is the quickest route and enough for most plugins. A text editor and one file:
 
@@ -123,7 +119,7 @@ The dialect is [b]Lua 5.1 (LuaJIT)[/b], the same flavour most game modding frame
 
 The two are deliberately separate downloads, because their prerequisites are. One needs a text editor, the other needs an x86 MSVC toolchain. Scripting exists precisely so that a small change doesn't need a compiler.
 
-[size=5][b]What a script can actually do[/b][/size]
+[size=4][b]What a script can actually do[/b][/size]
 
 The Lua API is built on LuaJIT's FFI, which keeps the native surface small and composes everything else on top of it:
 
@@ -141,7 +137,7 @@ The Lua API is built on LuaJIT's FFI, which keeps the native surface small and c
 
 A script that throws is named in a traceback, and one that keeps failing is dropped rather than allowed to spam every frame.
 
-[size=5][b]The plugin API, four tiers[/b][/size]
+[size=4][b]The plugin API, four tiers[/b][/size]
 
 From "no reverse engineering required" to "full control":
 
@@ -156,7 +152,7 @@ All four are now build independent. Tiers 1 and 4 never needed an address at all
 
 The header is pure C, so a plugin doesn't have to match the toolchain FCSE was built with, or the one the game was built with. Static CRT is recommended rather than required, and nothing across the boundary transfers ownership.
 
-[size=5][b]Settings and the plugin menu[/b][/size]
+[size=4][b]Settings and the plugin menu[/b][/size]
 
 A plugin declares what it has (a name, a type, a default and a callback) and FCSE owns the stored value from there:
 
@@ -182,13 +178,13 @@ Four types are available to C++ plugins. [b]Checkbox[/b] is a YES/NO spinner, [b
 
 The page holds [b]20 rows[/b]. That's a hard limit from the engine's own list widget, and FCSE logs an overflow rather than producing rows with no controls under them.
 
-[size=5][b]Conflicts[/b][/size]
+[size=4][b]Conflicts[/b][/size]
 
 Two plugins can legitimately want the same name, address or byte range. Rather than build a hook chaining dispatcher, FCSE tracks per resource ownership and [b]rejects the second claimant[/b], logging both names. Loud and debuggable beats silently wrong.
 
 Which plugin is calling is resolved automatically from the return address, so a plugin never passes its own identity into an API call and therefore can't get it wrong. FCSE's own stock registrations go through exactly the same tracking as anyone else's.
 
-[size=5][b]Logs[/b][/size]
+[size=4][b]Logs[/b][/size]
 
 Every run rewrites [b]bin\fcse.log[/b]. Loader lines and plugin lines go through one writer, so the format can't drift between them:
 
@@ -202,7 +198,7 @@ The build and the mapping version are in there on every run, so a bug report say
 
 A crash handler is installed before anything else runs. It logs the faulting instruction as [font=Courier New]module+RVA[/font], which pastes straight into Ghidra or IDA, along with registers and a scanned return address chain. It's purely an observer: it logs and returns [font=Courier New]EXCEPTION_CONTINUE_SEARCH[/font], so it doesn't turn crashes into non crashes and doesn't interfere with the game's own handling.
 
-[size=5][b]Documentation and source[/b][/size]
+[size=4][b]Documentation and source[/b][/size]
 
 [list]
 [*][b]Full documentation:[/b] [url=https://jbebe.github.io/farcry-sdk/fcse]jbebe.github.io/farcry-sdk/fcse[/url][/*]
