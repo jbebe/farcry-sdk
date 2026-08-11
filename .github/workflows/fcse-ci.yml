@@ -1,0 +1,60 @@
+name: FCSE build and test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'tools/FCSE/**'
+      # FCSE's settings-page layouts are encoded from assets/*.mgb.xml by tools/JackAll's CLI during
+      # the CMake build, so a change there can break this build without touching a file under
+      # tools/FCSE - same reason vortex-ci.yml watches it.
+      - 'tools/JackAll/**'
+      - '.github/workflows/fcse-ci.yml'
+  pull_request:
+    paths:
+      - 'tools/FCSE/**'
+      - 'tools/JackAll/**'
+      - '.github/workflows/fcse-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-test:
+    # FCSE.exe and its plugins are 32-bit MSVC/CMake builds (Far Cry 2 is a 32-bit process) - see
+    # tools/FCSE/build.ps1, which this reuses as-is rather than re-deriving the vcvarsall dance.
+    runs-on: windows-latest
+    strategy:
+      # Both configurations, because they are not the same build: Debug compiles /MTd against a
+      # LuaJIT that is always /MT, and the tests link a GoogleTest that inherits whichever runtime
+      # the root CMakeLists selected - a mismatch there fails only in the configuration that has it.
+      # fail-fast off so one config's failure doesn't hide the other's result.
+      fail-fast: false
+      matrix:
+        config: [release, debug]
+    defaults:
+      run:
+        working-directory: tools/FCSE
+    steps:
+      - uses: actions/checkout@v4
+
+      # The .NET SDK is a build prerequisite here exactly as the MSVC toolchain is: see the
+      # fcse_build_mgb note in tools/FCSE/CMakeLists.txt for what it builds.
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+
+      - name: Build and test (${{ matrix.config }})
+        shell: pwsh
+        # -Tests runs the suites in tests/ through ctest (see build.ps1): the fcse.ini reader/writer,
+        # the address-library decoder against the table that ships, the byte-pattern scanner, and the
+        # Lua runtime in this build's own LuaJIT. All of them run with no game attached, which is why
+        # they can gate a pull request at all.
+        run: .\build.ps1 -Config ${{ matrix.config }} -Tests
+
+      - name: Verify the build (${{ matrix.config }})
+        shell: pwsh
+        # Static CRT and the embedded layouts/Lua runtime - the two properties of this build that
+        # break silently, on a player's machine rather than here. See verify_build.ps1 for what each
+        # check is reading and why. The release workflow runs the same script before packaging.
+        run: .\verify_build.ps1 -Config ${{ matrix.config }}

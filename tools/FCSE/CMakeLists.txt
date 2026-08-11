@@ -102,7 +102,19 @@ endif()
 # `dotnet run` builds the CLI if it has to and forwards the app's exit code, so a failed encode
 # fails the build. Release rather than the default Debug: this is a tool being used, not debugged,
 # and it keeps the run out of whatever configuration a JackAll developer has in their tree.
-set(JACKALL_CLI "${DOTNET_EXECUTABLE}" run
+#
+# `--unset=Platform` because build.ps1 drives this whole build from a vcvarsall x86 developer
+# environment, and vcvarsall exports `Platform=x86`. MSBuild reads Platform off the environment as a
+# project property, so without the unset the C++ target architecture leaks into the C# build:
+# JackAll.Cli builds into bin\x86\ with a 32-bit apphost, which `dotnet run` then launches as a
+# 32-bit process. That process resolves its runtime through DOTNET_ROOT, so wherever DOTNET_ROOT
+# names the x64 install - which is exactly what actions/setup-dotnet does in CI - it loads an x64
+# hostfxr.dll and dies with HRESULT 0x800700C1. It only ever worked because a developer machine
+# tends to also have the x86 .NET runtime installed for it to fall back to, which is what made this
+# a CI-only failure. The encoder is a build tool that runs on the host, so it should be built for
+# the host regardless.
+set(JACKALL_CLI "${CMAKE_COMMAND}" -E env --unset=Platform
+                "${DOTNET_EXECUTABLE}" run
                 --project "${CMAKE_CURRENT_SOURCE_DIR}/../JackAll/src/JackAll.Cli/JackAll.Cli.csproj"
                 --configuration Release --verbosity quiet --)
 
@@ -116,19 +128,23 @@ set(JACKALL_CLI "${DOTNET_EXECUTABLE}" run
 # DEPENDS names the XML and not the encoder that reads it: `mgb encode` is byte-deterministic for a
 # given document (JackAll's own round-trip tests are what hold that), so re-encoding because JackAll
 # changed would rewrite identical bytes. If it ever isn't, delete the build tree.
-function(fcse_build_mgb xml mgb)
-  get_filename_component(name "${mgb}" NAME)
-  add_custom_command(
-    OUTPUT "${mgb}"
-    COMMAND ${JACKALL_CLI} mgb verify "${xml}" --page FCSE_PAGE
-    COMMAND ${JACKALL_CLI} mgb encode "${xml}" -o "${mgb}"
-    DEPENDS "${xml}"
-    COMMENT "Building ${name} from ${xml}"
-    VERBATIM)
-endfunction()
-
-fcse_build_mgb("${FCSE_MGB_XML}"            "${FCSE_MGB}")
-fcse_build_mgb("${FCSE_MGB_WIDESCREEN_XML}" "${FCSE_MGB_WIDESCREEN}")
+#
+# Both layouts come out of one custom command rather than one each, because the encoder is invoked as
+# `dotnet run`: two independent edges are exactly what a parallel generator runs at the same time,
+# and two concurrent `dotnet run` on the same project both build JackAll.Cli into the same obj\
+# folder - one of them then loses the race with `CSC : error CS2012: Cannot open ...
+# JackAll.Core.dll for writing`. It only shows up on a cold build tree, since an incremental one has
+# nothing left to encode, which makes it a CI-only failure in practice. Keeping the invocations on a
+# single edge also means the CLI is built once and every command after the first reuses it.
+add_custom_command(
+  OUTPUT "${FCSE_MGB}" "${FCSE_MGB_WIDESCREEN}"
+  COMMAND ${JACKALL_CLI} mgb verify "${FCSE_MGB_XML}" --page FCSE_PAGE
+  COMMAND ${JACKALL_CLI} mgb encode "${FCSE_MGB_XML}" -o "${FCSE_MGB}"
+  COMMAND ${JACKALL_CLI} mgb verify "${FCSE_MGB_WIDESCREEN_XML}" --page FCSE_PAGE
+  COMMAND ${JACKALL_CLI} mgb encode "${FCSE_MGB_WIDESCREEN_XML}" -o "${FCSE_MGB_WIDESCREEN}"
+  DEPENDS "${FCSE_MGB_XML}" "${FCSE_MGB_WIDESCREEN_XML}"
+  COMMENT "Building fcse.mgb and fcse_widescreen.mgb from assets/*.mgb.xml"
+  VERBATIM)
 
 # The .rc's OBJECT_DEPENDS below is what actually re-runs these when an XML changes; the target is
 # what orders them ahead of the link under generators that don't infer it from that dependency.

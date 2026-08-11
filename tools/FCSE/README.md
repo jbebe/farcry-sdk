@@ -232,6 +232,12 @@ part of the CMake build (`jackall mgb verify`, then `mgb encode`), so this proje
 implementation of the `.mgb` format and no binary layout is committed. Configure fails with a
 message naming this if `dotnet` isn't on `PATH`.
 
+`.\verify_build.ps1 [-Config debug]` checks the two properties of a built `FCSE.exe` that fail
+*silently* - the static CRT and the embedded layouts/Lua runtime, marked below under
+[Verification](#verification). Both it and `build.ps1 -Tests` run in both configurations on every
+push and pull request touching `tools/FCSE` or `tools/JackAll`
+(`.github/workflows/fcse-ci.yml`), and again before a release is packaged.
+
 `-Zip` packages `out\fcse-{Config}.zip` in the install layout below, so its contents extract
 straight into the game's `bin\`:
 
@@ -262,20 +268,24 @@ workflow (`.github/workflows/fcse-release.yml`) deliberately ships as a *separat
 - `cmake --preset x86-release` + build succeeds, produces a genuinely 32-bit `FCSE.exe` with
   `/LARGEADDRESSAWARE` set - confirm via `dumpbin /headers` showing
   `Application can handle large (>2GB) addresses`.
-- `dumpbin /dependents` on `FCSE.exe` lists **only `KERNEL32.dll` and `USER32.dll`**. Anything
-  starting `MSVCP`/`VCRUNTIME`/`api-ms-win-crt-` means the static-CRT setting silently stopped
-  applying, and players without the matching Visual C++ redistributable would get a missing-DLL box
-  before a single line of FCSE runs - no `fcse.log`, nothing to diagnose from. See the `CMP0091`
-  note in `CMakeLists.txt` for the failure mode that produces exactly that.
-- Both `.mgb` variants are really embedded: `FindResourceW(exe, L"FCSE_MGB", RT_RCDATA)` and
-  `FCSE_MGB_WIDESCREEN` return blobs byte-identical to the `.mgb`s the build encoded into
-  `<build-dir>/assets/`. A `.rc` added to a project without `enable_language(RC)` is skipped
-  silently, so a build with no settings page in it looks perfectly healthy until the game runs.
+- *(automated - `.\verify_build.ps1`)* `dumpbin /dependents` on `FCSE.exe` lists **only
+  `KERNEL32.dll` and `USER32.dll`**. Anything starting `MSVCP`/`VCRUNTIME`/`api-ms-win-crt-` means
+  the static-CRT setting silently stopped applying, and players without the matching Visual C++
+  redistributable would get a missing-DLL box before a single line of FCSE runs - no `fcse.log`,
+  nothing to diagnose from. See the `CMP0091` note in `CMakeLists.txt` for the failure mode that
+  produces exactly that.
+- *(automated - `.\verify_build.ps1`)* Both `.mgb` variants and the Lua runtime are really embedded:
+  `FindResourceW(exe, L"FCSE_MGB", RT_RCDATA)` and `FCSE_MGB_WIDESCREEN` return blobs
+  byte-identical to the `.mgb`s the build encoded into `<build-dir>/assets/`. A `.rc` added to a
+  project without `enable_language(RC)` is skipped silently, so a build with no settings page in it
+  looks perfectly healthy until the game runs.
 - Without the real game present: point `FCSE.exe` at a folder with no `Dunia.dll` and confirm it
   logs a clear failure (`fcse.log`) and shows a message box instead of crashing.
-- `.\build.ps1 -Tests` runs `tests/ini_file_tests.cpp` (the config file's reader/writer) and
-  `tests/lua_runtime_tests.lua` (the script API, in this build's own LuaJIT) via `ctest`. Neither
-  needs the game or `Dunia.dll`.
+- *(automated - CI)* `.\build.ps1 -Tests` runs `tests/` via `ctest`: the config file's reader/writer
+  (`ini_file_tests.cpp`), the address-library decoder against the table that ships
+  (`address_library_tests.cpp`), the byte-pattern compiler and search (`pattern_scan_tests.cpp`),
+  and the script API in this build's own LuaJIT (`lua_runtime_tests.lua`). None of them needs the
+  game or `Dunia.dll`.
 - Drop `example_plugin.dll` alone into `bin\plugins\`: `fcse.log` should show it discovered, loaded,
   the running build and mapping version, its hook on
   `magma::CRenderNomadImpl::BeginPageRendering` installed at a named address, and (later, from

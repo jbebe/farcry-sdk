@@ -38,52 +38,13 @@ jobs:
 
       - name: Verify the release build
         shell: pwsh
-        # Two properties of this build fail *silently* - the exe still builds, still runs on a dev
-        # machine, and only breaks on a player's install - so they're gated here instead of left to
-        # a manual pass before each release (both are in README.md's "Verification" section):
-        #
-        #   - Static CRT (/MT). If the CMP0091 setting stops applying, FCSE.exe imports
-        #     MSVCP140/VCRUNTIME140/the UCRT apisets, and a player without the VS 2015-2022 x86
-        #     redistributable gets a missing-DLL box before any of our code runs - no fcse.log,
-        #     nothing to diagnose from.
-        #   - The embedded .mgb layouts. A .rc added to a project without enable_language(RC) is
-        #     skipped without a word, producing an FCSE.exe whose settings page has no layout.
-        #
-        # Both are read straight out of the built image rather than through dumpbin, which isn't on
-        # PATH here - build.ps1 sets up the developer environment inside its own `cmd /c` and this
-        # step doesn't inherit it. The CRT names and the RCDATA payloads are plain bytes in the
-        # file; a static-CRT build contains none of the former (checked against a real build, not
-        # assumed), and matching the payloads byte-for-byte also catches an embedded copy that went
-        # stale against the layout this build just encoded.
-        run: |
-          $exePath = "out\build\x86-release\FCSE.exe"
-          # 28591 = Latin-1: one byte <-> one char, so a byte search is a plain string search.
-          $latin1 = [System.Text.Encoding]::GetEncoding(28591)
-          $exe = $latin1.GetString([System.IO.File]::ReadAllBytes((Resolve-Path $exePath)))
-
-          $crt = @("MSVCP140", "VCRUNTIME140", "api-ms-win-crt-", "ucrtbase") |
-                 Where-Object { $exe.Contains($_) }
-          if ($crt) {
-            throw "$exePath links the dynamic CRT (found: $($crt -join ', ')) - it must build /MT. See the CMP0091 note in CMakeLists.txt."
-          }
-
-          # The Lua runtime is embedded the same way and fails the same way - a missing RCDATA
-          # resource still builds and still launches, and only shows up as every script in the
-          # install failing to require 'fcse'.
-          #
-          # The layouts are read from the build tree because that is where they exist: they are
-          # built from assets\*.mgb.xml by JackAll's mgb encoder during the CMake build, and no
-          # binary .mgb is committed.
-          foreach ($asset in "out\build\x86-release\assets\fcse.mgb",
-                             "out\build\x86-release\assets\fcse_widescreen.mgb",
-                             "src\lua\runtime\fcse.lua") {
-            $payload = $latin1.GetString([System.IO.File]::ReadAllBytes((Resolve-Path $asset)))
-            if ($exe.IndexOf($payload, [System.StringComparison]::Ordinal) -lt 0) {
-              throw "$asset is not embedded in $exePath, or the embedded copy is stale - check that enable_language(RC) ran and that the generated fcse.rc reached the link."
-            }
-          }
-
-          Write-Host "FCSE.exe: static CRT, both .mgb layouts and the Lua runtime embedded." -ForegroundColor Green
+        # Static CRT and the embedded layouts/Lua runtime: the two properties of this build that fail
+        # *silently* - the exe still builds, still runs on a dev machine, and only breaks on a
+        # player's install - so they're gated here instead of left to a manual pass before each
+        # release. See verify_build.ps1 for what each check reads out of the image and why; the same
+        # script runs on every push and pull request from fcse-ci.yml, so a release is not the first
+        # place either failure would be noticed.
+        run: .\verify_build.ps1 -Config release
 
       - name: Stage release contents
         shell: pwsh
@@ -105,7 +66,7 @@ jobs:
           New-Item -ItemType Directory -Force -Path "stage\example-plugin" | Out-Null
           Copy-Item "$build\example_plugin\example_plugin.dll" "stage\example-plugin\example_plugin.dll"
           Copy-Item "example_plugin\example_plugin.cpp" "stage\example-plugin\example_plugin.cpp"
-          Copy-Item "include\plugin_api.h" "stage\example-plugin\plugin_api.h"
+          Copy-Item "include\fcse_api.h" "stage\example-plugin\fcse_api.h"
 
           # Laid out as plugins\example_script.lua so the zip extracts straight into the game's bin\.
           # Lua mods share bin\plugins\ with the DLLs - one install location whatever a mod is
@@ -125,7 +86,4 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          git tag "fcse-${{ inputs.version }}"
-          git push origin "fcse-${{ inputs.version }}"
-          gh release create "fcse-${{ inputs.version }}" "fcse-${{ inputs.version }}.zip" "fcse-example-plugin-${{ inputs.version }}.zip" "fcse-example-script-${{ inputs.version }}.zip" --title "FCSE ${{ inputs.version }}" --generate-notes
+        run: gh release create "fcse-${{ inputs.version }}" "fcse-${{ inputs.version }}.zip" "fcse-example-plugin-${{ inputs.version }}.zip" "fcse-example-script-${{ inputs.version }}.zip" --target "${{ github.sha }}" --title "FCSE ${{ inputs.version }}" --generate-notes
