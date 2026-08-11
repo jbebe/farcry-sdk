@@ -512,6 +512,16 @@ namespace {
                 Log::Loader("FcsePage: no CGameMenu* or page unavailable, click ignored");
                 return 0;
             }
+
+            // One page, three Options screens: rebind it to the one actually clicked before
+            // switching. Both fields were written at construction time from whichever screen FCSE
+            // built the page from, and the other two states own a different CGameMenu and a different
+            // CFCXOptionPage - so without this, opening the page from a pause menu would drive the
+            // main menu's CGameMenu, and Back would try to return to the main menu's Options screen
+            // from inside a paused game.
+            SafeWritePointer(targetPage, kOwnerPageToGameMenuOffset, gameMenu, &code);
+            SafeWritePointer(targetPage, kParentPageOffset, ownerPage, &code);
+
             if (!SafeWritePointer(gameMenu, kGameMenuNextPageOffset, targetPage, &code)) {
                 LogFailed("writing CGameMenu+0x3c", code);
                 return 0;
@@ -1784,7 +1794,10 @@ namespace {
 
 }
 
-bool FcsePage::Install(void* optionsMenuThis) {
+// Builds the single private page, once per session. `optionsMenuThis` is whichever Options screen
+// happened to be shown first; it supplies the initial owning CGameMenu and parent page, both of which
+// NavigationHandler::OnActivate rebinds to the screen actually clicked before every switch.
+static bool EnsurePage(void* optionsMenuThis) {
     if (g_installed) {
         return g_page != nullptr;
     }
@@ -1914,13 +1927,33 @@ bool FcsePage::Install(void* optionsMenuThis) {
 
     // Rows are NOT added here - our Display override clears the row list on every display, so
     // anything appended now is wiped first. AppendRows runs from inside that rebuild instead.
+    //
+    // The Options row is not added here either: it belongs to a particular Options screen, and there
+    // are three of them. FcsePage::Install adds one per screen.
+    Log::Loader("FcsePage: installed - the private page is built");
+    return true;
+}
 
-    NavigationHandler* handler = NavigationHandler::Create(optionsMenuThis, page);
+bool FcsePage::Install(void* optionsMenuThis) {
+    if (optionsMenuThis == nullptr) {
+        Log::Loader("FcsePage: no owner page, skipping");
+        return false;
+    }
+    if (!EnsurePage(optionsMenuThis)) {
+        return false;
+    }
+
+    // One handler per Options screen, each carrying its own screen as `ownerPage`. That is what lets
+    // a single page be reached from all three: OnActivate resolves the owning CGameMenu from
+    // `ownerPage` at click time, so the row added to a pause menu's Options screen drives that
+    // state's menu rather than the main menu's.
+    DWORD code = 0;
+    NavigationHandler* handler = NavigationHandler::Create(optionsMenuThis, g_page);
     if (!SafeAddButton(optionsMenuThis, L"Mod Configuration Menu", handler, &code)) {
         LogFailed("AddButton (Options row)", code);
         return false;
     }
-    Log::Loader("FcsePage: installed - added the Options row for the private page");
+    Log::Loader("FcsePage: added the Mod Configuration Menu row to an Options screen");
     return true;
 }
 

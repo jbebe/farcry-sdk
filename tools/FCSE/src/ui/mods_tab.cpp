@@ -32,20 +32,40 @@ namespace {
     using OptionsMenuFn = void(__thiscall*)(void* thisPtr);
 
     OptionsMenuFn g_originalOptionsMenu = nullptr;
-    bool g_appended = false; // guards against double-appending if this ever runs more than once
 
+    // The engine builds one CFCXOptionPage per game state, not one for the whole game.
+    // CFCXGRStateMain::Init (main menu), CFCXGRStatePause::Init (single-player pause) and
+    // CFCXPauseMultiService::DoInit (multiplayer pause) each call CGameMenu::AddPage<CFCXOptionPage>
+    // against their own embedded CGameMenu, and each builds the identical Options subtree
+    // (Game/Display/Sound/Network + Controller). All three instances share this one Setup, which runs
+    // once per instance, lazily the first time that state's Options screen is shown - so the hook
+    // fires three times per session, once per screen.
+    //
+    // This used to be gated on a single bool, which let whichever screen was shown first have the row
+    // and silently denied it to the other two: exactly why the two pause menus had no Mod
+    // Configuration Menu entry.
+    //
+    // Nothing is remembered about which pages have already been served, deliberately. Setup runs
+    // exactly once per page instance and the engine's own correctness depends on that - it is a
+    // one-time builder that allocates every button's handler with raw CMemMng::NMalloc and never
+    // frees it, and a second run would give the player a second set of stock category buttons. So
+    // "once per Setup call" already means "once per page", and appending unconditionally here yields
+    // exactly one row per screen.
+    //
+    // The tempting alternative - remember the pages already appended to, and skip the ones seen
+    // before - is unsound, because these pages do not outlive their state. Each state's CGameMenu is
+    // destroyed with the state (CGameMenu::~CGameMenu tears its page table down) and the pages it
+    // owned are abandoned, so a later state's CMemMng::NMalloc(300) may well hand back the address a
+    // dead page used to occupy. A remembered pointer would then match a different, live page and
+    // silently deny it the row: the original bug, returned, and now dependent on allocator behaviour
+    // rather than reproducible.
     void AppendModConfigurationMenu(void* optionsMenuThis) {
-        if (g_appended) {
-            Log::Loader("Mods tab: options menu built again - skipping re-append (see "
-                        "mods_tab.cpp's g_appended guard)");
-            return;
-        }
-        g_appended = true;
-
         // Load FCSE's own page layout. This is the right moment: the Options screen is built
         // lazily, well after common.mgb is up, which is what the layout's PageInstances point into.
         // Failure is not fatal - it just means no private page this run - so it is logged and the
-        // existing shared-Game-tab mechanism below carries on unchanged.
+        // existing shared-Game-tab mechanism below carries on unchanged. Reached once per Options
+        // screen now rather than once per session, which is safe: Load() does its work on the first
+        // call and returns that same result afterwards.
         MagmaPackage::Load();
 
         // Plugin config registrations are intentionally not rendered here. Options gets one

@@ -171,7 +171,8 @@
   <USERDATA name="fcse">
     <PROPERTIES />
   </USERDATA>
-  <MATERIALS materialExtra="3">
+  <MATERIALS materialExtra="4">
+    <Material name="cursor" texture="\textures\cursor.png" REGION="0 0 1 1" />
     <Material name="notebook" texture="\textures\hud\notebook.png" REGION="0 0 1 1" />
     <Material name="frame_color_scratch" texture="\textures\common\frame_color_scratch.png" REGION="0 0 1 1" />
     <Material name="jackal_track" texture="\textures\common\jackal_track.png" REGION="0 0 1 1" />
@@ -180,6 +181,50 @@
   <FONTS />
   <FONTFAMILIES />
   <CHILDREN>
+    <Area slot="68" type="Cursor" FRAMERATE="30" CURRENTFRAME="0" STATICBOX="0 17 0 22" HOTSPOT.x="0" HOTSPOT.y="0">
+      <USERDATA name="Cursor">
+        <PROPERTIES />
+      </USERDATA>
+      <CHILDREN>
+        <Element slot="77" type="Placeholder" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="#47CC8C92">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="#D427AD4D" IDX="0" INTERPOLATION="None">
+              <ACTIONEXECUTER slot="133" type="ActionExecuter">
+                <ACTIONS>
+                  <ACTION ACTIONNAME="#1964B988">
+                    <USERDATA name="#1964B988">
+                      <PROPERTIES>
+                        <PROPERTY key="#4BAB415E" type="17">
+                          <LINK slot="68" LASTOBJECTTYPE="Cursor" IDS="fcse Cursor" />
+                        </PROPERTY>
+                      </PROPERTIES>
+                    </USERDATA>
+                  </ACTION>
+                </ACTIONS>
+              </ACTIONEXECUTER>
+              <RectState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="0" RIGHT="0" TOP="0" BOTTOM="0" />
+            </Keyframe>
+          </KEYFRAMES>
+          <Placeholder />
+        </Element>
+        <Element slot="74" type="Image" HIDDEN="false" ISDUPLICATABLE="true" MASKMODE="NOMASK">
+          <USERDATA name="#0BA6368A">
+            <PROPERTIES />
+          </USERDATA>
+          <KEYFRAMES>
+            <Keyframe name="#5264ED6A" IDX="0" INTERPOLATION="None">
+              <ImageState INTERPOLATIONFLAGS="0" STATECOLOR="FFFFFFFF" ROTATION="0" ORIGIN.x="10" ORIGIN.y="10" LEFT="0" RIGHT="32" TOP="0" BOTTOM="32" SHADOWCOLOR="FFFFFFFF" SHADOWOFFSETX="0" SHADOWOFFSETY="0" TILING.x="1" TILING.y="1" OFFSET.x="0" OFFSET.y="0" FLIPHORIZONTAL="false" FLIPVERTICAL="false" ACTUALSIZE="false" COLOR1="FFFFFFFF" COLOR2="FFFFFFFF" COLOR3="FFFFFFFF" COLOR4="FFFFFFFF" />
+            </Keyframe>
+          </KEYFRAMES>
+          <Image BLENDINGMODE="Normal" ALPHABLENDFIRST="false" ADDRESSINGMODEU="Clamp" ADDRESSINGMODEV="Clamp">
+            <MATERIALLINK present="true" id="cursor" PACKAGE="" />
+          </Image>
+        </Element>
+      </CHILDREN>
+    </Area>
     <Area slot="101" type="Page" FRAMERATE="30" CURRENTFRAME="0" STATICBOX="0 0 0 0" SINGLE_GLOBAL_SELECTION="true">
       <USERDATA name="FCSE_PAGE">
         <PROPERTIES>
