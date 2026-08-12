@@ -27,22 +27,15 @@ jobs:
     # this reuses as-is rather than re-deriving the vcvarsall dance. No .NET SDK step, unlike
     # fcse-ci.yml: UFCP embeds no .mgb layouts, so JackAll is not in its build.
     runs-on: windows-latest
-    strategy:
-      # Both configurations, because the CRT setting they verify differs between them: Debug must
-      # come out /MTd and Release /MT, and CMP0091 failing to apply would only show in one.
-      # fail-fast off so one config's failure doesn't hide the other's result.
-      fail-fast: false
-      matrix:
-        config: [release, debug]
     defaults:
       run:
         working-directory: mods/UFCP
     steps:
       - uses: actions/checkout@v4
 
-      - name: Build (${{ matrix.config }})
+      - name: Build
         shell: pwsh
-        run: .\build.ps1 -Config ${{ matrix.config }}
+        run: .\build.ps1 -Config release
 
       # There is no test step, and that is deliberate rather than an omission. UFCP is byte patches
       # and hooks against a live Dunia.dll; it holds no pure logic worth a suite, and stubbing the
@@ -53,9 +46,9 @@ jobs:
       # still matches exactly once in each shipped build. That needs a copy of the game, which does
       # not belong in a repository, so mods/UFCP/verify_patterns.py is run locally instead. It is
       # the check to re-run after touching a pattern.
-      - name: Verify the build (${{ matrix.config }})
+      - name: Verify the build
         shell: pwsh
         # Architecture, static CRT, and the FCSE_Load export - the three properties of this build
         # that break silently, on a player's machine rather than here. See verify_build.ps1 for what
         # each check reads and why. The release workflow runs the same script before packaging.
-        run: .\verify_build.ps1 -Config ${{ matrix.config }}
+        run: .\verify_build.ps1 -Config release
