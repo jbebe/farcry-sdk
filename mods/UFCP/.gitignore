@@ -1,2 +1,6 @@
 out/
 .vs/
+# The release workflow's staging folder and archive, so running those steps by hand to check them
+# does not leave the tree dirty.
+stage/
+*.zip

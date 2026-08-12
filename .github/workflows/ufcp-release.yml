@@ -1,0 +1,63 @@
+name: UFCP release
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version - used as the git tag (ufcp-{version}) and as ufcp-{version}.zip'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    # A 32-bit MSVC/CMake build (Far Cry 2 is a 32-bit process) - see mods/UFCP/build.ps1, which
+    # this reuses as-is rather than re-deriving the vcvarsall dance.
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: mods/UFCP
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build UFCP.dll
+        shell: pwsh
+        run: .\build.ps1 -Config release
+
+      - name: Verify the release build
+        shell: pwsh
+        # Architecture, static CRT and the FCSE_Load export: the three properties of this build that
+        # fail *silently* - the DLL still builds, still loads on a dev machine, and only breaks on a
+        # player's install, where the symptom is a plugin that is simply never there. See
+        # verify_build.ps1 for what each check reads. The same script runs on every push and pull
+        # request from ufcp-ci.yml, so a release is not the first place a failure would be noticed.
+        run: .\verify_build.ps1 -Config release
+
+      - name: Stage release contents
+        shell: pwsh
+        # Laid out so the archive extracts straight into the game's bin\ folder with no rearranging:
+        #
+        #   plugins\UFCP.dll   "plugins", not "plugin" - FCSE scans bin\plugins\ by name
+        #   README.md          alongside it, as FCSE's own release zip does
+        #
+        # README-release.md rather than the repository's README.md: that one is written for someone
+        # working in the tree and links to sibling directories by relative path, every one of which
+        # is a dead link once the file is on its own inside a zip.
+        run: |
+          New-Item -ItemType Directory -Force -Path "stage\plugins" | Out-Null
+          Copy-Item "out\build\x86-release\UFCP.dll" "stage\plugins\UFCP.dll"
+          Copy-Item "README-release.md" "stage\README.md"
+
+      - name: Zip release artifact
+        shell: pwsh
+        run: Compress-Archive -Path "stage\*" -DestinationPath "ufcp-${{ inputs.version }}.zip"
+
+      - name: Tag and publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        # --target pins the tag to the exact commit this ran against, so a push landing mid-run
+        # cannot end up inside the release.
+        run: gh release create "ufcp-${{ inputs.version }}" "ufcp-${{ inputs.version }}.zip" --target "${{ github.sha }}" --title "UFCP ${{ inputs.version }}" --generate-notes

@@ -1,0 +1,61 @@
+name: UFCP build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mods/UFCP/**'
+      # UFCP's entire dependency on the loader is this one header, and it is the plugin ABI: a
+      # change to FCSE_PluginAPI's layout or to FCSE_API_VERSION breaks every plugin built against
+      # the old one, and UFCP refuses to load rather than reading fields at the wrong offsets. That
+      # refusal is correct but silent from the loader's side, so the build that would have caught it
+      # runs here.
+      - 'tools/FCSE/include/fcse_api.h'
+      - '.github/workflows/ufcp-ci.yml'
+  pull_request:
+    paths:
+      - 'mods/UFCP/**'
+      - 'tools/FCSE/include/fcse_api.h'
+      - '.github/workflows/ufcp-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # A 32-bit MSVC/CMake build (Far Cry 2 is a 32-bit process) - see mods/UFCP/build.ps1, which
+    # this reuses as-is rather than re-deriving the vcvarsall dance. No .NET SDK step, unlike
+    # fcse-ci.yml: UFCP embeds no .mgb layouts, so JackAll is not in its build.
+    runs-on: windows-latest
+    strategy:
+      # Both configurations, because the CRT setting they verify differs between them: Debug must
+      # come out /MTd and Release /MT, and CMP0091 failing to apply would only show in one.
+      # fail-fast off so one config's failure doesn't hide the other's result.
+      fail-fast: false
+      matrix:
+        config: [release, debug]
+    defaults:
+      run:
+        working-directory: mods/UFCP
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build (${{ matrix.config }})
+        shell: pwsh
+        run: .\build.ps1 -Config ${{ matrix.config }}
+
+      # There is no test step, and that is deliberate rather than an omission. UFCP is byte patches
+      # and hooks against a live Dunia.dll; it holds no pure logic worth a suite, and stubbing the
+      # engine to manufacture some would test the stub. What can be checked without the game is
+      # checked below.
+      #
+      # The one thing this workflow genuinely cannot verify is the byte patterns - whether each one
+      # still matches exactly once in each shipped build. That needs a copy of the game, which does
+      # not belong in a repository, so mods/UFCP/verify_patterns.py is run locally instead. It is
+      # the check to re-run after touching a pattern.
+      - name: Verify the build (${{ matrix.config }})
+        shell: pwsh
+        # Architecture, static CRT, and the FCSE_Load export - the three properties of this build
+        # that break silently, on a player's machine rather than here. See verify_build.ps1 for what
+        # each check reads and why. The release workflow runs the same script before packaging.
+        run: .\verify_build.ps1 -Config ${{ matrix.config }}

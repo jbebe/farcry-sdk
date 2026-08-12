@@ -93,7 +93,18 @@ sources, by `verify_patterns.py`: exactly one match on at least one build, never
 ```
 
 Needs the same x86 MSVC toolchain as FCSE, and nothing else — the whole dependency is
-`tools/FCSE/include/fcse_api.h`, the one header a third-party plugin would copy out of the tree.
+`tools/FCSE/include/fcse_api.h`, the one header a third-party plugin would copy out of the tree. No
+.NET SDK, unlike FCSE: UFCP embeds no `.mgb` layouts, so JackAll is not in its build.
+
+`.\verify_build.ps1 [-Config debug]` checks the three properties of a built `UFCP.dll` that fail
+*silently* — x86, static CRT, and the `FCSE_Load` export. All three produce a plugin that is simply
+never there, with FCSE itself starting up perfectly. Both it and the build run in both
+configurations on every push and pull request touching `mods/UFCP` or the plugin ABI header
+(`.github/workflows/ufcp-ci.yml`), and again before a release is packaged
+(`.github/workflows/ufcp-release.yml`, dispatched with a version, producing `ufcp-{version}.zip`).
+
+There is no test suite, deliberately. UFCP is byte patches and hooks against a live `Dunia.dll`; it
+holds no pure logic worth a suite, and stubbing the engine to manufacture some would test the stub.
 
 ## Installing
 
@@ -102,6 +113,14 @@ Needs the same x86 MSVC toolchain as FCSE, and nothing else — the whole depend
 3. Launch `FCSE.exe`.
 
 ## Verification
+
+*(automated — CI)* The build and `verify_build.ps1` in both configurations.
+
+*(automated — local, needs the game)* `python verify_patterns.py` re-checks every byte pattern
+against both shipped `Dunia.dll` builds. It cannot run in CI, because that would mean putting a copy
+of the game in the repository. Run it after touching a pattern.
+
+Everything below needs a real install:
 
 - `bin\fcse.log` shows `UFCP loaded`, then `jackal tapes fixed`, `predecessor tapes unlocked`,
   `machetes unlocked`, the FOV hook's address, and the affinity mask.
