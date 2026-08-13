@@ -8,71 +8,40 @@
 // engine code beyond its own DllMain/CRT init has run. Ships as a separate exe next to the
 // untouched FarCry2.exe - see tools/FCSE/README.md for the full design and install instructions.
 
-#include "fcse_api.h"
-#include "caller_identity.h"
+#include "api/hook.h"
+#include "api/plugin_api.h"
+#include "api/plugin_loader.h"
+#include "api/settings_registry.h"
 #include "crash_log.h"
 #include "engine/address_library.h"
 #include "engine/build_id.h"
 #include "engine/debug_commands.h"
 #include "engine/dunia_api.h"
 #include "engine/splash.h"
-#include "api/function_registry.h"
-#include "api/hook.h"
-#include "ini_file.h"
+#include "loader_paths.h"
 #include "log.h"
 #include "lua/lua_host.h"
 #include "lua/tick_source.h"
 #include "ui/mods_tab.h"
-#include "api/patch.h"
-#include "api/pattern_scan.h"
-#include "api/plugin_loader.h"
-#include "api/settings_registry.h"
 
 #include <windows.h>
 
 namespace FCSE {
 namespace {
 
-    void __cdecl PluginLogShim(const char* message) {
-        Log::FromCaller(_ReturnAddress(), message != nullptr ? message : "");
-    }
+    // Handed to Dunia.dll via RegisterGameFunctionProvider, matching what FarCry2.exe's own WinMain
+    // passes. Dunia.dll invokes it exactly once, after InitDuniaEngine succeeds - the only point at
+    // which the function registry is guaranteed to exist.
+    //
+    // The order is the whole override mechanism: FunctionRegistry_Insert is first-claimant-wins, so
+    // plugins claim names before scripts, and both before FCSE's own stock handlers.
+    void __cdecl ProvideGameFunctions() {
+        Log::Loader("provider callback invoked by Dunia.dll - running plugin registrations, then "
+                    "stock handlers");
 
-    void __cdecl PluginAddFunctionCBShim(void* fn, const char* name) {
-        FunctionRegistry::Register(fn, name);
-    }
-
-    FCSE_GameBuild ToPluginBuild(DuniaBuild build) {
-        switch (build) {
-            case DuniaBuild::Retail103: return FCSE_GAME_BUILD_103_RETAIL;
-            case DuniaBuild::Uplay103:  return FCSE_GAME_BUILD_103_UPLAY;
-            default:                    return FCSE_GAME_BUILD_UNKNOWN;
-        }
-    }
-
-    DuniaBuild FromPluginBuild(FCSE_GameBuild build) {
-        switch (build) {
-            case FCSE_GAME_BUILD_103_RETAIL: return DuniaBuild::Retail103;
-            case FCSE_GAME_BUILD_103_UPLAY:  return DuniaBuild::Uplay103;
-            default:                         return DuniaBuild::Unknown;
-        }
-    }
-
-    uintptr_t __cdecl PluginFindPatternShim(const char* pattern, uint32_t* outMatchCount) {
-        // _ReturnAddress so a rejected pattern is logged against the plugin that wrote it, not
-        // against FCSE - same reason PluginLogShim does it.
-        return PatternScan::Find(pattern, outMatchCount, _ReturnAddress());
-    }
-
-    uintptr_t __cdecl PluginResolveFromShim(FCSE_GameBuild sourceBuild, uint32_t rva) {
-        // Accept a VA at Dunia's preferred base as well as an RVA. Far Cry 2 addresses are quoted
-        // both ways in about equal measure - Ghidra shows 0x1081E9C0, the docs and this codebase
-        // mostly use 0x0081E9C0 - and a plugin author should not have to know which this wanted.
-        // No real RVA reaches the preferred base, so the two forms cannot be confused.
-        constexpr uint32_t kPreferredBase = 0x10000000u;
-        if (rva >= kPreferredBase) {
-            rva -= kPreferredBase;
-        }
-        return AddressLibrary::AddressFrom(FromPluginBuild(sourceBuild), rva);
+        PluginLoader::RunOnRegisterFunctions();
+        LuaHost::OnRegisterFunctions();
+        DebugCommands::RegisterStockHandlers();
     }
 
 } // namespace
@@ -82,7 +51,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
                     int /*nShowCmd*/) {
     using namespace FCSE;
 
-    Log::Init(GetModuleHandleW(nullptr));
+    LoaderPaths::Init(GetModuleHandleW(nullptr));
+    Log::Init(LoaderPaths::Directory());
     Log::Loader("FCSE starting");
 
     // Immediately after the log opens and before anything else: this is what turns a
@@ -90,7 +60,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     // touchpoints installed below.
     CrashLog::Install();
 
-    const std::wstring& directory = Log::LoaderDirectory();
+    const std::wstring& directory = LoaderPaths::Directory();
 
     if (!DuniaApi::Load(directory)) {
         MessageBoxW(nullptr,
@@ -144,28 +114,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
 
     // Before any plugin can register: registration resolves each setting against what this loads,
     // and fires the plugin's callback with the result, so the file has to be in memory first.
-    SettingsRegistry::Init(directory + L"fcse.ini");
+    SettingsRegistry::Init(LoaderPaths::In(L"fcse.ini"));
 
-    FCSE_PluginAPI api{};
-    api.apiVersion = FCSE_API_VERSION;
-    api.duniaModule = DuniaApi::Module();
-    api.duniaBase = DuniaApi::Base();
-    api.duniaSize = DuniaApi::Size();
-    // The address library, handed to plugins so they can be build-agnostic the same way FCSE now
-    // is. Without these a plugin has no choice but to bake an RVA and work on one build only.
-    api.ResolveFrom = &PluginResolveFromShim;
-    api.FindPattern = &PluginFindPatternShim;
-    api.gameBuild = ToPluginBuild(build.build);
-    api.gameBuildId = build.id;
-    api.addressMapping = AddressLibrary::MappingVersion().c_str();
-    api.Log = &PluginLogShim;
-    api.AddFunctionCB = &PluginAddFunctionCBShim;
-    api.Hook = &HookManager::Hook;
-    api.Patch = &PatchManager::Patch;
-    api.RegisterSettings = &SettingsRegistry::RegisterSettings;
-
-    std::wstring pluginsDirectory = directory + L"plugins\\";
-    PluginLoader::LoadAll(&api, pluginsDirectory);
+    const std::wstring pluginsDirectory = LoaderPaths::In(L"plugins\\");
+    PluginLoader::LoadAll(PluginApi::Build(build), pluginsDirectory);
 
     // After the plugin DLLs, so a compiled plugin keeps first claim on anything contested (the
     // function registry is first-claimant-wins) and existing installs behave exactly as before.
@@ -183,12 +135,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     // check waits for (0 silences it). Read straight from the file rather than registered as a
     // setting: it is meaningless to toggle mid-run, and the Mod Configuration Menu has only 20 rows
     // to spend on things players actually want.
-    {
-        IniFile diagnostics;
-        diagnostics.Load(directory + L"fcse.ini");
-        if (const std::string* frames = diagnostics.Find("fcse", "Tick self check frames")) {
-            TickSource::SetSelfCheckTicks(std::atoi(frames->c_str()));
-        }
+    if (const std::string* frames = SettingsRegistry::RawValue("Tick self check frames")) {
+        TickSource::SetSelfCheckTicks(std::atoi(frames->c_str()));
     }
     TickSource::Install();
 
@@ -197,7 +145,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     // fcse.ini without the player ever opening the menu.
     SettingsRegistry::Flush();
 
-    DuniaApi::RegisterGameFunctionProvider()(reinterpret_cast<void*>(&DebugCommands::Provider));
+    DuniaApi::RegisterGameFunctionProvider()(reinterpret_cast<void*>(&ProvideGameFunctions));
 
     Log::Loader("handing off to RunGame");
     bool ok = DuniaApi::RunGame()(hInstance, lpCmdLine);

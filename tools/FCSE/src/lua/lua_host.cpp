@@ -2,6 +2,9 @@
 
 #include "log.h"
 #include "lua/lua_api.h"
+#include "util/dir_walk.h"
+#include "util/resource.h"
+#include "util/win_string.h"
 
 extern "C" {
 #include "lauxlib.h"
@@ -19,6 +22,12 @@ namespace {
     lua_State* g_state = nullptr;
     int g_loadedScripts = 0;
 
+    // fcse._handlers and debug.traceback, held in the registry from InstallRuntime so Dispatch does
+    // not walk down to them from _G on every frame. The C side treats the referenced table as the
+    // handler list; reassigning fcse._handlers from Lua is not supported.
+    int g_handlersRef = LUA_NOREF;
+    int g_tracebackRef = LUA_NOREF;
+
     // Resource name, not a path - runtime/fcse.lua is embedded by CMake from assets/fcse.rc.in, same
     // as the .mgb layouts. Unquoted non-numeric names in a .rc are string names, so there is no
     // resource.h to keep in sync.
@@ -28,21 +37,6 @@ namespace {
     // the log filled the disk. After this many consecutive failures the handler is dropped for the
     // rest of the session and says so once.
     constexpr int kMaxConsecutiveFailures = 3;
-
-    std::string Narrow(const std::wstring& wide) {
-        if (wide.empty()) {
-            return "";
-        }
-        int len = WideCharToMultiByte(CP_ACP, 0, wide.c_str(), static_cast<int>(wide.size()),
-                                       nullptr, 0, nullptr, nullptr);
-        if (len <= 0) {
-            return "";
-        }
-        std::string result(len, '\0');
-        WideCharToMultiByte(CP_ACP, 0, wide.c_str(), static_cast<int>(wide.size()), result.data(),
-                             len, nullptr, nullptr);
-        return result;
-    }
 
     // Reads a script into memory. Scripts are small; nothing here needs streaming. Named for what it
     // reads rather than the generic ReadFile, which is a Win32 function this calls - the shadowing
@@ -67,30 +61,6 @@ namespace {
         return ok;
     }
 
-    // The runtime lives in FCSE.exe's own image, not in Dunia.dll - hence GetModuleHandleW(nullptr).
-    // Nothing needs freeing: LockResource returns a pointer into the mapped image.
-    bool FindEmbeddedRuntime(const char** data, size_t* size) {
-        HMODULE self = GetModuleHandleW(nullptr);
-        // MAKEINTRESOURCEW(10) rather than RT_RCDATA: this target does not define UNICODE, so
-        // RT_RCDATA expands to the ANSI form and will not pass to FindResourceW.
-        HRSRC found = FindResourceW(self, kRuntimeResource, MAKEINTRESOURCEW(10));
-        if (found == nullptr) {
-            return false;
-        }
-        HGLOBAL block = LoadResource(self, found);
-        if (block == nullptr) {
-            return false;
-        }
-        const void* bytes = LockResource(block);
-        DWORD length = SizeofResource(self, found);
-        if (bytes == nullptr || length == 0) {
-            return false;
-        }
-        *data = static_cast<const char*>(bytes);
-        *size = length;
-        return true;
-    }
-
     // Pushes debug.traceback to be used as a protected call's message handler, so a failure reports
     // where in the script it happened rather than just what went wrong.
     int PushTracebackHandler(lua_State* L) {
@@ -110,9 +80,9 @@ namespace {
     // Loads the embedded runtime and puts the module it returns into package.loaded, so a script's
     // `require 'fcse'` resolves without ever touching the filesystem.
     bool InstallRuntime(lua_State* L) {
-        const char* data = nullptr;
+        const void* data = nullptr;
         size_t size = 0;
-        if (!FindEmbeddedRuntime(&data, &size)) {
+        if (!FindRcData(kRuntimeResource, &data, &size)) {
             Log::Loader("Lua: the embedded fcse.lua runtime is missing from this build - check that "
                         "enable_language(RC) ran and that the generated fcse.rc reached the link");
             return false;
@@ -122,7 +92,7 @@ namespace {
 
         // "@fcse.lua" - the '@' marks it as a chunk name so errors read "fcse.lua:12:" rather than
         // quoting the whole source back at the reader.
-        if (luaL_loadbuffer(L, data, size, "@fcse.lua") != 0) {
+        if (luaL_loadbuffer(L, static_cast<const char*>(data), size, "@fcse.lua") != 0) {
             Log::Loader("Lua: the embedded runtime failed to compile: " + PopError(L));
             lua_remove(L, handler);
             return false;
@@ -138,6 +108,21 @@ namespace {
             Log::Loader("Lua: the embedded runtime did not return a module table");
             lua_pop(L, 1);
             return false;
+        }
+
+        lua_getfield(L, -1, "_handlers");
+        if (!lua_istable(L, -1)) {
+            Log::Loader("Lua: the embedded runtime did not expose a _handlers table");
+            lua_pop(L, 2); // _handlers, module
+            return false;
+        }
+        g_handlersRef = luaL_ref(L, LUA_REGISTRYINDEX);
+
+        PushTracebackHandler(L);
+        if (lua_isfunction(L, -1)) {
+            g_tracebackRef = luaL_ref(L, LUA_REGISTRYINDEX);
+        } else {
+            lua_pop(L, 1); // no debug library: dispatch runs without a message handler
         }
 
         lua_getglobal(L, "package");
@@ -176,41 +161,21 @@ namespace {
     // The name is the folder or file stem, and is what fcse.ini groups, log tags and the Mod
     // Configuration Menu use - so it is what a player sees.
     void Discover(const std::wstring& directory, std::vector<ScriptFile>& found) {
-        WIN32_FIND_DATAW entry;
-        HANDLE search = FindFirstFileW((directory + L"*").c_str(), &entry);
-        if (search == INVALID_HANDLE_VALUE) {
-            return;
-        }
-
-        std::vector<std::wstring> subdirectories;
-        do {
-            std::wstring name = entry.cFileName;
-            if (name == L"." || name == L"..") {
-                continue;
-            }
-
-            if (entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                std::wstring folder = directory + name + L"\\";
-                std::wstring main = folder + L"main.lua";
-                if (GetFileAttributesW(main.c_str()) != INVALID_FILE_ATTRIBUTES) {
-                    found.push_back({Narrow(name), main}); // a mod: stop here
-                } else {
-                    subdirectories.push_back(folder); // a container: keep walking
+        WalkDirectory(
+            directory,
+            [&found](const std::wstring& path, const std::wstring& name) {
+                if (HasExtensionI(name, L".lua")) {
+                    found.push_back({Narrow(name.substr(0, name.size() - 4)), path});
                 }
-                continue;
-            }
-
-            // Case-insensitive ".lua" suffix, since Windows paths are.
-            if (name.size() > 4 && _wcsicmp(name.c_str() + name.size() - 4, L".lua") == 0) {
-                found.push_back({Narrow(name.substr(0, name.size() - 4)), directory + name});
-            }
-        } while (FindNextFileW(search, &entry));
-
-        FindClose(search); // before recursing, rather than held open across the whole tree
-
-        for (const std::wstring& subdirectory : subdirectories) {
-            Discover(subdirectory, found);
-        }
+            },
+            [&found](const std::wstring& folder, const std::wstring& name) {
+                std::wstring main = folder + L"main.lua";
+                if (GetFileAttributesW(main.c_str()) == INVALID_FILE_ATTRIBUTES) {
+                    return DirAction::Recurse; // a container
+                }
+                found.push_back({Narrow(name), main}); // a mod
+                return DirAction::Skip;
+            });
     }
 
     // Runs one script in an environment of its own.
@@ -226,7 +191,7 @@ namespace {
             return false;
         }
 
-        LuaApi::SetCurrentScript(script.name);
+        LuaApi::SetCurrentScript(script.name.c_str());
 
         int handler = PushTracebackHandler(L);
         std::string chunkName = "@" + script.name + ".lua";
@@ -260,41 +225,44 @@ namespace {
     // a broken handler would otherwise fail once per frame forever.
     void Dispatch(const char* event, const double* argument = nullptr) {
         lua_State* L = g_state;
-        if (L == nullptr) {
+        if (L == nullptr || g_handlersRef == LUA_NOREF) {
             return;
         }
 
-        int top = lua_gettop(L);
+        const int top = lua_gettop(L);
 
-        lua_getglobal(L, "package");
-        lua_getfield(L, -1, "loaded");
-        lua_getfield(L, -1, "fcse");
-        if (!lua_istable(L, -1)) {
-            lua_settop(L, top);
-            return;
-        }
-        lua_getfield(L, -1, "_handlers");
+        lua_rawgeti(L, LUA_REGISTRYINDEX, g_handlersRef);
         lua_getfield(L, -1, event);
         if (!lua_istable(L, -1)) {
             lua_settop(L, top);
             return;
         }
 
-        int handlers = lua_gettop(L);
-        int errorHandler = PushTracebackHandler(L);
+        const int handlers = lua_gettop(L);
+        const int count = static_cast<int>(lua_objlen(L, handlers));
+        if (count == 0) {
+            lua_settop(L, top);
+            return; // the every-frame case when no script registered for this event
+        }
 
-        int count = static_cast<int>(lua_objlen(L, handlers));
+        int errorHandler = 0;
+        if (g_tracebackRef != LUA_NOREF) {
+            lua_rawgeti(L, LUA_REGISTRYINDEX, g_tracebackRef);
+            errorHandler = lua_gettop(L);
+        }
+
         for (int i = 1; i <= count; ++i) {
             lua_rawgeti(L, handlers, i);
             if (!lua_istable(L, -1)) {
                 lua_pop(L, 1);
                 continue;
             }
-            int entry = lua_gettop(L);
+            const int entry = lua_gettop(L);
 
+            // Left on the stack for the rest of the iteration rather than copied out: that is what
+            // keeps the string alive for `owner` to point into, and the settop below releases it.
             lua_getfield(L, entry, "script");
-            std::string owner = lua_isstring(L, -1) ? lua_tostring(L, -1) : "?";
-            lua_pop(L, 1);
+            const char* owner = lua_isstring(L, -1) ? lua_tostring(L, -1) : "?";
 
             lua_getfield(L, entry, "fn");
             if (!lua_isfunction(L, -1)) {
@@ -322,15 +290,22 @@ namespace {
                     // handlers after it do not shift while this loop is walking them.
                     lua_pushnil(L);
                     lua_setfield(L, entry, "fn");
-                    Log::Loader("Lua: '" + owner + "' " + event + " handler failed " +
+                    Log::Loader(std::string("Lua: '") + owner + "' " + event + " handler failed " +
                                 std::to_string(failures) + " times in a row and was disabled: " +
                                 message);
                 } else {
-                    Log::Loader("Lua: '" + owner + "' " + event + " handler failed: " + message);
+                    Log::Loader(std::string("Lua: '") + owner + "' " + event +
+                                " handler failed: " + message);
                 }
             } else {
-                lua_pushinteger(L, 0);
-                lua_setfield(L, entry, "failures");
+                // Read before written: on the path that runs every frame the count is already 0.
+                lua_getfield(L, entry, "failures");
+                const bool hadFailures = lua_tointeger(L, -1) != 0;
+                lua_pop(L, 1);
+                if (hadFailures) {
+                    lua_pushinteger(L, 0);
+                    lua_setfield(L, entry, "failures");
+                }
             }
 
             lua_settop(L, entry - 1);
@@ -379,6 +354,8 @@ bool LuaHost::Init(const std::wstring& pluginsDirectory) {
     if (!InstallRuntime(L)) {
         lua_close(L);
         g_state = nullptr;
+        g_handlersRef = LUA_NOREF;
+        g_tracebackRef = LUA_NOREF;
         return false;
     }
 
@@ -421,11 +398,10 @@ void LuaHost::Shutdown() {
     }
     lua_close(g_state);
     g_state = nullptr;
+    // The registry went with the state, so the cached refs are stale rather than leaked.
+    g_handlersRef = LUA_NOREF;
+    g_tracebackRef = LUA_NOREF;
     Log::Loader("Lua: interpreter closed");
 }
-
-bool LuaHost::IsRunning() { return g_state != nullptr; }
-
-int LuaHost::LoadedScriptCount() { return g_loadedScripts; }
 
 } // namespace FCSE

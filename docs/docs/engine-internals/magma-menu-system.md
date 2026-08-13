@@ -17,16 +17,31 @@ or an actual working/shipped feature) — not inference alone.
 FCSE no longer borrows the stock Game tab. It now authors its **own** Magma package, feeds it to the
 engine through a hooked file reader, and binds a private page to it by name — so the "shared page,
 tell the two visits apart with a flag" design this page describes at length is gone, along with the
-files it names. `tools/FCSE/src/mod_page.{h,cpp}` and `menu_handler.{h,cpp}` **no longer exist**;
-their roles live in `src/ui/fcse_page.{h,cpp}`, `src/ui/magma_package.{h,cpp}` and
-`src/ui/page_assets.{h,cpp}`.
+files it names.
+
+**Every `tools/FCSE/src/` path below is historical.** `mod_page.{h,cpp}`, `menu_handler.{h,cpp}`,
+`page_spike.{h,cpp}` and `PLAN-own-page.md` no longer exist. What ships now is:
+
+| Concern | File |
+| --- | --- |
+| Page construction, installation, shared state | `src/ui/fcse_page.{h,cpp}` |
+| Row building and reading values back | `src/ui/page_rows.cpp` |
+| Slot-cell cache and EditBox binding | `src/ui/page_slots.cpp` |
+| The private class-vtable overrides | `src/ui/page_vtable.cpp` |
+| Engine offsets, call shapes, string layouts | `src/ui/engine_page_abi.h` |
+| The `IMenuItemHandler` FCSE hands the engine | `src/ui/menu_item_handler.h` |
+| Serving `fcse.mgb` through the hooked reader | `src/ui/magma_package.{h,cpp}` |
+| Picking and validating the embedded package | `src/ui/page_assets.{h,cpp}` |
+| The Options-screen hook | `src/ui/mods_tab.{h,cpp}` |
+| The settings store behind the page | `src/api/settings_registry.{h,cpp}` |
+
+The ABI those files compile against is documented on its own page:
+[the settings page ABI](./fcse-settings-page-abi.md).
 
 The engine facts below — `CGameMenu`'s page table, `CUIPageBase::Init`, the `IMenuItemHandler`
 shape, the `AddButton`/`RefreshOptionList` behaviour — all still hold and are what the current
 implementation is built on. What is stale is which FCSE file does what, and the conclusion that a
 private page was unreachable.
-
-Current state and the full trail: `tools/FCSE/PLAN-own-page.md`.
 :::
 
 For the data side of the same problem — authoring the `.mgb` a page binds to — see
@@ -375,8 +390,7 @@ confirmed, byte-for-byte, against the four real sample files in `tmp/menu/` (`co
 
 :::info[Live-confirmed]
 Traced on `FarCry2_server`, ported and verified by decompile on `Dunia.dll`, then **exercised live
-in-game** by a private page that initialises and displays correctly. Full plan and evidence:
-`tools/FCSE/PLAN-own-page.md`.
+in-game** by a private page that initialises and displays correctly.
 :::
 
 Everything further down this page that describes a hand-built page as missing "some unidentified
@@ -464,8 +478,8 @@ resolve the stored name hashes by CRC32-ing every ASCII run in `Dunia.dll`.
 
 ### Confirmed live: a private page that works
 
-`tools/FCSE/src/page_spike.{h,cpp}` — a diagnostic, off unless `bin\fcse.ini` sets
-`[FCSE] Page spike = true` — constructs a private `CFCXOptionGamePage`, overwrites its name string
+The spike that established this (`src/page_spike.{h,cpp}`, since removed — its result is what
+`src/ui/fcse_page.cpp` was built from) constructs a private `CFCXOptionGamePage`, overwrites its name string
 to point at an already-shipped Magma page, calls `Init()`, and reaches it by writing
 `CGameMenu+0x3c` and calling `SwitchPage`. In-game result: a genuinely separate screen, all four
 bindings non-null, FCSE's own rows and nothing else, no exception across repeated entries.
@@ -491,24 +505,26 @@ gone. The rows themselves still use the same underlying primitive:
 
 - `tools/FCSE/include/fcse_api.h` — `FCSE_Setting` (name, `FCSE_SettingValue` default carrying its
   own `FCSE_SettingType`, optional `onChanged` callback), `FCSE_RegisterSettingsFn`,
-  `FCSE_API_VERSION` bumped 2→3. This replaced a `bool*`-based `FCSE_ConfigBool`/
-  `FCSE_RegisterConfigPageFn` pair (API v2): FCSE now owns the value and hands it to the plugin
-  through the callback, which is what lets settings persist — the old shape only knew *where* a
-  plugin's bool lived, never what to call it in a file.
+  `FCSE_API_VERSION` bumped 2→3 at the time (it has moved on since; the header is the authority).
+  This replaced a `bool*`-based `FCSE_ConfigBool`/`FCSE_RegisterConfigPageFn` pair (API v2): FCSE
+  now owns the value and hands it to the plugin through the callback, which is what lets settings
+  persist — the old shape only knew *where* a plugin's bool lived, never what to call it in a file.
 - `tools/FCSE/src/api/settings_registry.cpp`/`.h` (was `mods_registry`) — registry of
   `(pluginName, FCSE_Setting[])` groups backed by `bin\fcse.ini` (`src/ini_file.cpp`, tested by
-  `tests/ini_file_tests.cpp`).
+  `tests/ini_file_tests.cpp` and `tests/settings_registry_tests.cpp`).
 - The page lists **every loaded plugin** (`PluginLoader::LoadedNames`), not just the ones that
   registered settings — a plugin with none still gets a row, marked `(no settings)`. Settings are
   matched to plugins by name, and since a plugin picks its own registration name and may not use
   its module name, any group matching no loaded plugin is appended in its own block rather than
   hidden.
 - `tools/FCSE/src/menu_handler.cpp`/`.h` — `ModsMenuHandler`, the hand-built `IMenuItemHandler` used
-  for each row's click (toggles the backing `bool`, fires `onChanged`).
+  for each row's click (toggles the backing `bool`, fires `onChanged`). Now
+  `MenuItemHandler<Payload>` in `src/ui/menu_item_handler.h`, one mechanism over three payloads.
 - `tools/FCSE/src/ui/mods_tab.cpp`/`.h` — hooks `CFCXOptionPage::Setup` (`0x1081aee0`), calls through to
   the original first, then calls `ModPage::Install` (below) to build the separate page and its
-  navigation button.
-- `tools/FCSE/src/mod_page.cpp`/`.h` — Path C's implementation, see below.
+  navigation button. Still current, but it calls `FcsePage::Install`.
+- `tools/FCSE/src/mod_page.cpp`/`.h` — Path C's implementation, see below. Superseded by the
+  `src/ui/fcse_page` + `page_rows` + `page_slots` + `page_vtable` set.
 
 **Row labels live-refresh after a click** (fixed; this page previously recorded the stale
 `[ON]`/`[OFF]` label as a known cosmetic gap). Because `RefreshOptionList` rebuilds every row from

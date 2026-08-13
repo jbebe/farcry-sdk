@@ -13,16 +13,13 @@ namespace FCSE {
 class DebugCommands {
 public:
     // Reads MalariaCurve/PlayerSPFinalize's real constants from the real FarCry2.exe (see
-    // stock_constants.h). Call once, before Dunia.dll can invoke Provider() below.
+    // stock_constants.h). Call once, before RegisterStockHandlers below can run.
     static void Init(const std::wstring& directory);
 
-    // The provider callback handed to Dunia.dll via RegisterGameFunctionProvider, matching what
-    // FarCry2.exe's own WinMain passes. Dunia.dll invokes this exactly once, after
-    // InitDuniaEngine succeeds - the only point at which the function registry is guaranteed to
-    // exist. Runs every loaded plugin's optional FCSE_OnRegisterFunctions first, then registers
-    // this reimplementation's 12 stock handlers - in that order, so a plugin can override a stock
-    // name (Dunia's FunctionRegistry_Insert is first-claimant-wins, confirmed via decompile).
-    static void __cdecl Provider();
+    // Claims the 12 stock names. Called from the provider callback FCSE hands Dunia.dll, and
+    // deliberately last in it: FunctionRegistry_Insert is first-claimant-wins, so anything a
+    // plugin or script registered first keeps the name.
+    static void RegisterStockHandlers();
 };
 
 } // namespace FCSE

@@ -35,13 +35,9 @@ public:
     // declines; never fatal.
     static bool Install(void* optionsMenuThis);
 
-    // Whether `page` is our private instance. No longer load-bearing now that the vtable is private
-    // rather than shared - kept as a cheap assertion for anything that wants to be sure.
-    static bool OwnsPage(void* page);
-
-    // Appends FCSE's rows. Must be called from inside the per-display rebuild: the row list is
-    // cleared every time the page is shown, so anything added at construction time is wiped before
-    // the player ever sees it.
+    // Appends FCSE's rows. Internal to ui/ - it must be called from inside the per-display rebuild,
+    // since the row list is cleared every time the page is shown, so anything added at construction
+    // time is wiped before the player ever sees it.
     static void AppendRows(void* page);
 };
 

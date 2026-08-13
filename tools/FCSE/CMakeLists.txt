@@ -185,32 +185,66 @@ set_property(SOURCE "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc"
                                             "${FCSE_LUA_RUNTIME}" "${FCSE_ICON}"
                                             "${FCSE_ADDRLIB}")
 
+# The sources that mean something without a live Dunia.dll: config file, address-library decode,
+# build identification, logging, pattern matching, settings. Split out as a library so the test
+# targets link the same objects the loader does instead of recompiling them from ../src.
+add_library(fcse_core STATIC
+  "src/log.cpp"
+  "src/log.h"
+  "src/caller_identity.cpp"
+  "src/caller_identity.h"
+  "src/ini_file.cpp"
+  "src/ini_file.h"
+  "src/loader_paths.cpp"
+  "src/loader_paths.h"
+  "src/engine/build_id.cpp"
+  "src/engine/build_id.h"
+  "src/engine/address_library.cpp"
+  "src/engine/address_library.h"
+  "src/engine/address_symbols.h"
+  "src/engine/dunia_api.cpp"
+  "src/engine/dunia_api.h"
+  "src/api/pattern_scan.cpp"
+  "src/api/pattern_scan.h"
+  "src/api/settings_registry.cpp"
+  "src/api/settings_registry.h"
+  "src/util/dir_walk.cpp"
+  "src/util/dir_walk.h"
+  "src/util/member_fn.h"
+  "src/util/pe_image.cpp"
+  "src/util/pe_image.h"
+  "src/util/resource.cpp"
+  "src/util/resource.h"
+  "src/util/seh.h"
+  "src/util/win_string.cpp"
+  "src/util/win_string.h"
+)
+
+target_include_directories(fcse_core PUBLIC
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${CMAKE_CURRENT_SOURCE_DIR}/include"
+)
+
+if (CMAKE_VERSION VERSION_GREATER 3.12)
+  set_property(TARGET fcse_core PROPERTY CXX_STANDARD 20)
+endif()
+
 # Grouped by what a file talks to: engine/ reaches into the running game, api/ is what plugins and
 # Lua scripts both call, ui/ is FCSE's own settings page, lua/ is the script host. What is left at
 # the top of src/ is the loader entry point and the utilities every group uses.
 add_executable(FCSE WIN32
   "${CMAKE_CURRENT_BINARY_DIR}/fcse.rc"
   "src/main.cpp"
-  "src/log.cpp"
-  "src/log.h"
-  "src/caller_identity.cpp"
-  "src/caller_identity.h"
   "src/crash_log.cpp"
   "src/crash_log.h"
-  "src/ini_file.cpp"
-  "src/ini_file.h"
-  "src/engine/build_id.cpp"
-
-  "src/engine/address_library.cpp"
-
-  "src/engine/dunia_api.cpp"
-  "src/engine/dunia_api.h"
   "src/engine/stock_constants.cpp"
   "src/engine/stock_constants.h"
   "src/engine/debug_commands.cpp"
   "src/engine/debug_commands.h"
   "src/engine/splash.cpp"
   "src/engine/splash.h"
+  "src/api/plugin_api.cpp"
+  "src/api/plugin_api.h"
   "src/api/plugin_loader.cpp"
   "src/api/plugin_loader.h"
   "src/api/function_registry.cpp"
@@ -218,15 +252,17 @@ add_executable(FCSE WIN32
   "src/api/hook.cpp"
   "src/api/hook.h"
   "src/api/patch.cpp"
-
-  "src/api/pattern_scan.cpp"
   "src/api/patch.h"
-  "src/api/settings_registry.cpp"
-  "src/api/settings_registry.h"
+  "src/ui/engine_page_abi.h"
   "src/ui/fcse_page.cpp"
   "src/ui/fcse_page.h"
   "src/ui/magma_package.cpp"
   "src/ui/magma_package.h"
+  "src/ui/menu_item_handler.h"
+  "src/ui/page_internal.h"
+  "src/ui/page_rows.cpp"
+  "src/ui/page_slots.cpp"
+  "src/ui/page_vtable.cpp"
   "src/ui/mods_tab.cpp"
   "src/ui/mods_tab.h"
   "src/ui/page_assets.cpp"
@@ -254,7 +290,7 @@ target_include_directories(FCSE PRIVATE
 # rc.exe, not something to hand the C++ compiler.
 set_source_files_properties("${FCSE_LUA_RUNTIME}" PROPERTIES HEADER_FILE_ONLY TRUE)
 
-target_link_libraries(FCSE PRIVATE minhook luajit)
+target_link_libraries(FCSE PRIVATE fcse_core minhook luajit)
 
 # Ordering only - OBJECT_DEPENDS above already handles staleness. Without this the resource compile
 # and the .mgb encode are two independent leaves of the graph under generators that do not derive an

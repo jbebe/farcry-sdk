@@ -28,16 +28,13 @@ FetchContent_MakeAvailable(googletest)
 
 include(GoogleTest)
 
-# Built against the real src/ini_file.cpp - no stubs, and no dependency on Dunia.dll, so it runs
-# anywhere the project builds. The rest of src/ is not linked in because nothing in it is reachable
-# without the game.
+# Built against the real code through fcse_core - no stubs, and no dependency on Dunia.dll, so it
+# runs anywhere the project builds. The rest of src/ is not linked in because nothing in it is
+# reachable without the game.
 add_executable(ini_file_tests
   "ini_file_tests.cpp"
-  "../src/ini_file.cpp"
-  "../src/ini_file.h"
 )
-target_include_directories(ini_file_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../src")
-target_link_libraries(ini_file_tests PRIVATE GTest::gtest_main)
+target_link_libraries(ini_file_tests PRIVATE fcse_core GTest::gtest_main)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET ini_file_tests PROPERTY CXX_STANDARD 20)
@@ -57,13 +54,8 @@ gtest_discover_tests(ini_file_tests)
 # reports failures through it, and it no-ops safely when Log::Init was never called.
 add_executable(address_library_tests
   "address_library_tests.cpp"
-  "../src/engine/address_library.cpp"
-  "../src/engine/build_id.cpp"
-  "../src/log.cpp"
-  "../src/caller_identity.cpp"
 )
-target_include_directories(address_library_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../src")
-target_link_libraries(address_library_tests PRIVATE GTest::gtest_main)
+target_link_libraries(address_library_tests PRIVATE fcse_core GTest::gtest_main)
 
 # ctest runs from the build tree, so the relative paths the test tries first will not resolve;
 # this is the one that always does.
@@ -82,19 +74,28 @@ gtest_discover_tests(address_library_tests)
 # Neither shows up as a crash anywhere near the mistake.
 add_executable(pattern_scan_tests
   "pattern_scan_tests.cpp"
-  "../src/api/pattern_scan.cpp"
-  "../src/engine/dunia_api.cpp"
-  "../src/log.cpp"
-  "../src/caller_identity.cpp"
 )
-target_include_directories(pattern_scan_tests PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../src")
-target_link_libraries(pattern_scan_tests PRIVATE GTest::gtest_main)
+target_link_libraries(pattern_scan_tests PRIVATE fcse_core GTest::gtest_main)
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET pattern_scan_tests PROPERTY CXX_STANDARD 20)
 endif()
 
 gtest_discover_tests(pattern_scan_tests)
+
+# The settings store: declaration validation, the file<->value parse and the change path. Worth
+# testing for the same reason ini_file is - it owns the player's config, and both a value that
+# stops round-tripping and a rejected value that gets stored anyway fail silently.
+add_executable(settings_registry_tests
+  "settings_registry_tests.cpp"
+)
+target_link_libraries(settings_registry_tests PRIVATE fcse_core GTest::gtest_main)
+
+if (CMAKE_VERSION VERSION_GREATER 3.12)
+  set_property(TARGET settings_registry_tests PROPERTY CXX_STANDARD 20)
+endif()
+
+gtest_discover_tests(settings_registry_tests)
 
 # Runs the real src/lua/runtime/fcse.lua against a stubbed native table, in the very interpreter
 # this build produced - so the dialect, the FFI behaviour and the runtime under test are all the

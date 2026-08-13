@@ -37,11 +37,6 @@ public:
 
     // Closes the state. Safe whether or not Init succeeded.
     static void Shutdown();
-
-    static bool IsRunning();
-
-    // How many scripts loaded successfully. Read by the log line after Init.
-    static int LoadedScriptCount();
 };
 
 } // namespace FCSE

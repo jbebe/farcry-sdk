@@ -4,6 +4,7 @@
 #include "engine/dunia_api.h"
 #include "log.h"
 
+#include <intrin.h>
 #include <string>
 #include <unordered_map>
 
@@ -14,20 +15,19 @@ namespace {
 }
 
 bool FunctionRegistry::Register(void* fn, const char* name) {
-    std::string caller = ResolveCallerModuleName(_ReturnAddress());
-    std::string key = name != nullptr ? name : "";
+    const std::string caller = ResolveCallerModuleName(_ReturnAddress());
+    const std::string key = name != nullptr ? name : "";
 
     auto existing = g_owners.find(key);
     if (existing != g_owners.end()) {
-        Log::FromCaller(_ReturnAddress(), "AddFunctionCB(\"" + key +
-                                               "\") conflict: name already claimed by '" +
-                                               existing->second + "', rejected");
+        Log::Write(caller, "AddFunctionCB(\"" + key + "\") conflict: name already claimed by '" +
+                               existing->second + "', rejected");
         return false;
     }
 
     DuniaApi::AddFunctionCB()(fn, name);
     g_owners[key] = caller;
-    Log::FromCaller(_ReturnAddress(), "AddFunctionCB(\"" + key + "\") registered");
+    Log::Write(caller, "AddFunctionCB(\"" + key + "\") registered");
     return true;
 }
 

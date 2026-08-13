@@ -2,6 +2,7 @@
 
 #include "engine/dunia_api.h"
 #include "log.h"
+#include "util/pe_image.h"
 
 #include <cstdint>
 #include <cstring>
@@ -27,51 +28,6 @@ namespace {
     };
 
     DetouredImport g_createHBitmap;
-
-    uintptr_t* FindImportSlot(uintptr_t base, const char* moduleName, const char* functionName) {
-        const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
-        if (dos->e_magic != IMAGE_DOS_SIGNATURE) {
-            return nullptr;
-        }
-        const auto* headers = reinterpret_cast<const IMAGE_NT_HEADERS32*>(base + dos->e_lfanew);
-        if (headers->Signature != IMAGE_NT_SIGNATURE) {
-            return nullptr;
-        }
-
-        const IMAGE_DATA_DIRECTORY& imports =
-            headers->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_IMPORT];
-        if (imports.VirtualAddress == 0 || imports.Size == 0) {
-            return nullptr;
-        }
-
-        for (const auto* descriptor =
-                 reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>(base + imports.VirtualAddress);
-             descriptor->Name != 0; ++descriptor) {
-            if (_stricmp(reinterpret_cast<const char*>(base + descriptor->Name), moduleName) != 0) {
-                continue;
-            }
-
-            if (descriptor->OriginalFirstThunk == 0) {
-                return nullptr;
-            }
-
-            const auto* names =
-                reinterpret_cast<const IMAGE_THUNK_DATA32*>(base + descriptor->OriginalFirstThunk);
-            auto* slots = reinterpret_cast<uintptr_t*>(base + descriptor->FirstThunk);
-            for (; names->u1.AddressOfData != 0; ++names, ++slots) {
-                if (IMAGE_SNAP_BY_ORDINAL32(names->u1.Ordinal)) {
-                    continue;
-                }
-                const auto* imported =
-                    reinterpret_cast<const IMAGE_IMPORT_BY_NAME*>(base + names->u1.AddressOfData);
-                if (strcmp(reinterpret_cast<const char*>(imported->Name), functionName) == 0) {
-                    return slots;
-                }
-            }
-            return nullptr;
-        }
-        return nullptr;
-    }
 
     bool WriteImportSlot(uintptr_t* slot, uintptr_t value) {
         DWORD previous = 0;

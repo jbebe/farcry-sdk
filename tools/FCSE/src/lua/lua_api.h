@@ -24,7 +24,7 @@ public:
 
     // Names the script currently running, for log tags, hook/patch ownership and setting groups.
     // The host sets this around every call into a script; it is what C.current_script() returns.
-    static void SetCurrentScript(const std::string& name);
+    static void SetCurrentScript(const char* name);
     static const std::string& CurrentScript();
 };
 

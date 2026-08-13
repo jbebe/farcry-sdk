@@ -1,24 +1,22 @@
 #pragma once
 
 #include <string>
-#include <windows.h>
 
 // Flat-file logger for bin\fcse.log. Every line - whether written by FCSE.exe itself or by a
 // plugin through FCSE_PluginAPI::Log - goes through Write(), so the format can never drift
 // between the two sources. Deliberately minimal (no formatting libraries): this runs early in the
 // game process, before anything else has had a chance to allocate much.
+//
+// A line costs one synchronous unbuffered write and there is no rate limiting, so nothing on the
+// per-frame path may log unconditionally.
 namespace FCSE {
 
 class Log {
 public:
-    // Opens bin\fcse.log next to hLoaderModule (truncates any previous run's log). Safe to call
-    // once, before anything else in the loader runs.
-    static void Init(HMODULE hLoaderModule);
+    // Opens fcse.log in `directory` (truncating any previous run's). Safe to call once, before
+    // anything else in the loader runs; an empty directory leaves logging disabled.
+    static void Init(const std::wstring& directory);
     static void Shutdown();
-
-    // Directory the loader itself was loaded from, with a trailing backslash. Empty if Init
-    // hasn't run or GetModuleFileNameW failed.
-    static const std::wstring& LoaderDirectory();
 
     // One line, tagged "[fcse]" - for the loader's own lifecycle messages.
     static void Loader(const std::string& message);
@@ -29,8 +27,8 @@ public:
     // typically `_ReturnAddress()` captured at the FCSE_LogFn trampoline.
     static void FromCaller(void* returnAddress, const std::string& message);
 
-private:
-    // Core line writer: "[yyyy-MM-dd HH:mm:ss.ffffffff][tag] message\r\n".
+    // One line under an already-resolved tag: "[yyyy-MM-dd HH:mm:ss.ffffffff][tag] message\r\n".
+    // For callers that resolved the owning module once and log several lines under it.
     static void Write(const std::string& tag, const std::string& message);
 };
 

@@ -33,13 +33,6 @@ STAGE_RANK = {"export": 100, "thunk": 90, "exact_bytes": 80, "exact_insn": 70,
               "exact_mnem": 20}
 
 
-def load_functions(cfg, key):
-    build_id = cfg["builds"][key]["id"]
-    path = os.path.join(common.cache_dir(cfg, create=False),
-                        "%s.functions.jsonl" % build_id)
-    return {r["rva"]: r for r in common.read_jsonl(path)}
-
-
 def resolved_keys(callees, resolve):
     """Callee list reduced to target-space keys, unresolved entries as None."""
     out = []
@@ -106,8 +99,8 @@ def main():
     reporter = common.Reporter("addrlib :: scoring%s" % (" [%s]" % pfx if pfx else ""))
     out = common.out_dir(cfg)
 
-    ref_funcs = load_functions(cfg, "reference")
-    tgt_funcs = load_functions(cfg, "target")
+    ref_funcs = common.load_functions(cfg, "reference")
+    tgt_funcs = common.load_functions(cfg, "target")
 
     rows = list(common.read_jsonl(os.path.join(out, pfx + "anchors.jsonl")))
     bsim_path = os.path.join(out, pfx + "bsim.jsonl")

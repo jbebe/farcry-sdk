@@ -5,6 +5,7 @@
 #include <vector>
 
 #include "log.h"
+#include "util/resource.h"
 
 namespace FCSE {
 
@@ -74,31 +75,6 @@ namespace {
             ++length;
         }
         return std::string(text, length);
-    }
-
-    bool FindResourceBlob(const unsigned char** data, size_t* size) {
-        // The table is in FCSE.exe's own image, not in Dunia.dll.
-        HMODULE self = GetModuleHandleW(nullptr);
-        // MAKEINTRESOURCEW(10) rather than RT_RCDATA: this target does not
-        // define UNICODE, so RT_RCDATA expands to the ANSI form and will not
-        // pass to FindResourceW. Same reason as lua_host.cpp.
-        HRSRC found = FindResourceW(self, L"FCSE_ADDRLIB", MAKEINTRESOURCEW(10));
-        if (found == nullptr) {
-            return false;
-        }
-        HGLOBAL block = LoadResource(self, found);
-        if (block == nullptr) {
-            return false;
-        }
-        const void* bytes = LockResource(block);
-        DWORD length = SizeofResource(self, found);
-        if (bytes == nullptr || length == 0) {
-            return false;
-        }
-        // Nothing to free: LockResource points into the mapped image.
-        *data = static_cast<const unsigned char*>(bytes);
-        *size = length;
-        return true;
     }
 
 } // namespace
@@ -273,9 +249,9 @@ bool AddressLibrary::Init(HMODULE duniaModule, const BuildInfo& build) {
         return false;
     }
 
-    const unsigned char* blob = nullptr;
+    const void* blob = nullptr;
     size_t size = 0;
-    if (!FindResourceBlob(&blob, &size)) {
+    if (!FindRcData(L"FCSE_ADDRLIB", &blob, &size)) {
         Log::Loader("address library: FCSE_ADDRLIB resource is missing from "
                     "FCSE.exe - this build was linked without an address table");
         return false;
@@ -347,10 +323,6 @@ uint32_t AddressLibrary::RvaIn(DuniaBuild build, uint32_t referenceRva) {
         return 0;
     }
     return state.column[c][row];
-}
-
-uint32_t AddressLibrary::Count() {
-    return static_cast<uint32_t>(Get().column[0].size());
 }
 
 const std::string& AddressLibrary::MappingVersion() {

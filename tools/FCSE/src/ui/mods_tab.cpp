@@ -7,6 +7,7 @@
 #include "api/hook.h"
 #include "log.h"
 #include "ui/magma_package.h"
+#include "util/member_fn.h"
 
 #include <cstdint>
 
@@ -90,16 +91,6 @@ namespace {
         AppendModConfigurationMenu(optionsMenuThis);
     }
 
-    using SetupDetourMemberFn = void (SetupDetourThunk::*)();
-
-    void* RawFunctionPointer(SetupDetourMemberFn fn) {
-        union {
-            SetupDetourMemberFn member;
-            void* raw;
-        } converter;
-        converter.member = fn;
-        return converter.raw;
-    }
 }
 
 bool ModsTab::Install() {

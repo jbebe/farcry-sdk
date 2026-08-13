@@ -4,8 +4,10 @@
 #include "engine/address_symbols.h"
 #include "engine/dunia_api.h"
 #include "log.h"
+#include "util/resource.h"
 
 #include <cstdint>
+#include <cstdio>
 #include <windows.h>
 
 namespace FCSE {
@@ -56,25 +58,15 @@ namespace {
         }
     }
 
-    // The resource lives in FCSE.exe's own image, not in Dunia.dll - hence GetModuleHandleW(nullptr).
-    // Nothing here needs freeing: LockResource hands back a pointer into the mapped image, valid as
-    // long as the module is loaded, which for our own exe is the process lifetime.
     PackageBytes FindEmbedded(const wchar_t* name) {
-        HMODULE self = GetModuleHandleW(nullptr);
-        // MAKEINTRESOURCEW(10), not RT_RCDATA: this target does not define UNICODE, so RT_RCDATA
-        // expands to the ANSI form and will not pass to FindResourceW. Same reason the rest of this
-        // codebase names the W functions explicitly.
-        HRSRC found = FindResourceW(self, name, MAKEINTRESOURCEW(10));
-        if (found == nullptr) {
-            return {};
-        }
-        HGLOBAL block = LoadResource(self, found);
-        if (block == nullptr) {
+        const void* data = nullptr;
+        size_t size = 0;
+        if (!FindRcData(name, &data, &size)) {
             return {};
         }
         PackageBytes bytes;
-        bytes.data = static_cast<const unsigned char*>(LockResource(block));
-        bytes.size = SizeofResource(self, found);
+        bytes.data = static_cast<const unsigned char*>(data);
+        bytes.size = size;
         return bytes;
     }
 }
@@ -122,14 +114,17 @@ PackageBytes PageAssets::Locate() {
         // mismatch outright - so a package built for a different Magma build is worth naming here
         // rather than letting it fail deep inside the loader.
         char message[128];
-        sprintf_s(message, "Page assets: the embedded package is version 0x%06X, this engine wants "
-                           "0x%06X", version, kExpectedVersion);
+        std::snprintf(message, sizeof(message),
+                      "Page assets: the embedded package is version 0x%06X, this engine wants "
+                      "0x%06X",
+                      version, kExpectedVersion);
         Log::Loader(message);
         return {};
     }
 
     char message[96];
-    sprintf_s(message, "Page assets: using the embedded package (%zu bytes)", bytes.size);
+    std::snprintf(message, sizeof(message), "Page assets: using the embedded package (%zu bytes)",
+                  bytes.size);
     Log::Loader(message);
 
     g_package = bytes;

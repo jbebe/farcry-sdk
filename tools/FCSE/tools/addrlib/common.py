@@ -66,6 +66,13 @@ def out_dir(cfg, create=True):
     return d
 
 
+# One build's extracted functions, keyed by RVA. `key` is "reference" or "target".
+def load_functions(cfg, key):
+    build_id = cfg["builds"][key]["id"]
+    path = os.path.join(cache_dir(cfg, create=False), "%s.functions.jsonl" % build_id)
+    return {r["rva"]: r for r in read_jsonl(path)}
+
+
 # ---------------------------------------------------------------------------
 # io
 # ---------------------------------------------------------------------------

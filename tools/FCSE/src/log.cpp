@@ -3,38 +3,48 @@
 #include "caller_identity.h"
 
 #include <cstdio>
+#include <windows.h>
 
 namespace FCSE {
 
 namespace {
     HANDLE g_file = INVALID_HANDLE_VALUE;
-    std::wstring g_loaderDir;
+    SRWLOCK g_writeLock = SRWLOCK_INIT;
 
-    void WriteRaw(const std::string& text) {
+    // Set while this thread is inside WriteLine. The crash handler logs from the faulting thread,
+    // which may be the thread that was already writing - and an SRW lock is not recursive, so
+    // taking it again would deadlock inside the one handler that has to keep working.
+    thread_local bool t_writing = false;
+
+    // One line, one WriteFile. The handle stays unbuffered so a line that was written is on disk
+    // even if the process dies immediately after.
+    void WriteLine(const std::string& text) {
         if (g_file == INVALID_HANDLE_VALUE) {
             return;
         }
         DWORD written = 0;
+        if (t_writing) {
+            WriteFile(g_file, text.data(), static_cast<DWORD>(text.size()), &written, nullptr);
+            return;
+        }
+
+        t_writing = true;
+        AcquireSRWLockExclusive(&g_writeLock);
         WriteFile(g_file, text.data(), static_cast<DWORD>(text.size()), &written, nullptr);
+        ReleaseSRWLockExclusive(&g_writeLock);
+        t_writing = false;
     }
 }
 
-void Log::Init(HMODULE hLoaderModule) {
+void Log::Init(const std::wstring& directory) {
     if (g_file != INVALID_HANDLE_VALUE) {
         return; // already initialized
     }
-
-    wchar_t path[MAX_PATH];
-    DWORD len = GetModuleFileNameW(hLoaderModule, path, MAX_PATH);
-    if (len == 0 || len == MAX_PATH) {
-        return; // can't resolve our own path - logging stays disabled, loading still proceeds
+    if (directory.empty()) {
+        return; // no resolved path - logging stays disabled, loading still proceeds
     }
 
-    std::wstring modulePath(path, len);
-    size_t slash = modulePath.find_last_of(L"\\/");
-    g_loaderDir = (slash == std::wstring::npos) ? L"" : modulePath.substr(0, slash + 1);
-
-    std::wstring logPath = g_loaderDir + L"fcse.log";
+    const std::wstring logPath = directory + L"fcse.log";
 
     // FILE_SHARE_READ so the file can be tailed/opened for viewing while the game is running.
     // CREATE_ALWAYS truncates any previous run's log - each launch gets a fresh file.
@@ -53,10 +63,6 @@ void Log::Shutdown() {
         CloseHandle(g_file);
         g_file = INVALID_HANDLE_VALUE;
     }
-}
-
-const std::wstring& Log::LoaderDirectory() {
-    return g_loaderDir;
 }
 
 void Log::Loader(const std::string& message) {
@@ -90,13 +96,23 @@ void Log::Write(const std::string& tag, const std::string& message) {
     unsigned long long fractional100ns = ticks.QuadPart % 10000000ULL;
 
     char prefix[80];
-    std::snprintf(prefix, sizeof(prefix), "[%04u-%02u-%02u %02u:%02u:%02u.%07llu0][%s] ", st.wYear,
-                  st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond, fractional100ns,
-                  tag.c_str());
+    const int formatted =
+        std::snprintf(prefix, sizeof(prefix), "[%04u-%02u-%02u %02u:%02u:%02u.%07llu0][%s] ",
+                      st.wYear, st.wMonth, st.wDay, st.wHour, st.wMinute, st.wSecond,
+                      fractional100ns, tag.c_str());
+    if (formatted < 0) {
+        return;
+    }
+    // snprintf reports the length it wanted, which a long tag can push past the buffer.
+    const size_t wanted = static_cast<size_t>(formatted);
+    const size_t prefixLength = wanted < sizeof(prefix) ? wanted : sizeof(prefix) - 1;
 
-    WriteRaw(prefix);
-    WriteRaw(message);
-    WriteRaw("\r\n");
+    std::string line;
+    line.reserve(prefixLength + message.size() + 2);
+    line.append(prefix, prefixLength);
+    line.append(message);
+    line.append("\r\n");
+    WriteLine(line);
 }
 
 } // namespace FCSE

@@ -56,6 +56,40 @@ TEST(PatternCompile, RejectsOtherWildcardSpellings) {
     }
 }
 
+// The Lua surface has always taken a lone '?' as a wildcard, so the shared compiler has to keep
+// accepting it there - and has to keep rejecting it for the plugin C API.
+TEST(PatternCompile, AllowSingleTakesAloneQuestionMarkAsOneByte) {
+    const PatternScan::Compiled c =
+        PatternScan::Compile("8B ? 04", PatternScan::Wildcards::AllowSingle);
+    ASSERT_TRUE(c.valid) << c.error;
+    EXPECT_EQ(c.size(), 3u);
+    EXPECT_TRUE(c.mask[0]);
+    EXPECT_FALSE(c.mask[1]);
+    EXPECT_TRUE(c.mask[2]);
+}
+
+// "???" is "??" then "?" - two wildcards, the same as the Lua tokenizer this replaced.
+TEST(PatternCompile, AllowSingleReadsThreeQuestionMarksAsTwoBytes) {
+    const PatternScan::Compiled c =
+        PatternScan::Compile("8B ??? 04", PatternScan::Wildcards::AllowSingle);
+    ASSERT_TRUE(c.valid) << c.error;
+    EXPECT_EQ(c.size(), 4u);
+    EXPECT_FALSE(c.mask[1]);
+    EXPECT_FALSE(c.mask[2]);
+    EXPECT_TRUE(c.mask[3]);
+}
+
+// A pattern with nothing fixed in it matches everywhere, which is never what the author meant -
+// so it is refused in both modes rather than answered with the first byte of .text.
+TEST(PatternCompile, RejectsAnAllWildcardPatternInEitherMode) {
+    for (PatternScan::Wildcards mode :
+         {PatternScan::Wildcards::DoubleOnly, PatternScan::Wildcards::AllowSingle}) {
+        const PatternScan::Compiled c = PatternScan::Compile("?? ??", mode);
+        EXPECT_FALSE(c.valid) << "an all-wildcard pattern should not compile";
+        EXPECT_FALSE(c.error.empty()) << "it must say why";
+    }
+}
+
 // Consecutive wildcards stay one byte each rather than running together.
 TEST(PatternCompile, ConsecutiveWildcardsCountSeparately) {
     const PatternScan::Compiled c = PatternScan::Compile("E8 ?? ?? ?? ?? 33");
@@ -115,6 +149,12 @@ TEST(PatternSearch, ReportsOverlappingMatches) {
 TEST(PatternSearch, StopsAtTheLimit) {
     const std::vector<uint8_t> hay(64, 0x90);
     EXPECT_EQ(Find(hay, "90", 4).size(), 4u);
+}
+
+// Zero is "no limit", which is what fcse.mem.scan_all asks for.
+TEST(PatternSearch, ALimitOfZeroReportsEveryMatch) {
+    const std::vector<uint8_t> hay(64, 0x90);
+    EXPECT_EQ(Find(hay, "90", 0).size(), 64u);
 }
 
 // A pattern beginning with a wildcard still has to anchor on some fixed byte;

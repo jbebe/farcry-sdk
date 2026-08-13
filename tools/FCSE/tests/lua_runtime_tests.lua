@@ -149,6 +149,12 @@ check("scan returns nil when the shim reports 0", function()
   assert(fcse.mem.scan('90 90') == nil)
 end)
 
+check("scan_all passes the shim's match list straight through", function()
+  local hits = fcse.mem.scan_all('90 ?? 90')
+  assert(type(hits) == 'table', 'got ' .. type(hits))
+  assert(#hits == 0, 'the shim reports no matches')
+end)
+
 check("cast rejects a null address", function()
   local ok = pcall(fcse.cast, 'int*', 0)
   assert(not ok, 'null cast should error')
@@ -197,6 +203,18 @@ check("on() registers under the right event", function()
   assert(list[#list].fn == f)
   assert(list[#list].script == 'test_script', 'script was ' .. tostring(list[#list].script))
   assert(list[#list].failures == 0, 'failures should start at 0')
+end)
+
+-- The host caches _handlers in the Lua registry once, at load, and dispatches through that
+-- reference every frame. on() must keep mutating the same table rather than replacing it.
+check("on() mutates _handlers in place rather than replacing it", function()
+  local before = fcse._handlers
+  local lists = { before.load, before.register_functions, before.update }
+  fcse.on('update', function() end)
+  assert(rawequal(fcse._handlers, before), '_handlers table identity changed')
+  assert(rawequal(fcse._handlers.load, lists[1]), 'load list was replaced')
+  assert(rawequal(fcse._handlers.register_functions, lists[2]), 'register list was replaced')
+  assert(rawequal(fcse._handlers.update, lists[3]), 'update list was replaced')
 end)
 
 check("on() rejects an unknown event", function()

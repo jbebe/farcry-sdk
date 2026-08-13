@@ -5,6 +5,7 @@
 #include "log.h"
 
 #include <cstdlib>
+#include <cstring>
 #include <intrin.h>
 
 namespace FCSE {
@@ -14,6 +15,9 @@ namespace {
     std::wstring g_configPath;
     std::vector<SettingsRegistry::Group> g_groups;
     bool g_dirty = false;
+
+    // FCSE's own group, for the diagnostic flags that are not registered settings.
+    constexpr char kOwnGroup[] = "fcse";
 
     // A group name becomes an INI [header] verbatim, so it must not contain the brackets that
     // delimit one, nor a line break that would split it across lines.
@@ -383,10 +387,14 @@ bool SettingsRegistry::SetValue(Setting* setting, const FCSE_SettingValue& next)
         return false;
     }
 
-    std::string before = FormatValue(*setting);
-
+    // Each branch validates, then returns early if the value is the one already stored. The
+    // settings page reads every control back on every frame it is open, so the unchanged case is
+    // the one that runs constantly and it does no work and allocates nothing.
     switch (next.type) {
     case FCSE_SettingType_Checkbox:
+        if ((setting->value.asCheckbox != 0) == (next.asCheckbox != 0)) {
+            return false;
+        }
         // Through asNumber, not asCheckbox: a bool write only touches the low byte of the union, so
         // assigning the named member would leave whatever the other three bytes previously held.
         setting->value.asNumber = next.asCheckbox ? 1 : 0;
@@ -396,6 +404,9 @@ bool SettingsRegistry::SetValue(Setting* setting, const FCSE_SettingValue& next)
             Log::Loader("settings: ignoring choice index " + std::to_string(next.asChoice) +
                         " for [" + setting->groupName + "] " + setting->name + " - it has only " +
                         std::to_string(setting->choices.size()) + " option(s)");
+            return false;
+        }
+        if (setting->value.asChoice == next.asChoice) {
             return false;
         }
         setting->value.asChoice = next.asChoice;
@@ -408,29 +419,38 @@ bool SettingsRegistry::SetValue(Setting* setting, const FCSE_SettingValue& next)
                         std::to_string(setting->maxValue));
             return false;
         }
+        if (setting->value.asSlider == next.asSlider) {
+            return false;
+        }
         setting->value.asSlider = next.asSlider;
         break;
     case FCSE_SettingType_Text: {
-        std::string text = next.asText != nullptr ? next.asText : std::string();
-        if (text.size() > setting->maxTextLength) {
+        const char* incoming = next.asText != nullptr ? next.asText : "";
+        size_t length = std::strlen(incoming);
+        const bool truncated = length > setting->maxTextLength;
+        if (truncated) {
+            length = setting->maxTextLength;
+        }
+        if (setting->text.size() == length &&
+            std::memcmp(setting->text.data(), incoming, length) == 0) {
+            return false;
+        }
+        if (truncated) {
             Log::Loader("settings: truncating [" + setting->groupName + "] " + setting->name +
                         " to its " + std::to_string(setting->maxTextLength) + "-character limit");
-            text.resize(setting->maxTextLength);
         }
-        setting->text = text;
+        setting->text.assign(incoming, length);
         RefreshTextPointer(*setting);
         break;
     }
+    default:
+        return false;
     }
 
-    std::string after = FormatValue(*setting);
-    if (after == before) {
-        return false; // the page reads every control back on every display; unchanged is the norm
-    }
-
-    g_ini.Set(setting->groupName, setting->name, after);
+    const std::string stored = FormatValue(*setting);
+    g_ini.Set(setting->groupName, setting->name, stored);
     g_dirty = true;
-    Log::Loader("settings: [" + setting->groupName + "] " + setting->name + " = " + after);
+    Log::Loader("settings: [" + setting->groupName + "] " + setting->name + " = " + stored);
 
     Notify(*setting);
     Flush();
@@ -468,6 +488,21 @@ void SettingsRegistry::Flush() {
         Log::Loader("settings: failed to write fcse.ini - changes are live this session but will "
                     "not persist");
     }
+}
+
+const std::string* SettingsRegistry::RawValue(const char* key) {
+    if (const std::string* value = g_ini.Find(kOwnGroup, key)) {
+        return value;
+    }
+    // Section names match case-sensitively, and FCSE's own flags have been written both ways.
+    return g_ini.Find("FCSE", key);
+}
+
+void SettingsRegistry::ResetForTesting() {
+    g_groups.clear();
+    g_ini = IniFile();
+    g_configPath.clear();
+    g_dirty = false;
 }
 
 } // namespace FCSE

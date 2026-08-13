@@ -6,9 +6,11 @@
 #include "engine/dunia_api.h"
 #include "api/function_registry.h"
 #include "api/hook.h"
-#include "log.h"
 #include "api/patch.h"
+#include "api/pattern_scan.h"
 #include "api/settings_registry.h"
+#include "log.h"
+#include "util/pe_image.h"
 
 extern "C" {
 #include "lauxlib.h"
@@ -17,6 +19,7 @@ extern "C" {
 
 #include <cstdint>
 #include <cstring>
+#include <intrin.h>
 #include <string>
 #include <vector>
 #include <windows.h>
@@ -226,128 +229,52 @@ namespace {
 
     // ---- fcse.mem.scan --------------------------------------------------------------------------
 
-    // One byte of a signature: a value, or a wildcard that matches anything.
-    struct PatternByte {
-        uint8_t value;
-        bool wildcard;
-    };
-
-    // Parses "8B 44 24 ?? 85 C0" into bytes. Accepts `??` or `?` for a wildcard and tolerates any
-    // spacing. Returns false on anything it cannot read, rather than guessing - a misparsed
-    // signature would silently scan for the wrong thing.
-    bool ParsePattern(const char* text, std::vector<PatternByte>& out, std::string& error) {
-        out.clear();
-        for (const char* p = text; *p != '\0';) {
-            if (*p == ' ' || *p == '\t') {
-                ++p;
-                continue;
-            }
-            if (*p == '?') {
-                ++p;
-                if (*p == '?') {
-                    ++p;
-                }
-                out.push_back({0, true});
-                continue;
-            }
-
-            auto nibble = [](char c, int& value) {
-                if (c >= '0' && c <= '9') { value = c - '0'; return true; }
-                if (c >= 'a' && c <= 'f') { value = c - 'a' + 10; return true; }
-                if (c >= 'A' && c <= 'F') { value = c - 'A' + 10; return true; }
-                return false;
-            };
-
-            int high = 0;
-            int low = 0;
-            if (!nibble(p[0], high) || p[1] == '\0' || !nibble(p[1], low)) {
-                error = std::string("expected two hex digits or '??' at \"") + p + "\"";
-                return false;
-            }
-            out.push_back({static_cast<uint8_t>((high << 4) | low), false});
-            p += 2;
+    // Collects up to `limit` matches (0 for all) of a signature in Dunia's executable section.
+    // The scripting surface accepts `?` as well as `??`; everything else - the parse, the section
+    // bounds, the anchored search - is the same code the plugin C API scans with.
+    //
+    // False only for a pattern that could never match, with the reason in `error`. An unscannable
+    // state (Dunia not resolved yet) is no matches instead, which is what lets a script write
+    // `if fcse.mem.scan(...) then`.
+    bool ScanText(const char* text, size_t limit, std::vector<uintptr_t>& hits,
+                  std::string& error) {
+        const PatternScan::Compiled compiled =
+            PatternScan::Compile(text, PatternScan::Wildcards::AllowSingle);
+        if (!compiled.valid) {
+            error = compiled.error;
+            return false;
         }
 
-        if (out.empty()) {
-            error = "pattern is empty";
-            return false;
+        const uint8_t* code = nullptr;
+        size_t codeSize = 0;
+        if (!FindExecutableSection(DuniaApi::Module(), &code, &codeSize)) {
+            return true;
+        }
+
+        for (size_t hit : PatternScan::Search(code, codeSize, compiled, limit)) {
+            hits.push_back(reinterpret_cast<uintptr_t>(code + hit));
         }
         return true;
-    }
-
-    // Dunia's executable section, which is what a code signature is looking for. Scanning the whole
-    // module would also walk .data and .rsrc - slower, and a "hit" there is not an instruction.
-    bool DuniaTextRange(uintptr_t& begin, size_t& size) {
-        uintptr_t base = DuniaApi::Base();
-        if (base == 0) {
-            return false;
-        }
-        auto dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
-        if (dos->e_magic != IMAGE_DOS_SIGNATURE) {
-            return false;
-        }
-        auto nt = reinterpret_cast<const IMAGE_NT_HEADERS32*>(base + dos->e_lfanew);
-        if (nt->Signature != IMAGE_NT_SIGNATURE) {
-            return false;
-        }
-        begin = base + nt->OptionalHeader.BaseOfCode;
-        size = nt->OptionalHeader.SizeOfCode;
-        return true;
-    }
-
-    // Collects matches, stopping after `limit` (0 = no limit).
-    void ScanText(const std::vector<PatternByte>& pattern, size_t limit,
-                  std::vector<uintptr_t>& hits) {
-        uintptr_t begin = 0;
-        size_t size = 0;
-        if (!DuniaTextRange(begin, size) || pattern.size() > size) {
-            return;
-        }
-
-        const auto* bytes = reinterpret_cast<const uint8_t*>(begin);
-        const size_t last = size - pattern.size();
-        const size_t count = pattern.size();
-
-        for (size_t i = 0; i <= last; ++i) {
-            size_t j = 0;
-            for (; j < count; ++j) {
-                if (!pattern[j].wildcard && bytes[i + j] != pattern[j].value) {
-                    break;
-                }
-            }
-            if (j == count) {
-                hits.push_back(begin + i);
-                if (limit != 0 && hits.size() >= limit) {
-                    return;
-                }
-            }
-        }
     }
 
     int Api_Scan(lua_State* L) {
         const char* text = luaL_checkstring(L, 1);
-        std::vector<PatternByte> pattern;
+        std::vector<uintptr_t> hits;
         std::string error;
-        if (!ParsePattern(text, pattern, error)) {
+        if (!ScanText(text, 1, hits, error)) {
             return luaL_error(L, "scan: %s", error.c_str());
         }
-
-        std::vector<uintptr_t> hits;
-        ScanText(pattern, 1, hits);
         lua_pushnumber(L, hits.empty() ? 0 : static_cast<lua_Number>(hits.front()));
         return 1;
     }
 
     int Api_ScanAll(lua_State* L) {
         const char* text = luaL_checkstring(L, 1);
-        std::vector<PatternByte> pattern;
+        std::vector<uintptr_t> hits;
         std::string error;
-        if (!ParsePattern(text, pattern, error)) {
+        if (!ScanText(text, 0, hits, error)) {
             return luaL_error(L, "scan_all: %s", error.c_str());
         }
-
-        std::vector<uintptr_t> hits;
-        ScanText(pattern, 0, hits);
 
         lua_createtable(L, static_cast<int>(hits.size()), 0);
         for (size_t i = 0; i < hits.size(); ++i) {
@@ -388,7 +315,13 @@ void LuaApi::Install(lua_State* L) {
     lua_setglobal(L, "_FCSE_NATIVE");
 }
 
-void LuaApi::SetCurrentScript(const std::string& name) { g_currentScript = name; }
+void LuaApi::SetCurrentScript(const char* name) {
+    // Compared before assigning: the frame dispatch calls this once per handler, nearly always
+    // with the name it already holds.
+    if (g_currentScript != name) {
+        g_currentScript = name;
+    }
+}
 
 const std::string& LuaApi::CurrentScript() { return g_currentScript; }
 

@@ -34,6 +34,30 @@ its mangled name, `?RunGame@@YA_NPAUHINSTANCE__@@PBD@Z`) - so, unlike
 specific `Dunia.dll` build**. Only plugins that choose to hook/patch internals need their own
 version gate (`FCSE_PluginAPI::duniaSize` is provided for exactly that).
 
+### Source layout
+
+Grouped by what a file talks to.
+
+| Folder | What lives there |
+| --- | --- |
+| `src/` | The entry point (`main.cpp`), and the pieces everything uses: `log`, `loader_paths`, `crash_log`, `caller_identity`, `ini_file` |
+| `src/util/` | Leaf Win32 helpers with no FCSE state - string conversion, directory walking, PE headers, embedded resources, the SEH guards and the member-pointer cast |
+| `src/engine/` | Anything that reaches into the running game: `dunia_api`, `build_id`, `address_library`, `debug_commands`, `splash`, `stock_constants` |
+| `src/api/` | What plugins and scripts both call: `plugin_api` (the struct they receive), `plugin_loader`, `hook`, `patch`, `function_registry`, `pattern_scan`, `settings_registry` |
+| `src/ui/` | FCSE's own settings page - see below |
+| `src/lua/` | The script host: `lua_host`, `lua_api`, `tick_source`, and `runtime/fcse.lua` |
+
+The settings page is the one part big enough to need its own map. `ui/fcse_page` builds the page
+and owns its state, `ui/page_rows` builds rows and reads their values back, `ui/page_slots`
+resolves and binds the layout's cells, `ui/page_vtable` carries the class-vtable overrides, and
+`ui/page_internal.h` is what those four share. `ui/engine_page_abi.h` holds the engine offsets and
+call shapes they compile against; the reasoning behind every one of them is in
+[`docs/docs/engine-internals/fcse-settings-page-abi.md`](../../docs/docs/engine-internals/fcse-settings-page-abi.md).
+
+`fcse_core` (see `CMakeLists.txt`) is the subset that means something without a live `Dunia.dll`.
+The test suites link it rather than recompiling sources, so anything moved into it becomes
+testable.
+
 ### Startup sequence (`src/main.cpp`)
 
 1. Resolve `Dunia.dll` next to the loader, `GetProcAddress` the 3 exports above
@@ -46,8 +70,8 @@ version gate (`FCSE_PluginAPI::duniaSize` is provided for exactly that).
 4. Read `bin\fcse.ini` into memory (`src/api/settings_registry.cpp`). Must happen before any plugin
    loads: registration resolves each setting against this file and calls the plugin back with the
    result, so the file has to be there first. A missing file is the normal first-run case.
-5. Build the `FCSE_PluginAPI` struct and load every `*.dll` in `bin\plugins\`
-   (`src/api/plugin_loader.cpp`), calling each one's required `FCSE_Load` export. This is the
+5. Build the `FCSE_PluginAPI` struct (`src/api/plugin_api.cpp`) and load every `*.dll` in
+   `bin\plugins\` (`src/api/plugin_loader.cpp`), calling each one's required `FCSE_Load` export. This is the
    earliest safe point for a plugin to install `Hook()`/`Patch()` calls - nothing in `Dunia.dll`
    beyond its own `DllMain`/CRT init has run yet, and it's where plugins declare their settings.
 6. Write `bin\fcse.ini` back if anything changed. Every plugin has now declared what it has, so

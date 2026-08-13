@@ -6,8 +6,11 @@
 #include "api/hook.h"
 #include "log.h"
 #include "ui/page_assets.h"
+#include "util/member_fn.h"
+#include "util/seh.h"
 
 #include <cstdint>
+#include <cstdio>
 #include <windows.h>
 
 namespace FCSE {
@@ -182,29 +185,9 @@ namespace {
         return g_originalReaderGetFileSize(self);
     }
 
-    template <typename MemberFn>
-    void* RawFunctionPointer(MemberFn fn) {
-        union {
-            MemberFn member;
-            void* raw;
-        } converter;
-        converter.member = fn;
-        return converter.raw;
-    }
-
     // Each function below wraps exactly one native touchpoint in SEH and holds no C++ object with a
     // destructor - MSVC disallows mixing __try/__except with automatic unwinding in one function,
     // the same constraint fcse_page.cpp works within.
-
-    bool SafeReadPointer(void* address, void** outValue, DWORD* outCode) {
-        __try {
-            *outValue = *reinterpret_cast<void**>(address);
-            return true;
-        } __except (EXCEPTION_EXECUTE_HANDLER) {
-            *outCode = GetExceptionCode();
-            return false;
-        }
-    }
 
     bool SafeBuildFileName(FileNameCtorFn ctor, FileNameSetIdentifierFn setIdentifier, void* storage,
                            const char* path, DWORD* outCode) {
@@ -254,8 +237,8 @@ namespace {
             // Short strings live inline at +0x0c; long ones put a pointer there instead.
             const char* text = capacity < 0x10 ? base + kPathBufferOffset
                                                : *reinterpret_cast<char**>(base + kPathBufferOffset);
-            sprintf_s(out, outSize, "size=%u capacity=%u path=\"%.100s\"", size, capacity,
-                      text != nullptr ? text : "(null)");
+            std::snprintf(out, outSize, "size=%u capacity=%u path=\"%.100s\"", size, capacity,
+                          text != nullptr ? text : "(null)");
             return true;
         } __except (EXCEPTION_EXECUTE_HANDLER) {
             *outCode = GetExceptionCode();
@@ -265,7 +248,7 @@ namespace {
 
     std::string Hex(DWORD value) {
         char buffer[16];
-        sprintf_s(buffer, "0x%08lX", value);
+        std::snprintf(buffer, sizeof(buffer), "0x%08lX", value);
         return buffer;
     }
 
@@ -329,7 +312,7 @@ bool MagmaPackage::Load() {
 
     void* engine = nullptr;
     DWORD code = 0;
-    if (!SafeReadPointer(reinterpret_cast<void*>(enginePtr), &engine, &code)) {
+    if (!SehReadPointer(reinterpret_cast<void*>(enginePtr), 0, &engine, &code)) {
         Log::Loader("Magma package: faulted reading the engine singleton (" + Hex(code) + ")");
         return false;
     }
@@ -407,9 +390,10 @@ bool MagmaPackage::Load() {
 
     g_package = package;
     char message[160];
-    sprintf_s(message,
-              "Magma package: fcse.mgb loaded (magma::Package* = 0x%08zX) - \"FCSE_PAGE\" now resolves",
-              reinterpret_cast<size_t>(package));
+    std::snprintf(
+        message, sizeof(message),
+        "Magma package: fcse.mgb loaded (magma::Package* = 0x%08zX) - \"FCSE_PAGE\" now resolves",
+        reinterpret_cast<size_t>(package));
     Log::Loader(message);
     return true;
 }

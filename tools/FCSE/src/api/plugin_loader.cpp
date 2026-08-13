@@ -2,6 +2,8 @@
 
 #include "caller_identity.h"
 #include "log.h"
+#include "util/dir_walk.h"
+#include "util/win_string.h"
 
 #include <windows.h>
 
@@ -17,58 +19,22 @@ namespace {
     std::vector<std::string> g_loadedNames;
     const FCSE_PluginAPI* g_api = nullptr;
 
-    // Collects every *.dll under `directory`, at any depth, in a stable order (the OS enumerates a
-    // directory alphabetically, and each subtree is walked as it is reached).
-    //
-    // Recursive so a mod can ship as a folder holding its DLL alongside whatever else it needs,
-    // rather than being forced to scatter its files into a shared bin\plugins\ root.
+    // Collects every *.dll under `directory`, at any depth, so a mod can ship as a folder holding
+    // its DLL alongside whatever else it needs rather than scattering files into a shared
+    // bin\plugins\ root.
     //
     // Everything found is offered to LoadLibraryW, including DLLs a mod ships purely as its own
     // dependencies. That is deliberate rather than an oversight: a dependency has no FCSE_Load
     // export, so it is unloaded again and logged as skipped, and the alternative - guessing which
     // DLLs "look like" plugins from their names - would be wrong in both directions.
-    void CollectDlls(const std::wstring& directory, std::vector<std::wstring>& out) {
-        WIN32_FIND_DATAW entry;
-        HANDLE search = FindFirstFileW((directory + L"*").c_str(), &entry);
-        if (search == INVALID_HANDLE_VALUE) {
-            return;
-        }
-
-        std::vector<std::wstring> subdirectories;
-        do {
-            std::wstring name = entry.cFileName;
-            if (name == L"." || name == L"..") {
-                continue;
+    std::vector<std::wstring> CollectDlls(const std::wstring& directory) {
+        std::vector<std::wstring> found;
+        WalkDirectory(directory, [&found](const std::wstring& path, const std::wstring& name) {
+            if (HasExtensionI(name, L".dll")) {
+                found.push_back(path);
             }
-            if (entry.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY) {
-                subdirectories.push_back(directory + name + L"\\");
-                continue;
-            }
-            // Case-insensitive, since Windows paths are.
-            if (name.size() > 4 && _wcsicmp(name.c_str() + name.size() - 4, L".dll") == 0) {
-                out.push_back(directory + name);
-            }
-        } while (FindNextFileW(search, &entry));
-        FindClose(search);
-
-        // After the current directory's own files, so a mod's DLL loads before anything nested
-        // under it - and the search handle is closed before recursing rather than held open across
-        // the whole tree.
-        for (const std::wstring& subdirectory : subdirectories) {
-            CollectDlls(subdirectory, out);
-        }
-    }
-
-    std::string Narrow(const std::wstring& wide) {
-        int len = WideCharToMultiByte(CP_ACP, 0, wide.c_str(), static_cast<int>(wide.size()),
-                                       nullptr, 0, nullptr, nullptr);
-        if (len <= 0) {
-            return "";
-        }
-        std::string result(len, '\0');
-        WideCharToMultiByte(CP_ACP, 0, wide.c_str(), static_cast<int>(wide.size()), result.data(),
-                             len, nullptr, nullptr);
-        return result;
+        });
+        return found;
     }
 }
 
@@ -78,8 +44,7 @@ void PluginLoader::LoadAll(const FCSE_PluginAPI* api, const std::wstring& plugin
     // Fine if it already exists; a missing plugins\ folder just means "no plugins installed yet".
     CreateDirectoryW(pluginsDirectory.c_str(), nullptr);
 
-    std::vector<std::wstring> pluginPaths;
-    CollectDlls(pluginsDirectory, pluginPaths);
+    const std::vector<std::wstring> pluginPaths = CollectDlls(pluginsDirectory);
     if (pluginPaths.empty()) {
         Log::Loader("no plugin DLLs found in " + Narrow(pluginsDirectory));
         return;

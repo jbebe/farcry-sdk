@@ -82,6 +82,15 @@ public:
     // Writes the file if anything changed since the last write. Call after plugin loading, so a
     // first run leaves a complete, hand-editable file even if the player never opens the menu.
     static void Flush();
+
+    // A key from FCSE's own [fcse] group in the already-loaded document, or nullptr if unset.
+    // For the loader's diagnostic flags, which are hand-edited rather than registered as settings
+    // and so are never written back. Saves re-reading the file to answer one question.
+    static const std::string* RawValue(const char* key);
+
+    // Drops every registered group and the loaded document, so a test can start from nothing. The
+    // registry is process-global state that the loader only ever builds once.
+    static void ResetForTesting();
 };
 
 } // namespace FCSE

@@ -5,8 +5,6 @@
 #include <string>
 #include <vector>
 
-#include <windows.h>
-
 // Byte-pattern scanning over Dunia.dll's code section.
 //
 // The address library is exact and verified, but it only knows the two builds it
@@ -38,21 +36,25 @@ public:
         size_t size() const { return bytes.size(); }
     };
 
-    // Parses IDA-style text: "8B 41 04 ?? 8B 40 4C". `??` - and only `??` - is a
-    // wildcard byte; two characters per byte, matching the hex it stands in for,
-    // so a pattern's written width always equals its byte length.
-    // Case-insensitive, whitespace-flexible. A pattern that is empty, malformed,
-    // or entirely wildcards is rejected with a reason - the last because it would
-    // match everywhere and is always an authoring mistake.
-    static Compiled Compile(const char* pattern);
+    // How lenient Compile is about wildcard spelling. The plugin C API takes `??`
+    // only, so a pattern's written width always equals its byte length; the Lua
+    // surface has always also accepted a lone `?` and keeps doing so.
+    enum class Wildcards {
+        DoubleOnly,
+        AllowSingle,
+    };
 
-    // Every offset in [data, data+size) where `pattern` matches, up to `limit`.
-    // Pure over a buffer so it can be tested without a game attached.
+    // Parses IDA-style text: "8B 41 04 ?? 8B 40 4C". Case-insensitive,
+    // whitespace-flexible. A pattern that is empty, malformed, or entirely
+    // wildcards is rejected with a reason - the last because it would match
+    // everywhere and is always an authoring mistake.
+    static Compiled Compile(const char* pattern, Wildcards wildcards = Wildcards::DoubleOnly);
+
+    // Every offset in [data, data+size) where `pattern` matches, up to `limit`
+    // (0 for no limit). Pure over a buffer so it can be tested without a game
+    // attached.
     static std::vector<size_t> Search(const uint8_t* data, size_t size,
                                       const Compiled& pattern, size_t limit);
-
-    // Bounds of `module`'s .text, read from its mapped PE headers.
-    static bool CodeSection(HMODULE module, const uint8_t** begin, size_t* size);
 
     // The plugin-facing entry point: compile, scan Dunia.dll's .text, and return
     // the address only when exactly one site matched. `outCount` (optional)

@@ -5,6 +5,7 @@
 
 #include <MinHook.h>
 
+#include <intrin.h>
 #include <unordered_map>
 
 namespace FCSE {
@@ -27,38 +28,35 @@ void HookManager::Shutdown() {
 }
 
 bool HookManager::Hook(void* target, void* detour, void** original) {
-    std::string caller = ResolveCallerModuleName(_ReturnAddress());
+    const std::string caller = ResolveCallerModuleName(_ReturnAddress());
 
     if (target == nullptr) {
-        Log::FromCaller(_ReturnAddress(), "Hook() called with a null target, rejected");
+        Log::Write(caller, "Hook() called with a null target, rejected");
         return false;
     }
 
     auto existing = g_owners.find(target);
     if (existing != g_owners.end()) {
-        Log::FromCaller(_ReturnAddress(),
-                         "Hook conflict at address already owned by '" + existing->second +
-                             "', rejected");
+        Log::Write(caller, "Hook conflict at address already owned by '" + existing->second +
+                               "', rejected");
         return false;
     }
 
     MH_STATUS status = MH_CreateHook(target, detour, original);
     if (status != MH_OK) {
-        Log::FromCaller(_ReturnAddress(),
-                         std::string("MH_CreateHook failed: ") + MH_StatusToString(status));
+        Log::Write(caller, std::string("MH_CreateHook failed: ") + MH_StatusToString(status));
         return false;
     }
 
     status = MH_EnableHook(target);
     if (status != MH_OK) {
-        Log::FromCaller(_ReturnAddress(),
-                         std::string("MH_EnableHook failed: ") + MH_StatusToString(status));
+        Log::Write(caller, std::string("MH_EnableHook failed: ") + MH_StatusToString(status));
         MH_RemoveHook(target);
         return false;
     }
 
     g_owners[target] = caller;
-    Log::FromCaller(_ReturnAddress(), "Hook installed");
+    Log::Write(caller, "Hook installed");
     return true;
 }
 

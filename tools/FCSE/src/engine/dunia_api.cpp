@@ -2,6 +2,8 @@
 
 #include "log.h"
 
+#include <cstdio>
+
 namespace FCSE {
 
 namespace {
@@ -62,8 +64,10 @@ bool DuniaApi::Load(const std::wstring& directory) {
         return false;
     }
 
-    Log::Loader("Dunia.dll resolved, base=0x" + std::to_string(g_base) +
-                " size=" + std::to_string(g_size) + " bytes");
+    char summary[96];
+    std::snprintf(summary, sizeof(summary), "Dunia.dll resolved, base=0x%08X size=%zu bytes",
+                  static_cast<unsigned>(g_base), g_size);
+    Log::Loader(summary);
     return true;
 }
 

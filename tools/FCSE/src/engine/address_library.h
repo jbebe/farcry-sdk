@@ -71,7 +71,6 @@ public:
     // That address's RVA in a specific build, running or not; 0 if absent.
     static uint32_t RvaIn(DuniaBuild build, uint32_t referenceRva);
 
-    static uint32_t Count();
     static const std::string& MappingVersion();
 
     // Whether every one of `referenceRvas` resolves. Features use this to decide

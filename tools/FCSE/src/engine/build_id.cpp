@@ -1,6 +1,7 @@
 #include "engine/build_id.h"
 
 #include "log.h"
+#include "util/pe_image.h"
 
 namespace FCSE {
 
@@ -47,25 +48,6 @@ namespace {
                ", SizeOfImage=" + std::to_string(info.sizeOfImage);
     }
 
-    // Walks the mapped image's own headers. The module is already loaded, so
-    // this is pointer arithmetic over memory the loader mapped, not a re-read
-    // of the file - which is the entire point (see the note in build_id.h).
-    const IMAGE_NT_HEADERS* NtHeaders(HMODULE module) {
-        if (module == nullptr) {
-            return nullptr;
-        }
-        const auto* base = reinterpret_cast<const unsigned char*>(module);
-        const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
-        if (dos->e_magic != IMAGE_DOS_SIGNATURE) {
-            return nullptr;
-        }
-        const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
-        if (nt->Signature != IMAGE_NT_SIGNATURE) {
-            return nullptr;
-        }
-        return nt;
-    }
-
 } // namespace
 
 const char* ToString(DuniaBuild build) {
@@ -80,7 +62,7 @@ const char* ToString(DuniaBuild build) {
 BuildInfo IdentifyDuniaBuild(HMODULE duniaModule) {
     BuildInfo info;
 
-    const IMAGE_NT_HEADERS* nt = NtHeaders(duniaModule);
+    const IMAGE_NT_HEADERS32* nt = PeHeaders(duniaModule);
     if (nt == nullptr) {
         info.reason = "Dunia.dll does not have readable PE headers in memory.";
         Log::Loader("build detection: " + info.reason);

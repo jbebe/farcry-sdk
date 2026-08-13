@@ -4,6 +4,7 @@
 
 #include "engine/dunia_api.h"
 #include "log.h"
+#include "util/pe_image.h"
 
 namespace FCSE {
 
@@ -22,7 +23,7 @@ namespace {
 
 } // namespace
 
-PatternScan::Compiled PatternScan::Compile(const char* pattern) {
+PatternScan::Compiled PatternScan::Compile(const char* pattern, Wildcards wildcards) {
     Compiled out;
     if (pattern == nullptr) {
         out.error = "pattern is null";
@@ -36,16 +37,19 @@ PatternScan::Compiled PatternScan::Compile(const char* pattern) {
             continue;
         }
         if (*p == '?') {
-            // "??" and nothing else. Two characters per byte, exactly like the
-            // hex it stands in for, so a pattern lines up column-for-column
-            // whether or not it has wildcards in it. Accepting "?" as well would
-            // mean two spellings for one thing and a pattern that reads as one
-            // width but parses as another.
-            if (*(p + 1) != '?') {
+            // Under DoubleOnly, "??" and nothing else: two characters per byte,
+            // exactly like the hex it stands in for, so a pattern lines up
+            // column-for-column whether or not it has wildcards in it. Accepting
+            // "?" as well would mean two spellings for one thing and a pattern
+            // that reads as one width but parses as another.
+            if (*(p + 1) == '?') {
+                p += 2;
+            } else if (wildcards == Wildcards::AllowSingle) {
+                p += 1;
+            } else {
                 out.error = "a lone '?' is not a wildcard - write '??', one per byte";
                 return out;
             }
-            p += 2;
             out.bytes.push_back(0);
             out.mask.push_back(false);
             continue;
@@ -121,47 +125,13 @@ std::vector<size_t> PatternScan::Search(const uint8_t* data, size_t size,
         }
         if (ok) {
             hits.push_back(start);
-            if (hits.size() >= limit) {
+            if (limit != 0 && hits.size() >= limit) {
                 break;
             }
         }
         at = start + 1;
     }
     return hits;
-}
-
-bool PatternScan::CodeSection(HMODULE module, const uint8_t** begin, size_t* size) {
-    if (module == nullptr) {
-        return false;
-    }
-    const auto* base = reinterpret_cast<const uint8_t*>(module);
-    const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
-    if (dos->e_magic != IMAGE_DOS_SIGNATURE) {
-        return false;
-    }
-    const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS*>(base + dos->e_lfanew);
-    if (nt->Signature != IMAGE_NT_SIGNATURE) {
-        return false;
-    }
-
-    const auto* section = IMAGE_FIRST_SECTION(nt);
-    for (unsigned i = 0; i < nt->FileHeader.NumberOfSections; ++i, ++section) {
-        // By characteristics rather than by the name ".text": the name is a
-        // convention, the executable flag is what actually decides whether code
-        // can live there.
-        if ((section->Characteristics & IMAGE_SCN_MEM_EXECUTE) == 0) {
-            continue;
-        }
-        const DWORD extent = section->Misc.VirtualSize != 0 ? section->Misc.VirtualSize
-                                                            : section->SizeOfRawData;
-        if (extent == 0) {
-            continue;
-        }
-        *begin = base + section->VirtualAddress;
-        *size = extent;
-        return true;
-    }
-    return false;
 }
 
 uintptr_t PatternScan::Find(const char* pattern, uint32_t* outCount,
@@ -179,7 +149,7 @@ uintptr_t PatternScan::Find(const char* pattern, uint32_t* outCount,
 
     const uint8_t* code = nullptr;
     size_t codeSize = 0;
-    if (!CodeSection(DuniaApi::Module(), &code, &codeSize)) {
+    if (!FindExecutableSection(DuniaApi::Module(), &code, &codeSize)) {
         Log::FromCaller(callerReturnAddress,
                         "FindPattern: could not locate Dunia.dll's code section");
         return 0;

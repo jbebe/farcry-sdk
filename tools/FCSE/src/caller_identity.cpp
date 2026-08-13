@@ -1,5 +1,7 @@
 #include "caller_identity.h"
 
+#include "util/win_string.h"
+
 #include <windows.h>
 
 #include <cstdio>
@@ -55,15 +57,10 @@ std::string ResolveCallerModuleName(void* returnAddress) {
                 fileName = fileName.substr(0, dot);
             }
 
-            // Narrow via the system codepage - plugin/loader file names are expected to be plain
-            // ASCII, so this is a lossless conversion in practice.
-            int narrowLen = WideCharToMultiByte(CP_ACP, 0, fileName.c_str(),
-                                                 static_cast<int>(fileName.size()), nullptr, 0,
-                                                 nullptr, nullptr);
-            if (narrowLen > 0) {
-                std::string result(narrowLen, '\0');
-                WideCharToMultiByte(CP_ACP, 0, fileName.c_str(), static_cast<int>(fileName.size()),
-                                    result.data(), narrowLen, nullptr, nullptr);
+            // Plugin and loader file names are expected to be plain ASCII, so the system-codepage
+            // conversion is lossless in practice.
+            std::string result = Narrow(fileName);
+            if (!result.empty()) {
                 return result;
             }
         }
