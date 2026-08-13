@@ -57,19 +57,23 @@ public sealed class GameCache
     private const int Version = 2;
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
-    private struct TypeRecord
+    private struct TypeRecord : IKeyedRecord
     {
         public uint Hash;
         public ushort TypeId;
         public ushort Padding;
+
+        public readonly ulong Key => Hash;
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
-    private struct ContainerRecord
+    private struct ContainerRecord : IKeyedRecord
     {
         public uint Hash;
         public uint FragmentOffset;
         public uint FragmentCount;
+
+        public readonly ulong Key => Hash;
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
@@ -83,28 +87,25 @@ public sealed class GameCache
     /// <summary>An entry hash paired with the xxHash64 of that entry's own *decompressed* content -
     /// see <see cref="TryGetContentHash"/>.</summary>
     [StructLayout(LayoutKind.Sequential, Pack = 8)]
-    private struct HashRecord
+    private struct HashRecord : IKeyedRecord
     {
         public uint Hash;
         public uint Padding;
         public ulong ContentHash;
-    }
 
-    private static readonly int TypeRecordSize = Marshal.SizeOf<TypeRecord>();
-    private static readonly int ContainerRecordSize = Marshal.SizeOf<ContainerRecord>();
-    private static readonly int FragmentRecordSize = Marshal.SizeOf<FragmentRecord>();
-    private static readonly int HashRecordSize = Marshal.SizeOf<HashRecord>();
+        public readonly ulong Key => Hash;
+    }
 
     /// <summary>The whole file, read once and kept alive — every span below is a zero-copy window
     /// into this buffer. Empty for a cache that was never loaded from (or saved to) disk yet.</summary>
     private byte[] _fileBytes = [];
 
     private FileType[] _typeTable = [];
-    private (int Offset, int Count) _typeRecords;      // byte offset into _fileBytes, record count
-    private (int Offset, int Count) _containers;        // byte offset, record count
-    private (int Offset, int Count) _fragmentRecords;   // byte offset, record count
-    private (int Offset, int Length) _nameBlob;          // byte offset, byte length
-    private (int Offset, int Count) _hashRecords;        // byte offset, record count
+    private (int Offset, int Count) _typeRecords;
+    private (int Offset, int Count) _containers;
+    private (int Offset, int Count) _fragmentRecords;
+    private (int Offset, int Count) _nameBlob;
+    private (int Offset, int Count) _hashRecords;
 
     private readonly Dictionary<uint, FileType> _newTypes = [];
     private readonly Dictionary<uint, FcbFragmentInfo[]> _newFragments = [];
@@ -118,40 +119,17 @@ public sealed class GameCache
     public int FragmentContainerCount => _containers.Count + _newFragments.Count;
     public int ContentHashCount => _hashRecords.Count + _newContentHashes.Count;
 
-    private ReadOnlySpan<TypeRecord> TypeRecordSpan => _typeRecords.Count == 0
-        ? default
-        : MemoryMarshal.Cast<byte, TypeRecord>(_fileBytes.AsSpan(_typeRecords.Offset, _typeRecords.Count * TypeRecordSize));
+    private ReadOnlySpan<TypeRecord> TypeRecordSpan => BinaryTable.RecordSpan<TypeRecord>(_fileBytes, _typeRecords);
 
-    private ReadOnlySpan<ContainerRecord> ContainerSpan => _containers.Count == 0
-        ? default
-        : MemoryMarshal.Cast<byte, ContainerRecord>(_fileBytes.AsSpan(_containers.Offset, _containers.Count * ContainerRecordSize));
+    private ReadOnlySpan<ContainerRecord> ContainerSpan => BinaryTable.RecordSpan<ContainerRecord>(_fileBytes, _containers);
 
-    private ReadOnlySpan<FragmentRecord> FragmentRecordSpan => _fragmentRecords.Count == 0
-        ? default
-        : MemoryMarshal.Cast<byte, FragmentRecord>(_fileBytes.AsSpan(_fragmentRecords.Offset, _fragmentRecords.Count * FragmentRecordSize));
+    private ReadOnlySpan<FragmentRecord> FragmentRecordSpan => BinaryTable.RecordSpan<FragmentRecord>(_fileBytes, _fragmentRecords);
 
-    private ReadOnlySpan<byte> NameBlobSpan => _nameBlob.Length == 0
-        ? default
-        : _fileBytes.AsSpan(_nameBlob.Offset, _nameBlob.Length);
+    private ReadOnlySpan<byte> NameBlobSpan => _fileBytes.AsSpan(_nameBlob.Offset, _nameBlob.Count);
 
-    private ReadOnlySpan<HashRecord> HashRecordSpan => _hashRecords.Count == 0
-        ? default
-        : MemoryMarshal.Cast<byte, HashRecord>(_fileBytes.AsSpan(_hashRecords.Offset, _hashRecords.Count * HashRecordSize));
+    private ReadOnlySpan<HashRecord> HashRecordSpan => BinaryTable.RecordSpan<HashRecord>(_fileBytes, _hashRecords);
 
     // ------------------------------------------------------------------ type lookups
-
-    /// <summary>The entry's type — from the cache, or by reading its header and remembering it.</summary>
-    public FileType TypeOf(DuniaArchive archive, FatEntry entry)
-    {
-        if (TryGetType(entry.Hash, out FileType cached))
-        {
-            return cached;
-        }
-
-        FileType sniffed = Sniff(archive, entry);
-        SetType(entry.Hash, sniffed);
-        return sniffed;
-    }
 
     /// <summary>The query half of a split sniff: whether <paramref name="hash"/>'s type is already
     /// known, without sniffing it if not. Lets a caller (<see cref="Vfs.GameVfs.BuildMergedFiles"/>)
@@ -173,20 +151,14 @@ public sealed class GameCache
     private bool TryGetCachedType(uint hash, out FileType type)
     {
         ReadOnlySpan<TypeRecord> records = TypeRecordSpan;
-        int lo = 0, hi = records.Length - 1;
-        while (lo <= hi)
+        int found = BinaryTable.Find(records, hash);
+        if (found < 0)
         {
-            int mid = (lo + hi) / 2;
-            uint midHash = records[mid].Hash;
-            if (midHash == hash)
-            {
-                type = _typeTable[records[mid].TypeId];
-                return true;
-            }
-            if (midHash < hash) lo = mid + 1; else hi = mid - 1;
+            type = default;
+            return false;
         }
-        type = default;
-        return false;
+        type = _typeTable[records[found].TypeId];
+        return true;
     }
 
     /// <summary>Reads an entry's header without consulting or touching the cache.</summary>
@@ -214,21 +186,14 @@ public sealed class GameCache
         }
 
         ReadOnlySpan<ContainerRecord> containers = ContainerSpan;
-        int lo = 0, hi = containers.Length - 1;
-        while (lo <= hi)
+        int found = BinaryTable.Find(containers, hash);
+        if (found < 0)
         {
-            int mid = (lo + hi) / 2;
-            uint midHash = containers[mid].Hash;
-            if (midHash == hash)
-            {
-                fragments = Decode(containers[mid]);
-                return true;
-            }
-            if (midHash < hash) lo = mid + 1; else hi = mid - 1;
+            fragments = [];
+            return false;
         }
-
-        fragments = [];
-        return false;
+        fragments = Decode(containers[found]);
+        return true;
     }
 
     /// <summary>Records the answer for a hash — including an empty list, since "doesn't split" is
@@ -275,20 +240,14 @@ public sealed class GameCache
     private bool TryGetCachedContentHash(uint hash, out ulong contentHash)
     {
         ReadOnlySpan<HashRecord> records = HashRecordSpan;
-        int lo = 0, hi = records.Length - 1;
-        while (lo <= hi)
+        int found = BinaryTable.Find(records, hash);
+        if (found < 0)
         {
-            int mid = (lo + hi) / 2;
-            uint midHash = records[mid].Hash;
-            if (midHash == hash)
-            {
-                contentHash = records[mid].ContentHash;
-                return true;
-            }
-            if (midHash < hash) lo = mid + 1; else hi = mid - 1;
+            contentHash = default;
+            return false;
         }
-        contentHash = default;
-        return false;
+        contentHash = records[found].ContentHash;
+        return true;
     }
 
     // ------------------------------------------------------------------ persistence
@@ -300,14 +259,16 @@ public sealed class GameCache
     /// </summary>
     public static GameCache Load(string path)
     {
+        var cache = new GameCache();
         if (!File.Exists(path))
         {
-            return new GameCache();
+            return cache;
         }
 
         try
         {
-            return ParseBytes(File.ReadAllBytes(path));
+            cache.LoadFrom(File.ReadAllBytes(path));
+            return cache;
         }
         catch
         {
@@ -316,20 +277,20 @@ public sealed class GameCache
     }
 
     /// <summary>Shared by <see cref="Load"/> and <see cref="Save"/> — a cache freshly written by this
-    /// process reads back exactly the way one loaded from disk would.</summary>
-    private static GameCache ParseBytes(byte[] bytes)
+    /// process reads back exactly the way one loaded from disk would. Wrong magic/version leaves the
+    /// instance empty, same as any other unparseable file.</summary>
+    private void LoadFrom(byte[] bytes)
     {
         using var stream = new MemoryStream(bytes, writable: false);
         using var reader = new BinaryReader(stream);
 
         if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version)
         {
-            return new GameCache();
+            return;
         }
 
-        var cache = new GameCache { _fileBytes = bytes };
+        _fileBytes = bytes;
 
-        // ---- type section ----
         // There are only ~20 distinct (category, extension) pairs in the whole game, so they're
         // interned into a table and each record carries a 2-byte id instead of two strings.
         int typeTableCount = reader.ReadInt32();
@@ -338,44 +299,24 @@ public sealed class GameCache
         {
             typeTable[i] = new FileType(reader.ReadString(), reader.ReadString());
         }
-        cache._typeTable = typeTable;
+        _typeTable = typeTable;
 
-        int typeRecordCount = reader.ReadInt32();
-        cache._typeRecords = ((int)stream.Position, typeRecordCount);
-        stream.Position += typeRecordCount * TypeRecordSize;
-
-        // ---- fcb structure section ----
-        int containerCount = reader.ReadInt32();
-        cache._containers = ((int)stream.Position, containerCount);
-        stream.Position += containerCount * ContainerRecordSize;
-
-        int fragmentRecordCount = reader.ReadInt32();
-        cache._fragmentRecords = ((int)stream.Position, fragmentRecordCount);
-        stream.Position += fragmentRecordCount * FragmentRecordSize;
-
-        int nameBlobLength = reader.ReadInt32();
-        cache._nameBlob = ((int)stream.Position, nameBlobLength);
-        stream.Position += nameBlobLength;
-
-        // ---- content hash section ----
-        int hashRecordCount = reader.ReadInt32();
-        cache._hashRecords = ((int)stream.Position, hashRecordCount);
-        stream.Position += hashRecordCount * HashRecordSize;
-
-        return cache;
+        _typeRecords = BinaryTable.ReadSection<TypeRecord>(reader);
+        _containers = BinaryTable.ReadSection<ContainerRecord>(reader);
+        _fragmentRecords = BinaryTable.ReadSection<FragmentRecord>(reader);
+        _nameBlob = BinaryTable.ReadSection<byte>(reader);
+        _hashRecords = BinaryTable.ReadSection<HashRecord>(reader);
     }
 
     /// <summary>
-    /// Writes the cache via a temp file and an atomic swap, so a crash mid-write can't leave half a
-    /// cache behind — which would otherwise be read back as garbage on the next launch. The freshly
-    /// written bytes become this instance's new backing store (see <see cref="ParseBytes"/>), so a
-    /// second <c>Save</c> later in the same session starts from what's actually on disk rather than
-    /// re-decoding it.
+    /// Writes the cache atomically (see <see cref="AtomicFile"/>). The freshly written bytes become
+    /// this instance's new backing store (see <see cref="LoadFrom"/>), so a second <c>Save</c>
+    /// later in the same session starts from what's actually on disk rather than re-decoding it.
     /// </summary>
     public void Save(string path)
     {
         // ---- type section: merge what was already on disk with what got sniffed this session ----
-        var allTypes = new Dictionary<uint, FileType>(_typeRecords.Count + _newTypes.Count);
+        var allTypes = new Dictionary<uint, FileType>(TypeCount);
         foreach (TypeRecord record in TypeRecordSpan)
         {
             allTypes[record.Hash] = _typeTable[record.TypeId];
@@ -400,7 +341,7 @@ public sealed class GameCache
         FileType[] newTypeTable = [.. typeIds.OrderBy(kv => kv.Value).Select(kv => kv.Key)];
 
         // ---- fcb section: same merge, decoding whatever was already on disk back into fragment lists ----
-        var allFragments = new Dictionary<uint, FcbFragmentInfo[]>(_containers.Count + _newFragments.Count);
+        var allFragments = new Dictionary<uint, FcbFragmentInfo[]>(FragmentContainerCount);
         foreach (ContainerRecord container in ContainerSpan)
         {
             allFragments[container.Hash] = Decode(container);
@@ -437,7 +378,7 @@ public sealed class GameCache
         }
 
         // ---- content hash section: same merge, flat records like the type section ----
-        var allHashes = new Dictionary<uint, ulong>(_hashRecords.Count + _newContentHashes.Count);
+        var allHashes = new Dictionary<uint, ulong>(ContentHashCount);
         foreach (HashRecord record in HashRecordSpan)
         {
             allHashes[record.Hash] = record.ContentHash;
@@ -446,12 +387,9 @@ public sealed class GameCache
         {
             allHashes[hash] = contentHash;
         }
-        var newHashRecords = new HashRecord[allHashes.Count];
-        int h = 0;
-        foreach ((uint hash, ulong contentHash) in allHashes.OrderBy(kv => kv.Key))
-        {
-            newHashRecords[h++] = new HashRecord { Hash = hash, ContentHash = contentHash };
-        }
+        HashRecord[] newHashRecords = [.. allHashes
+            .OrderBy(kv => kv.Key)
+            .Select(kv => new HashRecord { Hash = kv.Key, ContentHash = kv.Value })];
 
         byte[] fileBytes;
         using (var buffer = new MemoryStream())
@@ -467,36 +405,20 @@ public sealed class GameCache
                     writer.Write(type.Category);
                     writer.Write(type.Extension);
                 }
-                writer.Write(newTypeRecords.Length);
-                writer.Write(MemoryMarshal.AsBytes<TypeRecord>(newTypeRecords));
+                BinaryTable.WriteSection(writer, newTypeRecords);
 
-                writer.Write(newContainers.Length);
-                writer.Write(MemoryMarshal.AsBytes<ContainerRecord>(newContainers));
-                writer.Write(newFragmentRecords.Count);
-                writer.Write(MemoryMarshal.AsBytes<FragmentRecord>(CollectionsMarshal.AsSpan(newFragmentRecords)));
-                writer.Write((int)nameBlobStream.Length);
-                nameBlobStream.Position = 0;
-                nameBlobStream.CopyTo(buffer);
+                BinaryTable.WriteSection(writer, newContainers);
+                BinaryTable.WriteSection(writer, CollectionsMarshal.AsSpan(newFragmentRecords));
+                BinaryTable.WriteSection(writer, nameBlobStream.GetBuffer().AsSpan(0, (int)nameBlobStream.Length));
 
-                writer.Write(newHashRecords.Length);
-                writer.Write(MemoryMarshal.AsBytes<HashRecord>(newHashRecords));
+                BinaryTable.WriteSection(writer, newHashRecords);
             }
             fileBytes = buffer.ToArray();
         }
 
-        string temp = path + ".writing";
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        File.WriteAllBytes(temp, fileBytes);
-        File.Move(temp, path, overwrite: true);
+        AtomicFile.Write(path, fileBytes);
 
-        GameCache reparsed = ParseBytes(fileBytes);
-        _fileBytes = reparsed._fileBytes;
-        _typeTable = reparsed._typeTable;
-        _typeRecords = reparsed._typeRecords;
-        _containers = reparsed._containers;
-        _fragmentRecords = reparsed._fragmentRecords;
-        _nameBlob = reparsed._nameBlob;
-        _hashRecords = reparsed._hashRecords;
+        LoadFrom(fileBytes);
         _newTypes.Clear();
         _newFragments.Clear();
         _newContentHashes.Clear();

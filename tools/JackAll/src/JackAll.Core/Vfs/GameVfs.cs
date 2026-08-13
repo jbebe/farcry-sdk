@@ -165,8 +165,8 @@ public sealed class GameVfs : IDisposable
     /// (loaded once at startup, saved on its own schedule) rather than tying it to any one
     /// <see cref="GameVfs"/> instance's lifetime, which a mod toggle can recreate repeatedly in a
     /// single session. A caller that wants the persistence checks <see cref="GameCache.IsDirty"/> and
-    /// calls <see cref="GameCache.Save"/> itself once it's done - see <c>ModLayerLoading.LoadVfs</c>'s
-    /// callers for the CLI's case.
+    /// calls <see cref="GameCache.Save"/> itself once it's done - <c>ModPipeline.SaveCache</c> is the
+    /// CLI's version of that.
     /// </summary>
     public GameCache Cache => _cache;
 
@@ -250,13 +250,6 @@ public sealed class GameVfs : IDisposable
 
         foreach (string fat in install.EnumerateArchiveFats())
         {
-            // The .vanilla backup is not a mountable archive, and mounting the live patch.dat is
-            // right: it's what the game currently reads.
-            if (fat.EndsWith(GameInstall.VanillaSuffix, StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
             progress?.Report($"Reading {Path.GetFileName(fat)}…");
             try
             {
@@ -369,32 +362,36 @@ public sealed class GameVfs : IDisposable
     }
 
     /// <summary>
-    /// The final XML for one fragment, folding every enabled layer touching it (in priority order)
-    /// via <see cref="FragmentMerge.Resolve"/> — docs/design/fcb-fragment-overlays.md Milestone 3.
-    /// This is the one part <see cref="PatchBuilder"/> can't share verbatim: getting from a container
-    /// hash to its decoded vanilla root is specific to how each side reaches the archives.
+    /// A container's decoded vanilla root — the ancestor every fragment override inside it is merged
+    /// against (see <see cref="FragmentMerge.Resolve"/>). Callers resolving several fragments of one
+    /// container decode once and share the result.
     /// </summary>
-    private string ResolveFragment(uint containerHash, string fragmentId, List<(IModLayer Layer, uint EntryHash)> layers)
-    {
-        FcbObject vanillaRoot = FcbDocument.Deserialize(ReadOriginal(containerHash)
+    private FcbObject DeserializeOriginal(uint containerHash)
+        => FcbDocument.Deserialize(ReadOriginal(containerHash)
             ?? throw new InvalidOperationException($"No archive provides {containerHash:X8}."));
-        return FragmentMerge.Resolve(vanillaRoot, fragmentId, layers, _fcbDefinitions);
-    }
 
     /// <summary>
-    /// <see cref="ResolveFragment"/>'s length, for display only — never lets a merge conflict (or a
-    /// vanished vanilla ancestor) escape <see cref="MergeFragments"/> and take down the whole rebuild
-    /// over one fragment nobody's actively reading yet. Falls back to the highest-priority
-    /// contributor's own raw length (what Milestone 2 would have shown) so the row still renders
-    /// something reasonable; the real error still surfaces loudly the moment something actually reads
-    /// this fragment or its container (<see cref="Read"/>/<see cref="ReadContainer"/>), or builds the
-    /// patch — never silently, just not here.
+    /// The active fragment overrides for a container, or null when it has none. Every consumer —
+    /// both <see cref="MergeFragments"/> passes and the read paths — shares this predicate, so they
+    /// can never disagree about which containers count as overridden.
     /// </summary>
-    private long SizeOfResolvedFragmentSafely(uint containerHash, string fragmentId, List<(IModLayer Layer, uint EntryHash)> layers)
+    private Dictionary<string, List<(IModLayer Layer, uint EntryHash)>>? OverridesFor(uint containerHash)
+        => _fragmentOverrides.TryGetValue(containerHash, out var byFragment) && byFragment.Count > 0
+            ? byFragment
+            : null;
+
+    /// <summary>
+    /// A resolved fragment's byte length, for display only — a merge conflict (or vanished vanilla
+    /// ancestor) must not take down the whole rebuild over one fragment nobody's reading yet. Falls
+    /// back to the highest-priority contributor's raw length; the real error still surfaces the
+    /// moment the fragment or its container is actually read, or the patch is built.
+    /// </summary>
+    private long SizeOfResolvedFragmentSafely(Lazy<FcbObject> vanillaRoot, string fragmentId, List<(IModLayer Layer, uint EntryHash)> layers)
     {
         try
         {
-            return Encoding.UTF8.GetByteCount(ResolveFragment(containerHash, fragmentId, layers));
+            return Encoding.UTF8.GetByteCount(
+                FragmentMerge.Resolve(vanillaRoot.Value, fragmentId, layers, _fcbDefinitions));
         }
         catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException)
         {
@@ -481,7 +478,8 @@ public sealed class GameVfs : IDisposable
 
         UnnamedCount = unnamed;
 
-        // Mod layers on top, in order — later wins.
+        // Mod layers on top, in order — later wins. One Read serves both the size and, when nothing
+        // beneath already settled it, the type sniff.
         foreach (var layer in _layers.Where(l => l.Enabled))
         {
             foreach (uint hash in layer.Hashes)
@@ -491,14 +489,14 @@ public sealed class GameVfs : IDisposable
                 string? layerPath = layer.PathOf(hash);
                 bool named = layerPath is not null || _names.TryResolve(hash, out layerPath!);
 
-                var type = beneath?.Type
-                           ?? FileTypeSniffer.Identify(ReadHeaderSafely(layer, hash), layerPath);
+                byte[] content = ReadSafely(layer, hash);
+                var type = beneath?.Type ?? FileTypeSniffer.Identify(content, layerPath);
 
                 files[hash] = new VfsFile(
                     Hash: hash,
                     Path: named ? layerPath! : SyntheticPath(hash, type),
                     Type: type,
-                    Size: SizeSafely(layer, hash),
+                    Size: content.LongLength,
                     SourceName: layer.Name,
                     SourceKind: SourceKind.Mod,
                     IsOverriding: beneath is not null,
@@ -571,87 +569,60 @@ public sealed class GameVfs : IDisposable
     /// container's own path plus one more segment (docs/design/fcb-fragment-overlays.md). Mutates
     /// <paramref name="files"/> in place and refreshes <see cref="_fragmentMemo"/> to match.
     /// </summary>
-    /// <remarks>
-    /// Split into three passes rather than one combined loop, for reasons empirically confirmed
-    /// against real game data (~46,000 `.fcb` entries), not just style:
-    ///
-    ///   1. Scan for containers needing a decode (cache miss, or non-cacheable because they're
-    ///      currently mod-overridden or in the volatile, never-cached patch.dat). Also skips
-    ///      containers the in-memory memo already has an up-to-date entry for *and that have no
-    ///      active fragment override* — so a patch.dat entry that never changes doesn't redecode on
-    ///      every single edit, but a non-cacheable container whose fragment override just appeared
-    ///      still gets queued here even though the memo matches, since pass 3 (which computes the
-    ///      exact same `hasOverrides` and must agree with this pass on it) will be forced past its
-    ///      own memo shortcut for it and needs `uncached` to actually have an entry.
-    ///   2. Decode just that (normally empty or tiny) list. A loop that can *conditionally* call a
-    ///      method containing a try/catch (DecodeFragments does, for FcbDocument.Deserialize)
-    ///      measured roughly 1000x slower than an identical loop that never references that method
-    ///      at all — even when the call is actually taken 0 times. Keeping pass 1's ~46,000-iteration
-    ///      scan free of any such call, and confining the call to this short list, is what avoids
-    ///      that cost, whatever its exact cause (JIT/tiering behaviour around methods with
-    ///      exception handlers, most likely, but the fix here is empirical rather than proven).
-    ///   3. Build the actual VfsFile fragment rows, memoized by container hash so a container whose
-    ///      winning source hasn't changed since the last call reuses its previous rows outright.
-    ///      The memo is read from the *previous* call's dictionary but built into a brand new one
-    ///      (swapped into _fragmentMemo only once, at the end) rather than written into the existing
-    ///      field in place — writing ~46,000 entries one at a time into that long-lived field (which
-    ///      survives across every call) measured ~1.7s, against single-digit milliseconds for the
-    ///      same work building a fresh dictionary and swapping it in. A container with an active
-    ///      fragment override (see <see cref="_fragmentOverrides"/>) skips this memo entirely, both
-    ///      read and write: the memo's cache key is the container's own (SourceKind, SourceName),
-    ///      which doesn't change when a fragment override's *content* changes (e.g. re-staging the
-    ///      same workspace fragment with different bytes) — only skipping it guarantees an
-    ///      overridden row's Size/attribution can't go stale in that case.
-    ///
-    /// A fourth, final step patches the *container's own* row (not its fragments) when it has an
-    /// active fragment override but no whole-file one — the built patch really does differ from
-    /// vanilla for that hash, so its row should read as modded too, not just its fragment rows.
-    /// Deliberately last: it must run after pass 3 builds the *un*-overridden sibling fragments'
-    /// rows, which need the container's original archive/mod attribution, not this patched one.
-    /// </remarks>
     private void MergeFragments(Dictionary<uint, VfsFile> files, IProgress<string>? progress)
+    {
+        Dictionary<uint, IReadOnlyList<FcbFragmentInfo>> uncached = DecodeUncachedContainers(files, progress);
+        BuildFragmentRows(files, uncached);
+        MarkOverriddenContainers(files);
+    }
+
+    /// <summary>True when <see cref="_fragmentMemo"/>'s rows for this container were built from the
+    /// same winning source it currently has. Shared by the scan and build passes, which must agree on
+    /// it exactly (see <see cref="DecodeUncachedContainers"/>).</summary>
+    private bool MemoIsCurrent(VfsFile container,
+        out (SourceKind Kind, string SourceName, VfsFile[] Fragments) memo)
+        => _fragmentMemo.TryGetValue(container.Hash, out memo)
+           && memo.Kind == container.SourceKind
+           && memo.SourceName == container.SourceName;
+
+    /// <summary>
+    /// Scans every `.fcb` container for those whose fragment structure isn't already known (cache
+    /// miss, or non-cacheable because they're mod-overridden or live in the volatile patch.dat),
+    /// decodes just that normally-tiny list in parallel, and returns the results that may not be
+    /// persisted to <see cref="_cache"/>. A container with an active fragment override is queued even
+    /// when the memo matches: <see cref="BuildFragmentRows"/> skips its memo shortcut for overridden
+    /// containers and expects to find them here — both passes share <see cref="OverridesFor"/> and
+    /// <see cref="MemoIsCurrent"/>, so they cannot disagree about which containers those are.
+    /// </summary>
+    /// <remarks>
+    /// The ~46,000-iteration scan deliberately reaches no method containing a try/catch: a loop that
+    /// merely *can* call one (DecodeFragments does) measured roughly 1000x slower than one that
+    /// can't, even with the call taken 0 times — JIT behaviour around exception handlers, empirically
+    /// confirmed. Decoding is confined to the short list and fanned out across cores; DecodeFragments
+    /// is pure, and the non-thread-safe <see cref="_cache"/> writes fold back on this one thread.
+    /// Progress reports from inside the parallel body because ToArray() blocks until every item is
+    /// done — reporting from the fold would freeze the bar through the slow part.
+    /// </remarks>
+    private Dictionary<uint, IReadOnlyList<FcbFragmentInfo>> DecodeUncachedContainers(
+        Dictionary<uint, VfsFile> files, IProgress<string>? progress)
     {
         var needsDecode = new List<(VfsFile Container, bool Cacheable)>();
         foreach (VfsFile c in files.Values)
         {
             if (c.Type.Extension != "fcb") continue;
 
-            // Must mirror pass 3's own memo-skip condition below exactly (including the hasOverrides
-            // check), or the two passes disagree about which containers pass 3 can expect to find in
-            // `uncached` — if this pass skips one via a stale-but-still-source-matching memo entry
-            // while pass 3 is forced past its own memo shortcut (because hasOverrides just went
-            // false->true for it), pass 3's `uncached[container.Hash]` throws KeyNotFoundException. A
-            // container that's never cacheable (lives in the volatile patch.dat, most commonly) hits
-            // this every time: its structure only ever lived in the memo, never in `_cache`.
-            bool hasOverrides = _fragmentOverrides.TryGetValue(c.Hash, out var overridesForThis)
-                && overridesForThis.Count > 0;
-
-            if (!hasOverrides
-                && _fragmentMemo.TryGetValue(c.Hash, out var existingMemo)
-                && existingMemo.Kind == c.SourceKind
-                && existingMemo.SourceName == c.SourceName)
+            if (OverridesFor(c.Hash) is null && MemoIsCurrent(c, out _))
             {
                 continue;
             }
 
-            bool cacheable = c.SourceKind == SourceKind.Archive
-                && !_archiveIsVolatile.GetValueOrDefault(c.SourceName, defaultValue: true);
+            bool cacheable = IsStableSource(c);
             if (!cacheable || !_cache.TryGet(c.Hash, out _))
             {
                 needsDecode.Add((c, cacheable));
             }
         }
 
-        // Decoding is the expensive part (an .fcb deserialize each) and every entry is independent, so
-        // fan it out across cores. DecodeFragments is pure - it only reads archive/mod bytes, which is
-        // lock-free (see DuniaArchive/ZipModLayer) - so this needs no shared mutable state. The results
-        // are folded back on this one thread below, keeping the non-thread-safe _cache writes serialized.
-        //
-        // Progress is reported from inside the parallel body, not the fold below: ToArray() blocks
-        // until every item is decoded, so the fold only starts once the expensive phase is already
-        // over - reporting there would leave the bar frozen through the slow part and then jump
-        // straight to done. The counter needs Interlocked since many threads hit it at once; IProgress
-        // is safe to call concurrently (WPF's Progress<T> marshals each post to the UI thread itself).
         const int ReportEvery = 1_000;
         int decodedCount = 0;
         int total = needsDecode.Count;
@@ -681,7 +652,23 @@ public sealed class GameVfs : IDisposable
                 uncached[c.Hash] = decodedFragments;
             }
         }
+        return uncached;
+    }
 
+    /// <summary>
+    /// Builds the fragment rows and folds them into <paramref name="files"/>, memoized by container
+    /// hash so a container whose winning source hasn't changed reuses its previous rows outright.
+    /// </summary>
+    /// <remarks>
+    /// The memo is read from the previous call's dictionary but built into a fresh one, swapped in
+    /// once at the end: writing ~46,000 entries into the long-lived field in place measured ~1.7s
+    /// against single-digit milliseconds for build-and-swap. A container with an active override
+    /// skips the memo entirely, read and write — the memo key (SourceKind, SourceName) can't see an
+    /// override's *content* change, so only skipping keeps an overridden row's size fresh.
+    /// </remarks>
+    private void BuildFragmentRows(
+        Dictionary<uint, VfsFile> files, Dictionary<uint, IReadOnlyList<FcbFragmentInfo>> uncached)
+    {
         var fragments = new Dictionary<uint, VfsFile>();
         var newFragmentMemo = new Dictionary<uint, (SourceKind Kind, string SourceName, VfsFile[] Fragments)>();
         foreach (VfsFile container in files.Values)
@@ -691,13 +678,9 @@ public sealed class GameVfs : IDisposable
                 continue;
             }
 
-            bool hasOverrides = _fragmentOverrides.TryGetValue(container.Hash,
-                out Dictionary<string, List<(IModLayer Layer, uint EntryHash)>>? byFragment) && byFragment.Count > 0;
+            var byFragment = OverridesFor(container.Hash);
 
-            if (!hasOverrides
-                && _fragmentMemo.TryGetValue(container.Hash, out var memo)
-                && memo.Kind == container.SourceKind
-                && memo.SourceName == container.SourceName)
+            if (byFragment is null && MemoIsCurrent(container, out var memo))
             {
                 foreach (VfsFile fragment in memo.Fragments)
                 {
@@ -712,68 +695,47 @@ public sealed class GameVfs : IDisposable
                 containerFragments = uncached[container.Hash];
             }
 
+            // The merge ancestor, decoded at most once per container no matter how many of its
+            // fragments are overridden.
+            var vanillaRoot = new Lazy<FcbObject>(() => DeserializeOriginal(container.Hash));
+
             var computed = new VfsFile[containerFragments.Count];
             for (int i = 0; i < containerFragments.Count; i++)
             {
                 FcbFragmentInfo fragment = containerFragments[i];
-                string fragmentPath = container.Path + "\\" + fragment.Id;
-                uint fragmentHash = NameHash.Compute(fragmentPath);
-
-                VfsFile vfsFragment = hasOverrides && byFragment!.TryGetValue(fragment.Id, out var contributors)
-                    ? new VfsFile(
-                        Hash: fragmentHash,
-                        Path: fragmentPath,
-                        Type: new FileType("misc", "xml"),
-                        Size: SizeOfResolvedFragmentSafely(container.Hash, fragment.Id, contributors),
-                        SourceName: contributors.Count == 1 ? contributors[0].Layer.Name : "multiple mods",
-                        SourceKind: SourceKind.Mod,
-                        IsOverriding: true,
-                        NameIsKnown: container.NameIsKnown,
-                        ContainerHash: container.Hash,
-                        FragmentId: fragment.Id)
-                    : new VfsFile(
-                        Hash: fragmentHash,
-                        Path: fragmentPath,
-                        Type: new FileType("misc", "xml"),
-                        Size: fragment.Size,
-                        SourceName: container.SourceName,
-                        SourceKind: container.SourceKind,
-                        IsOverriding: false,
-                        NameIsKnown: container.NameIsKnown,
-                        ContainerHash: container.Hash,
-                        FragmentId: fragment.Id);
+                VfsFile vfsFragment = byFragment is not null && byFragment.TryGetValue(fragment.Id, out var contributors)
+                    ? FragmentRow(container, fragment.Id,
+                        size: SizeOfResolvedFragmentSafely(vanillaRoot, fragment.Id, contributors),
+                        sourceName: AttributionOf(contributors),
+                        sourceKind: SourceKind.Mod,
+                        isOverriding: true)
+                    : FragmentRow(container, fragment.Id,
+                        size: fragment.Size,
+                        sourceName: container.SourceName,
+                        sourceKind: container.SourceKind,
+                        isOverriding: false);
                 computed[i] = vfsFragment;
-                fragments[fragmentHash] = vfsFragment;
+                fragments[vfsFragment.Hash] = vfsFragment;
             }
 
-            if (hasOverrides)
+            if (byFragment is not null)
             {
-                // Every override id with no match above: not overriding an existing child, but adding
-                // one the vanilla container never had (see FragmentMerge.Resolve's empty-ancestor
-                // case). Still gets its own synthetic row - same as any other fragment - so it's
-                // browsable/readable on its own, not just visible once its container is read whole.
-                // Never memoized: a container with overrides never takes the memo-shortcut branch
-                // above in the first place, so there's nothing to keep in sync here.
-                foreach ((string fragmentId, List<(IModLayer Layer, uint EntryHash)> contributors) in byFragment!)
+                // Every override id with no match above adds a child the vanilla container never had
+                // (see FragmentMerge.Resolve's empty-ancestor case) — it still gets its own synthetic
+                // row so it's browsable on its own, not just visible once its container is read whole.
+                foreach ((string fragmentId, List<(IModLayer Layer, uint EntryHash)> contributors) in byFragment)
                 {
                     if (containerFragments.Any(f => string.Equals(f.Id, fragmentId, StringComparison.OrdinalIgnoreCase)))
                     {
                         continue; // already produced above, as an override of an existing child
                     }
 
-                    string fragmentPath = container.Path + "\\" + fragmentId;
-                    uint fragmentHash = NameHash.Compute(fragmentPath);
-                    fragments[fragmentHash] = new VfsFile(
-                        Hash: fragmentHash,
-                        Path: fragmentPath,
-                        Type: new FileType("misc", "xml"),
-                        Size: SizeOfResolvedFragmentSafely(container.Hash, fragmentId, contributors),
-                        SourceName: contributors.Count == 1 ? contributors[0].Layer.Name : "multiple mods",
-                        SourceKind: SourceKind.Mod,
-                        IsOverriding: false,
-                        NameIsKnown: container.NameIsKnown,
-                        ContainerHash: container.Hash,
-                        FragmentId: fragmentId);
+                    VfsFile added = FragmentRow(container, fragmentId,
+                        size: SizeOfResolvedFragmentSafely(vanillaRoot, fragmentId, contributors),
+                        sourceName: AttributionOf(contributors),
+                        sourceKind: SourceKind.Mod,
+                        isOverriding: false);
+                    fragments[added.Hash] = added;
                 }
             }
             else
@@ -786,11 +748,17 @@ public sealed class GameVfs : IDisposable
         {
             files[hash] = fragment;
         }
+    }
 
-        // Last: the container's own row, so pass 3 above still saw its original archive/mod
-        // attribution when building the un-overridden sibling fragments' rows (see remarks). Only
-        // sets FragmentOverrideSource - SourceKind/SourceName/IsOverriding are left alone, since this
-        // row's own bytes still come from wherever they always did (see VfsFile.FragmentOverrideSource).
+    /// <summary>
+    /// Patches each overridden container's own row: the built patch really does differ from vanilla
+    /// for that hash, so it should read as modded, not just its fragment rows. Runs after
+    /// <see cref="BuildFragmentRows"/>, which needs the container's original attribution for the
+    /// un-overridden sibling fragments' rows. Only sets <see cref="VfsFile.FragmentOverrideSource"/> —
+    /// the row's own bytes still come from wherever they always did.
+    /// </summary>
+    private void MarkOverriddenContainers(Dictionary<uint, VfsFile> files)
+    {
         foreach ((uint containerHash, Dictionary<string, List<(IModLayer Layer, uint EntryHash)>> byFragment)
             in _fragmentOverrides)
         {
@@ -808,6 +776,28 @@ public sealed class GameVfs : IDisposable
             };
         }
     }
+
+    /// <summary>One synthetic row for a piece of a splitting `.fcb`, nested under its container.</summary>
+    private static VfsFile FragmentRow(VfsFile container, string fragmentId, long size,
+        string sourceName, SourceKind sourceKind, bool isOverriding)
+    {
+        string path = container.Path + "\\" + fragmentId;
+        return new VfsFile(
+            Hash: NameHash.Compute(path),
+            Path: path,
+            Type: new FileType("misc", "xml"),
+            Size: size,
+            SourceName: sourceName,
+            SourceKind: sourceKind,
+            IsOverriding: isOverriding,
+            NameIsKnown: container.NameIsKnown,
+            ContainerHash: container.Hash,
+            FragmentId: fragmentId);
+    }
+
+    /// <summary>The mod name a row shows for the layers contributing to one fragment.</summary>
+    private static string AttributionOf(List<(IModLayer Layer, uint EntryHash)> contributors)
+        => contributors.Count == 1 ? contributors[0].Layer.Name : "multiple mods";
 
     /// <summary>
     /// Adds dependency-link rows for every `depload.dat` — a per-world/per-DLC dependency-preload
@@ -943,7 +933,10 @@ public sealed class GameVfs : IDisposable
     /// </summary>
     public byte[] Read(uint hash)
     {
-        if (!_files.TryGetValue(hash, out var file))
+        // One snapshot for the whole resolution: a Rebuild on another thread swaps _files, and a
+        // row and its container must come from the same generation of the dictionary.
+        Dictionary<uint, VfsFile> files = _files;
+        if (!files.TryGetValue(hash, out var file))
         {
             throw new KeyNotFoundException($"No file with hash {hash:X8}.");
         }
@@ -953,10 +946,10 @@ public sealed class GameVfs : IDisposable
             // A dependency-link row has no bytes of its own - it's a reference, not content (see
             // docs/docs/file-formats/depload.md) - so this synthesizes a small human-readable summary
             // on demand, purely so the generic Export/Mirror actions have something sensible to do.
-            _files.TryGetValue(file.LinkOwnerHash!.Value, out VfsFile? owner);
+            files.TryGetValue(file.LinkOwnerHash!.Value, out VfsFile? owner);
             string ownerLabel = owner?.Path ?? $"0x{file.LinkOwnerHash:X8}";
             uint targetHash = file.LinkTargetHash!.Value;
-            string resolved = _files.TryGetValue(targetHash, out VfsFile? target)
+            string resolved = files.TryGetValue(targetHash, out VfsFile? target)
                 ? target.Path
                 : "not resolved - no archive/mod entry has this hash";
 
@@ -972,14 +965,15 @@ public sealed class GameVfs : IDisposable
         {
             // This exact fragment is overridden - no need to touch the container at all, and its
             // sibling fragments' overrides (if any) are irrelevant to it either way.
-            if (_fragmentOverrides.TryGetValue(file.ContainerHash!.Value, out var byFragment)
+            if (OverridesFor(file.ContainerHash!.Value) is { } byFragment
                 && byFragment.TryGetValue(file.FragmentId!, out List<(IModLayer Layer, uint EntryHash)>? contributors))
             {
-                string merged = ResolveFragment(file.ContainerHash!.Value, file.FragmentId!, contributors);
+                string merged = FragmentMerge.Resolve(
+                    DeserializeOriginal(file.ContainerHash!.Value), file.FragmentId!, contributors, _fcbDefinitions);
                 return new UTF8Encoding(false).GetBytes(merged);
             }
 
-            FcbObject root = FcbDocument.Deserialize(ReadFromSource(_files[file.ContainerHash!.Value]));
+            FcbObject root = FcbDocument.Deserialize(ReadFromSource(files[file.ContainerHash!.Value]));
             string xml = FcbXml.ExtractFragment(root, file.FragmentId!, _fcbDefinitions)
                 ?? throw new InvalidDataException(
                     $"'{file.FragmentId}' no longer matches any group in '{file.Directory}' - it may have changed shape.");
@@ -998,13 +992,14 @@ public sealed class GameVfs : IDisposable
     private byte[] ReadContainer(VfsFile container)
     {
         byte[] baseBytes = ReadFromSource(container);
-        if (!_fragmentOverrides.TryGetValue(container.Hash, out var byFragment) || byFragment.Count == 0)
+        if (OverridesFor(container.Hash) is not { } byFragment)
         {
             return baseBytes;
         }
 
+        FcbObject vanillaRoot = DeserializeOriginal(container.Hash);
         Dictionary<string, string> xmlByFragment = byFragment.ToDictionary(
-            kv => kv.Key, kv => ResolveFragment(container.Hash, kv.Key, kv.Value));
+            kv => kv.Key, kv => FragmentMerge.Resolve(vanillaRoot, kv.Key, kv.Value, _fcbDefinitions));
         return FcbAssembler.Apply(baseBytes, xmlByFragment);
     }
 
@@ -1153,7 +1148,9 @@ public sealed class GameVfs : IDisposable
 
     /// <summary>
     /// A known filename settles the type for free. Only a nameless entry has to be identified from
-    /// its header — the expensive path, and the only one worth caching.
+    /// its header — the expensive path, and the only one worth caching. The cache is normally
+    /// already warm here (see <see cref="PreSniffUncachedTypes"/>); the sniff-and-remember fallback
+    /// just keeps this correct on its own.
     /// </summary>
     private FileType ResolveType(DuniaArchive archive, FatEntry entry, string? knownPath, bool cacheable)
     {
@@ -1161,10 +1158,18 @@ public sealed class GameVfs : IDisposable
         {
             return FileTypeSniffer.Identify(ReadOnlySpan<byte>.Empty, knownPath);
         }
+        if (!cacheable)
+        {
+            return GameCache.Sniff(archive, entry);
+        }
+        if (_cache.TryGetType(entry.Hash, out FileType known))
+        {
+            return known;
+        }
 
-        return cacheable
-            ? _cache.TypeOf(archive, entry)
-            : GameCache.Sniff(archive, entry);
+        FileType sniffed = GameCache.Sniff(archive, entry);
+        _cache.SetType(entry.Hash, sniffed);
+        return sniffed;
     }
 
     /// <summary>
@@ -1175,30 +1180,17 @@ public sealed class GameVfs : IDisposable
     private static string SyntheticPath(uint hash, FileType type)
         => Path.Combine("_unknown", type.Category, $"{hash:x8}.{type.Extension}");
 
-    private static byte[] ReadHeaderSafely(IModLayer layer, uint hash)
+    /// <summary>A layer entry's bytes, or empty when the layer's backing file is unreadable — an
+    /// unreadable override still gets a row (size 0, sniffed as unknown) rather than a crash.</summary>
+    private static byte[] ReadSafely(IModLayer layer, uint hash)
     {
         try
         {
-            byte[] content = layer.Read(hash);
-            return content.Length <= FileTypeSniffer.HeaderBytes
-                ? content
-                : content[..FileTypeSniffer.HeaderBytes];
+            return layer.Read(hash);
         }
         catch
         {
             return [];
-        }
-    }
-
-    private static long SizeSafely(IModLayer layer, uint hash)
-    {
-        try
-        {
-            return layer.Read(hash).LongLength;
-        }
-        catch
-        {
-            return 0;
         }
     }
 

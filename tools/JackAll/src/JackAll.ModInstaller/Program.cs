@@ -1,7 +1,6 @@
 using System.Text.Json;
 using System.Text.Json.Serialization.Metadata;
 using JackAll.Core;
-using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 using JackAll.Core.Naming;
@@ -19,7 +18,8 @@ namespace JackAll.ModInstaller;
 /// </remarks>
 internal static class Program
 {
-    private static readonly HashSet<string> KnownFlags = new(StringComparer.OrdinalIgnoreCase)
+    /// <summary>Internal so CommandLineTests parses with the shipped grammar, not its own copy.</summary>
+    internal static readonly HashSet<string> KnownFlags = new(StringComparer.OrdinalIgnoreCase)
     {
         "game", "g", "layer", "l", "from", "f", "out", "o", "name", "force", "json", "help", "h",
     };
@@ -88,7 +88,7 @@ internal static class Program
 
         bool hasBackup = install.HasVanillaBackup;
         bool looksModded = install.LooksModded();
-        int patchEntries = TryCountEntries(install.PatchFat);
+        int patchEntries = install.TryCountPatchEntries();
 
         Emit(cli, new StatusPayload
         {
@@ -126,44 +126,7 @@ internal static class Program
 
         IReadOnlyList<string> layerPaths = [.. cli.Values("layer"), .. cli.Values("l")];
         List<IModLayer> layers = [.. layerPaths.Select(ModPipeline.OpenLayer)];
-
-        // Reading the archives is only needed to resolve a container a layer overrides *part* of - both
-        // as the base to splice onto and as the ancestor each contributor is merged against. Mounting
-        // them costs seconds, so it happens only when some layer actually stages a fragment.
-        bool needsOriginals = layers.Any(l => l.Enabled && l.FragmentOverrides.Count > 0);
-
-        GameVfs? vfs = null;
-        BuildResult result;
-        try
-        {
-            FcbClassDefinitions? definitions = null;
-            Func<uint, byte[]?>? readOriginal = null;
-            if (needsOriginals)
-            {
-                Report("A mod overrides part of an .fcb - mounting the game's archives for the originals…");
-                definitions = BundledAssets.LoadFcbClasses();
-                vfs = ModPipeline.OpenOriginals(install, BundledAssets.LoadNames(), new SyncProgress(Report));
-                readOriginal = vfs.ReadOriginal;
-            }
-
-            Report($"Building patch.dat from {layers.Count} layer(s)…");
-            // Headless: nobody's here to hand-fix a fragment collision the way JackAll.App's conflict
-            // row lets a person do, so load order wins outright (the same rule a whole-file override
-            // already follows) and the collision is reported below instead of aborting the build.
-            result = PatchBuilder.Build(install, layers, readOriginal, definitions,
-                resolveFragmentConflictsWithLoadOrder: true);
-        }
-        finally
-        {
-            // Persist whatever got freshly sniffed/hashed this run - see GameVfs.Cache's remarks on why
-            // this is the caller's job. Saved before Dispose closes the archive handles, though the
-            // cache doesn't depend on them being open.
-            if (vfs?.Cache.IsDirty == true)
-            {
-                vfs.Cache.Save(install.CacheFile);
-            }
-            vfs?.Dispose();
-        }
+        BuildResult result = ModPipeline.Build(install, layers, new SyncProgress(Report));
 
         Emit(cli, new BuildPayload
         {
@@ -207,17 +170,10 @@ internal static class Program
         GameInstall install = OpenInstall(cli);
         string from = cli.Required("from", "the legacy mod's zip or folder.");
         string outDir = cli.Required("out", "where to write the converted layer.");
-
-        bool isZip = File.Exists(from)
-            && Path.GetExtension(from).Equals(".zip", StringComparison.OrdinalIgnoreCase);
-        if (!isZip && !Directory.Exists(from))
-        {
-            throw new FileNotFoundException($"Not a folder or .zip: {from}");
-        }
+        bool isZip = ModPipeline.IsZipSource(from);
 
         Directory.CreateDirectory(outDir);
-        string name = cli.Value("name")
-            ?? Path.GetFileName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(outDir)));
+        string name = cli.Value("name") ?? ModPipeline.DefaultLayerName(outDir);
         var workspace = new FolderModLayer(outDir, name);
 
         FcbClassDefinitions definitions = BundledAssets.LoadFcbClasses();
@@ -230,13 +186,10 @@ internal static class Program
         LegacyImportResult result = isZip
             ? LegacyPatchImporter.Import(
                 from, workspace, names, definitions, vfs.ReadOriginal, vfs.ReadOriginalHash, progress)
-            : ImportFromDirectory(
+            : LegacyPatchImporter.ImportFromDirectory(
                 from, workspace, names, definitions, vfs.ReadOriginal, vfs.ReadOriginalHash, progress);
 
-        if (vfs.Cache.IsDirty)
-        {
-            vfs.Cache.Save(install.CacheFile);
-        }
+        ModPipeline.SaveCache(vfs, install);
 
         Emit(cli, new ImportLegacyPayload
         {
@@ -293,14 +246,12 @@ internal static class Program
 
     /// <summary>
     /// Refuses to snapshot a patch archive that already carries somebody's mod as this install's
-    /// "vanilla". PatchBuilder calls EnsureVanillaBackup without a confirm delegate, whose guard is
-    /// simply false when the delegate is null - so on its own it would freeze the mod in permanently,
-    /// with no way back short of reinstalling. A headless run has nobody to ask, so it refuses and lets
-    /// the caller decide with --force.
+    /// "vanilla" (see GameInstall.BackupWouldCaptureMods). A headless run has nobody to ask, so it
+    /// refuses and lets the caller decide with --force.
     /// </summary>
     private static void GuardVanillaBackup(GameInstall install, bool force)
     {
-        if (force || install.HasVanillaBackup || !install.LooksModded())
+        if (force || !install.BackupWouldCaptureMods)
         {
             return;
         }
@@ -309,24 +260,6 @@ internal static class Program
             + "building would capture someone else's mod as this install's base game - which cannot be "
             + "undone short of reinstalling. Restore the original files (verify the game's files in your "
             + "launcher) and try again, or pass --force if the current patch really is the baseline.");
-    }
-
-    private static LegacyImportResult ImportFromDirectory(
-        string directory,
-        FolderModLayer workspace,
-        NameDatabase names,
-        FcbClassDefinitions definitions,
-        Func<uint, byte[]?> readOriginal,
-        Func<uint, ulong?> readOriginalHash,
-        IProgress<string> progress)
-    {
-        (string Fat, string Dat) pair = LegacyPatchImporter.FindPatchPair(directory)
-            ?? throw new InvalidOperationException(
-                $"No patch.fat/patch.dat pair under '{directory}' - this isn't a legacy full-patch mod. "
-                + "An ordinary community mod (a tree of relative game paths) is used as a layer directly.");
-
-        return LegacyPatchImporter.Import(
-            pair.Fat, pair.Dat, workspace, names, definitions, readOriginal, readOriginalHash, progress);
     }
 
     /// <summary>
@@ -341,18 +274,6 @@ internal static class Program
     private static GameInstall OpenInstall(CommandLine cli)
         => GameInstall.TryOpen(GameOption(cli), out string error)
         ?? throw new InvalidOperationException(error);
-
-    private static int TryCountEntries(string fatPath)
-    {
-        try
-        {
-            return FatArchive.Read(fatPath).Entries.Count;
-        }
-        catch
-        {
-            return -1;
-        }
-    }
 
     private static void Emit<T>(CommandLine cli, T payload, JsonTypeInfo<T> typeInfo, string humanText)
     {

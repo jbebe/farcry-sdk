@@ -3,7 +3,7 @@ using System.Xml;
 using System.Xml.Linq;
 using JackAll.Core.Format.Fcb;
 
-namespace JackAll.App.FileHandlers.Fcb.FcbEditor;
+namespace JackAll.Tools.Fcb;
 
 /// <summary>
 /// Formats a <see cref="FcbValueCodec"/>-decoded value for display in an editable text field, and

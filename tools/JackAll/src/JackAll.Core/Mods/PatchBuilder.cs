@@ -63,13 +63,37 @@ public static class PatchBuilder
         FcbClassDefinitions? fcbDefinitions = null,
         bool resolveFragmentConflictsWithLoadOrder = false)
     {
-        FcbClassDefinitions defs = fcbDefinitions ?? FcbClassDefinitions.Empty;
         var conflicts = new ConcurrentQueue<FragmentConflict>();
 
         install.EnsureVanillaBackup();
 
-        var enabled = layers.Where(l => l.Enabled).ToList();
+        Dictionary<uint, byte[]> replacements = ComputeReplacements(
+            layers.Where(l => l.Enabled).ToList(),
+            readArchiveOriginal,
+            fcbDefinitions ?? FcbClassDefinitions.Empty,
+            resolveFragmentConflictsWithLoadOrder ? conflicts : null);
 
+        return WriteArchive(install, replacements, [.. conflicts]);
+    }
+
+    /// <summary>
+    /// Every hash that gets a fully-computed replacement entry in the patch: a plain whole-file
+    /// override, or a container assembled from its base bytes plus one or more fragment overlays.
+    /// Computed once, up front, so the vanilla-copy loop and the final write pass agree on exactly
+    /// which hashes are "replaced" without redoing any of this work.
+    /// </summary>
+    /// <remarks>
+    /// Every hash's read/decode/resolve/encode is independent, so each stage runs as a parallel pass
+    /// folded into `replacements` sequentially afterward — this is where nearly all of a
+    /// fragment-heavy build's time goes (an entity library's fragment overrides alone can run into
+    /// tens of megabytes of edited XML).
+    /// </remarks>
+    private static Dictionary<uint, byte[]> ComputeReplacements(
+        List<IModLayer> enabled,
+        Func<uint, byte[]?>? readArchiveOriginal,
+        FcbClassDefinitions defs,
+        ConcurrentQueue<FragmentConflict>? conflicts)
+    {
         // Later layers win, so walking forward and overwriting gives exactly the documented
         // "last one wins, no conflict resolution" semantics.
         var wholeFileOverrides = new Dictionary<uint, IModLayer>();
@@ -81,25 +105,6 @@ public static class PatchBuilder
             }
         }
 
-        // Container hash -> fragment id -> every contributing layer in priority order - one level
-        // deeper than wholeFileOverrides. Milestone 3 (docs/design/fcb-fragment-overlays.md): every
-        // contributor is folded through Diff3 against the vanilla ancestor, not just the last one -
-        // see FragmentMerge for why this index-building and the fold below live there, shared with
-        // GameVfs, instead of being duplicated here.
-        var fragmentOverrides = FragmentMerge.BuildOverrideIndex(enabled);
-
-        // Every hash that gets a fully-computed replacement entry in the patch: a plain whole-file
-        // override, or a container assembled from its base bytes plus one or more fragment overlays.
-        // Computed once, up front, so both the vanilla-copy loop below and the final write pass agree
-        // on exactly which hashes are "replaced" without redoing any of this work.
-        //
-        // Every hash's own read/decode/resolve/encode work is independent of every other hash's, so
-        // each stage below computes its results via a parallel pass (PLINQ, same pattern GameVfs's
-        // PreSniffUncachedTypes already uses) and folds them into the shared `replacements` dictionary
-        // sequentially afterward - `replacements` itself is never written to concurrently. This is
-        // where nearly all of a fragment-heavy build's own time goes: an entity library container's
-        // fragment overrides alone can run into tens of megabytes of edited XML, and this build used
-        // to decode/resolve/encode one container at a time regardless of how many CPU cores sat idle.
         var replacements = new Dictionary<uint, byte[]>();
         foreach ((uint hash, byte[] bytes) in wholeFileOverrides
             .AsParallel()
@@ -109,59 +114,70 @@ public static class PatchBuilder
             replacements[hash] = bytes;
         }
 
+        // Fragment overlays, one level deeper than whole files: every contributor folds through
+        // Diff3 against the vanilla ancestor (see FragmentMerge, shared with GameVfs).
+        var fragmentOverrides = FragmentMerge.BuildOverrideIndex(enabled);
         var containersWithFragments = fragmentOverrides.Where(kv => kv.Value.Count > 0).ToList();
-        if (containersWithFragments.Count > 0)
+        if (containersWithFragments.Count == 0)
         {
-            // The vanilla ancestor every contributing layer's edit is merged against (Milestone 3) -
-            // needed even when a whole-file override also exists for this container, since the merge
-            // ancestor is always "what Revert would restore," not whatever the whole-file override
-            // replaced it with. Decoded once per container and shared by every fragment inside it.
-            var vanillaByContainer = containersWithFragments
-                .AsParallel()
-                .Select(kv =>
-                {
-                    byte[] vanillaBytes = readArchiveOriginal?.Invoke(kv.Key)
-                        ?? throw new InvalidOperationException(
-                            $"A fragment override targets {kv.Key:X8}, but no archive currently provides " +
-                            "its vanilla ancestor.");
-                    return (ContainerHash: kv.Key, VanillaBytes: vanillaBytes, Root: FcbDocument.Deserialize(vanillaBytes));
-                })
-                .ToDictionary(x => x.ContainerHash);
-
-            // Every (container, fragment) pair, flattened into one parallel pass rather than nesting a
-            // parallel loop inside another: a mod that concentrates most of its edits into a single
-            // huge container (an entity library, say) would otherwise leave every core but one idle
-            // while that one container's fragments resolve one at a time.
-            var resolvedByContainer = containersWithFragments
-                .SelectMany(kv => kv.Value.Select(f => (ContainerHash: kv.Key, FragmentId: f.Key, Contributors: f.Value)))
-                .AsParallel()
-                .Select(item => (
-                    item.ContainerHash,
-                    item.FragmentId,
-                    Xml: FragmentMerge.Resolve(
-                        vanillaByContainer[item.ContainerHash].Root, item.FragmentId, item.Contributors, defs,
-                        resolveFragmentConflictsWithLoadOrder ? conflicts : null)))
-                .GroupBy(x => x.ContainerHash)
-                .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.FragmentId, x => x.Xml));
-
-            // Splicing the resolved fragments back in is per-container work too (FcbAssembler.Apply
-            // decodes and re-encodes the whole container), so the containers themselves run
-            // concurrently for this last step.
-            foreach ((uint containerHash, byte[] bytes) in resolvedByContainer
-                .AsParallel()
-                .Select(kv =>
-                {
-                    byte[] baseBytes = replacements.TryGetValue(kv.Key, out byte[]? wholeFileBytes)
-                        ? wholeFileBytes
-                        : vanillaByContainer[kv.Key].VanillaBytes;
-                    return (kv.Key, Bytes: FcbAssembler.Apply(baseBytes, kv.Value));
-                })
-                .ToArray())
-            {
-                replacements[containerHash] = bytes;
-            }
+            return replacements;
         }
 
+        // The vanilla ancestor every contributing layer's edit is merged against - needed even when
+        // a whole-file override also exists for this container, since the merge ancestor is always
+        // "what Revert would restore." Decoded once per container, shared by every fragment in it.
+        var vanillaByContainer = containersWithFragments
+            .AsParallel()
+            .Select(kv =>
+            {
+                byte[] vanillaBytes = readArchiveOriginal?.Invoke(kv.Key)
+                    ?? throw new InvalidOperationException(
+                        $"A fragment override targets {kv.Key:X8}, but no archive currently provides " +
+                        "its vanilla ancestor.");
+                return (ContainerHash: kv.Key, VanillaBytes: vanillaBytes, Root: FcbDocument.Deserialize(vanillaBytes));
+            })
+            .ToDictionary(x => x.ContainerHash);
+
+        // Every (container, fragment) pair, flattened into one parallel pass rather than nesting a
+        // parallel loop inside another: a mod that concentrates most of its edits into a single huge
+        // container would otherwise leave every core but one idle.
+        var resolvedByContainer = containersWithFragments
+            .SelectMany(kv => kv.Value.Select(f => (ContainerHash: kv.Key, FragmentId: f.Key, Contributors: f.Value)))
+            .AsParallel()
+            .Select(item => (
+                item.ContainerHash,
+                item.FragmentId,
+                Xml: FragmentMerge.Resolve(
+                    vanillaByContainer[item.ContainerHash].Root, item.FragmentId, item.Contributors, defs, conflicts)))
+            .GroupBy(x => x.ContainerHash)
+            .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.FragmentId, x => x.Xml));
+
+        // Splicing back in decodes and re-encodes the whole container (FcbAssembler.Apply), so the
+        // containers run concurrently for this last step too.
+        foreach ((uint containerHash, byte[] bytes) in resolvedByContainer
+            .AsParallel()
+            .Select(kv =>
+            {
+                byte[] baseBytes = replacements.TryGetValue(kv.Key, out byte[]? wholeFileBytes)
+                    ? wholeFileBytes
+                    : vanillaByContainer[kv.Key].VanillaBytes;
+                return (kv.Key, Bytes: FcbAssembler.Apply(baseBytes, kv.Value));
+            })
+            .ToArray())
+        {
+            replacements[containerHash] = bytes;
+        }
+
+        return replacements;
+    }
+
+    /// <summary>
+    /// Streams the vanilla backup plus <paramref name="replacements"/> into a fresh
+    /// patch.dat/patch.fat pair, written to temp files and swapped in only once complete.
+    /// </summary>
+    private static BuildResult WriteArchive(
+        GameInstall install, Dictionary<uint, byte[]> replacements, IReadOnlyList<FragmentConflict> conflicts)
+    {
         var vanillaIndex = FatArchive.Read(install.VanillaPatchFat);
         using var vanillaData = File.OpenRead(install.VanillaPatchDat);
 
@@ -231,7 +247,7 @@ public static class PatchBuilder
             OverriddenEntries: overridden,
             AddedEntries: added,
             OutputBytes: new FileInfo(install.PatchDat).Length,
-            Conflicts: [.. conflicts]);
+            Conflicts: conflicts);
     }
 
     /// <summary>

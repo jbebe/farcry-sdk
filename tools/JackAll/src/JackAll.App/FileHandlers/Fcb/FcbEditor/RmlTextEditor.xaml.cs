@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using ICSharpCode.AvalonEdit.Highlighting;
+using JackAll.Tools.Fcb;
 
 namespace JackAll.App.FileHandlers.Fcb.FcbEditor;
 

@@ -1,7 +1,8 @@
 using System.Xml.Linq;
 using JackAll.Core.Format.Fcb;
+using JackAll.Tools.Sav;
 
-namespace JackAll.App.FileHandlers.Fcb.FcbEditor;
+namespace JackAll.Tools.Fcb;
 
 /// <summary>
 /// Recovers the hash -&gt; (name, declared value type) pairs an already-rendered FCB XML document embeds

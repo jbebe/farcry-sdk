@@ -1,5 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
+using JackAll.Core.Text;
 
 namespace JackAll.App.FileHandlers.Text;
 

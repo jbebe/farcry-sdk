@@ -1,3 +1,4 @@
+using System.Buffers;
 using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
@@ -43,6 +44,7 @@ public static class FcbXml
     private const uint EntityLibraryTypeHash = 0xBCDD10B4;
     private const uint EntityLibraryGroupTypeHash = 0xE0BDB3DB;
     private static readonly uint NameFieldHash = FcbClassDefinitions.Crc32Ascii("Name");
+    private static readonly SearchValues<char> InvalidFileNameChars = SearchValues.Create(Path.GetInvalidFileNameChars());
 
     /// <summary>
     /// Converts a parsed FCB tree to XML. When the tree matches Gibbed's "entity library made up of
@@ -433,32 +435,25 @@ public static class FcbXml
     /// <summary>Writes a count-prefixed array of fixed-size scalar items (UInt32Array, HashArray, ...).</summary>
     private static bool TryWriteFixedArray(XElement el, byte[] value, int itemSize, Func<byte[], int, string> format)
     {
-        if (value.Length < 4) return false;
-        int count = BitConverter.ToInt32(value, 0);
-        if (count < 0 || value.Length != 4 + (count * itemSize)) return false;
-
-        for (int i = 0, offset = 4; i < count; i++, offset += itemSize)
+        if (!FcbWire.TryReadFixedArray(value, itemSize, (v, o) => new XElement("item", format(v, o)), out XElement[] items))
         {
-            el.Add(new XElement("item", format(value, offset)));
+            return false;
         }
+        el.Add(items);
         return true;
     }
 
     /// <summary>Vector3Array's items aren't scalars, so it gets its own writer instead of using <see cref="TryWriteFixedArray"/>.</summary>
     private static bool TryWriteVector3Array(XElement el, byte[] value)
     {
-        const int itemSize = 4 * 3;
-        if (value.Length < 4) return false;
-        int count = BitConverter.ToInt32(value, 0);
-        if (count < 0 || value.Length != 4 + (count * itemSize)) return false;
-
-        for (int i = 0, offset = 4; i < count; i++, offset += itemSize)
+        if (!FcbWire.TryReadFixedArray(value, 4 * 3, (v, o) => new XElement("item",
+                new XElement("x", Single(v, o)),
+                new XElement("y", Single(v, o + 4)),
+                new XElement("z", Single(v, o + 8))), out XElement[] items))
         {
-            el.Add(new XElement("item",
-                new XElement("x", Single(value, offset)),
-                new XElement("y", Single(value, offset + 4)),
-                new XElement("z", Single(value, offset + 8))));
+            return false;
         }
+        el.Add(items);
         return true;
     }
 
@@ -514,7 +509,7 @@ public static class FcbXml
         FcbMemberType.BinHex => Convert.FromHexString(el.Value.Trim()),
         FcbMemberType.Rml => ReadRml(el),
         FcbMemberType.Hash => BitConverter.GetBytes(uint.Parse(el.Value, NumberStyles.HexNumber, CultureInfo.InvariantCulture)),
-        FcbMemberType.String => NullTerminate(Encoding.UTF8.GetBytes(el.Value)),
+        FcbMemberType.String => FcbWire.NullTerminate(Encoding.UTF8.GetBytes(el.Value)),
         FcbMemberType.Enum => BitConverter.GetBytes(uint.Parse(el.Value, CultureInfo.InvariantCulture)),
         FcbMemberType.Bool => [(byte)(bool.Parse(el.Value) ? 1 : 0)],
         FcbMemberType.Float => BitConverter.GetBytes(float.Parse(el.Value, CultureInfo.InvariantCulture)),
@@ -584,7 +579,7 @@ public static class FcbXml
     /// <summary>Public entry point onto <see cref="TryDecodeRml"/> for callers that want the decoded
     /// .rml document itself rather than embedded in this class's own <c>&lt;value type="Rml"&gt;</c>
     /// text wrapper - currently the interactive property grid's Rml field (see
-    /// JackAll.App.FileHandlers.Fcb.FcbEditor.FcbFieldFormat), which shows/edits it as a plain XML string instead of
+    /// JackAll.Tools.Fcb.FcbFieldFormat), which shows/edits it as a plain XML string instead of
     /// opaque hex. Null for the opaque-hex fallback shape (see <see cref="TryDecodeRml"/>'s remarks).</summary>
     public static XElement? TryDecodeRmlValue(byte[] value) => TryDecodeRml(value, out XElement? element) ? element : null;
 
@@ -641,15 +636,8 @@ public static class FcbXml
     /// <summary>Reads a count-prefixed array of fixed-size items, mirroring <see cref="TryWriteFixedArray"/>.</summary>
     private static byte[] ReadFixedArray(XElement el, int itemSize, Func<XElement, byte[]> parseItem)
     {
-        List<byte[]> items = [.. el.Elements("item").Select(parseItem)];
-
-        byte[] result = new byte[4 + (items.Count * itemSize)];
-        BitConverter.GetBytes(items.Count).CopyTo(result, 0);
-        for (int i = 0; i < items.Count; i++)
-        {
-            items[i].CopyTo(result, 4 + (i * itemSize));
-        }
-        return result;
+        byte[][] items = [.. el.Elements("item").Select(parseItem)];
+        return FcbWire.WriteFixedArray(items, itemSize, (buf, offset, item) => item.CopyTo(buf, offset));
     }
 
     private static byte[] ReadMatrix4(XElement el)
@@ -684,13 +672,6 @@ public static class FcbXml
             : uint.Parse(hash!, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
     }
 
-    private static byte[] NullTerminate(byte[] utf8)
-    {
-        byte[] result = new byte[utf8.Length + 1]; // trailing byte is already 0 from the allocation
-        utf8.CopyTo(result, 0);
-        return result;
-    }
-
     private static bool TryDecodeCString(byte[] value, out string text)
     {
         if (value.Length < 1 || value[^1] != 0)
@@ -704,11 +685,18 @@ public static class FcbXml
 
     private static string SanitizeFileNamePart(string name)
     {
-        foreach (char invalid in Path.GetInvalidFileNameChars())
+        if (name.AsSpan().IndexOfAny(InvalidFileNameChars) < 0)
         {
-            name = name.Replace(invalid, '_');
+            return name;
         }
-        return name;
+
+        return string.Create(name.Length, name, static (chars, source) =>
+        {
+            for (int i = 0; i < source.Length; i++)
+            {
+                chars[i] = InvalidFileNameChars.Contains(source[i]) ? '_' : source[i];
+            }
+        });
     }
 
     private static string Render(XElement element)

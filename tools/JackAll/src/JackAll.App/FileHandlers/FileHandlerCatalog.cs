@@ -1,6 +1,5 @@
 using System.Windows.Controls;
 using JackAll.App.FileHandlers.DepLoad;
-using JackAll.App.FileHandlers.Domino;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.FileHandlers.Mgb;
 using JackAll.App.FileHandlers.Rml;
@@ -21,13 +20,11 @@ namespace JackAll.App.FileHandlers;
 /// </summary>
 public static class FileHandlerCatalog
 {
-    private const char Utf8Bom = (char)0xFEFF;
-
     /// <summary>
     /// Above this (either side of a diff, or a plain file), the text/diff views refuse to render the
     /// content at all - a multi-megabyte string is what actually hurts here: the AvalonEdit editor
     /// laying it out, and (for a diff) <c>DiffTextBuilder</c> running a line diff over it. Shared by
-    /// <see cref="BuildTextHandler"/>, <see cref="BuildFragmentHandler"/>, and (via this constant)
+    /// <see cref="BuildTextHandler"/>, <see cref="BuildLauncherPreview"/>, and (via this constant)
     /// <see cref="FcbFileHandler"/>'s own content-only-fcb diff, so the limit reads the same everywhere
     /// rather than three independently-chosen numbers.
     /// </summary>
@@ -41,16 +38,15 @@ public static class FileHandlerCatalog
     /// window's tab-based XML editor rather than anything embedded in this compact preview column.
     /// <paramref name="readOriginal"/> is used by the text and fragment cases, by the fcb case for a
     /// root that doesn't split into sub-files, and by the rml case, to diff a modded file against its
-    /// base game version (see <see cref="BuildTextHandler"/>, <see cref="BuildFragmentHandler"/>,
+    /// base game version (see <see cref="BuildTextHandler"/>, <see cref="BuildLauncherPreview"/>,
     /// <see cref="FcbFileHandler"/> and <see cref="RmlFileHandler"/>). <paramref name="resolveByHash"/>
     /// and <paramref name="navigateTo"/> are used by the dependency-link case, to look up what a link
     /// points to and jump the main tree/grid selection to it (see <see cref="DependencyLinkHandler"/>),
     /// and by the spk case, for a `SimpleFixed68`/`TransformedFixed128` row's own cross-reference to a
     /// different bank entirely (see <see cref="SpkFileHandler"/>). <paramref name="openDominoEditor"/>
     /// is the domino\user\ case's counterpart to <paramref name="openEditor"/>, handing off to the
-    /// graph-reconstruction tab (see <see cref="DominoFilePreviewHandler"/>), and
-    /// <paramref name="openMgbEditor"/> is the mgb case's, handing off to the Magma UI package editor
-    /// tab (see <see cref="MgbFilePreviewHandler"/>).
+    /// graph-reconstruction tab, and <paramref name="openMgbEditor"/> is the mgb case's, handing off
+    /// to the Magma UI package editor tab (see <see cref="MgbFilePreviewHandler"/>).
     /// </summary>
     public static UserControl? CreateView(
         VfsFile file, Func<byte[]> readContent, Action<byte[]> replaceContent, Action openEditor,
@@ -61,7 +57,10 @@ public static class FileHandlerCatalog
             // Checked before the plain "xml" case below - a fragment's own VfsFile.Type.Extension is
             // also "xml" (see GameVfs.MergeFragments), but it needs the dedicated editor tab, not the
             // generic read-only text viewer.
-            { IsFragment: true } => BuildFragmentHandler(file, readContent, readOriginal, openEditor),
+            { IsFragment: true } => BuildLauncherPreview(file, readContent, readOriginal, openEditor,
+                "This is one piece of a splitting .fcb - open it in the XML editor to browse and edit its structure.",
+                "Open value editor…", "xml",
+                "No changes from the base game - not shown here since a fragment can be huge. Open in FCB Editor to browse it."),
             // Same precedence reasoning as the fragment case above: a dependency-link row's own Type
             // is whatever its resolved target's type is (or Unknown), but it always needs its own
             // "what does this point to" mini view, never the type-based handler for that Type.
@@ -70,7 +69,9 @@ public static class FileHandlerCatalog
             // Only user\ graphs reconstruct into a box graph worth viewing - a system\ node's own body
             // is just a small hand-written function, already well served by the plain text/diff view.
             { Type.Extension: "lua" } when file.Directory.StartsWith(@"domino\user", StringComparison.OrdinalIgnoreCase)
-                => BuildDominoHandler(file, readContent, readOriginal, openDominoEditor),
+                => BuildLauncherPreview(file, readContent, readOriginal, openDominoEditor,
+                    "A Domino mission-graph script - open it in the graph editor to see it as boxes and connections instead of generated Lua.",
+                    "Open in Domino Editor…", "lua"),
             // "desc" is a known-path .mgb.desc (Path.GetExtension only keeps the last segment);
             // "mgb.desc" is the same file content-sniffed by its "<package>" root (see
             // FileTypeSniffer.IdentifyByContent) when no filelist entry named it. Both are plain XML.
@@ -97,7 +98,7 @@ public static class FileHandlerCatalog
     /// A plain read-only view for an unmodded (or origin-less) file, or - when <paramref name="file"/>
     /// is modded and has a base game version to compare against - the trimmed diff view
     /// (<see cref="TextFileHandler.CreateDiffView"/>) so the change is visible at a glance instead of
-    /// buried in an otherwise-identical file. No size gate here (unlike <see cref="BuildFragmentHandler"/>
+    /// buried in an otherwise-identical file. No size gate here (unlike <see cref="BuildLauncherPreview"/>
     /// and <see cref="FcbFileHandler"/>) - a plain xml/lua file's own view IS its content, so there's
     /// nothing to skip to.
     /// </summary>
@@ -109,77 +110,49 @@ public static class FileHandlerCatalog
             return new TextFileHandler { Text = readError!, Extension = file.Type.Extension };
         }
 
-        string current = DecodeText(currentBytes);
+        string current = AppText.DecodeUtf8(currentBytes);
         byte[]? originalBytes = TryReadOriginalBytes(file, readOriginal);
         return originalBytes is null
             ? new TextFileHandler { Text = current, Extension = file.Type.Extension }
-            : TextFileHandler.CreateDiffView(DecodeText(originalBytes), current, file.Type.Extension);
+            : TextFileHandler.CreateDiffView(AppText.DecodeUtf8(originalBytes), current, file.Type.Extension);
     }
 
     /// <summary>
-    /// The Files tab's compact preview for one fragment of a splitting .fcb: the "Open in XML
-    /// Editor…" launcher (see <see cref="FcbFragmentDetailsHandler"/>'s remarks - fragments can be huge
-    /// and need real navigation, a job for the dedicated editor tab, not this column) with the same
-    /// trimmed diff-against-vanilla view <see cref="BuildTextHandler"/> gives a plain xml/lua file
-    /// underneath it, so a change is visible here too without having to open the editor first. An
-    /// unmodified fragment never even has its (possibly huge) content read - nothing would change to
-    /// show anyway - and a modified one whose content or base game version is too big (see
-    /// <see cref="MaxPreviewBytes"/>) shows neither, same as the unmodified case, just with a different
-    /// explanation.
+    /// A launcher-plus-preview view (<see cref="LauncherPreviewHandler"/>): the dedicated editor is
+    /// where real navigation happens, but the trimmed diff-against-vanilla view underneath makes a
+    /// change visible without opening it. <paramref name="skipUnmodifiedMessage"/>, when given, means
+    /// an unmodified file's (possibly huge) content is never even read - the fragment case, where
+    /// nothing would change to show anyway; content or base game version over
+    /// <see cref="MaxPreviewBytes"/> shows a notice instead, for the same responsiveness reason.
     /// </summary>
-    private static FcbFragmentDetailsHandler BuildFragmentHandler(
-        VfsFile file, Func<byte[]> readContent, Func<byte[]?> readOriginal, Action openEditor)
+    private static LauncherPreviewHandler BuildLauncherPreview(
+        VfsFile file, Func<byte[]> readContent, Func<byte[]?> readOriginal, Action openEditor,
+        string blurb, string buttonText, string extension, string? skipUnmodifiedMessage = null)
     {
-        if (!file.IsModded)
+        LauncherPreviewHandler Notice(string text)
+            => new(blurb, buttonText, extension, openEditor, null, null, text);
+
+        if (skipUnmodifiedMessage is not null && !file.IsModded)
         {
-            return new FcbFragmentDetailsHandler(openEditor, currentXml: null, originalXml: null,
-                "No changes from the base game - not shown here since a fragment can be huge. Open in FCB Editor to browse it.");
+            return Notice(skipUnmodifiedMessage);
         }
 
         byte[]? currentBytes = TryRead(readContent, out string? readError);
         if (currentBytes is null)
         {
-            return new FcbFragmentDetailsHandler(openEditor, currentXml: null, originalXml: null, readError!);
+            return Notice(readError!);
         }
 
         byte[]? originalBytes = TryReadOriginalBytes(file, readOriginal);
         if (ExceedsPreviewLimit(currentBytes) || (originalBytes is not null && ExceedsPreviewLimit(originalBytes)))
         {
-            return new FcbFragmentDetailsHandler(openEditor, currentXml: null, originalXml: null,
-                TooLargeMessage(Math.Max(currentBytes.Length, originalBytes?.Length ?? 0)));
+            return Notice(TooLargeMessage(Math.Max(currentBytes.Length, originalBytes?.Length ?? 0)));
         }
 
-        string current = DecodeText(currentBytes);
-        string? originalText = originalBytes is null ? null : DecodeText(originalBytes);
-        return new FcbFragmentDetailsHandler(openEditor, current, originalText, previewUnavailableText: null);
-    }
-
-    /// <summary>
-    /// The Files tab's preview for a `domino\user\*.lua` mission graph: the "Open in Domino Editor…"
-    /// launcher, plus underneath the same trimmed diff-against-vanilla (or plain text, for a mod-added
-    /// file with nothing to diff against) view a plain lua file gets from <see cref="BuildTextHandler"/> -
-    /// same size-gate reasoning as <see cref="BuildFragmentHandler"/>, since a mission graph's generated
-    /// Lua can run to several thousand lines.
-    /// </summary>
-    private static DominoFilePreviewHandler BuildDominoHandler(
-        VfsFile file, Func<byte[]> readContent, Func<byte[]?> readOriginal, Action openEditor)
-    {
-        byte[]? currentBytes = TryRead(readContent, out string? readError);
-        if (currentBytes is null)
-        {
-            return new DominoFilePreviewHandler(openEditor, currentText: null, originalText: null, readError!);
-        }
-
-        byte[]? originalBytes = TryReadOriginalBytes(file, readOriginal);
-        if (ExceedsPreviewLimit(currentBytes) || (originalBytes is not null && ExceedsPreviewLimit(originalBytes)))
-        {
-            return new DominoFilePreviewHandler(openEditor, currentText: null, originalText: null,
-                TooLargeMessage(Math.Max(currentBytes.Length, originalBytes?.Length ?? 0)));
-        }
-
-        string current = DecodeText(currentBytes);
-        string? originalText = originalBytes is null ? null : DecodeText(originalBytes);
-        return new DominoFilePreviewHandler(openEditor, current, originalText, previewUnavailableText: null);
+        string current = AppText.DecodeUtf8(currentBytes);
+        string? originalText = originalBytes is null ? null : AppText.DecodeUtf8(originalBytes);
+        return new LauncherPreviewHandler(
+            blurb, buttonText, extension, openEditor, current, originalText, previewUnavailableText: null);
     }
 
     /// <summary>Null when <paramref name="file"/> isn't modded, has no base game version at all, or
@@ -222,7 +195,4 @@ public static class FileHandlerCatalog
     internal static string TooLargeMessage(long byteLength)
         => $"This is {byteLength / 1024.0:N0} KB - larger than the {MaxPreviewBytes / 1024:N0} KB preview limit, "
          + "so it isn't shown here to keep the preview responsive.";
-
-    private static string DecodeText(byte[] bytes)
-        => new System.Text.UTF8Encoding(false).GetString(bytes).TrimStart(Utf8Bom);
 }

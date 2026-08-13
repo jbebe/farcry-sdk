@@ -1,3 +1,5 @@
+using JackAll.Core.Format;
+
 namespace JackAll.Tools.Sdat;
 
 /// <summary>
@@ -130,21 +132,21 @@ public static class SdatSectorFile
             throw new InvalidDataException("File too small to be a .sdat sector chunk.");
         }
 
-        uint magic = ReadU32(sdat, 0);
+        uint magic = ByteCursor.U32(sdat, 0);
         if (magic != Magic)
         {
             throw new InvalidDataException($"Not a .sdat sector chunk (magic 0x{magic:X8}, expected 0x{Magic:X8}).");
         }
 
-        uint version = ReadU32(sdat, 4);
+        uint version = ByteCursor.U32(sdat, 4);
         if (version != ExpectedVersion)
         {
             throw new InvalidDataException($"Unsupported .sdat chunk version {version} (expected {ExpectedVersion}).");
         }
 
-        uint totalSize = ReadU32(sdat, 8);
-        uint ownDataSize = ReadU32(sdat, 0xC);
-        uint childChunkCount = ReadU32(sdat, 0x10);
+        uint totalSize = ByteCursor.U32(sdat, 8);
+        uint ownDataSize = ByteCursor.U32(sdat, 0xC);
+        uint childChunkCount = ByteCursor.U32(sdat, 0x10);
         if (childChunkCount != 0)
         {
             throw new InvalidDataException("This .sdat has nested chunks (ChildChunkCount != 0) - not supported.");
@@ -160,14 +162,14 @@ public static class SdatSectorFile
         }
 
         const int metaOffset = ChunkHeaderSize;
-        uint sectorId = ReadU32(sdat, metaOffset + 0x00);
-        uint flags = ReadU32(sdat, metaOffset + 0x04);
-        float x = ReadF32(sdat, metaOffset + 0x08);
-        float y = ReadF32(sdat, metaOffset + 0x0C);
-        uint unknownHeaderField = ReadU32(sdat, metaOffset + 0x10);
-        uint packedBlobSizeField = ReadU32(sdat, metaOffset + 0x14);
-        uint recordCount = ReadU32(sdat, metaOffset + 0x18);
-        uint formatFlag = ReadU32(sdat, metaOffset + 0x1C);
+        uint sectorId = ByteCursor.U32(sdat, metaOffset + 0x00);
+        uint flags = ByteCursor.U32(sdat, metaOffset + 0x04);
+        float x = ByteCursor.F32(sdat, metaOffset + 0x08);
+        float y = ByteCursor.F32(sdat, metaOffset + 0x0C);
+        uint unknownHeaderField = ByteCursor.U32(sdat, metaOffset + 0x10);
+        uint packedBlobSizeField = ByteCursor.U32(sdat, metaOffset + 0x14);
+        uint recordCount = ByteCursor.U32(sdat, metaOffset + 0x18);
+        uint formatFlag = ByteCursor.U32(sdat, metaOffset + 0x1C);
         byte[] envSettingsRaw = sdat[(metaOffset + 0x20)..(metaOffset + 0x20 + EnvSettingsSize)];
         byte[] headerPadding = sdat[(metaOffset + 0x23A)..(metaOffset + MetadataSize)];
 
@@ -201,7 +203,7 @@ public static class SdatSectorFile
         byte[] recordsRaw = sdat[recordsOffset..(recordsOffset + recordsByteLength)];
 
         int trailingOffset = recordsOffset + recordsByteLength;
-        uint trailingField = ReadU32(sdat, trailingOffset);
+        uint trailingField = ByteCursor.U32(sdat, trailingOffset);
 
         int tailOffset = trailingOffset + TrailingFieldSize;
         byte[] tailBlockRaw = sdat[tailOffset..(tailOffset + TailBlockSize)];
@@ -300,12 +302,6 @@ public static class SdatSectorFile
 
         return result;
     }
-
-    private static uint ReadU32(byte[] data, int offset)
-        => (uint)(data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24));
-
-    private static float ReadF32(byte[] data, int offset)
-        => BitConverter.Int32BitsToSingle((int)ReadU32(data, offset));
 
     private static void WriteU32(byte[] data, int offset, uint value)
     {

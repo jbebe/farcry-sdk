@@ -8,8 +8,6 @@ using System.IO;
 using System.Text;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
-using System.Windows.Threading;
 using System.Windows;
 
 namespace JackAll.App.FileHandlers.Spk;
@@ -62,13 +60,10 @@ public partial class SpkFileHandler : UserControl
     private readonly Action<byte[]> _replaceContent;
     private readonly Func<uint, VfsFile?> _resolveByHash;
     private readonly Action<VfsFile> _navigateTo;
-    private readonly DispatcherTimer _timer;
     private SpkPackage? _package;
     private byte[]? _originalContent;
     private List<Row> _rows = [];
     private string? _tempWavPath;
-    private bool _isUserSeeking;
-    private bool _updatingSlider;
 
     /// <summary>One row of the records grid - a plain-language view of a single record, decoded as far
     /// as we understand its type. <see cref="LinkedId"/> is this record's own outgoing cross-reference
@@ -113,10 +108,13 @@ public partial class SpkFileHandler : UserControl
         _resolveByHash = resolveByHash;
         _navigateTo = navigateTo;
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-        _timer.Tick += OnTimerTick;
-        _timer.Start();
-        Unloaded += (_, _) => Cleanup();
+        // Release the temp .wav before deleting it - the panel resets itself on Unloaded too, but
+        // child/parent Unloaded order isn't guaranteed.
+        Unloaded += (_, _) =>
+        {
+            AudioPreview.Reset();
+            DeleteTempFile();
+        };
 
         Load(content);
     }
@@ -149,7 +147,7 @@ public partial class SpkFileHandler : UserControl
             HeaderText.Text = $"Couldn't read this file: {ex.Message}";
             RecordsGrid.ItemsSource = null;
             AudioPanel.Visibility = Visibility.Collapsed;
-            ResetPlayer();
+            AudioPreview.Reset();
         }
     }
 
@@ -347,7 +345,7 @@ public partial class SpkFileHandler : UserControl
 
         if (row is not { IsPlayable: true })
         {
-            ResetPlayer();
+            AudioPreview.Reset();
             ImportAudioButton.IsEnabled = false;
             ExportAudioButton.IsEnabled = false;
             return;
@@ -426,7 +424,7 @@ public partial class SpkFileHandler : UserControl
 
     private async Task PreparePreviewAsync(SpkRecord record)
     {
-        ResetPlayer();
+        AudioPreview.Reset();
         DeleteTempFile();
         ExportAudioButton.IsEnabled = false;
         AudioStatusText.Text = "";
@@ -452,8 +450,7 @@ public partial class SpkFileHandler : UserControl
                 await File.WriteAllBytesAsync(_tempWavPath, wav);
             }
 
-            Player.Source = new Uri(_tempWavPath);
-            PlayButton.IsEnabled = true;
+            AudioPreview.Open(_tempWavPath);
             ExportAudioButton.IsEnabled = true;
         }
         catch (Exception ex)
@@ -614,81 +611,7 @@ public partial class SpkFileHandler : UserControl
         }
     }
 
-    private void Play_Click(object sender, RoutedEventArgs e) => Player.Play();
-
-    private void Pause_Click(object sender, RoutedEventArgs e) => Player.Pause();
-
-    private void Stop_Click(object sender, RoutedEventArgs e) => Player.Stop();
-
-    private void Player_MediaOpened(object sender, RoutedEventArgs e)
-    {
-        if (Player.NaturalDuration.HasTimeSpan)
-        {
-            SeekBar.Maximum = Player.NaturalDuration.TimeSpan.TotalSeconds;
-        }
-
-        SeekBar.IsEnabled = true;
-        PauseButton.IsEnabled = true;
-        StopButton.IsEnabled = true;
-    }
-
-    private void Player_MediaEnded(object sender, RoutedEventArgs e) => Player.Stop();
-
-    private void SeekBar_PreviewMouseDown(object sender, MouseButtonEventArgs e) => _isUserSeeking = true;
-
-    private void SeekBar_PreviewMouseUp(object sender, MouseButtonEventArgs e)
-    {
-        _isUserSeeking = false;
-        Player.Position = TimeSpan.FromSeconds(SeekBar.Value);
-    }
-
-    private void SeekBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (_updatingSlider || !_isUserSeeking)
-        {
-            return;
-        }
-
-        TimeText.Text = FormatTime(TimeSpan.FromSeconds(SeekBar.Value)) + " / " + FormatTime(TotalDuration());
-    }
-
-    private void OnTimerTick(object? sender, EventArgs e)
-    {
-        if (_isUserSeeking || Player.Source is null || !Player.NaturalDuration.HasTimeSpan)
-        {
-            return;
-        }
-
-        _updatingSlider = true;
-        SeekBar.Value = Player.Position.TotalSeconds;
-        _updatingSlider = false;
-        TimeText.Text = FormatTime(Player.Position) + " / " + FormatTime(TotalDuration());
-    }
-
-    private TimeSpan TotalDuration()
-        => Player.NaturalDuration.HasTimeSpan ? Player.NaturalDuration.TimeSpan : TimeSpan.Zero;
-
     private static string FormatTime(TimeSpan t) => $"{(int)t.TotalMinutes}:{t.Seconds:D2}";
-
-    private void ResetPlayer()
-    {
-        Player.Stop();
-        Player.Close();
-        Player.Source = null;
-        SeekBar.Value = 0;
-        SeekBar.IsEnabled = false;
-        TimeText.Text = "0:00 / 0:00";
-        PlayButton.IsEnabled = false;
-        PauseButton.IsEnabled = false;
-        StopButton.IsEnabled = false;
-    }
-
-    private void Cleanup()
-    {
-        _timer.Stop();
-        ResetPlayer();
-        DeleteTempFile();
-    }
 
     private void DeleteTempFile()
     {

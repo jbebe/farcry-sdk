@@ -1,5 +1,5 @@
-using System.Buffers.Binary;
 using System.Text;
+using JackAll.Core.Format;
 using JackAll.Tools.Xbg;
 
 namespace JackAll.Tools.Xbm;
@@ -34,8 +34,6 @@ public sealed class XbmMaterial
     public required IReadOnlyList<XbmProperty> Textures { get; init; }
     public required IReadOnlyList<XbmProperty> Properties { get; init; }
 
-    private static readonly byte[] LtmdTag = "LTMD"u8.ToArray();
-
     public static XbmMaterial Parse(byte[] data)
     {
         if (data.Length < 4 || data[0] != (byte)'H' || data[1] != (byte)'S' || data[2] != (byte)'E' || data[3] != (byte)'M')
@@ -44,7 +42,7 @@ public sealed class XbmMaterial
                 "Not a Far Cry 2 .xbm (no \"HSEM\" header) - this viewer doesn't support this file's format.");
         }
 
-        int idx = IndexOf(data, LtmdTag);
+        int idx = data.AsSpan().IndexOf("LTMD"u8);
         if (idx < 0)
         {
             throw new InvalidDataException("No \"LTMD\" material chunk found in this .xbm.");
@@ -56,7 +54,7 @@ public sealed class XbmMaterial
             throw new InvalidDataException("Truncated LTMD chunk header.");
         }
 
-        uint dataSize = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(idx + 12));
+        uint dataSize = ByteCursor.U32(data, idx + 12);
         int payloadStart = idx + 20;
         if (dataSize > int.MaxValue || payloadStart + (long)dataSize > data.Length)
         {
@@ -64,13 +62,13 @@ public sealed class XbmMaterial
         }
 
         int payloadEnd = payloadStart + (int)dataSize;
-        var r = new Reader(data, payloadEnd);
+        var r = new ByteCursor(data.AsSpan(0, payloadEnd));
 
         r.Position = FindPreamble(data, payloadStart, payloadEnd)
             ?? throw new InvalidDataException("Couldn't locate the LTMD material preamble.");
 
-        string name = r.ReadString();
-        string template = r.ReadString();
+        string name = ReadString(ref r);
+        string template = ReadString(ref r);
 
         var textures = new List<XbmProperty>();
         uint texCount = r.ReadU32();
@@ -81,8 +79,8 @@ public sealed class XbmMaterial
 
         for (int i = 0; i < texCount; i++)
         {
-            string value = r.ReadString();
-            string key = r.ReadString();
+            string value = ReadString(ref r);
+            string key = ReadString(ref r);
             textures.Add(new XbmProperty { Key = key, Value = value });
         }
 
@@ -97,7 +95,7 @@ public sealed class XbmMaterial
 
             for (int i = 0; i < count; i++)
             {
-                string key = r.ReadString();
+                string key = ReadString(ref r);
                 var vals = new float[ncomp];
                 for (int c = 0; c < ncomp; c++)
                 {
@@ -116,7 +114,7 @@ public sealed class XbmMaterial
 
         for (int i = 0; i < intCount; i++)
         {
-            string key = r.ReadString();
+            string key = ReadString(ref r);
             uint val = r.ReadU32();
             properties.Add(new XbmProperty { Key = key, Value = val.ToString() });
         }
@@ -140,7 +138,7 @@ public sealed class XbmMaterial
                 continue;
             }
 
-            uint len = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(lenPos));
+            uint len = ByteCursor.U32(data, lenPos);
             if (len is 0 or >= 64)
             {
                 continue;
@@ -172,80 +170,21 @@ public sealed class XbmMaterial
         return null;
     }
 
-    private static int IndexOf(byte[] haystack, byte[] needle)
+    /// <summary>A length-prefixed Latin1 string, followed by a NUL terminator when one is present.</summary>
+    private static string ReadString(ref ByteCursor cursor)
     {
-        for (int i = 0; i <= haystack.Length - needle.Length; i++)
+        uint len = cursor.ReadU32();
+        if (len > 4096)
         {
-            bool match = true;
-            for (int j = 0; j < needle.Length; j++)
-            {
-                if (haystack[i + j] != needle[j])
-                {
-                    match = false;
-                    break;
-                }
-            }
-
-            if (match)
-            {
-                return i;
-            }
+            throw new InvalidDataException($"Implausible string length {len} at offset 0x{cursor.Position - 4:X}.");
         }
 
-        return -1;
-    }
-
-    /// <summary>Little-endian-only forward reader (unlike <see cref="XbgModel"/>'s Cursor, .xbm has no
-    /// documented big-endian/PS3 variant).</summary>
-    private struct Reader(byte[] data, int end)
-    {
-        public int Position;
-
-        public string ReadString()
+        string s = Encoding.Latin1.GetString(cursor.ReadSpan((int)len));
+        if (cursor.Remaining > 0 && cursor.Data[cursor.Position] == 0)
         {
-            EnsureAvailable(4);
-            uint len = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(Position));
-            Position += 4;
-            if (len > 4096)
-            {
-                throw new InvalidDataException($"Implausible string length {len} at offset 0x{Position - 4:X}.");
-            }
-
-            EnsureAvailable((int)len);
-            string s = Encoding.Latin1.GetString(data, Position, (int)len);
-            Position += (int)len;
-            if (Position < end && data[Position] == 0)
-            {
-                Position += 1; // NUL terminator, when present
-            }
-
-            return s;
+            cursor.Position += 1;
         }
 
-        public uint ReadU32()
-        {
-            EnsureAvailable(4);
-            uint v = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(Position));
-            Position += 4;
-            return v;
-        }
-
-        public float ReadF32()
-        {
-            EnsureAvailable(4);
-            float v = BinaryPrimitives.ReadSingleLittleEndian(data.AsSpan(Position));
-            Position += 4;
-            return v;
-        }
-
-        private readonly void EnsureAvailable(int count)
-        {
-            if (Position < 0 || (long)Position + count > end)
-            {
-                throw new InvalidDataException(
-                    $"Ran out of bytes at offset 0x{Position:X} (needed {count}, only " +
-                    $"{Math.Max(0, end - Position)} left in the chunk).");
-            }
-        }
+        return s;
     }
 }

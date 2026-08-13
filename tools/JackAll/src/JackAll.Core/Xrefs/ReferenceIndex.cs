@@ -36,7 +36,7 @@ public sealed class ReferenceIndex
     private const int Version = 1;
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
-    private struct EdgeRecord
+    private struct EdgeRecord : IKeyedRecord
     {
         public uint SourceFile;
         public uint Target;
@@ -44,35 +44,38 @@ public sealed class ReferenceIndex
         public ushort SiteIndex;
         public byte Space;
         public byte Kind;
+
+        // Edges sort by (space, target, ...) - the packed key is that ordering's prefix.
+        public readonly ulong Key => BinaryTable.PackKey(Space, Target);
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
-    private struct DefRecord
+    private struct DefRecord : IKeyedRecord
     {
         public uint Id;
         public uint DefiningFile;
         public uint SiteKey;
         public uint Space; // a full word rather than a byte + padding: same 16-byte record either way
+
+        public readonly ulong Key => BinaryTable.PackKey(Space, Id);
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
-    private struct NameRecord
+    private struct NameRecord : IKeyedRecord
     {
         public uint Hash;
         public uint NameOffset;
         public uint NameLength;
-    }
 
-    private static readonly int EdgeRecordSize = Marshal.SizeOf<EdgeRecord>();
-    private static readonly int DefRecordSize = Marshal.SizeOf<DefRecord>();
-    private static readonly int NameRecordSize = Marshal.SizeOf<NameRecord>();
+        public readonly ulong Key => Hash;
+    }
 
     private byte[] _fileBytes = [];
     private (int Offset, int Count) _edges;
     private (int Offset, int Count) _bySource;   // uint[] permutation into _edges
     private (int Offset, int Count) _definitions;
     private (int Offset, int Count) _names;
-    private (int Offset, int Length) _nameBlob;
+    private (int Offset, int Count) _nameBlob;
     private (int Offset, int Count) _indexedFiles; // uint[] of source hashes covered by this index
 
     /// <summary>An index with nothing in it - what <see cref="Load"/> returns when there's no usable
@@ -83,29 +86,17 @@ public sealed class ReferenceIndex
     public int DefinitionCount => _definitions.Count;
     public int IndexedFileCount => _indexedFiles.Count;
 
-    private ReadOnlySpan<EdgeRecord> EdgeSpan => _edges.Count == 0
-        ? default
-        : MemoryMarshal.Cast<byte, EdgeRecord>(_fileBytes.AsSpan(_edges.Offset, _edges.Count * EdgeRecordSize));
+    private ReadOnlySpan<EdgeRecord> EdgeSpan => BinaryTable.RecordSpan<EdgeRecord>(_fileBytes, _edges);
 
-    private ReadOnlySpan<uint> BySourceSpan => _bySource.Count == 0
-        ? default
-        : MemoryMarshal.Cast<byte, uint>(_fileBytes.AsSpan(_bySource.Offset, _bySource.Count * sizeof(uint)));
+    private ReadOnlySpan<uint> BySourceSpan => BinaryTable.RecordSpan<uint>(_fileBytes, _bySource);
 
-    private ReadOnlySpan<DefRecord> DefSpan => _definitions.Count == 0
-        ? default
-        : MemoryMarshal.Cast<byte, DefRecord>(_fileBytes.AsSpan(_definitions.Offset, _definitions.Count * DefRecordSize));
+    private ReadOnlySpan<DefRecord> DefSpan => BinaryTable.RecordSpan<DefRecord>(_fileBytes, _definitions);
 
-    private ReadOnlySpan<NameRecord> NameSpan => _names.Count == 0
-        ? default
-        : MemoryMarshal.Cast<byte, NameRecord>(_fileBytes.AsSpan(_names.Offset, _names.Count * NameRecordSize));
+    private ReadOnlySpan<NameRecord> NameSpan => BinaryTable.RecordSpan<NameRecord>(_fileBytes, _names);
 
-    private ReadOnlySpan<byte> NameBlobSpan => _nameBlob.Length == 0
-        ? default
-        : _fileBytes.AsSpan(_nameBlob.Offset, _nameBlob.Length);
+    private ReadOnlySpan<byte> NameBlobSpan => _fileBytes.AsSpan(_nameBlob.Offset, _nameBlob.Count);
 
-    private ReadOnlySpan<uint> IndexedFileSpan => _indexedFiles.Count == 0
-        ? default
-        : MemoryMarshal.Cast<byte, uint>(_fileBytes.AsSpan(_indexedFiles.Offset, _indexedFiles.Count * sizeof(uint)));
+    private ReadOnlySpan<uint> IndexedFileSpan => BinaryTable.RecordSpan<uint>(_fileBytes, _indexedFiles);
 
     // ------------------------------------------------------------------ queries
 
@@ -116,17 +107,14 @@ public sealed class ReferenceIndex
     public IReadOnlyList<RefEdge> ReferencesTo(RefSpace space, uint target)
     {
         ReadOnlySpan<EdgeRecord> edges = EdgeSpan;
-        int start = LowerBoundByTarget(edges, (byte)space, target);
-        if (start >= edges.Length)
-        {
-            return [];
-        }
+        ulong key = BinaryTable.PackKey((byte)space, target);
+        int start = BinaryTable.LowerBound(edges, key);
 
         var result = new List<RefEdge>();
         for (int i = start; i < edges.Length; i++)
         {
             EdgeRecord record = edges[i];
-            if (record.Space != (byte)space || record.Target != target)
+            if (record.Key != key)
             {
                 break;
             }
@@ -141,10 +129,6 @@ public sealed class ReferenceIndex
         ReadOnlySpan<EdgeRecord> edges = EdgeSpan;
         ReadOnlySpan<uint> order = BySourceSpan;
         int start = LowerBoundBySource(edges, order, sourceFile);
-        if (start >= order.Length)
-        {
-            return [];
-        }
 
         var result = new List<RefEdge>();
         for (int i = start; i < order.Length; i++)
@@ -165,21 +149,15 @@ public sealed class ReferenceIndex
     public bool TryGetDefinition(RefSpace space, uint id, out RefDefinition definition)
     {
         ReadOnlySpan<DefRecord> defs = DefSpan;
-        int lo = 0, hi = defs.Length - 1;
-        while (lo <= hi)
+        int found = BinaryTable.Find(defs, BinaryTable.PackKey((byte)space, id));
+        if (found < 0)
         {
-            int mid = (lo + hi) / 2;
-            int cmp = CompareDef(defs[mid], (byte)space, id);
-            if (cmp == 0)
-            {
-                DefRecord record = defs[mid];
-                definition = new RefDefinition((RefSpace)record.Space, record.Id, record.DefiningFile, record.SiteKey);
-                return true;
-            }
-            if (cmp < 0) lo = mid + 1; else hi = mid - 1;
+            definition = default;
+            return false;
         }
-        definition = default;
-        return false;
+        DefRecord record = defs[found];
+        definition = new RefDefinition((RefSpace)record.Space, record.Id, record.DefiningFile, record.SiteKey);
+        return true;
     }
 
     /// <summary>The readable name of a reference site, or null when only its hash is known (the xref
@@ -187,19 +165,13 @@ public sealed class ReferenceIndex
     public string? Name(uint siteKey)
     {
         ReadOnlySpan<NameRecord> names = NameSpan;
-        int lo = 0, hi = names.Length - 1;
-        while (lo <= hi)
+        int found = BinaryTable.Find(names, siteKey);
+        if (found < 0)
         {
-            int mid = (lo + hi) / 2;
-            uint midHash = names[mid].Hash;
-            if (midHash == siteKey)
-            {
-                NameRecord record = names[mid];
-                return Encoding.UTF8.GetString(NameBlobSpan.Slice((int)record.NameOffset, (int)record.NameLength));
-            }
-            if (midHash < siteKey) lo = mid + 1; else hi = mid - 1;
+            return null;
         }
-        return null;
+        NameRecord record = names[found];
+        return Encoding.UTF8.GetString(NameBlobSpan.Slice((int)record.NameOffset, (int)record.NameLength));
     }
 
     /// <summary>
@@ -238,52 +210,13 @@ public sealed class ReferenceIndex
 
     /// <summary>Whether this index already covers <paramref name="fileHash"/> - including a file that
     /// turned out to have no references at all, which is just as worth remembering as a long list.</summary>
-    public bool IsIndexed(uint fileHash)
-    {
-        ReadOnlySpan<uint> files = IndexedFileSpan;
-        int lo = 0, hi = files.Length - 1;
-        while (lo <= hi)
-        {
-            int mid = (lo + hi) / 2;
-            uint value = files[mid];
-            if (value == fileHash) return true;
-            if (value < fileHash) lo = mid + 1; else hi = mid - 1;
-        }
-        return false;
-    }
+    public bool IsIndexed(uint fileHash) => IndexedFileSpan.BinarySearch(fileHash) >= 0;
 
     private static RefEdge ToEdge(EdgeRecord record) => new(
         record.SourceFile, (RefSpace)record.Space, record.Target, (RefKind)record.Kind,
         record.SiteKey, record.SiteIndex);
 
     // ------------------------------------------------------------------ ordering
-
-    private static int CompareByTarget(EdgeRecord record, byte space, uint target)
-    {
-        if (record.Space != space) return record.Space < space ? -1 : 1;
-        if (record.Target != target) return record.Target < target ? -1 : 1;
-        return 0;
-    }
-
-    private static int CompareDef(DefRecord record, byte space, uint id)
-    {
-        if (record.Space != space) return record.Space < space ? -1 : 1;
-        if (record.Id != id) return record.Id < id ? -1 : 1;
-        return 0;
-    }
-
-    /// <summary>First index whose (space, target) is not less than the key - a lower bound rather
-    /// than an exact-match search, so an equal run is entered at its start and can be walked.</summary>
-    private static int LowerBoundByTarget(ReadOnlySpan<EdgeRecord> edges, byte space, uint target)
-    {
-        int lo = 0, hi = edges.Length;
-        while (lo < hi)
-        {
-            int mid = lo + ((hi - lo) / 2);
-            if (CompareByTarget(edges[mid], space, target) < 0) lo = mid + 1; else hi = mid;
-        }
-        return lo;
-    }
 
     private static int LowerBoundBySource(ReadOnlySpan<EdgeRecord> edges, ReadOnlySpan<uint> order, uint sourceFile)
     {
@@ -298,8 +231,7 @@ public sealed class ReferenceIndex
 
     private static int FullEdgeOrder(EdgeRecord a, EdgeRecord b)
     {
-        if (a.Space != b.Space) return a.Space.CompareTo(b.Space);
-        if (a.Target != b.Target) return a.Target.CompareTo(b.Target);
+        if (a.Key != b.Key) return a.Key.CompareTo(b.Key);
         if (a.SourceFile != b.SourceFile) return a.SourceFile.CompareTo(b.SourceFile);
         if (a.SiteKey != b.SiteKey) return a.SiteKey.CompareTo(b.SiteKey);
         return a.SiteIndex.CompareTo(b.SiteIndex);
@@ -385,23 +317,12 @@ public sealed class ReferenceIndex
             writer.Write(Magic);
             writer.Write(Version);
 
-            writer.Write(edgeRecords.Length);
-            writer.Write(MemoryMarshal.AsBytes<EdgeRecord>(edgeRecords));
-
-            writer.Write(order.Length);
-            writer.Write(MemoryMarshal.AsBytes<uint>(order));
-
-            writer.Write(defRecords.Length);
-            writer.Write(MemoryMarshal.AsBytes<DefRecord>(defRecords));
-
-            writer.Write(nameRecords.Count);
-            writer.Write(MemoryMarshal.AsBytes<NameRecord>(CollectionsMarshal.AsSpan(nameRecords)));
-            writer.Write((int)nameBlob.Length);
-            nameBlob.Position = 0;
-            nameBlob.CopyTo(buffer);
-
-            writer.Write(files.Length);
-            writer.Write(MemoryMarshal.AsBytes<uint>(files));
+            BinaryTable.WriteSection(writer, edgeRecords);
+            BinaryTable.WriteSection(writer, order);
+            BinaryTable.WriteSection(writer, defRecords);
+            BinaryTable.WriteSection(writer, CollectionsMarshal.AsSpan(nameRecords));
+            BinaryTable.WriteSection(writer, nameBlob.GetBuffer().AsSpan(0, (int)nameBlob.Length));
+            BinaryTable.WriteSection(writer, files);
         }
         return buffer.ToArray();
     }
@@ -417,7 +338,7 @@ public sealed class ReferenceIndex
     {
         if (!File.Exists(path))
         {
-            return new ReferenceIndex();
+            return Empty;
         }
 
         try
@@ -426,7 +347,7 @@ public sealed class ReferenceIndex
         }
         catch
         {
-            return new ReferenceIndex();
+            return Empty;
         }
     }
 
@@ -437,48 +358,21 @@ public sealed class ReferenceIndex
 
         if (reader.ReadUInt32() != Magic || reader.ReadInt32() != Version)
         {
-            return new ReferenceIndex();
+            return Empty;
         }
 
         var index = new ReferenceIndex { _fileBytes = bytes };
 
-        int edgeCount = reader.ReadInt32();
-        index._edges = ((int)stream.Position, edgeCount);
-        stream.Position += (long)edgeCount * EdgeRecordSize;
-
-        int orderCount = reader.ReadInt32();
-        index._bySource = ((int)stream.Position, orderCount);
-        stream.Position += (long)orderCount * sizeof(uint);
-
-        int defCount = reader.ReadInt32();
-        index._definitions = ((int)stream.Position, defCount);
-        stream.Position += (long)defCount * DefRecordSize;
-
-        int nameCount = reader.ReadInt32();
-        index._names = ((int)stream.Position, nameCount);
-        stream.Position += (long)nameCount * NameRecordSize;
-
-        int nameBlobLength = reader.ReadInt32();
-        index._nameBlob = ((int)stream.Position, nameBlobLength);
-        stream.Position += nameBlobLength;
-
-        int fileCount = reader.ReadInt32();
-        index._indexedFiles = ((int)stream.Position, fileCount);
-        stream.Position += (long)fileCount * sizeof(uint);
+        index._edges = BinaryTable.ReadSection<EdgeRecord>(reader);
+        index._bySource = BinaryTable.ReadSection<uint>(reader);
+        index._definitions = BinaryTable.ReadSection<DefRecord>(reader);
+        index._names = BinaryTable.ReadSection<NameRecord>(reader);
+        index._nameBlob = BinaryTable.ReadSection<byte>(reader);
+        index._indexedFiles = BinaryTable.ReadSection<uint>(reader);
 
         return index;
     }
 
-    /// <summary>
-    /// Writes this index via a temp file and an atomic swap, so a crash mid-write can't leave half an
-    /// index behind to be read back as garbage next launch - same approach as
-    /// <see cref="Vfs.GameCache.Save"/>.
-    /// </summary>
-    public void Save(string path)
-    {
-        Directory.CreateDirectory(Path.GetDirectoryName(path)!);
-        string temp = path + ".writing";
-        File.WriteAllBytes(temp, _fileBytes);
-        File.Move(temp, path, overwrite: true);
-    }
+    /// <summary>Writes this index atomically (see <see cref="AtomicFile"/>).</summary>
+    public void Save(string path) => AtomicFile.Write(path, _fileBytes);
 }

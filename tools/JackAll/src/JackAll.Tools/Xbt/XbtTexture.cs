@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using JackAll.Core.Format;
 
 namespace JackAll.Tools.Xbt;
 
@@ -48,19 +49,19 @@ public static class XbtTexture
     /// <summary>Splits raw .xbt bytes into the header (everything before the DDS payload) and the DDS payload.</summary>
     public static (byte[] Header, byte[] Dds) Split(byte[] xbt)
     {
-        if (xbt.Length < 16 || ReadU32(xbt, 0) != Signature)
+        if (xbt.Length < 16 || ByteCursor.U32(xbt, 0) != Signature)
         {
             throw new InvalidDataException("Not an XBT file (missing 'TBX\\0' signature).");
         }
 
-        uint version = ReadU32(xbt, 4);
+        uint version = ByteCursor.U32(xbt, 4);
         if (version != LegacyVersion && version != CurrentVersion)
         {
             throw new InvalidDataException($"Unsupported XBT header version {version} (expected 10 or 11).");
         }
 
-        uint headerSize = ReadU32(xbt, 8);
-        if (headerSize > (uint)xbt.Length - 4 || ReadU32(xbt, (int)headerSize) != DdsMagic)
+        uint headerSize = ByteCursor.U32(xbt, 8);
+        if (headerSize > (uint)xbt.Length - 4 || ByteCursor.U32(xbt, (int)headerSize) != DdsMagic)
         {
             throw new InvalidDataException("XBT header's HeaderSize field doesn't point at a 'DDS ' payload.");
         }
@@ -90,11 +91,11 @@ public static class XbtTexture
 
         if (header.Length >= 16)
         {
-            uint version = ReadU32(header, 4);
+            uint version = ByteCursor.U32(header, 4);
             metadata.Add(
                 new XElement("Version", version),
-                new XElement("StoredHeaderSize", ReadU32(header, 8)),
-                new XElement("Reserved", ReadU32(header, 12)));
+                new XElement("StoredHeaderSize", ByteCursor.U32(header, 8)),
+                new XElement("Reserved", ByteCursor.U32(header, 12)));
 
             int fixedEnd = version == LegacyVersion ? V10FixedHeaderSize : V11FixedHeaderSize;
             if (version != LegacyVersion && header.Length >= V11FixedHeaderSize)
@@ -130,9 +131,6 @@ public static class XbtTexture
 
         return Convert.FromHexString(hex.Trim());
     }
-
-    private static uint ReadU32(byte[] data, int offset)
-        => (uint)(data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24));
 
     /// <summary>A null-terminated ASCII path occupying [fixedEnd, header.Length); empty in every sample seen so far.</summary>
     private static string? ReadEmbeddedPath(byte[] header, int fixedEnd)

@@ -51,21 +51,21 @@ public static class DepLoadDocument
 {
     public static DepLoadFile Decode(byte[] content)
     {
-        int pos = 0;
-        uint parentCount = ReadU32(content, ref pos);
+        var cursor = new ByteCursor(content);
+        uint parentCount = cursor.ReadU32();
 
         var rawParents = new (ushort ChildIndex, ushort ChildCount, uint Hash)[parentCount];
         for (int i = 0; i < parentCount; i++)
         {
-            ushort childIndex = ReadU16(content, ref pos);
-            ushort childCount = ReadU16(content, ref pos);
-            uint hash = ReadU32(content, ref pos);
+            ushort childIndex = cursor.ReadU16();
+            ushort childCount = cursor.ReadU16();
+            uint hash = cursor.ReadU32();
             rawParents[i] = (childIndex, childCount, hash);
         }
 
-        uint[] childHash = ReadU32Array(content, ref pos, out uint childHashCount);
-        byte[] childTypeIndex = ReadU8Array(content, ref pos, out uint childTypeIndexCount);
-        uint[] typeTable = ReadU32Array(content, ref pos, out _);
+        uint[] childHash = ReadU32Array(ref cursor, out uint childHashCount);
+        byte[] childTypeIndex = ReadU8Array(ref cursor, out uint childTypeIndexCount);
+        uint[] typeTable = ReadU32Array(ref cursor, out _);
 
         if (childHashCount != childTypeIndexCount)
         {
@@ -105,52 +105,20 @@ public static class DepLoadDocument
         return new DepLoadFile(parents);
     }
 
-    private static uint[] ReadU32Array(byte[] data, ref int pos, out uint count)
+    private static uint[] ReadU32Array(ref ByteCursor cursor, out uint count)
     {
-        count = ReadU32(data, ref pos);
+        count = cursor.ReadU32();
         var result = new uint[count];
         for (int i = 0; i < count; i++)
         {
-            result[i] = ReadU32(data, ref pos);
+            result[i] = cursor.ReadU32();
         }
         return result;
     }
 
-    private static byte[] ReadU8Array(byte[] data, ref int pos, out uint count)
+    private static byte[] ReadU8Array(ref ByteCursor cursor, out uint count)
     {
-        count = ReadU32(data, ref pos);
-        return Slice(data, ref pos, (int)count);
-    }
-
-    private static ushort ReadU16(byte[] data, ref int pos)
-    {
-        EnsureAvailable(data, pos, 2);
-        ushort value = (ushort)(data[pos] | (data[pos + 1] << 8));
-        pos += 2;
-        return value;
-    }
-
-    private static uint ReadU32(byte[] data, ref int pos)
-    {
-        EnsureAvailable(data, pos, 4);
-        uint value = (uint)(data[pos] | (data[pos + 1] << 8) | (data[pos + 2] << 16) | (data[pos + 3] << 24));
-        pos += 4;
-        return value;
-    }
-
-    private static byte[] Slice(byte[] data, ref int pos, int length)
-    {
-        EnsureAvailable(data, pos, length);
-        byte[] result = data[pos..(pos + length)];
-        pos += length;
-        return result;
-    }
-
-    private static void EnsureAvailable(byte[] data, int pos, int need)
-    {
-        if (pos + need > data.Length)
-        {
-            throw new InvalidDataException("Unexpected end of file while reading a depload.dat - truncated or corrupt.");
-        }
+        count = cursor.ReadU32();
+        return cursor.ReadBytes((int)count);
     }
 }

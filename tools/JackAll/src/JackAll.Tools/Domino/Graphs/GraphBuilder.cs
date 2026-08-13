@@ -45,21 +45,43 @@ public static class GraphBuilder
 
     private sealed record PendingEdge(string SourceNodeId, string SourcePin, int? Index, string? TargetHandler);
 
+    /// <summary>Mutable state the build passes accumulate into. <see cref="StatementOrder"/> is the
+    /// current statement's position in whole-file order, stamped on every data event so
+    /// <see cref="DataFlowResolver"/> can sequence produces against consumes across functions.</summary>
+    private sealed class BuildState
+    {
+        public readonly Dictionary<BoxRef, NodeBuilder> NodesByRef = new();
+        public readonly List<NodeBuilder> AllNodes = new();
+        public readonly List<string> RegisteredDeps = new();
+        public readonly List<(string, string)> LoadedResources = new();
+        public readonly List<DataEvent> DataEvents = new();
+        public readonly List<PendingEdge> PendingEdges = new();
+        public int StatementOrder;
+    }
+
     /// <param name="catalog">Resolves each box's node type to its pin interface. Optional: without one
     /// the graph still reconstructs, the nodes just carry no <see cref="GraphNode.Signature"/>.</param>
     /// <param name="twin">The graph's parsed `*.debug.lua`, when available - supplies each persistent
     /// box's original editor name.</param>
     public static ReconstructedGraph Build(UserGraph graph, DominoNodeCatalog? catalog = null, DominoDebugTwin? twin = null)
     {
-        var nodesByRef = new Dictionary<BoxRef, NodeBuilder>();
-        var allNodes = new List<NodeBuilder>();
-        var registeredDeps = new List<string>();
-        var loadedResources = new List<(string, string)>();
-        var dataEvents = new List<DataEvent>();
-        int statementOrder = 0;
+        var state = new BuildState();
+        RegisterPersistentBoxes(graph, state);
 
-        // Pass 0: register every persistent box instance up front, so any function can reference one by
-        // BoxRef regardless of which function it happens to be manipulated from.
+        var entryByFunction = new Dictionary<string, List<EntryEvent>>();
+        foreach (var fn in graph.Functions)
+        {
+            entryByFunction[fn.Name] = new FunctionWalker(state, fn).Walk();
+        }
+
+        var edges = ResolveControlEdges(state.PendingEdges, entryByFunction);
+        return Assemble(state, edges, catalog, twin);
+    }
+
+    /// <summary>Registers every persistent box instance up front, so any function can reference one by
+    /// BoxRef regardless of which function it happens to be manipulated from.</summary>
+    private static void RegisterPersistentBoxes(UserGraph graph, BuildState state)
+    {
         foreach (var fn in graph.Functions)
         {
             foreach (var stmt in fn.Body)
@@ -74,90 +96,42 @@ public static class GraphBuilder
                         Kind = BoxInstanceKind.Persistent,
                         OwnerFunction = fn.Name,
                     };
-                    nodesByRef[create.Box] = nb;
-                    allNodes.Add(nb);
+                    state.NodesByRef[create.Box] = nb;
+                    state.AllNodes.Add(nb);
                 }
             }
         }
+    }
 
-        // Pass 1: per function, build pooled-box occurrence nodes, collect this function's outgoing
-        // wiring as pending edges, and record what "firing into this function" resolves to.
-        var pendingEdges = new List<PendingEdge>();
-        var entryByFunction = new Dictionary<string, List<EntryEvent>>();
+    /// <summary>Walks one function's statements in order: builds pooled-box occurrence nodes, collects
+    /// the function's outgoing wiring as pending edges, and returns what "firing into this function"
+    /// resolves to.</summary>
+    private sealed class FunctionWalker(BuildState state, UserGraphFunction fn)
+    {
+        private readonly Dictionary<BoxRef, NodeBuilder> _openPooled = new();
+        private int _occurrenceSeq;
 
-        foreach (var fn in graph.Functions)
+        public List<EntryEvent> Walk()
         {
-            var openPooled = new Dictionary<BoxRef, NodeBuilder>();
-            int occurrenceSeq = 0;
             var events = new List<EntryEvent>();
-
-            NodeBuilder? ResolveBoxNode(BoxRef boxRef)
-            {
-                if (nodesByRef.TryGetValue(boxRef, out var existing))
-                {
-                    return existing;
-                }
-                if (boxRef is not PooledBoxRef pooled)
-                {
-                    return null; // an instance ref that was never CreateBox'd - not expected in the real corpus
-                }
-                if (openPooled.TryGetValue(boxRef, out var open))
-                {
-                    return open;
-                }
-                var nb = new NodeBuilder
-                {
-                    Id = $"o:{fn.Name}#{occurrenceSeq++}",
-                    Ref = boxRef,
-                    NodeTypePath = pooled.Path,
-                    Kind = BoxInstanceKind.Pooled,
-                    OwnerFunction = fn.Name,
-                };
-                openPooled[boxRef] = nb;
-                allNodes.Add(nb);
-                return nb;
-            }
-
-            // A `Box.Param = value;` is a data connection when the value reads something rather than
-            // stating a literal: usually a graph variable (`self.BuddyPawn`), occasionally another box's
-            // data-out pin directly. Literals aren't edges - they're just the box's settings.
-            void RecordParamDataEvent(NodeBuilder consumer, SetParamStmt p, string functionName, int order)
-            {
-                var (variable, direct) = DataFlowResolver.ClassifyParamValue(p.Value);
-                if (variable is not null)
-                {
-                    dataEvents.Add(new DataEvent(
-                        DataEventKind.Consume, consumer.Id, p.ParamName, variable,
-                        null, null, functionName, order));
-                }
-                else if (direct is { } source && nodesByRef.TryGetValue(source.Box, out NodeBuilder? sourceNode))
-                {
-                    // Looked up rather than resolved, so reading a pooled box's pin here can't silently
-                    // open a fresh occurrence of it as a side effect.
-                    dataEvents.Add(new DataEvent(
-                        DataEventKind.DirectConsume, consumer.Id, p.ParamName, null,
-                        sourceNode.Id, source.Pin, functionName, order));
-                }
-            }
-
             foreach (var stmt in fn.Body)
             {
-                statementOrder++;
+                state.StatementOrder++;
                 switch (stmt)
                 {
                     case RegisterBoxStmt r:
-                        registeredDeps.Add(r.Path);
+                        state.RegisteredDeps.Add(r.Path);
                         break;
 
                     case LoadResourceStmt l:
-                        loadedResources.Add((l.ResourceName, l.ResourceType));
+                        state.LoadedResources.Add((l.ResourceName, l.ResourceType));
                         break;
 
                     case SetParamStmt p:
                         if (ResolveBoxNode(p.Box) is { } paramNode)
                         {
                             paramNode.Params[p.ParamName] = p.Value;
-                            RecordParamDataEvent(paramNode, p, fn.Name, statementOrder);
+                            RecordParamDataEvent(paramNode, p);
                         }
                         break;
 
@@ -166,9 +140,9 @@ public static class GraphBuilder
                     case ReadDataStmt read when DominoNodeCatalog.GraphFieldName(read.Target) is { } variable:
                         if (ResolveBoxNode(read.Box) is { } producerNode)
                         {
-                            dataEvents.Add(new DataEvent(
+                            state.DataEvents.Add(new DataEvent(
                                 DataEventKind.Produce, producerNode.Id, read.PinName, variable,
-                                null, null, fn.Name, statementOrder)
+                                null, null, fn.Name, state.StatementOrder)
                             {
                                 NodeTypePath = producerNode.NodeTypePath,
                             });
@@ -176,13 +150,14 @@ public static class GraphBuilder
                         break;
 
                     case SetGraphBackrefStmt g:
-                        ResolveBoxNode(g.Box); // touch/open the occurrence only
+                        // Touch/open the occurrence only.
+                        ResolveBoxNode(g.Box);
                         break;
 
                     case WireControlOutStmt w:
                         if (ResolveBoxNode(w.Box) is { } wireNode)
                         {
-                            pendingEdges.Add(new PendingEdge(wireNode.Id, w.PinName, w.Index, w.TargetHandler));
+                            state.PendingEdges.Add(new PendingEdge(wireNode.Id, w.PinName, w.Index, w.TargetHandler));
                         }
                         break;
 
@@ -194,7 +169,7 @@ public static class GraphBuilder
                             {
                                 // Fired and done - a later configure of the same path in this function
                                 // is a fresh occurrence, not a continuation of this one.
-                                openPooled.Remove(f.Box);
+                                _openPooled.Remove(f.Box);
                             }
                         }
                         break;
@@ -207,18 +182,71 @@ public static class GraphBuilder
                         events.Add(new EntryEvent(EntryEventKind.GraphExit, null, null, null, pin.PinName));
                         break;
 
-                    // CreateBoxStmt: handled in pass 0.
+                    // CreateBoxStmt: handled by RegisterPersistentBoxes.
                     // RebindSelfToGraphStmt, ReadDataStmt, SetGraphFieldStmt, TraceConnectionStmt,
                     // OtherStmt: no node/edge effect.
                 }
             }
 
-            entryByFunction[fn.Name] = events;
+            return events;
         }
 
-        // Pass 2: resolve every pending edge. A target handler can fan out into any number of terminals
-        // (fire box A, then box B, then...) - each becomes its own edge sharing the source pin; a
-        // handler that resolves to zero terminals is a single DeadEnd edge instead.
+        private NodeBuilder? ResolveBoxNode(BoxRef boxRef)
+        {
+            if (state.NodesByRef.TryGetValue(boxRef, out var existing))
+            {
+                return existing;
+            }
+            if (boxRef is not PooledBoxRef pooled)
+            {
+                // An instance ref that was never CreateBox'd - not expected in the real corpus.
+                return null;
+            }
+            if (_openPooled.TryGetValue(boxRef, out var open))
+            {
+                return open;
+            }
+            var nb = new NodeBuilder
+            {
+                Id = $"o:{fn.Name}#{_occurrenceSeq++}",
+                Ref = boxRef,
+                NodeTypePath = pooled.Path,
+                Kind = BoxInstanceKind.Pooled,
+                OwnerFunction = fn.Name,
+            };
+            _openPooled[boxRef] = nb;
+            state.AllNodes.Add(nb);
+            return nb;
+        }
+
+        // A `Box.Param = value;` is a data connection when the value reads something rather than
+        // stating a literal: usually a graph variable (`self.BuddyPawn`), occasionally another box's
+        // data-out pin directly. Literals aren't edges - they're just the box's settings.
+        private void RecordParamDataEvent(NodeBuilder consumer, SetParamStmt p)
+        {
+            var (variable, direct) = DataFlowResolver.ClassifyParamValue(p.Value);
+            if (variable is not null)
+            {
+                state.DataEvents.Add(new DataEvent(
+                    DataEventKind.Consume, consumer.Id, p.ParamName, variable,
+                    null, null, fn.Name, state.StatementOrder));
+            }
+            else if (direct is { } source && state.NodesByRef.TryGetValue(source.Box, out NodeBuilder? sourceNode))
+            {
+                // Looked up rather than resolved, so reading a pooled box's pin here can't silently
+                // open a fresh occurrence of it as a side effect.
+                state.DataEvents.Add(new DataEvent(
+                    DataEventKind.DirectConsume, consumer.Id, p.ParamName, null,
+                    sourceNode.Id, source.Pin, fn.Name, state.StatementOrder));
+            }
+        }
+    }
+
+    /// <summary>Resolves every pending edge. A target handler can fan out into any number of terminals
+    /// (fire box A, then box B, then...) - each becomes its own edge sharing the source pin; a handler
+    /// that resolves to zero terminals is a single DeadEnd edge instead.</summary>
+    private static List<GraphEdge> ResolveControlEdges(List<PendingEdge> pendingEdges, Dictionary<string, List<EntryEvent>> entryByFunction)
+    {
         var edges = new List<GraphEdge>();
         foreach (var pending in pendingEdges)
         {
@@ -240,9 +268,14 @@ public static class GraphBuilder
             }
         }
 
+        return edges;
+    }
+
+    private static ReconstructedGraph Assemble(BuildState state, List<GraphEdge> edges, DominoNodeCatalog? catalog, DominoDebugTwin? twin)
+    {
         IReadOnlyDictionary<long, string>? twinNames = twin?.BoxNamesById;
 
-        var finalNodes = allNodes
+        var nodes = state.AllNodes
             .Select(nb => new GraphNode(nb.Id, nb.Ref, nb.NodeTypePath, nb.Kind, nb.OwnerFunction, nb.Params)
             {
                 Signature = catalog?.Resolve(nb.NodeTypePath),
@@ -251,7 +284,7 @@ public static class GraphBuilder
             .ToList();
 
         // Data attribution leans on control flow to tell which of several writers of a graph variable
-        // actually reached a given consumer, so the resolver needs the edges this pass just produced.
+        // actually reached a given consumer, so the resolver needs the just-resolved control edges.
         var controlAdjacency = edges
             .Where(e => e.Target == EdgeTarget.Node && e.TargetNodeId is not null)
             .Select(e => (e.SourceNodeId, e.TargetNodeId!))
@@ -259,7 +292,7 @@ public static class GraphBuilder
             .ToList();
 
         return new ReconstructedGraph(
-            finalNodes, edges, DataFlowResolver.Resolve(dataEvents, controlAdjacency), registeredDeps, loadedResources);
+            nodes, edges, DataFlowResolver.Resolve(state.DataEvents, controlAdjacency), state.RegisteredDeps, state.LoadedResources);
     }
 
     /// <summary>A persistent box's `self[N]` slot is its original editor box ID, which is what the debug

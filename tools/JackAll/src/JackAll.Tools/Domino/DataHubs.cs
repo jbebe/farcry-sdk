@@ -1,6 +1,6 @@
 using JackAll.Tools.Domino.Graphs;
 
-namespace JackAll.App.FileHandlers.Domino;
+namespace JackAll.Tools.Domino;
 
 /// <summary>
 /// Finds the data source pins that feed so many consumers that drawing each one as a wire stops

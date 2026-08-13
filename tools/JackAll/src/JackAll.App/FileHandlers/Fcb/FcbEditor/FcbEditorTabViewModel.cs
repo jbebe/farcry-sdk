@@ -1,6 +1,8 @@
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using JackAll.Core.Format.Fcb;
+using JackAll.Tools.Fcb;
+using JackAll.Tools.Sav;
 
 namespace JackAll.App.FileHandlers.Fcb.FcbEditor;
 

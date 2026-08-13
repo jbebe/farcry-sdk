@@ -21,10 +21,6 @@ public static class MgbEdit
     public static IReadOnlyList<string> LegalElementTypes { get; } =
         [.. MgbSchema.WidgetWrapper.Keys.Order(StringComparer.Ordinal)];
 
-    /// <summary>The <c>ActionExecuter</c> classes an <c>ActionCaller</c> may hold.</summary>
-    public static IReadOnlyList<string> LegalActionExecuterTypes { get; } =
-        [.. MgbSchema.ActionExecuterTypes.Order(StringComparer.Ordinal)];
-
     /// <summary>Creates an area of <paramref name="typeName"/>, declaring the class in the
     /// package's type table if it isn't already there.</summary>
     public static MgbArea CreateArea(MgbPackage package, string typeName, string name)
@@ -104,19 +100,5 @@ public static class MgbEdit
         var copy = new MgbElement { TypeSlot = element.TypeSlot, WidgetTypeName = element.WidgetTypeName };
         copy.Serialize(new MgbReadCodec(writer.ToArray(), package.Invert), ctx);
         return copy;
-    }
-
-    /// <summary>Moves an item within its list. Returns false when it is already at the end.</summary>
-    public static bool Move<T>(IList<T> list, T item, int delta)
-    {
-        int from = list.IndexOf(item);
-        int to = from + delta;
-        if (from < 0 || to < 0 || to >= list.Count)
-        {
-            return false;
-        }
-        list.RemoveAt(from);
-        list.Insert(to, item);
-        return true;
     }
 }

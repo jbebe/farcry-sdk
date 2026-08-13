@@ -7,8 +7,8 @@ namespace JackAll.App.FileHandlers.Mgb;
 
 /// <summary>
 /// The Files tab's compact preview for a <c>.mgb</c> Magma UI package: the "Open in MGB Editor…"
-/// launcher plus the one-line header summary, mirroring <see cref="Domino.DominoFilePreviewHandler"/>'s
-/// and <see cref="Fcb.FcbFragmentDetailsHandler"/>'s launcher-plus-preview shape. The editor itself
+/// launcher plus the one-line header summary, mirroring <see cref="LauncherPreviewHandler"/>'s
+/// launcher-plus-preview shape (a package summary rather than a text diff, so not that class). The editor itself
 /// (<see cref="App.Mgb.MgbTabView"/>) needs a tab of its own - see its remarks.
 /// </summary>
 public partial class MgbFilePreviewHandler : UserControl

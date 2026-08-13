@@ -20,8 +20,6 @@ public sealed class MgbMaterial : MgbRecord
         set => TextureName = MgbText.ToAnsi(value);
     }
 
-    public float Region(int i) => BitConverter.UInt32BitsToSingle(RegionBits[i]);
-
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
         c.NameId("name", ref NameId);

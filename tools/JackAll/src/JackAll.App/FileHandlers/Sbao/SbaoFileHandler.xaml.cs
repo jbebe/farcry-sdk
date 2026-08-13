@@ -3,8 +3,6 @@ using JackAll.Tools.Sbao;
 using Microsoft.Win32;
 using System.IO;
 using System.Windows.Controls;
-using System.Windows.Input;
-using System.Windows.Threading;
 using System.Windows;
 
 namespace JackAll.App.FileHandlers.Sbao;
@@ -13,19 +11,16 @@ namespace JackAll.App.FileHandlers.Sbao;
 /// The file handler for Ogg-backed .sbao audio (music, dialogue). Splits the file into its
 /// engine header and embedded Ogg Vorbis payload on load, offers export as the original Ogg or as
 /// mp3, imports any ffmpeg-readable audio (transcoded to Far Cry 2's required 48 kHz stereo Ogg
-/// Vorbis and staged into the workspace), and previews it with a small play/pause/stop/seek player.
+/// Vorbis and staged into the workspace), and previews it via <see cref="Audio.AudioPreviewPanel"/>.
 /// </summary>
 public partial class SbaoFileHandler : UserControl
 {
     private readonly string _fileName;
     private readonly Action<byte[]> _replaceContent;
-    private readonly DispatcherTimer _timer;
     private byte[]? _header;
     private byte[]? _ogg;
     private string? _tempOggPath;
     private string? _tempWavPath;
-    private bool _isUserSeeking;
-    private bool _updatingSlider;
 
     public SbaoFileHandler(string fileName, byte[] content, Action<byte[]> replaceContent)
     {
@@ -33,10 +28,13 @@ public partial class SbaoFileHandler : UserControl
         _fileName = fileName;
         _replaceContent = replaceContent;
 
-        _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-        _timer.Tick += OnTimerTick;
-        _timer.Start();
-        Unloaded += (_, _) => Cleanup();
+        // Release the temp .wav before deleting it - the panel resets itself on Unloaded too, but
+        // child/parent Unloaded order isn't guaranteed.
+        Unloaded += (_, _) =>
+        {
+            Preview.Reset();
+            DeleteTempFiles();
+        };
 
         Load(content);
     }
@@ -73,13 +71,13 @@ public partial class SbaoFileHandler : UserControl
             _ogg = null;
             StatusText.Text = $"Couldn't read this file: {ex.Message}";
             ExportButton.IsEnabled = false;
-            ResetPlayer();
+            Preview.Reset();
         }
     }
 
     private async Task PreparePreviewAsync(byte[] ogg)
     {
-        ResetPlayer();
+        Preview.Reset();
         DeleteTempFiles();
 
         try
@@ -89,8 +87,7 @@ public partial class SbaoFileHandler : UserControl
             await File.WriteAllBytesAsync(_tempOggPath, ogg);
             await FfmpegAudio.TranscodeToWavAsync(_tempOggPath, _tempWavPath);
 
-            Player.Source = new Uri(_tempWavPath);
-            PlayButton.IsEnabled = true;
+            Preview.Open(_tempWavPath);
         }
         catch (Exception ex)
         {
@@ -205,82 +202,6 @@ public partial class SbaoFileHandler : UserControl
             TryDelete(tempOgg);
             ImportButton.IsEnabled = true;
         }
-    }
-
-    private void Play_Click(object sender, RoutedEventArgs e) => Player.Play();
-
-    private void Pause_Click(object sender, RoutedEventArgs e) => Player.Pause();
-
-    private void Stop_Click(object sender, RoutedEventArgs e) => Player.Stop();
-
-    private void Player_MediaOpened(object sender, RoutedEventArgs e)
-    {
-        if (Player.NaturalDuration.HasTimeSpan)
-        {
-            SeekBar.Maximum = Player.NaturalDuration.TimeSpan.TotalSeconds;
-        }
-
-        SeekBar.IsEnabled = true;
-        PauseButton.IsEnabled = true;
-        StopButton.IsEnabled = true;
-    }
-
-    private void Player_MediaEnded(object sender, RoutedEventArgs e) => Player.Stop();
-
-    private void SeekBar_PreviewMouseDown(object sender, MouseButtonEventArgs e) => _isUserSeeking = true;
-
-    private void SeekBar_PreviewMouseUp(object sender, MouseButtonEventArgs e)
-    {
-        _isUserSeeking = false;
-        Player.Position = TimeSpan.FromSeconds(SeekBar.Value);
-    }
-
-    private void SeekBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
-    {
-        if (_updatingSlider || !_isUserSeeking)
-        {
-            return;
-        }
-
-        TimeText.Text = FormatTime(TimeSpan.FromSeconds(SeekBar.Value)) + " / " + FormatTime(TotalDuration());
-    }
-
-    private void OnTimerTick(object? sender, EventArgs e)
-    {
-        if (_isUserSeeking || Player.Source is null || !Player.NaturalDuration.HasTimeSpan)
-        {
-            return;
-        }
-
-        _updatingSlider = true;
-        SeekBar.Value = Player.Position.TotalSeconds;
-        _updatingSlider = false;
-        TimeText.Text = FormatTime(Player.Position) + " / " + FormatTime(TotalDuration());
-    }
-
-    private TimeSpan TotalDuration()
-        => Player.NaturalDuration.HasTimeSpan ? Player.NaturalDuration.TimeSpan : TimeSpan.Zero;
-
-    private static string FormatTime(TimeSpan t) => $"{(int)t.TotalMinutes}:{t.Seconds:D2}";
-
-    private void ResetPlayer()
-    {
-        Player.Stop();
-        Player.Close();
-        Player.Source = null;
-        SeekBar.Value = 0;
-        SeekBar.IsEnabled = false;
-        TimeText.Text = "0:00 / 0:00";
-        PlayButton.IsEnabled = false;
-        PauseButton.IsEnabled = false;
-        StopButton.IsEnabled = false;
-    }
-
-    private void Cleanup()
-    {
-        _timer.Stop();
-        ResetPlayer();
-        DeleteTempFiles();
     }
 
     private void DeleteTempFiles()

@@ -76,6 +76,26 @@ public static class LegacyPatchImporter
         }
     }
 
+    /// <summary>The same import against a folder: finds the patch.fat/patch.dat pair anywhere under
+    /// <paramref name="directory"/>, throwing when there is none — the signal that this isn't a
+    /// legacy full-patch mod at all.</summary>
+    public static LegacyImportResult ImportFromDirectory(
+        string directory,
+        FolderModLayer workspace,
+        NameDatabase names,
+        FcbClassDefinitions fcbDefinitions,
+        Func<uint, byte[]?> readOriginal,
+        Func<uint, ulong?> readOriginalHash,
+        IProgress<string>? progress = null)
+    {
+        (string Fat, string Dat) pair = FindPatchPair(directory)
+            ?? throw new InvalidOperationException(
+                $"No patch.fat/patch.dat pair under '{directory}' - this isn't a legacy full-patch mod. "
+                + "An ordinary community mod (a tree of relative game paths) is used as a layer directly.");
+
+        return Import(pair.Fat, pair.Dat, workspace, names, fcbDefinitions, readOriginal, readOriginalHash, progress);
+    }
+
     /// <summary>
     /// The same import, against a patch.fat/patch.dat pair already sitting on disk rather than one
     /// still inside a zip.

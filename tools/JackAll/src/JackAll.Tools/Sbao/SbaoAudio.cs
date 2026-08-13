@@ -1,3 +1,4 @@
+using JackAll.Core.Format;
 using JackAll.Tools.Audio;
 
 namespace JackAll.Tools.Sbao;
@@ -50,20 +51,20 @@ public static class SbaoAudio
     {
         // First Ogg page: 'OggS'(4) ver(1) type(1) granule(8) serial(4) seq(4) crc(4) nsegs(1) segtable(nsegs);
         // then the Vorbis ID packet: 0x01 'vorbis'(6) version(4) channels(1) sample_rate(4 LE) ...
-        if (ogg.Length < 28 || !Matches(ogg, 0, "OggS"u8))
+        if (ogg.Length < 28 || !ByteCursor.Matches(ogg, 0, "OggS"u8))
         {
             return null;
         }
 
         int nsegs = ogg[26];
         int packet = 27 + nsegs;
-        if (packet + 16 > ogg.Length || ogg[packet] != 0x01 || !Matches(ogg, packet + 1, "vorbis"u8))
+        if (packet + 16 > ogg.Length || ogg[packet] != 0x01 || !ByteCursor.Matches(ogg, packet + 1, "vorbis"u8))
         {
             return null;
         }
 
         int channels = ogg[packet + 11];
-        int sampleRate = (int)ReadU32(ogg, packet + 12);
+        int sampleRate = (int)ByteCursor.U32(ogg, packet + 12);
         return (sampleRate, channels);
     }
 
@@ -74,13 +75,13 @@ public static class SbaoAudio
             throw new InvalidDataException("File too small to be an .sbao.");
         }
 
-        uint offset = ReadU32(data, HeaderOffsetField);
-        if (offset > 0 && offset < data.Length - 4 && Matches(data, (int)offset, "OggS"u8))
+        uint offset = ByteCursor.U32(data, HeaderOffsetField);
+        if (offset > 0 && offset < data.Length - 4 && ByteCursor.Matches(data, (int)offset, "OggS"u8))
         {
             return (int)offset;
         }
 
-        int idx = IndexOf(data, "OggS"u8);
+        int idx = data.AsSpan().IndexOf("OggS"u8);
         if (idx < 0)
         {
             throw new InvalidDataException(
@@ -88,24 +89,5 @@ public static class SbaoAudio
                 "in a still-unconfirmed envelope, unsupported here).");
         }
         return idx;
-    }
-
-    private static uint ReadU32(byte[] data, int offset)
-        => (uint)(data[offset] | (data[offset + 1] << 8) | (data[offset + 2] << 16) | (data[offset + 3] << 24));
-
-    private static bool Matches(byte[] data, int offset, ReadOnlySpan<byte> expected)
-        => offset >= 0 && offset + expected.Length <= data.Length
-           && data.AsSpan(offset, expected.Length).SequenceEqual(expected);
-
-    private static int IndexOf(byte[] data, ReadOnlySpan<byte> pattern)
-    {
-        for (int i = 0; i <= data.Length - pattern.Length; i++)
-        {
-            if (data.AsSpan(i, pattern.Length).SequenceEqual(pattern))
-            {
-                return i;
-            }
-        }
-        return -1;
     }
 }

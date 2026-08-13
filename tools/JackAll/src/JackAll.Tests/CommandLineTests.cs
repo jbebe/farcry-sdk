@@ -9,12 +9,7 @@ namespace JackAll.Tests;
 /// </summary>
 public class CommandLineTests
 {
-    private static readonly HashSet<string> Flags = new(StringComparer.OrdinalIgnoreCase)
-    {
-        "game", "g", "layer", "l", "from", "f", "out", "o", "name", "force", "json",
-    };
-
-    private static CommandLine Parse(params string[] args) => CommandLine.Parse(args, Flags);
+    private static CommandLine Parse(params string[] args) => CommandLine.Parse(args, Program.KnownFlags);
 
     [Fact]
     public void Leading_words_become_the_command_and_flags_are_read_by_name()

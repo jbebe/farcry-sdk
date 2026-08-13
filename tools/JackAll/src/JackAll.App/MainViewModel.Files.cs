@@ -1,0 +1,590 @@
+using JackAll.Core.Naming;
+using JackAll.Core.Vfs;
+using System.Collections.ObjectModel;
+using System.Globalization;
+using System.IO;
+
+namespace JackAll.App;
+
+/// <summary>The Files-tab half of <see cref="MainViewModel"/>: the folder tree, the filtered file
+/// list, selection state, the details pane's display strings, and folder export.</summary>
+public sealed partial class MainViewModel
+{
+    private readonly Dictionary<string, FolderNode> _folderIndex = new(StringComparer.OrdinalIgnoreCase);
+    private FolderNode? _selectedFolder;
+    private VfsFile? _selectedFile;
+    private IReadOnlyList<VfsFile> _selectedFiles = [];
+    private bool _onlyMods;
+    private string _filterText = "";
+    private bool _includeLinks;
+    private CancellationTokenSource? _exportCts;
+
+    /// <summary>How often <see cref="ExportFiles"/> updates <see cref="Status"/> — often enough to
+    /// look alive on a big subtree, rarely enough not to spend the export marshalling to the UI thread.</summary>
+    private const int ExportReportEvery = 100;
+
+    public ObservableCollection<FolderNode> Roots { get; } = [];
+    public ObservableCollection<VfsFile> VisibleFiles { get; } = [];
+
+    /// <summary>
+    /// The "Show only mod files" filter - literally "did a mod layer win this hash". Rebuilding the
+    /// tree (rather than just the file list) is what makes this filter the directory list too, by
+    /// pruning away branches that carry no mod content.
+    /// </summary>
+    public bool OnlyMods
+    {
+        get => _onlyMods;
+        set { _onlyMods = value; OnPropertyChanged(); BuildTree(); }
+    }
+
+    /// <summary>
+    /// A partial-match search over every file's full path — while it's non-empty, the file list
+    /// shows every match across the whole tree instead of just the selected folder (the folder tree
+    /// stays put for navigation, it just stops constraining the list). '/' and '\' are treated as
+    /// equivalent since paths mix both conventions. An <c>ext:xbt</c>-shaped token filters by file
+    /// type instead (see <see cref="ParseFilter"/>) and can combine with plain text, e.g.
+    /// <c>"ext:xbt cliff"</c>.
+    /// </summary>
+    public string FilterText
+    {
+        get => _filterText;
+        set { _filterText = value; OnPropertyChanged(); RefreshFileList(debounce: true); }
+    }
+
+    /// <summary>Whether depload.dat link rows (see <see cref="VfsFile.IsDependencyLink"/>) show up
+    /// in the file list at all. Off by default - a link row exists for every parent/child entry of
+    /// every depload.dat (tens of thousands on a real install), and it duplicates a hit on the
+    /// target's own name/hash, so leaving them in swamps an ordinary text search.</summary>
+    public bool IncludeLinks
+    {
+        get => _includeLinks;
+        set { _includeLinks = value; OnPropertyChanged(); RefreshFileList(); }
+    }
+
+    public FolderNode? SelectedFolder
+    {
+        get => _selectedFolder;
+        set
+        {
+            _selectedFolder = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasSelectedFolder));
+            OnPropertyChanged(nameof(NoSelectedFolder));
+            RefreshFileList();
+        }
+    }
+
+    /// <summary>Whether the details pane has a folder to offer "Export folder…" for. Only consulted
+    /// while nothing is selected in the file grid (see <see cref="NoSelection"/>), which is exactly
+    /// the state browsing to a folder leaves you in.</summary>
+    public bool HasSelectedFolder => SelectedFolder is not null;
+    public bool NoSelectedFolder => SelectedFolder is null;
+
+    public VfsFile? SelectedFile
+    {
+        get => _selectedFile;
+        set
+        {
+            _selectedFile = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(HasSelection));
+            OnPropertyChanged(nameof(NoSelection));
+            OnPropertyChanged(nameof(CanRevert));
+            OnPropertyChanged(nameof(CanRevertFromWorkspace));
+            OnPropertyChanged(nameof(SizeText));
+            OnPropertyChanged(nameof(OriginText));
+            OnPropertyChanged(nameof(HashText));
+            OnPropertyChanged(nameof(PathText));
+            OnPropertyChanged(nameof(ModOrigin));
+            OnPropertyChanged(nameof(NamingNote));
+            OnPropertyChanged(nameof(HasNamingNote));
+            OnPropertyChanged(nameof(HasOriginal));
+        }
+    }
+
+    /// <summary>All rows currently selected in the Files tab's grid, kept in sync from code-behind.</summary>
+    public IReadOnlyList<VfsFile> SelectedFiles => _selectedFiles;
+
+    public int SelectedCount => _selectedFiles.Count;
+    public bool HasSelection => SelectedCount == 1;
+    public bool NoSelection => SelectedCount == 0;
+    public bool IsMultiSelection => SelectedCount > 1;
+    public bool CanRevert => SelectedFile?.IsModded == true;
+
+    /// <summary>Whether the Revert button can actually act on this row - the underlying
+    /// <see cref="Workspace"/>.Unstage only ever removes the workspace's own whole-file override (see
+    /// <see cref="Revert"/>), so this is narrower than <see cref="CanRevert"/> in two ways: a row whose
+    /// only "modded" signal is a fragment inside it (<see cref="VfsFile.FragmentOverrideSource"/>) has
+    /// nothing of its own to unstage, and a row overridden by some other mod zip isn't the workspace's
+    /// to remove - see Revert_Click's own messages for what each of those cases tells the user instead.</summary>
+    public bool CanRevertFromWorkspace => SelectedFile is { FragmentOverrideSource: null, SourceName: "workspace" };
+
+    /// <summary>Whether "Export original…" has anything worth exporting separately from "Export" -
+    /// requires <see cref="CanRevert"/> (an unmodded file's original is identical to what "Export"
+    /// already produces, so the second button would just be a duplicate) and an actual base-game
+    /// version to fall back to: a mod-added file (or, for a fragment, one whose container itself was
+    /// added entirely by a mod) can be modded with nothing to compare against.</summary>
+    public bool HasOriginal => CanRevert && SelectedFile is { } f && ReadOriginal(f) is not null;
+
+    public string MultiSelectCountText => $"{SelectedCount:N0} files selected";
+    public string MultiSelectSizeText => FormatSize(_selectedFiles.Sum(f => f.Size));
+
+    /// <summary>Called from code-behind whenever the Files tab's grid selection changes.</summary>
+    public void SetSelectedFiles(IReadOnlyList<VfsFile> files)
+    {
+        _selectedFiles = files;
+        SelectedFile = files.Count == 1 ? files[0] : null;
+        OnPropertyChanged(nameof(SelectedFiles));
+        OnPropertyChanged(nameof(SelectedCount));
+        OnPropertyChanged(nameof(IsMultiSelection));
+        OnPropertyChanged(nameof(MultiSelectCountText));
+        OnPropertyChanged(nameof(MultiSelectSizeText));
+    }
+
+    public string SizeText => SelectedFile is { } f ? FormatSize(f.Size) : string.Empty;
+
+    public string OriginText => SelectedFile switch
+    {
+        null => string.Empty,
+        { IsModded: true } => "mod",
+        var f => $"archive: {ModuleNameFor(f)}",
+    };
+
+    /// <summary>The archive name to show for <paramref name="file"/> - disambiguated with its parent
+    /// folder when another mounted archive shares the same bare name (see
+    /// <see cref="GameVfs.DisplayModuleName"/>), without exposing <see cref="_vfs"/> itself.</summary>
+    public string ModuleNameFor(VfsFile file) => _vfs?.DisplayModuleName(file) ?? file.SourceName;
+
+    /// <summary>Which mod supplied this file, and whether that meant overriding the base game.</summary>
+    public string ModOrigin => SelectedFile switch
+    {
+        { FragmentOverrideSource: { } source } => $"Mod: {source}  (overrides one or more fragments inside this file)",
+        { IsModded: true } f => f.IsOverriding ? $"Mod: {f.SourceName}  (overrides the base game file)" : $"Mod: {f.SourceName}",
+        _ => string.Empty,
+    };
+
+    public string HashText => SelectedFile is { } f ? $"{f.Hash:X8}" : string.Empty;
+    public string PathText => SelectedFile?.Path ?? string.Empty;
+
+    public bool HasNamingNote => SelectedFile is { NameIsKnown: false };
+
+    public string NamingNote => SelectedFile is { NameIsKnown: false }
+        ? "This file's real name is unknown - it's addressed by hash. Edits still work."
+        : string.Empty;
+
+    private void BuildTree()
+    {
+        if (_vfs is null) return;
+
+        string? previous = SelectedFolder?.FullPath;
+
+        // Every FolderNode below is a brand-new instance - captured before _folderIndex is cleared,
+        // so the tree doesn't silently collapse back to nothing expanded on every edit (see
+        // FolderNode.IsExpanded).
+        var previouslyExpanded = new HashSet<string>(
+            _folderIndex.Values.Where(n => n.IsExpanded).Select(n => n.FullPath),
+            StringComparer.OrdinalIgnoreCase);
+
+        var root = new FolderNode("", "");
+        _folderIndex.Clear();
+        _folderIndex[""] = root;
+
+        foreach (VfsFile file in _vfs.Files.Values)
+        {
+            FolderNode node = EnsureFolder(_folderIndex, root, file.Directory, previouslyExpanded);
+            node.HasFiles = true;
+            if (file.IsModded)
+            {
+                // Light up the whole path to a modded file, so you can find your edits by
+                // descending the tree instead of remembering where you put them.
+                for (FolderNode? n = node; n is not null; n = ParentOf(_folderIndex, n))
+                {
+                    n.ContainsMods = true;
+                }
+            }
+        }
+
+        SortRecursively(root);
+        if (OnlyMods)
+        {
+            PruneToModsOnly(root);
+        }
+
+        Roots.Clear();
+        foreach (FolderNode child in root.Children)
+        {
+            Roots.Add(child);
+        }
+
+        SelectedFolder = previous is not null
+                          && _folderIndex.TryGetValue(previous, out FolderNode? restored)
+                          && (!OnlyMods || restored.ContainsMods)
+            ? restored
+            : Roots.FirstOrDefault();
+    }
+
+    /// <summary>The folder node for an archive-relative directory path, if the tree currently has one.</summary>
+    public FolderNode? FindFolder(string directory) => _folderIndex.GetValueOrDefault(directory);
+
+    /// <summary>
+    /// The chain of folders from a top-level root down to (and including) <paramref name="node"/> —
+    /// what code-behind needs to expand/reveal a folder in the tree view that isn't already showing.
+    /// </summary>
+    public IReadOnlyList<FolderNode> GetAncestorChain(FolderNode node)
+    {
+        var chain = new List<FolderNode>();
+        for (FolderNode? current = node; current is not null; current = ParentOf(_folderIndex, current))
+        {
+            chain.Insert(0, current);
+        }
+        return chain;
+    }
+
+    /// <summary>
+    /// Every file "Export folder…" would write for <paramref name="folder"/>: everything at or below
+    /// it in the tree.
+    /// </summary>
+    /// <remarks>
+    /// Honours the same two view switches the file list itself does — <see cref="OnlyMods"/> (which
+    /// already pruned the tree you clicked in, so exporting vanilla files out of a mods-only view
+    /// would contradict it) and <see cref="IncludeLinks"/> — but deliberately not
+    /// <see cref="FilterText"/>: this action is "everything down this path", not "everything down
+    /// this path that also happens to match what I last typed in the search box".
+    /// </remarks>
+    public IReadOnlyList<VfsFile> FilesUnder(FolderNode folder)
+    {
+        if (_vfs is null) return [];
+
+        string root = folder.FullPath;
+        string prefix = PathPrefixOf(root);
+
+        return _vfs.Files.Values
+            .Where(f => IsUnder(f, root, prefix) && (!OnlyMods || f.IsModded) && (IncludeLinks || !f.IsDependencyLink))
+            .OrderBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+    }
+
+    /// <summary>What every path at or below <paramref name="root"/> starts with — empty for the
+    /// (unselectable) tree root, so it matches the whole VFS rather than nothing.</summary>
+    private static string PathPrefixOf(string root) => root.Length == 0 ? string.Empty : root + "\\";
+
+    private static bool IsUnder(VfsFile file, string root, string prefix)
+    {
+        // A synthetic row — an .fcb fragment, a depload.dat link — lives *inside* its container's own
+        // path, which on disk is a file, not a directory. Sweeping one up from an ancestor folder
+        // would mean writing worlds\…\foo.fcb as both a file and a folder in the same export, so
+        // they're only in scope when the folder asked for is the one they sit in directly (i.e. you
+        // pointed at the container itself, where there's nothing else to export anyway).
+        if (file.IsFragment || file.IsDependencyLink)
+        {
+            return string.Equals(file.Directory, root, StringComparison.OrdinalIgnoreCase);
+        }
+
+        return root.Length == 0
+               || string.Equals(file.Directory, root, StringComparison.OrdinalIgnoreCase)
+               || file.Directory.StartsWith(prefix, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>
+    /// Writes <paramref name="files"/> under <paramref name="destination"/>, recreating the folder
+    /// structure they have below <paramref name="folder"/>. Runs on a background thread and can be
+    /// stopped mid-run with <see cref="CancelExport"/>; a file that can't be read is counted and
+    /// skipped rather than abandoning the rest of the subtree.
+    /// </summary>
+    /// <remarks>
+    /// <paramref name="files"/> is what <see cref="FilesUnder"/> returned rather than something this
+    /// recomputes, so what lands on disk is exactly the count and size the caller put in front of the
+    /// user before they agreed to it.
+    /// </remarks>
+    public async Task<FolderExportResult> ExportFolderAsync(
+        FolderNode folder, IReadOnlyList<VfsFile> files, string destination)
+    {
+        string prefix = PathPrefixOf(folder.FullPath);
+        var progress = new Progress<string>(s => Status = s);
+
+        var cts = new CancellationTokenSource();
+        _exportCts = cts;
+        OnPropertyChanged(nameof(IsExporting));
+        try
+        {
+            return await Task.Run(() => ExportFiles(files, prefix, destination, progress, cts.Token));
+        }
+        finally
+        {
+            _exportCts = null;
+            cts.Dispose();
+            OnPropertyChanged(nameof(IsExporting));
+        }
+    }
+
+    private FolderExportResult ExportFiles(
+        IReadOnlyList<VfsFile> files, string prefix, string destination,
+        IProgress<string> progress, CancellationToken token)
+    {
+        int written = 0, failed = 0;
+        string? firstError = null;
+
+        // One CreateDirectory per file would be tens of thousands of syscalls for a subtree that only
+        // has a few hundred distinct folders in it.
+        var created = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+        for (int i = 0; i < files.Count; i++)
+        {
+            if (token.IsCancellationRequested)
+            {
+                return new FolderExportResult(written, failed, firstError, Cancelled: true);
+            }
+
+            VfsFile file = files[i];
+            try
+            {
+                string target = Path.Combine(destination, OutputPath.Relative(file.Path[prefix.Length..]));
+                string directory = Path.GetDirectoryName(target)!;
+                if (created.Add(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+                File.WriteAllBytes(target, Read(file));
+                written++;
+            }
+            catch (Exception ex)
+            {
+                failed++;
+                firstError ??= $"{file.Path}: {ex.Message}";
+            }
+
+            if ((i + 1) % ExportReportEvery == 0)
+            {
+                progress.Report($"Exporting… ({i + 1:N0} / {files.Count:N0})");
+            }
+        }
+
+        return new FolderExportResult(written, failed, firstError, Cancelled: false);
+    }
+
+    /// <summary>Stops the running <see cref="ExportFolderAsync"/> after the file it's on — a subtree
+    /// can be gigabytes, and there's no undoing bytes already written, only stopping more of them.</summary>
+    public void CancelExport() => _exportCts?.Cancel();
+
+    /// <summary>Whether a folder export is running, so the status bar can offer to cancel it.</summary>
+    public bool IsExporting => _exportCts is not null;
+
+    /// <summary>Drops every branch that carries no mod content, for the "Show only mod files" filter.</summary>
+    private static void PruneToModsOnly(FolderNode node)
+    {
+        var kept = node.Children.Where(c => c.ContainsMods).ToList();
+        node.Children.Clear();
+        foreach (FolderNode child in kept)
+        {
+            PruneToModsOnly(child);
+            node.Children.Add(child);
+        }
+    }
+
+    private static FolderNode? ParentOf(Dictionary<string, FolderNode> index, FolderNode node)
+    {
+        string? parent = Path.GetDirectoryName(node.FullPath);
+        return string.IsNullOrEmpty(parent) ? null : index.GetValueOrDefault(parent);
+    }
+
+    private static FolderNode EnsureFolder(
+        Dictionary<string, FolderNode> index, FolderNode root, string directory, HashSet<string> previouslyExpanded)
+    {
+        if (string.IsNullOrEmpty(directory))
+        {
+            return root;
+        }
+        if (index.TryGetValue(directory, out FolderNode? existing))
+        {
+            return existing;
+        }
+
+        string parentPath = Path.GetDirectoryName(directory) ?? string.Empty;
+        FolderNode parent = EnsureFolder(index, root, parentPath, previouslyExpanded);
+
+        var node = new FolderNode(Path.GetFileName(directory), directory)
+        {
+            IsExpanded = previouslyExpanded.Contains(directory),
+        };
+        parent.Children.Add(node);
+        index[directory] = node;
+        return node;
+    }
+
+    private static void SortRecursively(FolderNode node)
+    {
+        var sorted = node.Children.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList();
+        node.Children.Clear();
+        foreach (FolderNode child in sorted)
+        {
+            SortRecursively(child);
+            node.Children.Add(child);
+        }
+    }
+
+    private CancellationTokenSource? _refreshCts;
+    private const int FilterDebounceMilliseconds = 250;
+
+    /// <summary>
+    /// Kicks off (re)computing the file list without blocking the caller. <paramref name="debounce"/>
+    /// is for the filter textbox specifically — every keystroke calls this, and without a short delay
+    /// each one would start scanning the ~150,000-file merged view before the previous scan even
+    /// finished. Cancelling the previous run (rather than letting stale ones finish and overwrite a
+    /// newer result) is what makes it safe to fire on every keystroke at all.
+    /// </summary>
+    private void RefreshFileList(bool debounce = false)
+    {
+        _refreshCts?.Cancel();
+        _refreshCts?.Dispose();
+        var cts = new CancellationTokenSource();
+        _refreshCts = cts;
+        _ = RefreshFileListAsync(debounce, cts.Token);
+    }
+
+    private async Task RefreshFileListAsync(bool debounce, CancellationToken token)
+    {
+        if (debounce)
+        {
+            try
+            {
+                await Task.Delay(FilterDebounceMilliseconds, token);
+            }
+            catch (OperationCanceledException)
+            {
+                return;
+            }
+        }
+
+        if (_vfs is null)
+        {
+            VisibleFiles.Clear();
+            return;
+        }
+
+        GameVfs vfs = _vfs;
+        (string[] includes, string[] excludes, string? extFilter, string? archFilter, uint? hashFilter) = ParseFilter(_filterText);
+        string? folderPath = SelectedFolder?.FullPath;
+        bool onlyMods = OnlyMods;
+        bool includeLinks = IncludeLinks;
+
+        List<VfsFile>? matches;
+        try
+        {
+            // The scan itself (a substring match over every file, when a filter is active) is real
+            // CPU work over a large collection - running it on a background thread is what actually
+            // keeps the UI thread free while it happens, debounce or not.
+            matches = await Task.Run(() =>
+            {
+                IEnumerable<VfsFile> files;
+                if (includes.Length > 0 || excludes.Length > 0 || extFilter is not null || archFilter is not null || hashFilter is not null)
+                {
+                    files = vfs.Files.Values.Where(f =>
+                    {
+                        var normalizedPath = NormalizeSlashes(f.Path);
+                        // Filter for exclusion first, skip file early
+                        if (excludes.Length > 0 && excludes.Any(x => normalizedPath.Contains(x, StringComparison.OrdinalIgnoreCase)))
+                            return false;
+
+                        if (hashFilter is { } hash && f.Hash != hash)
+                            return false;
+
+                        if (archFilter is not null && !vfs.DisplayModuleName(f).Contains(archFilter, StringComparison.OrdinalIgnoreCase))
+                            return false;
+
+                        // Include and extension comes after that
+                        var extMatch = extFilter is null || string.Equals(f.Type.Extension, extFilter, StringComparison.OrdinalIgnoreCase);
+                        var includesMatch = includes.Length == 0 || includes.All(x => normalizedPath.Contains(x, StringComparison.OrdinalIgnoreCase));
+
+                        return extMatch && includesMatch;
+                    });
+                }
+                else if (folderPath is not null)
+                {
+                    files = vfs.Files.Values
+                        .Where(f => string.Equals(f.Directory, folderPath, StringComparison.OrdinalIgnoreCase));
+                }
+                else
+                {
+                    return null;
+                }
+
+                if (onlyMods)
+                {
+                    files = files.Where(f => f.IsModded);
+                }
+
+                if (!includeLinks)
+                {
+                    files = files.Where(f => !f.IsDependencyLink);
+                }
+
+                token.ThrowIfCancellationRequested();
+                return files.OrderBy(f => f.FileName, StringComparer.OrdinalIgnoreCase).ToList();
+            }, token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (token.IsCancellationRequested) return;
+
+        VisibleFiles.Clear();
+        if (matches is not null)
+        {
+            foreach (VfsFile file in matches)
+            {
+                VisibleFiles.Add(file);
+            }
+        }
+    }
+
+    private static string NormalizeSlashes(string path) => path.Replace('/', '\\');
+
+    /// <summary>
+    /// Pulls the special <c>ext:xbt</c>/<c>arch:dlc1</c>/<c>hash:1a2b3c4d</c>-shaped tokens out of the
+    /// filter text, leaving whatever's left as the ordinary path substring needle. Whitespace-delimited
+    /// and freely combinable, e.g. <c>"ext:xbt cliff"</c>: only .xbt files whose path also contains
+    /// "cliff". <c>arch:</c> matches against <see cref="GameVfs.DisplayModuleName"/> (so both the bare
+    /// archive name and, for a colliding one, its disambiguated "folder/name" form work); <c>hash:</c>
+    /// takes a hex CRC32 (with or without a leading "0x") and matches <see cref="VfsFile.Hash"/> exactly
+    /// - an unparsable hash: value is dropped rather than falling back to a literal text match, since a
+    /// mistyped hash is never a meaningful path substring.
+    /// </summary>
+    private static (string[] Includes, string[] Excludes, string? Extension, string? Archive, uint? Hash) ParseFilter(string filterText)
+    {
+        string? extension = null;
+        string? archive = null;
+        uint? hash = null;
+        var includes = new List<string>();
+        var excludes = new List<string>();
+
+        foreach (string token in filterText.Split(' ', StringSplitOptions.RemoveEmptyEntries))
+        {
+            if (token.StartsWith("ext:", StringComparison.OrdinalIgnoreCase))
+                extension = token[4..].TrimStart('.');
+            else if (token.StartsWith("arch:", StringComparison.OrdinalIgnoreCase))
+                archive = token[5..];
+            else if (token.StartsWith("hash:", StringComparison.OrdinalIgnoreCase))
+            {
+                string hex = token[5..];
+                if (hex.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
+                    hex = hex[2..];
+                if (uint.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint parsed))
+                    hash = parsed;
+            }
+            else if (token.StartsWith("-", StringComparison.OrdinalIgnoreCase) && token.Length > 1)
+                excludes.Add(token[1..]);
+            else
+                includes.Add(token);
+        }
+
+        return (
+            includes.Select(NormalizeSlashes).ToArray(),
+            excludes.Select(NormalizeSlashes).ToArray(),
+            extension is { Length: > 0 } ? extension : null,
+            archive is { Length: > 0 } ? archive : null,
+            hash
+        );
+    }
+}

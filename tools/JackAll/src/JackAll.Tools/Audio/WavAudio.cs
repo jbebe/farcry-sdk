@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using JackAll.Core.Format;
 
 namespace JackAll.Tools.Audio;
 
@@ -24,7 +25,7 @@ public static class WavAudio
     /// tag, a bit depth other than 16, or a file missing a `fmt `/`data` chunk).</summary>
     public static Pcm16Audio ReadPcm16(byte[] wav)
     {
-        if (wav.Length < 12 || !Matches(wav, 0, "RIFF"u8) || !Matches(wav, 8, "WAVE"u8))
+        if (wav.Length < 12 || !ByteCursor.Matches(wav, 0, "RIFF"u8) || !ByteCursor.Matches(wav, 8, "WAVE"u8))
         {
             throw new InvalidDataException("Not a RIFF/WAVE file.");
         }
@@ -42,7 +43,7 @@ public static class WavAudio
                 throw new InvalidDataException($"Truncated chunk at offset 0x{pos:X}.");
             }
 
-            if (Matches(wav, pos, "fmt "u8))
+            if (ByteCursor.Matches(wav, pos, "fmt "u8))
             {
                 short formatTag = BinaryPrimitives.ReadInt16LittleEndian(wav.AsSpan(bodyStart));
                 if (formatTag != PcmFormatTag)
@@ -54,7 +55,7 @@ public static class WavAudio
                 sampleRate = BinaryPrimitives.ReadInt32LittleEndian(wav.AsSpan(bodyStart + 4));
                 bitsPerSample = BinaryPrimitives.ReadInt16LittleEndian(wav.AsSpan(bodyStart + 14));
             }
-            else if (Matches(wav, pos, "data"u8))
+            else if (ByteCursor.Matches(wav, pos, "data"u8))
             {
                 if (bitsPerSample != BitsPerSample)
                 {
@@ -78,9 +79,6 @@ public static class WavAudio
 
         return new Pcm16Audio { Samples = samples, Channels = channels, SampleRate = sampleRate };
     }
-
-    private static bool Matches(byte[] data, int offset, ReadOnlySpan<byte> expected)
-        => offset + expected.Length <= data.Length && data.AsSpan(offset, expected.Length).SequenceEqual(expected);
 
     public static byte[] Write(short[] samples, int channels, int sampleRate)
     {

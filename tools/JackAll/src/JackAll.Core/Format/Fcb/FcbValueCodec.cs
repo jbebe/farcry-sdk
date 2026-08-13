@@ -148,33 +148,29 @@ public static class FcbValueCodec
                     return true;
 
                 case FcbMemberType.UInt32Array:
-                    if (!TryReadFixedArray(value, 4, (v, o) => (object)BitConverter.ToUInt32(v, o), out object[] uints)) break;
-                    decoded = Array.ConvertAll(uints, u => (uint)u);
-                    return true;
-
                 case FcbMemberType.HashArray:
-                    if (!TryReadFixedArray(value, 4, (v, o) => (object)BitConverter.ToUInt32(v, o), out object[] hashes)) break;
-                    decoded = Array.ConvertAll(hashes, h => (uint)h);
+                    if (!FcbWire.TryReadFixedArray(value, 4, (v, o) => BitConverter.ToUInt32(v, o), out uint[] uints)) break;
+                    decoded = uints;
                     return true;
 
                 case FcbMemberType.Int32Array:
-                    if (!TryReadFixedArray(value, 4, (v, o) => (object)BitConverter.ToInt32(v, o), out object[] ints)) break;
-                    decoded = Array.ConvertAll(ints, i => (int)i);
+                    if (!FcbWire.TryReadFixedArray(value, 4, (v, o) => BitConverter.ToInt32(v, o), out int[] ints)) break;
+                    decoded = ints;
                     return true;
 
                 case FcbMemberType.FloatArray:
-                    if (!TryReadFixedArray(value, 4, (v, o) => (object)BitConverter.ToSingle(v, o), out object[] floats)) break;
-                    decoded = Array.ConvertAll(floats, f => (float)f);
+                    if (!FcbWire.TryReadFixedArray(value, 4, (v, o) => BitConverter.ToSingle(v, o), out float[] floats)) break;
+                    decoded = floats;
                     return true;
 
                 case FcbMemberType.Bool32Array:
-                    if (!TryReadFixedArray(value, 4, (v, o) => (object)(BitConverter.ToUInt32(v, o) != 0), out object[] bools)) break;
-                    decoded = Array.ConvertAll(bools, b => (bool)b);
+                    if (!FcbWire.TryReadFixedArray(value, 4, (v, o) => BitConverter.ToUInt32(v, o) != 0, out bool[] bools)) break;
+                    decoded = bools;
                     return true;
 
                 case FcbMemberType.Vector3Array:
-                    if (!TryReadFixedArray(value, 4 * 3, (v, o) => (object)ReadFloats(v, o, 3), out object[] vectors)) break;
-                    decoded = Array.ConvertAll(vectors, v => (float[])v);
+                    if (!FcbWire.TryReadFixedArray(value, 4 * 3, (v, o) => ReadFloats(v, o, 3), out float[][] vectors)) break;
+                    decoded = vectors;
                     return true;
             }
         }
@@ -199,7 +195,7 @@ public static class FcbValueCodec
     public static byte[] Encode(FcbMemberType type, object value) => type switch
     {
         FcbMemberType.BinHex or FcbMemberType.Rml => (byte[])value,
-        FcbMemberType.String => NullTerminate(System.Text.Encoding.UTF8.GetBytes((string)value)),
+        FcbMemberType.String => FcbWire.NullTerminate(System.Text.Encoding.UTF8.GetBytes((string)value)),
         FcbMemberType.Hash => BitConverter.GetBytes((uint)value),
         FcbMemberType.Enum => BitConverter.GetBytes((uint)value),
         FcbMemberType.Bool => [(byte)((bool)value ? 1 : 0)],
@@ -218,12 +214,11 @@ public static class FcbValueCodec
         FcbMemberType.Vector3 => WriteFloats((float[])value),
         FcbMemberType.Vector4 => WriteFloats((float[])value),
         FcbMemberType.Matrix4 => WriteFloats((float[])value),
-        FcbMemberType.UInt32Array => WriteFixedArray((uint[])value, 4, (buf, o, v) => BitConverter.GetBytes(v).CopyTo(buf, o)),
-        FcbMemberType.HashArray => WriteFixedArray((uint[])value, 4, (buf, o, v) => BitConverter.GetBytes(v).CopyTo(buf, o)),
-        FcbMemberType.Int32Array => WriteFixedArray((int[])value, 4, (buf, o, v) => BitConverter.GetBytes(v).CopyTo(buf, o)),
-        FcbMemberType.FloatArray => WriteFixedArray((float[])value, 4, (buf, o, v) => BitConverter.GetBytes(v).CopyTo(buf, o)),
-        FcbMemberType.Bool32Array => WriteFixedArray((bool[])value, 4, (buf, o, v) => BitConverter.GetBytes((uint)(v ? 1 : 0)).CopyTo(buf, o)),
-        FcbMemberType.Vector3Array => WriteFixedArray((float[][])value, 4 * 3, (buf, o, v) => WriteFloats(v).CopyTo(buf, o)),
+        FcbMemberType.UInt32Array or FcbMemberType.HashArray => FcbWire.WriteFixedArray((uint[])value, 4, (buf, o, v) => BitConverter.GetBytes(v).CopyTo(buf, o)),
+        FcbMemberType.Int32Array => FcbWire.WriteFixedArray((int[])value, 4, (buf, o, v) => BitConverter.GetBytes(v).CopyTo(buf, o)),
+        FcbMemberType.FloatArray => FcbWire.WriteFixedArray((float[])value, 4, (buf, o, v) => BitConverter.GetBytes(v).CopyTo(buf, o)),
+        FcbMemberType.Bool32Array => FcbWire.WriteFixedArray((bool[])value, 4, (buf, o, v) => BitConverter.GetBytes((uint)(v ? 1 : 0)).CopyTo(buf, o)),
+        FcbMemberType.Vector3Array => FcbWire.WriteFixedArray((float[][])value, 4 * 3, (buf, o, v) => WriteFloats(v).CopyTo(buf, o)),
         _ => throw new NotSupportedException($"Unsupported FCB value type '{type}'."),
     };
 
@@ -247,44 +242,4 @@ public static class FcbValueCodec
         return result;
     }
 
-    private static bool TryReadFixedArray(byte[] value, int itemSize, Func<byte[], int, object> readItem, out object[] items)
-    {
-        if (value.Length < 4)
-        {
-            items = [];
-            return false;
-        }
-
-        int count = BitConverter.ToInt32(value, 0);
-        if (count < 0 || value.Length != 4 + (count * itemSize))
-        {
-            items = [];
-            return false;
-        }
-
-        items = new object[count];
-        for (int i = 0, offset = 4; i < count; i++, offset += itemSize)
-        {
-            items[i] = readItem(value, offset);
-        }
-        return true;
-    }
-
-    private static byte[] WriteFixedArray<T>(T[] values, int itemSize, Action<byte[], int, T> writeItem)
-    {
-        var result = new byte[4 + (values.Length * itemSize)];
-        BitConverter.GetBytes(values.Length).CopyTo(result, 0);
-        for (int i = 0; i < values.Length; i++)
-        {
-            writeItem(result, 4 + (i * itemSize), values[i]);
-        }
-        return result;
-    }
-
-    private static byte[] NullTerminate(byte[] utf8)
-    {
-        byte[] result = new byte[utf8.Length + 1];
-        utf8.CopyTo(result, 0);
-        return result;
-    }
 }

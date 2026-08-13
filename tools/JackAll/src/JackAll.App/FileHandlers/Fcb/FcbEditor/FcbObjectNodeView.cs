@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using JackAll.Core.Format.Fcb;
+using JackAll.Tools.Fcb;
 
 namespace JackAll.App.FileHandlers.Fcb.FcbEditor;
 

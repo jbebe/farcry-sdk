@@ -32,6 +32,75 @@ public sealed class GameInstall
 
     public bool HasVanillaBackup => File.Exists(VanillaPatchFat) && File.Exists(VanillaPatchDat);
 
+    /// <summary>
+    /// True when creating the vanilla backup right now would freeze a modded patch in as this
+    /// install's base game: no backup exists yet and the live patch already looks modded. Headless
+    /// callers refuse to build in this state unless forced — see <see cref="EnsureVanillaBackup"/>'s
+    /// remarks for why that mistake is permanent.
+    /// </summary>
+    public bool BackupWouldCaptureMods => !HasVanillaBackup && LooksModded();
+
+    /// <summary>The live patch.fat's entry count, or -1 when its index is unreadable.</summary>
+    public int TryCountPatchEntries()
+    {
+        try
+        {
+            return Format.FatArchive.Read(PatchFat).Entries.Count;
+        }
+        catch
+        {
+            return -1;
+        }
+    }
+
+    /// <summary>
+    /// Every entry hash the *base game* has, read straight off the <c>.fat</c> indices — far cheaper
+    /// than mounting a <see cref="Vfs.GameVfs"/> when all a caller needs is "does this hash exist".
+    /// </summary>
+    /// <remarks>
+    /// The live <c>patch.fat</c> is skipped once a vanilla backup exists, and the backup read in its
+    /// place: after even one deploy the live patch is JackAll's own build output, and counting a
+    /// previous mod's added entries as "files the game has" would let
+    /// <see cref="Mods.ModLayerInspector"/> score a wrong root as plausible.
+    /// </remarks>
+    public HashSet<uint> ReadBaseGameHashes(IProgress<string>? progress = null)
+    {
+        var hashes = new HashSet<uint>();
+        bool skipLivePatch = HasVanillaBackup;
+
+        foreach (string fat in EnumerateArchiveFats())
+        {
+            if (skipLivePatch && string.Equals(fat, PatchFat, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+            AddFatEntries(hashes, fat, progress);
+        }
+
+        if (skipLivePatch)
+        {
+            AddFatEntries(hashes, VanillaPatchFat, progress);
+        }
+        return hashes;
+    }
+
+    private static void AddFatEntries(HashSet<uint> hashes, string fatPath, IProgress<string>? progress)
+    {
+        try
+        {
+            foreach (Format.FatEntry entry in Format.FatArchive.Read(fatPath).Entries)
+            {
+                hashes.Add(entry.Hash);
+            }
+        }
+        catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException or IOException)
+        {
+            // One unreadable index makes the answer incomplete, not wrong - the remaining archives
+            // still tell us what they hold, and this is only ever used for scoring.
+            progress?.Report($"Skipped unreadable index {fatPath}: {ex.Message}");
+        }
+    }
+
     private GameInstall(string rootPath) => RootPath = rootPath;
 
     /// <summary>Validates a candidate folder. Returns null with a reason when it isn't an FC2 install.</summary>
@@ -61,9 +130,12 @@ public sealed class GameInstall
         return install;
     }
 
-    /// <summary>Every .fat under Data_Win32, including DLC — none of them are special.</summary>
+    /// <summary>Every .fat under Data_Win32, including DLC — none of them are special. The
+    /// `.vanilla` backup pair is excluded: it's JackAll's own file, not a mountable archive (and
+    /// Windows' 3-character-extension glob quirk would otherwise let "*.fat" match it).</summary>
     public IEnumerable<string> EnumerateArchiveFats()
-        => Directory.EnumerateFiles(DataDir, "*.fat", SearchOption.AllDirectories);
+        => Directory.EnumerateFiles(DataDir, "*.fat", SearchOption.AllDirectories)
+            .Where(fat => !fat.EndsWith(VanillaSuffix, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
     /// Every .dat/.fat archive under Data_Win32 except patch.dat/.fat itself, as paths relative to

@@ -7,7 +7,7 @@ namespace JackAll.Tests;
 /// <summary>
 /// Emits a canonical, line-oriented dump of every corpus package so it can be diffed against the
 /// independently-written Python reference implementation
-/// (<c>tools/JackAll/src/JackAll.Tools/Format/mgb_parser.py</c>).
+/// (<c>tools/misc/mgb-python-reference/mgb_parser.py</c>).
 /// </summary>
 /// <remarks>
 /// Round-tripping proves the bytes are reproduced, but not that they are *attributed* correctly:

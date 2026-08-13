@@ -5,7 +5,7 @@
     models, audio, terrain, savegames) and the Domino mission-graph Lua.
 
     Split out of JackAll.Core so the mod pipeline doesn't drag it along. Core is what the lean
-    `jackall-mod` CLI publishes, and none of this is reachable from `mod build`/`mod import-legacy` -
+    `jackall-mi` installer publishes, and none of this is reachable from `mod build`/`mod import-legacy` -
     keeping it here is what lets that exe stay trimmable and Loretta-free.
   -->
   <PropertyGroup>

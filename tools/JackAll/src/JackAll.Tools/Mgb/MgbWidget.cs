@@ -29,6 +29,18 @@ public abstract class MgbWidget : MgbRecord
         _ => throw new MgbFormatException(
             $"'{typeName}' is not one of the 14 widget classes Factory::MakeElement can construct"),
     };
+
+    /// <summary>A fixed run of optional links, one gate each, in wire order.</summary>
+    protected static void SerializeLinks(
+        IMgbCodec c, MgbContext ctx, string[] names, MgbAreaLink?[] links)
+    {
+        for (int i = 0; i < links.Length; i++)
+        {
+            MgbAreaLink? link = links[i];
+            SerializeOptional(c, ctx, names[i], ref link);
+            links[i] = link;
+        }
+    }
 }
 
 /// <summary>A layout slot. <c>Placeholder</c> has no <c>Visit</c> override - the inherited
@@ -276,14 +288,7 @@ public sealed class MgbListBox : MgbWidget
         c.U8("BUTTONCOUNT", ref ButtonCount);
         c.U32("ITEMSPACING", ref ItemSpacing);
         c.OptionalNameId("SLIDERLINK", ref SliderLink);
-
-        string[] names = ["HEADERLINK", "ITEMLINK", "FOOTERLINK"];
-        for (int i = 0; i < 3; i++)
-        {
-            MgbAreaLink? link = Links[i];
-            SerializeOptional(c, ctx, names[i], ref link);
-            Links[i] = link;
-        }
+        SerializeLinks(c, ctx, ["HEADERLINK", "ITEMLINK", "FOOTERLINK"], Links);
     }
 }
 
@@ -305,14 +310,7 @@ public sealed class MgbEditBox : MgbWidget
     {
         c.U32("maxLength", ref MaxLength);
         c.OptionalBlob("passwordChar", ref PasswordChar, 2);
-
-        string[] names = ["FIELDLINK", "CURSORLINK"];
-        for (int i = 0; i < 2; i++)
-        {
-            MgbAreaLink? link = Links[i];
-            SerializeOptional(c, ctx, names[i], ref link);
-            Links[i] = link;
-        }
+        SerializeLinks(c, ctx, ["FIELDLINK", "CURSORLINK"], Links);
     }
 }
 
@@ -340,14 +338,7 @@ public sealed class MgbSlider : MgbWidget
         c.U32("field3", ref Field3);
         c.U32("field4", ref Field4);
         c.Bool("ORIENTATION", ref Orientation);
-
-        string[] names = ["TRACKLINK", "KNOBLINK", "HEADERLINK", "FOOTERLINK"];
-        for (int i = 0; i < 4; i++)
-        {
-            MgbAreaLink? link = Links[i];
-            SerializeOptional(c, ctx, names[i], ref link);
-            Links[i] = link;
-        }
+        SerializeLinks(c, ctx, ["TRACKLINK", "KNOBLINK", "HEADERLINK", "FOOTERLINK"], Links);
     }
 }
 

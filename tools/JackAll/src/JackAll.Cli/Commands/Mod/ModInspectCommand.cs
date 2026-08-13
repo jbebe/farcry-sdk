@@ -42,13 +42,7 @@ public sealed class ModInspectCommand : CliCommand<ModInspectCommand.Settings>
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
-        bool isZip = File.Exists(settings.Input)
-            && Path.GetExtension(settings.Input).Equals(".zip", StringComparison.OrdinalIgnoreCase);
-        bool isDirectory = Directory.Exists(settings.Input);
-        if (!isZip && !isDirectory)
-        {
-            throw new FileNotFoundException($"Not a folder or .zip: {settings.Input}");
-        }
+        bool isZip = ModPipeline.IsZipSource(settings.Input);
 
         Func<uint, bool>? entryExists = null;
         if (!string.IsNullOrWhiteSpace(settings.Game))
@@ -56,7 +50,7 @@ public sealed class ModInspectCommand : CliCommand<ModInspectCommand.Settings>
             GameInstall install = GameInstall.TryOpen(settings.Game, out string error)
                 ?? throw new InvalidOperationException(error);
             JsonOutput.Report("Reading the game's archive indexes to check candidate roots…");
-            HashSet<uint> hashes = ModLayerLoading.ReadBaseGameHashes(install);
+            HashSet<uint> hashes = install.ReadBaseGameHashes(new SyncProgress(JsonOutput.Report));
             entryExists = hashes.Contains;
         }
 

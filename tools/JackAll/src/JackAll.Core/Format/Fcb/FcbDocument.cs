@@ -16,7 +16,7 @@ namespace JackAll.Core.Format.Fcb;
 /// documented below was independently confirmed against the actual engine parser in Dunia.dll
 /// (<c>Fcb_ReadHeader</c> @ 0x10235080, <c>Fcb_ParseObject</c> @ 0x10234d60, <c>Fcb_ReadTypeHash</c> @
 /// 0x10234260 - see reverse/dunia/fcb_format.md) via GhidraMCP, not just inferred from the community
-/// tool (JackAll.Core.Tests/FcbDocumentTests.cs).
+/// tool (JackAll.Tests/FcbDocumentTests.cs).
 ///
 /// Wire format: "FCbn"(4) + version=2(u16) + flags(u16, only bit 0 meaningful) + totalObjectCount(u32)
 /// + totalValueCount(u32), then the root <see cref="FcbObject"/> tree. The two counts are written on

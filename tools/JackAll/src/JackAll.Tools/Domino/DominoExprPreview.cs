@@ -1,12 +1,12 @@
 using Loretta.CodeAnalysis.Lua;
 using Loretta.CodeAnalysis.Lua.Syntax;
 
-namespace JackAll.App.FileHandlers.Domino;
+namespace JackAll.Tools.Domino;
 
 /// <summary>A short, single-line rendering of a parameter value for a node box label - not a real
 /// pretty-printer, just enough to distinguish "Entity: 205..." from "Command: BuddyUnlock" at a
 /// glance.</summary>
-internal static class DominoExprPreview
+public static class DominoExprPreview
 {
     public static string Short(ExpressionSyntax expr) => Truncate(Full(expr));
 

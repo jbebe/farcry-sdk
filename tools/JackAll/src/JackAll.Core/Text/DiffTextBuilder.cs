@@ -1,7 +1,7 @@
 using DiffPlex.DiffBuilder;
 using DiffPlex.DiffBuilder.Model;
 
-namespace JackAll.App.FileHandlers.Text;
+namespace JackAll.Core.Text;
 
 /// <summary>
 /// Turns a whole-file diff into the compact "just the changes" view a modder actually wants: every

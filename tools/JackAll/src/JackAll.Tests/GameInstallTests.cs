@@ -74,6 +74,66 @@ public class GameInstallTests : IDisposable
         Assert.Equal(original, File.ReadAllBytes(install.PatchDat));
     }
 
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void BackupWouldCaptureMods_flags_exactly_the_modded_no_backup_state()
+    {
+        GameInstall? install = MakeInstall("capture-check");
+        if (install is null) return;
+
+        Assert.False(install.BackupWouldCaptureMods);
+
+        InflateEntryCount(install);
+        Assert.True(install.BackupWouldCaptureMods);
+
+        install.EnsureVanillaBackup();
+        Assert.False(install.BackupWouldCaptureMods);
+    }
+
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void TryCountPatchEntries_reads_the_index_and_reports_unreadable_as_minus_one()
+    {
+        GameInstall? install = MakeInstall("count");
+        if (install is null) return;
+
+        Assert.Equal(FatArchive.Read(install.PatchFat).Entries.Count, install.TryCountPatchEntries());
+
+        File.WriteAllBytes(install.PatchFat, "garbage"u8.ToArray());
+        Assert.Equal(-1, install.TryCountPatchEntries());
+    }
+
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void EnumerateArchiveFats_excludes_the_vanilla_backup_pair()
+    {
+        GameInstall? install = MakeInstall("enumerate");
+        if (install is null) return;
+
+        install.EnsureVanillaBackup();
+
+        string[] fats = [.. install.EnumerateArchiveFats()];
+        Assert.Contains(install.PatchFat, fats);
+        Assert.DoesNotContain(install.VanillaPatchFat, fats);
+    }
+
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void ReadBaseGameHashes_reads_the_backup_not_the_live_patch_once_one_exists()
+    {
+        GameInstall? install = MakeInstall("base-hashes");
+        if (install is null) return;
+
+        install.EnsureVanillaBackup();
+        HashSet<uint> vanilla = install.ReadBaseGameHashes();
+
+        // Entries added by a later build are JackAll's own output, not base-game files.
+        InflateEntryCount(install);
+        HashSet<uint> afterBuild = install.ReadBaseGameHashes();
+
+        Assert.Equal(vanilla, afterBuild);
+    }
+
     /// <summary>Rewrites the index with enough duplicate entries to trip
     /// <see cref="GameInstall.LooksModded"/>'s entry-count heuristic, without touching the .dat -
     /// the heuristic only ever reads the index.</summary>

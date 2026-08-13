@@ -1,9 +1,7 @@
 using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
-using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
-using JackAll.Core.Vfs;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -42,47 +40,7 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
         GuardVanillaBackup(install, settings.Force);
 
         List<IModLayer> layers = [.. settings.Layers.Select(ModPipeline.OpenLayer)];
-
-        // Reading the archives is only needed to resolve a container a layer overrides *part* of -
-        // both as the base to splice onto and as the ancestor each contributor is merged against.
-        // Mounting them costs seconds, so it happens only when some layer actually stages a fragment.
-        bool needsOriginals = layers.Any(l => l.Enabled && l.FragmentOverrides.Count > 0);
-
-        GameVfs? vfs = null;
-        BuildResult result;
-        try
-        {
-            FcbClassDefinitions? definitions = null;
-            Func<uint, byte[]?>? readOriginal = null;
-            if (needsOriginals)
-            {
-                JsonOutput.Report("A mod overrides part of an .fcb - mounting the game's archives for the originals…");
-                definitions = BundledAssets.LoadFcbClasses();
-                vfs = ModPipeline.OpenOriginals(
-                    install, BundledAssets.LoadNames(), new SyncProgress(JsonOutput.Report));
-                readOriginal = vfs.ReadOriginal;
-            }
-
-            JsonOutput.Report($"Building patch.dat from {layers.Count} layer(s)…");
-            // Headless: nobody's here to hand-fix a fragment collision on the spot the way JackAll.App's
-            // conflict row lets a person do, so load order wins outright (same rule a whole-file
-            // override already follows) and the collision is reported below instead of aborting the
-            // build over it.
-            result = PatchBuilder.Build(install, layers, readOriginal, definitions,
-                resolveFragmentConflictsWithLoadOrder: true);
-        }
-        finally
-        {
-            // Persist whatever got freshly sniffed/decoded this run - see GameVfs.Cache's remarks on
-            // why this is the caller's job rather than something Dispose does on its own. Saved before
-            // Dispose closes the archive handles, though the cache itself doesn't depend on them being
-            // open (everything it needs was already read during LoadVfs).
-            if (vfs?.Cache.IsDirty == true)
-            {
-                vfs.Cache.Save(install.CacheFile);
-            }
-            vfs?.Dispose();
-        }
+        BuildResult result = ModPipeline.Build(install, layers, new SyncProgress(JsonOutput.Report));
 
         if (settings.Json)
         {
@@ -134,20 +92,13 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
 
     /// <summary>
     /// Refuses to snapshot a patch archive that already carries somebody's mod as this install's
-    /// "vanilla".
+    /// "vanilla" (see <see cref="GameInstall.BackupWouldCaptureMods"/>). A headless run has nobody
+    /// to ask the way JackAll.App's confirmation dialog does, so it refuses and lets the caller
+    /// decide with <c>--force</c>.
     /// </summary>
-    /// <remarks>
-    /// <see cref="PatchBuilder.Build"/> calls <see cref="GameInstall.EnsureVanillaBackup"/> without a
-    /// confirm delegate, and that overload's guard (<c>LooksModded() &amp;&amp;
-    /// confirmSuspiciousPatch?.Invoke() == false</c>) is simply false when the delegate is null — so
-    /// on its own it would happily freeze the mod in permanently, with no way back short of
-    /// reinstalling. JackAll.App never hits that because it passes a confirmation callback; a
-    /// headless run has nobody to ask, so it has to refuse and let the caller decide with
-    /// <c>--force</c>.
-    /// </remarks>
     private static void GuardVanillaBackup(GameInstall install, bool force)
     {
-        if (force || install.HasVanillaBackup || !install.LooksModded())
+        if (force || !install.BackupWouldCaptureMods)
         {
             return;
         }

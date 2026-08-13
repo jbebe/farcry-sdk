@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Media;
 using ICSharpCode.AvalonEdit.Document;
 using ICSharpCode.AvalonEdit.Rendering;
+using JackAll.Core.Text;
 
 namespace JackAll.App.FileHandlers.Text;
 

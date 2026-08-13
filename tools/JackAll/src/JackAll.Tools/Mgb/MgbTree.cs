@@ -126,44 +126,16 @@ public sealed class MgbElement : MgbRecord
 
     /// <summary>Reads or writes a list of elements, each prefixed by its own type slot.</summary>
     public static void SerializeElementList(IMgbCodec c, MgbContext ctx, List<MgbElement> elements)
-    {
-        int n = elements.Count;
-        using (c.ListScope("CHILDREN", ref n))
+        => MgbRecordHelpers.SlottedList(c, ctx, "Element", elements, e => e.TypeSlot, (slot, name) =>
         {
-            if (c.IsReading)
+            if (!MgbSchema.IsWidgetType(name))
             {
-                elements.Clear();
-                for (int i = 0; i < n; i++)
-                {
-                    using (c.Item("Element"))
-                    {
-                        byte slot = 0;
-                        c.TypeSlot("slot", "type", ref slot, ctx.Types);
-                        string? name = ctx.Types.NameForSlot(slot);
-                        if (!MgbSchema.IsWidgetType(name))
-                        {
-                            throw new MgbFormatException(
-                                $"element type slot {slot} resolves to '{name ?? "<unnamed>"}', which is not one " +
-                                $"of the 14 widget classes Factory::MakeElement can construct, at offset {c.Position - 1}");
-                        }
-                        var element = new MgbElement { TypeSlot = slot, WidgetTypeName = name! };
-                        element.Serialize(c, ctx);
-                        elements.Add(element);
-                    }
-                }
-                return;
+                throw new MgbFormatException(
+                    $"element type slot {slot} resolves to '{name ?? "<unnamed>"}', which is not one " +
+                    $"of the 14 widget classes Factory::MakeElement can construct, at offset {c.Position - 1}");
             }
-            foreach (MgbElement element in elements)
-            {
-                using (c.Item("Element"))
-                {
-                    byte slot = element.TypeSlot;
-                    c.TypeSlot("slot", "type", ref slot, ctx.Types);
-                    element.Serialize(c, ctx);
-                }
-            }
-        }
-    }
+            return new MgbElement { TypeSlot = slot, WidgetTypeName = name! };
+        });
 }
 
 /// <summary>One <c>DEFAULT_ELEMENT</c> entry of a page.</summary>
@@ -255,42 +227,14 @@ public sealed class MgbArea : MgbRecord
 
     /// <summary>Reads or writes the package's area list, each entry prefixed by its type slot.</summary>
     public static void SerializeAreaList(IMgbCodec c, MgbContext ctx, List<MgbArea> areas)
-    {
-        int n = areas.Count;
-        using (c.ListScope("CHILDREN", ref n))
+        => MgbRecordHelpers.SlottedList(c, ctx, "Area", areas, a => a.TypeSlot, (slot, name) =>
         {
-            if (c.IsReading)
+            if (!MgbSchema.IsAreaType(name))
             {
-                areas.Clear();
-                for (int i = 0; i < n; i++)
-                {
-                    using (c.Item("Area"))
-                    {
-                        byte slot = 0;
-                        c.TypeSlot("slot", "type", ref slot, ctx.Types);
-                        string? name = ctx.Types.NameForSlot(slot);
-                        if (!MgbSchema.IsAreaType(name))
-                        {
-                            throw new MgbFormatException(
-                                $"area type slot {slot} resolves to '{name ?? "<unnamed>"}', which is not one of " +
-                                $"the 5 classes Factory::MakeArea can construct, at offset {c.Position - 1}");
-                        }
-                        var area = new MgbArea { TypeSlot = slot, TypeName = name! };
-                        area.Serialize(c, ctx);
-                        areas.Add(area);
-                    }
-                }
-                return;
+                throw new MgbFormatException(
+                    $"area type slot {slot} resolves to '{name ?? "<unnamed>"}', which is not one of " +
+                    $"the 5 classes Factory::MakeArea can construct, at offset {c.Position - 1}");
             }
-            foreach (MgbArea area in areas)
-            {
-                using (c.Item("Area"))
-                {
-                    byte slot = area.TypeSlot;
-                    c.TypeSlot("slot", "type", ref slot, ctx.Types);
-                    area.Serialize(c, ctx);
-                }
-            }
-        }
-    }
+            return new MgbArea { TypeSlot = slot, TypeName = name! };
+        });
 }

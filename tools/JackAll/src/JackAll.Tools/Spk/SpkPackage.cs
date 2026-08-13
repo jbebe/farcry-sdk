@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using JackAll.Core.Format;
 using JackAll.Tools.Audio;
 using JackAll.Tools.Sbao;
 
@@ -231,10 +232,11 @@ public sealed class SpkPackage
         }
 
         var records = new List<SpkRecord>((int)count);
-        int pos = recordsStart;
+        var cursor = new ByteCursor(data);
+        cursor.Position = recordsStart;
         for (int i = 0; i < count; i++)
         {
-            uint preambleWordCount = ReadU32(data, ref pos);
+            uint preambleWordCount = cursor.ReadU32();
             if (preambleWordCount > 4096)
             {
                 throw new InvalidDataException($"Implausible preamble word count {preambleWordCount} in record {i}.");
@@ -243,18 +245,19 @@ public sealed class SpkPackage
             var preamble = new uint[preambleWordCount];
             for (int w = 0; w < preambleWordCount; w++)
             {
-                preamble[w] = ReadU32(data, ref pos);
+                preamble[w] = cursor.ReadU32();
             }
 
-            uint size = ReadU32(data, ref pos);
-            if (size > int.MaxValue || pos + (long)size > data.Length)
+            uint size = cursor.ReadU32();
+            if (size > int.MaxValue || cursor.Position + (long)size > data.Length)
             {
-                throw new InvalidDataException($"Truncated payload in record {i} (wanted {size} bytes at 0x{pos:X}).");
+                throw new InvalidDataException(
+                    $"Truncated payload in record {i} (wanted {size} bytes at 0x{cursor.Position:X}).");
             }
 
-            byte[] payload = data[pos..(pos + (int)size)];
-            pos += (int)size;
-            pos += (4 - pos % 4) % 4; // next record is 4-byte aligned
+            byte[] payload = cursor.ReadBytes((int)size);
+            // next record is 4-byte aligned
+            cursor.Position += PadLength(cursor.Position);
 
             SpkRecordCore? core = ParseCore(payload);
             records.Add(new SpkRecord
@@ -311,26 +314,29 @@ public sealed class SpkPackage
         }
 
         uint count = BinaryPrimitives.ReadUInt32LittleEndian(originalFile.AsSpan(4));
-        int pos = 8 + checked((int)count * 4);
+        var cursor = new ByteCursor(originalFile);
+        cursor.Position = 8 + checked((int)count * 4);
 
         for (int i = 0; i < count; i++)
         {
-            uint id = BinaryPrimitives.ReadUInt32LittleEndian(originalFile.AsSpan(8 + i * 4));
+            uint id = ByteCursor.U32(originalFile, 8 + i * 4);
 
-            uint preambleWordCount = ReadU32(originalFile, ref pos);
-            pos += checked((int)preambleWordCount) * 4;
+            uint preambleWordCount = cursor.ReadU32();
+            cursor.Position += checked((int)preambleWordCount) * 4;
 
-            int sizeFieldPos = pos;
-            uint size = ReadU32(originalFile, ref pos);
-            pos += (int)size;
-            pos += PadLength(pos); // next record (or end of file) is 4-byte aligned
+            int sizeFieldPos = cursor.Position;
+            uint size = cursor.ReadU32();
+            cursor.Position += (int)size;
+            // next record (or end of file) is 4-byte aligned
+            cursor.Position += PadLength(cursor.Position);
 
             if (id != recordId)
             {
                 continue;
             }
 
-            int oldChunkLength = pos - sizeFieldPos; // old size field + payload + padding
+            // the record's old size field + payload + padding, replaced as one chunk
+            int oldChunkLength = cursor.Position - sizeFieldPos;
             int newChunkLength = 4 + newPayload.Length + PadLength(newPayload.Length);
             var result = new byte[originalFile.Length - oldChunkLength + newChunkLength];
 
@@ -340,8 +346,9 @@ public sealed class SpkPackage
             BinaryPrimitives.WriteUInt32LittleEndian(result.AsSpan(w), (uint)newPayload.Length);
             w += 4;
             Array.Copy(newPayload, 0, result, w, newPayload.Length);
-            w += newPayload.Length + PadLength(newPayload.Length); // padding bytes stay zero (fresh array)
-            Array.Copy(originalFile, pos, result, w, originalFile.Length - pos);
+            // padding bytes stay zero (fresh array)
+            w += newPayload.Length + PadLength(newPayload.Length);
+            Array.Copy(originalFile, cursor.Position, result, w, originalFile.Length - cursor.Position);
 
             return result;
         }
@@ -360,15 +367,15 @@ public sealed class SpkPackage
 
         return new SpkRecordCore
         {
-            DeclaredSize = ReadU32At(payload, 0x04),
-            Unknown08 = ReadU32At(payload, 0x08),
-            Unknown0C = ReadU32At(payload, 0x0C),
-            Unknown10 = ReadU32At(payload, 0x10),
-            Unknown14 = ReadU32At(payload, 0x14),
-            ReservedZero18 = ReadU32At(payload, 0x18),
-            ReservedZero1C = ReadU32At(payload, 0x1C),
-            RawType = ReadU32At(payload, 0x20),
-            ReservedTwo24 = ReadU32At(payload, 0x24),
+            DeclaredSize = ByteCursor.U32(payload, 0x04),
+            Unknown08 = ByteCursor.U32(payload, 0x08),
+            Unknown0C = ByteCursor.U32(payload, 0x0C),
+            Unknown10 = ByteCursor.U32(payload, 0x10),
+            Unknown14 = ByteCursor.U32(payload, 0x14),
+            ReservedZero18 = ByteCursor.U32(payload, 0x18),
+            ReservedZero1C = ByteCursor.U32(payload, 0x1C),
+            RawType = ByteCursor.U32(payload, 0x20),
+            ReservedTwo24 = ByteCursor.U32(payload, 0x24),
         };
     }
 
@@ -414,17 +421,4 @@ public sealed class SpkPackage
         };
     }
 
-    private static uint ReadU32At(byte[] data, int offset) => BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(offset));
-
-    private static uint ReadU32(byte[] data, ref int pos)
-    {
-        if (pos < 0 || pos + 4 > data.Length)
-        {
-            throw new InvalidDataException($"Ran out of bytes at offset 0x{pos:X} (needed 4).");
-        }
-
-        uint v = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(pos));
-        pos += 4;
-        return v;
-    }
 }

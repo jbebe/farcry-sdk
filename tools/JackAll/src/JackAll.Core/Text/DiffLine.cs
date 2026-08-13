@@ -1,4 +1,4 @@
-namespace JackAll.App.FileHandlers.Text;
+namespace JackAll.Core.Text;
 
 public enum DiffLineKind
 {

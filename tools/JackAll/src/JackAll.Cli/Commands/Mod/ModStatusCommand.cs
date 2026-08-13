@@ -1,6 +1,5 @@
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
-using JackAll.Core.Format;
 using Spectre.Console;
 
 namespace JackAll.Cli.Commands.Mod;
@@ -43,7 +42,7 @@ public sealed class ModStatusCommand : CliCommand<GameCommandSettings>
 
         bool hasBackup = install.HasVanillaBackup;
         bool looksModded = install.LooksModded();
-        int patchEntries = TryCountEntries(install.PatchFat);
+        int patchEntries = install.TryCountPatchEntries();
 
         if (settings.Json)
         {
@@ -74,17 +73,5 @@ public sealed class ModStatusCommand : CliCommand<GameCommandSettings>
                 "before building, or the next build will treat someone else's mod as the base game.");
         }
         return 0;
-    }
-
-    private static int TryCountEntries(string fatPath)
-    {
-        try
-        {
-            return FatArchive.Read(fatPath).Entries.Count;
-        }
-        catch
-        {
-            return -1;
-        }
     }
 }

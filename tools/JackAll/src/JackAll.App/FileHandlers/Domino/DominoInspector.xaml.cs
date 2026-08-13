@@ -1,6 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
 using JackAll.Tools.Domino.Graphs;
+using JackAll.Tools.Domino;
 using JackAll.Tools.Domino.Nodes;
 
 namespace JackAll.App.FileHandlers.Domino;

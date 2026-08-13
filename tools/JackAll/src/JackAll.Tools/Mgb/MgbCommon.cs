@@ -61,6 +61,45 @@ internal static class MgbRecordHelpers
         }
     }
 
+    /// <summary>A <c>CHILDREN</c> list whose entries each carry their own type slot. On read the
+    /// slot's resolved class name is handed to <paramref name="create"/>, which validates it and
+    /// builds the entry; on write each entry's stored slot is re-emitted.</summary>
+    public static void SlottedList<T>(
+        IMgbCodec c, MgbContext ctx, string itemName, List<T> items,
+        Func<T, byte> slotOf, Func<byte, string?, T> create)
+        where T : MgbRecord
+    {
+        int n = items.Count;
+        using (c.ListScope("CHILDREN", ref n))
+        {
+            if (c.IsReading)
+            {
+                items.Clear();
+                for (int i = 0; i < n; i++)
+                {
+                    using (c.Item(itemName))
+                    {
+                        byte slot = 0;
+                        c.TypeSlot("slot", "type", ref slot, ctx.Types);
+                        T item = create(slot, ctx.Types.NameForSlot(slot));
+                        item.Serialize(c, ctx);
+                        items.Add(item);
+                    }
+                }
+                return;
+            }
+            foreach (T item in items)
+            {
+                using (c.Item(itemName))
+                {
+                    byte slot = slotOf(item);
+                    c.TypeSlot("slot", "type", ref slot, ctx.Types);
+                    item.Serialize(c, ctx);
+                }
+            }
+        }
+    }
+
     public static void Optional<T>(IMgbCodec c, MgbContext ctx, string name, ref T? item)
         where T : MgbRecord, new()
     {
@@ -119,8 +158,6 @@ public sealed class MgbFullLink : MgbRecord
     public byte TypeSlot;
 
     public List<uint> Ids = [];
-
-    public string? TypeName(MgbContext ctx) => Ids.Count == 0 ? null : ctx.Types.NameForSlot(TypeSlot);
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
@@ -187,9 +224,6 @@ public sealed class MgbProperty : MgbRecord
     public byte[] StringValue = [];   // tag 0x10
     public MgbFullLink? Link;         // tags 0x11 / 0x12 / 0x15
     public MgbStringResourceExternalId? StringResource; // tag 0x13
-
-    public static bool TagHasPayload(uint tag) => tag is TagUInt32 or TagFloat or TagBool
-        or TagString or TagFullLinkA or TagFullLinkB or TagStringResource or TagFullLinkC;
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {

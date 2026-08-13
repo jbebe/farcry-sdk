@@ -58,12 +58,6 @@ public class MgbRotationState : MgbState
 
     public override string TypeName => "RotationState";
 
-    public float Rotation
-    {
-        get => BitConverter.UInt32BitsToSingle(RotationBits);
-        set => RotationBits = BitConverter.SingleToUInt32Bits(value);
-    }
-
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
         base.Serialize(c, ctx);
@@ -96,18 +90,6 @@ public sealed class MgbScaleState : MgbPosState
     public uint ScaleYBits;
 
     public override string TypeName => "ScaleState";
-
-    public float ScaleX
-    {
-        get => BitConverter.UInt32BitsToSingle(ScaleXBits);
-        set => ScaleXBits = BitConverter.SingleToUInt32Bits(value);
-    }
-
-    public float ScaleY
-    {
-        get => BitConverter.UInt32BitsToSingle(ScaleYBits);
-        set => ScaleYBits = BitConverter.SingleToUInt32Bits(value);
-    }
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {
@@ -145,12 +127,6 @@ public class MgbTextBaseState : MgbRectState
     public ushort AbsOffsetY;
 
     public override string TypeName => "TextBaseState";
-
-    public float OffsetY
-    {
-        get => BitConverter.UInt32BitsToSingle(OffsetYBits);
-        set => OffsetYBits = BitConverter.SingleToUInt32Bits(value);
-    }
 
     public override void Serialize(IMgbCodec c, MgbContext ctx)
     {

@@ -60,17 +60,10 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
         GameInstall install = settings.OpenInstall();
-
-        bool isZip = File.Exists(settings.From)
-            && Path.GetExtension(settings.From).Equals(".zip", StringComparison.OrdinalIgnoreCase);
-        if (!isZip && !Directory.Exists(settings.From))
-        {
-            throw new FileNotFoundException($"Not a folder or .zip: {settings.From}");
-        }
+        bool isZip = ModPipeline.IsZipSource(settings.From);
 
         Directory.CreateDirectory(settings.Out);
-        string name = settings.Name
-            ?? Path.GetFileName(Path.TrimEndingDirectorySeparator(Path.GetFullPath(settings.Out)));
+        string name = settings.Name ?? ModPipeline.DefaultLayerName(settings.Out);
         var workspace = new FolderModLayer(settings.Out, name);
 
         FcbClassDefinitions definitions = BundledAssets.LoadFcbClasses();
@@ -84,14 +77,10 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
         LegacyImportResult result = isZip
             ? LegacyPatchImporter.Import(
                 settings.From, workspace, names, definitions, vfs.ReadOriginal, vfs.ReadOriginalHash, progress)
-            : ImportFromDirectory(settings.From, workspace, names, definitions, vfs.ReadOriginal, vfs.ReadOriginalHash, progress);
+            : LegacyPatchImporter.ImportFromDirectory(
+                settings.From, workspace, names, definitions, vfs.ReadOriginal, vfs.ReadOriginalHash, progress);
 
-        // See ModBuildCommand's identical save - persisting what this run sniffed/decoded means the
-        // next CLI invocation against this install doesn't pay for it again.
-        if (vfs.Cache.IsDirty)
-        {
-            vfs.Cache.Save(install.CacheFile);
-        }
+        ModPipeline.SaveCache(vfs, install);
 
         if (settings.Json)
         {
@@ -114,23 +103,5 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
             + $"into {settings.Out.EscapeMarkup()} (out of {result.TotalEntries:N0} entries; "
             + $"{result.Skipped:N0} matched the base game and were skipped).");
         return 0;
-    }
-
-    private static LegacyImportResult ImportFromDirectory(
-        string directory,
-        FolderModLayer workspace,
-        NameDatabase names,
-        FcbClassDefinitions definitions,
-        Func<uint, byte[]?> readOriginal,
-        Func<uint, ulong?> readOriginalHash,
-        IProgress<string> progress)
-    {
-        (string Fat, string Dat) pair = LegacyPatchImporter.FindPatchPair(directory)
-            ?? throw new InvalidDataException(
-                $"No patch.fat/patch.dat pair under '{directory}' - this isn't a legacy full-patch mod. "
-                + "An ordinary community mod (a tree of relative game paths) is used as a layer directly.");
-
-        return LegacyPatchImporter.Import(
-            pair.Fat, pair.Dat, workspace, names, definitions, readOriginal, readOriginalHash, progress);
     }
 }
