@@ -181,9 +181,10 @@ Compiled binaries — the game itself, its engine core, and supporting native/ma
 
 - `FarCry2.exe` — main game binary
 - `Dunia.dll` — engine core, confirmed hex-patchable
-- `FC2.dll`
+- `FC2.dll` — **out of scope**: SecuROM "Activate & Play" (Sony DADC, `paul_dll_activate_and_play.dll`). Nothing in `farcry2.exe`, `Dunia.dll` or `FC2Launcher.exe` references it by name
 - `FC2Editor.exe` — map editor; source recovered, see `research/reference-files/fc2editor-source/`
-- `FC2Launcher.exe`, `FC2ServerLauncher.exe`
+- `FC2Launcher.exe` — **out of scope**: Ubisoft's generic Game Update auto-patcher, contains no FC2 code and never touches `Dunia.dll`. See [the `FarCry2.exe` note](../engine-internals/launcher-exe.md)
+- `FC2ServerLauncher.exe`
 - `FC2BenchmarkTool.exe` + `.config`
 - `Microsoft.DirectX{,.Direct3D,.Direct3DX}.dll` — legacy MDX wrapper
 - `SandBar.dll`, `SandDock.dll` — WinForms docking UI (editor); safe to delete per community report

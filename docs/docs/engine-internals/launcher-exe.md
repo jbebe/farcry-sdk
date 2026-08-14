@@ -96,6 +96,37 @@ confirmed two things about the exe's export-table dependencies:
   overwritten if the name is already present — the call is a silent no-op. First registrant for a
   given name always wins at the engine level.
 
+## Not `FC2Launcher.exe` — that one is an updater
+
+`bin/FC2Launcher.exe` shares nothing with this binary but the word "launcher", and needs no modding
+attention. It is Ubisoft's generic **Game Update** auto-patcher: an MFC/ATL application
+(`CUpgradeLauncherApp`, `Evil::UpgradeHost`, statically-linked libcurl and TinyXML) shipped across
+many Ubisoft titles and branded per-game by stamping its resource string table — string ID 124 is the
+un-branded sentinel ("The game update application must be modified with the resource tool"), and
+startup aborts if the product name still equals it. It imports nothing from `Dunia.dll` and contains
+no FC2-specific code at all.
+
+Its whole job is to fetch
+`http://gconnect.ubi.com/MatchMakingConfig.aspx?action=g_guc&gid=<info>&locale=en-US`, parse the
+patch manifest (`PatchUrl`/`PatchSize`/`PatchCRC`/`Signature`/`Mirrors`), download and verify a
+payload (CRC plus an Authenticode `WinVerifyTrust` pass), then start the game:
+
+```c
+ShellExecuteA(NULL, "open", execPath, NULL, installDir, SW_SHOWNORMAL);
+```
+
+`execPath`, `installdir`, `info` (the update service's game id) and `language` all come from
+`HKLM\Software\Ubisoft\Far Cry 2\GameUpdate`; `execPath` points at `FarCry2.exe`. While running it
+also hosts a local RPC server (`ncalrpc` endpoint `ubiUpdateService`) — a control/logging channel for
+the updater, not DRM.
+
+`gconnect.ubi.com` is long dead, so the update check always fails and falls straight through to
+launching the game. Two consequences:
+
+- `lpParameters` is `NULL`: the launcher forwards **no** command-line arguments, so nothing in
+  [command-line args](./command-line-args.md) survives a launch made through it.
+- Redirecting what gets launched needs no binary edit — it is the registry's `execPath` value.
+
 ## Unknowns
 
 - The float constant behind `MalariaCurve` (`0x4020fc`) and the constant behind `PlayerSPFinalize`
