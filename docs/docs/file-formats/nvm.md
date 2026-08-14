@@ -33,6 +33,54 @@ switches format entirely on its bool argument:
   the two `%d`s)
 - `false` → `<root>nv\sectors\nv_<index>.nvm` — the per-sector satellite file path
 
+## What actually ships
+
+Measured against the retail archives, the two tiers live in **different trees**, and both sit under
+`nv\sectors\` — the level file is not at `nv\nv.nvm` as the path builder's alternate branch suggests:
+
+| Tier | Path | Count |
+|---|---|---|
+| Level file | `worlds\<world>\generated\nv\sectors\nv.nvm` | 26 — every multiplayer world, both campaign worlds, `tmpla` |
+| Sector satellite | `levels\<level>\generated\nv\sectors\nv_<sectorId>.nvm` | 5120 — **campaign levels only**, 256 each across 20 levels |
+
+No multiplayer level, no `tmpla`, and no `ige_map` has a single sector satellite. Multiplayer maps
+ship a level file with no sector data behind it, which is consistent with multiplayer having no AI.
+The editor's own world (`ige_map`) has neither tier, so maps built in the editor carry no navigation
+data at all — see [`.fc2map`](./fc2map.md).
+
+Satellite indices are the level's own sector ids, matching `sector<sectorId>.desc.fcb` exactly.
+
+## Level-file header, measured
+
+The shipped level files are header-only and follow a fixed layout. Reading them back confirms the
+field order recovered from `CNavMeshLevel::SerializeData`:
+
+| File offset | Content |
+|---|---|
+| `0x04` | `0x4e764d68` — `hMvN` in raw byte order, the same tag the per-sector header writes |
+| `0x18`, `0x1c` | world extent, `f32` ×2 |
+| `0x40`, `0x44` | sector grid dimensions, `u32` ×2 |
+| `0x48` | mode flag — `2` in every shipped file |
+| `0x4c` | sector count |
+| `0x50` | `u32[sectorCount]` descriptor table |
+| — | 24 trailing bytes |
+
+`0x50 + 4 × sectorCount + 24` accounts for the file size exactly in every sample. Grid dimensions
+multiply out to the sector count, and extent divided by grid dimension is **64 world units per
+sector** in all of them:
+
+| World | Extent | Grid | Sectors | Size |
+|---|---|---|---|---|
+| `tmpla` (editor world shape) | 512 | 8×8 | 64 | 360 |
+| `mp_16_airbase` | 640 | 10×10 | 100 | 504 |
+| `world1` | 5120 | 80×80 | 6400 | 25704 |
+
+Two observations complicate the satellite-loading path described above. The mode flag reads `2`
+(single-file) rather than `3` (per-sector satellites) in every shipped level file, and the descriptor
+table is **entirely zero** in all of them — including `world1`, which has 5120 satellites on disk.
+Whatever locates those satellites at run time therefore does not appear to be the descriptor table as
+serialized, and the level file functions in practice as a grid/extent declaration.
+
 ## Versioned serialization, not a size split
 
 Every `SerializeData`-family function in this format (level, sector, and sector-content) is a

@@ -179,6 +179,62 @@ and descriptions, compiled directly into the binary as literal strings. See [the
 language](./wilderness-script-language.md) for the full reference, recovered entirely from static data
 with no game/editor execution needed.
 
+## Hosting the engine
+
+`InitDuniaEngine` takes **two external window handles** — a top-level focus window and a separate
+render window — so the engine can be driven inside a host application's own UI rather than a window
+it creates itself. Passing a non-null `focusWnd` also forces windowed mode; passing null makes the
+engine create and own its window.
+
+The frame loop stays on the host side. `RunDuniaEngine` (the engine-owned loop) is exported but goes
+unused by the editor, which instead calls `TickDuniaEngine` once per frame and pumps Win32 messages
+itself. The engine calls back into managed code each frame through the `Update` callback.
+`FCE_Engine_UpdateViewport(sizeX, sizeY)` resizes the render target independently of the host
+window's client area, so the back buffer can be smaller than the control it draws into.
+
+Constraints that follow from the API shape rather than from any one function:
+
+- **Singleton.** No `FCE_*` call takes a context or instance handle; there is exactly one engine per
+  process.
+- **Single instance per machine.** `InitDuniaEngine` opens a named mutex `FarCry2Instance` and
+  refuses to start when it already exists, unless launched with both `-dedicated` and `-norender`.
+- **Working directory.** No root path is passed in; the engine resolves game data relative to the
+  process working directory, which must be the `bin\` folder.
+- **Calling conventions differ by direction.** Exports are `__stdcall`; the callbacks registered
+  through `FCE_Editor_*_Callback` are invoked `__cdecl`.
+- **String marshalling is not uniform.** Document paths are passed as explicit UTF-8 byte arrays
+  split into directory and filename; other string parameters are plain ANSI. `LocalizeText` takes
+  ANSI and returns UTF-16.
+
+## What the API does not cover
+
+The surface is complete for terrain, texture, vegetation, spline and prop authoring, and absent for
+everything else a single-player level contains:
+
+- **No property access.** `FCE_Object_*` exposes position, angles, bounds, visibility, freeze,
+  highlight, pivots and physics handles — and no property get or set of any kind. A placed object
+  keeps its archetype defaults.
+- **No entity, mission or event API.** `<world>.managers.fcb` carries `CEventComponent` and
+  `hidLinks` wiring, and `ExportWorldSectors` emits `MissionLayer` and `PathId` tags, but nothing in
+  the API authors either.
+- **`FCE_Document_Export` does nothing.** Driving it against a valid document writes no files
+  anywhere; and its address `0x10669070` is shared, through identical-COMDAT folding, with
+  `FCE_Inventory_Object_{AddPivot,ClearPivots,SavePivots,SetPivot,SetPivots,SetAutoPivot,SetZOffset}`
+  and `FCE_Wilderness_Desert`. Folding merges only byte-identical bodies, so that whole group is
+  empty stubs — the export path was compiled out of the shipping build. `EditorDocument.Export` and
+  the editor's hidden export menu items are complete on the managed side and call into nothing.
+  Note this also means the seven pivot mutators and the desert generator are inert.
+- **No navmesh generation.** The engine contains a complete generator
+  (`CNavmeshGenerator`, `CNavmeshEdition`, `CNavMeshSectorWriter`, `CNavMeshGenComponent`,
+  `BuildNavMeshLevel0`, `AppendNavMeshToSector`), but no export reaches it, and the editor's cooker
+  emits no [`.nvm`](../file-formats/nvm.md) data.
+
+`Validation` is worth reading in this light: `CFCXEditorGameValidation` checks geometry and budget
+only — terrain and collision placement per object type, playable-zone containment, memory and object
+budgets, and per-type count caps — plus the four multiplayer game-mode rule sets. Nothing in it
+rejects content by archetype. `CFCXEditor::ValidateIngame` additionally *destroys* the entities of
+any object whose error carries flag `0x40`, rather than only reporting it.
+
 ## Not found in the binary
 
 22 of the 338 C#-declared names have no matching export in this build of `Dunia.dll` — verified
@@ -197,10 +253,20 @@ individually, not just via a bulk substring search; no address was guessed for a
 
 Most cluster into two shapes: pure mutators on inventory entries (`SetPivot`, `SetZOffset`,
 `SetAutoPivot`, `AddPivot`, `ClearPivots`, `SavePivots`), or `Destroy`/`GetParent`/`GetDisplay`
-siblings of functions that *were* found right next to them in the same class. Reads as the linker
-folding/deduplicating near-identical destructor or trivial-getter stubs across the four parallel
-inventory classes (Object/Spline/Texture/Wilderness all share the same shape) — plausible, but
-unconfirmed; genuinely absent under this exact name either way, not chased further.
+siblings of functions that *were* found right next to them in the same class.
+
+:::note[Corrected]
+The folding theory above is confirmed, and the "absent" conclusion is not. Enumerating the export
+table of the GOG build resolves **all 22** of these names — they exist, sharing addresses with
+unrelated trivial functions through identical-COMDAT folding. Examples:
+`FCE_Wilderness_Desert` and `FCE_Document_Export` at `0x10669070`; `FCE_ImageMap_Destroy`,
+`FCE_Spline_Destroy` and `FCE_ValidationReport_Destroy` at `0x1032ea30`;
+`FCE_Inventory_Object_GetParent` and `FCE_ScriptFunction_GetPrototype` at `0x108808b0`;
+`FCE_PhysEntityVector_Create` at `0x10883530`.
+
+The export table carries **818 entries** in total, addressing 1:1 with ordinals, so a name that
+appears missing is more likely folded onto a shared address than genuinely absent.
+:::
 
 A quirk worth remembering when reading other decompiled signatures in this DLL: a `void`-looking C#
 wrapper doesn't always mean the native function is `void` — `FCE_SplineZone_Reset` and the
