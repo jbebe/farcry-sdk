@@ -119,9 +119,10 @@ public static class SdatSectorFile
 
     /// <summary>
     /// In-game meters per raw height unit, per <c>CSector::GetZApr</c>'s scale constant. The constant's
-    /// address was confirmed via PIC-relative disassembly, but its byte value wasn't independently read
-    /// (no raw-memory-read tool was available) - this is the community-sourced figure, carried over
-    /// provisionally.
+    /// address was confirmed via PIC-relative disassembly but its byte value never read directly, so the
+    /// figure itself came from the community. Corroborated since: an editor map's flat default terrain
+    /// stores 2048 in every height sample, and objects resting on that ground sit at z=16 - which is
+    /// 2048/128 exactly.
     /// </summary>
     public const float MetersPerUnit = 1f / 128f;
 

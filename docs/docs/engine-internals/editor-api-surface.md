@@ -40,6 +40,42 @@ this WinForms shell consumes.
 Every function below now has a decompiler-confirmed, source-verified signature — not inferred from
 disassembly, but taken directly from the original developers' own interop layer.
 
+## Second source: the Linux dedicated-server ELF
+
+`FarCry2_server` exports the same `FCE_*` surface and keeps far more type information than
+`Dunia.dll` — real class names, member-function names, and a distinct address per function where the
+Windows build folds identical bodies together. Annotating all ~345 exports there corroborates this
+page and settles several of its open questions.
+
+**The empty stubs are genuinely empty.** This page reasoned from identical-COMDAT folding that
+`FCE_Document_Export` and the pivot mutators must be compiled-out stubs. The ELF confirms it
+directly rather than by inference: `FCE_Document_Export` and all ten
+`FCE_Inventory_Object_*Pivot*` / `*ZOffset` functions each occupy their own address, take no
+arguments, and have bodies consisting of a bare `return` (or `return 0`). Nothing was folded away —
+there is nothing there to fold.
+
+Behaviour that the C# interop layer does not show:
+
+- **`Load` and `Save` are asynchronous.** `FCE_Document_Load` always returns success; the real
+  outcome arrives later as an `EResultCode` handed to the `LoadCompleted` / `SaveCompleted`
+  callbacks. Both push an editor state and raise a wait screen first.
+- **The two Euler entry points disagree on component order.** `FCE_Core_GetAnglesFromDir` writes
+  pitch into component X and leaves Y zero, while `FCE_Core_GetAnglesFromAxis` and
+  `FCE_Core_GetAxisFromAngles` put pitch in component Y. Reading the triple as a fixed
+  pitch/roll/yaw across the whole API is wrong.
+- **Splines are 2D.** `FCE_Spline_AddPoint`, `SetPoint` and `InsertPoint` all zero Z before storing;
+  points are `ndVec3` but the third component is never authored through this API.
+  `FCE_Spline_UpdateSplineHeight` always passes the whole-map rect, with no partial-region variant
+  exported.
+- **`FCE_Texture_Paint` remaps its slot argument** before use — 1→1, 2→0, 3→3, anything else→-1 —
+  so the value passed is not the layer index the engine ends up using.
+- **The terrain brush calls share one shape**, `(x, y, strength, brush)`, writing into a shared
+  per-filter singleton rather than taking a context. See
+  [Terrain, Sectors and Vegetation](./terrain-and-vegetation.md) for the pipeline and for the
+  eight-slot ceiling on collections that `FCE_CollectionManager_*` operates against.
+- **`FCE_Draw_WireBoxFromBottomZ` shuffles its arguments** on the way through, passing them to the
+  scene primitive helper in the order 4, 6, 5, 7.
+
 ## The API, grouped by subsystem
 
 ### Camera
@@ -62,6 +98,14 @@ Map lifecycle: `Load`/`Save(mapPath, mapName)`, `Reset`, `Validate`, `FinalizeMa
 `Export(mapFile, exportPath, toConsole)`. Metadata: `AuthorName`/`CreatorName`/`MapName` (strings),
 `BattlefieldSize`/`PlayerSize` (enums). Snapshot: `ClearSnapshot`, `IsSnapshotSet`,
 `SnapshotAngle`/`SnapshotPos`, `TakeSnapshot`.
+
+:::note[Terrace is shipped but unexposed, and unstable]
+`CFCXEditorToolTerrainTerrace` is a complete tool class that the stock editor never wires to a
+toolbar — the terrain toolbar binds F1–F7 to Bump, RaiseLower, SetHeight, Smooth, Ramp, Noise and
+Erosion, with no entry for it. Driving it directly shows why: brief applications terrace correctly,
+but held application diverges and destroys the terrain. It was finished enough to ship and not
+finished enough to expose.
+:::
 
 ### TerrainManager / TerrainManipulator
 `TerrainManager`: `WaterLevel`, `GetHeightAt(x, y)`, texture-layer slot binding
@@ -198,8 +242,10 @@ Constraints that follow from the API shape rather than from any one function:
   process.
 - **Single instance per machine.** `InitDuniaEngine` opens a named mutex `FarCry2Instance` and
   refuses to start when it already exists, unless launched with both `-dedicated` and `-norender`.
-- **Working directory.** No root path is passed in; the engine resolves game data relative to the
-  process working directory, which must be the `bin\` folder.
+- **The data root is derived from the host executable's path, not the working directory.** See
+  [data-root derivation](./data-root-derivation.md) for the exact rule. Setting the working directory
+  has no effect; a host started from outside the install reaches `InitDuniaEngine` and dies there
+  with an access violation.
 - **Calling conventions differ by direction.** Exports are `__stdcall`; the callbacks registered
   through `FCE_Editor_*_Callback` are invoked `__cdecl`.
 - **String marshalling is not uniform.** Document paths are passed as explicit UTF-8 byte arrays

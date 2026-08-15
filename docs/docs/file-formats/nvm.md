@@ -19,6 +19,29 @@ internal build-tool plugin list — `RecastNavmeshCompiler`/`Exporter`; not inde
 here). This page covers Dunia's own file/header structure wrapping whatever Recast-derived mesh data
 lives inside a sector — not Recast's own format.
 
+## A missing navmesh crashes the engine, it does not merely disable AI
+
+The in-game editor's cooker emits no `.nvm` at all — no `ige_map` or `mp_*` level ships one, because
+multiplayer has no AI and the gap was never noticed. Placing campaign AI archetypes into an editor
+map therefore produces a world where the AI system runs against no navigation data.
+
+Observed live: a converted campaign region carrying 34 `enemy_archetypes` NPCs and 226
+`STP_archetypes` smart-terrain points crashes the host **~30 seconds after load with no user input**,
+deterministically. The same map with those entities removed and all 1,073 remaining objects intact
+runs indefinitely.
+
+The crash is a read access violation at `Dunia.dll+0x498d66` (Steam build), inside a record-copy loop
+reached from an AI-perception routine — the one calling
+`CAIObjectSystem::EndAIObjectIterator<CPawnAgent>` and issuing randomised raycasts. When the editor
+host is a .NET process, this surfaces misleadingly: the managed frame beneath the engine puts
+coreclr's SEH handler on the dispatch chain, that handler faults on null while handling the first
+exception, and Windows blames `coreclr.dll` instead of Dunia. The original `EXCEPTION_RECORD` is
+still recoverable from the crash dump's stack.
+
+This raises navmesh generation from a quality issue to a hard prerequisite for any editor map that
+places actors. The generator is already compiled into the engine (`CNavmeshGenerator`,
+`CNavMeshSectorWriter`, `BuildNavMeshLevel0`); there is simply no `FCE_Nav*` export.
+
 ## A two-tier file scheme, unlike every other per-sector format
 
 Every other per-sector format documented so far (`.sdat`, `.srl`, `.zsr`) packs one physical file per

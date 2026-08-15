@@ -108,8 +108,7 @@ even with no renderer):
 iVar2 = *(int*)(this + 0x28)              // cached pointer, == packed-blob base (file offset 0x250)
 index = row*0x41 + col                     // 0x41 = 65 → confirms a 65-wide row stride
 height_u16 = *(ushort*)(iVar2 + index*4)   // 2-byte height sample, 4-byte stride per grid cell
-height_m   = (float)height_u16 * DAT_0a15babc   // scale constant, address confirmed but its float
-                                                  // bytes weren't read — see Unknowns
+height_m   = (float)height_u16 * 0.0078125      // 1/128 — now confirmed, see below
 ```
 
 It samples the 4 corners of a quad (`index`, `index+1`, `index+0x41`, `index+0x42`) and bilinearly
@@ -121,17 +120,52 @@ The packed blob's first `65*65*4 = 0x4204` (16,900) bytes are this height/materi
 record per grid cell, row-major, row stride `0x41*4 = 0x104` (260) bytes:
 
 ```
-+0x0  u16   height sample (LE) — see GetZApr scaling above
-+0x2  u8    unidentified — not read by any traced function
-+0x3  u8    low nibble = "material"/hole-select index (0-15), consumed by the LOD0/other-LOD
-             triangle-index builders (CreateLOD0TrianglesFromPackedData @ 0x097ee4a0,
-             CreateOtherLODTrianglesFromPackedData @ 0x097ef2d0) to choose a triangulation/restart
-             pattern per quad; also OR'd into by PreparePackedDataForExport from a separate
-             live-sector hole-mask source
++0x0  u16   height sample (LE), world Z = value * 0.0078125 (1/128)
++0x2  u8    normal X, encoded (b / 255) * 2 - 1   — see "Normals" below
++0x3  u8    bits 7..5 = detail-layer index 0..6; the value 7 means HOLE
+             bits 4..0 = not read by any traced function
 ```
 
-The remaining struct range `[0x4204, 0x4208)` (4 bytes, gap before the mip-mask tables) is unaccounted
-for — likely padding/alignment.
+:::note[Corrected — the layer index is the top three bits, not the low nibble]
+This page previously described `+0x3` as a low nibble holding a "material"/hole-select index 0–15.
+Tracing the readers in `FarCry2_server` shows otherwise: `CSector::GetHole`,
+`CTerrain::IsSectorEditorHole` and `CSector::GetSurfaceType` all evaluate `byte >> 5`, i.e. the top
+three bits, giving a range of 0–7 with **7 reserved to mean hole**. The low five bits are untouched
+by every reader traced. The earlier reading of the triangle-index builders is not contradicted — they
+consume the same byte — but the field's width and position were wrong.
+:::
+
+For a cell that is not a hole, the layer index selects one of **seven bytes of surface-type palette
+at struct-relative offset `0x594c`** (`CSector::GetSurfaceType`, which returns `0xff` for holes;
+`CTerrain::GetSurfaceType` then maps that to `0`).
+
+### Normals
+
+Normals occupy **two separate planes**: X is interleaved into each cell record at `+0x2` above, and Y
+is a standalone byte array of 4225 entries at struct-relative offset **`0x4628`**, indexed identically
+(`(y - OriginY) * 0x41 + (x - OriginX)`). `CSector::GetNormal` decodes both the same way and
+reconstructs Z:
+
+```
+nx = (Cells[i].NormalX / 255) * 2 - 1
+ny = (NormalY[i]       / 255) * 2 - 1
+nz = 1 - sqrt(nx*nx + ny*ny)
+```
+
+That is not a renormalisation and the result is not a unit vector — the engine consumes it as is.
+A sector with no packed data resident returns `(0, 0, 1)` instead.
+
+The `NormalY` array ends at `0x56a9`, immediately before the mip-mask table this page places at
+`0x56b0`, and starts after the LOD0 mask region beginning around `0x4208` — so the normal plane and
+the mask tables interleave in the range `[0x4204, 0x594c)` rather than either one owning it whole.
+The exact boundaries between them are not pinned down.
+
+### Writers must duplicate the shared edge
+
+Sector grids overlap by one row and one column, and `CTerrain::SetSectorHeightFixed` writes the same
+height into **up to three sectors**: the owning one, plus the sector to the left when `x % 64 == 0`,
+plus the sector above when `y % 64 == 0`. Any tool that edits heightmaps offline has to reproduce
+that duplication or the map will show seams at sector boundaries.
 
 ## `CChunkWriter` — the generic container
 
@@ -153,14 +187,43 @@ earlier: 14,964 of each across the whole install — `generated\worldsectors\sec
 literally co-located). Unlike this page's chunked container, both turn out to be raw fixed-size
 per-sector memory dumps with no header at all — see [`.srl`/`.zsr`](./srl-zsr.md) for the full writeup.
 
+## Terrain layers and `DetailTexMask`
+
+Terrain textures come from a **layer table that is global to the game**: `world1`, `world2` and the
+editor's own `ige_map` all carry a byte-identical 45-entry list, so a layer index means the same
+texture in every level. `C3DEngine::LoadTerrainLayersFromXML` (`0x09822ab0`) reads it from the
+world's `<name>.game.xml` — `<Layers>` of `<Layer>` elements carrying `Name`, `ProjAxis`, `Texture`,
+`Tiling`, `NormalMap`, `SpecularMap`, `HeightMap`, `SurfaceTypeID` and friends — and **a layer's
+index is simply its position in that list**, passed as the first argument to `STerrainLayer`'s
+constructor.
+
+`sector#.desc.fcb`'s `DetailTexMask` is not a hash despite the field's FCB type tag: it is **four
+byte-sized layer indices packed into a `u32`, with `0xFF` for an unused slot**, naming the (up to)
+four textures that sector blends. `CSector::GetDetailTexMask(int)` reads one. Shipped sectors use
+three and leave the fourth `0xFF`.
+
+The matching weights live in `generated/sdat/atlas#_mask.xbt` — 128×128 DXT1, one atlas per 2×2
+sectors, so one texel per world unit. Its R/G/B channels are the weights for `DetailTexMask` slots
+0/1/2 and **sum to 255 at every texel**. Layer names ending `_X`/`_Y`/`_Z` are one texture projected
+down different axes; the editor palette carries them as a single entry with `ProjectionX`/
+`ProjectionY` attributes, so they collapse when mapping to it.
+
+The editor writes the identical structure with a single global set — every cooked sector of a stock
+editor map carries `DetailTexMask = 09 FF FF FF` (layer 9, `Savannah_Undergrass`). The four-texture
+ceiling in [`.fc2map`](./fc2map.md) authoring is therefore an editor limit; the engine already varies
+its four per sector.
+
 ## Unknowns
 
-- Exact value of the height scale constant `DAT_0a15babc` — address confirmed via PIC-relative
-  disassembly, but its float bytes weren't read (no raw-memory-read tool available in this GhidraMCP
-  setup). Treat the ~1/128 (`0.0078125`) figure already used in `SdatHeightmap.cs` as provisional until
-  confirmed against a real file or memory dump.
-- Byte `+0x2` of each 4-byte grid cell (between the height u16 and the material/hole nibble at `+0x3`)
-  — no traced function reads it. Candidates: a second nibble pair, a normal/slope byte, or padding.
+- ~~Exact value of the height scale constant~~ — **resolved**: it is `0.0078125` (1/128), appearing
+  as an inline constant in `CTerrain::GetZ`, `CTerrain::GetSectorHeightFloat`, `CSector::GetZApr` and
+  `CSector::ComputeMinMaxZ`. This matches the indirect corroboration recorded earlier (flat editor
+  terrain stores 2048 and objects rest at z=16).
+- ~~Byte `+0x2` of each 4-byte grid cell~~ — **resolved**: it is normal X, paired with a second plane
+  at `0x4628`. See [Normals](#normals).
+- The low five bits of the `+0x3` flags byte — no traced reader touches them.
+- The exact boundaries between the `NormalY` plane and the mip-mask tables inside
+  `[0x4204, 0x594c)`.
 - The 16-byte tail block's exact meaning — shape suggests a bounding box or height min/max/range, not
   confirmed.
 - `SSectorDataChunk+0x010` and `+0x01C`'s exact semantics — both round-trip correctly but purpose wasn't
