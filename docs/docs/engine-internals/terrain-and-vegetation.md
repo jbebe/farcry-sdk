@@ -178,12 +178,39 @@ present in the level files in any form found so far. The `.sdat` `EnvSettings` b
 the remaining per-sector store and is a raw memory snapshot whose varying words look like retained
 pointers (`0x07xxxxxx`), not an authored slot table.
 
+### It lives in the landmark files
+
+Resolved: campaign vegetation placement is in
+`levels/<cell>/generated/worldsectors/landmarkfar_<sectorId>.data.fcb`, keyed by **global** sector id.
+Each holds one `WorldSector` → `MissionLayer` → `Entity` whose `Components` carry a
+`CCollectionComponent`:
+
+```
+CCollectionComponent
+  VegetationData        dataVersion (5), bboxMin, bboxMax
+    VegetationZoneData  zoneId, resourceList, resClustersCntList, boundingVolumeList,
+                        clustersInstancesCntList, posXYList, posZList, orientZDataList, colorsList
+```
+
+Those nine lists are the parallel vectors of `StSerialVegetationZoneData` named above, and
+`CCollectionComponent::SpawnVegetationFromSerializationData` is what walks them at load. A sibling
+`CCollectionIgnitorComponent` carries an `IgnitorZonesList`, which is what makes vegetation burn.
+`landmarknear<id>.data.fcb` is roughly ten times larger and additionally carries `LightVegeGrid`.
+
 :::caution[Open]
-Where a retail campaign level's vegetation placement comes from is unresolved. The untested
-possibilities are that it is derived at load from terrain layer or surface type, that it lives in the
-per-sector `.srl`/`.zsr` or landmark files, or that `CCollectionManager` synthesises it at runtime.
-Tracing `CCollectionManager`'s load path would settle it.
+The element packing inside the nine lists is not decoded. `resourceList` and `resClustersCntList` are
+56 bytes (14 `u32`, matching a per-sector resource count); the four 88-byte lists are per cluster.
+`posXYList` and `posZList` hold the instance positions, but their sizes do not divide as plain float
+arrays, so the elements are probably quantised or length-prefixed.
+
+Per-sector vegetation **extents** are usable without decoding any of that, from
+`VegetationData.bboxMin`/`bboxMax`.
 :::
+
+Three things this is **not**, each checked directly: vegetation is not placed as entities (33,000
+sampled entities contain about 16 plant props); it is not in `worldsector*.data.fcb`, the sector
+descriptors, `mapsdata.fcb`, `managers.fcb` or the entity library (833 sectors sampled world-wide);
+and no collection mask file ships with a retail level.
 
 ## Not mapped
 

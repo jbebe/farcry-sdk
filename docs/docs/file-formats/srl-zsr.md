@@ -67,6 +67,21 @@ as every other per-entity capability documented in [Engine
 Architecture](../engine-internals/architecture.md)) that presumably lets a placed entity define or
 query which zone it's in.
 
+## Confirmed owner and grid shape
+
+`%ssector%d.srl` is referenced only by `ExportSoundRegionLayer`, and the resource class is
+`CSRLResource` — so `.srl` is the sound region layer, not a general serialization blob as the
+extension suggests.
+
+Both files are fixed-size per-cell byte grids: `.srl` is 1,024 bytes (32×32, one byte per 2×2 quads)
+and `.zsr` is 4,096 bytes (64×64, one byte per quad). `.srl`'s low nibble tracks biome — sampled
+across `world1`, Desert sectors are 97.9% `0x00`, Jungle values end in `1` and Woodland values end in
+`2`, with the high nibble varying within a biome. That correlation is ambient sound following the
+biome, not vegetation: vegetation placement lives in the
+[landmark files](../engine-internals/terrain-and-vegetation.md#it-lives-in-the-landmark-files).
+`.zsr` is bimodal per sector — a sector is either almost entirely `0xFF` or almost entirely covered —
+which reads as zone membership rather than a painted per-cell field.
+
 ## Unknowns
 
 - **The actual on-disk record layout for either format.** `SSoundRegion` contains a `std::string`
