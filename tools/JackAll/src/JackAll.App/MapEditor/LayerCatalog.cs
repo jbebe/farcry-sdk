@@ -74,6 +74,12 @@ public static class LayerCatalog
             "Every placed plant, from the per-sector landmark files. Coloured by the resource it instantiates.",
             ["Show plant positions", "Resource ids not yet resolved to names", "Placement editing"]);
 
+    /// <summary>Draws a marker per placed light while visible, in the light's own colour.</summary>
+    public static readonly MapLayer Lights =
+        new("Dressing", "Lights", "Ready",
+            "Every placed light, from the CDynamicLightComponent on ordinary entities - omni (point) and spot.",
+            ["Show lights in their own colour", "Disabled lights dimmed", "Radius and cone not drawn yet"]);
+
     /// <summary>Draws a marker per walkable node while visible, green where the ground is flat
     /// enough to walk and red where the engine's slope limit rejects it.</summary>
     public static readonly MapLayer NavMesh =
@@ -97,9 +103,7 @@ public static class LayerCatalog
             "The per-world archetype palette every entity references (1,419 in world1).",
             ["Archetype browser by category", "Thumbnails", "Archetype editing"]),
 
-        new("Dressing", "Omni lights", "Partial",
-            "World-scope static light placements (omnis.fcb).",
-            ["Light list", "Place / edit lights"]),
+        Lights,
         Vegetation,
         Roads,
         new("Dressing", "Landmarks", "Partial",

@@ -23,7 +23,8 @@ public partial class MapTabView : UserControl
     private sealed record PendingLoad(
         TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table,
         Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines,
-        IReadOnlyList<VegetationInstance> Vegetation, IReadOnlyList<NavMeshNode> NavNodes);
+        IReadOnlyList<VegetationInstance> Vegetation, IReadOnlyList<NavMeshNode> NavNodes,
+        IReadOnlyList<WorldLight> Lights);
 
     private sealed record FieldRow(string Name, string Value);
 
@@ -56,6 +57,7 @@ public partial class MapTabView : UserControl
     private ShapeLayer? _splineLayer;
     private EntityMarkerLayer? _vegetationLayer;
     private EntityMarkerLayer? _navMeshLayer;
+    private EntityMarkerLayer? _lightLayer;
 
     private readonly Camera3D _camera = new();
     private readonly HashSet<Key> _flyKeys = [];
@@ -109,7 +111,9 @@ public partial class MapTabView : UserControl
                 IReadOnlyList<VegetationInstance> vegetation =
                     WorldVegetation.Load(map, vm.ReadByPath, FcbDefinitionsProvider.Value.Value, progress);
                 IReadOnlyList<NavMeshNode> navNodes = WorldNavMesh.Load(map, vm.ReadByPath, progress);
-                return new PendingLoad(map, terrain, detail, table, world, shapes, splines, vegetation, navNodes);
+                IReadOnlyList<WorldLight> lights = WorldLights.Load(world.Entities);
+                return new PendingLoad(
+                    map, terrain, detail, table, world, shapes, splines, vegetation, navNodes, lights);
             });
 
             WorldTerrain terrain = loaded.Terrain;
@@ -152,6 +156,9 @@ public partial class MapTabView : UserControl
             _vegetationLayer = new EntityMarkerLayer(BuildVegetationMarkers(pending.Vegetation), pending.Vegetation.Count);
             _navMeshLayer?.Dispose();
             _navMeshLayer = new EntityMarkerLayer(BuildNavMeshMarkers(pending.NavNodes), pending.NavNodes.Count);
+            _lightLayer?.Dispose();
+            _lightLayer = new EntityMarkerLayer(BuildLightMarkers(pending.Lights), pending.Lights.Count);
+            LightStatus.Text = Describe(pending.Lights);
             _markersDirty = true;
             _heightTexture = new HeightTexture(pending.Terrain);
             _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
@@ -213,6 +220,13 @@ public partial class MapTabView : UserControl
             OpenTK.Mathematics.Vector3 vegRight = _camera.Right;
             _vegetationLayer?.Draw(viewProjection, 2f, vegRight,
                 OpenTK.Mathematics.Vector3.Cross(vegRight, _camera.Forward), flattenZ: false, null);
+        }
+
+        if (LayerCatalog.Lights.IsVisible)
+        {
+            OpenTK.Mathematics.Vector3 lightRight = _camera.Right;
+            _lightLayer?.Draw(viewProjection, 4f, lightRight,
+                OpenTK.Mathematics.Vector3.Cross(lightRight, _camera.Forward), flattenZ: false, null);
         }
 
         if (LayerCatalog.NavMesh.IsVisible)
@@ -437,6 +451,39 @@ public partial class MapTabView : UserControl
         return stream;
     }
 
+    /// <summary>One marker per light in its own emitted colour, dimmed hard when the light ships
+    /// disabled so the two read apart at a glance.</summary>
+    private static float[] BuildLightMarkers(IReadOnlyList<WorldLight> lights)
+    {
+        var stream = new float[lights.Count * EntityMarkerLayer.Stride];
+        for (int i = 0; i < lights.Count; i++)
+        {
+            WorldLight light = lights[i];
+            float dim = light.Enabled ? 1f : 0.2f;
+            int at = i * EntityMarkerLayer.Stride;
+            stream[at] = light.Position.X;
+            stream[at + 1] = light.Position.Y;
+            stream[at + 2] = light.Position.Z;
+            stream[at + 3] = light.Colour.X * dim;
+            stream[at + 4] = light.Colour.Y * dim;
+            stream[at + 5] = light.Colour.Z * dim;
+        }
+        return stream;
+    }
+
+    private static string Describe(IReadOnlyList<WorldLight> lights)
+    {
+        if (lights.Count == 0)
+        {
+            return "No lights in this map.";
+        }
+
+        int spots = lights.Count(l => l.IsSpot);
+        int off = lights.Count(l => !l.Enabled);
+        return $"{lights.Count:N0} lights: {lights.Count - spots:N0} omni, {spots:N0} spot" +
+               (off > 0 ? $"; {off:N0} start disabled." : ".");
+    }
+
     private static uint StableHash(string text)
     {
         uint hash = 2166136261;
@@ -578,6 +625,9 @@ public partial class MapTabView : UserControl
                 ? System.Windows.Visibility.Visible
                 : System.Windows.Visibility.Collapsed;
         TexturePanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Textures)
+            ? System.Windows.Visibility.Visible
+            : System.Windows.Visibility.Collapsed;
+        LightPanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Lights)
             ? System.Windows.Visibility.Visible
             : System.Windows.Visibility.Collapsed;
 
