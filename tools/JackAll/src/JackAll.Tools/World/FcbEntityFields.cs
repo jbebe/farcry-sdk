@@ -26,6 +26,40 @@ public static class FcbEntityFields
             ? new Vector3(BitConverter.ToSingle(bytes, 0), BitConverter.ToSingle(bytes, 4), BitConverter.ToSingle(bytes, 8))
             : null;
 
+    public static float? ReadFloat(FcbObject node, uint field)
+        => node.Values.TryGetValue(field, out byte[]? bytes) && bytes.Length >= 4
+            ? BitConverter.ToSingle(bytes, 0)
+            : null;
+
+    public static uint? ReadU32(FcbObject node, uint field)
+        => node.Values.TryGetValue(field, out byte[]? bytes) && bytes.Length >= 4
+            ? BitConverter.ToUInt32(bytes, 0)
+            : null;
+
+    public static bool ReadBool(FcbObject node, uint field)
+        => node.Values.TryGetValue(field, out byte[]? bytes) && bytes.Length >= 1 && bytes[0] != 0;
+
+    /// <summary>Finds one of an entity's components by class hash; they hang off a
+    /// <c>Components</c> child rather than the entity itself.</summary>
+    public static FcbObject? FindComponent(FcbObject entity, uint typeHash)
+    {
+        foreach (FcbObject group in entity.Children)
+        {
+            if (group.TypeHash != WorldHashes.Components)
+            {
+                continue;
+            }
+            foreach (FcbObject component in group.Children)
+            {
+                if (component.TypeHash == typeHash)
+                {
+                    return component;
+                }
+            }
+        }
+        return null;
+    }
+
     public static byte[] Vector3Bytes(Vector3 v)
     {
         var bytes = new byte[12];

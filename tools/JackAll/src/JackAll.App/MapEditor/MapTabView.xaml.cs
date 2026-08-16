@@ -24,7 +24,7 @@ public partial class MapTabView : UserControl
         TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table,
         Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines,
         IReadOnlyList<VegetationInstance> Vegetation, IReadOnlyList<NavMeshNode> NavNodes,
-        IReadOnlyList<WorldLight> Lights);
+        IReadOnlyList<WorldLight> Lights, IReadOnlyList<TriggerVolume> Triggers);
 
     private sealed record FieldRow(string Name, string Value);
 
@@ -58,6 +58,7 @@ public partial class MapTabView : UserControl
     private EntityMarkerLayer? _vegetationLayer;
     private EntityMarkerLayer? _navMeshLayer;
     private EntityMarkerLayer? _lightLayer;
+    private ShapeLayer? _triggerLayer;
 
     private readonly Camera3D _camera = new();
     private readonly HashSet<Key> _flyKeys = [];
@@ -112,8 +113,10 @@ public partial class MapTabView : UserControl
                     WorldVegetation.Load(map, vm.ReadByPath, FcbDefinitionsProvider.Value.Value, progress);
                 IReadOnlyList<NavMeshNode> navNodes = WorldNavMesh.Load(map, vm.ReadByPath, progress);
                 IReadOnlyList<WorldLight> lights = WorldLights.Load(world.Entities);
+                IReadOnlyList<TriggerVolume> triggers = WorldTriggers.Load(world.Entities);
                 return new PendingLoad(
-                    map, terrain, detail, table, world, shapes, splines, vegetation, navNodes, lights);
+                    map, terrain, detail, table, world, shapes, splines, vegetation, navNodes, lights,
+                    triggers);
             });
 
             WorldTerrain terrain = loaded.Terrain;
@@ -159,6 +162,9 @@ public partial class MapTabView : UserControl
             _lightLayer?.Dispose();
             _lightLayer = new EntityMarkerLayer(BuildLightMarkers(pending.Lights), pending.Lights.Count);
             LightStatus.Text = Describe(pending.Lights);
+            _triggerLayer?.Dispose();
+            _triggerLayer = new ShapeLayer(BuildTriggerOutlines(pending.Triggers));
+            TriggerStatus.Text = Describe(pending.Triggers);
             _markersDirty = true;
             _heightTexture = new HeightTexture(pending.Terrain);
             _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
@@ -220,6 +226,11 @@ public partial class MapTabView : UserControl
             OpenTK.Mathematics.Vector3 vegRight = _camera.Right;
             _vegetationLayer?.Draw(viewProjection, 2f, vegRight,
                 OpenTK.Mathematics.Vector3.Cross(vegRight, _camera.Forward), flattenZ: false, null);
+        }
+
+        if (LayerCatalog.Triggers.IsVisible)
+        {
+            _triggerLayer?.Draw(viewProjection);
         }
 
         if (LayerCatalog.Lights.IsVisible)
@@ -451,6 +462,41 @@ public partial class MapTabView : UserControl
         return stream;
     }
 
+    /// <summary>Each trigger box as its twelve edges: the two rectangles plus the four uprights.
+    /// Reusing the polyline layer keeps this to line data rather than a renderer of its own.</summary>
+    private static List<WorldShape> BuildTriggerOutlines(IReadOnlyList<TriggerVolume> triggers)
+    {
+        var outlines = new List<WorldShape>(triggers.Count * 6);
+        foreach (TriggerVolume trigger in triggers)
+        {
+            System.Numerics.Vector3[] c = trigger.Corners();
+            string kind = trigger.Enabled ? "trigger" : "trigger-off";
+
+            outlines.Add(new WorldShape(kind, trigger.Name, "box", [c[0], c[1], c[3], c[2], c[0]]));
+            outlines.Add(new WorldShape(kind, trigger.Name, "box", [c[4], c[5], c[7], c[6], c[4]]));
+            for (int i = 0; i < 4; i++)
+            {
+                outlines.Add(new WorldShape(kind, trigger.Name, "box", [c[i], c[i + 4]]));
+            }
+        }
+        return outlines;
+    }
+
+    private static string Describe(IReadOnlyList<TriggerVolume> triggers)
+    {
+        if (triggers.Count == 0)
+        {
+            return "No proximity triggers in this map.";
+        }
+
+        int off = triggers.Count(t => !t.Enabled);
+        int rotated = triggers.Count(t => t.Yaw != 0);
+        return $"{triggers.Count:N0} proximity triggers; {rotated:N0} rotated" +
+               (off > 0 ? $", {off:N0} start disabled." : ".") +
+               " vectorSize is drawn as the box's full extent, centred on the entity - neither is " +
+               "confirmed from the engine.";
+    }
+
     /// <summary>One marker per light in its own emitted colour, dimmed hard when the light ships
     /// disabled so the two read apart at a glance.</summary>
     private static float[] BuildLightMarkers(IReadOnlyList<WorldLight> lights)
@@ -628,6 +674,9 @@ public partial class MapTabView : UserControl
             ? System.Windows.Visibility.Visible
             : System.Windows.Visibility.Collapsed;
         LightPanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Lights)
+            ? System.Windows.Visibility.Visible
+            : System.Windows.Visibility.Collapsed;
+        TriggerPanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Triggers)
             ? System.Windows.Visibility.Visible
             : System.Windows.Visibility.Collapsed;
 

@@ -151,6 +151,10 @@
                             <TextBlock x:Name="TextureStatus" Foreground="#888" TextWrapping="Wrap" Margin="0,12,0,0" />
                         </StackPanel>
 
+                        <StackPanel x:Name="TriggerPanel" Visibility="Collapsed">
+                            <TextBlock x:Name="TriggerStatus" Foreground="#888" TextWrapping="Wrap" Margin="0,12,0,0" />
+                        </StackPanel>
+
                         <StackPanel x:Name="LightPanel" Visibility="Collapsed">
                             <TextBlock x:Name="LightStatus" Foreground="#888" TextWrapping="Wrap" Margin="0,12,0,0" />
                         </StackPanel>

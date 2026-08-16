@@ -75,6 +75,8 @@ public sealed class ShapeLayer : IDisposable
         "river" => (0.30f, 0.55f, 0.95f),
         "path" => (0.70f, 0.45f, 0.85f),
         "sound" => (0.95f, 0.75f, 0.25f),
+        "trigger" => (0.95f, 0.90f, 0.20f),
+        "trigger-off" => (0.45f, 0.42f, 0.15f),
         _ => (0.35f, 0.85f, 0.95f),
     };
 

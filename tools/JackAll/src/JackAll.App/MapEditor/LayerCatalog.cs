@@ -74,6 +74,12 @@ public static class LayerCatalog
             "Every placed plant, from the per-sector landmark files. Coloured by the resource it instantiates.",
             ["Show plant positions", "Resource ids not yet resolved to names", "Placement editing"]);
 
+    /// <summary>Draws the proximity trigger boxes as wireframes while visible.</summary>
+    public static readonly MapLayer Triggers =
+        new("Objects", "Trigger boxes", "Ready",
+            "The volumes that fire when something enters them - proximity triggers on ordinary entities.",
+            ["Show trigger boxes", "Disabled triggers dimmed", "vectorSize read as full extent (unconfirmed)"]);
+
     /// <summary>Draws a marker per placed light while visible, in the light's own colour.</summary>
     public static readonly MapLayer Lights =
         new("Dressing", "Lights", "Ready",
@@ -99,6 +105,7 @@ public static class LayerCatalog
         Entities,
         MissionLayers,
         Shapes,
+        Triggers,
         new("Objects", "Entity library", "Ready",
             "The per-world archetype palette every entity references (1,419 in world1).",
             ["Archetype browser by category", "Thumbnails", "Archetype editing"]),

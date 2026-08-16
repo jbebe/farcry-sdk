@@ -35,7 +35,8 @@ public static class WorldLights
         var lights = new List<WorldLight>();
         foreach (WorldEntity entity in entities)
         {
-            if (entity.Position is not { } position || Find(entity.Node) is not { } light)
+            if (entity.Position is not { } position ||
+                FcbEntityFields.FindComponent(entity.Node, DynamicLight) is not { } light)
             {
                 continue;
             }
@@ -43,47 +44,12 @@ public static class WorldLights
             lights.Add(new WorldLight(
                 entity.Name,
                 position,
-                Vec3(light, Colour) ?? Vector3.One,
-                Scalar(light, Radius) ?? 0f,
-                Scalar(light, Intensity) ?? 1f,
-                Word(light, Type) == SpotType,
-                light.Values.TryGetValue(Enabled, out byte[]? on) && on.Length > 0 && on[0] != 0));
+                FcbEntityFields.ReadVector3(light, Colour) ?? Vector3.One,
+                FcbEntityFields.ReadFloat(light, Radius) ?? 0f,
+                FcbEntityFields.ReadFloat(light, Intensity) ?? 1f,
+                FcbEntityFields.ReadU32(light, Type) == SpotType,
+                FcbEntityFields.ReadBool(light, Enabled)));
         }
         return lights;
     }
-
-    private static FcbObject? Find(FcbObject entity)
-    {
-        foreach (FcbObject group in entity.Children)
-        {
-            if (group.TypeHash != WorldHashes.Components)
-            {
-                continue;
-            }
-            foreach (FcbObject component in group.Children)
-            {
-                if (component.TypeHash == DynamicLight)
-                {
-                    return component;
-                }
-            }
-        }
-        return null;
-    }
-
-    private static Vector3? Vec3(FcbObject node, uint field) =>
-        node.Values.TryGetValue(field, out byte[]? raw) && raw.Length == 12
-            ? new Vector3(
-                BitConverter.ToSingle(raw, 0), BitConverter.ToSingle(raw, 4), BitConverter.ToSingle(raw, 8))
-            : null;
-
-    private static float? Scalar(FcbObject node, uint field) =>
-        node.Values.TryGetValue(field, out byte[]? raw) && raw.Length == 4
-            ? BitConverter.ToSingle(raw, 0)
-            : null;
-
-    private static uint? Word(FcbObject node, uint field) =>
-        node.Values.TryGetValue(field, out byte[]? raw) && raw.Length == 4
-            ? BitConverter.ToUInt32(raw, 0)
-            : null;
 }
