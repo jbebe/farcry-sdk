@@ -152,7 +152,7 @@ public partial class MainWindow : Window
         OasisStringTable.UseSource(_vm.ReadByPath);
 
         await _vm.InitializeAsync();
-        MapTab.Initialize(_vm);
+        await MapTab.InitializeAsync(_vm);
     }
 
     /// <summary>First run: find the game, or there is nothing to manage. Also the one and only place

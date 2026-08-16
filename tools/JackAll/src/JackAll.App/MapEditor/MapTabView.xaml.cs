@@ -38,39 +38,40 @@ public partial class MapTabView : UserControl
         LayerList.ItemsSource = view;
         LayerList.SelectedItem = LayerCatalog.Layers[0];
 
-        WorldPicker.ItemsSource = Fc2WorldGrid.SpWorldNames;
-        WorldPicker.SelectedIndex = 0;
         Viewport.Start(new GLWpfControlSettings { MajorVersion = 3, MinorVersion = 3 });
     }
 
-    /// <summary>Called by MainWindow once the VFS is loaded and worlds become readable.</summary>
-    public void Initialize(MainViewModel vm)
+    /// <summary>Called by MainWindow once the VFS is loaded and its maps become discoverable.</summary>
+    public async Task InitializeAsync(MainViewModel vm)
     {
         _vm = vm;
-        WorldPicker.IsEnabled = true;
-        LoadButton.IsEnabled = true;
-        StatusText.Text = "Pick a world and Load";
+        IReadOnlyList<TerrainMap> maps = await Task.Run(() => TerrainMap.Discover(vm.AllKnownPaths));
+
+        MapPicker.ItemsSource = maps;
+        MapPicker.SelectedIndex = 0;
+        MapPicker.IsEnabled = maps.Count > 0;
+        LoadButton.IsEnabled = maps.Count > 0;
+        StatusText.Text = maps.Count > 0 ? $"{maps.Count} maps - pick one and Load" : "No map terrain found";
     }
 
     private async void Load_Click(object sender, System.Windows.RoutedEventArgs e)
     {
-        if (_vm is null) return;
+        if (_vm is null || MapPicker.SelectedItem is not TerrainMap map) return;
 
-        string worldName = (string)WorldPicker.SelectedItem;
         LoadButton.IsEnabled = false;
         try
         {
             var progress = new Progress<string>(s => StatusText.Text = s);
             MainViewModel vm = _vm;
-            WorldTerrain terrain = await Task.Run(() =>
-                WorldTerrain.Load(WorldPaths.ForWorld(worldName, vm.AllKnownPaths), vm.ReadByPath, progress));
+            WorldTerrain terrain = await Task.Run(() => WorldTerrain.Load(map, vm.ReadByPath, progress));
 
             _pendingTerrain = terrain;
-            int center = WorldTerrain.Side / 2;
+            int center = terrain.Side / 2;
             _camera.Position = new OpenTK.Mathematics.Vector3(
                 center, center, terrain.HeightMetersAt(center, center) + 150);
             ViewportHint.Visibility = System.Windows.Visibility.Collapsed;
-            StatusText.Text = $"{worldName}: {terrain.MinHeight / 128f:F0}-{terrain.MaxHeight / 128f:F0} m terrain";
+            StatusText.Text = $"{map.Name}: {map.SectorsPerSide}x{map.SectorsPerSide} sectors, " +
+                              $"{terrain.MinHeight / 128f:F0}-{terrain.MaxHeight / 128f:F0} m";
             Viewport.Focus();
         }
         finally
@@ -103,7 +104,10 @@ public partial class MapTabView : UserControl
         ApplyFlyKeys((float)delta.TotalSeconds);
         OpenTK.Mathematics.Matrix4 viewProjection = _camera.View()
             * _camera.Projection((float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1)));
-        _terrainMesh.Draw(viewProjection, _camera.Position);
+        if (LayerCatalog.Heightmap.IsVisible)
+        {
+            _terrainMesh.Draw(viewProjection, _camera.Position);
+        }
     }
 
     private void ApplyFlyKeys(float dt)

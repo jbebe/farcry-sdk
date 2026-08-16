@@ -3,24 +3,25 @@ using JackAll.Tools.Sdat;
 namespace JackAll.Tools.World;
 
 /// <summary>
-/// A whole SP world's terrain heights: all 6400 <c>sd&lt;id&gt;.sdat</c> sectors (dense, ids 0-6399
-/// on the 80x80 grid in both shipped worlds) stitched into one grid, one sample per world unit,
-/// row-major <c>[y * Side + x]</c> with grid row = world Y. Raw values are the sdat encoding:
-/// meters * 128. A missing sector leaves its samples zero - flat terrain is the honest rendering
-/// for a modded/partial install.
+/// A map's terrain heights: every <c>sd&lt;id&gt;.sdat</c> sector stitched into one grid, one sample
+/// per world unit, row-major <c>[y * Side + x]</c> with grid row = world Y. Raw values are the sdat
+/// encoding: meters * 128. A missing sector leaves its samples zero - flat terrain is the honest
+/// rendering for a map that ships no file for that cell.
 /// </summary>
 public sealed class WorldTerrain
 {
-    public static readonly int Side = SdatTerrainCrop.GridSideFor(Fc2WorldGrid.WorldSide);
+    /// <summary>Height samples a side.</summary>
+    public int Side { get; }
 
     public ushort[] Heights { get; }
 
-    /// <summary>Raw-height extremes across the world, for normalizing a relief rendering.</summary>
+    /// <summary>Raw-height extremes across the map, for normalizing a relief rendering.</summary>
     public ushort MinHeight { get; }
     public ushort MaxHeight { get; }
 
-    internal WorldTerrain(ushort[] heights, ushort min, ushort max)
+    private WorldTerrain(int side, ushort[] heights, ushort min, ushort max)
     {
+        Side = side;
         Heights = heights;
         MinHeight = min;
         MaxHeight = Math.Max(max, (ushort)(min + 1));
@@ -31,18 +32,19 @@ public sealed class WorldTerrain
            * (float)SdatSectorFile.MetersPerUnit;
 
     public static WorldTerrain Load(
-        WorldPaths paths,
+        TerrainMap map,
         Func<string, byte[]?> readByPath,
         IProgress<string>? progress = null)
     {
-        progress?.Report($"Loading {paths.WorldName} terrain: {paths.Terrain.Count} sectors");
+        progress?.Report($"Loading {map.Name} terrain: {map.Sectors.Count} sectors");
 
         // Each decoded sector's heights stream straight into the stitched grid (shared edges simply
         // written by both neighbours), so no sector outlives its own copy loop.
-        var heights = new ushort[Side * Side];
+        int side = map.GridSide;
+        var heights = new ushort[side * side];
         ushort min = ushort.MaxValue, max = 0;
         object minMaxLock = new();
-        Parallel.ForEach(paths.Terrain, item =>
+        Parallel.ForEach(map.Sectors, item =>
         {
             if (readByPath(item.Path) is not { } data)
             {
@@ -50,13 +52,12 @@ public sealed class WorldTerrain
             }
 
             SdatGridCell[,] grid = SdatSectorFile.Decode(data).Grid;
-            (int row, int col) = Fc2WorldGrid.SectorCoords(item.SectorId);
-            int y0 = row * SdatTerrainCrop.QuadsPerSector;
-            int x0 = col * SdatTerrainCrop.QuadsPerSector;
+            int y0 = item.SectorId / map.SectorsPerSide * SdatTerrainCrop.QuadsPerSector;
+            int x0 = item.SectorId % map.SectorsPerSide * SdatTerrainCrop.QuadsPerSector;
             ushort localMin = ushort.MaxValue, localMax = 0;
             for (int gy = 0; gy < SdatSectorFile.GridSize; gy++)
             {
-                int rowBase = (y0 + gy) * Side + x0;
+                int rowBase = (y0 + gy) * side + x0;
                 for (int gx = 0; gx < SdatSectorFile.GridSize; gx++)
                 {
                     ushort h = grid[gy, gx].RawHeight;
@@ -73,6 +74,6 @@ public sealed class WorldTerrain
             }
         });
 
-        return new WorldTerrain(heights, min == ushort.MaxValue ? (ushort)0 : min, max);
+        return new WorldTerrain(side, heights, min == ushort.MaxValue ? (ushort)0 : min, max);
     }
 }

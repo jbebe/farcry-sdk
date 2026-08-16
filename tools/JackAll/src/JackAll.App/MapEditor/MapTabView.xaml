@@ -10,7 +10,9 @@
                 <TextBlock x:Name="StatusText" DockPanel.Dock="Right" VerticalAlignment="Center"
                            Foreground="#555" Text="Waiting for the game archives to load" />
                 <StackPanel Orientation="Horizontal">
-                    <ComboBox x:Name="WorldPicker" Width="110" IsEnabled="False" Margin="0,0,8,0" />
+                    <ComboBox x:Name="MapPicker" Width="190" IsEnabled="False" Margin="0,0,8,0"
+                              DisplayMemberPath="Name"
+                              ToolTip="Every map that ships terrain: the two campaign worlds, the multiplayer maps, and tmpla" />
                     <Button x:Name="LoadButton" Content="Load" IsEnabled="False" Padding="12,3" Margin="0,0,4,0"
                             Click="Load_Click" />
                     <Button Content="Save" IsEnabled="False" Padding="12,3" Margin="0,0,4,0" />
@@ -45,7 +47,7 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
-                            <CheckBox IsChecked="True" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <CheckBox IsChecked="{Binding IsVisible}" VerticalAlignment="Center" Margin="0,0,6,0" />
                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
                         </StackPanel>
                     </DataTemplate>

@@ -1,4 +1,3 @@
-using JackAll.Tools.World;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 
@@ -29,7 +28,7 @@ public sealed class TerrainMesh3D : IDisposable
 
         string constants =
             $"""
-            const float extent = {WorldTerrain.Side - 1}.0;
+            const float extent = {heights.Side - 1}.0;
             const float metersPerRaw = 65535.0 / 128.0;
             const int patchSide = {PatchSide};
             """;
@@ -119,7 +118,7 @@ public sealed class TerrainMesh3D : IDisposable
         // depth offset on the backdrop avoids z-fighting where they overlap.
         GL.Enable(EnableCap.PolygonOffsetFill);
         GL.PolygonOffset(1f, 1f);
-        DrawPatch(spacing: (WorldTerrain.Side - 1f) / (PatchSide - 1), originX: 0, originY: 0);
+        DrawPatch(spacing: (_heights.Side - 1f) / (PatchSide - 1), originX: 0, originY: 0);
         GL.Disable(EnableCap.PolygonOffsetFill);
 
         const float fineSpacing = 1f;

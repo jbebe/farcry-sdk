@@ -4,15 +4,23 @@ namespace JackAll.App.MapEditor;
 /// One editable data layer of an FC2 world, as cataloged in tmp/fc2-map-layers.md. Static mock
 /// data for the Map tab layout: the real editing panels replace <see cref="Controls"/> per phase.
 /// </summary>
-public sealed record MapLayer(string Group, string Name, string Readiness, string Summary, string[] Controls);
+/// <remarks><see cref="IsVisible"/> is the viewport toggle the layer list's checkbox writes; a
+/// layer whose renderer exists reads it every frame.</remarks>
+public sealed record MapLayer(string Group, string Name, string Readiness, string Summary, string[] Controls)
+{
+    public bool IsVisible { get; set; } = true;
+}
 
 public static class LayerCatalog
 {
+    public static readonly MapLayer Heightmap =
+        new("Terrain", "Heightmap", "Ready",
+            "The ground itself - 65x65 heights per sector, stitched into one field per map.",
+            ["Brush tools: raise / lower / flatten / smooth", "Brush size, strength, flatten target height", "Extended brushes: blur, smear, airbrush, hill, slope"]);
+
     public static readonly MapLayer[] Layers =
     [
-        new("Terrain", "Heightmap", "Ready",
-            "The ground itself - 65x65 heights per sector, 6,400 sdat files stitched to one 5121x5121 field.",
-            ["Brush tools: raise / lower / flatten / smooth", "Brush size, strength, flatten target height", "Extended brushes: blur, smear, airbrush, hill, slope"]),
+        Heightmap,
         new("Terrain", "Surface data", "Partial",
             "Per-cell ground material index (footsteps, impacts, fire), normals and terrain holes.",
             ["Material index inspector", "Material painting", "Hole mask editing"]),

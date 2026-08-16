@@ -4,8 +4,8 @@ using OpenTK.Graphics.OpenGL4;
 namespace JackAll.App.MapEditor.Gl;
 
 /// <summary>
-/// The world heightfield as one R16 texture, shared by the 2D relief layer and the 3D terrain mesh
-/// (both sample it; neither owns it). Raw sdat encoding: normalized value * 65535 / 128 = meters.
+/// The map's heightfield as one R16 texture, sampled by the terrain mesh. Raw sdat encoding:
+/// normalized value * 65535 / 128 = meters.
 /// </summary>
 public sealed class HeightTexture : IDisposable
 {
@@ -13,16 +13,20 @@ public sealed class HeightTexture : IDisposable
     public float MinNormalized { get; }
     public float MaxNormalized { get; }
 
+    /// <summary>Height samples a side - the extent the sampling shaders normalize against.</summary>
+    public int Side { get; }
+
     public HeightTexture(WorldTerrain terrain)
     {
         MinNormalized = terrain.MinHeight / 65535f;
         MaxNormalized = terrain.MaxHeight / 65535f;
+        Side = terrain.Side;
 
         Handle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2D, Handle);
         GL.PixelStore(PixelStoreParameter.UnpackAlignment, 2);
         GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.R16,
-            WorldTerrain.Side, WorldTerrain.Side, 0,
+            Side, Side, 0,
             PixelFormat.Red, PixelType.UnsignedShort, terrain.Heights);
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
@@ -45,7 +49,7 @@ public sealed class HeightTexture : IDisposable
         var region = new ushort[width * height];
         for (int y = 0; y < height; y++)
         {
-            Array.Copy(terrain.Heights, (y0 + y) * WorldTerrain.Side + x0, region, y * width, width);
+            Array.Copy(terrain.Heights, (y0 + y) * Side + x0, region, y * width, width);
         }
         GL.BindTexture(TextureTarget.Texture2D, Handle);
         GL.PixelStore(PixelStoreParameter.UnpackAlignment, 2);
