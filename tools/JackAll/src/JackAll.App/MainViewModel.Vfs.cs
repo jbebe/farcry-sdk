@@ -15,6 +15,12 @@ public sealed partial class MainViewModel
     /// points to.</summary>
     public VfsFile? FindByHash(uint hash) => _vfs?.Files.GetValueOrDefault(hash);
 
+    /// <summary>Every resolved path in the merged filesystem - the map editor filters this down to
+    /// one world's sector and terrain files rather than probing synthesized paths against the
+    /// hash-only index (CRC32 collisions with unrelated entries are real).</summary>
+    public IEnumerable<string> AllKnownPaths
+        => _vfs is null ? [] : _vfs.Files.Values.Where(f => f.NameIsKnown).Select(f => f.Path);
+
     /// <summary>The merged filesystem's copy of <paramref name="path"/>, or null when no layer
     /// provides it (or it can't be read). For callers that know a game-relative path rather than a
     /// file they already have in hand - the .mgb editor resolving a material's texture, and the

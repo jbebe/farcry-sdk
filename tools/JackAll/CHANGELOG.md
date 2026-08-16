@@ -5,6 +5,10 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **Map tab** — the start of the map editor: a layer list of everything an FC2 world is built from
+  (terrain, entities, water, navmesh, ...), a per-layer context panel, and a 3D viewport that
+  renders a loaded world's full terrain heightfield with a fly camera. Read-only so far; layers
+  gain editing panels one at a time.
 - **`mgb verify`** — checks that a `.mgb`, or the XML it is built from, references only names it
   declares. `mgb encode` proves a package is loadable; this catches the failure that *is* loadable,
   where `Package::ResolveLinks` silently drops a link to an element that does not exist and the

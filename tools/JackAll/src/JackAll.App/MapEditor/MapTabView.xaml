@@ -1,0 +1,97 @@
+<UserControl x:Class="JackAll.App.MapEditor.MapTabView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:glWpf="clr-namespace:OpenTK.Wpf;assembly=GLWpfControl">
+
+    <DockPanel>
+        <!-- Save/Deploy stay disabled until an editing phase lands; only world load works. -->
+        <Border DockPanel.Dock="Top" Padding="0,0,0,6">
+            <DockPanel>
+                <TextBlock x:Name="StatusText" DockPanel.Dock="Right" VerticalAlignment="Center"
+                           Foreground="#555" Text="Waiting for the game archives to load" />
+                <StackPanel Orientation="Horizontal">
+                    <ComboBox x:Name="WorldPicker" Width="110" IsEnabled="False" Margin="0,0,8,0" />
+                    <Button x:Name="LoadButton" Content="Load" IsEnabled="False" Padding="12,3" Margin="0,0,4,0"
+                            Click="Load_Click" />
+                    <Button Content="Save" IsEnabled="False" Padding="12,3" Margin="0,0,4,0" />
+                    <Button Content="Deploy" IsEnabled="False" Padding="12,3" />
+                </StackPanel>
+            </DockPanel>
+        </Border>
+
+        <Grid>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="180" MinWidth="140" />
+                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="300" MinWidth="220" />
+                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="*" MinWidth="300" />
+            </Grid.ColumnDefinitions>
+
+            <!-- Layer list: the checkbox is the planned viewport-overlay toggle, selection picks
+                 which editing panel shows in the middle column. -->
+            <ListBox x:Name="LayerList" Grid.Column="0" SelectionChanged="LayerList_SelectionChanged"
+                     BorderThickness="1" BorderBrush="#DDD">
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <TextBlock Text="{Binding Name}" FontSize="10" FontWeight="SemiBold"
+                                           Foreground="#888" Margin="4,8,0,2" />
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <StackPanel Orientation="Horizontal">
+                            <CheckBox IsChecked="True" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" />
+
+            <!-- Context panel: swaps per selected layer; the mock shows what each panel will hold. -->
+            <Border Grid.Column="2" BorderThickness="1" BorderBrush="#DDD" Padding="10,8">
+                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <TextBlock x:Name="ContextTitle" FontSize="14" FontWeight="SemiBold" />
+                        <TextBlock x:Name="ContextReadiness" FontSize="10" Foreground="#888" Margin="0,1,0,0" />
+                        <TextBlock x:Name="ContextSummary" TextWrapping="Wrap" Foreground="#555" Margin="0,8,0,0" />
+                        <TextBlock Text="PLANNED CONTROLS" FontSize="9" FontWeight="SemiBold"
+                                   Foreground="#888" Margin="0,14,0,4" />
+                        <ItemsControl x:Name="ContextControls">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,3">
+                                        <Run Text="- " /><Run Text="{Binding Mode=OneWay}" />
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </ScrollViewer>
+            </Border>
+
+            <GridSplitter Grid.Column="3" HorizontalAlignment="Stretch" Background="Transparent" />
+
+            <Grid Grid.Column="4">
+                <glWpf:GLWpfControl x:Name="Viewport" Focusable="True"
+                                    Render="Viewport_Render"
+                                    MouseDown="Viewport_MouseDown" MouseUp="Viewport_MouseUp"
+                                    MouseMove="Viewport_MouseMove" MouseWheel="Viewport_MouseWheel" />
+                <StackPanel x:Name="ViewportHint" VerticalAlignment="Center" HorizontalAlignment="Center"
+                            IsHitTestVisible="False">
+                    <TextBlock Text="3D viewport" FontSize="16" Foreground="#666" HorizontalAlignment="Center" />
+                    <TextBlock Text="Load a world to see its terrain" FontSize="11" Foreground="#888"
+                               HorizontalAlignment="Center" Margin="0,4,0,0" />
+                    <TextBlock Text="Right-drag look - WASD move, Q/E down/up - wheel changes speed"
+                               FontSize="11" Foreground="#888" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </DockPanel>
+</UserControl>

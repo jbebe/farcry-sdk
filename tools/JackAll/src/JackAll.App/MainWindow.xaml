@@ -3,6 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:local="clr-namespace:JackAll.App"
         xmlns:xrefs="clr-namespace:JackAll.App.FileHandlers.Xrefs"
+        xmlns:mapEditor="clr-namespace:JackAll.App.MapEditor"
         Title="JackAll - Far Cry 2 Mod Manager" Height="720" Width="1180"
         WindowStartupLocation="CenterScreen">
 
@@ -722,6 +723,11 @@
                     </Border>
                     </Grid>
                 </DockPanel>
+            </TabItem>
+
+            <!-- ============================= MAP ============================== -->
+            <TabItem Header="Map">
+                <mapEditor:MapTabView x:Name="MapTab" Margin="6" />
             </TabItem>
         </TabControl>
     </DockPanel>

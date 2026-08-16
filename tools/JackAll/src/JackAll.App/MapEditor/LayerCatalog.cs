@@ -1,0 +1,84 @@
+namespace JackAll.App.MapEditor;
+
+/// <summary>
+/// One editable data layer of an FC2 world, as cataloged in tmp/fc2-map-layers.md. Static mock
+/// data for the Map tab layout: the real editing panels replace <see cref="Controls"/> per phase.
+/// </summary>
+public sealed record MapLayer(string Group, string Name, string Readiness, string Summary, string[] Controls);
+
+public static class LayerCatalog
+{
+    public static readonly MapLayer[] Layers =
+    [
+        new("Terrain", "Heightmap", "Ready",
+            "The ground itself - 65x65 heights per sector, 6,400 sdat files stitched to one 5121x5121 field.",
+            ["Brush tools: raise / lower / flatten / smooth", "Brush size, strength, flatten target height", "Extended brushes: blur, smear, airbrush, hill, slope"]),
+        new("Terrain", "Surface data", "Partial",
+            "Per-cell ground material index (footsteps, impacts, fire), normals and terrain holes.",
+            ["Material index inspector", "Material painting", "Hole mask editing"]),
+        new("Terrain", "Textures", "Blocked",
+            "Splat blend weights plus diffuse and color atlases; per-sector pick of 4 layers from the global table.",
+            ["Layer palette (4 per sector)", "Mask channel painting", "Diffuse stamping, color painting", "BLOCKED: FC2 atlas quadrant orientation underived"]),
+        new("Terrain", "Shadow", "Research",
+            "Baked light/shadow map multiplied into the terrain look.",
+            ["View overlay", "Regeneration after sculpting (unsolved)"]),
+        new("Terrain", "Water", "Ready",
+            "Per-sector water: still/river flags, height, surface material - format fully known.",
+            ["Sector grid picker", "Enable / disable water", "Height, still vs river, material"]),
+
+        new("Objects", "Entities", "Ready",
+            "Everything placed in the world; a placed entity is a delta over its archetype.",
+            ["Browse / search / group", "Place from palette", "Move, rotate, delete, duplicate", "Copy/paste with relationship remap", "Property grid (FcbEditor)"]),
+        new("Objects", "Mission layers", "Ready",
+            "Per-sector scoping: main plus mission-keyed overlays deciding which entities exist.",
+            ["Layer tree per sector", "Toggle layer visibility", "Assign entities to layers"]),
+        new("Objects", "Triggers & shapes", "Ready",
+            "Trigger boxes and hidShapePoints polylines (zones, volumes, paths).",
+            ["Volume overlay display", "Shape-point drag editing", "Add / remove points"]),
+        new("Objects", "Entity library", "Ready",
+            "The per-world archetype palette every entity references (1,419 in world1).",
+            ["Archetype browser by category", "Thumbnails", "Archetype editing"]),
+
+        new("Dressing", "Omni lights", "Partial",
+            "World-scope static light placements (omnis.fcb).",
+            ["Light list", "Place / edit lights"]),
+        new("Dressing", "Vegetation", "Research",
+            "8 seeded collection slots scatter vegetation; cooked zone records partially decoded.",
+            ["Collection slot / seed editor", "Mask painting", "RESEARCH: cooked record decode"]),
+        new("Dressing", "Roads", "Research",
+            "Spline-authored roads; the cooked retail representation is unidentified.",
+            ["Viewer first", "RESEARCH: find cooked format"]),
+        new("Dressing", "Landmarks", "Partial",
+            "Distant-silhouette LOD geometry per sector; goes stale when entities change.",
+            ["LOD overlay display", "Stale-check after edits"]),
+
+        new("Glue", "Sectors", "Ready",
+            "Streaming glue: per-sector neighbors/flags and world sector dependencies.",
+            ["Enable all sectors", "Create new sector", "Violation check (entity outside home sector)"]),
+        new("Glue", "Preload", "Research",
+            "Per-sector streaming prefetch and world resource-dependency lists.",
+            ["View lists", "RESEARCH: regenerate after adding archetypes"]),
+        new("Glue", "World settings", "Partial",
+            "The world descriptor: sky/sun/fog/lighting presets, time of day, terrain layer table.",
+            ["Environment preset slots", "Cross-map preset copy", "Terrain layer table"]),
+        new("Glue", "Managers", "Partial",
+            "World-scope singleton state (73 manager types) - mostly preserve, inspect raw.",
+            ["Raw FCB inspection"]),
+
+        new("Systems", "Navmesh", "Research",
+            "AI navigation, one file per campaign sector; missing navmesh plus AI entities crashes the game.",
+            ["Presence overlay", "AI-safety warning on placement", "RESEARCH: generation"]),
+        new("Systems", "Sound regions", "Research",
+            "Per-sector audio region data; records undecoded - preserve byte-for-byte.",
+            ["Presence view only"]),
+        new("Systems", "Cinematics", "Ready",
+            "Keyframed sequences (cameras plus objects) at world and level scope.",
+            ["Sequence browser", "Scrub / play preview", "Export / import"]),
+        new("Systems", "Mission logic", "Partial",
+            "Domino graphs wiring missions to map entities - 606 mission graphs, 215 system boxes.",
+            ["Open in Domino viewer (exists)", "Per-world master graph list"]),
+        new("Systems", "Map texture", "Ready",
+            "The in-game map/compass image per level and world (plain xbt).",
+            ["View", "Replace"]),
+    ];
+}
