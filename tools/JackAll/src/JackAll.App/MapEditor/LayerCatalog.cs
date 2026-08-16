@@ -56,6 +56,12 @@ public static class LayerCatalog
             "Per-sector scoping: main plus mission-keyed overlays deciding which entities exist when.",
             ["List layers with entity counts", "Show or hide a layer's entities", "Assign entities to layers"]);
 
+    /// <summary>Draws the authored polylines while visible.</summary>
+    public static readonly MapLayer Shapes =
+        new("Objects", "Shapes", "Ready",
+            "Authored polylines - zone outlines, paths and sound lines - stored in the world's mapsdata, not per sector.",
+            ["Show polylines", "Sound lines tinted apart", "Point editing"]);
+
     public static readonly MapLayer[] Layers =
     [
         Heightmap,
@@ -66,9 +72,7 @@ public static class LayerCatalog
 
         Entities,
         MissionLayers,
-        new("Objects", "Triggers & shapes", "Ready",
-            "Trigger boxes and hidShapePoints polylines (zones, volumes, paths).",
-            ["Volume overlay display", "Shape-point drag editing", "Add / remove points"]),
+        Shapes,
         new("Objects", "Entity library", "Ready",
             "The per-world archetype palette every entity references (1,419 in world1).",
             ["Archetype browser by category", "Thumbnails", "Archetype editing"]),

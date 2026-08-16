@@ -22,7 +22,7 @@ public partial class MapTabView : UserControl
 
     private sealed record PendingLoad(
         TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table,
-        Fc2World World);
+        Fc2World World, IReadOnlyList<WorldShape> Shapes);
 
     private sealed record FieldRow(string Name, string Value);
 
@@ -51,6 +51,7 @@ public partial class MapTabView : UserControl
     private TerrainTextureSet? _terrainTextures;
     private TerrainMesh3D? _terrainMesh;
     private WaterLayer? _waterLayer;
+    private ShapeLayer? _shapeLayer;
 
     private readonly Camera3D _camera = new();
     private readonly HashSet<Key> _flyKeys = [];
@@ -98,7 +99,9 @@ public partial class MapTabView : UserControl
                 SectorDetailLayers detail = SectorDetailLayers.Load(map, vm.ReadByPath);
                 TerrainLayerTable table = TerrainLayerTable.Load(map.Name, vm.ReadByPath);
                 Fc2World world = WorldLoader.Load(map, vm.ReadByPath, progress);
-                return new PendingLoad(map, terrain, detail, table, world);
+                IReadOnlyList<WorldShape> shapes =
+                    WorldShapes.Load(map.Name, vm.ReadByPath, FcbDefinitionsProvider.Value.Value);
+                return new PendingLoad(map, terrain, detail, table, world, shapes);
             });
 
             WorldTerrain terrain = loaded.Terrain;
@@ -132,7 +135,9 @@ public partial class MapTabView : UserControl
             _waterLayer?.Dispose();
             _markerLayer?.Dispose();
             _terrain = pending.Terrain;
+            _shapeLayer?.Dispose();
             _waterLayer = new WaterLayer(pending.Terrain);
+            _shapeLayer = new ShapeLayer(pending.Shapes);
             _markersDirty = true;
             _heightTexture = new HeightTexture(pending.Terrain);
             _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
@@ -177,6 +182,11 @@ public partial class MapTabView : UserControl
         if (LayerCatalog.Water.IsVisible)
         {
             _waterLayer?.Draw(viewProjection);
+        }
+
+        if (LayerCatalog.Shapes.IsVisible)
+        {
+            _shapeLayer?.Draw(viewProjection);
         }
 
         if (LayerCatalog.Entities.IsVisible)
