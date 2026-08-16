@@ -105,6 +105,29 @@
                     </Grid>
                 </DockPanel>
 
+                <!-- Mission layers filter which entities are drawn and listed. -->
+                <DockPanel x:Name="MissionLayerPanel" Visibility="Collapsed">
+                    <TextBlock DockPanel.Dock="Top" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,6"
+                               Text="Each sector scopes its entities into layers. Unticking one hides its entities everywhere." />
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <Button Content="All" Click="MissionLayersAll_Click" Padding="10,2" Margin="0,0,4,0" />
+                        <Button Content="Only main" Click="MissionLayersMain_Click" Padding="10,2" />
+                    </DockPanel>
+                    <ListBox x:Name="MissionLayerList" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel Margin="0,1">
+                                    <CheckBox DockPanel.Dock="Left" IsChecked="{Binding IsVisible}"
+                                              Click="MissionLayerToggle_Click" Margin="0,0,6,0" />
+                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Count}" Foreground="#888"
+                                               Margin="6,0,0,0" />
+                                    <TextBlock Text="{Binding Display}" TextTrimming="CharacterEllipsis" />
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+
                 <ScrollViewer x:Name="ContextInfo" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <TextBlock x:Name="ContextTitle" FontSize="14" FontWeight="SemiBold" />

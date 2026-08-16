@@ -26,10 +26,23 @@ public partial class MapTabView : UserControl
 
     private sealed record FieldRow(string Name, string Value);
 
+    /// <summary>One mission layer in the filter list. <see cref="IsVisible"/> is written by its
+    /// checkbox, so it is a settable property rather than a record positional.</summary>
+    private sealed class MissionLayerRow
+    {
+        public required string PathId { get; init; }
+        public required int Count { get; init; }
+        public bool IsVisible { get; set; } = true;
+        public string Display => PathId.Length == 0 ? "(unnamed)" : PathId;
+    }
+
     private Fc2World? _world;
     private EntityMarkerLayer? _markerLayer;
     private WorldEntity? _selectedEntity;
     private List<WorldEntity> _positionedEntities = [];
+    private List<WorldEntity> _visibleEntities = [];
+    private List<MissionLayerRow> _missionLayers = [];
+    private bool _markersDirty;
 
     private PendingLoad? _pendingLoad;
     private WorldTerrain? _terrain;
@@ -120,7 +133,7 @@ public partial class MapTabView : UserControl
             _markerLayer?.Dispose();
             _terrain = pending.Terrain;
             _waterLayer = new WaterLayer(pending.Terrain);
-            _markerLayer = new EntityMarkerLayer(BuildMarkers(_positionedEntities), _positionedEntities.Count);
+            _markersDirty = true;
             _heightTexture = new HeightTexture(pending.Terrain);
             _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
             _terrainTextures = _vm is { } vm
@@ -131,6 +144,15 @@ public partial class MapTabView : UserControl
                 ? $"{set.LayersLoaded} of {pending.Table.Layers.Count} layer textures loaded; blend mask {set.WeightSide}x{set.WeightSide}." +
                   (set.FailedLayers.Count > 0 ? $" Missing: {string.Join(", ", set.FailedLayers)}." : "")
                 : "No terrain textures loaded.";
+        }
+
+        // Toggling a mission layer changes which markers exist, so the instance stream is rebuilt
+        // here where a GL context is current rather than on the click.
+        if (_markersDirty)
+        {
+            _markersDirty = false;
+            _markerLayer?.Dispose();
+            _markerLayer = new EntityMarkerLayer(BuildMarkers(_visibleEntities), _visibleEntities.Count);
         }
 
         GL.Viewport(0, 0, Viewport.FrameBufferWidth, Viewport.FrameBufferHeight);
@@ -271,7 +293,43 @@ public partial class MapTabView : UserControl
         _world = world;
         _selectedEntity = null;
         _positionedEntities = [.. world.Entities.Where(e => e.Position is not null)];
+
+        _missionLayers = [.. _positionedEntities
+            .GroupBy(e => e.LayerPathId)
+            .Select(g => new MissionLayerRow { PathId = g.Key, Count = g.Count() })
+            .OrderByDescending(r => r.Count)];
+        MissionLayerList.ItemsSource = _missionLayers;
+
+        ApplyMissionLayerFilter();
+    }
+
+    /// <summary>Rebuilds what the viewport and list show from the ticked mission layers.</summary>
+    private void ApplyMissionLayerFilter()
+    {
+        HashSet<string> visible = [.. _missionLayers.Where(r => r.IsVisible).Select(r => r.PathId)];
+        _visibleEntities = [.. _positionedEntities.Where(e => visible.Contains(e.LayerPathId))];
+        _markersDirty = true;
         ApplyEntityFilter();
+    }
+
+    private void MissionLayerToggle_Click(object sender, System.Windows.RoutedEventArgs e) =>
+        ApplyMissionLayerFilter();
+
+    private void MissionLayersAll_Click(object sender, System.Windows.RoutedEventArgs e) =>
+        SetAllMissionLayers(_ => true);
+
+    private void MissionLayersMain_Click(object sender, System.Windows.RoutedEventArgs e) =>
+        SetAllMissionLayers(row => row.PathId.Equals("main", StringComparison.OrdinalIgnoreCase));
+
+    private void SetAllMissionLayers(Func<MissionLayerRow, bool> visible)
+    {
+        foreach (MissionLayerRow row in _missionLayers)
+        {
+            row.IsVisible = visible(row);
+        }
+        MissionLayerList.ItemsSource = null;
+        MissionLayerList.ItemsSource = _missionLayers;
+        ApplyMissionLayerFilter();
     }
 
     /// <summary>Markers are one instance each: position plus a colour keyed to the archetype, so the
@@ -318,8 +376,8 @@ public partial class MapTabView : UserControl
 
         string term = EntitySearch.Text.Trim();
         List<WorldEntity> shown = term.Length == 0
-            ? _positionedEntities
-            : [.. _positionedEntities.Where(e =>
+            ? _visibleEntities
+            : [.. _visibleEntities.Where(e =>
                 e.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
                 e.ArchetypeName.Contains(term, StringComparison.OrdinalIgnoreCase))];
 
@@ -392,7 +450,7 @@ public partial class MapTabView : UserControl
     /// </summary>
     private void PickEntityAt(System.Windows.Point point)
     {
-        if (_positionedEntities.Count == 0)
+        if (_visibleEntities.Count == 0)
         {
             return;
         }
@@ -403,7 +461,7 @@ public partial class MapTabView : UserControl
         WorldEntity? best = null;
         double bestDistance = 20 * 20;
 
-        foreach (WorldEntity entity in _positionedEntities)
+        foreach (WorldEntity entity in _visibleEntities)
         {
             System.Numerics.Vector3 p = entity.Position!.Value;
             var clip = new OpenTK.Mathematics.Vector4(p.X, p.Y, p.Z, 1f) * viewProjection;
@@ -442,7 +500,11 @@ public partial class MapTabView : UserControl
 
         // Entities take over the whole context column rather than sitting under the mock text.
         bool entities = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Entities);
+        bool missions = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.MissionLayers);
         EntityPanel.Visibility = entities ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
-        ContextInfo.Visibility = entities ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
+        MissionLayerPanel.Visibility = missions ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        ContextInfo.Visibility = entities || missions
+            ? System.Windows.Visibility.Collapsed
+            : System.Windows.Visibility.Visible;
     }
 }

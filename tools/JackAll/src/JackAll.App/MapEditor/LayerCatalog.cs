@@ -50,6 +50,12 @@ public static class LayerCatalog
             "Everything placed in the world; a placed entity is a delta over its archetype.",
             ["Browse and search", "Select from the list or the viewport", "Read-only field view"]);
 
+    /// <summary>Owns the mission-layer list that filters which entities are shown.</summary>
+    public static readonly MapLayer MissionLayers =
+        new("Objects", "Mission layers", "Ready",
+            "Per-sector scoping: main plus mission-keyed overlays deciding which entities exist when.",
+            ["List layers with entity counts", "Show or hide a layer's entities", "Assign entities to layers"]);
+
     public static readonly MapLayer[] Layers =
     [
         Heightmap,
@@ -59,9 +65,7 @@ public static class LayerCatalog
         Water,
 
         Entities,
-        new("Objects", "Mission layers", "Ready",
-            "Per-sector scoping: main plus mission-keyed overlays deciding which entities exist.",
-            ["Layer tree per sector", "Toggle layer visibility", "Assign entities to layers"]),
+        MissionLayers,
         new("Objects", "Triggers & shapes", "Ready",
             "Trigger boxes and hidShapePoints polylines (zones, volumes, paths).",
             ["Volume overlay display", "Shape-point drag editing", "Add / remove points"]),
