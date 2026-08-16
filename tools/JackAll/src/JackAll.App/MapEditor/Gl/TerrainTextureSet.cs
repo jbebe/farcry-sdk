@@ -21,6 +21,7 @@ public sealed class TerrainTextureSet : IDisposable
 
     public int WeightHandle { get; }
     public int ColourHandle { get; }
+    public int ShadowHandle { get; }
     public int SectorLayerHandle { get; }
     public int DetailArrayHandle { get; }
     public int WeightSide { get; }
@@ -48,6 +49,7 @@ public sealed class TerrainTextureSet : IDisposable
         Dictionary<int, string> sectorPaths = map.Sectors.ToDictionary(s => s.SectorId, s => s.Path);
         WeightHandle = BuildAtlasTexture(map, sectorPaths, readByPath, "mask");
         ColourHandle = BuildAtlasTexture(map, sectorPaths, readByPath, "color");
+        ShadowHandle = BuildShadowTexture(map, readByPath);
 
         // One texel per sector, carrying its four layer indices.
         SectorLayerHandle = GL.GenTexture();
@@ -167,6 +169,55 @@ public sealed class TerrainTextureSet : IDisposable
         }
     }
 
+    /// <summary>
+    /// The baked lighting, one 64x64 map per sector rather than one per 2x2 block. Its DDS payload is
+    /// uncompressed with two 16-bit channels (masks <c>0000FFFF</c> / <c>FFFF0000</c>); the high byte
+    /// of each is kept, which is ample for a shading term and a quarter of the memory.
+    /// </summary>
+    private int BuildShadowTexture(TerrainMap map, Func<string, byte[]?> readByPath)
+    {
+        int handle = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2D, handle);
+        GL.PixelStore(PixelStoreParameter.UnpackAlignment, 1);
+        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rg8, WeightSide, WeightSide, 0,
+            PixelFormat.Rg, PixelType.UnsignedByte, IntPtr.Zero);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+
+        const int tile = SdatQuadsPerSector;
+        var texels = new byte[tile * tile * 2];
+        foreach ((string path, int sectorId) in map.Sectors)
+        {
+            string shadowPath = path.Replace($"sd{sectorId}.sdat", $"sd{sectorId}_shadow.xbt",
+                StringComparison.OrdinalIgnoreCase);
+            if (readByPath(shadowPath) is not { } xbt)
+            {
+                continue;
+            }
+
+            byte[] dds;
+            try { dds = JackAll.Tools.Xbt.XbtTexture.Split(xbt).Dds; }
+            catch (Exception) { continue; }
+            if (dds.Length < 128 + tile * tile * 4)
+            {
+                continue;
+            }
+
+            for (int i = 0; i < tile * tile; i++)
+            {
+                texels[i * 2] = dds[128 + i * 4 + 1];
+                texels[i * 2 + 1] = dds[128 + i * 4 + 3];
+            }
+
+            int row = sectorId / map.SectorsPerSide, col = sectorId % map.SectorsPerSide;
+            GL.TexSubImage2D(TextureTarget.Texture2D, 0, col * tile, row * tile, tile, tile,
+                PixelFormat.Rg, PixelType.UnsignedByte, texels);
+        }
+        return handle;
+    }
+
     /// <summary>Derived from the sector's own path so the level folder never has to be recomputed.</summary>
     private static byte[]? ReadAtlas(
         Dictionary<int, string> sectorPaths, int atlasId, Func<string, byte[]?> readByPath, string kind)
@@ -201,7 +252,8 @@ public sealed class TerrainTextureSet : IDisposable
         return output;
     }
 
-    public void Bind(TextureUnit weights, TextureUnit sectorLayers, TextureUnit detail, TextureUnit colour)
+    public void Bind(TextureUnit weights, TextureUnit sectorLayers, TextureUnit detail,
+        TextureUnit colour, TextureUnit shadow)
     {
         GL.ActiveTexture(weights);
         GL.BindTexture(TextureTarget.Texture2D, WeightHandle);
@@ -211,12 +263,15 @@ public sealed class TerrainTextureSet : IDisposable
         GL.BindTexture(TextureTarget.Texture2DArray, DetailArrayHandle);
         GL.ActiveTexture(colour);
         GL.BindTexture(TextureTarget.Texture2D, ColourHandle);
+        GL.ActiveTexture(shadow);
+        GL.BindTexture(TextureTarget.Texture2D, ShadowHandle);
     }
 
     public void Dispose()
     {
         GL.DeleteTexture(WeightHandle);
         GL.DeleteTexture(ColourHandle);
+        GL.DeleteTexture(ShadowHandle);
         GL.DeleteTexture(SectorLayerHandle);
         GL.DeleteTexture(DetailArrayHandle);
     }

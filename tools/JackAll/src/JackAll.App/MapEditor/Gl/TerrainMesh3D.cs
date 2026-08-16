@@ -4,7 +4,7 @@ using OpenTK.Mathematics;
 namespace JackAll.App.MapEditor.Gl;
 
 /// <summary>What the terrain draws this frame.</summary>
-public readonly record struct TerrainDrawOptions(bool ShowTextures, bool TintBySurfaceType);
+public readonly record struct TerrainDrawOptions(bool ShowTextures, bool TintBySurfaceType, bool ShowShadow);
 
 /// <summary>
 /// The 3D terrain: two camera-following grid patches (a fine 1-unit-spacing ring and a coarse
@@ -28,6 +28,7 @@ public sealed class TerrainMesh3D : IDisposable
     private readonly int _uSpacing;
     private readonly int _uSurfaceTint;
     private readonly int _uTextureMix;
+    private readonly int _uShadowMix;
 
     public TerrainMesh3D(HeightTexture heights, SurfaceTypeTexture surfaces, TerrainTextureSet? textures)
     {
@@ -67,6 +68,8 @@ public sealed class TerrainMesh3D : IDisposable
             uniform sampler2D surfacePalette;
             uniform sampler2D blendWeights;
             uniform sampler2D terrainColour;
+            uniform sampler2D terrainShadow;
+            uniform float shadowMix;
             uniform sampler2D sectorLayers;
             uniform sampler2DArray detailTextures;
             uniform float layerTiling[64];
@@ -87,17 +90,13 @@ public sealed class TerrainMesh3D : IDisposable
                 return texture(sectorLayers, sectorUv) * 255.0;
             }
 
-            // An atlas covers a 2x2 sector block, and each sector's own 64-unit square is stored
-            // transposed inside its quadrant - the quadrants themselves sit in natural order. Verified
-            // by reassembling a campaign cell's colour atlases and checking rivers and roads run
-            // unbroken across sector boundaries.
+            // Every per-sector square the cooker writes is stored transposed, whichever file it lands
+            // in - a 2x2 atlas quadrant or a sector's own shadow map. Verified by reassembling a
+            // campaign cell and checking features run unbroken across sector boundaries.
             ivec2 atlasTexel(ivec2 w)
             {
-                ivec2 tile = (w / 128) * 128;
-                ivec2 inTile = w - tile;
-                ivec2 quadrant = inTile / 64;
-                ivec2 local = inTile - quadrant * 64;
-                return tile + quadrant * 64 + local.yx;
+                ivec2 sector = (w / 64) * 64;
+                return sector + (w - sector).yx;
             }
 
             // Because of that transpose, texels next to each other in memory are not next to each
@@ -169,6 +168,12 @@ public sealed class TerrainMesh3D : IDisposable
 
                 base = mix(base, blendedDetail(h * metersPerRaw), textureMix);
 
+                // Baked lighting: the low 16-bit channel, rescaled from the narrow band the data
+                // occupies so it reads as shading rather than a flat dimming.
+                float baked = sampleAtlas(terrainShadow, world).r;
+                baked = clamp((baked - 0.5) / 0.42, 0.0, 1.0);
+                base *= mix(1.0, 0.35 + 0.65 * baked, shadowMix);
+
                 // The surface id indexes the palette texture directly; r is the id scaled to 0..1,
                 // so the lookup lands mid-texel at (id + 0.5) / 256.
                 float id = texture(surfaceTypes, uv).r;
@@ -184,6 +189,7 @@ public sealed class TerrainMesh3D : IDisposable
         _uSpacing = _program.UniformLocation("spacing");
         _uSurfaceTint = _program.UniformLocation("surfaceTint");
         _uTextureMix = _program.UniformLocation("textureMix");
+        _uShadowMix = _program.UniformLocation("shadowMix");
         _program.Use();
         GL.Uniform2(_program.UniformLocation("heightRange"), heights.MinNormalized, heights.MaxNormalized);
         GL.Uniform1(_program.UniformLocation("heights"), 0);
@@ -193,6 +199,7 @@ public sealed class TerrainMesh3D : IDisposable
         GL.Uniform1(_program.UniformLocation("sectorLayers"), 4);
         GL.Uniform1(_program.UniformLocation("detailTextures"), 5);
         GL.Uniform1(_program.UniformLocation("terrainColour"), 6);
+        GL.Uniform1(_program.UniformLocation("terrainShadow"), 7);
         if (textures is not null)
         {
             GL.Uniform1(_program.UniformLocation("weightSide"), (float)textures.WeightSide);
@@ -233,9 +240,11 @@ public sealed class TerrainMesh3D : IDisposable
         GL.UniformMatrix4(_uViewProjection, false, ref viewProjection);
         GL.Uniform1(_uSurfaceTint, options.TintBySurfaceType ? 1f : 0f);
         GL.Uniform1(_uTextureMix, _textures is not null && options.ShowTextures ? 1f : 0f);
+        GL.Uniform1(_uShadowMix, _textures is not null && options.ShowShadow ? 1f : 0f);
         _heights.Bind(TextureUnit.Texture0);
         _surfaces.Bind(TextureUnit.Texture1, TextureUnit.Texture2);
-        _textures?.Bind(TextureUnit.Texture3, TextureUnit.Texture4, TextureUnit.Texture5, TextureUnit.Texture6);
+        _textures?.Bind(TextureUnit.Texture3, TextureUnit.Texture4, TextureUnit.Texture5,
+            TextureUnit.Texture6, TextureUnit.Texture7);
         GL.BindVertexArray(_vao);
         GL.Enable(EnableCap.DepthTest);
 

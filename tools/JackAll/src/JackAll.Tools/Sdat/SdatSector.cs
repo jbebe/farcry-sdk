@@ -46,7 +46,12 @@ public sealed record SdatSector
     /// <summary>Header field at metadata offset +0x1C, always 1 in every export path traced. Preserved verbatim.</summary>
     public required uint FormatFlag { get; init; }
 
-    /// <summary>538-byte snapshot of <c>GetEnvSettings()</c>, embedded verbatim per sector. Not decoded.</summary>
+    /// <summary>
+    /// 538-byte snapshot of <c>GetEnvSettings()</c>, embedded verbatim per sector. Mostly a raw memory
+    /// image (several words read back as retained pointers), but its first bytes are the water
+    /// settings the accessors below expose. It begins at file offset <c>0x34</c>, which is why the
+    /// community's absolute water offsets 0x34/0x38/0x3C/0x44 land at 0, 4, 8 and 0x10 here.
+    /// </summary>
     public required byte[] EnvSettingsRaw { get; init; }
 
     /// <summary>2 trailing bytes of the metadata block, purpose unknown. Preserved verbatim.</summary>
@@ -84,6 +89,35 @@ public sealed record SdatSector
     /// <summary>Encoded Y component of the cell's normal, from the plane that follows the grid.</summary>
     public byte NormalYAt(int row, int column) =>
         MaskTablesRaw[SdatSectorFile.NormalYOffsetInMaskTables + row * SdatSectorFile.GridSize + column];
+
+    /// <summary>Still water covers this sector.</summary>
+    public bool HasStillWater => EnvSettingsRaw.Length > 0 && EnvSettingsRaw[0] != 0;
+
+    /// <summary>River water covers this sector. A sector may set both flags.</summary>
+    public bool HasRiverWater => EnvSettingsRaw.Length > 4 && EnvSettingsRaw[4] != 0;
+
+    public bool HasWater => HasStillWater || HasRiverWater;
+
+    /// <summary>Height of the sector's water surface, in meters.</summary>
+    public float WaterLevel =>
+        EnvSettingsRaw.Length >= 12 ? BitConverter.ToSingle(EnvSettingsRaw, 8) : 0f;
+
+    /// <summary>Material the water surface is drawn with, e.g. <c>water_default_top.mlm</c>.</summary>
+    public string WaterMaterial
+    {
+        get
+        {
+            const int start = 0x10;
+            if (EnvSettingsRaw.Length <= start)
+            {
+                return "";
+            }
+            int end = Array.IndexOf(EnvSettingsRaw, (byte)0, start);
+            return end > start
+                ? System.Text.Encoding.ASCII.GetString(EnvSettingsRaw, start, end - start)
+                : "";
+        }
+    }
 
     /// <summary>The variable-length "quad LOD/hole" record array (12 bytes each). Not decoded - preserved verbatim.</summary>
     public required byte[] RecordsRaw { get; init; }

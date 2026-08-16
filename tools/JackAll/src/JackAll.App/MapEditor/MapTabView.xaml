@@ -58,7 +58,54 @@
 
             <!-- Context panel: swaps per selected layer; the mock shows what each panel will hold. -->
             <Border Grid.Column="2" BorderThickness="1" BorderBrush="#DDD" Padding="10,8">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
+                <Grid>
+                <!-- Entities get a real panel rather than the mock: a searchable list over a
+                     read-only field view. It sits outside the scroll viewer so the list virtualizes. -->
+                <DockPanel x:Name="EntityPanel" Visibility="Collapsed">
+                    <TextBox x:Name="EntitySearch" DockPanel.Dock="Top" Margin="0,0,0,6"
+                             TextChanged="EntitySearch_TextChanged"
+                             ToolTip="Filters by name or archetype" />
+                    <TextBlock x:Name="EntityCount" DockPanel.Dock="Top" Foreground="#888" Margin="0,0,0,4" />
+                    <Grid>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="*" MinHeight="80" />
+                            <RowDefinition Height="4" />
+                            <RowDefinition Height="180" MinHeight="60" />
+                        </Grid.RowDefinitions>
+                        <ListBox x:Name="EntityList" Grid.Row="0" SelectionChanged="EntityList_SelectionChanged"
+                                 ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel>
+                                        <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Text="{Binding ArchetypeName}" FontSize="10" Foreground="#888"
+                                                   TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                        <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" Background="Transparent" />
+                        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
+                            <StackPanel>
+                                <TextBlock x:Name="EntityHeading" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                <ItemsControl x:Name="EntityFields" Margin="0,4,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <DockPanel Margin="0,0,0,2">
+                                                <TextBlock DockPanel.Dock="Left" Text="{Binding Name}" Width="110"
+                                                           Foreground="#666" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Text="{Binding Value}" FontFamily="Consolas" FontSize="11"
+                                                           TextWrapping="Wrap" />
+                                            </DockPanel>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                        </ScrollViewer>
+                    </Grid>
+                </DockPanel>
+
+                <ScrollViewer x:Name="ContextInfo" VerticalScrollBarVisibility="Auto">
                     <StackPanel>
                         <TextBlock x:Name="ContextTitle" FontSize="14" FontWeight="SemiBold" />
                         <TextBlock x:Name="ContextReadiness" FontSize="10" Foreground="#888" Margin="0,1,0,0" />
@@ -101,6 +148,7 @@
                         </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
+                </Grid>
             </Border>
 
             <GridSplitter Grid.Column="3" HorizontalAlignment="Stretch" Background="Transparent" />

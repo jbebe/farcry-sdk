@@ -32,21 +32,33 @@ public static class LayerCatalog
             "How the ground looks: each sector blends up to four layers from the world's 45-entry table, weighted by its atlas mask.",
             ["Show real terrain textures", "Layer table browser", "Mask channel painting", "Per-sector layer assignment"]);
 
+    /// <summary>Multiplies the baked lighting into the terrain while visible.</summary>
+    public static readonly MapLayer Shadow =
+        new("Terrain", "Shadow", "Ready",
+            "Baked lighting, one 64x64 map per sector, multiplied over the terrain.",
+            ["Show baked lighting", "Second channel is unidentified", "Regeneration after sculpting (unsolved)"]);
+
+    /// <summary>Draws the water surfaces while visible.</summary>
+    public static readonly MapLayer Water =
+        new("Terrain", "Water", "Ready",
+            "Per-sector water: a still or river flag, the surface height, and the material it uses.",
+            ["Show water surfaces", "Per-sector height and material", "Enable / disable per sector"]);
+
+    /// <summary>Draws the entity markers while visible, and owns the browser panel.</summary>
+    public static readonly MapLayer Entities =
+        new("Objects", "Entities", "Ready",
+            "Everything placed in the world; a placed entity is a delta over its archetype.",
+            ["Browse and search", "Select from the list or the viewport", "Read-only field view"]);
+
     public static readonly MapLayer[] Layers =
     [
         Heightmap,
         SurfaceData,
         Textures,
-        new("Terrain", "Shadow", "Research",
-            "Baked light/shadow map multiplied into the terrain look.",
-            ["View overlay", "Regeneration after sculpting (unsolved)"]),
-        new("Terrain", "Water", "Ready",
-            "Per-sector water: still/river flags, height, surface material - format fully known.",
-            ["Sector grid picker", "Enable / disable water", "Height, still vs river, material"]),
+        Shadow,
+        Water,
 
-        new("Objects", "Entities", "Ready",
-            "Everything placed in the world; a placed entity is a delta over its archetype.",
-            ["Browse / search / group", "Place from palette", "Move, rotate, delete, duplicate", "Copy/paste with relationship remap", "Property grid (FcbEditor)"]),
+        Entities,
         new("Objects", "Mission layers", "Ready",
             "Per-sector scoping: main plus mission-keyed overlays deciding which entities exist.",
             ["Layer tree per sector", "Toggle layer visibility", "Assign entities to layers"]),

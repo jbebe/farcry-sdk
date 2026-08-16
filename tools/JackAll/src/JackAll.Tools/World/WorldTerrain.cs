@@ -2,6 +2,10 @@ using JackAll.Tools.Sdat;
 
 namespace JackAll.Tools.World;
 
+/// <summary>One sector's water: which kind covers it, how high the surface sits, and the material it
+/// is drawn with. A sector can declare both kinds at once.</summary>
+public sealed record WaterSector(int SectorId, bool Still, bool River, float Level, string Material);
+
 /// <summary>
 /// A map's terrain heights: every <c>sd&lt;id&gt;.sdat</c> sector stitched into one grid, one sample
 /// per world unit, row-major <c>[y * Side + x]</c> with grid row = world Y. Raw values are the sdat
@@ -25,15 +29,20 @@ public sealed class WorldTerrain
     /// <summary>Surface types present, most ground covered first.</summary>
     public IReadOnlyList<(byte SurfaceType, long Samples)> SurfaceTypeCoverage { get; }
 
+    /// <summary>Every sector carrying water, with the surface height and material it declares.</summary>
+    public IReadOnlyList<WaterSector> Water { get; }
+
     /// <summary>Raw-height extremes across the map, for normalizing a relief rendering.</summary>
     public ushort MinHeight { get; }
     public ushort MaxHeight { get; }
 
-    private WorldTerrain(int side, ushort[] heights, byte[] surfaceTypes, long[] coverage, ushort min, ushort max)
+    private WorldTerrain(int side, ushort[] heights, byte[] surfaceTypes, long[] coverage,
+        IReadOnlyList<WaterSector> water, ushort min, ushort max)
     {
         Side = side;
         Heights = heights;
         SurfaceTypes = surfaceTypes;
+        Water = water;
         MinHeight = min;
         MaxHeight = Math.Max(max, (ushort)(min + 1));
         SurfaceTypeCoverage = [.. Enumerable.Range(0, coverage.Length)
@@ -60,6 +69,7 @@ public sealed class WorldTerrain
         var surfaceTypes = new byte[side * side];
         Array.Fill(surfaceTypes, (byte)0xFF);
         var coverage = new long[256];
+        var water = new List<WaterSector>();
         ushort min = ushort.MaxValue, max = 0;
         object mergeLock = new();
         Parallel.ForEach(map.Sectors, item =>
@@ -103,9 +113,15 @@ public sealed class WorldTerrain
                 {
                     coverage[i] += localCoverage[i];
                 }
+                if (sector.HasWater)
+                {
+                    water.Add(new WaterSector(item.SectorId, sector.HasStillWater, sector.HasRiverWater,
+                        sector.WaterLevel, sector.WaterMaterial));
+                }
             }
         });
 
-        return new WorldTerrain(side, heights, surfaceTypes, coverage, min == ushort.MaxValue ? (ushort)0 : min, max);
+        return new WorldTerrain(side, heights, surfaceTypes, coverage, water,
+            min == ushort.MaxValue ? (ushort)0 : min, max);
     }
 }

@@ -1,6 +1,7 @@
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
+using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.MapEditor.Gl;
 using JackAll.Tools.World;
 using OpenTK.Graphics.OpenGL4;
@@ -20,7 +21,15 @@ public partial class MapTabView : UserControl
     private MainViewModel? _vm;
 
     private sealed record PendingLoad(
-        TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table);
+        TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table,
+        Fc2World World);
+
+    private sealed record FieldRow(string Name, string Value);
+
+    private Fc2World? _world;
+    private EntityMarkerLayer? _markerLayer;
+    private WorldEntity? _selectedEntity;
+    private List<WorldEntity> _positionedEntities = [];
 
     private PendingLoad? _pendingLoad;
     private WorldTerrain? _terrain;
@@ -28,6 +37,7 @@ public partial class MapTabView : UserControl
     private SurfaceTypeTexture? _surfaceTexture;
     private TerrainTextureSet? _terrainTextures;
     private TerrainMesh3D? _terrainMesh;
+    private WaterLayer? _waterLayer;
 
     private readonly Camera3D _camera = new();
     private readonly HashSet<Key> _flyKeys = [];
@@ -73,12 +83,15 @@ public partial class MapTabView : UserControl
                 WorldTerrain terrain = WorldTerrain.Load(map, vm.ReadByPath, progress);
                 progress.Report($"Loading {map.Name} sector descriptors");
                 SectorDetailLayers detail = SectorDetailLayers.Load(map, vm.ReadByPath);
-                return new PendingLoad(map, terrain, detail, TerrainLayerTable.Load(map.Name, vm.ReadByPath));
+                TerrainLayerTable table = TerrainLayerTable.Load(map.Name, vm.ReadByPath);
+                Fc2World world = WorldLoader.Load(map, vm.ReadByPath, progress);
+                return new PendingLoad(map, terrain, detail, table, world);
             });
 
             WorldTerrain terrain = loaded.Terrain;
             _pendingLoad = loaded;
             ShowSurfaceLegend(terrain, loaded.Table);
+            ShowEntities(loaded.World);
             int center = terrain.Side / 2;
             _camera.Position = new OpenTK.Mathematics.Vector3(
                 center, center, terrain.HeightMetersAt(center, center) + 150);
@@ -103,7 +116,11 @@ public partial class MapTabView : UserControl
             _heightTexture?.Dispose();
             _surfaceTexture?.Dispose();
             _terrainTextures?.Dispose();
+            _waterLayer?.Dispose();
+            _markerLayer?.Dispose();
             _terrain = pending.Terrain;
+            _waterLayer = new WaterLayer(pending.Terrain);
+            _markerLayer = new EntityMarkerLayer(BuildMarkers(_positionedEntities), _positionedEntities.Count);
             _heightTexture = new HeightTexture(pending.Terrain);
             _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
             _terrainTextures = _vm is { } vm
@@ -131,7 +148,20 @@ public partial class MapTabView : UserControl
         {
             _terrainMesh.Draw(viewProjection, _camera.Position, new TerrainDrawOptions(
                 ShowTextures: LayerCatalog.Textures.IsVisible,
-                TintBySurfaceType: LayerCatalog.SurfaceData.IsVisible));
+                TintBySurfaceType: LayerCatalog.SurfaceData.IsVisible,
+                ShowShadow: LayerCatalog.Shadow.IsVisible));
+        }
+
+        if (LayerCatalog.Water.IsVisible)
+        {
+            _waterLayer?.Draw(viewProjection);
+        }
+
+        if (LayerCatalog.Entities.IsVisible)
+        {
+            OpenTK.Mathematics.Vector3 right = _camera.Right;
+            _markerLayer?.Draw(viewProjection, 3f, right,
+                OpenTK.Mathematics.Vector3.Cross(right, _camera.Forward), flattenZ: false, _selectedEntity);
         }
     }
 
@@ -168,6 +198,10 @@ public partial class MapTabView : UserControl
             _looking = true;
             _lastDragPoint = e.GetPosition(Viewport);
             Viewport.CaptureMouse();
+        }
+        else if (e.ChangedButton == MouseButton.Left && LayerCatalog.Entities.IsVisible)
+        {
+            PickEntityAt(e.GetPosition(Viewport));
         }
     }
 
@@ -232,6 +266,170 @@ public partial class MapTabView : UserControl
         UpdateSurfaceLegendVisibility();
     }
 
+    private void ShowEntities(Fc2World world)
+    {
+        _world = world;
+        _selectedEntity = null;
+        _positionedEntities = [.. world.Entities.Where(e => e.Position is not null)];
+        ApplyEntityFilter();
+    }
+
+    /// <summary>Markers are one instance each: position plus a colour keyed to the archetype, so the
+    /// same kind of object reads the same everywhere.</summary>
+    private static float[] BuildMarkers(List<WorldEntity> entities)
+    {
+        var stream = new float[entities.Count * EntityMarkerLayer.Stride];
+        for (int i = 0; i < entities.Count; i++)
+        {
+            WorldEntity entity = entities[i];
+            System.Numerics.Vector3 position = entity.Position!.Value;
+            (byte r, byte g, byte b) = SurfaceTypeTexture.ColourFor(
+                (byte)(StableHash(entity.ArchetypeName) & 0x7F));
+            int at = i * EntityMarkerLayer.Stride;
+            stream[at] = position.X;
+            stream[at + 1] = position.Y;
+            stream[at + 2] = position.Z;
+            stream[at + 3] = r / 255f;
+            stream[at + 4] = g / 255f;
+            stream[at + 5] = b / 255f;
+        }
+        return stream;
+    }
+
+    private static uint StableHash(string text)
+    {
+        uint hash = 2166136261;
+        foreach (char c in text)
+        {
+            hash = (hash ^ c) * 16777619;
+        }
+        return hash;
+    }
+
+    private void EntitySearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) =>
+        ApplyEntityFilter();
+
+    private void ApplyEntityFilter()
+    {
+        if (_world is null)
+        {
+            return;
+        }
+
+        string term = EntitySearch.Text.Trim();
+        List<WorldEntity> shown = term.Length == 0
+            ? _positionedEntities
+            : [.. _positionedEntities.Where(e =>
+                e.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
+                e.ArchetypeName.Contains(term, StringComparison.OrdinalIgnoreCase))];
+
+        EntityList.ItemsSource = shown;
+        EntityCount.Text = shown.Count == _positionedEntities.Count
+            ? $"{_positionedEntities.Count:N0} entities"
+            : $"{shown.Count:N0} of {_positionedEntities.Count:N0} entities";
+    }
+
+    private void EntityList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (EntityList.SelectedItem is not WorldEntity entity)
+        {
+            return;
+        }
+        Select(entity, moveCamera: true);
+    }
+
+    private void Select(WorldEntity entity, bool moveCamera)
+    {
+        _selectedEntity = entity;
+        EntityHeading.Text = $"{entity.Name}  ({entity.LayerPathId})";
+
+        JackAll.Core.Format.Fcb.FcbClassDefinitions defs = FcbDefinitionsProvider.Value.Value;
+        JackAll.Core.Format.Fcb.FcbClass entityClass = defs.GetClass(entity.Node.TypeHash);
+        var rows = new List<FieldRow>
+        {
+            new("sector", entity.HomeSector.SectorId.ToString()),
+            new("disEntityId", entity.Id.ToString()),
+        };
+        foreach ((uint hash, byte[] value) in entity.Node.Values)
+        {
+            rows.Add(new FieldRow(entityClass.FindMember(hash)?.Name ?? $"{hash:X8}", Describe(value)));
+        }
+        foreach (IGrouping<uint, JackAll.Core.Format.Fcb.FcbObject> group in
+            entity.Node.Children.GroupBy(c => c.TypeHash))
+        {
+            string name = defs.GetClass(group.Key).Name ?? $"{group.Key:X8}";
+            rows.Add(new FieldRow("component", group.Count() > 1 ? $"{name} x{group.Count()}" : name));
+        }
+        EntityFields.ItemsSource = rows;
+
+        if (moveCamera && entity.Position is { } p)
+        {
+            _camera.Position = new OpenTK.Mathematics.Vector3(p.X, p.Y - 25f, p.Z + 15f);
+        }
+    }
+
+    /// <summary>Best-effort decode for display: the shapes that actually occur on entity fields.</summary>
+    private static string Describe(byte[] value)
+    {
+        if (value.Length > 1 && value[^1] == 0 &&
+            value.Take(value.Length - 1).All(b => b >= 32 && b < 127))
+        {
+            return System.Text.Encoding.ASCII.GetString(value, 0, value.Length - 1);
+        }
+        return value.Length switch
+        {
+            1 => value[0].ToString(),
+            4 => $"{BitConverter.ToInt32(value)}  ({BitConverter.ToSingle(value):0.###})",
+            8 => BitConverter.ToUInt64(value).ToString(),
+            12 => $"{BitConverter.ToSingle(value, 0):0.##}, {BitConverter.ToSingle(value, 4):0.##}, {BitConverter.ToSingle(value, 8):0.##}",
+            _ => Convert.ToHexString(value.Take(16).ToArray()) + (value.Length > 16 ? "..." : ""),
+        };
+    }
+
+    /// <summary>
+    /// Picks the entity nearest the click. Projecting the whole pool costs a pass over ~90k points on
+    /// one click, which is far simpler than maintaining a spatial index and quick enough not to notice.
+    /// </summary>
+    private void PickEntityAt(System.Windows.Point point)
+    {
+        if (_positionedEntities.Count == 0)
+        {
+            return;
+        }
+
+        OpenTK.Mathematics.Matrix4 viewProjection = _camera.View()
+            * _camera.Projection((float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1)));
+        double width = Viewport.ActualWidth, height = Viewport.ActualHeight;
+        WorldEntity? best = null;
+        double bestDistance = 20 * 20;
+
+        foreach (WorldEntity entity in _positionedEntities)
+        {
+            System.Numerics.Vector3 p = entity.Position!.Value;
+            var clip = new OpenTK.Mathematics.Vector4(p.X, p.Y, p.Z, 1f) * viewProjection;
+            if (clip.W <= 0.01f)
+            {
+                continue;
+            }
+
+            double sx = (clip.X / clip.W * 0.5 + 0.5) * width;
+            double sy = (1 - (clip.Y / clip.W * 0.5 + 0.5)) * height;
+            double distance = (sx - point.X) * (sx - point.X) + (sy - point.Y) * (sy - point.Y);
+            if (distance < bestDistance)
+            {
+                bestDistance = distance;
+                best = entity;
+            }
+        }
+
+        if (best is not null)
+        {
+            Select(best, moveCamera: false);
+            EntityList.SelectedItem = best;
+            EntityList.ScrollIntoView(best);
+        }
+    }
+
     private void UpdateSurfaceLegendVisibility()
     {
         SurfaceLegend.Visibility =
@@ -241,5 +439,10 @@ public partial class MapTabView : UserControl
         TexturePanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Textures)
             ? System.Windows.Visibility.Visible
             : System.Windows.Visibility.Collapsed;
+
+        // Entities take over the whole context column rather than sitting under the mock text.
+        bool entities = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Entities);
+        EntityPanel.Visibility = entities ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+        ContextInfo.Visibility = entities ? System.Windows.Visibility.Collapsed : System.Windows.Visibility.Visible;
     }
 }
