@@ -22,7 +22,8 @@ public partial class MapTabView : UserControl
 
     private sealed record PendingLoad(
         TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table,
-        Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines);
+        Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines,
+        IReadOnlyList<VegetationInstance> Vegetation);
 
     private sealed record FieldRow(string Name, string Value);
 
@@ -53,6 +54,7 @@ public partial class MapTabView : UserControl
     private WaterLayer? _waterLayer;
     private ShapeLayer? _shapeLayer;
     private ShapeLayer? _splineLayer;
+    private EntityMarkerLayer? _vegetationLayer;
 
     private readonly Camera3D _camera = new();
     private readonly HashSet<Key> _flyKeys = [];
@@ -103,7 +105,9 @@ public partial class MapTabView : UserControl
                 IReadOnlyList<WorldShape> shapes =
                     WorldShapes.Load(map.Name, vm.ReadByPath, FcbDefinitionsProvider.Value.Value);
                 IReadOnlyList<WorldShape> splines = WorldSplines.Load(map.Name, vm.ReadByPath);
-                return new PendingLoad(map, terrain, detail, table, world, shapes, splines);
+                IReadOnlyList<VegetationInstance> vegetation =
+                    WorldVegetation.Load(map, vm.ReadByPath, FcbDefinitionsProvider.Value.Value, progress);
+                return new PendingLoad(map, terrain, detail, table, world, shapes, splines, vegetation);
             });
 
             WorldTerrain terrain = loaded.Terrain;
@@ -142,6 +146,8 @@ public partial class MapTabView : UserControl
             _waterLayer = new WaterLayer(pending.Terrain);
             _shapeLayer = new ShapeLayer(pending.Shapes);
             _splineLayer = new ShapeLayer(pending.Splines);
+            _vegetationLayer?.Dispose();
+            _vegetationLayer = new EntityMarkerLayer(BuildVegetationMarkers(pending.Vegetation), pending.Vegetation.Count);
             _markersDirty = true;
             _heightTexture = new HeightTexture(pending.Terrain);
             _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
@@ -196,6 +202,13 @@ public partial class MapTabView : UserControl
         if (LayerCatalog.Roads.IsVisible)
         {
             _splineLayer?.Draw(viewProjection);
+        }
+
+        if (LayerCatalog.Vegetation.IsVisible)
+        {
+            OpenTK.Mathematics.Vector3 vegRight = _camera.Right;
+            _vegetationLayer?.Draw(viewProjection, 2f, vegRight,
+                OpenTK.Mathematics.Vector3.Cross(vegRight, _camera.Forward), flattenZ: false, null);
         }
 
         if (LayerCatalog.Entities.IsVisible)
@@ -366,6 +379,26 @@ public partial class MapTabView : UserControl
             stream[at] = position.X;
             stream[at + 1] = position.Y;
             stream[at + 2] = position.Z;
+            stream[at + 3] = r / 255f;
+            stream[at + 4] = g / 255f;
+            stream[at + 5] = b / 255f;
+        }
+        return stream;
+    }
+
+    /// <summary>One marker per plant, coloured by the resource it instantiates so a species reads
+    /// the same across the map.</summary>
+    private static float[] BuildVegetationMarkers(IReadOnlyList<VegetationInstance> vegetation)
+    {
+        var stream = new float[vegetation.Count * EntityMarkerLayer.Stride];
+        for (int i = 0; i < vegetation.Count; i++)
+        {
+            VegetationInstance plant = vegetation[i];
+            (byte r, byte g, byte b) = SurfaceTypeTexture.ColourFor((byte)(plant.ResourceId & 0x7F));
+            int at = i * EntityMarkerLayer.Stride;
+            stream[at] = plant.Position.X;
+            stream[at + 1] = plant.Position.Y;
+            stream[at + 2] = plant.Position.Z;
             stream[at + 3] = r / 255f;
             stream[at + 4] = g / 255f;
             stream[at + 5] = b / 255f;

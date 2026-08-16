@@ -197,15 +197,29 @@ Those nine lists are the parallel vectors of `StSerialVegetationZoneData` named 
 `CCollectionIgnitorComponent` carries an `IgnitorZonesList`, which is what makes vegetation burn.
 `landmarknear<id>.data.fcb` is roughly ten times larger and additionally carries `LightVegeGrid`.
 
-:::caution[Open]
-The element packing inside the nine lists is not decoded. `resourceList` and `resClustersCntList` are
-56 bytes (14 `u32`, matching a per-sector resource count); the four 88-byte lists are per cluster.
-`posXYList` and `posZList` hold the instance positions, but their sizes do not divide as plain float
-arrays, so the elements are probably quantised or length-prefixed.
+### List packing
 
-Per-sector vegetation **extents** are usable without decoding any of that, from
+Every list is a `u32` element count followed by that many 4-byte elements. The element meanings come
+from `StSerialVegetationZoneData::RestoreGraphicCluster` and the `CollectionComponentSerialUtils`
+helpers beside it:
+
+| List | Element |
+|---|---|
+| `resourceList` | resource id, one per resource |
+| `resClustersCntList` | how many clusters that resource owns |
+| `clustersInstancesCntList` | instance count in the **low byte**, instance-array offset in the **upper 24 bits** |
+| `boundingVolumeList` | four floats per cluster — a bounding sphere |
+| `posXYList` | two `u16`, each **× 0.1**, giving X and Y in **global world metres** |
+| `posZList` | plain `float` world Z |
+| `orientZDataList` | two `i16` packed into the `u32` |
+| `colorsList` | three `u32` per instance |
+
+The XY packing is the one that resists guessing: the values are decimetres in world space rather than
+anything sector-relative, so `0x50342A39` is (1080.9, 2053.2). `GetInstancesCntFromPacked` is
+`& 0xff` and `GetInstancesIndOffsetFromPacked` is `>> 8`.
+
+Per-sector vegetation extents are available without walking any of it, from
 `VegetationData.bboxMin`/`bboxMax`.
-:::
 
 Three things this is **not**, each checked directly: vegetation is not placed as entities (33,000
 sampled entities contain about 16 plant props); it is not in `worldsector*.data.fcb`, the sector

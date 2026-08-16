@@ -68,6 +68,12 @@ public static class LayerCatalog
             "Spline sets in the world's mapsdata: roads amber, rivers blue, foot paths violet.",
             ["Show splines", "Control points carry position, tangent and widths", "Spline editing"]);
 
+    /// <summary>Draws a marker per placed plant while visible.</summary>
+    public static readonly MapLayer Vegetation =
+        new("Dressing", "Vegetation", "Ready",
+            "Every placed plant, from the per-sector landmark files. Coloured by the resource it instantiates.",
+            ["Show plant positions", "Resource ids not yet resolved to names", "Placement editing"]);
+
     public static readonly MapLayer[] Layers =
     [
         Heightmap,
@@ -86,9 +92,7 @@ public static class LayerCatalog
         new("Dressing", "Omni lights", "Partial",
             "World-scope static light placements (omnis.fcb).",
             ["Light list", "Place / edit lights"]),
-        new("Dressing", "Vegetation", "Research",
-            "8 seeded collection slots scatter vegetation; cooked zone records partially decoded.",
-            ["Collection slot / seed editor", "Mask painting", "RESEARCH: cooked record decode"]),
+        Vegetation,
         Roads,
         new("Dressing", "Landmarks", "Partial",
             "Distant-silhouette LOD geometry per sector; goes stale when entities change.",
