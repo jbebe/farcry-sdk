@@ -22,7 +22,7 @@ public partial class MapTabView : UserControl
 
     private sealed record PendingLoad(
         TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table,
-        Fc2World World, IReadOnlyList<WorldShape> Shapes);
+        Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines);
 
     private sealed record FieldRow(string Name, string Value);
 
@@ -52,6 +52,7 @@ public partial class MapTabView : UserControl
     private TerrainMesh3D? _terrainMesh;
     private WaterLayer? _waterLayer;
     private ShapeLayer? _shapeLayer;
+    private ShapeLayer? _splineLayer;
 
     private readonly Camera3D _camera = new();
     private readonly HashSet<Key> _flyKeys = [];
@@ -101,7 +102,8 @@ public partial class MapTabView : UserControl
                 Fc2World world = WorldLoader.Load(map, vm.ReadByPath, progress);
                 IReadOnlyList<WorldShape> shapes =
                     WorldShapes.Load(map.Name, vm.ReadByPath, FcbDefinitionsProvider.Value.Value);
-                return new PendingLoad(map, terrain, detail, table, world, shapes);
+                IReadOnlyList<WorldShape> splines = WorldSplines.Load(map.Name, vm.ReadByPath);
+                return new PendingLoad(map, terrain, detail, table, world, shapes, splines);
             });
 
             WorldTerrain terrain = loaded.Terrain;
@@ -136,8 +138,10 @@ public partial class MapTabView : UserControl
             _markerLayer?.Dispose();
             _terrain = pending.Terrain;
             _shapeLayer?.Dispose();
+            _splineLayer?.Dispose();
             _waterLayer = new WaterLayer(pending.Terrain);
             _shapeLayer = new ShapeLayer(pending.Shapes);
+            _splineLayer = new ShapeLayer(pending.Splines);
             _markersDirty = true;
             _heightTexture = new HeightTexture(pending.Terrain);
             _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
@@ -187,6 +191,11 @@ public partial class MapTabView : UserControl
         if (LayerCatalog.Shapes.IsVisible)
         {
             _shapeLayer?.Draw(viewProjection);
+        }
+
+        if (LayerCatalog.Roads.IsVisible)
+        {
+            _splineLayer?.Draw(viewProjection);
         }
 
         if (LayerCatalog.Entities.IsVisible)

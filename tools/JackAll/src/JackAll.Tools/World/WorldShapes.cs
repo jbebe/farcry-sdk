@@ -3,8 +3,9 @@ using JackAll.Core.Format.Fcb;
 
 namespace JackAll.Tools.World;
 
-/// <summary>One authored polyline: a zone outline, a path, or a sound line.</summary>
-public sealed record WorldShape(string Name, string Owner, IReadOnlyList<Vector3> Points);
+/// <summary>One authored polyline. <paramref name="Kind"/> is what it is for - the renderer colours
+/// by it, and it is the only thing distinguishing a road from a river or a zone outline.</summary>
+public sealed record WorldShape(string Kind, string Name, string Owner, IReadOnlyList<Vector3> Points);
 
 /// <summary>
 /// The <c>hidShapePoints</c> polylines a world declares. Like the road splines these live in the
@@ -47,9 +48,11 @@ public static class WorldShapes
 
         if (node.Values.TryGetValue(ShapePoints, out byte[]? raw) && Decode(raw) is { Count: > 1 } points)
         {
+            string owner = definitions.GetClass(node.TypeHash).Name ?? $"{node.TypeHash:X8}";
             shapes.Add(new WorldShape(
+                owner.Contains("Sound", StringComparison.OrdinalIgnoreCase) ? "sound" : "shape",
                 name.Length > 0 ? name : "unnamed",
-                definitions.GetClass(node.TypeHash).Name ?? $"{node.TypeHash:X8}",
+                owner,
                 points));
         }
 

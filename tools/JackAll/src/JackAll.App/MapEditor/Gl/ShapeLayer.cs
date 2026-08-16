@@ -27,8 +27,7 @@ public sealed class ShapeLayer : IDisposable
         var vertices = new List<float>(shapes.Sum(s => s.Points.Count) * 12);
         foreach (WorldShape shape in shapes)
         {
-            bool sound = shape.Owner.Contains("Sound", StringComparison.OrdinalIgnoreCase);
-            (float r, float g, float b) = sound ? (0.95f, 0.75f, 0.25f) : (0.35f, 0.85f, 0.95f);
+            (float r, float g, float b) = TintFor(shape.Kind);
             for (int i = 0; i + 1 < shape.Points.Count; i++)
             {
                 Append(vertices, shape.Points[i], r, g, b);
@@ -69,6 +68,15 @@ public sealed class ShapeLayer : IDisposable
         GL.EnableVertexAttribArray(1);
         GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, 6 * sizeof(float), 3 * sizeof(float));
     }
+
+    private static (float R, float G, float B) TintFor(string kind) => kind switch
+    {
+        "road" => (0.85f, 0.65f, 0.30f),
+        "river" => (0.30f, 0.55f, 0.95f),
+        "path" => (0.70f, 0.45f, 0.85f),
+        "sound" => (0.95f, 0.75f, 0.25f),
+        _ => (0.35f, 0.85f, 0.95f),
+    };
 
     private static void Append(List<float> into, System.Numerics.Vector3 point, float r, float g, float b)
     {

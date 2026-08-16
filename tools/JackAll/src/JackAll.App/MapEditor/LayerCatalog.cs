@@ -62,6 +62,12 @@ public static class LayerCatalog
             "Authored polylines - zone outlines, paths and sound lines - stored in the world's mapsdata, not per sector.",
             ["Show polylines", "Sound lines tinted apart", "Point editing"]);
 
+    /// <summary>Draws the road, river and path splines while visible.</summary>
+    public static readonly MapLayer Roads =
+        new("Dressing", "Roads, rivers, paths", "Ready",
+            "Spline sets in the world's mapsdata: roads amber, rivers blue, foot paths violet.",
+            ["Show splines", "Control points carry position, tangent and widths", "Spline editing"]);
+
     public static readonly MapLayer[] Layers =
     [
         Heightmap,
@@ -83,9 +89,7 @@ public static class LayerCatalog
         new("Dressing", "Vegetation", "Research",
             "8 seeded collection slots scatter vegetation; cooked zone records partially decoded.",
             ["Collection slot / seed editor", "Mask painting", "RESEARCH: cooked record decode"]),
-        new("Dressing", "Roads", "Research",
-            "Spline-authored roads; the cooked retail representation is unidentified.",
-            ["Viewer first", "RESEARCH: find cooked format"]),
+        Roads,
         new("Dressing", "Landmarks", "Partial",
             "Distant-silhouette LOD geometry per sector; goes stale when entities change.",
             ["LOD overlay display", "Stale-check after edits"]),
