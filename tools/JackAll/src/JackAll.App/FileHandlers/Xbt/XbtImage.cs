@@ -38,6 +38,41 @@ public static class XbtImage
         }
     }
 
+    /// <summary>
+    /// The DDS payload as tightly packed RGBA bytes, for callers uploading to the GPU rather than
+    /// showing in WPF. Null when the payload can't be decoded.
+    /// </summary>
+    public static (byte[] Rgba, int Width, int Height)? TryDecodeRgba(byte[] xbt)
+    {
+        try
+        {
+            (_, byte[] dds) = XbtTexture.Split(xbt);
+            using var stream = new MemoryStream(dds);
+            ColorRgba32[,] rows = new BcDecoder().Decode2D(stream).ToArray();
+            int height = rows.GetLength(0);
+            int width = rows.GetLength(1);
+
+            var rgba = new byte[width * height * 4];
+            int i = 0;
+            for (int y = 0; y < height; y++)
+            {
+                for (int x = 0; x < width; x++)
+                {
+                    ColorRgba32 c = rows[y, x];
+                    rgba[i++] = c.r;
+                    rgba[i++] = c.g;
+                    rgba[i++] = c.b;
+                    rgba[i++] = c.a;
+                }
+            }
+            return (rgba, width, height);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
     private static WriteableBitmap ToBitmap(Memory2D<ColorRgba32> pixels)
     {
         int width = pixels.Width;

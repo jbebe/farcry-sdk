@@ -229,7 +229,8 @@ factory) owns a hashtable of `SRealtreeSound`, keyed by an `int` event id — co
 carry their own associated sounds (rustling, breaking, burning), tying this system directly into the
 audio layer, not just rendering/physics. `.rtx` is the most promising still-undocumented format in
 [the hash-list survey](../modding/file-manifest.md) precisely because this class taxonomy gives a
-near-complete chunk list to look for once byte-level RE starts.
+near-complete chunk list to look for once byte-level RE starts. The container framing has since been
+read from real files — see [`.rtx`](../file-formats/rtx.md).
 
 ### `Echo::CNetEngine` — an object-replication network engine
 

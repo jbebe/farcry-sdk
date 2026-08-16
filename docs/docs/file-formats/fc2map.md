@@ -288,6 +288,28 @@ Editor maps number sectors densely, `0`–`63`. Retail levels use a global world
 `w1_a_1` runs `5120`–`6335` in bands of 16 with a stride of 80, i.e. `sectorId = row × 80 + column`
 over the parent world's 80×80 grid.
 
+Because ids are dense over a square grid in every case, a map's grid dimension follows from its
+largest sector id: `sectorsPerSide = ceil(sqrt(maxSectorId + 1))`. That yields 80 for a campaign
+world, 10 for a retail multiplayer map and 8 for `tmpla`, with no per-map table.
+
+## Which maps ship terrain
+
+`.sdat` terrain is present for the two campaign worlds, every retail multiplayer map, `tmpla`, and
+the downloadable multiplayer maps. Counts and grids:
+
+| Map | `.sdat` files | Sector grid | Stitched heightfield |
+|---|---|---|---|
+| `world1` | 6,302 of 6,400 | 80×80 | 5121×5121 |
+| `world2` | 6,237 of 6,400 | 80×80 | 5121×5121 |
+| `mp_*` | 100 (one map has 99) | 10×10 | 641×641 |
+| `tmpla` | 64 | 8×8 | 513×513 |
+
+Campaign worlds are slightly sparse: a grid cell with no `.sdat` simply has no terrain file.
+
+`ige_map` ships **no** `.sdat` at all — only `sd<n>_shadow.xbt`. The editor slot's terrain lives
+inside `.fc2map` documents rather than in `worlds.fat`, so `ige_map` cannot be loaded as terrain from
+the shipped archives.
+
 Any per-sector satellite file keys off the same id — [`nv_<sectorId>.nvm`](./nvm.md) indices match
 `sector<sectorId>.desc.fcb` exactly for a given level.
 

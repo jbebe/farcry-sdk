@@ -19,9 +19,14 @@ public partial class MapTabView : UserControl
 {
     private MainViewModel? _vm;
 
-    private WorldTerrain? _pendingTerrain;
+    private sealed record PendingLoad(
+        TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table);
+
+    private PendingLoad? _pendingLoad;
     private WorldTerrain? _terrain;
     private HeightTexture? _heightTexture;
+    private SurfaceTypeTexture? _surfaceTexture;
+    private TerrainTextureSet? _terrainTextures;
     private TerrainMesh3D? _terrainMesh;
 
     private readonly Camera3D _camera = new();
@@ -61,11 +66,19 @@ public partial class MapTabView : UserControl
         LoadButton.IsEnabled = false;
         try
         {
-            var progress = new Progress<string>(s => StatusText.Text = s);
+            IProgress<string> progress = new Progress<string>(s => StatusText.Text = s);
             MainViewModel vm = _vm;
-            WorldTerrain terrain = await Task.Run(() => WorldTerrain.Load(map, vm.ReadByPath, progress));
+            PendingLoad loaded = await Task.Run(() =>
+            {
+                WorldTerrain terrain = WorldTerrain.Load(map, vm.ReadByPath, progress);
+                progress.Report($"Loading {map.Name} sector descriptors");
+                SectorDetailLayers detail = SectorDetailLayers.Load(map, vm.ReadByPath);
+                return new PendingLoad(map, terrain, detail, TerrainLayerTable.Load(map.Name, vm.ReadByPath));
+            });
 
-            _pendingTerrain = terrain;
+            WorldTerrain terrain = loaded.Terrain;
+            _pendingLoad = loaded;
+            ShowSurfaceLegend(terrain, loaded.Table);
             int center = terrain.Side / 2;
             _camera.Position = new OpenTK.Mathematics.Vector3(
                 center, center, terrain.HeightMetersAt(center, center) + 150);
@@ -82,15 +95,25 @@ public partial class MapTabView : UserControl
 
     private void Viewport_Render(TimeSpan delta)
     {
-        if (_pendingTerrain is { } pending)
+        if (_pendingLoad is { } pending)
         {
             // Swap inside the render callback so GL resources live and die with a context.
-            _pendingTerrain = null;
+            _pendingLoad = null;
             _terrainMesh?.Dispose();
             _heightTexture?.Dispose();
-            _terrain = pending;
-            _heightTexture = new HeightTexture(pending);
-            _terrainMesh = new TerrainMesh3D(_heightTexture);
+            _surfaceTexture?.Dispose();
+            _terrainTextures?.Dispose();
+            _terrain = pending.Terrain;
+            _heightTexture = new HeightTexture(pending.Terrain);
+            _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
+            _terrainTextures = _vm is { } vm
+                ? new TerrainTextureSet(pending.Map, pending.DetailLayers, pending.Table, vm.ReadByPath)
+                : null;
+            _terrainMesh = new TerrainMesh3D(_heightTexture, _surfaceTexture, _terrainTextures);
+            TextureStatus.Text = _terrainTextures is { } set
+                ? $"{set.LayersLoaded} of {pending.Table.Layers.Count} layer textures loaded; blend mask {set.WeightSide}x{set.WeightSide}." +
+                  (set.FailedLayers.Count > 0 ? $" Missing: {string.Join(", ", set.FailedLayers)}." : "")
+                : "No terrain textures loaded.";
         }
 
         GL.Viewport(0, 0, Viewport.FrameBufferWidth, Viewport.FrameBufferHeight);
@@ -106,7 +129,9 @@ public partial class MapTabView : UserControl
             * _camera.Projection((float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1)));
         if (LayerCatalog.Heightmap.IsVisible)
         {
-            _terrainMesh.Draw(viewProjection, _camera.Position);
+            _terrainMesh.Draw(viewProjection, _camera.Position, new TerrainDrawOptions(
+                ShowTextures: LayerCatalog.Textures.IsVisible,
+                TintBySurfaceType: LayerCatalog.SurfaceData.IsVisible));
         }
     }
 
@@ -178,5 +203,43 @@ public partial class MapTabView : UserControl
         ContextReadiness.Text = layer.Readiness.ToUpperInvariant();
         ContextSummary.Text = layer.Summary;
         ContextControls.ItemsSource = layer.Controls;
+        UpdateSurfaceLegendVisibility();
+    }
+
+    private sealed record SurfaceLegendRow(System.Windows.Media.Brush Swatch, string Label, string Coverage);
+
+    /// <summary>
+    /// Lists the surface types the loaded map actually uses, biggest first, with the same colours the
+    /// terrain is tinted with. Ids are resolved to layer names where the world's table names them.
+    /// </summary>
+    private void ShowSurfaceLegend(WorldTerrain terrain, TerrainLayerTable layers)
+    {
+        long total = terrain.SurfaceTypeCoverage.Sum(entry => entry.Samples);
+        SurfaceLegendRows.ItemsSource = terrain.SurfaceTypeCoverage
+            .Select(entry =>
+            {
+                (byte r, byte g, byte b) = SurfaceTypeTexture.ColourFor(entry.SurfaceType);
+                string name = entry.SurfaceType == 0xFF
+                    ? "hole / no terrain"
+                    : layers.Label(entry.SurfaceType) ?? "unnamed";
+                var brush = new System.Windows.Media.SolidColorBrush(
+                    System.Windows.Media.Color.FromRgb(r, g, b));
+                brush.Freeze();
+                return new SurfaceLegendRow(brush, $"{entry.SurfaceType} · {name}",
+                    $"{100.0 * entry.Samples / total:F1}%");
+            })
+            .ToList();
+        UpdateSurfaceLegendVisibility();
+    }
+
+    private void UpdateSurfaceLegendVisibility()
+    {
+        SurfaceLegend.Visibility =
+            ReferenceEquals(LayerList.SelectedItem, LayerCatalog.SurfaceData) && SurfaceLegendRows.ItemsSource is not null
+                ? System.Windows.Visibility.Visible
+                : System.Windows.Visibility.Collapsed;
+        TexturePanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Textures)
+            ? System.Windows.Visibility.Visible
+            : System.Windows.Visibility.Collapsed;
     }
 }

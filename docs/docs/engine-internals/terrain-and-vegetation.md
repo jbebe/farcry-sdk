@@ -152,11 +152,45 @@ resources, per-resource cluster counts, bounding volumes, per-cluster instance c
 Z positions, Z orientation data, colours, and a list of cluster records. Splitting instance data
 across parallel arrays rather than an array of structs is consistent throughout.
 
+## Retail campaign levels carry no authored collection data
+
+The collection system above is the **editor's** authoring mechanism. A shipped campaign level does not
+store its vegetation the same way. Checked against `world1` and `world2`:
+
+- **No collection mask file exists.** A level cell ships only `.fcb`, `.xbt`, `.zsr`, `.sdat`, `.srl`
+  and one `.xml`. The `ige/collection.mask` written by `SaveMasks` appears only inside
+  [`.fc2map`](../file-formats/fc2map.md) documents.
+- **No cluster or collection instances in sector data.** Across 40 `worldsector*.data.fcb` files in
+  `w1_c_2` there are none at all; across 40 in `w2_b_2` there are two `CRealtreeComponent`, which are
+  individually placed trees rather than scattered vegetation. Sector files in these cells are a few
+  kilobytes, far too small to hold per-instance placement.
+- **Nothing in the sector descriptor.** `sector<id>.desc.fcb` holds `DetailTexMask`, the sector id,
+  the neighbour list and landmark/mission references, and no collection fields.
+- **Nothing in `mapsdata.fcb`.**
+
+What does exist is a definition list: `<world>.managers.fcb` holds a `Collections` node with 144
+`Collection` entries, each carrying a name, an asset GUID and a hash. The names are biome-shaped —
+`FCX_SemiDesert01`, `FCX_Desert01`, `FCX_RoadDesert01`, `FCX_EmptyVoid`. The entity library
+separately declares `CGrassDisplacementComponent` and `CVegetationSlowdownComponent` on archetypes.
+
+So the 144 collections are a palette, and the per-location assignment that selects among them is not
+present in the level files in any form found so far. The `.sdat` `EnvSettings` blob was examined as
+the remaining per-sector store and is a raw memory snapshot whose varying words look like retained
+pointers (`0x07xxxxxx`), not an authored slot table.
+
+:::caution[Open]
+Where a retail campaign level's vegetation placement comes from is unresolved. The untested
+possibilities are that it is derived at load from terrain layer or surface type, that it lives in the
+per-sector `.srl`/`.zsr` or landmark files, or that `CCollectionManager` synthesises it at runtime.
+Tracing `CCollectionManager`'s load path would settle it.
+:::
+
 ## Not mapped
 
 Left deliberately unresolved rather than guessed:
 
-- The low five bits of the per-cell `Flags` byte.
+- Bit 4 of the per-cell `Flags` byte. Bits 3..0 are the quad mask and bits 7..5 the surface-type
+  palette slot — see [`.sdat`](../file-formats/sdat.md#the-low-nibble-is-the-quad-mask).
 - `StVegetationInstanceInfo`'s fields, and the nested 0x10- and 0x50-byte cluster/instance records
   inside `StSerialVegetationZoneData`.
 - `CFCXEditorCollectionManager::LoadMask` has an in-place expansion path for a shorter-than-expected

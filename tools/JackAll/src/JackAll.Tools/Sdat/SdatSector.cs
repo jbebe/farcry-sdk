@@ -6,16 +6,27 @@ namespace JackAll.Tools.Sdat;
 /// One 65x65-vertex grid cell: a packed 4-byte record from the terrain sector's height/material grid.
 /// </summary>
 /// <remarks>
-/// Only <see cref="RawHeight"/> (confirmed against <c>CSector::GetZApr</c>'s bilinear height sampler)
-/// and the low nibble of <see cref="RawByte3"/> (confirmed against the LOD triangle-index builders,
-/// which use it to pick a hole/tessellation pattern per quad) are understood. Both raw bytes are kept
-/// in full - not masked down to just the known bits - so a decode-then-encode round-trip with no edits
-/// reproduces the source file exactly even though part of this record's meaning is still unknown.
+/// <see cref="RawByte3"/> splits into three fields: bits 7-5 index the sector's surface-type palette
+/// (7 meaning HOLE), bits 3-0 are the per-quad mask the cooker mirrors into the mip tables, and bit 4
+/// is written by nothing traced. Both raw bytes are kept in full - not masked down to just the known
+/// bits - so a decode-then-encode round-trip with no edits reproduces the source file exactly.
 /// </remarks>
 public readonly record struct SdatGridCell(ushort RawHeight, byte RawByte2, byte RawByte3)
 {
-    /// <summary>Low nibble of <see cref="RawByte3"/> - a hole/tessellation-pattern selector (0-15) per quad.</summary>
-    public byte MaterialIndex => (byte)(RawByte3 & 0x0F);
+    /// <summary>Palette slot reserved to mean "no terrain here".</summary>
+    public const byte HoleSlot = 7;
+
+    /// <summary>Which of the sector's seven surface-type slots this cell uses. Meaningless on its own -
+    /// the palette is per-sector, so resolve it through <see cref="SdatSector.SurfaceTypeAt"/>.</summary>
+    public byte SurfaceSlot => (byte)(RawByte3 >> 5);
+
+    public bool IsHole => SurfaceSlot == HoleSlot;
+
+    /// <summary>Per-quad visibility mask - the nibble the cooker also mirrors into the mip-mask tables.</summary>
+    public byte QuadMask => (byte)(RawByte3 & 0x0F);
+
+    /// <summary>Encoded X component of the cell's normal; Y lives in the sector's separate plane.</summary>
+    public byte NormalX => RawByte2;
 
     /// <summary>Height in meters. Scale factor is provisional - see <see cref="SdatSectorFile.MetersPerUnit"/>.</summary>
     public float HeightMeters => RawHeight * SdatSectorFile.MetersPerUnit;
@@ -45,11 +56,34 @@ public sealed record SdatSector
     public required SdatGridCell[,] Grid { get; init; }
 
     /// <summary>
-    /// Multi-resolution hole/visibility bitmasks and per-node bounds built by
-    /// <c>CTerrainSectorGenericCompiler::PreparePackedDataForExport</c>, immediately following the
-    /// grid in the packed blob. Not decoded - preserved verbatim.
+    /// Everything in the packed blob after the cell grid: the NormalY plane, the multi-resolution
+    /// quad-mask tables and per-node bounds built by
+    /// <c>CTerrainSectorGenericCompiler::PreparePackedDataForExport</c>, and the surface-type palette.
+    /// Preserved verbatim; the decoded parts are exposed by the accessors below.
     /// </summary>
     public required byte[] MaskTablesRaw { get; init; }
+
+    /// <summary>
+    /// The sector's surface-type palette: seven <c>SurfaceTypeID</c> values, <c>0xFF</c> for an unused
+    /// slot. Filled first-fit by <c>STerrainSectorPackedData::SetSurfaceType</c>, so a slot number
+    /// means nothing outside this one sector.
+    /// </summary>
+    public ReadOnlySpan<byte> SurfaceTypePalette =>
+        MaskTablesRaw.AsSpan(SdatSectorFile.PaletteOffsetInMaskTables, SdatSectorFile.SurfaceTypeSlots);
+
+    /// <summary>
+    /// The surface type at a cell, resolved through this sector's palette - the value the engine's
+    /// <c>CSector::GetSurfaceType</c> returns, including <c>0xFF</c> for a hole.
+    /// </summary>
+    public byte SurfaceTypeAt(int row, int column)
+    {
+        SdatGridCell cell = Grid[row, column];
+        return cell.IsHole ? (byte)0xFF : SurfaceTypePalette[cell.SurfaceSlot];
+    }
+
+    /// <summary>Encoded Y component of the cell's normal, from the plane that follows the grid.</summary>
+    public byte NormalYAt(int row, int column) =>
+        MaskTablesRaw[SdatSectorFile.NormalYOffsetInMaskTables + row * SdatSectorFile.GridSize + column];
 
     /// <summary>The variable-length "quad LOD/hole" record array (12 bytes each). Not decoded - preserved verbatim.</summary>
     public required byte[] RecordsRaw { get; init; }
@@ -116,6 +150,17 @@ public static class SdatSectorFile
     private const int RecordSize = 12;
     private const int TrailingFieldSize = 4;
     private const int TailBlockSize = 16;
+
+    /// <summary>Surface-type slots a sector's palette holds, per <c>STerrainSectorPackedData</c>.</summary>
+    public const int SurfaceTypeSlots = 7;
+
+    /// <summary>Where the NormalY plane starts within <see cref="SdatSector.MaskTablesRaw"/>
+    /// (packed-blob offset 0x4628).</summary>
+    public const int NormalYOffsetInMaskTables = 0x4628 - GridByteSize;
+
+    /// <summary>Where the surface-type palette starts within <see cref="SdatSector.MaskTablesRaw"/>
+    /// (packed-blob offset 0x594c).</summary>
+    public const int PaletteOffsetInMaskTables = 0x594C - GridByteSize;
 
     /// <summary>
     /// In-game meters per raw height unit, per <c>CSector::GetZApr</c>'s scale constant. The constant's

@@ -3,6 +3,9 @@ using OpenTK.Mathematics;
 
 namespace JackAll.App.MapEditor.Gl;
 
+/// <summary>What the terrain draws this frame.</summary>
+public readonly record struct TerrainDrawOptions(bool ShowTextures, bool TintBySurfaceType);
+
 /// <summary>
 /// The 3D terrain: two camera-following grid patches (a fine 1-unit-spacing ring and a coarse
 /// 8-unit world backdrop) whose vertex shader pulls heights straight from the shared height
@@ -15,16 +18,22 @@ public sealed class TerrainMesh3D : IDisposable
     private const int PatchSide = 257;
 
     private readonly HeightTexture _heights;
+    private readonly SurfaceTypeTexture _surfaces;
+    private readonly TerrainTextureSet? _textures;
     private readonly ShaderProgram _program;
     private readonly int _vao;
     private readonly int _indexCount;
     private readonly int _uViewProjection;
     private readonly int _uOrigin;
     private readonly int _uSpacing;
+    private readonly int _uSurfaceTint;
+    private readonly int _uTextureMix;
 
-    public TerrainMesh3D(HeightTexture heights)
+    public TerrainMesh3D(HeightTexture heights, SurfaceTypeTexture surfaces, TerrainTextureSet? textures)
     {
         _heights = heights;
+        _surfaces = surfaces;
+        _textures = textures;
 
         string constants =
             $"""
@@ -54,10 +63,96 @@ public sealed class TerrainMesh3D : IDisposable
             $$"""
             #version 330 core
             uniform sampler2D heights;
+            uniform sampler2D surfaceTypes;
+            uniform sampler2D surfacePalette;
+            uniform sampler2D blendWeights;
+            uniform sampler2D terrainColour;
+            uniform sampler2D sectorLayers;
+            uniform sampler2DArray detailTextures;
+            uniform float layerTiling[64];
+            uniform float layerProjAxis[64];
             uniform vec2 heightRange;
+            uniform float surfaceTint;
+            uniform float textureMix;
+            uniform float weightSide;
+            uniform float sectorsPerSide;
             in vec2 world;
             out vec4 fragment;
             {{constants}}
+
+            // The four layer indices this sector blends, as the RGBA of one texel.
+            vec4 sectorLayerIndices()
+            {
+                vec2 sectorUv = (floor(world / 64.0) + 0.5) / sectorsPerSide;
+                return texture(sectorLayers, sectorUv) * 255.0;
+            }
+
+            // An atlas covers a 2x2 sector block, and each sector's own 64-unit square is stored
+            // transposed inside its quadrant - the quadrants themselves sit in natural order. Verified
+            // by reassembling a campaign cell's colour atlases and checking rivers and roads run
+            // unbroken across sector boundaries.
+            ivec2 atlasTexel(ivec2 w)
+            {
+                ivec2 tile = (w / 128) * 128;
+                ivec2 inTile = w - tile;
+                ivec2 quadrant = inTile / 64;
+                ivec2 local = inTile - quadrant * 64;
+                return tile + quadrant * 64 + local.yx;
+            }
+
+            // Because of that transpose, texels next to each other in memory are not next to each
+            // other in the world, so hardware filtering would blend unrelated ground. The four taps
+            // are mapped individually and blended here instead.
+            vec3 sampleAtlas(sampler2D tex, vec2 pos)
+            {
+                vec2 p = clamp(pos, 0.5, weightSide - 0.5) - 0.5;
+                ivec2 b = ivec2(floor(p));
+                vec2 f = p - vec2(b);
+                ivec2 hi = ivec2(int(weightSide) - 1);
+                vec3 c00 = texelFetch(tex, atlasTexel(clamp(b, ivec2(0), hi)), 0).rgb;
+                vec3 c10 = texelFetch(tex, atlasTexel(clamp(b + ivec2(1, 0), ivec2(0), hi)), 0).rgb;
+                vec3 c01 = texelFetch(tex, atlasTexel(clamp(b + ivec2(0, 1), ivec2(0), hi)), 0).rgb;
+                vec3 c11 = texelFetch(tex, atlasTexel(clamp(b + ivec2(1, 1), ivec2(0), hi)), 0).rgb;
+                return mix(mix(c00, c10, f.x), mix(c01, c11, f.x), f.y);
+            }
+
+            // A layer is projected along one axis rather than always from above, which is how cliffs
+            // avoid the stretching a top-down projection would give them.
+            vec2 layerUv(int layer, float height)
+            {
+                int axis = int(layerProjAxis[layer] + 0.5);
+                if (axis == 0) { return vec2(world.y, height); }
+                if (axis == 1) { return vec2(world.x, height); }
+                return world;
+            }
+
+            vec3 blendedDetail(float height)
+            {
+                vec3 w = sampleAtlas(blendWeights, world);
+                w /= max(w.r + w.g + w.b, 0.001);
+
+                // The unused DetailTexMask slot is the low byte far more often than the high one, so
+                // the three weighted layers are its upper bytes, highest first.
+                vec4 idx = sectorLayerIndices();
+                float chosen[3] = float[3](idx.a, idx.b, idx.g);
+
+                vec3 colour = vec3(0.0);
+                float used = 0.0;
+                for (int i = 0; i < 3; i++)
+                {
+                    int layer = int(chosen[i] + 0.5);
+                    if (layer >= 64) { continue; }
+                    float tiling = max(layerTiling[layer], 0.5);
+                    colour += w[i] * texture(detailTextures, vec3(layerUv(layer, height) / tiling, float(layer))).rgb;
+                    used += w[i];
+                }
+                if (used <= 0.001) { return vec3(0.5); }
+
+                // The colour atlas is a baked per-texel tint over the blended detail, mid-grey neutral.
+                vec3 tint = sampleAtlas(terrainColour, world);
+                return (colour / used) * tint * 2.0;
+            }
+
             void main()
             {
                 vec2 uv = world / extent;
@@ -71,6 +166,15 @@ public sealed class TerrainMesh3D : IDisposable
                 float h = texture(heights, uv).r;
                 float shade = (h - heightRange.x) / (heightRange.y - heightRange.x);
                 vec3 base = mix(vec3(0.24, 0.30, 0.18), vec3(0.62, 0.56, 0.44), shade);
+
+                base = mix(base, blendedDetail(h * metersPerRaw), textureMix);
+
+                // The surface id indexes the palette texture directly; r is the id scaled to 0..1,
+                // so the lookup lands mid-texel at (id + 0.5) / 256.
+                float id = texture(surfaceTypes, uv).r;
+                vec3 material = texture(surfacePalette, vec2(id * (255.0 / 256.0) + (0.5 / 256.0), 0.5)).rgb;
+                base = mix(base, base * 0.35 + material * 0.75, surfaceTint);
+
                 float light = max(dot(normal, normalize(vec3(0.4, 0.3, 0.85))), 0.0);
                 fragment = vec4(base * (0.35 + 0.65 * light), 1.0);
             }
@@ -78,8 +182,25 @@ public sealed class TerrainMesh3D : IDisposable
         _uViewProjection = _program.UniformLocation("viewProjection");
         _uOrigin = _program.UniformLocation("origin");
         _uSpacing = _program.UniformLocation("spacing");
+        _uSurfaceTint = _program.UniformLocation("surfaceTint");
+        _uTextureMix = _program.UniformLocation("textureMix");
         _program.Use();
         GL.Uniform2(_program.UniformLocation("heightRange"), heights.MinNormalized, heights.MaxNormalized);
+        GL.Uniform1(_program.UniformLocation("heights"), 0);
+        GL.Uniform1(_program.UniformLocation("surfaceTypes"), 1);
+        GL.Uniform1(_program.UniformLocation("surfacePalette"), 2);
+        GL.Uniform1(_program.UniformLocation("blendWeights"), 3);
+        GL.Uniform1(_program.UniformLocation("sectorLayers"), 4);
+        GL.Uniform1(_program.UniformLocation("detailTextures"), 5);
+        GL.Uniform1(_program.UniformLocation("terrainColour"), 6);
+        if (textures is not null)
+        {
+            GL.Uniform1(_program.UniformLocation("weightSide"), (float)textures.WeightSide);
+            GL.Uniform1(_program.UniformLocation("sectorsPerSide"), textures.WeightSide / 64f);
+            GL.Uniform1(_program.UniformLocation("layerTiling"), textures.Tiling.Length, textures.Tiling);
+            GL.Uniform1(_program.UniformLocation("layerProjAxis"),
+                textures.ProjectionAxis.Length, textures.ProjectionAxis);
+        }
 
         // Positions come from gl_VertexID; only the triangulation needs real data.
         var indices = new int[(PatchSide - 1) * (PatchSide - 1) * 6];
@@ -106,11 +227,15 @@ public sealed class TerrainMesh3D : IDisposable
         GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(int), indices, BufferUsageHint.StaticDraw);
     }
 
-    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition)
+    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition, TerrainDrawOptions options)
     {
         _program.Use();
         GL.UniformMatrix4(_uViewProjection, false, ref viewProjection);
+        GL.Uniform1(_uSurfaceTint, options.TintBySurfaceType ? 1f : 0f);
+        GL.Uniform1(_uTextureMix, _textures is not null && options.ShowTextures ? 1f : 0f);
         _heights.Bind(TextureUnit.Texture0);
+        _surfaces.Bind(TextureUnit.Texture1, TextureUnit.Texture2);
+        _textures?.Bind(TextureUnit.Texture3, TextureUnit.Texture4, TextureUnit.Texture5, TextureUnit.Texture6);
         GL.BindVertexArray(_vao);
         GL.Enable(EnableCap.DepthTest);
 

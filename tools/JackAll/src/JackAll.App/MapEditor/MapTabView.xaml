@@ -74,6 +74,31 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+
+                        <!-- How an atlas texel maps onto a sector cell could not be settled from the
+                             shipped data, so it is a toggle until a look at real terrain decides it. -->
+                        <StackPanel x:Name="TexturePanel" Visibility="Collapsed">
+                            <TextBlock x:Name="TextureStatus" Foreground="#888" TextWrapping="Wrap" Margin="0,12,0,0" />
+                        </StackPanel>
+
+                        <StackPanel x:Name="SurfaceLegend" Visibility="Collapsed">
+                            <TextBlock Text="SURFACE TYPES" FontSize="9" FontWeight="SemiBold"
+                                       Foreground="#888" Margin="0,14,0,4" />
+                            <ItemsControl x:Name="SurfaceLegendRows">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate>
+                                        <DockPanel Margin="0,0,0,3">
+                                            <Border Width="11" Height="11" DockPanel.Dock="Left" Margin="0,0,6,0"
+                                                    VerticalAlignment="Center" BorderBrush="#999" BorderThickness="1"
+                                                    Background="{Binding Swatch}" />
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Coverage}"
+                                                       Foreground="#888" Margin="6,0,0,0" />
+                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
                     </StackPanel>
                 </ScrollViewer>
             </Border>

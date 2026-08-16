@@ -18,15 +18,25 @@ public static class LayerCatalog
             "The ground itself - 65x65 heights per sector, stitched into one field per map.",
             ["Brush tools: raise / lower / flatten / smooth", "Brush size, strength, flatten target height", "Extended brushes: blur, smear, airbrush, hill, slope"]);
 
+    /// <summary>Tints the terrain by surface type while visible. Off by default now that the real
+    /// textures draw - the two compete for the same pixels.</summary>
+    public static readonly MapLayer SurfaceData =
+        new("Terrain", "Surface data", "Ready",
+            "What the ground is made of - the surface type under every sample, which drives footsteps, impacts and fire.",
+            ["Tint terrain by surface type", "Legend with coverage", "Surface painting", "Hole editing"])
+        { IsVisible = false };
+
+    /// <summary>Draws the real blended terrain textures while visible.</summary>
+    public static readonly MapLayer Textures =
+        new("Terrain", "Textures", "Ready",
+            "How the ground looks: each sector blends up to four layers from the world's 45-entry table, weighted by its atlas mask.",
+            ["Show real terrain textures", "Layer table browser", "Mask channel painting", "Per-sector layer assignment"]);
+
     public static readonly MapLayer[] Layers =
     [
         Heightmap,
-        new("Terrain", "Surface data", "Partial",
-            "Per-cell ground material index (footsteps, impacts, fire), normals and terrain holes.",
-            ["Material index inspector", "Material painting", "Hole mask editing"]),
-        new("Terrain", "Textures", "Blocked",
-            "Splat blend weights plus diffuse and color atlases; per-sector pick of 4 layers from the global table.",
-            ["Layer palette (4 per sector)", "Mask channel painting", "Diffuse stamping, color painting", "BLOCKED: FC2 atlas quadrant orientation underived"]),
+        SurfaceData,
+        Textures,
         new("Terrain", "Shadow", "Research",
             "Baked light/shadow map multiplied into the terrain look.",
             ["View overlay", "Regeneration after sculpting (unsolved)"]),

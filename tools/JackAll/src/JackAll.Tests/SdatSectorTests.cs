@@ -148,10 +148,24 @@ public class SdatSectorTests
         Assert.Equal(expectedMeters, cell.HeightMeters, precision: 3);
     }
 
+    /// <summary>The three fields packed into RawByte3 - palette slot, unused bit 4, quad mask.</summary>
     [Fact]
-    public void MaterialIndex_is_the_low_nibble_of_RawByte3()
+    public void RawByte3_splits_into_surface_slot_and_quad_mask()
     {
         var cell = new SdatGridCell(0, 0, 0xF7);
-        Assert.Equal(7, cell.MaterialIndex);
+
+        Assert.Equal(7, cell.SurfaceSlot);
+        Assert.True(cell.IsHole);
+        Assert.Equal(7, cell.QuadMask);
+    }
+
+    [Fact]
+    public void A_cell_using_palette_slot_zero_is_not_a_hole()
+    {
+        var cell = new SdatGridCell(0, 0, 0x0F);
+
+        Assert.Equal(0, cell.SurfaceSlot);
+        Assert.False(cell.IsHole);
+        Assert.Equal(15, cell.QuadMask);
     }
 }
