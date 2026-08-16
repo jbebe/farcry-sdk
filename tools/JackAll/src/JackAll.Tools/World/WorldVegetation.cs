@@ -7,10 +7,15 @@ namespace JackAll.Tools.World;
 public sealed record VegetationInstance(Vector3 Position, uint ResourceId);
 
 /// <summary>
-/// The vegetation a map places. Each sector's plants live in its
-/// <c>landmarkfar_&lt;sectorId&gt;.data.fcb</c>, under a <c>CCollectionComponent</c>'s
-/// <c>VegetationData</c> - never in the sector's own <c>worldsector</c> file.
+/// The vegetation a map places. Each sector's plants live in its two landmark files, under a
+/// <c>CCollectionComponent</c>'s <c>VegetationData</c> - never in the sector's own
+/// <c>worldsector</c> file.
 /// </summary>
+/// <remarks>
+/// Both landmark files are read. Despite the near/far naming they are not two levels of detail over
+/// the same plants: their instance positions do not overlap at all, and the near file carries around
+/// twenty times more, so together they are the full set.
+/// </remarks>
 /// <remarks>
 /// Field packing follows <c>StSerialVegetationZoneData::RestoreGraphicCluster</c> and the
 /// <c>CollectionComponentSerialUtils</c> helpers beside it:
@@ -32,26 +37,28 @@ public static class WorldVegetation
         Parallel.For(0, map.Sectors.Count, index =>
         {
             (string path, int sectorId) = map.Sectors[index];
-            string landmark = path
-                .Replace(@"\sdat\", @"\worldsectors\", StringComparison.OrdinalIgnoreCase)
-                .Replace($"sd{sectorId}.sdat", $"landmarkfar_{sectorId}.data.fcb", StringComparison.OrdinalIgnoreCase);
-            if (readByPath(landmark) is not { } bytes)
-            {
-                return;
-            }
-
-            FcbObject root;
-            try
-            {
-                root = FcbDocument.Deserialize(bytes);
-            }
-            catch (InvalidDataException)
-            {
-                return;
-            }
-
+            string sectorDir = path.Replace(@"\sdat\", @"\worldsectors\", StringComparison.OrdinalIgnoreCase);
             var found = new List<VegetationInstance>();
-            Collect(root, definitions, found, 0);
+
+            // Note the naming: the far file has an underscore before its id, the near file does not.
+            foreach (string file in new[] { $"landmarkfar_{sectorId}.data.fcb", $"landmarknear{sectorId}.data.fcb" })
+            {
+                string landmark = sectorDir.Replace($"sd{sectorId}.sdat", file, StringComparison.OrdinalIgnoreCase);
+                if (readByPath(landmark) is not { } bytes)
+                {
+                    continue;
+                }
+
+                try
+                {
+                    Collect(FcbDocument.Deserialize(bytes), definitions, found, 0);
+                }
+                catch (InvalidDataException)
+                {
+                    // A sector that will not parse simply contributes no plants.
+                }
+            }
+
             if (found.Count > 0)
             {
                 perSector[index] = found;
@@ -79,6 +86,8 @@ public static class WorldVegetation
             ReadZone(node, definitions, into);
             return;
         }
+
+        // A file holds several zones, so every branch has to be walked.
 
         if (depth > 10)
         {
