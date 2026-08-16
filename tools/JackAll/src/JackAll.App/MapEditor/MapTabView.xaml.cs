@@ -23,7 +23,7 @@ public partial class MapTabView : UserControl
     private sealed record PendingLoad(
         TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table,
         Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines,
-        IReadOnlyList<VegetationInstance> Vegetation);
+        IReadOnlyList<VegetationInstance> Vegetation, IReadOnlyList<NavMeshNode> NavNodes);
 
     private sealed record FieldRow(string Name, string Value);
 
@@ -55,6 +55,7 @@ public partial class MapTabView : UserControl
     private ShapeLayer? _shapeLayer;
     private ShapeLayer? _splineLayer;
     private EntityMarkerLayer? _vegetationLayer;
+    private EntityMarkerLayer? _navMeshLayer;
 
     private readonly Camera3D _camera = new();
     private readonly HashSet<Key> _flyKeys = [];
@@ -107,7 +108,8 @@ public partial class MapTabView : UserControl
                 IReadOnlyList<WorldShape> splines = WorldSplines.Load(map.Name, vm.ReadByPath);
                 IReadOnlyList<VegetationInstance> vegetation =
                     WorldVegetation.Load(map, vm.ReadByPath, FcbDefinitionsProvider.Value.Value, progress);
-                return new PendingLoad(map, terrain, detail, table, world, shapes, splines, vegetation);
+                IReadOnlyList<NavMeshNode> navNodes = WorldNavMesh.Load(map, vm.ReadByPath, progress);
+                return new PendingLoad(map, terrain, detail, table, world, shapes, splines, vegetation, navNodes);
             });
 
             WorldTerrain terrain = loaded.Terrain;
@@ -148,6 +150,8 @@ public partial class MapTabView : UserControl
             _splineLayer = new ShapeLayer(pending.Splines);
             _vegetationLayer?.Dispose();
             _vegetationLayer = new EntityMarkerLayer(BuildVegetationMarkers(pending.Vegetation), pending.Vegetation.Count);
+            _navMeshLayer?.Dispose();
+            _navMeshLayer = new EntityMarkerLayer(BuildNavMeshMarkers(pending.NavNodes), pending.NavNodes.Count);
             _markersDirty = true;
             _heightTexture = new HeightTexture(pending.Terrain);
             _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
@@ -209,6 +213,13 @@ public partial class MapTabView : UserControl
             OpenTK.Mathematics.Vector3 vegRight = _camera.Right;
             _vegetationLayer?.Draw(viewProjection, 2f, vegRight,
                 OpenTK.Mathematics.Vector3.Cross(vegRight, _camera.Forward), flattenZ: false, null);
+        }
+
+        if (LayerCatalog.NavMesh.IsVisible)
+        {
+            OpenTK.Mathematics.Vector3 navRight = _camera.Right;
+            _navMeshLayer?.Draw(viewProjection, 1.5f, navRight,
+                OpenTK.Mathematics.Vector3.Cross(navRight, _camera.Forward), flattenZ: false, null);
         }
 
         if (LayerCatalog.Entities.IsVisible)
@@ -402,6 +413,26 @@ public partial class MapTabView : UserControl
             stream[at + 3] = r / 255f;
             stream[at + 4] = g / 255f;
             stream[at + 5] = b / 255f;
+        }
+        return stream;
+    }
+
+    /// <summary>One marker per walkable node, shading from green to red as the node's normal tips
+    /// away from vertical - the same measure the engine's slope limit tests.</summary>
+    private static float[] BuildNavMeshMarkers(IReadOnlyList<NavMeshNode> nodes)
+    {
+        var stream = new float[nodes.Count * EntityMarkerLayer.Stride];
+        for (int i = 0; i < nodes.Count; i++)
+        {
+            NavMeshNode node = nodes[i];
+            float flat = Math.Clamp(node.Normal.Z, 0f, 1f);
+            int at = i * EntityMarkerLayer.Stride;
+            stream[at] = node.Position.X;
+            stream[at + 1] = node.Position.Y;
+            stream[at + 2] = node.Position.Z;
+            stream[at + 3] = 1f - flat;
+            stream[at + 4] = flat;
+            stream[at + 5] = 0.25f;
         }
         return stream;
     }

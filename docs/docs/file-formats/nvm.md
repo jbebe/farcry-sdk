@@ -186,28 +186,26 @@ u32  field_0x70, field_0x74               (a pair; falls back to CNavmeshEdition
 u16  field_0x5c
 --- CNavArchive::SetPackedVectorSettings() runs here: every vec3 below this point is quantized to
     3×int16, scaled relative to this sector's own bounding-box center/extent ---
-u32  field_0x64
+u32  field_0x64                           (version >= 0x13200)
 u32[field_0x64]              a raw (no per-element parser) block of u32s
 u32  nodeCount
-CNavMeshNode[nodeCount]      the actual navmesh graph — 60 bytes each, own SerializeData
-f32vec3[nodeCount] → packed  quantized vertex positions (one per node, 6 bytes each on disk)
+CNavMeshNode[nodeCount]      the actual navmesh graph — 48 bytes each on disk, own SerializeData
+u32  vertexCount             its own count, unrelated to nodeCount
+f32vec3[vertexCount] → packed  quantized vertex positions, 6 bytes each on disk
+--- obstacles appear only on versions in [0x10000, 0x13600); retail 0x14100 skips the block ---
+u32  obstacleCount
+CNavMeshObstacle[obstacleCount]  dynamic blockers — 40 bytes each, own SerializeData
+f32vec3[]  → packed           additional quantized vertex arrays (version >= 0x13000 / >= 0x134ff)
+--- both paths rejoin here ---
 u32  coverCount
-CNavCover[coverCount]        static AI cover points — 28 bytes each, own SerializeData
-u32  dynCoverCount
-CDynamicNavCover[dynCoverCount]  dynamic/toggleable cover points — 40 bytes each, own SerializeData
+CNavCover[coverCount]        static AI cover points — 28 bytes in memory, own SerializeData
+u32  dynCoverCount                        (version >= 0x13400)
+CDynamicNavCover[dynCoverCount]  dynamic/toggleable cover points — 40 bytes in memory, own SerializeData
 f32vec3[]  → packed          a second quantized vertex-position array (purpose distinct from the first,
                               not identified — candidate: edge midpoints or off-mesh link endpoints)
 CNavMeshQTree                a spatial index over the node list, built fresh from node positions via
                               CNavMeshQTreeWriter and serialized inline — baked into the file, not
                               rebuilt at load time
---- everything below this point is version-gated (see above) and progressively larger version numbers
-    unlock more of it ---
-u32  obstacleCount            (version >= 0x13600)
-CNavMeshObstacle[obstacleCount]  dynamic blockers — 40 bytes each, own SerializeData
-f32vec3[]  → packed           additional quantized vertex arrays (version >= 0x13000 / >= 0x134ff)
-CNavMeshQTree (again)         a second CNavMeshQTree is allocated and its own virtual SerializeData
-                               called unconditionally at the very end — relationship to the inline one
-                               above not resolved (see Unknowns)
 ```
 
 `AfterLoad(sector)` runs as the final step on the read path — a post-processing hook, presumably
@@ -219,14 +217,84 @@ This gives a genuinely complete structural map of what a navmesh sector contains
 baked spatial index — everything needed to actually decode geometry now has a named target class and a
 known position in the byte stream.
 
+## Measured per-sector header
+
+The field order above comes from the serializer; these offsets come from reading real
+`nv_<id>.nvm` files (`w1_c_2`, sectors 2576 and 2577):
+
+```
++0x00  u32   0
++0x04  u32   0x4E764D68        the per-sector tag
++0x08  u32   0x00014100        format version
++0x0C  u32   reload size       varies per sector (60300, 38220)
++0x10  u16   unidentified
++0x12  u16   sector id         2576 / 2577 - the global id, matching the file name
++0x14  f32   minX              1024 / 1088
++0x18  f32   minY              2048 / 2048
++0x1C  f32   maxX              1088 / 1152
++0x20  f32   maxY              2112 / 2112
+```
+
+The bounding box is 2D — four floats, no Z — and matches the sector's own 64×64 footprint exactly.
+That matters for reading the geometry: every vec3 past `SetPackedVectorSettings` is quantised as
+three `int16` **relative to this box**, so these four floats are the dequantisation basis.
+
+Sector files are sizeable — around 70–90 KB each, 254 of them in `w1_c_2` — so a sector's navmesh is
+far richer than its terrain.
+
+## Dequantising a position
+
+`SetPackedVectorSettings(centre, span)` (`0x09a0a750`) takes the bounding box centre and
+`2 × round(max(width, height))`, which must be a power of two, and derives the scale as
+`1 << (15 - log2(span))`. A 64 m sector therefore gives `span = 128` and a scale of 256, so:
+
+```
+x = centre.x + int16 / 256        centre = the bbox midpoint
+y = centre.y + int16 / 256
+z =            int16 / 32         Z is always 1/32 m and never uses the box
+```
+
+X and Y resolve to about 4 mm and Z to about 3 cm. The scale is per sector, so a position can only be
+decoded alongside the header it came from — there is no world-wide constant.
+
+## `CNavMeshNode` — 48 bytes on disk
+
+`CNavMeshNode::SerializeData` (`0x09a11e50`) writes 48 bytes for a current-version archive, against
+the 60 the class occupies in memory:
+
+```
++0x00  u32                        +0x15  u8   normal x    ┐ signed, /127
++0x04  u16                        +0x16  u8   normal y    │
++0x06  u16                        +0x17  u8   normal z    ┘
++0x08  u16                        +0x18  u8   flag         (version >= 0x13900)
++0x0A  u8                         +0x19  u8   flag         (version >= 0x13900)
++0x0B  u32                        +0x1A  u32 ×3            neighbour or edge references
++0x0F  int16 x, y, z  packed      +0x26  u32 ×2 + u16
+```
+
+The three normal bytes are what the engine dots against world up and compares to
+`NavMeshUtils::COS_ANGLE_SLOPE_LIMIT` to set the node's "too steep" bit, so slope is readable
+straight from the file without touching the terrain.
+
+Older versions are shorter: below `0x13800` the position is a full `f32vec3` rather than packed,
+below `0x13701` there is an extra byte, and below `0x13900` the two flag bytes are absent.
+
+:::note[Verified]
+Parsed across four `w1_c_2` sectors: 1,003 / 635 / 1,179 / 840 nodes, **every one** landing inside its
+own sector's bounding box, spanning the full 64 m in X and Y with heights of 16–37 m. A wrong stride
+or scale scatters positions immediately, so the layout above is confirmed rather than inferred.
+Implemented in `JackAll.Tools/World/WorldNavMesh.cs`.
+:::
+
 ## Unknowns
 
 - The semantic meaning of the level-file header fields (`+0x54` through `+0x70`) and the sector-content
   scalar fields (`+0x5c`, `+0x64`, `+0x6c`, `+0x70`/`+0x74`) — only their storage location and
   read/write order are confirmed, not what they represent.
-- The byte layout inside `CNavMeshNode`, `CNavCover`, `CDynamicNavCover`, `CNavMeshObstacle`, and
-  `CNavMeshQTree` — each has its own `SerializeData`, none opened yet. This is the natural next layer:
-  opening these five gets to the actual triangle/graph/cover-point field values.
+- The byte layout inside `CNavCover`, `CDynamicNavCover`, `CNavMeshObstacle`, and `CNavMeshQTree` —
+  each has its own `SerializeData`, none opened yet. `CNavMeshNode` is decoded (above), but what its
+  non-positional fields mean — which of the `u32`s index neighbours, which index the vertex array —
+  is not.
 - The purpose of the second quantized-vertex array, and the relationship between the inline
   `CNavMeshQTreeWriter`-built tree and the second `CNavMeshQTree` serialized unconditionally at the end
   of `SerializeDataContent` — possibly one is a full-precision editor-time tree and the other a

@@ -74,6 +74,14 @@ public static class LayerCatalog
             "Every placed plant, from the per-sector landmark files. Coloured by the resource it instantiates.",
             ["Show plant positions", "Resource ids not yet resolved to names", "Placement editing"]);
 
+    /// <summary>Draws a marker per walkable node while visible, green where the ground is flat
+    /// enough to walk and red where the engine's slope limit rejects it.</summary>
+    public static readonly MapLayer NavMesh =
+        new("Systems", "Navmesh", "Ready",
+            "Where the AI can walk - one node per walkable patch, only on campaign sectors.",
+            ["Show walkable nodes", "Steep nodes tinted red", "Generation after sculpting (unsolved)"])
+        { IsVisible = false };
+
     public static readonly MapLayer[] Layers =
     [
         Heightmap,
@@ -111,9 +119,7 @@ public static class LayerCatalog
             "World-scope singleton state (73 manager types) - mostly preserve, inspect raw.",
             ["Raw FCB inspection"]),
 
-        new("Systems", "Navmesh", "Research",
-            "AI navigation, one file per campaign sector; missing navmesh plus AI entities crashes the game.",
-            ["Presence overlay", "AI-safety warning on placement", "RESEARCH: generation"]),
+        NavMesh,
         new("Systems", "Sound regions", "Research",
             "Per-sector audio region data; records undecoded - preserve byte-for-byte.",
             ["Presence view only"]),
