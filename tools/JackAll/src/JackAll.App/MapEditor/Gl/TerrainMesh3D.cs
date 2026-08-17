@@ -49,8 +49,6 @@ public sealed class TerrainMesh3D : IDisposable
             const float metersPerRaw = 65535.0 / 128.0;
             const int patchSide = {PatchSide};
             """;
-        string horizon = string.Create(System.Globalization.CultureInfo.InvariantCulture,
-            $"const vec3 horizonColour = vec3({SceneLighting.Horizon.X:0.####}, {SceneLighting.Horizon.Y:0.####}, {SceneLighting.Horizon.Z:0.####});");
         _program = new ShaderProgram(
             $$"""
             #version 330 core
@@ -93,7 +91,7 @@ public sealed class TerrainMesh3D : IDisposable
             uniform float haze;
             uniform vec3 sunDirection;
             uniform float weightSide;
-            {{horizon}}
+            {{SceneLighting.SkyGlsl}}
             in float viewDistance;
             uniform float sectorsPerSide;
             in vec2 world;
@@ -208,13 +206,7 @@ public sealed class TerrainMesh3D : IDisposable
                 float light = max(dot(normal, sunDirection), 0.0);
                 float shading = mix(0.35 + 0.65 * light, 0.35 + 0.65 * baked, shadowMix);
                 vec3 lit = base * shading * brightness;
-
-                // Dust sits in the low air, so the haze thins with altitude and peaks rise out of
-                // it. Fading to the sky's own horizon colour is what stops the terrain ending at a
-                // visible edge against the sky.
-                float fog = 1.0 - exp(-viewDistance * 0.0011 * haze);
-                fog *= exp(-max(h * metersPerRaw - 30.0, 0.0) / 140.0);
-                fragment = vec4(mix(lit, horizonColour, clamp(fog, 0.0, 1.0)), 1.0);
+                fragment = vec4(applyHaze(lit, viewDistance, h * metersPerRaw, haze), 1.0);
             }
             """);
         _uViewProjection = _program.UniformLocation("viewProjection");

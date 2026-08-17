@@ -44,6 +44,16 @@ public static class SceneLighting
                 : mix(skyHorizon, skyNadir, clamp(-ray.z * 2.5, 0.0, 1.0));
             return sky + sunTint * pow(max(dot(ray, sunDirection), 0.0), 8.0) * 0.30;
         }
+
+        // Dust sits in the low air, so the haze thins with altitude and peaks rise out of it. Every
+        // surface in the scene has to run this same function or it will visibly float out of the
+        // haze the rest of the world is sitting in.
+        vec3 applyHaze(vec3 colour, float viewDistance, float height, float haze)
+        {
+            float fog = 1.0 - exp(-viewDistance * 0.0011 * haze);
+            fog *= exp(-max(height - 30.0, 0.0) / 140.0);
+            return mix(colour, skyHorizon, clamp(fog, 0.0, 1.0));
+        }
         """;
 
     private static string Glsl(Vector3 v) => string.Create(

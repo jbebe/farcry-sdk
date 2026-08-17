@@ -21,6 +21,7 @@ public sealed class WaterLayer : IDisposable
     private readonly int _uCameraPosition;
     private readonly int _uSunDirection;
     private readonly int _uTime;
+    private readonly int _uHaze;
 
     public int SectorCount { get; }
 
@@ -77,24 +78,32 @@ public sealed class WaterLayer : IDisposable
             uniform vec3 cameraPosition;
             uniform vec3 sunDirection;
             uniform float time;
+            uniform float haze;
             out vec4 fragment;
 
             {{SceneLighting.SkyGlsl}}
 
-            // Three crossing wavelets. Their gradients perturb the normal directly, which is all the
-            // surface needs: the ripples are never seen as geometry, only as moving highlights.
-            vec3 rippleNormal(vec2 p)
+            // Three crossing wavelets, wavelengths around 40 cm. Their gradients perturb the normal
+            // directly, which is all the surface needs: the ripples are never seen as geometry, only
+            // as moving highlights. Slope is frequency times amplitude, so the strength has to fall
+            // as the waves get finer or the normals turn to noise.
+            vec3 rippleNormal(vec2 p, float strength)
             {
                 vec2 slope = vec2(0.0);
-                slope += vec2( 0.14,  0.09) * cos(dot(p, vec2( 0.14,  0.09)) + time * 1.10);
-                slope += vec2(-0.07,  0.17) * cos(dot(p, vec2(-0.07,  0.17)) + time * 0.90);
-                slope += vec2( 0.21, -0.13) * cos(dot(p, vec2( 0.21, -0.13)) + time * 1.70);
-                return normalize(vec3(-slope * 2.2, 1.0));
+                slope += vec2( 14.0,   9.0) * cos(dot(p, vec2( 14.0,   9.0)) + time *  9.0);
+                slope += vec2( -7.0,  17.0) * cos(dot(p, vec2( -7.0,  17.0)) + time *  7.5);
+                slope += vec2( 21.0, -13.0) * cos(dot(p, vec2( 21.0, -13.0)) + time * 13.0);
+                return normalize(vec3(-slope * strength, 1.0));
             }
 
             void main()
             {
-                vec3 normal = rippleNormal(worldPosition.xy);
+                float viewDistance = distance(cameraPosition, worldPosition);
+
+                // Ripples this fine alias into crawling noise at range, so they flatten with
+                // distance and the surface settles into a plain mirror.
+                float strength = 0.022 * exp(-viewDistance / 250.0);
+                vec3 normal = rippleNormal(worldPosition.xy, strength);
                 vec3 view = normalize(cameraPosition - worldPosition);
                 vec3 mirrored = reflect(-view, normal);
 
@@ -106,6 +115,7 @@ public sealed class WaterLayer : IDisposable
                 float glint = pow(max(dot(mirrored, sunDirection), 0.0), 220.0);
 
                 vec3 colour = mix(surfaceTint * 0.8, reflected, fresnel) + sunTint * glint * 1.6;
+                colour = applyHaze(colour, viewDistance, worldPosition.z, haze);
                 fragment = vec4(colour, mix(0.55, 0.95, fresnel));
             }
             """);
@@ -113,6 +123,7 @@ public sealed class WaterLayer : IDisposable
         _uCameraPosition = _program.UniformLocation("cameraPosition");
         _uSunDirection = _program.UniformLocation("sunDirection");
         _uTime = _program.UniformLocation("time");
+        _uHaze = _program.UniformLocation("haze");
 
         _vao = GL.GenVertexArray();
         GL.BindVertexArray(_vao);
@@ -135,7 +146,7 @@ public sealed class WaterLayer : IDisposable
             : (0.12f + lift, 0.26f + lift, 0.38f + lift);
     }
 
-    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition, float seconds)
+    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition, float seconds, float haze)
     {
         if (_vertexCount == 0)
         {
@@ -147,6 +158,7 @@ public sealed class WaterLayer : IDisposable
         GL.Uniform3(_uCameraPosition, cameraPosition);
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
         GL.Uniform1(_uTime, seconds);
+        GL.Uniform1(_uHaze, haze);
         GL.BindVertexArray(_vao);
         GL.Enable(EnableCap.Blend);
         GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);

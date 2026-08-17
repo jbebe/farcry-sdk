@@ -222,7 +222,8 @@ public partial class MapTabView : UserControl
 
         if (LayerCatalog.Water.IsVisible)
         {
-            _waterLayer?.Draw(viewProjection, _camera.Position, (float)_elapsedSeconds);
+            _waterLayer?.Draw(viewProjection, _camera.Position, (float)_elapsedSeconds,
+                Atmosphere.IsChecked == true ? 1f : 0f);
         }
 
         if (LayerCatalog.Shapes.IsVisible)
