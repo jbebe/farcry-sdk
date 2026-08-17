@@ -1,3 +1,5 @@
+using System.ComponentModel;
+
 namespace JackAll.App.MapEditor;
 
 /// <summary>
@@ -10,14 +12,33 @@ namespace JackAll.App.MapEditor;
 /// synthesized equality: toggling a checkbox would change the item's hash code underneath the
 /// grouped collection view holding it, and the list would wedge.</remarks>
 public sealed class MapLayer(string group, string name, string readiness, string summary, string[] controls)
+    : INotifyPropertyChanged
 {
+    private bool _isVisible = true;
+
     public string Group { get; } = group;
     public string Name { get; } = name;
     public string Readiness { get; } = readiness;
     public string Summary { get; } = summary;
     public string[] Controls { get; } = controls;
 
-    public bool IsVisible { get; set; } = true;
+    /// <summary>Raises a change so code that clears the layers moves their checkboxes too; the
+    /// checkbox alone would not need it.</summary>
+    public bool IsVisible
+    {
+        get => _isVisible;
+        set
+        {
+            if (_isVisible == value)
+            {
+                return;
+            }
+            _isVisible = value;
+            PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(nameof(IsVisible)));
+        }
+    }
+
+    public event PropertyChangedEventHandler? PropertyChanged;
 }
 
 public static class LayerCatalog

@@ -35,7 +35,11 @@
 
             <!-- Layer list: the checkbox is the planned viewport-overlay toggle, selection picks
                  which editing panel shows in the middle column. -->
-            <ListBox x:Name="LayerList" Grid.Column="0" SelectionChanged="LayerList_SelectionChanged"
+            <DockPanel Grid.Column="0">
+            <Button DockPanel.Dock="Top" Content="Uncheck all" Padding="0,3" Margin="0,0,0,4"
+                    Click="UncheckAll_Click"
+                    ToolTip="Hides every layer except the heightmap" />
+            <ListBox x:Name="LayerList" SelectionChanged="LayerList_SelectionChanged"
                      BorderThickness="1" BorderBrush="#DDD">
                 <ListBox.GroupStyle>
                     <GroupStyle>
@@ -56,6 +60,7 @@
                     </DataTemplate>
                 </ListBox.ItemTemplate>
             </ListBox>
+            </DockPanel>
 
             <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" />
 

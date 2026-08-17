@@ -397,6 +397,19 @@ public partial class MapTabView : UserControl
         StatusText.Text = $"fly speed {_camera.MoveSpeed:F0} m/s";
     }
 
+    /// <summary>Hides every layer but the heightmap, which is left exactly as it was - wanting the
+    /// ground gone is the rare case, and this button should not be the thing that decides it.</summary>
+    private void UncheckAll_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        foreach (MapLayer layer in LayerCatalog.Layers)
+        {
+            if (!ReferenceEquals(layer, LayerCatalog.Heightmap))
+            {
+                layer.IsVisible = false;
+            }
+        }
+    }
+
     private void LayerList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (LayerList.SelectedItem is not MapLayer layer)
