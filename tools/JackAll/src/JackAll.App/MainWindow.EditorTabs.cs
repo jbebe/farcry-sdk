@@ -90,10 +90,14 @@ public partial class MainWindow
 
         OpenOrFocusEditorTab(_openEditors, file.Hash, onRemoved =>
         {
-            string xml;
+            FcbObject root;
+            FcbObject? vanilla;
             try
             {
-                xml = AppText.DecodeUtf8(_vm.Read(file));
+                // A container is binary, not a fragment's XML - parse it, and never round-trip it
+                // through XML, which is neither what it is on disk nor what has to be written back.
+                root = FcbDocument.Deserialize(_vm.Read(file));
+                vanilla = _vm.ReadOriginal(file) is { } original ? FcbDocument.Deserialize(original) : null;
             }
             catch (Exception ex)
             {
@@ -101,10 +105,9 @@ public partial class MainWindow
                 return null;
             }
 
-            string? vanilla = _vm.ReadOriginal(file) is { } original ? AppText.DecodeUtf8(original) : null;
             var vm = new FcbEditorTabViewModel(
-                file.FileName, file.Hash, xml, vanilla,
-                FcbDefinitionsProvider.Value.Value, _vm.StageFragmentEdits(file));
+                file.FileName, file.Hash, root, vanilla,
+                FcbDefinitionsProvider.Value.Value, _vm.StageContainerEdits(file));
             var view = new FcbEditorTabView(vm);
             var tab = new TabItem { Content = view };
             tab.Header = BuildClosableTabHeader(tab, vm, onRemoved);

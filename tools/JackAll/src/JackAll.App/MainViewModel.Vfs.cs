@@ -69,6 +69,23 @@ public sealed partial class MainViewModel
         };
 
     /// <summary>
+    /// The same for a whole <c>.fcb</c> container rather than one fragment of one. A fragment override is
+    /// stored as the XML that <c>FcbAssembler</c> splices back in, but a container is the real file the
+    /// game loads, so this has to stage binary.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="FcbDocument.Serialize"/> always writes the fully expanded form, so a container that
+    /// used shared-data backreferences comes back larger than it went in. Tree-equal, not byte-equal.
+    /// </remarks>
+    public Func<FcbObject, Task<string?>> StageContainerEdits(VfsFile file)
+        => async root =>
+        {
+            byte[] bytes = await Task.Run(() => FcbDocument.Serialize(root));
+            Replace(file, bytes);
+            return null;
+        };
+
+    /// <summary>
     /// The base game's own bytes for <paramref name="file"/>, ignoring every mod/workspace edit - null
     /// when there's nothing to compare against (a mod-added file, or a fragment whose container was
     /// added entirely by a mod). Backs both "Export original…" and the text handler's diff view.

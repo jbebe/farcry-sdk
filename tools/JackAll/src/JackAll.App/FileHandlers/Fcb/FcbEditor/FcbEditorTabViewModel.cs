@@ -90,15 +90,34 @@ public sealed class FcbEditorTabViewModel : INotifyPropertyChanged
     public FcbEditorTabViewModel(
         string title, uint hash, string currentXml, string? vanillaXml, FcbClassDefinitions defs,
         Func<FcbObject, Task<string?>> persist, bool useSaveGameNameHarvest = false)
+        : this(
+            title, hash, FcbXml.FromXml(currentXml),
+            vanillaXml is not null ? FcbXml.FromXml(vanillaXml) : null, defs, persist,
+            useSaveGameNameHarvest ? FcbXmlNameHarvest.Harvest(currentXml) : null)
+    {
+    }
+
+    /// <summary>
+    /// For a caller that already holds the parsed tree - a whole <c>.fcb</c> container, which unlike a
+    /// fragment is stored as binary and never had an XML form to go through.
+    /// </summary>
+    public FcbEditorTabViewModel(
+        string title, uint hash, FcbObject root, FcbObject? vanilla, FcbClassDefinitions defs,
+        Func<FcbObject, Task<string?>> persist)
+        : this(title, hash, root, vanilla, defs, persist, extraNames: null)
+    {
+    }
+
+    private FcbEditorTabViewModel(
+        string title, uint hash, FcbObject root, FcbObject? vanilla, FcbClassDefinitions defs,
+        Func<FcbObject, Task<string?>> persist,
+        IReadOnlyDictionary<uint, FcbXmlNameHarvest.Entry>? extraNames)
     {
         Title = title;
         Hash = hash;
         _persist = persist;
-        _root = FcbXml.FromXml(currentXml);
-        FcbObject? original = vanillaXml is not null ? FcbXml.FromXml(vanillaXml) : null;
-
-        var extraNames = useSaveGameNameHarvest ? FcbXmlNameHarvest.Harvest(currentXml) : null;
-        Root = FcbObjectNodeView.Build(_root, original, defs, extraNames);
+        _root = root;
+        Root = FcbObjectNodeView.Build(root, vanilla, defs, extraNames);
     }
 
     public string FilterText
