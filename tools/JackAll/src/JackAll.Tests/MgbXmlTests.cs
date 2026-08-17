@@ -280,17 +280,20 @@ public sealed class MgbXmlTests
         // The page is only reachable if CUIPageBase::Init can resolve it: it hashes the page name
         // and looks that up in the GenericObjectTable every loaded package registers.
         MgbPackage package = MgbPackage.Read(built);
-        MgbArea page = Assert.Single(package.Areas);
-        Assert.Equal("Page", page.TypeName);
+        MgbArea page = Assert.Single(package.Areas, a => a.TypeName == "Page");
+
+        // The pointer is drawn from a Cursor area the page's own package declares, so a page
+        // without one is navigable by keyboard only.
+        Assert.Single(package.Areas, a => a.TypeName == "Cursor");
 
         // Each variant must carry the geometry of the UI set it was built from, or the page will
         // be laid out for the wrong aspect - which is exactly the bug this pair exists to avoid.
         Assert.Equal(pageWidth, package.PageWidth);
         Assert.Equal(pageHeight, package.PageHeight);
 
-        // Both chrome materials are declared locally. They cannot be reached cross-package, and a
-        // material missing here renders as an untextured white quad over the whole page.
-        Assert.Equal(3, package.Materials.Count);
+        // Every material is declared locally. They cannot be reached cross-package, and a material
+        // missing here renders as an untextured white quad over the whole page.
+        Assert.Equal(4, package.Materials.Count);
 
         MgbGenericObjectTable table = Assert.IsType<MgbGenericObjectTable>(package.GenericObjectTable);
         MgbGenericObject entry = Assert.Single(
