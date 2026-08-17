@@ -18,6 +18,9 @@ public sealed class WaterLayer : IDisposable
     private readonly int _vbo;
     private readonly int _vertexCount;
     private readonly int _uViewProjection;
+    private readonly int _uCameraPosition;
+    private readonly int _uSunDirection;
+    private readonly int _uTime;
 
     public int SectorCount { get; }
 
@@ -59,22 +62,57 @@ public sealed class WaterLayer : IDisposable
             layout(location = 1) in vec3 tint;
             uniform mat4 viewProjection;
             out vec3 surfaceTint;
+            out vec3 worldPosition;
             void main()
             {
                 surfaceTint = tint;
+                worldPosition = position;
                 gl_Position = viewProjection * vec4(position, 1.0);
             }
             """,
-            """
+            $$"""
             #version 330 core
             in vec3 surfaceTint;
+            in vec3 worldPosition;
+            uniform vec3 cameraPosition;
+            uniform vec3 sunDirection;
+            uniform float time;
             out vec4 fragment;
+
+            {{SceneLighting.SkyGlsl}}
+
+            // Three crossing wavelets. Their gradients perturb the normal directly, which is all the
+            // surface needs: the ripples are never seen as geometry, only as moving highlights.
+            vec3 rippleNormal(vec2 p)
+            {
+                vec2 slope = vec2(0.0);
+                slope += vec2( 0.14,  0.09) * cos(dot(p, vec2( 0.14,  0.09)) + time * 1.10);
+                slope += vec2(-0.07,  0.17) * cos(dot(p, vec2(-0.07,  0.17)) + time * 0.90);
+                slope += vec2( 0.21, -0.13) * cos(dot(p, vec2( 0.21, -0.13)) + time * 1.70);
+                return normalize(vec3(-slope * 2.2, 1.0));
+            }
+
             void main()
             {
-                fragment = vec4(surfaceTint, 0.55);
+                vec3 normal = rippleNormal(worldPosition.xy);
+                vec3 view = normalize(cameraPosition - worldPosition);
+                vec3 mirrored = reflect(-view, normal);
+
+                // Fresnel: nearly transparent looking straight down, a mirror at a grazing angle.
+                // Carrying it into the alpha as well is most of why this reads as water.
+                float fresnel = 0.02 + 0.98 * pow(1.0 - max(dot(normal, view), 0.0), 5.0);
+
+                vec3 reflected = skyColour(mirrored, sunDirection);
+                float glint = pow(max(dot(mirrored, sunDirection), 0.0), 220.0);
+
+                vec3 colour = mix(surfaceTint * 0.8, reflected, fresnel) + sunTint * glint * 1.6;
+                fragment = vec4(colour, mix(0.55, 0.95, fresnel));
             }
             """);
         _uViewProjection = _program.UniformLocation("viewProjection");
+        _uCameraPosition = _program.UniformLocation("cameraPosition");
+        _uSunDirection = _program.UniformLocation("sunDirection");
+        _uTime = _program.UniformLocation("time");
 
         _vao = GL.GenVertexArray();
         GL.BindVertexArray(_vao);
@@ -97,7 +135,7 @@ public sealed class WaterLayer : IDisposable
             : (0.12f + lift, 0.26f + lift, 0.38f + lift);
     }
 
-    public void Draw(Matrix4 viewProjection)
+    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition, float seconds)
     {
         if (_vertexCount == 0)
         {
@@ -106,6 +144,9 @@ public sealed class WaterLayer : IDisposable
 
         _program.Use();
         GL.UniformMatrix4(_uViewProjection, false, ref viewProjection);
+        GL.Uniform3(_uCameraPosition, cameraPosition);
+        GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
+        GL.Uniform1(_uTime, seconds);
         GL.BindVertexArray(_vao);
         GL.Enable(EnableCap.Blend);
         GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);

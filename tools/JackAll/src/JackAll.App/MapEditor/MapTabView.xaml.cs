@@ -64,6 +64,9 @@ public partial class MapTabView : UserControl
     private double _frameSeconds;
     private int _frames;
 
+    /// <summary>Wall clock since the tab opened, driving the water ripples.</summary>
+    private double _elapsedSeconds;
+
     private readonly Camera3D _camera = new();
     private readonly HashSet<Key> _flyKeys = [];
     private bool _looking;
@@ -219,7 +222,7 @@ public partial class MapTabView : UserControl
 
         if (LayerCatalog.Water.IsVisible)
         {
-            _waterLayer?.Draw(viewProjection);
+            _waterLayer?.Draw(viewProjection, _camera.Position, (float)_elapsedSeconds);
         }
 
         if (LayerCatalog.Shapes.IsVisible)
@@ -270,6 +273,7 @@ public partial class MapTabView : UserControl
     /// the one that matters while judging whether a layer costs anything.</summary>
     private void ShowFrameRate(TimeSpan delta)
     {
+        _elapsedSeconds += delta.TotalSeconds;
         _frameSeconds += delta.TotalSeconds;
         _frames++;
         if (_frameSeconds < 0.25)

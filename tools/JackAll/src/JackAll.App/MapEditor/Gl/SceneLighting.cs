@@ -23,4 +23,29 @@ public static class SceneLighting
 
     /// <summary>Ground colour below the horizon, for looking down from altitude.</summary>
     public static readonly Vector3 Nadir = new(0.28f, 0.24f, 0.19f);
+
+    /// <summary>
+    /// The sky as a GLSL function, shared so water reflects exactly the sky that gets drawn rather
+    /// than an approximation of it. Covers the gradient and the sun's broad halo; the sharp disc
+    /// belongs to <see cref="SkyLayer"/> alone, because a mirrored disc aliases badly on water and a
+    /// specular highlight reads better anyway.
+    /// </summary>
+    public static string SkyGlsl { get; } =
+        $$"""
+        const vec3 skyZenith  = vec3({{Glsl(Zenith)}});
+        const vec3 skyHorizon = vec3({{Glsl(Horizon)}});
+        const vec3 skyNadir   = vec3({{Glsl(Nadir)}});
+        const vec3 sunTint    = vec3({{Glsl(SunColour)}});
+
+        vec3 skyColour(vec3 ray, vec3 sunDirection)
+        {
+            vec3 sky = ray.z >= 0.0
+                ? mix(skyHorizon, skyZenith, pow(clamp(ray.z, 0.0, 1.0), 0.42))
+                : mix(skyHorizon, skyNadir, clamp(-ray.z * 2.5, 0.0, 1.0));
+            return sky + sunTint * pow(max(dot(ray, sunDirection), 0.0), 8.0) * 0.30;
+        }
+        """;
+
+    private static string Glsl(Vector3 v) => string.Create(
+        System.Globalization.CultureInfo.InvariantCulture, $"{v.X:0.####}, {v.Y:0.####}, {v.Z:0.####}");
 }

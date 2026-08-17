@@ -39,27 +39,17 @@ public sealed class SkyLayer : IDisposable
             uniform vec3 sunDirection;
             out vec4 fragment;
 
-            const vec3 zenith  = vec3({{F(SceneLighting.Zenith)}});
-            const vec3 horizon = vec3({{F(SceneLighting.Horizon)}});
-            const vec3 nadir   = vec3({{F(SceneLighting.Nadir)}});
-            const vec3 sunTint = vec3({{F(SceneLighting.SunColour)}});
+            {{SceneLighting.SkyGlsl}}
 
             void main()
             {
                 vec4 far = inverseViewProjection * vec4(ndc, 1.0, 1.0);
                 vec3 ray = normalize(far.xyz / far.w - cameraPosition);
 
-                // The gradient is deliberately compressed near the horizon, where a linear ramp
-                // reads as a flat wash rather than atmosphere.
-                vec3 sky = ray.z >= 0.0
-                    ? mix(horizon, zenith, pow(clamp(ray.z, 0.0, 1.0), 0.42))
-                    : mix(horizon, nadir, clamp(-ray.z * 2.5, 0.0, 1.0));
-
                 // The disc's angular radius goes as the inverse square root of the exponent, so
                 // halving the sun means four times the exponent, not twice it.
-                float toSun = max(dot(ray, sunDirection), 0.0);
-                sky += sunTint * pow(toSun, 7200.0) * 6.0;
-                sky += sunTint * pow(toSun, 8.0) * 0.30;
+                vec3 sky = skyColour(ray, sunDirection)
+                         + sunTint * pow(max(dot(ray, sunDirection), 0.0), 7200.0) * 6.0;
 
                 fragment = vec4(sky, 1.0);
             }
@@ -68,9 +58,6 @@ public sealed class SkyLayer : IDisposable
         _uCameraPosition = _program.UniformLocation("cameraPosition");
         _uSunDirection = _program.UniformLocation("sunDirection");
     }
-
-    private static string F(Vector3 v) =>
-        System.FormattableString.Invariant($"{v.X:0.####}, {v.Y:0.####}, {v.Z:0.####}");
 
     /// <summary>Drawn before the scene with depth writes off, so it fills whatever the terrain does
     /// not cover without ever occluding it.</summary>
