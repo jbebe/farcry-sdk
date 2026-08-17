@@ -39,12 +39,15 @@ public sealed class Camera3D
         Pitch = Math.Clamp(Pitch - dyPixels * 0.004f, -1.55f, 1.55f);
     }
 
-    /// <summary>WASD-style move in the ground plane plus vertical, scaled by dt and MoveSpeed.</summary>
-    public void Move(float forward, float strafe, float lift, float dt)
+    /// <summary>The world-space unit direction WASD/QE input flies in. Forward follows the view
+    /// rather than the ground plane, so looking up and holding W climbs.</summary>
+    public Vector3 MoveDirection(float forward, float strafe, float lift)
     {
-        Vector3 flatForward = new(MathF.Sin(Yaw), MathF.Cos(Yaw), 0);
-        Position += (flatForward * forward + Right * strafe + Vector3.UnitZ * lift) * MoveSpeed * dt;
+        Vector3 move = Forward * forward + Right * strafe + Vector3.UnitZ * lift;
+        return move.LengthSquared > 1e-6f ? Vector3.Normalize(move) : Vector3.Zero;
     }
+
+    public void Move(Vector3 direction, float meters) => Position += direction * meters;
 
     /// <summary>The world-space ray under a viewport pixel, unprojected through the inverse
     /// view-projection.</summary>

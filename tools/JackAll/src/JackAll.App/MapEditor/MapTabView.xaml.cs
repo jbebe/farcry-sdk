@@ -60,6 +60,9 @@ public partial class MapTabView : UserControl
     private EntityMarkerLayer? _lightLayer;
     private ShapeLayer? _triggerLayer;
 
+    private double _frameSeconds;
+    private int _frames;
+
     private readonly Camera3D _camera = new();
     private readonly HashSet<Key> _flyKeys = [];
     private bool _looking;
@@ -139,6 +142,8 @@ public partial class MapTabView : UserControl
 
     private void Viewport_Render(TimeSpan delta)
     {
+        ShowFrameRate(delta);
+
         if (_pendingLoad is { } pending)
         {
             // Swap inside the render callback so GL resources live and die with a context.
@@ -255,13 +260,86 @@ public partial class MapTabView : UserControl
         }
     }
 
+    /// <summary>Averages over a quarter second: a per-frame number is unreadable, and the average is
+    /// the one that matters while judging whether a layer costs anything.</summary>
+    private void ShowFrameRate(TimeSpan delta)
+    {
+        _frameSeconds += delta.TotalSeconds;
+        _frames++;
+        if (_frameSeconds < 0.25)
+        {
+            return;
+        }
+
+        FpsText.Text = $"{_frames / _frameSeconds:0} fps   {_frameSeconds / _frames * 1000:0.0} ms";
+        _frameSeconds = 0;
+        _frames = 0;
+    }
+
+    /// <summary>Holding shift multiplies the fly speed.</summary>
+    private const float SprintFactor = 5f;
+
+    /// <summary>Where the camera starts braking, and where it stops dead - metres of clear travel
+    /// ahead along the direction of movement.</summary>
+    private const float BrakeFrom = 50f;
+    private const float BrakeTo = 1f;
+
     private void ApplyFlyKeys(float dt)
     {
         if (_flyKeys.Count == 0) return;
         float forward = (_flyKeys.Contains(Key.W) ? 1 : 0) - (_flyKeys.Contains(Key.S) ? 1 : 0);
         float strafe = (_flyKeys.Contains(Key.D) ? 1 : 0) - (_flyKeys.Contains(Key.A) ? 1 : 0);
         float lift = (_flyKeys.Contains(Key.E) ? 1 : 0) - (_flyKeys.Contains(Key.Q) ? 1 : 0);
-        _camera.Move(forward, strafe, lift, Math.Min(dt, 0.1f));
+
+        OpenTK.Mathematics.Vector3 direction = _camera.MoveDirection(forward, strafe, lift);
+        if (direction == OpenTK.Mathematics.Vector3.Zero) return;
+
+        float speed = _camera.MoveSpeed;
+        if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
+        {
+            speed *= SprintFactor;
+        }
+
+        float step = speed * Math.Min(dt, 0.1f);
+        if (GroundCollision.IsChecked == true && _terrain is not null)
+        {
+            step *= GroundBrake(direction);
+        }
+        _camera.Move(direction, step);
+        HoldAboveTerrain();
+    }
+
+    /// <summary>
+    /// How much of the requested step survives, from full at <see cref="BrakeFrom"/> metres of clear
+    /// travel down to nothing at <see cref="BrakeTo"/>. Marching the movement direction rather than
+    /// looking straight down is what lets the camera skim low over flat ground at full speed and
+    /// still stop dead against a hillside it is pointed at.
+    /// </summary>
+    private float GroundBrake(OpenTK.Mathematics.Vector3 direction)
+    {
+        for (float ahead = 0; ahead <= BrakeFrom; ahead += 1f)
+        {
+            OpenTK.Mathematics.Vector3 at = _camera.Position + direction * ahead;
+            if (at.Z <= _terrain!.HeightMetersAt((int)MathF.Round(at.X), (int)MathF.Round(at.Y)))
+            {
+                return Math.Clamp((ahead - BrakeTo) / (BrakeFrom - BrakeTo), 0f, 1f);
+            }
+        }
+        return 1f;
+    }
+
+    /// <summary>The backstop behind the braking ramp: a step that still ends up under the terrain is
+    /// lifted back out, so the ground cannot be crossed at any framerate.</summary>
+    private void HoldAboveTerrain()
+    {
+        if (GroundCollision.IsChecked != true || _terrain is null) return;
+
+        OpenTK.Mathematics.Vector3 position = _camera.Position;
+        float floor = _terrain.HeightMetersAt((int)MathF.Round(position.X), (int)MathF.Round(position.Y)) + BrakeTo;
+        if (position.Z < floor)
+        {
+            _camera.Position = new OpenTK.Mathematics.Vector3(position.X, position.Y, floor);
+        }
     }
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)

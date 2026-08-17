@@ -17,6 +17,9 @@
                             Click="Load_Click" />
                     <Button Content="Save" IsEnabled="False" Padding="12,3" Margin="0,0,4,0" />
                     <Button Content="Deploy" IsEnabled="False" Padding="12,3" />
+                    <CheckBox x:Name="GroundCollision" Content="Ground collision" IsChecked="True"
+                              VerticalAlignment="Center" Margin="12,0,0,0"
+                              ToolTip="Slows the camera to a stop as it approaches the terrain instead of flying through it" />
                 </StackPanel>
             </DockPanel>
         </Border>
@@ -189,12 +192,17 @@
                                     Render="Viewport_Render"
                                     MouseDown="Viewport_MouseDown" MouseUp="Viewport_MouseUp"
                                     MouseMove="Viewport_MouseMove" MouseWheel="Viewport_MouseWheel" />
+                <Border VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,6,8,0"
+                        Background="#66000000" Padding="6,2" CornerRadius="3" IsHitTestVisible="False">
+                    <TextBlock x:Name="FpsText" Foreground="#CFC" FontFamily="Consolas" FontSize="11" />
+                </Border>
+
                 <StackPanel x:Name="ViewportHint" VerticalAlignment="Center" HorizontalAlignment="Center"
                             IsHitTestVisible="False">
                     <TextBlock Text="3D viewport" FontSize="16" Foreground="#666" HorizontalAlignment="Center" />
                     <TextBlock Text="Load a world to see its terrain" FontSize="11" Foreground="#888"
                                HorizontalAlignment="Center" Margin="0,4,0,0" />
-                    <TextBlock Text="Right-drag look - WASD move, Q/E down/up - wheel changes speed"
+                    <TextBlock Text="Right-drag look - WASD move, Q/E down/up - Shift to sprint - wheel changes speed"
                                FontSize="11" Foreground="#888" HorizontalAlignment="Center" Margin="0,2,0,0" />
                 </StackPanel>
             </Grid>
