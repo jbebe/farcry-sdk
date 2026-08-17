@@ -63,7 +63,9 @@ VisualMesh set → CreateHelper(VisualMesh)
 `SourceName` is a plain dotted string compared by value — not a hash and not an asset path:
 
 - **Archetype**: matches an entity's `hidName` in the world's `generated\entitylibrary.fcb`
-  byte-for-byte. The first segment is the library root, the rest is the group path and name.
+  byte-for-byte. The first segment is the library root, the rest is the group path and name. Which
+  library actually answers that name at runtime is covered in
+  [archetype resolution](../engine-internals/entity-instancing.md).
 - **Prefab**: matches a `Description` name in `CPrefabManager` inside `<world>.managers.fcb`. A
   prefab is itself a list of objects, each with its own `SourceType`/`SourceName`/position/angles.
 
