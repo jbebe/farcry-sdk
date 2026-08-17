@@ -6,8 +6,17 @@ namespace JackAll.App.MapEditor;
 /// </summary>
 /// <remarks><see cref="IsVisible"/> is the viewport toggle the layer list's checkbox writes; a
 /// layer whose renderer exists reads it every frame.</remarks>
-public sealed record MapLayer(string Group, string Name, string Readiness, string Summary, string[] Controls)
+/// <remarks>A class rather than a record because that mutable property would otherwise join the
+/// synthesized equality: toggling a checkbox would change the item's hash code underneath the
+/// grouped collection view holding it, and the list would wedge.</remarks>
+public sealed class MapLayer(string group, string name, string readiness, string summary, string[] controls)
 {
+    public string Group { get; } = group;
+    public string Name { get; } = name;
+    public string Readiness { get; } = readiness;
+    public string Summary { get; } = summary;
+    public string[] Controls { get; } = controls;
+
     public bool IsVisible { get; set; } = true;
 }
 

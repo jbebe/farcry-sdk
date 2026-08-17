@@ -271,7 +271,7 @@ public partial class MapTabView : UserControl
             return;
         }
 
-        FpsText.Text = $"{_frames / _frameSeconds:0} fps   {_frameSeconds / _frames * 1000:0.0} ms";
+        FpsText.Text = $"{_frames / _frameSeconds:0} fps";
         _frameSeconds = 0;
         _frames = 0;
     }
