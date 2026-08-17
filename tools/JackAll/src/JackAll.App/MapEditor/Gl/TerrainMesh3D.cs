@@ -180,7 +180,6 @@ public sealed class TerrainMesh3D : IDisposable
                 // occupies so it reads as shading rather than a flat dimming.
                 float baked = sampleAtlas(terrainShadow, world).r;
                 baked = clamp((baked - 0.5) / 0.42, 0.0, 1.0);
-                base *= mix(1.0, 0.35 + 0.65 * baked, shadowMix);
 
                 // The surface id indexes the palette texture directly; r is the id scaled to 0..1,
                 // so the lookup lands mid-texel at (id + 0.5) / 256.
@@ -188,10 +187,12 @@ public sealed class TerrainMesh3D : IDisposable
                 vec3 material = texture(surfacePalette, vec2(id * (255.0 / 256.0) + (0.5 / 256.0), 0.5)).rgb;
                 base = mix(base, base * 0.35 + material * 0.75, surfaceTint);
 
-                // Exposure last: the baked shadow and the sun each only ever darken, and they
-                // multiply, so the textures land far below their own brightness without a lift.
-                float light = max(dot(normal, normalize(vec3(0.4, 0.3, 0.85))), 0.0);
-                fragment = vec4(base * (0.35 + 0.65 * light) * brightness, 1.0);
+                // The bake is a lightmap rather than plain occlusion - it correlates 0.77 with N·L
+                // for a low western sun - so it stands in for the sun instead of multiplying with
+                // it. One shading term, whichever source is available, never both.
+                float light = max(dot(normal, normalize(vec3(-0.72, 0.0, 0.70))), 0.0);
+                float shading = mix(0.35 + 0.65 * light, 0.35 + 0.65 * baked, shadowMix);
+                fragment = vec4(base * shading * brightness, 1.0);
             }
             """);
         _uViewProjection = _program.UniformLocation("viewProjection");

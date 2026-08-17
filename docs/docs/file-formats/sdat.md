@@ -247,6 +247,34 @@ The matching weights live in `generated/sdat/atlas#_mask.xbt` — 128×128 DXT1,
 sectors, so one texel per world unit. `atlas#_color.xbt` and `atlas#_diffuse.xbt` share the atlas's
 dimensions and layout; `sd#_shadow.xbt` is per sector rather than per atlas.
 
+### `sd#_shadow.xbt` is a lightmap, not an occlusion mask
+
+Correlating the baked value against `N·L` over 38,440 samples from 10 `world1` sectors, across a grid
+of candidate sun directions:
+
+| candidate | correlation |
+|---|---|
+| best fit: azimuth 270°, elevation 10° — `(-0.985, 0, 0.174)` | **0.768** |
+| straight up `(0, 0, 1)` | -0.018 |
+
+A correlation that high means the bake already carries the sun's angle: it is a **lightmap**, not a
+shadow or ambient-occlusion mask. A renderer that multiplies its own `N·L` on top of it is applying
+the sun twice.
+
+The fit also re-confirms the transpose independently — reading the shadow texels as stored scores
+only 0.319, against 0.768 for the transposed reading.
+
+The best-fit sun sits near the horizon in the **west**, which is worth knowing before inventing a
+direction: JackAll had been lighting terrain from `(0.4, 0.3, 0.85)`, roughly the opposite, which
+scores **-0.50**. Anti-correlated shading and a lightmap darken each other everywhere instead of
+agreeing, which is what made textured terrain look muddy.
+
+:::note[Open]
+Elevation 10° does not square with the `DefaultHour=11.5` the world descriptor declares, where the
+sun should be high. Either the bake includes terrain-cast horizon shadowing that biases the fit low,
+or the bake is not from the default time of day. Not resolved.
+:::
+
 ### Three channels, four layers
 
 The mask has only three channels for a sector's four slots, so **the fourth weight is implicit**:
