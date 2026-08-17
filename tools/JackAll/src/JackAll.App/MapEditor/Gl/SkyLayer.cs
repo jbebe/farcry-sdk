@@ -55,8 +55,10 @@ public sealed class SkyLayer : IDisposable
                     ? mix(horizon, zenith, pow(clamp(ray.z, 0.0, 1.0), 0.42))
                     : mix(horizon, nadir, clamp(-ray.z * 2.5, 0.0, 1.0));
 
+                // The disc's angular radius goes as the inverse square root of the exponent, so
+                // halving the sun means four times the exponent, not twice it.
                 float toSun = max(dot(ray, sunDirection), 0.0);
-                sky += sunTint * pow(toSun, 1800.0) * 6.0;
+                sky += sunTint * pow(toSun, 7200.0) * 6.0;
                 sky += sunTint * pow(toSun, 8.0) * 0.30;
 
                 fragment = vec4(sky, 1.0);
