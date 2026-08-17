@@ -1,4 +1,4 @@
-using JackAll.Tools.World;
+﻿using JackAll.Tools.World;
 using OpenTK.Graphics.OpenGL4;
 using OpenTK.Mathematics;
 
@@ -20,7 +20,7 @@ public sealed class WaterLayer : IDisposable
     private readonly int _uViewProjection;
     private readonly int _uCameraPosition;
     private readonly int _uSunDirection;
-    private readonly int _uHaze;
+    private readonly int _uDemo;
 
     public int SectorCount { get; }
 
@@ -76,7 +76,7 @@ public sealed class WaterLayer : IDisposable
             in vec3 worldPosition;
             uniform vec3 cameraPosition;
             uniform vec3 sunDirection;
-            uniform float haze;
+            uniform float demo;
             out vec4 fragment;
 
             {{SceneLighting.SkyGlsl}}
@@ -95,15 +95,18 @@ public sealed class WaterLayer : IDisposable
                 vec3 reflected = skyColour(mirrored, sunDirection);
                 float glint = pow(max(dot(mirrored, sunDirection), 0.0), 220.0);
 
-                vec3 colour = mix(surfaceTint * 0.8, reflected, fresnel) + sunTint * glint * 1.6;
-                colour = applyHaze(colour, viewDistance, worldPosition.z, haze);
-                fragment = vec4(colour, mix(0.55, 0.95, fresnel));
+                vec3 lit = mix(surfaceTint * 0.8, reflected, fresnel) + sunTint * glint * 1.6;
+                lit = applyHaze(lit, viewDistance, worldPosition.z, demo);
+
+                // Switched off, water falls back to the flat translucent tint - the readable form
+                // for judging where water is rather than how it looks.
+                fragment = vec4(mix(surfaceTint, lit, demo), mix(0.55, mix(0.55, 0.95, fresnel), demo));
             }
             """);
         _uViewProjection = _program.UniformLocation("viewProjection");
         _uCameraPosition = _program.UniformLocation("cameraPosition");
         _uSunDirection = _program.UniformLocation("sunDirection");
-        _uHaze = _program.UniformLocation("haze");
+        _uDemo = _program.UniformLocation("demo");
 
         _vao = GL.GenVertexArray();
         GL.BindVertexArray(_vao);
@@ -126,7 +129,7 @@ public sealed class WaterLayer : IDisposable
             : (0.12f + lift, 0.26f + lift, 0.38f + lift);
     }
 
-    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition, float haze)
+    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition, float demo)
     {
         if (_vertexCount == 0)
         {
@@ -137,7 +140,7 @@ public sealed class WaterLayer : IDisposable
         GL.UniformMatrix4(_uViewProjection, false, ref viewProjection);
         GL.Uniform3(_uCameraPosition, cameraPosition);
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
-        GL.Uniform1(_uHaze, haze);
+        GL.Uniform1(_uDemo, demo);
         GL.BindVertexArray(_vao);
         GL.Enable(EnableCap.Blend);
         GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
@@ -156,3 +159,4 @@ public sealed class WaterLayer : IDisposable
         GL.DeleteVertexArray(_vao);
     }
 }
+

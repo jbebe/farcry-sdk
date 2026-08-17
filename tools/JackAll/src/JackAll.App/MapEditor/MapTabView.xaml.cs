@@ -205,8 +205,14 @@ public partial class MapTabView : UserControl
         OpenTK.Mathematics.Matrix4 viewProjection = _camera.View()
             * _camera.Projection((float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1)));
 
-        _sky ??= new SkyLayer();
-        _sky.Draw(viewProjection, _camera.Position);
+        // One switch behind the sky, the haze and the water shading: presentation on, or a plain
+        // flat view of the data.
+        float demo = DemoMode.IsChecked == true ? 1f : 0f;
+        if (demo > 0f)
+        {
+            _sky ??= new SkyLayer();
+            _sky.Draw(viewProjection, _camera.Position);
+        }
         if (LayerCatalog.Heightmap.IsVisible)
         {
             _terrainMesh.Draw(viewProjection, _camera.Position, new TerrainDrawOptions(
@@ -214,12 +220,12 @@ public partial class MapTabView : UserControl
                 TintBySurfaceType: LayerCatalog.SurfaceData.IsVisible,
                 ShowShadow: LayerCatalog.Shadow.IsVisible,
                 Brightness: (float)BrightnessSlider.Value,
-                Haze: Atmosphere.IsChecked == true ? 1f : 0f));
+                Haze: demo));
         }
 
         if (LayerCatalog.Water.IsVisible)
         {
-            _waterLayer?.Draw(viewProjection, _camera.Position, Atmosphere.IsChecked == true ? 1f : 0f);
+            _waterLayer?.Draw(viewProjection, _camera.Position, demo);
         }
 
         if (LayerCatalog.Shapes.IsVisible)

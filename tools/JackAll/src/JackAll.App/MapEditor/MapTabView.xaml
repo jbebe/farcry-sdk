@@ -20,9 +20,9 @@
                     <CheckBox x:Name="GroundCollision" Content="Ground collision" IsChecked="True"
                               VerticalAlignment="Center" Margin="12,0,0,0"
                               ToolTip="Slows the camera to a stop as it approaches the terrain instead of flying through it" />
-                    <CheckBox x:Name="Atmosphere" Content="Haze" IsChecked="True"
+                    <CheckBox x:Name="DemoMode" Content="Demo mode" IsChecked="True"
                               VerticalAlignment="Center" Margin="10,0,0,0"
-                              ToolTip="Dusty distance fog fading to the sky's horizon colour; off to see the whole map clearly" />
+                              ToolTip="Sky and sun, distance haze, and reflective water. Off for a plain flat view of the data" />
                 </StackPanel>
             </DockPanel>
         </Border>
