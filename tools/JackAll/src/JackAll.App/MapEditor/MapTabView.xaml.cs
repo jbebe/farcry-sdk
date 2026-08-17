@@ -208,7 +208,8 @@ public partial class MapTabView : UserControl
             _terrainMesh.Draw(viewProjection, _camera.Position, new TerrainDrawOptions(
                 ShowTextures: LayerCatalog.Textures.IsVisible,
                 TintBySurfaceType: LayerCatalog.SurfaceData.IsVisible,
-                ShowShadow: LayerCatalog.Shadow.IsVisible));
+                ShowShadow: LayerCatalog.Shadow.IsVisible,
+                Brightness: (float)BrightnessSlider.Value));
         }
 
         if (LayerCatalog.Water.IsVisible)

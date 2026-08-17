@@ -156,6 +156,13 @@
                         <!-- How an atlas texel maps onto a sector cell could not be settled from the
                              shipped data, so it is a toggle until a look at real terrain decides it. -->
                         <StackPanel x:Name="TexturePanel" Visibility="Collapsed">
+                            <TextBlock Text="BRIGHTNESS" FontSize="9" FontWeight="SemiBold"
+                                       Foreground="#888" Margin="0,14,0,4" />
+                            <Slider x:Name="BrightnessSlider" Minimum="0.5" Maximum="3" Value="1.5"
+                                    TickFrequency="0.25" IsSnapToTickEnabled="False"
+                                    ToolTip="Exposure applied after the baked shadow and sun, which only ever darken" />
+                            <TextBlock Foreground="#888" FontSize="11"
+                                       Text="{Binding Value, ElementName=BrightnessSlider, StringFormat={}{0:0.00}x}" />
                             <TextBlock x:Name="TextureStatus" Foreground="#888" TextWrapping="Wrap" Margin="0,12,0,0" />
                         </StackPanel>
 

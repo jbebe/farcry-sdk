@@ -4,7 +4,9 @@ using OpenTK.Mathematics;
 namespace JackAll.App.MapEditor.Gl;
 
 /// <summary>What the terrain draws this frame.</summary>
-public readonly record struct TerrainDrawOptions(bool ShowTextures, bool TintBySurfaceType, bool ShowShadow);
+/// <param name="Brightness">Final exposure multiplier; 1 is the raw shaded result.</param>
+public readonly record struct TerrainDrawOptions(
+    bool ShowTextures, bool TintBySurfaceType, bool ShowShadow, float Brightness);
 
 /// <summary>
 /// The 3D terrain: two camera-following grid patches (a fine 1-unit-spacing ring and a coarse
@@ -29,6 +31,7 @@ public sealed class TerrainMesh3D : IDisposable
     private readonly int _uSurfaceTint;
     private readonly int _uTextureMix;
     private readonly int _uShadowMix;
+    private readonly int _uBrightness;
 
     public TerrainMesh3D(HeightTexture heights, SurfaceTypeTexture surfaces, TerrainTextureSet? textures)
     {
@@ -77,6 +80,7 @@ public sealed class TerrainMesh3D : IDisposable
             uniform vec2 heightRange;
             uniform float surfaceTint;
             uniform float textureMix;
+            uniform float brightness;
             uniform float weightSide;
             uniform float sectorsPerSide;
             in vec2 world;
@@ -184,8 +188,10 @@ public sealed class TerrainMesh3D : IDisposable
                 vec3 material = texture(surfacePalette, vec2(id * (255.0 / 256.0) + (0.5 / 256.0), 0.5)).rgb;
                 base = mix(base, base * 0.35 + material * 0.75, surfaceTint);
 
+                // Exposure last: the baked shadow and the sun each only ever darken, and they
+                // multiply, so the textures land far below their own brightness without a lift.
                 float light = max(dot(normal, normalize(vec3(0.4, 0.3, 0.85))), 0.0);
-                fragment = vec4(base * (0.35 + 0.65 * light), 1.0);
+                fragment = vec4(base * (0.35 + 0.65 * light) * brightness, 1.0);
             }
             """);
         _uViewProjection = _program.UniformLocation("viewProjection");
@@ -194,6 +200,7 @@ public sealed class TerrainMesh3D : IDisposable
         _uSurfaceTint = _program.UniformLocation("surfaceTint");
         _uTextureMix = _program.UniformLocation("textureMix");
         _uShadowMix = _program.UniformLocation("shadowMix");
+        _uBrightness = _program.UniformLocation("brightness");
         _program.Use();
         GL.Uniform2(_program.UniformLocation("heightRange"), heights.MinNormalized, heights.MaxNormalized);
         GL.Uniform1(_program.UniformLocation("heights"), 0);
@@ -245,6 +252,7 @@ public sealed class TerrainMesh3D : IDisposable
         GL.Uniform1(_uSurfaceTint, options.TintBySurfaceType ? 1f : 0f);
         GL.Uniform1(_uTextureMix, _textures is not null && options.ShowTextures ? 1f : 0f);
         GL.Uniform1(_uShadowMix, _textures is not null && options.ShowShadow ? 1f : 0f);
+        GL.Uniform1(_uBrightness, options.Brightness);
         _heights.Bind(TextureUnit.Texture0);
         _surfaces.Bind(TextureUnit.Texture1, TextureUnit.Texture2);
         _textures?.Bind(TextureUnit.Texture3, TextureUnit.Texture4, TextureUnit.Texture5,
