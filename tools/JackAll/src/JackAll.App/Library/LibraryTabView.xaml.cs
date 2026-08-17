@@ -27,6 +27,7 @@ public partial class LibraryTabView : UserControl
     private MainViewModel? _vm;
     private ArchetypeIndex? _index;
     private ArchetypeTreeNode? _root;
+    private string? _loadedWorld;
 
     /// <summary>Fragment rows per library container, kept because resolving one costs a pass over the
     /// whole VFS index and a click shouldn't pay for that.</summary>
@@ -49,7 +50,33 @@ public partial class LibraryTabView : UserControl
             : "No entity libraries found";
     }
 
-    private async void Load_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Selects one archetype, loading <paramref name="world"/> first when the tab is showing a
+    /// different one - the Map tab's jump lands here, and the user should not have to press Load.
+    /// </summary>
+    public async Task RevealArchetype(string world, string archetype)
+    {
+        if (_vm is null) return;
+
+        if (_index is null || !string.Equals(_loadedWorld, world, StringComparison.OrdinalIgnoreCase))
+        {
+            WorldPicker.SelectedItem = WorldPicker.Items
+                .Cast<string>()
+                .FirstOrDefault(w => w.Equals(world, StringComparison.OrdinalIgnoreCase));
+            await LoadSelectedWorld();
+        }
+
+        if (_root is null) return;
+
+        if (ArchetypeTreeNode.Reveal(_root, archetype) is null)
+        {
+            StatusText.Text = $"'{archetype}' is not declared by {world}'s libraries";
+        }
+    }
+
+    private async void Load_Click(object sender, RoutedEventArgs e) => await LoadSelectedWorld();
+
+    private async Task LoadSelectedWorld()
     {
         if (_vm is not { } vm || WorldPicker.SelectedItem is not string world) return;
 
@@ -68,6 +95,7 @@ public partial class LibraryTabView : UserControl
 
             _index = index;
             _root = root;
+            _loadedWorld = world;
             _fragments.Clear();
             ClearSelection();
 

@@ -54,10 +54,15 @@ public sealed class FcbEditorTabViewModel : INotifyPropertyChanged
     public bool HasNotice => !string.IsNullOrEmpty(_notice);
 
     /// <summary>Selects the node carrying <paramref name="value"/> in <paramref name="field"/>, so a
-    /// caller can open a fragment already positioned on the one object it cares about.</summary>
-    public bool TryReveal(uint field, string value)
+    /// caller can open a document already positioned on the one object it cares about.</summary>
+    public bool TryReveal(uint field, string value) => Reveal(FcbObjectNodeView.Reveal(Root, field, value));
+
+    /// <inheritdoc cref="TryReveal(uint, string)"/>
+    public bool TryReveal(uint field, byte[] value) => Reveal(FcbObjectNodeView.Reveal(Root, field, value));
+
+    private bool Reveal(FcbObjectNodeView? node)
     {
-        if (FcbObjectNodeView.Reveal(Root, field, value) is not { } node)
+        if (node is null)
         {
             return false;
         }

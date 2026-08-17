@@ -734,7 +734,7 @@
             </TabItem>
 
             <!-- ============================ LIBRARY ============================ -->
-            <TabItem Header="Library">
+            <TabItem Header="Library" x:Name="LibraryTabItem">
                 <library:LibraryTabView x:Name="LibraryTab" Margin="6" />
             </TabItem>
         </TabControl>

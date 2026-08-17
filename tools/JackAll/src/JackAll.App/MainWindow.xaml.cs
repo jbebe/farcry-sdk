@@ -154,6 +154,14 @@ public partial class MainWindow : Window
         await _vm.InitializeAsync();
         await MapTab.InitializeAsync(_vm);
         LibraryTab.Initialize(_vm);
+
+        // The Map tab owns neither the Library tab nor the editor registry, so it asks.
+        MapTab.ArchetypeRequested += async (world, archetype) =>
+        {
+            MainTabs.SelectedItem = LibraryTabItem;
+            await LibraryTab.RevealArchetype(world, archetype);
+        };
+        MapTab.SectorEditorRequested += OpenSectorEditorTab;
     }
 
     /// <summary>First run: find the game, or there is nothing to manage. Also the one and only place

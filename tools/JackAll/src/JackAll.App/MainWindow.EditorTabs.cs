@@ -2,9 +2,11 @@ using JackAll.App.FileHandlers.Domino;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.FileHandlers.Fcb.FcbEditor;
 using JackAll.App.FileHandlers.Mgb;
+using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Vfs;
 using JackAll.Tools.Sav;
+using JackAll.Tools.World;
 using System.Windows.Controls;
 using System.Windows;
 
@@ -71,6 +73,52 @@ public partial class MainWindow
             tab.Header = BuildClosableTabHeader(tab, vm, onRemoved);
             return tab;
         });
+
+    /// <summary>
+    /// The Map tab's "Open sector in XML editor": the same editor a fragment gets, but over a whole
+    /// <c>worldsector*.data.fcb</c>, positioned on one entity. Worldsector containers do not split into
+    /// fragments (their root is <c>WorldSector</c>, and all but a handful of entities sit under the one
+    /// <c>main</c> mission layer), so this is a whole-file override rather than a per-entity one.
+    /// </summary>
+    private void OpenSectorEditorTab(string sectorPath, ulong entityId)
+    {
+        if (_vm.FindByHash(NameHash.Compute(sectorPath)) is not { } file)
+        {
+            Warn($"'{sectorPath}' isn't in the merged filesystem.");
+            return;
+        }
+
+        OpenOrFocusEditorTab(_openEditors, file.Hash, onRemoved =>
+        {
+            string xml;
+            try
+            {
+                xml = AppText.DecodeUtf8(_vm.Read(file));
+            }
+            catch (Exception ex)
+            {
+                Warn($"Couldn't open '{file.FileName}': {ex.Message}");
+                return null;
+            }
+
+            string? vanilla = _vm.ReadOriginal(file) is { } original ? AppText.DecodeUtf8(original) : null;
+            var vm = new FcbEditorTabViewModel(
+                file.FileName, file.Hash, xml, vanilla,
+                FcbDefinitionsProvider.Value.Value, _vm.StageFragmentEdits(file));
+            var view = new FcbEditorTabView(vm);
+            var tab = new TabItem { Content = view };
+            tab.Header = BuildClosableTabHeader(tab, vm, onRemoved);
+            return tab;
+        });
+
+        // After the open-or-focus, so picking a second entity in a sector that is already open still
+        // moves to it rather than just raising the tab.
+        if (_openEditors.TryGetValue(file.Hash, out TabItem? open)
+            && open.Content is FcbEditorTabView editor)
+        {
+            editor.ViewModel.TryReveal(WorldHashes.DisEntityId, BitConverter.GetBytes(entityId));
+        }
+    }
 
     /// <summary>Open save-tree editor tabs, keyed by the save's own file path - same
     /// dedup-by-focusing-the-existing-tab behavior as <see cref="_openEditors"/>, just keyed by path

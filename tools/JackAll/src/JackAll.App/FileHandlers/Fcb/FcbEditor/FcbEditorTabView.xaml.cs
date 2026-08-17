@@ -21,6 +21,10 @@ public partial class FcbEditorTabView : UserControl
         DataContext = vm;
     }
 
+    /// <summary>Lets a host that focused an already-open tab still reposition it - see
+    /// <c>MainWindow.OpenSectorEditorTab</c>.</summary>
+    public FcbEditorTabViewModel ViewModel => _vm;
+
     private void OutlineTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
         => _vm.SelectedNode = e.NewValue as FcbObjectNodeView;
 

@@ -24,7 +24,8 @@ public partial class MapTabView : UserControl
         TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table,
         Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines,
         IReadOnlyList<VegetationInstance> Vegetation, IReadOnlyList<NavMeshNode> NavNodes,
-        IReadOnlyList<WorldLight> Lights, IReadOnlyList<TriggerVolume> Triggers);
+        IReadOnlyList<WorldLight> Lights, IReadOnlyList<TriggerVolume> Triggers,
+        ArchetypeIndex Archetypes);
 
     private sealed record FieldRow(string Name, string Value);
 
@@ -45,6 +46,18 @@ public partial class MapTabView : UserControl
     private List<WorldEntity> _visibleEntities = [];
     private List<MissionLayerRow> _missionLayers = [];
     private bool _markersDirty;
+
+    /// <summary>Built once per world; the mission-layer and search filters only change visibility.</summary>
+    private EntityTreeNode? _entityTree;
+
+    private ArchetypeIndex? _archetypes;
+
+    /// <summary>Raised for "Archetype in Library" - the host owns cross-tab navigation.</summary>
+    public event Action<string, string>? ArchetypeRequested;
+
+    /// <summary>Raised for "Open sector in XML editor", with the sector's game-relative path and the
+    /// entity to position on.</summary>
+    public event Action<string, ulong>? SectorEditorRequested;
 
     private PendingLoad? _pendingLoad;
     private WorldTerrain? _terrain;
@@ -118,15 +131,21 @@ public partial class MapTabView : UserControl
                 IReadOnlyList<NavMeshNode> navNodes = WorldNavMesh.Load(map, vm.ReadByPath, progress);
                 IReadOnlyList<WorldLight> lights = WorldLights.Load(world.Entities);
                 IReadOnlyList<TriggerVolume> triggers = WorldTriggers.Load(world.Entities);
+                // Groups the entity tree the way the Library tab groups archetypes, and is what the
+                // "Archetype in Library" jump resolves against.
+                ArchetypeIndex archetypes = ArchetypeIndex.Load(
+                    map.Name, vm.ReadByPath, progress, LibraryProfile.Client,
+                    ArchetypeIndex.DiscoverDlcLibraries(vm.AllKnownPaths));
                 return new PendingLoad(
                     map, terrain, detail, table, world, shapes, splines, vegetation, navNodes, lights,
-                    triggers);
+                    triggers, archetypes);
             });
 
             WorldTerrain terrain = loaded.Terrain;
             _pendingLoad = loaded;
             ShowSurfaceLegend(terrain, loaded.Table);
-            ShowEntities(loaded.World);
+            _archetypes = loaded.Archetypes;
+            ShowEntities(loaded.World, loaded.Archetypes);
             int center = terrain.Side / 2;
             _camera.Position = new OpenTK.Mathematics.Vector3(
                 center, center, terrain.HeightMetersAt(center, center) + 150);
@@ -459,7 +478,7 @@ public partial class MapTabView : UserControl
         UpdateSurfaceLegendVisibility();
     }
 
-    private void ShowEntities(Fc2World world)
+    private void ShowEntities(Fc2World world, ArchetypeIndex archetypes)
     {
         _world = world;
         _selectedEntity = null;
@@ -470,6 +489,9 @@ public partial class MapTabView : UserControl
             .Select(g => new MissionLayerRow { PathId = g.Key, Count = g.Count() })
             .OrderByDescending(r => r.Count)];
         MissionLayerList.ItemsSource = _missionLayers;
+
+        _entityTree = EntityTreeNode.Build(_positionedEntities, archetypes);
+        EntityTree.ItemsSource = _entityTree.Children;
 
         ApplyMissionLayerFilter();
     }
@@ -648,37 +670,37 @@ public partial class MapTabView : UserControl
 
     private void ApplyEntityFilter()
     {
-        if (_world is null)
+        if (_entityTree is null)
         {
             return;
         }
 
-        string term = EntitySearch.Text.Trim();
-        List<WorldEntity> shown = term.Length == 0
-            ? _visibleEntities
-            : [.. _visibleEntities.Where(e =>
-                e.Name.Contains(term, StringComparison.OrdinalIgnoreCase) ||
-                e.ArchetypeName.Contains(term, StringComparison.OrdinalIgnoreCase))];
+        HashSet<string> layers = [.. _missionLayers.Where(r => r.IsVisible).Select(r => r.PathId)];
+        int shown = EntityTreeNode.ApplyFilter(_entityTree, EntitySearch.Text.Trim(), layers);
 
-        EntityList.ItemsSource = shown;
-        EntityCount.Text = shown.Count == _positionedEntities.Count
+        EntityCount.Text = shown == _positionedEntities.Count
             ? $"{_positionedEntities.Count:N0} entities"
-            : $"{shown.Count:N0} of {_positionedEntities.Count:N0} entities";
+            : $"{shown:N0} of {_positionedEntities.Count:N0} entities";
     }
 
-    private void EntityList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void EntityTree_SelectedItemChanged(
+        object sender, System.Windows.RoutedPropertyChangedEventArgs<object> e)
     {
-        if (EntityList.SelectedItem is not WorldEntity entity)
+        if (e.NewValue is EntityTreeNode { Entity: { } entity })
         {
-            return;
+            Select(entity, moveCamera: true);
         }
-        Select(entity, moveCamera: true);
     }
 
     private void Select(WorldEntity entity, bool moveCamera)
     {
         _selectedEntity = entity;
         EntityHeading.Text = $"{entity.Name}  ({entity.LayerPathId})";
+
+        // A standalone entity names no archetype, and three quarters of a world is standalone.
+        ShowArchetypeButton.IsEnabled =
+            entity.ArchetypeName.Length > 0 && _archetypes?.Winner(entity.ArchetypeName) is not null;
+        OpenSectorButton.IsEnabled = true;
 
         JackAll.Core.Format.Fcb.FcbClassDefinitions defs = FcbDefinitionsProvider.Value.Value;
         JackAll.Core.Format.Fcb.FcbClass entityClass = defs.GetClass(entity.Node.TypeHash);
@@ -762,8 +784,26 @@ public partial class MapTabView : UserControl
         if (best is not null)
         {
             Select(best, moveCamera: false);
-            EntityList.SelectedItem = best;
-            EntityList.ScrollIntoView(best);
+            if (_entityTree is not null)
+            {
+                EntityTreeNode.Reveal(_entityTree, best);
+            }
+        }
+    }
+
+    private void ShowArchetype_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (_selectedEntity is { ArchetypeName.Length: > 0 } entity && _pendingLoad is { } loaded)
+        {
+            ArchetypeRequested?.Invoke(loaded.Map.Name, entity.ArchetypeName);
+        }
+    }
+
+    private void OpenSector_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (_selectedEntity is { } entity)
+        {
+            SectorEditorRequested?.Invoke(entity.HomeSector.SourcePath, entity.Id);
         }
     }
 

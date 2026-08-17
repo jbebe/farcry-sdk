@@ -14,7 +14,7 @@ namespace JackAll.App.FileHandlers.Fcb.FcbEditor;
 /// child object, which this editor doesn't support in v1 - only values change, and a value edit never
 /// changes which row it belongs under).
 /// </summary>
-public sealed class FcbObjectNodeView : INotifyPropertyChanged
+public sealed class FcbObjectNodeView : TreeNodeBase<FcbObjectNodeView>
 {
     private static readonly uint NameFieldHash = FcbClassDefinitions.Crc32Ascii("Name");
     private static readonly uint ValueFieldHash = FcbClassDefinitions.Crc32Ascii("Value");
@@ -29,51 +29,6 @@ public sealed class FcbObjectNodeView : INotifyPropertyChanged
 
     public FcbClass OwnClass { get; }
     public string Label { get; }
-    public ObservableCollection<FcbObjectNodeView> Children { get; } = [];
-
-    /// <summary>Null for the root - set by <see cref="BuildNode"/>, used to bubble
-    /// <see cref="ContainsChange"/> up without a separate lookup.</summary>
-    public FcbObjectNodeView? Parent { get; private set; }
-
-    private bool _isExpanded;
-    private bool _isSelected;
-    private bool _isVisible = true;
-
-    /// <summary>Two-way with the tree row, and set from code by <see cref="Reveal"/>.</summary>
-    public bool IsExpanded
-    {
-        get => _isExpanded;
-        set
-        {
-            if (_isExpanded == value) return;
-            _isExpanded = value;
-            OnPropertyChanged();
-        }
-    }
-
-    /// <inheritdoc cref="IsExpanded"/>
-    public bool IsSelected
-    {
-        get => _isSelected;
-        set
-        {
-            if (_isSelected == value) return;
-            _isSelected = value;
-            OnPropertyChanged();
-        }
-    }
-
-    /// <summary>Drives the tree row's <c>Visibility</c> - see <see cref="ApplyFilter"/>.</summary>
-    public bool IsVisible
-    {
-        get => _isVisible;
-        set
-        {
-            if (_isVisible == value) return;
-            _isVisible = value;
-            OnPropertyChanged();
-        }
-    }
 
     private int _ownChangedCount;
     private int _childrenWithChangesCount;
@@ -225,8 +180,7 @@ public sealed class FcbObjectNodeView : INotifyPropertyChanged
                 ? visibleOriginalChildren[i]
                 : null;
             FcbObjectNodeView child = BuildNode(visibleChildren[i], originalChild, ownClass, extraNames);
-            child.Parent = view;
-            view.Children.Add(child);
+            view.AddChild(child);
             if (child.ContainsChange)
             {
                 view._childrenWithChangesCount++;
@@ -367,59 +321,20 @@ public sealed class FcbObjectNodeView : INotifyPropertyChanged
     }
 
     public static bool ApplyFilter(FcbObjectNodeView node, string filter)
-    {
-        bool selfMatches = filter.Length == 0
-            || node.Label.Contains(filter, StringComparison.OrdinalIgnoreCase);
-
-        bool anyChildVisible = false;
-        foreach (FcbObjectNodeView child in node.Children)
-        {
-            anyChildVisible |= ApplyFilter(child, filter);
-        }
-
-        node.IsVisible = selfMatches || anyChildVisible;
-        return node.IsVisible;
-    }
+        => ApplyFilter(node, n => filter.Length == 0
+            || n.Label.Contains(filter, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>
-    /// The first node under <paramref name="root"/> whose <paramref name="field"/> holds
-    /// <paramref name="value"/>, with the path to it expanded and the node itself selected. Matches on a
-    /// field rather than on object identity so a caller that parsed the same bytes separately - the
-    /// Library tab, resolving an archetype - can still point at a node in this tree.
+    /// Selects the first node under <paramref name="root"/> whose <paramref name="field"/> holds
+    /// <paramref name="value"/>. Matches on a field rather than on object identity so a caller that
+    /// parsed the same bytes separately - the Library tab resolving an archetype, the Map tab an
+    /// entity - can still point at a node in this tree.
     /// </summary>
     public static FcbObjectNodeView? Reveal(FcbObjectNodeView root, uint field, string value)
-    {
-        if (Find(root, field, value) is not { } found)
-        {
-            return null;
-        }
+        => Reveal(root, n => n.Object.Values.ContainsKey(field)
+            && FcbEntityFields.ReadString(n.Object, field).Equals(value, StringComparison.OrdinalIgnoreCase));
 
-        for (FcbObjectNodeView? ancestor = found.Parent; ancestor is not null; ancestor = ancestor.Parent)
-        {
-            ancestor.IsExpanded = true;
-        }
-        found.IsSelected = true;
-        return found;
-    }
-
-    private static FcbObjectNodeView? Find(FcbObjectNodeView node, uint field, string value)
-    {
-        if (node.Object.Values.ContainsKey(field)
-            && FcbEntityFields.ReadString(node.Object, field).Equals(value, StringComparison.OrdinalIgnoreCase))
-        {
-            return node;
-        }
-        foreach (FcbObjectNodeView child in node.Children)
-        {
-            if (Find(child, field, value) is { } found)
-            {
-                return found;
-            }
-        }
-        return null;
-    }
-
-    public event PropertyChangedEventHandler? PropertyChanged;
-    private void OnPropertyChanged([CallerMemberName] string? name = null)
-        => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+    /// <summary>As above, for a field whose bytes are not text - an id, a count, a hash.</summary>
+    public static FcbObjectNodeView? Reveal(FcbObjectNodeView root, uint field, byte[] value)
+        => Reveal(root, n => n.Object.Values.TryGetValue(field, out byte[]? own) && own.SequenceEqual(value));
 }
