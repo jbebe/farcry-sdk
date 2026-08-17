@@ -1,6 +1,9 @@
+using JackAll.App.FileHandlers.Fcb;
 using JackAll.Core.Format;
+using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 using JackAll.Core.Vfs;
+using JackAll.Tools.World;
 
 namespace JackAll.App;
 
@@ -21,21 +24,8 @@ public sealed partial class MainViewModel
     public IEnumerable<string> AllKnownPaths
         => _vfs is null ? [] : _vfs.Files.Values.Where(f => f.NameIsKnown).Select(f => f.Path);
 
-    /// <summary>The merged filesystem's copy of <paramref name="path"/>, or null when no layer
-    /// provides it (or it can't be read). For callers that know a game-relative path rather than a
-    /// file they already have in hand - the .mgb editor resolving a material's texture, and the
-    /// oasis string table finding its own source file.</summary>
-    public byte[]? ReadByPath(string path)
-    {
-        try
-        {
-            return FindByHash(NameHash.Compute(path)) is { } file ? Read(file) : null;
-        }
-        catch
-        {
-            return null;
-        }
-    }
+    /// <inheritdoc cref="GameVfs.ReadByPath"/>
+    public byte[]? ReadByPath(string path) => _vfs?.ReadByPath(path);
 
     /// <summary>Selects <paramref name="file"/> as if the user had clicked it directly — used by a
     /// dependency-link row's "Go to file" button. Goes through <see cref="SetSelectedFiles"/> (not a
@@ -56,6 +46,27 @@ public sealed partial class MainViewModel
     /// (<see cref="VfsFile.IsFragment"/>).</summary>
     public string? ReadOriginalFragment(VfsFile file)
         => _vfs!.ReadOriginalFragment(file.ContainerHash!.Value, file.FragmentId!);
+
+    /// <summary>One container's fragment rows by id, so a caller holding a fragment id (the Library
+    /// tab, routing an archetype back to its file) can cache the lookup instead of rescanning the
+    /// whole index per click.</summary>
+    public IReadOnlyDictionary<string, VfsFile> FragmentsOf(uint containerHash)
+        => _vfs is null
+            ? new Dictionary<string, VfsFile>()
+            : _vfs.Files.Values
+                .Where(f => f.ContainerHash == containerHash && f.FragmentId is not null)
+                .ToDictionary(f => f.FragmentId!, StringComparer.OrdinalIgnoreCase);
+
+    /// <summary>What "saving" means for a fragment editor, wherever it was opened from: render the
+    /// edited tree and stage it over <paramref name="file"/>.</summary>
+    public Func<FcbObject, Task<string?>> StageFragmentEdits(VfsFile file)
+        => async root =>
+        {
+            FcbClassDefinitions definitions = FcbDefinitionsProvider.Value.Value;
+            string rendered = await Task.Run(() => FcbXml.RenderObject(root, definitions));
+            Replace(file, AppText.EncodeUtf8(rendered));
+            return null;
+        };
 
     /// <summary>
     /// The base game's own bytes for <paramref name="file"/>, ignoring every mod/workspace edit - null
@@ -118,6 +129,24 @@ public sealed partial class MainViewModel
         bool removed = Workspace!.Unstage(file.Hash);
         if (removed) Reindex();
         return removed;
+    }
+
+    /// <summary>
+    /// Archetype edits the enabled layers stage that a later entity library declares again - the file
+    /// changes and the game reads the other copy. Resolved through the merged filesystem, so a layer
+    /// that adds an archetype to a later library counts toward the answer.
+    /// </summary>
+    public async Task<IReadOnlyList<DeadEdit>> LintArchetypes(LibraryProfile profile = LibraryProfile.Client)
+    {
+        if (_vfs is null)
+        {
+            return [];
+        }
+
+        List<StagedFragment> staged = [.. ArchetypeLint.StagedFragmentsOf(Layers)];
+        var progress = new Progress<string>(s => Status = s);
+        List<string> paths = [.. AllKnownPaths];
+        return await Task.Run(() => ArchetypeLint.Run(staged, paths, ReadByPath, profile, progress));
     }
 
     /// <summary>

@@ -1,4 +1,5 @@
 using JackAll.Core.Mods;
+using JackAll.Tools.World;
 using Microsoft.Win32;
 using System.Diagnostics;
 using System.IO;
@@ -103,6 +104,47 @@ public partial class MainWindow
     }
 
     private void RescanMods_Click(object sender, RoutedEventArgs e) => _vm.RescanMods();
+
+    /// <summary>Reports archetype edits a later entity library overrides - the silent failure the
+    /// library's replace-by-name rule makes easy, since the edited file really did change.</summary>
+    private async void LintArchetypes_Click(object sender, RoutedEventArgs e)
+    {
+        var button = (Button)sender;
+        button.IsEnabled = false;
+        try
+        {
+            IReadOnlyList<DeadEdit> dead = await _vm.LintArchetypes();
+            if (dead.Count == 0)
+            {
+                _vm.Status = "No dead archetype edits - every edited archetype is the copy the game reads.";
+                return;
+            }
+
+            const int shown = 10;
+            IEnumerable<string> lines = dead
+                .GroupBy(d => d.Source)
+                .Select(byLayer =>
+                    $"{byLayer.Key}:{Environment.NewLine}"
+                    + string.Join(
+                        Environment.NewLine,
+                        byLayer.Take(shown).Select(d => $"  {d.Archetype} - overridden by {d.WinningPath}"))
+                    + (byLayer.Count() > shown
+                        ? $"{Environment.NewLine}  ... and {byLayer.Count() - shown:N0} more"
+                        : ""));
+
+            MessageBox.Show(
+                this,
+                $"{dead.Count:N0} archetype edit(s) change the file but nothing in game:"
+                + $"{Environment.NewLine}{Environment.NewLine}{string.Join(Environment.NewLine, lines)}"
+                + $"{Environment.NewLine}{Environment.NewLine}"
+                + "Move the edit into the library that wins, or drop the archetype from the later one.",
+                "JackAll", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+        finally
+        {
+            button.IsEnabled = true;
+        }
+    }
 
     private void RemoveMod_Click(object sender, RoutedEventArgs e)
     {

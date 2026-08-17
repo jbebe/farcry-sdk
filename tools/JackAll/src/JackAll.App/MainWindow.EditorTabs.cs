@@ -65,12 +65,7 @@ public partial class MainWindow
 
             var vm = new FcbEditorTabViewModel(
                 file.FileName, file.Hash, xml, originalXml, FcbDefinitionsProvider.Value.Value,
-                persist: async root =>
-                {
-                    string rendered = await Task.Run(() => FcbXml.RenderObject(root, FcbDefinitionsProvider.Value.Value));
-                    _vm.Replace(file, AppText.EncodeUtf8(rendered));
-                    return null;
-                });
+                _vm.StageFragmentEdits(file));
             var view = new FcbEditorTabView(vm);
             var tab = new TabItem { Content = view };
             tab.Header = BuildClosableTabHeader(tab, vm, onRemoved);

@@ -43,6 +43,9 @@ app.Configure(config =>
         mod.AddCommand<ModImportLegacyCommand>("import-legacy")
             .WithDescription("Convert a legacy replacement patch.dat/patch.fat mod into an ordinary layer folder.")
             .WithExample("mod", "import-legacy", "--game", @"C:\Games\Far Cry 2", "--from", "oldmod.zip", "--out", "oldmod");
+        mod.AddCommand<ModLintCommand>("lint")
+            .WithDescription("Report archetype edits a later entity library overrides, so they change nothing in game.")
+            .WithExample("mod", "lint", "--game", @"C:\Games\Far Cry 2", "--layer", "mods\\a");
         mod.AddCommand<ModBuildCommand>("build")
             .WithDescription("Compile the vanilla patch plus the given layers into the game's patch.dat/patch.fat.")
             .WithExample("mod", "build", "--game", @"C:\Games\Far Cry 2", "--layer", "mods\\a", "--layer", "mods\\b");

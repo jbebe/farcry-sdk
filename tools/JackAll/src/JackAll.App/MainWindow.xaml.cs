@@ -153,6 +153,7 @@ public partial class MainWindow : Window
 
         await _vm.InitializeAsync();
         await MapTab.InitializeAsync(_vm);
+        LibraryTab.Initialize(_vm);
     }
 
     /// <summary>First run: find the game, or there is nothing to manage. Also the one and only place

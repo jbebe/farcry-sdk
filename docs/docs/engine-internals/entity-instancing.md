@@ -52,6 +52,12 @@ else                     load "\entitylibrary_full.fcb"
 The base is an **either/or**, not a stack — one of the two, never both. The patch override then loads
 unconditionally *after* whichever base was chosen, so it wins over both.
 
+The trailing loop is the DLC libraries. That is read directly in the dedicated server, where the
+equivalent function calls `CDlcService::GetEntityLibraries` and passes each path it returns to
+`CEntityLibraryManager::Override`; Dunia's loop matches in shape but has not been read as the same
+call (see [Unknowns](#unknowns)). Their order among themselves is not established, and they load
+after the patch, so a DLC library wins over it.
+
 `entitylibrary_full.fcb` is the **client's** base: the dedicated server binary contains no reference
 to the string anywhere, while the suffix-less library appears in both. Measured over `world1`:
 
@@ -65,6 +71,11 @@ to the string anywhere, while the suffix-less library appears in both. Measured 
 **121** of the patch override's names are also declared by the world's own library, and **912** of
 them are declared by `_full`. That second number is why the either/or matters: if the two bases
 stacked, they and the patch would be contesting nearly every archetype the patch declares.
+
+The replace-by-name rule also applies *within* one file: `_full`'s 5,735 prototype nodes carry only
+5,566 distinct names, and the 169 redundant nodes belong to **29** names it declares more than once.
+Only the last declaration of each survives the map. The base library and the patch override contain no
+such duplicates.
 
 ## Instancing merges, it does not replace
 
@@ -150,11 +161,14 @@ entity, are both unconfirmed — a 2× error either way.
 
 ## Unknowns
 
-- What the flag at `+0xC4` selects between the two bases.
-- What the loop after the patch override loads. DLC libraries are the obvious candidate — `dlc1`
-  ships its own 42-archetype `entitylibrary.fcb` — but this has not been read, and anything it loads
-  would land *after* the patch, not before it.
+- What the flag at `+0xC4` selects between the two bases. The obvious write sites were searched and
+  none of them is this field.
+- Whether Dunia's loop after the patch override is literally `CDlcService::GetEntityLibraries`. In
+  `FarCry2_server` it is: `CXGame::LoadArchetypes` (`0x08888750`) calls
+  `CDlcService::GetEntityLibraries(CryVector<CryStringBase<char>>&)` and feeds each returned path
+  through `CEntityLibraryManager::Override`. Dunia's loop has the same shape — a vector of strings
+  walked at `0x1c` stride, each loaded through the same resolver slot and merged the same way — but
+  the call itself has not been read there. Either way the DLC libraries land *after* the patch, so
+  they win over it.
 - Attribute-level precedence inside a merged node: an instance field present in both must win for the
   merge to be useful, but `CReadOnlyMergeNode`'s attribute accessors have not been opened.
-- `entitylibrary_full.fcb` holds 5,735 prototype nodes but only 5,566 distinct names. If those are
-  genuine duplicates, the replace-by-name rule also applies *within* a single file.

@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.Fcb;
+using JackAll.Tools.World;
 
 namespace JackAll.App.FileHandlers.Fcb.FcbEditor;
 
@@ -34,15 +35,35 @@ public sealed class FcbObjectNodeView : INotifyPropertyChanged
     /// <see cref="ContainsChange"/> up without a separate lookup.</summary>
     public FcbObjectNodeView? Parent { get; private set; }
 
-    public bool IsExpanded { get; set; }
-    public bool IsSelected { get; set; }
-
+    private bool _isExpanded;
+    private bool _isSelected;
     private bool _isVisible = true;
 
-    /// <summary>Drives the tree row's <c>Visibility</c> (see <see cref="ApplyFilter"/>) - unlike
-    /// <see cref="IsExpanded"/>/<see cref="IsSelected"/>, this is set from code (the outline filter),
-    /// not just pushed up from a TwoWay binding on user interaction, so it has to actually raise
-    /// <see cref="PropertyChanged"/> for the TreeViewItem style's binding to notice a filter change.</summary>
+    /// <summary>Two-way with the tree row, and set from code by <see cref="Reveal"/>.</summary>
+    public bool IsExpanded
+    {
+        get => _isExpanded;
+        set
+        {
+            if (_isExpanded == value) return;
+            _isExpanded = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <inheritdoc cref="IsExpanded"/>
+    public bool IsSelected
+    {
+        get => _isSelected;
+        set
+        {
+            if (_isSelected == value) return;
+            _isSelected = value;
+            OnPropertyChanged();
+        }
+    }
+
+    /// <summary>Drives the tree row's <c>Visibility</c> - see <see cref="ApplyFilter"/>.</summary>
     public bool IsVisible
     {
         get => _isVisible;
@@ -358,6 +379,44 @@ public sealed class FcbObjectNodeView : INotifyPropertyChanged
 
         node.IsVisible = selfMatches || anyChildVisible;
         return node.IsVisible;
+    }
+
+    /// <summary>
+    /// The first node under <paramref name="root"/> whose <paramref name="field"/> holds
+    /// <paramref name="value"/>, with the path to it expanded and the node itself selected. Matches on a
+    /// field rather than on object identity so a caller that parsed the same bytes separately - the
+    /// Library tab, resolving an archetype - can still point at a node in this tree.
+    /// </summary>
+    public static FcbObjectNodeView? Reveal(FcbObjectNodeView root, uint field, string value)
+    {
+        if (Find(root, field, value) is not { } found)
+        {
+            return null;
+        }
+
+        for (FcbObjectNodeView? ancestor = found.Parent; ancestor is not null; ancestor = ancestor.Parent)
+        {
+            ancestor.IsExpanded = true;
+        }
+        found.IsSelected = true;
+        return found;
+    }
+
+    private static FcbObjectNodeView? Find(FcbObjectNodeView node, uint field, string value)
+    {
+        if (node.Object.Values.ContainsKey(field)
+            && FcbEntityFields.ReadString(node.Object, field).Equals(value, StringComparison.OrdinalIgnoreCase))
+        {
+            return node;
+        }
+        foreach (FcbObjectNodeView child in node.Children)
+        {
+            if (Find(child, field, value) is { } found)
+            {
+                return found;
+            }
+        }
+        return null;
     }
 
     public event PropertyChangedEventHandler? PropertyChanged;

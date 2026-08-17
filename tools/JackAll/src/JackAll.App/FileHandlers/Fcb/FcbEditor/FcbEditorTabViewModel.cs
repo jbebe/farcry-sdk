@@ -25,6 +25,7 @@ public sealed class FcbEditorTabViewModel : INotifyPropertyChanged
     private readonly Func<FcbObject, Task<string?>> _persist;
 
     private FcbObjectNodeView? _selectedNode;
+    private string? _notice;
     private string _filterText = "";
     private bool _isDirty;
     private bool _isBusy;
@@ -38,6 +39,31 @@ public sealed class FcbEditorTabViewModel : INotifyPropertyChanged
 
     public FcbObjectNodeView Root { get; }
     public IEnumerable<FcbObjectNodeView> RootItems => [Root];
+
+    /// <summary>
+    /// A warning strip above the property grid, or null for no strip. Set by the Library tab when the
+    /// document on screen is a declaration some later library overrides, so an edit here would change
+    /// the file and nothing in game.
+    /// </summary>
+    public string? Notice
+    {
+        get => _notice;
+        set { _notice = value; OnPropertyChanged(); OnPropertyChanged(nameof(HasNotice)); }
+    }
+
+    public bool HasNotice => !string.IsNullOrEmpty(_notice);
+
+    /// <summary>Selects the node carrying <paramref name="value"/> in <paramref name="field"/>, so a
+    /// caller can open a fragment already positioned on the one object it cares about.</summary>
+    public bool TryReveal(uint field, string value)
+    {
+        if (FcbObjectNodeView.Reveal(Root, field, value) is not { } node)
+        {
+            return false;
+        }
+        SelectedNode = node;
+        return true;
+    }
 
     /// <param name="currentXml">The document's current content - already-staged edits included, if
     /// any.</param>

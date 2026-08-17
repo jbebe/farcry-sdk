@@ -4,6 +4,7 @@
         xmlns:local="clr-namespace:JackAll.App"
         xmlns:xrefs="clr-namespace:JackAll.App.FileHandlers.Xrefs"
         xmlns:mapEditor="clr-namespace:JackAll.App.MapEditor"
+        xmlns:library="clr-namespace:JackAll.App.Library"
         Title="JackAll - Far Cry 2 Mod Manager" Height="720" Width="1180"
         WindowStartupLocation="CenterScreen">
 
@@ -147,6 +148,8 @@
                                 <Button Content="Import legacy mod" Click="ImportLegacy_Click" Style="{StaticResource Toolbar}" />
                                 <Button Content="Rescan mods" Click="RescanMods_Click" Style="{StaticResource Toolbar}"
                                         ToolTip="Re-reads every mod's zip and the workspace folder from disk - picks up a mod replaced or edited outside JackAll without needing a restart." />
+                                <Button Content="Check for dead edits" Click="LintArchetypes_Click" Style="{StaticResource Toolbar}"
+                                        ToolTip="Finds archetype edits a later entity library overrides, which change the file but nothing in game." />
                             </StackPanel>
                         </DockPanel>
                     </Border>
@@ -728,6 +731,11 @@
             <!-- ============================= MAP ============================== -->
             <TabItem Header="Map">
                 <mapEditor:MapTabView x:Name="MapTab" Margin="6" />
+            </TabItem>
+
+            <!-- ============================ LIBRARY ============================ -->
+            <TabItem Header="Library">
+                <library:LibraryTabView x:Name="LibraryTab" Margin="6" />
             </TabItem>
         </TabControl>
     </DockPanel>

@@ -1052,6 +1052,23 @@ public sealed class GameVfs : IDisposable
     }
 
     /// <summary>
+    /// The winning copy of a game-relative path, or null when no layer provides it or it can't be
+    /// read. For callers that know a path rather than a file they already hold - the world and library
+    /// loaders, which resolve synthesized paths and expect a miss to be an ordinary answer.
+    /// </summary>
+    public byte[]? ReadByPath(string path)
+    {
+        try
+        {
+            return _files.TryGetValue(NameHash.Compute(path), out VfsFile? file) ? Read(file.Hash) : null;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// Reads the copy the archives provide, ignoring mods — i.e. what Revert would restore.
     /// Null when the file exists only because a mod added it.
     /// </summary>

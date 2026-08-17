@@ -136,9 +136,9 @@ public static class LayerCatalog
         MissionLayers,
         Shapes,
         Triggers,
-        new("Objects", "Entity library", "Ready",
-            "The per-world archetype palette every entity references (1,419 in world1).",
-            ["Archetype browser by category", "Thumbnails", "Archetype editing"]),
+        new("Objects", "Entity library", "Library tab",
+            "The archetype palette every entity references, resolved across its override chain.",
+            ["Browse and edit it in the Library tab"]),
 
         Lights,
         Vegetation,
