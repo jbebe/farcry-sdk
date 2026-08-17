@@ -1,4 +1,5 @@
 using JackAll.Core.Format.Fcb;
+using JackAll.Tools.World;
 
 namespace JackAll.Tests;
 
@@ -41,51 +42,77 @@ public class FcbAssemblerTests
 
     [Theory]
     [MemberData(nameof(SampleFiles))]
-    public void Replacing_one_fragment_changes_only_that_child_and_leaves_every_other_byte_identical(string path)
+    public void Replacing_one_archetype_changes_only_that_fragment_and_leaves_every_other_one_identical(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
 
         byte[] baseFcb = File.ReadAllBytes(path);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
-        IReadOnlyList<string> ids = FcbXml.ListFragmentIds(original);
-        Assert.NotEmpty(ids); // every fixture here is entity-library-of-groups shaped
+        IReadOnlyList<FcbFragment> fragments = FcbFragments.List(original);
+        Assert.NotEmpty(fragments); // every fixture here is an entity library full of archetypes
 
-        string targetId = ids[0];
-
-        // A hand-built replacement group, unrelated to the original content - if the assembler
-        // spliced the wrong child, or corrupted a sibling, this would show up unmistakably below.
-        var replacement = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
+        // A replacement prototype that keeps the vanilla identity (same hidName on its Entity child,
+        // which is what the id derives from) but otherwise unrelated content - if the assembler
+        // spliced the wrong node, or corrupted a sibling, this shows up unmistakably below.
+        string targetId = fragments[0].Id;
+        var replacement = new FcbObject { TypeHash = WorldHashes.EntityPrototype };
         replacement.Values.Add(0xDEADBEEF, [0x01, 0x02, 0x03, 0x04]);
-        string replacementXml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty).IndexXml;
+        var entity = new FcbObject { TypeHash = WorldHashes.Entity };
+        entity.Values.Add(
+            WorldHashes.HidName,
+            fragments[0].Node.Children.First(c => c.TypeHash == WorldHashes.Entity).Values[WorldHashes.HidName]);
+        replacement.Children.Add(entity);
+        string replacementXml = FcbXml.RenderObject(replacement, FcbClassDefinitions.Empty);
 
         byte[] assembled = FcbAssembler.Apply(baseFcb, new Dictionary<string, string> { [targetId] = replacementXml });
         FcbObject rebuilt = FcbDocument.Deserialize(assembled);
 
         Assert.Equal(original.Children.Count, rebuilt.Children.Count);
+        IReadOnlyList<FcbFragment> rebuiltFragments = FcbFragments.List(rebuilt);
+        Assert.Equal(fragments.Count, rebuiltFragments.Count);
 
-        IReadOnlyList<string> rebuiltIds = FcbXml.ListFragmentIds(rebuilt);
-        int targetIndex = ids.ToList().IndexOf(targetId);
-
-        for (int i = 0; i < original.Children.Count; i++)
+        for (int i = 0; i < fragments.Count; i++)
         {
-            if (i == targetIndex)
+            Assert.Equal(fragments[i].Id, rebuiltFragments[i].Id);
+            if (FcbFragments.IdComparer.Equals(fragments[i].Id, targetId))
             {
-                Assert.Equal(0xE0BDB3DBu, rebuilt.Children[i].TypeHash);
-                Assert.Equal([0x01, 0x02, 0x03, 0x04], rebuilt.Children[i].Values[0xDEADBEEF]);
+                AssertSameShape(replacement, rebuiltFragments[i].Node);
             }
             else
             {
-                AssertSameShape(original.Children[i], rebuilt.Children[i]);
-                // The replacement's own id is deterministic from its content/position, so an
-                // untouched sibling must keep the exact same id too.
-                Assert.Equal(ids[i], rebuiltIds[i]);
+                AssertSameShape(fragments[i].Node, rebuiltFragments[i].Node);
             }
         }
     }
 
+    /// <summary>The pre-deep-fragment id space: a whole-group <c>NN_Name.xml</c> override staged by
+    /// an older version still splices, replacing the group it names.</summary>
     [Theory]
     [MemberData(nameof(SampleFiles))]
-    public void A_fragment_id_with_no_matching_child_is_appended_as_a_new_entry(string path)
+    public void A_legacy_group_id_still_replaces_the_whole_group(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+
+        byte[] baseFcb = File.ReadAllBytes(path);
+        FcbObject original = FcbDocument.Deserialize(baseFcb);
+        FcbXmlExport export = FcbXml.ToXml(original, FcbClassDefinitions.Empty);
+        string groupId = export.ExternalFiles.Keys.First();
+
+        var replacement = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
+        replacement.Values.Add(0xDEADBEEF, [0x01, 0x02, 0x03, 0x04]);
+        string replacementXml = FcbXml.RenderObject(replacement, FcbClassDefinitions.Empty);
+
+        byte[] assembled = FcbAssembler.Apply(baseFcb, new Dictionary<string, string> { [groupId] = replacementXml });
+        FcbObject rebuilt = FcbDocument.Deserialize(assembled);
+
+        Assert.Equal(original.Children.Count, rebuilt.Children.Count);
+        int groupIndex = export.ExternalFiles.Keys.ToList().IndexOf(groupId);
+        AssertSameShape(replacement, rebuilt.Children[groupIndex]);
+    }
+
+    [Theory]
+    [MemberData(nameof(SampleFiles))]
+    public void A_plain_fragment_id_with_no_match_is_appended_at_the_root(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
 
@@ -94,7 +121,7 @@ public class FcbAssemblerTests
 
         var addition = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
         addition.Values.Add(0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
-        string additionXml = FcbXml.ToXml(addition, FcbClassDefinitions.Empty).IndexXml;
+        string additionXml = FcbXml.RenderObject(addition, FcbClassDefinitions.Empty);
 
         byte[] assembled = FcbAssembler.Apply(
             baseFcb, new Dictionary<string, string> { ["99999_does_not_exist.xml"] = additionXml });
@@ -109,6 +136,31 @@ public class FcbAssemblerTests
         FcbObject added = rebuilt.Children[^1];
         Assert.Equal(0xE0BDB3DBu, added.TypeHash);
         Assert.Equal([0x2A, 0x00, 0x00, 0x00], added.Values[0xDEADBEEF]);
+    }
+
+    /// <summary>A brand-new archetype (a path-shaped id matching nothing) joins the library's last
+    /// group, not the root — the shape-defined append parent (<see cref="FcbFragments.AppendTarget"/>).</summary>
+    [Theory]
+    [MemberData(nameof(SampleFiles))]
+    public void A_new_archetype_id_is_appended_into_the_last_group(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+
+        byte[] baseFcb = File.ReadAllBytes(path);
+        FcbObject original = FcbDocument.Deserialize(baseFcb);
+
+        var addition = new FcbObject { TypeHash = WorldHashes.EntityPrototype };
+        addition.Values.Add(0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
+        string additionXml = FcbXml.RenderObject(addition, FcbClassDefinitions.Empty);
+
+        byte[] assembled = FcbAssembler.Apply(
+            baseFcb, new Dictionary<string, string> { [@"mymod\Weapons\BrandNew.xml"] = additionXml });
+        FcbObject rebuilt = FcbDocument.Deserialize(assembled);
+
+        Assert.Equal(original.Children.Count, rebuilt.Children.Count);
+        FcbObject added = rebuilt.Children[^1].Children[^1];
+        Assert.Equal([0x2A, 0x00, 0x00, 0x00], added.Values[0xDEADBEEF]);
+        Assert.Equal(original.Children[^1].Children.Count + 1, rebuilt.Children[^1].Children.Count);
     }
 
     private static void AssertSameShape(FcbObject expected, FcbObject actual)

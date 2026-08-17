@@ -51,10 +51,12 @@ public sealed class GameCache
 {
     private const uint Magic = 0x3143414A; // 'JAC1'
 
-    // v2 adds the content-hash section (see HashRecord) - a v1 file loaded by this version simply
-    // fails the version check below and resets to empty, same as any other unparseable cache; nothing
-    // here tries to upgrade one in place.
-    private const int Version = 2;
+    // v3 invalidates every fragment list recorded before deep fragment ids (see FcbFragments):
+    // a v2 file would keep answering "doesn't split" for every worldsector and group-level ids for
+    // every entity library. An old file loaded by this version simply fails the version check below
+    // and resets to empty, same as any other unparseable cache; nothing here tries to upgrade one
+    // in place.
+    private const int Version = 3;
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     private struct TypeRecord : IKeyedRecord

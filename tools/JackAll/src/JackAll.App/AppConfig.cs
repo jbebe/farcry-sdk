@@ -44,7 +44,7 @@ public sealed class AppConfig
 
     /// <summary>
     /// Sniffed file types for the game's read-only archives, plus decoded `.fcb` fragment structure
-    /// (see <c>FcbXml.ListFragmentIds</c>) — one file for both, since they share the same lifecycle:
+    /// (see <c>FcbFragments</c>) — one file for both, since they share the same lifecycle:
     /// safe to delete at any time, rebuilt on the next launch. Deleting it is the supported way to
     /// recover if the game itself is reinstalled or patched underneath us.
     /// </summary>

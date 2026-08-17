@@ -22,11 +22,16 @@ public sealed record LegacyImportResult(int TotalEntries, int Imported, int Frag
 /// <see cref="Import"/> - typically <see cref="Vfs.GameVfs.ReadOriginal"/>, ignoring every currently
 /// active mod/workspace edit) and only genuine differences are staged:
 ///
-///   - An entity-library-shaped `.fcb` (see <see cref="FcbXml.ToXml"/>) is split and compared one
-///     group at a time, so touching a single entity stages one small fragment override instead of the
-///     whole multi-hundred-KB container - the same <c>&lt;container&gt;.fcb\NN_Name.xml</c> shape
-///     <see cref="ModPathHashing"/> already recognizes as a fragment override (matching what
-///     JackAll.App's own structured fragment editor stages).
+///   - A `.fcb` that splits into deep fragments (see <see cref="FcbFragments"/>: one per archetype in
+///     an entity library, one per placed entity in a worldsector) is compared one fragment at a time,
+///     so touching a single weapon or a single placed entity stages one small fragment override
+///     instead of the whole container - the same <c>&lt;container&gt;.fcb\&lt;fragment id&gt;</c>
+///     shape <see cref="ModPathHashing"/> already recognizes (matching what JackAll.App's own
+///     structured fragment editor stages). That granularity only holds when everything *outside* the
+///     fragments is untouched and nothing was deleted or moved - changes a per-fragment override
+///     cannot express - so those cases fall back to the coarser unit: one <c>NN_Name.xml</c> group
+///     for an entity library (<see cref="FcbXml.ToXml"/>'s split, which every id-resolution path
+///     still accepts as an alias), the whole file for anything else.
 ///   - Any other `.fcb` is compared by its *decoded* shape (<see cref="FcbXml.RenderObject"/>) rather
 ///     than raw bytes, since this writer (like most community tools) never reproduces the shipped
 ///     files' backreference/dedup encoding (see <see cref="FcbDocument"/>'s remarks) - a logically
@@ -232,6 +237,12 @@ public static class LegacyPatchImporter
             }
         }
 
+        if (vanillaRoot is not null && TryImportDeepFragments(
+                hash, legacyRoot, vanillaRoot, containerPath, workspace, defs, ref fragmentsImported, ref skipped))
+        {
+            return true;
+        }
+
         FcbXmlExport export = FcbXml.ToXml(legacyRoot, defs);
         if (export.ExternalFiles.Count == 0)
         {
@@ -264,6 +275,97 @@ public static class LegacyPatchImporter
         }
 
         return true;
+    }
+
+    /// <summary>
+    /// The fine-grained half of <see cref="TryImportFcb"/>: diffs a splitting container one deep
+    /// fragment at a time and stages only the changed (or added) ones. Returns false, staging
+    /// nothing, when this granularity can't faithfully represent the change — the container doesn't
+    /// split, or its skeletons differ (an edit outside every fragment, a deleted fragment, a moved
+    /// one) — and the caller's coarser group/whole-file comparison takes over.
+    /// </summary>
+    private static bool TryImportDeepFragments(
+        uint hash, FcbObject legacyRoot, FcbObject vanillaRoot, string? containerPath,
+        FolderModLayer workspace, FcbClassDefinitions defs, ref int fragmentsImported, ref int skipped)
+    {
+        IReadOnlyList<FcbFragment> legacy = FcbFragments.List(legacyRoot);
+        if (legacy.Count == 0)
+        {
+            return false;
+        }
+
+        IReadOnlyList<FcbFragment> vanilla = FcbFragments.List(vanillaRoot);
+        var vanillaIds = new HashSet<string>(vanilla.Select(f => f.Id), FcbFragments.IdComparer);
+        if (SkeletonXml(legacyRoot, legacy, vanillaIds, defs) != SkeletonXml(vanillaRoot, vanilla, vanillaIds, defs))
+        {
+            return false;
+        }
+
+        var vanillaXmlById = new Dictionary<string, string>(vanilla.Count, FcbFragments.IdComparer);
+        foreach (FcbFragment fragment in vanilla)
+        {
+            vanillaXmlById[fragment.Id] = FcbXml.RenderObject(fragment.Node, defs);
+        }
+
+        string containerRelative = containerPath ?? $"_hash\\{hash:x8}.fcb";
+        foreach (FcbFragment fragment in legacy)
+        {
+            string xml = FcbXml.RenderObject(fragment.Node, defs);
+            if (vanillaXmlById.TryGetValue(fragment.Id, out string? vanillaXml) && vanillaXml == xml)
+            {
+                skipped++;
+                continue;
+            }
+
+            workspace.Stage(hash, $"{containerRelative}\\{fragment.Id}", "xml", new UTF8Encoding(false).GetBytes(xml));
+            fragmentsImported++;
+        }
+        return true;
+    }
+
+    /// <summary>
+    /// The container rendered with every fragment reduced to a marker carrying its canonical id, so
+    /// two skeletons compare equal exactly when everything *around* the fragments matches and every
+    /// common fragment sits in the same place. Fragments whose id is outside
+    /// <paramref name="keepOnlyIdsIn"/> (always the vanilla id set, so this only ever drops something
+    /// on the legacy side) vanish entirely, letting content a mod *adds* pass the comparison — an
+    /// addition is expressible as an appended override, a deletion is not.
+    /// </summary>
+    private static string SkeletonXml(
+        FcbObject root, IReadOnlyList<FcbFragment> fragments, HashSet<string> keepOnlyIdsIn,
+        FcbClassDefinitions defs)
+    {
+        var markerById = new Dictionary<FcbObject, string?>(ReferenceEqualityComparer.Instance);
+        foreach (FcbFragment fragment in fragments)
+        {
+            markerById[fragment.Node] =
+                keepOnlyIdsIn.Contains(fragment.Id) ? FcbFragments.Canonicalize(fragment.Id) : null;
+        }
+        return FcbXml.RenderObject(Skeleton(root, markerById), defs);
+    }
+
+    private static FcbObject Skeleton(FcbObject node, Dictionary<FcbObject, string?> markerById)
+    {
+        var clone = new FcbObject { TypeHash = node.TypeHash };
+        foreach ((uint nameHash, byte[] value) in node.Values)
+        {
+            clone.Values.Add(nameHash, value);
+        }
+        foreach (FcbObject child in node.Children)
+        {
+            if (markerById.TryGetValue(child, out string? canonicalId))
+            {
+                if (canonicalId is not null)
+                {
+                    var marker = new FcbObject { TypeHash = 0 };
+                    marker.Values.Add(0, Encoding.UTF8.GetBytes(canonicalId));
+                    clone.Children.Add(marker);
+                }
+                continue;
+            }
+            clone.Children.Add(Skeleton(child, markerById));
+        }
+        return clone;
     }
 
     /// <summary>

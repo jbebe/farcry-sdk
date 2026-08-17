@@ -39,8 +39,10 @@ deployed there would be mounted as if it were a shipped game archive.
 ### Ordering
 
 Layers apply top to bottom and **the bottom one wins** — identical to JackAll's own `config.ini`
-rule, and literally the order of `--layer` arguments passed to the build. Two mods editing
-*different parts of the same* `.fcb` container are 3-way merged rather than fought over, so ordering
+rule, and literally the order of `--layer` arguments passed to the build. Two mods overriding
+*different fragments* of the same `.fcb` container (different archetypes of an entity library,
+different placed entities of a worldsector — see the id space below) never meet at all, and two mods
+editing *different parts of the same fragment* are 3-way merged rather than fought over, so ordering
 only decides genuine conflicts: two mods editing the *exact same* field differently. For those, the
 lower mod in your load order wins outright — same rule as a whole-file override — and Vortex shows a
 warning notification naming the fragment and the mods involved, since a headless build has no
@@ -56,7 +58,7 @@ An archive is exactly one of three buckets, checked in this order:
 | --- | --- | --- |
 | 1 | A `patch.dat`/`patch.fat` pair, anywhere in the archive | **Legacy mod.** Converted at install time via `mod import-legacy` into an ordinary layer. **This is how most existing Far Cry 2 mods are distributed** — see [Mods Survey](./mods-survey.md). We can't force any structure on these (they predate this extension), so the pair is all that's recognized — everything else in the archive (readmes, screenshots, alternate versions) is not part of the conversion, and a confirmation dialog says so before install proceeds. |
 | 2 | A `.dll` under a `plugins\` folder | **FCSE plugin.** Deployed to `bin\plugins\`; nothing to do with the archive pipeline patch.dat is built from. Extra files alongside it (its own data/config) are normal and not warned about. |
-| 3 | Files rooted under a literal `Data_Win32\` folder | **Asset mod.** Everything up to and including that folder is stripped, and what's left (`worlds\…`, `generated\…`, `_hash\<crc32>.<ext>`, `<container>.fcb\NN_Name.xml`, …) is staged as an ordinary JackAll layer. Deliberately strict: a wrapper folder above `Data_Win32\` (`MyMod v1.2\Data_Win32\…`) is fine, but there's no fuzzy root-guessing beyond that — a mod either uses this convention or it doesn't. |
+| 3 | Files rooted under a literal `Data_Win32\` folder | **Asset mod.** Everything up to and including that folder is stripped, and what's left (`worlds\…`, `generated\…`, `_hash\<crc32>.<ext>`, `<container>.fcb\<fragment id>`, …) is staged as an ordinary JackAll layer. Deliberately strict: a wrapper folder above `Data_Win32\` (`MyMod v1.2\Data_Win32\…`) is fine, but there's no fuzzy root-guessing beyond that — a mod either uses this convention or it doesn't. |
 
 `FCSE.exe` itself (the loader/host program, not a plugin) is recognized separately and deployed to
 `bin\`.
@@ -64,6 +66,25 @@ An archive is exactly one of three buckets, checked in this order:
 None of this calls `jackall-mi` — it's plain string matching over the file list. Only bucket 1 ever
 reaches into JackAll (`mod import-legacy`), since converting a legacy patch genuinely requires
 diffing against the game's own archives; buckets 2 and 3 don't need the game discovered at all.
+
+### `.fcb` fragment ids
+
+A path whose non-final segment ends in `.fcb` overrides one **fragment** of that container instead
+of replacing the whole file. The fragment id — everything after the `.fcb` segment — names one
+override unit:
+
+| Container | Unit | Id | Example |
+| --- | --- | --- | --- |
+| Entity library (`entitylibrary*.fcb`) | one archetype | its `hidName`, dots as folders | `entitylibrary.fcb\vehicle\Land\DLC_Vehicle1_DLC1.xml` |
+| World sector (`worldsector*.data.fcb`) | one placed entity | `<hidName>.<disEntityId>.xml` | `worldsector17.data.fcb\StaticObject_201.2058514756624450165.xml` |
+
+For an entity override the **trailing numeric `disEntityId` is authoritative and the name prefix
+cosmetic** — an override staged under a since-renamed entity still matches, and `2058514756624450165.xml`
+alone works too. An id matching nothing in the vanilla container *adds* that content instead: a new
+archetype joins the library's last group, a new entity joins the sector's `main` mission layer. The
+older per-group ids (`entitylibrary.fcb\NN_Name.xml`) keep working as an alias for the whole group,
+so mods staged before per-archetype ids existed still build. Containers whose children carry no
+name/id (`mapsdata`, `managers`, …) don't split — only a whole-file override can touch those.
 
 ## The one destructive failure mode
 

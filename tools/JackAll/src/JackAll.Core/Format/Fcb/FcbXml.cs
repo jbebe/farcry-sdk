@@ -1,4 +1,3 @@
-using System.Buffers;
 using System.Globalization;
 using System.Text;
 using System.Xml.Linq;
@@ -14,7 +13,7 @@ namespace JackAll.Core.Format.Fcb;
 /// </summary>
 public sealed record FcbXmlExport(string IndexXml, IReadOnlyDictionary<string, string> ExternalFiles);
 
-/// <summary>One fragment's <see cref="FcbXml.ToXml"/>-assigned id, paired with its raw binary size —
+/// <summary>One fragment's <see cref="FcbFragments"/>-assigned id, paired with its binary size —
 /// see <see cref="FcbXml.ListFragmentsWithSize"/>.</summary>
 public readonly record struct FcbFragmentInfo(string Id, long Size);
 
@@ -41,11 +40,6 @@ public readonly record struct FcbFragmentInfo(string Id, long Size);
 /// </remarks>
 public static class FcbXml
 {
-    private const uint EntityLibraryTypeHash = 0xBCDD10B4;
-    private const uint EntityLibraryGroupTypeHash = 0xE0BDB3DB;
-    private static readonly uint NameFieldHash = FcbClassDefinitions.Crc32Ascii("Name");
-    private static readonly SearchValues<char> InvalidFileNameChars = SearchValues.Create(Path.GetInvalidFileNameChars());
-
     /// <summary>
     /// Converts a parsed FCB tree to XML. When the tree matches Gibbed's "entity library made up of
     /// named groups" shape (root has no values, root's type is EntityLibrary, every child is an
@@ -57,7 +51,7 @@ public static class FcbXml
     /// </summary>
     public static FcbXmlExport ToXml(FcbObject root, FcbClassDefinitions defs)
     {
-        if (!TryGetFragmentIds(root, out IReadOnlyList<string> ids))
+        if (!FcbFragments.TryGetGroupIds(root, out IReadOnlyList<string> ids))
         {
             (XElement inline, _) = WriteObject(root, defs);
             return new FcbXmlExport(Render(inline), new Dictionary<string, string>());
@@ -85,103 +79,35 @@ public static class FcbXml
     }
 
     /// <summary>
-    /// The fragment ids <see cref="ToXml"/> would split <paramref name="root"/> into, without
-    /// needing <see cref="FcbClassDefinitions"/> — the split decision and each child's <c>NN_Name</c>
-    /// id only ever touch <see cref="FcbObject.TypeHash"/>/<see cref="FcbObject.Children"/>/raw
-    /// <see cref="FcbObject.Values"/>, never the class/member config. Empty for a root that doesn't
-    /// match the entity-library-of-groups shape.
+    /// Every override-unit id of <paramref name="root"/> (see <see cref="FcbFragments"/> for the
+    /// recognised shapes and id scheme — a deeper space than <see cref="ToXml"/>'s Gibbed-compatible
+    /// group-per-file multi-export) with its <see cref="FcbDocument.EncodedSize"/> — the fully
+    /// expanded byte size, not the (possibly backreference-deduplicated) span it occupied in the file
+    /// it came from: a nested node's on-disk span isn't tracked by the decoder, and this is a display
+    /// number for the file browser's size column, nothing more (see <c>GameVfs</c>).
     /// </summary>
-    public static IReadOnlyList<string> ListFragmentIds(FcbObject root)
-        => TryGetFragmentIds(root, out IReadOnlyList<string> ids) ? ids : [];
+    public static IReadOnlyList<FcbFragmentInfo> ListFragmentsWithSize(FcbObject root)
+        => [.. FcbFragments.Slots(root)
+            .Select(s => new FcbFragmentInfo(s.Id, FcbDocument.EncodedSize(s.Parent.Children[s.Index])))];
 
     /// <summary>
-    /// Every fragment id <see cref="ToXml"/> would produce, paired with that child's raw on-disk byte
-    /// size as reported by <see cref="FcbDocument.DeserializeWithChildSizes"/> — not the rendered XML a
-    /// mod override actually edits/stores, and not even a re-encoded size; the real number of bytes
-    /// that child occupied in the file this <paramref name="root"/> came from (as little as 5 for an
-    /// object-level backreference - see that method's remarks). A display number for the file browser's
-    /// size column, nothing more (see <c>GameVfs</c>): unlike a full per-child XML render, reading it
-    /// off the decode that already had to happen costs nothing extra, where the old XML-rendering
-    /// approach used to be about half of a cold <c>GameVfs.MergeFragments</c> pass (see perf.txt) for a
-    /// number nobody was relying on for anything but display.
-    /// </summary>
-    public static IReadOnlyList<FcbFragmentInfo> ListFragmentsWithSize(FcbObject root, IReadOnlyList<long> childByteSizes)
-    {
-        if (!TryGetFragmentIds(root, out IReadOnlyList<string> ids))
-        {
-            return [];
-        }
-
-        var result = new List<FcbFragmentInfo>(ids.Count);
-        for (int i = 0; i < ids.Count; i++)
-        {
-            result.Add(new FcbFragmentInfo(ids[i], childByteSizes[i]));
-        }
-        return result;
-    }
-
-    /// <summary>
-    /// Renders the single child of <paramref name="root"/> whose <see cref="ToXml"/>-assigned id is
-    /// <paramref name="fragmentId"/>, or null if <paramref name="root"/> doesn't split or no child's
-    /// id matches (e.g. the tree changed shape since the id was recorded). Case-insensitive, matching
-    /// every other fragment id comparison in this codebase (<c>_fragmentOverrides</c>,
+    /// Renders the node of <paramref name="root"/> whose <see cref="FcbFragments"/> id is
+    /// <paramref name="fragmentId"/> (legacy group ids included — see <see cref="FcbFragments.Find"/>),
+    /// or null if <paramref name="root"/> doesn't split or nothing matches (e.g. the tree changed
+    /// shape since the id was recorded). Matching runs through <see cref="FcbFragments.IdComparer"/>,
+    /// like every other fragment id comparison in this codebase (<c>_fragmentOverrides</c>,
     /// <c>ModPathHashing</c>) — a staged override's id has already been lowercased by
-    /// <c>NameHash.Normalize</c> by the time it reaches here, but this method's own ids come straight
+    /// <c>NameHash.Normalize</c> by the time it reaches here, but the tree's own ids come straight
     /// from the game data's real casing.
     /// </summary>
     public static string? ExtractFragment(FcbObject root, string fragmentId, FcbClassDefinitions defs)
     {
-        if (!TryGetFragmentIds(root, out IReadOnlyList<string> ids))
+        if (FcbFragments.Find(root, fragmentId) is not { } node)
         {
             return null;
         }
-
-        for (int i = 0; i < ids.Count; i++)
-        {
-            if (string.Equals(ids[i], fragmentId, StringComparison.OrdinalIgnoreCase))
-            {
-                (XElement el, _) = WriteObject(root.Children[i], defs);
-                return Render(el);
-            }
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// Shared by <see cref="ToXml"/>, <see cref="ListFragmentIds"/> and <see cref="ExtractFragment"/>:
-    /// whether <paramref name="root"/> matches the entity-library-of-groups shape, and if so, the
-    /// <c>NN_Name.xml</c> id <see cref="ToXml"/> would assign each child, in <c>root.Children</c> order.
-    /// </summary>
-    private static bool TryGetFragmentIds(FcbObject root, out IReadOnlyList<string> ids)
-    {
-        bool isEntityLibraryOfGroups =
-            root.Values.Count == 0
-            && root.TypeHash == EntityLibraryTypeHash
-            && root.Children.Count > 0
-            && root.Children.All(c => c.TypeHash == EntityLibraryGroupTypeHash);
-
-        if (!isEntityLibraryOfGroups)
-        {
-            ids = [];
-            return false;
-        }
-
-        var computed = new List<string>(root.Children.Count);
-        int counter = 0;
-        int padLength = root.Children.Count.ToString(CultureInfo.InvariantCulture).Length;
-        foreach (FcbObject child in root.Children)
-        {
-            counter++;
-            string fileBaseName = counter.ToString(CultureInfo.InvariantCulture).PadLeft(padLength, '0');
-            if (child.Values.TryGetValue(NameFieldHash, out byte[]? nameBytes) && TryDecodeCString(nameBytes, out string name))
-            {
-                fileBaseName += "_" + SanitizeFileNamePart(name);
-            }
-            computed.Add(fileBaseName + ".xml");
-        }
-
-        ids = computed;
-        return true;
+        (XElement el, _) = WriteObject(node, defs);
+        return Render(el);
     }
 
     /// <summary>
@@ -670,33 +596,6 @@ public static class FcbXml
         return !string.IsNullOrWhiteSpace(name)
             ? FcbClassDefinitions.Crc32Ascii(name)
             : uint.Parse(hash!, NumberStyles.HexNumber, CultureInfo.InvariantCulture);
-    }
-
-    private static bool TryDecodeCString(byte[] value, out string text)
-    {
-        if (value.Length < 1 || value[^1] != 0)
-        {
-            text = "";
-            return false;
-        }
-        text = Encoding.UTF8.GetString(value, 0, value.Length - 1);
-        return text.Length > 0;
-    }
-
-    private static string SanitizeFileNamePart(string name)
-    {
-        if (name.AsSpan().IndexOfAny(InvalidFileNameChars) < 0)
-        {
-            return name;
-        }
-
-        return string.Create(name.Length, name, static (chars, source) =>
-        {
-            for (int i = 0; i < source.Length; i++)
-            {
-                chars[i] = InvalidFileNameChars.Contains(source[i]) ? '_' : source[i];
-            }
-        });
     }
 
     private static string Render(XElement element)

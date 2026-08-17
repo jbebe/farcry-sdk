@@ -102,21 +102,43 @@ public class FcbXmlTests
         Assert.Equal(original.Children.Count, export.ExternalFiles.Count);
     }
 
+    /// <summary>One fragment per archetype (docs/design/fcb-deep-fragments.md): the id count matches
+    /// the library's distinct <c>hidName</c> count, and no two ids collide under the canonical
+    /// comparer, so every archetype is individually addressable.</summary>
     [Theory]
     [MemberData(nameof(SampleFiles))]
     [Trait("Category", "RequiresFixture")]
-    public void ListFragmentIds_matches_ToXmls_external_file_names(string path)
+    public void An_entity_library_lists_one_uniquely_addressable_fragment_per_archetype(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
 
         FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
-        FcbXmlExport export = FcbXml.ToXml(original, FcbClassDefinitions.Empty);
+        List<string> ids = [.. FcbFragments.List(original).Select(f => f.Id)];
 
-        IReadOnlyList<string> ids = FcbXml.ListFragmentIds(original);
+        var archetypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (FcbObject group in original.Children)
+        {
+            foreach (FcbObject prototype in group.Children)
+            {
+                foreach (FcbObject entity in prototype.Children)
+                {
+                    byte[]? name = entity.Values.GetValueOrDefault(Crc32("hidName"));
+                    if (entity.TypeHash == Crc32("Entity") && name is { Length: > 1 })
+                    {
+                        archetypeNames.Add(System.Text.Encoding.UTF8.GetString(name, 0, name.Length - 1));
+                    }
+                }
+            }
+        }
 
-        Assert.Equal(export.ExternalFiles.Keys.OrderBy(k => k), ids.OrderBy(k => k));
+        Assert.Equal(archetypeNames.Count, ids.Count);
+        Assert.Equal(ids.Count, ids.Distinct(FcbFragments.IdComparer).Count());
+        Assert.All(ids, id => Assert.EndsWith(".xml", id));
     }
 
+    /// <summary>The pre-deep-fragment group ids — still what <see cref="FcbXml.ToXml"/> names its
+    /// external files — keep resolving as an alias for the whole group, so overrides staged by older
+    /// versions still extract and splice.</summary>
     [Theory]
     [MemberData(nameof(SampleFiles))]
     [Trait("Category", "RequiresFixture")]
@@ -141,25 +163,20 @@ public class FcbXmlTests
     [Theory]
     [MemberData(nameof(SampleFiles))]
     [Trait("Category", "RequiresFixture")]
-    public void ListFragmentsWithSize_reports_each_childs_real_on_disk_size(string path)
+    public void ListFragmentsWithSize_reports_each_fragments_fully_expanded_size(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
 
-        (FcbObject original, IReadOnlyList<long> childByteSizes) = FcbDocument.DeserializeWithChildSizes(File.ReadAllBytes(path));
-        IReadOnlyList<FcbFragmentInfo> fragments = FcbXml.ListFragmentsWithSize(original, childByteSizes);
+        FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        IReadOnlyList<FcbFragmentInfo> fragments = FcbXml.ListFragmentsWithSize(original);
+        IReadOnlyList<FcbFragment> nodes = FcbFragments.List(original);
 
         Assert.NotEmpty(fragments);
-        Assert.Equal(original.Children.Count, fragments.Count);
+        Assert.Equal(nodes.Count, fragments.Count);
         for (int i = 0; i < fragments.Count; i++)
         {
-            // The real on-disk span can only ever be <= the fully-expanded size (equal unless this
-            // particular child leans on the format's backreference dedup somewhere inside it) - see
-            // TestSupport.FullyExpandedFcbSize's remarks.
-            Assert.True(fragments[i].Size > 0, $"'{fragments[i].Id}' reported a size of 0.");
-            Assert.True(
-                fragments[i].Size <= TestSupport.FullyExpandedFcbSize(original.Children[i]),
-                $"'{fragments[i].Id}' reported {fragments[i].Size} bytes on disk but only " +
-                $"{TestSupport.FullyExpandedFcbSize(original.Children[i])} fully expanded - dedup can only shrink, never grow.");
+            Assert.Equal(nodes[i].Id, fragments[i].Id);
+            Assert.Equal(TestSupport.FullyExpandedFcbSize(nodes[i].Node), fragments[i].Size);
         }
     }
 
@@ -174,12 +191,13 @@ public class FcbXmlTests
     }
 
     [Fact]
-    public void ListFragmentIds_is_empty_for_a_root_that_does_not_split()
+    public void A_root_that_does_not_split_lists_no_fragments()
     {
         var root = new FcbObject { TypeHash = 0x11111111 };
         root.Values.Add(0xAAAAAAAA, [0x01]);
 
-        Assert.Empty(FcbXml.ListFragmentIds(root));
+        Assert.Empty(FcbFragments.List(root));
+        Assert.Empty(FcbXml.ListFragmentsWithSize(root));
         Assert.Null(FcbXml.ExtractFragment(root, "01.xml", FcbClassDefinitions.Empty));
     }
 

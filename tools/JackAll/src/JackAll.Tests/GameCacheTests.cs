@@ -234,13 +234,14 @@ public class GameCacheTests : IDisposable
             Assert.Equal(coldFragments.Keys.OrderBy(h => h), warmFragments.Keys.OrderBy(h => h));
             Assert.False(warm.IsDirty, "A warm load re-decoded something the cache should have covered.");
 
-            // The claim the whole feature rests on: a fragment's directory is exactly its container's
-            // own path, so the tree view gets a folder node for free with no dedicated widget code.
+            // The claim the whole feature rests on: a fragment's path nests under its container's
+            // own path (deep ids add namespace folders below it - see FcbFragments), so the tree
+            // view gets its folder nodes for free with no dedicated widget code.
             Assert.NotEmpty(warmFragments);
             foreach (VfsFile fragment in warmFragments.Values)
             {
                 VfsFile container = allWarmFiles[fragment.ContainerHash!.Value];
-                Assert.Equal(container.Path, fragment.Directory);
+                Assert.StartsWith(container.Path + "\\", fragment.Path);
             }
 
             // Regression coverage: fragment rows must carry a real rendered size, not the placeholder

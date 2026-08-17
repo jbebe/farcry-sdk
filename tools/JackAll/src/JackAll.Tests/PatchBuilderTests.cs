@@ -5,6 +5,7 @@ using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
+using JackAll.Tools.World;
 
 namespace JackAll.Tests;
 
@@ -194,7 +195,7 @@ public class PatchBuilderTests : IDisposable
         NameDatabase names = TestSupport.LoadNames();
         VfsFile container;
         string fragmentId;
-        int fragmentIndex;
+        int vanillaFragmentCount;
         using (var vfs = GameVfs.Load(_install, names))
         {
             // A named container specifically: its own real path hashes back to its own hash, so
@@ -204,7 +205,7 @@ public class PatchBuilderTests : IDisposable
             fragmentId = fragment.FragmentId!;
 
             FcbObject baseTree = FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!);
-            fragmentIndex = FcbXml.ListFragmentIds(baseTree).ToList().IndexOf(fragmentId);
+            vanillaFragmentCount = FcbFragments.List(baseTree).Count;
         }
 
         // A hand-built replacement, unrelated to the original content - before fragment overlays,
@@ -212,9 +213,9 @@ public class PatchBuilderTests : IDisposable
         // means nothing to the engine, and the container's own hash would have copied through from
         // vanilla completely untouched. If that regressed, the rebuilt container just wouldn't
         // contain this value anywhere.
-        var replacement = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
+        var replacement = new FcbObject { TypeHash = 0xE0BDB3DB };
         replacement.Values.Add(0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
-        string replacementXml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty).IndexXml;
+        string replacementXml = FcbXml.RenderObject(replacement, FcbClassDefinitions.Empty);
 
         string fragmentPath = $"{container.Path}\\{fragmentId}";
         var mod = MakeZipMod("fragment_mod", (fragmentPath, System.Text.Encoding.UTF8.GetBytes(replacementXml)));
@@ -229,12 +230,14 @@ public class PatchBuilderTests : IDisposable
         using var rebuilt = DuniaArchive.Open(_install.PatchFat);
         FcbObject rebuiltContainer = FcbDocument.Deserialize(rebuilt.Read(entry));
 
-        // Checked by position, not by re-looking-up the old id string: FcbXml derives a fragment's id
-        // from its own content (the "Name" value), and the hand-built replacement above has none, so
-        // this position's *recomputed* id is expected to differ from the original - that's correct,
-        // content-derived behavior, not a sign the splice landed in the wrong place.
-        Assert.Equal(0xE0BDB3DBu, rebuiltContainer.Children[fragmentIndex].TypeHash);
-        Assert.Equal([0x2A, 0x00, 0x00, 0x00], rebuiltContainer.Children[fragmentIndex].Values[0xDEADBEEF]);
+        // Located by its marker value, not by re-looking-up the old id string: a fragment's id
+        // derives from its own content, and the hand-built replacement above carries no identity, so
+        // the replaced slot's id ceases to exist - that's correct, content-derived behavior. The
+        // fragment count dropping by exactly one pins that it replaced in place rather than appended.
+        FcbObject? spliced = TestSupport.FindNodeWithValue(rebuiltContainer, 0xDEADBEEF);
+        Assert.NotNull(spliced);
+        Assert.Equal([0x2A, 0x00, 0x00, 0x00], spliced.Values[0xDEADBEEF]);
+        Assert.Equal(vanillaFragmentCount - 1, FcbFragments.List(rebuiltContainer).Count);
     }
 
     /// <summary>
@@ -295,7 +298,6 @@ public class PatchBuilderTests : IDisposable
         NameDatabase names = TestSupport.LoadNames();
         VfsFile container;
         string fragmentId;
-        int fragmentIndex;
         FcbObject vanillaFragment;
         using (var vfs = GameVfs.Load(_install, names))
         {
@@ -304,16 +306,18 @@ public class PatchBuilderTests : IDisposable
             fragmentId = fragment.FragmentId!;
 
             FcbObject baseTree = FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!);
-            fragmentIndex = FcbXml.ListFragmentIds(baseTree).ToList().IndexOf(fragmentId);
-            vanillaFragment = baseTree.Children[fragmentIndex];
+            vanillaFragment = FcbFragments.Find(baseTree, fragmentId)!;
         }
-        if (vanillaFragment.Children.Count < 2) return; // fixture too small to prove non-overlapping edits safely
+        if (TestSupport.TwoDistantEditPaths(vanillaFragment) is not { } paths)
+        {
+            return; // fixture too small to prove non-overlapping edits safely
+        }
 
         string fragmentPath = $"{container.Path}\\{fragmentId}";
         var modA = MakeZipMod("fragment_mod_a",
-            (fragmentPath, TestSupport.RenderWithChildValueSet(vanillaFragment, 0, 0xAAAA0001, [0x01, 0x00, 0x00, 0x00])));
+            (fragmentPath, TestSupport.RenderWithValueSetAt(vanillaFragment, paths.A, 0xAAAA0001, [0x01, 0x00, 0x00, 0x00])));
         var modB = MakeZipMod("fragment_mod_b",
-            (fragmentPath, TestSupport.RenderWithChildValueSet(vanillaFragment, 1, 0xAAAA0002, [0x02, 0x00, 0x00, 0x00])));
+            (fragmentPath, TestSupport.RenderWithValueSetAt(vanillaFragment, paths.B, 0xAAAA0002, [0x02, 0x00, 0x00, 0x00])));
 
         using (var vfsForRead = GameVfs.Load(_install, names))
         {
@@ -325,9 +329,10 @@ public class PatchBuilderTests : IDisposable
         using var rebuilt = DuniaArchive.Open(_install.PatchFat);
         FcbObject rebuiltContainer = FcbDocument.Deserialize(rebuilt.Read(entry));
 
-        FcbObject rebuiltFragment = rebuiltContainer.Children[fragmentIndex];
-        Assert.Equal([0x01, 0x00, 0x00, 0x00], rebuiltFragment.Children[0].Values[0xAAAA0001]);
-        Assert.Equal([0x02, 0x00, 0x00, 0x00], rebuiltFragment.Children[1].Values[0xAAAA0002]);
+        // Both edits preserve the fragment's identity fields, so the same id resolves in the rebuilt tree.
+        FcbObject rebuiltFragment = FcbFragments.Find(rebuiltContainer, fragmentId)!;
+        Assert.Equal([0x01, 0x00, 0x00, 0x00], TestSupport.NodeAt(rebuiltFragment, paths.A).Values[0xAAAA0001]);
+        Assert.Equal([0x02, 0x00, 0x00, 0x00], TestSupport.NodeAt(rebuiltFragment, paths.B).Values[0xAAAA0002]);
     }
 
     /// <summary>
@@ -346,7 +351,6 @@ public class PatchBuilderTests : IDisposable
         NameDatabase names = TestSupport.LoadNames();
         VfsFile container;
         string fragmentId;
-        int fragmentIndex;
         FcbObject vanillaFragment;
         using (var vfs = GameVfs.Load(_install, names))
         {
@@ -355,19 +359,23 @@ public class PatchBuilderTests : IDisposable
             fragmentId = fragment.FragmentId!;
 
             FcbObject baseTree = FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!);
-            fragmentIndex = FcbXml.ListFragmentIds(baseTree).ToList().IndexOf(fragmentId);
-            vanillaFragment = baseTree.Children[fragmentIndex];
+            vanillaFragment = FcbFragments.Find(baseTree, fragmentId)!;
         }
-        if (vanillaFragment.Values.Count == 0) return; // fixture has nothing existing to collide on
 
         // Same existing field, different content from both mods - a genuine collision, not two
-        // independent, non-overlapping edits (which Milestone 3 already merges cleanly).
-        uint existingHash = vanillaFragment.Values.Keys.First();
+        // independent, non-overlapping edits (which Milestone 3 already merges cleanly). A prototype
+        // fragment's own value table can be empty - its Entity child's never is. Identity fields are
+        // excluded so the fragment's id survives the garbage value and stays resolvable below.
+        int[] targetPath = vanillaFragment.Values.Count > 0 ? [] : [0];
+        FcbObject target = TestSupport.NodeAt(vanillaFragment, targetPath);
+        uint existingHash = target.Values.Keys.FirstOrDefault(
+            k => k != WorldHashes.HidName && k != WorldHashes.DisEntityId);
+        if (existingHash == 0) return; // fixture has nothing existing to collide on
         string fragmentPath = $"{container.Path}\\{fragmentId}";
         var modA = MakeZipMod("mod_a",
-            (fragmentPath, RenderWithTopLevelValueSet(vanillaFragment, existingHash, [0x01, 0x00, 0x00, 0x00])));
+            (fragmentPath, TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x01, 0x00, 0x00, 0x00])));
         var modB = MakeZipMod("mod_b",
-            (fragmentPath, RenderWithTopLevelValueSet(vanillaFragment, existingHash, [0x02, 0x00, 0x00, 0x00])));
+            (fragmentPath, TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x02, 0x00, 0x00, 0x00])));
 
         BuildResult result;
         using (var vfsForRead = GameVfs.Load(_install, names))
@@ -388,27 +396,8 @@ public class PatchBuilderTests : IDisposable
 
         // mod_b (later in the layer list, so higher priority) won outright - not some Diff3 partial
         // merge of the two, and not mod_a's value either.
-        Assert.Equal([0x02, 0x00, 0x00, 0x00], rebuiltContainer.Children[fragmentIndex].Values[existingHash]);
-    }
-
-    /// <summary>Mirrors <see cref="TestSupport.RenderWithChildValueSet"/> but edits one of
-    /// <paramref name="vanilla"/>'s own top-level values instead of a child's - what a genuine
-    /// same-field collision between two mods needs (two edits to a different child, or to different
-    /// fields, are non-overlapping and merge cleanly instead).</summary>
-    private static byte[] RenderWithTopLevelValueSet(FcbObject vanilla, uint valueHash, byte[] value)
-    {
-        var edited = new FcbObject { TypeHash = vanilla.TypeHash };
-        foreach ((uint hash, byte[] existing) in vanilla.Values)
-        {
-            edited.Values[hash] = existing;
-        }
-        edited.Values[valueHash] = value;
-        foreach (FcbObject child in vanilla.Children)
-        {
-            edited.Children.Add(child);
-        }
-        string xml = FcbXml.ToXml(edited, FcbClassDefinitions.Empty).IndexXml;
-        return System.Text.Encoding.UTF8.GetBytes(xml);
+        FcbObject rebuiltFragment = FcbFragments.Find(rebuiltContainer, fragmentId)!;
+        Assert.Equal([0x02, 0x00, 0x00, 0x00], TestSupport.NodeAt(rebuiltFragment, targetPath).Values[existingHash]);
     }
 
     [Fact]

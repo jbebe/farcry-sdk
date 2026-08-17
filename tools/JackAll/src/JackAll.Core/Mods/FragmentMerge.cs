@@ -27,10 +27,11 @@ public static class FragmentMerge
 {
     /// <summary>Container hash -&gt; fragment id -&gt; every enabled layer overriding it, in priority
     /// order (later in the list = higher priority, matching <paramref name="enabledLayers"/>' own
-    /// order). Case-insensitive by fragment id: a staged path is run through <c>NameHash.Normalize</c>
-    /// (which lowercases it) on the way in, but <c>FcbXml.ListFragmentIds</c> preserves whatever case
-    /// the game data's entity name actually has, so an exact-case match would silently miss real
-    /// matches.</summary>
+    /// order). Keyed via <see cref="FcbFragments.IdComparer"/>: a staged path is run through
+    /// <c>NameHash.Normalize</c> (which lowercases it) on the way in, but the tree's own ids keep
+    /// whatever case the game data's entity name actually has — and two mods spelling the same
+    /// world-sector entity differently (its numeric id is what's authoritative) must land on one
+    /// entry, not two competing ones.</summary>
     public static Dictionary<uint, Dictionary<string, List<(IModLayer Layer, uint EntryHash)>>> BuildOverrideIndex(
         IEnumerable<IModLayer> enabledLayers)
     {
@@ -41,7 +42,7 @@ public static class FragmentMerge
             {
                 if (!overrides.TryGetValue(containerHash, out Dictionary<string, List<(IModLayer, uint)>>? byFragment))
                 {
-                    byFragment = new Dictionary<string, List<(IModLayer, uint)>>(StringComparer.OrdinalIgnoreCase);
+                    byFragment = new Dictionary<string, List<(IModLayer, uint)>>(FcbFragments.IdComparer);
                     overrides[containerHash] = byFragment;
                 }
                 foreach (FragmentOverride fo in layerFragments)

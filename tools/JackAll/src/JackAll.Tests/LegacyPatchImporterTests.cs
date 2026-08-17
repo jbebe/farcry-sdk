@@ -77,9 +77,12 @@ public class LegacyPatchImporterTests : IDisposable
             container = vfs.Files[fragment.ContainerHash!.Value];
             fragmentId = fragment.FragmentId!;
 
-            var replacement = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
-            replacement.Values.Add(0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
-            fragmentReplacementXml = Encoding.UTF8.GetBytes(FcbXml.ToXml(replacement, FcbClassDefinitions.Empty).IndexXml);
+            // Derived from the vanilla fragment with one added value, keeping its identity fields -
+            // the realistic edit shape, and what lets the import attribute the change to this exact
+            // fragment id rather than falling back to a coarser unit.
+            FcbObject vanillaFragment = FcbFragments.Find(
+                FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!), fragmentId)!;
+            fragmentReplacementXml = TestSupport.RenderWithValueSetAt(vanillaFragment, [], 0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
         }
 
         var mod = MakeZipMod(
@@ -122,12 +125,11 @@ public class LegacyPatchImporterTests : IDisposable
         Assert.Contains(wholeFileHash, workspace.Hashes);
         Assert.Equal(wholeFileContent, workspace.Read(wholeFileHash));
 
-        // Not matched by id: FcbXml derives a fragment's id from its own content (the "Name" value),
-        // and this hand-built replacement has none, so the id the splice landed at can legitimately
-        // differ from the original fragmentId captured above (see PatchBuilderTests' identical note) -
-        // what matters is that exactly one fragment of this container was staged, with the right bytes.
+        // The edit kept the fragment's identity fields, so the staged override lands on the very id
+        // that was edited - not a coarser group or whole-file fallback - with the edited content.
         Assert.True(workspace.FragmentOverrides.TryGetValue(container.Hash, out var overrides));
         FragmentOverride staged = Assert.Single(overrides!);
+        Assert.True(FcbFragments.IdComparer.Equals(fragmentId, staged.FragmentId));
         Assert.Equal(fragmentReplacementXml, workspace.Read(staged.EntryHash));
     }
 

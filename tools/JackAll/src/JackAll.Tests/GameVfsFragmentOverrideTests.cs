@@ -217,27 +217,8 @@ public class GameVfsFragmentOverrideTests : IDisposable
     /// one contributing layer the merge is a proven no-op pass-through, but a real multi-layer merge
     /// test needs edits that actually derive from the same ancestor to mean anything).</summary>
     private static FcbObject VanillaFragmentObject(GameVfs vfs, VfsFile fragment)
-    {
-        FcbObject root = FcbDocument.Deserialize(vfs.ReadOriginal(fragment.ContainerHash!.Value)!);
-        int index = FcbXml.ListFragmentIds(root).ToList().IndexOf(fragment.FragmentId!);
-        return root.Children[index];
-    }
-
-    private static byte[] RenderWithTopLevelValueSet(FcbObject vanilla, uint valueHash, byte[] value)
-    {
-        var edited = new FcbObject { TypeHash = vanilla.TypeHash };
-        foreach ((uint hash, byte[] existing) in vanilla.Values)
-        {
-            edited.Values[hash] = existing;
-        }
-        edited.Values[valueHash] = value;
-        foreach (FcbObject child in vanilla.Children)
-        {
-            edited.Children.Add(child);
-        }
-        string xml = FcbXml.ToXml(edited, FcbClassDefinitions.Empty).IndexXml;
-        return System.Text.Encoding.UTF8.GetBytes(xml);
-    }
+        => FcbFragments.Find(
+            FcbDocument.Deserialize(vfs.ReadOriginal(fragment.ContainerHash!.Value)!), fragment.FragmentId!)!;
 
     [Fact]
     public void Two_mods_editing_different_fields_of_the_same_fragment_both_survive_in_the_merged_read()
@@ -249,19 +230,22 @@ public class GameVfsFragmentOverrideTests : IDisposable
 
         VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
         FcbObject vanilla = VanillaFragmentObject(vfs, fragment);
-        if (vanilla.Children.Count < 2) return; // fixture too small to prove non-overlapping edits safely
+        if (TestSupport.TwoDistantEditPaths(vanilla) is not { } paths)
+        {
+            return; // fixture too small to prove non-overlapping edits safely
+        }
 
         var zipDir = Path.Combine(_sandbox, "zip_src");
         Directory.CreateDirectory(zipDir);
         string zipEntryPath = Path.Combine(zipDir, fragment.Path.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(zipEntryPath)!);
-        File.WriteAllBytes(zipEntryPath, TestSupport.RenderWithChildValueSet(vanilla, 0, 0xAAAA0001, [0x01, 0x00, 0x00, 0x00]));
+        File.WriteAllBytes(zipEntryPath, TestSupport.RenderWithValueSetAt(vanilla, paths.A, 0xAAAA0001, [0x01, 0x00, 0x00, 0x00]));
         string zipPath = Path.Combine(_sandbox, "mod_a.zip");
         System.IO.Compression.ZipFile.CreateFromDirectory(zipDir, zipPath);
         var zipMod = new ZipModLayer(zipPath);
 
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
-        workspace.Stage(fragment.Hash, fragment.Path, "xml", TestSupport.RenderWithChildValueSet(vanilla, 1, 0xAAAA0002, [0x02, 0x00, 0x00, 0x00]));
+        workspace.Stage(fragment.Hash, fragment.Path, "xml", TestSupport.RenderWithValueSetAt(vanilla, paths.B, 0xAAAA0002, [0x02, 0x00, 0x00, 0x00]));
 
         vfs.Rebuild([zipMod, workspace]);
 
@@ -270,15 +254,15 @@ public class GameVfsFragmentOverrideTests : IDisposable
         Assert.Equal("multiple mods", mergedFragment.SourceName);
 
         FcbObject merged = FcbXml.FromXml(System.Text.Encoding.UTF8.GetString(vfs.Read(fragment.Hash)));
-        Assert.Equal([0x01, 0x00, 0x00, 0x00], merged.Children[0].Values[0xAAAA0001]);
-        Assert.Equal([0x02, 0x00, 0x00, 0x00], merged.Children[1].Values[0xAAAA0002]);
+        Assert.Equal([0x01, 0x00, 0x00, 0x00], TestSupport.NodeAt(merged, paths.A).Values[0xAAAA0001]);
+        Assert.Equal([0x02, 0x00, 0x00, 0x00], TestSupport.NodeAt(merged, paths.B).Values[0xAAAA0002]);
 
-        // The container composes both edits too, not just the standalone fragment row.
+        // The container composes both edits too, not just the standalone fragment row. Both edits
+        // preserve the fragment's identity fields, so the same id still resolves in the composed tree.
         FcbObject container = FcbDocument.Deserialize(vfs.Read(fragment.ContainerHash!.Value));
-        int index = FcbXml.ListFragmentIds(FcbDocument.Deserialize(vfs.ReadOriginal(fragment.ContainerHash!.Value)!))
-            .ToList().IndexOf(fragment.FragmentId!);
-        Assert.Equal([0x01, 0x00, 0x00, 0x00], container.Children[index].Children[0].Values[0xAAAA0001]);
-        Assert.Equal([0x02, 0x00, 0x00, 0x00], container.Children[index].Children[1].Values[0xAAAA0002]);
+        FcbObject composed = FcbFragments.Find(container, fragment.FragmentId!)!;
+        Assert.Equal([0x01, 0x00, 0x00, 0x00], TestSupport.NodeAt(composed, paths.A).Values[0xAAAA0001]);
+        Assert.Equal([0x02, 0x00, 0x00, 0x00], TestSupport.NodeAt(composed, paths.B).Values[0xAAAA0002]);
     }
 
     [Fact]
@@ -291,22 +275,25 @@ public class GameVfsFragmentOverrideTests : IDisposable
 
         VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
         FcbObject vanilla = VanillaFragmentObject(vfs, fragment);
-        if (vanilla.Values.Count == 0) return; // fixture has nothing existing to collide on
+        // A prototype fragment's own value table can be empty - its Entity child's never is.
+        int[] targetPath = vanilla.Values.Count > 0 ? [] : [0];
+        FcbObject target = TestSupport.NodeAt(vanilla, targetPath);
+        if (target.Values.Count == 0) return; // fixture has nothing existing to collide on
 
-        uint existingHash = vanilla.Values.Keys.First();
+        uint existingHash = target.Values.Keys.First();
 
         var zipDir = Path.Combine(_sandbox, "zip_src_conflict");
         Directory.CreateDirectory(zipDir);
         string zipEntryPath = Path.Combine(zipDir, fragment.Path.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(zipEntryPath)!);
         // Same existing field, different content - a genuine collision, not two independent adds.
-        File.WriteAllBytes(zipEntryPath, RenderWithTopLevelValueSet(vanilla, existingHash, [0x01, 0x00, 0x00, 0x00]));
+        File.WriteAllBytes(zipEntryPath, TestSupport.RenderWithValueSetAt(vanilla, targetPath, existingHash, [0x01, 0x00, 0x00, 0x00]));
         string zipPath = Path.Combine(_sandbox, "mod_conflict.zip");
         System.IO.Compression.ZipFile.CreateFromDirectory(zipDir, zipPath);
         var zipMod = new ZipModLayer(zipPath);
 
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
-        workspace.Stage(fragment.Hash, fragment.Path, "xml", RenderWithTopLevelValueSet(vanilla, existingHash, [0xFF, 0x00, 0x00, 0x00]));
+        workspace.Stage(fragment.Hash, fragment.Path, "xml", TestSupport.RenderWithValueSetAt(vanilla, targetPath, existingHash, [0xFF, 0x00, 0x00, 0x00]));
 
         vfs.Rebuild([zipMod, workspace]);
 

@@ -27,7 +27,7 @@ public sealed record VfsFile(
     /// <summary>The containing `.fcb`'s hash, when this entry is a synthetic fragment row rather
     /// than a real archive/mod entry — null otherwise.</summary>
     uint? ContainerHash = null,
-    /// <summary>This fragment's <c>FcbXml.ListFragmentIds</c> id, alongside <see cref="ContainerHash"/>.</summary>
+    /// <summary>This fragment's <c>FcbFragments</c> id, alongside <see cref="ContainerHash"/>.</summary>
     string? FragmentId = null,
     /// <summary>Set only on a *container's own* row (never a fragment row) when it has at least one
     /// active fragment override but no whole-file one — the contributing mod's name, or "multiple
@@ -564,7 +564,7 @@ public sealed class GameVfs : IDisposable
     }
 
     /// <summary>
-    /// Adds fragment rows for `.fcb` files that split (see FcbXml.ListFragmentIds) — this is what lets
+    /// Adds fragment rows for `.fcb` files that split (see FcbFragments) — this is what lets
     /// the tree/file view browse into one with no dedicated UI, since a fragment's path is just the
     /// container's own path plus one more segment (docs/design/fcb-fragment-overlays.md). Mutates
     /// <paramref name="files"/> in place and refreshes <see cref="_fragmentMemo"/> to match.
@@ -723,9 +723,10 @@ public sealed class GameVfs : IDisposable
                 // Every override id with no match above adds a child the vanilla container never had
                 // (see FragmentMerge.Resolve's empty-ancestor case) — it still gets its own synthetic
                 // row so it's browsable on its own, not just visible once its container is read whole.
+                var listedIds = new HashSet<string>(containerFragments.Select(f => f.Id), FcbFragments.IdComparer);
                 foreach ((string fragmentId, List<(IModLayer Layer, uint EntryHash)> contributors) in byFragment)
                 {
-                    if (containerFragments.Any(f => string.Equals(f.Id, fragmentId, StringComparison.OrdinalIgnoreCase)))
+                    if (listedIds.Contains(fragmentId))
                     {
                         continue; // already produced above, as an override of an existing child
                     }
@@ -899,8 +900,8 @@ public sealed class GameVfs : IDisposable
     /// been seen) or a `.fcb` currently overridden by a mod (including living in the volatile
     /// `patch.dat`), whose structure isn't a fixed fact about the game and so is never written to the
     /// on-disk <see cref="_cache"/>. It's still worth the full
-    /// <see cref="FcbXml.ListFragmentsWithSize"/> pass (accurate sizes, not just
-    /// <see cref="FcbXml.ListFragmentIds"/>) even for a non-cacheable entry: the in-memory
+    /// <see cref="FcbXml.ListFragmentsWithSize"/> pass (sizes included, not just the bare
+    /// <see cref="FcbFragments"/> ids) even for a non-cacheable entry: the in-memory
     /// <see cref="_fragmentMemo"/> already keeps this from being redone on every call — it's correctly
     /// invalidated only when that hash's winning source actually changes (kind or name), which is
     /// exactly when a mod starts or stops overriding it — so this only ever runs once per real change,
@@ -916,8 +917,7 @@ public sealed class GameVfs : IDisposable
     {
         try
         {
-            (FcbObject root, IReadOnlyList<long> childByteSizes) = FcbDocument.DeserializeWithChildSizes(ReadFromSource(container));
-            return FcbXml.ListFragmentsWithSize(root, childByteSizes);
+            return FcbXml.ListFragmentsWithSize(FcbDocument.Deserialize(ReadFromSource(container)));
         }
         catch
         {
@@ -976,7 +976,7 @@ public sealed class GameVfs : IDisposable
             FcbObject root = FcbDocument.Deserialize(ReadFromSource(files[file.ContainerHash!.Value]));
             string xml = FcbXml.ExtractFragment(root, file.FragmentId!, _fcbDefinitions)
                 ?? throw new InvalidDataException(
-                    $"'{file.FragmentId}' no longer matches any group in '{file.Directory}' - it may have changed shape.");
+                    $"'{file.FragmentId}' no longer matches anything in '{file.Directory}' - it may have changed shape.");
             return new UTF8Encoding(false).GetBytes(xml);
         }
 

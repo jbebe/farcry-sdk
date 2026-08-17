@@ -81,26 +81,26 @@ public static class FcbDocument
     }
 
     /// <summary>
-    /// Like <see cref="Deserialize"/>, but also reports each of the root's own direct children's exact
-    /// on-disk byte span - captured for free while walking the stream this decode already has to do,
-    /// rather than a second pass that re-serializes each child just to measure it (see
-    /// <see cref="FcbXml.ListFragmentsWithSize"/>, the one consumer). This is the file's own raw
-    /// size, dedup tricks and all (see class remarks): a child that happens to be an object-level
-    /// backreference to an earlier subtree reports as little as 5 bytes - the marker and pointer it
-    /// actually occupies here, not the size of whatever it points at. Deliberate: it's genuinely how
-    /// many bytes of the shipped file that entry costs, same as <c>ReadHeader</c>'s bytes not counting
-    /// toward the *next* file's size.
+    /// The exact byte length <see cref="Serialize"/> would emit for <paramref name="obj"/> alone (no
+    /// file header) — the fully expanded form, since this writer never emits the dedup tricks (see
+    /// class remarks). A pure counting walk, no allocation: what lets <see cref="FcbXml.ListFragmentsWithSize"/>
+    /// size a fragment at any depth without re-serializing it.
     /// </summary>
-    public static (FcbObject Root, IReadOnlyList<long> ChildByteSizes) DeserializeWithChildSizes(byte[] fcb)
+    public static long EncodedSize(FcbObject obj)
     {
-        using var input = new MemoryStream(fcb, writable: false);
-        ReadHeader(input);
-
-        var pointers = new List<FcbObject>();
-        var childByteSizes = new List<long>();
-        FcbObject root = DeserializeObject(input, pointers, childByteSizes);
-        return (root, childByteSizes);
+        long size = CountSize((uint)obj.Children.Count) + 4 + CountSize((uint)obj.Values.Count);
+        foreach ((_, byte[] value) in obj.Values)
+        {
+            size += 4 + CountSize((uint)value.Length) + value.Length;
+        }
+        foreach (FcbObject child in obj.Children)
+        {
+            size += EncodedSize(child);
+        }
+        return size;
     }
+
+    private static int CountSize(uint value) => value < OffsetMarker ? 1 : 5;
 
     private static void ReadHeader(MemoryStream input)
     {
@@ -140,11 +140,7 @@ public static class FcbDocument
         return output.ToArray();
     }
 
-    /// <summary><paramref name="childByteSizes"/>, when given, collects the on-disk byte span of
-    /// *this* object's own direct children only (not grandchildren - recursive calls below never pass
-    /// it on), which is exactly what <see cref="DeserializeWithChildSizes"/> needs from its one call at
-    /// the root.</summary>
-    private static FcbObject DeserializeObject(MemoryStream input, List<FcbObject> pointers, List<long>? childByteSizes = null)
+    private static FcbObject DeserializeObject(MemoryStream input, List<FcbObject> pointers)
     {
         uint childCount = ReadCount(input, out bool isOffset);
         if (isOffset)
@@ -170,9 +166,7 @@ public static class FcbDocument
 
         for (int i = 0; i < childCount; i++)
         {
-            long start = input.Position;
             obj.Children.Add(DeserializeObject(input, pointers));
-            childByteSizes?.Add(input.Position - start);
         }
 
         return obj;

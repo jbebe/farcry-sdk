@@ -17,14 +17,15 @@ namespace JackAll.Core.Mods;
 /// the file but never override it, since you couldn't produce a path that hashes to it.
 ///
 /// A third shape, layered on top of the first: a path with a segment (other than the last) ending in
-/// <c>.fcb</c> overrides one fragment of a splitting `.fcb` (see <c>FcbXml.ListFragmentIds</c>'s
-/// <c>NN_Name.xml</c> naming) rather than being a standalone archive entry — see
-/// <see cref="ModPathTarget.ContainerHash"/>. The same nameless-entry problem the <c>_hash\</c>
+/// <c>.fcb</c> overrides one fragment of a splitting `.fcb` — everything after that segment is the
+/// fragment id, which may itself be nested (<c>FcbFragments</c>' path-shaped ids, e.g.
+/// <c>entitylibrary.fcb\vehicle\land\jeep.xml</c>) — rather than being a standalone archive entry;
+/// see <see cref="ModPathTarget.ContainerHash"/>. The same nameless-entry problem the <c>_hash\</c>
 /// convention solves for a plain file applies one level deeper here too: an *unnamed* container's own
 /// display path (<c>GameVfs.SyntheticPath</c>, e.g. <c>_unknown\data\1a2b3c4d.fcb</c>) is a display
 /// convenience that deliberately doesn't hash back to the real archive hash, unlike a named
 /// container's own recovered path — so overriding a fragment inside one needs the container's hash
-/// spelled out directly: <c>_hash\1a2b3c4d.fcb\03_Foo.xml</c>.
+/// spelled out directly: <c>_hash\1a2b3c4d.fcb\&lt;fragment id&gt;</c>.
 /// </remarks>
 internal static class ModPathHashing
 {
@@ -34,7 +35,7 @@ internal static class ModPathHashing
     /// Vortex's own placeholder, dropped into any directory its deployment method would otherwise
     /// leave empty (hardlink/symlink deployment can't represent an empty folder, so it needs some
     /// file there to preserve it). It can land anywhere in a deployed mod's tree, including inside a
-    /// fragment-override folder that has no real overrides staged in it (an empty `NN_Name.fcb\`) -
+    /// fragment-override folder that has no real overrides staged in it (an empty container `.fcb\`) -
     /// treating it as content there means handing raw junk to <c>FcbXml.FromXml</c>. Not a mod file
     /// under any convention this class knows, so it's filtered before anything else runs.
     /// </summary>
@@ -80,7 +81,7 @@ internal static class ModPathHashing
     }
 
     /// <summary>
-    /// <c>_hash\&lt;hex&gt;[.ext]</c> (a plain unnamed override), or <c>_hash\&lt;hex&gt;.fcb\NN_Name.xml</c>
+    /// <c>_hash\&lt;hex&gt;[.ext]</c> (a plain unnamed override), or <c>_hash\&lt;hex&gt;.fcb\&lt;fragment id&gt;</c>
     /// (a fragment override inside an unnamed container — the hex is the *container's* hash, read
     /// straight off this segment rather than computed from any path, since none exists for it).
     /// </summary>

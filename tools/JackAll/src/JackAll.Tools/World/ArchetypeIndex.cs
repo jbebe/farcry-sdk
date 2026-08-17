@@ -45,8 +45,8 @@ public sealed record ArchetypeLayer(string Path, bool IsConfirmed = true)
 }
 
 /// <summary>One declaration of an archetype: what declares it, and the node it declares.</summary>
-/// <param name="FragmentId">The <c>NN_Name.xml</c> group the declaration sits in, or null when the
-/// container doesn't split into fragments.</param>
+/// <param name="FragmentId">The declaration's own fragment id (see <see cref="FcbFragments"/> — one
+/// per archetype), or null when the container doesn't split into fragments.</param>
 public sealed record ArchetypeDefinition(
     string Name, ArchetypeLayer Layer, uint ContainerHash, string? FragmentId, FcbObject Node);
 
@@ -239,20 +239,24 @@ public sealed partial class ArchetypeIndex
     /// <summary>
     /// Root to group to prototype to its <c>Entity</c> child - the same two levels
     /// <c>BuildArchetypesMap</c> descends, so nothing gets indexed that the engine would never see.
-    /// Each group is also exactly one <c>NN_Name.xml</c> fragment, which is what makes a declaration
-    /// routable back to the file a mod would override.
+    /// Each prototype is also exactly one fragment, which is what makes a declaration routable back
+    /// to the override unit a mod would stage.
     /// </summary>
     private static void CollectLibrary(
         FcbObject root, ArchetypeLayer layer, Dictionary<string, List<ArchetypeDefinition>> byName)
     {
         uint containerHash = NameHash.Compute(layer.Path);
-        IReadOnlyList<string> fragmentIds = FcbXml.ListFragmentIds(root);
+        var fragmentIdByPrototype = new Dictionary<FcbObject, string>(ReferenceEqualityComparer.Instance);
+        foreach (FcbFragment fragment in FcbFragments.List(root))
+        {
+            fragmentIdByPrototype[fragment.Node] = fragment.Id;
+        }
 
         for (int group = 0; group < root.Children.Count; group++)
         {
-            string? fragmentId = group < fragmentIds.Count ? fragmentIds[group] : null;
             foreach (FcbObject prototype in root.Children[group].Children)
             {
+                string? fragmentId = fragmentIdByPrototype.GetValueOrDefault(prototype);
                 if (prototype.TypeHash != WorldHashes.EntityPrototype)
                 {
                     continue;

@@ -55,8 +55,8 @@ public partial class MapTabView : UserControl
     /// <summary>Raised for "Archetype in Library" - the host owns cross-tab navigation.</summary>
     public event Action<string, string>? ArchetypeRequested;
 
-    /// <summary>Raised for "Open sector in XML editor", with the sector's game-relative path and the
-    /// entity to position on.</summary>
+    /// <summary>Raised for "Open entity in XML editor", with the sector's game-relative path and the
+    /// entity to open.</summary>
     public event Action<string, ulong>? SectorEditorRequested;
 
     private PendingLoad? _pendingLoad;

@@ -47,15 +47,26 @@ public sealed partial class MainViewModel
     public string? ReadOriginalFragment(VfsFile file)
         => _vfs!.ReadOriginalFragment(file.ContainerHash!.Value, file.FragmentId!);
 
-    /// <summary>One container's fragment rows by id, so a caller holding a fragment id (the Library
-    /// tab, routing an archetype back to its file) can cache the lookup instead of rescanning the
-    /// whole index per click.</summary>
+    /// <summary>One container's fragment rows by id, so a caller resolving many ids in the same
+    /// container (the Library tab, routing archetypes back to their files) can cache the lookup
+    /// instead of rescanning the whole index per click. Keyed via
+    /// <see cref="FcbFragments.IdComparer"/>, so an entity row resolves from its bare
+    /// <c>&lt;disEntityId&gt;.xml</c> too.</summary>
     public IReadOnlyDictionary<string, VfsFile> FragmentsOf(uint containerHash)
         => _vfs is null
             ? new Dictionary<string, VfsFile>()
             : _vfs.Files.Values
                 .Where(f => f.ContainerHash == containerHash && f.FragmentId is not null)
-                .ToDictionary(f => f.FragmentId!, StringComparer.OrdinalIgnoreCase);
+                .ToDictionary(f => f.FragmentId!, FcbFragments.IdComparer);
+
+    /// <summary>One fragment row by container and id — for a caller resolving a single id (the Map
+    /// tab's entity jump), which shouldn't pay <see cref="FragmentsOf"/>'s whole-container
+    /// dictionary just to read one entry out of it.</summary>
+    public VfsFile? FindFragment(uint containerHash, string fragmentId)
+        => _vfs?.Files.Values.FirstOrDefault(f =>
+            f.ContainerHash == containerHash
+            && f.FragmentId is not null
+            && FcbFragments.IdComparer.Equals(f.FragmentId, fragmentId));
 
     /// <summary>What "saving" means for a fragment editor, wherever it was opened from: render the
     /// edited tree and stage it over <paramref name="file"/>.</summary>
@@ -120,7 +131,7 @@ public sealed partial class MainViewModel
     /// </summary>
     public void Replace(VfsFile file, byte[] content)
     {
-        // A named container's fragment path (container's real path + its NN_Name.xml id) hashes back
+        // A named container's fragment path (container's real path + its fragment id) hashes back
         // to the right container on the next scan. An *unnamed* container's own path is only ever the
         // synthetic display placeholder (GameVfs.SyntheticPath) - it doesn't hash back to anything -
         // so its fragments have to go through the same _hash\ convention a plain unnamed file uses,

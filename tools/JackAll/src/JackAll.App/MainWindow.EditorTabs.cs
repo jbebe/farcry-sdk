@@ -75,16 +75,24 @@ public partial class MainWindow
         });
 
     /// <summary>
-    /// The Map tab's "Open sector in XML editor": the same editor a fragment gets, but over a whole
-    /// <c>worldsector*.data.fcb</c>, positioned on one entity. Worldsector containers do not split into
-    /// fragments (their root is <c>WorldSector</c>, and all but a handful of entities sit under the one
-    /// <c>main</c> mission layer), so this is a whole-file override rather than a per-entity one.
+    /// The Map tab's "Open entity in XML editor": worldsector containers split into one fragment per
+    /// placed entity (see <c>FcbFragments</c>), so this opens just the entity's own override unit —
+    /// saving stages that one entity, and two mods editing different entities of the same sector no
+    /// longer conflict. Falls back to the whole <c>worldsector*.data.fcb</c>, positioned on the
+    /// entity, when no fragment row exists for it (an entity with no <c>disEntityId</c>, or the
+    /// background fragment pass hasn't reached this sector yet) — that path stages the whole sector.
     /// </summary>
     private void OpenSectorEditorTab(string sectorPath, ulong entityId)
     {
         if (_vm.FindByHash(NameHash.Compute(sectorPath)) is not { } file)
         {
             Warn($"'{sectorPath}' isn't in the merged filesystem.");
+            return;
+        }
+
+        if (_vm.FindFragment(file.Hash, FcbFragments.EntityFragmentId(entityId)) is { } entityFragment)
+        {
+            OpenFcbEditorTab(entityFragment);
             return;
         }
 

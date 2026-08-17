@@ -21,8 +21,8 @@ public interface IModLayer
     /// <summary>The relative path, when this layer knows it (a <c>_hash\</c> entry doesn't).</summary>
     string? PathOf(uint hash);
 
-    /// <summary>Container hash -&gt; the fragments (see <c>FcbXml.ListFragmentIds</c>) this layer
-    /// overrides inside it — a path shaped <c>container.fcb\NN_Name.xml</c>. Each
+    /// <summary>Container hash -&gt; the fragments (see <c>FcbFragments</c>) this layer overrides
+    /// inside it — a path shaped <c>container.fcb\&lt;fragment id&gt;</c>, itself possibly nested. Each
     /// <see cref="FragmentOverride.EntryHash"/> is a valid <see cref="Read"/> argument, same as any
     /// hash in <see cref="Hashes"/>.</summary>
     IReadOnlyDictionary<uint, IReadOnlyList<FragmentOverride>> FragmentOverrides { get; }

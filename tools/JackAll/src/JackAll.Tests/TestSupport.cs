@@ -38,51 +38,85 @@ internal static class TestSupport
 
     /// <summary>What <paramref name="obj"/> would serialize to on its own, fully expanded (no
     /// backreference dedup - <see cref="FcbDocument.Serialize"/> never emits it). Reuses the public
-    /// <see cref="FcbDocument.Serialize"/>/<see cref="FcbDocument.Deserialize"/> pair rather than a
-    /// dedicated size-computing method in <see cref="FcbDocument"/> itself, since this is only ever
-    /// needed as a test oracle - production code gets a fragment's real on-disk size straight off
-    /// <see cref="FcbDocument.DeserializeWithChildSizes"/> instead, which this exists to check against.
-    /// 16 is the fixed "FCbn" file header's size (4-byte signature + 2-byte version + 2-byte flags +
-    /// two 4-byte counts - see <see cref="FcbDocument"/>'s own remarks); <c>Serialize</c> always writes
-    /// it once per call, so it has to be subtracted back out to get just <paramref name="obj"/>'s own
-    /// bytes.</summary>
+    /// <see cref="FcbDocument.Serialize"/>/<see cref="FcbDocument.Deserialize"/> pair rather than
+    /// <see cref="FcbDocument.EncodedSize"/> itself, since this is the independent oracle that method
+    /// is checked against. 16 is the fixed "FCbn" file header's size (4-byte signature + 2-byte
+    /// version + 2-byte flags + two 4-byte counts - see <see cref="FcbDocument"/>'s own remarks);
+    /// <c>Serialize</c> always writes it once per call, so it has to be subtracted back out to get
+    /// just <paramref name="obj"/>'s own bytes.</summary>
     public static long FullyExpandedFcbSize(FcbObject obj) => FcbDocument.Serialize(obj).Length - 16;
 
-    /// <summary>Sets one value on the child at <paramref name="childIndex"/>, leaving every other
-    /// child (and the fragment's own top-level values) byte-for-byte untouched — used by the
-    /// Milestone 3 merge tests (docs/design/fcb-fragment-overlays.md) to build two mods' edits that
-    /// land in genuinely different, non-adjacent regions of the rendered XML (different children
-    /// render as widely separated <c>&lt;object&gt;</c> blocks), unlike two edits both appended at the
-    /// same tail position, which even diff3 correctly treats as a real conflict.</summary>
-    public static byte[] RenderWithChildValueSet(FcbObject vanilla, int childIndex, uint valueHash, byte[] value)
+    /// <summary>Renders <paramref name="vanilla"/> with one value set on the node at
+    /// <paramref name="childPath"/> (an index path from the fragment's own root; empty edits the root
+    /// itself), leaving everything else byte-for-byte untouched — used by the merge tests
+    /// (docs/design/fcb-fragment-overlays.md Milestone 3) to build two mods' edits that land in
+    /// genuinely different regions of the rendered XML, or, aimed at the same existing value, a
+    /// genuine collision.</summary>
+    public static byte[] RenderWithValueSetAt(FcbObject vanilla, int[] childPath, uint valueHash, byte[] value)
     {
-        var edited = new FcbObject { TypeHash = vanilla.TypeHash };
-        foreach ((uint hash, byte[] existing) in vanilla.Values)
-        {
-            edited.Values[hash] = existing;
-        }
-        for (int i = 0; i < vanilla.Children.Count; i++)
-        {
-            FcbObject child = vanilla.Children[i];
-            if (i != childIndex)
-            {
-                edited.Children.Add(child);
-                continue;
-            }
-
-            var editedChild = new FcbObject { TypeHash = child.TypeHash };
-            foreach ((uint hash, byte[] existing) in child.Values)
-            {
-                editedChild.Values[hash] = existing;
-            }
-            editedChild.Values[valueHash] = value;
-            foreach (FcbObject grandchild in child.Children)
-            {
-                editedChild.Children.Add(grandchild);
-            }
-            edited.Children.Add(editedChild);
-        }
-        string xml = FcbXml.ToXml(edited, FcbClassDefinitions.Empty).IndexXml;
+        string xml = FcbXml.RenderObject(
+            CloneWithValueSet(vanilla, childPath, 0, valueHash, value), FcbClassDefinitions.Empty);
         return System.Text.Encoding.UTF8.GetBytes(xml);
+    }
+
+    private static FcbObject CloneWithValueSet(FcbObject node, int[] path, int depth, uint valueHash, byte[] value)
+    {
+        var clone = new FcbObject { TypeHash = node.TypeHash };
+        foreach ((uint hash, byte[] existing) in node.Values)
+        {
+            clone.Values[hash] = existing;
+        }
+        if (depth == path.Length)
+        {
+            clone.Values[valueHash] = value;
+        }
+        for (int i = 0; i < node.Children.Count; i++)
+        {
+            clone.Children.Add(depth < path.Length && path[depth] == i
+                ? CloneWithValueSet(node.Children[i], path, depth + 1, valueHash, value)
+                : node.Children[i]);
+        }
+        return clone;
+    }
+
+    /// <summary>Index paths to the first pair of sibling subtrees below <paramref name="fragment"/> —
+    /// two edit targets whose rendered XML is far enough apart for diff3 to merge cleanly. Null when
+    /// the tree never branches (a fragment too small to prove non-overlapping edits on).</summary>
+    public static (int[] A, int[] B)? TwoDistantEditPaths(FcbObject fragment)
+    {
+        var prefix = new List<int>();
+        FcbObject node = fragment;
+        while (node.Children.Count < 2)
+        {
+            if (node.Children.Count == 0)
+            {
+                return null;
+            }
+            prefix.Add(0);
+            node = node.Children[0];
+        }
+        return ([.. prefix, 0], [.. prefix, 1]);
+    }
+
+    /// <summary>The node at an index path produced by <see cref="TwoDistantEditPaths"/>.</summary>
+    public static FcbObject NodeAt(FcbObject root, int[] childPath)
+        => childPath.Aggregate(root, (node, index) => node.Children[index]);
+
+    /// <summary>Depth-first search for the node carrying <paramref name="valueHash"/> — how a test
+    /// relocates a spliced replacement that deliberately carries no identity of its own.</summary>
+    public static FcbObject? FindNodeWithValue(FcbObject node, uint valueHash)
+    {
+        if (node.Values.ContainsKey(valueHash))
+        {
+            return node;
+        }
+        foreach (FcbObject child in node.Children)
+        {
+            if (FindNodeWithValue(child, valueHash) is { } found)
+            {
+                return found;
+            }
+        }
+        return null;
     }
 }

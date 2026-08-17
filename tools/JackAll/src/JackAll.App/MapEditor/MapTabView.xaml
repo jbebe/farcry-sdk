@@ -118,9 +118,9 @@
                                             Padding="7,3" Margin="0,0,6,0" IsEnabled="False"
                                             Click="ShowArchetype_Click"
                                             ToolTip="Opens the Library tab on the archetype this entity merges over. Disabled for a standalone entity, which has none." />
-                                    <Button x:Name="OpenSectorButton" Content="Open sector in XML editor"
+                                    <Button x:Name="OpenSectorButton" Content="Open entity in XML editor"
                                             Padding="7,3" IsEnabled="False" Click="OpenSector_Click"
-                                            ToolTip="Opens the whole worldsector.data.fcb this entity lives in, positioned on it - these files do not split into fragments, so saving stages the whole sector." />
+                                            ToolTip="Opens this entity's own fragment of its worldsector.data.fcb, so saving stages just this one entity. Falls back to the whole sector for an entity with no disEntityId." />
                                 </StackPanel>
                                 <ItemsControl x:Name="EntityFields" Margin="0,8,0,0">
                                     <ItemsControl.ItemTemplate>
