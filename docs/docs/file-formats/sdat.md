@@ -228,14 +228,41 @@ document-wide search instead of by that parent shifts every layer index.
 
 `sector#.desc.fcb`'s `DetailTexMask` is not a hash despite the field's FCB type tag: it is **four
 byte-sized layer indices packed into a `u32`, with `0xFF` for an unused slot**, naming the (up to)
-four textures that sector blends. `CSector::GetDetailTexMask(int)` reads one. Shipped sectors
-normally use three, and the unused slot is the **low** byte: `0x0D0F29FF` names layers 41, 15 and 13.
-Sectors that use all four spend two of them on the `_X` and `_Y` projections of one rock texture.
+four textures that sector blends. `CSector::GetDetailTexMask(int)` reads one. The unused slot is
+always the **low** byte: `0x0D0F29FF` names layers 41, 15 and 13. Measured over a spread of 117
+`world1` sectors, the low byte is unused in only **42%** — most sectors do use all four — and the
+high byte is never unused:
+
+| slot | byte | unused | what it holds |
+|---|---|---|---|
+| 3 | high | 0% | ground layer |
+| 2 | | 0.9% | ground layer |
+| 1 | | 5.1% | the `_Y` rock projection where the sector has cliffs |
+| 0 | low | 41.9% | the `_X` rock projection, paired with slot 1 |
+
+Slots 0 and 1 are consistently consecutive indices — `44/43`, `36/35`, `26/25` — which the layer
+table shows are the `Mountain_Rock_X` and `Mountain_Rock_Y` entries of one biome.
 
 The matching weights live in `generated/sdat/atlas#_mask.xbt` — 128×128 DXT1, one atlas per 2×2
-sectors, so one texel per world unit. Its R/G/B channels are the weights for `DetailTexMask` slots
-0/1/2 and **sum to 255 at every texel**. `atlas#_color.xbt` and `atlas#_diffuse.xbt` share the atlas's
+sectors, so one texel per world unit. `atlas#_color.xbt` and `atlas#_diffuse.xbt` share the atlas's
 dimensions and layout; `sd#_shadow.xbt` is per sector rather than per atlas.
+
+### Three channels, four layers
+
+The mask has only three channels for a sector's four slots, so **the fourth weight is implicit**:
+whatever `1 - (r + g + b)` leaves over, belonging to the low byte's layer. Sampling 65,616 DXT1
+block endpoints across `world1`:
+
+- **85%** sum to roughly full (232–280 of 765), so the three explicit weights carry those texels and
+  the implicit one is zero
+- **2.4%** are near black (under 24), meaning that texel is essentially **all** implicit layer
+- 1% exceed full, so a renderer must still normalise by the total rather than trusting the sum
+
+An earlier version of this page claimed the channels "sum to 255 at every texel". That is wrong, and
+the near-black population is exactly the cliff faces: a black mask texel means solid rock, not
+absence of data. Treating the mask as three normalised weights leaves those texels with no layer at
+all, which is why JackAll drew flat grey patches on hillsides until the implicit fourth weight was
+added.
 
 The atlas number is not the sector id. `CSector::GetFilePaths` computes it as
 `2 * S * (row / 2) + (col / 2) * 2` for a world `S` sectors wide — equivalently

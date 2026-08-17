@@ -128,23 +128,27 @@ public sealed class TerrainMesh3D : IDisposable
             vec3 blendedDetail(float height)
             {
                 vec3 w = sampleAtlas(blendWeights, world);
-                w /= max(w.r + w.g + w.b, 0.001);
 
-                // The unused DetailTexMask slot is the low byte far more often than the high one, so
-                // the three weighted layers are its upper bytes, highest first.
+                // The mask carries three weights but a sector names four layers: the fourth weight is
+                // whatever the three leave over, and it belongs to the low byte - the cliff
+                // projection. That is why a black mask texel means solid rock rather than nothing,
+                // and why the sectors leaving the low byte unused are the ones with no cliffs.
                 vec4 idx = sectorLayerIndices();
-                float chosen[3] = float[3](idx.a, idx.b, idx.g);
+                float chosen[4] = float[4](idx.a, idx.b, idx.g, idx.r);
+                float weight[4] = float[4](w.r, w.g, w.b, max(0.0, 1.0 - (w.r + w.g + w.b)));
 
                 vec3 colour = vec3(0.0);
                 float used = 0.0;
-                for (int i = 0; i < 3; i++)
+                for (int i = 0; i < 4; i++)
                 {
                     int layer = int(chosen[i] + 0.5);
                     if (layer >= 64) { continue; }
                     float tiling = max(layerTiling[layer], 0.5);
-                    colour += w[i] * texture(detailTextures, vec3(layerUv(layer, height) / tiling, float(layer))).rgb;
-                    used += w[i];
+                    colour += weight[i] * texture(detailTextures, vec3(layerUv(layer, height) / tiling, float(layer))).rgb;
+                    used += weight[i];
                 }
+
+                // Only reachable now if a sector names no usable layer at all.
                 if (used <= 0.001) { return vec3(0.5); }
 
                 // The colour atlas is a baked per-texel tint over the blended detail, mid-grey neutral.
