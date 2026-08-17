@@ -59,6 +59,7 @@ public partial class MapTabView : UserControl
     private EntityMarkerLayer? _navMeshLayer;
     private EntityMarkerLayer? _lightLayer;
     private ShapeLayer? _triggerLayer;
+    private SkyLayer? _sky;
 
     private double _frameSeconds;
     private int _frames;
@@ -203,13 +204,17 @@ public partial class MapTabView : UserControl
         ApplyFlyKeys((float)delta.TotalSeconds);
         OpenTK.Mathematics.Matrix4 viewProjection = _camera.View()
             * _camera.Projection((float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1)));
+
+        _sky ??= new SkyLayer();
+        _sky.Draw(viewProjection, _camera.Position);
         if (LayerCatalog.Heightmap.IsVisible)
         {
             _terrainMesh.Draw(viewProjection, _camera.Position, new TerrainDrawOptions(
                 ShowTextures: LayerCatalog.Textures.IsVisible,
                 TintBySurfaceType: LayerCatalog.SurfaceData.IsVisible,
                 ShowShadow: LayerCatalog.Shadow.IsVisible,
-                Brightness: (float)BrightnessSlider.Value));
+                Brightness: (float)BrightnessSlider.Value,
+                Haze: Atmosphere.IsChecked == true ? 1f : 0f));
         }
 
         if (LayerCatalog.Water.IsVisible)

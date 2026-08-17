@@ -5,8 +5,9 @@ namespace JackAll.App.MapEditor.Gl;
 
 /// <summary>What the terrain draws this frame.</summary>
 /// <param name="Brightness">Final exposure multiplier; 1 is the raw shaded result.</param>
+/// <param name="Haze">Scales the distance fog; 0 turns it off entirely.</param>
 public readonly record struct TerrainDrawOptions(
-    bool ShowTextures, bool TintBySurfaceType, bool ShowShadow, float Brightness);
+    bool ShowTextures, bool TintBySurfaceType, bool ShowShadow, float Brightness, float Haze);
 
 /// <summary>
 /// The 3D terrain: two camera-following grid patches (a fine 1-unit-spacing ring and a coarse
@@ -32,6 +33,9 @@ public sealed class TerrainMesh3D : IDisposable
     private readonly int _uTextureMix;
     private readonly int _uShadowMix;
     private readonly int _uBrightness;
+    private readonly int _uHaze;
+    private readonly int _uSunDirection;
+    private readonly int _uCameraPosition;
 
     public TerrainMesh3D(HeightTexture heights, SurfaceTypeTexture surfaces, TerrainTextureSet? textures)
     {
@@ -45,6 +49,8 @@ public sealed class TerrainMesh3D : IDisposable
             const float metersPerRaw = 65535.0 / 128.0;
             const int patchSide = {PatchSide};
             """;
+        string horizon = string.Create(System.Globalization.CultureInfo.InvariantCulture,
+            $"const vec3 horizonColour = vec3({SceneLighting.Horizon.X:0.####}, {SceneLighting.Horizon.Y:0.####}, {SceneLighting.Horizon.Z:0.####});");
         _program = new ShaderProgram(
             $$"""
             #version 330 core
@@ -52,8 +58,10 @@ public sealed class TerrainMesh3D : IDisposable
             uniform mat4 viewProjection;
             uniform vec2 origin;
             uniform float spacing;
+            uniform vec3 cameraPosition;
             {{constants}}
             out vec2 world;
+            out float viewDistance;
             void main()
             {
                 int row = gl_VertexID / patchSide;
@@ -61,6 +69,7 @@ public sealed class TerrainMesh3D : IDisposable
                 world = origin + vec2(col, row) * spacing;
                 vec2 clamped = clamp(world, vec2(0.0), vec2(extent));
                 float z = texture(heights, clamped / extent).r * metersPerRaw;
+                viewDistance = distance(vec3(clamped, z), cameraPosition);
                 gl_Position = viewProjection * vec4(clamped, z, 1.0);
             }
             """,
@@ -81,7 +90,11 @@ public sealed class TerrainMesh3D : IDisposable
             uniform float surfaceTint;
             uniform float textureMix;
             uniform float brightness;
+            uniform float haze;
+            uniform vec3 sunDirection;
             uniform float weightSide;
+            {{horizon}}
+            in float viewDistance;
             uniform float sectorsPerSide;
             in vec2 world;
             out vec4 fragment;
@@ -192,9 +205,16 @@ public sealed class TerrainMesh3D : IDisposable
                 // multiplying with it. One shading term, whichever source is available, never both.
                 // Keep this source ASCII: a stray non-ASCII byte, even inside a comment, makes the
                 // GLSL tokeniser stop dead and report an unexpected end of file.
-                float light = max(dot(normal, normalize(vec3(-0.72, 0.0, 0.70))), 0.0);
+                float light = max(dot(normal, sunDirection), 0.0);
                 float shading = mix(0.35 + 0.65 * light, 0.35 + 0.65 * baked, shadowMix);
-                fragment = vec4(base * shading * brightness, 1.0);
+                vec3 lit = base * shading * brightness;
+
+                // Dust sits in the low air, so the haze thins with altitude and peaks rise out of
+                // it. Fading to the sky's own horizon colour is what stops the terrain ending at a
+                // visible edge against the sky.
+                float fog = 1.0 - exp(-viewDistance * 0.0011 * haze);
+                fog *= exp(-max(h * metersPerRaw - 30.0, 0.0) / 140.0);
+                fragment = vec4(mix(lit, horizonColour, clamp(fog, 0.0, 1.0)), 1.0);
             }
             """);
         _uViewProjection = _program.UniformLocation("viewProjection");
@@ -204,6 +224,9 @@ public sealed class TerrainMesh3D : IDisposable
         _uTextureMix = _program.UniformLocation("textureMix");
         _uShadowMix = _program.UniformLocation("shadowMix");
         _uBrightness = _program.UniformLocation("brightness");
+        _uHaze = _program.UniformLocation("haze");
+        _uSunDirection = _program.UniformLocation("sunDirection");
+        _uCameraPosition = _program.UniformLocation("cameraPosition");
         _program.Use();
         GL.Uniform2(_program.UniformLocation("heightRange"), heights.MinNormalized, heights.MaxNormalized);
         GL.Uniform1(_program.UniformLocation("heights"), 0);
@@ -256,6 +279,9 @@ public sealed class TerrainMesh3D : IDisposable
         GL.Uniform1(_uTextureMix, _textures is not null && options.ShowTextures ? 1f : 0f);
         GL.Uniform1(_uShadowMix, _textures is not null && options.ShowShadow ? 1f : 0f);
         GL.Uniform1(_uBrightness, options.Brightness);
+        GL.Uniform1(_uHaze, options.Haze);
+        GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
+        GL.Uniform3(_uCameraPosition, cameraPosition);
         _heights.Bind(TextureUnit.Texture0);
         _surfaces.Bind(TextureUnit.Texture1, TextureUnit.Texture2);
         _textures?.Bind(TextureUnit.Texture3, TextureUnit.Texture4, TextureUnit.Texture5,
