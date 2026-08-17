@@ -187,9 +187,11 @@ public sealed class TerrainMesh3D : IDisposable
                 vec3 material = texture(surfacePalette, vec2(id * (255.0 / 256.0) + (0.5 / 256.0), 0.5)).rgb;
                 base = mix(base, base * 0.35 + material * 0.75, surfaceTint);
 
-                // The bake is a lightmap rather than plain occlusion - it correlates 0.77 with N·L
-                // for a low western sun - so it stands in for the sun instead of multiplying with
-                // it. One shading term, whichever source is available, never both.
+                // The bake is a lightmap rather than plain occlusion - it correlates 0.77 with
+                // dot(N, L) for a low western sun - so it stands in for the sun instead of
+                // multiplying with it. One shading term, whichever source is available, never both.
+                // Keep this source ASCII: a stray non-ASCII byte, even inside a comment, makes the
+                // GLSL tokeniser stop dead and report an unexpected end of file.
                 float light = max(dot(normal, normalize(vec3(-0.72, 0.0, 0.70))), 0.0);
                 float shading = mix(0.35 + 0.65 * light, 0.35 + 0.65 * baked, shadowMix);
                 fragment = vec4(base * shading * brightness, 1.0);
