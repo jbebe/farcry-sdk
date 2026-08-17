@@ -20,7 +20,6 @@ public sealed class WaterLayer : IDisposable
     private readonly int _uViewProjection;
     private readonly int _uCameraPosition;
     private readonly int _uSunDirection;
-    private readonly int _uTime;
     private readonly int _uHaze;
 
     public int SectorCount { get; }
@@ -77,33 +76,15 @@ public sealed class WaterLayer : IDisposable
             in vec3 worldPosition;
             uniform vec3 cameraPosition;
             uniform vec3 sunDirection;
-            uniform float time;
             uniform float haze;
             out vec4 fragment;
 
             {{SceneLighting.SkyGlsl}}
 
-            // Three crossing wavelets, wavelengths around 40 cm. Their gradients perturb the normal
-            // directly, which is all the surface needs: the ripples are never seen as geometry, only
-            // as moving highlights. Slope is frequency times amplitude, so the strength has to fall
-            // as the waves get finer or the normals turn to noise.
-            vec3 rippleNormal(vec2 p, float strength)
-            {
-                vec2 slope = vec2(0.0);
-                slope += vec2( 14.0,   9.0) * cos(dot(p, vec2( 14.0,   9.0)) + time *  9.0);
-                slope += vec2( -7.0,  17.0) * cos(dot(p, vec2( -7.0,  17.0)) + time *  7.5);
-                slope += vec2( 21.0, -13.0) * cos(dot(p, vec2( 21.0, -13.0)) + time * 13.0);
-                return normalize(vec3(-slope * strength, 1.0));
-            }
-
             void main()
             {
                 float viewDistance = distance(cameraPosition, worldPosition);
-
-                // Ripples this fine alias into crawling noise at range, so they flatten with
-                // distance and the surface settles into a plain mirror.
-                float strength = 0.022 * exp(-viewDistance / 250.0);
-                vec3 normal = rippleNormal(worldPosition.xy, strength);
+                vec3 normal = vec3(0.0, 0.0, 1.0);
                 vec3 view = normalize(cameraPosition - worldPosition);
                 vec3 mirrored = reflect(-view, normal);
 
@@ -122,7 +103,6 @@ public sealed class WaterLayer : IDisposable
         _uViewProjection = _program.UniformLocation("viewProjection");
         _uCameraPosition = _program.UniformLocation("cameraPosition");
         _uSunDirection = _program.UniformLocation("sunDirection");
-        _uTime = _program.UniformLocation("time");
         _uHaze = _program.UniformLocation("haze");
 
         _vao = GL.GenVertexArray();
@@ -146,7 +126,7 @@ public sealed class WaterLayer : IDisposable
             : (0.12f + lift, 0.26f + lift, 0.38f + lift);
     }
 
-    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition, float seconds, float haze)
+    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition, float haze)
     {
         if (_vertexCount == 0)
         {
@@ -157,7 +137,6 @@ public sealed class WaterLayer : IDisposable
         GL.UniformMatrix4(_uViewProjection, false, ref viewProjection);
         GL.Uniform3(_uCameraPosition, cameraPosition);
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
-        GL.Uniform1(_uTime, seconds);
         GL.Uniform1(_uHaze, haze);
         GL.BindVertexArray(_vao);
         GL.Enable(EnableCap.Blend);
