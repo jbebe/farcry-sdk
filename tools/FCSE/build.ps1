@@ -19,8 +19,9 @@
     Run ctest after building. Off by default.
 
 .PARAMETER Zip
-    Package the build into out\fcse-{Config}.zip, laid out so its contents extract straight into
-    the game's bin\ folder. Off by default.
+    Package the build into out\fcse-{Config}.zip and out\fcse-plugins-{Config}.zip - the loader and
+    the example plugin/script separately - each laid out so its contents extract straight into the
+    game's bin\ folder. Off by default.
 
 .EXAMPLE
     .\build.ps1
@@ -77,38 +78,32 @@ if ($Tests) {
 if ($Zip) {
     Write-Host "Packaging ($Preset)..." -ForegroundColor Cyan
 
-    # Mirrors the install layout from README.md's "Installing" section, so the zip's contents drop
-    # straight into the game's bin\ folder with no rearranging:
+    # Two archives, so installing the loader never also installs a plugin. Contents of each extract
+    # straight into the game's bin\ - "plugins", not "plugin", is the folder main.cpp scans by name:
     #
-    #   FCSE.exe                       next to the untouched FarCry2.exe
-    #   plugins\example_plugin.dll     "plugins", not "plugin" - main.cpp scans bin\plugins\ by name
-    #   plugins\example_script.lua     Lua mods live in that same folder; both are found recursively
+    #   fcse-{Config}.zip          FCSE.exe
+    #   fcse-plugins-{Config}.zip  plugins\example_plugin.dll, plugins\example_script.lua
     #
-    # The settings-page layout is not here because it is inside FCSE.exe - both .mgb variants are
-    # built from assets\*.mgb.xml and embedded as RCDATA resources at build time (assets\fcse.rc.in,
-    # wired up in CMakeLists.txt), so there is no second file to copy, forget, or let go stale
-    # against the exe that reads it.
-    #
-    # Staged to a folder first rather than zipped from the build tree directly: the build directory
-    # also holds object files, the test exe, and the plugin's .lib/.exp, none of which ship.
-    $StageDir = Join-Path $ProjectRoot "out\package\$Preset"
-    $ZipPath = Join-Path $ProjectRoot "out\fcse-$Config.zip"
+    # Staged to folders, rebuilt from scratch, so the build tree's object files, test exe and
+    # .lib/.exp stay out and nothing stale survives into an archive.
+    $StageRoot = Join-Path $ProjectRoot "out\package\$Preset"
+    if (Test-Path $StageRoot) { Remove-Item -Recurse -Force $StageRoot }
 
-    # Both rebuilt from scratch, so a file dropped from the layout can't survive in a stale stage
-    # folder or get merged into an existing archive.
-    if (Test-Path $StageDir) { Remove-Item -Recurse -Force $StageDir }
-    if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
-    New-Item -ItemType Directory -Force -Path (Join-Path $StageDir "plugins") | Out-Null
-    Copy-Item $OutputExe (Join-Path $StageDir "FCSE.exe")
-    Copy-Item (Join-Path $BuildDir "example_plugin\example_plugin.dll") `
-              (Join-Path $StageDir "plugins\example_plugin.dll")
+    $ExeStage = Join-Path $StageRoot "fcse"
+    $PluginStage = Join-Path $StageRoot "example-plugins\plugins"
+    New-Item -ItemType Directory -Force -Path $ExeStage, $PluginStage | Out-Null
 
-    # Copied from source, not from the build tree: a script is not compiled, and the runtime it calls
-    # into (src\lua\runtime\fcse.lua) is already inside FCSE.exe as a resource, so there is nothing to
-    # build and nothing else to ship alongside it.
-    Copy-Item (Join-Path $ProjectRoot "example_script\example_script.lua") `
-              (Join-Path $StageDir "plugins\example_script.lua")
+    Copy-Item $OutputExe $ExeStage
+    Copy-Item (Join-Path $BuildDir "example_plugin\example_plugin.dll") $PluginStage
 
-    Compress-Archive -Path (Join-Path $StageDir "*") -DestinationPath $ZipPath
-    Write-Host "Packaged: $ZipPath" -ForegroundColor Green
+    # Copied from source, not the build tree: a script is not compiled, and the runtime it calls into
+    # is already inside FCSE.exe as a resource.
+    Copy-Item (Join-Path $ProjectRoot "example_script\example_script.lua") $PluginStage
+
+    foreach ($Name in "fcse", "example-plugins") {
+        $ZipPath = Join-Path $ProjectRoot "out\$Name-$Config.zip"
+        if (Test-Path $ZipPath) { Remove-Item -Force $ZipPath }
+        Compress-Archive -Path (Join-Path $StageRoot "$Name\*") -DestinationPath $ZipPath
+        Write-Host "Packaged: $ZipPath" -ForegroundColor Green
+    }
 }

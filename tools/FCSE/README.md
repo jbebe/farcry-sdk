@@ -240,7 +240,7 @@ process, and neither `FCSE.exe` nor a plugin DLL built for it can load as 64-bit
 .\build.ps1            # release (default), build only
 .\build.ps1 -Config debug
 .\build.ps1 -Tests     # also run ctest
-.\build.ps1 -Zip       # also package out\fcse-release.zip
+.\build.ps1 -Zip       # also package out\fcse-release.zip + out\fcse-plugins-release.zip
 ```
 
 Same `vswhere`/`vcvarsall.bat x86` dance as `tools/misc/modpatcher/build.ps1`. Builds `FCSE.exe`
@@ -262,21 +262,21 @@ message naming this if `dotnet` isn't on `PATH`.
 push and pull request touching `tools/FCSE` or `tools/JackAll`
 (`.github/workflows/fcse-ci.yml`), and again before a release is packaged.
 
-`-Zip` packages `out\fcse-{Config}.zip` in the install layout below, so its contents extract
-straight into the game's `bin\`:
+`-Zip` packages two archives - the loader and the examples separately, so installing FCSE doesn't
+also install a plugin, the same split the GitHub release workflow
+(`.github/workflows/fcse-release.yml`) ships. The contents of each extract straight into the game's
+`bin\`:
 
 ```
-FCSE.exe
-plugins\example_plugin.dll
+out\fcse-{Config}.zip          FCSE.exe
+out\fcse-plugins-{Config}.zip  plugins\example_plugin.dll
+                               plugins\example_script.lua
 ```
 
 FCSE's settings-page layout isn't in that list because it's *inside* `FCSE.exe`: both `.mgb`
 variants are embedded as `RCDATA` resources at build time (`assets/fcse.rc.in`, wired up in
 `CMakeLists.txt`), so installing the loader is copying one file and there's no second file to
 forget, mismatch, or lose.
-
-This is a local convenience package - it includes `example_plugin.dll`, which the GitHub release
-workflow (`.github/workflows/fcse-release.yml`) deliberately ships as a *separate* download.
 
 ## Installing
 
