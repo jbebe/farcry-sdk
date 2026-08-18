@@ -122,7 +122,7 @@ public sealed partial class ArchetypeIndex
             {
                 ArchetypeDefinition shadowed = chain[i];
                 if (shadowed.ContainerHash == containerHash
-                    && string.Equals(shadowed.FragmentId, fragmentId, StringComparison.OrdinalIgnoreCase))
+                    && FcbFragments.IdComparer.Equals(shadowed.FragmentId, fragmentId))
                 {
                     yield return shadowed;
                 }

@@ -12,6 +12,7 @@ public class ModLayerInspectorTests
 {
     private const string RealFileA = @"engine\gamemodes\gamemodesconfig.xml";
     private const string RealFileB = @"config\inputactionmapcommon.xml";
+    private const string Container = @"generated\entitylibrarypatchoverride.fcb";
 
     /// <summary>Stands in for the game's archives: only the two paths above (and nothing under any
     /// wrapper folder) are entries the engine actually has.</summary>
@@ -20,6 +21,11 @@ public class ModLayerInspectorTests
 
     private static ModLayerReport Inspect(params string[] paths)
         => ModLayerInspector.Inspect(paths, GameHashes.Contains);
+
+    /// <summary>Stands in for a game whose only entry is <paramref name="container"/> - a fragment's
+    /// own path hashes to nothing, so it's the container that has to exist.</summary>
+    private static ModLayerReport InspectIn(string container, params string[] paths)
+        => ModLayerInspector.Inspect(paths, hash => hash == NameHash.Compute(container));
 
     [Fact]
     public void An_already_rooted_mod_keeps_the_top_level_as_its_root()
@@ -91,14 +97,45 @@ public class ModLayerInspectorTests
     [Fact]
     public void An_fcb_fragment_is_reported_separately_and_judged_by_its_container()
     {
-        // The fragment's own path hashes to nothing the game has; it's the container that must exist.
-        string container = @"generated\entitylibrarypatchoverride.fcb";
-        var hashes = new HashSet<uint> { NameHash.Compute(container) };
-
-        ModLayerReport report = ModLayerInspector.Inspect(
-            [$@"{container}\03_Foo.xml"], hashes.Contains);
+        ModLayerReport report = InspectIn(Container, $@"{Container}\vehicle\Land\Jeep.xml");
 
         Assert.Equal(0, report.WholeFileOverrides);
+        Assert.Equal(1, report.FragmentOverrides);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+
+    [Fact]
+    public void Two_spellings_of_one_entity_fragment_count_as_a_single_override()
+    {
+        // A placed entity's name prefix is cosmetic, so both spell the same override - counting two
+        // would report more than the build actually merges (ModPathHashing.Add collapses them).
+        const string sector = @"worlds\world1\generated\worldsectors\worldsector17.data.fcb";
+
+        ModLayerReport report = InspectIn(sector,
+            $@"{sector}\Guard_12.2058514756624450165.xml", $@"{sector}\2058514756624450165.xml");
+
+        Assert.Equal(1, report.FragmentOverrides);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+
+    [Fact]
+    public void A_hash_addressed_container_takes_a_nested_fragment_id_too()
+    {
+        ModLayerReport report = InspectIn(
+            Container, $@"_hash\{NameHash.Compute(Container):x8}.fcb\vehicle\Land\Jeep.xml");
+
+        Assert.Equal(1, report.FragmentOverrides);
+        Assert.Equal(1, report.HashAddressed);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+
+    [Fact]
+    public void A_wrapper_above_a_deep_fragment_tree_is_stripped_without_descending_into_it()
+    {
+        // Every directory inside the container is also a candidate root; none of them may win.
+        ModLayerReport report = InspectIn(Container, $@"MyMod v1.2\{Container}\vehicle\Land\Jeep.xml");
+
+        Assert.Equal("mymod v1.2", report.Root);
         Assert.Equal(1, report.FragmentOverrides);
         Assert.Equal(0, report.UnknownEntries);
     }

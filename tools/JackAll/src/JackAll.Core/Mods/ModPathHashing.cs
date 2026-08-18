@@ -1,5 +1,6 @@
 using System.Globalization;
 using JackAll.Core.Format;
+using JackAll.Core.Format.Fcb;
 
 namespace JackAll.Core.Mods;
 
@@ -64,21 +65,37 @@ internal static class ModPathHashing
         }
 
         // A named container's fragment: some segment before the last ends in .fcb.
-        for (int i = 0; i < segments.Length - 1; i++)
+        if (ContainerPathOf(segments) is { } containerPath)
         {
-            if (!segments[i].EndsWith(".fcb", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            string containerPath = string.Join('\\', segments[..(i + 1)]);
-            string fragmentId = string.Join('\\', segments[(i + 1)..]);
+            string fragmentId = normalized[(containerPath.Length + 1)..];
             return new ModPathTarget(
                 NameHash.Compute(normalized), NameHash.Compute(containerPath), fragmentId);
         }
 
         return new ModPathTarget(NameHash.Compute(normalized), null, null);
     }
+
+    /// <summary>The container part of a normalized fragment path - everything up to and including the
+    /// first non-final segment ending in <c>.fcb</c> - or null when the path names no fragment. The
+    /// one definition of where a container ends and a fragment id begins.</summary>
+    internal static string? ContainerPathOf(string normalizedPath)
+        => ContainerPathOf(normalizedPath.Split('\\'));
+
+    private static string? ContainerPathOf(string[] segments)
+    {
+        for (int i = 0; i < segments.Length - 1; i++)
+        {
+            if (IsContainerSegment(segments[i]))
+            {
+                return string.Join('\\', segments[..(i + 1)]);
+            }
+        }
+        return null;
+    }
+
+    /// <summary>Whether this path segment is a splitting container's own name.</summary>
+    internal static bool IsContainerSegment(string segment)
+        => segment.EndsWith(".fcb", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// <c>_hash\&lt;hex&gt;[.ext]</c> (a plain unnamed override), or <c>_hash\&lt;hex&gt;.fcb\&lt;fragment id&gt;</c>
@@ -120,13 +137,16 @@ internal static class ModPathHashing
     /// <summary>
     /// Indexes one resolved target into a layer's <c>Hashes</c>/<c>FragmentOverrides</c> bookkeeping —
     /// shared so <see cref="ZipModLayer"/>'s constructor and <see cref="FolderModLayer"/>'s
-    /// <c>Rescan</c>/<c>Stage</c> classify identically. Idempotent: re-adding the same fragment
-    /// replaces its prior entry rather than duplicating it, so a folder layer's <c>Stage</c> (which
-    /// must update this immediately, not just on the next <c>Rescan</c> — callers build a patch right
-    /// after staging with no rescan in between) can call this unconditionally.
+    /// <c>Rescan</c>/<c>Stage</c> classify identically. A folder layer's <c>Stage</c> (which must
+    /// update this immediately, not just on the next <c>Rescan</c> — callers build a patch right
+    /// after staging with no rescan in between) can call this unconditionally: the per-container map
+    /// is keyed by <see cref="FcbFragments.IdComparer"/>, so re-adding a fragment replaces its prior
+    /// entry even under a different spelling of the same id (an entity's name prefix is cosmetic),
+    /// which would otherwise leave one layer holding two overrides of one fragment and conflicting
+    /// with itself.
     /// </summary>
     public static void Add(
-        ModPathTarget target, HashSet<uint> hashes, Dictionary<uint, List<FragmentOverride>> fragmentOverrides)
+        ModPathTarget target, HashSet<uint> hashes, Dictionary<uint, FragmentMap> fragmentOverrides)
     {
         if (target.ContainerHash is not { } containerHash)
         {
@@ -134,21 +154,23 @@ internal static class ModPathHashing
             return;
         }
 
-        if (!fragmentOverrides.TryGetValue(containerHash, out List<FragmentOverride>? fragments))
+        if (!fragmentOverrides.TryGetValue(containerHash, out FragmentMap? fragments))
         {
-            fragments = [];
+            fragments = new FragmentMap();
             fragmentOverrides[containerHash] = fragments;
         }
-        fragments.RemoveAll(f => f.EntryHash == target.EntryHash);
-        fragments.Add(new FragmentOverride(target.FragmentId!, target.EntryHash));
+        fragments[target.FragmentId!] = new FragmentOverride(target.FragmentId!, target.EntryHash);
     }
 
-    /// <summary>Snapshots the mutable per-container fragment lists into the immutable shape
+    /// <summary>Snapshots the mutable per-container fragment maps into the immutable shape
     /// <see cref="IModLayer.FragmentOverrides"/> exposes.</summary>
     public static IReadOnlyDictionary<uint, IReadOnlyList<FragmentOverride>> Freeze(
-        Dictionary<uint, List<FragmentOverride>> fragmentOverrides)
-        => fragmentOverrides.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<FragmentOverride>)kv.Value);
+        Dictionary<uint, FragmentMap> fragmentOverrides)
+        => fragmentOverrides.ToDictionary(kv => kv.Key, kv => (IReadOnlyList<FragmentOverride>)[.. kv.Value.Values]);
 }
 
 /// <summary>What one relative path inside a mod resolves to — see <see cref="ModPathHashing.Resolve"/>.</summary>
 internal readonly record struct ModPathTarget(uint EntryHash, uint? ContainerHash, string? FragmentId);
+
+/// <summary>One container's overridden fragments, keyed so two spellings of one id can't both land.</summary>
+internal sealed class FragmentMap() : Dictionary<string, FragmentOverride>(FcbFragments.IdComparer);

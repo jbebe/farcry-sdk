@@ -154,7 +154,7 @@ internal static class Program
         foreach (FragmentConflict conflict in result.Conflicts)
         {
             Report($"Warning: '{conflict.WinningLayer}' overrode '{string.Join(", ", conflict.EarlierLayers)}' "
-                + $"inside '{conflict.FragmentId}' by load order - their edits genuinely conflicted, so only "
+                + $"inside '{conflict.DisplayPath}' by load order - their edits genuinely conflicted, so only "
                 + "the higher-priority mod's change survived.");
         }
         return 0;
@@ -305,6 +305,7 @@ internal static class Program
 
     private static ConflictPayload ToPayload(FragmentConflict c) => new()
     {
+        Container = c.Container,
         FragmentId = c.FragmentId,
         IsNewEntry = c.IsNewEntry,
         WinningLayer = c.WinningLayer,

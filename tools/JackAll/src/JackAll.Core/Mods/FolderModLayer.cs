@@ -10,7 +10,7 @@ public sealed class FolderModLayer : IModLayer
 {
     private readonly Dictionary<uint, string> _absolutePaths = [];
     private readonly HashSet<uint> _hashes = [];
-    private readonly Dictionary<uint, List<FragmentOverride>> _fragmentOverrides = [];
+    private readonly Dictionary<uint, FragmentMap> _fragmentOverrides = [];
 
     public string Name { get; }
     public bool Enabled { get; set; } = true;
@@ -116,9 +116,9 @@ public sealed class FolderModLayer : IModLayer
         _absolutePaths.Remove(hash);
         _hashes.Remove(hash);
         if (target?.ContainerHash is { } containerHash
-            && _fragmentOverrides.TryGetValue(containerHash, out List<FragmentOverride>? fragments))
+            && _fragmentOverrides.TryGetValue(containerHash, out FragmentMap? fragments))
         {
-            fragments.RemoveAll(f => f.EntryHash == hash);
+            fragments.Remove(target.Value.FragmentId!);
             if (fragments.Count == 0)
             {
                 _fragmentOverrides.Remove(containerHash);

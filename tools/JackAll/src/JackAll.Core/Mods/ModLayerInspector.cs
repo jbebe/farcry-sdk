@@ -8,7 +8,8 @@ namespace JackAll.Core.Mods;
 /// after the mod, and that wrapper has to be stripped before anything hashes to the right entry.</param>
 /// <param name="WholeFileOverrides">Paths that resolve to a standalone archive-entry override,
 /// <c>_hash\</c>-addressed ones included.</param>
-/// <param name="FragmentOverrides">Paths that resolve to one fragment inside a splitting `.fcb`.</param>
+/// <param name="FragmentOverrides">Paths that resolve to one fragment inside a splitting `.fcb` — a
+/// path-shaped id, possibly several levels deep. Two spellings of one fragment count once.</param>
 /// <param name="HashAddressed">How many of the two counts above came in via <c>_hash\</c> rather
 /// than a real relative path — informational, not a separate bucket.</param>
 /// <param name="UnknownEntries">Overrides whose target isn't in the game's archives at all: either
@@ -92,8 +93,11 @@ public static class ModLayerInspector
         var roots = new HashSet<string>(StringComparer.Ordinal);
         foreach (string path in normalizedPaths)
         {
+            // Stops at a container's own `.fcb` segment: everything below it is a fragment tree, never
+            // a wrapper folder.
             string[] segments = path.Split('\\');
-            for (int depth = 1; depth <= Math.Min(MaxRootDepth, segments.Length - 1); depth++)
+            int maxDepth = Math.Min(MaxRootDepth, segments.Length - 1);
+            for (int depth = 1; depth <= maxDepth && !ModPathHashing.IsContainerSegment(segments[depth - 1]); depth++)
             {
                 roots.Add(string.Join('\\', segments[..depth]));
             }
@@ -107,6 +111,7 @@ public static class ModLayerInspector
         string prefix = root.Length == 0 ? "" : root + "\\";
         int wholeFile = 0, fragments = 0, hashAddressed = 0, unknown = 0, ignored = 0;
         var samples = new List<string>(SampleCount);
+        var seenFragments = new Dictionary<uint, HashSet<string>>();
 
         foreach (string path in normalizedPaths)
         {
@@ -125,6 +130,18 @@ public static class ModLayerInspector
 
             if (target.ContainerHash is { } containerHash)
             {
+                // Two spellings of one entity's id collapse into a single override at build time
+                // (ModPathHashing.Add), so counting both here would over-report what a build merges.
+                if (!seenFragments.TryGetValue(containerHash, out HashSet<string>? seenIds))
+                {
+                    seenIds = new HashSet<string>(Format.Fcb.FcbFragments.IdComparer);
+                    seenFragments[containerHash] = seenIds;
+                }
+                if (!seenIds.Add(target.FragmentId!))
+                {
+                    continue;
+                }
+
                 fragments++;
                 // A fragment's own EntryHash is a synthetic key for the staged file, never an archive
                 // entry - it's the container that has to exist for this to mean anything.

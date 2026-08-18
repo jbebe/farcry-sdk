@@ -79,8 +79,8 @@ public class WorldSectorFragmentTests : IDisposable
             Assert.Equal(fragments[i].Id, rebuiltFragments[i].Id);
             string expected = FcbFragments.IdComparer.Equals(fragments[i].Id, targetId)
                 ? System.Text.Encoding.UTF8.GetString(editedXml)
-                : FcbXml.RenderObject(fragments[i].Node, FcbClassDefinitions.Empty);
-            Assert.Equal(expected, FcbXml.RenderObject(rebuiltFragments[i].Node, FcbClassDefinitions.Empty));
+                : FcbXml.ToXml(fragments[i].Node, FcbClassDefinitions.Empty);
+            Assert.Equal(expected, FcbXml.ToXml(rebuiltFragments[i].Node, FcbClassDefinitions.Empty));
         }
     }
 
@@ -121,7 +121,7 @@ public class WorldSectorFragmentTests : IDisposable
 
         var addition = new FcbObject { TypeHash = WorldHashes.Entity };
         addition.Values.Add(WorldHashes.DisEntityId, BitConverter.GetBytes(999999999UL));
-        string additionXml = FcbXml.RenderObject(addition, FcbClassDefinitions.Empty);
+        string additionXml = FcbXml.ToXml(addition, FcbClassDefinitions.Empty);
 
         byte[] assembled = FcbAssembler.Apply(
             baseFcb, new Dictionary<string, string> { ["brand_new.999999999.xml"] = additionXml });

@@ -11,9 +11,7 @@ namespace JackAll.App.FileHandlers.Rml;
 /// <summary>
 /// The file handler for .rml resource-manifest/localization XML (research/file_manifest.md §10) -
 /// decodes to plain XML on load, exports that XML to a file for editing, and imports a (possibly
-/// hand-edited) file back into a replacement .rml staged into the workspace. Simpler than
-/// <see cref="Fcb.FcbFileHandler"/>: unlike .fcb, .rml never splits into external sub-files, so there's
-/// just one XML document in and out.
+/// hand-edited) file back into a replacement .rml staged into the workspace.
 ///
 /// When the file is modded and has a base game version to compare against, the Preview shows the same
 /// trimmed diff-against-vanilla view as the plain XML/Lua text handler

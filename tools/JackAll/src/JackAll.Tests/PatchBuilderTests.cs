@@ -215,7 +215,7 @@ public class PatchBuilderTests : IDisposable
         // contain this value anywhere.
         var replacement = new FcbObject { TypeHash = 0xE0BDB3DB };
         replacement.Values.Add(0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
-        string replacementXml = FcbXml.RenderObject(replacement, FcbClassDefinitions.Empty);
+        string replacementXml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty);
 
         string fragmentPath = $"{container.Path}\\{fragmentId}";
         var mod = MakeZipMod("fragment_mod", (fragmentPath, System.Text.Encoding.UTF8.GetBytes(replacementXml)));
@@ -264,7 +264,7 @@ public class PatchBuilderTests : IDisposable
 
         var addition = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
         addition.Values.Add(0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
-        string additionXml = FcbXml.ToXml(addition, FcbClassDefinitions.Empty).IndexXml;
+        string additionXml = FcbXml.ToXml(addition, FcbClassDefinitions.Empty);
 
         string newFragmentPath = $"{container.Path}\\99999_does_not_exist_in_vanilla.xml";
         var mod = MakeZipMod("add_mod", (newFragmentPath, System.Text.Encoding.UTF8.GetBytes(additionXml)));
@@ -386,6 +386,8 @@ public class PatchBuilderTests : IDisposable
 
         FragmentConflict conflict = Assert.Single(result.Conflicts);
         Assert.Equal(fragmentId, conflict.FragmentId, ignoreCase: true);
+        // The id alone names one entity of one container; the report has to say which container.
+        Assert.Equal(container.Path, conflict.Container, ignoreCase: true);
         Assert.Equal("mod_b", conflict.WinningLayer);
         Assert.Contains("mod_a", conflict.EarlierLayers);
 
@@ -398,6 +400,48 @@ public class PatchBuilderTests : IDisposable
         // merge of the two, and not mod_a's value either.
         FcbObject rebuiltFragment = FcbFragments.Find(rebuiltContainer, fragmentId)!;
         Assert.Equal([0x02, 0x00, 0x00, 0x00], TestSupport.NodeAt(rebuiltFragment, targetPath).Values[existingHash]);
+    }
+
+    /// <summary>A layer that addressed the container by hash has no path to recover a name from, so
+    /// the conflict reports the same synthetic spelling the override was staged under.</summary>
+    [Fact]
+    public void A_conflict_in_a_hash_addressed_container_reports_the_synthetic_container_path()
+    {
+        if (_install is null) return;
+
+        NameDatabase names = TestSupport.LoadNames();
+        VfsFile container;
+        string fragmentId;
+        FcbObject vanillaFragment;
+        using (var vfs = GameVfs.Load(_install, names))
+        {
+            VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+            container = vfs.Files[fragment.ContainerHash!.Value];
+            fragmentId = fragment.FragmentId!;
+            vanillaFragment = FcbFragments.Find(
+                FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!), fragmentId)!;
+        }
+
+        int[] targetPath = vanillaFragment.Values.Count > 0 ? [] : [0];
+        uint existingHash = TestSupport.NodeAt(vanillaFragment, targetPath).Values.Keys.FirstOrDefault(
+            k => k != WorldHashes.HidName && k != WorldHashes.DisEntityId);
+        if (existingHash == 0) return; // fixture has nothing existing to collide on
+
+        string hashAddressedPath = $"_hash\\{container.Hash:x8}.fcb\\{fragmentId}";
+        var modA = MakeZipMod("mod_a", (hashAddressedPath,
+            TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x01, 0x00, 0x00, 0x00])));
+        var modB = MakeZipMod("mod_b", (hashAddressedPath,
+            TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x02, 0x00, 0x00, 0x00])));
+
+        BuildResult result;
+        using (var vfsForRead = GameVfs.Load(_install, names))
+        {
+            result = PatchBuilder.Build(_install, [modA, modB], vfsForRead.ReadOriginal,
+                resolveFragmentConflictsWithLoadOrder: true);
+        }
+
+        FragmentConflict conflict = Assert.Single(result.Conflicts);
+        Assert.Equal($"_hash\\{container.Hash:x8}.fcb", conflict.Container);
     }
 
     [Fact]
@@ -425,7 +469,7 @@ public class PatchBuilderTests : IDisposable
         // first build just invalidated. Without ReloadPatchArchive above, this throws.
         var replacement = new FcbObject { TypeHash = 0xE0BDB3DB };
         replacement.Values.Add(0xDEADBEEF, [0x01, 0x02, 0x03, 0x04]);
-        string xml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty).IndexXml;
+        string xml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty);
         string fragmentPath = $"{container.Path}\\{fragment.FragmentId}";
         var mod = MakeZipMod("fragment_mod_2", (fragmentPath, System.Text.Encoding.UTF8.GetBytes(xml)));
 
@@ -459,7 +503,7 @@ public class PatchBuilderTests : IDisposable
         // exact hash.
         var replacement = new FcbObject { TypeHash = 0xE0BDB3DB };
         replacement.Values.Add(0xDEADBEEF, [0xAA, 0xBB, 0xCC, 0xDD]);
-        string xml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty).IndexXml;
+        string xml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty);
         string fragmentPath = $"{container.Path}\\{fragment.FragmentId}";
         var mod = MakeZipMod("fragment_mod_vanilla_check", (fragmentPath, System.Text.Encoding.UTF8.GetBytes(xml)));
 
@@ -498,7 +542,7 @@ public class PatchBuilderTests : IDisposable
 
         var replacement = new FcbObject { TypeHash = 0xE0BDB3DB };
         replacement.Values.Add(0xDEADBEEF, [0x09, 0x08, 0x07, 0x06]);
-        string xml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty).IndexXml;
+        string xml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty);
         workspace.Stage(fragment.Hash, fragment.Path, "xml", System.Text.Encoding.UTF8.GetBytes(xml));
 
         // Before the fix: KeyNotFoundException. MergeFragments' pass 1 skipped this container via a

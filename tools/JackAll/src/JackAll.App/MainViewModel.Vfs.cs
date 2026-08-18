@@ -74,7 +74,7 @@ public sealed partial class MainViewModel
         => async root =>
         {
             FcbClassDefinitions definitions = FcbDefinitionsProvider.Value.Value;
-            string rendered = await Task.Run(() => FcbXml.RenderObject(root, definitions));
+            string rendered = await Task.Run(() => FcbXml.ToXml(root, definitions));
             Replace(file, AppText.EncodeUtf8(rendered));
             return null;
         };

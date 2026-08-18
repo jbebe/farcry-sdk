@@ -107,6 +107,24 @@ assert.strictEqual(registered.onceCallbacks.length, 1, 'event handlers belong in
     [path.join('worlds', 'world1', 'foo.xml')],
     'everything up to and including Data_Win32\\ (wrapper folder included) must be stripped');
 
+  // A fragment id is a path of its own under the container, and the leaf's name prefix is only
+  // cosmetic to JackAll - but its exact spelling still has to survive installation untouched.
+  const fragments = await installer.install(
+    [
+      path.join('MyMod v1.2', 'Data_Win32', 'generated', 'entitylibrary.fcb', 'vehicle', 'Land', 'Jeep.xml'),
+      path.join('MyMod v1.2', 'Data_Win32', 'worlds', 'world1', 'generated', 'worldsectors',
+        'worldsector17.data.fcb', 'Guard_12.2058514756624450165.xml'),
+    ],
+    'C:\\staging\\fragments.installing', GAME_ID);
+  assert.deepStrictEqual(
+    fragments.instructions.filter(i => i.type === 'copy').map(i => i.destination),
+    [
+      path.join('generated', 'entitylibrary.fcb', 'vehicle', 'Land', 'Jeep.xml'),
+      path.join('worlds', 'world1', 'generated', 'worldsectors', 'worldsector17.data.fcb',
+        'Guard_12.2058514756624450165.xml'),
+    ],
+    'a nested .fcb fragment id must keep every segment and its exact casing');
+
   await assert.rejects(
     () => installer.install(['readme.txt', 'shot.png'], 'C:\\staging\\junk.installing', GAME_ID),
     err => err instanceof stub.util.DataInvalid,

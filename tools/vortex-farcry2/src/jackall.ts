@@ -28,7 +28,11 @@ export interface BuildResult extends Envelope {
   addedEntries: number;
   /** Fragments two mods both edited. A headless build has nobody to ask, so load order wins. */
   conflicts: Array<{
+    /** The container the fragment id is relative to - the id alone names one entity, not its sector. */
+    container: string;
     fragmentId: string;
+    /** Both mods added this fragment as new content rather than editing an existing one. */
+    isNewEntry: boolean;
     winningLayer: string;
     earlierLayers: string[];
   }>;

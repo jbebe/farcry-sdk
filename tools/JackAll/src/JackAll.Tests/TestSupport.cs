@@ -1,3 +1,4 @@
+using System.Globalization;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Naming;
 
@@ -52,9 +53,24 @@ internal static class TestSupport
     /// (docs/design/fcb-fragment-overlays.md Milestone 3) to build two mods' edits that land in
     /// genuinely different regions of the rendered XML, or, aimed at the same existing value, a
     /// genuine collision.</summary>
+    /// <summary>The id the deleted group-per-file export gave <paramref name="library"/>'s child at
+    /// <paramref name="index"/> — the only id shape a mod staged before per-archetype ids can carry,
+    /// and nothing in production defines it any more.</summary>
+    public static string PreDeepGroupId(FcbObject library, int index)
+    {
+        string id = (index + 1).ToString(CultureInfo.InvariantCulture)
+            .PadLeft(library.Children.Count.ToString(CultureInfo.InvariantCulture).Length, '0');
+        if (library.Children[index].Values.TryGetValue(FcbClassDefinitions.Crc32Ascii("Name"), out byte[]? name)
+            && name.Length > 1)
+        {
+            id += "_" + System.Text.Encoding.UTF8.GetString(name, 0, name.Length - 1);
+        }
+        return id + ".xml";
+    }
+
     public static byte[] RenderWithValueSetAt(FcbObject vanilla, int[] childPath, uint valueHash, byte[] value)
     {
-        string xml = FcbXml.RenderObject(
+        string xml = FcbXml.ToXml(
             CloneWithValueSet(vanilla, childPath, 0, valueHash, value), FcbClassDefinitions.Empty);
         return System.Text.Encoding.UTF8.GetBytes(xml);
     }

@@ -22,11 +22,7 @@ public readonly record struct FcbFragment(string Id, FcbObject Node);
 ///     <c>hidName</c> is not unique in a sector while <c>disEntityId</c> is the stable identity
 ///     mission scripts reference. An entity with no <c>disEntityId</c> gets no fragment.
 ///
-/// Anything else doesn't split. The pre-deep-fragment id space — one <c>NN_Name.xml</c> per library
-/// group, which is still <see cref="FcbXml.ToXml"/>'s Gibbed-compatible multi-export naming — keeps
-/// working as an alias: <see cref="Find"/> and <see cref="FcbAssembler.Apply"/> resolve a group id to
-/// its whole group, so overrides staged by older JackAll versions (and the layout
-/// docs/docs/modding/vortex.md documented) still build correctly.
+/// Anything else doesn't split, and an id naming no fragment is new content rather than an override.
 /// </summary>
 public static class FcbFragments
 {
@@ -36,7 +32,6 @@ public static class FcbFragments
     private static readonly uint EntityPrototypeTypeHash = FcbClassDefinitions.Crc32Ascii("EntityPrototype");
     private static readonly uint EntityTypeHash = FcbClassDefinitions.Crc32Ascii("Entity");
     private static readonly uint MissionLayerTypeHash = FcbClassDefinitions.Crc32Ascii("MissionLayer");
-    private static readonly uint NameFieldHash = FcbClassDefinitions.Crc32Ascii("Name");
     private static readonly uint HidNameFieldHash = FcbClassDefinitions.Crc32Ascii("hidName");
     private static readonly uint DisEntityIdFieldHash = FcbClassDefinitions.Crc32Ascii("disEntityId");
     private static readonly uint TextPathIdFieldHash = FcbClassDefinitions.Crc32Ascii("text_PathId");
@@ -97,10 +92,7 @@ public static class FcbFragments
     public static IReadOnlyList<FcbFragment> List(FcbObject root)
         => [.. Slots(root).Select(s => new FcbFragment(s.Id, s.Parent.Children[s.Index]))];
 
-    /// <summary>The node <paramref name="fragmentId"/> names — a deep fragment, or a whole library
-    /// group via the legacy <c>NN_Name.xml</c> alias. A deep fragment wins when an id happens to
-    /// match both spaces — <see cref="FcbAssembler.Apply"/> honours the same precedence. Null when
-    /// neither matches.</summary>
+    /// <summary>The node <paramref name="fragmentId"/> names, or null when nothing matches.</summary>
     public static FcbObject? Find(FcbObject root, string fragmentId)
     {
         foreach (FragmentSlot slot in Slots(root))
@@ -111,15 +103,15 @@ public static class FcbFragments
             }
         }
 
-        return FindLegacyGroupIndex(root, fragmentId) is { } index ? root.Children[index] : null;
+        return null;
     }
 
     /// <summary>Where <see cref="FcbAssembler.Apply"/> attaches content whose fragment id matched
     /// nothing — new content a mod adds. A new node in a world sector joins the <c>main</c> mission
-    /// layer (falling back to the first layer); in a library, a whole new <c>EntityLibraryGroup</c>
-    /// keeps the pre-deep-fragment behaviour of joining the root, while anything else (a new
-    /// archetype's prototype) joins the last group — appending a non-group at the root would stop the
-    /// whole container from splitting. An unrecognised root appends at the root.</summary>
+    /// layer (falling back to the first layer); in a library, a new <c>EntityLibraryGroup</c> joins
+    /// the root and anything else (a new archetype's prototype) joins the last group, since a
+    /// non-group at the root would stop the whole container from splitting. An unrecognised root
+    /// appends at the root.</summary>
     internal static FcbObject AppendTarget(FcbObject root, FcbObject addition)
     {
         if (root.TypeHash == WorldSectorTypeHash)
@@ -146,56 +138,6 @@ public static class FcbFragments
         }
 
         return root;
-    }
-
-    /// <summary>The index of the library group the legacy <c>NN_Name.xml</c> id names, or null.</summary>
-    private static int? FindLegacyGroupIndex(FcbObject root, string fragmentId)
-    {
-        if (!TryGetGroupIds(root, out IReadOnlyList<string> groupIds))
-        {
-            return null;
-        }
-        for (int i = 0; i < groupIds.Count; i++)
-        {
-            if (string.Equals(groupIds[i], fragmentId, StringComparison.OrdinalIgnoreCase))
-            {
-                return i;
-            }
-        }
-        return null;
-    }
-
-    /// <summary>
-    /// The group-level <c>NN_Name.xml</c> id space: what <see cref="FcbXml.ToXml"/> names its
-    /// Gibbed-compatible external files, and the alias older staged overrides resolve through — one id
-    /// per <c>root.Children</c> entry, in order. False when <paramref name="root"/> isn't an entity
-    /// library of groups.
-    /// </summary>
-    internal static bool TryGetGroupIds(FcbObject root, out IReadOnlyList<string> ids)
-    {
-        if (!IsLibraryOfGroups(root))
-        {
-            ids = [];
-            return false;
-        }
-
-        var computed = new List<string>(root.Children.Count);
-        int counter = 0;
-        int padLength = root.Children.Count.ToString(CultureInfo.InvariantCulture).Length;
-        foreach (FcbObject child in root.Children)
-        {
-            counter++;
-            string fileBaseName = counter.ToString(CultureInfo.InvariantCulture).PadLeft(padLength, '0');
-            string name = ReadCString(child, NameFieldHash);
-            if (name.Length > 0)
-            {
-                fileBaseName += "_" + Sanitize(name);
-            }
-            computed.Add(fileBaseName + ".xml");
-        }
-
-        ids = computed;
-        return true;
     }
 
     /// <summary>A fragment's place in the tree, held as parent + index so a replacement can be

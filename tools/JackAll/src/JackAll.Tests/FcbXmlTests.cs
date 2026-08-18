@@ -48,8 +48,7 @@ public class FcbXmlTests
 
         FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
 
-        FcbXmlExport export = FcbXml.ToXml(original, defs);
-        FcbObject reparsed = FcbXml.FromXml(export.IndexXml, name => export.ExternalFiles[name]);
+        FcbObject reparsed = FcbXml.FromXml(FcbXml.ToXml(original, defs));
 
         AssertSameShape(original, reparsed);
     }
@@ -71,8 +70,7 @@ public class FcbXmlTests
 
         FcbClassDefinitions defs = FcbClassDefinitions.Load(ClassesPath);
         FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
-        FcbXmlExport export = FcbXml.ToXml(original, defs);
-        string all = export.IndexXml + string.Join("", export.ExternalFiles.Values);
+        string all = FcbXml.ToXml(original, defs);
 
         int rmlValueCount = 0, index = 0;
         while ((index = all.IndexOf("type=\"Rml\"", index, StringComparison.Ordinal)) >= 0)
@@ -89,17 +87,13 @@ public class FcbXmlTests
     [Theory]
     [MemberData(nameof(SampleFiles))]
     [Trait("Category", "RequiresFixture")]
-    public void Every_entitylibrary_fixture_splits_into_at_least_one_external_file(string path)
+    public void Every_entitylibrary_fixture_renders_inline_as_one_document(string path)
     {
-        // All 5 real fixtures share the EntityLibrary-of-groups root shape (confirmed separately in
-        // FcbDocumentTests), so ToXml's multi-export path should trigger for every one of them.
         if (string.IsNullOrEmpty(path)) return;
 
         FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
-        FcbXmlExport export = FcbXml.ToXml(original, FcbClassDefinitions.Empty);
-
-        Assert.NotEmpty(export.ExternalFiles);
-        Assert.Equal(original.Children.Count, export.ExternalFiles.Count);
+        // The round trip itself is pinned by A_real_shipped_fcb_converts_to_xml_and_back_to_the_same_tree.
+        Assert.DoesNotContain("external=", FcbXml.ToXml(original, FcbClassDefinitions.Empty));
     }
 
     /// <summary>One fragment per archetype (docs/design/fcb-deep-fragments.md): the id count matches
@@ -136,27 +130,21 @@ public class FcbXmlTests
         Assert.All(ids, id => Assert.EndsWith(".xml", id));
     }
 
-    /// <summary>The pre-deep-fragment group ids — still what <see cref="FcbXml.ToXml"/> names its
-    /// external files — keep resolving as an alias for the whole group, so overrides staged by older
-    /// versions still extract and splice.</summary>
+    /// <summary>The pre-deep-fragment group ids are not an alias for anything: every id the old
+    /// group-per-file naming would have produced resolves to nothing.</summary>
     [Theory]
     [MemberData(nameof(SampleFiles))]
     [Trait("Category", "RequiresFixture")]
-    public void ExtractFragment_reproduces_the_same_content_ToXml_put_in_that_external_file(string path)
+    public void A_pre_deep_fragment_group_id_resolves_to_nothing(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
 
-        FcbClassDefinitions defs = File.Exists(ClassesPath)
-            ? FcbClassDefinitions.Load(ClassesPath)
-            : FcbClassDefinitions.Empty;
-
         FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
-        FcbXmlExport export = FcbXml.ToXml(original, defs);
 
-        foreach ((string fragmentId, string expectedXml) in export.ExternalFiles)
+        for (int i = 0; i < original.Children.Count; i++)
         {
-            string? actualXml = FcbXml.ExtractFragment(original, fragmentId, defs);
-            Assert.Equal(expectedXml, actualXml);
+            Assert.Null(FcbXml.ExtractFragment(
+                original, TestSupport.PreDeepGroupId(original, i), FcbClassDefinitions.Empty));
         }
     }
 
@@ -244,12 +232,12 @@ public class FcbXmlTests
             File.Delete(tempPath);
         }
 
-        FcbXmlExport export = FcbXml.ToXml(root, defs);
-        Assert.Contains("Vector3", export.IndexXml);
-        Assert.Contains("hello", export.IndexXml);
-        Assert.Contains("BinHex", export.IndexXml); // the unknown-hash value
+        string xml = FcbXml.ToXml(root, defs);
+        Assert.Contains("Vector3", xml);
+        Assert.Contains("hello", xml);
+        Assert.Contains("BinHex", xml); // the unknown-hash value
 
-        FcbObject reparsed = FcbXml.FromXml(export.IndexXml);
+        FcbObject reparsed = FcbXml.FromXml(xml);
         AssertSameShape(root, reparsed);
     }
 
@@ -289,11 +277,11 @@ public class FcbXmlTests
             File.Delete(tempPath);
         }
 
-        FcbXmlExport export = FcbXml.ToXml(root, defs);
-        Assert.Contains("<hidDescriptor x=\"1\" />", export.IndexXml);
-        Assert.DoesNotContain("BinHex", export.IndexXml);
+        string xml = FcbXml.ToXml(root, defs);
+        Assert.Contains("<hidDescriptor x=\"1\" />", xml);
+        Assert.DoesNotContain("BinHex", xml);
 
-        FcbObject reparsed = FcbXml.FromXml(export.IndexXml);
+        FcbObject reparsed = FcbXml.FromXml(xml);
         AssertSameShape(root, reparsed);
     }
 
@@ -337,11 +325,11 @@ public class FcbXmlTests
             File.Delete(tempPath);
         }
 
-        FcbXmlExport export = FcbXml.ToXml(root, defs);
-        Assert.Contains("<hidDescriptor x=\"1\" />", export.IndexXml);
-        Assert.DoesNotContain("BinHex", export.IndexXml);
+        string xml = FcbXml.ToXml(root, defs);
+        Assert.Contains("<hidDescriptor x=\"1\" />", xml);
+        Assert.DoesNotContain("BinHex", xml);
 
-        FcbObject reparsed = FcbXml.FromXml(export.IndexXml);
+        FcbObject reparsed = FcbXml.FromXml(xml);
         var expected = new FcbObject { TypeHash = 0x11111111 };
         expected.Values.Add(Crc32("hidDescriptor"), [.. value, 0]); // normalized: pad byte added back
         AssertSameShape(expected, reparsed);

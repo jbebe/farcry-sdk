@@ -29,10 +29,8 @@ public sealed record LegacyImportResult(int TotalEntries, int Imported, int Frag
 ///     shape <see cref="ModPathHashing"/> already recognizes (matching what JackAll.App's own
 ///     structured fragment editor stages). That granularity only holds when everything *outside* the
 ///     fragments is untouched and nothing was deleted or moved - changes a per-fragment override
-///     cannot express - so those cases fall back to the coarser unit: one <c>NN_Name.xml</c> group
-///     for an entity library (<see cref="FcbXml.ToXml"/>'s split, which every id-resolution path
-///     still accepts as an alias), the whole file for anything else.
-///   - Any other `.fcb` is compared by its *decoded* shape (<see cref="FcbXml.RenderObject"/>) rather
+///     cannot express - so those cases fall back to the only coarser unit there is, the whole file.
+///   - Any other `.fcb` is compared by its *decoded* shape (<see cref="FcbXml.ToXml"/>) rather
 ///     than raw bytes, since this writer (like most community tools) never reproduces the shipped
 ///     files' backreference/dedup encoding (see <see cref="FcbDocument"/>'s remarks) - a logically
 ///     identical container can still differ byte-for-byte for reasons that have nothing to do with the
@@ -203,7 +201,7 @@ public static class LegacyPatchImporter
 
     /// <summary>
     /// Handles one entry once it's already known to be named/sniffed as `.fcb` - decodes it and either
-    /// splits it into per-group fragment overrides or stages/skips it whole, per the class remarks.
+    /// splits it into per-fragment overrides or stages/skips it whole, per the class remarks.
     /// Returns false, staging nothing, when the content isn't actually a well-formed .fcb despite its
     /// extension (not every entry named or sniffed "fcb" necessarily is one - e.g. a "BASE"-magic
     /// container sniffs to the unrelated .wlu.fcb extension) - the caller falls back to the plain
@@ -243,35 +241,14 @@ public static class LegacyPatchImporter
             return true;
         }
 
-        FcbXmlExport export = FcbXml.ToXml(legacyRoot, defs);
-        if (export.ExternalFiles.Count == 0)
+        if (vanillaRoot is not null && FcbXml.ToXml(legacyRoot, defs) == FcbXml.ToXml(vanillaRoot, defs))
         {
-            bool unchanged = vanillaRoot is not null
-                && FcbXml.RenderObject(legacyRoot, defs) == FcbXml.RenderObject(vanillaRoot, defs);
-            if (unchanged)
-            {
-                skipped++;
-            }
-            else
-            {
-                workspace.Stage(hash, containerPath, "fcb", legacyBytes);
-                imported++;
-            }
-            return true;
+            skipped++;
         }
-
-        string containerRelative = containerPath ?? $"_hash\\{hash:x8}.fcb";
-        foreach ((string fragmentId, string xml) in export.ExternalFiles)
+        else
         {
-            string? vanillaXml = vanillaRoot is not null ? FcbXml.ExtractFragment(vanillaRoot, fragmentId, defs) : null;
-            if (vanillaXml == xml)
-            {
-                skipped++;
-                continue;
-            }
-
-            workspace.Stage(hash, $"{containerRelative}\\{fragmentId}", "xml", new UTF8Encoding(false).GetBytes(xml));
-            fragmentsImported++;
+            workspace.Stage(hash, containerPath, "fcb", legacyBytes);
+            imported++;
         }
 
         return true;
@@ -282,7 +259,7 @@ public static class LegacyPatchImporter
     /// fragment at a time and stages only the changed (or added) ones. Returns false, staging
     /// nothing, when this granularity can't faithfully represent the change — the container doesn't
     /// split, or its skeletons differ (an edit outside every fragment, a deleted fragment, a moved
-    /// one) — and the caller's coarser group/whole-file comparison takes over.
+    /// one) — and the caller's whole-file comparison takes over.
     /// </summary>
     private static bool TryImportDeepFragments(
         uint hash, FcbObject legacyRoot, FcbObject vanillaRoot, string? containerPath,
@@ -304,13 +281,13 @@ public static class LegacyPatchImporter
         var vanillaXmlById = new Dictionary<string, string>(vanilla.Count, FcbFragments.IdComparer);
         foreach (FcbFragment fragment in vanilla)
         {
-            vanillaXmlById[fragment.Id] = FcbXml.RenderObject(fragment.Node, defs);
+            vanillaXmlById[fragment.Id] = FcbXml.ToXml(fragment.Node, defs);
         }
 
         string containerRelative = containerPath ?? $"_hash\\{hash:x8}.fcb";
         foreach (FcbFragment fragment in legacy)
         {
-            string xml = FcbXml.RenderObject(fragment.Node, defs);
+            string xml = FcbXml.ToXml(fragment.Node, defs);
             if (vanillaXmlById.TryGetValue(fragment.Id, out string? vanillaXml) && vanillaXml == xml)
             {
                 skipped++;
@@ -341,7 +318,7 @@ public static class LegacyPatchImporter
             markerById[fragment.Node] =
                 keepOnlyIdsIn.Contains(fragment.Id) ? FcbFragments.Canonicalize(fragment.Id) : null;
         }
-        return FcbXml.RenderObject(Skeleton(root, markerById), defs);
+        return FcbXml.ToXml(Skeleton(root, markerById), defs);
     }
 
     private static FcbObject Skeleton(FcbObject node, Dictionary<FcbObject, string?> markerById)

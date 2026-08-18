@@ -134,7 +134,8 @@ public static class PatchBuilder
                     ?? throw new InvalidOperationException(
                         $"A fragment override targets {kv.Key:X8}, but no archive currently provides " +
                         "its vanilla ancestor.");
-                return (ContainerHash: kv.Key, VanillaBytes: vanillaBytes, Root: FcbDocument.Deserialize(vanillaBytes));
+                return (ContainerHash: kv.Key, VanillaBytes: vanillaBytes, Root: FcbDocument.Deserialize(vanillaBytes),
+                    Display: ContainerDisplayPath(kv.Key, kv.Value.Values));
             })
             .ToDictionary(x => x.ContainerHash);
 
@@ -148,7 +149,8 @@ public static class PatchBuilder
                 item.ContainerHash,
                 item.FragmentId,
                 Xml: FragmentMerge.Resolve(
-                    vanillaByContainer[item.ContainerHash].Root, item.FragmentId, item.Contributors, defs, conflicts)))
+                    vanillaByContainer[item.ContainerHash].Root, item.FragmentId, item.Contributors, defs, conflicts,
+                    vanillaByContainer[item.ContainerHash].Display)))
             .GroupBy(x => x.ContainerHash)
             .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.FragmentId, x => x.Xml));
 
@@ -169,6 +171,25 @@ public static class PatchBuilder
         }
 
         return replacements;
+    }
+
+    /// <summary>
+    /// The container's display path for a conflict report, read off any contributor's staged fragment
+    /// path. A fragment-only layer never carries the container's own hash, so a hash-addressed one has
+    /// no recovered name to fall back on.
+    /// </summary>
+    private static string ContainerDisplayPath(
+        uint containerHash, IEnumerable<List<(IModLayer Layer, uint EntryHash)>> contributorsByFragment)
+    {
+        foreach ((IModLayer layer, uint entryHash) in contributorsByFragment.SelectMany(c => c))
+        {
+            if (layer.PathOf(entryHash) is { } staged && ModPathHashing.ContainerPathOf(staged) is { } path)
+            {
+                return path;
+            }
+        }
+
+        return $"_hash\\{containerHash:x8}.fcb";
     }
 
     /// <summary>

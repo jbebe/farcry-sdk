@@ -8,11 +8,15 @@ namespace JackAll.Core.Mods;
 /// One fragment where two mods' edits genuinely collided and <see cref="FragmentMerge.Resolve"/> was
 /// told to fall back to load order instead of throwing — see that parameter's remarks. Recorded so a
 /// caller that asked for the lenient mode (currently only <c>jackall-cli mod build</c>, which has no
-/// interactive way to ask a user to hand-fix one) can still surface that it happened, rather than the
-/// build silently picking a winner with no trace.
+/// interactive way to ask a user to hand-fix one) can still surface that it happened. The container's
+/// display path rides along because a fragment id alone names one entity, not which sector it sits in.
 /// </summary>
 public readonly record struct FragmentConflict(
-    string FragmentId, bool IsNewEntry, string WinningLayer, IReadOnlyList<string> EarlierLayers);
+    string Container, string FragmentId, bool IsNewEntry, string WinningLayer, IReadOnlyList<string> EarlierLayers)
+{
+    /// <summary>Where the fragment sits, as one staged path.</summary>
+    public string DisplayPath => $"{Container}\\{FragmentId}";
+}
 
 /// <summary>
 /// The Milestone 3 (docs/design/fcb-fragment-overlays.md) fragment-merge machinery shared by
@@ -94,9 +98,13 @@ public static class FragmentMerge
     /// in one flat parallel pass - <c>Resolve</c> itself has to tolerate being called concurrently for
     /// different fragments sharing the same queue.
     /// </param>
+    /// <param name="container">
+    /// The container's display path, stamped onto every <see cref="FragmentConflict"/> this call
+    /// enqueues - <paramref name="fragmentId"/> is relative to it and ambiguous on its own.
+    /// </param>
     public static string Resolve(FcbObject vanillaRoot, string fragmentId,
         IReadOnlyList<(IModLayer Layer, uint EntryHash)> layers, FcbClassDefinitions defs,
-        ConcurrentQueue<FragmentConflict>? conflicts = null)
+        ConcurrentQueue<FragmentConflict>? conflicts = null, string container = "")
     {
         string? vanillaXml = FcbXml.ExtractFragment(vanillaRoot, fragmentId, defs);
         bool isNewEntry = vanillaXml is null;
@@ -163,8 +171,8 @@ public static class FragmentMerge
             // Lenient mode: load order wins outright, exactly like a whole-file override - "theirs" (the
             // higher-priority layer) replaces the failed 3-way merge rather than keeping whatever partial
             // result Diff3 produced.
-            conflicts.Enqueue(new FragmentConflict(
-                fragmentId, isNewEntry, layer.Name, [.. layers.Take(i).Select(l => l.Layer.Name).Distinct()]));
+            conflicts.Enqueue(new FragmentConflict(container, fragmentId, isNewEntry, layer.Name,
+                [.. layers.Take(i).Select(l => l.Layer.Name).Distinct()]));
             result = theirs;
         }
         return result;

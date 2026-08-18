@@ -165,6 +165,8 @@ Highest payoff: it is a new capability, not an improvement to an existing one.
 - **This changes existing ids**, so decide the migration: keep the group-level ids working as an alias,
   or convert layers on load. `mod import-legacy` also diffs entity libraries fragment-by-fragment, so
   its output granularity changes — check `LegacyPatchImporterTests` still holds.
+  *Resolved after the fact:* the alias was kept at first, then removed outright along with
+  `FcbXml.ToXml`'s group-per-file split — the `NN_Name.xml` id space no longer exists anywhere.
 - The Library tab then opens just the archetype, and `ArchetypeLint.DeadDeclarationsIn` becomes exactly
   per-archetype instead of per-group.
 

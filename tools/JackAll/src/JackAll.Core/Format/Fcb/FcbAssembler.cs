@@ -16,11 +16,10 @@ public static class FcbAssembler
     /// Decodes <paramref name="baseFcb"/>, replaces each fragment whose current id matches a key in
     /// <paramref name="fragmentXmlById"/> (via <see cref="FcbFragments.IdComparer"/> — a staged path
     /// is lowercased by <c>NameHash.Normalize</c> on the way in, and an entity override must match on
-    /// its numeric id even if the entity was renamed) with that XML re-parsed, and re-encodes. Legacy
-    /// whole-group ids resolve first, so a deep id staged inside a replaced group still lands in the
-    /// group's new content. A fragment id with no match at all is appended as brand-new content — a
-    /// mod adding an entity that never existed in the vanilla container, the normal "add new content"
-    /// case (see <see cref="FragmentMerge.Resolve"/>'s matching empty-ancestor handling) — under the
+    /// its numeric id even if the entity was renamed) with that XML re-parsed, and re-encodes. A
+    /// fragment id with no match at all is appended as brand-new content — a mod adding an entity that
+    /// never existed in the vanilla container, the normal "add new content" case (see
+    /// <see cref="FragmentMerge.Resolve"/>'s matching empty-ancestor handling) — under the
     /// shape-defined parent (<see cref="FcbFragments.AppendTarget"/>), in a deterministic (ordinal)
     /// order so building twice from the same layers is byte-identical. Returns
     /// <paramref name="baseFcb"/> unchanged, with no decode/encode round trip, when there is nothing
@@ -40,30 +39,8 @@ public static class FcbAssembler
 
         FcbObject root = FcbDocument.Deserialize(baseFcb);
         var remaining = new HashSet<string>(byId.Keys, FcbFragments.IdComparer);
-        List<FcbFragments.FragmentSlot> slots = FcbFragments.Slots(root);
 
-        // Whole-group alias replacements land before deep ones, so a deep id staged inside a
-        // replaced group resolves against the group's new content. An id claimed by a deep fragment
-        // never consumes a group though - same deep-over-alias precedence FcbFragments.Find applies.
-        if (FcbFragments.TryGetGroupIds(root, out IReadOnlyList<string> groupIds))
-        {
-            var deepClaimed = new HashSet<string>(slots.Select(s => s.Id), FcbFragments.IdComparer);
-            bool groupReplaced = false;
-            for (int i = 0; i < groupIds.Count; i++)
-            {
-                if (!deepClaimed.Contains(groupIds[i]) && remaining.Remove(groupIds[i]))
-                {
-                    root.Children[i] = FcbXml.FromXml(byId[groupIds[i]]);
-                    groupReplaced = true;
-                }
-            }
-            if (groupReplaced && remaining.Count > 0)
-            {
-                slots = FcbFragments.Slots(root);
-            }
-        }
-
-        foreach (FcbFragments.FragmentSlot slot in slots)
+        foreach (FcbFragments.FragmentSlot slot in FcbFragments.Slots(root))
         {
             if (remaining.Count == 0)
             {

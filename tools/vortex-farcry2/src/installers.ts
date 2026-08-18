@@ -15,6 +15,8 @@ const FCSE_PAGE_URL = 'https://jbebe.github.io/farcry-sdk/fcse';
 
 /** The game's own binaries. No content mod, FCSE loader or plugin has any reason to ship these. */
 const SUSPICIOUS_BINARIES = ['farcry2.exe', 'dunia.dll', 'fc2.dll'];
+/** How many staged files a legacy import reads at once — see installLegacyPatch. */
+const READ_BATCH = 32;
 
 /** Claims every non-empty archive: only makeInstaller can tell what one actually is. */
 export function testSupported(files: string[], gameId: string): Promise<types.ISupportedResult> {
@@ -265,12 +267,19 @@ async function installLegacyPatch(
       },
     });
 
+    // One file per changed archetype or placed entity, so a big mod stages thousands of small XMLs.
+    // Read them a batch at a time: opening every one at once runs a machine out of file handles,
+    // while one at a time pays a full event-loop round trip per file.
     const staged = await listFiles(outDir);
-    const instructions: types.IInstruction[] = await Promise.all(staged.map(async rel => ({
-      type: 'generatefile' as const,
-      data: await fs.readFileAsync(path.join(outDir, rel)),
-      destination: rel,
-    })));
+    const instructions: types.IInstruction[] = [];
+    for (let i = 0; i < staged.length; i += READ_BATCH) {
+      const batch = staged.slice(i, i + READ_BATCH);
+      instructions.push(...await Promise.all(batch.map(async rel => ({
+        type: 'generatefile' as const,
+        data: await fs.readFileAsync(path.join(outDir, rel)),
+        destination: rel,
+      }))));
+    }
 
     notify(api, {
       type: 'success',

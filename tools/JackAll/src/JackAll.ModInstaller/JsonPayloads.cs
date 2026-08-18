@@ -55,6 +55,7 @@ internal sealed record BuildLayerPayload
 /// <summary>A fragment two layers both edited, resolved by load order rather than refusing to build.</summary>
 internal sealed record ConflictPayload
 {
+    public string Container { get; init; } = string.Empty;
     public string FragmentId { get; init; } = string.Empty;
     public bool IsNewEntry { get; init; }
     public string WinningLayer { get; init; } = string.Empty;

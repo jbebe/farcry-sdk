@@ -110,11 +110,11 @@ app.Configure(config =>
     config.AddBranch("fcb", fcb =>
     {
         fcb.AddCommand<FcbDecodeCommand>("decode")
-            .WithDescription("Decode an .fcb to XML (index + external sub-files).")
+            .WithDescription("Decode an .fcb to XML.")
             .WithExample("fcb", "decode", "entitylibrary.fcb");
         fcb.AddCommand<FcbEncodeCommand>("encode")
-            .WithDescription("Re-encode an XML index folder back into an .fcb.")
-            .WithExample("fcb", "encode", "entitylibrary/entitylibrary.xml");
+            .WithDescription("Re-encode XML back into an .fcb.")
+            .WithExample("fcb", "encode", "entitylibrary.xml");
     });
 
     // --- .mgb Magma UI packages -----------------------------------------

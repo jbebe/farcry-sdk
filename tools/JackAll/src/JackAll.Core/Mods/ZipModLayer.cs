@@ -21,7 +21,7 @@ public sealed class ZipModLayer : IModLayer
 {
     private readonly Dictionary<uint, string> _entryNames = [];
     private readonly HashSet<uint> _hashes = [];
-    private readonly Dictionary<uint, List<FragmentOverride>> _fragmentOverrides = [];
+    private readonly Dictionary<uint, FragmentMap> _fragmentOverrides = [];
     private readonly ConcurrentDictionary<uint, byte[]> _readCache = new();
 
     public string Name { get; }

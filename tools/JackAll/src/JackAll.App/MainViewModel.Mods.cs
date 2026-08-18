@@ -62,8 +62,8 @@ public sealed partial class MainViewModel
     /// <summary>
     /// Every file this layer overrides, as a folder tree — plain overrides at their real (or
     /// <c>_hash\</c>-addressed, see <see cref="IModLayer"/>) path, and each splitting-.fcb fragment
-    /// override nested one level under its container. Rebuilt fresh on every call: cheap, since a
-    /// single mod's file count is orders of magnitude smaller than the whole VFS tree
+    /// override nested under its container, however deep its id runs. Rebuilt fresh on every call:
+    /// cheap, since a single mod's file count is orders of magnitude smaller than the whole VFS tree
     /// <see cref="BuildTree"/> maintains incrementally.
     /// </summary>
     private ObservableCollection<ModFileNode> BuildModFileTree(IModLayer layer)

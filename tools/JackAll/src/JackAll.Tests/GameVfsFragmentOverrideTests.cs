@@ -54,7 +54,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
     {
         var replacement = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
         replacement.Values.Add(0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
-        string xml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty).IndexXml;
+        string xml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty);
         return System.Text.Encoding.UTF8.GetBytes(xml);
     }
 

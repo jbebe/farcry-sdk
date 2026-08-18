@@ -64,6 +64,7 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
                 }),
                 conflicts = result.Conflicts.Select(c => new
                 {
+                    container = c.Container,
                     fragmentId = c.FragmentId,
                     isNewEntry = c.IsNewEntry,
                     winningLayer = c.WinningLayer,
@@ -83,7 +84,7 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
             AnsiConsole.MarkupLine(
                 $"[yellow]Warning:[/] '{conflict.WinningLayer.EscapeMarkup()}' overrode "
                 + $"'{string.Join(", ", conflict.EarlierLayers).EscapeMarkup()}' inside "
-                + $"'{conflict.FragmentId.EscapeMarkup()}' by load order - their edits genuinely "
+                + $"'{conflict.DisplayPath.EscapeMarkup()}' by load order - their edits genuinely "
                 + "conflicted, so only the higher-priority mod's change survived. Verify this in-game "
                 + "or hand-resolve it in JackAll.App.");
         }

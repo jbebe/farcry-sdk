@@ -237,7 +237,7 @@ jackall-cli spk extract 004e1c52.spk 0x004e1c50
 jackall-cli spk import 004e1c52.spk 0x004e1c50 replacement.wav
 
 jackall-cli fcb decode entitylibrary.fcb
-jackall-cli fcb encode entitylibrary/entitylibrary.xml
+jackall-cli fcb encode entitylibrary.xml
 
 jackall-cli rml decode toc.rml
 jackall-cli rml encode toc.xml

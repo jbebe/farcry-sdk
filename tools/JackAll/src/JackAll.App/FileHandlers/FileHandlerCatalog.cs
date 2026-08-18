@@ -36,8 +36,8 @@ public static class FileHandlerCatalog
     /// <paramref name="replaceContent"/> lets a handler stage an edited replacement into the workspace.
     /// <paramref name="openEditor"/> is only used by the fragment case, to hand off to the host
     /// window's tab-based XML editor rather than anything embedded in this compact preview column.
-    /// <paramref name="readOriginal"/> is used by the text and fragment cases, by the fcb case for a
-    /// root that doesn't split into sub-files, and by the rml case, to diff a modded file against its
+    /// <paramref name="readOriginal"/> is used by the text, fragment, fcb and rml cases, to diff a
+    /// modded file against its
     /// base game version (see <see cref="BuildTextHandler"/>, <see cref="BuildLauncherPreview"/>,
     /// <see cref="FcbFileHandler"/> and <see cref="RmlFileHandler"/>). <paramref name="resolveByHash"/>
     /// and <paramref name="navigateTo"/> are used by the dependency-link case, to look up what a link
@@ -191,6 +191,10 @@ public static class FileHandlerCatalog
     }
 
     internal static bool ExceedsPreviewLimit(byte[] bytes) => bytes.Length > MaxPreviewBytes;
+
+    /// <summary>The same limit against already-decoded text - what an .fcb's rendered XML is measured
+    /// by, since its expanded size is what the editor actually lays out.</summary>
+    internal static bool ExceedsPreviewLimit(string text) => text.Length > MaxPreviewBytes;
 
     internal static string TooLargeMessage(long byteLength)
         => $"This is {byteLength / 1024.0:N0} KB - larger than the {MaxPreviewBytes / 1024:N0} KB preview limit, "

@@ -62,7 +62,7 @@ public class FcbAssemblerTests
             WorldHashes.HidName,
             fragments[0].Node.Children.First(c => c.TypeHash == WorldHashes.Entity).Values[WorldHashes.HidName]);
         replacement.Children.Add(entity);
-        string replacementXml = FcbXml.RenderObject(replacement, FcbClassDefinitions.Empty);
+        string replacementXml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty);
 
         byte[] assembled = FcbAssembler.Apply(baseFcb, new Dictionary<string, string> { [targetId] = replacementXml });
         FcbObject rebuilt = FcbDocument.Deserialize(assembled);
@@ -85,29 +85,32 @@ public class FcbAssemblerTests
         }
     }
 
-    /// <summary>The pre-deep-fragment id space: a whole-group <c>NN_Name.xml</c> override staged by
-    /// an older version still splices, replacing the group it names.</summary>
+    /// <summary>The pre-deep-fragment id space is gone: a whole-group <c>NN_Name.xml</c> override
+    /// staged by an older version replaces nothing and lands as new content instead.</summary>
     [Theory]
     [MemberData(nameof(SampleFiles))]
-    public void A_legacy_group_id_still_replaces_the_whole_group(string path)
+    public void A_pre_deep_group_id_is_not_an_alias_and_appends_as_new_content(string path)
     {
         if (string.IsNullOrEmpty(path)) return;
 
         byte[] baseFcb = File.ReadAllBytes(path);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
-        FcbXmlExport export = FcbXml.ToXml(original, FcbClassDefinitions.Empty);
-        string groupId = export.ExternalFiles.Keys.First();
+
+        string groupId = TestSupport.PreDeepGroupId(original, 0);
 
         var replacement = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
         replacement.Values.Add(0xDEADBEEF, [0x01, 0x02, 0x03, 0x04]);
-        string replacementXml = FcbXml.RenderObject(replacement, FcbClassDefinitions.Empty);
+        string replacementXml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty);
 
         byte[] assembled = FcbAssembler.Apply(baseFcb, new Dictionary<string, string> { [groupId] = replacementXml });
         FcbObject rebuilt = FcbDocument.Deserialize(assembled);
 
-        Assert.Equal(original.Children.Count, rebuilt.Children.Count);
-        int groupIndex = export.ExternalFiles.Keys.ToList().IndexOf(groupId);
-        AssertSameShape(replacement, rebuilt.Children[groupIndex]);
+        Assert.Equal(original.Children.Count + 1, rebuilt.Children.Count);
+        for (int i = 0; i < original.Children.Count; i++)
+        {
+            AssertSameShape(original.Children[i], rebuilt.Children[i]);
+        }
+        AssertSameShape(replacement, rebuilt.Children[^1]);
     }
 
     [Theory]
@@ -121,7 +124,7 @@ public class FcbAssemblerTests
 
         var addition = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
         addition.Values.Add(0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
-        string additionXml = FcbXml.RenderObject(addition, FcbClassDefinitions.Empty);
+        string additionXml = FcbXml.ToXml(addition, FcbClassDefinitions.Empty);
 
         byte[] assembled = FcbAssembler.Apply(
             baseFcb, new Dictionary<string, string> { ["99999_does_not_exist.xml"] = additionXml });
@@ -151,7 +154,7 @@ public class FcbAssemblerTests
 
         var addition = new FcbObject { TypeHash = WorldHashes.EntityPrototype };
         addition.Values.Add(0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
-        string additionXml = FcbXml.RenderObject(addition, FcbClassDefinitions.Empty);
+        string additionXml = FcbXml.ToXml(addition, FcbClassDefinitions.Empty);
 
         byte[] assembled = FcbAssembler.Apply(
             baseFcb, new Dictionary<string, string> { [@"mymod\Weapons\BrandNew.xml"] = additionXml });

@@ -147,7 +147,7 @@ function notifyConflicts(
   notify(api, {
     type: 'warning',
     title: `${conflicts.length} mod conflict(s) resolved by load order`,
-    message: 'These mods edit the exact same part of the same file differently; the mod lower in '
+    message: 'These mods change the same part of the same thing differently; the mod lower in '
       + 'your load order won each time.',
     allowSuppress: true,
     actions: [{
@@ -162,13 +162,19 @@ function notifyConflicts(
 }
 
 function showConflicts(api: types.IExtensionApi, conflicts: jackall.BuildResult['conflicts']): void {
-  const lines = conflicts.map(c =>
-    `"${c.fragmentId}": "${c.winningLayer}" overrode ${c.earlierLayers.join(', ')} (load order).`);
+  const lines = conflicts.map(c => {
+    const what = c.isNewEntry
+      ? `both add "${c.fragmentId}" with different content`
+      : `both edit "${c.fragmentId}"`;
+    return `${c.container}: "${c.winningLayer}" and ${c.earlierLayers.join(', ')} ${what} - `
+      + `"${c.winningLayer}" was kept (load order).`;
+  });
 
   void ask(api, 'info', 'Mod conflicts resolved by load order', {
-    text: 'These mods edit the exact same part of the same file differently. The mod lower in your '
-      + 'load order won each time - reorder your mods if that\'s not what you want, or open '
-      + 'JackAll.App to hand-merge the edits.',
+    text: 'Each line is one archetype or placed entity two mods changed differently. Mods touching '
+      + 'different parts of the same file never reach this list. The mod lower in your load order '
+      + 'won each time - reorder your mods if that\'s not what you want, or open JackAll.App to '
+      + 'hand-merge the edits.',
     message: lines.join('\n'),
   }, [
     { label: 'Close' },

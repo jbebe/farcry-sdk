@@ -4,10 +4,10 @@ using JackAll.Core.Format.Fcb;
 namespace JackAll.App.FileHandlers.Sav;
 
 /// <summary>
-/// Renders a save's <c>PersistenceDB</c> tree in exactly the shape <see cref="FcbXml.RenderObject"/>
+/// Renders a save's <c>PersistenceDB</c> tree in exactly the shape <see cref="FcbXml.ToXml"/>
 /// renders an ordinary <c>.fcb</c> file - one <c>&lt;object&gt;</c>/<c>&lt;value&gt;</c> tree, a name
 /// attribute or a hash attribute (never both), typed content wherever a type is actually known - a
-/// single recursive build of one coherent <see cref="XElement"/> tree, not <see cref="FcbXml.RenderObject"/>'s
+/// single recursive build of one coherent <see cref="XElement"/> tree, not <see cref="FcbXml.ToXml"/>'s
 /// own output with several regex text-patches layered on top afterward.
 /// </summary>
 /// <remarks>
@@ -22,14 +22,14 @@ namespace JackAll.App.FileHandlers.Sav;
 /// next to a bolted-on <c>known="..."</c>/<c>ref="..."</c>, instead of the base game's own convention of
 /// <c>name="..."</c> replacing <c>hash="..."</c> outright once it's known.
 ///
-/// <see cref="FcbXml.RenderObject"/> itself can't just be reused for this: its own class/member
+/// <see cref="FcbXml.ToXml"/> itself can't just be reused for this: its own class/member
 /// resolution (<see cref="FcbClassDefinitions"/>) is exactly right for the ~37%/14% of a save's
 /// objects/values that really do reuse a live entitylibrary component class (<c>CIgnitorComponent</c>,
 /// <c>CPersistComponent</c>, ...; see reverse/dunia/savegame_format.md), but has no hook for a save's
 /// own, disjoint vocabulary (<see cref="SaveGameFieldCatalog"/>'s flat <c>binary_classes.xml</c> lookup,
 /// <see cref="SaveGamePersistenceTags"/>, <see cref="SaveGameCompiledFieldNames"/>). So this class re-walks
 /// the <see cref="FcbObject"/> tree itself, using the same public class-scope API
-/// <see cref="FcbXml.RenderObject"/> does internally (<see cref="FcbClassDefinitions.GetClass"/>/
+/// <see cref="FcbXml.ToXml"/> does internally (<see cref="FcbClassDefinitions.GetClass"/>/
 /// <see cref="FcbClass.Resolve"/>/<see cref="FcbClass.FindMember"/>) so a genuinely-resolvable component
 /// still resolves exactly as it would in a normal <c>.fcb</c>, falling through the savegame-specific
 /// dictionaries (same priority order the old five-pass pipeline used) only for whatever the entitylibrary
@@ -85,7 +85,7 @@ internal static class SaveGameXmlRenderer
 
     private static XElement WriteValue(uint nameHash, byte[] value, FcbClass ownClass)
     {
-        // 1) a real, class-scoped entitylibrary member - the same resolution + encoding FcbXml.RenderObject
+        // 1) a real, class-scoped entitylibrary member - the same resolution + encoding FcbXml.ToXml
         //    itself uses for an ordinary .fcb (walks ownClass's own superclass chain).
         FcbMember? member = ownClass.FindMember(nameHash);
         if (member is not null && TryBuildTyped(nameHash, member.Name, member.Type, value, out XElement? typed))

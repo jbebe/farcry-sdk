@@ -50,8 +50,9 @@ refuses to build until it's resolved.
 ## Load order
 
 Layers apply top to bottom and **the bottom one wins** — the same rule as JackAll's own mod list.
-Two mods editing different parts of the same `.fcb` container are merged rather than fought over, so
-order only decides genuine conflicts.
+Two mods overriding different fragments of the same `.fcb` container (different archetypes, different
+placed entities) never meet at all, and two editing different parts of the same fragment are merged
+rather than fought over, so order only decides genuine conflicts.
 
 Entries aren't individually toggleable: Vortex's own enable/disable already decides what's applied.
 
@@ -64,7 +65,7 @@ file list, no `jackall-mi` round trip involved:
 | --- | --- | --- |
 | 1 | A `patch.dat`/`patch.fat` pair, anywhere | **Legacy mod.** Converted at install time via `mod import-legacy`, keeping only what genuinely differs from the base game. This is how most existing Far Cry 2 mods are distributed. We can't force any structure on these, so the pair is all that's recognized - anything else in the archive is not part of the conversion, and a dialog says so before install proceeds. |
 | 2 | A `.dll` under a `plugins\` folder | **FCSE plugin.** Deployed to `bin\plugins\`. Nothing to do with the archive pipeline — FCSE is a runtime DLL loader. Extra files alongside it are normal, not warned about. |
-| 3 | Files rooted under a literal `Data_Win32\` folder | **Asset mod.** That prefix (plus any wrapper folder above it) is stripped, and what's left (`worlds\…`, `generated\…`, `_hash\<crc32>.<ext>`, `<container>.fcb\NN_Name.xml`, …) is staged as an ordinary layer. Deliberately strict: no fuzzy root-guessing beyond the literal folder name. |
+| 3 | Files rooted under a literal `Data_Win32\` folder | **Asset mod.** That prefix (plus any wrapper folder above it) is stripped, and what's left (`worlds\…`, `generated\…`, `_hash\<crc32>.<ext>`, `<container>.fcb\<fragment id>` such as `generated\entitylibrary.fcb\vehicle\Land\Jeep.xml`, …) is staged as an ordinary layer. Deliberately strict: no fuzzy root-guessing beyond the literal folder name. |
 
 `FCSE.exe` itself (the loader, not a plugin) is recognized separately and deployed to `bin\`.
 

@@ -133,6 +133,61 @@ public class LegacyPatchImporterTests : IDisposable
         Assert.Equal(fragmentReplacementXml, workspace.Read(staged.EntryHash));
     }
 
+    /// <summary>
+    /// A deleted archetype is a change no per-fragment override can express, so the import falls back
+    /// to the whole container - the only coarser unit left now that the group-per-file split is gone.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_change_deep_fragments_cannot_express_stages_the_whole_container()
+    {
+        if (_legacySourceInstall is null || _cleanInstall is null) return;
+
+        NameDatabase names = TestSupport.LoadNames();
+
+        VfsFile container;
+        byte[] withOneArchetypeRemoved;
+        using (var vfs = GameVfs.Load(_legacySourceInstall, names))
+        {
+            VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+            container = vfs.Files[fragment.ContainerHash!.Value];
+
+            FcbObject tree = FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!);
+            FcbObject group = tree.Children.First(c => c.Children.Count > 1);
+            group.Children.RemoveAt(0);
+            withOneArchetypeRemoved = FcbDocument.Serialize(tree);
+        }
+
+        var mod = MakeZipMod("deletion_source", (container.Path, withOneArchetypeRemoved));
+        using (var vfsForRead = GameVfs.Load(_legacySourceInstall, names))
+        {
+            PatchBuilder.Build(_legacySourceInstall, [mod], vfsForRead.ReadOriginal);
+        }
+
+        string legacyZipPath = Path.Combine(_sandbox, "deletion_mod.zip");
+        using (var zip = ZipFile.Open(legacyZipPath, ZipArchiveMode.Create))
+        {
+            zip.CreateEntryFromFile(_legacySourceInstall.PatchFat, "Data_Win32/patch.fat");
+            zip.CreateEntryFromFile(_legacySourceInstall.PatchDat, "Data_Win32/patch.dat");
+        }
+
+        string workspaceDir = Path.Combine(_sandbox, "deletion_workspace");
+        Directory.CreateDirectory(workspaceDir);
+        var workspace = new FolderModLayer(workspaceDir, "workspace");
+
+        using var cleanVfs = GameVfs.Load(_cleanInstall, names);
+        LegacyImportResult result = LegacyPatchImporter.Import(
+            legacyZipPath, workspace, names, FcbClassDefinitions.Empty, cleanVfs.ReadOriginal, cleanVfs.ReadOriginalHash);
+
+        Assert.Equal(1, result.Imported);
+        Assert.Equal(0, result.FragmentsImported);
+
+        workspace.Rescan();
+        Assert.Contains(container.Hash, workspace.Hashes);
+        Assert.DoesNotContain(container.Hash, workspace.FragmentOverrides.Keys);
+        Assert.Empty(Directory.EnumerateFiles(workspaceDir, "*.xml", SearchOption.AllDirectories));
+    }
+
     [Fact]
     [Trait("Category", "RequiresFixture")]
     public void Importing_an_extracted_folder_matches_importing_the_same_mod_as_a_zip()

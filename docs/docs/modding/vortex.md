@@ -82,9 +82,10 @@ For an entity override the **trailing numeric `disEntityId` is authoritative and
 cosmetic** — an override staged under a since-renamed entity still matches, and `2058514756624450165.xml`
 alone works too. An id matching nothing in the vanilla container *adds* that content instead: a new
 archetype joins the library's last group, a new entity joins the sector's `main` mission layer. The
-older per-group ids (`entitylibrary.fcb\NN_Name.xml`) keep working as an alias for the whole group,
-so mods staged before per-archetype ids existed still build. Containers whose children carry no
-name/id (`mapsdata`, `managers`, …) don't split — only a whole-file override can touch those.
+pre-per-archetype group ids (`entitylibrary.fcb\NN_Name.xml`) are **not** accepted — an override
+staged under one names no fragment, so it is added as new content rather than replacing that group.
+Containers whose children carry no name/id (`mapsdata`, `managers`, …) don't split — only a
+whole-file override can touch those.
 
 ## The one destructive failure mode
 

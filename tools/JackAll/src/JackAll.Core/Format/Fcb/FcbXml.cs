@@ -5,14 +5,6 @@ using JackAll.Core.Format.Rml;
 
 namespace JackAll.Core.Format.Fcb;
 
-/// <summary>
-/// The result of exporting an <see cref="FcbObject"/> tree to XML: a main "index" document, plus
-/// zero or more external sub-documents it references by filename (Gibbed's "multi-export" splitting,
-/// applied automatically for entity-library-shaped roots — see <see cref="FcbXml.ToXml"/>). Every
-/// entry is keyed by the plain filename the index document's <c>external="..."</c> attribute uses.
-/// </summary>
-public sealed record FcbXmlExport(string IndexXml, IReadOnlyDictionary<string, string> ExternalFiles);
-
 /// <summary>One fragment's <see cref="FcbFragments"/>-assigned id, paired with its binary size —
 /// see <see cref="FcbXml.ListFragmentsWithSize"/>.</summary>
 public readonly record struct FcbFragmentInfo(string Id, long Size);
@@ -20,7 +12,7 @@ public readonly record struct FcbFragmentInfo(string Id, long Size);
 /// <summary>
 /// Converts between a parsed <see cref="FcbObject"/> tree and Gibbed-compatible XML — same element
 /// shape (`&lt;object type="..."|hash="..."&gt;`, `&lt;value name="..."|hash="..." type="..."&gt;`),
-/// same value-type encodings, same "split an entity-library-of-groups into external files" behavior.
+/// and the same value-type encodings.
 /// </summary>
 /// <remarks>
 /// <see cref="ToXml"/> is the only direction that consults <see cref="FcbClassDefinitions"/> — it's
@@ -41,47 +33,18 @@ public readonly record struct FcbFragmentInfo(string Id, long Size);
 public static class FcbXml
 {
     /// <summary>
-    /// Converts a parsed FCB tree to XML. When the tree matches Gibbed's "entity library made up of
-    /// named groups" shape (root has no values, root's type is EntityLibrary, every child is an
-    /// unnamed group object) — true of every real entitylibrary*.fcb sample seen — splits each child
-    /// into its own external file, matching Gibbed's default multi-export behavior exactly (including
-    /// its one quirk: each split-out child's own class is resolved against the flat top-level table,
-    /// not nested inside the root's resolved class, since multi-export bypasses that scoping step).
-    /// Otherwise everything is written inline in one document.
+    /// Converts a parsed FCB tree to one XML document — a whole container's root or a single
+    /// fragment's node alike.
     /// </summary>
-    public static FcbXmlExport ToXml(FcbObject root, FcbClassDefinitions defs)
+    public static string ToXml(FcbObject obj, FcbClassDefinitions defs)
     {
-        if (!FcbFragments.TryGetGroupIds(root, out IReadOnlyList<string> ids))
-        {
-            (XElement inline, _) = WriteObject(root, defs);
-            return new FcbXmlExport(Render(inline), new Dictionary<string, string>());
-        }
-
-        var externals = new Dictionary<string, string>();
-        var indexRoot = new XElement("object");
-        FcbClass rootClass = defs.GetClass(root.TypeHash);
-        if (rootClass.Name is not null)
-        {
-            indexRoot.SetAttributeValue("type", rootClass.Name);
-        }
-        indexRoot.SetAttributeValue("hash", root.TypeHash.ToString("X8"));
-
-        for (int i = 0; i < root.Children.Count; i++)
-        {
-            string fileName = ids[i];
-            (XElement childEl, _) = WriteObject(root.Children[i], defs); // flat lookup - matches Gibbed's multi-export quirk
-            externals[fileName] = Render(childEl);
-
-            indexRoot.Add(new XElement("object", new XAttribute("external", fileName)));
-        }
-
-        return new FcbXmlExport(Render(indexRoot), externals);
+        (XElement el, _) = WriteObject(obj, defs);
+        return Render(el);
     }
 
     /// <summary>
     /// Every override-unit id of <paramref name="root"/> (see <see cref="FcbFragments"/> for the
-    /// recognised shapes and id scheme — a deeper space than <see cref="ToXml"/>'s Gibbed-compatible
-    /// group-per-file multi-export) with its <see cref="FcbDocument.EncodedSize"/> — the fully
+    /// recognised shapes and id scheme) with its <see cref="FcbDocument.EncodedSize"/> — the fully
     /// expanded byte size, not the (possibly backreference-deduplicated) span it occupied in the file
     /// it came from: a nested node's on-disk span isn't tracked by the decoder, and this is a display
     /// number for the file browser's size column, nothing more (see <c>GameVfs</c>).
@@ -92,34 +55,20 @@ public static class FcbXml
 
     /// <summary>
     /// Renders the node of <paramref name="root"/> whose <see cref="FcbFragments"/> id is
-    /// <paramref name="fragmentId"/> (legacy group ids included — see <see cref="FcbFragments.Find"/>),
-    /// or null if <paramref name="root"/> doesn't split or nothing matches (e.g. the tree changed
-    /// shape since the id was recorded). Matching runs through <see cref="FcbFragments.IdComparer"/>,
-    /// like every other fragment id comparison in this codebase (<c>_fragmentOverrides</c>,
-    /// <c>ModPathHashing</c>) — a staged override's id has already been lowercased by
-    /// <c>NameHash.Normalize</c> by the time it reaches here, but the tree's own ids come straight
-    /// from the game data's real casing.
+    /// <paramref name="fragmentId"/>, or null if <paramref name="root"/> doesn't split or nothing
+    /// matches (e.g. the tree changed shape since the id was recorded). Matching runs through
+    /// <see cref="FcbFragments.IdComparer"/> — a staged override's id arrives lowercased by
+    /// <c>NameHash.Normalize</c>, while the tree's own ids carry the game data's real casing.
     /// </summary>
     public static string? ExtractFragment(FcbObject root, string fragmentId, FcbClassDefinitions defs)
-    {
-        if (FcbFragments.Find(root, fragmentId) is not { } node)
-        {
-            return null;
-        }
-        (XElement el, _) = WriteObject(node, defs);
-        return Render(el);
-    }
+        => FcbFragments.Find(root, fragmentId) is { } node ? ToXml(node, defs) : null;
 
-    /// <summary>
-    /// Reverse of <see cref="ToXml"/>. <paramref name="resolveExternal"/> is called with the plain
-    /// filename from an <c>external="..."</c> attribute and must return that file's own XML text;
-    /// required only if <paramref name="indexXml"/> actually contains such a reference.
-    /// </summary>
-    public static FcbObject FromXml(string indexXml, Func<string, string>? resolveExternal = null)
+    /// <summary>Reverse of <see cref="ToXml"/>.</summary>
+    public static FcbObject FromXml(string xml)
     {
-        XElement root = XDocument.Parse(indexXml).Root
+        XElement root = XDocument.Parse(xml).Root
             ?? throw new InvalidDataException("Empty FCB XML document.");
-        return LoadNode(root, resolveExternal);
+        return ReadNode(root);
     }
 
     /// <summary>
@@ -132,21 +81,7 @@ public static class FcbXml
     /// actual rendered output.
     /// </summary>
     public static string CanonicalizeFragment(string fragmentXml, FcbClassDefinitions defs)
-        => RenderObject(FromXml(fragmentXml), defs);
-
-    /// <summary>
-    /// Renders <paramref name="obj"/> as a single, un-split document - the same per-object writer
-    /// <see cref="ToXml"/> uses for each piece of an entity-library split, exposed directly for a
-    /// caller (JackAll.App's structured fragment editor) that already holds a decoded
-    /// <see cref="FcbObject"/> from editing it natively rather than as text, and only needs XML as the
-    /// serialization format for staging - not <see cref="ToXml"/>'s multi-export splitting behavior,
-    /// which only makes sense for a whole container's root, never for one already-extracted fragment.
-    /// </summary>
-    public static string RenderObject(FcbObject obj, FcbClassDefinitions defs)
-    {
-        (XElement el, _) = WriteObject(obj, defs);
-        return Render(el);
-    }
+        => ToXml(FromXml(fragmentXml), defs);
 
     private static (XElement Element, FcbClass OwnClass) WriteObject(FcbObject obj, IFcbClassScope scope)
     {
@@ -208,7 +143,7 @@ public static class FcbXml
 
     /// <summary>
     /// Writes one value's content into <paramref name="el"/> for the given declared <paramref name="type"/>
-    /// - the same byte-to-XML encoding <see cref="RenderObject"/> itself uses, exposed directly so a
+    /// - the same byte-to-XML encoding <see cref="ToXml"/> itself uses, exposed directly so a
     /// caller with its own (unverified, class-resolution-free) name/type source - JackAll.App's savegame
     /// renderer, specifically - can still produce byte-for-byte the same shape a real resolved .fcb
     /// member would, rather than re-implementing this switch a second time. Returns <see langword="false"/>
@@ -386,27 +321,14 @@ public static class FcbXml
     private static string Single(byte[] value, int offset)
         => BitConverter.ToSingle(value, offset).ToString(CultureInfo.InvariantCulture);
 
-    private static FcbObject LoadNode(XElement node, Func<string, string>? resolveExternal)
+    private static FcbObject ReadNode(XElement node)
     {
-        string? external = (string?)node.Attribute("external");
-        if (!string.IsNullOrEmpty(external))
+        if (node.Attribute("external") is { } external)
         {
-            if (resolveExternal is null)
-            {
-                throw new InvalidDataException(
-                    $"'{external}' is an external reference, but no resolver was supplied to FromXml.");
-            }
-
-            XElement externalRoot = XDocument.Parse(resolveExternal(external)).Root
-                ?? throw new InvalidDataException($"'{external}' has no root element.");
-            return LoadNode(externalRoot, resolveExternal); // an external file can itself reference further externals
+            throw new InvalidDataException(
+                $"'{external.Value}' is an external reference; multi-file FCB XML is no longer supported.");
         }
 
-        return ReadNode(node, resolveExternal);
-    }
-
-    private static FcbObject ReadNode(XElement node, Func<string, string>? resolveExternal)
-    {
         var obj = new FcbObject { TypeHash = LoadNameOrHash(node, "type") };
 
         foreach (XElement valueEl in node.Elements("value"))
@@ -424,7 +346,7 @@ public static class FcbXml
 
         foreach (XElement childEl in node.Elements("object"))
         {
-            obj.Children.Add(LoadNode(childEl, resolveExternal));
+            obj.Children.Add(ReadNode(childEl));
         }
 
         return obj;

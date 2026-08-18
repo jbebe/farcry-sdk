@@ -8,8 +8,8 @@ const USAGE_INSTRUCTIONS =
   'Drag to set which mod wins when two of them change the same file. '
   + 'Layers are applied top to bottom, so the mod at the BOTTOM overrides the ones above it — the '
   + 'same order the JackAll app uses.\n\n'
-  + 'Mods that change different parts of the same .fcb container are merged rather than overridden, '
-  + 'so order only decides genuine conflicts.\n\n'
+  + 'Two mods changing different archetypes or placed entities of the same .fcb never collide at all, '
+  + 'and different parts of the same one are merged, so order only decides genuine conflicts.\n\n'
   + 'Use Vortex\'s normal enable/disable to leave a mod out; only enabled mods appear here.';
 
 function loadOrderFile(profileId: string): string {

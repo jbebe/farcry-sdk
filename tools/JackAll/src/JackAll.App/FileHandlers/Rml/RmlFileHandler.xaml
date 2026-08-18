@@ -12,7 +12,7 @@
                     Padding="8,6" />
         </StackPanel>
 
-        <!-- Unlike .fcb, .rml never splits into external sub-files - this is the whole decoded tree. -->
+        <!-- The whole decoded tree. -->
         <Border Margin="0,16,0,0" Background="#FAFAFA" BorderBrush="#DDD" BorderThickness="1">
             <text:TextFileHandler x:Name="Preview" Extension="xml" />
         </Border>
