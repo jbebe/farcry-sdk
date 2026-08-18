@@ -26,11 +26,10 @@ export interface ImportLegacyResult extends Envelope {
 export interface BuildResult extends Envelope {
   overriddenEntries: number;
   addedEntries: number;
-  /** Optional so a JACKALL_MI override pointing at an older build still parses. */
-  pluginsDeployed?: number;
-  pluginsRemoved?: number;
+  pluginsDeployed: number;
+  pluginsRemoved: number;
   /** Plugin files whose bin\plugins target exists but isn't JackAll's - left untouched. */
-  pluginCollisions?: string[];
+  pluginCollisions: string[];
   /** Fragments two mods both edited. A headless build has nobody to ask, so load order wins. */
   conflicts: Array<{
     /** The container the fragment id is relative to - the id alone names one entity, not its sector. */

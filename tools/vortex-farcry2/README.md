@@ -67,11 +67,10 @@ involved:
 | --- | --- | --- |
 | 1 | A `patch.dat`, anywhere | **Legacy mod.** Its `patch.fat` has to sit beside it - a lone `patch.dat` is rejected with the reason. Converted at install time via `mod import-legacy`, keeping only what genuinely differs from the base game. This is how most existing Far Cry 2 mods are distributed. We can't force any structure on these, so the pair is all that's recognized - anything else in the archive is not part of the conversion, and a dialog says so before install proceeds. |
 | 2 | `FCSE.exe`, anywhere | **The FCSE loader itself** (not a plugin). Deployed to `bin\`. |
-| 3 | A `plugins\` folder and/or a `mods\` folder | **Mod layer.** The two reserved folders may appear alone or together, each under any wrapper folder. `plugins\` carries an FCSE plugin and must hold at least one `.dll` or `.lua` at any depth (FCSE loads both, nested or flat). `mods\` holds game files (`worlds\…`, `generated\…`, `_hash\<crc32>.<ext>`, `<container>.fcb\<fragment id>` such as `generated\entitylibrary.fcb\vehicle\Land\Jeep.xml`, …). The archive shape is staged as-is: at build time JackAll compiles `mods\` into `patch.dat` and mirrors `plugins\` into `bin\plugins\`, manifest-tracked - so one archive can ship an asset mod with its companion plugin, and disabling it removes both halves. |
+| 3 | A top-level `plugins\` folder and/or `mods\` folder | **Mod layer.** Both reserved folders sit at the root of the archive - one of them, or both. `plugins\` carries an FCSE plugin and must hold at least one `.dll` or `.lua` at any depth (FCSE loads both, nested or flat). `mods\` holds game files at any depth (`worlds\…`, `generated\…`, `_hash\<crc32>.<ext>`, `<container>.fcb\<fragment id>` such as `generated\entitylibrary.fcb\vehicle\Land\Jeep.xml`, …), every one of which goes into `patch.dat`. The archive is staged as-is: at build time JackAll compiles `mods\` into `patch.dat` and mirrors `plugins\` into `bin\plugins\`, manifest-tracked - so one archive can ship an asset mod with its companion plugin, and disabling it removes both halves. |
 
-Anything else is rejected. **Breaking change:** the old `Data_Win32\`-rooted convention is gone -
-repack by renaming that folder to `mods`. Mods installed under the old FCSE-plugin mod type keep
-deploying; new plugin installs are plain layers.
+Anything else is rejected, a wrapper folder above the reserved pair included - the rejection names
+the folder to move.
 
 Only bucket 1 ever calls `jackall-mi` at install time (`mod import-legacy`) - converting a legacy
 patch genuinely needs the game's archives to diff against. The others don't need the game

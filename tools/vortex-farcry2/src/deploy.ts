@@ -66,7 +66,7 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
     const layers = await resolveLayerDirs(api, gameRoot);
     const signature = await signatureOf(layers);
 
-    // did-deploy fires for every mod type, FCSE plugins and loader included, and none of those reach
+    // did-deploy fires for every mod type, the FCSE loader included, and that one never reaches
     // patch.dat. The toolbar button exists to force a rebuild, so it ignores this.
     if (trigger === 'deploy' && signature === lastSignature) {
       log('info', 'Far Cry 2: patch.dat already matches the enabled layers, skipping rebuild');
@@ -89,7 +89,6 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
     lastSignature = signature;
 
     dismiss(api, NOTIFICATION_ID);
-    const pluginsDeployed = result.pluginsDeployed ?? 0;
     notify(api, {
       type: 'success',
       title: trigger === 'deploy' ? 'Far Cry 2 mods applied' : 'patch.dat rebuilt',
@@ -97,8 +96,8 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
         ? 'No mods enabled — patch.dat is back to stock.'
         : `${result.overriddenEntries} file(s) replaced and ${result.addedEntries} added across `
           + `${layers.length} mod(s).`
-          + (pluginsDeployed > 0
-            ? ` ${pluginsDeployed} plugin file(s) deployed to bin\\plugins.`
+          + (result.pluginsDeployed > 0
+            ? ` ${result.pluginsDeployed} plugin file(s) deployed to bin\\plugins.`
             : ''),
       displayMS: 8000,
     });
@@ -106,9 +105,8 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
     if (result.conflicts.length > 0) {
       notifyConflicts(api, result.conflicts);
     }
-    const collisions = result.pluginCollisions ?? [];
-    if (collisions.length > 0) {
-      notifyPluginCollisions(api, collisions);
+    if (result.pluginCollisions.length > 0) {
+      notifyPluginCollisions(api, result.pluginCollisions);
     }
   } catch (err) {
     dismiss(api, NOTIFICATION_ID);

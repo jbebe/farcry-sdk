@@ -46,8 +46,8 @@ assert.strictEqual(typeof game.setup, 'function');
 assert.strictEqual(game.supportedTools.length, 1);
 assert.strictEqual(game.supportedTools[0].id, 'fcse');
 
-assert.deepStrictEqual(registered.modTypes.map(t => t.id).sort(),
-  ['farcry2-fcse-loader', 'farcry2-fcse-plugin']);
+assert.deepStrictEqual(registered.modTypes.map(t => t.id), ['farcry2-fcse-loader'],
+  'FCSE is the only non-layer mod type; a plugin ships inside a layer');
 registered.modTypes.forEach(modType => assert.strictEqual(modType.options.mergeMods, true,
   `${modType.id} must opt out of the game's per-mod-folder mergeMods, or FCSE's files land in a `
   + 'subdirectory it never looks in'));
@@ -108,17 +108,17 @@ assert.strictEqual(registered.onceCallbacks.length, 1, 'event handlers belong in
   noModType(luaPlugin);
   assert.deepStrictEqual(copies(luaPlugin), [path.join('plugins', 'coolmod.lua')]);
 
-  const asset = await install([path.join('MyCoolMod', 'mods', 'worlds', 'world1', 'foo.xml')], 'asset');
+  const asset = await install([path.join('mods', 'worlds', 'world1', 'foo.xml')], 'asset');
   noModType(asset);
   assert.deepStrictEqual(copies(asset), [path.join('mods', 'worlds', 'world1', 'foo.xml')],
-    'the wrapper above mods\\ must be stripped, and the mods\\ folder itself kept');
+    'the mods\\ folder itself is part of the staged path - JackAll reads the layer by it');
 
-  // One archive carrying both halves: each is rebased independently, the readme is dropped.
+  // One archive carrying both halves, staged as-is; the readme beside them is dropped.
   const combined = await install([
-    path.join('MyMod', 'plugins', 'my_mod', 'my.dll'),
-    path.join('MyMod', 'plugins', 'data', 'config.ini'),
-    path.join('MyMod', 'mods', 'generated', 'entitylibrary.fcb', 'vehicle', 'Land', 'Jeep.xml'),
-    path.join('MyMod', 'readme.txt'),
+    path.join('plugins', 'my_mod', 'my.dll'),
+    path.join('plugins', 'data', 'config.ini'),
+    path.join('mods', 'generated', 'entitylibrary.fcb', 'vehicle', 'Land', 'Jeep.xml'),
+    'readme.txt',
   ], 'combined');
   noModType(combined);
   assert.deepStrictEqual(copies(combined),
@@ -129,12 +129,15 @@ assert.strictEqual(registered.onceCallbacks.length, 1, 'event handlers belong in
       path.join('plugins', 'my_mod', 'my.dll'),
       path.join('plugins', 'data', 'config.ini'),
     ]);
-
   // A plugins\ folder with no .dll or .lua anywhere inside it is not a plugin payload.
   const modsOnly = await install(
     [path.join('plugins', 'readme.txt'), path.join('mods', 'worlds', 'a.xml')], 'modsonly');
   noModType(modsOnly);
   assert.deepStrictEqual(copies(modsOnly), [path.join('mods', 'worlds', 'a.xml')]);
+
+  // Only the top level is reserved, so a "plugins" folder below mods\ is ordinary game content.
+  const nestedName = await install([path.join('mods', 'plugins', 'x.dll')], 'nestedname');
+  assert.deepStrictEqual(copies(nestedName), [path.join('mods', 'plugins', 'x.dll')]);
 
   await rejects(['patch.dat'], 'lonedat', stub.util.DataInvalid,
     'a lone patch.dat is a legacy mod missing its index, not something to misread as another shape',
@@ -144,9 +147,16 @@ assert.strictEqual(registered.onceCallbacks.length, 1, 'event handlers belong in
     stub.util.UserCanceled,
     'a patch.dat pair wins over everything else: the extras dialog must fire (the stub cancels it)');
 
+  await rejects([path.join('MyMod', 'mods', 'worlds', 'world1', 'foo.xml')], 'wrapped',
+    stub.util.DataInvalid,
+    'a wrapper above mods\\ makes the archive unrecognized, and the reason must name that folder '
+    + 'as packaged - it is what someone has to go and move',
+    /MyMod/);
+
   await rejects([path.join('Data_Win32', 'worlds', 'world1', 'foo.xml')], 'datawin32',
     stub.util.DataInvalid,
-    'the old Data_Win32 convention is gone; the error must point at the mods\\ rename', /mods/);
+    'a Data_Win32-rooted archive is not a layer; the error must spell out what one looks like',
+    /mods/);
 
   await rejects(['readme.txt', 'shot.png'], 'junk', stub.util.DataInvalid,
     'an archive matching no recognized shape must be rejected, not installed as one');

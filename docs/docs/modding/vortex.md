@@ -60,10 +60,10 @@ Checked in this order:
 | --- | --- | --- |
 | 1 | A `patch.dat`, anywhere in the archive | **Legacy mod.** Its `patch.fat` has to sit beside it — a lone `patch.dat` is rejected with the reason. Converted at install time via `mod import-legacy` into an ordinary layer. **This is how most existing Far Cry 2 mods are distributed** — see [Mods Survey](./mods-survey.md). We can't force any structure on these (they predate this extension), so the pair is all that's recognized — everything else in the archive (readmes, screenshots, alternate versions) is not part of the conversion, and a confirmation dialog says so before install proceeds. |
 | 2 | `FCSE.exe`, anywhere | **The FCSE loader/host program itself** (not a plugin). Deployed to `bin\`. |
-| 3 | A `plugins\` folder and/or a `mods\` folder | **Mod layer.** See the packaging convention below. The archive shape is staged as-is; the reserved folders are read natively by JackAll at build time — `mods\` compiles into `patch.dat`, `plugins\` mirrors into `bin\plugins\`. |
+| 3 | A top-level `plugins\` folder and/or `mods\` folder | **Mod layer.** See the packaging convention below. The archive is staged as-is; the reserved folders are read natively by JackAll at build time — `mods\` compiles into `patch.dat`, `plugins\` mirrors into `bin\plugins\`. |
 
-Anything else is rejected. **Breaking change:** the old `Data_Win32\`-rooted convention is gone —
-repack by renaming that folder to `mods`.
+Anything else is rejected, including an archive that buries the reserved folders under a wrapper —
+the rejection names the folder to move.
 
 None of this calls `jackall-mi` — it's plain string matching over the file list. Only bucket 1 ever
 reaches into JackAll (`mod import-legacy`), since converting a legacy patch genuinely requires
@@ -71,8 +71,8 @@ diffing against the game's own archives; the others don't need the game discover
 
 ### Packaging a mod
 
-One archive can carry an asset mod, an FCSE plugin, or both, through two reserved top-level folders
-(a single wrapper folder above them is fine, and they don't have to share one):
+One archive can carry an asset mod, an FCSE plugin, or both, through two reserved folders at the top
+level of the archive — either alone, or both together:
 
 ```
 MyMod.zip

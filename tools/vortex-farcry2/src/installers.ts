@@ -3,7 +3,7 @@ import * as nodeFs from 'fs';
 import * as path from 'path';
 import { fs, log, types, util } from 'vortex-api';
 
-import { GAME_ID, MODTYPE_FCSE_LOADER, MODTYPE_FCSE_PLUGIN } from './constants';
+import { GAME_ID, MODTYPE_FCSE_LOADER } from './constants';
 import { gamePath } from './game';
 import * as jackall from './jackall';
 import { ask, dismiss, notify } from './ui';
@@ -33,11 +33,11 @@ export function testSupported(files: string[], gameId: string): Promise<types.IS
  *      extension, so no structure can be forced on them; jackall converts the pair and ignores the
  *      rest of the archive.
  *   2. FCSE itself - FCSE.exe anywhere, deployed to bin\.
- *   3. Everything else is a layer, shaped by two reserved folders that may appear alone or
- *      together, each under any wrapper: plugins\ (an FCSE plugin - at least one .dll or .lua, at
- *      any depth) and mods\ (game files, e.g. mods\worlds\…). The archive shape is staged as-is:
- *      JackAll reads both folders natively at build time, compiling mods\ into patch.dat and
- *      syncing plugins\ into bin\plugins.
+ *   3. Everything else is a layer, shaped by two reserved folders at the archive root, alone or
+ *      together: plugins\ (an FCSE plugin - at least one .dll or .lua, at any depth) and mods\
+ *      (game files at any depth, e.g. mods\worlds\…). The archive is staged as-is: JackAll reads
+ *      both folders natively at build time, compiling mods\ into patch.dat and syncing plugins\
+ *      into bin\plugins.
  *
  * Only the legacy bucket touches jackall-mi at install time, because converting one means diffing
  * against the game's own archives. The rest is pure string work over the file list.
@@ -79,29 +79,29 @@ export function makeInstaller(api: types.IExtensionApi) {
     const loader = plainFiles.find(file => path.basename(file).toLowerCase() === FCSE_LOADER);
     if (loader !== undefined) {
       const root = path.dirname(loader);
-      return withModType(rebase(plainFiles, root === '.' ? '' : root), MODTYPE_FCSE_LOADER);
+      return withModType(
+        copyUnder(plainFiles, root === '.' ? '' : root, { stripRoot: true }), MODTYPE_FCSE_LOADER);
     }
 
-    const { pluginsRoot, modsRoot } = findLayerRoots(plainFiles);
-    if (pluginsRoot !== undefined || modsRoot !== undefined) {
-      if (pluginsRoot !== undefined) {
+    const roots = layerRoots(plainFiles);
+    if (roots.length > 0) {
+      if (roots.includes(PLUGINS_DIR)) {
         await warnIfFcseMissing(api, gamePath(api));
       }
-      log('info', 'Far Cry 2: staging mod layer', { pluginsRoot, modsRoot });
-      return {
-        instructions: [
-          ...(modsRoot === undefined ? [] : rebase(plainFiles, modsRoot, MODS_DIR)),
-          ...(pluginsRoot === undefined ? [] : rebase(plainFiles, pluginsRoot, PLUGINS_DIR)),
-        ],
-      };
+      log('info', 'Far Cry 2: staging mod layer', { roots });
+      return { instructions: roots.flatMap(root => copyUnder(plainFiles, root)) };
     }
 
+    const buried = findBuriedReservedDir(plainFiles);
     throw new util.DataInvalid(
-      'This doesn\'t look like a Far Cry 2 mod. It has to contain at least one of: a patch.dat (a '
-      + 'legacy full-patch mod, with its patch.fat beside it), a "plugins" folder holding an FCSE '
-      + 'plugin (a .dll or .lua at any depth), or a "mods" folder holding game files (e.g. '
-      + 'mods\\worlds\\…). Older packages rooted under Data_Win32\\ repack by renaming that folder '
-      + 'to "mods".');
+      'This doesn\'t look like a Far Cry 2 mod. It has to contain either a patch.dat with its '
+      + 'patch.fat beside it (a legacy full-patch mod), or - at the top level of the archive - a '
+      + '"plugins" folder holding an FCSE plugin (a .dll or .lua at any depth) and/or a "mods" '
+      + 'folder holding game files (e.g. mods\\worlds\\…).'
+      + (buried === undefined
+        ? ''
+        : ` This archive has "${buried}" - repack it with "${path.basename(buried)}" at the top `
+          + 'level.'));
   };
 }
 
@@ -124,22 +124,21 @@ function resolveExtractionRoot(destinationPath: string, files: string[]): string
   }
   return found;
 }
-
-/** Copy instructions with `root` stripped off the front of every path, re-rooted under `destRoot`
- * when one is given - for content that must keep a folder inside the layer. */
-function rebase(files: string[], root: string, destRoot = ''): types.IInstruction[] {
-  const prefix = root.length === 0 ? '' : normalize(root) + path.sep;
+/** Copy instructions for the files under `root`, staged at the path they already have - `stripRoot`
+ * drops that folder instead, for a payload whose own root is the destination. */
+function copyUnder(
+  files: string[], root: string, options: { stripRoot?: boolean } = {},
+): types.IInstruction[] {
+  // Normalized on both sides: Windows compares paths case-insensitively regardless.
+  const prefix = root === '' ? '' : normalize(root) + path.sep;
   return files
-    // Roots come back lowercased, and Windows compares paths case-insensitively regardless.
-    .filter(file => prefix === '' || normalize(file).startsWith(prefix))
-    .map(file => {
-      const stripped = prefix === '' ? file : file.substring(prefix.length);
-      return {
-        type: 'copy' as const,
-        source: file,
-        destination: destRoot === '' ? stripped : path.join(destRoot, stripped),
-      };
-    });
+    .filter(file => normalize(file).startsWith(prefix))
+    .map(file => ({
+      type: 'copy' as const,
+      source: file,
+      destination: (options.stripRoot === true ? file.substring(prefix.length) : file)
+        .replace(/[\\/]/g, path.sep),
+    }));
 }
 
 function withModType(instructions: types.IInstruction[], modType: string): types.IInstallResult {
@@ -245,37 +244,35 @@ function isPluginFile(file: string): boolean {
   return extension === '.dll' || extension === '.lua';
 }
 
-/** The prefix up to and including a folder literally named `dirName`, wrapper folders allowed
- * above it - counting only files `accept` allows. */
-function findReservedRoot(
-  files: string[], dirName: string, accept: (file: string) => boolean = () => true,
-): string | undefined {
+/** Whether `file` sits anywhere under the top-level folder `dirName`. */
+function isUnder(file: string, dirName: string): boolean {
+  return normalize(file).startsWith(dirName + path.sep);
+}
+
+/** The reserved folders this archive carries: mods\ needs a file of any kind, plugins\ one FCSE
+ * plugin file. Only the top level counts, so mods\plugins\x.dll is game data and plugins\mods\…
+ * plugin data. */
+function layerRoots(files: string[]): string[] {
+  return [
+    ...(files.some(file => isUnder(file, MODS_DIR)) ? [MODS_DIR] : []),
+    ...(files.some(file => isUnder(file, PLUGINS_DIR) && isPluginFile(file)) ? [PLUGINS_DIR] : []),
+  ];
+}
+
+/** A reserved folder the archive buries under a wrapper - the one packaging mistake worth naming
+ * in the rejection, since it looks like a layer but resolves to nothing. */
+function findBuriedReservedDir(files: string[]): string | undefined {
   for (const file of files) {
-    if (!accept(file)) {
-      continue;
-    }
-    const segments = normalize(file).split(path.sep);
-    const index = segments.indexOf(dirName);
-    if (index >= 0 && index < segments.length - 1) {
+    // Segments as packaged, not normalized: this ends up in a message telling someone what to move.
+    const segments = file.split(/[\\/]/);
+    const index = segments.findIndex((segment, at) =>
+      at > 0 && at < segments.length - 1
+      && [MODS_DIR, PLUGINS_DIR].includes(segment.toLowerCase()));
+    if (index !== -1) {
       return segments.slice(0, index + 1).join(path.sep);
     }
   }
   return undefined;
-}
-
-/** The archive's reserved layer folders. One nested inside the other is content of the outer
- * (mods\plugins\x.dll is game data, plugins\mods\… is plugin data), not a second root. */
-function findLayerRoots(files: string[]): { pluginsRoot?: string; modsRoot?: string } {
-  let pluginsRoot = findReservedRoot(files, PLUGINS_DIR, isPluginFile);
-  let modsRoot = findReservedRoot(files, MODS_DIR);
-  if (pluginsRoot !== undefined && modsRoot !== undefined) {
-    if (pluginsRoot.startsWith(modsRoot + path.sep)) {
-      pluginsRoot = undefined;
-    } else if (modsRoot.startsWith(pluginsRoot + path.sep)) {
-      modsRoot = undefined;
-    }
-  }
-  return { pluginsRoot, modsRoot };
 }
 
 /**
@@ -337,25 +334,15 @@ async function listFiles(root: string, prefix = ''): Promise<string[]> {
 }
 
 /**
- * FCSE's two mod types. The loader type is still assigned by the installer; the plugin type is
- * legacy-only - new plugin installs are plain layers whose plugins\ payload JackAll deploys - but
- * stays registered so mods installed under it keep deploying to bin\plugins.
+ * FCSE itself, the one thing that isn't a layer. A plugin has no mod type of its own: it rides in a
+ * layer's plugins\ folder, which JackAll deploys at build time.
  */
 export function registerModTypes(context: types.IExtensionContext): void {
-  const isFarCry2 = (gameId: string) => gameId === GAME_ID;
-  const binPath = () => path.join(gamePath(context.api) ?? '', 'bin');
-
-  // mergeMods: true is load-bearing. Without it these inherit the game's `mergeMods: mod => mod.id`
-  // and land in bin\<mod id>\ and bin\plugins\<mod id>\, where FCSE looks for neither.
+  // mergeMods: true is load-bearing. Without it this inherits the game's `mergeMods: mod => mod.id`
+  // and lands in bin\<mod id>\, where FCSE looks for nothing.
   context.registerModType(
-    MODTYPE_FCSE_PLUGIN, 25, isFarCry2,
-    () => path.join(binPath(), PLUGINS_DIR),
-    () => Bluebird.resolve(false),
-    { name: 'FCSE Plugin', mergeMods: true });
-
-  context.registerModType(
-    MODTYPE_FCSE_LOADER, 25, isFarCry2,
-    () => binPath(),
+    MODTYPE_FCSE_LOADER, 25, (gameId: string) => gameId === GAME_ID,
+    () => path.join(gamePath(context.api) ?? '', 'bin'),
     () => Bluebird.resolve(false),
     { name: 'FCSE', mergeMods: true });
 }
