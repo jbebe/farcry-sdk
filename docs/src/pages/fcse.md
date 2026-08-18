@@ -62,8 +62,16 @@ See
 [`example_plugin.cpp`](https://github.com/jbebe/farcry-sdk/blob/main/tools/FCSE/example_plugin/example_plugin.cpp)
 for a small, complete plugin exercising all three tiers.
 
-## Installing
+## Installing with Vortex
 
+0. Download the latest FCSE version from here: [farcry-sdk/releases](https://github.com/jbebe/farcry-sdk/releases?q=FCSE&expanded=true) (fcse-x.x.x.zip)
+1. In Vortex add FCSE as a mod to the game
+2. In Vortex go to Tools/FCSE/Set default launcher
+3. Start the game from Vortex by pressing the 'Play' button.
+
+## Installing manually
+
+0. Download the latest FCSE version from here: [farcry-sdk/releases](https://github.com/jbebe/farcry-sdk/releases?q=FCSE&expanded=true) (fcse-x.x.x.zip)
 1. Copy `FCSE.exe` into the game's `bin\` folder, next to the existing `FarCry2.exe` — that file is
    left completely untouched; `FCSE.exe` is an additional way to launch the game, not a
    replacement.
