@@ -89,18 +89,25 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
     lastSignature = signature;
 
     dismiss(api, NOTIFICATION_ID);
+    const pluginsDeployed = result.pluginsDeployed ?? 0;
     notify(api, {
       type: 'success',
       title: trigger === 'deploy' ? 'Far Cry 2 mods applied' : 'patch.dat rebuilt',
       message: layers.length === 0
         ? 'No mods enabled — patch.dat is back to stock.'
         : `${result.overriddenEntries} file(s) replaced and ${result.addedEntries} added across `
-          + `${layers.length} mod(s).`,
+          + `${layers.length} mod(s).`
+          + (pluginsDeployed > 0
+            ? ` ${pluginsDeployed} plugin file(s) deployed to bin\\plugins.`
+            : ''),
       displayMS: 8000,
     });
 
     if (result.conflicts.length > 0) {
       notifyConflicts(api, result.conflicts);
+    }
+    if ((result.pluginCollisions ?? []).length > 0) {
+      notifyPluginCollisions(api, result.pluginCollisions!);
     }
   } catch (err) {
     dismiss(api, NOTIFICATION_ID);
@@ -139,6 +146,16 @@ export async function restore(api: types.IExtensionApi): Promise<void> {
     notifyError(api, 'Failed to restore Far Cry 2\'s patch.dat', err as Error,
       { allowReport: false });
   }
+}
+
+function notifyPluginCollisions(api: types.IExtensionApi, collisions: string[]): void {
+  notify(api, {
+    type: 'warning',
+    title: `${collisions.length} plugin file(s) not deployed`,
+    message: `Already in bin\\plugins but not put there by JackAll, so left untouched: `
+      + `${collisions.join(', ')}. Remove the existing file(s) manually if the mod's copy should apply.`,
+    allowSuppress: true,
+  });
 }
 
 function notifyConflicts(

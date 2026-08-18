@@ -90,45 +90,78 @@ assert.strictEqual(registered.onceCallbacks.length, 1, 'event handlers belong in
   assert.ok(loader.instructions.some(i =>
     i.type === 'setmodtype' && i.value === 'farcry2-fcse-loader'));
 
+  const noModType = result => assert.ok(
+    !result.instructions.some(i => i.type === 'setmodtype'),
+    'plugins\\/mods\\ archives are plain layer mods - JackAll deploys both halves at build time');
+  const copies = result => result.instructions.filter(i => i.type === 'copy').map(i => i.destination);
+
+  // A plugin needs no dll directly under plugins\ - FCSE loads .dll and .lua at any depth.
   const plugin = await installer.install(
-    [path.join('plugins', 'coolplugin.dll')], 'C:\\staging\\plug.installing', GAME_ID);
-  assert.ok(plugin.instructions.some(i =>
-    i.type === 'setmodtype' && i.value === 'farcry2-fcse-plugin'));
-  assert.deepStrictEqual(
-    plugin.instructions.filter(i => i.type === 'copy').map(i => i.destination),
-    ['coolplugin.dll'],
-    'the plugins\\ wrapper is stripped, since the mod type already deploys into bin\\plugins');
+    [path.join('plugins', 'my_mod', 'my.dll')], 'C:\\staging\\plug.installing', GAME_ID);
+  noModType(plugin);
+  assert.deepStrictEqual(copies(plugin), [path.join('plugins', 'my_mod', 'my.dll')]);
+
+  const luaPlugin = await installer.install(
+    [path.join('plugins', 'coolmod.lua')], 'C:\\staging\\lua.installing', GAME_ID);
+  noModType(luaPlugin);
+  assert.deepStrictEqual(copies(luaPlugin), [path.join('plugins', 'coolmod.lua')]);
 
   const asset = await installer.install(
-    [path.join('MyCoolMod', 'Data_Win32', 'worlds', 'world1', 'foo.xml')],
+    [path.join('MyCoolMod', 'mods', 'worlds', 'world1', 'foo.xml')],
     'C:\\staging\\asset.installing', GAME_ID);
-  assert.deepStrictEqual(
-    asset.instructions.filter(i => i.type === 'copy').map(i => i.destination),
-    [path.join('worlds', 'world1', 'foo.xml')],
-    'everything up to and including Data_Win32\\ (wrapper folder included) must be stripped');
+  noModType(asset);
+  assert.deepStrictEqual(copies(asset), [path.join('mods', 'worlds', 'world1', 'foo.xml')],
+    'the wrapper above mods\\ must be stripped, and the mods\\ folder itself kept');
 
-  // A fragment id is a path of its own under the container, and the leaf's name prefix is only
-  // cosmetic to JackAll - but its exact spelling still has to survive installation untouched.
-  const fragments = await installer.install(
+  // One archive carrying both halves: each is rebased independently, the readme is dropped.
+  const combined = await installer.install(
     [
-      path.join('MyMod v1.2', 'Data_Win32', 'generated', 'entitylibrary.fcb', 'vehicle', 'Land', 'Jeep.xml'),
-      path.join('MyMod v1.2', 'Data_Win32', 'worlds', 'world1', 'generated', 'worldsectors',
-        'worldsector17.data.fcb', 'Guard_12.2058514756624450165.xml'),
+      path.join('MyMod', 'plugins', 'my_mod', 'my.dll'),
+      path.join('MyMod', 'plugins', 'data', 'config.ini'),
+      path.join('MyMod', 'mods', 'generated', 'entitylibrary.fcb', 'vehicle', 'Land', 'Jeep.xml'),
+      path.join('MyMod', 'readme.txt'),
     ],
-    'C:\\staging\\fragments.installing', GAME_ID);
-  assert.deepStrictEqual(
-    fragments.instructions.filter(i => i.type === 'copy').map(i => i.destination),
+    'C:\\staging\\combined.installing', GAME_ID);
+  noModType(combined);
+  assert.deepStrictEqual(copies(combined),
     [
-      path.join('generated', 'entitylibrary.fcb', 'vehicle', 'Land', 'Jeep.xml'),
-      path.join('worlds', 'world1', 'generated', 'worldsectors', 'worldsector17.data.fcb',
-        'Guard_12.2058514756624450165.xml'),
-    ],
-    'a nested .fcb fragment id must keep every segment and its exact casing');
+      // A fragment id is a path of its own under the container, and the leaf's name prefix is only
+      // cosmetic to JackAll - but its exact spelling still has to survive installation untouched.
+      path.join('mods', 'generated', 'entitylibrary.fcb', 'vehicle', 'Land', 'Jeep.xml'),
+      path.join('plugins', 'my_mod', 'my.dll'),
+      path.join('plugins', 'data', 'config.ini'),
+    ]);
+
+  // A plugins\ folder with no .dll or .lua anywhere inside it is not a plugin payload.
+  const modsOnly = await installer.install(
+    [path.join('plugins', 'readme.txt'), path.join('mods', 'worlds', 'a.xml')],
+    'C:\\staging\\modsonly.installing', GAME_ID);
+  noModType(modsOnly);
+  assert.deepStrictEqual(copies(modsOnly), [path.join('mods', 'worlds', 'a.xml')]);
+
+  await assert.rejects(
+    () => installer.install(['patch.dat'], 'C:\\staging\\lonedat.installing', GAME_ID),
+    err => err instanceof stub.util.DataInvalid && /patch\.fat/.test(err.message),
+    'a lone patch.dat is a legacy mod missing its index, not something to misread as another shape');
+
+  await assert.rejects(
+    () => installer.install(
+      ['patch.dat', 'patch.fat', path.join('plugins', 'x.dll')],
+      'C:\\staging\\legacyplus.installing', GAME_ID),
+    err => err instanceof stub.util.UserCanceled,
+    'a patch.dat wins over everything else: the extras dialog must fire (the stub cancels it)');
+
+  await assert.rejects(
+    () => installer.install(
+      [path.join('Data_Win32', 'worlds', 'world1', 'foo.xml')],
+      'C:\\staging\\datawin32.installing', GAME_ID),
+    err => err instanceof stub.util.DataInvalid && /mods/.test(err.message),
+    'the old Data_Win32 convention is gone; the error must point at the mods\\ rename');
 
   await assert.rejects(
     () => installer.install(['readme.txt', 'shot.png'], 'C:\\staging\\junk.installing', GAME_ID),
     err => err instanceof stub.util.DataInvalid,
-    'an archive matching none of the three buckets must be rejected, not installed as one');
+    'an archive matching no recognized shape must be rejected, not installed as one');
 
   console.log('smoke: ok');
 })().catch(err => {
@@ -165,6 +198,7 @@ function makeStub() {
       renderModName: mod => mod.id,
       SetupError: class SetupError extends Error {},
       DataInvalid: class DataInvalid extends Error {},
+      UserCanceled: class UserCanceled extends Error {},
     },
   };
 }

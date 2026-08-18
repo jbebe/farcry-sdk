@@ -10,7 +10,7 @@ import { ask, dismiss, notify } from './ui';
 
 const FCSE_LOADER = 'fcse.exe';
 const PLUGINS_DIR = 'plugins';
-const DATA_WIN32_DIR = 'data_win32';
+const MODS_DIR = 'mods';
 const FCSE_PAGE_URL = 'https://jbebe.github.io/farcry-sdk/fcse';
 
 /** The game's own binaries. No content mod, FCSE loader or plugin has any reason to ship these. */
@@ -27,17 +27,20 @@ export function testSupported(files: string[], gameId: string): Promise<types.IS
 }
 
 /**
- * Decides what a downloaded archive is. Three buckets, checked in this order, and an archive is
- * exactly one of them:
+ * Decides what a downloaded archive is, checked in this order:
  *
- *   1. Legacy mod - a patch.dat/patch.fat pair anywhere. These predate the extension, so no structure
- *      can be forced on them; jackall converts the pair and ignores the rest of the archive.
- *   2. FCSE plugin - a .dll under a plugins\ folder. Extra files alongside it are normal.
- *   3. Asset mod - rooted under a literal Data_Win32\ folder. Strict on purpose: a mod either uses
- *      the convention or it doesn't, with no guessing in between.
+ *   1. Legacy mod - a patch.dat anywhere (its patch.fat has to sit beside it). These predate the
+ *      extension, so no structure can be forced on them; jackall converts the pair and ignores the
+ *      rest of the archive.
+ *   2. FCSE itself - FCSE.exe anywhere, deployed to bin\.
+ *   3. Everything else is a layer, shaped by two reserved folders that may appear alone or
+ *      together, each under any wrapper: plugins\ (an FCSE plugin - at least one .dll or .lua, at
+ *      any depth) and mods\ (game files, e.g. mods\worlds\…). The archive shape is staged as-is:
+ *      JackAll reads both folders natively at build time, compiling mods\ into patch.dat and
+ *      syncing plugins\ into bin\plugins.
  *
- * Only the legacy bucket touches jackall-mi, because converting one means diffing against the game's
- * own archives. The other two are pure string work over the file list.
+ * Only the legacy bucket touches jackall-mi at install time, because converting one means diffing
+ * against the game's own archives. The rest is pure string work over the file list.
  */
 export function makeInstaller(api: types.IExtensionApi) {
   return async (
@@ -53,9 +56,14 @@ export function makeInstaller(api: types.IExtensionApi) {
     // Before any classification: a rogue FarCry2.exe is a concern whichever bucket this lands in.
     await warnIfBundlingGameBinaries(api, plainFiles, modName);
 
-    const legacyPair = findLegacyPatchPair(plainFiles);
-    if (legacyPair !== undefined) {
-      await warnAboutIgnoredExtras(api, plainFiles, legacyPair, modName);
+    const legacy = findLegacyPatch(plainFiles);
+    if (legacy !== undefined) {
+      if (legacy.fat === undefined) {
+        throw new util.DataInvalid(
+          'This archive contains a patch.dat but no patch.fat beside it. A legacy mod needs the '
+          + 'pair - the .fat is the index that makes the .dat readable.');
+      }
+      await warnAboutIgnoredExtras(api, plainFiles, { fat: legacy.fat, dat: legacy.dat }, modName);
 
       const gameRoot = gamePath(api);
       if (gameRoot === undefined) {
@@ -74,22 +82,36 @@ export function makeInstaller(api: types.IExtensionApi) {
       return withModType(rebase(plainFiles, root === '.' ? '' : root), MODTYPE_FCSE_LOADER);
     }
 
-    const pluginRoot = findPluginsRoot(plainFiles);
-    if (pluginRoot !== undefined) {
-      await warnIfFcseMissing(api, gamePath(api));
-      return withModType(rebase(plainFiles, pluginRoot), MODTYPE_FCSE_PLUGIN);
+    let pluginsRoot = findPluginsRoot(plainFiles);
+    let modsRoot = findModsRoot(plainFiles);
+    // A plugins\ nested inside mods\ is game content, not a payload - and vice versa.
+    if (pluginsRoot !== undefined && modsRoot !== undefined) {
+      if (pluginsRoot.startsWith(modsRoot + path.sep)) {
+        pluginsRoot = undefined;
+      } else if (modsRoot.startsWith(pluginsRoot + path.sep)) {
+        modsRoot = undefined;
+      }
     }
 
-    const dataRoot = findDataWin32Root(plainFiles);
-    if (dataRoot !== undefined) {
-      log('info', 'Far Cry 2: staging mod layer', { root: dataRoot });
-      return { instructions: rebase(plainFiles, dataRoot) };
+    if (pluginsRoot !== undefined || modsRoot !== undefined) {
+      if (pluginsRoot !== undefined) {
+        await warnIfFcseMissing(api, gamePath(api), modsRoot !== undefined);
+      }
+      log('info', 'Far Cry 2: staging mod layer', { pluginsRoot, modsRoot });
+      return {
+        instructions: [
+          ...(modsRoot === undefined ? [] : rebaseInto(plainFiles, modsRoot, MODS_DIR)),
+          ...(pluginsRoot === undefined ? [] : rebaseInto(plainFiles, pluginsRoot, PLUGINS_DIR)),
+        ],
+      };
     }
 
     throw new util.DataInvalid(
-      'This doesn\'t look like a Far Cry 2 mod. It has to be exactly one of: a replacement '
-      + 'patch.dat/patch.fat pair (anywhere in the archive), an FCSE plugin (a .dll under a '
-      + '"plugins" folder), or a set of game files rooted under a "Data_Win32" folder.');
+      'This doesn\'t look like a Far Cry 2 mod. It has to contain at least one of: a patch.dat (a '
+      + 'legacy full-patch mod, with its patch.fat beside it), a "plugins" folder holding an FCSE '
+      + 'plugin (a .dll or .lua at any depth), or a "mods" folder holding game files (e.g. '
+      + 'mods\\worlds\\…). Older packages rooted under Data_Win32\\ repack by renaming that folder '
+      + 'to "mods".');
   };
 }
 
@@ -124,6 +146,13 @@ function rebase(files: string[], root: string): types.IInstruction[] {
       source: file,
       destination: prefix === '' ? file : file.substring(prefix.length),
     }));
+}
+
+/** rebase, then re-prefix each destination under destRoot - for content that must keep its folder
+ * inside the layer rather than landing at its root. */
+function rebaseInto(files: string[], root: string, destRoot: string): types.IInstruction[] {
+  return rebase(files, root).map(instr =>
+    ({ ...instr, destination: path.join(destRoot, instr.destination as string) }));
 }
 
 function withModType(instructions: types.IInstruction[], modType: string): types.IInstallResult {
@@ -162,20 +191,22 @@ async function warnIfBundlingGameBinaries(
  * Detects the file on disk rather than checking mod state, so this catches FCSE installed by hand
  * (outside Vortex) just as well as FCSE installed as a mod.
  */
-async function warnIfFcseMissing(api: types.IExtensionApi, gameRoot: string | undefined): Promise<void> {
+async function warnIfFcseMissing(
+  api: types.IExtensionApi, gameRoot: string | undefined, combined: boolean,
+): Promise<void> {
   if (gameRoot === undefined || nodeFs.existsSync(path.join(gameRoot, 'bin', FCSE_LOADER))) {
     return;
   }
 
   const result = await ask(api, 'question', 'Far Cry Script Extender (FCSE) not found', {
-    text: 'This mod is an FCSE plugin, but FCSE itself doesn\'t look installed - without it, plugin '
-      + 'DLLs are deployed but never loaded by the game.',
+    text: `This mod ${combined ? 'includes' : 'is'} an FCSE plugin, but FCSE itself doesn't look `
+      + 'installed - without it, plugin files are deployed but never loaded by the game.',
   }, [
     { label: 'Download' },
     { label: 'Continue' },
   ]);
 
-  if (result.action === 'Open FCSE page') {
+  if (result.action === 'Download') {
     await util.opn(FCSE_PAGE_URL).catch(() => undefined);
   }
 }
@@ -207,43 +238,55 @@ async function confirm(api: types.IExtensionApi, title: string, text: string): P
   }
 }
 
-/** A patch.fat with a patch.dat right beside it, anywhere - the whole of what makes a legacy mod. */
-function findLegacyPatchPair(files: string[]): { fat: string; dat: string } | undefined {
+/**
+ * A patch.dat is the whole of what makes a legacy mod; the pair's fat is undefined when it's
+ * missing, so the caller can reject with the real reason rather than misreading the archive as
+ * something else. A dat with its fat beside it wins over a lone dat found earlier.
+ */
+function findLegacyPatch(files: string[]): { fat: string | undefined; dat: string } | undefined {
+  let lonely: string | undefined;
   for (const file of files) {
-    if (path.basename(file).toLowerCase() !== 'patch.fat') {
+    if (path.basename(file).toLowerCase() !== 'patch.dat') {
       continue;
     }
     const dir = normalize(path.dirname(file));
-    const dat = files.find(f =>
-      normalize(path.dirname(f)) === dir && path.basename(f).toLowerCase() === 'patch.dat');
-    if (dat !== undefined) {
-      return { fat: file, dat };
+    const fat = files.find(f =>
+      normalize(path.dirname(f)) === dir && path.basename(f).toLowerCase() === 'patch.fat');
+    if (fat !== undefined) {
+      return { fat, dat: file };
     }
+    lonely = lonely ?? file;
   }
-  return undefined;
+  return lonely === undefined ? undefined : { fat: undefined, dat: lonely };
 }
 
-/** The prefix up to and including a literal Data_Win32\ folder, wrapper folder allowed above it. */
-function findDataWin32Root(files: string[]): string | undefined {
+/** The prefix up to and including a literal mods\ folder, wrapper folders allowed above it. */
+function findModsRoot(files: string[]): string | undefined {
   for (const file of files) {
     const segments = normalize(file).split(path.sep);
-    const index = segments.indexOf(DATA_WIN32_DIR);
-    if (index >= 0) {
+    const index = segments.indexOf(MODS_DIR);
+    if (index >= 0 && index < segments.length - 1) {
       return segments.slice(0, index + 1).join(path.sep);
     }
   }
   return undefined;
 }
 
-/** The folder a plugins\ directory lives in, so plugin DLLs land as bin\plugins\x.dll. */
+/** The prefix up to and including a plugins\ folder holding at least one .dll or .lua at any
+ * depth - FCSE loads both, nested or flat. */
 function findPluginsRoot(files: string[]): string | undefined {
-  const dll = files.find(file => {
+  for (const file of files) {
+    const extension = path.extname(file).toLowerCase();
+    if (extension !== '.dll' && extension !== '.lua') {
+      continue;
+    }
     const segments = normalize(file).split(path.sep);
-    return segments.length >= 2
-      && segments[segments.length - 2] === PLUGINS_DIR
-      && path.extname(file).toLowerCase() === '.dll';
-  });
-  return dll === undefined ? undefined : path.dirname(dll);
+    const index = segments.indexOf(PLUGINS_DIR);
+    if (index >= 0 && index < segments.length - 1) {
+      return segments.slice(0, index + 1).join(path.sep);
+    }
+  }
+  return undefined;
 }
 
 /**
@@ -304,7 +347,11 @@ async function listFiles(root: string, prefix = ''): Promise<string[]> {
   return nested.flat();
 }
 
-/** FCSE's two mod types. Neither goes through JackAll - a plugin DLL never reaches patch.dat. */
+/**
+ * FCSE's two mod types. The loader type is still assigned by the installer; the plugin type is
+ * legacy-only - new plugin installs are plain layers whose plugins\ payload JackAll deploys - but
+ * stays registered so mods installed under it keep deploying to bin\plugins.
+ */
 export function registerModTypes(context: types.IExtensionContext): void {
   const isFarCry2 = (gameId: string) => gameId === GAME_ID;
   const binPath = () => path.join(gamePath(context.api) ?? '', 'bin');
