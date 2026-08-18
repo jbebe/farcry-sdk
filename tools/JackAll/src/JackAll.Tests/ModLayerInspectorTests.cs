@@ -5,8 +5,9 @@ namespace JackAll.Tests;
 
 /// <summary>
 /// Root detection is the whole reason <see cref="ModLayerInspector"/> exists, and it's a silent
-/// failure when it's wrong — a mod with a misread root hashes to nothing, installs cleanly, and
-/// simply doesn't apply. So the interesting cases are all about which prefix wins.
+/// failure when it's wrong — a mod with a misread root classifies to nothing, installs cleanly, and
+/// simply doesn't apply. So the interesting cases are all about which prefix wins, with content
+/// recognized only under the reserved mods\ folder and plugins under plugins\.
 /// </summary>
 public class ModLayerInspectorTests
 {
@@ -30,7 +31,7 @@ public class ModLayerInspectorTests
     [Fact]
     public void An_already_rooted_mod_keeps_the_top_level_as_its_root()
     {
-        ModLayerReport report = Inspect(RealFileA, RealFileB);
+        ModLayerReport report = Inspect($@"mods\{RealFileA}", $@"mods\{RealFileB}");
 
         Assert.Equal("", report.Root);
         Assert.Equal(2, report.WholeFileOverrides);
@@ -38,9 +39,19 @@ public class ModLayerInspectorTests
     }
 
     [Fact]
+    public void Content_at_the_layer_root_is_ignored_not_unknown()
+    {
+        ModLayerReport report = Inspect(RealFileA, @"_hash\4a724578.xbt");
+
+        // No root-layout fallback: outside mods\/plugins\ nothing is even hashed.
+        Assert.Equal(0, report.TotalOverrides);
+        Assert.Equal(2, report.IgnoredFiles);
+    }
+
+    [Fact]
     public void A_wrapper_folder_is_stripped()
     {
-        ModLayerReport report = Inspect($@"MyCoolMod v1.2\{RealFileA}", $@"MyCoolMod v1.2\{RealFileB}");
+        ModLayerReport report = Inspect($@"MyCoolMod v1.2\mods\{RealFileA}", $@"MyCoolMod v1.2\mods\{RealFileB}");
 
         // Normalized, so lowercase - callers matching this back against real entry names have to do
         // it case-insensitively, which is how Windows paths compare anyway.
@@ -52,7 +63,7 @@ public class ModLayerInspectorTests
     [Fact]
     public void Two_nested_wrapper_folders_are_stripped_together()
     {
-        ModLayerReport report = Inspect($@"MyMod v1.2\MyMod\{RealFileA}");
+        ModLayerReport report = Inspect($@"MyMod v1.2\MyMod\mods\{RealFileA}");
 
         Assert.Equal(@"mymod v1.2\mymod", report.Root);
         Assert.Equal(1, report.WholeFileOverrides);
@@ -62,7 +73,7 @@ public class ModLayerInspectorTests
     [Fact]
     public void A_readme_beside_the_wrapper_does_not_drag_the_root_back_to_the_top()
     {
-        ModLayerReport report = Inspect("readme.txt", $@"MyCoolMod\{RealFileA}", $@"MyCoolMod\{RealFileB}");
+        ModLayerReport report = Inspect("readme.txt", $@"MyCoolMod\mods\{RealFileA}", $@"MyCoolMod\mods\{RealFileB}");
 
         Assert.Equal("mycoolmod", report.Root);
         // The readme sits outside the winning root, so it isn't counted at all - which is right: it
@@ -74,10 +85,10 @@ public class ModLayerInspectorTests
     [Fact]
     public void A_correctly_rooted_mod_is_never_pushed_down_into_one_of_its_own_folders()
     {
-        // 'engine\' is a genuine top-level game folder and also a candidate root. Descending into it
-        // would score strictly worse (one recognized file becomes zero), so the tie-break must not
-        // take it.
-        ModLayerReport report = Inspect(RealFileA, RealFileB);
+        // 'mods' itself is also a candidate root. Descending into it would score strictly worse
+        // (the mods\ prefix is part of the contract, so its children recognize nothing), so the
+        // tie-break must not take it.
+        ModLayerReport report = Inspect($@"mods\{RealFileA}", $@"mods\{RealFileB}");
 
         Assert.Equal("", report.Root);
     }
@@ -86,7 +97,7 @@ public class ModLayerInspectorTests
     public void Hash_addressed_entries_are_counted_and_still_resolve_without_a_recovered_name()
     {
         uint hash = NameHash.Compute(RealFileA);
-        ModLayerReport report = Inspect($@"_hash\{hash:x8}.xbt");
+        ModLayerReport report = Inspect($@"mods\_hash\{hash:x8}.xbt");
 
         Assert.Equal("", report.Root);
         Assert.Equal(1, report.WholeFileOverrides);
@@ -97,7 +108,7 @@ public class ModLayerInspectorTests
     [Fact]
     public void An_fcb_fragment_is_reported_separately_and_judged_by_its_container()
     {
-        ModLayerReport report = InspectIn(Container, $@"{Container}\vehicle\Land\Jeep.xml");
+        ModLayerReport report = InspectIn(Container, $@"mods\{Container}\vehicle\Land\Jeep.xml");
 
         Assert.Equal(0, report.WholeFileOverrides);
         Assert.Equal(1, report.FragmentOverrides);
@@ -107,9 +118,9 @@ public class ModLayerInspectorTests
     /// <summary>A removed-id-space override is an error wherever it is addressed from, so a report can
     /// never quietly count one as a working override.</summary>
     [Theory]
-    [InlineData(@"generated\entitylibrarypatchoverride.fcb\03_Foo.xml")]
-    [InlineData(@"_hash\1a2b3c4d.fcb\03_Foo.xml")]
-    [InlineData(@"MyMod v1.2\generated\entitylibrarypatchoverride.fcb\03_Foo.xml")]
+    [InlineData(@"mods\generated\entitylibrarypatchoverride.fcb\03_Foo.xml")]
+    [InlineData(@"mods\_hash\1a2b3c4d.fcb\03_Foo.xml")]
+    [InlineData(@"MyMod v1.2\mods\generated\entitylibrarypatchoverride.fcb\03_Foo.xml")]
     public void A_group_id_override_is_refused_rather_than_reported(string path)
         => Assert.Throws<InvalidDataException>(() => Inspect(path));
 
@@ -121,7 +132,7 @@ public class ModLayerInspectorTests
         const string sector = @"worlds\world1\generated\worldsectors\worldsector17.data.fcb";
 
         ModLayerReport report = InspectIn(sector,
-            $@"{sector}\Guard_12.2058514756624450165.xml", $@"{sector}\2058514756624450165.xml");
+            $@"mods\{sector}\Guard_12.2058514756624450165.xml", $@"mods\{sector}\2058514756624450165.xml");
 
         Assert.Equal(1, report.FragmentOverrides);
         Assert.Equal(0, report.UnknownEntries);
@@ -131,7 +142,7 @@ public class ModLayerInspectorTests
     public void A_hash_addressed_container_takes_a_nested_fragment_id_too()
     {
         ModLayerReport report = InspectIn(
-            Container, $@"_hash\{NameHash.Compute(Container):x8}.fcb\vehicle\Land\Jeep.xml");
+            Container, $@"mods\_hash\{NameHash.Compute(Container):x8}.fcb\vehicle\Land\Jeep.xml");
 
         Assert.Equal(1, report.FragmentOverrides);
         Assert.Equal(1, report.HashAddressed);
@@ -142,7 +153,7 @@ public class ModLayerInspectorTests
     public void A_wrapper_above_a_deep_fragment_tree_is_stripped_without_descending_into_it()
     {
         // Every directory inside the container is also a candidate root; none of them may win.
-        ModLayerReport report = InspectIn(Container, $@"MyMod v1.2\{Container}\vehicle\Land\Jeep.xml");
+        ModLayerReport report = InspectIn(Container, $@"MyMod v1.2\mods\{Container}\vehicle\Land\Jeep.xml");
 
         Assert.Equal("mymod v1.2", report.Root);
         Assert.Equal(1, report.FragmentOverrides);
@@ -154,17 +165,17 @@ public class ModLayerInspectorTests
     {
         ModLayerReport report = Inspect("readme.txt", @"screenshots\one.png");
 
-        // Every path hashes to *something*, so these do count as overrides - of files the game
-        // doesn't have. "every override is unknown" is exactly the signal a caller uses to say
-        // "this isn't a Far Cry 2 mod" rather than "it's a mod that adds files".
-        Assert.Equal(2, report.WholeFileOverrides);
-        Assert.Equal(report.TotalOverrides, report.UnknownEntries);
+        // Nothing sits under mods\ or plugins\, so nothing is hashed at all - "no recognized files"
+        // is exactly the signal a caller uses to say "this isn't a Far Cry 2 mod".
+        Assert.Equal(0, report.TotalOverrides);
+        Assert.Equal(0, report.PluginFiles);
+        Assert.Equal(2, report.IgnoredFiles);
     }
 
     [Fact]
     public void Plugin_files_are_recognized_side_content_not_unknown_entries()
     {
-        ModLayerReport report = Inspect(RealFileA, @"plugins\coolplugin.dll");
+        ModLayerReport report = Inspect($@"mods\{RealFileA}", @"plugins\coolplugin.dll");
 
         Assert.Equal(1, report.WholeFileOverrides);
         Assert.Equal(1, report.PluginFiles);
@@ -174,7 +185,7 @@ public class ModLayerInspectorTests
     [Fact]
     public void A_wrapper_above_plugins_and_content_is_stripped_together()
     {
-        ModLayerReport report = Inspect($@"MyMod\{RealFileA}", @"MyMod\plugins\x.dll");
+        ModLayerReport report = Inspect($@"MyMod\mods\{RealFileA}", @"MyMod\plugins\x.dll");
 
         Assert.Equal("mymod", report.Root);
         Assert.Equal(1, report.WholeFileOverrides);
@@ -192,21 +203,13 @@ public class ModLayerInspectorTests
     }
 
     [Fact]
-    public void A_mods_wrapper_resolves_the_same_as_root_layout()
-    {
-        ModLayerReport report = Inspect($@"mods\{RealFileA}");
-
-        Assert.Equal("", report.Root);
-        Assert.Equal(1, report.WholeFileOverrides);
-        Assert.Equal(0, report.UnknownEntries);
-    }
-
-    [Fact]
     public void Without_a_game_to_check_against_the_tree_is_reported_as_given()
     {
-        ModLayerReport report = ModLayerInspector.Inspect([$@"MyCoolMod\{RealFileA}"]);
+        ModLayerReport report = ModLayerInspector.Inspect([$@"MyCoolMod\mods\{RealFileA}"]);
 
+        // No entryExists probe means no root scoring: the wrapper stays, and under it nothing
+        // classifies. The caller is warned to pass --game for exactly this reason.
         Assert.Equal("", report.Root);
-        Assert.Equal(0, report.UnknownEntries);
+        Assert.Equal(0, report.TotalOverrides);
     }
 }

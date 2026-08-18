@@ -237,7 +237,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
 
         var zipDir = Path.Combine(_sandbox, "zip_src");
         Directory.CreateDirectory(zipDir);
-        string zipEntryPath = Path.Combine(zipDir, fragment.Path.Replace('/', Path.DirectorySeparatorChar));
+        string zipEntryPath = Path.Combine(zipDir, "mods", fragment.Path.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(zipEntryPath)!);
         File.WriteAllBytes(zipEntryPath, TestSupport.RenderWithValueSetAt(vanilla, paths.A, 0xAAAA0001, [0x01, 0x00, 0x00, 0x00]));
         string zipPath = Path.Combine(_sandbox, "mod_a.zip");
@@ -284,7 +284,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
 
         var zipDir = Path.Combine(_sandbox, "zip_src_conflict");
         Directory.CreateDirectory(zipDir);
-        string zipEntryPath = Path.Combine(zipDir, fragment.Path.Replace('/', Path.DirectorySeparatorChar));
+        string zipEntryPath = Path.Combine(zipDir, "mods", fragment.Path.Replace('/', Path.DirectorySeparatorChar));
         Directory.CreateDirectory(Path.GetDirectoryName(zipEntryPath)!);
         // Same existing field, different content - a genuine collision, not two independent adds.
         File.WriteAllBytes(zipEntryPath, TestSupport.RenderWithValueSetAt(vanilla, targetPath, existingHash, [0x01, 0x00, 0x00, 0x00]));

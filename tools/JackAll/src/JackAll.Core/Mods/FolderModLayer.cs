@@ -109,8 +109,8 @@ public sealed class FolderModLayer : IModLayer
         ModPathTarget target = ModPathHashing.Resolve(relative)
             ?? throw new InvalidOperationException($"'{relative}' round-tripped to an unstageable path.");
 
-        // An older workspace staged this override at the layer root; the restage supersedes it, and
-        // leaving both would make Rescan's winner arbitrary.
+        // A previous stage of this override under another spelling (_hash\-addressed vs named) left
+        // its file at a different path; leaving both would hand Rescan two files for one hash.
         if (_absolutePaths.TryGetValue(target.EntryHash, out string? previous)
             && !previous.Equals(destination, StringComparison.OrdinalIgnoreCase)
             && File.Exists(previous))

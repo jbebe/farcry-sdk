@@ -297,7 +297,8 @@ public class LegacyPatchImporterTests : IDisposable
         {
             foreach ((string path, byte[] content) in files)
             {
-                var entry = zip.CreateEntry(path);
+                // Callers pass game paths; the layer contract wants them under mods\.
+                var entry = zip.CreateEntry($"mods/{path}");
                 using var stream = entry.Open();
                 stream.Write(content);
             }

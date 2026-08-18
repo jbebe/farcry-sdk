@@ -55,9 +55,10 @@ internal static class ModPathHashing
     /// Classifies one relative path the way every scan site must: a file under the reserved
     /// top-level <see cref="PluginsFolder"/> is plugin payload — never hashed, since its path would
     /// CRC to a junk archive entry (a hypothetical real entry named <c>plugins\…</c> stays
-    /// overridable via <c>_hash\</c>) — and anything else resolves as content with an optional
-    /// top-level <see cref="ModsFolder"/> wrapper stripped. One entry point, one normalization pass,
-    /// so the sites can't compose the rules in different orders.
+    /// overridable via <c>_hash\</c>) — a file under the reserved top-level <see cref="ModsFolder"/>
+    /// resolves as content with that wrapper stripped, and everything else is ignored: the two
+    /// folders are the whole layer contract, with no root-layout fallback. One entry point, one
+    /// normalization pass, so the sites can't compose the rules in different orders.
     /// </summary>
     public static LayerPath Classify(string relativePath)
     {
@@ -69,19 +70,24 @@ internal static class ModPathHashing
             return new LayerPath(ignored ? null : sub, normalized, null);
         }
 
-        string content = StripModsFolder(normalized);
-        return new LayerPath(null, content, ResolveNormalized(content));
+        if (normalized.StartsWith(ModsFolder + "\\", StringComparison.Ordinal))
+        {
+            string content = normalized[(ModsFolder.Length + 1)..];
+            return new LayerPath(null, content, ResolveNormalized(content));
+        }
+
+        return new LayerPath(null, normalized, null);
     }
 
-    /// <summary>The archive-relative content path: normalized, with a reserved top-level
-    /// <see cref="ModsFolder"/> wrapper stripped when present.</summary>
+    /// <summary>The archive-relative content path: normalized, with the <see cref="ModsFolder"/>
+    /// wrapper stripped. Only meaningful for a path <see cref="Classify"/> accepted as content.</summary>
     public static string ContentPathOf(string relativePath)
-        => StripModsFolder(NameHash.Normalize(relativePath));
-
-    private static string StripModsFolder(string normalized)
-        => normalized.StartsWith(ModsFolder + "\\", StringComparison.Ordinal)
+    {
+        string normalized = NameHash.Normalize(relativePath);
+        return normalized.StartsWith(ModsFolder + "\\", StringComparison.Ordinal)
             ? normalized[(ModsFolder.Length + 1)..]
             : normalized;
+    }
 
     /// <summary>Whether the path's leaf is Vortex's placeholder (see
     /// <see cref="VortexEmptyFolderMarker"/>).</summary>

@@ -73,7 +73,7 @@ public class ModLayerFragmentDedupTests : IDisposable
 
     private static void WriteFragment(string root, string fragmentId)
     {
-        string file = Path.Combine(root, Container, fragmentId);
+        string file = Path.Combine(root, "mods", Container, fragmentId);
         Directory.CreateDirectory(Path.GetDirectoryName(file)!);
         File.WriteAllText(file, "fragment");
     }

@@ -88,8 +88,9 @@ MyMod.zip
 
 A `plugins\` folder with no `.dll` or `.lua` anywhere inside is not a plugin payload and gets
 dropped. The same zip works dropped straight into the JackAll app — the reserved folders are part of
-JackAll's layer format, not a Vortex-only convention (a layer with neither folder still works too:
-game content at the layer root is the layout every already-installed mod has).
+JackAll's layer format, not a Vortex-only convention. They are also the *whole* format: content
+anywhere else in a layer, its root included, is ignored. JackAll itself stages workspace edits and
+legacy imports under `mods\` for the same reason.
 
 Plugin deployment is manifest-tracked (`bin\plugins\.jackall-plugins.json`): the build makes
 `bin\plugins` match the enabled layers — later layer wins a shared path, same as whole-file

@@ -73,7 +73,7 @@ public class PatchBuilderTests : IDisposable
     {
         if (_install is null) return;
 
-        var mod = MakeZipMod("test_mod", ("engine/gamemodes/gamemodesconfig.xml", "hello"u8.ToArray()));
+        var mod = MakeZipMod("test_mod", ("mods/engine/gamemodes/gamemodesconfig.xml", "hello"u8.ToArray()));
 
         PatchBuilder.Build(_install, [mod]);
         byte[] first = File.ReadAllBytes(_install.PatchDat);
@@ -92,7 +92,7 @@ public class PatchBuilderTests : IDisposable
         if (_install is null) return;
 
         byte[] vanilla = File.ReadAllBytes(_install.PatchDat);
-        var mod = MakeZipMod("test_mod", ("engine/gamemodes/gamemodesconfig.xml", "hello"u8.ToArray()));
+        var mod = MakeZipMod("test_mod", ("mods/engine/gamemodes/gamemodesconfig.xml", "hello"u8.ToArray()));
 
         PatchBuilder.Build(_install, [mod]);
         Assert.NotEqual(vanilla, File.ReadAllBytes(_install.PatchDat));
@@ -114,7 +114,7 @@ public class PatchBuilderTests : IDisposable
         byte[] content = "modded content"u8.ToArray();
 
         int vanillaCount = FatArchive.Read(_install.PatchFat).Entries.Count;
-        var result = PatchBuilder.Build(_install, [MakeZipMod("m", (path, content))]);
+        var result = PatchBuilder.Build(_install, [MakeZipMod("m", ($"mods/{path}", content))]);
 
         var index = FatArchive.Read(_install.PatchFat);
 
@@ -144,7 +144,7 @@ public class PatchBuilderTests : IDisposable
         const uint hash = 0x4A724578;
         byte[] content = "raw bytes"u8.ToArray();
 
-        PatchBuilder.Build(_install, [MakeZipMod("m", ($"_hash/{hash:x8}.xbt", content))]);
+        PatchBuilder.Build(_install, [MakeZipMod("m", ($"mods/_hash/{hash:x8}.xbt", content))]);
 
         var index = FatArchive.Read(_install.PatchFat);
         Assert.Contains(index.Entries, e => e.Hash == hash);
@@ -156,8 +156,8 @@ public class PatchBuilderTests : IDisposable
         if (_install is null) return;
 
         const string path = "engine/gamemodes/gamemodesconfig.xml";
-        var first = MakeZipMod("first", (path, "first"u8.ToArray()));
-        var second = MakeZipMod("second", (path, "second"u8.ToArray()));
+        var first = MakeZipMod("first", ($"mods/{path}", "first"u8.ToArray()));
+        var second = MakeZipMod("second", ($"mods/{path}", "second"u8.ToArray()));
 
         PatchBuilder.Build(_install, [first, second]);
 
@@ -218,7 +218,7 @@ public class PatchBuilderTests : IDisposable
         string replacementXml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty);
 
         string fragmentPath = $"{container.Path}\\{fragmentId}";
-        var mod = MakeZipMod("fragment_mod", (fragmentPath, System.Text.Encoding.UTF8.GetBytes(replacementXml)));
+        var mod = MakeZipMod("fragment_mod", ($"mods/{fragmentPath}", System.Text.Encoding.UTF8.GetBytes(replacementXml)));
 
         using (var vfsForRead = GameVfs.Load(_install, names))
         {
@@ -267,7 +267,7 @@ public class PatchBuilderTests : IDisposable
         string additionXml = FcbXml.ToXml(addition, FcbClassDefinitions.Empty);
 
         string newFragmentPath = $"{container.Path}\\does_not_exist_in_vanilla.xml";
-        var mod = MakeZipMod("add_mod", (newFragmentPath, System.Text.Encoding.UTF8.GetBytes(additionXml)));
+        var mod = MakeZipMod("add_mod", ($"mods/{newFragmentPath}", System.Text.Encoding.UTF8.GetBytes(additionXml)));
 
         using (var vfsForRead = GameVfs.Load(_install, names))
         {
@@ -315,9 +315,9 @@ public class PatchBuilderTests : IDisposable
 
         string fragmentPath = $"{container.Path}\\{fragmentId}";
         var modA = MakeZipMod("fragment_mod_a",
-            (fragmentPath, TestSupport.RenderWithValueSetAt(vanillaFragment, paths.A, 0xAAAA0001, [0x01, 0x00, 0x00, 0x00])));
+            ($"mods/{fragmentPath}", TestSupport.RenderWithValueSetAt(vanillaFragment, paths.A, 0xAAAA0001, [0x01, 0x00, 0x00, 0x00])));
         var modB = MakeZipMod("fragment_mod_b",
-            (fragmentPath, TestSupport.RenderWithValueSetAt(vanillaFragment, paths.B, 0xAAAA0002, [0x02, 0x00, 0x00, 0x00])));
+            ($"mods/{fragmentPath}", TestSupport.RenderWithValueSetAt(vanillaFragment, paths.B, 0xAAAA0002, [0x02, 0x00, 0x00, 0x00])));
 
         using (var vfsForRead = GameVfs.Load(_install, names))
         {
@@ -373,9 +373,9 @@ public class PatchBuilderTests : IDisposable
         if (existingHash == 0) return; // fixture has nothing existing to collide on
         string fragmentPath = $"{container.Path}\\{fragmentId}";
         var modA = MakeZipMod("mod_a",
-            (fragmentPath, TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x01, 0x00, 0x00, 0x00])));
+            ($"mods/{fragmentPath}", TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x01, 0x00, 0x00, 0x00])));
         var modB = MakeZipMod("mod_b",
-            (fragmentPath, TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x02, 0x00, 0x00, 0x00])));
+            ($"mods/{fragmentPath}", TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x02, 0x00, 0x00, 0x00])));
 
         BuildResult result;
         using (var vfsForRead = GameVfs.Load(_install, names))
@@ -428,9 +428,9 @@ public class PatchBuilderTests : IDisposable
         if (existingHash == 0) return; // fixture has nothing existing to collide on
 
         string hashAddressedPath = $"_hash\\{container.Hash:x8}.fcb\\{fragmentId}";
-        var modA = MakeZipMod("mod_a", (hashAddressedPath,
+        var modA = MakeZipMod("mod_a", ($"mods/{hashAddressedPath}",
             TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x01, 0x00, 0x00, 0x00])));
-        var modB = MakeZipMod("mod_b", (hashAddressedPath,
+        var modB = MakeZipMod("mod_b", ($"mods/{hashAddressedPath}",
             TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x02, 0x00, 0x00, 0x00])));
 
         BuildResult result;
@@ -471,7 +471,7 @@ public class PatchBuilderTests : IDisposable
         replacement.Values.Add(0xDEADBEEF, [0x01, 0x02, 0x03, 0x04]);
         string xml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty);
         string fragmentPath = $"{container.Path}\\{fragment.FragmentId}";
-        var mod = MakeZipMod("fragment_mod_2", (fragmentPath, System.Text.Encoding.UTF8.GetBytes(xml)));
+        var mod = MakeZipMod("fragment_mod_2", ($"mods/{fragmentPath}", System.Text.Encoding.UTF8.GetBytes(xml)));
 
         BuildResult result = PatchBuilder.Build(_install, [mod], vfs.ReadOriginal);
         Assert.True(result.TotalEntries > 0);
@@ -505,7 +505,7 @@ public class PatchBuilderTests : IDisposable
         replacement.Values.Add(0xDEADBEEF, [0xAA, 0xBB, 0xCC, 0xDD]);
         string xml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty);
         string fragmentPath = $"{container.Path}\\{fragment.FragmentId}";
-        var mod = MakeZipMod("fragment_mod_vanilla_check", (fragmentPath, System.Text.Encoding.UTF8.GetBytes(xml)));
+        var mod = MakeZipMod("fragment_mod_vanilla_check", ($"mods/{fragmentPath}", System.Text.Encoding.UTF8.GetBytes(xml)));
 
         PatchBuilder.Build(_install, [mod], vfs.ReadOriginal);
         vfs.ReloadPatchArchive();
@@ -580,19 +580,16 @@ public class PatchBuilderTests : IDisposable
     }
 
     [Fact]
-    public void A_mods_wrapper_builds_the_same_bytes_as_root_layout()
+    public void Content_outside_the_mods_folder_contributes_nothing()
     {
         if (_install is null) return;
 
-        byte[] content = "hello"u8.ToArray();
+        byte[] vanilla = File.ReadAllBytes(_install.PatchDat);
         PatchBuilder.Build(_install,
-            [MakeZipMod("root_layout", ("engine/gamemodes/gamemodesconfig.xml", content))]);
-        byte[] fromRoot = File.ReadAllBytes(_install.PatchDat);
+            [MakeZipMod("root_layout", ("engine/gamemodes/gamemodesconfig.xml", "hello"u8.ToArray()))]);
 
-        PatchBuilder.Build(_install,
-            [MakeZipMod("mods_layout", ("mods/engine/gamemodes/gamemodesconfig.xml", content))]);
-
-        Assert.Equal(fromRoot, File.ReadAllBytes(_install.PatchDat));
+        // The old root layout is gone, not grandfathered: a layer without mods\/plugins\ is empty.
+        Assert.Equal(vanilla, File.ReadAllBytes(_install.PatchDat));
     }
 
     private ZipModLayer MakeZipMod(string name, params (string Path, byte[] Content)[] files)

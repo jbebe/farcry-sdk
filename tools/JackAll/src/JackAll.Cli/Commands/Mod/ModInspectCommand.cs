@@ -96,8 +96,9 @@ public sealed class ModInspectCommand : CliCommand<ModInspectCommand.Settings>
         if (kind == "unknown")
         {
             AnsiConsole.MarkupLine(
-                "[yellow]Not a Far Cry 2 mod[/] - nothing in here resolves to a game file. "
-                + "(A mod is a tree of relative game paths, or _hash\\<crc32>.<ext> entries.)");
+                "[yellow]Not a Far Cry 2 mod[/] - nothing in here classifies as layer content. "
+                + "(A mod is a mods\\ folder of game paths - worlds\\…, _hash\\<crc32>.<ext> - "
+                + "and/or a plugins\\ folder holding an FCSE plugin.)");
             return 0;
         }
 
@@ -156,23 +157,15 @@ public sealed class ModInspectCommand : CliCommand<ModInspectCommand.Settings>
         => isZip ? LegacyPatchImporter.FindPatchPairInZip(input) : LegacyPatchImporter.FindPatchPair(input);
 
     /// <summary>
-    /// Whether real, game-recognized override content exists *outside* the legacy patch pair itself -
-    /// e.g. an author who zipped their content mod together with a full patch.dat/patch.fat backup, or
-    /// a bonus FCSE plugin bundled alongside. Null without <paramref name="entryExists"/> to check
-    /// against: without it, everything that isn't outright rejected by <see cref="ModPathHashing"/>
-    /// (a readme, a screenshot) would count as a "real" override too, which would flag *every* legacy
-    /// patch archive - see <see cref="ModLayerInspector"/>'s own remarks on why scoring needs a real
-    /// hash set to mean anything.
+    /// Whether real layer content exists *outside* the legacy patch pair itself - e.g. an author who
+    /// zipped their content mod together with a full patch.dat/patch.fat backup, or a bonus FCSE
+    /// plugin bundled alongside. Only <c>mods\</c>/<c>plugins\</c>-packaged files can qualify, so a
+    /// readme or screenshot next to the pair never flags.
     /// </summary>
     private static ModLayerReport? ScoreSideContent(
         string input, bool isZip, string[] allRelativePaths, (string Fat, string Dat) pair,
         Func<uint, bool>? entryExists)
     {
-        if (entryExists is null)
-        {
-            return null;
-        }
-
         // FindPatchPair(InZip) returns the pair as whatever it naturally addresses them by - absolute
         // filesystem paths for a directory input, zip entry names for a zip - so exclusion has to
         // match relativePaths' own shape rather than assuming one.
@@ -191,14 +184,9 @@ public sealed class ModInspectCommand : CliCommand<ModInspectCommand.Settings>
         string[] rest = [.. allRelativePaths.Where(p => !excluded.Contains(p))];
         ModLayerReport report = ModLayerInspector.Inspect(rest, entryExists);
 
-        // TotalOverrides alone isn't enough: it counts any path ModPathHashing.Resolve doesn't reject
-        // outright, real game entry or not - a plain readme.txt sitting next to patch.dat/patch.fat
-        // (extremely common) resolves to some hash and would count, flagging nearly every legacy
-        // patch archive. Requiring at least one *confirmed* entry (TotalOverrides beyond what
-        // UnknownEntries already accounts for) is what actually distinguishes real companion content
-        // from ordinary archive clutter - the same distinction ModLayerInspector.Inspect's own root
-        // scoring already relies on for the identical reason. A plugins\ payload is structural, so it
-        // needs no such confirmation.
+        // At least one *confirmed* entry (TotalOverrides beyond what UnknownEntries accounts for):
+        // mods\-packaged files that hash to nothing the game has are junk packaging, not companion
+        // content. A plugins\ payload is structural, so it needs no such confirmation.
         return report.TotalOverrides > report.UnknownEntries || report.PluginFiles > 0 ? report : null;
     }
 

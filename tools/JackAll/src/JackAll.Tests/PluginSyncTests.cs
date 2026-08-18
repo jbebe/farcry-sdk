@@ -35,7 +35,7 @@ public class PluginSyncTests : IDisposable
             (@"plugins\a.dll", "dll"),
             (@"plugins\sub\b.lua", "lua"),
             (@"plugins\__folder_managed_by_vortex", ""),
-            (@"generated\x.xml", "xml"));
+            (@"mods\generated\x.xml", "xml"));
 
         Assert.Equal([NameHash.Compute(@"generated\x.xml")], layer.Hashes);
         Assert.Equal(["a.dll", @"sub\b.lua"], layer.PluginPaths.Order());
@@ -55,13 +55,25 @@ public class PluginSyncTests : IDisposable
     }
 
     [Fact]
-    public void A_mods_wrapper_hashes_to_the_same_entry_as_root_layout()
+    public void A_mods_path_maps_back_to_its_game_path()
     {
         const string gamePath = @"engine\gamemodes\gamemodesconfig.xml";
         FolderModLayer layer = MakeFolderLayer("w", ($@"mods\{gamePath}", "x"));
 
         Assert.Equal([NameHash.Compute(gamePath)], layer.Hashes);
         Assert.Equal(gamePath, layer.PathOf(NameHash.Compute(gamePath)));
+    }
+
+    [Fact]
+    public void Content_at_the_layer_root_is_not_recognized()
+    {
+        FolderModLayer layer = MakeFolderLayer("strict",
+            (@"worlds\a.xml", "x"),
+            (@"_hash\4a724578.xbt", "x"));
+
+        // No root-layout fallback: mods\ and plugins\ are the whole contract.
+        Assert.Empty(layer.Hashes);
+        Assert.Empty(layer.PluginPaths);
     }
 
     [Fact]
@@ -93,15 +105,17 @@ public class PluginSyncTests : IDisposable
     }
 
     [Fact]
-    public void Restaging_a_root_layout_override_moves_it_under_mods()
+    public void Restaging_under_a_different_spelling_leaves_one_file()
     {
         const string gamePath = @"worlds\a.xml";
-        FolderModLayer layer = MakeFolderLayer("migrate", (gamePath, "old"));
+        uint hash = NameHash.Compute(gamePath);
+        FolderModLayer layer = MakeFolderLayer("respell");
 
-        layer.Stage(NameHash.Compute(gamePath), gamePath, "xml", "new"u8.ToArray());
+        layer.Stage(hash, knownPath: null, "xml", "old"u8.ToArray());
+        layer.Stage(hash, gamePath, "xml", "new"u8.ToArray());
 
-        Assert.False(Directory.Exists(Path.Combine(layer.RootPath, "worlds")));
-        Assert.Equal("new", Encoding.UTF8.GetString(layer.Read(NameHash.Compute(gamePath))));
+        Assert.False(Directory.Exists(Path.Combine(layer.RootPath, "mods", "_hash")));
+        Assert.Equal("new", Encoding.UTF8.GetString(layer.Read(hash)));
         Assert.True(File.Exists(Path.Combine(layer.RootPath, "mods", "worlds", "a.xml")));
     }
 

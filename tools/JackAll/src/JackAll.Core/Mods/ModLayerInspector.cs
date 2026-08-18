@@ -15,10 +15,10 @@ namespace JackAll.Core.Mods;
 /// <param name="UnknownEntries">Overrides whose target isn't in the game's archives at all: either
 /// files the mod genuinely adds, or the tell-tale of a root that was guessed wrong. Always 0 when
 /// <see cref="ModLayerInspector.Inspect"/> was called without an <c>entryExists</c> probe.</param>
-/// <param name="IgnoredFiles">Files <see cref="ModPathHashing.Resolve"/> rejects outright, such as a
-/// <c>_hash\</c> entry whose leaf isn't hex. Normally 0: almost any path hashes to *something*, so a
-/// mod's readme shows up as an override of a file the game doesn't have (see
-/// <paramref name="UnknownEntries"/>) rather than here.</param>
+/// <param name="IgnoredFiles">Files outside the reserved <c>mods\</c>/<c>plugins\</c> folders
+/// (readmes, screenshots — nothing else is layer content), plus the rare in-<c>mods\</c> path
+/// <see cref="ModPathHashing.Resolve"/> rejects, such as a <c>_hash\</c> entry whose leaf isn't
+/// hex.</param>
 /// <param name="PluginFiles">Files under the reserved top-level <c>plugins\</c> folder — recognized
 /// side-content the build deploys to <c>bin\plugins</c>, never compiled into patch.dat.</param>
 public sealed record ModLayerReport(
@@ -46,13 +46,13 @@ public sealed record ModLayerReport(
 /// This exists for callers that receive a mod as a bare directory of unknown shape — the Vortex
 /// extension's installer, most immediately — and need the answer *before* anything is staged.
 ///
-/// Root detection is the whole point. <see cref="ModPathHashing.Resolve"/> hashes a path exactly as
-/// given, so a zip that wraps its tree in <c>MyCoolMod\</c> hashes every entry as
-/// <c>mycoolmod\worlds\…</c> and matches nothing — silently, which is the worst way for this to
-/// fail. Rather than guess from folder names (the community has no convention worth trusting), every
-/// plausible prefix is scored by how many of the files below it actually resolve to entries the game
-/// has, and the best-scoring one wins. That reuses <see cref="ModPathHashing"/> itself as the
-/// oracle, so this can never disagree with what the builder will do later.
+/// Root detection is the whole point. <see cref="ModPathHashing.Classify"/> only recognizes the
+/// reserved <c>mods\</c>/<c>plugins\</c> folders at the top of a tree, so a zip that wraps them in
+/// <c>MyCoolMod\</c> contributes nothing — silently, which is the worst way for this to fail.
+/// Rather than guess from folder names, every plausible prefix is scored by how many of the files
+/// below it classify as recognized content, and the best-scoring one wins. That reuses
+/// <see cref="ModPathHashing"/> itself as the oracle, so this can never disagree with what the
+/// builder will do later.
 /// </remarks>
 public static class ModLayerInspector
 {

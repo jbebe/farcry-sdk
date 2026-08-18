@@ -46,9 +46,9 @@ public partial class MainWindow
                     && layer.PluginPaths.Count == 0)
                 {
                     Warn($"'{Path.GetFileName(path)}' has no files this game recognises.\n\n" +
-                         "A mod zip should contain the game's own folder structure - for example " +
-                         "worlds\\world1\\generated\\… - optionally under a mods\\ folder, and/or an " +
-                         "FCSE plugin under a plugins\\ folder.");
+                         "A mod zip contains a mods\\ folder with the game's own structure - for " +
+                         "example mods\\worlds\\world1\\generated\\… - and/or an FCSE plugin under " +
+                         "a plugins\\ folder.");
                     continue;
                 }
 
