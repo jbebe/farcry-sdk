@@ -19,9 +19,9 @@ pair** (see [Getting Started](./getting-started.md) for why
 So the Vortex extension is a front-end, not an implementation: Vortex handles downloading, staging,
 enabling and ordering, and everything that actually needs the game's own archives — converting a
 legacy patch, compiling the final `patch.dat` — goes to `jackall-mi`. Deciding *what kind* of mod an
-archive is happens first, though, and deliberately doesn't: it's three plain, string-only checks (see
+archive is happens first, though, and deliberately doesn't: it's plain string-only checks (see
 "What gets recognised" below), not a call out to JackAll. There's nothing to hash or score once an
-archive either does or doesn't have a literal `Data_Win32\` folder.
+archive either does or doesn't have a literal `mods\` or `plugins\` folder.
 
 ## How a mod reaches the game
 
@@ -29,8 +29,10 @@ archive either does or doesn't have a literal `Data_Win32\` folder.
 2. Deployment puts each mod in its own folder under `<game>\vortex-staging\` — one folder per mod,
    which is exactly JackAll's notion of a **layer**. At this point the game still can't see any of
    it.
-3. `did-deploy` runs `jackall-mi mod build`, compiling those layers into `patch.dat`.
-4. Purging runs `jackall-mi mod restore`, putting the pristine archive pair back.
+3. `did-deploy` runs `jackall-mi mod build`, compiling those layers' game content into `patch.dat`
+   and mirroring their `plugins\` payloads into `bin\plugins\` (see "What gets recognised").
+4. Purging runs `jackall-mi mod restore`, putting the pristine archive pair back and removing the
+   plugin files the build deployed.
 
 `vortex-staging\` sits at the game root and not under `Data_Win32` on purpose: JackAll finds the
 game's archives by globbing `*.fat` recursively under `Data_Win32`, so a legacy mod's `patch.fat`
@@ -52,20 +54,48 @@ of picking a side automatically).
 
 ### What gets recognised
 
-An archive is exactly one of three buckets, checked in this order:
+Checked in this order:
 
 | # | Archive shape | Handling |
 | --- | --- | --- |
-| 1 | A `patch.dat`/`patch.fat` pair, anywhere in the archive | **Legacy mod.** Converted at install time via `mod import-legacy` into an ordinary layer. **This is how most existing Far Cry 2 mods are distributed** — see [Mods Survey](./mods-survey.md). We can't force any structure on these (they predate this extension), so the pair is all that's recognized — everything else in the archive (readmes, screenshots, alternate versions) is not part of the conversion, and a confirmation dialog says so before install proceeds. |
-| 2 | A `.dll` under a `plugins\` folder | **FCSE plugin.** Deployed to `bin\plugins\`; nothing to do with the archive pipeline patch.dat is built from. Extra files alongside it (its own data/config) are normal and not warned about. |
-| 3 | Files rooted under a literal `Data_Win32\` folder | **Asset mod.** Everything up to and including that folder is stripped, and what's left (`worlds\…`, `generated\…`, `_hash\<crc32>.<ext>`, `<container>.fcb\<fragment id>`, …) is staged as an ordinary JackAll layer. Deliberately strict: a wrapper folder above `Data_Win32\` (`MyMod v1.2\Data_Win32\…`) is fine, but there's no fuzzy root-guessing beyond that — a mod either uses this convention or it doesn't. |
+| 1 | A `patch.dat`, anywhere in the archive | **Legacy mod.** Its `patch.fat` has to sit beside it — a lone `patch.dat` is rejected with the reason. Converted at install time via `mod import-legacy` into an ordinary layer. **This is how most existing Far Cry 2 mods are distributed** — see [Mods Survey](./mods-survey.md). We can't force any structure on these (they predate this extension), so the pair is all that's recognized — everything else in the archive (readmes, screenshots, alternate versions) is not part of the conversion, and a confirmation dialog says so before install proceeds. |
+| 2 | `FCSE.exe`, anywhere | **The FCSE loader/host program itself** (not a plugin). Deployed to `bin\`. |
+| 3 | A `plugins\` folder and/or a `mods\` folder | **Mod layer.** See the packaging convention below. The archive shape is staged as-is; the reserved folders are read natively by JackAll at build time — `mods\` compiles into `patch.dat`, `plugins\` mirrors into `bin\plugins\`. |
 
-`FCSE.exe` itself (the loader/host program, not a plugin) is recognized separately and deployed to
-`bin\`.
+Anything else is rejected. **Breaking change:** the old `Data_Win32\`-rooted convention is gone —
+repack by renaming that folder to `mods`.
 
 None of this calls `jackall-mi` — it's plain string matching over the file list. Only bucket 1 ever
 reaches into JackAll (`mod import-legacy`), since converting a legacy patch genuinely requires
-diffing against the game's own archives; buckets 2 and 3 don't need the game discovered at all.
+diffing against the game's own archives; the others don't need the game discovered at all.
+
+### Packaging a mod
+
+One archive can carry an asset mod, an FCSE plugin, or both, through two reserved top-level folders
+(a single wrapper folder above them is fine, and they don't have to share one):
+
+```
+MyMod.zip
+├─ plugins\                the FCSE plugin payload, deployed to bin\plugins\
+│  └─ my_mod\
+│     ├─ my_mod.dll        at least one .dll or .lua, at any depth (FCSE loads both)
+│     └─ config.ini        everything else under plugins\ ships verbatim alongside it
+└─ mods\                   game files, compiled into patch.dat
+   ├─ worlds\…
+   ├─ generated\entitylibrary.fcb\vehicle\Land\Jeep.xml
+   └─ _hash\4A724578.xbt
+```
+
+A `plugins\` folder with no `.dll` or `.lua` anywhere inside is not a plugin payload and gets
+dropped. The same zip works dropped straight into the JackAll app — the reserved folders are part of
+JackAll's layer format, not a Vortex-only convention (a layer with neither folder still works too:
+game content at the layer root is the layout every already-installed mod has).
+
+Plugin deployment is manifest-tracked (`bin\plugins\.jackall-plugins.json`): the build makes
+`bin\plugins` match the enabled layers — later layer wins a shared path, same as whole-file
+overrides — and never overwrites or deletes a file it didn't put there (a hand-installed plugin
+survives; the skipped path is reported as a collision warning instead). Disabling the mod and
+rebuilding, or restoring, removes exactly the files the build deployed.
 
 ### `.fcb` fragment ids
 
@@ -138,13 +168,14 @@ classifies archives itself (see "What gets recognised"), so `jackall-mi` leaves 
 ```console
 $ jackall-cli mod inspect coolmod.zip --game "C:\Games\Far Cry 2" --json
 {"ok":true,"kind":"layer","root":"mycoolmod v1.2","wholeFileOverrides":14,
- "fragmentOverrides":2,"hashAddressed":1,"unknownEntries":0,…}
+ "fragmentOverrides":2,"hashAddressed":1,"unknownEntries":0,"pluginFiles":1,…}
 ```
 
-`kind` is `layer`, `legacy-patch` or `unknown`. Root detection scores every candidate prefix by how
-many files below it hash to entries the game really has, so it can't silently pick a wrapper folder
-that makes the mod apply nothing. **Pass `--game`** — without it there's nothing to score against
-and the tree is reported as-is.
+`kind` is `layer`, `legacy-patch` or `unknown` — a plugins-only tree counts as `layer`, since it
+still deploys. `pluginFiles` counts the reserved `plugins\` payload. Root detection scores every
+candidate prefix by how many files below it hash to entries the game really has (plugin files count
+too), so it can't silently pick a wrapper folder that makes the mod apply nothing. **Pass `--game`**
+— without it there's nothing to score against and the tree is reported as-is.
 
 ### `mod import-legacy --game <dir> --from <zip|dir> --out <dir>`
 
@@ -163,21 +194,27 @@ deduplicates it.
 ```console
 $ jackall-mi mod build --game "C:\Games\Far Cry 2" --layer mods\a --layer mods\b --json
 {"ok":true,"totalEntries":231,"vanillaEntries":210,"overriddenEntries":6,"addedEntries":15,
- "outputBytes":10402118,"layers":[…]}
+ "outputBytes":10402118,"pluginsDeployed":1,"pluginsRemoved":0,"pluginCollisions":[],"layers":[…]}
 ```
 
-Building with **no** layers is meaningful: it reproduces the vanilla patch byte for byte. The
-archives are only mounted when some layer stages an `.fcb` fragment override (which needs the
-vanilla ancestor to merge against) — a whole-file-only build skips that entirely and takes about a
-second.
+After writing the archive pair, the build syncs each layer's reserved `plugins\` folder into
+`bin\plugins\` (see "Packaging a mod"): `pluginsDeployed`/`pluginsRemoved` count that,
+`pluginCollisions` lists paths left untouched because an untracked file already sits there (also
+warned on stderr), and each layer entry reports its own `pluginFiles`.
+
+Building with **no** layers is meaningful: it reproduces the vanilla patch byte for byte and
+removes every previously deployed plugin file. The archives are only mounted when some layer stages
+an `.fcb` fragment override (which needs the vanilla ancestor to merge against) — a whole-file-only
+build skips that entirely and takes about a second.
 
 `--force` overrides the vanilla-baseline refusal above. Only pass it when you know the current patch
 is stock.
 
 ### `mod restore --game <dir>`
 
-Copies `patch.dat.vanilla` / `patch.fat.vanilla` back over the live pair. Errors if no backup
-exists, rather than pretending to succeed.
+Copies `patch.dat.vanilla` / `patch.fat.vanilla` back over the live pair and removes every plugin
+file the build deployed (`pluginsRemoved` in the JSON; hand-installed plugins are never touched).
+Errors if no backup exists, rather than pretending to succeed.
 
 ## Getting it
 
