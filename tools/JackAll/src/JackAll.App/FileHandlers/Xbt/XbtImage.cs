@@ -47,6 +47,19 @@ public static class XbtImage
         try
         {
             (_, byte[] dds) = XbtTexture.Split(xbt);
+            return TryDecodeRgbaDds(dds);
+        }
+        catch (Exception)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>The same decode for a caller that already split the .xbt and holds the payload.</summary>
+    public static (byte[] Rgba, int Width, int Height)? TryDecodeRgbaDds(byte[] dds)
+    {
+        try
+        {
             using var stream = new MemoryStream(dds);
             ColorRgba32[,] rows = new BcDecoder().Decode2D(stream).ToArray();
             int height = rows.GetLength(0);

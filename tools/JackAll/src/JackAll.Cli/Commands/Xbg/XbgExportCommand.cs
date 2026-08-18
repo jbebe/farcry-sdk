@@ -79,7 +79,7 @@ public sealed class XbgExportCommand : CliCommand<XbgExportCommand.Settings>
         int submeshIndex = 0;
         foreach (XbgSubmesh sm in submeshes)
         {
-            Vector3[] normals = sm.Normals ?? ComputeSmoothNormals(sm.Positions, sm.Indices);
+            Vector3[] normals = sm.Normals ?? XbgModel.ComputeSmoothNormals(sm.Positions, sm.Indices);
 
             sb.AppendLine();
             sb.AppendLine($"g lod{sm.LodLevel}_part{sm.PartNumber}_submesh{submeshIndex}");
@@ -109,27 +109,6 @@ public sealed class XbgExportCommand : CliCommand<XbgExportCommand.Settings>
         }
 
         return sb.ToString();
-    }
-
-    /// <summary>Matches XbgFileHandler.ComputeSmoothNormals: accumulate each triangle's face normal into
-    /// its three vertices and normalize, so a file with no NORMAL component still exports usable shading.</summary>
-    private static Vector3[] ComputeSmoothNormals(Vector3[] positions, int[] indices)
-    {
-        var normals = new Vector3[positions.Length];
-        for (int i = 0; i + 2 < indices.Length; i += 3)
-        {
-            int a = indices[i], b = indices[i + 1], c = indices[i + 2];
-            Vector3 faceNormal = Vector3.Cross(positions[b] - positions[a], positions[c] - positions[a]);
-            normals[a] += faceNormal;
-            normals[b] += faceNormal;
-            normals[c] += faceNormal;
-        }
-
-        for (int i = 0; i < normals.Length; i++)
-        {
-            normals[i] = normals[i] == Vector3.Zero ? Vector3.UnitY : Vector3.Normalize(normals[i]);
-        }
-        return normals;
     }
 
     private static string F(float v) => v.ToString("0.######", CultureInfo.InvariantCulture);

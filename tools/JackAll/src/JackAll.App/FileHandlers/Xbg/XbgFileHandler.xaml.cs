@@ -123,7 +123,7 @@ public partial class XbgFileHandler : UserControl
                 mesh.Positions.Add(new Point3D(p.X, p.Y, p.Z));
             }
 
-            System.Numerics.Vector3[] normals = sm.Normals ?? ComputeSmoothNormals(sm.Positions, sm.Indices);
+            System.Numerics.Vector3[] normals = sm.Normals ?? XbgModel.ComputeSmoothNormals(sm.Positions, sm.Indices);
             mesh.Normals = new Vector3DCollection(normals.Length);
             foreach (System.Numerics.Vector3 n in normals)
             {
@@ -144,50 +144,9 @@ public partial class XbgFileHandler : UserControl
         Viewport.Children.Add(new ModelVisual3D { Content = root });
     }
 
-    /// <summary>Used when the file has no NORMAL vertex component: accumulate each triangle's face
-    /// normal into its three vertices and normalise, so shading still reads as a solid rather than flat
-    /// per-face facets.</summary>
-    private static System.Numerics.Vector3[] ComputeSmoothNormals(System.Numerics.Vector3[] positions, int[] indices)
-    {
-        var normals = new System.Numerics.Vector3[positions.Length];
-        for (int i = 0; i + 2 < indices.Length; i += 3)
-        {
-            int a = indices[i], b = indices[i + 1], c = indices[i + 2];
-            System.Numerics.Vector3 faceNormal = System.Numerics.Vector3.Cross(
-                positions[b] - positions[a], positions[c] - positions[a]);
-            normals[a] += faceNormal;
-            normals[b] += faceNormal;
-            normals[c] += faceNormal;
-        }
-
-        for (int i = 0; i < normals.Length; i++)
-        {
-            normals[i] = normals[i] == System.Numerics.Vector3.Zero
-                ? System.Numerics.Vector3.UnitY
-                : System.Numerics.Vector3.Normalize(normals[i]);
-        }
-
-        return normals;
-    }
-
     private void FrameCamera(List<XbgSubmesh> submeshes)
     {
-        var min = new System.Numerics.Vector3(float.MaxValue);
-        var max = new System.Numerics.Vector3(float.MinValue);
-        foreach (XbgSubmesh sm in submeshes)
-        {
-            foreach (System.Numerics.Vector3 p in sm.Positions)
-            {
-                min = System.Numerics.Vector3.Min(min, p);
-                max = System.Numerics.Vector3.Max(max, p);
-            }
-        }
-
-        if (min.X > max.X)
-        {
-            min = max = System.Numerics.Vector3.Zero;
-        }
-
+        (System.Numerics.Vector3 min, System.Numerics.Vector3 max) = XbgModel.Bounds(submeshes);
         System.Numerics.Vector3 center = (min + max) / 2f;
         float radius = Math.Max(0.01f, (max - min).Length() / 2f);
 

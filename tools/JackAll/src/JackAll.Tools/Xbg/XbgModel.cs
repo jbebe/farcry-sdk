@@ -14,14 +14,16 @@ public sealed class XbgSubmesh
     public required string MaterialName { get; init; }
     public required Vector3[] Positions { get; init; }
     public Vector3[]? Normals { get; init; }
+    /// <summary>UV channel 0, V already flipped to image convention; null when the file has none.</summary>
+    public Vector2[]? Uvs { get; init; }
     /// <summary>Triangle list, indices local to <see cref="Positions"/>.</summary>
     public required int[] Indices { get; init; }
 }
 
 /// <summary>
 /// Reads the static mesh geometry out of a Far Cry 2 .xbg for preview purposes: vertex
-/// positions/normals and triangle lists per (LOD, part, material), enough to render the model - not a
-/// full round-trippable parse (no skeleton/skinning/UVs/materials-as-textures).
+/// positions/normals/UVs and triangle lists per (LOD, part, material), enough to render the model -
+/// not a full round-trippable parse (no skeleton/skinning; materials stay names).
 ///
 /// Ported from <c>tools/XBG-Importer/modules/Far_Cry_2/{binary_fc2,chunks_fc2,import_mesh_fc2,
 /// import_xbg_fc2}.py</c> - see research/knowledge.md §8 for the format's provenance.
@@ -51,6 +53,7 @@ public sealed class XbgModel
         var meshes = new List<MeshEntry>();
         List<List<SubMeshHeader>>? subMeshList = null;
         float vertPosScale = 1f;
+        float uvTrans = 0f, uvScale = 1f;
 
         for (int m = 0; m < chunkCount; m++)
         {
@@ -68,6 +71,12 @@ public sealed class XbgModel
                 case "PMCP":
                     g.SkipI32(2);
                     vertPosScale = g.ReadF32Array(2)[1];
+                    break;
+                case "PMCU":
+                    g.SkipI32(2);
+                    float[] uvTransScale = g.ReadF32Array(2);
+                    uvTrans = uvTransScale[0];
+                    uvScale = uvTransScale[1];
                     break;
                 case "DIKS":
                     g.SkipI32(2);
@@ -92,16 +101,29 @@ public sealed class XbgModel
                 case "DNKS":
                     subMeshList = TryParseDnks(g);
                     break;
-                    // PMCU (UVs), EDON (skeleton), MB2O (bind matrices), XOBB/HPSB (bounds) aren't
-                    // needed for a geometry-only preview.
+                    // EDON (skeleton), MB2O (bind matrices), XOBB/HPSB (bounds) aren't needed for a
+                    // geometry-only preview.
             }
 
             g.Seek(chunkStart + chunkSize);
         }
 
+        // Submeshes routinely reference the same vertex region (one buffer, many materials);
+        // decode each region once and share the arrays, so consumers can dedupe by reference.
+        var decodedRegions = new Dictionary<(int Offset, int Count, int Stride, int Flags), MeshEntry>();
         foreach (MeshEntry mesh in meshes)
         {
-            ParseMeshVertices(g, mesh, vertPosScale);
+            (int, int, int, int) region = (mesh.VertSectionOffset, mesh.VertCount, mesh.VertStride, mesh.VertFormatFlags);
+            if (decodedRegions.TryGetValue(region, out MeshEntry? first))
+            {
+                mesh.Positions = first.Positions;
+                mesh.Normals = first.Normals;
+                mesh.Uvs = first.Uvs;
+                continue;
+            }
+
+            ParseMeshVertices(g, mesh, vertPosScale, uvTrans, uvScale);
+            decodedRegions[region] = mesh;
         }
 
         ProcessMeshFaces(g, meshes, subMeshList, materials);
@@ -124,6 +146,7 @@ public sealed class XbgModel
                     MaterialName = matName,
                     Positions = mesh.Positions,
                     Normals = mesh.Normals,
+                    Uvs = mesh.Uvs,
                     Indices = indices,
                 });
             }
@@ -168,6 +191,7 @@ public sealed class XbgModel
         public readonly List<(int VbIdx, int LodGrp, int SubIdx, int IdxOffset, int IdxCount)> MatListInfo = new();
         public Vector3[]? Positions;
         public Vector3[]? Normals;
+        public Vector2[]? Uvs;
         public readonly List<(int[] Indices, int MaterialId, string MaterialName)> Primitives = new();
     }
 
@@ -268,18 +292,20 @@ public sealed class XbgModel
     // ============================================================
 
     private const int PosFloat = 0x0001, PosInt16 = 0x0002, PosHalf = 0x0004, Uv0 = 0x0008,
-        BoneWts1 = 0x0010, Normal = 0x0040;
+        BoneWts1 = 0x0010, BoneWts2 = 0x0020, Normal = 0x0040, Color = 0x0080, Tangent = 0x0100,
+        Binormal = 0x0200, Unk400 = 0x0400, Uv1 = 0x0800, Uv2 = 0x1000;
 
     /// <summary>Component order fixed by the format: Position -> UV0 -> UV1 -> UV2 -> BoneWts1 ->
     /// BoneWts2 -> Normal -> Color -> Tangent -> Binormal -> Unk400. Only the offsets this preview
-    /// actually consumes (position, normal) are tracked; everything else just contributes to stride.</summary>
-    private static (int Stride, int PosOffset, int? NormalOffset) ComputeLayout(int flags)
+    /// actually consumes (position, UV0, normal) are tracked; everything else just contributes to
+    /// stride.</summary>
+    private static (int Stride, int PosOffset, int? Uv0Offset, int? NormalOffset) ComputeLayout(int flags)
     {
         int stride = 0;
-        int posOffset = 0, normalOffset = -1;
+        int posOffset = 0, uv0Offset = -1, normalOffset = -1;
         bool posHandled = false;
 
-        void Take(int flag, int size, bool isPos, bool isNormal)
+        void Take(int flag, int size, bool isPos = false, bool isUv0 = false, bool isNormal = false)
         {
             if (isPos)
             {
@@ -298,6 +324,10 @@ public sealed class XbgModel
                     return;
                 }
 
+                if (isUv0)
+                {
+                    uv0Offset = stride;
+                }
                 if (isNormal)
                 {
                     normalOffset = stride;
@@ -307,24 +337,24 @@ public sealed class XbgModel
             stride += size;
         }
 
-        Take(PosFloat, 12, isPos: true, isNormal: false);
-        Take(PosInt16, 8, isPos: true, isNormal: false);
-        Take(PosHalf, 8, isPos: true, isNormal: false);
-        Take(Uv0, 4, isPos: false, isNormal: false);
-        Take(0x0800, 4, isPos: false, isNormal: false); // UV1
-        Take(0x1000, 4, isPos: false, isNormal: false); // UV2
-        Take(BoneWts1, 8, isPos: false, isNormal: false);
-        Take(0x0020, 8, isPos: false, isNormal: false); // BoneWts2
-        Take(Normal, 4, isPos: false, isNormal: true);
-        Take(0x0080, 4, isPos: false, isNormal: false); // Color
-        Take(0x0100, 4, isPos: false, isNormal: false); // Tangent
-        Take(0x0200, 4, isPos: false, isNormal: false); // Binormal
-        Take(0x0400, 4, isPos: false, isNormal: false); // Unk400
+        Take(PosFloat, 12, isPos: true);
+        Take(PosInt16, 8, isPos: true);
+        Take(PosHalf, 8, isPos: true);
+        Take(Uv0, 4, isUv0: true);
+        Take(Uv1, 4);
+        Take(Uv2, 4);
+        Take(BoneWts1, 8);
+        Take(BoneWts2, 8);
+        Take(Normal, 4, isNormal: true);
+        Take(Color, 4);
+        Take(Tangent, 4);
+        Take(Binormal, 4);
+        Take(Unk400, 4);
 
-        return (stride, posOffset, normalOffset >= 0 ? normalOffset : null);
+        return (stride, posOffset, uv0Offset >= 0 ? uv0Offset : null, normalOffset >= 0 ? normalOffset : null);
     }
 
-    private static void ParseMeshVertices(Cursor g, MeshEntry mesh, float vertPosScale)
+    private static void ParseMeshVertices(Cursor g, MeshEntry mesh, float vertPosScale, float uvTrans, float uvScale)
     {
         int count = mesh.VertCount;
         int stride = mesh.VertStride;
@@ -336,7 +366,7 @@ public sealed class XbgModel
 
         bool hasPosFloat = (mesh.VertFormatFlags & PosFloat) != 0;
         bool hasNormal = (mesh.VertFormatFlags & Normal) != 0;
-        (_, int posOffset, int? normalOffset) = ComputeLayout(mesh.VertFormatFlags);
+        (_, int posOffset, int? uv0Offset, int? normalOffset) = ComputeLayout(mesh.VertFormatFlags);
 
         g.Seek(mesh.VertSectionOffset);
         byte[] buf = g.ReadBytes(count * stride);
@@ -344,6 +374,7 @@ public sealed class XbgModel
 
         var positions = new Vector3[count];
         Vector3[]? normals = hasNormal ? new Vector3[count] : null;
+        Vector2[]? uvs = uv0Offset is not null ? new Vector2[count] : null;
 
         for (int v = 0; v < count; v++)
         {
@@ -364,6 +395,15 @@ public sealed class XbgModel
 
             positions[v] = new Vector3(x * vertPosScale, y * vertPosScale, z * vertPosScale);
 
+            if (uvs is not null && uv0Offset is int uo)
+            {
+                int ub = v * stride + uo;
+                // 2x int16 through PMCU's translate+scale; V flipped to image convention.
+                uvs[v] = new Vector2(
+                    uvTrans + ReadI16(buf, ub, be) * uvScale,
+                    1f - (uvTrans + ReadI16(buf, ub + 2, be) * uvScale));
+            }
+
             if (normals is not null && normalOffset is int no)
             {
                 int nb = v * stride + no;
@@ -374,9 +414,50 @@ public sealed class XbgModel
 
         mesh.Positions = positions;
         mesh.Normals = normals;
+        mesh.Uvs = uvs;
     }
 
     private static float Unsign(byte b) => b / 255f * 2f - 1f;
+
+    /// <summary>Axis-aligned extent over the given submeshes' positions; (0,0)..(0,0) when empty.</summary>
+    public static (Vector3 Min, Vector3 Max) Bounds(IEnumerable<XbgSubmesh> submeshes)
+    {
+        var min = new Vector3(float.MaxValue);
+        var max = new Vector3(float.MinValue);
+        foreach (XbgSubmesh submesh in submeshes)
+        {
+            foreach (Vector3 p in submesh.Positions)
+            {
+                min = Vector3.Min(min, p);
+                max = Vector3.Max(max, p);
+            }
+        }
+
+        return min.X > max.X ? (Vector3.Zero, Vector3.Zero) : (min, max);
+    }
+
+    /// <summary>Fallback for files with no NORMAL vertex component: accumulate each triangle's face
+    /// normal into its three vertices and normalise, so shading still reads as a solid rather than
+    /// flat per-face facets.</summary>
+    public static Vector3[] ComputeSmoothNormals(Vector3[] positions, int[] indices)
+    {
+        var normals = new Vector3[positions.Length];
+        for (int i = 0; i + 2 < indices.Length; i += 3)
+        {
+            int a = indices[i], b = indices[i + 1], c = indices[i + 2];
+            Vector3 faceNormal = Vector3.Cross(positions[b] - positions[a], positions[c] - positions[a]);
+            normals[a] += faceNormal;
+            normals[b] += faceNormal;
+            normals[c] += faceNormal;
+        }
+
+        for (int i = 0; i < normals.Length; i++)
+        {
+            normals[i] = normals[i] == Vector3.Zero ? Vector3.UnitY : Vector3.Normalize(normals[i]);
+        }
+
+        return normals;
+    }
 
     // ============================================================
     // DNKS - per-submesh material id + face count (deterministic layout only; see

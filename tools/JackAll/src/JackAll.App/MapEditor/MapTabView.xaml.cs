@@ -25,7 +25,7 @@ public partial class MapTabView : UserControl
         Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines,
         IReadOnlyList<VegetationInstance> Vegetation, IReadOnlyList<NavMeshNode> NavNodes,
         IReadOnlyList<WorldLight> Lights, IReadOnlyList<TriggerVolume> Triggers,
-        ArchetypeIndex Archetypes);
+        ArchetypeIndex Archetypes, WorldModelSet Models);
 
     private sealed record FieldRow(string Name, string Value);
 
@@ -41,14 +41,22 @@ public partial class MapTabView : UserControl
 
     private Fc2World? _world;
     private EntityMarkerLayer? _markerLayer;
+    private EntityModelLayer? _modelLayer;
     private WorldEntity? _selectedEntity;
     private List<WorldEntity> _positionedEntities = [];
     private List<WorldEntity> _visibleEntities = [];
     private List<MissionLayerRow> _missionLayers = [];
     private bool _markersDirty;
+    private (int X, int Y) _cameraSector = (int.MinValue, int.MinValue);
+
+    /// <summary>Refilled per marker rebuild; sized for every positioned entity of the world.</summary>
+    private float[] _markerStaging = [];
 
     /// <summary>Built once per world; the mission-layer and search filters only change visibility.</summary>
     private EntityTreeNode? _entityTree;
+
+    /// <summary>The model stats line without its live texture-memory suffix.</summary>
+    private string _modelStatusText = "";
 
     private ArchetypeIndex? _archetypes;
 
@@ -136,9 +144,10 @@ public partial class MapTabView : UserControl
                 ArchetypeIndex archetypes = ArchetypeIndex.Load(
                     map.Name, vm.ReadByPath, progress, LibraryProfile.Client,
                     ArchetypeIndex.DiscoverDlcLibraries(vm.AllKnownPaths));
+                WorldModelSet models = WorldModels.Load(world.Entities, archetypes, vm.ReadByPath, progress);
                 return new PendingLoad(
                     map, terrain, detail, table, world, shapes, splines, vegetation, navNodes, lights,
-                    triggers, archetypes);
+                    triggers, archetypes, models);
             });
 
             WorldTerrain terrain = loaded.Terrain;
@@ -146,6 +155,12 @@ public partial class MapTabView : UserControl
             ShowSurfaceLegend(terrain, loaded.Table);
             _archetypes = loaded.Archetypes;
             ShowEntities(loaded.World, loaded.Archetypes);
+            WorldModelSet models = loaded.Models;
+            _modelStatusText =
+                $"{models.ModelIndexByEntity.Count:N0} of {_positionedEntities.Count:N0} entities " +
+                $"have models ({models.Models.Count:N0} unique meshes" +
+                (models.FailedPathCount > 0 ? $", {models.FailedPathCount} failed)" : ")");
+            ModelStatus.Text = _modelStatusText;
             int center = terrain.Side / 2;
             _camera.Position = new OpenTK.Mathematics.Vector3(
                 center, center, terrain.HeightMetersAt(center, center) + 150);
@@ -190,6 +205,13 @@ public partial class MapTabView : UserControl
             _triggerLayer?.Dispose();
             _triggerLayer = new ShapeLayer(BuildTriggerOutlines(pending.Triggers));
             TriggerStatus.Text = Describe(pending.Triggers);
+            _modelLayer?.Dispose();
+            _modelLayer = new EntityModelLayer(
+                pending.Models, _vm is { } modelVm ? modelVm.ReadByPath : _ => null, MarkerColour);
+            int positioned = pending.World.Entities.Count(e => e.Position is not null);
+            _markerStaging = new float[positioned * EntityMarkerLayer.Stride];
+            _markerLayer?.Dispose();
+            _markerLayer = new EntityMarkerLayer(positioned);
             _markersDirty = true;
             _heightTexture = new HeightTexture(pending.Terrain);
             _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
@@ -203,13 +225,31 @@ public partial class MapTabView : UserControl
                 : "No terrain textures loaded.";
         }
 
+        // The model tiers are keyed to the camera's sector, so crossing a boundary re-buckets the
+        // instance streams the same way a mission-layer toggle does.
+        var sector = ((int)MathF.Floor(_camera.Position.X / WorldModels.SectorMeters),
+            (int)MathF.Floor(_camera.Position.Y / WorldModels.SectorMeters));
+        if (sector != _cameraSector)
+        {
+            _cameraSector = sector;
+            _markersDirty = true;
+        }
+
         // Toggling a mission layer changes which markers exist, so the instance stream is rebuilt
         // here where a GL context is current rather than on the click.
         if (_markersDirty)
         {
             _markersDirty = false;
-            _markerLayer?.Dispose();
-            _markerLayer = new EntityMarkerLayer(BuildMarkers(_visibleEntities), _visibleEntities.Count);
+            List<WorldEntity> markerEntities = _visibleEntities;
+            if (_modelLayer is { } modelLayer && EntityDrawMode.SelectedIndex != ModeMarkers)
+            {
+                List<WorldEntity> leftover = modelLayer.SetVisible(_visibleEntities, _camera.Position);
+                if (EntityDrawMode.SelectedIndex == ModeModels)
+                {
+                    markerEntities = leftover;
+                }
+            }
+            _markerLayer?.SetInstances(FillMarkers(markerEntities), markerEntities.Count);
         }
 
         GL.Viewport(0, 0, Viewport.FrameBufferWidth, Viewport.FrameBufferHeight);
@@ -285,6 +325,12 @@ public partial class MapTabView : UserControl
 
         if (LayerCatalog.Entities.IsVisible)
         {
+            if (EntityDrawMode.SelectedIndex != ModeMarkers)
+            {
+                _modelLayer?.Draw(viewProjection, _camera.Position, demo);
+            }
+
+            // Markers blend, so they draw after the opaque models.
             OpenTK.Mathematics.Vector3 right = _camera.Right;
             _markerLayer?.Draw(viewProjection, 3f, right,
                 OpenTK.Mathematics.Vector3.Cross(right, _camera.Forward), flattenZ: false, _selectedEntity);
@@ -305,6 +351,14 @@ public partial class MapTabView : UserControl
         FpsText.Text = $"{_frames / _frameSeconds:0} fps";
         _frameSeconds = 0;
         _frames = 0;
+
+        string status = _modelStatusText + (_modelLayer is { TextureBytesResident: > 0 } layer
+            ? $" · {layer.TextureBytesResident / 1048576.0:F0} MB textures"
+            : "");
+        if (_modelStatusText.Length > 0 && ModelStatus.Text != status)
+        {
+            ModelStatus.Text = status;
+        }
     }
 
     /// <summary>Holding shift multiplies the fly speed.</summary>
@@ -527,15 +581,14 @@ public partial class MapTabView : UserControl
 
     /// <summary>Markers are one instance each: position plus a colour keyed to the archetype, so the
     /// same kind of object reads the same everywhere.</summary>
-    private static float[] BuildMarkers(List<WorldEntity> entities)
+    private float[] FillMarkers(List<WorldEntity> entities)
     {
-        var stream = new float[entities.Count * EntityMarkerLayer.Stride];
+        float[] stream = _markerStaging;
         for (int i = 0; i < entities.Count; i++)
         {
             WorldEntity entity = entities[i];
             System.Numerics.Vector3 position = entity.Position!.Value;
-            (byte r, byte g, byte b) = SurfaceTypeTexture.ColourFor(
-                (byte)(StableHash(entity.ArchetypeName) & 0x7F));
+            (byte r, byte g, byte b) = MarkerColour(entity);
             int at = i * EntityMarkerLayer.Stride;
             stream[at] = position.X;
             stream[at + 1] = position.Y;
@@ -546,6 +599,16 @@ public partial class MapTabView : UserControl
         }
         return stream;
     }
+
+    /// <summary>Colour keyed to the archetype, shared by markers and model tints so the same kind
+    /// of object reads the same in both forms.</summary>
+    private static (byte R, byte G, byte B) MarkerColour(WorldEntity entity)
+        => SurfaceTypeTexture.ColourFor((byte)(StableHash(entity.ArchetypeName) & 0x7F));
+
+    private const int ModeModels = 0;
+    private const int ModeMarkers = 1;
+
+    private void EntityDrawMode_Changed(object sender, SelectionChangedEventArgs e) => _markersDirty = true;
 
     /// <summary>One marker per plant, coloured by the resource it instantiates so a species reads
     /// the same across the map.</summary>

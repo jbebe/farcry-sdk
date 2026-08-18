@@ -18,7 +18,7 @@ public sealed class EntityMarkerLayer : IDisposable
     private readonly int _vao;
     private readonly int _highlightVao;
     private readonly int _instanceBuffer;
-    private readonly int _instanceCount;
+    private int _instanceCount;
     private readonly int _uProjection;
     private readonly int _uMarkerUnits;
     private readonly int _uRight;
@@ -26,11 +26,17 @@ public sealed class EntityMarkerLayer : IDisposable
     private readonly int _uFlattenZ;
 
     public EntityMarkerLayer(float[] instances, int instanceCount)
+        : this(instanceCount)
+        => SetInstances(instances, instanceCount);
+
+    /// <summary>A layer whose stream is refilled via <see cref="SetInstances"/> - the program, VAO
+    /// and capacity-sized buffer survive every refill, so a rebuild is one BufferSubData.</summary>
+    public EntityMarkerLayer(int capacity)
     {
-        _instanceCount = instanceCount;
         _instanceBuffer = GL.GenBuffer();
         GL.BindBuffer(BufferTarget.ArrayBuffer, _instanceBuffer);
-        GL.BufferData(BufferTarget.ArrayBuffer, instanceCount * Stride * sizeof(float), instances, BufferUsageHint.StaticDraw);
+        GL.BufferData(BufferTarget.ArrayBuffer, Math.Max(1, capacity) * Stride * sizeof(float),
+            IntPtr.Zero, BufferUsageHint.DynamicDraw);
 
         _vao = GL.GenVertexArray();
         GL.BindVertexArray(_vao);
@@ -78,6 +84,20 @@ public sealed class EntityMarkerLayer : IDisposable
         _uRight = _program.UniformLocation("right");
         _uUp = _program.UniformLocation("up");
         _uFlattenZ = _program.UniformLocation("flattenZ");
+    }
+
+    /// <summary>Rewrites the live instances in place; <paramref name="count"/> must fit the
+    /// capacity the layer was constructed with.</summary>
+    public void SetInstances(float[] instances, int count)
+    {
+        _instanceCount = count;
+        if (count == 0)
+        {
+            return;
+        }
+
+        GL.BindBuffer(BufferTarget.ArrayBuffer, _instanceBuffer);
+        GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, count * Stride * sizeof(float), instances);
     }
 
     public void Draw(Matrix4 projection, float markerUnits, Vector3 right, Vector3 up, bool flattenZ,

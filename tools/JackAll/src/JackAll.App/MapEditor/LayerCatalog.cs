@@ -74,11 +74,11 @@ public static class LayerCatalog
             "Per-sector water: a still or river flag, the surface height, and the material it uses.",
             ["Show water surfaces", "Per-sector height and material", "Enable / disable per sector"]);
 
-    /// <summary>Draws the entity markers while visible, and owns the browser panel.</summary>
+    /// <summary>Draws the entity models and markers while visible, and owns the browser panel.</summary>
     public static readonly MapLayer Entities =
         new("Objects", "Entities", "Ready",
             "Everything placed in the world; a placed entity is a delta over its archetype.",
-            ["Browse and search", "Select from the list or the viewport", "Read-only field view"]);
+            ["Draw as real models, markers, or both", "Browse and search", "Select from the list or the viewport", "Read-only field view"]);
 
     /// <summary>Owns the mission-layer list that filters which entities are shown.</summary>
     public static readonly MapLayer MissionLayers =

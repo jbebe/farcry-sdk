@@ -74,6 +74,15 @@
                 <!-- Entities get a real panel rather than the mock: a searchable list over a
                      read-only field view. It sits outside the scroll viewer so the list virtualizes. -->
                 <DockPanel x:Name="EntityPanel" Visibility="Collapsed">
+                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                        <TextBlock Text="Draw as" VerticalAlignment="Center" Foreground="#888" Margin="0,0,6,0" />
+                        <ComboBox x:Name="EntityDrawMode" SelectedIndex="0" SelectionChanged="EntityDrawMode_Changed">
+                            <ComboBoxItem Content="Models" />
+                            <ComboBoxItem Content="Markers" />
+                            <ComboBoxItem Content="Both" />
+                        </ComboBox>
+                    </DockPanel>
+                    <TextBlock x:Name="ModelStatus" DockPanel.Dock="Top" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,4" />
                     <TextBox x:Name="EntitySearch" DockPanel.Dock="Top" Margin="0,0,0,6"
                              TextChanged="EntitySearch_TextChanged"
                              ToolTip="Filters by name or archetype" />

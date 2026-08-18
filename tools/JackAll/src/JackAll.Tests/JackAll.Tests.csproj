@@ -33,5 +33,17 @@
     <Content Include="..\..\assets\binary_classes.xml" Link="Fixtures\Fcb\binary_classes.xml">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- Retail meshes from the local game export; absent on CI, where the fixture-guarded tests
+         no-op. The format-samples meshes are NOT used: their provenance is unknown. -->
+    <Content Include="..\..\..\..\tmp\graphics\actors\buddy_andrehyppolite\andrehyppolite.xbg"
+             Link="Fixtures\Xbg\andrehyppolite.xbg"
+             Condition="Exists('..\..\..\..\tmp\graphics\actors\buddy_andrehyppolite\andrehyppolite.xbg')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="..\..\..\..\tmp\graphics\objects\furnitures\chairs\chairbar01.xbg"
+             Link="Fixtures\Xbg\chairbar01.xbg"
+             Condition="Exists('..\..\..\..\tmp\graphics\objects\furnitures\chairs\chairbar01.xbg')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

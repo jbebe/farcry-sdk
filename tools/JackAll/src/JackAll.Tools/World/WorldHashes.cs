@@ -22,7 +22,9 @@ public static class WorldHashes
     public static readonly uint HidPosPrecise = FcbClassDefinitions.Crc32Ascii("hidPos_precise");
     public static readonly uint HidAngles = FcbClassDefinitions.Crc32Ascii("hidAngles");
 
-    /// <summary>The .xbg path inside an archetype template's graphics component; the field's source
-    /// string is unknown (no candidate name hashes to it), so it stays a literal.</summary>
-    public const uint MeshFileName = 0xBF9B3A5C;
+    public static readonly uint CGraphicComponent = FcbClassDefinitions.Crc32Ascii("CGraphicComponent");
+    /// <summary>The .xbg path on a graphics component (or on its per-slot "object" children).</summary>
+    public static readonly uint TextObjModel = FcbClassDefinitions.Crc32Ascii("text_objModel");
+    /// <summary>The per-slot child a library archetype's graphics component nests its fields in.</summary>
+    public static readonly uint GraphicObject = FcbClassDefinitions.Crc32Ascii("object");
 }
