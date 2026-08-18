@@ -193,8 +193,8 @@ public partial class MainWindow
         {
             BuildResult result = await _vm.BuildPatch();
 
-            string pluginsNote = result.PluginsDeployed + result.PluginsRemoved > 0
-                ? $", {result.PluginsDeployed:N0} plugin file(s) deployed"
+            string pluginsNote = result.Plugins.Deployed + result.Plugins.Removed > 0
+                ? $", {result.Plugins.Deployed:N0} plugin file(s) deployed, {result.Plugins.Removed:N0} removed"
                 : string.Empty;
             _vm.Status =
                 $"Built patch.dat - {result.TotalEntries:N0} files "

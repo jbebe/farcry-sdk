@@ -106,8 +106,9 @@ export async function rebuild(api: types.IExtensionApi, trigger: 'deploy' | 'man
     if (result.conflicts.length > 0) {
       notifyConflicts(api, result.conflicts);
     }
-    if ((result.pluginCollisions ?? []).length > 0) {
-      notifyPluginCollisions(api, result.pluginCollisions!);
+    const collisions = result.pluginCollisions ?? [];
+    if (collisions.length > 0) {
+      notifyPluginCollisions(api, collisions);
     }
   } catch (err) {
     dismiss(api, NOTIFICATION_ID);

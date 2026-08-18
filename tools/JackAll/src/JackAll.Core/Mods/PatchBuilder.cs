@@ -11,9 +11,7 @@ public sealed record BuildResult(
     int AddedEntries,
     long OutputBytes,
     IReadOnlyList<FragmentConflict> Conflicts,
-    int PluginsDeployed,
-    int PluginsRemoved,
-    IReadOnlyList<string> PluginCollisions);
+    PluginSyncResult Plugins);
 
 /// <summary>
 /// Compiles the vanilla patch archive plus the enabled mod layers into a new patch.dat/patch.fat,
@@ -83,13 +81,7 @@ public static class PatchBuilder
         // After the archive swap, so a plugin-sync failure never leaves a half-written patch. The
         // pair's atomicity doesn't extend to bin\plugins - the manifest lets the next build
         // reconcile it on its own.
-        PluginSyncResult plugins = PluginSync.Apply(install, layers);
-        return result with
-        {
-            PluginsDeployed = plugins.Deployed,
-            PluginsRemoved = plugins.Removed,
-            PluginCollisions = plugins.SkippedForeign,
-        };
+        return result with { Plugins = PluginSync.Apply(install, layers) };
     }
 
     /// <summary>
@@ -285,9 +277,7 @@ public static class PatchBuilder
             AddedEntries: added,
             OutputBytes: new FileInfo(install.PatchDat).Length,
             Conflicts: conflicts,
-            PluginsDeployed: 0,
-            PluginsRemoved: 0,
-            PluginCollisions: []);
+            Plugins: PluginSyncResult.Empty);
     }
 
     /// <summary>

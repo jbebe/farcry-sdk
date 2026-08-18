@@ -56,14 +56,9 @@ export function makeInstaller(api: types.IExtensionApi) {
     // Before any classification: a rogue FarCry2.exe is a concern whichever bucket this lands in.
     await warnIfBundlingGameBinaries(api, plainFiles, modName);
 
-    const legacy = findLegacyPatch(plainFiles);
-    if (legacy !== undefined) {
-      if (legacy.fat === undefined) {
-        throw new util.DataInvalid(
-          'This archive contains a patch.dat but no patch.fat beside it. A legacy mod needs the '
-          + 'pair - the .fat is the index that makes the .dat readable.');
-      }
-      await warnAboutIgnoredExtras(api, plainFiles, { fat: legacy.fat, dat: legacy.dat }, modName);
+    const legacyPair = findLegacyPatchPair(plainFiles);
+    if (legacyPair !== undefined) {
+      await warnAboutIgnoredExtras(api, plainFiles, legacyPair, modName);
 
       const gameRoot = gamePath(api);
       if (gameRoot === undefined) {
@@ -75,6 +70,11 @@ export function makeInstaller(api: types.IExtensionApi) {
       return installLegacyPatch(
         api, gameRoot, resolveExtractionRoot(destinationPath, plainFiles), modName);
     }
+    if (plainFiles.some(file => path.basename(file).toLowerCase() === 'patch.dat')) {
+      throw new util.DataInvalid(
+        'This archive contains a patch.dat but no patch.fat beside it. A legacy mod needs the '
+        + 'pair - the .fat is the index that makes the .dat readable.');
+    }
 
     const loader = plainFiles.find(file => path.basename(file).toLowerCase() === FCSE_LOADER);
     if (loader !== undefined) {
@@ -82,26 +82,16 @@ export function makeInstaller(api: types.IExtensionApi) {
       return withModType(rebase(plainFiles, root === '.' ? '' : root), MODTYPE_FCSE_LOADER);
     }
 
-    let pluginsRoot = findPluginsRoot(plainFiles);
-    let modsRoot = findModsRoot(plainFiles);
-    // A plugins\ nested inside mods\ is game content, not a payload - and vice versa.
-    if (pluginsRoot !== undefined && modsRoot !== undefined) {
-      if (pluginsRoot.startsWith(modsRoot + path.sep)) {
-        pluginsRoot = undefined;
-      } else if (modsRoot.startsWith(pluginsRoot + path.sep)) {
-        modsRoot = undefined;
-      }
-    }
-
+    const { pluginsRoot, modsRoot } = findLayerRoots(plainFiles);
     if (pluginsRoot !== undefined || modsRoot !== undefined) {
       if (pluginsRoot !== undefined) {
-        await warnIfFcseMissing(api, gamePath(api), modsRoot !== undefined);
+        await warnIfFcseMissing(api, gamePath(api));
       }
       log('info', 'Far Cry 2: staging mod layer', { pluginsRoot, modsRoot });
       return {
         instructions: [
-          ...(modsRoot === undefined ? [] : rebaseInto(plainFiles, modsRoot, MODS_DIR)),
-          ...(pluginsRoot === undefined ? [] : rebaseInto(plainFiles, pluginsRoot, PLUGINS_DIR)),
+          ...(modsRoot === undefined ? [] : rebase(plainFiles, modsRoot, MODS_DIR)),
+          ...(pluginsRoot === undefined ? [] : rebase(plainFiles, pluginsRoot, PLUGINS_DIR)),
         ],
       };
     }
@@ -135,24 +125,21 @@ function resolveExtractionRoot(destinationPath: string, files: string[]): string
   return found;
 }
 
-/** Copy instructions with `root` stripped off the front of every path. */
-function rebase(files: string[], root: string): types.IInstruction[] {
+/** Copy instructions with `root` stripped off the front of every path, re-rooted under `destRoot`
+ * when one is given - for content that must keep a folder inside the layer. */
+function rebase(files: string[], root: string, destRoot = ''): types.IInstruction[] {
   const prefix = root.length === 0 ? '' : normalize(root) + path.sep;
   return files
     // Roots come back lowercased, and Windows compares paths case-insensitively regardless.
     .filter(file => prefix === '' || normalize(file).startsWith(prefix))
-    .map(file => ({
-      type: 'copy',
-      source: file,
-      destination: prefix === '' ? file : file.substring(prefix.length),
-    }));
-}
-
-/** rebase, then re-prefix each destination under destRoot - for content that must keep its folder
- * inside the layer rather than landing at its root. */
-function rebaseInto(files: string[], root: string, destRoot: string): types.IInstruction[] {
-  return rebase(files, root).map(instr =>
-    ({ ...instr, destination: path.join(destRoot, instr.destination as string) }));
+    .map(file => {
+      const stripped = prefix === '' ? file : file.substring(prefix.length);
+      return {
+        type: 'copy' as const,
+        source: file,
+        destination: destRoot === '' ? stripped : path.join(destRoot, stripped),
+      };
+    });
 }
 
 function withModType(instructions: types.IInstruction[], modType: string): types.IInstallResult {
@@ -191,16 +178,14 @@ async function warnIfBundlingGameBinaries(
  * Detects the file on disk rather than checking mod state, so this catches FCSE installed by hand
  * (outside Vortex) just as well as FCSE installed as a mod.
  */
-async function warnIfFcseMissing(
-  api: types.IExtensionApi, gameRoot: string | undefined, combined: boolean,
-): Promise<void> {
+async function warnIfFcseMissing(api: types.IExtensionApi, gameRoot: string | undefined): Promise<void> {
   if (gameRoot === undefined || nodeFs.existsSync(path.join(gameRoot, 'bin', FCSE_LOADER))) {
     return;
   }
 
   const result = await ask(api, 'question', 'Far Cry Script Extender (FCSE) not found', {
-    text: `This mod ${combined ? 'includes' : 'is'} an FCSE plugin, but FCSE itself doesn't look `
-      + 'installed - without it, plugin files are deployed but never loaded by the game.',
+    text: 'This mod contains an FCSE plugin, but FCSE itself doesn\'t look installed - without it, '
+      + 'plugin files are deployed but never loaded by the game.',
   }, [
     { label: 'Download' },
     { label: 'Continue' },
@@ -238,13 +223,8 @@ async function confirm(api: types.IExtensionApi, title: string, text: string): P
   }
 }
 
-/**
- * A patch.dat is the whole of what makes a legacy mod; the pair's fat is undefined when it's
- * missing, so the caller can reject with the real reason rather than misreading the archive as
- * something else. A dat with its fat beside it wins over a lone dat found earlier.
- */
-function findLegacyPatch(files: string[]): { fat: string | undefined; dat: string } | undefined {
-  let lonely: string | undefined;
+/** A patch.dat with a patch.fat right beside it, anywhere - the whole of what makes a legacy mod. */
+function findLegacyPatchPair(files: string[]): { fat: string; dat: string } | undefined {
   for (const file of files) {
     if (path.basename(file).toLowerCase() !== 'patch.dat') {
       continue;
@@ -255,38 +235,47 @@ function findLegacyPatch(files: string[]): { fat: string | undefined; dat: strin
     if (fat !== undefined) {
       return { fat, dat: file };
     }
-    lonely = lonely ?? file;
-  }
-  return lonely === undefined ? undefined : { fat: undefined, dat: lonely };
-}
-
-/** The prefix up to and including a literal mods\ folder, wrapper folders allowed above it. */
-function findModsRoot(files: string[]): string | undefined {
-  for (const file of files) {
-    const segments = normalize(file).split(path.sep);
-    const index = segments.indexOf(MODS_DIR);
-    if (index >= 0 && index < segments.length - 1) {
-      return segments.slice(0, index + 1).join(path.sep);
-    }
   }
   return undefined;
 }
 
-/** The prefix up to and including a plugins\ folder holding at least one .dll or .lua at any
- * depth - FCSE loads both, nested or flat. */
-function findPluginsRoot(files: string[]): string | undefined {
+/** FCSE loads .dll and .lua alike, nested or flat. */
+function isPluginFile(file: string): boolean {
+  const extension = path.extname(file).toLowerCase();
+  return extension === '.dll' || extension === '.lua';
+}
+
+/** The prefix up to and including a folder literally named `dirName`, wrapper folders allowed
+ * above it - counting only files `accept` allows. */
+function findReservedRoot(
+  files: string[], dirName: string, accept: (file: string) => boolean = () => true,
+): string | undefined {
   for (const file of files) {
-    const extension = path.extname(file).toLowerCase();
-    if (extension !== '.dll' && extension !== '.lua') {
+    if (!accept(file)) {
       continue;
     }
     const segments = normalize(file).split(path.sep);
-    const index = segments.indexOf(PLUGINS_DIR);
+    const index = segments.indexOf(dirName);
     if (index >= 0 && index < segments.length - 1) {
       return segments.slice(0, index + 1).join(path.sep);
     }
   }
   return undefined;
+}
+
+/** The archive's reserved layer folders. One nested inside the other is content of the outer
+ * (mods\plugins\x.dll is game data, plugins\mods\… is plugin data), not a second root. */
+function findLayerRoots(files: string[]): { pluginsRoot?: string; modsRoot?: string } {
+  let pluginsRoot = findReservedRoot(files, PLUGINS_DIR, isPluginFile);
+  let modsRoot = findReservedRoot(files, MODS_DIR);
+  if (pluginsRoot !== undefined && modsRoot !== undefined) {
+    if (pluginsRoot.startsWith(modsRoot + path.sep)) {
+      pluginsRoot = undefined;
+    } else if (modsRoot.startsWith(pluginsRoot + path.sep)) {
+      modsRoot = undefined;
+    }
+  }
+  return { pluginsRoot, modsRoot };
 }
 
 /**

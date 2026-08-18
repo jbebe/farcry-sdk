@@ -23,6 +23,7 @@ public sealed class ZipModLayer : IModLayer
     private readonly Dictionary<uint, FragmentMap> _fragmentOverrides = [];
     private readonly Dictionary<string, string> _pluginEntryNames = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<uint, byte[]> _readCache = new();
+    private readonly ConcurrentDictionary<string, byte[]> _pluginReadCache = new(StringComparer.Ordinal);
 
     public string Name { get; }
     public bool Enabled { get; set; } = true;
@@ -44,20 +45,19 @@ public sealed class ZipModLayer : IModLayer
                 continue; // directory
             }
 
-            if (ModPathHashing.PluginPathOf(entry.FullName) is { } pluginPath)
+            LayerPath classified = ModPathHashing.Classify(entry.FullName);
+            if (classified.PluginPath is { } pluginPath)
             {
                 _pluginEntryNames[pluginPath] = entry.FullName;
                 continue;
             }
-
-            ModPathTarget? target = ModPathHashing.Resolve(ModPathHashing.ContentPathOf(entry.FullName));
-            if (target is null)
+            if (classified.Target is not { } target)
             {
                 continue; // not a valid override (e.g. a readme) - silently skipped
             }
 
-            _entryNames[target.Value.EntryHash] = entry.FullName;
-            ModPathHashing.Add(target.Value, _hashes, _fragmentOverrides);
+            _entryNames[target.EntryHash] = entry.FullName;
+            ModPathHashing.Add(target, _hashes, _fragmentOverrides);
         }
 
         FragmentOverrides = ModPathHashing.Freeze(_fragmentOverrides);
@@ -92,7 +92,7 @@ public sealed class ZipModLayer : IModLayer
 
     public byte[] ReadPlugin(string pluginPath)
         => _pluginEntryNames.TryGetValue(pluginPath, out string? entryName)
-            ? ReadFromZip(entryName)
+            ? _pluginReadCache.GetOrAdd(pluginPath, _ => ReadFromZip(entryName))
             : throw new KeyNotFoundException($"'{Name}' has no plugin '{pluginPath}'.");
 
     public string? PathOf(uint hash)

@@ -14,6 +14,7 @@ public sealed class GameInstall
     public const string VanillaSuffix = ".vanilla";
 
     public string RootPath { get; }
+    public string BinDir => Path.Combine(RootPath, "bin");
     public string DataDir => Path.Combine(RootPath, "Data_Win32");
     public string PatchFat => Path.Combine(DataDir, "patch.fat");
     public string PatchDat => Path.Combine(DataDir, "patch.dat");
@@ -116,7 +117,7 @@ public sealed class GameInstall
 
         var install = new GameInstall(rootPath);
 
-        if (!File.Exists(Path.Combine(rootPath, "bin", "FarCry2.exe")))
+        if (!File.Exists(Path.Combine(install.BinDir, "FarCry2.exe")))
         {
             error = "No bin\\FarCry2.exe here - this doesn't look like a Far Cry 2 folder.";
             return null;

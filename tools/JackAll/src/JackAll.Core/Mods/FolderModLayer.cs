@@ -40,21 +40,19 @@ public sealed class FolderModLayer : IModLayer
         {
             foreach (string file in Directory.EnumerateFiles(RootPath, "*", SearchOption.AllDirectories))
             {
-                string relative = Path.GetRelativePath(RootPath, file);
-                if (ModPathHashing.PluginPathOf(relative) is { } pluginPath)
+                LayerPath classified = ModPathHashing.Classify(Path.GetRelativePath(RootPath, file));
+                if (classified.PluginPath is { } pluginPath)
                 {
                     _pluginFiles[pluginPath] = file;
                     continue;
                 }
-
-                ModPathTarget? target = ModPathHashing.Resolve(ModPathHashing.ContentPathOf(relative));
-                if (target is null)
+                if (classified.Target is not { } target)
                 {
                     continue;
                 }
 
-                _absolutePaths[target.Value.EntryHash] = file;
-                ModPathHashing.Add(target.Value, _hashes, _fragmentOverrides);
+                _absolutePaths[target.EntryHash] = file;
+                ModPathHashing.Add(target, _hashes, _fragmentOverrides);
             }
         }
 
@@ -122,10 +120,9 @@ public sealed class FolderModLayer : IModLayer
             return false;
         }
 
-        // Resolved before the delete, since it needs the relative path to know whether this was a
+        // Classified before the delete, since it needs the relative path to know whether this was a
         // fragment override and which container it belonged to.
-        ModPathTarget? target = ModPathHashing.Resolve(
-            ModPathHashing.ContentPathOf(Path.GetRelativePath(RootPath, path)));
+        ModPathTarget? target = ModPathHashing.Classify(Path.GetRelativePath(RootPath, path)).Target;
 
         File.Delete(path);
         _absolutePaths.Remove(hash);
@@ -142,16 +139,22 @@ public sealed class FolderModLayer : IModLayer
         }
 
         // Leave no empty scaffolding behind, or the workspace slowly fills with dead folders.
-        string? dir = Path.GetDirectoryName(path);
+        PruneEmptyDirectories(Path.GetDirectoryName(path), RootPath);
+        return true;
+    }
+
+    /// <summary>Deletes now-empty folders from <paramref name="dir"/> up to (never including)
+    /// <paramref name="stopAt"/>.</summary>
+    internal static void PruneEmptyDirectories(string? dir, string stopAt)
+    {
         while (dir is not null
-               && dir.StartsWith(RootPath, StringComparison.OrdinalIgnoreCase)
-               && !dir.Equals(RootPath, StringComparison.OrdinalIgnoreCase)
+               && dir.StartsWith(stopAt, StringComparison.OrdinalIgnoreCase)
+               && !dir.Equals(stopAt, StringComparison.OrdinalIgnoreCase)
                && Directory.Exists(dir)
                && !Directory.EnumerateFileSystemEntries(dir).Any())
         {
             Directory.Delete(dir);
             dir = Path.GetDirectoryName(dir);
         }
-        return true;
     }
 }

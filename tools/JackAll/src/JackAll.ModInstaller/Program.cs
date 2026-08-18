@@ -137,9 +137,9 @@ internal static class Program
             OverriddenEntries = result.OverriddenEntries,
             AddedEntries = result.AddedEntries,
             OutputBytes = result.OutputBytes,
-            PluginsDeployed = result.PluginsDeployed,
-            PluginsRemoved = result.PluginsRemoved,
-            PluginCollisions = result.PluginCollisions,
+            PluginsDeployed = result.Plugins.Deployed,
+            PluginsRemoved = result.Plugins.Removed,
+            PluginCollisions = result.Plugins.SkippedForeign,
             Layers = [.. layers.Select((layer, index) => new BuildLayerPayload
             {
                 Index = index,
@@ -154,9 +154,9 @@ internal static class Program
             $"Built {install.PatchDat} - {result.TotalEntries:N0} entries "
             + $"({result.OverriddenEntries:N0} overridden, {result.AddedEntries:N0} added, "
             + $"{result.OutputBytes / 1024.0 / 1024.0:N1} MB)"
-            + (result.PluginsDeployed + result.PluginsRemoved > 0
-                ? $"{Environment.NewLine}bin\\plugins: {result.PluginsDeployed:N0} plugin file(s) deployed, "
-                  + $"{result.PluginsRemoved:N0} removed"
+            + (result.Plugins.Deployed + result.Plugins.Removed > 0
+                ? $"{Environment.NewLine}bin\\plugins: {result.Plugins.Deployed:N0} plugin file(s) deployed, "
+                  + $"{result.Plugins.Removed:N0} removed"
                 : string.Empty));
 
         foreach (FragmentConflict conflict in result.Conflicts)
@@ -165,7 +165,7 @@ internal static class Program
                 + $"inside '{conflict.DisplayPath}' by load order - their edits genuinely conflicted, so only "
                 + "the higher-priority mod's change survived.");
         }
-        foreach (string collision in result.PluginCollisions)
+        foreach (string collision in result.Plugins.SkippedForeign)
         {
             Report($"Warning: bin\\plugins\\{collision} already exists and wasn't deployed by JackAll - "
                 + "left untouched. Remove it manually if the mod's copy should apply.");

@@ -6,7 +6,10 @@ namespace JackAll.Core.Mods;
 /// <summary>What one <see cref="PluginSync.Apply"/> or <see cref="PluginSync.RemoveAll"/> did.
 /// <see cref="SkippedForeign"/> lists desired paths whose target file exists but isn't
 /// manifest-tracked — left untouched, for the caller to warn about.</summary>
-public sealed record PluginSyncResult(int Deployed, int Removed, IReadOnlyList<string> SkippedForeign);
+public sealed record PluginSyncResult(int Deployed, int Removed, IReadOnlyList<string> SkippedForeign)
+{
+    public static readonly PluginSyncResult Empty = new(0, 0, []);
+}
 
 /// <summary>
 /// Mirrors the enabled layers' <c>plugins\</c> payloads (see <see cref="IModLayer.PluginPaths"/>)
@@ -20,15 +23,14 @@ public static class PluginSync
     public const string ManifestFileName = ".jackall-plugins.json";
 
     public static string PluginsDir(GameInstall install)
-        => Path.Combine(install.RootPath, "bin", ModPathHashing.PluginsFolder);
+        => Path.Combine(install.BinDir, ModPathHashing.PluginsFolder);
 
     /// <summary>Makes <c>bin\plugins</c> match the enabled layers' plugin payloads, later layer
     /// winning on a shared path — the same rule whole-file overrides follow.</summary>
-    public static PluginSyncResult Apply(
-        GameInstall install, IReadOnlyList<IModLayer> layers, IProgress<string>? progress = null)
+    public static PluginSyncResult Apply(GameInstall install, IReadOnlyList<IModLayer> layers)
     {
         string pluginsDir = PluginsDir(install);
-        HashSet<string> tracked = LoadTrackedPaths(pluginsDir, progress);
+        HashSet<string> tracked = LoadTrackedPaths(pluginsDir);
 
         var desired = new Dictionary<string, IModLayer>(StringComparer.OrdinalIgnoreCase);
         foreach (IModLayer layer in layers.Where(l => l.Enabled))
@@ -42,7 +44,7 @@ public static class PluginSync
         // Nothing wanted and nothing owned: never touch (or create) bin\plugins at all.
         if (desired.Count == 0 && tracked.Count == 0)
         {
-            return new PluginSyncResult(0, 0, []);
+            return PluginSyncResult.Empty;
         }
 
         int deployed = 0;
@@ -55,7 +57,8 @@ public static class PluginSync
             // An untracked file with the same bytes is the same plugin, whoever copied it there -
             // adopt it instead of warning. Different bytes stay foreign and untouched.
             if (!tracked.Contains(path) && File.Exists(target)
-                && !content.AsSpan().SequenceEqual(File.ReadAllBytes(target)))
+                && (new FileInfo(target).Length != content.Length
+                    || !content.AsSpan().SequenceEqual(File.ReadAllBytes(target))))
             {
                 skippedForeign.Add(path);
                 continue;
@@ -76,12 +79,12 @@ public static class PluginSync
     public static PluginSyncResult RemoveAll(GameInstall install)
     {
         string pluginsDir = PluginsDir(install);
-        int removed = Remove(pluginsDir, LoadTrackedPaths(pluginsDir, progress: null));
+        int removed = Remove(pluginsDir, LoadTrackedPaths(pluginsDir));
         WriteManifest(pluginsDir, []);
         return new PluginSyncResult(0, removed, []);
     }
 
-    private static HashSet<string> LoadTrackedPaths(string pluginsDir, IProgress<string>? progress)
+    private static HashSet<string> LoadTrackedPaths(string pluginsDir)
     {
         var tracked = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         string manifestPath = Path.Combine(pluginsDir, ManifestFileName);
@@ -99,11 +102,10 @@ public static class PluginSync
                 tracked.Add(entry.Path);
             }
         }
-        catch (JsonException ex)
+        catch (JsonException)
         {
-            // Ownership of past deployments is lost; deploying fresh is still correct, the stale
-            // files just surface as foreign until removed by hand.
-            progress?.Report($"Ignoring unreadable {ManifestFileName}: {ex.Message}");
+            // Ownership of past deployments is lost; deploying fresh is still correct, and the
+            // stale files surface as foreign-file collisions until removed by hand.
         }
         return tracked;
     }
@@ -119,24 +121,10 @@ public static class PluginSync
                 File.Delete(target);
                 removed++;
             }
-            PruneEmptyDirectories(Path.GetDirectoryName(target), pluginsDir);
+            // Never past bin\plugins itself - FCSE expects the folder to stay.
+            FolderModLayer.PruneEmptyDirectories(Path.GetDirectoryName(target), pluginsDir);
         }
         return removed;
-    }
-
-    /// <summary>Deletes now-empty folders up to (never including) <paramref name="stopAt"/> — FCSE
-    /// expects <c>bin\plugins</c> itself to stay.</summary>
-    private static void PruneEmptyDirectories(string? dir, string stopAt)
-    {
-        while (dir is not null
-               && dir.StartsWith(stopAt, StringComparison.OrdinalIgnoreCase)
-               && !dir.Equals(stopAt, StringComparison.OrdinalIgnoreCase)
-               && Directory.Exists(dir)
-               && !Directory.EnumerateFileSystemEntries(dir).Any())
-        {
-            Directory.Delete(dir);
-            dir = Path.GetDirectoryName(dir);
-        }
     }
 
     private static void WriteManifest(string pluginsDir, List<PluginManifestEntry> files)

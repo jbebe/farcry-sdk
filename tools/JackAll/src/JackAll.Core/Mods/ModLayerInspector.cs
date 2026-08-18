@@ -34,8 +34,8 @@ public sealed record ModLayerReport(
     /// <summary>Everything this layer would contribute to a build.</summary>
     public int TotalOverrides => WholeFileOverrides + FragmentOverrides;
 
-    /// <summary>What root scoring maximizes: recognized contributions minus misses.</summary>
-    public int Score => TotalOverrides - UnknownEntries + PluginFiles;
+    /// <summary>Recognized contributions minus misses — what root scoring maximizes.</summary>
+    public int RecognizedFiles => TotalOverrides - UnknownEntries + PluginFiles;
 }
 
 /// <summary>
@@ -84,7 +84,7 @@ public static class ModLayerInspector
             ModLayerReport candidate = Score(normalized, root, entryExists);
             // Strictly better only: a deeper root has to actually recognize more files to win, so a
             // correctly-rooted mod is never "improved" into one of its own subfolders.
-            if (candidate.Score > best.Score)
+            if (candidate.RecognizedFiles > best.RecognizedFiles)
             {
                 best = candidate;
             }
@@ -127,7 +127,8 @@ public static class ModLayerInspector
             }
 
             string relative = path[prefix.Length..];
-            if (ModPathHashing.PluginPathOf(relative) is not null)
+            LayerPath classified = ModPathHashing.Classify(relative);
+            if (classified.PluginPath is not null)
             {
                 pluginFiles++;
                 if (samples.Count < SampleCount)
@@ -136,10 +137,7 @@ public static class ModLayerInspector
                 }
                 continue;
             }
-
-            string content = ModPathHashing.ContentPathOf(relative);
-            ModPathTarget? resolved = ModPathHashing.Resolve(content);
-            if (resolved is not { } target)
+            if (classified.Target is not { } target)
             {
                 ignored++;
                 continue;
@@ -176,7 +174,7 @@ public static class ModLayerInspector
                 }
             }
 
-            if (content.StartsWith(ModPathHashing.HashFolder + "\\", StringComparison.Ordinal))
+            if (classified.ContentPath.StartsWith(ModPathHashing.HashFolder + "\\", StringComparison.Ordinal))
             {
                 hashAddressed++;
             }

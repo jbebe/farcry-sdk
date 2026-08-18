@@ -51,51 +51,57 @@ internal static class ModPathHashing
     /// </summary>
     private const string VortexEmptyFolderMarker = "__folder_managed_by_vortex";
 
-    /// <summary>The path under the reserved top-level <see cref="PluginsFolder"/>, normalized — or
-    /// null for ordinary content. Every scan site checks this before <see cref="Resolve"/>: a plugin
-    /// file's path would otherwise CRC to a junk archive entry. A hypothetical real archive entry
-    /// named <c>plugins\…</c> stays overridable via <c>_hash\</c>.</summary>
-    public static string? PluginPathOf(string relativePath)
+    /// <summary>
+    /// Classifies one relative path the way every scan site must: a file under the reserved
+    /// top-level <see cref="PluginsFolder"/> is plugin payload — never hashed, since its path would
+    /// CRC to a junk archive entry (a hypothetical real entry named <c>plugins\…</c> stays
+    /// overridable via <c>_hash\</c>) — and anything else resolves as content with an optional
+    /// top-level <see cref="ModsFolder"/> wrapper stripped. One entry point, one normalization pass,
+    /// so the sites can't compose the rules in different orders.
+    /// </summary>
+    public static LayerPath Classify(string relativePath)
     {
         string normalized = NameHash.Normalize(relativePath);
-        if (!normalized.StartsWith(PluginsFolder + "\\", StringComparison.Ordinal))
+        if (normalized.StartsWith(PluginsFolder + "\\", StringComparison.Ordinal))
         {
-            return null;
+            string sub = normalized[(PluginsFolder.Length + 1)..];
+            bool ignored = sub.Length == 0 || IsVortexMarker(sub);
+            return new LayerPath(ignored ? null : sub, normalized, null);
         }
 
-        string sub = normalized[(PluginsFolder.Length + 1)..];
-        return sub.Length == 0
-            || sub.Split('\\')[^1].Equals(VortexEmptyFolderMarker, StringComparison.OrdinalIgnoreCase)
-            ? null
-            : sub;
+        string content = StripModsFolder(normalized);
+        return new LayerPath(null, content, ResolveNormalized(content));
     }
 
     /// <summary>The archive-relative content path: normalized, with a reserved top-level
     /// <see cref="ModsFolder"/> wrapper stripped when present.</summary>
     public static string ContentPathOf(string relativePath)
-    {
-        string normalized = NameHash.Normalize(relativePath);
-        return normalized.StartsWith(ModsFolder + "\\", StringComparison.Ordinal)
+        => StripModsFolder(NameHash.Normalize(relativePath));
+
+    private static string StripModsFolder(string normalized)
+        => normalized.StartsWith(ModsFolder + "\\", StringComparison.Ordinal)
             ? normalized[(ModsFolder.Length + 1)..]
             : normalized;
-    }
+
+    /// <summary>Whether the path's leaf is Vortex's placeholder (see
+    /// <see cref="VortexEmptyFolderMarker"/>).</summary>
+    private static bool IsVortexMarker(string normalizedPath)
+        => normalizedPath.AsSpan(normalizedPath.LastIndexOf('\\') + 1)
+            .Equals(VortexEmptyFolderMarker, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Resolves a relative path to what it overrides. Null for paths that are not overrides
     /// at all (readme files, Vortex's own deployment bookkeeping, and the like).</summary>
     public static ModPathTarget? Resolve(string relativePath)
+        => ResolveNormalized(NameHash.Normalize(relativePath));
+
+    private static ModPathTarget? ResolveNormalized(string normalized)
     {
-        string normalized = NameHash.Normalize(relativePath);
-        if (normalized.Length == 0)
+        if (normalized.Length == 0 || IsVortexMarker(normalized))
         {
             return null;
         }
 
         string[] segments = normalized.Split('\\');
-
-        if (segments[^1].Equals(VortexEmptyFolderMarker, StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
 
         if (segments[0] == HashFolder)
         {
@@ -243,6 +249,12 @@ internal static class ModPathHashing
 
 /// <summary>What one relative path inside a mod resolves to — see <see cref="ModPathHashing.Resolve"/>.</summary>
 internal readonly record struct ModPathTarget(uint EntryHash, uint? ContainerHash, string? FragmentId);
+
+/// <summary>One path's role in a layer (see <see cref="ModPathHashing.Classify"/>): a plugin payload
+/// file (<see cref="PluginPath"/> non-null), a content override (<see cref="Target"/> non-null), or
+/// neither — an ignored file. <see cref="ContentPath"/> is the normalized path the target was
+/// resolved from, mods\ wrapper already stripped.</summary>
+internal readonly record struct LayerPath(string? PluginPath, string ContentPath, ModPathTarget? Target);
 
 /// <summary>One container's overridden fragments, keyed so two spellings of one id can't both land.</summary>
 internal sealed class FragmentMap() : Dictionary<string, FragmentOverride>(FcbFragments.IdComparer);

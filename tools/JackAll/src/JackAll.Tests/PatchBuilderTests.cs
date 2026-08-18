@@ -571,11 +571,11 @@ public class PatchBuilderTests : IDisposable
         // The load-bearing half: nothing under plugins\ may leak into the archive.
         Assert.Equal(originalDat, File.ReadAllBytes(_install.PatchDat));
         Assert.Equal(0, result.AddedEntries);
-        Assert.Equal(1, result.PluginsDeployed);
+        Assert.Equal(1, result.Plugins.Deployed);
         Assert.True(File.Exists(deployed));
 
         mod.Enabled = false;
-        Assert.Equal(1, PatchBuilder.Build(_install, [mod]).PluginsRemoved);
+        Assert.Equal(1, PatchBuilder.Build(_install, [mod]).Plugins.Removed);
         Assert.False(File.Exists(deployed));
     }
 
@@ -621,6 +621,8 @@ public class PatchBuilderTests : IDisposable
         public string? PathOf(uint hash) => null;
         public IReadOnlyDictionary<uint, IReadOnlyList<FragmentOverride>> FragmentOverrides { get; } =
             new Dictionary<uint, IReadOnlyList<FragmentOverride>>();
+        public IReadOnlyCollection<string> PluginPaths => [];
+        public byte[] ReadPlugin(string pluginPath) => throw new KeyNotFoundException();
     }
 
     public void Dispose()

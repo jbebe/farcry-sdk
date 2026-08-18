@@ -54,9 +54,9 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
                 result.OverriddenEntries,
                 result.AddedEntries,
                 result.OutputBytes,
-                result.PluginsDeployed,
-                result.PluginsRemoved,
-                result.PluginCollisions,
+                pluginsDeployed = result.Plugins.Deployed,
+                pluginsRemoved = result.Plugins.Removed,
+                pluginCollisions = result.Plugins.SkippedForeign,
                 layers = layers.Select((layer, index) => new
                 {
                     index,
@@ -82,11 +82,11 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
             $"[green]Built[/] {install.PatchDat.EscapeMarkup()} - {result.TotalEntries:N0} entries "
             + $"({result.OverriddenEntries:N0} overridden, {result.AddedEntries:N0} added, "
             + $"{result.OutputBytes / 1024.0 / 1024.0:N1} MB)");
-        if (result.PluginsDeployed + result.PluginsRemoved > 0)
+        if (result.Plugins.Deployed + result.Plugins.Removed > 0)
         {
             AnsiConsole.MarkupLine(
-                $"bin\\plugins: {result.PluginsDeployed:N0} plugin file(s) deployed, "
-                + $"{result.PluginsRemoved:N0} removed");
+                $"bin\\plugins: {result.Plugins.Deployed:N0} plugin file(s) deployed, "
+                + $"{result.Plugins.Removed:N0} removed");
         }
 
         foreach (FragmentConflict conflict in result.Conflicts)
@@ -98,7 +98,7 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
                 + "conflicted, so only the higher-priority mod's change survived. Verify this in-game "
                 + "or hand-resolve it in JackAll.App.");
         }
-        foreach (string collision in result.PluginCollisions)
+        foreach (string collision in result.Plugins.SkippedForeign)
         {
             AnsiConsole.MarkupLine(
                 $"[yellow]Warning:[/] bin\\plugins\\{collision.EscapeMarkup()} already exists and wasn't "

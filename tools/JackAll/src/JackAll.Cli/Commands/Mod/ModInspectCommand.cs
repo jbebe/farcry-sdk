@@ -119,9 +119,7 @@ public sealed class ModInspectCommand : CliCommand<ModInspectCommand.Settings>
         // The confirmed count, not TotalOverrides - see ScoreSideContent's remarks on why an
         // unconfirmed path (a readme, a screenshot) shouldn't be counted as real side content, only as
         // what gates whether sideContent is non-null in the first place.
-        int confirmedSideFiles = sideContent is null
-            ? 0
-            : sideContent.TotalOverrides - sideContent.UnknownEntries + sideContent.PluginFiles;
+        int confirmedSideFiles = sideContent?.RecognizedFiles ?? 0;
 
         if (settings.Json)
         {
