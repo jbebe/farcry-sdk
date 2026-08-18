@@ -137,6 +137,9 @@ internal static class Program
             OverriddenEntries = result.OverriddenEntries,
             AddedEntries = result.AddedEntries,
             OutputBytes = result.OutputBytes,
+            PluginsDeployed = result.PluginsDeployed,
+            PluginsRemoved = result.PluginsRemoved,
+            PluginCollisions = result.PluginCollisions,
             Layers = [.. layers.Select((layer, index) => new BuildLayerPayload
             {
                 Index = index,
@@ -144,18 +147,28 @@ internal static class Program
                 Name = layer.Name,
                 WholeFileOverrides = layer.Hashes.Count,
                 FragmentOverrides = layer.FragmentOverrides.Sum(kv => kv.Value.Count),
+                PluginFiles = layer.PluginPaths.Count,
             })],
             Conflicts = [.. result.Conflicts.Select(ToPayload)],
         }, ModInstallerJson.Default.BuildPayload,
             $"Built {install.PatchDat} - {result.TotalEntries:N0} entries "
             + $"({result.OverriddenEntries:N0} overridden, {result.AddedEntries:N0} added, "
-            + $"{result.OutputBytes / 1024.0 / 1024.0:N1} MB)");
+            + $"{result.OutputBytes / 1024.0 / 1024.0:N1} MB)"
+            + (result.PluginsDeployed + result.PluginsRemoved > 0
+                ? $"{Environment.NewLine}bin\\plugins: {result.PluginsDeployed:N0} plugin file(s) deployed, "
+                  + $"{result.PluginsRemoved:N0} removed"
+                : string.Empty));
 
         foreach (FragmentConflict conflict in result.Conflicts)
         {
             Report($"Warning: '{conflict.WinningLayer}' overrode '{string.Join(", ", conflict.EarlierLayers)}' "
                 + $"inside '{conflict.DisplayPath}' by load order - their edits genuinely conflicted, so only "
                 + "the higher-priority mod's change survived.");
+        }
+        foreach (string collision in result.PluginCollisions)
+        {
+            Report($"Warning: bin\\plugins\\{collision} already exists and wasn't deployed by JackAll - "
+                + "left untouched. Remove it manually if the mod's copy should apply.");
         }
         return 0;
     }
@@ -222,14 +235,18 @@ internal static class Program
                 + "by JackAll, so there is nothing to undo.");
         }
 
-        install.RestoreVanilla();
+        PluginSyncResult plugins = install.RestoreVanilla();
 
         Emit(cli, new RestorePayload
         {
             PatchFat = install.PatchFat,
             PatchDat = install.PatchDat,
+            PluginsRemoved = plugins.Removed,
         }, ModInstallerJson.Default.RestorePayload,
-            $"Restored the original patch.dat/patch.fat in {install.DataDir}");
+            $"Restored the original patch.dat/patch.fat in {install.DataDir}"
+            + (plugins.Removed > 0
+                ? $" and removed {plugins.Removed:N0} deployed plugin file(s)"
+                : string.Empty));
         return 0;
     }
 
@@ -315,7 +332,8 @@ internal static class Program
     private const string Usage = """
         jackall-mi - Far Cry 2 mod installer
 
-        Compiles mods into Data_Win32\patch.dat. The headless half of JackAll's Mods tab, and the whole
+        Compiles mods into Data_Win32\patch.dat and syncs their plugins\ folders into bin\plugins
+        (restore removes what build deployed). The headless half of JackAll's Mods tab, and the whole
         surface a mod manager needs. Every command takes --json: one object on stdout, progress on stderr.
 
         Commands

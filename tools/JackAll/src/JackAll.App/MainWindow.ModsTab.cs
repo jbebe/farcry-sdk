@@ -42,11 +42,13 @@ public partial class MainWindow
             {
                 var layer = new ZipModLayer(path);
 
-                if (layer.Hashes.Count == 0)
+                if (layer.Hashes.Count == 0 && layer.FragmentOverrides.Count == 0
+                    && layer.PluginPaths.Count == 0)
                 {
                     Warn($"'{Path.GetFileName(path)}' has no files this game recognises.\n\n" +
                          "A mod zip should contain the game's own folder structure - for example " +
-                         "worlds\\world1\\generated\\… - which is the layout you get from unpacking an archive.");
+                         "worlds\\world1\\generated\\… - optionally under a mods\\ folder, and/or an " +
+                         "FCSE plugin under a plugins\\ folder.");
                     continue;
                 }
 
@@ -191,10 +193,13 @@ public partial class MainWindow
         {
             BuildResult result = await _vm.BuildPatch();
 
+            string pluginsNote = result.PluginsDeployed + result.PluginsRemoved > 0
+                ? $", {result.PluginsDeployed:N0} plugin file(s) deployed"
+                : string.Empty;
             _vm.Status =
                 $"Built patch.dat - {result.TotalEntries:N0} files "
                 + $"({result.OverriddenEntries:N0} replaced, {result.AddedEntries:N0} added, "
-                + $"{MainViewModel.FormatSize(result.OutputBytes)}). Launch the game to see it.";
+                + $"{MainViewModel.FormatSize(result.OutputBytes)}{pluginsNote}). Launch the game to see it.";
 
             _vm.SaveConfig();
         }

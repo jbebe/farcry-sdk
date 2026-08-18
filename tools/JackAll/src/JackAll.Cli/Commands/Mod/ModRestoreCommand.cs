@@ -25,7 +25,7 @@ public sealed class ModRestoreCommand : CliCommand<GameCommandSettings>
                 "JackAll, so there is nothing to undo.");
         }
 
-        install.RestoreVanilla();
+        Core.Mods.PluginSyncResult plugins = install.RestoreVanilla();
 
         if (settings.Json)
         {
@@ -35,11 +35,16 @@ public sealed class ModRestoreCommand : CliCommand<GameCommandSettings>
                 restored = true,
                 patchFat = install.PatchFat,
                 patchDat = install.PatchDat,
+                pluginsRemoved = plugins.Removed,
             });
             return 0;
         }
 
         AnsiConsole.MarkupLine($"[green]Restored[/] the original patch.dat/patch.fat in {install.DataDir.EscapeMarkup()}");
+        if (plugins.Removed > 0)
+        {
+            AnsiConsole.MarkupLine($"Removed {plugins.Removed:N0} deployed plugin file(s) from bin\\plugins");
+        }
         return 0;
     }
 }

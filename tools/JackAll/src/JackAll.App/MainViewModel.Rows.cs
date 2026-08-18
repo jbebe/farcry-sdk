@@ -68,10 +68,12 @@ public sealed class ModRow(IModLayer layer, bool isWorkspace) : INotifyPropertyC
     public string Name => IsWorkspace ? "workspace  (your edits - always applied last)" : Layer.Name;
 
     /// <summary>Whole-file overrides plus fragment overrides (each fragment counts as one, regardless
-    /// of which container it's inside) — <see cref="IModLayer.Hashes"/> alone would undercount (or
-    /// show zero) a layer that only stages `.fcb` fragments, since those are tracked separately in
-    /// <see cref="IModLayer.FragmentOverrides"/>, not <c>Hashes</c>.</summary>
-    public int FileCount => Layer.Hashes.Count + Layer.FragmentOverrides.Values.Sum(f => f.Count);
+    /// of which container it's inside) plus plugin files — <see cref="IModLayer.Hashes"/> alone would
+    /// undercount (or show zero) a layer that only stages `.fcb` fragments or an FCSE plugin, since
+    /// those are tracked separately in <see cref="IModLayer.FragmentOverrides"/>/
+    /// <see cref="IModLayer.PluginPaths"/>, not <c>Hashes</c>.</summary>
+    public int FileCount => Layer.Hashes.Count + Layer.FragmentOverrides.Values.Sum(f => f.Count)
+        + Layer.PluginPaths.Count;
     public string FileCountText => FileCount == 1 ? "1 file" : $"{FileCount:N0} files";
 
     /// <summary>

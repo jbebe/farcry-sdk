@@ -54,6 +54,9 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
                 result.OverriddenEntries,
                 result.AddedEntries,
                 result.OutputBytes,
+                result.PluginsDeployed,
+                result.PluginsRemoved,
+                result.PluginCollisions,
                 layers = layers.Select((layer, index) => new
                 {
                     index,
@@ -61,6 +64,7 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
                     layer.Name,
                     wholeFileOverrides = layer.Hashes.Count,
                     fragmentOverrides = layer.FragmentOverrides.Sum(kv => kv.Value.Count),
+                    pluginFiles = layer.PluginPaths.Count,
                 }),
                 conflicts = result.Conflicts.Select(c => new
                 {
@@ -78,6 +82,12 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
             $"[green]Built[/] {install.PatchDat.EscapeMarkup()} - {result.TotalEntries:N0} entries "
             + $"({result.OverriddenEntries:N0} overridden, {result.AddedEntries:N0} added, "
             + $"{result.OutputBytes / 1024.0 / 1024.0:N1} MB)");
+        if (result.PluginsDeployed + result.PluginsRemoved > 0)
+        {
+            AnsiConsole.MarkupLine(
+                $"bin\\plugins: {result.PluginsDeployed:N0} plugin file(s) deployed, "
+                + $"{result.PluginsRemoved:N0} removed");
+        }
 
         foreach (FragmentConflict conflict in result.Conflicts)
         {
@@ -87,6 +97,12 @@ public sealed class ModBuildCommand : CliCommand<ModBuildCommand.Settings>
                 + $"'{conflict.DisplayPath.EscapeMarkup()}' by load order - their edits genuinely "
                 + "conflicted, so only the higher-priority mod's change survived. Verify this in-game "
                 + "or hand-resolve it in JackAll.App.");
+        }
+        foreach (string collision in result.PluginCollisions)
+        {
+            AnsiConsole.MarkupLine(
+                $"[yellow]Warning:[/] bin\\plugins\\{collision.EscapeMarkup()} already exists and wasn't "
+                + "deployed by JackAll - left untouched. Remove it manually if the mod's copy should apply.");
         }
         return 0;
     }

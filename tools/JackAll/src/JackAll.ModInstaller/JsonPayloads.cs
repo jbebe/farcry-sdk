@@ -39,6 +39,10 @@ internal sealed record BuildPayload
     public int OverriddenEntries { get; init; }
     public int AddedEntries { get; init; }
     public long OutputBytes { get; init; }
+    public int PluginsDeployed { get; init; }
+    public int PluginsRemoved { get; init; }
+    /// <summary>Plugin paths whose target in bin\plugins exists but isn't JackAll's — left untouched.</summary>
+    public IReadOnlyList<string> PluginCollisions { get; init; } = [];
     public IReadOnlyList<BuildLayerPayload> Layers { get; init; } = [];
     public IReadOnlyList<ConflictPayload> Conflicts { get; init; } = [];
 }
@@ -50,6 +54,7 @@ internal sealed record BuildLayerPayload
     public string Name { get; init; } = string.Empty;
     public int WholeFileOverrides { get; init; }
     public int FragmentOverrides { get; init; }
+    public int PluginFiles { get; init; }
 }
 
 /// <summary>A fragment two layers both edited, resolved by load order rather than refusing to build.</summary>
@@ -80,6 +85,7 @@ internal sealed record RestorePayload
     public bool Restored { get; init; } = true;
     public string PatchFat { get; init; } = string.Empty;
     public string PatchDat { get; init; } = string.Empty;
+    public int PluginsRemoved { get; init; }
 }
 
 /// <summary>

@@ -67,7 +67,9 @@ public sealed class ModInspectCommand : CliCommand<ModInspectCommand.Settings>
         }
 
         ModLayerReport report = ModLayerInspector.Inspect(relativePaths, entryExists);
-        string kind = report.TotalOverrides > 0 ? "layer" : "unknown";
+        // A plugins-only tree is a deployable layer too: it builds a vanilla patch and still puts
+        // its payload into bin\plugins.
+        string kind = report.TotalOverrides > 0 || report.PluginFiles > 0 ? "layer" : "unknown";
 
         if (settings.Json)
         {
@@ -84,6 +86,7 @@ public sealed class ModInspectCommand : CliCommand<ModInspectCommand.Settings>
                 report.HashAddressed,
                 report.UnknownEntries,
                 report.IgnoredFiles,
+                report.PluginFiles,
                 report.SamplePaths,
                 totalFiles = relativePaths.Length,
             });
@@ -102,6 +105,7 @@ public sealed class ModInspectCommand : CliCommand<ModInspectCommand.Settings>
         AnsiConsole.MarkupLine($"  root              : {(report.Root.Length == 0 ? "<top level>" : report.Root.EscapeMarkup())}");
         AnsiConsole.MarkupLine($"  file overrides    : {report.WholeFileOverrides:N0} ({report.HashAddressed:N0} hash-addressed)");
         AnsiConsole.MarkupLine($"  .fcb fragments    : {report.FragmentOverrides:N0}");
+        AnsiConsole.MarkupLine($"  plugin files      : {report.PluginFiles:N0} (deployed to bin\\plugins)");
         if (entryExists is not null && report.UnknownEntries > 0)
         {
             AnsiConsole.MarkupLine($"  [yellow]not in the game   : {report.UnknownEntries:N0}[/] (files this mod adds, or a misread root)");
@@ -115,7 +119,9 @@ public sealed class ModInspectCommand : CliCommand<ModInspectCommand.Settings>
         // The confirmed count, not TotalOverrides - see ScoreSideContent's remarks on why an
         // unconfirmed path (a readme, a screenshot) shouldn't be counted as real side content, only as
         // what gates whether sideContent is non-null in the first place.
-        int confirmedSideFiles = sideContent is null ? 0 : sideContent.TotalOverrides - sideContent.UnknownEntries;
+        int confirmedSideFiles = sideContent is null
+            ? 0
+            : sideContent.TotalOverrides - sideContent.UnknownEntries + sideContent.PluginFiles;
 
         if (settings.Json)
         {
@@ -193,8 +199,9 @@ public sealed class ModInspectCommand : CliCommand<ModInspectCommand.Settings>
         // patch archive. Requiring at least one *confirmed* entry (TotalOverrides beyond what
         // UnknownEntries already accounts for) is what actually distinguishes real companion content
         // from ordinary archive clutter - the same distinction ModLayerInspector.Inspect's own root
-        // scoring already relies on for the identical reason.
-        return report.TotalOverrides > report.UnknownEntries ? report : null;
+        // scoring already relies on for the identical reason. A plugins\ payload is structural, so it
+        // needs no such confirmation.
+        return report.TotalOverrides > report.UnknownEntries || report.PluginFiles > 0 ? report : null;
     }
 
     private static string[] ZipPaths(string zipPath)

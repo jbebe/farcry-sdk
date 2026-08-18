@@ -92,6 +92,11 @@ public sealed partial class MainViewModel
             }
         }
 
+        foreach (string pluginPath in layer.PluginPaths)
+        {
+            InsertModFilePath(root, $"plugins\\{pluginPath}");
+        }
+
         SortModFileNodesRecursively(root);
         return root.Children;
     }
