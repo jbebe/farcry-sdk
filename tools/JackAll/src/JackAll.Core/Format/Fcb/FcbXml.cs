@@ -293,14 +293,6 @@ public static class FcbXml
         }
     }
 
-    /// <summary>
-    /// Renders one float. Negative zero renders as "0" rather than .NET's "-0" - the form Gibbed's
-    /// tools and the mod XML written against them use - which makes a zero's sign the one thing an
-    /// .fcb -> XML -> .fcb round trip doesn't preserve.
-    /// </summary>
-    public static string FormatSingle(float value)
-        => value == 0f ? "0" : value.ToString(CultureInfo.InvariantCulture);
-
     /// <summary>Writes a count-prefixed array of fixed-size scalar items (UInt32Array, HashArray, ...).</summary>
     private static bool TryWriteFixedArray(XElement el, byte[] value, int itemSize, Func<byte[], int, string> format)
     {
@@ -326,8 +318,16 @@ public static class FcbXml
         return true;
     }
 
+    /// <summary>
+    /// Renders one float, with negative zero as "0" - the form Gibbed's tools write - rather than
+    /// .NET's "-0". Their .NET Framework 7-digit rounding is deliberately not matched: it would emit
+    /// text that no longer parses back to the same float.
+    /// </summary>
     private static string Single(byte[] value, int offset)
-        => FormatSingle(BitConverter.ToSingle(value, offset));
+    {
+        float single = BitConverter.ToSingle(value, offset);
+        return single == 0f ? "0" : single.ToString(CultureInfo.InvariantCulture);
+    }
 
     private static FcbObject ReadNode(XElement node)
     {

@@ -50,7 +50,7 @@ public class FcbXmlTests
 
         FcbObject reparsed = FcbXml.FromXml(FcbXml.ToXml(original, defs));
 
-        AssertSameShape(original, reparsed);
+        TestSupport.AssertSameShape(original, reparsed, AssertSameValueIgnoringSignedZero);
     }
 
     /// <summary>
@@ -238,16 +238,11 @@ public class FcbXmlTests
         Assert.Contains("BinHex", xml); // the unknown-hash value
 
         FcbObject reparsed = FcbXml.FromXml(xml);
-        AssertSameShape(root, reparsed);
+        TestSupport.AssertSameShape(root, reparsed);
     }
 
-    /// <summary>
-    /// Real .fcb data carries ~2,000 negative-zero floats across the four fixtures, every one a
-    /// <c>hidAngles</c> component - .NET's own "-0" would diff against the "0" every Gibbed-produced
-    /// mod XML carries.
-    /// </summary>
     [Fact]
-    public void A_negative_zero_float_renders_as_plain_zero_but_still_parses_back()
+    public void A_negative_zero_float_renders_as_plain_zero()
     {
         var scalar = new XElement("value");
         Assert.True(FcbXml.TryWriteValue(scalar, FcbMemberType.Float, BitConverter.GetBytes(-0f)));
@@ -255,8 +250,8 @@ public class FcbXmlTests
 
         var vector = new XElement("value");
         Assert.True(FcbXml.TryWriteValue(vector, FcbMemberType.Vector3,
-            [.. BitConverter.GetBytes(0f), .. BitConverter.GetBytes(-0f), .. BitConverter.GetBytes(-1.5f)]));
-        Assert.Equal(["0", "0", "-1.5"], vector.Elements().Select(e => e.Value));
+            [.. BitConverter.GetBytes(2.5f), .. BitConverter.GetBytes(-0f), .. BitConverter.GetBytes(-1.5f)]));
+        Assert.Equal(["2.5", "0", "-1.5"], vector.Elements().Select(e => e.Value));
 
         // XMLs written before the normalization still carry "-0", and keep their sign bit on the way in.
         FcbObject reparsed = FcbXml.FromXml("""<object hash="11111111"><value hash="22222222" type="Float">-0</value></object>""");
@@ -304,7 +299,7 @@ public class FcbXmlTests
         Assert.DoesNotContain("BinHex", xml);
 
         FcbObject reparsed = FcbXml.FromXml(xml);
-        AssertSameShape(root, reparsed);
+        TestSupport.AssertSameShape(root, reparsed);
     }
 
     /// <summary>
@@ -354,7 +349,7 @@ public class FcbXmlTests
         FcbObject reparsed = FcbXml.FromXml(xml);
         var expected = new FcbObject { TypeHash = 0x11111111 };
         expected.Values.Add(Crc32("hidDescriptor"), [.. value, 0]); // normalized: pad byte added back
-        AssertSameShape(expected, reparsed);
+        TestSupport.AssertSameShape(expected, reparsed);
     }
 
     private static uint Crc32(string name)
@@ -371,38 +366,28 @@ public class FcbXmlTests
         return ~crc;
     }
 
-    private static void AssertSameShape(FcbObject expected, FcbObject actual)
-    {
-        Assert.Equal(expected.TypeHash, actual.TypeHash);
-        Assert.Equal(expected.Values.Keys.OrderBy(k => k), actual.Values.Keys.OrderBy(k => k));
-        foreach (uint key in expected.Values.Keys)
-        {
-            AssertSameValue(expected.Values[key], actual.Values[key]);
-        }
-
-        Assert.Equal(expected.Children.Count, actual.Children.Count);
-        for (int i = 0; i < expected.Children.Count; i++)
-        {
-            AssertSameShape(expected.Children[i], actual.Children[i]);
-        }
-    }
-
     /// <summary>
-    /// Compares one value's bytes, allowing the single difference an XML round trip is meant to have:
-    /// <see cref="FcbXml.FormatSingle"/> renders negative zero as "0", so a -0 float comes back as +0.
+    /// Compares one value's bytes, tolerating the one difference the XML round trip is meant to have:
+    /// the writer renders negative zero as "0", so a -0 float comes back as +0. Type-blind, so it also
+    /// tolerates those 4 bytes inside a non-float value - no fixture currently has one.
     /// </summary>
-    private static void AssertSameValue(byte[] expected, byte[] actual)
+    private static void AssertSameValueIgnoringSignedZero(byte[] expected, byte[] actual)
     {
         if (expected.AsSpan().SequenceEqual(actual)) return;
 
-        byte[] normalized = [.. expected];
-        for (int i = 3; i < normalized.Length; i += 4)
+        Assert.Equal(WithPositiveZeroFloats(expected), WithPositiveZeroFloats(actual));
+    }
+
+    private static byte[] WithPositiveZeroFloats(byte[] value)
+    {
+        byte[] normalized = [.. value];
+        for (int i = 0; i + 4 <= normalized.Length; i += 4)
         {
-            if (normalized[i] == 0x80 && normalized[i - 3] == 0 && normalized[i - 2] == 0 && normalized[i - 1] == 0)
+            if (BitConverter.ToUInt32(normalized, i) == 0x8000_0000u)
             {
-                normalized[i] = 0;
+                normalized[i + 3] = 0;
             }
         }
-        Assert.Equal(normalized, actual);
+        return normalized;
     }
 }

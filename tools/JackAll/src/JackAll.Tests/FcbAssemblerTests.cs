@@ -76,11 +76,11 @@ public class FcbAssemblerTests
             Assert.Equal(fragments[i].Id, rebuiltFragments[i].Id);
             if (FcbFragments.IdComparer.Equals(fragments[i].Id, targetId))
             {
-                AssertSameShape(replacement, rebuiltFragments[i].Node);
+                TestSupport.AssertSameShape(replacement, rebuiltFragments[i].Node);
             }
             else
             {
-                AssertSameShape(fragments[i].Node, rebuiltFragments[i].Node);
+                TestSupport.AssertSameShape(fragments[i].Node, rebuiltFragments[i].Node);
             }
         }
     }
@@ -109,9 +109,9 @@ public class FcbAssemblerTests
         Assert.Equal(original.Children.Count + 1, rebuilt.Children.Count);
         for (int i = 0; i < original.Children.Count; i++)
         {
-            AssertSameShape(original.Children[i], rebuilt.Children[i]);
+            TestSupport.AssertSameShape(original.Children[i], rebuilt.Children[i]);
         }
-        AssertSameShape(replacement, rebuilt.Children[^1]);
+        TestSupport.AssertSameShape(replacement, rebuilt.Children[^1]);
     }
 
     [Theory]
@@ -135,7 +135,7 @@ public class FcbAssemblerTests
         Assert.Equal(original.Children.Count + 1, rebuilt.Children.Count);
         for (int i = 0; i < original.Children.Count; i++)
         {
-            AssertSameShape(original.Children[i], rebuilt.Children[i]);
+            TestSupport.AssertSameShape(original.Children[i], rebuilt.Children[i]);
         }
         FcbObject added = rebuilt.Children[^1];
         Assert.Equal(0xE0BDB3DBu, added.TypeHash);
@@ -165,21 +165,5 @@ public class FcbAssemblerTests
         FcbObject added = rebuilt.Children[^1].Children[^1];
         Assert.Equal([0x2A, 0x00, 0x00, 0x00], added.Values[0xDEADBEEF]);
         Assert.Equal(original.Children[^1].Children.Count + 1, rebuilt.Children[^1].Children.Count);
-    }
-
-    private static void AssertSameShape(FcbObject expected, FcbObject actual)
-    {
-        Assert.Equal(expected.TypeHash, actual.TypeHash);
-        Assert.Equal(expected.Values.Keys.OrderBy(k => k), actual.Values.Keys.OrderBy(k => k));
-        foreach (uint key in expected.Values.Keys)
-        {
-            Assert.Equal(expected.Values[key], actual.Values[key]);
-        }
-
-        Assert.Equal(expected.Children.Count, actual.Children.Count);
-        for (int i = 0; i < expected.Children.Count; i++)
-        {
-            AssertSameShape(expected.Children[i], actual.Children[i]);
-        }
     }
 }

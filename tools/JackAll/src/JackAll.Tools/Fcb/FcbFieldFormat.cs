@@ -19,7 +19,7 @@ public static class FcbFieldFormat
         FcbMemberType.String => (string)value,
         FcbMemberType.Hash => ((uint)value).ToString("X8", CultureInfo.InvariantCulture),
         FcbMemberType.Enum => ((uint)value).ToString(CultureInfo.InvariantCulture),
-        FcbMemberType.Float => FcbXml.FormatSingle((float)value),
+        FcbMemberType.Float => ((float)value).ToString(CultureInfo.InvariantCulture),
         FcbMemberType.Int8 => ((sbyte)value).ToString(CultureInfo.InvariantCulture),
         FcbMemberType.UInt8 => ((byte)value).ToString(CultureInfo.InvariantCulture),
         FcbMemberType.Int16 => ((short)value).ToString(CultureInfo.InvariantCulture),
@@ -37,7 +37,7 @@ public static class FcbFieldFormat
             ? rml.ToString()
             : Convert.ToHexString((byte[])value),
         FcbMemberType.Vector2 or FcbMemberType.Vector3 or FcbMemberType.Vector4
-            => string.Join(", ", ((float[])value).Select(FcbXml.FormatSingle)),
+            => string.Join(", ", ((float[])value).Select(v => v.ToString(CultureInfo.InvariantCulture))),
         _ => throw new NotSupportedException($"'{type}' is not a scalar text field."),
     };
 

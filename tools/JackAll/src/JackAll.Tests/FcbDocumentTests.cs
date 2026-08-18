@@ -93,7 +93,7 @@ public class FcbDocumentTests
         // Not byte-identical: real shipped files lean heavily on the backreference/shared-bytes
         // dedup tricks (see FcbDocument's remarks), and this writer - like Gibbed's own - always
         // emits the fully-expanded form. The tree shape and every value's bytes must still match.
-        AssertSameShape(original, reparsed);
+        TestSupport.AssertSameShape(original, reparsed);
     }
 
     [Fact]
@@ -109,7 +109,7 @@ public class FcbDocumentTests
         byte[] serialized = FcbDocument.Serialize(root);
         FcbObject reparsed = FcbDocument.Deserialize(serialized);
 
-        AssertSameShape(root, reparsed);
+        TestSupport.AssertSameShape(root, reparsed);
     }
 
     [Fact]
@@ -260,22 +260,6 @@ public class FcbDocumentTests
             count += CountUniqueObjects(child, visited);
         }
         return count;
-    }
-
-    private static void AssertSameShape(FcbObject expected, FcbObject actual)
-    {
-        Assert.Equal(expected.TypeHash, actual.TypeHash);
-        Assert.Equal(expected.Values.Keys.OrderBy(k => k), actual.Values.Keys.OrderBy(k => k));
-        foreach (uint key in expected.Values.Keys)
-        {
-            Assert.Equal(expected.Values[key], actual.Values[key]);
-        }
-
-        Assert.Equal(expected.Children.Count, actual.Children.Count);
-        for (int i = 0; i < expected.Children.Count; i++)
-        {
-            AssertSameShape(expected.Children[i], actual.Children[i]);
-        }
     }
 
     private static byte[] WrapWithHeader(byte[] rootBytes)

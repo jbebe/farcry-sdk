@@ -135,4 +135,28 @@ internal static class TestSupport
         }
         return null;
     }
+
+    /// <summary>
+    /// Asserts two FCB trees carry the same type hashes, value keys, value bytes and child structure.
+    /// <paramref name="assertSameValue"/> replaces the byte-for-byte value comparison, for a round trip
+    /// that is deliberately lossy.
+    /// </summary>
+    public static void AssertSameShape(
+        FcbObject expected, FcbObject actual, Action<byte[], byte[]>? assertSameValue = null)
+    {
+        assertSameValue ??= (e, a) => Assert.Equal(e, a);
+
+        Assert.Equal(expected.TypeHash, actual.TypeHash);
+        Assert.Equal(expected.Values.Keys.OrderBy(k => k), actual.Values.Keys.OrderBy(k => k));
+        foreach (uint key in expected.Values.Keys)
+        {
+            assertSameValue(expected.Values[key], actual.Values[key]);
+        }
+
+        Assert.Equal(expected.Children.Count, actual.Children.Count);
+        for (int i = 0; i < expected.Children.Count; i++)
+        {
+            AssertSameShape(expected.Children[i], actual.Children[i], assertSameValue);
+        }
+    }
 }
