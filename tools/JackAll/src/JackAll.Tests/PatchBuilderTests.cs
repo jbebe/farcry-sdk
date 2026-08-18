@@ -266,7 +266,7 @@ public class PatchBuilderTests : IDisposable
         addition.Values.Add(0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
         string additionXml = FcbXml.ToXml(addition, FcbClassDefinitions.Empty);
 
-        string newFragmentPath = $"{container.Path}\\99999_does_not_exist_in_vanilla.xml";
+        string newFragmentPath = $"{container.Path}\\does_not_exist_in_vanilla.xml";
         var mod = MakeZipMod("add_mod", (newFragmentPath, System.Text.Encoding.UTF8.GetBytes(additionXml)));
 
         using (var vfsForRead = GameVfs.Load(_install, names))

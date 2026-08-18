@@ -32,14 +32,50 @@ public class ModLayerFragmentDedupTests : IDisposable
     public void Two_spellings_already_on_disk_rescan_into_one_override()
     {
         string root = Path.Combine(_sandbox, "rescan");
-        string containerDir = Path.Combine(root, Container);
-        Directory.CreateDirectory(containerDir);
-        File.WriteAllText(Path.Combine(containerDir, NamedSpelling), "fragment");
-        File.WriteAllText(Path.Combine(containerDir, BareSpelling), "fragment");
+        WriteFragment(root, NamedSpelling);
+        WriteFragment(root, BareSpelling);
 
         var layer = new FolderModLayer(root, "rescan");
 
         Assert.Single(layer.FragmentOverrides[NameHash.Compute(Container)]);
+    }
+
+    /// <summary>The removed group id space is refused outright rather than staged as a phantom group -
+    /// at a container's own root only, and never at the cost of a real entity id.</summary>
+    [Theory]
+    [InlineData(@"03_Foo.xml")]
+    [InlineData(@"1_a.xml")]
+    [InlineData(@"24_Weapons.xml")]
+    public void A_group_id_at_a_containers_root_is_refused(string fragmentId)
+    {
+        string root = Path.Combine(_sandbox, "refused");
+        WriteFragment(root, fragmentId);
+
+        InvalidDataException ex = Assert.Throws<InvalidDataException>(() => new FolderModLayer(root, "refused"));
+        Assert.Contains("NN_Name.xml", ex.Message);
+    }
+
+    [Theory]
+    [InlineData(@"2058514756624450165.xml")]                  // a placed entity by its bare numeric id
+    [InlineData(@"Guard_12.2058514756624450165.xml")]         // ... and with its cosmetic name prefix
+    [InlineData(@"12_Crate.2058514756624450165.xml")]         // ... whose name itself starts NN_
+    [InlineData(@"vehicle\Land\Jeep.xml")]                    // an archetype path
+    [InlineData(@"vehicle\03_Foo.xml")]                       // NN_-shaped, but not at the root
+    public void A_real_fragment_id_is_not_mistaken_for_one(string fragmentId)
+    {
+        string root = Path.Combine(_sandbox, "kept-" + fragmentId.GetHashCode().ToString("x8"));
+        WriteFragment(root, fragmentId);
+
+        var layer = new FolderModLayer(root, "kept");
+
+        Assert.Single(layer.FragmentOverrides[NameHash.Compute(Container)]);
+    }
+
+    private static void WriteFragment(string root, string fragmentId)
+    {
+        string file = Path.Combine(root, Container, fragmentId);
+        Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+        File.WriteAllText(file, "fragment");
     }
 
     [Fact]

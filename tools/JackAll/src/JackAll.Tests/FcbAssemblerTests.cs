@@ -85,8 +85,9 @@ public class FcbAssemblerTests
         }
     }
 
-    /// <summary>The pre-deep-fragment id space is gone: a whole-group <c>NN_Name.xml</c> override
-    /// staged by an older version replaces nothing and lands as new content instead.</summary>
+    /// <summary>The pre-deep-fragment id space is gone: a whole-group <c>NN_Name.xml</c> id matches no
+    /// fragment here and lands as new content. (Staging one is refused a level up, in
+    /// <c>ModPathHashing</c> — this pins that the assembler itself grants it nothing.)</summary>
     [Theory]
     [MemberData(nameof(SampleFiles))]
     public void A_pre_deep_group_id_is_not_an_alias_and_appends_as_new_content(string path)

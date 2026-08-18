@@ -164,7 +164,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
 
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
         byte[] addition = BuildReplacementFragmentXml();
-        string newFragmentPath = $"{container.Path}\\99999_does_not_exist_in_vanilla.xml";
+        string newFragmentPath = $"{container.Path}\\does_not_exist_in_vanilla.xml";
         uint newFragmentHash = NameHash.Compute(newFragmentPath);
         workspace.Stage(newFragmentHash, newFragmentPath, "xml", addition);
         vfs.Rebuild([workspace]);

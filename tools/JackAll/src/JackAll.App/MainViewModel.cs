@@ -118,7 +118,17 @@ public sealed partial class MainViewModel : INotifyPropertyChanged
                 install, names, _cache, FcbDefinitionsProvider.Value.Value, progress, includeFragments: false));
             _vfs = vfs;
 
-            Workspace = new FolderModLayer(AppConfig.WorkspaceDir, "workspace");
+            try
+            {
+                Workspace = new FolderModLayer(AppConfig.WorkspaceDir, "workspace");
+            }
+            catch (InvalidDataException ex)
+            {
+                // A staged file the workspace can't represent (see ModPathHashing) - naming it and
+                // stopping beats loading a workspace that silently drops or misapplies it.
+                Status = $"Your workspace has a file JackAll can't stage: {ex.Message}";
+                return;
+            }
 
             LoadModsFromConfig();
 

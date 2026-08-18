@@ -68,6 +68,7 @@ internal static class ModPathHashing
         if (ContainerPathOf(segments) is { } containerPath)
         {
             string fragmentId = normalized[(containerPath.Length + 1)..];
+            GuardNotGroupId(fragmentId, normalized);
             return new ModPathTarget(
                 NameHash.Compute(normalized), NameHash.Compute(containerPath), fragmentId);
         }
@@ -96,6 +97,38 @@ internal static class ModPathHashing
     /// <summary>Whether this path segment is a splitting container's own name.</summary>
     internal static bool IsContainerSegment(string segment)
         => segment.EndsWith(".fcb", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// Rejects the removed group-per-file id space (<c>NN_Name.xml</c> directly inside a container
+    /// folder). Nothing produces those any more, and one staged by an older JackAll names no fragment
+    /// — it would be appended as a phantom group instead of overriding the archetypes it came from, so
+    /// it fails loudly rather than half-applying. Only at a container's own root: deeper in, a segment
+    /// that happens to look like one is just part of an archetype's path.
+    /// </summary>
+    private static void GuardNotGroupId(string fragmentId, string normalized)
+    {
+        int underscore = fragmentId.IndexOf('_');
+        if (underscore <= 0
+            || fragmentId.Contains('\\')
+            || !fragmentId.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
+            || fragmentId.AsSpan(0, underscore).ContainsAnyExceptInRange('0', '9'))
+        {
+            return;
+        }
+
+        // A placed entity's id ends in its authoritative numeric id, which Canonicalize strips - so a
+        // shorter canonical form means this is an entity ("12_Crate.2058514756624450165.xml"), not a
+        // group. Only an id with nothing numeric to strip is the group shape.
+        if (FcbFragments.Canonicalize(fragmentId).Length != fragmentId.Length)
+        {
+            return;
+        }
+
+        throw new InvalidDataException(
+            $"'{normalized}' uses the removed NN_Name.xml group id space, which names no fragment - " +
+            "staging it would append a phantom group rather than override anything. Re-export and " +
+            "stage the archetype you meant to change.");
+    }
 
     /// <summary>
     /// <c>_hash\&lt;hex&gt;[.ext]</c> (a plain unnamed override), or <c>_hash\&lt;hex&gt;.fcb\&lt;fragment id&gt;</c>
@@ -131,6 +164,7 @@ internal static class ModPathHashing
         }
 
         string fragmentId = string.Join('\\', segments[2..]);
+        GuardNotGroupId(fragmentId, normalized);
         return new ModPathTarget(NameHash.Compute(normalized), hash, fragmentId);
     }
 

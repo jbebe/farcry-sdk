@@ -104,6 +104,15 @@ public class ModLayerInspectorTests
         Assert.Equal(0, report.UnknownEntries);
     }
 
+    /// <summary>A removed-id-space override is an error wherever it is addressed from, so a report can
+    /// never quietly count one as a working override.</summary>
+    [Theory]
+    [InlineData(@"generated\entitylibrarypatchoverride.fcb\03_Foo.xml")]
+    [InlineData(@"_hash\1a2b3c4d.fcb\03_Foo.xml")]
+    [InlineData(@"MyMod v1.2\generated\entitylibrarypatchoverride.fcb\03_Foo.xml")]
+    public void A_group_id_override_is_refused_rather_than_reported(string path)
+        => Assert.Throws<InvalidDataException>(() => Inspect(path));
+
     [Fact]
     public void Two_spellings_of_one_entity_fragment_count_as_a_single_override()
     {
