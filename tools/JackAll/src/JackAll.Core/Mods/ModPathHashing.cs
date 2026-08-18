@@ -32,6 +32,15 @@ internal static class ModPathHashing
 {
     public const string HashFolder = "_hash";
 
+    /// <summary>Reserved top-level folder holding a mod's FCSE plugin payload — synced into
+    /// <c>bin\plugins</c> by <see cref="PluginSync"/>, never hashed into patch.dat.</summary>
+    public const string PluginsFolder = "plugins";
+
+    /// <summary>Reserved top-level folder a mod may wrap its game content in, stripped by
+    /// <see cref="ContentPathOf"/> — so one archive can carry <c>mods\</c> and <c>plugins\</c>
+    /// side by side.</summary>
+    public const string ModsFolder = "mods";
+
     /// <summary>
     /// Vortex's own placeholder, dropped into any directory its deployment method would otherwise
     /// leave empty (hardlink/symlink deployment can't represent an empty folder, so it needs some
@@ -41,6 +50,35 @@ internal static class ModPathHashing
     /// under any convention this class knows, so it's filtered before anything else runs.
     /// </summary>
     private const string VortexEmptyFolderMarker = "__folder_managed_by_vortex";
+
+    /// <summary>The path under the reserved top-level <see cref="PluginsFolder"/>, normalized — or
+    /// null for ordinary content. Every scan site checks this before <see cref="Resolve"/>: a plugin
+    /// file's path would otherwise CRC to a junk archive entry. A hypothetical real archive entry
+    /// named <c>plugins\…</c> stays overridable via <c>_hash\</c>.</summary>
+    public static string? PluginPathOf(string relativePath)
+    {
+        string normalized = NameHash.Normalize(relativePath);
+        if (!normalized.StartsWith(PluginsFolder + "\\", StringComparison.Ordinal))
+        {
+            return null;
+        }
+
+        string sub = normalized[(PluginsFolder.Length + 1)..];
+        return sub.Length == 0
+            || sub.Split('\\')[^1].Equals(VortexEmptyFolderMarker, StringComparison.OrdinalIgnoreCase)
+            ? null
+            : sub;
+    }
+
+    /// <summary>The archive-relative content path: normalized, with a reserved top-level
+    /// <see cref="ModsFolder"/> wrapper stripped when present.</summary>
+    public static string ContentPathOf(string relativePath)
+    {
+        string normalized = NameHash.Normalize(relativePath);
+        return normalized.StartsWith(ModsFolder + "\\", StringComparison.Ordinal)
+            ? normalized[(ModsFolder.Length + 1)..]
+            : normalized;
+    }
 
     /// <summary>Resolves a relative path to what it overrides. Null for paths that are not overrides
     /// at all (readme files, Vortex's own deployment bookkeeping, and the like).</summary>

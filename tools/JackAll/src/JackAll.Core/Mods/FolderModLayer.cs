@@ -11,6 +11,7 @@ public sealed class FolderModLayer : IModLayer
     private readonly Dictionary<uint, string> _absolutePaths = [];
     private readonly HashSet<uint> _hashes = [];
     private readonly Dictionary<uint, FragmentMap> _fragmentOverrides = [];
+    private readonly Dictionary<string, string> _pluginFiles = new(StringComparer.Ordinal);
 
     public string Name { get; }
     public bool Enabled { get; set; } = true;
@@ -18,6 +19,7 @@ public sealed class FolderModLayer : IModLayer
     public IReadOnlyCollection<uint> Hashes => _hashes;
     public IReadOnlyDictionary<uint, IReadOnlyList<FragmentOverride>> FragmentOverrides { get; private set; } =
         ModPathHashing.Freeze([]);
+    public IReadOnlyCollection<string> PluginPaths => _pluginFiles.Keys;
 
     public FolderModLayer(string rootPath, string name)
     {
@@ -32,13 +34,20 @@ public sealed class FolderModLayer : IModLayer
         _absolutePaths.Clear();
         _hashes.Clear();
         _fragmentOverrides.Clear();
+        _pluginFiles.Clear();
 
         if (Directory.Exists(RootPath))
         {
             foreach (string file in Directory.EnumerateFiles(RootPath, "*", SearchOption.AllDirectories))
             {
                 string relative = Path.GetRelativePath(RootPath, file);
-                ModPathTarget? target = ModPathHashing.Resolve(relative);
+                if (ModPathHashing.PluginPathOf(relative) is { } pluginPath)
+                {
+                    _pluginFiles[pluginPath] = file;
+                    continue;
+                }
+
+                ModPathTarget? target = ModPathHashing.Resolve(ModPathHashing.ContentPathOf(relative));
                 if (target is null)
                 {
                     continue;
@@ -57,10 +66,15 @@ public sealed class FolderModLayer : IModLayer
             ? File.ReadAllBytes(path)
             : throw new KeyNotFoundException($"'{Name}' does not override {hash:X8}.");
 
+    public byte[] ReadPlugin(string pluginPath)
+        => _pluginFiles.TryGetValue(pluginPath, out string? path)
+            ? File.ReadAllBytes(path)
+            : throw new KeyNotFoundException($"'{Name}' has no plugin '{pluginPath}'.");
+
     public string? PathOf(uint hash)
     {
         if (!_absolutePaths.TryGetValue(hash, out string? absolute)) return null;
-        string relative = NameHash.Normalize(Path.GetRelativePath(RootPath, absolute));
+        string relative = ModPathHashing.ContentPathOf(Path.GetRelativePath(RootPath, absolute));
         return relative.StartsWith(ModPathHashing.HashFolder + "\\", StringComparison.Ordinal)
             ? null
             : relative;
@@ -110,7 +124,8 @@ public sealed class FolderModLayer : IModLayer
 
         // Resolved before the delete, since it needs the relative path to know whether this was a
         // fragment override and which container it belonged to.
-        ModPathTarget? target = ModPathHashing.Resolve(Path.GetRelativePath(RootPath, path));
+        ModPathTarget? target = ModPathHashing.Resolve(
+            ModPathHashing.ContentPathOf(Path.GetRelativePath(RootPath, path)));
 
         File.Delete(path);
         _absolutePaths.Remove(hash);

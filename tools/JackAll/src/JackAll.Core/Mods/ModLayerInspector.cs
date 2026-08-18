@@ -19,6 +19,8 @@ namespace JackAll.Core.Mods;
 /// <c>_hash\</c> entry whose leaf isn't hex. Normally 0: almost any path hashes to *something*, so a
 /// mod's readme shows up as an override of a file the game doesn't have (see
 /// <paramref name="UnknownEntries"/>) rather than here.</param>
+/// <param name="PluginFiles">Files under the reserved top-level <c>plugins\</c> folder — recognized
+/// side-content the build deploys to <c>bin\plugins</c>, never compiled into patch.dat.</param>
 public sealed record ModLayerReport(
     string Root,
     int WholeFileOverrides,
@@ -26,10 +28,14 @@ public sealed record ModLayerReport(
     int HashAddressed,
     int UnknownEntries,
     int IgnoredFiles,
+    int PluginFiles,
     IReadOnlyList<string> SamplePaths)
 {
     /// <summary>Everything this layer would contribute to a build.</summary>
     public int TotalOverrides => WholeFileOverrides + FragmentOverrides;
+
+    /// <summary>What root scoring maximizes: recognized contributions minus misses.</summary>
+    public int Score => TotalOverrides - UnknownEntries + PluginFiles;
 }
 
 /// <summary>
@@ -78,7 +84,7 @@ public static class ModLayerInspector
             ModLayerReport candidate = Score(normalized, root, entryExists);
             // Strictly better only: a deeper root has to actually recognize more files to win, so a
             // correctly-rooted mod is never "improved" into one of its own subfolders.
-            if (candidate.TotalOverrides - candidate.UnknownEntries > best.TotalOverrides - best.UnknownEntries)
+            if (candidate.Score > best.Score)
             {
                 best = candidate;
             }
@@ -109,7 +115,7 @@ public static class ModLayerInspector
         IReadOnlyList<string> normalizedPaths, string root, Func<uint, bool>? entryExists)
     {
         string prefix = root.Length == 0 ? "" : root + "\\";
-        int wholeFile = 0, fragments = 0, hashAddressed = 0, unknown = 0, ignored = 0;
+        int wholeFile = 0, fragments = 0, hashAddressed = 0, unknown = 0, ignored = 0, pluginFiles = 0;
         var samples = new List<string>(SampleCount);
         var seenFragments = new Dictionary<uint, HashSet<string>>();
 
@@ -121,7 +127,18 @@ public static class ModLayerInspector
             }
 
             string relative = path[prefix.Length..];
-            ModPathTarget? resolved = ModPathHashing.Resolve(relative);
+            if (ModPathHashing.PluginPathOf(relative) is not null)
+            {
+                pluginFiles++;
+                if (samples.Count < SampleCount)
+                {
+                    samples.Add(relative);
+                }
+                continue;
+            }
+
+            string content = ModPathHashing.ContentPathOf(relative);
+            ModPathTarget? resolved = ModPathHashing.Resolve(content);
             if (resolved is not { } target)
             {
                 ignored++;
@@ -159,7 +176,7 @@ public static class ModLayerInspector
                 }
             }
 
-            if (relative.StartsWith(ModPathHashing.HashFolder + "\\", StringComparison.Ordinal))
+            if (content.StartsWith(ModPathHashing.HashFolder + "\\", StringComparison.Ordinal))
             {
                 hashAddressed++;
             }
@@ -169,6 +186,6 @@ public static class ModLayerInspector
             }
         }
 
-        return new ModLayerReport(root, wholeFile, fragments, hashAddressed, unknown, ignored, samples);
+        return new ModLayerReport(root, wholeFile, fragments, hashAddressed, unknown, ignored, pluginFiles, samples);
     }
 }

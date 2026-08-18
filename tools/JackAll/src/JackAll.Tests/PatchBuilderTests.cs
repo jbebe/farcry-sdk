@@ -557,6 +557,44 @@ public class PatchBuilderTests : IDisposable
         Assert.Equal(xml, System.Text.Encoding.UTF8.GetString(vfs.Read(fragment.Hash)));
     }
 
+    [Fact]
+    public void A_plugins_only_layer_leaves_the_archive_vanilla_and_populates_bin_plugins()
+    {
+        if (_install is null) return;
+
+        byte[] originalDat = File.ReadAllBytes(_install.PatchDat);
+        string deployed = Path.Combine(_sandbox, "bin", "plugins", "foo.dll");
+        var mod = MakeZipMod("p", ("plugins/foo.dll", "plugin bytes"u8.ToArray()));
+
+        var result = PatchBuilder.Build(_install, [mod]);
+
+        // The load-bearing half: nothing under plugins\ may leak into the archive.
+        Assert.Equal(originalDat, File.ReadAllBytes(_install.PatchDat));
+        Assert.Equal(0, result.AddedEntries);
+        Assert.Equal(1, result.PluginsDeployed);
+        Assert.True(File.Exists(deployed));
+
+        mod.Enabled = false;
+        Assert.Equal(1, PatchBuilder.Build(_install, [mod]).PluginsRemoved);
+        Assert.False(File.Exists(deployed));
+    }
+
+    [Fact]
+    public void A_mods_wrapper_builds_the_same_bytes_as_root_layout()
+    {
+        if (_install is null) return;
+
+        byte[] content = "hello"u8.ToArray();
+        PatchBuilder.Build(_install,
+            [MakeZipMod("root_layout", ("engine/gamemodes/gamemodesconfig.xml", content))]);
+        byte[] fromRoot = File.ReadAllBytes(_install.PatchDat);
+
+        PatchBuilder.Build(_install,
+            [MakeZipMod("mods_layout", ("mods/engine/gamemodes/gamemodesconfig.xml", content))]);
+
+        Assert.Equal(fromRoot, File.ReadAllBytes(_install.PatchDat));
+    }
+
     private ZipModLayer MakeZipMod(string name, params (string Path, byte[] Content)[] files)
     {
         string zipPath = Path.Combine(_sandbox, $"{name}.zip");

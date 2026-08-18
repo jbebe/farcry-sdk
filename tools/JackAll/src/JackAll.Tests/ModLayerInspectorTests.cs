@@ -162,6 +162,46 @@ public class ModLayerInspectorTests
     }
 
     [Fact]
+    public void Plugin_files_are_recognized_side_content_not_unknown_entries()
+    {
+        ModLayerReport report = Inspect(RealFileA, @"plugins\coolplugin.dll");
+
+        Assert.Equal(1, report.WholeFileOverrides);
+        Assert.Equal(1, report.PluginFiles);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+
+    [Fact]
+    public void A_wrapper_above_plugins_and_content_is_stripped_together()
+    {
+        ModLayerReport report = Inspect($@"MyMod\{RealFileA}", @"MyMod\plugins\x.dll");
+
+        Assert.Equal("mymod", report.Root);
+        Assert.Equal(1, report.WholeFileOverrides);
+        Assert.Equal(1, report.PluginFiles);
+    }
+
+    [Fact]
+    public void A_plugins_only_tree_reports_plugin_files_and_no_overrides()
+    {
+        ModLayerReport report = Inspect(@"plugins\a.dll", @"plugins\sub\b.lua");
+
+        Assert.Equal(2, report.PluginFiles);
+        Assert.Equal(0, report.TotalOverrides);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+
+    [Fact]
+    public void A_mods_wrapper_resolves_the_same_as_root_layout()
+    {
+        ModLayerReport report = Inspect($@"mods\{RealFileA}");
+
+        Assert.Equal("", report.Root);
+        Assert.Equal(1, report.WholeFileOverrides);
+        Assert.Equal(0, report.UnknownEntries);
+    }
+
+    [Fact]
     public void Without_a_game_to_check_against_the_tree_is_reported_as_given()
     {
         ModLayerReport report = ModLayerInspector.Inspect([$@"MyCoolMod\{RealFileA}"]);

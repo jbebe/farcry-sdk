@@ -26,6 +26,16 @@ public interface IModLayer
     /// <see cref="FragmentOverride.EntryHash"/> is a valid <see cref="Read"/> argument, same as any
     /// hash in <see cref="Hashes"/>.</summary>
     IReadOnlyDictionary<uint, IReadOnlyList<FragmentOverride>> FragmentOverrides { get; }
+
+    /// <summary>Files under the reserved top-level <c>plugins\</c> folder, as normalized paths
+    /// relative to it. Disjoint from <see cref="Hashes"/>/<see cref="FragmentOverrides"/> — never
+    /// compiled into patch.dat; <see cref="PluginSync"/> mirrors them into <c>bin\plugins</c>
+    /// instead.</summary>
+    IReadOnlyCollection<string> PluginPaths => [];
+
+    /// <summary>Reads one plugin file's bytes; the argument is an element of <see cref="PluginPaths"/>.</summary>
+    byte[] ReadPlugin(string pluginPath)
+        => throw new KeyNotFoundException($"'{Name}' has no plugin '{pluginPath}'.");
 }
 
 /// <summary>One fragment override inside some container, as staged by a single <see cref="IModLayer"/>.</summary>

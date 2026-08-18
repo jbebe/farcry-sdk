@@ -218,7 +218,8 @@ public sealed class GameInstall
         }
     }
 
-    public void RestoreVanilla()
+    /// <summary>Restores the vanilla patch pair and removes every JackAll-deployed plugin file.</summary>
+    public Mods.PluginSyncResult RestoreVanilla()
     {
         if (!HasVanillaBackup)
         {
@@ -226,5 +227,6 @@ public sealed class GameInstall
         }
         File.Copy(VanillaPatchFat, PatchFat, overwrite: true);
         File.Copy(VanillaPatchDat, PatchDat, overwrite: true);
+        return Mods.PluginSync.RemoveAll(this);
     }
 }

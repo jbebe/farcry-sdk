@@ -1,6 +1,5 @@
 using System.Collections.Concurrent;
 using System.IO.Compression;
-using JackAll.Core.Format;
 
 namespace JackAll.Core.Mods;
 
@@ -22,6 +21,7 @@ public sealed class ZipModLayer : IModLayer
     private readonly Dictionary<uint, string> _entryNames = [];
     private readonly HashSet<uint> _hashes = [];
     private readonly Dictionary<uint, FragmentMap> _fragmentOverrides = [];
+    private readonly Dictionary<string, string> _pluginEntryNames = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<uint, byte[]> _readCache = new();
 
     public string Name { get; }
@@ -29,6 +29,7 @@ public sealed class ZipModLayer : IModLayer
     public string ZipPath { get; }
     public IReadOnlyCollection<uint> Hashes => _hashes;
     public IReadOnlyDictionary<uint, IReadOnlyList<FragmentOverride>> FragmentOverrides { get; }
+    public IReadOnlyCollection<string> PluginPaths => _pluginEntryNames.Keys;
 
     public ZipModLayer(string zipPath)
     {
@@ -43,7 +44,13 @@ public sealed class ZipModLayer : IModLayer
                 continue; // directory
             }
 
-            ModPathTarget? target = ModPathHashing.Resolve(entry.FullName);
+            if (ModPathHashing.PluginPathOf(entry.FullName) is { } pluginPath)
+            {
+                _pluginEntryNames[pluginPath] = entry.FullName;
+                continue;
+            }
+
+            ModPathTarget? target = ModPathHashing.Resolve(ModPathHashing.ContentPathOf(entry.FullName));
             if (target is null)
             {
                 continue; // not a valid override (e.g. a readme) - silently skipped
@@ -83,11 +90,16 @@ public sealed class ZipModLayer : IModLayer
         return buffer.ToArray();
     }
 
+    public byte[] ReadPlugin(string pluginPath)
+        => _pluginEntryNames.TryGetValue(pluginPath, out string? entryName)
+            ? ReadFromZip(entryName)
+            : throw new KeyNotFoundException($"'{Name}' has no plugin '{pluginPath}'.");
+
     public string? PathOf(uint hash)
     {
         string? name = _entryNames.GetValueOrDefault(hash);
         if (name is null) return null;
-        string normalized = NameHash.Normalize(name);
+        string normalized = ModPathHashing.ContentPathOf(name);
         return normalized.StartsWith(ModPathHashing.HashFolder + "\\", StringComparison.Ordinal)
             ? null
             : normalized;

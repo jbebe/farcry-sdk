@@ -10,10 +10,15 @@ public sealed record BuildResult(
     int OverriddenEntries,
     int AddedEntries,
     long OutputBytes,
-    IReadOnlyList<FragmentConflict> Conflicts);
+    IReadOnlyList<FragmentConflict> Conflicts,
+    int PluginsDeployed,
+    int PluginsRemoved,
+    IReadOnlyList<string> PluginCollisions);
 
 /// <summary>
-/// Compiles the vanilla patch archive plus the enabled mod layers into a new patch.dat/patch.fat.
+/// Compiles the vanilla patch archive plus the enabled mod layers into a new patch.dat/patch.fat,
+/// then mirrors the layers' <c>plugins\</c> payloads into <c>bin\plugins</c> (see
+/// <see cref="PluginSync"/>).
 /// </summary>
 /// <remarks>
 /// The output is a pure function of (vanilla backup, enabled layers, order). Nothing is read from
@@ -73,7 +78,18 @@ public static class PatchBuilder
             fcbDefinitions ?? FcbClassDefinitions.Empty,
             resolveFragmentConflictsWithLoadOrder ? conflicts : null);
 
-        return WriteArchive(install, replacements, [.. conflicts]);
+        BuildResult result = WriteArchive(install, replacements, [.. conflicts]);
+
+        // After the archive swap, so a plugin-sync failure never leaves a half-written patch. The
+        // pair's atomicity doesn't extend to bin\plugins - the manifest lets the next build
+        // reconcile it on its own.
+        PluginSyncResult plugins = PluginSync.Apply(install, layers);
+        return result with
+        {
+            PluginsDeployed = plugins.Deployed,
+            PluginsRemoved = plugins.Removed,
+            PluginCollisions = plugins.SkippedForeign,
+        };
     }
 
     /// <summary>
@@ -268,7 +284,10 @@ public static class PatchBuilder
             OverriddenEntries: overridden,
             AddedEntries: added,
             OutputBytes: new FileInfo(install.PatchDat).Length,
-            Conflicts: conflicts);
+            Conflicts: conflicts,
+            PluginsDeployed: 0,
+            PluginsRemoved: 0,
+            PluginCollisions: []);
     }
 
     /// <summary>
