@@ -242,6 +242,28 @@ public class FcbXmlTests
     }
 
     /// <summary>
+    /// Real .fcb data carries ~2,000 negative-zero floats across the four fixtures, every one a
+    /// <c>hidAngles</c> component - .NET's own "-0" would diff against the "0" every Gibbed-produced
+    /// mod XML carries.
+    /// </summary>
+    [Fact]
+    public void A_negative_zero_float_renders_as_plain_zero_but_still_parses_back()
+    {
+        var scalar = new XElement("value");
+        Assert.True(FcbXml.TryWriteValue(scalar, FcbMemberType.Float, BitConverter.GetBytes(-0f)));
+        Assert.Equal("0", scalar.Value);
+
+        var vector = new XElement("value");
+        Assert.True(FcbXml.TryWriteValue(vector, FcbMemberType.Vector3,
+            [.. BitConverter.GetBytes(0f), .. BitConverter.GetBytes(-0f), .. BitConverter.GetBytes(-1.5f)]));
+        Assert.Equal(["0", "0", "-1.5"], vector.Elements().Select(e => e.Value));
+
+        // XMLs written before the normalization still carry "-0", and keep their sign bit on the way in.
+        FcbObject reparsed = FcbXml.FromXml("""<object hash="11111111"><value hash="22222222" type="Float">-0</value></object>""");
+        Assert.Equal(BitConverter.GetBytes(-0f), reparsed.Values[0x22222222]);
+    }
+
+    /// <summary>
     /// A hand-built value covering exactly the FCB-layer convention <c>TryDecodeRml</c>/<c>ReadRml</c>
     /// implement: the raw bytes are a real .rml document (built here via
     /// <see cref="RmlDocument.Serialize"/> the same way <see cref="RmlDocumentTests"/> verifies against
@@ -355,7 +377,7 @@ public class FcbXmlTests
         Assert.Equal(expected.Values.Keys.OrderBy(k => k), actual.Values.Keys.OrderBy(k => k));
         foreach (uint key in expected.Values.Keys)
         {
-            Assert.Equal(expected.Values[key], actual.Values[key]);
+            AssertSameValue(expected.Values[key], actual.Values[key]);
         }
 
         Assert.Equal(expected.Children.Count, actual.Children.Count);
@@ -363,5 +385,24 @@ public class FcbXmlTests
         {
             AssertSameShape(expected.Children[i], actual.Children[i]);
         }
+    }
+
+    /// <summary>
+    /// Compares one value's bytes, allowing the single difference an XML round trip is meant to have:
+    /// <see cref="FcbXml.FormatSingle"/> renders negative zero as "0", so a -0 float comes back as +0.
+    /// </summary>
+    private static void AssertSameValue(byte[] expected, byte[] actual)
+    {
+        if (expected.AsSpan().SequenceEqual(actual)) return;
+
+        byte[] normalized = [.. expected];
+        for (int i = 3; i < normalized.Length; i += 4)
+        {
+            if (normalized[i] == 0x80 && normalized[i - 3] == 0 && normalized[i - 2] == 0 && normalized[i - 1] == 0)
+            {
+                normalized[i] = 0;
+            }
+        }
+        Assert.Equal(normalized, actual);
     }
 }

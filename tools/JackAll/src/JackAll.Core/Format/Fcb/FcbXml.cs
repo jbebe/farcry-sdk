@@ -176,7 +176,7 @@ public static class FcbXml
 
             case FcbMemberType.Float:
                 if (value.Length != 4) return false;
-                el.Value = BitConverter.ToSingle(value, 0).ToString(CultureInfo.InvariantCulture);
+                el.Value = Single(value, 0);
                 return true;
 
             case FcbMemberType.Int32:
@@ -293,6 +293,14 @@ public static class FcbXml
         }
     }
 
+    /// <summary>
+    /// Renders one float. Negative zero renders as "0" rather than .NET's "-0" - the form Gibbed's
+    /// tools and the mod XML written against them use - which makes a zero's sign the one thing an
+    /// .fcb -> XML -> .fcb round trip doesn't preserve.
+    /// </summary>
+    public static string FormatSingle(float value)
+        => value == 0f ? "0" : value.ToString(CultureInfo.InvariantCulture);
+
     /// <summary>Writes a count-prefixed array of fixed-size scalar items (UInt32Array, HashArray, ...).</summary>
     private static bool TryWriteFixedArray(XElement el, byte[] value, int itemSize, Func<byte[], int, string> format)
     {
@@ -319,7 +327,7 @@ public static class FcbXml
     }
 
     private static string Single(byte[] value, int offset)
-        => BitConverter.ToSingle(value, offset).ToString(CultureInfo.InvariantCulture);
+        => FormatSingle(BitConverter.ToSingle(value, offset));
 
     private static FcbObject ReadNode(XElement node)
     {
