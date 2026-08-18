@@ -65,6 +65,47 @@ public class PluginSyncTests : IDisposable
     }
 
     [Fact]
+    public void Stage_writes_under_the_mods_wrapper_and_round_trips()
+    {
+        const string gamePath = @"worlds\world1\a.xml";
+        FolderModLayer layer = MakeFolderLayer("stage");
+
+        layer.Stage(NameHash.Compute(gamePath), gamePath, "xml", "x"u8.ToArray());
+
+        Assert.True(File.Exists(Path.Combine(layer.RootPath, "mods", "worlds", "world1", "a.xml")));
+        Assert.Equal(gamePath, layer.PathOf(NameHash.Compute(gamePath)));
+        // A fresh scan of the same folder classifies identically to the in-place update.
+        Assert.Equal([NameHash.Compute(gamePath)], new FolderModLayer(layer.RootPath, "rescan").Hashes);
+    }
+
+    [Fact]
+    public void Staging_a_game_path_that_starts_with_plugins_stays_content()
+    {
+        const string gamePath = @"plugins\engine\foo.xml";
+        FolderModLayer layer = MakeFolderLayer("collision");
+
+        layer.Stage(NameHash.Compute(gamePath), gamePath, "xml", "x"u8.ToArray());
+
+        // The mods\ wrapper keeps a reserved-looking game path out of the plugin payload.
+        Assert.Empty(layer.PluginPaths);
+        Assert.Equal([NameHash.Compute(gamePath)], layer.Hashes);
+        Assert.Empty(new FolderModLayer(layer.RootPath, "rescan").PluginPaths);
+    }
+
+    [Fact]
+    public void Restaging_a_root_layout_override_moves_it_under_mods()
+    {
+        const string gamePath = @"worlds\a.xml";
+        FolderModLayer layer = MakeFolderLayer("migrate", (gamePath, "old"));
+
+        layer.Stage(NameHash.Compute(gamePath), gamePath, "xml", "new"u8.ToArray());
+
+        Assert.False(Directory.Exists(Path.Combine(layer.RootPath, "worlds")));
+        Assert.Equal("new", Encoding.UTF8.GetString(layer.Read(NameHash.Compute(gamePath))));
+        Assert.True(File.Exists(Path.Combine(layer.RootPath, "mods", "worlds", "a.xml")));
+    }
+
+    [Fact]
     public void Apply_deploys_the_payload_and_writes_the_manifest()
     {
         var layer = MakeFolderLayer("m", (@"plugins\a.dll", "dll"), (@"plugins\sub\b.lua", "lua"));

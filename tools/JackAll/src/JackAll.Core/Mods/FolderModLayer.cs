@@ -79,10 +79,12 @@ public sealed class FolderModLayer : IModLayer
     }
 
     /// <summary>
-    /// Writes an override into the folder. <paramref name="knownPath"/> is the file's real relative
-    /// path when we know it; when we don't, the file is staged under <c>_hash\</c> so it still
-    /// reaches the engine. Updates <see cref="Hashes"/>/<see cref="FragmentOverrides"/> immediately
-    /// (not just on the next <see cref="Rescan"/>) — <c>PatchBuilder.Build</c> can run right after a
+    /// Writes an override into the folder, under the reserved <c>mods\</c> wrapper — a game path
+    /// can then never collide with the <c>plugins\</c> payload folder, and the folder zips up as-is
+    /// into a valid mod archive. <paramref name="knownPath"/> is the file's real relative path when
+    /// we know it; when we don't, the file is staged under <c>mods\_hash\</c> so it still reaches
+    /// the engine. Updates <see cref="Hashes"/>/<see cref="FragmentOverrides"/> immediately (not
+    /// just on the next <see cref="Rescan"/>) — <c>PatchBuilder.Build</c> can run right after a
     /// stage with no rescan in between.
     /// </summary>
     /// <remarks>
@@ -100,12 +102,22 @@ public sealed class FolderModLayer : IModLayer
             ? NameHash.Normalize(knownPath)
             : Path.Combine(ModPathHashing.HashFolder, $"{hash:x8}.{extension.TrimStart('.')}");
 
-        string destination = Path.Combine(RootPath, relative);
+        string destination = Path.Combine(RootPath, ModPathHashing.ModsFolder, relative);
         Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
         File.WriteAllBytes(destination, content);
 
         ModPathTarget target = ModPathHashing.Resolve(relative)
             ?? throw new InvalidOperationException($"'{relative}' round-tripped to an unstageable path.");
+
+        // An older workspace staged this override at the layer root; the restage supersedes it, and
+        // leaving both would make Rescan's winner arbitrary.
+        if (_absolutePaths.TryGetValue(target.EntryHash, out string? previous)
+            && !previous.Equals(destination, StringComparison.OrdinalIgnoreCase)
+            && File.Exists(previous))
+        {
+            File.Delete(previous);
+            PruneEmptyDirectories(Path.GetDirectoryName(previous), RootPath);
+        }
 
         _absolutePaths[target.EntryHash] = destination;
         ModPathHashing.Add(target, _hashes, _fragmentOverrides);
