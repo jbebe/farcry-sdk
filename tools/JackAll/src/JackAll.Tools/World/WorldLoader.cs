@@ -28,17 +28,10 @@ public static class WorldLoader
         Parallel.For(0, sectors.Length, i =>
         {
             (string path, int sectorId) = sectors[i];
-            if (readByPath(path) is not { } data)
-            {
-                return;
-            }
-
-            FcbObject root;
-            try
-            {
-                root = FcbDocument.Deserialize(data);
-            }
-            catch (InvalidDataException)
+            // TryDeserialize, because the path is a derived probe: its CRC32 can collide with a real
+            // file of another format (the engine's own keyspace has such pairs), which should read
+            // as "this sector has no payload", not an error.
+            if (readByPath(path) is not { } data || FcbDocument.TryDeserialize(data) is not { } root)
             {
                 return;
             }

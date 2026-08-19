@@ -67,14 +67,14 @@ public static class ReferenceIndexer
 
         foreach (VfsFile file in vfs.Files.Values)
         {
-            if (file.IsFragment || file.IsDependencyLink || !vfs.IsStableSource(file))
+            if (file.IsSynthetic || !vfs.IsStableSource(file))
             {
                 continue;
             }
 
-            if (previous.IsIndexed(file.Hash))
+            if (previous.IsIndexed(file.EngineHash))
             {
-                reusable.Add(file.Hash);
+                reusable.Add(file.EngineHash);
             }
             else if (Extractor(extractors, file) is not null)
             {
@@ -84,7 +84,7 @@ public static class ReferenceIndexer
             {
                 // Nothing can extract from this type. Still recorded as indexed, so a later launch
                 // doesn't reconsider it - "no extractor" is a stable fact about the file's type.
-                reusable.Add(file.Hash);
+                reusable.Add(file.EngineHash);
             }
         }
 
@@ -127,7 +127,7 @@ public static class ReferenceIndexer
         CancellationToken cancellation = default)
     {
         var todo = vfs.Files.Values
-            .Where(f => !f.IsFragment && !f.IsDependencyLink && !vfs.IsStableSource(f))
+            .Where(f => !f.IsSynthetic && !vfs.IsStableSource(f))
             .Where(f => Extractor(extractors, f) is not null)
             .ToList();
 
@@ -161,7 +161,7 @@ public static class ReferenceIndexer
                 IReferenceExtractor? extractor = Extractor(extractors, file);
                 if (extractor is not null)
                 {
-                    sink.BeginFile(file.Hash);
+                    sink.BeginFile(file.EngineHash);
                     try
                     {
                         extractor.Extract(file, vfs.Read(file.Hash), sink);
@@ -207,7 +207,7 @@ public static class ReferenceIndexer
         }
 
         return new ReferenceHarvest(
-            allEdges, allDefinitions, allNames, [.. files.Select(f => f.Hash)], [.. failures]);
+            allEdges, allDefinitions, allNames, [.. files.Select(f => f.EngineHash)], [.. failures]);
     }
 
     /// <summary>Enough failures to tell a systematic problem from a one-off, without letting a

@@ -121,7 +121,7 @@ public partial class MainWindow : Window
         UserControl? view = file is not null
             ? FileHandlerCatalog.CreateView(
                 file, () => _vm.Read(file), bytes => _vm.Replace(file, bytes), () => OpenFcbEditorTab(file),
-                () => _vm.ReadOriginal(file), _vm.FindByHash, _vm.NavigateTo, () => OpenDominoEditorTab(file),
+                () => _vm.ReadOriginal(file), hash => _vm.FindByHash(hash), _vm.NavigateTo, () => OpenDominoEditorTab(file),
                 () => OpenMgbEditorTab(file))
             : null;
 

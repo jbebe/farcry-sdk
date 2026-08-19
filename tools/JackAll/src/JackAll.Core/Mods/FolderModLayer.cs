@@ -124,6 +124,13 @@ public sealed class FolderModLayer : IModLayer
         FragmentOverrides = ModPathHashing.Freeze(_fragmentOverrides);
     }
 
+    /// <summary>The storage key <see cref="Stage"/>/<see cref="Rescan"/> file a path-addressed
+    /// override under — the one <c>ModPathHashing</c> rule, exposed so a caller reverting or querying
+    /// by staged path can never derive a different key than the scan does.</summary>
+    public static uint StorageKeyOf(string relativePath)
+        => ModPathHashing.Resolve(relativePath)?.EntryHash
+            ?? throw new InvalidDataException($"'{relativePath}' does not resolve to an override.");
+
     /// <summary>Removes an override, reverting that file to whatever the layers below provide.</summary>
     public bool Unstage(uint hash)
     {

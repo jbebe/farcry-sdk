@@ -44,19 +44,13 @@ public static class WorldVegetation
             foreach (string file in new[] { $"landmarkfar_{sectorId}.data.fcb", $"landmarknear{sectorId}.data.fcb" })
             {
                 string landmark = sectorDir.Replace($"sd{sectorId}.sdat", file, StringComparison.OrdinalIgnoreCase);
-                if (readByPath(landmark) is not { } bytes)
+                // TryDeserialize because the path is a derived probe - see WorldLoader.Load.
+                if (readByPath(landmark) is not { } bytes || FcbDocument.TryDeserialize(bytes) is not { } root)
                 {
                     continue;
                 }
 
-                try
-                {
-                    Collect(FcbDocument.Deserialize(bytes), definitions, found, 0);
-                }
-                catch (InvalidDataException)
-                {
-                    // A sector that will not parse simply contributes no plants.
-                }
+                Collect(root, definitions, found, 0);
             }
 
             if (found.Count > 0)

@@ -71,7 +71,7 @@ public class GameCacheTests : IDisposable
             var cold = GameCache.Load(_cachePath);
             Assert.Equal(0, cold.TypeCount);
 
-            Dictionary<uint, string> coldTypes;
+            Dictionary<ulong, string> coldTypes;
             using (var vfs = GameVfs.Load(install, names, cold))
             {
                 coldTypes = vfs.Files.Values.ToDictionary(f => f.Hash, f => $"{f.Type.Category}/{f.Type.Extension}");
@@ -89,7 +89,7 @@ public class GameCacheTests : IDisposable
             var warm = GameCache.Load(_cachePath);
             Assert.Equal(cold.TypeCount, warm.TypeCount);
 
-            Dictionary<uint, string> warmTypes;
+            Dictionary<ulong, string> warmTypes;
             using (var vfs = GameVfs.Load(install, names, warm))
             {
                 warmTypes = vfs.Files.Values.ToDictionary(f => f.Hash, f => $"{f.Type.Category}/{f.Type.Extension}");
@@ -214,7 +214,7 @@ public class GameCacheTests : IDisposable
             NameDatabase names = TestSupport.LoadNames();
 
             var cold = GameCache.Load(_cachePath);
-            Dictionary<uint, VfsFile> coldFragments;
+            Dictionary<ulong, VfsFile> coldFragments;
             using (var vfs = GameVfs.Load(install, names, cold))
             {
                 coldFragments = vfs.Files.Values.Where(f => f.IsFragment).ToDictionary(f => f.Hash);
@@ -223,8 +223,8 @@ public class GameCacheTests : IDisposable
             cold.Save(_cachePath);
 
             var warm = GameCache.Load(_cachePath);
-            Dictionary<uint, VfsFile> warmFragments;
-            Dictionary<uint, VfsFile> allWarmFiles;
+            Dictionary<ulong, VfsFile> warmFragments;
+            Dictionary<ulong, VfsFile> allWarmFiles;
             using (var vfs = GameVfs.Load(install, names, warm))
             {
                 allWarmFiles = vfs.Files.ToDictionary(kv => kv.Key, kv => kv.Value);
@@ -312,7 +312,7 @@ public class GameCacheTests : IDisposable
             var cold = GameCache.Load(_cachePath);
             using (var vfs = GameVfs.Load(install, names, cold))
             {
-                someHash = vfs.Files.Keys.First();
+                someHash = vfs.Files.Values.First(f => !f.IsSynthetic).EngineHash;
                 Assert.True(vfs.ReadOriginalHash(someHash) is { } h);
                 coldHash = vfs.ReadOriginalHash(someHash)!.Value;
             }

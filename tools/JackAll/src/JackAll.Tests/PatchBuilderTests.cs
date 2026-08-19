@@ -204,7 +204,7 @@ public class PatchBuilderTests : IDisposable
             container = vfs.Files[fragment.ContainerHash!.Value];
             fragmentId = fragment.FragmentId!;
 
-            FcbObject baseTree = FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!);
+            FcbObject baseTree = FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!);
             vanillaFragmentCount = FcbFragments.List(baseTree).Count;
         }
 
@@ -259,7 +259,7 @@ public class PatchBuilderTests : IDisposable
         {
             VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
             container = vfs.Files[fragment.ContainerHash!.Value];
-            originalChildCount = FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!).Children.Count;
+            originalChildCount = FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!).Children.Count;
         }
 
         var addition = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
@@ -305,7 +305,7 @@ public class PatchBuilderTests : IDisposable
             container = vfs.Files[fragment.ContainerHash!.Value];
             fragmentId = fragment.FragmentId!;
 
-            FcbObject baseTree = FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!);
+            FcbObject baseTree = FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!);
             vanillaFragment = FcbFragments.Find(baseTree, fragmentId)!;
         }
         if (TestSupport.TwoDistantEditPaths(vanillaFragment) is not { } paths)
@@ -358,7 +358,7 @@ public class PatchBuilderTests : IDisposable
             container = vfs.Files[fragment.ContainerHash!.Value];
             fragmentId = fragment.FragmentId!;
 
-            FcbObject baseTree = FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!);
+            FcbObject baseTree = FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!);
             vanillaFragment = FcbFragments.Find(baseTree, fragmentId)!;
         }
 
@@ -419,7 +419,7 @@ public class PatchBuilderTests : IDisposable
             container = vfs.Files[fragment.ContainerHash!.Value];
             fragmentId = fragment.FragmentId!;
             vanillaFragment = FcbFragments.Find(
-                FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!), fragmentId)!;
+                FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!), fragmentId)!;
         }
 
         int[] targetPath = vanillaFragment.Values.Count > 0 ? [] : [0];
@@ -496,7 +496,7 @@ public class PatchBuilderTests : IDisposable
 
         VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
         VfsFile container = vfs.Files[fragment.ContainerHash!.Value];
-        byte[] trueVanillaContainer = vfs.ReadOriginal(container.Hash)!;
+        byte[] trueVanillaContainer = vfs.ReadOriginal((uint)container.Hash)!;
 
         // A real, content-changing deploy this time (unlike the empty-mods build above) - this is what
         // actually reproduces the bug: the live patch.dat on disk now differs from vanilla for this
@@ -514,7 +514,7 @@ public class PatchBuilderTests : IDisposable
         // would trivially pass without exercising the bug at all.
         Assert.NotEqual(trueVanillaContainer, vfs.Read(container.Hash));
 
-        Assert.Equal(trueVanillaContainer, vfs.ReadOriginal(container.Hash));
+        Assert.Equal(trueVanillaContainer, vfs.ReadOriginal((uint)container.Hash));
     }
 
     [Fact]
@@ -543,7 +543,7 @@ public class PatchBuilderTests : IDisposable
         var replacement = new FcbObject { TypeHash = 0xE0BDB3DB };
         replacement.Values.Add(0xDEADBEEF, [0x09, 0x08, 0x07, 0x06]);
         string xml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty);
-        workspace.Stage(fragment.Hash, fragment.Path, "xml", System.Text.Encoding.UTF8.GetBytes(xml));
+        workspace.Stage(NameHash.Compute(fragment.Path), fragment.Path, "xml", System.Text.Encoding.UTF8.GetBytes(xml));
 
         // Before the fix: KeyNotFoundException. MergeFragments' pass 1 skipped this container via a
         // stale-but-still-matching memo hit (its SourceKind/SourceName never changed), while pass 3 is

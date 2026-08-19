@@ -90,13 +90,13 @@ public class EndToEndTests : IDisposable
             // GameVfs.MergeFragments/MergeDependencyLinks) and were never real archive entries, so they
             // don't belong in a "nothing else moved in the rebuilt archive" check.
             before = vfs.Files.Values.Where(f => !f.IsFragment && !f.IsDependencyLink)
-                .ToDictionary(f => f.Hash, f => vfs.Read(f.Hash));
+                .ToDictionary(f => (uint)f.Hash, f => vfs.Read(f.Hash));
         }
 
         byte[] replacement = "this is my modded file"u8.ToArray();
 
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
-        workspace.Stage(target.Hash, target.Path, target.Type.Extension, replacement);
+        workspace.Stage((uint)target.Hash, target.Path, target.Type.Extension, replacement);
 
         BuildResult result = PatchBuilder.Build(_install, [workspace]);
         Assert.Equal(1, result.OverriddenEntries);
@@ -104,7 +104,7 @@ public class EndToEndTests : IDisposable
         // Re-open the archive we just wrote, the same way the engine would read it.
         using var rebuilt = DuniaArchive.Open(_install.PatchFat);
 
-        Assert.Equal(replacement, rebuilt.Read(target.Hash));
+        Assert.Equal(replacement, rebuilt.Read((uint)target.Hash));
 
         // The real test: nothing else moved or broke. Every other entry must still decompress to
         // exactly the bytes it had before the build.
@@ -137,17 +137,17 @@ public class EndToEndTests : IDisposable
         }
 
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
-        workspace.Stage(target.Hash, target.Path, target.Type.Extension, "temporary"u8.ToArray());
+        workspace.Stage((uint)target.Hash, target.Path, target.Type.Extension, "temporary"u8.ToArray());
         PatchBuilder.Build(_install, [workspace]);
 
-        Assert.True(workspace.Unstage(target.Hash));
+        Assert.True(workspace.Unstage((uint)target.Hash));
         PatchBuilder.Build(_install, [workspace]);
 
         using var rebuilt = DuniaArchive.Open(_install.PatchFat);
 
         // Round trip complete: the file is byte-for-byte what the game shipped, decompressed
         // through the same LZO path it originally came through.
-        Assert.Equal(original, rebuilt.Read(target.Hash));
+        Assert.Equal(original, rebuilt.Read((uint)target.Hash));
     }
 
     private static string? FindRealInstall()

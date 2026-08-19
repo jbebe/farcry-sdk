@@ -81,6 +81,29 @@ public static class FcbDocument
     }
 
     /// <summary>
+    /// <see cref="Deserialize"/> for loaders probing derived paths, where "not an .fcb" is an
+    /// ordinary answer: null for anything that doesn't parse, and — the part a try/catch around
+    /// <see cref="Deserialize"/> can't give — no exception thrown at all for bytes without the
+    /// signature, so a probe landing on a colliding file of another format stays silent.
+    /// </summary>
+    public static FcbObject? TryDeserialize(byte[] fcb)
+    {
+        if (!HasSignature(fcb))
+        {
+            return null;
+        }
+
+        try
+        {
+            return Deserialize(fcb);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
     /// The exact byte length <see cref="Serialize"/> would emit for <paramref name="obj"/> alone (no
     /// file header) — the fully expanded form, since this writer never emits the dedup tricks (see
     /// class remarks). A pure counting walk, no allocation: what lets <see cref="FcbXml.ListFragmentsWithSize"/>
@@ -101,6 +124,9 @@ public static class FcbDocument
     }
 
     private static int CountSize(uint value) => value < OffsetMarker ? 1 : 5;
+
+    private static bool HasSignature(ReadOnlySpan<byte> bytes)
+        => bytes.Length >= 4 && BinaryPrimitives.ReadUInt32LittleEndian(bytes) == Signature;
 
     private static void ReadHeader(MemoryStream input)
     {

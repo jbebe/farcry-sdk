@@ -35,7 +35,7 @@ public sealed class FcbEditorTabViewModel : INotifyPropertyChanged
 
     /// <summary>The fragment's own <c>VfsFile.Hash</c> — what the host window keys open tabs by. 0 for
     /// a save (see <see cref="_openSaveEditors"/> in <c>MainWindow.xaml.cs</c>, keyed by path instead).</summary>
-    public uint Hash { get; }
+    public ulong Hash { get; }
 
     public FcbObjectNodeView Root { get; }
     public IEnumerable<FcbObjectNodeView> RootItems => [Root];
@@ -88,7 +88,7 @@ public sealed class FcbEditorTabViewModel : INotifyPropertyChanged
     /// already came from <paramref name="defs"/> in the first place, so harvesting again would just be
     /// a wasted re-parse that finds nothing new.</param>
     public FcbEditorTabViewModel(
-        string title, uint hash, string currentXml, string? vanillaXml, FcbClassDefinitions defs,
+        string title, ulong hash, string currentXml, string? vanillaXml, FcbClassDefinitions defs,
         Func<FcbObject, Task<string?>> persist, bool useSaveGameNameHarvest = false)
         : this(
             title, hash, FcbXml.FromXml(currentXml),
@@ -102,14 +102,14 @@ public sealed class FcbEditorTabViewModel : INotifyPropertyChanged
     /// fragment is stored as binary and never had an XML form to go through.
     /// </summary>
     public FcbEditorTabViewModel(
-        string title, uint hash, FcbObject root, FcbObject? vanilla, FcbClassDefinitions defs,
+        string title, ulong hash, FcbObject root, FcbObject? vanilla, FcbClassDefinitions defs,
         Func<FcbObject, Task<string?>> persist)
         : this(title, hash, root, vanilla, defs, persist, extraNames: null)
     {
     }
 
     private FcbEditorTabViewModel(
-        string title, uint hash, FcbObject root, FcbObject? vanilla, FcbClassDefinitions defs,
+        string title, ulong hash, FcbObject root, FcbObject? vanilla, FcbClassDefinitions defs,
         Func<FcbObject, Task<string?>> persist,
         IReadOnlyDictionary<uint, FcbXmlNameHarvest.Entry>? extraNames)
     {

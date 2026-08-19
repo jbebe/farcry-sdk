@@ -136,9 +136,10 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(XrefsReady)); // nudges the panel to re-query the selected file
     }
 
-    /// <summary>Everything that references <paramref name="file"/>.</summary>
+    /// <summary>Everything that references <paramref name="file"/> — empty for a synthetic row,
+    /// which the reference index never covers.</summary>
     public IReadOnlyList<XrefRow> ReferencesTo(VfsFile file)
-        => [.. _xrefs.ReferencesTo(RefSpace.FilePath, file.Hash)
+        => file.IsSynthetic ? [] : [.. _xrefs.ReferencesTo(RefSpace.FilePath, file.EngineHash)
             .Select(edge => new XrefRow(
                 Display: DescribeFile(edge.SourceFile),
                 Site: DescribeSite(edge),
@@ -148,9 +149,10 @@ public sealed partial class MainViewModel
                 CanNavigate: FindByHash(edge.SourceFile) is not null))
             .OrderBy(row => row.Display, StringComparer.OrdinalIgnoreCase)];
 
-    /// <summary>Everything <paramref name="file"/> references.</summary>
+    /// <summary>Everything <paramref name="file"/> references — empty for a synthetic row, same as
+    /// <see cref="ReferencesTo"/>.</summary>
     public IReadOnlyList<XrefRow> ReferencesFrom(VfsFile file)
-        => [.. _xrefs.ReferencesFrom(file.Hash)
+        => file.IsSynthetic ? [] : [.. _xrefs.ReferencesFrom(file.EngineHash)
             .Select(edge => new XrefRow(
                 Display: DescribeTarget(edge),
                 Site: DescribeSite(edge),
@@ -234,8 +236,8 @@ public sealed partial class MainViewModel
     /// hour of clicking through xrefs would otherwise pin every visited file's row in memory for the
     /// life of the session, and nobody navigates back more than a handful of steps.
     /// </summary>
-    private readonly List<uint> _navigationBack = [];
-    private readonly List<uint> _navigationForward = [];
+    private readonly List<ulong> _navigationBack = [];
+    private readonly List<ulong> _navigationForward = [];
     private const int MaxNavigationHistory = 64;
 
     /// <summary>True while <see cref="NavigateTo"/> is replaying history, so the replay itself isn't
@@ -274,11 +276,11 @@ public sealed partial class MainViewModel
 
     public void NavigateForward() => Step(_navigationForward, _navigationBack);
 
-    private void Step(List<uint> from, List<uint> to)
+    private void Step(List<ulong> from, List<ulong> to)
     {
         while (from.Count > 0)
         {
-            uint hash = from[^1];
+            ulong hash = from[^1];
             from.RemoveAt(from.Count - 1);
 
             VfsFile? target = FindByHash(hash);

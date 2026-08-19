@@ -13,10 +13,10 @@ public sealed partial class MainViewModel
 {
     public byte[] Read(VfsFile file) => _vfs!.Read(file.Hash);
 
-    /// <summary>Looks up any VfsFile by hash — used by a dependency-link row's "Go to file" jump (see
+    /// <summary>Looks up any VfsFile by key — used by a dependency-link row's "Go to file" jump (see
     /// <see cref="FileHandlers.FileHandlerCatalog"/>'s dependency-link case) to resolve what a link
     /// points to.</summary>
-    public VfsFile? FindByHash(uint hash) => _vfs?.Files.GetValueOrDefault(hash);
+    public VfsFile? FindByHash(ulong key) => _vfs?.Files.GetValueOrDefault(key);
 
     /// <summary>Every resolved path in the merged filesystem - the map editor filters this down to
     /// one world's sector and terrain files rather than probing synthesized paths against the
@@ -108,9 +108,12 @@ public sealed partial class MainViewModel
     /// need to know which kind of row they're holding.
     /// </remarks>
     public byte[]? ReadOriginal(VfsFile file)
-        => file.IsFragment
-            ? (ReadOriginalFragment(file) is { } xml ? AppText.EncodeUtf8(xml) : null)
-            : _vfs!.ReadOriginal(file.Hash);
+        => file switch
+        {
+            { IsFragment: true } => ReadOriginalFragment(file) is { } xml ? AppText.EncodeUtf8(xml) : null,
+            { IsDependencyLink: true } => null,
+            _ => _vfs!.ReadOriginal(file.EngineHash),
+        };
 
     /// <summary>Whether the workspace already carries its own override for this exact file - queried
     /// before Mirror/Mirror original overwrite it (see MainWindow.xaml.cs's Mirror_Click/
@@ -118,10 +121,28 @@ public sealed partial class MainViewModel
     /// <see cref="IModLayer.FragmentOverrides"/> for a fragment row and <see cref="IModLayer.Hashes"/>
     /// otherwise, matching how <see cref="Replace"/> itself (via <c>FolderModLayer.Stage</c>) files a
     /// new override under one or the other.</summary>
-    public bool IsStagedInWorkspace(VfsFile file) => file.IsFragment
-        ? Workspace!.FragmentOverrides.TryGetValue(file.ContainerHash!.Value, out var fragments)
-          && fragments.Any(f => f.EntryHash == file.Hash)
-        : Workspace!.Hashes.Contains(file.Hash);
+    public bool IsStagedInWorkspace(VfsFile file) => file switch
+    {
+        { IsFragment: true } => Workspace!.FragmentOverrides.TryGetValue(file.ContainerHash!.Value, out var fragments)
+            && fragments.Any(f => FcbFragments.IdComparer.Equals(f.FragmentId, file.FragmentId)),
+        { IsDependencyLink: true } => false,
+        _ => Workspace!.Hashes.Contains(file.EngineHash),
+    };
+
+    /// <summary>The relative path a row's override is staged at — null for an unnamed plain file,
+    /// which stages under <c>_hash\</c> by its own hash instead (see ModPathHashing.Resolve; an
+    /// unnamed *container's* fragments use the same convention one level deeper).</summary>
+    private static string? StagePathOf(VfsFile file) => file switch
+    {
+        { IsFragment: true, NameIsKnown: false } => $"_hash\\{file.ContainerHash:x8}.fcb\\{file.FragmentId}",
+        { NameIsKnown: true } => file.Path,
+        _ => null,
+    };
+
+    /// <summary>The workspace layer's own key for a row's override — never the row's VFS key (a
+    /// fragment's is synthetic).</summary>
+    private static uint WorkspaceKeyOf(VfsFile file)
+        => StagePathOf(file) is { } path ? FolderModLayer.StorageKeyOf(path) : file.EngineHash;
 
     /// <summary>
     /// Puts a replacement file into the workspace, so it wins over everything below it. For a
@@ -131,20 +152,7 @@ public sealed partial class MainViewModel
     /// </summary>
     public void Replace(VfsFile file, byte[] content)
     {
-        // A named container's fragment path (container's real path + its fragment id) hashes back
-        // to the right container on the next scan. An *unnamed* container's own path is only ever the
-        // synthetic display placeholder (GameVfs.SyntheticPath) - it doesn't hash back to anything -
-        // so its fragments have to go through the same _hash\ convention a plain unnamed file uses,
-        // just one level deeper: _hash\<container hash>.fcb\<fragment id> (see ModPathHashing.Resolve).
-        string? knownPath = file switch
-        {
-            { IsFragment: true, NameIsKnown: true } => file.Path,
-            { IsFragment: true, NameIsKnown: false } => $"_hash\\{file.ContainerHash:x8}.fcb\\{file.FragmentId}",
-            { NameIsKnown: true } => file.Path,
-            _ => null,
-        };
-
-        Workspace!.Stage(file.Hash, knownPath, file.Type.Extension, content);
+        Workspace!.Stage(WorkspaceKeyOf(file), StagePathOf(file), file.Type.Extension, content);
         Reindex();
     }
 
@@ -154,7 +162,7 @@ public sealed partial class MainViewModel
     /// </summary>
     public bool Revert(VfsFile file)
     {
-        bool removed = Workspace!.Unstage(file.Hash);
+        bool removed = Workspace!.Unstage(WorkspaceKeyOf(file));
         if (removed) Reindex();
         return removed;
     }

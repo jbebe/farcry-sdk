@@ -330,9 +330,10 @@ public partial class MainWindow
 
     private void CopyHash_Click(object sender, RoutedEventArgs e)
     {
-        if (_vm.SelectedFile is not { } file) return;
-        Clipboard.SetText($"{file.Hash:X8}");
-        _vm.Status = $"Copied {file.Hash:X8}.";
+        // A synthetic row's key is tool-internal, not an engine hash worth copying.
+        if (_vm.SelectedFile is not { IsSynthetic: false } file) return;
+        Clipboard.SetText($"{file.EngineHash:X8}");
+        _vm.Status = $"Copied {file.EngineHash:X8}.";
     }
 
     private void CopyPath_Click(object sender, RoutedEventArgs e)

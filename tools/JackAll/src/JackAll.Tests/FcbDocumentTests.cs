@@ -113,6 +113,18 @@ public class FcbDocumentTests
     }
 
     [Fact]
+    public void TryDeserialize_returns_null_for_non_fcb_or_truncated_bytes_instead_of_throwing()
+    {
+        byte[] serialized = FcbDocument.Serialize(new FcbObject { TypeHash = 0xCAFEBABE });
+
+        Assert.NotNull(FcbDocument.TryDeserialize(serialized));
+        Assert.Null(FcbDocument.TryDeserialize("not an fcb"u8.ToArray()));
+        Assert.Null(FcbDocument.TryDeserialize([]));
+        // Signature present but the header cut short - the EndOfStream case Deserialize throws on.
+        Assert.Null(FcbDocument.TryDeserialize(serialized[..6]));
+    }
+
+    [Fact]
     public void An_object_level_backreference_returns_the_same_shared_subtree()
     {
         // Root has two children; the second is encoded as a backreference (marker 0xFE + pointer

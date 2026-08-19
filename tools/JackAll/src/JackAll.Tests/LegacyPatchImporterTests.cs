@@ -81,7 +81,7 @@ public class LegacyPatchImporterTests : IDisposable
             // the realistic edit shape, and what lets the import attribute the change to this exact
             // fragment id rather than falling back to a coarser unit.
             FcbObject vanillaFragment = FcbFragments.Find(
-                FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!), fragmentId)!;
+                FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!), fragmentId)!;
             fragmentReplacementXml = TestSupport.RenderWithValueSetAt(vanillaFragment, [], 0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
         }
 
@@ -127,7 +127,7 @@ public class LegacyPatchImporterTests : IDisposable
 
         // The edit kept the fragment's identity fields, so the staged override lands on the very id
         // that was edited - not a coarser group or whole-file fallback - with the edited content.
-        Assert.True(workspace.FragmentOverrides.TryGetValue(container.Hash, out var overrides));
+        Assert.True(workspace.FragmentOverrides.TryGetValue((uint)container.Hash, out var overrides));
         FragmentOverride staged = Assert.Single(overrides!);
         Assert.True(FcbFragments.IdComparer.Equals(fragmentId, staged.FragmentId));
         Assert.Equal(fragmentReplacementXml, workspace.Read(staged.EntryHash));
@@ -152,7 +152,7 @@ public class LegacyPatchImporterTests : IDisposable
             VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
             container = vfs.Files[fragment.ContainerHash!.Value];
 
-            FcbObject tree = FcbDocument.Deserialize(vfs.ReadOriginal(container.Hash)!);
+            FcbObject tree = FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!);
             FcbObject group = tree.Children.First(c => c.Children.Count > 1);
             group.Children.RemoveAt(0);
             withOneArchetypeRemoved = FcbDocument.Serialize(tree);
@@ -183,8 +183,8 @@ public class LegacyPatchImporterTests : IDisposable
         Assert.Equal(0, result.FragmentsImported);
 
         workspace.Rescan();
-        Assert.Contains(container.Hash, workspace.Hashes);
-        Assert.DoesNotContain(container.Hash, workspace.FragmentOverrides.Keys);
+        Assert.Contains((uint)container.Hash, workspace.Hashes);
+        Assert.DoesNotContain((uint)container.Hash, workspace.FragmentOverrides.Keys);
         Assert.Empty(Directory.EnumerateFiles(workspaceDir, "*.xml", SearchOption.AllDirectories));
     }
 

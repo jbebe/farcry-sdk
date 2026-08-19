@@ -214,17 +214,8 @@ public sealed partial class ArchetypeIndex
         foreach (ArchetypeLayer layer in layers)
         {
             progress?.Report($"Reading {layer.Path}");
-            if (readByPath(layer.Path) is not { } bytes)
-            {
-                continue;
-            }
-
-            FcbObject root;
-            try
-            {
-                root = FcbDocument.Deserialize(bytes);
-            }
-            catch (InvalidDataException)
+            if (readByPath(layer.Path) is not { } bytes
+                || FcbDocument.TryDeserialize(bytes) is not { } root)
             {
                 continue;
             }

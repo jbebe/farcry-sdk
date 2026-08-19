@@ -84,12 +84,15 @@ public sealed class XrefBuildCommand : CliCommand<XrefBuildCommand.Settings>
         int filePathEdges = 0, resolved = 0, volatileFiles = 0;
         foreach (VfsFile file in vfs.Files.Values)
         {
+            // Synthetic rows are never indexed, and their keys aren't engine hashes.
+            if (file.IsSynthetic) continue;
+
             if (!vfs.IsStableSource(file))
             {
                 volatileFiles++;
             }
 
-            foreach (RefEdge edge in index.ReferencesFrom(file.Hash))
+            foreach (RefEdge edge in index.ReferencesFrom(file.EngineHash))
             {
                 if (edge.TargetSpace != RefSpace.FilePath) continue;
                 filePathEdges++;

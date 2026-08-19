@@ -163,7 +163,9 @@ public sealed partial class MainViewModel
         _ => string.Empty,
     };
 
-    public string HashText => SelectedFile is { } f ? $"{f.Hash:X8}" : string.Empty;
+    /// <summary>Empty for a synthetic row — its key is tool-internal, not an engine hash anyone can
+    /// address the file by.</summary>
+    public string HashText => SelectedFile is { IsSynthetic: false } f ? $"{f.EngineHash:X8}" : string.Empty;
     public string PathText => SelectedFile?.Path ?? string.Empty;
 
     public bool HasNamingNote => SelectedFile is { NameIsKnown: false };

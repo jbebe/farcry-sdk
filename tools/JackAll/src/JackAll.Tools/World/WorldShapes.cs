@@ -19,17 +19,8 @@ public static class WorldShapes
     public static IReadOnlyList<WorldShape> Load(
         string mapName, Func<string, byte[]?> readByPath, FcbClassDefinitions definitions)
     {
-        if (readByPath($@"worlds\{mapName}\generated\{mapName}.mapsdata.fcb") is not { } bytes)
-        {
-            return [];
-        }
-
-        FcbObject root;
-        try
-        {
-            root = FcbDocument.Deserialize(bytes);
-        }
-        catch (InvalidDataException)
+        if (readByPath($@"worlds\{mapName}\generated\{mapName}.mapsdata.fcb") is not { } bytes
+            || FcbDocument.TryDeserialize(bytes) is not { } root)
         {
             return [];
         }

@@ -34,7 +34,7 @@ public sealed class ReferenceExtractorTests
         var sink = new ReferenceSink(FcbClassDefinitions.Empty);
         VfsFile file = FileFor(path);
         Assert.True(extractor.CanHandle(file), $"{extractor.GetType().Name} should claim {path}");
-        sink.BeginFile(file.Hash);
+        sink.BeginFile((uint)file.Hash);
         extractor.Extract(file, content, sink);
         return sink;
     }
@@ -118,7 +118,7 @@ public sealed class ReferenceExtractorTests
 
         var sink = new ReferenceSink(BundledClasses.Value);
         VfsFile file = FileFor("worlds\\x\\generated\\entitylibrary.fcb");
-        sink.BeginFile(file.Hash);
+        sink.BeginFile((uint)file.Hash);
         new FcbReferenceExtractor().Extract(file, File.ReadAllBytes(path!), sink);
 
         // Without the class definitions every value is opaque, so this doubles as a check that the

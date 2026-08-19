@@ -43,9 +43,9 @@ public partial class MainWindow
 
     // ------------------------------------------------------------ fragment XML editor tabs
 
-    /// <summary>Open editor tabs, keyed by the fragment's own hash - lets "Open in FCB Editor…" just
+    /// <summary>Open editor tabs, keyed by the fragment's own VFS key - lets "Open in FCB Editor…" just
     /// focus an already-open tab instead of opening a second copy of the same content.</summary>
-    private readonly Dictionary<uint, TabItem> _openEditors = [];
+    private readonly Dictionary<ulong, TabItem> _openEditors = [];
 
     private void OpenFcbEditorTab(VfsFile file)
         => OpenOrFocusEditorTab(_openEditors, file.Hash, onRemoved =>
@@ -90,7 +90,7 @@ public partial class MainWindow
             return;
         }
 
-        if (_vm.FindFragment(file.Hash, FcbFragments.EntityFragmentId(entityId)) is { } entityFragment)
+        if (_vm.FindFragment(file.EngineHash, FcbFragments.EntityFragmentId(entityId)) is { } entityFragment)
         {
             OpenFcbEditorTab(entityFragment);
             return;
@@ -174,7 +174,7 @@ public partial class MainWindow
     /// <summary>Open Domino editor tabs, keyed by the file's own hash - same dedup-by-focusing-the-
     /// existing-tab behavior as <see cref="_openEditors"/>. No dirty-tracking to plumb through here:
     /// unlike the XML editor, there's no write path yet, so a Domino tab is pure view.</summary>
-    private readonly Dictionary<uint, TabItem> _openDominoEditors = [];
+    private readonly Dictionary<ulong, TabItem> _openDominoEditors = [];
 
     private void OpenDominoEditorTab(VfsFile file)
         => OpenOrFocusEditorTab(_openDominoEditors, file.Hash, onRemoved =>
@@ -226,7 +226,7 @@ public partial class MainWindow
 
     /// <summary>Open Magma UI package editor tabs, keyed by the file's own hash - same
     /// dedup-by-focusing-the-existing-tab behavior as <see cref="_openEditors"/>.</summary>
-    private readonly Dictionary<uint, TabItem> _openMgbEditors = [];
+    private readonly Dictionary<ulong, TabItem> _openMgbEditors = [];
 
     /// <summary>The Files tab's "Open in MGB Editor…" launcher. Unlike the fragment and save editors
     /// there's no XML in between: <see cref="MgbTabView"/> edits the decoded package model directly and

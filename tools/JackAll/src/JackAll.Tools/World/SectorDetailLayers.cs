@@ -36,28 +36,20 @@ public sealed class SectorDetailLayers
             string path = item.Path
                 .Replace(@"\sdat\", @"\worldsectors\", StringComparison.OrdinalIgnoreCase)
                 .Replace($"sd{item.SectorId}.sdat", $"sector{item.SectorId}.desc.fcb", StringComparison.OrdinalIgnoreCase);
-            if (readByPath(path) is not { } bytes)
+            // TryDeserialize because the path is a derived probe - see WorldLoader.Load.
+            if (readByPath(path) is not { } bytes || FcbDocument.TryDeserialize(bytes) is not { } root)
             {
                 return;
             }
 
-            uint? mask;
-            try
-            {
-                mask = Find(FcbDocument.Deserialize(bytes), detailTexMask);
-            }
-            catch (InvalidDataException)
-            {
-                return;
-            }
-            if (mask is null)
+            if (Find(root, detailTexMask) is not { } mask)
             {
                 return;
             }
 
             for (int slot = 0; slot < 4; slot++)
             {
-                indices[item.SectorId * 4 + slot] = (byte)(mask.Value >> (slot * 8) & 0xFF);
+                indices[item.SectorId * 4 + slot] = (byte)(mask >> (slot * 8) & 0xFF);
             }
         });
 

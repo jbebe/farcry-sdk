@@ -73,7 +73,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
 
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
         byte[] replacement = BuildReplacementFragmentXml();
-        workspace.Stage(fragment.Hash, fragment.Path, "xml", replacement);
+        workspace.Stage(NameHash.Compute(fragment.Path), fragment.Path, "xml", replacement);
         vfs.Rebuild([workspace]);
 
         string? original = vfs.ReadOriginalFragment(fragment.ContainerHash!.Value, fragment.FragmentId!);
@@ -102,7 +102,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
 
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
         byte[] replacement = BuildReplacementFragmentXml();
-        workspace.Stage(fragment.Hash, fragment.Path, "xml", replacement);
+        workspace.Stage(NameHash.Compute(fragment.Path), fragment.Path, "xml", replacement);
         vfs.Rebuild([workspace]);
 
         // The fragment row itself: modded, attributed to the workspace, reads back the override.
@@ -125,7 +125,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
 
         // Reading the container assembles the override in - different from the untouched archive copy.
         byte[] assembledContainer = vfs.Read(containerBefore.Hash);
-        Assert.NotEqual(vfs.ReadOriginal(containerBefore.Hash), assembledContainer);
+        Assert.NotEqual(vfs.ReadOriginal((uint)containerBefore.Hash), assembledContainer);
 
         // An un-overridden sibling fragment is completely unaffected.
         if (sibling is not null)
@@ -137,7 +137,8 @@ public class GameVfsFragmentOverrideTests : IDisposable
         }
 
         // Reverting removes the override from both the fragment row and the container's attribution.
-        Assert.True(workspace.Unstage(fragment.Hash));
+        // The layer's own key is the staged path re-hashed, never the row's synthetic VFS key.
+        Assert.True(workspace.Unstage(NameHash.Compute(fragment.Path)));
         vfs.Rebuild([workspace]);
 
         Assert.False(vfs.Files[fragment.Hash].IsOverriding);
@@ -165,18 +166,20 @@ public class GameVfsFragmentOverrideTests : IDisposable
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
         byte[] addition = BuildReplacementFragmentXml();
         string newFragmentPath = $"{container.Path}\\does_not_exist_in_vanilla.xml";
-        uint newFragmentHash = NameHash.Compute(newFragmentPath);
-        workspace.Stage(newFragmentHash, newFragmentPath, "xml", addition);
+        workspace.Stage(NameHash.Compute(newFragmentPath), newFragmentPath, "xml", addition);
         vfs.Rebuild([workspace]);
 
         Assert.Equal(fragmentRowCountBefore + 1, vfs.Files.Values.Count(f => f.ContainerHash == container.Hash));
 
-        VfsFile added = vfs.Files[newFragmentHash];
+        // Found by identity, not by hashing its path - a fragment row's key is synthetic.
+        VfsFile added = vfs.Files.Values.Single(f =>
+            f.ContainerHash == container.Hash
+            && FcbFragments.IdComparer.Equals(f.FragmentId, "does_not_exist_in_vanilla.xml"));
         Assert.True(added.IsFragment);
         Assert.True(added.IsModded);
         Assert.False(added.IsOverriding); // not overriding an existing child - there wasn't one
         Assert.Equal("workspace", added.SourceName);
-        Assert.Equal(addition, vfs.Read(newFragmentHash));
+        Assert.Equal(addition, vfs.Read(added.Hash));
 
         // The existing sibling fragment (and every other) is unaffected.
         Assert.False(vfs.Files[existingFragment.Hash].IsModded);
@@ -201,7 +204,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
         byte[] replacement = BuildReplacementFragmentXml();
         string hashAddressedPath = $"_hash\\{fragment.ContainerHash:x8}.fcb\\{fragment.FragmentId}";
-        workspace.Stage(fragment.Hash, hashAddressedPath, "xml", replacement);
+        workspace.Stage(NameHash.Compute(hashAddressedPath), hashAddressedPath, "xml", replacement);
         vfs.Rebuild([workspace]);
 
         VfsFile overriddenFragment = vfs.Files[fragment.Hash];
@@ -245,7 +248,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
         var zipMod = new ZipModLayer(zipPath);
 
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
-        workspace.Stage(fragment.Hash, fragment.Path, "xml", TestSupport.RenderWithValueSetAt(vanilla, paths.B, 0xAAAA0002, [0x02, 0x00, 0x00, 0x00]));
+        workspace.Stage(NameHash.Compute(fragment.Path), fragment.Path, "xml", TestSupport.RenderWithValueSetAt(vanilla, paths.B, 0xAAAA0002, [0x02, 0x00, 0x00, 0x00]));
 
         vfs.Rebuild([zipMod, workspace]);
 
@@ -293,12 +296,68 @@ public class GameVfsFragmentOverrideTests : IDisposable
         var zipMod = new ZipModLayer(zipPath);
 
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
-        workspace.Stage(fragment.Hash, fragment.Path, "xml", TestSupport.RenderWithValueSetAt(vanilla, targetPath, existingHash, [0xFF, 0x00, 0x00, 0x00]));
+        workspace.Stage(NameHash.Compute(fragment.Path), fragment.Path, "xml", TestSupport.RenderWithValueSetAt(vanilla, targetPath, existingHash, [0xFF, 0x00, 0x00, 0x00]));
 
         vfs.Rebuild([zipMod, workspace]);
 
         InvalidDataException ex = Assert.Throws<InvalidDataException>(() => vfs.Read(fragment.Hash));
         Assert.Contains("workspace", ex.Message);
+    }
+
+    /// <summary>A synthetic row's key lives above the engine's 32-bit space (bit 63 set - see
+    /// <see cref="VfsFile.Hash"/>), so probing its display path by CRC32 is an ordinary miss, never
+    /// fragment XML handed to a caller expecting a real file's bytes.</summary>
+    [Fact]
+    public void A_fragment_path_probed_by_hash_is_a_miss_not_fragment_xml()
+    {
+        if (_install is null) return;
+
+        NameDatabase names = TestSupport.LoadNames();
+        using var vfs = GameVfs.Load(_install, names);
+
+        VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+        Assert.True(fragment.Hash > uint.MaxValue);
+        Assert.Null(vfs.ReadByPath(fragment.Path));
+    }
+
+    /// <summary>A real archive entry whose hash happens to equal a fragment display path's CRC32 -
+    /// the collision that used to let the fragment row silently shadow the real file (19 such files
+    /// were hidden in a real install before synthetic rows got their own keyspace).</summary>
+    [Fact]
+    public void A_real_entry_colliding_with_a_fragment_paths_hash_stays_visible()
+    {
+        if (_install is null) return;
+
+        NameDatabase names = TestSupport.LoadNames();
+
+        string fragmentPath;
+        using (var probe = GameVfs.Load(_install, names))
+        {
+            fragmentPath = probe.Files.Values.First(f => f.IsFragment && f.NameIsKnown).Path;
+        }
+
+        byte[] collidingContent = "not an fcb"u8.ToArray();
+        uint collidingHash = NameHash.Compute(fragmentPath);
+        WriteSingleEntryArchive(Path.Combine(_sandbox, "Data_Win32", "extra"), collidingHash, collidingContent);
+
+        using var vfs = GameVfs.Load(_install, names);
+
+        // Both rows coexist: the real entry at its engine hash, the fragment row at its own key.
+        Assert.True(vfs.Files.TryGetValue(collidingHash, out VfsFile? real));
+        Assert.False(real!.IsFragment);
+        Assert.Equal(collidingContent, vfs.Read(collidingHash));
+        Assert.Contains(vfs.Files.Values, f => f.IsFragment
+            && f.Path.Equals(fragmentPath, StringComparison.OrdinalIgnoreCase));
+
+        // And a loader probing the fragment's path gets the real entry's bytes - engine semantics.
+        Assert.Equal(collidingContent, vfs.ReadByPath(fragmentPath));
+    }
+
+    private static void WriteSingleEntryArchive(string basePath, uint hash, byte[] content)
+    {
+        File.WriteAllBytes(basePath + ".dat", content);
+        FatArchive.FromEntries([new FatEntry(hash, Offset: 0, content.Length, UncompressedSize: 0, CompressionScheme.None)])
+            .Write(basePath + ".fat");
     }
 
     public void Dispose()
