@@ -89,5 +89,23 @@
              Condition="Exists('$(Fc2Levels)\w2_b_2\generated\worldsectors\landmarknear4427.data.fcb')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- A terrain layer texture and the "_mip0.xbt" its header names, which is where its real top
+         level lives; plus one from the same folder whose header names nothing, so both branches of
+         the companion lookup are covered. Kept to the smallest such pair in the tree. -->
+    <Content Include="$(Fc2Graphics)\terrain\_textures\savannah\stiresjunk01_d.xbt"
+             Link="Fixtures\XbtStreamed\stiresjunk01_d.xbt"
+             Condition="Exists('$(Fc2Graphics)\terrain\_textures\savannah\stiresjunk01_d.xbt')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(Fc2Graphics)\terrain\_textures\savannah\stiresjunk01_d_mip0.xbt"
+             Link="Fixtures\XbtStreamed\stiresjunk01_d_mip0.xbt"
+             Condition="Exists('$(Fc2Graphics)\terrain\_textures\savannah\stiresjunk01_d_mip0.xbt')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(Fc2Graphics)\terrain\_textures\desert\desert_sand_still_d.xbt"
+             Link="Fixtures\XbtStreamed\desert_sand_still_d.xbt"
+             Condition="Exists('$(Fc2Graphics)\terrain\_textures\desert\desert_sand_still_d.xbt')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

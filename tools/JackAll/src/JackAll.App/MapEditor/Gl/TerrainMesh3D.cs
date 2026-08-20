@@ -91,6 +91,8 @@ public sealed class TerrainMesh3D : IDisposable
             uniform sampler2DArray detailTextures;
             uniform float layerTiling[64];
             uniform float layerProjAxis[64];
+            // Layers sharing a texture share a slice, so a layer index is not a slice index.
+            uniform float layerSlice[64];
             uniform vec2 heightRange;
             uniform float surfaceTint;
             uniform float textureMix;
@@ -170,7 +172,8 @@ public sealed class TerrainMesh3D : IDisposable
                     int layer = int(chosen[i] + 0.5);
                     if (layer >= 64) { continue; }
                     float tiling = max(layerTiling[layer], 0.5);
-                    colour += weight[i] * texture(detailTextures, vec3(layerUv(layer, height) / tiling, float(layer))).rgb;
+                    colour += weight[i] * texture(detailTextures,
+                        vec3(layerUv(layer, height) / tiling, layerSlice[layer])).rgb;
                     used += weight[i];
                 }
 
@@ -258,6 +261,8 @@ public sealed class TerrainMesh3D : IDisposable
             GL.Uniform1(_program.UniformLocation("layerTiling"), textures.Tiling.Length, textures.Tiling);
             GL.Uniform1(_program.UniformLocation("layerProjAxis"),
                 textures.ProjectionAxis.Length, textures.ProjectionAxis);
+            GL.Uniform1(_program.UniformLocation("layerSlice"),
+                textures.LayerSlice.Length, textures.LayerSlice);
         }
 
         // Positions come from gl_VertexID; only the triangulation needs real data.

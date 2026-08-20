@@ -114,6 +114,24 @@ public static class XbtTexture
         return new XDocument(root).ToString();
     }
 
+    /// <summary>
+    /// The archive-relative path of this file's <c>_mip0.xbt</c> streaming companion, or null when the
+    /// header names none. That companion is not an optional extra: it holds the texture's real top mip
+    /// level, and the file naming it starts one level down. Half the shipped graphics tree is stored
+    /// this way, so a reader that ignores it renders every one of those at half resolution.
+    /// </summary>
+    /// <param name="header">The header <see cref="Split"/> returned.</param>
+    public static string? CompanionPath(byte[] header)
+    {
+        if (header.Length < 16)
+        {
+            return null;
+        }
+
+        uint version = ByteCursor.U32(header, 4);
+        return ReadEmbeddedPath(header, version == LegacyVersion ? V10FixedHeaderSize : V11FixedHeaderSize);
+    }
+
     /// <summary>Recovers the raw header bytes from a companion XML file produced by <see cref="ToXml"/>.</summary>
     public static byte[] HeaderFromXml(string xml)
     {
@@ -132,7 +150,8 @@ public static class XbtTexture
         return Convert.FromHexString(hex.Trim());
     }
 
-    /// <summary>A null-terminated ASCII path occupying [fixedEnd, header.Length); empty in every sample seen so far.</summary>
+    /// <summary>A null-terminated ASCII path occupying [fixedEnd, header.Length); present on 960 of the
+    /// 1,947 textures in the shipped graphics tree and empty on the rest.</summary>
     private static string? ReadEmbeddedPath(byte[] header, int fixedEnd)
     {
         if (header.Length <= fixedEnd)

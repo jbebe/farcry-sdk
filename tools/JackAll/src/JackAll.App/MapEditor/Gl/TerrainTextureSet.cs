@@ -1,4 +1,4 @@
-using JackAll.App.FileHandlers.Xbt;
+using JackAll.Tools.Xbt;
 using JackAll.Tools.World;
 using OpenTK.Graphics.OpenGL4;
 
@@ -16,8 +16,22 @@ namespace JackAll.App.MapEditor.Gl;
 /// </remarks>
 public sealed class TerrainTextureSet : IDisposable
 {
-    /// <summary>Every detail texture is resampled to this before going into the array.</summary>
-    private const int DetailSize = 256;
+    /// <summary>
+    /// The side of every slice of the detail array, and the size the game authors its terrain
+    /// textures at: a 1024 file whose header points at the 2048 top level held in a separate
+    /// <c>_mip0.xbt</c>. At the usual 20-metre tiling that is 102 texels per metre - the number that
+    /// decides whether close-up ground reads as ground or as a blown-up thumbnail.
+    /// </summary>
+    private const int DetailSide = 2048;
+
+    /// <summary>Levels of a 2048 chain down to 1x1. Every one is written here, so nothing is
+    /// generated and no level is left holding whatever the driver had in it.</summary>
+    private const int DetailLevels = 12;
+
+    private const int Dxt1BlockBytes = 8;
+
+    /// <summary>Mid-grey as a DXT1 endpoint - what a layer draws when its texture cannot be used.</summary>
+    private const ushort NeutralGrey = 0x8410;
 
     public int WeightHandle { get; }
     public int ColourHandle { get; }
@@ -35,6 +49,14 @@ public sealed class TerrainTextureSet : IDisposable
 
     /// <summary>Projection plane per layer: 0 = X, 1 = Y, 2 = Z.</summary>
     public float[] ProjectionAxis { get; } = new float[MaxLayers];
+
+    /// <summary>Which slice of the detail array each layer samples. Layers sharing a texture share a
+    /// slice - world1 names 45 layers over 25 distinct textures - and slice 0 is the neutral grey a
+    /// layer falls back to.</summary>
+    public float[] LayerSlice { get; } = new float[MaxLayers];
+
+    /// <summary>What the detail array costs on the GPU, for the status line.</summary>
+    public long DetailBytes { get; }
 
     public const int MaxLayers = 64;
 
@@ -63,56 +85,214 @@ public sealed class TerrainTextureSet : IDisposable
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
 
-        DetailArrayHandle = GL.GenTexture();
-        GL.BindTexture(TextureTarget.Texture2DArray, DetailArrayHandle);
-        int layerCount = Math.Max(table.Layers.Count, 1);
-
-        // Every slice starts neutral grey. A layer whose texture is missing or in a format the
-        // decoder refuses would otherwise be drawn from uninitialised memory, which shows up as
-        // blocky garbage wherever that layer is weighted.
-        var neutral = new byte[DetailSize * DetailSize * 4];
-        Array.Fill(neutral, (byte)128);
-        GL.TexImage3D(TextureTarget.Texture2DArray, 0, PixelInternalFormat.Rgba8,
-            DetailSize, DetailSize, layerCount, 0, PixelFormat.Rgba, PixelType.UnsignedByte, IntPtr.Zero);
-        for (int layer = 0; layer < layerCount; layer++)
-        {
-            GL.TexSubImage3D(TextureTarget.Texture2DArray, 0, 0, 0, layer,
-                DetailSize, DetailSize, 1, PixelFormat.Rgba, PixelType.UnsignedByte, neutral);
-        }
-
         Array.Fill(Tiling, 20f);
         Array.Fill(ProjectionAxis, 2f);
-        int loaded = 0;
-        var failed = new List<string>();
-        foreach (TerrainLayer layer in table.Layers)
-        {
-            if (layer.Index < MaxLayers)
-            {
-                Tiling[layer.Index] = layer.Tiling;
-                ProjectionAxis[layer.Index] = layer.ProjectionAxis;
-            }
-            if (string.IsNullOrEmpty(layer.TexturePath) ||
-                readByPath(layer.TexturePath) is not { } xbt ||
-                XbtImage.TryDecodeRgba(xbt) is not { } decoded)
-            {
-                failed.Add(layer.Name);
-                continue;
-            }
 
-            byte[] scaled = Resample(decoded.Rgba, decoded.Width, decoded.Height, DetailSize);
-            GL.TexSubImage3D(TextureTarget.Texture2DArray, 0, 0, 0, layer.Index,
-                DetailSize, DetailSize, 1, PixelFormat.Rgba, PixelType.UnsignedByte, scaled);
-            loaded++;
-        }
-        LayersLoaded = loaded;
-        FailedLayers = failed;
+        DetailArrayHandle = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2DArray, DetailArrayHandle);
+        (LayersLoaded, FailedLayers, int slices) = BuildDetailArray(table, readByPath);
+        DetailBytes = ArrayBytes(slices);
 
-        GL.GenerateMipmap(GenerateMipmapTarget.Texture2DArray);
+        GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMaxLevel, DetailLevels - 1);
         GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMinFilter,
             (int)TextureMinFilter.LinearMipmapLinear);
         GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
         GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
         GL.TexParameter(TextureTarget.Texture2DArray, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+        GlSampling.Anisotropic(TextureTarget.Texture2DArray);
+    }
+
+    /// <summary>
+    /// Fills the detail array with the shipped DXT1 blocks - no decode, no resample, no generated
+    /// mips - and returns how many layers found a texture, which ones did not, and how many slices
+    /// the array ended up with.
+    /// </summary>
+    /// <remarks>
+    /// One slice per distinct texture rather than per layer: world1 spreads 45 layers over 25
+    /// textures, so this is close to half the memory and half the archive reads. What a layer keeps
+    /// to itself is its tiling and projection, not its pixels.
+    /// </remarks>
+    private (int Loaded, IReadOnlyList<string> Failed, int Slices) BuildDetailArray(
+        TerrainLayerTable table, Func<string, byte[]?> readByPath)
+    {
+        var failed = new List<string>();
+        var layersByPath = new Dictionary<string, List<TerrainLayer>>(StringComparer.OrdinalIgnoreCase);
+        foreach (TerrainLayer layer in table.Layers)
+        {
+            if (layer.Index >= MaxLayers)
+            {
+                continue;
+            }
+            Tiling[layer.Index] = layer.Tiling;
+            ProjectionAxis[layer.Index] = layer.ProjectionAxis;
+
+            if (string.IsNullOrEmpty(layer.TexturePath))
+            {
+                failed.Add(layer.Name);
+                continue;
+            }
+            if (!layersByPath.TryGetValue(layer.TexturePath, out List<TerrainLayer>? group))
+            {
+                layersByPath[layer.TexturePath] = group = [];
+            }
+            group.Add(layer);
+        }
+
+        // Slice 0 is the fallback grey, so a layer index no table entry claims - a sector's mask can
+        // name one - draws flat instead of out of whatever the driver left in the slice.
+        int slices = layersByPath.Count + 1;
+        Allocate(slices);
+        FillSlice(0, surface: null);
+
+        int loaded = 0, slice = 1;
+        foreach ((string path, List<TerrainLayer> group) in layersByPath)
+        {
+            int repeat = FillSlice(slice, ReadDetail(path, readByPath));
+            if (repeat == 0)
+            {
+                failed.AddRange(group.Select(l => l.Name));
+                slice++;
+                continue;
+            }
+
+            foreach (TerrainLayer layer in group)
+            {
+                LayerSlice[layer.Index] = slice;
+                Tiling[layer.Index] = layer.Tiling * repeat;
+                loaded++;
+            }
+            slice++;
+        }
+        return (loaded, failed, slices);
+    }
+
+    /// <summary>
+    /// Null unless the texture is a square power-of-two DXT1 - which every shipped terrain layer is,
+    /// and the only thing one DXT1 array can hold. Reads the top level out of the <c>_mip0.xbt</c>
+    /// companion the header names, without which every layer would be half the size it should be.
+    /// </summary>
+    private static DdsSurface? ReadDetail(string path, Func<string, byte[]?> readByPath)
+    {
+        if (readByPath(path) is not { } xbt || XbtSurface.TryRead(xbt, readByPath) is not { } surface)
+        {
+            return null;
+        }
+
+        bool squarePowerOfTwo = surface.Width == surface.Height &&
+            surface.Width > 0 && (surface.Width & (surface.Width - 1)) == 0;
+        return squarePowerOfTwo && surface.FourCc == DdsSurface.FourCcDxt1 ? surface : null;
+    }
+
+    private static void Allocate(int slices)
+    {
+        for (int level = 0; level < DetailLevels; level++)
+        {
+            int side = DetailSide >> level;
+            GL.CompressedTexImage3D(TextureTarget.Texture2DArray, level,
+                InternalFormat.CompressedRgbS3tcDxt1Ext, side, side, slices, 0,
+                LevelBytes(side) * slices, IntPtr.Zero);
+        }
+    }
+
+    /// <summary>
+    /// Writes one texture's whole chain into a slice and returns how many times it repeats across it;
+    /// 0 for a slice with no usable texture, which is filled neutral instead.
+    /// </summary>
+    /// <remarks>
+    /// A texture smaller than the slice is repeated rather than magnified - a whole-block copy, so
+    /// still nothing is decoded - and the caller multiplies its layers' tiling by the same factor,
+    /// which lands the pattern at exactly the world scale the game gives it.
+    /// </remarks>
+    private static int FillSlice(int slice, DdsSurface? surface)
+    {
+        if (surface is null)
+        {
+            for (int level = 0; level < DetailLevels; level++)
+            {
+                FillLevel(slice, level, NeutralGrey);
+            }
+            return 0;
+        }
+
+        int top = surface.Width, skipped = 0;
+        while (top > DetailSide)
+        {
+            top /= 2;
+            skipped++;
+        }
+        int repeat = DetailSide / top;
+        ushort average = Average(surface);
+
+        for (int level = 0; level < DetailLevels; level++)
+        {
+            int source = skipped + level;
+            int side = top >> level;
+
+            // Below 4x4 a repeat is no longer a whole number of blocks, so from there down the slice
+            // gets the texture's own average colour - which is what a mip that small converges to.
+            if (source >= surface.Mips.Count || (side < 4 && repeat > 1))
+            {
+                FillLevel(slice, level, average);
+                continue;
+            }
+
+            byte[] blocks = surface.Mips[source];
+            for (int y = 0; y < repeat; y++)
+            {
+                for (int x = 0; x < repeat; x++)
+                {
+                    GL.CompressedTexSubImage3D(TextureTarget.Texture2DArray, level,
+                        x * side, y * side, slice, side, side, 1,
+                        InternalFormat.CompressedRgbS3tcDxt1Ext, blocks.Length, blocks);
+                }
+            }
+        }
+        return repeat;
+    }
+
+    /// <summary>One flat colour across a level of a slice, as DXT1 blocks with both endpoints equal
+    /// and every index 0.</summary>
+    private static void FillLevel(int slice, int level, ushort colour)
+    {
+        int side = DetailSide >> level;
+        var blocks = new byte[LevelBytes(side)];
+        for (int i = 0; i < blocks.Length; i += Dxt1BlockBytes)
+        {
+            blocks[i] = blocks[i + 2] = (byte)colour;
+            blocks[i + 1] = blocks[i + 3] = (byte)(colour >> 8);
+        }
+        GL.CompressedTexSubImage3D(TextureTarget.Texture2DArray, level, 0, 0, slice, side, side, 1,
+            InternalFormat.CompressedRgbS3tcDxt1Ext, blocks.Length, blocks);
+    }
+
+    /// <summary>The texture's overall colour, read straight off the endpoints of its smallest mip -
+    /// no decode needed, they are already 5:6:5.</summary>
+    private static ushort Average(DdsSurface surface)
+    {
+        byte[] smallest = surface.Mips[^1];
+        int c0 = smallest[0] | smallest[1] << 8;
+        int c1 = smallest[2] | smallest[3] << 8;
+        int r = ((c0 >> 11) + (c1 >> 11)) / 2;
+        int g = (((c0 >> 5) & 0x3F) + ((c1 >> 5) & 0x3F)) / 2;
+        int b = ((c0 & 0x1F) + (c1 & 0x1F)) / 2;
+        return (ushort)(r << 11 | g << 5 | b);
+    }
+
+    private static int LevelBytes(int side)
+    {
+        int blocks = Math.Max(1, (side + 3) / 4);
+        return blocks * blocks * Dxt1BlockBytes;
+    }
+
+    /// <summary>Every level of every slice, for the status line.</summary>
+    private static long ArrayBytes(int slices)
+    {
+        long total = 0;
+        for (int level = 0; level < DetailLevels; level++)
+        {
+            total += LevelBytes(DetailSide >> level);
+        }
+        return total * slices;
     }
 
     private const int SdatQuadsPerSector = 64;
@@ -229,27 +409,6 @@ public sealed class TerrainTextureSet : IDisposable
         string atlasPath = path.Replace($"sd{atlasId}.sdat", $"atlas{atlasId}_{kind}.xbt",
             StringComparison.OrdinalIgnoreCase);
         return readByPath(atlasPath) is { } xbt ? JackAll.Tools.Xbt.XbtTexture.Split(xbt).Dds : null;
-    }
-
-    /// <summary>Nearest-neighbour resample - the detail textures only need to agree on one size.</summary>
-    private static byte[] Resample(byte[] rgba, int width, int height, int size)
-    {
-        if (width == size && height == size)
-        {
-            return rgba;
-        }
-
-        var output = new byte[size * size * 4];
-        for (int y = 0; y < size; y++)
-        {
-            int sy = Math.Min(y * height / size, height - 1);
-            for (int x = 0; x < size; x++)
-            {
-                int sx = Math.Min(x * width / size, width - 1);
-                Array.Copy(rgba, (sy * width + sx) * 4, output, (y * size + x) * 4, 4);
-            }
-        }
-        return output;
     }
 
     public void Bind(TextureUnit weights, TextureUnit sectorLayers, TextureUnit detail,

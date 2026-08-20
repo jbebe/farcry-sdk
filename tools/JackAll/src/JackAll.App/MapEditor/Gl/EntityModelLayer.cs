@@ -488,7 +488,7 @@ public sealed class EntityModelLayer : IDisposable
     {
         while (_requests.TryDequeue(out string? path))
         {
-            _decoded.Enqueue((path, DecodeTexture(_readByPath(path))));
+            _decoded.Enqueue((path, DecodeTexture(path)));
         }
         Interlocked.Decrement(ref _activeDecoders);
         if (!_requests.IsEmpty)
@@ -669,32 +669,32 @@ public sealed class EntityModelLayer : IDisposable
 
     /// <summary>Null when the bytes are missing or not a decodable .xbt; the range then keeps its
     /// tint for good.</summary>
-    private static Decoded? DecodeTexture(byte[]? xbt)
+    private Decoded? DecodeTexture(string path)
     {
-        if (xbt is null)
+        if (_readByPath(path) is not { } xbt)
         {
             return null;
         }
 
-        byte[] dds;
-        try
-        {
-            (_, dds) = XbtTexture.Split(xbt);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-
-        if (DdsSurface.TryParse(dds) is { } surface)
+        // Includes the top level from the "_mip0.xbt" companion, which is where half the game's
+        // textures keep it.
+        if (XbtSurface.TryRead(xbt, _readByPath) is { } surface)
         {
             return new Decoded(surface.Width, surface.Height, surface.FourCc, surface.Mips);
         }
 
         // Not a plain DXT payload - let the BCn decoder produce RGBA instead.
-        return XbtImage.TryDecodeRgbaDds(dds) is { } rgba
-            ? new Decoded(rgba.Width, rgba.Height, 0, [rgba.Rgba])
-            : null;
+        try
+        {
+            (_, byte[] dds) = XbtTexture.Split(xbt);
+            return XbtImage.TryDecodeRgbaDds(dds) is { } rgba
+                ? new Decoded(rgba.Width, rgba.Height, 0, [rgba.Rgba])
+                : null;
+        }
+        catch (Exception)
+        {
+            return null;
+        }
     }
 
     private int Upload(Decoded texture)
@@ -736,6 +736,10 @@ public sealed class EntityModelLayer : IDisposable
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.Repeat);
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.Repeat);
+        if (mipmapped)
+        {
+            GlSampling.Anisotropic(TextureTarget.Texture2D);
+        }
         return handle;
     }
 

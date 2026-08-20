@@ -267,7 +267,8 @@ public partial class MapTabView : UserControl
                 : null;
             _terrainMesh = new TerrainMesh3D(_heightTexture, _surfaceTexture, _terrainTextures);
             TextureStatus.Text = _terrainTextures is { } set
-                ? $"{set.LayersLoaded} of {pending.Table.Layers.Count} layer textures loaded; blend mask {set.WeightSide}x{set.WeightSide}." +
+                ? $"{set.LayersLoaded} of {pending.Table.Layers.Count} layer textures loaded " +
+                  $"({set.DetailBytes / (1024 * 1024)} MB); blend mask {set.WeightSide}x{set.WeightSide}." +
                   (set.FailedLayers.Count > 0 ? $" Missing: {string.Join(", ", set.FailedLayers)}." : "")
                 : "No terrain textures loaded.";
         }

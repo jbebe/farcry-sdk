@@ -17,6 +17,30 @@ public sealed class DdsSurface
     public required uint FourCc { get; init; }
     public required IReadOnlyList<byte[]> Mips { get; init; }
 
+    /// <summary>
+    /// The same surface with <paramref name="top"/>'s level 0 in front, which is how a texture whose
+    /// header names a <c>_mip0.xbt</c> companion is meant to be read: this payload starts one level
+    /// down, and the companion carries the level it is missing.
+    /// </summary>
+    /// <returns>This surface unchanged when the companion isn't exactly twice its size in the same
+    /// format - the pairing is then not the one the engine assumes and stacking them would lie about
+    /// the chain.</returns>
+    public DdsSurface WithTopLevel(DdsSurface top)
+    {
+        if (top.FourCc != FourCc || top.Width != Width * 2 || top.Height != Height * 2)
+        {
+            return this;
+        }
+
+        return new DdsSurface
+        {
+            Width = top.Width,
+            Height = top.Height,
+            FourCc = FourCc,
+            Mips = [top.Mips[0], .. Mips],
+        };
+    }
+
     /// <summary>Null for anything but the block-compressed DXT1/3/5 the game's textures use -
     /// those callers fall back to a full BCn decode instead.</summary>
     public static DdsSurface? TryParse(byte[] dds)
