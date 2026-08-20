@@ -287,6 +287,63 @@ public class XbgModelTests
         Assert.All(baked.MaterialRanges, r => Assert.Equal($@"tex\{r.MaterialName}.xbt", r.DiffuseTexturePath));
     }
 
+    /// <summary>
+    /// A file holds every state a part can be in and the engine shows one; the bake keeps the
+    /// lowest-numbered, which is the intact one. The swamp boat is the clean case: its body and its
+    /// three roof pieces each ship as STATE01 and STATE02, and drawing both puts the wrecked hull
+    /// inside the whole one.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Only_the_intact_state_of_a_part_is_baked()
+    {
+        const string Boat = FixturesDir + "/swampboat.xbg";
+        if (!File.Exists(Boat)) return;
+
+        XbgModel model = XbgModel.Parse(File.ReadAllBytes(Boat));
+        string[] all = [.. model.Submeshes.Select(s => s.PartName).Distinct()];
+        Assert.Contains("BODY_STATE01", all);
+        Assert.Contains("BODY_STATE02", all);
+
+        WorldModel whole = WorldModels.Bake(Boat, model, WorldModels.FineTriangleBudget)!;
+        WorldModel state01Only = WorldModels.Bake(Boat, model, WorldModels.FineTriangleBudget,
+            onlyParts: new HashSet<string>(all.Where(p => !p.EndsWith("STATE02", StringComparison.OrdinalIgnoreCase)),
+                StringComparer.OrdinalIgnoreCase))!;
+
+        // Baking the whole file already drops the STATE02 parts, so restricting to them changes
+        // nothing - which it would not if both states were still being drawn.
+        Assert.Equal(state01Only.Indices.Length, whole.Indices.Length);
+    }
+
+    /// <summary>
+    /// A wardrobe file draws only the parts the entity wears. Left whole, every mercenary in the
+    /// game renders all 111 pieces of merc_kit at once - seventeen heads on one body, and ten times
+    /// the triangles of the outfit it should be wearing.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_named_part_list_bakes_only_those_parts()
+    {
+        if (!FixturesPresent) return;
+
+        XbgModel model = ParseFixture(Prop);
+        string[] parts = [.. model.Submeshes.Where(s => s.LodLevel == 0)
+            .Select(s => s.PartName).Where(p => p.Length > 0).Distinct()];
+        if (parts.Length == 0) return;
+
+        WorldModel whole = WorldModels.Bake(Prop, model, WorldModels.FineTriangleBudget)!;
+        WorldModel one = WorldModels.Bake(Prop, model, WorldModels.FineTriangleBudget,
+            onlyParts: new HashSet<string>([parts[0]], StringComparer.OrdinalIgnoreCase))!;
+
+        Assert.True(one.Indices.Length <= whole.Indices.Length);
+        Assert.True(one.Vertices.Length <= whole.Vertices.Length);
+
+        // A list naming nothing the file has leaves no geometry at all, rather than falling back to
+        // the whole mesh - the caller only passes a list the entity actually stated.
+        Assert.Null(WorldModels.Bake(Prop, model, WorldModels.FineTriangleBudget,
+            onlyParts: new HashSet<string>(["NO_SUCH_PART"], StringComparer.OrdinalIgnoreCase)));
+    }
+
     /// <summary>Retail meshes carry two UV sets, and 99% of the corpus has the second one. It is
     /// what the "group" half of a material's tiling vector reads, so dropping it silently costs the
     /// mask and the second diffuse layer their coordinates.</summary>

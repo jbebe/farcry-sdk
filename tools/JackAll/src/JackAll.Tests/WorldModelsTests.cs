@@ -1,6 +1,7 @@
 using System.Numerics;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.World;
+using JackAll.Tools.Xbg;
 using JackAll.Tools.Xbm;
 
 namespace JackAll.Tests;
@@ -317,6 +318,87 @@ public class WorldModelsTests
 
     private static byte[]? ReadLibrary(string path)
         => path.Equals(LibraryPath, StringComparison.OrdinalIgnoreCase) ? File.ReadAllBytes(LibraryFixture) : null;
+
+    /// <summary>A handful of outfits over one mesh is cheap, so each entity keeps its own.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_few_outfits_over_one_mesh_each_keep_their_own_geometry()
+    {
+        if (!File.Exists(BoatFixture)) return;
+
+        string[] parts = BoatParts();
+        WorldModelSet set = LoadOutfits(Outfits(parts, 3));
+
+        Assert.Equal(3, set.Models.Count);
+    }
+
+    /// <summary>
+    /// Past the cap they all collapse onto the most common one. Without this a wardrobe file bakes
+    /// once per outfit worn anywhere in the world - 682 of them for the mercenaries of world 1,
+    /// turning a 2 MB mesh into 137 MB.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Too_many_outfits_over_one_mesh_collapse_onto_the_most_common()
+    {
+        if (!File.Exists(BoatFixture)) return;
+
+        string[] parts = BoatParts();
+        List<string> outfits = Outfits(parts, WorldModels.MaxOutfitsPerMesh + 4);
+
+        // One of them is worn twice, so it is the one everybody ends up in.
+        string favourite = outfits[2];
+        outfits.Add(favourite);
+
+        WorldModelSet set = LoadOutfits(outfits);
+        Assert.Single(set.Models);
+
+        WorldModel expected = WorldModels.Bake(
+            BoatFixture, XbgModel.Parse(File.ReadAllBytes(BoatFixture)), WorldModels.FineTriangleBudget,
+            onlyParts: new HashSet<string>(favourite.Split(';'), StringComparer.OrdinalIgnoreCase))!;
+        Assert.Equal(expected.Indices.Length, set.Models[0].Indices.Length);
+
+        // Every entity still draws, just all of them in the same clothes.
+        Assert.Equal(outfits.Count, set.ModelIndicesByEntity.Count);
+    }
+
+    private const string BoatFixture = "Fixtures/Xbg/swampboat.xbg";
+
+    private static string[] BoatParts()
+        => [.. XbgModel.Parse(File.ReadAllBytes(BoatFixture)).Submeshes
+            .Select(s => s.PartName).Where(p => p.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.Ordinal)];
+
+    /// <summary>Distinct non-empty part lists, taken as the bit patterns of 1, 2, 3...</summary>
+    private static List<string> Outfits(string[] parts, int count)
+        => [.. Enumerable.Range(1, count).Select(n => MeshRef.ParseParts(
+            string.Join(';', parts.Where((_, i) => i < 30 && (n & (1 << i)) != 0))))];
+
+    private static WorldModelSet LoadOutfits(IReadOnlyList<string> outfits)
+    {
+        var doc = new WorldSectorDocument
+        {
+            SourcePath = BoatFixture,
+            SectorId = 0,
+            PristineRoot = new FcbObject { TypeHash = WorldHashes.Entity },
+        };
+
+        byte[] mesh = File.ReadAllBytes(BoatFixture);
+        List<WorldEntity> entities = [.. outfits.Select(parts =>
+        {
+            var graphics = new FcbObject { TypeHash = WorldHashes.CGraphicComponent };
+            graphics.Values[WorldHashes.TextObjModel] = System.Text.Encoding.UTF8.GetBytes(BoatFixture);
+            graphics.Values[WorldHashes.HidMeshName] = System.Text.Encoding.UTF8.GetBytes(parts);
+            var components = new FcbObject { TypeHash = WorldHashes.Components };
+            components.Children.Add(graphics);
+            var node = new FcbObject { TypeHash = WorldHashes.Entity };
+            node.Children.Add(components);
+            return new WorldEntity { Node = node, HomeSector = doc, LayerPathId = "main", Position = Vector3.Zero };
+        })];
+
+        return WorldModels.Load(entities, EmptyIndex(),
+            path => path.EndsWith(".xbm", StringComparison.OrdinalIgnoreCase) ? null : mesh);
+    }
 
     private static ArchetypeIndex EmptyIndex() => ArchetypeIndex.Load([new ArchetypeLayer("missing.fcb")], _ => null);
 

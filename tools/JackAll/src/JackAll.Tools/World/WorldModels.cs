@@ -1,6 +1,7 @@
 using System.Collections.Concurrent;
 using System.Globalization;
 using System.Numerics;
+using System.Text.RegularExpressions;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.Xbg;
@@ -71,6 +72,32 @@ public readonly record struct MaterialSurface
         SecondDiffuseTiling = Vector2.One,
         MaskTiling = Vector2.One,
     };
+}
+
+/// <summary>
+/// One graphics slot: the mesh it names, and which of that mesh's parts to draw.
+/// </summary>
+/// <remarks>
+/// An empty <see cref="Parts"/> draws the whole mesh, which is what almost every entity wants. The
+/// exception is a wardrobe file: <c>merc_kit.xbg</c> holds all 111 pieces a mercenary can be built
+/// from - every head, hat, shirt and pair of boots - and each NPC's <c>hidMeshName</c> lists the
+/// dozen it actually wears. Drawing the file whole gives one body wearing seventeen faces.
+/// </remarks>
+public readonly record struct MeshRef(string Path, string Parts)
+{
+    /// <summary>The parts as the file writes them: a semicolon-delimited list with empty ends.
+    /// Normalized to a plain uppercase list so it can key a bake.</summary>
+    public static string ParseParts(string hidMeshName)
+        => string.Join(';', hidMeshName
+            .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Select(p => p.ToUpperInvariant())
+            .Order(StringComparer.Ordinal));
+
+    /// <summary>The part names as a set, or null when this slot draws the whole mesh.</summary>
+    public IReadOnlySet<string>? PartSet()
+        => Parts.Length == 0
+            ? null
+            : new HashSet<string>(Parts.Split(';'), StringComparer.OrdinalIgnoreCase);
 }
 
 /// <summary>The slice of a fine tier drawn with one material, with the diffuse .xbt it binds when
@@ -151,37 +178,44 @@ public static class WorldModels
     /// per-slot "object" children. A component holding several slots draws all of them - that is
     /// where a vehicle keeps its wheels and glass, and a building its separate wall pieces.</summary>
     public static IReadOnlyList<string> MeshPaths(FcbObject entityNode)
+        => [.. MeshRefs(entityNode).Select(r => r.Path).Distinct(StringComparer.OrdinalIgnoreCase)];
+
+    /// <summary>The same slots, each with the parts of its mesh the entity actually wears.</summary>
+    public static IReadOnlyList<MeshRef> MeshRefs(FcbObject entityNode)
     {
         if (FcbEntityFields.FindComponent(entityNode, WorldHashes.CGraphicComponent) is not { } component)
         {
             return [];
         }
 
-        var paths = new List<string>();
-        void Take(string value)
+        var refs = new List<MeshRef>();
+        void Take(FcbObject holder)
         {
+            string value = FcbEntityFields.ReadString(holder, WorldHashes.TextObjModel);
             if (value.Length == 0)
             {
                 return;
             }
 
-            string path = NameHash.Normalize(value);
-            if (!paths.Contains(path, StringComparer.OrdinalIgnoreCase))
+            var slot = new MeshRef(
+                NameHash.Normalize(value),
+                MeshRef.ParseParts(FcbEntityFields.ReadString(holder, WorldHashes.HidMeshName)));
+            if (!refs.Contains(slot))
             {
-                paths.Add(path);
+                refs.Add(slot);
             }
         }
 
-        Take(FcbEntityFields.ReadString(component, WorldHashes.TextObjModel));
+        Take(component);
         foreach (FcbObject slot in component.Children)
         {
             if (slot.TypeHash == WorldHashes.GraphicObject)
             {
-                Take(FcbEntityFields.ReadString(slot, WorldHashes.TextObjModel));
+                Take(slot);
             }
         }
 
-        return paths;
+        return refs;
     }
 
     public static WorldModelSet Load(
@@ -191,8 +225,8 @@ public static class WorldModels
         Func<string, MaterialSurface?> surfaceByMaterial = SurfaceResolver(readByPath);
 
         // A few hundred archetypes cover ~90k entities, so the fallback walk runs once per name.
-        var archetypeMeshPaths = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
-        var pathsByEntity = new Dictionary<WorldEntity, IReadOnlyList<string>>();
+        var archetypeMeshRefs = new Dictionary<string, IReadOnlyList<MeshRef>>(StringComparer.OrdinalIgnoreCase);
+        var refsByEntity = new Dictionary<WorldEntity, IReadOnlyList<MeshRef>>();
         int withoutMesh = 0;
         foreach (WorldEntity entity in entities)
         {
@@ -201,21 +235,21 @@ public static class WorldModels
                 continue;
             }
 
-            IReadOnlyList<string> paths = MeshPaths(entity.Node);
-            if (paths.Count == 0 && entity.ArchetypeName.Length > 0)
+            IReadOnlyList<MeshRef> refs = MeshRefs(entity.Node);
+            if (refs.Count == 0 && entity.ArchetypeName.Length > 0)
             {
-                if (!archetypeMeshPaths.TryGetValue(entity.ArchetypeName, out IReadOnlyList<string>? cached))
+                if (!archetypeMeshRefs.TryGetValue(entity.ArchetypeName, out IReadOnlyList<MeshRef>? cached))
                 {
-                    cached = archetypes.Winner(entity.ArchetypeName) is { } winner ? MeshPaths(winner.Node) : [];
-                    archetypeMeshPaths[entity.ArchetypeName] = cached;
+                    cached = archetypes.Winner(entity.ArchetypeName) is { } winner ? MeshRefs(winner.Node) : [];
+                    archetypeMeshRefs[entity.ArchetypeName] = cached;
                 }
 
-                paths = cached;
+                refs = cached;
             }
 
-            if (paths.Count > 0)
+            if (refs.Count > 0)
             {
-                pathsByEntity[entity] = paths;
+                refsByEntity[entity] = refs;
             }
             else
             {
@@ -223,25 +257,43 @@ public static class WorldModels
             }
         }
 
-        List<string> unique = [.. pathsByEntity.Values.SelectMany(p => p).Distinct(StringComparer.OrdinalIgnoreCase)];
-        var baked = new ConcurrentDictionary<string, WorldModel?>(StringComparer.OrdinalIgnoreCase);
+        CollapseCrowdedWardrobes(refsByEntity);
+
+        // Keyed by slot rather than by path, because two entities wearing different outfits out of
+        // one wardrobe file bake to different geometry. The parse is still shared per path, so a
+        // file every mercenary in the world references is read and parsed exactly once.
+        List<MeshRef> unique = [.. refsByEntity.Values.SelectMany(r => r).Distinct()];
+        var parsed = new ConcurrentDictionary<string, XbgModel?>(StringComparer.OrdinalIgnoreCase);
+        var baked = new ConcurrentDictionary<MeshRef, WorldModel?>();
         int done = 0;
-        Parallel.ForEach(unique, path =>
+        Parallel.ForEach(unique, slot =>
         {
             WorldModel? model = null;
-            if (readByPath(path) is { } bytes)
+            // A single corrupt or unexpected file must not take down the world load.
+            try
             {
-                // A single corrupt or unexpected file must not take down the world load.
-                try
+                XbgModel? mesh = parsed.GetOrAdd(slot.Path, path =>
                 {
-                    model = Bake(path, XbgModel.Parse(bytes), FineTriangleBudget, surfaceByMaterial);
-                }
-                catch (Exception)
+                    try
+                    {
+                        return readByPath(path) is { } bytes ? XbgModel.Parse(bytes) : null;
+                    }
+                    catch (Exception)
+                    {
+                        return null;
+                    }
+                });
+
+                if (mesh is not null)
                 {
+                    model = Bake(slot.Path, mesh, FineTriangleBudget, surfaceByMaterial, slot.PartSet());
                 }
             }
+            catch (Exception)
+            {
+            }
 
-            baked[path] = model;
+            baked[slot] = model;
             int soFar = Interlocked.Increment(ref done);
             if (soFar % 200 == 0)
             {
@@ -250,21 +302,21 @@ public static class WorldModels
         });
 
         var models = new List<WorldModel>();
-        var indexByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        foreach (string path in unique)
+        var indexByPath = new Dictionary<MeshRef, int>();
+        foreach (MeshRef slot in unique)
         {
-            if (baked[path] is { } model)
+            if (baked[slot] is { } model)
             {
-                indexByPath[path] = models.Count;
+                indexByPath[slot] = models.Count;
                 models.Add(model);
             }
         }
 
-        var modelIndicesByEntity = new Dictionary<WorldEntity, int[]>(pathsByEntity.Count);
-        foreach ((WorldEntity entity, IReadOnlyList<string> paths) in pathsByEntity)
+        var modelIndicesByEntity = new Dictionary<WorldEntity, int[]>(refsByEntity.Count);
+        foreach ((WorldEntity entity, IReadOnlyList<MeshRef> refs) in refsByEntity)
         {
-            int[] indices = [.. paths
-                .Select(p => indexByPath.TryGetValue(p, out int index) ? index : -1)
+            int[] indices = [.. refs
+                .Select(r => indexByPath.TryGetValue(r, out int index) ? index : -1)
                 .Where(index => index >= 0)];
             if (indices.Length > 0)
             {
@@ -285,7 +337,8 @@ public static class WorldModels
 
     /// <summary>Null when the parse yielded no drawable triangles (DNKS mismatch or empty mesh).</summary>
     public static WorldModel? Bake(
-        string path, XbgModel model, int fineTriangleBudget, Func<string, MaterialSurface?>? surfaceByMaterial = null)
+        string path, XbgModel model, int fineTriangleBudget,
+        Func<string, MaterialSurface?>? surfaceByMaterial = null, IReadOnlySet<string>? onlyParts = null)
     {
         // Measured on what each tier would actually draw, fallback parts included, so the budget
         // means the same thing as the bake.
@@ -293,7 +346,7 @@ public static class WorldModels
         var trianglesPerLod = new Dictionary<int, int>();
         foreach (int lod in model.LodLevels)
         {
-            List<XbgSubmesh> at = SubmeshesAt(model, lod);
+            List<XbgSubmesh> at = SubmeshesAt(model, lod, onlyParts);
             submeshesPerLod[lod] = at;
             trianglesPerLod[lod] = at.Sum(s => s.Indices.Length) / 3;
         }
@@ -345,11 +398,117 @@ public static class WorldModels
     /// <summary>Parts do not all carry the same LOD levels - a wall or a wheel often stops at a
     /// finer one than the body it belongs to - so a part with nothing at the requested level falls
     /// back to its own nearest rather than dropping out of the model.</summary>
-    private static List<XbgSubmesh> SubmeshesAt(XbgModel model, int lod)
+    /// <summary>
+    /// How many different part lists one mesh may bake before they all collapse to one.
+    /// </summary>
+    /// <remarks>
+    /// Filtering parts out never costs memory - it is the number of copies that does. Each distinct
+    /// outfit is a separate bake of the same file, so a mesh worn one way is 2 MB and the same mesh
+    /// worn 682 ways is 137 MB. A handful of variants is free and worth keeping; a wardrobe with
+    /// hundreds is not, and every NPC wearing one default outfit still beats drawing the whole rack.
+    /// </remarks>
+    public const int MaxOutfitsPerMesh = 16;
+
+    /// <summary>
+    /// Holds the per-entity outfits of any mesh with few enough of them, and gives every entity
+    /// wearing a more crowded one its most common outfit instead. Ties break on the part list so a
+    /// world always loads the same way.
+    /// </summary>
+    private static void CollapseCrowdedWardrobes(Dictionary<WorldEntity, IReadOnlyList<MeshRef>> refsByEntity)
+    {
+        var uses = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
+        foreach (MeshRef slot in refsByEntity.Values.SelectMany(refs => refs))
+        {
+            if (slot.Parts.Length == 0)
+            {
+                continue;
+            }
+
+            if (!uses.TryGetValue(slot.Path, out Dictionary<string, int>? outfits))
+            {
+                uses[slot.Path] = outfits = new Dictionary<string, int>(StringComparer.Ordinal);
+            }
+
+            outfits[slot.Parts] = outfits.GetValueOrDefault(slot.Parts) + 1;
+        }
+
+        var defaults = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+        foreach ((string path, Dictionary<string, int> outfits) in uses)
+        {
+            if (outfits.Count > MaxOutfitsPerMesh)
+            {
+                defaults[path] = outfits
+                    .OrderByDescending(o => o.Value).ThenBy(o => o.Key, StringComparer.Ordinal)
+                    .First().Key;
+            }
+        }
+
+        if (defaults.Count == 0)
+        {
+            return;
+        }
+
+        foreach (WorldEntity entity in refsByEntity.Keys.ToList())
+        {
+            IReadOnlyList<MeshRef> refs = refsByEntity[entity];
+            if (!refs.Any(r => r.Parts.Length > 0 && defaults.ContainsKey(r.Path)))
+            {
+                continue;
+            }
+
+            refsByEntity[entity] = [.. refs.Select(r =>
+                r.Parts.Length > 0 && defaults.TryGetValue(r.Path, out string? only)
+                    ? r with { Parts = only }
+                    : r)];
+        }
+    }
+
+    /// <summary>The <c>STATE&lt;n&gt;</c> tag a part name carries, anywhere in the name.</summary>
+    private static readonly Regex StateToken =
+        new(@"_?STATE(\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
+
+    /// <summary>
+    /// One variant per part. A file holds every state a part can be in - a vehicle body intact and
+    /// wrecked, a door closed, ajar and open, a sign whole and snapped - and the engine shows one at
+    /// a time, so drawing them all buries a pristine hull inside its own wreck.
+    /// </summary>
+    /// <remarks>
+    /// Each part keeps the lowest state number it has, which is the intact, closed, unbroken one.
+    /// The comparison is per part rather than per file because 616 part groups in the retail set
+    /// have no state 1 at all - a file-wide minimum would delete them outright. A part naming no
+    /// state is never touched. Across the corpus this drops 364 parts over 181 meshes.
+    /// </remarks>
+    private static List<XbgSubmesh> PristineOnly(List<XbgSubmesh> submeshes)
+    {
+        var lowest = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        foreach (XbgSubmesh submesh in submeshes)
+        {
+            if (StateOf(submesh.PartName) is not int state)
+            {
+                continue;
+            }
+
+            string group = StateToken.Replace(submesh.PartName, "");
+            lowest[group] = lowest.TryGetValue(group, out int best) ? Math.Min(best, state) : state;
+        }
+
+        return lowest.Count == 0
+            ? submeshes
+            : [.. submeshes.Where(s => StateOf(s.PartName) is not int state
+                || state == lowest[StateToken.Replace(s.PartName, "")])];
+    }
+
+    private static int? StateOf(string partName)
+        => StateToken.Match(partName) is { Success: true } match
+            && int.TryParse(match.Groups[1].ValueSpan, out int state)
+                ? state
+                : null;
+
+    private static List<XbgSubmesh> SubmeshesAt(XbgModel model, int lod, IReadOnlySet<string>? onlyParts)
     {
         var picked = new List<XbgSubmesh>();
-        foreach (IGrouping<string, XbgSubmesh> part in model.Submeshes
-            .Where(s => s.Indices.Length > 0)
+        foreach (IGrouping<string, XbgSubmesh> part in PristineOnly([.. model.Submeshes
+            .Where(s => s.Indices.Length > 0 && (onlyParts is null || onlyParts.Contains(s.PartName)))])
             .GroupBy(s => s.PartName, StringComparer.OrdinalIgnoreCase))
         {
             // Ties break toward the finer level, so the second key is the LOD itself.

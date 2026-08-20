@@ -25,6 +25,10 @@ public static class WorldHashes
     public static readonly uint CGraphicComponent = FcbClassDefinitions.Crc32Ascii("CGraphicComponent");
     /// <summary>The .xbg path on a graphics component (or on its per-slot "object" children).</summary>
     public static readonly uint TextObjModel = FcbClassDefinitions.Crc32Ascii("text_objModel");
+    /// <summary>The parts of a mesh an entity actually draws, semicolon-delimited. Empty on almost
+    /// everything; a wardrobe file needs it to pick one outfit out of the whole rack.</summary>
+    public static readonly uint HidMeshName = FcbClassDefinitions.Crc32Ascii("hidMeshName");
+
     /// <summary>The per-slot child a library archetype's graphics component nests its fields in.</summary>
     public static readonly uint GraphicObject = FcbClassDefinitions.Crc32Ascii("object");
 }
