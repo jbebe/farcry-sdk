@@ -105,6 +105,82 @@ merge against an archetype; the other 98 stand alone. All 146 carry their own `C
 61 name their own `.xbg` mesh directly — which is why a renderer can draw most of a map without
 opening a library, while a property inspector cannot.
 
+## `hidMeshName` picks parts out of a wardrobe
+
+:::info[Verified against the retail corpus]
+:::
+
+A graphics slot's `objModel` names the `.xbg`; its `hidMeshName` names **which parts of that file to
+draw**, semicolon-delimited with empty ends:
+
+```
+;P_MC_CAUCASIAN_HEAD03;P_MC_UB_SHIRT_VEST02;P_MC_CAUCASIAN_SHIRT_ARMS;P_MC_LB_PANT_JEANS01;
+ P_MC_DUMMYARMDEALERBEARD;P_MC_LB_BOOT02;P_MC_CAUC_HAIR01;…;P_MC_EYES_CAUCASIAN_HEAD03;
+```
+
+The names match the mesh's `DNKS` part names exactly. Empty — which it is on almost everything —
+means draw the whole file.
+
+It matters for exactly the files where it is set. `merc_kit.xbg` is a 111-part wardrobe referenced by
+469 campaign sector files; without the list every mercenary in the game renders all 111 parts at
+once, which is one body wearing seventeen faces and ten times the triangles it should have.
+
+Note the shape: on worldsector entities the slot fields sit **flat on the component**, but on a
+character they sit in a nested `object` child, and that is where `hidMeshName` lives. Reading only
+the flat form finds nothing.
+
+Outfits are effectively unique per NPC — 709 mercenaries in `world1` wear 682 distinct part lists —
+so a tool that bakes geometry per outfit is baking almost per entity.
+
+## Where entities are actually placed
+
+:::info[Verified against the retail corpus]
+:::
+
+Three files per sector can place entities, and reading only the obvious one loses the set pieces:
+
+| File | Holds |
+|---|---|
+| `worldsector<id>.data.fcb` | the bulk — props, vehicles, NPCs, fine building detail |
+| `landmarknear<id>.data.fcb` | large-silhouette geometry, plus vegetation and spline volumes |
+| `landmarkfar_<id>.data.fcb` | the same, biased to the largest features |
+
+Counting distinct meshes placed per tier across both campaign worlds:
+
+| | shells | roofs | windows/doors | interiors |
+|---|---|---|---|---|
+| `worldsector` | 65 | 58 | 104 | 17 |
+| `landmarknear` | 26 | 22 | 6 | 0 |
+| `landmarkfar_` | 1 | 0 | 0 | 0 |
+
+The landmark tier is shell-and-roof heavy and holds **zero** interiors; the fine detail stays in the
+worldsector file. In `world1` the landmark files are almost entirely cliffs and rock formations —
+the skyline. **72 meshes are reachable no other way**, including every HQ building, the forts,
+churches, the hotel, the C-130 and several roof and door pieces.
+
+Landmark files also carry a `SectorEntity_*` vegetation container and `SplinePrimitive_*` occlusion
+volumes, which have no geometry of their own and belong to the collection and spline systems.
+
+### Buildings are kits
+
+A medium building is not one mesh. `colonialmd01` ships as a shell, `roof_01`/`roof_02`,
+`roofcap`, `roofshelter`, `roofshelter_open`, `windowsdoors_01/04/05`, `windowsdoors_open`,
+`balcony_01/02` and an interior — one shell, many combinations, including open and closed shutter
+variants.
+
+The split is a visibility budget as much as a content one. The pieces carry deliberately unequal LOD
+ladders, so detail retires before the silhouette does:
+
+| piece | LODs |
+|---|---|
+| shell | 4 |
+| roof, windows/doors, balcony | 3 |
+| interior | 2 |
+
+And they are authored to butt together exactly: `colonialmd01building_01` spans z −1.00→**7.75**,
+`colonialmd01roof_01` spans **7.75**→9.40. Small buildings are not kits — `colonialsmall02_bld01` is
+self-contained and includes its own roof.
+
 ## Components read off an instance
 
 Two component layouts confirmed from shipped sector data. Both hang off an entity's `Components`
@@ -147,6 +223,34 @@ physics maintains, so the box test lives in collider registration.
 Whether `vectorSize` is the box's full extent or a half-extent, and whether the box is centred on the
 entity, are both unconfirmed — a 2× error either way.
 :::
+
+## A third of a world's entities draw nothing
+
+:::info[Verified against the retail corpus]
+:::
+
+Of `world1`'s ~90,600 positioned entities, roughly 35,000 resolve to no mesh on themselves. They are
+not one undifferentiated pool — each carries a component that names its purpose:
+
+| Component set | Count | What it is |
+|---|---|---|
+| `CEventComponent` alone | 10,366 | pure logic nodes, the largest group |
+| `+ CFCXAIComponent` | 3,143 | AI reference points — cover, guard posts, lean and sit spots |
+| `CEntranceInfoComponent` / `CBuildingInfoComponent` | 1,204 | the `DOOR` and `WINDOW` hints AI navigates buildings by |
+| `+ CPersistComponent` | 1,130 | |
+| `CRealtreeComponent` | 807 | vegetation |
+| `CNewParticlesComponent` | 448 | particle emitters |
+| `CSoundComponent` | 325 | sound emitters |
+| `CDynamicLightComponent` | 291 | lights |
+| `CProximityTriggerComponent` | 207 | triggers |
+
+Two things fall out of this for a tool. Lights, triggers and Realtree entities are *already* drawn by
+their own systems, so a generic "entity has no mesh, draw a marker" pass stacks a second marker on
+each of them. And an entrance node carries an AI component **as well as** its entrance one, so a
+classifier that tests for AI first files all 1,204 door and window hints among 3,000 cover markers.
+
+The count is an upper bound: about 7,800 of those entities do carry a `CGraphicComponent` and resolve
+through the archetype fallback, so they are only mesh-less if you skip that step.
 
 ## Consequences for tools
 

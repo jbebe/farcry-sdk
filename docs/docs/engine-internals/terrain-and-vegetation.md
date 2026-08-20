@@ -205,7 +205,7 @@ helpers beside it:
 
 | List | Element |
 |---|---|
-| `resourceList` | resource id, one per resource |
+| `resourceList` | resource id, one per resource — the **CRC32 of the resource's own path** |
 | `resClustersCntList` | how many clusters that resource owns |
 | `clustersInstancesCntList` | instance count in the **low byte**, instance-array offset in the **upper 24 bits** |
 | `boundingVolumeList` | four floats per cluster — a bounding sphere |
@@ -220,6 +220,35 @@ anything sector-relative, so `0x50342A39` is (1080.9, 2053.2). `GetInstancesCntF
 
 Per-sector vegetation extents are available without walking any of it, from
 `VegetationData.bboxMin`/`bboxMax`.
+
+### Resource ids are path hashes, and most of the scatter is grass
+
+:::info[Verified against the retail corpus]
+:::
+
+A `resourceList` element is the same CRC32 the `.fat` index keys on, taken over the resource's
+normalized path — so a reverse lookup against the known path list resolves it. All 84 distinct ids
+across `world1`'s landmark files resolve this way, with no misses.
+
+What they resolve to is worth knowing before building anything on top. `world1` places **2,472,226
+instances** across 5,377 landmark files:
+
+| | resources | instances |
+|---|---|---|
+| grass meshes (`1_grass<biome>_<letter>.xbg`) | 9 | 2,340,025 (95%) |
+| all `.xbg` | 24+ | 2,370,625 (96%) |
+| `.rtx` [RealTree](../file-formats/rtx.md) | 60 | ~101,000 (4%) |
+
+`1_grasssavannah_a.xbg` alone is placed 793,864 times. Two consequences:
+
+- The collection system is **not** a plant system. It scatters `terrain/rocks/*` and
+  `objects/natural/dung*` through the same lists, so a tool that filters it by folder loses geometry.
+- Almost all of it is ordinary `.xbg`, so a renderer that can draw a crate can draw the scatter. The
+  RealTree share is small — bushes and shrubs, not the bulk. At this scale, nothing on that path can
+  afford to allocate per instance.
+
+Sampling is treacherous here: a few hundred landmark files taken in directory order land in desert
+sectors, which are rock-heavy and grass-light, and give the opposite ratio. Count the world.
 
 Three things this is **not**, each checked directly: vegetation is not placed as entities (33,000
 sampled entities contain about 16 plant props); it is not in `worldsector*.data.fcb`, the sector

@@ -50,7 +50,11 @@ is a repeated decimal string (`180809718`), which looks like a build or revision
 
 ## Placement
 
-`.rtx` names a species, not a location. How a level decides where its vegetation stands is a separate
-and currently unresolved question — retail campaign levels carry no authored placement data, only a
-palette of collection definitions. See
-[Retail campaign levels carry no authored collection data](../engine-internals/terrain-and-vegetation.md#retail-campaign-levels-carry-no-authored-collection-data).
+`.rtx` names a species, not a location. Placement is resolved: it lives in the per-sector landmark
+files, under a `CCollectionComponent`'s `VegetationZoneData`, and a `.rtx` is referenced there the
+same way a mesh is — by the CRC32 of its own path. See
+[It lives in the landmark files](../engine-internals/terrain-and-vegetation.md#it-lives-in-the-landmark-files)
+and [Resource ids are path hashes](../engine-internals/terrain-and-vegetation.md#resource-ids-are-path-hashes-and-most-of-the-scatter-is-grass).
+
+RealTree is the smaller half of that scatter: 60 distinct `.rtx` resources against roughly 101,000
+placed instances in `world1`, about 4% of the total. The other 96% resolves to ordinary `.xbg`.

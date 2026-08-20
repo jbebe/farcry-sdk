@@ -51,6 +51,139 @@ tiling/glow effects, but only if the values aren't clamped to a byte range.
 (offset divisible by 16), or the game breaks on load. Does not apply to XBM (material) files, which
 carry no 3D data — some converters apply the rule to XBM anyway without it mattering either way.
 
+## The shading model, read out of the engine's own shaders
+
+:::info[Verified via reverse engineering]
+Disassembled from the shipped shader objects. Everything in this section is the engine's own code,
+not inference from the asset files.
+:::
+
+`Data_Win32/shadersobj.fat` carries the compiled shaders under two trees:
+
+| Tree | Build | Names |
+|---|---|---|
+| `engine/shaders/obj/*.pso`, `.vso` | Direct3D 9 | stripped |
+| `engine/shaders/obj10/*.pso`, `.vso` | Direct3D 10 (DXBC) | **intact** |
+
+The D3D9 tree is the one that looks like a dead end: the bytecode begins 78 bytes into a proprietary
+wrapper and carries no `CTAB`, so every constant is a bare register number. The `obj10` tree is plain
+`DXBC` from byte 0 with its `RDEF` reflection chunk intact, which means constant-buffer names, field
+offsets, sampler names and the template name all survive. Any DXBC disassembler reads it directly:
+
+```
+fxc /nologo /dumpbin shadernumber_06480e00.pso
+```
+
+Filenames are permutation ids, not paths, so the practical way to find a template is to grep the tree
+for a constant name (`DiffuseColorBase`, `MaskTexture1`) and disassemble the hits.
+
+### The `Generic` pixel shader
+
+`Generic` covers about two thirds of the retail material set. Two diffuse layers and a mask, where
+the mask decides both how much of layer 2 shows and how far layer 1's tint travels:
+
+```
+uvD1   = uv0 * DiffuseTilingAndGroup1.xy + uv1 * DiffuseTilingAndGroup1.zw
+uvD2   = uv0 * DiffuseTilingAndGroup2.xy + uv1 * DiffuseTilingAndGroup2.zw
+uvM    = uv0 * MaskTilingAndGroup1.xy    + uv1 * MaskTilingAndGroup1.zw
+
+d1     = tex2D(DiffuseTexture1, uvD1)
+clip(d1.a - AlphaValues.x)                  // alpha test, layer 1's alpha only
+mask   = tex2D(MaskTexture1, uvM)
+
+layer1 = d1.rgb * lerp(DiffuseColorBase, DiffuseColor1, mask.b * saturate(vertexColour.b))
+layer2 = tex2D(DiffuseTexture2, uvD2).rgb * DiffuseColor2
+
+albedo = lerp(layer1, layer2, mask.g * saturate(vertexColour.g))
+alpha  = d1.a
+```
+
+The two weights are worth stating separately, because neither is guessable from the asset files and
+both are easy to get half-right:
+
+- **Layer-1 tint weight** is `MaskTexture1.b × vertexColour.b`. Reading the vertex channel alone
+  paints the full `DiffuseColor1` over the whole surface — on a material whose `DiffuseColor1` is a
+  strong colour that turns a weathered wall into a flat repaint.
+- **Layer-2 blend weight** is `MaskTexture1.g × vertexColour.g`.
+
+A material naming no mask samples white, which is why an unmasked surface takes its tint at full
+strength. `DiffuseColorBase` is *not* dead data even though the vertex channel is 1.0 on roughly
+three quarters of retail vertices — the mask is what brings it in.
+
+Sampler bindings are `t0` `MaskTexture1`, `t1` `DiffuseTexture1`, `t2` `DiffuseTexture2`. The
+`Generic` constant buffer's 16-byte slots are `[1]` `DiffuseColorBase`, `[2]` `DiffuseColor1`,
+`[3]` `DiffuseColor2`, `[7]` `DiffuseTilingAndGroup1`, `[8]` `DiffuseTilingAndGroup2`,
+`[11]` `MaskTilingAndGroup1`.
+
+### Tiling and the "group" half
+
+Each `…TilingAndGroup` constant is `float4(tilingU, tilingV, groupU, groupV)`. The `.xy` half scales
+UV set 0 and the `.zw` half scales UV set 1, so a texture bound to the second set carries its tiling
+in `zw` and zeroes in `xy`. The `.xbm` stores the two halves apart: `DiffuseTiling1`,
+`DiffuseTiling2` and `MaskTiling1` as `float2`, plus `UVGroupMapChannel0..3` mapping a group index to
+a UV channel.
+
+`UVGroupMapChannel0` is 0 on every retail material and layer 1 always sits on group 0, so layer 1
+always reads UV set 0. Which group the mask and layer 2 use is **not recorded in the `.xbm`** — only
+the group-to-channel table is — and it could not be recovered by correlating tiling values against
+the table, so that mapping is still open.
+
+Tiling is a real number, not a formality: 1,227 of 2,235 retail materials tile at something other
+than 1, up to 20×.
+
+## Vertex layout, measured across the retail set
+
+:::info[Verified against the retail corpus]
+Measured over all 2,922 `.xbg` files in `worlds.fat`, and cross-checked against the vertex shader
+that consumes them.
+:::
+
+- **Two UV sets.** 2,905 of 2,922 meshes (99%) carry UV set 1 — bit `0x0800`, part of the common
+  `0x0BCA` static layout. None carry a third. The second set is what the tiling "group" half reads.
+- **UV decompression is the `PMCU` chunk.** The vertex shader runs both texcoords through one
+  `_MeshDecompression.zw` pair as `raw * scale + translate`, which is exactly `PMCU`'s translate and
+  scale. UVs stay in D3D space, where V=0 is the texture's top row.
+- **Vertex colour is a mask, stored BGRA.** The vertex shader emits it as `colour.zyxw`, i.e. it
+  swizzles the buffer's BGRA into RGBA before the pixel shader sees it. Green and blue are the two
+  blend weights above; every mesh in the set carries the attribute.
+- **Triangles wind clockwise** around their authored normal — the D3D convention. Measured at 99–100%
+  per file across characters, vehicles, props and buildings. Renderers that assume OpenGL's
+  counter-clockwise default will treat every outward-facing triangle as back-facing, which silently
+  breaks backface culling and any lighting that keys off facing.
+- Vertex-format flags seen in retail: `0x0BCA` (static, 32-byte stride), `0x0BDA` (skinned, 40-byte),
+  `0x008A` (16-byte).
+
+## Parts, damage states and wardrobes
+
+:::info[Verified against the retail corpus]
+:::
+
+The `DNKS` chunk names each drawable block, and that name — not its index — is the part's identity.
+Names carry a `_LOD<n>` suffix which is the LOD tier, and the same part appears once per tier.
+
+**A rigid part's vertices are stored around its own pivot, not in model space.** What places it is
+the `EDON` bone that *shares its name*: take that bone's world matrix and transform the part by it.
+Skip this and every wheel, door and bumper piles up at the model origin. Roughly half of retail parts
+have a non-identity placement, so the error is obvious on vehicles and invisible on a single-part
+prop. Sibling parts frequently share one vertex buffer and place it differently, so placement has to
+be applied per part rather than per buffer.
+
+**Skinned meshes are the exception**: their vertices already sit in the skeleton root's bind space,
+so they take the root bone rather than a same-named one. That root is at the character's waist,
+around z = +1.0 — using the wrong one sinks a character to the knees through the floor.
+
+**A file holds every state a part can be in, and the engine draws one.** Roughly 1,162 parts across
+the set carry a `STATE<n>` tag: a vehicle body intact and wrecked, a door closed/ajar/open, a road
+sign whole and snapped. The lowest number is the intact, closed, unbroken one. The comparison has to
+be made **per part**, not per file — 616 part groups in the retail set have no state 1 at all, so a
+file-wide minimum deletes them.
+
+**Character files are wardrobes.** `characters/mercenaries/merc_kit.xbg` holds 111 parts — every
+head, hat, shirt, vest, trouser, boot and ethnicity-specific arm and chest a mercenary can be built
+from, 77,193 triangles in total. A single NPC wears about a dozen of them, roughly 7,700 triangles.
+Which dozen is on the entity, not in the mesh — see
+[`hidMeshName`](../engine-internals/entity-instancing.md#hidmeshname-picks-parts-out-of-a-wardrobe).
+
 ## Character/creature bone palettes
 
 Neither author understood the `SULC` submesh blocks' bone-palette data for character XBGs as of April
