@@ -349,11 +349,26 @@ public partial class MapTabView : UserControl
                 Haze: demo));
         }
 
+        // Every opaque surface goes in before the water. The water blends and never writes depth,
+        // so it can only occlude what is already in the depth buffer: drawn first, a boat below
+        // the surface paints straight over it and reads as floating in a hole.
+        bool drawEntityModels = LayerCatalog.Entities.IsVisible && EntityDrawMode.SelectedIndex != ModeMarkers;
+        if (LayerCatalog.Vegetation.IsVisible)
+        {
+            _vegetationModelLayer?.Draw(viewProjection, _camera.Position, demo);
+        }
+        if (drawEntityModels)
+        {
+            _modelLayer?.Draw(viewProjection, _camera.Position, demo);
+        }
+
         if (LayerCatalog.Water.IsVisible)
         {
             _waterLayer?.Draw(viewProjection, _camera.Position, demo);
         }
 
+        // Indicators from here on: lines and markers that are meant to read through the water, not
+        // sit under it.
         if (LayerCatalog.Shapes.IsVisible)
         {
             _shapeLayer?.Draw(viewProjection);
@@ -366,8 +381,6 @@ public partial class MapTabView : UserControl
 
         if (LayerCatalog.Vegetation.IsVisible)
         {
-            // Meshes first, opaque; the markers for what has no mesh blend over them.
-            _vegetationModelLayer?.Draw(viewProjection, _camera.Position, demo);
             _vegetationLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
                 MarkerStyle.World(2f));
         }
@@ -391,12 +404,6 @@ public partial class MapTabView : UserControl
 
         if (LayerCatalog.Entities.IsVisible)
         {
-            if (EntityDrawMode.SelectedIndex != ModeMarkers)
-            {
-                _modelLayer?.Draw(viewProjection, _camera.Position, demo);
-            }
-
-            // Markers blend, so they draw after the opaque models.
             _markerLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
                 MarkerStyle.World(MarkerWorldSize));
         }
