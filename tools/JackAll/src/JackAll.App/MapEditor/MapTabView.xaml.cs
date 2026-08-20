@@ -100,6 +100,11 @@ public partial class MapTabView : UserControl
     private ShapeLayer? _triggerLayer;
     private SkyLayer? _sky;
     private SelectionBoxLayer? _selectionBox;
+    private TranslateGizmoLayer? _gizmo;
+
+    /// <summary>The arm being dragged, or the one under the cursor when nothing is held.</summary>
+    private GizmoGrab? _grab;
+    private GizmoAxis _hoveredArm = GizmoAxis.None;
 
     private double _frameSeconds;
     private int _frames;
@@ -457,14 +462,84 @@ public partial class MapTabView : UserControl
             * System.Numerics.Matrix4x4.CreateTranslation(position);
 
         _selectionBox ??= new SelectionBoxLayer();
-        _selectionBox.Draw(viewProjection, ToGl(model), new OpenTK.Mathematics.Vector3(1f, 0.85f, 0.2f));
+        _selectionBox.Draw(viewProjection, GlMatrix.From(model), new OpenTK.Mathematics.Vector3(1f, 0.85f, 0.2f));
+
+        _gizmo ??= new TranslateGizmoLayer();
+        _gizmo.Draw(viewProjection, position, GizmoScale(position), _grab?.Axis ?? _hoveredArm);
     }
 
-    private static OpenTK.Mathematics.Matrix4 ToGl(System.Numerics.Matrix4x4 m) => new(
-        m.M11, m.M12, m.M13, m.M14,
-        m.M21, m.M22, m.M23, m.M24,
-        m.M31, m.M32, m.M33, m.M34,
-        m.M41, m.M42, m.M43, m.M44);
+    /// <summary>The gizmo's world size where the entity stands, holding it at a constant on-screen
+    /// size. The one definition - hit testing and drawing both go through it, so what lights up under
+    /// the cursor is what a click grabs.</summary>
+    private float GizmoScale(System.Numerics.Vector3 origin)
+        => TranslateGizmo.Scale(
+            origin, ToNumerics(_camera.Position), Camera3D.VerticalFovRadians,
+            (float)Viewport.ActualHeight, GizmoPixels);
+
+    /// <summary>The world ray under a viewport point, in the numerics types the world model uses.</summary>
+    private (System.Numerics.Vector3 Origin, System.Numerics.Vector3 Direction) RayAt(
+        System.Windows.Point point)
+    {
+        (OpenTK.Mathematics.Vector3 origin, OpenTK.Mathematics.Vector3 direction) = _camera.Ray(
+            point.X, point.Y, Viewport.ActualWidth, Math.Max(Viewport.ActualHeight, 1));
+        return (ToNumerics(origin), ToNumerics(direction));
+    }
+
+    private static System.Numerics.Vector3 ToNumerics(OpenTK.Mathematics.Vector3 v)
+        => new(v.X, v.Y, v.Z);
+
+    /// <summary>The arm under a viewport point, or None when the selection has no gizmo to grab.</summary>
+    private GizmoGrab? GrabAt(System.Windows.Point point)
+    {
+        if (!LayerCatalog.Entities.IsVisible || _selectedEntity is not { Position: { } origin })
+        {
+            return null;
+        }
+
+        (System.Numerics.Vector3 rayOrigin, System.Numerics.Vector3 direction) = RayAt(point);
+        return TranslateGizmo.Grab(rayOrigin, direction, origin, GizmoScale(origin));
+    }
+
+    /// <summary>Moves the held entity to where the cursor has dragged its arm.</summary>
+    private void DragTo(System.Windows.Point point)
+    {
+        if (_grab is not { } grab || _selectedEntity is not { } entity)
+        {
+            return;
+        }
+
+        (System.Numerics.Vector3 origin, System.Numerics.Vector3 direction) = RayAt(point);
+        if (TranslateGizmo.Follow(grab, origin, direction) is not { } moved)
+        {
+            return;
+        }
+
+        entity.Position = moved;
+
+        // The instance streams are uploaded from entity positions, so the move shows up by asking
+        // for the same rebuild a mission-layer toggle does.
+        _markersDirty = true;
+        StatusText.Text = $"{entity.Name}  {moved.X:0.00}, {moved.Y:0.00}, {moved.Z:0.00}";
+    }
+
+    /// <summary>Ends a drag, optionally putting the entity back where it was grabbed from.</summary>
+    private void EndDrag(bool revert)
+    {
+        if (_grab is { } grab && revert && _selectedEntity is { } entity)
+        {
+            entity.Position = grab.Origin;
+            _markersDirty = true;
+        }
+
+        _grab = null;
+
+        // Not while the right button still holds it for looking, or the camera loses the mouse
+        // halfway through a turn.
+        if (!_looking)
+        {
+            Viewport.ReleaseMouseCapture();
+        }
+    }
 
     /// <summary>Averages over a quarter second: a per-frame number is unreadable, and the average is
     /// the one that matters while judging whether a layer costs anything.</summary>
@@ -499,6 +574,11 @@ public partial class MapTabView : UserControl
 
     /// <summary>Floor on each axis of a pick box, so a flat or tiny model is still a target.</summary>
     private const float MinPickExtent = 0.35f;
+
+    /// <summary>Viewport height the move gizmo holds, whatever it is standing on and however far
+    /// away - a gizmo that shrinks with its entity stops being grabbable well before it stops being
+    /// visible.</summary>
+    private const float GizmoPixels = 110f;
 
     /// <summary>How far above the terrain the camera is held when ground collision is on.</summary>
     private const float GroundClearance = 1f;
@@ -550,7 +630,13 @@ public partial class MapTabView : UserControl
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
-        if (Viewport.IsKeyboardFocused && e.Key is Key.W or Key.A or Key.S or Key.D or Key.Q or Key.E)
+        // Nothing here saves, so a move is only undone by putting it back. Escape mid-drag is that.
+        if (e.Key == Key.Escape && _grab is not null)
+        {
+            EndDrag(revert: true);
+            e.Handled = true;
+        }
+        else if (Viewport.IsKeyboardFocused && e.Key is Key.W or Key.A or Key.S or Key.D or Key.Q or Key.E)
         {
             _flyKeys.Add(e.Key);
             e.Handled = true;
@@ -575,7 +661,19 @@ public partial class MapTabView : UserControl
         }
         else if (e.ChangedButton == MouseButton.Left && LayerCatalog.Entities.IsVisible)
         {
-            PickEntityAt(e.GetPosition(Viewport));
+            System.Windows.Point point = e.GetPosition(Viewport);
+
+            // The gizmo gets first refusal on the click: its arms stand in front of the entity they
+            // move, so a click that lands on one must not fall through and reselect what is behind.
+            _grab = GrabAt(point);
+            if (_grab is not null)
+            {
+                Viewport.CaptureMouse();
+            }
+            else
+            {
+                PickEntityAt(point);
+            }
         }
     }
 
@@ -586,14 +684,29 @@ public partial class MapTabView : UserControl
             _looking = false;
             Viewport.ReleaseMouseCapture();
         }
+        else if (e.ChangedButton == MouseButton.Left && _grab is not null)
+        {
+            EndDrag(revert: false);
+        }
     }
 
     private void Viewport_MouseMove(object sender, MouseEventArgs e)
     {
-        if (!_looking) return;
         System.Windows.Point p = e.GetPosition(Viewport);
-        _camera.Look((float)(p.X - _lastDragPoint.X), (float)(p.Y - _lastDragPoint.Y));
-        _lastDragPoint = p;
+        if (_grab is not null)
+        {
+            DragTo(p);
+            return;
+        }
+
+        if (_looking)
+        {
+            _camera.Look((float)(p.X - _lastDragPoint.X), (float)(p.Y - _lastDragPoint.Y));
+            _lastDragPoint = p;
+            return;
+        }
+
+        _hoveredArm = GrabAt(p)?.Axis ?? GizmoAxis.None;
     }
 
     private void Viewport_MouseWheel(object sender, MouseWheelEventArgs e)
@@ -657,6 +770,8 @@ public partial class MapTabView : UserControl
     {
         _world = world;
         _selectedEntity = null;
+        _grab = null;
+        _hoveredArm = GizmoAxis.None;
         _positionedEntities = [.. world.Entities.Where(e => e.Position is not null)];
 
         _missionLayers = [.. _positionedEntities
@@ -1090,10 +1205,7 @@ public partial class MapTabView : UserControl
             return;
         }
 
-        (OpenTK.Mathematics.Vector3 glOrigin, OpenTK.Mathematics.Vector3 glDirection) = _camera.Ray(
-            point.X, point.Y, Viewport.ActualWidth, Math.Max(Viewport.ActualHeight, 1));
-        var origin = new System.Numerics.Vector3(glOrigin.X, glOrigin.Y, glOrigin.Z);
-        var direction = new System.Numerics.Vector3(glDirection.X, glDirection.Y, glDirection.Z);
+        (System.Numerics.Vector3 origin, System.Numerics.Vector3 direction) = RayAt(point);
 
         WorldEntity? best = null;
         float bestDistance = float.MaxValue;

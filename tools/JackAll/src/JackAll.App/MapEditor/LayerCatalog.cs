@@ -88,7 +88,9 @@ public static class LayerCatalog
     public static readonly MapLayer Entities =
         new("Geometry", "Entities", "Ready",
             "Everything placed in the world; a placed entity is a delta over its archetype.",
-            ["Draw as real models, markers, or both", "Browse and search", "Select from the list or the viewport", "Read-only field view"]);
+            ["Draw as real models, markers, or both", "Browse and search", "Select from the list or the viewport",
+             "Drag the XYZ gizmo to move a selection (this session only - nothing saves yet)",
+             "Read-only field view"]);
 
     /// <summary>Owns the mission-layer list that filters which entities are shown.</summary>
     public static readonly MapLayer MissionLayers =
