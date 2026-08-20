@@ -68,7 +68,8 @@ public static class LayerCatalog
     /// <summary>Draws the real blended terrain textures while visible.</summary>
     public static readonly MapLayer Textures =
         new("Terrain", "Textures", "Ready",
-            "How the ground looks: each sector blends up to four layers from the world's 45-entry table, weighted by its atlas mask.",
+            "How the ground looks: each sector blends up to four layers from the world's 45-entry table, "
+            + "weighted by its atlas mask, fading into the sector's baked albedo with distance the way the game does.",
             ["Show real terrain textures", "Layer table browser", "Mask channel painting", "Per-sector layer assignment"]);
 
     /// <summary>Multiplies the baked lighting into the terrain while visible.</summary>

@@ -104,8 +104,40 @@ at a 20-texel lag that a 20-unit repeat could not hide.
 ## Far terrain is a different texture entirely
 
 `atlas<id>_diffuse.xbt` is a baked albedo of the blended detail at one texel per world unit, one
-atlas per 2×2 sectors. The pixel shader samples it through `DiffuseSampler` at the sector UV and, when
-the `BlendDetail` flag is set, lerps from the tiled detail into it by view distance
-(`MaterialLODParams`, `InvSquaredMaxDetailDistance`). So distant ground in Far Cry 2 is not the detail
-textures at a high mip — it is this bake, and the tiling stops being visible before it could repeat
-into a pattern.
+atlas per 2×2 sectors (128×128 DXT1, same dimensions and layout as `_mask` and `_color`). The pixel
+shader samples it through `DiffuseSampler` at the sector UV and, when the `BlendDetail` flag is set,
+lerps from the tiled detail into it by view distance:
+
+```
+t      = saturate(viewDistance * MaterialLODParams.x + MaterialLODParams.y)
+ground = lerp(bakedAlbedo, detailBlend, t)
+```
+
+So distant ground in Far Cry 2 is not the detail textures at a high mip — it is this bake, which is
+why the tiling never repeats into a visible pattern however far you look. Note the bake already
+carries the `_color` tint: the shader multiplies the colour atlas into the detail path only.
+
+The two distances come from the `<Terrain>` block of `engine\settings\defaultrenderconfig.xml`:
+
+| Quality | `TerrainDetailBlendViewDistance` | `TerrainDetailViewDistance` |
+| --- | --- | --- |
+| low | 10 | 20 |
+| medium | 64 | 200 |
+| high / veryhigh / ultrahigh | 64 | 512 |
+
+Reading them as "full detail out to the first, gone by the second" makes all three profiles sensible
+and matches the community observation that raising the blend distance costs performance — which only
+holds if it is where detail ends rather than the width of a fade. The mapping onto
+`MaterialLODParams` itself has not been traced.
+
+### The atlases are stored transposed, and it can be undone in place
+
+Every per-sector square the cooker writes is stored transposed — the texel at (x, y) inside a
+64-texel sector holds what belongs at (y, x). A reader can swap at sampling time, but then the
+hardware can never filter or mip the texture, because neighbours in memory are not neighbours in the
+world. That matters most for `_diffuse`, which is what the whole distance draws from.
+
+Undoing it up front is lossless and needs no decode: transposing a square of DXT1 blocks is a move of
+whole blocks plus a mirror of the 4×4 selector grid inside each, and the two endpoints do not care
+where the block sits. It works down the mip chain as far as a sector is still one block across —
+level 4 for a 64-texel sector.

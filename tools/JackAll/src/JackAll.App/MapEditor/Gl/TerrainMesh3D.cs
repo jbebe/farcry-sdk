@@ -55,6 +55,8 @@ public sealed class TerrainMesh3D : IDisposable
             const float extent = {heights.Side - 1}.0;
             const float metersPerRaw = 65535.0 / 128.0;
             const int patchSide = {PatchSide};
+            const float detailFullDistance = {TerrainTextureSet.DetailFullDistance:0.0};
+            const float detailFadeDistance = {TerrainTextureSet.DetailFadeDistance:0.0};
             """;
         _program = new ShaderProgram(
             $$"""
@@ -86,6 +88,9 @@ public sealed class TerrainMesh3D : IDisposable
             uniform sampler2D blendWeights;
             uniform sampler2D terrainColour;
             uniform sampler2D terrainShadow;
+            uniform sampler2D bakedDiffuse;
+            // 0 when the world ships no baked albedo, which forces the detail blend to every distance.
+            uniform float bakedMix;
             uniform float shadowMix;
             uniform sampler2D sectorLayers;
             uniform sampler2DArray detailTextures;
@@ -188,6 +193,31 @@ public sealed class TerrainMesh3D : IDisposable
                 return (colour / used) * tint * 2.0;
             }
 
+            // How much of the detail blend survives at this distance. The engine crossfades the
+            // ground into a baked albedo rather than letting the detail textures run out to the
+            // horizon on a high mip - which is why its far terrain never shows a repeat - and it is
+            // why everything past the fade costs one filtered tap instead of twelve fetches.
+            float detailWeight()
+            {
+                if (bakedMix < 0.5) { return 1.0; }
+                return clamp((detailFadeDistance - viewDistance)
+                    / (detailFadeDistance - detailFullDistance), 0.0, 1.0);
+            }
+
+            // Sampled like any ordinary texture: this one is straightened at upload rather than at
+            // every tap, so it mips and filters on its own. No tint either - the engine multiplies
+            // the colour atlas into the detail path only, because the bake already carries it.
+            // The gradients are handed in rather than taken here: this sits inside a branch on
+            // distance, and a fetch under divergent control flow has no defined implicit level.
+            vec3 groundColour(float height, vec2 uvDx, vec2 uvDy)
+            {
+                float detail = detailWeight();
+                vec2 uv = world / weightSide;
+                if (detail <= 0.0) { return textureGrad(bakedDiffuse, uv, uvDx, uvDy).rgb; }
+                if (detail >= 1.0) { return blendedDetail(height); }
+                return mix(textureGrad(bakedDiffuse, uv, uvDx, uvDy).rgb, blendedDetail(height), detail);
+            }
+
             void main()
             {
                 // The two passes read one heightfield at different steps, so where the coarse step
@@ -212,7 +242,8 @@ public sealed class TerrainMesh3D : IDisposable
                 float shade = (h - heightRange.x) / (heightRange.y - heightRange.x);
                 vec3 base = mix(vec3(0.24, 0.30, 0.18), vec3(0.62, 0.56, 0.44), shade);
 
-                base = mix(base, blendedDetail(h * metersPerRaw), textureMix);
+                vec2 bakedUv = world / weightSide;
+                base = mix(base, groundColour(h * metersPerRaw, dFdx(bakedUv), dFdy(bakedUv)), textureMix);
 
                 // Baked lighting: the low 16-bit channel, rescaled from the narrow band the data
                 // occupies so it reads as shading rather than a flat dimming.
@@ -257,8 +288,10 @@ public sealed class TerrainMesh3D : IDisposable
         GL.Uniform1(_program.UniformLocation("detailTextures"), 5);
         GL.Uniform1(_program.UniformLocation("terrainColour"), 6);
         GL.Uniform1(_program.UniformLocation("terrainShadow"), 7);
+        GL.Uniform1(_program.UniformLocation("bakedDiffuse"), 8);
         if (textures is not null)
         {
+            GL.Uniform1(_program.UniformLocation("bakedMix"), textures.HasDiffuseAtlas ? 1f : 0f);
             GL.Uniform1(_program.UniformLocation("weightSide"), (float)textures.WeightSide);
             GL.Uniform1(_program.UniformLocation("sectorsPerSide"), textures.WeightSide / 64f);
             GL.Uniform1(_program.UniformLocation("layerTiling"), textures.Tiling.Length, textures.Tiling);
@@ -307,7 +340,7 @@ public sealed class TerrainMesh3D : IDisposable
         _heights.Bind(TextureUnit.Texture0);
         _surfaces.Bind(TextureUnit.Texture1, TextureUnit.Texture2);
         _textures?.Bind(TextureUnit.Texture3, TextureUnit.Texture4, TextureUnit.Texture5,
-            TextureUnit.Texture6, TextureUnit.Texture7);
+            TextureUnit.Texture6, TextureUnit.Texture7, TextureUnit.Texture8);
         GL.BindVertexArray(_vao);
         GL.Enable(EnableCap.DepthTest);
 

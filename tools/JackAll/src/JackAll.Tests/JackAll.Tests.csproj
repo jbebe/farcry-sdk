@@ -107,5 +107,13 @@
              Condition="Exists('$(Fc2Graphics)\terrain\_textures\desert\desert_sand_still_d.xbt')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- One baked terrain albedo atlas, stored in the cooker's per-sector transpose. Picked for
+         having the strongest discontinuity at its internal sector seam of any in the level, so a
+         mirror that got the direction wrong could not pass unnoticed. -->
+    <Content Include="$(Fc2Levels)\w1_a_1\generated\sdat\atlas5126_diffuse.xbt"
+             Link="Fixtures\Sdat\atlas5126_diffuse.xbt"
+             Condition="Exists('$(Fc2Levels)\w1_a_1\generated\sdat\atlas5126_diffuse.xbt')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 </Project>

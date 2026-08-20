@@ -245,7 +245,9 @@ table shows are the `Mountain_Rock_X` and `Mountain_Rock_Y` entries of one biome
 
 The matching weights live in `generated/sdat/atlas#_mask.xbt` — 128×128 DXT1, one atlas per 2×2
 sectors, so one texel per world unit. `atlas#_color.xbt` and `atlas#_diffuse.xbt` share the atlas's
-dimensions and layout; `sd#_shadow.xbt` is per sector rather than per atlas.
+dimensions and layout; `sd#_shadow.xbt` is per sector rather than per atlas. `atlas#_diffuse.xbt` is
+the baked albedo distant ground is drawn from instead of the tiled detail — see
+[`.xbt`](xbt.md) for the blend distances and for undoing the per-sector transpose in place.
 
 ### `sd#_shadow.xbt` is a lightmap, not an occlusion mask
 

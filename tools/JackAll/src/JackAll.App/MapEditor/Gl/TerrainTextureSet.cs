@@ -58,6 +58,39 @@ public sealed class TerrainTextureSet : IDisposable
     public int WeightHandle { get; }
     public int ColourHandle { get; }
     public int ShadowHandle { get; }
+
+    /// <summary>
+    /// The baked far-field albedo, one texel per world unit: what the ground fades into past
+    /// <see cref="DetailFullDistance"/> instead of showing the detail textures at a high mip.
+    /// </summary>
+    public int DiffuseHandle { get; }
+
+    /// <summary>False when the world ships no <c>atlas&lt;id&gt;_diffuse.xbt</c> at all, in which
+    /// case the detail blend has to carry every distance on its own.</summary>
+    public bool HasDiffuseAtlas { get; }
+
+    /// <summary>
+    /// How far the detail blend holds at full strength, and where it has faded entirely into the
+    /// baked albedo. Both are the engine's own, from the <c>&lt;Terrain&gt;</c> block of
+    /// <c>engine\settings\defaultrenderconfig.xml</c>: <c>TerrainDetailBlendViewDistance</c> and
+    /// <c>TerrainDetailViewDistance</c>, 64 and 512 on high and above (medium 64/200, low 10/20).
+    /// </summary>
+    /// <remarks>Which of the two the ramp runs between is a reading, not a trace: the shader takes
+    /// them as one <c>saturate(distance * a + b)</c> pair. It is the reading that makes all three
+    /// profiles sensible, and it matches the community note that raising the blend distance costs
+    /// performance - which only holds if it is where detail ends rather than a fade width.</remarks>
+    public const float DetailFullDistance = 64f;
+
+    /// <inheritdoc cref="DetailFullDistance"/>
+    public const float DetailFadeDistance = 512f;
+
+    /// <summary>The side of one baked atlas, covering a 2x2 block of sectors.</summary>
+    private const int AtlasSide = 128;
+
+    /// <summary>Levels of the baked albedo kept on the GPU. Level 4 leaves a sector one 4x4 block
+    /// across, which is as far as its transpose can be undone by moving whole blocks.</summary>
+    private const int BakedLevels = 5;
+
     public int SectorLayerHandle { get; }
     public int DetailArrayHandle { get; }
     public int WeightSide { get; }
@@ -92,8 +125,10 @@ public sealed class TerrainTextureSet : IDisposable
         WeightSide = map.SectorsPerSide * SdatQuadsPerSector;
 
         Dictionary<int, string> sectorPaths = map.Sectors.ToDictionary(s => s.SectorId, s => s.Path);
-        WeightHandle = BuildAtlasTexture(map, sectorPaths, readByPath, "mask");
-        ColourHandle = BuildAtlasTexture(map, sectorPaths, readByPath, "color");
+        (WeightHandle, _) = BuildAtlasTexture(map, sectorPaths, readByPath, "mask");
+        (ColourHandle, _) = BuildAtlasTexture(map, sectorPaths, readByPath, "color");
+        (DiffuseHandle, int bakedAtlases) = BuildBakedDiffuse(map, sectorPaths, readByPath);
+        HasDiffuseAtlas = bakedAtlases > 0;
         ShadowHandle = BuildShadowTexture(map, readByPath);
 
         // One texel per sector, carrying its four layer indices.
@@ -325,9 +360,12 @@ public sealed class TerrainTextureSet : IDisposable
     /// atlas lands at its block's world position; the transposed layout inside a sector is handled
     /// when sampling, not here.
     /// </summary>
-    private int BuildAtlasTexture(
+    /// <returns>The handle, and how many atlases actually landed in it - zero means the world ships
+    /// none of that kind.</returns>
+    private (int Handle, int Loaded) BuildAtlasTexture(
         TerrainMap map, Dictionary<int, string> sectorPaths, Func<string, byte[]?> readByPath, string kind)
     {
+        int loaded = 0;
         int handle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2D, handle);
         GL.CompressedTexImage2D(TextureTarget.Texture2D, 0,
@@ -356,8 +394,64 @@ public sealed class TerrainTextureSet : IDisposable
             GL.CompressedTexSubImage2D(TextureTarget.Texture2D, 0,
                 col * SdatQuadsPerSector, row * SdatQuadsPerSector, 128, 128,
                 InternalFormat.CompressedRgbS3tcDxt1Ext, expected, blocks);
+            loaded++;
         }
-        return handle;
+        return (handle, loaded);
+    }
+
+    /// <summary>
+    /// The baked far-field albedo, stitched world-sized with its shipped mip chain and, unlike the
+    /// mask and colour atlases, straightened out of the cooker's per-sector transpose first.
+    /// </summary>
+    /// <remarks>
+    /// Straightening it is what lets the hardware filter and mip it, which matters more here than
+    /// anywhere else: this is the texture the whole distance draws from, at one texel per world unit,
+    /// where a screen pixel covers several texels and point-ish sampling would crawl. It stays
+    /// lossless - a transpose inside a 64-texel sector is a move of whole DXT1 blocks plus a mirror
+    /// of the 4x4 selector grid inside each, and neither touches the endpoints.
+    /// </remarks>
+    private (int Handle, int Loaded) BuildBakedDiffuse(
+        TerrainMap map, Dictionary<int, string> sectorPaths, Func<string, byte[]?> readByPath)
+    {
+        int handle = GL.GenTexture();
+        GL.BindTexture(TextureTarget.Texture2D, handle);
+        for (int level = 0; level < BakedLevels; level++)
+        {
+            int side = WeightSide >> level;
+            GL.CompressedTexImage2D(TextureTarget.Texture2D, level,
+                InternalFormat.CompressedRgbS3tcDxt1Ext, side, side, 0, side * side / 2, IntPtr.Zero);
+        }
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, BakedLevels - 1);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter,
+            (int)TextureMinFilter.LinearMipmapLinear);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
+        GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
+        GlSampling.Anisotropic(TextureTarget.Texture2D);
+
+        int loaded = 0;
+        foreach (int atlasId in AtlasIds(map))
+        {
+            if (ReadAtlas(sectorPaths, atlasId, readByPath, "diffuse") is not { } dds ||
+                DdsSurface.TryParse(dds) is not { Width: AtlasSide, Height: AtlasSide } surface ||
+                surface.FourCc != DdsSurface.FourCcDxt1)
+            {
+                continue;
+            }
+
+            int row = atlasId / map.SectorsPerSide, col = atlasId % map.SectorsPerSide;
+            for (int level = 0; level < Math.Min(BakedLevels, surface.Mips.Count); level++)
+            {
+                int sector = SdatQuadsPerSector >> level;
+                int side = AtlasSide >> level;
+                byte[] blocks = DxtSectorTranspose.Mirror(surface.Mips[level], side, sector);
+                GL.CompressedTexSubImage2D(TextureTarget.Texture2D, level,
+                    col * sector, row * sector, side, side,
+                    InternalFormat.CompressedRgbS3tcDxt1Ext, blocks.Length, blocks);
+            }
+            loaded++;
+        }
+        return (handle, loaded);
     }
 
     /// <summary>One atlas covers a 2x2 block of sectors, so only even rows and columns name one.</summary>
@@ -435,7 +529,7 @@ public sealed class TerrainTextureSet : IDisposable
     }
 
     public void Bind(TextureUnit weights, TextureUnit sectorLayers, TextureUnit detail,
-        TextureUnit colour, TextureUnit shadow)
+        TextureUnit colour, TextureUnit shadow, TextureUnit bakedDiffuse)
     {
         GL.ActiveTexture(weights);
         GL.BindTexture(TextureTarget.Texture2D, WeightHandle);
@@ -447,6 +541,8 @@ public sealed class TerrainTextureSet : IDisposable
         GL.BindTexture(TextureTarget.Texture2D, ColourHandle);
         GL.ActiveTexture(shadow);
         GL.BindTexture(TextureTarget.Texture2D, ShadowHandle);
+        GL.ActiveTexture(bakedDiffuse);
+        GL.BindTexture(TextureTarget.Texture2D, DiffuseHandle);
     }
 
     public void Dispose()
@@ -454,6 +550,7 @@ public sealed class TerrainTextureSet : IDisposable
         GL.DeleteTexture(WeightHandle);
         GL.DeleteTexture(ColourHandle);
         GL.DeleteTexture(ShadowHandle);
+        GL.DeleteTexture(DiffuseHandle);
         GL.DeleteTexture(SectorLayerHandle);
         GL.DeleteTexture(DetailArrayHandle);
     }
