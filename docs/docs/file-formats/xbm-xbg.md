@@ -131,6 +131,33 @@ the table, so that mapping is still open.
 Tiling is a real number, not a formality: 1,227 of 2,235 retail materials tile at something other
 than 1, up to 20×.
 
+### The lighting around the albedo
+
+The same shader family shows what the engine does with the albedo once it has it. The terrain pixel
+shader (the mesh templates share the structure) computes:
+
+```
+sun     = _LightColor * shadow                           // shadow: the baked self-shadow map
+ambient = lerp(hemiGround, _SkyColor * hemiAO, N·up * 0.5 + 0.5)
+colour  = albedo * (ambient + saturate(N·L) * sun)
+        + specularColour * sun * pow(saturate(N·H), shininess)
+```
+
+Three structural facts, each visible if a renderer gets it wrong:
+
+- **The ambient is a directional hemisphere, not a scalar** — a ground colour below, a sky colour
+  above, blended on how far the normal points up.
+- **Ambient and sun add before the albedo multiplies**, so a fully lit surface runs brighter than
+  its texture and a shadowed one keeps colour from the sky term.
+- **Specular is a separate additive Blinn term.** The `.xbm` carries its inputs as
+  `SpecularColorBase`/`SpecularColor1` (the same pair shape as the diffuse tints) and
+  `SpecularPower`; measured across the 2,208 retail materials, 2,129 carry a non-zero power (2–20,
+  mode 8 — broad lobes), 466 author colours past 1 up to 2.0, and 1,743 name a `SpecularTexture1`
+  that scales the highlight per texel. A renderer without that map has to tame the authored colours
+  or a highlight covers half the surface.
+- **The baked terrain shadow scales the sun rather than replacing `N·L`** — see
+  [`.sdat`](sdat.md#sd_shadowxbt-carries-the-suns-angle--and-the-engine-multiplies-it-in-anyway).
+
 ## Vertex layout, measured across the retail set
 
 :::info[Verified against the retail corpus]

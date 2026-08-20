@@ -3,11 +3,11 @@ using OpenTK.Mathematics;
 
 namespace JackAll.App.MapEditor.Gl;
 
-/// <summary>What the terrain draws this frame.</summary>
-/// <param name="Brightness">Final exposure multiplier; 1 is the raw shaded result.</param>
+/// <summary>What the terrain draws this frame. Exposure is scene-wide - SceneLighting.Exposure -
+/// rather than an option here, so the terrain cannot run at a different one to the models.</summary>
 /// <param name="Haze">Scales the distance fog; 0 turns it off entirely.</param>
 public readonly record struct TerrainDrawOptions(
-    bool ShowTextures, bool TintBySurfaceType, bool ShowShadow, float Brightness, float Haze);
+    bool ShowTextures, bool TintBySurfaceType, bool ShowShadow, float Haze);
 
 /// <summary>
 /// The 3D terrain: two grid patches over one height texture - a fine 1-unit ring that follows the
@@ -39,7 +39,9 @@ public sealed class TerrainMesh3D : IDisposable
     private readonly int _uSurfaceTint;
     private readonly int _uTextureMix;
     private readonly int _uShadowMix;
-    private readonly int _uBrightness;
+    private readonly int _uExposure;
+    private readonly int _uFogSetup;
+    private readonly int _uFogTint;
     private readonly int _uHaze;
     private readonly int _uSunDirection;
     private readonly int _uCameraPosition;
@@ -101,15 +103,17 @@ public sealed class TerrainMesh3D : IDisposable
             uniform vec2 heightRange;
             uniform float surfaceTint;
             uniform float textureMix;
-            uniform float brightness;
+            uniform float exposure;
             uniform float haze;
             uniform vec3 sunDirection;
+            uniform vec3 cameraPosition;
             uniform float weightSide;
             // The world-space rectangle the fine ring covers, as (minX, minY, maxX, maxY). The
             // coarse pass throws away everything inside it; the fine pass passes an inverted
             // rectangle, which no fragment can be inside.
             uniform vec4 clipRect;
             {{SceneLighting.SkyGlsl}}
+            {{SceneLighting.SurfaceGlsl}}
             in float viewDistance;
             uniform float sectorsPerSide;
             in vec2 world;
@@ -256,14 +260,19 @@ public sealed class TerrainMesh3D : IDisposable
                 vec3 material = texture(surfacePalette, vec2(id * (255.0 / 256.0) + (0.5 / 256.0), 0.5)).rgb;
                 base = mix(base, base * 0.35 + material * 0.75, surfaceTint);
 
-                // The bake is a lightmap rather than plain occlusion - it correlates 0.77 with
-                // dot(N, L) for a low western sun - so it stands in for the sun instead of
-                // multiplying with it. One shading term, whichever source is available, never both.
+                // The bake multiplies the sun rather than replacing N.L, which is what the engine's
+                // own terrain shader does with its self-shadow map - relief from the normals
+                // survives, and the bake darkens what the sun cannot reach. (The bake does
+                // correlate 0.77 with dot(N, L), but a self-shadow map would: slopes facing away
+                // from the sun are both dark and self-shadowed, so the correlation cannot separate
+                // a lightmap from a shadow term. The engine's shader can, and did.)
                 // Keep this source ASCII: a stray non-ASCII byte, even inside a comment, makes the
                 // GLSL tokeniser stop dead and report an unexpected end of file.
                 float light = max(dot(normal, sunDirection), 0.0);
-                float shading = mix(0.35 + 0.65 * light, 0.35 + 0.65 * baked, shadowMix);
-                vec3 lit = base * shading * brightness;
+                float sunAmount = light * mix(1.0, baked, shadowMix);
+                vec3 worldPos = vec3(world, h * metersPerRaw);
+                vec3 lit = shadeSurface(base, normal, normalize(cameraPosition - worldPos),
+                    sunDirection, sunAmount, vec3(0.0), 0.0) * exposure;
                 fragment = vec4(applyHaze(lit, viewDistance, h * metersPerRaw, haze), 1.0);
             }
             """);
@@ -274,7 +283,9 @@ public sealed class TerrainMesh3D : IDisposable
         _uSurfaceTint = _program.UniformLocation("surfaceTint");
         _uTextureMix = _program.UniformLocation("textureMix");
         _uShadowMix = _program.UniformLocation("shadowMix");
-        _uBrightness = _program.UniformLocation("brightness");
+        _uExposure = _program.UniformLocation("exposure");
+        _uFogSetup = _program.UniformLocation("fogSetup");
+        _uFogTint = _program.UniformLocation("fogTint");
         _uHaze = _program.UniformLocation("haze");
         _uSunDirection = _program.UniformLocation("sunDirection");
         _uCameraPosition = _program.UniformLocation("cameraPosition");
@@ -333,7 +344,8 @@ public sealed class TerrainMesh3D : IDisposable
         GL.Uniform1(_uSurfaceTint, options.TintBySurfaceType ? 1f : 0f);
         GL.Uniform1(_uTextureMix, _textures is not null && options.ShowTextures ? 1f : 0f);
         GL.Uniform1(_uShadowMix, _textures is not null && options.ShowShadow ? 1f : 0f);
-        GL.Uniform1(_uBrightness, options.Brightness);
+        GL.Uniform1(_uExposure, SceneLighting.Exposure);
+        SceneLighting.SetFogUniforms(_uFogSetup, _uFogTint);
         GL.Uniform1(_uHaze, options.Haze);
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
         GL.Uniform3(_uCameraPosition, cameraPosition);

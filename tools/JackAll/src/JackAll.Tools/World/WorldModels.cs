@@ -70,7 +70,19 @@ public readonly record struct MaterialSurface
     /// </summary>
     public bool Billboard { get; init; }
 
-    /// <summary>What an unresolved material draws as: the texture unchanged, untiled, untinted.</summary>
+    /// <summary>The pair the highlight's colour lerps between, on the same mask weight as the
+    /// diffuse tint. Kept as authored and never capped - 466 retail materials run past 1, to 2.0 -
+    /// because the engine also multiplies a spec map into this and the renderer tames it instead.</summary>
+    public Vector3 SpecularBase { get; init; }
+    public Vector3 SpecularColour { get; init; }
+
+    /// <summary>Blinn exponent - 2 to 20 across retail, mode 8, so the lobes are broad. Zero means
+    /// the material asks for no highlight, which is what an unresolved material and the untextured
+    /// coarse tier both get.</summary>
+    public float SpecularPower { get; init; }
+
+    /// <summary>What an unresolved material draws as: the texture unchanged, untiled, untinted, and
+    /// - load-bearing for the untextured coarse tier - without a highlight.</summary>
     public static readonly MaterialSurface None = new()
     {
         Alpha = MaterialAlpha.Opaque,
@@ -80,6 +92,9 @@ public readonly record struct MaterialSurface
         DiffuseTiling = Vector2.One,
         SecondDiffuseTiling = Vector2.One,
         MaskTiling = Vector2.One,
+        SpecularBase = Vector3.Zero,
+        SpecularColour = Vector3.Zero,
+        SpecularPower = 0f,
     };
 }
 
@@ -724,6 +739,7 @@ public static class WorldModels
     public static MaterialSurface SurfaceOf(XbmMaterial material)
     {
         (Vector3 tintBase, Vector3 tint) = TintsOf(material);
+        (Vector3 specularBase, Vector3 specular) = SpecularsOf(material);
         return new MaterialSurface
         {
             DiffuseTexturePath = DiffuseTextureOf(material),
@@ -737,8 +753,38 @@ public static class WorldModels
             SecondDiffuseTiling = TilingProperty(material, "DiffuseTiling2"),
             MaskTiling = TilingProperty(material, "MaskTiling1"),
             Billboard = BoolProperty(material, "Billboard"),
+            SpecularBase = specularBase,
+            SpecularColour = specular,
+            SpecularPower = Math.Clamp(ScalarProperty(material, "SpecularPower") ?? 0f, 0f, 128f),
         };
     }
+
+    /// <summary>
+    /// The highlight's colour pair, the same shape as the diffuse pair and read by the same rule: a
+    /// material naming only one of the two uses it for both. Where the two differ from the tints is
+    /// the fallback - an absent diffuse tint means "leave the texture alone" (white), an absent
+    /// specular colour means "no highlight" (black). Getting that backwards puts a white highlight
+    /// on every material that never asked for one.
+    /// </summary>
+    /// <remarks>Only the diffuse half of the pair-lerp was decoded from the retail shader; driving
+    /// the specular pair by the same mask weight is this model's assumption.</remarks>
+    public static (Vector3 Base, Vector3 Colour) SpecularsOf(XbmMaterial material)
+    {
+        Vector3? colour = ColourProperty(material, "SpecularColor1");
+        Vector3? colourBase = ColourProperty(material, "SpecularColorBase");
+        return colour is null && colourBase is null
+            ? (Vector3.Zero, Vector3.Zero)
+            : (colourBase ?? colour!.Value, colour ?? colourBase!.Value);
+    }
+
+    /// <summary>A material's single-float property; null when it names none.</summary>
+    private static float? ScalarProperty(XbmMaterial material, string key)
+        => material.Properties.FirstOrDefault(
+            p => p.Key.Equals(key, StringComparison.OrdinalIgnoreCase)) is { } property
+            && float.TryParse(property.Value.Split(',')[0].Trim(), NumberStyles.Float,
+                CultureInfo.InvariantCulture, out float value)
+            ? value
+            : null;
 
     /// <summary>A material's integer-valued flag; false when it names none.</summary>
     private static bool BoolProperty(XbmMaterial material, string key)

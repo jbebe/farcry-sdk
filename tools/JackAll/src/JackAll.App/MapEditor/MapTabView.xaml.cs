@@ -26,7 +26,7 @@ public partial class MapTabView : UserControl
         IReadOnlyList<VegetationInstance> Vegetation, ScatterSet VegetationModels,
         IReadOnlyList<NavMeshNode> NavNodes,
         IReadOnlyList<WorldLight> Lights, IReadOnlyList<TriggerVolume> Triggers,
-        ArchetypeIndex Archetypes, WorldModelSet Models);
+        ArchetypeIndex Archetypes, WorldModelSet Models, WorldEnvironment Environment);
 
     private sealed record FieldRow(string Name, string Value);
 
@@ -157,6 +157,7 @@ public partial class MapTabView : UserControl
                 progress.Report($"Loading {map.Name} sector descriptors");
                 SectorDetailLayers detail = SectorDetailLayers.Load(map, vm.ReadByPath);
                 TerrainLayerTable table = TerrainLayerTable.Load(map.Name, vm.ReadByPath);
+                WorldEnvironment environment = WorldEnvironment.Load(map.Name, vm.ReadByPath);
                 Fc2World world = WorldLoader.Load(map, vm.ReadByPath, progress);
                 IReadOnlyList<WorldShape> shapes =
                     WorldShapes.Load(map.Name, vm.ReadByPath, FcbDefinitionsProvider.Value.Value);
@@ -179,7 +180,7 @@ public partial class MapTabView : UserControl
                 WorldModelSet models = WorldModels.Load(world.Entities, archetypes, vm.ReadByPath, progress);
                 return new PendingLoad(
                     map, terrain, detail, table, world, shapes, splines, vegetation, vegetationModels,
-                    navNodes, lights, triggers, archetypes, models);
+                    navNodes, lights, triggers, archetypes, models, environment);
             });
 
             WorldTerrain terrain = loaded.Terrain;
@@ -271,6 +272,7 @@ public partial class MapTabView : UserControl
                 ? new TerrainTextureSet(pending.Map, pending.DetailLayers, pending.Table, vm.ReadByPath)
                 : null;
             _terrainMesh = new TerrainMesh3D(_heightTexture, _surfaceTexture, _terrainTextures);
+            SceneLighting.Fog = pending.Environment;
             TextureStatus.Text = _terrainTextures is { } set
                 ? $"{set.LayersLoaded} of {pending.Table.Layers.Count} layer textures loaded " +
                   $"({set.DetailBytes / (1024 * 1024)} MB); blend mask {set.WeightSide}x{set.WeightSide}." +
@@ -332,6 +334,7 @@ public partial class MapTabView : UserControl
         // One switch behind the sky, the haze and the water shading: presentation on, or a plain
         // flat view of the data.
         float demo = DemoMode.IsChecked == true ? 1f : 0f;
+        SceneLighting.Exposure = (float)ExposureSlider.Value;
         if (demo > 0f)
         {
             _sky ??= new SkyLayer();
@@ -343,7 +346,6 @@ public partial class MapTabView : UserControl
                 ShowTextures: LayerCatalog.Textures.IsVisible,
                 TintBySurfaceType: LayerCatalog.SurfaceData.IsVisible,
                 ShowShadow: LayerCatalog.Shadow.IsVisible,
-                Brightness: (float)BrightnessSlider.Value,
                 Haze: demo));
         }
 

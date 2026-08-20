@@ -226,6 +226,21 @@ one. `world1.game.xml` holds 1,725 `<Layer>` elements in total; the other 1,680 
 `MissionsDef` and carry neither `Texture` nor `SurfaceTypeID`. Collecting `<Layer>` elements by a
 document-wide search instead of by that parent shifts every layer index.
 
+The same file's `<Environment>` block mixes GUID references into `<world>.managers.fcb` (the
+`Lighting`/`Fog`/`Sky` preset slots, whose `CEnvironment*` objects have no decoded field names) with
+a handful of literal, immediately usable values:
+
+```xml
+<DefaultEnvSettings DefaultStormFactor="0" DefaultHour="11" DefaultMin="30" />
+<Fog Color="202,219,230" Start="0" End="400" FogAmount="0.8" />
+<Camera ViewDistance="1024" />
+```
+
+Two parsing traps: colours here are 0–255 integers while the `<Layer>` colours in the same file are
+0–1 floats, and sibling elements carry literal `f` suffixes (`<CurvedHorizon Start="500.0f">`) that a
+plain float parse rejects. The `<Fog>`/`<Camera>` line is identical across every world examined
+(`world1`, `world2`, the MP maps); `DefaultHour` varies per world.
+
 `sector#.desc.fcb`'s `DetailTexMask` is not a hash despite the field's FCB type tag: it is **four
 byte-sized layer indices packed into a `u32`, with `0xFF` for an unused slot**, naming the (up to)
 four textures that sector blends. `CSector::GetDetailTexMask(int)` reads one. The unused slot is
@@ -249,7 +264,7 @@ dimensions and layout; `sd#_shadow.xbt` is per sector rather than per atlas. `at
 the baked albedo distant ground is drawn from instead of the tiled detail — see
 [`.xbt`](xbt.md) for the blend distances and for undoing the per-sector transpose in place.
 
-### `sd#_shadow.xbt` is a lightmap, not an occlusion mask
+### `sd#_shadow.xbt` carries the sun's angle — and the engine multiplies it in anyway
 
 Correlating the baked value against `N·L` over 38,440 samples from 10 `world1` sectors, across a grid
 of candidate sun directions:
@@ -259,9 +274,19 @@ of candidate sun directions:
 | best fit: azimuth 270°, elevation 10° — `(-0.985, 0, 0.174)` | **0.768** |
 | straight up `(0, 0, 1)` | -0.018 |
 
-A correlation that high means the bake already carries the sun's angle: it is a **lightmap**, not a
-shadow or ambient-occlusion mask. A renderer that multiplies its own `N·L` on top of it is applying
-the sun twice.
+A correlation that high means the bake carries the sun's angle. An earlier version of this section
+concluded from that alone that the bake is a full lightmap and that multiplying `N·L` on top would
+apply the sun twice — but the correlation cannot actually separate a lightmap from a self-shadow
+term, because slopes facing away from the sun are both dark *and* self-shadowed. What settles it is
+the engine's own terrain pixel shader (`shadersobj/engine/shaders/obj10`, RDEF names intact): its
+shadow map **scales the light colour while `saturate(N·L)` still shades the surface** —
+
+```
+colour = albedo * (hemisphereAmbient + saturate(N·L) * _LightColor * shadow) + specular
+```
+
+— so the bake is best read as a self-shadow/occlusion term over an analytic sun, not as a
+replacement for it.
 
 The fit also re-confirms the transpose independently — reading the shadow texels as stored scores
 only 0.319, against 0.768 for the transposed reading.

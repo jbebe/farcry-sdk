@@ -21,6 +21,8 @@ public sealed class WaterLayer : IDisposable
     private readonly int _uCameraPosition;
     private readonly int _uSunDirection;
     private readonly int _uDemo;
+    private readonly int _uFogSetup;
+    private readonly int _uFogTint;
 
     public int SectorCount { get; }
 
@@ -107,6 +109,8 @@ public sealed class WaterLayer : IDisposable
         _uCameraPosition = _program.UniformLocation("cameraPosition");
         _uSunDirection = _program.UniformLocation("sunDirection");
         _uDemo = _program.UniformLocation("demo");
+        _uFogSetup = _program.UniformLocation("fogSetup");
+        _uFogTint = _program.UniformLocation("fogTint");
 
         _vao = GL.GenVertexArray();
         GL.BindVertexArray(_vao);
@@ -141,6 +145,7 @@ public sealed class WaterLayer : IDisposable
         GL.Uniform3(_uCameraPosition, cameraPosition);
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
         GL.Uniform1(_uDemo, demo);
+        SceneLighting.SetFogUniforms(_uFogSetup, _uFogTint);
         GL.BindVertexArray(_vao);
         GL.Enable(EnableCap.Blend);
         GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);

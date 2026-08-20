@@ -581,3 +581,83 @@ public class WorldModelsTests
             })];
     }
 }
+
+/// <summary>
+/// The specular half of a material: real data on nearly every retail surface (2,129 of 2,208 name a
+/// non-zero SpecularPower), so what these pin is the reading, not whether to bother.
+/// </summary>
+public class WorldModelsSpecularTests
+{
+    private static XbmMaterial Material((string Key, string Value)[]? properties = null) => new()
+    {
+        Name = "m",
+        Template = "t",
+        Textures = [],
+        Properties = [.. (properties ?? []).Select(p => new XbmProperty { Key = p.Key, Value = p.Value })],
+    };
+
+    [Fact]
+    public void The_specular_pair_reads_like_the_diffuse_pair()
+    {
+        Assert.Equal(
+            (new Vector3(0.098f, 0.055f, 0f), new Vector3(1.569f, 1.012f, 0.526f)),
+            WorldModels.SpecularsOf(Material(
+                [("SpecularColorBase", "0.098, 0.055, 0"), ("SpecularColor1", "1.569, 1.012, 0.526")])));
+
+        // Naming only one of the two uses it for both, same as the diffuse rule.
+        Assert.Equal(
+            (new Vector3(0.5f, 0.5f, 0.5f), new Vector3(0.5f, 0.5f, 0.5f)),
+            WorldModels.SpecularsOf(Material([("SpecularColorBase", "0.5, 0.5, 0.5")])));
+    }
+
+    /// <summary>The fallback that must differ from the tints: an absent diffuse tint means "leave
+    /// the texture alone" (white), an absent specular colour means "no highlight" (black). Inverted,
+    /// every material in the game grows a highlight it never asked for.</summary>
+    [Fact]
+    public void A_material_naming_no_specular_gets_black_not_white()
+        => Assert.Equal((Vector3.Zero, Vector3.Zero), WorldModels.SpecularsOf(Material()));
+
+    [Fact]
+    public void Specular_reaches_the_surface_with_its_power()
+    {
+        MaterialSurface surface = WorldModels.SurfaceOf(Material(
+            [("SpecularColor1", "2, 1.255, 0.196"), ("SpecularPower", "8")]));
+
+        Assert.Equal(8f, surface.SpecularPower);
+        Assert.Equal(new Vector3(2f, 1.255f, 0.196f), surface.SpecularColour);
+        // Kept as authored past 1 - the renderer tames it, the parse does not.
+        Assert.True(surface.SpecularColour.X > 1f);
+    }
+
+    [Fact]
+    public void An_absurd_power_clamps_and_a_broken_one_reads_zero()
+    {
+        Assert.Equal(128f, WorldModels.SurfaceOf(Material([("SpecularPower", "9999")])).SpecularPower);
+        Assert.Equal(0f, WorldModels.SurfaceOf(Material([("SpecularPower", "-3")])).SpecularPower);
+        Assert.Equal(0f, WorldModels.SurfaceOf(Material([("SpecularPower", "shiny")])).SpecularPower);
+    }
+
+    /// <summary>The untextured coarse tier draws with None, and its guarantee of never catching a
+    /// highlight is exactly these three zeros.</summary>
+    [Fact]
+    public void The_unresolved_material_carries_no_specular()
+    {
+        Assert.Equal(Vector3.Zero, MaterialSurface.None.SpecularBase);
+        Assert.Equal(Vector3.Zero, MaterialSurface.None.SpecularColour);
+        Assert.Equal(0f, MaterialSurface.None.SpecularPower);
+    }
+
+    /// <summary>Two surfaces differing only in specular must compare unequal, because the renderer's
+    /// change-filtered uniform upload relies on record equality to notice the difference - a member
+    /// this misses is a member that silently never reaches the GPU.</summary>
+    [Fact]
+    public void Specular_participates_in_surface_equality()
+    {
+        MaterialSurface a = MaterialSurface.None;
+        MaterialSurface b = MaterialSurface.None with { SpecularPower = 8f };
+        MaterialSurface c = MaterialSurface.None with { SpecularColour = Vector3.One };
+
+        Assert.NotEqual(a, b);
+        Assert.NotEqual(a, c);
+    }
+}

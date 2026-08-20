@@ -1,6 +1,4 @@
-using System.Text;
 using System.Xml.Linq;
-using JackAll.Core.Format.Rml;
 
 namespace JackAll.Tools.World;
 
@@ -55,8 +53,7 @@ public sealed class TerrainLayerTable
 
     public static TerrainLayerTable Load(string mapName, Func<string, byte[]?> readByPath)
     {
-        byte[]? bytes = readByPath($@"worlds\{mapName}\generated\{mapName}.game.xml");
-        if (bytes is null || Parse(bytes) is not { } root)
+        if (WorldDescriptor.TryLoadRoot(mapName, readByPath) is not { } root)
         {
             return Empty;
         }
@@ -93,23 +90,5 @@ public sealed class TerrainLayerTable
             }
         }
         return new TerrainLayerTable(bySurfaceType, layers);
-    }
-
-    /// <summary>Worlds ship this file in either form, so both are tried before giving up.</summary>
-    private static XElement? Parse(byte[] bytes)
-    {
-        if (RmlDocument.TryDeserialize(bytes, out XElement? rml))
-        {
-            return rml;
-        }
-
-        try
-        {
-            return XDocument.Parse(Encoding.UTF8.GetString(bytes)).Root;
-        }
-        catch (Exception e) when (e is System.Xml.XmlException or ArgumentException)
-        {
-            return null;
-        }
     }
 }

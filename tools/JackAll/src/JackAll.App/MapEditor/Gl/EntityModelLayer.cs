@@ -78,6 +78,12 @@ public sealed class EntityModelLayer : IDisposable
     private readonly int _uMaskTiling;
     private readonly int _uUseSecond;
     private readonly int _uUseMask;
+    private readonly int _uSpecularBase;
+    private readonly int _uSpecularColour;
+    private readonly int _uSpecularPower;
+    private readonly int _uExposure;
+    private readonly int _uFogSetup;
+    private readonly int _uFogTint;
     private readonly int _uBillboardFacing;
     /// <summary>Just the meshes carrying a blended range, so the second pass skips the rest.</summary>
     private readonly Mesh[] _blendedMeshes;
@@ -267,18 +273,25 @@ public sealed class EntityModelLayer : IDisposable
             uniform vec2 maskTiling;
             uniform float useSecond;
             uniform float useMask;
+            uniform vec3 specularBase;
+            uniform vec3 specularColour;
+            uniform float specularPower;
+            uniform float exposure;
             uniform sampler2D diffuse;
             uniform sampler2D diffuse2;
             uniform sampler2D maskMap;
             out vec4 fragment;
             {{SceneLighting.SkyGlsl}}
+            {{SceneLighting.SurfaceGlsl}}
             void main()
             {
                 vec3 albedo = baseColour;
                 float coverage = 1.0;
+                vec4 texel = vec4(1.0);
+                vec2 weights = vec2(0.0);
                 if (useTexture > 0.5)
                 {
-                    vec4 texel = texture(diffuse, texUv * diffuseTiling);
+                    texel = texture(diffuse, texUv * diffuseTiling);
                     // Only materials that asked for it read alpha as coverage; on the rest it is a
                     // gloss or spec mask and would erase the surface.
                     if (alphaMode == 1 && texel.a < 0.5) { discard; }
@@ -288,7 +301,7 @@ public sealed class EntityModelLayer : IDisposable
                     // both blends: green picks how much of layer 2 shows, blue how far layer 1's
                     // tint travels from Base to Color1. A material with no mask samples white, which
                     // is why an unmasked surface takes its tint in full.
-                    vec2 weights = clamp(maskWeights, 0.0, 1.0);
+                    weights = clamp(maskWeights, 0.0, 1.0);
                     if (useMask > 0.5)
                     {
                         weights *= texture(maskMap, texUv * maskTiling).gb;
@@ -301,14 +314,31 @@ public sealed class EntityModelLayer : IDisposable
                         albedo = mix(albedo, layer2, weights.x);
                     }
                 }
+                else
+                {
+                    // The untextured coarse tier stands in for the average of a textured surface,
+                    // and a saturated marker colour at full additive lighting would clip to a
+                    // glowing ring around the fine radius instead.
+                    albedo = baseColour * 0.55;
+                }
                 vec3 n = normalize(worldNormal);
                 // Many parts are single-sided shells, so light whichever side is showing. The test
                 // is against the eye, not gl_FrontFacing: the meshes are wound clockwise the way
                 // D3D wants, which GL reads as back-facing on every outward triangle, and taking
                 // that at its word flips every normal into the surface and kills the sun term.
-                if (dot(n, cameraPosition - worldPosition) < 0.0) { n = -n; }
-                float light = max(dot(n, sunDirection), 0.0);
-                vec3 lit = albedo * (0.35 + 0.65 * light);
+                bool flipped = dot(n, cameraPosition - worldPosition) < 0.0;
+                if (flipped) { n = -n; }
+
+                // An opaque material's diffuse alpha is its gloss mask - the same fact the coverage
+                // branch above steps around. A flipped normal is a guess about which way a shell
+                // faces: good enough for diffuse, not good enough to hang a mirror highlight on, so
+                // the inside of a shell stays matte.
+                float specMask = (useTexture > 0.5 && alphaMode == 0 && !flipped) ? texel.a : 0.0;
+                vec3 spec = mix(specularBase, specularColour, weights.y) * specMask;
+
+                vec3 toEye = normalize(cameraPosition - worldPosition);
+                vec3 lit = shadeSurface(albedo, n, toEye, sunDirection,
+                    max(dot(n, sunDirection), 0.0), spec, specularPower) * exposure;
                 fragment = vec4(
                     applyHaze(lit, distance(cameraPosition, worldPosition), worldPosition.z, haze), coverage);
             }
@@ -328,6 +358,12 @@ public sealed class EntityModelLayer : IDisposable
         _uMaskTiling = _program.UniformLocation("maskTiling");
         _uUseSecond = _program.UniformLocation("useSecond");
         _uUseMask = _program.UniformLocation("useMask");
+        _uSpecularBase = _program.UniformLocation("specularBase");
+        _uSpecularColour = _program.UniformLocation("specularColour");
+        _uSpecularPower = _program.UniformLocation("specularPower");
+        _uExposure = _program.UniformLocation("exposure");
+        _uFogSetup = _program.UniformLocation("fogSetup");
+        _uFogTint = _program.UniformLocation("fogTint");
         _program.Use();
         GL.Uniform1(_program.UniformLocation("diffuse"), 0);
         GL.Uniform1(_program.UniformLocation("diffuse2"), 1);
@@ -548,6 +584,8 @@ public sealed class EntityModelLayer : IDisposable
         GL.Uniform3(_uCameraPosition, cameraPosition);
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
         GL.Uniform1(_uHaze, haze);
+        GL.Uniform1(_uExposure, SceneLighting.Exposure);
+        SceneLighting.SetFogUniforms(_uFogSetup, _uFogTint);
         GL.Enable(EnableCap.DepthTest);
         GL.ActiveTexture(TextureUnit.Texture0);
 
@@ -585,6 +623,10 @@ public sealed class EntityModelLayer : IDisposable
                 GL.Uniform2(_uDiffuseTiling, surface.DiffuseTiling.X, surface.DiffuseTiling.Y);
                 GL.Uniform2(_uSecondTiling, surface.SecondDiffuseTiling.X, surface.SecondDiffuseTiling.Y);
                 GL.Uniform2(_uMaskTiling, surface.MaskTiling.X, surface.MaskTiling.Y);
+                GL.Uniform3(_uSpecularBase, surface.SpecularBase.X, surface.SpecularBase.Y, surface.SpecularBase.Z);
+                GL.Uniform3(_uSpecularColour,
+                    surface.SpecularColour.X, surface.SpecularColour.Y, surface.SpecularColour.Z);
+                GL.Uniform1(_uSpecularPower, surface.SpecularPower);
             }
             lastSurface = surface;
         }

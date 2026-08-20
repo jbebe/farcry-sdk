@@ -5,6 +5,7 @@
     <!-- The game export the retail fixtures are linked out of; one place to repoint if it moves. -->
     <Fc2Graphics>..\..\..\..\tmp\gamefiles\worlds\worlds\graphics</Fc2Graphics>
     <Fc2Levels>..\..\..\..\tmp\gamefiles\worlds\worlds\levels</Fc2Levels>
+    <Fc2Worlds>..\..\..\..\tmp\gamefiles\worlds\worlds\worlds</Fc2Worlds>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -131,6 +132,13 @@
     <Content Include="$(Fc2Graphics)\vegetation\jungle\realtrees\hy_bigleaf.rtx"
              Link="Fixtures\Rtx\hy_bigleaf.rtx"
              Condition="Exists('$(Fc2Graphics)\vegetation\jungle\realtrees\hy_bigleaf.rtx')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- The smallest world descriptor in the export (23 KB against world1's 352), carrying the
+         same <Fog> and <Camera> literals as the campaign worlds and a different DefaultHour. -->
+    <Content Include="$(Fc2Worlds)\mp_17_dunes\generated\mp_17_dunes.game.xml"
+             Link="Fixtures\WorldDescriptor\mp_17_dunes.game.xml"
+             Condition="Exists('$(Fc2Worlds)\mp_17_dunes\generated\mp_17_dunes.game.xml')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <!-- One baked terrain albedo atlas, stored in the cooker's per-sector transpose. Picked for
