@@ -301,10 +301,12 @@ public partial class MapTabView : UserControl
 
             // The draw mode speaks only for entities that resolved to geometry: Models draws them as
             // meshes and nothing else, so the mode no longer smuggles the leftovers back in as
-            // markers. The mesh-less ones belong to their category layers either way.
+            // markers. The mesh-less ones belong to their category layers either way - and the ones
+            // a dedicated layer already draws are held back here too, or a light picks up a second
+            // marker on top of the one the Lights layer gives it.
             List<WorldEntity> markerEntities = EntityDrawMode.SelectedIndex == ModeModels
                 ? []
-                : _visibleEntities;
+                : [.. _visibleEntities.Where(OwnedByThisLayer)];
             _markerLayer?.SetInstances(FillMarkers(markerEntities), markerEntities.Count);
             RebuildCategoryMarkers();
         }
@@ -733,6 +735,14 @@ public partial class MapTabView : UserControl
     /// it is worth drawing one at all.</summary>
     private const float GlyphPixels = 13f;
     private const float GlyphMaxDistance = 220f;
+
+    /// <summary>Whether the Entities layer is the one that should draw this entity's marker. An
+    /// entity that resolved to a mesh always is; a mesh-less one belongs to whichever layer owns its
+    /// category, and only falls here when no other layer does.</summary>
+    private bool OwnedByThisLayer(WorldEntity entity)
+        => _modelSet is not { } models
+            || models.ModelIndicesByEntity.ContainsKey(entity)
+            || !WorldEntityCategories.Of(entity.Node).HasOwnLayer();
 
     /// <summary>Refills each category layer from the entities the model layer could not draw. Runs
     /// only on a marker rebuild, so it costs nothing per frame.</summary>

@@ -22,6 +22,15 @@ public sealed class MapLayer(string group, string name, string readiness, string
     public string Summary { get; } = summary;
     public string[] Controls { get; } = controls;
 
+    /// <summary>Whether a renderer reads <see cref="IsVisible"/> every frame. The rows that draw
+    /// nothing are the editor's roadmap - worth listing, but a checkbox on one is a control that
+    /// silently does nothing, which is worse than no control.</summary>
+    public bool Drawn { get; init; } = true;
+
+    /// <summary>Shown only where the toggle means something.</summary>
+    public System.Windows.Visibility ToggleVisibility
+        => Drawn ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
+
     /// <summary>Raises a change so code that clears the layers moves their checkboxes too; the
     /// checkbox alone would not need it.</summary>
     public bool IsVisible
@@ -76,45 +85,45 @@ public static class LayerCatalog
 
     /// <summary>Draws the entity models and markers while visible, and owns the browser panel.</summary>
     public static readonly MapLayer Entities =
-        new("Objects", "Entities", "Ready",
+        new("Geometry", "Entities", "Ready",
             "Everything placed in the world; a placed entity is a delta over its archetype.",
             ["Draw as real models, markers, or both", "Browse and search", "Select from the list or the viewport", "Read-only field view"]);
 
     /// <summary>Owns the mission-layer list that filters which entities are shown.</summary>
     public static readonly MapLayer MissionLayers =
-        new("Objects", "Mission layers", "Ready",
+        new("Geometry", "Mission layers", "Ready",
             "Per-sector scoping: main plus mission-keyed overlays deciding which entities exist when.",
             ["List layers with entity counts", "Show or hide a layer's entities", "Assign entities to layers"]);
 
     /// <summary>Draws the authored polylines while visible.</summary>
     public static readonly MapLayer Shapes =
-        new("Objects", "Shapes", "Ready",
+        new("Geometry", "Shapes", "Ready",
             "Authored polylines - zone outlines, paths and sound lines - stored in the world's mapsdata, not per sector.",
             ["Show polylines", "Sound lines tinted apart", "Point editing"]);
 
     /// <summary>Draws the road, river and path splines while visible.</summary>
     public static readonly MapLayer Roads =
-        new("Dressing", "Roads, rivers, paths", "Ready",
+        new("Geometry", "Roads, rivers, paths", "Ready",
             "Spline sets in the world's mapsdata: roads amber, rivers blue, foot paths violet.",
             ["Show splines", "Control points carry position, tangent and widths", "Spline editing"]);
 
     /// <summary>Draws the scatter while visible: real geometry where the resource is a mesh, a
     /// marker where it is a RealTree.</summary>
     public static readonly MapLayer Vegetation =
-        new("Dressing", "Vegetation", "Ready",
+        new("Geometry", "Vegetation", "Ready",
             "The per-sector scatter from the landmark files - rocks, grasses and bushes as their own "
             + "meshes, everything else as a marker coloured by the resource it instantiates.",
             ["Draw the ones backed by a mesh", "RealTree (.rtx) resources stay markers", "Placement editing"]);
 
     /// <summary>Draws the proximity trigger boxes as wireframes while visible.</summary>
     public static readonly MapLayer Triggers =
-        new("Objects", "Trigger boxes", "Ready",
+        new("Markers", "Trigger boxes", "Ready",
             "The volumes that fire when something enters them - proximity triggers on ordinary entities.",
             ["Show trigger boxes", "Disabled triggers dimmed", "vectorSize read as full extent (unconfirmed)"]);
 
     /// <summary>Draws a marker per placed light while visible, in the light's own colour.</summary>
     public static readonly MapLayer Lights =
-        new("Dressing", "Lights", "Ready",
+        new("Markers", "Lights", "Ready",
             "Every placed light, from the CDynamicLightComponent on ordinary entities - omni (point) and spot.",
             ["Show lights in their own colour", "Disabled lights dimmed", "Radius and cone not drawn yet"]);
 
@@ -125,25 +134,25 @@ public static class LayerCatalog
     /// trigger and entrance put together. Each draws its own glyph at a fixed size on screen.
     /// </summary>
     public static readonly MapLayer EventNodes =
-        new("Systems", "Event nodes", "Ready",
+        new("Markers", "Event nodes", "Ready",
             "Logic-only entities - the largest mesh-less group, drawn as a diamond.",
             ["Show event nodes", "Fixed size on screen", "Event graph not yet readable"])
         { IsVisible = false };
 
     public static readonly MapLayer AiPoints =
-        new("Systems", "AI points", "Ready",
+        new("Markers", "AI points", "Ready",
             "Cover, guard posts and the lean and sit reference points, drawn as a cone.",
             ["Show AI reference points", "Fixed size on screen", "Facing direction not yet drawn"])
         { IsVisible = false };
 
     public static readonly MapLayer Entrances =
-        new("Systems", "Entrances", "Ready",
+        new("Markers", "Entrances", "Ready",
             "The DOOR and WINDOW hints the AI navigates buildings by, drawn as a doorway.",
             ["Show entrance hints", "Fixed size on screen", "Link back to the building not drawn"])
         { IsVisible = false };
 
     public static readonly MapLayer Emitters =
-        new("Dressing", "Emitters", "Ready",
+        new("Markers", "Emitters", "Ready",
             "Particle and sound sources, drawn as a burst.",
             ["Show emitters", "Fixed size on screen", "Effect and sound names not yet resolved"])
         { IsVisible = false };
@@ -151,13 +160,16 @@ public static class LayerCatalog
     /// <summary>Draws a marker per walkable node while visible, green where the ground is flat
     /// enough to walk and red where the engine's slope limit rejects it.</summary>
     public static readonly MapLayer NavMesh =
-        new("Systems", "Navmesh", "Ready",
+        new("Markers", "Navmesh", "Ready",
             "Where the AI can walk - one node per walkable patch, only on campaign sectors.",
             ["Show walkable nodes", "Steep nodes tinted red", "Generation after sculpting (unsolved)"])
         { IsVisible = false };
 
     public static readonly MapLayer[] Layers =
     [
+        // Grouped by what the list is actually for: what the viewport draws, and in what form.
+        // Geometry is the world's own surfaces, Markers is everything drawn as an indicator over
+        // them, and Planned is the roadmap - rows that carry no renderer and so no toggle.
         Heightmap,
         SurfaceData,
         Textures,
@@ -166,48 +178,49 @@ public static class LayerCatalog
 
         Entities,
         MissionLayers,
+        Vegetation,
         Shapes,
-        Triggers,
-        new("Objects", "Entity library", "Library tab",
-            "The archetype palette every entity references, resolved across its override chain.",
-            ["Browse and edit it in the Library tab"]),
+        Roads,
 
         Lights,
-        Vegetation,
+        Triggers,
         Emitters,
-        Roads,
-        new("Dressing", "Landmarks", "Partial",
-            "Distant-silhouette LOD geometry per sector; goes stale when entities change.",
-            ["LOD overlay display", "Stale-check after edits"]),
-
-        new("Glue", "Sectors", "Ready",
-            "Streaming glue: per-sector neighbors/flags and world sector dependencies.",
-            ["Enable all sectors", "Create new sector", "Violation check (entity outside home sector)"]),
-        new("Glue", "Preload", "Research",
-            "Per-sector streaming prefetch and world resource-dependency lists.",
-            ["View lists", "RESEARCH: regenerate after adding archetypes"]),
-        new("Glue", "World settings", "Partial",
-            "The world descriptor: sky/sun/fog/lighting presets, time of day, terrain layer table.",
-            ["Environment preset slots", "Cross-map preset copy", "Terrain layer table"]),
-        new("Glue", "Managers", "Partial",
-            "World-scope singleton state (73 manager types) - mostly preserve, inspect raw.",
-            ["Raw FCB inspection"]),
-
-        NavMesh,
-        EventNodes,
         AiPoints,
         Entrances,
-        new("Systems", "Sound regions", "Research",
+        EventNodes,
+        NavMesh,
+
+        new("Planned", "Entity library", "Library tab",
+            "The archetype palette every entity references, resolved across its override chain.",
+            ["Browse and edit it in the Library tab"]) { Drawn = false },
+        new("Planned", "Landmarks", "Partial",
+            "Per-sector distant-silhouette LOD. The geometry itself now draws under Entities, which "
+            + "reads the landmark files; what is left here is keeping it from going stale after edits.",
+            ["Stale-check after edits", "Regenerate a sector's landmark set"]) { Drawn = false },
+        new("Planned", "Sectors", "Ready",
+            "Streaming glue: per-sector neighbors/flags and world sector dependencies.",
+            ["Enable all sectors", "Create new sector", "Violation check (entity outside home sector)"])
+            { Drawn = false },
+        new("Planned", "Preload", "Research",
+            "Per-sector streaming prefetch and world resource-dependency lists.",
+            ["View lists", "RESEARCH: regenerate after adding archetypes"]) { Drawn = false },
+        new("Planned", "World settings", "Partial",
+            "The world descriptor: sky/sun/fog/lighting presets, time of day, terrain layer table.",
+            ["Environment preset slots", "Cross-map preset copy", "Terrain layer table"]) { Drawn = false },
+        new("Planned", "Managers", "Partial",
+            "World-scope singleton state (73 manager types) - mostly preserve, inspect raw.",
+            ["Raw FCB inspection"]) { Drawn = false },
+        new("Planned", "Sound regions", "Research",
             "Per-sector audio region data; records undecoded - preserve byte-for-byte.",
-            ["Presence view only"]),
-        new("Systems", "Cinematics", "Ready",
+            ["Presence view only"]) { Drawn = false },
+        new("Planned", "Cinematics", "Ready",
             "Keyframed sequences (cameras plus objects) at world and level scope.",
-            ["Sequence browser", "Scrub / play preview", "Export / import"]),
-        new("Systems", "Mission logic", "Partial",
+            ["Sequence browser", "Scrub / play preview", "Export / import"]) { Drawn = false },
+        new("Planned", "Mission logic", "Partial",
             "Domino graphs wiring missions to map entities - 606 mission graphs, 215 system boxes.",
-            ["Open in Domino viewer (exists)", "Per-world master graph list"]),
-        new("Systems", "Map texture", "Ready",
+            ["Open in Domino viewer (exists)", "Per-world master graph list"]) { Drawn = false },
+        new("Planned", "Map texture", "Ready",
             "The in-game map/compass image per level and world (plain xbt).",
-            ["View", "Replace"]),
+            ["View", "Replace"]) { Drawn = false },
     ];
 }

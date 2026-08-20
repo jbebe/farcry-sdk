@@ -58,7 +58,10 @@
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
-                            <CheckBox IsChecked="{Binding IsVisible}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                            <!-- Only the layers a renderer reads get a toggle; the rest are the
+                                 roadmap, and a checkbox on one would do nothing. -->
+                            <CheckBox IsChecked="{Binding IsVisible}" Visibility="{Binding ToggleVisibility}"
+                                      VerticalAlignment="Center" Margin="0,0,6,0" />
                             <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
                         </StackPanel>
                     </DataTemplate>
