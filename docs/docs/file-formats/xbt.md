@@ -66,13 +66,46 @@ same 25 textures serve all 45 layer slots.
 | 256² | 512² | `stiresjunk01_d` |
 | 256² | none | `desert_sand_still_d`, `desert_sand_rippled_d` |
 
-Each layer also carries a `Tiling` in world units per repeat — 20 for most ground, 2–3 for rock, 100
-for open sand — so the usual case is 2048 texels over 20 metres, about 102 texels per metre. The
-two 256² sand layers are the exception, and they get their close-up detail from a normal map at a
-much finer tiling instead: `desert_sand_still` pairs a `Tiling="100"` diffuse with a
-`NormalMapTiling="6"` normal map.
-
 Every layer names a `NormalMap` (DXT5, same streaming split) and most name a `SpecularMap`, each with
 its own independent tiling, alongside `SpecularColor`, `SpecularIntensity`, `SpecularShininess`,
 `MinSlope`/`MaxSlope`, `AltStart`/`AltEnd` and a `ProjAxis` (0 = X, 1 = Y, 2 = Z) that gives cliff
 layers a sideways projection instead of a stretched top-down one.
+
+## What `Tiling` counts
+
+The terrain pixel shader builds a layer's UV as **world XY × `_DetailUVScaling[layer]`**, with V
+negated; the float4's `.x`/`.y`/`.z` are the diffuse, normal and specular scales, matching the three
+tilings in the XML. The vertex shader supplies that world XY as the vertex's integer grid coordinate
+plus the sector's offset, so the UV is anchored to world space, not to the sector's own 0–1 UV — that
+one is a separate TEXCOORD, used for the mask, colour and shadow atlases.
+
+`Tiling` is **not** world units per repeat. It is repeats per sector, so the period is
+`64 / Tiling` world units:
+
+| Layer | `Tiling` | Period | Sanity check |
+| --- | --- | --- | --- |
+| `Jungle_Underbrush_Dense` | 20 | 3.2 m | ~640 texels/m off a 2048 texture |
+| `Misc_Tire` (`stiresjunk01_d`) | 30 | 2.1 m | tyres come out 0.7 m across |
+| `Jungle_Urban_Ground` | 20 | 3.2 m | embedded stones 13 cm |
+| `Desert_CrackedEarth` | 20 | 3.2 m | dried-mud cells 27 cm |
+| `Jungle_Mountain_Rock_*` | 2 | 32 m | a cliff face, not a 2 m tile |
+| `Desert_Sand_Still` | 100 | 0.64 m | fine grain; the dunes come from its `NormalMapTiling="6"` → 10.7 m |
+
+:::note[Community-reported]
+The 64 is inferred, not read out of the engine. `Tiling` reaches the sector's static shader data
+untouched — `C3DEngine::LoadTerrainLayersFromXML` → `STerrainLayer` (offsets 0x18/0x24/0x30) →
+`CSector::InitializeLayers` — so the conversion to `_DetailUVScaling` happens in renderer code not
+yet located in either binary. What supports 64 is measurement: reading `Tiling` as world units per
+repeat makes those tyres 10 m across, those stones 0.8 m and those mud cells 1.7 m, and the engine's
+own baked far-field albedo (below), which is exactly one texel per world unit, carries no periodicity
+at a 20-texel lag that a 20-unit repeat could not hide.
+:::
+
+## Far terrain is a different texture entirely
+
+`atlas<id>_diffuse.xbt` is a baked albedo of the blended detail at one texel per world unit, one
+atlas per 2×2 sectors. The pixel shader samples it through `DiffuseSampler` at the sector UV and, when
+the `BlendDetail` flag is set, lerps from the tiled detail into it by view distance
+(`MaterialLODParams`, `InvSquaredMaxDetailDistance`). So distant ground in Far Cry 2 is not the detail
+textures at a high mip — it is this bake, and the tiling stops being visible before it could repeat
+into a pattern.

@@ -19,8 +19,9 @@ public sealed class TerrainTextureSet : IDisposable
     /// <summary>
     /// The side of every slice of the detail array, and the size the game authors its terrain
     /// textures at: a 1024 file whose header points at the 2048 top level held in a separate
-    /// <c>_mip0.xbt</c>. At the usual 20-metre tiling that is 102 texels per metre - the number that
-    /// decides whether close-up ground reads as ground or as a blown-up thumbnail.
+    /// <c>_mip0.xbt</c>. Over the 3.2-metre period a Tiling of 20 works out to, that is about 640
+    /// texels per metre - the number that decides whether close-up ground reads as ground or as a
+    /// blown-up thumbnail.
     /// </summary>
     private const int DetailSide = 2048;
 
@@ -33,6 +34,27 @@ public sealed class TerrainTextureSet : IDisposable
     /// <summary>Mid-grey as a DXT1 endpoint - what a layer draws when its texture cannot be used.</summary>
     private const ushort NeutralGrey = 0x8410;
 
+    /// <summary>
+    /// World units a sector spans, which is the unit a layer's <c>Tiling</c> counts repeats in - so
+    /// the texture's period is <c>SectorSide / Tiling</c> world units, not <c>Tiling</c> of them.
+    /// </summary>
+    /// <remarks>
+    /// Read off the shipped textures rather than the engine: at one repeat per <c>Tiling</c> world
+    /// units the tyres in <c>stiresjunk01_d</c> (Tiling 30) would be 10 m across, the stones in
+    /// <c>urban_ground_d</c> (20) 0.8 m, and the dried-mud cells in <c>dessert_crackedearth_d</c>
+    /// (20) 1.7 m. Dividing into the sector instead puts all three at 0.7 m, 13 cm and 27 cm, and
+    /// gives the mountain rock layers (Tiling 2-3) the 20-30 m period a cliff face wants instead of
+    /// a 2 m one. The engine's own baked far-field albedo agrees: it is one texel per world unit and
+    /// carries no periodicity at a 20-texel lag, which a 20-unit repeat could not hide.
+    ///
+    /// What is NOT verified is the constant itself. The pixel shader multiplies world XY by
+    /// <c>_DetailUVScaling</c>, and the XML's Tiling reaches the sector's static data untouched
+    /// (Dunia.dll / FarCry2_server: LoadTerrainLayersFromXML -> STerrainLayer -> InitializeLayers),
+    /// so the conversion happens in renderer code not yet located. 64 is the reading the measurements
+    /// support and the natural one for a per-sector terrain editor, but it is inference.
+    /// </remarks>
+    private const float SectorSide = 64f;
+
     public int WeightHandle { get; }
     public int ColourHandle { get; }
     public int ShadowHandle { get; }
@@ -44,7 +66,8 @@ public sealed class TerrainTextureSet : IDisposable
     /// <summary>Layers whose texture could not be read or decoded; they draw neutral grey.</summary>
     public IReadOnlyList<string> FailedLayers { get; }
 
-    /// <summary>World units each layer's texture repeats over, indexed by layer index.</summary>
+    /// <summary>World units each layer's texture repeats over, indexed by layer index. Derived from
+    /// the layer's <c>Tiling</c> via <see cref="SectorSide"/>, not equal to it.</summary>
     public float[] Tiling { get; } = new float[MaxLayers];
 
     /// <summary>Projection plane per layer: 0 = X, 1 = Y, 2 = Z.</summary>
@@ -85,7 +108,7 @@ public sealed class TerrainTextureSet : IDisposable
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
 
-        Array.Fill(Tiling, 20f);
+        Array.Fill(Tiling, SectorSide / 20f);
         Array.Fill(ProjectionAxis, 2f);
 
         DetailArrayHandle = GL.GenTexture();
@@ -123,7 +146,7 @@ public sealed class TerrainTextureSet : IDisposable
             {
                 continue;
             }
-            Tiling[layer.Index] = layer.Tiling;
+            Tiling[layer.Index] = SectorSide / layer.Tiling;
             ProjectionAxis[layer.Index] = layer.ProjectionAxis;
 
             if (string.IsNullOrEmpty(layer.TexturePath))
@@ -158,7 +181,7 @@ public sealed class TerrainTextureSet : IDisposable
             foreach (TerrainLayer layer in group)
             {
                 LayerSlice[layer.Index] = slice;
-                Tiling[layer.Index] = layer.Tiling * repeat;
+                Tiling[layer.Index] = SectorSide / layer.Tiling * repeat;
                 loaded++;
             }
             slice++;

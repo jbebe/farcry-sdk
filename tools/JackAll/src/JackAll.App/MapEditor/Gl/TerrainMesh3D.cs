@@ -171,7 +171,10 @@ public sealed class TerrainMesh3D : IDisposable
                 {
                     int layer = int(chosen[i] + 0.5);
                     if (layer >= 64) { continue; }
-                    float tiling = max(layerTiling[layer], 0.5);
+                    // Only a guard against a zero: the real periods run from well under a metre
+                    // (sand, which leans on a fine normal map the game has and this does not) up to
+                    // tens of metres for cliff rock.
+                    float tiling = max(layerTiling[layer], 0.05);
                     colour += weight[i] * texture(detailTextures,
                         vec3(layerUv(layer, height) / tiling, layerSlice[layer])).rgb;
                     used += weight[i];
