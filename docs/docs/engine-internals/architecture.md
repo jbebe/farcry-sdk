@@ -120,7 +120,7 @@ is presumably how the editor/server/client trim which phases run. Categorized:
 | **AI** | `CAIEngine::PreUpdate` / `PostUpdate` (gated with the "Domino" flag, see below) |
 | **"Domino" mission/AI scripting** | `CDominoDelayManager::Update`, `CDominoSoundManager::Update`, `CDominoSequenceManager::Update` — all under one flag bit alongside AI PreUpdate, confirming Domino is the Lua-backed mission-scripting layer named in [the file manifest](../modding/file-manifest.md#9-lua-scripts--partial) |
 | **Animation** | `MSAnim::Update` |
-| **Ambient / vegetation** | `CDynamicAmbientUpdateManager::UpdatePrePhysics` / `UpdatePostPhysics`, `CAmbianceManager::Update`, `RTxcManager` tick + `PostUpdate` — `RTxcManager` ("Real Tree" component manager) is almost certainly what reads the `.rtx` procedural-vegetation files found hash-list-only, with no format page yet |
+| **Ambient / vegetation** | `CDynamicAmbientUpdateManager::UpdatePrePhysics` / `UpdatePostPhysics`, `CAmbianceManager::Update`, `RTxcManager` tick + `PostUpdate` — `RTxcManager` ("Real Tree" component manager) is what reads the `.rtx` vegetation files — see [`.rtx`](../file-formats/rtx.md) |
 | **Rendering-adjacent** | `CMovieSystem::Update` (cutscenes), `CDecalManager::Update`, `CSky`/fog (via `CDynamicEnvironmentManager`), `CBufferFrameID::Increment3DFrameID` |
 | **Audio** | `GetSoundSystem()->Update()` (opaque interface call — the concrete class wasn't named in this binary; likely the DARE middleware named in [the sound section of the file manifest](../modding/file-manifest.md#7-audio--partial)), `CSubtitleManager::Update` |
 | **Networking** | `Echo::CNetEngine::Update` (confirms `Echo` is the network-engine namespace), `CSessionManager::Update`, `CCommandRequestManager::Update`, `CCommandManager::Update` |
@@ -227,10 +227,10 @@ than a mesh format. The concrete component classes it manages:
 `CRTxEngineResource` (the loadable top-level resource — `CreateInstance` at `0x095bcd14` is its
 factory) owns a hashtable of `SRealtreeSound`, keyed by an `int` event id — confirming individual trees
 carry their own associated sounds (rustling, breaking, burning), tying this system directly into the
-audio layer, not just rendering/physics. `.rtx` is the most promising still-undocumented format in
-[the hash-list survey](../modding/file-manifest.md) precisely because this class taxonomy gives a
-near-complete chunk list to look for once byte-level RE starts. The container framing has since been
-read from real files — see [`.rtx`](../file-formats/rtx.md).
+audio layer, not just rendering/physics. This class taxonomy is what made the format tractable: it
+named the parts to look for, and `RTxcManager::LoadSkeletal` turned out to spell the layout out in
+full. The geometry half is decoded — see [`.rtx`](../file-formats/rtx.md); the simulation state these
+classes own is not.
 
 ### `Echo::CNetEngine` — an object-replication network engine
 

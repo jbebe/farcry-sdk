@@ -2,6 +2,7 @@ using System.Collections.Concurrent;
 using System.Numerics;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
+using JackAll.Tools.Rtx;
 using JackAll.Tools.Xbg;
 
 namespace JackAll.Tools.World;
@@ -49,8 +50,8 @@ public static class WorldVegetation
     /// A resource id is the CRC32 of the resource's own path - the same hash the archives key on -
     /// so reversing it over the known path list resolves every id the retail data uses. Both kinds
     /// come back. 96% of placed instances are ordinary <c>.xbg</c> - the grasses, desert rocks,
-    /// facing bushes and river pebbles - and draw as themselves; the rest name a <c>.rtx</c>
-    /// RealTree, which has no parser and draws as a stand-in (see <see cref="VegetationStandIn"/>).
+    /// facing bushes and river pebbles - and the rest name a <c>.rtx</c> RealTree, which parses to
+    /// triangles of its own (see <see cref="RtxMesh"/>).
     /// </remarks>
     public static Dictionary<uint, string> ResourcesById(IEnumerable<string> knownPaths)
     {
@@ -117,10 +118,9 @@ public static class WorldVegetation
 
     /// <summary>
     /// The scatter split into what can be drawn and what cannot: every instance whose resource
-    /// resolves to a mesh becomes a bare placement of that mesh, so the model layer's culling,
-    /// detail tiers, materials and textures all apply to a tuft of grass exactly as they do to a
-    /// crate. Instances naming a RealTree borrow an impostor card at the size their name implies -
-    /// see <see cref="VegetationStandIn"/> - and only what resolves to nothing at all stays a marker.
+    /// resolves to geometry becomes a bare placement of it, so the model layer's culling, detail
+    /// tiers, materials and textures all apply to a tuft of grass exactly as they do to a crate.
+    /// Only what resolves to nothing at all stays a marker.
     /// </summary>
     /// <remarks>
     /// The scale is the thing to keep in mind here: world 1 places 2.4 million instances, 95% of
@@ -136,12 +136,7 @@ public static class WorldVegetation
             .OfType<string>()
             .Distinct(StringComparer.OrdinalIgnoreCase)];
 
-        // A RealTree draws as a borrowed impostor, so those meshes are baked too even when the
-        // scatter never places one in its own right.
-        string[] toBake = [.. unique
-            .Where(p => p.EndsWith(".xbg", StringComparison.OrdinalIgnoreCase))
-            .Concat(VegetationStandIn.Meshes)
-            .Distinct(StringComparer.OrdinalIgnoreCase)];
+        string[] toBake = [.. unique.Where(WorldModels.IsGeometry)];
 
         progress?.Report($"Loading vegetation: {toBake.Length} meshes");
 
@@ -152,7 +147,7 @@ public static class WorldVegetation
             try
             {
                 baked[path] = readByPath(path) is { } bytes
-                    ? WorldModels.Bake(path, XbgModel.Parse(bytes), WorldModels.FineTriangleBudget, surfaceByMaterial)
+                    ? WorldModels.Bake(path, WorldModels.Triangulate(path, bytes), WorldModels.FineTriangleBudget, surfaceByMaterial)
                     : null;
             }
             catch (Exception)
@@ -161,25 +156,11 @@ public static class WorldVegetation
             }
         });
 
-        // One model per resource: a mesh is itself, a RealTree is its stand-in scaled to the height
-        // its name implies, so two species sharing a card still draw at their own sizes.
         var models = new List<WorldModel>();
         var indexByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        int standIns = 0;
         foreach (string path in unique)
         {
-            WorldModel? model;
-            if (VegetationStandIn.For(path) is { } standIn)
-            {
-                model = baked.GetValueOrDefault(standIn.Mesh)?.ScaledToHeight(standIn.Height);
-                standIns += model is null ? 0 : 1;
-            }
-            else
-            {
-                model = baked.GetValueOrDefault(path);
-            }
-
-            if (model is not null)
+            if (baked.GetValueOrDefault(path) is { } model)
             {
                 indexByPath[path] = models.Count;
                 models.Add(model);
@@ -202,8 +183,8 @@ public static class WorldVegetation
         }
 
         progress?.Report(
-            $"Loaded vegetation: {placed.Count:N0} placements over {models.Count} meshes "
-            + $"({standIns} RealTree stand-ins), {markers.Count:N0} markers");
+            $"Loaded vegetation: {placed.Count:N0} placements over {models.Count} meshes, "
+            + $"{markers.Count:N0} markers");
         return new ScatterSet(models, [.. placed], markers);
     }
 

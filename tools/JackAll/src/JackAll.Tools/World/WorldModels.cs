@@ -4,6 +4,7 @@ using System.Numerics;
 using System.Text.RegularExpressions;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
+using JackAll.Tools.Rtx;
 using JackAll.Tools.Xbg;
 using JackAll.Tools.Xbm;
 
@@ -152,43 +153,6 @@ public sealed class WorldModel
     public Vector2? BillboardFacing { get; init; }
 
     public int VertexCount => Vertices.Length / FloatsPerVertex;
-
-    /// <summary>
-    /// A copy scaled about the model origin so it stands <paramref name="height"/> tall, sharing
-    /// this model's indices and materials. Normals are untouched: a uniform scale does not turn them.
-    /// </summary>
-    /// <remarks>Keeping the origin rather than the base matters - the pivot is where the world
-    /// places the mesh, and a card that dips below it does so on purpose.</remarks>
-    public WorldModel ScaledToHeight(float height)
-    {
-        float tall = LocalMax.Z - LocalMin.Z;
-        if (tall <= 0f || height <= 0f)
-        {
-            return this;
-        }
-
-        float scale = height / tall;
-        var vertices = (float[])Vertices.Clone();
-        for (int i = 0; i + 2 < vertices.Length; i += FloatsPerVertex)
-        {
-            vertices[i] *= scale;
-            vertices[i + 1] *= scale;
-            vertices[i + 2] *= scale;
-        }
-
-        return new WorldModel
-        {
-            Path = $"{Path}@{height:0.#}m",
-            Vertices = vertices,
-            Indices = Indices,
-            Fine = Fine,
-            Coarse = Coarse,
-            MaterialRanges = MaterialRanges,
-            LocalMin = LocalMin * scale,
-            LocalMax = LocalMax * scale,
-            BillboardFacing = BillboardFacing,
-        };
-    }
 }
 
 /// <summary>Every entity resolved to renderable geometry, plus what the status line reports.</summary>
@@ -330,7 +294,7 @@ public static class WorldModels
                 {
                     try
                     {
-                        return readByPath(path) is { } bytes ? XbgModel.Parse(bytes) : null;
+                        return readByPath(path) is { } bytes ? Triangulate(path, bytes) : null;
                     }
                     catch (Exception)
                     {
@@ -388,6 +352,18 @@ public static class WorldModels
             EntitiesWithoutMesh = withoutMesh,
         };
     }
+
+    /// <summary>The two kinds of file a graphics slot or a scatter list names that carry geometry.</summary>
+    public static bool IsGeometry(string path)
+        => path.EndsWith(".xbg", StringComparison.OrdinalIgnoreCase) || IsRealTree(path);
+
+    /// <summary>Triangles from either kind: a mesh parses to them, a RealTree is a skeleton and is
+    /// tessellated into them first.</summary>
+    public static XbgModel Triangulate(string path, byte[] bytes)
+        => IsRealTree(path) ? RtxMesh.ToMesh(RtxModel.Parse(bytes)) : XbgModel.Parse(bytes);
+
+    private static bool IsRealTree(string path)
+        => path.EndsWith(".rtx", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Null when the parse yielded no drawable triangles (DNKS mismatch or empty mesh).</summary>
     public static WorldModel? Bake(

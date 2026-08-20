@@ -120,6 +120,19 @@
              Condition="Exists('$(Fc2Graphics)\_materials\dboivin-m-2008041150042062.xbm')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- One RealTree of each kind the format has: a savannah tree whose foliage is flat cards, and
+         a jungle plant whose leaves are modelled meshes. Their arenas are packed differently, so a
+         stride wrong in either walk shows up in exactly one of them. -->
+    <Content Include="$(Fc2Graphics)\vegetation\savannah\realtrees\rt_tree_acacia.rtx"
+             Link="Fixtures\Rtx\rt_tree_acacia.rtx"
+             Condition="Exists('$(Fc2Graphics)\vegetation\savannah\realtrees\rt_tree_acacia.rtx')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(Fc2Graphics)\vegetation\jungle\realtrees\hy_bigleaf.rtx"
+             Link="Fixtures\Rtx\hy_bigleaf.rtx"
+             Condition="Exists('$(Fc2Graphics)\vegetation\jungle\realtrees\hy_bigleaf.rtx')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <!-- One baked terrain albedo atlas, stored in the cooker's per-sector transpose. Picked for
          having the strongest discontinuity at its internal sector seam of any in the level, so a
          mirror that got the direction wrong could not pass unnoticed. -->

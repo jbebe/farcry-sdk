@@ -108,15 +108,14 @@ public static class LayerCatalog
             "Spline sets in the world's mapsdata: roads amber, rivers blue, foot paths violet.",
             ["Show splines", "Control points carry position, tangent and widths", "Spline editing"]);
 
-    /// <summary>Draws the scatter while visible: real geometry where the resource is a mesh, a
-    /// borrowed impostor card where it is a RealTree.</summary>
+    /// <summary>Draws the scatter while visible, every resource as its own geometry.</summary>
     public static readonly MapLayer Vegetation =
-        new("Geometry", "Vegetation", "Partial",
+        new("Geometry", "Vegetation", "Ready",
             "The per-sector scatter from the landmark files - rocks, grasses and bushes as their own "
-            + "meshes. RealTree species have no parser, so they borrow one of the game's camera-facing "
-            + "impostor cards at the size their name implies: a stand-in, not the species.",
-            ["Draw the ones backed by a mesh", "RealTree (.rtx) borrows an impostor card",
-             "RESEARCH: decode .rtx for real species geometry", "Placement editing"]);
+            + "meshes, and the RealTree species as theirs: the branch skeleton drawn as tubes, hung "
+            + "with the leaf cards or modelled leaves the file authored.",
+            ["Draw every placed resource", "RealTree (.rtx) draws as its own species",
+             "Placement editing"]);
 
     /// <summary>Draws the proximity trigger boxes as wireframes while visible.</summary>
     public static readonly MapLayer Triggers =
