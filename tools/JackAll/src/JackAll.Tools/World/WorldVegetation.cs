@@ -10,6 +10,18 @@ namespace JackAll.Tools.World;
 public sealed record VegetationInstance(Vector3 Position, uint ResourceId);
 
 /// <summary>
+/// One placed copy of one baked mesh, with no object behind it. World 1 scatters 2.4 million of
+/// these - an entity apiece would cost a few hundred megabytes of objects and as many tiny arrays,
+/// so the scatter carries positions and a model index and nothing else.
+/// </summary>
+public readonly record struct ScatterInstance(Vector3 Position, int Model);
+
+/// <summary>The scatter sorted into what can be drawn and what cannot.</summary>
+public sealed record ScatterSet(
+    IReadOnlyList<WorldModel> Models, ScatterInstance[] Instances,
+    IReadOnlyList<VegetationInstance> Markers);
+
+/// <summary>
 /// The vegetation a map places. Each sector's plants live in its two landmark files, under a
 /// <c>CCollectionComponent</c>'s <c>VegetationData</c> - never in the sector's own
 /// <c>worldsector</c> file.
@@ -104,32 +116,27 @@ public static class WorldVegetation
 
     /// <summary>
     /// The scatter split into what can be drawn and what cannot: every instance whose resource
-    /// resolves to a mesh becomes a standing entity at its own position, so the model layer's
-    /// culling, detail tiers, materials and textures all apply to a rock exactly as they do to a
-    /// crate. Instances naming a RealTree come back as <c>Markers</c> for the billboard layer.
+    /// resolves to a mesh becomes a bare placement of that mesh, so the model layer's culling,
+    /// detail tiers, materials and textures all apply to a tuft of grass exactly as they do to a
+    /// crate. Instances naming a RealTree come back as markers for the billboard layer.
     /// </summary>
-    public static (WorldModelSet Models, IReadOnlyList<VegetationInstance> Markers) Split(
+    /// <remarks>
+    /// The scale is the thing to keep in mind here: world 1 places 2.4 million instances, 95% of
+    /// them grass, and 96% of the whole scatter resolves to real geometry. Nothing on this path may
+    /// allocate per instance beyond the placement itself.
+    /// </remarks>
+    public static ScatterSet Split(
         IReadOnlyList<VegetationInstance> instances, IReadOnlyDictionary<uint, string> meshesById,
         Func<string, byte[]?> readByPath, IProgress<string>? progress = null)
     {
-        var markers = new List<VegetationInstance>();
-        var drawable = new List<(VegetationInstance Instance, string Path)>();
-        foreach (VegetationInstance instance in instances)
-        {
-            if (meshesById.TryGetValue(instance.ResourceId, out string? path))
-            {
-                drawable.Add((instance, path));
-            }
-            else
-            {
-                markers.Add(instance);
-            }
-        }
+        string[] unique = [.. instances
+            .Select(i => meshesById.GetValueOrDefault(i.ResourceId))
+            .OfType<string>()
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
 
-        progress?.Report($"Loading vegetation models: {drawable.Count:N0} instances");
+        progress?.Report($"Loading vegetation: {unique.Length} meshes");
 
         Func<string, MaterialSurface?> surfaceByMaterial = WorldModels.SurfaceResolver(readByPath);
-        string[] unique = [.. drawable.Select(d => d.Path).Distinct(StringComparer.OrdinalIgnoreCase)];
         var baked = new ConcurrentDictionary<string, WorldModel?>(StringComparer.OrdinalIgnoreCase);
         Parallel.ForEach(unique, path =>
         {
@@ -156,46 +163,25 @@ public static class WorldVegetation
             }
         }
 
-        // The model layer keys instances on entities, so each plant gets one. They all share a
-        // single node and document: nothing reads either, and 40,000 copies of both would be waste.
-        var host = new WorldSectorDocument
+        var placed = new List<ScatterInstance>(instances.Count);
+        var markers = new List<VegetationInstance>();
+        foreach (VegetationInstance instance in instances)
         {
-            SourcePath = "",
-            SectorId = 0,
-            PristineRoot = new FcbObject { TypeHash = WorldHashes.Entity },
-        };
-
-        var byEntity = new Dictionary<WorldEntity, int[]>(drawable.Count);
-        foreach ((VegetationInstance instance, string path) in drawable)
-        {
-            if (!indexByPath.TryGetValue(path, out int index))
+            if (meshesById.TryGetValue(instance.ResourceId, out string? path)
+                && indexByPath.TryGetValue(path, out int index))
+            {
+                placed.Add(new ScatterInstance(instance.Position, index));
+            }
+            else
             {
                 markers.Add(instance);
-                continue;
             }
-
-            byEntity[new WorldEntity
-            {
-                Node = host.PristineRoot,
-                HomeSector = host,
-                LayerPathId = "",
-                Name = System.IO.Path.GetFileNameWithoutExtension(path),
-                ArchetypeName = path,
-                Position = instance.Position,
-            }] = [index];
         }
 
-        var set = new WorldModelSet
-        {
-            Models = models,
-            ModelIndicesByEntity = byEntity,
-            FailedPathCount = unique.Length - models.Count,
-            EntitiesWithoutMesh = markers.Count,
-        };
-
         progress?.Report(
-            $"Loaded vegetation: {byEntity.Count:N0} models over {models.Count} meshes, {markers.Count:N0} markers");
-        return (set, markers);
+            $"Loaded vegetation: {placed.Count:N0} placements over {models.Count} meshes, "
+            + $"{markers.Count:N0} markers");
+        return new ScatterSet(models, [.. placed], markers);
     }
 
     private static void Collect(

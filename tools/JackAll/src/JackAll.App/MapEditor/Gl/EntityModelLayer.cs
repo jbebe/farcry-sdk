@@ -85,20 +85,8 @@ public sealed class EntityModelLayer : IDisposable
     public EntityModelLayer(
         WorldModelSet set, Func<string, byte[]?> readByPath,
         Func<WorldEntity, (byte R, byte G, byte B)> colourOf)
+        : this(set.Models, readByPath, CapacityOf(set))
     {
-        _readByPath = readByPath;
-
-        // The staging and instance buffers are sized once for every entity that can ever map to
-        // the mesh; visibility and ring changes only shrink the live counts.
-        var capacity = new int[set.Models.Count];
-        foreach (int[] indices in set.ModelIndicesByEntity.Values)
-        {
-            foreach (int index in indices)
-            {
-                capacity[index]++;
-            }
-        }
-
         _rows = new Dictionary<WorldEntity, Row>(set.ModelIndicesByEntity.Count);
         var colourByArchetype = new Dictionary<string, (float R, float G, float B)>(StringComparer.OrdinalIgnoreCase);
         foreach ((WorldEntity entity, int[] models) in set.ModelIndicesByEntity)
@@ -111,12 +99,38 @@ public sealed class EntityModelLayer : IDisposable
             }
             _rows[entity] = new Row(models, colour.R, colour.G, colour.B);
         }
+    }
 
-        _meshes = new Mesh[set.Models.Count];
-        var blended = new List<Mesh>();
-        for (int i = 0; i < set.Models.Count; i++)
+    private static int[] CapacityOf(WorldModelSet set)
+    {
+        var capacity = new int[set.Models.Count];
+        foreach (int[] indices in set.ModelIndicesByEntity.Values)
         {
-            WorldModel model = set.Models[i];
+            foreach (int index in indices)
+            {
+                capacity[index]++;
+            }
+        }
+
+        return capacity;
+    }
+
+    /// <summary>
+    /// The geometry-only half of the layer: meshes, buffers and the shader, with no entities behind
+    /// them. The scatter builds on this - two million placements cannot each be an entity - and the
+    /// entity constructor chains through it.
+    /// </summary>
+    public EntityModelLayer(
+        IReadOnlyList<WorldModel> models, Func<string, byte[]?> readByPath, int[] capacity)
+    {
+        _readByPath = readByPath;
+        _rows = [];
+
+        _meshes = new Mesh[models.Count];
+        var blended = new List<Mesh>();
+        for (int i = 0; i < models.Count; i++)
+        {
+            WorldModel model = models[i];
             IReadOnlyList<MaterialRange> ranges = model.MaterialRanges;
             var mesh = new Mesh
             {
@@ -304,6 +318,94 @@ public sealed class EntityModelLayer : IDisposable
     /// front of each mesh's staging array, coarse ones backward from its end, so one pass fills
     /// both without counting first.
     /// </summary>
+    /// <summary>
+    /// The same visibility pass over bare placements. Only the ones inside the coarse ring reach a
+    /// buffer, so a world scattering millions of them streams the few thousand around the camera.
+    /// </summary>
+    public void SetVisible(ScatterInstance[] scatter, Vector3 cameraPosition)
+    {
+        int cameraX = (int)MathF.Floor(cameraPosition.X / WorldModels.SectorMeters);
+        int cameraY = (int)MathF.Floor(cameraPosition.Y / WorldModels.SectorMeters);
+
+        foreach (Mesh mesh in _meshes)
+        {
+            mesh.FineCount = 0;
+            mesh.CoarseCount = 0;
+            mesh.FineFloats = 0;
+            mesh.CoarseFloats = mesh.Staging.Length;
+        }
+
+        foreach (ScatterInstance instance in scatter)
+        {
+            int distance = Math.Max(
+                Math.Abs((int)MathF.Floor(instance.Position.X / WorldModels.SectorMeters) - cameraX),
+                Math.Abs((int)MathF.Floor(instance.Position.Y / WorldModels.SectorMeters) - cameraY));
+            if (distance > WorldModels.CoarseRadius)
+            {
+                continue;
+            }
+
+            Place(_meshes[instance.Model], instance.Position, System.Numerics.Vector3.Zero,
+                distance <= WorldModels.FineRadius, 1f, 1f, 1f);
+        }
+
+        UploadStaging();
+    }
+
+    /// <summary>Writes one placement into a mesh's staging, fine from the front and coarse from the
+    /// back. A mesh whose staging is full drops the rest, which only a scatter can reach.</summary>
+    private static void Place(
+        Mesh mesh, System.Numerics.Vector3 position, System.Numerics.Vector3 angles, bool fine,
+        float r, float g, float b)
+    {
+        int at;
+        if (fine)
+        {
+            if (mesh.FineFloats + InstanceStride > mesh.CoarseFloats) return;
+            at = mesh.FineFloats;
+            mesh.FineFloats += InstanceStride;
+            mesh.FineCount++;
+        }
+        else
+        {
+            if (mesh.CoarseFloats - InstanceStride < mesh.FineFloats) return;
+            mesh.CoarseFloats -= InstanceStride;
+            at = mesh.CoarseFloats;
+            mesh.CoarseCount++;
+        }
+
+        mesh.Staging[at] = position.X;
+        mesh.Staging[at + 1] = position.Y;
+        mesh.Staging[at + 2] = position.Z;
+        mesh.Staging[at + 3] = angles.X;
+        mesh.Staging[at + 4] = angles.Y;
+        mesh.Staging[at + 5] = angles.Z;
+        mesh.Staging[at + 6] = r;
+        mesh.Staging[at + 7] = g;
+        mesh.Staging[at + 8] = b;
+    }
+
+    private void UploadStaging()
+    {
+        foreach (Mesh mesh in _meshes)
+        {
+            mesh.PointedAt = -1;
+            mesh.CoarseStart = mesh.CoarseFloats / InstanceStride;
+            GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
+            if (mesh.FineCount > 0)
+            {
+                GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero,
+                    mesh.FineCount * InstanceStrideBytes, mesh.Staging);
+                RequestTextures(mesh);
+            }
+            if (mesh.CoarseCount > 0)
+            {
+                GL.BufferSubData(BufferTarget.ArrayBuffer, (IntPtr)(mesh.CoarseFloats * sizeof(float)),
+                    mesh.CoarseCount * InstanceStrideBytes, ref mesh.Staging[mesh.CoarseFloats]);
+            }
+        }
+    }
+
     public List<WorldEntity> SetVisible(List<WorldEntity> visible, Vector3 cameraPosition)
     {
         int cameraX = (int)MathF.Floor(cameraPosition.X / WorldModels.SectorMeters);
@@ -334,56 +436,11 @@ public sealed class EntityModelLayer : IDisposable
             System.Numerics.Vector3 angles = entity.Angles * (MathF.PI / 180f);
             foreach (int model in row.Models)
             {
-                Mesh mesh = _meshes[model];
-                int at;
-                if (fine)
-                {
-                    at = mesh.FineFloats;
-                    mesh.FineFloats += InstanceStride;
-                    mesh.FineCount++;
-                }
-                else
-                {
-                    mesh.CoarseFloats -= InstanceStride;
-                    at = mesh.CoarseFloats;
-                    mesh.CoarseCount++;
-                }
-
-                float[] staging = mesh.Staging;
-                staging[at] = position.X;
-                staging[at + 1] = position.Y;
-                staging[at + 2] = position.Z;
-                staging[at + 3] = angles.X;
-                staging[at + 4] = angles.Y;
-                staging[at + 5] = angles.Z;
-                staging[at + 6] = row.R;
-                staging[at + 7] = row.G;
-                staging[at + 8] = row.B;
+                Place(_meshes[model], position, angles, fine, row.R, row.G, row.B);
             }
         }
 
-        foreach (Mesh mesh in _meshes)
-        {
-            if (mesh.FineCount + mesh.CoarseCount == 0)
-            {
-                continue;
-            }
-
-            mesh.CoarseStart = mesh.CoarseFloats / InstanceStride;
-            GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
-            if (mesh.FineCount > 0)
-            {
-                GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero,
-                    mesh.FineCount * InstanceStrideBytes, mesh.Staging);
-                RequestTextures(mesh);
-            }
-            if (mesh.CoarseCount > 0)
-            {
-                GL.BufferSubData(BufferTarget.ArrayBuffer, (IntPtr)(mesh.CoarseFloats * sizeof(float)),
-                    mesh.CoarseCount * InstanceStrideBytes, ref mesh.Staging[mesh.CoarseFloats]);
-            }
-        }
-
+        UploadStaging();
         return leftover;
     }
 

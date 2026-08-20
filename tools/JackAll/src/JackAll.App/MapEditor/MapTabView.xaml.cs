@@ -23,7 +23,7 @@ public partial class MapTabView : UserControl
     private sealed record PendingLoad(
         TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table,
         Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines,
-        IReadOnlyList<VegetationInstance> Vegetation, WorldModelSet VegetationModels,
+        IReadOnlyList<VegetationInstance> Vegetation, ScatterSet VegetationModels,
         IReadOnlyList<NavMeshNode> NavNodes,
         IReadOnlyList<WorldLight> Lights, IReadOnlyList<TriggerVolume> Triggers,
         ArchetypeIndex Archetypes, WorldModelSet Models);
@@ -89,7 +89,7 @@ public partial class MapTabView : UserControl
 
     /// <summary>Every drawable scatter instance, as the model layer's visibility pass wants them.
     /// Rebuilt into the layer whenever the camera crosses a sector.</summary>
-    private List<WorldEntity> _vegetationInstances = [];
+    private ScatterInstance[] _vegetationInstances = [];
     private bool _vegetationDirty;
     private EntityMarkerLayer? _navMeshLayer;
     private EntityMarkerLayer? _lightLayer;
@@ -160,9 +160,9 @@ public partial class MapTabView : UserControl
                     WorldVegetation.Load(map, vm.ReadByPath, FcbDefinitionsProvider.Value.Value, progress);
                 // A scatter resource id is its mesh path's own hash, so the ones that name geometry
                 // draw as geometry; the RealTree ones have no parser and stay as markers.
-                (WorldModelSet vegetationModels, IReadOnlyList<VegetationInstance> vegetation) =
-                    WorldVegetation.Split(
-                        scatter, WorldVegetation.MeshesByResourceId(vm.AllKnownPaths), vm.ReadByPath, progress);
+                ScatterSet vegetationModels = WorldVegetation.Split(
+                    scatter, WorldVegetation.MeshesByResourceId(vm.AllKnownPaths), vm.ReadByPath, progress);
+                IReadOnlyList<VegetationInstance> vegetation = vegetationModels.Markers;
                 IReadOnlyList<NavMeshNode> navNodes = WorldNavMesh.Load(map, vm.ReadByPath, progress);
                 IReadOnlyList<WorldLight> lights = WorldLights.Load(world.Entities);
                 IReadOnlyList<TriggerVolume> triggers = WorldTriggers.Load(world.Entities);
@@ -227,9 +227,9 @@ public partial class MapTabView : UserControl
             _vegetationLayer = new EntityMarkerLayer(BuildVegetationMarkers(pending.Vegetation), pending.Vegetation.Count);
             _vegetationModelLayer?.Dispose();
             _vegetationModelLayer = new EntityModelLayer(
-                pending.VegetationModels, _vm is { } vegVm ? vegVm.ReadByPath : _ => null,
-                _ => (140, 150, 120));
-            _vegetationInstances = [.. pending.VegetationModels.ModelIndicesByEntity.Keys];
+                pending.VegetationModels.Models, _vm is { } vegVm ? vegVm.ReadByPath : _ => null,
+                ScatterCapacity(pending.VegetationModels));
+            _vegetationInstances = pending.VegetationModels.Instances;
             _vegetationDirty = true;
             _navMeshLayer?.Dispose();
             _navMeshLayer = new EntityMarkerLayer(BuildNavMeshMarkers(pending.NavNodes), pending.NavNodes.Count);
@@ -402,6 +402,30 @@ public partial class MapTabView : UserControl
         }
 
         DrawSelectionBox(viewProjection);
+    }
+
+    /// <summary>
+    /// How many placements of one scatter mesh a frame may hold. Sizing to the world's own count is
+    /// what the entity layer does, but the scatter counts differently: world 1 places 794,000 tufts
+    /// of one grass alone, and a buffer for all of them would be 29 MB of the ~1% ever inside the
+    /// draw radius. Anything past the cap in a single ring simply does not draw.
+    /// </summary>
+    private const int MaxScatterPerMesh = 40_000;
+
+    private static int[] ScatterCapacity(ScatterSet scatter)
+    {
+        var capacity = new int[scatter.Models.Count];
+        foreach (ScatterInstance instance in scatter.Instances)
+        {
+            capacity[instance.Model]++;
+        }
+
+        for (int i = 0; i < capacity.Length; i++)
+        {
+            capacity[i] = Math.Min(capacity[i], MaxScatterPerMesh);
+        }
+
+        return capacity;
     }
 
     /// <summary>The billboard axes for the 3D view: the camera's own right, and the up that squares

@@ -50,18 +50,19 @@ public class WorldVegetationTests
         ];
 
         byte[] bytes = File.ReadAllBytes(MeshFixture);
-        (WorldModelSet models, IReadOnlyList<VegetationInstance> markers) = WorldVegetation.Split(
+        ScatterSet scatter = WorldVegetation.Split(
             instances,
             new Dictionary<uint, string> { [known] = Mesh },
             path => path.EndsWith(".xbg", StringComparison.OrdinalIgnoreCase) ? bytes : null);
 
-        Assert.Single(models.Models);
-        Assert.Equal(2, models.ModelIndicesByEntity.Count);
-        Assert.All(models.ModelIndicesByEntity.Values, i => Assert.Equal([0], i));
-        Assert.Equal([new Vector3(7, 8, 9)], markers.Select(m => m.Position));
+        Assert.Single(scatter.Models);
+        Assert.Equal(2, scatter.Instances.Length);
+        Assert.All(scatter.Instances, i => Assert.Equal(0, i.Model));
+        Assert.Equal([new Vector3(1, 2, 3), new Vector3(4, 5, 6)], scatter.Instances.Select(i => i.Position));
+        Assert.Equal([new Vector3(7, 8, 9)], scatter.Markers.Select(m => m.Position));
 
         // Every instance ends up in exactly one of the two.
-        Assert.Equal(instances.Length, models.ModelIndicesByEntity.Count + markers.Count);
+        Assert.Equal(instances.Length, scatter.Instances.Length + scatter.Markers.Count);
     }
 
     /// <summary>A resource that resolves to a path the reader cannot serve falls back to a marker
@@ -72,13 +73,13 @@ public class WorldVegetationTests
         const string Missing = @"graphics\props\gone.xbg";
         uint id = NameHash.Compute(Missing);
 
-        (WorldModelSet models, IReadOnlyList<VegetationInstance> markers) = WorldVegetation.Split(
+        ScatterSet scatter = WorldVegetation.Split(
             [new VegetationInstance(Vector3.Zero, id)],
             new Dictionary<uint, string> { [id] = Missing },
             _ => null);
 
-        Assert.Empty(models.Models);
-        Assert.Empty(models.ModelIndicesByEntity);
-        Assert.Single(markers);
+        Assert.Empty(scatter.Models);
+        Assert.Empty(scatter.Instances);
+        Assert.Single(scatter.Markers);
     }
 }
