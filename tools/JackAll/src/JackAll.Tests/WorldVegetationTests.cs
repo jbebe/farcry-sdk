@@ -20,14 +20,17 @@ public class WorldVegetationTests
     public void A_resource_id_is_its_own_path_hash()
     {
         const string Rock = @"graphics\terrain\rocks\desert\ter_desertrock39_nav.xbg";
-        Dictionary<uint, string> byId = WorldVegetation.MeshesByResourceId(
-            [Rock.Replace('\\', '/').ToUpperInvariant(), @"graphics\vegetation\desert\bush.rtx"]);
+        const string Tree = @"graphics\vegetation\desert\realtrees\bush.rtx";
+        Dictionary<uint, string> byId = WorldVegetation.ResourcesById(
+            [Rock.Replace('\\', '/').ToUpperInvariant(), Tree, @"graphics\terrain\rocks\rock.hkx"]);
 
         Assert.Equal(Rock, byId[NameHash.Compute(Rock)]);
         Assert.Equal(0x847110E1u, NameHash.Compute(Rock));
 
-        // Only meshes: a RealTree has no parser here, so it must not claim a slot in the map.
-        Assert.Single(byId);
+        // RealTrees are in the map too - they draw as a stand-in rather than not at all - but
+        // nothing else a scatter list could name is.
+        Assert.Equal(Tree, byId[NameHash.Compute(Tree)]);
+        Assert.Equal(2, byId.Count);
     }
 
     /// <summary>Instances whose resource resolves to a mesh become drawable models; the rest come

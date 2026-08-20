@@ -58,3 +58,30 @@ and [Resource ids are path hashes](../engine-internals/terrain-and-vegetation.md
 
 RealTree is the smaller half of that scatter: 60 distinct `.rtx` resources against roughly 101,000
 placed instances in `world1`, about 4% of the total. The other 96% resolves to ordinary `.xbg`.
+
+By instance count that share is small, but by *species* it is nearly everything: sampling six landmark
+files from each `world1` cell turns up 88 distinct resources, and the ones that read as vegetation are
+almost all `.rtx` — `rt_tree_acacia`, `rt_tree_ficus_a`/`_b`, `rt_tree_camphor`, `rt_saguaro_cactus_line_*`,
+`rt_bush_tamarix_*`, `hy_aloes_*`, `hy_banana_big`. The `.xbg` share is dominated by grass and by
+`terrain\rocks\desert\ter_desertrock*`. **The trees are the part that has no parser.**
+
+The payload holds no references out to other assets: scanning `rt_tree_acacia.rtx` for the CRC32 of
+every one of the 16,645 paths under `graphics\` finds zero matches, and the only readable string is
+the `.rta` source path in the header. So the species' textures and materials cannot be recovered from
+it without decoding the payload proper.
+
+## Impostor cards
+
+Six meshes under `graphics\vegetation\jungle\realtrees\donotuse\` are camera-facing impostor cards:
+`facingbush`, `facing_bush_large`, `facing_bush_palm`, `facingbush_savannah2`,
+`facing_bush_large_savannah`, `facing_bush_savannah`. Despite the folder name the scatter does place
+them — `facingbush.xbg` and both `facing_bush_large`/`_palm` show up in the `world1` sample above.
+
+Each is 12 vertices: a single quad (four triangles, normals along **−Y**) plus two ground-facing
+triangles, spanning roughly 16 m wide and up to 15 m tall.
+
+They are also the only meshes in the game that ask to be turned toward the viewer, and they say so in
+their material rather than their name. Exactly **two of the 2,208 shipped `.xbm` materials** carry a
+`Billboard` property — `dboivin-m-2008041150042062` and `smaingot-m-2008042358745658` — and between
+them they cover those six meshes and nothing else. A renderer that ignores it draws a tree card
+edge-on.

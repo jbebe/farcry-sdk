@@ -43,6 +43,8 @@ public sealed class EntityModelLayer : IDisposable
         public int CoarseStart;
         /// <summary>Instance index the attrib pointers target; -1 forces the first bind.</summary>
         public int PointedAt = -1;
+        /// <summary>Model-space direction the card looks, or zero when the mesh is not a billboard.</summary>
+        public System.Numerics.Vector2 Facing;
     }
 
     /// <summary>What an entity contributes besides its live position and yaw: the meshes its
@@ -76,6 +78,7 @@ public sealed class EntityModelLayer : IDisposable
     private readonly int _uMaskTiling;
     private readonly int _uUseSecond;
     private readonly int _uUseMask;
+    private readonly int _uBillboardFacing;
     /// <summary>Just the meshes carrying a blended range, so the second pass skips the rest.</summary>
     private readonly Mesh[] _blendedMeshes;
 
@@ -143,6 +146,7 @@ public sealed class EntityModelLayer : IDisposable
                 RangeHandles = new int[ranges.Count],
                 SecondHandles = new int[ranges.Count],
                 MaskHandles = new int[ranges.Count],
+                Facing = model.BillboardFacing ?? System.Numerics.Vector2.Zero,
             };
             if (mesh.BlendedRanges.Length > 0)
             {
@@ -198,6 +202,10 @@ public sealed class EntityModelLayer : IDisposable
             layout(location = 5) in vec3 tint;
             layout(location = 6) in vec2 vertexMask;
             uniform mat4 viewProjection;
+            uniform vec3 cameraPosition;
+            // Which way this mesh's card looks in model space, or zero for ordinary geometry that
+            // keeps the orientation the world gave it.
+            uniform vec2 billboardFacing;
             out vec3 worldNormal;
             out vec3 worldPosition;
             out vec3 baseColour;
@@ -213,9 +221,23 @@ public sealed class EntityModelLayer : IDisposable
                 mat3 rz = mat3(c.z, s.z, 0.0,   -s.z, c.z, 0.0,   0.0, 0.0, 1.0);
                 return rz * rx * ry;
             }
+            // Turns the card so it looks at the camera, about Z only - a plant leans with the
+            // ground, it does not tip back when you climb a hill.
+            mat3 faceCamera(vec3 origin)
+            {
+                vec2 toCamera = cameraPosition.xy - origin.xy;
+                if (dot(toCamera, toCamera) < 1e-6) { return spin(vec3(0.0)); }
+                toCamera = normalize(toCamera);
+                // The yaw that carries billboardFacing onto toCamera, as a difference of angles.
+                float yaw = atan(toCamera.y, toCamera.x) - atan(billboardFacing.y, billboardFacing.x);
+                return spin(vec3(0.0, 0.0, yaw));
+            }
+
             void main()
             {
-                mat3 rotation = spin(instanceAngles);
+                mat3 rotation = dot(billboardFacing, billboardFacing) > 0.5
+                    ? faceCamera(instancePosition)
+                    : spin(instanceAngles);
                 worldPosition = rotation * position + instancePosition;
                 // Pure rotation, so the normal rotates the same way - no inverse-transpose needed.
                 worldNormal = rotation * normal;
@@ -295,6 +317,7 @@ public sealed class EntityModelLayer : IDisposable
         _uCameraPosition = _program.UniformLocation("cameraPosition");
         _uSunDirection = _program.UniformLocation("sunDirection");
         _uHaze = _program.UniformLocation("haze");
+        _uBillboardFacing = _program.UniformLocation("billboardFacing");
         _uUseTexture = _program.UniformLocation("useTexture");
         _uAlphaMode = _program.UniformLocation("alphaMode");
         _uTintBase = _program.UniformLocation("tintBase");
@@ -345,8 +368,13 @@ public sealed class EntityModelLayer : IDisposable
                 continue;
             }
 
-            Place(_meshes[instance.Model], instance.Position, System.Numerics.Vector3.Zero,
-                distance <= WorldModels.FineRadius, 1f, 1f, 1f);
+            // A card is nothing without its cutout - drawn in the untextured coarse tier it would
+            // be a flat white rectangle - so billboards stay in the textured pass at every
+            // distance. Twelve vertices each, so that costs nothing.
+            Mesh mesh = _meshes[instance.Model];
+            Place(mesh, instance.Position, System.Numerics.Vector3.Zero,
+                mesh.Facing != System.Numerics.Vector2.Zero || distance <= WorldModels.FineRadius,
+                1f, 1f, 1f);
         }
 
         UploadStaging();
@@ -432,11 +460,13 @@ public sealed class EntityModelLayer : IDisposable
                 continue;
             }
 
-            bool fine = distance <= WorldModels.FineRadius;
+            bool near = distance <= WorldModels.FineRadius;
             System.Numerics.Vector3 angles = entity.Angles * (MathF.PI / 180f);
             foreach (int model in row.Models)
             {
-                Place(_meshes[model], position, angles, fine, row.R, row.G, row.B);
+                Mesh mesh = _meshes[model];
+                Place(mesh, position, angles,
+                    near || mesh.Facing != System.Numerics.Vector2.Zero, row.R, row.G, row.B);
             }
         }
 
@@ -596,6 +626,7 @@ public sealed class EntityModelLayer : IDisposable
             }
 
             GL.BindVertexArray(mesh.Vao);
+            GL.Uniform2(_uBillboardFacing, mesh.Facing.X, mesh.Facing.Y);
             if (mesh.FineCount > 0)
             {
                 DrawRanges(mesh, mesh.OpaqueRanges);
@@ -620,6 +651,7 @@ public sealed class EntityModelLayer : IDisposable
                 if (mesh.FineCount > 0)
                 {
                     GL.BindVertexArray(mesh.Vao);
+                    GL.Uniform2(_uBillboardFacing, mesh.Facing.X, mesh.Facing.Y);
                     DrawRanges(mesh, mesh.BlendedRanges);
                 }
             }

@@ -43,21 +43,22 @@ public static class WorldVegetation
     private const float DecimetresToMetres = 0.1f;
 
     /// <summary>
-    /// Which mesh each scatter resource id names.
+    /// Which resource each scatter id names.
     /// </summary>
     /// <remarks>
     /// A resource id is the CRC32 of the resource's own path - the same hash the archives key on -
-    /// so reversing it over the known path list resolves every id the retail data uses. Only meshes
-    /// come back: about three quarters of placed instances name a <c>.rtx</c> RealTree, a procedural
-    /// tree format this preview has no parser for, and those stay markers. The remaining quarter is
-    /// real geometry - the desert rocks, grasses, facing bushes and river pebbles.
+    /// so reversing it over the known path list resolves every id the retail data uses. Both kinds
+    /// come back. 96% of placed instances are ordinary <c>.xbg</c> - the grasses, desert rocks,
+    /// facing bushes and river pebbles - and draw as themselves; the rest name a <c>.rtx</c>
+    /// RealTree, which has no parser and draws as a stand-in (see <see cref="VegetationStandIn"/>).
     /// </remarks>
-    public static Dictionary<uint, string> MeshesByResourceId(IEnumerable<string> knownPaths)
+    public static Dictionary<uint, string> ResourcesById(IEnumerable<string> knownPaths)
     {
         var byId = new Dictionary<uint, string>();
         foreach (string path in knownPaths)
         {
-            if (!path.EndsWith(".xbg", StringComparison.OrdinalIgnoreCase))
+            if (!path.EndsWith(".xbg", StringComparison.OrdinalIgnoreCase)
+                && !path.EndsWith(".rtx", StringComparison.OrdinalIgnoreCase))
             {
                 continue;
             }
@@ -118,7 +119,8 @@ public static class WorldVegetation
     /// The scatter split into what can be drawn and what cannot: every instance whose resource
     /// resolves to a mesh becomes a bare placement of that mesh, so the model layer's culling,
     /// detail tiers, materials and textures all apply to a tuft of grass exactly as they do to a
-    /// crate. Instances naming a RealTree come back as markers for the billboard layer.
+    /// crate. Instances naming a RealTree borrow an impostor card at the size their name implies -
+    /// see <see cref="VegetationStandIn"/> - and only what resolves to nothing at all stays a marker.
     /// </summary>
     /// <remarks>
     /// The scale is the thing to keep in mind here: world 1 places 2.4 million instances, 95% of
@@ -126,19 +128,26 @@ public static class WorldVegetation
     /// allocate per instance beyond the placement itself.
     /// </remarks>
     public static ScatterSet Split(
-        IReadOnlyList<VegetationInstance> instances, IReadOnlyDictionary<uint, string> meshesById,
+        IReadOnlyList<VegetationInstance> instances, IReadOnlyDictionary<uint, string> resourcesById,
         Func<string, byte[]?> readByPath, IProgress<string>? progress = null)
     {
         string[] unique = [.. instances
-            .Select(i => meshesById.GetValueOrDefault(i.ResourceId))
+            .Select(i => resourcesById.GetValueOrDefault(i.ResourceId))
             .OfType<string>()
             .Distinct(StringComparer.OrdinalIgnoreCase)];
 
-        progress?.Report($"Loading vegetation: {unique.Length} meshes");
+        // A RealTree draws as a borrowed impostor, so those meshes are baked too even when the
+        // scatter never places one in its own right.
+        string[] toBake = [.. unique
+            .Where(p => p.EndsWith(".xbg", StringComparison.OrdinalIgnoreCase))
+            .Concat(VegetationStandIn.Meshes)
+            .Distinct(StringComparer.OrdinalIgnoreCase)];
+
+        progress?.Report($"Loading vegetation: {toBake.Length} meshes");
 
         Func<string, MaterialSurface?> surfaceByMaterial = WorldModels.SurfaceResolver(readByPath);
         var baked = new ConcurrentDictionary<string, WorldModel?>(StringComparer.OrdinalIgnoreCase);
-        Parallel.ForEach(unique, path =>
+        Parallel.ForEach(toBake, path =>
         {
             try
             {
@@ -152,11 +161,25 @@ public static class WorldVegetation
             }
         });
 
+        // One model per resource: a mesh is itself, a RealTree is its stand-in scaled to the height
+        // its name implies, so two species sharing a card still draw at their own sizes.
         var models = new List<WorldModel>();
         var indexByPath = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        int standIns = 0;
         foreach (string path in unique)
         {
-            if (baked[path] is { } model)
+            WorldModel? model;
+            if (VegetationStandIn.For(path) is { } standIn)
+            {
+                model = baked.GetValueOrDefault(standIn.Mesh)?.ScaledToHeight(standIn.Height);
+                standIns += model is null ? 0 : 1;
+            }
+            else
+            {
+                model = baked.GetValueOrDefault(path);
+            }
+
+            if (model is not null)
             {
                 indexByPath[path] = models.Count;
                 models.Add(model);
@@ -167,7 +190,7 @@ public static class WorldVegetation
         var markers = new List<VegetationInstance>();
         foreach (VegetationInstance instance in instances)
         {
-            if (meshesById.TryGetValue(instance.ResourceId, out string? path)
+            if (resourcesById.TryGetValue(instance.ResourceId, out string? path)
                 && indexByPath.TryGetValue(path, out int index))
             {
                 placed.Add(new ScatterInstance(instance.Position, index));
@@ -179,8 +202,8 @@ public static class WorldVegetation
         }
 
         progress?.Report(
-            $"Loaded vegetation: {placed.Count:N0} placements over {models.Count} meshes, "
-            + $"{markers.Count:N0} markers");
+            $"Loaded vegetation: {placed.Count:N0} placements over {models.Count} meshes "
+            + $"({standIns} RealTree stand-ins), {markers.Count:N0} markers");
         return new ScatterSet(models, [.. placed], markers);
     }
 

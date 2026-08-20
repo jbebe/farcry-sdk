@@ -158,10 +158,10 @@ public partial class MapTabView : UserControl
                 IReadOnlyList<WorldShape> splines = WorldSplines.Load(map.Name, vm.ReadByPath);
                 IReadOnlyList<VegetationInstance> scatter =
                     WorldVegetation.Load(map, vm.ReadByPath, FcbDefinitionsProvider.Value.Value, progress);
-                // A scatter resource id is its mesh path's own hash, so the ones that name geometry
-                // draw as geometry; the RealTree ones have no parser and stay as markers.
+                // A scatter resource id is its own path's hash, so the ones naming geometry draw as
+                // geometry; a RealTree has no parser and borrows an impostor card at its size.
                 ScatterSet vegetationModels = WorldVegetation.Split(
-                    scatter, WorldVegetation.MeshesByResourceId(vm.AllKnownPaths), vm.ReadByPath, progress);
+                    scatter, WorldVegetation.ResourcesById(vm.AllKnownPaths), vm.ReadByPath, progress);
                 IReadOnlyList<VegetationInstance> vegetation = vegetationModels.Markers;
                 IReadOnlyList<NavMeshNode> navNodes = WorldNavMesh.Load(map, vm.ReadByPath, progress);
                 IReadOnlyList<WorldLight> lights = WorldLights.Load(world.Entities);

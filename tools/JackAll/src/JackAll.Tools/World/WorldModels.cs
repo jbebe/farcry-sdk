@@ -61,6 +61,14 @@ public readonly record struct MaterialSurface
     public Vector2 SecondDiffuseTiling { get; init; }
     public Vector2 MaskTiling { get; init; }
 
+    /// <summary>
+    /// The material draws as a card that turns to face the camera. Exactly two of the 2,208 retail
+    /// materials set this, and between them they cover the six <c>facing*</c> vegetation impostors
+    /// and nothing else - so this is the engine's own flag for it, not a guess from a mesh's name or
+    /// its shape.
+    /// </summary>
+    public bool Billboard { get; init; }
+
     /// <summary>What an unresolved material draws as: the texture unchanged, untiled, untinted.</summary>
     public static readonly MaterialSurface None = new()
     {
@@ -134,7 +142,53 @@ public sealed class WorldModel
     public required Vector3 LocalMin { get; init; }
     public required Vector3 LocalMax { get; init; }
 
+    /// <summary>
+    /// Which way the card looks in model space when a material marked this mesh a billboard, or
+    /// null when it is ordinary geometry that keeps its authored orientation.
+    /// </summary>
+    /// <remarks>Measured from the card's own normals rather than assumed. All six retail impostors
+    /// come out facing -Y, but nothing in the format promises that, and a mesh drawn edge-on because
+    /// the convention was guessed is exactly the bug this is here to fix.</remarks>
+    public Vector2? BillboardFacing { get; init; }
+
     public int VertexCount => Vertices.Length / FloatsPerVertex;
+
+    /// <summary>
+    /// A copy scaled about the model origin so it stands <paramref name="height"/> tall, sharing
+    /// this model's indices and materials. Normals are untouched: a uniform scale does not turn them.
+    /// </summary>
+    /// <remarks>Keeping the origin rather than the base matters - the pivot is where the world
+    /// places the mesh, and a card that dips below it does so on purpose.</remarks>
+    public WorldModel ScaledToHeight(float height)
+    {
+        float tall = LocalMax.Z - LocalMin.Z;
+        if (tall <= 0f || height <= 0f)
+        {
+            return this;
+        }
+
+        float scale = height / tall;
+        var vertices = (float[])Vertices.Clone();
+        for (int i = 0; i + 2 < vertices.Length; i += FloatsPerVertex)
+        {
+            vertices[i] *= scale;
+            vertices[i + 1] *= scale;
+            vertices[i + 2] *= scale;
+        }
+
+        return new WorldModel
+        {
+            Path = $"{Path}@{height:0.#}m",
+            Vertices = vertices,
+            Indices = Indices,
+            Fine = Fine,
+            Coarse = Coarse,
+            MaterialRanges = MaterialRanges,
+            LocalMin = LocalMin * scale,
+            LocalMax = LocalMax * scale,
+            BillboardFacing = BillboardFacing,
+        };
+    }
 }
 
 /// <summary>Every entity resolved to renderable geometry, plus what the status line reports.</summary>
@@ -392,7 +446,40 @@ public static class WorldModels
             MaterialRanges = materialRanges,
             LocalMin = localMin.X > localMax.X ? Vector3.Zero : localMin,
             LocalMax = localMin.X > localMax.X ? Vector3.Zero : localMax,
+            BillboardFacing = FacingOf(materialRanges, vertices, indices),
         };
+    }
+
+    /// <summary>
+    /// Where a billboard mesh's card looks, averaged over the normals of the ranges whose material
+    /// asked for it and flattened to the ground plane. Null unless a material did ask.
+    /// </summary>
+    /// <remarks>
+    /// Only the billboard ranges are averaged. The retail impostors pair their card with a couple of
+    /// ground-facing triangles, and folding those in would drag the answer toward straight up.
+    /// </remarks>
+    private static Vector2? FacingOf(
+        List<MaterialRange> ranges, List<float> vertices, List<int> indices)
+    {
+        var facing = Vector2.Zero;
+        bool any = false;
+        foreach (MaterialRange range in ranges.Where(r => r.Surface.Billboard))
+        {
+            any = true;
+            for (int i = range.Start; i < range.Start + range.Count && i < indices.Count; i++)
+            {
+                int at = indices[i] * WorldModel.FloatsPerVertex;
+                facing += new Vector2(vertices[at + 3], vertices[at + 4]);
+            }
+        }
+
+        if (!any)
+        {
+            return null;
+        }
+        // A card authored perfectly edge-on to the ground plane leaves nothing to aim; -Y is what
+        // every retail impostor uses, so it is the least surprising thing to fall back to.
+        return facing.LengthSquared() > 1e-6f ? Vector2.Normalize(facing) : -Vector2.UnitY;
     }
 
     /// <summary>Parts do not all carry the same LOD levels - a wall or a wheel often stops at a
@@ -657,8 +744,15 @@ public static class WorldModels
             DiffuseTiling = TilingProperty(material, "DiffuseTiling1"),
             SecondDiffuseTiling = TilingProperty(material, "DiffuseTiling2"),
             MaskTiling = TilingProperty(material, "MaskTiling1"),
+            Billboard = BoolProperty(material, "Billboard"),
         };
     }
+
+    /// <summary>A material's integer-valued flag; false when it names none.</summary>
+    private static bool BoolProperty(XbmMaterial material, string key)
+        => material.Properties.FirstOrDefault(
+            p => p.Key.Equals(key, StringComparison.OrdinalIgnoreCase)) is { } property
+            && int.TryParse(property.Value, out int value) && value != 0;
 
     /// <summary>A material's UV multiplier for one texture; 1:1 when it names none.</summary>
     private static Vector2 TilingProperty(XbmMaterial material, string key)

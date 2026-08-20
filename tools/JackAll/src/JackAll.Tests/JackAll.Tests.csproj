@@ -107,6 +107,19 @@
              Condition="Exists('$(Fc2Graphics)\terrain\_textures\desert\desert_sand_still_d.xbt')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- One of the six camera-facing vegetation impostors and the material that marks it a
+         billboard - two of the 2,208 shipped materials set that flag, and these six meshes are all
+         that use them. -->
+    <Content Include="$(Fc2Graphics)\vegetation\jungle\realtrees\donotuse\facingbush.xbg"
+             Link="Fixtures\Billboard\facingbush.xbg"
+             Condition="Exists('$(Fc2Graphics)\vegetation\jungle\realtrees\donotuse\facingbush.xbg')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(Fc2Graphics)\_materials\dboivin-m-2008041150042062.xbm"
+             Link="Fixtures\Billboard\facingbush.xbm"
+             Condition="Exists('$(Fc2Graphics)\_materials\dboivin-m-2008041150042062.xbm')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <!-- One baked terrain albedo atlas, stored in the cooker's per-sector transpose. Picked for
          having the strongest discontinuity at its internal sector seam of any in the level, so a
          mirror that got the direction wrong could not pass unnoticed. -->
