@@ -98,11 +98,13 @@ public static class LayerCatalog
             "Spline sets in the world's mapsdata: roads amber, rivers blue, foot paths violet.",
             ["Show splines", "Control points carry position, tangent and widths", "Spline editing"]);
 
-    /// <summary>Draws a marker per placed plant while visible.</summary>
+    /// <summary>Draws the scatter while visible: real geometry where the resource is a mesh, a
+    /// marker where it is a RealTree.</summary>
     public static readonly MapLayer Vegetation =
         new("Dressing", "Vegetation", "Ready",
-            "Every placed plant, from the per-sector landmark files. Coloured by the resource it instantiates.",
-            ["Show plant positions", "Resource ids not yet resolved to names", "Placement editing"]);
+            "The per-sector scatter from the landmark files - rocks, grasses and bushes as their own "
+            + "meshes, everything else as a marker coloured by the resource it instantiates.",
+            ["Draw the ones backed by a mesh", "RealTree (.rtx) resources stay markers", "Placement editing"]);
 
     /// <summary>Draws the proximity trigger boxes as wireframes while visible.</summary>
     public static readonly MapLayer Triggers =

@@ -23,7 +23,8 @@ public partial class MapTabView : UserControl
     private sealed record PendingLoad(
         TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table,
         Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines,
-        IReadOnlyList<VegetationInstance> Vegetation, IReadOnlyList<NavMeshNode> NavNodes,
+        IReadOnlyList<VegetationInstance> Vegetation, WorldModelSet VegetationModels,
+        IReadOnlyList<NavMeshNode> NavNodes,
         IReadOnlyList<WorldLight> Lights, IReadOnlyList<TriggerVolume> Triggers,
         ArchetypeIndex Archetypes, WorldModelSet Models);
 
@@ -81,6 +82,15 @@ public partial class MapTabView : UserControl
     private ShapeLayer? _shapeLayer;
     private ShapeLayer? _splineLayer;
     private EntityMarkerLayer? _vegetationLayer;
+
+    /// <summary>The scatter that resolved to real meshes - rocks, grasses, facing bushes - drawn by
+    /// the same layer the entities use, so they get its culling, detail tiers and materials.</summary>
+    private EntityModelLayer? _vegetationModelLayer;
+
+    /// <summary>Every drawable scatter instance, as the model layer's visibility pass wants them.
+    /// Rebuilt into the layer whenever the camera crosses a sector.</summary>
+    private List<WorldEntity> _vegetationInstances = [];
+    private bool _vegetationDirty;
     private EntityMarkerLayer? _navMeshLayer;
     private EntityMarkerLayer? _lightLayer;
 
@@ -146,8 +156,13 @@ public partial class MapTabView : UserControl
                 IReadOnlyList<WorldShape> shapes =
                     WorldShapes.Load(map.Name, vm.ReadByPath, FcbDefinitionsProvider.Value.Value);
                 IReadOnlyList<WorldShape> splines = WorldSplines.Load(map.Name, vm.ReadByPath);
-                IReadOnlyList<VegetationInstance> vegetation =
+                IReadOnlyList<VegetationInstance> scatter =
                     WorldVegetation.Load(map, vm.ReadByPath, FcbDefinitionsProvider.Value.Value, progress);
+                // A scatter resource id is its mesh path's own hash, so the ones that name geometry
+                // draw as geometry; the RealTree ones have no parser and stay as markers.
+                (WorldModelSet vegetationModels, IReadOnlyList<VegetationInstance> vegetation) =
+                    WorldVegetation.Split(
+                        scatter, WorldVegetation.MeshesByResourceId(vm.AllKnownPaths), vm.ReadByPath, progress);
                 IReadOnlyList<NavMeshNode> navNodes = WorldNavMesh.Load(map, vm.ReadByPath, progress);
                 IReadOnlyList<WorldLight> lights = WorldLights.Load(world.Entities);
                 IReadOnlyList<TriggerVolume> triggers = WorldTriggers.Load(world.Entities);
@@ -158,8 +173,8 @@ public partial class MapTabView : UserControl
                     ArchetypeIndex.DiscoverDlcLibraries(vm.AllKnownPaths));
                 WorldModelSet models = WorldModels.Load(world.Entities, archetypes, vm.ReadByPath, progress);
                 return new PendingLoad(
-                    map, terrain, detail, table, world, shapes, splines, vegetation, navNodes, lights,
-                    triggers, archetypes, models);
+                    map, terrain, detail, table, world, shapes, splines, vegetation, vegetationModels,
+                    navNodes, lights, triggers, archetypes, models);
             });
 
             WorldTerrain terrain = loaded.Terrain;
@@ -210,6 +225,12 @@ public partial class MapTabView : UserControl
             _splineLayer = new ShapeLayer(pending.Splines);
             _vegetationLayer?.Dispose();
             _vegetationLayer = new EntityMarkerLayer(BuildVegetationMarkers(pending.Vegetation), pending.Vegetation.Count);
+            _vegetationModelLayer?.Dispose();
+            _vegetationModelLayer = new EntityModelLayer(
+                pending.VegetationModels, _vm is { } vegVm ? vegVm.ReadByPath : _ => null,
+                _ => (140, 150, 120));
+            _vegetationInstances = [.. pending.VegetationModels.ModelIndicesByEntity.Keys];
+            _vegetationDirty = true;
             _navMeshLayer?.Dispose();
             _navMeshLayer = new EntityMarkerLayer(BuildNavMeshMarkers(pending.NavNodes), pending.NavNodes.Count);
             _lightLayer?.Dispose();
@@ -259,6 +280,13 @@ public partial class MapTabView : UserControl
         {
             _cameraSector = sector;
             _markersDirty = true;
+            _vegetationDirty = true;
+        }
+
+        if (_vegetationDirty && _vegetationModelLayer is { } vegetationModels)
+        {
+            _vegetationDirty = false;
+            vegetationModels.SetVisible(_vegetationInstances, _camera.Position);
         }
 
         // Toggling a mission layer changes which markers exist, so the instance stream is rebuilt
@@ -328,6 +356,8 @@ public partial class MapTabView : UserControl
 
         if (LayerCatalog.Vegetation.IsVisible)
         {
+            // Meshes first, opaque; the markers for what has no mesh blend over them.
+            _vegetationModelLayer?.Draw(viewProjection, _camera.Position, demo);
             _vegetationLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
                 MarkerStyle.World(2f));
         }
