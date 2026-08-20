@@ -84,7 +84,7 @@ public readonly record struct MaterialSurface
 }
 
 /// <summary>
-/// One graphics slot: the mesh it names, and which of that mesh's parts to draw.
+/// One mesh an entity draws, and which of that mesh's parts it wants of it.
 /// </summary>
 /// <remarks>
 /// An empty <see cref="Parts"/> draws the whole mesh, which is what almost every entity wants. The
@@ -95,11 +95,12 @@ public readonly record struct MaterialSurface
 public readonly record struct MeshRef(string Path, string Parts)
 {
     /// <summary>The parts as the file writes them: a semicolon-delimited list with empty ends.
-    /// Normalized to a plain uppercase list so it can key a bake.</summary>
+    /// Normalized to a sorted, deduplicated uppercase list so it can key a bake.</summary>
     public static string ParseParts(string hidMeshName)
         => string.Join(';', hidMeshName
             .Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
             .Select(p => p.ToUpperInvariant())
+            .Distinct(StringComparer.Ordinal)
             .Order(StringComparer.Ordinal));
 
     /// <summary>The part names as a set, or null when this slot draws the whole mesh.</summary>
@@ -198,7 +199,16 @@ public static class WorldModels
     public static IReadOnlyList<string> MeshPaths(FcbObject entityNode)
         => [.. MeshRefs(entityNode).Select(r => r.Path).Distinct(StringComparer.OrdinalIgnoreCase)];
 
-    /// <summary>The same slots, each with the parts of its mesh the entity actually wears.</summary>
+    /// <summary>
+    /// One reference per mesh the entity draws, carrying every part it wants from that mesh.
+    /// </summary>
+    /// <remarks>
+    /// Slots naming the same mesh are pieces of one object rather than alternatives to each other:
+    /// every retail vehicle spends one slot per wheel, panel and light, up to 45 of them on a truck,
+    /// and none of them names the whole mesh. So they merge, which is what lets a vehicle bake once
+    /// instead of 45 times, and what lets the state filter see a part's damaged and undamaged
+    /// variants side by side rather than one slot at a time.
+    /// </remarks>
     public static IReadOnlyList<MeshRef> MeshRefs(FcbObject entityNode)
     {
         if (FcbEntityFields.FindComponent(entityNode, WorldHashes.CGraphicComponent) is not { } component)
@@ -206,34 +216,35 @@ public static class WorldModels
             return [];
         }
 
-        var refs = new List<MeshRef>();
+        var slots = new List<(string Path, string Parts)>();
         void Take(FcbObject holder)
         {
             string value = FcbEntityFields.ReadString(holder, WorldHashes.TextObjModel);
-            if (value.Length == 0)
+            if (value.Length > 0)
             {
-                return;
-            }
-
-            var slot = new MeshRef(
-                NameHash.Normalize(value),
-                MeshRef.ParseParts(FcbEntityFields.ReadString(holder, WorldHashes.HidMeshName)));
-            if (!refs.Contains(slot))
-            {
-                refs.Add(slot);
+                slots.Add((
+                    NameHash.Normalize(value),
+                    FcbEntityFields.ReadString(holder, WorldHashes.HidMeshName)));
             }
         }
 
         Take(component);
-        foreach (FcbObject slot in component.Children)
+        foreach (FcbObject child in component.Children)
         {
-            if (slot.TypeHash == WorldHashes.GraphicObject)
+            if (child.TypeHash == WorldHashes.GraphicObject)
             {
-                Take(slot);
+                Take(child);
             }
         }
 
-        return refs;
+        return [.. slots
+            .GroupBy(s => s.Path, StringComparer.OrdinalIgnoreCase)
+            .Select(perMesh => new MeshRef(
+                perMesh.Key,
+                // A slot naming no part draws the whole mesh, which subsumes any part list beside it.
+                perMesh.Any(s => s.Parts.Length == 0)
+                    ? ""
+                    : MeshRef.ParseParts(string.Join(';', perMesh.Select(s => s.Parts)))))];
     }
 
     public static WorldModelSet Load(
@@ -477,6 +488,11 @@ public static class WorldModels
     /// wearing a more crowded one its most common outfit instead. Ties break on the part list so a
     /// world always loads the same way.
     /// </summary>
+    /// <remarks>
+    /// An outfit is one entity's whole part list for one mesh, which is why <see cref="MeshRefs"/>
+    /// has to merge an entity's slots first. Counting slots instead reads a vehicle's 33 pieces as 33
+    /// ways to wear a Land Rover and leaves every one of them wearing a single door.
+    /// </remarks>
     private static void CollapseCrowdedWardrobes(Dictionary<WorldEntity, IReadOnlyList<MeshRef>> refsByEntity)
     {
         var uses = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);

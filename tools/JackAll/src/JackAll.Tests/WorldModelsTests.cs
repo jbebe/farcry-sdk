@@ -319,6 +319,157 @@ public class WorldModelsTests
     private static byte[]? ReadLibrary(string path)
         => path.Equals(LibraryPath, StringComparison.OrdinalIgnoreCase) ? File.ReadAllBytes(LibraryFixture) : null;
 
+    /// <summary>
+    /// Every retail vehicle fills one graphics slot per wheel, panel and light - 18 on the buggy, 45
+    /// on the big truck - and none of them names the whole mesh. Those slots are one object, so they
+    /// merge into one reference carrying every part.
+    /// </summary>
+    [Fact]
+    public void One_slot_per_part_merges_into_one_reference()
+    {
+        string[] pieces = ["CHASSIS", "WHEELBACK_L", "WHEELBACK_R", "BUMPER_STATE01"];
+
+        IReadOnlyList<MeshRef> refs = WorldModels.MeshRefs(VehicleNode("buggy.xbg", pieces));
+
+        MeshRef only = Assert.Single(refs);
+        Assert.Equal("buggy.xbg", only.Path);
+        Assert.Equal(new HashSet<string>(pieces, StringComparer.OrdinalIgnoreCase), only.PartSet());
+    }
+
+    /// <summary>A slot naming no part draws everything, so a part list beside it adds nothing.</summary>
+    [Fact]
+    public void A_whole_mesh_slot_subsumes_the_part_lists_beside_it()
+    {
+        var graphics = new FcbObject { TypeHash = WorldHashes.CGraphicComponent };
+        graphics.Values[WorldHashes.TextObjModel] = System.Text.Encoding.UTF8.GetBytes("rover.xbg");
+        AddSlot(graphics, "rover.xbg", "CHASSIS");
+
+        MeshRef only = Assert.Single(WorldModels.MeshRefs(Wrap(graphics)));
+
+        Assert.Equal("", only.Parts);
+        Assert.Null(only.PartSet());
+    }
+
+    /// <summary>
+    /// The wardrobe cap counts outfits, not pieces. A vehicle's slots all belong to one entity, so
+    /// however many it has they are one outfit and it keeps every one of them - the bug this exists
+    /// to prevent left a Land Rover drawing nothing but its grille.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_vehicles_many_pieces_are_one_outfit_and_survive_the_cap()
+    {
+        if (!File.Exists(BuggyFixture)) return;
+
+        // The buggy's own 18 pieces, comfortably past the cap and every one a separate slot.
+        string[] pieces = PartsOf(BuggyFixture);
+        Assert.True(pieces.Length > WorldModels.MaxOutfitsPerMesh,
+            $"the buggy should carry more pieces than the cap, found {pieces.Length}");
+
+        WorldModelSet set = LoadVehicles(BuggyFixture, pieces, copies: 3);
+
+        Assert.Single(set.Models);
+        Assert.Equal(3, set.ModelIndicesByEntity.Count);
+
+        // The whole vehicle, not one piece of it: the merged bake matches asking for all the parts.
+        WorldModel expected = WorldModels.Bake(
+            BuggyFixture, XbgModel.Parse(File.ReadAllBytes(BuggyFixture)), WorldModels.FineTriangleBudget,
+            onlyParts: new HashSet<string>(pieces, StringComparer.OrdinalIgnoreCase))!;
+        Assert.Equal(expected.Indices.Length, set.Models[0].Indices.Length);
+        Assert.True(expected.Indices.Length > 0);
+    }
+
+    /// <summary>
+    /// The wheels have to actually be there. Merging the slots is what lets the state filter compare
+    /// a part's variants, so the bumper keeps one of its two and the wheels keep all four.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_merged_vehicle_keeps_every_wheel_and_one_bumper()
+    {
+        if (!File.Exists(BuggyFixture)) return;
+
+        string[] pieces = PartsOf(BuggyFixture);
+        XbgModel mesh = XbgModel.Parse(File.ReadAllBytes(BuggyFixture));
+        WorldModel model = WorldModels.Bake(
+            BuggyFixture, mesh, WorldModels.FineTriangleBudget,
+            onlyParts: new HashSet<string>(pieces, StringComparer.OrdinalIgnoreCase))!;
+
+        int Triangles(string part) => WorldModels.Bake(
+            BuggyFixture, mesh, WorldModels.FineTriangleBudget,
+            onlyParts: new HashSet<string> { part })?.Fine.Count / 3 ?? 0;
+
+        int wheels = Triangles("WHEELBACK_L_STATE01") + Triangles("WHEELBACK_R_STATE01")
+            + Triangles("WHEELFONT_L_STATE01") + Triangles("WHEELFONT_R_STATE01");
+        Assert.True(wheels > 0, "the buggy fixture should have four wheels to find");
+
+        // One bumper of the two, and the chassis and wheels beside it - not a lone grille.
+        Assert.True(model.Fine.Count / 3 > wheels + Triangles("BUMPER_STATE01"),
+            "the merged buggy should be more than its bumper and wheels");
+        Assert.True(
+            model.Fine.Count / 3 < Triangles("BUMPER_STATE01") + Triangles("BUMPER_STATE02")
+                + Triangles("CHASSIS") + wheels + Triangles("WATERTANK_STATE01")
+                + Triangles("WATERTANK_STATE02"),
+            "both bumper states should not draw at once");
+    }
+
+    private const string BuggyFixture = "Fixtures/Xbg/buggy.xbg";
+
+    private static string[] PartsOf(string fixture)
+        => [.. XbgModel.Parse(File.ReadAllBytes(fixture)).Submeshes
+            .Select(s => s.PartName).Where(p => p.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)
+            .Order(StringComparer.Ordinal)];
+
+    private static FcbObject VehicleNode(string mesh, IEnumerable<string> pieces)
+    {
+        var graphics = new FcbObject { TypeHash = WorldHashes.CGraphicComponent };
+        foreach (string piece in pieces)
+        {
+            AddSlot(graphics, mesh, piece);
+        }
+
+        return Wrap(graphics);
+    }
+
+    private static void AddSlot(FcbObject graphics, string mesh, string piece)
+    {
+        var slot = new FcbObject { TypeHash = WorldHashes.GraphicObject };
+        slot.Values[WorldHashes.TextObjModel] = System.Text.Encoding.UTF8.GetBytes(mesh);
+        slot.Values[WorldHashes.HidMeshName] = System.Text.Encoding.UTF8.GetBytes(piece);
+        graphics.Children.Add(slot);
+    }
+
+    private static FcbObject Wrap(FcbObject graphics)
+    {
+        var components = new FcbObject { TypeHash = WorldHashes.Components };
+        components.Children.Add(graphics);
+        var node = new FcbObject { TypeHash = WorldHashes.Entity };
+        node.Children.Add(components);
+        return node;
+    }
+
+    private static WorldModelSet LoadVehicles(string fixture, IReadOnlyList<string> pieces, int copies)
+    {
+        var doc = new WorldSectorDocument
+        {
+            SourcePath = fixture,
+            SectorId = 0,
+            PristineRoot = new FcbObject { TypeHash = WorldHashes.Entity },
+        };
+
+        byte[] mesh = File.ReadAllBytes(fixture);
+        List<WorldEntity> entities = [.. Enumerable.Range(0, copies).Select(_ => new WorldEntity
+        {
+            Node = VehicleNode(fixture, pieces),
+            HomeSector = doc,
+            LayerPathId = "main",
+            Position = Vector3.Zero,
+        })];
+
+        return WorldModels.Load(entities, EmptyIndex(),
+            path => path.EndsWith(".xbm", StringComparison.OrdinalIgnoreCase) ? null : mesh);
+    }
+
     /// <summary>A handful of outfits over one mesh is cheap, so each entity keeps its own.</summary>
     [Fact]
     [Trait("Category", "RequiresFixture")]
