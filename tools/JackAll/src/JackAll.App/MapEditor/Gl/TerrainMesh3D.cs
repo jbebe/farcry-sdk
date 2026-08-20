@@ -10,11 +10,17 @@ public readonly record struct TerrainDrawOptions(
     bool ShowTextures, bool TintBySurfaceType, bool ShowShadow, float Brightness, float Haze);
 
 /// <summary>
-/// The 3D terrain: two camera-following grid patches (a fine 1-unit-spacing ring and a coarse
-/// 8-unit world backdrop) whose vertex shader pulls heights straight from the shared height
-/// texture - no terrain geometry is ever built on the CPU, and edits only need a texture update.
-/// Shading is per-fragment: finite-difference normals from the same texture, one sun.
+/// The 3D terrain: two grid patches over one height texture - a fine 1-unit ring that follows the
+/// camera, and a coarse whole-world backdrop with a hole cut in it where the ring lands. No terrain
+/// geometry is ever built on the CPU, so edits only need a texture update. Shading is per-fragment:
+/// finite-difference normals from the same texture, one sun.
 /// </summary>
+/// <remarks>
+/// The hole matters: both patches read the same heightfield, but the backdrop steps over it in
+/// whole cells, and a step that spans a dip draws a surface metres above the real ground. Left
+/// covering the camera it hides roads, ditches and anything else set into the terrain, and no depth
+/// bias can fix that because the geometry really is higher.
+/// </remarks>
 public sealed class TerrainMesh3D : IDisposable
 {
     /// <summary>Vertices per patch edge; 257x257 keeps both patches under half a million triangles.</summary>
@@ -29,6 +35,7 @@ public sealed class TerrainMesh3D : IDisposable
     private readonly int _uViewProjection;
     private readonly int _uOrigin;
     private readonly int _uSpacing;
+    private readonly int _uClipRect;
     private readonly int _uSurfaceTint;
     private readonly int _uTextureMix;
     private readonly int _uShadowMix;
@@ -91,6 +98,10 @@ public sealed class TerrainMesh3D : IDisposable
             uniform float haze;
             uniform vec3 sunDirection;
             uniform float weightSide;
+            // The world-space rectangle the fine ring covers, as (minX, minY, maxX, maxY). The
+            // coarse pass throws away everything inside it; the fine pass passes an inverted
+            // rectangle, which no fragment can be inside.
+            uniform vec4 clipRect;
             {{SceneLighting.SkyGlsl}}
             in float viewDistance;
             uniform float sectorsPerSide;
@@ -173,6 +184,16 @@ public sealed class TerrainMesh3D : IDisposable
 
             void main()
             {
+                // The two passes read one heightfield at different steps, so where the coarse step
+                // bridges a dip - a road cutting is the obvious one - its surface sits metres above
+                // the real ground and buries whatever is down there. Drawing it only outside the
+                // fine ring is the fix; a depth bias cannot help when the geometry is genuinely
+                // higher.
+                if (all(greaterThan(world, clipRect.xy)) && all(lessThan(world, clipRect.zw)))
+                {
+                    discard;
+                }
+
                 vec2 uv = world / extent;
                 float texel = 1.0 / extent;
                 float hl = texture(heights, uv - vec2(texel, 0.0)).r;
@@ -212,6 +233,7 @@ public sealed class TerrainMesh3D : IDisposable
         _uViewProjection = _program.UniformLocation("viewProjection");
         _uOrigin = _program.UniformLocation("origin");
         _uSpacing = _program.UniformLocation("spacing");
+        _uClipRect = _program.UniformLocation("clipRect");
         _uSurfaceTint = _program.UniformLocation("surfaceTint");
         _uTextureMix = _program.UniformLocation("textureMix");
         _uShadowMix = _program.UniformLocation("shadowMix");
@@ -281,18 +303,27 @@ public sealed class TerrainMesh3D : IDisposable
         GL.BindVertexArray(_vao);
         GL.Enable(EnableCap.DepthTest);
 
-        // Coarse whole-world backdrop, then the fine ring around the camera drawn over it; slight
-        // depth offset on the backdrop avoids z-fighting where they overlap.
-        GL.Enable(EnableCap.PolygonOffsetFill);
-        GL.PolygonOffset(1f, 1f);
-        DrawPatch(spacing: (_heights.Side - 1f) / (PatchSide - 1), originX: 0, originY: 0);
-        GL.Disable(EnableCap.PolygonOffsetFill);
-
         const float fineSpacing = 1f;
+        float coarseSpacing = (_heights.Side - 1f) / (PatchSide - 1);
         float half = (PatchSide - 1) * fineSpacing / 2f;
         // Snapped to whole units so the fine grid doesn't swim as the camera pans.
         float ox = MathF.Floor(cameraPosition.X - half);
         float oy = MathF.Floor(cameraPosition.Y - half);
+
+        // Coarse whole-world backdrop, cut away wherever the fine ring will cover it, then the fine
+        // ring itself. The hole is inset by one coarse cell so the two still overlap in a thin band
+        // rather than leaving a crack where their tessellations disagree - and the depth offset
+        // keeps the fine ring winning inside that band.
+        GL.Enable(EnableCap.PolygonOffsetFill);
+        GL.PolygonOffset(1f, 1f);
+        GL.Uniform4(_uClipRect,
+            ox + coarseSpacing, oy + coarseSpacing,
+            ox + half * 2f - coarseSpacing, oy + half * 2f - coarseSpacing);
+        DrawPatch(coarseSpacing, originX: 0, originY: 0);
+        GL.Disable(EnableCap.PolygonOffsetFill);
+
+        // An inverted rectangle: no fragment is inside it, so the fine ring clips nothing.
+        GL.Uniform4(_uClipRect, 1f, 1f, -1f, -1f);
         DrawPatch(fineSpacing, ox, oy);
     }
 

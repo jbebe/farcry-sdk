@@ -287,6 +287,49 @@ public class XbgModelTests
         Assert.All(baked.MaterialRanges, r => Assert.Equal($@"tex\{r.MaterialName}.xbt", r.DiffuseTexturePath));
     }
 
+    /// <summary>Retail meshes carry two UV sets, and 99% of the corpus has the second one. It is
+    /// what the "group" half of a material's tiling vector reads, so dropping it silently costs the
+    /// mask and the second diffuse layer their coordinates.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Both_uv_sets_survive_the_parse()
+    {
+        if (!FixturesPresent) return;
+
+        foreach (string name in new[] { Character, Prop })
+        {
+            foreach (XbgSubmesh submesh in ParseFixture(name).Submeshes.Where(s => s.LodLevel == 0))
+            {
+                Assert.NotNull(submesh.Uvs);
+                Assert.NotNull(submesh.Uvs1);
+                Assert.Equal(submesh.Uvs!.Length, submesh.Uvs1!.Length);
+            }
+        }
+    }
+
+    /// <summary>
+    /// The bake hands the shader both channels the diffuse blend multiplies the mask by: green
+    /// weights the two layers against each other, blue moves layer 1's tint from Base to Color1.
+    /// Ten floats a vertex, and the last two are those, in that order.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Baked_vertices_carry_both_mask_channels()
+    {
+        if (!FixturesPresent) return;
+
+        XbgModel model = ParseFixture(Prop);
+        WorldModel baked = WorldModels.Bake(Prop, model, WorldModels.FineTriangleBudget)!;
+
+        Assert.Equal(10, WorldModel.FloatsPerVertex);
+        Assert.Equal(0, baked.Vertices.Length % WorldModel.FloatsPerVertex);
+
+        XbgSubmesh source = model.Submeshes.First(s => s.LodLevel == 0 && s.Colours is not null);
+        Vector4 first = source.Colours![source.Indices[0]];
+        Assert.Equal(first.Y, baked.Vertices[8], 3);
+        Assert.Equal(first.Z, baked.Vertices[9], 3);
+    }
+
     /// <summary>
     /// Retail meshes are wound the way D3D wants: walk a triangle's indices in order and the
     /// cross product points away from the authored normal, into the surface. OpenGL reads that

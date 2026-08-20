@@ -199,83 +199,96 @@ public class WorldModelsTests
         Assert.Equal((Vector3.One, Vector3.One), WorldModels.TintsOf(Material()));
     }
 
-    /// <summary>51 retail materials point layer 1 at one of the engine's flat colour swatches and
-    /// keep the real surface in layer 2 - the swamp boat's hull is one, which is why its interior
-    /// draws as an 8x8 grey square. Layer 2 brings its own colour, so it fills both ends of the
-    /// per-vertex blend rather than inheriting layer 1's pair.</summary>
+    /// <summary>
+    /// Everything the Generic shader reads off a material, in one pass: both diffuse layers, the
+    /// mask that gates them, all three tints and all three UV multipliers. The values are the swamp
+    /// boat's hull material, whose layer 1 is an 8x8 grey swatch - the case that first showed the
+    /// second layer had to exist.
+    /// </summary>
     [Fact]
-    public void A_flat_swatch_in_layer_one_hands_the_surface_to_layer_two()
+    public void A_material_carries_both_layers_its_mask_and_every_tiling()
     {
         MaterialSurface surface = WorldModels.SurfaceOf(Material(
             textures:
             [
                 ("DiffuseTexture1", @"graphics\_textures\diffuse\icone\grey.xbt"),
                 ("DiffuseTexture2", @"graphics\_textures\diffuse\ground\dirt_03_d.xbt"),
+                ("MaskTexture1", @"graphics\_textures\mask\rust_01_m.xbt"),
             ],
             properties:
             [
                 ("DiffuseColorBase", "0.322, 0.306, 0.306"),
                 ("DiffuseColor1", "0.439, 0.439, 0.439"),
                 ("DiffuseColor2", "0.369, 0.322, 0.282"),
+                ("DiffuseTiling1", "15, 15"),
+                ("DiffuseTiling2", "4, 2"),
+                ("MaskTiling1", "1, 1"),
             ]));
 
-        Assert.Equal(@"graphics\_textures\diffuse\ground\dirt_03_d.xbt", surface.DiffuseTexturePath);
-        Assert.Equal(new Vector3(0.369f, 0.322f, 0.282f), surface.TintBase);
-        Assert.Equal(new Vector3(0.369f, 0.322f, 0.282f), surface.Tint);
+        Assert.Equal(@"graphics\_textures\diffuse\icone\grey.xbt", surface.DiffuseTexturePath);
+        Assert.Equal(@"graphics\_textures\diffuse\ground\dirt_03_d.xbt", surface.SecondDiffusePath);
+        Assert.Equal(@"graphics\_textures\mask\rust_01_m.xbt", surface.MaskPath);
+
+        Assert.Equal(new Vector3(0.322f, 0.306f, 0.306f), surface.TintBase);
+        Assert.Equal(new Vector3(0.439f, 0.439f, 0.439f), surface.Tint);
+        Assert.Equal(new Vector3(0.369f, 0.322f, 0.282f), surface.SecondTint);
+
+        Assert.Equal(new Vector2(15f, 15f), surface.DiffuseTiling);
+        Assert.Equal(new Vector2(4f, 2f), surface.SecondDiffuseTiling);
+        Assert.Equal(new Vector2(1f, 1f), surface.MaskTiling);
     }
 
-    /// <summary>The other 88 swatch materials are grey on purpose: layer 2 is absent, or is the
-    /// same swatch again. Those keep layer 1 and the tints that colour it.</summary>
+    /// <summary>A material naming no second layer, no mask and no tiling leaves those switched off
+    /// rather than defaulted to something that would scale or darken the surface.</summary>
     [Fact]
-    public void A_swatch_with_nothing_better_behind_it_keeps_layer_one()
-    {
-        const string Grey = @"graphics\_textures\diffuse\icone\grey.xbt";
-        (string, string)[] tints = [("DiffuseColorBase", "0.5, 0.5, 0.5"), ("DiffuseColor2", "1, 0, 0")];
-
-        MaterialSurface alone = WorldModels.SurfaceOf(
-            Material(textures: [("DiffuseTexture1", Grey)], properties: tints));
-        Assert.Equal(Grey, alone.DiffuseTexturePath);
-        Assert.Equal(new Vector3(0.5f, 0.5f, 0.5f), alone.Tint);
-
-        MaterialSurface doubled = WorldModels.SurfaceOf(Material(
-            textures: [("DiffuseTexture1", Grey), ("DiffuseTexture2", Grey)], properties: tints));
-        Assert.Equal(Grey, doubled.DiffuseTexturePath);
-        Assert.Equal(new Vector3(0.5f, 0.5f, 0.5f), doubled.Tint);
-    }
-
-    /// <summary>A material with a real albedo is untouched, whatever it keeps in layer 2 - the
-    /// fallback must not reach the 1,381 materials that carry a second layer as detail.</summary>
-    [Fact]
-    public void A_real_albedo_ignores_the_second_layer()
+    public void What_a_material_does_not_name_stays_neutral()
     {
         MaterialSurface surface = WorldModels.SurfaceOf(Material(
-            textures:
-            [
-                ("DiffuseTexture1", @"graphics\_textures\diffuse\wood\woodplank_03_d.xbt"),
-                ("DiffuseTexture2", @"graphics\_textures\diffuse\ground\dirt_03_d.xbt"),
-            ],
-            properties: [("DiffuseColorBase", "0.2, 0.2, 0.2"), ("DiffuseColor2", "1, 0, 0")]));
+            textures: [("DiffuseTexture1", @"graphics\_textures\diffuse\wood\woodplank_03_d.xbt")]));
 
-        Assert.Equal(@"graphics\_textures\diffuse\wood\woodplank_03_d.xbt", surface.DiffuseTexturePath);
-        Assert.Equal(new Vector3(0.2f, 0.2f, 0.2f), surface.Tint);
+        Assert.Null(surface.SecondDiffusePath);
+        Assert.Null(surface.MaskPath);
+        Assert.Equal(Vector3.One, surface.SecondTint);
+        Assert.Equal(Vector2.One, surface.DiffuseTiling);
+        Assert.Equal(Vector2.One, surface.SecondDiffuseTiling);
+        Assert.Equal(Vector2.One, surface.MaskTiling);
     }
 
-    /// <summary>The same two cases over real .xbm bytes, because the swap only fires if the parser
-    /// surfaces both texture slots under the keys the lookup expects.</summary>
+    /// <summary>A zero tiling would collapse the whole texture into one texel, so it reads as
+    /// "unset" rather than being passed through.</summary>
+    [Fact]
+    public void A_zero_tiling_is_ignored()
+    {
+        MaterialSurface surface = WorldModels.SurfaceOf(Material(
+            textures: [("DiffuseTexture1", "a.xbt")],
+            properties: [("DiffuseTiling1", "0, 0")]));
+
+        Assert.Equal(Vector2.One, surface.DiffuseTiling);
+    }
+
+    /// <summary>The same over real .xbm bytes, because the layers only reach the shader if the
+    /// parser surfaces every slot under the key the lookup expects.</summary>
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void Real_swatch_materials_resolve_through_the_parser()
+    public void Real_layered_materials_resolve_through_the_parser()
     {
-        AssertFixtureAlbedo(@".\Fixtures\XbmSwatch\swaps.xbm", "clay02_d.xbt");
-        AssertFixtureAlbedo(@".\Fixtures\XbmSwatch\flat.xbm", "grey.xbt");
-    }
+        const string Fixture = @".\Fixtures\XbmSwatch\swaps.xbm";
+        if (!File.Exists(Fixture)) return;
 
-    private static void AssertFixtureAlbedo(string path, string expectedFileName)
-    {
-        if (!File.Exists(path)) return;
+        MaterialSurface surface = WorldModels.SurfaceOf(XbmMaterial.Parse(File.ReadAllBytes(Fixture)));
 
-        MaterialSurface surface = WorldModels.SurfaceOf(XbmMaterial.Parse(File.ReadAllBytes(path)));
-        Assert.EndsWith(expectedFileName, surface.DiffuseTexturePath, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("grey.xbt", surface.DiffuseTexturePath, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("clay02_d.xbt", surface.SecondDiffusePath, StringComparison.OrdinalIgnoreCase);
+        Assert.NotNull(surface.MaskPath);
+
+        // The other fixture points both layers at the same swatch, which is a real and legitimate
+        // shape: the mask still decides the tint even when there is nothing to blend to.
+        const string Flat = @".\Fixtures\XbmSwatch\flat.xbm";
+        if (!File.Exists(Flat)) return;
+
+        MaterialSurface flat = WorldModels.SurfaceOf(XbmMaterial.Parse(File.ReadAllBytes(Flat)));
+        Assert.EndsWith("grey.xbt", flat.DiffuseTexturePath, StringComparison.OrdinalIgnoreCase);
+        Assert.EndsWith("grey.xbt", flat.SecondDiffusePath, StringComparison.OrdinalIgnoreCase);
     }
 
     /// <summary>End-to-end over real materials, because the flags only reach

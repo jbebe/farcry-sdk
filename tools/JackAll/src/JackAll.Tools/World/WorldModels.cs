@@ -22,16 +22,55 @@ public enum MaterialAlpha
 }
 
 /// <summary>
-/// What one .xbm contributes to a draw. The engine's shader reads the diffuse map as a base and
-/// takes the colour from the two tints, blended per vertex - so a material whose map is a neutral
-/// grey renders grey until the tints are applied.
+/// What one .xbm contributes to a draw, in the terms the engine's own <c>Generic</c> pixel shader
+/// uses. Two diffuse layers and a mask, where the mask decides both how much of each layer shows and
+/// which of the first layer's two tints it takes:
+/// <code>
+/// layer1 = diffuse1 * lerp(TintBase, Tint, mask.b * vertexColour.b)
+/// layer2 = diffuse2 * SecondTint
+/// albedo = lerp(layer1, layer2, mask.g * vertexColour.g)
+/// </code>
+/// Decoded from the retail shader objects rather than inferred - see the notes on
+/// <see cref="WorldModels.SurfaceOf"/>.
 /// </summary>
-public readonly record struct MaterialSurface(
-    string? DiffuseTexturePath, MaterialAlpha Alpha, Vector3 TintBase, Vector3 Tint)
+public readonly record struct MaterialSurface
 {
-    /// <summary>What an unresolved material draws as: the texture unchanged.</summary>
-    public static readonly MaterialSurface None =
-        new(null, MaterialAlpha.Opaque, Vector3.One, Vector3.One);
+    /// <summary>Layer 1's albedo, and the only layer whose alpha is coverage.</summary>
+    public string? DiffuseTexturePath { get; init; }
+
+    /// <summary>Layer 2's albedo, blended over layer 1 by the mask. Null leaves layer 1 alone.</summary>
+    public string? SecondDiffusePath { get; init; }
+
+    /// <summary>The mask driving both blends. Null makes the material a plain tinted layer 1, which
+    /// is what the engine gets when the mask samples white.</summary>
+    public string? MaskPath { get; init; }
+
+    public MaterialAlpha Alpha { get; init; }
+
+    /// <summary>The pair layer 1's tint lerps between, unclamped - retail authors past 1.</summary>
+    public Vector3 TintBase { get; init; }
+    public Vector3 Tint { get; init; }
+
+    /// <summary>Layer 2's single tint.</summary>
+    public Vector3 SecondTint { get; init; }
+
+    /// <summary>UV multipliers, one per texture. Every one of these is a real number in retail - 55%
+    /// of materials tile at something other than 1, up to 20x.</summary>
+    public Vector2 DiffuseTiling { get; init; }
+    public Vector2 SecondDiffuseTiling { get; init; }
+    public Vector2 MaskTiling { get; init; }
+
+    /// <summary>What an unresolved material draws as: the texture unchanged, untiled, untinted.</summary>
+    public static readonly MaterialSurface None = new()
+    {
+        Alpha = MaterialAlpha.Opaque,
+        TintBase = Vector3.One,
+        Tint = Vector3.One,
+        SecondTint = Vector3.One,
+        DiffuseTiling = Vector2.One,
+        SecondDiffuseTiling = Vector2.One,
+        MaskTiling = Vector2.One,
+    };
 }
 
 /// <summary>The slice of a fine tier drawn with one material, with the diffuse .xbt it binds when
@@ -44,11 +83,11 @@ public sealed record MaterialRange(int Start, int Count, string MaterialName, Ma
 
 /// <summary>
 /// One unique .xbg a world references, baked into GPU-ready arrays: interleaved
-/// [px py pz nx ny nz u v mask] vertices and a triangle index list holding two detail tiers.
+/// [px py pz nx ny nz u v maskG maskB] vertices and a triangle index list holding two detail tiers.
 /// </summary>
 public sealed class WorldModel
 {
-    public const int FloatsPerVertex = 9;
+    public const int FloatsPerVertex = 10;
 
     public required string Path { get; init; }
     public required float[] Vertices { get; init; }
@@ -358,9 +397,10 @@ public static class WorldModels
                 Vector3 p = first.Place(first.Positions[i]);
                 Vector3 n = first.PlaceNormal(normals[i]);
                 Vector2 uv = first.Uvs is { } uvs ? uvs[i] : Vector2.Zero;
-                // Only the mask's blue channel reaches the diffuse blend; absent, the engine reads
-                // white, which lands on the material's DiffuseColor1.
-                float mask = first.Colours is { } colours ? colours[i].Z : 1f;
+                // Two of the vertex colour's channels reach the diffuse: green weights the blend
+                // between the material's two layers, blue the lerp between layer 1's two tints. Both
+                // are multiplied by a mask channel in the shader. Absent, the engine reads white.
+                Vector4 colour = first.Colours is { } colours ? colours[i] : Vector4.One;
                 vertices.Add(p.X);
                 vertices.Add(p.Y);
                 vertices.Add(p.Z);
@@ -369,7 +409,8 @@ public static class WorldModels
                 vertices.Add(n.Z);
                 vertices.Add(uv.X);
                 vertices.Add(uv.Y);
-                vertices.Add(mask);
+                vertices.Add(colour.Y);
+                vertices.Add(colour.Z);
             }
 
             blocks[block.Key] = (remap, baseIndex);
@@ -426,31 +467,56 @@ public static class WorldModels
             });
     }
 
-    /// <summary>The engine keeps its flat colour swatches in one folder - an 8x8 grey, white, red
-    /// and black, plus a few gradients. Pointing layer 1 at one of those is not a request for a
-    /// grey surface: the detail sits in layer 2, which the shader blends over the swatch. 51 retail
-    /// materials are built that way, the swamp boat's hull among them.</summary>
-    private const string SwatchFolder = @"graphics\_textures\diffuse\icone\";
-
-    /// <summary>What one material draws as. Layer 1 is the albedo, except where it is a flat swatch
-    /// standing in for a second layer, in which case layer 2 and its own tint take over.</summary>
+    /// <summary>
+    /// What one material draws as, following the retail <c>Generic</c> pixel shader.
+    /// </summary>
+    /// <remarks>
+    /// Decoded from <c>shadersobj\engine\shaders\obj10</c>, which ships the D3D10 build of the
+    /// engine's shaders as DXBC with its reflection chunk intact - so the constant and sampler names
+    /// survive and <c>fxc /dumpbin</c> reads them straight out. The sibling <c>obj</c> tree is the
+    /// same shaders built for D3D9 with the names stripped.
+    /// <para>
+    /// One simplification: the engine pairs every tiling with a "group" that picks which of the two
+    /// UV sets the texture reads. Group 0 maps to UV set 0 on every retail material, and layer 1
+    /// always sits on group 0, so layer 1 is exact. Which group the mask and layer 2 use is not
+    /// recorded in the .xbm - only the group-to-channel table is - so both are read off UV set 0
+    /// too, which is right wherever their group also maps to channel 0.
+    /// </para>
+    /// </remarks>
     public static MaterialSurface SurfaceOf(XbmMaterial material)
     {
-        string? albedo = DiffuseTextureOf(material);
         (Vector3 tintBase, Vector3 tint) = TintsOf(material);
-
-        if (albedo is not null && albedo.StartsWith(SwatchFolder, StringComparison.OrdinalIgnoreCase) &&
-            TextureSlot(material, "DiffuseTexture2") is { } second &&
-            !second.Equals(albedo, StringComparison.OrdinalIgnoreCase))
+        return new MaterialSurface
         {
-            // Layer 2 carries its own colour rather than the pair layer 1 lerps between, so both
-            // ends of the lerp become it and the per-vertex blend flattens out.
-            albedo = second;
-            Vector3 layer2 = ColourProperty(material, "DiffuseColor2") ?? Vector3.One;
-            (tintBase, tint) = (layer2, layer2);
+            DiffuseTexturePath = DiffuseTextureOf(material),
+            SecondDiffusePath = TextureSlot(material, "DiffuseTexture2"),
+            MaskPath = TextureSlot(material, "MaskTexture1"),
+            Alpha = AlphaOf(material),
+            TintBase = tintBase,
+            Tint = tint,
+            SecondTint = ColourProperty(material, "DiffuseColor2") ?? Vector3.One,
+            DiffuseTiling = TilingProperty(material, "DiffuseTiling1"),
+            SecondDiffuseTiling = TilingProperty(material, "DiffuseTiling2"),
+            MaskTiling = TilingProperty(material, "MaskTiling1"),
+        };
+    }
+
+    /// <summary>A material's UV multiplier for one texture; 1:1 when it names none.</summary>
+    private static Vector2 TilingProperty(XbmMaterial material, string key)
+    {
+        if (material.Properties.FirstOrDefault(
+            p => p.Key.Equals(key, StringComparison.OrdinalIgnoreCase)) is not { } property)
+        {
+            return Vector2.One;
         }
 
-        return new MaterialSurface(albedo, AlphaOf(material), tintBase, tint);
+        string[] parts = property.Value.Split(',');
+        return parts.Length >= 2
+            && float.TryParse(parts[0].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out float u)
+            && float.TryParse(parts[1].Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out float v)
+            && u != 0 && v != 0
+                ? new Vector2(u, v)
+                : Vector2.One;
     }
 
     /// <summary>

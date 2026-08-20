@@ -38,6 +38,10 @@ public sealed class XbgSubmesh
     /// none.</summary>
     public Vector2[]? Uvs { get; init; }
 
+    /// <summary>UV channel 1, the second set a material can bind a texture to through the Group
+    /// half of its tiling vector. 99% of retail meshes carry one.</summary>
+    public Vector2[]? Uvs1 { get; init; }
+
     /// <summary>The per-vertex colour the engine calls the vertex mask: its blue channel blends the
     /// material's two diffuse tints, red the speculars, alpha is occlusion. Null when the file
     /// carries none, which the engine treats as white.</summary>
@@ -153,6 +157,7 @@ public sealed partial class XbgModel
                 mesh.Positions = first.Positions;
                 mesh.Normals = first.Normals;
                 mesh.Uvs = first.Uvs;
+                mesh.Uvs1 = first.Uvs1;
                 mesh.Colours = first.Colours;
                 continue;
             }
@@ -184,6 +189,7 @@ public sealed partial class XbgModel
                     Positions = mesh.Positions,
                     Normals = mesh.Normals,
                     Uvs = mesh.Uvs,
+                    Uvs1 = mesh.Uvs1,
                     Colours = mesh.Colours,
                     Indices = indices,
                 });
@@ -344,6 +350,7 @@ public sealed partial class XbgModel
         public Vector3[]? Positions;
         public Vector3[]? Normals;
         public Vector2[]? Uvs;
+        public Vector2[]? Uvs1;
         public Vector4[]? Colours;
         public readonly List<(int[] Indices, int MaterialId, string MaterialName)> Primitives = new();
     }
@@ -432,69 +439,45 @@ public sealed partial class XbgModel
         Binormal = 0x0200, Unk400 = 0x0400, Uv1 = 0x0800, Uv2 = 0x1000;
 
     /// <summary>Component order fixed by the format: Position -> UV0 -> UV1 -> UV2 -> BoneWts1 ->
-    /// BoneWts2 -> Normal -> Color -> Tangent -> Binormal -> Unk400. Only the offsets this preview
-    /// actually consumes (position, UV0, normal) are tracked; everything else just contributes to
-    /// stride.</summary>
-    private static (int Stride, int PosOffset, int? Uv0Offset, int? NormalOffset, int? ColourOffset)
-        ComputeLayout(int flags)
+    /// BoneWts2 -> Normal -> Color -> Tangent -> Binormal -> Unk400. Components this preview does
+    /// not read still have to be walked, because every one of them moves the stride.</summary>
+    private static (int Stride, int PosOffset, int? Uv0Offset, int? Uv1Offset, int? NormalOffset,
+        int? ColourOffset) ComputeLayout(int flags)
     {
         int stride = 0;
-        int posOffset = 0, uv0Offset = -1, normalOffset = -1, colourOffset = -1;
-        bool posHandled = false;
 
-        void Take(int flag, int size, bool isPos = false, bool isUv0 = false, bool isNormal = false,
-            bool isColour = false)
+        // Where this component starts, or -1 when the format leaves it out.
+        int Take(int flag, int size)
         {
-            if (isPos)
+            if ((flags & flag) == 0)
             {
-                if (posHandled || (flags & flag) == 0)
-                {
-                    return;
-                }
-
-                posHandled = true;
-                posOffset = stride;
-            }
-            else
-            {
-                if ((flags & flag) == 0)
-                {
-                    return;
-                }
-
-                if (isUv0)
-                {
-                    uv0Offset = stride;
-                }
-                if (isNormal)
-                {
-                    normalOffset = stride;
-                }
-                if (isColour)
-                {
-                    colourOffset = stride;
-                }
+                return -1;
             }
 
+            int at = stride;
             stride += size;
+            return at;
         }
 
-        Take(PosFloat, 12, isPos: true);
-        Take(PosInt16, 8, isPos: true);
-        Take(PosHalf, 8, isPos: true);
-        Take(Uv0, 4, isUv0: true);
-        Take(Uv1, 4);
+        // Exactly one position encoding is ever present, and it claims the first slot.
+        int position = Take(PosFloat, 12);
+        position = position >= 0 ? position : Take(PosInt16, 8);
+        position = position >= 0 ? position : Take(PosHalf, 8);
+
+        int uv0 = Take(Uv0, 4);
+        int uv1 = Take(Uv1, 4);
         Take(Uv2, 4);
         Take(BoneWts1, 8);
         Take(BoneWts2, 8);
-        Take(Normal, 4, isNormal: true);
-        Take(Color, 4, isColour: true);
+        int normal = Take(Normal, 4);
+        int colour = Take(Color, 4);
         Take(Tangent, 4);
         Take(Binormal, 4);
         Take(Unk400, 4);
 
-        return (stride, posOffset, uv0Offset >= 0 ? uv0Offset : null,
-            normalOffset >= 0 ? normalOffset : null, colourOffset >= 0 ? colourOffset : null);
+        static int? Present(int offset) => offset >= 0 ? offset : null;
+        return (stride, Math.Max(position, 0), Present(uv0), Present(uv1), Present(normal),
+            Present(colour));
     }
 
     private static void ParseMeshVertices(Cursor g, MeshEntry mesh, float vertPosScale, float uvTrans, float uvScale)
@@ -509,7 +492,7 @@ public sealed partial class XbgModel
 
         bool hasPosFloat = (mesh.VertFormatFlags & PosFloat) != 0;
         bool hasNormal = (mesh.VertFormatFlags & Normal) != 0;
-        (_, int posOffset, int? uv0Offset, int? normalOffset, int? colourOffset) =
+        (_, int posOffset, int? uv0Offset, int? uv1Offset, int? normalOffset, int? colourOffset) =
             ComputeLayout(mesh.VertFormatFlags);
 
         g.Seek(mesh.VertSectionOffset);
@@ -519,6 +502,7 @@ public sealed partial class XbgModel
         var positions = new Vector3[count];
         Vector3[]? normals = hasNormal ? new Vector3[count] : null;
         Vector2[]? uvs = uv0Offset is not null ? new Vector2[count] : null;
+        Vector2[]? uvs1 = uv1Offset is not null ? new Vector2[count] : null;
         Vector4[]? colours = colourOffset is not null ? new Vector4[count] : null;
 
         for (int v = 0; v < count; v++)
@@ -540,14 +524,25 @@ public sealed partial class XbgModel
 
             positions[v] = new Vector3(x * vertPosScale, y * vertPosScale, z * vertPosScale);
 
-            if (uvs is not null && uv0Offset is int uo)
+            // Both sets are 2x int16 through the same PMCU translate+scale - the vertex shader runs
+            // texcoord0 and texcoord1 through one _MeshDecompression.zw pair. Left in the game's D3D
+            // space, where V=0 is the texture's top row - the same row a .dds hands GL first.
+            Vector2 ReadUv(int offset)
             {
-                int ub = v * stride + uo;
-                // 2x int16 through PMCU's translate+scale. Left in the game's D3D space, where V=0
-                // is the texture's top row - the same row a .dds hands GL first.
-                uvs[v] = new Vector2(
+                int ub = v * stride + offset;
+                return new Vector2(
                     uvTrans + ReadI16(buf, ub, be) * uvScale,
                     uvTrans + ReadI16(buf, ub + 2, be) * uvScale);
+            }
+
+            if (uvs is not null && uv0Offset is int uo)
+            {
+                uvs[v] = ReadUv(uo);
+            }
+
+            if (uvs1 is not null && uv1Offset is int u1)
+            {
+                uvs1[v] = ReadUv(u1);
             }
 
             if (normals is not null && normalOffset is int no)
@@ -569,6 +564,7 @@ public sealed partial class XbgModel
         mesh.Positions = positions;
         mesh.Normals = normals;
         mesh.Uvs = uvs;
+        mesh.Uvs1 = uvs1;
         mesh.Colours = colours;
     }
 

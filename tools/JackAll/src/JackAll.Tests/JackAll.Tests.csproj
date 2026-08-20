@@ -64,8 +64,8 @@
              Condition="Exists('$(Fc2Graphics)\_materials\aamancio-m-2007111374254074.xbm')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <!-- Layer 1 is a flat colour swatch on both: one keeps the real surface in layer 2, the other
-         repeats the swatch there and is grey by intent. -->
+    <!-- Layer 1 is a flat colour swatch on both, which is what made the second layer visible in the
+         first place: one keeps a real texture in layer 2, the other repeats the swatch there. -->
     <Content Include="$(Fc2Graphics)\_materials\apare-m-2007102557105961.xbm"
              Link="Fixtures\XbmSwatch\swaps.xbm"
              Condition="Exists('$(Fc2Graphics)\_materials\apare-m-2007102557105961.xbm')">

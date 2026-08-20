@@ -33,7 +33,11 @@ public sealed class EntityModelLayer : IDisposable
         public required int[] OpaqueRanges;
         public required int[] BlendedRanges;
         public required float[] Staging;
+        /// <summary>Live GL handles per range, one array per sampler the Generic shader binds; 0
+        /// where that map is absent or still streaming.</summary>
         public required int[] RangeHandles;
+        public required int[] SecondHandles;
+        public required int[] MaskHandles;
         public int FineCount, CoarseCount;
         public int FineFloats, CoarseFloats;
         public int CoarseStart;
@@ -66,6 +70,12 @@ public sealed class EntityModelLayer : IDisposable
     private readonly int _uAlphaMode;
     private readonly int _uTintBase;
     private readonly int _uTintColour;
+    private readonly int _uTintSecond;
+    private readonly int _uDiffuseTiling;
+    private readonly int _uSecondTiling;
+    private readonly int _uMaskTiling;
+    private readonly int _uUseSecond;
+    private readonly int _uUseMask;
     /// <summary>Just the meshes carrying a blended range, so the second pass skips the rest.</summary>
     private readonly Mesh[] _blendedMeshes;
 
@@ -117,6 +127,8 @@ public sealed class EntityModelLayer : IDisposable
                 BlendedRanges = [.. Enumerable.Range(0, ranges.Count).Where(r => ranges[r].Alpha == MaterialAlpha.Blend)],
                 Staging = new float[capacity[i] * InstanceStride],
                 RangeHandles = new int[ranges.Count],
+                SecondHandles = new int[ranges.Count],
+                MaskHandles = new int[ranges.Count],
             };
             if (mesh.BlendedRanges.Length > 0)
             {
@@ -144,7 +156,7 @@ public sealed class EntityModelLayer : IDisposable
             GL.EnableVertexAttribArray(2);
             GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, VertexStrideBytes, 24);
             GL.EnableVertexAttribArray(6);
-            GL.VertexAttribPointer(6, 1, VertexAttribPointerType.Float, false, VertexStrideBytes, 32);
+            GL.VertexAttribPointer(6, 2, VertexAttribPointerType.Float, false, VertexStrideBytes, 32);
             GL.EnableVertexAttribArray(3);
             GL.EnableVertexAttribArray(4);
             GL.EnableVertexAttribArray(5);
@@ -170,13 +182,13 @@ public sealed class EntityModelLayer : IDisposable
             layout(location = 3) in vec3 instancePosition;
             layout(location = 4) in vec3 instanceAngles;
             layout(location = 5) in vec3 tint;
-            layout(location = 6) in float vertexMask;
+            layout(location = 6) in vec2 vertexMask;
             uniform mat4 viewProjection;
             out vec3 worldNormal;
             out vec3 worldPosition;
             out vec3 baseColour;
             out vec2 texUv;
-            out float maskBlue;
+            out vec2 maskWeights;
             // The engine's Z-up Euler order: yaw about Z last, over pitch then roll. Columns, so
             // the product reads right-to-left as Rz * Rx * Ry.
             mat3 spin(vec3 a)
@@ -195,7 +207,7 @@ public sealed class EntityModelLayer : IDisposable
                 worldNormal = rotation * normal;
                 baseColour = tint;
                 texUv = uv;
-                maskBlue = vertexMask;
+                maskWeights = vertexMask;
                 gl_Position = viewProjection * vec4(worldPosition, 1.0);
             }
             """,
@@ -205,7 +217,7 @@ public sealed class EntityModelLayer : IDisposable
             in vec3 worldPosition;
             in vec3 baseColour;
             in vec2 texUv;
-            in float maskBlue;
+            in vec2 maskWeights;
             uniform vec3 cameraPosition;
             uniform vec3 sunDirection;
             uniform float haze;
@@ -213,7 +225,15 @@ public sealed class EntityModelLayer : IDisposable
             uniform int alphaMode;
             uniform vec3 tintBase;
             uniform vec3 tintColour;
+            uniform vec3 tintSecond;
+            uniform vec2 diffuseTiling;
+            uniform vec2 secondTiling;
+            uniform vec2 maskTiling;
+            uniform float useSecond;
+            uniform float useMask;
             uniform sampler2D diffuse;
+            uniform sampler2D diffuse2;
+            uniform sampler2D maskMap;
             out vec4 fragment;
             {{SceneLighting.SkyGlsl}}
             void main()
@@ -222,14 +242,28 @@ public sealed class EntityModelLayer : IDisposable
                 float coverage = 1.0;
                 if (useTexture > 0.5)
                 {
-                    vec4 texel = texture(diffuse, texUv);
+                    vec4 texel = texture(diffuse, texUv * diffuseTiling);
                     // Only materials that asked for it read alpha as coverage; on the rest it is a
                     // gloss or spec mask and would erase the surface.
                     if (alphaMode == 1 && texel.a < 0.5) { discard; }
                     if (alphaMode == 2) { coverage = texel.a; }
-                    // The engine's diffuse: the map is a base and the colour comes from the two
-                    // material tints, blended by the vertex mask's blue channel.
-                    albedo = texel.rgb * mix(tintBase, tintColour, clamp(maskBlue, 0.0, 1.0));
+
+                    // The engine's Generic shader, decoded from its own bytecode. The mask gates
+                    // both blends: green picks how much of layer 2 shows, blue how far layer 1's
+                    // tint travels from Base to Color1. A material with no mask samples white, which
+                    // is why an unmasked surface takes its tint in full.
+                    vec2 weights = clamp(maskWeights, 0.0, 1.0);
+                    if (useMask > 0.5)
+                    {
+                        weights *= texture(maskMap, texUv * maskTiling).gb;
+                    }
+
+                    albedo = texel.rgb * mix(tintBase, tintColour, weights.y);
+                    if (useSecond > 0.5)
+                    {
+                        vec3 layer2 = texture(diffuse2, texUv * secondTiling).rgb * tintSecond;
+                        albedo = mix(albedo, layer2, weights.x);
+                    }
                 }
                 vec3 n = normalize(worldNormal);
                 // Many parts are single-sided shells, so light whichever side is showing. The test
@@ -251,8 +285,16 @@ public sealed class EntityModelLayer : IDisposable
         _uAlphaMode = _program.UniformLocation("alphaMode");
         _uTintBase = _program.UniformLocation("tintBase");
         _uTintColour = _program.UniformLocation("tintColour");
+        _uTintSecond = _program.UniformLocation("tintSecond");
+        _uDiffuseTiling = _program.UniformLocation("diffuseTiling");
+        _uSecondTiling = _program.UniformLocation("secondTiling");
+        _uMaskTiling = _program.UniformLocation("maskTiling");
+        _uUseSecond = _program.UniformLocation("useSecond");
+        _uUseMask = _program.UniformLocation("useMask");
         _program.Use();
         GL.Uniform1(_program.UniformLocation("diffuse"), 0);
+        GL.Uniform1(_program.UniformLocation("diffuse2"), 1);
+        GL.Uniform1(_program.UniformLocation("maskMap"), 2);
     }
 
     /// <summary>
@@ -349,14 +391,22 @@ public sealed class EntityModelLayer : IDisposable
     {
         foreach (MaterialRange range in mesh.Ranges)
         {
-            if (range.DiffuseTexturePath is not { } path || !_textures.TryAdd(path, -1))
-            {
-                continue;
-            }
-
-            _requests.Enqueue(path);
+            // All three of the Generic shader's maps, because the mask is what decides how much of
+            // the tint and of layer 2 reaches the surface - without it a material renders as its
+            // fully-tinted first layer.
+            Request(range.Surface.DiffuseTexturePath);
+            Request(range.Surface.SecondDiffusePath);
+            Request(range.Surface.MaskPath);
         }
         StartDecoders();
+
+        void Request(string? path)
+        {
+            if (path is not null && _textures.TryAdd(path, -1))
+            {
+                _requests.Enqueue(path);
+            }
+        }
     }
 
     /// <summary>A couple of long-running workers instead of one task per texture, so a dense ring
@@ -414,24 +464,40 @@ public sealed class EntityModelLayer : IDisposable
         GL.Enable(EnableCap.DepthTest);
         GL.ActiveTexture(TextureUnit.Texture0);
 
-        float lastUseTexture = -1f;
+        float lastUseTexture = -1f, lastUseSecond = -1f, lastUseMask = -1f;
         int lastAlphaMode = -1;
         MaterialSurface lastSurface = default;
-        void SetSurface(int handle, MaterialSurface surface)
+        void SetSurface(int handle, int second, int mask, MaterialSurface surface)
         {
             float useTexture = handle > 0 ? 1f : 0f;
             if (lastUseTexture != useTexture)
             {
                 GL.Uniform1(_uUseTexture, lastUseTexture = useTexture);
             }
+            // A map that is absent, failed or still streaming leaves its layer switched off rather
+            // than sampling whatever happens to be bound.
+            float useSecond = second > 0 ? 1f : 0f;
+            if (lastUseSecond != useSecond)
+            {
+                GL.Uniform1(_uUseSecond, lastUseSecond = useSecond);
+            }
+            float useMask = mask > 0 ? 1f : 0f;
+            if (lastUseMask != useMask)
+            {
+                GL.Uniform1(_uUseMask, lastUseMask = useMask);
+            }
             if (lastAlphaMode != (int)surface.Alpha)
             {
                 GL.Uniform1(_uAlphaMode, lastAlphaMode = (int)surface.Alpha);
             }
-            if (lastSurface.TintBase != surface.TintBase || lastSurface.Tint != surface.Tint)
+            if (lastSurface != surface)
             {
                 GL.Uniform3(_uTintBase, surface.TintBase.X, surface.TintBase.Y, surface.TintBase.Z);
                 GL.Uniform3(_uTintColour, surface.Tint.X, surface.Tint.Y, surface.Tint.Z);
+                GL.Uniform3(_uTintSecond, surface.SecondTint.X, surface.SecondTint.Y, surface.SecondTint.Z);
+                GL.Uniform2(_uDiffuseTiling, surface.DiffuseTiling.X, surface.DiffuseTiling.Y);
+                GL.Uniform2(_uSecondTiling, surface.SecondDiffuseTiling.X, surface.SecondDiffuseTiling.Y);
+                GL.Uniform2(_uMaskTiling, surface.MaskTiling.X, surface.MaskTiling.Y);
             }
             lastSurface = surface;
         }
@@ -443,10 +509,23 @@ public sealed class EntityModelLayer : IDisposable
             {
                 MaterialRange range = mesh.Ranges[i];
                 int handle = mesh.RangeHandles[i];
-                SetSurface(handle, range.Surface);
+                int second = mesh.SecondHandles[i];
+                int mask = mesh.MaskHandles[i];
+                SetSurface(handle, second, mask, range.Surface);
                 if (handle > 0)
                 {
+                    GL.ActiveTexture(TextureUnit.Texture0);
                     GL.BindTexture(TextureTarget.Texture2D, handle);
+                }
+                if (second > 0)
+                {
+                    GL.ActiveTexture(TextureUnit.Texture1);
+                    GL.BindTexture(TextureTarget.Texture2D, second);
+                }
+                if (mask > 0)
+                {
+                    GL.ActiveTexture(TextureUnit.Texture2);
+                    GL.BindTexture(TextureTarget.Texture2D, mask);
                 }
                 DrawRange(new IndexRange(range.Start, range.Count), mesh.FineCount);
             }
@@ -467,7 +546,7 @@ public sealed class EntityModelLayer : IDisposable
             if (mesh.CoarseCount > 0)
             {
                 PointInstanceAttribs(mesh, mesh.CoarseStart);
-                SetSurface(0, MaterialSurface.None);
+                SetSurface(0, 0, 0, MaterialSurface.None);
                 DrawRange(mesh.Coarse, mesh.CoarseCount);
             }
         }
@@ -499,12 +578,15 @@ public sealed class EntityModelLayer : IDisposable
         {
             for (int i = 0; i < mesh.Ranges.Count; i++)
             {
-                mesh.RangeHandles[i] = mesh.Ranges[i].DiffuseTexturePath is { } path
-                    && _textures.TryGetValue(path, out int handle) && handle > 0
-                    ? handle
-                    : 0;
+                MaterialSurface surface = mesh.Ranges[i].Surface;
+                mesh.RangeHandles[i] = Resolve(surface.DiffuseTexturePath);
+                mesh.SecondHandles[i] = Resolve(surface.SecondDiffusePath);
+                mesh.MaskHandles[i] = Resolve(surface.MaskPath);
             }
         }
+
+        int Resolve(string? path)
+            => path is not null && _textures.TryGetValue(path, out int handle) && handle > 0 ? handle : 0;
     }
 
     /// <summary>GL 3.3 has no baseInstance, so drawing the coarse partition means repointing the
