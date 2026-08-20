@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Numerics;
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace JackAll.Tools.Xbg;
 
@@ -9,13 +10,38 @@ namespace JackAll.Tools.Xbg;
 public sealed class XbgSubmesh
 {
     public required int LodLevel { get; init; }
-    public required int PartNumber { get; init; }
     public required int MaterialIndex { get; init; }
     public required string MaterialName { get; init; }
+
+    /// <summary>The named part this belongs to - a wheel, a bumper, a wall - without its LOD
+    /// suffix. Empty when the file names no part for it.</summary>
+    public string PartName { get; init; } = "";
+
+    /// <summary>What moves this part's vertices into model space: the world matrix of the bone they
+    /// are stored relative to - the part's own bone when rigid, the skeleton root when skinned. Null
+    /// when that bone is the identity and the vertices already sit in model space.</summary>
+    public Matrix4x4? PartTransform { get; init; }
+
     public required Vector3[] Positions { get; init; }
     public Vector3[]? Normals { get; init; }
-    /// <summary>UV channel 0, V already flipped to image convention; null when the file has none.</summary>
+
+    /// <summary>A position from <see cref="Positions"/> moved out of pivot space into the model's.
+    /// Positions stay unplaced because parts sharing a vertex buffer need different placements, so
+    /// every consumer of the geometry goes through this.</summary>
+    public Vector3 Place(Vector3 position)
+        => PartTransform is { } m ? Vector3.Transform(position, m) : position;
+
+    /// <summary>The placement is rigid, so a normal only needs its rotation.</summary>
+    public Vector3 PlaceNormal(Vector3 normal)
+        => PartTransform is { } m ? Vector3.TransformNormal(normal, m) : normal;
+    /// <summary>UV channel 0 in the game's D3D space (V=0 is the top row); null when the file has
+    /// none.</summary>
     public Vector2[]? Uvs { get; init; }
+
+    /// <summary>The per-vertex colour the engine calls the vertex mask: its blue channel blends the
+    /// material's two diffuse tints, red the speculars, alpha is occlusion. Null when the file
+    /// carries none, which the engine treats as white.</summary>
+    public Vector4[]? Colours { get; init; }
     /// <summary>Triangle list, indices local to <see cref="Positions"/>.</summary>
     public required int[] Indices { get; init; }
 }
@@ -28,8 +54,11 @@ public sealed class XbgSubmesh
 /// Ported from <c>tools/XBG-Importer/modules/Far_Cry_2/{binary_fc2,chunks_fc2,import_mesh_fc2,
 /// import_xbg_fc2}.py</c> - see research/knowledge.md §8 for the format's provenance.
 /// </summary>
-public sealed class XbgModel
+public sealed partial class XbgModel
 {
+    [GeneratedRegex(@"_LOD\d+$", RegexOptions.IgnoreCase)]
+    private static partial Regex LodSuffixRegex();
+
     public required IReadOnlyList<string> Materials { get; init; }
     public required IReadOnlyList<XbgSubmesh> Submeshes { get; init; }
     public required IReadOnlyList<int> LodLevels { get; init; }
@@ -52,6 +81,8 @@ public sealed class XbgModel
         var materials = new List<string>();
         var meshes = new List<MeshEntry>();
         List<List<SubMeshHeader>>? subMeshList = null;
+        var partNames = new List<string>();
+        var bones = new List<Bone>();
         float vertPosScale = 1f;
         float uvTrans = 0f, uvScale = 1f;
 
@@ -99,10 +130,13 @@ public sealed class XbgModel
                     ParseSdolChunk(g, meshes);
                     break;
                 case "DNKS":
-                    subMeshList = TryParseDnks(g);
+                    subMeshList = TryParseDnks(g, partNames);
                     break;
-                    // EDON (skeleton), MB2O (bind matrices), XOBB/HPSB (bounds) aren't needed for a
-                    // geometry-only preview.
+                case "EDON":
+                    bones = ParseEdon(g);
+                    break;
+                    // MB2O (bind matrices) and XOBB/HPSB (bounds) aren't needed for a geometry-only
+                    // preview.
             }
 
             g.Seek(chunkStart + chunkSize);
@@ -119,6 +153,7 @@ public sealed class XbgModel
                 mesh.Positions = first.Positions;
                 mesh.Normals = first.Normals;
                 mesh.Uvs = first.Uvs;
+                mesh.Colours = first.Colours;
                 continue;
             }
 
@@ -126,6 +161,7 @@ public sealed class XbgModel
             decodedRegions[region] = mesh;
         }
 
+        AssignParts(meshes, partNames, bones);
         ProcessMeshFaces(g, meshes, subMeshList, materials);
 
         var submeshes = new List<XbgSubmesh>();
@@ -141,12 +177,14 @@ public sealed class XbgModel
                 submeshes.Add(new XbgSubmesh
                 {
                     LodLevel = mesh.LodLevel,
-                    PartNumber = mesh.PartNumber,
+                    PartName = mesh.PartName,
+                    PartTransform = mesh.PartTransform,
                     MaterialIndex = matId,
                     MaterialName = matName,
                     Positions = mesh.Positions,
                     Normals = mesh.Normals,
                     Uvs = mesh.Uvs,
+                    Colours = mesh.Colours,
                     Indices = indices,
                 });
             }
@@ -174,24 +212,139 @@ public sealed class XbgModel
     }
 
     // ============================================================
+    // EDON - the bone hierarchy that places the named rigid parts
+    // ============================================================
+
+    private sealed class Bone
+    {
+        public required string Name;
+        public required int Parent;
+        public required Matrix4x4 Local;
+        public Matrix4x4? World;
+    }
+
+    private static List<Bone> ParseEdon(Cursor g)
+    {
+        var bones = new List<Bone>();
+        try
+        {
+            g.SkipI32(2);
+            int count = g.ReadI32();
+            if (count is < 0 or > 100_000)
+            {
+                return [];
+            }
+
+            for (int i = 0; i < count; i++)
+            {
+                g.SkipBytes(4);
+                g.SkipI32(2);
+                int parent = g.ReadI32();
+                float[] pose = g.ReadF32Array(7); // quaternion xyzw then translation xyz
+                g.SkipBytes(24); // unused floats/ints between the pose and the name
+                int nameLen = g.ReadI32();
+                if (nameLen is < 0 or > 256)
+                {
+                    return [];
+                }
+
+                string name = g.ReadWord(nameLen);
+                g.SkipBytes(1);
+                bones.Add(new Bone
+                {
+                    Name = name,
+                    Parent = parent,
+                    Local = Matrix4x4.CreateFromQuaternion(new Quaternion(pose[0], pose[1], pose[2], pose[3]))
+                        * Matrix4x4.CreateTranslation(pose[4], pose[5], pose[6]),
+                });
+            }
+        }
+        catch (Exception)
+        {
+            return [];
+        }
+
+        return bones;
+    }
+
+    private static Matrix4x4 WorldOf(List<Bone> bones, int index, int depth = 0)
+    {
+        if (bones[index].World is { } cached)
+        {
+            return cached;
+        }
+
+        Bone bone = bones[index];
+        Matrix4x4 world = bone.Parent >= 0 && bone.Parent < bones.Count && bone.Parent != index && depth < 64
+            ? bone.Local * WorldOf(bones, bone.Parent, depth + 1)
+            : bone.Local;
+        bone.World = world;
+        return world;
+    }
+
+    /// <summary>Geometry is stored relative to one bone, and needs that bone's world matrix to reach
+    /// model space: a rigid part is modelled around its own pivot and named after its bone, while a
+    /// skinned part sits in the skeleton root's bind space - which for a character puts the root at
+    /// the waist, so leaving it alone sinks them to their hips.</summary>
+    private static void AssignParts(List<MeshEntry> meshes, List<string> partNames, List<Bone> bones)
+    {
+        if (bones.Count == 0)
+        {
+            return;
+        }
+
+        var boneByName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
+        for (int i = 0; i < bones.Count; i++)
+        {
+            boneByName.TryAdd(bones[i].Name, i);
+        }
+
+        int root = bones.FindIndex(b => b.Parent < 0 || b.Parent >= bones.Count);
+
+        foreach (MeshEntry mesh in meshes)
+        {
+            int block = mesh.MatListInfo.Count > 0 ? mesh.MatListInfo[0].LodGrp : -1;
+            if (block >= 0 && block < partNames.Count)
+            {
+                mesh.PartName = LodSuffixRegex().Replace(partNames[block], "");
+            }
+
+            int bone = (mesh.VertFormatFlags & BoneWts1) != 0
+                ? root
+                : boneByName.GetValueOrDefault(mesh.PartName, -1);
+            if (bone < 0)
+            {
+                continue;
+            }
+
+            Matrix4x4 world = WorldOf(bones, bone);
+            if (!world.IsIdentity)
+            {
+                mesh.PartTransform = world;
+            }
+        }
+    }
+
+    // ============================================================
     // SDOL - vertex buffer layout + per-LOD/part/material index-range table
     // ============================================================
 
     private sealed class MeshEntry
     {
         public int LodLevel;
-        public int PartNumber;
-        public int VbIndex;
         public int IndiceSectionOffset;
         public int NameIndex;
         public int VertFormatFlags;
         public int VertStride;
         public int VertSectionOffset;
         public int VertCount;
-        public readonly List<(int VbIdx, int LodGrp, int SubIdx, int IdxOffset, int IdxCount)> MatListInfo = new();
+        public string PartName = "";
+        public Matrix4x4? PartTransform;
+        public readonly List<(int LodGrp, int SubIdx, int IdxOffset)> MatListInfo = new();
         public Vector3[]? Positions;
         public Vector3[]? Normals;
         public Vector2[]? Uvs;
+        public Vector4[]? Colours;
         public readonly List<(int[] Indices, int MaterialId, string MaterialName)> Primitives = new();
     }
 
@@ -232,14 +385,6 @@ public sealed class XbgModel
                 submeshInfo.Add((vbIdx, lodGrp, subIdx, idxOffset));
             }
 
-            var submeshData = new List<(int VbIdx, int LodGrp, int SubIdx, int IdxOffset, int IdxCount)>();
-            for (int i = 0; i < submeshInfo.Count; i++)
-            {
-                (int vbIdx, int lodGrp, int subIdx, int idxOffset) = submeshInfo[i];
-                int idxCount = i + 1 < submeshInfo.Count ? submeshInfo[i + 1].IdxOffset - idxOffset : -1;
-                submeshData.Add((vbIdx, lodGrp, subIdx, idxOffset, idxCount));
-            }
-
             uint vertSectionSize = g.ReadU32();
             g.SeekPad(16);
             int vertSectionBase = g.Position;
@@ -250,21 +395,12 @@ public sealed class XbgModel
             int indiceSectionOffset = g.Position;
             g.Seek(indiceSectionOffset + (int)(indiceSectionSize * 2));
 
-            if (submeshData.Count > 0 && submeshData[^1].IdxCount == -1)
+            for (int smIdx = 0; smIdx < submeshInfo.Count; smIdx++)
             {
-                var last = submeshData[^1];
-                last.IdxCount = (int)indiceSectionSize - last.IdxOffset;
-                submeshData[^1] = last;
-            }
-
-            for (int smIdx = 0; smIdx < submeshData.Count; smIdx++)
-            {
-                (int vbIdx, int lodGrp, int subIdx, int idxOffset, int idxCount) = submeshData[smIdx];
+                (int vbIdx, int lodGrp, int subIdx, int idxOffset) = submeshInfo[smIdx];
                 var mesh = new MeshEntry
                 {
                     LodLevel = currentLod,
-                    PartNumber = subIdx,
-                    VbIndex = vbIdx,
                     IndiceSectionOffset = indiceSectionOffset,
                     NameIndex = smIdx,
                 };
@@ -279,7 +415,7 @@ public sealed class XbgModel
                         : 0;
                 }
 
-                mesh.MatListInfo.Add((vbIdx, lodGrp, subIdx, idxOffset, idxCount));
+                mesh.MatListInfo.Add((lodGrp, subIdx, idxOffset));
                 meshDict[(currentLod, smIdx)] = mesh;
             }
         }
@@ -299,13 +435,15 @@ public sealed class XbgModel
     /// BoneWts2 -> Normal -> Color -> Tangent -> Binormal -> Unk400. Only the offsets this preview
     /// actually consumes (position, UV0, normal) are tracked; everything else just contributes to
     /// stride.</summary>
-    private static (int Stride, int PosOffset, int? Uv0Offset, int? NormalOffset) ComputeLayout(int flags)
+    private static (int Stride, int PosOffset, int? Uv0Offset, int? NormalOffset, int? ColourOffset)
+        ComputeLayout(int flags)
     {
         int stride = 0;
-        int posOffset = 0, uv0Offset = -1, normalOffset = -1;
+        int posOffset = 0, uv0Offset = -1, normalOffset = -1, colourOffset = -1;
         bool posHandled = false;
 
-        void Take(int flag, int size, bool isPos = false, bool isUv0 = false, bool isNormal = false)
+        void Take(int flag, int size, bool isPos = false, bool isUv0 = false, bool isNormal = false,
+            bool isColour = false)
         {
             if (isPos)
             {
@@ -332,6 +470,10 @@ public sealed class XbgModel
                 {
                     normalOffset = stride;
                 }
+                if (isColour)
+                {
+                    colourOffset = stride;
+                }
             }
 
             stride += size;
@@ -346,12 +488,13 @@ public sealed class XbgModel
         Take(BoneWts1, 8);
         Take(BoneWts2, 8);
         Take(Normal, 4, isNormal: true);
-        Take(Color, 4);
+        Take(Color, 4, isColour: true);
         Take(Tangent, 4);
         Take(Binormal, 4);
         Take(Unk400, 4);
 
-        return (stride, posOffset, uv0Offset >= 0 ? uv0Offset : null, normalOffset >= 0 ? normalOffset : null);
+        return (stride, posOffset, uv0Offset >= 0 ? uv0Offset : null,
+            normalOffset >= 0 ? normalOffset : null, colourOffset >= 0 ? colourOffset : null);
     }
 
     private static void ParseMeshVertices(Cursor g, MeshEntry mesh, float vertPosScale, float uvTrans, float uvScale)
@@ -366,7 +509,8 @@ public sealed class XbgModel
 
         bool hasPosFloat = (mesh.VertFormatFlags & PosFloat) != 0;
         bool hasNormal = (mesh.VertFormatFlags & Normal) != 0;
-        (_, int posOffset, int? uv0Offset, int? normalOffset) = ComputeLayout(mesh.VertFormatFlags);
+        (_, int posOffset, int? uv0Offset, int? normalOffset, int? colourOffset) =
+            ComputeLayout(mesh.VertFormatFlags);
 
         g.Seek(mesh.VertSectionOffset);
         byte[] buf = g.ReadBytes(count * stride);
@@ -375,6 +519,7 @@ public sealed class XbgModel
         var positions = new Vector3[count];
         Vector3[]? normals = hasNormal ? new Vector3[count] : null;
         Vector2[]? uvs = uv0Offset is not null ? new Vector2[count] : null;
+        Vector4[]? colours = colourOffset is not null ? new Vector4[count] : null;
 
         for (int v = 0; v < count; v++)
         {
@@ -398,10 +543,11 @@ public sealed class XbgModel
             if (uvs is not null && uv0Offset is int uo)
             {
                 int ub = v * stride + uo;
-                // 2x int16 through PMCU's translate+scale; V flipped to image convention.
+                // 2x int16 through PMCU's translate+scale. Left in the game's D3D space, where V=0
+                // is the texture's top row - the same row a .dds hands GL first.
                 uvs[v] = new Vector2(
                     uvTrans + ReadI16(buf, ub, be) * uvScale,
-                    1f - (uvTrans + ReadI16(buf, ub + 2, be) * uvScale));
+                    uvTrans + ReadI16(buf, ub + 2, be) * uvScale);
             }
 
             if (normals is not null && normalOffset is int no)
@@ -410,26 +556,38 @@ public sealed class XbgModel
                 // D3DCOLOR-encoded: unsigned-normalised bytes, BGRA order (xyz = byte2,byte1,byte0).
                 normals[v] = new Vector3(Unsign(buf[nb + 2]), Unsign(buf[nb + 1]), Unsign(buf[nb]));
             }
+
+            if (colours is not null && colourOffset is int co)
+            {
+                int cb = v * stride + co;
+                // BGRA bytes, straight 0..1 rather than the normals' signed remap.
+                colours[v] = new Vector4(
+                    buf[cb + 2] / 255f, buf[cb + 1] / 255f, buf[cb] / 255f, buf[cb + 3] / 255f);
+            }
         }
 
         mesh.Positions = positions;
         mesh.Normals = normals;
         mesh.Uvs = uvs;
+        mesh.Colours = colours;
     }
 
     private static float Unsign(byte b) => b / 255f * 2f - 1f;
 
-    /// <summary>Axis-aligned extent over the given submeshes' positions; (0,0)..(0,0) when empty.</summary>
+    /// <summary>Axis-aligned extent over the vertices the given submeshes actually draw, placed;
+    /// (0,0)..(0,0) when empty. Sibling parts share a vertex buffer and place it differently, so
+    /// this walks each submesh's own triangles rather than the whole buffer.</summary>
     public static (Vector3 Min, Vector3 Max) Bounds(IEnumerable<XbgSubmesh> submeshes)
     {
         var min = new Vector3(float.MaxValue);
         var max = new Vector3(float.MinValue);
         foreach (XbgSubmesh submesh in submeshes)
         {
-            foreach (Vector3 p in submesh.Positions)
+            foreach (int i in submesh.Indices)
             {
-                min = Vector3.Min(min, p);
-                max = Vector3.Max(max, p);
+                Vector3 placed = submesh.Place(submesh.Positions[i]);
+                min = Vector3.Min(min, placed);
+                max = Vector3.Max(max, placed);
             }
         }
 
@@ -471,7 +629,7 @@ public sealed class XbgModel
         public int FaceCount => Header.Length > 1 ? Header[1] : 0;
     }
 
-    private static List<List<SubMeshHeader>>? TryParseDnks(Cursor g)
+    private static List<List<SubMeshHeader>>? TryParseDnks(Cursor g, List<string> partNames)
     {
         int start = g.Position;
         try
@@ -529,7 +687,7 @@ public sealed class XbgModel
                     throw new InvalidDataException("bad DNKS name length");
                 }
 
-                g.SkipBytes((int)nameLen);
+                partNames.Add(g.ReadWord((int)nameLen));
                 g.SkipBytes(1); // NUL terminator
             }
 
@@ -538,6 +696,7 @@ public sealed class XbgModel
         catch (Exception)
         {
             g.Seek(start);
+            partNames.Clear();
             return null;
         }
     }
@@ -563,9 +722,9 @@ public sealed class XbgModel
     {
         foreach (MeshEntry mesh in meshes)
         {
-            // The submesh header's own FaceCount is what drives the read below, not the tuple's
-            // idxCount - hence discarding it here.
-            foreach ((int _, int lodGrp, int subIdxVal, int idxOffset, int _) in mesh.MatListInfo)
+            // The submesh header's own FaceCount drives the read below - the SDOL index range is
+            // never consulted.
+            foreach ((int lodGrp, int subIdxVal, int idxOffset) in mesh.MatListInfo)
             {
                 int? dnksPos = ResolveDnksPos(lodGrp, subIdxVal, mesh.NameIndex, subMeshList);
                 if (dnksPos is null)

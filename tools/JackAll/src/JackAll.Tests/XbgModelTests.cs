@@ -15,6 +15,7 @@ public class XbgModelTests
     private const string FixturesDir = "Fixtures/Xbg";
     private const string Character = "andrehyppolite.xbg";
     private const string Prop = "chairbar01.xbg";
+    private const string Vehicle = "buggy.xbg";
 
     private static bool FixturesPresent
         => File.Exists(Path.Combine(FixturesDir, Character)) && File.Exists(Path.Combine(FixturesDir, Prop));
@@ -124,6 +125,21 @@ public class XbgModelTests
         }
     }
 
+    /// <summary>The prop's V bounds, read off its raw PMCU pair. They're asymmetric, so re-flipping
+    /// V into bottom-up image space would move them to [-2.367, 1.664] and fail here.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Uvs_stay_in_the_games_top_down_texture_space()
+    {
+        if (!FixturesPresent) return;
+
+        Vector2[] uvs = ParseFixture(Prop).Submeshes
+            .Where(s => s.Uvs is not null).SelectMany(s => s.Uvs!).ToArray();
+
+        Assert.Equal(-0.664, uvs.Min(uv => uv.Y), 3);
+        Assert.Equal(3.367, uvs.Max(uv => uv.Y), 3);
+    }
+
     [Fact]
     public void Smooth_normals_are_unit_length_with_a_fallback_for_unreferenced_vertices()
     {
@@ -135,6 +151,8 @@ public class XbgModelTests
         Assert.Equal(Vector3.UnitY, normals[3]);
     }
 
+    /// <summary>Each tier draws at least its target LOD's triangles - more when a part has nothing
+    /// at that level and falls back to its own nearest.</summary>
     [Fact]
     [Trait("Category", "RequiresFixture")]
     public void Bake_picks_the_finest_lod_that_fits_the_budget()
@@ -146,13 +164,93 @@ public class XbgModelTests
         int coarsest = model.LodLevels.Min(l => TrianglesAt(model, l));
 
         WorldModel unbounded = WorldModels.Bake(Character, model, int.MaxValue)!;
-        Assert.Equal(finest, unbounded.Fine.Count / 3);
-        Assert.Equal(coarsest, unbounded.Coarse.Count / 3);
+        Assert.InRange(unbounded.Fine.Count / 3, finest, finest + coarsest);
+        Assert.InRange(unbounded.Coarse.Count / 3, coarsest, finest);
 
         // A budget nothing fits falls back to the coarsest LOD rather than to nothing.
         WorldModel squeezed = WorldModels.Bake(Character, model, 1)!;
-        Assert.Equal(coarsest, squeezed.Fine.Count / 3);
+        Assert.InRange(squeezed.Fine.Count / 3, coarsest, finest);
     }
+
+    /// <summary>Two parts sharing one vertex buffer must not share its baked vertices: each bakes
+    /// its own placement in, so the wheel and the body land in different places.</summary>
+    [Fact]
+    public void Bake_gives_parts_that_share_a_buffer_their_own_placement()
+    {
+        Vector3[] shared = [Vector3.Zero, Vector3.UnitX, Vector3.UnitY];
+        XbgSubmesh Part(string name, Matrix4x4? placement) => new()
+        {
+            LodLevel = 0,
+            PartName = name,
+            PartTransform = placement,
+            MaterialIndex = name == "body" ? 0 : 1,
+            MaterialName = name,
+            Positions = shared,
+            Indices = [0, 1, 2],
+        };
+
+        var model = new XbgModel
+        {
+            Materials = ["body", "wheel"],
+            Submeshes = [Part("body", null), Part("wheel", Matrix4x4.CreateTranslation(0, 5, 0))],
+            LodLevels = [0],
+        };
+
+        WorldModel baked = WorldModels.Bake("m.xbg", model, int.MaxValue)!;
+
+        // Both parts emit their own three vertices, and only the wheel's are moved.
+        Assert.Equal(6, baked.VertexCount);
+        float[] y = [.. Enumerable.Range(0, 6).Select(i => baked.Vertices[i * WorldModel.FloatsPerVertex + 1])];
+        Assert.Equal([0f, 0f, 1f], y[..3]);
+        Assert.Equal([5f, 5f, 6f], y[3..]);
+    }
+
+    /// <summary>The buggy's four wheels are each modelled around their own pivot, so without the
+    /// skeleton they render stacked inside the chassis. Placed, they sit at the four corners.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Rigid_parts_are_placed_by_the_bone_that_shares_their_name()
+    {
+        if (!File.Exists(Path.Combine(FixturesDir, Vehicle))) return;
+
+        List<IGrouping<string, XbgSubmesh>> wheels = [.. ParseFixture(Vehicle).Submeshes
+            .Where(s => s.LodLevel == 0 && s.PartName.StartsWith("Wheel", StringComparison.OrdinalIgnoreCase))
+            .GroupBy(s => s.PartName)];
+
+        Dictionary<string, Vector3> centreByPart = wheels.ToDictionary(
+            g => g.Key, Centre, StringComparer.OrdinalIgnoreCase);
+        Assert.Equal(4, centreByPart.Count);
+
+        // Unplaced they all collapse onto the model origin.
+        Assert.All(wheels, g => Assert.True(Centre(g.Select(Unplaced)).Length() < 0.2f));
+
+        Vector3 backLeft = centreByPart["WheelBack_L_State01"];
+        Vector3 backRight = centreByPart["WheelBack_R_State01"];
+        Vector3 frontLeft = centreByPart["WheelFont_L_State01"];
+        Vector3 frontRight = centreByPart["WheelFont_R_State01"];
+
+        Assert.True(backLeft.X < 0 && frontLeft.X < 0, "left wheels sit on -X");
+        Assert.True(backRight.X > 0 && frontRight.X > 0, "right wheels sit on +X");
+        Assert.True(backLeft.Y < 0 && backRight.Y < 0, "rear wheels sit behind the origin");
+        Assert.True(frontLeft.Y > 1.4f && frontRight.Y > 1.4f, "front wheels sit ahead of the origin");
+    }
+
+    private static Vector3 Centre(IEnumerable<XbgSubmesh> submeshes)
+    {
+        (Vector3 min, Vector3 max) = XbgModel.Bounds(submeshes);
+        return (min + max) / 2f;
+    }
+
+    private static XbgSubmesh Unplaced(XbgSubmesh submesh) => new()
+    {
+        LodLevel = submesh.LodLevel,
+        PartName = submesh.PartName,
+        MaterialIndex = submesh.MaterialIndex,
+        MaterialName = submesh.MaterialName,
+        Positions = submesh.Positions,
+        Indices = submesh.Indices,
+    };
 
     [Theory]
     [InlineData(Character)]
@@ -183,10 +281,56 @@ public class XbgModelTests
 
         WorldModel baked = WorldModels.Bake(
             Character, ParseFixture(Character), WorldModels.FineTriangleBudget,
-            name => $@"tex\{name}.xbt")!;
+            name => MaterialSurface.None with { DiffuseTexturePath = $@"tex\{name}.xbt" })!;
 
         Assert.NotEmpty(baked.MaterialRanges);
         Assert.All(baked.MaterialRanges, r => Assert.Equal($@"tex\{r.MaterialName}.xbt", r.DiffuseTexturePath));
+    }
+
+    /// <summary>
+    /// Retail meshes are wound the way D3D wants: walk a triangle's indices in order and the
+    /// cross product points away from the authored normal, into the surface. OpenGL reads that
+    /// as back-facing on every outward triangle, which is why the model shader decides which side
+    /// is showing by testing against the eye rather than trusting <c>gl_FrontFacing</c>. Reversing
+    /// the index order here - or culling on GL's default winding - would erase the sun term.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Triangles_are_wound_clockwise_around_their_authored_normal()
+    {
+        if (!FixturesPresent) return;
+
+        foreach (string name in new[] { Character, Prop })
+        {
+            int matchesWinding = 0, opposesWinding = 0;
+            foreach (XbgSubmesh submesh in ParseFixture(name).Submeshes.Where(s => s.LodLevel == 0))
+            {
+                if (submesh.Normals is null) continue;
+
+                for (int i = 0; i + 2 < submesh.Indices.Length; i += 3)
+                {
+                    int a = submesh.Indices[i], b = submesh.Indices[i + 1], c = submesh.Indices[i + 2];
+                    Vector3 wound = Vector3.Cross(
+                        submesh.Positions[b] - submesh.Positions[a],
+                        submesh.Positions[c] - submesh.Positions[a]);
+                    Vector3 authored = submesh.Normals[a] + submesh.Normals[b] + submesh.Normals[c];
+                    if (wound.LengthSquared() < 1e-12f || authored.LengthSquared() < 1e-12f) continue;
+
+                    if (Vector3.Dot(Vector3.Normalize(wound), Vector3.Normalize(authored)) > 0)
+                    {
+                        matchesWinding++;
+                    }
+                    else
+                    {
+                        opposesWinding++;
+                    }
+                }
+            }
+
+            // Not every triangle: a handful of degenerate slivers land either way.
+            Assert.True(opposesWinding > (matchesWinding + opposesWinding) * 0.95,
+                $"{name}: only {opposesWinding} of {matchesWinding + opposesWinding} triangles wind clockwise");
+        }
     }
 
     private static int TotalVertices(XbgModel model)

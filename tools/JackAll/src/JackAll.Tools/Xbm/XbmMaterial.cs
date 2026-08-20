@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 using JackAll.Core.Format;
 using JackAll.Tools.Xbg;
@@ -122,7 +123,9 @@ public sealed class XbmMaterial
         return new XbmMaterial { Name = name, Template = template, Textures = textures, Properties = properties };
     }
 
-    private static string FormatFloat(float f) => f.ToString("0.###");
+    /// <summary>Invariant so the text stays machine-readable wherever it is parsed back - a comma
+    /// decimal separator would collide with the separator between a vector's components.</summary>
+    private static string FormatFloat(float f) => f.ToString("0.###", CultureInfo.InvariantCulture);
 
     /// <summary>The material preamble (a handful of reserved bytes before the name string) varies in
     /// length between files - rather than assume a fixed size, try the offsets actually observed in the

@@ -2,6 +2,9 @@
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
+    <!-- The game export the retail fixtures are linked out of; one place to repoint if it moves. -->
+    <Fc2Graphics>..\..\..\..\tmp\gamefiles\worlds\worlds\graphics</Fc2Graphics>
+    <Fc2Levels>..\..\..\..\tmp\gamefiles\worlds\worlds\levels</Fc2Levels>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -35,15 +38,50 @@
     </Content>
     <!-- Retail meshes from the local game export; absent on CI, where the fixture-guarded tests
          no-op. The format-samples meshes are NOT used: their provenance is unknown. -->
-    <Content Include="..\..\..\..\tmp\graphics\actors\buddy_andrehyppolite\andrehyppolite.xbg"
+    <Content Include="$(Fc2Graphics)\actors\buddy_andrehyppolite\andrehyppolite.xbg"
              Link="Fixtures\Xbg\andrehyppolite.xbg"
-             Condition="Exists('..\..\..\..\tmp\graphics\actors\buddy_andrehyppolite\andrehyppolite.xbg')">
+             Condition="Exists('$(Fc2Graphics)\actors\buddy_andrehyppolite\andrehyppolite.xbg')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
-    <Content Include="..\..\..\..\tmp\graphics\objects\furnitures\chairs\chairbar01.xbg"
+    <Content Include="$(Fc2Graphics)\objects\furnitures\chairs\chairbar01.xbg"
              Link="Fixtures\Xbg\chairbar01.xbg"
-             Condition="Exists('..\..\..\..\tmp\graphics\objects\furnitures\chairs\chairbar01.xbg')">
+             Condition="Exists('$(Fc2Graphics)\objects\furnitures\chairs\chairbar01.xbg')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(Fc2Graphics)\vehicles\land\buggy\buggy.xbg"
+             Link="Fixtures\Xbg\buggy.xbg"
+             Condition="Exists('$(Fc2Graphics)\vehicles\land\buggy\buggy.xbg')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- The checked-in Fixtures\Xbm samples are all opaque; these two carry the alpha flags. -->
+    <Content Include="$(Fc2Graphics)\_materials\cromagnoli-m-2008030651031699.xbm"
+             Link="Fixtures\XbmAlpha\blended.xbm"
+             Condition="Exists('$(Fc2Graphics)\_materials\cromagnoli-m-2008030651031699.xbm')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(Fc2Graphics)\_materials\aamancio-m-2007111374254074.xbm"
+             Link="Fixtures\XbmAlpha\masked.xbm"
+             Condition="Exists('$(Fc2Graphics)\_materials\aamancio-m-2007111374254074.xbm')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- Layer 1 is a flat colour swatch on both: one keeps the real surface in layer 2, the other
+         repeats the swatch there and is grey by intent. -->
+    <Content Include="$(Fc2Graphics)\_materials\apare-m-2007102557105961.xbm"
+             Link="Fixtures\XbmSwatch\swaps.xbm"
+             Condition="Exists('$(Fc2Graphics)\_materials\apare-m-2007102557105961.xbm')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(Fc2Graphics)\_materials\apare-m-2008041046168921.xbm"
+             Link="Fixtures\XbmSwatch\flat.xbm"
+             Condition="Exists('$(Fc2Graphics)\_materials\apare-m-2008041046168921.xbm')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- A landmark file that places a colonial house: its shell, its window-and-door panel, and a
+         second building, beside the vegetation container and spline volumes that must not load. -->
+    <Content Include="$(Fc2Levels)\w2_b_2\generated\worldsectors\landmarknear4427.data.fcb"
+             Link="Fixtures\WorldSector\landmarknear4427.data.fcb"
+             Condition="Exists('$(Fc2Levels)\w2_b_2\generated\worldsectors\landmarknear4427.data.fcb')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
   </ItemGroup>
-</Project>
+</Project>

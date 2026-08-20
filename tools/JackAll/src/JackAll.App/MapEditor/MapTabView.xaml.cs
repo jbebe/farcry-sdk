@@ -1,4 +1,4 @@
-using System.Windows.Controls;
+﻿using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
 using JackAll.App.FileHandlers.Fcb;
@@ -60,6 +60,10 @@ public partial class MapTabView : UserControl
 
     private ArchetypeIndex? _archetypes;
 
+    /// <summary>Kept past the GL swap that clears the pending load, because picking and the
+    /// selection outline need each entity's baked bounds every frame.</summary>
+    private WorldModelSet? _modelSet;
+
     /// <summary>Raised for "Archetype in Library" - the host owns cross-tab navigation.</summary>
     public event Action<string, string>? ArchetypeRequested;
 
@@ -79,14 +83,22 @@ public partial class MapTabView : UserControl
     private EntityMarkerLayer? _vegetationLayer;
     private EntityMarkerLayer? _navMeshLayer;
     private EntityMarkerLayer? _lightLayer;
+
+    /// <summary>One marker layer per mesh-less category, each with its own glyph and its own toggle
+    /// in the layer list. Categories a dedicated layer already draws never reach these.</summary>
+    private readonly Dictionary<EntityCategory, EntityMarkerLayer> _categoryLayers = [];
     private ShapeLayer? _triggerLayer;
     private SkyLayer? _sky;
+    private SelectionBoxLayer? _selectionBox;
 
     private double _frameSeconds;
     private int _frames;
 
     private readonly Camera3D _camera = new();
     private readonly HashSet<Key> _flyKeys = [];
+    /// <summary>How long the current movement has been held - what winds the fly speed up from a
+    /// standing start. Cleared the moment nothing is pressed, so taps stay short.</summary>
+    private float _flyHeldSeconds;
     private bool _looking;
     private System.Windows.Point _lastDragPoint;
 
@@ -157,9 +169,10 @@ public partial class MapTabView : UserControl
             ShowEntities(loaded.World, loaded.Archetypes);
             WorldModelSet models = loaded.Models;
             _modelStatusText =
-                $"{models.ModelIndexByEntity.Count:N0} of {_positionedEntities.Count:N0} entities " +
+                $"{models.ModelIndicesByEntity.Count:N0} of {_positionedEntities.Count:N0} entities " +
                 $"have models ({models.Models.Count:N0} unique meshes" +
-                (models.FailedPathCount > 0 ? $", {models.FailedPathCount} failed)" : ")");
+                (models.FailedPathCount > 0 ? $", {models.FailedPathCount:N0} meshes failed" : "") +
+                (models.EntitiesWithoutMesh > 0 ? $", {models.EntitiesWithoutMesh:N0} named none" : "") + ")";
             ModelStatus.Text = _modelStatusText;
             int center = terrain.Side / 2;
             _camera.Position = new OpenTK.Mathematics.Vector3(
@@ -202,10 +215,23 @@ public partial class MapTabView : UserControl
             _lightLayer?.Dispose();
             _lightLayer = new EntityMarkerLayer(BuildLightMarkers(pending.Lights), pending.Lights.Count);
             LightStatus.Text = Describe(pending.Lights);
+            // Sized for every positioned entity, because which category an entity lands in is not
+            // known until the model layer has had its pass; the live counts do the real limiting.
+            int categoryCapacity = pending.World.Entities.Count(e => e.Position is not null);
+            foreach (EntityMarkerLayer stale in _categoryLayers.Values)
+            {
+                stale.Dispose();
+            }
+            _categoryLayers.Clear();
+            foreach ((EntityCategory category, _, _, _, _, _) in DrawnCategories)
+            {
+                _categoryLayers[category] = new EntityMarkerLayer(categoryCapacity);
+            }
             _triggerLayer?.Dispose();
             _triggerLayer = new ShapeLayer(BuildTriggerOutlines(pending.Triggers));
             TriggerStatus.Text = Describe(pending.Triggers);
             _modelLayer?.Dispose();
+            _modelSet = pending.Models;
             _modelLayer = new EntityModelLayer(
                 pending.Models, _vm is { } modelVm ? modelVm.ReadByPath : _ => null, MarkerColour);
             int positioned = pending.World.Entities.Count(e => e.Position is not null);
@@ -240,16 +266,19 @@ public partial class MapTabView : UserControl
         if (_markersDirty)
         {
             _markersDirty = false;
-            List<WorldEntity> markerEntities = _visibleEntities;
             if (_modelLayer is { } modelLayer && EntityDrawMode.SelectedIndex != ModeMarkers)
             {
-                List<WorldEntity> leftover = modelLayer.SetVisible(_visibleEntities, _camera.Position);
-                if (EntityDrawMode.SelectedIndex == ModeModels)
-                {
-                    markerEntities = leftover;
-                }
+                modelLayer.SetVisible(_visibleEntities, _camera.Position);
             }
+
+            // The draw mode speaks only for entities that resolved to geometry: Models draws them as
+            // meshes and nothing else, so the mode no longer smuggles the leftovers back in as
+            // markers. The mesh-less ones belong to their category layers either way.
+            List<WorldEntity> markerEntities = EntityDrawMode.SelectedIndex == ModeModels
+                ? []
+                : _visibleEntities;
             _markerLayer?.SetInstances(FillMarkers(markerEntities), markerEntities.Count);
+            RebuildCategoryMarkers();
         }
 
         GL.Viewport(0, 0, Viewport.FrameBufferWidth, Viewport.FrameBufferHeight);
@@ -299,9 +328,8 @@ public partial class MapTabView : UserControl
 
         if (LayerCatalog.Vegetation.IsVisible)
         {
-            OpenTK.Mathematics.Vector3 vegRight = _camera.Right;
-            _vegetationLayer?.Draw(viewProjection, 2f, vegRight,
-                OpenTK.Mathematics.Vector3.Cross(vegRight, _camera.Forward), flattenZ: false, null);
+            _vegetationLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
+                MarkerStyle.World(2f));
         }
 
         if (LayerCatalog.Triggers.IsVisible)
@@ -311,16 +339,14 @@ public partial class MapTabView : UserControl
 
         if (LayerCatalog.Lights.IsVisible)
         {
-            OpenTK.Mathematics.Vector3 lightRight = _camera.Right;
-            _lightLayer?.Draw(viewProjection, 4f, lightRight,
-                OpenTK.Mathematics.Vector3.Cross(lightRight, _camera.Forward), flattenZ: false, null);
+            _lightLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
+                MarkerStyle.World(4f));
         }
 
         if (LayerCatalog.NavMesh.IsVisible)
         {
-            OpenTK.Mathematics.Vector3 navRight = _camera.Right;
-            _navMeshLayer?.Draw(viewProjection, 1.5f, navRight,
-                OpenTK.Mathematics.Vector3.Cross(navRight, _camera.Forward), flattenZ: false, null);
+            _navMeshLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
+                MarkerStyle.World(1.5f));
         }
 
         if (LayerCatalog.Entities.IsVisible)
@@ -331,11 +357,57 @@ public partial class MapTabView : UserControl
             }
 
             // Markers blend, so they draw after the opaque models.
-            OpenTK.Mathematics.Vector3 right = _camera.Right;
-            _markerLayer?.Draw(viewProjection, 3f, right,
-                OpenTK.Mathematics.Vector3.Cross(right, _camera.Forward), flattenZ: false, _selectedEntity);
+            _markerLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
+                MarkerStyle.World(MarkerWorldSize));
         }
+
+        foreach ((EntityCategory category, MarkerGlyph glyph, MapLayer layer, _, _, _) in DrawnCategories)
+        {
+            if (layer.IsVisible && _categoryLayers.TryGetValue(category, out EntityMarkerLayer? markers))
+            {
+                markers.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
+                    MarkerStyle.Screen(glyph, GlyphPixels, (float)Viewport.ActualHeight,
+                        Camera3D.VerticalFovRadians, GlyphMaxDistance));
+            }
+        }
+
+        DrawSelectionBox(viewProjection);
     }
+
+    /// <summary>The billboard axes for the 3D view: the camera's own right, and the up that squares
+    /// with it, so every marker layer faces the viewer the same way.</summary>
+    private OpenTK.Mathematics.Vector3 Right() => _camera.Right;
+
+    private OpenTK.Mathematics.Vector3 Up()
+        => OpenTK.Mathematics.Vector3.Cross(_camera.Right, _camera.Forward);
+
+    /// <summary>Outlines the selected entity with the same box picking tests against, so what the
+    /// click targets and what the highlight shows are always the one volume.</summary>
+    private void DrawSelectionBox(OpenTK.Mathematics.Matrix4 viewProjection)
+    {
+        if (_selectedEntity is not { Position: { } position } entity)
+        {
+            return;
+        }
+
+        (System.Numerics.Vector3 min, System.Numerics.Vector3 max) = LocalBoundsOf(entity);
+        System.Numerics.Vector3 size = max - min;
+        System.Numerics.Vector3 centre = (min + max) * 0.5f;
+        System.Numerics.Matrix4x4 model =
+            System.Numerics.Matrix4x4.CreateScale(size)
+            * System.Numerics.Matrix4x4.CreateTranslation(centre)
+            * entity.Rotation
+            * System.Numerics.Matrix4x4.CreateTranslation(position);
+
+        _selectionBox ??= new SelectionBoxLayer();
+        _selectionBox.Draw(viewProjection, ToGl(model), new OpenTK.Mathematics.Vector3(1f, 0.85f, 0.2f));
+    }
+
+    private static OpenTK.Mathematics.Matrix4 ToGl(System.Numerics.Matrix4x4 m) => new(
+        m.M11, m.M12, m.M13, m.M14,
+        m.M21, m.M22, m.M23, m.M24,
+        m.M31, m.M32, m.M33, m.M34,
+        m.M41, m.M42, m.M43, m.M44);
 
     /// <summary>Averages over a quarter second: a per-frame number is unreadable, and the average is
     /// the one that matters while judging whether a layer costs anything.</summary>
@@ -362,65 +434,57 @@ public partial class MapTabView : UserControl
     }
 
     /// <summary>Holding shift multiplies the fly speed.</summary>
-    private const float SprintFactor = 5f;
+    private const float SprintFactor = 10f;
 
-    /// <summary>Where the camera starts braking, and where it stops dead - metres of clear travel
-    /// ahead along the direction of movement.</summary>
-    private const float BrakeFrom = 50f;
-    private const float BrakeTo = 1f;
+    /// <summary>World size of a billboard marker, and so of the box that makes a mesh-less entity
+    /// clickable.</summary>
+    private const float MarkerWorldSize = 3f;
+
+    /// <summary>Floor on each axis of a pick box, so a flat or tiny model is still a target.</summary>
+    private const float MinPickExtent = 0.35f;
+
+    /// <summary>How far above the terrain the camera is held when ground collision is on.</summary>
+    private const float GroundClearance = 1f;
 
     private void ApplyFlyKeys(float dt)
     {
-        if (_flyKeys.Count == 0) return;
+        if (_flyKeys.Count == 0)
+        {
+            _flyHeldSeconds = 0f;
+            return;
+        }
+
         float forward = (_flyKeys.Contains(Key.W) ? 1 : 0) - (_flyKeys.Contains(Key.S) ? 1 : 0);
         float strafe = (_flyKeys.Contains(Key.D) ? 1 : 0) - (_flyKeys.Contains(Key.A) ? 1 : 0);
         float lift = (_flyKeys.Contains(Key.E) ? 1 : 0) - (_flyKeys.Contains(Key.Q) ? 1 : 0);
 
         OpenTK.Mathematics.Vector3 direction = _camera.MoveDirection(forward, strafe, lift);
-        if (direction == OpenTK.Mathematics.Vector3.Zero) return;
+        if (direction == OpenTK.Mathematics.Vector3.Zero)
+        {
+            _flyHeldSeconds = 0f;
+            return;
+        }
 
-        float speed = _camera.MoveSpeed;
+        _flyHeldSeconds += dt;
+        float speed = _camera.MoveSpeed * Camera3D.SpeedFactor(_flyHeldSeconds);
         if (Keyboard.IsKeyDown(Key.LeftShift) || Keyboard.IsKeyDown(Key.RightShift))
         {
             speed *= SprintFactor;
         }
 
-        float step = speed * Math.Min(dt, 0.1f);
-        if (GroundCollision.IsChecked == true && _terrain is not null)
-        {
-            step *= GroundBrake(direction);
-        }
-        _camera.Move(direction, step);
+        _camera.Move(direction, speed * Math.Min(dt, 0.1f));
         HoldAboveTerrain();
     }
 
-    /// <summary>
-    /// How much of the requested step survives, from full at <see cref="BrakeFrom"/> metres of clear
-    /// travel down to nothing at <see cref="BrakeTo"/>. Marching the movement direction rather than
-    /// looking straight down is what lets the camera skim low over flat ground at full speed and
-    /// still stop dead against a hillside it is pointed at.
-    /// </summary>
-    private float GroundBrake(OpenTK.Mathematics.Vector3 direction)
-    {
-        for (float ahead = 0; ahead <= BrakeFrom; ahead += 1f)
-        {
-            OpenTK.Mathematics.Vector3 at = _camera.Position + direction * ahead;
-            if (at.Z <= _terrain!.HeightMetersAt((int)MathF.Round(at.X), (int)MathF.Round(at.Y)))
-            {
-                return Math.Clamp((ahead - BrakeTo) / (BrakeFrom - BrakeTo), 0f, 1f);
-            }
-        }
-        return 1f;
-    }
-
-    /// <summary>The backstop behind the braking ramp: a step that still ends up under the terrain is
-    /// lifted back out, so the ground cannot be crossed at any framerate.</summary>
+    /// <summary>A step that ends up under the terrain is lifted back out, so the ground cannot be
+    /// crossed at any framerate.</summary>
     private void HoldAboveTerrain()
     {
         if (GroundCollision.IsChecked != true || _terrain is null) return;
 
         OpenTK.Mathematics.Vector3 position = _camera.Position;
-        float floor = _terrain.HeightMetersAt((int)MathF.Round(position.X), (int)MathF.Round(position.Y)) + BrakeTo;
+        float floor = _terrain.HeightMetersAt((int)MathF.Round(position.X), (int)MathF.Round(position.Y))
+            + GroundClearance;
         if (position.Z < floor)
         {
             _camera.Position = new OpenTK.Mathematics.Vector3(position.X, position.Y, floor);
@@ -600,6 +664,76 @@ public partial class MapTabView : UserControl
         return stream;
     }
 
+    /// <summary>The glyph, layer toggle and colour each drawn category gets. Categories a dedicated
+    /// layer already owns are absent, which is what keeps a light from being drawn twice.</summary>
+    private static readonly (EntityCategory Category, MarkerGlyph Glyph, MapLayer Layer, float R, float G, float B)[]
+        DrawnCategories =
+        [
+            (EntityCategory.Event, MarkerGlyph.Diamond, LayerCatalog.EventNodes, 0.55f, 0.60f, 0.70f),
+            (EntityCategory.Ai, MarkerGlyph.Cone, LayerCatalog.AiPoints, 0.45f, 0.75f, 0.55f),
+            (EntityCategory.Entrance, MarkerGlyph.Doorway, LayerCatalog.Entrances, 0.85f, 0.70f, 0.35f),
+            (EntityCategory.Emitter, MarkerGlyph.Burst, LayerCatalog.Emitters, 0.80f, 0.50f, 0.75f),
+        ];
+
+    /// <summary>Roughly how many pixels of viewport height a category glyph holds, and how far out
+    /// it is worth drawing one at all.</summary>
+    private const float GlyphPixels = 13f;
+    private const float GlyphMaxDistance = 220f;
+
+    /// <summary>Refills each category layer from the entities the model layer could not draw. Runs
+    /// only on a marker rebuild, so it costs nothing per frame.</summary>
+    private void RebuildCategoryMarkers()
+    {
+        if (_modelSet is not { } models || _categoryLayers.Count == 0)
+        {
+            return;
+        }
+
+        var byCategory = new Dictionary<EntityCategory, List<WorldEntity>>();
+        foreach (WorldEntity entity in _visibleEntities)
+        {
+            if (models.ModelIndicesByEntity.ContainsKey(entity))
+            {
+                continue;
+            }
+
+            EntityCategory category = WorldEntityCategories.Of(entity.Node);
+            if (category.HasOwnLayer())
+            {
+                continue;
+            }
+
+            if (!byCategory.TryGetValue(category, out List<WorldEntity>? bucket))
+            {
+                byCategory[category] = bucket = [];
+            }
+            bucket.Add(entity);
+        }
+
+        foreach ((EntityCategory category, _, _, float r, float g, float b) in DrawnCategories)
+        {
+            if (!_categoryLayers.TryGetValue(category, out EntityMarkerLayer? layer))
+            {
+                continue;
+            }
+
+            List<WorldEntity> entities = byCategory.GetValueOrDefault(category) ?? [];
+            var stream = new float[Math.Max(1, entities.Count) * EntityMarkerLayer.Stride];
+            for (int i = 0; i < entities.Count; i++)
+            {
+                System.Numerics.Vector3 position = entities[i].Position!.Value;
+                int at = i * EntityMarkerLayer.Stride;
+                stream[at] = position.X;
+                stream[at + 1] = position.Y;
+                stream[at + 2] = position.Z;
+                stream[at + 3] = r;
+                stream[at + 4] = g;
+                stream[at + 5] = b;
+            }
+            layer.SetInstances(stream, entities.Count);
+        }
+    }
+
     /// <summary>Colour keyed to the archetype, shared by markers and model tints so the same kind
     /// of object reads the same in both forms.</summary>
     private static (byte R, byte G, byte B) MarkerColour(WorldEntity entity)
@@ -751,11 +885,11 @@ public partial class MapTabView : UserControl
     {
         if (e.NewValue is EntityTreeNode { Entity: { } entity })
         {
-            Select(entity, moveCamera: true);
+            Select(entity);
         }
     }
 
-    private void Select(WorldEntity entity, bool moveCamera)
+    private void Select(WorldEntity entity)
     {
         _selectedEntity = entity;
         EntityHeading.Text = $"{entity.Name}  ({entity.LayerPathId})";
@@ -783,11 +917,6 @@ public partial class MapTabView : UserControl
             rows.Add(new FieldRow("component", group.Count() > 1 ? $"{name} x{group.Count()}" : name));
         }
         EntityFields.ItemsSource = rows;
-
-        if (moveCamera && entity.Position is { } p)
-        {
-            _camera.Position = new OpenTK.Mathematics.Vector3(p.X, p.Y - 25f, p.Z + 15f);
-        }
     }
 
     /// <summary>Best-effort decode for display: the shapes that actually occur on entity fields.</summary>
@@ -808,9 +937,86 @@ public partial class MapTabView : UserControl
         };
     }
 
+    /// <summary>Local-space extent of what an entity draws: the union of its models, or a box the
+    /// size of the billboard for the mesh-less ones so they stay clickable.</summary>
+    private (System.Numerics.Vector3 Min, System.Numerics.Vector3 Max) LocalBoundsOf(WorldEntity entity)
+    {
+        var half = new System.Numerics.Vector3(MarkerWorldSize * 0.5f);
+        if (_modelSet is not { } set || !set.ModelIndicesByEntity.TryGetValue(entity, out int[]? models))
+        {
+            return (-half, half);
+        }
+
+        var min = new System.Numerics.Vector3(float.MaxValue);
+        var max = new System.Numerics.Vector3(float.MinValue);
+        foreach (int index in models)
+        {
+            min = System.Numerics.Vector3.Min(min, set.Models[index].LocalMin);
+            max = System.Numerics.Vector3.Max(max, set.Models[index].LocalMax);
+        }
+
+        // A model whose bake produced nothing, and any axis too thin to hit, still needs a target.
+        if (min.X > max.X)
+        {
+            return (-half, half);
+        }
+
+        for (int axis = 0; axis < 3; axis++)
+        {
+            if (max[axis] - min[axis] < MinPickExtent)
+            {
+                float centre = (min[axis] + max[axis]) * 0.5f;
+                min[axis] = centre - MinPickExtent * 0.5f;
+                max[axis] = centre + MinPickExtent * 0.5f;
+            }
+        }
+
+        return (min, max);
+    }
+
+    /// <summary>Slab test; returns the near hit distance along the ray, or null when it misses. A
+    /// ray starting inside the box counts as a hit at zero.</summary>
+    private static float? RayHitsBox(
+        System.Numerics.Vector3 origin, System.Numerics.Vector3 direction,
+        System.Numerics.Vector3 min, System.Numerics.Vector3 max)
+    {
+        float near = 0f, far = float.MaxValue;
+        for (int axis = 0; axis < 3; axis++)
+        {
+            float o = origin[axis], d = direction[axis];
+            float lo = axis == 0 ? min.X : axis == 1 ? min.Y : min.Z;
+            float hi = axis == 0 ? max.X : axis == 1 ? max.Y : max.Z;
+            if (MathF.Abs(d) < 1e-6f)
+            {
+                if (o < lo || o > hi)
+                {
+                    return null;
+                }
+                continue;
+            }
+
+            float t1 = (lo - o) / d, t2 = (hi - o) / d;
+            if (t1 > t2)
+            {
+                (t1, t2) = (t2, t1);
+            }
+
+            near = MathF.Max(near, t1);
+            far = MathF.Min(far, t2);
+            if (near > far)
+            {
+                return null;
+            }
+        }
+
+        return near;
+    }
+
     /// <summary>
-    /// Picks the entity nearest the click. Projecting the whole pool costs a pass over ~90k points on
-    /// one click, which is far simpler than maintaining a spatial index and quick enough not to notice.
+    /// Picks the entity whose drawn volume the click ray enters first. Testing the real bounds rather
+    /// than the projected origin is what makes a model clickable anywhere on its body, and taking the
+    /// nearest hit along the ray means the thing in front wins instead of whatever happens to project
+    /// closest to the cursor.
     /// </summary>
     private void PickEntityAt(System.Windows.Point point)
     {
@@ -819,25 +1025,30 @@ public partial class MapTabView : UserControl
             return;
         }
 
-        OpenTK.Mathematics.Matrix4 viewProjection = _camera.View()
-            * _camera.Projection((float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1)));
-        double width = Viewport.ActualWidth, height = Viewport.ActualHeight;
-        WorldEntity? best = null;
-        double bestDistance = 20 * 20;
+        (OpenTK.Mathematics.Vector3 glOrigin, OpenTK.Mathematics.Vector3 glDirection) = _camera.Ray(
+            point.X, point.Y, Viewport.ActualWidth, Math.Max(Viewport.ActualHeight, 1));
+        var origin = new System.Numerics.Vector3(glOrigin.X, glOrigin.Y, glOrigin.Z);
+        var direction = new System.Numerics.Vector3(glDirection.X, glDirection.Y, glDirection.Z);
 
+        WorldEntity? best = null;
+        float bestDistance = float.MaxValue;
         foreach (WorldEntity entity in _visibleEntities)
         {
-            System.Numerics.Vector3 p = entity.Position!.Value;
-            var clip = new OpenTK.Mathematics.Vector4(p.X, p.Y, p.Z, 1f) * viewProjection;
-            if (clip.W <= 0.01f)
+            if (entity.Position is not { } position)
             {
                 continue;
             }
 
-            double sx = (clip.X / clip.W * 0.5 + 0.5) * width;
-            double sy = (1 - (clip.Y / clip.W * 0.5 + 0.5)) * height;
-            double distance = (sx - point.X) * (sx - point.X) + (sy - point.Y) * (sy - point.Y);
-            if (distance < bestDistance)
+            // Into the entity's own space rather than growing its box to fit the world axes, so a
+            // rotated building is no easier to miss than an unrotated one.
+            System.Numerics.Matrix4x4 inverse = System.Numerics.Matrix4x4.Transpose(entity.Rotation);
+            System.Numerics.Vector3 localOrigin =
+                System.Numerics.Vector3.Transform(origin - position, inverse);
+            System.Numerics.Vector3 localDirection =
+                System.Numerics.Vector3.Transform(direction, inverse);
+
+            (System.Numerics.Vector3 min, System.Numerics.Vector3 max) = LocalBoundsOf(entity);
+            if (RayHitsBox(localOrigin, localDirection, min, max) is { } distance && distance < bestDistance)
             {
                 bestDistance = distance;
                 best = entity;
@@ -846,7 +1057,7 @@ public partial class MapTabView : UserControl
 
         if (best is not null)
         {
-            Select(best, moveCamera: false);
+            Select(best);
             if (_entityTree is not null)
             {
                 EntityTreeNode.Reveal(_entityTree, best);

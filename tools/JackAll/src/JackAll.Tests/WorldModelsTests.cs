@@ -1,3 +1,4 @@
+using System.Numerics;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.World;
 using JackAll.Tools.Xbm;
@@ -46,7 +47,7 @@ public class WorldModelsTests
     {
         if (!FixturesPresent) return;
 
-        List<string> paths = [.. SectorEntities().Select(e => WorldModels.MeshPath(e)).OfType<string>()];
+        List<string> paths = [.. SectorEntities().SelectMany(WorldModels.MeshPaths)];
 
         Assert.Equal(10, paths.Count);
         Assert.All(paths, p => Assert.EndsWith(".xbg", p));
@@ -62,12 +63,29 @@ public class WorldModelsTests
         if (!FixturesPresent) return;
 
         ArchetypeIndex index = ArchetypeIndex.Load([new ArchetypeLayer(LibraryPath)], ReadLibrary);
-        List<string> paths = [.. index.Names
-            .Select(n => WorldModels.MeshPath(index.Winner(n)!.Node))
-            .OfType<string>()];
+        List<string> paths = [.. index.Names.SelectMany(n => WorldModels.MeshPaths(index.Winner(n)!.Node))];
 
         Assert.Equal(333, paths.Count);
         Assert.Contains(@"graphics\objects\mapcompass\compass.xbg", paths);
+    }
+
+    /// <summary>A component's several graphics slots name parts inside one mesh file rather than
+    /// separate files - hidMeshName is what differs between them - so an archetype with several
+    /// slots still resolves to the single .xbg its component draws.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Several_slots_on_one_component_resolve_to_a_single_mesh()
+    {
+        if (!FixturesPresent) return;
+
+        ArchetypeIndex index = ArchetypeIndex.Load([new ArchetypeLayer(LibraryPath)], ReadLibrary);
+        List<FcbObject> multiSlot = [.. index.Names
+            .Select(n => index.Winner(n)!.Node)
+            .Where(node => FcbEntityFields.FindComponent(node, WorldHashes.CGraphicComponent) is { } component
+                && component.Children.Count(c => c.TypeHash == WorldHashes.GraphicObject) > 1)];
+
+        Assert.NotEmpty(multiSlot);
+        Assert.All(multiSlot, node => Assert.Single(WorldModels.MeshPaths(node)));
     }
 
     [Fact]
@@ -79,7 +97,7 @@ public class WorldModelsTests
         WorldModelSet set = WorldModels.Load(BuildEntities(), EmptyIndex(), _ => null);
 
         Assert.Empty(set.Models);
-        Assert.Empty(set.ModelIndexByEntity);
+        Assert.Empty(set.ModelIndicesByEntity);
         Assert.True(set.FailedPathCount > 0);
     }
 
@@ -95,10 +113,11 @@ public class WorldModelsTests
             entities, EmptyIndex(),
             path => path.EndsWith(".xbm", StringComparison.OrdinalIgnoreCase) ? null : mesh);
 
-        int resolvable = entities.Count(e => e.Position is not null && WorldModels.MeshPath(e.Node) is not null);
-        Assert.Equal(resolvable, set.ModelIndexByEntity.Count);
+        int resolvable = entities.Count(e => e.Position is not null && WorldModels.MeshPaths(e.Node).Count > 0);
+        Assert.Equal(resolvable, set.ModelIndicesByEntity.Count);
         Assert.Equal(0, set.FailedPathCount);
-        Assert.All(set.ModelIndexByEntity.Values, i => Assert.InRange(i, 0, set.Models.Count - 1));
+        Assert.All(set.ModelIndicesByEntity.Values,
+            indices => Assert.All(indices, i => Assert.InRange(i, 0, set.Models.Count - 1)));
     }
 
     /// <summary>Foreign or corrupt bytes behind a referenced material path must cost the range its
@@ -124,22 +143,163 @@ public class WorldModelsTests
     [Fact]
     public void The_diffuse_slot_priority_follows_the_material_templates()
     {
-        static XbmMaterial Material(params (string Key, string Value)[] textures) => new()
-        {
-            Name = "m",
-            Template = "t",
-            Textures = [.. textures.Select(t => new XbmProperty { Key = t.Key, Value = t.Value })],
-            Properties = [],
-        };
-
         Assert.Equal(@"a\d.xbt", WorldModels.DiffuseTextureOf(
-            Material(("FabricTexture", @"a\f.xbt"), ("DiffuseTexture1", @"a\d.xbt"), ("SkinTexture", @"a\s.xbt"))));
+            Material(textures: [("FabricTexture", @"a\f.xbt"), ("DiffuseTexture1", @"a\d.xbt"), ("SkinTexture", @"a\s.xbt")])));
         Assert.Equal(@"a\s.xbt", WorldModels.DiffuseTextureOf(
-            Material(("NormalTexture1", @"a\n.xbt"), ("SkinTexture", @"a\s.xbt"))));
+            Material(textures: [("NormalTexture1", @"a\n.xbt"), ("SkinTexture", @"a\s.xbt")])));
         Assert.Equal(@"a\f.xbt", WorldModels.DiffuseTextureOf(
-            Material(("MaskTexture1", @"a\m.xbt"), ("FabricTexture", @"a\f.xbt"))));
-        Assert.Equal(@"a\d2.xbt", WorldModels.DiffuseTextureOf(Material(("DiffuseTexture2", @"a\d2.xbt"))));
-        Assert.Null(WorldModels.DiffuseTextureOf(Material(("NormalTexture1", @"a\n.xbt"))));
+            Material(textures: [("MaskTexture1", @"a\m.xbt"), ("FabricTexture", @"a\f.xbt")])));
+        Assert.Equal(@"a\d2.xbt", WorldModels.DiffuseTextureOf(Material(textures: [("DiffuseTexture2", @"a\d2.xbt")])));
+        Assert.Null(WorldModels.DiffuseTextureOf(Material(textures: [("NormalTexture1", @"a\n.xbt")])));
+    }
+
+    private static XbmMaterial Material(
+        (string Key, string Value)[]? textures = null, (string Key, string Value)[]? properties = null) => new()
+    {
+        Name = "m",
+        Template = "t",
+        Textures = [.. (textures ?? []).Select(t => new XbmProperty { Key = t.Key, Value = t.Value })],
+        Properties = [.. (properties ?? []).Select(p => new XbmProperty { Key = p.Key, Value = p.Value })],
+    };
+
+    /// <summary>A material only reads its alpha as coverage when it says so; on the rest that
+    /// channel holds a gloss or spec mask.</summary>
+    [Fact]
+    public void Alpha_mode_follows_the_materials_own_flags()
+    {
+        Assert.Equal(MaterialAlpha.Opaque, WorldModels.AlphaOf(Material()));
+        Assert.Equal(MaterialAlpha.Opaque, WorldModels.AlphaOf(
+            Material(properties: [("AlphaTestEnabled", "0"), ("AlphaBlendEnabled", "0")])));
+        Assert.Equal(MaterialAlpha.Mask, WorldModels.AlphaOf(Material(properties: [("AlphaTestEnabled", "1")])));
+        Assert.Equal(MaterialAlpha.Blend, WorldModels.AlphaOf(Material(properties: [("AlphaBlendEnabled", "1")])));
+        Assert.Equal(MaterialAlpha.Blend, WorldModels.AlphaOf(
+            Material(properties: [("AlphaTestEnabled", "1"), ("AlphaBlendEnabled", "1")])));
+    }
+
+    /// <summary>The tints the engine's diffuse blend needs, including the HDR ones a clamp would
+    /// darken and the single-tint materials that must fill both ends of the blend.</summary>
+    [Fact]
+    public void Diffuse_tints_survive_parsing_unclamped()
+    {
+        Assert.Equal(
+            (new Vector3(0.11f, 0.11f, 0.11f), new Vector3(0.282f, 0.282f, 0.282f)),
+            WorldModels.TintsOf(Material(properties:
+                [("DiffuseColorBase", "0.11, 0.11, 0.11"), ("DiffuseColor1", "0.282, 0.282, 0.282")])));
+
+        // 295 retail materials author a tint past 1; capping them renders the surface too dark.
+        Assert.Equal(
+            new Vector3(1.647f, 1.914f, 2f),
+            WorldModels.TintsOf(Material(properties: [("DiffuseColor1", "1.647, 1.914, 2")])).Tint);
+
+        // Either tint alone fills both ends, so the blend is flat rather than fading to white.
+        Assert.Equal(
+            (new Vector3(0.5f, 0.5f, 0.5f), new Vector3(0.5f, 0.5f, 0.5f)),
+            WorldModels.TintsOf(Material(properties: [("DiffuseColorBase", "0.5, 0.5, 0.5")])));
+
+        Assert.Equal((Vector3.One, Vector3.One), WorldModels.TintsOf(Material()));
+    }
+
+    /// <summary>51 retail materials point layer 1 at one of the engine's flat colour swatches and
+    /// keep the real surface in layer 2 - the swamp boat's hull is one, which is why its interior
+    /// draws as an 8x8 grey square. Layer 2 brings its own colour, so it fills both ends of the
+    /// per-vertex blend rather than inheriting layer 1's pair.</summary>
+    [Fact]
+    public void A_flat_swatch_in_layer_one_hands_the_surface_to_layer_two()
+    {
+        MaterialSurface surface = WorldModels.SurfaceOf(Material(
+            textures:
+            [
+                ("DiffuseTexture1", @"graphics\_textures\diffuse\icone\grey.xbt"),
+                ("DiffuseTexture2", @"graphics\_textures\diffuse\ground\dirt_03_d.xbt"),
+            ],
+            properties:
+            [
+                ("DiffuseColorBase", "0.322, 0.306, 0.306"),
+                ("DiffuseColor1", "0.439, 0.439, 0.439"),
+                ("DiffuseColor2", "0.369, 0.322, 0.282"),
+            ]));
+
+        Assert.Equal(@"graphics\_textures\diffuse\ground\dirt_03_d.xbt", surface.DiffuseTexturePath);
+        Assert.Equal(new Vector3(0.369f, 0.322f, 0.282f), surface.TintBase);
+        Assert.Equal(new Vector3(0.369f, 0.322f, 0.282f), surface.Tint);
+    }
+
+    /// <summary>The other 88 swatch materials are grey on purpose: layer 2 is absent, or is the
+    /// same swatch again. Those keep layer 1 and the tints that colour it.</summary>
+    [Fact]
+    public void A_swatch_with_nothing_better_behind_it_keeps_layer_one()
+    {
+        const string Grey = @"graphics\_textures\diffuse\icone\grey.xbt";
+        (string, string)[] tints = [("DiffuseColorBase", "0.5, 0.5, 0.5"), ("DiffuseColor2", "1, 0, 0")];
+
+        MaterialSurface alone = WorldModels.SurfaceOf(
+            Material(textures: [("DiffuseTexture1", Grey)], properties: tints));
+        Assert.Equal(Grey, alone.DiffuseTexturePath);
+        Assert.Equal(new Vector3(0.5f, 0.5f, 0.5f), alone.Tint);
+
+        MaterialSurface doubled = WorldModels.SurfaceOf(Material(
+            textures: [("DiffuseTexture1", Grey), ("DiffuseTexture2", Grey)], properties: tints));
+        Assert.Equal(Grey, doubled.DiffuseTexturePath);
+        Assert.Equal(new Vector3(0.5f, 0.5f, 0.5f), doubled.Tint);
+    }
+
+    /// <summary>A material with a real albedo is untouched, whatever it keeps in layer 2 - the
+    /// fallback must not reach the 1,381 materials that carry a second layer as detail.</summary>
+    [Fact]
+    public void A_real_albedo_ignores_the_second_layer()
+    {
+        MaterialSurface surface = WorldModels.SurfaceOf(Material(
+            textures:
+            [
+                ("DiffuseTexture1", @"graphics\_textures\diffuse\wood\woodplank_03_d.xbt"),
+                ("DiffuseTexture2", @"graphics\_textures\diffuse\ground\dirt_03_d.xbt"),
+            ],
+            properties: [("DiffuseColorBase", "0.2, 0.2, 0.2"), ("DiffuseColor2", "1, 0, 0")]));
+
+        Assert.Equal(@"graphics\_textures\diffuse\wood\woodplank_03_d.xbt", surface.DiffuseTexturePath);
+        Assert.Equal(new Vector3(0.2f, 0.2f, 0.2f), surface.Tint);
+    }
+
+    /// <summary>The same two cases over real .xbm bytes, because the swap only fires if the parser
+    /// surfaces both texture slots under the keys the lookup expects.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Real_swatch_materials_resolve_through_the_parser()
+    {
+        AssertFixtureAlbedo(@".\Fixtures\XbmSwatch\swaps.xbm", "clay02_d.xbt");
+        AssertFixtureAlbedo(@".\Fixtures\XbmSwatch\flat.xbm", "grey.xbt");
+    }
+
+    private static void AssertFixtureAlbedo(string path, string expectedFileName)
+    {
+        if (!File.Exists(path)) return;
+
+        MaterialSurface surface = WorldModels.SurfaceOf(XbmMaterial.Parse(File.ReadAllBytes(path)));
+        Assert.EndsWith(expectedFileName, surface.DiffuseTexturePath, StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>End-to-end over real materials, because the flags only reach
+    /// <see cref="WorldModels.AlphaOf"/> if the .xbm parser surfaces them as plain integers. The
+    /// opaque case is the one that matters most: most of the retail set is opaque, and reading its
+    /// alpha as coverage erases the surface.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Real_materials_classify_through_the_parser()
+    {
+        foreach (string path in Directory.EnumerateFiles(@".\Fixtures\Xbm", "*.xbm"))
+        {
+            Assert.Equal(MaterialAlpha.Opaque, WorldModels.AlphaOf(XbmMaterial.Parse(File.ReadAllBytes(path))));
+        }
+
+        AssertFixtureAlpha(@".\Fixtures\XbmAlpha\blended.xbm", MaterialAlpha.Blend);
+        AssertFixtureAlpha(@".\Fixtures\XbmAlpha\masked.xbm", MaterialAlpha.Mask);
+    }
+
+    private static void AssertFixtureAlpha(string path, MaterialAlpha expected)
+    {
+        if (!File.Exists(path)) return;
+
+        Assert.Equal(expected, WorldModels.AlphaOf(XbmMaterial.Parse(File.ReadAllBytes(path))));
     }
 
     private static byte[]? ReadLibrary(string path)

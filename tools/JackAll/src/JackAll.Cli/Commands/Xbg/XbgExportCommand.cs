@@ -82,16 +82,18 @@ public sealed class XbgExportCommand : CliCommand<XbgExportCommand.Settings>
             Vector3[] normals = sm.Normals ?? XbgModel.ComputeSmoothNormals(sm.Positions, sm.Indices);
 
             sb.AppendLine();
-            sb.AppendLine($"g lod{sm.LodLevel}_part{sm.PartNumber}_submesh{submeshIndex}");
+            sb.AppendLine($"g lod{sm.LodLevel}_{Sanitize(sm.PartName)}_submesh{submeshIndex}");
             sb.AppendLine($"usemtl {Sanitize(sm.MaterialName)}");
 
             foreach (Vector3 p in sm.Positions)
             {
-                sb.AppendLine($"v {F(p.X)} {F(p.Y)} {F(p.Z)}");
+                Vector3 placed = sm.Place(p);
+                sb.AppendLine($"v {F(placed.X)} {F(placed.Y)} {F(placed.Z)}");
             }
             foreach (Vector3 n in normals)
             {
-                sb.AppendLine($"vn {F(n.X)} {F(n.Y)} {F(n.Z)}");
+                Vector3 placed = sm.PlaceNormal(n);
+                sb.AppendLine($"vn {F(placed.X)} {F(placed.Y)} {F(placed.Z)}");
             }
 
             for (int i = 0; i + 2 < sm.Indices.Length; i += 3)

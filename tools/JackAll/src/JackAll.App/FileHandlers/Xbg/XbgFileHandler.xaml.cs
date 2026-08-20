@@ -84,7 +84,7 @@ public partial class XbgFileHandler : UserControl
         var sb = new StringBuilder();
         int totalVerts = submeshes.Select(s => s.Positions).Distinct().Sum(p => p.Length);
         int totalTris = submeshes.Sum(s => s.Indices.Length / 3);
-        int parts = submeshes.Select(s => s.PartNumber).Distinct().Count();
+        int parts = submeshes.Select(s => s.PartName).Distinct(StringComparer.OrdinalIgnoreCase).Count();
         sb.AppendLine($"LOD {lod}: {parts} part(s), {submeshes.Count} submesh(es), " +
                        $"{totalVerts:N0} vertices, {totalTris:N0} triangles");
         foreach (string mat in submeshes.Select(s => s.MaterialName).Distinct().OrderBy(m => m))
@@ -120,14 +120,16 @@ public partial class XbgFileHandler : UserControl
             var mesh = new MeshGeometry3D { Positions = new Point3DCollection(sm.Positions.Length) };
             foreach (System.Numerics.Vector3 p in sm.Positions)
             {
-                mesh.Positions.Add(new Point3D(p.X, p.Y, p.Z));
+                System.Numerics.Vector3 placed = sm.Place(p);
+                mesh.Positions.Add(new Point3D(placed.X, placed.Y, placed.Z));
             }
 
             System.Numerics.Vector3[] normals = sm.Normals ?? XbgModel.ComputeSmoothNormals(sm.Positions, sm.Indices);
             mesh.Normals = new Vector3DCollection(normals.Length);
             foreach (System.Numerics.Vector3 n in normals)
             {
-                mesh.Normals.Add(new Vector3D(n.X, n.Y, n.Z));
+                System.Numerics.Vector3 placed = sm.PlaceNormal(n);
+                mesh.Normals.Add(new Vector3D(placed.X, placed.Y, placed.Z));
             }
 
             mesh.TriangleIndices = new Int32Collection(sm.Indices);

@@ -116,6 +116,36 @@ public static class LayerCatalog
             "Every placed light, from the CDynamicLightComponent on ordinary entities - omni (point) and spot.",
             ["Show lights in their own colour", "Disabled lights dimmed", "Radius and cone not drawn yet"]);
 
+    /// <summary>
+    /// The four categories of mesh-less entity that no other layer draws. They are split rather
+    /// than pooled because they are what a third of a world's entities are, and one undifferentiated
+    /// field of markers over them is unreadable - the AI points alone outnumber every light,
+    /// trigger and entrance put together. Each draws its own glyph at a fixed size on screen.
+    /// </summary>
+    public static readonly MapLayer EventNodes =
+        new("Systems", "Event nodes", "Ready",
+            "Logic-only entities - the largest mesh-less group, drawn as a diamond.",
+            ["Show event nodes", "Fixed size on screen", "Event graph not yet readable"])
+        { IsVisible = false };
+
+    public static readonly MapLayer AiPoints =
+        new("Systems", "AI points", "Ready",
+            "Cover, guard posts and the lean and sit reference points, drawn as a cone.",
+            ["Show AI reference points", "Fixed size on screen", "Facing direction not yet drawn"])
+        { IsVisible = false };
+
+    public static readonly MapLayer Entrances =
+        new("Systems", "Entrances", "Ready",
+            "The DOOR and WINDOW hints the AI navigates buildings by, drawn as a doorway.",
+            ["Show entrance hints", "Fixed size on screen", "Link back to the building not drawn"])
+        { IsVisible = false };
+
+    public static readonly MapLayer Emitters =
+        new("Dressing", "Emitters", "Ready",
+            "Particle and sound sources, drawn as a burst.",
+            ["Show emitters", "Fixed size on screen", "Effect and sound names not yet resolved"])
+        { IsVisible = false };
+
     /// <summary>Draws a marker per walkable node while visible, green where the ground is flat
     /// enough to walk and red where the engine's slope limit rejects it.</summary>
     public static readonly MapLayer NavMesh =
@@ -142,6 +172,7 @@ public static class LayerCatalog
 
         Lights,
         Vegetation,
+        Emitters,
         Roads,
         new("Dressing", "Landmarks", "Partial",
             "Distant-silhouette LOD geometry per sector; goes stale when entities change.",
@@ -161,6 +192,9 @@ public static class LayerCatalog
             ["Raw FCB inspection"]),
 
         NavMesh,
+        EventNodes,
+        AiPoints,
+        Entrances,
         new("Systems", "Sound regions", "Research",
             "Per-sector audio region data; records undecoded - preserve byte-for-byte.",
             ["Presence view only"]),

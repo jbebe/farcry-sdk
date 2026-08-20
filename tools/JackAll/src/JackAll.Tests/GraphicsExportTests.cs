@@ -47,7 +47,7 @@ public class GraphicsExportTests
 
         XbgModel model = XbgModel.Parse(File.ReadAllBytes(Path.Combine(Root, mesh)));
         WorldModel baked = WorldModels.Bake(
-            mesh, model, WorldModels.FineTriangleBudget, WorldModels.DiffuseResolver(ReadByPath))!;
+            mesh, model, WorldModels.FineTriangleBudget, WorldModels.SurfaceResolver(ReadByPath))!;
 
         Assert.NotEmpty(baked.MaterialRanges);
         foreach (MaterialRange range in baked.MaterialRanges)

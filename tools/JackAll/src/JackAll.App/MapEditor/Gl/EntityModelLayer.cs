@@ -15,8 +15,8 @@ namespace JackAll.App.MapEditor.Gl;
 /// </summary>
 public sealed class EntityModelLayer : IDisposable
 {
-    /// <summary>Floats per instance: x y z yawRadians r g b.</summary>
-    private const int InstanceStride = 7;
+    /// <summary>Floats per instance: x y z, then the three Euler angles in radians, then r g b.</summary>
+    private const int InstanceStride = 9;
 
     private const int VertexStrideBytes = WorldModel.FloatsPerVertex * sizeof(float);
     private const int InstanceStrideBytes = InstanceStride * sizeof(float);
@@ -28,6 +28,10 @@ public sealed class EntityModelLayer : IDisposable
         public int Vao, VertexBuffer, IndexBuffer, InstanceBuffer;
         public IndexRange Fine, Coarse;
         public required IReadOnlyList<MaterialRange> Ranges;
+        /// <summary>Indices into <see cref="Ranges"/> per pass, so neither pass walks the other's.
+        /// </summary>
+        public required int[] OpaqueRanges;
+        public required int[] BlendedRanges;
         public required float[] Staging;
         public required int[] RangeHandles;
         public int FineCount, CoarseCount;
@@ -37,8 +41,9 @@ public sealed class EntityModelLayer : IDisposable
         public int PointedAt = -1;
     }
 
-    /// <summary>What an entity contributes besides its live position and yaw.</summary>
-    private readonly record struct Row(int Model, float R, float G, float B);
+    /// <summary>What an entity contributes besides its live position and yaw: the meshes its
+    /// graphics slots resolved to, all drawn at the entity's transform.</summary>
+    private readonly record struct Row(int[] Models, float R, float G, float B);
 
     /// <summary>A texture decoded off-thread: DXT mips uploaded as-is, or (FourCc 0) one RGBA image.</summary>
     private sealed record Decoded(int Width, int Height, uint FourCc, IReadOnlyList<byte[]> Mips);
@@ -58,6 +63,11 @@ public sealed class EntityModelLayer : IDisposable
     private readonly int _uSunDirection;
     private readonly int _uHaze;
     private readonly int _uUseTexture;
+    private readonly int _uAlphaMode;
+    private readonly int _uTintBase;
+    private readonly int _uTintColour;
+    /// <summary>Just the meshes carrying a blended range, so the second pass skips the rest.</summary>
+    private readonly Mesh[] _blendedMeshes;
 
     /// <summary>What the streamed diffuse textures currently hold on the GPU.</summary>
     public long TextureBytesResident { get; private set; }
@@ -71,14 +81,17 @@ public sealed class EntityModelLayer : IDisposable
         // The staging and instance buffers are sized once for every entity that can ever map to
         // the mesh; visibility and ring changes only shrink the live counts.
         var capacity = new int[set.Models.Count];
-        foreach (int index in set.ModelIndexByEntity.Values)
+        foreach (int[] indices in set.ModelIndicesByEntity.Values)
         {
-            capacity[index]++;
+            foreach (int index in indices)
+            {
+                capacity[index]++;
+            }
         }
 
-        _rows = new Dictionary<WorldEntity, Row>(set.ModelIndexByEntity.Count);
+        _rows = new Dictionary<WorldEntity, Row>(set.ModelIndicesByEntity.Count);
         var colourByArchetype = new Dictionary<string, (float R, float G, float B)>(StringComparer.OrdinalIgnoreCase);
-        foreach ((WorldEntity entity, int model) in set.ModelIndexByEntity)
+        foreach ((WorldEntity entity, int[] models) in set.ModelIndicesByEntity)
         {
             if (!colourByArchetype.TryGetValue(entity.ArchetypeName, out (float R, float G, float B) colour))
             {
@@ -86,21 +99,29 @@ public sealed class EntityModelLayer : IDisposable
                 colour = (r / 255f, g / 255f, b / 255f);
                 colourByArchetype[entity.ArchetypeName] = colour;
             }
-            _rows[entity] = new Row(model, colour.R, colour.G, colour.B);
+            _rows[entity] = new Row(models, colour.R, colour.G, colour.B);
         }
 
         _meshes = new Mesh[set.Models.Count];
+        var blended = new List<Mesh>();
         for (int i = 0; i < set.Models.Count; i++)
         {
             WorldModel model = set.Models[i];
+            IReadOnlyList<MaterialRange> ranges = model.MaterialRanges;
             var mesh = new Mesh
             {
                 Fine = model.Fine,
                 Coarse = model.Coarse,
-                Ranges = model.MaterialRanges,
+                Ranges = ranges,
+                OpaqueRanges = [.. Enumerable.Range(0, ranges.Count).Where(r => ranges[r].Alpha != MaterialAlpha.Blend)],
+                BlendedRanges = [.. Enumerable.Range(0, ranges.Count).Where(r => ranges[r].Alpha == MaterialAlpha.Blend)],
                 Staging = new float[capacity[i] * InstanceStride],
-                RangeHandles = new int[model.MaterialRanges.Count],
+                RangeHandles = new int[ranges.Count],
             };
+            if (mesh.BlendedRanges.Length > 0)
+            {
+                blended.Add(mesh);
+            }
 
             mesh.VertexBuffer = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.VertexBuffer);
@@ -122,17 +143,22 @@ public sealed class EntityModelLayer : IDisposable
             GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, VertexStrideBytes, 12);
             GL.EnableVertexAttribArray(2);
             GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, VertexStrideBytes, 24);
+            GL.EnableVertexAttribArray(6);
+            GL.VertexAttribPointer(6, 1, VertexAttribPointerType.Float, false, VertexStrideBytes, 32);
             GL.EnableVertexAttribArray(3);
             GL.EnableVertexAttribArray(4);
+            GL.EnableVertexAttribArray(5);
             PointInstanceAttribs(mesh, 0);
             GL.VertexAttribDivisor(3, 1);
             GL.VertexAttribDivisor(4, 1);
+            GL.VertexAttribDivisor(5, 1);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, mesh.IndexBuffer);
             GL.BufferData(BufferTarget.ElementArrayBuffer, model.Indices.Length * sizeof(int),
                 model.Indices, BufferUsageHint.StaticDraw);
 
             _meshes[i] = mesh;
         }
+        _blendedMeshes = [.. blended];
         GL.BindVertexArray(0);
 
         _program = new ShaderProgram(
@@ -141,24 +167,35 @@ public sealed class EntityModelLayer : IDisposable
             layout(location = 0) in vec3 position;
             layout(location = 1) in vec3 normal;
             layout(location = 2) in vec2 uv;
-            layout(location = 3) in vec4 posYaw;
-            layout(location = 4) in vec3 tint;
+            layout(location = 3) in vec3 instancePosition;
+            layout(location = 4) in vec3 instanceAngles;
+            layout(location = 5) in vec3 tint;
+            layout(location = 6) in float vertexMask;
             uniform mat4 viewProjection;
             out vec3 worldNormal;
             out vec3 worldPosition;
             out vec3 baseColour;
             out vec2 texUv;
+            out float maskBlue;
+            // The engine's Z-up Euler order: yaw about Z last, over pitch then roll. Columns, so
+            // the product reads right-to-left as Rz * Rx * Ry.
+            mat3 spin(vec3 a)
+            {
+                vec3 s = sin(a), c = cos(a);
+                mat3 ry = mat3(c.y, 0.0, -s.y,   0.0, 1.0, 0.0,   s.y, 0.0, c.y);
+                mat3 rx = mat3(1.0, 0.0, 0.0,    0.0, c.x, s.x,   0.0, -s.x, c.x);
+                mat3 rz = mat3(c.z, s.z, 0.0,   -s.z, c.z, 0.0,   0.0, 0.0, 1.0);
+                return rz * rx * ry;
+            }
             void main()
             {
-                float s = sin(posYaw.w), c = cos(posYaw.w);
-                vec3 rotated = vec3(position.x * c - position.y * s,
-                                    position.x * s + position.y * c,
-                                    position.z);
-                worldPosition = rotated + posYaw.xyz;
+                mat3 rotation = spin(instanceAngles);
+                worldPosition = rotation * position + instancePosition;
                 // Pure rotation, so the normal rotates the same way - no inverse-transpose needed.
-                worldNormal = vec3(normal.x * c - normal.y * s, normal.x * s + normal.y * c, normal.z);
+                worldNormal = rotation * normal;
                 baseColour = tint;
                 texUv = uv;
+                maskBlue = vertexMask;
                 gl_Position = viewProjection * vec4(worldPosition, 1.0);
             }
             """,
@@ -168,30 +205,42 @@ public sealed class EntityModelLayer : IDisposable
             in vec3 worldPosition;
             in vec3 baseColour;
             in vec2 texUv;
+            in float maskBlue;
             uniform vec3 cameraPosition;
             uniform vec3 sunDirection;
             uniform float haze;
             uniform float useTexture;
+            uniform int alphaMode;
+            uniform vec3 tintBase;
+            uniform vec3 tintColour;
             uniform sampler2D diffuse;
             out vec4 fragment;
             {{SceneLighting.SkyGlsl}}
             void main()
             {
                 vec3 albedo = baseColour;
+                float coverage = 1.0;
                 if (useTexture > 0.5)
                 {
-                    vec4 sample = texture(diffuse, texUv);
-                    // Vegetation and fences are alpha cutouts.
-                    if (sample.a < 0.5) { discard; }
-                    albedo = sample.rgb;
+                    vec4 texel = texture(diffuse, texUv);
+                    // Only materials that asked for it read alpha as coverage; on the rest it is a
+                    // gloss or spec mask and would erase the surface.
+                    if (alphaMode == 1 && texel.a < 0.5) { discard; }
+                    if (alphaMode == 2) { coverage = texel.a; }
+                    // The engine's diffuse: the map is a base and the colour comes from the two
+                    // material tints, blended by the vertex mask's blue channel.
+                    albedo = texel.rgb * mix(tintBase, tintColour, clamp(maskBlue, 0.0, 1.0));
                 }
                 vec3 n = normalize(worldNormal);
-                // Many parts are single-sided shells; light whichever side faces the camera.
-                if (!gl_FrontFacing) { n = -n; }
+                // Many parts are single-sided shells, so light whichever side is showing. The test
+                // is against the eye, not gl_FrontFacing: the meshes are wound clockwise the way
+                // D3D wants, which GL reads as back-facing on every outward triangle, and taking
+                // that at its word flips every normal into the surface and kills the sun term.
+                if (dot(n, cameraPosition - worldPosition) < 0.0) { n = -n; }
                 float light = max(dot(n, sunDirection), 0.0);
                 vec3 lit = albedo * (0.35 + 0.65 * light);
                 fragment = vec4(
-                    applyHaze(lit, distance(cameraPosition, worldPosition), worldPosition.z, haze), 1.0);
+                    applyHaze(lit, distance(cameraPosition, worldPosition), worldPosition.z, haze), coverage);
             }
             """);
         _uViewProjection = _program.UniformLocation("viewProjection");
@@ -199,6 +248,9 @@ public sealed class EntityModelLayer : IDisposable
         _uSunDirection = _program.UniformLocation("sunDirection");
         _uHaze = _program.UniformLocation("haze");
         _uUseTexture = _program.UniformLocation("useTexture");
+        _uAlphaMode = _program.UniformLocation("alphaMode");
+        _uTintBase = _program.UniformLocation("tintBase");
+        _uTintColour = _program.UniformLocation("tintColour");
         _program.Use();
         GL.Uniform1(_program.UniformLocation("diffuse"), 0);
     }
@@ -236,29 +288,36 @@ public sealed class EntityModelLayer : IDisposable
                 continue;
             }
 
-            Mesh mesh = _meshes[row.Model];
-            int at;
-            if (distance <= WorldModels.FineRadius)
+            bool fine = distance <= WorldModels.FineRadius;
+            System.Numerics.Vector3 angles = entity.Angles * (MathF.PI / 180f);
+            foreach (int model in row.Models)
             {
-                at = mesh.FineFloats;
-                mesh.FineFloats += InstanceStride;
-                mesh.FineCount++;
-            }
-            else
-            {
-                mesh.CoarseFloats -= InstanceStride;
-                at = mesh.CoarseFloats;
-                mesh.CoarseCount++;
-            }
+                Mesh mesh = _meshes[model];
+                int at;
+                if (fine)
+                {
+                    at = mesh.FineFloats;
+                    mesh.FineFloats += InstanceStride;
+                    mesh.FineCount++;
+                }
+                else
+                {
+                    mesh.CoarseFloats -= InstanceStride;
+                    at = mesh.CoarseFloats;
+                    mesh.CoarseCount++;
+                }
 
-            float[] staging = mesh.Staging;
-            staging[at] = position.X;
-            staging[at + 1] = position.Y;
-            staging[at + 2] = position.Z;
-            staging[at + 3] = entity.Angles.Z * MathF.PI / 180f;
-            staging[at + 4] = row.R;
-            staging[at + 5] = row.G;
-            staging[at + 6] = row.B;
+                float[] staging = mesh.Staging;
+                staging[at] = position.X;
+                staging[at + 1] = position.Y;
+                staging[at + 2] = position.Z;
+                staging[at + 3] = angles.X;
+                staging[at + 4] = angles.Y;
+                staging[at + 5] = angles.Z;
+                staging[at + 6] = row.R;
+                staging[at + 7] = row.G;
+                staging[at + 8] = row.B;
+            }
         }
 
         foreach (Mesh mesh in _meshes)
@@ -356,12 +415,40 @@ public sealed class EntityModelLayer : IDisposable
         GL.ActiveTexture(TextureUnit.Texture0);
 
         float lastUseTexture = -1f;
-        void SetUseTexture(float value)
+        int lastAlphaMode = -1;
+        MaterialSurface lastSurface = default;
+        void SetSurface(int handle, MaterialSurface surface)
         {
-            if (lastUseTexture != value)
+            float useTexture = handle > 0 ? 1f : 0f;
+            if (lastUseTexture != useTexture)
             {
-                lastUseTexture = value;
-                GL.Uniform1(_uUseTexture, value);
+                GL.Uniform1(_uUseTexture, lastUseTexture = useTexture);
+            }
+            if (lastAlphaMode != (int)surface.Alpha)
+            {
+                GL.Uniform1(_uAlphaMode, lastAlphaMode = (int)surface.Alpha);
+            }
+            if (lastSurface.TintBase != surface.TintBase || lastSurface.Tint != surface.Tint)
+            {
+                GL.Uniform3(_uTintBase, surface.TintBase.X, surface.TintBase.Y, surface.TintBase.Z);
+                GL.Uniform3(_uTintColour, surface.Tint.X, surface.Tint.Y, surface.Tint.Z);
+            }
+            lastSurface = surface;
+        }
+
+        void DrawRanges(Mesh mesh, int[] which)
+        {
+            PointInstanceAttribs(mesh, 0);
+            foreach (int i in which)
+            {
+                MaterialRange range = mesh.Ranges[i];
+                int handle = mesh.RangeHandles[i];
+                SetSurface(handle, range.Surface);
+                if (handle > 0)
+                {
+                    GL.BindTexture(TextureTarget.Texture2D, handle);
+                }
+                DrawRange(new IndexRange(range.Start, range.Count), mesh.FineCount);
             }
         }
 
@@ -375,29 +462,33 @@ public sealed class EntityModelLayer : IDisposable
             GL.BindVertexArray(mesh.Vao);
             if (mesh.FineCount > 0)
             {
-                PointInstanceAttribs(mesh, 0);
-                if (mesh.Ranges.Count == 0)
-                {
-                    SetUseTexture(0f);
-                    DrawRange(mesh.Fine, mesh.FineCount);
-                }
-                for (int i = 0; i < mesh.Ranges.Count; i++)
-                {
-                    int handle = mesh.RangeHandles[i];
-                    SetUseTexture(handle > 0 ? 1f : 0f);
-                    if (handle > 0)
-                    {
-                        GL.BindTexture(TextureTarget.Texture2D, handle);
-                    }
-                    DrawRange(new IndexRange(mesh.Ranges[i].Start, mesh.Ranges[i].Count), mesh.FineCount);
-                }
+                DrawRanges(mesh, mesh.OpaqueRanges);
             }
             if (mesh.CoarseCount > 0)
             {
                 PointInstanceAttribs(mesh, mesh.CoarseStart);
-                SetUseTexture(0f);
+                SetSurface(0, MaterialSurface.None);
                 DrawRange(mesh.Coarse, mesh.CoarseCount);
             }
+        }
+
+        if (_blendedMeshes.Length > 0)
+        {
+            // Glass and its like, over the solid geometry. Unsorted, so overlapping panes blend in
+            // draw order; depth writes stay off so they cannot occlude each other.
+            GL.Enable(EnableCap.Blend);
+            GL.BlendFunc(BlendingFactor.SrcAlpha, BlendingFactor.OneMinusSrcAlpha);
+            GL.DepthMask(false);
+            foreach (Mesh mesh in _blendedMeshes)
+            {
+                if (mesh.FineCount > 0)
+                {
+                    GL.BindVertexArray(mesh.Vao);
+                    DrawRanges(mesh, mesh.BlendedRanges);
+                }
+            }
+            GL.DepthMask(true);
+            GL.Disable(EnableCap.Blend);
         }
         GL.BindVertexArray(0);
     }
@@ -428,8 +519,9 @@ public sealed class EntityModelLayer : IDisposable
         mesh.PointedAt = firstInstance;
         GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
         int baseOffset = firstInstance * InstanceStrideBytes;
-        GL.VertexAttribPointer(3, 4, VertexAttribPointerType.Float, false, InstanceStrideBytes, baseOffset);
-        GL.VertexAttribPointer(4, 3, VertexAttribPointerType.Float, false, InstanceStrideBytes, baseOffset + 16);
+        GL.VertexAttribPointer(3, 3, VertexAttribPointerType.Float, false, InstanceStrideBytes, baseOffset);
+        GL.VertexAttribPointer(4, 3, VertexAttribPointerType.Float, false, InstanceStrideBytes, baseOffset + 12);
+        GL.VertexAttribPointer(5, 3, VertexAttribPointerType.Float, false, InstanceStrideBytes, baseOffset + 24);
     }
 
     private static void DrawRange(IndexRange range, int instanceCount)

@@ -32,6 +32,20 @@ public sealed class WorldEntity
 
     public Vector3 Angles { get; set; }
 
+    /// <summary>The orientation <see cref="Angles"/> means, as the engine composes it: ZXY Euler in
+    /// degrees, yaw applied last. The one definition of the convention - the map's vertex shader
+    /// mirrors this and nothing else should re-derive it.</summary>
+    public Matrix4x4 Rotation
+    {
+        get
+        {
+            Vector3 radians = Angles * (MathF.PI / 180f);
+            return Matrix4x4.CreateRotationY(radians.Y)
+                * Matrix4x4.CreateRotationX(radians.X)
+                * Matrix4x4.CreateRotationZ(radians.Z);
+        }
+    }
+
     /// <summary>Placed this session, i.e. absent from <see cref="WorldSectorDocument.PristineRoot"/>.</summary>
     public bool IsNew { get; set; }
 }
