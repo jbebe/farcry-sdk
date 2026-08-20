@@ -154,6 +154,10 @@ public sealed class WorldModel
     /// <summary>Material sub-ranges of <see cref="Fine"/>, for textured drawing.</summary>
     public required IReadOnlyList<MaterialRange> MaterialRanges { get; init; }
 
+    /// <summary>The same over <see cref="Coarse"/>, so the far ring draws textured too rather than
+    /// as flat tint. The same list as <see cref="MaterialRanges"/> when the two tiers share a LOD.</summary>
+    public required IReadOnlyList<MaterialRange> CoarseMaterialRanges { get; init; }
+
     /// <summary>Axis-aligned extent of the baked geometry in model space, which is what picking
     /// tests a click ray against.</summary>
     public required Vector3 LocalMin { get; init; }
@@ -425,9 +429,13 @@ public static class WorldModels
         var indices = new List<int>(indexCount);
         var materialRanges = new List<MaterialRange>();
         IndexRange fine = BakeLod(fineSubmeshes, vertices, indices, materialRanges, surfaceByMaterial);
-        IndexRange coarse = coarseLod == fineLod
-            ? fine
-            : BakeLod(coarseSubmeshes, vertices, indices, null, null);
+        List<MaterialRange> coarseRanges = materialRanges;
+        IndexRange coarse = fine;
+        if (coarseLod != fineLod)
+        {
+            coarseRanges = [];
+            coarse = BakeLod(coarseSubmeshes, vertices, indices, coarseRanges, surfaceByMaterial);
+        }
 
         var localMin = new Vector3(float.MaxValue);
         var localMax = new Vector3(float.MinValue);
@@ -446,6 +454,7 @@ public static class WorldModels
             Fine = fine,
             Coarse = coarse,
             MaterialRanges = materialRanges,
+            CoarseMaterialRanges = coarseRanges,
             LocalMin = localMin.X > localMax.X ? Vector3.Zero : localMin,
             LocalMax = localMin.X > localMax.X ? Vector3.Zero : localMax,
             BillboardFacing = FacingOf(materialRanges, vertices, indices),

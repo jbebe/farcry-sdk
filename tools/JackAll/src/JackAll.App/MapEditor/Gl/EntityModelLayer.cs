@@ -9,9 +9,9 @@ namespace JackAll.App.MapEditor.Gl;
 
 /// <summary>
 /// Draws every mesh-resolved entity as its real .xbg geometry: one VAO per unique mesh, one
-/// instanced draw per populated detail tier. The fine tier draws textured per material range, with
-/// diffuse textures decoded on background threads and uploaded on a per-frame budget; the coarse
-/// tier stays flat-tinted in the entity's marker colour.
+/// instanced draw per material range per populated detail tier. Both tiers draw textured, with the
+/// maps decoded on background threads and uploaded on a per-frame budget; a range whose maps have
+/// not arrived yet draws flat in the entity's marker colour until they do.
 /// </summary>
 public sealed class EntityModelLayer : IDisposable
 {
@@ -23,21 +23,39 @@ public sealed class EntityModelLayer : IDisposable
     private const int MaxDecoders = 2;
     private const long UploadBudgetPerFrame = 8 << 20;
 
+    /// <summary>One detail tier's material ranges and the live texture handles behind each.</summary>
+    private sealed class Tier
+    {
+        public required IReadOnlyList<MaterialRange> Ranges;
+        /// <summary>Indices into <see cref="Ranges"/> per pass, so neither pass walks the other's.
+        /// </summary>
+        public required int[] Opaque;
+        public required int[] Blended;
+        /// <summary>Live GL handles per range, one array per sampler the Generic shader binds; 0
+        /// where that map is absent or still streaming.</summary>
+        public required int[] Handles;
+        public required int[] SecondHandles;
+        public required int[] MaskHandles;
+
+        public static Tier Of(IReadOnlyList<MaterialRange> ranges) => new()
+        {
+            Ranges = ranges,
+            Opaque = [.. Enumerable.Range(0, ranges.Count).Where(r => ranges[r].Alpha != MaterialAlpha.Blend)],
+            Blended = [.. Enumerable.Range(0, ranges.Count).Where(r => ranges[r].Alpha == MaterialAlpha.Blend)],
+            Handles = new int[ranges.Count],
+            SecondHandles = new int[ranges.Count],
+            MaskHandles = new int[ranges.Count],
+        };
+    }
+
     private sealed class Mesh
     {
         public int Vao, VertexBuffer, IndexBuffer, InstanceBuffer;
         public IndexRange Fine, Coarse;
-        public required IReadOnlyList<MaterialRange> Ranges;
-        /// <summary>Indices into <see cref="Ranges"/> per pass, so neither pass walks the other's.
-        /// </summary>
-        public required int[] OpaqueRanges;
-        public required int[] BlendedRanges;
+        /// <summary>Both tiers textured: the far ring is the file's coarsest LOD, not a flat tint.</summary>
+        public required Tier FineTier;
+        public required Tier CoarseTier;
         public required float[] Staging;
-        /// <summary>Live GL handles per range, one array per sampler the Generic shader binds; 0
-        /// where that map is absent or still streaming.</summary>
-        public required int[] RangeHandles;
-        public required int[] SecondHandles;
-        public required int[] MaskHandles;
         public int FineCount, CoarseCount;
         public int FineFloats, CoarseFloats;
         public int CoarseStart;
@@ -140,21 +158,16 @@ public sealed class EntityModelLayer : IDisposable
         for (int i = 0; i < models.Count; i++)
         {
             WorldModel model = models[i];
-            IReadOnlyList<MaterialRange> ranges = model.MaterialRanges;
             var mesh = new Mesh
             {
                 Fine = model.Fine,
                 Coarse = model.Coarse,
-                Ranges = ranges,
-                OpaqueRanges = [.. Enumerable.Range(0, ranges.Count).Where(r => ranges[r].Alpha != MaterialAlpha.Blend)],
-                BlendedRanges = [.. Enumerable.Range(0, ranges.Count).Where(r => ranges[r].Alpha == MaterialAlpha.Blend)],
+                FineTier = Tier.Of(model.MaterialRanges),
+                CoarseTier = Tier.Of(model.CoarseMaterialRanges),
                 Staging = new float[capacity[i] * InstanceStride],
-                RangeHandles = new int[ranges.Count],
-                SecondHandles = new int[ranges.Count],
-                MaskHandles = new int[ranges.Count],
                 Facing = model.BillboardFacing ?? System.Numerics.Vector2.Zero,
             };
-            if (mesh.BlendedRanges.Length > 0)
+            if (mesh.FineTier.Blended.Length > 0 || mesh.CoarseTier.Blended.Length > 0)
             {
                 blended.Add(mesh);
             }
@@ -316,9 +329,9 @@ public sealed class EntityModelLayer : IDisposable
                 }
                 else
                 {
-                    // The untextured coarse tier stands in for the average of a textured surface,
-                    // and a saturated marker colour at full additive lighting would clip to a
-                    // glowing ring around the fine radius instead.
+                    // A range still streaming its maps, or one with none to stream, stands in for
+                    // the average of a textured surface; a saturated marker colour at full
+                    // additive lighting would flash as a glowing placeholder instead.
                     albedo = baseColour * 0.55;
                 }
                 vec3 n = normalize(worldNormal);
@@ -404,13 +417,8 @@ public sealed class EntityModelLayer : IDisposable
                 continue;
             }
 
-            // A card is nothing without its cutout - drawn in the untextured coarse tier it would
-            // be a flat white rectangle - so billboards stay in the textured pass at every
-            // distance. Twelve vertices each, so that costs nothing.
-            Mesh mesh = _meshes[instance.Model];
-            Place(mesh, instance.Position, System.Numerics.Vector3.Zero,
-                mesh.Facing != System.Numerics.Vector2.Zero || distance <= WorldModels.FineRadius,
-                1f, 1f, 1f);
+            Place(_meshes[instance.Model], instance.Position, System.Numerics.Vector3.Zero,
+                distance <= WorldModels.FineRadius, 1f, 1f, 1f);
         }
 
         UploadStaging();
@@ -460,12 +468,13 @@ public sealed class EntityModelLayer : IDisposable
             {
                 GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero,
                     mesh.FineCount * InstanceStrideBytes, mesh.Staging);
-                RequestTextures(mesh);
+                RequestTextures(mesh.FineTier);
             }
             if (mesh.CoarseCount > 0)
             {
                 GL.BufferSubData(BufferTarget.ArrayBuffer, (IntPtr)(mesh.CoarseFloats * sizeof(float)),
                     mesh.CoarseCount * InstanceStrideBytes, ref mesh.Staging[mesh.CoarseFloats]);
+                RequestTextures(mesh.CoarseTier);
             }
         }
     }
@@ -496,13 +505,11 @@ public sealed class EntityModelLayer : IDisposable
                 continue;
             }
 
-            bool near = distance <= WorldModels.FineRadius;
+            bool fine = distance <= WorldModels.FineRadius;
             System.Numerics.Vector3 angles = entity.Angles * (MathF.PI / 180f);
             foreach (int model in row.Models)
             {
-                Mesh mesh = _meshes[model];
-                Place(mesh, position, angles,
-                    near || mesh.Facing != System.Numerics.Vector2.Zero, row.R, row.G, row.B);
+                Place(_meshes[model], position, angles, fine, row.R, row.G, row.B);
             }
         }
 
@@ -510,9 +517,9 @@ public sealed class EntityModelLayer : IDisposable
         return leftover;
     }
 
-    private void RequestTextures(Mesh mesh)
+    private void RequestTextures(Tier tier)
     {
-        foreach (MaterialRange range in mesh.Ranges)
+        foreach (MaterialRange range in tier.Ranges)
         {
             // All three of the Generic shader's maps, because the mask is what decides how much of
             // the tint and of layer 2 reaches the surface - without it a material renders as its
@@ -631,15 +638,16 @@ public sealed class EntityModelLayer : IDisposable
             lastSurface = surface;
         }
 
-        void DrawRanges(Mesh mesh, int[] which)
+        // One tier's ranges over the instances of one partition of the mesh's instance buffer.
+        void DrawRanges(Mesh mesh, Tier tier, int[] which, int firstInstance, int instanceCount)
         {
-            PointInstanceAttribs(mesh, 0);
+            PointInstanceAttribs(mesh, firstInstance);
             foreach (int i in which)
             {
-                MaterialRange range = mesh.Ranges[i];
-                int handle = mesh.RangeHandles[i];
-                int second = mesh.SecondHandles[i];
-                int mask = mesh.MaskHandles[i];
+                MaterialRange range = tier.Ranges[i];
+                int handle = tier.Handles[i];
+                int second = tier.SecondHandles[i];
+                int mask = tier.MaskHandles[i];
                 SetSurface(handle, second, mask, range.Surface);
                 if (handle > 0)
                 {
@@ -656,7 +664,19 @@ public sealed class EntityModelLayer : IDisposable
                     GL.ActiveTexture(TextureUnit.Texture2);
                     GL.BindTexture(TextureTarget.Texture2D, mask);
                 }
-                DrawRange(new IndexRange(range.Start, range.Count), mesh.FineCount);
+                DrawRange(new IndexRange(range.Start, range.Count), instanceCount);
+            }
+        }
+
+        void DrawTiers(Mesh mesh, Func<Tier, int[]> which)
+        {
+            if (mesh.FineCount > 0)
+            {
+                DrawRanges(mesh, mesh.FineTier, which(mesh.FineTier), 0, mesh.FineCount);
+            }
+            if (mesh.CoarseCount > 0)
+            {
+                DrawRanges(mesh, mesh.CoarseTier, which(mesh.CoarseTier), mesh.CoarseStart, mesh.CoarseCount);
             }
         }
 
@@ -669,16 +689,7 @@ public sealed class EntityModelLayer : IDisposable
 
             GL.BindVertexArray(mesh.Vao);
             GL.Uniform2(_uBillboardFacing, mesh.Facing.X, mesh.Facing.Y);
-            if (mesh.FineCount > 0)
-            {
-                DrawRanges(mesh, mesh.OpaqueRanges);
-            }
-            if (mesh.CoarseCount > 0)
-            {
-                PointInstanceAttribs(mesh, mesh.CoarseStart);
-                SetSurface(0, 0, 0, MaterialSurface.None);
-                DrawRange(mesh.Coarse, mesh.CoarseCount);
-            }
+            DrawTiers(mesh, tier => tier.Opaque);
         }
 
         if (_blendedMeshes.Length > 0)
@@ -690,11 +701,11 @@ public sealed class EntityModelLayer : IDisposable
             GL.DepthMask(false);
             foreach (Mesh mesh in _blendedMeshes)
             {
-                if (mesh.FineCount > 0)
+                if (mesh.FineCount + mesh.CoarseCount > 0)
                 {
                     GL.BindVertexArray(mesh.Vao);
                     GL.Uniform2(_uBillboardFacing, mesh.Facing.X, mesh.Facing.Y);
-                    DrawRanges(mesh, mesh.BlendedRanges);
+                    DrawTiers(mesh, tier => tier.Blended);
                 }
             }
             GL.DepthMask(true);
@@ -707,12 +718,15 @@ public sealed class EntityModelLayer : IDisposable
     {
         foreach (Mesh mesh in _meshes)
         {
-            for (int i = 0; i < mesh.Ranges.Count; i++)
+            foreach (Tier tier in new[] { mesh.FineTier, mesh.CoarseTier })
             {
-                MaterialSurface surface = mesh.Ranges[i].Surface;
-                mesh.RangeHandles[i] = Resolve(surface.DiffuseTexturePath);
-                mesh.SecondHandles[i] = Resolve(surface.SecondDiffusePath);
-                mesh.MaskHandles[i] = Resolve(surface.MaskPath);
+                for (int i = 0; i < tier.Ranges.Count; i++)
+                {
+                    MaterialSurface surface = tier.Ranges[i].Surface;
+                    tier.Handles[i] = Resolve(surface.DiffuseTexturePath);
+                    tier.SecondHandles[i] = Resolve(surface.SecondDiffusePath);
+                    tier.MaskHandles[i] = Resolve(surface.MaskPath);
+                }
             }
         }
 
