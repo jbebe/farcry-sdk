@@ -94,7 +94,7 @@ def extract(model, lod_index=0, place=True):
             continue
 
         order = sorted(used, key=used.get)
-        placement = model.part_placement(part_name(desc.name), cluster.is_skinned)
+        placement = model.part_placement(desc.name)
         part = _build(model, desc, cluster, stream, order, triangles,
                       placement if place else None)
         if not place:

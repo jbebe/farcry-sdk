@@ -27,8 +27,9 @@ opaque share so the two numbers stay side by side.
 
 **What works today**: importing a shipped `.xbg` into Blender — parts, LODs, UVs, vertex colours,
 normals, an armature from the nodes, rigid parts on their pivots, skin weights as vertex groups, and
-**textures**, by resolving each material through its `.xbm` to the `.xbt` files it names. Export is
-not written yet, and neither is `.mab` keyframe authoring.
+**textures**, by resolving each material through its `.xbm` to the `.xbt` files it names. The same
+model can be packed into a self-contained [bundle](#model-bundles) and imported with no game install
+present. Export is not written yet, and neither is `.mab` keyframe authoring.
 
 ## Layout
 
@@ -41,18 +42,63 @@ not written yet, and neither is `.mab` keyframe authoring.
 | `fc2fmt/transform.py` | 4x4 helpers, so node world transforms need no `mathutils` |
 | `fc2fmt/skeleton.py` | `.skeleton` (`LKS`) bones, constraints, anim handles |
 | `fc2fmt/mab.py` | `.mab` header, bone bitmasks, the smallest-three quaternion codec |
-| `fc2fmt/xbm.py` | `.xbm` material: texture slots, tiling, tint colours |
+| `fc2fmt/xbm.py` | `.xbm` material: texture slots, tiling, tint colours, and the variant an `.xbg` embeds |
 | `fc2fmt/xbt.py` | `.xbt` texture: strips the header off the DDS payload Blender loads |
-| `addon/` | The Blender add-on: `convert.py` holds every Dunia-to-Blender convention, `materials.py` rebuilds the Generic shader, `resolve.py` finds assets on disk |
+| `fc2fmt/assets.py` | Turns a game-relative path into bytes, against an extracted install |
+| `fc2fmt/bundle.py` | `.fc2model`: one model and every file it needs, in one zip |
+| `addon/` | The Blender add-on: `convert.py` holds every Dunia-to-Blender convention, `materials.py` rebuilds the Generic shader |
 | `tests/_corpus.py` | Corpus location and the skip-when-absent helper the scripts share |
 | `tests/roundtrip.py` | Round-trips every retail file of a format; `--coverage` reports the opaque share |
 | `tests/invariants.py` | Checks decoded meaning: palettes index real bones, derived values recompute to what shipped |
 | `tests/mabcheck.py` | Resolves every `.mab` mask bit against `pelvis_ref.skeleton` and checks quaternion norms |
 | `tests/quatcheck.py` | Scores the quaternion component layout against the skeleton rest pose |
-| `tests/blender_import.py` | Imports the AK-47 and a character inside Blender, headless |
+| `tests/blender_import.py` | Imports the AK-47, a character and a bundle inside Blender, headless |
 | `tests/render_preview.py` | Renders an imported model to a PNG, for looking at what the importer built |
+| `tests/bundle.py` | Builds bundles and resolves each model's whole reference graph from the bundle alone |
 | `tests/probe.py` | Dumps one file's chunk layout when a round trip fails |
+| `bundle_model.py` | Packs a model and its dependencies into a `.fc2model` |
 | `open_model.py` / `.cmd` | Opens a model in Blender's UI, quoting-safe in cmd and PowerShell |
+
+## Model bundles
+
+An `.xbg` on its own is not openable. It names its materials by game-relative path, each `.xbm` names
+its textures the same way, and those live in shared trees far from the model — 18 files for the
+AK-47, 70 for a character, 194 for the largest shipped mesh. A `.fc2model` is a zip carrying all of
+them under their game paths, so Blender never has to reach into a game install or talk to JackAll.
+
+```
+python bundle_model.py <model.xbg> [-o out.fc2model] [--root DIR]
+```
+
+Then **File ▸ Import ▸ Far Cry 2 Model Bundle (.fc2model)**.
+
+Inside is a `manifest.json` beside every file, each stored under its game-relative path:
+
+```json
+{
+  "format": "fc2model", "version": 1,
+  "model": "graphics/weapons/primary/ak47/ak47.xbg",
+  "entries": [
+    {"path": "graphics/weapons/primary/ak47/ak47.xbg", "role": "owned"},
+    {"path": "graphics/_textures/diffuse/metal/metalbrushed_d.xbt", "role": "shared"}
+  ]
+}
+```
+
+**The role is the part that matters for export.** `owned` files sit in the model's own directory and
+exist for this model; `shared` files back many others — `metalbrushed_d.xbt` is used by 46 of the 87
+shipped weapons, so editing it through one bundle would re-skin all of them. An exporter writes back
+`owned` entries only. The rule is by directory, which is a proxy: 58% of retail materials are used by
+exactly one model, but they all live together in `graphics\_materials`, so a single-use one is still
+marked shared.
+
+Bundles are fat on purpose. Copying the shared files in costs roughly 1.9x over storing a whole
+weapon set once, and buys a bundle that opens with nothing else installed. The median is 11 files and
+1.4 MB; the AK-47 is 18 files, 2.6 MB, 1.7 MB zipped.
+
+Closure is complete for **2,922 of 2,922** shipped models — every material, every texture, and the
+`_mip0` companion carrying a texture's top mip. The three meshes that embed their material in the
+`.xbg` instead of naming an `.xbm` are covered by reading that inline chunk.
 
 ## Running the tests
 
@@ -66,6 +112,7 @@ python roundtrip.py mab --coverage
 python invariants.py
 python mabcheck.py
 python quatcheck.py
+python bundle.py
 ```
 
 The Blender test runs headless against the real add-on:
@@ -99,9 +146,25 @@ differently by cmd and PowerShell, and cmd will split it on spaces.
 
 ## Installing the add-on
 
-Blender 4.2+ extension. Zip the folder and install it from **Edit ▸ Preferences ▸ Get Extensions ▸
-Install from Disk**, or point Blender's script path at this directory. Import via
-**File ▸ Import ▸ Far Cry 2 Mesh (.xbg)**.
+Blender 4.2+ extension. Build the zip with Blender itself, which validates the manifest on the way:
+
+```
+& "C:\Programs\Blender 5.2\blender.exe" --command extension build --source-dir tools\BlenderFC2 --output-dir .
+```
+
+Install the resulting `farcry2_formats-<version>.zip` from **Edit ▸ Preferences ▸ Get Extensions ▸
+Install from Disk**. Import via **File ▸ Import ▸ Far Cry 2 Model Bundle (.fc2model)** or
+**Far Cry 2 Mesh (.xbg)**.
+
+Plain `zip` on the folder does not work: an extension needs `register`/`unregister` at the zip root
+beside the manifest, which is what the root `__init__.py` re-exports, and `[build]` in the manifest
+is what keeps `tests/` and the command-line scripts out of the package.
+
+**An installed extension shadows this working tree.** The add-on puts its own directory on
+`sys.path`, so once it is installed, anything run inside Blender imports that frozen copy of `fc2fmt`
+rather than the files being edited. `tests/_corpus.py` evicts it, which covers every test script;
+`open_model.py` does not, so rebuild and reinstall after changing code, or disable the extension
+while developing.
 
 The manifest declares `SPDX:Unlicense` to match the repository root; `tools/JackAll` uses a different
 licence, so change it here if this should follow that instead.
@@ -124,10 +187,12 @@ byte, which silently destroys the round-trip gate.
 holds a contiguous prefix of node indices, duplicates included, then `-1` padding (3,953/3,953). The
 community rule that skinned palettes must never contain `-1` is wrong.
 
-**Part placement is case-insensitive.** A rigid part sits on the node sharing its name, but only 559
-of 16,876 parts match exactly — the rest need case folding (`WHEELBACK_L_STATE01` against a node
-named `Wheelback_L_State01`). Skinned parts instead take node 0, the skeleton root, which is what
-lifts a character off the floor.
+**`DIKS` names each part's placement node, so nothing matches names.** An entry is
+`CRC32(full part name)` then `(node index or 0xFFFF) << 16 | entry position`, one per `DNKS` part —
+16,885 of 16,885 across the corpus. Matching part names against node names instead disagrees on 291
+parts and is wrong on all of them, because some meshes have a node whose own name ends in `_LOD0`.
+A part marked `0xFFFF` sits in the root's space: every skinned one, and rigid ones already modelled
+in place.
 
 **Dunia and Blender are both Z-up, so geometry needs no axis change.** The file winds clockwise
 (D3D) in 113 of 113 sampled meshes, so triangles are reversed on import, and V is flipped. Nothing
@@ -140,6 +205,12 @@ The AK-47's `ak47_state01_m.xbt` is that mask; its wood and metal come from
 `graphics\_textures\diffuse\`. Applying `DiffuseColor1` flat instead of lerping from the base leaves
 everything washed out. `.xbm` is the same chunk container as `.xbg`, with the material in its `LTMD`
 chunk — 2,379 of 2,379 shipped materials parse, and 2,370 name an albedo.
+
+**Three meshes carry their material inline, in a different layout.** `bat.xbg`, `torch01.xbg` and
+`rag_animready.xbg` reference `.fakemat` names that their own `LTMD` chunks define, instead of naming
+an `.xbm` file. An embedded chunk leads with that name and the `DNKS` part it applies to; a
+standalone `.xbm` leads with five bytes. Read one with the other's layout and it desynchronises on
+the first field, which is why these three used to import untextured.
 
 **`.mab` bitmasks are indexed by `.skeleton` bone id**, and a bone's slot inside a section is the
 popcount of the mask below its id. Verified by resolving 303,067 mask bits against

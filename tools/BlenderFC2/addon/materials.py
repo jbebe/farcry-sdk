@@ -1,4 +1,4 @@
-# Build a Blender material from an .xbm, following the engine's Generic shader.
+# Build a Blender material from a parsed material, following the Generic shader.
 #
 # A Dunia surface is rarely one texture. The albedo is two tiling detail maps
 # blended by the green and blue channels of a per-model mask, each tinted by its
@@ -11,34 +11,34 @@ import tempfile
 import bpy
 
 from fc2fmt import xbt
-from fc2fmt.xbm import DIFFUSE1, DIFFUSE2, MASK1, XbmMaterial
-
-from .resolve import game_files
+from fc2fmt.xbm import DIFFUSE2, MASK1
 
 # Node graph spacing, purely cosmetic.
 COLUMN = 260
 ROW = 300
 
 
-def _image(path, files, cache):
+def _image(game_path, source, cache):
     """Load an .xbt as a Blender image by handing Blender its DDS payload."""
-    if path in cache:
-        return cache[path]
-    resolved = files.find(path)
+    if game_path in cache:
+        return cache[game_path]
     image = None
-    if resolved:
-        try:
-            texture = xbt.read(resolved)
-            name = os.path.basename(resolved)[:-4] + ".dds"
-            temporary = os.path.join(tempfile.gettempdir(), "fc2tex", name)
-            os.makedirs(os.path.dirname(temporary), exist_ok=True)
-            with open(temporary, "wb") as handle:
-                handle.write(texture.dds)
-            image = bpy.data.images.load(temporary, check_existing=True)
-            image.name = os.path.basename(path)
-        except Exception:
-            image = None
-    cache[path] = image
+    try:
+        texture = xbt.read(source, game_path)
+    except Exception:
+        texture = None
+    if texture:
+        name = os.path.basename(game_path.replace("\\", "/"))
+        temporary = os.path.join(tempfile.gettempdir(), "fc2tex", name[:-4] + ".dds")
+        os.makedirs(os.path.dirname(temporary), exist_ok=True)
+        with open(temporary, "wb") as handle:
+            handle.write(texture.dds)
+        image = bpy.data.images.load(temporary, check_existing=True)
+        # The same game path can carry different pixels in a bundle than in the
+        # install, and check_existing hands back the datablock loaded first.
+        image.reload()
+        image.name = name
+    cache[game_path] = image
     return image
 
 
@@ -65,15 +65,15 @@ def _rgba(colour, fallback=(1.0, 1.0, 1.0)):
     return (values[0], values[1], values[2], 1.0)
 
 
-def _multiply(tree, source, colour, location):
+def _multiply(tree, layer, colour, location):
     """Multiply a layer by its DiffuseColor, which is how the engine tints it."""
     if colour is None or tuple(colour) == (1.0, 1.0, 1.0):
-        return source
+        return layer
     node = tree.nodes.new("ShaderNodeMixRGB")
     node.blend_type = "MULTIPLY"
     node.location = location
     node.inputs["Fac"].default_value = 1.0
-    tree.links.new(node.inputs["Color1"], source)
+    tree.links.new(node.inputs["Color1"], layer)
     node.inputs["Color2"].default_value = _rgba(colour)
     return node.outputs["Color"]
 
@@ -99,13 +99,8 @@ def _base_tint(tree, definition, weight, location):
     return node.outputs["Color"]
 
 
-def build(material, xbm_path, files, cache):
-    """Wire an existing Blender material to the textures its .xbm names."""
-    data = files.find(xbm_path)
-    if not data:
-        return False
-    definition = XbmMaterial.parse(open(data, "rb").read())
-
+def build(material, definition, source, cache):
+    """Wire an existing Blender material to the textures its definition names."""
     material.use_nodes = True
     tree = material.node_tree
     tree.nodes.clear()
@@ -116,14 +111,14 @@ def build(material, xbm_path, files, cache):
     tree.links.new(output.inputs["Surface"], principled.outputs["BSDF"])
 
     albedo = definition.albedo()
-    first = _image(albedo, files, cache) if albedo else None
+    first = _image(albedo, source, cache) if albedo else None
     if first is None:
         return False
 
     # The mask supplies both weights: green blends in layer 2, blue chooses how
     # far layer 1's tint moves from DiffuseColorBase towards DiffuseColor1.
     mask_path = definition.textures.get(MASK1)
-    mask = _image(mask_path, files, cache) if mask_path else None
+    mask = _image(mask_path, source, cache) if mask_path else None
     layer_weight = tint_weight = None
     if mask is not None:
         mask_node = _texture_node(tree, mask, definition.tiling("MaskTiling1"),
@@ -147,7 +142,7 @@ def build(material, xbm_path, files, cache):
         colour = node.outputs["Color"]
 
     second_path = definition.textures.get(DIFFUSE2)
-    second = _image(second_path, files, cache) if second_path else None
+    second = _image(second_path, source, cache) if second_path else None
     if second is not None and layer_weight is not None:
         second_node = _texture_node(tree, second, definition.tiling("DiffuseTiling2"), (0, -ROW))
         second_colour = _multiply(tree, second_node.outputs["Color"],

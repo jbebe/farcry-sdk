@@ -5,7 +5,7 @@
 
 from dataclasses import dataclass, field
 
-from .binary import Reader, Writer
+from .binary import Reader, Writer, name_hash
 from .transform import multiply, trs_matrix
 
 MAGIC = b"HSEM"
@@ -15,6 +15,9 @@ NODE_RECORD = 0x44
 PALETTE_SLOTS = 48
 EMPTY_SLOT = -1
 NO_NODE = 0xFFFFFFFF
+
+# A DIKS entry names the node that places its part, or this when none does.
+NO_PLACEMENT = 0xFFFF
 
 # Vertex component flags. Position is one of the first three; the rest are
 # independent bits consumed in this fixed order.
@@ -165,6 +168,17 @@ class SkinDesc:
 
 
 @dataclass
+class PartRef:
+    """A DIKS entry: a part, by name hash, and the node that places it.
+
+    The entry's own position in the table is stored alongside and regenerated
+    on write, so only these two fields carry information.
+    """
+    name_hash: int
+    node: int
+
+
+@dataclass
 class Chunk:
     """Chunk identity, the header word we do not interpret, and any opaque body."""
     tag: str
@@ -181,7 +195,7 @@ class XbgFile:
         self.bind_matrices = []
         self.materials = []
         self.material_word = None
-        self.lod_distances = []
+        self.part_refs = []
         self.lods = []
         self.skin_descs = []
         self.cluster_word0 = 0
@@ -239,7 +253,11 @@ class XbgFile:
             self.material_word = r.u32() if _has_material_word(self.version) else None
             self.materials = [r.cstring() for _ in range(count)]
         elif tag == TAG_SKID:
-            self.lod_distances = [r.u32s(2) for _ in range(r.u32())]
+            self.part_refs = []
+            for _ in range(r.u32()):
+                hashed = r.u32()
+                packed = r.u32()
+                self.part_refs.append(PartRef(hashed, packed >> 16))
         elif tag == TAG_LODS:
             self.lods = _read_lods(r)
         elif tag == TAG_SKND:
@@ -324,9 +342,9 @@ class XbgFile:
             for name in self.materials:
                 w.cstring(name)
         elif tag == TAG_SKID:
-            w.u32(len(self.lod_distances))
-            for pair in self.lod_distances:
-                w.u32s(pair)
+            w.u32(len(self.part_refs))
+            for position, ref in enumerate(self.part_refs):
+                w.u32(ref.name_hash).u32((ref.node << 16) | position)
         elif tag == TAG_LODS:
             _write_lods(w, self.lods)
         elif tag == TAG_BBOX:
@@ -355,22 +373,26 @@ class XbgFile:
             matrices.append(multiply(parent, local) if parent else local)
         return matrices
 
-    def part_placement(self, part_name, skinned=False):
+    def part_node(self, full_name):
+        """The node placing the part named `full_name`, or None if none does."""
+        wanted = name_hash(full_name)
+        node = next((r.node for r in self.part_refs if r.name_hash == wanted), NO_PLACEMENT)
+        return None if node == NO_PLACEMENT or node >= len(self.nodes) else node
+
+    def part_placement(self, full_name):
         """Where a part sits in model space.
 
-        A rigid part is modelled around its own pivot and placed by the node
-        sharing its name, so skipping this piles every wheel, door and magazine
-        at the origin. A skinned part is in the skeleton root's bind space and
-        takes node 0 instead, which lifts a character off the floor.
+        A rigid part is modelled around its own pivot, so skipping this piles
+        every wheel, door and magazine at the origin. A part DIKS gives no node
+        — every skinned one, and any rigid one already modelled in place — sits
+        in the root's space instead, which is what lifts a character off the
+        floor.
         """
         matrices = self.node_world_matrices()
-        if skinned:
-            return matrices[0] if matrices else None
-        # Part names are upper-cased against mixed-case node names, so only 559
-        # of 16,876 rigid parts match exactly while all of them match folded.
-        wanted = part_name.lower()
-        index = next((i for i, n in enumerate(self.nodes) if n.name.lower() == wanted), None)
-        return None if index is None else matrices[index]
+        if not matrices:
+            return None
+        node = self.part_node(full_name)
+        return matrices[0] if node is None else matrices[node]
 
     def rebuild_hierarchy(self):
         """Recompute sibling links and skin indices after nodes have been edited.

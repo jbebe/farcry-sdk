@@ -6,6 +6,7 @@
 
 import os
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
@@ -14,8 +15,14 @@ sys.path.insert(0, HERE)
 import bpy
 import mathutils
 
+# _corpus first: it evicts any copy of these packages that an installed
+# extension already put in sys.modules.
 from _corpus import GRAPHICS, present
+
+import addon
 from addon import import_xbg
+from fc2fmt.assets import InstallAssets, find_root, normalise
+from fc2fmt.bundle import Bundle
 from fc2fmt.xbg import XbgFile
 
 AK47 = os.path.join(GRAPHICS, "weapons", "primary", "ak47", "ak47.xbg")
@@ -31,25 +38,28 @@ def check_bounds(model, parts):
 
     This is what catches a part being transformed twice: bone-parenting an
     object whose vertices already carry the placement moves it off the model,
-    which shows up here long before anyone looks at a render.
+    which shows up here long before anyone looks at a render. Slack comes from
+    the whole diagonal, because a flat model has an axis of span zero and a
+    per-axis tolerance would be blind along it.
     """
     corners = [obj.matrix_world @ mathutils.Vector(corner)
                for obj in parts for corner in obj.bound_box]
+    diagonal = (mathutils.Vector(model.bbox[3:]) - mathutils.Vector(model.bbox[:3])).length
+    slack = diagonal * 0.02 + 1e-3
     errors = 0
     for axis in range(3):
         low = min(c[axis] for c in corners)
         high = max(c[axis] for c in corners)
-        slack = abs(model.bbox[axis + 3] - model.bbox[axis]) * 0.05 + 1e-3
         if abs(low - model.bbox[axis]) > slack or abs(high - model.bbox[axis + 3]) > slack:
             errors += fail("axis %d spans %.3f..%.3f, file says %.3f..%.3f"
                            % (axis, low, high, model.bbox[axis], model.bbox[axis + 3]))
     return errors
 
 
-def check_textures(parts, files):
+def check_textures(parts, source):
     """Every part should end up with a material backed by a real image."""
-    if not files:
-        return fail("no game root found, so no textures were resolved")
+    if not source:
+        return fail("no asset source, so no textures were resolved")
     missing = [obj.name for obj in parts
                if not any(node.type == "TEX_IMAGE" and node.image
                           for slot in obj.data.materials if slot and slot.node_tree
@@ -87,7 +97,7 @@ def main():
         errors += fail("every AK-47 part should carry UVs")
 
     errors += check_bounds(model, parts)
-    errors += check_textures(parts, result["files"])
+    errors += check_textures(parts, result["source"])
 
     # The muzzle bone must sit at the far end of the barrel, which is the
     # model's maximum on the forward axis.
@@ -112,8 +122,61 @@ def main():
           % (len(parts), triangles, len(armature.data.bones), len(model.materials)))
 
     errors += check_character()
+    errors += check_bundle()
+    errors += check_operators()
     print("blender import: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0
+
+
+def check_operators():
+    """Register the add-on and drive the importers the way the File menu does.
+
+    Both operators take their options from a shared mixin, so passing one that
+    Blender never collected as a property is what this is here to catch.
+    """
+    errors = 0
+    with tempfile.TemporaryDirectory() as directory:
+        path = os.path.join(directory, "ak47.fc2model")
+        make_bundle(AK47).write(path)
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        addon.register()
+        try:
+            for operator, target in ((bpy.ops.import_scene.fc2_bundle, path),
+                                     (bpy.ops.import_scene.fc2_xbg, AK47)):
+                bpy.ops.wm.read_factory_settings(use_empty=True)
+                status = operator(filepath=target, lod=0, with_armature=True,
+                                  with_textures=True)
+                meshes = [o for o in bpy.context.scene.objects if o.type == "MESH"]
+                if status != {"FINISHED"} or len(meshes) != 6:
+                    errors += fail("%s returned %s with %d meshes"
+                                   % (target, status, len(meshes)))
+        finally:
+            addon.unregister()
+    print("operators: registered and ran both importers")
+    return errors
+
+
+def make_bundle(model_path):
+    root = find_root(model_path)
+    return Bundle.build(normalise(os.path.relpath(model_path, root)), InstallAssets(root))
+
+
+def check_bundle():
+    """A bundle must import to the same thing, without touching the install."""
+    bundle = make_bundle(AK47)
+    with tempfile.TemporaryDirectory() as directory:
+        path = os.path.join(directory, "ak47.fc2model")
+        bundle.write(path)
+        bpy.ops.wm.read_factory_settings(use_empty=True)
+        result = import_xbg.load_bundle(path, lod=0)
+    parts = result["parts"]
+    errors = 0
+    if len(parts) != 6:
+        errors += fail("bundle gave %d LOD0 parts, the install gives 6" % len(parts))
+    errors += check_bounds(result["model"], parts)
+    errors += check_textures(parts, result["source"])
+    print("bundle: parts %d  files %d" % (len(parts), len(bundle.entries)))
+    return errors
 
 
 def check_character():
@@ -151,7 +214,7 @@ def check_character():
         errors += fail("%d vertices do not have weights summing to 1" % off)
 
     errors += check_bounds(model, parts)
-    errors += check_textures(parts, result["files"])
+    errors += check_textures(parts, result["source"])
 
     groups = len({g.name for obj in parts for g in obj.vertex_groups})
     print("character: parts %d  bones %d  weighted groups %d" % (len(parts), len(bones), groups))

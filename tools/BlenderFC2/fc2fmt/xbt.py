@@ -8,8 +8,6 @@
 # holding a single level at twice the size, so opening only the named file
 # yields a texture that is correct but half resolution on each axis.
 
-import os
-
 from .binary import Reader
 
 MAGIC = b"TBX\x00"
@@ -41,9 +39,16 @@ class XbtTexture:
         return self.payload
 
 
-def read(path):
-    """The texture at `path`, preferring its full-resolution companion."""
-    companion = path[:-4] + COMPANION_SUFFIX if not path.endswith(COMPANION_SUFFIX) else None
-    if companion and os.path.exists(companion):
-        path = companion
-    return XbtTexture.parse(open(path, "rb").read())
+def companion(game_path):
+    """The sibling holding this texture's top mip, or None if this is one."""
+    if game_path.lower().endswith(COMPANION_SUFFIX):
+        return None
+    return game_path[:-4] + COMPANION_SUFFIX
+
+
+def read(source, game_path):
+    """The texture named by `game_path`, preferring its full-resolution companion."""
+    mip0 = companion(game_path)
+    data = source.read(mip0) if mip0 else None
+    data = data or source.read(game_path)
+    return XbtTexture.parse(data) if data else None

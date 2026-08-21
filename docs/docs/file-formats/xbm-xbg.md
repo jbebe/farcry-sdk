@@ -116,7 +116,46 @@ material inlined into the mesh instead of referenced by path, carrying names lik
 `Torch01_587110454_0.fakemat`. `LTMR` (`RMTL`) is the ordinary path-reference material list, and it
 carries a trailing word after mesh version 41.3, which FC2 (42.6) has.
 
-`DIKS` (`SKID`) entries are **8 bytes**, not 4.
+**An inline `LTMD` is not laid out like an `.xbm`'s.** A standalone `.xbm` opens its `LTMD` payload
+with five bytes, then the material name, then the shader name. An embedded one has no such preamble:
+it opens with the name the mesh's `LTMR` list references, then the `DNKS` part that name belongs to
+(`BAT`, `WOODTORCH01`, `CLOTHTORCH01`, `RAG01`), then the shader name. From there the two run the
+same body — counted texture slots, property groups of one, two, three and four floats, integers,
+then a trailing word. Reading an embedded chunk with the standalone layout desynchronises on the
+first field. Measured on all four shipped chunks, each consuming its payload exactly; the three
+meshes carrying one resolve their textures only through this path.
+
+### `DIKS` is the part table, and it names each part's placement node
+
+`DIKS` (`SKID`) entries are **8 bytes**, not 4, and they are not LOD switch distances. The chunk is a
+`u32` count followed by one entry per `DNKS` part:
+
+```
++0x00  u32  CRC32 of the full part name, "FRAME_LOD0" — the exact-case DNKS name
++0x04  u32  (placement node index, or 0xFFFF when none) << 16 | this entry's position
+```
+
+Measured across all 2,922 shipped meshes and 16,885 entries:
+
+| Claim | Result |
+|---|---|
+| word 0 hashes to a `DNKS` part name | 16,885 / 16,885 |
+| entry count equals part count | 2,922 / 2,922 |
+| low 16 bits equal the entry's own position | 16,885 / 16,885 |
+| every skinned part carries `0xFFFF` | 1,645 / 1,645 |
+
+So a mesh states each part's placement node outright, and nothing has to match part names against
+node names. Matching by name is not merely slower, it is wrong: 291 parts fold to a different node
+than `DIKS` names, because those meshes have a node whose *own* name ends in `_LOD0`
+(`ColonialChurchBellRinger_01_LOD0` sits beside the root `ColonialChurchBellRinger_01`, and stripping
+the suffix from the part name matches the root). Judged by which placement makes a model's LOD0
+geometry fill its own `XOBB` bounds, `DIKS` beats name matching in 3 meshes and loses in none;
+`urbanmedium00_gazebo02_part02_bk` sits 65% outside its declared bounds under name matching and
+within 1% under `DIKS`.
+
+`0xFFFF` does not mean "no such node exists" — it means no node transforms this part. Both skinned
+parts and rigid parts already modelled in model space carry it, including ones that do have a
+same-named node (`urbanlarge01_cs_door` has nodes `s1` and `s2` and marks both parts `0xFFFF`).
 
 ### `EDON` node record
 
@@ -277,16 +316,18 @@ that consumes them.
 The `DNKS` chunk names each drawable block, and that name — not its index — is the part's identity.
 Names carry a `_LOD<n>` suffix which is the LOD tier, and the same part appears once per tier.
 
-**A rigid part's vertices are stored around its own pivot, not in model space.** What places it is
-the `EDON` bone that *shares its name*: take that bone's world matrix and transform the part by it.
-Skip this and every wheel, door and bumper piles up at the model origin. Roughly half of retail parts
-have a non-identity placement, so the error is obvious on vehicles and invisible on a single-part
-prop. Sibling parts frequently share one vertex buffer and place it differently, so placement has to
-be applied per part rather than per buffer.
+**A rigid part's vertices are stored around its own pivot, not in model space.** What places it is an
+`EDON` node — and [`DIKS`](#diks-is-the-part-table-and-it-names-each-parts-placement-node) names
+which one, so this needs no name matching. Take that node's world matrix and transform the part by
+it. Skip this and every wheel, door and bumper piles up at the model origin. Roughly half of retail
+parts have a non-identity placement, so the error is obvious on vehicles and invisible on a
+single-part prop. Sibling parts frequently share one vertex buffer and place it differently, so
+placement has to be applied per part rather than per buffer.
 
-**Skinned meshes are the exception**: their vertices already sit in the skeleton root's bind space,
-so they take the root bone rather than a same-named one. That root is at the character's waist,
-around z = +1.0 — using the wrong one sinks a character to the knees through the floor.
+**A part `DIKS` gives no node sits in the root's space.** That covers every skinned mesh — their
+vertices already sit in the skeleton root's bind space — and rigid parts already modelled in place.
+The root is at a character's waist, around z = +1.0, so using the wrong one sinks a character to the
+knees through the floor.
 
 **A file holds every state a part can be in, and the engine draws one.** Roughly 1,162 parts across
 the set carry a `STATE<n>` tag: a vehicle body intact and wrecked, a door closed/ajar/open, a road

@@ -1,5 +1,5 @@
 @echo off
-rem Open a Far Cry 2 model in Blender.
+rem Open a Far Cry 2 model or bundle in Blender.
 rem
 rem   open_model.cmd path\to\model.xbg [lod]
 rem
@@ -9,7 +9,7 @@ setlocal
 if "%BLENDER%"=="" set "BLENDER=C:\Programs\Blender 5.2\blender.exe"
 
 if "%~1"=="" (
-    echo usage: open_model.cmd ^<model.xbg^> [lod]
+    echo usage: open_model.cmd ^<model.xbg or .fc2model^> [lod]
     exit /b 1
 )
 if not exist "%BLENDER%" (

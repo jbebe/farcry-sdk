@@ -17,7 +17,7 @@ from fc2fmt.mab import MabFile, mask_slot
 from fc2fmt.mesh import extract
 from fc2fmt.skeleton import SkeletonFile
 from fc2fmt.vertex import VertexStream, buffer_vertex_count, pack_indices, unpack_indices
-from fc2fmt.xbg import EMPTY_SLOT, NO_NODE, XbgFile, vertex_layout
+from fc2fmt.xbg import EMPTY_SLOT, NO_NODE, NO_PLACEMENT, XbgFile, vertex_layout
 
 
 def check_xbg(model, fail):
@@ -33,7 +33,19 @@ def check_xbg(model, fail):
         if i and name_hash(node.name) != node.name_hash:
             fail("node %r name hash mismatch" % node.name)
 
+    # DIKS names every part exactly once and says which node places it, so an
+    # importer never has to match part names against node names.
+    if len(model.part_refs) != len(model.skin_descs):
+        fail("DIKS has %d entries for %d parts" % (len(model.part_refs), len(model.skin_descs)))
+    hashes = {name_hash(desc.name) for desc in model.skin_descs}
+    for ref in model.part_refs:
+        if ref.name_hash not in hashes:
+            fail("DIKS entry %d names no part" % ref.name_hash)
+        if ref.node != NO_PLACEMENT and ref.node >= len(model.nodes):
+            fail("DIKS entry names node %d, past the node array" % ref.node)
     for desc in model.skin_descs:
+        if any(c.is_skinned for c in desc.clusters) and model.part_node(desc.name) is not None:
+            fail("skinned part %r is given a placement node" % desc.name)
         for cluster in desc.clusters:
             slots = cluster.bones()
             if not cluster.is_skinned:

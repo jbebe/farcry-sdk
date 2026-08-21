@@ -1,4 +1,4 @@
-# Render an .xbg to a PNG, headless, for looking at what the importer built.
+# Render a model to a PNG, headless, for looking at what the importer built.
 #
 #   & "C:\Programs\Blender 5.2\blender.exe" -b --python render_preview.py -- model.xbg out.png
 #   ... -- model.xbg out.png --highlight 5    colours one part red
@@ -17,6 +17,9 @@ sys.path.insert(0, HERE)
 import bpy
 import mathutils
 
+# _corpus first: it evicts any copy of these packages that an installed
+# extension already put in sys.modules, so this renders the working tree.
+import _corpus  # noqa: F401
 from addon import import_xbg
 
 PALETTE = [(0.85, 0.35, 0.25, 1), (0.30, 0.60, 0.85, 1), (0.45, 0.80, 0.45, 1),

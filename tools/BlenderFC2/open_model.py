@@ -1,4 +1,4 @@
-# Open a Far Cry 2 model in Blender's UI.
+# Open a Far Cry 2 model or bundle in Blender's UI.
 #
 #   blender.exe --python open_model.py -- path\to\model.xbg [lod]
 #
@@ -17,7 +17,7 @@ from addon import import_xbg
 def main():
     argv = sys.argv[sys.argv.index("--") + 1:] if "--" in sys.argv else []
     if not argv:
-        print("usage: blender --python open_model.py -- <model.xbg> [lod]")
+        print("usage: blender --python open_model.py -- <model.xbg or .fc2model> [lod]")
         return
     path = argv[0]
     lod = int(argv[1]) if len(argv) > 1 else 0

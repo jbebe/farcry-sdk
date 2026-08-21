@@ -1,10 +1,12 @@
 # Reader for `.xbm`, the Dunia material.
 #
 # An `.xbm` is the same chunk container as an `.xbg`; everything that matters
-# sits in its `LTMD` chunk, which an `.xbg` may also carry inline. The payload
-# is a run of counted sections: texture maps first, then property groups of one,
-# two, three and four floats, then a group of integers.
+# sits in its `LTMD` chunk, which an `.xbg` may also carry inline. Either way the
+# body is a run of counted sections: texture maps first, then property groups of
+# one, two, three and four floats, then a group of integers. The two differ only
+# in what precedes that body.
 
+from .assets import normalise
 from .binary import Reader
 from .xbg import CHUNK_HEADER, MAGIC, TAG_LTMD
 
@@ -24,6 +26,7 @@ GROUP_SIZES = (1, 2, 3, 4)
 class XbmMaterial:
     def __init__(self):
         self.name = ""
+        self.part = ""
         self.shader = ""
         self.textures = {}
         self.floats = {}
@@ -41,12 +44,32 @@ class XbmMaterial:
 
     @classmethod
     def parse_ltmd(cls, data, payload, end):
+        """A standalone .xbm's LTMD, which opens with five bytes nothing reads."""
         self = cls()
         r = Reader(data, payload)
-        # Five bytes precede the name in every shipped material.
         r.skip(5)
         self.name = r.cstring()
         self.shader = r.cstring()
+        self._read_body(r)
+        if r.pos != end:
+            raise ValueError("LTMD consumed %d of %d bytes" % (r.pos - payload, end - payload))
+        return self
+
+    @classmethod
+    def parse_inline(cls, raw):
+        """The LTMD an .xbg embeds, whose body is preceded by the name its
+        geometry references and the part that name belongs to."""
+        self = cls()
+        r = Reader(raw, 0)
+        self.name = r.cstring()
+        self.part = r.cstring()
+        self.shader = r.cstring()
+        self._read_body(r)
+        if r.pos != len(raw):
+            raise ValueError("inline LTMD consumed %d of %d bytes" % (r.pos, len(raw)))
+        return self
+
+    def _read_body(self, r):
         # Each field is read into a local first: in `d[a()] = b()` Python
         # evaluates b() before a(), which would read these fields out of order.
         for _ in range(r.u32()):
@@ -60,9 +83,6 @@ class XbmMaterial:
             key = r.cstring()
             self.integers[key] = r.u32()
         self.trailing = r.u32()
-        if r.pos != end:
-            raise ValueError("LTMD consumed %d of %d bytes" % (r.pos - payload, end - payload))
-        return self
 
     def albedo(self):
         """The diffuse map, under whichever slot name this shader uses."""
@@ -70,6 +90,22 @@ class XbmMaterial:
 
     def tiling(self, slot, default=(1.0, 1.0)):
         return tuple(self.floats.get(slot, default))
+
+
+def inline_materials(model):
+    """The materials an .xbg embeds, keyed by the name its geometry references."""
+    return {m.name.lower(): m
+            for m in (XbmMaterial.parse_inline(c.raw)
+                      for c in model.chunks if c.tag == TAG_LTMD and c.raw)}
+
+
+def resolve(path, model, source):
+    """A material's definition: the one the model embeds, or the .xbm it names."""
+    definition = inline_materials(model).get(normalise(path))
+    if definition is not None:
+        return definition
+    data = source.read(path) if source is not None else None
+    return XbmMaterial.parse(data) if data else None
 
 
 def _chunks(data):

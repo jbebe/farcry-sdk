@@ -11,4 +11,16 @@ blender_version_min = "4.2.0"
 tags = ["Import-Export"]
 
 [permissions]
-files = "Read .xbg, .skeleton and .mab files from disk"
+files = "Read .fc2model bundles and Dunia .xbg, .skeleton and .mab files"
+
+# The corpus tests and the command-line scripts are not part of the add-on.
+[build]
+paths_exclude_pattern = [
+    "__pycache__/",
+    "/.git/",
+    "*.zip",
+    "/tests/",
+    "/bundle_model.py",
+    "/open_model.py",
+    "/open_model.cmd",
+]

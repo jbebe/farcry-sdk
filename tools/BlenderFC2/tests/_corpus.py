@@ -7,7 +7,26 @@ import os
 import sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
-sys.path.insert(0, os.path.join(HERE, ".."))
+PACKAGE_ROOT = os.path.normpath(os.path.join(HERE, ".."))
+sys.path.insert(0, PACKAGE_ROOT)
+
+
+def _drop_installed_copies():
+    """Forget any of our modules Blender already loaded from somewhere else.
+
+    The add-on puts its own directory on sys.path, so once the extension is
+    installed, a test run inside Blender imports that frozen copy of fc2fmt
+    instead of the files being edited — and passes.
+    """
+    for name, module in list(sys.modules.items()):
+        if name.split(".")[0] not in ("fc2fmt", "addon"):
+            continue
+        path = getattr(module, "__file__", None)
+        if path and not os.path.abspath(path).startswith(PACKAGE_ROOT):
+            del sys.modules[name]
+
+
+_drop_installed_copies()
 
 CORPUS = os.path.normpath(os.path.join(HERE, "..", "..", "..", "tmp", "gamefiles"))
 GRAPHICS = os.path.join(CORPUS, "worlds", "worlds", "graphics")
