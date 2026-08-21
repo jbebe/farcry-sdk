@@ -23,7 +23,7 @@
                               ToolTip="Slows the camera to a stop as it approaches the terrain instead of flying through it" />
                     <CheckBox x:Name="DemoMode" Content="Demo mode" IsChecked="True"
                               VerticalAlignment="Center" Margin="10,0,0,0"
-                              ToolTip="Sky and sun, distance haze, and reflective water. Off for a plain flat view of the data" />
+                              ToolTip="Everything that costs: sun shadows, ambient occlusion, sky, haze, real water, the far model ring, and a continuous redraw. Off, the viewport is flatly lit textures, drawn once per change" />
                     <TextBlock Text="Exposure" VerticalAlignment="Center" Foreground="#888" Margin="14,0,4,0" />
                     <Slider x:Name="ExposureSlider" Width="90" Minimum="0.5" Maximum="3.0" Value="1.8"
                             VerticalAlignment="Center" TickFrequency="0.1" IsSnapToTickEnabled="False"

@@ -152,6 +152,7 @@ public sealed class WaterLayer : IDisposable
             layout(location = 1) in vec4 instanceOrigin;
             layout(location = 2) in vec3 instanceTint;
             uniform mat4 viewProjection;
+            uniform float demo;
             {{WaveGlsl}}
             out vec3 worldPosition;
             out vec3 surfaceTint;
@@ -161,7 +162,8 @@ public sealed class WaterLayer : IDisposable
                 vec2 plane = instanceOrigin.xy + gridCorner * {{SectorSize}}.0;
                 riverness = instanceOrigin.w;
                 surfaceTint = instanceTint;
-                worldPosition = vec3(plane, instanceOrigin.z + swell(plane, riverness));
+                float height = demo < 0.5 ? 0.0 : swell(plane, riverness);
+                worldPosition = vec3(plane, instanceOrigin.z + height);
                 gl_Position = viewProjection * vec4(worldPosition, 1.0);
             }
             """,
@@ -172,7 +174,6 @@ public sealed class WaterLayer : IDisposable
             in float riverness;
             uniform vec3 cameraPosition;
             uniform vec3 sunDirection;
-            uniform float demo;
             uniform sampler2D sceneColour;
             uniform sampler2D sceneDepth;
             out vec4 fragment;
@@ -191,6 +192,16 @@ public sealed class WaterLayer : IDisposable
 
             void main()
             {
+                // Presentation off: a flat translucent pane of the authored tint. Everything below
+                // - the wave normal, the three scene taps, the refraction, the glint and the foam -
+                // exists only to make it look like water, and the scene copy that feeds it is not
+                // even taken.
+                if (demo < 0.5)
+                {
+                    fragment = vec4(surfaceTint, 0.55);
+                    return;
+                }
+
                 vec2 screenUv = gl_FragCoord.xy / vec2(textureSize(sceneDepth, 0));
                 float viewDistance = distance(cameraPosition, worldPosition);
                 vec3 view = normalize(cameraPosition - worldPosition);
@@ -242,13 +253,10 @@ public sealed class WaterLayer : IDisposable
 
                 vec3 lit = mix(throughWater, reflected, fresnel) + sunTint * min(glint, 60.0) * 0.5;
                 lit = mix(lit, vec3(0.72), foam);
-                lit = applyHaze(lit, viewDistance, worldPosition.z, demo);
+                lit = applyHaze(lit, viewDistance, worldPosition.z);
 
-                // Switched off, water falls back to the flat translucent tint - the readable form
-                // for judging where water is rather than how it looks. On, it covers what is behind
-                // it, because the refraction already brought that through.
-                fragment = vec4(mix(surfaceTint, lit, demo),
-                                mix(0.55, clamp(1.0 - exp(-column * 3.0) + fresnel, 0.0, 1.0), demo));
+                // It covers what is behind it, because the refraction already brought that through.
+                fragment = vec4(lit, clamp(1.0 - exp(-column * 3.0) + fresnel, 0.0, 1.0));
             }
             """);
         _uViewProjection = _program.UniformLocation("viewProjection");
@@ -371,7 +379,7 @@ public sealed class WaterLayer : IDisposable
         GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, at * sizeof(float), _staging);
     }
 
-    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition, float demo, RenderTargets targets)
+    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition, RenderTargets targets)
     {
         if (_instanceCount == 0)
         {
@@ -382,14 +390,17 @@ public sealed class WaterLayer : IDisposable
         GL.UniformMatrix4(_uViewProjection, false, ref viewProjection);
         GL.Uniform3(_uCameraPosition, cameraPosition);
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
-        GL.Uniform1(_uDemo, demo);
         GL.Uniform1(_uTime, SceneLighting.Time);
-        SceneLighting.SetFogUniforms(_uFogSetup, _uFogTint);
+        SceneLighting.SetSkyUniforms(_uDemo, _uFogSetup, _uFogTint);
 
-        GL.ActiveTexture(TextureUnit.Texture1);
-        GL.BindTexture(TextureTarget.Texture2D, targets.DepthCopy);
-        GL.ActiveTexture(TextureUnit.Texture0);
-        GL.BindTexture(TextureTarget.Texture2D, targets.ColourCopy);
+        // The flat pane reads neither copy, and with the presentation off they are not allocated.
+        if (SceneLighting.Demo)
+        {
+            GL.ActiveTexture(TextureUnit.Texture1);
+            GL.BindTexture(TextureTarget.Texture2D, targets.DepthCopy);
+            GL.ActiveTexture(TextureUnit.Texture0);
+            GL.BindTexture(TextureTarget.Texture2D, targets.ColourCopy);
+        }
 
         GL.BindVertexArray(_vao);
         GL.Enable(EnableCap.Blend);

@@ -3,11 +3,11 @@ using OpenTK.Mathematics;
 
 namespace JackAll.App.MapEditor.Gl;
 
-/// <summary>What the terrain draws this frame. Exposure is scene-wide - SceneLighting.Exposure -
-/// rather than an option here, so the terrain cannot run at a different one to the models.</summary>
-/// <param name="Haze">Scales the distance fog; 0 turns it off entirely.</param>
+/// <summary>What the terrain draws this frame. Exposure and the presentation switch are scene-wide -
+/// SceneLighting - rather than options here, so the terrain cannot run at a different one to the
+/// models.</summary>
 public readonly record struct TerrainDrawOptions(
-    bool ShowTextures, bool TintBySurfaceType, bool ShowShadow, float Haze);
+    bool ShowTextures, bool TintBySurfaceType, bool ShowShadow);
 
 /// <summary>
 /// The 3D terrain: two grid patches over one height texture - a fine 1-unit ring that follows the
@@ -51,7 +51,7 @@ public sealed class TerrainMesh3D : IDisposable
     private readonly int _uShadowMix;
     private readonly int _uFogSetup;
     private readonly int _uFogTint;
-    private readonly int _uHaze;
+    private readonly int _uDemo;
     private readonly int _uSunDirection;
     private readonly int _uCameraPosition;
 
@@ -155,7 +155,6 @@ public sealed class TerrainMesh3D : IDisposable
             uniform vec2 heightRange;
             uniform float surfaceTint;
             uniform float textureMix;
-            uniform float haze;
             uniform vec3 sunDirection;
             uniform vec3 cameraPosition;
             uniform float weightSide;
@@ -304,15 +303,23 @@ public sealed class TerrainMesh3D : IDisposable
                 base = mix(base, groundColour(h * metersPerRaw, dFdx(bakedUv), dFdy(bakedUv)), textureMix);
 
                 // Baked lighting: the low 16-bit channel, rescaled from the narrow band the data
-                // occupies so it reads as shading rather than a flat dimming.
-                float baked = sampleAtlas(terrainShadow, world).r;
-                baked = clamp((baked - 0.5) / 0.42, 0.0, 1.0);
+                // occupies so it reads as shading rather than a flat dimming. Four texel fetches,
+                // so the layer's own toggle gates them rather than scaling them away afterwards.
+                float baked = 1.0;
+                if (shadowMix > 0.0)
+                {
+                    baked = clamp((sampleAtlas(terrainShadow, world).r - 0.5) / 0.42, 0.0, 1.0);
+                }
 
                 // The surface id indexes the palette texture directly; r is the id scaled to 0..1,
                 // so the lookup lands mid-texel at (id + 0.5) / 256.
-                float id = texture(surfaceTypes, uv).r;
-                vec3 material = texture(surfacePalette, vec2(id * (255.0 / 256.0) + (0.5 / 256.0), 0.5)).rgb;
-                base = mix(base, base * 0.35 + material * 0.75, surfaceTint);
+                if (surfaceTint > 0.0)
+                {
+                    float id = texture(surfaceTypes, uv).r;
+                    vec3 material = texture(surfacePalette,
+                        vec2(id * (255.0 / 256.0) + (0.5 / 256.0), 0.5)).rgb;
+                    base = mix(base, base * 0.35 + material * 0.75, surfaceTint);
+                }
 
                 // The bake multiplies the sun rather than replacing N.L, which is what the engine's
                 // own terrain shader does with its self-shadow map - relief from the normals
@@ -324,17 +331,26 @@ public sealed class TerrainMesh3D : IDisposable
                 // GLSL tokeniser stop dead and report an unexpected end of file.
                 float light = max(dot(normal, sunDirection), 0.0);
                 vec3 worldPos = vec3(world, h * metersPerRaw);
+                float bakedSun = light * mix(1.0, baked, shadowMix);
+
+                // Presentation off: the ground stops here, with none of the cascade lookup, the
+                // occlusion tap, the highlight or the haze below ever reached.
+                if (demo < 0.5)
+                {
+                    fragment = vec4(shadeFlat(base, bakedSun), 1.0);
+                    return;
+                }
 
                 // The bake was lit by a 10-degree sun and this scene is lit by a 44-degree one, so
                 // the two cannot both be right in the same place - only in different ones. Cast
                 // shadows out to the last cascade, the bake past it, crossfaded where they meet.
-                float sunAmount = light * mix(
-                    mix(1.0, baked, shadowMix),
-                    sampleShadow(worldPos, viewDistance, light),
+                float sunAmount = mix(
+                    bakedSun,
+                    light * sampleShadow(worldPos, viewDistance, light),
                     shadowFade(viewDistance));
                 vec3 lit = shadeSurface(base, normal, normalize(cameraPosition - worldPos),
                     sunDirection, sunAmount, vec3(0.0), 0.0);
-                fragment = vec4(applyHaze(lit, viewDistance, h * metersPerRaw, haze), 1.0);
+                fragment = vec4(applyHaze(lit, viewDistance, h * metersPerRaw), 1.0);
             }
             """);
         _uViewProjection = _program.UniformLocation("viewProjection");
@@ -348,7 +364,7 @@ public sealed class TerrainMesh3D : IDisposable
         _occlusion = new OcclusionBinding(_program);
         _uFogSetup = _program.UniformLocation("fogSetup");
         _uFogTint = _program.UniformLocation("fogTint");
-        _uHaze = _program.UniformLocation("haze");
+        _uDemo = _program.UniformLocation("demo");
         _uSunDirection = _program.UniformLocation("sunDirection");
         _uCameraPosition = _program.UniformLocation("cameraPosition");
         _program.Use();
@@ -406,8 +422,7 @@ public sealed class TerrainMesh3D : IDisposable
         GL.Uniform1(_uSurfaceTint, options.TintBySurfaceType ? 1f : 0f);
         GL.Uniform1(_uTextureMix, _textures is not null && options.ShowTextures ? 1f : 0f);
         GL.Uniform1(_uShadowMix, _textures is not null && options.ShowShadow ? 1f : 0f);
-        SceneLighting.SetFogUniforms(_uFogSetup, _uFogTint);
-        GL.Uniform1(_uHaze, options.Haze);
+        SceneLighting.SetSkyUniforms(_uDemo, _uFogSetup, _uFogTint);
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
         GL.Uniform3(_uCameraPosition, cameraPosition);
         _shadow.Apply();

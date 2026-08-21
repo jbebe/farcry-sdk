@@ -33,7 +33,8 @@ public sealed class RenderTargets : IDisposable
     private int _presentColour;
 
     /// <summary>The opaque scene as it stood before the water went in, so the water can refract
-    /// what is behind it. A pass cannot sample the target it is drawing into.</summary>
+    /// what is behind it. A pass cannot sample the target it is drawing into. Allocated only while
+    /// the presentation is on - see <see cref="EnsurePresentation"/>.</summary>
     public int ColourCopy { get; private set; }
 
     /// <summary>The depth beside it. The water needs the scene depth to know how much water the
@@ -62,6 +63,7 @@ public sealed class RenderTargets : IDisposable
             return;
         }
 
+        bool hadPresentation = ColourCopyFramebuffer != 0;
         Release();
         Width = Math.Max(width, 1);
         Height = Math.Max(height, 1);
@@ -75,6 +77,21 @@ public sealed class RenderTargets : IDisposable
         SceneFramebuffer = NewFramebuffer(Colour, Depth);
         PresentFramebuffer = NewFramebuffer(_presentColour, Depth);
 
+        if (hadPresentation)
+        {
+            EnsurePresentation();
+        }
+    }
+
+    /// <summary>Allocates the surfaces only the presentation reads - the scene copies the water
+    /// refracts and the occlusion pair - at four full-resolution buffers between them.</summary>
+    public void EnsurePresentation()
+    {
+        if (ColourCopyFramebuffer != 0)
+        {
+            return;
+        }
+
         ColourCopy = NewTexture(PixelInternalFormat.Rgba16f, PixelFormat.Rgba, PixelType.Float);
         DepthCopy = NewTexture(
             PixelInternalFormat.DepthComponent32f, PixelFormat.DepthComponent, PixelType.Float,
@@ -85,6 +102,23 @@ public sealed class RenderTargets : IDisposable
         OcclusionBlur = NewTexture(PixelInternalFormat.R8, PixelFormat.Red, PixelType.UnsignedByte);
         OcclusionFramebuffer = NewFramebuffer(Occlusion, depthTexture: 0);
         OcclusionBlurFramebuffer = NewFramebuffer(OcclusionBlur, depthTexture: 0);
+    }
+
+    public void ReleasePresentation()
+    {
+        if (ColourCopyFramebuffer == 0)
+        {
+            return;
+        }
+
+        int[] framebuffers =
+            [ColourCopyFramebuffer, OcclusionFramebuffer, OcclusionBlurFramebuffer];
+        int[] textures = [ColourCopy, DepthCopy, Occlusion, OcclusionBlur];
+        GL.DeleteFramebuffers(framebuffers.Length, framebuffers);
+        GL.DeleteTextures(textures.Length, textures);
+        ColourCopyFramebuffer = 0;
+        OcclusionFramebuffer = 0;
+        OcclusionBlurFramebuffer = 0;
     }
 
     private int NewTexture(PixelInternalFormat internalFormat, PixelFormat format, PixelType type,
@@ -131,23 +165,18 @@ public sealed class RenderTargets : IDisposable
 
     private void Release()
     {
+        ReleasePresentation();
         if (SceneFramebuffer == 0)
         {
             return;
         }
 
-        int[] framebuffers =
-            [SceneFramebuffer, PresentFramebuffer, OcclusionFramebuffer, OcclusionBlurFramebuffer,
-             ColourCopyFramebuffer];
-        int[] textures =
-            [Colour, _presentColour, Depth, Occlusion, OcclusionBlur, ColourCopy, DepthCopy];
+        int[] framebuffers = [SceneFramebuffer, PresentFramebuffer];
+        int[] textures = [Colour, _presentColour, Depth];
         GL.DeleteFramebuffers(framebuffers.Length, framebuffers);
         GL.DeleteTextures(textures.Length, textures);
         SceneFramebuffer = 0;
         PresentFramebuffer = 0;
-        OcclusionFramebuffer = 0;
-        OcclusionBlurFramebuffer = 0;
-        ColourCopyFramebuffer = 0;
     }
 
     public void Dispose() => Release();

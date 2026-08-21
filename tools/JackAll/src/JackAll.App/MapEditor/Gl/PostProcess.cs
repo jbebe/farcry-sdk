@@ -60,11 +60,15 @@ public sealed class PostProcess : IDisposable
             {
                 vec3 colour = texture(scene, uv).rgb * exposure;
 
-                // Switched off, the tonemap goes with it: a flat view of the data wants the values
-                // it was given, clipped, not a highlight rolloff shaping them.
-                colour = mix(clamp(colour, 0.0, 1.0), tonemap(colour), demo);
+                // Switched off, the tonemap and the dither go with it: a flat view of the data wants
+                // the values it was given, clipped, and there is no sky gradient left to band.
+                if (demo < 0.5)
+                {
+                    fragment = vec4(linearToSrgb(clamp(colour, 0.0, 1.0)), 1.0);
+                    return;
+                }
 
-                vec3 encoded = linearToSrgb(clamp(colour, 0.0, 1.0));
+                vec3 encoded = linearToSrgb(clamp(tonemap(colour), 0.0, 1.0));
                 // Triangular PDF at one 8-bit step, which is what keeps the sky gradient from
                 // banding once it is quantised.
                 float dither = (interleavedGradientNoise(gl_FragCoord.xy)
@@ -79,13 +83,13 @@ public sealed class PostProcess : IDisposable
     /// <summary>Resolves the scene colour into whatever framebuffer is bound. Depth is left alone:
     /// the target shares the scene's depth texture, and the overlays drawn afterwards test against
     /// it.</summary>
-    public void Composite(int sceneColour, float demo)
+    public void Composite(int sceneColour)
     {
         _program.Use();
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2D, sceneColour);
         GL.Uniform1(_uExposure, SceneLighting.Exposure);
-        GL.Uniform1(_uDemo, demo);
+        GL.Uniform1(_uDemo, SceneLighting.DemoUniform);
 
         using GlState pass = new();
         GL.Disable(EnableCap.DepthTest);

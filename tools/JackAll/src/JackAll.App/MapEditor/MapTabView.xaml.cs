@@ -1,4 +1,5 @@
 ﻿using System.Windows.Controls;
+using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using JackAll.App.FileHandlers.Fcb;
@@ -53,6 +54,9 @@ public partial class MapTabView : UserControl
     private ShadowCascades? _cascades;
     private AmbientOcclusion? _occlusion;
     private (int X, int Y) _cameraSector = (int.MinValue, int.MinValue);
+
+    /// <summary>The viewport's own background, and so what shows in place of the sky.</summary>
+    private static readonly OpenTK.Mathematics.Vector3 BackgroundColour = new(0.13f, 0.15f, 0.17f);
 
     /// <summary>Refilled per marker rebuild; sized for every positioned entity of the world.</summary>
     private float[] _markerStaging = [];
@@ -130,8 +134,27 @@ public partial class MapTabView : UserControl
         LayerList.ItemsSource = view;
         LayerList.SelectedItem = LayerCatalog.Layers[0];
 
+        // Every button, toggle, slider and list in the tab can change what the viewport shows, so
+        // they are caught here as routed events rather than wired one handler at a time - the layer
+        // list's own checkboxes and any control added later included.
+        AddHandler(ToggleButton.CheckedEvent,
+            new System.Windows.RoutedEventHandler(Redraw), handledEventsToo: true);
+        AddHandler(ToggleButton.UncheckedEvent,
+            new System.Windows.RoutedEventHandler(Redraw), handledEventsToo: true);
+        AddHandler(Selector.SelectionChangedEvent,
+            new SelectionChangedEventHandler(Redraw), handledEventsToo: true);
+        AddHandler(Slider.ValueChangedEvent,
+            new System.Windows.RoutedPropertyChangedEventHandler<double>(Redraw), handledEventsToo: true);
+        AddHandler(ButtonBase.ClickEvent,
+            new System.Windows.RoutedEventHandler(Redraw), handledEventsToo: true);
+        AddHandler(TreeView.SelectedItemChangedEvent,
+            new System.Windows.RoutedPropertyChangedEventHandler<object>(Redraw), handledEventsToo: true);
+
         Viewport.Start(new GLWpfControlSettings { MajorVersion = 3, MinorVersion = 3 });
+        Viewport.SizeChanged += Redraw;
     }
+
+    private void Redraw(object? sender, System.Windows.RoutedEventArgs e) => Viewport.InvalidateVisual();
 
     /// <summary>Called by MainWindow once the VFS is loaded and its maps become discoverable.</summary>
     public async Task InitializeAsync(MainViewModel vm)
@@ -210,6 +233,7 @@ public partial class MapTabView : UserControl
         finally
         {
             LoadButton.IsEnabled = true;
+            Viewport.InvalidateVisual();
         }
     }
 
@@ -224,6 +248,15 @@ public partial class MapTabView : UserControl
         // Leaving a pass framebuffer bound blacks the viewport for the rest of the session.
         using GlState frame = new();
         GlState.BeginFrame();
+
+        // The checkbox is read here rather than on the click because turning the presentation off
+        // frees GL objects, and this is the one place a context is current.
+        bool demo = DemoMode.IsChecked == true;
+        if (demo != SceneLighting.Demo)
+        {
+            SceneLighting.Demo = demo;
+            ApplyPresentation();
+        }
 
         if (_pendingLoad is { } pending)
         {
@@ -316,9 +349,10 @@ public partial class MapTabView : UserControl
         if (_markersDirty)
         {
             _markersDirty = false;
+            List<WorldEntity> beyondTheRing = [];
             if (_modelLayer is { } modelLayer && EntityDrawMode.SelectedIndex != ModeMarkers)
             {
-                modelLayer.SetVisible(_visibleEntities, _camera.Position);
+                beyondTheRing = modelLayer.SetVisible(_visibleEntities, _camera.Position);
             }
 
             // The draw mode speaks only for entities that resolved to geometry: Models draws them as
@@ -326,9 +360,12 @@ public partial class MapTabView : UserControl
             // markers. The mesh-less ones belong to their category layers either way - and the ones
             // a dedicated layer already draws are held back here too, or a light picks up a second
             // marker on top of the one the Lights layer gives it.
-            List<WorldEntity> markerEntities = EntityDrawMode.SelectedIndex == ModeModels
-                ? []
-                : [.. _visibleEntities.Where(OwnedByThisLayer)];
+            // Off the presentation the ring is a third as wide, so there Models does fall back to
+            // markers for what it dropped rather than letting a world go empty a block away.
+            IEnumerable<WorldEntity> candidates = EntityDrawMode.SelectedIndex != ModeModels
+                ? _visibleEntities
+                : SceneLighting.Demo ? [] : beyondTheRing;
+            List<WorldEntity> markerEntities = [.. candidates.Where(OwnedByThisLayer)];
             _markerLayer?.SetInstances(FillMarkers(markerEntities), markerEntities.Count);
             RebuildCategoryMarkers();
         }
@@ -343,7 +380,7 @@ public partial class MapTabView : UserControl
         }
 
         GL.Viewport(0, 0, width, height);
-        GL.ClearColor(0.13f, 0.15f, 0.17f, 1f);
+        GL.ClearColor(BackgroundColour.X, BackgroundColour.Y, BackgroundColour.Z, 1f);
 
         // Nothing loaded yet, so there is no scene to resolve - clear the control's own buffer and
         // leave, rather than clearing an offscreen one nothing will read.
@@ -361,16 +398,14 @@ public partial class MapTabView : UserControl
         float aspect = (float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1));
         OpenTK.Mathematics.Matrix4 viewProjection = _camera.View() * _camera.Projection(aspect);
 
-        // One switch behind the sky, the haze and the water shading: presentation on, or a plain
-        // flat view of the data.
-        float demo = DemoMode.IsChecked == true ? 1f : 0f;
         SceneLighting.Exposure = (float)ExposureSlider.Value;
         bool drawEntityModels = LayerCatalog.Entities.IsVisible && EntityDrawMode.SelectedIndex != ModeMarkers;
 
         SceneLighting.Shadows = null;
         SceneLighting.OcclusionMap = 0;
-        if (demo > 0f)
+        if (SceneLighting.Demo)
         {
+            _targets.EnsurePresentation();
             SceneLighting.Shadows = DrawShadowMaps(drawEntityModels, aspect);
             SceneLighting.OcclusionMap = DrawOcclusion(drawEntityModels, viewProjection, aspect);
         }
@@ -378,13 +413,18 @@ public partial class MapTabView : UserControl
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.SceneFramebuffer);
         GL.Viewport(0, 0, width, height);
 
+        // The scene buffer holds linear radiance and the composite encodes it, so the background
+        // has to go in as the linear of the authored colour to come back out as that colour.
+        var background = SceneLighting.Linear(BackgroundColour);
+        GL.ClearColor(background.X, background.Y, background.Z, 1f);
+
         // The occlusion pass leaves behind the depth its prepass laid down, which is exactly what
         // the opaque pass tests against - so only the colour needs clearing when it ran.
         GL.Clear(SceneLighting.OcclusionMap == 0
             ? ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit
             : ClearBufferMask.ColorBufferBit);
 
-        if (demo > 0f)
+        if (SceneLighting.Demo)
         {
             _sky ??= new SkyLayer();
             _sky.Draw(viewProjection, _camera.Position);
@@ -394,8 +434,7 @@ public partial class MapTabView : UserControl
             _terrainMesh.Draw(viewProjection, _camera.Position, new TerrainDrawOptions(
                 ShowTextures: LayerCatalog.Textures.IsVisible,
                 TintBySurfaceType: LayerCatalog.SurfaceData.IsVisible,
-                ShowShadow: LayerCatalog.Shadow.IsVisible,
-                Haze: demo));
+                ShowShadow: LayerCatalog.Shadow.IsVisible));
         }
 
         // Every opaque surface goes in before the water. The water blends and never writes depth,
@@ -403,33 +442,37 @@ public partial class MapTabView : UserControl
         // the surface paints straight over it and reads as floating in a hole.
         if (LayerCatalog.Vegetation.IsVisible)
         {
-            _vegetationModelLayer?.Draw(viewProjection, _camera.Position, demo);
+            _vegetationModelLayer?.Draw(viewProjection, _camera.Position);
         }
         if (drawEntityModels)
         {
-            _modelLayer?.Draw(viewProjection, _camera.Position, demo);
+            _modelLayer?.Draw(viewProjection, _camera.Position);
         }
 
         if (LayerCatalog.Water.IsVisible && _waterLayer is { HasVisibleWater: true })
         {
             // The water reads both what is behind it and how far away that is, and a pass cannot
             // sample an image the draw it is part of is bound to. Depth as well as colour, because
-            // the water is depth-testing against the live buffer while it reads this one.
-            GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _targets.SceneFramebuffer);
-            GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, _targets.ColourCopyFramebuffer);
-            GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-                ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit,
-                BlitFramebufferFilter.Nearest);
-            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.SceneFramebuffer);
+            // the water is depth-testing against the live buffer while it reads this one. The flat
+            // pane reads neither, so the copy is part of the presentation.
+            if (SceneLighting.Demo)
+            {
+                GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _targets.SceneFramebuffer);
+                GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, _targets.ColourCopyFramebuffer);
+                GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height,
+                    ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit,
+                    BlitFramebufferFilter.Nearest);
+                GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.SceneFramebuffer);
+            }
 
-            _waterLayer.Draw(viewProjection, _camera.Position, demo, _targets);
+            _waterLayer.Draw(viewProjection, _camera.Position, _targets);
         }
 
         // The scene is complete, so resolve it to a displayable image here. Everything after this
         // point is an indicator drawn at exactly the colour it was authored in - run a selection box
         // or a category glyph through the tonemap and it comes back muted.
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.PresentFramebuffer);
-        _post.Composite(_targets.Colour, demo);
+        _post.Composite(_targets.Colour);
 
         // Indicators from here on: lines and markers that are meant to read through the water, not
         // sit under it.
@@ -490,6 +533,34 @@ public partial class MapTabView : UserControl
         GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, Viewport.Framebuffer);
         GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height,
             ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
+
+        // Keep drawing only while something is still moving: the presentation animates its water,
+        // held keys and a look drag move the camera, and a streamed texture reaches the GPU inside
+        // a draw and nowhere else. Otherwise this frame is the one the viewport holds until an
+        // input or a control asks for another.
+        Viewport.RenderContinuously = SceneLighting.Demo || _flyKeys.Count > 0 || _looking
+            || _modelLayer is { Streaming: true }
+            || _vegetationModelLayer is { Streaming: true };
+    }
+
+    /// <summary>Releases what only the presentation owns, or lets the next frame build it again.
+    /// The draw ring moves with the switch, so both instance streams are rebuilt either way.</summary>
+    private void ApplyPresentation()
+    {
+        _markersDirty = true;
+        _vegetationDirty = true;
+        if (SceneLighting.Demo)
+        {
+            return;
+        }
+
+        _cascades?.Dispose();
+        _cascades = null;
+        _occlusion?.Dispose();
+        _occlusion = null;
+        _sky?.Dispose();
+        _sky = null;
+        _targets?.ReleasePresentation();
     }
 
     /// <summary>
@@ -779,17 +850,20 @@ public partial class MapTabView : UserControl
             _flyKeys.Add(e.Key);
             e.Handled = true;
         }
+        Viewport.InvalidateVisual();
         base.OnPreviewKeyDown(e);
     }
 
     protected override void OnPreviewKeyUp(KeyEventArgs e)
     {
         _flyKeys.Remove(e.Key);
+        Viewport.InvalidateVisual();
         base.OnPreviewKeyUp(e);
     }
 
     private void Viewport_MouseDown(object sender, MouseButtonEventArgs e)
     {
+        Viewport.InvalidateVisual();
         Viewport.Focus();
         if (e.ChangedButton == MouseButton.Right)
         {
@@ -817,6 +891,7 @@ public partial class MapTabView : UserControl
 
     private void Viewport_MouseUp(object sender, MouseButtonEventArgs e)
     {
+        Viewport.InvalidateVisual();
         if (e.ChangedButton == MouseButton.Right)
         {
             _looking = false;
@@ -830,6 +905,8 @@ public partial class MapTabView : UserControl
 
     private void Viewport_MouseMove(object sender, MouseEventArgs e)
     {
+        // Every path below moves something the viewport draws, the gizmo's hover arm included.
+        Viewport.InvalidateVisual();
         System.Windows.Point p = e.GetPosition(Viewport);
         if (_grab is not null)
         {
@@ -849,6 +926,7 @@ public partial class MapTabView : UserControl
 
     private void Viewport_MouseWheel(object sender, MouseWheelEventArgs e)
     {
+        Viewport.InvalidateVisual();
         if (_terrain is null) return;
         _camera.MoveSpeed = Math.Clamp(_camera.MoveSpeed * (e.Delta > 0 ? 1.3f : 1 / 1.3f), 5f, 600f);
         StatusText.Text = $"fly speed {_camera.MoveSpeed:F0} m/s";

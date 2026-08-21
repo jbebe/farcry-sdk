@@ -12,9 +12,19 @@ public static class GlDebug
     /// delegate is a crash inside the driver several frames later.</summary>
     private static DebugProc? _callback;
 
+    /// <summary>Latched so a driver without the extension is asked once rather than once a frame -
+    /// the extension walk marshals every name in the list.</summary>
+    private static bool _tried;
+
     public static void Install()
     {
-        if (_callback is not null || !HasExtension("GL_KHR_debug"))
+        if (_tried)
+        {
+            return;
+        }
+
+        _tried = true;
+        if (!HasExtension("GL_KHR_debug"))
         {
             return;
         }

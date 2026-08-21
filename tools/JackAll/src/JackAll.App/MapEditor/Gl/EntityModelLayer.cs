@@ -71,6 +71,12 @@ public sealed class EntityModelLayer : IDisposable
     private const int MaxDecoders = 2;
     private const long UploadBudgetPerFrame = 8 << 20;
 
+    /// <summary>How far out, in sectors, a placement still reaches a buffer. The presentation pays
+    /// for the coarse tier; with it off only the near ring draws and the rest falls to markers.
+    /// </summary>
+    private static int OuterRing
+        => SceneLighting.Demo ? WorldModels.CoarseRadius : WorldModels.FineRadius;
+
     /// <summary>One detail tier's material ranges and the live texture handles behind each.</summary>
     private sealed class Tier
     {
@@ -133,7 +139,7 @@ public sealed class EntityModelLayer : IDisposable
     private readonly int _uViewProjection;
     private readonly int _uCameraPosition;
     private readonly int _uSunDirection;
-    private readonly int _uHaze;
+    private readonly int _uDemo;
     private readonly int _uUseTexture;
     private readonly int _uAlphaMode;
     private readonly int _uTintBase;
@@ -165,6 +171,11 @@ public sealed class EntityModelLayer : IDisposable
 
     /// <summary>What the streamed diffuse textures currently hold on the GPU.</summary>
     public long TextureBytesResident { get; private set; }
+
+    /// <summary>Whether a texture is still queued, decoding or waiting to upload. Uploading happens
+    /// inside <see cref="Draw"/>, so a viewport that only redraws on demand has to keep asking for
+    /// frames while this is true or the maps never arrive.</summary>
+    public bool Streaming => !_requests.IsEmpty || !_decoded.IsEmpty || _activeDecoders > 0;
 
     public EntityModelLayer(
         WorldModelSet set, Func<string, byte[]?> readByPath,
@@ -336,7 +347,6 @@ public sealed class EntityModelLayer : IDisposable
             in vec2 maskWeights;
             uniform vec3 cameraPosition;
             uniform vec3 sunDirection;
-            uniform float haze;
             uniform float useTexture;
             uniform int alphaMode;
             uniform vec3 tintBase;
@@ -403,6 +413,15 @@ public sealed class EntityModelLayer : IDisposable
                 // that at its word flips every normal into the surface and kills the sun term.
                 bool flipped = dot(n, cameraPosition - worldPosition) < 0.0;
                 if (flipped) { n = -n; }
+                float ndotl = max(dot(n, sunDirection), 0.0);
+
+                // Presentation off: the mesh stops here, with none of the cascade lookup, the
+                // occlusion tap, the highlight or the haze below ever reached.
+                if (demo < 0.5)
+                {
+                    fragment = vec4(shadeFlat(albedo, ndotl), coverage);
+                    return;
+                }
 
                 // An opaque material's diffuse alpha is its gloss mask - the same fact the coverage
                 // branch above steps around. A flipped normal is a guess about which way a shell
@@ -413,20 +432,19 @@ public sealed class EntityModelLayer : IDisposable
 
                 vec3 toEye = normalize(cameraPosition - worldPosition);
                 float viewDistance = distance(cameraPosition, worldPosition);
-                float ndotl = max(dot(n, sunDirection), 0.0);
 
                 // Nothing baked here to fall back on, so past the cascades a mesh is simply lit.
                 float sunAmount = ndotl
                     * mix(1.0, sampleShadow(worldPosition, viewDistance, ndotl),
                           shadowFade(viewDistance));
                 vec3 lit = shadeSurface(albedo, n, toEye, sunDirection, sunAmount, spec, specularPower);
-                fragment = vec4(applyHaze(lit, viewDistance, worldPosition.z, haze), coverage);
+                fragment = vec4(applyHaze(lit, viewDistance, worldPosition.z), coverage);
             }
             """);
         _uViewProjection = _program.UniformLocation("viewProjection");
         _uCameraPosition = _program.UniformLocation("cameraPosition");
         _uSunDirection = _program.UniformLocation("sunDirection");
-        _uHaze = _program.UniformLocation("haze");
+        _uDemo = _program.UniformLocation("demo");
         _uBillboardFacing = _program.UniformLocation("billboardFacing");
         _shadow = new ShadowBinding(_program);
         _occlusion = new OcclusionBinding(_program);
@@ -475,12 +493,13 @@ public sealed class EntityModelLayer : IDisposable
             mesh.CoarseFloats = mesh.Staging.Length;
         }
 
+        int ring = OuterRing;
         foreach (ScatterInstance instance in scatter)
         {
             int distance = Math.Max(
                 Math.Abs((int)MathF.Floor(instance.Position.X / WorldModels.SectorMeters) - cameraX),
                 Math.Abs((int)MathF.Floor(instance.Position.Y / WorldModels.SectorMeters) - cameraY));
-            if (distance > WorldModels.CoarseRadius)
+            if (distance > ring)
             {
                 continue;
             }
@@ -560,6 +579,7 @@ public sealed class EntityModelLayer : IDisposable
             mesh.CoarseFloats = mesh.Staging.Length;
         }
 
+        int ring = OuterRing;
         var leftover = new List<WorldEntity>(visible.Count);
         foreach (WorldEntity entity in visible)
         {
@@ -567,7 +587,7 @@ public sealed class EntityModelLayer : IDisposable
             int distance = Math.Max(
                 Math.Abs((int)MathF.Floor(position.X / WorldModels.SectorMeters) - cameraX),
                 Math.Abs((int)MathF.Floor(position.Y / WorldModels.SectorMeters) - cameraY));
-            if (distance > WorldModels.CoarseRadius || !_rows.TryGetValue(entity, out Row row))
+            if (distance > ring || !_rows.TryGetValue(entity, out Row row))
             {
                 leftover.Add(entity);
                 continue;
@@ -638,7 +658,7 @@ public sealed class EntityModelLayer : IDisposable
         }
     }
 
-    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition, float haze)
+    public void Draw(Matrix4 viewProjection, Vector3 cameraPosition)
     {
         // Budgeted so a ring change worth of decodes cannot dump hundreds of uploads in one frame.
         long uploadedBefore = TextureBytesResident;
@@ -660,8 +680,7 @@ public sealed class EntityModelLayer : IDisposable
         _shadow.Apply();
         _occlusion.Apply();
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
-        GL.Uniform1(_uHaze, haze);
-        SceneLighting.SetFogUniforms(_uFogSetup, _uFogTint);
+        SceneLighting.SetSkyUniforms(_uDemo, _uFogSetup, _uFogTint);
         GL.Enable(EnableCap.DepthTest);
         GL.ActiveTexture(TextureUnit.Texture0);
 

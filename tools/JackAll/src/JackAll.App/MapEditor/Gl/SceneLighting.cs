@@ -88,13 +88,23 @@ public static class SceneLighting
     public static int OcclusionMap { get; set; }
 
     /// <summary>
+    /// The presentation switch behind the viewport's Demo checkbox: every pass, every uniform and
+    /// every shader branch that exists to make the map look like the game rather than to show what
+    /// is in it. Off, the frame is one geometry pass of flatly lit textures.
+    /// </summary>
+    public static bool Demo { get; set; } = true;
+
+    /// <summary>The same switch as the <c>demo</c> uniform <see cref="SkyGlsl"/> declares.</summary>
+    public static float DemoUniform => Demo ? 1f : 0f;
+
+    /// <summary>
     /// The sky as a GLSL function, shared so water reflects exactly the sky that gets drawn rather
     /// than an approximation of it. Covers the gradient and the sun's broad halo; the sharp disc
     /// belongs to <see cref="SkyLayer"/> alone, because a mirrored disc aliases badly on water and a
     /// specular highlight reads better anyway.
     /// </summary>
     /// <remarks>Every program pasting this block that also calls <c>applyHaze</c> must set the two
-    /// fog uniforms - see <see cref="SetFogUniforms"/>. Left at their zero defaults they disable the
+    /// fog uniforms - see <see cref="SetSkyUniforms"/>. Left at their zero defaults they disable the
     /// fog entirely, which is visible enough not to ship by accident.</remarks>
     public static string SkyGlsl { get; } =
         $$"""
@@ -108,6 +118,10 @@ public static class SceneLighting
         uniform vec3 fogSetup;
         uniform vec3 fogTint;
 
+        // The presentation switch, declared once here because every surface shader pastes this
+        // block. Uniform across the draw, so the branches it guards cost nothing to take.
+        uniform float demo;
+
         vec3 skyColour(vec3 ray, vec3 sunDirection)
         {
             vec3 sky = ray.z >= 0.0
@@ -119,11 +133,11 @@ public static class SceneLighting
         // The authored linear fog, with one editor liberty kept: dust sits in the low air, so the
         // haze thins with altitude and peaks rise out of it. Every surface in the scene has to run
         // this same function or it will visibly float out of the haze the rest of the world sits in.
-        vec3 applyHaze(vec3 colour, float viewDistance, float height, float haze)
+        vec3 applyHaze(vec3 colour, float viewDistance, float height)
         {
             float fog = clamp((viewDistance - fogSetup.x) * fogSetup.y, 0.0, 1.0) * fogSetup.z;
             fog *= exp(-max(height - 30.0, 0.0) / 140.0);
-            return mix(colour, fogTint, clamp(fog * haze, 0.0, 1.0));
+            return mix(colour, fogTint, clamp(fog, 0.0, 1.0));
         }
         """;
 
@@ -240,6 +254,14 @@ public static class SceneLighting
         const vec3 ambientGround = vec3({{Glsl(AmbientGround)}});
         const float specularStrength = {{Glsl(SpecularStrength)}};
 
+        // The whole of the shading with the presentation off: one directional term over a constant
+        // ambient, so a slope still reads as a slope. Shared for the same reason shadeSurface is -
+        // the ground and the models drifting apart is the bug this file exists to prevent.
+        vec3 shadeFlat(vec3 albedo, float sunAmount)
+        {
+            return albedo * (0.30 + 0.70 * sunAmount);
+        }
+
         // sunAmount is how much sun reaches this fragment with N.L already folded in, because the
         // callers answer that differently: a mesh takes max(dot(n, L), 0), the terrain multiplies
         // that by its baked shadow. Everything downstream - including whether a highlight is
@@ -271,10 +293,18 @@ public static class SceneLighting
         }
         """;
 
-    /// <summary>Sets the two fog uniforms <see cref="SkyGlsl"/> declares, from the current world's
+    /// <summary>Sets the three uniforms <see cref="SkyGlsl"/> declares, from the current world's
     /// authored values. Callers pass locations they resolved on their own program.</summary>
-    public static void SetFogUniforms(int fogSetupLocation, int fogTintLocation)
+    public static void SetSkyUniforms(int demoLocation, int fogSetupLocation, int fogTintLocation)
     {
+        OpenTK.Graphics.OpenGL4.GL.Uniform1(demoLocation, DemoUniform);
+
+        // Nothing reads the fog with the presentation off - applyHaze is behind the same switch.
+        if (!Demo)
+        {
+            return;
+        }
+
         WorldEnvironment fog = Fog;
         float range = MathF.Max(fog.FogEnd - fog.FogStart, 1f);
         OpenTK.Graphics.OpenGL4.GL.Uniform3(
