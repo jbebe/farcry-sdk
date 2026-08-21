@@ -12,7 +12,8 @@ from fc2fmt.mesh import extract, part_name
 from fc2fmt.skeleton import SkeletonFile
 from fc2fmt.xbg import EMPTY_SLOT, XbgFile
 
-from . import convert
+from . import convert, materials
+from .resolve import find_root, game_files
 
 # Custom properties carried so an export can rebuild what it did not author.
 PROP_NODE_HASH = "fc2_node_hash"
@@ -58,16 +59,21 @@ def build_armature(model, name, collection):
     return obj
 
 
-def _material(cache, path):
+def _material(cache, path, files):
     if path not in cache:
         material = bpy.data.materials.new(os.path.basename(path.replace("\\", "/")) or "material")
         material[PROP_MATERIAL] = path
         material.use_nodes = True
+        if files is not None:
+            try:
+                materials.build(material, path, files, cache.setdefault("_images", {}))
+            except Exception as error:
+                print("fc2: material %s: %s" % (path, error))
         cache[path] = material
     return cache[path]
 
 
-def build_part(part, model, collection, materials, armature):
+def build_part(part, model, collection, material_cache, armature, files):
     mesh = bpy.data.meshes.new(part.full_name)
     mesh.from_pydata(part.positions, [], [convert.triangle(t) for t in part.triangles])
     mesh.update()
@@ -87,7 +93,7 @@ def build_part(part, model, collection, materials, armature):
     if part.normals:
         mesh.normals_split_custom_set_from_vertices(part.normals)
 
-    mesh.materials.append(_material(materials, part.material))
+    mesh.materials.append(_material(material_cache, part.material, files))
     obj = bpy.data.objects.new(part.full_name, mesh)
     obj[PROP_PART] = part.name
     obj[PROP_LOD] = part.lod
@@ -127,20 +133,26 @@ def _folded(model, name):
     return next((n for n in model.nodes if n.name.lower() == wanted), None)
 
 
-def load(path, lod=0, with_armature=True):
-    """Import one .xbg, plus its sibling _ref.skeleton when one is present."""
+def load(path, lod=0, with_armature=True, with_textures=True, game_root=None):
+    """Import one .xbg, resolving its materials against the surrounding install."""
     model = XbgFile.parse(open(path, "rb").read())
     name = os.path.splitext(os.path.basename(path))[0]
     collection = bpy.data.collections.new(name)
     bpy.context.scene.collection.children.link(collection)
 
+    files = None
+    if with_textures:
+        root = game_root or find_root(path)
+        files = game_files(root) if root else None
+
     armature = build_armature(model, name, collection) if with_armature else None
-    materials = {}
+    cache = {}
     # Without an armature there is nothing to parent to, so bake the placement
     # into the vertices instead.
-    parts = [build_part(part, model, collection, materials, armature)
+    parts = [build_part(part, model, collection, cache, armature, files)
              for part in extract(model, lod, place=armature is None)]
-    return {"model": model, "collection": collection, "armature": armature, "parts": parts}
+    return {"model": model, "collection": collection, "armature": armature,
+            "parts": parts, "files": files}
 
 
 def load_skeleton(path):

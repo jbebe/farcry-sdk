@@ -24,13 +24,26 @@ class FC2_OT_import_xbg(bpy.types.Operator, ImportHelper):
                      description="Which detail level to import")
     with_armature: BoolProperty(name="Build armature", default=True,
                                 description="Create bones from the model's nodes")
+    with_textures: BoolProperty(
+        name="Load textures", default=True,
+        description="Resolve each material's .xbm and load the .xbt textures it names")
+    game_root: StringProperty(
+        name="Game root", default="", subtype="DIR_PATH",
+        description="Where to look for materials and textures; found from the "
+                    "model's own path when left empty")
 
     def execute(self, context):
         try:
-            result = import_xbg.load(self.filepath, self.lod, self.with_armature)
+            result = import_xbg.load(self.filepath, self.lod, self.with_armature,
+                                     self.with_textures, self.game_root or None)
         except Exception as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
+        if self.with_textures and not result["files"]:
+            self.report({"WARNING"},
+                        "Imported %d parts, but no game root was found for textures"
+                        % len(result["parts"]))
+            return {"FINISHED"}
         self.report({"INFO"}, "Imported %d parts" % len(result["parts"]))
         return {"FINISHED"}
 

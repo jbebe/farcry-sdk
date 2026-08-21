@@ -25,9 +25,10 @@ per part. Most of a `.mab` is its keyframe payload, which is still carried throu
 `tests/invariants.py` covers what a round trip cannot, and `roundtrip.py --coverage` prints the
 opaque share so the two numbers stay side by side.
 
-**What works today**: importing a shipped `.xbg` into Blender — parts, LODs, materials, UVs, vertex
-colours, normals, an armature from the nodes, rigid parts on their pivots, and skin weights as vertex
-groups. Export is not written yet, and neither is `.mab` keyframe authoring.
+**What works today**: importing a shipped `.xbg` into Blender — parts, LODs, UVs, vertex colours,
+normals, an armature from the nodes, rigid parts on their pivots, skin weights as vertex groups, and
+**textures**, by resolving each material through its `.xbm` to the `.xbt` files it names. Export is
+not written yet, and neither is `.mab` keyframe authoring.
 
 ## Layout
 
@@ -40,7 +41,9 @@ groups. Export is not written yet, and neither is `.mab` keyframe authoring.
 | `fc2fmt/transform.py` | 4x4 helpers, so node world transforms need no `mathutils` |
 | `fc2fmt/skeleton.py` | `.skeleton` (`LKS`) bones, constraints, anim handles |
 | `fc2fmt/mab.py` | `.mab` header, bone bitmasks, the smallest-three quaternion codec |
-| `addon/` | The Blender add-on: `convert.py` holds every Dunia-to-Blender convention |
+| `fc2fmt/xbm.py` | `.xbm` material: texture slots, tiling, tint colours |
+| `fc2fmt/xbt.py` | `.xbt` texture: strips the header off the DDS payload Blender loads |
+| `addon/` | The Blender add-on: `convert.py` holds every Dunia-to-Blender convention, `materials.py` rebuilds the Generic shader, `resolve.py` finds assets on disk |
 | `tests/_corpus.py` | Corpus location and the skip-when-absent helper the scripts share |
 | `tests/roundtrip.py` | Round-trips every retail file of a format; `--coverage` reports the opaque share |
 | `tests/invariants.py` | Checks decoded meaning: palettes index real bones, derived values recompute to what shipped |
@@ -129,6 +132,14 @@ lifts a character off the floor.
 **Dunia and Blender are both Z-up, so geometry needs no axis change.** The file winds clockwise
 (D3D) in 113 of 113 sampled meshes, so triangles are reversed on import, and V is flipped. Nothing
 rotates the armature — the third-party importer's 180° Z rotation has no support in the data.
+
+**A model's own texture is usually a mask, not its colour.** A Dunia surface is two shared tiling
+detail maps blended by the green channel of a per-model mask, each tinted by its own colour, with the
+blue channel choosing how far layer 1's tint moves from `DiffuseColorBase` towards `DiffuseColor1`.
+The AK-47's `ak47_state01_m.xbt` is that mask; its wood and metal come from
+`graphics\_textures\diffuse\`. Applying `DiffuseColor1` flat instead of lerping from the base leaves
+everything washed out. `.xbm` is the same chunk container as `.xbg`, with the material in its `LTMD`
+chunk — 2,379 of 2,379 shipped materials parse, and 2,370 name an albedo.
 
 **`.mab` bitmasks are indexed by `.skeleton` bone id**, and a bone's slot inside a section is the
 popcount of the mask below its id. Verified by resolving 303,067 mask bits against

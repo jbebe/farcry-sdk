@@ -46,6 +46,17 @@ def check_bounds(model, parts):
     return errors
 
 
+def check_textures(parts, files):
+    """Every part should end up with a material backed by a real image."""
+    if not files:
+        return fail("no game root found, so no textures were resolved")
+    missing = [obj.name for obj in parts
+               if not any(node.type == "TEX_IMAGE" and node.image
+                          for slot in obj.data.materials if slot and slot.node_tree
+                          for node in slot.node_tree.nodes)]
+    return fail("no image on %d parts: %s" % (len(missing), missing[:3])) if missing else 0
+
+
 def main():
     if not present():
         print("corpus not present, skipping")
@@ -76,6 +87,7 @@ def main():
         errors += fail("every AK-47 part should carry UVs")
 
     errors += check_bounds(model, parts)
+    errors += check_textures(parts, result["files"])
 
     # The muzzle bone must sit at the far end of the barrel, which is the
     # model's maximum on the forward axis.
@@ -139,6 +151,7 @@ def check_character():
         errors += fail("%d vertices do not have weights summing to 1" % off)
 
     errors += check_bounds(model, parts)
+    errors += check_textures(parts, result["files"])
 
     groups = len({g.name for obj in parts for g in obj.vertex_groups})
     print("character: parts %d  bones %d  weighted groups %d" % (len(parts), len(bones), groups))
