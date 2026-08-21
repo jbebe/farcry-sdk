@@ -144,6 +144,40 @@ A weapon rig is much smaller. `weapons\primary\ak47\ak47_ref.skeleton` is 8 bone
 `FRAME`, `CLIP`, `SLIDE`, `FX_FIRE`, `FX_CASING`, `ACCESSORY`, `Weapon_Break` — with no anim handles
 and translation animated on ids 0, 2, 3 and 6.
 
+## The bone tree here is not the one in the `.xbg`
+
+A character's `.xbg` carries its own node tree, and for most bones the two agree. On `pelvis_ref`
+four do not — the mid-joint helpers:
+
+| Bone | Parent in the `.xbg` | Parent here |
+|---|---|---|
+| `L Knee` | `Pelvis` | `L Thigh` |
+| `R Knee` | `Pelvis` | `R Thigh` |
+| `L Elbow` | `Pelvis` | `L UpperArm` |
+| `R Elbow` | `Pelvis` | `R UpperArm` |
+
+The engine animates on **this** tree, so a tool that builds its rig from the `.xbg` and then plays a
+clip on it leaves each helper hanging off the pelvis. The helper stays by the hip while the leg
+swings, and because it deforms the mesh like any other bone, the skin between it and the thigh
+stretches into spikes at the knee. Measured on a sprint clip, the worst edge stretch around those
+bones falls from **10.5x to 2.5x** once the rig is put on the skeleton's tree — below the 5.3x the
+rest of the character reaches in the same clip.
+
+`Pelvis` also differs, harmlessly: the `.xbg` puts a `Root` node above it and the skeleton has none.
+
+## Sixteen bones are solved, not animated
+
+Every bone with `m_eOriConst != 0` is derived by the engine, and no clip keys any of them. On
+`pelvis_ref` that is the four helpers above, at `m_eOriConst 2` blending the bones above and below
+them at 0.5/0.5, and twelve arm twist bones at `m_eOriConst 3` distributing a joint's roll at
+weights 1.0, 0.75, 0.5 and 0.25 along each chain.
+
+The fields are read straight out of `SerializeBone`, but **where the engine evaluates them has not
+been traced** — neither `GetJointRotationsAtTime` nor `GenerateOrientationForJoint` touches them, and
+the latter falls back to `m_ChildToParent` for any bone a clip does not key. Reading them as
+world-space blends and applying that to a rig was tried and measurably made the deformation worse, so
+the semantics should be considered open.
+
 ## Tooling
 
 `tools/BlenderFC2/fc2fmt/skeleton.py` reads and writes the format; `tools/BlenderFC2/tests/roundtrip.py

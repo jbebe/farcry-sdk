@@ -10,27 +10,29 @@ under Blender's interpreter for the add-on.
 
 | Format | What it is | Round trip | Bytes still opaque |
 |---|---|---|---|
-| `.xbg` | mesh container: geometry, LODs, nodes, materials, skinning | **3,133 / 3,133** | **0.12%** |
+| `.xbg` | mesh container: geometry, LODs, nodes, materials, skinning | **3,133 / 3,133** | **0.00%** |
 | `.skeleton` | rig: bones, constraints, weapon sockets | **81 / 81** | **0%** |
-| `.mab` | animation bank: rotation tracks and events | **4,436 / 4,436** | 99.6% |
+| `.mab` | animation bank: rotation tracks and events | **4,436 / 4,436** | 21% |
 
 Round trip means `write(parse(f)) == f`, with the writer regenerating each structure — chunk sizes,
 payload sizes, counts, padding, and the derived duplicates inside a cluster header — rather than
 echoing it.
 
 **Read the second column with the first.** A round trip proves the *framing*; bytes kept as an opaque
-blob pass it for free. `.skeleton` is fully decoded. For `.xbg`, vertex and index streams are decoded
-and re-encoded losslessly (proven per buffer across the corpus), and every LOD's geometry blocks can
-be regenerated from scratch and still match. Most of a `.mab` is its keyframe payload, which is still
-carried through untouched.
-`tests/invariants.py` covers what a round trip cannot, and `roundtrip.py --coverage` prints the
-opaque share so the two numbers stay side by side.
+blob pass it for free, so `roundtrip.py --coverage` reports what share is blob. `.skeleton` is fully
+decoded. For `.xbg`, vertex and index streams are decoded and re-encoded losslessly, every LOD's
+geometry blocks can be regenerated from scratch and still match, and the only blobs left are the two
+rare chunks — but a handful of words are still read as values without being understood, so 0.00%
+means "nothing is carried blind", not "everything is explained". What remains opaque in a `.mab` is
+its event chain, which is FCB binary, and the six section slots nothing dereferences.
+`tests/invariants.py` covers what a round trip cannot.
 
 **What works today**: importing a shipped `.xbg` into Blender — parts, LODs, UVs, vertex colours,
 normals, an armature from the nodes, rigid parts on their pivots, skin weights as vertex groups, and
 **textures**, by resolving each material through its `.xbm` to the `.xbt` files it names. The same
 model can be packed into a self-contained [bundle](#model-bundles) and imported with no game install
-present. [Export](#export) writes edited parts back. `.mab` keyframe authoring is not written.
+present. [Export](#export) writes edited parts back. A `.mab` clip loads onto the armature as a
+Blender Action — see [Animation](#animation).
 
 ## Layout
 
@@ -44,12 +46,12 @@ present. [Export](#export) writes edited parts back. `.mab` keyframe authoring i
 | `fc2fmt/mesh.py` | Assembles the container into per-part meshes with their vertices localised |
 | `fc2fmt/transform.py` | 4x4 helpers, so node world transforms need no `mathutils` |
 | `fc2fmt/skeleton.py` | `.skeleton` (`LKS`) bones, constraints, anim handles |
-| `fc2fmt/mab.py` | `.mab` header, bone bitmasks, the smallest-three quaternion codec |
+| `fc2fmt/mab.py` | `.mab` header, bone bitmasks, the smallest-three quaternion codec, sparse keyframe groups |
 | `fc2fmt/xbm.py` | `.xbm` material: texture slots, tiling, tint colours, and the variant an `.xbg` embeds |
 | `fc2fmt/xbt.py` | `.xbt` texture: strips the header off the DDS payload Blender loads |
 | `fc2fmt/assets.py` | Turns a game-relative path into bytes, against an extracted install |
 | `fc2fmt/bundle.py` | `.fc2model`: one model and every file it needs, in one zip |
-| `addon/` | The Blender add-on: `convert.py` holds every Dunia-to-Blender convention, `materials.py` rebuilds the Generic shader, `export_xbg.py` writes parts back into their source model |
+| `addon/` | The Blender add-on: `convert.py` holds every Dunia-to-Blender convention, `materials.py` rebuilds the Generic shader, `export_xbg.py` writes parts back, `import_mab.py` builds an Action |
 | `tests/_corpus.py` | Corpus location and the skip-when-absent helper the scripts share |
 | `tests/roundtrip.py` | Round-trips every retail file of a format; `--coverage` reports the opaque share |
 | `tests/rebuild.py` | Regenerates every LOD's geometry blocks from scratch and requires the file back |
@@ -59,11 +61,12 @@ present. [Export](#export) writes edited parts back. `.mab` keyframe authoring i
 | `tests/quatcheck.py` | Scores the quaternion component layout against the skeleton rest pose |
 | `tests/blender_import.py` | Imports the AK-47, a character and a bundle inside Blender, headless |
 | `tests/blender_export.py` | Imports and re-exports inside Blender, requiring the source bytes back |
+| `tests/blender_anim.py` | Poses a character from a clip and reads the rotations back off the rig |
 | `tests/render_preview.py` | Renders an imported model to a PNG, for looking at what the importer built |
 | `tests/bundle.py` | Builds bundles and resolves each model's whole reference graph from the bundle alone |
 | `tests/probe.py` | Dumps one file's chunk layout when a round trip fails |
 | `bundle_model.py` | Packs a model and its dependencies into a `.fc2model` |
-| `open_model.py` / `.cmd` | Opens a model in Blender's UI, quoting-safe in cmd and PowerShell |
+| `open_model.py` / `.cmd` | Opens a model, and optionally a clip, in Blender's UI; quoting-safe in cmd and PowerShell |
 
 ## Model bundles
 
@@ -148,6 +151,49 @@ and re-encoding those moves about half of them by one step. The original directi
 along in an `fc2_normal` attribute, which export prefers and falls back from when a mesh has been
 rebuilt.
 
+## Animation
+
+**File ▸ Import ▸ Far Cry 2 Animation (.mab)** loads a clip onto the selected armature as an Action.
+
+A clip stores rotations sparsely, in groups of eight frames: per group, each track's rotation at the
+group's first frame, then a presence byte per track saying which of the next seven subframes carry a
+key, then those keys. The full layout is in
+[`.mab`](../../docs/docs/file-formats/mab.md#the-keyframe-block); walking it that way, the groups
+tile every shipped clip exactly — **3,880 clips, 63,579 groups, 14,930,196 keys**, none over- or
+under-running.
+
+Two things a reader has to get right or the pose comes out mangled:
+
+- **A clip names bones by their id in the `.skeleton` it was authored for**, not by name, so that
+  file is needed to map ids to names. The importer finds `pelvis_ref.skeleton` up the tree, or a
+  `<model>_ref.skeleton` beside the model.
+- **The `.xbg` bone tree is not the tree clips animate.** On `pelvis_ref` four bones differ: the
+  mid-joint helpers `L/R Knee` and `L/R Elbow` hang off the `Pelvis` in the mesh but off the thigh
+  and upper arm in the skeleton. Animate them on the mesh's tree and a knee helper stays by the hip
+  while the leg swings, tearing the mesh into spikes — the knee artefact the third-party importer
+  also hits. Reparenting keeps every head, tail and roll, so the bind pose is untouched; it takes
+  the worst edge stretch around those bones from **10.5x to 2.5x**, which is less than the 5.3x the
+  rest of the character reaches on the same sprint.
+- **A rotation replaces the bone's rest rotation rather than adding to it**, so the pose bone gets
+  `rest⁻¹ · clip`, and the armature is built with each bone oriented like its `.xbg` node instead of
+  aimed at its children. Aiming at children bakes in a twist that no later correction removes.
+
+`tests/blender_anim.py` checks this from the other side: it evaluates the posed rig and reads each
+bone's rotation relative to its parent back out, requiring the quaternion the file stores. Worst
+difference over a whole clip is `2.2e-07`.
+
+Weapon clips are character clips. The 57 files under `animations/weapons/primary/ak47/` animate the
+player's arms on `pelvis_ref` (119 bones); they do not touch the gun's own eight-bone rig.
+
+Sixteen bones carry an orientation constraint and no clip ever keys them — those four helpers plus
+twelve arm twists. `fc2fmt.skeleton` reads the fields (`m_iBone1`/`m_flWeight1` and friends), but
+where the engine evaluates them has not been traced, so nothing here poses them and they simply
+follow their parents. Reading them as world-space blends was tried and measurably made the mesh
+worse, so it is not shipped.
+
+Not written: **authoring** a clip. Reading is solved, but nothing writes keys back, and translation
+tracks are still undecoded — `m_fAnimatedTranslation` is set only on `Pelvis` and `Camera`.
+
 ## Running the tests
 
 They need the retail export under `tmp/gamefiles/` and skip cleanly without it.
@@ -170,6 +216,7 @@ The Blender test runs headless against the real add-on:
 ```
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools/BlenderFC2/tests/blender_import.py
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools/BlenderFC2/tests/blender_export.py
+& "C:\Programs\Blender 5.2\blender.exe" -b --python tools/BlenderFC2/tests/blender_anim.py
 ```
 
 To look at a model rather than assert about it — worth doing, since a part can sit in the wrong
@@ -185,11 +232,18 @@ To open one interactively, with the model already loaded — works the same in c
 tools\BlenderFC2\open_model.cmd tmp\gamefiles\worlds\worlds\graphics\weapons\primary\ak47\ak47.xbg
 ```
 
+A character with a clip already on it — arguments after the model are recognised by what they are, a
+number being the LOD and a `.mab` being the clip:
+
+```
+tools\BlenderFC2\open_model.cmd <character.xbg> 0 <clip.mab>
+```
+
 Set `BLENDER` to point at a different executable. Or call Blender directly, which is the same thing
 without the wrapper:
 
 ```
-"C:\Programs\Blender 5.2\blender.exe" --python tools\BlenderFC2\open_model.py -- <model.xbg> [lod]
+"C:\Programs\Blender 5.2\blender.exe" --python tools\BlenderFC2\open_model.py -- <model.xbg> [lod] [clip.mab]
 ```
 
 Avoid `--python-expr` for this: a one-line expression full of quotes and semicolons is tokenised

@@ -16,7 +16,7 @@ import traceback
 
 from _corpus import CORPUS, describe_difference, find, require
 
-from fc2fmt.mab import MabFile
+from fc2fmt.mab import SECTION_CONSTANT, SECTION_KEYFRAMES, MabFile
 from fc2fmt.skeleton import SkeletonFile
 from fc2fmt.xbg import XbgFile
 
@@ -30,14 +30,17 @@ FORMATS = {
 def opaque_bytes(model):
     """Bytes nothing in fc2fmt can interpret.
 
-    An .xbg's vertex and index blocks are stored as bytes but fc2fmt.vertex
-    decodes and re-encodes them losslessly, so they do not count here. What
-    remains is the ten undetermined floats per part and any unknown chunk.
+    Blocks stored as bytes but decoded and re-encoded elsewhere do not count: an
+    .xbg's vertex and index data goes through fc2fmt.vertex, and a .mab's
+    constant and keyframe sections through fc2fmt.mab. What is left is the
+    chunks and sections still carried verbatim.
     """
     if isinstance(model, XbgFile):
-        return 40 * len(model.skin_descs) + sum(len(c.raw) for c in model.chunks)
+        return sum(len(c.raw) for c in model.chunks)
     if isinstance(model, MabFile):
-        return len(model.opaque) + len(model.body_tail)
+        decoded = sum(len(model.section(index) or b"")
+                      for index in (SECTION_CONSTANT, SECTION_KEYFRAMES))
+        return len(model.opaque) + len(model.body_tail) - decoded
     return 0
 
 

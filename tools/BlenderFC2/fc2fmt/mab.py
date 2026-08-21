@@ -1,8 +1,7 @@
 # Reader and writer for `.mab`, the Dunia animation bank.
 #
-# Layout is documented in docs/docs/file-formats/mab.md. The keyframe block's
-# per-track packing is not decoded, so every byte outside the fields below is
-# preserved verbatim.
+# Layout is documented in docs/docs/file-formats/mab.md. Everything outside the
+# fields below is preserved verbatim, so a parsed file writes back unchanged.
 
 import struct
 
@@ -32,13 +31,17 @@ QUAT_SCALE = 4.315969e-05
 QUAT_BIAS = 0.70710677
 QUAT_BYTES = 6
 
+# Keyframes are grouped in eights, one presence byte per track per group.
+GROUP_SHIFT = 3
+GROUP_FRAMES = 1 << GROUP_SHIFT
+
 # Where the three stored components and the recovered one land in xyzw, keyed by
 # the sign bits of the first two words as (first << 1) | second.
 ENGINE_LAYOUT = ((3, 0, 1, 2), (0, 1, 3, 2), (0, 3, 1, 2), (0, 1, 2, 3))
 
 _PACKED_QUAT = struct.Struct("<HHh")
 _U16 = struct.Struct("<H")
-_KEYFRAME_HEADER = struct.Struct("<HHI")
+_KEYFRAME_HEADER = struct.Struct("<HHHH")
 
 
 def unpack_quaternion(first, second, third, layout=ENGINE_LAYOUT):
@@ -148,11 +151,50 @@ class MabFile:
         return rotations
 
     def keyframe_header(self):
-        """(quantised count, frame count, track count) for the keyframe block."""
+        """(track count, last frame, frames per second) for the keyframe block."""
         block = self.section(SECTION_KEYFRAMES)
-        if not block or len(block) < 8:
+        if not block or len(block) < _KEYFRAME_HEADER.size:
             return None
-        return _KEYFRAME_HEADER.unpack_from(block, 0)
+        tracks, last_frame, rate, _spare = _KEYFRAME_HEADER.unpack_from(block, 0)
+        return tracks, last_frame, rate
+
+    def keyframe_tracks(self, layout=ENGINE_LAYOUT):
+        """bone id -> [(frame, quaternion)], read out of the sparse groups.
+
+        Frames are grouped in eights. Each group stores, per track in bone-id
+        order, the rotation at its first frame; then a presence byte per track,
+        padded to an even count; then the rotations for the subframes those
+        bytes name, again in track order. Bit i of a presence byte means a key
+        at subframe i + 1, and bit 7 is the group's first frame, which is always
+        present and stored up front.
+        """
+        block = self.section(SECTION_KEYFRAMES)
+        bones = self.keyframed_bones()
+        header = self.keyframe_header()
+        if not block or not bones or not header:
+            return {}
+        tracks, last_frame, _rate = header
+        if tracks != len(bones):
+            raise ValueError("%d tracks for %d bones in the keyframe mask"
+                             % (tracks, len(bones)))
+        groups = (last_frame >> GROUP_SHIFT) + 1
+        offsets = struct.unpack_from("<%di" % groups, block, _KEYFRAME_HEADER.size)
+
+        out = {bone: [] for bone in bones}
+        for group, start in enumerate(offsets):
+            presence = start + tracks * QUAT_BYTES
+            cursor = presence + ((tracks + 1) & ~1)
+            first = group << GROUP_SHIFT
+            for slot, bone in enumerate(bones):
+                out[bone].append(
+                    (first, read_quaternion(block, start + slot * QUAT_BYTES, layout)))
+                byte = block[presence + slot]
+                for bit in range(GROUP_FRAMES - 1):
+                    if byte >> bit & 1:
+                        out[bone].append(
+                            (first + bit + 1, read_quaternion(block, cursor, layout)))
+                        cursor += QUAT_BYTES
+        return out
 
     def events(self):
         return self.section(SECTION_EVENTS)

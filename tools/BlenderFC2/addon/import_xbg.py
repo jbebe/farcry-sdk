@@ -48,6 +48,12 @@ def build_armature(model, name, collection):
         bone.head = heads[index]
         children = [heads[c] for c, other in enumerate(model.nodes) if other.parent == index]
         bone.tail = convert.bone_tail(bone.head, children)
+        # Orient the bone the way the node is, not at its children. The rest
+        # pose then matches Dunia's, so a clip's local rotation drives the pose
+        # bone directly; aiming bones at children would bake in a twist.
+        length = bone.length
+        bone.matrix = convert.matrix(matrices[index])
+        bone.length = length
         edit_bones.append(bone)
     for index, node in enumerate(model.nodes):
         if node.parent < len(edit_bones):

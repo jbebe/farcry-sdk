@@ -34,12 +34,39 @@ def main():
         for bone_id in clip.keyframed_bones():
             animated[by_id[bone_id].name if bone_id in by_id else "?%d" % bone_id] += 1
         stats["keyframe header present" if clip.keyframe_header() else "no keyframe block"] += 1
+        worst_norm = max(worst_norm, check_tracks(clip, stats))
 
     for key, value in sorted(stats.items()):
         print("  %-24s %d" % (key, value))
     print("  worst |norm-1|          %.2e" % worst_norm)
     print("most animated bones:", [name for name, _ in animated.most_common(12)])
     return 0 if not stats["BONE OUT OF RANGE"] and worst_norm < 1e-3 else 1
+
+
+def check_tracks(clip, stats):
+    """Every key must decode, land inside the clip and arrive in frame order."""
+    header = clip.keyframe_header()
+    if not header:
+        return 0.0
+    _tracks, last_frame, rate = header
+    # The engine indexes the group table with time * rate, so the clip cannot
+    # run past the last frame that table describes.
+    if rate and clip.duration * rate > last_frame + 1:
+        stats["DURATION PAST THE LAST FRAME"] += 1
+
+    worst = 0.0
+    for frames in clip.keyframe_tracks().values():
+        previous = -1
+        for frame, quat in frames:
+            stats["keys"] += 1
+            if quat is None:
+                stats["KEY FAILED TO DECODE"] += 1
+                continue
+            if frame <= previous:
+                stats["KEYS OUT OF ORDER"] += 1
+            previous = frame
+            worst = max(worst, abs(sum(c * c for c in quat) ** 0.5 - 1.0))
+    return worst
 
 
 if __name__ == "__main__":
