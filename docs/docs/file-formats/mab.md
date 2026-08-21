@@ -98,7 +98,7 @@ the file — so a section's extent is found from the next larger offset, not the
 | 3 | `+0x84` | keyframed rotations — see [The keyframe block](#the-keyframe-block) | 11,261 |
 | 4 | `+0x88` | constant translations | 11,261 |
 | 5 | `+0x8C` | animated translations | 11,261 |
-| 6 | `+0x90` | tag table | 3,582 |
+| 6 | `+0x90` | tag table — one record per chained clip | 3,582 |
 | 7 | `+0x94` | event chain | 2,669 |
 | 8 | `+0x98` | the next skeleton's clip | 11,261 |
 
@@ -134,24 +134,53 @@ Every array section opens with the same eight bytes:
 Sizing every one of these sections from its header and mask, the entries always end inside the
 section, with only alignment padding to spare.
 
-### Tag table and event chain
+### Tag table — the participant index
 
-Section 6 is `u32 count` followed by fixed 172-byte records. Only part of a record is traced:
+Section 6 is `u32 count` followed by fixed 172-byte records, **one per chained clip**. It is what
+turns the chain from a list of anonymous clips into a scene: each record names the thing its clip
+animates and the bone that thing hangs from.
 
 ```
-+0x00  u8    kind — 0, 1, 6, 7, 8 and 9 occur
++0x00  u8    kind — 1, 6, 7, 8 and 9 occur
 +0x02  s16   id
-+0x0C  i32   offset to an embedded clip, relative to the record; 0 when there is none
++0x0C  i32   offset to that participant's clip, relative to the record
 +0x10  f32   start time
 +0x14  f32   end time
-+0x18  i32   matched against the anim node's own parameter
++0x18  name       what is being animated — 'ak47', 'centerscene', 'Case_Top01'
++0x3C  parent     the bone on this clip's skeleton that it hangs from
++0x60  (unused)   zero in every shipped record
++0x84  reference  set only on a record that tracks something already in the scene
 +0xA8  ptr   the engine writes the record's address here; zero on disk
 ```
 
-`EvaluateSingleAnimNode` scans this table for a record whose kind and id match the node and whose
-time range contains the current time, and can take joint rotations or the whole trajectory from the
-clip embedded at `+0x0C` instead of from the clip that owns the table. The remaining 140 bytes are
-not decoded.
+Each of the four name slots is a `u32` CRC32 followed by 32 NUL-padded bytes. The hash matches its
+own text in all four slots of all 6,825 records, the empty slot included — `CRC32("") = 0`.
+
+The record count equals the chain length in every bank, and following `+0x0C` from record *i*
+lands on chained clip *i* — **6,825 of 6,825, no misses**. `EvaluateSingleAnimNode` reaches a
+participant's clip exactly this way, so the tag table, not the chain, is the authoritative link.
+
+**A participant's clip is expressed in the frame of the bone `parent` names.** Measured on the
+third-person AK-47 reload, the rifle's own root moves within ±0.1 m of `R Hand` while its `CLIP`
+bone travels a metre as the magazine is dropped.
+
+Where participants hang, over the whole retail set:
+
+| Parent bone | Records |
+|---|---|
+| `R Hand` | 2,545 |
+| `L Hand` | 1,817 |
+| *(none — a free scene anchor)* | 1,699 |
+| `Camera` | 249 |
+| `Spine2` | 118 |
+
+**`reference` is what separates a prop from a second track on one.** It is empty in all 3,432 kind-1
+records and set in all 1,455 kind-6, 192 kind-8 and 231 kind-9 records. A reload names its rifle once
+with no reference — that record's clip drives the whole eight-bone rig — and again once per magazine
+with one, each of those addressing only a root bone. Instantiating a model for every record would
+put three rifles in the scene instead of one.
+
+The remaining 140 bytes of a record are not decoded.
 
 Section 7 is the event chain proper — what `CAnimData::GetEventAtTime`, `GetTimeOfEvent`,
 `GetNearestEvent` and `TriggerGameEvents` read. Nodes are FCB binary instantiated through
@@ -243,15 +272,29 @@ which is required because the engine indexes the group table with `time * rate`.
 
 ## Reading a weapon's animation
 
-The clip a bank holds for a given rig is the first one in the chain whose bone ids all fit that
-skeleton. A character clip addresses ids up to 118, so an 8-bone weapon rig skips past it and lands
-on its own clip; the character rig matches the first clip and stops there. Of the 468 banks filed
-under a weapon, 467 chain a clip that fits that weapon's `_ref.skeleton`.
+Two ways in, depending on what you have.
+
+**From the rig.** The clip a bank holds for a given skeleton is the first in the chain whose bone
+ids all fit it. A character clip addresses ids up to 118, so an 8-bone weapon rig skips past it and
+lands on its own clip; the character rig matches the first clip and stops there. Of the 468 banks
+filed under a weapon, 467 chain a clip that fits that weapon's `_ref.skeleton`.
 
 Loading `1stge_uppb_reload_+000fw_prak4_i1.mab` twice — once against `pelvis_ref.skeleton` and once
 against `ak47_ref.skeleton` — poses 53 character bones from the first clip and all 8 AK-47 bones
 from the second, with `AK47`, `CLIP`, `SLIDE` and `ACCESSORY` carrying the translations, which is
 exactly the four ids `ak47_ref.skeleton` marks translation-animated.
+
+**From the tag table**, which is what the engine does and what a scene needs: walk the records, and
+for each one take its name, the bone in `parent`, and the clip at `+0x0C`. That gives the whole
+scene without guessing — the model to load, where to hang it, and what drives it. A participant name
+is the model's own file name rather than a path, so the path has to be recovered by searching; 29
+of the 30 weapon sockets on `pelvis_ref` have a same-named `.xbg` (`diamondcanister` is the
+exception), and names are not unique across the tree — `mortar` is both a weapon and a kitchen prop.
+
+:::info[Two entries share a name on purpose]
+A reload's records are all called `ak47`, because the magazine belongs to the same weapon. Use
+`reference` to tell them apart, not the name.
+:::
 
 ## What is still open
 
@@ -266,15 +309,21 @@ the four bitmasks, both constant arrays, the sparse rotation keyframes, the dens
 and the trajectory — 97% of the bytes in the retail set, with the tag and event blocks the remainder.
 `tools/BlenderFC2/tests/roundtrip.py mab` re-writes all 4,436 shipped files and requires the bytes
 back unchanged; `tests/invariants.py` sizes every array section in all 11,261 clips from its own
-header and mask and requires the entries to end inside it; `tests/mabcheck.py` decodes every key in
-the character clips and checks each rotation is unit length, arrives in frame order, and that no
-translation lands on a bone the skeleton holds fixed.
+header and mask and requires the entries to end inside it, and checks the tag table against the
+chain — record count, the clip each record reaches, and all four name hashes; `tests/mabcheck.py`
+decodes every key in the character clips and checks each rotation is unit length, arrives in frame
+order, and that no translation lands on a bone the skeleton holds fixed.
 
 `tools/BlenderFC2/addon/import_mab.py` turns a clip into a Blender Action. Because a clip stores a
 bone's transform relative to its parent — replacing the rest transform rather than adding to it — the
 pose bone carries `rest⁻¹ · clip`, and the armature has to be built with each bone oriented like its
 `.xbg` node rather than aimed at its children. A pose bone's location is measured in its own rest
-frame, so the offset is rotated into it before being keyed. `tests/blender_anim.py` checks the result
-the other way round: it evaluates the posed rig and reads each bone's rotation and offset relative to
-its parent back out, requiring what the file stores (worst `4.4e-07` on rotation and `2.4e-07` metres
-on offset across four clips, character and weapon).
+frame, so the offset is rotated into it before being keyed.
+
+It also reads the tag table: each participant's model is loaded, posed from its own clip, and
+parented to the bone the record names. Blender parents an object to a bone's *tail*, so the parent
+inverse cancels the bone's length and the prop lands on the head, where the clip's frame is.
+`tests/blender_anim.py` checks all of it the other way round — it evaluates the posed rig and reads
+each bone's rotation and offset relative to its parent back out, requiring what the file stores
+(worst `4.4e-07` on rotation and `2.4e-07` metres on offset across four clips, character and
+weapon), and requires each attached object to sit on its bone with its own track applied on top.

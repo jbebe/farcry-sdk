@@ -86,6 +86,11 @@ class FC2_OT_import_mab(bpy.types.Operator, ImportHelper):
     set_frame_range: BoolProperty(
         name="Set frame range", default=True,
         description="Point the scene's frame range and rate at the clip")
+    with_props: BoolProperty(
+        name="Import attached props", default=True,
+        description="Also import whatever the clip attaches to this rig — the "
+                    "weapon in hand and anything else it animates — parented "
+                    "to the bone the clip names and posed from its own track")
 
     def execute(self, context):
         armature = context.object
@@ -95,17 +100,21 @@ class FC2_OT_import_mab(bpy.types.Operator, ImportHelper):
             self.report({"ERROR"}, "Select the armature to animate")
             return {"CANCELLED"}
         try:
-            result = import_mab.load(self.filepath, armature, self.skeleton or None)
+            result = import_mab.load(self.filepath, armature, self.skeleton or None,
+                                     with_props=self.with_props)
         except Exception as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
         if self.set_frame_range:
             import_mab.apply_to_scene(context.scene, result["clip"])
+        props = ", plus %s" % ", ".join(p["participant"].name for p in result["props"]) \
+            if result["props"] else ""
         if result["unmatched"]:
-            self.report({"WARNING"}, "%d keys on %d bones; %d tracks name no bone here"
-                        % (result["keys"], result["bones"], result["unmatched"]))
+            self.report({"WARNING"}, "%d keys on %d bones%s; %d tracks name no bone here"
+                        % (result["keys"], result["bones"], props, result["unmatched"]))
         else:
-            self.report({"INFO"}, "%d keys on %d bones" % (result["keys"], result["bones"]))
+            self.report({"INFO"}, "%d keys on %d bones%s"
+                        % (result["keys"], result["bones"], props))
         return {"FINISHED"}
 
 

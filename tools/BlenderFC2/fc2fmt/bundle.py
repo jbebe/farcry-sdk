@@ -48,6 +48,9 @@ class Bundle:
         entry = self.entries.get(normalise(game_path))
         return entry.data if entry else None
 
+    def paths(self):
+        return self.entries.keys()
+
     def owned(self):
         return [e for e in self.sorted_entries() if e.role == OWNED]
 
@@ -59,12 +62,24 @@ class Bundle:
         return sum(len(entry.data) for entry in self.entries.values())
 
     @classmethod
-    def build(cls, model_path, source):
-        """Collect a model and everything it references out of `source`."""
+    def build(cls, model_path, source, also=()):
+        """Collect a model and everything it references out of `source`.
+
+        `also` names further models to carry along — the props a clip attaches
+        to this one, so the bundle can play that animation on its own.
+        """
         self = cls(model_path)
-        data = self._pull(source, self.model)
-        if data is None:
+        if self._add_model(source, self.model) is None:
             raise ValueError("no model at %s" % self.model)
+        for extra in also:
+            self._add_model(source, extra)
+        return self
+
+    def _add_model(self, source, model_path):
+        """One model, its materials, its textures and its rig."""
+        data = self._pull(source, model_path)
+        if data is None:
+            return None
         model = XbgFile.parse(data)
         inline = inline_materials(model)
         for material_path in model.materials:
@@ -81,8 +96,8 @@ class Bundle:
                 # Half of all textures keep their top mip in a sibling, and a
                 # bundle without it renders at half resolution on each axis.
                 self._pull(source, xbt.companion(texture_path), optional=True)
-        self._pull(source, self.model[:-4] + SKELETON_SUFFIX, optional=True)
-        return self
+        self._pull(source, model_path[:-4] + SKELETON_SUFFIX, optional=True)
+        return data
 
     @classmethod
     def load(cls, path):

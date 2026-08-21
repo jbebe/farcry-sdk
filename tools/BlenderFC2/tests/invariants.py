@@ -169,6 +169,36 @@ def check_mab(bank, fail):
                 fail("%sconstant rotation for bone %d is not a rotation" % (where, bone_id))
                 break
 
+    check_participants(bank, fail)
+
+
+def _clip_identity(clip):
+    return clip.masks, clip.sections, clip.duration, len(clip.data)
+
+
+def check_participants(bank, fail):
+    """The tag table is the participant index.
+
+    One record per chained clip, each naming the thing it animates and the bone
+    that thing hangs from, and pointing at the clip that drives it. An importer
+    reads the attachment straight out of this, so all three have to hold.
+    """
+    chain = bank.clips()
+    block = bank.section(mab.SECTION_TAGS)
+    pairs = bank.participant_clips()
+    if len(pairs) != len(chain) - 1:
+        fail("%d tag records for %d chained clips" % (len(pairs), len(chain) - 1))
+        return
+    for index, (part, clip) in enumerate(pairs):
+        if _clip_identity(clip) != _clip_identity(chain[index + 1]):
+            fail("tag record %d does not point at chained clip %d" % (index, index + 1))
+        base = mab.TAG_COUNT_BYTES + index * mab.TAG_STRIDE
+        slots = (part.name, part.parent, "", part.reference)
+        for at, name in zip(mab.TAG_NAMES, slots):
+            if mab.tag_hash(block, base + at) != name_hash(name):
+                fail("tag record %d slot %#x holds %r, which is not its hash"
+                     % (index, at, name))
+
 
 def main():
     if not require():

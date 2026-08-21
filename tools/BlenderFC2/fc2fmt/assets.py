@@ -6,7 +6,7 @@
 # install or from a self-contained bundle without knowing which.
 #
 # A source answers `read(game_path)` with bytes, or None when it holds no such
-# file.
+# file, and `paths()` with every game path it holds.
 
 import os
 
@@ -59,8 +59,21 @@ class InstallAssets:
         path = self.entries.get(normalise(game_path))
         return open(path, "rb").read() if path else None
 
+    def paths(self):
+        return self.entries.keys()
+
     def __len__(self):
         return len(self.entries)
+
+
+def find_named(source, name, suffix=".xbg"):
+    """Game paths in a source whose file name is `name` with this suffix.
+
+    A `.mab` names an attached prop the way its file is named rather than by
+    path, so the path has to be recovered from the name.
+    """
+    wanted = "/%s%s" % (name.lower(), suffix)
+    return sorted(path for path in source.paths() if path.endswith(wanted))
 
 
 _cache = {}

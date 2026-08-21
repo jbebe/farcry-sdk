@@ -21,6 +21,7 @@ import bpy
 from mathutils import Quaternion, Vector
 
 from addon import import_mab, import_xbg
+from addon.import_mab import FIRST_FRAME
 from fc2fmt.skeleton import SkeletonFile
 
 CHARACTER = os.path.join(GRAPHICS, "actors", "buddy_andrehyppolite", "andrehyppolite.xbg")
@@ -28,6 +29,7 @@ AK47 = os.path.join(GRAPHICS, "weapons", "primary", "ak47", "ak47.xbg")
 AK47_REF = os.path.join(GRAPHICS, "weapons", "primary", "ak47", "ak47_ref.skeleton")
 CLIPS = os.path.join(GRAPHICS, "characters", "_common", "animations")
 AK47_CLIPS = os.path.join(CLIPS, "weapons", "primary", "ak47")
+THIRD_PERSON_RELOAD = os.path.join(AK47_CLIPS, "3rdge_uppb_reload_nodir_prak4_i1.mab")
 
 # An upper-body clip, which holds its offsets constant; a full-body jump, which
 # drives the Pelvis along a translation track; and the same reload read twice,
@@ -134,6 +136,51 @@ def check(model, skeleton_path, path):
     return errors
 
 
+def check_props():
+    """A clip has to bring in what it attaches, on the bone it names.
+
+    The reload names its rifle once with no reference and again per magazine
+    with one; only the first is a prop, or the scene fills with rifles.
+    """
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    result = import_xbg.load(CHARACTER, lod=0, with_textures=False)
+    armature = result["armature"]
+    loaded = import_mab.load(THIRD_PERSON_RELOAD, armature, PELVIS_REF,
+                             with_props=True, lod=0)
+    props = loaded["props"]
+    modelled = [p for p in props if p["model"]]
+    print("attached: %s" % ["%s on %s%s" % (p["participant"].name,
+                                            p["participant"].parent,
+                                            "" if p["model"] else " (marker)")
+                            for p in props])
+    errors = 0
+    if len(modelled) != 1 or not modelled[0]["model"].endswith("ak47.xbg"):
+        errors += fail("expected one rifle, got %s" % [p["model"] for p in modelled])
+    if not modelled or modelled[0]["participant"].parent != "R Hand":
+        errors += fail("the rifle is not on the right hand")
+
+    # Each attached object sits on its bone with its own track applied on top.
+    worst = 0.0
+    travel = []
+    for frame in range(FIRST_FRAME, FIRST_FRAME + 40):
+        bpy.context.scene.frame_set(frame)
+        bpy.context.view_layer.update()
+        for prop in props:
+            bone = armature.pose.bones[prop["participant"].parent]
+            want = armature.matrix_world @ bone.matrix @ prop["object"].matrix_basis
+            got = prop["object"].matrix_world
+            worst = max(worst, max(abs(got[r][c] - want[r][c])
+                                   for r in range(4) for c in range(4)))
+        travel.append(modelled[0]["object"].pose.bones["CLIP"].matrix.translation.copy())
+    if worst > TOLERANCE:
+        errors += fail("an attached object is %.2e off its bone" % worst)
+    span = max((a - b).length for a in travel for b in travel)
+    print("  on the bone to %.2e; the rifle's CLIP travels %.3f m" % (worst, span))
+    if span < 0.2:
+        errors += fail("the magazine barely moves (%.3f m)" % span)
+    return errors
+
+
 def check_skeleton_discovery():
     """With no skeleton named, the clip has to find the one the rig belongs to.
 
@@ -157,7 +204,8 @@ def main():
         print("corpus not present, skipping")
         return 0
 
-    errors = sum(check(*case) for case in CASES) + check_skeleton_discovery()
+    errors = (sum(check(*case) for case in CASES)
+              + check_skeleton_discovery() + check_props())
     print("blender anim: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0
 

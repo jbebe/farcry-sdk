@@ -4,16 +4,22 @@
 # that file is what turns ids into names; the armature is then matched by name.
 # Rotations and offsets are local and replace the bone's own rest transform, so
 # what the pose bone carries is the rest undone and the clip's applied.
+#
+# A bank holds a clip per skeleton taking part, and its tag records say which
+# bone each of the others hangs from, so the props are imported and attached
+# from the same file.
 
 import os
 
 import bpy
-from mathutils import Quaternion, Vector
+from mathutils import Matrix, Quaternion, Vector
 
+from fc2fmt.assets import find_named, find_root, install_assets
+from fc2fmt.bundle import EXTENSION, SKELETON_SUFFIX, Bundle
 from fc2fmt.mab import MabFile
 from fc2fmt.skeleton import SkeletonFile
 
-from . import rig
+from . import import_xbg, rig
 from .import_xbg import PROP_SOURCE
 
 # Blender counts frames from one, the file from zero.
@@ -78,10 +84,12 @@ def clip_for(bank, skeleton):
     return None
 
 
-def load(path, armature, skeleton_path=None, model_path=None):
+def load(path, armature, skeleton_path=None, model_path=None, with_props=False,
+         lod=0):
     """Put one clip on `armature` as its active Action."""
     bank = MabFile.parse(open(path, "rb").read())
-    skeleton_path = skeleton_path or find_skeleton(path, model_path or model_of(armature))
+    model_path = model_path or model_of(armature)
+    skeleton_path = skeleton_path or find_skeleton(path, model_path)
     if not skeleton_path:
         raise ValueError("no .skeleton found for %s; name one to map bone ids"
                          % os.path.basename(path))
@@ -90,12 +98,32 @@ def load(path, armature, skeleton_path=None, model_path=None):
     if clip is None:
         raise ValueError("%s holds no clip for a %d-bone skeleton"
                          % (os.path.basename(path), len(skeleton.bones)))
+
+    name = os.path.splitext(os.path.basename(path))[0]
+    result = pose(clip, armature, skeleton, name)
+    source = _source_of(model_path) if with_props else None
+    result["props"] = load_participants(clip, armature, source, lod) if source else []
+    result.update(bank=bank, skeleton=skeleton_path)
+    return result
+
+
+def _source_of(model_path):
+    """Where to find the props a clip attaches: the bundle, or the install."""
+    if not model_path:
+        return None
+    if model_path.lower().endswith(EXTENSION):
+        return Bundle.load(model_path)
+    root = find_root(model_path)
+    return install_assets(root) if root else None
+
+
+def pose(clip, armature, skeleton, name):
+    """Build an Action from one clip and make it the armature's active one."""
     names = {bone.id: bone.name for bone in skeleton.bones}
     # The .xbg tree and the constraint bones both need reconciling first, or
     # the knees, elbows and arm twists lag behind everything around them.
     adjusted = rig.apply(armature, skeleton)
 
-    name = os.path.splitext(os.path.basename(path))[0]
     action = bpy.data.actions.new(name)
     action[PROP_DURATION] = clip.duration
     header = clip.keyframe_header()
@@ -135,10 +163,101 @@ def load(path, armature, skeleton_path=None, model_path=None):
             pose_bone.keyframe_insert("location", frame=frame + FIRST_FRAME)
             keys += 1
 
-    return {"clip": clip, "bank": bank, "action": action, "bones": posed,
-            "unmatched": missing, "keys": keys, "skeleton": skeleton_path,
-            "rig": adjusted,
+    return {"clip": clip, "action": action, "bones": posed, "unmatched": missing,
+            "keys": keys, "rig": adjusted,
             "moved": sum(1 for b in offsets if names.get(b, "") in armature.pose.bones)}
+
+
+def attach(child, armature, bone_name):
+    """Hang an object off a bone at the bone's head, where a clip attaches.
+
+    Blender parents to the tail, so the inverse cancels the bone's length.
+    """
+    child.parent = armature
+    child.parent_type = "BONE"
+    child.parent_bone = bone_name
+    child.matrix_parent_inverse = Matrix.Translation(
+        (0.0, -armature.data.bones[bone_name].length, 0.0))
+
+
+def load_participants(clip, armature, source, lod=0):
+    """Import what a clip attaches to this rig, posed and parented.
+
+    A participant's clip is expressed in the frame of the bone its tag record
+    names, so its rig is hung off that bone and its own root carries the rest.
+    One that only references a prop already in the scene gets an empty carrying
+    its track instead of a second copy of the geometry.
+    """
+    loaded = []
+    for participant, sub in clip.participant_clips():
+        if participant.parent not in armature.pose.bones:
+            continue
+        model = (_participant_model(source, participant, sub)
+                 if participant.is_primary else None)
+        entry = {"participant": participant, "clip": sub, "model": model}
+        if model is None:
+            entry["object"] = _empty(participant.name, armature)
+            _key_root(sub, entry["object"])
+        else:
+            result = import_xbg.build(source.read(model), participant.name,
+                                      source, lod, True, model)
+            entry["object"] = result["armature"]
+            entry["collection"] = result["collection"]
+            skeleton = source.read(_beside(model, SKELETON_SUFFIX))
+            if skeleton:
+                pose(sub, result["armature"], SkeletonFile.parse(skeleton),
+                     participant.name)
+            else:
+                # No rig to name the bones by, so drive the whole thing instead.
+                _key_root(sub, result["armature"])
+        attach(entry["object"], armature, participant.parent)
+        loaded.append(entry)
+    return loaded
+
+
+def _empty(name, armature):
+    empty = bpy.data.objects.new(name, None)
+    empty.empty_display_type = "ARROWS"
+    armature.users_collection[0].objects.link(empty)
+    return empty
+
+
+def _key_root(clip, obj, root=0):
+    """Key a participant's root track straight onto an object."""
+    obj.rotation_mode = "QUATERNION"
+    rotations = clip.keyframe_tracks().get(root) or [
+        (0, clip.constant_rotations().get(root))]
+    offsets = clip.translation_tracks().get(root) or [
+        (0, clip.constant_translations().get(root))]
+    for frame, rotation in rotations:
+        if rotation is not None:
+            obj.rotation_quaternion = _quaternion(rotation)
+            obj.keyframe_insert("rotation_quaternion", frame=frame + FIRST_FRAME)
+    for frame, offset in offsets:
+        if offset is not None:
+            obj.location = Vector(offset)
+            obj.keyframe_insert("location", frame=frame + FIRST_FRAME)
+
+
+def _beside(model, suffix):
+    return os.path.splitext(model)[0] + suffix
+
+
+def _participant_model(source, participant, clip):
+    """The model a participant names, or None when the source has no such file.
+
+    Names are not unique across the retail tree — `mortar` is both a weapon and
+    a kitchen prop — so a candidate whose rig fits the participant's clip wins.
+    """
+    candidates = find_named(source, participant.name)
+    for model in candidates:
+        data = source.read(_beside(model, SKELETON_SUFFIX))
+        if data is None:
+            continue
+        ids = clip.bone_ids()
+        if not ids or ids[-1] < len(SkeletonFile.parse(data).bones):
+            return model
+    return candidates[0] if candidates else None
 
 
 def apply_to_scene(scene, clip):

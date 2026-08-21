@@ -6,6 +6,7 @@
 # unchanged.
 
 import struct
+from dataclasses import dataclass
 
 from .binary import Reader, Writer
 
@@ -56,6 +57,16 @@ TRACK_HEADER = 8
 GROUP_SHIFT = 3
 GROUP_FRAMES = 1 << GROUP_SHIFT
 
+# The tag section: a u32 count, then one fixed-size record per participant.
+TAG_COUNT_BYTES = 4
+TAG_STRIDE = 0xAC
+TAG_KIND = 0x00
+TAG_CLIP = 0x0C
+# Four name slots, each a CRC32 then 32 NUL-padded bytes. The third is empty in
+# every shipped record.
+TAG_NAMES = (0x18, 0x3C, 0x60, 0x84)
+TAG_NAME_BYTES = 32
+
 # Where the three stored components and the recovered one land in xyzw, keyed by
 # the sign bits of the first two words as (first << 1) | second.
 ENGINE_LAYOUT = ((3, 0, 1, 2), (0, 1, 3, 2), (0, 3, 1, 2), (0, 1, 2, 3))
@@ -98,6 +109,41 @@ def mask_slot(mask, bone_id):
         return None
     below = sum(bin(value).count("1") for value in mask[:word])
     return below + bin(mask[word] & ((1 << bit) - 1)).count("1")
+
+
+def tag_name(block, at):
+    """One name slot of a tag record, without its hash."""
+    text = block[at + 4:at + 4 + TAG_NAME_BYTES].split(b"\0")[0]
+    return text.decode("ascii", "replace")
+
+
+def tag_hash(block, at):
+    return struct.unpack_from("<I", block, at)[0]
+
+
+@dataclass
+class Participant:
+    """Something a clip animates besides its own skeleton.
+
+    `parent` is the bone on the owning clip's skeleton that the participant's
+    rig hangs from, and its clip is expressed in that bone's frame.
+    """
+
+    kind: int
+    name: str
+    parent: str
+    reference: str
+    clip_offset: int
+
+    @property
+    def is_primary(self):
+        """Whether this is the prop itself rather than a track on another one.
+
+        A reload names its rifle once with no reference and again per magazine
+        with one, so instantiating every record would fill the scene with
+        duplicate rifles.
+        """
+        return not self.reference
 
 
 class Clip:
@@ -270,6 +316,32 @@ class Clip:
 
     def tags(self):
         return self.section(SECTION_TAGS)
+
+    def participants(self):
+        """What this clip animates besides its own skeleton, in chain order."""
+        block = self.section(SECTION_TAGS)
+        if not block:
+            return []
+        out = []
+        for index in range(struct.unpack_from("<I", block, 0)[0]):
+            base = TAG_COUNT_BYTES + index * TAG_STRIDE
+            if base + TAG_STRIDE > len(block):
+                break
+            name, parent, _spare, reference = (tag_name(block, base + at)
+                                               for at in TAG_NAMES)
+            # The record stores its clip relative to itself; carry it relative
+            # to this clip instead, which is what section() and data are in.
+            offset = struct.unpack_from("<i", block, base + TAG_CLIP)[0]
+            out.append(Participant(
+                kind=block[base + TAG_KIND], name=name, parent=parent,
+                reference=reference,
+                clip_offset=self.sections[SECTION_TAGS] + base + offset))
+        return out
+
+    def participant_clips(self):
+        """(participant, its clip) for everything this clip attaches."""
+        return [(part, Clip.parse(self.data[part.clip_offset - CLIP_HEADER:]))
+                for part in self.participants()]
 
     def events(self):
         return self.section(SECTION_EVENTS)

@@ -32,7 +32,8 @@ normals, an armature from the nodes, rigid parts on their pivots, skin weights a
 **textures**, by resolving each material through its `.xbm` to the `.xbt` files it names. The same
 model can be packed into a self-contained [bundle](#model-bundles) and imported with no game install
 present. [Export](#export) writes edited parts back. A `.mab` clip loads onto the armature as a
-Blender Action — see [Animation](#animation).
+Blender Action, bringing the weapon it puts in the character's hand with it — see
+[Animation](#animation).
 
 ## Layout
 
@@ -46,22 +47,22 @@ Blender Action — see [Animation](#animation).
 | `fc2fmt/mesh.py` | Assembles the container into per-part meshes with their vertices localised |
 | `fc2fmt/transform.py` | 4x4 helpers, so node world transforms need no `mathutils` |
 | `fc2fmt/skeleton.py` | `.skeleton` (`LKS`) bones, constraints, anim handles |
-| `fc2fmt/mab.py` | `.mab` clip chain, the four bone bitmasks, the smallest-three quaternion codec, sparse rotation groups and dense translation tracks |
+| `fc2fmt/mab.py` | `.mab` clip chain and participant table, the four bone bitmasks, the smallest-three quaternion codec, sparse rotation groups and dense translation tracks |
 | `fc2fmt/xbm.py` | `.xbm` material: texture slots, tiling, tint colours, and the variant an `.xbg` embeds |
 | `fc2fmt/xbt.py` | `.xbt` texture: strips the header off the DDS payload Blender loads |
 | `fc2fmt/assets.py` | Turns a game-relative path into bytes, against an extracted install |
 | `fc2fmt/bundle.py` | `.fc2model`: one model and every file it needs, in one zip |
-| `addon/` | The Blender add-on: `convert.py` holds every Dunia-to-Blender convention, `materials.py` rebuilds the Generic shader, `export_xbg.py` writes parts back, `import_mab.py` builds an Action |
+| `addon/` | The Blender add-on: `convert.py` holds every Dunia-to-Blender convention, `materials.py` rebuilds the Generic shader, `export_xbg.py` writes parts back, `import_mab.py` builds an Action and attaches the props a clip names |
 | `tests/_corpus.py` | Corpus location and the skip-when-absent helper the scripts share |
 | `tests/roundtrip.py` | Round-trips every retail file of a format; `--coverage` reports the opaque share |
 | `tests/rebuild.py` | Regenerates every LOD's geometry blocks from scratch and requires the file back |
 | `tests/reencode.py` | Decodes every vertex buffer to float space and back, per component |
-| `tests/invariants.py` | Checks decoded meaning: palettes index real bones, derived values recompute to what shipped |
+| `tests/invariants.py` | Checks decoded meaning: palettes index real bones, derived values recompute to what shipped, `.mab` tag records reach the clip they name |
 | `tests/mabcheck.py` | Resolves every `.mab` mask bit against `pelvis_ref.skeleton`, checks quaternion norms, and refuses a translation on a bone the skeleton holds fixed |
 | `tests/quatcheck.py` | Scores the quaternion component layout against the skeleton rest pose |
 | `tests/blender_import.py` | Imports the AK-47, a character and a bundle inside Blender, headless |
 | `tests/blender_export.py` | Imports and re-exports inside Blender, requiring the source bytes back |
-| `tests/blender_anim.py` | Poses a character and a weapon from clips and reads the rotations and offsets back off the rig |
+| `tests/blender_anim.py` | Poses a character and a weapon from clips, attaches the props a clip names, and reads the rotations and offsets back off the rig |
 | `tests/render_preview.py` | Renders an imported model to a PNG, for looking at what the importer built |
 | `tests/bundle.py` | Builds bundles and resolves each model's whole reference graph from the bundle alone |
 | `tests/probe.py` | Dumps one file's chunk layout when a round trip fails |
@@ -189,9 +190,26 @@ Four things a reader has to get right or the pose comes out mangled:
 bone's rotation and offset relative to its parent back out, requiring what the file stores. Worst
 difference across four clips is `4.4e-07` on rotation and `2.4e-07` metres on offset.
 
-Weapon clips are not only character clips. `1stge_uppb_reload_+000fw_prak4_i1.mab` animates the
-player's arms on `pelvis_ref` (119 bones) in its first clip and the gun's own eight-bone rig in the
-second — load it against `ak47_ref.skeleton` and `AK47`, `CLIP`, `SLIDE` and `ACCESSORY` move.
+### The weapon in the hand
+
+A bank's sixth section is a **participant index**: one 172-byte record per chained clip, naming what
+that clip animates and the bone it hangs from. Record *i* points at chained clip *i* in **6,825 of
+6,825** cases, and every one of the four name slots matches its own CRC32.
+
+So the importer does not have to guess. **Import attached props** (on by default) walks the table,
+loads each named model, poses it from its own clip and parents it to the bone the record names —
+`R Hand` in 2,545 records, `L Hand` in 1,817, `Camera` in 249, `Spine2` in 118. Load
+`3rdge_uppb_reload_nodir_prak4_i1.mab` onto a character and the AK-47 arrives in the right hand with
+its magazine dropping out, `CLIP` travelling **1.03 m** over the reload.
+
+Two things that would otherwise go wrong:
+
+- **A reload's records are all named `ak47`** — the magazine belongs to the same weapon. The
+  `reference` field separates them: it is empty on the weapon itself in all 3,432 such records and
+  set on all 1,878 secondary tracks. Instantiate every record and you get three rifles instead of
+  one; the secondary ones become empties carrying their track.
+- **Blender parents an object to a bone's tail**, so the parent inverse cancels the bone's length
+  and the prop lands on the head, which is the frame the clip is written in.
 
 Sixteen bones carry an orientation constraint and no clip ever keys them — those four helpers plus
 twelve arm twists. `fc2fmt.skeleton` reads the fields (`m_iBone1`/`m_flWeight1` and friends), but

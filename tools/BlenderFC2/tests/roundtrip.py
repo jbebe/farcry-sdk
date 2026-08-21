@@ -20,10 +20,12 @@ from fc2fmt import mab
 from fc2fmt.mab import SECTION_NEXT_CLIP, MabFile
 from fc2fmt.skeleton import SkeletonFile
 from fc2fmt.xbg import XbgFile
+from fc2fmt.xbm import XbmMaterial
 
 FORMATS = {
     "skeleton": (".skeleton", SkeletonFile),
     "xbg": (".xbg", XbgFile),
+    "xbm": (".xbm", XbmMaterial),
     "mab": (".mab", MabFile),
 }
 
