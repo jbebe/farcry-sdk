@@ -1,0 +1,125 @@
+# Check what a round trip cannot: that the decoded values mean something.
+#
+#   python tools/BlenderFC2/tests/invariants.py
+#
+# A round trip passes on any blob the reader echoes, and most of an .xbg is
+# blob. These are the invariants an importer and exporter rely on, asserted
+# across the whole retail set. Anything derived is also recomputed and required
+# to reproduce what shipped.
+
+import collections
+import sys
+
+from _corpus import find, require
+
+from fc2fmt.binary import name_hash
+from fc2fmt.mab import MabFile, mask_slot
+from fc2fmt.skeleton import SkeletonFile
+from fc2fmt.xbg import EMPTY_SLOT, NO_NODE, XbgFile, vertex_layout
+
+
+def check_xbg(model, fail):
+    skinning = [n for n in model.nodes if n.skin_index != EMPTY_SLOT]
+    if sorted(n.skin_index for n in skinning) != list(range(len(skinning))):
+        fail("skin_index is not a permutation of 0..n-1")
+    if model.bind_matrices and len(model.bind_matrices) != len(skinning):
+        fail("MB2O count %d != %d skinning nodes" % (len(model.bind_matrices), len(skinning)))
+
+    for i, node in enumerate(model.nodes):
+        if node.parent != NO_NODE and node.parent >= len(model.nodes):
+            fail("node %d parent out of range" % i)
+        if i and name_hash(node.name) != node.name_hash:
+            fail("node %r name hash mismatch" % node.name)
+
+    for desc in model.skin_descs:
+        for cluster in desc.clusters:
+            slots = cluster.bones()
+            if not cluster.is_skinned:
+                if slots:
+                    fail("static cluster in %r has a non-empty palette" % desc.name)
+                continue
+            if not slots:
+                fail("skinned cluster in %r has an empty palette" % desc.name)
+            elif max(slots) >= len(model.nodes):
+                fail("palette in %r indexes past the node array" % desc.name)
+            elif any(model.nodes[s].skin_index == EMPTY_SLOT for s in slots):
+                fail("palette in %r names a non-skinning node" % desc.name)
+            if any(slot != EMPTY_SLOT for slot in cluster.palette[len(slots):]):
+                fail("palette in %r is not a contiguous prefix" % desc.name)
+
+    for index, lod in enumerate(model.lods):
+        for vb in lod.vertex_buffers:
+            _offsets, stride = vertex_layout(vb.flags)
+            if stride != vb.stride:
+                fail("LOD %d flags %#x imply stride %d, file says %d"
+                     % (index, vb.flags, stride, vb.stride))
+            if vb.offset > len(lod.vertex_data):
+                fail("LOD %d vertex buffer starts past the buffer" % index)
+
+    links = [(n.first_child, n.next_sibling, n.skin_index) for n in model.nodes]
+    model.rebuild_hierarchy()
+    if links != [(n.first_child, n.next_sibling, n.skin_index) for n in model.nodes]:
+        fail("rebuild_hierarchy disagrees with the shipped links")
+
+
+def check_skeleton(skeleton, fail):
+    for bone in skeleton.bones:
+        if name_hash(bone.name) != bone.name_hash:
+            fail("bone %r name hash mismatch" % bone.name)
+        if bone.parent != 0xFFFF and bone.parent >= len(skeleton.bones):
+            fail("bone %r parent out of range" % bone.name)
+    for handle in skeleton.handles:
+        if not skeleton.bone_by_name(handle.parent_bone):
+            fail("handle %r names unknown bone %r" % (handle.name, handle.parent_bone))
+
+    links = [(b.first_child, b.next_sibling) for b in skeleton.bones]
+    skeleton.rebuild_hierarchy()
+    if links != [(b.first_child, b.next_sibling) for b in skeleton.bones]:
+        fail("rebuild_hierarchy disagrees with the shipped links")
+
+
+def check_mab(clip, fail):
+    """The readers index sections by ordinal; prove that equals the popcount rule."""
+    for mask, bones in ((clip.constant_mask, clip.constant_bones()),
+                        (clip.keyframe_mask, clip.keyframed_bones())):
+        for ordinal, bone_id in enumerate(bones):
+            if mask_slot(mask, bone_id) != ordinal:
+                fail("bone %d slot %r != ordinal %d"
+                     % (bone_id, mask_slot(mask, bone_id), ordinal))
+                return
+
+
+def main():
+    if not require():
+        return 0
+    stats, failures = collections.Counter(), []
+
+    for path in find(".xbg"):
+        model = XbgFile.parse(open(path, "rb").read())
+        stats["xbg files"] += 1
+        stats["nodes"] += len(model.nodes)
+        stats["clusters"] += sum(len(d.clusters) for d in model.skin_descs)
+        stats["skinned xbg"] += 1 if model.bind_matrices else 0
+        check_xbg(model, lambda why, p=path: failures.append((p, why)))
+
+    for path in find(".skeleton"):
+        skeleton = SkeletonFile.parse(open(path, "rb").read())
+        stats["skeletons"] += 1
+        stats["bones"] += len(skeleton.bones)
+        check_skeleton(skeleton, lambda why, p=path: failures.append((p, why)))
+
+    for path in find(".mab"):
+        clip = MabFile.parse(open(path, "rb").read())
+        stats["clips"] += 1
+        check_mab(clip, lambda why, p=path: failures.append((p, why)))
+
+    for key, value in sorted(stats.items()):
+        print("  %-14s %d" % (key, value))
+    print("invariant failures: %d" % len(failures))
+    for path, why in failures[:20]:
+        print("  FAIL %s: %s" % (path, why))
+    return 1 if failures else 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

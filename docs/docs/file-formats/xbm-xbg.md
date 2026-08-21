@@ -16,7 +16,9 @@ distinguished on this site.
 `.xbm` (materials) and `.xbg` (meshes) are structurally the same file format under different
 extensions: "they are the same files in a way, just with a different extension... they have the same
 structure." An XBM parser can read into an XBG's material data by skipping the XBG-specific mesh
-(`LTMD`) content, and vice versa — the section-parsing logic is shared.
+content, and vice versa — the section-parsing logic is shared. (The community account names `LTMD` as
+that mesh content; it is in fact an embedded material, and appears in only three shipped meshes — see
+[Chunk framing](#chunk-framing-read-out-of-the-engines-own-loader) below.)
 
 ## Container shape
 
@@ -50,6 +52,93 @@ tiling/glow effects, but only if the values aren't clamped to a byte range.
 **XBG-only alignment**: the start of the actual 3D mesh data inside an XBG must be 16-byte aligned
 (offset divisible by 16), or the game breaks on load. Does not apply to XBM (material) files, which
 carry no 3D data — some converters apply the rule to XBM anyway without it mattering either way.
+
+## Chunk framing, read out of the engine's own loader
+
+:::info[Verified via reverse engineering]
+Read out of `LoadGeomResource` (`0x097fd440`) in the symbol-bearing `FarCry2_server` binary, and
+checked against all 3,133 shipped `.xbg`. A reader written from it walks every file with **zero
+trailing bytes**, and a writer reproduces all 3,133 **byte for byte**.
+:::
+
+The community description above works in practice but treats the chunk header as 12 bytes with the
+payload immediately after it. The engine reads a **20-byte header**, and the payload is addressed
+**backwards from the end of the chunk**:
+
+```
++0x00  u32   tag, stored reversed — 'EDON' in the file is 'NODE' to the engine
++0x04  u32
++0x08  u32   chunk size, including this header
++0x0C  u32   payload size
++0x10  u32   sub-chunk count
+
+payload = chunkStart + chunkSize - payloadSize
+```
+
+For every chunk in every shipped file that resolves to `chunkStart + 20` — **except `DNKS`**, which
+is the only chunk in the format with a sub-chunk (`subChunkCount` is 1 in all 3,133 files). Its
+sub-chunk is `SULC`, framed the same way, and `DNKS`'s own payload sits *after* it:
+
+```
+DNKS
+  +0x00   20-byte header, subChunkCount = 1
+  +0x14   SULC sub-chunk — per skin descriptor: u32 cluster count, then that many
+          110-byte clusters (7 x u16 header, then 48 x int16 bone palette)
+  ...
+  end - payloadSize:  u32 descriptor count, then per descriptor:
+                      52-byte meta, u32 name length, name, NUL
+```
+
+That backwards-addressed payload is why parsers written from the community description need a
+hand-tuned "preamble" constant to find the `DNKS` name table.
+
+**Alignment padding is a descending byte counter, not zeros.** Nine bytes of padding before the
+vertex or index section are written `09 08 07 06 05 04 03 02 01`. A file padded with zeros still
+loads, but no longer matches the original byte for byte.
+
+Chunk tags are **not unique within a file** — `objects\lights\torch01.xbg` carries two `LTMD` chunks.
+A parser that keys chunks by tag silently drops data.
+
+### Chunk census
+
+Every shipped `.xbg` is version `0x0006002A` and carries these ten chunks exactly once:
+`LTMR`, `EDON`, `DIKS`, `DNKS`, `SDOL`, `XOBB`, `HPSB`, `DOL\0`, `PMCP`, `PMCU`. Three more appear
+conditionally:
+
+| Chunk | Engine name | Files | Contents |
+|---|---|---|---|
+| `MB2O` | `O2BM` | 78 | `u32` count, then that many 64-byte inverse-bind matrices, column-major |
+| `ADKI` | `IKDA` | 10 | IK data, 52 bytes per entry. Byte-identical in all ten, all destructible props |
+| `LTMD` | `DMTL` | 4 chunks in 3 files | an **embedded material**, loaded by `CMaterialResource::LoadFromGLM` |
+
+`LTMD` is therefore not "XBG-specific mesh content an XBM parser skips" as described above — it is a
+material inlined into the mesh instead of referenced by path, carrying names like
+`Torch01_587110454_0.fakemat`. `LTMR` (`RMTL`) is the ordinary path-reference material list, and it
+carries a trailing word after mesh version 41.3, which FC2 (42.6) has.
+
+`DIKS` (`SKID`) entries are **8 bytes**, not 4.
+
+### `EDON` node record
+
+68 bytes, `memcpy`'d wholesale by the engine, then a length-prefixed NUL-terminated name:
+
+```
++0x00  u32     CRC32 of the exact-case name — 0 on the root, and not read at runtime
++0x04  u32     first child, 0xFFFFFFFF when none — not read at runtime
++0x08  u32     next sibling, 0xFFFFFFFF when none — not read at runtime
++0x0C  u32     parent, 0xFFFFFFFF on the root
++0x10  f32[4]  local rotation, xyzw
++0x20  f32[3]  local translation
++0x2C  f32[3]  local scale
++0x38  i32     skinIndex — -1, or an index into MB2O
++0x3C  f32     1.0 in all 16,738 shipped nodes
++0x40  f32     constant per file in 3,123 of 3,133 files, median 0.97x the XOBB bbox diagonal
++0x44  u32     name length, then the name, then a NUL
+```
+
+`CGeomResource::GenerateMatrices` (`0x097fc880`) builds each node's world transform as
+`parent_world x TRS(scale, rotation, translation)`, so the scale at `+0x2C` is live — 121 shipped
+nodes carry a non-unit value.
 
 ## The shading model, read out of the engine's own shaders
 
@@ -213,21 +302,46 @@ Which dozen is on the entity, not in the mesh — see
 
 ## Character/creature bone palettes
 
-Neither author understood the `SULC` submesh blocks' bone-palette data for character XBGs as of April
-2026 ("I don't know how bone palettes work... that's why I still can't create a character-type xbg" —
-fdx4061). By June 2026, **Quiet_Joker** (author of the `Dunia-Engine-XBG-Blender-Importer`, see
-[Sources](../modding/sources.md)) worked out the actual mechanism:
+:::info[Verified via reverse engineering]
+Read out of `LoadGeomResource` (`0x097fd440`) and `CGeometryResource::ClientProcessRawData`
+(`0x097fb3f0`), and measured across every cluster in the retail set.
+:::
 
-An `.xbg` model's bones are a local, pruned subset of a full master "source skeleton" file
-(`.mab`/`.skeleton`) — one shared per model *category* (e.g. all NPCs), containing every bone ever
-defined for that category at development time, from which each individual model's bones were derived.
-**Animation does not use the xbg's own local bone order** — because bones get pruned per-model, that
-local order isn't stable across models — so the engine looks up the master skeleton file as a reference
-for which bones move, then applies that to the local xbg model at animation time. **Three files are
-required together for a custom/replaced model to animate correctly**: a `.mab` motion/animation-bank
-file, an `.xbg` that references it, and the category's master `.skeleton` reference file. This
-bone-inheritance pattern is a known technique from professional animation tooling (Maya), not a
-Dunia-specific oddity.
+This was the open edge of the format. Neither Gabor nor fdx4061 had it as of April 2026 ("I don't
+know how bone palettes work... that's why I still can't create a character-type xbg" — fdx4061).
+The chain is:
+
+**cluster palette slot → `EDON` node → that node's `skinIndex` → `MB2O` inverse-bind matrix.**
+
+Each 110-byte cluster inside `SULC` ends with 48 `int16` palette slots. A slot holds an **index into
+the file's `EDON` node array**, not a bone id from any external file. Every `EDON` node carries an
+`i32` at `+0x38`: `-1` when the node is not a skinning bone, otherwise its index into the `MB2O`
+array of inverse-bind matrices. Across the 78 skinned files those indices form a clean permutation of
+`0 … MB2O count − 1`, and the `MB2O` count equals the file's skinned-node count in every one.
+
+Every palette slot in the retail set resolves to a node whose `skinIndex` is not `-1` — 3,953 of
+3,953 non-empty palettes.
+
+Padding rules, measured over all 32,170 clusters:
+
+| | Count |
+|---|---|
+| Static cluster (`fmtFlags & 0x0010` clear) — all 48 slots `-1` | 28,217 / 28,217 |
+| Skinned cluster — at least one bone | 3,953 / 3,953 |
+| Skinned palette is a contiguous prefix of indices, then `-1` padding | 3,953 / 3,953 |
+| Skinned palette repeats a bone index within the prefix | 3,841 / 3,953 |
+
+**The rule that a skinned palette must never contain `-1` is wrong** — every skinned palette in the
+game is `-1`-padded, and duplicate indices inside the prefix are normal. The engine's only use of the
+palette at load is the final loop of `LoadGeomResource`, which scans all 48 slots and sets a single
+"has any bone" flag if any slot is not `-1`. The constraint a writer must actually hold is narrower:
+every slot a vertex's `BLENDINDICES` refers to has to be non-`-1`.
+
+Animation binds by **name**, not by index: `CGraphicComponent::BuildSkeleton` (`0x094ac0b0`) walks
+the nodes into `CSkeletonBuilder::BeginAddBone(nameId, matrix)`, where `nameId` is the CRC32 of the
+node's exact-case name. An `.xbg` node and a [`.skeleton`](./skeleton.md) bone are the same bone when
+those hashes match, which is why a replacement model must keep part and bone names byte-identical.
+See [`.mab`](./mab.md) for how a clip then addresses those bones by skeleton bone id.
 
 ## Import/export tooling
 
