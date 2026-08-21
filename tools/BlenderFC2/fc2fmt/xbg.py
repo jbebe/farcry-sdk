@@ -146,10 +146,9 @@ class Cluster:
 class SkinDesc:
     """A named (part, damage state, LOD) group and the clusters drawing it.
 
-    `bounds` is ten floats whose grouping is undetermined: the community layout
-    of a min/max pair holds for 18 of 18,533 shipped parts, so it is carried
-    through rather than interpreted. `lod` matches the name's _LODn suffix in
-    all 18,533.
+    `bounds` is a bounding sphere then an axis-aligned box: centre, radius, min,
+    max. The box matches the part's own vertices in 16,885 of 16,885 shipped
+    parts. `lod` matches the name's _LODn suffix in all of them.
     """
     name: str
     lod_metric: float
@@ -158,6 +157,19 @@ class SkinDesc:
     reserved: int
     clusters: list = field(default_factory=list)
 
+    @property
+    def aabb(self):
+        """(min, max) of the part's own vertices."""
+        return tuple(self.bounds[4:7]), tuple(self.bounds[7:10])
+
+    def set_bounds(self, points):
+        """Refit the sphere and the box around `points`, in the part's own space."""
+        low = tuple(min(p[a] for p in points) for a in range(3))
+        high = tuple(max(p[a] for p in points) for a in range(3))
+        centre = tuple((low[a] + high[a]) / 2.0 for a in range(3))
+        radius = max(_distance(p, centre) for p in points)
+        self.bounds = centre + (radius,) + low + high
+
     @classmethod
     def read(cls, r):
         return cls(name="", lod_metric=r.f32(), bounds=tuple(r.f32s(10)),
@@ -165,6 +177,10 @@ class SkinDesc:
 
     def write(self, w):
         w.f32(self.lod_metric).f32s(self.bounds).i32(self.lod).u32(self.reserved)
+
+
+def _distance(a, b):
+    return sum((a[i] - b[i]) ** 2 for i in range(3)) ** 0.5
 
 
 @dataclass
@@ -372,6 +388,19 @@ class XbgFile:
             parent = matrices[node.parent] if node.parent < len(matrices) else None
             matrices.append(multiply(parent, local) if parent else local)
         return matrices
+
+    def set_bounds(self, points):
+        """Refit XOBB and HPSB around model-space points.
+
+        The shipped sphere is a fitted one, tighter than the box allows and
+        centred off the box centre in 94% of models, so this does not reproduce
+        it. What it writes encloses every vertex, which is what culling needs.
+        """
+        low = [min(p[a] for p in points) for a in range(3)]
+        high = [max(p[a] for p in points) for a in range(3)]
+        centre = [(low[a] + high[a]) / 2.0 for a in range(3)]
+        self.bbox = low + high
+        self.bsphere = centre + [max(_distance(p, centre) for p in points)]
 
     def part_node(self, full_name):
         """The node placing the part named `full_name`, or None if none does."""

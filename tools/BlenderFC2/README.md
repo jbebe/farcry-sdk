@@ -20,8 +20,9 @@ echoing it.
 
 **Read the second column with the first.** A round trip proves the *framing*; bytes kept as an opaque
 blob pass it for free. `.skeleton` is fully decoded. For `.xbg`, vertex and index streams are decoded
-and re-encoded losslessly (proven per buffer across the corpus), leaving only ten undetermined floats
-per part. Most of a `.mab` is its keyframe payload, which is still carried through untouched.
+and re-encoded losslessly (proven per buffer across the corpus), and every LOD's geometry blocks can
+be regenerated from scratch and still match. Most of a `.mab` is its keyframe payload, which is still
+carried through untouched.
 `tests/invariants.py` covers what a round trip cannot, and `roundtrip.py --coverage` prints the
 opaque share so the two numbers stay side by side.
 
@@ -29,7 +30,7 @@ opaque share so the two numbers stay side by side.
 normals, an armature from the nodes, rigid parts on their pivots, skin weights as vertex groups, and
 **textures**, by resolving each material through its `.xbm` to the `.xbt` files it names. The same
 model can be packed into a self-contained [bundle](#model-bundles) and imported with no game install
-present. Export is not written yet, and neither is `.mab` keyframe authoring.
+present. [Export](#export) writes edited parts back. `.mab` keyframe authoring is not written.
 
 ## Layout
 
@@ -38,6 +39,8 @@ present. Export is not written yet, and neither is `.mab` keyframe authoring.
 | `fc2fmt/binary.py` | `Reader`/`Writer`, CRC32 name hashing, the descending-counter alignment fill |
 | `fc2fmt/xbg.py` | `.xbg` container: chunks, `EDON` nodes, `MB2O` bind matrices, `DNKS`/`SULC` clusters, LODs |
 | `fc2fmt/vertex.py` | Typed access to a vertex buffer: positions, UVs, normals, colours, skin weights |
+| `fc2fmt/geometry.py` | Splits a LOD into per-cluster geometry and reassembles it, deriving every offset and count |
+| `fc2fmt/encode.py` | Packs float-space arrays back to file precision — the inverse of `vertex.py` |
 | `fc2fmt/mesh.py` | Assembles the container into per-part meshes with their vertices localised |
 | `fc2fmt/transform.py` | 4x4 helpers, so node world transforms need no `mathutils` |
 | `fc2fmt/skeleton.py` | `.skeleton` (`LKS`) bones, constraints, anim handles |
@@ -46,13 +49,16 @@ present. Export is not written yet, and neither is `.mab` keyframe authoring.
 | `fc2fmt/xbt.py` | `.xbt` texture: strips the header off the DDS payload Blender loads |
 | `fc2fmt/assets.py` | Turns a game-relative path into bytes, against an extracted install |
 | `fc2fmt/bundle.py` | `.fc2model`: one model and every file it needs, in one zip |
-| `addon/` | The Blender add-on: `convert.py` holds every Dunia-to-Blender convention, `materials.py` rebuilds the Generic shader |
+| `addon/` | The Blender add-on: `convert.py` holds every Dunia-to-Blender convention, `materials.py` rebuilds the Generic shader, `export_xbg.py` writes parts back into their source model |
 | `tests/_corpus.py` | Corpus location and the skip-when-absent helper the scripts share |
 | `tests/roundtrip.py` | Round-trips every retail file of a format; `--coverage` reports the opaque share |
+| `tests/rebuild.py` | Regenerates every LOD's geometry blocks from scratch and requires the file back |
+| `tests/reencode.py` | Decodes every vertex buffer to float space and back, per component |
 | `tests/invariants.py` | Checks decoded meaning: palettes index real bones, derived values recompute to what shipped |
 | `tests/mabcheck.py` | Resolves every `.mab` mask bit against `pelvis_ref.skeleton` and checks quaternion norms |
 | `tests/quatcheck.py` | Scores the quaternion component layout against the skeleton rest pose |
 | `tests/blender_import.py` | Imports the AK-47, a character and a bundle inside Blender, headless |
+| `tests/blender_export.py` | Imports and re-exports inside Blender, requiring the source bytes back |
 | `tests/render_preview.py` | Renders an imported model to a PNG, for looking at what the importer built |
 | `tests/bundle.py` | Builds bundles and resolves each model's whole reference graph from the bundle alone |
 | `tests/probe.py` | Dumps one file's chunk layout when a round trip fails |
@@ -100,6 +106,48 @@ Closure is complete for **2,922 of 2,922** shipped models — every material, ev
 `_mip0` companion carrying a texture's top mip. The three meshes that embed their material in the
 `.xbg` instead of naming an `.xbm` are covered by reading that inline chunk.
 
+## Export
+
+**File ▸ Export ▸ Far Cry 2 Mesh (.xbg)** writes the collection's parts back into the model they came
+from. The container is edited, not rebuilt: nodes, materials, bone palettes, the LODs that were never
+imported and every chunk still carried as an opaque blob all survive untouched, because a mod usually
+means new geometry rather than a new file.
+
+The gate is that **an untouched export returns the source bytes**, through Blender, for the AK-47, the
+37-part buggy and a skinned character. `tests/blender_export.py` also moves a single vertex and checks
+that exactly one vertex moves in the file, so a writer that quietly copied its input would fail.
+
+**A part's topology can change.** Give a part more or fewer vertices and the tangent frame is
+regenerated from the UVs — Blender's frame agrees with the file's convention, within 0.9 dot on 89 to
+96% of retail vertices, the rest being the seam and smoothing differences any regeneration produces.
+Every other per-vertex slot the editor cannot supply turned out to be a constant: the fourth position
+int16 is `1` and the fourth byte of each direction is `128`, in all 14,319,419 shipped vertices.
+`tests/blender_export.py` subdivides a part from 805 vertices to 2,637 and checks the result.
+
+Whenever geometry moves, each part's sphere and box are refitted, and so are the model's. Culling
+reads them, so a stale one makes a part vanish in game. Nothing is refitted when nothing moved, which
+is what keeps the untouched round trip byte-exact.
+
+What it cannot do yet:
+
+- **Split UVs, normals or colours.** The file stores all three per vertex, not per corner, so a seam
+  has to be a duplicated vertex. The first corner touching a vertex wins.
+- **Add or remove parts, nodes or LODs.**
+- **Outgrow the source's quantisation.** Positions are int16 times the file's own `PMCP` scale, so a
+  much larger model than the one being replaced is refused rather than silently wrapped.
+- **Recompute tangents after a UV edit that kept the topology** — tick *Recompute tangents* for that.
+
+Three measured facts make the round trip exact. Every LOD is a plain concatenation — each cluster owns
+`[base, base + vertex_count)` of its buffer and a matching run of indices, in submesh order, with
+nothing left over (29,296 of 29,296 clusters, 9,746 of 9,746 LODs). Every vertex is referenced by a
+triangle, so nothing is dropped on import and no compaction is needed. And every component quantises
+back exactly, checked per component over 10,460 buffers.
+
+The exception is normals: the file's are not unit length, Blender normalises the ones it shades with,
+and re-encoding those moves about half of them by one step. The original direction therefore rides
+along in an `fc2_normal` attribute, which export prefers and falls back from when a mesh has been
+rebuilt.
+
 ## Running the tests
 
 They need the retail export under `tmp/gamefiles/` and skip cleanly without it.
@@ -109,6 +157,8 @@ cd tools/BlenderFC2/tests
 python roundtrip.py skeleton --coverage
 python roundtrip.py xbg --coverage
 python roundtrip.py mab --coverage
+python rebuild.py
+python reencode.py
 python invariants.py
 python mabcheck.py
 python quatcheck.py
@@ -119,6 +169,7 @@ The Blender test runs headless against the real add-on:
 
 ```
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools/BlenderFC2/tests/blender_import.py
+& "C:\Programs\Blender 5.2\blender.exe" -b --python tools/BlenderFC2/tests/blender_export.py
 ```
 
 To look at a model rather than assert about it — worth doing, since a part can sit in the wrong
@@ -223,6 +274,12 @@ mean `|dot| = 0.977` against 0.858 for the next candidate and 0.04 for the wrong
 a table (`ENGINE_LAYOUT`) the test drives as a parameter, so it scores the shipped decoder rather
 than a copy of it.
 
+**A `DNKS` part's ten floats are a sphere then a box**: centre, radius, min, max, all in the part's
+own space. The box matches the part's own vertices in 16,885 of 16,885 shipped parts, allowing one
+quantisation step because the bounds were fitted before positions were quantised. The community
+reading of them as a bare min/max pair was one slot short — it read the sphere as the box. The
+sphere is fitted, not circumscribed: its radius is exact for its centre in 99.3% of parts, but that
+centre is the box centre in only 5.6%.
+
 **Still open**: the per-track packing inside a `.mab` keyframe group, so animation import is not yet
-possible; and ten floats per part in `DNKS` whose grouping is undetermined — the community layout of
-a bbox min/max pair holds for only 18 of 18,533 shipped parts.
+possible.

@@ -74,6 +74,12 @@ class VertexStream:
                                 for i in range(count)]
         return cls(buffer.flags, count, components)
 
+    def slice(self, start, count):
+        """A stream over `count` of this buffer's vertices, from `start`."""
+        return VertexStream(self.flags, count,
+                            {name: values[start:start + count]
+                             for name, values in self.components.items()})
+
     def pack(self):
         offsets, stride = vertex_layout(self.flags)
         position = _position_key(self.flags)

@@ -92,6 +92,29 @@ DNKS
 That backwards-addressed payload is why parsers written from the community description need a
 hand-tuned "preamble" constant to find the `DNKS` name table.
 
+The 52-byte meta is a LOD metric, ten floats of bounds, the LOD tier and a reserved word:
+
+```
++0x00  f32      LOD metric
++0x04  f32[3]   bounding sphere centre
++0x10  f32      bounding sphere radius
++0x14  f32[3]   AABB min, over this part's own vertices
++0x20  f32[3]   AABB max
++0x2C  i32      LOD tier, matching the name's _LOD<n> suffix
++0x30  u32      reserved
+```
+
+The box matches the part's vertices in **16,885 of 16,885** shipped parts, once the comparison
+allows one position-quantisation step — the bounds were fitted before the positions were quantised
+to int16. Both are in the part's **own** space, not model space, so the placement node is not applied.
+The sphere is a fitted one rather than the box's circumscribed sphere: its radius is the exact
+distance to the furthest vertex in 99.3% of parts, but its centre is the box centre in only 5.6%, so
+it comes from a minimal-enclosing-sphere fit. `XOBB`/`HPSB` carry the same pair for the whole model,
+in model space, and their sphere behaves the same way.
+
+This retires the community reading of these ten as a bare min/max pair, which holds for 18 of 18,533
+— it was reading the sphere as the box.
+
 **Alignment padding is a descending byte counter, not zeros.** Nine bytes of padding before the
 vertex or index section are written `09 08 07 06 05 04 03 02 01`. A file padded with zeros still
 loads, but no longer matches the original byte for byte.
@@ -156,6 +179,28 @@ within 1% under `DIKS`.
 `0xFFFF` does not mean "no such node exists" — it means no node transforms this part. Both skinned
 parts and rigid parts already modelled in model space carry it, including ones that do have a
 same-named node (`urbanlarge01_cs_door` has nodes `s1` and `s2` and marks both parts `0xFFFF`).
+
+### A LOD's geometry is a plain concatenation
+
+`SDOL` holds one flat vertex block and one flat index block per LOD, and the submesh table says how
+they are divided. The division is completely regular, which is what makes an exporter possible:
+
+- A cluster's vertices are `vertex_count` of them starting at the running total for **its own
+  buffer**, counted in submesh order.
+- Its indices are `face_count * 3` of them starting at the running total for the **whole LOD**, also
+  in submesh order, and address the buffer directly.
+- Buffers sit end to end in the vertex block, in buffer order.
+- Nothing is left over at the end of either block.
+
+Measured across every shipped mesh: 29,296 of 29,296 clusters and 9,746 of 9,746 LODs, with no
+exceptions to any of the four. Two consequences worth knowing before writing a reader:
+
+**Every vertex is referenced by a triangle** — 29,296 of 29,296 clusters have no spare vertices, and
+no shipped mesh contains a degenerate triangle or a `0xFFFF` strip-restart index. A reader that
+compacts a cluster's vertices down to the referenced set is therefore doing nothing but permuting
+them, which quietly makes a re-export differ from the original.
+
+**`cluster.stride` always equals its buffer's stride**, so it is a duplicate, not an override.
 
 ### `EDON` node record
 

@@ -5,14 +5,14 @@ import sys
 
 import bpy
 from bpy.props import BoolProperty, IntProperty, StringProperty
-from bpy_extras.io_utils import ImportHelper
+from bpy_extras.io_utils import ExportHelper, ImportHelper
 
 # fc2fmt sits beside this package and imports no bpy, so it also runs headless.
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from fc2fmt.bundle import EXTENSION
 
-from . import import_xbg
+from . import export_xbg, import_xbg
 
 
 class FC2ImportBase(ImportHelper):
@@ -70,22 +70,55 @@ class FC2_OT_import_bundle(bpy.types.Operator, FC2ImportBase):
                                       self.with_textures)
 
 
+class FC2_OT_export_xbg(bpy.types.Operator, ExportHelper):
+    """Write the edited parts back into the model they were imported from"""
+
+    bl_idname = "export_scene.fc2_xbg"
+    bl_label = "Export Far Cry 2 Mesh"
+    bl_options = {"REGISTER"}
+
+    filename_ext = ".xbg"
+    filter_glob: StringProperty(default="*.xbg", options={"HIDDEN"})
+    recompute_tangents: BoolProperty(
+        name="Recompute tangents", default=False,
+        description="Rebuild the tangent frame from the UVs. Done automatically for "
+                    "a part whose vertex count changed; turn on after editing UVs on "
+                    "a part that kept its topology")
+
+    def execute(self, context):
+        try:
+            collection = export_xbg.collection_of(context)
+            result = export_xbg.save(self.filepath, collection, self.recompute_tangents)
+        except Exception as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+        self.report({"INFO"}, "Wrote %d parts at LOD%d, %d rebuilt"
+                    % (result["parts"], result["lod"], result["resized"]))
+        return {"FINISHED"}
+
+
 def menu_import(self, _context):
     self.layout.operator(FC2_OT_import_bundle.bl_idname,
                          text="Far Cry 2 Model Bundle (%s)" % EXTENSION)
     self.layout.operator(FC2_OT_import_xbg.bl_idname, text="Far Cry 2 Mesh (.xbg)")
 
 
-CLASSES = (FC2_OT_import_xbg, FC2_OT_import_bundle)
+def menu_export(self, _context):
+    self.layout.operator(FC2_OT_export_xbg.bl_idname, text="Far Cry 2 Mesh (.xbg)")
+
+
+CLASSES = (FC2_OT_import_xbg, FC2_OT_import_bundle, FC2_OT_export_xbg)
 
 
 def register():
     for cls in CLASSES:
         bpy.utils.register_class(cls)
     bpy.types.TOPBAR_MT_file_import.append(menu_import)
+    bpy.types.TOPBAR_MT_file_export.append(menu_export)
 
 
 def unregister():
+    bpy.types.TOPBAR_MT_file_export.remove(menu_export)
     bpy.types.TOPBAR_MT_file_import.remove(menu_import)
     for cls in reversed(CLASSES):
         bpy.utils.unregister_class(cls)

@@ -23,6 +23,12 @@ PROP_EXTENT = "fc2_extent"
 PROP_PART = "fc2_part"
 PROP_LOD = "fc2_lod"
 PROP_MATERIAL = "fc2_material"
+PROP_SOURCE = "fc2_source"
+PROP_SUBMESH = "fc2_submesh"
+
+# The file's normals are not unit length and Blender normalises the ones it
+# shades with, so the originals ride along in their own attribute.
+ATTR_NORMAL = "fc2_normal"
 
 
 def build_armature(model, name, collection):
@@ -94,11 +100,14 @@ def build_part(part, model, collection, material_cache, armature, source):
             layer.data[index].color = colour
     if part.normals:
         mesh.normals_split_custom_set_from_vertices(part.normals)
+        stored = mesh.attributes.new(name=ATTR_NORMAL, type="FLOAT_VECTOR", domain="POINT")
+        stored.data.foreach_set("vector", [c for n in part.normals for c in n])
 
     mesh.materials.append(_material(material_cache, part.material, model, source))
     obj = bpy.data.objects.new(part.full_name, mesh)
     obj[PROP_PART] = part.name
     obj[PROP_LOD] = part.lod
+    obj[PROP_SUBMESH] = part.submesh
     collection.objects.link(obj)
 
     slots = part.bone_slots()
@@ -143,7 +152,7 @@ def load(path, lod=0, with_armature=True, with_textures=True, game_root=None):
         root = game_root or find_root(path)
         source = install_assets(root) if root else None
     name = os.path.splitext(os.path.basename(path))[0]
-    return build(open(path, "rb").read(), name, source, lod, with_armature)
+    return build(open(path, "rb").read(), name, source, lod, with_armature, path)
 
 
 def load_bundle(path, lod=0, with_armature=True, with_textures=True):
@@ -151,14 +160,17 @@ def load_bundle(path, lod=0, with_armature=True, with_textures=True):
     bundle = Bundle.load(path)
     name = os.path.splitext(os.path.basename(bundle.model))[0]
     source = bundle if with_textures else None
-    return build(bundle.read(bundle.model), name, source, lod, with_armature)
+    return build(bundle.read(bundle.model), name, source, lod, with_armature, path)
 
 
-def build(data, name, source, lod=0, with_armature=True):
+def build(data, name, source, lod=0, with_armature=True, origin=""):
     """Turn the bytes of one .xbg into Blender objects under a new collection."""
     model = XbgFile.parse(data)
     collection = bpy.data.collections.new(name)
     bpy.context.scene.collection.children.link(collection)
+    # Export reopens this to edit the parts in place, leaving the rest alone.
+    collection[PROP_SOURCE] = origin
+    collection[PROP_LOD] = lod
 
     armature = build_armature(model, name, collection) if with_armature else None
     cache = {}

@@ -150,9 +150,14 @@ def check_operators():
                 if status != {"FINISHED"} or len(meshes) != 6:
                     errors += fail("%s returned %s with %d meshes"
                                    % (target, status, len(meshes)))
+            out = os.path.join(directory, "exported.xbg")
+            if bpy.ops.export_scene.fc2_xbg(filepath=out) != {"FINISHED"}:
+                errors += fail("the export operator did not finish")
+            elif open(out, "rb").read() != open(AK47, "rb").read():
+                errors += fail("the export operator did not reproduce the source")
         finally:
             addon.unregister()
-    print("operators: registered and ran both importers")
+    print("operators: registered and ran both importers and the exporter")
     return errors
 
 

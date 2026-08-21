@@ -1,8 +1,7 @@
 # Assemble an .xbg into per-part meshes ready for a 3D application.
 #
-# The container stores one vertex buffer behind many parts, so this walks the
-# SDOL submesh table, pairs each draw call with its DNKS cluster, and emits only
-# the vertices that part actually references.
+# The container stores one vertex buffer behind many parts, so this pairs each
+# draw call from fc2fmt.geometry with its DNKS cluster and material.
 #
 # Triangles come out in the file's own winding, which is D3D clockwise; flipping
 # for a right-handed application is the caller's job.
@@ -10,11 +9,10 @@
 import re
 from dataclasses import dataclass, field
 
+from .geometry import read_lod
 from .transform import apply, apply_direction
-from .vertex import VertexStream, buffer_vertex_count, unpack_indices
 
 LOD_SUFFIX = re.compile(r"_LOD\d+$", re.IGNORECASE)
-DEGENERATE = 0xFFFF
 
 
 @dataclass
@@ -22,6 +20,9 @@ class PartMesh:
     """One drawable part of one LOD, with its vertices already localised."""
     name: str
     full_name: str
+    # Which entry of the LOD submesh table drew this, so an exporter can put
+    # the edited geometry back in the right place.
+    submesh: int
     lod: int
     material: str
     positions: list
@@ -61,67 +62,43 @@ def extract(model, lod_index=0, place=True):
     carries the matrix that would move them — which is what an application
     wants when the part is parented to the bone instead.
     """
-    lod = model.lods[lod_index]
-    indices = unpack_indices(lod)
-    streams, meshes = {}, []
-
-    for submesh in lod.submeshes:
-        if submesh.part >= len(model.skin_descs):
+    meshes = []
+    for geometry in read_lod(model, model.lods[lod_index]):
+        if not geometry.face_count:
             continue
-        desc = model.skin_descs[submesh.part]
-        if submesh.cluster >= len(desc.clusters):
-            continue
-        cluster = desc.clusters[submesh.cluster]
-        if not cluster.face_count:
-            continue
-
-        if submesh.buffer not in streams:
-            buffer = lod.vertex_buffers[submesh.buffer]
-            streams[submesh.buffer] = (
-                buffer,
-                VertexStream.unpack(lod.vertex_data, buffer,
-                                    buffer_vertex_count(lod, submesh.buffer)))
-        buffer, stream = streams[submesh.buffer]
-
-        triangles, used = [], {}
-        start = submesh.index_offset
-        for corner in range(start, start + cluster.face_count * 3, 3):
-            face = indices[corner:corner + 3]
-            if len(face) < 3 or DEGENERATE in face:
-                continue
-            triangles.append(tuple(used.setdefault(v, len(used)) for v in face))
-        if not triangles:
-            continue
-
-        order = sorted(used, key=used.get)
+        desc = model.skin_descs[geometry.part]
+        cluster = desc.clusters[geometry.cluster]
+        # A cluster owns exactly the vertices it references — 29,296 of 29,296
+        # in the retail set — so the slice is taken whole, in the file's own
+        # order. Compacting it here would permute what an exporter writes back.
+        triangles = [tuple(geometry.indices[corner:corner + 3])
+                     for corner in range(0, len(geometry.indices), 3)]
         placement = model.part_placement(desc.name)
-        part = _build(model, desc, cluster, stream, order, triangles,
-                      placement if place else None)
+        part = _build(model, desc, cluster, geometry.vertices, triangles,
+                      placement if place else None, geometry.submesh)
         if not place:
             part.placement = placement
         meshes.append(part)
     return meshes
 
 
-def _gather(values, order, transform=None):
-    if values is None:
-        return None
-    picked = [values[i] for i in order]
-    return [transform(v) for v in picked] if transform else picked
+def _map(values, transform):
+    """Apply a transform to every value, or hand the list back untouched."""
+    return [transform(v) for v in values] if values and transform else values
 
 
-def _build(model, desc, cluster, stream, order, triangles, placement):
-    positions = _gather(stream.positions(model.pos_scale), order,
-                        (lambda p: apply(placement, p)) if placement else None)
-    normals = _gather(stream.normals(), order,
-                      (lambda n: apply_direction(placement, n)) if placement else None)
-    skin = _gather(stream.skin(), order)
+def _build(model, desc, cluster, stream, triangles, placement, position):
+    positions = _map(stream.positions(model.pos_scale),
+                     (lambda p: apply(placement, p)) if placement else None)
+    normals = _map(stream.normals(),
+                   (lambda n: apply_direction(placement, n)) if placement else None)
     material = (model.materials[cluster.material_index]
                 if cluster.material_index < len(model.materials) else "")
     return PartMesh(
-        name=part_name(desc.name), full_name=desc.name, lod=desc.lod, material=material,
+        name=part_name(desc.name), full_name=desc.name, submesh=position,
+        lod=desc.lod, material=material,
         positions=positions, triangles=triangles, normals=normals,
-        uvs=_gather(stream.uvs(model.uv_translate, model.uv_scale, 0), order),
-        uvs1=_gather(stream.uvs(model.uv_translate, model.uv_scale, 1), order),
-        colours=_gather(stream.colors(), order), skin=skin,
+        uvs=stream.uvs(model.uv_translate, model.uv_scale, 0),
+        uvs1=stream.uvs(model.uv_translate, model.uv_scale, 1),
+        colours=stream.colors(), skin=stream.skin(),
         palette=cluster.palette)
