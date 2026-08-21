@@ -9,7 +9,8 @@ The header, bone bitmasks, section table and quaternion codec below are read out
 `GetQuaternionAtTime` (`0x09bb8a50`), `AnimDataHeader::AnimDataHeader` (`0x09b9f150`),
 `CMoveDefParameter::GetAnimData` (`0x09b7d480`) and `CAnimationResource::ClientProcessRawData`
 (`0x09b9e8d0`) in the symbol-bearing `FarCry2_server` binary, and checked against all **4,436**
-shipped `.mab` files. The per-track packing inside a keyframe group is **not** decoded.
+shipped `.mab` files. The keyframe group layout below is read from the same function and from
+`CAnimSparseRotationChunkWalker::sg_magicTable` (`0x0a1f2140`).
 :::
 
 `.mab` holds one animation clip: a set of bone rotations over time, plus the events the clip fires.
@@ -69,7 +70,7 @@ Ten entries. The engine dereferences three of them by name; the rest are not ide
 | Index | Body offset | Contents |
 |---|---|---|
 | 2 | `+0x80` | constant rotations — `u16` count, entries from `+8`, one packed quaternion each |
-| 3 | `+0x84` | keyframes — `u16` quantised count, `u16` frame count, `u32` track count, then per-group offsets |
+| 3 | `+0x84` | keyframes — see [The keyframe block](#the-keyframe-block) |
 | 7 | `+0x94` | event node chain |
 
 Offsets are **not** stored in ascending order, so a section's extent is found from the next larger
@@ -115,18 +116,62 @@ confirmed a second way: a bone a clip holds constant should sit at or near its r
 (`m_ChildToParent`). Scored against the rest pose over 31,383 samples, this mapping gives mean
 `|dot| = 0.977`; the nearest alternative gives 0.858 and the rest give 0.04.
 
+## The keyframe block
+
+Rotations are stored sparsely, in groups of eight frames. The block opens with a four-word header
+and one offset per group, each relative to the block's own start:
+
+```
++0x00  u16   track count — equals the number of bones in the keyframed mask
++0x02  u16   last frame index; group count is (last >> 3) + 1
++0x04  u16   frames per second; the engine picks a frame with time * this
++0x06  u16   0 in all 4,436 shipped clips
++0x08  i32[groupCount]  group offsets
+```
+
+Each group holds three runs, every one of them ordered by ascending bone id:
+
+```
+trackCount x 6 bytes   the rotation at the group's first frame, one per track
+trackCount bytes       a presence byte per track, padded up to an even count
+                       then, per track in the same order:
+popcount(b & 0x7F) x 6 bytes   the rotations for the subframes that byte names
+```
+
+**Bit `i` of a presence byte means a key at subframe `i + 1`.** Bit 7 is the group's own first
+frame, which is always present and already stored in the first run — the engine forces that bit on
+with `| 0x80` before counting, so its value in the file is irrelevant.
+
+The engine never counts these bits directly. It indexes `sg_magicTable`, a 256-byte table whose low
+three bits are `popcount(x) - 1`; the walk advances a track's key pointer by
+`sg_magicTable[presence | 0x80] & 7` quaternions. The upper bits pick a slerp scale for interpolating
+between two keys, which a tool converting to its own keyframes does not need.
+
+Walking every shipped clip this way, the groups tile their block exactly: **3,880 clips** with
+keyframes, **63,579 groups** and **14,930,196 keys**, with no group over- or under-running the next.
+The remaining 556 clips have no keyframed bones at all. The only slack is 2 to 14 zero bytes after
+the final group, which is the block being padded to a 16-byte boundary.
+
+The header cross-checks itself: `duration * rate` never exceeds `last frame + 1` in any shipped clip,
+which is required because the engine indexes the group table with `time * rate`.
+
 ## What is still open
 
-- **The per-track packing inside a keyframe group.** The group table and the block boundaries are
-  readable; splitting a group into per-bone tracks is not solved, so a clip cannot yet be imported
-  as keyframes.
 - **Translation tracks.** `m_fAnimatedTranslation` is set on `Pelvis` and `Camera` only, and the
-  path that reads their translations has not been traced.
+  path that reads their translations has not been traced. Rotation is all this block carries.
 - **Section table entries 0, 1, 4, 5, 6, 8 and 9**, and body `+0x28`–`+0x6F`.
 
 ## Tooling
 
-`tools/BlenderFC2/fc2fmt/mab.py` reads and writes the container, decodes both bitmasks and the
-constant rotations, and preserves everything else byte for byte;
+`tools/BlenderFC2/fc2fmt/mab.py` reads and writes the container, decodes both bitmasks, the constant
+rotations and the keyframe tracks, and preserves everything else byte for byte;
 `tools/BlenderFC2/tests/roundtrip.py mab` re-writes all 4,436 shipped files and requires the bytes
-back unchanged.
+back unchanged, and `tests/mabcheck.py` decodes every key in the character clips and checks each one
+is unit length and arrives in frame order.
+
+`tools/BlenderFC2/addon/import_mab.py` turns a clip into a Blender Action. Because a clip stores a
+bone's rotation relative to its parent — replacing the rest rotation rather than adding to it — the
+pose bone carries `rest⁻¹ · clip`, and the armature has to be built with each bone oriented like its
+`.xbg` node rather than aimed at its children. `tests/blender_anim.py` checks the result the other
+way round: it evaluates the posed rig and reads each bone's rotation relative to its parent back out,
+requiring the quaternion the file stores (worst difference `2.2e-07` over a whole clip).
