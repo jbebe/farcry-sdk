@@ -50,8 +50,15 @@ public sealed class Camera3D
     /// marker glyph's pixel size falls out of this and the viewport height.</summary>
     public static readonly float VerticalFovRadians = MathHelper.DegreesToRadians(60f);
 
-    public Matrix4 Projection(float aspect) =>
-        Matrix4.CreatePerspectiveFieldOfView(VerticalFovRadians, MathF.Max(aspect, 0.1f), 0.5f, 8000f);
+    /// <summary>The clip planes, shared with anything that has to undo the projection - the water
+    /// turns a depth sample back into metres of water to see through, and a copy of these that
+    /// drifted would leave it measuring a depth the camera never drew.</summary>
+    public const float NearPlane = 0.5f;
+
+    public const float FarPlane = 8000f;
+
+    public Matrix4 Projection(float aspect) => Matrix4.CreatePerspectiveFieldOfView(
+        VerticalFovRadians, MathF.Max(aspect, 0.1f), NearPlane, FarPlane);
 
     public void Look(float dxPixels, float dyPixels)
     {

@@ -247,7 +247,7 @@ public sealed class TerrainTextureSet : IDisposable
         {
             int side = DetailSide >> level;
             GL.CompressedTexImage3D(TextureTarget.Texture2DArray, level,
-                InternalFormat.CompressedRgbS3tcDxt1Ext, side, side, slices, 0,
+                InternalFormat.CompressedSrgbS3tcDxt1Ext, side, side, slices, 0,
                 LevelBytes(side) * slices, IntPtr.Zero);
         }
     }
@@ -301,7 +301,7 @@ public sealed class TerrainTextureSet : IDisposable
                 {
                     GL.CompressedTexSubImage3D(TextureTarget.Texture2DArray, level,
                         x * side, y * side, slice, side, side, 1,
-                        InternalFormat.CompressedRgbS3tcDxt1Ext, blocks.Length, blocks);
+                        InternalFormat.CompressedSrgbS3tcDxt1Ext, blocks.Length, blocks);
                 }
             }
         }
@@ -320,7 +320,7 @@ public sealed class TerrainTextureSet : IDisposable
             blocks[i + 1] = blocks[i + 3] = (byte)(colour >> 8);
         }
         GL.CompressedTexSubImage3D(TextureTarget.Texture2DArray, level, 0, 0, slice, side, side, 1,
-            InternalFormat.CompressedRgbS3tcDxt1Ext, blocks.Length, blocks);
+            InternalFormat.CompressedSrgbS3tcDxt1Ext, blocks.Length, blocks);
     }
 
     /// <summary>The texture's overall colour, read straight off the endpoints of its smallest mip -
@@ -366,10 +366,14 @@ public sealed class TerrainTextureSet : IDisposable
         TerrainMap map, Dictionary<int, string> sectorPaths, Func<string, byte[]?> readByPath, string kind)
     {
         int loaded = 0;
+        // The colour atlas is albedo; the mask beside it is blend data. Only one is sRGB.
+        InternalFormat format = kind == "color"
+            ? InternalFormat.CompressedSrgbS3tcDxt1Ext
+            : InternalFormat.CompressedRgbS3tcDxt1Ext;
         int handle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2D, handle);
         GL.CompressedTexImage2D(TextureTarget.Texture2D, 0,
-            InternalFormat.CompressedRgbS3tcDxt1Ext, WeightSide, WeightSide, 0,
+            format, WeightSide, WeightSide, 0,
             WeightSide * WeightSide / 2, IntPtr.Zero);
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
@@ -393,7 +397,7 @@ public sealed class TerrainTextureSet : IDisposable
             }
             GL.CompressedTexSubImage2D(TextureTarget.Texture2D, 0,
                 col * SdatQuadsPerSector, row * SdatQuadsPerSector, 128, 128,
-                InternalFormat.CompressedRgbS3tcDxt1Ext, expected, blocks);
+                format, expected, blocks);
             loaded++;
         }
         return (handle, loaded);
@@ -419,7 +423,7 @@ public sealed class TerrainTextureSet : IDisposable
         {
             int side = WeightSide >> level;
             GL.CompressedTexImage2D(TextureTarget.Texture2D, level,
-                InternalFormat.CompressedRgbS3tcDxt1Ext, side, side, 0, side * side / 2, IntPtr.Zero);
+                InternalFormat.CompressedSrgbS3tcDxt1Ext, side, side, 0, side * side / 2, IntPtr.Zero);
         }
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMaxLevel, BakedLevels - 1);
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter,
@@ -447,7 +451,7 @@ public sealed class TerrainTextureSet : IDisposable
                 byte[] blocks = DxtSectorTranspose.Mirror(surface.Mips[level], side, sector);
                 GL.CompressedTexSubImage2D(TextureTarget.Texture2D, level,
                     col * sector, row * sector, side, side,
-                    InternalFormat.CompressedRgbS3tcDxt1Ext, blocks.Length, blocks);
+                    InternalFormat.CompressedSrgbS3tcDxt1Ext, blocks.Length, blocks);
             }
             loaded++;
         }

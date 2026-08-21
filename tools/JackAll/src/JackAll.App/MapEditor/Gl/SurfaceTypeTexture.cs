@@ -39,7 +39,7 @@ public sealed class SurfaceTypeTexture : IDisposable
         }
         PaletteHandle = GL.GenTexture();
         GL.BindTexture(TextureTarget.Texture2D, PaletteHandle);
-        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Rgb8, 256, 1, 0,
+        GL.TexImage2D(TextureTarget.Texture2D, 0, PixelInternalFormat.Srgb8, 256, 1, 0,
             PixelFormat.Rgb, PixelType.UnsignedByte, colours);
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Nearest);
         GL.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Nearest);

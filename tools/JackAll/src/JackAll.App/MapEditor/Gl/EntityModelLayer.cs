@@ -18,6 +18,54 @@ public sealed class EntityModelLayer : IDisposable
     /// <summary>Floats per instance: x y z, then the three Euler angles in radians, then r g b.</summary>
     private const int InstanceStride = 9;
 
+    /// <summary>
+    /// Where an instance lands, shared by the lit pass and the shadow pass. Billboards keep facing
+    /// the camera in the shadow map rather than the sun: the card's shadow then matches the card
+    /// that is actually on screen, where turning it edge-on to the sun would cast nothing at all.
+    /// </summary>
+    private const string TransformGlsl =
+        """
+        layout(location = 0) in vec3 position;
+        layout(location = 1) in vec3 normal;
+        layout(location = 2) in vec2 uv;
+        layout(location = 3) in vec3 instancePosition;
+        layout(location = 4) in vec3 instanceAngles;
+        layout(location = 5) in vec3 tint;
+        layout(location = 6) in vec2 vertexMask;
+        uniform mat4 viewProjection;
+        uniform vec3 cameraPosition;
+        // Which way this mesh's card looks in model space, or zero for ordinary geometry that
+        // keeps the orientation the world gave it.
+        uniform vec2 billboardFacing;
+        // The engine's Z-up Euler order: yaw about Z last, over pitch then roll. Columns, so
+        // the product reads right-to-left as Rz * Rx * Ry.
+        mat3 spin(vec3 a)
+        {
+            vec3 s = sin(a), c = cos(a);
+            mat3 ry = mat3(c.y, 0.0, -s.y,   0.0, 1.0, 0.0,   s.y, 0.0, c.y);
+            mat3 rx = mat3(1.0, 0.0, 0.0,    0.0, c.x, s.x,   0.0, -s.x, c.x);
+            mat3 rz = mat3(c.z, s.z, 0.0,   -s.z, c.z, 0.0,   0.0, 0.0, 1.0);
+            return rz * rx * ry;
+        }
+        // Turns the card so it looks at the camera, about Z only - a plant leans with the
+        // ground, it does not tip back when you climb a hill.
+        mat3 faceCamera(vec3 origin)
+        {
+            vec2 toCamera = cameraPosition.xy - origin.xy;
+            if (dot(toCamera, toCamera) < 1e-6) { return spin(vec3(0.0)); }
+            toCamera = normalize(toCamera);
+            // The yaw that carries billboardFacing onto toCamera, as a difference of angles.
+            float yaw = atan(toCamera.y, toCamera.x) - atan(billboardFacing.y, billboardFacing.x);
+            return spin(vec3(0.0, 0.0, yaw));
+        }
+        mat3 instanceRotation()
+        {
+            return dot(billboardFacing, billboardFacing) > 0.5
+                ? faceCamera(instancePosition)
+                : spin(instanceAngles);
+        }
+        """;
+
     private const int VertexStrideBytes = WorldModel.FloatsPerVertex * sizeof(float);
     private const int InstanceStrideBytes = InstanceStride * sizeof(float);
     private const int MaxDecoders = 2;
@@ -99,12 +147,21 @@ public sealed class EntityModelLayer : IDisposable
     private readonly int _uSpecularBase;
     private readonly int _uSpecularColour;
     private readonly int _uSpecularPower;
-    private readonly int _uExposure;
     private readonly int _uFogSetup;
     private readonly int _uFogTint;
     private readonly int _uBillboardFacing;
     /// <summary>Just the meshes carrying a blended range, so the second pass skips the rest.</summary>
     private readonly Mesh[] _blendedMeshes;
+
+    private readonly ShaderProgram _depthProgram;
+    private readonly ShadowBinding _shadow;
+    private readonly OcclusionBinding _occlusion;
+    private readonly int _dViewProjection;
+    private readonly int _dCameraPosition;
+    private readonly int _dBillboardFacing;
+    private readonly int _dDiffuseTiling;
+    private readonly int _dUseTexture;
+    private readonly int _dAlphaMode;
 
     /// <summary>What the streamed diffuse textures currently hold on the GPU.</summary>
     public long TextureBytesResident { get; private set; }
@@ -210,53 +267,57 @@ public sealed class EntityModelLayer : IDisposable
         _blendedMeshes = [.. blended];
         GL.BindVertexArray(0);
 
-        _program = new ShaderProgram(
+        _depthProgram = new ShaderProgram(
+            $$"""
+            #version 330 core
+            {{TransformGlsl}}
+            invariant gl_Position;
+            out vec2 texUv;
+            void main()
+            {
+                texUv = uv;
+                gl_Position =
+                    viewProjection * vec4(instanceRotation() * position + instancePosition, 1.0);
+            }
+            """,
             """
             #version 330 core
-            layout(location = 0) in vec3 position;
-            layout(location = 1) in vec3 normal;
-            layout(location = 2) in vec2 uv;
-            layout(location = 3) in vec3 instancePosition;
-            layout(location = 4) in vec3 instanceAngles;
-            layout(location = 5) in vec3 tint;
-            layout(location = 6) in vec2 vertexMask;
-            uniform mat4 viewProjection;
-            uniform vec3 cameraPosition;
-            // Which way this mesh's card looks in model space, or zero for ordinary geometry that
-            // keeps the orientation the world gave it.
-            uniform vec2 billboardFacing;
+            in vec2 texUv;
+            uniform sampler2D diffuse;
+            uniform vec2 diffuseTiling;
+            uniform float useTexture;
+            uniform int alphaMode;
+            void main()
+            {
+                // The same coverage test the lit pass makes. Without it a tree casts the shadow of
+                // the cards its leaves are painted on.
+                if (useTexture > 0.5 && alphaMode == 1
+                    && texture(diffuse, texUv * diffuseTiling).a < 0.5)
+                {
+                    discard;
+                }
+            }
+            """);
+        _dViewProjection = _depthProgram.UniformLocation("viewProjection");
+        _dCameraPosition = _depthProgram.UniformLocation("cameraPosition");
+        _dBillboardFacing = _depthProgram.UniformLocation("billboardFacing");
+        _dDiffuseTiling = _depthProgram.UniformLocation("diffuseTiling");
+        _dUseTexture = _depthProgram.UniformLocation("useTexture");
+        _dAlphaMode = _depthProgram.UniformLocation("alphaMode");
+
+        _program = new ShaderProgram(
+            $$"""
+            #version 330 core
+            {{TransformGlsl}}
+            invariant gl_Position;
             out vec3 worldNormal;
             out vec3 worldPosition;
             out vec3 baseColour;
             out vec2 texUv;
             out vec2 maskWeights;
-            // The engine's Z-up Euler order: yaw about Z last, over pitch then roll. Columns, so
-            // the product reads right-to-left as Rz * Rx * Ry.
-            mat3 spin(vec3 a)
-            {
-                vec3 s = sin(a), c = cos(a);
-                mat3 ry = mat3(c.y, 0.0, -s.y,   0.0, 1.0, 0.0,   s.y, 0.0, c.y);
-                mat3 rx = mat3(1.0, 0.0, 0.0,    0.0, c.x, s.x,   0.0, -s.x, c.x);
-                mat3 rz = mat3(c.z, s.z, 0.0,   -s.z, c.z, 0.0,   0.0, 0.0, 1.0);
-                return rz * rx * ry;
-            }
-            // Turns the card so it looks at the camera, about Z only - a plant leans with the
-            // ground, it does not tip back when you climb a hill.
-            mat3 faceCamera(vec3 origin)
-            {
-                vec2 toCamera = cameraPosition.xy - origin.xy;
-                if (dot(toCamera, toCamera) < 1e-6) { return spin(vec3(0.0)); }
-                toCamera = normalize(toCamera);
-                // The yaw that carries billboardFacing onto toCamera, as a difference of angles.
-                float yaw = atan(toCamera.y, toCamera.x) - atan(billboardFacing.y, billboardFacing.x);
-                return spin(vec3(0.0, 0.0, yaw));
-            }
-
             void main()
             {
-                mat3 rotation = dot(billboardFacing, billboardFacing) > 0.5
-                    ? faceCamera(instancePosition)
-                    : spin(instanceAngles);
+                mat3 rotation = instanceRotation();
                 worldPosition = rotation * position + instancePosition;
                 // Pure rotation, so the normal rotates the same way - no inverse-transpose needed.
                 worldNormal = rotation * normal;
@@ -289,13 +350,13 @@ public sealed class EntityModelLayer : IDisposable
             uniform vec3 specularBase;
             uniform vec3 specularColour;
             uniform float specularPower;
-            uniform float exposure;
             uniform sampler2D diffuse;
             uniform sampler2D diffuse2;
             uniform sampler2D maskMap;
             out vec4 fragment;
             {{SceneLighting.SkyGlsl}}
             {{SceneLighting.SurfaceGlsl}}
+            {{SceneLighting.ShadowGlsl}}
             void main()
             {
                 vec3 albedo = baseColour;
@@ -320,10 +381,11 @@ public sealed class EntityModelLayer : IDisposable
                         weights *= texture(maskMap, texUv * maskTiling).gb;
                     }
 
-                    albedo = texel.rgb * mix(tintBase, tintColour, weights.y);
+                    albedo = srgbToLinear(texel.rgb) * mix(tintBase, tintColour, weights.y);
                     if (useSecond > 0.5)
                     {
-                        vec3 layer2 = texture(diffuse2, texUv * secondTiling).rgb * tintSecond;
+                        vec3 layer2 =
+                            srgbToLinear(texture(diffuse2, texUv * secondTiling).rgb) * tintSecond;
                         albedo = mix(albedo, layer2, weights.x);
                     }
                 }
@@ -332,7 +394,7 @@ public sealed class EntityModelLayer : IDisposable
                     // A range still streaming its maps, or one with none to stream, stands in for
                     // the average of a textured surface; a saturated marker colour at full
                     // additive lighting would flash as a glowing placeholder instead.
-                    albedo = baseColour * 0.55;
+                    albedo = srgbToLinear(baseColour) * 0.55;
                 }
                 vec3 n = normalize(worldNormal);
                 // Many parts are single-sided shells, so light whichever side is showing. The test
@@ -350,10 +412,15 @@ public sealed class EntityModelLayer : IDisposable
                 vec3 spec = mix(specularBase, specularColour, weights.y) * specMask;
 
                 vec3 toEye = normalize(cameraPosition - worldPosition);
-                vec3 lit = shadeSurface(albedo, n, toEye, sunDirection,
-                    max(dot(n, sunDirection), 0.0), spec, specularPower) * exposure;
-                fragment = vec4(
-                    applyHaze(lit, distance(cameraPosition, worldPosition), worldPosition.z, haze), coverage);
+                float viewDistance = distance(cameraPosition, worldPosition);
+                float ndotl = max(dot(n, sunDirection), 0.0);
+
+                // Nothing baked here to fall back on, so past the cascades a mesh is simply lit.
+                float sunAmount = ndotl
+                    * mix(1.0, sampleShadow(worldPosition, viewDistance, ndotl),
+                          shadowFade(viewDistance));
+                vec3 lit = shadeSurface(albedo, n, toEye, sunDirection, sunAmount, spec, specularPower);
+                fragment = vec4(applyHaze(lit, viewDistance, worldPosition.z, haze), coverage);
             }
             """);
         _uViewProjection = _program.UniformLocation("viewProjection");
@@ -361,6 +428,8 @@ public sealed class EntityModelLayer : IDisposable
         _uSunDirection = _program.UniformLocation("sunDirection");
         _uHaze = _program.UniformLocation("haze");
         _uBillboardFacing = _program.UniformLocation("billboardFacing");
+        _shadow = new ShadowBinding(_program);
+        _occlusion = new OcclusionBinding(_program);
         _uUseTexture = _program.UniformLocation("useTexture");
         _uAlphaMode = _program.UniformLocation("alphaMode");
         _uTintBase = _program.UniformLocation("tintBase");
@@ -374,7 +443,6 @@ public sealed class EntityModelLayer : IDisposable
         _uSpecularBase = _program.UniformLocation("specularBase");
         _uSpecularColour = _program.UniformLocation("specularColour");
         _uSpecularPower = _program.UniformLocation("specularPower");
-        _uExposure = _program.UniformLocation("exposure");
         _uFogSetup = _program.UniformLocation("fogSetup");
         _uFogTint = _program.UniformLocation("fogTint");
         _program.Use();
@@ -589,9 +657,10 @@ public sealed class EntityModelLayer : IDisposable
         _program.Use();
         GL.UniformMatrix4(_uViewProjection, false, ref viewProjection);
         GL.Uniform3(_uCameraPosition, cameraPosition);
+        _shadow.Apply();
+        _occlusion.Apply();
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
         GL.Uniform1(_uHaze, haze);
-        GL.Uniform1(_uExposure, SceneLighting.Exposure);
         SceneLighting.SetFogUniforms(_uFogSetup, _uFogTint);
         GL.Enable(EnableCap.DepthTest);
         GL.ActiveTexture(TextureUnit.Texture0);
@@ -624,9 +693,13 @@ public sealed class EntityModelLayer : IDisposable
             }
             if (lastSurface != surface)
             {
-                GL.Uniform3(_uTintBase, surface.TintBase.X, surface.TintBase.Y, surface.TintBase.Z);
-                GL.Uniform3(_uTintColour, surface.Tint.X, surface.Tint.Y, surface.Tint.Z);
-                GL.Uniform3(_uTintSecond, surface.SecondTint.X, surface.SecondTint.Y, surface.SecondTint.Z);
+                // Authored material colours, so linearised here rather than per fragment.
+                var tintBase = SceneLighting.Linear(surface.TintBase);
+                var tint = SceneLighting.Linear(surface.Tint);
+                var tintSecond = SceneLighting.Linear(surface.SecondTint);
+                GL.Uniform3(_uTintBase, tintBase.X, tintBase.Y, tintBase.Z);
+                GL.Uniform3(_uTintColour, tint.X, tint.Y, tint.Z);
+                GL.Uniform3(_uTintSecond, tintSecond.X, tintSecond.Y, tintSecond.Z);
                 GL.Uniform2(_uDiffuseTiling, surface.DiffuseTiling.X, surface.DiffuseTiling.Y);
                 GL.Uniform2(_uSecondTiling, surface.SecondDiffuseTiling.X, surface.SecondDiffuseTiling.Y);
                 GL.Uniform2(_uMaskTiling, surface.MaskTiling.X, surface.MaskTiling.Y);
@@ -734,6 +807,56 @@ public sealed class EntityModelLayer : IDisposable
             => path is not null && _textures.TryGetValue(path, out int handle) && handle > 0 ? handle : 0;
     }
 
+    /// <summary>
+    /// Every opaque range from the sun's point of view, depth only. Blended ranges are left out:
+    /// glass casting a solid shadow reads worse than glass casting none.
+    /// </summary>
+    public void DrawDepth(Matrix4 lightViewProjection, Vector3 cameraPosition)
+    {
+        _depthProgram.Use();
+        GL.UniformMatrix4(_dViewProjection, false, ref lightViewProjection);
+        GL.Uniform3(_dCameraPosition, cameraPosition);
+
+        foreach (Mesh mesh in _meshes)
+        {
+            if (mesh.FineCount + mesh.CoarseCount == 0)
+            {
+                continue;
+            }
+
+            GL.BindVertexArray(mesh.Vao);
+            GL.Uniform2(_dBillboardFacing, mesh.Facing.X, mesh.Facing.Y);
+            DepthTier(mesh, mesh.FineTier, 0, mesh.FineCount);
+            DepthTier(mesh, mesh.CoarseTier, mesh.CoarseStart, mesh.CoarseCount);
+        }
+        GL.BindVertexArray(0);
+
+        void DepthTier(Mesh mesh, Tier tier, int firstInstance, int instanceCount)
+        {
+            if (instanceCount == 0)
+            {
+                return;
+            }
+
+            PointInstanceAttribs(mesh, firstInstance);
+            foreach (int i in tier.Opaque)
+            {
+                MaterialRange range = tier.Ranges[i];
+                int handle = tier.Handles[i];
+                GL.Uniform1(_dUseTexture, handle > 0 ? 1f : 0f);
+                GL.Uniform1(_dAlphaMode, (int)range.Surface.Alpha);
+                if (handle > 0)
+                {
+                    GL.Uniform2(_dDiffuseTiling,
+                        range.Surface.DiffuseTiling.X, range.Surface.DiffuseTiling.Y);
+                    GL.ActiveTexture(TextureUnit.Texture0);
+                    GL.BindTexture(TextureTarget.Texture2D, handle);
+                }
+                DrawRange(new IndexRange(range.Start, range.Count), instanceCount);
+            }
+        }
+    }
+
     /// <summary>GL 3.3 has no baseInstance, so drawing the coarse partition means repointing the
     /// instance attributes at its first entry.</summary>
     private static void PointInstanceAttribs(Mesh mesh, int firstInstance)
@@ -834,6 +957,7 @@ public sealed class EntityModelLayer : IDisposable
     public void Dispose()
     {
         _program.Dispose();
+        _depthProgram.Dispose();
         foreach (Mesh mesh in _meshes)
         {
             GL.DeleteVertexArray(mesh.Vao);

@@ -30,7 +30,17 @@ public sealed class TerrainMesh3D : IDisposable
     private readonly SurfaceTypeTexture _surfaces;
     private readonly TerrainTextureSet? _textures;
     private readonly ShaderProgram _program;
+
+    /// <summary>The same geometry from the sun's point of view, depth only.</summary>
+    private readonly ShaderProgram _depthProgram;
+    private readonly ShadowBinding _shadow;
+    private readonly OcclusionBinding _occlusion;
+    private readonly int _dViewProjection;
+    private readonly int _dOrigin;
+    private readonly int _dSpacing;
+    private readonly int _dClipRect;
     private readonly int _vao;
+    private readonly int _ebo;
     private readonly int _indexCount;
     private readonly int _uViewProjection;
     private readonly int _uOrigin;
@@ -39,7 +49,6 @@ public sealed class TerrainMesh3D : IDisposable
     private readonly int _uSurfaceTint;
     private readonly int _uTextureMix;
     private readonly int _uShadowMix;
-    private readonly int _uExposure;
     private readonly int _uFogSetup;
     private readonly int _uFogTint;
     private readonly int _uHaze;
@@ -60,26 +69,69 @@ public sealed class TerrainMesh3D : IDisposable
             const float detailFullDistance = {TerrainTextureSet.DetailFullDistance:0.0};
             const float detailFadeDistance = {TerrainTextureSet.DetailFadeDistance:0.0};
             """;
-        _program = new ShaderProgram(
+        // The patch carries no vertex buffer, so where the ground is lives entirely in this one
+        // function. The shadow pass runs the same copy: two of them is two chances for a shadow to
+        // land somewhere the surface is not.
+        string vertexGlsl =
             $$"""
-            #version 330 core
             uniform sampler2D heights;
             uniform mat4 viewProjection;
             uniform vec2 origin;
             uniform float spacing;
-            uniform vec3 cameraPosition;
             {{constants}}
+            vec3 terrainVertex(out vec2 plane)
+            {
+                int row = gl_VertexID / patchSide;
+                int col = gl_VertexID % patchSide;
+                plane = origin + vec2(col, row) * spacing;
+                vec2 clamped = clamp(plane, vec2(0.0), vec2(extent));
+                return vec3(clamped, texture(heights, clamped / extent).r * metersPerRaw);
+            }
+            """;
+
+        _depthProgram = new ShaderProgram(
+            $$"""
+            #version 330 core
+            {{vertexGlsl}}
+            invariant gl_Position;
+            out vec2 world;
+            void main()
+            {
+                gl_Position = viewProjection * vec4(terrainVertex(world), 1.0);
+            }
+            """,
+            """
+            #version 330 core
+            in vec2 world;
+            uniform vec4 clipRect;
+            void main()
+            {
+                // The same cut the lit pass makes. The coarse patch bridges dips metres above the
+                // real ground, and a shadow cast off that surface lands nowhere near it.
+                if (all(greaterThan(world, clipRect.xy)) && all(lessThan(world, clipRect.zw)))
+                {
+                    discard;
+                }
+            }
+            """);
+        _dViewProjection = _depthProgram.UniformLocation("viewProjection");
+        _dOrigin = _depthProgram.UniformLocation("origin");
+        _dSpacing = _depthProgram.UniformLocation("spacing");
+        _dClipRect = _depthProgram.UniformLocation("clipRect");
+
+        _program = new ShaderProgram(
+            $$"""
+            #version 330 core
+            {{vertexGlsl}}
+            uniform vec3 cameraPosition;
+            invariant gl_Position;
             out vec2 world;
             out float viewDistance;
             void main()
             {
-                int row = gl_VertexID / patchSide;
-                int col = gl_VertexID % patchSide;
-                world = origin + vec2(col, row) * spacing;
-                vec2 clamped = clamp(world, vec2(0.0), vec2(extent));
-                float z = texture(heights, clamped / extent).r * metersPerRaw;
-                viewDistance = distance(vec3(clamped, z), cameraPosition);
-                gl_Position = viewProjection * vec4(clamped, z, 1.0);
+                vec3 ground = terrainVertex(world);
+                viewDistance = distance(ground, cameraPosition);
+                gl_Position = viewProjection * vec4(ground, 1.0);
             }
             """,
             $$"""
@@ -103,7 +155,6 @@ public sealed class TerrainMesh3D : IDisposable
             uniform vec2 heightRange;
             uniform float surfaceTint;
             uniform float textureMix;
-            uniform float exposure;
             uniform float haze;
             uniform vec3 sunDirection;
             uniform vec3 cameraPosition;
@@ -114,6 +165,7 @@ public sealed class TerrainMesh3D : IDisposable
             uniform vec4 clipRect;
             {{SceneLighting.SkyGlsl}}
             {{SceneLighting.SurfaceGlsl}}
+            {{SceneLighting.ShadowGlsl}}
             in float viewDistance;
             uniform float sectorsPerSide;
             in vec2 world;
@@ -190,11 +242,13 @@ public sealed class TerrainMesh3D : IDisposable
                 }
 
                 // Only reachable now if a sector names no usable layer at all.
-                if (used <= 0.001) { return vec3(0.5); }
+                if (used <= 0.001) { return vec3(0.2159); }
 
                 // The colour atlas is a baked per-texel tint over the blended detail, mid-grey neutral.
                 vec3 tint = sampleAtlas(terrainColour, world);
-                return (colour / used) * tint * 2.0;
+                // 4.632 is 1/linear(0.5): the atlas is authored mid-grey neutral, and mid-grey
+                // sRGB is 0.2159 once the sampler decodes it.
+                return (colour / used) * tint * 4.632;
             }
 
             // How much of the detail blend survives at this distance. The engine crossfades the
@@ -269,10 +323,17 @@ public sealed class TerrainMesh3D : IDisposable
                 // Keep this source ASCII: a stray non-ASCII byte, even inside a comment, makes the
                 // GLSL tokeniser stop dead and report an unexpected end of file.
                 float light = max(dot(normal, sunDirection), 0.0);
-                float sunAmount = light * mix(1.0, baked, shadowMix);
                 vec3 worldPos = vec3(world, h * metersPerRaw);
+
+                // The bake was lit by a 10-degree sun and this scene is lit by a 44-degree one, so
+                // the two cannot both be right in the same place - only in different ones. Cast
+                // shadows out to the last cascade, the bake past it, crossfaded where they meet.
+                float sunAmount = light * mix(
+                    mix(1.0, baked, shadowMix),
+                    sampleShadow(worldPos, viewDistance, light),
+                    shadowFade(viewDistance));
                 vec3 lit = shadeSurface(base, normal, normalize(cameraPosition - worldPos),
-                    sunDirection, sunAmount, vec3(0.0), 0.0) * exposure;
+                    sunDirection, sunAmount, vec3(0.0), 0.0);
                 fragment = vec4(applyHaze(lit, viewDistance, h * metersPerRaw, haze), 1.0);
             }
             """);
@@ -283,7 +344,8 @@ public sealed class TerrainMesh3D : IDisposable
         _uSurfaceTint = _program.UniformLocation("surfaceTint");
         _uTextureMix = _program.UniformLocation("textureMix");
         _uShadowMix = _program.UniformLocation("shadowMix");
-        _uExposure = _program.UniformLocation("exposure");
+        _shadow = new ShadowBinding(_program);
+        _occlusion = new OcclusionBinding(_program);
         _uFogSetup = _program.UniformLocation("fogSetup");
         _uFogTint = _program.UniformLocation("fogTint");
         _uHaze = _program.UniformLocation("haze");
@@ -332,8 +394,8 @@ public sealed class TerrainMesh3D : IDisposable
 
         _vao = GL.GenVertexArray();
         GL.BindVertexArray(_vao);
-        int ebo = GL.GenBuffer();
-        GL.BindBuffer(BufferTarget.ElementArrayBuffer, ebo);
+        _ebo = GL.GenBuffer();
+        GL.BindBuffer(BufferTarget.ElementArrayBuffer, _ebo);
         GL.BufferData(BufferTarget.ElementArrayBuffer, indices.Length * sizeof(int), indices, BufferUsageHint.StaticDraw);
     }
 
@@ -344,18 +406,40 @@ public sealed class TerrainMesh3D : IDisposable
         GL.Uniform1(_uSurfaceTint, options.TintBySurfaceType ? 1f : 0f);
         GL.Uniform1(_uTextureMix, _textures is not null && options.ShowTextures ? 1f : 0f);
         GL.Uniform1(_uShadowMix, _textures is not null && options.ShowShadow ? 1f : 0f);
-        GL.Uniform1(_uExposure, SceneLighting.Exposure);
         SceneLighting.SetFogUniforms(_uFogSetup, _uFogTint);
         GL.Uniform1(_uHaze, options.Haze);
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
         GL.Uniform3(_uCameraPosition, cameraPosition);
+        _shadow.Apply();
+        _occlusion.Apply();
         _heights.Bind(TextureUnit.Texture0);
         _surfaces.Bind(TextureUnit.Texture1, TextureUnit.Texture2);
         _textures?.Bind(TextureUnit.Texture3, TextureUnit.Texture4, TextureUnit.Texture5,
             TextureUnit.Texture6, TextureUnit.Texture7, TextureUnit.Texture8);
         GL.BindVertexArray(_vao);
         GL.Enable(EnableCap.DepthTest);
+        DrawPatches(cameraPosition, new PatchUniforms(_uOrigin, _uSpacing, _uClipRect));
+    }
 
+    /// <summary>The same two patches from the sun's point of view. Casting terrain matters for what
+    /// stands on it - a hut in a hill's shade stays lit otherwise, because the baked lightmap the
+    /// terrain carries covers only the ground.</summary>
+    public void DrawDepth(Matrix4 lightViewProjection, Vector3 cameraPosition)
+    {
+        _depthProgram.Use();
+        GL.UniformMatrix4(_dViewProjection, false, ref lightViewProjection);
+        _heights.Bind(TextureUnit.Texture0);
+        GL.BindVertexArray(_vao);
+        DrawPatches(cameraPosition, new PatchUniforms(_dOrigin, _dSpacing, _dClipRect));
+    }
+
+    /// <summary>Where one program keeps the three uniforms a patch draw sets.</summary>
+    private readonly record struct PatchUniforms(int Origin, int Spacing, int ClipRect);
+
+    /// <summary>The coarse backdrop then the fine ring, against whichever program's uniforms are
+    /// passed in - the lit pass and the shadow pass have to submit identical geometry.</summary>
+    private void DrawPatches(Vector3 cameraPosition, PatchUniforms uniforms)
+    {
         const float fineSpacing = 1f;
         float coarseSpacing = (_heights.Side - 1f) / (PatchSide - 1);
         float half = (PatchSide - 1) * fineSpacing / 2f;
@@ -369,27 +453,29 @@ public sealed class TerrainMesh3D : IDisposable
         // keeps the fine ring winning inside that band.
         GL.Enable(EnableCap.PolygonOffsetFill);
         GL.PolygonOffset(1f, 1f);
-        GL.Uniform4(_uClipRect,
+        GL.Uniform4(uniforms.ClipRect,
             ox + coarseSpacing, oy + coarseSpacing,
             ox + half * 2f - coarseSpacing, oy + half * 2f - coarseSpacing);
-        DrawPatch(coarseSpacing, originX: 0, originY: 0);
+        DrawPatch(uniforms, coarseSpacing, originX: 0, originY: 0);
         GL.Disable(EnableCap.PolygonOffsetFill);
 
         // An inverted rectangle: no fragment is inside it, so the fine ring clips nothing.
-        GL.Uniform4(_uClipRect, 1f, 1f, -1f, -1f);
-        DrawPatch(fineSpacing, ox, oy);
+        GL.Uniform4(uniforms.ClipRect, 1f, 1f, -1f, -1f);
+        DrawPatch(uniforms, fineSpacing, ox, oy);
     }
 
-    private void DrawPatch(float spacing, float originX, float originY)
+    private void DrawPatch(PatchUniforms uniforms, float spacing, float originX, float originY)
     {
-        GL.Uniform2(_uOrigin, originX, originY);
-        GL.Uniform1(_uSpacing, spacing);
+        GL.Uniform2(uniforms.Origin, originX, originY);
+        GL.Uniform1(uniforms.Spacing, spacing);
         GL.DrawElements(PrimitiveType.Triangles, _indexCount, DrawElementsType.UnsignedInt, 0);
     }
 
     public void Dispose()
     {
         _program.Dispose();
+        _depthProgram.Dispose();
+        GL.DeleteBuffer(_ebo);
         GL.DeleteVertexArray(_vao);
     }
 }

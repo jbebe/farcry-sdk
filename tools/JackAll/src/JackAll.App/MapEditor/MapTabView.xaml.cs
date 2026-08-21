@@ -48,6 +48,10 @@ public partial class MapTabView : UserControl
     private List<WorldEntity> _visibleEntities = [];
     private List<MissionLayerRow> _missionLayers = [];
     private bool _markersDirty;
+    private RenderTargets? _targets;
+    private PostProcess? _post;
+    private ShadowCascades? _cascades;
+    private AmbientOcclusion? _occlusion;
     private (int X, int Y) _cameraSector = (int.MinValue, int.MinValue);
 
     /// <summary>Refilled per marker rebuild; sized for every positioned entity of the world.</summary>
@@ -212,6 +216,14 @@ public partial class MapTabView : UserControl
     private void Viewport_Render(TimeSpan delta)
     {
         ShowFrameRate(delta);
+        SceneLighting.Time += (float)delta.TotalSeconds;
+
+        GlDebug.Install();
+
+        // Scoped for the throwing paths below - a shader typo in a lazy layer, a failed world swap.
+        // Leaving a pass framebuffer bound blacks the viewport for the rest of the session.
+        using GlState frame = new();
+        GlState.BeginFrame();
 
         if (_pendingLoad is { } pending)
         {
@@ -227,6 +239,7 @@ public partial class MapTabView : UserControl
             _shapeLayer?.Dispose();
             _splineLayer?.Dispose();
             _waterLayer = new WaterLayer(pending.Terrain);
+            _waterLayer.SetVisible(_camera.Position);
             _shapeLayer = new ShapeLayer(pending.Shapes);
             _splineLayer = new ShapeLayer(pending.Splines);
             _vegetationLayer?.Dispose();
@@ -289,6 +302,7 @@ public partial class MapTabView : UserControl
             _cameraSector = sector;
             _markersDirty = true;
             _vegetationDirty = true;
+            _waterLayer?.SetVisible(_camera.Position);
         }
 
         if (_vegetationDirty && _vegetationModelLayer is { } vegetationModels)
@@ -319,22 +333,57 @@ public partial class MapTabView : UserControl
             RebuildCategoryMarkers();
         }
 
-        GL.Viewport(0, 0, Viewport.FrameBufferWidth, Viewport.FrameBufferHeight);
-        GL.ClearColor(0.13f, 0.15f, 0.17f, 1f);
-        GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-        if (_terrain is null || _terrainMesh is null)
+        int width = Viewport.FrameBufferWidth;
+        int height = Viewport.FrameBufferHeight;
+
+        // Collapsed or mid-layout: there is no surface to size the offscreen targets against.
+        if (width <= 0 || height <= 0)
         {
             return;
         }
 
+        GL.Viewport(0, 0, width, height);
+        GL.ClearColor(0.13f, 0.15f, 0.17f, 1f);
+
+        // Nothing loaded yet, so there is no scene to resolve - clear the control's own buffer and
+        // leave, rather than clearing an offscreen one nothing will read.
+        if (_terrain is null || _terrainMesh is null)
+        {
+            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+            return;
+        }
+
+        _targets ??= new RenderTargets();
+        _targets.Resize(width, height);
+        _post ??= new PostProcess();
+
         ApplyFlyKeys((float)delta.TotalSeconds);
-        OpenTK.Mathematics.Matrix4 viewProjection = _camera.View()
-            * _camera.Projection((float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1)));
+        float aspect = (float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1));
+        OpenTK.Mathematics.Matrix4 viewProjection = _camera.View() * _camera.Projection(aspect);
 
         // One switch behind the sky, the haze and the water shading: presentation on, or a plain
         // flat view of the data.
         float demo = DemoMode.IsChecked == true ? 1f : 0f;
         SceneLighting.Exposure = (float)ExposureSlider.Value;
+        bool drawEntityModels = LayerCatalog.Entities.IsVisible && EntityDrawMode.SelectedIndex != ModeMarkers;
+
+        SceneLighting.Shadows = null;
+        SceneLighting.OcclusionMap = 0;
+        if (demo > 0f)
+        {
+            SceneLighting.Shadows = DrawShadowMaps(drawEntityModels, aspect);
+            SceneLighting.OcclusionMap = DrawOcclusion(drawEntityModels, viewProjection, aspect);
+        }
+
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.SceneFramebuffer);
+        GL.Viewport(0, 0, width, height);
+
+        // The occlusion pass leaves behind the depth its prepass laid down, which is exactly what
+        // the opaque pass tests against - so only the colour needs clearing when it ran.
+        GL.Clear(SceneLighting.OcclusionMap == 0
+            ? ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit
+            : ClearBufferMask.ColorBufferBit);
+
         if (demo > 0f)
         {
             _sky ??= new SkyLayer();
@@ -352,7 +401,6 @@ public partial class MapTabView : UserControl
         // Every opaque surface goes in before the water. The water blends and never writes depth,
         // so it can only occlude what is already in the depth buffer: drawn first, a boat below
         // the surface paints straight over it and reads as floating in a hole.
-        bool drawEntityModels = LayerCatalog.Entities.IsVisible && EntityDrawMode.SelectedIndex != ModeMarkers;
         if (LayerCatalog.Vegetation.IsVisible)
         {
             _vegetationModelLayer?.Draw(viewProjection, _camera.Position, demo);
@@ -362,10 +410,26 @@ public partial class MapTabView : UserControl
             _modelLayer?.Draw(viewProjection, _camera.Position, demo);
         }
 
-        if (LayerCatalog.Water.IsVisible)
+        if (LayerCatalog.Water.IsVisible && _waterLayer is { HasVisibleWater: true })
         {
-            _waterLayer?.Draw(viewProjection, _camera.Position, demo);
+            // The water reads both what is behind it and how far away that is, and a pass cannot
+            // sample an image the draw it is part of is bound to. Depth as well as colour, because
+            // the water is depth-testing against the live buffer while it reads this one.
+            GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _targets.SceneFramebuffer);
+            GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, _targets.ColourCopyFramebuffer);
+            GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height,
+                ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit,
+                BlitFramebufferFilter.Nearest);
+            GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.SceneFramebuffer);
+
+            _waterLayer.Draw(viewProjection, _camera.Position, demo, _targets);
         }
+
+        // The scene is complete, so resolve it to a displayable image here. Everything after this
+        // point is an indicator drawn at exactly the colour it was authored in - run a selection box
+        // or a category glyph through the tonemap and it comes back muted.
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.PresentFramebuffer);
+        _post.Composite(_targets.Colour, demo);
 
         // Indicators from here on: lines and markers that are meant to read through the water, not
         // sit under it.
@@ -419,6 +483,71 @@ public partial class MapTabView : UserControl
         }
 
         DrawSelectionBox(viewProjection);
+
+        // Colour only: the control's depth is a 24-bit renderbuffer and the scene's is a 32-bit
+        // float texture, and a depth blit between two formats is an error.
+        GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _targets.PresentFramebuffer);
+        GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, Viewport.Framebuffer);
+        GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height,
+            ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
+    }
+
+    /// <summary>
+    /// A depth-only pass from the camera, and the occlusion computed off it. The prepass is the same
+    /// <c>DrawDepth</c> the cascades use, pointed at the eye instead of the sun - occlusion has to be
+    /// ready before the surfaces that consume it are shaded, and a forward pass cannot sample a
+    /// depth buffer it is still writing.
+    /// </summary>
+    private int DrawOcclusion(
+        bool drawEntityModels, OpenTK.Mathematics.Matrix4 viewProjection, float aspect)
+    {
+        _occlusion ??= new AmbientOcclusion();
+
+        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets!.SceneFramebuffer);
+        GL.Viewport(0, 0, _targets.Width, _targets.Height);
+        GL.Clear(ClearBufferMask.DepthBufferBit);
+        DrawCasters(viewProjection, drawEntityModels);
+
+        return _occlusion.Render(_targets, _camera.Projection(aspect));
+    }
+
+    /// <summary>Everything that writes depth, from one viewpoint. The cascades and the prepass want
+    /// the same set - the only difference between them is where it is seen from.</summary>
+    private void DrawCasters(OpenTK.Mathematics.Matrix4 viewProjection, bool drawEntityModels)
+    {
+        if (LayerCatalog.Heightmap.IsVisible)
+        {
+            _terrainMesh?.DrawDepth(viewProjection, _camera.Position);
+        }
+        if (LayerCatalog.Vegetation.IsVisible)
+        {
+            _vegetationModelLayer?.DrawDepth(viewProjection, _camera.Position);
+        }
+        if (drawEntityModels)
+        {
+            _modelLayer?.DrawDepth(viewProjection, _camera.Position);
+        }
+    }
+
+    /// <summary>
+    /// The sun's depth of the scene, one pass per cascade. The terrain casts as well as receives:
+    /// the lightmap baked into it covers the ground and nothing standing on it, so a hut in a hill's
+    /// shade would stay lit without this.
+    /// </summary>
+    /// <remarks>The bias is entirely in the lookup rather than a polygon offset here, because the
+    /// terrain's own draw sets and clears <c>PolygonOffsetFill</c> for its coarse patch and would
+    /// take an outer one with it.</remarks>
+    private ShadowCascades DrawShadowMaps(bool drawEntityModels, float aspect)
+    {
+        _cascades ??= new ShadowCascades();
+        _cascades.Fit(_camera, aspect);
+
+        for (int cascade = 0; cascade < ShadowCascades.Count; cascade++)
+        {
+            _cascades.BeginCascade(cascade);
+            DrawCasters(_cascades.Matrices[cascade], drawEntityModels);
+        }
+        return _cascades;
     }
 
     /// <summary>
