@@ -94,18 +94,15 @@ public static class SceneLighting
     /// </summary>
     public static bool Demo { get; set; } = true;
 
-    /// <summary>The same switch as the <c>demo</c> uniform <see cref="SkyGlsl"/> declares.</summary>
-    public static float DemoUniform => Demo ? 1f : 0f;
-
     /// <summary>
     /// The sky as a GLSL function, shared so water reflects exactly the sky that gets drawn rather
     /// than an approximation of it. Covers the gradient and the sun's broad halo; the sharp disc
     /// belongs to <see cref="SkyLayer"/> alone, because a mirrored disc aliases badly on water and a
     /// specular highlight reads better anyway.
     /// </summary>
-    /// <remarks>Every program pasting this block that also calls <c>applyHaze</c> must set the two
-    /// fog uniforms - see <see cref="SetSkyUniforms"/>. Left at their zero defaults they disable the
-    /// fog entirely, which is visible enough not to ship by accident.</remarks>
+    /// <remarks>Every program pasting this block needs a <see cref="SkyBinding"/> to fill the
+    /// uniforms it declares. Left at their zero defaults the fog is disabled entirely and the
+    /// presentation reads as off, which is visible enough not to ship by accident.</remarks>
     public static string SkyGlsl { get; } =
         $$"""
         const vec3 skyZenith  = vec3({{Glsl(Linear(Zenith))}});
@@ -254,12 +251,14 @@ public static class SceneLighting
         const vec3 ambientGround = vec3({{Glsl(AmbientGround)}});
         const float specularStrength = {{Glsl(SpecularStrength)}};
 
-        // The whole of the shading with the presentation off: one directional term over a constant
-        // ambient, so a slope still reads as a slope. Shared for the same reason shadeSurface is -
-        // the ground and the models drifting apart is the bug this file exists to prevent.
-        vec3 shadeFlat(vec3 albedo, float sunAmount)
+        // Directional ambient plus sun. With the presentation off this is the whole of the shading -
+        // called with no occlusion, and with none of the cascade lookup, highlight or haze that
+        // shadeSurface goes on to add. One expression for both, so switching the presentation
+        // changes what the frame computes rather than how bright the world is.
+        vec3 shadeDiffuse(vec3 albedo, vec3 normal, float sunAmount, float occlusion)
         {
-            return albedo * (0.30 + 0.70 * sunAmount);
+            vec3 ambient = mix(ambientGround, ambientSky, normal.z * 0.5 + 0.5) * occlusion;
+            return albedo * (ambient + sunLight * sunAmount);
         }
 
         // sunAmount is how much sun reaches this fragment with N.L already folded in, because the
@@ -272,8 +271,7 @@ public static class SceneLighting
             vec3 albedo, vec3 normal, vec3 toEye, vec3 sunDirection, float sunAmount,
             vec3 specularColour, float specularPower)
         {
-            vec3 ambient = mix(ambientGround, ambientSky, normal.z * 0.5 + 0.5) * ambientOcclusion();
-            vec3 lit = albedo * (ambient + sunLight * sunAmount);
+            vec3 lit = shadeDiffuse(albedo, normal, sunAmount, ambientOcclusion());
             if (specularPower > 0.0 && sunAmount > 0.0)
             {
                 // Blinn, gated on sunAmount so a facet the sun does not reach cannot catch a
@@ -293,33 +291,45 @@ public static class SceneLighting
         }
         """;
 
-    /// <summary>Sets the three uniforms <see cref="SkyGlsl"/> declares, from the current world's
-    /// authored values. Callers pass locations they resolved on their own program.</summary>
-    public static void SetSkyUniforms(int demoLocation, int fogSetupLocation, int fogTintLocation)
-    {
-        OpenTK.Graphics.OpenGL4.GL.Uniform1(demoLocation, DemoUniform);
-
-        // Nothing reads the fog with the presentation off - applyHaze is behind the same switch.
-        if (!Demo)
-        {
-            return;
-        }
-
-        WorldEnvironment fog = Fog;
-        float range = MathF.Max(fog.FogEnd - fog.FogStart, 1f);
-        OpenTK.Graphics.OpenGL4.GL.Uniform3(
-            fogSetupLocation, fog.FogStart, 1f / range, fog.FogAmount);
-
-        // The descriptor writes fog as an 8-bit triple - an authored sRGB colour, like every other
-        // colour in this file, and the haze mixes toward it in linear radiance.
-        var tint = Linear(fog.FogColour);
-        OpenTK.Graphics.OpenGL4.GL.Uniform3(fogTintLocation, tint.X, tint.Y, tint.Z);
-    }
-
     private static string Glsl(Vector3 v) => string.Create(
         System.Globalization.CultureInfo.InvariantCulture, $"{v.X:0.####}, {v.Y:0.####}, {v.Z:0.####}");
 
     /// <summary>Invariant, so a comma-decimal locale cannot turn one constant into two.</summary>
     private static string Glsl(float v)
         => v.ToString("0.0####", System.Globalization.CultureInfo.InvariantCulture);
+}
+
+/// <summary>
+/// The uniforms <see cref="SceneLighting.SkyGlsl"/> declares, resolved on one program. Same shape as
+/// <see cref="ShadowBinding"/> and <see cref="OcclusionBinding"/>: the block is shared GLSL, so what
+/// fills it has to be shared too rather than hand-carried as a list of locations per layer.
+/// </summary>
+public sealed class SkyBinding
+{
+    private readonly int _demo;
+    private readonly int _fogSetup;
+    private readonly int _fogTint;
+
+    public SkyBinding(ShaderProgram program)
+    {
+        _demo = program.UniformLocation("demo");
+        _fogSetup = program.UniformLocation("fogSetup");
+        _fogTint = program.UniformLocation("fogTint");
+    }
+
+    /// <summary>Uploads the switch and the current world's fog to whichever program is in use.
+    /// </summary>
+    public void Apply()
+    {
+        OpenTK.Graphics.OpenGL4.GL.Uniform1(_demo, SceneLighting.Demo ? 1f : 0f);
+
+        WorldEnvironment fog = SceneLighting.Fog;
+        float range = MathF.Max(fog.FogEnd - fog.FogStart, 1f);
+        OpenTK.Graphics.OpenGL4.GL.Uniform3(_fogSetup, fog.FogStart, 1f / range, fog.FogAmount);
+
+        // The descriptor writes fog as an 8-bit triple - an authored sRGB colour, like every other
+        // colour in this file, and the haze mixes toward it in linear radiance.
+        System.Numerics.Vector3 tint = SceneLighting.Linear(fog.FogColour);
+        OpenTK.Graphics.OpenGL4.GL.Uniform3(_fogTint, tint.X, tint.Y, tint.Z);
+    }
 }

@@ -4,6 +4,19 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 
 ## [Unreleased]
 
+### Changed
+- **Map viewport "Demo mode" is now the switch for everything that costs.** It used to gate only the
+  shadow cascades, the occlusion pass and the sky; every other presentation feature ran regardless
+  and was discarded by a trailing `mix()` — the water shader computed its waves, refraction, glint
+  and foam, and the frame paid a full-screen colour+depth blit to feed a refraction nothing showed.
+  Off, the viewport now draws one geometry pass of flatly lit textures, releases the presentation's
+  ~115 MB of render targets, and redraws only when something changes: an idle editor sitting over a
+  loaded world1 went from 1.30 s of CPU per 5 s to 0.02 s. Model and scatter geometry draws to the
+  near sector ring rather than the far one. Demo mode itself renders identically to before.
+- The terrain shader no longer samples the baked lightmap or the surface-type palette when their
+  layer toggles are off, nor the twelve-fetch detail blend when Textures is - all three were sampled
+  and then scaled away by zero, in both modes.
+
 ### Added
 - **Map tab** — the start of the map editor: a layer list of everything an FC2 world is built from
   (terrain, entities, water, navmesh, ...), a per-layer context panel, and a 3D viewport that

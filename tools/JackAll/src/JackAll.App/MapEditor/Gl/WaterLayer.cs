@@ -129,10 +129,8 @@ public sealed class WaterLayer : IDisposable
     private readonly int _uViewProjection;
     private readonly int _uCameraPosition;
     private readonly int _uSunDirection;
-    private readonly int _uDemo;
     private readonly int _uTime;
-    private readonly int _uFogSetup;
-    private readonly int _uFogTint;
+    private readonly SkyBinding _sky;
 
     /// <summary>Whether any water is near enough to draw. The scene copy the refraction reads costs
     /// a full-screen colour and depth blit, and on a map with no water near the camera there is
@@ -262,10 +260,8 @@ public sealed class WaterLayer : IDisposable
         _uViewProjection = _program.UniformLocation("viewProjection");
         _uCameraPosition = _program.UniformLocation("cameraPosition");
         _uSunDirection = _program.UniformLocation("sunDirection");
-        _uDemo = _program.UniformLocation("demo");
         _uTime = _program.UniformLocation("time");
-        _uFogSetup = _program.UniformLocation("fogSetup");
-        _uFogTint = _program.UniformLocation("fogTint");
+        _sky = new SkyBinding(_program);
         _program.Use();
         GL.Uniform1(_program.UniformLocation("sceneColour"), 0);
         GL.Uniform1(_program.UniformLocation("sceneDepth"), 1);
@@ -391,16 +387,14 @@ public sealed class WaterLayer : IDisposable
         GL.Uniform3(_uCameraPosition, cameraPosition);
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
         GL.Uniform1(_uTime, SceneLighting.Time);
-        SceneLighting.SetSkyUniforms(_uDemo, _uFogSetup, _uFogTint);
+        _sky.Apply();
 
-        // The flat pane reads neither copy, and with the presentation off they are not allocated.
-        if (SceneLighting.Demo)
-        {
-            GL.ActiveTexture(TextureUnit.Texture1);
-            GL.BindTexture(TextureTarget.Texture2D, targets.DepthCopy);
-            GL.ActiveTexture(TextureUnit.Texture0);
-            GL.BindTexture(TextureTarget.Texture2D, targets.ColourCopy);
-        }
+        // Both are 0 with the presentation off, which is what the flat pane wants: it samples
+        // neither, and there is nothing allocated to sample.
+        GL.ActiveTexture(TextureUnit.Texture1);
+        GL.BindTexture(TextureTarget.Texture2D, targets.DepthCopy);
+        GL.ActiveTexture(TextureUnit.Texture0);
+        GL.BindTexture(TextureTarget.Texture2D, targets.ColourCopy);
 
         GL.BindVertexArray(_vao);
         GL.Enable(EnableCap.Blend);

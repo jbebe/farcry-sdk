@@ -58,6 +58,12 @@ public partial class MapTabView : UserControl
     /// <summary>The viewport's own background, and so what shows in place of the sky.</summary>
     private static readonly OpenTK.Mathematics.Vector3 BackgroundColour = new(0.13f, 0.15f, 0.17f);
 
+    /// <summary>The same colour for the scene buffer, which holds linear radiance and is sRGB-encoded
+    /// by the composite - clear it with the authored value and the background comes back far lighter.
+    /// </summary>
+    private static readonly OpenTK.Mathematics.Vector3 BackgroundLinear =
+        SceneLighting.Linear(BackgroundColour);
+
     /// <summary>Refilled per marker rebuild; sized for every positioned entity of the world.</summary>
     private float[] _markerStaging = [];
 
@@ -134,9 +140,19 @@ public partial class MapTabView : UserControl
         LayerList.ItemsSource = view;
         LayerList.SelectedItem = LayerCatalog.Layers[0];
 
-        // Every button, toggle, slider and list in the tab can change what the viewport shows, so
-        // they are caught here as routed events rather than wired one handler at a time - the layer
-        // list's own checkboxes and any control added later included.
+        // Layer visibility is what the frame actually reads, so the redraw hangs off the property
+        // rather than off the checkbox - code that hides a layer without a click still redraws.
+        foreach (MapLayer layer in LayerCatalog.Layers)
+        {
+            layer.PropertyChanged += (_, _) => Viewport.InvalidateVisual();
+        }
+
+        // The rest of the tab has no such state to watch, so its controls are caught as routed
+        // events at the root. Checked and Unchecked are not redundant with Click: a box toggled by
+        // anything other than a click - a binding, an automation peer - raises only the former, and
+        // with the viewport idle there is no next frame to notice the change on its own.
+        AddHandler(ButtonBase.ClickEvent,
+            new System.Windows.RoutedEventHandler(Redraw), handledEventsToo: true);
         AddHandler(ToggleButton.CheckedEvent,
             new System.Windows.RoutedEventHandler(Redraw), handledEventsToo: true);
         AddHandler(ToggleButton.UncheckedEvent,
@@ -145,8 +161,6 @@ public partial class MapTabView : UserControl
             new SelectionChangedEventHandler(Redraw), handledEventsToo: true);
         AddHandler(Slider.ValueChangedEvent,
             new System.Windows.RoutedPropertyChangedEventHandler<double>(Redraw), handledEventsToo: true);
-        AddHandler(ButtonBase.ClickEvent,
-            new System.Windows.RoutedEventHandler(Redraw), handledEventsToo: true);
         AddHandler(TreeView.SelectedItemChangedEvent,
             new System.Windows.RoutedPropertyChangedEventHandler<object>(Redraw), handledEventsToo: true);
 
@@ -249,14 +263,7 @@ public partial class MapTabView : UserControl
         using GlState frame = new();
         GlState.BeginFrame();
 
-        // The checkbox is read here rather than on the click because turning the presentation off
-        // frees GL objects, and this is the one place a context is current.
-        bool demo = DemoMode.IsChecked == true;
-        if (demo != SceneLighting.Demo)
-        {
-            SceneLighting.Demo = demo;
-            ApplyPresentation();
-        }
+        SyncPresentation();
 
         if (_pendingLoad is { } pending)
         {
@@ -341,7 +348,7 @@ public partial class MapTabView : UserControl
         if (_vegetationDirty && _vegetationModelLayer is { } vegetationModels)
         {
             _vegetationDirty = false;
-            vegetationModels.SetVisible(_vegetationInstances, _camera.Position);
+            vegetationModels.SetVisible(_vegetationInstances, _camera.Position, DrawRing);
         }
 
         // Toggling a mission layer changes which markers exist, so the instance stream is rebuilt
@@ -349,10 +356,9 @@ public partial class MapTabView : UserControl
         if (_markersDirty)
         {
             _markersDirty = false;
-            List<WorldEntity> beyondTheRing = [];
             if (_modelLayer is { } modelLayer && EntityDrawMode.SelectedIndex != ModeMarkers)
             {
-                beyondTheRing = modelLayer.SetVisible(_visibleEntities, _camera.Position);
+                modelLayer.SetVisible(_visibleEntities, _camera.Position, DrawRing);
             }
 
             // The draw mode speaks only for entities that resolved to geometry: Models draws them as
@@ -360,12 +366,9 @@ public partial class MapTabView : UserControl
             // markers. The mesh-less ones belong to their category layers either way - and the ones
             // a dedicated layer already draws are held back here too, or a light picks up a second
             // marker on top of the one the Lights layer gives it.
-            // Off the presentation the ring is a third as wide, so there Models does fall back to
-            // markers for what it dropped rather than letting a world go empty a block away.
-            IEnumerable<WorldEntity> candidates = EntityDrawMode.SelectedIndex != ModeModels
-                ? _visibleEntities
-                : SceneLighting.Demo ? [] : beyondTheRing;
-            List<WorldEntity> markerEntities = [.. candidates.Where(OwnedByThisLayer)];
+            List<WorldEntity> markerEntities = EntityDrawMode.SelectedIndex == ModeModels
+                ? []
+                : [.. _visibleEntities.Where(OwnedByThisLayer)];
             _markerLayer?.SetInstances(FillMarkers(markerEntities), markerEntities.Count);
             RebuildCategoryMarkers();
         }
@@ -380,18 +383,19 @@ public partial class MapTabView : UserControl
         }
 
         GL.Viewport(0, 0, width, height);
-        GL.ClearColor(BackgroundColour.X, BackgroundColour.Y, BackgroundColour.Z, 1f);
 
         // Nothing loaded yet, so there is no scene to resolve - clear the control's own buffer and
-        // leave, rather than clearing an offscreen one nothing will read.
+        // leave, rather than clearing an offscreen one nothing will read. This one is the only clear
+        // that reaches an 8-bit buffer directly, so it takes the colour as authored.
         if (_terrain is null || _terrainMesh is null)
         {
+            GL.ClearColor(BackgroundColour.X, BackgroundColour.Y, BackgroundColour.Z, 1f);
             GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
             return;
         }
 
         _targets ??= new RenderTargets();
-        _targets.Resize(width, height);
+        _targets.Resize(width, height, SceneLighting.Demo);
         _post ??= new PostProcess();
 
         ApplyFlyKeys((float)delta.TotalSeconds);
@@ -405,7 +409,6 @@ public partial class MapTabView : UserControl
         SceneLighting.OcclusionMap = 0;
         if (SceneLighting.Demo)
         {
-            _targets.EnsurePresentation();
             SceneLighting.Shadows = DrawShadowMaps(drawEntityModels, aspect);
             SceneLighting.OcclusionMap = DrawOcclusion(drawEntityModels, viewProjection, aspect);
         }
@@ -413,10 +416,7 @@ public partial class MapTabView : UserControl
         GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.SceneFramebuffer);
         GL.Viewport(0, 0, width, height);
 
-        // The scene buffer holds linear radiance and the composite encodes it, so the background
-        // has to go in as the linear of the authored colour to come back out as that colour.
-        var background = SceneLighting.Linear(BackgroundColour);
-        GL.ClearColor(background.X, background.Y, background.Z, 1f);
+        GL.ClearColor(BackgroundLinear.X, BackgroundLinear.Y, BackgroundLinear.Z, 1f);
 
         // The occlusion pass leaves behind the depth its prepass laid down, which is exactly what
         // the opaque pass tests against - so only the colour needs clearing when it ran.
@@ -534,33 +534,47 @@ public partial class MapTabView : UserControl
         GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height,
             ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
 
-        // Keep drawing only while something is still moving: the presentation animates its water,
-        // held keys and a look drag move the camera, and a streamed texture reaches the GPU inside
-        // a draw and nowhere else. Otherwise this frame is the one the viewport holds until an
-        // input or a control asks for another.
-        Viewport.RenderContinuously = SceneLighting.Demo || _flyKeys.Count > 0 || _looking
-            || _modelLayer is { Streaming: true }
-            || _vegetationModelLayer is { Streaming: true };
+        // Keep drawing only while something is still moving. The water is the one thing in the scene
+        // that animates, and only under the presentation. A texture reaches the GPU inside the very
+        // Draw this frame may have skipped, so a layer only counts as streaming while it is drawn -
+        // untick Entities mid-load and waiting on it would spin forever, making no progress.
+        // Otherwise this frame is the one the viewport holds until an input or a control asks again.
+        Viewport.RenderContinuously = _flyKeys.Count > 0 || _looking
+            || (SceneLighting.Demo && LayerCatalog.Water.IsVisible
+                && _waterLayer is { HasVisibleWater: true })
+            || (drawEntityModels && _modelLayer is { Streaming: true })
+            || (LayerCatalog.Vegetation.IsVisible && _vegetationModelLayer is { Streaming: true });
     }
 
-    /// <summary>Releases what only the presentation owns, or lets the next frame build it again.
-    /// The draw ring moves with the switch, so both instance streams are rebuilt either way.</summary>
-    private void ApplyPresentation()
+    /// <summary>How far out, in sectors, a model or a scatter placement still draws as geometry.
+    /// The far tier is the presentation's; off it, only the near ring draws.</summary>
+    private static int DrawRing
+        => SceneLighting.Demo ? WorldModels.CoarseRadius : WorldModels.FineRadius;
+
+    /// <summary>
+    /// Takes the Demo checkbox and, when it has moved, everything that follows from it: the draw
+    /// ring changes, so both instance streams are rebuilt, and switching off frees the 64 MB cascade
+    /// array. Read here rather than on the click because that freeing needs a current GL context.
+    /// </summary>
+    private void SyncPresentation()
     {
-        _markersDirty = true;
-        _vegetationDirty = true;
-        if (SceneLighting.Demo)
+        bool demo = DemoMode.IsChecked == true;
+        if (demo == SceneLighting.Demo)
         {
             return;
         }
 
-        _cascades?.Dispose();
-        _cascades = null;
-        _occlusion?.Dispose();
-        _occlusion = null;
-        _sky?.Dispose();
-        _sky = null;
-        _targets?.ReleasePresentation();
+        SceneLighting.Demo = demo;
+        _markersDirty = true;
+        _vegetationDirty = true;
+
+        // The occlusion and sky layers own nothing but shader programs, so they are kept: disposing
+        // them would reclaim a few KB and cost three compiles the next time Demo comes back on.
+        if (!demo)
+        {
+            _cascades?.Dispose();
+            _cascades = null;
+        }
     }
 
     /// <summary>
@@ -847,17 +861,23 @@ public partial class MapTabView : UserControl
         }
         else if (Viewport.IsKeyboardFocused && e.Key is Key.W or Key.A or Key.S or Key.D or Key.Q or Key.E)
         {
-            _flyKeys.Add(e.Key);
+            // Auto-repeat fires this for as long as the key is held, by which point the frame has
+            // already asked for continuous redraws - only the first press has to wake it.
+            if (_flyKeys.Add(e.Key))
+            {
+                Viewport.InvalidateVisual();
+            }
             e.Handled = true;
         }
-        Viewport.InvalidateVisual();
         base.OnPreviewKeyDown(e);
     }
 
     protected override void OnPreviewKeyUp(KeyEventArgs e)
     {
-        _flyKeys.Remove(e.Key);
-        Viewport.InvalidateVisual();
+        if (_flyKeys.Remove(e.Key))
+        {
+            Viewport.InvalidateVisual();
+        }
         base.OnPreviewKeyUp(e);
     }
 
@@ -905,12 +925,11 @@ public partial class MapTabView : UserControl
 
     private void Viewport_MouseMove(object sender, MouseEventArgs e)
     {
-        // Every path below moves something the viewport draws, the gizmo's hover arm included.
-        Viewport.InvalidateVisual();
         System.Windows.Point p = e.GetPosition(Viewport);
         if (_grab is not null)
         {
             DragTo(p);
+            Viewport.InvalidateVisual();
             return;
         }
 
@@ -918,10 +937,18 @@ public partial class MapTabView : UserControl
         {
             _camera.Look((float)(p.X - _lastDragPoint.X), (float)(p.Y - _lastDragPoint.Y));
             _lastDragPoint = p;
+            Viewport.InvalidateVisual();
             return;
         }
 
-        _hoveredArm = GrabAt(p)?.Axis ?? GizmoAxis.None;
+        // A plain hover changes nothing unless it moves onto or off a gizmo arm, and redrawing the
+        // scene for every mouse move across the viewport is the cost this mode exists to avoid.
+        GizmoAxis hovered = GrabAt(p)?.Axis ?? GizmoAxis.None;
+        if (hovered != _hoveredArm)
+        {
+            _hoveredArm = hovered;
+            Viewport.InvalidateVisual();
+        }
     }
 
     private void Viewport_MouseWheel(object sender, MouseWheelEventArgs e)

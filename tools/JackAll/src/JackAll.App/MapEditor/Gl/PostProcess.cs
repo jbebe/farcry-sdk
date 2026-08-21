@@ -89,7 +89,7 @@ public sealed class PostProcess : IDisposable
         GL.ActiveTexture(TextureUnit.Texture0);
         GL.BindTexture(TextureTarget.Texture2D, sceneColour);
         GL.Uniform1(_uExposure, SceneLighting.Exposure);
-        GL.Uniform1(_uDemo, SceneLighting.DemoUniform);
+        GL.Uniform1(_uDemo, SceneLighting.Demo ? 1f : 0f);
 
         using GlState pass = new();
         GL.Disable(EnableCap.DepthTest);

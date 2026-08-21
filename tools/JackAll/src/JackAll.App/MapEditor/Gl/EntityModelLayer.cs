@@ -71,12 +71,6 @@ public sealed class EntityModelLayer : IDisposable
     private const int MaxDecoders = 2;
     private const long UploadBudgetPerFrame = 8 << 20;
 
-    /// <summary>How far out, in sectors, a placement still reaches a buffer. The presentation pays
-    /// for the coarse tier; with it off only the near ring draws and the rest falls to markers.
-    /// </summary>
-    private static int OuterRing
-        => SceneLighting.Demo ? WorldModels.CoarseRadius : WorldModels.FineRadius;
-
     /// <summary>One detail tier's material ranges and the live texture handles behind each.</summary>
     private sealed class Tier
     {
@@ -139,7 +133,6 @@ public sealed class EntityModelLayer : IDisposable
     private readonly int _uViewProjection;
     private readonly int _uCameraPosition;
     private readonly int _uSunDirection;
-    private readonly int _uDemo;
     private readonly int _uUseTexture;
     private readonly int _uAlphaMode;
     private readonly int _uTintBase;
@@ -153,8 +146,7 @@ public sealed class EntityModelLayer : IDisposable
     private readonly int _uSpecularBase;
     private readonly int _uSpecularColour;
     private readonly int _uSpecularPower;
-    private readonly int _uFogSetup;
-    private readonly int _uFogTint;
+    private readonly SkyBinding _sky;
     private readonly int _uBillboardFacing;
     /// <summary>Just the meshes carrying a blended range, so the second pass skips the rest.</summary>
     private readonly Mesh[] _blendedMeshes;
@@ -414,12 +406,9 @@ public sealed class EntityModelLayer : IDisposable
                 bool flipped = dot(n, cameraPosition - worldPosition) < 0.0;
                 if (flipped) { n = -n; }
                 float ndotl = max(dot(n, sunDirection), 0.0);
-
-                // Presentation off: the mesh stops here, with none of the cascade lookup, the
-                // occlusion tap, the highlight or the haze below ever reached.
                 if (demo < 0.5)
                 {
-                    fragment = vec4(shadeFlat(albedo, ndotl), coverage);
+                    fragment = vec4(shadeDiffuse(albedo, n, ndotl, 1.0), coverage);
                     return;
                 }
 
@@ -444,7 +433,6 @@ public sealed class EntityModelLayer : IDisposable
         _uViewProjection = _program.UniformLocation("viewProjection");
         _uCameraPosition = _program.UniformLocation("cameraPosition");
         _uSunDirection = _program.UniformLocation("sunDirection");
-        _uDemo = _program.UniformLocation("demo");
         _uBillboardFacing = _program.UniformLocation("billboardFacing");
         _shadow = new ShadowBinding(_program);
         _occlusion = new OcclusionBinding(_program);
@@ -461,8 +449,7 @@ public sealed class EntityModelLayer : IDisposable
         _uSpecularBase = _program.UniformLocation("specularBase");
         _uSpecularColour = _program.UniformLocation("specularColour");
         _uSpecularPower = _program.UniformLocation("specularPower");
-        _uFogSetup = _program.UniformLocation("fogSetup");
-        _uFogTint = _program.UniformLocation("fogTint");
+        _sky = new SkyBinding(_program);
         _program.Use();
         GL.Uniform1(_program.UniformLocation("diffuse"), 0);
         GL.Uniform1(_program.UniformLocation("diffuse2"), 1);
@@ -477,10 +464,11 @@ public sealed class EntityModelLayer : IDisposable
     /// both without counting first.
     /// </summary>
     /// <summary>
-    /// The same visibility pass over bare placements. Only the ones inside the coarse ring reach a
-    /// buffer, so a world scattering millions of them streams the few thousand around the camera.
+    /// The same visibility pass over bare placements. Only the ones inside <paramref name="ring"/>
+    /// reach a buffer, so a world scattering millions of them streams the few thousand around the
+    /// camera.
     /// </summary>
-    public void SetVisible(ScatterInstance[] scatter, Vector3 cameraPosition)
+    public void SetVisible(ScatterInstance[] scatter, Vector3 cameraPosition, int ring)
     {
         int cameraX = (int)MathF.Floor(cameraPosition.X / WorldModels.SectorMeters);
         int cameraY = (int)MathF.Floor(cameraPosition.Y / WorldModels.SectorMeters);
@@ -493,12 +481,9 @@ public sealed class EntityModelLayer : IDisposable
             mesh.CoarseFloats = mesh.Staging.Length;
         }
 
-        int ring = OuterRing;
         foreach (ScatterInstance instance in scatter)
         {
-            int distance = Math.Max(
-                Math.Abs((int)MathF.Floor(instance.Position.X / WorldModels.SectorMeters) - cameraX),
-                Math.Abs((int)MathF.Floor(instance.Position.Y / WorldModels.SectorMeters) - cameraY));
+            int distance = SectorDistance(instance.Position, cameraX, cameraY);
             if (distance > ring)
             {
                 continue;
@@ -510,6 +495,13 @@ public sealed class EntityModelLayer : IDisposable
 
         UploadStaging();
     }
+
+    /// <summary>Chebyshev distance in sectors, which is what makes a ring a square box of sectors
+    /// around the camera's own rather than a circle.</summary>
+    private static int SectorDistance(System.Numerics.Vector3 position, int cameraX, int cameraY)
+        => Math.Max(
+            Math.Abs((int)MathF.Floor(position.X / WorldModels.SectorMeters) - cameraX),
+            Math.Abs((int)MathF.Floor(position.Y / WorldModels.SectorMeters) - cameraY));
 
     /// <summary>Writes one placement into a mesh's staging, fine from the front and coarse from the
     /// back. A mesh whose staging is full drops the rest, which only a scatter can reach.</summary>
@@ -566,7 +558,7 @@ public sealed class EntityModelLayer : IDisposable
         }
     }
 
-    public List<WorldEntity> SetVisible(List<WorldEntity> visible, Vector3 cameraPosition)
+    public List<WorldEntity> SetVisible(List<WorldEntity> visible, Vector3 cameraPosition, int ring)
     {
         int cameraX = (int)MathF.Floor(cameraPosition.X / WorldModels.SectorMeters);
         int cameraY = (int)MathF.Floor(cameraPosition.Y / WorldModels.SectorMeters);
@@ -579,14 +571,11 @@ public sealed class EntityModelLayer : IDisposable
             mesh.CoarseFloats = mesh.Staging.Length;
         }
 
-        int ring = OuterRing;
         var leftover = new List<WorldEntity>(visible.Count);
         foreach (WorldEntity entity in visible)
         {
             System.Numerics.Vector3 position = entity.Position!.Value;
-            int distance = Math.Max(
-                Math.Abs((int)MathF.Floor(position.X / WorldModels.SectorMeters) - cameraX),
-                Math.Abs((int)MathF.Floor(position.Y / WorldModels.SectorMeters) - cameraY));
+            int distance = SectorDistance(position, cameraX, cameraY);
             if (distance > ring || !_rows.TryGetValue(entity, out Row row))
             {
                 leftover.Add(entity);
@@ -680,7 +669,7 @@ public sealed class EntityModelLayer : IDisposable
         _shadow.Apply();
         _occlusion.Apply();
         GL.Uniform3(_uSunDirection, SceneLighting.SunDirection);
-        SceneLighting.SetSkyUniforms(_uDemo, _uFogSetup, _uFogTint);
+        _sky.Apply();
         GL.Enable(EnableCap.DepthTest);
         GL.ActiveTexture(TextureUnit.Texture0);
 
