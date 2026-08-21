@@ -12,7 +12,7 @@ under Blender's interpreter for the add-on.
 |---|---|---|---|
 | `.xbg` | mesh container: geometry, LODs, nodes, materials, skinning | **3,133 / 3,133** | **0.00%** |
 | `.skeleton` | rig: bones, constraints, weapon sockets | **81 / 81** | **0%** |
-| `.mab` | animation bank: rotation tracks and events | **4,436 / 4,436** | 21% |
+| `.mab` | animation bank: one clip per skeleton — rotations, translations, trajectory, events | **4,436 / 4,436** | 2.6% |
 
 Round trip means `write(parse(f)) == f`, with the writer regenerating each structure — chunk sizes,
 payload sizes, counts, padding, and the derived duplicates inside a cluster header — rather than
@@ -24,7 +24,7 @@ decoded. For `.xbg`, vertex and index streams are decoded and re-encoded lossles
 geometry blocks can be regenerated from scratch and still match, and the only blobs left are the two
 rare chunks — but a handful of words are still read as values without being understood, so 0.00%
 means "nothing is carried blind", not "everything is explained". What remains opaque in a `.mab` is
-its event chain, which is FCB binary, and the six section slots nothing dereferences.
+its event chain, which is FCB binary, and most of each record in its tag table.
 `tests/invariants.py` covers what a round trip cannot.
 
 **What works today**: importing a shipped `.xbg` into Blender — parts, LODs, UVs, vertex colours,
@@ -46,7 +46,7 @@ Blender Action — see [Animation](#animation).
 | `fc2fmt/mesh.py` | Assembles the container into per-part meshes with their vertices localised |
 | `fc2fmt/transform.py` | 4x4 helpers, so node world transforms need no `mathutils` |
 | `fc2fmt/skeleton.py` | `.skeleton` (`LKS`) bones, constraints, anim handles |
-| `fc2fmt/mab.py` | `.mab` header, bone bitmasks, the smallest-three quaternion codec, sparse keyframe groups |
+| `fc2fmt/mab.py` | `.mab` clip chain, the four bone bitmasks, the smallest-three quaternion codec, sparse rotation groups and dense translation tracks |
 | `fc2fmt/xbm.py` | `.xbm` material: texture slots, tiling, tint colours, and the variant an `.xbg` embeds |
 | `fc2fmt/xbt.py` | `.xbt` texture: strips the header off the DDS payload Blender loads |
 | `fc2fmt/assets.py` | Turns a game-relative path into bytes, against an extracted install |
@@ -57,11 +57,11 @@ Blender Action — see [Animation](#animation).
 | `tests/rebuild.py` | Regenerates every LOD's geometry blocks from scratch and requires the file back |
 | `tests/reencode.py` | Decodes every vertex buffer to float space and back, per component |
 | `tests/invariants.py` | Checks decoded meaning: palettes index real bones, derived values recompute to what shipped |
-| `tests/mabcheck.py` | Resolves every `.mab` mask bit against `pelvis_ref.skeleton` and checks quaternion norms |
+| `tests/mabcheck.py` | Resolves every `.mab` mask bit against `pelvis_ref.skeleton`, checks quaternion norms, and refuses a translation on a bone the skeleton holds fixed |
 | `tests/quatcheck.py` | Scores the quaternion component layout against the skeleton rest pose |
 | `tests/blender_import.py` | Imports the AK-47, a character and a bundle inside Blender, headless |
 | `tests/blender_export.py` | Imports and re-exports inside Blender, requiring the source bytes back |
-| `tests/blender_anim.py` | Poses a character from a clip and reads the rotations back off the rig |
+| `tests/blender_anim.py` | Poses a character and a weapon from clips and reads the rotations and offsets back off the rig |
 | `tests/render_preview.py` | Renders an imported model to a PNG, for looking at what the importer built |
 | `tests/bundle.py` | Builds bundles and resolves each model's whole reference graph from the bundle alone |
 | `tests/probe.py` | Dumps one file's chunk layout when a round trip fails |
@@ -155,14 +155,17 @@ rebuilt.
 
 **File ▸ Import ▸ Far Cry 2 Animation (.mab)** loads a clip onto the selected armature as an Action.
 
-A clip stores rotations sparsely, in groups of eight frames: per group, each track's rotation at the
+A `.mab` is a **bank**, not one clip: it carries one clip per skeleton taking part, chained through
+the last section slot. 4,436 files hold 11,261 clips, and the longest chain is 35.
+
+Rotations are stored sparsely, in groups of eight frames: per group, each track's rotation at the
 group's first frame, then a presence byte per track saying which of the next seven subframes carry a
 key, then those keys. The full layout is in
 [`.mab`](../../docs/docs/file-formats/mab.md#the-keyframe-block); walking it that way, the groups
 tile every shipped clip exactly — **3,880 clips, 63,579 groups, 14,930,196 keys**, none over- or
-under-running.
+under-running. Translations are stored the opposite way: dense and frame-major, no compression.
 
-Two things a reader has to get right or the pose comes out mangled:
+Four things a reader has to get right or the pose comes out mangled:
 
 - **A clip names bones by their id in the `.skeleton` it was authored for**, not by name, so that
   file is needed to map ids to names. The importer finds `pelvis_ref.skeleton` up the tree, or a
@@ -176,14 +179,19 @@ Two things a reader has to get right or the pose comes out mangled:
   rest of the character reaches on the same sprint.
 - **A rotation replaces the bone's rest rotation rather than adding to it**, so the pose bone gets
   `rest⁻¹ · clip`, and the armature is built with each bone oriented like its `.xbg` node instead of
-  aimed at its children. Aiming at children bakes in a twist that no later correction removes.
+  aimed at its children. Aiming at children bakes in a twist that no later correction removes. The
+  same holds for offsets, and since a pose bone's location is measured in its own rest frame, the
+  offset is rotated into that frame before it is keyed.
+- **Which clip in the bank to take is decided by the skeleton**, not by position: the importer picks
+  the first clip whose bone ids all fit the rig it was given.
 
 `tests/blender_anim.py` checks this from the other side: it evaluates the posed rig and reads each
-bone's rotation relative to its parent back out, requiring the quaternion the file stores. Worst
-difference over a whole clip is `2.2e-07`.
+bone's rotation and offset relative to its parent back out, requiring what the file stores. Worst
+difference across four clips is `4.4e-07` on rotation and `2.4e-07` metres on offset.
 
-Weapon clips are character clips. The 57 files under `animations/weapons/primary/ak47/` animate the
-player's arms on `pelvis_ref` (119 bones); they do not touch the gun's own eight-bone rig.
+Weapon clips are not only character clips. `1stge_uppb_reload_+000fw_prak4_i1.mab` animates the
+player's arms on `pelvis_ref` (119 bones) in its first clip and the gun's own eight-bone rig in the
+second — load it against `ak47_ref.skeleton` and `AK47`, `CLIP`, `SLIDE` and `ACCESSORY` move.
 
 Sixteen bones carry an orientation constraint and no clip ever keys them — those four helpers plus
 twelve arm twists. `fc2fmt.skeleton` reads the fields (`m_iBone1`/`m_flWeight1` and friends), but
@@ -191,8 +199,8 @@ where the engine evaluates them has not been traced, so nothing here poses them 
 follow their parents. Reading them as world-space blends was tried and measurably made the mesh
 worse, so it is not shipped.
 
-Not written: **authoring** a clip. Reading is solved, but nothing writes keys back, and translation
-tracks are still undecoded — `m_fAnimatedTranslation` is set only on `Pelvis` and `Camera`.
+Not written: **authoring** a clip. Reading is solved, but nothing builds a keyframe block from
+scratch.
 
 ## Running the tests
 
@@ -335,5 +343,9 @@ reading of them as a bare min/max pair was one slot short — it read the sphere
 sphere is fitted, not circumscribed: its radius is exact for its centre in 99.3% of parts, but that
 centre is the box centre in only 5.6%.
 
-**Still open**: the per-track packing inside a `.mab` keyframe group, so animation import is not yet
-possible.
+**A `.mab` is a chain, and a clip's translation masks are separate from its rotation masks.** Every
+one of the 19,458 constant translations and 5,692 translation tracks in the retail set lands on
+`Pelvis` or `Camera` — the two bones `pelvis_ref.skeleton` independently marks
+`m_fAnimatedTranslation`, which is the cross-format check on the decode.
+
+**Still open**: writing a clip, and 140 of the 172 bytes in a `.mab` tag record.

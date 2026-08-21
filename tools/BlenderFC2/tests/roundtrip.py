@@ -16,7 +16,8 @@ import traceback
 
 from _corpus import CORPUS, describe_difference, find, require
 
-from fc2fmt.mab import SECTION_CONSTANT, SECTION_KEYFRAMES, MabFile
+from fc2fmt import mab
+from fc2fmt.mab import SECTION_NEXT_CLIP, MabFile
 from fc2fmt.skeleton import SkeletonFile
 from fc2fmt.xbg import XbgFile
 
@@ -27,20 +28,32 @@ FORMATS = {
 }
 
 
+# Sections fc2fmt.mab turns into rotations, translations and trajectories.
+DECODED_SECTIONS = (mab.SECTION_ROOT_TRANSLATION, mab.SECTION_ROOT_ROTATION,
+                    mab.SECTION_CONSTANT_ROTATION, mab.SECTION_KEYFRAME_ROTATION,
+                    mab.SECTION_CONSTANT_TRANSLATION, mab.SECTION_ANIMATED_TRANSLATION)
+
+
+def clip_opaque(clip):
+    """Bytes of one clip in a bank that nothing decodes, its children included."""
+    decoded = sum(len(clip.section(index) or b"") for index in DECODED_SECTIONS)
+    child = clip.section(SECTION_NEXT_CLIP)
+    own = len(clip.data) - decoded - len(child or b"")
+    return own + (clip_opaque(clip.next_clip()) if child else 0)
+
+
 def opaque_bytes(model):
     """Bytes nothing in fc2fmt can interpret.
 
     Blocks stored as bytes but decoded and re-encoded elsewhere do not count: an
     .xbg's vertex and index data goes through fc2fmt.vertex, and a .mab's
-    constant and keyframe sections through fc2fmt.mab. What is left is the
+    rotation and translation sections through fc2fmt.mab. What is left is the
     chunks and sections still carried verbatim.
     """
     if isinstance(model, XbgFile):
         return sum(len(c.raw) for c in model.chunks)
     if isinstance(model, MabFile):
-        decoded = sum(len(model.section(index) or b"")
-                      for index in (SECTION_CONSTANT, SECTION_KEYFRAMES))
-        return len(model.opaque) + len(model.body_tail) - decoded
+        return clip_opaque(model)
     return 0
 
 

@@ -1,7 +1,9 @@
 # Reader and writer for `.mab`, the Dunia animation bank.
 #
-# Layout is documented in docs/docs/file-formats/mab.md. Everything outside the
-# fields below is preserved verbatim, so a parsed file writes back unchanged.
+# Layout is documented in docs/docs/file-formats/mab.md. A bank holds one clip
+# per participating skeleton, each chained from the one before. Everything
+# outside the fields below is preserved verbatim, so a parsed file writes back
+# unchanged.
 
 import struct
 
@@ -11,19 +13,30 @@ HEADER_SIZE = 16
 VERSION_FC2 = 0x4C
 BODY_TAG = b"AnD\x1a"
 
-# Body offsets, all relative to file + HEADER_SIZE.
-OFF_OPAQUE = 0x28
+# Where the tag sits in a clip, and where the clip's fixed fields end.
 OFF_TAG = 0x70
-OFF_SECTIONS = 0x78
+CLIP_HEADER = 0xA0
 
 MASK_WORDS = 5
-SECTION_COUNT = 10
-SECTION_DATA = OFF_SECTIONS + SECTION_COUNT * 4
+MASK_COUNT = 4
+SECTION_COUNT = 9
 
-# Section table slots the engine dereferences by name.
-SECTION_CONSTANT = 2
-SECTION_KEYFRAMES = 3
+# Which bones a mask names. Rotation and translation are masked independently.
+MASK_CONSTANT_ROTATION = 0
+MASK_KEYFRAME_ROTATION = 1
+MASK_CONSTANT_TRANSLATION = 2
+MASK_ANIMATED_TRANSLATION = 3
+
+# Section table slots, in the order the engine dereferences them.
+SECTION_ROOT_TRANSLATION = 0
+SECTION_ROOT_ROTATION = 1
+SECTION_CONSTANT_ROTATION = 2
+SECTION_KEYFRAME_ROTATION = 3
+SECTION_CONSTANT_TRANSLATION = 4
+SECTION_ANIMATED_TRANSLATION = 5
+SECTION_TAGS = 6
 SECTION_EVENTS = 7
+SECTION_NEXT_CLIP = 8
 
 # Smallest-three quaternion codec. Three components are stored in 16 bits each
 # over the range +/- 1/sqrt(2); the omitted one is recovered from the norm.
@@ -31,7 +44,15 @@ QUAT_SCALE = 4.315969e-05
 QUAT_BIAS = 0.70710677
 QUAT_BYTES = 6
 
-# Keyframes are grouped in eights, one presence byte per track per group.
+VEC3_BYTES = 12
+
+# The trajectory sections carry one unnamed track rather than a masked set.
+ROOT_BONE = 0
+
+# Every array section opens with the same eight bytes.
+TRACK_HEADER = 8
+
+# Sparse rotation keyframes are grouped in eights, one presence byte per track.
 GROUP_SHIFT = 3
 GROUP_FRAMES = 1 << GROUP_SHIFT
 
@@ -41,7 +62,8 @@ ENGINE_LAYOUT = ((3, 0, 1, 2), (0, 1, 3, 2), (0, 3, 1, 2), (0, 1, 2, 3))
 
 _PACKED_QUAT = struct.Struct("<HHh")
 _U16 = struct.Struct("<H")
-_KEYFRAME_HEADER = struct.Struct("<HHHH")
+_VEC3 = struct.Struct("<3f")
+_TRACK_HEADER = struct.Struct("<HHHH")
 
 
 def unpack_quaternion(first, second, third, layout=ENGINE_LAYOUT):
@@ -78,46 +100,44 @@ def mask_slot(mask, bone_id):
     return below + bin(mask[word] & ((1 << bit) - 1)).count("1")
 
 
-class MabFile:
+class Clip:
+    """One skeleton's animation within a bank."""
+
     def __init__(self):
-        self.header = b""
-        self.constant_mask = [0] * MASK_WORDS
-        self.keyframe_mask = [0] * MASK_WORDS
-        self.opaque = b""
+        self.masks = [[0] * MASK_WORDS for _ in range(MASK_COUNT)]
+        self.reference_rotation = (0.0, 0.0, 0.0, 1.0)
+        self.loop_rotation = (0.0, 0.0, 0.0, 1.0)
         self.duration = 0.0
         self.sections = [0] * SECTION_COUNT
-        self.body_tail = b""
-
-    @property
-    def version(self):
-        return _U16.unpack_from(self.header, 0)[0]
+        self.data = b""
 
     @classmethod
-    def parse(cls, data):
-        if len(data) < HEADER_SIZE + SECTION_DATA:
-            raise ValueError("file too small to be a .mab")
+    def parse(cls, body):
+        if len(body) < CLIP_HEADER or body[OFF_TAG:OFF_TAG + 4] != BODY_TAG:
+            raise ValueError("missing AnD clip tag")
         self = cls()
-        self.header = data[:HEADER_SIZE]
-        if self.version != VERSION_FC2:
-            raise ValueError("unsupported .mab version %#x" % self.version)
-        body = Reader(data, HEADER_SIZE)
-        self.constant_mask = body.u32s(MASK_WORDS)
-        self.keyframe_mask = body.u32s(MASK_WORDS)
-        self.opaque = body.raw(OFF_TAG - OFF_OPAQUE)
-        if body.raw(4) != BODY_TAG:
-            raise ValueError("missing AnD body tag")
-        self.duration = body.f32()
-        self.sections = [body.i32() for _ in range(SECTION_COUNT)]
-        self.body_tail = data[HEADER_SIZE + SECTION_DATA:]
+        r = Reader(body, 0)
+        self.masks = [r.u32s(MASK_WORDS) for _ in range(MASK_COUNT)]
+        self.reference_rotation = r.f32s(4)
+        self.loop_rotation = r.f32s(4)
+        # The tag was checked above; step over it to reach the duration.
+        r.skip(4)
+        self.duration = r.f32()
+        self.sections = [r.i32() for _ in range(SECTION_COUNT)]
+        if r.i32():
+            raise ValueError("the slot the engine writes its own pointer to is set")
+        self.data = body[CLIP_HEADER:]
         return self
 
     def write(self):
         w = Writer()
-        w.raw(self.header).u32s(self.constant_mask).u32s(self.keyframe_mask)
-        w.raw(self.opaque).raw(BODY_TAG).f32(self.duration)
+        for mask in self.masks:
+            w.u32s(mask)
+        w.f32s(self.reference_rotation).f32s(self.loop_rotation)
+        w.raw(BODY_TAG).f32(self.duration)
         for offset in self.sections:
             w.i32(offset)
-        return w.raw(self.body_tail).bytes()
+        return w.i32(0).raw(self.data).bytes()
 
     def section(self, index):
         """Bytes of one section, or None when the slot is unused."""
@@ -125,38 +145,56 @@ class MabFile:
         if offset <= 0:
             return None
         end = min((s for s in self.sections if s > offset),
-                  default=SECTION_DATA + len(self.body_tail))
-        return self.body_tail[offset - SECTION_DATA:end - SECTION_DATA]
+                  default=CLIP_HEADER + len(self.data))
+        return self.data[offset - CLIP_HEADER:end - CLIP_HEADER]
+
+    def track_header(self, index):
+        """(track count, last frame, frames per second) for an array section."""
+        block = self.section(index)
+        if not block or len(block) < _TRACK_HEADER.size:
+            return None
+        count, last_frame, rate, _spare = _TRACK_HEADER.unpack_from(block, 0)
+        return count, last_frame, rate
+
+    def bone_ids(self):
+        """Every skeleton bone id this clip addresses, in ascending order."""
+        return sorted({bone for mask in self.masks for bone in mask_bones(mask)})
 
     def constant_bones(self):
-        return mask_bones(self.constant_mask)
+        return mask_bones(self.masks[MASK_CONSTANT_ROTATION])
 
     def keyframed_bones(self):
-        return mask_bones(self.keyframe_mask)
+        return mask_bones(self.masks[MASK_KEYFRAME_ROTATION])
 
     def constant_rotations(self, layout=ENGINE_LAYOUT):
         """bone id -> the single rotation held for the whole clip."""
-        block = self.section(SECTION_CONSTANT)
+        return self._constant(SECTION_CONSTANT_ROTATION, MASK_CONSTANT_ROTATION,
+                              QUAT_BYTES,
+                              lambda block, at: read_quaternion(block, at, layout))
+
+    def constant_translations(self):
+        """bone id -> the single offset held for the whole clip."""
+        return self._constant(SECTION_CONSTANT_TRANSLATION,
+                              MASK_CONSTANT_TRANSLATION, VEC3_BYTES,
+                              _VEC3.unpack_from)
+
+    def _constant(self, section, mask, stride, read):
+        block = self.section(section)
         if not block:
             return {}
         count = _U16.unpack_from(block, 0)[0]
-        rotations = {}
+        out = {}
         # mask_bones yields ids ascending, so a bone's slot is its ordinal.
-        for slot, bone_id in enumerate(self.constant_bones()):
+        for slot, bone_id in enumerate(mask_bones(self.masks[mask])):
             if slot >= count:
                 break
-            quat = read_quaternion(block, 8 + slot * QUAT_BYTES, layout)
-            if quat is not None:
-                rotations[bone_id] = quat
-        return rotations
+            value = read(block, TRACK_HEADER + slot * stride)
+            if value is not None:
+                out[bone_id] = tuple(value)
+        return out
 
     def keyframe_header(self):
-        """(track count, last frame, frames per second) for the keyframe block."""
-        block = self.section(SECTION_KEYFRAMES)
-        if not block or len(block) < _KEYFRAME_HEADER.size:
-            return None
-        tracks, last_frame, rate, _spare = _KEYFRAME_HEADER.unpack_from(block, 0)
-        return tracks, last_frame, rate
+        return self.track_header(SECTION_KEYFRAME_ROTATION)
 
     def keyframe_tracks(self, layout=ENGINE_LAYOUT):
         """bone id -> [(frame, quaternion)], read out of the sparse groups.
@@ -168,7 +206,7 @@ class MabFile:
         at subframe i + 1, and bit 7 is the group's first frame, which is always
         present and stored up front.
         """
-        block = self.section(SECTION_KEYFRAMES)
+        block = self.section(SECTION_KEYFRAME_ROTATION)
         bones = self.keyframed_bones()
         header = self.keyframe_header()
         if not block or not bones or not header:
@@ -178,7 +216,7 @@ class MabFile:
             raise ValueError("%d tracks for %d bones in the keyframe mask"
                              % (tracks, len(bones)))
         groups = (last_frame >> GROUP_SHIFT) + 1
-        offsets = struct.unpack_from("<%di" % groups, block, _KEYFRAME_HEADER.size)
+        offsets = struct.unpack_from("<%di" % groups, block, TRACK_HEADER)
 
         out = {bone: [] for bone in bones}
         for group, start in enumerate(offsets):
@@ -196,5 +234,81 @@ class MabFile:
                         cursor += QUAT_BYTES
         return out
 
+    def translation_tracks(self):
+        """bone id -> [(frame, offset)], one entry per frame with no gaps."""
+        return self._dense(SECTION_ANIMATED_TRANSLATION,
+                           mask_bones(self.masks[MASK_ANIMATED_TRANSLATION]),
+                           VEC3_BYTES, _VEC3.unpack_from)
+
+    def root_translation(self):
+        """[(frame, offset)] for the trajectory the clip drives the actor along."""
+        return self._dense(SECTION_ROOT_TRANSLATION, [ROOT_BONE],
+                           VEC3_BYTES, _VEC3.unpack_from).get(ROOT_BONE, [])
+
+    def root_rotation(self, layout=ENGINE_LAYOUT):
+        """[(frame, quaternion)] for the heading that trajectory is turned to."""
+        return self._dense(
+            SECTION_ROOT_ROTATION, [ROOT_BONE], QUAT_BYTES,
+            lambda block, at: read_quaternion(block, at, layout)).get(ROOT_BONE, [])
+
+    def _dense(self, section, bones, stride, read):
+        """A frame-major section: every track's value at frame 0, then at 1, ..."""
+        block = self.section(section)
+        header = self.track_header(section)
+        if not block or not header or not bones:
+            return {}
+        tracks, last_frame, _rate = header
+        if tracks != len(bones):
+            raise ValueError("section %d holds %d tracks for %d bones"
+                             % (section, tracks, len(bones)))
+        out = {bone: [] for bone in bones}
+        for frame in range(last_frame + 1):
+            base = TRACK_HEADER + frame * tracks * stride
+            for slot, bone in enumerate(bones):
+                out[bone].append((frame, read(block, base + slot * stride)))
+        return out
+
+    def tags(self):
+        return self.section(SECTION_TAGS)
+
     def events(self):
         return self.section(SECTION_EVENTS)
+
+    def next_clip(self):
+        """The next skeleton's clip in the bank, or None at the end."""
+        block = self.section(SECTION_NEXT_CLIP)
+        return Clip.parse(block) if block else None
+
+    def clips(self):
+        """Every clip in the bank, this one first."""
+        out, clip = [], self
+        while clip is not None:
+            out.append(clip)
+            clip = clip.next_clip()
+        return out
+
+
+class MabFile(Clip):
+    """A bank on disk: a small file header, then the first clip."""
+
+    def __init__(self):
+        super().__init__()
+        self.header = b""
+
+    @property
+    def version(self):
+        return _U16.unpack_from(self.header, 0)[0]
+
+    @classmethod
+    def parse(cls, data):
+        if len(data) < HEADER_SIZE + CLIP_HEADER:
+            raise ValueError("file too small to be a .mab")
+        version = _U16.unpack_from(data, 0)[0]
+        if version != VERSION_FC2:
+            raise ValueError("unsupported .mab version %#x" % version)
+        self = super().parse(data[HEADER_SIZE:])
+        self.header = data[:HEADER_SIZE]
+        return self
+
+    def write(self):
+        return self.header + super().write()

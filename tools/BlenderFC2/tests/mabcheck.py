@@ -22,6 +22,12 @@ def main():
     by_id = {b.id: b for b in skeleton.bones}
     print("pelvis_ref.skeleton: %d bones" % len(skeleton.bones))
 
+    # The skeleton says which bones may carry translation at all; a clip must
+    # not name any other, which is the cross-check on the translation masks.
+    movable = set(skeleton.translation_bone_ids)
+    print("translation bones: %s"
+          % [by_id[i].name for i in sorted(movable) if i in by_id])
+
     stats, animated, worst_norm = collections.Counter(), collections.Counter(), 0.0
     for path in find(".mab", os.path.join(GRAPHICS, "characters", "_common", "animations")):
         clip = MabFile.parse(open(path, "rb").read())
@@ -35,12 +41,26 @@ def main():
             animated[by_id[bone_id].name if bone_id in by_id else "?%d" % bone_id] += 1
         stats["keyframe header present" if clip.keyframe_header() else "no keyframe block"] += 1
         worst_norm = max(worst_norm, check_tracks(clip, stats))
+        check_translations(clip, movable, stats)
 
     for key, value in sorted(stats.items()):
         print("  %-24s %d" % (key, value))
     print("  worst |norm-1|          %.2e" % worst_norm)
     print("most animated bones:", [name for name, _ in animated.most_common(12)])
-    return 0 if not stats["BONE OUT OF RANGE"] and worst_norm < 1e-3 else 1
+    return 0 if not (stats["BONE OUT OF RANGE"] or stats["TRANSLATES A FIXED BONE"]
+                     or stats["TRANSLATION NOT FINITE"]) and worst_norm < 1e-3 else 1
+
+
+def check_translations(clip, movable, stats):
+    """Only the bones the skeleton frees to move may carry an offset."""
+    for source, values in (("constant", clip.constant_translations()),
+                           ("animated", clip.translation_tracks())):
+        for bone_id, value in values.items():
+            stats["TRANSLATES A FIXED BONE" if bone_id not in movable
+                  else "%s translation" % source] += 1
+            samples = [value] if source == "constant" else [v for _f, v in value]
+            if any(abs(c) > 1e6 or c != c for v in samples for c in v):
+                stats["TRANSLATION NOT FINITE"] += 1
 
 
 def check_tracks(clip, stats):

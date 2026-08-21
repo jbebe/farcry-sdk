@@ -20,9 +20,10 @@ in-process patcher if patching proves necessary.
 | Tier | Formats | State |
 |---|---|---|
 | Solved end-to-end | `.fat`/`.dat`, `.fcb`, `.rml`, `.mgb`, `.xbt`, `.sbao`, `.spk`, `.sav`, `depload` | Round-trip + editor + mod pipeline. Nothing more needed. |
-| Reads, no write path | Domino graphs, `.sdat`, `.xbg`, `.xbm` | Writers exist for Domino and `.sdat` but are called only from tests. |
+| Reads, no write path | Domino graphs, `.sdat`, `.xbm` | Writers exist for Domino and `.sdat` but are called only from tests. |
+| Round-trips, partial write path | `.xbg`, `.skeleton`, `.mab`, `.rtx` | `tools/BlenderFC2` writes `.xbg` and `.skeleton`; `.mab` round-trips but nothing authors a clip. |
 | Container only | `.srl` (14,964 files), `.zsr` (14,964), `.nvm` (5,144) | Spatial data — roadmap dependencies, not standalone work. |
-| Sniffed, never parsed | `.hkx`, `.mab`, `.skeleton`, `.rtx`, shader bins, `.bik`, `.feu`, `.wem` | See [Not doing](#not-doing-and-why). |
+| Sniffed, never parsed | `.hkx`, shader bins, `.bik`, `.feu`, `.wem` | See [Not doing](#not-doing-and-why). |
 | Parseable but unusable | `worldsector<N>.data.fcb` (5,230), `world1.mapsdata.fcb` | These *are* FCB — decoded today into a wall of `hidPos`/`hidAngles` floats with no spatial meaning. This is the wall. |
 
 All the gameplay data modders actually want — weapons, AI, economy, vehicles, patrols, missions — is
@@ -259,7 +260,7 @@ Stand up `JackAll.App.Tests` before either large App feature lands, and delete t
   virtualization → Brandes-Köpf x-coordinate assignment and edge routing → semantic collapsing →
   persist node positions.
 - **Shaders** (permutation IDs, a documented hard ceiling), **`.bik`** (third-party), **`.hkx`** (deep
-  niche), **`.mab`/`.skeleton`** (blocked behind the `.xbg` skinning problem anyway).
+  niche).
 - **`.srl`, `.zsr` and `.nvm` as standalone tracks.** They are Track 1 dependencies. Decoded in
   isolation they're hex dumps; decoded alongside a map they're editable overlays. `.nvm` in
   particular only matters once you can place geometry — and regenerating a Recast graph wrong breaks

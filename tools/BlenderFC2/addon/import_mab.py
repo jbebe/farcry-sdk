@@ -2,18 +2,19 @@
 #
 # A clip names bones by their id in the `.skeleton` it was authored against, so
 # that file is what turns ids into names; the armature is then matched by name.
-# Rotations are local and replace the bone's own rest rotation, so what the pose
-# bone carries is the rest rotation undone and the clip's applied.
+# Rotations and offsets are local and replace the bone's own rest transform, so
+# what the pose bone carries is the rest undone and the clip's applied.
 
 import os
 
 import bpy
-from mathutils import Quaternion
+from mathutils import Quaternion, Vector
 
 from fc2fmt.mab import MabFile
 from fc2fmt.skeleton import SkeletonFile
 
 from . import rig
+from .import_xbg import PROP_SOURCE
 
 # Blender counts frames from one, the file from zero.
 FIRST_FRAME = 1
@@ -54,14 +55,41 @@ def _rest_local(bone):
     return bone.matrix_local.copy()
 
 
+def model_of(armature):
+    """The .xbg this armature was imported from, if the import recorded one."""
+    for collection in armature.users_collection:
+        origin = collection.get(PROP_SOURCE)
+        if origin:
+            return origin
+    return None
+
+
+def clip_for(bank, skeleton):
+    """The clip a bank holds for this skeleton: the first whose ids fit it.
+
+    A bank carries one clip per skeleton taking part, character first and then
+    the weapon or vehicle it handles, so a weapon rig has to skip past the
+    character's clip to reach its own.
+    """
+    for clip in bank.clips():
+        ids = clip.bone_ids()
+        if not ids or ids[-1] < len(skeleton.bones):
+            return clip
+    return None
+
+
 def load(path, armature, skeleton_path=None, model_path=None):
     """Put one clip on `armature` as its active Action."""
-    clip = MabFile.parse(open(path, "rb").read())
-    skeleton_path = skeleton_path or find_skeleton(path, model_path)
+    bank = MabFile.parse(open(path, "rb").read())
+    skeleton_path = skeleton_path or find_skeleton(path, model_path or model_of(armature))
     if not skeleton_path:
         raise ValueError("no .skeleton found for %s; name one to map bone ids"
                          % os.path.basename(path))
     skeleton = SkeletonFile.parse(open(skeleton_path, "rb").read())
+    clip = clip_for(bank, skeleton)
+    if clip is None:
+        raise ValueError("%s holds no clip for a %d-bone skeleton"
+                         % (os.path.basename(path), len(skeleton.bones)))
     names = {bone.id: bone.name for bone in skeleton.bones}
     # The .xbg tree and the constraint bones both need reconciling first, or
     # the knees, elbows and arm twists lag behind everything around them.
@@ -80,25 +108,37 @@ def load(path, armature, skeleton_path=None, model_path=None):
     tracks = dict(clip.keyframe_tracks())
     for bone_id, quat in clip.constant_rotations().items():
         tracks.setdefault(bone_id, [(0, quat)])
+    offsets = dict(clip.translation_tracks())
+    for bone_id, offset in clip.constant_translations().items():
+        offsets.setdefault(bone_id, [(0, offset)])
 
     posed = missing = keys = 0
-    for bone_id, frames in sorted(tracks.items()):
+    for bone_id in sorted(set(tracks) | set(offsets)):
         pose_bone = armature.pose.bones.get(names.get(bone_id, ""))
         if pose_bone is None:
             missing += 1
             continue
         posed += 1
-        rest = _rest_local(pose_bone.bone).to_quaternion().inverted()
+        rest_offset, rest_rotation, _scale = _rest_local(pose_bone.bone).decompose()
+        undo = rest_rotation.inverted()
         pose_bone.rotation_mode = "QUATERNION"
-        for frame, rotation in frames:
+        for frame, rotation in tracks.get(bone_id, ()):
             if rotation is None:
                 continue
-            pose_bone.rotation_quaternion = rest @ _quaternion(rotation)
+            pose_bone.rotation_quaternion = undo @ _quaternion(rotation)
             pose_bone.keyframe_insert("rotation_quaternion", frame=frame + FIRST_FRAME)
             keys += 1
+        # A pose bone's location is measured in its own rest frame, so the
+        # offset the clip replaces the rest one with has to be rotated into it.
+        for frame, offset in offsets.get(bone_id, ()):
+            pose_bone.location = undo @ (Vector(offset) - rest_offset)
+            pose_bone.keyframe_insert("location", frame=frame + FIRST_FRAME)
+            keys += 1
 
-    return {"clip": clip, "action": action, "bones": posed, "unmatched": missing,
-            "keys": keys, "skeleton": skeleton_path, "rig": adjusted}
+    return {"clip": clip, "bank": bank, "action": action, "bones": posed,
+            "unmatched": missing, "keys": keys, "skeleton": skeleton_path,
+            "rig": adjusted,
+            "moved": sum(1 for b in offsets if names.get(b, "") in armature.pose.bones)}
 
 
 def apply_to_scene(scene, clip):

@@ -13,7 +13,8 @@ import sys
 from _corpus import find, require
 
 from fc2fmt.binary import name_hash
-from fc2fmt.mab import MabFile, mask_slot
+from fc2fmt import mab
+from fc2fmt.mab import MabFile, mask_bones, mask_slot
 from fc2fmt.mesh import extract
 from fc2fmt.skeleton import SkeletonFile
 from fc2fmt.vertex import VertexStream, buffer_vertex_count, pack_indices, unpack_indices
@@ -114,15 +115,59 @@ def check_skeleton(skeleton, fail):
         fail("rebuild_hierarchy disagrees with the shipped links")
 
 
-def check_mab(clip, fail):
-    """The readers index sections by ordinal; prove that equals the popcount rule."""
-    for mask, bones in ((clip.constant_mask, clip.constant_bones()),
-                        (clip.keyframe_mask, clip.keyframed_bones())):
-        for ordinal, bone_id in enumerate(bones):
-            if mask_slot(mask, bone_id) != ordinal:
-                fail("bone %d slot %r != ordinal %d"
-                     % (bone_id, mask_slot(mask, bone_id), ordinal))
-                return
+# Each array section, the mask that sizes it, and the bytes one entry takes.
+MAB_SECTIONS = (
+    (mab.SECTION_CONSTANT_ROTATION, mab.MASK_CONSTANT_ROTATION, mab.QUAT_BYTES, False),
+    (mab.SECTION_CONSTANT_TRANSLATION, mab.MASK_CONSTANT_TRANSLATION, mab.VEC3_BYTES, False),
+    (mab.SECTION_ANIMATED_TRANSLATION, mab.MASK_ANIMATED_TRANSLATION, mab.VEC3_BYTES, True),
+    (mab.SECTION_ROOT_TRANSLATION, None, mab.VEC3_BYTES, True),
+    (mab.SECTION_ROOT_ROTATION, None, mab.QUAT_BYTES, True),
+)
+
+# What alignment padding may leave unused at the end of a section.
+MAB_ALIGNMENT = 16
+
+# The exporter writes the tag array even when it is empty, and then leaves the
+# table slot at zero, so those 16 bytes trail the animated translations.
+MAB_EMPTY_TAGS = 16
+
+
+def check_mab(bank, fail):
+    """The readers index sections by ordinal and size them off the masks.
+
+    Prove both: that ordinal equals the popcount rule, and that the entries each
+    section is then read to hold end inside it, with only padding to spare.
+    """
+    for depth, clip in enumerate(bank.clips()):
+        where = "clip %d: " % depth
+        for index, mask in enumerate(clip.masks):
+            for ordinal, bone_id in enumerate(mask_bones(mask)):
+                if mask_slot(mask, bone_id) != ordinal:
+                    fail("%smask %d bone %d slot %r != ordinal %d"
+                         % (where, index, bone_id, mask_slot(mask, bone_id), ordinal))
+                    return
+
+        for section, mask, stride, dense in MAB_SECTIONS:
+            block = clip.section(section)
+            header = clip.track_header(section)
+            if not block or not header:
+                continue
+            count, last_frame, _rate = header
+            if mask is not None and count != len(mask_bones(clip.masks[mask])):
+                fail("%ssection %d holds %d entries for %d bones in its mask"
+                     % (where, section, count, len(mask_bones(clip.masks[mask]))))
+            needed = mab.TRACK_HEADER + count * stride * (last_frame + 1 if dense else 1)
+            spare = MAB_ALIGNMENT
+            if section == mab.SECTION_ANIMATED_TRANSLATION and not clip.sections[mab.SECTION_TAGS]:
+                spare += MAB_EMPTY_TAGS
+            if not 0 <= len(block) - needed < spare:
+                fail("%ssection %d needs %d bytes of the %d it was given"
+                     % (where, section, needed, len(block)))
+
+        for bone_id, quat in clip.constant_rotations().items():
+            if abs(sum(c * c for c in quat) ** 0.5 - 1.0) > 1e-3:
+                fail("%sconstant rotation for bone %d is not a rotation" % (where, bone_id))
+                break
 
 
 def main():
@@ -146,7 +191,8 @@ def main():
 
     for path in find(".mab"):
         clip = MabFile.parse(open(path, "rb").read())
-        stats["clips"] += 1
+        stats["clips"] += len(clip.clips())
+        stats["banks"] += 1
         check_mab(clip, lambda why, p=path: failures.append((p, why)))
 
     for key, value in sorted(stats.items()):
