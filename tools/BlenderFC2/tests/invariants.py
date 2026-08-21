@@ -14,7 +14,9 @@ from _corpus import find, require
 
 from fc2fmt.binary import name_hash
 from fc2fmt.mab import MabFile, mask_slot
+from fc2fmt.mesh import extract
 from fc2fmt.skeleton import SkeletonFile
+from fc2fmt.vertex import VertexStream, buffer_vertex_count, pack_indices, unpack_indices
 from fc2fmt.xbg import EMPTY_SLOT, NO_NODE, XbgFile, vertex_layout
 
 
@@ -47,19 +49,41 @@ def check_xbg(model, fail):
             if any(slot != EMPTY_SLOT for slot in cluster.palette[len(slots):]):
                 fail("palette in %r is not a contiguous prefix" % desc.name)
 
-    for index, lod in enumerate(model.lods):
-        for vb in lod.vertex_buffers:
-            _offsets, stride = vertex_layout(vb.flags)
-            if stride != vb.stride:
-                fail("LOD %d flags %#x imply stride %d, file says %d"
-                     % (index, vb.flags, stride, vb.stride))
-            if vb.offset > len(lod.vertex_data):
-                fail("LOD %d vertex buffer starts past the buffer" % index)
-
     links = [(n.first_child, n.next_sibling, n.skin_index) for n in model.nodes]
     model.rebuild_hierarchy()
     if links != [(n.first_child, n.next_sibling, n.skin_index) for n in model.nodes]:
         fail("rebuild_hierarchy disagrees with the shipped links")
+
+    for index, lod in enumerate(model.lods):
+        for slot, buffer in enumerate(lod.vertex_buffers):
+            _offsets, stride = vertex_layout(buffer.flags)
+            if stride != buffer.stride:
+                fail("LOD %d flags %#x imply stride %d, file says %d"
+                     % (index, buffer.flags, stride, buffer.stride))
+                continue
+            count = buffer_vertex_count(lod, slot)
+            stream = VertexStream.unpack(lod.vertex_data, buffer, count)
+            original = lod.vertex_data[buffer.offset:buffer.offset + count * buffer.stride]
+            if stream.pack() != original:
+                fail("LOD %d buffer %d does not survive unpack/pack" % (index, slot))
+        if pack_indices(unpack_indices(lod)) != lod.index_data:
+            fail("LOD %d indices do not survive unpack/pack" % index)
+
+    # Decode, place, and require the result to land inside the bounds the file
+    # ships. This is the end-to-end check: quantisation, pivots and the skinned
+    # root all have to be right for it to hold. Two destructible variants
+    # (urbanmedium00_gazebo02_part02_bk, buddytable_flip_bk) ship bounds a few
+    # centimetres tighter than their own geometry, hence the relative slack.
+    if model.lods and model.bbox:
+        points = [p for part in extract(model, 0) for p in part.positions]
+        for axis in range(3) if points else ():
+            span = model.bbox[axis + 3] - model.bbox[axis]
+            slack = model.pos_scale * 2 + abs(span) * 0.05 + 1e-3
+            low = min(p[axis] for p in points)
+            high = max(p[axis] for p in points)
+            if low < model.bbox[axis] - slack or high > model.bbox[axis + 3] + slack:
+                fail("placed LOD0 exceeds XOBB on axis %d: %.3f..%.3f vs %.3f..%.3f"
+                     % (axis, low, high, model.bbox[axis], model.bbox[axis + 3]))
 
 
 def check_skeleton(skeleton, fail):

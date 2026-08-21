@@ -28,11 +28,14 @@ FORMATS = {
 
 
 def opaque_bytes(model):
-    """Bytes the reader carried through without interpreting them."""
+    """Bytes nothing in fc2fmt can interpret.
+
+    An .xbg's vertex and index blocks are stored as bytes but fc2fmt.vertex
+    decodes and re-encodes them losslessly, so they do not count here. What
+    remains is the ten undetermined floats per part and any unknown chunk.
+    """
     if isinstance(model, XbgFile):
-        return (sum(len(l.vertex_data) + len(l.index_data) for l in model.lods)
-                + sum(len(d.meta) for d in model.skin_descs)
-                + sum(len(c.raw) for c in model.chunks))
+        return 40 * len(model.skin_descs) + sum(len(c.raw) for c in model.chunks)
     if isinstance(model, MabFile):
         return len(model.opaque) + len(model.body_tail)
     return 0

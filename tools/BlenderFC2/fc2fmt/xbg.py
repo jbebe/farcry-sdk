@@ -6,12 +6,12 @@
 from dataclasses import dataclass, field
 
 from .binary import Reader, Writer
+from .transform import multiply, trs_matrix
 
 MAGIC = b"HSEM"
 VERSION_FC2 = 0x0006002A
 CHUNK_HEADER = 20
 NODE_RECORD = 0x44
-SKIN_DESC_META = 52
 PALETTE_SLOTS = 48
 EMPTY_SLOT = -1
 NO_NODE = 0xFFFFFFFF
@@ -76,6 +76,28 @@ class VertexBuffer:
 
 
 @dataclass
+class Submesh:
+    """Where one cluster's triangles live: which buffer, and where in the indices.
+
+    `part` indexes XbgFile.skin_descs and `cluster` the cluster inside it, which
+    is how a draw call is paired with its material and bone palette.
+    """
+    buffer: int
+    part: int
+    cluster: int
+    index_offset: int
+    trailing: list
+
+    @classmethod
+    def read(cls, r):
+        words = r.u32s(7)
+        return cls(words[0], words[1], words[2], words[3], words[4:])
+
+    def write(self, w):
+        w.u32s([self.buffer, self.part, self.cluster, self.index_offset] + self.trailing)
+
+
+@dataclass
 class Lod:
     distance: float
     vertex_buffers: list
@@ -118,10 +140,27 @@ class Cluster:
 
 @dataclass
 class SkinDesc:
-    """A named (part, damage state, LOD) group and the clusters drawing it."""
+    """A named (part, damage state, LOD) group and the clusters drawing it.
+
+    `bounds` is ten floats whose grouping is undetermined: the community layout
+    of a min/max pair holds for 18 of 18,533 shipped parts, so it is carried
+    through rather than interpreted. `lod` matches the name's _LODn suffix in
+    all 18,533.
+    """
     name: str
-    meta: bytes
+    lod_metric: float
+    bounds: tuple
+    lod: int
+    reserved: int
     clusters: list = field(default_factory=list)
+
+    @classmethod
+    def read(cls, r):
+        return cls(name="", lod_metric=r.f32(), bounds=tuple(r.f32s(10)),
+                   lod=r.i32(), reserved=r.u32())
+
+    def write(self, w):
+        w.f32(self.lod_metric).f32s(self.bounds).i32(self.lod).u32(self.reserved)
 
 
 @dataclass
@@ -232,8 +271,9 @@ class XbgFile:
         names = Reader(data, payload)
         self.skin_descs = []
         for _ in range(names.u32()):
-            meta = names.raw(SKIN_DESC_META)
-            self.skin_descs.append(SkinDesc(names.cstring(), meta))
+            desc = SkinDesc.read(names)
+            desc.name = names.cstring()
+            self.skin_descs.append(desc)
 
         clusters = Reader(data, sub + sub_size - sub_payload_size)
         for desc in self.skin_descs:
@@ -256,7 +296,8 @@ class XbgFile:
             payload = len(w)
             w.u32(len(self.skin_descs))
             for desc in self.skin_descs:
-                w.raw(desc.meta).cstring(desc.name)
+                desc.write(w)
+                w.cstring(desc.name)
         else:
             payload = len(w)
             self._write_payload(w, chunk)
@@ -303,6 +344,32 @@ class XbgFile:
     def node_by_name(self, name):
         """The root stores a zero hash, so match on the name the engine hashes."""
         return next((n for n in self.nodes if n.name == name), None)
+
+    def node_world_matrices(self):
+        """Each node's world transform, parent applied before child."""
+        matrices = []
+        for node in self.nodes:
+            local = trs_matrix(node.rotation, node.translation, node.scale)
+            parent = matrices[node.parent] if node.parent < len(matrices) else None
+            matrices.append(multiply(parent, local) if parent else local)
+        return matrices
+
+    def part_placement(self, part_name, skinned=False):
+        """Where a part sits in model space.
+
+        A rigid part is modelled around its own pivot and placed by the node
+        sharing its name, so skipping this piles every wheel, door and magazine
+        at the origin. A skinned part is in the skeleton root's bind space and
+        takes node 0 instead, which lifts a character off the floor.
+        """
+        matrices = self.node_world_matrices()
+        if skinned:
+            return matrices[0] if matrices else None
+        # Part names are upper-cased against mixed-case node names, so only 559
+        # of 16,876 rigid parts match exactly while all of them match folded.
+        wanted = part_name.lower()
+        index = next((i for i, n in enumerate(self.nodes) if n.name.lower() == wanted), None)
+        return None if index is None else matrices[index]
 
     def rebuild_hierarchy(self):
         """Recompute sibling links and skin indices after nodes have been edited.
@@ -353,7 +420,7 @@ def _read_lods(r):
     for _ in range(r.u32()):
         distance = r.f32()
         buffers = [VertexBuffer(*r.u32s(4)) for _ in range(r.u32())]
-        submeshes = [r.u32s(7) for _ in range(r.u32())]
+        submeshes = [Submesh.read(r) for _ in range(r.u32())]
         vertex_size = r.u32()
         vertex_data = r.align(16).raw(vertex_size)
         index_count = r.u32()
@@ -371,7 +438,7 @@ def _write_lods(w, lods):
             w.u32s([vb.flags, vb.stride, vb.unknown, vb.offset])
         w.u32(len(lod.submeshes))
         for submesh in lod.submeshes:
-            w.u32s(submesh)
+            submesh.write(w)
         w.u32(len(lod.vertex_data))
         w.align(16).raw(lod.vertex_data)
         w.u32(len(lod.index_data) // 2)

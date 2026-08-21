@@ -1,0 +1,14 @@
+schema_version = "1.0.0"
+
+id = "farcry2_formats"
+name = "Far Cry 2 Formats"
+version = "0.1.0"
+tagline = "Import Far Cry 2 (Dunia) meshes, rigs and animations"
+maintainer = "FarCry2 modding tools"
+type = "add-on"
+license = ["SPDX:Unlicense"]
+blender_version_min = "4.2.0"
+tags = ["Import-Export"]
+
+[permissions]
+files = "Read .xbg, .skeleton and .mab files from disk"
