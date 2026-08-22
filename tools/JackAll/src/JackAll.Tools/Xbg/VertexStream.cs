@@ -29,6 +29,13 @@ public sealed class VertexStream
 
     public int Count { get; }
 
+    /// <summary>Each component's run at file precision, tightly packed, keyed by its layout name.</summary>
+    public IReadOnlyDictionary<string, byte[]> Components => _components;
+
+    /// <summary>A stream over components already at file precision, as the encoder builds them.</summary>
+    public static VertexStream FromComponents(uint flags, int count, Dictionary<string, byte[]> components)
+        => new(flags, count, components);
+
     public static VertexStream Unpack(ReadOnlySpan<byte> data, XbgVertexBuffer buffer, int count)
     {
         (List<(string Name, int Offset, int Size)> layout, int stride) = XbgFile.VertexLayout(buffer.Flags);
