@@ -140,6 +140,30 @@ public sealed class VertexStream
         return used ? out_ : null;
     }
 
+    /// <summary>
+    /// The same UVs, but present whenever the channel is, sentinel values included.
+    /// </summary>
+    /// <remarks>
+    /// A channel carrying nothing is written as <see cref="UvUnused"/> rather than zeroed, so a
+    /// codec re-encoding what it decoded has to see those values; <see cref="Uvs"/> hides them
+    /// because a consumer drawing the mesh wants to know the channel is unused instead.
+    /// </remarks>
+    public (float U, float V)[]? RawUvs(float translate, float scale, int channel = 0)
+    {
+        if (!_components.TryGetValue($"uv{channel}", out byte[]? run))
+        {
+            return null;
+        }
+
+        var out_ = new (float, float)[Count];
+        for (int i = 0; i < Count; i++)
+        {
+            out_[i] = (translate + (Int16(run, i * 4) * scale),
+                       translate + (Int16(run, (i * 4) + 2) * scale));
+        }
+        return out_;
+    }
+
     public (float X, float Y, float Z)[]? Normals() => Directions("normal");
 
     public (float X, float Y, float Z)[]? Tangents() => Directions("tangent");
