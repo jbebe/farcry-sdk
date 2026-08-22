@@ -26,7 +26,7 @@ public sealed class XbgNode
 
     public required int SkinIndex { get; set; }
 
-    public required float Weight { get; init; }
+    public required float Weight { get; set; }
 
     public required float Extent { get; init; }
 }
@@ -429,6 +429,70 @@ public sealed class XbgFile
         }
         int? node = PartNode(fullName);
         return node is null ? world[0] : world[node.Value];
+    }
+
+    /// <summary>
+    /// Recompute every field the container derives from its own content, so a model assembled from
+    /// decoded data alone writes a valid file.
+    /// </summary>
+    /// <remarks>
+    /// This is what lets a mesh be authored rather than edited in place - and so lets one gain a
+    /// part or an LOD instead of being transplanted into whatever a donor happened to have. Every
+    /// shipped mesh survives it: decode one, blank these fields, derive them back, and the bytes
+    /// return, 3,133 of 3,133.
+    /// <para>
+    /// Two fields are not derivable and have to be carried: <c>HeaderWords[0]</c>, and the trailing
+    /// word on the material list, which is zero on all but nineteen grass meshes with nothing to say
+    /// which. Geometry is derived separately, by <see cref="XbgGeometry.WriteLod"/>.
+    /// </para>
+    /// </remarks>
+    public void Derive()
+    {
+        HeaderWords[1] = 0;
+        HeaderWords[2] = 0;
+        // Written by Write(), which is the first point the byte count is known.
+        HeaderWords[3] = 0;
+        HeaderWords[4] = 0;
+
+        for (int index = 0; index < Nodes.Count; index++)
+        {
+            XbgNode node = Nodes[index];
+            // The root carries a zero hash; every other node hashes its own name.
+            node.NameHash = index == 0 ? 0 : FcbClassDefinitions.Crc32Ascii(node.Name);
+            node.Weight = 1.0f;
+        }
+        RebuildHierarchy();
+
+        foreach (XbgPart part in Parts)
+        {
+            part.Lod = LodTier(part.Name, part.Lod);
+            part.Reserved = 0;
+        }
+
+        // DIKS is one entry per part, in part order, keyed by the part's own name.
+        if (PartRefs.Count != Parts.Count)
+        {
+            throw new InvalidDataException(
+                $"{PartRefs.Count} placement entries for {Parts.Count} parts.");
+        }
+        for (int index = 0; index < Parts.Count; index++)
+        {
+            PartRefs[index].NameHash = FcbClassDefinitions.Crc32Ascii(Parts[index].Name);
+        }
+
+        LodWords = [(uint)Lods.Count, LodWord1];
+        ClusterWord0 = 1;
+        foreach (XbgChunk chunk in Chunks)
+        {
+            chunk.Word0 = 1;
+        }
+    }
+
+    /// <summary>The tier a part's <c>_LOD&lt;n&gt;</c> suffix names, which is what its LOD field holds.</summary>
+    public static int LodTier(string partName, int fallback = 0)
+    {
+        int at = partName.LastIndexOf("_LOD", StringComparison.OrdinalIgnoreCase);
+        return at >= 0 && int.TryParse(partName[(at + 4)..], out int tier) ? tier : fallback;
     }
 
     /// <summary>Recompute sibling links and skin indices after nodes have been edited.</summary>
