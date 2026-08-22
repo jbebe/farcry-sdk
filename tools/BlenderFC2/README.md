@@ -57,7 +57,7 @@ Blender Action, bringing the weapon it puts in the character's hand with it — 
 | `addon/` | The Blender add-on: `convert.py` holds every Dunia-to-Blender convention, `materials.py` rebuilds the Generic shader, `export_xbg.py` writes parts back, `import_mab.py` builds an Action and attaches the props a clip names |
 | `tests/_corpus.py` | Corpus location and the skip-when-absent helper the scripts share |
 | `tests/roundtrip.py` | Round-trips every retail file of a format; `--coverage` reports the opaque share |
-| `tests/rebuild.py` | Regenerates every LOD's geometry blocks from scratch and requires the file back |
+| `tests/originate.py` | Builds every `.xbg` from decoded content alone and requires the file back |
 | `tests/reencode.py` | Decodes every vertex buffer to float space and back, per component |
 | `tests/invariants.py` | Checks decoded meaning: palettes index real bones, derived values recompute to what shipped, `.mab` tag records reach the clip they name |
 | `tests/mabcheck.py` | Resolves every `.mab` mask bit against `pelvis_ref.skeleton`, checks quaternion norms, and refuses a translation on a bone the skeleton holds fixed |
@@ -68,6 +68,7 @@ Blender Action, bringing the weapon it puts in the character's hand with it — 
 | `tests/render_preview.py` | Renders an imported model to a PNG, for looking at what the importer built |
 | `tests/bundle.py` | Builds bundles and resolves each model's whole reference graph from the bundle alone |
 | `tests/probe.py` | Dumps one file's chunk layout when a round trip fails |
+| `tests/fielddump.py` | Dumps each file's decoded fields as JSON, for the C# port to check itself against |
 | `bundle_model.py` | Packs a model and its dependencies into a `.fc2model` |
 | `open_model.py` / `.cmd` | Opens a model, and optionally a clip, in Blender's UI; quoting-safe in cmd and PowerShell |
 
@@ -231,8 +232,9 @@ cd tools/BlenderFC2/tests
 python roundtrip.py skeleton --coverage
 python roundtrip.py xbg --coverage
 python roundtrip.py mab --coverage
-python rebuild.py
+python originate.py
 python reencode.py
+python fielddump.py skeleton
 python invariants.py
 python mabcheck.py
 python quatcheck.py

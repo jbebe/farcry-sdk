@@ -32,11 +32,33 @@ public ref struct ByteCursor
         }
     }
 
+    public byte ReadU8()
+    {
+        EnsureAvailable(1);
+        return _data[Position++];
+    }
+
     public ushort ReadU16()
     {
         EnsureAvailable(2);
         ushort value = BinaryPrimitives.ReadUInt16LittleEndian(_data[Position..]);
         Position += 2;
+        return value;
+    }
+
+    public short ReadI16()
+    {
+        EnsureAvailable(2);
+        short value = BinaryPrimitives.ReadInt16LittleEndian(_data[Position..]);
+        Position += 2;
+        return value;
+    }
+
+    public int ReadI32()
+    {
+        EnsureAvailable(4);
+        int value = BinaryPrimitives.ReadInt32LittleEndian(_data[Position..]);
+        Position += 4;
         return value;
     }
 
@@ -65,6 +87,71 @@ public ref struct ByteCursor
     }
 
     public byte[] ReadBytes(int length) => ReadSpan(length).ToArray();
+
+    public ushort[] ReadU16Array(int count)
+    {
+        var values = new ushort[count];
+        for (int i = 0; i < count; i++)
+        {
+            values[i] = ReadU16();
+        }
+        return values;
+    }
+
+    public short[] ReadI16Array(int count)
+    {
+        var values = new short[count];
+        for (int i = 0; i < count; i++)
+        {
+            values[i] = ReadI16();
+        }
+        return values;
+    }
+
+    public uint[] ReadU32Array(int count)
+    {
+        var values = new uint[count];
+        for (int i = 0; i < count; i++)
+        {
+            values[i] = ReadU32();
+        }
+        return values;
+    }
+
+    public float[] ReadF32Array(int count)
+    {
+        var values = new float[count];
+        for (int i = 0; i < count; i++)
+        {
+            values[i] = ReadF32();
+        }
+        return values;
+    }
+
+    /// <summary>A CStringID: CRC32 of the exact-case name, its length, then unterminated characters.</summary>
+    public (uint Hash, string Name) ReadStringId()
+    {
+        uint hash = ReadU32();
+        return (hash, Latin1(ReadSpan((int)ReadU32())));
+    }
+
+    /// <summary>A length-prefixed, NUL-terminated name, as the .xbg chunks store it.</summary>
+    public string ReadCString()
+    {
+        string name = Latin1(ReadSpan((int)ReadU32()));
+        Position++;
+        return name;
+    }
+
+    private static string Latin1(ReadOnlySpan<byte> bytes)
+    {
+        var chars = new char[bytes.Length];
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            chars[i] = (char)bytes[i];
+        }
+        return new string(chars);
+    }
 
     public static uint U32(ReadOnlySpan<byte> data, int offset)
         => BinaryPrimitives.ReadUInt32LittleEndian(data[offset..]);
