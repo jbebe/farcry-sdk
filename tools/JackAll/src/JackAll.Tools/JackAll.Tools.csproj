@@ -22,6 +22,7 @@
     <!-- Parses the game's Domino mission-graph Lua (Domino\). -->
     <PackageReference Include="BCnEncoder.Net" Version="2.3.0" />
     <PackageReference Include="Loretta.CodeAnalysis.Lua" Version="0.2.13" />
+    <PackageReference Include="SixLabors.ImageSharp" Version="4.1.1" />
   </ItemGroup>
 
 </Project>

@@ -90,7 +90,7 @@ public sealed class VertexEncoderTests
         // 14,319,419 shipped vertices, so an authored vertex has to carry them too.
         Assert.Equal(VertexEncoder.PositionW, BitConverter.ToInt16(stream.Components["pos"], 6));
         Assert.Equal(VertexEncoder.DirectionW, stream.Components["normal"][3]);
-        Assert.Equal([(1.0f, 1.0f, 1.0f, 1.0f)], stream.Colours());
+        Assert.Equal([(1.0f, 1.0f, 1.0f, 1.0f)], stream.Colours()!);
     }
 
     [Fact]
