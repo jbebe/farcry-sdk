@@ -21,6 +21,8 @@ import sys
 from _corpus import CORPUS, find, require
 
 from fc2fmt.skeleton import SkeletonFile
+from fc2fmt.xbg import XbgFile
+from fc2fmt.xbm import XbmMaterial
 
 DEFAULT_OUT = os.path.join(CORPUS, "..", "fielddump")
 
@@ -70,7 +72,74 @@ def dump_skeleton(data):
     }
 
 
-FORMATS = {"skeleton": (".skeleton", dump_skeleton)}
+def dump_xbg(data):
+    """Structure only: the bulk vertex and index blocks are the round trip's job."""
+    m = XbgFile.parse(data)
+    return {
+        "version": m.version,
+        "header_words": list(m.header_words),
+        "chunks": [{"tag": c.tag, "word0": c.word0, "raw_length": len(c.raw)}
+                   for c in m.chunks],
+        "materials": list(m.materials),
+        "material_word": m.material_word,
+        "cluster_word0": m.cluster_word0,
+        "lod_words": list(m.lod_words),
+        "bbox": bit_list(m.bbox),
+        "bsphere": bit_list(m.bsphere),
+        "pos_compress": bit_list(m.pos_compress),
+        "uv_compress": bit_list(m.uv_compress),
+        "bind_matrices": [bit_list(matrix) for matrix in m.bind_matrices],
+        "nodes": [{
+            "name": n.name, "name_hash": n.name_hash, "first_child": n.first_child,
+            "next_sibling": n.next_sibling, "parent": n.parent,
+            "rotation": bit_list(n.rotation), "translation": bit_list(n.translation),
+            "scale": bit_list(n.scale), "skin_index": n.skin_index,
+            "weight": bits(n.weight), "extent": bits(n.extent),
+        } for n in m.nodes],
+        "part_refs": [{"name_hash": p.name_hash, "node": p.node} for p in m.part_refs],
+        "parts": [{
+            "name": d.name, "lod_metric": bits(d.lod_metric), "bounds": bit_list(d.bounds),
+            "lod": d.lod, "reserved": d.reserved,
+            "clusters": [{
+                "material_index": c.material_index, "face_count": c.face_count,
+                "stride": c.stride, "vertex_count": c.vertex_count, "flags": c.flags,
+                "palette": list(c.palette),
+            } for c in d.clusters],
+        } for d in m.skin_descs],
+        "lods": [{
+            "distance": bits(lod.distance),
+            "vertex_bytes": len(lod.vertex_data), "index_bytes": len(lod.index_data),
+            "vertex_buffers": [{"flags": b.flags, "stride": b.stride,
+                                "vertex_count": b.vertex_count, "offset": b.offset}
+                               for b in lod.vertex_buffers],
+            "submeshes": [{"buffer": s.buffer, "part": s.part, "cluster": s.cluster,
+                           "index_offset": s.index_offset, "trailing": list(s.trailing)}
+                          for s in lod.submeshes],
+        } for lod in m.lods],
+    }
+
+
+def entry_value(section, value):
+    if section == "textures":
+        return {"path": value}
+    if section == "floats":
+        return {"floats": bit_list(value)}
+    return {"integer": value}
+
+
+def dump_xbm(data):
+    x = XbmMaterial.parse(data)
+    return {
+        "name": x.name, "part": x.part, "shader": x.shader,
+        "preamble": list(x.preamble), "trailing": x.trailing,
+        "entries": [dict({"section": section, "key": key}, **entry_value(section, value))
+                    for section, key, value in x.entries],
+    }
+
+
+FORMATS = {"skeleton": (".skeleton", dump_skeleton),
+           "xbg": (".xbg", dump_xbg),
+           "xbm": (".xbm", dump_xbm)}
 
 
 def main(argv):

@@ -50,6 +50,50 @@ internal static class Fc2FieldDump
     }
 
     /// <summary>
+    /// Decode every dumped file with <paramref name="project"/> and require it to match, field for
+    /// field, what the Python codec decoded.
+    /// </summary>
+    public static void AssertMatches(string format, Func<byte[], JsonNode> project)
+    {
+        List<string> failures = [];
+        int compared = 0;
+
+        foreach ((string relative, JsonNode expected) in Read(format))
+        {
+            string path = Path.Combine(Fc2Corpus.Root, relative.Replace('/', Path.DirectorySeparatorChar));
+            if (!File.Exists(path))
+            {
+                failures.Add($"{relative}: dumped but not present in the corpus");
+                continue;
+            }
+
+            compared++;
+            try
+            {
+                if (FirstDifference(expected, project(File.ReadAllBytes(path))) is { } difference)
+                {
+                    failures.Add($"{relative}: {difference}");
+                }
+            }
+            catch (Exception error)
+            {
+                failures.Add($"{relative}: {error.Message}");
+            }
+        }
+
+        // Without this an empty dump would pass on zero comparisons, which is the
+        // failure this whole gate exists to make impossible.
+        Assert.True(
+            compared > 0 || !Present(format),
+            $"{PathFor(format)} is present but named no file this corpus holds.");
+
+        Assert.True(
+            failures.Count == 0,
+            $"{compared - failures.Count}/{compared} files decoded identically. First failures:"
+            + Environment.NewLine + string.Join(Environment.NewLine, failures.Take(5)));
+    }
+
+    /// <summary>
     /// The first place two trees disagree, as a dotted path, or null when they match.
     /// </summary>
     public static string? FirstDifference(JsonNode? expected, JsonNode? actual, string path = "")

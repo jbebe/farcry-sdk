@@ -235,6 +235,8 @@ python roundtrip.py mab --coverage
 python originate.py
 python reencode.py
 python fielddump.py skeleton
+python fielddump.py xbg
+python fielddump.py xbm
 python invariants.py
 python mabcheck.py
 python quatcheck.py

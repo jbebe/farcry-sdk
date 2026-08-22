@@ -18,38 +18,7 @@ public sealed class SkeletonDifferentialTests
 
     [Fact]
     public void Decodes_every_shipped_rig_to_the_same_fields_as_the_python_codec()
-    {
-        List<string> failures = [];
-        int compared = 0;
-
-        foreach ((string relative, JsonNode expected) in Fc2FieldDump.Read(Format))
-        {
-            string path = Path.Combine(Fc2Corpus.Root, relative.Replace('/', Path.DirectorySeparatorChar));
-            if (!File.Exists(path))
-            {
-                failures.Add($"{relative}: dumped but not present in the corpus");
-                continue;
-            }
-
-            compared++;
-            JsonNode actual = Project(SkeletonFile.Parse(File.ReadAllBytes(path)));
-            if (Fc2FieldDump.FirstDifference(expected, actual) is { } difference)
-            {
-                failures.Add($"{relative}: {difference}");
-            }
-        }
-
-        // Without this an empty dump would pass on zero comparisons, which is the
-        // failure this whole gate exists to make impossible.
-        Assert.True(
-            compared > 0 || !Fc2FieldDump.Present(Format),
-            $"{Fc2FieldDump.PathFor(Format)} is present but named no file this corpus holds.");
-
-        Assert.True(
-            failures.Count == 0,
-            $"{compared - failures.Count}/{compared} rigs decoded identically. First failures:{Environment.NewLine}"
-            + string.Join(Environment.NewLine, failures.Take(5)));
-    }
+        => Fc2FieldDump.AssertMatches(Format, data => Project(SkeletonFile.Parse(data)));
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
