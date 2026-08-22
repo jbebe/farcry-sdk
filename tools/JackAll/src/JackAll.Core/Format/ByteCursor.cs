@@ -32,6 +32,9 @@ public ref struct ByteCursor
         }
     }
 
+    /// <summary>Advance to the next multiple of <paramref name="boundary"/>.</summary>
+    public void Align(int boundary) => Position = (Position + boundary - 1) & ~(boundary - 1);
+
     public byte ReadU8()
     {
         EnsureAvailable(1);

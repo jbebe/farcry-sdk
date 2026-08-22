@@ -39,6 +39,11 @@ public sealed class SkeletonFileTests
             }
         }
 
+        // Without this, a corpus holding no rigs passes on zero files.
+        Assert.True(
+            checked_ > 0 || !Fc2Corpus.Present,
+            $"{Fc2Corpus.Root} holds no *{Extension}, so this gate asserted nothing.");
+
         Assert.True(
             failures.Count == 0,
             $"{checked_ - failures.Count}/{checked_} rigs round-tripped. First failures:{Environment.NewLine}"
