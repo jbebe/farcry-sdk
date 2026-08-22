@@ -251,7 +251,14 @@ public sealed class XbmFile
         }
     }
 
-    private void Add(XbmEntry entry)
+    /// <summary>
+    /// Append a property, keeping the file-order list and the lookup maps in step.
+    /// </summary>
+    /// <remarks>
+    /// Both have to be maintained together: the list is what gets written, including the one shipped
+    /// material that repeats a key, and the maps are what callers read by name.
+    /// </remarks>
+    public void Add(XbmEntry entry)
     {
         Entries.Add(entry);
         switch (entry.Section)

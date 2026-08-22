@@ -110,11 +110,11 @@ public sealed class SkeletonFile
 
     public uint Version { get; set; } = BoneVersion;
 
-    public List<SkeletonBone> Bones { get; } = [];
+    public List<SkeletonBone> Bones { get; set; } = [];
 
     public ushort[] CommonBoneIds { get; set; } = [];
 
-    public List<SkeletonAnimHandle> Handles { get; } = [];
+    public List<SkeletonAnimHandle> Handles { get; set; } = [];
 
     public float ScaleFactor { get; set; } = 1.0f;
 
@@ -123,7 +123,7 @@ public sealed class SkeletonFile
     /// <summary>
     /// Three groups, stored zeroed; <c>CSkeleton::FillLODBitmask</c> regenerates them after load.
     /// </summary>
-    public List<uint[]> LodMasks { get; } = [];
+    public List<uint[]> LodMasks { get; set; } = [];
 
     public static SkeletonFile Parse(byte[] data)
     {

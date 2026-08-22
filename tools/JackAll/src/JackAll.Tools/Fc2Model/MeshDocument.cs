@@ -45,20 +45,51 @@ public sealed class MeshPart
     public List<MeshCluster> Clusters { get; init; } = [];
 }
 
-/// <summary>One cluster's geometry, in float space.</summary>
+/// <summary>
+/// One cluster's geometry, in float space and flat.
+/// </summary>
+/// <remarks>
+/// Every component is one array with a fixed stride rather than a list of points, because that is
+/// both what a <c>.bin</c> buffer holds and the only shape that survives a general serialiser -
+/// a tuple's members are fields, so JSON writes each vertex as an empty object and loses the lot.
+/// </remarks>
 public sealed class MeshGeometry
 {
+    /// <summary>Weight and slot pairs per vertex, zero-padded to the wider of the two sets.</summary>
+    public const int SkinStride = 8;
+
     public required uint Buffer { get; init; }
 
     public required uint Part { get; init; }
 
     public required uint Cluster { get; init; }
 
-    public required VertexData Vertices { get; init; }
-
     public required int VertexCount { get; init; }
 
-    public required List<int> Indices { get; init; }
+    /// <summary>Three per vertex.</summary>
+    public required float[] Positions { get; init; }
+
+    /// <summary>Two per vertex.</summary>
+    public float[]? Uvs { get; init; }
+
+    public float[]? Uvs1 { get; init; }
+
+    /// <summary>Three per vertex.</summary>
+    public float[]? Normals { get; init; }
+
+    public float[]? Tangents { get; init; }
+
+    public float[]? Binormals { get; init; }
+
+    /// <summary>Four per vertex, RGBA.</summary>
+    public float[]? Colours { get; init; }
+
+    /// <summary><see cref="SkinStride"/> per vertex, alongside <see cref="SkinSlots"/>.</summary>
+    public float[]? SkinWeights { get; init; }
+
+    public int[]? SkinSlots { get; init; }
+
+    public required int[] Indices { get; init; }
 }
 
 public sealed class MeshLod
@@ -195,13 +226,23 @@ public sealed class MeshDocument
 
             foreach (ClusterGeometry geometry in XbgGeometry.ReadLod(file, lod))
             {
+                VertexStream stream = geometry.Vertices;
+                (float[]? weights, int[]? slots) = FlattenSkin(stream.Skin());
                 fresh.Geometry.Add(new MeshGeometry
                 {
                     Buffer = geometry.Buffer,
                     Part = geometry.Part,
                     Cluster = geometry.Cluster,
-                    VertexCount = geometry.Vertices.Count,
-                    Vertices = Decode(geometry.Vertices, file.PosScale, scales),
+                    VertexCount = stream.Count,
+                    Positions = Flatten3(stream.Positions(file.PosScale)),
+                    Uvs = Flatten2(stream.RawUvs(scales.UvTranslate, scales.UvScale, 0)),
+                    Uvs1 = Flatten2(stream.RawUvs(scales.UvTranslate, scales.UvScale, 1)),
+                    Normals = Flatten3(stream.Normals()),
+                    Tangents = Flatten3(stream.Tangents()),
+                    Binormals = Flatten3(stream.Binormals()),
+                    Colours = Flatten4(stream.Colours()),
+                    SkinWeights = weights,
+                    SkinSlots = slots,
                     Indices = [.. geometry.Indices],
                 });
             }
@@ -320,7 +361,7 @@ public sealed class MeshDocument
                 Part = g.Part,
                 Cluster = g.Cluster,
                 Vertices = VertexEncoder.Encode(
-                    lod.BufferFlags[(int)g.Buffer], g.VertexCount, scales, g.Vertices),
+                    lod.BufferFlags[(int)g.Buffer], g.VertexCount, scales, VerticesOf(g)),
                 Indices = [.. g.Indices],
             })];
             XbgGeometry.WriteLod(file, target, geometries);
@@ -328,18 +369,86 @@ public sealed class MeshDocument
         return file;
     }
 
-    private static VertexData Decode(VertexStream stream, float posScale, VertexScales scales)
-        => new()
+    private static VertexData VerticesOf(MeshGeometry geometry) => new()
+    {
+        Positions = Unflatten3(geometry.Positions),
+        Uvs = Unflatten2(geometry.Uvs),
+        Uvs1 = Unflatten2(geometry.Uvs1),
+        Normals = Unflatten3(geometry.Normals),
+        Tangents = Unflatten3(geometry.Tangents),
+        Binormals = Unflatten3(geometry.Binormals),
+        Colours = Unflatten4(geometry.Colours),
+        Skin = UnflattenSkin(geometry.SkinWeights, geometry.SkinSlots),
+    };
+
+    private static float[]? Flatten2((float U, float V)[]? values)
+        => values is null ? null : [.. values.SelectMany(v => (float[])[v.U, v.V])];
+
+    private static float[]? Flatten3((float X, float Y, float Z)[]? values)
+        => values is null ? null : [.. values.SelectMany(v => (float[])[v.X, v.Y, v.Z])];
+
+    private static float[]? Flatten4((float R, float G, float B, float A)[]? values)
+        => values is null ? null : [.. values.SelectMany(v => (float[])[v.R, v.G, v.B, v.A])];
+
+    /// <summary>Zero-weight pairs are dropped on decode, so they are padded back in here.</summary>
+    private static (float[]? Weights, int[]? Slots) FlattenSkin(List<(float Weight, int Slot)>[]? skin)
+    {
+        if (skin is null)
         {
-            Positions = stream.Positions(posScale),
-            Uvs = stream.RawUvs(scales.UvTranslate, scales.UvScale, 0),
-            Uvs1 = stream.RawUvs(scales.UvTranslate, scales.UvScale, 1),
-            Normals = stream.Normals(),
-            Tangents = stream.Tangents(),
-            Binormals = stream.Binormals(),
-            Colours = stream.Colours(),
-            Skin = stream.Skin(),
-        };
+            return (null, null);
+        }
+
+        var weights = new float[skin.Length * MeshGeometry.SkinStride];
+        var slots = new int[skin.Length * MeshGeometry.SkinStride];
+        for (int vertex = 0; vertex < skin.Length; vertex++)
+        {
+            for (int at = 0; at < skin[vertex].Count && at < MeshGeometry.SkinStride; at++)
+            {
+                weights[(vertex * MeshGeometry.SkinStride) + at] = skin[vertex][at].Weight;
+                slots[(vertex * MeshGeometry.SkinStride) + at] = skin[vertex][at].Slot;
+            }
+        }
+        return (weights, slots);
+    }
+
+    private static (float U, float V)[]? Unflatten2(float[]? flat)
+        => flat is null ? null : [.. Enumerable.Range(0, flat.Length / 2).Select(i => (flat[i * 2], flat[(i * 2) + 1]))];
+
+    private static (float X, float Y, float Z)[]? Unflatten3(float[]? flat)
+        => flat is null
+            ? null
+            : [.. Enumerable.Range(0, flat.Length / 3)
+                .Select(i => (flat[i * 3], flat[(i * 3) + 1], flat[(i * 3) + 2]))];
+
+    private static (float R, float G, float B, float A)[]? Unflatten4(float[]? flat)
+        => flat is null
+            ? null
+            : [.. Enumerable.Range(0, flat.Length / 4)
+                .Select(i => (flat[i * 4], flat[(i * 4) + 1], flat[(i * 4) + 2], flat[(i * 4) + 3]))];
+
+    private static List<(float Weight, int Slot)>[]? UnflattenSkin(float[]? weights, int[]? slots)
+    {
+        if (weights is null || slots is null)
+        {
+            return null;
+        }
+
+        var skin = new List<(float, int)>[weights.Length / MeshGeometry.SkinStride];
+        for (int vertex = 0; vertex < skin.Length; vertex++)
+        {
+            List<(float, int)> pairs = [];
+            for (int at = 0; at < MeshGeometry.SkinStride; at++)
+            {
+                float weight = weights[(vertex * MeshGeometry.SkinStride) + at];
+                if (weight != 0.0f)
+                {
+                    pairs.Add((weight, slots[(vertex * MeshGeometry.SkinStride) + at]));
+                }
+            }
+            skin[vertex] = pairs;
+        }
+        return skin;
+    }
 
     private static void Refuse(uint flags)
     {

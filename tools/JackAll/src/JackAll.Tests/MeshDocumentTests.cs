@@ -1,3 +1,4 @@
+using System.Text.Json;
 using JackAll.Tools.Fc2Model;
 using JackAll.Tools.Xbg;
 
@@ -15,6 +16,8 @@ namespace JackAll.Tests;
 /// </remarks>
 public sealed class MeshDocumentTests
 {
+    private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
+
     [Fact]
     public void Every_shipped_mesh_survives_the_trip_through_the_document()
     {
@@ -27,7 +30,10 @@ public sealed class MeshDocumentTests
             byte[] original = File.ReadAllBytes(path);
             try
             {
-                byte[] produced = MeshDocument.From(XbgFile.Parse(original)).ToXbg().Write();
+                // Through JSON, because that is how it travels - a member the serialiser drops
+                // has to fail here rather than in a mod nobody can explain.
+                string text = JsonSerializer.Serialize(MeshDocument.From(XbgFile.Parse(original)), Json);
+                byte[] produced = JsonSerializer.Deserialize<MeshDocument>(text, Json)!.ToXbg().Write();
                 if (!produced.AsSpan().SequenceEqual(original))
                 {
                     failures.Add(Fc2Corpus.DescribeDifference(path, original, produced));
@@ -76,8 +82,8 @@ public sealed class MeshDocumentTests
         // Geometry is float space: a rifle is under a couple of metres in every direction.
         foreach (MeshGeometry geometry in document.Lods[0].Geometry)
         {
-            Assert.All(geometry.Vertices.Positions!, p =>
-                Assert.True(Math.Abs(p.X) < 2.0f && Math.Abs(p.Y) < 2.0f && Math.Abs(p.Z) < 2.0f));
+            Assert.Equal(geometry.VertexCount * 3, geometry.Positions.Length);
+            Assert.All(geometry.Positions, coordinate => Assert.True(Math.Abs(coordinate) < 2.0f));
         }
     }
 
