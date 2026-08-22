@@ -179,8 +179,68 @@ public sealed class XbgFile
     /// <summary>A DIKS entry names the node that places its part, or this when none does.</summary>
     public const uint NoPlacement = 0xFFFF;
 
+    /// <summary>
+    /// Vertex component flags. The position is one of the first three; the rest are independent
+    /// bits, and a buffer lays its components out in this fixed order.
+    /// </summary>
+    public const uint PosFloat = 0x0001;
+    public const uint PosInt16 = 0x0002;
+    public const uint PosHalf = 0x0004;
+    public const uint Uv0 = 0x0008;
     public const uint BoneWeights1 = 0x0010;
     public const uint BoneWeights2 = 0x0020;
+    public const uint Normal = 0x0040;
+    public const uint Colour = 0x0080;
+    public const uint Tangent = 0x0100;
+    public const uint Binormal = 0x0200;
+    public const uint Unk400 = 0x0400;
+    public const uint Uv1 = 0x0800;
+    public const uint Uv2 = 0x1000;
+
+    /// <summary>The position encodings, in the order a buffer's flags are tested.</summary>
+    private static readonly (uint Bit, string Name, int Size)[] PositionKinds =
+    [
+        (PosFloat, "pos_float", 12), (PosInt16, "pos_int16", 8), (PosHalf, "pos_half", 8),
+    ];
+
+    private static readonly (uint Bit, string Name, int Size)[] Components =
+    [
+        (Uv0, "uv0", 4), (Uv1, "uv1", 4), (Uv2, "uv2", 4),
+        (BoneWeights1, "bone_wts1", 8), (BoneWeights2, "bone_wts2", 8),
+        (Normal, "normal", 4), (Colour, "color", 4),
+        (Tangent, "tangent", 4), (Binormal, "binormal", 4), (Unk400, "unk400", 4),
+    ];
+
+    /// <summary>
+    /// Where each component sits inside one vertex, and the stride the flags imply.
+    /// </summary>
+    /// <remarks>
+    /// The position is reported under the name <c>pos</c> whichever encoding it uses, so callers
+    /// can find it without testing the flags again. Every shipped buffer stores int16 positions.
+    /// </remarks>
+    public static (List<(string Name, int Offset, int Size)> Layout, int Stride) VertexLayout(uint flags)
+    {
+        List<(string, int, int)> layout = [];
+        int cursor = 0;
+        foreach ((uint bit, _, int size) in PositionKinds)
+        {
+            if ((flags & bit) != 0)
+            {
+                layout.Add(("pos", cursor, size));
+                cursor += size;
+                break;
+            }
+        }
+        foreach ((uint bit, string name, int size) in Components)
+        {
+            if ((flags & bit) != 0)
+            {
+                layout.Add((name, cursor, size));
+                cursor += size;
+            }
+        }
+        return (layout, cursor);
+    }
 
     /// <summary>header_words[3] holds the byte count from <see cref="SizeOrigin"/> to end of file.</summary>
     public const int SizeField = 20;
