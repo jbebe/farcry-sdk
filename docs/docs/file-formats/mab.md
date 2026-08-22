@@ -296,11 +296,41 @@ A reload's records are all called `ak47`, because the magazine belongs to the sa
 `reference` to tell them apart, not the name.
 :::
 
+## How a clip is laid out on disk
+
+:::info[Measured across the retail corpus]
+The rules below come from sizing every array section from its own header and mask and comparing
+that against where the next section starts, over 11,261 clips.
+:::
+
+Four rules, and none of them is the one an `.xbg` follows:
+
+- **Sections appear in the order 1, 0, 2, 3, 4, 5, 6, 7, 8** — the two trajectory slots lead, and
+  the rotation one comes *before* the translation one. Their offsets are not in table order, so a
+  reader that assumes ascending slots walks the wrong bytes.
+- **Every section starts on a 16-byte boundary**, and its span is a multiple of 16.
+- **Padding is zeros.** An `.xbg` pads with a descending byte counter instead, so a writer sharing
+  one alignment helper between the two formats silently destroys whichever it was not written for —
+  the file still loads, it just no longer matches.
+- **A 16-byte block of zeros separates the last data section from the event chunk or the chained
+  clip.** It follows whichever section precedes them, not one particular slot.
+
+An array section's eight-byte header is `(track count, last frame, rate, 0)`. The track count is the
+popcount of the mask that names the section's bones, or 1 for a trajectory. A constant section holds
+no frames, so its last frame and rate are both zero; a keyed one carries the clip's rate, 30 to 32
+in the shipped set.
+
 ## What is still open
 
-- **Writing clips.** Reading is complete enough to round-trip; nothing yet builds a keyframe block
-  from scratch.
+- **Writing a keyframe block.** The container, the quaternion codec and the section framing are all
+  reproducible; the sparse group layout is not yet written from scratch.
 - **140 of the 172 bytes in a tag record**, and the FCB payload schema of an event node.
+- **A clip cannot be re-encoded byte-exactly, and not because of a bug.** 487 of the 704,739 shipped
+  rotations were authored on an exact tie — a quarter turn puts two components at `1/sqrt(2)`, an
+  even diagonal puts all four at `1/2` — and quantising breaks that tie asymmetrically, so which
+  component the encoder dropped is no longer recoverable from what it stored. Those re-encode to a
+  different, equally valid triple. Every one still decodes to the same rotation, so a writer can be
+  held to meaning rather than to bytes.
 
 ## Tooling
 
