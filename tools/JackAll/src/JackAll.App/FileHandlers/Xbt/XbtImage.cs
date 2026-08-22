@@ -1,8 +1,4 @@
-using BCnEncoder.Decoder;
-using BCnEncoder.Shared;
-using CommunityToolkit.HighPerformance;
 using JackAll.Tools.Xbt;
-using System.IO;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -10,100 +6,51 @@ using System.Windows.Media.Imaging;
 namespace JackAll.App.FileHandlers.Xbt;
 
 /// <summary>
-/// Decodes an <c>.xbt</c>'s DDS payload into something WPF can show.
+/// Turns an <c>.xbt</c> into something WPF can show.
 /// </summary>
 /// <remarks>
-/// Shared rather than living in <see cref="XbtFileHandler"/>, because the <c>.mgb</c> editor's
-/// material rows resolve their texture path to an <c>.xbt</c> and preview it the same way (see
-/// <c>MgbTextureResolver</c>) - one BCn decode path, not two that can drift apart.
+/// The BCn decode itself lives in <see cref="XbtPixels"/>, which the map editor and the model packer
+/// share; this is only the part that needs WPF. Shared rather than living in
+/// <see cref="XbtFileHandler"/>, because the <c>.mgb</c> editor's material rows resolve their
+/// texture path to an <c>.xbt</c> and preview it the same way (see <c>MgbTextureResolver</c>).
 /// </remarks>
 public static class XbtImage
 {
     /// <summary>Null (with the reason in <paramref name="error"/>) if <paramref name="xbt"/> isn't a
-    /// readable .xbt or its DDS payload uses something <see cref="BcDecoder"/> can't decode.</summary>
+    /// readable .xbt or its payload uses something the decoder can't handle.</summary>
     public static BitmapSource? TryDecode(byte[] xbt, out string? error)
     {
-        try
+        if (XbtPixels.TryDecode(xbt) is not { } decoded)
         {
-            (_, byte[] dds) = XbtTexture.Split(xbt);
-            var decoder = new BcDecoder();
-            using var stream = new MemoryStream(dds);
-            error = null;
-            return ToBitmap(decoder.Decode2D(stream));
-        }
-        catch (Exception ex)
-        {
-            error = ex.Message;
+            error = "Not a readable .xbt, or its payload is not block-compressed.";
             return null;
         }
+
+        error = null;
+        return ToBitmap(decoded.Rgba, decoded.Width, decoded.Height);
     }
 
     /// <summary>
-    /// The DDS payload as tightly packed RGBA bytes, for callers uploading to the GPU rather than
-    /// showing in WPF. Null when the payload can't be decoded.
+    /// The payload as tightly packed RGBA bytes, for callers uploading to the GPU rather than
+    /// showing in WPF.
     /// </summary>
     public static (byte[] Rgba, int Width, int Height)? TryDecodeRgba(byte[] xbt)
-    {
-        try
-        {
-            (_, byte[] dds) = XbtTexture.Split(xbt);
-            return TryDecodeRgbaDds(dds);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
+        => XbtPixels.TryDecode(xbt);
 
     /// <summary>The same decode for a caller that already split the .xbt and holds the payload.</summary>
     public static (byte[] Rgba, int Width, int Height)? TryDecodeRgbaDds(byte[] dds)
+        => XbtPixels.TryDecodeDds(dds);
+
+    private static WriteableBitmap ToBitmap(byte[] rgba, int width, int height)
     {
-        try
+        // WPF wants BGRA, so the red and blue channels swap on the way in.
+        var buffer = new byte[rgba.Length];
+        for (int at = 0; at < rgba.Length; at += 4)
         {
-            using var stream = new MemoryStream(dds);
-            ColorRgba32[,] rows = new BcDecoder().Decode2D(stream).ToArray();
-            int height = rows.GetLength(0);
-            int width = rows.GetLength(1);
-
-            var rgba = new byte[width * height * 4];
-            int i = 0;
-            for (int y = 0; y < height; y++)
-            {
-                for (int x = 0; x < width; x++)
-                {
-                    ColorRgba32 c = rows[y, x];
-                    rgba[i++] = c.r;
-                    rgba[i++] = c.g;
-                    rgba[i++] = c.b;
-                    rgba[i++] = c.a;
-                }
-            }
-            return (rgba, width, height);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
-
-    private static WriteableBitmap ToBitmap(Memory2D<ColorRgba32> pixels)
-    {
-        int width = pixels.Width;
-        int height = pixels.Height;
-        ColorRgba32[,] rows = pixels.ToArray();
-
-        byte[] buffer = new byte[width * height * 4];
-        int i = 0;
-        for (int y = 0; y < height; y++)
-        {
-            for (int x = 0; x < width; x++)
-            {
-                ColorRgba32 c = rows[y, x];
-                buffer[i++] = c.b;
-                buffer[i++] = c.g;
-                buffer[i++] = c.r;
-                buffer[i++] = c.a;
-            }
+            buffer[at] = rgba[at + 2];
+            buffer[at + 1] = rgba[at + 1];
+            buffer[at + 2] = rgba[at];
+            buffer[at + 3] = rgba[at + 3];
         }
 
         var bitmap = new WriteableBitmap(width, height, 96, 96, PixelFormats.Bgra32, null);

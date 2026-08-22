@@ -7,7 +7,6 @@
 
   <ItemGroup>
     <PackageReference Include="AvalonEdit" Version="6.3.1.120" />
-    <PackageReference Include="BCnEncoder.Net" Version="2.3.0" />
     <PackageReference Include="DiffPlex" Version="1.9.0" />
     <PackageReference Include="FFMpegCore" Version="5.1.0" />
     <PackageReference Include="ini-parser-netstandard" Version="2.5.3" />
