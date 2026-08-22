@@ -143,14 +143,6 @@ class VertexStream:
         return out
 
 
-def buffer_vertex_count(lod, index):
-    """Vertices in one buffer, derived from where the next buffer starts."""
-    buffer = lod.vertex_buffers[index]
-    following = [b.offset for b in lod.vertex_buffers if b.offset > buffer.offset]
-    end = min(following) if following else len(lod.vertex_data)
-    return (end - buffer.offset) // buffer.stride
-
-
 def unpack_indices(lod):
     count = len(lod.index_data) // 2
     return list(struct.unpack_from("<%dH" % count, lod.index_data, 0))

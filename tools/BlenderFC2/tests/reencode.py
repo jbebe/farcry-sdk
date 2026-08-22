@@ -2,7 +2,7 @@
 #
 #   python reencode.py [--limit N]
 #
-# rebuild.py proves the container arithmetic while carrying vertex bytes
+# originate.py proves the container arithmetic while carrying vertex bytes
 # through untouched. This proves the other half: that the float-space values an
 # editor is handed quantise back to exactly what shipped. Anything that fails
 # here is a component an exporter would silently corrupt.
@@ -13,14 +13,14 @@ import sys
 from _corpus import find, require
 
 from fc2fmt.encode import Layout, encode
-from fc2fmt.vertex import VertexStream, buffer_vertex_count
+from fc2fmt.vertex import VertexStream
 from fc2fmt.xbg import BONE_WTS1, COLOR, NORMAL, UV0, UV1, XbgFile
 
 
 def check(model, lod, index, damage):
     """Round-trip one buffer through float space and record what moved."""
     buffer = lod.vertex_buffers[index]
-    count = buffer_vertex_count(lod, index)
+    count = lod.vertex_buffers[index].vertex_count
     if not count:
         return
     stream = VertexStream.unpack(lod.vertex_data, buffer, count)

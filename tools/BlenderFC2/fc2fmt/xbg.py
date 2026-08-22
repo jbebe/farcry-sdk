@@ -16,6 +16,13 @@ PALETTE_SLOTS = 48
 EMPTY_SLOT = -1
 NO_NODE = 0xFFFFFFFF
 
+# header_words[3] holds the byte count from SIZE_ORIGIN to the end of the file.
+SIZE_FIELD = 20
+SIZE_ORIGIN = 12
+
+# The second word of DOL\0, constant across every shipped mesh.
+LOD_WORD1 = 98
+
 # A DIKS entry names the node that places its part, or this when none does.
 NO_PLACEMENT = 0xFFFF
 
@@ -75,7 +82,7 @@ class Node:
 class VertexBuffer:
     flags: int
     stride: int
-    unknown: int
+    vertex_count: int
     offset: int
 
 
@@ -319,6 +326,7 @@ class XbgFile:
         w.raw(MAGIC).u32(self.version).u32s(self.header_words).u32(len(self.chunks))
         for chunk in self.chunks:
             self._write_chunk(w, chunk)
+        w.patch_u32(SIZE_FIELD, len(w) - SIZE_ORIGIN)
         return w.bytes()
 
     def _write_chunk(self, w, chunk):
@@ -487,7 +495,7 @@ def _write_lods(w, lods):
         w.f32(lod.distance)
         w.u32(len(lod.vertex_buffers))
         for vb in lod.vertex_buffers:
-            w.u32s([vb.flags, vb.stride, vb.unknown, vb.offset])
+            w.u32s([vb.flags, vb.stride, vb.vertex_count, vb.offset])
         w.u32(len(lod.submeshes))
         for submesh in lod.submeshes:
             submesh.write(w)

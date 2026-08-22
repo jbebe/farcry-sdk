@@ -12,7 +12,7 @@
 import collections
 from dataclasses import dataclass, field
 
-from .vertex import VertexStream, buffer_vertex_count, pack_indices, unpack_indices
+from .vertex import VertexStream, pack_indices, unpack_indices
 
 
 @dataclass
@@ -39,7 +39,7 @@ def read_lod(model, lod):
         if submesh.buffer not in streams:
             streams[submesh.buffer] = VertexStream.unpack(
                 lod.vertex_data, lod.vertex_buffers[submesh.buffer],
-                buffer_vertex_count(lod, submesh.buffer))
+                lod.vertex_buffers[submesh.buffer].vertex_count)
         start = base[submesh.buffer]
         base[submesh.buffer] += cluster.vertex_count
         run = indices[submesh.index_offset:submesh.index_offset + cluster.face_count * 3]
@@ -71,13 +71,20 @@ def write_lod(model, lod, geometries):
     indices, base = [], collections.defaultdict(int)
     for position, (submesh, geometry) in enumerate(zip(lod.submeshes, geometries)):
         cluster = _cluster(model, submesh, position)
+        buffer = lod.vertex_buffers[geometry.buffer]
         start = base[geometry.buffer]
         base[geometry.buffer] += len(geometry.vertices)
         submesh.index_offset = len(indices)
         indices.extend(index + start for index in geometry.indices)
         cluster.face_count = geometry.face_count
         cluster.vertex_count = len(geometry.vertices)
-        cluster.stride = lod.vertex_buffers[geometry.buffer].stride
+        cluster.stride = buffer.stride
+        # The submesh's last vertex index, then its byte offset into the LOD's
+        # whole vertex block rather than into its own buffer.
+        submesh.trailing = [start + cluster.vertex_count - 1,
+                            buffer.offset + start * buffer.stride, 0]
+    for index, buffer in enumerate(lod.vertex_buffers):
+        buffer.vertex_count = base[index]
     lod.index_data = pack_indices(indices)
 
 

@@ -17,7 +17,7 @@ from fc2fmt import mab
 from fc2fmt.mab import MabFile, mask_bones, mask_slot
 from fc2fmt.mesh import extract
 from fc2fmt.skeleton import SkeletonFile
-from fc2fmt.vertex import VertexStream, buffer_vertex_count, pack_indices, unpack_indices
+from fc2fmt.vertex import VertexStream, pack_indices, unpack_indices
 from fc2fmt.xbg import EMPTY_SLOT, NO_NODE, NO_PLACEMENT, XbgFile, vertex_layout
 
 
@@ -74,7 +74,14 @@ def check_xbg(model, fail):
                 fail("LOD %d flags %#x imply stride %d, file says %d"
                      % (index, buffer.flags, stride, buffer.stride))
                 continue
-            count = buffer_vertex_count(lod, slot)
+            count = buffer.vertex_count
+            # The buffer states its own vertex count; walking to where the next
+            # buffer starts has to agree, or the block is not a concatenation.
+            following = [b.offset for b in lod.vertex_buffers if b.offset > buffer.offset]
+            end = min(following) if following else len(lod.vertex_data)
+            if (end - buffer.offset) // buffer.stride != count:
+                fail("LOD %d buffer %d says %d vertices, its extent holds %d"
+                     % (index, slot, count, (end - buffer.offset) // buffer.stride))
             stream = VertexStream.unpack(lod.vertex_data, buffer, count)
             original = lod.vertex_data[buffer.offset:buffer.offset + count * buffer.stride]
             if stream.pack() != original:

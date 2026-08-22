@@ -518,6 +518,55 @@ node's exact-case name. An `.xbg` node and a [`.skeleton`](./skeleton.md) bone a
 those hashes match, which is why a replacement model must keep part and bone names byte-identical.
 See [`.mab`](./mab.md) for how a clip then addresses those bones by skeleton bone id.
 
+## A container can be authored, not just edited
+
+:::info[Verified against the retail corpus]
+`tools/BlenderFC2/tests/originate.py` rebuilds each shipped mesh from its decoded content and
+requires the bytes back: **3,133 of 3,133 byte-identical**.
+:::
+
+Editing a container in place preserves whatever was not understood, which is why every exporter so
+far has done that — and why none could add a part or an LOD. Originating one instead requires
+knowing which fields carry information and which are bookkeeping. Almost all of them are bookkeeping:
+
+| Field | Derived from |
+| --- | --- |
+| every chunk size, payload size and sub-chunk count | the body written under it |
+| every chunk's `word0` | constant `1`, on all ten mandatory chunks and on `SULC` |
+| `header_words[1]`, `[2]`, `[4]` | constant `0` |
+| `header_words[3]` | the file size, less the 12 bytes that precede it |
+| `DOL\0` | the LOD count, then a constant `98` |
+| node `nameId`, `first child`, `next sibling`, `skinIndex` | the name, and node order |
+| node `+0x3C` | constant `1.0` |
+| `DIKS` entries and their order | one per part, in part order, keyed by the part's name |
+| part `reserved` | constant `0` |
+| part LOD tier | the `_LOD<n>` suffix on the part's own name |
+| `cluster.stride`, `cluster.flags` | the buffer the cluster draws from |
+| `cluster.face_count`, `vertex_count` | the geometry |
+| `VertexBuffer` third word | that buffer's own vertex count |
+| `VertexBuffer` fourth word, `submesh.index_offset` | the running layout |
+| `submesh` trailing words | see below |
+
+**A submesh's three trailing words are `[last vertex index, byte offset, 0]`** — the index is
+`start + vertex_count - 1` within its buffer, and the offset is `buffer.offset + start * stride`,
+absolute in the LOD's whole vertex block rather than relative to the buffer.
+
+The two readings differ only when a LOD has a second buffer, and just six LODs across
+`1_grassjungle_b.xbg` and `1_grassjungle_c.xbg` do. The relative reading matches 3,131 of 3,133
+files, so those two meshes are the entire evidence that distinguishes them.
+
+Two fields carry information nothing else supplies, so a writer has to keep them:
+
+- **`header_words[0]`**, a per-file value that is not a CRC32 of the file name, the stem in any
+  casing, or the body.
+- **`LTMR`'s trailing word**, zero in 3,114 files and 1 to 3 on nineteen grass meshes. It equals the
+  material count on 17 of those 19, which is a coincidence rather than a rule — it is zero on every
+  other mesh, and those have materials too.
+
+Everything else a writer needs — node transforms, part and model bounds, the quantisation scales,
+vertex format flags, bone palettes, material paths and LOD distances — is content rather than
+bookkeeping, and a decoded model holds it already.
+
 ## Authoring ceilings
 
 :::info[Verified against the retail corpus]

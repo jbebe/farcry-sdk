@@ -54,6 +54,12 @@ def part_name(full_name):
     return LOD_SUFFIX.sub("", full_name)
 
 
+def lod_tier(full_name, fallback=0):
+    """The tier a part's _LODn suffix names, which is what SkinDesc.lod holds."""
+    found = LOD_SUFFIX.search(full_name)
+    return int(found.group()[4:]) if found else fallback
+
+
 def extract(model, lod_index=0, place=True):
     """Every part drawn at one LOD.
 
