@@ -237,6 +237,7 @@ python reencode.py
 python fielddump.py skeleton
 python fielddump.py xbg
 python fielddump.py xbm
+python fielddump.py mab
 python invariants.py
 python mabcheck.py
 python quatcheck.py

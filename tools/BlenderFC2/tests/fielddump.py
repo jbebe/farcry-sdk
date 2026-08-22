@@ -22,6 +22,7 @@ from _corpus import CORPUS, find, require
 
 from fc2fmt.skeleton import SkeletonFile
 from fc2fmt.xbg import XbgFile
+from fc2fmt.mab import MabFile
 from fc2fmt.xbm import XbmMaterial
 
 DEFAULT_OUT = os.path.join(CORPUS, "..", "fielddump")
@@ -137,9 +138,66 @@ def dump_xbm(data):
     }
 
 
+FNV_OFFSET = 2166136261
+FNV_PRIME = 16777619
+
+
+def fnv(values):
+    """A digest both languages can reproduce exactly, over u32 values.
+
+    The keyframe block holds 14.9 million keys across the corpus, which is far
+    too much to carry as JSON but exactly where a misread group layout would
+    hide, so the tracks travel as digests instead of values.
+    """
+    h = FNV_OFFSET
+    for value in values:
+        h = ((h ^ (value & 0xFFFFFFFF)) * FNV_PRIME) & 0xFFFFFFFF
+    return h
+
+
+def track_digest(entries):
+    """(frame, value) pairs as a count and two digests."""
+    frames, values = [], []
+    for frame, value in entries:
+        frames.append(frame)
+        values.extend(bit_list(value) if value is not None else [0xFFFFFFFF])
+    return {"count": len(entries), "frames": fnv(frames), "values": fnv(values)}
+
+
+def dump_clip(clip):
+    return {
+        "masks": [list(mask) for mask in clip.masks],
+        "reference_rotation": bit_list(clip.reference_rotation),
+        "loop_rotation": bit_list(clip.loop_rotation),
+        "duration": bits(clip.duration),
+        "sections": list(clip.sections),
+        "data_length": len(clip.data),
+        "constant_rotations": [{"bone": bone, "value": bit_list(value)}
+                               for bone, value in sorted(clip.constant_rotations().items())],
+        "constant_translations": [{"bone": bone, "value": bit_list(value)}
+                                  for bone, value in sorted(clip.constant_translations().items())],
+        "keyframes": [dict({"bone": bone}, **track_digest(track))
+                      for bone, track in sorted(clip.keyframe_tracks().items())],
+        "translations": [dict({"bone": bone}, **track_digest(track))
+                         for bone, track in sorted(clip.translation_tracks().items())],
+        "root_translation": track_digest(clip.root_translation()),
+        "root_rotation": track_digest(clip.root_rotation()),
+        "participants": [{"kind": p.kind, "name": p.name, "parent": p.parent,
+                          "reference": p.reference, "clip_offset": p.clip_offset}
+                         for p in clip.participants()],
+    }
+
+
+def dump_mab(data):
+    bank = MabFile.parse(data)
+    return {"version": bank.version, "header": list(bank.header),
+            "clips": [dump_clip(clip) for clip in bank.clips()]}
+
+
 FORMATS = {"skeleton": (".skeleton", dump_skeleton),
            "xbg": (".xbg", dump_xbg),
-           "xbm": (".xbm", dump_xbm)}
+           "xbm": (".xbm", dump_xbm),
+           "mab": (".mab", dump_mab)}
 
 
 def main(argv):
