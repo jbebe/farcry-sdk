@@ -607,7 +607,18 @@ public static class WorldModels
                 ? state
                 : null;
 
-    private static List<XbgSubmesh> SubmeshesAt(XbgModel model, int lod, IReadOnlySet<string>? onlyParts)
+    /// <summary>
+    /// What a mesh draws at one detail level: its pristine parts, each at the LOD nearest the one
+    /// asked for.
+    /// </summary>
+    /// <remarks>
+    /// Two rules a plain filter on <see cref="XbgSubmesh.LodLevel"/> gets wrong, which is why
+    /// anything drawing a mesh goes through this. A destructible prop ships every damage state as
+    /// its own part, so taking them all stacks intact and broken geometry in the same place. And a
+    /// part need not exist at every tier, so an exact match silently drops it rather than falling
+    /// back to the nearest one it does have.
+    /// </remarks>
+    public static List<XbgSubmesh> SubmeshesAt(XbgModel model, int lod, IReadOnlySet<string>? onlyParts = null)
     {
         var picked = new List<XbgSubmesh>();
         foreach (IGrouping<string, XbgSubmesh> part in PristineOnly([.. model.Submeshes

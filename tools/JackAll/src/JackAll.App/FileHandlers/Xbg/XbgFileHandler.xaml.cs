@@ -1,3 +1,4 @@
+using JackAll.Tools.World;
 using JackAll.Tools.Xbg;
 using System.Text;
 using System.Windows.Controls;
@@ -9,12 +10,19 @@ using System.Windows;
 namespace JackAll.App.FileHandlers.Xbg;
 
 /// <summary>
-/// The file handler for .xbg meshes - a read-only 3D geometry preview. Parses the Far Cry 2
-/// chunk layout via <see cref="XbgModel"/> (positions/normals/triangles per LOD, no skinning or
-/// textures - see that class's remarks) and renders the selected LOD in an orbitable Viewport3D, one
-/// flat-coloured material per submesh so distinct parts/materials are visually distinguishable without
-/// needing the game's actual textures.
+/// The file handler for .xbg meshes - a read-only 3D geometry preview.
 /// </summary>
+/// <remarks>
+/// Shares the map editor's mesh path: <see cref="WorldModels.Triangulate"/> to parse (which also
+/// tessellates a RealTree) and <see cref="WorldModels.SubmeshesAt"/> to choose what draws, so a
+/// destructible prop shows one damage state rather than all of them stacked, and a part missing at
+/// the selected LOD falls back to its nearest instead of vanishing.
+/// <para>
+/// Where it deliberately differs is presentation: the map editor renders textured through its own
+/// shader, and this draws one flat colour per material so parts stay distinguishable without needing
+/// archive access to resolve them.
+/// </para>
+/// </remarks>
 public partial class XbgFileHandler : UserControl
 {
     // A small fixed palette rather than per-material texture lookups - this preview has no access to
@@ -45,7 +53,7 @@ public partial class XbgFileHandler : UserControl
     {
         try
         {
-            XbgModel model = XbgModel.Parse(content);
+            XbgModel model = WorldModels.Triangulate(fileName, content);
             _model = model;
 
             if (model.Submeshes.Count == 0)
@@ -79,7 +87,8 @@ public partial class XbgFileHandler : UserControl
         }
 
         _selectedLod = lod;
-        List<XbgSubmesh> submeshes = _model.Submeshes.Where(s => s.LodLevel == lod).ToList();
+        // The same selection the map editor draws: pristine parts only, each at its nearest tier.
+        List<XbgSubmesh> submeshes = WorldModels.SubmeshesAt(_model, lod);
 
         var sb = new StringBuilder();
         int totalVerts = submeshes.Select(s => s.Positions).Distinct().Sum(p => p.Length);
@@ -105,7 +114,7 @@ public partial class XbgFileHandler : UserControl
             return;
         }
 
-        FrameCamera(_model.Submeshes.Where(s => s.LodLevel == _selectedLod).ToList());
+        FrameCamera(WorldModels.SubmeshesAt(_model, _selectedLod));
     }
 
     private void BuildScene(List<XbgSubmesh> submeshes)
