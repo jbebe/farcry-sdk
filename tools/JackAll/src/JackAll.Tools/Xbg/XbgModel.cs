@@ -1,6 +1,4 @@
-using System.Buffers.Binary;
 using System.Numerics;
-using System.Text;
 using System.Text.RegularExpressions;
 
 namespace JackAll.Tools.Xbg;
@@ -34,6 +32,7 @@ public sealed class XbgSubmesh
     /// <summary>The placement is rigid, so a normal only needs its rotation.</summary>
     public Vector3 PlaceNormal(Vector3 normal)
         => PartTransform is { } m ? Vector3.TransformNormal(normal, m) : normal;
+
     /// <summary>UV channel 0 in the game's D3D space (V=0 is the top row); null when the file has
     /// none.</summary>
     public Vector2[]? Uvs { get; init; }
@@ -46,18 +45,27 @@ public sealed class XbgSubmesh
     /// material's two diffuse tints, red the speculars, alpha is occlusion. Null when the file
     /// carries none, which the engine treats as white.</summary>
     public Vector4[]? Colours { get; init; }
+
     /// <summary>Triangle list, indices local to <see cref="Positions"/>.</summary>
     public required int[] Indices { get; init; }
 }
 
 /// <summary>
-/// Reads the static mesh geometry out of a Far Cry 2 .xbg for preview purposes: vertex
-/// positions/normals/UVs and triangle lists per (LOD, part, material), enough to render the model -
-/// not a full round-trippable parse (no skeleton/skinning; materials stay names).
-///
-/// Ported from <c>tools/XBG-Importer/modules/Far_Cry_2/{binary_fc2,chunks_fc2,import_mesh_fc2,
-/// import_xbg_fc2}.py</c> - see research/knowledge.md §8 for the format's provenance.
+/// A mesh flattened for drawing: vertex positions, normals, UVs and triangle lists per
+/// (LOD, part, material), enough to render the model.
 /// </summary>
+/// <remarks>
+/// A projection over <see cref="XbgFile"/>, which owns the format. Keeping it separate is what lets
+/// the viewer, the world baker, the RealTree converter and the CLI exporter share one shape without
+/// each of them walking chunks.
+/// <para>
+/// It previously carried its own parser, ported from the community Blender importer, which read
+/// 12-byte chunk headers, skipped DIKS as 4-byte entries and placed rigid parts by matching a
+/// part's name against a node's. That last one disagrees on 291 shipped parts and is wrong on all
+/// of them - some meshes have a node whose own name ends in <c>_LOD0</c> - so this now takes the
+/// placement DIKS names outright.
+/// </para>
+/// </remarks>
 public sealed partial class XbgModel
 {
     [GeneratedRegex(@"_LOD\d+$", RegexOptions.IgnoreCase)]
@@ -69,510 +77,46 @@ public sealed partial class XbgModel
 
     public static XbgModel Parse(byte[] data)
     {
-        bool bigEndian = DetectEndian(data);
-        var g = new Cursor(data, bigEndian);
-
-        byte[] magic = g.ReadBytes(4);
-        if (magic is not [(byte)'H', (byte)'S', (byte)'E', (byte)'M'])
-        {
-            throw new InvalidDataException(
-                "Not a Far Cry 2 .xbg (no \"HSEM\" header) - this viewer doesn't support this file's format.");
-        }
-
-        g.SkipI32(6);
-        int chunkCount = g.ReadI32();
-
-        var materials = new List<string>();
-        var meshes = new List<MeshEntry>();
-        List<List<SubMeshHeader>>? subMeshList = null;
-        var partNames = new List<string>();
-        var bones = new List<Bone>();
-        float vertPosScale = 1f;
-        float uvTrans = 0f, uvScale = 1f;
-
-        for (int m = 0; m < chunkCount; m++)
-        {
-            int chunkStart = g.Position;
-            string chunkName = g.ReadChunkName();
-            int[] ci = g.ReadI32Array(2);
-            int chunkSize = ci[1];
-            if (chunkSize < 12 || chunkStart + chunkSize > data.Length)
-            {
-                break; // corrupt/truncated - stop rather than seek off the end
-            }
-
-            switch (chunkName)
-            {
-                case "PMCP":
-                    g.SkipI32(2);
-                    vertPosScale = g.ReadF32Array(2)[1];
-                    break;
-                case "PMCU":
-                    g.SkipI32(2);
-                    float[] uvTransScale = g.ReadF32Array(2);
-                    uvTrans = uvTransScale[0];
-                    uvScale = uvTransScale[1];
-                    break;
-                case "DIKS":
-                    g.SkipI32(2);
-                    int lodCount = g.ReadI32();
-                    g.SkipBytes(lodCount * 4);
-                    break;
-                case "LTMR":
-                    int[] w = g.ReadI32Array(4);
-                    int mc = w[2];
-                    for (int mi = 0; mi < mc; mi++)
-                    {
-                        int nl = g.ReadI32();
-                        string full = g.ReadWord(nl);
-                        g.SkipBytes(1);
-                        string shortName = full.Split('/')[^1].Replace(".mat", "");
-                        materials.Add(shortName.Length > 0 ? shortName : $"Material_{mi}");
-                    }
-                    break;
-                case "SDOL":
-                    ParseSdolChunk(g, meshes);
-                    break;
-                case "DNKS":
-                    subMeshList = TryParseDnks(g, partNames);
-                    break;
-                case "EDON":
-                    bones = ParseEdon(g);
-                    break;
-                    // MB2O (bind matrices) and XOBB/HPSB (bounds) aren't needed for a geometry-only
-                    // preview.
-            }
-
-            g.Seek(chunkStart + chunkSize);
-        }
-
-        // Submeshes routinely reference the same vertex region (one buffer, many materials);
-        // decode each region once and share the arrays, so consumers can dedupe by reference.
-        var decodedRegions = new Dictionary<(int Offset, int Count, int Stride, int Flags), MeshEntry>();
-        foreach (MeshEntry mesh in meshes)
-        {
-            (int, int, int, int) region = (mesh.VertSectionOffset, mesh.VertCount, mesh.VertStride, mesh.VertFormatFlags);
-            if (decodedRegions.TryGetValue(region, out MeshEntry? first))
-            {
-                mesh.Positions = first.Positions;
-                mesh.Normals = first.Normals;
-                mesh.Uvs = first.Uvs;
-                mesh.Uvs1 = first.Uvs1;
-                mesh.Colours = first.Colours;
-                continue;
-            }
-
-            ParseMeshVertices(g, mesh, vertPosScale, uvTrans, uvScale);
-            decodedRegions[region] = mesh;
-        }
-
-        AssignParts(meshes, partNames, bones);
-        ProcessMeshFaces(g, meshes, subMeshList, materials);
+        XbgFile file = XbgFile.Parse(data);
+        Matrix4x4[] world = file.NodeWorldMatrices();
+        float uvTranslate = file.UvCompress.Length > 0 ? file.UvCompress[0] : 0.0f;
+        float uvScale = file.UvCompress.Length > 1 ? file.UvCompress[1] : 1.0f;
 
         var submeshes = new List<XbgSubmesh>();
-        foreach (MeshEntry mesh in meshes)
+        for (int lodLevel = 0; lodLevel < file.Lods.Count; lodLevel++)
         {
-            if (mesh.Positions is null)
+            foreach (ClusterGeometry geometry in XbgGeometry.ReadLod(file, file.Lods[lodLevel]))
             {
-                continue;
-            }
-
-            foreach ((int[] indices, int matId, string matName) in mesh.Primitives)
-            {
+                XbgPart part = file.Parts[(int)geometry.Part];
+                XbgCluster cluster = part.Clusters[(int)geometry.Cluster];
+                Matrix4x4? placement = file.PartPlacement(part.Name, world);
                 submeshes.Add(new XbgSubmesh
                 {
-                    LodLevel = mesh.LodLevel,
-                    PartName = mesh.PartName,
-                    PartTransform = mesh.PartTransform,
-                    MaterialIndex = matId,
-                    MaterialName = matName,
-                    Positions = mesh.Positions,
-                    Normals = mesh.Normals,
-                    Uvs = mesh.Uvs,
-                    Uvs1 = mesh.Uvs1,
-                    Colours = mesh.Colours,
-                    Indices = indices,
+                    LodLevel = lodLevel,
+                    PartName = LodSuffixRegex().Replace(part.Name, ""),
+                    PartTransform = placement is { IsIdentity: false } ? placement : null,
+                    MaterialIndex = cluster.MaterialIndex,
+                    MaterialName = cluster.MaterialIndex < file.Materials.Count
+                        ? file.Materials[cluster.MaterialIndex]
+                        : "",
+                    Positions = Points(geometry.Vertices.Positions(file.PosScale)),
+                    Normals = Directions(geometry.Vertices.Normals()),
+                    Uvs = Coordinates(geometry.Vertices.Uvs(uvTranslate, uvScale, 0)),
+                    Uvs1 = Coordinates(geometry.Vertices.Uvs(uvTranslate, uvScale, 1)),
+                    Colours = Colours(geometry.Vertices.Colours()),
+                    Indices = [.. geometry.Indices],
                 });
             }
         }
 
-        List<int> lodLevels = submeshes.Select(s => s.LodLevel).Distinct().OrderBy(x => x).ToList();
-        return new XbgModel { Materials = materials, Submeshes = submeshes, LodLevels = lodLevels };
+        return new XbgModel
+        {
+            Materials = file.Materials,
+            Submeshes = submeshes,
+            LodLevels = [.. submeshes.Select(s => s.LodLevel).Distinct().Order()],
+        };
     }
 
-    /// <summary>Chunk count lives at byte offset 28 as a 32-bit int; a real file's is always small
-    /// (&lt; 256). Whichever endianness yields a sane value wins - mirrors
-    /// <c>binary_fc2.detect_endian_from_bytes</c>.</summary>
-    private static bool DetectEndian(byte[] data)
-    {
-        if (data.Length < 32)
-        {
-            return false;
-        }
-
-        int le = BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(28));
-        int be = BinaryPrimitives.ReadInt32BigEndian(data.AsSpan(28));
-        bool leOk = le is > 0 and < 256;
-        bool beOk = be is > 0 and < 256;
-        return beOk && !leOk;
-    }
-
-    // ============================================================
-    // EDON - the bone hierarchy that places the named rigid parts
-    // ============================================================
-
-    private sealed class Bone
-    {
-        public required string Name;
-        public required int Parent;
-        public required Matrix4x4 Local;
-        public Matrix4x4? World;
-    }
-
-    private static List<Bone> ParseEdon(Cursor g)
-    {
-        var bones = new List<Bone>();
-        try
-        {
-            g.SkipI32(2);
-            int count = g.ReadI32();
-            if (count is < 0 or > 100_000)
-            {
-                return [];
-            }
-
-            for (int i = 0; i < count; i++)
-            {
-                g.SkipBytes(4);
-                g.SkipI32(2);
-                int parent = g.ReadI32();
-                float[] pose = g.ReadF32Array(7); // quaternion xyzw then translation xyz
-                g.SkipBytes(24); // unused floats/ints between the pose and the name
-                int nameLen = g.ReadI32();
-                if (nameLen is < 0 or > 256)
-                {
-                    return [];
-                }
-
-                string name = g.ReadWord(nameLen);
-                g.SkipBytes(1);
-                bones.Add(new Bone
-                {
-                    Name = name,
-                    Parent = parent,
-                    Local = Matrix4x4.CreateFromQuaternion(new Quaternion(pose[0], pose[1], pose[2], pose[3]))
-                        * Matrix4x4.CreateTranslation(pose[4], pose[5], pose[6]),
-                });
-            }
-        }
-        catch (Exception)
-        {
-            return [];
-        }
-
-        return bones;
-    }
-
-    private static Matrix4x4 WorldOf(List<Bone> bones, int index, int depth = 0)
-    {
-        if (bones[index].World is { } cached)
-        {
-            return cached;
-        }
-
-        Bone bone = bones[index];
-        Matrix4x4 world = bone.Parent >= 0 && bone.Parent < bones.Count && bone.Parent != index && depth < 64
-            ? bone.Local * WorldOf(bones, bone.Parent, depth + 1)
-            : bone.Local;
-        bone.World = world;
-        return world;
-    }
-
-    /// <summary>Geometry is stored relative to one bone, and needs that bone's world matrix to reach
-    /// model space: a rigid part is modelled around its own pivot and named after its bone, while a
-    /// skinned part sits in the skeleton root's bind space - which for a character puts the root at
-    /// the waist, so leaving it alone sinks them to their hips.</summary>
-    private static void AssignParts(List<MeshEntry> meshes, List<string> partNames, List<Bone> bones)
-    {
-        if (bones.Count == 0)
-        {
-            return;
-        }
-
-        var boneByName = new Dictionary<string, int>(StringComparer.OrdinalIgnoreCase);
-        for (int i = 0; i < bones.Count; i++)
-        {
-            boneByName.TryAdd(bones[i].Name, i);
-        }
-
-        int root = bones.FindIndex(b => b.Parent < 0 || b.Parent >= bones.Count);
-
-        foreach (MeshEntry mesh in meshes)
-        {
-            int block = mesh.MatListInfo.Count > 0 ? mesh.MatListInfo[0].LodGrp : -1;
-            if (block >= 0 && block < partNames.Count)
-            {
-                mesh.PartName = LodSuffixRegex().Replace(partNames[block], "");
-            }
-
-            int bone = (mesh.VertFormatFlags & BoneWts1) != 0
-                ? root
-                : boneByName.GetValueOrDefault(mesh.PartName, -1);
-            if (bone < 0)
-            {
-                continue;
-            }
-
-            Matrix4x4 world = WorldOf(bones, bone);
-            if (!world.IsIdentity)
-            {
-                mesh.PartTransform = world;
-            }
-        }
-    }
-
-    // ============================================================
-    // SDOL - vertex buffer layout + per-LOD/part/material index-range table
-    // ============================================================
-
-    private sealed class MeshEntry
-    {
-        public int LodLevel;
-        public int IndiceSectionOffset;
-        public int NameIndex;
-        public int VertFormatFlags;
-        public int VertStride;
-        public int VertSectionOffset;
-        public int VertCount;
-        public string PartName = "";
-        public Matrix4x4? PartTransform;
-        public readonly List<(int LodGrp, int SubIdx, int IdxOffset)> MatListInfo = new();
-        public Vector3[]? Positions;
-        public Vector3[]? Normals;
-        public Vector2[]? Uvs;
-        public Vector2[]? Uvs1;
-        public Vector4[]? Colours;
-        public readonly List<(int[] Indices, int MaterialId, string MaterialName)> Primitives = new();
-    }
-
-    private static void ParseSdolChunk(Cursor g, List<MeshEntry> meshes)
-    {
-        g.SkipI32(2);
-        int lodCount = g.ReadI32();
-        if (lodCount == 0)
-        {
-            return;
-        }
-
-        var meshDict = new Dictionary<(int Lod, int SmIdx), MeshEntry>();
-
-        for (int currentLod = 0; currentLod < lodCount; currentLod++)
-        {
-            g.SkipI32(1); // lod switch distance
-            int vbCount = g.ReadI32();
-            var vbInfo = new List<(int Flags, int Stride, int Offset)>();
-            for (int vb = 0; vb < vbCount; vb++)
-            {
-                int flags = g.ReadI32();
-                int stride = g.ReadI32();
-                g.SkipI32(1); // unknown
-                int offset = g.ReadI32();
-                vbInfo.Add((flags, stride, offset));
-            }
-
-            int submeshCount = g.ReadI32();
-            var submeshInfo = new List<(int VbIdx, int LodGrp, int SubIdx, int IdxOffset)>();
-            for (int sm = 0; sm < submeshCount; sm++)
-            {
-                int vbIdx = g.ReadI32();
-                int lodGrp = g.ReadI32();
-                int subIdx = g.ReadI32();
-                int idxOffset = g.ReadI32();
-                g.SkipI32(3); // vert_marker, unk1, unk2
-                submeshInfo.Add((vbIdx, lodGrp, subIdx, idxOffset));
-            }
-
-            uint vertSectionSize = g.ReadU32();
-            g.SeekPad(16);
-            int vertSectionBase = g.Position;
-            g.Seek(vertSectionBase + (int)vertSectionSize);
-
-            uint indiceSectionSize = g.ReadU32();
-            g.SeekPad(16);
-            int indiceSectionOffset = g.Position;
-            g.Seek(indiceSectionOffset + (int)(indiceSectionSize * 2));
-
-            for (int smIdx = 0; smIdx < submeshInfo.Count; smIdx++)
-            {
-                (int vbIdx, int lodGrp, int subIdx, int idxOffset) = submeshInfo[smIdx];
-                var mesh = new MeshEntry
-                {
-                    LodLevel = currentLod,
-                    IndiceSectionOffset = indiceSectionOffset,
-                    NameIndex = smIdx,
-                };
-                if (vbIdx < vbInfo.Count)
-                {
-                    (int flags, int stride, int offset) = vbInfo[vbIdx];
-                    mesh.VertFormatFlags = flags;
-                    mesh.VertStride = stride;
-                    mesh.VertSectionOffset = vertSectionBase + offset;
-                    mesh.VertCount = stride > 0
-                        ? (vbIdx + 1 < vbInfo.Count ? vbInfo[vbIdx + 1].Offset - offset : (int)vertSectionSize - offset) / stride
-                        : 0;
-                }
-
-                mesh.MatListInfo.Add((lodGrp, subIdx, idxOffset));
-                meshDict[(currentLod, smIdx)] = mesh;
-            }
-        }
-
-        meshes.AddRange(meshDict.Values);
-    }
-
-    // ============================================================
-    // Vertex buffer decode - VertexFlags bitmask (see import_mesh_fc2.VertexFlags)
-    // ============================================================
-
-    private const int PosFloat = 0x0001, PosInt16 = 0x0002, PosHalf = 0x0004, Uv0 = 0x0008,
-        BoneWts1 = 0x0010, BoneWts2 = 0x0020, Normal = 0x0040, Color = 0x0080, Tangent = 0x0100,
-        Binormal = 0x0200, Unk400 = 0x0400, Uv1 = 0x0800, Uv2 = 0x1000;
-
-    /// <summary>Component order fixed by the format: Position -> UV0 -> UV1 -> UV2 -> BoneWts1 ->
-    /// BoneWts2 -> Normal -> Color -> Tangent -> Binormal -> Unk400. Components this preview does
-    /// not read still have to be walked, because every one of them moves the stride.</summary>
-    private static (int Stride, int PosOffset, int? Uv0Offset, int? Uv1Offset, int? NormalOffset,
-        int? ColourOffset) ComputeLayout(int flags)
-    {
-        int stride = 0;
-
-        // Where this component starts, or -1 when the format leaves it out.
-        int Take(int flag, int size)
-        {
-            if ((flags & flag) == 0)
-            {
-                return -1;
-            }
-
-            int at = stride;
-            stride += size;
-            return at;
-        }
-
-        // Exactly one position encoding is ever present, and it claims the first slot.
-        int position = Take(PosFloat, 12);
-        position = position >= 0 ? position : Take(PosInt16, 8);
-        position = position >= 0 ? position : Take(PosHalf, 8);
-
-        int uv0 = Take(Uv0, 4);
-        int uv1 = Take(Uv1, 4);
-        Take(Uv2, 4);
-        Take(BoneWts1, 8);
-        Take(BoneWts2, 8);
-        int normal = Take(Normal, 4);
-        int colour = Take(Color, 4);
-        Take(Tangent, 4);
-        Take(Binormal, 4);
-        Take(Unk400, 4);
-
-        static int? Present(int offset) => offset >= 0 ? offset : null;
-        return (stride, Math.Max(position, 0), Present(uv0), Present(uv1), Present(normal),
-            Present(colour));
-    }
-
-    private static void ParseMeshVertices(Cursor g, MeshEntry mesh, float vertPosScale, float uvTrans, float uvScale)
-    {
-        int count = mesh.VertCount;
-        int stride = mesh.VertStride;
-        if (count <= 0 || stride <= 0 || mesh.VertSectionOffset + (long)count * stride > g.Length)
-        {
-            mesh.Positions = [];
-            return;
-        }
-
-        bool hasPosFloat = (mesh.VertFormatFlags & PosFloat) != 0;
-        bool hasNormal = (mesh.VertFormatFlags & Normal) != 0;
-        (_, int posOffset, int? uv0Offset, int? uv1Offset, int? normalOffset, int? colourOffset) =
-            ComputeLayout(mesh.VertFormatFlags);
-
-        g.Seek(mesh.VertSectionOffset);
-        byte[] buf = g.ReadBytes(count * stride);
-        bool be = g.BigEndian;
-
-        var positions = new Vector3[count];
-        Vector3[]? normals = hasNormal ? new Vector3[count] : null;
-        Vector2[]? uvs = uv0Offset is not null ? new Vector2[count] : null;
-        Vector2[]? uvs1 = uv1Offset is not null ? new Vector2[count] : null;
-        Vector4[]? colours = colourOffset is not null ? new Vector4[count] : null;
-
-        for (int v = 0; v < count; v++)
-        {
-            int b = v * stride + posOffset;
-            float x, y, z;
-            if (hasPosFloat)
-            {
-                x = ReadF32(buf, b, be);
-                y = ReadF32(buf, b + 4, be);
-                z = ReadF32(buf, b + 8, be);
-            }
-            else
-            {
-                x = ReadI16(buf, b, be);
-                y = ReadI16(buf, b + 2, be);
-                z = ReadI16(buf, b + 4, be);
-            }
-
-            positions[v] = new Vector3(x * vertPosScale, y * vertPosScale, z * vertPosScale);
-
-            // Both sets are 2x int16 through the same PMCU translate+scale - the vertex shader runs
-            // texcoord0 and texcoord1 through one _MeshDecompression.zw pair. Left in the game's D3D
-            // space, where V=0 is the texture's top row - the same row a .dds hands GL first.
-            Vector2 ReadUv(int offset)
-            {
-                int ub = v * stride + offset;
-                return new Vector2(
-                    uvTrans + ReadI16(buf, ub, be) * uvScale,
-                    uvTrans + ReadI16(buf, ub + 2, be) * uvScale);
-            }
-
-            if (uvs is not null && uv0Offset is int uo)
-            {
-                uvs[v] = ReadUv(uo);
-            }
-
-            if (uvs1 is not null && uv1Offset is int u1)
-            {
-                uvs1[v] = ReadUv(u1);
-            }
-
-            if (normals is not null && normalOffset is int no)
-            {
-                int nb = v * stride + no;
-                // D3DCOLOR-encoded: unsigned-normalised bytes, BGRA order (xyz = byte2,byte1,byte0).
-                normals[v] = new Vector3(Unsign(buf[nb + 2]), Unsign(buf[nb + 1]), Unsign(buf[nb]));
-            }
-
-            if (colours is not null && colourOffset is int co)
-            {
-                int cb = v * stride + co;
-                // BGRA bytes, straight 0..1 rather than the normals' signed remap.
-                colours[v] = new Vector4(
-                    buf[cb + 2] / 255f, buf[cb + 1] / 255f, buf[cb] / 255f, buf[cb + 3] / 255f);
-            }
-        }
-
-        mesh.Positions = positions;
-        mesh.Normals = normals;
-        mesh.Uvs = uvs;
-        mesh.Uvs1 = uvs1;
-        mesh.Colours = colours;
-    }
-
-    private static float Unsign(byte b) => b / 255f * 2f - 1f;
-
-    /// <summary>Axis-aligned extent over the vertices the given submeshes actually draw, placed;
-    /// (0,0)..(0,0) when empty. Sibling parts share a vertex buffer and place it differently, so
-    /// this walks each submesh's own triangles rather than the whole buffer.</summary>
     public static (Vector3 Min, Vector3 Max) Bounds(IEnumerable<XbgSubmesh> submeshes)
     {
         var min = new Vector3(float.MaxValue);
@@ -613,288 +157,15 @@ public sealed partial class XbgModel
         return normals;
     }
 
-    // ============================================================
-    // DNKS - per-submesh material id + face count (deterministic layout only; see
-    // chunks_fc2.parse_dnks_for_palette / import_mesh_fc2.parse_dnks_chunk for the full model
-    // including the legacy heuristic fallback this preview doesn't need)
-    // ============================================================
+    private static Vector3[] Points((float X, float Y, float Z)[] values)
+        => [.. values.Select(v => new Vector3(v.X, v.Y, v.Z))];
 
-    private sealed class SubMeshHeader
-    {
-        public required ushort[] Header; // [0]=material id, [1]=face count
-        public int FaceCount => Header.Length > 1 ? Header[1] : 0;
-    }
+    private static Vector3[]? Directions((float X, float Y, float Z)[]? values)
+        => values is null ? null : Points(values);
 
-    private static List<List<SubMeshHeader>>? TryParseDnks(Cursor g, List<string> partNames)
-    {
-        int start = g.Position;
-        try
-        {
-            int[] pp = g.ReadI32Array(2);
-            g.SkipBytes(4); // 'SULC' sub-tag
-            int[] qq = g.ReadI32Array(4);
-            int trailSize = pp[0];
-            int blocksBytes = qq[2];
-            if (blocksBytes <= 0 || blocksBytes > (1 << 28) || trailSize < 4)
-            {
-                throw new InvalidDataException("implausible DNKS preamble");
-            }
+    private static Vector2[]? Coordinates((float U, float V)[]? values)
+        => values is null ? null : [.. values.Select(v => new Vector2(v.U, v.V))];
 
-            var subMeshList = new List<List<SubMeshHeader>>();
-            int consumed = 0;
-            while (consumed < blocksBytes)
-            {
-                int cnt = g.ReadI32();
-                if (cnt is < 0 or > 100_000)
-                {
-                    throw new InvalidDataException("bad DNKS block count");
-                }
-
-                consumed += 4;
-                var block = new List<SubMeshHeader>(cnt);
-                for (int i = 0; i < cnt; i++)
-                {
-                    ushort[] header = g.ReadU16Array(7);
-                    g.SkipBytes(96); // 48 x int16 bone palette - not needed for a geometry preview
-                    block.Add(new SubMeshHeader { Header = header });
-                }
-
-                consumed += cnt * 110;
-                subMeshList.Add(block);
-            }
-
-            if (consumed != blocksBytes)
-            {
-                throw new InvalidDataException("DNKS block region overrun");
-            }
-
-            int blockCount = (int)g.ReadU32();
-            if (blockCount != subMeshList.Count)
-            {
-                throw new InvalidDataException("DNKS name count mismatch");
-            }
-
-            for (int k = 0; k < blockCount; k++)
-            {
-                g.SkipBytes(52); // metric/bbox/lod meta
-                uint nameLen = g.ReadU32();
-                if (nameLen is < 1 or > 256)
-                {
-                    throw new InvalidDataException("bad DNKS name length");
-                }
-
-                partNames.Add(g.ReadWord((int)nameLen));
-                g.SkipBytes(1); // NUL terminator
-            }
-
-            return subMeshList;
-        }
-        catch (Exception)
-        {
-            g.Seek(start);
-            partNames.Clear();
-            return null;
-        }
-    }
-
-    private static int? ResolveDnksPos(int lodGrp, int subIdx, int nameIndex, List<List<SubMeshHeader>>? subMeshList)
-    {
-        if (subMeshList is null || lodGrp < 0 || lodGrp >= subMeshList.Count)
-        {
-            return null;
-        }
-
-        int n = subMeshList[lodGrp].Count;
-        if (subIdx >= 0 && subIdx < n)
-        {
-            return subIdx;
-        }
-
-        return nameIndex >= 0 && nameIndex < n ? nameIndex : null;
-    }
-
-    private static void ProcessMeshFaces(
-        Cursor g, List<MeshEntry> meshes, List<List<SubMeshHeader>>? subMeshList, List<string> materials)
-    {
-        foreach (MeshEntry mesh in meshes)
-        {
-            // The submesh header's own FaceCount drives the read below - the SDOL index range is
-            // never consulted.
-            foreach ((int lodGrp, int subIdxVal, int idxOffset) in mesh.MatListInfo)
-            {
-                int? dnksPos = ResolveDnksPos(lodGrp, subIdxVal, mesh.NameIndex, subMeshList);
-                if (dnksPos is null)
-                {
-                    continue;
-                }
-
-                SubMeshHeader sm = subMeshList![lodGrp][dnksPos.Value];
-                int matId = sm.Header[0];
-                string matName = matId < materials.Count ? materials[matId] : $"Material_{matId}";
-                int faceCount = sm.FaceCount;
-                if (faceCount <= 0)
-                {
-                    continue;
-                }
-
-                int byteOffset = mesh.IndiceSectionOffset + idxOffset * 2;
-                int rawCount = faceCount * 3;
-                if (byteOffset < 0 || byteOffset + (long)rawCount * 2 > g.Length)
-                {
-                    continue;
-                }
-
-                g.Seek(byteOffset);
-                byte[] rawBuf = g.ReadBytes(rawCount * 2);
-                bool be = g.BigEndian;
-
-                var idx = new List<int>(rawCount);
-                for (int i = 0; i < rawCount; i += 3)
-                {
-                    ushort a = ReadU16(rawBuf, i * 2, be);
-                    ushort b = ReadU16(rawBuf, (i + 1) * 2, be);
-                    ushort c = ReadU16(rawBuf, (i + 2) * 2, be);
-                    if (a != 65535 && b != 65535 && c != 65535)
-                    {
-                        idx.Add(a);
-                        idx.Add(b);
-                        idx.Add(c);
-                    }
-                }
-
-                if (idx.Count > 0)
-                {
-                    mesh.Primitives.Add((idx.ToArray(), matId, matName));
-                }
-            }
-        }
-    }
-
-    private static float ReadF32(byte[] buf, int offset, bool be) =>
-        be ? BinaryPrimitives.ReadSingleBigEndian(buf.AsSpan(offset)) : BinaryPrimitives.ReadSingleLittleEndian(buf.AsSpan(offset));
-
-    private static short ReadI16(byte[] buf, int offset, bool be) =>
-        be ? BinaryPrimitives.ReadInt16BigEndian(buf.AsSpan(offset)) : BinaryPrimitives.ReadInt16LittleEndian(buf.AsSpan(offset));
-
-    private static ushort ReadU16(byte[] buf, int offset, bool be) =>
-        be ? BinaryPrimitives.ReadUInt16BigEndian(buf.AsSpan(offset)) : BinaryPrimitives.ReadUInt16LittleEndian(buf.AsSpan(offset));
-
-    /// <summary>Forward-only byte cursor, endian-aware per <see cref="DetectEndian"/> (PC Far Cry 2 is
-    /// little-endian, the PS3 release big-endian - see binary_fc2.py's endianness note).</summary>
-    private sealed class Cursor(byte[] data, bool bigEndian)
-    {
-        public int Position { get; private set; }
-        public bool BigEndian => bigEndian;
-        public int Length => data.Length;
-
-        public void Seek(int pos) => Position = pos;
-        public void SkipBytes(int n) => Position += n;
-        public void SkipI32(int n) => Position += n * 4;
-
-        public void SeekPad(int pad)
-        {
-            int rem = (pad - Position % pad) % pad;
-            Position += rem;
-        }
-
-        public byte[] ReadBytes(int n)
-        {
-            EnsureAvailable(n);
-            byte[] slice = data[Position..(Position + n)];
-            Position += n;
-            return slice;
-        }
-
-        public int ReadI32()
-        {
-            EnsureAvailable(4);
-            int v = bigEndian
-                ? BinaryPrimitives.ReadInt32BigEndian(data.AsSpan(Position))
-                : BinaryPrimitives.ReadInt32LittleEndian(data.AsSpan(Position));
-            Position += 4;
-            return v;
-        }
-
-        public uint ReadU32()
-        {
-            EnsureAvailable(4);
-            uint v = bigEndian
-                ? BinaryPrimitives.ReadUInt32BigEndian(data.AsSpan(Position))
-                : BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(Position));
-            Position += 4;
-            return v;
-        }
-
-        public int[] ReadI32Array(int n)
-        {
-            var arr = new int[n];
-            for (int i = 0; i < n; i++)
-            {
-                arr[i] = ReadI32();
-            }
-
-            return arr;
-        }
-
-        public float[] ReadF32Array(int n)
-        {
-            var arr = new float[n];
-            for (int i = 0; i < n; i++)
-            {
-                EnsureAvailable(4);
-                arr[i] = bigEndian
-                    ? BinaryPrimitives.ReadSingleBigEndian(data.AsSpan(Position))
-                    : BinaryPrimitives.ReadSingleLittleEndian(data.AsSpan(Position));
-                Position += 4;
-            }
-
-            return arr;
-        }
-
-        public ushort[] ReadU16Array(int n)
-        {
-            var arr = new ushort[n];
-            for (int i = 0; i < n; i++)
-            {
-                EnsureAvailable(2);
-                arr[i] = bigEndian
-                    ? BinaryPrimitives.ReadUInt16BigEndian(data.AsSpan(Position))
-                    : BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(Position));
-                Position += 2;
-            }
-
-            return arr;
-        }
-
-        public string ReadWord(int length)
-        {
-            byte[] raw = ReadBytes(length);
-            int nul = Array.IndexOf(raw, (byte)0);
-            return Encoding.UTF8.GetString(raw, 0, nul >= 0 ? nul : raw.Length);
-        }
-
-        /// <summary>4-byte chunk magic; reversed on a big-endian (PS3) file so callers can always
-        /// switch on the canonical PC name ("SDOL", "EDON", ...).</summary>
-        public string ReadChunkName()
-        {
-            byte[] raw = ReadBytes(4);
-            if (bigEndian)
-            {
-                Array.Reverse(raw);
-            }
-
-            int nul = Array.IndexOf(raw, (byte)0);
-            return Encoding.ASCII.GetString(raw, 0, nul >= 0 ? nul : raw.Length);
-        }
-
-        private void EnsureAvailable(int count)
-        {
-            if (Position < 0 || (long)Position + count > data.Length)
-            {
-                throw new InvalidDataException(
-                    $"Ran out of bytes at offset 0x{Position:X} (needed {count}, only " +
-                    $"{Math.Max(0, data.Length - Position)} left).");
-            }
-        }
-    }
+    private static Vector4[]? Colours((float R, float G, float B, float A)[]? values)
+        => values is null ? null : [.. values.Select(v => new Vector4(v.R, v.G, v.B, v.A))];
 }

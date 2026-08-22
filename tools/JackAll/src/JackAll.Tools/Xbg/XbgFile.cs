@@ -1,4 +1,7 @@
+using System.Buffers.Binary;
+using System.Numerics;
 using JackAll.Core.Format;
+using JackAll.Core.Format.Fcb;
 
 namespace JackAll.Tools.Xbg;
 
@@ -163,8 +166,8 @@ public sealed class XbgChunk
 /// byte for byte.
 /// </para>
 /// <para>
-/// This supersedes <see cref="XbgModel"/>, which walks 12-byte headers and reads DIKS as 4-byte
-/// entries; that one stays until its preview and world consumers are migrated.
+/// <see cref="XbgModel"/> flattens this into per-(LOD, part, material) triangle lists for anything
+/// that only wants to draw the thing.
 /// </para>
 /// </remarks>
 public sealed class XbgFile
@@ -311,6 +314,12 @@ public sealed class XbgFile
         self.Version = r.ReadU32();
         self.HeaderWords = r.ReadU32Array(5);
         uint chunkCount = r.ReadU32();
+        if (chunkCount is 0 or > 256 && BinaryPrimitives.ReverseEndianness(chunkCount) is > 0 and <= 256)
+        {
+            throw new InvalidDataException(
+                "This .xbg is big-endian, so it comes from the Xbox 360 or PS3 build. Only the PC "
+                + "layout is supported; there is no console corpus here to verify one against.");
+        }
 
         int pos = 32;
         for (uint i = 0; i < chunkCount; i++)
@@ -357,6 +366,70 @@ public sealed class XbgFile
     /// <summary>The chunk carrying this tag, or null when the file has none.</summary>
     public XbgChunk? Chunk(string tag)
         => Chunks.FirstOrDefault(chunk => chunk.Tag == tag);
+
+    /// <summary>Each node's world transform, parent applied before child.</summary>
+    /// <remarks>
+    /// <c>CGeomResource::GenerateMatrices</c> composes scale, then rotation, then translation, and
+    /// the scale at a node is live - 121 shipped nodes carry a non-unit one.
+    /// </remarks>
+    public Matrix4x4[] NodeWorldMatrices()
+    {
+        var world = new Matrix4x4[Nodes.Count];
+        for (int index = 0; index < Nodes.Count; index++)
+        {
+            XbgNode node = Nodes[index];
+            Matrix4x4 local =
+                Matrix4x4.CreateScale(node.Scale[0], node.Scale[1], node.Scale[2])
+                * Matrix4x4.CreateFromQuaternion(
+                    new Quaternion(node.Rotation[0], node.Rotation[1], node.Rotation[2], node.Rotation[3]))
+                * Matrix4x4.CreateTranslation(node.Translation[0], node.Translation[1], node.Translation[2]);
+            world[index] = node.Parent < (uint)index ? local * world[node.Parent] : local;
+        }
+        return world;
+    }
+
+    /// <summary>
+    /// The node placing the part named <paramref name="fullName"/>, or null when none does.
+    /// </summary>
+    /// <remarks>
+    /// DIKS names it outright, keyed by the CRC32 of the part's exact-case name. Matching part
+    /// names against node names instead disagrees on 291 shipped parts and is wrong on all of them,
+    /// because some meshes have a node whose own name ends in <c>_LOD0</c>.
+    /// </remarks>
+    public int? PartNode(string fullName)
+    {
+        uint wanted = FcbClassDefinitions.Crc32Ascii(fullName);
+        foreach (XbgPartRef reference in PartRefs)
+        {
+            if (reference.NameHash == wanted)
+            {
+                return reference.Node == NoPlacement || reference.Node >= Nodes.Count
+                    ? null
+                    : (int)reference.Node;
+            }
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Where a part sits in model space.
+    /// </summary>
+    /// <remarks>
+    /// A rigid part is modelled around its own pivot, so skipping this piles every wheel, door and
+    /// magazine at the origin. A part DIKS gives no node - every skinned one, and any rigid one
+    /// already modelled in place - sits in the root's space instead, which is what lifts a character
+    /// off the floor.
+    /// </remarks>
+    public Matrix4x4? PartPlacement(string fullName, Matrix4x4[]? world = null)
+    {
+        world ??= NodeWorldMatrices();
+        if (world.Length == 0)
+        {
+            return null;
+        }
+        int? node = PartNode(fullName);
+        return node is null ? world[0] : world[node.Value];
+    }
 
     /// <summary>Recompute sibling links and skin indices after nodes have been edited.</summary>
     public void RebuildHierarchy()

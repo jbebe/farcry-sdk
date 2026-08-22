@@ -46,9 +46,7 @@ public sealed class XbmEntry
 /// references and the part that name belongs to. Read one with the other's layout and it
 /// desynchronises on the first field.
 /// <para>
-/// This supersedes <see cref="XbmMaterial"/>, which searches for the chunk rather than walking the
-/// container and guesses the preamble from a list of candidate offsets; that one stays until its
-/// world and preview consumers are migrated.
+/// <see cref="XbmMaterial"/> flattens this into display-formatted text for the file viewer.
 /// </para>
 /// </remarks>
 public sealed class XbmFile

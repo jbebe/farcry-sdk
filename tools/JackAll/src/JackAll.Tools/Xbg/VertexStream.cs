@@ -107,7 +107,13 @@ public sealed class VertexStream
         return out_;
     }
 
-    /// <summary>UVs with V flipped bottom-up, or null when the channel is unused.</summary>
+    /// <summary>
+    /// UVs in the game's D3D space, where V = 0 is the top row, or null when the channel is unused.
+    /// </summary>
+    /// <remarks>
+    /// A bottom-up tool wants <c>1 - v</c>; that flip belongs to whatever targets one rather than
+    /// here, since the file's own convention is what every other consumer needs.
+    /// </remarks>
     public (float U, float V)[]? Uvs(float translate, float scale, int channel = 0)
     {
         if (!_components.TryGetValue($"uv{channel}", out byte[]? run))
@@ -122,7 +128,7 @@ public sealed class VertexStream
             short u = Int16(run, i * 4);
             short v = Int16(run, (i * 4) + 2);
             used |= u != UvUnused || v != UvUnused;
-            out_[i] = (translate + (u * scale), 1.0f - (translate + (v * scale)));
+            out_[i] = (translate + (u * scale), translate + (v * scale));
         }
         return used ? out_ : null;
     }
