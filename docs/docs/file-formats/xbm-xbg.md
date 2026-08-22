@@ -224,6 +224,92 @@ them, which quietly makes a re-export differ from the original.
 `parent_world x TRS(scale, rotation, translation)`, so the scale at `+0x2C` is live — 121 shipped
 nodes carry a non-unit value.
 
+## The `.xbm` body, and writing one back
+
+:::info[Verified against the retail corpus]
+Measured over all 2,379 shipped `.xbm` files, and round-tripped byte-identically through
+`tools/BlenderFC2`'s writer.
+:::
+
+The community account that an `.xbm` and an `.xbg` are the same format is exactly right, and stronger
+than stated: **an `.xbm` is an `.xbg` carrying an `LTMD` chunk and no geometry**. All 2,379 shipped
+materials have the byte-identical chunk layout
+
+```
+LTMD EDON DIKS DNKS SDOL XOBB HPSB DOL\0 PMCP PMCU
+```
+
+so a mesh writer that treats `LTMD` as opaque already emits a correct `.xbm` container — 2,379 of
+2,379 come back byte-identical with no material-specific code at all. Only the `LTMD` payload needs
+its own serialiser.
+
+That payload is a run of counted sections:
+
+```
+u8[5]           preamble, which no traced code path reads
+cstring         material name          e.g. SAWEDOFF_SHOTGUN_METAL_CHROME
+cstring         shader name            e.g. Weapon
+u32 count, then count x (cstring path, cstring slot)      textures — path first, then its slot
+for width in 1, 2, 3, 4:
+  u32 count, then count x (cstring key, f32[width])       float properties, grouped by width
+u32 count, then count x (cstring key, u32)                integer properties
+u32             trailing — 0 in all 2,379
+```
+
+`cstring` is the same length-prefixed, NUL-terminated form the `.xbg` chunks use. The float sections
+are what split `DiffuseTiling1` (a `float2`) from `DiffuseColor1` (a `float3`) — a key's width is
+carried by which group it sits in, not by the key.
+
+**A section may repeat a key, so a reader that stores properties in a map loses data.**
+`FATHER_MALIYA_HAIRHELMET` (`worlds/worlds/graphics/_materials/fchappart-m-2008041057227927.xbm`)
+lists `OmniSpotLightingDisabled` twice in its integer section, both times 1. It is the only material
+in the set that does, and it is enough to break a byte-exact round trip: keep the entries in file
+order alongside whatever map the reader exposes.
+
+### Shader and slot census
+
+| Shader | Materials |
+| --- | --- |
+| `Generic` | 1,626 |
+| `Cloth` | 265 |
+| `Skin` | 142 |
+| `Weapon` | 102 |
+| `RealtreeTrunk` | 51 |
+| `Unlit` | 49 |
+| `Hair` | 37 |
+| `Vehicle` | 34 |
+| `Leaf` | 25 |
+| `Road` | 18 |
+| `BigLeaf` | 12 |
+| `Water` | 7 |
+
+Texture slots, by how many materials name them: `DiffuseTexture1` 1,964, `SpecularTexture1` 1,889,
+`NormalTexture1` 1,656, `MaskTexture1` 1,565, `DiffuseTexture2` 1,503, `RimLightTexture` 397,
+`BloodTexture` 393, `FabricTexture` 264, `PrintTexture` 239, `ReflectionTexture` 222, `SkinTexture`
+142, `NormalTexture2` 135, `MaskTextureBroken` 102, `BurntDiffuseTexture` 51, `MaskTexture0` 34,
+`SpecularID` 25.
+
+### The `Weapon` shader's parameter set
+
+The 102 `Weapon` materials extend `Generic`'s inputs with the weapon-degradation system:
+
+- **`MaskTextureBroken` and `MaskTilingBroken`** — a second mask, alongside `MaskTexture1`.
+- **A `Clean`/`Broken` triplet for every colour.** `DiffuseColor1`, `DiffuseColor1Clean`,
+  `DiffuseColor1Broken`, and the same for `DiffuseColorBase`, `DiffuseColor2`, `SpecularColor1` and
+  `SpecularColorBase`. The unsuffixed key is what the shader reads; the two suffixed ones are the
+  ends the weapon's condition interpolates between.
+- **`ReflectionTexture` and `ReflectionPower`** on some of them — the sawed-off's black-metal
+  material names `graphics\_textures\cubemap\lens_cubemap.xbt` at power 0.9.
+
+The mask channels behave as `Generic`'s do. Measured on the sawed-off's own shipped
+`sawed_off_shotgun_state01.xbt`: **green is 0.000 in every texel**, red averages 0.556, blue averages
+0.439, alpha is 1. So a shipped weapon never blends its second tiling layer in at all — the whole
+look is layer 1 tinted between `DiffuseColorBase` and `DiffuseColor1` by the mask's blue.
+
+`MaskTiling1` is 1,1 on all three of the sawed-off's materials while `DiffuseTiling1` runs 6 to 12,
+which is the shape to expect: the mask is per-model and in the model's own UVs, the detail maps tile
+over it.
+
 ## The shading model, read out of the engine's own shaders
 
 :::info[Verified via reverse engineering]
@@ -345,7 +431,10 @@ that consumes them.
   scale. UVs stay in D3D space, where V=0 is the texture's top row.
 - **Vertex colour is a mask, stored BGRA.** The vertex shader emits it as `colour.zyxw`, i.e. it
   swizzles the buffer's BGRA into RGBA before the pixel shader sees it. Green and blue are the two
-  blend weights above; every mesh in the set carries the attribute.
+  blend weights above; every mesh in the set carries the attribute. It is real data, not padding:
+  across 8,550,866 shipped LOD0 vertices, **45.3% carry a non-white RGB**. A writer that emits white
+  is asking for both weights at full strength, which is right for a weapon (the sawed-off and the
+  AK-47 are white in RGB, varying only in alpha) and wrong as a general default.
 - **Triangles wind clockwise** around their authored normal — the D3D convention. Measured at 99–100%
   per file across characters, vehicles, props and buildings. Renderers that assume OpenGL's
   counter-clockwise default will treat every outward-facing triangle as back-facing, which silently
@@ -428,6 +517,30 @@ the nodes into `CSkeletonBuilder::BeginAddBone(nameId, matrix)`, where `nameId` 
 node's exact-case name. An `.xbg` node and a [`.skeleton`](./skeleton.md) bone are the same bone when
 those hashes match, which is why a replacement model must keep part and bone names byte-identical.
 See [`.mab`](./mab.md) for how a clip then addresses those bones by skeleton bone id.
+
+## Authoring ceilings
+
+:::info[Verified against the retail corpus]
+Measured over all 3,133 shipped `.xbg` files: 32,170 clusters and 10,462 LODs.
+:::
+
+Indices are `u16` throughout, and a cluster stores its own counts in `u16` as well, which puts three
+hard ceilings on anything written. Retail sits just under all three — the art pipeline was clearly
+built against them:
+
+| Ceiling | Limit | Highest shipped |
+| --- | --- | --- |
+| Triangles in one cluster (`face_count * 3` is a `u16`) | 21,845 | **21,351** — `bargearmsbazard_multi` |
+| Vertices addressed by one LOD's buffer | 65,535 | **56,961** — `merc_kit` LOD0 |
+| `cluster.vertex_count` | 65,535 | **29,965** — `bridge_end_multi` |
+
+The triangle ceiling is the one a donated mesh hits first, and it is per *cluster*, not per part or
+per LOD — a part with three clusters can draw 65,535 triangles between them. The vertex ceiling is
+per buffer, and 10,456 of 10,462 LODs use exactly one buffer, so in practice it is per LOD.
+
+**No shipped cluster draws nothing.** 0 of 32,170 have a zero face count, so a submesh left empty is
+a shape the engine is never asked to handle. A writer that cannot fill a cluster should give it a
+degenerate or sub-millimetre triangle rather than a zero count.
 
 ## Import/export tooling
 

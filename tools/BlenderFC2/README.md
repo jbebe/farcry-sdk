@@ -12,6 +12,7 @@ under Blender's interpreter for the add-on.
 |---|---|---|---|
 | `.xbg` | mesh container: geometry, LODs, nodes, materials, skinning | **3,133 / 3,133** | **0.00%** |
 | `.skeleton` | rig: bones, constraints, weapon sockets | **81 / 81** | **0%** |
+| `.xbm` | material: shader, texture slots, tiling, tint and specular colours | **2,379 / 2,379** | **0.00%** |
 | `.mab` | animation bank: one clip per skeleton — rotations, translations, trajectory, events | **4,436 / 4,436** | 2.6% |
 
 Round trip means `write(parse(f)) == f`, with the writer regenerating each structure — chunk sizes,
@@ -23,9 +24,10 @@ blob pass it for free, so `roundtrip.py --coverage` reports what share is blob. 
 decoded. For `.xbg`, vertex and index streams are decoded and re-encoded losslessly, every LOD's
 geometry blocks can be regenerated from scratch and still match, and the only blobs left are the two
 rare chunks — but a handful of words are still read as values without being understood, so 0.00%
-means "nothing is carried blind", not "everything is explained". What remains opaque in a `.mab` is
-its event chain, which is FCB binary, and most of each record in its tag table.
-`tests/invariants.py` covers what a round trip cannot.
+means "nothing is carried blind", not "everything is explained". An `.xbm` is the same container with
+an `LTMD` chunk and no geometry, so the mesh writer already emits it; only that chunk's body needed a
+serialiser. What remains opaque in a `.mab` is its event chain, which is FCB binary, and most of each
+record in its tag table. `tests/invariants.py` covers what a round trip cannot.
 
 **What works today**: importing a shipped `.xbg` into Blender — parts, LODs, UVs, vertex colours,
 normals, an armature from the nodes, rigid parts on their pivots, skin weights as vertex groups, and

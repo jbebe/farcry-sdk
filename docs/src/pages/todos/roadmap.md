@@ -20,8 +20,8 @@ in-process patcher if patching proves necessary.
 | Tier | Formats | State |
 |---|---|---|
 | Solved end-to-end | `.fat`/`.dat`, `.fcb`, `.rml`, `.mgb`, `.xbt`, `.sbao`, `.spk`, `.sav`, `depload` | Round-trip + editor + mod pipeline. Nothing more needed. |
-| Reads, no write path | Domino graphs, `.sdat`, `.xbm` | Writers exist for Domino and `.sdat` but are called only from tests. |
-| Round-trips, partial write path | `.xbg`, `.skeleton`, `.mab`, `.rtx` | `tools/BlenderFC2` writes `.xbg` and `.skeleton`; `.mab` round-trips but nothing authors a clip. |
+| Reads, no write path | Domino graphs, `.sdat` | Writers exist for both but are called only from tests. |
+| Round-trips, partial write path | `.xbg`, `.skeleton`, `.xbm`, `.mab`, `.rtx` | `tools/BlenderFC2` writes `.xbg`, `.skeleton` and `.xbm`, all byte-identical over the retail set; `.mab` round-trips but nothing authors a clip. |
 | Container only | `.srl` (14,964 files), `.zsr` (14,964), `.nvm` (5,144) | Spatial data — roadmap dependencies, not standalone work. |
 | Sniffed, never parsed | `.hkx`, shader bins, `.bik`, `.feu`, `.wem` | See [Not doing](#not-doing-and-why). |
 | Parseable but unusable | `worldsector<N>.data.fcb` (5,230), `world1.mapsdata.fcb` | These *are* FCB — decoded today into a wall of `hidPos`/`hidAngles` floats with no spatial meaning. This is the wall. |
@@ -213,12 +213,13 @@ The cheapest wins in the tool.
 - **Batch operations.** Multi-select in the file grid drives only a count/size readout — no batch
   extract, replace or folder export — and the CLI has no glob/recursive mode. Small.
 
-## Track 4 — `.xbm` writer, then textured preview
+## Track 4 — `.xbm` writer in JackAll, then textured preview
 
-`JackAll.Tools/Xbm/XbmMaterial.cs` is parse-only and byte-scans for `LTMD` rather than walking the
-chunk list. Material tweaks — glow values, tiling, swapping a texture slot — are a real modding use
-case, the format is small and documented, and a round-trip-validated reference exists. Medium
-effort, high value.
+`tools/BlenderFC2` now writes `.xbm` — 2,379 of 2,379 shipped materials byte-identical, and rewritten
+ones load in game. `JackAll.Tools/Xbm/XbmMaterial.cs` is still parse-only and byte-scans for `LTMD`
+rather than walking the chunk list, so the remaining work is porting a solved format rather than
+cracking one. The layout, the section order and the one material that repeats a key inside a section
+are documented in [xbm-xbg](/docs/file-formats/xbm-xbg).
 
 That in turn unlocks the best demo feature in the tool: a **textured 3D preview that honours the mod
 stack**. Every viewer today renders the shipped asset; nothing renders the modded result in context.

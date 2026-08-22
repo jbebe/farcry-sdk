@@ -54,7 +54,7 @@ are listed once with both links.
 
 ### Engine/bugfix patches
 - [Far Cry 2 - Patched](https://www.nexusmods.com/farcry2/mods/317) ([ModDB](https://www.moddb.com/mods/far-cry-2-patched)) — Boggalog. Foundational bugfix mod most overhauls build on.
-- [Scubrah's Patch](https://www.nexusmods.com/farcry2/mods/328) ([ModDB](https://www.moddb.com/mods/scubrahs-patch)) — scubrah. Second major patch lineage.
+- [Scubrah's Patch](https://www.nexusmods.com/farcry2/mods/328) ([ModDB](https://www.moddb.com/mods/scubrahs-patch)) — scubrah. Second major patch lineage. **It moves the three DLC weapons out of the world.** Its `domino\system\dlc1weaponsspawn.lua` comments out every `SpawnEntityFromArchetype` call for the crossbow, sawed-off and silenced shotgun at all ten crate sites, leaving only the crate itself — so the site shows a use prompt and no guns. Its `gamemodesconfig.xml` sells them in the weapon bazaar instead (sawed-off secondary 25, silenced shotgun primary 40, crossbow special 40, all available from the start with no unlock), which vanilla does not. Worth knowing before concluding a DLC weapon is broken. It also edits the three DLC pickup archetypes, but only to set `fRespawnTime` from 0.1 to 0.
 - [Fix Bouncing NPCs](https://www.nexusmods.com/farcry2/mods/309) — scubrah (Nexus only).
 - [Far Cry 2 VanillaPatchedDamage](https://www.nexusmods.com/farcry2/mods/353) — krieger857 (Nexus only, built on Patched).
 - [Hunter's Far Cry 2 Update](https://www.moddb.com/mods/hunters-far-cry-2-update) — ModDB only. "Return of the Jackal tapes! No blinking items! Dynamic enemy AI! Improved Patrols! Infamous heal animations restored! Better ballistics!" — sizeable engine-behavior patch by the same "Hunter" behind the Gibbed-style tools.

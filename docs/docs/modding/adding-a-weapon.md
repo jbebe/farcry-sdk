@@ -9,8 +9,12 @@ No community mod has ever added a new weapon — [the survey](./mods-survey.md) 
 rebalances, reskins and unlocks — and every other weapon page on this site edits an existing entry.
 This page is built from two things instead: Ubisoft's own DLC1 weapon pack, decoded field by field
 out of `tmp/gamefiles`, and the engine code that consumes it, traced through GhidraMCP against
-`FarCry2_server`. Nothing here has been round-tripped into a running game yet, so treat the
-*procedure* as untested even though each individual fact is measured.
+`FarCry2_server`.
+
+**The art half is no longer untested.** A weapon whose mesh, materials and textures were all authored
+here has been built, installed and played — see [Replacing a weapon's art](#replacing-a-weapons-art)
+below. The archetype half — the seven `.fcb` records, `iAnimationValue`, `depload`, spawning a
+weapon that did not previously exist — is still a procedure nobody has run end to end.
 :::
 
 ## The reference implementation
@@ -316,7 +320,11 @@ Re-encoding is a different matter: the output is 322 KB against the original's 1
 encoder expands the `0xFE` back-references the original uses for repeated values and objects rather
 than re-emitting them (object count goes 945 → 4,550). The decode is nonetheless **semantically
 lossless and stable** — `decode(encode(decode(x)))` produces XML byte-identical to `decode(x)`
-across all three sub-files. Whether the game loads the inflated file is untested.
+across all three sub-files.
+
+**The inflated file does load.** Scubrah's Patch overrides fragments inside this library, which
+forces exactly that re-encode into `patch.dat`, and the DLC archetypes still resolve and spawn in a
+running game.
 :::
 
 ## Geometry: edit a donor, don't build from scratch
@@ -342,11 +350,87 @@ Its limits line up with the archetype work above rather than fighting it:
 So the practical route is: pick a donor weapon with a part layout you can live with, reshape its parts,
 and keep every name byte-identical.
 
+## Replacing a weapon's art
+
+:::info[Verified in a running game]
+A donated mesh with its own textures and materials, built through `tools/BlenderFC2`, packaged with
+`jackall-cli mod build` and played. Eight files, all overrides of existing paths — no new asset
+paths, so no hashlist entry and no `depload` work.
+:::
+
+The replacement was the DLC1 sawed-off: `dlc1_sawedoff_shotgun.xbg` (all six LODs), its two state
+`.xbt` textures with their `_mip0` companions, and the three `.xbm` materials it owns. The `.hkx`,
+the `_ref.skeleton` and all 49 `.mab` clips were left alone.
+
+**`patch.dat` overrides a file whose home is a DLC archive.** This is the load-bearing assumption
+under any DLC-content mod and it holds: an override staged at `graphics\weapons\dlc\…` in
+`patch.dat` is what the engine loads, even though the vanilla file lives in
+`downloadcontent\dlc1\entitylibrary.dat`. Confirmed twice — once with a `.lua` whose home is
+`downloadcontent\dlc1\dominos.dat`, once with the weapon mesh itself.
+
+### Which part you put geometry in decides how it animates
+
+The clips drive the donor's parts by name, so the cut is an animation decision, not just a material
+one. Measured across all 49 sawed-off clips, as the largest departure from each bone's rest pose:
+
+| Part | Turns | Moves |
+| --- | --- | --- |
+| `FRAME` | 0° | 0 m |
+| `CLIP` | 177° | 1.01 m |
+| `ACCESSORY` | 31° | 0.18 m |
+| `ACCESSORY2` | 45° | 0 m |
+
+`FRAME` never moves at all, so it is where the body belongs. `CLIP` is the break-action hinge — on
+the sawed-off it carries the barrels, which swing fully open on reload. Anything mapped onto it will
+swing with them, and anything left on `FRAME` will not.
+
+A weapon whose parts do not line up with the donor's is still workable: a submesh you cannot fill
+needs a marker triangle rather than a zero face count, because
+[no shipped cluster draws nothing](../file-formats/xbm-xbg.md#authoring-ceilings).
+
+### Giving a weapon its own colour
+
+The `Weapon` shader has **no albedo slot**. Colour comes from two shared, game-wide tiling maps
+blended by a per-model mask, so a donated colour texture has nowhere to go and a mask can only say
+*where*, never *what colour*. Rewriting the `.xbm` gives it somewhere:
+
+- `DiffuseTexture1` → a texture the weapon already owns, with `DiffuseTiling1` set to `1,1` so it
+  lands on the model's own UVs instead of tiling.
+- `MaskTexture1` and `MaskTextureBroken` → a control map with **green at 0** so the second tiling
+  layer never blends, and **blue at 1** so the tint weight is full.
+- `DiffuseColorBase` and `DiffuseColor1`, and their `Clean`/`Broken` variants, set so no weapon
+  condition re-tints the texture.
+
+With blue held at 1, `DiffuseColor1` becomes a plain per-material multiplier. That is the right place
+to put hue: the texture carries wear and detail, the material carries the colour, and one atlas can
+serve a steel receiver and a wooden grip through two materials.
+
+A weapon typically owns exactly two texture paths (its two damage-state masks), which is enough for
+one albedo and one control map. Both can be rebuilt with `jackall-cli xbt extract` / `xbt build`, and
+**the replacement may change dimensions** — 512²/1024² was raised to 1024²/2048² and loaded fine, so
+the `_mip0` relationship is "twice the base", not a fixed size.
+
+### Four things that went wrong, and why
+
+- **A physically based albedo is far too dark for this shader.** Doom's texture measured 0.05 to 0.12
+  luma and up to 3.7 times as red as blue, because its metal gets brightness from a metalness map
+  this shader has no equivalent for. Lit, it reads as black plastic with rust.
+- **Fix it in the texture, not the material.** Reaching a metal level from 0.05 needs about 8x, and
+  DXT1 gives red 5 bits — multiplying through `DiffuseColor1` afterwards bands it badly. Do it in
+  float before quantisation.
+- **A gamma lift is the wrong curve.** It compresses the top, so it burns pale areas to white under
+  the game's sun while barely moving the darkest metal. Fit the albedo into a band with a floor and
+  a ceiling instead; nothing can then blow out under any light.
+- **Never split one visual surface across two clusters with different materials.** If the cut assigns
+  triangles by count rather than by an edge loop, triangles at the same position land in different
+  clusters and the boundary interleaves triangle by triangle. That is invisible while both clusters
+  draw the same thing and reads as a row of saw teeth the moment their materials differ.
+
 ## Not solved
 
 | Gap | Detail |
 |---|---|
-| **`.xbm` materials** | No writer anywhere in-repo; both readers are parse-only. Reuse a donor's `.xbm` when the shader matches (`Weapon` for a gun body, `Generic` for shells). |
+| **`.xbm` materials** | Solved. `tools/BlenderFC2`'s writer round-trips all 2,379 shipped materials byte-identically and rewritten ones load in game — see [xbm-xbg](../file-formats/xbm-xbg.md#the-xbm-body-and-writing-one-back). JackAll's `XbmMaterial.cs` is still parse-only. |
 | **`.hkx` collision** | Not parsed at all. Reuse the donor's. |
 | **`.mab` authoring** | Clips now decode fully — the sparse eight-frame keyframe groups are solved and **File ▸ Import ▸ Far Cry 2 Animation (.mab)** loads one onto an armature as an Action. There is still no *export* path, so a new clip cannot be authored. See [mab](../file-formats/mab.md). |
 | **MOVE authoring** | Header, class-ID table, channel table and merge semantics are decoded; per-state record interiors are not. See [move](../file-formats/move.md). |

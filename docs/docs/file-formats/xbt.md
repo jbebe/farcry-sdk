@@ -50,6 +50,11 @@ axis, which is invisible until something is drawn close enough for that texture 
 The split exists so the engine can drop the largest level under memory pressure without touching the
 rest of the chain.
 
+**A replacement may change the dimensions.** The pair is "companion at twice the base", not a fixed
+size: a weapon's 512² base and 1024² companion were rebuilt at 1024² and 2048², keeping the original
+headers, and the engine loaded them. Nothing in the header carries a size — the loader reads it from
+the DDS.
+
 Sizes cluster tightly: base textures are mostly 256×256 (487 files) or 512×512 (91), and companions
 mostly 512×512 (253) or 1024×1024 (91).
 
