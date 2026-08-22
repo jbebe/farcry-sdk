@@ -385,6 +385,74 @@ public class MabClip
         ];
     }
 
+    /// <summary>
+    /// A rotation back into the three words it is stored as - the inverse of
+    /// <see cref="UnpackQuaternion"/>.
+    /// </summary>
+    /// <remarks>
+    /// The component with the largest magnitude is the one left out and recovered from the norm, and
+    /// which one that is rides in the top bit of each of the first two words. Because the recovered
+    /// component comes back as a square root it is always positive, so a rotation whose largest
+    /// component is negative is negated first - the same rotation either way.
+    /// </remarks>
+    public static (ushort First, ushort Second, short Third) PackQuaternion(float[] rotation)
+    {
+        double[] q = [rotation[0], rotation[1], rotation[2], rotation[3]];
+        int largest = 0;
+        for (int i = 1; i < 4; i++)
+        {
+            double mine = Math.Abs(q[i]);
+            double best = Math.Abs(q[largest]);
+            // Components tie often enough to matter - a quarter turn puts two at 1/sqrt(2), and an
+            // even diagonal puts all four at 1/2 - and which one the shipped data drops is not
+            // arbitrary: it prefers one that is already positive, because dropping a negative would
+            // mean negating the whole rotation. Between two equally positive candidates it takes the
+            // later.
+            // Comparing exactly: allowing near-ties instead was measured and is worse, because
+            // genuinely different magnitudes sit within a few steps of each other far more often
+            // than a broken tie appears.
+            if (mine > best || (mine == best && (q[i] >= 0.0 || q[largest] < 0.0)))
+            {
+                largest = i;
+            }
+        }
+        if (q[largest] < 0.0)
+        {
+            for (int i = 0; i < 4; i++)
+            {
+                q[i] = -q[i];
+            }
+        }
+
+        int index = Array.FindIndex(EngineLayout, layout => layout[largest] == 3);
+        int[] chosen = EngineLayout[index];
+
+        // values[j] is the component the layout sends to position j.
+        var stored = new double[3];
+        for (int position = 0; position < 4; position++)
+        {
+            if (chosen[position] != 3)
+            {
+                stored[chosen[position]] = q[position];
+            }
+        }
+
+        ushort first = (ushort)(Steps(stored[0]) | ((index & 2) != 0 ? 0x8000 : 0));
+        ushort second = (ushort)(Steps(stored[1]) | ((index & 1) != 0 ? 0x8000 : 0));
+        return (first, second, (short)Steps(stored[2]));
+    }
+
+    public static void WriteQuaternion(Span<byte> destination, float[] rotation)
+    {
+        (ushort first, ushort second, short third) = PackQuaternion(rotation);
+        BinaryPrimitives.WriteUInt16LittleEndian(destination, first);
+        BinaryPrimitives.WriteUInt16LittleEndian(destination[2..], second);
+        BinaryPrimitives.WriteInt16LittleEndian(destination[4..], third);
+    }
+
+    private static int Steps(double value)
+        => Math.Clamp((int)Math.Round((value + QuatBias) / QuatScale), 0, 0x7FFF);
+
     public static float[]? ReadQuaternion(byte[] data, int offset)
     {
         if (offset + QuatBytes > data.Length)
