@@ -1,4 +1,5 @@
 using JackAll.Tools.Fc2Model;
+using JackAll.Tools.Png;
 using JackAll.Tools.Xbt;
 
 namespace JackAll.Tests;
@@ -69,7 +70,7 @@ public sealed class TextureDocumentTests
                 TextureDocument document = TextureDocument.From(File.ReadAllBytes(path), read);
                 paired += document.CompanionHeader is not null ? 1 : 0;
 
-                byte[] rgba = TextureDocument.RgbaFromPng(document.ToPng(), out int width, out int height);
+                (byte[] rgba, int width, int height) = PngImage.Decode(document.ToPng());
                 if (width != document.Width || height != document.Height)
                 {
                     failures.Add($"{Path.GetFileName(path)}: PNG came back {width}x{height}, not {document.Width}x{document.Height}");

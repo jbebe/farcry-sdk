@@ -1,10 +1,8 @@
 using CommunityToolkit.HighPerformance;
 using BCnEncoder.Encoder;
 using BCnEncoder.Shared;
+using JackAll.Tools.Png;
 using JackAll.Tools.Xbt;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace JackAll.Tools.Fc2Model;
 
@@ -127,23 +125,7 @@ public sealed class TextureDocument
         };
     }
 
-    public byte[] ToPng()
-    {
-        using Image<Rgba32> image = Image.LoadPixelData<Rgba32>(Rgba, Width, Height);
-        using var stream = new MemoryStream();
-        image.Save(stream, new PngEncoder());
-        return stream.ToArray();
-    }
-
-    public static byte[] RgbaFromPng(byte[] png, out int width, out int height)
-    {
-        using Image<Rgba32> image = Image.Load<Rgba32>(png);
-        width = image.Width;
-        height = image.Height;
-        var rgba = new byte[width * height * 4];
-        image.CopyPixelDataTo(rgba);
-        return rgba;
-    }
+    public byte[] ToPng() => PngImage.Encode(Rgba, Width, Height);
 
     /// <summary>
     /// The pair of files this texture ships as: the base, and its companion when it had one.

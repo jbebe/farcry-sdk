@@ -1,4 +1,5 @@
 using System.Text.Json;
+using JackAll.Tools.Png;
 using JackAll.Tools.Skeleton;
 using JackAll.Tools.Xbt;
 
@@ -112,7 +113,7 @@ public static class Fc2ModelApplier
     private static IEnumerable<Fc2ModelOutput> Texture(
         Fc2ModelBundle bundle, Fc2ModelEntry entry, byte[] png)
     {
-        byte[] rgba = TextureDocument.RgbaFromPng(png, out int width, out int height);
+        (byte[] rgba, int width, int height) = PngImage.Decode(png);
         var document = new TextureDocument
         {
             Width = width,
