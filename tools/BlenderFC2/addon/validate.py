@@ -48,6 +48,7 @@ def check_scene(context):
     found += rules.check_geometry(mesh, _entries(objects, mesh, built["lod"]), limits)
     found += _meshes(objects, mesh, built["lod"], pack)
     found += _materials(collection, pack)
+    found += _textures(collection, pack)
     found += _placement(objects)
     return sorted(found, key=lambda f: (f.severity != ERROR, f.code))
 
@@ -234,6 +235,71 @@ def _materials(collection, pack):
             seen.add(material.name)
             out += _material(material, pack)
     return out
+
+
+def _textures(collection, pack):
+    """Every image an exported material samples, walked once."""
+    out = []
+    seen = set()
+    for obj in collection.objects:
+        if obj.type != "MESH":
+            continue
+        for material in obj.data.materials:
+            if material is None or not material.use_nodes:
+                continue
+            for node in material.node_tree.nodes:
+                if node.type != "TEX_IMAGE" or node.image is None:
+                    continue
+                if node.image.name in seen:
+                    continue
+                seen.add(node.image.name)
+                out += _texture(node, pack)
+    return out
+
+
+def _texture(node, pack):
+    image = node.image
+    if not tuple(image.size) or not image.size[0]:
+        return []
+
+    path = image.get(materials.PROP_IMAGE_PATH, "")
+    entry = pack.entry(path) if path else None
+    return rules.check_texture(
+        image.name,
+        node.get(materials.PROP_SLOT, ""),
+        tuple(image.size),
+        image.get(materials.PROP_IMAGE_SIZE),
+        entry.record.get("codec") if entry is not None else None,
+        _alpha_levels(image))
+
+
+# How many pixels to look at when asking whether an image has soft alpha. A
+# 2048-square image is sixteen million floats and reading all of them would make
+# a check take longer than the export it is checking.
+ALPHA_SAMPLES = 4096
+
+
+def _alpha_levels(image):
+    """Roughly how many distinct alpha values an image holds, or None.
+
+    Sampled on a stride rather than read whole. Three is the interesting
+    threshold - fully on, fully off, and anything between - so a sample that
+    misses a rare soft texel costs a warning nobody needed.
+    """
+    if image.channels < 4:
+        return None
+    try:
+        pixels = image.pixels
+        count = len(pixels) // 4
+        if count == 0:
+            return None
+        stride = max(1, count // ALPHA_SAMPLES)
+        return len({round(pixels[index * 4 + 3], 2)
+                    for index in range(0, count, stride)})
+    except (RuntimeError, AttributeError):
+        # An image with no pixel data loaded - a broken path, or one Blender has
+        # freed - has nothing to say rather than something to complain about.
+        return None
 
 
 def _material(material, pack):

@@ -323,3 +323,59 @@ def check_loose(name, submesh, loose):
         % (len(loose), name),
         Target(object=name, kind="vertex", index=loose[0]),
         "Delete them (Mesh > Clean Up > Delete Loose).")]
+
+
+# What every shipped texture is, measured over the 4,283 in the graphics tree
+# that decode on their own. Nothing here is a hard limit the tools enforce - the
+# compressor pads an odd size rather than refusing - so these warn.
+LARGEST_SHIPPED = 2048
+
+
+def check_texture(name, slot, size, original, codec, alphas):
+    """One image, against what the pack said it was and what the format carries."""
+    target = Target(kind="image", name=name)
+    out = []
+    width, height = size
+
+    if original and tuple(original) != tuple(size):
+        out.append(Finding(
+            WARNING, "texture.resized",
+            "'%s' is now %dx%d; it arrived %dx%d." % (name, width, height, *original),
+            target,
+            "Resizing is fine - the shipped sawed-off went from 1024 to 2048 - but the "
+            "whole mip chain is rebuilt from it, so check it still reads at distance."))
+
+    if not (_power_of_two(width) and _power_of_two(height)):
+        out.append(Finding(
+            WARNING, "texture.non-power-of-two",
+            "'%s' is %dx%d, which is not a power of two. All 4,283 shipped textures are."
+            % (name, width, height), target,
+            "Mip levels halve, so a size that does not halve cleanly loses a row or column "
+            "at each step."))
+    elif width % 4 or height % 4:
+        out.append(Finding(
+            WARNING, "texture.partial-block",
+            "'%s' is %dx%d, and block compression works in 4x4 blocks." % (name, width, height),
+            target, "The edge block is padded, so the last few texels shift."))
+
+    if width > LARGEST_SHIPPED or height > LARGEST_SHIPPED:
+        out.append(Finding(
+            WARNING, "texture.too-large",
+            "'%s' is %dx%d; the largest shipped texture is %d." % (name, width, height,
+                                                                   LARGEST_SHIPPED), target,
+            "It will load, but it costs memory the engine was not budgeted for."))
+
+    # DXT1 carries one bit of alpha - on or off - so a gradient collapses to a
+    # hard edge. 2,842 of the shipped textures are DXT1 and 1,315 are DXT5.
+    if codec == "DXT1" and alphas is not None and alphas > 2:
+        out.append(Finding(
+            WARNING, "texture.format-downgrade",
+            "'%s' has soft alpha and its slot is DXT1, which stores one bit of it."
+            % name, target,
+            "The gradient becomes a hard edge. Nothing here can change the codec, so "
+            "either accept the cutout or pick a slot whose texture is DXT5."))
+    return out
+
+
+def _power_of_two(value):
+    return value > 0 and (value & (value - 1)) == 0

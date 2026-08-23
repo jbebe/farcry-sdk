@@ -33,6 +33,10 @@ PROP_SHADER = "fc2_shader"
 # it came from and a rule can tell an edited chain from a rebuilt one.
 PROP_SLOT = "fc2_slot"
 
+# What an image was when the pack handed it over, so a rule can say it changed.
+PROP_IMAGE_SIZE = "fc2_size"
+PROP_IMAGE_PATH = "fc2_texture_path"
+
 # Node graph spacing, purely cosmetic.
 COLUMN = 260
 ROW = 300
@@ -79,6 +83,10 @@ def _image(game_path, pack, cache):
         # another, and check_existing hands back the datablock loaded first.
         image.reload()
         image.name = name
+        # Stamped so a rule can tell a texture that was replaced or resized from
+        # one that arrived this way. Blender only knows what it is holding now.
+        image[PROP_IMAGE_SIZE] = list(image.size)
+        image[PROP_IMAGE_PATH] = game_path
     cache[game_path] = image
     return image
 

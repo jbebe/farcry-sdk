@@ -1,3 +1,7 @@
+| an unweighted vertex on a skinned part | a model-owned texture set to tile |
+| editing a file shared with other models | the `Weapon` shader having no albedo slot, with the working recipe |
+|  | a texture resized, no longer a power of two, or over 2048 |
+|  | soft alpha in a slot whose codec stores one bit of it |
 | `tests/blender_check.py` | Requires every rule to be silent on retail, then fire on exactly one violation |
 | `tests/blender_write.py` | Rewrites one clip and requires every other clip in the bank to survive |
 | `addon/export_xbg.py` | Writes edited geometry back into the pack |
@@ -279,7 +283,11 @@ What it catches today, all of it a silent failure otherwise:
 
 Each one names what to do instead.
 
-The ceilings come from the pack's own `limits`, so there is no second place for them to drift.
+The ceilings come from the pack's own `limits`, so there is no second place for them to drift. The
+texture rules come from measurement instead: all 4,283 shipped textures in the graphics tree are a
+power of two, none is larger than 2048, and the codecs are DXT1 (2,842), DXT5 (1,315) and DXT3 (124).
+None of it is enforced by the tools - the block compressor pads an odd size rather than refusing - so
+all of it warns.
 
 ## The motion table
 

@@ -190,6 +190,26 @@ def too_many_influences(result):
             group.remove([vertex.index])
 
 
+def resized_texture(result):
+    """A texture scaled up, which is allowed but worth saying happened."""
+    image = next(node.image
+                 for obj in result["parts"]
+                 for material in obj.data.materials if material and material.use_nodes
+                 for node in material.node_tree.nodes
+                 if node.type == "TEX_IMAGE" and node.image)
+    image.scale(image.size[0] * 2, image.size[1] * 2)
+
+
+def odd_texture(result):
+    """A texture that is no longer a power of two, so its mips stop halving."""
+    image = next(node.image
+                 for obj in result["parts"]
+                 for material in obj.data.materials if material and material.use_nodes
+                 for node in material.node_tree.nodes
+                 if node.type == "TEX_IMAGE" and node.image)
+    image.scale(300, 300)
+
+
 def viewport_shows_what_ships():
     """The channels a material carries have to reach the viewport.
 
@@ -350,6 +370,9 @@ def main():
                             reassigned_material)
     errors += one_violation("skin.influences-truncated", "skin.influences-truncated",
                             too_many_influences, MODELS[2][1])
+    errors += one_violation("texture.resized", "texture.resized", resized_texture)
+    errors += one_violation("texture.non-power-of-two",
+                            ["texture.non-power-of-two", "texture.resized"], odd_texture)
 
     errors += blocks_only_on_errors()
     errors += viewport_shows_what_ships()
