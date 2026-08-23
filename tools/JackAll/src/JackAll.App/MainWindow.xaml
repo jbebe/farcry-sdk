@@ -146,6 +146,8 @@
                             <StackPanel Orientation="Horizontal">
                                 <Button Content="Import mod" Click="AddMod_Click" Style="{StaticResource Toolbar}" />
                                 <Button Content="Import legacy mod" Click="ImportLegacy_Click" Style="{StaticResource Toolbar}" />
+                                <Button Content="Apply .fc2model" Click="ApplyPack_Click" Style="{StaticResource Toolbar}"
+                                        ToolTip="Encodes a model pack a 3D editor changed and stages the changed files into the workspace." />
                                 <Button Content="Rescan mods" Click="RescanMods_Click" Style="{StaticResource Toolbar}"
                                         ToolTip="Re-reads every mod's zip and the workspace folder from disk - picks up a mod replaced or edited outside JackAll without needing a restart." />
                                 <Button Content="Check for dead edits" Click="LintArchetypes_Click" Style="{StaticResource Toolbar}"
@@ -704,6 +706,17 @@
                                     <Button Content="Mirror original…" Click="MirrorOriginal_Click" Padding="8,6"
                                             Visibility="{Binding HasOriginal, Converter={StaticResource BoolToVis}}"
                                             ToolTip="Copy the asset while keeping the folder structure" />
+                                </StackPanel>
+
+                                <!-- A model and everything it names, decoded into one pack a 3D editor
+                                     can open without a line of Dunia format code. Applying one stages
+                                     the entries an editor changed back into the workspace. -->
+                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0"
+                                            Visibility="{Binding SelectionIsModel, Converter={StaticResource BoolToVis}}">
+                                    <Button Content="Export as .fc2model…" Click="ExportPack_Click" Margin="0,0,6,0" Padding="8,6"
+                                            ToolTip="Collect this model, its materials, textures and rig into one decoded pack" />
+                                    <Button Content="…with animations" Click="ExportPackWithClips_Click" Padding="8,6"
+                                            ToolTip="Also carry every animation bank that names this model" />
                                 </StackPanel>
                             </StackPanel>
 

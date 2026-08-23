@@ -99,6 +99,7 @@ public sealed partial class MainViewModel
             OnPropertyChanged(nameof(NamingNote));
             OnPropertyChanged(nameof(HasNamingNote));
             OnPropertyChanged(nameof(HasOriginal));
+            OnPropertyChanged(nameof(SelectionIsModel));
         }
     }
 
