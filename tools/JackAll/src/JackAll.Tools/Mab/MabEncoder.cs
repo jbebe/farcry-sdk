@@ -175,6 +175,65 @@ public static class MabEncoder
     public static int Padded(int length) => (length + Alignment - 1) & ~(Alignment - 1);
 
     /// <summary>
+    /// The order sections are laid out in, which is not the order the table lists them.
+    /// </summary>
+    /// <remarks>
+    /// The two trajectory slots lead, rotation before translation. A reader that walks the table in
+    /// order and assumes ascending offsets reads the wrong bytes.
+    /// </remarks>
+    public static ReadOnlySpan<int> DataOrder =>
+    [
+        MabClip.SectionRootRotation, MabClip.SectionRootTranslation,
+        MabClip.SectionConstantRotation, MabClip.SectionKeyframeRotation,
+        MabClip.SectionConstantTranslation, MabClip.SectionAnimatedTranslation,
+        MabClip.SectionTags, MabClip.SectionEvents, MabClip.SectionNextClip,
+    ];
+
+    /// <summary>
+    /// Lay a clip's sections out and report where each landed.
+    /// </summary>
+    /// <remarks>
+    /// Each section starts on a 16-byte boundary and is padded to one with zeros - not the descending
+    /// counter an `.xbg` writes. A 16-byte block of zeros then separates the last of the track
+    /// sections from the event chunk or the chained clip.
+    /// </remarks>
+    public static (byte[] Data, int[] Sections) Assemble(IReadOnlyDictionary<int, byte[]> sections)
+    {
+        var offsets = new int[MabClip.SectionCount];
+        var data = new List<byte>();
+        bool separated = false;
+        int previous = -1;
+
+        foreach (int slot in DataOrder)
+        {
+            if (!sections.TryGetValue(slot, out byte[]? body))
+            {
+                continue;
+            }
+
+            // A 16-byte block of zeros closes the track sections off before the event chunk or the
+            // chained clip. The tag table does not get one: when it is present it already sits
+            // between them and the tracks, and what follows it starts immediately.
+            if (!separated && slot is MabClip.SectionEvents or MabClip.SectionNextClip)
+            {
+                if (previous <= MabClip.SectionAnimatedTranslation)
+                {
+                    data.AddRange(new byte[Alignment]);
+                }
+                separated = true;
+            }
+
+            // The last clip in a chain still names a next-clip slot; it just points at its own end,
+            // which is how a reader knows the chain stops. An empty body says exactly that.
+            offsets[slot] = MabClip.ClipHeader + data.Count;
+            data.AddRange(body);
+            data.AddRange(new byte[Padded(body.Length) - body.Length]);
+            previous = slot;
+        }
+        return ([.. data], offsets);
+    }
+
+    /// <summary>
     /// One masked bone's value, or a refusal naming what is missing.
     /// </summary>
     /// <remarks>
