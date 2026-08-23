@@ -1,5 +1,6 @@
 using JackAll.Cli.Commands;
 using JackAll.Cli.Commands.Archive;
+using JackAll.Cli.Commands.Fc2Model;
 using JackAll.Cli.Commands.Fcb;
 using JackAll.Cli.Commands.Mgb;
 using JackAll.Cli.Commands.Mod;
@@ -71,6 +72,21 @@ app.Configure(config =>
         xbt.AddCommand<XbtBuildCommand>("build")
             .WithDescription("Reassemble an .xbt from a .dds and its .xml header.")
             .WithExample("xbt", "build", "texture.dds", "texture.xml");
+    });
+
+    // --- .fc2model packs -------------------------------------------------
+    config.AddBranch("fc2model", pack =>
+    {
+        pack.AddCommand<Fc2ModelExportCommand>("export")
+            .WithDescription("Collect a model and everything it references into a decoded pack.")
+            .WithExample("fc2model", "export", "-g", @"C:\Games\Far Cry 2",
+                "graphics/weapons/primary/ak47/ak47.xbg");
+        pack.AddCommand<Fc2ModelExtractCommand>("extract")
+            .WithDescription("Write a pack's edits out as game files, laid out as a mod layer.")
+            .WithExample("fc2model", "extract", "ak47.fc2model");
+        pack.AddCommand<Fc2ModelInspectCommand>("inspect")
+            .WithDescription("List what a pack holds and which of it has been changed.")
+            .WithExample("fc2model", "inspect", "ak47.fc2model");
     });
 
     // --- .xbg meshes -----------------------------------------------------
