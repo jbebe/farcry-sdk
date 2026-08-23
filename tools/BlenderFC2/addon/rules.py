@@ -379,3 +379,34 @@ def check_texture(name, slot, size, original, codec, alphas):
 
 def _power_of_two(value):
     return value > 0 and (value & (value - 1)) == 0
+
+
+def check_uvs(name, submesh, wants_uvs, has_layer, at_origin):
+    """A part whose texture coordinates say nothing.
+
+    A UV layer Blender has just made is every corner at (0,0), which samples one
+    texel of the texture for the whole part - a flat smear of whatever colour
+    happens to be in that corner. It is what a transplanted part looks like
+    before it is unwrapped, and the file has no way to say "not unwrapped yet".
+
+    Measured over the retail set: 7 of the 32,170 shipped clusters do put every
+    UV in one place, and **none of them at the origin** - so this is the shape
+    that never ships, rather than a style rule about flat mapping.
+    """
+    target = Target(object=name, kind="part", index=submesh)
+    if not wants_uvs:
+        return []
+    if not has_layer:
+        return [Finding(
+            ERROR, "uv.missing",
+            "'%s' has no UV layer, so its part would keep whatever coordinates were "
+            "in the file before." % name, target,
+            "Unwrap it (U > Unwrap), or delete the object to leave the part alone.")]
+    if at_origin:
+        return [Finding(
+            ERROR, "uv.unwrapped",
+            "Every UV on '%s' is at the origin, so the whole part would sample one texel."
+            % name, target,
+            "Unwrap it (U > Smart UV Project is enough to see whether it works)."
+            " No shipped part is mapped this way.")]
+    return []

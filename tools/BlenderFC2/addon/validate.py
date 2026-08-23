@@ -82,7 +82,13 @@ def _meshes(objects, mesh, lod, pack):
     out = []
     for obj, _name, submesh in objects:
         entry = geometry[submesh]
+        out += rules.check_uvs(
+            obj.name, submesh,
+            bool(entry.get("uvs")),
+            bool(obj.data.uv_layers),
+            _uvs_at_origin(obj.data))
         out += rules.check_mesh(
+
             obj.name, submesh,
             _split_corners(obj.data),
             _groups(obj, entry),
@@ -90,6 +96,16 @@ def _meshes(objects, mesh, lod, pack):
             _part_material(mesh, entry))
         out += rules.check_loose(obj.name, submesh, _loose(obj.data))
     return out
+
+
+
+def _uvs_at_origin(data):
+    """Whether every UV sits at (0, 0), which is a layer nobody has unwrapped."""
+    if not data.uv_layers:
+        return False
+    layer = data.uv_layers[0]
+    return bool(len(layer.data)) and all(
+        abs(corner.uv[0]) < 1e-6 and abs(corner.uv[1]) < 1e-6 for corner in layer.data)
 
 
 def _split_corners(data):

@@ -190,6 +190,25 @@ def too_many_influences(result):
             group.remove([vertex.index])
 
 
+def unwrapped_uvs(result):
+    """A part whose UVs are all at the origin, so it samples one texel.
+
+    Set rather than left to a new layer: Blender fills a fresh one with a
+    default projection, so the state this is about has to be made on purpose -
+    which is what snapping every UV to the cursor at the origin does.
+    """
+    obj = result["parts"][0]
+    for corner in obj.data.uv_layers[0].data:
+        corner.uv = (0.0, 0.0)
+
+
+def no_uv_layer(result):
+    """A part with its UVs deleted, which keeps whatever was in the file."""
+    obj = result["parts"][0]
+    while obj.data.uv_layers:
+        obj.data.uv_layers.remove(obj.data.uv_layers[0])
+
+
 def resized_texture(result):
     """A texture scaled up, which is allowed but worth saying happened."""
     image = next(node.image
@@ -370,6 +389,8 @@ def main():
                             reassigned_material)
     errors += one_violation("skin.influences-truncated", "skin.influences-truncated",
                             too_many_influences, MODELS[2][1])
+    errors += one_violation("uv.unwrapped", "uv.unwrapped", unwrapped_uvs)
+    errors += one_violation("uv.missing", "uv.missing", no_uv_layer)
     errors += one_violation("texture.resized", "texture.resized", resized_texture)
     errors += one_violation("texture.non-power-of-two",
                             ["texture.non-power-of-two", "texture.resized"], odd_texture)

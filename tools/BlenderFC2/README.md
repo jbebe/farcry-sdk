@@ -1,11 +1,3 @@
-| an unweighted vertex on a skinned part | a model-owned texture set to tile |
-| editing a file shared with other models | the `Weapon` shader having no albedo slot, with the working recipe |
-|  | a texture resized, no longer a power of two, or over 2048 |
-|  | soft alpha in a slot whose codec stores one bit of it |
-| `tests/blender_check.py` | Requires every rule to be silent on retail, then fire on exactly one violation |
-| `tests/blender_write.py` | Rewrites one clip and requires every other clip in the bank to survive |
-| `addon/export_xbg.py` | Writes edited geometry back into the pack |
-| `addon/export_mab.py` | Writes an Action back into one clip of a bank, leaving the rest verbatim |
 # BlenderFC2
 
 A Blender add-on for editing Far Cry 2 models. It reads and writes `.fc2model` **packs** — the
@@ -49,6 +41,7 @@ workspace, or `jackall-cli fc2model extract` for a folder to drop into a mod lay
 | `addon/rig.py` | Reparents the mesh's node tree onto the rig's — the knee fix below |
 | `addon/import_mab.py` | Builds an Action from a bank, and marks what it attaches |
 | `addon/export_xbg.py` | Writes edited geometry back into the pack |
+| `addon/export_mab.py` | Writes an Action back into one clip of a bank, leaving the rest verbatim |
 | `addon/rules.py` | What a model is allowed to be, with no bpy and no format constants in it |
 | `addon/validate.py` | Runs the rules against a scene, through the code an export would take |
 | `addon/motion.py` | How far each bone travels across the clips a pack carries |
@@ -58,6 +51,8 @@ workspace, or `jackall-cli fc2model extract` for a folder to drop into a mod lay
 | `tests/blender_export.py` | Exports back through JackAll and requires the shipped `.xbg` bytes |
 | `tests/blender_anim.py` | Poses a character and a weapon, and reads the rotations and offsets back off the rig |
 | `tests/blender_check.py` | Requires every rule to be silent on retail, then fire on exactly one violation |
+| `tests/blender_write.py` | Rewrites one clip and requires every other clip in the bank to survive |
+| `tests/blender_transplant.py` | Rebuilds a weapon from a donated mesh with nothing but this add-on, end to end |
 | `tests/render_preview.py` | Renders an imported model to a PNG, for looking at what the importer built |
 | `open_model.py` / `.cmd` | Opens a pack, and optionally a clip, in Blender's UI; quoting-safe in cmd and PowerShell |
 
@@ -188,6 +183,8 @@ cleanly when either is missing.
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_export.py
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_anim.py
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_check.py
+& "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_write.py
+& "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_transplant.py
 ```
 
 To look at a model rather than assert about it — worth doing, since a part can sit in the wrong place
@@ -276,10 +273,12 @@ What it catches today, all of it a silent failure otherwise:
 | two objects claiming one part | a vertex in more groups than the buffer addresses |
 | a part that draws nothing | weights that do not sum to one |
 | a part moved in object mode, whose move export discards | a vertex no triangle uses |
+| a part with no UV layer, or every UV at the origin | a texture resized, no longer a power of two, or over 2048 |
 | a cluster over the triangle or palette ceiling | a material slot pointed somewhere the file ignores |
 | a buffer over the vertex ceiling | the channels the format does not carry - metalness, roughness maps, emission, subsurface and the rest |
 | an unweighted vertex on a skinned part | a model-owned texture set to tile |
 | editing a file shared with other models | the `Weapon` shader having no albedo slot, with the working recipe |
+|  | soft alpha in a slot whose codec stores one bit of it |
 
 Each one names what to do instead.
 
@@ -302,6 +301,37 @@ which is otherwise a playtest discovery.
 
 Bone to part is a name match, which holds for weapon rigs (`FRAME`, `CLIP`, `SLIDE`, `ACCESSORY`) and
 is meaningless for characters.
+
+## The end-to-end gate
+
+`tests/blender_transplant.py` is the honest check on the whole toolchain: rebuild a weapon from a
+donated mesh using **nothing but this add-on and stock Blender**, and require the result to reach the
+game. Anything a run needs that reaches past `addon/` into a format is recorded as a gap and printed.
+
+The run transplants a donor's geometry into all seven of the sawed-off's parts, leaves one
+deliberately unwrapped, checks, acts on what the check says, exports, applies through JackAll,
+re-packs the written `.xbg` and imports it again — then loads the shotgun's own reload onto it and
+reads the motion table.
+
+```
+target: 7 parts, donor: 6 parts
+transplanted 7 of 7 parts
+check after the transplant: 1 finding(s), 1 blocking
+   ERROR  uv.unwrapped   Every UV on 'FRAME_LOD0' is at the origin, so the whole part would sample one texel.
+check is clear
+applied: dlc1_sawedoff_shotgun.xbg, 579834 bytes
+reopened: 7 parts, 8073 triangles
+animation: 5 bones posed, 271 keys; 4 of 5 bones move
+   dlc1_sawedOff_shotgun 107.6 deg  0.131 m
+   CLIP                   70.5 deg  0.000 m
+```
+
+**No gaps.** For comparison, the first custom weapon that shipped took roughly twenty one-off
+scripts, a trip outside the repo to convert a texture, and a working knowledge of chunk padding, bone
+palettes, mip companions and the `Weapon` shader's missing albedo slot.
+
+What the gate does *not* prove is that the result looks good — a numeric check cannot see a part in
+the wrong place that still lands inside the model bounds, which is what `render_preview.py` is for.
 
 ## Conventions this file owns
 
