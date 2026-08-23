@@ -1,8 +1,9 @@
-# Build a Blender material from a parsed material, following the Generic shader.
+# Build a Blender material from a pack's material document, following the
+# Generic shader.
 #
 # A Dunia surface is rarely one texture. The albedo is two tiling detail maps
 # blended by the green and blue channels of a per-model mask, each tinted by its
-# own colour, over a base tint. That is why a weapon's own .xbt looks like a
+# own colour, over a base tint. That is why a weapon's own texture looks like a
 # greyscale smear: it is the mask, not the colour.
 
 import os
@@ -10,43 +11,84 @@ import tempfile
 
 import bpy
 
-from fc2fmt import xbt
-from fc2fmt.xbm import DIFFUSE2, MASK1
+from .pack import stem
+
+# Slots the Generic shader samples, in the order it blends them.
+DIFFUSE1 = "DiffuseTexture1"
+DIFFUSE2 = "DiffuseTexture2"
+MASK1 = "MaskTexture1"
+SPECULAR1 = "SpecularTexture1"
+NORMAL1 = "NormalTexture1"
+
+# A character's skin and a cloth material name their albedo differently.
+ALBEDO_SLOTS = (DIFFUSE1, "SkinTexture", "FabricTexture")
+
+# The material's own internal name and shader, kept apart from the game path the
+# importer stores - one property used to carry both, so resolving the textures
+# overwrote the path with the name and lost it.
+PROP_MATERIAL_NAME = "fc2_material_name"
+PROP_SHADER = "fc2_shader"
+
+# Which slot a node stands for, so an export can match an image back to the slot
+# it came from and a rule can tell an edited chain from a rebuilt one.
+PROP_SLOT = "fc2_slot"
 
 # Node graph spacing, purely cosmetic.
 COLUMN = 260
 ROW = 300
 
 
-def _image(game_path, source, cache):
-    """Load an .xbt as a Blender image by handing Blender its DDS payload."""
+def textures(definition):
+    """A material's texture slots as a plain dict, last spelling wins."""
+    return {entry["slot"]: entry["path"] for entry in definition.get("textures", ())}
+
+
+def floats(definition):
+    return {entry["key"]: entry["value"] for entry in definition.get("floats", ())}
+
+
+def integers(definition):
+    return {entry["key"]: entry["value"] for entry in definition.get("integers", ())}
+
+
+def albedo(definition):
+    """The diffuse map, under whichever slot name this shader uses."""
+    slots = textures(definition)
+    return next((slots[name] for name in ALBEDO_SLOTS if name in slots), None)
+
+
+def tiling(definition, slot, default=(1.0, 1.0)):
+    return tuple(floats(definition).get(slot, default))
+
+
+def _image(game_path, pack, cache):
+    """Load a pack's texture as a Blender image by handing Blender its PNG."""
     if game_path in cache:
         return cache[game_path]
+
     image = None
-    try:
-        texture = xbt.read(source, game_path)
-    except Exception:
-        texture = None
-    if texture:
-        name = os.path.basename(game_path.replace("\\", "/"))
-        temporary = os.path.join(tempfile.gettempdir(), "fc2tex", name[:-4] + ".dds")
+    png = pack.texture(game_path) if pack else None
+    if png:
+        name = stem(game_path) + ".png"
+        temporary = os.path.join(tempfile.gettempdir(), "fc2tex", name)
         os.makedirs(os.path.dirname(temporary), exist_ok=True)
         with open(temporary, "wb") as handle:
-            handle.write(texture.dds)
+            handle.write(png)
         image = bpy.data.images.load(temporary, check_existing=True)
-        # The same game path can carry different pixels in a bundle than in the
-        # install, and check_existing hands back the datablock loaded first.
+        # The same game path can carry different pixels in one pack than in
+        # another, and check_existing hands back the datablock loaded first.
         image.reload()
         image.name = name
     cache[game_path] = image
     return image
 
 
-def _texture_node(tree, image, uv_scale, location, colorspace="sRGB"):
+def _texture_node(tree, image, slot, uv_scale, location, colorspace="sRGB"):
     node = tree.nodes.new("ShaderNodeTexImage")
     node.image = image
     node.location = location
     node.interpolation = "Smart"
+    node[PROP_SLOT] = slot
     if colorspace != "sRGB":
         image.colorspace_settings.name = colorspace
     if uv_scale and uv_scale != (1.0, 1.0):
@@ -78,14 +120,14 @@ def _multiply(tree, layer, colour, location):
     return node.outputs["Color"]
 
 
-def _base_tint(tree, definition, weight, location):
-    """lerp(DiffuseColorBase, DiffuseColor1, mask.b) — the engine's layer-1 tint.
+def _base_tint(tree, values, weight, location):
+    """lerp(DiffuseColorBase, DiffuseColor1, mask.b) - the engine's layer-1 tint.
 
     Applying DiffuseColor1 flat instead leaves everything washed out, because
     DiffuseColorBase is what darkens the unworn areas.
     """
-    base = definition.floats.get("DiffuseColorBase")
-    layer = definition.floats.get("DiffuseColor1")
+    base = values.get("DiffuseColorBase")
+    layer = values.get("DiffuseColor1")
     if base is None and layer is None:
         return None
     node = tree.nodes.new("ShaderNodeMixRGB")
@@ -99,8 +141,8 @@ def _base_tint(tree, definition, weight, location):
     return node.outputs["Color"]
 
 
-def build(material, definition, source, cache):
-    """Wire an existing Blender material to the textures its definition names."""
+def build(material, definition, pack, cache):
+    """Wire an existing Blender material to the textures its document names."""
     material.use_nodes = True
     tree = material.node_tree
     tree.nodes.clear()
@@ -110,18 +152,21 @@ def build(material, definition, source, cache):
     principled.location = (2 * COLUMN, 0)
     tree.links.new(output.inputs["Surface"], principled.outputs["BSDF"])
 
-    albedo = definition.albedo()
-    first = _image(albedo, source, cache) if albedo else None
+    material[PROP_SHADER] = definition.get("shader", "")
+    material[PROP_MATERIAL_NAME] = definition.get("name", "")
+
+    slots = textures(definition)
+    values = floats(definition)
+    first = _image(albedo(definition), pack, cache) if albedo(definition) else None
     if first is None:
         return False
 
     # The mask supplies both weights: green blends in layer 2, blue chooses how
     # far layer 1's tint moves from DiffuseColorBase towards DiffuseColor1.
-    mask_path = definition.textures.get(MASK1)
-    mask = _image(mask_path, source, cache) if mask_path else None
+    mask = _image(slots[MASK1], pack, cache) if MASK1 in slots else None
     layer_weight = tint_weight = None
     if mask is not None:
-        mask_node = _texture_node(tree, mask, definition.tiling("MaskTiling1"),
+        mask_node = _texture_node(tree, mask, MASK1, tiling(definition, "MaskTiling1"),
                                   (0, -2 * ROW), colorspace="Non-Color")
         split = tree.nodes.new("ShaderNodeSeparateColor")
         split.location = (COLUMN, -2 * ROW)
@@ -129,8 +174,8 @@ def build(material, definition, source, cache):
         layer_weight = split.outputs["Green"]
         tint_weight = split.outputs["Blue"]
 
-    base = _texture_node(tree, first, definition.tiling("DiffuseTiling1"), (0, 0))
-    tint = _base_tint(tree, definition, tint_weight, (COLUMN, ROW))
+    base = _texture_node(tree, first, DIFFUSE1, tiling(definition, "DiffuseTiling1"), (0, 0))
+    tint = _base_tint(tree, values, tint_weight, (COLUMN, ROW))
     colour = base.outputs["Color"]
     if tint is not None:
         node = tree.nodes.new("ShaderNodeMixRGB")
@@ -141,12 +186,12 @@ def build(material, definition, source, cache):
         tree.links.new(node.inputs["Color2"], tint)
         colour = node.outputs["Color"]
 
-    second_path = definition.textures.get(DIFFUSE2)
-    second = _image(second_path, source, cache) if second_path else None
+    second = _image(slots[DIFFUSE2], pack, cache) if DIFFUSE2 in slots else None
     if second is not None and layer_weight is not None:
-        second_node = _texture_node(tree, second, definition.tiling("DiffuseTiling2"), (0, -ROW))
+        second_node = _texture_node(tree, second, DIFFUSE2,
+                                    tiling(definition, "DiffuseTiling2"), (0, -ROW))
         second_colour = _multiply(tree, second_node.outputs["Color"],
-                                  definition.floats.get("DiffuseColor2"), (COLUMN, -ROW))
+                                  values.get("DiffuseColor2"), (COLUMN, -ROW))
         blend = tree.nodes.new("ShaderNodeMixRGB")
         blend.location = (1.7 * COLUMN, 0)
         tree.links.new(blend.inputs["Fac"], layer_weight)
@@ -156,8 +201,6 @@ def build(material, definition, source, cache):
 
     tree.links.new(principled.inputs["Base Color"], colour)
     principled.inputs["Roughness"].default_value = 0.6
-    if definition.integers.get("AlphaTestEnabled"):
+    if integers(definition).get("AlphaTestEnabled"):
         material.blend_method = "CLIP"
-    material["fc2_shader"] = definition.shader
-    material["fc2_material"] = definition.name
     return True

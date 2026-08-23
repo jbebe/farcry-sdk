@@ -1,39 +1,43 @@
-# Build Blender objects from an .xbg, and an armature from its nodes.
+# Build Blender objects from a .fc2model pack, and an armature from its nodes.
 #
-# One object per drawable part, named <PART>_STATEnn_LODk as the file names it,
+# One object per drawable part, named <PART>_STATEnn_LODk as the pack names it,
 # so an exporter can find the parts again. Rigid parts are parented to the node
 # that placed them; skinned parts get vertex groups from their bone palette.
-
-import os
+#
+# Nothing here reads a Dunia format. The pack arrives decoded - float positions
+# in metres, UVs, normals, skin pairs and material documents - which is what
+# lets this file be about Blender and nothing else.
 
 import bpy
 
-from fc2fmt import xbm
-from fc2fmt.assets import find_root, install_assets
-from fc2fmt.bundle import EXTENSION, Bundle
-from fc2fmt.mesh import extract
-from fc2fmt.xbg import EMPTY_SLOT, XbgFile
-
-from . import convert, materials
+from . import convert, materials, model as fc2model
+from .pack import EXTENSION, Pack, stem
 
 # Custom properties carried so an export can rebuild what it did not author.
-PROP_NODE_HASH = "fc2_node_hash"
 PROP_SKIN_INDEX = "fc2_skin_index"
 PROP_EXTENT = "fc2_extent"
 PROP_PART = "fc2_part"
 PROP_LOD = "fc2_lod"
-PROP_MATERIAL = "fc2_material"
 PROP_SOURCE = "fc2_source"
 PROP_SUBMESH = "fc2_submesh"
+
+# The material's game path, which is its identity in the pack. Kept apart from
+# the material's own internal name (see materials.PROP_MATERIAL_NAME) - one file
+# used to carry both, so resolving textures overwrote the path with the name.
+PROP_MATERIAL_PATH = "fc2_material_path"
+
+# Where a part was placed at import, so an export can tell that the modeler
+# moved the object rather than its vertices - which export silently discards.
+PROP_PLACEMENT = "fc2_placement"
 
 # The file's normals are not unit length and Blender normalises the ones it
 # shades with, so the originals ride along in their own attribute.
 ATTR_NORMAL = "fc2_normal"
 
 
-def build_armature(model, name, collection):
-    """An armature from the EDON nodes, in the file's own node order."""
-    matrices = model.node_world_matrices()
+def build_armature(mesh, name, collection):
+    """An armature from the pack's nodes, in the file's own node order."""
+    matrices = fc2model.node_world_matrices(mesh)
     data = bpy.data.armatures.new(name + "_rig")
     obj = bpy.data.objects.new(name + "_rig", data)
     collection.objects.link(obj)
@@ -43,10 +47,11 @@ def build_armature(model, name, collection):
     bpy.ops.object.mode_set(mode="EDIT")
     heads = [convert.matrix(m).to_translation() for m in matrices]
     edit_bones = []
-    for index, node in enumerate(model.nodes):
-        bone = data.edit_bones.new(bone_name(model, index))
+    for index, node in enumerate(mesh["nodes"]):
+        bone = data.edit_bones.new(fc2model.bone_name(mesh, index))
         bone.head = heads[index]
-        children = [heads[c] for c, other in enumerate(model.nodes) if other.parent == index]
+        children = [heads[c] for c, other in enumerate(mesh["nodes"])
+                    if other["parent"] == index]
         bone.tail = convert.bone_tail(bone.head, children)
         # Orient the bone the way the node is, not at its children. The rest
         # pose then matches Dunia's, so a clip's local rotation drives the pose
@@ -55,62 +60,60 @@ def build_armature(model, name, collection):
         bone.matrix = convert.matrix(matrices[index])
         bone.length = length
         edit_bones.append(bone)
-    for index, node in enumerate(model.nodes):
-        if node.parent < len(edit_bones):
-            edit_bones[index].parent = edit_bones[node.parent]
+    for index, node in enumerate(mesh["nodes"]):
+        if node["parent"] < len(edit_bones):
+            edit_bones[index].parent = edit_bones[node["parent"]]
             edit_bones[index].use_connect = False
     bpy.ops.object.mode_set(mode="OBJECT")
     bpy.context.view_layer.objects.active = previous
 
-    for index, node in enumerate(model.nodes):
-        bone = data.bones.get(bone_name(model, index))
+    for index, node in enumerate(mesh["nodes"]):
+        bone = data.bones.get(fc2model.bone_name(mesh, index))
         if bone:
-            # A CRC32 overflows Blender's signed 32-bit custom int, so keep hex.
-            bone[PROP_NODE_HASH] = "%08x" % node.name_hash
-            bone[PROP_SKIN_INDEX] = node.skin_index
-            bone[PROP_EXTENT] = node.extent
+            bone[PROP_SKIN_INDEX] = node["skin_index"]
+            bone[PROP_EXTENT] = node["extent"]
     return obj
 
 
-def _material(cache, path, model, source):
+def _material(cache, path, pack):
     if path not in cache:
-        material = bpy.data.materials.new(os.path.basename(path.replace("\\", "/")) or "material")
-        material[PROP_MATERIAL] = path
+        material = bpy.data.materials.new(stem(path) or "material")
+        material[PROP_MATERIAL_PATH] = path
         material.use_nodes = True
-        try:
-            definition = xbm.resolve(path, model, source)
-            if definition is not None:
-                materials.build(material, definition, source, cache.setdefault("_images", {}))
-        except Exception as error:
-            print("fc2: material %s: %s" % (path, error))
+        definition = pack.material(path) if pack else None
+        if definition is not None:
+            try:
+                materials.build(material, definition, pack, cache.setdefault("_images", {}))
+            except Exception as error:
+                print("fc2: material %s: %s" % (path, error))
         cache[path] = material
     return cache[path]
 
 
-def build_part(part, model, collection, material_cache, armature, source):
-    mesh = bpy.data.meshes.new(part.full_name)
-    mesh.from_pydata(part.positions, [], [convert.triangle(t) for t in part.triangles])
-    mesh.update()
+def build_part(part, mesh, collection, material_cache, armature, pack):
+    data = bpy.data.meshes.new(part.full_name)
+    data.from_pydata(part.positions, [], [convert.triangle(t) for t in part.triangles])
+    data.update()
 
     if part.uvs:
-        layer = mesh.uv_layers.new(name="UVMap")
-        for loop in mesh.loops:
+        layer = data.uv_layers.new(name="UVMap")
+        for loop in data.loops:
             layer.data[loop.index].uv = part.uvs[loop.vertex_index]
     if part.uvs1:
-        layer = mesh.uv_layers.new(name="UVMap1")
-        for loop in mesh.loops:
+        layer = data.uv_layers.new(name="UVMap1")
+        for loop in data.loops:
             layer.data[loop.index].uv = part.uvs1[loop.vertex_index]
     if part.colours:
-        layer = mesh.color_attributes.new(name="Colour", type="FLOAT_COLOR", domain="POINT")
+        layer = data.color_attributes.new(name="Colour", type="FLOAT_COLOR", domain="POINT")
         for index, colour in enumerate(part.colours):
             layer.data[index].color = colour
     if part.normals:
-        mesh.normals_split_custom_set_from_vertices(part.normals)
-        stored = mesh.attributes.new(name=ATTR_NORMAL, type="FLOAT_VECTOR", domain="POINT")
+        data.normals_split_custom_set_from_vertices(part.normals)
+        stored = data.attributes.new(name=ATTR_NORMAL, type="FLOAT_VECTOR", domain="POINT")
         stored.data.foreach_set("vector", [c for n in part.normals for c in n])
 
-    mesh.materials.append(_material(material_cache, part.material, model, source))
-    obj = bpy.data.objects.new(part.full_name, mesh)
+    data.materials.append(_material(material_cache, part.material, pack))
+    obj = bpy.data.objects.new(part.full_name, data)
     obj[PROP_PART] = part.name
     obj[PROP_LOD] = part.lod
     obj[PROP_SUBMESH] = part.submesh
@@ -120,10 +123,7 @@ def build_part(part, model, collection, material_cache, armature, source):
     if slots and armature:
         groups = {}
         for vertex, pairs in enumerate(slots):
-            for weight, node_index in pairs:
-                if node_index == EMPTY_SLOT or node_index >= len(model.nodes):
-                    continue
-                name = model.nodes[node_index].name
+            for weight, name in pairs:
                 if name not in groups:
                     groups[name] = obj.vertex_groups.new(name=name)
                 groups[name].add([vertex], weight, "REPLACE")
@@ -135,54 +135,44 @@ def build_part(part, model, collection, material_cache, armature, source):
         # parent so Blender solves the local transform; baking the placement
         # into the vertices as well would move the part twice.
         obj.parent = armature
-        node = model.part_node(part.full_name)
-        if node is not None:
+        node = part.placement_node
+        if node < len(mesh["nodes"]):
             obj.parent_type = "BONE"
-            obj.parent_bone = bone_name(model, node)
+            obj.parent_bone = fc2model.bone_name(mesh, node)
     if part.placement is not None:
         obj.matrix_world = convert.matrix(part.placement)
+    # Stashed after the placement, so it records where the part actually landed.
+    # Export reads mesh.vertices[i].co, which is object-local, so an object moved
+    # in object mode is silently discarded - this is what lets a rule say so.
+    obj[PROP_PLACEMENT] = [c for row in obj.matrix_world for c in row]
     return obj
 
 
-def bone_name(model, index):
-    """What build_armature called the bone for a node, named or not."""
-    return model.nodes[index].name or "node_%d" % index
+def load(path, lod=0, with_armature=True, with_textures=True):
+    """Import one model from a pack."""
+    if not path.lower().endswith(EXTENSION):
+        raise ValueError(
+            "%s is not a %s. Export one with 'jackall-cli fc2model export', or from "
+            "JackAll's Files tab." % (path, EXTENSION))
+    pack = Pack.load(path)
+    return build(pack, stem(pack.model), lod, with_armature, with_textures, path)
 
 
-def load(path, lod=0, with_armature=True, with_textures=True, game_root=None):
-    """Import one model, from a bundle or a loose .xbg beside its install."""
-    if path.lower().endswith(EXTENSION):
-        return load_bundle(path, lod, with_armature, with_textures)
-    source = None
-    if with_textures:
-        root = game_root or find_root(path)
-        source = install_assets(root) if root else None
-    name = os.path.splitext(os.path.basename(path))[0]
-    return build(open(path, "rb").read(), name, source, lod, with_armature, path)
-
-
-def load_bundle(path, lod=0, with_armature=True, with_textures=True):
-    """Import a .fc2model, which already carries every file the model needs."""
-    bundle = Bundle.load(path)
-    name = os.path.splitext(os.path.basename(bundle.model))[0]
-    source = bundle if with_textures else None
-    return build(bundle.read(bundle.model), name, source, lod, with_armature, path)
-
-
-def build(data, name, source, lod=0, with_armature=True, origin=""):
-    """Turn the bytes of one .xbg into Blender objects under a new collection."""
-    model = XbgFile.parse(data)
+def build(pack, name, lod=0, with_armature=True, with_textures=True, origin=""):
+    """Turn one pack's mesh into Blender objects under a new collection."""
+    mesh = pack.mesh()
     collection = bpy.data.collections.new(name)
     bpy.context.scene.collection.children.link(collection)
     # Export reopens this to edit the parts in place, leaving the rest alone.
     collection[PROP_SOURCE] = origin
     collection[PROP_LOD] = lod
 
-    armature = build_armature(model, name, collection) if with_armature else None
+    armature = build_armature(mesh, name, collection) if with_armature else None
     cache = {}
     # Without an armature there is nothing to parent to, so bake the placement
     # into the vertices instead.
-    parts = [build_part(part, model, collection, cache, armature, source)
-             for part in extract(model, lod, place=armature is None)]
-    return {"model": model, "collection": collection, "armature": armature,
-            "parts": parts, "source": source}
+    parts = [build_part(part, mesh, collection, cache, armature,
+                        pack if with_textures else None)
+             for part in fc2model.parts_at(mesh, lod, place=armature is None)]
+    return {"pack": pack, "mesh": mesh, "collection": collection,
+            "armature": armature, "parts": parts}

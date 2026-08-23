@@ -12,7 +12,8 @@
 
 import bpy
 
-from fc2fmt.skeleton import ORI_NONE
+# What a bone's Ori block holds when the engine does not solve it.
+ORI_NONE = 0
 
 MARKER = "FC2 "
 
@@ -31,15 +32,15 @@ def reparent(armature, skeleton):
     Only bones the skeleton gives a parent are touched, so the .xbg's own root
     above the pelvis is left where it is.
     """
-    names = {bone.id: bone.name for bone in skeleton.bones}
+    names = {bone["id"]: bone["name"] for bone in skeleton["bones"]}
     previous = bpy.context.view_layer.objects.active
     bpy.context.view_layer.objects.active = armature
     bpy.ops.object.mode_set(mode="EDIT")
     moved = []
     try:
-        for bone in skeleton.bones:
-            edit_bone = armature.data.edit_bones.get(bone.name)
-            wanted = armature.data.edit_bones.get(names.get(bone.parent, ""))
+        for bone in skeleton["bones"]:
+            edit_bone = armature.data.edit_bones.get(bone["name"])
+            wanted = armature.data.edit_bones.get(names.get(bone["parent"], ""))
             if edit_bone is None or wanted is None:
                 continue
             # Compared by name: Blender hands back a fresh wrapper each time, so
@@ -50,10 +51,10 @@ def reparent(armature, skeleton):
                 edit_bone.parent = wanted
             except (RuntimeError, ValueError) as error:
                 print("fc2: cannot reparent %s to %s: %s"
-                      % (bone.name, wanted.name, error))
+                      % (bone["name"], wanted.name, error))
                 continue
             edit_bone.use_connect = False
-            moved.append(bone.name)
+            moved.append(bone["name"])
     finally:
         bpy.ops.object.mode_set(mode="OBJECT")
         bpy.context.view_layer.objects.active = previous
@@ -64,11 +65,12 @@ def derived_bones(skeleton):
     """Bones the engine solves rather than reads from a clip, so nothing keys them.
 
     Sixteen on `pelvis_ref`: the four mid-joint helpers and twelve arm twists.
-    Their fields are read (see fc2fmt.skeleton) but where the engine evaluates
-    them has not been traced, so nothing here poses them — they simply follow
-    their parents.
+    Their fields are carried in the pack but where the engine evaluates them has
+    not been traced, so nothing here poses them - they simply follow their
+    parents.
     """
-    return [bone.name for bone in skeleton.bones if bone.ori.kind != ORI_NONE]
+    return [bone["name"] for bone in skeleton["bones"]
+            if bone.get("ori", {}).get("kind", ORI_NONE) != ORI_NONE]
 
 
 def apply(armature, skeleton):

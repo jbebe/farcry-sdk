@@ -2,8 +2,8 @@
 #
 # Measured rather than inherited: both are Z-up, so geometry needs no axis
 # change. The file winds clockwise (D3D) in 113 of 113 sampled meshes, so each
-# triangle is reversed; UVs arrive already flipped to bottom-up V from
-# fc2fmt.vertex. Nothing here rotates the armature.
+# triangle is reversed; UVs arrive already flipped to bottom-up V in the pack.
+# Nothing here rotates the armature.
 
 import mathutils
 
@@ -14,7 +14,7 @@ def triangle(corners):
 
 
 def matrix(rows):
-    """A fc2fmt row-major 4x4 as a Blender Matrix."""
+    """A pack's row-major 4x4 as a Blender Matrix."""
     return mathutils.Matrix(rows)
 
 

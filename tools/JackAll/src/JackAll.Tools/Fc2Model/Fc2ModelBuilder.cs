@@ -33,9 +33,14 @@ public static class Fc2ModelBuilder
     /// <param name="clips">Animation banks to carry along, by game path. A weapon's motion lives in
     /// a bank filed under the character animations rather than beside the model, so nothing in the
     /// mesh names them - the caller decides which belong.</param>
+    /// <param name="rig">The rig to carry, by game path. Defaults to the one beside the model, which
+    /// is where a weapon's and a vehicle's sit. A character has none: 74 of the 78 skinned meshes
+    /// have no sibling rig and share <c>characters_commonpelvis_ref.skeleton</c> - the best name
+    /// match for 70 of them, and a tie for five - so which one is the caller's to say rather than
+    /// something to guess at.</param>
     public static Fc2ModelBundle Build(
         string modelPath, Func<string, byte[]?> readByPath, Func<string, int>? usage = null,
-        IEnumerable<string>? clips = null)
+        IEnumerable<string>? clips = null, string? rig = null)
     {
         byte[] modelBytes = readByPath(modelPath)
             ?? throw new InvalidDataException($"No model at {modelPath}.");
@@ -68,7 +73,7 @@ public static class Fc2ModelBuilder
             }
         }
 
-        string rigPath = modelPath[..^4] + RigSuffix;
+        string rigPath = rig ?? modelPath[..^4] + RigSuffix;
         if (readByPath(rigPath) is { } rigBytes)
         {
             Add(bundle, rigPath, "model/rig.json", Fc2ModelKind.Rig,

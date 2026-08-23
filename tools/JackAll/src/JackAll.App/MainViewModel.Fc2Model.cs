@@ -31,12 +31,14 @@ public sealed partial class MainViewModel
     /// the model's folder reads as shared, which refuses edits that would have been safe - wrong,
     /// but in the direction that cannot break another model.
     /// </remarks>
-    public Fc2ModelBundle BuildPack(VfsFile model, IEnumerable<string>? clips = null)
+    public Fc2ModelBundle BuildPack(
+        VfsFile model, IEnumerable<string>? clips = null, string? rig = null)
         => Fc2ModelBuilder.Build(
             model.Path,
             ReadByPath,
             ReferenceUsage.Counter(_xrefIndex, model.Path),
-            clips);
+            clips,
+            rig);
 
     /// <summary>Every animation bank that names this model, which is not something its mesh says.</summary>
     public List<string> FindClips(VfsFile model)

@@ -3,7 +3,7 @@ schema_version = "1.0.0"
 id = "farcry2_formats"
 name = "Far Cry 2 Formats"
 version = "0.1.0"
-tagline = "Import Far Cry 2 (Dunia) meshes, rigs and animations"
+tagline = "Import and edit Far Cry 2 model packs"
 maintainer = "FarCry2 modding tools"
 type = "add-on"
 license = ["SPDX:Unlicense"]
@@ -11,7 +11,7 @@ blender_version_min = "4.2.0"
 tags = ["Import-Export"]
 
 [permissions]
-files = "Read .fc2model bundles and Dunia .xbg, .skeleton and .mab files"
+files = "Read and write .fc2model model packs"
 
 # The corpus tests and the command-line scripts are not part of the add-on.
 [build]
@@ -20,7 +20,6 @@ paths_exclude_pattern = [
     "/.git/",
     "*.zip",
     "/tests/",
-    "/bundle_model.py",
     "/open_model.py",
     "/open_model.cmd",
 ]

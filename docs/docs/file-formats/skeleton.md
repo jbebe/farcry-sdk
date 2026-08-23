@@ -180,5 +180,6 @@ the semantics should be considered open.
 
 ## Tooling
 
-`tools/BlenderFC2/fc2fmt/skeleton.py` reads and writes the format; `tools/BlenderFC2/tests/roundtrip.py
-skeleton` re-writes all 81 shipped files and requires the bytes back unchanged.
+`tools/JackAll/src/JackAll.Tools/Skeleton/` reads and writes the format; `SkeletonFileTests`
+re-writes all 81 shipped files and requires the bytes back unchanged, and rebuilds the child and
+sibling links from the parent ids alone.

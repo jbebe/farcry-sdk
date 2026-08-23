@@ -1,11 +1,11 @@
-# Put a clip on an imported character and check the bones actually land there.
+# Put a clip on an imported rig and check the bones actually land there.
 #
 #   & "C:\Programs\Blender 5.2\blender.exe" -b --python tools/BlenderFC2/tests/blender_anim.py
 #
 # The Action is built by undoing each bone's rest transform and applying the
 # clip's, so the check is the other direction: evaluate the posed armature and
 # read each bone's rotation and offset relative to its parent back out. Both have
-# to be what the file stores, or the rest composition is wrong.
+# to be what the pack stores, or the rest composition is wrong.
 
 import os
 import sys
@@ -14,32 +14,31 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.join(HERE, ".."))
 sys.path.insert(0, HERE)
 
-# _corpus first: it evicts any copy of these packages an installed extension left.
-from _corpus import GRAPHICS, PELVIS_REF, present
+# _corpus first: it evicts any copy of the add-on an installed extension left.
+from _corpus import pack, require_pack
 
 import bpy
 from mathutils import Quaternion, Vector
 
 from addon import import_mab, import_xbg
-from addon.import_mab import FIRST_FRAME
-from fc2fmt.skeleton import SkeletonFile
+from addon.import_mab import FIRST_FRAME, bone_ids, timing
 
-CHARACTER = os.path.join(GRAPHICS, "actors", "buddy_andrehyppolite", "andrehyppolite.xbg")
-AK47 = os.path.join(GRAPHICS, "weapons", "primary", "ak47", "ak47.xbg")
-AK47_REF = os.path.join(GRAPHICS, "weapons", "primary", "ak47", "ak47_ref.skeleton")
-CLIPS = os.path.join(GRAPHICS, "characters", "_common", "animations")
-AK47_CLIPS = os.path.join(CLIPS, "weapons", "primary", "ak47")
-THIRD_PERSON_RELOAD = os.path.join(AK47_CLIPS, "3rdge_uppb_reload_nodir_prak4_i1.mab")
+CHARACTER = "graphics/actors/buddy_andrehyppolite/andrehyppolite.xbg"
+AK47 = "graphics/weapons/primary/ak47/ak47.xbg"
+PELVIS_REF = "graphics/characters/_common/pelvis_ref.skeleton"
+CLIPS = "graphics/characters/_common/animations"
+AK47_CLIPS = CLIPS + "/weapons/primary/ak47"
+RELOAD = AK47_CLIPS + "/1stge_uppb_reload_+000fw_prak4_i1.mab"
+THIRD_PERSON_RELOAD = AK47_CLIPS + "/3rdge_uppb_reload_nodir_prak4_i1.mab"
 
 # An upper-body clip, which holds its offsets constant; a full-body jump, which
 # drives the Pelvis along a translation track; and the same reload read twice,
 # once for the character and once for the weapon clip chained behind it.
 CASES = (
-    (CHARACTER, PELVIS_REF, os.path.join(AK47_CLIPS, "1stge_uppb_aimcycle_+000fw_prak4_i1.mab")),
-    (CHARACTER, PELVIS_REF,
-     os.path.join(CLIPS, "locomotion", "stand", "jump", "3rdge_fulb_jump_+000fw_nowep_i1.mab")),
-    (CHARACTER, PELVIS_REF, os.path.join(AK47_CLIPS, "1stge_uppb_reload_+000fw_prak4_i1.mab")),
-    (AK47, AK47_REF, os.path.join(AK47_CLIPS, "1stge_uppb_reload_+000fw_prak4_i1.mab")),
+    (CHARACTER, PELVIS_REF, AK47_CLIPS + "/1stge_uppb_aimcycle_+000fw_prak4_i1.mab"),
+    (CHARACTER, PELVIS_REF, CLIPS + "/locomotion/stand/jump/3rdge_fulb_jump_+000fw_nowep_i1.mab"),
+    (CHARACTER, PELVIS_REF, RELOAD),
+    (AK47, None, RELOAD),
 )
 
 TOLERANCE = 1e-4
@@ -57,56 +56,55 @@ def posed_local(pose_bone):
     return pose_bone.matrix.copy()
 
 
-def check(model, skeleton_path, path):
-    skeleton = SkeletonFile.parse(open(skeleton_path, "rb").read())
-    names = {bone.id: bone.name for bone in skeleton.bones}
-
+def check(model, rig, clip_path):
+    path = pack(model, clips=[clip_path], rig=rig)
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    result = import_xbg.load(model, lod=0, with_textures=False)
+    result = import_xbg.load(path, lod=0, with_textures=False)
     armature = result["armature"]
-    loaded = import_mab.load(path, armature, skeleton_path)
-    clip = loaded["clip"]
+
+    loaded = import_mab.load(result["pack"], clip_path, armature)
+    clip, skeleton = loaded["clip"], result["pack"].rig()
+    names = {bone["id"]: bone["name"] for bone in skeleton["bones"]}
     errors = 0
 
     print("%s on %s: %d bones posed, %d moved, %d unmatched, %d keys, duration %.3f"
-          % (os.path.basename(path), os.path.basename(skeleton_path), loaded["bones"],
-             loaded["moved"], loaded["unmatched"], loaded["keys"], clip.duration))
-    if loaded["bones"] < min(len(skeleton.bones), 20) // 2:
+          % (os.path.basename(clip_path), os.path.basename(rig or model),
+             loaded["bones"], loaded["moved"], loaded["unmatched"], loaded["keys"],
+             clip.get("duration", 0.0)))
+    if loaded["bones"] < min(len(skeleton["bones"]), 20) // 2:
         errors += fail("only %d bones matched the armature" % loaded["bones"])
     if not loaded["keys"]:
         return fail("no keys were inserted")
-    if clip.bone_ids() and clip.bone_ids()[-1] >= len(skeleton.bones):
-        errors += fail("the chosen clip addresses bone %d, past the %d-bone skeleton"
-                       % (clip.bone_ids()[-1], len(skeleton.bones)))
+    ids = bone_ids(clip)
+    if ids and ids[-1] >= len(skeleton["bones"]):
+        errors += fail("the chosen clip addresses bone %d, past the %d-bone rig"
+                       % (ids[-1], len(skeleton["bones"])))
 
-    # The .xbg hangs the knee and elbow helpers off the Pelvis while the
-    # .skeleton hangs them off the limb. Posed on the .xbg tree they stay by the
-    # hip and tear the mesh, so the armature has to be on the skeleton's tree.
-    for bone in skeleton.bones:
-        pose_bone = armature.pose.bones.get(bone.name)
-        wanted = names.get(bone.parent)
+    # The mesh hangs the knee and elbow helpers off the Pelvis while the rig
+    # hangs them off the limb. Posed on the mesh's tree they stay by the hip and
+    # tear the mesh, so the armature has to be on the rig's tree.
+    for bone in skeleton["bones"]:
+        pose_bone = armature.pose.bones.get(bone["name"])
+        wanted = names.get(bone["parent"])
         if pose_bone is None or wanted is None or wanted not in armature.pose.bones:
             continue
         got = pose_bone.parent.name if pose_bone.parent else None
         if got != wanted:
-            errors += fail("%s hangs off %s, the skeleton says %s"
-                           % (bone.name, got, wanted))
+            errors += fail("%s hangs off %s, the rig says %s" % (bone["name"], got, wanted))
 
-    rotations = {(bone, frame): quat
-                 for bone, frames in clip.keyframe_tracks().items()
-                 for frame, quat in frames}
+    rotations = {(bone, frame): value
+                 for bone, keys in _tracks(clip, "keyframe_rotations", 4).items()
+                 for frame, value in keys}
     offsets = {(bone, frame): value
-               for bone, frames in clip.translation_tracks().items()
-               for frame, value in frames}
-    offsets.update({(bone, 0): value
-                    for bone, value in clip.constant_translations().items()})
-    if not offsets and skeleton.translation_bone_ids:
-        errors += fail("the clip carries no translation to check")
+               for bone, keys in _tracks(clip, "animated_translations", 3).items()
+               for frame, value in keys}
+    offsets.update({(entry["bone"], 0): entry["value"]
+                    for entry in clip.get("constant_translations") or ()})
 
     # Sample every frame and compare what the rig evaluates to.
     checked = worst = worst_offset = 0
-    for frame in range(clip.keyframe_header()[1] + 1):
-        bpy.context.scene.frame_set(frame + import_mab.FIRST_FRAME)
+    for frame in range(timing(clip)[0] + 1):
+        bpy.context.scene.frame_set(frame + FIRST_FRAME)
         for bone_id, name in names.items():
             pose_bone = armature.pose.bones.get(name)
             if pose_bone is None:
@@ -128,84 +126,83 @@ def check(model, skeleton_path, path):
     if not checked:
         errors += fail("no frame carried a key to compare")
     elif worst > TOLERANCE or worst_offset > TOLERANCE:
-        errors += fail("differs from the file by %.3e rotation / %.3e offset over %d samples"
+        errors += fail("differs from the pack by %.3e rotation / %.3e offset over %d samples"
                        % (worst, worst_offset, checked))
     else:
-        print("  matches the file: %d samples, worst %.2e rotation, %.2e offset"
+        print("  matches the pack: %d samples, worst %.2e rotation, %.2e offset"
               % (checked, worst, worst_offset))
     return errors
 
 
-def check_props():
-    """A clip has to bring in what it attaches, on the bone it names.
+def _tracks(clip, key, width):
+    return {entry["bone"]: [(frame, entry["values"][i * width:(i + 1) * width])
+                            for i, frame in enumerate(entry["frames"])]
+            for entry in clip.get(key) or ()}
 
-    The reload names its rifle once with no reference and again per magazine
-    with one; only the first is a prop, or the scene fills with rifles.
+
+def check_attachments():
+    """A bank has to say what it attaches, and on which bone.
+
+    That is the fact a weapon modeler actually needs from an animation - put the
+    geometry on the wrong bone and the gun tears itself apart on the first
+    reload - and it is unreadable outside JackAll unless the pack carries it
+    decoded.
     """
+    path = pack(CHARACTER, clips=[THIRD_PERSON_RELOAD], rig=PELVIS_REF)
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    result = import_xbg.load(CHARACTER, lod=0, with_textures=False)
+    result = import_xbg.load(path, lod=0, with_textures=False)
     armature = result["armature"]
-    loaded = import_mab.load(THIRD_PERSON_RELOAD, armature, PELVIS_REF,
-                             with_props=True, lod=0)
+    loaded = import_mab.load(result["pack"], THIRD_PERSON_RELOAD, armature, with_props=True)
+
     props = loaded["props"]
-    modelled = [p for p in props if p["model"]]
-    print("attached: %s" % ["%s on %s%s" % (p["participant"].name,
-                                            p["participant"].parent,
-                                            "" if p["model"] else " (marker)")
+    print("attached: %s" % ["%s on %s" % (p["participant"]["name"], p["participant"]["bone"])
                             for p in props])
     errors = 0
-    if len(modelled) != 1 or not modelled[0]["model"].endswith("ak47.xbg"):
-        errors += fail("expected one rifle, got %s" % [p["model"] for p in modelled])
-    if not modelled or modelled[0]["participant"].parent != "R Hand":
-        errors += fail("the rifle is not on the right hand")
+    if not props:
+        return fail("the reload attaches a rifle, and nothing was marked")
+    if not any(p["participant"]["name"] == "ak47" and p["participant"]["bone"] == "R Hand"
+               for p in props):
+        errors += fail("no rifle on the right hand")
 
-    # Each attached object sits on its bone with its own track applied on top.
+    # Each marker sits on its bone with its own track applied on top.
     worst = 0.0
-    travel = []
     for frame in range(FIRST_FRAME, FIRST_FRAME + 40):
         bpy.context.scene.frame_set(frame)
         bpy.context.view_layer.update()
         for prop in props:
-            bone = armature.pose.bones[prop["participant"].parent]
+            bone = armature.pose.bones[prop["participant"]["bone"]]
             want = armature.matrix_world @ bone.matrix @ prop["object"].matrix_basis
             got = prop["object"].matrix_world
             worst = max(worst, max(abs(got[r][c] - want[r][c])
                                    for r in range(4) for c in range(4)))
-        travel.append(modelled[0]["object"].pose.bones["CLIP"].matrix.translation.copy())
     if worst > TOLERANCE:
-        errors += fail("an attached object is %.2e off its bone" % worst)
-    span = max((a - b).length for a in travel for b in travel)
-    print("  on the bone to %.2e; the rifle's CLIP travels %.3f m" % (worst, span))
-    if span < 0.2:
-        errors += fail("the magazine barely moves (%.3f m)" % span)
+        errors += fail("an attached marker is %.2e off its bone" % worst)
+    else:
+        print("  on the bone to %.2e" % worst)
     return errors
 
 
-def check_skeleton_discovery():
-    """With no skeleton named, the clip has to find the one the rig belongs to.
+def check_weapon_clip_is_chosen():
+    """A weapon rig has to reach past the character's clip to its own.
 
-    This is the path the operator takes, and getting it wrong on a weapon means
-    silently posing nothing: the character's clip names ids no gun rig has.
+    The character's clip names bone ids no gun rig has, so taking the first clip
+    in the bank silently poses nothing.
     """
+    path = pack(AK47, clips=[RELOAD])
     bpy.ops.wm.read_factory_settings(use_empty=True)
-    result = import_xbg.load(AK47, lod=0, with_textures=False)
-    loaded = import_mab.load(CASES[-1][2], result["armature"])
-    found = os.path.basename(loaded["skeleton"])
-    print("no skeleton named: found %s, posed %d bones, %d moved"
-          % (found, loaded["bones"], loaded["moved"]))
-    if found != os.path.basename(AK47_REF):
-        return fail("found %s for a weapon rig" % found)
+    result = import_xbg.load(path, lod=0, with_textures=False)
+    loaded = import_mab.load(result["pack"], RELOAD, result["armature"])
+    print("weapon rig: posed %d bones, %d moved" % (loaded["bones"], loaded["moved"]))
     return 0 if loaded["bones"] == 8 and loaded["moved"] == 4 else fail(
         "posed %d bones, %d moved" % (loaded["bones"], loaded["moved"]))
 
 
 def main():
-    if not present() or not all(os.path.exists(p) for case in CASES for p in case):
-        print("corpus not present, skipping")
+    if not require_pack():
         return 0
 
     errors = (sum(check(*case) for case in CASES)
-              + check_skeleton_discovery() + check_props())
+              + check_weapon_clip_is_chosen() + check_attachments())
     print("blender anim: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0
 

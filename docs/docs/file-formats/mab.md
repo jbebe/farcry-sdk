@@ -334,26 +334,32 @@ in the shipped set.
 
 ## Tooling
 
-`tools/BlenderFC2/fc2fmt/mab.py` reads and writes the container, walks the clip chain, and decodes
-the four bitmasks, both constant arrays, the sparse rotation keyframes, the dense translation tracks
-and the trajectory — 97% of the bytes in the retail set, with the tag and event blocks the remainder.
-`tools/BlenderFC2/tests/roundtrip.py mab` re-writes all 4,436 shipped files and requires the bytes
-back unchanged; `tests/invariants.py` sizes every array section in all 11,261 clips from its own
-header and mask and requires the entries to end inside it, and checks the tag table against the
-chain — record count, the clip each record reaches, and all four name hashes; `tests/mabcheck.py`
-decodes every key in the character clips and checks each rotation is unit length, arrives in frame
-order, and that no translation lands on a bone the skeleton holds fixed.
+`tools/JackAll/src/JackAll.Tools/Mab/` reads and writes the container, walks the clip chain, and
+decodes the four bitmasks, both constant arrays, the sparse rotation keyframes, the dense translation
+tracks and the trajectory — 97% of the bytes in the retail set, with the tag and event blocks the
+remainder. `MabFileTests` re-writes all 4,436 shipped files and requires the bytes back unchanged,
+sizes every array section in all 11,261 clips from its own header and mask and requires the entries
+to end inside it, checks the tag table against the chain — record count, the clip each record
+reaches, and all four name hashes — and resolves every mask bit against `pelvis_ref.skeleton`,
+checking each rotation is unit length, arrives in frame order, and that no translation lands on a
+bone the skeleton holds fixed.
+
+`MabEncoder` builds a bank back from decoded tracks rather than re-emitting the blob it read.
+`BankDocumentTests` takes every shipped bank through the format-free document a `.fc2model` carries
+and requires it back: **99.9% keep every clip, section and mask where it was**, and **78.4% return
+byte-identical** — the shortfall being rotations that cannot be re-encoded exactly, compounded over a
+chain of up to 35 clips.
 
 `tools/BlenderFC2/addon/import_mab.py` turns a clip into a Blender Action. Because a clip stores a
 bone's transform relative to its parent — replacing the rest transform rather than adding to it — the
 pose bone carries `rest⁻¹ · clip`, and the armature has to be built with each bone oriented like its
-`.xbg` node rather than aimed at its children. A pose bone's location is measured in its own rest
+mesh node rather than aimed at its children. A pose bone's location is measured in its own rest
 frame, so the offset is rotated into it before being keyed.
 
-It also reads the tag table: each participant's model is loaded, posed from its own clip, and
-parented to the bone the record names. Blender parents an object to a bone's *tail*, so the parent
-inverse cancels the bone's length and the prop lands on the head, where the clip's frame is.
+It also reads the participant list a pack carries: each one is marked on the bone its record names,
+carrying that participant's own track. Blender parents an object to a bone's *tail*, so the parent
+inverse cancels the bone's length and the marker lands on the head, where the clip's frame is.
 `tests/blender_anim.py` checks all of it the other way round — it evaluates the posed rig and reads
-each bone's rotation and offset relative to its parent back out, requiring what the file stores
-(worst `4.4e-07` on rotation and `2.4e-07` metres on offset across four clips, character and
-weapon), and requires each attached object to sit on its bone with its own track applied on top.
+each bone's rotation and offset relative to its parent back out, requiring what the pack stores
+(worst `5.0e-07` on rotation and `2.0e-07` metres on offset across four clips, character and
+weapon), and requires each marker to sit on its bone with its own track applied on top.

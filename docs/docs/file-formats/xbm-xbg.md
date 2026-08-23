@@ -521,8 +521,8 @@ See [`.mab`](./mab.md) for how a clip then addresses those bones by skeleton bon
 ## A container can be authored, not just edited
 
 :::info[Verified against the retail corpus]
-`tools/BlenderFC2/tests/originate.py` rebuilds each shipped mesh from its decoded content and
-requires the bytes back: **3,133 of 3,133 byte-identical**.
+`XbgAuthorTests` rebuilds each shipped mesh from its decoded content and requires the bytes back:
+**3,133 of 3,133 byte-identical**.
 :::
 
 Editing a container in place preserves whatever was not understood, which is why every exporter so

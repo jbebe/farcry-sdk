@@ -1,4 +1,4 @@
-# 4x4 transform helpers, in plain Python so the codec stays free of bpy.
+# 4x4 transform helpers, in plain Python so nothing here needs bpy.
 #
 # Matrices are row-major nested tuples and multiply as parent x child, matching
 # CGeomResource::GenerateMatrices.

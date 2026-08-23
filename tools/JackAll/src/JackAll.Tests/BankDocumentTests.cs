@@ -77,6 +77,67 @@ public sealed class BankDocumentTests
         Assert.True(bytes >= 0.78, $"{exact}/{rebuilt} banks came back byte-identical ({bytes:P1}).");
     }
 
+    /// <summary>
+    /// A participant's record names the clip that actually moves it.
+    /// </summary>
+    /// <remarks>
+    /// The document says record <c>k</c> is chain clip <c>k + 1</c>, which is what lets a reader
+    /// find the gun's motion without touching the tag block those records came from. That is a claim
+    /// about every shipped bank, not about the one the encoder was written against, so it is checked
+    /// against where the records' own byte offsets land.
+    /// </remarks>
+    [Fact]
+    public void A_participant_names_the_clip_that_moves_it()
+    {
+        int checkedRecords = 0;
+        List<string> failures = [];
+
+        foreach (string path in Fc2Corpus.Find(".mab"))
+        {
+            MabFile bank;
+            List<(MabParticipant Participant, MabClip Clip)> byOffset;
+            try
+            {
+                bank = MabFile.Parse(File.ReadAllBytes(path));
+                byOffset = bank.ParticipantClips();
+            }
+            catch (InvalidDataException)
+            {
+                continue;
+            }
+
+            List<MabClip> chain = bank.Clips();
+            foreach (BankParticipant carried in BankDocument.From(bank).Participants)
+            {
+                checkedRecords++;
+                if (carried.Clip >= chain.Count)
+                {
+                    failures.Add($"{Path.GetFileName(path)}: {carried.Name} names clip "
+                                 + $"{carried.Clip} of {chain.Count}");
+                    continue;
+                }
+
+                // Same bones and same sections is what "the same clip" means here - two clips in one
+                // bank move different skeletons, so agreeing on both is not something a wrong index
+                // gets away with.
+                MabClip named = chain[carried.Clip];
+                MabClip actual = byOffset[carried.Clip - 1].Clip;
+                if (!named.BoneIds().SequenceEqual(actual.BoneIds())
+                    || !named.Sections.SequenceEqual(actual.Sections))
+                {
+                    failures.Add($"{Path.GetFileName(path)}: {carried.Name} names clip "
+                                 + $"{carried.Clip}, whose bones are not the record's own");
+                }
+            }
+        }
+
+        Assert.True(checkedRecords > 0 || !Fc2Corpus.Present, "No participant was checked.");
+        Assert.True(
+            failures.Count == 0,
+            $"{checkedRecords - failures.Count}/{checkedRecords} participants name the clip that "
+            + $"moves them.{Environment.NewLine}" + string.Join(Environment.NewLine, failures.Take(5)));
+    }
+
     [Fact]
     [Trait("Category", "RequiresFixture")]
     public void The_corpus_was_actually_found()

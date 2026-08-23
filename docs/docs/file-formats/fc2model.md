@@ -166,12 +166,22 @@ An ordered list, not a map. One shipped material repeats a key inside a section,
 reader loses it and its writer cannot put the file back.
 
 ```json
-{"name": "SAWEDOFF_SHOTGUN_METAL", "shader": "Weapon",
- "preamble": [0, 0, 0, 0, 0], "trailing": 0,
- "textures": [{"slot": "DiffuseTexture1", "path": "graphics/.../state01.xbt"}],
+{"header_word": 2369979903, "name": "SAWEDOFF_SHOTGUN_METAL", "shader": "Weapon",
+ "preamble": "AAAAAAA=", "trailing": 0,
+ "textures": [{"slot": "DiffuseTexture1", "path": "graphics\\...\\state01.xbt"}],
  "floats":   [{"key": "DiffuseColor1", "value": [0.55, 0.5, 0.48]}],
  "integers": [{"key": "AlphaTestEnabled", "value": 0}]}
 ```
+
+### A material a mesh embeds is not carried
+
+An `.xbg` may hold a material inline rather than naming a file, and there is no file for the pack to
+put one in. Those travel inside the mesh document as one of the chunks it carries whole, so they
+survive a round trip but nothing outside JackAll can read them - an editor gets the material name and
+no shader graph.
+
+Measured over the retail set, that is **4 of 7,496 material names, across 3 of 3,133 meshes, none of
+them weapons**. Small enough to name rather than design around.
 
 ## Clips
 

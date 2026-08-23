@@ -1,96 +1,106 @@
-# Far Cry 2 format add-on: registration and the file menu entries.
-
-import os
-import sys
+# Far Cry 2 model add-on: registration and the file menu entries.
+#
+# One import and one export, both of `.fc2model` - the decoded pack JackAll
+# writes. Nothing here opens a game file, which is the whole arrangement: JackAll
+# owns the byte layouts and this owns what a scene looks like.
 
 import bpy
-from bpy.props import BoolProperty, IntProperty, StringProperty
+from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-# fc2fmt sits beside this package and imports no bpy, so it also runs headless.
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from fc2fmt.bundle import EXTENSION
-
 from . import export_xbg, import_mab, import_xbg
+from .pack import EXTENSION, Pack
 
 
-class FC2ImportBase(ImportHelper):
-    """The options and reporting both importers share; `run` does the loading."""
+class FC2_OT_import_pack(bpy.types.Operator, ImportHelper):
+    """Import a model pack: its mesh, rig, materials and textures"""
 
+    bl_idname = "import_scene.fc2_pack"
+    bl_label = "Import Far Cry 2 Model Pack"
+    bl_options = {"REGISTER", "UNDO"}
+
+    filename_ext = EXTENSION
+    filter_glob: StringProperty(default="*" + EXTENSION, options={"HIDDEN"})
     lod: IntProperty(name="LOD", default=0, min=0,
                      description="Which detail level to import")
     with_armature: BoolProperty(name="Build armature", default=True,
                                 description="Create bones from the model's nodes")
     with_textures: BoolProperty(
         name="Load textures", default=True,
-        description="Resolve each material and load the textures it names")
+        description="Wire each material to the textures the pack carries")
 
     def execute(self, context):
         try:
-            result = self.run()
+            result = import_xbg.load(self.filepath, self.lod, self.with_armature,
+                                     self.with_textures)
         except Exception as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
-        parts = len(result["parts"])
-        if self.with_textures and result["source"] is None:
-            self.report({"WARNING"}, "Imported %d parts, but found no assets for textures" % parts)
-        else:
-            self.report({"INFO"}, "Imported %d parts" % parts)
+
+        banks = len(result["pack"].clips)
+        self.report({"INFO"}, "Imported %d parts%s" % (
+            len(result["parts"]),
+            "; %d animation bank(s) to load" % banks if banks else ""))
         return {"FINISHED"}
 
 
-class FC2_OT_import_xbg(bpy.types.Operator, FC2ImportBase):
-    bl_idname = "import_scene.fc2_xbg"
-    bl_label = "Import Far Cry 2 Mesh"
+def _pack_of(context):
+    """The pack the active object was imported from, and its collection."""
+    obj = context.object
+    collections = list(obj.users_collection) if obj else []
+    collections += [c for c in bpy.data.collections if import_xbg.PROP_SOURCE in c]
+    for collection in collections:
+        origin = collection.get(import_xbg.PROP_SOURCE)
+        if origin:
+            return origin, collection
+    return None, None
+
+
+def _clip_items(self, context):
+    """The banks the pack carries, straight from its manifest.
+
+    Read here rather than in a panel's draw: draw runs on every redraw, and
+    opening a zip from one is how an add-on makes the viewport stutter.
+    """
+    origin, _collection = _pack_of(context)
+    if not origin:
+        return [("", "No pack imported", "")]
+    try:
+        clips = Pack.load(origin).clips
+    except Exception:
+        return [("", "Could not read the pack", "")]
+    if not clips:
+        return [("", "This pack carries no animation", "")]
+    return [(clip["path"],
+             clip["label"],
+             "%d frames at %d Hz%s" % (clip.get("frames", 0), clip.get("rate", 0),
+                                       ", on %s" % clip["bone"] if clip.get("bone") else ""))
+            for clip in clips]
+
+
+class FC2_OT_load_clip(bpy.types.Operator):
+    """Pose the armature with one of the animation banks the pack carries"""
+
+    bl_idname = "object.fc2_load_clip"
+    bl_label = "Load Far Cry 2 Animation"
     bl_options = {"REGISTER", "UNDO"}
 
-    filename_ext = ".xbg"
-    filter_glob: StringProperty(default="*.xbg", options={"HIDDEN"})
-    game_root: StringProperty(
-        name="Game root", default="", subtype="DIR_PATH",
-        description="Where to look for materials and textures; found from the "
-                    "model's own path when left empty")
-
-    def run(self):
-        return import_xbg.load(self.filepath, self.lod, self.with_armature,
-                               self.with_textures, self.game_root or None)
-
-
-class FC2_OT_import_bundle(bpy.types.Operator, FC2ImportBase):
-    bl_idname = "import_scene.fc2_bundle"
-    bl_label = "Import Far Cry 2 Model Bundle"
-    bl_options = {"REGISTER", "UNDO"}
-
-    filename_ext = EXTENSION
-    filter_glob: StringProperty(default="*" + EXTENSION, options={"HIDDEN"})
-
-    def run(self):
-        return import_xbg.load_bundle(self.filepath, self.lod, self.with_armature,
-                                      self.with_textures)
-
-
-class FC2_OT_import_mab(bpy.types.Operator, ImportHelper):
-    """Load an animation onto the selected armature"""
-
-    bl_idname = "import_scene.fc2_mab"
-    bl_label = "Import Far Cry 2 Animation"
-    bl_options = {"REGISTER", "UNDO"}
-
-    filename_ext = ".mab"
-    filter_glob: StringProperty(default="*.mab", options={"HIDDEN"})
-    skeleton: StringProperty(
-        name="Skeleton", default="", subtype="FILE_PATH",
-        description="The .skeleton the clip names its bones by; found from the "
-                    "clip's own path when left empty")
+    clip: EnumProperty(name="Animation", items=_clip_items,
+                       description="Which bank the pack carries to play")
     set_frame_range: BoolProperty(
         name="Set frame range", default=True,
         description="Point the scene's frame range and rate at the clip")
     with_props: BoolProperty(
-        name="Import attached props", default=True,
-        description="Also import whatever the clip attaches to this rig — the "
-                    "weapon in hand and anything else it animates — parented "
-                    "to the bone the clip names and posed from its own track")
+        name="Mark attachments", default=True,
+        description="Put a marker on each bone the bank attaches something to, "
+                    "carrying that participant's own track")
+
+    @classmethod
+    def poll(cls, context):
+        return _pack_of(context)[0] is not None
+
+    def invoke(self, context, _event):
+        return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
         armature = context.object
@@ -99,16 +109,22 @@ class FC2_OT_import_mab(bpy.types.Operator, ImportHelper):
         if armature is None:
             self.report({"ERROR"}, "Select the armature to animate")
             return {"CANCELLED"}
+        if not self.clip:
+            self.report({"ERROR"}, "This pack carries no animation to load")
+            return {"CANCELLED"}
+
+        origin, _collection = _pack_of(context)
         try:
-            result = import_mab.load(self.filepath, armature, self.skeleton or None,
+            result = import_mab.load(Pack.load(origin), self.clip, armature,
                                      with_props=self.with_props)
         except Exception as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
+
         if self.set_frame_range:
             import_mab.apply_to_scene(context.scene, result["clip"])
-        props = ", plus %s" % ", ".join(p["participant"].name for p in result["props"]) \
-            if result["props"] else ""
+        props = (", plus %s" % ", ".join(p["participant"]["name"] for p in result["props"])
+                 if result["props"] else "")
         if result["unmatched"]:
             self.report({"WARNING"}, "%d keys on %d bones%s; %d tracks name no bone here"
                         % (result["keys"], result["bones"], props, result["unmatched"]))
@@ -118,15 +134,15 @@ class FC2_OT_import_mab(bpy.types.Operator, ImportHelper):
         return {"FINISHED"}
 
 
-class FC2_OT_export_xbg(bpy.types.Operator, ExportHelper):
-    """Write the edited parts back into the model they were imported from"""
+class FC2_OT_export_pack(bpy.types.Operator, ExportHelper):
+    """Write the edited parts back into the pack they were imported from"""
 
-    bl_idname = "export_scene.fc2_xbg"
-    bl_label = "Export Far Cry 2 Mesh"
+    bl_idname = "export_scene.fc2_pack"
+    bl_label = "Export Far Cry 2 Model Pack"
     bl_options = {"REGISTER"}
 
-    filename_ext = ".xbg"
-    filter_glob: StringProperty(default="*.xbg", options={"HIDDEN"})
+    filename_ext = EXTENSION
+    filter_glob: StringProperty(default="*" + EXTENSION, options={"HIDDEN"})
     recompute_tangents: BoolProperty(
         name="Recompute tangents", default=False,
         description="Rebuild the tangent frame from the UVs. Done automatically for "
@@ -140,23 +156,27 @@ class FC2_OT_export_xbg(bpy.types.Operator, ExportHelper):
         except Exception as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
-        self.report({"INFO"}, "Wrote %d parts at LOD%d, %d rebuilt"
-                    % (result["parts"], result["lod"], result["resized"]))
+
+        if not result["moved"] and not result["resized"]:
+            self.report({"INFO"}, "Wrote the pack unchanged: nothing in LOD%d was edited"
+                        % result["lod"])
+        else:
+            self.report({"INFO"}, "Wrote %d parts at LOD%d, %d rebuilt"
+                        % (result["parts"], result["lod"], result["resized"]))
         return {"FINISHED"}
 
 
 def menu_import(self, _context):
-    self.layout.operator(FC2_OT_import_bundle.bl_idname,
-                         text="Far Cry 2 Model Bundle (%s)" % EXTENSION)
-    self.layout.operator(FC2_OT_import_xbg.bl_idname, text="Far Cry 2 Mesh (.xbg)")
-    self.layout.operator(FC2_OT_import_mab.bl_idname, text="Far Cry 2 Animation (.mab)")
+    self.layout.operator(FC2_OT_import_pack.bl_idname,
+                         text="Far Cry 2 Model Pack (%s)" % EXTENSION)
 
 
 def menu_export(self, _context):
-    self.layout.operator(FC2_OT_export_xbg.bl_idname, text="Far Cry 2 Mesh (.xbg)")
+    self.layout.operator(FC2_OT_export_pack.bl_idname,
+                         text="Far Cry 2 Model Pack (%s)" % EXTENSION)
 
 
-CLASSES = (FC2_OT_import_xbg, FC2_OT_import_bundle, FC2_OT_import_mab, FC2_OT_export_xbg)
+CLASSES = (FC2_OT_import_pack, FC2_OT_load_clip, FC2_OT_export_pack)
 
 
 def register():

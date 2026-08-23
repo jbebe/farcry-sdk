@@ -1,122 +1,200 @@
-# Write a Blender scene back into the .xbg it was imported from.
+# Write a Blender scene back into the pack it was imported from.
 #
-# Export edits parts in place inside the original container, so the nodes,
-# materials, bone palettes, the LODs that were never imported and every chunk
-# this project carries through opaque all survive untouched. Only the geometry
-# of the objects present is rebuilt.
+# Export edits geometry in place inside the pack's mesh document, so nodes,
+# materials, bone palettes, the LODs that were never imported and everything the
+# document carries whole all survive untouched. Only the parts present are
+# rebuilt, and only the entries actually changed grow an origin hash - which is
+# what stops applying a pack from re-encoding a texture it never touched.
 #
-# The file stores UVs, colours and normals per vertex, not per corner, so a
+# There is no quantisation here. The document holds float positions in metres
+# and JackAll packs them on the way back, which is why this file can be about
+# Blender and nothing else.
+#
+# The format stores UVs, colours and normals per vertex, not per corner, so a
 # split UV or a split normal cannot be represented: the first corner of each
 # vertex wins.
 
 import os
+import struct
 
 import bpy
 
-from fc2fmt.bundle import EXTENSION, Bundle
-from fc2fmt.encode import Layout, encode
-from fc2fmt.geometry import read_lod, write_lod
-from fc2fmt.transform import apply
-from fc2fmt.xbg import (BONE_WTS1, BONE_WTS2, COLOR, EMPTY_SLOT, NORMAL, UV0, UV1,
-                        XbgFile)
-
-from . import convert
+from . import convert, model as fc2model
+from .import_mab import PROP_PROP_OF
 from .import_xbg import ATTR_NORMAL, PROP_LOD, PROP_SOURCE, PROP_SUBMESH
+from .pack import EXTENSION, Pack
+from .transform import apply
 
-
-def source_model(collection):
-    """Reopen the file this collection was imported from."""
+def source_pack(collection):
+    """Reopen the pack this collection was imported from."""
     origin = collection.get(PROP_SOURCE)
     if not origin:
         raise ValueError("%s was not imported by this add-on" % collection.name)
+    if not origin.lower().endswith(EXTENSION):
+        raise ValueError("%s was imported from %s, which is not a pack" % (collection.name, origin))
     if not os.path.exists(origin):
         raise ValueError("the source %s is gone; re-import it" % origin)
-    if origin.lower().endswith(EXTENSION):
-        bundle = Bundle.load(origin)
-        return XbgFile.parse(bundle.read(bundle.model))
-    return XbgFile.parse(open(origin, "rb").read())
+    return Pack.load(origin)
 
 
-def save(path, collection, recompute_tangents=False):
-    """Rebuild the collection's LOD in its source model and write it out."""
-    model = source_model(collection)
+def build_mesh(collection, recompute_tangents=False):
+    """The edited mesh document, and what changed in it.
+
+    Split out from `save` so a validity check and an export run the same code:
+    a rule that fired on something export would not write, or missed something
+    it would, is worse than no rule.
+    """
+    pack = source_pack(collection)
+    mesh = pack.mesh()
     lod_index = collection.get(PROP_LOD, 0)
-    lod = model.lods[lod_index]
-    geometries = read_lod(model, lod)
-    layout = Layout.of(model)
+    geometries = mesh["lods"][lod_index]["geometry"]
 
-    resized = edited = moved = 0
+    edited = resized = moved = 0
     for obj in collection.objects:
         if obj.type != "MESH" or PROP_SUBMESH not in obj:
             continue
-        position = obj[PROP_SUBMESH]
-        if not 0 <= position < len(geometries):
+        submesh = obj[PROP_SUBMESH]
+        if not 0 <= submesh < len(geometries):
             raise ValueError("%s names submesh %d, the LOD has %d"
-                             % (obj.name, position, len(geometries)))
-        # _encode edits the geometry in place, so what it replaces is captured first.
-        before = (len(geometries[position].vertices),
-                  geometries[position].vertices.pack(),
-                  list(geometries[position].indices))
-        after = _encode(obj, model, geometries[position], layout, recompute_tangents)
-        geometries[position] = after
-        edited += 1
-        resized += len(after.vertices) != before[0]
-        moved += (after.vertices.pack(), after.indices) != before[1:]
+                             % (obj.name, submesh, len(geometries)))
 
-    write_lod(model, lod, geometries)
+        geometry = geometries[submesh]
+        before = geometry["vertex_count"]
+        moved += _encode(obj, mesh, geometry, recompute_tangents)
+        edited += 1
+        resized += geometry["vertex_count"] != before
+
     # Refitting is skipped when nothing moved, because the shipped sphere is a
     # tighter fit than this can reproduce and rewriting it would lose bytes.
     if moved:
-        _refit_bounds(model)
-    with open(path, "wb") as handle:
-        handle.write(model.write())
-    return {"model": model, "parts": edited, "resized": resized, "moved": moved,
-            "lod": lod_index}
+        refit_bounds(mesh)
+    return {"pack": pack, "mesh": mesh, "parts": edited, "resized": resized,
+            "moved": moved, "lod": lod_index}
 
 
-def _refit_bounds(model):
+def save(path, collection, recompute_tangents=False):
+    """Rebuild the collection's LOD in its source pack and write the pack out."""
+    built = build_mesh(collection, recompute_tangents)
+    pack = built["pack"]
+    if built["moved"] or built["resized"]:
+        pack.replace_document(pack.model, built["mesh"])
+    pack.save(path)
+    return built
+
+
+def refit_bounds(mesh):
     """Refit every part's sphere and box, and the model's own, around what is
     now drawn. Culling reads these, so stale ones make a part vanish."""
+    world = fc2model.node_world_matrices(mesh)
     points = {}
-    for lod in model.lods:
-        for geometry in read_lod(model, lod):
-            if geometry.face_count:
-                points.setdefault(geometry.part, []).extend(
-                    geometry.vertices.positions(model.pos_scale))
+    for lod in mesh["lods"]:
+        for geometry in lod["geometry"]:
+            if geometry["indices"]:
+                points.setdefault(geometry["part"], []).extend(
+                    _triples(geometry["positions"]))
 
     placed = []
-    for index, part in points.items():
-        desc = model.skin_descs[index]
-        desc.set_bounds(part)
-        placement = model.part_placement(desc.name)
-        placed.extend(apply(placement, p) if placement else p for p in part)
+    for index, part_points in points.items():
+        part = mesh["parts"][index]
+        part["bounds"] = _bounds(part_points)
+        placement = fc2model.part_placement(mesh, part, world)
+        placed.extend(apply(placement, p) if placement else p for p in part_points)
     if placed:
-        model.set_bounds(placed)
+        # The shipped sphere is a fitted one, tighter than the box allows and
+        # centred off the box centre in 94% of models, so this does not
+        # reproduce it. What it writes encloses every vertex, which is what
+        # culling needs.
+        fitted = _bounds(placed)
+        mesh["sphere"] = fitted[:4]
+        mesh["box"] = fitted[4:]
 
 
-def _encode(obj, model, geometry, layout, recompute_tangents):
-    """One object's geometry, packed into the layout its buffer already uses."""
-    mesh = obj.data
-    count = len(mesh.vertices)
-    flags = geometry.vertices.flags
-    # A part that kept its vertex count inherits everything not written here,
+def _bounds(points):
+    """A part's ten floats: sphere centre and radius, then the box."""
+    low = [min(p[a] for p in points) for a in range(3)]
+    high = [max(p[a] for p in points) for a in range(3)]
+    centre = [(low[a] + high[a]) / 2.0 for a in range(3)]
+    radius = max(_distance(p, centre) for p in points)
+    return centre + [radius] + low + high
+
+
+def _distance(a, b):
+    return sum((a[i] - b[i]) ** 2 for i in range(3)) ** 0.5
+
+
+def _triples(values):
+    return [tuple(values[at:at + 3]) for at in range(0, len(values), 3)]
+
+
+def _encode(obj, mesh, geometry, recompute_tangents):
+    """One object's geometry, written into the document's flat arrays.
+
+    Which components to write is decided by which ones the geometry already
+    holds, not by a copy of the container's format flags. A buffer's layout is
+    fixed and this cannot widen it, so presence says the same thing the flags
+    would - without a second place for the bit values to be wrong.
+    """
+    data = obj.data
+    count = len(data.vertices)
+    # A part that kept its vertex count keeps whatever this does not rewrite,
     # which is what lets an untouched export match the source byte for byte.
-    template = geometry.vertices if count == len(geometry.vertices) else None
-    frame = _tangent_frame(mesh, count) if template is None or recompute_tangents else None
+    same_size = count == geometry["vertex_count"]
+    frame = _tangent_frame(data, count) if not same_size or recompute_tangents else None
 
-    geometry.vertices = encode(
-        flags, count, layout, template,
-        positions=[tuple(v.co) for v in mesh.vertices],
-        uvs=_per_vertex_uv(mesh, 0, count) if flags & UV0 else None,
-        uvs1=_per_vertex_uv(mesh, 1, count) if flags & UV1 else None,
-        normals=_normals(mesh, count) if flags & NORMAL else None,
-        tangents=frame[0] if frame else None,
-        binormals=frame[1] if frame else None,
-        colours=_colours(mesh, count) if flags & COLOR else None,
-        skin=_skin(obj, model, geometry, flags) if flags & BONE_WTS1 else None)
-    geometry.indices = [i for triangle in _triangles(mesh)
-                        for i in convert.triangle(triangle)]
-    return geometry
+    changed = not same_size
+    geometry["vertex_count"] = count
+    changed |= _put(geometry, "positions", _flat([tuple(v.co) for v in data.vertices]))
+    changed |= _put(geometry, "uvs", _flat(_per_vertex_uv(data, 0, count)))
+    changed |= _put(geometry, "uvs1", _flat(_per_vertex_uv(data, 1, count)))
+    changed |= _put(geometry, "normals", _flat(_normals(data, count)))
+    changed |= _put(geometry, "colours", _flat(_colours(data, count)))
+    if frame:
+        changed |= _put(geometry, "tangents", _flat(frame[0]))
+        changed |= _put(geometry, "binormals", _flat(frame[1]))
+    changed |= _skin(obj, mesh, geometry)
+
+    indices = [i for triangle in _triangles(data) for i in convert.triangle(triangle)]
+    changed |= indices != geometry["indices"]
+    geometry["indices"] = indices
+    return changed
+
+
+def _put(geometry, key, values):
+    """Write one component back, and say whether it actually moved.
+
+    A component the geometry does not carry is left absent even when Blender
+    could supply one: the buffer's layout is fixed, so an extra UV set has
+    nowhere to go and inventing an array would have JackAll pack it into a
+    buffer with no room for it.
+
+    The comparison rounds to float32 first. The pack's numbers were written as
+    the shortest decimal that round-trips through a float, and Blender hands
+    back the float widened to a double - the same value, spelled differently, so
+    comparing the doubles calls every vertex moved.
+    """
+    if key not in geometry:
+        return False
+    if values is None:
+        return False
+    if _same(geometry[key], values):
+        return False
+    geometry[key] = values
+    return True
+
+
+def _same(before, after):
+    if len(before) != len(after):
+        return False
+    return all(_f32(a) == _f32(b) for a, b in zip(before, after))
+
+
+def _f32(value):
+    """A number as the float32 the file will hold, widened back to a double."""
+    return struct.unpack("<f", struct.pack("<f", value))[0]
+
+
+def _flat(points):
+    return [c for point in points for c in point] if points else None
 
 
 def _tangent_frame(mesh, count):
@@ -183,21 +261,28 @@ def _colours(mesh, count):
     return _first_corner(mesh, count, lambda index: tuple(data[index].color))
 
 
-def _skin(obj, model, geometry, flags):
-    """Vertex groups back into (weight, palette slot) pairs.
+def _skin(obj, mesh, geometry):
+    """Vertex groups back into the document's weight and slot arrays.
 
-    The buffer has four slots per weight set, so a vertex with more influences
-    than that keeps its heaviest — which is what the palette can address.
+    The width is the one the geometry already holds, so a vertex with more
+    influences than the buffer addresses keeps its heaviest, and every vertex is
+    padded back out to it - the arrays are flat with a fixed stride, and a
+    ragged one has none.
     """
-    cluster = model.skin_descs[geometry.part].clusters[geometry.cluster]
-    slot_of = {}
-    for slot, node in enumerate(cluster.palette):
-        if node != EMPTY_SLOT and node < len(model.nodes):
-            slot_of.setdefault(model.nodes[node].name, slot)
+    if "skin_weights" not in geometry or "skin_slots" not in geometry:
+        return False
 
-    limit = 8 if flags & BONE_WTS2 else 4
+    part = mesh["parts"][geometry["part"]]
+    palette = part["clusters"][geometry["cluster"]]["palette"]
+    nodes = mesh["nodes"]
+    slot_of = {}
+    for slot, node in enumerate(palette):
+        if 0 <= node < len(nodes):
+            slot_of.setdefault(fc2model.bone_name(mesh, node), slot)
+
+    limit = max(1, len(geometry["skin_weights"]) // max(1, geometry["vertex_count"]))
     names = {group.index: group.name for group in obj.vertex_groups}
-    out = []
+    weights, slots = [], []
     for vertex in obj.data.vertices:
         pairs = []
         for item in vertex.groups:
@@ -208,16 +293,32 @@ def _skin(obj, model, geometry, flags):
                 raise ValueError("%s: vertex group %r is not in the part's bone palette"
                                  % (obj.name, name))
             pairs.append((item.weight, slot_of[name]))
-        out.append(sorted(pairs, key=lambda pair: -pair[0])[:limit])
-    return out
+        pairs = sorted(pairs, key=lambda pair: -pair[0])[:limit]
+        pairs += [(0.0, 0)] * (limit - len(pairs))
+        weights.extend(weight for weight, _slot in pairs)
+        slots.extend(slot for _weight, slot in pairs)
+
+    changed = _put(geometry, "skin_weights", weights)
+    changed |= geometry["skin_slots"] != slots
+    geometry["skin_slots"] = slots
+    return changed
 
 
 def collection_of(context):
-    """The collection to export: the active one, or the only imported one."""
+    """The collection to export: the active one, or the only imported one.
+
+    A prop a clip attached is sourced too, so it is skipped here - otherwise
+    loading any clip with props makes every later export ask which of two
+    collections was meant.
+    """
     active = context.view_layer.active_layer_collection
-    if active and PROP_SOURCE in active.collection:
+    if active and _is_model(active.collection):
         return active.collection
-    imported = [c for c in bpy.data.collections if PROP_SOURCE in c]
+    imported = [c for c in bpy.data.collections if _is_model(c)]
     if len(imported) == 1:
         return imported[0]
     raise ValueError("select the collection to export; found %d" % len(imported))
+
+
+def _is_model(collection):
+    return PROP_SOURCE in collection and PROP_PROP_OF not in collection

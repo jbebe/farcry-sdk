@@ -3,8 +3,11 @@
 # Importing this also puts the package root on sys.path, so each script starts
 # with `from _corpus import ...` and nothing else.
 
+import hashlib
 import os
+import subprocess
 import sys
+import tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 PACKAGE_ROOT = os.path.normpath(os.path.join(HERE, ".."))
@@ -15,11 +18,11 @@ def _drop_installed_copies():
     """Forget any of our modules Blender already loaded from somewhere else.
 
     The add-on puts its own directory on sys.path, so once the extension is
-    installed, a test run inside Blender imports that frozen copy of fc2fmt
-    instead of the files being edited — and passes.
+    installed, a test run inside Blender imports that frozen copy instead of the
+    files being edited - and passes.
     """
     for name, module in list(sys.modules.items()):
-        if name.split(".")[0] not in ("fc2fmt", "addon"):
+        if name.split(".")[0] != "addon":
             continue
         path = getattr(module, "__file__", None)
         if path and not os.path.abspath(path).startswith(PACKAGE_ROOT):
@@ -66,3 +69,58 @@ def first_difference(a, b):
 
 def describe_difference(a, b):
     return "differs at byte %s (%d vs %d bytes)" % (first_difference(a, b), len(a), len(b))
+
+
+# Where a pack comes from for a test: JackAll builds one, because the pack is a
+# contract between two codebases and a fixture written by hand would only ever
+# test this side's idea of it. Proprietary game content is never committed, so
+# there is nothing to check in either.
+GAME = os.environ.get("FC2_GAME", r"C:\Games\Far Cry 2")
+CLI = os.path.normpath(os.path.join(
+    HERE, "..", "..", "JackAll", "src", "JackAll.Cli", "bin", "Debug", "net10.0", "jackall-cli.exe"))
+
+_packs = {}
+
+
+def have_jackall():
+    return os.path.exists(CLI) and os.path.isdir(GAME)
+
+
+def require_pack():
+    """Print the skip line and return False when no pack can be built."""
+    if have_jackall():
+        return True
+    print("no JackAll build at %s or no install at %s, skipping" % (CLI, GAME))
+    return False
+
+
+def pack(model_path, clips=(), rig=None):
+    """Build a pack for one game path, once per run.
+
+    Written under the system temp directory rather than the repo, since it holds
+    game content.
+    """
+    key = (model_path, tuple(clips), rig)
+    if key in _packs:
+        return _packs[key]
+
+    directory = os.path.join(tempfile.gettempdir(), "fc2packs")
+    os.makedirs(directory, exist_ok=True)
+    # The clips and rig are part of the name: a pack built for one bank is not the
+    # pack built for another, and reusing the file would silently test the first
+    # one twice.
+    stamp = hashlib.sha256(repr(key).encode()).hexdigest()[:8]
+    out = os.path.join(directory, "%s-%s.fc2model" % (
+        os.path.splitext(os.path.basename(model_path))[0], stamp))
+    if not os.path.exists(out):
+        command = [CLI, "fc2model", "export", model_path, "--game", GAME, "-o", out]
+        for clip in clips:
+            command += ["--clip", clip]
+        if rig:
+            command += ["--rig", rig]
+        result = subprocess.run(command, capture_output=True, text=True)
+        if result.returncode != 0 or not os.path.exists(out):
+            raise RuntimeError("jackall could not pack %s:\n%s\n%s"
+                               % (model_path, result.stdout, result.stderr))
+    _packs[key] = out
+    return out

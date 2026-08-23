@@ -23,7 +23,9 @@ public sealed class Fc2ModelExportCommand : CliCommand<Fc2ModelExportCommand.Set
     public sealed class Settings : XrefFileSettings
     {
         [CommandArgument(0, "<model>")]
-        [Description("The model's game-relative path, e.g. graphics/weapons/primary/ak47/ak47.xbg.")]
+        [Description("The model's game-relative path, e.g. graphics/weapons/primary/ak47/ak47.xbg. "
+                   + "A path to a loose .xbg works too, resolving what it names out of the tree it "
+                   + "sits in - no install needed.")]
         public string Model { get; init; } = string.Empty;
 
         [CommandOption("-o|--out <file.fc2model>")]
@@ -34,12 +36,87 @@ public sealed class Fc2ModelExportCommand : CliCommand<Fc2ModelExportCommand.Set
         [Description("An animation bank to carry along, by game path. Repeatable.")]
         public string[] Clip { get; init; } = [];
 
+        [CommandOption("--rig <path>")]
+        [Description("The rig to carry, by game path. Defaults to the one beside the model; a "
+                   + "character has none of its own and shares pelvis_ref.skeleton.")]
+        public string? Rig { get; init; }
+
         [CommandOption("--clips")]
         [Description("Carry every animation bank that names this model. Reads every bank in the install.")]
         public bool Clips { get; init; }
+
+        /// <summary>
+        /// <c>--game</c> is not needed when the model argument is a file that exists.
+        /// </summary>
+        /// <remarks>
+        /// Packing a loose <c>.xbg</c> resolves what it names out of the folder tree it sits in, so
+        /// there is no install to point at - which is what an extracted export, a test fixture and a
+        /// bug report all look like.
+        /// </remarks>
+        public override Spectre.Console.ValidationResult Validate()
+            => File.Exists(Model) ? Spectre.Console.ValidationResult.Success() : base.Validate();
     }
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
+    {
+        return File.Exists(settings.Model) ? FromFolder(settings) : FromInstall(settings);
+    }
+
+    /// <summary>
+    /// Pack a loose <c>.xbg</c>, resolving what it names out of the tree it sits in.
+    /// </summary>
+    /// <remarks>
+    /// For an extracted export rather than an installed game - which is what a test fixture and a
+    /// bug report both look like. Ownership falls back to the directory rule, because a folder of
+    /// files is not the whole game and a count taken over it would promote things that are shared.
+    /// </remarks>
+    private int FromFolder(Settings settings)
+    {
+        string full = Path.GetFullPath(settings.Model);
+        string? root = GraphicsRoot(full);
+        if (root is null)
+        {
+            AnsiConsole.MarkupLineInterpolated(
+                $"[red]{full} is not under a 'graphics' folder[/], so nothing can resolve the materials and textures it names by game path.");
+            return 1;
+        }
+
+        // Indexed by file name rather than by path: a model names its materials however the
+        // authoring tool spelled them, and a loose export is not case-consistent about it.
+        Dictionary<string, string> byName = new(StringComparer.OrdinalIgnoreCase);
+        foreach (string path in Directory.EnumerateFiles(root, "*", SearchOption.AllDirectories))
+        {
+            byName[Path.GetFileName(path)] = path;
+        }
+
+        byte[]? Read(string gamePath)
+        {
+            string name = Path.GetFileName(gamePath.Replace('\\', '/'));
+            return byName.TryGetValue(name, out string? found) ? File.ReadAllBytes(found) : null;
+        }
+
+        string model = Relative(root, full);
+        Fc2ModelBundle bundle = Fc2ModelBuilder.Build(model, Read, null, settings.Clip, settings.Rig);
+        return Write(settings, bundle, model);
+    }
+
+    /// <summary>The folder holding the model's nearest <c>graphics</c> ancestor, if there is one.</summary>
+    private static string? GraphicsRoot(string modelPath)
+    {
+        for (DirectoryInfo? at = Directory.GetParent(modelPath); at is not null; at = at.Parent)
+        {
+            if (at.Name.Equals("graphics", StringComparison.OrdinalIgnoreCase))
+            {
+                return at.Parent?.FullName;
+            }
+        }
+        return null;
+    }
+
+    private static string Relative(string root, string path)
+        => Path.GetRelativePath(root, path).Replace('\\', '/');
+
+    private int FromInstall(Settings settings)
     {
         GameInstall install = settings.OpenInstall();
         using GameVfs vfs = GameVfs.Load(
@@ -58,9 +135,14 @@ public sealed class Fc2ModelExportCommand : CliCommand<Fc2ModelExportCommand.Set
 
         List<string> clips = Clips(vfs, settings);
         Fc2ModelBundle bundle = Fc2ModelBuilder.Build(
-            settings.Model, vfs.ReadByPath, usage, clips);
+            settings.Model, vfs.ReadByPath, usage, clips, settings.Rig);
+        return Write(settings, bundle, settings.Model);
+    }
+
+    private static int Write(Settings settings, Fc2ModelBundle bundle, string model)
+    {
         string output = settings.Out
-            ?? Path.GetFileNameWithoutExtension(settings.Model) + Fc2ModelBundle.Extension;
+            ?? Path.GetFileNameWithoutExtension(model) + Fc2ModelBundle.Extension;
         bundle.Save(output);
 
         int carried = bundle.Manifest.Entries.Count(entry => entry.Kind == Fc2ModelKind.Clip);

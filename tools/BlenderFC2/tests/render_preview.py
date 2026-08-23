@@ -1,7 +1,7 @@
 # Render a model to a PNG, headless, for looking at what the importer built.
 #
-#   & "C:\Programs\Blender 5.2\blender.exe" -b --python render_preview.py -- model.xbg out.png
-#   ... -- model.xbg out.png --highlight 5    colours one part red
+#   & "C:\Programs\Blender 5.2\blender.exe" -b --python render_preview.py -- model.fc2model out.png
+#   ... -- model.fc2model out.png --highlight 5    colours one part red
 #
 # The numeric gates cannot see a part sitting in the wrong place if it still
 # lands inside the model bounds, so this exists to be looked at.
