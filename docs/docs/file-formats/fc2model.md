@@ -11,21 +11,29 @@ is the only other thing that opens it.
 :::
 
 A `.fc2model` is a zip holding **one model, decoded**. No Dunia bytes survive inside it: the mesh
-arrives as JSON plus flat float buffers, materials as JSON, textures as PNG, the rig and its clips
-as JSON. That is what lets the Blender add-on carry no format code at all, and what lets a model
-gain a part or an LOD rather than being transplanted into whatever a donor happened to have.
+arrives as JSON with flat float arrays, materials as JSON, textures as PNG, the rig and its clips as
+JSON. That is what lets the Blender add-on carry no format code at all, and what lets a model gain a
+part or an LOD rather than being transplanted into whatever a donor happened to have.
 
 ```
 manifest.json
-model.json                 parts, nodes, LODs, bounds, vertex formats
-buffers/lod0-pos.bin       flat float32, one file per component per LOD
+model/mesh.json                          parts, nodes, LODs, bounds, geometry
+model/rig.json                           the .skeleton beside the model
 materials/SDORE2-M-2008091137450636.json
-textures/sawed_off_shotgun_state01.png
-textures/sawed_off_shotgun_state01.header.xml
-rig.json
-clips/1stge_uppb_reload_nodir_dlc1sawedoff_i1.json
-README.txt
+textures/ak47_state01_m.png              full resolution, mip0 already merged in
+textures/ak47_state01_m.header.bin       the .xbt header, which nothing derives
+textures/ak47_state01_m_mip0.header.bin
+clips/1stge_uppb_reload_+000fw_prak4_i1.json
 ```
+
+Keys are `snake_case` and JSON throughout — C#'s own property casing would be a language-shaped type
+leaking into a format whose other reader is Python. `sha256` is lowercase hex, which is what
+`hashlib.sha256().hexdigest()` gives, so neither side has to remember to fold case. A `bytes` field
+(a material's `preamble`, a clip's `tags`) is base64.
+
+The one thing not normalised is `path`. It is the file's identity **as the game names it**, which
+means it arrives however the referencing file spelled it — `GRAPHICS\_MATERIALS\SDORE2-M-….xbm`
+included. Compare one case-insensitively with `\` and `/` treated alike; do not rewrite it.
 
 ## The manifest
 
@@ -33,10 +41,8 @@ Every entry keeps its **game path as its identity** and names the file that carr
 
 ```json
 {
-  "format": "fc2model", "version": 2, "requires": {"reader": 2},
-  "generator": {"name": "JackAll", "version": "0.x"},
-  "model": "graphics/weapons/dlc/sawed_off_shotgun/dlc1_sawedoff_shotgun.xbg",
-  "credits": {"title": "...", "author": "...", "license": "CC-BY-4.0"},
+  "format": "fc2model", "version": 2, "requires_reader": 2, "generator": "JackAll",
+  "model": "graphics/weapons/primary/ak47/ak47.xbg",
   "limits": {
     "max_cluster_triangles": 21845,
     "max_buffer_vertices": 65535,
@@ -44,16 +50,16 @@ Every entry keeps its **game path as its identity** and names the file that carr
     "max_uv_sets": 2
   },
   "entries": [
-    {"path": "graphics/_materials/SDORE2-M-2008091137450636.xbm",
+    {"path": "GRAPHICS\_MATERIALS\SDORE2-M-2008091137450636.xbm",
      "file": "materials/SDORE2-M-2008091137450636.json", "kind": "material",
-     "role": "owned", "usage": 1, "usage_source": "xref", "sha256": "..."},
+     "role": "owned", "usage": 1, "usage_source": "xref", "sha256": "…"},
 
-    {"path": "graphics/.../sawed_off_shotgun_state01.xbt",
-     "file": "textures/sawed_off_shotgun_state01.png", "kind": "texture",
+    {"path": "graphics\weapons\primary\ak47\ak47_state01_m.xbt",
+     "file": "textures/ak47_state01_m.png", "kind": "texture",
      "role": "owned", "usage": 1, "usage_source": "xref",
-     "header": "textures/sawed_off_shotgun_state01.header.xml",
-     "companion_header": "textures/sawed_off_shotgun_state01_mip0.header.xml",
-     "codec": "DXT1", "levels": 12, "sha256": "..."}
+     "header": "textures/ak47_state01_m.header.bin",
+     "companion_header": "textures/ak47_state01_m_mip0.header.bin",
+     "codec": "DXT1", "levels": 12, "sha256": "…"}
   ],
   "clips": [
     {"path": "graphics/characters/.../1stge_uppb_reload_+000fw_prak4_i1.mab",
@@ -138,8 +144,8 @@ graphics-only scan is a **lower bound**: `bullettracer_d.xbt` is named from a we
 
 ## Textures
 
-A texture is stored as **one PNG at full resolution**, plus the `.xbt` header bytes in the XML form
-`jackall-cli xbt extract` already emits.
+A texture is stored as **one PNG at full resolution**, plus the `.xbt` header verbatim, as a
+`.header.bin` beside it.
 
 The header is carried because it cannot be synthesized: `Reserved` is a bitfield the streaming
 loader consumes, and `Hash` is a stable per-asset id nothing derives — see [`.xbt`](./xbt.md#header).

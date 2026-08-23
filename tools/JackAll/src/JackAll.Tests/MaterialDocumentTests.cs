@@ -13,7 +13,9 @@ namespace JackAll.Tests;
 /// </remarks>
 public sealed class MaterialDocumentTests
 {
-    private static readonly JsonSerializerOptions Json = new() { WriteIndented = false };
+    // The options a pack actually writes with, so this gate covers the shape that ships rather
+    // than a shape only it uses.
+    private static readonly JsonSerializerOptions Json = Fc2ModelJson.Compact;
 
     [Fact]
     public void Every_shipped_material_survives_the_trip_through_json()

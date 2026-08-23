@@ -22,7 +22,7 @@ public sealed class Fc2ModelOutput
 /// </remarks>
 public static class Fc2ModelApplier
 {
-    private static readonly JsonSerializerOptions Json = new();
+    private static readonly JsonSerializerOptions Json = Fc2ModelJson.Compact;
 
     /// <summary>What applying this pack would write.</summary>
     public static List<Fc2ModelOutput> Outputs(Fc2ModelBundle bundle, bool onlyModified = true)

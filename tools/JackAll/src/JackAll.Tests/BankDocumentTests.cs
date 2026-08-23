@@ -19,7 +19,9 @@ namespace JackAll.Tests;
 /// </remarks>
 public sealed class BankDocumentTests
 {
-    private static readonly JsonSerializerOptions Json = new();
+    // The options a pack actually writes with, so this gate covers the shape that ships rather
+    // than a shape only it uses.
+    private static readonly JsonSerializerOptions Json = Fc2ModelJson.Compact;
 
     [Fact]
     public void Every_bank_survives_the_trip_through_json()

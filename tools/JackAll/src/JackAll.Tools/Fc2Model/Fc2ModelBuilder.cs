@@ -23,7 +23,7 @@ public static class Fc2ModelBuilder
     // Not indented: a document is mostly flat float arrays, and a line per element makes the pack
     // several times its own size for no reader's benefit. The manifest, which is the part a person
     // reads, is indented where it is written.
-    private static readonly JsonSerializerOptions Json = new();
+    private static readonly JsonSerializerOptions Json = Fc2ModelJson.Compact;
 
     /// <summary>
     /// Build a pack for one model.

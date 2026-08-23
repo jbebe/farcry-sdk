@@ -147,11 +147,7 @@ public sealed class Fc2ModelBundle
     public const string Owned = "owned";
     public const string Shared = "shared";
 
-    private static readonly JsonSerializerOptions Json = new()
-    {
-        WriteIndented = true,
-        DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
-    };
+    private static readonly JsonSerializerOptions Json = Fc2ModelJson.Readable;
 
     public required Fc2ModelManifest Manifest { get; init; }
 
@@ -168,7 +164,15 @@ public sealed class Fc2ModelBundle
     /// <summary>Entries an editor changed, which are the only ones worth writing back.</summary>
     public IEnumerable<Fc2ModelEntry> Modified => Manifest.Entries.Where(entry => entry.Modified);
 
-    public static string Hash(ReadOnlySpan<byte> content) => Convert.ToHexString(SHA256.HashData(content));
+    /// <summary>
+    /// An entry's content hash, lowercase - which is what <c>hashlib.sha256().hexdigest()</c> gives.
+    /// </summary>
+    /// <remarks>
+    /// A pack is written by one language and read by another, and a hash that only matches when both
+    /// sides remember to fold case is a trap that shows up as "every entry looks modified".
+    /// </remarks>
+    public static string Hash(ReadOnlySpan<byte> content)
+        => Convert.ToHexStringLower(SHA256.HashData(content));
 
     /// <summary>
     /// Whether a file backs only this model, by directory or by an authoritative count.
