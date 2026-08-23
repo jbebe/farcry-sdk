@@ -16,6 +16,9 @@ public sealed class Fc2ModelBundleTests
 {
     private const string Rifle = "graphics/weapons/primary/ak47/ak47.xbg";
 
+    private const string Reload = "graphics/characters/_common/animations/locomotion/stand/"
+        + "upperbody/3rdge_uppb_runregupperbody_+000fw_prak47_i1.mab";
+
     [Fact]
     public void A_pack_carries_the_model_and_everything_it_names()
     {
@@ -144,6 +147,59 @@ public sealed class Fc2ModelBundleTests
         Assert.Contains(shared.Path, error.Message, StringComparison.Ordinal);
     }
 
+
+    /// <summary>
+    /// A weapon's motion is not named by anything in its mesh - it lives in a bank filed under the
+    /// character animations - so the caller says which belong and the pack carries them decoded.
+    /// </summary>
+    /// <remarks>
+    /// This is the piece that lets an editor show a reload without owning a line of <c>.mab</c> code.
+    /// A bank stays shared: it is the character's animation, and rewriting one would change every
+    /// other thing that plays it.
+    /// </remarks>
+    [Fact]
+    public void A_pack_carries_the_clips_it_is_given()
+    {
+        if (Reader() is not { } read)
+        {
+            return;
+        }
+
+        Fc2ModelBundle bundle = Fc2ModelBuilder.Build(Rifle, read, clips: [Reload]);
+
+        Fc2ModelEntry clip = Assert.Single(
+            bundle.Manifest.Entries, entry => entry.Kind == Fc2ModelKind.Clip);
+        Assert.Equal(Reload, clip.Path);
+        Assert.Equal(Fc2ModelBundle.Shared, clip.Role);
+
+        // The index says enough to list the bank without parsing it, and names the bone the rifle
+        // hangs from - which is the fact that decides where a modeler's geometry belongs.
+        Fc2ModelClip index = Assert.Single(bundle.Manifest.Clips);
+        Assert.Equal(Reload, index.Path);
+        Assert.Equal(clip.File, index.File);
+        Assert.True(index.Frames > 0 && index.Rate > 0, $"{index.Frames} frames at {index.Rate} Hz.");
+        Assert.Equal("ak47", index.Participant);
+        Assert.NotEmpty(index.Bone!);
+
+        // Through the zip, because that is the trip the editor's copy actually makes.
+        string path = Path.Combine(Path.GetTempPath(), $"fc2model-{Guid.NewGuid():N}{Fc2ModelBundle.Extension}");
+        try
+        {
+            bundle.Save(path);
+            Fc2ModelBundle loaded = Fc2ModelBundle.Load(path);
+            Fc2ModelOutput written = Assert.Single(
+                Fc2ModelApplier.Outputs(loaded, onlyModified: false),
+                output => output.Path == Reload);
+
+            Assert.True(
+                written.Content.AsSpan().SequenceEqual(read(Reload)),
+                Fc2Corpus.DescribeDifference(Reload, read(Reload)!, written.Content));
+        }
+        finally
+        {
+            File.Delete(path);
+        }
+    }
     [Fact]
     [Trait("Category", "RequiresFixture")]
     public void The_corpus_was_actually_found()
@@ -158,7 +214,7 @@ public sealed class Fc2ModelBundleTests
         }
 
         Dictionary<string, string> byTail = new(StringComparer.OrdinalIgnoreCase);
-        foreach (string extension in (string[])[".xbg", ".xbm", ".xbt", ".skeleton"])
+        foreach (string extension in (string[])[".xbg", ".xbm", ".xbt", ".skeleton", ".mab"])
         {
             foreach (string path in Fc2Corpus.Find(extension))
             {

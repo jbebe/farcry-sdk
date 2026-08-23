@@ -71,6 +71,35 @@ public sealed class Fc2ModelLimits
     public int MaxUvSets { get; init; } = 2;
 }
 
+/// <summary>
+/// One animation bank in a pack, indexed so an editor can list what is carried without opening and
+/// parsing every one of them.
+/// </summary>
+/// <remarks>
+/// A hint, not truth: which clip in a bank's chain belongs to a given rig has to be re-derived from
+/// the rig's bone ids on load, so a stale entry here can never mispose anything.
+/// </remarks>
+public sealed class Fc2ModelClip
+{
+    /// <summary>The bank's game path, which is the entry it indexes.</summary>
+    public required string Path { get; init; }
+
+    public required string File { get; init; }
+
+    /// <summary>The bank's own name. Nothing in the format carries a friendlier one.</summary>
+    public required string Label { get; init; }
+
+    /// <summary>The last frame the bank keys, and the rate it plays at, or zero when it keys none.</summary>
+    public int Frames { get; init; }
+
+    public int Rate { get; init; }
+
+    /// <summary>What this bank calls the model, and the bone it hangs it from.</summary>
+    public string? Participant { get; init; }
+
+    public string? Bone { get; init; }
+}
+
 public sealed class Fc2ModelManifest
 {
     public string Format { get; init; } = Fc2ModelBundle.FormatName;
@@ -90,6 +119,9 @@ public sealed class Fc2ModelManifest
     public Fc2ModelLimits Limits { get; init; } = new();
 
     public List<Fc2ModelEntry> Entries { get; init; } = [];
+
+    /// <summary>An index over the entries of kind <c>clip</c>. See <see cref="Fc2ModelClip"/>.</summary>
+    public List<Fc2ModelClip> Clips { get; init; } = [];
 }
 
 /// <summary>

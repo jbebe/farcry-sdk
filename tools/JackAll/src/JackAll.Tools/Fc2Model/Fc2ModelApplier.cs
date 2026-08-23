@@ -76,6 +76,14 @@ public static class Fc2ModelApplier
                 };
                 break;
 
+            case Fc2ModelKind.Clip:
+                yield return new Fc2ModelOutput
+                {
+                    Path = entry.Path,
+                    Content = Deserialize<BankDocument>(content).ToMab(),
+                };
+                break;
+
             case Fc2ModelKind.Texture:
                 foreach (Fc2ModelOutput output in Texture(bundle, entry, content))
                 {

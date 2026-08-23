@@ -56,8 +56,10 @@ Every entry keeps its **game path as its identity** and names the file that carr
      "codec": "DXT1", "levels": 12, "sha256": "..."}
   ],
   "clips": [
-    {"path": "graphics/characters/.../reload.mab", "file": "clips/reload.json",
-     "label": "reload (1st person)", "frames": 61, "rate": 30}
+    {"path": "graphics/characters/.../1stge_uppb_reload_+000fw_prak4_i1.mab",
+     "file": "clips/1stge_uppb_reload_+000fw_prak4_i1.json",
+     "label": "1stge_uppb_reload_+000fw_prak4_i1", "frames": 61, "rate": 30,
+     "participant": "ak47", "bone": "R Hand"}
   ]
 }
 ```
@@ -140,10 +142,32 @@ reader loses it and its writer cannot put the file back.
 
 ## Clips
 
-`clips[]` in the manifest is an index for the editor — enough to list what a pack carries without
-opening and parsing every bank. It is a **hint, not truth**: which clip in a chain belongs to a
-given rig must be re-derived from the rig's bone ids on load, so a stale entry can never mispose
-anything.
+Nothing in a mesh names its animation, so a pack carries the banks it is told to carry. `clips[]` in
+the manifest indexes them - enough to list what a pack holds without opening and parsing every one.
+It is a **hint, not truth**: which clip in a chain belongs to a given rig must be re-derived from the
+rig's bone ids on load, so a stale entry can never mispose anything.
+
+`label` is the bank's own file name. The format carries no friendlier one, and the naming convention
+(`1stge_uppb_reload_+000fw_prak4_i1` - first person, upper body, reload, no direction, AK-pattern
+rifle) is not decoded here rather than guessed at.
+
+`frames` and `rate` are the root clip's, which is the character's - a bank plays as one thing, so
+that is the length to show. `participant` and `bone` come from the tag record that names this pack's
+model: they say which bone the bank hangs the model from, which is the fact that decides where a
+modeler's geometry belongs. A bank that keys nothing reports `0` frames.
+
+### Finding the banks that move a model
+
+The folders do not answer this. The ak47's banks sit under `animations/weapons/primary/ak47`, but
+the spas12's sit under `franchi_spas12`, the m16's under `m-16` and the desert eagle's under
+`desert_eagle_50` - mirroring the model's own folder finds the banks for 12 of the 49 shipped weapon
+folders.
+
+The banks answer it themselves. Each names what it animates besides the skeleton in its tag records,
+by the model's file stem, and asking every bank is both exact and broader than the folder: 94 banks
+name `ak47` against the 62 filed beside it, the rest being locomotion and cutscene banks that carry
+the rifle while a character runs or talks. 44 of the 89 models under `graphics\weapons` find banks
+this way; the other 45 are ammo boxes, pickups, casings and bullets, which nothing animates.
 
 An edited clip is simply an entry whose bytes changed and which has grown an `origin_sha256`.
 Defining `clips[]` now is what lets clip authoring arrive later without a format change.

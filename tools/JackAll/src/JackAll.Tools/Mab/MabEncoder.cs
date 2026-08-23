@@ -104,6 +104,15 @@ public static class MabEncoder
         int lastFrame,
         int rate)
     {
+        // A clip can name this section and key nothing in it. There are no groups to describe then,
+        // so it is the header alone rather than an offset table over empty groups.
+        if (bones.Count == 0)
+        {
+            var empty = new byte[MabClip.TrackHeader];
+            WriteTrackHeader(empty, 0, lastFrame, rate);
+            return empty;
+        }
+
         int groups = (lastFrame >> MabClip.GroupShift) + 1;
         int presenceBytes = (bones.Count + 1) & ~1;
 

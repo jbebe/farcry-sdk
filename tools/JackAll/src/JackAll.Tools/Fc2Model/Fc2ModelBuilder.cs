@@ -1,4 +1,5 @@
 using System.Text.Json;
+using JackAll.Tools.Mab;
 using JackAll.Tools.Skeleton;
 using JackAll.Tools.Xbg;
 using JackAll.Tools.Xbm;
@@ -19,15 +20,22 @@ public static class Fc2ModelBuilder
     /// <summary>A rig sits beside its model under this suffix.</summary>
     public const string RigSuffix = "_ref.skeleton";
 
-    private static readonly JsonSerializerOptions Json = new() { WriteIndented = true };
+    // Not indented: a document is mostly flat float arrays, and a line per element makes the pack
+    // several times its own size for no reader's benefit. The manifest, which is the part a person
+    // reads, is indented where it is written.
+    private static readonly JsonSerializerOptions Json = new();
 
     /// <summary>
     /// Build a pack for one model.
     /// </summary>
     /// <param name="usage">How many files reference a path, when an authoritative index can say.
     /// Without one, ownership falls back to the directory rule, which is the safe direction.</param>
+    /// <param name="clips">Animation banks to carry along, by game path. A weapon's motion lives in
+    /// a bank filed under the character animations rather than beside the model, so nothing in the
+    /// mesh names them - the caller decides which belong.</param>
     public static Fc2ModelBundle Build(
-        string modelPath, Func<string, byte[]?> readByPath, Func<string, int>? usage = null)
+        string modelPath, Func<string, byte[]?> readByPath, Func<string, int>? usage = null,
+        IEnumerable<string>? clips = null)
     {
         byte[] modelBytes = readByPath(modelPath)
             ?? throw new InvalidDataException($"No model at {modelPath}.");
@@ -66,7 +74,53 @@ public static class Fc2ModelBuilder
             Add(bundle, rigPath, "model/rig.json", Fc2ModelKind.Rig,
                 JsonSerializer.SerializeToUtf8Bytes(SkeletonFile.Parse(rigBytes), Json), modelPath, usage);
         }
+
+        foreach (string clipPath in clips ?? [])
+        {
+            if (readByPath(clipPath) is not { } clipBytes || bundle.Entry(clipPath) is not null)
+            {
+                continue;
+            }
+
+            MabFile bank = MabFile.Parse(clipBytes);
+            string file = $"clips/{Name(clipPath)}.json";
+            Add(bundle, clipPath, file, Fc2ModelKind.Clip,
+                JsonSerializer.SerializeToUtf8Bytes(BankDocument.From(bank), Json), modelPath, usage);
+            bundle.Manifest.Clips.Add(Index(bank, clipPath, file, Name(modelPath)));
+        }
         return bundle;
+    }
+
+    /// <summary>
+    /// What an editor needs to list a bank without opening it.
+    /// </summary>
+    /// <remarks>
+    /// The timing is the root clip's, which is the character's - a bank plays as one thing, so that
+    /// is the length to show. The participant record is the model's own: it says which bone the bank
+    /// hangs the model from, which is the fact that decides where geometry belongs.
+    /// </remarks>
+    private static Fc2ModelClip Index(MabFile bank, string clipPath, string file, string model)
+    {
+        (int Tracks, int LastFrame, int Rate)? timing = null;
+        foreach (int slot in (int[])
+                 [MabClip.SectionKeyframeRotation, MabClip.SectionAnimatedTranslation,
+                  MabClip.SectionRootTranslation, MabClip.SectionRootRotation])
+        {
+            timing ??= bank.TrackHeaderOf(slot);
+        }
+
+        MabParticipant? mine = bank.Participants()
+            .FirstOrDefault(p => p.Name.Equals(model, StringComparison.OrdinalIgnoreCase));
+        return new Fc2ModelClip
+        {
+            Path = clipPath,
+            File = file,
+            Label = Name(clipPath),
+            Frames = timing?.LastFrame ?? 0,
+            Rate = timing?.Rate ?? 0,
+            Participant = mine?.Name,
+            Bone = mine?.Parent,
+        };
     }
 
     private static void AddTexture(
