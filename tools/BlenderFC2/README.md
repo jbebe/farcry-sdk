@@ -1,3 +1,7 @@
+| `tests/blender_check.py` | Requires every rule to be silent on retail, then fire on exactly one violation |
+| `tests/blender_write.py` | Rewrites one clip and requires every other clip in the bank to survive |
+| `addon/export_xbg.py` | Writes edited geometry back into the pack |
+| `addon/export_mab.py` | Writes an Action back into one clip of a bank, leaving the rest verbatim |
 # BlenderFC2
 
 A Blender add-on for editing Far Cry 2 models. It reads and writes `.fc2model` **packs** — the
@@ -57,8 +61,9 @@ workspace, or `jackall-cli fc2model extract` for a folder to drop into a mod lay
 
 Importing a pack: parts, LODs, UVs, vertex colours, normals, an armature from the nodes, rigid parts
 on their pivots, skin weights as vertex groups, and textures wired into the Generic shader graph.
-Exporting edited geometry back. Loading any animation bank the pack carries onto the rig. Checking
-the model against what the format allows, from a sidebar panel, before the game finds out.
+Exporting edited geometry back. Loading any animation bank the pack carries onto the rig, and
+writing one back. Checking the model against what the format allows, from a sidebar panel, before
+the game finds out.
 
 ## Export
 
@@ -136,8 +141,35 @@ twelve arm twists. Where the engine evaluates them has not been traced, so nothi
 and they simply follow their parents. Reading them as world-space blends was tried and measurably
 made the mesh worse, so it is not shipped.
 
-Not written: **authoring** a clip. JackAll can encode one (99.9% of shipped banks rebuild with their
-framing intact), but nothing here turns an edited Action back into keyframe tracks.
+### Writing one back
+
+**Far Cry 2 ▸ Animation ▸ Write Animation** puts the armature's current Action back into the bank it
+came from. The pose is sampled off the evaluated rig rather than read out of the F-curves, so a
+constraint, an NLA strip or a driver all land in the file the way they look in the viewport.
+
+**Only the clip that fits this model's rig is rewritten.** A bank holds the character's motion too,
+and re-encoding that would quietly degrade the arms holding the gun a little more on every save. It
+does not happen: an untouched clip carries its sections and its bone masks verbatim, so it goes back
+byte for byte, and JackAll's own gate holds every one of the 4,436 shipped banks to that.
+`tests/blender_write.py` checks it from outside — after rewriting the rifle's clip, **10,232 of the
+10,240 bytes belonging to clips nobody touched are identical**, and the eight that move are the two
+tag records' clip deltas, which have to move when a later clip changes size.
+
+Two layout rules the writer has to respect, and one choice it offers:
+
+- Rotations are stored in groups of eight frames whose first frame always carries a key, so frames
+  0, 8, 16 … are written whatever the tolerance says.
+- Translations are dense and frame-major, so a moving bone gets a value on every frame. A bone the
+  rig does not mark `animated_translation` gets none at all — every shipped translation lands on a
+  bone marked otherwise, and writing one elsewhere is inventing motion the engine will not play.
+- **Key every frame** stores the pose exactly. The default keeps a frame only where dropping it
+  would move the bone further than the tolerance from the interpolation of its neighbours: on the
+  rifle's reload that is 44 keys against 158, and the pose comes back within `8.3e-04` of a rotation
+  and `1.2e-07` m.
+
+A bank reads as `shared`, and that rule is too blunt for one — the rifle's reload counts three
+users, two of them unnamed resources that load it rather than models that use it. The writer is safe
+because of what it can change rather than because of a permission it was given.
 
 ## Running the tests
 

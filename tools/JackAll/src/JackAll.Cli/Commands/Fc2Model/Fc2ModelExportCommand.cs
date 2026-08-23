@@ -91,9 +91,16 @@ public sealed class Fc2ModelExportCommand : CliCommand<Fc2ModelExportCommand.Set
 
         byte[]? Read(string gamePath)
         {
+            // A path that exists is read where it is: a clip written out of an editor sits wherever
+            // that editor put it, not inside the tree the model came from.
+            if (File.Exists(gamePath))
+            {
+                return File.ReadAllBytes(gamePath);
+            }
             string name = Path.GetFileName(gamePath.Replace('\\', '/'));
             return byName.TryGetValue(name, out string? found) ? File.ReadAllBytes(found) : null;
         }
+
 
         string model = Relative(root, full);
         Fc2ModelBundle bundle = Fc2ModelBuilder.Build(model, Read, null, settings.Clip, settings.Rig);

@@ -94,6 +94,39 @@ public sealed class ClipDocument
     /// </remarks>
     public List<int> Sections { get; init; } = [];
 
+    /// <summary>
+    /// Each section exactly as it arrived, keyed by slot.
+    /// </summary>
+    /// <remarks>
+    /// The decoded fields above are what an editor reads and changes; these are what gets written
+    /// when it did not. A bank holds the character's motion as well as the model's, and re-encoding
+    /// every clip loses bytes on a fifth of the shipped set - so an editor rewriting a weapon's
+    /// motion would perturb the arms holding it.
+    /// <para>
+    /// **Dropping a slot from here is how an editor says it changed that section.** Present means
+    /// "unchanged, write these bytes"; absent means "encode it from the decoded fields". That keeps
+    /// the decision explicit rather than resting on a comparison that float rounding would break.
+    /// </para>
+    /// </remarks>
+    public Dictionary<int, byte[]> Raw { get; init; } = [];
+
+    /// <summary>
+    /// The four bone bitmasks exactly as they arrived, or empty to have them derived.
+    /// </summary>
+    /// <remarks>
+    /// A mask says which bones a section holds values for, and its popcount below a bone is that
+    /// bone's slot inside the section - so the mask and the ordering are the same fact stated twice,
+    /// and deriving one from the other is what keeps them agreeing.
+    /// <para>
+    /// They are still carried, because on a shipped bank the two can disagree: 9 of the 11,261
+    /// shipped clips, all in <c>sm10_se02_player_outro.mab</c>, name a bone in the constant-rotation
+    /// mask that the section has no value for. The engine reads the mask, so rewriting it would
+    /// change how a bank nobody edited plays. **Clearing this is how an editor says it changed which
+    /// bones are keyed**, the same contract as <see cref="Raw"/>.
+    /// </para>
+    /// </remarks>
+    public List<uint[]> Masks { get; init; } = [];
+
     public static ClipDocument From(MabClip clip) => new()
     {
         ReferenceRotation = [.. clip.ReferenceRotation],
@@ -116,7 +149,31 @@ public sealed class ClipDocument
         Chained = clip.Sections[MabClip.SectionNextClip] != 0,
         Sections = [.. Enumerable.Range(0, MabClip.SectionCount)
             .Where(slot => slot != MabClip.SectionNextClip && clip.Sections[slot] != 0)],
+        Raw = Verbatim(clip),
+        Masks = [.. clip.Masks.Select(mask => (uint[])[.. mask])],
     };
+
+    /// <summary>Every section the clip carries, at its own length rather than its padded span.</summary>
+    private static Dictionary<int, byte[]> Verbatim(MabClip clip)
+    {
+        Dictionary<int, byte[]> sections = [];
+        for (int slot = 0; slot < MabClip.SectionCount; slot++)
+        {
+            if (slot == MabClip.SectionNextClip)
+            {
+                continue;
+            }
+            if (clip.IntrinsicSection(slot) is { } bytes)
+            {
+                sections[slot] = bytes;
+            }
+            else if (clip.Sections[slot] != 0)
+            {
+                sections[slot] = [];
+            }
+        }
+        return sections;
+    }
 
     /// <summary>The clip's parts, with the four bitmasks derived from what actually carries data.</summary>
     public MabClipParts ToParts()
@@ -126,6 +183,14 @@ public sealed class ClipDocument
         Dictionary<int, byte[]> sections = [];
         foreach (int slot in Sections)
         {
+            // Present in Raw means the editor left this section alone, so it goes back exactly as
+            // it came - which is what keeps a rewrite of one clip from disturbing the others.
+            if (Raw.TryGetValue(slot, out byte[]? verbatim))
+            {
+                sections[slot] = verbatim;
+                continue;
+            }
+
             sections[slot] = slot switch
             {
                 MabClip.SectionConstantRotation => MabEncoder.ConstantRotations(
@@ -165,7 +230,7 @@ public sealed class ClipDocument
 
         return new MabClipParts
         {
-            Masks = Masks(),
+            Masks = Masks.Count == MabClip.MaskCount ? [.. Masks] : Derived(),
             ReferenceRotation = [.. ReferenceRotation],
             LoopRotation = [.. LoopRotation],
             Duration = Duration,
@@ -174,14 +239,14 @@ public sealed class ClipDocument
     }
 
     /// <summary>
-    /// The four bitmasks, rebuilt from which bones carry what.
+    /// The four bitmasks, rebuilt from which bones carry what - used when an editor cleared them.
     /// </summary>
     /// <remarks>
     /// A mask is indexed by skeleton bone id, and a bone's slot inside its section is the popcount
     /// of the mask below it - so the mask and the section's ordering are the same fact stated twice,
     /// and deriving it is what keeps them from disagreeing.
     /// </remarks>
-    private uint[][] Masks()
+    private uint[][] Derived()
     {
         var masks = new uint[MabClip.MaskCount][];
         for (int index = 0; index < MabClip.MaskCount; index++)

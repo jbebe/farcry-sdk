@@ -346,9 +346,19 @@ bone the skeleton holds fixed.
 
 `MabEncoder` builds a bank back from decoded tracks rather than re-emitting the blob it read.
 `BankDocumentTests` takes every shipped bank through the format-free document a `.fc2model` carries
-and requires it back: **99.9% keep every clip, section and mask where it was**, and **78.4% return
+and requires it back: **4,436 of 4,436 byte-identical**, because a clip nobody edited carries its
+sections and bone masks verbatim. Only a section an editor cleared is re-encoded, which is what lets
+one clip in a chain be rewritten without disturbing the others.
+
+The encoder itself is held separately, with those verbatim bytes thrown away: from the decoded fields
+alone, **99.9% of banks keep every clip, section and mask where it was** and **78.4% return
 byte-identical** — the shortfall being rotations that cannot be re-encoded exactly, compounded over a
 chain of up to 35 clips.
+
+A section has to be taken at its *intrinsic* length for that to work. The block a reader slices runs
+to wherever the next section starts, so it carries the alignment padding and the sixteen-byte
+separator with it, and re-laying those adds them a second time — one separator per clip, on every
+shipped bank.
 
 `tools/BlenderFC2/addon/import_mab.py` turns a clip into a Blender Action. Because a clip stores a
 bone's transform relative to its parent — replacing the rest transform rather than adding to it — the

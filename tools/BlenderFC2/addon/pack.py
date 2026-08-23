@@ -169,6 +169,31 @@ class Pack:
         self.files[entry.file] = content
         return entry
 
+    def replace_clip(self, game_path, bank):
+        """Put an edited animation bank back, whatever its role says.
+
+        A bank is `shared` by the ownership rule and that rule is too blunt for
+        one: the AK-47's reload counts three users, two of them unnamed
+        resources that load it rather than models that use it. What actually
+        matters is which clip inside it changed.
+
+        This is safe because of what it can change, not because of a permission:
+        an untouched clip carries its sections and masks verbatim, so it goes
+        back byte for byte, and the writer only ever rewrites the clip that fits
+        this pack's own rig. The character's arms are the same file they were.
+        """
+        entry = self.entry(game_path)
+        if entry is None:
+            raise KeyError("this pack carries no %s" % game_path)
+        if entry.kind != CLIP:
+            raise ValueError("%s is a %s, not an animation bank" % (game_path, entry.kind))
+
+        content = dumps(bank)
+        entry.record.setdefault("origin_sha256", entry.record["sha256"])
+        entry.record["sha256"] = hashlib.sha256(content).hexdigest()
+        self.files[entry.file] = content
+        return entry
+
     def replace_document(self, game_path, document):
         return self.replace(game_path, dumps(document))
 

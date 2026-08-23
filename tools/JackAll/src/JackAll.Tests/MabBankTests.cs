@@ -89,6 +89,73 @@ public sealed class MabBankTests
         Assert.True(bytes >= 0.75, $"{exact}/{rebuilt} banks came back byte-identical ({bytes:P1}).");
     }
 
+    /// <summary>
+    /// A bank re-laid from its sections' own bytes has to come back exactly.
+    /// </summary>
+    /// <remarks>
+    /// This is what makes rewriting one clip safe. A bank holds the character's motion as well as
+    /// the weapon's, and re-encoding the lot loses bytes on a fifth of the shipped set - so a writer
+    /// that rebuilt everything would perturb clips nobody touched. Carrying an untouched clip's
+    /// sections verbatim instead lands them exactly where they were, and the only clip re-encoded is
+    /// the one somebody edited.
+    /// <para>
+    /// It only works at a section's *intrinsic* length: the block a reader slices runs to wherever
+    /// the next section starts, so it carries the alignment padding and the separator with it, and
+    /// re-laying those adds them a second time - one separator per clip, on every shipped bank.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void A_bank_relaid_from_its_own_section_bytes_is_unchanged()
+    {
+        int rebuilt = 0;
+        List<string> failures = [];
+
+        foreach (string path in Fc2Corpus.Find(".mab"))
+        {
+            byte[] original = File.ReadAllBytes(path);
+            MabFile bank = MabFile.Parse(original);
+
+            List<MabClipParts> parts = [.. bank.Clips().Select(
+                clip => MabClipParts.Of(clip, Verbatim(clip)))];
+
+            rebuilt++;
+            byte[] produced = MabEncoder.AssembleBank(bank.Header, parts);
+            if (!produced.AsSpan().SequenceEqual(original) && failures.Count < 5)
+            {
+                failures.Add(Fc2Corpus.DescribeDifference(path, original, produced));
+            }
+        }
+
+        Assert.True(rebuilt > 0 || !Fc2Corpus.Present, "No bank was re-laid.");
+        Assert.True(
+            failures.Count == 0,
+            $"{rebuilt - failures.Count}/{rebuilt} banks came back byte-identical."
+            + Environment.NewLine + string.Join(Environment.NewLine, failures));
+    }
+
+    /// <summary>Every section a clip carries, at its own length.</summary>
+    private static Dictionary<int, byte[]> Verbatim(MabClip clip)
+    {
+        Dictionary<int, byte[]> sections = [];
+        for (int slot = 0; slot < MabClip.SectionCount; slot++)
+        {
+            if (slot == MabClip.SectionNextClip)
+            {
+                continue;
+            }
+            if (clip.IntrinsicSection(slot) is { } bytes)
+            {
+                sections[slot] = bytes;
+            }
+            else if (clip.Sections[slot] != 0)
+            {
+                // A slot that names an empty section still has to be named back.
+                sections[slot] = [];
+            }
+        }
+        return sections;
+    }
+
     [Fact]
     [Trait("Category", "RequiresFixture")]
     public void The_corpus_was_actually_found()

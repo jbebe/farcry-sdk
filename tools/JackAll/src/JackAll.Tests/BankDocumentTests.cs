@@ -23,8 +23,57 @@ public sealed class BankDocumentTests
     // than a shape only it uses.
     private static readonly JsonSerializerOptions Json = Fc2ModelJson.Compact;
 
+    /// <summary>
+    /// Every shipped bank through the document a pack carries, and back to the same bytes.
+    /// </summary>
+    /// <remarks>
+    /// Exact, not approximate, because the document carries each section verbatim alongside the
+    /// decoded fields. That is the whole point: a bank holds the character's motion as well as the
+    /// model's, and an editor rewriting a weapon's reload must not perturb the arms holding it.
+    /// </remarks>
     [Fact]
     public void Every_bank_survives_the_trip_through_json()
+    {
+        int rebuilt = 0;
+        List<string> failures = [];
+
+        foreach (string path in Fc2Corpus.Find(".mab"))
+        {
+            byte[] original = File.ReadAllBytes(path);
+            MabFile bank = MabFile.Parse(original);
+
+            string text = JsonSerializer.Serialize(BankDocument.From(bank), Json);
+            byte[] produced = JsonSerializer.Deserialize<BankDocument>(text, Json)!.ToMab();
+
+            rebuilt++;
+            if (!produced.AsSpan().SequenceEqual(original) && failures.Count < 5)
+            {
+                failures.Add(Fc2Corpus.DescribeDifference(path, original, produced));
+            }
+        }
+
+        Assert.True(rebuilt > 0 || !Fc2Corpus.Present, "No bank was rebuilt.");
+        Assert.True(
+            failures.Count == 0,
+            $"{rebuilt - failures.Count}/{rebuilt} banks came back byte-identical."
+            + Environment.NewLine + string.Join(Environment.NewLine, failures));
+    }
+
+    /// <summary>
+    /// The same trip with the verbatim bytes thrown away, which is what an edited clip takes.
+    /// </summary>
+    /// <remarks>
+    /// Without this the encoder would stop being tested the moment the document started carrying
+    /// raw sections - every bank would pass by handing back what it was given. What is held here is
+    /// that the decoded fields alone still rebuild the bank: its chain, its masks and its sections
+    /// all where they were, and most of the time the bytes too.
+    /// <para>
+    /// Bytes lag framing by the rotations that cannot be re-encoded exactly - a quaternion whose
+    /// smallest-three encoding ties - compounded over a chain of up to 35 clips.
+    /// </para>
+    /// </remarks>
+    [Fact]
+    public void A_bank_rebuilds_from_its_decoded_fields_alone()
     {
         int rebuilt = 0;
         int framed = 0;
@@ -35,13 +84,17 @@ public sealed class BankDocumentTests
         foreach (string path in Fc2Corpus.Find(".mab"))
         {
             byte[] original = File.ReadAllBytes(path);
-            MabFile bank = MabFile.Parse(original);
+            BankDocument document = BankDocument.From(MabFile.Parse(original));
+            foreach (ClipDocument clip in document.Clips)
+            {
+                clip.Raw.Clear();
+                clip.Masks.Clear();
+            }
 
             byte[] produced;
             try
             {
-                string text = JsonSerializer.Serialize(BankDocument.From(bank), Json);
-                produced = JsonSerializer.Deserialize<BankDocument>(text, Json)!.ToMab();
+                produced = document.ToMab();
             }
             catch (InvalidDataException)
             {
@@ -59,7 +112,6 @@ public sealed class BankDocumentTests
             {
                 samples.Add($"{Path.GetFileName(path)}: {produced.Length} bytes vs {original.Length}");
             }
-
             exact += produced.AsSpan().SequenceEqual(original) ? 1 : 0;
         }
 
@@ -71,8 +123,6 @@ public sealed class BankDocumentTests
             $"{framed}/{rebuilt} banks rebuilt with every clip and mask where it was ({framing:P1}), "
             + $"{skipped} skipped.{Environment.NewLine}" + string.Join(Environment.NewLine, samples));
 
-        // Bytes lag framing by the rotations that cannot be re-encoded exactly, compounded over a
-        // chain of up to 35 clips.
         double bytes = exact / (double)rebuilt;
         Assert.True(bytes >= 0.78, $"{exact}/{rebuilt} banks came back byte-identical ({bytes:P1}).");
     }

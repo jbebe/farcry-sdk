@@ -35,7 +35,12 @@ public static class Fc2ModelApplier
                 continue;
             }
 
-            if (entry.Role == Fc2ModelBundle.Shared && entry.Modified)
+            // A bank is shared by the directory rule and that rule is too blunt for one: what
+            // matters is which clip inside it changed, and an editor can only rewrite the clip
+            // belonging to this pack's own rig - every other clip in the chain carries its sections
+            // verbatim and goes back byte for byte.
+            if (entry.Role == Fc2ModelBundle.Shared && entry.Modified
+                && entry.Kind != Fc2ModelKind.Clip)
             {
                 throw new InvalidOperationException(
                     $"'{entry.Path}' is shared with other models and was edited. Applying it would "

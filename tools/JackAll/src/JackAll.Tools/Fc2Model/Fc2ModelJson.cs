@@ -22,6 +22,7 @@ public static class Fc2ModelJson
     {
         PropertyNamingPolicy = JsonNamingPolicy.SnakeCaseLower,
         DefaultIgnoreCondition = JsonIgnoreCondition.WhenWritingNull,
+        Converters = { new NegativeZeroConverter() },
     };
 
     /// <summary>For the manifest, which is the part a person reads.</summary>

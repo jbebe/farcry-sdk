@@ -186,6 +186,71 @@ public class MabClip
         return end > offset ? Data[(offset - ClipHeader)..(end - ClipHeader)] : null;
     }
 
+    /// <summary>
+    /// A section's bytes at its own length, without the padding that follows it.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="Section"/> runs a block to wherever the next one starts, so what it hands back
+    /// carries the alignment padding and, after the last track section, the sixteen-byte separator.
+    /// Re-laying a clip out of those adds all of that a second time - every shipped bank comes back
+    /// one separator per clip too long.
+    /// <para>
+    /// This is what lets a clip be rewritten without disturbing the ones around it: an untouched
+    /// clip's sections go back verbatim and land exactly where they were, so only the clip somebody
+    /// edited is re-encoded at all.
+    /// </para>
+    /// </remarks>
+    public byte[]? IntrinsicSection(int slot)
+    {
+        if (Section(slot) is not { } block)
+        {
+            return null;
+        }
+
+        int length = IntrinsicLength(slot, block);
+        return length > 0 && length <= block.Length ? block[..length] : block;
+    }
+
+    /// <summary>How long a section is by its own header, or the whole block when nothing says.</summary>
+    private int IntrinsicLength(int slot, byte[] block)
+    {
+        if (slot == SectionTags)
+        {
+            int count = BinaryPrimitives.ReadInt32LittleEndian(block);
+            return TagCountBytes + (count * TagStride);
+        }
+        // An event chain is FCB and its length is not computable from anything decoded, so the
+        // block stands as it is. Nothing rewrites one either way.
+        if (slot is SectionEvents or SectionNextClip || block.Length < TrackHeader)
+        {
+            return block.Length;
+        }
+
+        int tracks = U16(block, 0);
+        int frames = U16(block, 2) + 1;
+        return slot switch
+        {
+            SectionConstantRotation => TrackHeader + (tracks * QuatBytes),
+            SectionConstantTranslation => TrackHeader + (tracks * Vec3Bytes),
+            SectionAnimatedTranslation => TrackHeader + (frames * tracks * Vec3Bytes),
+            SectionRootTranslation => TrackHeader + (frames * Vec3Bytes),
+            SectionRootRotation => TrackHeader + (frames * QuatBytes),
+            // The group offset table ends in a sentinel that is the section's own size - the same
+            // value the writer puts there, which is what makes this exact rather than a guess.
+            SectionKeyframeRotation => KeyframeLength(block),
+            _ => block.Length,
+        };
+    }
+
+    private static int KeyframeLength(byte[] block)
+    {
+        int groups = (U16(block, 2) >> GroupShift) + 1;
+        int at = TrackHeader + (groups * 4);
+        return at + 4 <= block.Length
+            ? BinaryPrimitives.ReadInt32LittleEndian(block.AsSpan(at))
+            : block.Length;
+    }
+
     /// <summary>(track count, last frame, frames per second) for an array section.</summary>
     public (int Tracks, int LastFrame, int Rate)? TrackHeaderOf(int index)
     {

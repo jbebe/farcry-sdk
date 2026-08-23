@@ -5,10 +5,11 @@
 # owns the byte layouts and this owns what a scene looks like.
 
 import bpy
-from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
+from bpy.props import (BoolProperty, EnumProperty, FloatProperty, IntProperty,
+                       StringProperty)
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from . import export_xbg, import_mab, import_xbg, panel
+from . import export_mab, export_xbg, import_mab, import_xbg, panel
 from .pack import EXTENSION, Pack
 
 
@@ -134,6 +135,62 @@ class FC2_OT_load_clip(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class FC2_OT_write_clip(bpy.types.Operator):
+    """Write the armature's current Action back into the bank it came from"""
+
+    bl_idname = "object.fc2_write_clip"
+    bl_label = "Write Animation"
+    bl_options = {"REGISTER"}
+
+    clip: EnumProperty(name="Animation", items=_clip_items,
+                       description="Which of the pack's banks to rewrite")
+    lossless: BoolProperty(
+        name="Key every frame", default=False,
+        description="Store a key on every frame instead of only where the motion departs "
+                    "from its neighbours. Exact, and roughly eight times the bytes")
+    tolerance: FloatProperty(
+        name="Tolerance", default=0.002, min=0.0, max=0.1, precision=4,
+        description="How far a dropped frame may sit from the interpolation of the frames "
+                    "kept around it")
+
+    @classmethod
+    def poll(cls, context):
+        return _pack_of(context)[0] is not None
+
+    def invoke(self, context, _event):
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        armature = context.object
+        if armature is None or armature.type != "ARMATURE":
+            armature = next((o for o in context.scene.objects if o.type == "ARMATURE"), None)
+        if armature is None:
+            self.report({"ERROR"}, "Select the armature whose Action to write")
+            return {"CANCELLED"}
+        if not self.clip:
+            self.report({"ERROR"}, "This pack carries no animation to write")
+            return {"CANCELLED"}
+
+        origin, _collection = _pack_of(context)
+        pack = Pack.load(origin)
+        try:
+            written = export_mab.write(pack, self.clip, armature,
+                                       lossless=self.lossless, tolerance=self.tolerance)
+        except Exception as error:
+            self.report({"ERROR"}, str(error))
+            return {"CANCELLED"}
+
+        # Saved straight back over the pack it came from, so the next export or
+        # apply carries the new motion without a second file to keep in step.
+        pack.save(origin)
+        self.report({"INFO"},
+                    "Wrote clip %d of %d: %d bones keyed, %d held still, %d moved, %d keys"
+                    % (written["clip"], written["clips"], written["keyed_rotations"],
+                       written["constant_rotations"], written["animated_translations"],
+                       written["keys"]))
+        return {"FINISHED"}
+
+
 class FC2_OT_export_pack(bpy.types.Operator, ExportHelper):
     """Write the edited parts back into the pack they were imported from"""
 
@@ -176,7 +233,7 @@ def menu_export(self, _context):
                          text="Far Cry 2 Model Pack (%s)" % EXTENSION)
 
 
-CLASSES = (FC2_OT_import_pack, FC2_OT_load_clip, FC2_OT_export_pack)
+CLASSES = (FC2_OT_import_pack, FC2_OT_load_clip, FC2_OT_write_clip, FC2_OT_export_pack)
 
 
 def register():
