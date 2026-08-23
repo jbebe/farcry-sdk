@@ -70,18 +70,25 @@ def silent_on_retail():
     return errors
 
 
-def one_violation(name, code, prepare, game_path=MODELS[0][1]):
-    """Introduce one violation and require that code, and nothing else."""
+def one_violation(name, expected, prepare, game_path=MODELS[0][1]):
+    """Introduce one violation and require exactly the codes it should raise.
+
+    A set rather than a single code, because some violations genuinely imply
+    another: deleting every face of a part leaves every one of its vertices
+    loose, and both of those are worth saying. What the assertion still refuses
+    is anything the violation does not entail.
+    """
+    expected = sorted(expected if isinstance(expected, (list, tuple, set)) else [expected])
     result = load(game_path)
     prepare(result)
     found = validate.check_scene(bpy.context)
     codes = sorted({finding.code for finding in found})
 
-    if codes == [code]:
-        message = next(f.message for f in found if f.code == code)
-        print("%-28s %s" % (name, message[:96]))
+    if codes == expected:
+        message = next(f.message for f in found if f.code == expected[0])
+        print("%-30s %s" % (name, message[:92]))
         return 0
-    return fail("%s: expected only %s, got %s" % (name, code, codes or "nothing"))
+    return fail("%s: expected %s, got %s" % (name, expected, codes or "nothing"))
 
 
 def unknown_object(result):
@@ -129,6 +136,58 @@ def metallic(result):
     principled = next(node for node in material.node_tree.nodes
                       if node.type == "BSDF_PRINCIPLED")
     principled.inputs["Metallic"].default_value = 1.0
+
+
+def split_uv(result):
+    """One corner of a shared vertex moved, which the format cannot store.
+
+    It has to be a vertex several faces touch: moving the only corner of a
+    vertex moves the vertex, which is a perfectly representable edit.
+    """
+    obj = result["parts"][0]
+    layer = obj.data.uv_layers[0]
+    corners = {}
+    for loop in obj.data.loops:
+        corners.setdefault(loop.vertex_index, []).append(loop.index)
+    shared = next(loops for loops in corners.values() if len(loops) > 1)
+    uv = layer.data[shared[0]].uv
+    layer.data[shared[0]].uv = (uv[0] + 0.25, uv[1])
+
+
+def loose_vertex(result):
+    """A vertex no triangle uses. Every shipped vertex is referenced."""
+    obj = result["parts"][0]
+    mesh = bmesh.new()
+    mesh.from_mesh(obj.data)
+    mesh.verts.new((0.0, 0.0, 0.0))
+    mesh.to_mesh(obj.data)
+    mesh.free()
+    obj.data.update()
+
+
+def reassigned_material(result):
+    """A part pointed at another part's material, which the file ignores."""
+    parts = result["parts"]
+    other = next(o for o in parts[1:] if o.data.materials
+                 and o.data.materials[0] is not parts[0].data.materials[0])
+    parts[0].data.materials[0] = other.data.materials[0]
+
+
+def too_many_influences(result):
+    """A vertex in more groups than the buffer addresses; the light ones go."""
+    obj = next(o for o in result["parts"] if o.vertex_groups)
+    weights = {group.name: 0.0 for group in obj.vertex_groups}
+    vertex = obj.data.vertices[0]
+    for item in vertex.groups:
+        weights[obj.vertex_groups[item.group].name] = item.weight
+    # Spread the vertex over one more group than the format can carry, keeping
+    # the sum at one so only the influence rule has anything to say.
+    spare = [g for g in obj.vertex_groups if weights[g.name] == 0.0][:9]
+    for group in spare:
+        group.add([vertex.index], 1.0 / len(spare), "REPLACE")
+    for group in obj.vertex_groups:
+        if weights[group.name]:
+            group.remove([vertex.index])
 
 
 def viewport_shows_what_ships():
@@ -278,11 +337,19 @@ def main():
     print("--- one violation at a time ---")
     errors += one_violation("part.unknown-object", "part.unknown-object", unknown_object)
     errors += one_violation("part.duplicate", "part.duplicate", duplicate_part)
-    errors += one_violation("cluster.zero-triangles", "cluster.zero-triangles", zero_triangles)
+    errors += one_violation("cluster.zero-triangles",
+                            ["cluster.zero-triangles", "mesh.loose-vertex"], zero_triangles)
     errors += one_violation("object.moved", "object.moved", moved_object)
-    errors += one_violation("skin.unweighted-vertex", "skin.unweighted-vertex",
+    errors += one_violation("skin.unweighted-vertex",
+                            ["skin.unweighted-vertex", "skin.weights-unnormalised"],
                             unweighted_vertex, MODELS[2][1])
     errors += one_violation("channel.metallic", "channel.metallic", metallic)
+    errors += one_violation("uv.split", "uv.split", split_uv)
+    errors += one_violation("mesh.loose-vertex", "mesh.loose-vertex", loose_vertex)
+    errors += one_violation("material.assignment-ignored", "material.assignment-ignored",
+                            reassigned_material)
+    errors += one_violation("skin.influences-truncated", "skin.influences-truncated",
+                            too_many_influences, MODELS[2][1])
 
     errors += blocks_only_on_errors()
     errors += viewport_shows_what_ships()

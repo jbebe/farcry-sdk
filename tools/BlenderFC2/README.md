@@ -232,12 +232,20 @@ Retail is the definition of valid, so a rule that fires on it is a wrong rule, a
 blocking a legitimate export would destroy trust in the whole feature. `tests/blender_check.py` then
 introduces one violation at a time and requires that exact code and no other.
 
-What it catches today: an object export would silently skip, two objects claiming one part, a part
-that draws nothing, a part moved in object mode (export writes vertex positions only, so the move is
-discarded), a cluster over the triangle or palette ceiling, a buffer over the vertex ceiling, an
-unweighted vertex on a skinned part, editing a file shared with other models, and the material
-channels the format does not carry — metalness, roughness maps, emission, subsurface and the rest —
-each with what to do instead.
+What it catches today, all of it a silent failure otherwise:
+
+| Blocks the export | Warns |
+|---|---|
+| an object export would skip | a corner that disagrees about UV, normal or colour, which the format stores per vertex |
+| two objects claiming one part | a vertex in more groups than the buffer addresses |
+| a part that draws nothing | weights that do not sum to one |
+| a part moved in object mode, whose move export discards | a vertex no triangle uses |
+| a cluster over the triangle or palette ceiling | a material slot pointed somewhere the file ignores |
+| a buffer over the vertex ceiling | the channels the format does not carry - metalness, roughness maps, emission, subsurface and the rest |
+| an unweighted vertex on a skinned part | a model-owned texture set to tile |
+| editing a file shared with other models | the `Weapon` shader having no albedo slot, with the working recipe |
+
+Each one names what to do instead.
 
 The ceilings come from the pack's own `limits`, so there is no second place for them to drift.
 

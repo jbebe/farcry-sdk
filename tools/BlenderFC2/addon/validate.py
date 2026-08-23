@@ -12,7 +12,7 @@
 import bpy
 
 from . import export_xbg, materials, rules
-from .import_xbg import PROP_MATERIAL_PATH, PROP_PART, PROP_SUBMESH
+from .import_xbg import ATTR_NORMAL, PROP_MATERIAL_PATH, PROP_PART, PROP_SUBMESH
 from .rules import ERROR, Finding, Target
 
 
@@ -46,6 +46,7 @@ def check_scene(context):
 
     found = rules.check_scene(collection, objects, limits)
     found += rules.check_geometry(mesh, _entries(objects, mesh, built["lod"]), limits)
+    found += _meshes(objects, mesh, built["lod"], pack)
     found += _materials(collection, pack)
     found += _placement(objects)
     return sorted(found, key=lambda f: (f.severity != ERROR, f.code))
@@ -72,6 +73,125 @@ def _objects(collection, mesh, lod):
 def _entries(objects, mesh, lod):
     geometry = mesh["lods"][lod]["geometry"]
     return [(obj.name, submesh, geometry[submesh]) for obj, _name, submesh in objects]
+
+
+def _meshes(objects, mesh, lod, pack):
+    """The per-object rules, over the scene data each one needs."""
+    geometry = mesh["lods"][lod]["geometry"]
+    out = []
+    for obj, _name, submesh in objects:
+        entry = geometry[submesh]
+        out += rules.check_mesh(
+            obj.name, submesh,
+            _split_corners(obj.data),
+            _groups(obj, entry),
+            _slot_material(obj, pack),
+            _part_material(mesh, entry))
+        out += rules.check_loose(obj.name, submesh, _loose(obj.data))
+    return out
+
+
+def _split_corners(data):
+    """Vertices whose corners disagree, per attribute the format stores per vertex.
+
+    Returns (attribute, how many, the first) so a rule can report and select
+    without knowing anything about Blender.
+    """
+    out = []
+    for kind, split in (("uv", _uv_corners(data)),
+                        ("normal", _normal_corners(data)),
+                        ("colour", _colour_corners(data))):
+        if split is None:
+            continue
+        indices = sorted(split)
+        out.append((kind, len(indices), indices[0] if indices else -1))
+    return out
+
+
+def _uv_corners(data):
+    """Vertices whose corners disagree about where they are in the texture."""
+    if not data.uv_layers:
+        return None
+    layer = data.uv_layers[0]
+    corners = {}
+    for loop in data.loops:
+        corners.setdefault(loop.vertex_index, set()).add(
+            (round(layer.data[loop.index].uv[0], 5), round(layer.data[loop.index].uv[1], 5)))
+    return {vertex for vertex, values in corners.items() if len(values) > 1}
+
+
+def _normal_corners(data):
+    """Vertices whose corners point meaningfully apart.
+
+    Compared by angle, not by value. Blender normalises the normals it shades
+    with and the file's are not unit length, so the corners of one vertex differ
+    in the fifth decimal on every smooth mesh - 570 of the rifle's 805 vertices
+    at four decimal places, and none of them a real seam.
+    """
+    corners = {}
+    for loop in data.loops:
+        corners.setdefault(loop.vertex_index, []).append(
+            tuple(data.corner_normals[loop.index].vector))
+    # About one degree. A real hard edge is tens of degrees apart.
+    limit = 0.9998
+    return {vertex: values for vertex, values in corners.items()
+            if any(sum(a * b for a, b in zip(values[0], other)) < limit
+                   for other in values[1:])}
+
+
+def _colour_corners(data):
+    if not data.color_attributes:
+        return None
+    attribute = data.color_attributes[0]
+    if attribute.domain != "CORNER":
+        return None
+    corners = {}
+    for loop in data.loops:
+        corners.setdefault(loop.vertex_index, set()).add(
+            tuple(round(c, 4) for c in attribute.data[loop.index].color))
+    return {vertex for vertex, values in corners.items() if len(values) > 1}
+
+
+def _loose(data):
+    used = {index for polygon in data.polygons for index in polygon.vertices}
+    return [index for index in range(len(data.vertices)) if index not in used]
+
+
+def _groups(obj, geometry):
+    """Per vertex: how many non-zero groups, their sum, and the buffer's width.
+
+    Only for a part the format actually skins - a rigid one has no weights, and
+    a stray vertex group on it changes nothing either way.
+    """
+    weights = geometry.get("skin_weights")
+    if not weights or not obj.vertex_groups:
+        return []
+    limit = max(1, len(weights) // max(1, geometry["vertex_count"]))
+    return [(vertex.index,
+             sum(1 for item in vertex.groups if item.weight > 0.0),
+             sum(item.weight for item in vertex.groups),
+             limit)
+            for vertex in obj.data.vertices]
+
+
+def _slot_material(obj, pack):
+    """The `.xbm` the object's material slot points at, by game path."""
+    material = obj.data.materials[0] if obj.data.materials else None
+    return material.get(PROP_MATERIAL_PATH, "") if material else ""
+
+
+def _part_material(mesh, geometry):
+    """The `.xbm` the cluster's own material index names, by game path.
+
+    Compared as paths, not as names: a material's internal name and the file it
+    lives in are different things by design - the rifle's `AK47WOOD` sits in
+    `jpcormier-m-2007100950589039.xbm` - so comparing those calls every shipped
+    material reassigned.
+    """
+    part = mesh["parts"][geometry["part"]]
+    index = part["clusters"][geometry["cluster"]]["material_index"]
+    names = mesh["materials"]
+    return names[index] if index < len(names) else ""
 
 
 def _placement(objects):

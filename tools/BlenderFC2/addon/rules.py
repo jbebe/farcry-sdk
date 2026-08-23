@@ -250,3 +250,76 @@ def check_edit(entry):
         % (entry.path, " with %d other files" % (entry.usage - 1) if entry.usage else ""),
         Target(kind="material" if entry.kind == "material" else "image", name=entry.path),
         "Copy it to the model's own folder first, and point the material at the copy.")]
+def check_mesh(name, submesh, corners, groups, slot_material, part_material):
+    """Rules about one object's own mesh data.
+
+    Everything here is a silent failure: the file has no way to store what the
+    modeler did, so export drops it and the model looks subtly wrong in game and
+    exactly right in Blender.
+    """
+    target = Target(object=name, kind="part", index=submesh)
+    out = []
+
+    for kind, count, first in corners:
+        if not count:
+            continue
+        out.append(Finding(
+            WARNING, "%s.split" % kind,
+            "%d vertices of '%s' have corners that disagree about %s. The format stores "
+            "one per vertex, so the first corner wins and the seam collapses."
+            % (count, name, kind), Target(object=name, kind="vertex", index=first),
+            "Split the vertices along the seam (Edge > Mark Sharp then Edge Split), which "
+            "changes the topology and so regenerates the tangents."))
+
+    out += _group_rules(name, target, groups)
+
+    # The container keeps each cluster's material index, so pointing the slot at
+    # a different material changes what Blender draws and nothing in the file.
+    if slot_material and part_material and not _same_path(slot_material, part_material):
+        out.append(Finding(
+            WARNING, "material.assignment-ignored",
+            "'%s' now uses a different material; the file keeps '%s' and the change "
+            "would be lost." % (name, part_material),
+            Target(object=name, kind="material", name=slot_material),
+            "Edit the material the part already names, or point that material at "
+            "different textures."))
+    return out
+
+
+def _same_path(a, b):
+    return a.replace("\\", "/").lower() == b.replace("\\", "/").lower()
+
+
+def _group_rules(name, target, groups):
+    """`groups` is (vertex index, non-zero weight count, weight sum, limit)."""
+    truncated = [entry for entry in groups if entry[1] > entry[3]]
+    unnormalised = [entry for entry in groups if abs(entry[2] - 1.0) > 0.02]
+    out = []
+    if truncated:
+        worst = max(entry[1] for entry in truncated)
+        out.append(Finding(
+            WARNING, "skin.influences-truncated",
+            "%d vertices of '%s' are in more than %d vertex groups (up to %d); only the "
+            "heaviest survive." % (len(truncated), name, truncated[0][3], worst),
+            Target(object=name, kind="vertex", index=truncated[0][0]),
+            "Limit the influences (Weight Paint > Weights > Limit Total)."))
+    if unnormalised:
+        out.append(Finding(
+            WARNING, "skin.weights-unnormalised",
+            "%d vertices of '%s' have weights that do not sum to 1, so the part would be "
+            "drawn smaller or larger than it looks." % (len(unnormalised), name),
+            Target(object=name, kind="vertex", index=unnormalised[0][0]),
+            "Normalise them (Weight Paint > Weights > Normalize All)."))
+    return out
+
+
+def check_loose(name, submesh, loose):
+    """A vertex no triangle references. Every shipped vertex is referenced."""
+    if not loose:
+        return []
+    return [Finding(
+        WARNING, "mesh.loose-vertex",
+        "%d vertices of '%s' are in no triangle. They cost buffer space and draw nothing."
+        % (len(loose), name),
+        Target(object=name, kind="vertex", index=loose[0]),
+        "Delete them (Mesh > Clean Up > Delete Loose).")]
