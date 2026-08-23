@@ -36,6 +36,24 @@ package won't fix the real problem (20,228 wire crossings after layout).
   - Review code
   - Revamp the visual interface, find a good graph wpf package
 
+## Tools/BlenderFC2
+
+The art half of a custom weapon is
+[done end to end](/farcry-sdk/docs/modding/adding-a-weapon#geometry-materials-and-textures-one-file-one-plugin) —
+what is left is what a modeler cannot do rather than what is broken.
+
+- [ ] **Add a part, node or LOD from the scene.** A weapon inherits its donor's part list. JackAll
+  authors a container from decoded content alone (3,133 of 3,133), so the format is not the obstacle;
+  nothing turns a new Blender object into a new part, node or LOD entry.
+- [ ] **`.hkx` collision.** Not parsed at all, so a reshaped weapon keeps the donor's collision shape.
+  This is the last format in a weapon's file set with nothing behind it.
+- [ ] **A material a mesh embeds cannot be edited.** Four material names of 7,496, across three
+  meshes, none of them weapons — they travel inside the mesh document as an opaque chunk, so an
+  editor gets the name and no shader graph.
+- [ ] **Nothing checks that the result looks right.** Every gate is numeric, and a part in the wrong
+  place that still lands inside the model bounds passes all of them. `tests/render_preview.py` exists
+  to be looked at; nothing compares renders.
+
 ## Tools/FCSE
 
 - [ ] **Known bug: pressing Enter in a text field does nothing.** On the stock Options → Network

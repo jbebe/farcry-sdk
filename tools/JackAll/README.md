@@ -17,6 +17,15 @@ ordinary patch archives, so they're shareable with people who don't use this too
   in `workspace\`, which is pinned last and can be switched off like any other mod.
 - **Files tab** — the merged view of all 13 archives, as the engine resolves them. Anything a mod
   supplies is highlighted, so "what have I actually changed" is answerable at a glance.
+- **Export as .fc2model** — on any `.xbg`, collects the model, its materials, textures, rig and
+  (optionally) every animation bank that names it into one decoded file a 3D editor can open with no
+  format code of its own. **Apply .fc2model** stages what an editor changed back into the workspace,
+  listing every game file it will touch first. See
+  [`.fc2model`](../../docs/docs/file-formats/fc2model.md) and
+  [`tools/BlenderFC2`](../BlenderFC2/README.md).
+
+JackAll is also where every Dunia format actually lives — `.xbg`, `.xbm`, `.xbt`, `.skeleton`, `.mab`
+and the rest, each with a corpus gate beside it that holds the codec to the shipped bytes.
 
 A mod zip is just a tree of relative paths (`worlds\world1\generated\…`) — exactly what unpacking an
 archive already gives you, so existing community mods drop straight in.
