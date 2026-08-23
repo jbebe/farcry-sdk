@@ -21,7 +21,7 @@ in-process patcher if patching proves necessary.
 |---|---|---|
 | Solved end-to-end | `.fat`/`.dat`, `.fcb`, `.rml`, `.mgb`, `.xbt`, `.sbao`, `.spk`, `.sav`, `depload` | Round-trip + editor + mod pipeline. Nothing more needed. |
 | Reads, no write path | Domino graphs, `.sdat` | Writers exist for both but are called only from tests. |
-| Round-trips, partial write path | `.xbg`, `.skeleton`, `.xbm`, `.mab`, `.rtx` | `tools/BlenderFC2` writes `.xbg`, `.skeleton` and `.xbm`, all byte-identical over the retail set; `.mab` round-trips but nothing authors a clip. |
+| Round-trips, partial write path | `.xbg`, `.skeleton`, `.xbm`, `.mab`, `.rtx` | `tools/BlenderFC2` writes `.xbg`, `.skeleton`, `.xbm` and `.mab`, all byte-identical over the retail set. A `.mab` clip is authored by rewriting the one clip that fits the rig and carrying the rest of the chain verbatim; re-encoding a whole bank from decoded fields alone returns 78.4% byte-identical, the shortfall being rotations authored on an exact tie. |
 | Container only | `.srl` (14,964 files), `.zsr` (14,964), `.nvm` (5,144) | Spatial data — roadmap dependencies, not standalone work. |
 | Sniffed, never parsed | `.hkx`, shader bins, `.bik`, `.feu`, `.wem` | See [Not doing](#not-doing-and-why). |
 | Parseable but unusable | `worldsector<N>.data.fcb` (5,230), `world1.mapsdata.fcb` | These *are* FCB — decoded today into a wall of `hidPos`/`hidAngles` floats with no spatial meaning. This is the wall. |

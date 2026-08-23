@@ -1,0 +1,49 @@
+name: Prepare the release
+description: Takes the version and the release notes from the project's changelog, and refuses a
+  version that has already been released.
+
+inputs:
+  directory:
+    description: Project directory, the one holding CHANGELOG.md.
+    required: true
+  tag_prefix:
+    description: Tag prefix for this project, the part before the version.
+    required: true
+
+outputs:
+  version:
+    description: The newest version the changelog documents, which is the one being released.
+    value: ${{ steps.read.outputs.version }}
+  tag:
+    description: Tag to create the release under.
+    value: ${{ steps.read.outputs.tag }}
+  notes_file:
+    description: Markdown file holding the changelog section, for gh release create.
+    value: ${{ steps.read.outputs.notes_file }}
+  nexus:
+    description: The same section as the plain text the Nexus Mods changelog takes.
+    value: ${{ steps.read.outputs.nexus }}
+
+runs:
+  using: composite
+  steps:
+    - id: read
+      shell: pwsh
+      # Nothing is built before this passes, so a release whose notes were never written - or one
+      # already published - stops in seconds rather than after a full build.
+      run: |
+        $changelog = Join-Path '${{ inputs.directory }}' 'CHANGELOG.md'
+        $render = "$env:GITHUB_WORKSPACE/scripts/changelog.ps1"
+        $version = & $render -Path $changelog -Render version
+        $tag = "${{ inputs.tag_prefix }}-$version"
+        if (git ls-remote --tags origin "refs/tags/$tag") {
+          throw "$version has already been released - add its section to $changelog first."
+        }
+        $notes = Join-Path $env:RUNNER_TEMP 'release-notes.md'
+        & $render -Path $changelog -Section $version -Render markdown | Out-File $notes -Encoding utf8
+        "version=$version" | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
+        "tag=$tag" | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
+        "notes_file=$notes" | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
+        "nexus<<NOTES_EOF" | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
+        & $render -Path $changelog -Section $version -Render nexus | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8
+        "NOTES_EOF" | Out-File $env:GITHUB_OUTPUT -Append -Encoding utf8

@@ -39,14 +39,14 @@ folder with a `main.lua` inside it (`bin\plugins\my_mod\main.lua`) - the files b
 are then libraries to `require`, not scripts that run on their own. Both forms are found at any depth
 under `bin\plugins\`, so mods can be grouped into folders freely. Scripts can read
 and write engine memory, scan for byte signatures, detour functions and add their own rows to the
-in-game Mod Configuration Menu - no compiler, no build step. The separate `fcse-example-script`
-download is a working, commented starting point.
+in-game Mod Configuration Menu - no compiler, no build step. The `fcse-example-plugin` download
+carries a working, commented script to start from.
 
 Note the dialect is **Lua 5.1** (LuaJIT), not 5.4 - the same flavor used by most other game modding
 frameworks. This is unrelated to the ancient Lua that Far Cry 2 itself contains internally.
 
-**In C++** - for anything Lua cannot reach. See the separate `fcse-example-plugin` download for a
-minimal, complete, working plugin (source + compiled DLL) to start from.
+**In C++** - for anything Lua cannot reach. The same download carries a minimal, complete plugin,
+source and compiled DLL both.
 
 Full writeup for both at https://jbebe.github.io/farcry-sdk/fcse.
 

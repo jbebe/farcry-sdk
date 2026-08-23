@@ -2,14 +2,16 @@ name: UFCP release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version - used as the git tag (ufcp-{version}) and as ufcp-{version}.zip'
-        required: true
-        type: string
 
 permissions:
   contents: write
+
+env:
+  # Nexus Mods identifiers for the UFCP mod page. NEXUS_MOD_ID is the internal ID that
+  # v3/games/farcry2/mods/{id in the page URL} answers with, not the ID in the URL; the file ID is
+  # on the mod's Files tab under "API Info". An empty file ID skips the upload.
+  NEXUS_MOD_ID: ''
+  NEXUS_FILE_UFCP: ''
 
 jobs:
   release:
@@ -21,6 +23,13 @@ jobs:
         working-directory: mods/UFCP
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prepare the release
+        id: release
+        uses: ./.github/actions/prepare-release
+        with:
+          directory: mods/UFCP
+          tag_prefix: ufcp
 
       - name: Build UFCP.dll
         shell: pwsh
@@ -52,12 +61,22 @@ jobs:
 
       - name: Zip release artifact
         shell: pwsh
-        run: Compress-Archive -Path "stage\*" -DestinationPath "ufcp-${{ inputs.version }}.zip"
+        run: Compress-Archive -Path "stage\*" -DestinationPath "ufcp-${{ steps.release.outputs.version }}.zip"
 
-      - name: Tag and publish GitHub release
+      - name: Publish GitHub release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        # --target pins the tag to the exact commit this ran against, so a push landing mid-run
-        # cannot end up inside the release.
-        run: gh release create "ufcp-${{ inputs.version }}" "ufcp-${{ inputs.version }}.zip" --target "${{ github.sha }}" --title "UFCP ${{ inputs.version }}" --generate-notes
+        run: gh release create "${{ steps.release.outputs.tag }}" "ufcp-${{ steps.release.outputs.version }}.zip" --title "UFCP ${{ steps.release.outputs.version }}" --target "${{ github.sha }}" --notes-file "${{ steps.release.outputs.notes_file }}"
+
+      - name: Upload UFCP to Nexus Mods
+        uses: ./.github/actions/nexus-upload
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          mod_id: ${{ env.NEXUS_MOD_ID }}
+          file_id: ${{ env.NEXUS_FILE_UFCP }}
+          filename: mods/UFCP/ufcp-${{ steps.release.outputs.version }}.zip
+          version: ${{ steps.release.outputs.version }}
+          display_name: UFCP ${{ steps.release.outputs.version }}
+          changelog: ${{ steps.release.outputs.nexus }}
+          update_mod_version: 'true'

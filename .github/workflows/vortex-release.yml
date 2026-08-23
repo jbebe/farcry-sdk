@@ -6,6 +6,14 @@ on:
 permissions:
   contents: write
 
+env:
+  # Nexus Mods identifiers for the extension's page, which lives under the site domain rather than
+  # farcry2. NEXUS_MOD_ID is the internal ID that v3/games/site/mods/{id in the page URL} answers
+  # with, not the ID in the URL; the file ID is on the mod's Files tab under "API Info". An empty
+  # file ID skips the upload.
+  NEXUS_MOD_ID: ''
+  NEXUS_FILE_EXTENSION: '7736709'
+
 jobs:
   release:
     runs-on: windows-latest
@@ -14,6 +22,23 @@ jobs:
         working-directory: tools/vortex-farcry2
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prepare the release
+        id: release
+        uses: ./.github/actions/prepare-release
+        with:
+          directory: tools/vortex-farcry2
+          tag_prefix: vortex
+
+      - name: Check info.json against the changelog
+        shell: pwsh
+        # info.json is what Vortex itself reads the version from, so shipping it out of step
+        # with the changelog would number the extension differently from its own release.
+        run: |
+          $declared = (Get-Content info.json -Raw | ConvertFrom-Json).version
+          if ($declared -ne "${{ steps.release.outputs.version }}") {
+            throw "info.json declares $declared but the changelog releases ${{ steps.release.outputs.version }}."
+          }
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -26,37 +51,26 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund --legacy-peer-deps
 
-      - name: Read the version from info.json
-        # info.json is what Vortex reads the version from, so it's the single source of truth -
-        # the tag and release are derived from it instead of taken as a separate input.
-        id: version
-        shell: pwsh
-        run: |
-          $info = Get-Content info.json -Raw | ConvertFrom-Json
-          "version=$($info.version)" >> $env:GITHUB_OUTPUT
-
-      - name: Fail if the tag already exists
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          $tag = "vortex-${{ steps.version.outputs.version }}"
-          $existing = git ls-remote --tags origin "refs/tags/$tag"
-          if ($existing) {
-            Write-Error "Tag $tag already exists - bump the version in info.json before releasing."
-            exit 1
-          }
-
       - name: Build
         run: pwsh ./build.ps1
 
       - name: Smoke test
         run: npm test
 
-      - name: Tag and publish GitHub release
+      - name: Publish GitHub release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: |
-          $tag = "vortex-${{ steps.version.outputs.version }}"
-          gh release create $tag "vortex-farcry2-${{ steps.version.outputs.version }}.zip" --target "${{ github.sha }}" --title "Vortex Far Cry 2 extension ${{ steps.version.outputs.version }}" --generate-notes
+        run: gh release create "${{ steps.release.outputs.tag }}" "vortex-farcry2-${{ steps.release.outputs.version }}.zip" --title "Vortex Far Cry 2 extension ${{ steps.release.outputs.version }}" --target "${{ github.sha }}" --notes-file "${{ steps.release.outputs.notes_file }}"
+
+      - name: Upload the extension to Nexus Mods
+        uses: ./.github/actions/nexus-upload
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          mod_id: ${{ env.NEXUS_MOD_ID }}
+          file_id: ${{ env.NEXUS_FILE_EXTENSION }}
+          filename: tools/vortex-farcry2/vortex-farcry2-${{ steps.release.outputs.version }}.zip
+          version: ${{ steps.release.outputs.version }}
+          display_name: Vortex Farcry2
+          changelog: ${{ steps.release.outputs.nexus }}
+          update_mod_version: 'true'

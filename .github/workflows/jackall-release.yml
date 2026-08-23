@@ -2,14 +2,17 @@ name: JackAll release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version - used as the git tag (jackall-{version}) and as jackall-{version}.zip'
-        required: true
-        type: string
 
 permissions:
   contents: write
+
+env:
+  # Nexus Mods identifiers for the JackAll mod page. NEXUS_MOD_ID is the internal ID that
+  # v3/games/farcry2/mods/{id in the page URL} answers with, not the ID in the URL; each file ID is
+  # on the mod's Files tab under "API Info". An empty file ID skips that artifact's upload.
+  NEXUS_MOD_ID: '6317896892786'
+  NEXUS_FILE_APP: '7850727'
+  NEXUS_FILE_CLI: '7850730'
 
 jobs:
   release:
@@ -20,6 +23,13 @@ jobs:
         working-directory: tools/JackAll
     steps:
       - uses: actions/checkout@v4
+
+      - name: Prepare the release
+        id: release
+        uses: ./.github/actions/prepare-release
+        with:
+          directory: tools/JackAll
+          tag_prefix: jackall
 
       - uses: actions/setup-dotnet@v4
         with:
@@ -41,11 +51,35 @@ jobs:
       - name: Zip release
         shell: pwsh
         run: |
-          Compress-Archive -Path "publish\app\*" -DestinationPath "jackall-${{ inputs.version }}.zip"
-          Compress-Archive -Path "publish\cli\*" -DestinationPath "jackall-cli-${{ inputs.version }}.zip"
+          Compress-Archive -Path "publish\app\*" -DestinationPath "jackall-${{ steps.release.outputs.version }}.zip"
+          Compress-Archive -Path "publish\cli\*" -DestinationPath "jackall-cli-${{ steps.release.outputs.version }}.zip"
 
-      - name: Tag and publish GitHub release
+      - name: Publish GitHub release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "jackall-${{ inputs.version }}" "jackall-${{ inputs.version }}.zip" "jackall-cli-${{ inputs.version }}.zip" --target "${{ github.sha }}" --title "JackAll ${{ inputs.version }}" --generate-notes
+        run: gh release create "${{ steps.release.outputs.tag }}" "jackall-${{ steps.release.outputs.version }}.zip" "jackall-cli-${{ steps.release.outputs.version }}.zip" --title "JackAll ${{ steps.release.outputs.version }}" --target "${{ github.sha }}" --notes-file "${{ steps.release.outputs.notes_file }}"
+
+      # Only this first upload carries the changelog and the mod version - the two are mod-wide, and
+      # sending them twice would post the same entry twice.
+      - name: Upload JackAll to Nexus Mods
+        uses: ./.github/actions/nexus-upload
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          mod_id: ${{ env.NEXUS_MOD_ID }}
+          file_id: ${{ env.NEXUS_FILE_APP }}
+          filename: tools/JackAll/jackall-${{ steps.release.outputs.version }}.zip
+          version: ${{ steps.release.outputs.version }}
+          display_name: JackAll Application
+          changelog: ${{ steps.release.outputs.nexus }}
+          update_mod_version: 'true'
+
+      - name: Upload the JackAll CLI to Nexus Mods
+        uses: ./.github/actions/nexus-upload
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          mod_id: ${{ env.NEXUS_MOD_ID }}
+          file_id: ${{ env.NEXUS_FILE_CLI }}
+          filename: tools/JackAll/jackall-cli-${{ steps.release.outputs.version }}.zip
+          version: ${{ steps.release.outputs.version }}
+          display_name: JackAll CLI

@@ -238,11 +238,18 @@ confirmed a second way: a bone a clip holds constant should sit at or near its r
 ## The keyframe block
 
 Rotations — and only rotations — are stored sparsely, in groups of eight frames. After the shared
-eight-byte header comes one offset per group, each relative to the block's own start:
+eight-byte header comes one offset per group and a final one past the last, each relative to the
+block's own start:
 
 ```
-+0x08  i32[groupCount]  group offsets; groupCount is (last frame >> 3) + 1
++0x08  i32[groupCount + 1]  group offsets; groupCount is (last frame >> 3) + 1
 ```
+
+**The table carries one entry more than there are groups.** The trailing one is where the last
+group ends, which is the section's own size, and reading it is the only way to size the block
+without walking every group — see
+[the intrinsic length table](#rewriting-one-clip-and-leaving-the-rest-alone). A reader that takes
+the table as `groupCount` long mistakes the last group's start for the end of the block.
 
 Each group holds three runs, every one of them ordered by ascending bone id:
 

@@ -2,14 +2,17 @@ name: FCSE release
 
 on:
   workflow_dispatch:
-    inputs:
-      version:
-        description: 'Release version - used as the git tag (fcse-{version}) and as fcse-{version}.zip'
-        required: true
-        type: string
 
 permissions:
   contents: write
+
+env:
+  # https://www.nexusmods.com/farcry2/mods/368. NEXUS_MOD_ID is the internal ID that
+  # v3/games/farcry2/mods/368 answers with, not the 368 in the URL; each file ID is on the mod's
+  # Files tab under "API Info". An empty file ID skips that artifact's upload.
+  NEXUS_MOD_ID: '6317896892784'
+  NEXUS_FILE_FCSE: '7791918'
+  NEXUS_FILE_EXAMPLE: ''
 
 jobs:
   release:
@@ -22,6 +25,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Prepare the release
+        id: release
+        uses: ./.github/actions/prepare-release
+        with:
+          directory: tools/FCSE
+          tag_prefix: fcse
+
       # FCSE's settings-page layouts are built from assets/*.mgb.xml by tools/JackAll's CLI during
       # the CMake build (see the fcse_build_mgb note in tools/FCSE/CMakeLists.txt), so the .NET SDK
       # is a build prerequisite here exactly as the MSVC toolchain is.
@@ -31,9 +41,8 @@ jobs:
 
       - name: Build and test FCSE.exe and the example plugin
         shell: pwsh
-        # -Tests runs tests/ini_file_tests.cpp through ctest (see build.ps1). It's the one piece
-        # here that runs with no game attached, and its failure mode is silently mangling a
-        # player's fcse.ini, so a release shouldn't go out without it.
+        # -Tests runs every suite that needs no game attached (see build.ps1): the ini parser,
+        # settings registry, pattern scanner, address library and Lua runtime.
         run: .\build.ps1 -Config release -Tests
 
       - name: Verify the release build
@@ -48,14 +57,8 @@ jobs:
 
       - name: Stage release contents
         shell: pwsh
-        # Three separate staging folders -> three separate zips (see the "Zip release artifacts" step
-        # below): the main FCSE download, and two opt-in extras for anyone who wants a working
-        # starting point - one for each way of writing a mod.
-        #
-        # The two extras are deliberately not merged: a compiled plugin and a Lua script have
-        # entirely different prerequisites (an x86 MSVC toolchain vs. a text editor), and pairing
-        # them in one download would imply the C++ one is a prerequisite for the other. It is not -
-        # scripting exists precisely so a small change needs no compiler.
+        # Two zips: the FCSE download, and one opt-in example covering both ways of writing a mod.
+        # Its plugins\ folder extracts straight into the game's bin\, where FCSE finds either form.
         run: |
           $build = "out\build\x86-release"
 
@@ -63,27 +66,46 @@ jobs:
           Copy-Item "$build\FCSE.exe" "stage\fcse\FCSE.exe"
           Copy-Item "README-release.md" "stage\fcse\README.md"
 
-          New-Item -ItemType Directory -Force -Path "stage\example-plugin" | Out-Null
-          Copy-Item "$build\example_plugin\example_plugin.dll" "stage\example-plugin\example_plugin.dll"
-          Copy-Item "example_plugin\example_plugin.cpp" "stage\example-plugin\example_plugin.cpp"
-          Copy-Item "include\fcse_api.h" "stage\example-plugin\fcse_api.h"
-
-          # Laid out as plugins\example_script.lua so the zip extracts straight into the game's bin\.
-          # Lua mods share bin\plugins\ with the DLLs - one install location whatever a mod is
-          # written in. Nothing is copied from the build tree: a script is not compiled, and the API
-          # it calls into is already embedded in FCSE.exe as a resource.
-          New-Item -ItemType Directory -Force -Path "stage\example-script\plugins" | Out-Null
-          Copy-Item "example_script\example_script.lua" "stage\example-script\plugins\example_script.lua"
+          New-Item -ItemType Directory -Force -Path "stage\example\plugins" | Out-Null
+          New-Item -ItemType Directory -Force -Path "stage\example\source" | Out-Null
+          Copy-Item "$build\example_plugin\example_plugin.dll" "stage\example\plugins\example_plugin.dll"
+          Copy-Item "example_script\example_script.lua" "stage\example\plugins\example_script.lua"
+          Copy-Item "example_plugin\example_plugin.cpp" "stage\example\source\example_plugin.cpp"
+          Copy-Item "include\fcse_api.h" "stage\example\source\fcse_api.h"
 
       - name: Zip release artifacts
         shell: pwsh
         run: |
-          Compress-Archive -Path "stage\fcse\*" -DestinationPath "fcse-${{ inputs.version }}.zip"
-          Compress-Archive -Path "stage\example-plugin\*" -DestinationPath "fcse-example-plugin-${{ inputs.version }}.zip"
-          Compress-Archive -Path "stage\example-script\*" -DestinationPath "fcse-example-script-${{ inputs.version }}.zip"
+          Compress-Archive -Path "stage\fcse\*" -DestinationPath "fcse-${{ steps.release.outputs.version }}.zip"
+          Compress-Archive -Path "stage\example\*" -DestinationPath "fcse-example-plugin-${{ steps.release.outputs.version }}.zip"
 
-      - name: Tag and publish GitHub release
+      - name: Publish GitHub release
         shell: pwsh
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "fcse-${{ inputs.version }}" "fcse-${{ inputs.version }}.zip" "fcse-example-plugin-${{ inputs.version }}.zip" "fcse-example-script-${{ inputs.version }}.zip" --target "${{ github.sha }}" --title "FCSE ${{ inputs.version }}" --generate-notes
+        run: gh release create "${{ steps.release.outputs.tag }}" "fcse-${{ steps.release.outputs.version }}.zip" "fcse-example-plugin-${{ steps.release.outputs.version }}.zip" --title "FCSE ${{ steps.release.outputs.version }}" --target "${{ github.sha }}" --notes-file "${{ steps.release.outputs.notes_file }}"
+
+      # Only this first upload carries the changelog and the mod version - the two are mod-wide, and
+      # sending them twice would post the same entry twice.
+      - name: Upload FCSE to Nexus Mods
+        uses: ./.github/actions/nexus-upload
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          mod_id: ${{ env.NEXUS_MOD_ID }}
+          file_id: ${{ env.NEXUS_FILE_FCSE }}
+          filename: tools/FCSE/fcse-${{ steps.release.outputs.version }}.zip
+          version: ${{ steps.release.outputs.version }}
+          display_name: FCSE
+          changelog: ${{ steps.release.outputs.nexus }}
+          update_mod_version: 'true'
+
+      - name: Upload the example to Nexus Mods
+        uses: ./.github/actions/nexus-upload
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          mod_id: ${{ env.NEXUS_MOD_ID }}
+          file_id: ${{ env.NEXUS_FILE_EXAMPLE }}
+          filename: tools/FCSE/fcse-example-plugin-${{ steps.release.outputs.version }}.zip
+          version: ${{ steps.release.outputs.version }}
+          display_name: Example Plugins
+          category: miscellaneous

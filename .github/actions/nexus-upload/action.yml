@@ -1,0 +1,68 @@
+name: Upload to Nexus Mods
+description: Adds a new version of one release artifact to the Nexus Mods file entry it belongs to.
+
+inputs:
+  api_key:
+    description: Nexus Mods API key.
+    required: true
+  mod_id:
+    description: Internal mod ID, from v3/games/{domain}/mods/{id in the page URL}. Needed only to
+      post a changelog.
+    required: true
+  file_id:
+    description: File ID, from the mod's Files tab under "API Info". Empty skips the upload.
+    required: true
+  filename:
+    description: Path to the zip, relative to the workspace root.
+    required: true
+  version:
+    description: Version string for the new file version.
+    required: true
+  display_name:
+    description: Name shown for the file version.
+    required: true
+  category:
+    description: Section of the mod page the file sits in. The API takes only main, optional
+      and miscellaneous, all lowercase.
+    required: false
+    default: main
+  changelog:
+    description: Release notes for the mod's Changelog tab. Pass these on one artifact only.
+    required: false
+    default: ''
+  update_mod_version:
+    description: Whether this upload also sets the version the mod page shows.
+    required: false
+    default: 'false'
+
+runs:
+  using: composite
+  steps:
+    - name: Skip the upload when no file ID is configured
+      if: inputs.file_id == ''
+      shell: pwsh
+      run: Write-Host "::warning::No Nexus file ID for ${{ inputs.display_name }} - skipping its upload."
+
+    - name: Warn when the changelog cannot be posted
+      if: inputs.file_id != '' && inputs.changelog != '' && inputs.mod_id == ''
+      shell: pwsh
+      run: Write-Host "::warning::No Nexus mod ID - uploading ${{ inputs.display_name }} without a changelog entry."
+
+    - name: Add the file version
+      if: inputs.file_id != ''
+      uses: Nexus-Mods/upload-action@v1.0.0-beta.10
+      with:
+        api_key: ${{ inputs.api_key }}
+        mod_id: ${{ inputs.mod_id }}
+        file_id: ${{ inputs.file_id }}
+        filename: ${{ inputs.filename }}
+        version: ${{ inputs.version }}
+        display_name: ${{ inputs.display_name }}
+        category: ${{ inputs.category }}
+        # The action rejects a changelog with no mod ID rather than skipping it, which would fail
+        # the upload after the GitHub release is already out.
+        changelog: ${{ inputs.mod_id != '' && inputs.changelog || '' }}
+        update_mod_version: ${{ inputs.update_mod_version }}
+        # The version this one replaces moves to the mod's archived files rather than staying up
+        # alongside it as a second current download.
+        archive_existing_version: 'true'
