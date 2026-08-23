@@ -41,10 +41,15 @@ workspace, or `jackall-cli fc2model extract` for a folder to drop into a mod lay
 | `addon/rig.py` | Reparents the mesh's node tree onto the rig's — the knee fix below |
 | `addon/import_mab.py` | Builds an Action from a bank, and marks what it attaches |
 | `addon/export_xbg.py` | Writes edited geometry back into the pack |
+| `addon/rules.py` | What a model is allowed to be, with no bpy and no format constants in it |
+| `addon/validate.py` | Runs the rules against a scene, through the code an export would take |
+| `addon/motion.py` | How far each bone travels across the clips a pack carries |
+| `addon/panel.py` | The sidebar: the model, the check list, the motion table, export |
 | `tests/_corpus.py` | Where a test pack comes from, and the skip-when-absent helpers |
 | `tests/blender_import.py` | Imports the AK-47 and a character inside Blender, headless |
 | `tests/blender_export.py` | Exports back through JackAll and requires the shipped `.xbg` bytes |
 | `tests/blender_anim.py` | Poses a character and a weapon, and reads the rotations and offsets back off the rig |
+| `tests/blender_check.py` | Requires every rule to be silent on retail, then fire on exactly one violation |
 | `tests/render_preview.py` | Renders an imported model to a PNG, for looking at what the importer built |
 | `open_model.py` / `.cmd` | Opens a pack, and optionally a clip, in Blender's UI; quoting-safe in cmd and PowerShell |
 
@@ -52,7 +57,8 @@ workspace, or `jackall-cli fc2model extract` for a folder to drop into a mod lay
 
 Importing a pack: parts, LODs, UVs, vertex colours, normals, an armature from the nodes, rigid parts
 on their pivots, skin weights as vertex groups, and textures wired into the Generic shader graph.
-Exporting edited geometry back. Loading any animation bank the pack carries onto the rig.
+Exporting edited geometry back. Loading any animation bank the pack carries onto the rig. Checking
+the model against what the format allows, from a sidebar panel, before the game finds out.
 
 ## Export
 
@@ -145,6 +151,7 @@ cleanly when either is missing.
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_import.py
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_export.py
 & "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_anim.py
+& "C:\Programs\Blender 5.2\blender.exe" -b --python tools\BlenderFC2\tests\blender_check.py
 ```
 
 To look at a model rather than assert about it — worth doing, since a part can sit in the wrong place
@@ -193,6 +200,60 @@ does not, so rebuild and reinstall after changing code, or disable the extension
 
 The manifest declares `SPDX:Unlicense` to match the repository root; `tools/JackAll` uses a different
 licence, so change it here if this should follow that instead.
+
+## The viewport tells the truth
+
+Warning that a channel is unsupported is only honest if the supported ones are visible, so the
+material graph wires everything the format actually carries: the two tiling detail maps blended by
+the mask, each tinted, the base tint lerp, the normal map through a Normal Map node (1,656 of 2,379
+shipped materials carry one), the specular map inverted into Roughness with `SpecularPower` as the
+floor (1,889 carry one), and vertex colour multiplied into both blend weights where
+`VertexColorEnabled` is set (2,159).
+
+Roughness is the one approximation. Blender has no `SpecularPower` and Dunia has no roughness, so a
+bright specular texel becomes a smooth one — which is the difference between seeing a specular edit
+and seeing nothing.
+
+**Every node the importer makes carries an `fc2_slot` tag** naming the slot it stands for. That is
+what lets the validator tell the graph it built from one a modeler rewired: without it, driving
+Roughness from a specular map would make the plugin warn about every shipped material at once — which
+is exactly what `tests/blender_check.py` caught the first time this was wired.
+
+## Checking a model
+
+**View3D sidebar ▸ Far Cry 2 ▸ Check** runs every rule against what an export would write, and lists
+what it finds with a Select button that jumps to the object, vertex or material each one is about.
+An **ERROR** blocks the export; everything else is a warning, because retail itself breaks plenty of
+guidelines and refusing those would make the plugin wrong about the game it is for.
+
+The gate that keeps it honest is that **every rule, warnings included, says nothing about a model
+exactly as it shipped** — checked against the rifle, a 37-part vehicle and a skinned character.
+Retail is the definition of valid, so a rule that fires on it is a wrong rule, and one wrong rule
+blocking a legitimate export would destroy trust in the whole feature. `tests/blender_check.py` then
+introduces one violation at a time and requires that exact code and no other.
+
+What it catches today: an object export would silently skip, two objects claiming one part, a part
+that draws nothing, a part moved in object mode (export writes vertex positions only, so the move is
+discarded), a cluster over the triangle or palette ceiling, a buffer over the vertex ceiling, an
+unweighted vertex on a skinned part, editing a file shared with other models, and the material
+channels the format does not carry — metalness, roughness maps, emission, subsurface and the rest —
+each with what to do instead.
+
+The ceilings come from the pack's own `limits`, so there is no second place for them to drift.
+
+## The motion table
+
+**Far Cry 2 ▸ Animation ▸ Measure motion** reports, per bone, the worst rotation and translation
+across every bank the pack carries. On the AK-47 that is `FRAME` at 0° over 0 m, `SLIDE` at 0.14 m
+and `CLIP` at 45° over 0.39 m.
+
+That is the single most useful thing the add-on can say to a weapon modeler and it is not guessable
+from the mesh: the bone that does not move is where the body of the gun belongs, and one that swings
+is a moving part. Put geometry on the wrong bone and the gun tears itself apart on the first reload,
+which is otherwise a playtest discovery.
+
+Bone to part is a name match, which holds for weapon rigs (`FRAME`, `CLIP`, `SLIDE`, `ACCESSORY`) and
+is meaningless for characters.
 
 ## Conventions this file owns
 

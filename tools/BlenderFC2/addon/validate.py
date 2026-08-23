@@ -150,11 +150,18 @@ def _edited(material):
 
 
 def _driven(material):
-    """Which Principled inputs something is wired into, and which carry a value.
+    """Which Principled inputs the *modeler* wired something into.
 
-    An input driven by a link is a channel the modeler meant to use. Metallic is
-    also reported when it merely carries a non-zero value, because that is how
-    an imported PBR material arrives and it looks like nothing in the viewport.
+    The importer drives some of these itself - a specular map lands on Roughness
+    and a normal map on Normal - so a bare "is this linked" test reports every
+    shipped material as using a channel the format does not carry. Every node
+    the importer makes is tagged with the slot it stands for, so a chain with an
+    untagged image in it is one somebody changed, and that is what a warning is
+    about.
+
+    Metallic is also reported when it merely carries a non-zero value, because
+    that is how an imported PBR material arrives and it looks like nothing in
+    the viewport.
     """
     driven = {}
     if not material.use_nodes:
@@ -166,11 +173,36 @@ def _driven(material):
         return driven
 
     for socket in principled.inputs:
-        if socket.is_linked:
+        if socket.is_linked and _hand_wired(socket):
             driven[socket.name] = True
     if not driven.get("Metallic") and _scalar(principled, "Metallic") > 0.0:
         driven["Metallic"] = True
     return driven
+
+
+def _hand_wired(socket, limit=64):
+    """Whether this socket's chain is one the importer did not build.
+
+    True when an image upstream carries no slot tag, and true when there is no
+    image upstream at all - the importer only ever drives a Principled input
+    from a tagged texture, so a bare colour or a maths chain is the modeler's.
+    """
+    seen = set()
+    images = 0
+    stack = [link.from_node for link in socket.links]
+    while stack and len(seen) < limit:
+        node = stack.pop()
+        if node.name in seen:
+            continue
+        seen.add(node.name)
+        if node.type == "TEX_IMAGE":
+            images += 1
+            if materials.PROP_SLOT not in node:
+                return True
+            continue
+        for inner in node.inputs:
+            stack.extend(link.from_node for link in inner.links)
+    return images == 0
 
 
 def _scalar(node, name):

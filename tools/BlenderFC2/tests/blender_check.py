@@ -131,6 +131,80 @@ def metallic(result):
     principled.inputs["Metallic"].default_value = 1.0
 
 
+def viewport_shows_what_ships():
+    """The channels a material carries have to reach the viewport.
+
+    Warning that Metallic is unsupported is only honest if the channels that
+    *are* supported are visible - otherwise a modeler editing a specular map or
+    a normal map sees nothing change and has no instrument but the game.
+
+    Asserted per material against the slots it actually holds, not against a
+    fixed list: the AK-47's three materials carry a specular map and no normal
+    map, so requiring a normal map would be requiring something that is not
+    there.
+    """
+    errors = 0
+    wired = {}
+    for label, game_path in (MODELS[0], MODELS[2]):
+        rig = "graphics/characters/_common/pelvis_ref.skeleton" if label == "character" else None
+        result = load(game_path, rig)
+        pack = result["pack"]
+        for obj in result["parts"]:
+            for material in obj.data.materials:
+                errors += _material_channels(material, pack, wired)
+    print("wired: %s" % {key: len(value) for key, value in sorted(wired.items())})
+
+    # Between the rifle and the character, everything the format carries should
+    # have been exercised at least once.
+    for name in ("Base Color", "Normal", "Roughness"):
+        if name not in wired:
+            errors += fail("nothing drove %s across either model" % name)
+    return errors
+
+
+# Which slot has to end up driving which Principled input, when the material
+# carries it at all.
+CHANNELS = (("DiffuseTexture1", "Base Color"),
+            ("NormalTexture1", "Normal"),
+            ("SpecularTexture1", "Roughness"))
+
+
+def _material_channels(material, pack, wired):
+    from addon import materials as fc2materials
+
+    if material is None or not material.use_nodes:
+        return 0
+    path = material.get("fc2_material_path", "")
+    definition = pack.material(path) if path else None
+    if definition is None:
+        return 0
+
+    principled = next((n for n in material.node_tree.nodes
+                       if n.type == "BSDF_PRINCIPLED"), None)
+    if principled is None:
+        return fail("%s has no Principled node" % material.name)
+
+    errors = 0
+    slots = fc2materials.textures(definition)
+    for slot, socket_name in CHANNELS:
+        if slot not in slots or pack.texture(slots[slot]) is None:
+            continue
+        socket = principled.inputs.get(socket_name)
+        if socket is None or not socket.is_linked:
+            errors += fail("%s carries %s and nothing drives %s"
+                           % (material.name, slot, socket_name))
+        else:
+            wired.setdefault(socket_name, set()).add(material.name)
+
+    # Every image node has to say which slot it stands for, or export cannot
+    # match one back and a rule cannot tell an edited chain from a rebuilt one.
+    untagged = [n.name for n in material.node_tree.nodes
+                if n.type == "TEX_IMAGE" and fc2materials.PROP_SLOT not in n]
+    if untagged:
+        errors += fail("%s has untagged image nodes: %s" % (material.name, untagged))
+    return errors
+
+
 def panel_operators():
     """Drive the panel the way a click does: register, check, select, measure.
 
@@ -211,6 +285,7 @@ def main():
     errors += one_violation("channel.metallic", "channel.metallic", metallic)
 
     errors += blocks_only_on_errors()
+    errors += viewport_shows_what_ships()
     errors += panel_operators()
     print("blender check: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0

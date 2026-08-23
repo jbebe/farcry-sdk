@@ -141,6 +141,77 @@ def _base_tint(tree, values, weight, location):
     return node.outputs["Color"]
 
 
+def _normal(tree, slots, pack, cache, definition, principled):
+    """A normal map through a Normal Map node, which is the only correct route.
+
+    1,656 of the 2,379 shipped materials carry one. Without it a modeler editing
+    a normal map is working blind, and a warning about the channels the format
+    does not carry is only honest if the ones it does carry are shown.
+    """
+    if NORMAL1 not in slots:
+        return
+    image = _image(slots[NORMAL1], pack, cache)
+    if image is None:
+        return
+
+    node = _texture_node(tree, image, NORMAL1, tiling(definition, "NormalTiling1"),
+                         (0, ROW), colorspace="Non-Color")
+    normal_map = tree.nodes.new("ShaderNodeNormalMap")
+    normal_map.location = (COLUMN, ROW)
+    tree.links.new(normal_map.inputs["Color"], node.outputs["Color"])
+    tree.links.new(principled.inputs["Normal"], normal_map.outputs["Normal"])
+
+
+def _specular(tree, slots, pack, cache, definition, values, principled):
+    """Specular as the engine has it: a per-texel map, a colour, and a power.
+
+    1,889 shipped materials carry the map. Blender's Principled has no direct
+    equivalent, so the map drives Roughness inverted - a bright specular texel is
+    a smooth one - and SpecularPower sets the floor. That is an approximation,
+    but it is the difference between seeing a specular edit and seeing nothing.
+    """
+    power = values.get("SpecularPower")
+    if power:
+        # Shipped powers run 1 to about 64. Higher is glossier, and Blender's
+        # roughness runs the other way.
+        principled.inputs["Roughness"].default_value = max(
+            0.05, min(1.0, 1.0 - (float(power[0]) / 64.0)))
+
+    if SPECULAR1 not in slots:
+        return
+    image = _image(slots[SPECULAR1], pack, cache)
+    if image is None:
+        return
+
+    node = _texture_node(tree, image, SPECULAR1, tiling(definition, "SpecularTiling1"),
+                         (0, 2 * ROW), colorspace="Non-Color")
+    tint = _multiply(tree, node.outputs["Color"], values.get("SpecularColor1"),
+                     (COLUMN, 2 * ROW))
+    invert = tree.nodes.new("ShaderNodeInvert")
+    invert.location = (1.4 * COLUMN, 2 * ROW)
+    tree.links.new(invert.inputs["Color"], tint)
+    tree.links.new(principled.inputs["Roughness"], invert.outputs["Color"])
+
+
+def _vertex_colour(tree, weight, location):
+    """Multiply a blend weight by the vertex colour's own channel.
+
+    The pixel shader multiplies vertex colour into both mask weights, and 2,159
+    shipped materials turn it on - so a mesh's painted wear is invisible without
+    this, and a modeler editing it is the only instrument.
+    """
+    attribute = tree.nodes.new("ShaderNodeVertexColor")
+    attribute.layer_name = "Colour"
+    attribute.location = (location[0] - COLUMN, location[1])
+    node = tree.nodes.new("ShaderNodeMixRGB")
+    node.blend_type = "MULTIPLY"
+    node.location = location
+    node.inputs["Fac"].default_value = 1.0
+    tree.links.new(node.inputs["Color1"], weight)
+    tree.links.new(node.inputs["Color2"], attribute.outputs["Color"])
+    return node.outputs["Color"]
+
+
 def build(material, definition, pack, cache):
     """Wire an existing Blender material to the textures its document names."""
     material.use_nodes = True
@@ -173,6 +244,12 @@ def build(material, definition, pack, cache):
         tree.links.new(split.inputs["Color"], mask_node.outputs["Color"])
         layer_weight = split.outputs["Green"]
         tint_weight = split.outputs["Blue"]
+        # The pixel shader multiplies vertex colour into both weights, and 2,159
+        # shipped materials turn it on, so a mesh's painted wear is invisible
+        # without this.
+        if integers(definition).get("VertexColorEnabled"):
+            layer_weight = _vertex_colour(tree, layer_weight, (1.4 * COLUMN, -2 * ROW))
+            tint_weight = _vertex_colour(tree, tint_weight, (1.4 * COLUMN, -3 * ROW))
 
     base = _texture_node(tree, first, DIFFUSE1, tiling(definition, "DiffuseTiling1"), (0, 0))
     tint = _base_tint(tree, values, tint_weight, (COLUMN, ROW))
@@ -201,6 +278,8 @@ def build(material, definition, pack, cache):
 
     tree.links.new(principled.inputs["Base Color"], colour)
     principled.inputs["Roughness"].default_value = 0.6
+    _specular(tree, slots, pack, cache, definition, values, principled)
+    _normal(tree, slots, pack, cache, definition, principled)
     if integers(definition).get("AlphaTestEnabled"):
         material.blend_method = "CLIP"
     return True
