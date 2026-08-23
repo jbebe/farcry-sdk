@@ -205,6 +205,9 @@ public sealed class ShadowBinding
     /// the lookup off rather than leaving last frame's matrices behind it.</summary>
     public void Apply()
     {
+        // Onto the shared unit whether there are cascades or not: left at its default the sampler
+        // reads unit 0, where an array sampler finds the plain 2D texture some layer bound there.
+        GL.Uniform1(_map, TextureUnits.ShadowMap);
         if (SceneLighting.Shadows is not { } cascades)
         {
             GL.Uniform1(_strength, 0f);
@@ -212,7 +215,6 @@ public sealed class ShadowBinding
         }
 
         cascades.Bind(TextureUnit.Texture0 + TextureUnits.ShadowMap);
-        GL.Uniform1(_map, TextureUnits.ShadowMap);
         GL.Uniform1(_strength, 1f);
         Vector4 splits = ShadowCascades.Splits;
         GL.Uniform4(_splits, splits);

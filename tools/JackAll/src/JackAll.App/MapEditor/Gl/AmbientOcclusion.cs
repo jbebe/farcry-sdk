@@ -214,6 +214,9 @@ public sealed class OcclusionBinding
 
     public void Apply()
     {
+        // Onto the shared unit whether there is a buffer or not, for the same reason ShadowBinding
+        // does it: unit 0 belongs to whichever layer is drawing.
+        GL.Uniform1(_map, TextureUnits.Occlusion);
         if (SceneLighting.OcclusionMap == 0)
         {
             GL.Uniform1(_strength, 0f);
@@ -222,7 +225,6 @@ public sealed class OcclusionBinding
 
         GL.ActiveTexture(TextureUnit.Texture0 + TextureUnits.Occlusion);
         GL.BindTexture(TextureTarget.Texture2D, SceneLighting.OcclusionMap);
-        GL.Uniform1(_map, TextureUnits.Occlusion);
         GL.Uniform1(_strength, 1f);
         GL.ActiveTexture(TextureUnit.Texture0);
     }

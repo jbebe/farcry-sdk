@@ -45,6 +45,23 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   without committing to an import.
 
 ### Fixed
+- **Loading a second map into the viewport no longer wipes the scene and crashes.** The world swap
+  disposed the entity marker layer twice without clearing the field in between, and the ~15 layers
+  built between the two calls were handed the GL names the first one had just freed — so the second
+  deleted a live layer's program, VAO and index buffer out from under it. What followed was
+  `GL_INVALID_VALUE ... Handle does not refer to a shader or program object` and an access violation
+  inside `glDrawElementsInstanced`.
+- **The shadow and occlusion samplers no longer dangle with Demo mode off.** Their texture unit was
+  assigned only on the branch that had a real texture to bind, so with the presentation off
+  `shadowMap` and `occlusionMap` pointed at units whose textures had just been freed — or at unit 0,
+  where an array sampler finds whatever plain 2D texture a layer left there. Drivers answer an
+  incomplete sampler with a message per draw call, which is thousands a frame with debug output
+  synchronous, and is why the raw mode ran slower than the Demo mode that draws four times as far.
+  Both units now carry a 1x1 stand-in whenever the real one is absent.
+- The viewport's fps readout counts only frames the previous one had already asked for. Redrawing on
+  demand, the gap after an idle viewport arrived as a frame delta seconds long and was averaged in,
+  reporting single-digit rates nobody had waited for. The same delta is now clamped before it steps
+  the camera and the water clock, so the first frame after an idle no longer flings both.
 - `mod build` refuses to run when `patch.dat` already looks modded and no `patch.dat.vanilla` exists,
   unless `--force` is passed. `PatchBuilder.Build` doesn't guard this itself — `EnsureVanillaBackup()`
   only refuses when given a confirmation callback that returns false, so every headless caller would

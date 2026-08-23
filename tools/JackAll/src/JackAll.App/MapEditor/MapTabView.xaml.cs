@@ -254,7 +254,11 @@ public partial class MapTabView : UserControl
     private void Viewport_Render(TimeSpan delta)
     {
         ShowFrameRate(delta);
-        SceneLighting.Time += (float)delta.TotalSeconds;
+
+        // A viewport that only redraws on demand hands out the whole idle gap as its delta, and
+        // advancing the camera or the clock by seconds at once flings both.
+        float step = MathF.Min((float)delta.TotalSeconds, MaxStep);
+        SceneLighting.Time += step;
 
         GlDebug.Install();
 
@@ -274,7 +278,6 @@ public partial class MapTabView : UserControl
             _surfaceTexture?.Dispose();
             _terrainTextures?.Dispose();
             _waterLayer?.Dispose();
-            _markerLayer?.Dispose();
             _terrain = pending.Terrain;
             _shapeLayer?.Dispose();
             _splineLayer?.Dispose();
@@ -398,7 +401,7 @@ public partial class MapTabView : UserControl
         _targets.Resize(width, height, SceneLighting.Demo);
         _post ??= new PostProcess();
 
-        ApplyFlyKeys((float)delta.TotalSeconds);
+        ApplyFlyKeys(step);
         float aspect = (float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1));
         OpenTK.Mathematics.Matrix4 viewProjection = _camera.View() * _camera.Projection(aspect);
 
@@ -545,6 +548,10 @@ public partial class MapTabView : UserControl
             || (drawEntityModels && _modelLayer is { Streaming: true })
             || (LayerCatalog.Vegetation.IsVisible && _vegetationModelLayer is { Streaming: true });
     }
+
+    /// <summary>The longest step the camera and the water clock will take from one frame. An idle
+    /// viewport can be seconds between frames, and neither is meant to cover that in one go.</summary>
+    private const float MaxStep = 0.1f;
 
     /// <summary>How far out, in sectors, a model or a scatter placement still draws as geometry.
     /// The far tier is the presentation's; off it, only the near ring draws.</summary>
@@ -765,9 +772,17 @@ public partial class MapTabView : UserControl
     }
 
     /// <summary>Averages over a quarter second: a per-frame number is unreadable, and the average is
-    /// the one that matters while judging whether a layer costs anything.</summary>
+    /// the one that matters while judging whether a layer costs anything. Counted only while the
+    /// previous frame had already asked for another - the gap after an idle viewport is how long
+    /// nothing wanted a frame, and averaging it in reports seconds per frame that nobody waited.
+    /// </summary>
     private void ShowFrameRate(TimeSpan delta)
     {
+        if (!Viewport.RenderContinuously)
+        {
+            return;
+        }
+
         _frameSeconds += delta.TotalSeconds;
         _frames++;
         if (_frameSeconds < 0.25)

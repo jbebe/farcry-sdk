@@ -47,6 +47,10 @@ public readonly struct GlState : IDisposable
         GL.DepthMask(true);
         GL.Disable(EnableCap.Blend);
         GL.Disable(EnableCap.CullFace);
+
+        // The shared units carry something readable from here on. Whatever produces a real cascade
+        // array or occlusion buffer this frame binds over the top of these.
+        TextureUnits.BindStandIns();
     }
 
     public void Dispose()
