@@ -8,7 +8,7 @@ import bpy
 from bpy.props import BoolProperty, EnumProperty, IntProperty, StringProperty
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
-from . import export_xbg, import_mab, import_xbg
+from . import export_xbg, import_mab, import_xbg, panel
 from .pack import EXTENSION, Pack
 
 
@@ -182,6 +182,9 @@ CLASSES = (FC2_OT_import_pack, FC2_OT_load_clip, FC2_OT_export_pack)
 def register():
     for cls in CLASSES:
         bpy.utils.register_class(cls)
+    # After the operators: the panel's buttons name them, and a panel drawn
+    # against an unregistered operator is a poll error on the first redraw.
+    panel.register()
     bpy.types.TOPBAR_MT_file_import.append(menu_import)
     bpy.types.TOPBAR_MT_file_export.append(menu_export)
 
@@ -189,5 +192,6 @@ def register():
 def unregister():
     bpy.types.TOPBAR_MT_file_export.remove(menu_export)
     bpy.types.TOPBAR_MT_file_import.remove(menu_import)
+    panel.unregister()
     for cls in reversed(CLASSES):
         bpy.utils.unregister_class(cls)
