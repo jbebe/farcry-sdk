@@ -98,16 +98,43 @@ the install differs from what the pack was built against before touching anythin
 owned  =  same_directory_as_model  OR  usage == 1
 ```
 
-`usage` is how many other files reference this one. The directory half stays because a file in the
-model's own folder is its own by construction; the count only ever **promotes**, so the rule cannot
-get less safe as evidence improves. `metalbrushed_d.xbt` backs 46 of the 87 shipped weapons and
-stays `shared`; a single-use `.xbm` pooled in `graphics/_materials` finally becomes `owned`, which
-the directory rule alone gets wrong for 58% of retail materials.
+`usage` is how many files **use** this one, counting the packed model itself. The directory half
+stays because a file in the model's own folder is its own by construction; the count only ever
+**promotes**, so the rule cannot get less safe as evidence improves. Measured over the shipped
+weapons: of the 325 pooled materials they name, 140 have exactly one user and become `owned` -
+including the sawed-off shotgun's, which the directory rule leaves `shared` and a modeler otherwise
+has to go and find by hand. `metalbrushed_d.xbt` stays `shared`.
+
+Counting the packed model itself is what makes the promotion safe. A count of one can then only ever
+mean *this* model, never one other file with the model's own edge missing from the index.
+
+#### A reference is not a use
+
+The reference index answers "who points at this", and most of the answers are not users. Every world
+ships a generated `<name>_depload.dat` listing what the level loads, plus an `.xml` twin restating
+it, so a material one weapon uses is *referenced* by four dozen files. The shipped AK-47's materials
+count **47 references and 8 users**; counted naively, nothing in the game would ever promote — 46 of
+2,379 materials rather than 1,315.
+
+So a use is counted from the edge's kind:
+
+| Kind | Counted as |
+|---|---|
+| `XbgMaterial`, `XbmTexture`, `MgbTexture`, `FcbPathValue`, `FcbNameValue`, `MgbNameId` | the referencing file |
+| `DepLoadDependency` | the **site**, which is the parent resource that pulled it in |
+| `TextPath` | not counted |
+
+A `depload.dat` names no bytes of its own, but it sites each dependency against the resource that
+pulled it in — so the manifest is not the user and its site is. That is the one place the graph
+records a user for a file nothing else mentions.
+
+`TextPath` is dropped because the generated `_depload.xml` twins are its bulk here. What goes with
+them is a path named in an `.rml` or a Lua script, which is not a rendering use.
 
 `usage_source` records where the count came from. Only `xref` — JackAll's reference index, which
-covers `.fcb`, `depload` and text edges as well as meshes — may promote a file outside the model's
-own directory. A graphics-only scan is a **lower bound**: `bullettracer_d.xbt` is named from a weapon
-archetype's `texTexture` field and by no mesh at all, and under-counting is the dangerous direction.
+covers `.fcb`, `depload` and mesh edges — may promote a file outside the model's own directory. A
+graphics-only scan is a **lower bound**: `bullettracer_d.xbt` is named from a weapon archetype's
+`texTexture` field and by no mesh at all, and under-counting is the dangerous direction.
 
 ## Textures
 

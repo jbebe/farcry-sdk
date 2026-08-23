@@ -1,8 +1,10 @@
 using System.ComponentModel;
 using JackAll.Cli.Commands.Mod;
+using JackAll.Cli.Commands.Xref;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
 using JackAll.Core.Vfs;
+using JackAll.Core.Xrefs;
 using JackAll.Tools.Fc2Model;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -18,7 +20,7 @@ namespace JackAll.Cli.Commands.Fc2Model;
 /// </remarks>
 public sealed class Fc2ModelExportCommand : CliCommand<Fc2ModelExportCommand.Settings>
 {
-    public sealed class Settings : GameCommandSettings
+    public sealed class Settings : XrefFileSettings
     {
         [CommandArgument(0, "<model>")]
         [Description("The model's game-relative path, e.g. graphics/weapons/primary/ak47/ak47.xbg.")]
@@ -44,8 +46,19 @@ public sealed class Fc2ModelExportCommand : CliCommand<Fc2ModelExportCommand.Set
             install, BundledAssets.LoadNames(), GameCache.Load(install.CacheFile),
             BundledAssets.LoadFcbClasses(), new SyncProgress(JsonOutput.Report), includeFragments: false);
 
+        ReferenceIndex index = ReferenceIndex.Load(settings.ResolveIndexPath());
+        Func<string, int>? usage = ReferenceUsage.Counter(index, settings.Model);
+        if (usage is null)
+        {
+            AnsiConsole.MarkupLine(
+                "[yellow]No reference index[/]: ownership falls back to the directory rule, which "
+                + "marks a pooled material shared even when only this model uses it. Run "
+                + "'jackall-cli xref build' to get counts.");
+        }
+
         List<string> clips = Clips(vfs, settings);
-        Fc2ModelBundle bundle = Fc2ModelBuilder.Build(settings.Model, vfs.ReadByPath, clips: clips);
+        Fc2ModelBundle bundle = Fc2ModelBuilder.Build(
+            settings.Model, vfs.ReadByPath, usage, clips);
         string output = settings.Out
             ?? Path.GetFileNameWithoutExtension(settings.Model) + Fc2ModelBundle.Extension;
         bundle.Save(output);
