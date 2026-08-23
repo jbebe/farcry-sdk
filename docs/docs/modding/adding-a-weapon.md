@@ -11,10 +11,11 @@ This page is built from two things instead: Ubisoft's own DLC1 weapon pack, deco
 out of `tmp/gamefiles`, and the engine code that consumes it, traced through GhidraMCP against
 `FarCry2_server`.
 
-**The art half is no longer untested.** A weapon whose mesh, materials and textures were all authored
-here has been built, installed and played — see [Replacing a weapon's art](#replacing-a-weapons-art)
-below. The archetype half — the seven `.fcb` records, `iAnimationValue`, `depload`, spawning a
-weapon that did not previously exist — is still a procedure nobody has run end to end.
+**The art half is solved and no longer needs this page.** A weapon whose mesh, materials and textures
+were all authored here has been built, installed and played, and the twenty-odd one-off scripts that
+took have since become [one file and one plugin](#geometry-materials-and-textures-one-file-one-plugin).
+The archetype half — the seven `.fcb` records, `iAnimationValue`, `depload`, spawning a weapon that
+did not previously exist — is still a procedure nobody has run end to end.
 :::
 
 ## The reference implementation
@@ -306,7 +307,8 @@ wrong misbehaves animations *without crashing*, so it is easy to miss until play
 | New archetype into an existing library | stage `mods/generated/entitylibrary.fcb/Weapons/<Name>.xml` in a layer | `FcbAssembler` appends unmatched fragment ids as new content — a tested path |
 | Checking nothing shadows your archetype | `jackall-cli mod lint` | models the real override chain |
 | Finding what references what | `jackall-cli xref build` then `xref to` / `xref from` | |
-| HUD icon and textures | `jackall-cli xbt extract` → edit DDS → `xbt build` | header XML is required, not optional — every header byte must come from a real file |
+| Mesh, materials, textures, animation | `jackall-cli fc2model export` → Blender → `fc2model extract` | one decoded file; see [below](#geometry-materials-and-textures-one-file-one-plugin) |
+| A HUD icon, or any texture outside a model | `jackall-cli xbt extract` → edit DDS → `xbt build` | header XML is required, not optional — every header byte must come from a real file. A model's own textures travel as PNG in the pack instead |
 | Shop / menu UI | `jackall-cli mgb decode` / `encode` / `verify` | byte-exact round trip |
 | Sounds | `jackall-cli spk list/extract/import`, `sbao build` | |
 | Packaging | `jackall-cli mod build -g <game> -l <layer>`, `mod restore` to undo | there is no loose-file override; a mod is a rebuilt `patch.dat`/`patch.fat` — see [getting-started](./getting-started.md) and [vortex](./vortex.md) |
@@ -327,28 +329,62 @@ forces exactly that re-encode into `patch.dat`, and the DLC archetypes still res
 running game.
 :::
 
-## Geometry: edit a donor, don't build from scratch
+## Geometry, materials and textures: one file, one plugin
 
-`tools/BlenderFC2` exports meshes — **File ▸ Export ▸ Far Cry 2 Mesh (.xbg)** — and the shape of that
-exporter happens to match this job exactly. It *edits* the container rather than rebuilding it: nodes,
-materials, bone palettes, un-imported LODs and every opaque chunk survive untouched, and an untouched
-export returns the source bytes through Blender for the AK-47, a 37-part vehicle and a skinned
-character. A part's topology can change freely — the tangent frame is regenerated from the UVs, and
-`tests/blender_export.py` subdivides a part from 805 to 2,637 vertices. Bounding spheres and boxes are
-refitted whenever geometry moves, which matters because culling reads them.
+:::info[Verified end to end]
+`tools/BlenderFC2/tests/blender_transplant.py` rebuilds a weapon from a donated mesh using nothing
+but the Blender add-on and stock Blender — transplant, check, unwrap, export, apply — and reads the
+written `.xbg` back at full part count with its own reload still posing it. Nothing in the run
+reaches past the add-on into a file format.
+:::
 
-Its limits line up with the archetype work above rather than fighting it:
+The art half used to mean roughly twenty one-off scripts, a trip outside the repo to convert a
+texture, and a working knowledge of chunk padding, bone palettes, mip companions and the `Weapon`
+shader's missing albedo slot. It is now one file and one plugin.
 
-- **Cannot add or remove parts, nodes or LODs.** Your weapon inherits the donor's part list — which is
-  what you want anyway, since `CGraphicComponent` hashes part names exact-case and the MOVE graph and
-  `.skeleton` bind to them.
+```
+jackall-cli fc2model export graphics/weapons/dlc/sawed_off_shotgun/dlc1_sawedoff_shotgun.xbg \
+    --game "C:\Games\Far Cry 2" --clips -o shotgun.fc2model
+```
+
+That collects the mesh, its materials, its textures, the rig beside it and every animation bank that
+names it into one [`.fc2model`](../file-formats/fc2model.md) — a zip with **no Dunia format inside
+it**: JSON and flat float arrays for the mesh, JSON for the materials, PNG for the textures. JackAll.App
+does the same from **Export as .fc2model** on any `.xbg`.
+
+Open it with **File ▸ Import ▸ Far Cry 2 Model Pack**, work, and export it back. Applying is
+**Apply .fc2model** in the app, which stages the changed files into the workspace, or
+`jackall-cli fc2model extract` for a folder to drop into a mod layer. Only what actually changed is
+written — a texture travels as PNG, so re-encoding an untouched one would recompress it on every
+save.
+
+Four things the plugin now does that this page used to have to explain:
+
+- **It tells you where geometry belongs.** *Measure motion* reports, per bone, the worst rotation and
+  translation across every bank the pack carries. The table below is what it prints for the
+  sawed-off; you no longer have to know it in advance.
+- **It refuses an export that would silently lose your work** — a new object export would skip, a
+  part dragged in object mode (positions are object-local, so the drag is discarded), a part left
+  unwrapped, a vertex in no vertex group. Each says what to do instead.
+- **It warns about channels the format does not carry** — metalness, roughness maps, emission — and
+  about the `Weapon` shader's missing albedo slot, with the recipe below as the fix.
+- **It shows what the format *does* carry**, so a specular or normal-map edit is visible rather than
+  taken on trust.
+
+Every rule is silent on the game's own models: retail is the definition of valid, so a rule that
+fires on a shipped weapon is a wrong rule.
+
+### What it still cannot do
+
+- **Add or remove parts, nodes or LODs.** Your weapon inherits the donor's part list — which is what
+  you want anyway, since `CGraphicComponent` hashes part names exact-case and the MOVE graph and
+  `.skeleton` bind to them. JackAll can [author a container from decoded content
+  alone](../file-formats/xbm-xbg.md#a-container-can-be-authored-not-just-edited), 3,133 of 3,133, so
+  the format is not what stands in the way; the scene-to-document side is.
 - **No split UVs, normals or colours** — the file stores all three per vertex, so a seam must be a
-  duplicated vertex.
-- **Cannot outgrow the source's quantisation.** Positions are int16 against the file's own `PMCP`
-  scale, so a much larger model than the one being replaced is refused rather than silently wrapped.
-
-So the practical route is: pick a donor weapon with a part layout you can live with, reshape its parts,
-and keep every name byte-identical.
+  duplicated vertex. The plugin now counts them for you instead of letting the first corner quietly
+  win.
+- **`.hkx` collision is untouched.** Reshape a weapon and it keeps the donor's collision shape.
 
 ## Replacing a weapon's art
 
@@ -371,7 +407,9 @@ under any DLC-content mod and it holds: an override staged at `graphics\weapons\
 ### Which part you put geometry in decides how it animates
 
 The clips drive the donor's parts by name, so the cut is an animation decision, not just a material
-one. Measured across all 49 sawed-off clips, as the largest departure from each bone's rest pose:
+one. **The plugin's *Measure motion* prints this for whatever pack is open** — the table below is the
+sawed-off's, measured across all 49 of its clips as the largest departure from each bone's rest pose,
+and it is here as the worked example rather than as something to memorise:
 
 | Part | Turns | Moves |
 | --- | --- | --- |
@@ -412,6 +450,10 @@ the `_mip0` relationship is "twice the base", not a fixed size.
 
 ### Four things that went wrong, and why
 
+The first three are the same trap seen from three angles, and the plugin now names it: a material
+driving **Metallic** raises `channel.metallic`, with the band below as the fix. The fourth it cannot
+see, because it is about where you make the cut.
+
 - **A physically based albedo is far too dark for this shader.** Doom's texture measured 0.05 to 0.12
   luma and up to 3.7 times as red as blue, because its metal gets brightness from a metalness map
   this shader has no equivalent for. Lit, it reads as black plastic with rust.
@@ -430,9 +472,10 @@ the `_mip0` relationship is "twice the base", not a fixed size.
 
 | Gap | Detail |
 |---|---|
-| **`.xbm` materials** | Solved. `tools/BlenderFC2`'s writer round-trips all 2,379 shipped materials byte-identically and rewritten ones load in game — see [xbm-xbg](../file-formats/xbm-xbg.md#the-xbm-body-and-writing-one-back). JackAll's `XbmMaterial.cs` is still parse-only. |
-| **`.hkx` collision** | Not parsed at all. Reuse the donor's. |
-| **`.mab` authoring** | Clips now decode fully — the sparse eight-frame keyframe groups are solved and **File ▸ Import ▸ Far Cry 2 Animation (.mab)** loads one onto an armature as an Action. There is still no *export* path, so a new clip cannot be authored. See [mab](../file-formats/mab.md). |
+| **`.xbm` materials** | Solved, in JackAll. All 2,379 shipped materials round-trip byte-identically and rewritten ones load in game — see [xbm-xbg](../file-formats/xbm-xbg.md#the-xbm-body-and-writing-one-back). A pack carries them as JSON, so nothing outside JackAll parses one. |
+| **`.hkx` collision** | Not parsed at all. Reuse the donor's — a reshaped weapon keeps its collision shape. |
+| **`.mab` authoring** | Solved. Pose the rig and **Write Animation** puts the Action back into the bank, rewriting only the clip that fits this model and leaving the character's byte for byte. See [rewriting one clip](../file-formats/mab.md#rewriting-one-clip-and-leaving-the-rest-alone). |
+| **Adding a part or LOD** | The container can be [authored from decoded content alone](../file-formats/xbm-xbg.md#a-container-can-be-authored-not-just-edited), 3,133 of 3,133, but nothing turns a new Blender object into a new part. A weapon still inherits its donor's part list. |
 | **MOVE authoring** | Header, class-ID table, channel table and merge semantics are decoded; per-state record interiors are not. See [move](../file-formats/move.md). |
 | **New `.spk` sound ids** | Only replacement of an existing record is documented; how a new id is minted is not. |
 | **Missing `depload` entries** | Whether an absent asset fails to load, loads late, or is fine has never been tested. |
@@ -446,17 +489,20 @@ on the AK-47 and a 1911**, so re-verify before relying on any of it.
 
 1. Pick an `iAnimationValue` from 0–43 and set `sPartName` to match whatever owns that slot's
    animation set.
-2. Clone the donor's `.xbg`, `.hkx`, `_ref.skeleton` and state textures under new paths, keeping every
-   internal part and bone name byte-identical. Reshape the mesh in Blender if you want your own
-   silhouette.
-3. Append the new paths to `tools/JackAll/assets/fc2.hashlist`; run `jackall-cli system hash archiveitems`.
-4. Author the seven archetypes as FCB fragments. Set `sName` to `dlc1` (or 2–6).
-5. Write **both halves** of every hash-backed field: the string and its exact-case CRC32.
-6. Re-skin `hud_icon_dlc_01.xbt` and the two state masks via `xbt extract` / `xbt build`.
-7. Add the resources to the world's `depload`, then re-sort the parents array by CRC32.
-8. Spawn it from a Domino Lua box in one of the four pre-wired DLC slots.
-9. `jackall-cli mod lint`, then `mod build`.
-10. **Start a new game** — `Inventory` and `CPickupWeapon` are captured in savegames. Ballistics are
+2. `fc2model export` the donor, reshape it in Blender, **Check**, and export the pack back. Its
+   materials, textures and animation come with it. Keep every internal part and bone name
+   byte-identical.
+3. Clone the donor's `.hkx` under the new path — nothing parses it, so the collision shape is the
+   donor's whatever the mesh became.
+4. Append the new paths to `tools/JackAll/assets/fc2.hashlist`; run `jackall-cli system hash archiveitems`.
+5. Author the seven archetypes as FCB fragments. Set `sName` to `dlc1` (or 2–6).
+6. Write **both halves** of every hash-backed field: the string and its exact-case CRC32.
+7. Re-skin `hud_icon_dlc_01.xbt` via `xbt extract` / `xbt build` — it belongs to no model, so it is
+   not in the pack.
+8. Add the resources to the world's `depload`, then re-sort the parents array by CRC32.
+9. Spawn it from a Domino Lua box in one of the four pre-wired DLC slots.
+10. `jackall-cli mod lint`, then `mod build`.
+11. **Start a new game** — `Inventory` and `CPickupWeapon` are captured in savegames. Ballistics are
     archetype-only and read fresh at spawn, so those you can iterate on a live save.
 
 There is no in-game dev console, so every iteration is a full repack and relaunch.

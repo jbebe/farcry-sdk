@@ -227,8 +227,8 @@ nodes carry a non-unit value.
 ## The `.xbm` body, and writing one back
 
 :::info[Verified against the retail corpus]
-Measured over all 2,379 shipped `.xbm` files, and round-tripped byte-identically through
-`tools/BlenderFC2`'s writer.
+Measured over all 2,379 shipped `.xbm` files, and round-tripped byte-identically through JackAll's
+writer.
 :::
 
 The community account that an `.xbm` and an `.xbg` are the same format is exactly right, and stronger
@@ -591,7 +591,24 @@ per buffer, and 10,456 of 10,462 LODs use exactly one buffer, so in practice it 
 a shape the engine is never asked to handle. A writer that cannot fill a cluster should give it a
 degenerate or sub-millimetre triangle rather than a zero count.
 
+**Seven clusters put every UV in one place, and none of them at the origin.** Of the 32,170, seven
+map their whole part to a single point — `urbanelectricpole02b` at `(128.0039, 128.0039)`,
+`pubboardsquare03` at `(-3.0001, -3.0001)`, `jeepwrangler_taxi`'s `DASHLIGHT` at `(0.048, 0.643)`.
+So flat mapping is a thing the art pipeline did on purpose, and *flat mapping at `(0, 0)`* is not:
+that is the shape a UV layer nobody unwrapped takes, and no shipped part has it.
+
+**Four material names of 7,496 are embedded rather than named.** Three meshes — `bat.xbg`,
+`torch01.xbg` and `rag_animready.xbg` — carry their material in their own `LTMD` chunk instead of
+pointing at an `.xbm` file, and none of them is a weapon. See
+[the `.xbm` body](#the-xbm-body-and-writing-one-back) for why the two layouts cannot be read with one
+reader.
+
 ## Import/export tooling
+
+The supported route is `tools/BlenderFC2`, which reads and writes
+[`.fc2model`](./fc2model.md) packs rather than the container itself — JackAll decodes and re-authors
+the `.xbg`, so the add-on carries no format code. What follows is the community landscape it grew up
+alongside.
 
 **`Dunia-Engine-XBG-Blender-Importer`** (Quiet_Joker) is the current working answer to custom mesh
 import, v3.0 released 2026-07-04. Originally built for *Avatar: The Game*, ported from a Blender

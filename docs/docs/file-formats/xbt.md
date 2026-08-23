@@ -58,6 +58,38 @@ the DDS.
 Sizes cluster tightly: base textures are mostly 256×256 (487 files) or 512×512 (91), and companions
 mostly 512×512 (253) or 1024×1024 (91).
 
+## What a shipped texture looks like
+
+:::info[Measured over the graphics tree]
+4,283 of the 4,289 `.xbt` outside `sdat\` decode standalone; the other six need a companion that is
+not beside them. The terrain layers under `sdat\` are excluded — they are
+[two 16-bit channels](#terrain-layer-textures), not colour.
+:::
+
+| Property | Count |
+|---|---|
+| a power of two on both axes | **4,283 of 4,283** |
+| a multiple of four on both axes | 4,283 of 4,283 |
+| square | 3,216 |
+| larger than 2048 on either axis | **0** — the largest shipped is 2048x2048 |
+
+| Codec | Count |
+|---|---|
+| DXT1 | 2,842 |
+| DXT5 | 1,315 |
+| DXT3 | 124 |
+| uncompressed | 2 — both sky domes |
+
+None of this is enforced by the tools. A block compressor pads an odd size rather than refusing one,
+so a 300x300 texture builds and loads; what it does not do is halve cleanly through a mip chain. The
+unanimity is worth knowing precisely because nothing checks it.
+
+**A replacement may change dimensions.** The sawed-off's 512²/1024² pair was raised to 1024²/2048²
+and loaded fine — the `_mip0` relationship is "twice the base", not a fixed size.
+
+**DXT1 carries one bit of alpha.** A soft gradient dropped into a DXT1 slot becomes a hard cutout,
+and nothing in the material can change the codec, so the choice is the slot or the edge.
+
 ## Terrain layer textures
 
 Every entry in a world's terrain layer table (`<world>.game.xml`, `<Layers>`) points at a diffuse

@@ -320,10 +320,57 @@ popcount of the mask that names the section's bones, or 1 for a trajectory. A co
 no frames, so its last frame and rate are both zero; a keyed one carries the clip's rate, 30 to 32
 in the shipped set.
 
+## Rewriting one clip and leaving the rest alone
+
+A bank holds a clip per skeleton taking part, so a modder editing a weapon's motion is editing a file
+that also carries the character's. Re-encoding the whole thing loses bytes on a fifth of the shipped
+set — the exact ties below — which would degrade the arms a little more on every save. The way round
+it is not to re-encode what nobody touched.
+
+:::info[Verified against the retail corpus]
+Every one of the **4,436 shipped banks** re-lays byte-identically when each clip's sections are taken
+verbatim and the chain is nested back together.
+:::
+
+Two things have to be right for that to hold.
+
+**A section must be taken at its intrinsic length, not its span.** A reader normally slices a section
+from its own offset to wherever the next one starts, and that block carries the alignment padding and
+the sixteen-byte separator with it. Re-laying those adds them a second time — one separator per clip,
+on every shipped bank. The intrinsic length is computable from the section's own header:
+
+| Section | Length |
+|---|---|
+| constant rotation | header + `tracks × 6` |
+| constant translation | header + `tracks × 12` |
+| animated translation | header + `frames × tracks × 12` |
+| trajectory translation | header + `frames × 12` |
+| trajectory rotation | header + `frames × 6` |
+| keyframe rotation | the **last entry of the group offset table**, which is the section's own size |
+| tag table | `4 + count × 172` |
+| event chain | not computable — it is FCB, and it travels as it stands |
+
+**The four bone masks have to travel verbatim too.** A mask names which bones a section holds values
+for, and the popcount below a bone is that bone's slot inside it, so the two are normally the same
+fact stated twice and either can be derived from the other. On shipped data they can disagree: **9 of
+the 11,261 clips**, all in `sm10_se02_player_outro.mab`, name a bone in the constant-rotation mask
+that the section has no value for. The engine reads the mask, so deriving it would change how a bank
+nobody edited plays.
+
+### What a writer must respect
+
+- **Every rotation group's first frame carries a key.** Groups are eight frames wide, so frames 0, 8,
+  16 … are written whatever a keying policy decides about the rest.
+- **Translations are dense and frame-major**, so a moving bone gets a value on every frame — there is
+  no sparse form to choose.
+- **Only a bone the `.skeleton` marks `m_fAnimatedTranslation` may translate at all.** Every one of
+  the 19,458 constant translations and 5,692 translation tracks in the retail set lands on such a
+  bone; writing one elsewhere is inventing motion the engine will not play.
+- **Every tag record's `+0x0C` delta moves** when any clip changes size, because it is measured from
+  the record's own position. A wrong delta misbehaves the animation without crashing.
+
 ## What is still open
 
-- **Writing a keyframe block.** The container, the quaternion codec and the section framing are all
-  reproducible; the sparse group layout is not yet written from scratch.
 - **140 of the 172 bytes in a tag record**, and the FCB payload schema of an event node.
 - **A clip cannot be re-encoded byte-exactly, and not because of a bug.** 487 of the 704,739 shipped
   rotations were authored on an exact tie — a quarter turn puts two components at `1/sqrt(2)`, an
@@ -360,7 +407,8 @@ to wherever the next section starts, so it carries the alignment padding and the
 separator with it, and re-laying those adds them a second time — one separator per clip, on every
 shipped bank.
 
-`tools/BlenderFC2/addon/import_mab.py` turns a clip into a Blender Action. Because a clip stores a
+`tools/BlenderFC2/addon/import_mab.py` turns a clip into a Blender Action, and `export_mab.py` puts
+one back. Because a clip stores a
 bone's transform relative to its parent — replacing the rest transform rather than adding to it — the
 pose bone carries `rest⁻¹ · clip`, and the armature has to be built with each bone oriented like its
 mesh node rather than aimed at its children. A pose bone's location is measured in its own rest

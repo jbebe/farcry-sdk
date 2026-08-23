@@ -114,6 +114,13 @@ has to go and find by hand. `metalbrushed_d.xbt` stays `shared`.
 Counting the packed model itself is what makes the promotion safe. A count of one can then only ever
 mean *this* model, never one other file with the model's own edge missing from the index.
 
+**An animation bank is the one exception, and not by being given permission.** A bank always reads
+`shared` — the AK-47's reload counts three users, two of them unnamed resources that *load* it rather
+than models that *use* it — and the rule has no way to see that what changed inside it was one clip.
+So the exception is structural instead: an editor can only rewrite the clip that fits this pack's own
+rig, and [every other clip goes back byte for byte](#an-edited-clip-and-how-the-rest-of-the-bank-survives).
+Applying a pack lets an edited `clip` entry through for that reason and no other.
+
 #### A reference is not a use
 
 The reference index answers "who points at this", and most of the answers are not users. Every world
@@ -212,8 +219,41 @@ name `ak47` against the 62 filed beside it, the rest being locomotion and cutsce
 the rifle while a character runs or talks. 44 of the 89 models under `graphics\weapons` find banks
 this way; the other 45 are ammo boxes, pickups, casings and bullets, which nothing animates.
 
-An edited clip is simply an entry whose bytes changed and which has grown an `origin_sha256`.
-Defining `clips[]` now is what lets clip authoring arrive later without a format change.
+An edited clip is an entry whose bytes changed and which has grown an `origin_sha256`, like any
+other. What is different about a bank is what "edited" is allowed to mean — see below.
+
+### An edited clip, and how the rest of the bank survives
+
+A bank's document holds every clip decoded — bones, keys, timing — and, alongside them, **each
+section exactly as it arrived** under `raw`, plus the four bone masks under `masks`.
+
+That redundancy is the whole point. Present in `raw` means "unchanged, write these bytes"; absent
+means "encode it from the decoded fields". So an editor rewriting a weapon's reload **drops the four
+motion sections from `raw` and clears `masks` on that one clip**, and every other clip in the chain —
+the character's arms among them — goes back byte for byte.
+
+```json
+{"header": "…", "clips": [
+  {"duration": 2.57, "constant_rotations": [{"bone": 3, "value": [0, 0, 0, 1]}],
+   "keyframe_rotations": [{"bone": 5, "frames": [0, 8, 16], "values": [/* 4 per key */]}],
+   "sections": [2, 3, 6], "chained": true,
+   "masks": [[…], […], […], […]],
+   "raw": {"2": "…base64…", "3": "…base64…", "6": "…base64…"}}],
+ "participants": [{"name": "ak47", "bone": "R Hand", "clip": 1}]}
+```
+
+The alternative — re-encoding every clip and hoping — costs bytes on a fifth of the shipped banks,
+because [some rotations were authored on an exact tie](./mab.md#what-is-still-open) and cannot be
+re-encoded to the bytes they came from. Carrying them instead makes the round trip exact for all
+4,436.
+
+`participants` is derived on the way in and ignored on the way out; the tag block those records came
+from travels in `raw` like any other section. It is there so a reader never has to open that block —
+without it, the one thing a modeler needs from a bank, which bone the gun hangs from, is unreadable
+outside JackAll.
+
+`sections` says which slots the clip carries, which is not derivable: a clip can name a keyframe
+section whose mask is empty, and 451 of 982 sampled clips do.
 
 ## Reading an older pack
 

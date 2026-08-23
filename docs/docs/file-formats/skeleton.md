@@ -18,9 +18,12 @@ name, which is how an `.xbg` node and a `.skeleton` bone are matched — see
 
 ## Inventory
 
-81 files ship, all named `<root bone>_ref.skeleton` and sitting beside the model they rig. Sizes run
-from 232 bytes (`characters\_common\singlebone_ref.skeleton`) to 12,428 bytes
+81 files ship, all named `<root bone>_ref.skeleton`. Sizes run from 232 bytes
+(`characters\_common\singlebone_ref.skeleton`) to 12,428 bytes
 (`characters\_common\pelvis_ref.skeleton`).
+
+Most sit beside the model they rig, but [not all do](#which-rig-a-model-uses-is-not-in-the-model) —
+a character's is somewhere else entirely.
 
 Every human in the game shares `characters\_common\pelvis_ref.skeleton`. Animals have their own
 (`hips_ref` or `pelvis_ref` per species), as do vehicles, animated doors, and 41 weapons.
@@ -120,6 +123,25 @@ f32[4]    m_ParentToChild
 f32[3]    m_LocalOffsetInverted
 f32[4]    m_ParentToChild            written a second time
 ```
+
+## Which rig a model uses is not in the model
+
+A weapon and a vehicle keep their rig beside them, as `<model>_ref.skeleton`. A character does not,
+and nothing in the mesh says which one it uses.
+
+:::info[Measured over the retail corpus]
+Of the 3,133 shipped meshes, **71 have a sibling `_ref.skeleton`**. Of the **78 that are skinned**,
+only **4** do — the other 74 share `characters\_common\pelvis_ref.skeleton`.
+:::
+
+Matching by name gets close but not all the way: scoring every rig by how many of a mesh's node names
+it holds picks `pelvis_ref` for **70 of those 74**, and ties for the remaining five. No mesh's node
+set is a subset of any rig's, because a mesh carries FX and attachment nodes the rig has no bone for
+— so "the rig whose bones cover this mesh" has no exact answer, and the mapping has to come from
+somewhere else or be stated by hand.
+
+The engine gets it from the entity archetype rather than from either file. That path is not traced,
+so tooling here takes the sibling when there is one and asks otherwise.
 
 ## What the human rig contains
 
