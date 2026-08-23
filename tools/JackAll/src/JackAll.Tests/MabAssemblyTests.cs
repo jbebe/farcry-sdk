@@ -40,7 +40,7 @@ public sealed class MabAssemblyTests
                 Dictionary<int, byte[]> sections;
                 try
                 {
-                    sections = Intrinsic(clip);
+                    sections = MabSections.Intrinsic(clip);
                 }
                 catch (InvalidDataException)
                 {
@@ -91,65 +91,4 @@ public sealed class MabAssemblyTests
     public void The_corpus_was_actually_found()
         => Assert.True(Fc2Corpus.Find(".mab").Any(), Fc2Corpus.MissingMessage(".mab"));
 
-    /// <summary>Each section at its own length, with the opaque ones cut to what they actually hold.</summary>
-    private static Dictionary<int, byte[]> Intrinsic(MabClip clip)
-    {
-        Dictionary<int, byte[]> sections = [];
-
-        if (clip.Section(MabClip.SectionConstantRotation) is not null)
-        {
-            sections[MabClip.SectionConstantRotation] =
-                MabEncoder.ConstantRotations(clip.ConstantBones(), clip.ConstantRotations());
-        }
-        if (clip.Section(MabClip.SectionConstantTranslation) is not null)
-        {
-            sections[MabClip.SectionConstantTranslation] = MabEncoder.ConstantTranslations(
-                MabClip.MaskBones(clip.Masks[MabClip.MaskConstantTranslation]), clip.ConstantTranslations());
-        }
-        if (clip.TrackHeaderOf(MabClip.SectionAnimatedTranslation) is { } dense)
-        {
-            sections[MabClip.SectionAnimatedTranslation] = MabEncoder.DenseTranslations(
-                MabClip.MaskBones(clip.Masks[MabClip.MaskAnimatedTranslation]),
-                clip.TranslationTracks(), dense.LastFrame, dense.Rate);
-        }
-        if (clip.TrackHeaderOf(MabClip.SectionRootRotation) is { } rotation)
-        {
-            sections[MabClip.SectionRootRotation] =
-                MabEncoder.DenseRotations(clip.RootRotation(), rotation.LastFrame, rotation.Rate);
-        }
-        if (clip.TrackHeaderOf(MabClip.SectionRootTranslation) is { } translation)
-        {
-            sections[MabClip.SectionRootTranslation] = MabEncoder.DenseTranslations(
-                [0], new Dictionary<int, List<(int, float[]?)>> { [0] = clip.RootTranslation() },
-                translation.LastFrame, translation.Rate);
-        }
-        if (clip.TrackHeaderOf(MabClip.SectionKeyframeRotation) is { } keyed)
-        {
-            sections[MabClip.SectionKeyframeRotation] = clip.KeyframedBones().Count > 0
-                ? MabEncoder.KeyframeRotations(
-                    clip.KeyframedBones(), clip.KeyframeTracks(), keyed.LastFrame, keyed.Rate)
-                : throw new InvalidDataException("An empty keyframe mask cannot be rebuilt.");
-        }
-
-        // The tag table is a count and fixed-size records, so its own length is known even though
-        // most of each record is not understood.
-        if (clip.Section(MabClip.SectionTags) is { } tags)
-        {
-            int count = System.Buffers.Binary.BinaryPrimitives.ReadInt32LittleEndian(tags);
-            sections[MabClip.SectionTags] =
-                tags[..(MabClip.TagCountBytes + (count * MabClip.TagStride))];
-        }
-
-        // The chained clip runs to the end, so what was read is what it is. The last clip in a
-        // chain still names the slot - pointing at its own end - so an empty body stands for that.
-        if (clip.Section(MabClip.SectionNextClip) is { } next)
-        {
-            sections[MabClip.SectionNextClip] = next;
-        }
-        else if (clip.Sections[MabClip.SectionNextClip] != 0)
-        {
-            sections[MabClip.SectionNextClip] = [];
-        }
-        return sections;
-    }
 }

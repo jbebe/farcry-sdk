@@ -112,7 +112,8 @@ public class MabClip
         [3, 0, 1, 2], [0, 1, 3, 2], [0, 3, 1, 2], [0, 1, 2, 3],
     ];
 
-    protected static ReadOnlySpan<byte> BodyTag => "AnD\x1a"u8;
+    /// <summary>The signature a clip body carries, which a writer has to reproduce.</summary>
+    public static ReadOnlySpan<byte> BodyTag => "AnD\x1a"u8;
 
     /// <summary>The trajectory sections carry one unnamed track rather than a masked set.</summary>
     private const int RootBone = 0;

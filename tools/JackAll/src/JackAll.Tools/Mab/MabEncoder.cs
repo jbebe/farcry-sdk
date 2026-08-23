@@ -175,6 +175,74 @@ public static class MabEncoder
     public static int Padded(int length) => (length + Alignment - 1) & ~(Alignment - 1);
 
     /// <summary>
+    /// Lay a whole bank out: every clip in the chain, nested, with the tag table repointed.
+    /// </summary>
+    /// <remarks>
+    /// A chain is nested rather than sequential - clip two lives inside clip one's data, which lives
+    /// inside clip zero's - so it is built from the last clip backwards, each finished body becoming
+    /// the next-clip section of the one before it.
+    /// <para>
+    /// The tag records then have to be repointed. Each carries its clip as a delta from the record's
+    /// own position, so every one of them moves when any clip's size changes, and a wrong delta
+    /// misbehaves the animation without crashing.
+    /// </para>
+    /// </remarks>
+    public static byte[] AssembleBank(byte[] fileHeader, IReadOnlyList<MabClipParts> clips)
+    {
+        byte[] body = [];
+        for (int index = clips.Count - 1; index >= 0; index--)
+        {
+            Dictionary<int, byte[]> sections = new(clips[index].Sections);
+            // The last clip still names the slot; it just points at its own end.
+            sections[MabClip.SectionNextClip] = index == clips.Count - 1 ? [] : body;
+
+            (byte[] data, int[] offsets) = Assemble(sections);
+            body = [.. clips[index].Header(offsets), .. data];
+        }
+
+        byte[] bank = [.. fileHeader, .. body];
+        RepointTags(bank);
+        return bank;
+    }
+
+    /// <summary>
+    /// Rewrite every tag record's delta to where its clip actually landed.
+    /// </summary>
+    private static void RepointTags(byte[] bank)
+    {
+        MabFile parsed = MabFile.Parse(bank);
+        List<MabClip> chain = parsed.Clips();
+
+        // Each clip's position in the first clip's frame. A nested clip's own addresses map into its
+        // parent by adding the parent's next-clip offset: the parent's header cancels against the
+        // ClipHeader every address is already measured from.
+        var positions = new int[chain.Count];
+        for (int index = 0; index + 1 < chain.Count; index++)
+        {
+            positions[index + 1] = positions[index] + chain[index].Sections[MabClip.SectionNextClip];
+        }
+
+        int tagsOffset = parsed.Sections[MabClip.SectionTags];
+        if (tagsOffset <= 0)
+        {
+            return;
+        }
+
+        // The tag table sits in the first clip, whose data starts at ClipHeader in the file body.
+        int tagsInBank = MabFile.HeaderSize + tagsOffset;
+        // One record per participant, and the first clip is the owner rather than a participant -
+        // so record i names the clip one further down the chain.
+        int count = BinaryPrimitives.ReadInt32LittleEndian(bank.AsSpan(tagsInBank));
+        for (int record = 0; record < count && record + 1 < chain.Count; record++)
+        {
+            int at = tagsInBank + MabClip.TagCountBytes + (record * MabClip.TagStride);
+            int recordBase = tagsOffset + MabClip.TagCountBytes + (record * MabClip.TagStride);
+            BinaryPrimitives.WriteInt32LittleEndian(
+                bank.AsSpan(at + MabClip.TagClip), positions[record + 1] - recordBase);
+        }
+    }
+
+    /// <summary>
     /// The order sections are laid out in, which is not the order the table lists them.
     /// </summary>
     /// <remarks>
