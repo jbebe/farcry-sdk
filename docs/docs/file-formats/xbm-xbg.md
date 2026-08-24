@@ -567,6 +567,36 @@ Everything else a writer needs — node transforms, part and model bounds, the q
 vertex format flags, bone palettes, material paths and LOD distances — is content rather than
 bookkeeping, and a decoded model holds it already.
 
+## Adding a part to a model that shipped without one
+
+:::info[Verified against the retail corpus]
+`XbgAppendTests` gives every shipped mesh a part it never had, writes it and reads it back:
+**3,133 of 3,133** take one, with every original part's vertices and triangles unchanged.
+:::
+
+Because the table above is derived rather than stored, appending a part is mostly a matter of not
+disturbing what is already there:
+
+- **Append, never insert.** A `DIKS` entry stores its own position in its low 16 bits and every
+  submesh names its part by index, so adding at the end leaves both alone. Inserting renumbers every
+  part after the new one.
+- **A part and its `DIKS` entry are one thing.** The two lists must stay the same length — the
+  writer refuses otherwise — so whatever adds a part adds its placement entry with it.
+- **Borrow a vertex format rather than inventing one.** A LOD's buffer has a fixed layout, and a new
+  cluster has to fill every channel that layout declares. Taking the format from a part already in
+  the LOD guarantees both that it is one the file carries and that the channels are fillable.
+- **Reuse the existing buffer.** 10,456 of 10,462 shipped LODs have exactly one, and every offset
+  and count in it is re-derived on write anyway.
+
+What no rule supplies is the part's **LOD metric**, whose semantics are undocumented; copying it
+from a part at the same tier is the only guidance the shipped set offers.
+
+Two things sit outside the container and do not follow from adding a part. `CGraphicComponent`
+carries one entry per part keyed by a CRC32 of the exact-case name, and `hidMeshName` — empty on
+almost everything, which means *draw the whole file* — names which parts to draw. A part added to
+the mesh alone is expected to draw, but anything wanting its own placement or animation binding is
+an entity edit as well.
+
 ## Authoring ceilings
 
 :::info[Verified against the retail corpus]

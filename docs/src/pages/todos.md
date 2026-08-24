@@ -42,9 +42,10 @@ The art half of a custom weapon is
 [done end to end](/farcry-sdk/docs/modding/adding-a-weapon#geometry-materials-and-textures-one-file-one-plugin) —
 what is left is what a modeler cannot do rather than what is broken.
 
-- [ ] **Add a part, node or LOD from the scene.** A weapon inherits its donor's part list. JackAll
-  authors a container from decoded content alone (3,133 of 3,133), so the format is not the obstacle;
-  nothing turns a new Blender object into a new part, node or LOD entry.
+- [ ] **Add a node or an LOD from the scene.** Adding a *part* is done — **Add as New Part** appends
+  one and every shipped mesh takes it with its own parts unchanged (3,133 of 3,133). A node and a
+  whole LOD tier still have no scene-to-document path, and neither does removing a part. An added
+  part also lives only at the LOD it was added to, so it vanishes at distance.
 - [ ] **`.hkx` collision.** Not parsed at all, so a reshaped weapon keeps the donor's collision shape.
   This is the last format in a weapon's file set with nothing behind it.
 - [ ] **A material a mesh embeds cannot be edited.** Four material names of 7,496, across three

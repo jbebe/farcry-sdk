@@ -107,7 +107,7 @@ def edit_shows_up(label, game_path, directory):
         return fail("%s: applying the edited pack wrote no mesh" % label)
 
     source = fc2model.parts_at(mesh, 0, place=False)[0]
-    after = _reimport(produced[os.path.basename(game_path).lower()], directory, label)
+    after = _reimport(produced[os.path.basename(game_path).lower()], directory, label)[0]
     if len(after.positions) != len(source.positions):
         return fail("%s: vertex count changed" % label)
 
@@ -130,7 +130,7 @@ def _reimport(xbg_path, directory, label):
         [CLI, "fc2model", "export", xbg_path, "-o", out], capture_output=True, text=True)
     if result.returncode != 0:
         raise RuntimeError("jackall could not re-pack %s:\n%s" % (xbg_path, result.stderr))
-    return fc2model.parts_at(import_xbg.Pack.load(out).mesh(), 0, place=False)[0]
+    return fc2model.parts_at(import_xbg.Pack.load(out).mesh(), 0, place=False)
 
 
 def topology_change(label, game_path, directory):
@@ -162,7 +162,7 @@ def topology_change(label, game_path, directory):
     if os.path.basename(game_path).lower() not in produced:
         return fail("%s: applying the subdivided pack wrote no mesh" % label)
 
-    part = _reimport(produced[os.path.basename(game_path).lower()], directory, label)
+    part = _reimport(produced[os.path.basename(game_path).lower()], directory, label)[0]
     if len(part.positions) != grown:
         errors += fail("%s: file has %d vertices, Blender had %d"
                        % (label, len(part.positions), grown))
@@ -180,6 +180,84 @@ def topology_change(label, game_path, directory):
     return errors
 
 
+def adds_a_part(label, game_path, directory):
+    """Add a part the model never had, and require it in the file with the rest intact."""
+    path = pack(game_path)
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    result = import_xbg.load(path, lod=0, with_textures=False)
+    collection, armature = result["collection"], result["armature"]
+    before = fc2model.parts_at(result["mesh"], 0, place=False)
+
+    bone = armature.data.bones[1].name if len(armature.data.bones) > 1 else None
+    obj = _borrowed_cube("TESTSCOPE", result["parts"][0], collection)
+    if bone:
+        obj.parent = armature
+        obj.parent_type = "BONE"
+        obj.parent_bone = bone
+    obj[import_xbg.PROP_NEW_PART] = "TESTSCOPE"
+
+    out = os.path.join(directory, label + "_added.fc2model")
+    written = export_xbg.save(out, collection)
+    errors = 0
+    if written["added"] != 1:
+        return fail("%s: %d parts added, expected 1" % (label, written["added"]))
+
+    fresh = written["mesh"]["parts"][-1]
+    if fresh["name"] != "TESTSCOPE_LOD0":
+        errors += fail("%s: the added part is called %s" % (label, fresh["name"]))
+    if bone and fc2model.bone_name(written["mesh"], fresh["placement_node"]) != bone:
+        errors += fail("%s: the added part hangs on node %d, not %s"
+                       % (label, fresh["placement_node"], bone))
+
+    produced = apply_pack(out, directory)
+    if os.path.basename(game_path).lower() not in produced:
+        return fail("%s: applying the pack with an added part wrote no mesh" % label)
+    after = _reimport(produced[os.path.basename(game_path).lower()], directory, label)
+
+    if len(after) != len(before) + 1:
+        return fail("%s: %d parts came back, expected %d" % (label, len(after), len(before) + 1))
+    for was, now in zip(before, after):
+        if was.full_name != now.full_name or len(was.positions) != len(now.positions):
+            errors += fail("%s: %s changed when a part was added beside it"
+                           % (label, was.full_name))
+            break
+        if any(max(abs(a[i] - b[i]) for i in range(3)) > 1e-6
+               for a, b in zip(was.positions, now.positions)):
+            errors += fail("%s: %s moved when a part was added beside it" % (label, was.full_name))
+            break
+    if len(after[-1].positions) != len(obj.data.vertices):
+        errors += fail("%s: the added part has %d vertices, Blender had %d"
+                       % (label, len(after[-1].positions), len(obj.data.vertices)))
+    if not errors:
+        print("%s: a part the model never had lands, %d originals untouched"
+              % (label, len(before)))
+    return errors
+
+
+def _borrowed_cube(name, donor, collection):
+    """A cube carrying the channels and material of a part already in the model."""
+    data = bpy.data.meshes.new(name)
+    mesh = bmesh.new()
+    bmesh.ops.create_cube(mesh, size=0.05)
+    mesh.to_mesh(data)
+    mesh.free()
+
+    # As many UV sets as the donor: the format carries two on a weapon, and a
+    # new part has to fill every channel the layout it borrows declares.
+    for index in range(max(1, len(donor.data.uv_layers))):
+        layer = data.uv_layers.new(name="UVMap%d" % index)
+        for loop in data.loops:
+            layer.data[loop.index].uv = (0.5, 0.5)
+    if donor.data.color_attributes:
+        data.color_attributes.new(name="Colour", type="FLOAT_COLOR", domain="POINT")
+    if donor.data.materials:
+        data.materials.append(donor.data.materials[0])
+
+    obj = bpy.data.objects.new(name, data)
+    collection.objects.link(obj)
+    return obj
+
+
 def main():
     if not require_pack():
         return 0
@@ -192,6 +270,7 @@ def main():
                 print("%s: %s" % (label, error))
         errors += edit_shows_up("ak47", MODELS[0][1], directory)
         errors += topology_change("ak47", MODELS[0][1], directory)
+        errors += adds_a_part("ak47", MODELS[0][1], directory)
     print("blender export: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0
 

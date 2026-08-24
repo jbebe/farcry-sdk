@@ -21,9 +21,14 @@ import bpy
 
 from . import convert, model as fc2model
 from .import_mab import PROP_PROP_OF
-from .import_xbg import ATTR_NORMAL, PROP_LOD, PROP_SOURCE, PROP_SUBMESH
+from .import_xbg import (
+    ATTR_NORMAL, PROP_LOD, PROP_MATERIAL_PATH, PROP_NEW_PART, PROP_SOURCE, PROP_SUBMESH)
 from .pack import EXTENSION, Pack
 from .transform import apply
+
+# The per-vertex channels a geometry entry can carry, which is what decides
+# whether a new part's borrowed vertex format has been filled.
+COMPONENTS = ("positions", "uvs", "uvs1", "normals", "tangents", "binormals", "colours")
 
 def source_pack(collection):
     """Reopen the pack this collection was imported from."""
@@ -49,7 +54,8 @@ def build_mesh(collection, recompute_tangents=False):
     lod_index = collection.get(PROP_LOD, 0)
     geometries = mesh["lods"][lod_index]["geometry"]
 
-    edited = resized = moved = 0
+    written = []
+    edited = resized = moved = added = 0
     for obj in collection.objects:
         if obj.type != "MESH" or PROP_SUBMESH not in obj:
             continue
@@ -63,20 +69,124 @@ def build_mesh(collection, recompute_tangents=False):
         moved += _encode(obj, mesh, geometry, recompute_tangents)
         edited += 1
         resized += geometry["vertex_count"] != before
+        written.append((obj, submesh))
+
+    # Sorted so two new parts land in the same order on every export, whatever
+    # order the collection happens to hold them in.
+    for obj in sorted(new_parts(collection), key=lambda o: o.name):
+        geometry = _add_part(obj, mesh, geometries, lod_index)
+        _encode(obj, mesh, geometry, recompute_tangents)
+        _require_filled(obj, geometry)
+        written.append((obj, len(geometries) - 1))
+        added += 1
 
     # Refitting is skipped when nothing moved, because the shipped sphere is a
     # tighter fit than this can reproduce and rewriting it would lose bytes.
-    if moved:
+    if moved or added:
         refit_bounds(mesh)
     return {"pack": pack, "mesh": mesh, "parts": edited, "resized": resized,
-            "moved": moved, "lod": lod_index}
+            "moved": moved, "added": added, "written": written, "lod": lod_index}
+
+
+def new_parts(collection):
+    """Objects export will append rather than write into a part already there."""
+    return [obj for obj in collection.objects
+            if obj.type == "MESH" and PROP_SUBMESH not in obj and PROP_NEW_PART in obj]
+
+
+def _add_part(obj, mesh, geometries, lod_index):
+    """Give the document a part it did not have, drawn by one new cluster.
+
+    The vertex format is taken from a rigid part already in this LOD rather than
+    invented, so the new one is written in a layout the file already carries and
+    `_encode` fills exactly the components that layout holds.
+    """
+    donor = _donor(geometries, obj)
+    donor_part = mesh["parts"][donor["part"]]
+    donor_cluster = donor_part["clusters"][donor["cluster"]]
+
+    full_name = "%s_LOD%d" % (obj[PROP_NEW_PART], lod_index)
+    if any(part["name"] == full_name for part in mesh["parts"]):
+        raise ValueError("%s would add a second part called %s, and the engine tells parts apart "
+                         "by a hash of that name" % (obj.name, full_name))
+
+    index = len(mesh["parts"])
+    mesh["parts"].append({
+        "name": full_name,
+        "lod_metric": donor_part["lod_metric"],
+        "bounds": [0.0] * 10,
+        "placement_node": _placement_node(obj, mesh),
+        "clusters": [{
+            "material_index": _material_index(obj, mesh),
+            "flags": donor_cluster["flags"],
+            "palette": list(donor_cluster["palette"]),
+        }],
+    })
+
+    fresh = {"buffer": donor["buffer"], "part": index, "cluster": 0,
+             "vertex_count": 0, "indices": []}
+    for key in COMPONENTS:
+        if key in donor:
+            fresh[key] = []
+    geometries.append(fresh)
+    return fresh
+
+
+def _require_filled(obj, geometry):
+    """Every channel the borrowed format carries has to have been supplied.
+
+    An edited part keeps whatever a channel Blender cannot supply already held.
+    A new one has nothing to keep, and JackAll fills what it is not given with
+    defaults - flat UVs, white, straight up - so an unwrapped part would go out
+    silently wrong rather than refused.
+    """
+    for key in COMPONENTS:
+        if key in geometry and not geometry[key]:
+            raise ValueError("%s has no %s, which the part it takes its vertex format from carries"
+                             % (obj.name, key))
+
+
+def _donor(geometries, obj):
+    """A rigid part in this LOD, whose vertex format the new one borrows."""
+    for geometry in geometries:
+        if "skin_weights" not in geometry:
+            return geometry
+    raise ValueError("%s cannot be added: every part in this LOD is skinned, and a new part "
+                     "is written rigid" % obj.name)
+
+
+def _placement_node(obj, mesh):
+    """The node a new part hangs on, which is the bone it is parented to."""
+    if obj.parent_type != "BONE" or not obj.parent_bone:
+        return fc2model.NO_PLACEMENT
+    for index in range(len(mesh["nodes"])):
+        if fc2model.bone_name(mesh, index) == obj.parent_bone:
+            return index
+    raise ValueError("%s hangs on %r, which is not one of this model's nodes"
+                     % (obj.name, obj.parent_bone))
+
+
+def _material_index(obj, mesh):
+    """Which of the model's materials the object's first slot names.
+
+    The same slot `validate` reads, so the material a rule checks is the one
+    export writes.
+    """
+    material = obj.data.materials[0] if obj.data.materials else None
+    if material is None:
+        raise ValueError("%s carries no material, so nothing says how to draw it" % obj.name)
+    try:
+        return mesh["materials"].index(material.get(PROP_MATERIAL_PATH, ""))
+    except ValueError:
+        raise ValueError("%s uses %r, which is not one of this model's materials"
+                         % (obj.name, material.name)) from None
 
 
 def save(path, collection, recompute_tangents=False):
     """Rebuild the collection's LOD in its source pack and write the pack out."""
     built = build_mesh(collection, recompute_tangents)
     pack = built["pack"]
-    if built["moved"] or built["resized"]:
+    if built["moved"] or built["resized"] or built["added"]:
         pack.replace_document(pack.model, built["mesh"])
     pack.save(path)
     return built

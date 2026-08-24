@@ -9,8 +9,13 @@ from bpy.props import (BoolProperty, EnumProperty, FloatProperty, IntProperty,
                        StringProperty)
 from bpy_extras.io_utils import ExportHelper, ImportHelper
 
+from mathutils import Matrix
+
 from . import export_mab, export_xbg, import_mab, import_xbg, panel
 from .pack import EXTENSION, Pack
+
+# What the bone enum holds when a part is placed by nothing.
+ROOT_BONE = "__root__"
 
 
 class FC2_OT_import_pack(bpy.types.Operator, ImportHelper):
@@ -191,6 +196,78 @@ class FC2_OT_write_clip(bpy.types.Operator):
         return {"FINISHED"}
 
 
+def _bone_items(_self, context):
+    _origin, collection = _pack_of(context)
+    armature = _armature_in(collection)
+    items = [(ROOT_BONE, "Model root", "Sit in the model's own space, placed by nothing")]
+    if armature:
+        items += [(bone.name, bone.name, "") for bone in armature.data.bones]
+    return items
+
+
+def _armature_in(collection):
+    if collection is None:
+        return None
+    return next((obj for obj in collection.objects if obj.type == "ARMATURE"), None)
+
+
+class FC2_OT_add_part(bpy.types.Operator):
+    """Add the selected mesh to the model as a part it did not have"""
+
+    bl_idname = "object.fc2_add_part"
+    bl_label = "Add as New Part"
+    bl_options = {"REGISTER", "UNDO"}
+
+    name: StringProperty(
+        name="Part name", default="",
+        description="What the model calls the part, without the _LOD suffix export adds")
+    bone: EnumProperty(
+        name="Attach to", items=_bone_items,
+        description="The bone that places the part, the way a weapon's parts hang on theirs")
+
+    @classmethod
+    def poll(cls, context):
+        obj = context.object
+        return obj is not None and obj.type == "MESH" and _pack_of(context)[0] is not None
+
+    def invoke(self, context, _event):
+        if not self.name:
+            self.name = context.object.name.upper()
+        return context.window_manager.invoke_props_dialog(self)
+
+    def execute(self, context):
+        obj = context.object
+        _origin, collection = _pack_of(context)
+        armature = _armature_in(collection)
+        name = self.name.strip()
+        if not name:
+            self.report({"ERROR"}, "Give the part a name")
+            return {"CANCELLED"}
+
+        for other in list(obj.users_collection):
+            other.objects.unlink(obj)
+        collection.objects.link(obj)
+
+        on_bone = armature is not None and self.bone != ROOT_BONE
+        place = (armature.matrix_world @ armature.data.bones[self.bone].matrix_local
+                 if on_bone else Matrix.Identity(4))
+        # A part is modelled around its own pivot, and export reads vertices in
+        # object space, so the transform that put the object where the modeler
+        # left it moves into the mesh rather than staying on the object.
+        obj.data.transform(place.inverted() @ obj.matrix_world)
+        if armature:
+            obj.parent = armature
+            if on_bone:
+                obj.parent_type = "BONE"
+                obj.parent_bone = self.bone
+        obj.matrix_world = place
+
+        obj[import_xbg.PROP_NEW_PART] = name
+        import_xbg.stamp_placement(obj)
+        self.report({"INFO"}, "%s will be added as %s" % (obj.name, name))
+        return {"FINISHED"}
+
+
 class FC2_OT_export_pack(bpy.types.Operator, ExportHelper):
     """Write the edited parts back into the pack they were imported from"""
 
@@ -214,12 +291,13 @@ class FC2_OT_export_pack(bpy.types.Operator, ExportHelper):
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
 
-        if not result["moved"] and not result["resized"]:
+        if not result["moved"] and not result["resized"] and not result["added"]:
             self.report({"INFO"}, "Wrote the pack unchanged: nothing in LOD%d was edited"
                         % result["lod"])
         else:
-            self.report({"INFO"}, "Wrote %d parts at LOD%d, %d rebuilt"
-                        % (result["parts"], result["lod"], result["resized"]))
+            added = ", %d added" % result["added"] if result["added"] else ""
+            self.report({"INFO"}, "Wrote %d parts at LOD%d, %d rebuilt%s"
+                        % (result["parts"], result["lod"], result["resized"], added))
         return {"FINISHED"}
 
 
@@ -233,7 +311,8 @@ def menu_export(self, _context):
                          text="Far Cry 2 Model Pack (%s)" % EXTENSION)
 
 
-CLASSES = (FC2_OT_import_pack, FC2_OT_load_clip, FC2_OT_write_clip, FC2_OT_export_pack)
+CLASSES = (FC2_OT_import_pack, FC2_OT_load_clip, FC2_OT_write_clip, FC2_OT_add_part,
+           FC2_OT_export_pack)
 
 
 def register():

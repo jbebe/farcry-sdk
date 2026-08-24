@@ -376,11 +376,13 @@ fires on a shipped weapon is a wrong rule.
 
 ### What it still cannot do
 
-- **Add or remove parts, nodes or LODs.** Your weapon inherits the donor's part list — which is what
-  you want anyway, since `CGraphicComponent` hashes part names exact-case and the MOVE graph and
-  `.skeleton` bind to them. JackAll can [author a container from decoded content
-  alone](../file-formats/xbm-xbg.md#a-container-can-be-authored-not-just-edited), 3,133 of 3,133, so
-  the format is not what stands in the way; the scene-to-document side is.
+- **Remove a part, or add a node or an LOD.** A part can now be added — select the mesh and use
+  **Add as New Part**, and export appends it, leaving every part already there untouched (see
+  [adding a part](../file-formats/xbm-xbg.md#adding-a-part-to-a-model-that-shipped-without-one)).
+  Removing one, and adding a node or a whole LOD tier, still have no scene-to-document path.
+  Reusing the donor's parts is still the easier road where it fits, since `CGraphicComponent` hashes
+  part names exact-case and the MOVE graph and `.skeleton` bind to them: an added part draws, but
+  nothing outside the mesh knows its name.
 - **No split UVs, normals or colours** — the file stores all three per vertex, so a seam must be a
   duplicated vertex. The plugin now counts them for you instead of letting the first corner quietly
   win.
@@ -475,7 +477,8 @@ see, because it is about where you make the cut.
 | **`.xbm` materials** | Solved, in JackAll. All 2,379 shipped materials round-trip byte-identically and rewritten ones load in game — see [xbm-xbg](../file-formats/xbm-xbg.md#the-xbm-body-and-writing-one-back). A pack carries them as JSON, so nothing outside JackAll parses one. |
 | **`.hkx` collision** | Not parsed at all. Reuse the donor's — a reshaped weapon keeps its collision shape. |
 | **`.mab` authoring** | Solved. Pose the rig and **Write Animation** puts the Action back into the bank, rewriting only the clip that fits this model and leaving the character's byte for byte. See [rewriting one clip](../file-formats/mab.md#rewriting-one-clip-and-leaving-the-rest-alone). |
-| **Adding a part or LOD** | The container can be [authored from decoded content alone](../file-formats/xbm-xbg.md#a-container-can-be-authored-not-just-edited), 3,133 of 3,133, but nothing turns a new Blender object into a new part. A weapon still inherits its donor's part list. |
+| **Adding a part** | Solved. **Add as New Part** appends a Blender mesh to the model, and every shipped mesh takes one with its own parts unchanged, 3,133 of 3,133 — see [adding a part](../file-formats/xbm-xbg.md#adding-a-part-to-a-model-that-shipped-without-one). The part lives at the LOD you imported, and nothing outside the mesh binds to its name. |
+| **Adding a node or an LOD** | The container [carries either](../file-formats/xbm-xbg.md#a-container-can-be-authored-not-just-edited), but nothing turns a Blender bone into a node or generates a new LOD tier. |
 | **MOVE authoring** | Header, class-ID table, channel table and merge semantics are decoded; per-state record interiors are not. See [move](../file-formats/move.md). |
 | **New `.spk` sound ids** | Only replacement of an existing record is documented; how a new id is minted is not. |
 | **Missing `depload` entries** | Whether an absent asset fails to load, loads late, or is fine has never been tested. |

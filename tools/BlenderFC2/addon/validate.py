@@ -12,8 +12,8 @@
 import bpy
 
 from . import export_xbg, materials, rules
-from .import_xbg import ATTR_NORMAL, PROP_MATERIAL_PATH, PROP_PART, PROP_SUBMESH
-from .rules import ERROR, Finding, Target
+from .import_xbg import PROP_MATERIAL_PATH, PROP_PART
+from .rules import ERROR, WARNING, Finding, Target
 
 
 def check_scene(context):
@@ -42,7 +42,7 @@ def check_scene(context):
 
     pack, mesh = built["pack"], built["mesh"]
     limits = pack.limits
-    objects = _objects(collection, mesh, built["lod"])
+    objects = _objects(built)
 
     found = rules.check_scene(collection, objects, limits)
     found += rules.check_geometry(mesh, _entries(objects, mesh, built["lod"]), limits)
@@ -50,25 +50,35 @@ def check_scene(context):
     found += _materials(collection, pack)
     found += _textures(collection, pack)
     found += _placement(objects)
+    found += _added_to_one_lod(built)
     return sorted(found, key=lambda f: (f.severity != ERROR, f.code))
+
+
+def _added_to_one_lod(built):
+    """A part added to the open LOD is drawn at that distance and no other."""
+    if not built["added"] or len(built["mesh"]["lods"]) < 2:
+        return []
+    return [Finding(
+        WARNING, "part.added-one-lod",
+        "%d added part(s) exist only at LOD%d, so they vanish when the model drops to a coarser "
+        "one." % (built["added"], built["lod"]),
+        Target(kind="scene"),
+        "Nothing in the format forbids it. Import the other LODs and add the part there too if it "
+        "should stay visible.")]
 
 
 def blocking(found):
     return [finding for finding in found if finding.severity == ERROR]
 
 
-def _objects(collection, mesh, lod):
-    """Every mesh object export would write, with the part it writes to."""
-    count = len(mesh["lods"][lod]["geometry"])
-    out = []
-    for obj in collection.objects:
-        if obj.type != "MESH" or PROP_SUBMESH not in obj:
-            continue
-        submesh = obj[PROP_SUBMESH]
-        if not 0 <= submesh < count:
-            continue
-        out.append((obj, obj.get(PROP_PART, obj.name), submesh))
-    return out
+def _objects(built):
+    """Every mesh object export wrote, with the part it wrote to.
+
+    Taken from the export itself rather than re-derived, so a part export
+    appended is covered by the same rules as one it edited.
+    """
+    return [(obj, obj.get(PROP_PART, obj.name), submesh)
+            for obj, submesh in built["written"]]
 
 
 def _entries(objects, mesh, lod):

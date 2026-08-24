@@ -40,7 +40,7 @@ workspace, or `jackall-cli fc2model extract` for a folder to drop into a mod lay
 | `addon/materials.py` | Rebuilds the Generic shader as a node graph |
 | `addon/rig.py` | Reparents the mesh's node tree onto the rig's — the knee fix below |
 | `addon/import_mab.py` | Builds an Action from a bank, and marks what it attaches |
-| `addon/export_xbg.py` | Writes edited geometry back into the pack |
+| `addon/export_xbg.py` | Writes edited geometry back into the pack, and appends a part it did not have |
 | `addon/export_mab.py` | Writes an Action back into one clip of a bank, leaving the rest verbatim |
 | `addon/rules.py` | What a model is allowed to be, with no bpy and no format constants in it |
 | `addon/validate.py` | Runs the rules against a scene, through the code an export would take |
@@ -60,9 +60,10 @@ workspace, or `jackall-cli fc2model extract` for a folder to drop into a mod lay
 
 Importing a pack: parts, LODs, UVs, vertex colours, normals, an armature from the nodes, rigid parts
 on their pivots, skin weights as vertex groups, and textures wired into the Generic shader graph.
-Exporting edited geometry back. Loading any animation bank the pack carries onto the rig, and
-writing one back. Checking the model against what the format allows, from a sidebar panel, before
-the game finds out.
+Exporting edited geometry back, and adding a part the model shipped without — **Add as New Part**
+marks a mesh, and export appends it with every part already there untouched. Loading any animation
+bank the pack carries onto the rig, and writing one back. Checking the model against what the
+format allows, from a sidebar panel, before the game finds out.
 
 ## Export
 

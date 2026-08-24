@@ -21,6 +21,12 @@ PROP_LOD = "fc2_lod"
 PROP_SOURCE = "fc2_source"
 PROP_SUBMESH = "fc2_submesh"
 
+# A part's base name on an object the document does not have yet, which export
+# appends. Deliberately not turned into a PROP_SUBMESH once written: export
+# always reopens the pristine source pack, so an index stamped here would name a
+# part that pack never had.
+PROP_NEW_PART = "fc2_new_part"
+
 # The material's game path, which is its identity in the pack. Kept apart from
 # the material's own internal name (see materials.PROP_MATERIAL_NAME) - one file
 # used to carry both, so resolving textures overwrote the path with the name.
@@ -141,11 +147,18 @@ def build_part(part, mesh, collection, material_cache, armature, pack):
             obj.parent_bone = fc2model.bone_name(mesh, node)
     if part.placement is not None:
         obj.matrix_world = convert.matrix(part.placement)
-    # Stashed after the placement, so it records where the part actually landed.
-    # Export reads mesh.vertices[i].co, which is object-local, so an object moved
-    # in object mode is silently discarded - this is what lets a rule say so.
-    obj[PROP_PLACEMENT] = [c for row in obj.matrix_world for c in row]
+    stamp_placement(obj)
     return obj
+
+
+def stamp_placement(obj):
+    """Record where the part landed, which is what lets a rule say it moved.
+
+    Export reads mesh.vertices[i].co, which is object-local, so an object moved
+    in object mode is silently discarded. Called after the placement is set, and
+    by everything that places a part, or the rule compares against a stale one.
+    """
+    obj[PROP_PLACEMENT] = [c for row in obj.matrix_world for c in row]
 
 
 def load(path, lod=0, with_armature=True, with_textures=True):

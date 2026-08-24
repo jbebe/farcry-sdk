@@ -16,7 +16,7 @@ import bpy
 from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProperty,
                        IntProperty, PointerProperty, StringProperty)
 
-from . import import_mab, import_xbg, motion, validate
+from . import export_xbg, import_mab, import_xbg, motion, validate
 from .pack import Pack
 from .rules import ERROR, INFO, WARNING
 
@@ -223,12 +223,20 @@ class FC2_PT_model(FC2_PT_base):
         triangles = sum(len(obj.data.polygons) for obj in parts)
         vertices = sum(len(obj.data.vertices) for obj in parts)
 
+        # Export's own list, so the panel cannot announce a part it would skip.
+        added = export_xbg.new_parts(collection)
+
         box = layout.box()
         box.label(text="%d parts, %d triangles, %d vertices" % (len(parts), triangles, vertices))
+        if added:
+            box.label(text="%d to be added: %s"
+                      % (len(added), ", ".join(obj[import_xbg.PROP_NEW_PART] for obj in added)),
+                      icon="PLUS")
         # Counts only. The ceilings are per cluster and per buffer, and a bar
         # against a total would say a model is fine when one part is not - which
         # is what the check is for.
         box.label(text="Check for the per-part limits", icon="CHECKMARK")
+        layout.operator("object.fc2_add_part", icon="PLUS")
 
 
 class FC2_PT_check(FC2_PT_base):

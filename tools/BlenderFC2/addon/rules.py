@@ -67,7 +67,7 @@ def _unknown_objects(collection, objects):
         ERROR, "part.unknown-object",
         "'%s' is not one of this model's parts, so exporting would skip it." % obj.name,
         Target(object=obj.name, kind="object"),
-        "The format has a fixed part list. Edit an existing part, or delete this object.")
+        "Add it with Add as New Part, edit an existing part, or delete this object.")
         for obj in collection.objects
         if obj.type == "MESH" and obj not in known]
 
