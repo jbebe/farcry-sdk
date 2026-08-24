@@ -13,13 +13,15 @@ tags = ["Import-Export"]
 [permissions]
 files = "Read and write .fc2model model packs"
 
-# The corpus tests and the command-line scripts are not part of the add-on.
+# The corpus tests, the command-line scripts and the build script are not part of the add-on.
 [build]
 paths_exclude_pattern = [
     "__pycache__/",
     "/.git/",
+    "/.gitignore",
     "*.zip",
     "/tests/",
     "/open_model.py",
     "/open_model.cmd",
+    "/build.ps1",
 ]

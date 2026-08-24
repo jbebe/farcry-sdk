@@ -3,6 +3,23 @@
 A release is set up entirely in the project's `CHANGELOG.md` — the version and the notes both come
 from it. Running the workflow publishes what is written there, and fails if nothing was written.
 
+## What releases
+
+Each is standalone: its own changelog, its own workflow, its own tag series, released on its own
+schedule.
+
+| Project | Directory | Tag | Also declares its version in |
+|---|---|---|---|
+| JackAll | `tools/JackAll` | `jackall-<version>` | |
+| FCSE | `tools/FCSE` | `fcse-<version>` | |
+| UFCP | `mods/UFCP` | `ufcp-<version>` | |
+| Vortex extension | `tools/vortex-farcry2` | `vortex-<version>` | `info.json` |
+| Blender add-on | `tools/BlenderFC2` | `blenderfc2-<version>` | `blender_manifest.toml` |
+
+The Blender add-on's release installs Blender on the runner before it builds. Blender builds its own
+extension zips — a hand-made one will not install — so that is a build prerequisite there in the way
+the MSVC toolchain is for FCSE.
+
 ## Cutting a release
 
 1. In the project's `CHANGELOG.md`, add a section for the version you are releasing, above every
@@ -16,8 +33,9 @@ from it. Running the workflow publishes what is written there, and fails if noth
    ```
 
    Keeping an `## [Unreleased]` section above it, for notes still being written, is fine — a release
-   skips it. For the Vortex extension, set the same version in `info.json` too, since that is where
-   Vortex itself reads it.
+   skips it. Two projects declare their version a second time, and it has to agree: the Vortex
+   extension's `info.json`, and the Blender add-on's `blender_manifest.toml`. Both are where the
+   host application itself reads the version, and the add-on's also names the zip.
 
 2. Commit and push to `main`.
 
@@ -35,7 +53,8 @@ seconds rather than after a full build:
 - its newest version is already tagged, which is what happens when the changelog was not updated
   for this release;
 - that version's section is empty;
-- for the Vortex extension, `info.json` disagrees with the changelog.
+- for the Vortex extension, `info.json` disagrees with the changelog;
+- for the Blender add-on, `blender_manifest.toml` disagrees with the changelog.
 
 ## Where the notes go
 

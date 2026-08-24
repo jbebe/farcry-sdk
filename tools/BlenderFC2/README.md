@@ -214,10 +214,12 @@ differently by cmd and PowerShell, and cmd will split it on spaces.
 
 ## Installing the add-on
 
-Blender 4.2+ extension. Build the zip with Blender itself, which validates the manifest on the way:
+Blender 4.2+ extension. `build.ps1` builds the zip with Blender itself, which validates the manifest
+on the way. It finds Blender on PATH or under the usual install roots; pass `-Blender <path>` or set
+`$env:BLENDER` if yours is somewhere else.
 
 ```
-& "C:\Programs\Blender 5.2\blender.exe" --command extension build --source-dir tools\BlenderFC2 --output-dir .
+.\tools\BlenderFC2\build.ps1
 ```
 
 Install the resulting `farcry2_formats-<version>.zip` from **Edit ▸ Preferences ▸ Get Extensions ▸

@@ -1,0 +1,36 @@
+# Changelog
+
+Notable changes to the Far Cry 2 Blender add-on, loosely following
+[Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
+
+## [0.1.0] - 2026-08-24
+
+### Added
+- **Importing a `.fc2model` model pack** — parts and their LODs, UVs, vertex colours, the file's own
+  normals, an armature built from the model's nodes, rigid parts sitting on their own pivots, and
+  skin weights as vertex groups. Nothing here opens a game file: JackAll owns the byte layouts and
+  this owns what a scene looks like.
+- **Materials rebuilt as a node graph**, with the pack's textures wired into the slots the game's
+  Generic shader actually reads.
+- **Exporting edited geometry back into the pack it came from.** A model nobody touched comes back
+  byte-identical to the file it was built from, so an edit costs only what was edited — the LODs you
+  never opened, the nodes, the bone palettes and everything the format carries whole all survive.
+- **Adding a part the model shipped without.** Select a mesh, **Add as New Part**, and export
+  appends it with every part already there untouched. All 3,133 shipped meshes accept one.
+- **Animation, both ways.** Load any bank the pack carries onto the rig, pose it, and **Write
+  Animation** puts the Action back into the one clip that fits this model, leaving the character's
+  clip and the rest of the chain byte for byte.
+- **A validation panel** that checks a model against what the format allows before the game finds
+  out — per-cluster triangle and per-buffer vertex ceilings, bone palette limits, UVs, and the
+  channels the format silently drops. Every rule is silent on the game's own models, because retail
+  is the definition of valid.
+- **A motion table** showing how far each bone travels across the clips a pack carries.
+- **`build.ps1`**, which builds the installable extension zip with Blender itself so the manifest is
+  validated on the way.
+
+### Known limitations
+- A part can be added but not removed, and neither a node nor a whole LOD tier can be added.
+- An added part exists only at the LOD it was added to, so it is not drawn once the model drops to a
+  coarser one.
+- A new part reuses one of the model's existing materials; nothing creates a new one.
+- `.hkx` collision is not parsed, so a reshaped model keeps its donor's collision shape.

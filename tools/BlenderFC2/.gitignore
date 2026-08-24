@@ -1,0 +1,3 @@
+__pycache__/
+# The installable extension, built from this folder by build.ps1. Nothing here is worth committing.
+farcry2_formats-*.zip

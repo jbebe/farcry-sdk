@@ -1,0 +1,86 @@
+name: Blender add-on release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # https://www.nexusmods.com/farcry2/mods/371. NEXUS_MOD_ID is the internal ID that
+  # v3/games/farcry2/mods/371 answers with, not the 371 in the URL; the file ID is on the mod's
+  # Files tab under "API Info". An empty file ID skips that artifact's upload.
+  NEXUS_MOD_ID: '6317896892787'
+  NEXUS_FILE_ADDON: '7854573'
+
+jobs:
+  release:
+    # Blender builds its own extension zips - see tools/BlenderFC2/build.ps1 for why a hand-made one
+    # will not install - so the runner needs a Blender rather than just a Python.
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: tools/BlenderFC2
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare the release
+        id: release
+        uses: ./.github/actions/prepare-release
+        with:
+          directory: tools/BlenderFC2
+          tag_prefix: blenderfc2
+
+      - name: Check the manifest against the changelog
+        shell: pwsh
+        # blender_manifest.toml is where Blender itself reads the version, and it names the zip, so
+        # shipping it out of step with the changelog would number the add-on differently from its
+        # own release.
+        run: |
+          $declared = [regex]::Match((Get-Content blender_manifest.toml -Raw), '(?m)^\s*version\s*=\s*"([^"]+)"').Groups[1].Value
+          if ($declared -ne "${{ steps.release.outputs.version }}") {
+            throw "blender_manifest.toml declares $declared but the changelog releases ${{ steps.release.outputs.version }}."
+          }
+
+      - name: Install Blender
+        shell: pwsh
+        run: choco install blender -y --no-progress
+
+      - name: Build and validate the extension
+        shell: pwsh
+        # build.ps1 finds Blender itself, builds through Blender so the manifest is validated on the
+        # way, and validates the built zip afterwards.
+        run: .\build.ps1
+
+      - name: Byte-compile the add-on
+        shell: pwsh
+        # The manifest is validated by the build; the Python in it is not. A syntax error would
+        # otherwise ship and only surface when a user enables the add-on.
+        run: |
+          $onPath = Get-Command blender.exe -ErrorAction SilentlyContinue
+          if ($onPath) {
+            $blender = $onPath.Source
+          } else {
+            $blender = (Get-ChildItem (Join-Path $env:ProgramFiles 'Blender Foundation') -Filter blender.exe -Recurse -Depth 2 | Select-Object -First 1).FullName
+          }
+          if (-not $blender) { throw 'Blender is installed but blender.exe was not found.' }
+          & $blender -b --python-expr "import compileall, sys; sys.exit(0 if compileall.compile_dir('addon', quiet=1) and compileall.compile_file('__init__.py', quiet=1) else 1)"
+          if ($LASTEXITCODE -ne 0) { throw 'the add-on does not byte-compile.' }
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.release.outputs.tag }}" "farcry2_formats-${{ steps.release.outputs.version }}.zip" --title "Far Cry 2 Blender add-on ${{ steps.release.outputs.version }}" --target "${{ github.sha }}" --notes-file "${{ steps.release.outputs.notes_file }}"
+
+      - name: Upload the add-on to Nexus Mods
+        uses: ./.github/actions/nexus-upload
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          mod_id: ${{ env.NEXUS_MOD_ID }}
+          file_id: ${{ env.NEXUS_FILE_ADDON }}
+          filename: tools/BlenderFC2/farcry2_formats-${{ steps.release.outputs.version }}.zip
+          version: ${{ steps.release.outputs.version }}
+          display_name: Blender Add-on
+          changelog: ${{ steps.release.outputs.nexus }}
+          update_mod_version: 'true'

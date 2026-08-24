@@ -78,6 +78,20 @@ The ceilings are declared by the pack rather than hardcoded by whatever opens it
 no second place to drift from. They are properties of the container's `u16` fields, measured over
 every shipped mesh — see [Authoring ceilings](./xbm-xbg.md#authoring-ceilings).
 
+### The pack's own conventions, not the file's
+
+A pack is not a Dunia format, and it does not inherit Dunia's conventions. The one that catches
+people:
+
+- **V runs bottom-up**, the way a modelling tool measures it, while the `.xbg` measures it from the
+  top row. `MeshDocument` flips it on the way out and back, so a reader takes `uvs` as they come and
+  a writer hands them back the same way. Flipping again on top of that turns every texture upside
+  down, which no numeric gate can see — a round trip stays byte-exact either way, because the two
+  flips cancel.
+
+Positions are already metres and triangles keep the file's own clockwise winding, so a bottom-up,
+counter-clockwise tool reverses those itself.
+
 ### The two fields that must be carried
 
 Almost everything in an `.xbg` is bookkeeping the writer regenerates. Two things are not, and the

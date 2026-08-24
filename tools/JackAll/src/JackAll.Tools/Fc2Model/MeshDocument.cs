@@ -235,8 +235,8 @@ public sealed class MeshDocument
                     Cluster = geometry.Cluster,
                     VertexCount = stream.Count,
                     Positions = Flatten3(stream.Positions(file.PosScale)),
-                    Uvs = Flatten2(stream.RawUvs(scales.UvTranslate, scales.UvScale, 0)),
-                    Uvs1 = Flatten2(stream.RawUvs(scales.UvTranslate, scales.UvScale, 1)),
+                    Uvs = FlipV(Flatten2(stream.RawUvs(scales.UvTranslate, scales.UvScale, 0))),
+                    Uvs1 = FlipV(Flatten2(stream.RawUvs(scales.UvTranslate, scales.UvScale, 1))),
                     Normals = Flatten3(stream.Normals()),
                     Tangents = Flatten3(stream.Tangents()),
                     Binormals = Flatten3(stream.Binormals()),
@@ -372,14 +372,34 @@ public sealed class MeshDocument
     private static VertexData VerticesOf(MeshGeometry geometry) => new()
     {
         Positions = Unflatten3(geometry.Positions),
-        Uvs = Unflatten2(geometry.Uvs),
-        Uvs1 = Unflatten2(geometry.Uvs1),
+        Uvs = Unflatten2(FlipV(geometry.Uvs)),
+        Uvs1 = Unflatten2(FlipV(geometry.Uvs1)),
         Normals = Unflatten3(geometry.Normals),
         Tangents = Unflatten3(geometry.Tangents),
         Binormals = Unflatten3(geometry.Binormals),
         Colours = Unflatten4(geometry.Colours),
         Skin = UnflattenSkin(geometry.SkinWeights, geometry.SkinSlots),
     };
+
+    /// <summary>
+    /// V the other way up. The file measures it from the top row, a modelling tool from the bottom,
+    /// and the document carries what the tool wants - so this runs on the way out and back, one
+    /// operation either way because flipping twice is the identity.
+    /// </summary>
+    private static float[]? FlipV(float[]? uvs)
+    {
+        if (uvs is null)
+        {
+            return null;
+        }
+        var flipped = new float[uvs.Length];
+        for (int i = 0; i + 1 < uvs.Length; i += 2)
+        {
+            flipped[i] = uvs[i];
+            flipped[i + 1] = 1.0f - uvs[i + 1];
+        }
+        return flipped;
+    }
 
     private static float[]? Flatten2((float U, float V)[]? values)
         => values is null ? null : [.. values.SelectMany(v => (float[])[v.U, v.V])];
