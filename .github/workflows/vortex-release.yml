@@ -7,11 +7,10 @@ permissions:
   contents: write
 
 env:
-  # Nexus Mods identifiers for the extension's page, which lives under the site domain rather than
-  # farcry2. NEXUS_MOD_ID is the internal ID that v3/games/site/mods/{id in the page URL} answers
-  # with, not the ID in the URL; the file ID is on the mod's Files tab under "API Info". An empty
-  # file ID skips the upload.
-  NEXUS_MOD_ID: ''
+  # Nexus Mods identifiers for the extension. It sits under the site domain, which is game 2295 in
+  # the same ID space as any other - NEXUS_MOD_ID is (game_id << 32) | 2143, not the ID in the URL.
+  # The file ID is on the Files tab under "API Info"; an empty one skips the upload.
+  NEXUS_MOD_ID: '9856949946463'
   NEXUS_FILE_EXTENSION: '7736709'
 
 jobs:

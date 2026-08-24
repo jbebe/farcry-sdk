@@ -19,7 +19,9 @@ inputs:
     description: Version string for the new file version.
     required: true
   display_name:
-    description: Name shown for the file version.
+    description: Name of the file version this upload creates, not of the mod file holding it -
+      that one only changes through a PATCH. Max 50 chars, and the API takes only letters, digits,
+      spaces and _ ' ( ) . -
     required: true
   category:
     description: Section of the mod page the file sits in. The API takes only main, optional
