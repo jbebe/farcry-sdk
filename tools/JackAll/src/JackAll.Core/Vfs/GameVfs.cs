@@ -81,6 +81,10 @@ public sealed record VfsFile(
 
     public string Directory => System.IO.Path.GetDirectoryName(Path)?.Replace('/', '\\') ?? string.Empty;
     public string FileName => System.IO.Path.GetFileName(Path);
+
+    /// <summary>The path alone: the record's synthesized printer reads every public property,
+    /// including <see cref="EngineHash"/>, which throws on a synthetic row.</summary>
+    public override string ToString() => Path;
 }
 
 /// <summary>
