@@ -152,6 +152,11 @@ def _base_tint(tree, values, weight, location):
 def _normal(tree, slots, pack, cache, definition, principled):
     """A normal map through a Normal Map node, which is the only correct route.
 
+    The game stores the vector in two channels - X in the alpha, Y in the colour
+    - and leaves Z to be rebuilt, which is why the image reads grey rather than
+    lavender. Handing the Normal Map node that colour as it stands gives it
+    (Y, Y, Y), and the surface stripes.
+
     1,656 of the 2,379 shipped materials carry one. Without it a modeler editing
     a normal map is working blind, and a warning about the channels the format
     does not carry is only honest if the ones it does carry are shown.
@@ -161,12 +166,26 @@ def _normal(tree, slots, pack, cache, definition, principled):
     image = _image(slots[NORMAL1], pack, cache)
     if image is None:
         return
+    # The alpha is a coordinate rather than coverage, so Blender must not fold it
+    # into the colour on the way in.
+    image.alpha_mode = "CHANNEL_PACKED"
 
     node = _texture_node(tree, image, NORMAL1, tiling(definition, "NormalTiling1"),
                          (0, ROW), colorspace="Non-Color")
+    separate = tree.nodes.new("ShaderNodeSeparateColor")
+    separate.location = (COLUMN, ROW)
+    tree.links.new(separate.inputs["Color"], node.outputs["Color"])
+
+    rebuilt = tree.nodes.new("ShaderNodeCombineColor")
+    rebuilt.location = (2 * COLUMN, ROW)
+    tree.links.new(rebuilt.inputs["Red"], node.outputs["Alpha"])
+    tree.links.new(rebuilt.inputs["Green"], separate.outputs["Green"])
+    # Z straight up, which the Normal Map node renormalises into the real vector.
+    rebuilt.inputs["Blue"].default_value = 1.0
+
     normal_map = tree.nodes.new("ShaderNodeNormalMap")
-    normal_map.location = (COLUMN, ROW)
-    tree.links.new(normal_map.inputs["Color"], node.outputs["Color"])
+    normal_map.location = (3 * COLUMN, ROW)
+    tree.links.new(normal_map.inputs["Color"], rebuilt.outputs["Color"])
     tree.links.new(principled.inputs["Normal"], normal_map.outputs["Normal"])
 
 
