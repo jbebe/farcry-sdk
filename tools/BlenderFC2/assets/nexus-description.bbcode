@@ -1,0 +1,119 @@
+[size=6][b]Far Cry 2 Formats - the Blender add-on[/b][/size]
+
+Far Cry 2 models live in Dunia formats nothing outside the game reads: .xbg meshes with LODs and damage states, .xbm materials, .xbt textures, .skeleton rigs and .mab animation banks. Getting a weapon into Blender used to mean a pile of one-off scripts, a trip outside the toolchain to convert a texture, and knowing about chunk padding and bone palettes.
+
+This add-on is the other half of [url=https://www.nexusmods.com/farcry2/mods/370]JackAll[/url]. JackAll decodes a model into a .fc2model pack, one file with no Dunia bytes in it, and this reads that pack into a normal Blender scene, lets you edit it, and writes it back. Import a gun, change it, export, apply, play.
+
+The split is on purpose: JackAll owns every byte layout, this owns what a scene looks like. There is no format code in here at all, which is why the two can't drift apart.
+
+[b]You need JackAll for the pack.[/b] Export as .fc2model on any .xbg in JackAll, or from the command line:
+
+[code]jackall-cli fc2model export graphics/weapons/primary/ak47/ak47.xbg --game "C:\Games\Far Cry 2" --clips[/code]
+
+--clips carries every animation bank that names this model. Applying your edit back is Apply .fc2model in JackAll, which stages the changed game files into your workspace and shows you the list before it touches anything.
+
+[line]
+
+[size=5][b]Importing[/b][/size]
+
+[img]https://staticdelivery.nexusmods.com/mods/1471/images/371/371-1787582069-1643988116.png[/img]
+
+[b]File > Import > Far Cry 2 Model Pack (.fc2model)[/b]. That's the whole step. No skeleton to hunt for, no texture to convert first, nothing to point at a game folder.
+
+[img]https://staticdelivery.nexusmods.com/mods/1471/images/371/371-1787582074-1357032030.png[/img]
+
+What you get is a normal scene: every part as its own mesh with its UVs, vertex colours and the file's own normals, an armature built from the model's nodes, rigid parts sitting on their real pivots, skin weights as vertex groups, and the materials rebuilt as a node graph with the pack's textures wired in.
+
+Dunia and Blender are both Z-up, so nothing is rotated to make it fit. Winding is reversed and V is flipped, because that is what the file actually stores.
+
+The material graph shows what the format really carries: the two shared tiling detail maps blended by the model's mask, each tinted, the normal map, the specular map inverted into Roughness. Worth knowing before you paint anything: [b]a model's own texture is usually a mask, not its colour[/b]. The AK-47's wood and metal come from shared detail maps; its own texture decides where each one goes.
+
+[size=5][b]Editing and export[/b][/size]
+
+[img]https://staticdelivery.nexusmods.com/mods/1471/images/371/371-1787582066-204483423.png[/img]
+
+[b]File > Export > Far Cry 2 Model Pack (.fc2model)[/b] writes your parts back into the pack they came from. The pack is edited, not rebuilt, so the LODs you never opened, the nodes, the bone palettes and every document you didn't touch survive exactly as they were.
+
+[b]A model nobody edited comes back byte for byte identical to the file the game ships[/b] - all the way round, Blender to pack to .xbg, bytes compared. That holds for the AK-47, a 37-part buggy and a skinned character. Only an entry that actually changed is rewritten, which is what stops an export from recompressing a texture you never opened.
+
+[list]
+[*][b]A part's topology can change.[/b] Give it more or fewer vertices and the tangent frame is regenerated from the UVs. The test subdivides a part from 805 vertices to 2,637 and checks the result.[/*]
+[*][b]You can add a part the model shipped without.[/b] Mark a mesh with [b]Add as New Part[/b] and export appends it, leaving every part already there untouched.[/*]
+[*][b]Bounds are refitted whenever geometry moves[/b], per part and for the whole model, because culling reads them and a stale one makes a part vanish in game.[/*]
+[/list]
+
+[size=5][b]Animation[/b][/size]
+
+[img]https://staticdelivery.nexusmods.com/mods/1471/images/371/371-1787582073-1561762298.png[/img]
+
+[b]Object > Load Far Cry 2 Animation[/b] lists the banks the pack carries - name, length, rate, and the bone the model hangs from - and loads one onto the rig as an Action. No file dialog, no matching a bank to a skeleton by hand.
+
+[img]https://staticdelivery.nexusmods.com/mods/1471/images/371/371-1787582066-1661967377.png[/img]
+
+From there it's a normal Action in a normal editor. [b]Far Cry 2 > Animation > Write Animation[/b] puts it back into the bank it came from. The pose is sampled off the evaluated rig, not read out of the F-curves, so a constraint, an NLA strip or a driver all land in the file the way they look in the viewport.
+
+[b]Only the clip that fits your model's rig is rewritten.[/b] A bank holds the character's motion too, and re-encoding that on every save would quietly degrade the arms holding the gun. After rewriting the rifle's reload, 10,232 of the 10,240 bytes belonging to clips nobody touched are identical, and the eight that move have to.
+
+Four things a naive reader gets wrong and this one doesn't: a bank is not one clip, so a weapon rig reaches past the character's clip to its own, picked by bone ids rather than position; the mesh's bone tree is not the tree clips animate, and animating the mesh's tree tears a character into spikes around the knees and elbows; a rotation replaces a bone's rest rotation instead of adding to it; and Blender parents an object to a bone's tail while the clip is written at the head.
+
+[size=5][b]Checking a model before the game finds out[/b][/size]
+
+[img]https://staticdelivery.nexusmods.com/mods/1471/images/371/371-1787582077-1310307789.png[/img]
+
+The [b]Far Cry 2[/b] tab in the View3D sidebar is the whole add-on in one place: what's imported, [b]Check[/b], the animation buttons, and Export.
+
+Check runs every rule against what an export would actually write and lists what it finds, with a Select button that jumps straight to the object, vertex or material each one is about. An ERROR blocks the export. Everything else warns, because retail itself breaks plenty of guidelines and refusing those would make the add-on wrong about the game it's for.
+
+[b]Every rule is silent on the game's own models[/b], checked against a rifle, a 37-part vehicle and a skinned character. Retail is the definition of valid, so a rule that fires on it is a wrong rule.
+
+Blocks the export:
+[list]
+[*]an object the export would skip, or two objects claiming one part[/*]
+[*]a part that draws nothing, or one moved in object mode whose move export would discard[/*]
+[*]a part with no UV layer, or every UV sitting at the origin[/*]
+[*]a cluster over the triangle or palette ceiling, or a buffer over the vertex ceiling[/*]
+[*]an unweighted vertex on a skinned part[/*]
+[*]editing a file that other models share[/*]
+[/list]
+
+Warns:
+[list]
+[*]a corner that disagrees about UV, normal or colour, which the format stores per vertex[/*]
+[*]a vertex in more groups than the buffer addresses, weights that don't sum to one, a vertex no triangle uses[/*]
+[*]a texture resized, no longer a power of two, or over 2048[/*]
+[*]a material slot pointing somewhere the file ignores[/*]
+[*]the channels the format doesn't carry - metalness, roughness maps, emission, subsurface and the rest[/*]
+[*]a model-owned texture set to tile, the Weapon shader having no albedo slot, soft alpha in a codec that stores one bit of it[/*]
+[/list]
+
+Each one names what to do instead. The ceilings come from the pack itself, so they can't drift out of date, and the texture rules come from measuring all 4,283 shipped textures rather than from a guess.
+
+[size=5][b]The motion table[/b][/size]
+
+[b]Far Cry 2 > Animation > Measure motion[/b] reports, per bone, the worst rotation and translation across every bank the pack carries. On the AK-47 that's FRAME at 0 degrees over 0 m, SLIDE at 0.14 m, and CLIP at 45 degrees over 0.39 m.
+
+That is the most useful thing this add-on can tell a weapon modeler and you cannot guess it from the mesh: the bone that doesn't move is where the body of the gun belongs, and one that swings is a moving part. Put geometry on the wrong bone and the gun tears itself apart on the first reload - otherwise a playtest discovery.
+
+[size=5][b]What it can't do yet[/b][/size]
+
+[list]
+[*][b]Split UVs, normals or colours.[/b] The format stores all three per vertex, not per corner, so a seam has to be a duplicated vertex. The first corner touching a vertex wins.[/*]
+[*][b]Add or remove parts, nodes or LODs.[/b] A part can be added but not removed, and an added part exists only at the LOD you added it to, so it isn't drawn once the model drops to a coarser one.[/*]
+[*][b]Make a new material.[/b] A new part reuses one the model already has.[/*]
+[*][b]Add a vertex component a buffer has no room for.[/b] A second UV set on a part whose buffer carries one is dropped rather than invented.[/*]
+[*][b].hkx collision isn't parsed[/b], so a reshaped model keeps its donor's collision shape.[/*]
+[/list]
+
+[size=5][b]Installing[/b][/size]
+
+[img]https://staticdelivery.nexusmods.com/mods/1471/images/371/371-1787582069-2041911208.png[/img]
+
+Blender 4.2 or newer. [b]Edit > Preferences > Get Extensions > Install from Disk[/b], pick the zip, done. Then [b]File > Import > Far Cry 2 Model Pack (.fc2model)[/b].
+
+Unzipping it into the addons folder by hand is not the same thing and won't register.
+
+[size=5][b]Source and credits[/b][/size]
+
+Source code: [url=https://github.com/jbebe/farcry-sdk/tree/main/tools/BlenderFC2]tools/BlenderFC2 on GitHub[/url]. The pack format and everything that reads a game file: [url=https://github.com/jbebe/farcry-sdk/tree/main/tools/JackAll]tools/JackAll[/url].
+
+The format knowledge underneath all of it stands on ten years of community reverse engineering, from Gibbed's original Dunia tools onward. Thank you to everyone who ever posted a hex dump or a "here's how the header works" note into the void.

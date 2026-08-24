@@ -50,7 +50,9 @@ Most file types get a real viewer instead of a hex dump. .xbt textures show a pr
 
 [b]Export as .fc2model[/b] on any .xbg collects the model, its materials, its textures, the skeleton next to it and, if you want, every animation bank that uses it. All of that goes into one file with zero Dunia formats inside: JSON and plain float arrays for the mesh, JSON for the materials, PNG for the textures. [b]Apply .fc2model[/b] takes the file back from your 3D editor and stages the changed game files into your workspace, and it shows you the list of files it will touch before it does anything.
 
-The split is on purpose. JackAll knows the byte layouts, and the Blender add-on ([url=https://github.com/jbebe/farcry-sdk/tree/main/tools/BlenderFC2]tools/BlenderFC2[/url]) knows what a scene should look like. The add-on has no format code in it at all. In practice this means the art half of a custom weapon is one file and one plugin, instead of twenty small scripts.
+The split is on purpose. JackAll knows the byte layouts, and the Blender add-on knows what a scene should look like. The add-on has no format code in it at all. In practice this means the art half of a custom weapon is one file and one plugin, instead of twenty small scripts.
+
+The Blender side is a separate download here on Nexus: [url=https://www.nexusmods.com/farcry2/mods/371]Model editor (Blender plugin)[/url] ([url=https://github.com/jbebe/farcry-sdk/tree/main/tools/BlenderFC2]source[/url]). It imports a .fc2model pack, gives you the mesh, the materials and the rig as a normal Blender scene, and writes your edit back into the pack for [b]Apply .fc2model[/b] to stage.
 
 [size=4][b]Map[/b][/size]
 
