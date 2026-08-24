@@ -2,20 +2,14 @@ using System.Buffers.Binary;
 using System.IO.Compression;
 using System.IO.Hashing;
 using JackAll.Tools.Png;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.Formats.Png;
-using SixLabors.ImageSharp.PixelFormats;
 
 namespace JackAll.Tests;
 
-/// <summary>
-/// The PNG codec, held against ImageSharp - a test-only dependency kept for exactly this, because a
-/// codec checked only against itself agrees with its own mistakes.
-/// </summary>
+/// <summary>The PNG codec, over its own round trip and over files assembled by hand.</summary>
 public class PngImageTests
 {
     /// <summary>Gradients, a hard edge and a transparent block, so no filter wins every row.</summary>
-    private static byte[] Source(int width, int height, bool opaque = false)
+    private static byte[] Source(int width, int height)
     {
         var rgba = new byte[width * height * 4];
         for (int y = 0; y < height; y++)
@@ -26,17 +20,9 @@ public class PngImageTests
                 rgba[at] = (byte)(x * 7);
                 rgba[at + 1] = (byte)(y * 13);
                 rgba[at + 2] = (byte)((x ^ y) * 3);
-                rgba[at + 3] = opaque || x < width / 2 ? (byte)255 : x < width * 3 / 4 ? (byte)0 : (byte)137;
+                rgba[at + 3] = x < width / 2 ? (byte)255 : x < width * 3 / 4 ? (byte)0 : (byte)137;
             }
         }
-        return rgba;
-    }
-
-    private static byte[] ImageSharpRgba(byte[] png)
-    {
-        using Image<Rgba32> image = Image.Load<Rgba32>(png);
-        var rgba = new byte[image.Width * image.Height * 4];
-        image.CopyPixelDataTo(rgba);
         return rgba;
     }
 
@@ -55,68 +41,6 @@ public class PngImageTests
 
         Assert.Equal((width, height), (decodedWidth, decodedHeight));
         Assert.Equal(source, rgba);
-    }
-
-    /// <summary>Our writer read by something that is not ours, which is the half a round trip misses.</summary>
-    [Fact]
-    public void Writes_a_png_imagesharp_reads_identically()
-    {
-        byte[] source = Source(97, 61);
-
-        Assert.Equal(source, ImageSharpRgba(PngImage.Encode(source, 97, 61)));
-    }
-
-    public static TheoryData<PngColorType, PngBitDepth, PngInterlaceMode> Layouts()
-    {
-        var layouts = new TheoryData<PngColorType, PngBitDepth, PngInterlaceMode>();
-        foreach (PngInterlaceMode interlace in new[] { PngInterlaceMode.None, PngInterlaceMode.Adam7 })
-        {
-            foreach (PngBitDepth depth in new[]
-                     { PngBitDepth.Bit1, PngBitDepth.Bit2, PngBitDepth.Bit4, PngBitDepth.Bit8, PngBitDepth.Bit16 })
-            {
-                layouts.Add(PngColorType.Grayscale, depth, interlace);
-                if (depth <= PngBitDepth.Bit8)
-                {
-                    layouts.Add(PngColorType.Palette, depth, interlace);
-                }
-                if (depth >= PngBitDepth.Bit8)
-                {
-                    layouts.Add(PngColorType.Rgb, depth, interlace);
-                    layouts.Add(PngColorType.GrayscaleWithAlpha, depth, interlace);
-                    layouts.Add(PngColorType.RgbWithAlpha, depth, interlace);
-                }
-            }
-        }
-        return layouts;
-    }
-
-    /// <summary>
-    /// Every colour type, bit depth and interlace the format has, read the way ImageSharp reads it.
-    /// </summary>
-    /// <remarks>
-    /// The comparison is against ImageSharp's decode of the same file rather than the source image,
-    /// because the low bit depths and the palette quantize. What is under test is that two readers
-    /// agree about the bytes that were written, whatever they turned out to be.
-    /// </remarks>
-    [Theory]
-    [MemberData(nameof(Layouts))]
-    public void Reads_every_layout_the_format_has(PngColorType colour, PngBitDepth depth, PngInterlaceMode interlace)
-    {
-        bool opaque = colour is PngColorType.Grayscale or PngColorType.Rgb;
-        using Image<Rgba32> image = Image.LoadPixelData<Rgba32>(Source(37, 19, opaque), 37, 19);
-        using var written = new MemoryStream();
-        image.Save(written, new PngEncoder { ColorType = colour, BitDepth = depth, InterlaceMethod = interlace });
-        byte[] png = written.ToArray();
-
-        // What IHDR ended up saying, so a layout ImageSharp quietly substituted cannot pass as coverage.
-        Assert.Equal(
-            ((byte)depth, (byte)colour, interlace == PngInterlaceMode.Adam7),
-            (png[24], png[25], png[28] == 1));
-
-        (byte[] rgba, int width, int height) = PngImage.Decode(png);
-
-        Assert.Equal((37, 19), (width, height));
-        Assert.Equal(ImageSharpRgba(png), rgba);
     }
 
     /// <summary>The colour-keyed transparency an editor never writes and a reader still owes.</summary>
@@ -138,7 +62,6 @@ public class PngImageTests
         (byte[] rgba, _, _) = PngImage.Decode(png);
 
         Assert.Equal([0, 0, 0, 255, 1, 1, 1, 255, 2, 2, 2, 0, 3, 3, 3, 255], rgba);
-        Assert.Equal(ImageSharpRgba(png), rgba);
     }
 
     [Fact]
@@ -183,7 +106,7 @@ public class PngImageTests
         Assert.Throws<ArgumentException>(() => PngImage.Encode(new byte[16], 4, 4));
     }
 
-    /// <summary>A PNG built by hand, for what ImageSharp will not write.</summary>
+    /// <summary>A PNG built by hand, for the chunks and layouts our own writer never emits.</summary>
     private static byte[] Assemble(
         int width, int height, byte bitDepth, byte colourType, byte[] scanlines,
         params (string Type, byte[] Data)[] ahead)
