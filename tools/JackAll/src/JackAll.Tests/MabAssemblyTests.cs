@@ -17,7 +17,9 @@ namespace JackAll.Tests;
 /// </remarks>
 public sealed class MabAssemblyTests
 {
+    // Measures a rate, so a corpus of no files divides by zero rather than no-opping.
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void A_clip_lays_out_where_it_was_read_from()
     {
         int assembled = 0;

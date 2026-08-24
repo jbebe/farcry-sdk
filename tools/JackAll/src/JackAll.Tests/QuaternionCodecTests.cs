@@ -14,7 +14,9 @@ namespace JackAll.Tests;
 /// </remarks>
 public sealed class QuaternionCodecTests
 {
+    // Measures a rate, so a corpus of no files divides by zero rather than no-opping.
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void Every_shipped_rotation_packs_back_to_the_words_it_came_from()
     {
         long rotations = 0;

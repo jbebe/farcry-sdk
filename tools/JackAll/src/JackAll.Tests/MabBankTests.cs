@@ -18,7 +18,9 @@ namespace JackAll.Tests;
 /// </remarks>
 public sealed class MabBankTests
 {
+    // Measures a rate, so a corpus of no files divides by zero rather than no-opping.
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void Every_bank_rebuilds_with_its_chain_and_tags_intact()
     {
         int rebuilt = 0;

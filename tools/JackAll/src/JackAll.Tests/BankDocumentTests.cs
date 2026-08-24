@@ -72,7 +72,9 @@ public sealed class BankDocumentTests
     /// smallest-three encoding ties - compounded over a chain of up to 35 clips.
     /// </para>
     /// </remarks>
+    // Measures a rate, so a corpus of no files divides by zero rather than no-opping.
     [Fact]
+    [Trait("Category", "RequiresFixture")]
     public void A_bank_rebuilds_from_its_decoded_fields_alone()
     {
         int rebuilt = 0;
