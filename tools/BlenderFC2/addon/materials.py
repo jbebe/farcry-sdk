@@ -307,6 +307,19 @@ def build(material, definition, pack, cache):
     principled.inputs["Roughness"].default_value = 0.6
     _specular(tree, slots, pack, cache, definition, values, principled)
     _normal(tree, slots, pack, cache, definition, principled)
-    if integers(definition).get("AlphaTestEnabled"):
-        material.blend_method = "CLIP"
+    _alpha(tree, base, definition, principled, material)
     return True
+
+
+def _alpha(tree, node, definition, principled, material):
+    """Let the diffuse texture's alpha cut the surface, the way the game does.
+
+    Nothing else links it, and the BSDF's own default is opaque - so a cutout
+    like a crosshair draws as a solid rectangle of its diffuse colour.
+    """
+    flags = integers(definition)
+    if not flags.get("AlphaTestEnabled") and not flags.get("AlphaBlendEnabled"):
+        return
+    tree.links.new(principled.inputs["Alpha"], node.outputs["Alpha"])
+    material.surface_render_method = ("BLENDED" if flags.get("AlphaBlendEnabled")
+                                      else "DITHERED")

@@ -305,6 +305,31 @@ which is otherwise a playtest discovery.
 Bone to part is a name match, which holds for weapon rigs (`FRAME`, `CLIP`, `SLIDE`, `ACCESSORY`) and
 is meaningless for characters.
 
+## The sight picture
+
+**Far Cry 2 ▸ Animation ▸ Sight picture** hides everything but `SCOPE_HI` and looks at what is left
+from the player's eye. Press it again to leave.
+
+`SCOPE_HI` is drawn *instead of* the rest of the model while the player is zoomed, not on top of it,
+so a scoped weapon needs its optic built twice: once on `FRAME` for the ordinary view and once,
+self-contained, on `SCOPE_HI`. That part therefore carries its own tube, its own lens and its own
+reticle — on the Dragunov, five clusters and 2,232 triangles that no other view ever shows.
+
+This is a view rather than a rule because the defects it catches are all legal files: geometry on the
+wrong part, at the wrong position, or the wrong size. `docs/docs/modding/replacing-a-weapon.md` is
+where those are written up, and it is the home for the game-side facts.
+
+The eye is not guessed. An aim bank hangs the weapon off the character's `Camera` bone, so the
+weapon's own root track inside that bank is the weapon measured from the eye; inverting it puts the
+camera where the player's is — out of the weapon's own pack, with no character rig to pose.
+`aimironcycle` is preferred over `aimcycle`, being the zoomed stance.
+
+The lens angle is fitted to frame the part, **not** the game's zoom angle, which is nowhere in the
+pack. What the view does reproduce exactly is the size of each piece against the others, which is
+what a reticle scaled to the tube instead of to the camera gets wrong.
+
+Only LOD0 carries a `SCOPE_HI`, so import at LOD 0 to use this.
+
 ## The end-to-end gate
 
 `tests/blender_transplant.py` is the honest check on the whole toolchain: rebuild a weapon from a

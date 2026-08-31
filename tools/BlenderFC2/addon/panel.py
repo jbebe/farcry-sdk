@@ -16,7 +16,7 @@ import bpy
 from bpy.props import (BoolProperty, CollectionProperty, EnumProperty, FloatProperty,
                        IntProperty, PointerProperty, StringProperty)
 
-from . import export_xbg, import_mab, import_xbg, motion, validate
+from . import export_xbg, import_mab, import_xbg, motion, sight, validate
 from .pack import Pack
 from .rules import ERROR, INFO, WARNING
 
@@ -196,6 +196,50 @@ class FC2_OT_motion_table(bpy.types.Operator):
         return {"FINISHED"}
 
 
+class FC2_OT_sight_picture(bpy.types.Operator):
+    """Show only what a zoomed player sees, from where their eye is"""
+
+    bl_idname = "object.fc2_sight_picture"
+    bl_label = "Sight picture"
+    bl_options = {"REGISTER", "UNDO"}
+
+    @classmethod
+    def poll(cls, context):
+        return _pack_path(context) is not None
+
+    def execute(self, context):
+        collection = _collection(context)
+        view = _view(context)
+
+        if sight.sighting(collection):
+            sight.leave(collection)
+            context.scene.camera = None
+            if view:
+                view.region_3d.view_perspective = "PERSP"
+            return {"FINISHED"}
+
+        if not sight.parts(collection):
+            self.report({"ERROR"}, "No %s here. Only LOD0 carries one - re-import at LOD 0."
+                        % sight.PART)
+            return {"CANCELLED"}
+
+        pose = motion.aim_pose(Pack.load(_pack_path(context)))
+        if pose is None:
+            self.report({"ERROR"}, "No bank in this pack aims down the weapon, so there is "
+                                   "nowhere to put the eye. Re-export with --clips.")
+            return {"CANCELLED"}
+
+        render = context.scene.render
+        context.scene.camera = sight.enter(
+            collection, pose,
+            (render.resolution_x * render.pixel_aspect_x)
+            / (render.resolution_y * render.pixel_aspect_y))
+        if view:
+            view.region_3d.view_perspective = "CAMERA"
+        self.report({"INFO"}, "Eye from %s." % pose["bank"])
+        return {"FINISHED"}
+
+
 class FC2_PT_base(bpy.types.Panel):
     bl_space_type = "VIEW_3D"
     bl_region_type = "UI"
@@ -288,6 +332,15 @@ class FC2_PT_animation(FC2_PT_base):
         layout.operator("object.fc2_motion_table", icon="DRIVER_ROTATIONAL_DIFFERENCE")
 
         state = context.scene.fc2
+        collection = _collection(context)
+        zoomed = collection is not None and sight.sighting(collection)
+        layout.operator("object.fc2_sight_picture", icon="CAMERA_DATA",
+                        text="Leave sight picture" if zoomed else "Sight picture")
+        if zoomed:
+            _wrapped(layout, "%s replaces the rest of the model while zoomed, so this is the "
+                             "whole view. Sizes against each other are exact; the lens angle is "
+                             "fitted here, not the game's." % sight.PART, icon="INFO")
+
         if not len(state.bones):
             if state.motion_summary:
                 layout.label(text=state.motion_summary)
@@ -348,10 +401,16 @@ def _pack_path(context):
     return collection.get(import_xbg.PROP_SOURCE) if collection else None
 
 
+def _view(context):
+    """The 3D viewport the sidebar this was pressed in belongs to."""
+    space = context.space_data
+    return space if space and space.type == "VIEW_3D" else None
+
+
 CLASSES = (
     FC2_PG_finding, FC2_PG_bone, FC2_PG_state,
     FC2_UL_findings, FC2_UL_bones,
-    FC2_OT_check, FC2_OT_select_finding, FC2_OT_motion_table,
+    FC2_OT_check, FC2_OT_select_finding, FC2_OT_motion_table, FC2_OT_sight_picture,
     FC2_PT_model, FC2_PT_check, FC2_PT_animation, FC2_PT_export,
 )
 

@@ -3,6 +3,23 @@
 Notable changes to the Far Cry 2 Blender add-on, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Fixed
+- **A material's alpha is now wired to the surface.** Nothing linked the diffuse texture's alpha
+  channel, so every material declaring `AlphaTestEnabled` or `AlphaBlendEnabled` drew fully opaque —
+  the Dragunov's crosshair, a black cutout on a transparent texture, came through as a solid black
+  rectangle over the sight picture. Across a weapon, a scoped weapon and a character, 13 of 46
+  materials declare one of those flags. The old `blend_method = "CLIP"` it set instead has been a
+  no-op since EEVEE Next: it maps to `DITHERED`, which is already the default.
+
+### Added
+- **A sight picture**, which isolates `SCOPE_HI` and views it from the player's eye. `SCOPE_HI`
+  replaces the rest of the model while zoomed rather than overlaying it, so it is the whole zoomed
+  view. What it catches is geometry in the wrong part, at the wrong position or the wrong size —
+  none of which is a malformed file, so no rule can reach them. The eye comes out of the aim bank's
+  `Camera` participant, so no character rig is needed to find it.
+
 ## [0.1.0] - 2026-08-24
 
 ### Added

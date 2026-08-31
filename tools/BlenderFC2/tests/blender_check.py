@@ -294,6 +294,16 @@ def _material_channels(material, pack, wired):
         else:
             wired.setdefault(socket_name, set()).add(material.name)
 
+    # Alpha hangs off the material's flags rather than off a slot of its own, so
+    # it is checked apart from CHANNELS. Unlinked, a cutout draws solid.
+    flags = fc2materials.integers(definition)
+    if flags.get("AlphaTestEnabled") or flags.get("AlphaBlendEnabled"):
+        socket = principled.inputs.get("Alpha")
+        if socket is None or not socket.is_linked:
+            errors += fail("%s declares alpha and nothing drives Alpha" % material.name)
+        else:
+            wired.setdefault("Alpha", set()).add(material.name)
+
     # Every image node has to say which slot it stands for, or export cannot
     # match one back and a rule cannot tell an edited chain from a rebuilt one.
     untagged = [n.name for n in material.node_tree.nodes

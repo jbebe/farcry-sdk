@@ -12,11 +12,20 @@
 # number is how far the bone swings *within the clip*, not where the clip puts
 # it relative to the model.
 #
+# The same banks also say where the player's eye sits, which is what frames a
+# scope's sight picture.
+#
 # No bpy here, so it can be measured without a scene.
 
 import math
 
 from . import import_mab
+
+# The character bone an aim bank hangs the weapon off, the weapon's own root
+# within the clip that bank drives it with, and the zoomed bank of the two.
+AIM_BONE = "Camera"
+ROOT_BONE = 0
+ZOOMED_BANK = "aimironcycle"
 
 
 def table(pack, rig=None):
@@ -111,3 +120,30 @@ def _span(keys):
     low = [min(key[axis] for key in keys) for axis in range(3)]
     high = [max(key[axis] for key in keys) for axis in range(3)]
     return math.sqrt(sum((high[axis] - low[axis]) ** 2 for axis in range(3)))
+
+
+def aim_pose(pack):
+    """Where a bank holds the weapon relative to the player's eye.
+
+    An aim bank hangs the model off the character's `Camera` bone, so the
+    weapon's own root track inside it is the weapon measured from the eye.
+    """
+    # The zoomed stance first, then the shoulder-ready one a few centimetres
+    # further back, so a bank is only parsed until one of them answers.
+    for index in sorted(pack.clips, key=lambda entry: ZOOMED_BANK not in entry["label"]):
+        bank = pack.clip(index["path"])
+        clip = _aimed(bank) if bank else None
+        if clip is None:
+            continue
+        return {"bank": index["label"],
+                "rotation": (_rotations(clip).get(ROOT_BONE) or [None])[0],
+                "translation": (_translations(clip).get(ROOT_BONE) or [None])[0]}
+    return None
+
+
+def _aimed(bank):
+    """The clip a bank drives its model with while hanging it off the eye."""
+    for participant in bank.get("participants") or ():
+        if participant.get("bone") == AIM_BONE:
+            return bank["clips"][participant["clip"]]
+    return None
