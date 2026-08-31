@@ -35,6 +35,8 @@ add_library(UFCP SHARED
   "src/main.cpp"
   "src/fixes/jackal_tapes.cpp"
   "src/fixes/bonus_content.cpp"
+  "src/fixes/load_savegame.cpp"
+  "src/fixes/exit_teardown.cpp"
   "src/options/fov.cpp"
   "src/options/affinity.cpp"
 )

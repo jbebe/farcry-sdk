@@ -15,6 +15,8 @@ Applied unconditionally, with no setting — a fix that needs a switch is a pref
 | Jackal tapes | The same Jackal tape recording — usually *#09. Stealing Boots* — plays every time in the southern map instead of advancing through the set. |
 | Predecessor tapes | Restores the seven Intel Bonus predecessor missions, which ship in the game files but are held behind an ownership check no longer able to succeed. |
 | Machetes | Restores the Primitive and Homemade machete variants, held behind the same kind of check. Pick one in the game's own Options → Game → Machete Type. |
+| Savegame launch | `-load <name>.sav` quit to desktop in a fraction of a second instead of booting straight into the save. The command line's own way to skip the menus, unusable as shipped. |
+| Exit crash | Quitting through Exit Game faulted instead of closing cleanly — the reason "Far Cry 2 crashes on exit" is folklore, and a guaranteed false positive on top of any real crash you are trying to read. |
 
 The two restorations are not a bypass of anything anyone can still buy. Both were Ubisoft promotions
 that ended; the Steam build asks a retired Uplay privileges service and the GOG build reads a
@@ -62,6 +64,51 @@ The community investigated this in 2011 and again in 2016 without finding a caus
 [Far Cry 2 Multi Fixer](https://github.com/FoxAhead/Far-Cry-2-Multi-Fixer) shipped the same one-byte
 edit without describing what it does. The annotated disassembly and the derivation are in
 [`src/fixes/jackal_tapes.cpp`](src/fixes/jackal_tapes.cpp).
+
+## Savegame launch
+
+`-load` opens the save and parses it correctly, then dies in what it does next: a validation pass
+that resolves the save's records against engine registries by name. The command line is dispatched
+from `InitDuniaEngine+0x52C` and those registries are not built until `CCryEngine::Initialize` at
+`+0x10CF`, so the pass always runs against an engine that does not exist yet and faults on the first
+registry it reads.
+
+The fix skips the pass while the engine is absent, returning the pass's own "resolved cleanly"
+result; once the engine is up it runs untouched. Skipping is safe rather than merely expedient: the
+pass discards every lookup result, and its only durable effect is a flag on a registry that has not
+been constructed, so before the engine exists there is nothing for it to accomplish.
+
+The save name needs its extension — `-load <name>.sav`, not `-load <name>`. That part is not a bug:
+the parser takes the basename verbatim and appends nothing, so a name without `.sav` genuinely
+matches no file.
+
+## Exit crash
+
+A registry teardown hands each of its (owner, object) pairs to a function that walks the object and
+then destroys it, but some of those objects have already been destroyed through another path. The
+engine null-checks the pointer, which does not help: the pointer is non-null and the object behind
+it is gone. Three different faults come out of that one bug depending on how the dead allocation has
+decayed — an unmapped page, a zeroed vtable, a null destructor slot.
+
+The fix tests the object with `VirtualQuery` and skips the teardown when it is already dead.
+Catching the fault instead would also shut the game down cleanly, but the access violation still
+happens, and a first-chance exception is what a crash handler reports — trading a crash for a crash
+log that cries wolf on every exit is not a fix.
+
+The teardown is not exit-only: the same function is reached from magma's list-widget
+remove-all-items path, so the guard also runs on every UI list repopulation. That is menu-event
+rate rather than frame rate, which is what makes a `VirtualQuery` per object affordable. The first
+object it skips is logged once, with the vtable RVA where one is still readable — the class identity
+of whatever is being destroyed twice is the one thing a real fix would need, and this is the only
+place it surfaces.
+
+This is the game's bug and not FCSE's, which was worth ruling out rather than assuming: FCSE loads
+its own `fcse.mgb` into the same magma engine and never unloads it, so the stale entry could have
+been its. Two indirect attempts failed — the package loads when the menu is built rather than when
+Options is opened, so no ordinary FCSE run avoids it, and an unmodded `FarCry2.exe` shows nothing
+because the engine swallows the access violation itself and exits 0, leaving no Windows error
+record. Disabling `MagmaPackage::Load()` in a throwaway FCSE build settled it in one run: with the
+package never loaded, the guard still skipped a destroyed object.
 
 ## How a feature finds the code it patches
 
@@ -123,7 +170,10 @@ of the game in the repository. Run it after touching a pattern.
 Everything below needs a real install:
 
 - `bin\fcse.log` shows `UFCP loaded`, then `jackal tapes fixed`, `predecessor tapes unlocked`,
-  `machetes unlocked`, the FOV hook's address, and the affinity mask.
+  `machetes unlocked`, both guards installing, the FOV hook's address, and the affinity mask.
+- **Savegame launch** *(run, works)*: `FCSE.exe -load <name>.sav` boots straight into that save.
+- **Exit crash** *(run, works)*: quitting through Exit Game ends with `RunGame returned true` and no
+  `CRASH:` line — verified both from the menu and after a `-load` launch.
 - `bin\fcse.ini` gains a `[UFCP]` group with `Field of view = 75` and
   `Processor affinity = All cores`.
 - Moving the FOV slider logs the new value; setting it back to 75 logs that the game's own value is

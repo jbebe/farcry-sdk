@@ -36,8 +36,8 @@ Three independent parsing mechanisms exist:
 :::warning[Prefix collisions are real]
 Every check is a substring match on the *whole* command line, not tokenised argument parsing. So
 `-loadx` takes the `-load` branch, `-benchmarkloop` alone is enough to enter the `-benchmark` branch,
-and `-spawn` matches inside `-spawnpos` and `-spawnangle`. Confirmed live: `-loadx` kills the game
-exactly like `-load` does.
+and `-spawn` matches inside `-spawnpos` and `-spawnangle`. Confirmed live: `-loadx` enters the
+`-load` branch and dies there exactly as a `-load` naming a missing save does.
 :::
 
 ## Dispatch is a first-match-wins chain
@@ -52,7 +52,7 @@ Process(cmdline)
   -benchmark  -> CreateBenchmarkNode  [0x10662f90]                   RETURN
   -host       -> DispatchNetworkMode  [0x10663af0] -> CreateHostNode
   -join       -> DispatchNetworkMode              -> CreateClientNode
-  -load       -> FUN_10661f50                                        (broken, see below)
+  -load       -> FUN_10661f50                                        (see below)
   -wait       -> DispatchNetworkMode              -> CreateHostNode
   (else)      -> CreateMainMenuNode   [0x106622f0]                   (-ubidays read here)
 ```
@@ -152,43 +152,63 @@ This whole cluster was missing from earlier versions of this page. The strings l
 is a usable world altitude, just not a safe one at the shipped values.
 :::
 
-## Save loading — `-load` is broken in retail
+## Save loading — `-load`
 
 | Flag | Effect |
 |---|---|
-| `-load <savename>` | Intended to load a save directly. **Kills the game instantly — see below** |
+| `-load <savename>.sav` | Loads a save directly, skipping the menus. **Crashes as shipped**, for the reason below; UFCP (`mods/UFCP`) fixes it, after which this is the one working way to boot straight into playable gameplay |
 
-:::danger[`-load` terminates the game in ~0.1s, for every value]
-Live-tested against a real save ID, a real ID with `.sav` appended, a bogus name, and `-load` with
-no value at all: **all five exit in 0.1 s with exit code 0**, before any window appears. `-loadx`
-does the same, via the `strstr` prefix collision. The value is irrelevant, so this is not a
-save-name format problem.
+:::note[Corrects an earlier claim on this page]
+This page previously said `-load` "kills the game instantly, for every value", that the value was
+therefore irrelevant, and that the blocking save load never worked. All three were wrong, and the
+error was methodological: **every** failure here exits in about 0.3 s with exit code 0, so exit
+timing cannot tell them apart. Running under FCSE, whose crash handler names the faulting address,
+separates them immediately:
+
+| Command | Fault | Meaning |
+|---|---|---|
+| `-load <name>` | `0x106621B8` | file not found |
+| `-load <name>.sav` | `0x104DBB80` | **file found, opened and parsed** — dies afterwards |
+
+The extension is required and is not a bug: `FUN_102a18f0` is a plain `basename`, and the parser
+appends nothing, so a name without `.sav` matches no file.
 :::
 
-Why, traced through `FUN_10661f50`:
+`GameFileUtils::GenerateRelativeFileName(name, mode)` (`0x101e9b20`) builds the path. The mode
+switch is `0 → "Saved Games\"`, `1 → "Benchmarks\Playbacks\"`, `2 → "user_maps\"`,
+`3 → "user_maps\downloads\"`; `-load` passes mode `0`, so the target is
+`My Games\Far Cry 2\Saved Games\<name>`.
 
-- `GameFileUtils::GenerateRelativeFileName(name, mode)` (`0x101e9b20`) builds the path. The mode
-  switch is `0 → "Saved Games\"`, `1 → "Benchmarks\Playbacks\"`, `2 → "user_maps\"`,
-  `3 → "user_maps\downloads\"`. `-load` passes mode `0`, so the target is
-  `My Games\Far Cry 2\Saved Games\<name>`.
-- Unlike every other branch in `Process` — which merely *record intent* into a node object —
-  the `-load` branch calls `FUN_101cc960`, which spins up a **`GameFileBlockingLoadThread`** and
-  synchronously loads the save right there, then dereferences the result to read a `"PlayerPos"`
-  property back out.
-- That happens far too early. Inside `InitDuniaEngine` the call order is:
+Unlike every other branch in `Process` — which merely *record intent* into a node object — the
+`-load` branch calls `FUN_101cc960`, which spins up a **`GameFileBlockingLoadThread`**. That thread
+(`FUN_101cd100`) opens and parses the save successfully. It then runs a post-load pass through its
+context vtable slot `+0x14` (`0x1072EE60`) that binds the save's records to engine registries by
+name, and *that* is what faults — on registries which do not exist yet:
 
-  | Offset | Call |
-  |---|---|
-  | `+0x074` | `ParseGameConfigFlags` |
-  | **`+0x52C`** | **`Process` — the `-load` blocking save load runs here** |
-  | `+0x10CF` | `CCryEngine::Initialize` — sound, physics, resource managers, console, string tables |
+```
+1072ee8a  call 104DBB80h   ; ecx = [11644D74h], the settings manager - null
+1072eeb3  call 10172820h   ; walks a registry at this+50h            - null
+```
 
-  So `-load` attempts a blocking savegame load roughly `0xBA3` bytes of init code *before* the
-  subsystems it depends on are constructed. `RunGame` turns the resulting failure into
-  `return false`, which is the clean exit-code-0 the harness observes.
+Inside `InitDuniaEngine` the call order is:
 
-**Consequence:** there is no working way to boot directly into *playable* gameplay from the command
-line in the retail build. `-benchmark` can load a world, but only as a camera harness (below).
+| Offset | Call |
+|---|---|
+| `+0x074` | `ParseGameConfigFlags` |
+| **`+0x52C`** | **`Process` — the `-load` branch, including the blocking load, runs here** |
+| `+0x10CF` | `CCryEngine::Initialize` — builds `0x11644D74` and the rest of the engine |
+
+So the save is read correctly and then bound against an engine that has not been constructed.
+`RunGame` turns the resulting fault into `return false`, which is the clean exit-code-0 observed.
+
+UFCP skips that pass while the engine is absent, returning the pass's own "resolved cleanly" result
+(`1`; `5` is its failure code). Live-confirmed: with the fix, `-load <name>.sav` boots directly into
+the save, playable, at ~840 MB working set.
+
+A name that matches **no** file still faults, at `0x106621B8`, and the fix above does not change
+that: on a failed load the thread returns its error code `10` and `FUN_10661f50` reads the resulting
+document pointer without checking it. That path is a separate bug from the one UFCP patches, and it
+is only reachable by naming a save that is not there.
 
 ## Benchmark harness (`CreateBenchmarkNode`, entered whenever `-benchmark` is present)
 
@@ -320,7 +340,8 @@ usage errors surface as a real window titled `Error`; `-borderless` shows up as 
 | `-3dplatform d3d10` | Boots normally; which backend actually loaded was **not** confirmed |
 | `-world world1` *(alone)* | **Ignored.** Normal main menu, 246 MB |
 | `-ubidays` | **No visible effect** |
-| `-load <anything>` | **Broken.** Exits in 0.1 s, exit code 0, for every value including none |
+| `-load <name>.sav` | **Works with UFCP.** Boots into the save at ~840 MB. Unpatched it faults at `0x104DBB80` |
+| `-load <name>` *(no extension)* | File not found — faults at `0x106621B8` |
 | `-cmdfile <file>` | **Broken.** File contents never applied |
 | `-zzznotaflag` | Unknown flags are harmless — boots normally |
 

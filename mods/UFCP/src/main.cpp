@@ -20,6 +20,10 @@
 void ApplyJackalTapesFix();
 void ApplyPredecessorTapesUnlock();
 void ApplyMachetesUnlock();
+// -load <save>.sav crashes to desktop instead of launching into the save.
+void ApplyLoadSavegameFix();
+// Quitting from the menu crashes to desktop instead of closing cleanly.
+void ApplyExitTeardownFix();
 
 // Options. The hook has to exist before the setting that drives it is registered, because
 // registration is what delivers the saved value.
@@ -51,6 +55,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     ApplyJackalTapesFix();
     ApplyPredecessorTapesUnlock();
     ApplyMachetesUnlock();
+    ApplyLoadSavegameFix();
+    ApplyExitTeardownFix();
 
     InstallFovHook();
 
