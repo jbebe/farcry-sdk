@@ -55,10 +55,15 @@ def main():
         print("no armature to animate")
         return
 
-    loaded = import_mab.load(pack, matched["path"], result["armature"], with_props=True)
+    loaded = import_mab.load(pack, matched["path"], result["armature"],
+                             with_props=True, actor=result.get("actor"))
     import_mab.apply_to_scene(bpy.context.scene, loaded["clip"])
     print("animated with %s: %d bones, %d keys, %d tracks name no bone here"
           % (matched["label"], loaded["bones"], loaded["keys"], loaded["unmatched"]))
+    if loaded.get("actor"):
+        print("   %s poses %d bones and holds the model at %s"
+              % (os.path.basename(pack.actor), loaded["actor"]["bones"],
+                 loaded["actor"].get("bone", "nothing")))
 
 
 main()

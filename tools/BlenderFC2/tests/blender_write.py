@@ -44,8 +44,8 @@ def fail(message):
     return 1
 
 
-def load():
-    path = pack(AK47, clips=[RELOAD])
+def load(model=AK47, rig=None):
+    path = pack(model, clips=[RELOAD], rig=rig)
     bpy.ops.wm.read_factory_settings(use_empty=True)
     result = import_xbg.load(path, lod=0, with_textures=False)
     result["loaded"] = import_mab.load(result["pack"], RELOAD, result["armature"])
@@ -272,6 +272,58 @@ def _sample(armature, pack_object, bank_path=RELOAD):
     return out
 
 
+CHARACTER = "graphics/actors/buddy_andrehyppolite/andrehyppolite.xbg"
+PELVIS_REF = "graphics/characters/_common/pelvis_ref.skeleton"
+EDITED = "L Hand"
+SECTIONS = ("constant_rotations", "keyframe_rotations",
+            "constant_translations", "animated_translations")
+
+
+def _by_bone(clip):
+    return {section: {entry["bone"]: entry for entry in clip.get(section) or ()}
+            for section in SECTIONS}
+
+
+def named_bones_only():
+    """A clip rewritten for one bone has to leave every other bone's entry alone.
+
+    Rigged to pelvis_ref the clip that fits is the character's, so this is the
+    arms - which the README explains is not free to re-encode.
+    """
+    result = load(CHARACTER, PELVIS_REF)
+    armature, rig = result["armature"], result["pack"].rig()
+    before = _by_bone(clip_for(result["pack"].clip(RELOAD), rig))
+
+    bone = armature.pose.bones[EDITED]
+    bone.rotation_mode = "QUATERNION"
+    bone.rotation_quaternion = Quaternion((0.0, 0.0, 1.0), 0.6)
+    bone.keyframe_insert("rotation_quaternion", frame=FIRST_FRAME + 40)
+
+    written = export_mab.write(result["pack"], RELOAD, armature, bones={EDITED})
+    if written["clip"] != 0:
+        return fail("the character's clip is not the one that fits pelvis_ref")
+
+    after = _by_bone(clip_for(result["pack"].clip(RELOAD), rig))
+    edited = next(b["id"] for b in rig["bones"] if b["name"] == EDITED)
+    checked = [(section, bone_id, entry)
+               for section, entries in before.items()
+               for bone_id, entry in entries.items() if bone_id != edited]
+
+    errors = 0
+    for section, entries in before.items():
+        added = set(after[section]) - set(entries)
+        if added:
+            errors += fail("%s gained %d bone(s) the clip never addressed"
+                           % (section, len(added)))
+    moved = [name for section, name, entry in checked
+             if after[section].get(name) != entry]
+    if moved:
+        errors += fail("%d bone(s) other than %s were re-encoded" % (len(moved), EDITED))
+    else:
+        print("named bones only: %d entries carried, %s rewritten" % (len(checked), EDITED))
+    return errors
+
+
 def main():
     if not require_pack():
         return 0
@@ -279,6 +331,7 @@ def main():
     with tempfile.TemporaryDirectory() as directory:
         errors += other_clips_survive(directory)
         errors += motion_survives(directory)
+        errors += named_bones_only()
         errors += panel_write_operator(directory)
     print("blender write: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0
@@ -307,6 +360,14 @@ def panel_write_operator(directory):
         status = bpy.ops.object.fc2_write_clip(clip=RELOAD, lossless=True)
         if status != {"FINISHED"}:
             return fail("the write operator returned %s" % status)
+
+        # And again through the only-selected path, which reads a flag that does
+        # not live where an armature's bones do.
+        for bone in result["armature"].pose.bones:
+            bone.select = bone.name == "CLIP"
+        status = bpy.ops.object.fc2_write_clip(clip=RELOAD, only_selected=True)
+        if status != {"FINISHED"}:
+            return fail("the write operator returned %s for only-selected" % status)
     finally:
         addon.unregister()
 

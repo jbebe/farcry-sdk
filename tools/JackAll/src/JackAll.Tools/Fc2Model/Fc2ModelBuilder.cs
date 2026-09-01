@@ -38,9 +38,14 @@ public static class Fc2ModelBuilder
     /// have no sibling rig and share <c>characters_commonpelvis_ref.skeleton</c> - the best name
     /// match for 70 of them, and a tie for five - so which one is the caller's to say rather than
     /// something to guess at.</param>
+    /// <param name="actor">A body to carry alongside, by game path, so the hands a bank poses can
+    /// be seen and animated against. Its mesh and rig only - see <see cref="Fc2ModelManifest.Actor"/>.</param>
+    /// <param name="actorRig">The actor's rig, by game path. Every skinned character shares
+    /// <c>pelvis_ref</c>, so there is nothing beside the model to find.</param>
     public static Fc2ModelBundle Build(
         string modelPath, Func<string, byte[]?> readByPath, Func<string, int>? usage = null,
-        IEnumerable<string>? clips = null, string? rig = null)
+        IEnumerable<string>? clips = null, string? rig = null,
+        string? actor = null, string? actorRig = null)
     {
         byte[] modelBytes = readByPath(modelPath)
             ?? throw new InvalidDataException($"No model at {modelPath}.");
@@ -51,7 +56,7 @@ public static class Fc2ModelBuilder
             Manifest = new Fc2ModelManifest { Model = modelPath },
         };
 
-        Add(bundle, modelPath, "model/mesh.json", Fc2ModelKind.Mesh,
+        Add(bundle, modelPath, Fc2ModelBundle.SubjectFolder + "mesh.json", Fc2ModelKind.Mesh,
             JsonSerializer.SerializeToUtf8Bytes(MeshDocument.From(model), Json), modelPath, usage);
 
         // A material the mesh embeds is already inside it; only a named one is a file of its own.
@@ -76,7 +81,7 @@ public static class Fc2ModelBuilder
         string rigPath = rig ?? modelPath[..^4] + RigSuffix;
         if (readByPath(rigPath) is { } rigBytes)
         {
-            Add(bundle, rigPath, "model/rig.json", Fc2ModelKind.Rig,
+            Add(bundle, rigPath, Fc2ModelBundle.SubjectFolder + "rig.json", Fc2ModelKind.Rig,
                 JsonSerializer.SerializeToUtf8Bytes(SkeletonFile.Parse(rigBytes), Json), modelPath, usage);
         }
 
@@ -93,7 +98,38 @@ public static class Fc2ModelBuilder
                 JsonSerializer.SerializeToUtf8Bytes(BankDocument.From(bank), Json), modelPath, usage);
             bundle.Manifest.Clips.Add(Index(bank, clipPath, file, Name(modelPath)));
         }
+
+        AddActor(bundle, actor, actorRig, readByPath, modelPath, usage);
         return bundle;
+    }
+
+    /// <summary>
+    /// Carry a body for the clips to pose, mesh and rig only.
+    /// </summary>
+    /// <remarks>
+    /// Skipped when the pack holds no clips: without a bank there is nothing to pose it with, and
+    /// it would be a megabyte of nobody's business.
+    /// </remarks>
+    private static void AddActor(
+        Fc2ModelBundle bundle, string? actor, string? actorRig, Func<string, byte[]?> readByPath,
+        string modelPath, Func<string, int>? usage)
+    {
+        if (actor is null || bundle.Manifest.Clips.Count == 0
+            || readByPath(actor) is not { } actorBytes)
+        {
+            return;
+        }
+
+        Add(bundle, actor, Fc2ModelBundle.ActorFolder + "mesh.json", Fc2ModelKind.Mesh,
+            JsonSerializer.SerializeToUtf8Bytes(MeshDocument.From(XbgFile.Parse(actorBytes)), Json),
+            modelPath, usage);
+        if (actorRig is not null && readByPath(actorRig) is { } actorRigBytes)
+        {
+            Add(bundle, actorRig, Fc2ModelBundle.ActorFolder + "rig.json", Fc2ModelKind.Rig,
+                JsonSerializer.SerializeToUtf8Bytes(SkeletonFile.Parse(actorRigBytes), Json),
+                modelPath, usage);
+        }
+        bundle.Manifest.Actor = actor;
     }
 
     /// <summary>

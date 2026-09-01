@@ -19,6 +19,8 @@ part or an LOD rather than being transplanted into whatever a donor happened to 
 manifest.json
 model/mesh.json                          parts, nodes, LODs, bounds, geometry
 model/rig.json                           the .skeleton beside the model
+actor/mesh.json                          the body the clips pose, when any are carried
+actor/rig.json                           pelvis_ref, which every character shares
 materials/SDORE2-M-2008091137450636.json
 textures/ak47_state01_m.png              full resolution, mip0 already merged in
 textures/ak47_state01_m.header.bin       the .xbt header, which nothing derives
@@ -43,6 +45,7 @@ Every entry keeps its **game path as its identity** and names the file that carr
 {
   "format": "fc2model", "version": 2, "requires_reader": 2, "generator": "JackAll",
   "model": "graphics/weapons/primary/ak47/ak47.xbg",
+  "actor": "graphics\actors\principal_yabeck\yabek.xbg",
   "limits": {
     "max_cluster_triangles": 21845,
     "max_buffer_vertices": 65535,
@@ -71,6 +74,25 @@ Every entry keeps its **game path as its identity** and names the file that carr
 ```
 
 `kind` is one of `mesh | rig | material | texture | clip | note`.
+
+### `actor` — the body the clips pose
+
+A pack that carries clips carries **two** models, and `kind` cannot tell them apart. The subject is
+`model/`; the body is `actor/`, and `actor` names it by game path.
+
+It is there because a bank holds one clip per skeleton taking part, and for a weapon that means the
+character's arms as well as the gun. Without the body those bones have no armature to land on, so
+the animation a weapon actually plays is only half visible — and a modeller fitting a gun to a grip
+is fitting it to hands that are not in the scene. Its **mesh and rig travel; its materials and
+textures do not**: it is there to be posed and to show a hand clipping through a receiver, not to be
+looked at for colour or edited. That keeps it to about 740 KB.
+
+Every skinned character shares `characters\_common\pelvis_ref.skeleton` and none has a sibling rig,
+so the actor's rig is named rather than found beside it. Which body is arbitrary — the arms a player
+sees are whichever protagonist they chose — so it defaults to the smallest of the fourteen and
+`--actor` overrides it.
+
+Both actor entries come out `shared`, which is what already stops an editor writing to them.
 
 ### `limits` keeps format constants out of the editor
 

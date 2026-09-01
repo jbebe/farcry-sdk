@@ -114,6 +114,17 @@ public sealed class Fc2ModelManifest
     /// <summary>The model this pack is about, by game path.</summary>
     public required string Model { get; init; }
 
+    /// <summary>
+    /// A second model carried for context rather than for editing, by game path.
+    /// </summary>
+    /// <remarks>
+    /// A weapon's bank holds the character's clip as well as the weapon's, and the hands it poses
+    /// are what a weapon animation has to be fitted to - so a pack carrying clips carries the body
+    /// they belong to. Its mesh and rig travel; its materials and textures do not, because nothing
+    /// about it is being edited or looked at for colour.
+    /// </remarks>
+    public string? Actor { get; set; }
+
     public string? Credits { get; init; }
 
     public Fc2ModelLimits Limits { get; init; } = new();
@@ -141,6 +152,11 @@ public sealed class Fc2ModelBundle
 {
     public const string FormatName = "fc2model";
     public const int CurrentVersion = 2;
+
+    /// <summary>Where the subject's own documents sit, against the actor's.</summary>
+    public const string SubjectFolder = "model/";
+
+    public const string ActorFolder = "actor/";
     public const string ManifestFile = "manifest.json";
     public const string Extension = ".fc2model";
 

@@ -197,12 +197,48 @@ def check_weapon_clip_is_chosen():
         "posed %d bones, %d moved" % (loaded["bones"], loaded["moved"]))
 
 
+def check_actor_holds_the_model():
+    """A pack with clips carries the body they pose, and the model hangs off it.
+
+    Both clips in the bank are then live at once - the character's on the body,
+    the weapon's on the weapon - which is the scene a weapon animator has to fit
+    the gun to, and what makes clipping visible at all.
+    """
+    path = pack(AK47, clips=[RELOAD])
+    bpy.ops.wm.read_factory_settings(use_empty=True)
+    result = import_xbg.load(path, lod=0, with_textures=False)
+    if not result["pack"].actor:
+        return fail("a pack carrying clips carries no body to play them on")
+
+    actor = result["actor"]
+    armature = result["armature"]
+    loaded = import_mab.load(result["pack"], RELOAD, armature, with_props=True, actor=actor)
+    posed = loaded["actor"]
+    print("actor %s: %d bones posed, holding the model at %s"
+          % (os.path.basename(result["pack"].actor), posed["bones"] if posed else 0,
+             (posed or {}).get("bone")))
+
+    errors = 0
+    if posed is None:
+        return fail("the body was carried but never posed")
+    if posed["clip"] is loaded["clip"]:
+        errors += fail("the body and the model were posed from the same clip")
+    if armature.parent is not actor["armature"] or armature.parent_bone != posed.get("bone"):
+        errors += fail("the model does not hang off the bone the bank names")
+    if any(p["participant"]["name"] == "ak47" for p in loaded["props"]):
+        errors += fail("the model was marked with an empty as well as being held")
+    if not actor["parts"]:
+        errors += fail("the body came with no mesh, so nothing can show a clip through it")
+    return errors
+
+
 def main():
     if not require_pack():
         return 0
 
     errors = (sum(check(*case) for case in CASES)
-              + check_weapon_clip_is_chosen() + check_attachments())
+              + check_weapon_clip_is_chosen() + check_attachments()
+              + check_actor_holds_the_model())
     print("blender anim: %s" % ("FAILED" if errors else "OK"))
     return 1 if errors else 0
 

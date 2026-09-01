@@ -71,8 +71,14 @@ def timing(clip):
     return 0, 0
 
 
-def load(pack, bank_path, armature, with_props=False, lod=0):
-    """Put one of a pack's banks on `armature` as its active Action."""
+def load(pack, bank_path, armature, with_props=False, lod=0, actor=None):
+    """Put one of a pack's banks on `armature` as its active Action.
+
+    A bank holds a clip per skeleton taking part. Given the body the pack carries,
+    the character's clip goes on it and the model hangs off the bone the bank's
+    own tag record names - which is the scene the bank describes, rather than the
+    model alone with a marker where the hands should be.
+    """
     bank = pack.clip(bank_path)
     if bank is None:
         raise ValueError("this pack carries no %s" % bank_path)
@@ -86,9 +92,32 @@ def load(pack, bank_path, armature, with_props=False, lod=0):
                          % (stem(bank_path), len(skeleton["bones"])))
 
     result = pose(clip, armature, skeleton, stem(bank_path))
+    result["actor"] = _pose_actor(pack, bank, clip, armature, actor, stem(bank_path))
     result["props"] = attach_participants(bank, clip, armature) if with_props else []
     result.update(bank=bank, clip_path=bank_path)
     return result
+
+
+def _pose_actor(pack, bank, clip, armature, actor, name):
+    """Pose the carried body and hang the model off the bone the bank names."""
+    if actor is None:
+        return None
+    skeleton = pack.rig(actor=True)
+    theirs = clip_for(bank, skeleton) if skeleton else None
+    if theirs is None or theirs is clip:
+        return None
+
+    posed = pose(theirs, actor["armature"], skeleton, name + "_actor")
+    # A bank names the model once with no reference - that record's clip drives
+    # the whole rig - and again per moving piece with one. Only the first says
+    # where the model itself hangs.
+    records = [p for p in bank.get("participants") or ()
+               if bank["clips"][p["clip"]] is clip and p.get("bone")]
+    mine = next((p for p in records if not p.get("reference")), None)
+    if mine and mine["bone"] in actor["armature"].pose.bones:
+        attach(armature, actor["armature"], mine["bone"])
+        posed["bone"] = mine["bone"]
+    return posed
 
 
 def pose(clip, armature, skeleton, name):

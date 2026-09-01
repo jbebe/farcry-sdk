@@ -25,6 +25,11 @@ SHARED = "shared"
 
 MESH = "mesh"
 RIG = "rig"
+
+# Which folder the builder writes a pack's two models to. The subject is what an
+# editor may change; the actor is context.
+SUBJECT = "model/"
+ACTOR = "actor/"
 MATERIAL = "material"
 TEXTURE = "texture"
 CLIP = "clip"
@@ -139,12 +144,21 @@ class Pack:
         entry = self.entry(game_path)
         return self.content(entry) if entry else None
 
-    def mesh(self):
-        return self.document(self._only(MESH))
+    @property
+    def actor(self):
+        """The body the pack carries for its clips to pose, by game path, or None.
 
-    def rig(self):
-        entries = self.of_kind(RIG)
-        return self.document(entries[0]) if entries else None
+        A weapon's bank holds the character's clip too, and the hands it poses
+        are what a weapon animation is fitted to.
+        """
+        return self.manifest.get("actor")
+
+    def mesh(self, actor=False):
+        return self.document(self._model(MESH, actor))
+
+    def rig(self, actor=False):
+        entry = self._model(RIG, actor, required=False)
+        return self.document(entry) if entry else None
 
     def material(self, game_path):
         """One material's document, or None when the pack does not carry it."""
@@ -213,11 +227,19 @@ class Pack:
             for name in sorted(self.files):
                 archive.writestr(name, self.files[name])
 
-    def _only(self, kind):
-        entries = self.of_kind(kind)
-        if not entries:
-            raise ValueError("this pack carries no %s" % kind)
-        return entries[0]
+    def _model(self, kind, actor, required=True):
+        """The subject's entry of a kind, or the actor's.
+
+        A pack carrying an actor has two of each, told apart by the folder the
+        builder writes them to rather than by their order.
+        """
+        prefix = ACTOR if actor else SUBJECT
+        for entry in self.of_kind(kind):
+            if entry.file.startswith(prefix):
+                return entry
+        if required:
+            raise ValueError("this pack carries no %s%s" % ("actor " if actor else "", kind))
+        return None
 
 
 def dumps(document):

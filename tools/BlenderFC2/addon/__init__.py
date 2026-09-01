@@ -5,6 +5,7 @@
 # owns the byte layouts and this owns what a scene looks like.
 
 import itertools
+import math
 import os
 
 import bpy
@@ -62,6 +63,23 @@ def _pack_of(context):
         if origin:
             return origin, collection
     return None, None
+
+
+def _armatures(context):
+    """The model's armature and the carried body's, if the scene holds one.
+
+    Two armatures share the scene once a pack carries a body, so the first one
+    found is no longer an answer to which is which.
+    """
+    subject = actor = None
+    for obj in context.scene.objects:
+        if obj.type != "ARMATURE":
+            continue
+        if obj.get(import_xbg.PROP_ACTOR_OF):
+            actor = actor or obj
+        else:
+            subject = subject or obj
+    return subject, actor
 
 
 _NO_PACK = [("", "No pack imported", "")]
@@ -129,9 +147,10 @@ class FC2_OT_load_clip(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
-        armature = context.object
-        if armature is None or armature.type != "ARMATURE":
-            armature = next((o for o in context.scene.objects if o.type == "ARMATURE"), None)
+        # Driven from the model's armature whatever is selected: a bank poses the
+        # body as well, and which clip goes where is decided by the rigs, not by
+        # what the cursor happens to be on.
+        armature, actor = _armatures(context)
         if armature is None:
             self.report({"ERROR"}, "Select the armature to animate")
             return {"CANCELLED"}
@@ -142,7 +161,8 @@ class FC2_OT_load_clip(bpy.types.Operator):
         origin, _collection = _pack_of(context)
         try:
             result = import_mab.load(Pack.load(origin), self.clip, armature,
-                                     with_props=self.with_props)
+                                     with_props=self.with_props,
+                                     actor={"armature": actor} if actor else None)
         except Exception as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}
@@ -151,12 +171,15 @@ class FC2_OT_load_clip(bpy.types.Operator):
             import_mab.apply_to_scene(context.scene, result["clip"])
         props = (", plus %s" % ", ".join(p["participant"]["name"] for p in result["props"])
                  if result["props"] else "")
+        held = result.get("actor")
+        body = (", held at %s by the body's %d bones" % (held.get("bone"), held["bones"])
+                if held else "")
         if result["unmatched"]:
-            self.report({"WARNING"}, "%d keys on %d bones%s; %d tracks name no bone here"
-                        % (result["keys"], result["bones"], props, result["unmatched"]))
+            self.report({"WARNING"}, "%d keys on %d bones%s%s; %d tracks name no bone here"
+                        % (result["keys"], result["bones"], props, body, result["unmatched"]))
         else:
-            self.report({"INFO"}, "%d keys on %d bones%s"
-                        % (result["keys"], result["bones"], props))
+            self.report({"INFO"}, "%d keys on %d bones%s%s"
+                        % (result["keys"], result["bones"], props, body))
         return {"FINISHED"}
 
 
@@ -174,9 +197,15 @@ class FC2_OT_write_clip(bpy.types.Operator):
         description="Store a key on every frame instead of only where the motion departs "
                     "from its neighbours. Exact, and roughly eight times the bytes")
     tolerance: FloatProperty(
-        name="Tolerance", default=0.002, min=0.0, max=0.1, precision=4,
-        description="How far a dropped frame may sit from the interpolation of the frames "
-                    "kept around it")
+        name="Tolerance", default=math.radians(7.2), min=0.0, max=math.radians(45.0),
+        subtype="ANGLE",
+        description="How far a dropped frame may sit from the arc the engine draws between "
+                    "the frames kept either side of it. The curve you posed is sampled at "
+                    "every frame either way; this only decides how many of those survive")
+    only_selected: BoolProperty(
+        name="Only selected bones", default=False,
+        description="Rewrite only the selected bones. Every other bone keeps the entry the "
+                    "clip already held, at the frames the clip itself keyed")
 
     @classmethod
     def poll(cls, context):
@@ -186,9 +215,12 @@ class FC2_OT_write_clip(bpy.types.Operator):
         return context.window_manager.invoke_props_dialog(self)
 
     def execute(self, context):
+        # Selecting the body and writing is meaningful here - it is how the
+        # character's clip gets edited - so what is selected wins, and the
+        # model's armature is only the fallback.
         armature = context.object
         if armature is None or armature.type != "ARMATURE":
-            armature = next((o for o in context.scene.objects if o.type == "ARMATURE"), None)
+            armature = _armatures(context)[0]
         if armature is None:
             self.report({"ERROR"}, "Select the armature whose Action to write")
             return {"CANCELLED"}
@@ -196,11 +228,24 @@ class FC2_OT_write_clip(bpy.types.Operator):
             self.report({"ERROR"}, "This pack carries no animation to write")
             return {"CANCELLED"}
 
+        # Off the pose bones, which is where selection lives and which keeps it
+        # outside pose mode - unlike context.selected_pose_bones, which is empty
+        # the moment the dialog takes focus.
+        bones = ({bone.name for bone in armature.pose.bones if bone.select}
+                 if self.only_selected else None)
+        if bones is not None and not bones:
+            self.report({"ERROR"}, "No bones are selected")
+            return {"CANCELLED"}
+
         origin, _collection = _pack_of(context)
         pack = Pack.load(origin)
         try:
-            written = export_mab.write(pack, self.clip, armature,
-                                       lossless=self.lossless, tolerance=self.tolerance)
+            # The writer measures a dropped frame as 1 - |dot| between quaternions;
+            # a modeler measures it in degrees. Converted here so the number in
+            # the dialog is one a person can reason about.
+            written = export_mab.write(
+                pack, self.clip, armature, bones=bones, lossless=self.lossless,
+                tolerance=1.0 - math.cos(self.tolerance / 2.0))
         except Exception as error:
             self.report({"ERROR"}, str(error))
             return {"CANCELLED"}

@@ -31,6 +31,13 @@ public static class Fc2ModelApplier
         List<Fc2ModelOutput> outputs = [];
         foreach (Fc2ModelEntry entry in bundle.Manifest.Entries)
         {
+            // The body a pack carries is there to be posed and looked at, never to be written -
+            // including under --all, which otherwise hands back a protagonist nobody edited.
+            if (entry.File.StartsWith(Fc2ModelBundle.ActorFolder, StringComparison.Ordinal))
+            {
+                continue;
+            }
+
             if (onlyModified && !entry.Modified)
             {
                 continue;

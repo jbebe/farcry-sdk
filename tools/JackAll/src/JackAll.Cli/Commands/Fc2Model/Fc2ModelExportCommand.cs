@@ -20,6 +20,18 @@ namespace JackAll.Cli.Commands.Fc2Model;
 /// </remarks>
 public sealed class Fc2ModelExportCommand : CliCommand<Fc2ModelExportCommand.Settings>
 {
+    /// <summary>
+    /// The body a pack carries for its clips to pose.
+    /// </summary>
+    /// <remarks>
+    /// The arms a player sees are whichever protagonist they picked, so there is no one right
+    /// answer; this is the smallest of the fourteen. All of them skin to the same rig, and none has
+    /// a sibling skeleton of its own.
+    /// </remarks>
+    private const string DefaultActor = @"graphics\actors\principal_yabeck\yabek.xbg";
+
+    private const string DefaultActorRig = @"graphics\characters\_common\pelvis_ref.skeleton";
+
     public sealed class Settings : XrefFileSettings
     {
         [CommandArgument(0, "<model>")]
@@ -44,6 +56,22 @@ public sealed class Fc2ModelExportCommand : CliCommand<Fc2ModelExportCommand.Set
         [CommandOption("--clips")]
         [Description("Carry every animation bank that names this model. Reads every bank in the install.")]
         public bool Clips { get; init; }
+
+        [CommandOption("--actor <path>")]
+        [Description("The body to carry alongside the clips, so the hands they pose can be seen and "
+                   + "animated against. Defaults to a playable protagonist; mesh and rig only, no "
+                   + "materials or textures.")]
+        public string Actor { get; init; } = DefaultActor;
+
+        [CommandOption("--no-actor")]
+        [Description("Leave the body out. The clips still carry the character's motion, but there is "
+                   + "nothing to play it on.")]
+        public bool NoActor { get; init; }
+
+        [CommandOption("--actor-rig <path>")]
+        [Description("The actor's rig. Every skinned character shares pelvis_ref, so there is "
+                   + "nothing beside the model to find.")]
+        public string ActorRig { get; init; } = DefaultActorRig;
 
         /// <summary>
         /// <c>--game</c> is not needed when the model argument is a file that exists.
@@ -103,7 +131,9 @@ public sealed class Fc2ModelExportCommand : CliCommand<Fc2ModelExportCommand.Set
 
 
         string model = Relative(root, full);
-        Fc2ModelBundle bundle = Fc2ModelBuilder.Build(model, Read, null, settings.Clip, settings.Rig);
+        Fc2ModelBundle bundle = Fc2ModelBuilder.Build(
+            model, Read, null, settings.Clip, settings.Rig,
+            settings.NoActor ? null : settings.Actor, settings.ActorRig);
         return Write(settings, bundle, model);
     }
 
@@ -142,7 +172,8 @@ public sealed class Fc2ModelExportCommand : CliCommand<Fc2ModelExportCommand.Set
 
         List<string> clips = Clips(vfs, settings);
         Fc2ModelBundle bundle = Fc2ModelBuilder.Build(
-            settings.Model, vfs.ReadByPath, usage, clips, settings.Rig);
+            settings.Model, vfs.ReadByPath, usage, clips, settings.Rig,
+            settings.NoActor ? null : settings.Actor, settings.ActorRig);
         return Write(settings, bundle, settings.Model);
     }
 

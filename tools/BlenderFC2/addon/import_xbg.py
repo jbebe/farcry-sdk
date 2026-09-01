@@ -27,6 +27,10 @@ PROP_SUBMESH = "fc2_submesh"
 # part that pack never had.
 PROP_NEW_PART = "fc2_new_part"
 
+# Marks the body a pack carries for its clips to pose, so a check or an export
+# can tell it apart from the model those are about.
+PROP_ACTOR_OF = "fc2_actor_of"
+
 # The material's game path, which is its identity in the pack. Kept apart from
 # the material's own internal name (see materials.PROP_MATERIAL_NAME) - one file
 # used to carry both, so resolving textures overwrote the path with the name.
@@ -187,5 +191,31 @@ def build(pack, name, lod=0, with_armature=True, with_textures=True, origin=""):
     parts = [build_part(part, mesh, collection, cache, armature,
                         pack if with_textures else None)
              for part in fc2model.parts_at(mesh, lod, place=armature is None)]
-    return {"pack": pack, "mesh": mesh, "collection": collection,
-            "armature": armature, "parts": parts}
+    built = {"pack": pack, "mesh": mesh, "collection": collection,
+             "armature": armature, "parts": parts}
+    if with_armature and pack.actor:
+        built["actor"] = build_actor(pack)
+    return built
+
+
+def build_actor(pack):
+    """The body a pack carries for its clips to pose, in a collection of its own.
+
+    It travels without materials or textures, so its parts come back untextured.
+    Kept out of the subject's collection: an export picks the collection it is
+    given, and two models in one would make that ambiguous.
+    """
+    mesh = pack.mesh(actor=True)
+    name = stem(pack.actor)
+    collection = bpy.data.collections.new(name)
+    bpy.context.scene.collection.children.link(collection)
+    collection[PROP_ACTOR_OF] = pack.model
+
+    armature = build_armature(mesh, name, collection)
+    armature[PROP_ACTOR_OF] = pack.model
+    cache = {}
+    parts = [build_part(part, mesh, collection, cache, armature, None)
+             for part in fc2model.parts_at(mesh, 0)]
+    for obj in parts:
+        obj[PROP_ACTOR_OF] = pack.model
+    return {"mesh": mesh, "collection": collection, "armature": armature, "parts": parts}

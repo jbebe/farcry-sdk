@@ -1,10 +1,10 @@
 # Write a Blender Action back into one of the pack's animation banks.
 #
 # A bank holds one clip per skeleton taking part, so this only ever rewrites the
-# one that fits this model's rig - the character's arms, and every other clip in
-# the chain, go back byte for byte. That is not a promise this file keeps by
-# being careful; it is what the pack's own format does, because an untouched
-# clip carries its sections verbatim and only a cleared one is re-encoded.
+# one that fits this model's rig - every other clip in the chain goes back byte
+# for byte. That is not a promise this file keeps by being careful; it is what
+# the pack's own format does, because an untouched clip carries its sections
+# verbatim and only a cleared one is re-encoded.
 #
 # The conversion is the inverse of `import_mab.pose`: a clip stores a bone's
 # transform relative to its parent and *replaces* the rest transform rather than
@@ -17,10 +17,9 @@
 #   - Translations are dense and frame-major, so every frame carries a value.
 
 import bpy
-from mathutils import Quaternion, Vector
 
-from . import import_mab
-from .import_mab import FIRST_FRAME, clip_for, timing
+from .import_mab import FIRST_FRAME, _rest_local, clip_for, timing
+from .import_xbg import PROP_ACTOR_OF
 
 # Which sections a rewrite touches. The tags, the events and the trajectory are
 # left exactly as they were: nothing here edits what a bank attaches or where it
@@ -40,15 +39,22 @@ STILL_ROTATION = 1e-5
 STILL_TRANSLATION = 1e-5
 
 
-def write(pack, bank_path, armature, lossless=False, tolerance=0.002):
+def write(pack, bank_path, armature, lossless=False, tolerance=0.002, bones=None):
     """Rewrite this model's clip in one bank from the armature's Action.
+
+    `bones` names the bones to rewrite; every other one keeps the entry the clip
+    already held, at the frames the clip itself keyed. Leave it out to rewrite
+    the whole clip, which re-chooses every bone's key frames and adds an entry
+    for every bone on the rig.
 
     Returns what changed, so a caller can say it rather than guess.
     """
     bank = pack.clip(bank_path)
     if bank is None:
         raise ValueError("this pack carries no %s" % bank_path)
-    skeleton = pack.rig()
+    # Which rig decides which clip, so writing the carried body's Action writes
+    # the character's clip rather than the model's.
+    skeleton = pack.rig(actor=bool(armature.get(PROP_ACTOR_OF)))
     if skeleton is None:
         raise ValueError("this pack carries no rig, so nothing maps bone names to ids")
     if armature.animation_data is None or armature.animation_data.action is None:
@@ -60,7 +66,7 @@ def write(pack, bank_path, armature, lossless=False, tolerance=0.002):
                          % (bank_path, len(skeleton["bones"])))
 
     last, rate = timing(clip)
-    sampled = _sample(armature, skeleton, last)
+    sampled = _sample(armature, skeleton, last, bones)
     written = _fill(clip, skeleton, sampled, last, rate, lossless, tolerance)
 
     pack.replace_clip(bank_path, bank)
@@ -68,8 +74,8 @@ def write(pack, bank_path, armature, lossless=False, tolerance=0.002):
                 frames=last + 1, rate=rate)
 
 
-def _sample(armature, skeleton, last):
-    """Every rig bone's clip-space transform at every frame.
+def _sample(armature, skeleton, last, wanted=None):
+    """Each named rig bone's clip-space transform at every frame.
 
     Sampled off the evaluated pose rather than read out of the F-curves, so a
     constraint, an NLA strip or a driver all land in the file the way they look
@@ -77,17 +83,19 @@ def _sample(armature, skeleton, last):
     """
     scene = bpy.context.scene
     before = scene.frame_current
+    # A bone's rest transform does not depend on the frame, so it is decomposed
+    # once rather than inside a sweep that is bones times frames.
     bones = [(bone["id"], armature.pose.bones.get(bone["name"]))
-             for bone in skeleton["bones"]]
-    bones = [(bone_id, bone) for bone_id, bone in bones if bone is not None]
+             for bone in skeleton["bones"] if wanted is None or bone["name"] in wanted]
+    bones = [(bone_id, bone) + _rest_local(bone.bone).decompose()[:2]
+             for bone_id, bone in bones if bone is not None]
 
-    rotations = {bone_id: [] for bone_id, _bone in bones}
-    offsets = {bone_id: [] for bone_id, _bone in bones}
+    rotations = {bone_id: [] for bone_id, _bone, _offset, _rotation in bones}
+    offsets = {bone_id: [] for bone_id, _bone, _offset, _rotation in bones}
     try:
         for frame in range(last + 1):
             scene.frame_set(frame + FIRST_FRAME)
-            for bone_id, bone in bones:
-                rest_offset, rest_rotation, _scale = _rest_local(bone.bone).decompose()
+            for bone_id, bone, rest_offset, rest_rotation in bones:
                 # import_mab poses with `rest^-1 . clip`; this is that undone.
                 rotations[bone_id].append(rest_rotation @ bone.rotation_quaternion)
                 offsets[bone_id].append(rest_offset + (rest_rotation @ bone.location))
@@ -96,49 +104,36 @@ def _sample(armature, skeleton, last):
     return rotations, offsets
 
 
-def _rest_local(bone):
-    if bone.parent:
-        return bone.parent.matrix_local.inverted() @ bone.matrix_local
-    return bone.matrix_local.copy()
-
-
 def _fill(clip, skeleton, sampled, last, rate, lossless, tolerance):
     """Replace the clip's four motion sections with what was sampled."""
     rotations, offsets = sampled
     moves = {bone["id"] for bone in skeleton["bones"]
              if bone.get("animated_translation")}
 
-    constant_rotations, keyed_rotations = [], []
-    for bone_id in sorted(rotations):
-        keys = rotations[bone_id]
+    def rotation(bone_id, keys):
         if _still_rotation(keys):
-            constant_rotations.append(
-                {"bone": bone_id, "value": _xyzw(keys[0])})
-        else:
-            frames = _frames(keys, last, lossless, tolerance, _rotation_error)
-            keyed_rotations.append({
-                "bone": bone_id,
-                "frames": frames,
-                "values": [c for frame in frames for c in _xyzw(keys[frame])]})
+            return {"bone": bone_id, "value": _xyzw(keys[0])}, True
+        frames = _frames(keys, last, lossless, tolerance, _rotation_error)
+        return {"bone": bone_id, "frames": frames,
+                "values": [c for frame in frames for c in _xyzw(keys[frame])]}, False
 
-    constant_translations, animated_translations = [], []
-    for bone_id in sorted(offsets):
+    def translation(bone_id, keys):
         if bone_id not in moves:
             # The rig holds this bone at a fixed offset, and every shipped
             # translation lands on a bone marked otherwise. Writing one here
             # would be inventing motion the engine will not play.
-            continue
-        keys = offsets[bone_id]
+            return None, False
         if _still_translation(keys):
-            constant_translations.append(
-                {"bone": bone_id, "value": [keys[0].x, keys[0].y, keys[0].z]})
-        else:
-            # Dense and frame-major: every frame carries a value, so there is no
-            # keying decision to make here.
-            animated_translations.append({
-                "bone": bone_id,
-                "frames": list(range(last + 1)),
-                "values": [c for key in keys for c in (key.x, key.y, key.z)]})
+            return {"bone": bone_id, "value": [keys[0].x, keys[0].y, keys[0].z]}, True
+        # Dense and frame-major: every frame carries a value, so there is no
+        # keying decision to make here.
+        return {"bone": bone_id, "frames": list(range(last + 1)),
+                "values": [c for key in keys for c in (key.x, key.y, key.z)]}, False
+
+    constant_rotations, keyed_rotations = _section(
+        clip, "constant_rotations", "keyframe_rotations", rotations, rotation)
+    constant_translations, animated_translations = _section(
+        clip, "constant_translations", "animated_translations", offsets, translation)
 
     clip["constant_rotations"] = constant_rotations
     clip["keyframe_rotations"] = keyed_rotations
@@ -165,6 +160,27 @@ def _fill(clip, skeleton, sampled, last, rate, lossless, tolerance):
             "constant_translations": len(constant_translations),
             "animated_translations": len(animated_translations),
             "keys": sum(len(track["frames"]) for track in keyed_rotations)}
+
+
+def _section(clip, constant, keyed, sampled, encode):
+    """One section pair: encoded where the bone was sampled, held where it was not.
+
+    Bone order has to stay ascending. The mask JackAll derives is a bitset and a
+    bone's slot inside a section is the popcount below it, so a carried entry
+    appended out of order would pair the mask with the wrong values.
+    """
+    held = {section: {entry["bone"]: entry for entry in clip.get(section) or ()}
+            for section in (constant, keyed)}
+    out = {constant: [], keyed: []}
+    for bone_id in sorted(set(sampled) | set(held[constant]) | set(held[keyed])):
+        if bone_id not in sampled:
+            section = constant if bone_id in held[constant] else keyed
+            out[section].append(held[section][bone_id])
+            continue
+        entry, still = encode(bone_id, sampled[bone_id])
+        if entry is not None:
+            out[constant if still else keyed].append(entry)
+    return out[constant], out[keyed]
 
 
 def _declare(clip, slot, present):

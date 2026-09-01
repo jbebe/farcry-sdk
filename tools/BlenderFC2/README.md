@@ -110,6 +110,12 @@ A pack's manifest indexes the banks it carries, so **Object ▸ Load Far Cry 2 A
 as a list — name, length, rate and the bone the model hangs from — with no file dialog and no hunting
 for a skeleton.
 
+**A pack with clips also carries the body they pose**, so loading one gives the whole scene the bank
+describes: the character's clip on the character, the weapon's on the weapon, and the weapon hanging
+off the bone the bank's own tag record names. That is what a weapon animation has to be fitted to —
+and skin, rather than bones, is what shows a hand clipping through a receiver. It arrives without
+materials or textures, so it renders flat; `--no-actor` leaves it out.
+
 Four things a reader has to get right or the pose comes out mangled. They are why this file exists
 rather than a generic JSON-to-Action script:
 
@@ -156,6 +162,24 @@ byte for byte, and JackAll's own gate holds every one of the 4,436 shipped banks
 `tests/blender_write.py` checks it from outside — after rewriting the rifle's clip, **10,232 of the
 10,240 bytes belonging to clips nobody touched are identical**, and the eight that move are the two
 tag records' clip deltas, which have to move when a later clip changes size.
+
+**Which clip fits is decided by the rig, so a character pack rewrites the character's.** An 8-bone
+weapon rig skips past clip 0 to its own; a pack rigged to `pelvis_ref` lands on clip 0 — the arms and
+hands. What cannot be edited is the arms *from a weapon pack*.
+
+**Only selected bones** preserves the rest of the clip. A rewritten bone gets a fresh keyframe set —
+group boundaries plus whatever the tolerance keeps — so its entry changes even when the motion is
+identical, and a whole-clip rewrite also adds an entry for every bone on the rig, including the
+sixteen `pelvis_ref` bones the engine solves rather than reads. Selecting the bones you moved leaves
+every other entry exactly as the clip held it, at the frames the clip itself keyed.
+`tests/blender_write.py` rewrites one hand on a character clip and requires the other 54 entries back
+unchanged, with no bone added.
+
+That makes an *untouched* bone faithful, not a rewritten one. `import_mab` keys a bone only where the
+clip does, and Blender joins those keys with a per-component curve while the engine slerps, so a
+resampled bone picks up whatever the curve invented at the frames in between — on the shipped
+character reload a whole-clip rewrite moves a thumb 0.74° and writes quaternions of norm 0.995.
+Closing that means resampling with slerp on the way in, which is **not done yet**.
 
 Two layout rules the writer has to respect, and one choice it offers:
 
