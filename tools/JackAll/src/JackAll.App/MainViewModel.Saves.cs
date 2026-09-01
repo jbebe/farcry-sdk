@@ -124,6 +124,22 @@ public sealed partial class MainViewModel
               + (failed > 0 ? $"  •  {failed} couldn't be read" : string.Empty);
     }
 
+    /// <summary>Adds a newly written save to the list, newest-first like <see cref="LoadSavesAsync"/>
+    /// leaves it - lighter than a full reload, and keeps the current selection and its decoded details
+    /// alive.</summary>
+    public void AddSaveRow(string filePath)
+    {
+        var row = new SaveRow(SaveGameDocument.Read(filePath));
+        int index = 0;
+        while (index < Saves.Count && Saves[index].LastWriteTimeLocal > row.LastWriteTimeLocal)
+        {
+            index++;
+        }
+        Saves.Insert(index, row);
+
+        SavesStatus = $"{Saves.Count:N0} save(s) found";
+    }
+
     /// <summary>Drops one save from the list after its file has been deleted from disk (see
     /// MainWindow.xaml.cs's DeleteSave_Click) - lighter than a full <see cref="LoadSavesAsync"/>
     /// reload, and keeps the rest of the list/selection undisturbed.</summary>

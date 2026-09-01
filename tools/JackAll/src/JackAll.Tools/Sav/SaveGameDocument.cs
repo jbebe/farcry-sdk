@@ -93,12 +93,12 @@ public static class SaveGameDocument
     }
 
     /// <summary>
-    /// Writes <paramref name="root"/> back into <paramref name="info"/>'s own `.sav` file, replacing
-    /// the embedded `.fcb` blob in place - the wrapper bytes before <see cref="SaveGameInfo.FcbBlobOffset"/>
-    /// (header, thumbnail, DLC list) are copied through untouched, since nothing here needs to
-    /// understand them, only preserve them. Writes to a temp file first and renames it over the
-    /// original (not a safety net for a bad edit - the caller decides that - just so an interrupted
-    /// write can't leave a half-written `.sav` on disk).
+    /// Writes <paramref name="info"/>'s wrapper bytes plus <paramref name="root"/> to
+    /// <paramref name="destPath"/>, which may be <see cref="SaveGameInfo.FilePath"/> to edit in place or
+    /// any other path to leave the source untouched. The bytes before
+    /// <see cref="SaveGameInfo.FcbBlobOffset"/> (header, thumbnail, DLC list) are copied through
+    /// untouched. Overwrites <paramref name="destPath"/> if it exists - the caller decides whether that
+    /// is acceptable.
     /// </summary>
     /// <remarks>
     /// <see cref="FcbDocument.Serialize"/> is a generic, already-production-proven `.fcb` writer (see
@@ -109,18 +109,18 @@ public static class SaveGameDocument
     /// own remarks (confirmed against the real engine's header reader, not just this reader), so a
     /// mismatch there is expected and harmless, not a sign of corruption.
     /// </remarks>
-    public static void WriteFcbRoot(SaveGameInfo info, FcbObject root)
+    public static void WriteFcbRoot(SaveGameInfo info, FcbObject root, string destPath)
     {
         byte[] wrapper = ReadWrapperPrefix(info);
         byte[] blob = FcbDocument.Serialize(root);
 
-        string tempPath = info.FilePath + ".tmp";
+        string tempPath = destPath + ".tmp";
         using (FileStream output = File.Create(tempPath))
         {
             output.Write(wrapper);
             output.Write(blob);
         }
-        File.Move(tempPath, info.FilePath, overwrite: true);
+        File.Move(tempPath, destPath, overwrite: true);
     }
 
     private static byte[] ReadWrapperPrefix(SaveGameInfo info)

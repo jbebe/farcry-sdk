@@ -5,6 +5,7 @@ using JackAll.Cli.Commands.Fcb;
 using JackAll.Cli.Commands.Mgb;
 using JackAll.Cli.Commands.Mod;
 using JackAll.Cli.Commands.Rml;
+using JackAll.Cli.Commands.Sav;
 using JackAll.Cli.Commands.Sbao;
 using JackAll.Cli.Commands.Spk;
 using JackAll.Cli.Commands.Xbg;
@@ -131,6 +132,19 @@ app.Configure(config =>
         fcb.AddCommand<FcbEncodeCommand>("encode")
             .WithDescription("Re-encode XML back into an .fcb.")
             .WithExample("fcb", "encode", "entitylibrary.xml");
+    });
+
+    // --- .sav savegames ---------------------------------------------------
+    config.AddBranch("sav", sav =>
+    {
+        sav.AddCommand<SavListCommand>("list")
+            .WithDescription("List the player's saves.")
+            .WithExample("sav", "list");
+        sav.AddCommand<SavCleanCommand>("clean")
+            .WithDescription(
+                "Copy a save with its persisted entities dropped, so entities respawn from the current " +
+                "entity library and a mod installed after the save was made takes effect.")
+            .WithExample("sav", "clean", "759340844606.sav");
     });
 
     // --- .mgb Magma UI packages -----------------------------------------

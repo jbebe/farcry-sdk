@@ -419,6 +419,10 @@
                                         <Button Content="Delete…" Padding="10,5" Margin="0,0,6,0"
                                                 Click="DeleteSave_Click" IsEnabled="{Binding SavesGridEnabled}" />
 
+                                        <!-- Writes a separate new save with this one's persisted entities dropped. -->
+                                        <Button Content="Purge persisted entities…" Padding="10,5" Margin="0,0,6,0"
+                                                Click="PurgeSave_Click" IsEnabled="{Binding SavesGridEnabled}" />
+
                                         <!-- Opens the same tree/property-grid editor tab the Files tab's
                                              fragments use (FcbEditorTabView) over this save's PersistenceDB
                                              tree - editable there too, writing straight back into this

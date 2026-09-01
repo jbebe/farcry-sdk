@@ -159,4 +159,52 @@ internal static class TestSupport
             AssertSameShape(expected.Children[i], actual.Children[i], assertSameValue);
         }
     }
+
+    /// <summary>A .sav file's four wrapper sections, up to and including the field right before the
+    /// embedded `.fcb` blob. A real .sav is a player's own save data, so every savegame test builds one
+    /// rather than checking a fixture in.</summary>
+    public static void WriteSaveWrapper(
+        BinaryWriter writer, string world, string player, int thumbWidth, int thumbHeight, string[] dlcIds)
+    {
+        writer.Write(new byte[20]); // CGameFileHeader base
+
+        WriteLengthPrefixedString(writer, world);
+        WriteLengthPrefixedString(writer, player);
+        writer.Write(new byte[12]); // 3 unconfirmed trailing u32s
+
+        writer.Write((uint)thumbWidth);
+        writer.Write((uint)thumbHeight);
+        writer.Write((uint)4); // channels
+        writer.Write((uint)8); // bits per channel
+        writer.Write(new byte[thumbWidth * thumbHeight * 4]);
+        writer.Write((uint)0); // metadata entry count
+
+        writer.Write((uint)dlcIds.Length);
+        foreach (string dlc in dlcIds)
+        {
+            WriteLengthPrefixedString(writer, dlc);
+        }
+        writer.Write((uint)0); // unconfirmed extra field
+    }
+
+    /// <summary>A complete, readable .sav whose embedded blob is <paramref name="root"/>.</summary>
+    public static byte[] SaveGameWithTree(
+        FcbObject root, string world = "world1", string player = "Paul_Ferenc",
+        int thumbWidth = 2, int thumbHeight = 2, string[]? dlcIds = null)
+    {
+        using var stream = new MemoryStream();
+        using var writer = new BinaryWriter(stream);
+
+        WriteSaveWrapper(writer, world, player, thumbWidth, thumbHeight, dlcIds ?? ["dlc1"]);
+        writer.Write(FcbDocument.Serialize(root));
+
+        return stream.ToArray();
+    }
+
+    private static void WriteLengthPrefixedString(BinaryWriter writer, string value)
+    {
+        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(value);
+        writer.Write((uint)bytes.Length);
+        writer.Write(bytes);
+    }
 }

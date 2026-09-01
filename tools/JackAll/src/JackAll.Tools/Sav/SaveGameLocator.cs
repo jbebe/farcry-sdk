@@ -1,7 +1,7 @@
 namespace JackAll.Tools.Sav;
 
 /// <summary>
-/// Resolves the folder Far Cry 2 writes savegames to and enumerates the .sav files in it.
+/// Where Far Cry 2 keeps savegames, what it calls them, and what is in that folder.
 /// </summary>
 /// <remarks>
 /// The game itself builds this path by calling <c>SHGetFolderPathA</c>/<c>W</c> (almost certainly
@@ -18,12 +18,29 @@ public static class SaveGameLocator
         "My Games", "Far Cry 2", "Saved Games");
 
     /// <summary>
-    /// Every .sav file in <see cref="SavedGamesFolder"/> — empty (not an error) if that folder
-    /// doesn't exist yet, which just means the game has never been run or nothing has been saved.
+    /// Every .sav file in <paramref name="folder"/>, or in <see cref="SavedGamesFolder"/> by default —
+    /// empty (not an error) if that folder doesn't exist yet, which just means the game has never been
+    /// run or nothing has been saved.
     /// </summary>
-    public static IEnumerable<string> EnumerateSaveFiles()
+    public static IEnumerable<string> EnumerateSaveFiles(string? folder = null)
     {
-        string folder = SavedGamesFolder;
+        folder ??= SavedGamesFolder;
         return Directory.Exists(folder) ? Directory.EnumerateFiles(folder, "*.sav") : [];
+    }
+
+    /// <summary>
+    /// A free path in <paramref name="folder"/> for a new save, named the way the game names its own —
+    /// plain decimal digits plus <c>.sav</c> — so it lists as an ordinary slot.
+    /// </summary>
+    public static string GenerateSaveFilePath(string folder)
+    {
+        while (true)
+        {
+            string candidate = Path.Combine(folder, $"{Random.Shared.NextInt64(100_000_000_000L, 1_000_000_000_000L)}.sav");
+            if (!File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
     }
 }

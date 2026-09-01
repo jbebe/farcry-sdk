@@ -13,50 +13,15 @@ namespace JackAll.Tests;
 /// </summary>
 public class SaveGameDocumentTests
 {
-    /// <summary>Sections 1-4 up to and including the field right before the embedded `.fcb` blob -
-    /// shared by <see cref="BuildMinimalSaveGame"/> (which appends a header-only, no-object-tree blob;
-    /// fine for every test here that only reads wrapper metadata) and the round-trip write tests below
-    /// (which append a real, <see cref="FcbDocument.Serialize"/>-produced blob instead, since
-    /// <see cref="SaveGameDocument.ReadFcbRoot"/>/<see cref="SaveGameDocument.WriteFcbRoot"/> need an
-    /// actual object tree to read/replace).</summary>
-    private static void WriteWrapper(
-        BinaryWriter writer, string world, string player, int thumbWidth, int thumbHeight, string[] dlcIds)
-    {
-        // Section 1: CGameFileHeader base, 20 opaque bytes.
-        writer.Write(new byte[20]);
-
-        // Section 2: CCampaignGameFileHeader extension.
-        WriteLengthPrefixedString(writer, world);
-        WriteLengthPrefixedString(writer, player);
-        writer.Write(new byte[12]); // 3 unconfirmed trailing u32s
-
-        // Section 3: CScreenShot.
-        writer.Write((uint)thumbWidth);
-        writer.Write((uint)thumbHeight);
-        writer.Write((uint)4); // channels
-        writer.Write((uint)8); // bits per channel
-        writer.Write(new byte[thumbWidth * thumbHeight * 4]);
-        writer.Write((uint)0); // metadata entry count
-
-        // Section 4: CCampaignGameFileData — DLC list, then the embedded .fcb blob.
-        writer.Write((uint)dlcIds.Length);
-        foreach (string dlc in dlcIds)
-        {
-            WriteLengthPrefixedString(writer, dlc);
-        }
-        writer.Write((uint)0); // unconfirmed extra field
-    }
-
     private static byte[] BuildMinimalSaveGame(
         string world = "world1", string player = "Paul_Ferenc",
         int thumbWidth = 2, int thumbHeight = 2,
         string[]? dlcIds = null, uint persistedObjectCount = 42)
     {
-        dlcIds ??= ["dlc1"];
         using var stream = new MemoryStream();
         using var writer = new BinaryWriter(stream);
 
-        WriteWrapper(writer, world, player, thumbWidth, thumbHeight, dlcIds);
+        TestSupport.WriteSaveWrapper(writer, world, player, thumbWidth, thumbHeight, dlcIds ?? ["dlc1"]);
 
         writer.Write(0x4643626Eu); // "FCbn"
         writer.Write((ushort)2);   // version
@@ -65,31 +30,6 @@ public class SaveGameDocumentTests
         writer.Write((uint)0);     // totalValueCount — not read by SaveGameDocument
 
         return stream.ToArray();
-    }
-
-    /// <summary>Same wrapper shape as <see cref="BuildMinimalSaveGame"/>, but with a real, decodable
-    /// `.fcb` blob (<paramref name="root"/> serialized via <see cref="FcbDocument.Serialize"/>) instead
-    /// of a bare header - what <see cref="SaveGameDocument.ReadFcbRoot"/>/<see cref="SaveGameDocument.WriteFcbRoot"/>
-    /// need to actually have an object tree to read or replace.</summary>
-    private static byte[] BuildSaveGameWithFcbBlob(
-        FcbObject root, string world = "world1", string player = "Paul_Ferenc",
-        int thumbWidth = 2, int thumbHeight = 2, string[]? dlcIds = null)
-    {
-        dlcIds ??= ["dlc1"];
-        using var stream = new MemoryStream();
-        using var writer = new BinaryWriter(stream);
-
-        WriteWrapper(writer, world, player, thumbWidth, thumbHeight, dlcIds);
-        writer.Write(FcbDocument.Serialize(root));
-
-        return stream.ToArray();
-    }
-
-    private static void WriteLengthPrefixedString(BinaryWriter writer, string value)
-    {
-        byte[] bytes = System.Text.Encoding.UTF8.GetBytes(value);
-        writer.Write((uint)bytes.Length);
-        writer.Write(bytes);
     }
 
     [Fact]
@@ -185,7 +125,7 @@ public class SaveGameDocumentTests
         string path = Path.Combine(Path.GetTempPath(), $"jackall-test-{Guid.NewGuid():N}.sav");
         try
         {
-            File.WriteAllBytes(path, BuildSaveGameWithFcbBlob(
+            File.WriteAllBytes(path, TestSupport.SaveGameWithTree(
                 BuildSampleTree(), world: "world1", player: "Paul_Ferenc", dlcIds: ["dlc1", "dlc_jungle"]));
 
             SaveGameInfo before = SaveGameDocument.Read(path);
@@ -195,7 +135,7 @@ public class SaveGameDocumentTests
             // write it back.
             uint nameHash = FcbClassDefinitions.Crc32Ascii("MemoryUsage");
             root.Children[0].Values[nameHash] = BitConverter.GetBytes(99u);
-            SaveGameDocument.WriteFcbRoot(before, root);
+            SaveGameDocument.WriteFcbRoot(before, root, path);
 
             SaveGameInfo after = SaveGameDocument.Read(path);
             Assert.Equal(before.WorldName, after.WorldName);
@@ -214,19 +154,48 @@ public class SaveGameDocumentTests
     }
 
     [Fact]
+    public void WriteFcbRoot_to_another_path_leaves_the_source_save_byte_for_byte_intact()
+    {
+        string path = Path.Combine(Path.GetTempPath(), $"jackall-test-{Guid.NewGuid():N}.sav");
+        string copyPath = Path.Combine(Path.GetTempPath(), $"jackall-test-{Guid.NewGuid():N}.sav");
+        try
+        {
+            File.WriteAllBytes(path, TestSupport.SaveGameWithTree(BuildSampleTree()));
+            byte[] original = File.ReadAllBytes(path);
+
+            SaveGameInfo before = SaveGameDocument.Read(path);
+            FcbObject root = SaveGameDocument.ReadFcbRoot(before);
+            root.Children.Clear();
+            SaveGameDocument.WriteFcbRoot(before, root, copyPath);
+
+            Assert.Equal(original, File.ReadAllBytes(path));
+
+            SaveGameInfo copy = SaveGameDocument.Read(copyPath);
+            Assert.Equal(before.WorldName, copy.WorldName);
+            Assert.Equal(before.PlayerName, copy.PlayerName);
+            Assert.Empty(SaveGameDocument.ReadFcbRoot(copy).Children);
+        }
+        finally
+        {
+            File.Delete(path);
+            File.Delete(copyPath);
+        }
+    }
+
+    [Fact]
     public void WriteFcbRoot_tolerates_the_edited_tree_growing_larger_than_the_original_blob()
     {
         string path = Path.Combine(Path.GetTempPath(), $"jackall-test-{Guid.NewGuid():N}.sav");
         try
         {
-            File.WriteAllBytes(path, BuildSaveGameWithFcbBlob(BuildSampleTree(rootValueText: "short")));
+            File.WriteAllBytes(path, TestSupport.SaveGameWithTree(BuildSampleTree(rootValueText: "short")));
 
             SaveGameInfo before = SaveGameDocument.Read(path);
             FcbObject root = SaveGameDocument.ReadFcbRoot(before);
 
             uint nameHash = FcbClassDefinitions.Crc32Ascii("Name");
             root.Values[nameHash] = [.. System.Text.Encoding.ASCII.GetBytes("a much, much longer replacement name"), 0];
-            SaveGameDocument.WriteFcbRoot(before, root);
+            SaveGameDocument.WriteFcbRoot(before, root, path);
 
             SaveGameInfo after = SaveGameDocument.Read(path);
             FcbObject reloaded = SaveGameDocument.ReadFcbRoot(after);

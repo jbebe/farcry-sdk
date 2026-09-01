@@ -153,7 +153,7 @@ public partial class MainWindow
                 {
                     try
                     {
-                        await Task.Run(() => SaveGameDocument.WriteFcbRoot(save.Info, root));
+                        await Task.Run(() => SaveGameDocument.WriteFcbRoot(save.Info, root, save.Info.FilePath));
                         _vm.RefreshSaveRow(save.Info.FilePath);
                         return null;
                     }
