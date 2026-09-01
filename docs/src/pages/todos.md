@@ -109,6 +109,13 @@ what is left is what a modeler cannot do rather than what is broken.
 - [x] Find where the weapon-bazaar name comes from; it is not `sDisplayName`. It is
       `nameOasis="WEAPONBAZAAR_*_NAME"` in `engine\gamemodes\gamemodesconfig.xml`, resolved against
       `languages\<language>\oasisstrings.rml`. Ten strings name one weapon across five sections
+- [x] VSS: jamming and breaking. Both confirmed in game, then set to the Dragunov's values. Jamming
+      is `fJamProbabilityPerReload` in `ReliabilityLevelsData` on the **weapon** archetype, per
+      reload and zero at full condition; breaking is `iClipsForSelfDestruct` on `WeaponProperties`
+- [ ] What `nForcedFailure*` actually governs. Raising it from 0 to 20 produced no failures at all,
+      and Mike's rusty Dragunov carries the same values as an ordinary one
+- [ ] VSS: the weapon never *looks* degraded — a consequence of the albedo recipe pinning every
+      `Clean`/`Broken` pair. Needs a second control map, and a weapon owns only two texture paths
 - [ ] VSS: the other ten languages still say "Dart Rifle"; only English was renamed
 - [ ] VSS: `pickups.Weapons.DartRifle_new.Multi.Dropped`, skipped on the single-player rule, so a
       dropped VSS in multiplayer still has no barrel

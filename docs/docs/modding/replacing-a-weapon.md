@@ -1327,6 +1327,51 @@ Dragunov. Repoint `objGeometryPreload` and the `.glm` with it.
 Then regenerate the boxes from the pack you ship — `tools/misc/weapon-swap/fix_bboxes.ps1` matches
 parts by name and handles a pickup exactly as it does a weapon.
 
+## Jamming and breaking are two systems, in two archetypes
+
+:::danger[Neither lives where the stat block suggests]
+`WeaponProperties` carries `fForcedReliability`, `fInitialJamCounter`, `selJamType`, `bIsBreakable`
+and eight `nForcedFailure*` fields, and **none of them is the dial**. Two rounds of testing were spent
+on them before the real ones turned up elsewhere.
+:::
+
+**Jamming is per reload, not per shot**, and it lives on the **weapon** archetype in
+`ReliabilityLevelsData` — four condition levels, each with its own probability and recoil penalty:
+
+```
+                          High   Medium   Low   Failure
+fJamProbabilityPerReload    0      0.04   0.08    0.16
+fHorizontalRecoilPerShot  0.5      0.6     0.7     0.8
+fVerticalRecoilPerShot      1      1.25    1.5    1.75
+```
+
+**It is exactly zero at `High`.** A pristine weapon cannot jam at any number of rounds, which is worth
+knowing before you spend a magazine trying to reproduce one. To force a jam for testing, set
+`fJamProbabilityPerReload` to 1 at every level and reload.
+
+**Breaking is a plain counter** on `WeaponProperties`: `iClipsForSelfDestruct`, 20 on a normal weapon.
+At a ten-round magazine that is 200 rounds, so a weapon will not come apart during casual testing.
+
+### The whole recipe for a decrepit weapon is two fields
+
+`WeaponProperties.Primary.Dragunov.Mikes_Rusty` is the story weapon Ubisoft authored to be falling
+apart. Diffed against the ordinary Dragunov, it changes **two values**:
+
+| | normal | Mike's rusty |
+| --- | ---: | ---: |
+| `iClipsForSelfDestruct` | 20 | **2** |
+| `fForcedReliability` | 0 | **−10** |
+
+Everything else — `nForcedFailure*`, `bIsBreakable`, `selJamType`, `fInitialJamCounter`, and the whole
+`ReliabilityLevelsData` block — is **identical** between a pristine weapon and a decrepit one. So
+those are not how you make a weapon unreliable, whatever their names suggest.
+
+:::note[`nForcedFailure*` was never observed doing anything]
+The Dart Rifle carries `0` on all four difficulties where the Dragunov carries 2/2, 1/1, 0/1, 0/0.
+Raising the Dart Rifle's to 20 produced no failures at all until `fJamProbabilityPerReload` changed,
+so what the field actually governs is still unknown. Copy your donor's rather than reason about it.
+:::
+
 ## Naming and icons live outside the archetype entirely
 
 :::info[Answers what this page listed as an open question]

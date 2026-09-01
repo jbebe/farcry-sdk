@@ -48,7 +48,7 @@
                 <x>80</x>
                 <y>100</y>
               </value>
-              <value name="fUnjamTime" type="Float">4.4</value>
+              <value name="fUnjamTime" type="Float">2.5</value>
               <value name="selJamType" type="UInt32">0</value>
               <value name="iClipsForSelfDestruct" type="UInt32">20</value>
               <value name="bIsIndestructible" type="Bool">False</value>
@@ -220,12 +220,12 @@
                 <value name="archTargetDistanceCurve" type="String">Curves.ShootingSystem.DistanceAccuracy</value>
                 <value name="archSuccessfulHitCurve" type="String">Curves.ShootingSystem.SuccessfulHit</value>
                 <value name="fSuccessfulBulletHitTimer" type="Float">1</value>
-                <value name="nForcedFailureMinCausal" type="UInt32">0</value>
-                <value name="nForcedFailureMaxCausal" type="UInt32">0</value>
-                <value name="nForcedFailureMinExperimented" type="UInt32">0</value>
-                <value name="nForcedFailureMaxExperimented" type="UInt32">0</value>
+                <value name="nForcedFailureMinCausal" type="UInt32">2</value>
+                <value name="nForcedFailureMaxCausal" type="UInt32">2</value>
+                <value name="nForcedFailureMinExperimented" type="UInt32">1</value>
+                <value name="nForcedFailureMaxExperimented" type="UInt32">1</value>
                 <value name="nForcedFailureMinHardcore" type="UInt32">0</value>
-                <value name="nForcedFailureMaxHardcore" type="UInt32">0</value>
+                <value name="nForcedFailureMaxHardcore" type="UInt32">1</value>
                 <value name="nForcedFailureMinInfamous" type="UInt32">0</value>
                 <value name="nForcedFailureMaxInfamous" type="UInt32">0</value>
                 <value name="fBurstLengthLong_Max" type="Float">1.2</value>

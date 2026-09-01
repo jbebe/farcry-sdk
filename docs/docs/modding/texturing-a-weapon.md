@@ -47,6 +47,18 @@ Your control map then holds **green at 0** so the second tiling layer never blen
 so the tint weight is full. With blue pinned, `DiffuseColor1` stops being a lerp end and becomes a
 plain per-material multiplier — which is the knob you set the weapon's overall level with.
 
+:::warning[This gives up the weapon's degraded appearance, permanently]
+The `Clean`/`Broken` pairs and the second mask are the degradation system: a weapon interpolates
+between them as its condition falls, which is how a rifle gets visibly filthy. Setting each pair to
+the same value and pointing `MaskTexture1` and `MaskTextureBroken` at the same texture leaves
+**nothing to interpolate**, so the weapon looks identical at every condition however much it is used.
+
+That is the price of the recipe, not a bug in it — the slot the degradation system wants to blend is
+the one now carrying your artwork. Getting it back needs a *second* control map at a distinct path,
+and a weapon owns only two. It also does not affect the weapon *mechanically*: it still jams and
+still breaks, it just never looks it.
+:::
+
 **A weapon owns exactly two texture paths.** That is enough for one albedo and one control map, and
 not enough for a normal map. Both worked examples leave `NormalTexture1` and `SpecularTexture1`
 pointed at the shared tiling maps they came with, which is what every retail weapon does. A donated
