@@ -4,6 +4,9 @@
 # writes. Nothing here opens a game file, which is the whole arrangement: JackAll
 # owns the byte layouts and this owns what a scene looks like.
 
+import itertools
+import os
+
 import bpy
 from bpy.props import (BoolProperty, EnumProperty, FloatProperty, IntProperty,
                        StringProperty)
@@ -12,7 +15,7 @@ from bpy_extras.io_utils import ExportHelper, ImportHelper
 from mathutils import Matrix
 
 from . import export_mab, export_xbg, import_mab, import_xbg, panel
-from .pack import EXTENSION, Pack
+from .pack import EXTENSION, Pack, read_manifest
 
 # What the bone enum holds when a part is placed by nothing.
 ROOT_BONE = "__root__"
@@ -53,30 +56,47 @@ class FC2_OT_import_pack(bpy.types.Operator, ImportHelper):
 def _pack_of(context):
     """The pack the active object was imported from, and its collection."""
     obj = context.object
-    collections = list(obj.users_collection) if obj else []
-    collections += [c for c in bpy.data.collections if import_xbg.PROP_SOURCE in c]
-    for collection in collections:
+    for collection in itertools.chain(obj.users_collection if obj else (),
+                                      bpy.data.collections):
         origin = collection.get(import_xbg.PROP_SOURCE)
         if origin:
             return origin, collection
     return None, None
 
 
-def _clip_items(self, context):
-    """The banks the pack carries, straight from its manifest.
+_NO_PACK = [("", "No pack imported", "")]
+_UNREADABLE = [("", "Could not read the pack", "")]
+_NO_CLIPS = [("", "This pack carries no animation", "")]
 
-    Read here rather than in a panel's draw: draw runs on every redraw, and
-    opening a zip from one is how an add-on makes the viewport stutter.
-    """
+# Each pack's bank list against the mtime it was read at. Blender runs an items
+# callback on every redraw and keeps no reference to what it returns, so the
+# list is built once and outlives the call.
+_CLIPS = {}
+
+
+def _clip_items(self, context):
+    """The banks the pack carries, from its manifest alone."""
     origin, _collection = _pack_of(context)
     if not origin:
-        return [("", "No pack imported", "")]
+        return _NO_PACK
     try:
-        clips = Pack.load(origin).clips
-    except Exception:
-        return [("", "Could not read the pack", "")]
-    if not clips:
-        return [("", "This pack carries no animation", "")]
+        stamp = os.path.getmtime(origin)
+    except OSError:
+        return _UNREADABLE
+    if origin not in _CLIPS or _CLIPS[origin][0] != stamp:
+        try:
+            _CLIPS[origin] = (stamp, _banks(origin) or _NO_CLIPS)
+        except Exception:
+            # Cached like any other answer: a pack that cannot be read would
+            # otherwise reopen its zip on every redraw, and the stamp clears
+            # this the moment the file is rewritten.
+            _CLIPS[origin] = (stamp, _UNREADABLE)
+    return _CLIPS[origin][1]
+
+
+def _banks(origin):
+    clips = sorted(read_manifest(origin).get("clips", []),
+                   key=lambda clip: clip["label"].casefold())
     return [(clip["path"],
              clip["label"],
              "%d frames at %d Hz%s" % (clip.get("frames", 0), clip.get("rate", 0),
@@ -196,13 +216,18 @@ class FC2_OT_write_clip(bpy.types.Operator):
         return {"FINISHED"}
 
 
+# The bone enum's items, kept alive for the callback the way _CLIPS is.
+_BONES = []
+
+
 def _bone_items(_self, context):
+    global _BONES
     _origin, collection = _pack_of(context)
     armature = _armature_in(collection)
-    items = [(ROOT_BONE, "Model root", "Sit in the model's own space, placed by nothing")]
+    _BONES = [(ROOT_BONE, "Model root", "Sit in the model's own space, placed by nothing")]
     if armature:
-        items += [(bone.name, bone.name, "") for bone in armature.data.bones]
-    return items
+        _BONES += [(bone.name, bone.name, "") for bone in armature.data.bones]
+    return _BONES
 
 
 def _armature_in(collection):

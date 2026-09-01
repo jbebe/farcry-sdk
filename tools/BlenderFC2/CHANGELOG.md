@@ -5,7 +5,21 @@ Notable changes to the Far Cry 2 Blender add-on, loosely following
 
 ## [Unreleased]
 
+### Changed
+- **The animation list is sorted by name.** A pack lists its banks in export order, which for the
+  Dart Rifle's 60 near-identical names is no order at all to look through. Sorted, the first- and
+  third-person banks group and the action reads down the list. `open_model.py` sorts the same way,
+  so the 20 it prints are the first 20 rather than an arbitrary 20.
+
 ### Fixed
+- **The animation list no longer stalls the UI.** Picking a bank in **Load Far Cry 2 Animation** ran
+  the enum's items callback on every redraw, and each call reopened the pack and decompressed all of
+  it — 19 MB of mesh and textures for a list that only needs the manifest. Measured at **29.2 ms per
+  call** on the Dart Rifle, which is what the dropdown was paying per frame. It now reads the
+  manifest alone and holds the built list against the pack's mtime: **1.0 ms** to open a pack,
+  **0.008 ms** after. Holding the list also fixes the enum returning strings Blender does not own,
+  which is the documented way to get garbled entries or a crash.
+
 - **A material's alpha is now wired to the surface.** Nothing linked the diffuse texture's alpha
   channel, so every material declaring `AlphaTestEnabled` or `AlphaBlendEnabled` drew fully opaque —
   the Dragunov's crosshair, a black cutout on a transparent texture, came through as a solid black

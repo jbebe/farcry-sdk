@@ -40,7 +40,7 @@ def main():
     print("opened %s: %d parts at LOD%d, %d animation bank(s)"
           % (os.path.basename(path), len(result["parts"]), lod, len(pack.clips)))
     if not wanted:
-        for clip in pack.clips[:20]:
+        for clip in sorted(pack.clips, key=lambda c: c["label"].casefold())[:20]:
             print("   %s  %d frames at %d Hz%s"
                   % (clip["label"], clip.get("frames", 0), clip.get("rate", 0),
                      " on %s" % clip["bone"] if clip.get("bone") else ""))

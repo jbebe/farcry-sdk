@@ -48,6 +48,23 @@ def stem(path):
     return posixpath.splitext(posixpath.basename(_key(path)))[0]
 
 
+def read_manifest(path):
+    """What a pack carries, without unpacking any of it."""
+    with zipfile.ZipFile(path) as archive:
+        return _manifest(archive, path)
+
+
+def _manifest(archive, path):
+    manifest = json.loads(archive.read(MANIFEST))
+    if manifest.get("format") != FORMAT:
+        raise ValueError("%s is not a %s pack" % (path, FORMAT))
+    required = manifest.get("requires_reader", manifest.get("version", 1))
+    if required > READS_VERSION:
+        raise ValueError("%s needs a reader for version %d; this one reads up to %d"
+                         % (path, required, READS_VERSION))
+    return manifest
+
+
 class Entry:
     """One file in the pack: what it is in the game, and where it sits in the zip."""
 
@@ -83,14 +100,7 @@ class Pack:
     @classmethod
     def load(cls, path):
         with zipfile.ZipFile(path) as archive:
-            manifest = json.loads(archive.read(MANIFEST))
-            if manifest.get("format") != FORMAT:
-                raise ValueError("%s is not a %s pack" % (path, FORMAT))
-            required = manifest.get("requires_reader", manifest.get("version", 1))
-            if required > READS_VERSION:
-                raise ValueError(
-                    "%s needs a reader for version %d; this one reads up to %d"
-                    % (path, required, READS_VERSION))
+            manifest = _manifest(archive, path)
             files = {name: archive.read(name) for name in archive.namelist()
                      if name != MANIFEST}
         return cls(manifest, files)
