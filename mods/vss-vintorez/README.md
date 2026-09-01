@@ -13,13 +13,15 @@ mod; those pages are the method.
 
 ## What it changes
 
-Eighteen files, all overrides of paths that already exist.
+Nineteen files. All but one are overrides of paths that already exist; `vss_worn_c.xbt` is at a path
+invented for this mod, which loads from `patch.dat` with no hashlist and no `depload` entry.
 
 ```
 mods/graphics/weapons/special/dart_rifle/dart_rifle.xbg     the VSS, all five LOD tiers
 mods/graphics/weapons/special/dart_rifle/dart_rifle.hkx     the Dragunov's collision shape
 mods/graphics/weapons/special/dart_rifle/dart_rifle_state_01.xbt   the albedo, + _mip0
 mods/graphics/weapons/special/dart_rifle/dart_rifle_state_02.xbt   the control map, + _mip0
+mods/graphics/weapons/special/dart_rifle/vss_worn_c.xbt     the worn control map, a new path
 mods/graphics/_materials/FBOIVIN2-M-2007050148031384.xbm    DART_RIFLE_METAL, repointed
 mods/ui/textures/hud/icons_weapons/hud_icon_sniperdart.xbt  the HUD and bazaar icon
 mods/ui/textures/guns/gun_icon_sniperdart.xbt               the multiplayer weapon select
@@ -98,8 +100,10 @@ The donor works in game, so any difference between the two images in the same vi
 - **One material for the whole body.** The stock takes the same specular response as the steel,
   separated only by the control map's red rather than by a material of its own. Splitting it needs
   the transplant re-run, not new textures.
-- **No normal map.** The weapon owns two texture paths and both are spent, on the albedo and the
-  control map. The source's 4096² normal map has nowhere to go without minting a new asset path.
+- **No normal map.** Not for want of a texture path — minting one is proven to work, and the worn
+  control map uses it. **No `Weapon`-shader material declares a `NormalTexture1` slot at all**, across
+  all nine on the Dragunov, the Dart Rifle and the sawed-off, so whether the shader would sample one
+  is unknown. Settling it means disassembling the `Weapon` pixel shader out of `shadersobj.fat`.
 - **Damage is the Dart Rifle's, deliberately.** `Stim_ImpactDamage.nLevel` is 5 against the
   Dragunov's 25 and `fPhysImpulse` 10 against 60, so it kills a soft target but does little to a
   tough one. That is what makes it a stealth weapon rather than a battle rifle, and it is kept.

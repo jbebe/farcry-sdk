@@ -114,8 +114,13 @@ what is left is what a modeler cannot do rather than what is broken.
       reload and zero at full condition; breaking is `iClipsForSelfDestruct` on `WeaponProperties`
 - [ ] What `nForcedFailure*` actually governs. Raising it from 0 to 20 produced no failures at all,
       and Mike's rusty Dragunov carries the same values as an ordinary one
-- [ ] VSS: the weapon never *looks* degraded — a consequence of the albedo recipe pinning every
-      `Clean`/`Broken` pair. Needs a second control map, and a weapon owns only two texture paths
+- [x] VSS: the weapon never *looks* degraded. Fixed with a hand-painted rust map on a second control
+      map — and the reason it was blocked, "a weapon owns only two texture paths", turned out to be
+      false: **a texture at an invented path loads from `patch.dat` with no hashlist and no `depload`
+      entry**, proven with a magenta canary. That removes the ceiling for every weapon mod
+- [ ] Whether the `Weapon` shader samples a normal map at all. No `NormalTexture1` slot appears on any
+      of the nine `Weapon` materials across three weapons, so a texture path is not what is missing.
+      Disassemble the template out of `shadersobj.fat`'s `obj10` tree, which keeps its reflection data
 - [ ] VSS: the other ten languages still say "Dart Rifle"; only English was renamed
 - [ ] VSS: `pickups.Weapons.DartRifle_new.Multi.Dropped`, skipped on the single-player rule, so a
       dropped VSS in multiplayer still has no barrel

@@ -47,23 +47,49 @@ Your control map then holds **green at 0** so the second tiling layer never blen
 so the tint weight is full. With blue pinned, `DiffuseColor1` stops being a lerp end and becomes a
 plain per-material multiplier — which is the knob you set the weapon's overall level with.
 
-:::warning[This gives up the weapon's degraded appearance, permanently]
+:::warning[Doing only this gives up the weapon's degraded appearance]
 The `Clean`/`Broken` pairs and the second mask are the degradation system: a weapon interpolates
 between them as its condition falls, which is how a rifle gets visibly filthy. Setting each pair to
 the same value and pointing `MaskTexture1` and `MaskTextureBroken` at the same texture leaves
 **nothing to interpolate**, so the weapon looks identical at every condition however much it is used.
 
-That is the price of the recipe, not a bug in it — the slot the degradation system wants to blend is
-the one now carrying your artwork. Getting it back needs a *second* control map at a distinct path,
-and a weapon owns only two. It also does not affect the weapon *mechanically*: it still jams and
-still breaks, it just never looks it.
+It never affects the weapon *mechanically* — it still jams and still breaks, it just never looks it.
+Getting the look back needs a second control map, which needs a third texture path, which is
+[not the obstacle it appears to be](#a-weapon-is-not-limited-to-the-texture-paths-it-owns).
 :::
 
-**A weapon owns exactly two texture paths.** That is enough for one albedo and one control map, and
-not enough for a normal map. Both worked examples leave `NormalTexture1` and `SpecularTexture1`
-pointed at the shared tiling maps they came with, which is what every retail weapon does. A donated
-normal map has no home without minting a new asset path, and whether an asset missing from a world's
-`depload` loads at all has never been tested here.
+**A weapon owns exactly two texture paths** — its damage-state masks. That is enough for one albedo
+and one control map. It is *not* the ceiling it looks like, though; see below.
+
+## A weapon is not limited to the texture paths it owns
+
+:::tip[Verified in a running game — this page used to say the opposite]
+**A texture at a path that exists in no shipped archive, in no hashlist, and in no world's `depload`
+loads from `patch.dat` and renders.** The two-owned-paths ceiling every earlier version of this page
+described is not real.
+:::
+
+It was settled with a canary: a solid magenta 1024² texture staged at
+`graphics\weapons\special\dart_rifle\vss_test_d.xbt` — a path invented for the test — with the
+material's `DiffuseTexture1` pointed at it. The gun came back magenta.
+
+What that means in practice:
+
+- **No hashlist entry is needed.** `tools/JackAll/assets/fc2.hashlist` is JackAll's hash→name
+  dictionary for *extraction*; `mod build` CRC32s the layer path directly, and the engine only ever
+  asks for the hash. The one cost is that `archive extract --names` cannot resolve your new file's
+  name afterwards, so it lands under `_unknown\<hash>`. Compute the hash yourself to find it: CRC32
+  of the path, lowercased, backslash-separated.
+- **`depload` does not gate it.** At least for a texture reached through a material that is itself in
+  `depload` — which is the case that matters, since your material is one the replaced weapon owned.
+- **So a weapon can have as many textures as it needs**: a second control map for the degradation
+  look, and a normal map if the shader turns out to sample one.
+
+The one thing you cannot synthesize is the `.xbt` header, which is why the canary borrows one. Take
+it from a texture with **no `_mip0` companion** — a UI icon is ideal — because the header carries the
+companion's path and a borrowed one would send the engine looking for the wrong sibling. That gives
+you a single self-contained file; put the whole mip chain in it with `texconv -m 0` rather than
+splitting the pair by hand.
 
 ## Step 1 — find a material you are allowed to own
 
@@ -287,7 +313,42 @@ surface is not metal. Two details decide whether it works:
   the metal band to 0.80 instead puts both ends where they belong, and lets a weapon that happens to
   be 57% metal keep a mean higher than the donor's without that being wrong.
 
-## Step 6 — ship it
+## Step 6 — give it a degraded look
+
+Once a third texture path is available the degradation system works as authored, and it is a small
+job. Measured on the Dragunov's own pair, a clean and a broken mask differ in **one channel**:
+
+| | red | green | blue |
+| --- | ---: | ---: | ---: |
+| `MaskTexture1` (clean) | 0.3474 | **0.0000** | 0.3474 |
+| `MaskTextureBroken` | 0.3269 | **0.3957** | 0.3472 |
+
+Green is the weight on `DiffuseTexture2`, which on a weapon material is the game's own rust map —
+`dirtrust_03_d.xbt` on both the Dragunov and the Dart Rifle. So **the painted map says where rust
+appears, not what it looks like**, and green at 0 on the clean mask is exactly why a weapon following
+the recipe above never grimes.
+
+The whole change is:
+
+- **A second control map at a new path**, identical to the clean one but with the painted rust in
+  green. Retail spans the full range and averages about 0.40; paint coverage, not colour.
+- **`MaskTextureBroken`** pointed at it instead of at the clean map.
+- **`DiffuseColor1Broken` and `DiffuseColorBaseBroken`** moved off the clean tint, so the weapon
+  darkens as well as rusting. The worked example uses `0.50, 0.47, 0.44` against a clean `0.64`.
+- **Leave `DiffuseColor2*` alone.** That is the rust layer's own colour and vanilla already brightens
+  it from 0.31 to 1.54 as a weapon wears — flattening it is what kills the effect.
+
+:::note[Paint against the albedo, and remember what does not rust]
+The mask shares the model's UVs, so paint it over the albedo as an underlay. On the worked example
+the wooden stock, handguard and grip are painted black: wood does not rust, and a rust map that
+covers them reads as obviously wrong.
+:::
+
+To see it without firing 200 rounds, drop `iClipsForSelfDestruct` to 1 in a temporary layer — the
+whole condition ramp then runs inside a single magazine. See
+[jamming and breaking](./replacing-a-weapon.md#jamming-and-breaking-are-two-systems-in-two-archetypes).
+
+## Step 7 — ship it
 
 Do the whole thing through a `.fc2model` pack. Edit `materials/<name>.json` and swap the texture PNGs
 inside the zip, then set **`origin_sha256`** on each entry you touched — that field's presence is
@@ -349,8 +410,12 @@ the **Dragunov's** `spdra`. The framing is wrong by however far those two eyes d
 
 - **The `Weapon` shader samples no albedo.** Colour is two tiling maps blended by a mask until you
   rewrite the `.xbm`.
-- **A weapon owns two texture paths**, its damage-state masks. One albedo, one control map, no normal
-  map.
+- **A weapon owns two texture paths**, its damage-state masks — but it is not limited to them. A
+  texture at an invented path loads from `patch.dat` with no hashlist and no `depload` entry.
+- **A borrowed `.xbt` header must come from a texture with no `_mip0` companion**, or it sends the
+  engine looking for a sibling that is not yours.
+- **Green on the control map is the rust weight**, and it is 0 on every clean mask. Pinning
+  `MaskTextureBroken` to the same map is what stops a weapon ever looking used.
 - **A transplanted mesh keeps its donor's material table.** Take a material the replaced weapon owned
   instead, and check it with `xref` rather than the directory rule.
 - **Nothing creates an `.xbm`.** If no material is exclusively yours, that is a wall, not a detour.
