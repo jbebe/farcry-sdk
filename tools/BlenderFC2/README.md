@@ -91,9 +91,11 @@ What it cannot do yet:
 
 - **Split UVs, normals or colours.** The format stores all three per vertex, not per corner, so a
   seam has to be a duplicated vertex. The first corner touching a vertex wins.
-- **Add or remove parts, nodes or LODs.** JackAll can author a container from decoded content alone
-  (3,133 of 3,133 shipped meshes), so the format no longer stands in the way — the scene-to-document
-  side is what is missing.
+- **Remove a part, or add a node or a whole LOD tier.** Adding a *part* works — **Add as New Part**,
+  and every shipped mesh takes one with its own parts unchanged. The other three have no
+  scene-to-document path. JackAll can author a container from decoded content alone (3,133 of 3,133
+  shipped meshes), so the format is not the blocker. An added part also lives only at the LOD it was
+  added to, so it vanishes at distance.
 - **Add a vertex component a buffer has no room for.** A second UV set on a part whose buffer carries
   one is dropped rather than invented.
 

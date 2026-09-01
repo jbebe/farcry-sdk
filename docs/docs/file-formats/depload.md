@@ -14,7 +14,15 @@ extended by disassembly, traced live via GhidraMCP against the same more heavily
 :::
 
 `depload.dat` records, per world, which resources a resource depends on (its "parents"/"children") —
-used by the engine to know what to load together and, evidently, what animation data ties to what.
+a **prefetch manifest**, used by the engine to warm what a resource will need and, evidently, to tie
+animation data to what plays it.
+
+:::note[It does not gate loading]
+An asset absent from every `depload` still resolves and renders when something asks for it — verified
+with a texture staged into `patch.dat` at a path present in no shipped archive, no hashlist and no
+`depload` list, reached through a material that *is* listed. Absence costs streaming warmth, not
+availability. Untested for a mesh or a sound at an unlisted path.
+:::
 
 ## How it's loaded
 
@@ -22,9 +30,12 @@ used by the engine to know what to load together and, evidently, what animation 
 
 1. Calls `CWorldDescriptorImpl::LoadDep()` (`0x09c2b0c0`), which loads the current world's own
    `<world>/generated/<world>_depload.dat` (format string `"%s%s_depload.dat"`), and its sibling
-   `"%s%s_deploadnewparticles.rml"` — a second, RML-format dependency file for particle effects, out of
-   scope here. If the binary `.dat` isn't found, it falls back to a same-named `_depload.xml` (a plain
-   `XmlParser::parse` path — no shipped example was located to confirm its shape).
+   `"%s%s_deploadnewparticles.rml"` — a second, RML-format dependency file for particle effects. RML
+   is a separate container and a solved one: `jackall-cli rml decode` / `rml encode` round-trip
+   `oasisstrings.rml` byte-identically at 946 KB. Its *contents* are out of scope here. If the binary
+   `.dat` isn't found, it falls back to a same-named `_depload.xml` (a plain `XmlParser::parse` path —
+   `worlds/tmpla/` ships source XML twins beside its binaries, so confirm whether the fallback
+   consumes that same shape before relying on it).
 2. Then walks every installed DLC via `CDlcService::GetDepLoads()` and loads each one's own
    `depload.dat` the same way, with `isPrimary = false`.
 

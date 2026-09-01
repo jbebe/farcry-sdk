@@ -3,8 +3,9 @@
 Replaces the single-player **Dart Rifle** with a VSS Vintorez: the VSS's mesh on the Dragunov's
 skeleton and animation set, semi-automatic, ten-round magazine off the sniper ammo pool.
 
-**Status: geometry and textures done, playing and confirmed in game.** See
-[what is left](#what-is-left) for the parts that are not art.
+**Status: complete and confirmed in game** — mesh, LOD tiers, textures, a worn appearance that grimes
+as the weapon degrades, the weapon on the ground, the muzzle socket, icons, name, and jam/break
+behaviour. See [what is left](#what-is-left) and [deliberate, not missing](#deliberate-not-missing).
 
 The procedure this mod was built by is written up in
 [replacing an existing weapon](../../docs/docs/modding/replacing-a-weapon.md) and
@@ -50,7 +51,7 @@ changed — that carries the five-part list including `ACCESSORY02`, the Draguno
 `sPartName`, `iAnimationValue` and `bUseHiResScope` across in one piece. The bounding boxes are then
 regenerated from the shipped mesh.
 
-`WeaponProperties.Special.Dart_Rifle` is the vanilla Dart Rifle with thirteen values changed:
+`WeaponProperties.Special.Dart_Rifle` is the vanilla Dart Rifle with nineteen values changed:
 
 | field | from | to |
 | --- | --- | --- |
@@ -62,6 +63,15 @@ regenerated from the shipped mesh.
 | `iMaxAmmo{Casual,Experimented,Hardcore,Infamous}` | 9/4/3/2 | 40/20/20/10 |
 | `BulletCaseBone` + twin | `FX_CASING` / `D431B68E` | `FX_Casing` / `2365743E` |
 | `fIronsightFOV` | 0.3 | 0.28 |
+| `fUnjamTime` | 4.4 | 2.5 |
+| `nForcedFailureMin/MaxCausal` | 0 / 0 | 2 / 2 |
+| `nForcedFailureMin/MaxExperimented` | 0 / 0 | 1 / 1 |
+| `nForcedFailureMaxHardcore` | 0 | 1 |
+
+The last four give it the **Dragunov's** reliability rather than the Dart Rifle's, which never fails
+at all. `fJamProbabilityPerReload` — in `ReliabilityLevelsData` on the *weapon* archetype, per reload
+and zero at full condition — and `iClipsForSelfDestruct` = 20 needed no change: the two weapons
+already carry identical values for both.
 
 It keeps `bIsSilent = True`, `selCategory = 3` (Special slot), `sName`, and `archPickupArchetype`.
 
@@ -104,18 +114,24 @@ The donor works in game, so any difference between the two images in the same vi
   control map uses it. **No `Weapon`-shader material declares a `NormalTexture1` slot at all**, across
   all nine on the Dragunov, the Dart Rifle and the sawed-off, so whether the shader would sample one
   is unknown. Settling it means disassembling the `Weapon` pixel shader out of `shadersobj.fat`.
-- **Damage is the Dart Rifle's, deliberately.** `Stim_ImpactDamage.nLevel` is 5 against the
-  Dragunov's 25 and `fPhysImpulse` 10 against 60, so it kills a soft target but does little to a
-  tough one. That is what makes it a stealth weapon rather than a battle rifle, and it is kept.
-  It does **not** tranquilize — an earlier note here said so and was wrong; both hit-location
-  severities are `Kill`, it fires `Bullet` rather than `Projectile`, and no dart is spawned.
-- **Only English is renamed.** Ten other languages ship `oasisstrings.rml` and still say "Dart
-  Rifle" in the bazaar, the challenge list and the statistics.
+- **Only English is renamed.** Ten other languages ship `oasisstrings.rml` and still carry the same
+  ten strings saying "Dart Rifle" in the bazaar, the challenge list and the statistics.
 - **`pickups.Weapons.DartRifle_new.Multi.Dropped`** was skipped on the single-player rule, so a
   dropped VSS in multiplayer still has no barrel.
+
+## Deliberate, not missing
+
+- **Damage is the Dart Rifle's.** `Stim_ImpactDamage.nLevel` is 5 against the Dragunov's 25 and
+  `fPhysImpulse` 10 against 60, so it kills a soft target but does little to a tough one — which is
+  what makes it a stealth weapon rather than a battle rifle. It does **not** tranquilize: both
+  hit-location severities are `Kill`, it fires `Bullet` rather than `Projectile`, and no dart is
+  spawned. `MuzzleStims.fRadius` is 2.5 m against the Dragunov's 150, and that — not `bIsSilent` —
+  is what carries the suppression.
 - **The coarse LOD tiers cost more than the donor's.** LOD3 and LOD4 ship LOD2's budget, 1,428 and
-  1,189 against 278 and 96, because this model is some forty disconnected shells and a decimation
-  below that turns it into slivers. Reaching the donor's numbers needs hand-authored low-poly tiers.
+  1,189 against 278 and 96, because this model is some forty disconnected shells and decimating below
+  LOD2 turns them into slivers. Accepted; reaching the donor's numbers needs hand-authored tiers.
+- **LOD0 is undecimated** at 20,390 triangles, about 1.6× the heaviest weapon Ubisoft shipped. The
+  first-person viewmodel never leaves LOD0, so it is the one mesh whose detail is always on screen.
 
 ## Credit
 

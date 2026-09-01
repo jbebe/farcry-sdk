@@ -283,7 +283,9 @@ order alongside whatever map the reader exposes.
 | `BigLeaf` | 12 |
 | `Water` | 7 |
 
-Texture slots, by how many materials name them: `DiffuseTexture1` 1,964, `SpecularTexture1` 1,889,
+These counts are corpus-wide across all 2,379 materials, and the distribution is not uniform by
+shader — `NormalTexture1` does not appear on any `Weapon` material at all. Texture slots, by how
+many materials name them: `DiffuseTexture1` 1,964, `SpecularTexture1` 1,889,
 `NormalTexture1` 1,656, `MaskTexture1` 1,565, `DiffuseTexture2` 1,503, `RimLightTexture` 397,
 `BloodTexture` 393, `FabricTexture` 264, `PrintTexture` 239, `ReflectionTexture` 222, `SkinTexture`
 142, `NormalTexture2` 135, `MaskTextureBroken` 102, `BurntDiffuseTexture` 51, `MaskTexture0` 34,
@@ -291,7 +293,11 @@ Texture slots, by how many materials name them: `DiffuseTexture1` 1,964, `Specul
 
 ### The `Weapon` shader's parameter set
 
-The 102 `Weapon` materials extend `Generic`'s inputs with the weapon-degradation system:
+The 102 `Weapon` materials add the weapon-degradation system on top of `Generic`'s mask-and-two-layer
+structure. They are **not** a superset of `Generic`'s slots: none of the nine checked across the
+Dragunov, the Dart Rifle and the sawed-off declares `NormalTexture1`, so whether the `Weapon`
+template samples a normal at all is unknown, and a normal map authored into a weapon material has no
+observed effect.
 
 - **`MaskTextureBroken` and `MaskTilingBroken`** — a second mask, alongside `MaskTexture1`.
 - **A `Clean`/`Broken` triplet for every colour.** `DiffuseColor1`, `DiffuseColor1Clean`,
@@ -301,10 +307,25 @@ The 102 `Weapon` materials extend `Generic`'s inputs with the weapon-degradation
 - **`ReflectionTexture` and `ReflectionPower`** on some of them — the sawed-off's black-metal
   material names `graphics\_textures\cubemap\lens_cubemap.xbt` at power 0.9.
 
-The mask channels behave as `Generic`'s do. Measured on the sawed-off's own shipped
-`sawed_off_shotgun_state01.xbt`: **green is 0.000 in every texel**, red averages 0.556, blue averages
-0.439, alpha is 1. So a shipped weapon never blends its second tiling layer in at all — the whole
-look is layer 1 tinted between `DiffuseColorBase` and `DiffuseColor1` by the mask's blue.
+The mask channels behave as `Generic`'s do, and **the pair is where the degradation lives**. Measured
+on the Dragunov's two masks, they differ in exactly one channel:
+
+| | red | green | blue |
+| --- | ---: | ---: | ---: |
+| `MaskTexture1` — clean | 0.3474 | **0.0000** | 0.3474 |
+| `MaskTextureBroken` — worn | 0.3269 | **0.3957** | 0.3472 |
+
+Green is the layer-2 blend weight, and `DiffuseTexture2` on a weapon material is a rust map —
+`dirtrust_03_d.xbt` on both the Dragunov and the Dart Rifle. So a weapon in good condition blends no
+second layer at all, and the rust arrives as its condition falls. Red and blue barely move; the
+broken mask is a rust map with the other two channels carried over.
+
+:::note[Corrects an earlier reading of this]
+This section used to say, from the sawed-off's `state01` alone, that "a shipped weapon never blends
+its second tiling layer in at all". That is true of a **clean** mask and false in general — it is the
+whole mechanism by which a rifle gets visibly filthy. Measuring one of a pair is what made it look
+like a rule.
+:::
 
 `MaskTiling1` is 1,1 on all three of the sawed-off's materials while `DiffuseTiling1` runs 6 to 12,
 which is the shape to expect: the mask is per-model and in the model's own UVs, the detail maps tile
@@ -409,11 +430,21 @@ Three structural facts, each visible if a renderer gets it wrong:
 - **Ambient and sun add before the albedo multiplies**, so a fully lit surface runs brighter than
   its texture and a shadowed one keeps colour from the sky term.
 - **Specular is a separate additive Blinn term.** The `.xbm` carries its inputs as
-  `SpecularColorBase`/`SpecularColor1` (the same pair shape as the diffuse tints) and
-  `SpecularPower`; measured across the 2,208 retail materials, 2,129 carry a non-zero power (2–20,
-  mode 8 — broad lobes), 466 author colours past 1 up to 2.0, and 1,743 name a `SpecularTexture1`
+  `SpecularColorBase`/`SpecularColor1` — the same *pair shape* as the diffuse tints, though **how the
+  two combine was never traced**: only the diffuse half of the pair-lerp was read out of the retail
+  shader, and driving the specular pair by the same mask weight is an assumption the renderer here
+  makes explicit. What is measured is the consequence: a high `SpecularColorBase` makes a surface
+  glossy everywhere the mask asks for nothing.
+
+  With `SpecularPower`; measured across the 2,208 retail materials, 2,129 carry a non-zero power —
+  mostly 2–20 with a mode of 8, broad lobes — but **weapons run tighter and higher than that band**:
+  the Dragunov ships 30. 466 author colours past 1 up to 2.0, and 1,743 name a `SpecularTexture1`
   that scales the highlight per texel. A renderer without that map has to tame the authored colours
   or a highlight covers half the surface.
+
+  A retail weapon's full triplet, for scale: Dragunov `SpecularColorBase` 0.043, `SpecularColor1`
+  2.0, `SpecularPower` 30 — a dim floor everywhere plus a tight, over-1 highlight where the mask
+  allows one.
 - **The baked terrain shadow scales the sun rather than replacing `N·L`** — see
   [`.sdat`](sdat.md#sd_shadowxbt-carries-the-suns-angle--and-the-engine-multiplies-it-in-anyway).
 

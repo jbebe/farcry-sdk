@@ -168,10 +168,11 @@ def _palette_rules(mesh, entries, max_slots):
 
 # ------------------------------------------------------------- the materials
 
-# Which Principled inputs the format carries, and what it does with them. A
-# shader that samples no albedo at all is the trap that cost the most time on
-# the first hand-built weapon: the `Weapon` shader has no diffuse slot, and 102
-# shipped materials use it.
+# Which Principled inputs the format carries, and what it does with them. The
+# trap that cost the most time on the first hand-built weapon: the `Weapon`
+# shader has no *per-model* albedo. Its DiffuseTexture1 is a shared, game-wide
+# tiling detail map blended by a per-model mask, so a donated colour texture
+# tiles instead of landing on the UVs until DiffuseTiling1 is 1,1.
 UNSUPPORTED_INPUTS = {
     "Metallic": ("channel.metallic",
                  "Dunia has no metalness. A PBR albedo measures 0.05-0.12 luma and reads "
@@ -207,17 +208,26 @@ def check_material(name, shader, slots, driven, tiling, owned):
             WARNING, "channel.weapon-no-albedo" if shader == "Weapon" else "channel.no-slot",
             "'%s' uses the %s shader, which samples no albedo, so a Base Color image "
             "would be dropped." % (name, shader or "unknown"), target,
-            "Put the texture in DiffuseTexture1 with DiffuseTiling1 = 1,1, a mask that is "
-            "green 0 and blue 1, and the colour in DiffuseColor1."
+            "Put the texture in DiffuseTexture1 with DiffuseTiling1 = 1,1, MaskTexture1 "
+            "green 0 and blue 1, and the colour in DiffuseColor1. Give MaskTextureBroken a "
+            "second control map with rust painted into green - pointing both mask slots at "
+            "one map is what leaves a weapon looking new at every condition."
             if shader == "Weapon" else
             "Move it into a slot this shader samples: %s."
             % ", ".join(ALBEDO_SLOTS)))
 
     if driven.get("Normal") and "NormalTexture1" not in slots:
         out.append(Finding(
-            WARNING, "channel.no-slot",
+            WARNING,
+            "channel.weapon-no-normal" if shader == "Weapon" else "channel.no-slot",
             "'%s' has no NormalTexture1 slot, so a normal map would be dropped." % name,
-            target, "Add the slot in the material, or drop the map."))
+            target,
+            "Drop the map, or move it to a material whose shader declares the slot. No shipped "
+            "Weapon material declares NormalTexture1 at all, so whether that shader samples a "
+            "normal is unknown - and adding a slot a material never had may change which shader "
+            "permutation binds, which is untested."
+            if shader == "Weapon" else
+            "Add the slot in the material, or drop the map."))
 
     for input_name, (code, hint) in UNSUPPORTED_INPUTS.items():
         if driven.get(input_name):

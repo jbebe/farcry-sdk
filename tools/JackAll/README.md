@@ -42,10 +42,16 @@ the patch from that backup**, never from whatever is currently on disk. So:
 
 `common.dat`, `worlds.dat` and the rest are opened read-only and never written.
 
+Everything the app does is also a CLI verb, and `jackall-cli` is what the mod build recipes under
+`mods/` actually run — see [replacing a weapon](../../docs/docs/modding/replacing-a-weapon.md).
+
 ## Layout
 
 ```
 JackAll.exe         one self-contained file - no .NET install needed
+jackall-cli.exe     the same engine on the command line: mod build/restore/inspect/lint,
+                    archive extract, fc2model export/extract/inspect, xbt, xbg, fcb, rml,
+                    mgb, spk, sbao, sav, xref
 config.ini          your game folder + the mod list; hand-editable, comments preserved
 data\               shipped/generated support files - nothing here is hand-edited
   .itemhashes         hash -> filename dictionary (161,686 names)

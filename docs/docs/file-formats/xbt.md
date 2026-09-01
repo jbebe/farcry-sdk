@@ -32,6 +32,13 @@ correlation yet found to DDS format, companion presence, or naming. Because neit
 `Hash` can be synthesized, there is no honest "build an `.xbt` from a bare `.dds`" path — every
 header byte has to come from a real file.
 
+**A borrowed header works, with one condition.** Nothing ties a header to its own asset: neither
+value is read back in a way that cares, and the header carries no dimensions, so a 1024² DDS behind a
+UI icon's header loads correctly. That is how a texture at a **new** path gets made, since there is
+no original to extract from. The condition is that the donor must have **no `_mip0` companion** — the
+header names the companion, and a borrowed one sends the engine after a sibling that is not yours.
+So take a header from a single-file texture and put the whole mip chain in that one file.
+
 ## The top mip level lives in a second file
 
 When the embedded path is non-empty it names a sibling `<name>_mip0.xbt`, and **that file holds the

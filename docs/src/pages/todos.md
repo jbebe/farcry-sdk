@@ -91,9 +91,10 @@ what is left is what a modeler cannot do rather than what is broken.
       [texturing a replaced weapon](/farcry-sdk/docs/modding/texturing-a-weapon)
 - [ ] VSS: split the body into steel and stock materials, so the stock stops sharing the steel's
       specular response. Needs the transplant re-run, not new textures
-- [ ] Point the doom mod's local build scripts at the pack — `retexture.py`, `unify_materials.py`
-      and `verify.py` still import the Python `fc2fmt`, whose format code moved into JackAll, so
-      they no longer run as written
+- [ ] Point the doom mod's build scripts at the pack — `retexture.py`, `transplant.py`,
+      `unify_materials.py` and `verify.py` still import the Python `fc2fmt`, whose format code moved
+      into JackAll, so they no longer run as written. The scripts are gitignored and local, so this is
+      housekeeping — the method they encode is in `texturing-a-weapon.md`
 - [x] VSS: the pickup archetypes, so the weapon on the ground is complete at close range. Rebuilt
       from the Dragunov's pickups; `archWeapon` has to be repointed with them or the pickup hands
       over a Dragunov
@@ -121,6 +122,7 @@ what is left is what a modeler cannot do rather than what is broken.
 - [ ] Whether the `Weapon` shader samples a normal map at all. No `NormalTexture1` slot appears on any
       of the nine `Weapon` materials across three weapons, so a texture path is not what is missing.
       Disassemble the template out of `shadersobj.fat`'s `obj10` tree, which keeps its reflection data
-- [ ] VSS: the other ten languages still say "Dart Rifle"; only English was renamed
+- [ ] VSS: only the English `oasisstrings.rml` was renamed. The other ten shipped languages carry
+      the same ten strings and still say "Dart Rifle"
 - [ ] VSS: `pickups.Weapons.DartRifle_new.Multi.Dropped`, skipped on the single-player rule, so a
       dropped VSS in multiplayer still has no barrel

@@ -21,7 +21,7 @@ in-process patcher if patching proves necessary.
 |---|---|---|
 | Solved end-to-end | `.fat`/`.dat`, `.fcb`, `.rml`, `.mgb`, `.xbt`, `.sbao`, `.spk`, `.sav`, `depload` | Round-trip + editor + mod pipeline. Nothing more needed. |
 | Reads, no write path | Domino graphs, `.sdat` | Writers exist for both but are called only from tests. |
-| Round-trips, partial write path | `.xbg`, `.skeleton`, `.xbm`, `.mab`, `.rtx` | `tools/BlenderFC2` writes `.xbg`, `.skeleton`, `.xbm` and `.mab`, all byte-identical over the retail set. A `.mab` clip is authored by rewriting the one clip that fits the rig and carrying the rest of the chain verbatim; re-encoding a whole bank from decoded fields alone returns 78.4% byte-identical, the shortfall being rotations authored on an exact tie. |
+| Round-trips, partial write path | `.xbg`, `.skeleton`, `.xbm`, `.mab`, `.rtx` | **JackAll** writes `.xbg`, `.skeleton`, `.xbm` and `.mab`, all byte-identical over the retail set; `tools/BlenderFC2` authors the edits as `.fc2model` packs and holds no format code of its own. A `.mab` clip is authored by rewriting the one clip that fits the rig and carrying the rest of the chain verbatim; re-encoding a whole bank from decoded fields alone returns 78.4% byte-identical, the shortfall being rotations authored on an exact tie. |
 | Container only | `.srl` (14,964 files), `.zsr` (14,964), `.nvm` (5,144) | Spatial data — roadmap dependencies, not standalone work. |
 | Sniffed, never parsed | `.hkx`, shader bins, `.bik`, `.feu`, `.wem` | See [Not doing](#not-doing-and-why). |
 | Parseable but unusable | `worldsector<N>.data.fcb` (5,230), `world1.mapsdata.fcb` | These *are* FCB — decoded today into a wall of `hidPos`/`hidAngles` floats with no spatial meaning. This is the wall. |
@@ -62,8 +62,6 @@ non-brush mutation survives Save + Export. Separately, the 7 biome scripts ship 
   `world1.mapsdata.fcb`.
 - [.xbm/.xbg](/docs/file-formats/xbm-xbg) calls the Blender importer broken, while the vendored
   copy's README now claims skeleton export, HKX collision export and full material export.
-- JackAll's `CHANGELOG.md` names `JackAll.Core.Tests` as the live suite — that's an empty leftover
-  directory; the real one is `JackAll.Tests`.
 
 ## Track 1 — Campaign levels in Ubisoft's editor
 
@@ -213,13 +211,15 @@ The cheapest wins in the tool.
 - **Batch operations.** Multi-select in the file grid drives only a count/size readout — no batch
   extract, replace or folder export — and the CLI has no glob/recursive mode. Small.
 
-## Track 4 — `.xbm` writer in JackAll, then textured preview
+## Track 4 — Textured preview
 
-`tools/BlenderFC2` now writes `.xbm` — 2,379 of 2,379 shipped materials byte-identical, and rewritten
-ones load in game. `JackAll.Tools/Xbm/XbmMaterial.cs` is still parse-only and byte-scans for `LTMD`
-rather than walking the chunk list, so the remaining work is porting a solved format rather than
-cracking one. The layout, the section order and the one material that repeats a key inside a section
-are documented in [xbm-xbg](/docs/file-formats/xbm-xbg).
+**The `.xbm` writer landed.** `JackAll.Tools/Xbm/XbmFile.cs` parses standalone and inline `LTMD` and
+writes the container back — 2,379 of 2,379 shipped materials byte-identical — finding the chunk by
+walking the container rather than scanning for its tag. A rewritten material ships and loads in game
+(`mods/vss-vintorez`). The layout, the section order and the one material that repeats a key inside a
+section are documented in [xbm-xbg](/docs/file-formats/xbm-xbg).
+
+What is left is the demo feature it unlocks.
 
 That in turn unlocks the best demo feature in the tool: a **textured 3D preview that honours the mod
 stack**. Every viewer today renders the shipped asset; nothing renders the modded result in context.
@@ -246,15 +246,16 @@ csproj reference: `SugiyamaLayout`, `FcbEditorTabViewModel`, `PropertyRow`, `Sca
 snag is that `MainViewModel` pulls in `System.Windows.Media.Imaging` for exactly one line
 (`Int32Rect`, save thumbnails) — extract that and the app's central view model becomes testable.
 
-Stand up `JackAll.App.Tests` before either large App feature lands, and delete the empty
-`src/JackAll.Core.Tests/` leftover.
+Stand up `JackAll.App.Tests` before either large App feature lands.
 
 ## Not doing, and why
 
-- **A native `.xbg` writer.** Large, and it duplicates an actively-developed Blender add-on that per
-  its own vendored README now covers skeleton export, HKX collision export and full material export.
-  Integrate — a send-to/receive-from-Blender staging path — rather than reimplement. Re-verify those
-  claims first, since our docs contradict them.
+- **A second `.xbg` writer.** Done, and not needed twice: `JackAll.Tools/Xbg/XbgFile.cs` writes
+  containers byte-identically over the retail set, and `fc2model export`/`extract` is the
+  send-to/receive-from-Blender staging path this entry used to propose building. The claims this
+  entry told us to re-verify — skeleton, HKX collision and full material export — belong to the
+  *third-party* vendored importer, not to `tools/BlenderFC2`, which makes none of them; `.hkx` is
+  still unparsed by anything here.
 - **Swapping the Domino graph package.** The Nodify 7.3.0 complaints are real but cosmetic; the
   actual problem is 20,228 wire crossings *after* four Sugiyama sweeps on `a1bu00_storymission`. A
   new package buys styling and virtualization, not readability. If revisited, the order is: UI

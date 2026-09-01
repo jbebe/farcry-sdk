@@ -254,7 +254,7 @@ low-vertex-colour areas *brighter* rather than darker.
 
 ## Step 5 — get the specular right
 
-:::danger[`SpecularColorBase` is a floor under every texel]
+:::danger[`SpecularColorBase` is what every texel gets where the mask asks for nothing]
 This is the one that cost the most time on the VSS, and the render gates cannot see it. The gun
 looked correct in every offline check and came back from the first playtest reading as **one polished
 surface** — stock, receiver and suppressor all equally glossy.
@@ -424,7 +424,8 @@ the **Dragunov's** `spdra`. The framing is wrong by however far those two eyes d
 - **Fit the albedo into a band anchored on the source's own percentiles**, in float, before
   compression.
 - **Match the effective albedo to your donor's level**, not to another mod's absolute number.
-- **`SpecularColorBase` is a floor under every texel.** A chrome weapon's 0.6 makes everything glossy.
+- **`SpecularColorBase` is what a texel gets where the mask's red is low**, so a chrome weapon's 0.6
+  makes the whole surface glossy however the mask is painted. The Dragunov ships 0.043.
 - **A working specular control is bimodal**, and its metal band is what to level — not its mean.
 - **`SpecularPower` is lobe width and low is wide.**
 - **Set `DiffuseColorBase` equal to `DiffuseColor1`** so no condition or vertex channel re-tints.

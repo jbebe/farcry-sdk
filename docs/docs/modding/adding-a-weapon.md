@@ -77,21 +77,26 @@ definition** rather than merging fields. See [entity instancing](../engine-inter
 
 ## The names that matter
 
-Four strings do real work, and only one of them is the archetype path.
+Five strings do real work, and only one of them is the archetype path.
 
 | String | Where | What it drives |
 |---|---|---|
 | `hidName` | every archetype | the library key; what `SpawnEntityFromArchetype` and `archPickupArchetype` reference |
 | `CommonProperties.sName` | `WeaponProperties.*` | the **short code** — picks the HUD icon and the MP kill-message glyph |
-| `CommonProperties.sDisplayName` | `WeaponProperties.*` | the on-screen name, a **literal string, not a localization ID** |
+| `CommonProperties.sDisplayName` | `WeaponProperties.*` | the **HUD** name, a literal string, not a localization ID. It does **not** drive the bazaar name |
 | `CSimpleAnimationComponent.sPartName` | the weapon entity | the **animation key** — what the MOVE graph and `depload` bind clips to |
+| `nameOasis` | the `<Item>` in `gamemodesconfig.xml` | the bazaar, manual, challenge and statistics name — an id into `oasisstrings.rml` |
 
-For the sawed-off those are `WeaponProperties.DLC1.SawedOffShotgun`, `sawedoffshotgun`,
+For the sawed-off the first four are `WeaponProperties.DLC1.SawedOffShotgun`, `sawedoffshotgun`,
 `S-O Shotgun`, and `dlc1_sawedoff_shotgun`.
 
-**Localization is not involved.** `oasisstrings.xml`/`.rml` have zero hits for "sawed" or "crossbow"
-in any of the eleven shipped languages. You only need string-table work if you want a weapon-bazaar
-entry, which uses `WEAPONBAZAAR_<WEAPON>_{CRATE,OPERATION_MANUAL,REPAIR_MANUAL}_{NAME,DESCRIPTION}`.
+**The DLC weapons skipped localization and you can too — but only for the HUD name.**
+`oasisstrings.xml`/`.rml` have zero hits for "sawed" or "crossbow" in any of the eleven shipped
+languages. Anything reaching the weapon bazaar, the manuals, the challenge list or the statistics
+screen *is* localized: the `<Item>` in `engine\gamemodes\gamemodesconfig.xml` carries
+`nameOasis="WEAPONBAZAAR_<WEAPON>_CRATE_NAME"`, resolved against `languages\<lang>\oasisstrings.rml`,
+and `sDisplayName` has no effect there — it was set to an unmistakable canary and the bazaar went on
+showing the vanilla name.
 
 ## Every `Hash` field is CRC32 of its companion string
 
@@ -125,8 +130,11 @@ on nine independent pairs from `WeaponProperties.DLC1.SawedOffShotgun`, all nine
 Two consequences. First, **when you author a new weapon you must write both halves** — the readable
 string *and* its CRC32 — because the engine reads the hash. Second, these are the same CRC32 the
 `.fat` index uses for file paths, so `graphics\gfx\weapons\bullettracer_d.xbt` → `5D831E10` is also
-its archive key; adding new asset paths means appending them to `tools/JackAll/assets/fc2.hashlist`
-and re-running `jackall-cli system hash archiveitems`.
+its archive key. **A new asset path needs no registration anywhere** — `mod build` CRC32s the layer
+path itself and the engine only ever asks for the hash. Appending to
+`tools/JackAll/assets/fc2.hashlist` and re-running `jackall-cli system hash archiveitems` buys one
+thing: `archive extract --names` can name your file afterwards instead of dropping it under
+`_unknown\<hash>`.
 
 Two of these are worth reading twice: the sawed-off's `ammoAmmoType` is CRC32 of **`deserteagle`**
 (it shares the Desert Eagle's ammo pool), and its `HolsterHandle` is CRC32 of **`m79`** (it holsters
@@ -392,8 +400,9 @@ fires on a shipped weapon is a wrong rule.
 
 :::info[Verified in a running game]
 A donated mesh with its own textures and materials, built through `tools/BlenderFC2`, packaged with
-`jackall-cli mod build` and played. Eight files, all overrides of existing paths — no new asset
-paths, so no hashlist entry and no `depload` work.
+`jackall-cli mod build` and played. Eight files, all overrides of existing paths. New paths would
+have been fine too — a texture at an invented path has since been shown to load with no hashlist
+entry and no `depload` work — but overriding kept the first build to one variable.
 :::
 
 The replacement was the DLC1 sawed-off: `dlc1_sawedoff_shotgun.xbg` (all six LODs), its two state
@@ -442,8 +451,12 @@ blended by a per-model mask, so a donated colour texture has nowhere to go and a
 
 - `DiffuseTexture1` → a texture the weapon already owns, with `DiffuseTiling1` set to `1,1` so it
   lands on the model's own UVs instead of tiling.
-- `MaskTexture1` and `MaskTextureBroken` → a control map with **green at 0** so the second tiling
-  layer never blends, and **blue at 1** so the tint weight is full.
+- `MaskTexture1` → a control map with **green at 0** so the rust layer never blends, and **blue at
+  1** so the tint weight is full. Green is the blend weight for `DiffuseTexture2`, which on a weapon
+  material is the game's own rust map, and it is 0 only on the *clean* mask — a shipped broken one
+  averages about 0.40.
+- `MaskTextureBroken` → a **second** control map, at a path you mint, with the rust painted into
+  green. Point it at the same map as `MaskTexture1` and the weapon never looks used at any condition.
 - `DiffuseColorBase` and `DiffuseColor1`, and their `Clean`/`Broken` variants, set so no weapon
   condition re-tints the texture.
 
@@ -452,9 +465,11 @@ to put hue: the texture carries wear and detail, the material carries the colour
 serve a steel receiver and a wooden grip through two materials.
 
 A weapon typically owns exactly two texture paths (its two damage-state masks), which is enough for
-one albedo and one control map, and not enough for a normal map. The cheapest way to rebuild them is
-to swap the PNGs inside a `.fc2model` pack and let the applier re-encode and split the pair; going
-through `jackall-cli xbt extract` / `xbt build` works too but leaves the `_mip0` split to you.
+one albedo and one control map — **but it is not limited to them.** A texture at a path you invent
+loads from `patch.dat` with no hashlist and no `depload` entry, which is how a weapon gets a second
+control map for its degraded look. The cheapest way to rebuild the two it already owns is to swap the
+PNGs inside a `.fc2model` pack and let the applier re-encode and split the pair; going through
+`jackall-cli xbt extract` / `xbt build` works too but leaves the `_mip0` split to you.
 **The replacement may change dimensions** — 512²/1024² was raised to 1024²/2048² and loaded fine, so
 the `_mip0` relationship is "twice the base", not a fixed size.
 
@@ -489,10 +504,10 @@ see, because it is about where you make the cut.
 | **Adding a node or an LOD** | The container [carries either](../file-formats/xbm-xbg.md#a-container-can-be-authored-not-just-edited), but nothing turns a Blender bone into a node or generates a new LOD tier. |
 | **MOVE authoring** | Header, class-ID table, channel table and merge semantics are decoded; per-state record interiors are not. See [move](../file-formats/move.md). |
 | **New `.spk` sound ids** | Only replacement of an existing record is documented; how a new id is minted is not. |
-| **Missing `depload` entries** | Whether an absent asset fails to load, loads late, or is fine has never been tested. |
+| **Missing `depload` entries** | Solved for textures, at least. A texture at a path present in no archive, no hashlist and no `depload` list loads from `patch.dat` and renders — verified with a magenta canary on a weapon material. See [texturing a weapon](./texturing-a-weapon.md#a-weapon-is-not-limited-to-the-texture-paths-it-owns). Whether the same holds for a mesh or a sound is still untested. |
 
 The vendored `tools/third-party/Dunia-Engine-XBG-Blender-Importer/` additionally claims `.xbm`, `.xbt`
-and HKX+MOPP export, which would close the first two rows — but
+and HKX+MOPP export, which would close the `.hkx` row — but
 [xbm-xbg](../file-formats/xbm-xbg.md) records its weapon XBG import as **confirmed broken, reproduced
 on the AK-47 and a 1911**, so re-verify before relying on any of it.
 
@@ -505,7 +520,7 @@ on the AK-47 and a 1911**, so re-verify before relying on any of it.
    byte-identical.
 3. Clone the donor's `.hkx` under the new path — nothing parses it, so the collision shape is the
    donor's whatever the mesh became.
-4. Append the new paths to `tools/JackAll/assets/fc2.hashlist`; run `jackall-cli system hash archiveitems`.
+4. *(Optional, for your own tooling.)* Append the new paths to `tools/JackAll/assets/fc2.hashlist` and run `jackall-cli system hash archiveitems`, so `archive extract --names` can name them later. The game does not need it — a brand-new asset path loads from `patch.dat` on its hash alone.
 5. Author the seven archetypes as FCB fragments. Set `sName` to `dlc1` (or 2–6).
 6. Write **both halves** of every hash-backed field: the string and its exact-case CRC32.
 7. Re-skin `hud_icon_dlc_01.xbt` via `xbt extract` / `xbt build` — it belongs to no model, so it is
