@@ -92,8 +92,11 @@ The donor works in game, so any difference between the two images in the same vi
   the transplant re-run, not new textures.
 - **No normal map.** The weapon owns two texture paths and both are spent, on the albedo and the
   control map. The source's 4096² normal map has nowhere to go without minting a new asset path.
-- **Lethality.** It still tranquilizes: `WeaponStims` / `ImpactStims` are the Dart Rifle's, and the
-  projectile is still `dart.xbg`.
+- **Damage is the Dart Rifle's, deliberately.** `Stim_ImpactDamage.nLevel` is 5 against the
+  Dragunov's 25 and `fPhysImpulse` 10 against 60, so it kills a soft target but does little to a
+  tough one. That is what makes it a stealth weapon rather than a battle rifle, and it is kept.
+  It does **not** tranquilize — an earlier note here said so and was wrong; both hit-location
+  severities are `Kill`, it fires `Bullet` rather than `Projectile`, and no dart is spawned.
 - **Icons.** `sName` is unchanged, so the HUD and bazaar icons are still the dart syringe.
 - **The coarse LOD tiers cost more than the donor's.** LOD3 and LOD4 ship LOD2's budget, 1,428 and
   1,189 against 278 and 96, because this model is some forty disconnected shells and a decimation

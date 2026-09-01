@@ -188,7 +188,7 @@ around it.
 
 ## Stats: what actually changes
 
-The values below are the ones that make a bolt-action tranquilizer rifle behave like a semi-automatic
+The values below are the ones that make a bolt-action silent sniper behave like a semi-automatic
 suppressed marksman rifle. Every one lives on `WeaponProperties.Special.Dart_Rifle`, in **each
 world's** library (see [which library](#which-entity-library-the-game-actually-reads)); the `.Multi`
 twin is multiplayer and does not need them.
@@ -224,9 +224,31 @@ The rule is simple: **whichever weapon's `SCOPE_HI` you are drawing, take that w
 The `sel*` enums are self-describing in the file — each is followed by its own value list — so none
 of these indices has to be guessed. See [adding-a-weapon](./adding-a-weapon.md#weaponproperties--the-stat-archetype).
 
-Beyond the table, making the weapon lethal rather than tranquilizing means rewriting the
-`WeaponStims` / `ImpactStims` blocks and repointing the projectile off `dart.xbg` (a visible dart)
-onto the rifle bullet and tracer. That is the largest single chunk of data work in this build.
+:::note[The Dart Rifle is not a tranquilizer, and earlier versions of this page said it was]
+This section used to claim that making the weapon lethal meant rewriting the `WeaponStims` and
+`ImpactStims` blocks and repointing the projectile off `dart.xbg`, and called it the largest chunk of
+data work in the build. **None of that is needed**, and the archetype says so:
+
+- `selFireStrategy` is `0` = `Bullet`, the same as the Dragunov's. It is not on `Projectile`, so no
+  dart entity is spawned — nothing in either archetype references `props.Props.Dart`, and `xref`
+  finds the model named only by that prop's own archetype and the `depload` lists.
+- `selHitLocation_Torso_Severity` and `_Limb_Severity` are both `4` = **`Kill`**, against the
+  Dragunov's `3` and `2`. With `bSingleHitHealthFailure = True` the Dart Rifle is set *more* lethal
+  per hit than the rifle you would copy from.
+- The visible dart hung off a `Dart_Rifle_DART` bone in the Dart Rifle's own rig. Take a donor's
+  skeleton and it is gone with it.
+
+The real Dart Rifle is a silent one-shot-kill sniper, which is close to what a VSS should be. What
+*is* low is `Stim_ImpactDamage.nLevel`, 5 against the Dragunov's 25, and `fPhysImpulse`, 10 against
+60 — so it kills a soft target but does little to a tough one and barely moves a body.
+:::
+
+:::danger[Do not copy a lethal rifle's stims wholesale]
+`MuzzleStims.fRadius` is what decides how far the AI hears the shot: **2.5 m on the Dart Rifle
+against 150 m on the Dragunov**, with `ImpactStims.fRadius` 2 against 6. That, not `bIsSilent` alone,
+is the suppression. Lift the damage numbers from a loud weapon and you can take its audibility with
+them without noticing until a compound turns on you.
+:::
 
 ### Which entity library the game actually reads
 

@@ -101,6 +101,8 @@ what is left is what a modeler cannot do rather than what is broken.
       forty slivers rather than a gun, and are now floored at LOD2's budget
 - [x] Move `FX_FIRE` to the VSS's muzzle — done through the archetype's baked skeleton, which is
       per-archetype, rather than the rig file, which every world's Dart Rifle still names
-- [ ] VSS: lethality — `WeaponStims`/`ImpactStims` and the projectile off `dart.xbg`
+- [x] VSS: lethality. Measured rather than done — the weapon already kills (`selFireStrategy` is
+      `Bullet`, both hit-location severities are `Kill`, and nothing spawns a dart). Its damage
+      number stays the Dart Rifle's on purpose; a suppressed stealth weapon is what it is for
 - [ ] VSS: HUD and bazaar icons, still the dart syringe because `sName` is unchanged
 - [ ] Find where the weapon-bazaar name comes from; it is not `sDisplayName`
