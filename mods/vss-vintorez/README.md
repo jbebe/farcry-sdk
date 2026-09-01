@@ -13,7 +13,7 @@ mod; those pages are the method.
 
 ## What it changes
 
-Fifteen files, all overrides of paths that already exist.
+Eighteen files, all overrides of paths that already exist.
 
 ```
 mods/graphics/weapons/special/dart_rifle/dart_rifle.xbg     the VSS, all five LOD tiers
@@ -21,9 +21,17 @@ mods/graphics/weapons/special/dart_rifle/dart_rifle.hkx     the Dragunov's colli
 mods/graphics/weapons/special/dart_rifle/dart_rifle_state_01.xbt   the albedo, + _mip0
 mods/graphics/weapons/special/dart_rifle/dart_rifle_state_02.xbt   the control map, + _mip0
 mods/graphics/_materials/FBOIVIN2-M-2007050148031384.xbm    DART_RIFLE_METAL, repointed
+mods/ui/textures/hud/icons_weapons/hud_icon_sniperdart.xbt  the HUD and bazaar icon
+mods/ui/textures/guns/gun_icon_sniperdart.xbt               the multiplayer weapon select
+mods/languages/english/oasisstrings.rml                     the weapon's name, ten strings
 mods/worlds/world1/generated/entitylibrary.fcb/...          four archetype fragments
 mods/worlds/world2/generated/entitylibrary.fcb/...          the same four, per world
 ```
+
+The name and the icons are bound by name in `engine\gamemodes\gamemodesconfig.xml`, so both are
+replacements of what a name points at rather than config edits. The bazaar name is **not**
+`sDisplayName` — it is `nameOasis="WEAPONBAZAAR_DART_RIFLECRATE_NAME"`, resolved against
+`oasisstrings.rml`.
 
 The four fragments are the weapon, its stats, and the two pickups. **The pickups carry their own
 part lists**, so until they were rebuilt from the Dragunov's the weapon on the ground had no barrel
@@ -97,7 +105,10 @@ The donor works in game, so any difference between the two images in the same vi
   tough one. That is what makes it a stealth weapon rather than a battle rifle, and it is kept.
   It does **not** tranquilize — an earlier note here said so and was wrong; both hit-location
   severities are `Kill`, it fires `Bullet` rather than `Projectile`, and no dart is spawned.
-- **Icons.** `sName` is unchanged, so the HUD and bazaar icons are still the dart syringe.
+- **Only English is renamed.** Ten other languages ship `oasisstrings.rml` and still say "Dart
+  Rifle" in the bazaar, the challenge list and the statistics.
+- **`pickups.Weapons.DartRifle_new.Multi.Dropped`** was skipped on the single-player rule, so a
+  dropped VSS in multiplayer still has no barrel.
 - **The coarse LOD tiers cost more than the donor's.** LOD3 and LOD4 ship LOD2's budget, 1,428 and
   1,189 against 278 and 96, because this model is some forty disconnected shells and a decimation
   below that turns it into slivers. Reaching the donor's numbers needs hand-authored low-poly tiers.

@@ -1327,7 +1327,61 @@ Dragunov. Repoint `objGeometryPreload` and the `.glm` with it.
 Then regenerate the boxes from the pack you ship — `tools/misc/weapon-swap/fix_bboxes.ps1` matches
 parts by name and handles a pickup exactly as it does a weapon.
 
+## Naming and icons live outside the archetype entirely
+
+:::info[Answers what this page listed as an open question]
+The weapon-bazaar name is **not** `sDisplayName` — that was set to an unmistakable canary and the
+bazaar went on reading the vanilla name. It comes from `engine\gamemodes\gamemodesconfig.xml`, which
+binds a bazaar crate to a string id and an icon by name:
+
+```xml
+<Item category="weapons" subcategory="special" name="dart rifle crate"
+      nameOasis="WEAPONBAZAAR_DART_RIFLECRATE_NAME"
+      descriptionOasis="WEAPONBAZAAR_DART_RIFLECRATE_DESCRIPTION"
+      availability="1" needsUnlock="1" cost="10" icon="hud_icon_sniperdart"/>
+```
+:::
+
+So renaming a weapon is a string-table edit, and re-skinning its icon is a texture edit. **Neither
+needs a config change**, because both are bound by name and you are replacing what the name points at.
+
+**The text** lives in `languages\<language>\oasisstrings.rml`, which `jackall-cli rml decode` /
+`rml encode` round-trips byte-identically. Ten strings name one weapon, and they are spread across
+five sections — the bazaar crate, both manuals, the item list, the challenge list, three statistics
+entries, and a second copy of the crate name under `Tutorial`. Search by string id rather than by
+value. Eleven languages ship the table; editing one leaves the other ten alone.
+
+:::warning[Edit the copy the game loads]
+`oasisstrings.rml` ships in the **retail patch**, not only in `common.dat`. `mod build` reporting your
+file as `1 overridden` rather than `added` is the confirmation you took the right one.
+:::
+
+**The icons** belong to no model, so they do not travel in a `.fc2model` pack and go through
+`jackall-cli xbt extract` / `xbt build` with the header the extract wrote. A weapon has two, and only
+one of them is single-player:
+
+| Texture | Size | Codec | Drawn by |
+| --- | --- | --- | --- |
+| `ui\textures\hud\icons_weapons\hud_icon_<name>.xbt` | 128×32 | DXT5 | the HUD indicator **and** the bazaar crate |
+| `ui\textures\guns\gun_icon_<name>.xbt` | 256×64 | DXT1 | the multiplayer weapon select |
+
+Neither has a `_mip0` companion, which makes them far simpler than a weapon's own textures.
+
+:::danger[texconv tags every PNG it writes as linear]
+Converting a DDS to PNG for editing, `texconv` stamps `gAMA = 100000` — a declaration that the file
+is linear. The DDS carries no such tag, so a viewer that honours `gAMA` shows the PNG **noticeably
+brighter than the DDS it came from** while the bytes are identical, and `-srgbo` does not suppress it.
+An editor that honours it converts on load and again on save, and then the shift is real.
+
+Strip `gAMA`, `cHRM`, `sRGB` and `iCCP` from the PNG before handing it to anyone. An untagged PNG is
+read as sRGB everywhere. On a cutout icon, check the alpha survived the round trip too — flattened,
+a DXT5 icon draws as a filled box rather than a silhouette.
+:::
+
 ## Open questions
-- Where the weapon-bazaar name comes from. It is **not** `sDisplayName` — that was set to an
-  unmistakable canary and the bazaar still read the vanilla name. Likely `WEAPONBAZAAR_*_NAME` in
-  `oasisstrings`. Unverified.
+
+Nothing outstanding on the path this page describes. The worked example is complete: archetype,
+mesh, textures, LOD tiers, the weapon on the ground, the muzzle socket, its name and its icons.
+
+What is left is what nobody has needed yet — a second material for a part of the body, a normal map
+where a weapon owns no third texture path, and the `.Multi` pickup for multiplayer.

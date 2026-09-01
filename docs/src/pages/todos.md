@@ -104,5 +104,11 @@ what is left is what a modeler cannot do rather than what is broken.
 - [x] VSS: lethality. Measured rather than done — the weapon already kills (`selFireStrategy` is
       `Bullet`, both hit-location severities are `Kill`, and nothing spawns a dart). Its damage
       number stays the Dart Rifle's on purpose; a suppressed stealth weapon is what it is for
-- [ ] VSS: HUD and bazaar icons, still the dart syringe because `sName` is unchanged
-- [ ] Find where the weapon-bazaar name comes from; it is not `sDisplayName`
+- [x] VSS: HUD and bazaar icons. Both redrawn; they are bound by name in `gamemodesconfig.xml`, so
+      replacing the texture is the whole job
+- [x] Find where the weapon-bazaar name comes from; it is not `sDisplayName`. It is
+      `nameOasis="WEAPONBAZAAR_*_NAME"` in `engine\gamemodes\gamemodesconfig.xml`, resolved against
+      `languages\<language>\oasisstrings.rml`. Ten strings name one weapon across five sections
+- [ ] VSS: the other ten languages still say "Dart Rifle"; only English was renamed
+- [ ] VSS: `pickups.Weapons.DartRifle_new.Multi.Dropped`, skipped on the single-player rule, so a
+      dropped VSS in multiplayer still has no barrel
