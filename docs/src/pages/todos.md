@@ -78,4 +78,11 @@ what is left is what a modeler cannot do rather than what is broken.
 
 ## Mod
 
-- [ ] Create our first mod because that was the original plan
+- [x] Create our first mod because that was the original plan — `mods/doom-super-shotgun`, then
+      `mods/vss-vintorez`
+- [ ] VSS: textures. PBR → legacy conversion and `.xbt`; `mods/doom-super-shotgun/scripts/` is the
+      worked precedent
+- [ ] VSS: the pickup archetypes, so the weapon on the ground is complete at close range
+- [ ] VSS: lethality — `WeaponStims`/`ImpactStims` and the projectile off `dart.xbg`
+- [ ] Move `FX_FIRE` to the VSS's muzzle, or author a rig with matching bone order
+- [ ] Find where the weapon-bazaar name comes from; it is not `sDisplayName`

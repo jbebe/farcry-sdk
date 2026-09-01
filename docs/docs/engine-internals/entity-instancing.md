@@ -58,14 +58,38 @@ equivalent function calls `CDlcService::GetEntityLibraries` and passes each path
 call (see [Unknowns](#unknowns)). Their order among themselves is not established, and they load
 after the patch, so a DLC library wins over it.
 
-`entitylibrary_full.fcb` is the **client's** base: the dedicated server binary contains no reference
-to the string anywhere, while the suffix-less library appears in both. Measured over `world1`:
+:::info[Measured in a running game — the flag selects the suffix-less library in single-player]
+Which branch the campaign takes was settled by experiment rather than inference. The same weapon
+archetype was staged into all six single-player containers at once, each carrying a different
+magazine size, and the game was asked which one it saw:
+
+```
+worlds\tmpla\generated\entitylibrary.fcb        21
+worlds\tmpla\generated\entitylibrary_full.fcb   22
+worlds\world1\generated\entitylibrary.fcb       23
+worlds\world1\generated\entitylibrary_full.fcb  24
+worlds\world2\generated\entitylibrary.fcb       25   <- observed, playing act 2
+worlds\world2\generated\entitylibrary_full.fcb  26
+```
+
+So the single-player client takes the **`flag == 0`** branch and reads
+**`worlds\<world>\generated\entitylibrary.fcb`** — the suffix-less library — for the world it is in.
+`_full` is not read, and `tmpla` is not read.
+
+Note this is the opposite of the reading the table below invites. `_full` being absent from the
+dedicated server binary shows it is *not a server* library; it does not follow that it is the
+client's base, because the client can take either branch and in the campaign it takes the other one.
+:::
+
+`entitylibrary_full.fcb` appears only in the client: the dedicated server binary contains no
+reference to the string anywhere, while the suffix-less library appears in both. Measured over
+`world1`:
 
 | library | archetypes | relationship |
 |---|---|---|
-| `worlds\world1\generated\entitylibrary.fcb` | 1,419 | shared by client and server |
-| `worlds\world1\generated\entitylibrary_full.fcb` | 5,566 | client only; strict superset, adds 4,147 |
-| `generated\EntityLibraryPatchOverride.fcb` | 915 | loads last, wins |
+| `worlds\world1\generated\entitylibrary.fcb` | 1,419 | shared by client and server; **what single-player reads** |
+| `worlds\world1\generated\entitylibrary_full.fcb` | 5,566 | strict superset, adds 4,147; not read in single-player |
+| `generated\EntityLibraryPatchOverride.fcb` | 915 | loads last, wins — but see below |
 | `worlds\ige_map\generated\entitylibrary.fcb` | 5,566 | identical content to `_full` |
 
 **121** of the patch override's names are also declared by the world's own library, and **912** of
@@ -76,6 +100,17 @@ The replace-by-name rule also applies *within* one file: `_full`'s 5,735 prototy
 5,566 distinct names, and the 169 redundant nodes belong to **29** names it declares more than once.
 Only the last declaration of each survives the map. The base library and the patch override contain no
 such duplicates.
+
+:::warning[`EntityLibraryPatchOverride.fcb` does not ship in every edition]
+It is **absent from the GOG Fortune's Edition**. That install's `patch.fat` holds 215 entries, its
+only entity library is `worlds\tmpla\generated\entitylibrary.fcb`, and its four hash-only entries are
+208–587-byte XML fragments. The name `generated\entitylibrarypatchoverride.fcb` (`F43E63CB`) is in
+the hashlist, so a present file would have been resolved by name — it is genuinely not there.
+
+The 915-archetype measurement above therefore describes a different edition (the community guides
+reach it through a retail `patch_unpack`). Do not assume the override step exists before checking the
+install in front of you, and do not attribute a dead archetype edit to it.
+:::
 
 ## Instancing merges, it does not replace
 
