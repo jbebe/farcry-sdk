@@ -94,7 +94,13 @@ what is left is what a modeler cannot do rather than what is broken.
 - [ ] Point the doom mod's local build scripts at the pack — `retexture.py`, `unify_materials.py`
       and `verify.py` still import the Python `fc2fmt`, whose format code moved into JackAll, so
       they no longer run as written
-- [ ] VSS: the pickup archetypes, so the weapon on the ground is complete at close range
+- [x] VSS: the pickup archetypes, so the weapon on the ground is complete at close range. Rebuilt
+      from the Dragunov's pickups; `archWeapon` has to be repointed with them or the pickup hands
+      over a Dragunov
+- [x] VSS: the LOD tiers. LOD1/LOD2 were budgeted per cluster instead of per part; LOD3/LOD4 were
+      forty slivers rather than a gun, and are now floored at LOD2's budget
+- [x] Move `FX_FIRE` to the VSS's muzzle — done through the archetype's baked skeleton, which is
+      per-archetype, rather than the rig file, which every world's Dart Rifle still names
 - [ ] VSS: lethality — `WeaponStims`/`ImpactStims` and the projectile off `dart.xbg`
-- [ ] Move `FX_FIRE` to the VSS's muzzle, or author a rig with matching bone order
+- [ ] VSS: HUD and bazaar icons, still the dart syringe because `sName` is unchanged
 - [ ] Find where the weapon-bazaar name comes from; it is not `sDisplayName`

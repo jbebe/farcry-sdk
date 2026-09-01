@@ -13,7 +13,7 @@ mod; those pages are the method.
 
 ## What it changes
 
-Eleven files, all overrides of paths that already exist.
+Fifteen files, all overrides of paths that already exist.
 
 ```
 mods/graphics/weapons/special/dart_rifle/dart_rifle.xbg     the VSS, all five LOD tiers
@@ -21,9 +21,13 @@ mods/graphics/weapons/special/dart_rifle/dart_rifle.hkx     the Dragunov's colli
 mods/graphics/weapons/special/dart_rifle/dart_rifle_state_01.xbt   the albedo, + _mip0
 mods/graphics/weapons/special/dart_rifle/dart_rifle_state_02.xbt   the control map, + _mip0
 mods/graphics/_materials/FBOIVIN2-M-2007050148031384.xbm    DART_RIFLE_METAL, repointed
-mods/worlds/world1/generated/entitylibrary.fcb/...          two archetype fragments
-mods/worlds/world2/generated/entitylibrary.fcb/...          the same two, per world
+mods/worlds/world1/generated/entitylibrary.fcb/...          four archetype fragments
+mods/worlds/world2/generated/entitylibrary.fcb/...          the same four, per world
 ```
+
+The four fragments are the weapon, its stats, and the two pickups. **The pickups carry their own
+part lists**, so until they were rebuilt from the Dragunov's the weapon on the ground had no barrel
+at close range and grew one back at distance — LOD1 and below fold `ACCESSORY02` into `FRAME`.
 
 The mesh was built inside the Dragunov's pack, so it inherited the Dragunov's material table. Its
 body clusters are moved onto `DART_RIFLE_METAL` — a material nothing else uses, already in both
@@ -88,13 +92,12 @@ The donor works in game, so any difference between the two images in the same vi
   the transplant re-run, not new textures.
 - **No normal map.** The weapon owns two texture paths and both are spent, on the albedo and the
   control map. The source's 4096² normal map has nowhere to go without minting a new asset path.
-- **The pickup archetypes.** `pickups.Weapons.DartRifle_new*` keep their own four-part lists, so the
-  weapon on the ground loses its barrel at close range and regains it at distance — the part list is
-  per archetype, and coarser LOD tiers fold `ACCESSORY02` into `FRAME`.
 - **Lethality.** It still tranquilizes: `WeaponStims` / `ImpactStims` are the Dart Rifle's, and the
   projectile is still `dart.xbg`.
 - **Icons.** `sName` is unchanged, so the HUD and bazaar icons are still the dart syringe.
-- **`FX_FIRE`** is at the Dragunov's muzzle, which is further forward than the VSS's.
+- **The coarse LOD tiers cost more than the donor's.** LOD3 and LOD4 ship LOD2's budget, 1,428 and
+  1,189 against 278 and 96, because this model is some forty disconnected shells and a decimation
+  below that turns it into slivers. Reaching the donor's numbers needs hand-authored low-poly tiers.
 
 ## Credit
 

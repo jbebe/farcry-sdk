@@ -602,7 +602,15 @@ ERROR  cluster.too-many-triangles
 
 Retail first-person weapons run **5,018–12,455 triangles at LOD0** across all 21 of them, the
 heaviest being the MGL-140. At 18,153 the VSS clears every format ceiling but sits about 1.5× above
-anything Ubisoft shipped, so LOD0 is being decimated to roughly 11–12k to stay in band.
+anything Ubisoft shipped.
+
+The worked example **ships it undecimated anyway**, at 20,390 including the donor's untouched
+`SCOPE_HI`. That is a deliberate choice rather than an oversight: the first-person viewmodel sits
+half a metre from the camera and never leaves LOD0, so it is the one mesh whose detail the player
+actually looks at, and the retail band is a convention from 2008 hardware rather than a limit
+anything enforces. Decimating it would also mean regenerating the archetype's baked boxes and
+re-verifying the build. **The tiers below it are a different question** — see
+[decimating the tiers](#step-10--the-other-lods).
 
 ## Splitting your model into the donor's parts
 
@@ -1135,6 +1143,16 @@ Repeat steps 3–9 with **LOD** set to 1, 2, 3, 4, each time supplying a decimat
 geometry. Match the donor's triangle counts tier for tier rather than inventing a budget — those are
 what the authored LOD distances were balanced against.
 
+:::warning[Budget by the donor's **part**, not by its cluster]
+A donor spreads a part across several clusters — the Dragunov's `FRAME` at LOD1 is 406 + 422 + 2,198
+— while a transplant draws the whole part through **one**, because a cluster takes one material and
+you only have one. Target the cluster's share and every middle tier lands about a quarter under the
+weapon it replaces, which reads as the model popping harder than the donor at the same distance.
+
+The symptom is easy to misread as the decimator missing: it is not. Ask for 2,198 and Blender returns
+2,198 exactly. Ask for the part's 3,026 and you get that.
+:::
+
 :::danger[The cluster index is not stable between tiers]
 LOD0–3 give `FRAME` three clusters (lens, metal, wood); **LOD4 gives it two**. So slot 1 is metal at
 LOD0 and *wood* at LOD4.
@@ -1149,10 +1167,22 @@ Two practical notes from doing it:
 - **Export chains.** An export edits the pack it came from, so each tier must be imported from the
   pack the previous tier wrote. Start each one from the donor and you will hand back a file
   containing only the last tier's work.
-- **Decimation has a floor.** Blender will not collapse below roughly four faces per disconnected
-  shell. The VSS frame is 40-odd shells, so LOD4 came out at 311 triangles against a target of 57.
-  At that draw distance it costs a few pixels; merging the shells before decimating is the fix if you
-  care.
+- **A decimated model cannot reach a hand-authored budget, and the failure is not subtle.** The
+  donor's coarse tiers are low-poly models somebody made; yours is a collapse of the full-resolution
+  mesh, and a collapse **reduces a disconnected shell to a sliver rather than removing it**. The VSS
+  is some forty shells, so asking for the donor's 278 triangles at LOD3 returns forty slivers — the
+  weapon renders as confetti, not as a simplified gun. It still costs the triangles.
+
+  **Find the coarsest tier that holds together and floor the ones below it there.** On the VSS that
+  is LOD2, so LOD3 and LOD4 ship its budget: 1,428 and 1,189 against the donor's 278 and 96. About
+  1,100 triangles at 8 m and beyond, which is nothing, in exchange for a weapon that reads correctly.
+
+  **Welding the shells together first does not work** — it is the obvious fix and it was measured:
+  LOD3 and LOD4 went *up*, to 814 and 818, because the merged geometry gives the collapse less to
+  work with rather than more.
+
+  You will only see this by rendering the coarse tiers. Nothing numeric distinguishes forty slivers
+  from a simplified gun — both are 353 triangles with zero findings.
 
 :::note[Do not use **Add as New Part** here]
 That operator exists for giving a model a part it never shipped with, and an added part exists only
@@ -1163,26 +1193,19 @@ no slot for, and then accept that it disappears at distance.
 
 ### What the worked example came out at
 
-:::warning[Every offline gate passed, and the build was still wrong]
-The VSS geometry below is transplanted across all five LOD tiers. **LOD0 passes Check with zero
-findings**, and the pack round-trips: exported, re-imported, bounds identical.
+The VSS as shipped, against the Dragunov it replaces. Both are read out of the built packs, and the
+donor's column is what the authored LOD distances were balanced against.
 
-It is also a **four-part** split made before `ACCESSORY02` was known about and before the `SCOPE_HI`
-rule was corrected, so in game it had no suppressor and no working zoom. Keep it as a triangle-budget
-reference, not as a part layout to copy.
-:::
+| Tier | Distance | Dragunov | VSS | |
+| --- | ---: | ---: | ---: | --- |
+| LOD0 | 2 m | 9,926 | 20,390 | the source model, undecimated by choice |
+| LOD1 | 3 m | 3,410 | 3,346 | |
+| LOD2 | 5 m | 1,428 | 1,429 | |
+| LOD3 | 8 m | 278 | 1,428 | floored — see below |
+| LOD4 | 55 m | 96 | 1,189 | floored |
 
-| Tier | FRAME metal | FRAME wood | CLIP | SLIDE | SCOPE_HI | Findings |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: |
-| LOD0 | 15,027 | 2,252 | 318 | 556 | 632 | **0** |
-| LOD1 | 2,369 | 423 | 12 | 272 | — | 4 warnings |
-| LOD2 | 1,102 | 264 | 12 | 76 | — | 4 warnings |
-| LOD3 | 311 | 129 | 10 | 40 | — | 4 warnings |
-| LOD4 | 311 | 41 | — | — | — | 4 warnings |
-
-The LOD1–4 warnings are around 20 `normal.split` and 10 `uv.split` per tier, produced by the
-decimator merging vertices that disagreed. That is inherent to decimation and they are warnings, not
-errors.
+LOD1–4 carry around 20 `normal.split` and 10 `uv.split` findings per tier, produced by the decimator
+merging vertices that disagreed. That is inherent to decimation and they are warnings, not errors.
 
 For scale, the same job done wrong: welding by position alone produced **8,092** `normal.split`
 findings on `FRAME` at LOD0 by itself, and not welding at all stranded **28,676** loose vertices at
@@ -1219,6 +1242,11 @@ Things that are settled, so nobody re-derives them:
   copies must sit in the same place.
 - **A part that exists only at LOD0 folds into `FRAME` below it.** Ship it on its own part at every
   tier and it vanishes at distance.
+- **The pickup archetypes carry their own part lists.** A part the weapon archetype draws is still
+  absent from the weapon on the ground until you rebuild those too.
+- **A decimated model cannot reach a hand-authored coarse budget.** A collapse leaves a sliver per
+  disconnected shell, so floor the coarse tiers at the last one that holds together.
+- **Budget a tier by the donor's part total, not one cluster's share of it.**
 - **Fill every channel the donor's buffer declares**, not the ones your model has. An unsupplied
   channel is left stale rather than cleared, and nothing warns.
 - **A seam is a duplicated vertex.** Merge only where position, normal and UV all agree.
@@ -1243,15 +1271,41 @@ Things that are settled, so nobody re-derives them:
   resolves without touching `CAnimationPackageResource`. That holds because the donor already ships
   in the same worlds — a donor from a world your weapon does not appear in may not be so forgiving.
 - **The Dragunov's magazine-drop trajectory reads fine** with a VSS magazine modelled into it.
+- **An FX socket can be moved without touching the rig.** `FX_FIRE` and `FX_CASING` exist twice: as
+  bones in the `.skeleton`, and as a `<bone>` in the archetype's own baked `<skeleton>`. Editing the
+  baked copy moves the muzzle flash and changes nothing else, which matters because the rig file is
+  **not** yours to rewrite — `fileSkeleton` still names the donor's from every world's archetype
+  including the MP maps, and a rig with different bone transforms handed to clips that address bones
+  by id is the [bone-id trap](#animation-ianimationvalue-and-the-bone-id-trap).
+
+  Place it against the donor's own geometry rather than at your muzzle: the Dragunov's socket sits
+  **7.3 cm behind its muzzle tip**, at the base of the flash hider, and its z matches the bore to
+  within 0.1 mm. Preserving that offset cannot leave the flash hanging in front of the gun.
+
+## The weapon on the ground is a different archetype
+
+:::danger[A part you add to the weapon does not appear on the pickup]
+`pickups.Weapons.<Weapon>_new.Dropped` and `.WeaponStorage` carry **their own baked part lists**. The
+Dart Rifle's names four parts, so a VSS lying on the ground had no barrel or suppressor at close
+range — and grew them back as you walked away, because LOD1 and below fold `ACCESSORY02` into
+`FRAME`. That combination is the signature of this bug and not of a LOD problem.
+:::
+
+Fix it the way the weapon archetype was fixed: **take the donor's entire pickup and change only its
+identity and the model it draws.** That carries the five-part list, and the skeleton that has an
+`ACCESSORY02` bone to hang it on, across in one piece. The identity is three fields — `Name`,
+`hidName`, and `disEntityId` taken from the archetype you are replacing, not the donor's.
+
+:::warning[`archWeapon` is not cosmetic]
+The pickup names the weapon it hands the player. Copy the Dragunov's pickup without repointing
+`archWeapon` from `weapons.Primary.Dragunov` to your own, and picking up your weapon gives you a
+Dragunov. Repoint `objGeometryPreload` and the `.glm` with it.
+:::
+
+Then regenerate the boxes from the pack you ship — `tools/misc/weapon-swap/fix_bboxes.ps1` matches
+parts by name and handles a pickup exactly as it does a weapon.
 
 ## Open questions
-
-- Whether to keep `fileSkeleton` pointed at the donor's rig or author one with matching bone order.
-  The donor's rig puts `FX_FIRE` at the **Dragunov's** muzzle, which is 34 cm further forward than the
-  VSS's, so the muzzle flash is out in front of the suppressor.
-- The pickup archetypes (`pickups.Weapons.<Weapon>_new` and its `.Dropped`, `.WeaponStorage` and
-  `.Multi` variants) carry their **own** part lists, so a part you add to the weapon archetype does
-  not appear on the ground until you add it there too. Untouched here.
 - Where the weapon-bazaar name comes from. It is **not** `sDisplayName` — that was set to an
   unmistakable canary and the bazaar still read the vanilla name. Likely `WEAPONBAZAAR_*_NAME` in
   `oasisstrings`. Unverified.
