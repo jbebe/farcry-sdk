@@ -1,0 +1,203 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">Special.Dart_Rifle</value>
+      <object type="Entity">
+        <value name="hidName" type="String">weapons.Special.Dart_Rifle</value>
+        <value name="disEntityId" type="Int64">5701</value>
+        <value hash="D2B3429E" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">4</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value hash="2A7BCA49" type="String">graphics\weapons\special\sniper_dragunov\dragunov.xml</value>
+            <value name="fileName" type="Hash">0B5CFE53</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <object index="0" meshName="CLIP" boneName="CLIP" bboxMin="-0.01439,-0.075259,-0.000331" bboxMax="0.014395,0.0115,0.085239" />
+                  <object index="1" meshName="FRAME" boneName="FRAME" bboxMin="-0.035379,-0.118269,0.025879" bboxMax="0.050941,0.559418,0.252624" />
+                  <object index="2" meshName="SCOPE_HI" boneName="SCOPE_HI" bboxMin="-0.029298,-0.178961,-0.00354" bboxMax="0.020142,-0.087649,0.0459" />
+                  <object index="3" meshName="SLIDE" boneName="SLIDE" bboxMin="-0.011096,-0.22151,0.027176" bboxMax="0.009878,-0.149781,0.04815" />
+                  <object index="4" meshName="ACCESSORY02" boneName="ACCESSORY02" bboxMin="-0.021738,-0.482497,-0.072687" bboxMax="0.021738,0.148617,0.033838" />
+                  <resource fileName="graphics\Weapons\Special\Dart_Rifle\Dart_Rifle.xbg" bboxMin="-0.036916,-0.3103,-0.066944" bboxMax="0.052396,0.631498,0.168957" />
+                  <skeleton name="Dragunov" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="CLIP" pos="-2e-006,0.206563,-0.052321" rot="1,0,0,0" />
+                    <bone name="FRAME" pos="-2e-006,-0.192031,-0.092823" rot="1,0,0,0" />
+                    <bone name="FX_Casing" pos="0.009994,0.216002,0.067115" rot="0.67438,0.212631,0.212631,0.67438" />
+                    <bone name="FX_FIRE" pos="-1.3e-005,0.902816,0.069808" rot="1,0,0,0" />
+                    <bone name="SCOPE_HI" pos="0.004584,0.102614,0.104865" rot="1,0,0,0" />
+                    <bone name="SLIDE" pos="-0.023556,0.254234,0.077033" rot="1,0,0,0" />
+                    <bone name="ACCESSORY02" pos="0,0.482497,0.072687" rot="1,0,0,0" />
+                    <bone name="Weapon_Break" pos="0,0,0" rot="1,0,0,0" />
+                  </skeleton>
+                </component>
+                <component class="RigidPhysComponent">
+                  <resource fileName="graphics\Weapons\Special\Dart_Rifle\Dart_Rifle.hkx" />
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000501</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value hash="BF9B3A5C" type="String">graphics\weapons\special\dart_rifle\dart_rifle.xbg</value>
+              <value name="objModel" type="Hash">450E50CA</value>
+              <value name="hidMeshName" type="String">CLIP</value>
+              <value hash="E1A0EE56" type="String">CLIP</value>
+              <value name="hidNodeName" type="Hash">9BB5F9D3</value>
+              <value hash="0D9C8B1A" type="String">CLIP_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">00B20B5C</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">1</value>
+              <value hash="BF9B3A5C" type="String">graphics\weapons\special\dart_rifle\dart_rifle.xbg</value>
+              <value name="objModel" type="Hash">450E50CA</value>
+              <value name="hidMeshName" type="String">FRAME</value>
+              <value hash="E1A0EE56" type="String">FRAME</value>
+              <value name="hidNodeName" type="Hash">42ACFE7D</value>
+              <value hash="0D9C8B1A" type="String">FRAME_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">117FF4BB</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">2</value>
+              <value hash="BF9B3A5C" type="String">graphics\weapons\special\dart_rifle\dart_rifle.xbg</value>
+              <value name="objModel" type="Hash">450E50CA</value>
+              <value name="hidMeshName" type="String">SCOPE_HI</value>
+              <value hash="E1A0EE56" type="String">SCOPE_HI</value>
+              <value name="hidNodeName" type="Hash">F1FFCE61</value>
+              <value hash="0D9C8B1A" type="String">SCOPE_HI_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">E5561B0B</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">3</value>
+              <value hash="BF9B3A5C" type="String">graphics\weapons\special\dart_rifle\dart_rifle.xbg</value>
+              <value name="objModel" type="Hash">450E50CA</value>
+              <value name="hidMeshName" type="String">SLIDE</value>
+              <value hash="E1A0EE56" type="String">SLIDE</value>
+              <value name="hidNodeName" type="Hash">85BB2CD2</value>
+              <value hash="0D9C8B1A" type="String">SLIDE_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">F2877992</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">4</value>
+              <value hash="BF9B3A5C" type="String">graphics\weapons\special\dart_rifle\dart_rifle.xbg</value>
+              <value name="objModel" type="Hash">450E50CA</value>
+              <value name="hidMeshName" type="String">ACCESSORY02</value>
+              <value hash="E1A0EE56" type="String">ACCESSORY02</value>
+              <value name="hidNodeName" type="Hash">D8D2CBA5</value>
+              <value hash="0D9C8B1A" type="String">ACCESSORY02_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">BACEEF7A</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CSimpleAnimationComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value hash="F9F2D5F4" type="String">graphics\weapons\special\sniper_dragunov\dragunov_ref.skeleton</value>
+            <value name="fileSkeleton" type="Hash">1BF80FFB</value>
+            <value name="sPartName" type="String">dragunov</value>
+          </object>
+          <object type="CFCXWeapon">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="iAnimationValue" type="UInt32">23</value>
+            <value name="sndswtpWeaponStatusSoundSwitchType" type="Hash">00000004</value>
+            <value name="WeaponStatusSwitchValues" type="Rml">
+              <WeaponStatusSwitchValues Failure="4294967295" LowReliability="4294967295" MediumReliability="4294967295" HighReliability="4294967295" />
+            </value>
+            <value name="bUseHiResScope" type="Bool">True</value>
+            <value name="fHiResLowResScopeSwitchTransitionPoint" type="Float">0.99</value>
+            <object type="FireStrategy" />
+            <object type="ReliabilityLevelsData">
+              <object type="Failure">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.8</value>
+                <value name="fVerticalRecoilPerShot" type="Float">1.75</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.16</value>
+              </object>
+              <object type="Low">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.7</value>
+                <value name="fVerticalRecoilPerShot" type="Float">1.5</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.08</value>
+              </object>
+              <object type="Medium">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.6</value>
+                <value name="fVerticalRecoilPerShot" type="Float">1.25</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0.04</value>
+              </object>
+              <object type="High">
+                <value name="fHorizontalRecoilPerShot" type="Float">0.5</value>
+                <value name="fVerticalRecoilPerShot" type="Float">1</value>
+                <value name="fBulletDeviationMax" type="Float">0</value>
+                <value name="fJamProbabilityPerReload" type="Float">0</value>
+              </object>
+            </object>
+          </object>
+          <object type="CWeaponNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+          </object>
+          <object type="CCountersComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="archStimEffectTable" type="String">tables.StimEffectTables.WeaponDefault</value>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">2</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>

@@ -1,0 +1,726 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">Special.Dart_Rifle</value>
+      <object type="Entity">
+        <value name="hidName" type="String">WeaponProperties.Special.Dart_Rifle</value>
+        <value name="disEntityId" type="Int64">5529</value>
+        <value hash="D2B3429E" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">0</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CWeaponProperties">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <object type="CommonProperties">
+              <value name="sName" type="String">Dart_Rifle</value>
+              <value name="sDisplayName" type="String">VSS Vintorez</value>
+              <value name="fReloadTime" type="Float">0</value>
+              <value name="bAutoReload" type="Bool">True</value>
+              <value name="bIsSilent" type="Bool">True</value>
+              <value name="bVisibleHolstered" type="Bool">True</value>
+              <value name="bEmitLight" type="Bool">False</value>
+              <value name="selReloadType" type="UInt32">0</value>
+              <value name="selWeaponClass" type="UInt32">5</value>
+              <value name="selFireStrategy" type="UInt32">0</value>
+              <value name="selReticleType" type="UInt32">0</value>
+              <value name="crosshairMagmaAreaName" type="String"></value>
+              <value name="iBaseAccuracyLevel" type="UInt32">1</value>
+              <value name="fRange" type="Float">400</value>
+              <value name="vectorEffectiveRange" type="Vector2">
+                <x>60</x>
+                <y>80</y>
+              </value>
+              <value name="vectorEffectiveRangeIS" type="Vector2">
+                <x>80</x>
+                <y>100</y>
+              </value>
+              <value name="fUnjamTime" type="Float">4.4</value>
+              <value name="selJamType" type="UInt32">0</value>
+              <value name="iClipsForSelfDestruct" type="UInt32">20</value>
+              <value name="bIsIndestructible" type="Bool">False</value>
+              <value name="bIsBreakable" type="Bool">True</value>
+              <value name="fLookSensitivityFactor" type="Float">1</value>
+              <value name="fMoveSpeedFactor" type="Float">1</value>
+              <value name="fForcedReliability" type="Float">0</value>
+              <value name="fInitialJamCounter" type="Float">0</value>
+              <value name="archPickupArchetype" type="String">pickups.Weapons.DartRifle_new.Dropped</value>
+              <value name="fShootingAngle" type="Float">40</value>
+              <value name="fShootingIronsightAngle" type="Float">70</value>
+              <value name="bSingleHitHealthFailure" type="Bool">True</value>
+              <value name="fHealthFailureChanceModifier" type="Float">1</value>
+              <value name="selHitLocation_Torso_Severity" type="UInt32">4</value>
+              <value name="selHitLocation_Limb_Severity" type="UInt32">4</value>
+              <value name="selCategory" type="UInt32">3</value>
+              <value hash="E0FF29E0" type="String"></value>
+              <value name="HolsterHandle" type="Hash">FFFFFFFF</value>
+              <object type="enumReloadType">
+                <object type="enum">
+                  <value name="Value" type="String">Magazine</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Bullet</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">None</value>
+                </object>
+              </object>
+              <object type="enumWeaponClass">
+                <object type="enum">
+                  <value name="Value" type="String">Machete</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Pistol</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Assault</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">SMG</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Shotgun</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Sniper</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">LMG</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">RPG</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">CarlGustav</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Flamethrower</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Mortar</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">IED</value>
+                </object>
+              </object>
+              <object type="enumFireStrategy">
+                <object type="enum">
+                  <value name="Value" type="String">Bullet</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Melee</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Flame</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Mortar</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Projectile</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">IED</value>
+                </object>
+              </object>
+              <object type="enumReticleType">
+                <object type="enum">
+                  <value name="Value" type="String">Type1</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Type2</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Type3</value>
+                </object>
+              </object>
+              <object type="FireRate">
+                <value name="fBusyDuration" type="Float">0</value>
+                <value name="iFireRate" type="Float">85</value>
+                <value name="selFireRateMode" type="UInt32">0</value>
+                <object type="enumFireRateMode">
+                  <object type="enum">
+                    <value name="Value" type="String">SingleShot</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">FullAuto</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">PrepareShot</value>
+                  </object>
+                </object>
+              </object>
+              <object type="Ammo">
+                <value hash="AB258E09" type="String">sniperrifle</value>
+                <value name="ammoAmmoType" type="Hash">7D6BD5F2</value>
+                <value name="iAmmoInClip" type="Int32">10</value>
+                <value name="iMaxAmmoCasual" type="Int32">40</value>
+                <value name="iMaxAmmoExperimented" type="Int32">20</value>
+                <value name="iMaxAmmoHardcore" type="Int32">20</value>
+                <value name="iMaxAmmoInfamous" type="Int32">10</value>
+                <value name="bUsesClips" type="Bool">True</value>
+                <value name="bIsAmmoVisible" type="Bool">False</value>
+              </object>
+              <object type="Recoil">
+                <value name="iRecoilRecoveryLevel" type="Int32">5</value>
+                <value name="fRecoilAchieveTime" type="Float">0.05</value>
+                <value name="fRecoilAnimationWeight" type="Float">1</value>
+                <value name="fRecoilMax" type="Float">45</value>
+                <object type="RecoilIK">
+                  <value name="fIKRecoilBurstSpeedIn" type="Float">0</value>
+                  <value name="fIKRecoilBurstPitchRandom" type="Float">0</value>
+                  <value name="fIKRecoilBurstSpeedOut" type="Float">0</value>
+                  <value name="fIKRecoilBurstPitchRate" type="Float">0</value>
+                  <value name="vIKRecoilBurstOffset" type="Vector3">
+                    <x>0</x>
+                    <y>0</y>
+                    <z>0</z>
+                  </value>
+                </object>
+              </object>
+              <object type="IronSight">
+                <value name="fMoveSpeedFactor" type="Float">0.5</value>
+                <value name="bCanIronsight" type="Bool">True</value>
+                <value name="fLookSensitivityFactor" type="Float">0.091</value>
+                <value name="fIronsightFOV" type="Float">0.28</value>
+                <value name="fIronsightTransitionTime" type="Float">0.4</value>
+                <value name="fIronsightRecoilFactor" type="Float">1</value>
+                <value name="fIronsightPrepareDelay" type="Float">900</value>
+                <value name="bIronsightCanPrepare" type="Bool">False</value>
+                <value name="archTransitionCurve" type="String">weapons.AimCurves.SniperFOVCurve</value>
+                <value name="archAnimPlaybackCurve" type="String"></value>
+                <value hash="D553AED0" type="String">ironsightfx</value>
+                <value name="IronsightFX" type="Hash">ED63A53E</value>
+              </object>
+              <object type="enumJamType">
+                <object type="enum">
+                  <value name="Value" type="String">Jam</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Malfunction</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">StrategyManaged</value>
+                </object>
+              </object>
+              <object type="AIShootingSystem">
+                <value name="archTargetDistanceCurve" type="String">Curves.ShootingSystem.DistanceAccuracy</value>
+                <value name="archSuccessfulHitCurve" type="String">Curves.ShootingSystem.SuccessfulHit</value>
+                <value name="fSuccessfulBulletHitTimer" type="Float">1</value>
+                <value name="nForcedFailureMinCausal" type="UInt32">0</value>
+                <value name="nForcedFailureMaxCausal" type="UInt32">0</value>
+                <value name="nForcedFailureMinExperimented" type="UInt32">0</value>
+                <value name="nForcedFailureMaxExperimented" type="UInt32">0</value>
+                <value name="nForcedFailureMinHardcore" type="UInt32">0</value>
+                <value name="nForcedFailureMaxHardcore" type="UInt32">0</value>
+                <value name="nForcedFailureMinInfamous" type="UInt32">0</value>
+                <value name="nForcedFailureMaxInfamous" type="UInt32">0</value>
+                <value name="fBurstLengthLong_Max" type="Float">1.2</value>
+                <value name="fBurstLengthLong_Min" type="Float">0.8</value>
+                <value name="fBurstLengthMid_Max" type="Float">0.8</value>
+                <value name="fBurstLengthMid_Min" type="Float">0.5</value>
+                <value name="fBurstLengthShort_Max" type="Float">0.5</value>
+                <value name="fBurstLengthShort_Min" type="Float">0.3</value>
+                <value name="fBurstWaitLong_Max" type="Float">1.2</value>
+                <value name="fBurstWaitLong_Min" type="Float">0.8</value>
+                <value name="fBurstWaitMid_Max" type="Float">0.8</value>
+                <value name="fBurstWaitMid_Min" type="Float">0.5</value>
+                <value name="fBurstWaitShort_Max" type="Float">0.5</value>
+                <value name="fBurstWaitShort_Min" type="Float">0.3</value>
+              </object>
+              <object type="enumHitLocation_Torso_Severity">
+                <object type="enum">
+                  <value name="Value" type="String">Normal_Damage</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">HealthFailureLevel_1</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">HealthFailureLevel_2</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">HealthFailureLevel_3</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Kill</value>
+                </object>
+              </object>
+              <object type="enumHitLocation_Limb_Severity">
+                <object type="enum">
+                  <value name="Value" type="String">Normal_Damage</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">HealthFailureLevel_1</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">HealthFailureLevel_2</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">HealthFailureLevel_3</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Kill</value>
+                </object>
+              </object>
+              <object type="enumCategory">
+                <object type="enum">
+                  <value name="Value" type="String">Hand To Hand</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Primary</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Secondary</value>
+                </object>
+                <object type="enum">
+                  <value name="Value" type="String">Special</value>
+                </object>
+              </object>
+              <object type="AICurve">
+                <value name="archDamageMultiplierVisibleCurve" type="String"></value>
+                <value name="archDamageMultiplierNotVisibleCurve" type="String"></value>
+                <value name="archPrimaryBulletChanceOfSuccessCurve" type="String"></value>
+                <value name="archSecondaryBulletChanceOfSuccessCurve" type="String"></value>
+              </object>
+            </object>
+            <object type="FireStrategyProperties">
+              <value name="bUseAngleSpread" type="Bool">False</value>
+              <value name="iBulletsShot" type="UInt32">1</value>
+              <value name="iBurstLength" type="UInt32">0</value>
+              <value name="fAngleYawBulletSpread" type="Float">0</value>
+              <value name="fAnglePitchBulletSpread" type="Float">0</value>
+              <value name="bHasMuzzleLight" type="Bool">False</value>
+              <value hash="F8F5F0F8" type="String">Weapon.MetalShellSmall</value>
+              <value name="matimpShellImpactFx" type="Hash">A7CC9C1C</value>
+              <value hash="EB8DE264" type="String">Weapon.Bullet</value>
+              <value name="matimpBulletImpactFx" type="Hash">792B8A0E</value>
+              <value hash="74A94828" type="String">Weapon.Bullet</value>
+              <value name="matimpSecondaryBulletImpactFx" type="Hash">792B8A0E</value>
+              <object type="Network">
+                <value name="strControllerNetobjectType" type="String"></value>
+              </object>
+              <object type="Stim_ImpactDamage">
+                <value name="hidEventName" type="String">Stims</value>
+                <value name="eventMask" type="UInt32">2</value>
+                <value name="hidTargetEntityId" type="Int64">-1</value>
+                <value hash="FC25E1F1" type="String">BulletImpact</value>
+                <value name="sDetail" type="Hash">AB3FB98A</value>
+                <value name="selType" type="UInt32">3</value>
+                <value name="nLevel" type="UInt32">5</value>
+                <value name="hidShowType" type="Bool">True</value>
+                <value name="hidShowRadius" type="Bool">False</value>
+                <value name="fPhysImpulse" type="Float">10</value>
+                <object type="enumType">
+                  <object type="enum">
+                    <value name="Value" type="String">None</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Bang</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Snap</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Pierce</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Crush</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Cut</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Health</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Burn</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Water</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Panic</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Fear</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Morale</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Dirt</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Reliability</value>
+                  </object>
+                  <object type="enum">
+                    <value name="Value" type="String">Interest</value>
+                  </object>
+                </object>
+              </object>
+              <object type="MuzzleStims">
+                <object type="Stims">
+                  <object type="Stim">
+                    <value name="selStimType" type="UInt32">0</value>
+                    <value name="hidEventName" type="String">Stims</value>
+                    <value name="eventMask" type="UInt32">2</value>
+                    <value name="hidTargetEntityId" type="Int64">-1</value>
+                    <value hash="FC25E1F1" type="String"></value>
+                    <value name="sDetail" type="Hash">FFFFFFFF</value>
+                    <value name="selType" type="UInt32">1</value>
+                    <value name="nLevel" type="UInt32">2</value>
+                    <value name="fRadius" type="Float">2.5</value>
+                    <value name="bFalloff" type="Bool">True</value>
+                    <value name="nFalloffMinLevel" type="UInt32">1</value>
+                    <value name="hidShowType" type="Bool">True</value>
+                    <value name="hidShowRadius" type="Bool">True</value>
+                    <object type="enumStimType">
+                      <object type="enum">
+                        <value name="Value" type="String">Generic</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">BulletHit</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Explosion</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">None</value>
+                      </object>
+                    </object>
+                    <object type="enumType">
+                      <object type="enum">
+                        <value name="Value" type="String">None</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Bang</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Snap</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Pierce</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Crush</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Cut</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Health</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Burn</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Water</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Panic</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Fear</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Morale</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Dirt</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Reliability</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Interest</value>
+                      </object>
+                    </object>
+                  </object>
+                  <object type="Stim">
+                    <value name="selStimType" type="UInt32">3</value>
+                    <object type="enumStimType">
+                      <object type="enum">
+                        <value name="Value" type="String">Generic</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">BulletHit</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Explosion</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">None</value>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+              </object>
+              <object type="WeaponStims">
+                <object type="Stims">
+                  <object type="Stim">
+                    <value name="selStimType" type="UInt32">3</value>
+                    <object type="enumStimType">
+                      <object type="enum">
+                        <value name="Value" type="String">Generic</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">BulletHit</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Explosion</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">None</value>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+              </object>
+              <object type="ImpactStims">
+                <object type="Stims">
+                  <object type="Stim">
+                    <value name="selStimType" type="UInt32">0</value>
+                    <value name="hidEventName" type="String">Stims</value>
+                    <value name="eventMask" type="UInt32">2</value>
+                    <value name="hidTargetEntityId" type="Int64">-1</value>
+                    <value hash="FC25E1F1" type="String"></value>
+                    <value name="sDetail" type="Hash">FFFFFFFF</value>
+                    <value name="selType" type="UInt32">1</value>
+                    <value name="nLevel" type="UInt32">2</value>
+                    <value name="fRadius" type="Float">2</value>
+                    <value name="bFalloff" type="Bool">True</value>
+                    <value name="nFalloffMinLevel" type="UInt32">1</value>
+                    <value name="hidShowType" type="Bool">True</value>
+                    <value name="hidShowRadius" type="Bool">True</value>
+                    <object type="enumStimType">
+                      <object type="enum">
+                        <value name="Value" type="String">Generic</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">BulletHit</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Explosion</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">None</value>
+                      </object>
+                    </object>
+                    <object type="enumType">
+                      <object type="enum">
+                        <value name="Value" type="String">None</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Bang</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Snap</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Pierce</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Crush</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Cut</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Health</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Burn</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Water</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Panic</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Fear</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Morale</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Dirt</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Reliability</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Interest</value>
+                      </object>
+                    </object>
+                  </object>
+                  <object type="Stim">
+                    <value name="selStimType" type="UInt32">3</value>
+                    <object type="enumStimType">
+                      <object type="enum">
+                        <value name="Value" type="String">Generic</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">BulletHit</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Explosion</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">None</value>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+              </object>
+              <object type="VictimStims">
+                <object type="Stims">
+                  <object type="Stim">
+                    <value name="selStimType" type="UInt32">3</value>
+                    <object type="enumStimType">
+                      <object type="enum">
+                        <value name="Value" type="String">Generic</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">BulletHit</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Explosion</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">None</value>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+              </object>
+              <object type="RangeMultipliers">
+                <object type="RangeMultiplierCasual">
+                  <object type="RangeMultiplierDifficulty">
+                    <object type="RangeMultiplier">
+                      <value name="iMultiplier" type="Int32">0</value>
+                      <value name="fMinRange" type="Float">0</value>
+                      <value name="fMaxRange" type="Float">0</value>
+                    </object>
+                  </object>
+                </object>
+                <object type="RangeMultiplierExperimented">
+                  <object type="RangeMultiplierDifficulty">
+                    <object type="RangeMultiplier">
+                      <value name="iMultiplier" type="Int32">0</value>
+                      <value name="fMinRange" type="Float">0</value>
+                      <value name="fMaxRange" type="Float">0</value>
+                    </object>
+                  </object>
+                </object>
+                <object type="RangeMultiplierHardcore">
+                  <object type="RangeMultiplierDifficulty">
+                    <object type="RangeMultiplier">
+                      <value name="iMultiplier" type="Int32">0</value>
+                      <value name="fMinRange" type="Float">0</value>
+                      <value name="fMaxRange" type="Float">0</value>
+                    </object>
+                  </object>
+                </object>
+                <object type="RangeMultiplierInfamous">
+                  <object type="RangeMultiplierDifficulty">
+                    <object type="RangeMultiplier">
+                      <value name="iMultiplier" type="Int32">0</value>
+                      <value name="fMinRange" type="Float">0</value>
+                      <value name="fMaxRange" type="Float">0</value>
+                    </object>
+                  </object>
+                </object>
+              </object>
+              <object type="Sounds">
+                <value name="sndEmptyWeapon" type="String">0x004493A1</value>
+                <value name="sndtpEmptyWeaponType" type="Int32">9</value>
+                <value name="sndPassByWizz" type="String">0xFFFFFFFF</value>
+                <value name="fPassByWizzTiming" type="Float">0.15</value>
+                <value name="sndHitPlayerSound" type="String">0xFFFFFFFF</value>
+                <value name="sndtpHitPlayerSoundType" type="Int32">-1</value>
+                <value name="sndHitPlayerHeadSound" type="String">0xFFFFFFFF</value>
+                <value name="sndtpHitPlayerHeadSoundType" type="Int32">-1</value>
+                <value name="sndmlDistanceFromShootingSoundToPlayerMultilayer" type="Hash">FFFFFFFF</value>
+                <value name="sndSingleBulletShot" type="String">0x004BF5EA</value>
+                <value name="sndSingleBulletShotEcho" type="String">0xFFFFFFFF</value>
+                <value name="sndtpSingleBulletShotType" type="Int32">8</value>
+                <object type="ThirdPerson">
+                  <value name="sndSingleBulletShot" type="String">0x004BF5EB</value>
+                  <value name="sndtpSingleBulletShotType" type="Int32">9</value>
+                  <value name="sndStartAutoBulletShot" type="String">0xFFFFFFFF</value>
+                  <value name="sndStopAutoBulletShot" type="String">0xFFFFFFFF</value>
+                  <value name="sndtpAutoBulletShotType" type="Int32">-1</value>
+                </object>
+              </object>
+              <object type="Particles">
+                <value hash="B171F78F" type="String">weapons.weapons.pl_muzzleflash_sniper_riffle</value>
+                <value name="psMuzzleParticlesId" type="Hash">4A671433</value>
+                <value hash="4C222D81" type="String"></value>
+                <value name="psMuzzleParticlesId_3rd" type="Hash">FFFFFFFF</value>
+                <value hash="415C9112" type="String">FX_FIRE</value>
+                <value name="MuzzleBone" type="Hash">AF2676DA</value>
+                <value hash="90665ACB" type="String"></value>
+                <value name="psBulletCaseParticleId" type="Hash">FFFFFFFF</value>
+                <value hash="B395D9E0" type="String">bullet_impact.bullet_impact.b_imp_water</value>
+                <value name="psBulletUnderwaterId" type="Hash">19CB9FE7</value>
+                <value hash="13E1DBD8" type="String">FX_Casing</value>
+                <value name="BulletCaseBone" type="Hash">2365743E</value>
+                <value hash="2A092EF9" type="String"></value>
+                <value name="psShineParticleId" type="Hash">FFFFFFFF</value>
+              </object>
+              <object type="FirstPerson">
+                <value name="fBulletSpread_MovementModifier" type="Float">1.75</value>
+                <value name="fBulletSpread_StabilizationTime" type="Float">1</value>
+                <value name="fBulletSpread_MinimumSpreadPercentage" type="Float">0.3</value>
+                <object type="BulletSpread">
+                  <value name="fAmplitude" type="Float">1.5</value>
+                  <value name="fFrequency" type="Float">5</value>
+                </object>
+                <object type="BulletSpread_IronSight">
+                  <value name="fAmplitude" type="Float">0</value>
+                  <value name="fFrequency" type="Float">0</value>
+                </object>
+                <object type="BulletSpreadCrouch">
+                  <value name="fAmplitude" type="Float">1.3</value>
+                  <value name="fFrequency" type="Float">5</value>
+                </object>
+                <object type="BulletSpreadCrouch_IronSight">
+                  <value name="fAmplitude" type="Float">0</value>
+                  <value name="fFrequency" type="Float">0</value>
+                </object>
+                <object type="BulletSpreadJump">
+                  <value name="fAmplitude" type="Float">2.5</value>
+                  <value name="fFrequency" type="Float">5</value>
+                </object>
+              </object>
+              <object type="BulletTracer">
+                <value hash="3924E150" type="String">graphics\gfx\weapons\bullettracer_d.xbt</value>
+                <value name="texTexture" type="Hash">5D831E10</value>
+                <value hash="FBF9F7A6" type="String"></value>
+                <value name="texTextureDistortion" type="Hash">FFFFFFFF</value>
+                <value name="fSpeed" type="Float">400</value>
+                <value name="fLength" type="Float">10</value>
+                <value name="fLengthDistortion" type="Float">50</value>
+                <value name="fWidth" type="Float">0.03</value>
+                <value name="fOffset" type="Float">0</value>
+                <value name="iFrequency" type="Int32">1</value>
+              </object>
+            </object>
+          </object>
+        </object>
+      </object>
+    </object>
