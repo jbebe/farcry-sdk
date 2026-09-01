@@ -35,6 +35,13 @@ package won't fix the real problem (20,228 wire crossings after layout).
 - [ ] Review the Domino viewer because it needs a lot of improvements
   - Review code
   - Revamp the visual interface, find a good graph wpf package
+- [ ] **Nothing writes into a `.fc2model`.** `fc2model` has `export`/`extract`/`inspect` only, so
+      retexturing a weapon means hand-editing the pack's JSON — which is what
+      [texturing a replaced weapon](/farcry-sdk/docs/modding/texturing-a-weapon) currently
+      prescribes. `Fc2ModelBundle` and `MaterialDocument` already model everything a
+      `fc2model set-material` / `set-texture` pair would need. Worth building when a third mod wants
+      it; the mesh half stays a per-mod script, because appending a material and skipping `SCOPE_HI`
+      is policy rather than a generic operation.
 
 ## Tools/BlenderFC2
 
@@ -80,8 +87,13 @@ what is left is what a modeler cannot do rather than what is broken.
 
 - [x] Create our first mod because that was the original plan — `mods/doom-super-shotgun`, then
       `mods/vss-vintorez`
-- [ ] VSS: textures. PBR → legacy conversion and `.xbt`; `mods/doom-super-shotgun/scripts/` is the
-      worked precedent
+- [x] VSS: textures. Done and confirmed in game; the method is
+      [texturing a replaced weapon](/farcry-sdk/docs/modding/texturing-a-weapon)
+- [ ] VSS: split the body into steel and stock materials, so the stock stops sharing the steel's
+      specular response. Needs the transplant re-run, not new textures
+- [ ] Point the doom mod's local build scripts at the pack — `retexture.py`, `unify_materials.py`
+      and `verify.py` still import the Python `fc2fmt`, whose format code moved into JackAll, so
+      they no longer run as written
 - [ ] VSS: the pickup archetypes, so the weapon on the ground is complete at close range
 - [ ] VSS: lethality — `WeaponStims`/`ImpactStims` and the projectile off `dart.xbg`
 - [ ] Move `FX_FIRE` to the VSS's muzzle, or author a rig with matching bone order

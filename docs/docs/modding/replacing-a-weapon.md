@@ -10,8 +10,8 @@ correct model, correct animation set, semi-automatic, ten rounds, and a scope th
 `mods/vss-vintorez` in this repo, with its build scripts and reference renders beside it.
 
 Everything below is measured or traced, and says which. Where a step is specific to that weapon pair
-it says so; the reasoning is written to transfer to any other pair. Textures are the one part not
-done — see [what is left](#what-is-left-after-the-mesh).
+it says so; the reasoning is written to transfer to any other pair. This page is the mesh and the
+archetype; the art it then wears is [texturing a replaced weapon](./texturing-a-weapon.md).
 :::
 
 [Adding a new weapon](./adding-a-weapon.md) covers standing up a weapon that did not previously
@@ -74,9 +74,9 @@ about geometry in the wrong part, correct geometry in the wrong place, or an opt
 screen. The donor works in game, so **any difference between your render and the donor's, in the same
 view, is your bug**.
 
-`mods/vss-vintorez/scripts/render_refs.py` renders the three views that matter for any pack, and
-`sight_fov.py` renders what the player actually sees at the archetype's zoom FOV. Two things they had
-to get right, and both are easy to get wrong in your own:
+Three views are worth rendering for any pack: a flat-shaded side view, a lit one, and the sight
+picture from where the aim bank puts the eye. Two things the script that does it had to get right,
+and both are easy to get wrong in your own:
 
 - **The sight view needs a material engine.** The reticle is an alpha-tested quad — a flat-shaded
   render shows grey and the reticle is simply not there.
@@ -1190,12 +1190,14 @@ LOD4. Both exported without an error.
 
 ### What is left after the mesh
 
-- **PBR → legacy conversion.** FC2's Generic shader reads diffuse / normal / specular; a modern
-  source model ships metallic-roughness. This is a conversion, not a copy. Roughness is the lossy
-  direction: Blender has no `SpecularPower` and Dunia has no roughness.
-- **Textures to `.xbt`.** All 4,283 shipped graphics textures are power-of-two and none exceeds
-  2048; the codecs are DXT1, DXT5 and DXT3. Nothing enforces this — the block compressor pads an odd
-  size rather than refusing — so it warns rather than blocks, but retail is the safe target.
+The art, which is [its own page](./texturing-a-weapon.md) — the PBR-to-legacy conversion, and the
+fact that the mesh you just moved is still drawing through **the donor's materials**, which the donor
+is still drawing through too.
+
+One consequence belongs here rather than there, because it is a property of the transplant: a mesh
+built inside a donor's pack keeps that donor's material table, so retexturing it means taking a
+material the *replaced* weapon owned and moving your clusters onto it. `SCOPE_HI` shares the body's
+material, so that move has to **append** an entry rather than rewrite one.
 
 ## Known constraints, collected
 
@@ -1233,6 +1235,8 @@ Things that are settled, so nobody re-derives them:
 - **Fragments must be UTF-8 with no BOM**, or `mod build` rejects them with a message that names no
   file.
 - **Nothing numeric catches a part in the wrong place.** Render it and compare against the donor.
+- **The mesh moved; its material and texture references did not.** Rewriting them retextures the
+  donor as well — see [texturing a replaced weapon](./texturing-a-weapon.md).
 ## Answered by the finished build
 
 - **`depload` needed no edit.** `sPartName = dragunov` alone was sufficient; the animation package

@@ -430,6 +430,12 @@ needs a marker triangle rather than a zero face count, because
 
 ### Giving a weapon its own colour
 
+:::note[The whole job is on its own page]
+[Texturing a replaced weapon](./texturing-a-weapon.md) covers this end to end — finding a material
+you are allowed to own, the PBR conversion, and the specular settings that decide whether the weapon
+reads matte or polished. What follows is the summary.
+:::
+
 The `Weapon` shader has **no albedo slot**. Colour comes from two shared, game-wide tiling maps
 blended by a per-model mask, so a donated colour texture has nowhere to go and a mask can only say
 *where*, never *what colour*. Rewriting the `.xbm` gives it somewhere:
@@ -446,8 +452,10 @@ to put hue: the texture carries wear and detail, the material carries the colour
 serve a steel receiver and a wooden grip through two materials.
 
 A weapon typically owns exactly two texture paths (its two damage-state masks), which is enough for
-one albedo and one control map. Both can be rebuilt with `jackall-cli xbt extract` / `xbt build`, and
-**the replacement may change dimensions** — 512²/1024² was raised to 1024²/2048² and loaded fine, so
+one albedo and one control map, and not enough for a normal map. The cheapest way to rebuild them is
+to swap the PNGs inside a `.fc2model` pack and let the applier re-encode and split the pair; going
+through `jackall-cli xbt extract` / `xbt build` works too but leaves the `_mip0` split to you.
+**The replacement may change dimensions** — 512²/1024² was raised to 1024²/2048² and loaded fine, so
 the `_mip0` relationship is "twice the base", not a fixed size.
 
 ### Four things that went wrong, and why
