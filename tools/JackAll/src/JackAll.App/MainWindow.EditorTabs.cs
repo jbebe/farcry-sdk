@@ -245,7 +245,7 @@ public partial class MainWindow
                 return null;
             }
 
-            var view = new MgbTabView(file.FileName, content, bytes => _vm.Replace(file, bytes), _vm.ReadByPath);
+            var view = new MgbTabView(file.FileName, content, bytes => ReplaceGuarded(file, bytes), _vm.ReadByPath);
             var tab = new TabItem { Content = view };
             tab.Header = BuildClosableTabHeader(view.Title,
                 () => CloseMgbEditorTab(tab, view, onRemoved),

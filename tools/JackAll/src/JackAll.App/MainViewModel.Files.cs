@@ -1,5 +1,6 @@
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
+using JackAll.Tools.Reach;
 using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
@@ -15,7 +16,15 @@ public sealed partial class MainViewModel
     private VfsFile? _selectedFile;
     private IReadOnlyList<VfsFile> _selectedFiles = [];
     private bool _onlyMods;
+    private bool _hideUnused;
     private string _filterText = "";
+
+    /// <summary>
+    /// Which base-game files no engine code path can open. Loaded once and shared by every query
+    /// below; <see cref="ReachList.Empty"/> when the asset is missing, which turns the whole
+    /// feature off rather than failing.
+    /// </summary>
+    private static readonly Lazy<ReachList> Unreachable = new(() => ReachList.Load(AppConfig.ReachFile));
     private CancellationTokenSource? _exportCts;
 
     /// <summary>How often <see cref="ExportFiles"/> updates <see cref="Status"/> — often enough to
@@ -35,6 +44,29 @@ public sealed partial class MainViewModel
         get => _onlyMods;
         set { _onlyMods = value; OnPropertyChanged(); BuildTree(); }
     }
+
+    /// <summary>
+    /// The "Hide unused game files" filter - drops every base-game file the reachability analysis
+    /// proved the engine cannot open, and prunes the folders left holding nothing else. A file you
+    /// have modded is never hidden, however dead the original was: it is your edit, and losing
+    /// sight of it would be worse than the clutter.
+    /// </summary>
+    public bool HideUnused
+    {
+        get => _hideUnused;
+        set { _hideUnused = value; OnPropertyChanged(); BuildTree(); }
+    }
+
+    /// <summary>Whether the shipped verdict list positively says the engine can never open this
+    /// file. An <c>unknown</c> row is not unused - that is the case the analysis declined to
+    /// decide, and hiding those would be exactly the false negative it refuses to make.</summary>
+    public static bool IsUnusedFile(VfsFile file)
+        => !file.IsModded && ReachHashOf(file) is { } hash && Unreachable.Value.IsUnused(hash);
+
+    /// <summary>The hash the verdict list can answer for: a fragment has no engine hash of its own
+    /// and is only ever as reachable as the container it lives inside.</summary>
+    private static uint? ReachHashOf(VfsFile file)
+        => file.ContainerHash ?? (file.IsSynthetic ? null : file.EngineHash);
 
     /// <summary>
     /// A partial-match search over every file's full path — while it's non-empty, the file list
@@ -87,6 +119,8 @@ public sealed partial class MainViewModel
             OnPropertyChanged(nameof(ModOrigin));
             OnPropertyChanged(nameof(NamingNote));
             OnPropertyChanged(nameof(HasNamingNote));
+            OnPropertyChanged(nameof(ReachNote));
+            OnPropertyChanged(nameof(HasReachNote));
             OnPropertyChanged(nameof(HasOriginal));
             OnPropertyChanged(nameof(SelectionIsModel));
         }
@@ -164,6 +198,28 @@ public sealed partial class MainViewModel
         ? "This file's real name is unknown - it's addressed by hash. Edits still work."
         : string.Empty;
 
+    public bool HasReachNote => ReachNote.Length > 0;
+
+    public string ReachNote => SelectedFile is { } file ? ReachNoteFor(file) : string.Empty;
+
+    /// <summary>Why this file is dead, phrased for someone about to spend an evening on it. Empty
+    /// for everything the engine can reach, which is almost every file.</summary>
+    public static string ReachNoteFor(VfsFile file)
+    {
+        if (ReachHashOf(file) is not { } hash
+            || !Unreachable.Value.TryGet(hash, out ReachListEntry entry)
+            || entry.Verdict != ReachVerdict.Unused)
+        {
+            return string.Empty;
+        }
+
+        string why = ReachReasons.Explain(entry.Reason);
+        string subject = file.IsFragment ? "The file this lives inside is never read" : "The game never reads this file";
+        return file.IsModded
+            ? $"{subject}: {why} Your edit is staged, but the game will not load it."
+            : $"{subject}: {why} Editing it will have no effect in game.";
+    }
+
     private void BuildTree()
     {
         if (_vfs is null) return;
@@ -194,12 +250,21 @@ public sealed partial class MainViewModel
                     n.ContainsMods = true;
                 }
             }
+            if (!IsUnusedFile(file))
+            {
+                // Stops at the first ancestor already marked: unlike mods this is true of nearly
+                // every file, so walking the full chain each time would be ~200,000 redundant walks.
+                for (FolderNode? n = node; n is { ContainsUsedFiles: false }; n = ParentOf(_folderIndex, n))
+                {
+                    n.ContainsUsedFiles = true;
+                }
+            }
         }
 
         SortRecursively(root);
-        if (OnlyMods)
+        if (OnlyMods || HideUnused)
         {
-            PruneToModsOnly(root);
+            Prune(root, n => (!OnlyMods || n.ContainsMods) && (!HideUnused || n.ContainsUsedFiles));
         }
 
         Roots.Clear();
@@ -211,6 +276,7 @@ public sealed partial class MainViewModel
         SelectedFolder = previous is not null
                           && _folderIndex.TryGetValue(previous, out FolderNode? restored)
                           && (!OnlyMods || restored.ContainsMods)
+                          && (!HideUnused || restored.ContainsUsedFiles)
             ? restored
             : Roots.FirstOrDefault();
     }
@@ -251,7 +317,9 @@ public sealed partial class MainViewModel
         string prefix = PathPrefixOf(root);
 
         return _vfs.Files.Values
-            .Where(f => IsUnder(f, root, prefix) && (!OnlyMods || f.IsModded))
+            .Where(f => IsUnder(f, root, prefix)
+                        && (!OnlyMods || f.IsModded)
+                        && (!HideUnused || !IsUnusedFile(f)))
             .OrderBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -361,14 +429,15 @@ public sealed partial class MainViewModel
     /// <summary>Whether a folder export is running, so the status bar can offer to cancel it.</summary>
     public bool IsExporting => _exportCts is not null;
 
-    /// <summary>Drops every branch that carries no mod content, for the "Show only mod files" filter.</summary>
-    private static void PruneToModsOnly(FolderNode node)
+    /// <summary>Drops every branch <paramref name="keep"/> rejects, for the view filters that prune
+    /// the directory tree as well as the file list.</summary>
+    private static void Prune(FolderNode node, Func<FolderNode, bool> keep)
     {
-        var kept = node.Children.Where(c => c.ContainsMods).ToList();
+        var kept = node.Children.Where(keep).ToList();
         node.Children.Clear();
         foreach (FolderNode child in kept)
         {
-            PruneToModsOnly(child);
+            Prune(child, keep);
             node.Children.Add(child);
         }
     }
@@ -457,6 +526,7 @@ public sealed partial class MainViewModel
         (string[] includes, string[] excludes, string? extFilter, string? archFilter, uint? hashFilter) = ParseFilter(_filterText);
         string? folderPath = SelectedFolder?.FullPath;
         bool onlyMods = OnlyMods;
+        bool hideUnused = HideUnused;
 
         List<VfsFile>? matches;
         try
@@ -502,6 +572,11 @@ public sealed partial class MainViewModel
                 if (onlyMods)
                 {
                     files = files.Where(f => f.IsModded);
+                }
+
+                if (hideUnused)
+                {
+                    files = files.Where(f => !IsUnusedFile(f));
                 }
 
                 token.ThrowIfCancellationRequested();

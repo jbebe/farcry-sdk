@@ -5,6 +5,12 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **Unused files, in the Files tab** — "Hide unused game files" drops every base-game file the
+  engine can never open and prunes the folders left holding nothing else; the rows that remain
+  visible when it is off are italicised. Selecting one explains in the details pane *why* it is
+  dead, and staging an edit over one asks first — once per file per session, from whichever button
+  or editor tab you save with. Your own edits are never hidden and never silently blocked: the
+  warning explains that the edit will deploy normally and still do nothing in game.
 - **`xref reach` CLI** — classifies every file in an install as `used`, `used-sp-only`,
   `used-mp-only`, `unused` or `unknown` by walking the reference graph out from the roots
   `Dunia.dll` itself names (`assets/engine-roots.tsv`: 153 hardcoded paths and 49 filename

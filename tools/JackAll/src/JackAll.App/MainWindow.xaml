@@ -19,6 +19,7 @@
     <Window.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
         <local:ModuleNameMultiConverter x:Key="ModuleNameConverter" />
+        <local:UnusedFileConverter x:Key="UnusedFileConverter" />
 
         <Style x:Key="Toolbar" TargetType="Button">
             <Setter Property="Padding" Value="10,5" />
@@ -446,6 +447,9 @@
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                         <CheckBox DockPanel.Dock="Left" Margin="0,0,16,0" Content="Show only mod files"
                                   IsChecked="{Binding OnlyMods}" VerticalAlignment="Center" />
+                        <CheckBox DockPanel.Dock="Left" Margin="0,0,16,0" Content="Hide unused game files"
+                                  IsChecked="{Binding HideUnused}" VerticalAlignment="Center"
+                                  ToolTip="Hides base game files the engine can never open - authoring twins, console leftovers, and the un-stripped development world. Your own edits are never hidden." />
                         <TextBlock DockPanel.Dock="Left" Text="Filter:" Margin="0,0,6,0" VerticalAlignment="Center" />
                         <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
                                  VerticalAlignment="Center" Padding="4,2">
@@ -605,6 +609,12 @@
                                         <DataTrigger Binding="{Binding IsModded}" Value="True">
                                             <Setter Property="Foreground" Value="Black" />
                                         </DataTrigger>
+                                        <!-- Italic rather than another Foreground: grey/black already
+                                             means "untouched/changed", and a dead file can be either. -->
+                                        <DataTrigger Binding="{Binding Converter={StaticResource UnusedFileConverter}}" Value="True">
+                                            <Setter Property="FontStyle" Value="Italic" />
+                                            <Setter Property="ToolTip" Value="The game never reads this file - editing it will have no effect." />
+                                        </DataTrigger>
                                         <!-- Wins over the IsModded setter above so selected text stays readable on the blue highlight. -->
                                         <MultiTrigger>
                                             <MultiTrigger.Conditions>
@@ -688,6 +698,15 @@
                                 <TextBlock Text="{Binding NamingNote}" TextWrapping="Wrap" Foreground="#888"
                                            FontSize="11" Margin="0,0,0,6"
                                            Visibility="{Binding HasNamingNote, Converter={StaticResource BoolToVis}}" />
+
+                                <!-- Louder than NamingNote above on purpose: an unknown name is a
+                                     curiosity, a dead file is an evening about to be wasted. -->
+                                <Border Background="#FBF0DC" BorderBrush="#E0BE73" BorderThickness="1"
+                                        Padding="6,4" Margin="0,0,0,6" CornerRadius="2"
+                                        Visibility="{Binding HasReachNote, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding ReachNote}" TextWrapping="Wrap"
+                                               Foreground="#6B4E12" FontSize="11" />
+                                </Border>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
                                     <Button Content="Export…" Click="Export_Click" Margin="0,0,6,0" Padding="8,6" />

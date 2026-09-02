@@ -225,7 +225,7 @@ public partial class MainWindow
 
         try
         {
-            _vm.Replace(file, File.ReadAllBytes(dialog.FileName));
+            if (!ReplaceGuarded(file, File.ReadAllBytes(dialog.FileName))) return;
             _vm.Status = $"{file.FileName} staged in your workspace. Press Deploy all mods to put it into the game.";
         }
         catch (Exception ex)
@@ -246,7 +246,7 @@ public partial class MainWindow
 
         try
         {
-            _vm.Replace(file, _vm.Read(file));
+            if (!ReplaceGuarded(file, _vm.Read(file))) return;
             _vm.Status = $"{file.FileName} mirrored into your workspace. Press Deploy all mods to put it into the game.";
         }
         catch (Exception ex)
@@ -274,7 +274,7 @@ public partial class MainWindow
 
         try
         {
-            _vm.Replace(file, original);
+            if (!ReplaceGuarded(file, original)) return;
             _vm.Status = $"{file.FileName} (original) mirrored into your workspace. Press Deploy all mods to put it into the game.";
         }
         catch (Exception ex)
@@ -292,6 +292,46 @@ public partial class MainWindow
         return MessageBox.Show(this,
             $"'{file.FileName}' is already staged in your workspace. Overwrite it?",
             "Mirror to workspace", MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+    }
+
+    /// <summary>Files already questioned this session. An editor tab saves repeatedly, and asking
+    /// again on every save would train the user to dismiss the one dialog that matters.</summary>
+    private readonly HashSet<ulong> _unusedEditsAccepted = [];
+
+    /// <summary>
+    /// Stages an edit, stopping first if the file it replaces is one the engine can never open.
+    /// Every path that writes to the workspace goes through here, so the warning cannot be reached
+    /// around by using a different button or an editor tab's Save.
+    /// </summary>
+    private bool ReplaceGuarded(VfsFile file, byte[] content)
+    {
+        if (!ConfirmUnusedEdit(file)) return false;
+
+        _vm.Replace(file, content);
+        return true;
+    }
+
+    private bool ConfirmUnusedEdit(VfsFile file)
+    {
+        // Keyed on the VFS key, not the engine hash: a fragment row has no engine hash of its own.
+        if (!MainViewModel.IsUnusedFile(file) || !_unusedEditsAccepted.Add(file.Hash))
+        {
+            return true;
+        }
+
+        bool proceed = MessageBox.Show(this,
+            $"{MainViewModel.ReachNoteFor(file)}\n\n"
+            + "You can still edit it - the file will stage and deploy normally - but nothing will "
+            + "change in game.\n\nEdit it anyway?",
+            "This file is never read by the game",
+            MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes;
+
+        if (!proceed)
+        {
+            // Ask again next time: they backed out, so they have not accepted anything.
+            _unusedEditsAccepted.Remove(file.Hash);
+        }
+        return proceed;
     }
 
     private void Revert_Click(object sender, RoutedEventArgs e)

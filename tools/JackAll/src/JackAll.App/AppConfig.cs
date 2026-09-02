@@ -76,6 +76,13 @@ public sealed class AppConfig
     public static string VanillaHashesFile => Path.Combine(DataDir, ".archivehashes");
 
     /// <summary>
+    /// The reachability verdicts for the retail game (see <c>jackall-cli xref reach</c>) - which
+    /// base-game files no engine code path can open. A fixed part of the product, same treatment as
+    /// <see cref="NamesFile"/>. Missing is not fatal: nothing is hidden and no edit is questioned.
+    /// </summary>
+    public static string ReachFile => Path.Combine(DataDir, ".reachlist");
+
+    /// <summary>
     /// A savegame-specific hash -> name table (see <see cref="JackAll.App.FileHandlers.Sav.SaveGameCompiledFieldNames"/>)
     /// recovered by CRC32 dictionary-matching every string constant in the game's Linux dedicated-server
     /// binary against the exact hashes a real save's <c>PersistenceDB</c> tree uses - a fixed part of the

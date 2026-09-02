@@ -121,6 +121,15 @@ binary data — `world2_deploadnewparticles.xml` is 9.9 MB expanded but roughly 
 packed. The whole 183 MB of XML sources costs on the order of 11 MB on disc, which is a fair part
 of the answer to why nobody stripped them.
 
+## Using it in JackAll
+
+The Files tab reads the same verdict list. **Hide unused game files** drops every dead base-game
+file and prunes the folders that held nothing else; with it off, those rows are italicised instead.
+Selecting one explains why it is dead, and staging an edit over one asks for confirmation first —
+once per file per session, whichever button or editor tab you save from. A file you have already
+modded is never hidden, however dead the original was: it is your edit, and losing sight of it
+would be worse than the clutter.
+
 ## Running it
 
 ```bash

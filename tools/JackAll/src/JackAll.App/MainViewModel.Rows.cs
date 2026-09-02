@@ -20,6 +20,10 @@ public sealed class FolderNode(string name, string fullPath)
     public bool IsEmpty => Children.Count == 0 && !HasFiles;
     public bool ContainsMods { get; set; }
 
+    /// <summary>Whether anything at or below this folder is a file the engine can actually open -
+    /// what the "Hide unused game files" filter prunes on.</summary>
+    public bool ContainsUsedFiles { get; set; }
+
     /// <summary>
     /// Two-way bound to the TreeViewItem's own IsExpanded (see the implicit TreeViewItem style in
     /// MainWindow.xaml) — carried over by <see cref="MainViewModel.BuildTree"/> when it rebuilds the
