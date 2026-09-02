@@ -30,6 +30,11 @@ public sealed class XrefReachCommand : CliCommand<XrefReachCommand.Settings>
         [Description("Where to write the verdict TSV (default: fc2.reach.tsv in the current directory).")]
         public string? OutPath { get; init; }
 
+        [CommandOption("--only <verdicts>")]
+        [Description("Write only these comma-separated verdicts (used, used-sp-only, used-mp-only, unused, unknown). "
+                   + "The whole corpus is 22 MB of TSV; the checked-in asset is the 'unused,unknown' slice.")]
+        public string? Only { get; init; }
+
         [CommandOption("--build")]
         [Description("Build (or refresh) the reference index first instead of requiring an existing one.")]
         public bool Build { get; init; }
@@ -119,7 +124,14 @@ public sealed class XrefReachCommand : CliCommand<XrefReachCommand.Settings>
         truths.Add(CheckMoveClips(result, graph));
 
         string outPath = Path.GetFullPath(settings.OutPath ?? "fc2.reach.tsv");
-        ReachReport.WriteTsv(outPath, result.Rows);
+        IReadOnlyList<ReachRow> written = result.Rows;
+        if (settings.Only is { Length: > 0 } only)
+        {
+            var keep = only.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            written = [.. result.Rows.Where(r => keep.Contains(ReachReport.VerdictText(r.Verdict)))];
+        }
+        ReachReport.WriteTsv(outPath, written);
 
         IReadOnlyList<ReachRow> decoys = ReachReport.Decoys(result.Rows);
         var verdictCounts = result.Rows.CountBy(r => r.Verdict).ToDictionary();

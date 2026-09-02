@@ -5,6 +5,18 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **`xref reach` CLI** — classifies every file in an install as `used`, `used-sp-only`,
+  `used-mp-only`, `unused` or `unknown` by walking the reference graph out from the roots
+  `Dunia.dll` itself names (`assets/engine-roots.tsv`: 153 hardcoded paths and 49 filename
+  templates, each with its source address). The headline output is the decoy table — files that are
+  dead but shaped like they matter, such as the 24 six-megabyte `entitylibrary_full.fcb` copies and
+  the `_depload.xml` twins. `unknown` is a real third state: a file nothing *could* have referenced
+  in a form the tools read is never called dead. Verdicts for the whole retail corpus ship as
+  `assets/fc2.unused.tsv`; the method is documented under Asset reachability in the docs site.
+- **`.xbt`, MOVE and `.rtx` reference extractors** — an `.xbt` header's `_mip0` companion, a MOVE
+  graph's clip hashes, and an `.rtx` species' material slots (rewritten from the authoring `.mlm` to
+  the `.xbm` that ships) now reach the reference index. Each closed a source of files that looked
+  unreferenced only because nothing parsed the format naming them.
 - **Move tab** — the animation graph the engine picks clips with (`movemgr.bin`, `dlc1.bin`),
   browsable as the ownership tree it reads back as. Criteria are labelled with the channel and enum
   value they test where a named twin sits beside the graph, so a rule reads as

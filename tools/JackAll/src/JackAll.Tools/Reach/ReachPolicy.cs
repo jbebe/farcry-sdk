@@ -42,6 +42,17 @@ public static class ReachPolicy
     };
 
     /// <summary>
+    /// Trees whose files are reached by runtime name composition the extractors cannot see:
+    /// Domino graph and node paths are built from bare graph names ("domino\user" is a Dunia.dll
+    /// prefix literal), so an unreached file here is <c>unknown</c> unless a curated rule says
+    /// otherwise.
+    /// </summary>
+    public static readonly IReadOnlyList<string> OpaqueReferrerPrefixes = [@"domino\"];
+
+    public static bool IsOpaquePath(string path)
+        => OpaqueReferrerPrefixes.Any(p => path.StartsWith(p, StringComparison.OrdinalIgnoreCase));
+
+    /// <summary>
     /// The one known CRC32 collision inside the shipped filelist (see
     /// docs/docs/modding/getting-started.md): one hash, two legitimate names. A hash-keyed verdict
     /// cannot tell which file it describes, so it is never allowed to say <c>unused</c>.

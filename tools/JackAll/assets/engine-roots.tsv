@@ -20,6 +20,8 @@ world	EDITOR	ige_map
 # 10e9f34 "Worlds\tmpla\generated\tmpla.game.xml" - hardcoded, but only plausibly reached via
 # -benchmark; the un-stripped development twin of the world slot.
 world	NONE	tmpla	dev-leftover(-benchmark)
+# downloadcontent\<pack>\generated\ carries the same composed names as a world dir
+world	SP|MP	dlc[a-z0-9_]*
 #
 # ---- global config / engine trees ----
 # 10e7969c "Config\AlwaysLoaded.xml", 10e6a900/10e69eb0 Default/OverrideEngineConfig.xml,
@@ -56,19 +58,20 @@ pattern	GLOBAL	^scripts\\game\\ambx\\.*\.ambx$
 pattern	GLOBAL	^languages\\[^\\]+\\oasisstrings\.rml$
 #
 # ---- UI packages (flags from the engine's own sp/mp/ige naming) ----
+# The engine's bare "ui/..." literals resolve through a localization prefix at runtime: every
+# shipped UI file sits under ui\localized\{pc,pcwidescreen}\<lang>\ui\. Platform and language are
+# both user-selectable, so the prefix itself carries no flags.
 # 10e288d4 "ui\_depload.xml" - the UI manifest IS the xml here, unlike the worlds twins
-literal	GLOBAL	ui\_depload.xml
+pattern	GLOBAL	^ui\\localized\\[^\\]+\\[^\\]+\\ui\\_depload\.xml$
 # 10ea28c8 "ui/common.mgb", 10e72a18 "ui/hud.mgb", 10e8df10 "ui/loading_pre_loader.mgb",
 # 10e9e07c "ui/weapon_bazaar.mgb", 10e729f4 "ui/360.mgb", 10ea4938 "UI\common.mgb.desc"
-pattern	GLOBAL	^ui\\(common|hud|loading_pre_loader|weapon_bazaar|360)\.mgb(\.desc)?$
+pattern	GLOBAL	^ui\\localized\\[^\\]+\\[^\\]+\\ui\\(common|hud|loading_pre_loader|weapon_bazaar|360)\.mgb(\.desc)?$
 # 10eb05f8 "ui/sp_menus.mgb", 10e72a00 "ui/sp_pause_menus.mgb", 10e8dcc8.. "UI\loading_sp_NN.mgb.desc"
-pattern	SP	^ui\\(sp_menus|sp_pause_menus|loading_sp_\d+)\.mgb(\.desc)?$
+pattern	SP	^ui\\localized\\[^\\]+\\[^\\]+\\ui\\(sp_menus|sp_pause_menus|loading_sp_\d+)\.mgb(\.desc)?$
 # 10eb844c "ui/mp_menus.mgb", 10ea7e7c "ui/common_mp.mgb", 10e8db60.. "UI\loading_mp_NN.mgb.desc"
-pattern	MP	^ui\\(mp_menus|common_mp|loading_mp_\d+)\.mgb(\.desc)?$
+pattern	MP	^ui\\localized\\[^\\]+\\[^\\]+\\ui\\(mp_menus|common_mp|loading_mp_\d+)\.mgb(\.desc)?$
 # 10eaea78 "UI\ingameeditor.mgb", 10e8dab8.. "UI\loading_ige_NN.mgb.desc"
-pattern	EDITOR	^ui\\(ingameeditor|loading_ige_\d+)\.mgb(\.desc)?$
-# 10e27c68 "toc.rml"
-pattern	GLOBAL	(^|\\)toc\.rml$
+pattern	EDITOR	^ui\\localized\\[^\\]+\\[^\\]+\\ui\\(ingameeditor|loading_ige_\d+)\.mgb(\.desc)?$
 # 10eeabb8 "%sFonts%s%s.mft" + page textures the .mft's font names imply
 pattern	GLOBAL	^ui\\fonts\\.*\.(mft|xbt)$
 #
@@ -91,8 +94,8 @@ family	GLOBAL	prefix:graphics\sky\
 pattern	GLOBAL	^graphics\\fonts\\.*\.xbt$
 # 10e46c14 "graphics\Terrain\Water\AnimatedCaustics_%03d.xbt"
 pattern	GLOBAL	^graphics\\terrain\\water\\animatedcaustics_\d+\.xbt$
-# 10e121f8 gazelle galop .mab, 10e12254 "graphics\Characters\Animals\Gazelle\Pelvis_ref.skeleton"
-literal	GLOBAL	graphics\characters\animals\gazelle\animations\gazel_fulb_galopjump2_+000fw_nowep_i1.mab
+# 10e12254 "graphics\Characters\Animals\Gazelle\Pelvis_ref.skeleton" (its 10e121f8 galopjump2
+# .mab sibling names a clip that never shipped)
 literal	GLOBAL	graphics\characters\animals\gazelle\pelvis_ref.skeleton
 # 10e717b0 "graphics\vehicles\air\veh_glider\veh_glider_intel.xbg"
 literal	GLOBAL	graphics\vehicles\air\veh_glider\veh_glider_intel.xbg
@@ -105,23 +108,24 @@ pattern	GLOBAL	(^|\\)onscreenpopup\\onscreendata\.xml$
 pattern	GLOBAL	^graphics\\move\\(movemgr|dlc1)\.bin$
 #
 # ---- per-world composed names (WORLD flags via the <world> capture) ----
+# A "world dir" is worlds\<world>\ (world1/world2/multicommon/tmpla/ige_map and every mp_* map),
+# levels\<cell>\ for the same suffixes that also exist per level cell, or downloadcontent\<pack>\;
+# the cooked files sit under an optional generated\ segment.
 # 10ea9f1c "%s%s.game.xml", 10e8c774 ".game.xml"
-pattern	WORLD	^worlds\\(?<world>[^\\]+)\\[^\\]+\.game\.xml$
+pattern	WORLD	^(worlds|levels|downloadcontent)\\(?<world>[^\\]+)\\(generated\\)?[^\\]+\.game\.xml$
 # 10ea9ee4 "%sentitylibrary.fcb", 10e8b378 "\entitylibrary.fcb", 10e8b34c patch override
-pattern	WORLD	^worlds\\(?<world>[^\\]+)\\entitylibrary\.fcb$
+pattern	WORLD	^(worlds|levels|downloadcontent)\\(?<world>[^\\]+)\\(generated\\)?entitylibrary\.fcb$
 literal	GLOBAL	generated\entitylibrarypatchoverride.fcb
 # 10ea9dfc/10ea9ef8/10ea9f08/10ea9e64 "%s%s.{mapsdata,omnis,managers,sectorsdep}.fcb"
-pattern	WORLD	^worlds\\(?<world>[^\\]+)\\[^\\]+\.(mapsdata|omnis|managers|sectorsdep)\.fcb$
+pattern	WORLD	^(worlds|levels|downloadcontent)\\(?<world>[^\\]+)\\(generated\\)?[^\\]+\.(mapsdata|omnis|managers|sectorsdep)\.fcb$
 # 10ea9ed0 "%s%s_depload.dat" - the binary manifest is the primary
-pattern	WORLD	^worlds\\(?<world>[^\\]+)\\[^\\]*_depload\.dat$
+pattern	WORLD	^(worlds|levels|downloadcontent)\\(?<world>[^\\]+)\\(generated\\)?[^\\]*_depload\.dat$
 # 10ea9eb0 "%s%s_deploadnewparticles.rml"
-pattern	WORLD	^worlds\\(?<world>[^\\]+)\\[^\\]*_deploadnewparticles\.rml$
+pattern	WORLD	^(worlds|levels|downloadcontent)\\(?<world>[^\\]+)\\(generated\\)?[^\\]*_deploadnewparticles\.rml$
 # 10e75e1c "\mapcompass.xbt", 10ead31c "\topviewmap.xbt"
-pattern	WORLD	^worlds\\(?<world>[^\\]+)\\(mapcompass|topviewmap)\.xbt$
+pattern	WORLD	^(worlds|levels|downloadcontent)\\(?<world>[^\\]+)\\(generated\\)?(mapcompass|topviewmap)\.xbt$
 # 10ea9d10 "%smoviedata.xml", 10e8c764 "\moviedata.xml"
-pattern	WORLD	^worlds\\(?<world>[^\\]+)\\moviedata\.xml$
-# 10ebb5e4 "/DLC1/descimage.xbt", 10ebb698 "/descimage.xbt"
-pattern	GLOBAL	(^|\\)descimage\.xbt$
+pattern	WORLD	^(worlds|levels|downloadcontent)\\(?<world>[^\\]+)\\(generated\\)?moviedata\.xml$
 #
 # ---- per-level-cell composed names ----
 # 10ea9e34 "%ssd%d.sdat", 10ea9e40 "%ssd%d_%s.xbt", 10e44c74 "\sdat\atlas" + "_diffuse.xbt" 10e44c5c
@@ -130,17 +134,33 @@ pattern	WORLD	^levels\\(?<world>[^\\]+)\\generated\\sdat\\(sd\d+.*\.(sdat|xbt)|a
 # 10ea9dec "%ssector%d.srl", 10ea9dd8 "%szonesector%d.zsr", landmark pair per
 # docs/docs/engine-internals/terrain-and-vegetation.md
 pattern	WORLD	^levels\\(?<world>[^\\]+)\\generated\\worldsectors\\(worldsector\d+\.data\.fcb|sector\d+\.(desc\.fcb|preload_x\.fcb|srl)|zonesector\d+\.zsr|landmarknear\d+\.data\.fcb|landmarkfar_\d+\.data\.fcb)$
+# 10e75e04 ".preload_x.fcb" - sector preload lists sit at the level root, not under worldsectors\
+pattern	WORLD	^levels\\(?<world>[^\\]+)\\sector\d+\.preload_x\.fcb$
 # 10e442bc "%snv\nv%d_%d.nvm", 10e442ac "nv\sectors\nv_", 10e4352c "nv\sectors\nv.nvm",
 # 10e43540 "nv\nv.nvm" - satellites located by convention (descriptor tables ship zeroed)
-pattern	WORLD	^levels\\(?<world>[^\\]+)\\.*\.nvm$
+pattern	WORLD	^(worlds|levels)\\(?<world>[^\\]+)\\.*\.nvm$
 #
-# ---- fallbacks: engine knows the name but only reads it when the primary is absent ----
+# ---- fallbacks and known-dead names ----
+# These are curated overrides: a match is `unused` even when something references it, so list
+# only names RE work has verified the retail engine never reads.
 # 10e397c0 "_depload.xml" - readable twin of the .dat, read only if the .dat is missing
-fallback	NONE	^worlds\\.*_depload\.xml$	fallback:primary-present
+fallback	NONE	^(worlds|levels|downloadcontent)\\.*_depload\.xml$	fallback:primary-present
 # 10e8b38c "\entitylibrary_full.fcb" - flag-selected variant; SP takes the suffix-less branch
-fallback	NONE	^worlds\\[^\\]+\\entitylibrary_full\.fcb$	fallback:flag-selected
+fallback	NONE	^(worlds|levels|downloadcontent)\\.*\\entitylibrary_full\.fcb$	fallback:flag-selected
+# authoring twins of the MOVE graphs - "the engine loads movemgr.bin; movemgrnamed.bin is an
+# authoring artifact" (docs/docs/file-formats/move.md)
+fallback	NONE	^graphics\\move\\(movemgr|dlc1)named\.bin$	unreachable:authoring-twin
+# every Domino graph ships twice; the .debug.lua twin is a topology oracle the engine never
+# loads (docs/docs/engine-internals/domino-scripts.md)
+fallback	NONE	^domino\\.*\.debug\.lua$	unreachable:authoring-twin
+# QA gym scaffolding and Ubidays trade-show demo scripts, not shipped mission content
+# (docs/docs/engine-internals/domino-scripts.md)
+fallback	NONE	^domino\\user\\gyms\\.*	unreachable:qa-scaffolding
+fallback	NONE	^domino\\user\\ubidays\..*	unreachable:trade-show-demo
 #
-# Unmatched engine strings deliberately not rooted: profile/system files outside the archives
+# Unmatched engine strings deliberately not rooted: names no shipped file answers to
+# (toc.rml 10e27c68, descimage.xbt 10ebb5e4/10ebb698, the gazelle galopjump2 .mab 10e121f8),
+# profile/system files outside the archives
 # (FC2Init.ini 10e09bf4, GamerProfile.xml 10e0f480, version.ini 10e39348, cacheAssets.dat 10f30e94,
 # DARE.INI 10fa3348), the archive files themselves (patch.dat 10f4872c and the 10f485e0..10f48720
 # mount list - they are containers, not entries), format strings too generic to anchor

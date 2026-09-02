@@ -58,13 +58,13 @@ public static class ReachAnalysis
         var warnings = new List<string>();
         int nameProbes = 0;
 
-        void Raise(uint hash, ReachFlags add, string why, uint from)
+        bool Raise(uint hash, ReachFlags add, string why, uint from)
         {
             add = add.Modes();
             ReachFlags old = flags.GetValueOrDefault(hash);
             if (add == ReachFlags.None || (old | add) == old)
             {
-                return;
+                return false;
             }
             flags[hash] = old | add;
             if (reason.TryAdd(hash, why))
@@ -72,6 +72,7 @@ public static class ReachAnalysis
                 predecessor[hash] = from;
             }
             queue.Enqueue(hash);
+            return true;
         }
 
         string PathOf(uint hash)
@@ -174,10 +175,10 @@ public static class ReachAnalysis
                     // Name-probe: an .fcb Hash member holding what is really a path hash (landmark
                     // vegetation resource lists do exactly this). A numeric coincidence yields a
                     // false `used` - the acceptable direction; the count keeps a blow-up visible.
-                    if (edge.TargetSpace == RefSpace.EngineName && byHash.ContainsKey(edge.Target))
+                    if (edge.TargetSpace == RefSpace.EngineName && byHash.ContainsKey(edge.Target)
+                        && Raise(edge.Target, f, $"via:name-probe:{PathOf(source)}", source))
                     {
                         nameProbes++;
-                        Raise(edge.Target, f, $"via:name-probe:{PathOf(source)}", source);
                     }
 
                     // Sound ids resolve to files by the engine's own %08x naming rule.
@@ -236,6 +237,7 @@ public static class ReachAnalysis
             int outRefs = graph.ReferencesFrom(file.Hash).Count;
             ReachVerdict verdict;
             string why;
+            bool knownDead = false;
 
             if (ReachPolicy.KnownCollisions.TryGetValue(file.Hash, out string? twin))
             {
@@ -248,15 +250,20 @@ public static class ReachAnalysis
                 f = ReachFlags.None;
                 why = "console-only";
             }
+            else if (fallback.TryGetValue(file.Hash, out string? fallbackWhy))
+            {
+                // A curated override, like console-only: fallback rules carry RE-verified "the
+                // engine never reads this" facts, and those outrank a followed reference (the
+                // engine config names movemgrnamed.bin in a slot retail code never consumes).
+                knownDead = true;
+                verdict = ReachVerdict.Unused;
+                f = ReachFlags.None;
+                why = fallbackWhy;
+            }
             else if (f != ReachFlags.None)
             {
                 verdict = FromFlags(f);
                 why = reason[file.Hash];
-            }
-            else if (fallback.TryGetValue(file.Hash, out string? fallbackWhy))
-            {
-                verdict = ReachVerdict.Unused;
-                why = fallbackWhy;
             }
             else if (suppressed.TryGetValue(file.Hash, out string? suppressedWhy))
             {
@@ -267,6 +274,11 @@ public static class ReachAnalysis
             {
                 verdict = ReachVerdict.Unknown;
                 why = "unnamed";
+            }
+            else if (ReachPolicy.IsOpaquePath(file.Path))
+            {
+                verdict = ReachVerdict.Unknown;
+                why = "opaque-referrers(domino)";
             }
             else if (ReachPolicy.OpaqueReferrerExtensions.Contains(file.Extension))
             {
@@ -279,8 +291,10 @@ public static class ReachAnalysis
                 why = "unreachable";
             }
 
+            // A name the engine knows but never reads is the decoy shape by definition; otherwise
+            // size or reference count has to make the file look load-bearing.
             if (verdict == ReachVerdict.Unused
-                && (outRefs >= ReachPolicy.DecoyOutRefs || file.Size >= ReachPolicy.DecoyBytes))
+                && (knownDead || outRefs >= ReachPolicy.DecoyOutRefs || file.Size >= ReachPolicy.DecoyBytes))
             {
                 f |= ReachFlags.Decoy;
             }

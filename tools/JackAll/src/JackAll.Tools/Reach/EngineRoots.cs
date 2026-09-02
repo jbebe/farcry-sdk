@@ -59,7 +59,10 @@ public sealed class EngineRoots
     private readonly List<RootRule> _sourceFamilies = [];
     private readonly List<RootRule> _prefixFamilies = [];
     private readonly List<RootRule> _fallbacks = [];
-    private readonly Dictionary<RootRule, int> _matchCounts = [];
+
+    // Keyed by line number, not rule: family rules are stored as `with`-copies whose record
+    // identity differs from the original in Rules.
+    private readonly Dictionary<int, int> _matchCounts = [];
 
     public IReadOnlyList<RootRule> Rules { get; }
 
@@ -226,7 +229,7 @@ public sealed class EngineRoots
     /// <summary>Rules that matched nothing across the sweep - a typo'd pattern or a literal the
     /// install doesn't ship, which would otherwise fail silently.</summary>
     public IEnumerable<RootRule> UnmatchedRules()
-        => Rules.Where(r => r.Kind != RootKind.World && _matchCounts.GetValueOrDefault(r) == 0);
+        => Rules.Where(r => r.Kind != RootKind.World && _matchCounts.GetValueOrDefault(r.LineNumber) == 0);
 
     private void Apply(RootMatch result, RootRule rule, string reason, ReachFlags? flags = null)
     {
@@ -235,7 +238,8 @@ public sealed class EngineRoots
         result.Reason ??= reason;
     }
 
-    private void Count(RootRule rule) => _matchCounts[rule] = _matchCounts.GetValueOrDefault(rule) + 1;
+    private void Count(RootRule rule)
+        => _matchCounts[rule.LineNumber] = _matchCounts.GetValueOrDefault(rule.LineNumber) + 1;
 
     private static ReachFlags ParseFlags(string text, int lineNumber, out bool fromWorld)
     {

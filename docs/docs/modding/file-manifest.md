@@ -249,3 +249,7 @@ build-time/editor artifacts, not retail content; don't expect to find them by un
   terrain-generation scripting API (procedural noise/heightmap/erosion functions).
 - `.png` — `mapcompass.png`, `worlds\%s\smallscreenshot.png` — lightweight UI/thumbnail images, separate
   from the `.xbt` texture pipeline used for actual in-game textures.
+
+The mirror image of this section — files that *do* ship but which no engine code path can reach — is
+[Asset reachability](../engine-internals/asset-reachability.md), which classifies every entry in the
+install and flags the dead ones that look load-bearing.
