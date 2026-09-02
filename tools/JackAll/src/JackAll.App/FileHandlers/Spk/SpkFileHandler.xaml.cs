@@ -23,6 +23,14 @@ namespace JackAll.App.FileHandlers.Spk;
 /// type, or one of the no-audio-of-its-own "alias" banks - see docs/docs/file-formats/spk.md) falls
 /// into a trailing "Other records" group instead of being force-fit somewhere misleading.
 ///
+/// A `SimpleFixed68` record is an *event*, not a sound, and the two composite event kinds
+/// (<see cref="SpkEventType.List"/>/<see cref="SpkEventType.Switch"/>) hold no audio at all - they
+/// dispatch to ids in *other* banks, listed in the bytes after their sub-header. Those get a group of
+/// their own headed "plays N sounds", with one indented row per child carrying its own "Go to". Before
+/// that, such a bank rendered as a single "Sound params → 0x00000000" row in "Other records", because
+/// the word a leaf event uses as a link is a byte offset here - which made a perfectly ordinary
+/// one-entry list event (the Dart Rifle's first-person shot, say) look like a file leading nowhere.
+///
 /// Every row is still decoded in plain language rather than raw hex - format/duration/size for audio,
 /// which other record it points to plus its gain for the two metadata types. Every record's own
 /// byte-level fields (the confirmed constants, the four still-unidentified core fields, full
@@ -44,12 +52,14 @@ namespace JackAll.App.FileHandlers.Spk;
 /// rate/channel count that record already used (there's no single required format the way `.sbao`
 /// music has one).
 ///
-/// A `SimpleFixed68`/`TransformedFixed128` row's own cross-reference gets a "Go to" action too, the
-/// same jump mechanism <c>DepLoadFileHandler</c> uses for a dependency: if the id matches
-/// another record already in this same bank, it just selects that row (typically a no-op click for a
-/// grouped child, since it's already visible right there - the real value is for a reference that
-/// *isn't* grouped, i.e. doesn't resolve within this file); otherwise it's looked up VFS-wide
-/// (<c>resolveByHash</c>) and jumps to that other file entirely.
+/// A row's own cross-reference gets a "Go to" action too, the same jump mechanism
+/// <c>DepLoadFileHandler</c> uses for a dependency: if the id matches another record already in this
+/// same bank, it just selects that row (typically a no-op click for a grouped child, since it's
+/// already visible right there - the real value is for a reference that *isn't* grouped, i.e. doesn't
+/// resolve within this file); otherwise it goes through <c>resolveSoundId</c>, which turns the id into
+/// the bank filename the engine itself would (<c>soundbinary\&lt;id:08x&gt;.spk</c>) and jumps there.
+/// That callback must resolve a **sound id**, not a path hash: passing this id to a path-hash lookup
+/// finds nothing and reports a bank that plainly exists as missing.
 /// </summary>
 public partial class SpkFileHandler : UserControl
 {
@@ -58,7 +68,7 @@ public partial class SpkFileHandler : UserControl
 
     private readonly string _fileName;
     private readonly Action<byte[]> _replaceContent;
-    private readonly Func<uint, VfsFile?> _resolveByHash;
+    private readonly Func<uint, VfsFile?> _resolveSoundId;
     private readonly Action<VfsFile> _navigateTo;
     private SpkPackage? _package;
     private byte[]? _originalContent;
@@ -73,10 +83,25 @@ public partial class SpkFileHandler : UserControl
     private sealed class Row
     {
         public required int DisplayIndex { get; init; }
+
+        /// <summary>The "#" column: a record's position in the file, blank for a
+        /// <see cref="IsReference"/> row, which has no position of its own.</summary>
+        public string IndexLabel => IsReference ? "" : DisplayIndex.ToString();
+
         public required string IdHex { get; init; }
         public required string Kind { get; init; }
         public required string Summary { get; init; }
-        public required SpkRecord Record { get; init; }
+
+        /// <summary>The record this row shows, or null for a <see cref="IsReference"/> row - one of a
+        /// composite event's children, which is an id in *another* bank and so has no record here.</summary>
+        public required SpkRecord? Record { get; init; }
+
+        /// <summary>True for a synthetic row standing in for one entry of a composite event's child
+        /// list (see <see cref="SimpleFixed68SubHeader.ChildIds"/>). It has no record of its own, is
+        /// never playable, and exists so each child gets its own "Go to" - the alternative was one
+        /// button for a list that usually has two entries.</summary>
+        public required bool IsReference { get; init; }
+
         public required bool IsPlayable { get; init; }
         public required uint? LinkedId { get; init; }
         public required bool LinkedInSameFile { get; init; }
@@ -94,18 +119,23 @@ public partial class SpkFileHandler : UserControl
         public required string GroupKey { get; init; }
 
         public bool CanNavigateLink => LinkedInSameFile || LinkedExternalFile is not null;
-        public bool ShowLinkButton => LinkedId is not null && !IsChild;
+
+        /// <summary>A reference row exists only to be navigated from, so it always shows its button
+        /// even though it is indented like a grouped child; a real record only shows one when its own
+        /// link isn't already visible right beneath it.</summary>
+        public bool ShowLinkButton => LinkedId is not null && (IsReference || !IsChild);
+
         public string LinkButtonText => ShowLinkButton ? (CanNavigateLink ? "Go to →" : "Not found") : "";
     }
 
     public SpkFileHandler(
         string fileName, byte[] content, Action<byte[]> replaceContent,
-        Func<uint, VfsFile?> resolveByHash, Action<VfsFile> navigateTo)
+        Func<uint, VfsFile?> resolveSoundId, Action<VfsFile> navigateTo)
     {
         InitializeComponent();
         _fileName = fileName;
         _replaceContent = replaceContent;
-        _resolveByHash = resolveByHash;
+        _resolveSoundId = resolveSoundId;
         _navigateTo = navigateTo;
 
         // Release the temp .wav before deleting it - the panel resets itself on Unloaded too, but
@@ -135,7 +165,7 @@ public partial class SpkFileHandler : UserControl
             AudioPanel.Visibility = _rows.Any(r => r.IsPlayable) ? Visibility.Visible : Visibility.Collapsed;
 
             Row? toSelect = reselectRecordId is { } id
-                ? _rows.FirstOrDefault(r => r.Record.Id == id)
+                ? _rows.FirstOrDefault(r => r.Record?.Id == id)
                 : _rows.FirstOrDefault(r => r.IsPlayable);
             RecordsGrid.SelectedItem = toSelect; // triggers SelectionChanged -> loads the preview, if any
         }
@@ -210,6 +240,17 @@ public partial class SpkFileHandler : UserControl
             }
         }
 
+        // A composite event holds no audio, so the loop above never claims it - and its children are
+        // ids in other banks, not records here. Give each one its own group so the bank reads as what
+        // it is ("this event fires these two sounds") instead of landing in "Other records" looking
+        // like a dead end.
+        foreach (SpkRecord ev in package.Records.Where(r =>
+            !handled.Contains(r.Id) && r.SimpleFixed68 is { IsComposite: true }))
+        {
+            ordered.Add((ev, false, $"Event 0x{ev.Id:x8} — {DescribeChildCount(ev.SimpleFixed68!)}"));
+            handled.Add(ev.Id);
+        }
+
         foreach (SpkRecord r in package.Records.Where(r => !handled.Contains(r.Id)))
         {
             ordered.Add((r, false, OtherRecordsGroup));
@@ -220,7 +261,7 @@ public partial class SpkFileHandler : UserControl
         {
             uint? linkedId = r.TransformedFixed128?.FlatCopySiblingId ?? r.SimpleFixed68?.LinkedId;
             bool linkedInSameFile = linkedId is { } id && byId.ContainsKey(id);
-            VfsFile? linkedExternalFile = linkedId is { } id2 && !linkedInSameFile ? _resolveByHash(id2) : null;
+            VfsFile? linkedExternalFile = linkedId is { } id2 && !linkedInSameFile ? _resolveSoundId(id2) : null;
 
             rows.Add(new Row
             {
@@ -229,6 +270,7 @@ public partial class SpkFileHandler : UserControl
                 Kind = (isChild ? "↳ " : "") + DescribeKind(r),
                 Summary = DescribeSummary(package, r),
                 Record = r,
+                IsReference = false,
                 IsPlayable = r.FlatCopyAudioStream is not null,
                 LinkedId = linkedId,
                 LinkedInSameFile = linkedInSameFile,
@@ -236,10 +278,44 @@ public partial class SpkFileHandler : UserControl
                 IsChild = isChild,
                 GroupKey = groupKey,
             });
+
+            if (r.SimpleFixed68 is not { IsComposite: true } composite)
+            {
+                continue;
+            }
+
+            for (int i = 0; i < composite.ChildIds.Count; i++)
+            {
+                uint childId = composite.ChildIds[i];
+                bool inSameFile = byId.ContainsKey(childId);
+                VfsFile? external = inSameFile ? null : _resolveSoundId(childId);
+                string key = composite.SwitchKeys.Count > i ? $" · when 0x{composite.SwitchKeys[i]:x8}" : "";
+
+                rows.Add(new Row
+                {
+                    DisplayIndex = originalIndex[r.Id] + 1,
+                    IdHex = $"0x{childId:x8}",
+                    Kind = "↳ plays",
+                    Summary = (inSameFile ? "in this bank"
+                        : external is { } f ? f.Path
+                        : $"soundbinary\\{childId:x8}.spk — not in the loaded filesystem") + key,
+                    Record = null,
+                    IsReference = true,
+                    IsPlayable = false,
+                    LinkedId = childId,
+                    LinkedInSameFile = inSameFile,
+                    LinkedExternalFile = external,
+                    IsChild = true,
+                    GroupKey = groupKey,
+                });
+            }
         }
 
         return rows;
     }
+
+    private static string DescribeChildCount(SimpleFixed68SubHeader s68) =>
+        s68.ChildIds.Count == 1 ? "plays 1 sound" : $"plays {s68.ChildIds.Count} sounds";
 
     private void GoToLink_Click(object sender, RoutedEventArgs e)
     {
@@ -250,7 +326,8 @@ public partial class SpkFileHandler : UserControl
 
         if (row.LinkedInSameFile && row.LinkedId is { } id)
         {
-            RecordsGrid.SelectedItem = _rows.FirstOrDefault(r => r.Record.Id == id);
+            // The record row, never a reference row that happens to name the same id.
+            RecordsGrid.SelectedItem = _rows.FirstOrDefault(r => r.Record?.Id == id);
         }
         else if (row.LinkedExternalFile is { } file)
         {
@@ -263,9 +340,21 @@ public partial class SpkFileHandler : UserControl
         null => "(malformed)",
         { Type: SpkRecordType.FlatCopy } => "▶ Audio",
         { Type: SpkRecordType.TransformedFixed128 } => "Audio params",
-        { Type: SpkRecordType.SimpleFixed68 } => "Sound params",
+        { Type: SpkRecordType.SimpleFixed68 } => DescribeEventKind(r.SimpleFixed68),
         { Type: { } t } => t.ToString(),
         _ => $"Unknown (0x{r.Core.RawType:x8})",
+    };
+
+    /// <summary>A `SimpleFixed68` record is an event object, and which kind matters: a list or switch
+    /// event holds no sound of its own and dispatches to other banks entirely, so calling every one of
+    /// them "Sound params" (as this handler used to) hid the distinction that explains why such a bank
+    /// looks empty.</summary>
+    private static string DescribeEventKind(SimpleFixed68SubHeader? s68) => s68?.KnownEventType switch
+    {
+        null when s68 is not null => $"Event (type {s68.EventType}?)",
+        SpkEventType.List => "Event list",
+        SpkEventType.Switch => "Event switch",
+        _ => "Sound event",
     };
 
     private string DescribeSummary(SpkPackage package, SpkRecord r)
@@ -275,7 +364,7 @@ public partial class SpkFileHandler : UserControl
             if (SbaoAudio.TryReadVorbisId(audio) is { } vorbis)
             {
                 string channelLabel = vorbis.Channels == 2 ? "Stereo" : vorbis.Channels == 1 ? "Mono" : $"{vorbis.Channels}ch";
-                return $"{channelLabel} · {vorbis.SampleRate} Hz · Ogg Vorbis · {FormatBytes(audio.Length)}";
+                return $"{channelLabel} · {vorbis.SampleRate} Hz · Ogg Vorbis · {FormatBytes(audio.Length)}{DescribeLengthMismatch(package, r)}";
             }
 
             try
@@ -286,7 +375,7 @@ public partial class SpkFileHandler : UserControl
                 int frames = decoded.Samples.Length / decoded.Channels;
                 string channelLabel = decoded.Channels == 2 ? "Stereo" : "Mono";
                 string rateLabel = sampleRate is { } hz ? $"{hz} Hz" : $"~{FallbackSampleRateHz} Hz (no rate on record)";
-                return $"{channelLabel} · {rateLabel} · IMA-ADPCM · {FormatTime(TimeSpan.FromSeconds((double)frames / rate))} · {FormatBytes(audio.Length)}";
+                return $"{channelLabel} · {rateLabel} · IMA-ADPCM · {FormatTime(TimeSpan.FromSeconds((double)frames / rate))} · {FormatBytes(audio.Length)}{DescribeLengthMismatch(package, r)}";
             }
             catch (Exception ex)
             {
@@ -301,6 +390,14 @@ public partial class SpkFileHandler : UserControl
 
         if (r.SimpleFixed68 is { } s68)
         {
+            if (s68.IsComposite)
+            {
+                string children = s68.ChildIds.Count == 0
+                    ? "(empty list)"
+                    : string.Join(", ", s68.ChildIds.Select(id => $"0x{id:x8}"));
+                return $"{DescribeChildCount(s68)} → {children}";
+            }
+
             var extras = new List<string>();
             if (s68.SignedHundredFlag != 0)
             {
@@ -320,6 +417,17 @@ public partial class SpkFileHandler : UserControl
             ? "too short for the 40-byte record core"
             : $"{r.Payload.Length:N0} bytes";
     }
+
+    /// <summary>Flags an audio record whose descriptor sibling still declares the length of a
+    /// *different* stream - which is what every JackAll audio import leaves behind, since neither
+    /// importer rewrites that field. Shipped records always agree, so a mismatch here means this
+    /// record has been edited. See <see cref="SpkPackage.DeclaredAudioLengthMatches"/> for how far the
+    /// consequences are actually understood (not far: it is a strong candidate for the trailing-noise
+    /// symptom, not a confirmed cause).</summary>
+    private static string DescribeLengthMismatch(SpkPackage package, SpkRecord r) =>
+        package.DeclaredAudioLengthMatches(r) == false && package.TryGetAudioDescriptor(r) is { } t128
+            ? $"  ⚠ descriptor declares {t128.AudioByteLength:N0} B"
+            : "";
 
     private static string FormatQ16_16(int fixedPoint) => (fixedPoint / 65536.0).ToString("0.###");
 
@@ -352,7 +460,7 @@ public partial class SpkFileHandler : UserControl
         }
 
         ImportAudioButton.IsEnabled = true;
-        _ = PreparePreviewAsync(row.Record);
+        _ = PreparePreviewAsync(row.Record!); // IsPlayable is only ever set on a row backed by a record
     }
 
     private void ShowRawDetailsCheckBox_Changed(object sender, RoutedEventArgs e)
@@ -362,7 +470,14 @@ public partial class SpkFileHandler : UserControl
 
     private void UpdateRawDetails(Row? row)
     {
-        RawDetailsText.Text = row is null ? "(no record selected)" : BuildRawDetails(row.DisplayIndex - 1, row.Record);
+        RawDetailsText.Text = row switch
+        {
+            null => "(no record selected)",
+            { IsReference: true } => $"0x{row.IdHex[2..]} is a child of the event above, not a record in this " +
+                                     $"file — it lives in its own bank ({row.Summary}). Use \"Go to →\" to open it.",
+            { Record: { } record } => BuildRawDetails(row.DisplayIndex - 1, record),
+            _ => "(no record selected)",
+        };
     }
 
     /// <summary>The full byte-level breakdown for one record - every core/sub-header field (including
@@ -389,16 +504,32 @@ public partial class SpkFileHandler : UserControl
 
         if (r.SimpleFixed68 is { } s68)
         {
+            string eventLabel = s68.KnownEventType is { } known
+                ? $"{(uint)known} ({known})"
+                : $"{s68.EventType} (unknown — the engine rejects this at load)";
             sb.AppendLine(
-                $"SimpleFixed68: ownId=0x{s68.OwnId:x8}  linkedId=0x{s68.LinkedId:x8}  categoryId=0x{s68.CategoryId:x8}  " +
-                $"gain={FormatQ16_16(unchecked((int)s68.IdentityGainQ16_16))}  variant={s68.VariantOrVoiceCount}  " +
+                $"SimpleFixed68 (binary event): ownId=0x{s68.OwnId:x8}  eventType={eventLabel}  " +
+                $"categoryId=0x{s68.CategoryId:x8}  gain={FormatQ16_16(unchecked((int)s68.IdentityGainQ16_16))}  " +
                 $"flag100={s68.SignedHundredFlag}  bool={s68.BoolFlag}");
+
+            if (s68.IsComposite)
+            {
+                IEnumerable<string> entries = s68.ChildIds.Select((id, i) =>
+                    s68.SwitchKeys.Count > i ? $"0x{id:x8}@0x{s68.SwitchKeys[i]:x8}" : $"0x{id:x8}");
+                sb.AppendLine(
+                    $"  children (tail offset {s68.RawWord2}, {s68.ChildIds.Count}): {string.Join(", ", entries)}");
+            }
+            else
+            {
+                sb.AppendLine($"  linkedId=0x{s68.LinkedId:x8}");
+            }
         }
 
         if (r.TransformedFixed128 is { } t128)
         {
             sb.AppendLine(
                 $"TransformedFixed128: ownId=0x{t128.OwnId:x8}  flatCopySibling=0x{t128.FlatCopySiblingId:x8}  " +
+                $"declaredAudioLength={t128.AudioByteLength:N0} B (mirror {t128.AudioByteLengthMirror:N0})  " +
                 $"gain={FormatQ16_16(t128.GainQ16_16)}  channelsGuess={t128.ChannelCountGuess}  " +
                 $"sampleRate={t128.SampleRate} Hz  word20={t128.Word20}  word25={t128.Word25}  " +
                 $"word28={t128.Word28}  word31=0x{t128.Word31:x8}");
@@ -474,12 +605,11 @@ public partial class SpkFileHandler : UserControl
 
     private void ExportAudio_Click(object sender, RoutedEventArgs e)
     {
-        if (RecordsGrid.SelectedItem is not Row { IsPlayable: true } row)
+        if (RecordsGrid.SelectedItem is not Row { IsPlayable: true, Record: { } record })
         {
             return;
         }
 
-        SpkRecord record = row.Record;
         byte[] stream = record.FlatCopyAudioStream!;
         bool isOgg = SbaoAudio.TryReadVorbisId(stream) is not null;
 
@@ -520,12 +650,11 @@ public partial class SpkFileHandler : UserControl
     private async void ImportAudio_Click(object sender, RoutedEventArgs e)
     {
         if (_package is null || _originalContent is null ||
-            RecordsGrid.SelectedItem is not Row { IsPlayable: true } row)
+            RecordsGrid.SelectedItem is not Row { IsPlayable: true, Record: { } record })
         {
             return;
         }
 
-        SpkRecord record = row.Record;
         byte[] currentStream = record.FlatCopyAudioStream!;
         (int SampleRate, int Channels)? currentVorbis = SbaoAudio.TryReadVorbisId(currentStream);
 

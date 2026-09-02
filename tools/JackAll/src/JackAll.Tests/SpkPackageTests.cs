@@ -1,3 +1,4 @@
+using JackAll.Core.Format;
 using JackAll.Tools.Spk;
 
 namespace JackAll.Tests;
@@ -184,6 +185,94 @@ public class SpkPackageTests
 
         byte[] original = File.ReadAllBytes(path);
         Assert.Throws<InvalidDataException>(() => SpkPackage.ReplaceRecordPayload(original, 0xdeadbeef, []));
+    }
+
+    /// <summary>The bank behind the Dart Rifle's first-person shot, and the reason this case is worth
+    /// a fixture: it holds one record, that record holds no audio, and the word a leaf event uses to
+    /// point at its sound is `0` here - so read as a leaf it looks like a file leading nowhere. It is
+    /// a list event, and its four trailing bytes name the bank that does have the audio.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_list_event_exposes_its_children_and_no_link()
+    {
+        string path = "Fixtures/Spk/004bf5ea_5c852949.spk";
+        if (!File.Exists(path)) return;
+
+        SpkPackage package = SpkPackage.Parse(File.ReadAllBytes(path));
+        SimpleFixed68SubHeader s68 = Assert.Single(package.Records).SimpleFixed68!;
+
+        Assert.Equal(SpkEventType.List, s68.KnownEventType);
+        Assert.True(s68.IsComposite);
+        Assert.Equal([0x004bf5e9u], s68.ChildIds);
+        Assert.Empty(s68.SwitchKeys);
+
+        // word[2] is a byte offset into the child list here, not an id - reading it as a link is what
+        // made this bank render as "-> 0x00000000".
+        Assert.Null(s68.LinkedId);
+        Assert.Equal(0u, s68.RawWord2);
+    }
+
+    [Theory]
+    [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
+    public void A_leaf_event_exposes_a_link_and_no_children(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+
+        SpkPackage package = SpkPackage.Parse(File.ReadAllBytes(path));
+
+        foreach (SpkRecord r in package.Records)
+        {
+            if (r.SimpleFixed68 is not { IsComposite: false } leaf)
+            {
+                continue;
+            }
+
+            Assert.Equal(leaf.RawWord2, leaf.LinkedId);
+            Assert.Empty(leaf.ChildIds);
+            Assert.Empty(leaf.SwitchKeys);
+        }
+    }
+
+    /// <summary>Locks in <see cref="TransformedFixed128SubHeader.AudioByteLength"/>: shipped records
+    /// always agree with the stream they describe (exact across every paired record in the corpus this
+    /// was checked against), so a mismatch means a tool edited the audio without rewriting the
+    /// descriptor - which is what makes it worth surfacing in both front ends.</summary>
+    [Theory]
+    [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
+    public void A_shipped_records_declared_audio_length_matches_its_actual_stream(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+
+        SpkPackage package = SpkPackage.Parse(File.ReadAllBytes(path));
+
+        foreach (SpkRecord r in package.Records.Where(r => r.FlatCopyAudioStream is not null))
+        {
+            if (package.DeclaredAudioLengthMatches(r) is not { } matches)
+            {
+                continue; // no descriptor sibling in this bank to compare against
+            }
+
+            Assert.True(matches,
+                $"0x{r.Id:x8} in {Path.GetFileName(path)} declares " +
+                $"{package.TryGetAudioDescriptor(r)!.AudioByteLength} bytes but carries " +
+                $"{r.FlatCopyAudioStream!.Length}.");
+        }
+    }
+
+    /// <summary>
+    /// A sound id is not a path hash - it becomes one only through the filename the engine builds from
+    /// it (<c>soundbinary\&lt;id:08x&gt;.spk</c>, see the `.spk` page's loading pipeline). That
+    /// derivation is what lets a viewer follow an event's child id to the bank holding the audio, so it
+    /// is pinned here against the engine's own numbers: these two CRCs are copied out of a shipped
+    /// world's `depload.xml`, which spells out both the path and its hash.
+    /// </summary>
+    [Fact]
+    public void A_sound_ids_bank_path_hashes_to_the_value_depload_records()
+    {
+        Assert.Equal(1552230729u, NameHash.Compute(@"soundbinary\004bf5ea.spk"));
+        Assert.Equal(1424403779u, NameHash.Compute(@"soundbinary\004bf5e9.spk"));
     }
 
     [Fact]

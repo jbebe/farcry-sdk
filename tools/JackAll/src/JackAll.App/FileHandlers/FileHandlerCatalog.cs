@@ -40,17 +40,18 @@ public static class FileHandlerCatalog
     /// <paramref name="readOriginal"/> is used by the text, fragment, fcb and rml cases, to diff a
     /// modded file against its
     /// base game version (see <see cref="BuildTextHandler"/>, <see cref="BuildLauncherPreview"/>,
-    /// <see cref="FcbFileHandler"/> and <see cref="RmlFileHandler"/>). <paramref name="resolveByHash"/>
-    /// and <paramref name="navigateTo"/> are used by the spk case, for a
-    /// `SimpleFixed68`/`TransformedFixed128` row's own cross-reference to a different bank entirely
-    /// (see <see cref="SpkFileHandler"/>). <paramref name="openDominoEditor"/>
+    /// <see cref="FcbFileHandler"/> and <see cref="RmlFileHandler"/>). <paramref name="resolveSoundId"/>
+    /// and <paramref name="navigateTo"/> are used by the spk case, for a row's cross-reference to a
+    /// different bank entirely (see <see cref="SpkFileHandler"/>); it takes a *sound id*, not a path
+    /// hash - the two are different spaces, and resolving one as the other silently finds nothing.
+    /// <paramref name="openDominoEditor"/>
     /// is the domino\user\ case's counterpart to <paramref name="openEditor"/>, handing off to the
     /// graph-reconstruction tab, and <paramref name="openMgbEditor"/> is the mgb case's, handing off
     /// to the Magma UI package editor tab (see <see cref="MgbFilePreviewHandler"/>).
     /// </summary>
     public static UserControl? CreateView(
         VfsFile file, Func<byte[]> readContent, Action<byte[]> replaceContent, Action openEditor,
-        Func<byte[]?> readOriginal, Func<uint, VfsFile?> resolveByHash, Action<VfsFile> navigateTo,
+        Func<byte[]?> readOriginal, Func<uint, VfsFile?> resolveSoundId, Action<VfsFile> navigateTo,
         Action openDominoEditor, Action openMgbEditor)
         => file switch
         {
@@ -81,7 +82,7 @@ public static class FileHandlerCatalog
             { Type.Extension: "fcb" } => new FcbFileHandler(file, readContent(), replaceContent, readOriginal),
             { Type.Extension: "rml" } => new RmlFileHandler(file, readContent(), replaceContent, readOriginal),
             { Type.Extension: "sdat" } => new SdatFileHandler(file.FileName, readContent()),
-            { Type.Extension: "spk" } => new SpkFileHandler(file.FileName, readContent(), replaceContent, resolveByHash, navigateTo),
+            { Type.Extension: "spk" } => new SpkFileHandler(file.FileName, readContent(), replaceContent, resolveSoundId, navigateTo),
             { Type.Extension: "mgb" } => new MgbFilePreviewHandler(readContent(), openMgbEditor),
             // Matched by filename suffix, not bare extension - "dat" alone is also the archive-container
             // extension, so this must not fire for anything else that happens to carry a literal .dat

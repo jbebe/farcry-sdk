@@ -20,7 +20,12 @@ internal static class SpkFormat
         null => "(malformed)",
         { Type: SpkRecordType.FlatCopy } => "Audio",
         { Type: SpkRecordType.TransformedFixed128 } => "Audio params",
-        { Type: SpkRecordType.SimpleFixed68 } => "Sound params",
+        { Type: SpkRecordType.SimpleFixed68 } => r.SimpleFixed68?.KnownEventType switch
+        {
+            SpkEventType.List => "Event list",
+            SpkEventType.Switch => "Event switch",
+            _ => "Sound event",
+        },
         { Type: { } t } => t.ToString(),
         _ => $"Unknown (0x{r.Core.RawType:x8})",
     };
@@ -31,7 +36,7 @@ internal static class SpkFormat
         {
             if (SbaoAudio.TryReadVorbisId(audio) is { } vorbis)
             {
-                return $"{DescribeChannels(vorbis.Channels)} - {vorbis.SampleRate} Hz - Ogg Vorbis - {FormatBytes(audio.Length)}";
+                return $"{DescribeChannels(vorbis.Channels)} - {vorbis.SampleRate} Hz - Ogg Vorbis - {FormatBytes(audio.Length)}{DescribeLengthMismatch(package, r)}";
             }
 
             try
@@ -39,7 +44,7 @@ internal static class SpkFormat
                 ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(audio);
                 int? sampleRate = package.TryGetFlatCopySampleRate(r);
                 string rateLabel = sampleRate is { } hz ? $"{hz} Hz" : $"~{FallbackSampleRateHz} Hz (no rate on record)";
-                return $"{DescribeChannels(decoded.Channels)} - {rateLabel} - IMA-ADPCM - {FormatBytes(audio.Length)}";
+                return $"{DescribeChannels(decoded.Channels)} - {rateLabel} - IMA-ADPCM - {FormatBytes(audio.Length)}{DescribeLengthMismatch(package, r)}";
             }
             catch (Exception ex)
             {
@@ -54,11 +59,27 @@ internal static class SpkFormat
 
         if (r.SimpleFixed68 is { } s68)
         {
+            if (s68.IsComposite)
+            {
+                string children = s68.ChildIds.Count == 0
+                    ? "(empty list)"
+                    : string.Join(" ", s68.ChildIds.Select(id => $"0x{id:x8}"));
+                return $"plays {s68.ChildIds.Count} -> {children}";
+            }
+
             return $"-> 0x{s68.LinkedId:x8}";
         }
 
         return r.Core is null ? "too short for the 40-byte record core" : $"{r.Payload.Length:N0} bytes";
     }
+
+    /// <summary>Flags an audio record whose descriptor sibling still declares a different stream's
+    /// length - what every JackAll audio import leaves behind, since neither importer rewrites that
+    /// field. See <see cref="SpkPackage.DeclaredAudioLengthMatches"/>.</summary>
+    private static string DescribeLengthMismatch(SpkPackage package, SpkRecord r) =>
+        package.DeclaredAudioLengthMatches(r) == false && package.TryGetAudioDescriptor(r) is { } t128
+            ? $"  (!) descriptor declares {t128.AudioByteLength:N0} B"
+            : "";
 
     private static string DescribeChannels(int channels) => channels switch
     {

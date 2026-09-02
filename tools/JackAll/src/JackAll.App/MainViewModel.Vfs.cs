@@ -3,6 +3,7 @@ using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 using JackAll.Core.Vfs;
+using JackAll.Core.Xrefs;
 using JackAll.Tools.World;
 
 namespace JackAll.App;
@@ -17,6 +18,25 @@ public sealed partial class MainViewModel
     /// <see cref="FileHandlers.FileHandlerCatalog"/>'s dependency-link case) to resolve what a link
     /// points to.</summary>
     public VfsFile? FindByHash(ulong key) => _vfs?.Files.GetValueOrDefault(key);
+
+    /// <summary>
+    /// The file a sound id lives in — for an `.spk` row's jump to whatever bank a reference points at.
+    /// </summary>
+    /// <remarks>
+    /// A sound id is <b>not</b> a path hash, so <see cref="FindByHash"/> can't answer this directly:
+    /// bank `0x004bf5e9` lives at a path whose hash is something else entirely. The engine itself
+    /// turns the id into a filename (<c>soundbinary\&lt;id:08x&gt;.spk</c>, and the same shape with a
+    /// `.sbao` extension for a streamed object — see the `.spk` docs page's loading pipeline), so
+    /// deriving that path and hashing it is both the correct lookup and one that needs no index built.
+    ///
+    /// The reference index is the fallback, for the minority of ids that name a record *inside* some
+    /// other bank rather than a bank of their own — it knows which file defines each id, but only once
+    /// the background pass has finished, which is why it isn't the primary route.
+    /// </remarks>
+    public VfsFile? ResolveSoundResource(uint id)
+        => FindByHash(NameHash.Compute($@"soundbinary\{id:x8}.spk"))
+            ?? FindByHash(NameHash.Compute($@"soundbinary\{id:x8}.sbao"))
+            ?? ResolveReference(RefSpace.SoundResource, id);
 
     /// <summary>Every resolved path in the merged filesystem - the map editor filters this down to
     /// one world's sector and terrain files rather than probing synthesized paths against the

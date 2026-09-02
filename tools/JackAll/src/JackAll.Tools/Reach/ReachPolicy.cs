@@ -24,7 +24,8 @@ public static class ReachPolicy
     /// propagate - one groups by anonymous type, the other names a localised string.</summary>
     public static bool PropagatesToName(RefKind kind) => kind is
         RefKind.FcbNameValue or RefKind.MgbNameId or RefKind.XbgMaterial or
-        RefKind.SpkRecordLink or RefKind.SpkCategory or RefKind.SpkFlatCopySibling;
+        RefKind.SpkRecordLink or RefKind.SpkCategory or RefKind.SpkFlatCopySibling or
+        RefKind.SpkEventChild;
 
     /// <summary>
     /// Extensions whose plausible referrers the extractors cannot read (Havok rigs are picked by

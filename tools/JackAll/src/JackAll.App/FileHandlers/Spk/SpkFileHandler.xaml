@@ -49,7 +49,7 @@
                     </GroupStyle>
                 </DataGrid.GroupStyle>
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="#" Binding="{Binding DisplayIndex}" Width="40" />
+                    <DataGridTextColumn Header="#" Binding="{Binding IndexLabel}" Width="40" />
                     <DataGridTextColumn Header="Id" Binding="{Binding IdHex}" Width="110">
                         <DataGridTextColumn.ElementStyle>
                             <Style TargetType="TextBlock">

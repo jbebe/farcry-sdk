@@ -49,9 +49,59 @@ public sealed class SpkRecordCore
     public SpkRecordType? Type => Enum.IsDefined(typeof(SpkRecordType), RawType) ? (SpkRecordType)RawType : null;
 }
 
-/// <summary><see cref="SpkRecordType.SimpleFixed68"/>'s 68-byte sub-header, word-indexed fields named
-/// where their meaning is known or strongly inferred - see <see cref="SpkPackage"/>'s remarks for the
-/// confidence behind each one. Every other word was `0` in every real record checked.</summary>
+/// <summary>The <see cref="SimpleFixed68SubHeader.EventType"/> values the engine's own post-load fixup
+/// (`FUN_10a3ebd0` in `Dunia.dll`) switches on. Anything outside this set is rejected there with
+/// "ERROR: Cannot init binary event, unknown event type." - which is where the name comes from: a
+/// `SimpleFixed68` record is a *binary event object*, not a sound. Only the two composite kinds carry
+/// anything after the 68-byte sub-header; see <see cref="SimpleFixed68SubHeader.ChildIds"/>.</summary>
+public enum SpkEventType : uint
+{
+    /// <summary>Plays the sound resource in word[2]; word[7] is resolved too. 91% of real records.</summary>
+    Leaf = 1,
+
+    /// <summary>Resolves word[2] but declines to play - the play dispatcher no-ops.</summary>
+    NoOpLinked = 2,
+
+    /// <summary>Resolves nothing and no-ops.</summary>
+    NoOp3 = 3,
+
+    /// <summary>Plays, after an extra dispatcher step; resolves word[2] and word[3].</summary>
+    LeafExtraStep = 4,
+
+    /// <summary>Plays; resolves word[2] and word[6]. Absent from the corpus checked.</summary>
+    Leaf5 = 5,
+
+    /// <inheritdoc cref="Leaf5"/>
+    Leaf6 = 6,
+
+    /// <inheritdoc cref="Leaf5"/>
+    Leaf7 = 7,
+
+    /// <summary>Resolves nothing and no-ops.</summary>
+    NoOp8 = 8,
+
+    /// <inheritdoc cref="Leaf5"/>
+    Leaf9 = 9,
+
+    /// <summary>Resolves nothing and no-ops.</summary>
+    NoOp10 = 10,
+
+    /// <summary>A keyed table: `[6]` entries of three words at tail byte offset `[5]`, each
+    /// `{id, resolvedPointer, key}`. The dispatcher walks every entry, recursing.</summary>
+    Switch = 11,
+
+    /// <summary>A plain list: `[3]` ids at tail byte offset `[2]`. The dispatcher walks every entry
+    /// and recurses into each - it fires *all* of them, so this is a layered composite rather than a
+    /// random-variation picker.</summary>
+    List = 12,
+}
+
+/// <summary><see cref="SpkRecordType.SimpleFixed68"/>'s 68-byte sub-header - a *binary event object*
+/// rather than a sound. <see cref="EventType"/> (word[1]) selects which of the remaining words mean
+/// anything: the leaf kinds use word[2] as a link to the sound resource they play, while the two
+/// composite kinds reinterpret it as a byte offset into a trailing child list. See
+/// <see cref="SpkEventType"/> and <see cref="SpkPackage"/>'s remarks for the confidence behind each
+/// field. Every other word was `0` in every real record checked.</summary>
 public sealed class SimpleFixed68SubHeader
 {
     public const int Size = 68;
@@ -59,14 +109,45 @@ public sealed class SimpleFixed68SubHeader
     /// <summary>word[0] (+0x00) - echoes the record's own id.</summary>
     public required uint OwnId { get; init; }
 
-    /// <summary>word[1] (+0x04) - `1` in 98% of real records; otherwise a power of two (2/4/8),
-    /// possibly a variant/voice count.</summary>
-    public required uint VariantOrVoiceCount { get; init; }
+    /// <summary>word[1] (+0x04) - which kind of event this record is; see <see cref="SpkEventType"/>.
+    /// Named a "variant/voice count" in earlier revisions of this file on the strength of `1` being
+    /// 91% of records - the decompiled fixup shows it is a type tag, and the two values that never fit
+    /// that reading (`11`/`12`) are exactly the two that carry a child list.</summary>
+    public required uint EventType { get; init; }
 
-    /// <summary>word[2] (+0x08) - an id-reference: resolves to some real id in the corpus 99.9% of the
-    /// time, to a record in the same bank 79% of the time (not reliably the positionally-adjacent
-    /// record, despite that pattern holding in early small-sample checks).</summary>
-    public required uint LinkedId { get; init; }
+    /// <summary>Whether this event dispatches to a list of other events rather than playing a sound
+    /// itself - true for <see cref="SpkEventType.List"/> and <see cref="SpkEventType.Switch"/>, the
+    /// only two kinds with a <see cref="ChildIds"/> list and the only two where
+    /// <see cref="LinkedId"/> is meaningless.</summary>
+    public bool IsComposite => KnownEventType is SpkEventType.List or SpkEventType.Switch;
+
+    /// <summary><see cref="EventType"/> as a named value, or null if it is not one the engine
+    /// handles (which the engine itself would reject at load).</summary>
+    public SpkEventType? KnownEventType =>
+        Enum.IsDefined(typeof(SpkEventType), EventType) ? (SpkEventType)EventType : null;
+
+    /// <summary>word[2] (+0x08) - the sound resource this event plays, for the leaf event kinds; the
+    /// engine's fixup rewrites it into a live pointer. **Null for a composite event**, where the same
+    /// word is a byte offset into the child list instead of an id - reading it as a link there is what
+    /// makes a list event look like a record pointing at `0x00000000`.</summary>
+    public uint? LinkedId => IsComposite ? null : RawWord2;
+
+    /// <summary>word[2] (+0x08) verbatim, whatever it means for this <see cref="EventType"/> - a link
+    /// for a leaf, a byte offset into the tail for a composite (`0` in every real record).</summary>
+    public required uint RawWord2 { get; init; }
+
+    /// <summary>The ids this event dispatches to, read from the bytes after the 68-byte sub-header -
+    /// `[3]` of them for a <see cref="SpkEventType.List"/>, `[6]` for a
+    /// <see cref="SpkEventType.Switch"/> (whose entries are three words wide, of which this is the
+    /// first). Empty for every leaf event. These are ids of *other banks*, which have to be resident
+    /// already - the fixup only looks them up in the atomic-object registry, so a bank not pulled in by
+    /// `depload` resolves to null. See the `.spk` docs page.</summary>
+    public required IReadOnlyList<uint> ChildIds { get; init; }
+
+    /// <summary>The third column of a <see cref="SpkEventType.Switch"/> table, positionally paired with
+    /// <see cref="ChildIds"/> - a switch value selecting between them, not traced to the code that
+    /// reads it. Empty for every other event kind.</summary>
+    public required IReadOnlyList<uint> SwitchKeys { get; init; }
 
     /// <summary>word[4] (+0x10) - constant `0x00010000` = `1.0` in `Q16.16` fixed point; plausibly an
     /// identity gain/scale default.</summary>
@@ -95,6 +176,17 @@ public sealed class TransformedFixed128SubHeader
 
     /// <summary>word[0] (+0x00) - echoes the record's own id.</summary>
     public required uint OwnId { get; init; }
+
+    /// <summary>word[2] (+0x08) - the sibling <see cref="SpkRecordType.FlatCopy"/> record's audio byte
+    /// length (its payload size minus the 40-byte core). Exact in all 3,211 records that pair with a
+    /// sibling across the corpus checked, for both codecs. Nothing in JackAll rewrites it when audio is
+    /// replaced, so a record whose audio has been swapped will disagree with its sibling - see
+    /// <see cref="SpkPackage.DeclaredAudioLengthMatches"/>.</summary>
+    public required uint AudioByteLength { get; init; }
+
+    /// <summary>word[22] (+0x58) - the same value as <see cref="AudioByteLength"/>, or `0`. Never a
+    /// third value: of 3,211 paired records, 2,971 mirror it exactly and the remaining 240 are `0`.</summary>
+    public required uint AudioByteLengthMirror { get; init; }
 
     /// <summary>word[5] (+0x14) - a negative `Q16.16` fixed-point value when nonzero (e.g. `-12.0`,
     /// `-8.0`); plausibly a gain/dB adjustment applied by this type's own post-load transform.</summary>
@@ -188,10 +280,9 @@ public sealed class SpkRecord
 ///
 /// Preamble words are copied verbatim into a small cache keyed by the record's own id; the cached
 /// copy's pointer becomes the record's `extra` field at load time, later read back by the engine and
-/// threaded into generic runtime playback dispatch. Not decoded further here - see the `.spk` docs
-/// page for the full trace. Statistically, the word before a preamble's trailing self-id resolves to
-/// some other real id in the corpus 98.3% of the time (whenever a record has 2+ preamble words),
-/// confirming these are genuine cross-references to other sound resources rather than noise.
+/// threaded into generic runtime playback dispatch. Their content is the bank's own id plus every
+/// parent that pulls it in - the same parent/child edge `depload` records from the other side, verified
+/// against a world's `depload` on a full chain. Self is not at a fixed position; treat it as a set.
 ///
 /// `SpkRecordType.Streamed` is never actually stored inside a `.spk` bank (rejected outright by the
 /// engine) - streamed sounds exist exclusively as standalone `<id>.sbao`/`<id>.bao` files instead. Real
@@ -280,18 +371,40 @@ public sealed class SpkPackage
     /// the sibling <see cref="TransformedFixed128SubHeader"/> record whose
     /// <see cref="TransformedFixed128SubHeader.FlatCopySiblingId"/> points back at it - or null if no
     /// such sibling exists in this bank.</summary>
-    public int? TryGetFlatCopySampleRate(SpkRecord flatCopyRecord)
+    public int? TryGetFlatCopySampleRate(SpkRecord flatCopyRecord) =>
+        TryGetAudioDescriptor(flatCopyRecord) is { } t128 ? (int)t128.SampleRate : null;
+
+    /// <summary>The <see cref="TransformedFixed128SubHeader"/> describing a given
+    /// <see cref="SpkRecordType.FlatCopy"/> record - the sibling whose
+    /// <see cref="TransformedFixed128SubHeader.FlatCopySiblingId"/> points back at it, or null if this
+    /// bank holds no such record.</summary>
+    public TransformedFixed128SubHeader? TryGetAudioDescriptor(SpkRecord flatCopyRecord)
     {
         foreach (SpkRecord r in Records)
         {
             if (r.TransformedFixed128?.FlatCopySiblingId == flatCopyRecord.Id)
             {
-                return (int)r.TransformedFixed128.SampleRate;
+                return r.TransformedFixed128;
             }
         }
 
         return null;
     }
+
+    /// <summary>Whether a <see cref="SpkRecordType.FlatCopy"/> record's actual audio length agrees with
+    /// the length its descriptor sibling declares in
+    /// <see cref="TransformedFixed128SubHeader.AudioByteLength"/>. True in every shipped record; false
+    /// means the audio has been replaced by a tool that didn't rewrite the descriptor (JackAll's own
+    /// importers among them). Null when there is no descriptor sibling to compare against.
+    ///
+    /// Whether the engine actually reads this as a playback-length gate is untested - it is the best
+    /// remaining candidate for the trailing-noise symptom documented on the `.spk` docs page, but the
+    /// field that was tried and ruled out was word[20], not this one. Surfaced so a mismatch is visible
+    /// rather than silently shipped.</summary>
+    public bool? DeclaredAudioLengthMatches(SpkRecord flatCopyRecord) =>
+        flatCopyRecord.FlatCopyAudioStream is { } audio && TryGetAudioDescriptor(flatCopyRecord) is { } t128
+            ? t128.AudioByteLength == (uint)audio.Length
+            : null;
 
     /// <summary>
     /// Rebuilds this .spk file's raw bytes with one record's payload replaced by
@@ -387,11 +500,48 @@ public sealed class SpkPackage
             return null;
         }
 
+        uint eventType = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x04..]);
+        var tail = sub[SimpleFixed68SubHeader.Size..];
+
+        // The two composite kinds store their child list in the tail, addressed by a byte offset and a
+        // count that live in different words per kind (word[2]/word[3] for a list, word[5]/word[6] for
+        // a switch, whose entries are three words wide). Both are bounds-checked against the tail we
+        // actually have rather than trusted: a truncated or hand-edited record yields no children
+        // instead of an overread.
+        (uint offset, uint count, int stride) = eventType switch
+        {
+            (uint)SpkEventType.List => (BinaryPrimitives.ReadUInt32LittleEndian(sub[0x08..]),
+                                        BinaryPrimitives.ReadUInt32LittleEndian(sub[0x0C..]), 1),
+            (uint)SpkEventType.Switch => (BinaryPrimitives.ReadUInt32LittleEndian(sub[0x14..]),
+                                          BinaryPrimitives.ReadUInt32LittleEndian(sub[0x18..]), 3),
+            _ => (0u, 0u, 0),
+        };
+
+        uint[] childIds = [];
+        uint[] switchKeys = [];
+        if (stride != 0 && count <= int.MaxValue / (stride * 4) && offset <= (uint)tail.Length
+            && (int)count * stride * 4 <= tail.Length - (int)offset)
+        {
+            var entries = tail[(int)offset..];
+            childIds = new uint[count];
+            switchKeys = stride == 3 ? new uint[count] : [];
+            for (int i = 0; i < count; i++)
+            {
+                childIds[i] = BinaryPrimitives.ReadUInt32LittleEndian(entries[(i * stride * 4)..]);
+                if (stride == 3)
+                {
+                    switchKeys[i] = BinaryPrimitives.ReadUInt32LittleEndian(entries[(i * stride * 4 + 8)..]);
+                }
+            }
+        }
+
         return new SimpleFixed68SubHeader
         {
             OwnId = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x00..]),
-            VariantOrVoiceCount = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x04..]),
-            LinkedId = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x08..]),
+            EventType = eventType,
+            RawWord2 = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x08..]),
+            ChildIds = childIds,
+            SwitchKeys = switchKeys,
             IdentityGainQ16_16 = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x10..]),
             CategoryId = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x1C..]),
             SignedHundredFlag = BinaryPrimitives.ReadInt32LittleEndian(sub[0x24..]),
@@ -410,6 +560,8 @@ public sealed class SpkPackage
         return new TransformedFixed128SubHeader
         {
             OwnId = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x00..]),
+            AudioByteLength = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x08..]),
+            AudioByteLengthMirror = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x58..]),
             GainQ16_16 = BinaryPrimitives.ReadInt32LittleEndian(sub[0x14..]),
             FlatCopySiblingId = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x1C..]),
             ChannelCountGuess = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x44..]),

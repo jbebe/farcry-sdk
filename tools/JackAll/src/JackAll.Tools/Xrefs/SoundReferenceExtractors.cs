@@ -35,7 +35,20 @@ public sealed class SpkReferenceExtractor : IReferenceExtractor
             // bank holds the link, which is the only way to find it again in a bank of hundreds.
             if (record.SimpleFixed68 is { } simple)
             {
-                sink.Add(RefSpace.SoundResource, simple.LinkedId, RefKind.SpkRecordLink, record.Id);
+                // Only a leaf event's word[2] is a link; a composite event reuses that word as a byte
+                // offset into its child list, so indexing it there recorded an edge to id 0 and missed
+                // every real child. The children are the edges that matter: they're what makes a bank
+                // holding no audio of its own reach the bank that does.
+                if (simple.LinkedId is { } linkedId)
+                {
+                    sink.Add(RefSpace.SoundResource, linkedId, RefKind.SpkRecordLink, record.Id);
+                }
+
+                foreach (uint childId in simple.ChildIds)
+                {
+                    sink.Add(RefSpace.SoundResource, childId, RefKind.SpkEventChild, record.Id);
+                }
+
                 sink.Add(RefSpace.SoundResource, simple.CategoryId, RefKind.SpkCategory, record.Id);
             }
 

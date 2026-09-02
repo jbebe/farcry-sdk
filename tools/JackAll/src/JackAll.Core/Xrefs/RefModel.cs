@@ -79,7 +79,8 @@ public enum RefKind : byte
     /// <summary>An `.mgb` localised-string reference.</summary>
     MgbStringResource = 8,
 
-    /// <summary>An `.spk` <c>SimpleFixed68</c> record's <c>LinkedId</c>.</summary>
+    /// <summary>An `.spk` <c>SimpleFixed68</c> record's <c>LinkedId</c> - the sound resource a leaf
+    /// event plays. A composite event has no such link (see <see cref="SpkEventChild"/>).</summary>
     SpkRecordLink = 9,
 
     /// <summary>An `.spk` <c>SimpleFixed68</c> record's <c>CategoryId</c>.</summary>
@@ -100,6 +101,12 @@ public enum RefKind : byte
     /// <summary>An `.rtx` species' material slot, rewritten from the authoring `.mlm` to the
     /// `.xbm` that actually ships.</summary>
     RtxMaterial = 15,
+
+    /// <summary>One entry of an `.spk` composite event's child list - a sound id the event dispatches
+    /// to, almost always in a different bank. These were previously invisible to the index: the list
+    /// lives in the bytes after the sub-header, and the word a leaf event uses as its link is a byte
+    /// offset here, so the only edge recorded was a spurious one to id `0`.</summary>
+    SpkEventChild = 16,
 }
 
 /// <summary>Facts about a <see cref="RefKind"/> that the UI needs but the enum can't carry.</summary>
