@@ -2,6 +2,8 @@ using JackAll.Core.Format.Fcb;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 using JackAll.Core.Xrefs;
+using JackAll.Tools.Move;
+using JackAll.Tools.Rtx;
 using JackAll.Tools.Xrefs;
 
 namespace JackAll.Tests;
@@ -143,6 +145,79 @@ public sealed class ReferenceExtractorTests
 
         Assert.Single(sink.Edges);
         Assert.Equal(JackAll.Core.Format.NameHash.Compute(@"graphics\ui\hud.xbt"), sink.Edges[0].Target);
+    }
+
+    [Fact]
+    public void Xbt_extractor_reports_the_mip0_companion_and_nothing_else()
+    {
+        string path = Path.Combine("Fixtures", "XbtStreamed", "stiresjunk01_d.xbt");
+        if (!File.Exists(path)) return; // fixture not present in this checkout
+
+        ReferenceSink sink = Extract(new XbtReferenceExtractor(),
+            "graphics\\terrain\\_textures\\savannah\\stiresjunk01_d.xbt", File.ReadAllBytes(path));
+
+        RefEdge edge = Assert.Single(sink.Edges);
+        Assert.Equal(RefKind.XbtMipCompanion, edge.Kind);
+        Assert.Equal(RefSpace.FilePath, edge.TargetSpace);
+        Assert.Equal(JackAll.Core.Format.NameHash.Compute(
+            @"graphics\terrain\_textures\savannah\stiresjunk01_d_mip0.xbt"), edge.Target);
+    }
+
+    [Fact]
+    public void Xbt_extractor_is_silent_for_a_texture_with_no_companion()
+    {
+        string path = Path.Combine("Fixtures", "XbtStreamed", "desert_sand_still_d.xbt");
+        if (!File.Exists(path)) return; // fixture not present in this checkout
+
+        ReferenceSink sink = Extract(new XbtReferenceExtractor(),
+            "graphics\\test\\desert_sand_still_d.xbt", File.ReadAllBytes(path));
+
+        Assert.Empty(sink.Edges);
+    }
+
+    [Fact]
+    public void Rtx_extractor_rewrites_each_material_slot_to_its_shipped_xbm()
+    {
+        string path = Path.Combine("Fixtures", "Rtx", "rt_tree_acacia.rtx");
+        if (!File.Exists(path)) return; // fixture not present in this checkout
+
+        byte[] content = File.ReadAllBytes(path);
+        ReferenceSink sink = Extract(new RtxReferenceExtractor(),
+            "graphics\\vegetation\\rt_tree_acacia.rtx", content);
+
+        // The extractor's whole job is the .mlm → .xbm rewrite, so the expected targets are the
+        // parser's own material paths pushed through it.
+        var expected = RtxModel.Parse(content).Materials
+            .Where(m => m is { Length: > 0 })
+            .Select(m => JackAll.Core.Format.NameHash.Compute(Path.ChangeExtension(m!, ".xbm")))
+            .ToHashSet();
+        Assert.Equal(2, expected.Count);
+        Assert.Equal(expected, sink.Edges.Select(e => e.Target).ToHashSet());
+        Assert.All(sink.Edges, e =>
+        {
+            Assert.Equal(RefKind.RtxMaterial, e.Kind);
+            Assert.Equal(RefSpace.FilePath, e.TargetSpace);
+        });
+    }
+
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Move_extractor_reports_every_distinct_clip_of_the_retail_graph()
+    {
+        string path = Path.Combine(Fc2Corpus.Root, "common", "graphics", "move", "movemgr.bin");
+        Assert.True(File.Exists(path), Fc2Corpus.MissingMessage("movemgr.bin"));
+
+        byte[] content = File.ReadAllBytes(path);
+        ReferenceSink sink = Extract(new MoveReferenceExtractor(), "graphics\\move\\movemgr.bin", content);
+
+        Assert.Equal(MoveWeapons.AllClipReferences(MoveCodec.Load(content)).Count, sink.Edges.Count);
+        // A Dart Rifle clip hash the repoint tests already pin.
+        Assert.Contains(sink.Edges, e => e.Target == 0xB4B65546);
+        Assert.All(sink.Edges, e =>
+        {
+            Assert.Equal(RefKind.MoveClip, e.Kind);
+            Assert.Equal(RefSpace.FilePath, e.TargetSpace);
+        });
     }
 
     private static string? FirstFixture(string directory, string pattern)

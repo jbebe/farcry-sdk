@@ -90,6 +90,16 @@ public enum RefKind : byte
 
     /// <summary>A path found in the text of an `.xml`/`.lua`/`.rml`/`.mgb.desc` file.</summary>
     TextPath = 12,
+
+    /// <summary>An `.xbt` header's embedded path to its `_mip0.xbt` streaming companion.</summary>
+    XbtMipCompanion = 13,
+
+    /// <summary>A MOVE graph's <c>m_animNameHash</c> clip reference - the path hash of a `.mab`.</summary>
+    MoveClip = 14,
+
+    /// <summary>An `.rtx` species' material slot, rewritten from the authoring `.mlm` to the
+    /// `.xbm` that actually ships.</summary>
+    RtxMaterial = 15,
 }
 
 /// <summary>Facts about a <see cref="RefKind"/> that the UI needs but the enum can't carry.</summary>

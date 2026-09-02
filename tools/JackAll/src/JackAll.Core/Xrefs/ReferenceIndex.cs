@@ -32,8 +32,10 @@ namespace JackAll.Core.Xrefs;
 /// </remarks>
 public sealed class ReferenceIndex
 {
+    // Version 2: the extractor set grew (.xbt/.rtx/movemgr edges). Bumping forces a clean rebuild,
+    // because an incremental one reuses every previously visited file and would never re-extract.
     private const uint Magic = 0x3158414A; // 'JAX1'
-    private const int Version = 1;
+    private const int Version = 2;
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     private struct EdgeRecord : IKeyedRecord
@@ -211,6 +213,16 @@ public sealed class ReferenceIndex
     /// <summary>Whether this index already covers <paramref name="fileHash"/> - including a file that
     /// turned out to have no references at all, which is just as worth remembering as a long list.</summary>
     public bool IsIndexed(uint fileHash) => IndexedFileSpan.BinarySearch(fileHash) >= 0;
+
+    /// <summary>Every edge in the index, in (space, target, source) order - for analyses that need
+    /// one linear pass instead of millions of per-key binary searches.</summary>
+    public IEnumerable<RefEdge> AllEdges()
+    {
+        for (int i = 0; i < _edges.Count; i++)
+        {
+            yield return ToEdge(EdgeSpan[i]);
+        }
+    }
 
     private static RefEdge ToEdge(EdgeRecord record) => new(
         record.SourceFile, (RefSpace)record.Space, record.Target, (RefKind)record.Kind,

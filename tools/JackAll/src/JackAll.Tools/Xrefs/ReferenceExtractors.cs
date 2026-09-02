@@ -30,5 +30,8 @@ public static class ReferenceExtractors
         new SbaoReferenceExtractor(),
         new RmlReferenceExtractor(),
         new TextReferenceExtractor(),
+        new XbtReferenceExtractor(),
+        new MoveReferenceExtractor(),
+        new RtxReferenceExtractor(),
     ];
 }
