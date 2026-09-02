@@ -470,8 +470,8 @@ Bone lists come from `tmp/fielddump/skeleton.jsonl`; clip contents from `tmp/fie
 The bone-id addressing is documented in [`.mab`](../file-formats/mab.md).
 :::
 
-`CFCXWeapon.iAnimationValue` is an index into the `EquippedWeapon` enum in
-[`movemgr.bin`](../file-formats/move.md). The Dart Rifle is `39`; the Dragunov is `23`. A VSS
+`iAnimationValue` is the integer written into the `EquippedWeapon` channel that the animation graph
+in [`movemgr.bin`](../file-formats/move.md) tests. The Dart Rifle is `39`; the Dragunov is `23`. A VSS
 should move like a Dragunov, not like a dart gun, so the instinct is simply to write `23`.
 
 **That instinct is right, and doing only that would break the weapon.**

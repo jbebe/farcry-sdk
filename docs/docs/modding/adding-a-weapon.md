@@ -205,28 +205,54 @@ archetype instantiating existing C++ classes — no new engine code**. See
   `WeaponStatusSwitchValues`, `bUseHiResScope`.
 - **`CCountersComponent`**, **`CWeaponNetworkComponent`**, **`CPersistComponent`**.
 
-## The hard ceiling: `iAnimationValue`
+## `iAnimationValue` and the `EquippedWeapon` channel
 
-`CFCXWeapon.iAnimationValue` is **an index into the `EquippedWeapon` enum in
-[`movemgr.bin`](../file-formats/move.md)**, which has exactly 44 entries. Confirmed against shipped
-data: `DLC1.Crossbow` = 41, `DLC1.SawedOffShotgun` = 42, `DLC1.SilencedShotgun` = 43.
+`iAnimationValue` is **the integer the engine writes into MOVE channel 17 (`EquippedWeapon`)**, which
+is what the animation graph in [`movemgr.bin`](../file-formats/move.md) tests to pick a weapon's
+clips. The shipped graph covers indices 0–43; confirmed against shipped data, `DLC1.Crossbow` = 41,
+`DLC1.SawedOffShotgun` = 42, `DLC1.SilencedShotgun` = 43.
 
-That enum lives only in the base file's `CMoveValueContainer`. A DLC-style MOVE expansion contains
-no value container at all, so **it cannot introduce a 45th value**, and `MSAnim::LoadMoves` rejects
-any base file that does not declare exactly 105 channels. The three DLC weapon slots were reserved
-in the base game before the DLC shipped — the `SawedOffShotgun` string is present even in v1.0
-`Dunia.dll`.
+:::warning[This page used to call 44 a hard ceiling. It isn't one.]
+The earlier claim was that the `EquippedWeapon` enum is *declared* in the base file's
+`CMoveValueContainer`, so nothing could add a 45th value. Tracing the serializer disproved every
+step of that:
 
-So a new weapon's `iAnimationValue` must be one of 0–43. In practice that means one of:
+- `movemgr.bin` holds **no channel names and no enum value names at all** — five bytes of
+  `{type, mirrorable}` per channel, and zero occurrences of `EquippedWeapon` or `SawedOffShotgun`.
+  The 44 names exist only in `movemgrnamed.bin`, which the engine refuses to load.
+- Criteria compare plain integers: one byte of channel index, a signed 32-bit comparand, no
+  range check against any declared value count.
+- `iAnimationValue` is a plain `int` property registered on `CEquipmentBase` (not `CFCXWeapon`) with
+  no clamp at the registration site.
+- The string evidence was misread — exact-case `SawedOffShotgun` appears **zero** times in all six
+  `Dunia.dll` builds. What's there is lowercase `sawedoffshotgun`, the model/package name.
+
+The number 44 is authoring metadata. See
+[the weapon ceiling](../file-formats/move.md#equippedweapon--the-weapon-ceiling) for the full
+evidence.
+:::
+
+What this changes in practice is less than it sounds. The barrier was never permission to use index
+44 — it's that **index 44 has no states behind it**, so a character holding that weapon finds no
+matching move. Supplying those states is the actual work, and it is the ordinary expansion path DLC1
+used. Two things also remain untested in game: whether the code driving channel 17 each frame passes
+the value through unclamped, and what the graph does when nothing matches.
+
+So, cheapest first:
 
 1. **Reuse an index**, and name your model after the weapon that owns it — set `sPartName` to
    `dlc1_sawedoff_shotgun` and you inherit the entire DLC1 animation graph for free. Costs you that
-   weapon.
+   weapon. This is what every shipped mod in this repo does, and it stays the right default.
 2. **Commandeer a slot that nothing uses.** `Ratchet`, `Phone`, `Watch`, `MapCompass` and `Compass`
    are candidates; check what actually references them first.
-3. **Replace `movemgr.bin`**, which needs a writer for a format that is only partly decoded. The
-   base path comes from a config key (`files` / `Move File` in
-   `common/config/defaultengineconfig.xml`), so repointing it is at least cheap to try.
+3. **Ship a MOVE expansion that covers a new index.** No longer ruled out — an expansion needs no
+   value container, and its criteria can name 44 as readily as 43. The format is
+   [fully decoded and writable](../file-formats/move.md#writing-move-files); a reference codec in
+   `tools/misc/move-python-reference/` will clone an existing weapon's states onto a new index for
+   you. Untested in game, and the clones still point at the donor's `.mab` clips.
+4. **Replace `movemgr.bin` wholesale.** The base path comes from a config key (`files` / `Move File`
+   in `common/config/defaultengineconfig.xml`), so repointing it is cheap to try — but note the
+   file's channel count is fixed at exactly 105 by `MSAnim::LoadMoves`.
 
 :::note[Corrects an earlier community claim]
 `iAnimationValue` is described in [data-recipes](./data-recipes.md) as "reportedly affects which
@@ -513,8 +539,9 @@ on the AK-47 and a 1911**, so re-verify before relying on any of it.
 
 ## Checklist
 
-1. Pick an `iAnimationValue` from 0–43 and set `sPartName` to match whatever owns that slot's
-   animation set.
+1. Pick an `iAnimationValue` the shipped graph already covers (0–43) and set `sPartName` to match
+   whatever owns that slot's animation set. A higher index is not blocked, but nothing animates it
+   until you ship states for it.
 2. `fc2model export` the donor, reshape it in Blender, **Check**, and export the pack back. Its
    materials, textures and animation come with it. Keep every internal part and bone name
    byte-identical.
