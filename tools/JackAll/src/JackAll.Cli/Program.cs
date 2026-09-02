@@ -239,6 +239,9 @@ app.Configure(config =>
         xref.AddCommand<XrefFromCommand>("from")
             .WithDescription("List everything a file references.")
             .WithExample("xref", "from", @"graphics\_common\weapons\ak47\ak47.xbm", "--game", @"C:\Games\Far Cry 2");
+        xref.AddCommand<XrefReachCommand>("reach")
+            .WithDescription("Classify every file as used / used-sp-only / used-mp-only / unused / unknown by reachability from engine roots.")
+            .WithExample("xref", "reach", "--game", @"C:\Games\Far Cry 2", "--build", "--out", "fc2.reach.tsv");
     });
 });
 

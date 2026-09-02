@@ -4,11 +4,12 @@
 # format string's iteration domain never has to be re-derived. Provenance comments carry the
 # defining Dunia.dll string address and the raw engine string.
 #
-# columns: kind<TAB>flags<TAB>value
+# columns: kind<TAB>flags<TAB>value<TAB>[label]
 #   kind : literal | pattern | world | family | fallback
 #   flags: SP, MP, EDITOR and their |-combos; GLOBAL (= SP|MP|EDITOR);
 #          WORLD (= derive from the pattern's (?<world>...) capture via the `world` rules);
 #          NONE (recorded for the reason string, seeds nothing)
+#   label: optional reason text carried into the verdict list for NONE/fallback rules
 #
 # ---- world rules: (?<world>...) capture -> flags ----
 world	SP	world[12]
@@ -18,7 +19,7 @@ world	MP	multicommon
 world	EDITOR	ige_map
 # 10e9f34 "Worlds\tmpla\generated\tmpla.game.xml" - hardcoded, but only plausibly reached via
 # -benchmark; the un-stripped development twin of the world slot.
-world	NONE	tmpla
+world	NONE	tmpla	dev-leftover(-benchmark)
 #
 # ---- global config / engine trees ----
 # 10e7969c "Config\AlwaysLoaded.xml", 10e6a900/10e69eb0 Default/OverrideEngineConfig.xml,
@@ -135,9 +136,9 @@ pattern	WORLD	^levels\\(?<world>[^\\]+)\\.*\.nvm$
 #
 # ---- fallbacks: engine knows the name but only reads it when the primary is absent ----
 # 10e397c0 "_depload.xml" - readable twin of the .dat, read only if the .dat is missing
-fallback	NONE	^worlds\\.*_depload\.xml$
+fallback	NONE	^worlds\\.*_depload\.xml$	fallback:primary-present
 # 10e8b38c "\entitylibrary_full.fcb" - flag-selected variant; SP takes the suffix-less branch
-fallback	NONE	^worlds\\[^\\]+\\entitylibrary_full\.fcb$
+fallback	NONE	^worlds\\[^\\]+\\entitylibrary_full\.fcb$	fallback:flag-selected
 #
 # Unmatched engine strings deliberately not rooted: profile/system files outside the archives
 # (FC2Init.ini 10e09bf4, GamerProfile.xml 10e0f480, version.ini 10e39348, cacheAssets.dat 10f30e94,

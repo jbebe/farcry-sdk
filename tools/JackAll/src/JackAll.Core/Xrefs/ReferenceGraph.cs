@@ -100,6 +100,42 @@ public sealed class ReferenceGraph
         => _overlayDefinitions.TryGetValue((space, id), out definition)
         || _base.TryGetDefinition(space, id, out definition);
 
+    /// <summary>Every edge, base and overlay together, with shadowed base sources skipped - for
+    /// analyses that sweep the whole graph once instead of querying per key.</summary>
+    public IEnumerable<RefEdge> AllEdges()
+    {
+        foreach (RefEdge edge in _base.AllEdges())
+        {
+            if (!_shadowed.Contains(edge.SourceFile))
+            {
+                yield return edge;
+            }
+        }
+        foreach (List<RefEdge> edges in _overlayBySource.Values)
+        {
+            foreach (RefEdge edge in edges)
+            {
+                yield return edge;
+            }
+        }
+    }
+
+    /// <summary>Every definition, with the same shadowing rule as <see cref="AllEdges"/>.</summary>
+    public IEnumerable<RefDefinition> AllDefinitions()
+    {
+        foreach (RefDefinition definition in _base.AllDefinitions())
+        {
+            if (!_shadowed.Contains(definition.DefiningFile))
+            {
+                yield return definition;
+            }
+        }
+        foreach (RefDefinition definition in _overlayDefinitions.Values)
+        {
+            yield return definition;
+        }
+    }
+
     /// <summary>The readable name of a reference site, or null when only its hash is known.</summary>
     public string? Name(uint siteKey)
         => _overlayNames.TryGetValue(siteKey, out string? name) ? name : _base.Name(siteKey);
