@@ -177,13 +177,15 @@ public sealed class XrefReachCommand : CliCommand<XrefReachCommand.Settings>
         if (decoys.Count > 0)
         {
             var table = new Table().Border(TableBorder.Simple).Title("[bold]Decoys - unused but shaped like they matter[/]");
-            table.AddColumn("path");
-            table.AddColumn(new TableColumn("bytes").RightAligned());
-            table.AddColumn(new TableColumn("outRefs").RightAligned());
-            table.AddColumn("reason");
+            // A wrapped path is unreadable, and the size/count columns are narrow and fixed, so the
+            // path keeps whatever width is left.
+            table.AddColumn(new TableColumn("path").NoWrap());
+            table.AddColumn(new TableColumn("size").RightAligned().NoWrap());
+            table.AddColumn(new TableColumn("names").RightAligned().NoWrap());
+            table.AddColumn(new TableColumn("reason").NoWrap());
             foreach (ReachRow row in decoys.Take(40))
             {
-                table.AddRow(row.File.Path.EscapeMarkup(), $"{row.File.Size:N0}", $"{row.OutRefs:N0}", row.Reason.EscapeMarkup());
+                table.AddRow(row.File.Path.EscapeMarkup(), Bytes(row.File.Size), $"{row.OutRefs:N0}", row.Reason.EscapeMarkup());
             }
             AnsiConsole.Write(table);
             if (decoys.Count > 40)
@@ -223,6 +225,13 @@ public sealed class XrefReachCommand : CliCommand<XrefReachCommand.Settings>
 
         return truths.All(t => t.Pass) ? 0 : 1;
     }
+
+    private static string Bytes(long size) => size switch
+    {
+        >= 1 << 20 => $"{size / 1024.0 / 1024.0:N1} MB",
+        >= 1 << 10 => $"{size / 1024.0:N0} KB",
+        _ => $"{size} B",
+    };
 
     /// <summary>The one ground truth that needs the graph: every clip movemgr.bin names must be
     /// reachable, because depload makes `.mab` loading mandatory.</summary>
