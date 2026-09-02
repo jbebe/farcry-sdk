@@ -329,8 +329,16 @@ carries a `CGeometryResource` → `CMaterialResource` → `CTextureResource` cha
 `CAnimationPackageResource` per weapon — named by `sPartName`, with 75 `CAnimationResource` children
 for the sawed-off, each pulling in its own `.spk` and shell mesh.
 
-**Trap:** the parents array is sorted by CRC32 and must be re-sorted after any insert. Getting it
-wrong misbehaves animations *without crashing*, so it is easy to miss until playtesting. See
+Every clip your weapon plays has to be a child of its `CAnimationPackageResource`, or it will not
+load — the state machine enters the animation and never leaves. `jackall-cli depload add` writes the
+entry and re-derives the sort order and slices for you; stage it as a layer fragment with
+`--fragment` rather than shipping the whole 220 KB manifest.
+
+**Trap:** the package is named by `sPartName`, which for a replacement is often *not* the weapon whose
+slot you took. Registering under the wrong package is accepted and silently does nothing.
+
+**Trap:** hand-editing instead means re-sorting the parents array by CRC32 after any insert. Getting
+it wrong misbehaves animations *without crashing*, so it is easy to miss until playtesting. See
 [depload](../file-formats/depload.md).
 
 ## Tooling

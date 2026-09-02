@@ -14,8 +14,10 @@ extended by disassembly, traced live via GhidraMCP against the same more heavily
 :::
 
 `depload.dat` records, per world, which resources a resource depends on (its "parents"/"children") —
-a **prefetch manifest**, used by the engine to warm what a resource will need and, evidently, to tie
-animation data to what plays it.
+a **prefetch manifest**, used by the engine to warm what a resource will need. It is also, for
+animation, the membership list of every `CAnimationPackageResource`: a `.mab` the engine will play
+has to be listed under the package that plays it, so for clips this file is not a hint but a
+requirement.
 
 :::note[It does not gate loading — for a texture]
 A *texture* absent from every `depload` still resolves and renders when something asks for it —
@@ -36,9 +38,11 @@ below** — an animation clip in the same situation did *not* load.
    `"%s%s_deploadnewparticles.rml"` — a second, RML-format dependency file for particle effects. RML
    is a separate container and a solved one: `jackall-cli rml decode` / `rml encode` round-trip
    `oasisstrings.rml` byte-identically at 946 KB. Its *contents* are out of scope here. If the binary
-   `.dat` isn't found, it falls back to a same-named `_depload.xml` (a plain `XmlParser::parse` path —
-   `worlds/tmpla/` ships source XML twins beside its binaries, so confirm whether the fallback
-   consumes that same shape before relying on it).
+   `.dat` isn't found, it falls back to a same-named `_depload.xml` (a plain `XmlParser::parse` path).
+   Nearly every world ships that XML twin beside its binary — 25 of them, up to 5.3 MB — and they
+   carry the same parents the binary does, with names restored; see
+   [The type table](#the-type-table). Whether the loader's fallback actually consumes that exact
+   shape is untested, since the binary is always present.
 2. Then walks every installed DLC via `CDlcService::GetDepLoads()` and loads each one's own
    `depload.dat` the same way, with `isPrimary = false`.
 
@@ -112,7 +116,36 @@ arrays, or empirical correlation against known resource types across several rea
 
 ## Animations are not like textures
 
-:::danger[An animation clip at a path in no `depload` did not load]
+:::tip[Solved: a `.mab` is reachable only through its animation package]
+Measured in game. An animation clip at a path present in **no shipped archive** loads and plays
+normally, provided it is listed as a `CAnimationResource` child of the `CAnimationPackageResource`
+that the weapon's **`sPartName`** names. Registering a clip in a `depload` *is* adding it to an
+animation package — they are the same act, which is why the two candidate explanations below
+collapsed into one.
+
+Three configurations, one variable each time:
+
+| Clip at an invented path | Result |
+|---|---|
+| listed in no `depload` | reload never plays; the MOVE state machine enters the reload state and never leaves |
+| listed under the **wrong** package (`dart_rifle`) | identical failure |
+| listed under the package `sPartName` names (`dragunov`) | **plays normally** |
+
+The middle row is the control that matters: it rules out "any `depload` edit, or the rebuild itself,
+fixed it" and pins the cause to package membership.
+
+**The trap is which package.** It is named by the archetype's `sPartName`, *not* by the weapon whose
+slot a mod occupies. The VSS Vintorez replaces the Dart Rifle but sets `sPartName = dragunov`, so its
+clips belong to the `dragunov` package; a registration under `dart_rifle` is accepted, changes
+nothing, and fails silently.
+
+Edit it with [`jackall-cli depload add`](#editing) rather than by hand.
+:::
+
+The measurements that led there are kept below, since they are what a similar investigation would
+have to repeat.
+
+:::note[How it was found: an unlisted clip did not load]
 Measured in game, twice, while repointing the VSS Vintorez's clips (see
 [MOVE](./move.md#which-clips-does-a-weapon-play)):
 
@@ -128,20 +161,18 @@ The correlation is exact. The working clip's `CPathID` (`70AEAAE4`,
 **none**.
 :::
 
-That is strong circumstantial evidence rather than proof of mechanism: it shows an unlisted clip
-does not load, not that `depload` is what stops it. Two other candidates are untested — the
-animation-package system (`CAnimationPackageResource`, which is itself one of the resource types
-below) and the archive lookup treating `.mab` differently. The clean proof is to register an
-invented path in a `depload` and retest, which needs a writer for this format.
+That was the circumstantial stage: it showed an unlisted clip does not load, not that `depload` was
+what stopped it. Registering an invented path and retesting is what settled it — see the box above.
 
 Worth noting alongside it: the one community report of a corrupted `depload` describes
-**animations misbehaving** specifically (see [Hand-editing gotcha](#hand-editing-gotcha)). Two
-independent observations now tie this file to animation loading and nothing else.
+**animations misbehaving** specifically (see [Hand-editing gotcha](#hand-editing-gotcha)), which is
+the same mechanism seen from the other side — a parents array the engine can no longer binary-search
+loses the package lookup.
 
-**Practical rule for now: a mod adding a new animation clip should ship it at a path the game
-already has, not at an invented one.** For a weapon replacement, the replaced weapon's own clip
-slots are usually free — `jackall-cli move clips --weapon N --shared-only` tells you which of them
-no other weapon plays.
+Reusing a real path the mod already owns still works and needs no `depload` edit, so it stays the
+simpler option when a free slot exists: `jackall-cli move clips --weapon N --shared-only` tells you
+which of a replaced weapon's own clip slots no other weapon plays. Registering a new path is what
+scales past that, and what a mod adding genuinely new content has to do.
 
 ## The type table
 
@@ -149,8 +180,13 @@ no other weapon plays.
 `CPathID`. Confirmed against `world1_depload.dat`'s 16-entry table; the lowercased form matches
 nothing.
 
-The `_depload.xml` form is what gives the names away, because it spells the class out as the element
-name:
+The `_depload.xml` form is what gives the names away, twice over: it spells the class out as the
+element name, and on many entries it also carries the hash outright as a `crc_Type` attribute.
+
+```xml
+<CSoundResource Type="CSoundResource" crc_Type="1676955864" ID="soundbinary\00456a3c.spk"
+                crc_ID="1746764574" IsFilename="1" Size="0" nbChildren="2">
+```
 
 ```xml
 <CMagmaConfigUIResource ID="ui\localized\pc\eng\ui\360.mgb.desc" crc_ID="3891716022" version="2">
@@ -161,22 +197,28 @@ name:
 So the XML is the binary's own shape with names restored: a parent element per parent entry, its
 children nested inside, `crc_ID` being the `CPathID` the binary stores.
 
-Eight of the sixteen distinct type hashes across every shipped `depload` are identified:
+**All sixteen distinct type hashes across every shipped `depload` are identified.** Each name below
+hashes to the value observed in a real type table, with none left over:
 
-| `typeHash` | Class | In |
-|---|---|---:|
-| `BC825377` | `CMaterialResource` | 26 files |
-| `6BD55AFC` | `CTextureResource` | 26 files |
-| `63F450D8` | `CSoundResource` | 26 files |
-| `B0604725` | `CAnimationResource` | 26 files |
-| `4CDDA42C` | `CSkeletonResource` | 26 files |
-| `221AD401` | `CMovementResource` | 25 files |
-| `84A30AF0` | `CAnimationPackageResource` | 2 files |
-| `6BE083B6`, `86E8E8BE`, `44601C12`, `06EA6087`, `1131FDDC`, `AB064BA6`, `59EB7FEF`, `1543407D`, `3AE88EFD` | unidentified | — |
+| `typeHash` | Class | | `typeHash` | Class |
+|---|---|---|---|---|
+| `BC825377` | `CMaterialResource` | | `B0604725` | `CAnimationResource` |
+| `6BD55AFC` | `CTextureResource` | | `44601C12` | `CParticlesSystemParamResource` |
+| `6BE083B6` | `CParticlesEmitterParamResource` | | `4CDDA42C` | `CSkeletonResource` |
+| `86E8E8BE` | `CGeometryResource` | | `AB064BA6` | `CFaceAnimResource` |
+| `63F450D8` | `CSoundResource` | | `59EB7FEF` | `CDominoBoxResource` |
+| `1131FDDC` | `CStateMachineResource` | | `1543407D` | `CResourceContainer` |
+| `06EA6087` | `CFrankensteinPoseResource` | | `84A30AF0` | `CAnimationPackageResource` |
+| `221AD401` | `CMovementResource` | | `3AE88EFD` | `CPhysResource` |
 
-The unidentified eight resisted a guess-list of ~60 plausible `C*Resource` names, so they are
-probably classes whose names are not obvious from the asset types — recovering them wants the class
-registry out of the binary rather than more guessing.
+An earlier pass left eight of these unnamed after a guess-list of ~60 plausible `C*Resource` names.
+Guessing was the wrong instrument: the names are in the shipped data. Six are stated outright by the
+world twins' `crc_Type` attributes, and the rest fall out of matching child hashes against the same
+twins — `CFrankensteinPoseResource` and `CParticlesEmitterParamResource` were never going to be
+guessed.
+
+`CRealtreeResource`, `CStateMachineBlobResource` and `CResource` appear in the twins as parents but
+never as anyone's child, so they never enter a type table.
 
 ## Hand-editing gotcha
 
@@ -186,17 +228,72 @@ by CRC32 afterward (and keep `childIndex`/`childCount` consistent with wherever 
 ends up in the children arrays), or the file loads but animations misbehave — not a hard crash, so the
 corruption is easy to miss until playtesting.
 
+## Editing
+
+`jackall-cli depload` reads, writes and edits the format. `Encode` re-derives the parents' sort
+order, every child slice and the whole type table from the decoded model, so an edit says only what
+belongs where and never maintains an index by hand — which is exactly the class of mistake the
+[gotcha](#hand-editing-gotcha) describes.
+
+```
+jackall-cli depload decode world1_depload.dat          # to XML, paths resolved from the hashlist
+jackall-cli depload encode world1_depload.xml
+jackall-cli depload validate world1_depload.dat        # sort order, index ceilings, round trip
+jackall-cli depload add world1_depload.dat \
+    --parent dragunov --child "graphics\...\clip.mab" --type CAnimationResource
+```
+
+`--parent` takes an animation package name, a game path, or an eight-digit hex CRC: package names
+hash exactly as paths do, so `dragunov` resolves to `E765D26D` on its own.
+
+For a mod, add `--fragment` and stage the result in a layer, which merges into the retail file at
+build time instead of shipping a 220 KB binary:
+
+```
+mods\worlds\world1\generated\world1_depload.dat\dragunov.3882209901.xml
+```
+
+One fragment is one parent and its whole dependency list — about 2 KB.
+
+**The number is the parent's `CPathID` and is what binds; the label in front of it is yours.**
+`3882209901.xml`, `dragunov.3882209901.xml` and `anything.3882209901.xml` are the same fragment, so
+renaming a staged file cannot orphan the override and two mods spelling a package differently still
+land on one entry. This is the scheme a world-sector entity's fragment already uses
+(`Guard_12.2058514756624450165.xml`), which is why it needs no special case anywhere. Decimal rather
+than hex precisely because that rule keys on a *numeric* tail — and it is how the twins print
+`crc_ID` anyway. `depload add --fragment` names the file after whatever you passed to `--parent`, so
+you never look a hash up; pass a hash instead and you get the bare form.
+
+A fragment deliberately carries no `childIndex`: that is a whole-file layout detail which shifts
+whenever anything earlier in the file changes, so including it would make every fragment churn.
+
+Two mods registering clips under **different** packages compose without either noticing. Under the
+**same** package they do not: the merge is line-based, both edits append at the same line, and it
+lands as a real conflict. A build resolves it by load order and *reports* it, so the losing clip is
+at least named rather than vanishing the way a whole-file override would. Making those merge would
+mean canonicalizing children into hash order, and 30% of shipped parents store them in some other
+order — not worth trading that fidelity for while the meaning of the order is unknown.
+
+Three properties of all 27 shipped files are what let the encoder rebuild from the model alone, and
+JackAll's tests pin each one:
+
+- the child slices are a **gapless, non-overlapping cover** of the child arrays;
+- the type table is in **first-use order**, with no unused slot;
+- `childIndex` is **not** monotonic in parent order, so block order has to be carried separately.
+
+The format's own ceilings are `childIndex`/`childCount` being `u16` (65,535 children per file;
+`world1` uses 29,723) and `childTypeIndex` being `u8` (256 distinct types; 16 are used).
+
 ## Unknowns
 
-- **Eight of the sixteen `typeHash` values** are still unnamed (see [The type table](#the-type-table)).
-  The other eight, and the hashing rule, are settled.
-- **What actually stops an unlisted animation loading.** The correlation is exact but the mechanism
-  is not proven — see [Animations are not like textures](#animations-are-not-like-textures). Needs a
-  writer for this format to test directly.
-- **No writer.** The format is fully decoded and read-only tooling is straightforward, but nothing
-  edits it. The sort invariant and the `childIndex`/`childCount` slices make hand-editing hazardous
-  in the way the gotcha below describes, so this is the piece worth building next.
+- **Whether registration is needed for asset types other than animations.** A texture at an
+  unlisted path renders fine, and an animation does not load at all; nothing else has been tested.
+- **The `_depload.xml` twins are not a byte-exact source for the binary.** In `world1` they agree on
+  all 9,718 parents, but 381 parents recur through the nesting and 2,032 localized
+  `soundbinary\loc\*.spk` children disagree with the `.dat`, so the XML is a readable sibling rather
+  than the file the binary is built from.
 
-Resolved since the first revision: the `_depload.xml` fallback now has real samples — every
-`common/ui/localized/*/ui/_depload.xml` — and they are nested parent/children with the resource class
-as the element name, which is what identified the type table.
+Resolved since the first revision: the `_depload.xml` fallback has real samples, and not only the
+small `common/ui/localized/*/ui/` ones — **every world ships a full twin** beside its binary
+(`world1_depload.xml` is 5.3 MB, and 25 of them exist). They are nested parent/children with the
+resource class as the element name, which is what identified the type table.

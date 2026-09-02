@@ -1293,10 +1293,19 @@ Things that are settled, so nobody re-derives them:
   resolves without touching `CAnimationPackageResource`. That holds because the donor already ships
   in the same worlds — a donor from a world your weapon does not appear in may not be so forgiving.
 
-  **It also holds only while every clip you play is one the game already lists.** Shipping a
-  re-authored clip at a *new* path breaks it: an animation at a path in no `depload` does not load,
-  and the weapon locks up mid-reload. Put your clip in a slot the game already has — the replaced
-  weapon's own, verified free with `move clips --weapon N --shared-only`. See
+  **It also holds only while every clip you play is one the game already lists.** A clip at a path
+  the game never shipped does not load unless you register it, and the weapon locks up mid-reload.
+  Two ways out:
+
+  - **Reuse a slot the game already has** — the replaced weapon's own, verified free with
+    `move clips --weapon N --shared-only`. No `depload` edit, but it needs a spare real path per
+    clip, so it does not scale.
+  - **Register the new path** with `jackall-cli depload add`, staged as a layer fragment. This is
+    what a mod adding genuinely new clips has to do.
+
+  If you register, the package is the one your **`sPartName`** names — not the weapon whose slot you
+  took. The VSS sets `sPartName = dragunov`, so its clips go under `dragunov`; filing them under
+  `dart_rifle` is accepted and does nothing. See
   [depload](../file-formats/depload.md#animations-are-not-like-textures).
 - **The Dragunov's magazine-drop trajectory reads fine** with a VSS magazine modelled into it.
 - **An FX socket can be moved without touching the rig.** `FX_FIRE` and `FX_CASING` exist twice: as

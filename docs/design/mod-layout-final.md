@@ -171,13 +171,50 @@ Settled. Reopening one needs a new measurement, not a new opinion.
 - **Splitting containers under ~100 KB.** No. Rule 1. This is what rejects `mapsdata`, `sectorsDep`,
   `ActionMap`, barks and `Sector`.
 - **Positional or synthesized ids.** No — not stable, would orphan overrides.
-- **Splitting generated manifests.** No, unless a pipeline ever needs to inject a resource by hand.
+- **Splitting generated manifests.** ~~No, unless a pipeline ever needs to inject a resource by
+  hand.~~ **Reopened, and `depload.dat` now splits** — the escape clause fired. See
+  [below](#reopened-depload-splits).
 - **Deeper than one key level past the container.** No. Mission-layer granularity inside a sector was
   already rejected (97% of entities sit under `main`); the same logic holds everywhere else.
 - **Fragment overrides reducing archive size.** They do not and never will: `Apply` re-encodes the whole
   container and drops shared-data backreferences (measured 18,525 → 32,256 B on one sector). Orthogonal
   change, separate pass.
 - **Per-format bespoke layouts.** No. Everything is `<container>.<ext>\<fragmentId>`.
+
+## Reopened: `depload` splits
+
+This section excluded resource manifests as "generated dependency manifests… A mod should never
+hand-ship one; they are rebuilt from the asset set." That reasoning assumed a pipeline is available
+to rebuild them. **For a mod there is none**, and an animation clip at a new path does not load
+until it is registered in a `depload` — measured in game, see
+[depload](/docs/file-formats/depload). So the escape clause the Closed questions list already
+wrote — *"unless a pipeline ever needs to inject a resource by hand"* — is met, and reopening it
+needs a measurement rather than an opinion:
+
+| | measured |
+|---|---|
+| median `depload.dat` | **102 KB** (min 10 KB, max 223 KB) — clears Rule 1's ~100 KB, but only just |
+| one item (a parent and its dependency list) | median **331 B**, p90 784 B, p99 8.4 KB, max 43.7 KB |
+| amplification | **315×** |
+| identity | the parent's `crc_ID`, a `CPathID` — the "type hash that is itself a name hash" the identity rule already admits |
+| depth | stop at the **parent**. Per-child would be one dependency per file, which is Rule 2's whole point |
+
+All three gates pass, the 2 KB margin on Rule 1 included, and the on-disk convention needed no change
+at all — `<container>.<ext>\<fragmentId>` absorbed a third format exactly as it absorbed the second.
+
+The id scheme needed no invention either: `<label>.<crc32 decimal>.xml` is the **same cosmetic-name /
+authoritative-number shape a placed entity already uses**, so `FcbFragments.IdComparer` collapses the
+label with no special case, and a rename cannot orphan an override. Decimal because that comparer
+keys on a numeric tail. The label is only ever supplied by a caller who already knows it — `depload
+add` uses whatever was passed to `--parent` — so nothing has to resolve a hash back to a name, and a
+parent nobody can name still works as a bare `3882209901.xml`. One detail *is* specific to depload: a
+fragment omits `childIndex`, a whole-file layout value that shifts whenever anything earlier changes
+and would otherwise make every fragment churn.
+
+**The splitter interface named in [The one mechanism change](#the-one-mechanism-change) is now
+built**, as `IContainerSplitter`/`IContainerTree` with `FcbContainerSplitter` and
+`DepLoadContainerSplitter`. `stringtable` and `NewPartLib` remain the two additions this document
+called for; they now only need an implementation each, not a refactor.
 
 ## Correction to fcb-deep-fragments.md
 
