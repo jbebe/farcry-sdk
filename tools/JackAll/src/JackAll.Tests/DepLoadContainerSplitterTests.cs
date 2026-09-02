@@ -39,7 +39,11 @@ public class DepLoadContainerSplitterTests : IDisposable
     [InlineData("entitylibrary.fcb", true)]
     [InlineData("patch.dat", false)]
     [InlineData("common.dat", false)]
-    [InlineData("movemgr.bin", false)]
+    // A MOVE graph is a container too, but only by name: `.bin` alone is far too broad, and the
+    // authoring twin is not loadable by any engine. See MoveContainerSplitterTests.
+    [InlineData("movemgr.bin", true)]
+    [InlineData("movemgrnamed.bin", false)]
+    [InlineData("particles.bin", false)]
     public void Only_a_depload_is_a_container_not_every_dat(string fileName, bool expected)
         => Assert.Equal(expected, ContainerFormats.IsContainerSegment(fileName));
 

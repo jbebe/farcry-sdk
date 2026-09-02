@@ -48,6 +48,10 @@ public readonly struct MoveOp(MoveOpKind kind, string name, uint number, byte[]?
         new(kind, name, 0, null, target);
 
     public MoveOp WithNumber(uint value) => new(Kind, Name, value, Bytes, Target);
+
+    /// <summary>The same pointer aimed at another object - how a reference into a replaced state is
+    /// re-seated once the replacement is in place.</summary>
+    public MoveOp WithTarget(MoveObject target) => new(Kind, Name, Number, Bytes, target);
 }
 
 /// <summary>One serialized object: its class and the ordered primitives it holds.</summary>
@@ -109,6 +113,35 @@ public sealed class MoveFile
 
     public MoveObject? StateMachine =>
         Objects.FirstOrDefault(o => o.ClassName == "CMoveStateMachine");
+
+    /// <summary>
+    /// Rebuilds <see cref="Objects"/> by walking the ownership tree from the root, in the order a
+    /// reader recreates them.
+    /// </summary>
+    /// <remarks>
+    /// <see cref="MoveCodec.Save"/> walks the tree and never consults this list, so writing does not
+    /// need it - but everything that <em>reasons</em> about a graph does, and after a splice the list
+    /// still names the objects the edit replaced. Call this once the tree is final.
+    /// </remarks>
+    public void Reindex()
+    {
+        Objects.Clear();
+        Walk(Root);
+
+        void Walk(MoveObject node)
+        {
+            foreach (MoveOp op in node.Ops)
+            {
+                if (op.Kind != MoveOpKind.PointerNew)
+                {
+                    continue;
+                }
+
+                Objects.Add(op.Target!);
+                Walk(op.Target!);
+            }
+        }
+    }
 }
 
 public sealed class MoveFormatException(string message) : Exception(message);

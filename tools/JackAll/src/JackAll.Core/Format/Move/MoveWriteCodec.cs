@@ -9,6 +9,7 @@ internal sealed class MoveWriteCodec(MoveFile file) : IMoveCodec
 {
     private readonly List<byte> _out = [];
     private readonly Stack<(MoveObject Object, int Index)> _stack = new();
+    private readonly HashSet<MoveObject> _seen = [];
     private int _written;
     private MoveObject _current = file.Root;
     private int _index;
@@ -117,8 +118,22 @@ internal sealed class MoveWriteCodec(MoveFile file) : IMoveCodec
                 return null;
 
             case MoveOpKind.PointerRef:
-                WriteU32(unchecked((uint)op.Target!.Index));
-                return op.Target;
+                // A back-reference can only name an object this pass has already written. An unwritten
+                // target still carries whatever Index the read pass left on it, so emitting it blind
+                // is silent corruption rather than a bad file: -1 is the "new object" marker, and the
+                // reader would take the next four bytes for a ClassType. Whole-graph round trips never
+                // reach this, but splicing fragments does. Tracked by identity for that same reason -
+                // Index alone cannot say whether this pass assigned it.
+                MoveObject referenced = op.Target!;
+                if (!_seen.Contains(referenced))
+                {
+                    throw new MoveFormatException(
+                        $"{_current.ClassName}.{op.Name} refers to a {referenced.ClassName} that this "
+                        + "graph never writes, so there is no index to point at");
+                }
+
+                WriteU32(unchecked((uint)referenced.Index));
+                return referenced;
 
             case MoveOpKind.PointerNew:
                 break;
@@ -132,6 +147,7 @@ internal sealed class MoveWriteCodec(MoveFile file) : IMoveCodec
         WriteU32(unchecked((uint)-1));
         WriteU32(MoveClasses.Id(target.ClassName));
         target.Index = _written++;
+        _seen.Add(target);
 
         _stack.Push((_current, _index));
         _current = target;
