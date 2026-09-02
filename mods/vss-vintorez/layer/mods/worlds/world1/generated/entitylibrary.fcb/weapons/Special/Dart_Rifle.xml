@@ -31,11 +31,11 @@
               <hidDescriptor>
                 <component class="GraphicComponent" version="2" detail="0">
                   <object index="0" meshName="CLIP" boneName="CLIP" bboxMin="-0.01439,-0.075259,-0.000331" bboxMax="0.014395,0.0115,0.085239" />
-                  <object index="1" meshName="FRAME" boneName="FRAME" bboxMin="-0.035379,-0.118269,0.025879" bboxMax="0.050941,0.559418,0.252624" />
+                  <object index="1" meshName="FRAME" boneName="FRAME" bboxMin="-0.035379,-0.118269,0.025879" bboxMax="0.033729,0.559418,0.252624" />
                   <object index="2" meshName="SCOPE_HI" boneName="SCOPE_HI" bboxMin="-0.029298,-0.178961,-0.00354" bboxMax="0.020142,-0.087649,0.0459" />
-                  <object index="3" meshName="SLIDE" boneName="SLIDE" bboxMin="-0.011096,-0.22151,0.027176" bboxMax="0.009878,-0.149781,0.04815" />
+                  <object index="3" meshName="SLIDE" boneName="SLIDE" bboxMin="0.03516,-0.140996,-0.014951" bboxMax="0.074495,-0.061773,0.01531" />
                   <object index="4" meshName="ACCESSORY02" boneName="ACCESSORY02" bboxMin="-0.021738,-0.482497,-0.072687" bboxMax="0.021738,0.148617,0.033838" />
-                  <resource fileName="graphics\Weapons\Special\Dart_Rifle\Dart_Rifle.xbg" bboxMin="-0.036916,-0.3103,-0.066944" bboxMax="0.051339,0.631498,0.16633" />
+                  <resource fileName="graphics\Weapons\Special\Dart_Rifle\Dart_Rifle.xbg" bboxMin="-0.036314,-0.3103,-0.066944" bboxMax="0.051742,0.631498,0.16633" />
                   <skeleton name="Dragunov" pos="0,0,0" rot="1,-0,-0,-0">
                     <bone name="CLIP" pos="-2e-006,0.206563,-0.052321" rot="1,0,0,0" />
                     <bone name="FRAME" pos="-2e-006,-0.192031,-0.092823" rot="1,0,0,0" />
