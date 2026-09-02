@@ -118,3 +118,24 @@ public static class MoveCodec
 
 /// <summary>One value channel: its name, and its value names when it is an enum.</summary>
 public sealed record MoveChannel(string Name, IReadOnlyList<string>? Values);
+
+/// <summary>
+/// What a MOVE graph's opaque integers mean. Everything here is informational - the builder
+/// ignores it, so an annotated document still rebuilds byte-for-byte.
+/// </summary>
+/// <param name="Channels">The value channels, from a named twin's channel table.</param>
+/// <param name="ResolveName">Turns a CPathID back into a game path, usually a hash dictionary.</param>
+public sealed record MoveLabels(
+    IReadOnlyList<MoveChannel>? Channels = null,
+    Func<uint, string?>? ResolveName = null)
+{
+    /// <summary>The fields that hold a CPathID or CStringID worth resolving to a name.</summary>
+    private static readonly HashSet<string> Hashed =
+    [
+        "m_animNameHash", "m_stateNameHash", "aliasID", "m_package", "m_poseNameHash",
+        "m_iModelHashNamePartID", "m_anchorPartName", "m_iHandleHash",
+    ];
+
+    public string? PathOf(string field, uint value) =>
+        ResolveName is not null && Hashed.Contains(field) ? ResolveName(value) : null;
+}

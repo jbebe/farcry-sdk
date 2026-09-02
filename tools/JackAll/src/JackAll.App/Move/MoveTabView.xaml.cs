@@ -1,6 +1,8 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using JackAll.Core;
+using JackAll.Core.Naming;
 using JackAll.Tools.Move;
 using Microsoft.Win32;
 
@@ -123,7 +125,10 @@ public partial class MoveTabView : UserControl
             return;
         }
 
-        File.WriteAllText(dialog.FileName, MoveXml.ToXml(_file, _channels));
+        NameDatabase names = BundledAssets.LoadNames();
+        MoveLabels labels = new(
+            _channels, hash => names.TryResolve(hash, out string path) ? path : null);
+        File.WriteAllText(dialog.FileName, MoveXml.ToXml(_file, labels));
         StatusText.Text = $"Wrote {dialog.FileName}";
     }
 

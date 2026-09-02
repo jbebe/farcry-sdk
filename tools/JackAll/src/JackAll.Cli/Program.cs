@@ -174,6 +174,22 @@ app.Configure(config =>
         move.AddCommand<MoveVerifyCommand>("verify")
             .WithDescription("Check that a MOVE graph, or the XML it is built from, reads back to itself.")
             .WithExample("move", "verify", "dlc1.bin");
+        move.AddCommand<MoveClipsCommand>("clips")
+            .WithDescription(
+                "List the animation clips an EquippedWeapon index plays, flagging the ones another "
+                + "weapon plays too. Omit --weapon for a census of every index.")
+            .WithExample("move", "clips", "movemgr.bin", "--weapon", "39");
+        move.AddCommand<MoveValidateCommand>("validate")
+            .WithDescription("Report clip references that no known game path hashes to.")
+            .WithExample("move", "validate", "movemgr.bin");
+        move.AddCommand<MoveRepointCommand>("repoint")
+            .WithDescription(
+                "Retarget the clips one weapon plays, from a map of old to new game paths. Only "
+                + "sites that weapon governs are rewritten; shared sites are reported, not touched.")
+            .WithExample("move", "repoint", "movemgr.bin", "out.bin", "--weapon", "39", "--map", "vss.tsv");
+        move.AddCommand<MoveHashCommand>("hash")
+            .WithDescription("Print the CPathID a game path hashes to.")
+            .WithExample("move", "hash", @"graphics\characters\clip.mab");
     });
 
     // --- .rml resource manifests ----------------------------------------

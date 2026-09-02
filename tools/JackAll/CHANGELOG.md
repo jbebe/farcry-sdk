@@ -9,10 +9,22 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   browsable as the ownership tree it reads back as. Criteria are labelled with the channel and enum
   value they test where a named twin sits beside the graph, so a rule reads as
   `EquippedWeapon == SawedOffShotgun` rather than `17 == 42`. Read-only.
-- **`move` CLI** — `decode`, `encode` and `verify` for MOVE graphs. The XML is an interchange
-  format using the engine's own field names; `verify` reports whether a graph reads back to the
-  bytes it came from, which also checks the pointer graph because every back-reference is
-  renumbered from object identity rather than replayed.
+- **`move` CLI** — `decode`, `encode`, `verify`, `clips`, `validate` and `hash` for MOVE graphs.
+  The XML is an interchange format using the engine's own field names, with clip and state hashes
+  resolved to game paths by default; `verify` reports whether a graph reads back to the bytes it
+  came from, which also checks the pointer graph because every back-reference is renumbered from
+  object identity rather than replayed.
+- **`move clips --weapon N`** — the clips an EquippedWeapon index plays, scoped by criterion rather
+  than by folder, and flagging the ones another weapon plays too. Repointing a shared clip changes
+  how that other weapon animates: the Dart Rifle's own folder holds a draw clip the MGL-140 plays,
+  and its jam cycle is borrowed from the AK-47.
+- **`move repoint --weapon N --map pairs.tsv`** — retargets the clips one weapon plays. Only sites
+  that weapon governs are rewritten, so a clip it shares keeps playing for the other weapon. A
+  mapped clip also reachable from a site no weapon governs makes the repoint *incomplete* — the
+  weapon still plays the original through that path — and the command says so and exits non-zero
+  rather than reporting success.
+- **`move validate`** — clip references that no known game path hashes to, which catches a mistyped
+  repoint map before it ships a graph that parses and plays nothing.
 
 ## [1.0.0] - 2026-08-23
 

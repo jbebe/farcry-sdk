@@ -23,13 +23,13 @@ public static class MoveXml
     private const string RootName = "MoveGraph";
 
     /// <summary>Renders a binary MOVE graph as XML.</summary>
-    public static string Decode(byte[] data, IReadOnlyList<MoveChannel>? channels = null)
-        => ToXml(MoveCodec.Load(data), channels);
+    public static string Decode(byte[] data, MoveLabels? labels = null)
+        => ToXml(MoveCodec.Load(data), labels);
 
     /// <summary>Builds a document produced by <see cref="Decode"/> back into a binary graph.</summary>
     public static byte[] Encode(string xml) => MoveCodec.Save(FromXml(xml));
 
-    public static string ToXml(MoveFile file, IReadOnlyList<MoveChannel>? channels = null)
+    public static string ToXml(MoveFile file, MoveLabels? labels = null)
     {
         StringBuilder text = new();
         XmlWriterSettings settings = new() { Indent = true, IndentChars = "  " };
@@ -41,7 +41,7 @@ public static class MoveXml
             writer.WriteAttributeString("flags", "0x" + file.Flags.ToString("X8"));
             foreach (MoveOp op in file.Root.Ops)
             {
-                Write(writer, op, channels, null);
+                Write(writer, op, labels, null);
             }
 
             writer.WriteEndElement();
@@ -51,7 +51,7 @@ public static class MoveXml
     }
 
     private static void Write(
-        XmlWriter writer, MoveOp op, IReadOnlyList<MoveChannel>? channels, uint? channel)
+        XmlWriter writer, MoveOp op, MoveLabels? labels, uint? channel)
     {
         switch (op.Kind)
         {
@@ -64,7 +64,7 @@ public static class MoveXml
                 uint? inner = target.Field("m_eValueID");
                 foreach (MoveOp child in target.Ops)
                 {
-                    Write(writer, child, channels, inner);
+                    Write(writer, child, labels, inner);
                 }
 
                 writer.WriteEndElement();
@@ -99,13 +99,13 @@ public static class MoveXml
 
             case MoveOpKind.U8:
             case MoveOpKind.U32:
-                WriteInteger(writer, op, op.Number.ToString(CultureInfo.InvariantCulture), channels, channel);
+                WriteInteger(writer, op, op.Number.ToString(CultureInfo.InvariantCulture), labels, channel);
                 return;
 
             case MoveOpKind.S32:
                 WriteInteger(
                     writer, op,
-                    unchecked((int)op.Number).ToString(CultureInfo.InvariantCulture), channels, channel);
+                    unchecked((int)op.Number).ToString(CultureInfo.InvariantCulture), labels, channel);
                 return;
 
             case MoveOpKind.Str:
@@ -149,19 +149,31 @@ public static class MoveXml
 
     private static void WriteInteger(
         XmlWriter writer, MoveOp op, string value,
-        IReadOnlyList<MoveChannel>? channels, uint? channel)
+        MoveLabels? labels, uint? channel)
     {
         writer.WriteStartElement(op.Kind.ToString().ToLowerInvariant());
         writer.WriteAttributeString("n", op.Name);
         writer.WriteAttributeString("v", value);
-        Annotate(writer, op, channels, channel);
+        Annotate(writer, op, labels, channel);
         writer.WriteEndElement();
     }
 
     /// <summary>Informational channel and enum labels; <see cref="FromXml"/> ignores them.</summary>
     private static void Annotate(
-        XmlWriter writer, MoveOp op, IReadOnlyList<MoveChannel>? channels, uint? channel)
+        XmlWriter writer, MoveOp op, MoveLabels? labels, uint? channel)
     {
+        if (labels is null)
+        {
+            return;
+        }
+
+        if (labels.PathOf(op.Name, op.Number) is { } path)
+        {
+            writer.WriteAttributeString("path", path);
+            return;
+        }
+
+        IReadOnlyList<MoveChannel>? channels = labels.Channels;
         if (channels is null)
         {
             return;

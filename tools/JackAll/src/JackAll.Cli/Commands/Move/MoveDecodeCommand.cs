@@ -1,5 +1,7 @@
 using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
+using JackAll.Core;
+using JackAll.Core.Naming;
 using JackAll.Tools.Move;
 
 using Spectre.Console.Cli;
@@ -34,11 +36,14 @@ public sealed class MoveDecodeCommand : CliCommand<MoveDecodeCommand.Settings>
         byte[] data = CliIO.ReadInput(settings.Input);
         CliIO.GuardNotOverwritingInput(settings.Input, outPath);
 
-        IReadOnlyList<MoveChannel>? channels = settings.Names is null
-            ? null
-            : MoveCodec.ChannelTable(CliIO.ReadInput(settings.Names));
+        // Paths resolve by default: without them every identifier in the document is an opaque
+        // integer, and a clip is the one thing an author always needs to recognise.
+        NameDatabase names = BundledAssets.LoadNames();
+        MoveLabels labels = new(
+            settings.Names is null ? null : MoveCodec.ChannelTable(CliIO.ReadInput(settings.Names)),
+            hash => names.TryResolve(hash, out string path) ? path : null);
 
-        CliIO.WriteOutput(outPath, MoveXml.Decode(data, channels));
+        CliIO.WriteOutput(outPath, MoveXml.Decode(data, labels));
         CliIO.ReportWrote(outPath);
         return 0;
     }
