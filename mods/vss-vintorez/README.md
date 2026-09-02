@@ -14,8 +14,14 @@ mod; those pages are the method.
 
 ## What it changes
 
-Nineteen files. All but one are overrides of paths that already exist; `vss_worn_c.xbt` is at a path
-invented for this mod, which loads from `patch.dat` with no hashlist and no `depload` entry.
+Twenty-one files. Most are overrides of paths that already exist. Two are at paths invented for this
+mod, and they need different treatment:
+
+- `vss_worn_c.xbt` loads from `patch.dat` with no hashlist and no `depload` entry — a texture reached
+  through a material that is itself listed needs no registration.
+- the reload clip does not. An animation at an unlisted path never plays, so it is registered under
+  the `dragunov` animation package — the one `sPartName` names — by the two `_depload.dat` fragments
+  below. See [depload](../../docs/docs/file-formats/depload.md#animations-are-not-like-textures).
 
 ```
 mods/graphics/weapons/special/dart_rifle/dart_rifle.xbg     the VSS, all five LOD tiers
@@ -27,8 +33,12 @@ mods/graphics/_materials/FBOIVIN2-M-2007050148031384.xbm    DART_RIFLE_METAL, re
 mods/ui/textures/hud/icons_weapons/hud_icon_sniperdart.xbt  the HUD and bazaar icon
 mods/ui/textures/guns/gun_icon_sniperdart.xbt               the multiplayer weapon select
 mods/languages/english/oasisstrings.rml                     the weapon's name, ten strings
+mods/graphics/characters/.../vss_vintorez/...vssvi_i1.mab   the reload, at a new path
+mods/graphics/move/movemgr.bin                              the MOVE graph, reload repointed
 mods/worlds/world1/generated/entitylibrary.fcb/...          four archetype fragments
 mods/worlds/world2/generated/entitylibrary.fcb/...          the same four, per world
+mods/worlds/world1/generated/world1_depload.dat/...         registers the clip, one fragment
+mods/worlds/world2/generated/world2_depload.dat/...         the same, per world
 ```
 
 The name and the icons are bound by name in `engine\gamemodes\gamemodesconfig.xml`, so both are
@@ -36,9 +46,16 @@ replacements of what a name points at rather than config edits. The bazaar name 
 `sDisplayName` — it is `nameOasis="WEAPONBAZAAR_DART_RIFLECRATE_NAME"`, resolved against
 `oasisstrings.rml`.
 
-The four fragments are the weapon, its stats, and the two pickups. **The pickups carry their own
-part lists**, so until they were rebuilt from the Dragunov's the weapon on the ground had no barrel
-at close range and grew one back at distance — LOD1 and below fold `ACCESSORY02` into `FRAME`.
+The four entitylibrary fragments are the weapon, its stats, and the two pickups. **The pickups carry
+their own part lists**, so until they were rebuilt from the Dragunov's the weapon on the ground had
+no barrel at close range and grew one back at distance — LOD1 and below fold `ACCESSORY02` into
+`FRAME`.
+
+The two `depload` fragments each add one line: the reload clip's `CPathID` as a `CAnimationResource`
+child of the `dragunov` package. Without them the clip is in `patch.dat` and referenced by
+`movemgr.bin`, and still never plays — the weapon enters the reload state and stays there. The
+package is `dragunov` because that is what this weapon's `sPartName` is; `dart_rifle` would be
+accepted and do nothing.
 
 The mesh was built inside the Dragunov's pack, so it inherited the Dragunov's material table. Its
 body clusters are moved onto `DART_RIFLE_METAL` — a material nothing else uses, already in both
