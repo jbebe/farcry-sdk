@@ -138,7 +138,7 @@
           </object>
           <object type="CFCXWeapon">
             <value name="hidHasAliasName" type="Bool">False</value>
-            <value name="iAnimationValue" type="UInt32">23</value>
+            <value name="iAnimationValue" type="UInt32">39</value>
             <value name="sndswtpWeaponStatusSoundSwitchType" type="Hash">00000004</value>
             <value name="WeaponStatusSwitchValues" type="Rml">
               <WeaponStatusSwitchValues Failure="4294967295" LowReliability="4294967295" MediumReliability="4294967295" HighReliability="4294967295" />
