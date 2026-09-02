@@ -52,6 +52,9 @@
     <Content Include="..\..\assets\binary_classes.xml" Link=".fcbclasses">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\assets\engine-roots.tsv" Link=".engineroots">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

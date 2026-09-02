@@ -1,0 +1,148 @@
+# engine-roots.tsv - reachability roots extracted from Dunia.dll (retail Steam build).
+# Consumed by `jackall-cli xref reach`. Patterns are .NET regexes matched case-insensitively
+# against game-relative corpus paths; they are corpus-matched, never printf-expanded, so a
+# format string's iteration domain never has to be re-derived. Provenance comments carry the
+# defining Dunia.dll string address and the raw engine string.
+#
+# columns: kind<TAB>flags<TAB>value
+#   kind : literal | pattern | world | family | fallback
+#   flags: SP, MP, EDITOR and their |-combos; GLOBAL (= SP|MP|EDITOR);
+#          WORLD (= derive from the pattern's (?<world>...) capture via the `world` rules);
+#          NONE (recorded for the reason string, seeds nothing)
+#
+# ---- world rules: (?<world>...) capture -> flags ----
+world	SP	world[12]
+world	SP	w[12]_[a-z0-9_]+
+world	MP	mp_[a-z0-9_]+
+world	MP	multicommon
+world	EDITOR	ige_map
+# 10e9f34 "Worlds\tmpla\generated\tmpla.game.xml" - hardcoded, but only plausibly reached via
+# -benchmark; the un-stripped development twin of the world slot.
+world	NONE	tmpla
+#
+# ---- global config / engine trees ----
+# 10e7969c "Config\AlwaysLoaded.xml", 10e6a900/10e69eb0 Default/OverrideEngineConfig.xml,
+# 10e0f3bc/10e1101c/10e3918c/10e3a1a8/10e460fc/10e558fc engine\settings\* pairs,
+# 10e6b0f0 "engine\gamemodes\GameModesConfig.xml", 10e52070 ProviderDescriptors\descriptors.xml
+family	GLOBAL	prefix:config\
+family	GLOBAL	prefix:engine\
+# 10e397fc "Databases\", 10e70d9c "Databases\MaterialImpacts\", 10e83038 "Databases\SoundMixing\",
+# 10e8f048 "Databases\BurnableObjects\BurnableObjects.xml"
+family	GLOBAL	prefix:databases\
+# shader permutation id space; ~93% of shadersobj is unnamed and ids are not paths, so per-file
+# evidence cannot exist (see memory of the shadersobj ceiling). Matched on archive source name.
+family	GLOBAL	source:shadersobj
+#
+# ---- sound: id-addressed spaces, names composed as hex ids ----
+# 10e82df0 "%s%08x.spk", 10e82dfc "%s%s\%08x.spk" (localized), 10e207e0 "%s%s\%d.spk",
+# 10edab20 "%08x.sbao", 10edab14 "%08x.bao", 10e82cf8 "%s%x.bao"
+pattern	GLOBAL	^soundbinary\\.*\.(spk|sbao|bao)$
+# 10e7b2a8 "SoundRegions.xml", 10e82a5c "SoundInfo.xml", 10e82cb0 "Config/SoundConfig.xml"
+pattern	GLOBAL	(^|\\)(soundregions|soundinfo)\.xml$
+#
+# ---- barks / facial / ambx ----
+# 10e20774 "scripts\game\BarkData\SPBarkData.banklist", 10e207a0 "scripts\game\BarkData\" +
+# 10e207c8 "%s%d.bank" - the banklist names SP outright
+pattern	SP	^scripts\\game\\barkdata\\.*\.(bank|banklist)$
+# 10e35374 "graphics\Characters\_common\facial\generated\%d.lfe", 10e207d4 "%s%d.pfe"
+pattern	GLOBAL	^graphics\\characters\\_common\\facial\\generated\\\d+\.(lfe|lfa|pfe)$
+# 10e20af0 "scripts\game\ambx\index.ambx", 10e20a8c/10e20aac "scripts\game\ambx\%s_{stop,play}.ambx"
+pattern	GLOBAL	^scripts\\game\\ambx\\.*\.ambx$
+#
+# ---- localization ----
+# 10e23b08 "%s\%s\oasisstrings.rml" - the engine composes the .rml; the .xml siblings are
+# authoring twins nothing composes
+pattern	GLOBAL	^languages\\[^\\]+\\oasisstrings\.rml$
+#
+# ---- UI packages (flags from the engine's own sp/mp/ige naming) ----
+# 10e288d4 "ui\_depload.xml" - the UI manifest IS the xml here, unlike the worlds twins
+literal	GLOBAL	ui\_depload.xml
+# 10ea28c8 "ui/common.mgb", 10e72a18 "ui/hud.mgb", 10e8df10 "ui/loading_pre_loader.mgb",
+# 10e9e07c "ui/weapon_bazaar.mgb", 10e729f4 "ui/360.mgb", 10ea4938 "UI\common.mgb.desc"
+pattern	GLOBAL	^ui\\(common|hud|loading_pre_loader|weapon_bazaar|360)\.mgb(\.desc)?$
+# 10eb05f8 "ui/sp_menus.mgb", 10e72a00 "ui/sp_pause_menus.mgb", 10e8dcc8.. "UI\loading_sp_NN.mgb.desc"
+pattern	SP	^ui\\(sp_menus|sp_pause_menus|loading_sp_\d+)\.mgb(\.desc)?$
+# 10eb844c "ui/mp_menus.mgb", 10ea7e7c "ui/common_mp.mgb", 10e8db60.. "UI\loading_mp_NN.mgb.desc"
+pattern	MP	^ui\\(mp_menus|common_mp|loading_mp_\d+)\.mgb(\.desc)?$
+# 10eaea78 "UI\ingameeditor.mgb", 10e8dab8.. "UI\loading_ige_NN.mgb.desc"
+pattern	EDITOR	^ui\\(ingameeditor|loading_ige_\d+)\.mgb(\.desc)?$
+# 10e27c68 "toc.rml"
+pattern	GLOBAL	(^|\\)toc\.rml$
+# 10eeabb8 "%sFonts%s%s.mft" + page textures the .mft's font names imply
+pattern	GLOBAL	^ui\\fonts\\.*\.(mft|xbt)$
+#
+# ---- in-game editor data ----
+# 10eb3d68 "ingameeditor/object_inventory.xml" and siblings 10ea9c54/10eaf5f8/10eb3cd4/10eb3e70/
+# 10eb3ff4, 10eaa6ac "ingameeditor\object_icons.xbt"
+family	EDITOR	prefix:ingameeditor\
+# 10eaf314 "graphics\editor\IGE_LadderHelper.xbg"
+literal	EDITOR	graphics\editor\ige_ladderhelper.xbg
+#
+# ---- online / matchmaking ----
+# 10e28de0 "engine\online\Agora\AgoraLeaderboard.xml", 10e43168 AgoraMatchmaking.xml,
+# 10e43134 DemonWareAccountSecureKey.pub - engine\ prefix family already covers them; kept for flags
+pattern	MP	^engine\\online\\.*
+#
+# ---- hardcoded global assets ----
+# 10e253f0..10e25508 sky dome textures, 10e25240 StarSphere.xbg
+family	GLOBAL	prefix:graphics\sky\
+# 10e452ac/10e452d0 "Graphics\Fonts\CourierNew{11x18,9x16}.xbt"
+pattern	GLOBAL	^graphics\\fonts\\.*\.xbt$
+# 10e46c14 "graphics\Terrain\Water\AnimatedCaustics_%03d.xbt"
+pattern	GLOBAL	^graphics\\terrain\\water\\animatedcaustics_\d+\.xbt$
+# 10e121f8 gazelle galop .mab, 10e12254 "graphics\Characters\Animals\Gazelle\Pelvis_ref.skeleton"
+literal	GLOBAL	graphics\characters\animals\gazelle\animations\gazel_fulb_galopjump2_+000fw_nowep_i1.mab
+literal	GLOBAL	graphics\characters\animals\gazelle\pelvis_ref.skeleton
+# 10e717b0 "graphics\vehicles\air\veh_glider\veh_glider_intel.xbg"
+literal	GLOBAL	graphics\vehicles\air\veh_glider\veh_glider_intel.xbg
+# 10e9c400 "SCRIPTS\MissionTools.lua", 10f47398 StateRegistry.xml
+literal	GLOBAL	scripts\missiontools.lua
+literal	GLOBAL	scripts\engine\objects\pawn\statemachine\states\stateregistry.xml
+# 10e9acf0 "OnScreenPopup\OnScreenData.xml"
+pattern	GLOBAL	(^|\\)onscreenpopup\\onscreendata\.xml$
+# graphics\move MOVE graphs: loaded by name, clips resolved through them (MoveReferenceExtractor)
+pattern	GLOBAL	^graphics\\move\\(movemgr|dlc1)\.bin$
+#
+# ---- per-world composed names (WORLD flags via the <world> capture) ----
+# 10ea9f1c "%s%s.game.xml", 10e8c774 ".game.xml"
+pattern	WORLD	^worlds\\(?<world>[^\\]+)\\[^\\]+\.game\.xml$
+# 10ea9ee4 "%sentitylibrary.fcb", 10e8b378 "\entitylibrary.fcb", 10e8b34c patch override
+pattern	WORLD	^worlds\\(?<world>[^\\]+)\\entitylibrary\.fcb$
+literal	GLOBAL	generated\entitylibrarypatchoverride.fcb
+# 10ea9dfc/10ea9ef8/10ea9f08/10ea9e64 "%s%s.{mapsdata,omnis,managers,sectorsdep}.fcb"
+pattern	WORLD	^worlds\\(?<world>[^\\]+)\\[^\\]+\.(mapsdata|omnis|managers|sectorsdep)\.fcb$
+# 10ea9ed0 "%s%s_depload.dat" - the binary manifest is the primary
+pattern	WORLD	^worlds\\(?<world>[^\\]+)\\[^\\]*_depload\.dat$
+# 10ea9eb0 "%s%s_deploadnewparticles.rml"
+pattern	WORLD	^worlds\\(?<world>[^\\]+)\\[^\\]*_deploadnewparticles\.rml$
+# 10e75e1c "\mapcompass.xbt", 10ead31c "\topviewmap.xbt"
+pattern	WORLD	^worlds\\(?<world>[^\\]+)\\(mapcompass|topviewmap)\.xbt$
+# 10ea9d10 "%smoviedata.xml", 10e8c764 "\moviedata.xml"
+pattern	WORLD	^worlds\\(?<world>[^\\]+)\\moviedata\.xml$
+# 10ebb5e4 "/DLC1/descimage.xbt", 10ebb698 "/descimage.xbt"
+pattern	GLOBAL	(^|\\)descimage\.xbt$
+#
+# ---- per-level-cell composed names ----
+# 10ea9e34 "%ssd%d.sdat", 10ea9e40 "%ssd%d_%s.xbt", 10e44c74 "\sdat\atlas" + "_diffuse.xbt" 10e44c5c
+pattern	WORLD	^levels\\(?<world>[^\\]+)\\generated\\sdat\\(sd\d+.*\.(sdat|xbt)|atlas\d+.*\.xbt)$
+# 10ea9f90 "%sworldsector%d.data.fcb", 10ea9e50 "%ssector%d.desc.fcb", 10e75e04 ".preload_x.fcb",
+# 10ea9dec "%ssector%d.srl", 10ea9dd8 "%szonesector%d.zsr", landmark pair per
+# docs/docs/engine-internals/terrain-and-vegetation.md
+pattern	WORLD	^levels\\(?<world>[^\\]+)\\generated\\worldsectors\\(worldsector\d+\.data\.fcb|sector\d+\.(desc\.fcb|preload_x\.fcb|srl)|zonesector\d+\.zsr|landmarknear\d+\.data\.fcb|landmarkfar_\d+\.data\.fcb)$
+# 10e442bc "%snv\nv%d_%d.nvm", 10e442ac "nv\sectors\nv_", 10e4352c "nv\sectors\nv.nvm",
+# 10e43540 "nv\nv.nvm" - satellites located by convention (descriptor tables ship zeroed)
+pattern	WORLD	^levels\\(?<world>[^\\]+)\\.*\.nvm$
+#
+# ---- fallbacks: engine knows the name but only reads it when the primary is absent ----
+# 10e397c0 "_depload.xml" - readable twin of the .dat, read only if the .dat is missing
+fallback	NONE	^worlds\\.*_depload\.xml$
+# 10e8b38c "\entitylibrary_full.fcb" - flag-selected variant; SP takes the suffix-less branch
+fallback	NONE	^worlds\\[^\\]+\\entitylibrary_full\.fcb$
+#
+# Unmatched engine strings deliberately not rooted: profile/system files outside the archives
+# (FC2Init.ini 10e09bf4, GamerProfile.xml 10e0f480, version.ini 10e39348, cacheAssets.dat 10f30e94,
+# DARE.INI 10fa3348), the archive files themselves (patch.dat 10f4872c and the 10f485e0..10f48720
+# mount list - they are containers, not entries), format strings too generic to anchor
+# ("%s%s\%s.xml" 10e3984c, "%s.dat" 10e39884), and editor-era templates whose files never shipped
+# (Levels\%s\%s.nomad 10ea9f5c, %sheightmap.raw 10eaa054, %stexture.mask 10eaa044,
+# %scollection.mask 10eaa2c8).

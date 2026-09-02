@@ -27,6 +27,11 @@ public static class BundledAssets
         return path is null ? FcbClassDefinitions.Empty : FcbClassDefinitions.Load(path);
     }
 
+    /// <summary>Resolves a bundled asset by its beside-the-exe name or its in-repo path, the same
+    /// walk-up both loaders above use.</summary>
+    public static string? FindAsset(string linkName, string repoRelativePath)
+        => Find(linkName) ?? Find(repoRelativePath);
+
     private static string? Find(string relativePath)
     {
         for (string? dir = AppContext.BaseDirectory; dir is not null; dir = Path.GetDirectoryName(dir))
