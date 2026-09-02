@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Move;
+namespace JackAll.Core.Format.Move;
 
 /// <summary>What one recorded primitive in a MOVE object is.</summary>
 public enum MoveOpKind

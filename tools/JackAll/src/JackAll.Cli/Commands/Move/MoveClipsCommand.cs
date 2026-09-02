@@ -2,7 +2,7 @@ using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
 using JackAll.Core.Naming;
-using JackAll.Tools.Move;
+using JackAll.Core.Format.Move;
 using Spectre.Console;
 using Spectre.Console.Cli;
 

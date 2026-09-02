@@ -1,4 +1,4 @@
-using JackAll.Tools.Move;
+using JackAll.Core.Format.Move;
 
 namespace JackAll.Tests;
 

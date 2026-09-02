@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Move;
+namespace JackAll.Core.Format.Move;
 
 /// <summary>One animation clip a weapon plays, and who else plays it.</summary>
 /// <param name="Hash">CPathID of the clip's game path: CRC32 of the lowercased path.</param>

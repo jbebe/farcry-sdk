@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Move;
+namespace JackAll.Core.Format.Move;
 
 /// <summary>What a repoint did, and what it deliberately did not do.</summary>
 /// <param name="Rewritten">Reference sites the target weapon governs, which were retargeted.</param>

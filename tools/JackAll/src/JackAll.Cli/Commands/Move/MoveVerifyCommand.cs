@@ -1,6 +1,6 @@
 using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
-using JackAll.Tools.Move;
+using JackAll.Core.Format.Move;
 using Spectre.Console;
 using Spectre.Console.Cli;
 

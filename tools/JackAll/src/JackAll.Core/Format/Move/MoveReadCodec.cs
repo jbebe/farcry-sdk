@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace JackAll.Tools.Move;
+namespace JackAll.Core.Format.Move;
 
 /// <summary>Parses a MOVE graph, recording every primitive on the object being built.</summary>
 internal sealed class MoveReadCodec(byte[] data, MoveFile file) : IMoveCodec

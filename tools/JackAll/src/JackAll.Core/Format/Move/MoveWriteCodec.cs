@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace JackAll.Tools.Move;
+namespace JackAll.Core.Format.Move;
 
 /// <summary>Emits a MOVE graph, replaying the values the reader recorded.</summary>
 /// <remarks>Back-references are written from the index this pass assigns, not the one the file was

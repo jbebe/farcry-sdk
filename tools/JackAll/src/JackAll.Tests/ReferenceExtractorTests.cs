@@ -2,7 +2,7 @@ using JackAll.Core.Format.Fcb;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 using JackAll.Core.Xrefs;
-using JackAll.Tools.Move;
+using JackAll.Core.Format.Move;
 using JackAll.Tools.Rtx;
 using JackAll.Tools.Xrefs;
 

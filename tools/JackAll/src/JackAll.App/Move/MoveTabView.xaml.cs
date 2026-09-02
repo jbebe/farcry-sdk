@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using JackAll.Core;
 using JackAll.Core.Naming;
-using JackAll.Tools.Move;
+using JackAll.Core.Format.Move;
 using Microsoft.Win32;
 
 namespace JackAll.App.Move;

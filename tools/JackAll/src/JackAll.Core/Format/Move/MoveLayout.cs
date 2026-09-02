@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Move;
+namespace JackAll.Core.Format.Move;
 
 /// <summary>
 /// What each MOVE class writes, in order. One set of functions drives both directions: the reader

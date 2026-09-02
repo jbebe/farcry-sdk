@@ -1,6 +1,6 @@
 using JackAll.Core.Vfs;
 using JackAll.Core.Xrefs;
-using JackAll.Tools.Move;
+using JackAll.Core.Format.Move;
 
 namespace JackAll.Tools.Xrefs;
 

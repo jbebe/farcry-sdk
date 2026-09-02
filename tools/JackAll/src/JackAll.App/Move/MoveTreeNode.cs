@@ -1,5 +1,5 @@
 using System.Globalization;
-using JackAll.Tools.Move;
+using JackAll.Core.Format.Move;
 
 namespace JackAll.App.Move;
 

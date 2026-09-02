@@ -1,4 +1,4 @@
-namespace JackAll.Tools.Move;
+namespace JackAll.Core.Format.Move;
 
 /// <summary>The serializer's feature flags, as carried by the file's dwFileFormat word.</summary>
 public static class MoveFlags

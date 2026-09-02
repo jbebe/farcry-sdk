@@ -1,6 +1,6 @@
 using System.Buffers.Binary;
 
-namespace JackAll.Tools.Move;
+namespace JackAll.Core.Format.Move;
 
 /// <summary>
 /// One direction of the MOVE serializer. Integer and version calls return their value because the

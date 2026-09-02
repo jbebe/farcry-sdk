@@ -3,7 +3,7 @@ using System.Globalization;
 using System.Text;
 using System.Xml;
 
-namespace JackAll.Tools.Move;
+namespace JackAll.Core.Format.Move;
 
 /// <summary>Converts a MOVE graph to and from an editable XML document.</summary>
 /// <remarks>
