@@ -50,6 +50,12 @@ to find. The analysis matches these patterns against the shipped tree instead of
 templates — a root only matters if the file shipped, and matching sidesteps re-deriving each
 template's iteration domain (how many sectors, which languages).
 
+A template is also what settles whether a twin is a fallback or dead weight. `_depload` has both a
+`.dat` and a `.xml` string in the binary, so the readable copy is a real fallback the engine would
+read if the binary vanished. `_deploadnewparticles` and `oasisstrings` have only their `.rml`
+templates — no `.xml` anywhere in the binary — so their XML sources cannot be loaded under any
+condition. Same-looking pair, different verdicts, and only the string table tells them apart.
+
 **Stored references.** Paths and path hashes inside the data: `.fcb` string members, `.xbm` texture
 slots, `.mgb.desc` dependency lists, `depload.dat` manifests, an `.xbt` header naming its `_mip0`
 companion, a MOVE graph's clip hashes, an `.rtx` species' material slots. This is the only category
@@ -94,6 +100,7 @@ The worst offenders, all confirmed dead:
 | File | Size | Names | Why it is dead |
 | --- | ---: | ---: | --- |
 | `worlds\*\generated\entitylibrary_full.fcb` (24×) | 6.2 MB each | ~31,000 | The full archetype set. Single-player takes the suffix-less branch; the flag that selects this one is never set. |
+| `*_deploadnewparticles.xml` (24×), `oasisstrings.xml` (10×) | 183 MB total | — | Every RML document ships twice: the `.rml` the engine composes, and the `.xml` it was authored from. The binary holds no `.xml` string for either family — only `%s%s_deploadnewparticles.rml` and `%s\%s\oasisstrings.rml` — so unlike `_depload` these are not even fallbacks. `world2_deploadnewparticles.xml`, at 9.9 MB, is the largest dead file in the game. |
 | `worlds\*\generated\*_depload.xml` (24×) | up to 5.3 MB | ~1,000 | Readable twin of `_depload.dat`. Only read if the binary is missing. |
 | `worlds\tmpla\**` (381 files) | 202 KB manifest + 6.2 MB library | 36,158 | The un-stripped development world slot, reachable only via `-benchmark`. |
 | `graphics\move\movemgrnamed.bin`, `dlc1named.bin` | 5.9 MB together | — | Authoring copies of the MOVE graphs with names retained. Listed in `DefaultEngineConfig.xml` under a slot retail code never consumes. |

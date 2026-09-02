@@ -150,6 +150,12 @@ fallback	NONE	^(worlds|levels|downloadcontent)\\.*\\entitylibrary_full\.fcb$	fal
 # authoring twins of the MOVE graphs - "the engine loads movemgr.bin; movemgrnamed.bin is an
 # authoring artifact" (docs/docs/file-formats/move.md)
 fallback	NONE	^graphics\\move\\(movemgr|dlc1)named\.bin$	unreachable:authoring-twin
+# Every RML document ships twice: the `.rml` the engine composes and the `.xml` it was authored
+# from. Unlike `_depload`, there is no engine string for either `.xml` - only 10ea9eb0
+# "%s%s_deploadnewparticles.rml" and 10e23b08 "%s\%s\oasisstrings.rml" - so the source is never
+# read, not even as a fallback. 34 files, ~183 MB, including the largest dead file in the game.
+fallback	NONE	^(worlds|levels|downloadcontent)\\.*_deploadnewparticles\.xml$	unreachable:rml-source
+fallback	NONE	^languages\\[^\\]+\\oasisstrings\.xml$	unreachable:rml-source
 # every Domino graph ships twice; the .debug.lua twin is a topology oracle the engine never
 # loads (docs/docs/engine-internals/domino-scripts.md)
 fallback	NONE	^domino\\.*\.debug\.lua$	unreachable:authoring-twin
