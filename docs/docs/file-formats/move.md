@@ -641,9 +641,20 @@ settle the remainder — only more differential reading against the loadable twi
 
 ## Writing MOVE files
 
-A reference codec lives in `tools/misc/move-python-reference/` — `move_codec.py` reads and writes,
-`move_xml.py` converts to and from [an editable XML form](#an-editable-xml-form), and
-`move_expand.py` clones a weapon's states onto a new index. One
+**JackAll reads and writes MOVE graphs.** `jackall-cli move decode / encode / verify` converts to
+and from [the XML form](#an-editable-xml-form) and checks a graph reads back to itself, and the
+app's **Move tab** browses a graph as the ownership tree it reads back as, labelling criteria with
+the channel and enum value they test.
+
+```
+jackall-cli move decode movemgr.bin --names movemgrnamed.bin
+jackall-cli move encode movemgr.xml
+jackall-cli move verify dlc1.bin
+```
+
+A Python reference codec lives beside it in `tools/misc/move-python-reference/` — `move_codec.py`
+reads and writes, `move_xml.py` converts to and from XML, and `move_expand.py` clones a weapon's
+states onto a new index. One
 set of layout functions drives both directions: the reader records each primitive, the writer
 replays the recorded values while emitting bytes, so version gates and list terminators take the
 same branches without being special-cased.

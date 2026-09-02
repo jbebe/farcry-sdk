@@ -4,6 +4,7 @@ using JackAll.Cli.Commands.Fc2Model;
 using JackAll.Cli.Commands.Fcb;
 using JackAll.Cli.Commands.Mgb;
 using JackAll.Cli.Commands.Mod;
+using JackAll.Cli.Commands.Move;
 using JackAll.Cli.Commands.Rml;
 using JackAll.Cli.Commands.Sav;
 using JackAll.Cli.Commands.Sbao;
@@ -159,6 +160,20 @@ app.Configure(config =>
         mgb.AddCommand<MgbVerifyCommand>("verify")
             .WithDescription("Check that a .mgb, or the XML it is built from, references only names it declares.")
             .WithExample("mgb", "verify", "fcse.mgb.xml", "--page", "FCSE_PAGE");
+    });
+
+    // --- MOVE animation graphs ------------------------------------------
+    config.AddBranch("move", move =>
+    {
+        move.AddCommand<MoveDecodeCommand>("decode")
+            .WithDescription("Decode a MOVE animation graph (movemgr.bin) to editable XML.")
+            .WithExample("move", "decode", "movemgr.bin", "--names", "movemgrnamed.bin");
+        move.AddCommand<MoveEncodeCommand>("encode")
+            .WithDescription("Build an XML document back into a binary MOVE graph.")
+            .WithExample("move", "encode", "movemgr.xml");
+        move.AddCommand<MoveVerifyCommand>("verify")
+            .WithDescription("Check that a MOVE graph, or the XML it is built from, reads back to itself.")
+            .WithExample("move", "verify", "dlc1.bin");
     });
 
     // --- .rml resource manifests ----------------------------------------

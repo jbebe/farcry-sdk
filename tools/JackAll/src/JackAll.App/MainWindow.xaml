@@ -5,6 +5,7 @@
         xmlns:xrefs="clr-namespace:JackAll.App.FileHandlers.Xrefs"
         xmlns:mapEditor="clr-namespace:JackAll.App.MapEditor"
         xmlns:library="clr-namespace:JackAll.App.Library"
+        xmlns:move="clr-namespace:JackAll.App.Move"
         Title="JackAll - Far Cry 2 Mod Manager" Height="720" Width="1180"
         WindowStartupLocation="CenterScreen">
 
@@ -753,6 +754,11 @@
             <!-- ============================ LIBRARY ============================ -->
             <TabItem Header="Library" x:Name="LibraryTabItem">
                 <library:LibraryTabView x:Name="LibraryTab" Margin="6" />
+            </TabItem>
+
+            <!-- ============================= MOVE ============================== -->
+            <TabItem Header="Move" x:Name="MoveTabItem">
+                <move:MoveTabView x:Name="MoveTab" Margin="6" />
             </TabItem>
         </TabControl>
     </DockPanel>

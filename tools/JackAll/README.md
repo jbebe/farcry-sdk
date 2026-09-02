@@ -51,7 +51,7 @@ Everything the app does is also a CLI verb, and `jackall-cli` is what the mod bu
 JackAll.exe         one self-contained file - no .NET install needed
 jackall-cli.exe     the same engine on the command line: mod build/restore/inspect/lint,
                     archive extract, fc2model export/extract/inspect, xbt, xbg, fcb, rml,
-                    mgb, spk, sbao, sav, xref
+                    mgb, move, spk, sbao, sav, xref
 config.ini          your game folder + the mod list; hand-editable, comments preserved
 data\               shipped/generated support files - nothing here is hand-edited
   .itemhashes         hash -> filename dictionary (161,686 names)

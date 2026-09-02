@@ -2,6 +2,18 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **Move tab** — the animation graph the engine picks clips with (`movemgr.bin`, `dlc1.bin`),
+  browsable as the ownership tree it reads back as. Criteria are labelled with the channel and enum
+  value they test where a named twin sits beside the graph, so a rule reads as
+  `EquippedWeapon == SawedOffShotgun` rather than `17 == 42`. Read-only.
+- **`move` CLI** — `decode`, `encode` and `verify` for MOVE graphs. The XML is an interchange
+  format using the engine's own field names; `verify` reports whether a graph reads back to the
+  bytes it came from, which also checks the pointer graph because every back-reference is
+  renumbered from object identity rather than replayed.
+
 ## [1.0.0] - 2026-08-23
 
 First release.

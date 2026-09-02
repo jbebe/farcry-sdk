@@ -154,6 +154,7 @@ public partial class MainWindow : Window
         await _vm.InitializeAsync();
         await MapTab.InitializeAsync(_vm);
         LibraryTab.Initialize(_vm);
+        MoveTab.Initialize(_vm);
 
         // The Map tab owns neither the Library tab nor the editor registry, so it asks.
         MapTab.ArchetypeRequested += async (world, archetype) =>
