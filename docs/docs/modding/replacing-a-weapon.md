@@ -12,6 +12,10 @@ correct model, correct animation set, semi-automatic, ten rounds, and a scope th
 Everything below is measured or traced, and says which. Where a step is specific to that weapon pair
 it says so; the reasoning is written to transfer to any other pair. This page is the mesh and the
 archetype; the art it then wears is [texturing a replaced weapon](./texturing-a-weapon.md).
+
+The one section not covered by "played": the
+[shot sound](#the-shot-sound-is-two-banks-and-neither-id-is-the-one-you-edit), replaced and verified
+on disk but not yet heard in game.
 :::
 
 [Adding a new weapon](./adding-a-weapon.md) covers standing up a weapon that did not previously
@@ -1287,6 +1291,9 @@ Things that are settled, so nobody re-derives them:
 - **Nothing numeric catches a part in the wrong place.** Render it and compare against the donor.
 - **The mesh moved; its material and texture references did not.** Rewriting them retextures the
   donor as well — see [texturing a replaced weapon](./texturing-a-weapon.md).
+- **A sound id is not a sound.** It may name a wrapper that only lists other banks. Run `spk list`
+  and follow it before importing, and keep each slot's own channel count — first person is stereo,
+  third person mono.
 ## Answered by the finished build
 
 - **`depload` needed no edit.** `sPartName = dragunov` alone was sufficient; the animation package
@@ -1438,10 +1445,96 @@ read as sRGB everywhere. On a cutout icon, check the alpha survived the round tr
 a DXT5 icon draws as a filled box rather than a silhouette.
 :::
 
+## The shot sound is two banks, and neither id is the one you edit
+
+:::caution[Replaced, not yet confirmed in game]
+Unlike everything above, the sound swap has not been heard in game yet. The mechanism is
+RE-verified and the files round-trip, but treat the recipe as unproven until someone fires it.
+:::
+
+The archetype holds sound **ids**, not filenames, and there are two of them — one per listener:
+
+```xml
+<object type="Sounds">
+  <value name="sndSingleBulletShot" type="String">0x004BF5EA</value>   <!-- first person -->
+  <object type="ThirdPerson">
+    <value name="sndSingleBulletShot" type="String">0x004BF5EB</value> <!-- third person -->
+```
+
+You replace what those ids reach. **The ids themselves never change**, which is what keeps this a
+pure data swap with no registration work.
+
+### Neither id necessarily names the bank holding the audio
+
+A sound id resolves to `soundbinary\<id:08x>.spk`, but that bank may hold no audio at all. `0x004BF5EA`
+is a **list event**: one record, no audio, and four trailing bytes naming its real target,
+`0x004BF5E9`. `0x004BF5EB` is a leaf and holds its own. Same weapon, two different shapes — so
+**always look before you edit**:
+
+```
+jackall-cli spk list soundbinary\004bf5ea.spk
+  0x004bf5ea  Event list  plays 1 -> 0x004bf5e9      ← follow this
+jackall-cli spk list soundbinary\004bf5eb.spk
+  0x004bf5eb  Sound event   -> 0x004bf5f0
+  0x004bf5f0  Audio params  -> audio 0x004bf5f2 - 44100 Hz
+  0x004bf5f2  Audio  Mono - 44100 Hz - IMA-ADPCM - 4.8 KB   ← this is the record to import into
+```
+
+The full dispatch model — event types, why a list event fires *all* its children, and what actually
+loads the child bank — is on the [`.spk` page](../file-formats/spk.md#binary-event-objects).
+
+### First person is stereo, third person is mono
+
+Not a detail to smooth over: the first-person shot is a 2D clip played flat on the player, the
+third-person one is a 3D point emitter. `spk import` warns on a mismatch but **does not re-mix**, so
+prepare one master per slot at the rate and channel count the record already uses:
+
+```
+ffmpeg -i shot.wav -ac 2 -ar 44100 -c:a pcm_s16le fp.wav      # first person, stereo
+ffmpeg -i shot.wav -ac 1 -ar 44100 -c:a pcm_s16le tp.wav      # third person, mono
+
+jackall-cli spk import 004bf5e9.spk 0x004bf5f3 fp.wav
+jackall-cli spk import 004bf5eb.spk 0x004bf5f2 tp.wav
+```
+
+`spk import` needs 16-bit PCM for an IMA-ADPCM record and encodes natively; it takes an already-Ogg
+file verbatim for an Ogg-backed one. `spk extract` on the original tells you which you are dealing
+with. Both files go in the layer at `mods/soundbinary/<id>.spk`.
+
+### Rewrite the descriptor's length, because the importer doesn't
+
+Each audio record has a sibling descriptor whose `word[2]` is that audio's byte length, exact in every
+shipped record. Neither importer updates it, so a swap leaves the descriptor describing the *old*
+clip. `spk list` flags the mismatch:
+
+```
+0x004bf5f3  Audio  Stereo - 44100 Hz - IMA-ADPCM - 16 KB  (!) descriptor declares 9,766 B
+```
+
+Whether the engine reads it as a playback-length gate is
+[untested](../file-formats/spk.md#playback-length-shorter-ima-adpcm-replacements-decode-as-trailing-noise),
+but it is the best candidate for the known trailing-noise symptom, and shipping a descriptor that
+contradicts its own stream has nothing to recommend it. Patch `word[2]` and `word[22]` to the real
+length.
+
+### No `depload` work — but only because these paths already exist
+
+Both banks are overrides of paths the game already ships, so they need no registration, exactly like
+a texture. That does **not** generalise to a new bank: a sound is requested by id against a registry
+with no load-on-miss path, so an unlisted bank resolves to null and plays nothing. See
+[what loads the child bank](../file-formats/spk.md#what-loads-the-child-bank-depload).
+
+:::note[The third-person file may be dead weight in a single-player mod]
+The third-person shot only plays when something other than the player's own first-person view fires
+the weapon — an NPC carrying it, or another player. Whether any single-player AI is ever issued the
+weapon you replaced is worth checking before you ship that half.
+:::
+
 ## Open questions
 
 Nothing outstanding on the path this page describes. The worked example is complete: archetype,
 mesh, textures, LOD tiers, the weapon on the ground, the muzzle socket, its name and its icons.
+The shot sound is replaced but unheard — see [above](#the-shot-sound-is-two-banks-and-neither-id-is-the-one-you-edit).
 
 What is left is what nobody has needed yet — a second material for a part of the body, a normal map
 where a weapon owns no third texture path, and the `.Multi` pickup for multiplayer.

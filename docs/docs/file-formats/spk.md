@@ -91,15 +91,114 @@ Real `.spk` banks only ever contain `SimpleFixed68`/`TransformedFixed128`/`FlatC
 contain exactly an equal count of all three common types, though not always laid out as consecutive
 triples.
 
-## `SimpleFixed68` sub-header (68 bytes, `u32[17]`)
+## Binary event objects
+
+A `SimpleFixed68` record is not a sound. It is a **binary event object** — the engine's own term, from
+the failure path of its post-load fixup (`FUN_10a3ebd0`, `Dunia.dll`):
+
+```
+ERROR: Cannot init binary event, unknown event type.
+```
+
+That fixup switches on sub-header **word[1]**, which is the **event type**, not a variant count. The
+rest of the sub-header is a union keyed by it. Three functions read the type and together define what
+each one means:
+
+- **`FUN_10a3ebd0`** — the post-load fixup. Rewrites each type's id-shaped fields into live pointers
+  via `FUN_10a419f0` → `FUN_10a40aa0(id, 1)`, a registry lookup that also takes a reference (the
+  counters behind `Atomic Object 0x%x should have its internal counters to zero (RefCount = %d,
+  LoadCount = %d)`).
+- **`FUN_10a38d20`** — the play dispatcher.
+- **`FUN_10a391e0`** — duration; logs `Invalid sound event type.` for anything it does not handle.
+
+| Type | Fixup resolves | On play | Duration | Records |
+|---|---|---|---|---|
+| `1` | `[2]`, `[7]` | starts a voice | real | 4,149 |
+| `2` | `[2]` | no-op | `-1` | 241 |
+| `3`, `8`, `10` | nothing | no-op | `-1` | 18 (`8` only) |
+| `4` | `[2]`, `[3]` | starts a voice, after an extra step | `-1` | 60 |
+| `5`, `6`, `7`, `9` | `[2]`, `[6]` | starts a voice | real | — |
+| `11` | `[4]`; then a table at byte offset `[5]`, `[6]` entries of 3 words | iterates **every** entry, recursing | `-1` | 8 |
+| `12` | an array at byte offset `[2]`, `[3]` entries of 1 word | iterates **every** entry, recursing | `-1` | 65 |
+
+Counts are over the 4,895 `.spk` files extracted into this repo's `tmp/`, which is not a full install
+— treat them as proportions, not totals. Types `5`/`6`/`7`/`9` appear in none of them.
+
+### Types `11` and `12` carry a tail
+
+Only these two put anything after the 68-byte sub-header, and they are the only records in the corpus
+whose payload exceeds `0x28 + 68`. The tail is a list the fixup walks in place, replacing each id with
+the resolved object:
+
+```
+type 12:  u32[ [3] ]              // child event/resource ids, at tail byte offset [2]
+type 11:  { u32 id, u32 resolved, u32 key }[ [6] ]   // at tail byte offset [5]
+```
+
+`[2]` and `[5]` are byte offsets into the tail, **not** id-references — they are `0` in every real
+record. The arithmetic closes exactly: `[2] + [3]*4` equals the tail size in all 65 type-`12` records,
+and `[5] + [6]*12` in all 8 type-`11` records. Every type-`12` tail id is a real bank id, and none of
+the 70 records carrying a tail holds any audio of its own.
+
+The play dispatcher iterates the whole list and calls itself on each entry — no random selection, no
+break on first success — so a type-`12` event fires **all** of its children. It is a layered
+composite, and that is what the data shows: 43 of the type-`12` events have exactly two children, and
+one child is shared across many weapons (`0x004565A6` appears in 8 of them, `0x004B291E` in 9) — a
+common layer mixed under a per-weapon one. Nesting is supported by the recursion but never used.
+
+:::warning[Tools that read word[2] as a link will show a dead end]
+A type-`12` event's word[2] is a byte offset, so anything that prints it as a "linked id" reports `0`
+and never reaches the tail. `jackall-cli spk list` does exactly this. A one-entry list event — such as
+the Dart Rifle's first-person shot, `0x004BF5EA` → `0x004BF5E9` — therefore looks like a bank
+containing nothing but a parameter record pointing nowhere.
+:::
+
+### What loads the child bank: `depload`
+
+A child id in a tail is only ever a **registry lookup**. `FUN_10a419f0` → `FUN_10a40aa0(id, 1)` finds an
+already-registered atomic object and takes a reference; there is **no load-on-miss path**. An id that
+was never loaded resolves to `0`, and the play dispatcher bails with `Atomic object 0x%X has not been
+loaded!`. Parsing a bank registers only the records inside *that file* — it never opens another.
+
+So something else has to have loaded the child bank first, and that something is
+[`depload`](./depload.md), which lists sound banks by path as `CSoundResource` entries — 5,480 of them
+in one world — with the parent/child relation spelled out:
+
+```xml
+<CSoundResource ID="soundbinary\004bf5ea.spk" nbChildren="3">
+    <CSoundResource ID="soundbinary\804e1b35.spk" />
+    <CSoundResource ID="soundbinary\00449311.spk" />
+    <CSoundResource ID="soundbinary\004bf5e9.spk" />
+</CSoundResource>
+```
+
+The child list is **wider than the tail**: three banks resident against one dispatched to. The tail is
+the immediate play list; `depload` is the transitive set the event can reach (`00449311`'s own word[2]
+points at `004e1b35`, and `804e1b35` is that id's localized variant — the high-bit form from the
+[loading pipeline](#loading-pipeline)). It matches the corpus from the other side too: the three banks
+listed here are exactly the three whose record preambles carry `0x004BF5EA` — see
+[preamble words](#preamble-words-and-the-extra-field).
+
+:::danger[For sound, `depload` is a requirement, not a prefetch hint]
+The [`depload` page](./depload.md) notes that a missing entry costs a texture only streaming warmth,
+while an animation genuinely fails to load. **Sound behaves like animation, and for a sharper reason**:
+a texture is asked for by path, so the resource system can still find it, but a sound is only ever
+asked for by id against a registry that cannot load. Replacing audio inside an existing chain is safe —
+the entries already exist. Pointing a weapon at a *new* bank chain needs the `depload` entry added, or
+the event resolves to null and the weapon is silent.
+
+Inferred from the absence of a load-on-miss path rather than tested with a deliberately unlisted bank.
+:::
+
+### Leaf fields (type `1`, 91% of records)
 
 | Word | Offset | Meaning |
 |---|---|---|
 | `[0]` | `+0x00` | echoes the record's own id |
-| `[1]` | `+0x04` | `1` in 98% of records; otherwise `2`/`4`/`8` — possibly a variant/voice count |
-| `[2]` | `+0x08` | an id-reference: resolves to some real id in the corpus 99.9% of the time, to a record in the same file 79% of the time |
+| `[1]` | `+0x04` | the event type above |
+| `[2]` | `+0x08` | the sound resource this event plays — resolved to a live pointer by the fixup |
 | `[4]` | `+0x10` | constant `0x00010000` = `1.0` in Q16.16 fixed point — plausibly an identity gain/scale default |
-| `[7]` | `+0x1C` | an id-reference-shaped field; `0xFFFFFFFF` sentinel only 14% of the time — the rest cluster heavily on a handful of ids (one accounts for 29% of all records), reading more like a shared category/template reference |
+| `[7]` | `+0x1C` | a second object reference, also resolved by the fixup; `0xFFFFFFFF` sentinel only 14% of the time, the rest clustering on a handful of ids (one accounts for 29% of all records) — reads like a shared category/template |
 | `[9]` | `+0x24` | `0` in 90% of records; when nonzero, always exactly `+100` or `-100` — a discrete signed flag |
 | `[16]` | `+0x40` | boolean — `0` in 84%, `1` in 16% |
 
@@ -111,12 +210,14 @@ triples.
 |---|---|---|
 | `[0]` | `+0x00` | echoes the record's own id |
 | `[1]` | `+0x04` | `1` |
+| `[2]` | `+0x08` | **the sibling `FlatCopy`'s audio byte length** — its payload size minus the 40-byte core. Exact in all 3,211 records that pair with a sibling, both codecs |
 | `[5]` | `+0x14` | negative Q16.16 fixed-point value when nonzero (e.g. `-12.0`, `-8.0`) — plausibly a gain/dB adjustment applied by this type's post-load transform |
 | `[7]` | `+0x1C` | an id-reference: matches the positionally-preceding record 59% of the time, some id in the same file 72% of the time |
 | `[9]` | — | boolean, `1` in 97% |
 | `[17]` | `+0x44` | `1` (94%) or `2` (~2%) — correlates with the sibling `FlatCopy` payload's size (~11× larger average when `2`), consistent with a **channel-count field** |
 | `[19]` | `+0x4C` | **sample rate** — always a standard real-world rate: `32000` (44%), `22050` (42%), `48000` (10%), `44100` (3%), rarer `24000`/`16000`/`12000`/`8000`/`6000` |
 | `[20]` | `+0x50` | irregular values in the low thousands, not a rate (equals `[19]` in only 0.1%) — reads like a decoded sample/frame count or output buffer size |
+| `[22]` | `+0x58` | the same audio byte length as `[2]`, or `0`. Never a third value: of 3,211 paired records, 2,971 match `[2]` exactly and the remaining 240 are `0` |
 | `[25]` | `+0x64` | `4` (81%) or `3` (19%) |
 | `[28]` | `+0x70` | `7` (99.8%) |
 | `[31]` | `+0x7C` | `0xFFFFFFFF` (99.9%) |
@@ -129,10 +230,16 @@ the `extra` field on the record's in-memory descriptor (`{id, dataPtr, size, ext
 alongside the resolved sound object into the runtime playback/event-dispatch system — generic engine
 machinery, not specific to this container.
 
-Statistically, the word immediately before a preamble's trailing self-id (present when a record has 2+
-preamble words, the large majority) resolves to some real id elsewhere in the corpus 98.3% of the time
-— genuine cross-references to other sound resources. It's usually not this same bank's own id (30% of
-the time) and rarely a simple numeric neighbor (`±1`, 8.8%).
+The list is **the bank's own id plus every parent that pulls it in** — the `depload` parent/child edge
+recorded from the child's side. Cross-checked both ways on the Dart Rifle's first-person chain: the
+three banks whose preambles carry `0x004BF5EA` (`004bf5e9`, `00449311`, `804e1b35`) are exactly the
+three `depload` lists as that bank's children, and `004bf5eb` — a leaf nothing wraps — carries only
+its own id. Self is not at a fixed position in the list; treat it as a set, not a sequence.
+
+That also explains the earlier statistic: the word before a preamble's trailing entry resolves to a
+real id elsewhere in the corpus 98.3% of the time, is usually not the bank's own id (30%), and is
+rarely a numeric neighbour (`±1`, 8.8%) — the behaviour of a parent reference, not of a sibling or a
+sequence number.
 
 ## Relationship to `.sbao`
 
@@ -244,6 +351,14 @@ before encoding, rather than declaring a shorter length. This keeps the encoded 
 same-or-longer than the original, so whatever the real length-governing mechanism is, it can't run past
 the buffer. Ogg Vorbis records need no such workaround — the container is self-describing.
 
+**Untested candidate**: `TransformedFixed128` word `[2]` is the sibling's audio byte length, exactly,
+in all 3,211 paired records — a far better-behaved field than word `[20]`, which was the one actually
+tried and ruled out. Neither JackAll's importer nor `jackall-cli spk import` updates it, so every
+replacement made so far has shipped a descriptor still declaring the *original* clip's length. That is
+exactly the shape of a read-length gate, and it would explain the symptom directly. It has **not** been
+tested in game. Rewriting `[2]` (and `[22]`, which mirrors it) to the replacement's real stream length
+is the obvious experiment.
+
 ## Unknowns
 
 - The four unidentified 40-byte-core fields (`0x08`–`0x14`) — confirmed not a checksum, otherwise
@@ -251,9 +366,18 @@ the buffer. Ogg Vorbis records need no such workaround — the container is self
 - The concrete game-design meaning of each record type (one-shot vs. looping vs. 3D-positioned sounds)
   and most of `TransformedFixed128`'s untabulated sub-header words.
 - What `SimpleFixed68` word `[7]`'s small cluster of heavily-reused "category" ids represents.
+- What separates the playable leaf event types (`1`, and the unseen `5`/`6`/`7`/`9`) from each other,
+  and what the no-op types (`2`, `3`, `8`, `10`) are for — they resolve references and then decline to
+  play.
+- What a type-`11` event's third column keys on. The keys are a shared, dense id range (`0x00440261`–
+  `0x0044027D` across six of the eight records) and word `[3]` holds the id immediately below that
+  range — consistent with a switch group and its values, matching the archetype fields
+  `sndswtpCloseFarSoundSwitchType` / `sndswvlCloseSoundSwitchValue`, but not traced to the code that
+  reads them.
 - The unidentified bytes in the 28-byte ADPCM stream header.
 - Whether the channel-mode byte can represent channel counts above 2 directly, or whether >2-channel
   audio is always built from multiple sub-streams.
 - What actually governs an IMA-ADPCM `FlatCopy` record's total playback length — confirmed not
   `TransformedFixed128` word `[20]`, traced as far as the DARE "voice" construction pipeline with
-  several unidentified sub-objects, not resolved to a concrete field or instruction.
+  several unidentified sub-objects, not resolved to a concrete field or instruction. Word `[2]` is an
+  untested candidate; see [above](#playback-length-shorter-ima-adpcm-replacements-decode-as-trailing-noise).

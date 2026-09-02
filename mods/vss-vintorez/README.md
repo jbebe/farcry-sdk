@@ -5,7 +5,8 @@ skeleton and animation set, semi-automatic, ten-round magazine off the sniper am
 
 **Status: complete and confirmed in game** — mesh, LOD tiers, textures, a worn appearance that grimes
 as the weapon degrades, the weapon on the ground, the muzzle socket, icons, name, and jam/break
-behaviour. See [what is left](#what-is-left) and [deliberate, not missing](#deliberate-not-missing).
+behaviour. The shot sound is replaced but **not yet confirmed in game**. See
+[what is left](#what-is-left) and [deliberate, not missing](#deliberate-not-missing).
 
 The procedure this mod was built by is written up in
 [replacing an existing weapon](../../docs/docs/modding/replacing-a-weapon.md) and
@@ -14,8 +15,8 @@ mod; those pages are the method.
 
 ## What it changes
 
-Twenty-one files. Most are overrides of paths that already exist. Two are at paths invented for this
-mod, and they need different treatment:
+Twenty-three files. Most are overrides of paths that already exist. Two are at paths invented for
+this mod, and they need different treatment:
 
 - `vss_worn_c.xbt` loads from `patch.dat` with no hashlist and no `depload` entry — a texture reached
   through a material that is itself listed needs no registration.
@@ -35,6 +36,8 @@ mods/ui/textures/guns/gun_icon_sniperdart.xbt               the multiplayer weap
 mods/languages/english/oasisstrings.rml                     the weapon's name, ten strings
 mods/graphics/characters/.../vss_vintorez/...vssvi_i1.mab   the reload, at a new path
 mods/graphics/move/movemgr.bin                              the MOVE graph, reload repointed
+mods/soundbinary/004bf5e9.spk                               the shot, first person (stereo)
+mods/soundbinary/004bf5eb.spk                               the shot, third person (mono)
 mods/worlds/world1/generated/entitylibrary.fcb/...          four archetype fragments
 mods/worlds/world2/generated/entitylibrary.fcb/...          the same four, per world
 mods/worlds/world1/generated/world1_depload.dat/dragunov.3882209901.xml   registers the clip
@@ -56,6 +59,18 @@ child of the `dragunov` package. Without them the clip is in `patch.dat` and ref
 `movemgr.bin`, and still never plays — the weapon enters the reload state and stays there. The
 package is `dragunov` because that is what this weapon's `sPartName` is; `dart_rifle` would be
 accepted and do nothing.
+
+**The shot sound replaces banks, not ids.** The archetype's `Sounds` block is untouched:
+`sndSingleBulletShot` is still `0x004BF5EA` first person and `0x004BF5EB` third. Only the third of
+those is a bank that holds audio. `0x004BF5EA` is a **list event with one child** — its payload is
+four bytes longer than a leaf's, and those four bytes are the child id `0x004BF5E9`, which is the
+bank actually replaced. See [`.spk`](../../docs/docs/file-formats/spk.md#binary-event-objects).
+
+The clip is encoded twice because the two slots want different channel counts: first person is
+**stereo**, played flat on the player; third person is **mono**, because it is a 3D point emitter in
+the world. Both are 44,100 Hz IMA-ADPCM, matching what they replace. The sibling descriptor's
+byte-length fields were rewritten to the new stream length by hand — `jackall-cli spk import` swaps
+the audio but leaves them describing the old clip.
 
 The mesh was built inside the Dragunov's pack, so it inherited the Dragunov's material table. Its
 body clusters are moved onto `DART_RIFLE_METAL` — a material nothing else uses, already in both
@@ -94,13 +109,46 @@ It keeps `bIsSilent = True`, `selCategory = 3` (Special slot), `sName`, and `arc
 
 ## Install
 
+From this repo, straight off the layer:
+
 ```
 jackall-cli mod build   --game "C:\Games\Far Cry 2" --layer mods\vss-vintorez\layer
 jackall-cli mod restore --game "C:\Games\Far Cry 2"      # undo
 ```
 
+Or from a packaged `.zip`, which is what a mod manager takes — `--layer` accepts either:
+
+```
+jackall-cli mod build --game "C:\Games\Far Cry 2" --layer vss-vintorez.zip
+```
+
 **Buy the weapon again after installing.** A weapon already in inventory keeps the archetype it was
 acquired with, so a save that already holds a Dart Rifle shows the new model on the old behaviour.
+
+### Packaging it for a mod manager
+
+A JackAll layer archive is defined by two reserved folders **at the archive root** — `mods\` for game
+content and `plugins\` for FCSE plugins. This mod uses only the first, so the package is the contents
+of `layer\` (which already has `mods\` at its top) plus the readme:
+
+```
+vss-vintorez.zip
+├── mods\…          ← the layer, verbatim
+└── README.md       ← ignored by both installers; there for whoever opens the zip
+```
+
+JackAll and the [Vortex extension](../../tools/vortex-farcry2/) read the same shape, and Vortex stages
+it as-is. `jackall-cli mod inspect <zip> --game …` is the check that it is a valid layer and that the
+root was read correctly.
+
+Two things worth knowing when you build the archive:
+
+- **The zip filename becomes the mod's display name** in JackAll's list — there is no manifest to
+  carry one.
+- **Entry paths must use forward slashes.** .NET Framework's `ZipFile.CreateFromDirectory` (what
+  PowerShell 5.1's `Compress-Archive` sits on) writes the platform separator, producing backslash
+  entries that violate the zip spec and confuse other extractors. Python's `zipfile`, 7-Zip and
+  `Compress-Archive` on PowerShell 7 all get it right.
 
 ## Building it
 

@@ -27,6 +27,10 @@ streaming warmth, not availability.
 
 **This does not generalise. See [Animations are not like textures](#animations-are-not-like-textures)
 below** — an animation clip in the same situation did *not* load.
+
+Sound banks are a second such case, and the mechanism there is explicit: a sound is requested by **id**
+against a registry with no load-on-miss path, never by path, so an unlisted bank can only resolve to
+null. See [what loads the child bank](./spk.md#what-loads-the-child-bank-depload).
 :::
 
 ## How it's loaded
