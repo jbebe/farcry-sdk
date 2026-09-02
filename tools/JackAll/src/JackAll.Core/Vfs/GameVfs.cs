@@ -40,22 +40,7 @@ public sealed record VfsFile(
     /// fragment override never has a whole-file entry for this hash to read. This field exists purely
     /// so <see cref="IsModded"/> and the UI's attribution text can tell "this file's build output
     /// differs from vanilla because of a fragment edit" apart from "unmodified.".</summary>
-    string? FragmentOverrideSource = null,
-    /// <summary>The owning `depload.dat`'s hash, set only on a synthetic dependency-link row (one
-    /// entry of a depload's parent/children list, browsable the same way an `.fcb` fragment is - see
-    /// <see cref="IsDependencyLink"/>). Deliberately a separate field from <see cref="ContainerHash"/>:
-    /// that one is read elsewhere with `.fcb`-fragment-specific meaning baked in (fragment XML
-    /// extraction, fragment-override lookup), which a depload link is not.</summary>
-    uint? LinkOwnerHash = null,
-    /// <summary>The resource CRC32 this dependency link refers to - always set alongside
-    /// <see cref="LinkOwnerHash"/>, whether or not it resolves to a known VFS entry (look it up in
-    /// <see cref="GameVfs.Files"/> to tell resolved from unresolved).</summary>
-    uint? LinkTargetHash = null,
-    /// <summary>The dependency's resolved type hash (looked up via the depload's own small deduplicated
-    /// type table - see <see cref="Format.DepLoadDocument"/>), set only when this link is a depload
-    /// *child* entry - null for a parent entry, which doubles as how a link row's own kind is told
-    /// apart. Semantic meaning of the type hash itself isn't yet confirmed.</summary>
-    uint? LinkChildTypeHash = null)
+    string? FragmentOverrideSource = null)
 {
     /// <summary>True when a mod (or the workspace) supplies this file, whole or in part (a fragment
     /// override counts even without a whole-file replace) — drives Revert and the "only mods" filter.</summary>
@@ -65,13 +50,9 @@ public sealed record VfsFile(
     /// real archive/mod entry.</summary>
     public bool IsFragment => ContainerHash is not null;
 
-    /// <summary>True for a synthetic row representing one entry (a parent or a child) of a
-    /// `depload.dat`'s dependency list, rather than a real archive/mod entry.</summary>
-    public bool IsDependencyLink => LinkOwnerHash is not null;
-
-    /// <summary>True for a row JackAll invents (a fragment or a dependency link) — keyed above the
-    /// engine's 32-bit space, with no archive/mod bytes of its own.</summary>
-    public bool IsSynthetic => IsFragment || IsDependencyLink;
+    /// <summary>True for a row JackAll invents — keyed above the engine's 32-bit space, with no
+    /// archive/mod bytes of its own.</summary>
+    public bool IsSynthetic => IsFragment;
 
     /// <summary>The engine's CRC32 for a real entry — the narrowing that every archive, layer, and
     /// xref lookup needs, refused loudly for a synthetic row instead of yielding a junk hash.</summary>
@@ -103,6 +84,7 @@ public sealed class GameVfs : IDisposable
     private readonly NameDatabase _names;
     private readonly GameCache _cache;
     private readonly FcbClassDefinitions _fcbDefinitions;
+    private readonly FcbContainerSplitter _fcbSplitter;
     private List<IModLayer> _layers = [];
     private Dictionary<ulong, VfsFile> _files = [];
 
@@ -208,6 +190,7 @@ public sealed class GameVfs : IDisposable
         _names = names;
         _cache = cache;
         _fcbDefinitions = fcbDefinitions;
+        _fcbSplitter = new FcbContainerSplitter(fcbDefinitions);
     }
 
     /// <summary>
@@ -383,9 +366,24 @@ public sealed class GameVfs : IDisposable
     /// against (see <see cref="FragmentMerge.Resolve"/>). Callers resolving several fragments of one
     /// container decode once and share the result.
     /// </summary>
-    private FcbObject DeserializeOriginal(uint containerHash)
-        => FcbDocument.Deserialize(ReadOriginal(containerHash)
-            ?? throw new InvalidOperationException($"No archive provides {containerHash:X8}."));
+    private ContainerAncestor OpenOriginal(VfsFile container)
+    {
+        byte[] bytes = ReadOriginal(container.EngineHash)
+            ?? throw new InvalidOperationException($"No archive provides {container.EngineHash:X8}.");
+        IContainerSplitter splitter = SplitterFor(container);
+        return new ContainerAncestor(splitter, splitter.Open(bytes));
+    }
+
+    /// <summary>How a container splits, chosen by its name - see <see cref="ContainerFormats"/>.</summary>
+    private IContainerSplitter SplitterFor(VfsFile container)
+        => ContainerFormats.IsDepLoad(container.FileName) ? DepLoadContainerSplitter.Instance : _fcbSplitter;
+
+    /// <summary>The same, for a caller holding only a hash. A hash naming no row is an override
+    /// staged under <c>_hash\</c>, which is only ever an `.fcb`.</summary>
+    private IContainerSplitter SplitterFor(uint containerHash)
+        => _files.TryGetValue(containerHash, out VfsFile? container) ? SplitterFor(container) : _fcbSplitter;
+
+    private readonly record struct ContainerAncestor(IContainerSplitter Splitter, IContainerTree Tree);
 
     /// <summary>
     /// The active fragment overrides for a container, or null when it has none. Every consumer —
@@ -403,12 +401,12 @@ public sealed class GameVfs : IDisposable
     /// back to the highest-priority contributor's raw length; the real error still surfaces the
     /// moment the fragment or its container is actually read, or the patch is built.
     /// </summary>
-    private long SizeOfResolvedFragmentSafely(Lazy<FcbObject> vanillaRoot, string fragmentId, List<(IModLayer Layer, uint EntryHash)> layers)
+    private static long SizeOfResolvedFragmentSafely(Lazy<ContainerAncestor> vanilla, string fragmentId, List<(IModLayer Layer, uint EntryHash)> layers)
     {
         try
         {
             return Encoding.UTF8.GetByteCount(
-                FragmentMerge.Resolve(vanillaRoot.Value, fragmentId, layers, _fcbDefinitions));
+                FragmentMerge.Resolve(vanilla.Value.Splitter, vanilla.Value.Tree, fragmentId, layers));
         }
         catch (Exception ex) when (ex is InvalidDataException or InvalidOperationException)
         {
@@ -581,7 +579,7 @@ public sealed class GameVfs : IDisposable
     }
 
     /// <summary>
-    /// Adds fragment rows for `.fcb` files that split (see FcbFragments) — this is what lets
+    /// Adds fragment rows for container files that split (see <see cref="IContainerSplitter"/>) — this is what lets
     /// the tree/file view browse into one with no dedicated UI, since a fragment's path is just the
     /// container's own path plus one more segment (docs/design/fcb-fragment-overlays.md). Mutates
     /// <paramref name="files"/> in place and refreshes <see cref="_fragmentMemo"/> to match.
@@ -627,6 +625,9 @@ public sealed class GameVfs : IDisposable
         foreach (VfsFile c in files.Values)
         {
             // A dependency-link row can carry its target's .fcb type - only real entries are containers.
+            // Browsable rows stay `.fcb`-only even though a `depload.dat` also splits: its parents are
+            // already browsable as dependency-link rows, so adding fragment rows would double them up.
+            // Building a staged depload fragment doesn't come through here - see PatchBuilder.
             if (c.Type.Extension != "fcb" || c.IsSynthetic) continue;
 
             if (OverridesFor(c.EngineHash) is null && MemoIsCurrent(c, out _))
@@ -716,7 +717,7 @@ public sealed class GameVfs : IDisposable
 
             // The merge ancestor, decoded at most once per container no matter how many of its
             // fragments are overridden.
-            var vanillaRoot = new Lazy<FcbObject>(() => DeserializeOriginal(containerHash));
+            var vanillaRoot = new Lazy<ContainerAncestor>(() => OpenOriginal(container));
 
             var computed = new VfsFile[containerFragments.Count];
             for (int i = 0; i < containerFragments.Count; i++)
@@ -844,91 +845,16 @@ public sealed class GameVfs : IDisposable
     /// caching/parallelism to stay fast), there are only a handful of `depload.dat` files total — a
     /// single synchronous pass with no caching is fast enough.
     /// </remarks>
-    private void MergeDependencyLinks(Dictionary<ulong, VfsFile> files, IProgress<string>? progress)
-    {
-        List<VfsFile> containers = [.. files.Values
-            .Where(f => f.FileName.EndsWith("_depload.dat", StringComparison.OrdinalIgnoreCase))];
-        if (containers.Count == 0)
-        {
-            return;
-        }
-
-        var links = new Dictionary<ulong, VfsFile>();
-        foreach (VfsFile container in containers)
-        {
-            DepLoadFile depLoad;
-            try
-            {
-                depLoad = DepLoadDocument.Decode(ReadFromSource(container));
-            }
-            catch
-            {
-                continue; // unreadable/corrupt - treat as having no links, same as GameCache's "unreadable -> Unknown" precedent
-            }
-
-            foreach (DepLoadParent parent in depLoad.Parents)
-            {
-                VfsFile parentLink = MakeDependencyLinkRow(container, container.Path, files, links, parent.Hash);
-                links[parentLink.Hash] = parentLink;
-
-                foreach (DepLoadChild child in parent.Children)
-                {
-                    VfsFile childLink = MakeDependencyLinkRow(
-                        container, parentLink.Path, files, links, child.Hash, child.TypeHash);
-                    links[childLink.Hash] = childLink;
-                }
-            }
-        }
-
-        foreach ((ulong key, VfsFile link) in links)
-        {
-            files[key] = link;
-        }
-        progress?.Report($"Indexing depload.dat links… ({links.Count:N0})");
-    }
-
     /// <summary>One parent or child entry of a `depload.dat`, as a browsable row nested under
     /// <paramref name="parentPath"/> - the container's own path for a parent entry, or the parent's own
     /// just-built row path for one of its children.</summary>
-    private static VfsFile MakeDependencyLinkRow(
-        VfsFile container, string parentPath, Dictionary<ulong, VfsFile> files, Dictionary<ulong, VfsFile> linksSoFar,
-        uint targetHash, uint? childTypeHash = null)
-    {
-        files.TryGetValue(targetHash, out VfsFile? target);
-        string label = target?.Path ?? $"0x{targetHash:X8}";
-        string linkPath = parentPath + "\\" + label;
-        ulong linkKey = SyntheticKey(linkPath);
-
-        // A parent's slice can legitimately list the same child twice - two rows share one path then,
-        // so the duplicate gets a suffixed key rather than silently replacing the first.
-        int suffix = 0;
-        while (linksSoFar.ContainsKey(linkKey))
-        {
-            suffix++;
-            linkKey = SyntheticKey($"{linkPath}#{suffix}");
-        }
-
-        return new VfsFile(
-            Hash: linkKey,
-            Path: linkPath,
-            Type: target?.Type ?? FileType.Unknown,
-            Size: 0,
-            SourceName: container.SourceName,
-            SourceKind: container.SourceKind,
-            IsOverriding: false,
-            NameIsKnown: target is not null,
-            LinkOwnerHash: container.EngineHash,
-            LinkTargetHash: targetHash,
-            LinkChildTypeHash: childTypeHash);
-    }
-
     /// <summary>
     /// The rare path: an `.fcb` whose fragments weren't already resolved by <see cref="_cache"/> or
     /// <see cref="_fragmentMemo"/> — either a genuine cache miss (first time this game install has
     /// been seen) or a `.fcb` currently overridden by a mod (including living in the volatile
     /// `patch.dat`), whose structure isn't a fixed fact about the game and so is never written to the
     /// on-disk <see cref="_cache"/>. It's still worth the full
-    /// <see cref="FcbXml.ListFragmentsWithSize"/> pass (sizes included, not just the bare
+    /// <see cref="IContainerTree.List"/> pass (sizes included, not just the bare
     /// <see cref="FcbFragments"/> ids) even for a non-cacheable entry: the in-memory
     /// <see cref="_fragmentMemo"/> already keeps this from being redone on every call — it's correctly
     /// invalidated only when that hash's winning source actually changes (kind or name), which is
@@ -945,7 +871,7 @@ public sealed class GameVfs : IDisposable
     {
         try
         {
-            return FcbXml.ListFragmentsWithSize(FcbDocument.Deserialize(ReadFromSource(container)));
+            return _fcbSplitter.ListFragments(ReadFromSource(container));
         }
         catch
         {
@@ -996,25 +922,26 @@ public sealed class GameVfs : IDisposable
             if (OverridesFor(file.ContainerHash!.Value) is { } byFragment
                 && byFragment.TryGetValue(file.FragmentId!, out List<(IModLayer Layer, uint EntryHash)>? contributors))
             {
+                ContainerAncestor vanilla = OpenOriginal(files[file.ContainerHash!.Value]);
                 string merged = FragmentMerge.Resolve(
-                    DeserializeOriginal(file.ContainerHash!.Value), file.FragmentId!, contributors, _fcbDefinitions);
+                    vanilla.Splitter, vanilla.Tree, file.FragmentId!, contributors);
                 return new UTF8Encoding(false).GetBytes(merged);
             }
 
-            FcbObject root = FcbDocument.Deserialize(ReadFromSource(files[file.ContainerHash!.Value]));
-            string xml = FcbXml.ExtractFragment(root, file.FragmentId!, _fcbDefinitions)
+            VfsFile owner = files[file.ContainerHash!.Value];
+            string xml = SplitterFor(owner).Open(ReadFromSource(owner)).Extract(file.FragmentId!)
                 ?? throw new InvalidDataException(
                     $"'{file.FragmentId}' no longer matches anything in '{file.Directory}' - it may have changed shape.");
             return new UTF8Encoding(false).GetBytes(xml);
         }
 
-        return file.Type.Extension == "fcb" ? ReadContainer(file) : ReadFromSource(file);
+        return ContainerFormats.IsContainerSegment(file.FileName) ? ReadContainer(file) : ReadFromSource(file);
     }
 
     /// <summary>
     /// A container's base bytes (its own whole-file winning source, exactly as
     /// <see cref="ReadFromSource"/> always resolved it) with any active fragment overrides spliced in
-    /// via <see cref="FcbAssembler"/>. Unchanged, with no decode/encode cost, when nothing overrides
+    /// via the container's splitter. Unchanged, with no decode/encode cost, when nothing overrides
     /// any of this container's fragments — the common case.
     /// </summary>
     private byte[] ReadContainer(VfsFile container)
@@ -1025,10 +952,10 @@ public sealed class GameVfs : IDisposable
             return baseBytes;
         }
 
-        FcbObject vanillaRoot = DeserializeOriginal(container.EngineHash);
+        ContainerAncestor vanilla = OpenOriginal(container);
         Dictionary<string, string> xmlByFragment = byFragment.ToDictionary(
-            kv => kv.Key, kv => FragmentMerge.Resolve(vanillaRoot, kv.Key, kv.Value, _fcbDefinitions));
-        return FcbAssembler.Apply(baseBytes, xmlByFragment);
+            kv => kv.Key, kv => FragmentMerge.Resolve(vanilla.Splitter, vanilla.Tree, kv.Key, kv.Value));
+        return vanilla.Splitter.Apply(baseBytes, xmlByFragment);
     }
 
     /// <summary>
@@ -1181,8 +1108,7 @@ public sealed class GameVfs : IDisposable
             return null;
         }
 
-        FcbObject root = FcbDocument.Deserialize(originalContainer);
-        return FcbXml.ExtractFragment(root, fragmentId, _fcbDefinitions);
+        return SplitterFor(containerHash).Open(originalContainer).Extract(fragmentId);
     }
 
     /// <summary>patch beats everything else; otherwise mount order doesn't matter (no collisions).</summary>

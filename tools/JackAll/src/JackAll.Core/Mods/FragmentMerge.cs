@@ -69,9 +69,9 @@ public static class FragmentMerge
     /// ancestor makes the first fold <c>Diff3.Merge(ancestor, ancestor, layer's text)</c>, which is a
     /// no-op pass-through for any input (see <see cref="Diff3"/>'s remarks) — so a fragment touched
     /// by exactly one layer behaves exactly as it did before Milestone 3, with no special-casing.
-    /// <paramref name="fragmentId"/> not matching anything in <paramref name="vanillaRoot"/> isn't an
+    /// <paramref name="fragmentId"/> not matching anything in <paramref name="vanilla"/> is not an
     /// error: it means every contributing layer is adding a genuinely new entry rather than overriding
-    /// an existing one (normal modding — see <see cref="Format.Fcb.FcbAssembler.Apply"/>, which is what
+    /// an existing one (normal modding — see <see cref="IContainerSplitter.Apply"/>, which is what
     /// actually splices an added child in). There's no ancestor to fold the first contributor's content
     /// against in that case, so it's taken outright instead of going through <see cref="Diff3"/> at all
     /// — same byte-for-byte guarantee a single layer touching an existing fragment already gets, rather
@@ -102,11 +102,11 @@ public static class FragmentMerge
     /// The container's display path, stamped onto every <see cref="FragmentConflict"/> this call
     /// enqueues - <paramref name="fragmentId"/> is relative to it and ambiguous on its own.
     /// </param>
-    public static string Resolve(FcbObject vanillaRoot, string fragmentId,
-        IReadOnlyList<(IModLayer Layer, uint EntryHash)> layers, FcbClassDefinitions defs,
+    public static string Resolve(IContainerSplitter splitter, IContainerTree vanilla, string fragmentId,
+        IReadOnlyList<(IModLayer Layer, uint EntryHash)> layers,
         ConcurrentQueue<FragmentConflict>? conflicts = null, string container = "")
     {
-        string? vanillaXml = FcbXml.ExtractFragment(vanillaRoot, fragmentId, defs);
+        string? vanillaXml = vanilla.Extract(fragmentId);
         bool isNewEntry = vanillaXml is null;
         string ancestor = vanillaXml ?? "";
 
@@ -117,11 +117,11 @@ public static class FragmentMerge
             string theirs;
             try
             {
-                theirs = FcbXml.CanonicalizeFragment(Encoding.UTF8.GetString(layer.Read(entryHash)), defs);
+                theirs = splitter.Canonicalize(Encoding.UTF8.GetString(layer.Read(entryHash)));
             }
             catch (Exception ex) when (ex is not InvalidDataException)
             {
-                // FcbXml.FromXml (via CanonicalizeFragment) throws a bare XmlException - "Data at the
+                // A splitter's parser throws a bare XmlException - "Data at the
                 // root level is invalid. Line 1, position 1." for an empty file, and similarly opaque
                 // messages for other malformed content - with no indication of which mod or file it
                 // came from. This is user-supplied content (unlike ancestor/result below, which only
@@ -140,7 +140,7 @@ public static class FragmentMerge
                 // Diff3Tests.Ours_unchanged_from_ancestor_means_theirs_wins_outright_with_no_conflict)
                 // to always resolve to theirs with no conflict whenever "ours" equals "ancestor" - true
                 // here unconditionally at i == 0: either there's no ancestor at all (a brand-new entry),
-                // or "ours" would just be CanonicalizeFragment(ancestor), which is ancestor's own text
+                // or "ours" would just be Canonicalize(ancestor), which is ancestor's own text
                 // back again (ancestor already went through this same WriteObject/Render pipeline via
                 // ExtractFragment). Take that documented outcome directly instead of spending a real
                 // XML round-trip and a full 3-way text diff to re-derive it - this is the dominant cost
@@ -149,7 +149,7 @@ public static class FragmentMerge
                 continue;
             }
 
-            string ours = FcbXml.CanonicalizeFragment(result, defs);
+            string ours = splitter.Canonicalize(result);
             (string merged, bool conflict) = Diff3.Merge(ancestor, ours, theirs);
             if (!conflict)
             {

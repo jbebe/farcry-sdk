@@ -146,7 +146,7 @@ internal static class ModPathHashing
 
     /// <summary>Whether this path segment is a splitting container's own name.</summary>
     internal static bool IsContainerSegment(string segment)
-        => segment.EndsWith(".fcb", StringComparison.OrdinalIgnoreCase);
+        => ContainerFormats.IsContainerSegment(segment);
 
     /// <summary>
     /// Rejects the removed group-per-file id space (<c>NN_Name.xml</c> directly inside a container
@@ -207,10 +207,9 @@ internal static class ModPathHashing
             return new ModPathTarget(hash, null, null);
         }
 
-        string extension = dot < 0 ? "" : leaf[dot..];
-        if (!extension.Equals(".fcb", StringComparison.OrdinalIgnoreCase))
+        if (!IsContainerSegment(leaf))
         {
-            return null; // extra segments after anything but a _hash\<hex>.fcb leaf mean nothing
+            return null; // extra segments after anything but a container leaf mean nothing
         }
 
         string fragmentId = string.Join('\\', segments[2..]);

@@ -1,3 +1,4 @@
+using System.Globalization;
 using Spectre.Console;
 
 namespace JackAll.Cli.Infrastructure;
@@ -62,6 +63,20 @@ internal static class CliIO
         {
             throw new IOException($"Output path is the same as the input ({inputPath}); refusing to overwrite it.");
         }
+    }
+
+    /// <summary>
+    /// A CRC32 the user typed as hex, or null when what they typed is a name to be hashed instead.
+    /// Accepts an optional <c>0x</c> and up to eight digits, so the same spelling works wherever a
+    /// command takes "a hash or the thing it hashes".
+    /// </summary>
+    public static uint? TryParseHash(string text)
+    {
+        string digits = text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? text[2..] : text;
+        return digits.Length is > 0 and <= 8 && digits.All(Uri.IsHexDigit)
+            && uint.TryParse(digits, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint hash)
+                ? hash
+                : null;
     }
 
     public static void ReportWrote(string path) =>

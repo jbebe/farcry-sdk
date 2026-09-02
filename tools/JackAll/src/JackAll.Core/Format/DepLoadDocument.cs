@@ -1,3 +1,5 @@
+using System.Runtime.InteropServices;
+
 namespace JackAll.Core.Format;
 
 /// <summary>
@@ -9,8 +11,17 @@ namespace JackAll.Core.Format;
 /// </summary>
 public readonly record struct DepLoadChild(uint Hash, uint TypeHash);
 
-/// <summary>One `depload.dat` parent entry: a resource CRC32 plus every child (dependency) it pulls in.</summary>
-public sealed record DepLoadParent(uint Hash, IReadOnlyList<DepLoadChild> Children);
+/// <summary>
+/// One `depload.dat` parent entry: a resource CRC32 plus every child (dependency) it pulls in.
+/// </summary>
+/// <remarks>
+/// <paramref name="ChildIndex"/> is where this parent's children sat in the flattened child arrays,
+/// kept only to order the blocks on the way back out - <see cref="DepLoadDocument.Encode"/> assigns
+/// each parent a fresh one. It has to be carried because block order is not parent order: the
+/// parents array is sorted by CRC32 while the child blocks are in an unrelated order, so rebuilding
+/// the arrays parent-by-parent would silently reshuffle a file that should have round-tripped.
+/// </remarks>
+public sealed record DepLoadParent(uint Hash, int ChildIndex, IReadOnlyList<DepLoadChild> Children);
 
 /// <summary>
 /// A decoded `depload.dat` - the per-world/per-DLC dependency-preload index the engine walks in
@@ -22,8 +33,7 @@ public sealed record DepLoadParent(uint Hash, IReadOnlyList<DepLoadChild> Childr
 public sealed record DepLoadFile(IReadOnlyList<DepLoadParent> Parents);
 
 /// <summary>
-/// Decodes a `depload.dat`. Decode-only - the file is purely a reference index ("just a link," not
-/// editable content), so there's no edit workflow that would need a matching `Encode`.
+/// Decodes and encodes a `depload.dat`.
 /// </summary>
 /// <remarks>
 /// Reverse-engineered live via GhidraMCP against a fully-symbolized FC2 build (the same "server build"
@@ -46,6 +56,11 @@ public sealed record DepLoadFile(IReadOnlyList<DepLoadParent> Parents);
 /// field, which an earlier pass at this format (before a real sample was available to check against)
 /// had wrongly assumed. Parents are already sorted ascending by CRC32 on disk (the engine binary-searches
 /// this array on load, so a real file has to be) - this decoder keeps file order rather than re-sorting.
+///
+/// Three properties of every one of the 27 shipped files are what let <see cref="Encode"/> rebuild a
+/// file from the decoded model alone rather than echoing what it parsed: the child slices are a
+/// gapless, non-overlapping cover of the child arrays, the type table is in first-use order with no
+/// unused slot, and `childIndex` is *not* monotonic in parent order. The corpus tests pin all three.
 /// </remarks>
 public static class DepLoadDocument
 {
@@ -99,10 +114,90 @@ public static class DepLoadDocument
                 }
                 children[c] = new DepLoadChild(childHash[idx], typeTable[typeIndex]);
             }
-            parents[i] = new DepLoadParent(hash, children);
+            parents[i] = new DepLoadParent(hash, childIndex, children);
         }
 
         return new DepLoadFile(parents);
+    }
+
+    /// <summary>
+    /// Serializes a `depload.dat`, re-deriving the parents' sort order, the child slices and the type
+    /// table from the model - so an edited file is laid out correctly rather than needing its indices
+    /// hand-maintained.
+    /// </summary>
+    public static byte[] Encode(DepLoadFile file)
+    {
+        int count = file.Parents.Count;
+
+        // uint sorts unsigned, which is what the engine's binary search over this array expects;
+        // comparing these hashes signed is the documented way to make a file that loads but misbehaves.
+        int[] byHash = [.. Enumerable.Range(0, count).OrderBy(i => file.Parents[i].Hash)];
+        int[] byBlock = [.. Enumerable.Range(0, count).OrderBy(i => file.Parents[i].ChildIndex)];
+
+        int childCount = file.Parents.Sum(p => p.Children.Count);
+        if (childCount > ushort.MaxValue)
+        {
+            throw new InvalidDataException(
+                $"This depload.dat holds {childCount} children, but childIndex is a u16 - a file " +
+                $"cannot hold more than {ushort.MaxValue} in total.");
+        }
+
+        var childIndex = new int[count];
+        var typeIndexOf = new Dictionary<uint, byte>();
+        var typeTable = new List<uint>();
+        var childHash = new uint[childCount];
+        var childTypeIndex = new byte[childCount];
+        int at = 0;
+        foreach (int i in byBlock)
+        {
+            DepLoadParent parent = file.Parents[i];
+            if (parent.Children.Count > ushort.MaxValue)
+            {
+                throw new InvalidDataException(
+                    $"Parent 0x{parent.Hash:X8} has {parent.Children.Count} children, but childCount " +
+                    $"is a u16 - depload.dat cannot address more than {ushort.MaxValue} per parent.");
+            }
+
+            childIndex[i] = at;
+            foreach (DepLoadChild child in parent.Children)
+            {
+                if (!typeIndexOf.TryGetValue(child.TypeHash, out byte typeIndex))
+                {
+                    if (typeTable.Count > byte.MaxValue)
+                    {
+                        throw new InvalidDataException(
+                            $"This depload.dat needs more than {byte.MaxValue + 1} distinct type hashes, " +
+                            "but childTypeIndex is a u8.");
+                    }
+                    typeIndex = (byte)typeTable.Count;
+                    typeIndexOf[child.TypeHash] = typeIndex;
+                    typeTable.Add(child.TypeHash);
+                }
+
+                childHash[at] = child.Hash;
+                childTypeIndex[at] = typeIndex;
+                at++;
+            }
+        }
+
+        var writer = new ByteWriter();
+        writer.WriteU32((uint)count);
+        foreach (int i in byHash)
+        {
+            DepLoadParent parent = file.Parents[i];
+            writer.WriteU16((ushort)childIndex[i]);
+            writer.WriteU16((ushort)parent.Children.Count);
+            writer.WriteU32(parent.Hash);
+        }
+
+        writer.WriteU32((uint)childCount);
+        writer.WriteU32Array(childHash);
+        writer.WriteU32((uint)childCount);
+        writer.WriteRaw(childTypeIndex);
+        writer.WriteU32((uint)typeTable.Count);
+        writer.WriteU32Array(CollectionsMarshal.AsSpan(typeTable));
+
+        return writer.ToArray();
     }
 
     private static uint[] ReadU32Array(ref ByteCursor cursor, out uint count)

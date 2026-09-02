@@ -178,4 +178,129 @@ public class DepLoadDocumentTests
         Assert.NotEmpty(decoded.Parents);
         Assert.Contains(decoded.Parents, p => p.Children.Count > 0);
     }
+
+    private static List<string> CorpusDepLoads() =>
+    [
+        .. Fc2Corpus.Find(".dat")
+            .Where(path => Path.GetFileName(path).EndsWith("_depload.dat", StringComparison.OrdinalIgnoreCase)),
+    ];
+
+    public static TheoryData<string> CorpusFiles()
+    {
+        var data = new TheoryData<string>();
+        List<string> files = CorpusDepLoads();
+        if (files.Count == 0)
+        {
+            data.Add(string.Empty);
+            return data;
+        }
+        foreach (string file in files)
+        {
+            data.Add(file);
+        }
+        return data;
+    }
+
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void The_corpus_holds_depload_files_to_gate_against()
+    {
+        Assert.True(CorpusDepLoads().Count > 0, Fc2Corpus.MissingMessage("_depload.dat"));
+    }
+
+    /// <summary>
+    /// The real gate. <c>Encode</c> re-derives the sort order, every child slice and the whole type
+    /// table from the model rather than replaying what it read, so byte-identical output also proves
+    /// those three derivations match what the game's own exporter produced.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(CorpusFiles))]
+    public void Round_trips_every_shipped_depload_byte_for_byte(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        byte[] rebuilt = DepLoadDocument.Encode(DepLoadDocument.Decode(original));
+
+        Assert.Equal(original.Length, rebuilt.Length);
+        int at = Fc2Corpus.FirstDifference(original, rebuilt);
+        Assert.True(at < 0, Fc2Corpus.DescribeDifference(path, original, rebuilt));
+    }
+
+    /// <summary>
+    /// Shuffling the model's parent order changes nothing, which is what separates re-deriving the
+    /// layout from echoing the order it was read in - the round trip alone cannot tell those apart.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(CorpusFiles))]
+    public void Encodes_from_the_model_rather_than_the_order_it_was_read_in(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        DepLoadFile file = DepLoadDocument.Decode(original);
+        var shuffled = new DepLoadFile([.. file.Parents.Reverse()]);
+
+        byte[] rebuilt = DepLoadDocument.Encode(shuffled);
+
+        int at = Fc2Corpus.FirstDifference(original, rebuilt);
+        Assert.True(at < 0, Fc2Corpus.DescribeDifference(path, original, rebuilt));
+    }
+
+    /// <summary>
+    /// The three properties <c>Encode</c> relies on. Pinned separately so a future file that breaks
+    /// one says which, instead of surfacing as an unexplained byte difference.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(CorpusFiles))]
+    public void Every_shipped_depload_holds_the_invariants_the_encoder_relies_on(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] content = File.ReadAllBytes(path);
+        DepLoadFile file = DepLoadDocument.Decode(content);
+
+        for (int i = 1; i < file.Parents.Count; i++)
+        {
+            Assert.True(file.Parents[i].Hash > file.Parents[i - 1].Hash,
+                $"parents are not sorted ascending unsigned at index {i}");
+        }
+
+        int expected = 0;
+        foreach (DepLoadParent parent in file.Parents.OrderBy(p => p.ChildIndex))
+        {
+            Assert.Equal(expected, parent.ChildIndex);
+            expected += parent.Children.Count;
+        }
+
+        var firstUse = new List<uint>();
+        foreach (DepLoadParent parent in file.Parents.OrderBy(p => p.ChildIndex))
+        {
+            foreach (DepLoadChild child in parent.Children)
+            {
+                if (!firstUse.Contains(child.TypeHash))
+                {
+                    firstUse.Add(child.TypeHash);
+                }
+            }
+        }
+        Assert.Equal(TypeTableOf(content), firstUse);
+    }
+
+    /// <summary>The file's own type table, in stored order - the one thing the decoded model drops.</summary>
+    private static List<uint> TypeTableOf(byte[] content)
+    {
+        int at = 4 + (8 * (int)BitConverter.ToUInt32(content, 0));
+        at += 4 + (4 * (int)BitConverter.ToUInt32(content, at));
+        at += 4 + (int)BitConverter.ToUInt32(content, at);
+
+        int count = (int)BitConverter.ToUInt32(content, at);
+        at += 4;
+        var table = new List<uint>(count);
+        for (int i = 0; i < count; i++)
+        {
+            table.Add(BitConverter.ToUInt32(content, at + (4 * i)));
+        }
+        return table;
+    }
 }

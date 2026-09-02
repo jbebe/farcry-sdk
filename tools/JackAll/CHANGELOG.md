@@ -25,6 +25,24 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   rather than reporting success.
 - **`move validate`** — clip references that no known game path hashes to, which catches a mistyped
   repoint map before it ships a graph that parses and plays nothing.
+- **`depload` CLI** — `decode`, `encode`, `add` and `validate` for the per-world dependency index.
+  Writing it is what lets a mod ship content at a path the game never had: an animation clip only
+  loads if it is listed under the `CAnimationPackageResource` the weapon's `sPartName` names, which
+  is now measured in game rather than inferred. `add` re-derives the parents' sort order, every
+  child slice and the type table, so the mistake that misbehaves animations without crashing cannot
+  be made by hand.
+- **`depload.dat` splits into fragments** — stage one resource's dependency list at
+  `mods\worlds\world1\generated\world1_depload.dat\dragunov.3882209901.xml` (about 2 KB) — the number
+  binds and the label is the author's, as with a world-sector entity — and the build merges it
+  into the retail file, instead of shipping a 220 KB binary. `depload add --fragment` writes one.
+  Two mods registering clips under different animation packages then compose; under the same
+  package the build reports the collision instead of silently dropping one mod's clip.
+
+### Changed
+- **Container splitting is no longer `.fcb`-only.** The fragment machinery now runs through an
+  `IContainerSplitter`, so a format supplies *recognise / open / extract / apply* and inherits the
+  three-way merge, load-order folding and `_hash\` addressing unchanged. `.fcb` and `depload.dat`
+  are the two implementations; `stringtable` and `NewPartLib` need only an implementation each.
 
 ## [1.0.0] - 2026-08-23
 

@@ -1,4 +1,5 @@
 using JackAll.Core.Format;
+using JackAll.Core.Mods;
 using JackAll.Core.Vfs;
 
 namespace JackAll.Core.Xrefs;
@@ -27,7 +28,7 @@ public sealed class DepLoadReferenceExtractor : IReferenceExtractor
     /// </summary>
     public bool CanHandle(VfsFile file)
         => file.Type.Extension is "dat"
-        && file.FileName.EndsWith("_depload.dat", StringComparison.OrdinalIgnoreCase);
+        && ContainerFormats.IsDepLoad(file.FileName);
 
     public void Extract(VfsFile file, byte[] content, ReferenceSink sink)
     {

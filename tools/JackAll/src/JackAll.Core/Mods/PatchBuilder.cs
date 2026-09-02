@@ -40,7 +40,7 @@ public static class PatchBuilder
     /// <summary>
     /// <paramref name="readArchiveOriginal"/> resolves a hash to the archives' own current bytes for
     /// it (ignoring mods) — needed for a container with a fragment override, both as the base
-    /// <see cref="FcbAssembler"/> splices onto when there's no whole-file override, and as the vanilla
+    /// <see cref="IContainerSplitter.Apply"/> splices onto when there is no whole-file override, and as the vanilla
     /// ancestor every contributing layer's edit is merged against (docs/design/
     /// fcb-fragment-overlays.md Milestone 3) — since nearly every real `.fcb` lives in an archive
     /// other than <c>patch.dat</c> and this method otherwise only ever touches the vanilla patch
@@ -142,8 +142,10 @@ public static class PatchBuilder
                     ?? throw new InvalidOperationException(
                         $"A fragment override targets {kv.Key:X8}, but no archive currently provides " +
                         "its vanilla ancestor.");
-                return (ContainerHash: kv.Key, VanillaBytes: vanillaBytes, Root: FcbDocument.Deserialize(vanillaBytes),
-                    Display: ContainerDisplayPath(kv.Key, kv.Value.Values));
+                string display = ContainerDisplayPath(kv.Key, kv.Value.Values);
+                IContainerSplitter splitter = ContainerFormats.For(display, defs);
+                return (ContainerHash: kv.Key, VanillaBytes: vanillaBytes, Splitter: splitter,
+                    Tree: splitter.Open(vanillaBytes), Display: display);
             })
             .ToDictionary(x => x.ContainerHash);
 
@@ -153,16 +155,17 @@ public static class PatchBuilder
         var resolvedByContainer = containersWithFragments
             .SelectMany(kv => kv.Value.Select(f => (ContainerHash: kv.Key, FragmentId: f.Key, Contributors: f.Value)))
             .AsParallel()
-            .Select(item => (
-                item.ContainerHash,
-                item.FragmentId,
-                Xml: FragmentMerge.Resolve(
-                    vanillaByContainer[item.ContainerHash].Root, item.FragmentId, item.Contributors, defs, conflicts,
-                    vanillaByContainer[item.ContainerHash].Display)))
+            .Select(item =>
+            {
+                var container = vanillaByContainer[item.ContainerHash];
+                return (item.ContainerHash, item.FragmentId, Xml: FragmentMerge.Resolve(
+                    container.Splitter, container.Tree, item.FragmentId, item.Contributors,
+                    conflicts, container.Display));
+            })
             .GroupBy(x => x.ContainerHash)
             .ToDictionary(g => g.Key, g => g.ToDictionary(x => x.FragmentId, x => x.Xml));
 
-        // Splicing back in decodes and re-encodes the whole container (FcbAssembler.Apply), so the
+        // Splicing back in decodes and re-encodes the whole container, so the
         // containers run concurrently for this last step too.
         foreach ((uint containerHash, byte[] bytes) in resolvedByContainer
             .AsParallel()
@@ -171,7 +174,7 @@ public static class PatchBuilder
                 byte[] baseBytes = replacements.TryGetValue(kv.Key, out byte[]? wholeFileBytes)
                     ? wholeFileBytes
                     : vanillaByContainer[kv.Key].VanillaBytes;
-                return (kv.Key, Bytes: FcbAssembler.Apply(baseBytes, kv.Value));
+                return (kv.Key, Bytes: vanillaByContainer[kv.Key].Splitter.Apply(baseBytes, kv.Value));
             })
             .ToArray())
         {

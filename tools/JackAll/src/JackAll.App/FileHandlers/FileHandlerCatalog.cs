@@ -10,6 +10,7 @@ using JackAll.App.FileHandlers.Text;
 using JackAll.App.FileHandlers.Xbg;
 using JackAll.App.FileHandlers.Xbm;
 using JackAll.App.FileHandlers.Xbt;
+using JackAll.Core.Mods;
 using JackAll.Core.Vfs;
 
 namespace JackAll.App.FileHandlers;
@@ -89,7 +90,7 @@ public static class FileHandlerCatalog
             // extension, so this must not fire for anything else that happens to carry a literal .dat
             // extension in the VFS content tree. Sibling "_deploadnewparticles.rml" files are unaffected
             // (routed by their own "rml" extension, checked above).
-            { Type.Extension: "dat" } when file.FileName.EndsWith("_depload.dat", StringComparison.OrdinalIgnoreCase)
+            { Type.Extension: "dat" } when ContainerFormats.IsDepLoad(file.FileName)
                 => new DepLoadFileHandler(file.FileName, readContent()),
             _ => null,
         };

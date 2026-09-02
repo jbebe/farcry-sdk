@@ -1,5 +1,6 @@
 using JackAll.Cli.Commands;
 using JackAll.Cli.Commands.Archive;
+using JackAll.Cli.Commands.DepLoad;
 using JackAll.Cli.Commands.Fc2Model;
 using JackAll.Cli.Commands.Fcb;
 using JackAll.Cli.Commands.Mgb;
@@ -160,6 +161,27 @@ app.Configure(config =>
         mgb.AddCommand<MgbVerifyCommand>("verify")
             .WithDescription("Check that a .mgb, or the XML it is built from, references only names it declares.")
             .WithExample("mgb", "verify", "fcse.mgb.xml", "--page", "FCSE_PAGE");
+    });
+
+    // --- depload.dat dependency index ------------------------------------
+    config.AddBranch("depload", depload =>
+    {
+        depload.AddCommand<DepLoadDecodeCommand>("decode")
+            .WithDescription("Decode a depload.dat dependency index to editable XML.")
+            .WithExample("depload", "decode", "world1_depload.dat");
+        depload.AddCommand<DepLoadEncodeCommand>("encode")
+            .WithDescription("Build an XML document back into a binary depload.dat.")
+            .WithExample("depload", "encode", "world1_depload.xml");
+        depload.AddCommand<DepLoadAddCommand>("add")
+            .WithDescription(
+                "Register a resource as a dependency of another - how a mod declares content at a "
+                + "path the game never shipped, so the engine will load it. For an animation clip "
+                + "the parent is the package the weapon's sPartName names.")
+            .WithExample("depload", "add", "world1_depload.dat", "--parent", "dragunov",
+                "--child", @"graphics\characters\_common\animations\weapons\special\x.mab");
+        depload.AddCommand<DepLoadValidateCommand>("validate")
+            .WithDescription("Check a depload.dat's sort order and index ceilings, and that it reads back to itself.")
+            .WithExample("depload", "validate", "world1_depload.dat");
     });
 
     // --- MOVE animation graphs ------------------------------------------

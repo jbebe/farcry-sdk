@@ -159,10 +159,12 @@ public class WorldSectorFragmentTests : IDisposable
         var byFragment = overrides[NameHash.Compute(SectorPath)];
         Assert.Equal(2, byFragment.Count);
 
+        var splitter = new FcbContainerSplitter(FcbClassDefinitions.Empty);
+        IContainerTree vanilla = splitter.Open(baseFcb);
         Dictionary<string, string> xmlById = byFragment.ToDictionary(
             kv => kv.Key,
-            kv => FragmentMerge.Resolve(vanillaRoot, kv.Key, kv.Value, FcbClassDefinitions.Empty));
-        FcbObject rebuilt = FcbDocument.Deserialize(FcbAssembler.Apply(baseFcb, xmlById));
+            kv => FragmentMerge.Resolve(splitter, vanilla, kv.Key, kv.Value));
+        FcbObject rebuilt = FcbDocument.Deserialize(splitter.Apply(baseFcb, xmlById));
 
         Assert.Equal(
             [0x01, 0x00, 0x00, 0x00],
