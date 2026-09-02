@@ -64,7 +64,7 @@ public class EndToEndTests : IDisposable
         // Dependency-link rows are exempt: they're synthetic references nested under their owning
         // depload.dat's own path (see GameVfs.MergeDependencyLinks), not real archive/mod entries, so
         // an unresolved one's identity is legitimately "<owner path>\0x<hash>", not "_unknown\...".
-        foreach (VfsFile unnamed in vfs.Files.Values.Where(f => !f.NameIsKnown && !f.IsDependencyLink))
+        foreach (VfsFile unnamed in vfs.Files.Values.Where(f => !f.NameIsKnown))
         {
             Assert.StartsWith("_unknown\\", unnamed.Path, StringComparison.Ordinal);
             Assert.NotEqual(string.Empty, unnamed.Type.Extension);
@@ -89,7 +89,7 @@ public class EndToEndTests : IDisposable
             // virtual entries, or one depload.dat decoded into its parent/children entries — see
             // GameVfs.MergeFragments/MergeDependencyLinks) and were never real archive entries, so they
             // don't belong in a "nothing else moved in the rebuilt archive" check.
-            before = vfs.Files.Values.Where(f => !f.IsFragment && !f.IsDependencyLink)
+            before = vfs.Files.Values.Where(f => !f.IsFragment)
                 .ToDictionary(f => (uint)f.Hash, f => vfs.Read(f.Hash));
         }
 

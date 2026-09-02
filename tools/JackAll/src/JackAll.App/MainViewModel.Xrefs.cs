@@ -1,4 +1,5 @@
 using JackAll.Core;
+using JackAll.Core.Mods;
 using JackAll.Core.Vfs;
 using JackAll.Core.Xrefs;
 using JackAll.Tools.Xrefs;
@@ -136,10 +137,33 @@ public sealed partial class MainViewModel
         OnPropertyChanged(nameof(XrefsReady)); // nudges the panel to re-query the selected file
     }
 
-    /// <summary>Everything that references <paramref name="file"/> — empty for a synthetic row,
-    /// which the reference index never covers.</summary>
+    /// <summary>
+    /// The resource a depload fragment row stands for, with the container it came out of - null for
+    /// any other row.
+    /// </summary>
+    /// <remarks>
+    /// A depload fragment is one resource's dependency list, so the row *is* that resource as far as
+    /// references are concerned: what it pulls in are its outgoing edges, and whatever else lists it
+    /// are its incoming ones. Without this a fragment row would answer "no references" for a row that
+    /// is made of nothing else, because its own VFS key is synthetic and the index never sees it.
+    /// </remarks>
+    private static (uint Container, uint Resource)? DepLoadResourceOf(VfsFile file)
+        => file is { IsFragment: true, ContainerHash: { } container, FragmentId: { } id }
+        && ContainerFormats.ContainerPathOf(file.Path) is { } containerPath
+        && ContainerFormats.IsDepLoad(containerPath)
+        && DepLoadContainerSplitter.ResourceOf(id) is { } resource
+            ? (container, resource)
+            : null;
+
+    /// <summary>Everything that references <paramref name="file"/> — empty for a synthetic row the
+    /// index never covers, but a depload fragment answers for the resource it describes.</summary>
     public IReadOnlyList<XrefRow> ReferencesTo(VfsFile file)
-        => file.IsSynthetic ? [] : [.. _xrefs.ReferencesTo(RefSpace.FilePath, file.EngineHash)
+    {
+        uint? subject = DepLoadResourceOf(file) is { } depLoad ? depLoad.Resource
+            : file.IsSynthetic ? null
+            : file.EngineHash;
+
+        return subject is not { } hash ? [] : [.. _xrefs.ReferencesTo(RefSpace.FilePath, hash)
             .Select(edge => new XrefRow(
                 Display: DescribeFile(edge.SourceFile),
                 Site: DescribeSite(edge),
@@ -148,11 +172,27 @@ public sealed partial class MainViewModel
                 Target: edge.SourceFile,
                 CanNavigate: FindByHash(edge.SourceFile) is not null))
             .OrderBy(row => row.Display, StringComparer.OrdinalIgnoreCase)];
+    }
 
-    /// <summary>Everything <paramref name="file"/> references — empty for a synthetic row, same as
-    /// <see cref="ReferencesTo"/>.</summary>
+    /// <summary>Everything <paramref name="file"/> references. A depload fragment reports just its
+    /// own resource's dependencies, not every edge in the container it sits in.</summary>
     public IReadOnlyList<XrefRow> ReferencesFrom(VfsFile file)
-        => file.IsSynthetic ? [] : [.. _xrefs.ReferencesFrom(file.EngineHash)
+    {
+        IEnumerable<RefEdge> edges;
+        if (DepLoadResourceOf(file) is { } depLoad)
+        {
+            edges = _xrefs.ReferencesFrom(depLoad.Container).Where(e => e.SiteKey == depLoad.Resource);
+        }
+        else if (file.IsSynthetic)
+        {
+            return [];
+        }
+        else
+        {
+            edges = _xrefs.ReferencesFrom(file.EngineHash);
+        }
+
+        return [.. edges
             .Select(edge => new XrefRow(
                 Display: DescribeTarget(edge),
                 Site: DescribeSite(edge),
@@ -162,6 +202,7 @@ public sealed partial class MainViewModel
                 CanNavigate: CanNavigateTo(edge.TargetSpace, edge.Target)))
             .OrderBy(row => row.Site, StringComparer.OrdinalIgnoreCase)
             .ThenBy(row => row.Display, StringComparer.OrdinalIgnoreCase)];
+    }
 
     /// <summary>
     /// Selects whatever <paramref name="space"/>/<paramref name="id"/> refers to. A file hash goes

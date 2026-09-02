@@ -1,3 +1,5 @@
+using JackAll.Core.Format.Fcb;
+
 namespace JackAll.Core.Mods;
 
 /// <summary>One decoded container, ready to have its fragments read.</summary>
@@ -10,6 +12,12 @@ public interface IContainerTree
     /// <summary>This fragment's canonical XML, or null when the container holds no such fragment -
     /// which is not an error, but a layer adding new content rather than overriding.</summary>
     string? Extract(string fragmentId);
+
+    /// <summary>
+    /// Every fragment this container splits into, with the size to show against it - what the file
+    /// browser lists under the container, and the set a mod picks from when staging an override.
+    /// </summary>
+    IReadOnlyList<FcbFragmentInfo> List();
 }
 
 /// <summary>
@@ -20,10 +28,6 @@ public interface IContainerTree
 /// merges it into the vanilla container rather than shipping the whole recompiled file. That
 /// addressing is format-agnostic already - the id is a plain string keyed by container hash - so this
 /// is the only piece a new format has to supply. See docs/design/mod-layout-final.md.
-///
-/// Listing a container's fragments is deliberately not here. Only `.fcb` files get browsable
-/// fragment rows (a `depload.dat`'s parents are already rows in their own right), so it stays on
-/// <see cref="FcbContainerSplitter"/> where its `.fcb`-shaped result belongs.
 /// </remarks>
 public interface IContainerSplitter
 {

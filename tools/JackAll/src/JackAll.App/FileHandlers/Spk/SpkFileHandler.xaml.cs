@@ -45,7 +45,7 @@ namespace JackAll.App.FileHandlers.Spk;
 /// music has one).
 ///
 /// A `SimpleFixed68`/`TransformedFixed128` row's own cross-reference gets a "Go to" action too, the
-/// same jump mechanism <c>DependencyLinkHandler</c> uses for `.fcb` references: if the id matches
+/// same jump mechanism <c>DepLoadFileHandler</c> uses for a dependency: if the id matches
 /// another record already in this same bank, it just selects that row (typically a no-op click for a
 /// grouped child, since it's already visible right there - the real value is for a reference that
 /// *isn't* grouped, i.e. doesn't resolve within this file); otherwise it's looked up VFS-wide

@@ -19,13 +19,10 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
     public byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById)
         => FcbAssembler.Apply(baseBytes, fragmentXmlById);
 
-    /// <summary>Every fragment of a container, with the size to show against it. Only `.fcb` files
-    /// get browsable fragment rows, which is why this is here rather than on the interface.</summary>
-    public IReadOnlyList<FcbFragmentInfo> ListFragments(byte[] container)
-        => FcbXml.ListFragmentsWithSize(FcbDocument.Deserialize(container));
-
     private sealed class Tree(FcbObject root, FcbClassDefinitions definitions) : IContainerTree
     {
         public string? Extract(string fragmentId) => FcbXml.ExtractFragment(root, fragmentId, definitions);
+
+        public IReadOnlyList<FcbFragmentInfo> List() => FcbXml.ListFragmentsWithSize(root);
     }
 }

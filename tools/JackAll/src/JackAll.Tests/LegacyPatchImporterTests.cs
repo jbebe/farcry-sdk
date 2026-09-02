@@ -73,7 +73,7 @@ public class LegacyPatchImporterTests : IDisposable
         byte[] fragmentReplacementXml;
         using (var vfs = GameVfs.Load(_legacySourceInstall, names))
         {
-            VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+            VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
             container = vfs.Files[fragment.ContainerHash!.Value];
             fragmentId = fragment.FragmentId!;
 
@@ -149,7 +149,7 @@ public class LegacyPatchImporterTests : IDisposable
         byte[] withOneArchetypeRemoved;
         using (var vfs = GameVfs.Load(_legacySourceInstall, names))
         {
-            VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+            VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
             container = vfs.Files[fragment.ContainerHash!.Value];
 
             FcbObject tree = FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!);

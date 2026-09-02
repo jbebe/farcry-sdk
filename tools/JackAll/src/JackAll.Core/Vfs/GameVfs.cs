@@ -85,6 +85,7 @@ public sealed class GameVfs : IDisposable
     private readonly GameCache _cache;
     private readonly FcbClassDefinitions _fcbDefinitions;
     private readonly FcbContainerSplitter _fcbSplitter;
+    private readonly DepLoadContainerSplitter _depLoadSplitter;
     private List<IModLayer> _layers = [];
     private Dictionary<ulong, VfsFile> _files = [];
 
@@ -191,6 +192,7 @@ public sealed class GameVfs : IDisposable
         _cache = cache;
         _fcbDefinitions = fcbDefinitions;
         _fcbSplitter = new FcbContainerSplitter(fcbDefinitions);
+        _depLoadSplitter = new DepLoadContainerSplitter(names);
     }
 
     /// <summary>
@@ -355,7 +357,6 @@ public sealed class GameVfs : IDisposable
             if (includeFragments)
             {
                 MergeFragments(files, progress);
-                MergeDependencyLinks(files, progress);
             }
             _files = files;
         }
@@ -376,7 +377,7 @@ public sealed class GameVfs : IDisposable
 
     /// <summary>How a container splits, chosen by its name - see <see cref="ContainerFormats"/>.</summary>
     private IContainerSplitter SplitterFor(VfsFile container)
-        => ContainerFormats.IsDepLoad(container.FileName) ? DepLoadContainerSplitter.Instance : _fcbSplitter;
+        => ContainerFormats.IsDepLoad(container.FileName) ? _depLoadSplitter : _fcbSplitter;
 
     /// <summary>The same, for a caller holding only a hash. A hash naming no row is an override
     /// staged under <c>_hash\</c>, which is only ever an `.fcb`.</summary>
@@ -427,7 +428,6 @@ public sealed class GameVfs : IDisposable
         {
             var files = new Dictionary<ulong, VfsFile>(_files);
             MergeFragments(files, progress);
-            MergeDependencyLinks(files, progress);
             _files = files;
         }
     }
@@ -624,11 +624,9 @@ public sealed class GameVfs : IDisposable
         var needsDecode = new List<(VfsFile Container, bool Cacheable)>();
         foreach (VfsFile c in files.Values)
         {
-            // A dependency-link row can carry its target's .fcb type - only real entries are containers.
-            // Browsable rows stay `.fcb`-only even though a `depload.dat` also splits: its parents are
-            // already browsable as dependency-link rows, so adding fragment rows would double them up.
-            // Building a staged depload fragment doesn't come through here - see PatchBuilder.
-            if (c.Type.Extension != "fcb" || c.IsSynthetic) continue;
+            // Any splitting container, not just `.fcb` - a `depload.dat` splits per resource too, and
+            // its rows are what a mod stages an override into. Only real entries are containers.
+            if (!ContainerFormats.IsContainerSegment(c.FileName) || c.IsSynthetic) continue;
 
             if (OverridesFor(c.EngineHash) is null && MemoIsCurrent(c, out _))
             {
@@ -692,7 +690,7 @@ public sealed class GameVfs : IDisposable
         var newFragmentMemo = new Dictionary<uint, (SourceKind Kind, string SourceName, VfsFile[] Fragments)>();
         foreach (VfsFile container in files.Values)
         {
-            if (container.Type.Extension != "fcb" || container.IsSynthetic)
+            if (!ContainerFormats.IsContainerSegment(container.FileName) || container.IsSynthetic)
             {
                 continue;
             }
@@ -871,7 +869,7 @@ public sealed class GameVfs : IDisposable
     {
         try
         {
-            return _fcbSplitter.ListFragments(ReadFromSource(container));
+            return SplitterFor(container).Open(ReadFromSource(container)).List();
         }
         catch
         {
@@ -893,26 +891,6 @@ public sealed class GameVfs : IDisposable
         if (!files.TryGetValue(key, out var file))
         {
             throw new KeyNotFoundException($"No file with key {key:X8}.");
-        }
-
-        if (file.IsDependencyLink)
-        {
-            // A dependency-link row has no bytes of its own - it's a reference, not content (see
-            // docs/docs/file-formats/depload.md) - so this synthesizes a small human-readable summary
-            // on demand, purely so the generic Export/Mirror actions have something sensible to do.
-            files.TryGetValue(file.LinkOwnerHash!.Value, out VfsFile? owner);
-            string ownerLabel = owner?.Path ?? $"0x{file.LinkOwnerHash:X8}";
-            uint targetHash = file.LinkTargetHash!.Value;
-            string resolved = files.TryGetValue(targetHash, out VfsFile? target)
-                ? target.Path
-                : "not resolved - no archive/mod entry has this hash";
-
-            var summary = new StringBuilder();
-            summary.AppendLine($"Dependency link (from {ownerLabel})");
-            summary.AppendLine($"Hash: 0x{targetHash:X8}");
-            summary.AppendLine($"Resolved: {resolved}");
-            if (file.LinkChildTypeHash is { } typeHash) summary.AppendLine($"Type hash: 0x{typeHash:X8}");
-            return new UTF8Encoding(false).GetBytes(summary.ToString());
         }
 
         if (file.IsFragment)
@@ -985,7 +963,7 @@ public sealed class GameVfs : IDisposable
             // Several archives share this bare name - a fragment/link row's own hash is synthetic
             // (not a real archive entry), so probe with whichever ancestor hash actually lives in one
             // of their FAT indexes instead.
-            uint probeHash = file.ContainerHash ?? file.LinkOwnerHash ?? file.EngineHash;
+            uint probeHash = file.ContainerHash ?? file.EngineHash;
             archive = candidates.FirstOrDefault(a => a.Contains(probeHash)) ?? candidates[0];
         }
 

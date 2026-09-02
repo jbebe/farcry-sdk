@@ -10,7 +10,7 @@ namespace JackAll.Core.Xrefs;
 /// <remarks>
 /// This is the one format that is *entirely* references (see <see cref="DepLoadDocument"/>: "not a
 /// container of embedded file bytes ... every entry is a CRC32 reference to another resource"), and
-/// the one the app already lets you follow one link at a time via <c>DependencyLinkHandler</c>. What
+/// the one the app already lets you follow one link at a time via <c>DepLoadFileHandler</c>. What
 /// it never answered until now is the other direction - "which worlds preload this texture?" - which
 /// falls straight out of indexing the same edges.
 ///

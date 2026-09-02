@@ -200,7 +200,7 @@ public class PatchBuilderTests : IDisposable
         {
             // A named container specifically: its own real path hashes back to its own hash, so
             // staging at "container's path + fragment id" (the normal, no-_hash\-needed case) works.
-            VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+            VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
             container = vfs.Files[fragment.ContainerHash!.Value];
             fragmentId = fragment.FragmentId!;
 
@@ -257,7 +257,7 @@ public class PatchBuilderTests : IDisposable
         int originalChildCount;
         using (var vfs = GameVfs.Load(_install, names))
         {
-            VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+            VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
             container = vfs.Files[fragment.ContainerHash!.Value];
             originalChildCount = FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!).Children.Count;
         }
@@ -301,7 +301,7 @@ public class PatchBuilderTests : IDisposable
         FcbObject vanillaFragment;
         using (var vfs = GameVfs.Load(_install, names))
         {
-            VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+            VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
             container = vfs.Files[fragment.ContainerHash!.Value];
             fragmentId = fragment.FragmentId!;
 
@@ -354,7 +354,7 @@ public class PatchBuilderTests : IDisposable
         FcbObject vanillaFragment;
         using (var vfs = GameVfs.Load(_install, names))
         {
-            VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+            VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
             container = vfs.Files[fragment.ContainerHash!.Value];
             fragmentId = fragment.FragmentId!;
 
@@ -415,7 +415,7 @@ public class PatchBuilderTests : IDisposable
         FcbObject vanillaFragment;
         using (var vfs = GameVfs.Load(_install, names))
         {
-            VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+            VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
             container = vfs.Files[fragment.ContainerHash!.Value];
             fragmentId = fragment.FragmentId!;
             vanillaFragment = FcbFragments.Find(
@@ -456,7 +456,7 @@ public class PatchBuilderTests : IDisposable
         NameDatabase names = TestSupport.LoadNames();
         using var vfs = GameVfs.Load(_install, names);
 
-        VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+        VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
         VfsFile container = vfs.Files[fragment.ContainerHash!.Value];
 
         // First build: no mods, just replaces patch.dat/.fat once so the "GameVfs's archive handle
@@ -494,7 +494,7 @@ public class PatchBuilderTests : IDisposable
         NameDatabase names = TestSupport.LoadNames();
         using var vfs = GameVfs.Load(_install, names);
 
-        VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+        VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
         VfsFile container = vfs.Files[fragment.ContainerHash!.Value];
         byte[] trueVanillaContainer = vfs.ReadOriginal((uint)container.Hash)!;
 
@@ -532,7 +532,7 @@ public class PatchBuilderTests : IDisposable
         // as install.PatchFat/.Dat.
         using var vfs = GameVfs.Load(_install, names);
 
-        VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+        VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
         VfsFile container = vfs.Files[fragment.ContainerHash!.Value];
         Assert.Equal("patch", container.SourceName); // sanity: confirms the non-cacheable setup above.
 

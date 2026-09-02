@@ -16,7 +16,6 @@ public sealed partial class MainViewModel
     private IReadOnlyList<VfsFile> _selectedFiles = [];
     private bool _onlyMods;
     private string _filterText = "";
-    private bool _includeLinks;
     private CancellationTokenSource? _exportCts;
 
     /// <summary>How often <see cref="ExportFiles"/> updates <see cref="Status"/> — often enough to
@@ -49,16 +48,6 @@ public sealed partial class MainViewModel
     {
         get => _filterText;
         set { _filterText = value; OnPropertyChanged(); RefreshFileList(debounce: true); }
-    }
-
-    /// <summary>Whether depload.dat link rows (see <see cref="VfsFile.IsDependencyLink"/>) show up
-    /// in the file list at all. Off by default - a link row exists for every parent/child entry of
-    /// every depload.dat (tens of thousands on a real install), and it duplicates a hit on the
-    /// target's own name/hash, so leaving them in swamps an ordinary text search.</summary>
-    public bool IncludeLinks
-    {
-        get => _includeLinks;
-        set { _includeLinks = value; OnPropertyChanged(); RefreshFileList(); }
     }
 
     public FolderNode? SelectedFolder
@@ -248,9 +237,9 @@ public sealed partial class MainViewModel
     /// it in the tree.
     /// </summary>
     /// <remarks>
-    /// Honours the same two view switches the file list itself does — <see cref="OnlyMods"/> (which
+    /// Honours the same view switch the file list itself does — <see cref="OnlyMods"/> (which
     /// already pruned the tree you clicked in, so exporting vanilla files out of a mods-only view
-    /// would contradict it) and <see cref="IncludeLinks"/> — but deliberately not
+    /// would contradict it) — but deliberately not
     /// <see cref="FilterText"/>: this action is "everything down this path", not "everything down
     /// this path that also happens to match what I last typed in the search box".
     /// </remarks>
@@ -262,7 +251,7 @@ public sealed partial class MainViewModel
         string prefix = PathPrefixOf(root);
 
         return _vfs.Files.Values
-            .Where(f => IsUnder(f, root, prefix) && (!OnlyMods || f.IsModded) && (IncludeLinks || !f.IsDependencyLink))
+            .Where(f => IsUnder(f, root, prefix) && (!OnlyMods || f.IsModded))
             .OrderBy(f => f.Path, StringComparer.OrdinalIgnoreCase)
             .ToList();
     }
@@ -278,7 +267,7 @@ public sealed partial class MainViewModel
         // would mean writing worlds\…\foo.fcb as both a file and a folder in the same export, so
         // they're only in scope when the folder asked for is the one they sit in directly (i.e. you
         // pointed at the container itself, where there's nothing else to export anyway).
-        if (file.IsFragment || file.IsDependencyLink)
+        if (file.IsFragment)
         {
             return string.Equals(file.Directory, root, StringComparison.OrdinalIgnoreCase);
         }
@@ -468,7 +457,6 @@ public sealed partial class MainViewModel
         (string[] includes, string[] excludes, string? extFilter, string? archFilter, uint? hashFilter) = ParseFilter(_filterText);
         string? folderPath = SelectedFolder?.FullPath;
         bool onlyMods = OnlyMods;
-        bool includeLinks = IncludeLinks;
 
         List<VfsFile>? matches;
         try
@@ -514,11 +502,6 @@ public sealed partial class MainViewModel
                 if (onlyMods)
                 {
                     files = files.Where(f => f.IsModded);
-                }
-
-                if (!includeLinks)
-                {
-                    files = files.Where(f => !f.IsDependencyLink);
                 }
 
                 token.ThrowIfCancellationRequested();

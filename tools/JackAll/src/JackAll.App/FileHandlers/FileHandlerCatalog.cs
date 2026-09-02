@@ -41,10 +41,9 @@ public static class FileHandlerCatalog
     /// modded file against its
     /// base game version (see <see cref="BuildTextHandler"/>, <see cref="BuildLauncherPreview"/>,
     /// <see cref="FcbFileHandler"/> and <see cref="RmlFileHandler"/>). <paramref name="resolveByHash"/>
-    /// and <paramref name="navigateTo"/> are used by the dependency-link case, to look up what a link
-    /// points to and jump the main tree/grid selection to it (see <see cref="DependencyLinkHandler"/>),
-    /// and by the spk case, for a `SimpleFixed68`/`TransformedFixed128` row's own cross-reference to a
-    /// different bank entirely (see <see cref="SpkFileHandler"/>). <paramref name="openDominoEditor"/>
+    /// and <paramref name="navigateTo"/> are used by the spk case, for a
+    /// `SimpleFixed68`/`TransformedFixed128` row's own cross-reference to a different bank entirely
+    /// (see <see cref="SpkFileHandler"/>). <paramref name="openDominoEditor"/>
     /// is the domino\user\ case's counterpart to <paramref name="openEditor"/>, handing off to the
     /// graph-reconstruction tab, and <paramref name="openMgbEditor"/> is the mgb case's, handing off
     /// to the Magma UI package editor tab (see <see cref="MgbFilePreviewHandler"/>).
@@ -55,6 +54,9 @@ public static class FileHandlerCatalog
         Action openDominoEditor, Action openMgbEditor)
         => file switch
         {
+            // A depload fragment is a dependency list, not an `.fcb` value tree, so it gets the plain
+            // text/diff view rather than the FCB value editor - which would have nothing to parse.
+            { IsFragment: true } when IsDepLoadFragment(file) => BuildTextHandler(file, readContent, readOriginal),
             // Checked before the plain "xml" case below - a fragment's own VfsFile.Type.Extension is
             // also "xml" (see GameVfs.MergeFragments), but it needs the dedicated editor tab, not the
             // generic read-only text viewer.
@@ -62,11 +64,6 @@ public static class FileHandlerCatalog
                 "This is one piece of a splitting .fcb - open it in the XML editor to browse and edit its structure.",
                 "Open value editor…", "xml",
                 "No changes from the base game - not shown here since a fragment can be huge. Open in FCB Editor to browse it."),
-            // Same precedence reasoning as the fragment case above: a dependency-link row's own Type
-            // is whatever its resolved target's type is (or Unknown), but it always needs its own
-            // "what does this point to" mini view, never the type-based handler for that Type.
-            { IsDependencyLink: true }
-                => new DependencyLinkHandler(file, resolveByHash(file.LinkTargetHash!.Value), navigateTo),
             // Only user\ graphs reconstruct into a box graph worth viewing - a system\ node's own body
             // is just a small hand-written function, already well served by the plain text/diff view.
             { Type.Extension: "lua" } when file.Directory.StartsWith(@"domino\user", StringComparison.OrdinalIgnoreCase)
@@ -94,6 +91,12 @@ public static class FileHandlerCatalog
                 => new DepLoadFileHandler(file.FileName, readContent()),
             _ => null,
         };
+
+    /// <summary>Whether a fragment row belongs to a `depload.dat` rather than an `.fcb`, read off the
+    /// container its staged path names.</summary>
+    private static bool IsDepLoadFragment(VfsFile file)
+        => ContainerFormats.ContainerPathOf(file.Path) is { } container
+        && ContainerFormats.IsDepLoad(container);
 
     /// <summary>
     /// A plain read-only view for an unmodded (or origin-less) file, or - when <paramref name="file"/>

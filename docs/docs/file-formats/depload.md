@@ -250,19 +250,31 @@ For a mod, add `--fragment` and stage the result in a layer, which merges into t
 build time instead of shipping a 220 KB binary:
 
 ```
-mods\worlds\world1\generated\world1_depload.dat\dragunov.3882209901.xml
+mods\worlds\world1\generated\
+    entitylibrary.fcb\weapons\Special\Dart_Rifle.xml   an archetype
+    world1_depload.dat\dragunov.3882209901.xml         an animation package
 ```
 
-One fragment is one parent and its whole dependency list — about 2 KB.
+One fragment is one resource and its whole dependency list — about 2 KB.
 
-**The number is the parent's `CPathID` and is what binds; the label in front of it is yours.**
-`3882209901.xml`, `dragunov.3882209901.xml` and `anything.3882209901.xml` are the same fragment, so
-renaming a staged file cannot orphan the override and two mods spelling a package differently still
-land on one entry. This is the scheme a world-sector entity's fragment already uses
-(`Guard_12.2058514756624450165.xml`), which is why it needs no special case anywhere. Decimal rather
-than hex precisely because that rule keys on a *numeric* tail — and it is how the twins print
-`crc_ID` anyway. `depload add --fragment` names the file after whatever you passed to `--parent`, so
-you never look a hash up; pass a hash instead and you get the bare form.
+**The number is the resource's `CPathID` and is what binds; the label in front of it is decoration.**
+`3882209901.xml`, `dragunov.3882209901.xml` and `anything.3882209901.xml` are the same fragment. That
+matters because the two sides of this rarely know the same names: JackAll resolves resources through
+the hashlist, which covers 7,543 of `world1`'s 9,718 and includes **no animation packages at all**,
+while a mod author writing `dragunov` does know. Binding on the number lets each label the entry
+however it can and still land on one entry — otherwise a row lists under one spelling, a mod stages
+under another, and the same resource appears twice.
+
+This is the scheme a world-sector entity's fragment already uses
+(`Guard_12.2058514756624450165.xml`), so `FcbFragments.IdComparer` collapses the label with no
+special case. Decimal rather than hex precisely because that rule keys on a *numeric* tail. The label
+must be a flat leaf — spelled with directories it would canonicalize with the directory kept and stop
+matching. `depload add --fragment` writes the filename from whatever you passed to `--parent`.
+
+JackAll browses the file the same way: a `_depload.dat` expands in the file tree into exactly these
+entries, one row per resource under the id a mod stages it at, so a row can be read, diffed against
+vanilla and mirrored into the workspace as a fragment override without leaving the file list — the
+same treatment a splitting `.fcb` gets.
 
 A fragment deliberately carries no `childIndex`: that is a whole-file layout detail which shifts
 whenever anything earlier in the file changes, so including it would make every fragment churn.

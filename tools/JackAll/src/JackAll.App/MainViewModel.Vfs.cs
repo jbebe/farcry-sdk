@@ -111,7 +111,6 @@ public sealed partial class MainViewModel
         => file switch
         {
             { IsFragment: true } => ReadOriginalFragment(file) is { } xml ? AppText.EncodeUtf8(xml) : null,
-            { IsDependencyLink: true } => null,
             _ => _vfs!.ReadOriginal(file.EngineHash),
         };
 
@@ -125,7 +124,6 @@ public sealed partial class MainViewModel
     {
         { IsFragment: true } => Workspace!.FragmentOverrides.TryGetValue(file.ContainerHash!.Value, out var fragments)
             && fragments.Any(f => FcbFragments.IdComparer.Equals(f.FragmentId, file.FragmentId)),
-        { IsDependencyLink: true } => false,
         _ => Workspace!.Hashes.Contains(file.EngineHash),
     };
 

@@ -1,4 +1,5 @@
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Naming;
 
 namespace JackAll.Core.Mods;
 
@@ -32,8 +33,13 @@ public static class ContainerFormats
     /// Falls back to `.fcb`, the only format a hash-addressed override is ever staged as, since such
     /// a path carries no recoverable name to match on.
     /// </summary>
-    public static IContainerSplitter For(string containerPath, FcbClassDefinitions definitions)
+    public static IContainerSplitter For(
+        string containerPath, FcbClassDefinitions definitions, NameDatabase? names = null)
         => IsDepLoad(containerPath)
-            ? DepLoadContainerSplitter.Instance
+            ? names is null ? DepLoadContainerSplitter.Instance : new DepLoadContainerSplitter(names)
             : new FcbContainerSplitter(definitions);
+
+    /// <summary>The container part of a staged fragment path, or null when it names no fragment -
+    /// how a caller outside this assembly tells which format a fragment row belongs to.</summary>
+    public static string? ContainerPathOf(string stagedPath) => ModPathHashing.ContainerPathOf(stagedPath);
 }

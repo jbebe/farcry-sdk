@@ -446,9 +446,6 @@
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                         <CheckBox DockPanel.Dock="Left" Margin="0,0,16,0" Content="Show only mod files"
                                   IsChecked="{Binding OnlyMods}" VerticalAlignment="Center" />
-                        <CheckBox DockPanel.Dock="Left" Margin="0,0,16,0" Content="Include links"
-                                  IsChecked="{Binding IncludeLinks}" VerticalAlignment="Center"
-                                  ToolTip="Show depload.dat dependency-link rows in the file list. Off by default - they duplicate hits on the target file's own name/hash and swamp an ordinary search." />
                         <TextBlock DockPanel.Dock="Left" Text="Filter:" Margin="0,0,6,0" VerticalAlignment="Center" />
                         <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
                                  VerticalAlignment="Center" Padding="4,2">

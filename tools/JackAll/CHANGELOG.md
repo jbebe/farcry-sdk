@@ -39,6 +39,17 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   package the build reports the collision instead of silently dropping one mod's clip.
 
 ### Changed
+- **Xrefs answer for a depload resource, not just the file it sits in.** Selecting one resource's
+  entry shows what *it* pulls in under References, and what lists *it* under Referenced by — a clip
+  now names the animation package that plays it. Previously a fragment row reported no references at
+  all, because its VFS key is synthetic and the index never saw it, which was a poor answer for a row
+  made of nothing but references.
+- **`depload.dat` now browses like a splitting `.fcb`.** It expands in the file tree into one row per
+  resource, under the id a mod stages it at (`dragunov.3882209901.xml`) — the same
+  entries a mod stages, so a row can be diffed against vanilla and mirrored straight into the
+  workspace as a fragment override. This replaces a synthetic row per parent *and* per child, over
+  half a million of them, each pathed by its target so the explorer grew a fake folder for every path
+  segment of every dependency; xref already indexed those edges properly.
 - **Container splitting is no longer `.fcb`-only.** The fragment machinery now runs through an
   `IContainerSplitter`, so a format supplies *recognise / open / extract / apply* and inherits the
   three-way merge, load-order folding and `_hash\` addressing unchanged. `.fcb` and `depload.dat`

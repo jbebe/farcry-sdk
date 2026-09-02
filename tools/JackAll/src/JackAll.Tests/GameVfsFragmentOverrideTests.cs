@@ -19,6 +19,59 @@ public class GameVfsFragmentOverrideTests : IDisposable
 {
     private const string FixturesDir = "Fixtures/Patch";
 
+    /// <summary>
+    /// The file browser has to show the same entries a mod stages, under ids that match - otherwise a
+    /// staged override looks like unrelated new content and the same resource appears twice.
+    /// </summary>
+    /// <remarks>
+    /// This is the case that actually broke. The two sides do not know the same names: the app labels
+    /// a resource from the hashlist, which carries no animation packages at all, while a mod author
+    /// writing <c>dragunov</c> does know one. Because the id binds on its number and the label is
+    /// decoration, the app's bare-number row and the mod's labelled file are one entry.
+    /// </remarks>
+    [Fact]
+    public void A_depload_row_and_a_differently_labelled_staged_file_are_one_entry()
+    {
+        if (_install is null) return;
+
+        using var vfs = GameVfs.Load(_install, TestSupport.LoadNames());
+        vfs.LoadFragments();
+
+        VfsFile? row = vfs.Files.Values.FirstOrDefault(TestSupport.IsDepLoadFragment);
+        Assert.NotNull(row);
+
+        VfsFile container = vfs.Files[row!.ContainerHash!.Value];
+        int rowsBefore = vfs.Files.Values.Count(f => f.ContainerHash == row.ContainerHash);
+
+        // What a mod author would write: the same resource, labelled however they know it.
+        DepLoadParent parent = DepLoadXml.FragmentFromXml(System.Text.Encoding.UTF8.GetString(vfs.Read(row.Hash)));
+        string labelled = DepLoadContainerSplitter.IdOf(parent.Hash, "what_a_modder_calls_it");
+        Assert.NotEqual(row.FragmentId, labelled);
+
+        DepLoadParent edited = parent with
+        {
+            Children = [.. parent.Children, new DepLoadChild(0x11641D75, 0xB0604725)],
+        };
+        string stagedPath = container.Path + "\\" + labelled;
+
+        var workspace = new FolderModLayer(_workspaceDir, "workspace");
+        workspace.Stage(NameHash.Compute(stagedPath), stagedPath, "xml",
+            System.Text.Encoding.UTF8.GetBytes(DepLoadXml.FragmentToXml(edited)));
+        vfs.Rebuild([workspace]);
+
+        // One entry, not two: the existing row is the override, and nothing was added beside it.
+        Assert.Equal(rowsBefore, vfs.Files.Values.Count(f => f.ContainerHash == row.ContainerHash));
+        VfsFile after = vfs.Files[row.Hash];
+        Assert.True(after.IsModded);
+        Assert.True(after.IsOverriding);
+        Assert.Equal("workspace", after.SourceName);
+        Assert.Contains("291773813", System.Text.Encoding.UTF8.GetString(vfs.Read(row.Hash)), StringComparison.Ordinal);
+
+        // And the container assembles it in, so a build would carry the edit.
+        Assert.Equal("workspace", vfs.Files[container.Hash].FragmentOverrideSource);
+        Assert.NotEqual(vfs.ReadOriginal((uint)container.Hash), vfs.Read(container.Hash));
+    }
+
     private readonly string _sandbox;
     private readonly string _workspaceDir;
     private readonly GameInstall? _install;
@@ -68,7 +121,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
         NameDatabase names = TestSupport.LoadNames();
         using var vfs = GameVfs.Load(_install, names);
 
-        VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+        VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
         byte[] originalFragmentContent = vfs.Read(fragment.Hash);
 
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
@@ -94,10 +147,10 @@ public class GameVfsFragmentOverrideTests : IDisposable
         // at "container's path + fragment id" (the normal, no-_hash\-needed case) works. The unnamed
         // case (which needs the deeper _hash\<hex>.fcb\<fragment id> convention instead) is covered
         // separately below.
-        VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+        VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
         VfsFile containerBefore = vfs.Files[fragment.ContainerHash!.Value];
         VfsFile? sibling = vfs.Files.Values.FirstOrDefault(
-            f => f.IsFragment && f.ContainerHash == fragment.ContainerHash && f.Hash != fragment.Hash);
+            f => TestSupport.IsFcbFragment(f) && f.ContainerHash == fragment.ContainerHash && f.Hash != fragment.Hash);
         byte[] originalFragmentContent = vfs.Read(fragment.Hash);
 
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
@@ -159,7 +212,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
         NameDatabase names = TestSupport.LoadNames();
         using var vfs = GameVfs.Load(_install, names);
 
-        VfsFile existingFragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+        VfsFile existingFragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
         VfsFile container = vfs.Files[existingFragment.ContainerHash!.Value];
         int fragmentRowCountBefore = vfs.Files.Values.Count(f => f.ContainerHash == container.Hash);
 
@@ -199,7 +252,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
         NameDatabase names = TestSupport.LoadNames();
         using var vfs = GameVfs.Load(_install, names);
 
-        VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment);
+        VfsFile fragment = vfs.Files.Values.First(TestSupport.IsFcbFragment);
 
         var workspace = new FolderModLayer(_workspaceDir, "workspace");
         byte[] replacement = BuildReplacementFragmentXml();
@@ -231,7 +284,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
         NameDatabase names = TestSupport.LoadNames();
         using var vfs = GameVfs.Load(_install, names);
 
-        VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+        VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
         FcbObject vanilla = VanillaFragmentObject(vfs, fragment);
         if (TestSupport.TwoDistantEditPaths(vanilla) is not { } paths)
         {
@@ -276,7 +329,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
         NameDatabase names = TestSupport.LoadNames();
         using var vfs = GameVfs.Load(_install, names);
 
-        VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+        VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
         FcbObject vanilla = VanillaFragmentObject(vfs, fragment);
         // A prototype fragment's own value table can be empty - its Entity child's never is.
         int[] targetPath = vanilla.Values.Count > 0 ? [] : [0];
@@ -315,7 +368,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
         NameDatabase names = TestSupport.LoadNames();
         using var vfs = GameVfs.Load(_install, names);
 
-        VfsFile fragment = vfs.Files.Values.First(f => f.IsFragment && f.NameIsKnown);
+        VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
         Assert.True(fragment.Hash > uint.MaxValue);
         Assert.Null(vfs.ReadByPath(fragment.Path));
     }
@@ -333,7 +386,7 @@ public class GameVfsFragmentOverrideTests : IDisposable
         string fragmentPath;
         using (var probe = GameVfs.Load(_install, names))
         {
-            fragmentPath = probe.Files.Values.First(f => f.IsFragment && f.NameIsKnown).Path;
+            fragmentPath = probe.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown).Path;
         }
 
         byte[] collidingContent = "not an fcb"u8.ToArray();

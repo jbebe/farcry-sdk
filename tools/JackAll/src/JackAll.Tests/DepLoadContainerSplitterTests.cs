@@ -50,12 +50,12 @@ public class DepLoadContainerSplitterTests : IDisposable
         string root = Path.Combine(_sandbox, "layer");
         string dir = Path.Combine(root, "mods", @"worlds\world1\generated\world1_depload.dat");
         Directory.CreateDirectory(dir);
-        File.WriteAllText(Path.Combine(dir, "3882209901.xml"), "<Resource crc_ID=\"3882209901\" />");
+        File.WriteAllText(Path.Combine(dir, "dragunov.3882209901.xml"), "<Resource crc_ID=\"3882209901\" />");
 
         var layer = new FolderModLayer(root, "layer");
 
         FragmentOverride staged = Assert.Single(layer.FragmentOverrides[NameHash.Compute(Container)]);
-        Assert.Equal("3882209901.xml", staged.FragmentId, ignoreCase: true);
+        Assert.Equal("dragunov.3882209901.xml", staged.FragmentId, ignoreCase: true);
         Assert.Empty(layer.Hashes);
     }
 
@@ -138,17 +138,16 @@ public class DepLoadContainerSplitterTests : IDisposable
     }
 
     /// <summary>
-    /// A label ahead of the number is the author's to choose and the number is what binds, so a
-    /// staged file can be renamed - or named differently by two mods - without orphaning anything.
-    /// This is the scheme a placed entity's fragment already uses, so the shared id comparer needs
-    /// no special case for it.
+    /// Every spelling of one resource resolves to it - the labelled form a mod stages, the bare
+    /// number the app lists when it cannot name the resource, and a differently-labelled form from
+    /// another mod.
     /// </summary>
     [Theory]
-    [InlineData("3882209901.xml")]
     [InlineData("dragunov.3882209901.xml")]
     [InlineData("DRAGUNOV.3882209901.xml")]
-    [InlineData("something_else_entirely.3882209901.xml")]
-    public void A_label_in_front_of_the_number_names_the_same_fragment(string id)
+    [InlineData("3882209901.xml")]
+    [InlineData("someone_elses_name.3882209901.xml")]
+    public void Every_spelling_of_one_resource_names_the_same_fragment(string id)
     {
         byte[] container = DepLoadDocument.Encode(new DepLoadFile([
             new DepLoadParent(Dragunov, 0, [new DepLoadChild(0xA1, Animation)]),
@@ -156,21 +155,61 @@ public class DepLoadContainerSplitterTests : IDisposable
         var edited = new DepLoadParent(Dragunov, 0, [new DepLoadChild(0xA1, Animation), new DepLoadChild(0xAAAA, Animation)]);
 
         Assert.NotNull(_splitter.Open(container).Extract(id));
-        Assert.True(FcbFragments.IdComparer.Equals(id, "3882209901.xml"));
 
         DepLoadFile applied = DepLoadDocument.Decode(_splitter.Apply(
             container, new Dictionary<string, string> { [id] = DepLoadXml.FragmentToXml(edited) }));
         Assert.Contains(applied.Parents.Single().Children, c => c.Hash == 0xAAAA);
     }
 
-    /// <summary>The label is what a caller already knows; nothing resolves a hash back to a name.</summary>
+    /// <summary>
+    /// A fragment row stands for a resource, so anything asking what it depends on - the xref panel
+    /// especially - has to get that resource's hash back out of the id, whichever way it was spelled.
+    /// </summary>
+    [Theory]
+    [InlineData("dragunov.3882209901.xml", 3882209901u)]
+    [InlineData("3882209901.xml", 3882209901u)]
+    [InlineData("SOMETHING.3882209901.xml", 3882209901u)]
+    [InlineData("not a fragment id", null)]
+    [InlineData(".xml", null)]
+    public void A_fragment_id_resolves_to_the_resource_it_stands_for(string id, object? expected)
+        => Assert.Equal((uint?)expected, DepLoadContainerSplitter.ResourceOf(id));
+
+    /// <summary>
+    /// The label is decoration and the number binds, so the id reads as the resource it overrides
+    /// while still comparing equal to any other spelling of it.
+    /// </summary>
     [Fact]
-    public void A_named_id_reads_by_its_name_and_binds_by_its_number()
+    public void A_fragment_reads_by_its_label_and_binds_by_its_number()
     {
         Assert.Equal("dragunov.3882209901.xml", DepLoadContainerSplitter.IdOf(Dragunov, "dragunov"));
-        Assert.Equal("3882209901.xml", DepLoadContainerSplitter.IdOf(Dragunov));
+
+        // A path is reduced to its leaf: a label with directories in it would canonicalize with the
+        // directory kept, and stop matching the bare number.
         Assert.Equal("dragunov.xbg.3882209901.xml",
             DepLoadContainerSplitter.IdOf(Dragunov, @"graphics\weapons\special\dragunov.xbg"));
+
+        Assert.Equal("3882209901.xml", DepLoadContainerSplitter.IdOf(Dragunov));
+    }
+
+    /// <summary>
+    /// The property the whole scheme rests on, and the bug it fixes: the app lists a resource it
+    /// cannot name under its bare number while a mod stages it under a label, and those two have to
+    /// be one entry - otherwise the row shows as un-overridden and the staged file appears again as
+    /// a second, phantom row for the same resource.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(CorpusFiles))]
+    public void A_listed_id_and_a_labelled_one_are_the_same_fragment(string path)
+    {
+        if (path.Length == 0) return;
+
+        foreach (DepLoadParent parent in DepLoadDocument.Decode(File.ReadAllBytes(path)).Parents.Take(300))
+        {
+            string listed = DepLoadContainerSplitter.IdOf(parent.Hash);
+            string staged = DepLoadContainerSplitter.IdOf(parent.Hash, "whatever_a_mod_called_it");
+            Assert.True(FcbFragments.IdComparer.Equals(listed, staged), $"{listed} != {staged}");
+            Assert.Equal(FcbFragments.IdComparer.GetHashCode(listed), FcbFragments.IdComparer.GetHashCode(staged));
+        }
     }
 
     /// <summary>

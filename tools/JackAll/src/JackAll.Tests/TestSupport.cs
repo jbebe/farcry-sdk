@@ -1,12 +1,30 @@
 using System.Globalization;
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Mods;
 using JackAll.Core.Naming;
+using JackAll.Core.Vfs;
 
 namespace JackAll.Tests;
 
 /// <summary>Shared setup helpers with no natural home in any one test class.</summary>
 internal static class TestSupport
 {
+    /// <summary>
+    /// An `.fcb` fragment specifically. A `depload.dat` splits into fragments too, so "the first
+    /// fragment row" is no longer necessarily one whose container decodes as FCB - a test that goes
+    /// on to call <see cref="FcbDocument.Deserialize"/> has to say which kind it means.
+    /// </summary>
+    public static bool IsFcbFragment(VfsFile file)
+        => file.IsFragment
+        && ContainerFormats.ContainerPathOf(file.Path)?
+            .EndsWith(".fcb", StringComparison.OrdinalIgnoreCase) == true;
+
+    /// <summary>The other kind: one resource's dependency list out of a `depload.dat`.</summary>
+    public static bool IsDepLoadFragment(VfsFile file)
+        => file.IsFragment
+        && ContainerFormats.ContainerPathOf(file.Path) is { } container
+        && ContainerFormats.IsDepLoad(container);
+
     /// <summary>The repo root, found by walking up from the test runner's output directory until a
     /// <c>tools\JackAll\assets</c> is in sight — same search-don't-assume approach as
     /// <see cref="LoadNames"/>, since the output path depends on configuration and TFM.</summary>

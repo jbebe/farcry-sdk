@@ -37,8 +37,8 @@ mods/graphics/characters/.../vss_vintorez/...vssvi_i1.mab   the reload, at a new
 mods/graphics/move/movemgr.bin                              the MOVE graph, reload repointed
 mods/worlds/world1/generated/entitylibrary.fcb/...          four archetype fragments
 mods/worlds/world2/generated/entitylibrary.fcb/...          the same four, per world
-mods/worlds/world1/generated/world1_depload.dat/...         registers the clip, one fragment
-mods/worlds/world2/generated/world2_depload.dat/...         the same, per world
+mods/worlds/world1/generated/world1_depload.dat/dragunov.3882209901.xml   registers the clip
+mods/worlds/world2/generated/world2_depload.dat/dragunov.3882209901.xml   the same, per world
 ```
 
 The name and the icons are bound by name in `engine\gamemodes\gamemodesconfig.xml`, so both are

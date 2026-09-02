@@ -204,10 +204,13 @@ at all — `<container>.<ext>\<fragmentId>` absorbed a third format exactly as i
 
 The id scheme needed no invention either: `<label>.<crc32 decimal>.xml` is the **same cosmetic-name /
 authoritative-number shape a placed entity already uses**, so `FcbFragments.IdComparer` collapses the
-label with no special case, and a rename cannot orphan an override. Decimal because that comparer
-keys on a numeric tail. The label is only ever supplied by a caller who already knows it — `depload
-add` uses whatever was passed to `--parent` — so nothing has to resolve a hash back to a name, and a
-parent nobody can name still works as a bare `3882209901.xml`. One detail *is* specific to depload: a
+label with no special case. That property is load-bearing rather than cosmetic here, because the two
+sides do not know the same names: JackAll labels a resource from the hashlist, which covers 7,543 of
+world1's 9,718 and contains **no animation packages**, while a mod author writing `dragunov` does
+know one. Binding on the number lets each label the entry however it can and still land on one entry.
+Addressing by the *path* instead was tried and reverted: it reads better, but a nested label
+canonicalizes with its directory kept, so a listed row and a staged file stop matching and the same
+resource shows up twice. Two details are specific to depload: the label must be a flat leaf, and a
 fragment omits `childIndex`, a whole-file layout value that shifts whenever anything earlier changes
 and would otherwise make every fragment churn.
 
