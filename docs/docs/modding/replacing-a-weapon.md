@@ -1292,6 +1292,12 @@ Things that are settled, so nobody re-derives them:
 - **`depload` needed no edit.** `sPartName = dragunov` alone was sufficient; the animation package
   resolves without touching `CAnimationPackageResource`. That holds because the donor already ships
   in the same worlds — a donor from a world your weapon does not appear in may not be so forgiving.
+
+  **It also holds only while every clip you play is one the game already lists.** Shipping a
+  re-authored clip at a *new* path breaks it: an animation at a path in no `depload` does not load,
+  and the weapon locks up mid-reload. Put your clip in a slot the game already has — the replaced
+  weapon's own, verified free with `move clips --weapon N --shared-only`. See
+  [depload](../file-formats/depload.md#animations-are-not-like-textures).
 - **The Dragunov's magazine-drop trajectory reads fine** with a VSS magazine modelled into it.
 - **An FX socket can be moved without touching the rig.** `FX_FIRE` and `FX_CASING` exist twice: as
   bones in the `.skeleton`, and as a `<bone>` in the archetype's own baked `<skeleton>`. Editing the

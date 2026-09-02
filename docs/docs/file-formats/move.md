@@ -708,6 +708,93 @@ generated expansion (13.1M). Two details make that exactness possible: floats ar
 only when re-parsing reproduces the same four bytes and fall back to `hex=` otherwise, and string
 fields that are not clean ASCII — such as the `Extension` garbage — are written as `hex=` too.
 
+### Which clips does a weapon play?
+
+This is the question weapon modding actually asks, and it has a trap in it.
+
+A criterion pins **the subtree it hangs off**. So the clips of weapon `N` are the `m_animNameHash`
+fields under an object whose *own* criteria pin it to `N`, pruning any nested branch pinned to a
+different weapon. What it is **not** is the subtree of a top-level state that mentions `N`
+somewhere: top-level states are shared containers holding one branch per weapon, so walking a whole
+one reaches **1,761 clips spanning every weapon in the game** rather than the ~50 that weapon plays.
+
+**Both weapon channels pin.** A draw or holster branch is gated on `DesiredWeapon` (channel 18) —
+the weapon being switched *to* — rather than `EquippedWeapon` (17). Three of the five sites playing
+the Dart Rifle's draw clip are pinned by channel 18, and a rule reading only channel 17
+under-reports most weapons by the four to seven clips they play while being drawn: the AK-47 has 63
+clips, not the 56 channel 17 alone finds.
+
+`jackall-cli move clips --weapon N` implements the scoped rule over both channels.
+
+:::danger[A weapon's own folder is not a safe scope for repointing]
+The obvious shortcut — treat everything under `…\weapons\special\pneu_dart_model_389\` as the Dart
+Rifle's — is both incomplete and unsafe.
+
+Of the **52** clips scoped to index 39, **49 are exclusive to it and 3 are played by other
+weapons**:
+
+| Clip | Also played by |
+|---|---|
+| `…\weapons\primary\ak47\3rdge_fulb_jamcycle_nodir_prak4_i1.mab` | 16 other weapons |
+| `…\special\pneu_dart_model_389\1stge_uppb_draw_+000fw_sp389_i1.mab` | MGL-140 (40) |
+| `…\locomotion\stand\upperbody\3rdge_uppb_runnoneupperbody_+000fw_sp389_i1.mab` | MGL-140 (40) |
+
+The first is a clip the Dart Rifle *borrows* from the AK-47's folder, so a folder scope misses it.
+The second is the dangerous one: it sits in the Dart Rifle's **own** folder and the MGL-140 plays
+it anyway, so a folder scope would happily repoint it and silently change how the MGL-140 draws.
+
+`move clips --weapon N` marks shared clips, and `--shared-only` lists just them. Check that before
+repointing anything.
+:::
+
+### Retargeting one weapon's clips
+
+`jackall-cli move repoint <in> <out> --weapon N --map pairs.tsv` rewrites clip references from a
+TSV of old and new game paths. Paths are hashed rather than opened, so the new target need not
+exist yet — which is what lets a mod point at a clip it is about to ship.
+
+Only sites the weapon **governs** are rewritten. Governance is the nearest weapon-pinned ancestor,
+and three outcomes matter:
+
+| Site | What happens | Why |
+|---|---|---|
+| this weapon governs it | rewritten | the point of the exercise |
+| another weapon governs it | left alone | rewriting it changes how *that* weapon animates |
+| no weapon governs it | left alone, **and reported** | shared behaviour — see below |
+
+That third row is the one to understand. Of `movemgr.bin`'s **6,341** clip reference sites, only
+**2,416 are governed by a weapon**; the other **3,925 are shared behaviour every weapon can reach**.
+A scoped repoint cannot retarget those without changing every weapon, so it leaves them — but that
+makes the repoint *incomplete*: the weapon still plays the original clip through that path. The
+command reports the count and exits non-zero, because a graph that verifies, loads, and animates
+wrong in one situation is the worst failure mode available. **46 clips** have both governed and
+ungoverned sites and are exactly where this fires.
+
+The honest framing is that `repoint --weapon` retargets a weapon's *own branches* and cannot
+retarget shared behaviour at all. Making shared behaviour differ per weapon means cloning the
+states so the sites become governed — an expansion, not a repoint.
+
+:::danger[Repoint at a path the game already has, not an invented one]
+Confirmed in game: a `.mab` staged into `patch.dat` at a path present in no shipped archive and no
+`depload` **does not load**, even though `movemgr.bin` names it and the archive contains it. The
+state machine enters the state and never leaves — the weapon will not reload, will not fire, and
+stays dead after switching away and back. The same clip bytes at a real shipped path play
+immediately. See [depload](./depload.md#animations-are-not-like-textures).
+
+The workaround is to reuse a real slot the mod already owns. For a weapon replacement, the replaced
+weapon's own clips are usually free: `move clips --weapon N --shared-only` says which of them no
+other weapon plays, and anything not listed there is exclusively yours to overwrite.
+
+`move validate` is the cheap check — a mod that has introduced an invented path shows up as one more
+unresolved clip than vanilla's **104**.
+:::
+
+Clip references are `CPathID`s like every other name here — CRC32 of the lowercased game path,
+backslashes and `.mab` extension included, so `move hash <path>` gives the value to look for.
+`movemgr.bin` holds **4,172 distinct clips through 6,341 references**; `move validate` reports the
+ones no known path hashes to, which is the check that catches a typo in a repoint map before it
+produces a graph that parses cleanly and plays nothing.
+
 ### The pointer graph is the hard part
 
 Objects are addressed by **their position in registration order**, not by any stored id.
