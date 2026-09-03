@@ -126,3 +126,6 @@ what is left is what a modeler cannot do rather than what is broken.
       the same ten strings and still say "Dart Rifle"
 - [ ] VSS: `pickups.Weapons.DartRifle_new.Multi.Dropped`, skipped on the single-player rule, so a
       dropped VSS in multiplayer still has no barrel
+- [ ] VSS: downsample the textures to the sizes retail uses — 512² base and 1024² `_mip0`. They ship
+      at 1024² and 2048², which is four times the pixels and 5.33 MB against the Dart Rifle's 1.33 MB
+      for the same four files. `vss_worn_c.xbt` is single-file with no companion, so it goes to 512²

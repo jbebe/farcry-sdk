@@ -77,6 +77,6 @@ jobs:
           file_id: ${{ env.NEXUS_FILE_UFCP }}
           filename: mods/UFCP/ufcp-${{ steps.release.outputs.version }}.zip
           version: ${{ steps.release.outputs.version }}
-          display_name: UFCP ${{ steps.release.outputs.version }}
+          display_name: UFCP
           changelog: ${{ steps.release.outputs.nexus }}
           update_mod_version: 'true'

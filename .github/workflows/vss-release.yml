@@ -1,0 +1,56 @@
+name: VSS Vintorez release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  NEXUS_MOD_ID: '6317896892789'
+  NEXUS_FILE_VSS: '7903884'
+
+jobs:
+  release:
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: mods/vss-vintorez
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare the release
+        id: release
+        uses: ./.github/actions/prepare-release
+        with:
+          directory: mods/vss-vintorez
+          tag_prefix: mod-vss
+
+      - name: Package the layer
+        shell: pwsh
+        # A layer archive is its reserved folders at the archive root, so the zip takes the contents
+        # of layer\ rather than the folder itself. README-release.md is the copy with no relative
+        # links, which are dead once the file is alone inside a zip.
+        run: |
+          if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7+ is required - older Compress-Archive writes backslash entry paths, which no installer reads.' }
+          if (-not (Test-Path "layer\mods")) { throw 'layer\mods is missing - the zip would not be a layer.' }
+          Copy-Item "README-release.md" "layer\README.md"
+          Compress-Archive -Path "layer\*" -DestinationPath "vss-vintorez-${{ steps.release.outputs.version }}.zip"
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.release.outputs.tag }}" "vss-vintorez-${{ steps.release.outputs.version }}.zip" --title "VSS Vintorez ${{ steps.release.outputs.version }}" --target "${{ github.sha }}" --notes-file "${{ steps.release.outputs.notes_file }}"
+
+      - name: Upload the mod to Nexus Mods
+        uses: ./.github/actions/nexus-upload
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          mod_id: ${{ env.NEXUS_MOD_ID }}
+          file_id: ${{ env.NEXUS_FILE_VSS }}
+          filename: mods/vss-vintorez/vss-vintorez-${{ steps.release.outputs.version }}.zip
+          version: ${{ steps.release.outputs.version }}
+          display_name: VSS Vintorez
+          changelog: ${{ steps.release.outputs.nexus }}
+          update_mod_version: 'true'

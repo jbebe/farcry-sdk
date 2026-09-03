@@ -1,0 +1,1 @@
+Replaces the single-player Dart Rifle with a VSS Vintorez: new mesh, textures, icons, name and shot sound, a ten-round magazine off the sniper ammo pool, and the Dragunov's reliability. Model by Zol4ik, CC-BY-4.0.

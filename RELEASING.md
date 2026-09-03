@@ -15,6 +15,7 @@ schedule.
 | UFCP | `mods/UFCP` | `ufcp-<version>` | |
 | Vortex extension | `tools/vortex-farcry2` | `vortex-<version>` | `info.json` |
 | Blender add-on | `tools/BlenderFC2` | `blenderfc2-<version>` | `blender_manifest.toml` |
+| VSS Vintorez | `mods/vss-vintorez` | `mod-vss-<version>` | |
 
 The Blender add-on's release installs Blender on the runner before it builds. Blender builds its own
 extension zips — a hand-made one will not install — so that is a build prerequisite there in the way
@@ -96,8 +97,13 @@ for each artifact and skips it — everything else still runs.
 An upload adds a version to a file entry that already exists, so each artifact needs its file
 created by hand on the mod page once. The version it replaces is archived.
 
-## Adding a new tool
+## Adding a new project
 
 1. Give it a `CHANGELOG.md` with no version sections yet - its first release writes the first one.
 2. Copy the nearest `<project>-release.yml` and change the tag prefix and directory it prepares
    from, the build steps, the artifact names and the Nexus `env:` block.
+
+A weapon replacement has no build steps to change: it ships the `layer/` that is already checked in.
+Copy `vss-release.yml`, which packages one, and only its directory, tag prefix, artifact name and
+`env:` block differ. It also needs a `README-release.md` — the repository README links to sibling
+directories by relative path, and every one of those is dead once the file is alone inside a zip.
