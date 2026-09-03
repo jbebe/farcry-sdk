@@ -64,6 +64,36 @@ public class DepLoadContainerSplitterTests : IDisposable
     }
 
     /// <summary>
+    /// A `depload.dat` is nothing but its parents, so its shape is the order they sit in: what a
+    /// parent depends on belongs to that parent's fragment, and losing one does not.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(CorpusFiles))]
+    public void A_skeleton_is_the_parent_order_and_nothing_a_fragment_carries(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        DepLoadFile file = DepLoadDocument.Decode(original);
+        string shape = _splitter.Open(original).Skeleton(_ => true)!;
+
+        DepLoadParent parent = file.Parents.First(p => p.Children.Count > 0);
+        string id = DepLoadContainerSplitter.IdOf(parent.Hash);
+        DepLoadParent withOneMore = parent with
+        {
+            Children = [.. parent.Children, new DepLoadChild(0xFEEDFACE, parent.Children[0].TypeHash)],
+        };
+
+        byte[] edited = _splitter.Apply(
+            original, new Dictionary<string, string> { [id] = DepLoadXml.FragmentToXml(withOneMore) });
+        Assert.Equal(shape, _splitter.Open(edited).Skeleton(_ => true));
+
+        byte[] withoutIt = DepLoadDocument.Encode(
+            new DepLoadFile([.. file.Parents.Where(p => p.Hash != parent.Hash)]));
+        Assert.NotEqual(shape, _splitter.Open(withoutIt).Skeleton(_ => true));
+    }
+
+    /// <summary>
     /// Taking every parent out as a fragment and putting them all back has to reproduce the file -
     /// the same round trip the binary codec is gated on, one level up.
     /// </summary>

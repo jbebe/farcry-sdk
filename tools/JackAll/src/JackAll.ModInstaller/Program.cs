@@ -213,6 +213,7 @@ internal static class Program
             FragmentsImported = result.FragmentsImported,
             Skipped = result.Skipped,
             StagedFiles = Directory.EnumerateFiles(outDir, "*", SearchOption.AllDirectories).Count(),
+            Refused = [.. result.Refused.Select(r => $"{r.ContainerPath}: {r.Reason}")],
         }, ModInstallerJson.Default.ImportLegacyPayload,
             $"Imported {result.Imported:N0} file(s) and {result.FragmentsImported:N0} .fcb fragment(s) "
             + $"into {outDir} (out of {result.TotalEntries:N0} entries; {result.Skipped:N0} matched the "

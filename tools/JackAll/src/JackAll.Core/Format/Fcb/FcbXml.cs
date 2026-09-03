@@ -63,6 +63,50 @@ public static class FcbXml
     public static string? ExtractFragment(FcbObject root, string fragmentId, FcbClassDefinitions defs)
         => FcbFragments.Find(root, fragmentId) is { } node ? ToXml(node, defs) : null;
 
+    /// <summary>
+    /// <paramref name="root"/> with every fragment replaced by a marker carrying its canonical id,
+    /// and fragments <paramref name="keep"/> rejects dropped outright — see
+    /// <c>IContainerTree.Skeleton</c>.
+    /// </summary>
+    public static string SkeletonXml(
+        FcbObject root, IReadOnlyList<FcbFragment> fragments, Func<string, bool> keep, FcbClassDefinitions defs)
+    {
+        var markerById = new Dictionary<FcbObject, string?>(ReferenceEqualityComparer.Instance);
+        foreach (FcbFragment fragment in fragments)
+        {
+            markerById[fragment.Node] = keep(fragment.Id) ? FcbFragments.Canonicalize(fragment.Id) : null;
+        }
+
+        return ToXml(Skeleton(root, markerById), defs);
+    }
+
+    private static FcbObject Skeleton(FcbObject node, Dictionary<FcbObject, string?> markerById)
+    {
+        var clone = new FcbObject { TypeHash = node.TypeHash };
+        foreach ((uint nameHash, byte[] value) in node.Values)
+        {
+            clone.Values.Add(nameHash, value);
+        }
+
+        foreach (FcbObject child in node.Children)
+        {
+            if (markerById.TryGetValue(child, out string? canonicalId))
+            {
+                if (canonicalId is not null)
+                {
+                    var marker = new FcbObject { TypeHash = 0 };
+                    marker.Values.Add(0, Encoding.UTF8.GetBytes(canonicalId));
+                    clone.Children.Add(marker);
+                }
+                continue;
+            }
+
+            clone.Children.Add(Skeleton(child, markerById));
+        }
+
+        return clone;
+    }
+
     /// <summary>Reverse of <see cref="ToXml"/>.</summary>
     public static FcbObject FromXml(string xml)
     {

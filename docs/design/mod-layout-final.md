@@ -323,7 +323,10 @@ Consequences worth stating:
   whole-file shape stays legal and merely wastes bytes. Here there is one table per language that
   *every* localization mod must touch, so a whole-file override is guaranteed to be last-wins against
   all of them, silently. The legacy importer converts one to a patch document on the way in, which is
-  where nearly every existing localization mod will meet this. Nothing else adopts this rule.
+  where nearly every existing localization mod will meet this. No other container adopts the rule at
+  the layer level — though the legacy importer declines to *produce* a whole-file MOVE override,
+  leaving the graph out with a warning instead, for the same last-wins reason. A hand-authored layer
+  may still ship one, and a build still uses it as the base its fragments splice onto.
 - **`IContainerTree.List` is empty.** 11,394 rows per language is not a browsable child set; the rows
   worth showing are the ones a mod overrides, which `GameVfs.BuildFragmentRows` already synthesizes
   from the override index. A container may now be addressable without being enumerable.

@@ -18,6 +18,19 @@ public interface IContainerTree
     /// browser lists under the container, and the set a mod picks from when staging an override.
     /// </summary>
     IReadOnlyList<FcbFragmentInfo> List();
+
+    /// <summary>
+    /// The container with every fragment reduced to a marker naming it, and fragments outside
+    /// <paramref name="keep"/> dropped entirely. Null when this format does not compare by shape.
+    /// </summary>
+    /// <remarks>
+    /// Two skeletons compare equal exactly when everything <em>around</em> the fragments matches and
+    /// every common fragment sits in the same place - which is what tells an importer whether a
+    /// container's whole change is expressible as per-fragment overrides. <paramref name="keep"/> is
+    /// the ancestor's id set, so content a mod <em>adds</em> vanishes from the comparison: an
+    /// addition is expressible as an appended override, a deletion is not.
+    /// </remarks>
+    string? Skeleton(Func<string, bool> keep);
 }
 
 /// <summary>

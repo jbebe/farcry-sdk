@@ -879,6 +879,20 @@ Whether index 44 then *works in game* is a separate question this cannot answer 
 [the weapon ceiling](#equippedweapon--the-weapon-ceiling): nothing declares the enum, so the graph
 accepts 44 as cheaply as 43, but it has never been driven with one.
 
+#### Importing a mod that shipped the whole graph
+
+`mod import-legacy` converts one by comparing the mod's graph against the base game's a fragment at a
+time, so a mod that retargeted one weapon arrives as the branches it changed. That only works while
+everything *around* the fragments matches: a state that moved in the slot list, or an edit outside
+every state and section, is a change no fragment carries, because no fragment records a position.
+
+Such a graph is **left out of the import with a warning**, not staged as a whole-file override. The
+override would work, but it would be last-wins against every other animation mod and say nothing —
+the exact failure the split exists to remove. `.fcb` and `depload.dat` keep their whole-file fallback
+instead: measured across the community's two largest legacy mods, ~100 world sectors each arrive with
+their entities redistributed into new mission layers, and dropping those would discard most of the
+mod. No mod measured ships an edited graph at all.
+
 #### Getting the names back
 
 The loadable graph has no names, and the twin that does is a format

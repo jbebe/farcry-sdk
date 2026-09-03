@@ -88,12 +88,20 @@ public partial class MainWindow
             LegacyImportResult result = await _vm.ImportLegacyMod(dialog.FileName);
 
             string fragmentsNote = result.FragmentsImported > 0
-                ? $" + {result.FragmentsImported:N0} entity-library fragments"
+                ? $" + {result.FragmentsImported:N0} container fragments"
                 : string.Empty;
             _vm.Status =
                 $"Imported '{Path.GetFileName(dialog.FileName)}': {result.Imported:N0} changed files{fragmentsNote} " +
                 $"staged to your workspace ({result.Skipped:N0} of {result.TotalEntries:N0} were identical to the " +
                 "base game and left out). Open workspace to review, then zip it up to share.";
+
+            if (result.Refused.Count > 0)
+            {
+                Warn(
+                    "This mod changed these in a way a fragment override can't express, and overriding the whole "
+                    + "file would silently outrank every other mod that touches them, so they were left out:\n\n"
+                    + string.Join('\n', result.Refused.Select(r => $"  {r.ContainerPath} — {r.Reason}")));
+            }
         }
         catch (Exception ex)
         {

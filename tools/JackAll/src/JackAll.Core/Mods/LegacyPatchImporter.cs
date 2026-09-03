@@ -4,12 +4,34 @@ using System.Text;
 using System.Xml.Linq;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Format.Move;
 using JackAll.Core.Format.Rml;
 using JackAll.Core.Naming;
 
 namespace JackAll.Core.Mods;
 
-public sealed record LegacyImportResult(int TotalEntries, int Imported, int FragmentsImported, int Skipped);
+/// <summary>A container the import left out, because neither of the shapes a layer may express it
+/// in could carry its change.</summary>
+public sealed record LegacyImportRefusal(string ContainerPath, string Reason);
+
+public sealed record LegacyImportResult(
+    int TotalEntries,
+    int Imported,
+    int FragmentsImported,
+    int Skipped,
+    IReadOnlyList<LegacyImportRefusal> Refused)
+{
+    /// <summary>Value equality all the way down: the synthesized comparison would take
+    /// <see cref="Refused"/> by reference, so two identical imports would never compare equal.</summary>
+    public bool Equals(LegacyImportResult? other)
+        => other is not null
+           && (TotalEntries, Imported, FragmentsImported, Skipped)
+              == (other.TotalEntries, other.Imported, other.FragmentsImported, other.Skipped)
+           && Refused.SequenceEqual(other.Refused);
+
+    public override int GetHashCode()
+        => HashCode.Combine(TotalEntries, Imported, FragmentsImported, Skipped, Refused.Count);
+}
 
 /// <summary>
 /// Converts a legacy community mod - one built the old way as a full replacement patch.dat/patch.fat
@@ -24,26 +46,32 @@ public sealed record LegacyImportResult(int TotalEntries, int Imported, int Frag
 /// <see cref="Import"/> - typically <see cref="Vfs.GameVfs.ReadOriginal"/>, ignoring every currently
 /// active mod/workspace edit) and only genuine differences are staged:
 ///
-///   - A `.fcb` that splits into deep fragments (see <see cref="FcbFragments"/>: one per archetype in
-///     an entity library, one per placed entity in a worldsector) is compared one fragment at a time,
-///     so touching a single weapon or a single placed entity stages one small fragment override
-///     instead of the whole container - the same <c>&lt;container&gt;.fcb\&lt;fragment id&gt;</c>
-///     shape <see cref="ModPathHashing"/> already recognizes (matching what JackAll.App's own
-///     structured fragment editor stages). That granularity only holds when everything *outside* the
-///     fragments is untouched and nothing was deleted or moved - changes a per-fragment override
-///     cannot express - so those cases fall back to the only coarser unit there is, the whole file.
-///   - Any other `.fcb` is compared by its *decoded* shape (<see cref="FcbXml.ToXml"/>) rather
-///     than raw bytes, since this writer (like most community tools) never reproduces the shipped
-///     files' backreference/dedup encoding (see <see cref="FcbDocument"/>'s remarks) - a logically
-///     identical container can still differ byte-for-byte for reasons that have nothing to do with the
-///     mod. A real change still has to stage real `.fcb` bytes (there's no plain-text staged form for
-///     a whole-container replacement - see JackAll.App's own Import button, which round-trips through
-///     <see cref="FcbDocument.Serialize"/> for exactly this reason), so the original legacy bytes are
-///     staged unchanged, not a re-render.
+///   - A container that splits (see <see cref="IContainerSplitter"/>: one fragment per archetype in
+///     an entity library, per placed entity in a worldsector, per resource in a `depload`, per state
+///     in a MOVE graph) is compared one fragment at a time, so touching a single weapon or a single
+///     animation stages one small override instead of the whole container - the same
+///     <c>&lt;container&gt;\&lt;fragment id&gt;</c> shape <see cref="ModPathHashing"/> already
+///     recognizes. That granularity only holds when everything *outside* the fragments is untouched
+///     and nothing was deleted or moved - changes a per-fragment override cannot express - so those
+///     cases fall back to the only coarser unit there is, the whole file. A MOVE graph is the
+///     exception: a whole-file override of one is last-wins against every other animation mod, so it
+///     is refused and reported instead.
+///   - A container that doesn't split is compared by its *decoded* shape rather than raw bytes, since
+///     this writer (like most community tools) never reproduces the shipped files'
+///     backreference/dedup encoding (see <see cref="FcbDocument"/>'s remarks) - a logically identical
+///     container can still differ byte-for-byte for reasons that have nothing to do with the mod. A
+///     real change still has to stage real binary (there's no plain-text staged form for a
+///     whole-container replacement), so the original legacy bytes are staged unchanged.
+///   - The localized string table is its own case: its override unit is a patch document rather than
+///     a fragment path, and a whole-file override of it is refused outright.
 ///   - Everything else is a plain byte-for-byte comparison.
 /// </remarks>
 public static class LegacyPatchImporter
 {
+    /// <summary>Staged text is BOM-less, and an import writes one file per changed fragment - tens of
+    /// thousands of them for a large mod.</summary>
+    private static readonly UTF8Encoding Utf8 = new(encoderShouldEmitUTF8Identifier: false);
+
     /// <summary>
     /// Extracts the patch.fat/patch.dat pair from <paramref name="zipPath"/>, diffs every entry against
     /// <paramref name="readOriginal"/>, and stages whatever differs into <paramref name="workspace"/>.
@@ -125,6 +153,7 @@ public static class LegacyPatchImporter
         using DuniaArchive legacy = DuniaArchive.Open(fatPath, datPath);
 
         int imported = 0, fragmentsImported = 0, skipped = 0, processed = 0;
+        List<LegacyImportRefusal> refused = [];
         foreach (FatEntry entry in legacy.Entries)
         {
             processed++;
@@ -164,16 +193,18 @@ public static class LegacyPatchImporter
                 : FileTypeSniffer.IdentifyByContent(
                     legacyBytes.AsSpan(0, Math.Min(legacyBytes.Length, FileTypeSniffer.HeaderBytes)));
 
-            if (type.Extension.Equals("fcb", StringComparison.OrdinalIgnoreCase)
-                && TryImportFcb(entry.Hash, legacyBytes, vanillaBytes, named ? path : null,
-                    workspace, fcbDefinitions, ref imported, ref fragmentsImported, ref skipped))
+            // The string table is checked first because it is the one container whose override unit
+            // is not a fragment path, so the shared path below could never express it.
+            if (named && ContainerFormats.IsStringTable(Path.GetFileName(path)))
             {
-                continue;
+                if (TryImportStringTable(legacyBytes, vanillaBytes, path,
+                        workspace, ref fragmentsImported, ref skipped))
+                {
+                    continue;
+                }
             }
-
-            if (named && ContainerFormats.IsStringTable(Path.GetFileName(path))
-                && TryImportStringTable(legacyBytes, vanillaBytes, path,
-                    workspace, ref fragmentsImported, ref skipped))
+            else if (TryImportContainer(entry.Hash, legacyBytes, vanillaBytes, named ? path : null, type,
+                         workspace, names, fcbDefinitions, refused, ref fragmentsImported, ref skipped, progress))
             {
                 continue;
             }
@@ -182,7 +213,7 @@ public static class LegacyPatchImporter
             imported++;
         }
 
-        return new LegacyImportResult(legacy.Entries.Count, imported, fragmentsImported, skipped);
+        return new LegacyImportResult(legacy.Entries.Count, imported, fragmentsImported, skipped, refused);
     }
 
     /// <summary>
@@ -209,58 +240,147 @@ public static class LegacyPatchImporter
     }
 
     /// <summary>
-    /// Handles one entry once it's already known to be named/sniffed as `.fcb` - decodes it and either
-    /// splits it into per-fragment overrides or stages/skips it whole, per the class remarks.
-    /// Returns false, staging nothing, when the content isn't actually a well-formed .fcb despite its
-    /// extension (not every entry named or sniffed "fcb" necessarily is one - e.g. a "BASE"-magic
-    /// container sniffs to the unrelated .wlu.fcb extension) - the caller falls back to the plain
-    /// whole-file byte comparison every other entry goes through.
+    /// Imports one splitting container as the fragments that differ from vanilla. Returns false,
+    /// staging nothing, when the entry names no container this can address, or when the change is one
+    /// fragments cannot express and the format still accepts a whole-file override - in both cases
+    /// the caller's plain whole-file path takes over. A MOVE graph is the exception: it is refused
+    /// and reported rather than coarsened, per the class remarks.
     /// </summary>
-    private static bool TryImportFcb(
-        uint hash, byte[] legacyBytes, byte[]? vanillaBytes, string? containerPath,
-        FolderModLayer workspace, FcbClassDefinitions defs,
-        ref int imported, ref int fragmentsImported, ref int skipped)
+    private static bool TryImportContainer(
+        uint hash, byte[] legacyBytes, byte[]? vanillaBytes, string? knownPath, FileType type,
+        FolderModLayer workspace, NameDatabase names, FcbClassDefinitions defs,
+        List<LegacyImportRefusal> refused, ref int fragmentsImported, ref int skipped,
+        IProgress<string>? progress)
     {
-        FcbObject legacyRoot;
-        try
-        {
-            legacyRoot = FcbDocument.Deserialize(legacyBytes);
-        }
-        catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException)
+        if (ContainerPathFor(knownPath, type, hash) is not { } containerPath)
         {
             return false;
         }
 
-        FcbObject? vanillaRoot = null;
-        if (vanillaBytes is not null)
-        {
-            try
-            {
-                vanillaRoot = FcbDocument.Deserialize(vanillaBytes);
-            }
-            catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException)
-            {
-                // No decodable vanilla ancestor - every comparison below just treats this as new.
-            }
-        }
-
-        if (vanillaRoot is not null && TryImportDeepFragments(
-                hash, legacyRoot, vanillaRoot, containerPath, workspace, defs, ref fragmentsImported, ref skipped))
+        IContainerSplitter splitter = ContainerFormats.For(containerPath, defs, names);
+        string? refusal = StageFragments(
+            splitter, legacyBytes, vanillaBytes, containerPath, hash, workspace,
+            ref fragmentsImported, ref skipped);
+        if (refusal is null)
         {
             return true;
         }
 
-        if (vanillaRoot is not null && FcbXml.ToXml(legacyRoot, defs) == FcbXml.ToXml(vanillaRoot, defs))
+        if (!ContainerFormats.IsMoveGraph(Path.GetFileName(containerPath)))
         {
-            skipped++;
-        }
-        else
-        {
-            workspace.Stage(hash, containerPath, "fcb", legacyBytes);
-            imported++;
+            return false;
         }
 
+        refused.Add(new LegacyImportRefusal(containerPath, refusal));
+        progress?.Report($"Left out {containerPath}: {refusal}.");
         return true;
+    }
+
+    /// <summary>
+    /// The path a container's fragments are staged under, or null when this entry names no container.
+    /// An entry the hashlist couldn't name is only ever a `.fcb`: recognition reads the path, and a
+    /// hash-addressed override has none to read.
+    /// </summary>
+    private static string? ContainerPathFor(string? knownPath, FileType type, uint hash)
+    {
+        if (knownPath is not null)
+        {
+            return ContainerFormats.IsContainerSegment(Path.GetFileName(knownPath)) ? knownPath : null;
+        }
+
+        return type.Extension.Equals("fcb", StringComparison.OrdinalIgnoreCase)
+            ? $"_hash\\{hash:x8}.fcb"
+            : null;
+    }
+
+    /// <summary>
+    /// Diffs a container one fragment at a time and stages only the changed (or added) ones,
+    /// returning null once it has. Anything else is why this granularity can't faithfully represent
+    /// the change, in words a modder can act on.
+    /// </summary>
+    /// <remarks>
+    /// A container that splits into nothing still resolves here: with no fragments to elide, its
+    /// skeleton is the whole decoded container, so comparing the two answers "did anything really
+    /// change?" for a format whose writer doesn't reproduce the shipped dedup encoding.
+    /// </remarks>
+    private static string? StageFragments(
+        IContainerSplitter splitter, byte[] legacyBytes, byte[]? vanillaBytes, string containerPath,
+        uint hash, FolderModLayer workspace, ref int fragmentsImported, ref int skipped)
+    {
+        if (vanillaBytes is null)
+        {
+            return "the base game has no copy of it to compare against";
+        }
+
+        IContainerTree legacy, vanilla;
+        try
+        {
+            legacy = splitter.Open(legacyBytes);
+            vanilla = splitter.Open(vanillaBytes);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException or MoveFormatException)
+        {
+            return $"it did not decode ({ex.Message})";
+        }
+
+        IReadOnlyList<FcbFragmentInfo> rows = legacy.List();
+        var legacyIds = new HashSet<string>(rows.Select(r => r.Id), FcbFragments.IdComparer);
+        IReadOnlyList<FcbFragmentInfo> vanillaRows = vanilla.List();
+        var vanillaIds = new HashSet<string>(vanillaRows.Select(r => r.Id), FcbFragments.IdComparer);
+        if (legacyIds.Count != rows.Count || vanillaIds.Count != vanillaRows.Count)
+        {
+            return "two of its fragments share one id, so an override could not say which it meant";
+        }
+
+        if (legacy.Skeleton(vanillaIds.Contains) is not { } legacyShape
+            || vanilla.Skeleton(vanillaIds.Contains) is not { } vanillaShape)
+        {
+            return "this format is not compared by shape";
+        }
+
+        if (legacyShape != vanillaShape)
+        {
+            return vanillaIds.IsSubsetOf(legacyIds)
+                ? "something outside its fragments changed, or a fragment moved"
+                : "it drops fragments, which an override cannot remove";
+        }
+
+        if (rows.Count == 0)
+        {
+            skipped++;
+            return null;
+        }
+
+        // Nothing is written until every fragment has been read, so a refusal found part way through
+        // leaves the caller free to stage the whole file instead of on top of half a fragment set.
+        List<(string Path, string Xml)> changed = [];
+        int unchanged = 0;
+        foreach (FcbFragmentInfo row in rows)
+        {
+            // A listed fragment that will not extract means the splitter disagrees with itself, and
+            // going on would drop whatever the mod put there without saying so.
+            if (legacy.Extract(row.Id) is not { } xml)
+            {
+                return $"it lists a fragment, {row.Id}, that it will not then hand over";
+            }
+
+            if (xml == vanilla.Extract(row.Id))
+            {
+                unchanged++;
+                continue;
+            }
+
+            changed.Add(($"{containerPath}\\{row.Id}", xml));
+        }
+
+        foreach ((string path, string xml) in changed)
+        {
+            workspace.Stage(hash, path, "xml", Utf8.GetBytes(xml));
+        }
+
+        fragmentsImported += changed.Count;
+        skipped += unchanged;
+        return null;
     }
 
     /// <summary>
@@ -295,101 +415,10 @@ public static class LegacyPatchImporter
             string patchPath = OasisStringsPatch.PatchPathOf(containerPath);
             workspace.Stage(
                 NameHash.Compute(patchPath), patchPath, "xml",
-                new UTF8Encoding(false).GetBytes(OasisStringsPatch.Render(changed)));
+                Utf8.GetBytes(OasisStringsPatch.Render(changed)));
             fragmentsImported += changed.Count;
         }
         return true;
-    }
-
-    /// <summary>
-    /// The fine-grained half of <see cref="TryImportFcb"/>: diffs a splitting container one deep
-    /// fragment at a time and stages only the changed (or added) ones. Returns false, staging
-    /// nothing, when this granularity can't faithfully represent the change — the container doesn't
-    /// split, or its skeletons differ (an edit outside every fragment, a deleted fragment, a moved
-    /// one) — and the caller's whole-file comparison takes over.
-    /// </summary>
-    private static bool TryImportDeepFragments(
-        uint hash, FcbObject legacyRoot, FcbObject vanillaRoot, string? containerPath,
-        FolderModLayer workspace, FcbClassDefinitions defs, ref int fragmentsImported, ref int skipped)
-    {
-        IReadOnlyList<FcbFragment> legacy = FcbFragments.List(legacyRoot);
-        if (legacy.Count == 0)
-        {
-            return false;
-        }
-
-        IReadOnlyList<FcbFragment> vanilla = FcbFragments.List(vanillaRoot);
-        var vanillaIds = new HashSet<string>(vanilla.Select(f => f.Id), FcbFragments.IdComparer);
-        if (SkeletonXml(legacyRoot, legacy, vanillaIds, defs) != SkeletonXml(vanillaRoot, vanilla, vanillaIds, defs))
-        {
-            return false;
-        }
-
-        var vanillaXmlById = new Dictionary<string, string>(vanilla.Count, FcbFragments.IdComparer);
-        foreach (FcbFragment fragment in vanilla)
-        {
-            vanillaXmlById[fragment.Id] = FcbXml.ToXml(fragment.Node, defs);
-        }
-
-        string containerRelative = containerPath ?? $"_hash\\{hash:x8}.fcb";
-        foreach (FcbFragment fragment in legacy)
-        {
-            string xml = FcbXml.ToXml(fragment.Node, defs);
-            if (vanillaXmlById.TryGetValue(fragment.Id, out string? vanillaXml) && vanillaXml == xml)
-            {
-                skipped++;
-                continue;
-            }
-
-            workspace.Stage(hash, $"{containerRelative}\\{fragment.Id}", "xml", new UTF8Encoding(false).GetBytes(xml));
-            fragmentsImported++;
-        }
-        return true;
-    }
-
-    /// <summary>
-    /// The container rendered with every fragment reduced to a marker carrying its canonical id, so
-    /// two skeletons compare equal exactly when everything *around* the fragments matches and every
-    /// common fragment sits in the same place. Fragments whose id is outside
-    /// <paramref name="keepOnlyIdsIn"/> (always the vanilla id set, so this only ever drops something
-    /// on the legacy side) vanish entirely, letting content a mod *adds* pass the comparison — an
-    /// addition is expressible as an appended override, a deletion is not.
-    /// </summary>
-    private static string SkeletonXml(
-        FcbObject root, IReadOnlyList<FcbFragment> fragments, HashSet<string> keepOnlyIdsIn,
-        FcbClassDefinitions defs)
-    {
-        var markerById = new Dictionary<FcbObject, string?>(ReferenceEqualityComparer.Instance);
-        foreach (FcbFragment fragment in fragments)
-        {
-            markerById[fragment.Node] =
-                keepOnlyIdsIn.Contains(fragment.Id) ? FcbFragments.Canonicalize(fragment.Id) : null;
-        }
-        return FcbXml.ToXml(Skeleton(root, markerById), defs);
-    }
-
-    private static FcbObject Skeleton(FcbObject node, Dictionary<FcbObject, string?> markerById)
-    {
-        var clone = new FcbObject { TypeHash = node.TypeHash };
-        foreach ((uint nameHash, byte[] value) in node.Values)
-        {
-            clone.Values.Add(nameHash, value);
-        }
-        foreach (FcbObject child in node.Children)
-        {
-            if (markerById.TryGetValue(child, out string? canonicalId))
-            {
-                if (canonicalId is not null)
-                {
-                    var marker = new FcbObject { TypeHash = 0 };
-                    marker.Values.Add(0, Encoding.UTF8.GetBytes(canonicalId));
-                    clone.Children.Add(marker);
-                }
-                continue;
-            }
-            clone.Children.Add(Skeleton(child, markerById));
-        }
-        return clone;
     }
 
     /// <summary>

@@ -1,3 +1,4 @@
+using System.Text;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Format.Move;
 using JackAll.Core.Format;
@@ -369,17 +370,28 @@ public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerS
                + "broke a reference something else makes into it. Rebuild both together, or leave "
                + "the referenced state's shape alone.");
 
-    private sealed class Tree(MoveFile file, MoveNames? names) : IContainerTree
+    private sealed class Tree : IContainerTree
     {
-        private readonly MoveStateIndex _index = MoveStateIndex.Build(file);
-        private readonly MoveNames _names = names ?? MoveNames.Empty;
+        private readonly MoveStateIndex _index;
+        private readonly MoveNames _names;
 
         /// <summary>
         /// Which manager sections this graph has - none for an expansion, which is a bare
         /// <c>CMoveStateMachine</c> with no manager and no value container at all.
         /// </summary>
-        private readonly IReadOnlyCollection<MoveSection> _sections =
-            MoveSections.Ranges(file) is { } ranges ? [.. ranges.Keys] : [];
+        private readonly IReadOnlyCollection<MoveSection> _sections;
+
+        private readonly Dictionary<uint, (MoveObject State, MoveUnit Unit)> _units;
+
+        /// <summary>Built here rather than on demand: a build hands one tree to every fragment of a
+        /// container at once, in parallel, so nothing about it may be populated late.</summary>
+        public Tree(MoveFile file, MoveNames? names)
+        {
+            _index = MoveStateIndex.Build(file);
+            _names = names ?? MoveNames.Empty;
+            _sections = MoveSections.Ranges(file) is { } ranges ? [.. ranges.Keys] : [];
+            _units = Catalogue();
+        }
 
         public string? Extract(string fragmentId)
         {
@@ -391,24 +403,32 @@ public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerS
                     : null;
             }
 
-            if (FragmentId.NumberOf(fragmentId) is not { } id || Find(id) is not var (state, unit))
+            if (FragmentId.NumberOf(fragmentId) is not { } id
+                || !_units.TryGetValue(id, out (MoveObject state, MoveUnit unit) found))
             {
                 return null;
             }
+
+            (MoveObject state, MoveUnit unit) = found;
 
             return MoveFragmentXml.Render(unit.IsRemainder
                 ? MoveFragmentXml.LiftState(_index, state)
                 : MoveFragmentXml.LiftBranches(_index, state, unit));
         }
 
-        /// <summary>The state and unit a fragment number names, searching states then their branches.</summary>
-        private (MoveObject State, MoveUnit Unit)? Find(uint id)
+        /// <summary>
+        /// Every unit this graph holds, by the number a fragment id resolves to. Indexed up front
+        /// because an import asks one container for all 2,312 of its fragments, and a branch id
+        /// never short-circuits on <see cref="MoveStateIndex.ByHash"/> - it would re-walk every
+        /// state's subtree per lookup.
+        /// </summary>
+        /// <remarks>
+        /// Branches go in first so a state overwrites one that collides with it, keeping the
+        /// precedence the search this replaced had: a state wins over a branch of the same number.
+        /// </remarks>
+        private Dictionary<uint, (MoveObject State, MoveUnit Unit)> Catalogue()
         {
-            if (_index.ByHash(id) is { } direct && !_index.IsNested(direct))
-            {
-                return (direct, new MoveUnit(id, 0, null));
-            }
-
+            Dictionary<uint, (MoveObject, MoveUnit)> units = [];
             foreach (MoveObject state in _index.TopLevelStates)
             {
                 if (MoveStateIndex.NameHashOf(state) is not { } hash)
@@ -416,16 +436,21 @@ public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerS
                     continue;
                 }
 
-                foreach (MoveUnit unit in MoveUnits.UnitsOf(state, hash))
+                foreach (MoveUnit unit in MoveUnits.UnitsOf(state, hash).Where(u => !u.IsRemainder))
                 {
-                    if (unit.Id == id)
-                    {
-                        return (state, unit);
-                    }
+                    units[unit.Id] = (state, unit);
                 }
             }
 
-            return null;
+            foreach (MoveObject state in _index.TopLevelStates)
+            {
+                if (MoveStateIndex.NameHashOf(state) is { } hash)
+                {
+                    units[hash] = (state, new MoveUnit(hash, 0, null));
+                }
+            }
+
+            return units;
         }
 
         /// <summary>
@@ -465,6 +490,116 @@ public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerS
 
             return rows;
         }
+
+        /// <summary>
+        /// The graph with every listed state's subtree and every manager section replaced by a
+        /// marker, rendered through <see cref="MoveXml.ToXml"/> so the header, class names, op names
+        /// and value encodings all come along - see <see cref="IContainerTree.Skeleton"/>.
+        /// </summary>
+        /// <remarks>
+        /// Section markers and the ops they hide come from one <see cref="MoveSections.Ranges"/> call,
+        /// so a section's content can never end up counted as residue. <c>nbState</c> is dropped
+        /// because <see cref="Rebuild"/> re-derives it from the slot count, and keeping it would make
+        /// every added state fail a comparison additions are supposed to pass.
+        /// </remarks>
+        public string? Skeleton(Func<string, bool> keep)
+        {
+            MoveFile file = _index.File;
+            MoveObject? manager = file.Objects.FirstOrDefault(o => o.ClassName == "CMoveMgr");
+            IReadOnlyDictionary<MoveSection, (int Start, int Count)> ranges =
+                manager is not null ? MoveSections.Ranges(manager) : new Dictionary<MoveSection, (int, int)>();
+
+            Dictionary<MoveObject, MoveObject> clones = new(ReferenceEqualityComparer.Instance);
+            List<(MoveObject Owner, int At, MoveObject Target)> refs = [];
+            var skeleton = new MoveFile { Type = file.Type, Version = file.Version, Flags = file.Flags };
+            skeleton.Root = Prune(file.Root);
+
+            foreach ((MoveObject owner, int at, MoveObject target) in refs)
+            {
+                string name = owner.Ops[at].Name;
+                owner.Ops[at] = clones.TryGetValue(target, out MoveObject? cloned)
+                    ? MoveOp.Pointer(MoveOpKind.PointerRef, name, cloned)
+                    : Marker(name, _index.AddressOf(target)?.ToString() ?? target.ClassName);
+            }
+
+            // ToXml addresses an object by its index, so the pruned tree needs its own numbering:
+            // two skeletons of the same shape have to render the same ids.
+            skeleton.Reindex();
+            for (int i = 0; i < skeleton.Objects.Count; i++)
+            {
+                skeleton.Objects[i].Index = i;
+            }
+
+            return MoveXml.ToXml(skeleton);
+
+            MoveObject Prune(MoveObject node)
+            {
+                var clone = new MoveObject(node.ClassName);
+                clones[node] = clone;
+                bool isManager = ReferenceEquals(node, manager);
+
+                for (int i = 0; i < node.Ops.Count; i++)
+                {
+                    if (isManager && SectionAt(ranges, i) is { } section)
+                    {
+                        clone.Ops.Add(Marker("#section", MoveSections.IdOf(section)));
+                        i += ranges[section].Count - 1;
+                        continue;
+                    }
+
+                    MoveOp op = node.Ops[i];
+                    switch (op.Kind)
+                    {
+                        case MoveOpKind.PointerNew when FragmentIdOf(op.Target!) is { } id:
+                            if (keep(id))
+                            {
+                                clone.Ops.Add(Marker(op.Name, id));
+                            }
+                            break;
+                        case MoveOpKind.PointerNew:
+                            clone.Ops.Add(MoveOp.Pointer(MoveOpKind.PointerNew, op.Name, Prune(op.Target!)));
+                            break;
+                        case MoveOpKind.PointerRef:
+                            refs.Add((clone, clone.Ops.Count, op.Target!));
+                            clone.Ops.Add(op);
+                            break;
+                        default:
+                            if (op.Name != "nbState")
+                            {
+                                clone.Ops.Add(op);
+                            }
+                            break;
+                    }
+                }
+
+                return clone;
+            }
+        }
+
+        /// <summary>The fragment id a state is listed under, or null when it is not one - a nested
+        /// state, or a top-level one with no <c>m_stateNameHash</c>, which <see cref="List"/> emits
+        /// no row for and so has to stay in the skeleton as residue.</summary>
+        private string? FragmentIdOf(MoveObject node)
+            => ReferenceEquals(_index.StateOf(node), node) && MoveStateIndex.NameHashOf(node) is { } hash
+                ? FragmentId.Of(hash)
+                : null;
+
+        private static MoveSection? SectionAt(
+            IReadOnlyDictionary<MoveSection, (int Start, int Count)> ranges, int op)
+        {
+            foreach ((MoveSection section, (int start, _)) in ranges)
+            {
+                if (start == op)
+                {
+                    return section;
+                }
+            }
+
+            return null;
+        }
+
+        private static MoveOp Marker(string name, string text)
+            => MoveOp.Blob(MoveOpKind.Str, name, Encoding.ASCII.GetBytes(text));
 
         private static long Weigh(MoveObject node, HashSet<MoveObject> stopAt)
         {

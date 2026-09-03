@@ -118,6 +118,14 @@ public sealed class DepLoadContainerSplitter(NameDatabase? names = null) : ICont
             => [.. _file.Parents.Select(p => new FcbFragmentInfo(
                 IdOf(p.Hash, NameFor(p.Hash)), 8 + (5L * p.Children.Count)))];
 
+        /// <summary>
+        /// The kept parents' ids in file order. A `depload.dat` is nothing but its parents, so that
+        /// order is the whole of its shape - a parent's own <c>ChildIndex</c> is block layout that
+        /// <see cref="Apply"/> takes from the base file, never from a fragment.
+        /// </summary>
+        public string? Skeleton(Func<string, bool> keep)
+            => string.Join('\n', _file.Parents.Select(p => IdOf(p.Hash)).Where(keep));
+
         /// <summary>A resource's own path, but only one that hashes back to it - the id has to stay
         /// resolvable without a hashlist, so a name that disagrees is no use as an address.</summary>
         private string? NameFor(uint hash)

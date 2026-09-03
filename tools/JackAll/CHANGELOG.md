@@ -5,6 +5,14 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **Legacy import splits every container, not just `.fcb`** — `mod import-legacy` used to diff a
+  legacy patch fragment-by-fragment only for entity libraries and world sectors; a mod that changed
+  `movemgr.bin` or a `*_depload.dat` landed as a whole-file override, last-wins and silent. The
+  fine-grained path is now format-agnostic over `IContainerSplitter`, so every splitting container
+  imports as the fragments that actually differ. A MOVE graph whose change no fragment can carry is
+  left out with a warning rather than overridden whole — reported in `--json`, in the CLI's output
+  and in the app — while `.fcb` and `depload` keep their whole-file fallback, which the community's
+  largest legacy mods still need for ~100 world sectors apiece.
 - **`oasisstrings.rml` is overridden one string at a time** — a localization mod ships one
   `oasisstrings.fragment.xml` per language stating only the strings it changes, instead of
   overriding all 11,394. Two mods that rename different weapons never meet, even inside one section;

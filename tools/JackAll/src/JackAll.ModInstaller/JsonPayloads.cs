@@ -77,6 +77,10 @@ internal sealed record ImportLegacyPayload
     public int FragmentsImported { get; init; }
     public int Skipped { get; init; }
     public int StagedFiles { get; init; }
+
+    /// <summary>Containers left out, as <c>&lt;path&gt;: &lt;reason&gt;</c> - see
+    /// <see cref="LegacyImportRefusal"/>.</summary>
+    public IReadOnlyList<string> Refused { get; init; } = [];
 }
 
 internal sealed record RestorePayload

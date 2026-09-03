@@ -94,14 +94,23 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
                 result.FragmentsImported,
                 result.Skipped,
                 stagedFiles = Directory.EnumerateFiles(settings.Out, "*", SearchOption.AllDirectories).Count(),
+                refused = result.Refused.Select(r => new { r.ContainerPath, r.Reason }),
             });
             return 0;
         }
 
         AnsiConsole.MarkupLine(
-            $"[green]Imported[/] {result.Imported:N0} file(s) and {result.FragmentsImported:N0} .fcb fragment(s) "
+            $"[green]Imported[/] {result.Imported:N0} file(s) and {result.FragmentsImported:N0} fragment(s) "
             + $"into {settings.Out.EscapeMarkup()} (out of {result.TotalEntries:N0} entries; "
             + $"{result.Skipped:N0} matched the base game and were skipped).");
+
+        foreach (LegacyImportRefusal refusal in result.Refused)
+        {
+            AnsiConsole.MarkupLine(
+                $"[yellow]Left out[/] {refusal.ContainerPath.EscapeMarkup()}: {refusal.Reason.EscapeMarkup()}. "
+                + "Overriding the whole file would silently outrank every other mod that touches it.");
+        }
+
         return 0;
     }
 }

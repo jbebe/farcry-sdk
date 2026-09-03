@@ -268,18 +268,9 @@ public sealed class MoveContainerSplitterTests
         IContainerTree tree = _splitter.Open(original);
         if (tree.Extract("_packages.xml") is not { } packages) return;
 
-        // One more package: bump the count, and append its three strings after the last entry.
         uint before = uint.Parse(Between(packages, "<u32 n=\"size\" v=\"", "\""));
-        int lastEnd = packages.LastIndexOf("</MoveSection>", StringComparison.Ordinal);
-        string edited = packages
-            .Replace($"<u32 n=\"size\" v=\"{before}\" />", $"<u32 n=\"size\" v=\"{before + 1}\" />")
-            .Insert(lastEnd,
-                "  <str n=\"Name\" v=\"dlc1_vss_vintorez\" />\n"
-                + "  <str n=\"Extension\" v=\"\" />\n"
-                + "  <str n=\"ExportWithWorld\" v=\"\" />\n");
-
         MoveFile after = MoveCodec.Load(_splitter.Apply(
-            original, new Dictionary<string, string> { ["_packages.xml"] = edited }));
+            original, new Dictionary<string, string> { ["_packages.xml"] = WithPackageAdded(packages) }));
 
         MoveObject manager = after.Objects.First(o => o.ClassName == "CMoveMgr");
         Assert.Equal(before + 1, manager.Field("size"));
@@ -333,6 +324,59 @@ public sealed class MoveContainerSplitterTests
     }
 
     /// <summary>
+    /// What a state or a section says is its fragment's business; where it sits is the graph's. The
+    /// skeleton has to draw that line exactly, since an importer trusts it to decide whether
+    /// per-fragment overrides can carry a change at all.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(CorpusFiles))]
+    public void A_skeleton_ignores_what_fragments_say_but_not_where_they_sit(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        IContainerTree tree = _splitter.Open(original);
+        string shape = tree.Skeleton(_ => true)!;
+        Assert.Equal(shape, _splitter.Open(original).Skeleton(_ => true));
+
+        // Every fragment put back verbatim: the graph is rebuilt object by object, and the shape
+        // still has to land on the same text.
+        byte[] respliced = _splitter.Apply(
+            original, tree.List().ToDictionary(row => row.Id, row => tree.Extract(row.Id)!));
+        Assert.Equal(shape, _splitter.Open(respliced).Skeleton(_ => true));
+
+        // Two states swapping slots is the change no fragment carries, because no fragment records a
+        // position - so this is precisely what the skeleton exists to catch.
+        MoveFile graph = MoveCodec.Load(original);
+        MoveObject machine = graph.StateMachine!;
+        List<int> slots = [.. Enumerable.Range(0, machine.Ops.Count)
+            .Where(i => machine.Ops[i].Name == "CMoveBaseState"
+                        && machine.Ops[i].Kind == MoveOpKind.PointerNew)];
+        (machine.Ops[slots[^1]], machine.Ops[slots[^2]]) = (machine.Ops[slots[^2]], machine.Ops[slots[^1]]);
+        Assert.NotEqual(shape, _splitter.Open(MoveCodec.Save(graph)).Skeleton(_ => true));
+    }
+
+    /// <summary>
+    /// A manager section is a fragment like any other, so registering a new animation package must
+    /// not disturb the shape - the trap being that a section's content lives in objects the manager
+    /// only points at, which a walk over the graph would otherwise count as scaffolding.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(CorpusFiles))]
+    public void A_section_edit_leaves_the_skeleton_alone(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        IContainerTree tree = _splitter.Open(original);
+        if (tree.Extract("_packages.xml") is not { } packages) return;
+
+        byte[] after = _splitter.Apply(
+            original, new Dictionary<string, string> { ["_packages.xml"] = WithPackageAdded(packages) });
+        Assert.Equal(tree.Skeleton(_ => true), _splitter.Open(after).Skeleton(_ => true));
+    }
+
+    /// <summary>
     /// A state fragment that neither references outside itself nor keeps a weapon branch, so a clone
     /// of it under a fresh name stands alone: nothing to re-seat, and no branch fragment to bring
     /// along that would still be keyed to the original state.
@@ -350,6 +394,21 @@ public sealed class MoveContainerSplitterTests
         }
 
         throw new InvalidOperationException("every state references outside itself or holds a branch");
+    }
+
+    /// <summary>One more package in a `_packages.xml` section: the count bumped, and the three
+    /// strings an entry is made of appended after the last one.</summary>
+    private static string WithPackageAdded(string packages)
+    {
+        uint before = uint.Parse(Between(packages, "<u32 n=\"size\" v=\"", "\""));
+        string resized = packages.Replace(
+            $"<u32 n=\"size\" v=\"{before}\" />", $"<u32 n=\"size\" v=\"{before + 1}\" />");
+
+        return resized.Insert(
+            resized.LastIndexOf("</MoveSection>", StringComparison.Ordinal),
+            "  <str n=\"Name\" v=\"dlc1_vss_vintorez\" />\n"
+            + "  <str n=\"Extension\" v=\"\" />\n"
+            + "  <str n=\"ExportWithWorld\" v=\"\" />\n");
     }
 
     private static string Between(string text, string open, string close)

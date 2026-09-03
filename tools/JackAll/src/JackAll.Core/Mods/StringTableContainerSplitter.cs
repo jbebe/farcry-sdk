@@ -135,6 +135,13 @@ public sealed class StringTableContainerSplitter : IContainerSplitter
         /// <summary>Nothing - see the class remarks. The table is addressable but not browsable.</summary>
         public IReadOnlyList<FcbFragmentInfo> List() => [];
 
+        /// <summary>
+        /// Declined. A table that lists no fragments cannot be reduced to markers, and nothing asks:
+        /// this format's own override unit is a patch document, so it never reaches the generic
+        /// fragment path that compares shapes.
+        /// </summary>
+        public string? Skeleton(Func<string, bool> keep) => null;
+
         private static Dictionary<uint, OasisStringEdit> Index(XElement root)
         {
             var byId = new Dictionary<uint, OasisStringEdit>();
