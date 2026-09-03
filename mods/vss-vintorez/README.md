@@ -35,7 +35,7 @@ mods/ui/textures/hud/icons_weapons/hud_icon_sniperdart.xbt  the HUD and bazaar i
 mods/ui/textures/guns/gun_icon_sniperdart.xbt               the multiplayer weapon select
 mods/languages/english/oasisstrings.rml                     the weapon's name, ten strings
 mods/graphics/characters/.../vss_vintorez/...vssvi_i1.mab   the reload, at a new path
-mods/graphics/move/movemgr.bin                              the MOVE graph, reload repointed
+mods/graphics/move/movemgr.bin/state_*_w39.*.xml            17 MOVE fragments, clips repointed
 mods/soundbinary/004bf5e9.spk                               the shot, first person (stereo)
 mods/soundbinary/004bf5eb.spk                               the shot, third person (mono)
 mods/worlds/world1/generated/entitylibrary.fcb/...          four archetype fragments
@@ -53,6 +53,14 @@ The four entitylibrary fragments are the weapon, its stats, and the two pickups.
 their own part lists**, so until they were rebuilt from the Dragunov's the weapon on the ground had
 no barrel at close range and grew one back at distance — LOD1 and below fold `ACCESSORY02` into
 `FRAME`.
+
+**The MOVE edit ships as fragments, not as the graph.** All 81 changed clip references sit in
+branches the graph pins to `EquippedWeapon == 39`, so the mod stages those branches and nothing else:
+17 files, 265 KB, against the 1.8 MB `movemgr.bin` this used to ship whole. Every filename ends
+`_w39`, so a mod retargeting a different weapon cannot collide with it — where two whole-file copies
+of the graph would have silently overwritten each other. Regenerate them with
+`jackall-cli move fragments <edited.bin> --base <retail.bin> --out <dir>`, and check a set against the
+binary it came from with `move assemble … --expect`.
 
 The two `depload` fragments each add one line: the reload clip's `CPathID` as a `CAnimationResource`
 child of the `dragunov` package. Without them the clip is in `patch.dat` and referenced by

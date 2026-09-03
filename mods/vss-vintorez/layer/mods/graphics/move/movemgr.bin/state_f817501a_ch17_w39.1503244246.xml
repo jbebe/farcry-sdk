@@ -1,0 +1,1482 @@
+<MoveBranch unit="1503244246" state="4162277402" channel="17" weapon="39">
+  <obj n="CMoveDescriptor" class="CMoveGroup" id="0">
+    <ver n="CMoveObject" v="1" />
+    <obj n="CMoveCriteria" class="CMoveCriteriaEnumEqual" id="1">
+      <ver n="CMoveCriteriaEnum" v="1" />
+      <s32 n="m_Value" v="39" />
+      <ver n="CMoveCriteria" v="4" />
+      <u8 n="m_eValueID" v="17" />
+      <ver n="CMoveObject" v="1" />
+      <s32 n="m_logicOperator" v="0" />
+    </obj>
+    <null n="CMoveCriteria" />
+    <ver n="CMoveDescriptorGroup" v="2" />
+    <obj n="CMoveDescriptor" class="CTimeControlledLayeredParameter" id="2">
+      <ver n="CTimeControlledLayeredParameter" v="2" />
+      <ver n="CLayeredParameter" v="5" />
+      <s32 n="m_spliceBlendMode" v="1" />
+      <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+      <ver n="CMoveDefParameter" v="25" />
+      <f32 n="m_flStartTime" v="0" />
+      <f32 n="m_flStopTime" v="0" />
+      <f32 n="m_flCutTime" v="0.03336671" />
+      <u32 n="m_dwBlendType" v="4278211602" />
+      <f32 n="m_flBlendTime" v="0.03567252" />
+      <f32 n="m_flMultiplier" v="1" />
+      <ver n="CMoveObject" v="1" />
+      <null n="CMoveCriteria" />
+      <ver n="CMoveDescriptorGroup" v="2" />
+      <null n="CMoveDescriptor" />
+      <obj n="CTransitionLink" class="CTransitionLink" id="3">
+        <ver n="CTransitionLink" v="3" />
+        <ver n="CMoveObject" v="1" />
+        <f32 n="flBlendTime" v="0.3" />
+        <u32 n="dwBlendType" v="4278211602" />
+        <f32 n="flBlendRate" v="0.05" />
+        <obj n="m_ptr" class="CLayeredAxialBlend" id="4">
+          <ver n="CLayeredAxialBlend" v="5" />
+          <u8 n="m_spliceBlendMode" v="1" />
+          <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+          <u8 n="m_eAxisValueID" v="2" />
+          <ver n="CMoveObject" v="1" />
+          <null n="CMoveCriteria" />
+          <ver n="CMoveDescriptorGroup" v="2" />
+          <obj n="CMoveDescriptor" class="CAxialBlendAnimGroup" id="5">
+            <u8 n="m_eAxisValueID" v="28" />
+            <ver n="CMoveObject" v="1" />
+            <null n="CMoveCriteria" />
+            <ver n="CMoveDescriptorGroup" v="2" />
+            <obj n="CMoveDescriptor" class="CMoveDefParameter" id="6">
+              <ver n="CMoveDefParameter" v="25" />
+              <f32 n="m_flStartTime" v="0" />
+              <f32 n="m_flStopTime" v="0" />
+              <f32 n="m_flCutTime" v="0.03336346" />
+              <u32 n="m_dwBlendType" v="4278211602" />
+              <f32 n="m_flBlendTime" v="0.13346681" />
+              <f32 n="m_flMultiplier" v="1" />
+              <ver n="CMoveObject" v="1" />
+              <null n="CMoveCriteria" />
+              <ver n="CMoveDescriptorGroup" v="2" />
+              <null n="CMoveDescriptor" />
+              <null n="CTransitionLink" />
+              <null n="CNotInterruptibleLink" />
+              <ver n="CBaseAnimGroup" v="9" />
+              <f32 n="m_flAnimGroupValue" v="-179" />
+              <obj n="CAnimTech" class="CAnimTechIKPath" id="7">
+                <ver n="CAnimTech" v="9" />
+                <ver n="CMoveObject" v="1" />
+                <f32 n="m_flStartTimeIn" v="0" />
+                <f32 n="m_flDurationIn" v="0.13333334" />
+                <f32 n="m_flStartTimeOut" v="0" />
+                <f32 n="m_flDurationOut" v="0.13333334" />
+                <u32 n="m_dwBlendTypeIn" v="4278211602" />
+                <u32 n="m_dwBlendTypeOut" v="4278211586" />
+                <s32 n="m_iParentID" v="-1" />
+                <u32 n="m_iModelHashNamePartID" v="115510436" />
+                <str n="m_partName" v="" />
+                <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+                <str n="m_parentBoneName.m_szName" v="L Hand" />
+              </obj>
+              <null n="CAnimTech" />
+              <f32 n="m_headLookAtEnable" v="0" />
+              <u8 n="m_livePostureEnable" v="0" />
+              <s32 n="m_weaponOffsetMode" v="1" />
+              <u8 n="m_destructiveLookat" v="1" />
+              <u8 n="m_fInterruptible" v="1" />
+              <u8 n="m_dropEventsOutsideRange" v="0" />
+              <f32 n="m_physicsMuscleIntensity" v="100" />
+              <s32 n="m_loopOverride" v="1" />
+              <u8 n="m_categoryOverride" v="255" />
+              <s32 n="m_cutBehaviour" v="0" />
+              <u8 n="m_motionOrientationCorrection" v="0" />
+              <f32 n="m_lastAnimDataDuration" v="-1" />
+              <u32 n="m_animNameHash" v="383053065" />
+              <u8 n="m_bodyPartAvailability" v="255" />
+              <u8 n="m_lowerBodyProgressState" v="0" />
+              <u8 n="m_ragdollController" v="0" />
+              <u8 n="m_displacementMode" v="0" />
+              <u32 n="m_package" v="115510436" />
+              <u8 n="m_poseInfoForPMS" v="255" />
+            </obj>
+            <obj n="CMoveDescriptor" class="CMoveDefParameter" id="8">
+              <ver n="CMoveDefParameter" v="25" />
+              <f32 n="m_flStartTime" v="0" />
+              <f32 n="m_flStopTime" v="0" />
+              <f32 n="m_flCutTime" v="0.03336346" />
+              <u32 n="m_dwBlendType" v="4278211602" />
+              <f32 n="m_flBlendTime" v="0.13346681" />
+              <f32 n="m_flMultiplier" v="1" />
+              <ver n="CMoveObject" v="1" />
+              <null n="CMoveCriteria" />
+              <ver n="CMoveDescriptorGroup" v="2" />
+              <null n="CMoveDescriptor" />
+              <null n="CTransitionLink" />
+              <null n="CNotInterruptibleLink" />
+              <ver n="CBaseAnimGroup" v="9" />
+              <f32 n="m_flAnimGroupValue" v="0" />
+              <obj n="CAnimTech" class="CAnimTechIKPath" id="9">
+                <ver n="CAnimTech" v="9" />
+                <ver n="CMoveObject" v="1" />
+                <f32 n="m_flStartTimeIn" v="0" />
+                <f32 n="m_flDurationIn" v="0.13333334" />
+                <f32 n="m_flStartTimeOut" v="0" />
+                <f32 n="m_flDurationOut" v="0.13333334" />
+                <u32 n="m_dwBlendTypeIn" v="4278211602" />
+                <u32 n="m_dwBlendTypeOut" v="4278211586" />
+                <s32 n="m_iParentID" v="-1" />
+                <u32 n="m_iModelHashNamePartID" v="115510436" />
+                <str n="m_partName" v="" />
+                <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+                <str n="m_parentBoneName.m_szName" v="L Hand" />
+              </obj>
+              <null n="CAnimTech" />
+              <f32 n="m_headLookAtEnable" v="0" />
+              <u8 n="m_livePostureEnable" v="0" />
+              <s32 n="m_weaponOffsetMode" v="1" />
+              <u8 n="m_destructiveLookat" v="1" />
+              <u8 n="m_fInterruptible" v="1" />
+              <u8 n="m_dropEventsOutsideRange" v="0" />
+              <f32 n="m_physicsMuscleIntensity" v="100" />
+              <s32 n="m_loopOverride" v="1" />
+              <u8 n="m_categoryOverride" v="255" />
+              <s32 n="m_cutBehaviour" v="0" />
+              <u8 n="m_motionOrientationCorrection" v="0" />
+              <f32 n="m_lastAnimDataDuration" v="-1" />
+              <u32 n="m_animNameHash" v="2427697522" />
+              <u8 n="m_bodyPartAvailability" v="255" />
+              <u8 n="m_lowerBodyProgressState" v="0" />
+              <u8 n="m_ragdollController" v="0" />
+              <u8 n="m_displacementMode" v="0" />
+              <u32 n="m_package" v="115510436" />
+              <u8 n="m_poseInfoForPMS" v="255" />
+            </obj>
+            <obj n="CMoveDescriptor" class="CMoveDefParameter" id="10">
+              <ver n="CMoveDefParameter" v="25" />
+              <f32 n="m_flStartTime" v="0" />
+              <f32 n="m_flStopTime" v="0" />
+              <f32 n="m_flCutTime" v="0.03336346" />
+              <u32 n="m_dwBlendType" v="4278211602" />
+              <f32 n="m_flBlendTime" v="0.13346681" />
+              <f32 n="m_flMultiplier" v="1" />
+              <ver n="CMoveObject" v="1" />
+              <null n="CMoveCriteria" />
+              <ver n="CMoveDescriptorGroup" v="2" />
+              <null n="CMoveDescriptor" />
+              <null n="CTransitionLink" />
+              <null n="CNotInterruptibleLink" />
+              <ver n="CBaseAnimGroup" v="9" />
+              <f32 n="m_flAnimGroupValue" v="179" />
+              <obj n="CAnimTech" class="CAnimTechIKPath" id="11">
+                <ver n="CAnimTech" v="9" />
+                <ver n="CMoveObject" v="1" />
+                <f32 n="m_flStartTimeIn" v="0" />
+                <f32 n="m_flDurationIn" v="0.13333334" />
+                <f32 n="m_flStartTimeOut" v="0" />
+                <f32 n="m_flDurationOut" v="0.13333334" />
+                <u32 n="m_dwBlendTypeIn" v="4278211602" />
+                <u32 n="m_dwBlendTypeOut" v="4278211586" />
+                <s32 n="m_iParentID" v="-1" />
+                <u32 n="m_iModelHashNamePartID" v="115510436" />
+                <str n="m_partName" v="" />
+                <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+                <str n="m_parentBoneName.m_szName" v="L Hand" />
+              </obj>
+              <null n="CAnimTech" />
+              <f32 n="m_headLookAtEnable" v="0" />
+              <u8 n="m_livePostureEnable" v="0" />
+              <s32 n="m_weaponOffsetMode" v="1" />
+              <u8 n="m_destructiveLookat" v="1" />
+              <u8 n="m_fInterruptible" v="1" />
+              <u8 n="m_dropEventsOutsideRange" v="0" />
+              <f32 n="m_physicsMuscleIntensity" v="100" />
+              <s32 n="m_loopOverride" v="1" />
+              <u8 n="m_categoryOverride" v="255" />
+              <s32 n="m_cutBehaviour" v="0" />
+              <u8 n="m_motionOrientationCorrection" v="0" />
+              <f32 n="m_lastAnimDataDuration" v="-1" />
+              <u32 n="m_animNameHash" v="572088608" />
+              <u8 n="m_bodyPartAvailability" v="255" />
+              <u8 n="m_lowerBodyProgressState" v="0" />
+              <u8 n="m_ragdollController" v="0" />
+              <u8 n="m_displacementMode" v="0" />
+              <u32 n="m_package" v="115510436" />
+              <u8 n="m_poseInfoForPMS" v="255" />
+            </obj>
+            <null n="CMoveDescriptor" />
+            <null n="CTransitionLink" />
+            <null n="CNotInterruptibleLink" />
+            <ver n="CBaseAnimGroup" v="9" />
+            <f32 n="m_flAnimGroupValue" v="0" />
+            <null n="CAnimTech" />
+            <f32 n="m_headLookAtEnable" v="0" />
+            <u8 n="m_livePostureEnable" v="0" />
+            <s32 n="m_weaponOffsetMode" v="1" />
+            <u8 n="m_destructiveLookat" v="1" />
+            <ver n="CAxialBlendAnimGroup" v="4" />
+            <u8 n="m_scaleDuration" v="1" />
+          </obj>
+          <obj n="CMoveDescriptor" class="CMoveDefParameter" id="12">
+            <ver n="CMoveDefParameter" v="25" />
+            <f32 n="m_flStartTime" v="0" />
+            <f32 n="m_flStopTime" v="0" />
+            <f32 n="m_flCutTime" v="0.033366382" />
+            <u32 n="m_dwBlendType" v="4278211602" />
+            <f32 n="m_flBlendTime" v="0.13346681" />
+            <f32 n="m_flMultiplier" v="1" />
+            <ver n="CMoveObject" v="1" />
+            <null n="CMoveCriteria" />
+            <ver n="CMoveDescriptorGroup" v="2" />
+            <null n="CMoveDescriptor" />
+            <null n="CTransitionLink" />
+            <null n="CNotInterruptibleLink" />
+            <ver n="CBaseAnimGroup" v="9" />
+            <f32 n="m_flAnimGroupValue" v="5" />
+            <obj n="CAnimTech" class="CAnimTechIKPath" id="13">
+              <ver n="CAnimTech" v="9" />
+              <ver n="CMoveObject" v="1" />
+              <f32 n="m_flStartTimeIn" v="0" />
+              <f32 n="m_flDurationIn" v="0.13333334" />
+              <f32 n="m_flStartTimeOut" v="0" />
+              <f32 n="m_flDurationOut" v="0.13333334" />
+              <u32 n="m_dwBlendTypeIn" v="4278211602" />
+              <u32 n="m_dwBlendTypeOut" v="4278211586" />
+              <s32 n="m_iParentID" v="-1" />
+              <u32 n="m_iModelHashNamePartID" v="115510436" />
+              <str n="m_partName" v="" />
+              <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+              <str n="m_parentBoneName.m_szName" v="L Hand" />
+            </obj>
+            <null n="CAnimTech" />
+            <f32 n="m_headLookAtEnable" v="0" />
+            <u8 n="m_livePostureEnable" v="0" />
+            <s32 n="m_weaponOffsetMode" v="1" />
+            <u8 n="m_destructiveLookat" v="1" />
+            <u8 n="m_fInterruptible" v="1" />
+            <u8 n="m_dropEventsOutsideRange" v="0" />
+            <f32 n="m_physicsMuscleIntensity" v="100" />
+            <s32 n="m_loopOverride" v="1" />
+            <u8 n="m_categoryOverride" v="255" />
+            <s32 n="m_cutBehaviour" v="0" />
+            <u8 n="m_motionOrientationCorrection" v="0" />
+            <f32 n="m_lastAnimDataDuration" v="-1" />
+            <u32 n="m_animNameHash" v="3506645609" />
+            <u8 n="m_bodyPartAvailability" v="255" />
+            <u8 n="m_lowerBodyProgressState" v="0" />
+            <u8 n="m_ragdollController" v="0" />
+            <u8 n="m_displacementMode" v="0" />
+            <u32 n="m_package" v="115510436" />
+            <u8 n="m_poseInfoForPMS" v="255" />
+          </obj>
+          <null n="CMoveDescriptor" />
+          <obj n="CTransitionLink" class="CTransitionLink" id="14">
+            <ver n="CTransitionLink" v="3" />
+            <ver n="CMoveObject" v="1" />
+            <f32 n="flBlendTime" v="0.3" />
+            <u32 n="dwBlendType" v="4278211602" />
+            <f32 n="flBlendRate" v="0.05" />
+            <ref n="m_ptr" id="2" />
+            <null n="m_group" />
+          </obj>
+          <null n="CTransitionLink" />
+          <null n="CNotInterruptibleLink" />
+          <ver n="CBaseAnimGroup" v="9" />
+          <f32 n="m_flAnimGroupValue" v="0" />
+          <null n="CAnimTech" />
+          <f32 n="m_headLookAtEnable" v="1" />
+          <u8 n="m_livePostureEnable" v="0" />
+          <s32 n="m_weaponOffsetMode" v="1" />
+          <u8 n="m_destructiveLookat" v="1" />
+          <ver n="CAxialBlendAnimGroup" v="4" />
+          <u8 n="m_scaleDuration" v="1" />
+          <f32 n="m_worldOffsetForLayer" v="1" />
+          <f32 n="m_flBlendOutTime" v="0.3" />
+        </obj>
+        <null n="m_group" />
+      </obj>
+      <null n="CTransitionLink" />
+      <null n="CNotInterruptibleLink" />
+      <ver n="CBaseAnimGroup" v="9" />
+      <f32 n="m_flAnimGroupValue" v="0" />
+      <obj n="CAnimTech" class="CAnimTechIKPath" id="15">
+        <ver n="CAnimTech" v="9" />
+        <ver n="CMoveObject" v="1" />
+        <f32 n="m_flStartTimeIn" v="0" />
+        <f32 n="m_flDurationIn" v="0.13333334" />
+        <f32 n="m_flStartTimeOut" v="0" />
+        <f32 n="m_flDurationOut" v="0.13333334" />
+        <u32 n="m_dwBlendTypeIn" v="4278211602" />
+        <u32 n="m_dwBlendTypeOut" v="4278211586" />
+        <s32 n="m_iParentID" v="-1" />
+        <u32 n="m_iModelHashNamePartID" v="115510436" />
+        <str n="m_partName" v="" />
+        <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+        <str n="m_parentBoneName.m_szName" v="L Hand" />
+      </obj>
+      <null n="CAnimTech" />
+      <f32 n="m_headLookAtEnable" v="0" />
+      <u8 n="m_livePostureEnable" v="0" />
+      <s32 n="m_weaponOffsetMode" v="1" />
+      <u8 n="m_destructiveLookat" v="1" />
+      <u8 n="m_fInterruptible" v="1" />
+      <u8 n="m_dropEventsOutsideRange" v="0" />
+      <f32 n="m_physicsMuscleIntensity" v="100" />
+      <s32 n="m_loopOverride" v="1" />
+      <u8 n="m_categoryOverride" v="255" />
+      <s32 n="m_cutBehaviour" v="1" />
+      <u8 n="m_motionOrientationCorrection" v="0" />
+      <f32 n="m_lastAnimDataDuration" v="0.33333334" />
+      <u32 n="m_animNameHash" v="2160409284" />
+      <u8 n="m_bodyPartAvailability" v="255" />
+      <u8 n="m_lowerBodyProgressState" v="0" />
+      <u8 n="m_ragdollController" v="0" />
+      <u8 n="m_displacementMode" v="0" />
+      <u32 n="m_package" v="115510436" />
+      <u8 n="m_poseInfoForPMS" v="255" />
+      <f32 n="m_worldOffsetForLayer" v="1" />
+      <f32 n="m_flBlendOutTime" v="0.03567252" />
+      <u8 n="m_eTimeSourceID" v="55" />
+      <f32 n="m_timeSourceRangeMin" v="0" />
+      <f32 n="m_timeSourceRangeMax" v="1" />
+    </obj>
+    <null n="CMoveDescriptor" />
+    <null n="CTransitionLink" />
+    <null n="CNotInterruptibleLink" />
+    <ver n="CMoveGroup" v="1" />
+    <u8 n="m_branchEnable" v="1" />
+  </obj>
+  <obj n="CMoveDescriptor" class="CMoveGroup" id="16">
+    <ver n="CMoveObject" v="1" />
+    <obj n="CMoveCriteria" class="CMoveCriteriaEnumEqual" id="17">
+      <ver n="CMoveCriteriaEnum" v="1" />
+      <s32 n="m_Value" v="39" />
+      <ver n="CMoveCriteria" v="4" />
+      <u8 n="m_eValueID" v="17" />
+      <ver n="CMoveObject" v="1" />
+      <s32 n="m_logicOperator" v="0" />
+    </obj>
+    <null n="CMoveCriteria" />
+    <ver n="CMoveDescriptorGroup" v="2" />
+    <ref n="CMoveDescriptor" id="4" />
+    <null n="CMoveDescriptor" />
+    <null n="CTransitionLink" />
+    <null n="CNotInterruptibleLink" />
+    <ver n="CMoveGroup" v="1" />
+    <u8 n="m_branchEnable" v="1" />
+  </obj>
+  <obj n="CMoveDescriptor" class="CMoveGroup" id="18">
+    <ver n="CMoveObject" v="1" />
+    <obj n="CMoveCriteria" class="CMoveCriteriaEnumEqual" id="19">
+      <ver n="CMoveCriteriaEnum" v="1" />
+      <s32 n="m_Value" v="39" />
+      <ver n="CMoveCriteria" v="4" />
+      <u8 n="m_eValueID" v="17" />
+      <ver n="CMoveObject" v="1" />
+      <s32 n="m_logicOperator" v="0" />
+    </obj>
+    <null n="CMoveCriteria" />
+    <ver n="CMoveDescriptorGroup" v="2" />
+    <obj n="CMoveDescriptor" class="CMoveGroup" id="20">
+      <ver n="CMoveObject" v="1" />
+      <obj n="CMoveCriteria" class="TMoveCriteriaEqual&lt;bool&gt;" id="21">
+        <u8 n="m_Value" v="1" />
+        <ver n="CMoveCriteria" v="4" />
+        <u8 n="m_eValueID" v="21" />
+        <ver n="CMoveObject" v="1" />
+        <s32 n="m_logicOperator" v="0" />
+      </obj>
+      <null n="CMoveCriteria" />
+      <ver n="CMoveDescriptorGroup" v="2" />
+      <obj n="CMoveDescriptor" class="CLayeredParameter" id="22">
+        <ver n="CLayeredParameter" v="5" />
+        <s32 n="m_spliceBlendMode" v="1" />
+        <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+        <ver n="CMoveDefParameter" v="25" />
+        <f32 n="m_flStartTime" v="0" />
+        <f32 n="m_flStopTime" v="0" />
+        <f32 n="m_flCutTime" v="0.03336382" />
+        <u32 n="m_dwBlendType" v="4278211602" />
+        <f32 n="m_flBlendTime" v="0.13346681" />
+        <f32 n="m_flMultiplier" v="1" />
+        <ver n="CMoveObject" v="1" />
+        <null n="CMoveCriteria" />
+        <ver n="CMoveDescriptorGroup" v="2" />
+        <null n="CMoveDescriptor" />
+        <obj n="CTransitionLink" class="CTransitionLink" id="23">
+          <ver n="CTransitionLink" v="3" />
+          <ver n="CMoveObject" v="1" />
+          <f32 n="flBlendTime" v="0.1333333" />
+          <u32 n="dwBlendType" v="4278211602" />
+          <f32 n="flBlendRate" v="0.05" />
+          <obj n="m_ptr" class="CLayeredParameter" id="24">
+            <ver n="CLayeredParameter" v="5" />
+            <s32 n="m_spliceBlendMode" v="1" />
+            <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+            <ver n="CMoveDefParameter" v="25" />
+            <f32 n="m_flStartTime" v="0" />
+            <f32 n="m_flStopTime" v="0" />
+            <f32 n="m_flCutTime" v="0.033367038" />
+            <u32 n="m_dwBlendType" v="4278211602" />
+            <f32 n="m_flBlendTime" v="0.13346681" />
+            <f32 n="m_flMultiplier" v="1" />
+            <ver n="CMoveObject" v="1" />
+            <null n="CMoveCriteria" />
+            <ver n="CMoveDescriptorGroup" v="2" />
+            <null n="CMoveDescriptor" />
+            <null n="CTransitionLink" />
+            <null n="CNotInterruptibleLink" />
+            <ver n="CBaseAnimGroup" v="9" />
+            <f32 n="m_flAnimGroupValue" v="0" />
+            <null n="CAnimTech" />
+            <f32 n="m_headLookAtEnable" v="0" />
+            <u8 n="m_livePostureEnable" v="0" />
+            <s32 n="m_weaponOffsetMode" v="1" />
+            <u8 n="m_destructiveLookat" v="1" />
+            <u8 n="m_fInterruptible" v="1" />
+            <u8 n="m_dropEventsOutsideRange" v="0" />
+            <f32 n="m_physicsMuscleIntensity" v="0" />
+            <s32 n="m_loopOverride" v="0" />
+            <u8 n="m_categoryOverride" v="255" />
+            <s32 n="m_cutBehaviour" v="1" />
+            <u8 n="m_motionOrientationCorrection" v="0" />
+            <f32 n="m_lastAnimDataDuration" v="-1" />
+            <u32 n="m_animNameHash" v="430652194" />
+            <u8 n="m_bodyPartAvailability" v="255" />
+            <u8 n="m_lowerBodyProgressState" v="0" />
+            <u8 n="m_ragdollController" v="0" />
+            <u8 n="m_displacementMode" v="0" />
+            <u32 n="m_package" v="115510436" />
+            <u8 n="m_poseInfoForPMS" v="255" />
+            <f32 n="m_worldOffsetForLayer" v="1" />
+            <f32 n="m_flBlendOutTime" v="0.13346681" />
+          </obj>
+          <obj n="m_group" class="CLayeredParameter" id="25">
+            <ver n="CLayeredParameter" v="5" />
+            <s32 n="m_spliceBlendMode" v="1" />
+            <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+            <ver n="CMoveDefParameter" v="25" />
+            <f32 n="m_flStartTime" v="0" />
+            <f32 n="m_flStopTime" v="0" />
+            <f32 n="m_flCutTime" v="0.03336668" />
+            <u32 n="m_dwBlendType" v="4278211602" />
+            <f32 n="m_flBlendTime" v="0.1333333" />
+            <f32 n="m_flMultiplier" v="1" />
+            <ver n="CMoveObject" v="1" />
+            <null n="CMoveCriteria" />
+            <ver n="CMoveDescriptorGroup" v="2" />
+            <null n="CMoveDescriptor" />
+            <null n="CTransitionLink" />
+            <null n="CNotInterruptibleLink" />
+            <ver n="CBaseAnimGroup" v="9" />
+            <f32 n="m_flAnimGroupValue" v="0" />
+            <null n="CAnimTech" />
+            <f32 n="m_headLookAtEnable" v="1" />
+            <u8 n="m_livePostureEnable" v="0" />
+            <s32 n="m_weaponOffsetMode" v="1" />
+            <u8 n="m_destructiveLookat" v="1" />
+            <u8 n="m_fInterruptible" v="1" />
+            <u8 n="m_dropEventsOutsideRange" v="0" />
+            <f32 n="m_physicsMuscleIntensity" v="100" />
+            <s32 n="m_loopOverride" v="0" />
+            <u8 n="m_categoryOverride" v="255" />
+            <s32 n="m_cutBehaviour" v="1" />
+            <u8 n="m_motionOrientationCorrection" v="0" />
+            <f32 n="m_lastAnimDataDuration" v="0.8000001" />
+            <u32 n="m_animNameHash" v="430652194" />
+            <u8 n="m_bodyPartAvailability" v="255" />
+            <u8 n="m_lowerBodyProgressState" v="0" />
+            <u8 n="m_ragdollController" v="0" />
+            <u8 n="m_displacementMode" v="0" />
+            <u32 n="m_package" v="115510436" />
+            <u8 n="m_poseInfoForPMS" v="255" />
+            <f32 n="m_worldOffsetForLayer" v="1" />
+            <f32 n="m_flBlendOutTime" v="0.1333333" />
+          </obj>
+        </obj>
+        <null n="CTransitionLink" />
+        <null n="CNotInterruptibleLink" />
+        <ver n="CBaseAnimGroup" v="9" />
+        <f32 n="m_flAnimGroupValue" v="0" />
+        <null n="CAnimTech" />
+        <f32 n="m_headLookAtEnable" v="1" />
+        <u8 n="m_livePostureEnable" v="0" />
+        <s32 n="m_weaponOffsetMode" v="1" />
+        <u8 n="m_destructiveLookat" v="1" />
+        <u8 n="m_fInterruptible" v="1" />
+        <u8 n="m_dropEventsOutsideRange" v="0" />
+        <f32 n="m_physicsMuscleIntensity" v="100" />
+        <s32 n="m_loopOverride" v="1" />
+        <u8 n="m_categoryOverride" v="255" />
+        <s32 n="m_cutBehaviour" v="2" />
+        <u8 n="m_motionOrientationCorrection" v="0" />
+        <f32 n="m_lastAnimDataDuration" v="4.66667" />
+        <u32 n="m_animNameHash" v="2306415208" />
+        <u8 n="m_bodyPartAvailability" v="255" />
+        <u8 n="m_lowerBodyProgressState" v="0" />
+        <u8 n="m_ragdollController" v="0" />
+        <u8 n="m_displacementMode" v="0" />
+        <u32 n="m_package" v="115510436" />
+        <u8 n="m_poseInfoForPMS" v="255" />
+        <f32 n="m_worldOffsetForLayer" v="1" />
+        <f32 n="m_flBlendOutTime" v="0.13346681" />
+      </obj>
+      <null n="CMoveDescriptor" />
+      <null n="CTransitionLink" />
+      <null n="CNotInterruptibleLink" />
+      <ver n="CMoveGroup" v="1" />
+      <u8 n="m_branchEnable" v="1" />
+    </obj>
+    <obj n="CMoveDescriptor" class="CMoveGroup" id="26">
+      <ver n="CMoveObject" v="1" />
+      <obj n="CMoveCriteria" class="CMoveCriteriaEnumEqual" id="27">
+        <ver n="CMoveCriteriaEnum" v="1" />
+        <s32 n="m_Value" v="0" />
+        <ver n="CMoveCriteria" v="4" />
+        <u8 n="m_eValueID" v="46" />
+        <ver n="CMoveObject" v="1" />
+        <s32 n="m_logicOperator" v="0" />
+      </obj>
+      <obj n="CMoveCriteria" class="TMoveCriteriaEqual&lt;bool&gt;" id="28">
+        <u8 n="m_Value" v="1" />
+        <ver n="CMoveCriteria" v="4" />
+        <u8 n="m_eValueID" v="82" />
+        <ver n="CMoveObject" v="1" />
+        <s32 n="m_logicOperator" v="1" />
+      </obj>
+      <null n="CMoveCriteria" />
+      <ver n="CMoveDescriptorGroup" v="2" />
+      <obj n="CMoveDescriptor" class="CMoveGroup" id="29">
+        <ver n="CMoveObject" v="1" />
+        <obj n="CMoveCriteria" class="TMoveCriteriaIntv&lt;float&gt;" id="30">
+          <ver n="TMoveCriteriaIntv" v="2" />
+          <f32 n="m_LowerBound" v="5.1" />
+          <f32 n="m_UpperBound" v="20" />
+          <u8 n="m_inclusive" v="1" />
+          <ver n="CMoveCriteria" v="4" />
+          <u8 n="m_eValueID" v="2" />
+          <ver n="CMoveObject" v="1" />
+          <s32 n="m_logicOperator" v="0" />
+        </obj>
+        <null n="CMoveCriteria" />
+        <ver n="CMoveDescriptorGroup" v="2" />
+        <obj n="CMoveDescriptor" class="CLayeredParameter" id="31">
+          <ver n="CLayeredParameter" v="5" />
+          <s32 n="m_spliceBlendMode" v="1" />
+          <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+          <ver n="CMoveDefParameter" v="25" />
+          <f32 n="m_flStartTime" v="0" />
+          <f32 n="m_flStopTime" v="0" />
+          <f32 n="m_flCutTime" v="0.03336668" />
+          <u32 n="m_dwBlendType" v="4278211602" />
+          <f32 n="m_flBlendTime" v="0.266667" />
+          <f32 n="m_flMultiplier" v="1" />
+          <ver n="CMoveObject" v="1" />
+          <null n="CMoveCriteria" />
+          <ver n="CMoveDescriptorGroup" v="2" />
+          <null n="CMoveDescriptor" />
+          <null n="CTransitionLink" />
+          <null n="CNotInterruptibleLink" />
+          <ver n="CBaseAnimGroup" v="9" />
+          <f32 n="m_flAnimGroupValue" v="0" />
+          <obj n="CAnimTech" class="CAnimTechIKPath" id="32">
+            <ver n="CAnimTech" v="9" />
+            <ver n="CMoveObject" v="1" />
+            <f32 n="m_flStartTimeIn" v="0" />
+            <f32 n="m_flDurationIn" v="0.13333334" />
+            <f32 n="m_flStartTimeOut" v="0" />
+            <f32 n="m_flDurationOut" v="0.13333334" />
+            <u32 n="m_dwBlendTypeIn" v="4278211602" />
+            <u32 n="m_dwBlendTypeOut" v="4278211586" />
+            <s32 n="m_iParentID" v="-1" />
+            <u32 n="m_iModelHashNamePartID" v="115510436" />
+            <str n="m_partName" v="" />
+            <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+            <str n="m_parentBoneName.m_szName" v="L Hand" />
+          </obj>
+          <null n="CAnimTech" />
+          <f32 n="m_headLookAtEnable" v="1" />
+          <u8 n="m_livePostureEnable" v="0" />
+          <s32 n="m_weaponOffsetMode" v="1" />
+          <u8 n="m_destructiveLookat" v="1" />
+          <u8 n="m_fInterruptible" v="1" />
+          <u8 n="m_dropEventsOutsideRange" v="0" />
+          <f32 n="m_physicsMuscleIntensity" v="100" />
+          <s32 n="m_loopOverride" v="1" />
+          <u8 n="m_categoryOverride" v="255" />
+          <s32 n="m_cutBehaviour" v="0" />
+          <u8 n="m_motionOrientationCorrection" v="0" />
+          <f32 n="m_lastAnimDataDuration" v="0.6" />
+          <u32 n="m_animNameHash" v="4067870413" />
+          <u8 n="m_bodyPartAvailability" v="255" />
+          <u8 n="m_lowerBodyProgressState" v="0" />
+          <u8 n="m_ragdollController" v="0" />
+          <u8 n="m_displacementMode" v="0" />
+          <u32 n="m_package" v="115510436" />
+          <u8 n="m_poseInfoForPMS" v="255" />
+          <f32 n="m_worldOffsetForLayer" v="1" />
+          <f32 n="m_flBlendOutTime" v="0.266667" />
+        </obj>
+        <null n="CMoveDescriptor" />
+        <null n="CTransitionLink" />
+        <null n="CNotInterruptibleLink" />
+        <ver n="CMoveGroup" v="1" />
+        <u8 n="m_branchEnable" v="1" />
+      </obj>
+      <obj n="CMoveDescriptor" class="CMoveGroup" id="33">
+        <ver n="CMoveObject" v="1" />
+        <obj n="CMoveCriteria" class="TMoveCriteriaIntv&lt;float&gt;" id="34">
+          <ver n="TMoveCriteriaIntv" v="2" />
+          <f32 n="m_LowerBound" v="0" />
+          <f32 n="m_UpperBound" v="0.01" />
+          <u8 n="m_inclusive" v="1" />
+          <ver n="CMoveCriteria" v="4" />
+          <u8 n="m_eValueID" v="2" />
+          <ver n="CMoveObject" v="1" />
+          <s32 n="m_logicOperator" v="0" />
+        </obj>
+        <null n="CMoveCriteria" />
+        <ver n="CMoveDescriptorGroup" v="2" />
+        <obj n="CMoveDescriptor" class="CLayeredAxialBlend" id="35">
+          <ver n="CLayeredAxialBlend" v="5" />
+          <u8 n="m_spliceBlendMode" v="1" />
+          <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+          <u8 n="m_eAxisValueID" v="28" />
+          <ver n="CMoveObject" v="1" />
+          <null n="CMoveCriteria" />
+          <ver n="CMoveDescriptorGroup" v="2" />
+          <obj n="CMoveDescriptor" class="CMoveDefParameter" id="36">
+            <ver n="CMoveDefParameter" v="25" />
+            <f32 n="m_flStartTime" v="0" />
+            <f32 n="m_flStopTime" v="0" />
+            <f32 n="m_flCutTime" v="0.03336346" />
+            <u32 n="m_dwBlendType" v="4278211602" />
+            <f32 n="m_flBlendTime" v="0.266667" />
+            <f32 n="m_flMultiplier" v="1" />
+            <ver n="CMoveObject" v="1" />
+            <null n="CMoveCriteria" />
+            <ver n="CMoveDescriptorGroup" v="2" />
+            <null n="CMoveDescriptor" />
+            <null n="CTransitionLink" />
+            <null n="CNotInterruptibleLink" />
+            <ver n="CBaseAnimGroup" v="9" />
+            <f32 n="m_flAnimGroupValue" v="-179" />
+            <obj n="CAnimTech" class="CAnimTechIKPath" id="37">
+              <ver n="CAnimTech" v="9" />
+              <ver n="CMoveObject" v="1" />
+              <f32 n="m_flStartTimeIn" v="0" />
+              <f32 n="m_flDurationIn" v="0.13333334" />
+              <f32 n="m_flStartTimeOut" v="0" />
+              <f32 n="m_flDurationOut" v="0.13333334" />
+              <u32 n="m_dwBlendTypeIn" v="4278211602" />
+              <u32 n="m_dwBlendTypeOut" v="4278211586" />
+              <s32 n="m_iParentID" v="-1" />
+              <u32 n="m_iModelHashNamePartID" v="115510436" />
+              <str n="m_partName" v="" />
+              <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+              <str n="m_parentBoneName.m_szName" v="L Hand" />
+            </obj>
+            <null n="CAnimTech" />
+            <f32 n="m_headLookAtEnable" v="1" />
+            <u8 n="m_livePostureEnable" v="0" />
+            <s32 n="m_weaponOffsetMode" v="1" />
+            <u8 n="m_destructiveLookat" v="1" />
+            <u8 n="m_fInterruptible" v="1" />
+            <u8 n="m_dropEventsOutsideRange" v="0" />
+            <f32 n="m_physicsMuscleIntensity" v="100" />
+            <s32 n="m_loopOverride" v="1" />
+            <u8 n="m_categoryOverride" v="255" />
+            <s32 n="m_cutBehaviour" v="0" />
+            <u8 n="m_motionOrientationCorrection" v="0" />
+            <f32 n="m_lastAnimDataDuration" v="-1" />
+            <u32 n="m_animNameHash" v="3990132982" />
+            <u8 n="m_bodyPartAvailability" v="255" />
+            <u8 n="m_lowerBodyProgressState" v="0" />
+            <u8 n="m_ragdollController" v="0" />
+            <u8 n="m_displacementMode" v="0" />
+            <u32 n="m_package" v="115510436" />
+            <u8 n="m_poseInfoForPMS" v="255" />
+          </obj>
+          <obj n="CMoveDescriptor" class="CMoveDefParameter" id="38">
+            <ver n="CMoveDefParameter" v="25" />
+            <f32 n="m_flStartTime" v="0" />
+            <f32 n="m_flStopTime" v="0" />
+            <f32 n="m_flCutTime" v="0.03336346" />
+            <u32 n="m_dwBlendType" v="4278211602" />
+            <f32 n="m_flBlendTime" v="0.266667" />
+            <f32 n="m_flMultiplier" v="1" />
+            <ver n="CMoveObject" v="1" />
+            <null n="CMoveCriteria" />
+            <ver n="CMoveDescriptorGroup" v="2" />
+            <null n="CMoveDescriptor" />
+            <null n="CTransitionLink" />
+            <null n="CNotInterruptibleLink" />
+            <ver n="CBaseAnimGroup" v="9" />
+            <f32 n="m_flAnimGroupValue" v="0" />
+            <obj n="CAnimTech" class="CAnimTechIKPath" id="39">
+              <ver n="CAnimTech" v="9" />
+              <ver n="CMoveObject" v="1" />
+              <f32 n="m_flStartTimeIn" v="0" />
+              <f32 n="m_flDurationIn" v="0.13333334" />
+              <f32 n="m_flStartTimeOut" v="0" />
+              <f32 n="m_flDurationOut" v="0.13333334" />
+              <u32 n="m_dwBlendTypeIn" v="4278211602" />
+              <u32 n="m_dwBlendTypeOut" v="4278211586" />
+              <s32 n="m_iParentID" v="-1" />
+              <u32 n="m_iModelHashNamePartID" v="115510436" />
+              <str n="m_partName" v="" />
+              <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+              <str n="m_parentBoneName.m_szName" v="L Hand" />
+            </obj>
+            <null n="CAnimTech" />
+            <f32 n="m_headLookAtEnable" v="1" />
+            <u8 n="m_livePostureEnable" v="0" />
+            <s32 n="m_weaponOffsetMode" v="1" />
+            <u8 n="m_destructiveLookat" v="1" />
+            <u8 n="m_fInterruptible" v="1" />
+            <u8 n="m_dropEventsOutsideRange" v="0" />
+            <f32 n="m_physicsMuscleIntensity" v="100" />
+            <s32 n="m_loopOverride" v="1" />
+            <u8 n="m_categoryOverride" v="255" />
+            <s32 n="m_cutBehaviour" v="0" />
+            <u8 n="m_motionOrientationCorrection" v="0" />
+            <f32 n="m_lastAnimDataDuration" v="-1" />
+            <u32 n="m_animNameHash" v="1149903661" />
+            <u8 n="m_bodyPartAvailability" v="255" />
+            <u8 n="m_lowerBodyProgressState" v="0" />
+            <u8 n="m_ragdollController" v="0" />
+            <u8 n="m_displacementMode" v="0" />
+            <u32 n="m_package" v="115510436" />
+            <u8 n="m_poseInfoForPMS" v="255" />
+          </obj>
+          <obj n="CMoveDescriptor" class="CMoveDefParameter" id="40">
+            <ver n="CMoveDefParameter" v="25" />
+            <f32 n="m_flStartTime" v="0" />
+            <f32 n="m_flStopTime" v="0" />
+            <f32 n="m_flCutTime" v="0.03336346" />
+            <u32 n="m_dwBlendType" v="4278211602" />
+            <f32 n="m_flBlendTime" v="0.266667" />
+            <f32 n="m_flMultiplier" v="1" />
+            <ver n="CMoveObject" v="1" />
+            <null n="CMoveCriteria" />
+            <ver n="CMoveDescriptorGroup" v="2" />
+            <null n="CMoveDescriptor" />
+            <null n="CTransitionLink" />
+            <null n="CNotInterruptibleLink" />
+            <ver n="CBaseAnimGroup" v="9" />
+            <f32 n="m_flAnimGroupValue" v="179" />
+            <obj n="CAnimTech" class="CAnimTechIKPath" id="41">
+              <ver n="CAnimTech" v="9" />
+              <ver n="CMoveObject" v="1" />
+              <f32 n="m_flStartTimeIn" v="0" />
+              <f32 n="m_flDurationIn" v="0.13333334" />
+              <f32 n="m_flStartTimeOut" v="0" />
+              <f32 n="m_flDurationOut" v="0.13333334" />
+              <u32 n="m_dwBlendTypeIn" v="4278211602" />
+              <u32 n="m_dwBlendTypeOut" v="4278211586" />
+              <s32 n="m_iParentID" v="-1" />
+              <u32 n="m_iModelHashNamePartID" v="115510436" />
+              <str n="m_partName" v="" />
+              <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+              <str n="m_parentBoneName.m_szName" v="L Hand" />
+            </obj>
+            <null n="CAnimTech" />
+            <f32 n="m_headLookAtEnable" v="1" />
+            <u8 n="m_livePostureEnable" v="0" />
+            <s32 n="m_weaponOffsetMode" v="1" />
+            <u8 n="m_destructiveLookat" v="1" />
+            <u8 n="m_fInterruptible" v="1" />
+            <u8 n="m_dropEventsOutsideRange" v="0" />
+            <f32 n="m_physicsMuscleIntensity" v="100" />
+            <s32 n="m_loopOverride" v="1" />
+            <u8 n="m_categoryOverride" v="255" />
+            <s32 n="m_cutBehaviour" v="0" />
+            <u8 n="m_motionOrientationCorrection" v="0" />
+            <f32 n="m_lastAnimDataDuration" v="-1" />
+            <u32 n="m_animNameHash" v="3642299615" />
+            <u8 n="m_bodyPartAvailability" v="255" />
+            <u8 n="m_lowerBodyProgressState" v="0" />
+            <u8 n="m_ragdollController" v="0" />
+            <u8 n="m_displacementMode" v="0" />
+            <u32 n="m_package" v="115510436" />
+            <u8 n="m_poseInfoForPMS" v="255" />
+          </obj>
+          <null n="CMoveDescriptor" />
+          <obj n="CTransitionLink" class="CTransitionLink" id="42">
+            <ver n="CTransitionLink" v="3" />
+            <ver n="CMoveObject" v="1" />
+            <f32 n="flBlendTime" v="0.3" />
+            <u32 n="dwBlendType" v="4278211602" />
+            <f32 n="flBlendRate" v="0.05" />
+            <ref n="m_ptr" id="4" />
+            <null n="m_group" />
+          </obj>
+          <null n="CTransitionLink" />
+          <null n="CNotInterruptibleLink" />
+          <ver n="CBaseAnimGroup" v="9" />
+          <f32 n="m_flAnimGroupValue" v="0" />
+          <null n="CAnimTech" />
+          <f32 n="m_headLookAtEnable" v="1" />
+          <u8 n="m_livePostureEnable" v="0" />
+          <s32 n="m_weaponOffsetMode" v="1" />
+          <u8 n="m_destructiveLookat" v="1" />
+          <ver n="CAxialBlendAnimGroup" v="4" />
+          <u8 n="m_scaleDuration" v="1" />
+          <f32 n="m_worldOffsetForLayer" v="1" />
+          <f32 n="m_flBlendOutTime" v="0.3" />
+        </obj>
+        <null n="CMoveDescriptor" />
+        <null n="CTransitionLink" />
+        <null n="CNotInterruptibleLink" />
+        <ver n="CMoveGroup" v="1" />
+        <u8 n="m_branchEnable" v="1" />
+      </obj>
+      <obj n="CMoveDescriptor" class="CLayeredAxialBlend" id="43">
+        <ver n="CLayeredAxialBlend" v="5" />
+        <u8 n="m_spliceBlendMode" v="1" />
+        <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+        <u8 n="m_eAxisValueID" v="2" />
+        <ver n="CMoveObject" v="1" />
+        <null n="CMoveCriteria" />
+        <ver n="CMoveDescriptorGroup" v="2" />
+        <obj n="CMoveDescriptor" class="CMoveDefParameter" id="44">
+          <ver n="CMoveDefParameter" v="25" />
+          <f32 n="m_flStartTime" v="0" />
+          <f32 n="m_flStopTime" v="0" />
+          <f32 n="m_flCutTime" v="0.03336346" />
+          <u32 n="m_dwBlendType" v="4278211602" />
+          <f32 n="m_flBlendTime" v="0.2666667" />
+          <f32 n="m_flMultiplier" v="1" />
+          <ver n="CMoveObject" v="1" />
+          <null n="CMoveCriteria" />
+          <ver n="CMoveDescriptorGroup" v="2" />
+          <null n="CMoveDescriptor" />
+          <null n="CTransitionLink" />
+          <null n="CNotInterruptibleLink" />
+          <ver n="CBaseAnimGroup" v="9" />
+          <f32 n="m_flAnimGroupValue" v="0" />
+          <obj n="CAnimTech" class="CAnimTechIKPath" id="45">
+            <ver n="CAnimTech" v="9" />
+            <ver n="CMoveObject" v="1" />
+            <f32 n="m_flStartTimeIn" v="0" />
+            <f32 n="m_flDurationIn" v="0.13333334" />
+            <f32 n="m_flStartTimeOut" v="0" />
+            <f32 n="m_flDurationOut" v="0.13333334" />
+            <u32 n="m_dwBlendTypeIn" v="4278211602" />
+            <u32 n="m_dwBlendTypeOut" v="4278211586" />
+            <s32 n="m_iParentID" v="-1" />
+            <u32 n="m_iModelHashNamePartID" v="115510436" />
+            <str n="m_partName" v="" />
+            <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+            <str n="m_parentBoneName.m_szName" v="L Hand" />
+          </obj>
+          <null n="CAnimTech" />
+          <f32 n="m_headLookAtEnable" v="1" />
+          <u8 n="m_livePostureEnable" v="0" />
+          <s32 n="m_weaponOffsetMode" v="1" />
+          <u8 n="m_destructiveLookat" v="1" />
+          <u8 n="m_fInterruptible" v="1" />
+          <u8 n="m_dropEventsOutsideRange" v="0" />
+          <f32 n="m_physicsMuscleIntensity" v="100" />
+          <s32 n="m_loopOverride" v="1" />
+          <u8 n="m_categoryOverride" v="255" />
+          <s32 n="m_cutBehaviour" v="0" />
+          <u8 n="m_motionOrientationCorrection" v="0" />
+          <f32 n="m_lastAnimDataDuration" v="-1" />
+          <u32 n="m_animNameHash" v="1149903661" />
+          <u8 n="m_bodyPartAvailability" v="255" />
+          <u8 n="m_lowerBodyProgressState" v="0" />
+          <u8 n="m_ragdollController" v="0" />
+          <u8 n="m_displacementMode" v="0" />
+          <u32 n="m_package" v="115510436" />
+          <u8 n="m_poseInfoForPMS" v="255" />
+        </obj>
+        <obj n="CMoveDescriptor" class="CMoveDefParameter" id="46">
+          <ver n="CMoveDefParameter" v="25" />
+          <f32 n="m_flStartTime" v="0" />
+          <f32 n="m_flStopTime" v="0" />
+          <f32 n="m_flCutTime" v="0.03333342" />
+          <u32 n="m_dwBlendType" v="4278211602" />
+          <f32 n="m_flBlendTime" v="0.266667" />
+          <f32 n="m_flMultiplier" v="1" />
+          <ver n="CMoveObject" v="1" />
+          <null n="CMoveCriteria" />
+          <ver n="CMoveDescriptorGroup" v="2" />
+          <null n="CMoveDescriptor" />
+          <null n="CTransitionLink" />
+          <null n="CNotInterruptibleLink" />
+          <ver n="CBaseAnimGroup" v="9" />
+          <f32 n="m_flAnimGroupValue" v="3.8" />
+          <obj n="CAnimTech" class="CAnimTechIKPath" id="47">
+            <ver n="CAnimTech" v="9" />
+            <ver n="CMoveObject" v="1" />
+            <f32 n="m_flStartTimeIn" v="0" />
+            <f32 n="m_flDurationIn" v="0.13333334" />
+            <f32 n="m_flStartTimeOut" v="0" />
+            <f32 n="m_flDurationOut" v="0.13333334" />
+            <u32 n="m_dwBlendTypeIn" v="4278211602" />
+            <u32 n="m_dwBlendTypeOut" v="4278211586" />
+            <s32 n="m_iParentID" v="-1" />
+            <u32 n="m_iModelHashNamePartID" v="115510436" />
+            <str n="m_partName" v="" />
+            <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+            <str n="m_parentBoneName.m_szName" v="L Hand" />
+          </obj>
+          <null n="CAnimTech" />
+          <f32 n="m_headLookAtEnable" v="1" />
+          <u8 n="m_livePostureEnable" v="0" />
+          <s32 n="m_weaponOffsetMode" v="1" />
+          <u8 n="m_destructiveLookat" v="1" />
+          <u8 n="m_fInterruptible" v="1" />
+          <u8 n="m_dropEventsOutsideRange" v="0" />
+          <f32 n="m_physicsMuscleIntensity" v="100" />
+          <s32 n="m_loopOverride" v="1" />
+          <u8 n="m_categoryOverride" v="255" />
+          <s32 n="m_cutBehaviour" v="0" />
+          <u8 n="m_motionOrientationCorrection" v="0" />
+          <f32 n="m_lastAnimDataDuration" v="0" />
+          <u32 n="m_animNameHash" v="811633698" />
+          <u8 n="m_bodyPartAvailability" v="255" />
+          <u8 n="m_lowerBodyProgressState" v="0" />
+          <u8 n="m_ragdollController" v="0" />
+          <u8 n="m_displacementMode" v="0" />
+          <u32 n="m_package" v="115510436" />
+          <u8 n="m_poseInfoForPMS" v="255" />
+        </obj>
+        <null n="CMoveDescriptor" />
+        <null n="CTransitionLink" />
+        <null n="CNotInterruptibleLink" />
+        <ver n="CBaseAnimGroup" v="9" />
+        <f32 n="m_flAnimGroupValue" v="0" />
+        <null n="CAnimTech" />
+        <f32 n="m_headLookAtEnable" v="1" />
+        <u8 n="m_livePostureEnable" v="0" />
+        <s32 n="m_weaponOffsetMode" v="1" />
+        <u8 n="m_destructiveLookat" v="1" />
+        <ver n="CAxialBlendAnimGroup" v="4" />
+        <u8 n="m_scaleDuration" v="1" />
+        <f32 n="m_worldOffsetForLayer" v="1" />
+        <f32 n="m_flBlendOutTime" v="0.3" />
+      </obj>
+      <null n="CMoveDescriptor" />
+      <null n="CTransitionLink" />
+      <null n="CNotInterruptibleLink" />
+      <ver n="CMoveGroup" v="1" />
+      <u8 n="m_branchEnable" v="1" />
+    </obj>
+    <obj n="CMoveDescriptor" class="CMoveGroup" id="48">
+      <ver n="CMoveObject" v="1" />
+      <obj n="CMoveCriteria" class="CMoveCriteriaEnumEqual" id="49">
+        <ver n="CMoveCriteriaEnum" v="1" />
+        <s32 n="m_Value" v="1" />
+        <ver n="CMoveCriteria" v="4" />
+        <u8 n="m_eValueID" v="46" />
+        <ver n="CMoveObject" v="1" />
+        <s32 n="m_logicOperator" v="0" />
+      </obj>
+      <null n="CMoveCriteria" />
+      <ver n="CMoveDescriptorGroup" v="2" />
+      <obj n="CMoveDescriptor" class="CLayeredParameter" id="50">
+        <ver n="CLayeredParameter" v="5" />
+        <s32 n="m_spliceBlendMode" v="1" />
+        <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+        <ver n="CMoveDefParameter" v="25" />
+        <f32 n="m_flStartTime" v="0" />
+        <f32 n="m_flStopTime" v="0" />
+        <f32 n="m_flCutTime" v="0.03336668" />
+        <u32 n="m_dwBlendType" v="4278211602" />
+        <f32 n="m_flBlendTime" v="0.3" />
+        <f32 n="m_flMultiplier" v="1" />
+        <ver n="CMoveObject" v="1" />
+        <obj n="CMoveCriteria" class="TMoveCriteriaIntv&lt;float&gt;" id="51">
+          <ver n="TMoveCriteriaIntv" v="2" />
+          <f32 n="m_LowerBound" v="0" />
+          <f32 n="m_UpperBound" v="0.01" />
+          <u8 n="m_inclusive" v="1" />
+          <ver n="CMoveCriteria" v="4" />
+          <u8 n="m_eValueID" v="2" />
+          <ver n="CMoveObject" v="1" />
+          <s32 n="m_logicOperator" v="0" />
+        </obj>
+        <null n="CMoveCriteria" />
+        <ver n="CMoveDescriptorGroup" v="2" />
+        <null n="CMoveDescriptor" />
+        <null n="CTransitionLink" />
+        <null n="CNotInterruptibleLink" />
+        <ver n="CBaseAnimGroup" v="9" />
+        <f32 n="m_flAnimGroupValue" v="0" />
+        <obj n="CAnimTech" class="CAnimTechIKPath" id="52">
+          <ver n="CAnimTech" v="9" />
+          <ver n="CMoveObject" v="1" />
+          <f32 n="m_flStartTimeIn" v="0" />
+          <f32 n="m_flDurationIn" v="0.13333334" />
+          <f32 n="m_flStartTimeOut" v="0" />
+          <f32 n="m_flDurationOut" v="0.13333334" />
+          <u32 n="m_dwBlendTypeIn" v="4278211602" />
+          <u32 n="m_dwBlendTypeOut" v="4278211586" />
+          <s32 n="m_iParentID" v="-1" />
+          <u32 n="m_iModelHashNamePartID" v="115510436" />
+          <str n="m_partName" v="" />
+          <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+          <str n="m_parentBoneName.m_szName" v="L Hand" />
+        </obj>
+        <null n="CAnimTech" />
+        <f32 n="m_headLookAtEnable" v="1" />
+        <u8 n="m_livePostureEnable" v="0" />
+        <s32 n="m_weaponOffsetMode" v="1" />
+        <u8 n="m_destructiveLookat" v="1" />
+        <u8 n="m_fInterruptible" v="1" />
+        <u8 n="m_dropEventsOutsideRange" v="0" />
+        <f32 n="m_physicsMuscleIntensity" v="100" />
+        <s32 n="m_loopOverride" v="2" />
+        <u8 n="m_categoryOverride" v="255" />
+        <s32 n="m_cutBehaviour" v="0" />
+        <u8 n="m_motionOrientationCorrection" v="0" />
+        <f32 n="m_lastAnimDataDuration" v="2" />
+        <u32 n="m_animNameHash" v="3262355269" />
+        <u8 n="m_bodyPartAvailability" v="255" />
+        <u8 n="m_lowerBodyProgressState" v="0" />
+        <u8 n="m_ragdollController" v="0" />
+        <u8 n="m_displacementMode" v="0" />
+        <u32 n="m_package" v="115510436" />
+        <u8 n="m_poseInfoForPMS" v="255" />
+        <f32 n="m_worldOffsetForLayer" v="1" />
+        <f32 n="m_flBlendOutTime" v="0" />
+      </obj>
+      <obj n="CMoveDescriptor" class="CMoveGroup" id="53">
+        <ver n="CMoveObject" v="1" />
+        <obj n="CMoveCriteria" class="TMoveCriteriaIntv&lt;float&gt;" id="54">
+          <ver n="TMoveCriteriaIntv" v="2" />
+          <f32 n="m_LowerBound" v="5.1" />
+          <f32 n="m_UpperBound" v="20" />
+          <u8 n="m_inclusive" v="1" />
+          <ver n="CMoveCriteria" v="4" />
+          <u8 n="m_eValueID" v="2" />
+          <ver n="CMoveObject" v="1" />
+          <s32 n="m_logicOperator" v="0" />
+        </obj>
+        <null n="CMoveCriteria" />
+        <ver n="CMoveDescriptorGroup" v="2" />
+        <obj n="CMoveDescriptor" class="CLayeredParameter" id="55">
+          <ver n="CLayeredParameter" v="5" />
+          <s32 n="m_spliceBlendMode" v="1" />
+          <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+          <ver n="CMoveDefParameter" v="25" />
+          <f32 n="m_flStartTime" v="0" />
+          <f32 n="m_flStopTime" v="0" />
+          <f32 n="m_flCutTime" v="0.03336668" />
+          <u32 n="m_dwBlendType" v="4278211602" />
+          <f32 n="m_flBlendTime" v="0.266667" />
+          <f32 n="m_flMultiplier" v="1" />
+          <ver n="CMoveObject" v="1" />
+          <null n="CMoveCriteria" />
+          <ver n="CMoveDescriptorGroup" v="2" />
+          <null n="CMoveDescriptor" />
+          <null n="CTransitionLink" />
+          <null n="CNotInterruptibleLink" />
+          <ver n="CBaseAnimGroup" v="9" />
+          <f32 n="m_flAnimGroupValue" v="0" />
+          <obj n="CAnimTech" class="CAnimTechIKPath" id="56">
+            <ver n="CAnimTech" v="9" />
+            <ver n="CMoveObject" v="1" />
+            <f32 n="m_flStartTimeIn" v="0" />
+            <f32 n="m_flDurationIn" v="0.13333334" />
+            <f32 n="m_flStartTimeOut" v="0" />
+            <f32 n="m_flDurationOut" v="0.13333334" />
+            <u32 n="m_dwBlendTypeIn" v="4278211602" />
+            <u32 n="m_dwBlendTypeOut" v="4278211586" />
+            <s32 n="m_iParentID" v="-1" />
+            <u32 n="m_iModelHashNamePartID" v="115510436" />
+            <str n="m_partName" v="" />
+            <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+            <str n="m_parentBoneName.m_szName" v="L Hand" />
+          </obj>
+          <null n="CAnimTech" />
+          <f32 n="m_headLookAtEnable" v="1" />
+          <u8 n="m_livePostureEnable" v="0" />
+          <s32 n="m_weaponOffsetMode" v="1" />
+          <u8 n="m_destructiveLookat" v="1" />
+          <u8 n="m_fInterruptible" v="1" />
+          <u8 n="m_dropEventsOutsideRange" v="0" />
+          <f32 n="m_physicsMuscleIntensity" v="100" />
+          <s32 n="m_loopOverride" v="1" />
+          <u8 n="m_categoryOverride" v="255" />
+          <s32 n="m_cutBehaviour" v="0" />
+          <u8 n="m_motionOrientationCorrection" v="0" />
+          <f32 n="m_lastAnimDataDuration" v="0.6" />
+          <u32 n="m_animNameHash" v="4067870413" />
+          <u8 n="m_bodyPartAvailability" v="255" />
+          <u8 n="m_lowerBodyProgressState" v="0" />
+          <u8 n="m_ragdollController" v="0" />
+          <u8 n="m_displacementMode" v="0" />
+          <u32 n="m_package" v="115510436" />
+          <u8 n="m_poseInfoForPMS" v="255" />
+          <f32 n="m_worldOffsetForLayer" v="1" />
+          <f32 n="m_flBlendOutTime" v="0.266667" />
+        </obj>
+        <null n="CMoveDescriptor" />
+        <null n="CTransitionLink" />
+        <null n="CNotInterruptibleLink" />
+        <ver n="CMoveGroup" v="1" />
+        <u8 n="m_branchEnable" v="1" />
+      </obj>
+      <obj n="CMoveDescriptor" class="CLayeredAxialBlend" id="57">
+        <ver n="CLayeredAxialBlend" v="5" />
+        <u8 n="m_spliceBlendMode" v="1" />
+        <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+        <u8 n="m_eAxisValueID" v="2" />
+        <ver n="CMoveObject" v="1" />
+        <null n="CMoveCriteria" />
+        <ver n="CMoveDescriptorGroup" v="2" />
+        <obj n="CMoveDescriptor" class="CMoveDefParameter" id="58">
+          <ver n="CMoveDefParameter" v="25" />
+          <f32 n="m_flStartTime" v="0" />
+          <f32 n="m_flStopTime" v="0" />
+          <f32 n="m_flCutTime" v="0.03336668" />
+          <u32 n="m_dwBlendType" v="4278211602" />
+          <f32 n="m_flBlendTime" v="0.333333" />
+          <f32 n="m_flMultiplier" v="1" />
+          <ver n="CMoveObject" v="1" />
+          <null n="CMoveCriteria" />
+          <ver n="CMoveDescriptorGroup" v="2" />
+          <null n="CMoveDescriptor" />
+          <null n="CTransitionLink" />
+          <null n="CNotInterruptibleLink" />
+          <ver n="CBaseAnimGroup" v="9" />
+          <f32 n="m_flAnimGroupValue" v="0" />
+          <obj n="CAnimTech" class="CAnimTechIKPath" id="59">
+            <ver n="CAnimTech" v="9" />
+            <ver n="CMoveObject" v="1" />
+            <f32 n="m_flStartTimeIn" v="0" />
+            <f32 n="m_flDurationIn" v="0.13333334" />
+            <f32 n="m_flStartTimeOut" v="0" />
+            <f32 n="m_flDurationOut" v="0.13333334" />
+            <u32 n="m_dwBlendTypeIn" v="4278211602" />
+            <u32 n="m_dwBlendTypeOut" v="4278211586" />
+            <s32 n="m_iParentID" v="-1" />
+            <u32 n="m_iModelHashNamePartID" v="115510436" />
+            <str n="m_partName" v="" />
+            <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+            <str n="m_parentBoneName.m_szName" v="L Hand" />
+          </obj>
+          <null n="CAnimTech" />
+          <f32 n="m_headLookAtEnable" v="1" />
+          <u8 n="m_livePostureEnable" v="0" />
+          <s32 n="m_weaponOffsetMode" v="1" />
+          <u8 n="m_destructiveLookat" v="1" />
+          <u8 n="m_fInterruptible" v="1" />
+          <u8 n="m_dropEventsOutsideRange" v="0" />
+          <f32 n="m_physicsMuscleIntensity" v="100" />
+          <s32 n="m_loopOverride" v="1" />
+          <u8 n="m_categoryOverride" v="255" />
+          <s32 n="m_cutBehaviour" v="0" />
+          <u8 n="m_motionOrientationCorrection" v="0" />
+          <f32 n="m_lastAnimDataDuration" v="2" />
+          <u32 n="m_animNameHash" v="3262355269" />
+          <u8 n="m_bodyPartAvailability" v="255" />
+          <u8 n="m_lowerBodyProgressState" v="0" />
+          <u8 n="m_ragdollController" v="0" />
+          <u8 n="m_displacementMode" v="0" />
+          <u32 n="m_package" v="115510436" />
+          <u8 n="m_poseInfoForPMS" v="255" />
+        </obj>
+        <obj n="CMoveDescriptor" class="CMoveDefParameter" id="60">
+          <ver n="CMoveDefParameter" v="25" />
+          <f32 n="m_flStartTime" v="0" />
+          <f32 n="m_flStopTime" v="0" />
+          <f32 n="m_flCutTime" v="0.03336668" />
+          <u32 n="m_dwBlendType" v="4278211602" />
+          <f32 n="m_flBlendTime" v="0.333333" />
+          <f32 n="m_flMultiplier" v="1" />
+          <ver n="CMoveObject" v="1" />
+          <null n="CMoveCriteria" />
+          <ver n="CMoveDescriptorGroup" v="2" />
+          <null n="CMoveDescriptor" />
+          <null n="CTransitionLink" />
+          <null n="CNotInterruptibleLink" />
+          <ver n="CBaseAnimGroup" v="9" />
+          <f32 n="m_flAnimGroupValue" v="3.8" />
+          <obj n="CAnimTech" class="CAnimTechIKPath" id="61">
+            <ver n="CAnimTech" v="9" />
+            <ver n="CMoveObject" v="1" />
+            <f32 n="m_flStartTimeIn" v="0" />
+            <f32 n="m_flDurationIn" v="0.13333334" />
+            <f32 n="m_flStartTimeOut" v="0" />
+            <f32 n="m_flDurationOut" v="0.13333334" />
+            <u32 n="m_dwBlendTypeIn" v="4278211602" />
+            <u32 n="m_dwBlendTypeOut" v="4278211586" />
+            <s32 n="m_iParentID" v="-1" />
+            <u32 n="m_iModelHashNamePartID" v="115510436" />
+            <str n="m_partName" v="" />
+            <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+            <str n="m_parentBoneName.m_szName" v="L Hand" />
+          </obj>
+          <null n="CAnimTech" />
+          <f32 n="m_headLookAtEnable" v="1" />
+          <u8 n="m_livePostureEnable" v="0" />
+          <s32 n="m_weaponOffsetMode" v="1" />
+          <u8 n="m_destructiveLookat" v="1" />
+          <u8 n="m_fInterruptible" v="1" />
+          <u8 n="m_dropEventsOutsideRange" v="0" />
+          <f32 n="m_physicsMuscleIntensity" v="100" />
+          <s32 n="m_loopOverride" v="1" />
+          <u8 n="m_categoryOverride" v="255" />
+          <s32 n="m_cutBehaviour" v="0" />
+          <u8 n="m_motionOrientationCorrection" v="0" />
+          <f32 n="m_lastAnimDataDuration" v="1" />
+          <u32 n="m_animNameHash" v="2546516321" />
+          <u8 n="m_bodyPartAvailability" v="255" />
+          <u8 n="m_lowerBodyProgressState" v="0" />
+          <u8 n="m_ragdollController" v="0" />
+          <u8 n="m_displacementMode" v="0" />
+          <u32 n="m_package" v="115510436" />
+          <u8 n="m_poseInfoForPMS" v="255" />
+        </obj>
+        <null n="CMoveDescriptor" />
+        <null n="CTransitionLink" />
+        <null n="CNotInterruptibleLink" />
+        <ver n="CBaseAnimGroup" v="9" />
+        <f32 n="m_flAnimGroupValue" v="0" />
+        <null n="CAnimTech" />
+        <f32 n="m_headLookAtEnable" v="1" />
+        <u8 n="m_livePostureEnable" v="0" />
+        <s32 n="m_weaponOffsetMode" v="1" />
+        <u8 n="m_destructiveLookat" v="1" />
+        <ver n="CAxialBlendAnimGroup" v="4" />
+        <u8 n="m_scaleDuration" v="1" />
+        <f32 n="m_worldOffsetForLayer" v="1" />
+        <f32 n="m_flBlendOutTime" v="0.3" />
+      </obj>
+      <null n="CMoveDescriptor" />
+      <null n="CTransitionLink" />
+      <null n="CNotInterruptibleLink" />
+      <ver n="CMoveGroup" v="1" />
+      <u8 n="m_branchEnable" v="1" />
+    </obj>
+    <obj n="CMoveDescriptor" class="CMoveGroup" id="62">
+      <ver n="CMoveObject" v="1" />
+      <obj n="CMoveCriteria" class="CMoveCriteriaEnumEqual" id="63">
+        <ver n="CMoveCriteriaEnum" v="1" />
+        <s32 n="m_Value" v="2" />
+        <ver n="CMoveCriteria" v="4" />
+        <u8 n="m_eValueID" v="46" />
+        <ver n="CMoveObject" v="1" />
+        <s32 n="m_logicOperator" v="0" />
+      </obj>
+      <null n="CMoveCriteria" />
+      <ver n="CMoveDescriptorGroup" v="2" />
+      <obj n="CMoveDescriptor" class="CMoveGroup" id="64">
+        <ver n="CMoveObject" v="1" />
+        <obj n="CMoveCriteria" class="TMoveCriteriaIntv&lt;float&gt;" id="65">
+          <ver n="TMoveCriteriaIntv" v="2" />
+          <f32 n="m_LowerBound" v="0" />
+          <f32 n="m_UpperBound" v="0.01" />
+          <u8 n="m_inclusive" v="1" />
+          <ver n="CMoveCriteria" v="4" />
+          <u8 n="m_eValueID" v="2" />
+          <ver n="CMoveObject" v="1" />
+          <s32 n="m_logicOperator" v="0" />
+        </obj>
+        <null n="CMoveCriteria" />
+        <ver n="CMoveDescriptorGroup" v="2" />
+        <obj n="CMoveDescriptor" class="CLayeredParameter" id="66">
+          <ver n="CLayeredParameter" v="5" />
+          <s32 n="m_spliceBlendMode" v="1" />
+          <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+          <ver n="CMoveDefParameter" v="25" />
+          <f32 n="m_flStartTime" v="0" />
+          <f32 n="m_flStopTime" v="0" />
+          <f32 n="m_flCutTime" v="0.03336668" />
+          <u32 n="m_dwBlendType" v="4278211602" />
+          <f32 n="m_flBlendTime" v="0.3" />
+          <f32 n="m_flMultiplier" v="1" />
+          <ver n="CMoveObject" v="1" />
+          <null n="CMoveCriteria" />
+          <ver n="CMoveDescriptorGroup" v="2" />
+          <null n="CMoveDescriptor" />
+          <null n="CTransitionLink" />
+          <null n="CNotInterruptibleLink" />
+          <ver n="CBaseAnimGroup" v="9" />
+          <f32 n="m_flAnimGroupValue" v="0" />
+          <obj n="CAnimTech" class="CAnimTechIKPath" id="67">
+            <ver n="CAnimTech" v="9" />
+            <ver n="CMoveObject" v="1" />
+            <f32 n="m_flStartTimeIn" v="0" />
+            <f32 n="m_flDurationIn" v="0.13333334" />
+            <f32 n="m_flStartTimeOut" v="0" />
+            <f32 n="m_flDurationOut" v="0.13333334" />
+            <u32 n="m_dwBlendTypeIn" v="4278211602" />
+            <u32 n="m_dwBlendTypeOut" v="4278211586" />
+            <s32 n="m_iParentID" v="-1" />
+            <u32 n="m_iModelHashNamePartID" v="115510436" />
+            <str n="m_partName" v="" />
+            <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+            <str n="m_parentBoneName.m_szName" v="L Hand" />
+          </obj>
+          <null n="CAnimTech" />
+          <f32 n="m_headLookAtEnable" v="1" />
+          <u8 n="m_livePostureEnable" v="0" />
+          <s32 n="m_weaponOffsetMode" v="1" />
+          <u8 n="m_destructiveLookat" v="1" />
+          <u8 n="m_fInterruptible" v="1" />
+          <u8 n="m_dropEventsOutsideRange" v="0" />
+          <f32 n="m_physicsMuscleIntensity" v="100" />
+          <s32 n="m_loopOverride" v="2" />
+          <u8 n="m_categoryOverride" v="255" />
+          <s32 n="m_cutBehaviour" v="0" />
+          <u8 n="m_motionOrientationCorrection" v="0" />
+          <f32 n="m_lastAnimDataDuration" v="2" />
+          <u32 n="m_animNameHash" v="3262355269" />
+          <u8 n="m_bodyPartAvailability" v="255" />
+          <u8 n="m_lowerBodyProgressState" v="0" />
+          <u8 n="m_ragdollController" v="0" />
+          <u8 n="m_displacementMode" v="0" />
+          <u32 n="m_package" v="115510436" />
+          <u8 n="m_poseInfoForPMS" v="255" />
+          <f32 n="m_worldOffsetForLayer" v="1" />
+          <f32 n="m_flBlendOutTime" v="0" />
+        </obj>
+        <null n="CMoveDescriptor" />
+        <null n="CTransitionLink" />
+        <null n="CNotInterruptibleLink" />
+        <ver n="CMoveGroup" v="1" />
+        <u8 n="m_branchEnable" v="1" />
+      </obj>
+      <obj n="CMoveDescriptor" class="CLayeredAxialBlend" id="68">
+        <ver n="CLayeredAxialBlend" v="5" />
+        <u8 n="m_spliceBlendMode" v="1" />
+        <data n="m_rgflBoneWeights" hex="646464C8C8C8C8C8C8C8C8C86464646464646464C8C8C8C8C8646464646464" />
+        <u8 n="m_eAxisValueID" v="2" />
+        <ver n="CMoveObject" v="1" />
+        <null n="CMoveCriteria" />
+        <ver n="CMoveDescriptorGroup" v="2" />
+        <obj n="CMoveDescriptor" class="CMoveDefParameter" id="69">
+          <ver n="CMoveDefParameter" v="25" />
+          <f32 n="m_flStartTime" v="0" />
+          <f32 n="m_flStopTime" v="0" />
+          <f32 n="m_flCutTime" v="0.03336668" />
+          <u32 n="m_dwBlendType" v="4278211602" />
+          <f32 n="m_flBlendTime" v="0.333333" />
+          <f32 n="m_flMultiplier" v="1" />
+          <ver n="CMoveObject" v="1" />
+          <null n="CMoveCriteria" />
+          <ver n="CMoveDescriptorGroup" v="2" />
+          <null n="CMoveDescriptor" />
+          <null n="CTransitionLink" />
+          <null n="CNotInterruptibleLink" />
+          <ver n="CBaseAnimGroup" v="9" />
+          <f32 n="m_flAnimGroupValue" v="0" />
+          <obj n="CAnimTech" class="CAnimTechIKPath" id="70">
+            <ver n="CAnimTech" v="9" />
+            <ver n="CMoveObject" v="1" />
+            <f32 n="m_flStartTimeIn" v="0" />
+            <f32 n="m_flDurationIn" v="0.13333334" />
+            <f32 n="m_flStartTimeOut" v="0" />
+            <f32 n="m_flDurationOut" v="0.13333334" />
+            <u32 n="m_dwBlendTypeIn" v="4278211602" />
+            <u32 n="m_dwBlendTypeOut" v="4278211586" />
+            <s32 n="m_iParentID" v="-1" />
+            <u32 n="m_iModelHashNamePartID" v="115510436" />
+            <str n="m_partName" v="" />
+            <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+            <str n="m_parentBoneName.m_szName" v="L Hand" />
+          </obj>
+          <null n="CAnimTech" />
+          <f32 n="m_headLookAtEnable" v="1" />
+          <u8 n="m_livePostureEnable" v="0" />
+          <s32 n="m_weaponOffsetMode" v="1" />
+          <u8 n="m_destructiveLookat" v="1" />
+          <u8 n="m_fInterruptible" v="1" />
+          <u8 n="m_dropEventsOutsideRange" v="0" />
+          <f32 n="m_physicsMuscleIntensity" v="100" />
+          <s32 n="m_loopOverride" v="1" />
+          <u8 n="m_categoryOverride" v="255" />
+          <s32 n="m_cutBehaviour" v="0" />
+          <u8 n="m_motionOrientationCorrection" v="0" />
+          <f32 n="m_lastAnimDataDuration" v="2" />
+          <u32 n="m_animNameHash" v="3262355269" />
+          <u8 n="m_bodyPartAvailability" v="255" />
+          <u8 n="m_lowerBodyProgressState" v="0" />
+          <u8 n="m_ragdollController" v="0" />
+          <u8 n="m_displacementMode" v="0" />
+          <u32 n="m_package" v="115510436" />
+          <u8 n="m_poseInfoForPMS" v="255" />
+        </obj>
+        <obj n="CMoveDescriptor" class="CMoveDefParameter" id="71">
+          <ver n="CMoveDefParameter" v="25" />
+          <f32 n="m_flStartTime" v="0" />
+          <f32 n="m_flStopTime" v="0" />
+          <f32 n="m_flCutTime" v="0.03336668" />
+          <u32 n="m_dwBlendType" v="4278211602" />
+          <f32 n="m_flBlendTime" v="0.333333" />
+          <f32 n="m_flMultiplier" v="1" />
+          <ver n="CMoveObject" v="1" />
+          <null n="CMoveCriteria" />
+          <ver n="CMoveDescriptorGroup" v="2" />
+          <null n="CMoveDescriptor" />
+          <null n="CTransitionLink" />
+          <null n="CNotInterruptibleLink" />
+          <ver n="CBaseAnimGroup" v="9" />
+          <f32 n="m_flAnimGroupValue" v="3.8" />
+          <obj n="CAnimTech" class="CAnimTechIKPath" id="72">
+            <ver n="CAnimTech" v="9" />
+            <ver n="CMoveObject" v="1" />
+            <f32 n="m_flStartTimeIn" v="0" />
+            <f32 n="m_flDurationIn" v="0.13333334" />
+            <f32 n="m_flStartTimeOut" v="0" />
+            <f32 n="m_flDurationOut" v="0.13333334" />
+            <u32 n="m_dwBlendTypeIn" v="4278211602" />
+            <u32 n="m_dwBlendTypeOut" v="4278211586" />
+            <s32 n="m_iParentID" v="-1" />
+            <u32 n="m_iModelHashNamePartID" v="115510436" />
+            <str n="m_partName" v="" />
+            <u32 n="m_parentBoneName.m_nHashValue" v="2928506397" />
+            <str n="m_parentBoneName.m_szName" v="L Hand" />
+          </obj>
+          <null n="CAnimTech" />
+          <f32 n="m_headLookAtEnable" v="1" />
+          <u8 n="m_livePostureEnable" v="0" />
+          <s32 n="m_weaponOffsetMode" v="1" />
+          <u8 n="m_destructiveLookat" v="1" />
+          <u8 n="m_fInterruptible" v="1" />
+          <u8 n="m_dropEventsOutsideRange" v="0" />
+          <f32 n="m_physicsMuscleIntensity" v="100" />
+          <s32 n="m_loopOverride" v="1" />
+          <u8 n="m_categoryOverride" v="255" />
+          <s32 n="m_cutBehaviour" v="0" />
+          <u8 n="m_motionOrientationCorrection" v="0" />
+          <f32 n="m_lastAnimDataDuration" v="1" />
+          <u32 n="m_animNameHash" v="2546516321" />
+          <u8 n="m_bodyPartAvailability" v="255" />
+          <u8 n="m_lowerBodyProgressState" v="0" />
+          <u8 n="m_ragdollController" v="0" />
+          <u8 n="m_displacementMode" v="0" />
+          <u32 n="m_package" v="115510436" />
+          <u8 n="m_poseInfoForPMS" v="255" />
+        </obj>
+        <null n="CMoveDescriptor" />
+        <null n="CTransitionLink" />
+        <null n="CNotInterruptibleLink" />
+        <ver n="CBaseAnimGroup" v="9" />
+        <f32 n="m_flAnimGroupValue" v="0" />
+        <null n="CAnimTech" />
+        <f32 n="m_headLookAtEnable" v="1" />
+        <u8 n="m_livePostureEnable" v="0" />
+        <s32 n="m_weaponOffsetMode" v="1" />
+        <u8 n="m_destructiveLookat" v="1" />
+        <ver n="CAxialBlendAnimGroup" v="4" />
+        <u8 n="m_scaleDuration" v="1" />
+        <f32 n="m_worldOffsetForLayer" v="1" />
+        <f32 n="m_flBlendOutTime" v="0.3" />
+      </obj>
+      <null n="CMoveDescriptor" />
+      <null n="CTransitionLink" />
+      <null n="CNotInterruptibleLink" />
+      <ver n="CMoveGroup" v="1" />
+      <u8 n="m_branchEnable" v="1" />
+    </obj>
+    <null n="CMoveDescriptor" />
+    <null n="CTransitionLink" />
+    <null n="CNotInterruptibleLink" />
+    <ver n="CMoveGroup" v="1" />
+    <u8 n="m_branchEnable" v="1" />
+  </obj>
+</MoveBranch>

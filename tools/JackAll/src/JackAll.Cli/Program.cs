@@ -209,6 +209,16 @@ app.Configure(config =>
                 "Retarget the clips one weapon plays, from a map of old to new game paths. Only "
                 + "sites that weapon governs are rewritten; shared sites are reported, not touched.")
             .WithExample("move", "repoint", "movemgr.bin", "out.bin", "--weapon", "39", "--map", "vss.tsv");
+        move.AddCommand<MoveFragmentsCommand>("fragments")
+            .WithDescription(
+                "Write a MOVE graph out as per-state fragments a mod can stage, keeping only the "
+                + "states that differ from --base. Turns a 1.8 MB whole-file override into a diff.")
+            .WithExample("move", "fragments", "movemgr.bin", "--base", "vanilla.bin", "--out", "layer");
+        move.AddCommand<MoveAssembleCommand>("assemble")
+            .WithDescription(
+                "Splice a directory of per-state fragments back into a MOVE graph. Pass --expect to "
+                + "check the result against the binary the fragments came from.")
+            .WithExample("move", "assemble", "vanilla.bin", "layer", "--expect", "modded.bin");
         move.AddCommand<MoveHashCommand>("hash")
             .WithDescription("Print the CPathID a game path hashes to.")
             .WithExample("move", "hash", @"graphics\characters\clip.mab");

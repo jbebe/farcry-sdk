@@ -47,10 +47,13 @@ public sealed class MoveContainerSplitterTests
         Assert.True(at < 0, Fc2Corpus.DescribeDifference(path, original, rebuilt));
     }
 
-    /// <summary>Every listed row extracts, and nothing else does.</summary>
+    /// <summary>
+    /// Every listed row extracts, and nothing else does. A row is a unit: one per state, plus one per
+    /// weapon whose branches that state holds.
+    /// </summary>
     [Theory]
     [MemberData(nameof(CorpusFiles))]
-    public void Only_top_level_states_are_listed_as_fragments(string path)
+    public void Every_state_and_weapon_branch_is_listed_as_a_fragment(string path)
     {
         if (path.Length == 0) return;
 
@@ -58,14 +61,59 @@ public sealed class MoveContainerSplitterTests
         MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(original));
         IContainerTree tree = _splitter.Open(original);
 
-        Assert.Equal(index.TopLevelStates.Count(), tree.List().Count);
+        int expected = index.TopLevelStates.Sum(
+            s => MoveUnits.UnitsOf(s, MoveStateIndex.NameHashOf(s)!.Value).Count);
+        Assert.Equal(expected, tree.List().Count);
+        Assert.True(expected > index.TopLevelStates.Count(), "the corpus is expected to hold branches");
         Assert.All(tree.List(), row => Assert.NotNull(tree.Extract(row.Id)));
 
         foreach (MoveObject nested in index.Slots.Where(index.IsNested))
         {
             uint hash = MoveStateIndex.NameHashOf(nested)!.Value;
-            Assert.Null(tree.Extract(MoveContainerSplitter.IdOf(hash)));
+            Assert.Null(tree.Extract(MoveContainerSplitter.IdOf(new MoveUnit(hash, 0, null))));
         }
+    }
+
+    /// <summary>
+    /// The reason a whole state was the wrong unit. What a mod is forced to ship is the largest
+    /// fragment it touches, and splitting a state at its weapon branches has to bring that down.
+    /// </summary>
+    /// <remarks>
+    /// Measured: <c>movemgr.bin</c>'s worst case falls from 2,515 objects to 606, and the median unit
+    /// is 3. <c>dlc1.bin</c> improves far less - one state holds 3,992 of its 5,723 objects and most
+    /// of that is a single weapon's branch - so the claim worth pinning is the direction, not a
+    /// number that only the base graph meets.
+    /// </remarks>
+    [Theory]
+    [MemberData(nameof(CorpusFiles))]
+    public void Splitting_a_state_at_its_branches_shrinks_the_largest_fragment(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(original));
+        IContainerTree tree = _splitter.Open(original);
+
+        long largestUnit = tree.List().Max(r => r.Size);
+        long largestState = index.TopLevelStates.Max(Weigh);
+
+        Assert.True(
+            largestUnit < largestState,
+            $"largest unit {largestUnit} should be under the largest whole state {largestState}");
+    }
+
+    private static long Weigh(MoveObject node)
+    {
+        long total = 1;
+        foreach (MoveOp op in node.Ops)
+        {
+            if (op.Kind == MoveOpKind.PointerNew)
+            {
+                total += Weigh(op.Target!);
+            }
+        }
+
+        return total;
     }
 
     /// <summary>
@@ -120,7 +168,7 @@ public sealed class MoveContainerSplitterTests
                      $"<u32 n=\"m_stateNameHash\" v=\"{fresh}\" />");
 
         MoveStateIndex after = MoveStateIndex.Build(MoveCodec.Load(_splitter.Apply(
-            original, new Dictionary<string, string> { [MoveContainerSplitter.IdOf(fresh)] = clone })));
+            original, new Dictionary<string, string> { [MoveContainerSplitter.IdOf(new MoveUnit(fresh, 0, null))] = clone })));
 
         Assert.Equal(before.Slots.Count + 1, after.Slots.Count);
         Assert.Equal((uint)after.Slots.Count, after.StateMachine.Field("nbState"));
@@ -150,7 +198,7 @@ public sealed class MoveContainerSplitterTests
     [InlineData("dragunov.3882209901.xml")]
     [InlineData("anything at all.3882209901.xml")]
     public void Every_spelling_of_one_state_names_the_same_fragment(string id)
-        => Assert.Equal(3882209901u, MoveContainerSplitter.StateOf(id));
+        => Assert.Equal(3882209901u, MoveContainerSplitter.UnitOf(id));
 
     [Theory]
     [MemberData(nameof(CorpusFiles))]
@@ -160,9 +208,9 @@ public sealed class MoveContainerSplitterTests
 
         IContainerTree tree = _splitter.Open(File.ReadAllBytes(path));
         string bare = tree.List()[0].Id;
-        uint hash = MoveContainerSplitter.StateOf(bare)!.Value;
+        uint hash = MoveContainerSplitter.UnitOf(bare)!.Value;
 
-        Assert.Equal(tree.Extract(bare), tree.Extract(MoveContainerSplitter.IdOf(hash, "Pawn_Aim")));
+        Assert.Equal(tree.Extract(bare), tree.Extract(MoveContainerSplitter.IdOf(new MoveUnit(hash, 0, null), "Pawn_Aim")));
         Assert.True(FcbFragments.IdComparer.Equals(bare, $"Pawn_Aim.{hash}.xml"));
     }
 
@@ -204,19 +252,24 @@ public sealed class MoveContainerSplitterTests
         throw new InvalidOperationException("no fragment holds a uniquely-valued clip reference");
     }
 
-    /// <summary>A fragment with no reference leaving it, so a clone of it needs no re-seating.</summary>
+    /// <summary>
+    /// A state fragment that neither references outside itself nor keeps a weapon branch, so a clone
+    /// of it under a fresh name stands alone: nothing to re-seat, and no branch fragment to bring
+    /// along that would still be keyed to the original state.
+    /// </summary>
     private static (string Id, string Xml, uint Hash) FirstSelfContainedFragment(IContainerTree tree)
     {
         foreach (FcbFragmentInfo row in tree.List())
         {
             string xml = tree.Extract(row.Id)!;
-            if (!xml.Contains("<xref"))
+            if (xml.StartsWith("<MoveState", StringComparison.Ordinal)
+                && !xml.Contains("<xref") && !xml.Contains("<branch"))
             {
-                return (row.Id, xml, MoveContainerSplitter.StateOf(row.Id)!.Value);
+                return (row.Id, xml, MoveContainerSplitter.UnitOf(row.Id)!.Value);
             }
         }
 
-        throw new InvalidOperationException("every fragment references outside itself");
+        throw new InvalidOperationException("every state references outside itself or holds a branch");
     }
 
     private static string Between(string text, string open, string close)

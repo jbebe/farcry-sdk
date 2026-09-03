@@ -25,7 +25,7 @@ public sealed class MoveFragmentXmlTests
         int checked_ = 0;
         foreach (MoveObject state in index.TopLevelStates)
         {
-            string once = MoveFragmentXml.Render(MoveFragmentXml.Lift(index, state));
+            string once = MoveFragmentXml.Render(MoveFragmentXml.LiftState(index, state));
             string twice = MoveFragmentXml.Render(MoveFragmentXml.Parse(once));
             Assert.Equal(once, twice);
             checked_++;
@@ -48,7 +48,7 @@ public sealed class MoveFragmentXmlTests
 
         foreach (MoveObject state in index.TopLevelStates)
         {
-            MoveFragment lifted = MoveFragmentXml.Lift(index, state);
+            MoveFragment lifted = MoveFragmentXml.LiftState(index, state);
             MoveFragment parsed = MoveFragmentXml.Parse(MoveFragmentXml.Render(lifted));
 
             List<MoveObject> before = lifted.Objects();
@@ -79,8 +79,8 @@ public sealed class MoveFragmentXmlTests
 
         // The biggest state is the one most likely to reference outside itself.
         MoveObject biggest = index.TopLevelStates
-            .MaxBy(s => MoveFragmentXml.Lift(index, s).Objects().Count)!;
-        MoveFragment fragment = MoveFragmentXml.Lift(index, biggest);
+            .MaxBy(s => MoveFragmentXml.LiftState(index, s).Objects().Count)!;
+        MoveFragment fragment = MoveFragmentXml.LiftState(index, biggest);
         string xml = MoveFragmentXml.Render(fragment);
 
         // Local ids run 0..n-1 for this fragment alone, so none may reach the file's object count.
@@ -109,7 +109,7 @@ public sealed class MoveFragmentXmlTests
         int external = 0;
         foreach (MoveObject state in index.TopLevelStates)
         {
-            MoveFragment lifted = MoveFragmentXml.Lift(index, state);
+            MoveFragment lifted = MoveFragmentXml.LiftState(index, state);
             foreach (((MoveObject owner, int i), MoveAddress address) in lifted.External)
             {
                 Assert.Same(owner.Ops[i].Target, index.Resolve(address));

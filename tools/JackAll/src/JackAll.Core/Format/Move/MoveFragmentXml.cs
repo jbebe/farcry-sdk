@@ -5,34 +5,71 @@ using System.Xml;
 namespace JackAll.Core.Format.Move;
 
 /// <summary>
-/// One state and everything it owns, detached from the file it came from.
+/// One overridable piece of a graph, detached from the file it came from: either a state with its
+/// weapon branches elided, or all of one weapon's branches within a state.
 /// </summary>
 /// <remarks>
-/// <see cref="External"/> is what makes the subtree portable. A MOVE graph is a tree by ownership but
-/// not by reference: 753 of <c>movemgr.bin</c>'s back-references leave the state that holds them, and
-/// 687 of those land deep inside another state rather than on its root. Those cannot travel as
-/// pointers, so they travel as <see cref="MoveAddress"/> and are re-seated when the fragment is
-/// spliced back in.
+/// <see cref="External"/> is what makes a piece portable. A MOVE graph is a tree by ownership but not
+/// by reference - 753 of <c>movemgr.bin</c>'s back-references leave the state that holds them, and
+/// 687 of those land deep inside another state rather than on its root - and splitting a state again
+/// at its branches turns some of its internal references into crossings too. None of those can travel
+/// as pointers, so they travel as <see cref="MoveAddress"/> and are re-seated after assembly.
 /// </remarks>
-public sealed class MoveFragment(uint stateHash, MoveObject root)
+public sealed class MoveFragment(MoveUnit unit, List<MoveObject> roots)
 {
-    public uint StateHash { get; } = stateHash;
+    /// <summary>Stands in for an elided branch in a <em>parsed</em> remainder. Never written to a
+    /// binary: the writer has no layout for it, so an unassembled remainder fails loudly rather than
+    /// emitting nonsense.</summary>
+    public const string BranchPlaceholder = "#branch";
 
-    public MoveObject Root { get; } = root;
+    public MoveUnit Unit { get; } = unit;
+
+    /// <summary>One root for a state, several for a branch group.</summary>
+    public List<MoveObject> Roots { get; } = roots;
+
+    /// <summary>The field each root hung off, parallel to <see cref="Roots"/>; empty for a state.</summary>
+    public List<string> RootNames { get; } = [];
+
+    /// <summary>
+    /// The branch subtrees this fragment leaves out, when it was lifted from a live graph.
+    /// </summary>
+    /// <remarks>
+    /// Lifting never copies or mutates the graph - it walks the real objects and simply declines to
+    /// descend into these. A <em>parsed</em> remainder has no live subtree to decline, so it carries
+    /// <see cref="BranchPlaceholder"/> objects instead; both render identically.
+    /// </remarks>
+    public Dictionary<MoveObject, MoveUnit> Elided { get; } = [];
+
+    public uint StateHash => Unit.StateHash;
 
     /// <summary>Which pointer ops point out of this fragment, and at what.</summary>
     public Dictionary<(MoveObject Owner, int Index), MoveAddress> External { get; } = [];
 
-    /// <summary>Every object this fragment owns, in the order a reader recreates them.</summary>
+    /// <summary>
+    /// Every object this fragment owns, in the order a reader recreates them. An elided branch is not
+    /// one of them and consumes no id, so a remainder's ids do not depend on what its branches hold.
+    /// </summary>
     public List<MoveObject> Objects()
     {
         List<MoveObject> ordered = [];
-        Visit(Root, ordered);
+        foreach (MoveObject root in Roots)
+        {
+            Visit(root, ordered);
+        }
+
         return ordered;
     }
 
-    private static void Visit(MoveObject node, List<MoveObject> into)
+    public bool IsElided(MoveObject node)
+        => node.ClassName == BranchPlaceholder || Elided.ContainsKey(node);
+
+    private void Visit(MoveObject node, List<MoveObject> into)
     {
+        if (IsElided(node))
+        {
+            return;
+        }
+
         into.Add(node);
         foreach (MoveOp op in node.Ops)
         {
@@ -42,36 +79,156 @@ public sealed class MoveFragment(uint stateHash, MoveObject root)
             }
         }
     }
+
+    /// <summary>The unit an elided child belongs to, however this fragment happens to record it.</summary>
+    public uint BranchUnitId(MoveObject node)
+        => Elided.TryGetValue(node, out MoveUnit unit)
+            ? unit.Id
+            : node.Field("unit")
+              ?? throw new MoveFormatException("a branch placeholder with no unit");
 }
 
-/// <summary>Converts one state's subtree to and from the XML a mod stages.</summary>
+/// <summary>Converts one overridable piece of a graph to and from the XML a mod stages.</summary>
 /// <remarks>
-/// The vocabulary is <see cref="MoveXml"/>'s, so the two forms read alike, with two differences that
-/// exist so a fragment never carries whole-file layout:
+/// The vocabulary is <see cref="MoveXml"/>'s, so the two forms read alike, with three differences
+/// that exist so a fragment never carries whole-file layout:
 ///
 ///   - <c>id</c> is the object's position <em>within this fragment</em>, not in the file. A file
 ///     index shifts whenever anything earlier changes, which would churn every fragment on every
 ///     unrelated edit - the same reason a `depload` fragment omits <c>childIndex</c>.
 ///   - a reference leaving the fragment is <c>&lt;xref state="…" path="…"/&gt;</c> rather than
-///     <c>&lt;ref&gt;</c>.
+///     <c>&lt;ref&gt;</c>. The path is relative to the assembled state, so a reference between a
+///     state's remainder and one of its branches uses the same form as one to another state.
+///   - a weapon branch elided out of a state leaves <c>&lt;branch unit="…"/&gt;</c> behind. Sites are
+///     matched back up by pre-order, so no fragment records a position.
 ///
 /// See docs/docs/file-formats/move.md.
 /// </remarks>
 public static class MoveFragmentXml
 {
-    private const string RootName = "MoveState";
+    private const string StateRoot = "MoveState";
+    private const string BranchRoot = "MoveBranch";
 
-    /// <summary>Lifts one state out of a graph, turning every reference that leaves it into an
-    /// address.</summary>
-    public static MoveFragment Lift(MoveStateIndex index, MoveObject state)
+    /// <summary>Lifts a state out of a graph with its weapon branches elided.</summary>
+    public static MoveFragment LiftState(MoveStateIndex index, MoveObject state)
     {
         uint hash = MoveStateIndex.NameHashOf(state)
             ?? throw new MoveFormatException(
                 $"a {state.ClassName} with no m_stateNameHash cannot be a fragment");
 
-        MoveFragment fragment = new(hash, state);
-        HashSet<MoveObject> mine = [.. fragment.Objects()];
+        MoveFragment fragment = new(new MoveUnit(hash, 0, null), [state]);
+        foreach (MoveUnits.Site site in MoveUnits.BranchesOf(state, hash))
+        {
+            fragment.Elided[site.Branch] = site.Unit;
+        }
 
+        Record(index, fragment);
+        return fragment;
+    }
+
+    /// <summary>Lifts every branch of one weapon within a state.</summary>
+    public static MoveFragment LiftBranches(MoveStateIndex index, MoveObject state, MoveUnit unit)
+    {
+        List<MoveUnits.Site> sites =
+            [.. MoveUnits.BranchesOf(state, unit.StateHash).Where(s => s.Unit == unit)];
+        if (sites.Count == 0)
+        {
+            throw new MoveFormatException($"state {unit.StateHash:X8} has no branches for {unit}");
+        }
+
+        MoveFragment fragment = new(unit, [.. sites.Select(s => s.Branch)]);
+        fragment.RootNames.AddRange(sites.Select(s => s.Name));
+        Record(index, fragment);
+        return fragment;
+    }
+
+    /// <summary>
+    /// Puts a state back together from its remainder and its branch groups, returning the state and
+    /// every reference the pieces make outside themselves.
+    /// </summary>
+    /// <remarks>
+    /// Sites are matched to subtrees by pre-order - the k-th <c>&lt;branch unit="U"/&gt;</c> takes the
+    /// k-th root of U's fragment - so neither side records a position, and a fragment stays valid when
+    /// an unrelated branch of the same state grows or shrinks.
+    ///
+    /// Assembly runs <em>before</em> addresses are resolved, so a reference from a state's remainder
+    /// into one of its own branches is resolved against the finished state exactly like a reference
+    /// to another state. That is what lets one address space serve both.
+    /// </remarks>
+    public static (MoveObject State, List<(MoveObject Owner, int Index, MoveAddress Address)> External)
+        Assemble(MoveFragment remainder, IReadOnlyDictionary<uint, MoveFragment> branches)
+    {
+        Dictionary<uint, int> taken = [];
+        List<(MoveObject, int, MoveAddress)> external =
+            [.. remainder.External.Select(e => (e.Key.Owner, e.Key.Index, e.Value))];
+
+        Splice(remainder.Roots[0]);
+
+        foreach ((uint id, MoveFragment group) in branches)
+        {
+            if (taken.GetValueOrDefault(id) != group.Roots.Count)
+            {
+                throw new InvalidDataException(
+                    $"unit {id} supplies {group.Roots.Count} branches but state "
+                    + $"{remainder.StateHash} has {taken.GetValueOrDefault(id)} sites for it. Adding "
+                    + "or removing a branch means editing the state fragment too, so that its "
+                    + "<branch> markers still match.");
+            }
+        }
+
+        return (remainder.Roots[0], external);
+
+        void Splice(MoveObject node)
+        {
+            for (int i = 0; i < node.Ops.Count; i++)
+            {
+                MoveOp op = node.Ops[i];
+                if (op.Kind != MoveOpKind.PointerNew)
+                {
+                    continue;
+                }
+
+                if (!remainder.IsElided(op.Target!))
+                {
+                    Splice(op.Target!);
+                    continue;
+                }
+
+                uint id = remainder.BranchUnitId(op.Target!);
+                if (!branches.TryGetValue(id, out MoveFragment? group))
+                {
+                    throw new InvalidDataException(
+                        $"state {remainder.StateHash} keeps a branch in unit {id}, but no fragment "
+                        + "supplies it. Stage that unit alongside the state, or leave the state's "
+                        + "branch sites alone.");
+                }
+
+                int at = taken.GetValueOrDefault(id);
+                if (at >= group.Roots.Count)
+                {
+                    throw new InvalidDataException(
+                        $"unit {id} supplies {group.Roots.Count} branches but state "
+                        + $"{remainder.StateHash} has more sites for it. The two fragments disagree "
+                        + "about how many branches this weapon has.");
+                }
+
+                taken[id] = at + 1;
+                node.Ops[i] = op.WithTarget(group.Roots[at]);
+                if (at == 0)
+                {
+                    external.AddRange(
+                        group.External.Select(e => (e.Key.Owner, e.Key.Index, e.Value)));
+                }
+
+                Splice(group.Roots[at]);
+            }
+        }
+    }
+
+    /// <summary>Turns every reference leaving this fragment into an address.</summary>
+    private static void Record(MoveStateIndex index, MoveFragment fragment)
+    {
+        HashSet<MoveObject> mine = [.. fragment.Objects()];
         foreach (MoveObject obj in fragment.Objects())
         {
             for (int i = 0; i < obj.Ops.Count; i++)
@@ -84,12 +241,10 @@ public static class MoveFragmentXml
 
                 fragment.External[(obj, i)] = index.AddressOf(op.Target!)
                     ?? throw new MoveFormatException(
-                        $"state {hash:X8} references a {op.Target!.ClassName} that belongs to no "
+                        $"{fragment.Unit} references a {op.Target!.ClassName} that belongs to no "
                         + "state, which this format has no way to name");
             }
         }
-
-        return fragment;
     }
 
     public static string Render(MoveFragment fragment)
@@ -113,18 +268,46 @@ public static class MoveFragmentXml
             NewLineChars = Environment.NewLine,
             OmitXmlDeclaration = true,
         };
+
         using (XmlWriter writer = XmlWriter.Create(text, settings))
         {
-            writer.WriteStartElement(RootName);
-            writer.WriteAttributeString(
-                "state", fragment.StateHash.ToString(CultureInfo.InvariantCulture));
-            writer.WriteAttributeString("class", fragment.Root.ClassName);
-            WriteBody(writer, fragment, fragment.Root, ids);
+            MoveUnit unit = fragment.Unit;
+            if (unit.IsRemainder)
+            {
+                writer.WriteStartElement(StateRoot);
+                Attribute(writer, "state", unit.StateHash);
+                writer.WriteAttributeString("class", fragment.Roots[0].ClassName);
+                WriteBody(writer, fragment, fragment.Roots[0], ids);
+            }
+            else
+            {
+                writer.WriteStartElement(BranchRoot);
+                Attribute(writer, "unit", unit.Id);
+                Attribute(writer, "state", unit.StateHash);
+                Attribute(writer, "channel", (uint)unit.Channel);
+                Attribute(writer, "weapon", (uint)unit.Weapon!.Value);
+                for (int i = 0; i < fragment.Roots.Count; i++)
+                {
+                    MoveObject root = fragment.Roots[i];
+                    writer.WriteStartElement("obj");
+                    writer.WriteAttributeString(
+                        "n", i < fragment.RootNames.Count ? fragment.RootNames[i] : string.Empty);
+                    writer.WriteAttributeString("class", root.ClassName);
+                    writer.WriteAttributeString(
+                        "id", ids[root].ToString(CultureInfo.InvariantCulture));
+                    WriteBody(writer, fragment, root, ids);
+                    writer.WriteEndElement();
+                }
+            }
+
             writer.WriteEndElement();
         }
 
         return text.ToString();
     }
+
+    private static void Attribute(XmlWriter writer, string name, uint value)
+        => writer.WriteAttributeString(name, value.ToString(CultureInfo.InvariantCulture));
 
     private static void WriteBody(
         XmlWriter writer, MoveFragment fragment, MoveObject obj, Dictionary<MoveObject, int> ids)
@@ -145,6 +328,13 @@ public static class MoveFragmentXml
                     writer.WriteEndElement();
                     break;
 
+                case MoveOpKind.PointerNew when fragment.IsElided(op.Target!):
+                    writer.WriteStartElement("branch");
+                    writer.WriteAttributeString("n", op.Name);
+                    Attribute(writer, "unit", fragment.BranchUnitId(op.Target!));
+                    writer.WriteEndElement();
+                    break;
+
                 case MoveOpKind.PointerNew:
                     writer.WriteStartElement("obj");
                     writer.WriteAttributeString("n", op.Name);
@@ -160,8 +350,7 @@ public static class MoveFragmentXml
                     {
                         writer.WriteStartElement("xref");
                         writer.WriteAttributeString("n", op.Name);
-                        writer.WriteAttributeString(
-                            "state", address.StateHash.ToString(CultureInfo.InvariantCulture));
+                        Attribute(writer, "state", address.StateHash);
                         writer.WriteAttributeString("path", address.Path);
                     }
                     else
@@ -190,9 +379,11 @@ public static class MoveFragmentXml
         List<(MoveObject Owner, int Index, int TargetId)> pending = [];
         List<(MoveObject Owner, int Index, MoveAddress Address)> external = [];
         Stack<MoveObject> stack = new();
-        MoveObject? root = null;
+        List<MoveObject> roots = [];
+        List<string> rootNames = [];
         MoveObject? current = null;
-        uint stateHash = 0;
+        MoveUnit unit = default;
+        bool branchDocument = false;
 
         while (reader.Read())
         {
@@ -201,6 +392,10 @@ public static class MoveFragmentXml
                 if (reader.Name == "obj" && stack.Count > 0)
                 {
                     current = stack.Pop();
+                }
+                else if (reader.Name == "obj")
+                {
+                    current = null;
                 }
 
                 continue;
@@ -211,13 +406,39 @@ public static class MoveFragmentXml
                 continue;
             }
 
-            if (reader.Name == RootName)
+            if (reader.Name == StateRoot)
             {
-                stateHash = uint.Parse(
-                    Required(reader, "state"), NumberStyles.None, CultureInfo.InvariantCulture);
-                root = new MoveObject(Required(reader, "class"));
-                byId[0] = root;
-                current = root;
+                unit = new MoveUnit(Number(reader, "state"), 0, null);
+                MoveObject state = new(Required(reader, "class"));
+                byId[0] = state;
+                roots.Add(state);
+                current = state;
+                continue;
+            }
+
+            if (reader.Name == BranchRoot)
+            {
+                unit = new MoveUnit(
+                    Number(reader, "state"), (int)Number(reader, "channel"),
+                    (int)Number(reader, "weapon"));
+                branchDocument = true;
+                continue;
+            }
+
+            string name = reader.GetAttribute("n") ?? string.Empty;
+
+            // A branch document's top-level <obj>s are its roots, not children of anything.
+            if (branchDocument && current is null && reader.Name == "obj")
+            {
+                MoveObject root = new(Required(reader, "class"));
+                byId[int.Parse(Required(reader, "id"), CultureInfo.InvariantCulture)] = root;
+                roots.Add(root);
+                rootNames.Add(name);
+                if (!reader.IsEmptyElement)
+                {
+                    current = root;
+                }
+
                 continue;
             }
 
@@ -226,7 +447,6 @@ public static class MoveFragmentXml
                 throw new MoveFormatException($"<{reader.Name}> outside the fragment's root element");
             }
 
-            string name = reader.GetAttribute("n") ?? string.Empty;
             if (MoveXmlPrimitives.TryRead(reader, name) is { } leaf)
             {
                 current.Ops.Add(leaf);
@@ -247,6 +467,12 @@ public static class MoveFragmentXml
 
                     break;
 
+                case "branch":
+                    MoveObject marker = new(MoveFragment.BranchPlaceholder);
+                    marker.Ops.Add(MoveOp.Integer(MoveOpKind.U32, "unit", Number(reader, "unit")));
+                    current.Ops.Add(MoveOp.Pointer(MoveOpKind.PointerNew, name, marker));
+                    break;
+
                 case "null":
                     current.Ops.Add(MoveOp.Pointer(MoveOpKind.PointerNull, name, null));
                     break;
@@ -259,8 +485,7 @@ public static class MoveFragmentXml
 
                 case "xref":
                     external.Add((current, current.Ops.Count, new MoveAddress(
-                        uint.Parse(Required(reader, "state"), NumberStyles.None, CultureInfo.InvariantCulture),
-                        reader.GetAttribute("path") ?? string.Empty)));
+                        Number(reader, "state"), reader.GetAttribute("path") ?? string.Empty)));
                     current.Ops.Add(MoveOp.Pointer(MoveOpKind.PointerRef, name, null));
                     break;
 
@@ -269,12 +494,13 @@ public static class MoveFragmentXml
             }
         }
 
-        if (root is null)
+        if (roots.Count == 0)
         {
-            throw new MoveFormatException($"no <{RootName}> element");
+            throw new MoveFormatException($"no <{StateRoot}> or <{BranchRoot}> element");
         }
 
-        MoveFragment fragment = new(stateHash, root);
+        MoveFragment fragment = new(unit, roots);
+        fragment.RootNames.AddRange(rootNames);
         foreach ((MoveObject owner, int index, int targetId) in pending)
         {
             if (!byId.TryGetValue(targetId, out MoveObject? target))
@@ -292,6 +518,9 @@ public static class MoveFragmentXml
 
         return fragment;
     }
+
+    private static uint Number(XmlReader reader, string attribute)
+        => uint.Parse(Required(reader, attribute), NumberStyles.None, CultureInfo.InvariantCulture);
 
     private static string Required(XmlReader reader, string attribute)
         => reader.GetAttribute(attribute)

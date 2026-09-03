@@ -41,20 +41,25 @@ public sealed class MoveContainerSplitter : IContainerSplitter
         => Graphs.Contains(fileName, StringComparer.OrdinalIgnoreCase);
 
     /// <summary>
-    /// The fragment id a state is staged under: <c>&lt;label&gt;.&lt;hash decimal&gt;.xml</c>, or a
-    /// bare <c>&lt;hash&gt;.xml</c> when there is no name to read it by - which is the normal case,
-    /// since the loadable graph holds no names.
+    /// The fragment id a unit is staged under: <c>&lt;label&gt;.&lt;number decimal&gt;.xml</c>.
     /// </summary>
-    public static string IdOf(uint stateHash, string? name = null)
+    /// <remarks>
+    /// For a state the number is its <c>m_stateNameHash</c>; for a weapon branch it is the hash of
+    /// <see cref="MoveUnit.Key"/>, which is built only from engine-assigned values - the state's own
+    /// hash, the MOVE channel index, and the <c>EquippedWeapon</c> enum value. That keeps the
+    /// composite key inside the one thing <see cref="FcbFragments.IdComparer"/> can collapse, a
+    /// numeric tail, and it is the same "type hash that is itself a name hash" shape `depload` uses.
+    /// </remarks>
+    public static string IdOf(MoveUnit unit, string? name = null)
     {
-        string label = Sanitize(name);
-        return label.Length == 0 ? $"{stateHash}.xml" : $"{label}.{stateHash}.xml";
+        string label = Sanitize(name ?? unit.Label);
+        return label.Length == 0 ? $"{unit.Id}.xml" : $"{label}.{unit.Id}.xml";
     }
 
-    /// <summary>The state hash a fragment id names, read through the same canonicalization
+    /// <summary>The number a fragment id names, read through the same canonicalization
     /// <see cref="FcbFragments.IdComparer"/> keys on, so two ids that comparer calls equal resolve to
-    /// one state here too.</summary>
-    public static uint? StateOf(string fragmentId) => HashOf(fragmentId);
+    /// one unit here too.</summary>
+    public static uint? UnitOf(string fragmentId) => HashOf(fragmentId);
 
     private static uint? HashOf(string fragmentId)
     {
@@ -110,17 +115,21 @@ public sealed class MoveContainerSplitter : IContainerSplitter
 
         MoveFile file = MoveCodec.Load(baseBytes);
         MoveStateIndex index = MoveStateIndex.Build(file);
+        Dictionary<uint, MoveUnit> known = Catalogue(index);
 
-        Dictionary<uint, MoveFragment> staged = [];
+        // A staged unit belongs to a state; a state is rebuilt only once, from whichever of its units
+        // were staged plus the rest taken from the base graph.
+        Dictionary<uint, Dictionary<uint, MoveFragment>> byState = [];
         foreach ((string id, string xml) in fragmentXmlById)
         {
             MoveFragment fragment = MoveFragmentXml.Parse(xml);
-            if (HashOf(id) != fragment.StateHash)
+            uint unitId = fragment.Unit.Id;
+            if (HashOf(id) != unitId)
             {
                 throw new InvalidDataException(
-                    $"A MOVE fragment staged as '{id}' describes state {fragment.StateHash} instead. "
-                    + $"Name it '{IdOf(fragment.StateHash)}' - any label ahead of the number is yours "
-                    + "to choose - or fix the state it names.");
+                    $"A MOVE fragment staged as '{id}' describes {fragment.Unit} instead, which is "
+                    + $"{unitId}. Name it '{IdOf(fragment.Unit)}' - any label ahead of the number is "
+                    + "yours to choose - or fix what it names.");
             }
 
             if (index.ByHash(fragment.StateHash) is { } existing && index.IsNested(existing))
@@ -128,23 +137,23 @@ public sealed class MoveContainerSplitter : IContainerSplitter
                 throw new InvalidDataException(
                     $"State {fragment.StateHash} is not its own fragment: it is nested inside another "
                     + "state's subtree and travels with it. Override the top-level state that "
-                    + $"contains it ('{IdOf(TopLevelOwnerHash(index, existing))}') instead.");
+                    + $"contains it instead.");
             }
 
-            staged[fragment.StateHash] = fragment;
+            byState.TryAdd(fragment.StateHash, []);
+            byState[fragment.StateHash][unitId] = fragment;
         }
 
-        // Every reference that survives the splice but points into a state being replaced has to be
-        // re-seated afterwards, because the objects it names are about to be discarded. Capture them
-        // as addresses first: after the swap there is no way back from a dead pointer to what it meant.
-        HashSet<MoveObject> doomed = [];
-        foreach (uint hash in staged.Keys)
-        {
-            if (index.ByHash(hash) is { } state && !index.IsNested(state))
-            {
-                doomed.Add(state);
-            }
-        }
+        // Every reference that survives but points into a state being rebuilt has to be re-seated
+        // afterwards: the objects it names are about to be replaced. Capture them as addresses first,
+        // because after the swap there is no way back from a dead pointer to what it meant.
+        HashSet<MoveObject> doomed =
+        [
+            .. byState.Keys
+                .Select(index.ByHash)
+                .OfType<MoveObject>()
+                .Where(s => !index.IsNested(s)),
+        ];
 
         List<(MoveObject Owner, int Index, MoveAddress Address)> inbound = [];
         foreach (MoveObject obj in file.Objects)
@@ -165,24 +174,96 @@ public sealed class MoveContainerSplitter : IContainerSplitter
             }
         }
 
-        Rebuild(file, index, staged);
-        MoveStateIndex rebuilt = MoveStateIndex.Build(file);
-
-        foreach ((MoveObject owner, int at, MoveAddress address) in inbound)
+        List<(MoveObject Owner, int Index, MoveAddress Address)> pending = [];
+        Dictionary<uint, MoveObject> states = [];
+        foreach ((uint stateHash, Dictionary<uint, MoveFragment> units) in byState)
         {
-            owner.Ops[at] = owner.Ops[at].WithTarget(Seat(rebuilt, address, "a state it references"));
+            (MoveObject state, List<(MoveObject, int, MoveAddress)> external) =
+                AssembleState(index, known, stateHash, units);
+            states[stateHash] = state;
+            pending.AddRange(external);
         }
 
-        foreach (MoveFragment fragment in staged.Values)
+        Rebuild(file, index, states);
+        MoveStateIndex rebuilt = MoveStateIndex.Build(file);
+
+        foreach ((MoveObject owner, int at, MoveAddress address) in inbound.Concat(pending))
         {
-            foreach (((MoveObject owner, int at), MoveAddress address) in fragment.External)
-            {
-                owner.Ops[at] = owner.Ops[at].WithTarget(
-                    Seat(rebuilt, address, $"state {fragment.StateHash}"));
-            }
+            owner.Ops[at] = owner.Ops[at].WithTarget(Seat(rebuilt, address));
         }
 
         return MoveCodec.Save(file);
+    }
+
+    /// <summary>Every unit the base graph holds, by the number a fragment id resolves to.</summary>
+    private static Dictionary<uint, MoveUnit> Catalogue(MoveStateIndex index)
+    {
+        Dictionary<uint, MoveUnit> known = [];
+        foreach (MoveObject state in index.TopLevelStates)
+        {
+            if (MoveStateIndex.NameHashOf(state) is not { } hash)
+            {
+                continue;
+            }
+
+            foreach (MoveUnit unit in MoveUnits.UnitsOf(state, hash))
+            {
+                known[unit.Id] = unit;
+            }
+        }
+
+        return known;
+    }
+
+    /// <summary>
+    /// Rebuilds one state from the units a mod staged, taking every unit it did not stage from the
+    /// base graph. A mod that edits one weapon's branch never has to ship the state around it.
+    /// </summary>
+    private static (MoveObject State, List<(MoveObject, int, MoveAddress)> External) AssembleState(
+        MoveStateIndex index,
+        IReadOnlyDictionary<uint, MoveUnit> known,
+        uint stateHash,
+        IReadOnlyDictionary<uint, MoveFragment> staged)
+    {
+        MoveObject? original = index.ByHash(stateHash);
+        MoveFragment remainder;
+        if (staged.TryGetValue(stateHash, out MoveFragment? own))
+        {
+            remainder = own;
+        }
+        else if (original is not null)
+        {
+            remainder = MoveFragmentXml.LiftState(index, original);
+        }
+        else
+        {
+            throw new InvalidDataException(
+                $"A branch fragment names state {stateHash}, which this graph does not have. Stage "
+                + "the state itself alongside it.");
+        }
+
+        Dictionary<uint, MoveFragment> branches = [];
+        foreach ((uint id, MoveFragment fragment) in staged)
+        {
+            if (id != stateHash)
+            {
+                branches[id] = fragment;
+            }
+        }
+
+        // Units the mod left alone still have to be supplied, from the graph as it stands.
+        if (original is not null)
+        {
+            foreach (MoveUnit unit in MoveUnits.UnitsOf(original, stateHash))
+            {
+                if (!unit.IsRemainder && !branches.ContainsKey(unit.Id))
+                {
+                    branches[unit.Id] = MoveFragmentXml.LiftBranches(index, original, unit);
+                }
+            }
+        }
+
+        return MoveFragmentXml.Assemble(remainder, branches);
     }
 
     /// <summary>
@@ -198,7 +279,7 @@ public sealed class MoveContainerSplitter : IContainerSplitter
     /// not of distinct states: 13 of <c>movemgr.bin</c>'s 1,700 slots are such back-references.
     /// </remarks>
     private static void Rebuild(
-        MoveFile file, MoveStateIndex index, Dictionary<uint, MoveFragment> staged)
+        MoveFile file, MoveStateIndex index, Dictionary<uint, MoveObject> staged)
     {
         List<uint> order = [];
         List<MoveObject> roots = [];
@@ -211,16 +292,14 @@ public sealed class MoveContainerSplitter : IContainerSplitter
                 continue;
             }
 
-            roots.Add(staged.TryGetValue(hash, out MoveFragment? replacement)
-                ? replacement.Root
-                : slot);
+            roots.Add(staged.TryGetValue(hash, out MoveObject? replacement) ? replacement : slot);
         }
 
         HashSet<uint> known = [.. order];
         foreach (uint hash in staged.Keys.Where(h => !known.Contains(h)).Order())
         {
             order.Add(hash);
-            roots.Add(staged[hash].Root);
+            roots.Add(staged[hash]);
         }
 
         // Which object each hash now names, counting states nested inside a top-level one.
@@ -281,16 +360,13 @@ public sealed class MoveContainerSplitter : IContainerSplitter
         }
     }
 
-    private static MoveObject Seat(MoveStateIndex index, MoveAddress address, string who)
+    private static MoveObject Seat(MoveStateIndex index, MoveAddress address)
         => index.Resolve(address)
            ?? throw new InvalidDataException(
-               $"{who} points at {address}, which the rebuilt graph no longer has. A mod restructured "
-               + "that state - added, removed or reordered the objects under it - and broke a "
-               + "reference another state makes into it. Rebuild both together, or leave the "
-               + "referenced state's shape alone.");
-
-    private static uint TopLevelOwnerHash(MoveStateIndex index, MoveObject nested)
-        => MoveStateIndex.NameHashOf(index.StateOf(nested) ?? nested) ?? 0;
+               $"A reference points at {address}, which the rebuilt graph no longer has. A mod "
+               + "restructured that state - added, removed or reordered the objects under it - and "
+               + "broke a reference something else makes into it. Rebuild both together, or leave "
+               + "the referenced state's shape alone.");
 
     private sealed class Tree(MoveFile file) : IContainerTree
     {
@@ -298,20 +374,47 @@ public sealed class MoveContainerSplitter : IContainerSplitter
 
         public string? Extract(string fragmentId)
         {
-            if (HashOf(fragmentId) is not { } hash
-                || _index.ByHash(hash) is not { } state
-                || _index.IsNested(state))
+            if (HashOf(fragmentId) is not { } id || Find(id) is not var (state, unit))
             {
                 return null;
             }
 
-            return MoveFragmentXml.Render(MoveFragmentXml.Lift(_index, state));
+            return MoveFragmentXml.Render(unit.IsRemainder
+                ? MoveFragmentXml.LiftState(_index, state)
+                : MoveFragmentXml.LiftBranches(_index, state, unit));
+        }
+
+        /// <summary>The state and unit a fragment number names, searching states then their branches.</summary>
+        private (MoveObject State, MoveUnit Unit)? Find(uint id)
+        {
+            if (_index.ByHash(id) is { } direct && !_index.IsNested(direct))
+            {
+                return (direct, new MoveUnit(id, 0, null));
+            }
+
+            foreach (MoveObject state in _index.TopLevelStates)
+            {
+                if (MoveStateIndex.NameHashOf(state) is not { } hash)
+                {
+                    continue;
+                }
+
+                foreach (MoveUnit unit in MoveUnits.UnitsOf(state, hash))
+                {
+                    if (unit.Id == id)
+                    {
+                        return (state, unit);
+                    }
+                }
+            }
+
+            return null;
         }
 
         /// <summary>
-        /// One row per top-level state. The size is the subtree's object count rather than its
-        /// rendered length: a graph holds 22,000 objects across 1,687 states, and rendering every one
-        /// just to measure it would build 25 MB of text nobody reads.
+        /// One row per unit: every state, plus every weapon branch group inside it. The size is the
+        /// object count rather than the rendered length - a graph holds 22,000 objects, and rendering
+        /// every unit just to measure it would build 25 MB of text nobody reads.
         /// </summary>
         public IReadOnlyList<FcbFragmentInfo> List()
         {
@@ -323,20 +426,34 @@ public sealed class MoveContainerSplitter : IContainerSplitter
                     continue;
                 }
 
-                rows.Add(new FcbFragmentInfo(IdOf(hash), Weigh(state)));
+                IReadOnlyList<MoveUnits.Site> sites = MoveUnits.BranchesOf(state, hash);
+                HashSet<MoveObject> elided = [.. sites.Select(s => s.Branch)];
+                rows.Add(new FcbFragmentInfo(
+                    IdOf(new MoveUnit(hash, 0, null)), Weigh(state, elided)));
+
+                foreach (MoveUnit unit in sites.Select(s => s.Unit).Distinct())
+                {
+                    long size = sites.Where(s => s.Unit == unit).Sum(s => Weigh(s.Branch, []));
+                    rows.Add(new FcbFragmentInfo(IdOf(unit), size));
+                }
             }
 
             return rows;
         }
 
-        private static long Weigh(MoveObject node)
+        private static long Weigh(MoveObject node, HashSet<MoveObject> stopAt)
         {
+            if (stopAt.Contains(node))
+            {
+                return 0;
+            }
+
             long total = 1;
             foreach (MoveOp op in node.Ops)
             {
                 if (op.Kind == MoveOpKind.PointerNew)
                 {
-                    total += Weigh(op.Target!);
+                    total += Weigh(op.Target!, stopAt);
                 }
             }
 
