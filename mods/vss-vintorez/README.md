@@ -33,7 +33,7 @@ mods/graphics/weapons/special/dart_rifle/vss_worn_c.xbt     the worn control map
 mods/graphics/_materials/FBOIVIN2-M-2007050148031384.xbm    DART_RIFLE_METAL, repointed
 mods/ui/textures/hud/icons_weapons/hud_icon_sniperdart.xbt  the HUD and bazaar icon
 mods/ui/textures/guns/gun_icon_sniperdart.xbt               the multiplayer weapon select
-mods/languages/english/oasisstrings.rml                     the weapon's name, ten strings
+mods/languages/english/oasisstrings.rml/*.xml                 5 section fragments, ten strings
 mods/graphics/characters/.../vss_vintorez/...vssvi_i1.mab   the reload, at a new path
 mods/graphics/move/movemgr.bin/Pawn_Generic_*_w39.*.xml     17 MOVE fragments, clips repointed
 mods/soundbinary/004bf5e9.spk                               the shot, first person (stereo)

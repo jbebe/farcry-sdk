@@ -1,0 +1,48 @@
+<section name="Items">
+  <string enum="ak47" value="AK-47" />
+  <string enum="carl_gustaf" value="Carl G Rocket Launcher" />
+  <string enum="rpg-7" value="RPG-7 Rocket Launcher" />
+  <string enum="machete" value="Machete" />
+  <string enum="deserteagle" value="Eagle.50" />
+  <string enum="star45" value="Star .45" />
+  <string enum="makarov" value="Makarov" />
+  <string enum="mac10" value="MAC-10" />
+  <string enum="uzi" value="Uzi" />
+  <string enum="g3ka4" value="G3-KA4" />
+  <string enum="mp5" value="Silent MP-5" />
+  <string enum="fnfal" value="FAL Paratrooper" />
+  <string enum="usas12" value="USAS-12" />
+  <string enum="ithaca" value="Homeland 37" />
+  <string enum="spas12" value="SPAS-12" />
+  <string enum="m1903" value="M1903" />
+  <string enum="dragunov" value="Dragunov SVD" />
+  <string enum="as50" value="AS50" />
+  <string enum="lpo50" value="LPO-50" />
+  <string enum="m16" value="AR-16" />
+  <string enum="m249" value="M-249 SAW" />
+  <string enum="pkm" value="PKM" />
+  <string enum="m67" value="M-67 Grenade" />
+  <string enum="molotov" value="Molotov" />
+  <string enum="m79" value="M-79 Grenade Launcher" />
+  <string enum="dart_rifle" value="VSS Vintorez" />
+  <string enum="mgl140" value="MGL-140" />
+  <string enum="6p9" value="Silent Makarov 6P9" />
+  <string enum="ied" value="IED" />
+  <string enum="flare_gun" value="Flare Pistol" />
+  <string enum="mortar" value="Type 63 Mortar" />
+  <string enum="rover" value="Assault Truck" />
+  <string enum="buggy" value="Buggy" />
+  <string enum="swampboat" value="Swamp Boat" />
+  <string enum="fishingboat" value="Fishing Boat" />
+  <string enum="jeep_liberty" value="Jeep Liberty™" />
+  <string enum="jeep_wrangler" value="Jeep Wrangler™" />
+  <string enum="bigtruck" value="Big Truck" />
+  <string enum="datsun" value="Car" />
+  <string enum="camouflage" value="Camouflage" />
+  <string enum="basic_firstaid_kit" value="Basic First Aid Kit" />
+  <string enum="advanced_firstaid_kit" value="Advanced First Aid Kit" />
+  <string enum="secondary_weapon_crate" value="Secondary Weapon Crate" />
+  <string enum="primary_weapon_crate" value="Primary Weapon Crate" />
+  <string enum="special_weapon_crate" value="Special Weapon Crate" />
+  <string enum="syrette" value="Syrette" />
+</section>
