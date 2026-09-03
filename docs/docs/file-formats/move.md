@@ -795,6 +795,85 @@ backslashes and `.mab` extension included, so `move hash <path>` gives the value
 ones no known path hashes to, which is the check that catches a typo in a repoint map before it
 produces a graph that parses cleanly and plays nothing.
 
+### Splitting a graph for mods
+
+A mod that retargets one clip used to ship the whole 1.8 MB graph, and whole-file overrides are
+**last-wins and silent** — so two mods that each touched an animation could not coexist, and the
+loser was never told. JackAll now splits `movemgr.bin` and `dlc1.bin` into fragments the same way it
+splits `.fcb` and [`depload.dat`](./depload.md#editing), staged under the same
+`<container>.<ext>\<fragmentId>` convention.
+
+**The unit is not the state.** A state is the obvious split — 1,687 of them, each with a unique
+`m_stateNameHash` to key on — and it is wrong. The graph's big top-level states are shared containers
+holding one branch per weapon, so a weapon's clips live inside subtrees of thousands of objects. The
+VSS Vintorez changes **81 clip hashes, 324 bytes**, and per-state fragments cost **11.8 MB of XML** to
+say it, which is worse than the binary they replace.
+
+So a state splits again at its **weapon-pinned branches**: the outermost objects whose own
+`CMoveCriteriaEnumEqual` tests channel 17 (`EquippedWeapon`) or 18 (`DesiredWeapon`), with no pinned
+ancestor inside the state. Measured over `movemgr.bin`:
+
+| | per state | per weapon branch |
+|---|---:|---:|
+| units | 1,687 | 2,308 |
+| largest unit | 2,515 objects, 4.74 MB | **606 objects, 960 KB** |
+| median unit | 3 objects | 3 objects, 2.7 KB |
+| the VSS mod ships | 15 files, 11.8 MB | **17 files, 265 KB** |
+
+Only **43 of 1,687** states have pinned branches, so the rest are untouched by this. Branches
+themselves are small — 1,137 of them, median 4 objects, max 63.
+
+The independence is the point. Every one of the VSS mod's 17 fragments is named `…_w39`, so a mod
+retargeting the MGL-140 writes `…_w40` files and the two compose without either noticing.
+
+```
+mods\graphics\move\movemgr.bin\
+    state_f817501a_ch17_w39.1503244246.xml    everything state F817501A pins to weapon 39
+    state_ffce5970_ch18_w39.4037165567.xml    ... and what it pins to the weapon being drawn
+```
+
+A fragment id is `<label>.<number>.xml`, the scheme `depload` uses, so `FcbFragments.IdComparer`
+collapses the label and **the number is what binds**. For a state the number is its
+`m_stateNameHash`; for a branch group it is the hash of `movestate:<hash>:ch<channel>:w<weapon>` —
+three engine-assigned values and no positional component, which is what keeps a composite key inside
+the one thing the comparer can collapse, a numeric tail.
+
+That the number binds matters more here than anywhere else: the loadable graph carries **no state
+names at all**, so JackAll can only ever list a bare number, while an author holding
+`movemgrnamed.bin` knows `Pawn_Generic_Aim`.
+
+Three details the format forces:
+
+- **A fragment carries no file position.** Object ids restart at 0 within each fragment, exactly as a
+  `depload` fragment omits `childIndex` — a stream index shifts whenever anything earlier changes and
+  would churn every fragment on every unrelated edit.
+- **A reference leaving a fragment becomes an address**, `<xref state="…" path="…"/>`, where the path
+  is a chain of child ordinals from the state's root. It has to: **753** of `movemgr.bin`'s
+  back-references leave the state holding them, and **687 of those land deep inside another state**
+  rather than on its root, up to 29 levels down. A state is reassembled from its remainder and its
+  branches *before* addresses are resolved, so a reference between a state and its own branch uses
+  the same form as one to another state.
+- **Elided branches leave `<branch unit="…"/>` behind**, matched back up by pre-order. Neither side
+  records a position, so a fragment stays valid when an unrelated branch of the same state changes
+  size.
+
+```
+jackall-cli move fragments movemgr.bin --base <retail>.bin --out layer   # split, diffed
+jackall-cli move assemble <retail>.bin layer --expect movemgr.bin        # splice, and check
+```
+
+`move assemble --expect` is the honest gate on a fragment set: it rebuilds and compares against the
+binary the fragments came from. The VSS mod's 17 fragments reproduce its 1,858,293-byte graph
+**byte-for-byte**.
+
+:::note[`nbState` counts slots, not states]
+`movemgr.bin` declares `nbState = 1700` but holds **1,687** top-level states. The other 13 slots are
+back-references to states nested inside another state's subtree — they keep a slot but are not their
+own fragment, and travel inside whichever top-level state contains them. Anything rebuilding the
+machine's list has to preserve each slot's new-vs-reference nature and derive `nbState` from the
+slot count; deriving it from the number of distinct states emits 1,687 and corrupts the file.
+:::
+
 ### The pointer graph is the hard part
 
 Objects are addressed by **their position in registration order**, not by any stored id.

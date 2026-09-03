@@ -219,6 +219,59 @@ built**, as `IContainerSplitter`/`IContainerTree` with `FcbContainerSplitter` an
 `DepLoadContainerSplitter`. `stringtable` and `NewPartLib` remain the two additions this document
 called for; they now only need an implementation each, not a refactor.
 
+## Reopened: MOVE splits, and Rule 2 needed a second reading
+
+`movemgr.bin` was on neither list — not an approved split, not a recorded rejection. It is the last
+big shared file a mod could only override wholesale, and since whole-file overrides are last-wins and
+silent, two mods that each retargeted an animation could not coexist and the loser was never told.
+It splits now. The three gates, measured:
+
+| | measured |
+|---|---|
+| median loadable graph | **1,139 KB** (`movemgr.bin` 1,858,293 B, `dlc1.bin` 473,404 B) — clears Rule 1 by 11× |
+| identity | `m_stateNameHash`, a `CPathID`; **1,700 states, 1,700 distinct hashes, none missing** — the "type hash that is itself a name hash" the rule admits |
+| depth | see below — the state is *not* where it stops |
+
+**The interesting part is Rule 2, which the state passes and should not.** Per state the median unit
+is 3 objects and 94% land under 20 KB, so the rule says stop. Then the workload says otherwise: the
+graph's big top-level states are shared containers holding one branch per weapon, so the states a
+weapon mod actually edits are the tail, never the median. The VSS Vintorez changes **81 clip hashes,
+324 bytes**, and per-state fragments cost it **11.8 MB of XML** — worse than the 1.8 MB binary they
+replace, which defeats the point of splitting at all.
+
+So a state splits again, at its **weapon-pinned branches**: the outermost objects whose own
+`CMoveCriteriaEnumEqual` tests `EquippedWeapon` or `DesiredWeapon`.
+
+| | per state | per weapon branch |
+|---|---:|---:|
+| units | 1,687 | 2,308 |
+| largest | 2,515 objects, 4.74 MB | **606 objects, 960 KB** |
+| the VSS mod ships | 15 files, 11.8 MB | **17 files, 265 KB** |
+
+Only 43 of 1,687 states have branches, so this is a second key level for 2.5% of the container and no
+change at all for the rest. Every one of the VSS mod's 17 fragments is a weapon-39 branch, so a mod
+retargeting a different weapon writes disjoint files and the two compose silently — which is the
+independence the split exists for, delivered where per-state granularity could not.
+
+**The lesson worth keeping is about Rule 2, not about MOVE.** "Coarsest sub-unit whose *median* item
+lands under ~20 KB" silently assumes edits are spread like items are. Where a container has one shape
+for its bulk and another for what mods touch — a long tail that is also the whole workload — the
+median is the wrong statistic and the rule has to be checked against a real mod's diff instead. The
+two additions this document already calls for (`stringtable`, `NewPartLib`) are not like that;
+`WorldSector` arguably is, which is why it was admitted on a conflict-merge argument rather than a
+payload one.
+
+Two details are specific to MOVE:
+
+- **A composite key cannot be spelled out in a fragment id.** `FcbFragments.IdComparer` keys on a
+  numeric tail, so `(state, channel, weapon)` is hashed to one number and the id stays
+  `<label>.<number>.xml`. The key is built only from engine-assigned values, so it is not the
+  synthesized positional id the identity rule forbids.
+- **MOVE is the first splitting container whose fragment graph is not a forest.** 753 back-references
+  leave the state that holds them and 687 of those land deep inside another state, so a reference
+  leaving a fragment travels as an address — the owning state's hash plus a chain of child ordinals —
+  rather than as a pointer. `.fcb` and `depload` have no object-level back-references at all.
+
 ## Correction to fcb-deep-fragments.md
 
 It lists `mapsdata` and `sectorsdep` among containers whose "children carry no name field, so they
