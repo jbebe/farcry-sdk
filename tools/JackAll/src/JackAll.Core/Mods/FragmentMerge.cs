@@ -64,6 +64,32 @@ public static class FragmentMerge
     }
 
     /// <summary>
+    /// Reports every fragment of one container whose resolved overrides contradict another's - a
+    /// deletion of something a sibling override also edits. <see cref="IContainerSplitter.Apply"/>
+    /// keeps the entity either way; this is what stops that being a silent decision.
+    /// </summary>
+    /// <param name="conflicts">Null for the strict mode <see cref="JackAll.Core.Vfs.GameVfs"/> uses,
+    /// which throws so the App can offer the row to hand-fix; a queue for the headless build, which
+    /// records and carries on - the same split <see cref="Resolve"/> already makes.</param>
+    public static void ReportContradictions(
+        IContainerSplitter splitter, IReadOnlyDictionary<string, string> resolved,
+        ConcurrentQueue<FragmentConflict>? conflicts, string container)
+    {
+        foreach ((string fragmentId, string kept, string overruled) in splitter.Contradictions(resolved))
+        {
+            if (conflicts is null)
+            {
+                throw new InvalidDataException(
+                    $"For '{fragmentId}' in '{container}', {kept} wins over {overruled} - drop one of "
+                    + "the two to say which you meant.");
+            }
+
+            conflicts.Enqueue(new FragmentConflict(
+                container, fragmentId, IsNewEntry: false, WinningLayer: kept, EarlierLayers: [overruled]));
+        }
+    }
+
+    /// <summary>
     /// The final XML for one fragment, folding every enabled layer touching it (in priority order)
     /// via a chain of 3-way merges against the vanilla ancestor. Starting <c>result</c> at the
     /// ancestor makes the first fold <c>Diff3.Merge(ancestor, ancestor, layer's text)</c>, which is a
@@ -117,7 +143,7 @@ public static class FragmentMerge
             string theirs;
             try
             {
-                theirs = splitter.Canonicalize(Encoding.UTF8.GetString(layer.Read(entryHash)));
+                theirs = splitter.Canonicalize(fragmentId, Encoding.UTF8.GetString(layer.Read(entryHash)));
             }
             catch (Exception ex) when (ex is not InvalidDataException)
             {
@@ -149,8 +175,8 @@ public static class FragmentMerge
                 continue;
             }
 
-            string ours = splitter.Canonicalize(result);
-            (string merged, bool conflict) = Diff3.Merge(ancestor, ours, theirs);
+            string ours = splitter.Canonicalize(fragmentId, result);
+            (string merged, bool conflict) = splitter.Merge(fragmentId, ancestor, ours, theirs);
             if (!conflict)
             {
                 result = merged;
@@ -168,12 +194,13 @@ public static class FragmentMerge
                       "since the workspace is always highest priority.");
             }
 
-            // Lenient mode: load order wins outright, exactly like a whole-file override - "theirs" (the
-            // higher-priority layer) replaces the failed 3-way merge rather than keeping whatever partial
-            // result Diff3 produced.
+            // Lenient mode: keep the splitter's own resolution of the collision. For a text fragment
+            // that is the higher-priority layer outright, exactly like a whole-file override; for a
+            // format that merges by meaning it is the fold with only the collision decided, so the
+            // other layer's untouched edits survive.
             conflicts.Enqueue(new FragmentConflict(container, fragmentId, isNewEntry, layer.Name,
                 [.. layers.Take(i).Select(l => l.Layer.Name).Distinct()]));
-            result = theirs;
+            result = merged;
         }
         return result;
     }

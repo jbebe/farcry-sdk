@@ -61,6 +61,7 @@ public class ModLayerFragmentDedupTests : IDisposable
     [InlineData(@"12_Crate.2058514756624450165.xml")]         // ... whose name itself starts NN_
     [InlineData(@"vehicle\Land\Jeep.xml")]                    // an archetype path
     [InlineData(@"vehicle\03_Foo.xml")]                       // NN_-shaped, but not at the root
+    [InlineData(@"_layers.xml")]                              // a sector's mission-layer placement
     public void A_real_fragment_id_is_not_mistaken_for_one(string fragmentId)
     {
         string root = Path.Combine(_sandbox, "kept-" + fragmentId.GetHashCode().ToString("x8"));

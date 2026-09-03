@@ -204,7 +204,7 @@ public class StringTableContainerSplitterTests : IDisposable
 
         Assert.Equal(
             OasisStringsPatch.FragmentToXml(new OasisStringEdit("Generic", "ACCEPT", "Accept")),
-            _splitter.Canonicalize(ugly));
+            _splitter.Canonicalize(StringTableContainerSplitter.IdOf("Generic", "ACCEPT"), ugly));
     }
 
     /// <summary>Two mods renaming different weapons: different strings, so they never meet.</summary>

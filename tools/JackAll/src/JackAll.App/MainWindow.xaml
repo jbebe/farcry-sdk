@@ -699,6 +699,19 @@
                                            FontSize="11" Margin="0,0,0,6"
                                            Visibility="{Binding HasNamingNote, Converter={StaticResource BoolToVis}}" />
 
+                                <TextBlock Text="{Binding AncestryText}" TextWrapping="Wrap" Foreground="#888"
+                                           FontSize="11" Margin="0,0,0,6"
+                                           Visibility="{Binding HasAncestry, Converter={StaticResource BoolToVis}}" />
+
+                                <!-- Same weight as the reach note below: both are cases where an edit
+                                     looks staged and does nothing in game. -->
+                                <Border Background="#FBF0DC" BorderBrush="#E0BE73" BorderThickness="1"
+                                        Padding="6,4" Margin="0,0,0,6" CornerRadius="2"
+                                        Visibility="{Binding HasLayerMismatchNote, Converter={StaticResource BoolToVis}}">
+                                    <TextBlock Text="{Binding LayerMismatchNote}" TextWrapping="Wrap"
+                                               Foreground="#6B4E12" FontSize="11" />
+                                </Border>
+
                                 <!-- Louder than NamingNote above on purpose: an unknown name is a
                                      curiosity, a dead file is an evening about to be wasted. -->
                                 <Border Background="#FBF0DC" BorderBrush="#E0BE73" BorderThickness="1"

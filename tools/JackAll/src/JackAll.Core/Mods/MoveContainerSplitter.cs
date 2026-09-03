@@ -67,7 +67,7 @@ public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerS
 
     public IContainerTree Open(byte[] container) => new Tree(MoveCodec.Load(container), names);
 
-    public string Canonicalize(string fragmentXml)
+    public string Canonicalize(string fragmentId, string fragmentXml)
         => MoveFragmentXml.Render(MoveFragmentXml.Parse(fragmentXml));
 
     public byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById)

@@ -342,7 +342,7 @@ public class DepLoadContainerSplitterTests : IDisposable
         string ugly = "<Resource crc_ID='16'><CAnimationResource crc_ID='161'></CAnimationResource></Resource>";
         string tidy = DepLoadXml.FragmentToXml(new DepLoadParent(0x10, 0, [new DepLoadChild(0xA1, Animation)]));
 
-        Assert.Equal(tidy, _splitter.Canonicalize(ugly));
+        Assert.Equal(tidy, _splitter.Canonicalize(DepLoadContainerSplitter.IdOf(0x10), ugly));
     }
 
     [Fact]

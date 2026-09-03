@@ -79,8 +79,12 @@ internal sealed record ImportLegacyPayload
     public int StagedFiles { get; init; }
 
     /// <summary>Containers left out, as <c>&lt;path&gt;: &lt;reason&gt;</c> - see
-    /// <see cref="LegacyImportRefusal"/>.</summary>
+    /// <see cref="LegacyImportNote"/>.</summary>
     public IReadOnlyList<string> Refused { get; init; } = [];
+
+    /// <summary>Containers staged whole rather than per fragment, in the same shape as
+    /// <see cref="Refused"/>. Imported, but without their per-fragment merging.</summary>
+    public IReadOnlyList<string> WholeFile { get; init; } = [];
 }
 
 internal sealed record RestorePayload

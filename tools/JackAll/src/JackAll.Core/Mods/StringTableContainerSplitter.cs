@@ -57,7 +57,7 @@ public sealed class StringTableContainerSplitter : IContainerSplitter
 
     public IContainerTree Open(byte[] container) => new Tree(RmlDocument.Deserialize(container));
 
-    public string Canonicalize(string fragmentXml)
+    public string Canonicalize(string fragmentId, string fragmentXml)
         => OasisStringsPatch.FragmentToXml(OasisStringsPatch.FragmentFromXml(fragmentXml));
 
     public byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById)

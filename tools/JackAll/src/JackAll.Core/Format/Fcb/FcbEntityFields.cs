@@ -1,8 +1,7 @@
 using System.Numerics;
 using System.Text;
-using JackAll.Core.Format.Fcb;
 
-namespace JackAll.Tools.World;
+namespace JackAll.Core.Format.Fcb;
 
 /// <summary>
 /// Byte codecs for the handful of entity fields the editor reads and writes in bulk. UTF-8 with a

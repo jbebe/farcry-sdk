@@ -1,4 +1,6 @@
+using System.IO.Compression;
 using JackAll.Core;
+using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 using JackAll.Core.Naming;
@@ -29,6 +31,11 @@ public sealed class LegacyCommunityModTests : IDisposable
 {
     private readonly string _sandbox =
         Path.Combine(Path.GetTempPath(), "fc2mm-tests", Guid.NewGuid().ToString("N"));
+
+    /// <summary>Where a zipped mod's patch archive is unpacked to be read back, kept out of
+    /// <see cref="_sandbox"/> so the workspace scan never walks a 100 MB patch.dat.</summary>
+    private readonly string _unpacked =
+        Path.Combine(Path.GetTempPath(), "fc2mm-tests", Guid.NewGuid().ToString("N") + "-unpacked");
 
     [Fact]
     public void A_mod_and_an_install_were_actually_found()
@@ -70,6 +77,97 @@ public sealed class LegacyCommunityModTests : IDisposable
         // file and fragments of it would be telling the build two different things.
         workspace.Rescan();
         Assert.DoesNotContain(workspace.FragmentOverrides.Keys, workspace.Hashes.Contains);
+
+        AssertRebuildsEveryContainerItSplit(modPath, workspace, vfs, definitions);
+    }
+
+    /// <summary>
+    /// The check the import cannot make about itself: for every world sector it chose to split, the
+    /// fragments it staged, applied to the base game's own copy, put every entity under the same
+    /// mission layer the mod's own container has it under. A sector that re-files entities is the case
+    /// this exists for - the layout override is the only thing that can carry it.
+    /// </summary>
+    /// <remarks>
+    /// Vacuous for a mod that touches no sector, which several of these legitimately don't. That the
+    /// mechanism works at all is pinned deterministically in <see cref="LegacyPatchImporterTests"/>;
+    /// what this adds is the real mods nobody here wrote.
+    /// </remarks>
+    private void AssertRebuildsEveryContainerItSplit(
+        string modPath, FolderModLayer workspace, GameVfs vfs, FcbClassDefinitions definitions)
+    {
+        (string fat, string dat) = PatchPairOf(modPath);
+        using DuniaArchive mod = DuniaArchive.Open(fat, dat);
+        var splitter = new FcbContainerSplitter(definitions);
+
+        foreach ((uint containerHash, IReadOnlyList<FragmentOverride> staged) in workspace.FragmentOverrides)
+        {
+            // A layer overrides fragments of `depload` and string-table containers too, and neither
+            // is an FCB tree - this check is about world sectors specifically.
+            if (vfs.ReadOriginal(containerHash) is not { } vanilla
+                || TryReadSector(mod, containerHash) is not { } theirs)
+            {
+                continue;
+            }
+
+            Dictionary<string, string> byId = staged.ToDictionary(
+                o => o.FragmentId,
+                o => System.Text.Encoding.UTF8.GetString(workspace.Read(o.EntryHash)),
+                FcbFragments.IdComparer);
+
+            FcbObject ours = FcbDocument.Deserialize(splitter.Apply(vanilla, byId));
+            Assert.Equal(PlacementOf(theirs), PlacementOf(ours));
+        }
+    }
+
+    /// <summary>The mod's own copy of a container, when it is a world sector at all.</summary>
+    private static FcbObject? TryReadSector(DuniaArchive mod, uint containerHash)
+    {
+        try
+        {
+            FcbObject root = FcbDocument.Deserialize(mod.Read(containerHash));
+            return root.TypeHash == WorldHashes.WorldSector ? root : null;
+        }
+        catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException or KeyNotFoundException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Every placed entity of a sector and the mission layer it sits under.</summary>
+    private static SortedDictionary<ulong, string> PlacementOf(FcbObject sector)
+    {
+        var placement = new SortedDictionary<ulong, string>();
+        foreach (FcbObject layer in sector.Children.Where(c => c.TypeHash == WorldHashes.MissionLayer))
+        {
+            string name = FcbEntityFields.ReadString(layer, WorldHashes.TextPathId);
+            foreach (FcbObject entity in layer.Children.Where(e => e.TypeHash == WorldHashes.Entity))
+            {
+                placement[FcbEntityFields.ReadU64(entity, WorldHashes.DisEntityId)] = name;
+            }
+        }
+        return placement;
+    }
+
+    /// <summary>The mod's own patch archive, unpacked out of its zip first when that is how it ships -
+    /// the check below has to cover a zipped mod too, not quietly pass over it.</summary>
+    private (string Fat, string Dat) PatchPairOf(string modPath)
+    {
+        if (!ModPipeline.IsZipSource(modPath))
+        {
+            return LegacyPatchImporter.FindPatchPair(modPath)
+                ?? throw new InvalidOperationException($"{modPath} has no patch pair, but it imported.");
+        }
+
+        (string fat, string dat) = LegacyPatchImporter.FindPatchPairInZip(modPath)
+            ?? throw new InvalidOperationException($"{modPath} has no patch pair in it, but it imported.");
+
+        Directory.CreateDirectory(_unpacked);
+        using ZipArchive zip = ZipFile.OpenRead(modPath);
+        string fatPath = Path.Combine(_unpacked, "patch.fat");
+        string datPath = Path.Combine(_unpacked, "patch.dat");
+        zip.GetEntry(fat)!.ExtractToFile(fatPath, overwrite: true);
+        zip.GetEntry(dat)!.ExtractToFile(datPath, overwrite: true);
+        return (fatPath, datPath);
     }
 
     private const string ModsVariable = "JACKALL_FC2_MODS";
@@ -134,5 +232,6 @@ public sealed class LegacyCommunityModTests : IDisposable
     public void Dispose()
     {
         try { Directory.Delete(_sandbox, recursive: true); } catch { /* best effort */ }
+        try { Directory.Delete(_unpacked, recursive: true); } catch { /* best effort */ }
     }
 }

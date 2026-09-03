@@ -102,6 +102,16 @@ public partial class MainWindow
                     + "file would silently outrank every other mod that touches them, so they were left out:\n\n"
                     + string.Join('\n', result.Refused.Select(r => $"  {r.ContainerPath} — {r.Reason}")));
             }
+
+            if (result.WholeFile.Count > 0)
+            {
+                const int shown = 10;
+                Warn(
+                    $"{result.WholeFile.Count:N0} file(s) were imported whole rather than one fragment at a time, "
+                    + "so they will outrank other mods touching the same files instead of merging with them:\n\n"
+                    + string.Join('\n', result.WholeFile.Take(shown).Select(r => $"  {r.ContainerPath} — {r.Reason}"))
+                    + (result.WholeFile.Count > shown ? $"\n  ... and {result.WholeFile.Count - shown:N0} more" : ""));
+            }
         }
         catch (Exception ex)
         {

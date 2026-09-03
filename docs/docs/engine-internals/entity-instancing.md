@@ -216,6 +216,47 @@ And they are authored to butt together exactly: `colonialmd01building_01` spans 
 `colonialmd01roof_01` spans **7.75**→9.40. Small buildings are not kits — `colonialsmall02_bld01` is
 self-contained and includes its own roof.
 
+## Mission layers decide when a placed entity exists
+
+:::info[Verified via reverse engineering]
+Traced via GhidraMCP against `FarCry2_server` (`CSectorSpawnCategory::OnReceivedSectorData`,
+`CLayerResource::Spawn`/`Unspawn`, `CGameMissionMgr::IsLayerEnabled`, `CEntity::GetLayerName`) and
+confirmed against the retail `Dunia.dll`, which runs the same walk.
+:::
+
+Every placed entity belongs to a **mission layer**, and the layer is what decides whether the entity
+is in the world at all. Two separate bindings carry a layer, and they do different jobs — confusing
+them produces a mod that looks right and behaves wrong.
+
+**Where the entity sits in the sector container gates spawning.** Reading a sector's data walks the
+container's mission-layer nodes and creates one layer resource per node, each owning the entities
+nested under that node. When a layer turns on, that resource spawns exactly its own entities; when it
+turns off, it removes exactly them. An entity nested under a layer is therefore reachable only
+through that layer's on/off state.
+
+**The `main` layer is always on.** The enabled test returns true for it unconditionally, without
+consulting mission state. Every other layer is enabled only while some enabled mission lists it —
+missions and their layer lists come from the world's mission definitions, which is why a mod that
+adds a layer must also declare a mission that enables it.
+
+**A mission component on the entity files a *live* entity into a layer.** It is read when an already
+existing entity is added to or removed from a sector, when its owning layer is queried, and when it
+is persisted to a savegame, so it survives a save/reload as instance state. It is not consulted when
+the sector is first read, so it cannot decide whether the entity spawns.
+
+**The component's layer field holds -1 when it names no layer**, and the read tests for that before
+using it, answering `main` instead. That is the usual case rather than an edge one: across 40
+untouched `w1_b_2` containers, 46 entities carry -1 and none carries a real layer id. A tool that
+reads the field as an id concludes that most of the shipped game is mis-filed.
+
+The practical consequence: **setting only the component moves nothing.** An entity that still sits
+under `main` in the container spawns unconditionally at sector load, whatever its component says, and
+the layer named by the component never controls it. Moving an entity between layers means moving it
+in the container itself.
+
+`entSpawnMissionTrigger` on an entity is a spawn-point property whose accessor has no callers on the
+traced binary. It is not part of this mechanism.
+
 ## Components read off an instance
 
 Two component layouts confirmed from shipped sector data. Both hang off an entity's `Components`
@@ -297,6 +338,8 @@ through the archetype fallback, so they are only mesh-less if you skip that step
   resolve it against the base while claiming to model the client.
 - Editing an archetype **does** change the 48-in-146 that reference one, and does nothing for the
   rest.
+- Treat an entity's mission layer as **structural**. A tool that offers to change an entity's layer
+  by editing its mission component alone is offering a change the engine will not honour.
 
 ## Unknowns
 

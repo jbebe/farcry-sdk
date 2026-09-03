@@ -108,6 +108,8 @@ override unit:
 | --- | --- | --- | --- |
 | Entity library (`entitylibrary*.fcb`) | one archetype | its `hidName`, dots as folders | `entitylibrary.fcb\vehicle\Land\DLC_Vehicle1_DLC1.xml` |
 | World sector (`worldsector*.data.fcb`) | one placed entity | `<hidName>.<disEntityId>.xml` | `worldsector17.data.fcb\StaticObject_201.2058514756624450165.xml` |
+| World sector (`worldsector*.data.fcb`) | which mission layer its entities sit in | `_layers.xml` | `worldsector17.data.fcb\_layers.xml` |
+| World descriptor (`<world>.game.xml`) | one mission | its name, slashes as folders | `world1.game.xml\missions\outposts\w1_b_2\oiihvvl.xml` |
 
 For an entity override the **trailing numeric `disEntityId` is authoritative and the name prefix
 cosmetic** — an override staged under a since-renamed entity still matches, and `2058514756624450165.xml`
@@ -116,6 +118,27 @@ archetype joins the library's last group, a new entity joins the sector's `main`
 pre-per-archetype group ids (`entitylibrary.fcb\NN_Name.xml`) are **rejected outright**: one sitting
 in a container folder's root names no fragment, so rather than silently appending a phantom group the
 build fails and names the file. Re-export the archetype you meant to change.
+
+`_layers.xml` is the one id that names no single entity. It says which mission layer a sector's
+entities belong to — the one thing an entity's own fragment cannot say, since an override always
+lands where the base container already put it. It matters because the game spawns an entity from
+where it sits, not from the `CMissionComponent` on it, so moving an outpost's guards into a mission
+layer of their own takes this file as well as their fragments. State only what you changed;
+everything unlisted stays put. Moving an entity by hand normally means editing its own fragment too,
+so its mission component names the layer you moved it to — the layout decides whether it spawns, the
+component decides which layer the running game files it under.
+
+`<world>.game.xml` splits per mission for the same reason. It declares which mission layers exist and
+when each is on, so every mod that adds a mission, an outpost, or any controllable group of entities
+has to edit it. Overriding it whole means last-wins on the one file all of those mods need. State the
+missions you add or change and nothing else: the flat `<MissionLayers>` index is rebuilt from them, so
+you never maintain two copies. The multiplayer template `tmpla.game.xml` ships as plain text rather
+than the compiled form and keeps its whole-file override.
+
+The sector layout is also where you **remove** something: `<delete id="2054324264221284349" />` takes that entity off
+the map. Deletion is the one edit that cannot merge, so it is exclusive over that entity and nothing
+else — you can still delete a crate while another mod edits the barrel next to it. If another enabled
+mod edits the very entity you deleted, the edit wins, it stays, and the build tells you.
 Containers whose children carry no name/id (`mapsdata`, `managers`, …) don't split — only a
 whole-file override can touch those.
 

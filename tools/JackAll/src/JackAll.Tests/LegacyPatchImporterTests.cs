@@ -254,11 +254,121 @@ public class LegacyPatchImporterTests : IDisposable
 
         (LegacyImportResult result, FolderModLayer workspace) = ImportLegacy(zipPath, "reorder_ws", names);
 
-        LegacyImportRefusal refusal = Assert.Single(result.Refused);
+        LegacyImportNote refusal = Assert.Single(result.Refused);
         Assert.Equal(MoveGraphPath, refusal.ContainerPath);
 
         Assert.DoesNotContain(containerHash, workspace.Hashes);
         Assert.DoesNotContain(containerHash, workspace.FragmentOverrides.Keys);
+    }
+
+    private const string SectorPath =
+        @"levels\mp_14_woodlands\generated\worldsectors\worldsector56.data.fcb";
+
+    private const string SectorFixture = "Fixtures/WorldSector/worldsector56.data.fcb";
+
+    /// <summary>
+    /// The pattern behind nearly every whole-file fallback the two largest community mods produce:
+    /// entities moved out of <c>main</c> into a mission layer the mod adds. It imports as the moved
+    /// entity plus the sector's layout, so the mod keeps per-fragment merging instead of claiming the
+    /// whole sector.
+    /// </summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_reparented_entity_imports_as_its_fragment_plus_a_layout()
+    {
+        if (_legacySourceInstall is null || _cleanInstall is null || !File.Exists(SectorFixture)) return;
+
+        NameDatabase names = TestSupport.LoadNames();
+        byte[] vanillaSector = File.ReadAllBytes(SectorFixture);
+        const string addedLayer = @"missions\outposts\test\zone_01";
+
+        FcbObject moved = FcbDocument.Deserialize(vanillaSector);
+        FcbObject main = moved.Children.First(c =>
+            c.TypeHash == WorldHashes.MissionLayer
+            && MissionLayers.IsMain(FcbEntityFields.ReadString(c, WorldHashes.TextPathId)));
+        FcbObject entity = main.Children.First(e => e.TypeHash == WorldHashes.Entity);
+        ulong entityId = FcbEntityFields.ReadU64(entity, WorldHashes.DisEntityId);
+        main.Children.Remove(entity);
+        // Real outpost mods declare the layer on the entity as well as nesting it there.
+        DeclareLayer(entity, NameHash.Compute(addedLayer));
+        moved.Children.Insert(0, NewLayer(addedLayer, entity));
+
+        Seed(_cleanInstall, names, MakeZipMod("reparent_vanilla", (SectorPath, vanillaSector)));
+        string zipPath = BuildLegacyPatch(
+            "reparent", names, MakeZipMod("reparent_source", (SectorPath, FcbDocument.Serialize(moved))));
+
+        (LegacyImportResult result, FolderModLayer workspace) = ImportLegacy(zipPath, "reparent_ws", names);
+
+        Assert.Empty(result.Refused);
+        Assert.Empty(result.WholeFile);
+        Assert.Equal(0, result.Imported);
+        Assert.Equal(2, result.FragmentsImported); // the entity, and the sector's layout
+
+        uint containerHash = NameHash.Compute(SectorPath);
+        Assert.DoesNotContain(containerHash, workspace.Hashes);
+        Assert.True(workspace.FragmentOverrides.TryGetValue(containerHash, out var staged));
+        Assert.Contains(staged!, o => WorldSectorLayout.IsLayoutId(o.FragmentId));
+
+        // The real test of the import: the staged pieces put the entity back under the mod's own
+        // layer, without staging the sector.
+        var splitter = new FcbContainerSplitter(FcbClassDefinitions.Empty);
+        Dictionary<string, string> byId = staged!.ToDictionary(
+            o => o.FragmentId, o => Encoding.UTF8.GetString(workspace.Read(o.EntryHash)), FcbFragments.IdComparer);
+        IContainerTree rebuilt = splitter.Open(splitter.Apply(vanillaSector, byId));
+
+        Assert.Equal(addedLayer, rebuilt.AncestryOf($"{entityId}.xml")!.ParentName);
+    }
+
+    /// <summary>A sector whose entities were only shuffled inside one layer is not a reparent, so it
+    /// still falls back - and the fallback still says so.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_reordered_sector_still_stages_whole_and_says_so()
+    {
+        if (_legacySourceInstall is null || _cleanInstall is null || !File.Exists(SectorFixture)) return;
+
+        NameDatabase names = TestSupport.LoadNames();
+        byte[] vanillaSector = File.ReadAllBytes(SectorFixture);
+
+        FcbObject reordered = FcbDocument.Deserialize(vanillaSector);
+        FcbObject main = reordered.Children.First(c =>
+            c.TypeHash == WorldHashes.MissionLayer
+            && MissionLayers.IsMain(FcbEntityFields.ReadString(c, WorldHashes.TextPathId)));
+        (main.Children[0], main.Children[1]) = (main.Children[1], main.Children[0]);
+
+        Seed(_cleanInstall, names, MakeZipMod("reorder_vanilla_sector", (SectorPath, vanillaSector)));
+        string zipPath = BuildLegacyPatch(
+            "reorder_sector", names, MakeZipMod("reorder_sector_source", (SectorPath, FcbDocument.Serialize(reordered))));
+
+        (LegacyImportResult result, FolderModLayer workspace) = ImportLegacy(zipPath, "reorder_sector_ws", names);
+
+        Assert.Equal(1, result.Imported);
+        Assert.Equal(0, result.FragmentsImported);
+        LegacyImportNote note = Assert.Single(result.WholeFile);
+        Assert.Equal(SectorPath, note.ContainerPath);
+        Assert.Contains(NameHash.Compute(SectorPath), workspace.Hashes);
+    }
+
+    /// <summary>Adds the mission component an entity carries when a mod re-files it.</summary>
+    private static void DeclareLayer(FcbObject entity, uint pathId)
+    {
+        var component = new FcbObject { TypeHash = WorldHashes.CMissionComponent };
+        component.Values.Add(WorldHashes.HidMissionLayerPath, BitConverter.GetBytes(pathId));
+
+        var components = new FcbObject { TypeHash = WorldHashes.Components };
+        components.Children.Add(component);
+        entity.Children.Add(components);
+    }
+
+    /// <summary>A mission layer carrying <paramref name="entity"/>, shaped the way a shipped one is:
+    /// the authored path, then its id.</summary>
+    private static FcbObject NewLayer(string path, FcbObject entity)
+    {
+        var layer = new FcbObject { TypeHash = WorldHashes.MissionLayer };
+        layer.Values.Add(WorldHashes.TextPathId, [.. System.Text.Encoding.UTF8.GetBytes(path), 0]);
+        layer.Values.Add(WorldHashes.PathId, BitConverter.GetBytes(NameHash.Compute(path)));
+        layer.Children.Add(entity);
+        return layer;
     }
 
     private const string MoveGraphPath = "graphics\\move\\movemgr.bin";

@@ -174,7 +174,9 @@ public static class PatchBuilder
                 byte[] baseBytes = replacements.TryGetValue(kv.Key, out byte[]? wholeFileBytes)
                     ? wholeFileBytes
                     : vanillaByContainer[kv.Key].VanillaBytes;
-                return (kv.Key, Bytes: vanillaByContainer[kv.Key].Splitter.Apply(baseBytes, kv.Value));
+                var container = vanillaByContainer[kv.Key];
+                FragmentMerge.ReportContradictions(container.Splitter, kv.Value, conflicts, container.Display);
+                return (kv.Key, Bytes: container.Splitter.Apply(baseBytes, kv.Value));
             })
             .ToArray())
         {

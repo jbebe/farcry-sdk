@@ -1,3 +1,4 @@
+using JackAll.Core.Mods;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 using JackAll.Tools.Reach;
@@ -26,6 +27,11 @@ public sealed partial class MainViewModel
     /// </summary>
     private static readonly Lazy<ReachList> Unreachable = new(() => ReachList.Load(AppConfig.ReachFile));
     private CancellationTokenSource? _exportCts;
+
+    /// <summary>Where the selected fragment sits in its container, once the background lookup for it
+    /// has landed. Null for every non-fragment row, and while the lookup is still running.</summary>
+    private FragmentAncestry? _ancestry;
+    private CancellationTokenSource? _ancestryCts;
 
     /// <summary>How often <see cref="ExportFiles"/> updates <see cref="Status"/> — often enough to
     /// look alive on a big subtree, rarely enough not to spend the export marshalling to the UI thread.</summary>
@@ -107,6 +113,7 @@ public sealed partial class MainViewModel
         set
         {
             _selectedFile = value;
+            RefreshAncestry(value);
             OnPropertyChanged();
             OnPropertyChanged(nameof(HasSelection));
             OnPropertyChanged(nameof(NoSelection));
@@ -197,6 +204,86 @@ public sealed partial class MainViewModel
     public string NamingNote => SelectedFile is { NameIsKnown: false }
         ? "This file's real name is unknown - it's addressed by hash. Edits still work."
         : string.Empty;
+
+    public bool HasAncestry => AncestryText.Length > 0;
+
+    /// <summary>Which mission layer or library group the selected fragment lives in. A fragment id
+    /// carries none of this, so without it there is no way to see from the file list that an entity
+    /// even has a structural parent.</summary>
+    public string AncestryText => _ancestry is { } a ? $"Lives under {a.Display}." : string.Empty;
+
+    public bool HasLayerMismatchNote => LayerMismatchNote.Length > 0;
+
+    public string LayerMismatchNote => MismatchNoteFor(_ancestry);
+
+    /// <summary>The same note for a file that isn't the selected one - what the editor tab shows,
+    /// where the details pane isn't on screen to carry it. Opening an editor decodes the container
+    /// anyway, so this answers directly rather than through the background lookup.</summary>
+    public string? LayerMismatchNoteFor(VfsFile file)
+        => MismatchNoteFor(_vfs?.AncestryOf(file)) is { Length: > 0 } note ? note : null;
+
+    /// <summary>The silent-wrong case: the entity's own mission component names one layer while the
+    /// sector nests it under another. The nesting is what the game spawns from.</summary>
+    private static string MismatchNoteFor(FragmentAncestry? ancestry)
+        => ancestry is { IsLayerMismatch: true, ParentName: var parent }
+            ? $"This entity's mission component names a different layer than the \"{parent}\" it sits "
+              + "under. The game spawns it from where it sits, so the component alone changes nothing - "
+              + "and a fragment override cannot move it between layers."
+            : string.Empty;
+
+    /// <summary>
+    /// Looks up <paramref name="file"/>'s ancestry off the UI thread, because answering needs the
+    /// whole container decoded and an entity library is 6 MB. Cancelling the previous lookup is what
+    /// keeps arrowing down the file list from queuing one decode per row passed through.
+    /// </summary>
+    private void RefreshAncestry(VfsFile? file)
+    {
+        _ancestryCts?.Cancel();
+        _ancestryCts?.Dispose();
+        // Cleared, not just disposed: the early return below leaves this field live, and cancelling a
+        // disposed source throws.
+        _ancestryCts = null;
+        SetAncestry(null);
+
+        if (_vfs is not { } vfs || file is not { IsFragment: true })
+        {
+            return;
+        }
+
+        var cts = new CancellationTokenSource();
+        _ancestryCts = cts;
+        _ = LookUpAncestryAsync(vfs, file, cts.Token);
+    }
+
+    /// <summary>Clearing it matters as much as setting it: moving to a row with no ancestry has to
+    /// take the previous row's line off the pane rather than leave it standing.</summary>
+    private void SetAncestry(FragmentAncestry? ancestry)
+    {
+        _ancestry = ancestry;
+        OnPropertyChanged(nameof(AncestryText));
+        OnPropertyChanged(nameof(HasAncestry));
+        OnPropertyChanged(nameof(LayerMismatchNote));
+        OnPropertyChanged(nameof(HasLayerMismatchNote));
+    }
+
+    private async Task LookUpAncestryAsync(GameVfs vfs, VfsFile file, CancellationToken token)
+    {
+        FragmentAncestry? found;
+        try
+        {
+            found = await Task.Run(() => vfs.AncestryOf(file), token);
+        }
+        catch (Exception ex) when (ex is OperationCanceledException or InvalidDataException
+                                      or InvalidOperationException or KeyNotFoundException)
+        {
+            return;
+        }
+
+        if (!token.IsCancellationRequested)
+        {
+            SetAncestry(found);
+        }
+    }
 
     public bool HasReachNote => ReachNote.Length > 0;
 

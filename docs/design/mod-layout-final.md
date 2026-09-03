@@ -53,6 +53,7 @@ In practice the size thresholds reject far more than the identity rule does.
 | `Sector` (fcb) | 2.3 KB | 12 KB | 140 B | 16× | no split |
 | Barks (fcb) | **1.3 KB** | 50 KB | 359 B | 4× | no split |
 | `WorldSector` (fcb) | **4.3 KB** | 364 KB | 1.1 KB | 4× | splits today — see below |
+| `WorldDescriptor` (rml) | 22 KB | **343 KB** | 386 B | **912×** | **split per `Mission`** |
 
 ## What to add: exactly two
 
@@ -184,6 +185,37 @@ Settled. Reopening one needs a new measurement, not a new opinion.
   container and drops shared-data backreferences (measured 18,525 → 32,256 B on one sector). Orthogonal
   change, separate pass.
 - **Per-format bespoke layouts.** No. Everything is `<container>.<ext>\<fragmentId>`.
+
+## Added: `<world>.game.xml` splits per mission
+
+The measurement table above did not carry this file at all, and it is the one every ambitious mod has
+to write to. It declares which mission layers exist and when each is on, so adding a mission, an
+outpost, or any group of entities the game can switch on and off means editing it — and overriding it
+whole is last-wins against every other mod that needs it. Both of the community's largest mods ship a
+modified copy.
+
+| | measured |
+|---|---|
+| median descriptor | 22 KB, max **343 KB** for `world1` |
+| one item (a `Mission` and its layer) | **386 B** |
+| amplification | **912×** |
+| identity | the mission's own `Name`, unique across all 840 in `world1` and carrying no dot, so it maps onto a path the way an archetype's dotted name does |
+| depth | stop at the **mission**. Every shipped mission holds exactly one layer, so per-layer would be the same split with a worse name |
+
+The flat `<MissionLayers>` index is not authored: it is byte-identical to the missions' own layers, in
+the same order, so `Apply` rebuilds it and a mod states its mission once. All 23 compiled descriptors
+round-trip byte-for-byte through decode and re-encode, which is what lets an untouched file stay
+untouched. `tmpla.game.xml`, the multiplayer template, ships as plain text instead and is declined
+rather than re-serialized from someone else's indentation.
+
+Measured on Realism Plus Redux: **32 mission fragments totalling 12,758 B in place of a 365,187 B
+whole-file override**.
+
+That covers the whole file only for a mod that restricts itself to missions. Scubrah's Patch also
+raises the shadow radius, the view distance and the sun range in the `Environment` block beside them,
+which no mission fragment carries, so it keeps its whole-file override — caught by the shape
+comparison rather than guessed at. That block is the next thing worth its own fragment if a second
+mod ever needs it.
 
 ## Reopened: `depload` splits
 

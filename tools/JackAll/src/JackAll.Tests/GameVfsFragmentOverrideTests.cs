@@ -20,6 +20,31 @@ public class GameVfsFragmentOverrideTests : IDisposable
     private const string FixturesDir = "Fixtures/Patch";
 
     /// <summary>
+    /// A fragment row's structural parent, which its id deliberately does not record - so the file
+    /// browser can show it rather than leaving the user to guess.
+    /// </summary>
+    [Fact]
+    public void A_fragment_row_reports_the_group_it_lives_in()
+    {
+        if (_install is null) return;
+
+        using var vfs = GameVfs.Load(_install, TestSupport.LoadNames());
+        vfs.LoadFragments();
+
+        VfsFile row = vfs.Files.Values.First(TestSupport.IsFcbFragment);
+        FragmentAncestry ancestry = Assert.IsType<FragmentAncestry>(vfs.AncestryOf(row));
+
+        Assert.NotEmpty(ancestry.ParentName);
+        Assert.NotEmpty(ancestry.Display);
+
+        // Asked twice, the memo answers - and answers the same thing.
+        Assert.Equal(ancestry, vfs.AncestryOf(row));
+
+        // A container is not a fragment and has no parent of this kind.
+        Assert.Null(vfs.AncestryOf(vfs.Files[row.ContainerHash!.Value]));
+    }
+
+    /// <summary>
     /// The file browser has to show the same entries a mod stages, under ids that match - otherwise a
     /// staged override looks like unrelated new content and the same resource appears twice.
     /// </summary>

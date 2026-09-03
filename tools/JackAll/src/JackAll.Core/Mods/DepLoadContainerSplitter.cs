@@ -30,7 +30,7 @@ public sealed class DepLoadContainerSplitter(NameDatabase? names = null) : ICont
 
     public IContainerTree Open(byte[] container) => new Tree(DepLoadDocument.Decode(container), names);
 
-    public string Canonicalize(string fragmentXml)
+    public string Canonicalize(string fragmentId, string fragmentXml)
         => DepLoadXml.FragmentToXml(DepLoadXml.FragmentFromXml(fragmentXml));
 
     public byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById)

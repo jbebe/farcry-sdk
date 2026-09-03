@@ -95,6 +95,7 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
                 result.Skipped,
                 stagedFiles = Directory.EnumerateFiles(settings.Out, "*", SearchOption.AllDirectories).Count(),
                 refused = result.Refused.Select(r => new { r.ContainerPath, r.Reason }),
+                wholeFile = result.WholeFile.Select(r => new { r.ContainerPath, r.Reason }),
             });
             return 0;
         }
@@ -104,11 +105,18 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
             + $"into {settings.Out.EscapeMarkup()} (out of {result.TotalEntries:N0} entries; "
             + $"{result.Skipped:N0} matched the base game and were skipped).");
 
-        foreach (LegacyImportRefusal refusal in result.Refused)
+        foreach (LegacyImportNote refusal in result.Refused)
         {
             AnsiConsole.MarkupLine(
                 $"[yellow]Left out[/] {refusal.ContainerPath.EscapeMarkup()}: {refusal.Reason.EscapeMarkup()}. "
                 + "Overriding the whole file would silently outrank every other mod that touches it.");
+        }
+
+        foreach (LegacyImportNote coarsened in result.WholeFile)
+        {
+            AnsiConsole.MarkupLine(
+                $"[yellow]Staged whole[/] {coarsened.ContainerPath.EscapeMarkup()}: "
+                + $"{coarsened.Reason.EscapeMarkup()}. It will outrank other mods touching that file.");
         }
 
         return 0;

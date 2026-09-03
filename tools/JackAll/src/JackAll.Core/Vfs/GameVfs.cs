@@ -133,6 +133,13 @@ public sealed class GameVfs : IDisposable
     /// </summary>
     private Dictionary<uint, Dictionary<string, List<(IModLayer Layer, uint EntryHash)>>> _fragmentOverrides = [];
 
+    /// <summary>The last container <see cref="AncestryOf"/> decoded, so selecting one row after
+    /// another inside a 6 MB entity library doesn't decode it once per row. A single reference so
+    /// callers on different threads can only ever see one whole entry or another, never a mix.</summary>
+    private sealed record AncestryMemo(Dictionary<ulong, VfsFile> Files, uint ContainerHash, IContainerTree Tree);
+
+    private AncestryMemo? _ancestryMemo;
+
     /// <summary>
     /// The one archive we write, and therefore the one archive whose types can't be cached. It is
     /// also the smallest by three orders of magnitude, so sniffing it fresh every launch is free.
@@ -355,6 +362,9 @@ public sealed class GameVfs : IDisposable
                 MergeFragments(files, progress);
             }
             _files = files;
+            // Holds a whole decoded container, which this rebuild may just have invalidated - and
+            // keeping it would pin that tree for the life of the session.
+            _ancestryMemo = null;
         }
     }
 
@@ -932,6 +942,7 @@ public sealed class GameVfs : IDisposable
         ContainerAncestor vanilla = OpenOriginal(container);
         Dictionary<string, string> xmlByFragment = byFragment.ToDictionary(
             kv => kv.Key, kv => FragmentMerge.Resolve(vanilla.Splitter, vanilla.Tree, kv.Key, kv.Value));
+        FragmentMerge.ReportContradictions(vanilla.Splitter, xmlByFragment, null, container.Path);
         return vanilla.Splitter.Apply(baseBytes, xmlByFragment);
     }
 
@@ -1088,6 +1099,36 @@ public sealed class GameVfs : IDisposable
         return SplitterFor(containerHash).Open(originalContainer).Extract(fragmentId);
     }
 
+    /// <summary>
+    /// Which mission layer or library group <paramref name="row"/> sits in, or null when it is not a
+    /// fragment row or its container has no grouping to report. Read from the container as the game
+    /// would see it - overrides spliced in - so an entity a mod re-declares is reported where the
+    /// build actually puts it.
+    /// </summary>
+    public FragmentAncestry? AncestryOf(VfsFile row)
+    {
+        if (!row.IsFragment)
+        {
+            return null;
+        }
+
+        Dictionary<ulong, VfsFile> files = _files;
+        uint containerHash = row.ContainerHash!.Value;
+        if (!files.TryGetValue(containerHash, out VfsFile? container))
+        {
+            return null;
+        }
+
+        AncestryMemo? memo = _ancestryMemo;
+        if (memo is null || memo.Files != files || memo.ContainerHash != containerHash)
+        {
+            memo = new AncestryMemo(files, containerHash, SplitterFor(container).Open(ReadContainer(container)));
+            _ancestryMemo = memo;
+        }
+
+        return memo.Tree.AncestryOf(row.FragmentId!);
+    }
+
     /// <summary>patch beats everything else; otherwise mount order doesn't matter (no collisions).</summary>
     private static int PriorityOf(string archiveName)
         => archiveName.Equals("patch", StringComparison.OrdinalIgnoreCase) ? 1 : 0;
@@ -1150,5 +1191,6 @@ public sealed class GameVfs : IDisposable
             archive.Dispose();
         }
         _vanillaPatchArchive?.Dispose();
+        _ancestryMemo = null;
     }
 }

@@ -126,6 +126,81 @@ produce two competing overrides.
 **Do not put the mission layer in the id.** Moving an entity between layers would silently change its
 identity and orphan the override.
 
+## Mission-layer placement — `_layers.xml`
+
+The rule above stands: an id never carries a layer. But the layer still has to be changeable, because
+the engine spawns an entity from **where it sits in the container**, not from what its
+`CMissionComponent` claims — the component only files an already-live entity into a layer, and `main`
+is always enabled (see `docs/docs/engine-internals/entity-instancing.md`). So an entity left under
+`main` with a component pointing elsewhere spawns unconditionally, and the layer it names never
+controls it. Editing the component alone is a silently wrong mod.
+
+Placement is therefore its own override unit, staged under the reserved id
+`<sector>.data.fcb\_layers.xml` — the same trick the MOVE graph's manager sections use. It reads as
+constraints, not a picture:
+
+```xml
+<layers>
+  <remove path="missions\storymissions\a2sm05\a2sm05_ai_disable" />
+  <delete id="2054324264221284349" />
+  <layer path="missions\outposts\w1_b_2\oiihvvl" pathId="FF7C43B9" before="main">
+    <entity id="2053840442929193718" />
+  </layer>
+</layers>
+```
+
+Between them, fragments and this document are a structural diff of the sector, and the verbs are
+complete: replace a node, add one, move one between layers, create a layer, drop an emptied one, and
+delete an entity outright.
+
+- A listed layer must exist; it is created if missing, ahead of `before` (the outpost mods prepend
+  theirs), else after the last layer. `pathId` defaults to the CRC32 of the lowercased path.
+- A listed entity must be that layer's child. Anything unlisted stays where the base container has it,
+  so a mod ships only what it changed and a sector's own layout applied to itself is a no-op.
+- `<remove>` drops a layer **only once it is empty**, which is how a mod that repurposes a layer reads.
+  A layer still holding entities is left alone.
+- `<delete>` takes one entity off the map. It is the only operation here that cannot merge, because
+  two mods disagreeing about whether something exists genuinely disagree. What it buys is that the
+  disagreement is now **one entity wide instead of one file wide**: a mod removing a crate composes
+  with a mod editing the barrel beside it, where a whole-file override would have claimed both.
+  When another enabled layer also overrides a deleted entity, the entity is kept and the pair is
+  reported (`IContainerSplitter.Contradictions`, surfaced by `FragmentMerge.ReportContradictions`).
+  Keeping something a mod wanted gone is the lesser harm, which is the call the string table already
+  makes for a dropped section.
+- An id naming no entity in this build is ignored rather than refused — a layout outlives the exact
+  container it was written against.
+
+**A move usually wants both halves.** The layout moves the entity in the container, which is what
+decides whether it spawns. The entity's own `CMissionComponent` is separate, and is what files the
+*live* entity into a layer once it exists, so leaving it behind means the entity spawns with the new
+layer but is tracked under the old one. Both mods do both: the moved entity in Realism Plus Redux
+carries `hidMissionLayerPath = FF7C43B9`, matching the layer it was nested into, and the import
+stages that as an ordinary content edit on the entity's own fragment beside the layout. A
+hand-authored `_layers.xml` on its own does half the job.
+
+Note that the component's field holds `FFFFFFFF` when it names no layer, which is what most shipped
+entities carry. It means "unset", not "a layer with that id" — see
+`docs/docs/engine-internals/entity-instancing.md`.
+
+It is not listed by `IContainerTree.List`, so no sector gains a row it never had and the fragment
+cache is untouched; the row appears only when a layer stages one. `Extract` answers with the
+container's *whole* current placement, which is the ancestor a staged layout merges against. Merging
+is by meaning rather than by lines — union the layers, per-entity last-wins — so two mods re-filing
+different entities of one sector both get their way, and only two mods moving the *same* entity to
+different layers is a conflict.
+
+Measured on Realism Plus Redux, whose sectors are Functional Outposts':
+
+| | fallbacks | staged fragments |
+| --- | --- | --- |
+| before | 96 | 669 |
+| with layers | 8 | 12,542 |
+| with deletion | 5 | 12,676 |
+
+No world sector falls back any more, in that mod or in Scubrah's Patch. What is left in both is
+`managers`, `omnis`, `mapsdata` and `entitylibrarypatchoverride`, none of which is a sector and none
+of which splits at all.
+
 ## Work
 
 ### 1. Depth-aware fragment ids — the enabler

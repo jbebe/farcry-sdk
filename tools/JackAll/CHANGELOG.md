@@ -5,6 +5,35 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **`<world>.game.xml` is overridden one mission at a time** — the file that declares which mission
+  layers exist and when each is on, so every mod adding a mission or an outpost had to override it
+  whole and last-wins against every other such mod. It now splits per `<Mission>`, with the flat
+  `<MissionLayers>` index rebuilt from the missions rather than maintained by hand. Realism Plus
+  Redux's world1 edit becomes **32 mission fragments totalling 12,758 bytes in place of a 365,187
+  byte whole-file override**, so two mods adding different outposts finally merge. The plain-text
+  multiplayer template keeps its whole-file override, since re-serializing it could not be
+  round-tripped safely.
+- **An entity can be deleted from a sector without claiming the sector** — `_layers.xml` gained
+  `<delete id="…"/>`. Removing one crate used to mean a whole-file override, which outranked every
+  other mod touching any of that sector's other entities. Deletion is still exclusive, because two
+  mods disagreeing about whether something exists genuinely disagree, but it is now exclusive over
+  **one entity instead of one file**. Where another enabled mod edits an entity you deleted, the
+  entity is kept and the collision is reported rather than silently resolved. With this, no world
+  sector in either of the two largest community mods falls back to a whole-file override.
+- **A world sector's mission layers are overridable** — an entity is spawned from the layer it sits
+  in, not from the `CMissionComponent` on it, so an outpost mod that moves guards into a mission
+  layer of its own could not be expressed per fragment and landed as a whole-file override. A sector
+  now has one more override unit, `_layers.xml`, saying which layer its entities belong to; a mod
+  states only what it moved, and two mods re-filing different entities of one sector merge instead of
+  fighting. Importing Realism Plus Redux takes its whole-file fallbacks from **96 to 8** and its
+  staged fragments from 669 to **12,542**.
+- **A fragment shows what it lives in** — the Files tab names the mission layer or library group a
+  fragment sits in, which its id deliberately does not record. An entity whose mission component
+  claims a different layer than the sector nests it under is flagged in the details pane and in the
+  editor: the game spawns it from where it sits, so that edit changes nothing on its own.
+- **A whole-file fallback says so** — `mod import-legacy` used to coarsen an `.fcb` to a whole-file
+  override in silence. It now reports every one, in the app, the CLI and `--json`, and names the
+  reason - down to which entities moved into which mission layer.
 - **Legacy import splits every container, not just `.fcb`** — `mod import-legacy` used to diff a
   legacy patch fragment-by-fragment only for entity libraries and world sectors; a mod that changed
   `movemgr.bin` or a `*_depload.dat` landed as a whole-file override, last-wins and silent. The

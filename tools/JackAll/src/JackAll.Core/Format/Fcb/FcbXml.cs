@@ -51,7 +51,7 @@ public static class FcbXml
     /// </summary>
     public static IReadOnlyList<FcbFragmentInfo> ListFragmentsWithSize(FcbObject root)
         => [.. FcbFragments.Slots(root)
-            .Select(s => new FcbFragmentInfo(s.Id, FcbDocument.EncodedSize(s.Parent.Children[s.Index])))];
+            .Select(s => new FcbFragmentInfo(s.Id, FcbDocument.EncodedSize(s.Node)))];
 
     /// <summary>
     /// Renders the node of <paramref name="root"/> whose <see cref="FcbFragments"/> id is

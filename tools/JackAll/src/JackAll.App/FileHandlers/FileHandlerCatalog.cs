@@ -55,9 +55,13 @@ public static class FileHandlerCatalog
         Action openDominoEditor, Action openMgbEditor)
         => file switch
         {
-            // A depload fragment is a dependency list, not an `.fcb` value tree, so it gets the plain
-            // text/diff view rather than the FCB value editor - which would have nothing to parse.
-            { IsFragment: true } when IsDepLoadFragment(file) => BuildTextHandler(file, readContent, readOriginal),
+            // A dependency list, a mission element and a sector's layer placement are all small
+            // documents rather than `.fcb` value trees, so they get the plain text/diff view rather
+            // than the FCB value editor - which would have nothing to parse.
+            { IsFragment: true, FragmentId: { } id } when IsPlainDocumentFragment(file, id)
+                => BuildTextHandler(
+                    file, readContent,
+                    ContainerFormats.HasComparableOriginal(id) ? readOriginal : static () => null),
             // Checked before the plain "xml" case below - a fragment's own VfsFile.Type.Extension is
             // also "xml" (see GameVfs.MergeFragments), but it needs the dedicated editor tab, not the
             // generic read-only text viewer.
@@ -93,11 +97,11 @@ public static class FileHandlerCatalog
             _ => null,
         };
 
-    /// <summary>Whether a fragment row belongs to a `depload.dat` rather than an `.fcb`, read off the
-    /// container its staged path names.</summary>
-    private static bool IsDepLoadFragment(VfsFile file)
-        => ContainerFormats.ContainerPathOf(file.Path) is { } container
-        && ContainerFormats.IsDepLoad(container);
+    /// <summary>Whether this fragment row is a plain document, read off the container its staged
+    /// path names.</summary>
+    private static bool IsPlainDocumentFragment(VfsFile file, string fragmentId)
+        => ContainerFormats.IsPlainDocumentFragment(
+            ContainerFormats.ContainerPathOf(file.Path) ?? "", fragmentId);
 
     /// <summary>
     /// A plain read-only view for an unmodded (or origin-less) file, or - when <paramref name="file"/>

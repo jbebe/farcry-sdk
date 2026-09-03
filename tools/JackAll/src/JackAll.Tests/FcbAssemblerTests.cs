@@ -1,4 +1,5 @@
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Mods;
 using JackAll.Tools.World;
 
 namespace JackAll.Tests;
@@ -38,6 +39,39 @@ public class FcbAssemblerTests
         byte[] result = FcbAssembler.Apply(baseFcb, new Dictionary<string, string>());
 
         Assert.Same(baseFcb, result); // no decode/encode round trip at all - not just byte-equal
+    }
+
+    /// <summary>A library has grouping too, and it is equally invisible from the id - an archetype's
+    /// id is its dotted name, which need not match the group declaring it.</summary>
+    [Theory]
+    [MemberData(nameof(SampleFiles))]
+    public void An_archetype_reports_the_library_group_that_declares_it(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+
+        byte[] baseFcb = File.ReadAllBytes(path);
+        FcbObject root = FcbDocument.Deserialize(baseFcb);
+        IContainerTree tree = new FcbContainerSplitter(FcbClassDefinitions.Empty).Open(baseFcb);
+
+        foreach (FcbObject group in root.Children)
+        {
+            string expected = FcbEntityFields.ReadString(group, WorldHashes.Name);
+            foreach (FcbObject prototype in group.Children.Where(p => p.TypeHash == WorldHashes.EntityPrototype))
+            {
+                FcbObject? entity = prototype.Children.FirstOrDefault(c => c.TypeHash == WorldHashes.Entity);
+                if (entity is null || FcbEntityFields.ReadString(entity, WorldHashes.HidName) is not { Length: > 0 } name)
+                {
+                    continue;
+                }
+
+                FragmentAncestry ancestry = Assert.IsType<FragmentAncestry>(
+                    tree.AncestryOf(name.Replace('.', '\\') + ".xml"));
+                Assert.Equal(FragmentParentKind.LibraryGroup, ancestry.Kind);
+                Assert.Equal(expected, ancestry.ParentName);
+                // Grouping is not a layer, so it can never read as one being wrong.
+                Assert.False(ancestry.IsLayerMismatch);
+            }
+        }
     }
 
     [Theory]

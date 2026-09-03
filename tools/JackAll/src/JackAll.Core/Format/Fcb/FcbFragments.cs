@@ -1,6 +1,5 @@
 using System.Buffers;
 using System.Globalization;
-using System.Text;
 
 namespace JackAll.Core.Format.Fcb;
 
@@ -12,7 +11,7 @@ public readonly record struct FcbFragment(string Id, FcbObject Node);
 /// individually overridable, and what path-shaped id (see docs/design/fcb-deep-fragments.md) each one
 /// gets. Two shapes are recognised:
 ///
-///   - An entity library (root <c>EntityLibrary</c> of <c>EntityLibraryGroup</c> children): one
+///   - An entity library (root <c>EntityLibraries</c> of <c>EntityLibrary</c> group children): one
 ///     fragment per <c>EntityPrototype</c>, keyed on its entity's <c>hidName</c> — the engine's own
 ///     archetype map key — with the dotted name mapped onto a path
 ///     (<c>vehicle\Land\DLC_Vehicle1_DLC1.xml</c>).
@@ -26,15 +25,6 @@ public readonly record struct FcbFragment(string Id, FcbObject Node);
 /// </summary>
 public static class FcbFragments
 {
-    private const uint EntityLibraryTypeHash = 0xBCDD10B4;
-    private const uint EntityLibraryGroupTypeHash = 0xE0BDB3DB;
-    private const uint WorldSectorTypeHash = 0xC1CB6D9A;
-    private static readonly uint EntityPrototypeTypeHash = FcbClassDefinitions.Crc32Ascii("EntityPrototype");
-    private static readonly uint EntityTypeHash = FcbClassDefinitions.Crc32Ascii("Entity");
-    private static readonly uint MissionLayerTypeHash = FcbClassDefinitions.Crc32Ascii("MissionLayer");
-    private static readonly uint HidNameFieldHash = FcbClassDefinitions.Crc32Ascii("hidName");
-    private static readonly uint DisEntityIdFieldHash = FcbClassDefinitions.Crc32Ascii("disEntityId");
-    private static readonly uint TextPathIdFieldHash = FcbClassDefinitions.Crc32Ascii("text_PathId");
     private static readonly SearchValues<char> InvalidFileNameChars = SearchValues.Create(Path.GetInvalidFileNameChars());
 
     /// <summary>
@@ -90,7 +80,7 @@ public static class FcbFragments
     /// (two declarations of one archetype in one library), only the last occurrence is addressable,
     /// matching the engine's own last-wins resolution.</summary>
     public static IReadOnlyList<FcbFragment> List(FcbObject root)
-        => [.. Slots(root).Select(s => new FcbFragment(s.Id, s.Parent.Children[s.Index]))];
+        => [.. Slots(root).Select(s => new FcbFragment(s.Id, s.Node))];
 
     /// <summary>The node <paramref name="fragmentId"/> names, or null when nothing matches.</summary>
     public static FcbObject? Find(FcbObject root, string fragmentId)
@@ -99,7 +89,7 @@ public static class FcbFragments
         {
             if (IdComparer.Equals(slot.Id, fragmentId))
             {
-                return slot.Parent.Children[slot.Index];
+                return slot.Node;
             }
         }
 
@@ -114,17 +104,17 @@ public static class FcbFragments
     /// appends at the root.</summary>
     internal static FcbObject AppendTarget(FcbObject root, FcbObject addition)
     {
-        if (root.TypeHash == WorldSectorTypeHash)
+        if (root.TypeHash == WorldHashes.WorldSector)
         {
             FcbObject? first = null;
             foreach (FcbObject layer in root.Children)
             {
-                if (layer.TypeHash != MissionLayerTypeHash)
+                if (layer.TypeHash != WorldHashes.MissionLayer)
                 {
                     continue;
                 }
                 first ??= layer;
-                if (ReadCString(layer, TextPathIdFieldHash).Equals("main", StringComparison.OrdinalIgnoreCase))
+                if (MissionLayers.IsMain(MissionLayers.NameOf(layer)))
                 {
                     return layer;
                 }
@@ -132,7 +122,7 @@ public static class FcbFragments
             return first ?? root;
         }
 
-        if (addition.TypeHash != EntityLibraryGroupTypeHash && IsLibraryOfGroups(root))
+        if (addition.TypeHash != WorldHashes.EntityLibrary && IsLibraryOfGroups(root))
         {
             return root.Children[^1];
         }
@@ -142,7 +132,12 @@ public static class FcbFragments
 
     /// <summary>A fragment's place in the tree, held as parent + index so a replacement can be
     /// written straight back into the same slot.</summary>
-    internal readonly record struct FragmentSlot(string Id, FcbObject Parent, int Index);
+    internal readonly record struct FragmentSlot(string Id, FcbObject Parent, int Index)
+    {
+        /// <summary>The node currently in the slot. Only valid until something moves it - a caller
+        /// that rearranges children has to take this first.</summary>
+        public FcbObject Node => Parent.Children[Index];
+    }
 
     internal static List<FragmentSlot> Slots(FcbObject root)
     {
@@ -154,7 +149,7 @@ public static class FcbFragments
                 for (int i = 0; i < group.Children.Count; i++)
                 {
                     FcbObject prototype = group.Children[i];
-                    if (prototype.TypeHash != EntityPrototypeTypeHash)
+                    if (prototype.TypeHash != WorldHashes.EntityPrototype)
                     {
                         continue;
                     }
@@ -166,25 +161,25 @@ public static class FcbFragments
                 }
             }
         }
-        else if (root.TypeHash == WorldSectorTypeHash)
+        else if (root.TypeHash == WorldHashes.WorldSector)
         {
             foreach (FcbObject layer in root.Children)
             {
-                if (layer.TypeHash != MissionLayerTypeHash)
+                if (layer.TypeHash != WorldHashes.MissionLayer)
                 {
                     continue;
                 }
                 for (int i = 0; i < layer.Children.Count; i++)
                 {
                     FcbObject entity = layer.Children[i];
-                    if (entity.TypeHash != EntityTypeHash
-                        || !entity.Values.TryGetValue(DisEntityIdFieldHash, out byte[]? idBytes)
+                    if (entity.TypeHash != WorldHashes.Entity
+                        || !entity.Values.TryGetValue(WorldHashes.DisEntityId, out byte[]? idBytes)
                         || idBytes.Length < 8)
                     {
                         continue;
                     }
                     ulong disEntityId = BitConverter.ToUInt64(idBytes, 0);
-                    slots.Add(new FragmentSlot(EntityId(ReadCString(entity, HidNameFieldHash), disEntityId), layer, i));
+                    slots.Add(new FragmentSlot(EntityId(FcbEntityFields.ReadString(entity, WorldHashes.HidName), disEntityId), layer, i));
                 }
             }
         }
@@ -233,9 +228,9 @@ public static class FcbFragments
     {
         foreach (FcbObject child in prototype.Children)
         {
-            if (child.TypeHash == EntityTypeHash)
+            if (child.TypeHash == WorldHashes.Entity)
             {
-                string name = ReadCString(child, HidNameFieldHash);
+                string name = FcbEntityFields.ReadString(child, WorldHashes.HidName);
                 if (name.Length > 0)
                 {
                     return name;
@@ -247,16 +242,12 @@ public static class FcbFragments
 
     private static bool IsLibraryOfGroups(FcbObject root)
         => root.Values.Count == 0
-        && root.TypeHash == EntityLibraryTypeHash
+        && root.TypeHash == WorldHashes.EntityLibraries
         && root.Children.Count > 0
-        && root.Children.All(c => c.TypeHash == EntityLibraryGroupTypeHash);
+        && root.Children.All(c => c.TypeHash == WorldHashes.EntityLibrary);
 
-    private static string ReadCString(FcbObject node, uint fieldHash)
-        => node.Values.TryGetValue(fieldHash, out byte[]? bytes) && bytes.Length > 0 && bytes[^1] == 0
-            ? Encoding.UTF8.GetString(bytes, 0, bytes.Length - 1)
-            : "";
-
-    private static string Sanitize(string name)
+    /// <summary>A name made safe to use as one path segment of a fragment id.</summary>
+    internal static string Sanitize(string name)
     {
         if (name.AsSpan().IndexOfAny(InvalidFileNameChars) < 0)
         {

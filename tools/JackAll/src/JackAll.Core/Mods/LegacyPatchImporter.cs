@@ -10,27 +10,32 @@ using JackAll.Core.Naming;
 
 namespace JackAll.Core.Mods;
 
-/// <summary>A container the import left out, because neither of the shapes a layer may express it
-/// in could carry its change.</summary>
-public sealed record LegacyImportRefusal(string ContainerPath, string Reason);
+/// <summary>A container whose change per-fragment overrides could not express, and why.</summary>
+public sealed record LegacyImportNote(string ContainerPath, string Reason);
 
+/// <param name="Refused">Containers left out entirely - a whole-file override of one would do more
+/// harm than dropping it.</param>
+/// <param name="WholeFile">Containers staged whole instead. Not a failure, but it costs the mod its
+/// per-fragment merging, so it is reported rather than passed over in silence.</param>
 public sealed record LegacyImportResult(
     int TotalEntries,
     int Imported,
     int FragmentsImported,
     int Skipped,
-    IReadOnlyList<LegacyImportRefusal> Refused)
+    IReadOnlyList<LegacyImportNote> Refused,
+    IReadOnlyList<LegacyImportNote> WholeFile)
 {
-    /// <summary>Value equality all the way down: the synthesized comparison would take
-    /// <see cref="Refused"/> by reference, so two identical imports would never compare equal.</summary>
+    /// <summary>Value equality all the way down: the synthesized comparison would take the two lists
+    /// by reference, so two identical imports would never compare equal.</summary>
     public bool Equals(LegacyImportResult? other)
         => other is not null
            && (TotalEntries, Imported, FragmentsImported, Skipped)
               == (other.TotalEntries, other.Imported, other.FragmentsImported, other.Skipped)
-           && Refused.SequenceEqual(other.Refused);
+           && Refused.SequenceEqual(other.Refused)
+           && WholeFile.SequenceEqual(other.WholeFile);
 
     public override int GetHashCode()
-        => HashCode.Combine(TotalEntries, Imported, FragmentsImported, Skipped, Refused.Count);
+        => HashCode.Combine(TotalEntries, Imported, FragmentsImported, Skipped, Refused.Count, WholeFile.Count);
 }
 
 /// <summary>
@@ -153,7 +158,7 @@ public static class LegacyPatchImporter
         using DuniaArchive legacy = DuniaArchive.Open(fatPath, datPath);
 
         int imported = 0, fragmentsImported = 0, skipped = 0, processed = 0;
-        List<LegacyImportRefusal> refused = [];
+        List<LegacyImportNote> refused = [], wholeFile = [];
         foreach (FatEntry entry in legacy.Entries)
         {
             processed++;
@@ -204,7 +209,8 @@ public static class LegacyPatchImporter
                 }
             }
             else if (TryImportContainer(entry.Hash, legacyBytes, vanillaBytes, named ? path : null, type,
-                         workspace, names, fcbDefinitions, refused, ref fragmentsImported, ref skipped, progress))
+                         workspace, names, fcbDefinitions, refused, wholeFile, ref fragmentsImported,
+                         ref skipped, progress))
             {
                 continue;
             }
@@ -213,7 +219,8 @@ public static class LegacyPatchImporter
             imported++;
         }
 
-        return new LegacyImportResult(legacy.Entries.Count, imported, fragmentsImported, skipped, refused);
+        return new LegacyImportResult(
+            legacy.Entries.Count, imported, fragmentsImported, skipped, refused, wholeFile);
     }
 
     /// <summary>
@@ -243,14 +250,15 @@ public static class LegacyPatchImporter
     /// Imports one splitting container as the fragments that differ from vanilla. Returns false,
     /// staging nothing, when the entry names no container this can address, or when the change is one
     /// fragments cannot express and the format still accepts a whole-file override - in both cases
-    /// the caller's plain whole-file path takes over. A MOVE graph is the exception: it is refused
+    /// the caller's plain whole-file path takes over, and the second case is recorded in
+    /// <paramref name="wholeFile"/> on the way past. A MOVE graph is the exception: it is refused
     /// and reported rather than coarsened, per the class remarks.
     /// </summary>
     private static bool TryImportContainer(
         uint hash, byte[] legacyBytes, byte[]? vanillaBytes, string? knownPath, FileType type,
         FolderModLayer workspace, NameDatabase names, FcbClassDefinitions defs,
-        List<LegacyImportRefusal> refused, ref int fragmentsImported, ref int skipped,
-        IProgress<string>? progress)
+        List<LegacyImportNote> refused, List<LegacyImportNote> wholeFile, ref int fragmentsImported,
+        ref int skipped, IProgress<string>? progress)
     {
         if (ContainerPathFor(knownPath, type, hash) is not { } containerPath)
         {
@@ -268,10 +276,12 @@ public static class LegacyPatchImporter
 
         if (!ContainerFormats.IsMoveGraph(Path.GetFileName(containerPath)))
         {
+            wholeFile.Add(new LegacyImportNote(containerPath, refusal));
+            progress?.Report($"Staged {containerPath} whole: {refusal}.");
             return false;
         }
 
-        refused.Add(new LegacyImportRefusal(containerPath, refusal));
+        refused.Add(new LegacyImportNote(containerPath, refusal));
         progress?.Report($"Left out {containerPath}: {refusal}.");
         return true;
     }
@@ -338,11 +348,19 @@ public static class LegacyPatchImporter
             return "this format is not compared by shape";
         }
 
+        (string Id, string Xml)? structural = null;
         if (legacyShape != vanillaShape)
         {
-            return vanillaIds.IsSubsetOf(legacyIds)
-                ? "something outside its fragments changed, or a fragment moved"
-                : "it drops fragments, which an override cannot remove";
+            // The shapes differ because entities were re-filed or removed, both of which a structural
+            // override expresses. Anything else about the container having changed is caught by the
+            // reassembly check further down, not guessed at here.
+            if (legacy.StructuralOverride(vanilla) is not { } found)
+            {
+                return vanillaIds.IsSubsetOf(legacyIds)
+                    ? "something outside its fragments changed, or a fragment moved"
+                    : "it drops fragments, which an override cannot remove";
+            }
+            structural = found;
         }
 
         if (rows.Count == 0)
@@ -353,7 +371,7 @@ public static class LegacyPatchImporter
 
         // Nothing is written until every fragment has been read, so a refusal found part way through
         // leaves the caller free to stage the whole file instead of on top of half a fragment set.
-        List<(string Path, string Xml)> changed = [];
+        List<(string Id, string Xml)> changed = [];
         int unchanged = 0;
         foreach (FcbFragmentInfo row in rows)
         {
@@ -370,17 +388,85 @@ public static class LegacyPatchImporter
                 continue;
             }
 
-            changed.Add(($"{containerPath}\\{row.Id}", xml));
+            changed.Add((row.Id, xml));
         }
 
-        foreach ((string path, string xml) in changed)
+        if (structural is { } extra)
         {
-            workspace.Stage(hash, path, "xml", Utf8.GetBytes(xml));
+            changed.Add(extra);
+
+            // Everything above is a diff of the two containers; this is the check that the diff
+            // actually rebuilds the mod's container. Without it a sector that was also reordered, or
+            // changed in some way outside its fragments, would import as a quietly wrong one.
+            if (Reassemble(splitter, vanillaBytes, changed, vanillaIds) != legacyShape)
+            {
+                return DescribeMovedFragments(legacy, vanilla, vanillaIds) is { } what
+                    ? $"{what}, and something else about it changed too"
+                    : "something outside its fragments changed, or a fragment moved";
+            }
+        }
+
+        foreach ((string id, string xml) in changed)
+        {
+            workspace.Stage(hash, $"{containerPath}\\{id}", "xml", Utf8.GetBytes(xml));
         }
 
         fragmentsImported += changed.Count;
         skipped += unchanged;
         return null;
+    }
+
+    /// <summary>The shape the staged set actually rebuilds, for comparing against the shape the mod
+    /// shipped.</summary>
+    private static string? Reassemble(
+        IContainerSplitter splitter, byte[] vanillaBytes, List<(string Id, string Xml)> staged,
+        HashSet<string> vanillaIds)
+    {
+        try
+        {
+            Dictionary<string, string> byId = staged.ToDictionary(
+                c => c.Id, c => c.Xml, FcbFragments.IdComparer);
+            return splitter.Open(splitter.Apply(vanillaBytes, byId)).Skeleton(vanillaIds.Contains);
+        }
+        catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException or MoveFormatException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Why two containers of the same fragments still differ in shape, when the answer is that
+    /// fragments changed parent - a worldsector mod moving entities into a mission layer of its own,
+    /// which is most of what the fragment model cannot currently express. Null when nothing moved and
+    /// the difference is something else.
+    /// </summary>
+    private static string? DescribeMovedFragments(
+        IContainerTree legacy, IContainerTree vanilla, IEnumerable<string> commonIds)
+    {
+        int moved = 0;
+        string grouping = "";
+        var newParents = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        foreach (string id in commonIds)
+        {
+            if (legacy.AncestryOf(id) is not { } after || vanilla.AncestryOf(id) is not { } before
+                || after.ParentName.Equals(before.ParentName, StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            moved++;
+            grouping = after.Grouping;
+            newParents.Add(after.ParentName);
+        }
+
+        if (moved == 0)
+        {
+            return null;
+        }
+
+        string what = moved == 1 ? "1 entity was" : $"{moved} entities were";
+        return $"{what} moved into {grouping}(s) {string.Join(", ", newParents.Order())}, "
+            + "which a per-fragment override cannot do";
     }
 
     /// <summary>

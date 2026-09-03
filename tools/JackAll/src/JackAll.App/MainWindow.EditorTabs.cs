@@ -67,7 +67,10 @@ public partial class MainWindow
 
             var vm = new FcbEditorTabViewModel(
                 file.FileName, file.Hash, xml, originalXml, FcbDefinitionsProvider.Value.Value,
-                _vm.StageFragmentEdits(file));
+                _vm.StageFragmentEdits(file))
+            {
+                Notice = _vm.LayerMismatchNoteFor(file),
+            };
             var view = new FcbEditorTabView(vm);
             var tab = new TabItem { Content = view };
             tab.Header = BuildClosableTabHeader(tab, vm, onRemoved);

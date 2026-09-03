@@ -27,7 +27,27 @@ public static class ContainerFormats
         => segment.EndsWith(FcbSuffix, StringComparison.OrdinalIgnoreCase)
            || IsDepLoad(segment)
            || IsMoveGraph(segment)
-           || IsStringTable(segment);
+           || IsStringTable(segment)
+           || IsWorldDescriptor(segment);
+
+    /// <summary>A world or map descriptor, which splits per mission.</summary>
+    public static bool IsWorldDescriptor(string fileName)
+        => WorldDescriptorContainerSplitter.IsWorldDescriptor(fileName);
+
+    /// <summary>
+    /// Whether a fragment of <paramref name="container"/> is a plain document rather than an `.fcb`
+    /// value tree, and so belongs in a text view instead of the value editor.
+    /// </summary>
+    public static bool IsPlainDocumentFragment(string container, string fragmentId)
+        => IsDepLoad(container) || IsWorldDescriptor(container) || WorldSectorLayout.IsLayoutId(fragmentId);
+
+    /// <summary>
+    /// Whether a fragment's base-game form is worth diffing against. A world sector's layout states
+    /// only what a mod moved, while its vanilla form is the sector's whole placement, so a diff of
+    /// the two would read as the entire vanilla layout being deleted.
+    /// </summary>
+    public static bool HasComparableOriginal(string fragmentId)
+        => !WorldSectorLayout.IsLayoutId(fragmentId);
 
     public static bool IsDepLoad(string fileName)
         => fileName.EndsWith(DepLoadSuffix, StringComparison.OrdinalIgnoreCase);
@@ -79,6 +99,11 @@ public static class ContainerFormats
         if (IsMoveGraph(fileName))
         {
             return MoveSplitter.Value;
+        }
+
+        if (IsWorldDescriptor(fileName))
+        {
+            return WorldDescriptorContainerSplitter.Instance;
         }
 
         return IsStringTable(fileName)

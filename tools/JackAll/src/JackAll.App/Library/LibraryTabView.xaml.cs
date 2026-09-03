@@ -2,6 +2,7 @@ using System.Windows;
 using System.Windows.Controls;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.FileHandlers.Fcb.FcbEditor;
+using JackAll.Core.Format.Fcb;
 using JackAll.Core.Vfs;
 using JackAll.Tools.World;
 

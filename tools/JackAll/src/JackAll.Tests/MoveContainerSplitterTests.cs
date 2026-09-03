@@ -226,13 +226,13 @@ public sealed class MoveContainerSplitterTests
         string xml = tree.Extract(tree.List().First(r => !r.Id.StartsWith((char)95)).Id)!;
 
         string reflowed = xml.Replace("  <", "      <").Replace("\r\n", "\n");
-        Assert.Equal(xml, _splitter.Canonicalize(reflowed));
-        Assert.Equal(xml, _splitter.Canonicalize(xml));
+        Assert.Equal(xml, _splitter.Canonicalize("state.xml", reflowed));
+        Assert.Equal(xml, _splitter.Canonicalize("state.xml", xml));
     }
 
     [Fact]
     public void An_unreadable_fragment_names_the_problem()
-        => Assert.ThrowsAny<Exception>(() => _splitter.Canonicalize("not xml at all"));
+        => Assert.ThrowsAny<Exception>(() => _splitter.Canonicalize("state.xml", "not xml at all"));
 
     /// <summary>
     /// The manager's four sections are reserved ids, and an expansion - a bare state machine with no
