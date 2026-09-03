@@ -1,5 +1,6 @@
 using JackAll.App.FileHandlers;
 using JackAll.App.FileHandlers.Mgb;
+using JackAll.Core.Format.Rml;
 using JackAll.Core.Vfs;
 using JackAll.Core;
 using Microsoft.Win32;

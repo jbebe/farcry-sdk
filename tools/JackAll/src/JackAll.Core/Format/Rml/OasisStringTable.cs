@@ -1,8 +1,7 @@
 using System.Globalization;
 using System.Xml.Linq;
-using JackAll.Core.Format.Rml;
 
-namespace JackAll.App.FileHandlers.Mgb;
+namespace JackAll.Core.Format.Rml;
 
 /// <summary>
 /// The game's localised string table (<c>languages\english\oasisstrings.rml</c>), key → text.
