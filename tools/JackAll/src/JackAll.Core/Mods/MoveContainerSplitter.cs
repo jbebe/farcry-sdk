@@ -120,8 +120,33 @@ public sealed class MoveContainerSplitter : IContainerSplitter
         // A staged unit belongs to a state; a state is rebuilt only once, from whichever of its units
         // were staged plus the rest taken from the base graph.
         Dictionary<uint, Dictionary<uint, MoveFragment>> byState = [];
+        Dictionary<MoveSection, MoveFragment> sections = [];
         foreach ((string id, string xml) in fragmentXmlById)
         {
+            if (MoveSections.Parse(id) is { } named)
+            {
+                MoveFragment slice = MoveFragmentXml.Parse(xml);
+                if (slice.Section != named)
+                {
+                    throw new InvalidDataException(
+                        $"A MOVE fragment staged as '{id}' describes the "
+                        + $"{(slice.Section is { } s ? MoveSections.NameOf(s) : "no")} section instead.");
+                }
+
+                if (named == MoveSection.Channels
+                    && MoveSections.DeclaredChannelCount(slice.Roots[0].Ops)
+                        is { } count and not MoveSections.RequiredChannelCount)
+                {
+                    throw new InvalidDataException(
+                        $"'{id}' declares {count} value channels. MSAnim::LoadMoves compares this "
+                        + $"against a hardcoded {MoveSections.RequiredChannelCount} and drops the "
+                        + "file otherwise, so the graph would load as no animation at all, silently.");
+                }
+
+                sections[named] = slice;
+                continue;
+            }
+
             MoveFragment fragment = MoveFragmentXml.Parse(xml);
             uint unitId = fragment.Unit.Id;
             if (HashOf(id) != unitId)
@@ -182,6 +207,19 @@ public sealed class MoveContainerSplitter : IContainerSplitter
                 AssembleState(index, known, stateHash, units);
             states[stateHash] = state;
             pending.AddRange(external);
+        }
+
+        if (sections.Count > 0)
+        {
+            MoveObject manager = file.Objects.FirstOrDefault(o => o.ClassName == "CMoveMgr")
+                ?? throw new InvalidDataException(
+                    "This graph has no CMoveMgr, so it has no manager sections to override - an "
+                    + "expansion like dlc1.bin is a bare state machine.");
+            MoveFragmentXml.SpliceSections(manager, sections);
+            foreach (MoveFragment slice in sections.Values)
+            {
+                pending.AddRange(slice.External.Select(e => (e.Key.Owner, e.Key.Index, e.Value)));
+            }
         }
 
         Rebuild(file, index, states);
@@ -372,8 +410,23 @@ public sealed class MoveContainerSplitter : IContainerSplitter
     {
         private readonly MoveStateIndex _index = MoveStateIndex.Build(file);
 
+        /// <summary>
+        /// Which manager sections this graph has - none for an expansion, which is a bare
+        /// <c>CMoveStateMachine</c> with no manager and no value container at all.
+        /// </summary>
+        private readonly IReadOnlyCollection<MoveSection> _sections =
+            MoveSections.Ranges(file) is { } ranges ? [.. ranges.Keys] : [];
+
         public string? Extract(string fragmentId)
         {
+            // Reserved names are matched first, so a state can never shadow a section.
+            if (MoveSections.Parse(fragmentId) is { } section)
+            {
+                return _sections.Contains(section)
+                    ? MoveFragmentXml.Render(MoveFragmentXml.LiftSection(_index, section))
+                    : null;
+            }
+
             if (HashOf(fragmentId) is not { } id || Find(id) is not var (state, unit))
             {
                 return null;
@@ -419,6 +472,13 @@ public sealed class MoveContainerSplitter : IContainerSplitter
         public IReadOnlyList<FcbFragmentInfo> List()
         {
             List<FcbFragmentInfo> rows = [];
+            foreach (MoveSection section in _sections)
+            {
+                rows.Add(new FcbFragmentInfo(
+                    MoveSections.IdOf(section),
+                    MoveFragmentXml.LiftSection(_index, section).Objects().Count));
+            }
+
             foreach (MoveObject state in _index.TopLevelStates)
             {
                 if (MoveStateIndex.NameHashOf(state) is not { } hash)

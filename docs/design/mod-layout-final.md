@@ -261,6 +261,12 @@ two additions this document already calls for (`stringtable`, `NewPartLib`) are 
 `WorldSector` arguably is, which is why it was admitted on a conflict-merge argument rather than a
 payload one.
 
+The manager's own inline blocks split too, under four reserved ids — `_channels.xml` (7.4 KB),
+`_packages.xml` (16.9 KB), `_blendsets.xml` (2.9 KB), `_transitions.xml` (10.4 KB). Four rather than
+one because combined they are ~38 KB, over Rule 2's line; and because the seams put the only block a
+mod realistically edits, the animation package list a new weapon must be registered in, in a fragment
+that contains no pointers. An expansion has none of them: `dlc1.bin` is a bare state machine.
+
 Two details are specific to MOVE:
 
 - **A composite key cannot be spelled out in a fragment id.** `FcbFragments.IdComparer` keys on a

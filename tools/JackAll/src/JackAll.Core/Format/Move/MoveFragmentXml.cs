@@ -24,7 +24,17 @@ public sealed class MoveFragment(MoveUnit unit, List<MoveObject> roots)
 
     public MoveUnit Unit { get; } = unit;
 
-    /// <summary>One root for a state, several for a branch group.</summary>
+    /// <summary>Set when this is a slice of the manager rather than anything to do with a state.</summary>
+    public MoveSection? Section { get; init; }
+
+    /// <summary>
+    /// One root for a state or a manager section, several for a branch group.
+    /// </summary>
+    /// <remarks>
+    /// A section's root is synthetic: the manager writes its sections inline, so the root is a holder
+    /// for a run of the manager's own ops rather than an object the file contains. The ops inside it
+    /// are the real ones, pointers included, so nothing is copied and nothing is mutated.
+    /// </remarks>
     public List<MoveObject> Roots { get; } = roots;
 
     /// <summary>The field each root hung off, parallel to <see cref="Roots"/>; empty for a state.</summary>
@@ -108,6 +118,41 @@ public static class MoveFragmentXml
 {
     private const string StateRoot = "MoveState";
     private const string BranchRoot = "MoveBranch";
+    private const string SectionRoot = "MoveSection";
+
+    /// <summary>The class name of a section's synthetic holder; never written to a binary.</summary>
+    private const string SectionHolder = "#section";
+
+    /// <summary>Lifts one run of the manager's own ops - a section - out of a graph.</summary>
+    public static MoveFragment LiftSection(MoveStateIndex index, MoveSection section)
+    {
+        MoveObject manager = index.File.Objects.FirstOrDefault(o => o.ClassName == "CMoveMgr")
+            ?? throw new MoveFormatException("this graph has no CMoveMgr, so it has no sections");
+
+        (int start, int count) = MoveSections.Ranges(manager)[section];
+        MoveObject holder = new(SectionHolder);
+        holder.Ops.AddRange(manager.Ops.GetRange(start, count));
+
+        MoveFragment fragment = new(default, [holder]) { Section = section };
+        Record(index, fragment);
+        return fragment;
+    }
+
+    /// <summary>Puts a parsed section's ops back where they came from.</summary>
+    /// <remarks>
+    /// Sections are spliced back to front so that replacing one does not move the next one's start.
+    /// </remarks>
+    public static void SpliceSections(
+        MoveObject manager, IReadOnlyDictionary<MoveSection, MoveFragment> staged)
+    {
+        IReadOnlyDictionary<MoveSection, (int Start, int Count)> ranges = MoveSections.Ranges(manager);
+        foreach (MoveSection section in staged.Keys.OrderByDescending(s => ranges[s].Start))
+        {
+            (int start, int count) = ranges[section];
+            manager.Ops.RemoveRange(start, count);
+            manager.Ops.InsertRange(start, staged[section].Roots[0].Ops);
+        }
+    }
 
     /// <summary>Lifts a state out of a graph with its weapon branches elided.</summary>
     public static MoveFragment LiftState(MoveStateIndex index, MoveObject state)
@@ -272,7 +317,13 @@ public static class MoveFragmentXml
         using (XmlWriter writer = XmlWriter.Create(text, settings))
         {
             MoveUnit unit = fragment.Unit;
-            if (unit.IsRemainder)
+            if (fragment.Section is { } section)
+            {
+                writer.WriteStartElement(SectionRoot);
+                writer.WriteAttributeString("name", MoveSections.NameOf(section));
+                WriteBody(writer, fragment, fragment.Roots[0], ids);
+            }
+            else if (unit.IsRemainder)
             {
                 writer.WriteStartElement(StateRoot);
                 Attribute(writer, "state", unit.StateHash);
@@ -384,6 +435,7 @@ public static class MoveFragmentXml
         MoveObject? current = null;
         MoveUnit unit = default;
         bool branchDocument = false;
+        MoveSection? section = null;
 
         while (reader.Read())
         {
@@ -413,6 +465,18 @@ public static class MoveFragmentXml
                 byId[0] = state;
                 roots.Add(state);
                 current = state;
+                continue;
+            }
+
+            if (reader.Name == SectionRoot)
+            {
+                section = MoveSections.ByName(Required(reader, "name"))
+                    ?? throw new MoveFormatException(
+                        $"<{SectionRoot} name=\"{reader.GetAttribute("name")}\"> names no section");
+                MoveObject holder = new(SectionHolder);
+                byId[0] = holder;
+                roots.Add(holder);
+                current = holder;
                 continue;
             }
 
@@ -499,7 +563,7 @@ public static class MoveFragmentXml
             throw new MoveFormatException($"no <{StateRoot}> or <{BranchRoot}> element");
         }
 
-        MoveFragment fragment = new(unit, roots);
+        MoveFragment fragment = new(unit, roots) { Section = section };
         fragment.RootNames.AddRange(rootNames);
         foreach ((MoveObject owner, int index, int targetId) in pending)
         {

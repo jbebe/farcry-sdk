@@ -61,9 +61,10 @@ public sealed class MoveContainerSplitterTests
         MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(original));
         IContainerTree tree = _splitter.Open(original);
 
+        int sections = tree.List().Count(r => r.Id.StartsWith('_'));
         int expected = index.TopLevelStates.Sum(
             s => MoveUnits.UnitsOf(s, MoveStateIndex.NameHashOf(s)!.Value).Count);
-        Assert.Equal(expected, tree.List().Count);
+        Assert.Equal(expected + sections, tree.List().Count);
         Assert.True(expected > index.TopLevelStates.Count(), "the corpus is expected to hold branches");
         Assert.All(tree.List(), row => Assert.NotNull(tree.Extract(row.Id)));
 
@@ -207,7 +208,8 @@ public sealed class MoveContainerSplitterTests
         if (path.Length == 0) return;
 
         IContainerTree tree = _splitter.Open(File.ReadAllBytes(path));
-        string bare = tree.List()[0].Id;
+        // A reserved section id has no number to bind by, so this rule is about the other rows.
+        string bare = tree.List().First(r => !r.Id.StartsWith('_')).Id;
         uint hash = MoveContainerSplitter.UnitOf(bare)!.Value;
 
         Assert.Equal(tree.Extract(bare), tree.Extract(MoveContainerSplitter.IdOf(new MoveUnit(hash, 0, null), "Pawn_Aim")));
@@ -221,7 +223,7 @@ public sealed class MoveContainerSplitterTests
         if (path.Length == 0) return;
 
         IContainerTree tree = _splitter.Open(File.ReadAllBytes(path));
-        string xml = tree.Extract(tree.List()[0].Id)!;
+        string xml = tree.Extract(tree.List().First(r => !r.Id.StartsWith((char)95)).Id)!;
 
         string reflowed = xml.Replace("  <", "      <").Replace("\r\n", "\n");
         Assert.Equal(xml, _splitter.Canonicalize(reflowed));
@@ -231,6 +233,84 @@ public sealed class MoveContainerSplitterTests
     [Fact]
     public void An_unreadable_fragment_names_the_problem()
         => Assert.ThrowsAny<Exception>(() => _splitter.Canonicalize("not xml at all"));
+
+    /// <summary>
+    /// The manager's four sections are reserved ids, and an expansion - a bare state machine with no
+    /// manager at all - offers none of them.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(CorpusFiles))]
+    public void Manager_sections_are_listed_only_when_the_graph_has_a_manager(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        IContainerTree tree = _splitter.Open(original);
+        bool hasManager = MoveCodec.Load(original).Objects.Any(o => o.ClassName == "CMoveMgr");
+
+        string[] reserved =
+            ["_channels.xml", "_packages.xml", "_blendsets.xml", "_transitions.xml"];
+        foreach (string id in reserved)
+        {
+            Assert.Equal(hasManager, tree.List().Any(r => r.Id == id));
+            Assert.Equal(hasManager, tree.Extract(id) is not null);
+        }
+    }
+
+    /// <summary>The section a mod actually edits: registering a new weapon's animation package.</summary>
+    [Theory]
+    [MemberData(nameof(CorpusFiles))]
+    public void A_package_can_be_added_without_touching_any_state(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        IContainerTree tree = _splitter.Open(original);
+        if (tree.Extract("_packages.xml") is not { } packages) return;
+
+        // One more package: bump the count, and append its three strings after the last entry.
+        uint before = uint.Parse(Between(packages, "<u32 n=\"size\" v=\"", "\""));
+        int lastEnd = packages.LastIndexOf("</MoveSection>", StringComparison.Ordinal);
+        string edited = packages
+            .Replace($"<u32 n=\"size\" v=\"{before}\" />", $"<u32 n=\"size\" v=\"{before + 1}\" />")
+            .Insert(lastEnd,
+                "  <str n=\"Name\" v=\"dlc1_vss_vintorez\" />\n"
+                + "  <str n=\"Extension\" v=\"\" />\n"
+                + "  <str n=\"ExportWithWorld\" v=\"\" />\n");
+
+        MoveFile after = MoveCodec.Load(_splitter.Apply(
+            original, new Dictionary<string, string> { ["_packages.xml"] = edited }));
+
+        MoveObject manager = after.Objects.First(o => o.ClassName == "CMoveMgr");
+        Assert.Equal(before + 1, manager.Field("size"));
+        Assert.Contains(manager.Ops, op =>
+            op.Name == "Name" && op.Bytes is { } b
+            && System.Text.Encoding.ASCII.GetString(b) == "dlc1_vss_vintorez");
+    }
+
+    /// <summary>
+    /// The hardest constraint in the format: <c>MSAnim::LoadMoves</c> compares the channel count
+    /// against a hardcoded 105 and drops the file otherwise, which in game is no animation at all and
+    /// no diagnostic.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(CorpusFiles))]
+    public void A_channel_table_that_is_not_105_channels_is_refused(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        IContainerTree tree = _splitter.Open(original);
+        if (tree.Extract("_channels.xml") is not { } channels) return;
+
+        string broken = channels.Replace(
+            "<u32 n=\"ms_iNumMoveValue\" v=\"105\" />", "<u32 n=\"ms_iNumMoveValue\" v=\"104\" />");
+        Assert.NotEqual(channels, broken);
+
+        InvalidDataException error = Assert.Throws<InvalidDataException>(() =>
+            _splitter.Apply(original, new Dictionary<string, string> { ["_channels.xml"] = broken }));
+        Assert.Contains("105", error.Message);
+    }
 
     private static (string Id, string Xml, uint Clip) FirstFragmentWithAClip(IContainerTree tree)
     {

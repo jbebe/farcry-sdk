@@ -857,6 +857,33 @@ Three details the format forces:
   records a position, so a fragment stays valid when an unrelated branch of the same state changes
   size.
 
+#### The manager's four sections
+
+Everything that belongs to `CMoveMgr` rather than to a state is written **inline** in its op list, so
+those are runs of ops rather than subtrees. They split under four reserved ids:
+
+| id | holds | XML |
+|---|---|---:|
+| `_channels.xml` | the 105 value channels | 7.4 KB |
+| `_packages.xml` | the 126 animation package names | 16.9 KB |
+| `_blendsets.xml` | the blend set, its 16 categories and their poses | 2.9 KB |
+| `_transitions.xml` | the default transition and the 16×16 matrix | 10.4 KB |
+
+Four rather than one because a combined manager fragment is ~38 KB, over the ~20 KB line the repo's
+mod-layout design note sets for a fragment — and because splitting on these seams means the only one
+a mod realistically edits, `_packages.xml`, contains no pointers at all.
+`_packages.xml` is what a new weapon has to be registered in, alongside its
+[`depload`](./depload.md#animations-are-not-like-textures) package.
+
+An expansion has none of them: `dlc1.bin`'s root is a bare `CMoveStateMachine`, with no manager and
+no value container, so it lists only states and branches.
+
+:::danger[`_channels.xml` must declare exactly 105 channels]
+`MSAnim::LoadMoves` compares the count against a hardcoded `0x69` and **drops the file** otherwise.
+The symptom in game is no animation at all, with no error — so a build refuses a channel table of any
+other length rather than producing a graph the engine will silently ignore.
+:::
+
 ```
 jackall-cli move fragments movemgr.bin --base <retail>.bin --out layer   # split, diffed
 jackall-cli move assemble <retail>.bin layer --expect movemgr.bin        # splice, and check
