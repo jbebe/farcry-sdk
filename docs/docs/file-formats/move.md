@@ -856,6 +856,29 @@ Three details the format forces:
   records a position, so a fragment stays valid when an unrelated branch of the same state changes
   size.
 
+#### Adding a weapon, as fragments
+
+Retargeting a weapon is a **value** edit — the branches already exist, and a mod rewrites the clip
+hashes in them. A *new* weapon index has no branches at all, so something must create them, and that
+is a **structural** edit. The scheme supports it, at a cost worth stating plainly.
+
+A branch lives at a `<branch unit="…"/>` marker inside its state, so **adding a branch means editing
+the state fragment too** — one file to hold the new marker, one to hold the branch:
+
+```
+Pawn_Generic_Reload.1920121392.xml          the state, with a marker added
+Pawn_Generic_Reload_ch17_w44.<id>.xml       the new weapon's branch
+```
+
+Ship only the branch and the build refuses it — the state has no site for that unit, so the two
+fragments disagree about how many branches the weapon has and it says so rather than dropping one
+silently. Both directions are pinned by `MoveNewWeaponTests`, which clones weapon 39's branch onto
+index 44 and checks that 44 then reaches the clips 39 reaches while 39 itself is unchanged.
+
+Whether index 44 then *works in game* is a separate question this cannot answer — see
+[the weapon ceiling](#equippedweapon--the-weapon-ceiling): nothing declares the enum, so the graph
+accepts 44 as cheaply as 43, but it has never been driven with one.
+
 #### Getting the names back
 
 The loadable graph has no names, and the twin that does is a format
