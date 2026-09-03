@@ -13,6 +13,10 @@ public sealed class FolderModLayer : IModLayer
     private readonly Dictionary<uint, FragmentMap> _fragmentOverrides = [];
     private readonly Dictionary<string, string> _pluginFiles = new(StringComparer.Ordinal);
 
+    /// <summary>Fragments whose bytes come from inside a file rather than being one - the strings a
+    /// localization patch document states. Keyed like <see cref="_absolutePaths"/>, read first.</summary>
+    private readonly Dictionary<uint, byte[]> _inlineFragments = [];
+
     public string Name { get; }
     public bool Enabled { get; set; } = true;
     public string RootPath { get; }
@@ -35,15 +39,28 @@ public sealed class FolderModLayer : IModLayer
         _hashes.Clear();
         _fragmentOverrides.Clear();
         _pluginFiles.Clear();
+        _inlineFragments.Clear();
 
+        List<string> refused = [];
         if (Directory.Exists(RootPath))
         {
             foreach (string file in Directory.EnumerateFiles(RootPath, "*", SearchOption.AllDirectories))
             {
                 LayerPath classified = ModPathHashing.Classify(Path.GetRelativePath(RootPath, file));
+                if (classified.Refusal is { } refusal)
+                {
+                    refused.Add(refusal);
+                    continue;
+                }
                 if (classified.PluginPath is { } pluginPath)
                 {
                     _pluginFiles[pluginPath] = file;
+                    continue;
+                }
+                if (classified.PatchesContainer is { } patched)
+                {
+                    ModPathHashing.AddPatch(
+                        patched, File.ReadAllText(file), _fragmentOverrides, _inlineFragments);
                     continue;
                 }
                 if (classified.Target is not { } target)
@@ -57,11 +74,12 @@ public sealed class FolderModLayer : IModLayer
         }
 
         FragmentOverrides = ModPathHashing.Freeze(_fragmentOverrides);
+        ModPathHashing.RefuseAll(Name, refused);
     }
 
     public byte[] Read(uint hash)
-        => _absolutePaths.TryGetValue(hash, out string? path)
-            ? File.ReadAllBytes(path)
+        => _inlineFragments.TryGetValue(hash, out byte[]? inline) ? inline
+            : _absolutePaths.TryGetValue(hash, out string? path) ? File.ReadAllBytes(path)
             : throw new KeyNotFoundException($"'{Name}' does not override {hash:X8}.");
 
     public byte[] ReadPlugin(string pluginPath)

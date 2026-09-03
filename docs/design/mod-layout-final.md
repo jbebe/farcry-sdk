@@ -60,8 +60,9 @@ In practice the size thresholds reject far more than the identity rule does.
 gap in the tool: 11,394 strings live in one file, so every retranslation, weapon rename or dialogue
 tweak is a whole-file override today. Key is `section@name`.
 
-**Built**, as `StringTableContainerSplitter`. Two things this section did not anticipate, both
-settled by building it — see [below](#reopened-the-string-table-refuses-the-old-shape).
+**Built** — but *per string*, and the "stop at the section" reasoning below does not survive contact
+with a real mod's diff. See
+[below](#reopened-the-string-table-splits-per-string-and-the-file-stops-being-the-unit).
 
 Stop at the section — do **not** go per-string, even though `string@enum` is a perfect key (unique
 within every section, 0 duplicates measured). A section is already 1.7 KB, so per-string saves 1.6 KB
@@ -281,28 +282,51 @@ Two details are specific to MOVE:
   leaving a fragment travels as an address — the owning state's hash plus a chain of child ordinals —
   rather than as a pointer. `.fcb` and `depload` have no object-level back-references at all.
 
-## Reopened: the string table refuses the old shape
+## Reopened: the string table splits per string, and the file stops being the unit
 
-The `stringtable` split is built. Two things the approval above did not anticipate.
+The `stringtable` split is built — **per string, not per section**, and its file on disk is not a
+fragment at all. Three corrections to the approval above.
 
-**A whole-file override is now refused outright, not merely discouraged.** Everywhere else a
-container splits, the whole-file shape stays legal and simply loses on payload — an author who ships
-one is only wasting bytes. The string table is the one container where that is not true: there is
-exactly one per language and *every* localization mod has to touch it, so a whole-file override is
-guaranteed to be last-wins against all of them, silently. Keeping both shapes legal would mean the
-split existed while the failure it removes still happened, so `ModPathHashing` rejects the file with
-a message naming `jackall-cli rml fragments`. The legacy importer splits one on the way in rather
-than failing, which is where nearly every existing localization mod will meet this. Nothing else
-adopts this rule.
+**Rule 2 was read off the wrong statistic again, exactly as it was for MOVE.** "Stop at the section,
+a section is already 1.7 KB" is true of the median section and false of every section a mod actually
+edits. The VSS Vintorez's ten strings land in `Tutorial` (26 KB), `WeaponBazaar` (18 KB),
+`StatisticService` (11 KB), `Items` and `Challenges`: **59 KB shipped to say 545 bytes**, still 108×
+amplification, because a weapon name lives in the big prose-carrying sections rather than the median
+one. That is a new measurement, which is what reopening a closed question requires. Per section was
+the wrong depth.
 
-**The payload win is 16×, not 565×.** The measurement above is right about the median section, and
-wrong about the sections a mod actually edits — the same trap MOVE's Rule 2 reading fell into. The
-VSS Vintorez's ten strings land in `Tutorial` (26 KB), `WeaponBazaar` (18 KB), `StatisticService`
-(11 KB), `Items` and `Challenges`: **59 KB against 946 KB**, because a weapon name sits in the big
-prose-carrying sections, not the 1.7 KB median one. Still worth it — and the composition argument,
-which the approval treated as secondary, is now the primary one. Sections are rendered one
-`<string>` per line, so two mods editing *different lines of the same section* Diff3-merge cleanly;
-only the same string twice conflicts, and then it is reported rather than swallowed.
+**Per string is the right depth, and one file per string is still the wrong layout.** The rejection
+above was right that 11,394 files is not a mod folder — it was wrong to conclude the *override* unit
+therefore had to be coarser. Those are separate decisions. So the override is the string and the
+**file is the mod**: one `oasisstrings.fragment.xml` per language stating only what that mod
+changes, expanded into one fragment per string when the layer is scanned. The VSS mod ships
+**1,271 bytes, ten entries, one readable file**, and a full retranslation is still one file.
+
+> This is the first place `<container>.<ext>\<fragmentId>` is not how a fragment is spelled on disk.
+> The convention is not weakened — every id still lives in that space and every downstream consumer
+> still sees ordinary per-fragment overrides — but a format may now *author* them in one document
+> where a directory of thousands of files would be unreadable. The escape hatch is the layer scan,
+> not the addressing layer.
+
+Consequences worth stating:
+
+- **The value is an attribute, never element text.** 200 shipped strings contain a newline, and 2
+  are empty; as file contents those become indistinguishable from an editor's trailing newline or a
+  missing file, and git's line-ending conversion would rewrite them in transit. `&#xA;` in an
+  attribute cannot be altered by any of that. This is why "filename is the key, content is the
+  value" was rejected despite being the smallest possible form.
+- **The id hashes with `Crc32Ascii`, not `NameHash`.** A string key is a literal, not a path, and the
+  `Keyboard` section keys punctuation by the character it types — `/`, `\` and `;` are three
+  different strings there. A path hash folds `/` onto `\` and lowercases, which collapses two real
+  entries onto one id; measured, it does exactly that on every shipped table.
+- **A whole-file override is refused outright, not merely discouraged.** Everywhere else the
+  whole-file shape stays legal and merely wastes bytes. Here there is one table per language that
+  *every* localization mod must touch, so a whole-file override is guaranteed to be last-wins against
+  all of them, silently. The legacy importer converts one to a patch document on the way in, which is
+  where nearly every existing localization mod will meet this. Nothing else adopts this rule.
+- **`IContainerTree.List` is empty.** 11,394 rows per language is not a browsable child set; the rows
+  worth showing are the ones a mod overrides, which `GameVfs.BuildFragmentRows` already synthesizes
+  from the override index. A container may now be addressable without being enumerable.
 
 ## Correction to fcb-deep-fragments.md
 

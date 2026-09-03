@@ -1,12 +1,14 @@
 using System.Xml.Linq;
+using System.Text;
+using JackAll.Core.Format;
 using JackAll.Core.Format.Rml;
 using JackAll.Core.Mods;
 
 namespace JackAll.Tests;
 
 /// <summary>
-/// The end-to-end check on a real mod: the VSS Vintorez's ten renamed strings, staged as five
-/// section fragments, rebuild the table it used to ship as a 946 KB whole-file override.
+/// The end-to-end check on a real mod: the VSS Vintorez's ten renamed strings, stated in one 1.3 KB
+/// patch document, rebuild the table it used to ship as a 946 KB whole-file override.
 /// </summary>
 /// <remarks>
 /// A real mod against a known-good target is worth more than any synthetic case, and it needs no
@@ -18,9 +20,11 @@ public sealed class StringTableVssMigrationTests
     private static string Vanilla =>
         Path.Combine(Fc2Corpus.Root, "patch", "languages", "english", "oasisstrings.rml");
 
-    private static string StagedFragments =>
-        Path.Combine(TestSupport.RepositoryRoot, "mods", "vss-vintorez", "layer", "mods",
-            "languages", "english", "oasisstrings.rml");
+    private static string ModLayer =>
+        Path.Combine(TestSupport.RepositoryRoot, "mods", "vss-vintorez", "layer");
+
+    private static string PatchDocument =>
+        Path.Combine(ModLayer, "mods", "languages", "english", OasisStringsPatch.FileName);
 
     /// <summary>
     /// Every string the mod renames, and nothing else. The crate name appears twice - once in the
@@ -39,20 +43,28 @@ public sealed class StringTableVssMigrationTests
         ("WeaponBazaar", "WEAPONBAZAAR_DART_RIFLE_REPAIR_MANUAL_NAME", "VSS Vintorez"),
     ];
 
+    /// <summary>
+    /// The mod's one patch document, taken through the real layer scan rather than parsed here: this
+    /// is the path a build takes, so it gates the expansion into per-string fragments too.
+    /// </summary>
     [Fact]
     public void The_vss_fragments_rename_only_the_strings_they_mean_to()
     {
-        if (!File.Exists(Vanilla) || !Directory.Exists(StagedFragments))
+        if (!File.Exists(Vanilla) || !File.Exists(PatchDocument))
         {
             return;
         }
 
         byte[] vanilla = File.ReadAllBytes(Vanilla);
-        Dictionary<string, string> staged = Directory.EnumerateFiles(StagedFragments, "*.xml")
-            .ToDictionary(f => Path.GetFileName(f)!, File.ReadAllText);
-        Assert.Equal(5, staged.Count);
+        var layer = new FolderModLayer(ModLayer, "vss-vintorez");
 
-        byte[] built = StringTableContainerSplitter.Instance.Apply(vanilla, staged);
+        IReadOnlyList<FragmentOverride> staged =
+            layer.FragmentOverrides[NameHash.Compute(@"languages\english\oasisstrings.rml")];
+        Assert.Equal(Renamed.Length + 1, staged.Count);
+
+        byte[] built = StringTableContainerSplitter.Instance.Apply(
+            vanilla,
+            staged.ToDictionary(f => f.FragmentId, f => Encoding.UTF8.GetString(layer.Read(f.EntryHash))));
 
         Dictionary<(string, string), string> before = Strings(vanilla);
         Dictionary<(string, string), string> after = Strings(built);

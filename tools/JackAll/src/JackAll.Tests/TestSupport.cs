@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Collections.Concurrent;
+using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 using JackAll.Core.Naming;
@@ -39,6 +41,25 @@ internal static class TestSupport
             }
             return dir ?? AppContext.BaseDirectory;
         }
+    }
+
+    /// <summary>
+    /// Every fragment the given layers override inside one container, folded through the merge the
+    /// build runs - the setup every splitter's compose/conflict tests need, so they cannot drift
+    /// into disagreeing about what a merge is.
+    /// </summary>
+    /// <param name="conflicts">Null for the strict mode the App uses, which throws on a conflict;
+    /// a queue for the load-order-wins mode <c>mod build</c> uses, which records one.</param>
+    public static Dictionary<string, string> ResolveFragments(
+        IContainerSplitter splitter,
+        byte[] container,
+        string containerPath,
+        ConcurrentQueue<FragmentConflict>? conflicts,
+        params IModLayer[] layers)
+    {
+        IContainerTree tree = splitter.Open(container);
+        return FragmentMerge.BuildOverrideIndex(layers)[NameHash.Compute(containerPath)]
+            .ToDictionary(kv => kv.Key, kv => FragmentMerge.Resolve(splitter, tree, kv.Key, kv.Value, conflicts));
     }
 
     /// <summary>Walks up from the test runner's own output directory (e.g. bin\Debug\net10.0) to

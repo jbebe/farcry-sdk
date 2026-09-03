@@ -1,0 +1,22 @@
+<oasisstrings>
+  <section name="Tutorial">
+    <string enum="COMPUTER_ADVERT_01" value="Prefer a stealthy approach? Consider the Silent Makarov 6P9, the Silent MP-5 or the VSS Vintorez. IEDs are also effective when used by the stealthy saboteur. Finally, the stealth suit decreases visibility, making sneaking easier. Invest in stealth equipment today and get the drop on unsuspecting foes!" />
+    <string enum="WEAPONBAZAAR_DART_RIFLECRATE_NAME" value="VSS Vintorez" />
+  </section>
+  <section name="Challenges">
+    <string enum="dartrifle" value="VSS Vintorez" />
+  </section>
+  <section name="Items">
+    <string enum="dart_rifle" value="VSS Vintorez" />
+  </section>
+  <section name="StatisticService">
+    <string enum="Kills_Dart_Rifle" value="VSS Vintorez Kills" />
+    <string enum="Executions_Dart_Rifle" value="VSS Vintorez Executions" />
+    <string enum="Headshots_Dart_Rifle" value="VSS Vintorez Headshots" />
+  </section>
+  <section name="WeaponBazaar">
+    <string enum="WEAPONBAZAAR_DART_RIFLECRATE_NAME" value="VSS Vintorez" />
+    <string enum="WEAPONBAZAAR_DART_RIFLE_OPERATION_MANUAL_NAME" value="VSS Vintorez" />
+    <string enum="WEAPONBAZAAR_DART_RIFLE_REPAIR_MANUAL_NAME" value="VSS Vintorez" />
+  </section>
+</oasisstrings>

@@ -1,6 +1,8 @@
 using System.Globalization;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
+using System.Text;
+using JackAll.Core.Format.Rml;
 
 namespace JackAll.Core.Mods;
 
@@ -73,7 +75,16 @@ internal static class ModPathHashing
         if (normalized.StartsWith(ModsFolder + "\\", StringComparison.Ordinal))
         {
             string content = normalized[(ModsFolder.Length + 1)..];
-            return new LayerPath(null, content, ResolveNormalized(content));
+            string leaf = LeafOf(content);
+
+            if (OasisStringsPatch.IsPatchDocument(leaf))
+            {
+                return new LayerPath(null, content, null, OasisStringsPatch.TablePathOf(content));
+            }
+
+            return RefusalFor(content, leaf) is { } refusal
+                ? new LayerPath(null, content, null, null, refusal)
+                : new LayerPath(null, content, ResolveNormalized(content));
         }
 
         return new LayerPath(null, normalized, null);
@@ -94,6 +105,49 @@ internal static class ModPathHashing
     private static bool IsVortexMarker(string normalizedPath)
         => normalizedPath.AsSpan(normalizedPath.LastIndexOf('\\') + 1)
             .Equals(VortexEmptyFolderMarker, StringComparison.OrdinalIgnoreCase);
+
+    private static string LeafOf(string normalizedPath)
+        => normalizedPath[(normalizedPath.LastIndexOf('\\') + 1)..];
+
+    /// <summary>
+    /// Indexes a localization patch document as one fragment override per string it edits, so a
+    /// single authored file behaves downstream exactly like a directory of per-string fragments -
+    /// merged, attributed and conflict-reported one string at a time.
+    /// </summary>
+    /// <remarks>
+    /// The bytes of each fragment come out of the document rather than off disk, which is why a
+    /// layer keeps them beside its file paths and serves both from <see cref="IModLayer.Read"/>.
+    /// </remarks>
+    public static void AddPatch(
+        string containerPath,
+        string documentXml,
+        Dictionary<uint, FragmentMap> fragmentOverrides,
+        Dictionary<uint, byte[]> inlineFragments)
+    {
+        uint containerHash = NameHash.Compute(containerPath);
+        foreach (OasisStringEdit edit in OasisStringsPatch.Parse(documentXml))
+        {
+            string fragmentId = StringTableContainerSplitter.IdOf(edit);
+            uint entryHash = NameHash.Compute($"{containerPath}\\{fragmentId}");
+
+            inlineFragments[entryHash] = Encoding.UTF8.GetBytes(OasisStringsPatch.FragmentToXml(edit));
+            Add(new ModPathTarget(entryHash, containerHash, fragmentId), [], fragmentOverrides);
+        }
+    }
+
+    /// <summary>Refuses a layer that stages something the format does not allow, naming every such
+    /// file at once rather than dying on whichever the scan reached first.</summary>
+    public static void RefuseAll(string layerName, IReadOnlyList<string> refusals)
+    {
+        if (refusals.Count == 0)
+        {
+            return;
+        }
+
+        throw new InvalidDataException(
+            $"'{layerName}' stages {refusals.Count} file(s) it may not: "
+            + string.Join(" ", refusals.Distinct()));
+    }
 
     /// <summary>Resolves a relative path to what it overrides. Null for paths that are not overrides
     /// at all (readme files, Vortex's own deployment bookkeeping, and the like).</summary>
@@ -191,18 +245,24 @@ internal static class ModPathHashing
     /// </summary>
     private static void GuardNotWholeStringTable(string normalized, string[] segments)
     {
-        if (!ContainerFormats.IsStringTable(segments[^1]))
+        if (RefusalFor(normalized, segments[^1]) is { } refusal)
         {
-            return;
+            throw new InvalidDataException(refusal);
         }
-
-        throw new InvalidDataException(
-            $"'{normalized}' overrides the whole string table, which splits into one file per "
-            + "section - so this would silently overwrite every other localization mod's work. Stage "
-            + $"only the sections you changed, under '{normalized}\\', named "
-            + "<section>.<number>.xml. `jackall-cli rml fragments <file.rml> --base <vanilla.rml>` "
-            + "writes exactly those.");
     }
+
+    /// <summary>
+    /// Why this path may not be staged, or null when it may be. Returned rather than thrown so a
+    /// scan can name every refused file at once, and so <see cref="ModLayerInspector"/> can score a
+    /// candidate root without a refusal aborting the probe.
+    /// </summary>
+    public static string? RefusalFor(string normalizedPath, string leaf)
+        => ContainerFormats.IsStringTable(leaf)
+            ? $"'{normalizedPath}' overrides the whole string table, which is overridden one string "
+              + "at a time - so this would silently overwrite every other localization mod's work. "
+              + $"State only the strings you changed, in a '{OasisStringsPatch.FileName}' beside it. "
+              + "`jackall-cli rml fragments <file.rml> --base <vanilla.rml>` writes exactly that."
+            : null;
 
     /// <summary>
     /// <c>_hash\&lt;hex&gt;[.ext]</c> (a plain unnamed override), or <c>_hash\&lt;hex&gt;.fcb\&lt;fragment id&gt;</c>
@@ -283,7 +343,16 @@ internal readonly record struct ModPathTarget(uint EntryHash, uint? ContainerHas
 /// file (<see cref="PluginPath"/> non-null), a content override (<see cref="Target"/> non-null), or
 /// neither — an ignored file. <see cref="ContentPath"/> is the normalized path the target was
 /// resolved from, mods\ wrapper already stripped.</summary>
-internal readonly record struct LayerPath(string? PluginPath, string ContentPath, ModPathTarget? Target);
+internal readonly record struct LayerPath(
+    string? PluginPath,
+    string ContentPath,
+    ModPathTarget? Target,
+    /// <summary>Set when this file is a localization patch document rather than an override of its
+    /// own path: the container it edits, to be expanded by <see cref="ModPathHashing.AddPatch"/>.</summary>
+    string? PatchesContainer = null,
+    /// <summary>Set when this file names a real override the layer format does not allow - the
+    /// message saying why, and what to stage instead. A scan collects these and refuses once.</summary>
+    string? Refusal = null);
 
 /// <summary>One container's overridden fragments, keyed so two spellings of one id can't both land.</summary>
 internal sealed class FragmentMap() : Dictionary<string, FragmentOverride>(FcbFragments.IdComparer);

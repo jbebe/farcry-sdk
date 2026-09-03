@@ -293,11 +293,7 @@ public class DepLoadContainerSplitterTests : IDisposable
 
     private Dictionary<string, string> Resolve(
         byte[] container, ConcurrentQueue<FragmentConflict>? conflicts, params FolderModLayer[] layers)
-    {
-        IContainerTree tree = _splitter.Open(container);
-        return FragmentMerge.BuildOverrideIndex(layers)[NameHash.Compute(Container)]
-            .ToDictionary(kv => kv.Key, kv => FragmentMerge.Resolve(_splitter, tree, kv.Key, kv.Value, conflicts));
-    }
+        => TestSupport.ResolveFragments(_splitter, container, Container, conflicts, layers);
 
     private FolderModLayer MakeLayer(string name, DepLoadParent parent)
     {

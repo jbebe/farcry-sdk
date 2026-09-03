@@ -23,6 +23,10 @@ public sealed class ZipModLayer : IModLayer
     private readonly Dictionary<uint, FragmentMap> _fragmentOverrides = [];
     private readonly Dictionary<string, string> _pluginEntryNames = new(StringComparer.Ordinal);
     private readonly ConcurrentDictionary<uint, byte[]> _readCache = new();
+
+    /// <summary>Fragments whose bytes come from inside an entry rather than being one - the strings a
+    /// localization patch document states. Keyed like <see cref="_entryNames"/>, read first.</summary>
+    private readonly Dictionary<uint, byte[]> _inlineFragments = [];
     private readonly ConcurrentDictionary<string, byte[]> _pluginReadCache = new(StringComparer.Ordinal);
 
     public string Name { get; }
@@ -37,6 +41,7 @@ public sealed class ZipModLayer : IModLayer
         ZipPath = zipPath;
         Name = Path.GetFileNameWithoutExtension(zipPath);
 
+        List<string> refused = [];
         using var zip = ZipFile.OpenRead(zipPath);
         foreach (var entry in zip.Entries)
         {
@@ -46,9 +51,21 @@ public sealed class ZipModLayer : IModLayer
             }
 
             LayerPath classified = ModPathHashing.Classify(entry.FullName);
+            if (classified.Refusal is { } refusal)
+            {
+                refused.Add(refusal);
+                continue;
+            }
             if (classified.PluginPath is { } pluginPath)
             {
                 _pluginEntryNames[pluginPath] = entry.FullName;
+                continue;
+            }
+            if (classified.PatchesContainer is { } patched)
+            {
+                using var reader = new StreamReader(entry.Open());
+                ModPathHashing.AddPatch(
+                    patched, reader.ReadToEnd(), _fragmentOverrides, _inlineFragments);
                 continue;
             }
             if (classified.Target is not { } target)
@@ -61,10 +78,16 @@ public sealed class ZipModLayer : IModLayer
         }
 
         FragmentOverrides = ModPathHashing.Freeze(_fragmentOverrides);
+        ModPathHashing.RefuseAll(Name, refused);
     }
 
     public byte[] Read(uint hash)
     {
+        if (_inlineFragments.TryGetValue(hash, out byte[]? inline))
+        {
+            return inline;
+        }
+
         if (!_entryNames.TryGetValue(hash, out string? entryName))
         {
             throw new KeyNotFoundException($"Mod '{Name}' does not override {hash:X8}.");

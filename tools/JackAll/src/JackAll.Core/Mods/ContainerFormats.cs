@@ -1,4 +1,5 @@
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Format.Rml;
 using JackAll.Core.Naming;
 
 namespace JackAll.Core.Mods;
@@ -53,7 +54,7 @@ public static class ContainerFormats
     /// a different key.
     /// </remarks>
     public static bool IsStringTable(string fileName)
-        => fileName.Equals(StringTableContainerSplitter.FileName, StringComparison.OrdinalIgnoreCase);
+        => fileName.Equals(OasisStringsPatch.TableFileName, StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
     /// The splitter for a container, chosen by the suffix of <paramref name="containerPath"/>.

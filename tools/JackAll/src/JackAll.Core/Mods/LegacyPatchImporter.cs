@@ -1,6 +1,7 @@
 using System.IO.Compression;
 using System.IO.Hashing;
 using System.Text;
+using System.Xml.Linq;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Format.Rml;
@@ -171,7 +172,7 @@ public static class LegacyPatchImporter
             }
 
             if (named && ContainerFormats.IsStringTable(Path.GetFileName(path))
-                && TryImportStringTable(entry.Hash, legacyBytes, vanillaBytes, path,
+                && TryImportStringTable(legacyBytes, vanillaBytes, path,
                     workspace, ref fragmentsImported, ref skipped))
             {
                 continue;
@@ -274,31 +275,28 @@ public static class LegacyPatchImporter
     /// less damaging than removing every string it never meant to touch.
     /// </remarks>
     private static bool TryImportStringTable(
-        uint hash, byte[] legacyBytes, byte[]? vanillaBytes, string containerPath,
+        byte[] legacyBytes, byte[]? vanillaBytes, string containerPath,
         FolderModLayer workspace, ref int fragmentsImported, ref int skipped)
     {
         if (vanillaBytes is null
-            || !RmlDocument.TryDeserialize(legacyBytes, out _)
-            || !RmlDocument.TryDeserialize(vanillaBytes, out _))
+            || !RmlDocument.TryDeserialize(legacyBytes, out XElement? legacyRoot)
+            || !RmlDocument.TryDeserialize(vanillaBytes, out XElement? vanillaRoot))
         {
             return false;
         }
 
-        StringTableContainerSplitter splitter = StringTableContainerSplitter.Instance;
-        IContainerTree legacy = splitter.Open(legacyBytes);
-        IContainerTree vanilla = splitter.Open(vanillaBytes);
+        IReadOnlyList<OasisStringEdit> changed = OasisStringsPatch.Changed(
+            StringTableContainerSplitter.Strings(legacyRoot),
+            StringTableContainerSplitter.Strings(vanillaRoot));
+        skipped += StringTableContainerSplitter.Strings(legacyRoot).Count() - changed.Count;
 
-        foreach (FcbFragmentInfo section in legacy.List())
+        if (changed.Count > 0)
         {
-            string xml = legacy.Extract(section.Id)!;
-            if (vanilla.Extract(section.Id) == xml)
-            {
-                skipped++;
-                continue;
-            }
-
-            workspace.Stage(hash, $"{containerPath}\\{section.Id}", "xml", new UTF8Encoding(false).GetBytes(xml));
-            fragmentsImported++;
+            string patchPath = OasisStringsPatch.PatchPathOf(containerPath);
+            workspace.Stage(
+                NameHash.Compute(patchPath), patchPath, "xml",
+                new UTF8Encoding(false).GetBytes(OasisStringsPatch.Render(changed)));
+            fragmentsImported += changed.Count;
         }
         return true;
     }

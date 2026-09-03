@@ -1417,19 +1417,29 @@ are spread across five sections — the bazaar crate, both manuals, the item lis
 three statistics entries, and a second copy of the crate name under `Tutorial`. Search by string id
 rather than by value. Eleven languages ship the table; editing one leaves the other ten alone.
 
-The table **splits into one file per `<section>`**, and that is the only shape a layer may stage it
-in — a whole-file override is refused, because it would silently overwrite every other localization
-mod's work. Edit a decoded copy, then let the tool write the diff:
+A mod states its localization edits in **one `oasisstrings.fragment.xml`** per language, holding only
+the strings it changes. That is the only shape a layer may stage — a whole-file override is refused,
+because it would silently overwrite every other localization mod's work. Edit a decoded copy, then
+let the tool write the diff:
 
 ```
 jackall-cli rml decode oasisstrings.rml          # edit the strings you want
 jackall-cli rml encode oasisstrings.xml
-jackall-cli rml fragments oasisstrings.rml --base <retail>\oasisstrings.rml --out layer
+jackall-cli rml fragments oasisstrings.rml --base <retail>\oasisstrings.rml
 ```
 
-For the VSS Vintorez that is five files and 59 KB in place of 946 KB, and a mod renaming a different
-weapon writes different sections — or different lines of the same one — so the two compose instead of
-clobbering each other.
+```xml
+<oasisstrings>
+  <section name="Items">
+    <string enum="dart_rifle" value="VSS Vintorez" />
+  </section>
+</oasisstrings>
+```
+
+For the VSS Vintorez that is **1,271 bytes in place of 946 KB**. The override unit is the individual
+string, so a mod renaming a different weapon never meets yours — not even when the two strings sit in
+the same section — and only two mods rewriting the *same* string conflict, which is reported rather
+than swallowed.
 
 :::warning[Diff against the copy the game loads]
 `oasisstrings.rml` ships in the **retail patch**, not only in `common.dat`. Point `--base` at the
