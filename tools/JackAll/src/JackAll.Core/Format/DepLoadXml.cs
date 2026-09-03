@@ -1,4 +1,3 @@
-using System.Xml;
 using System.Xml.Linq;
 using JackAll.Core.Naming;
 
@@ -101,31 +100,8 @@ public static class DepLoadXml
         return new DepLoadParent(HashOf(element), ChildIndexPlaceholder, children);
     }
 
-    /// <summary>
-    /// Renders a document the way the shipped twins are written: tab-indented, and with no XML
-    /// declaration - which also avoids announcing utf-16 on a file every caller writes as UTF-8.
-    /// </summary>
-    /// <remarks>
-    /// The line ending has to be <see cref="Environment.NewLine"/> rather than the writer's own
-    /// unconditional CRLF: a fragment goes through <see cref="Fcb.Diff3"/>, which rejoins merged
-    /// lines that way, and a mismatch would rewrite every line of a fragment only one layer touched.
-    /// </remarks>
-    private static string Render(XElement root)
-    {
-        var settings = new XmlWriterSettings
-        {
-            Indent = true,
-            IndentChars = "\t",
-            NewLineChars = Environment.NewLine,
-            OmitXmlDeclaration = true,
-        };
-        var text = new StringWriter();
-        using (XmlWriter writer = XmlWriter.Create(text, settings))
-        {
-            new XDocument(root).Save(writer);
-        }
-        return text.ToString();
-    }
+    /// <summary>Renders a document the way the shipped twins are written: tab-indented.</summary>
+    private static string Render(XElement root) => FragmentXml.Render(root, "\t");
 
     public static DepLoadFile FromXml(string xml)
     {

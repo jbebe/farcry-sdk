@@ -301,20 +301,8 @@ public static class MoveFragmentXml
             ids[ordered[i]] = i;
         }
 
-        // Matches DepLoadXml.Render: a fragment is written UTF-8 to disk, so the declaration an
-        // XmlWriter over a StringBuilder would emit ("utf-16") is worse than none; and Diff3 rejoins
-        // on Environment.NewLine, so a mismatch there rewrites every line of a fragment only one
-        // layer touched.
         StringBuilder text = new();
-        XmlWriterSettings settings = new()
-        {
-            Indent = true,
-            IndentChars = "  ",
-            NewLineChars = Environment.NewLine,
-            OmitXmlDeclaration = true,
-        };
-
-        using (XmlWriter writer = XmlWriter.Create(text, settings))
+        using (XmlWriter writer = XmlWriter.Create(text, FragmentXml.Settings("  ")))
         {
             MoveUnit unit = fragment.Unit;
             if (fragment.Section is { } section)
