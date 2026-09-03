@@ -84,8 +84,6 @@ public sealed class GameVfs : IDisposable
     private readonly NameDatabase _names;
     private readonly GameCache _cache;
     private readonly FcbClassDefinitions _fcbDefinitions;
-    private readonly FcbContainerSplitter _fcbSplitter;
-    private readonly DepLoadContainerSplitter _depLoadSplitter;
     private List<IModLayer> _layers = [];
     private Dictionary<ulong, VfsFile> _files = [];
 
@@ -191,8 +189,6 @@ public sealed class GameVfs : IDisposable
         _names = names;
         _cache = cache;
         _fcbDefinitions = fcbDefinitions;
-        _fcbSplitter = new FcbContainerSplitter(fcbDefinitions);
-        _depLoadSplitter = new DepLoadContainerSplitter(names);
     }
 
     /// <summary>
@@ -375,14 +371,17 @@ public sealed class GameVfs : IDisposable
         return new ContainerAncestor(splitter, splitter.Open(bytes));
     }
 
-    /// <summary>How a container splits, chosen by its name - see <see cref="ContainerFormats"/>.</summary>
+    /// <summary>How a container splits, chosen by its name - see <see cref="ContainerFormats"/>,
+    /// which is the one place that knows.</summary>
     private IContainerSplitter SplitterFor(VfsFile container)
-        => ContainerFormats.IsDepLoad(container.FileName) ? _depLoadSplitter : _fcbSplitter;
+        => ContainerFormats.For(container.Path, _fcbDefinitions, _names);
 
     /// <summary>The same, for a caller holding only a hash. A hash naming no row is an override
     /// staged under <c>_hash\</c>, which is only ever an `.fcb`.</summary>
     private IContainerSplitter SplitterFor(uint containerHash)
-        => _files.TryGetValue(containerHash, out VfsFile? container) ? SplitterFor(container) : _fcbSplitter;
+        => _files.TryGetValue(containerHash, out VfsFile? container)
+            ? SplitterFor(container)
+            : new FcbContainerSplitter(_fcbDefinitions);
 
     private readonly record struct ContainerAncestor(IContainerSplitter Splitter, IContainerTree Tree);
 

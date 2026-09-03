@@ -51,12 +51,12 @@ public sealed class GameCache
 {
     private const uint Magic = 0x3143414A; // 'JAC1'
 
-    // v3 invalidates every fragment list recorded before deep fragment ids (see FcbFragments):
-    // a v2 file would keep answering "doesn't split" for every worldsector and group-level ids for
-    // every entity library. An old file loaded by this version simply fails the version check below
-    // and resets to empty, same as any other unparseable cache; nothing here tries to upgrade one
-    // in place.
-    private const int Version = 3;
+    // The version invalidates every fragment list recorded before a container learned to split: v3
+    // for deep fragment ids (see FcbFragments), v4 for `oasisstrings.rml` and MOVE graphs, which a
+    // v3 file would keep answering "doesn't split" for. An old file loaded by this version simply
+    // fails the version check below and resets to empty, same as any other unparseable cache;
+    // nothing here tries to upgrade one in place.
+    private const int Version = 4;
 
     [StructLayout(LayoutKind.Sequential, Pack = 4)]
     private struct TypeRecord : IKeyedRecord

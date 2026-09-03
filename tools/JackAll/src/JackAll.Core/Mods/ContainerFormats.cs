@@ -25,7 +25,8 @@ public static class ContainerFormats
     public static bool IsContainerSegment(string segment)
         => segment.EndsWith(FcbSuffix, StringComparison.OrdinalIgnoreCase)
            || IsDepLoad(segment)
-           || IsMoveGraph(segment);
+           || IsMoveGraph(segment)
+           || IsStringTable(segment);
 
     public static bool IsDepLoad(string fileName)
         => fileName.EndsWith(DepLoadSuffix, StringComparison.OrdinalIgnoreCase);
@@ -44,6 +45,17 @@ public static class ContainerFormats
     public static bool IsMoveGraph(string fileName) => MoveContainerSplitter.IsMoveGraph(fileName);
 
     /// <summary>
+    /// A localised string table, named outright for the same reason a MOVE graph is.
+    /// </summary>
+    /// <remarks>
+    /// A bare <c>.rml</c> would be far too broad: the shipped archives hold 69 of them, and the 24
+    /// <c>*_deploadnewparticles.rml</c> particle libraries among them are a different container with
+    /// a different key.
+    /// </remarks>
+    public static bool IsStringTable(string fileName)
+        => fileName.Equals(StringTableContainerSplitter.FileName, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
     /// The splitter for a container, chosen by the suffix of <paramref name="containerPath"/>.
     /// Falls back to `.fcb`, the only format a hash-addressed override is ever staged as, since such
     /// a path carries no recoverable name to match on.
@@ -58,11 +70,18 @@ public static class ContainerFormats
                 : new DepLoadContainerSplitter(names);
         }
 
-        // A MOVE graph is matched on its filename, so a container path ending in one is unambiguous.
-        // It takes no NameDatabase - a state name is not a game path, so the hashlist cannot resolve
-        // one - and reads its own bundled table instead, which is decoration over a binding number.
-        return IsMoveGraph(Path.GetFileName(containerPath))
-            ? MoveSplitter.Value
+        // The remaining two are matched on their filename, so a container path ending in one is
+        // unambiguous. Neither takes a NameDatabase: a MOVE state name is not a game path, so the
+        // hashlist cannot resolve one and the splitter reads its own bundled table instead, while a
+        // section carries its name in the file.
+        string fileName = Path.GetFileName(containerPath);
+        if (IsMoveGraph(fileName))
+        {
+            return MoveSplitter.Value;
+        }
+
+        return IsStringTable(fileName)
+            ? StringTableContainerSplitter.Instance
             : new FcbContainerSplitter(definitions);
     }
 

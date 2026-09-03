@@ -6,6 +6,7 @@
     <Fc2Graphics>..\..\..\..\tmp\gamefiles\worlds\worlds\graphics</Fc2Graphics>
     <Fc2Levels>..\..\..\..\tmp\gamefiles\worlds\worlds\levels</Fc2Levels>
     <Fc2Worlds>..\..\..\..\tmp\gamefiles\worlds\worlds\worlds</Fc2Worlds>
+    <Fc2Languages>..\..\..\..\tmp\gamefiles</Fc2Languages>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <IsPackable>false</IsPackable>
@@ -35,6 +36,18 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <Content Include="..\..\assets\binary_classes.xml" Link="Fixtures\Fcb\binary_classes.xml">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <!-- Every shipped string table, both archives: the whole corpus the section split has to
+         re-encode byte-for-byte. Absent on CI, where the fixture-guarded tests no-op. -->
+    <Content Include="$(Fc2Languages)\common\languages\**\oasisstrings.rml"
+             Link="Fixtures\StringTable\common\%(RecursiveDir)oasisstrings.rml"
+             Condition="Exists('$(Fc2Languages)\common\languages')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(Fc2Languages)\patch\languages\**\oasisstrings.rml"
+             Link="Fixtures\StringTable\patch\%(RecursiveDir)oasisstrings.rml"
+             Condition="Exists('$(Fc2Languages)\patch\languages')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
     <!-- Retail meshes from the local game export; absent on CI, where the fixture-guarded tests

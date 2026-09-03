@@ -238,6 +238,11 @@ app.Configure(config =>
         rml.AddCommand<RmlEncodeCommand>("encode")
             .WithDescription("Re-encode an XML document back into a binary .rml.")
             .WithExample("rml", "encode", "toc.xml");
+        rml.AddCommand<RmlFragmentsCommand>("fragments")
+            .WithDescription(
+                "Write a string table out as per-section fragments a mod can stage, keeping only the "
+                + "sections that differ from --base. Turns a 946 KB whole-file override into a diff.")
+            .WithExample("rml", "fragments", "oasisstrings.rml", "--base", "vanilla.rml", "--out", "layer");
     });
 
     // --- Hash reference graph --------------------------------------------
