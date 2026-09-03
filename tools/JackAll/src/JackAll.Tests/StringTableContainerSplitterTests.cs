@@ -249,6 +249,25 @@ public class StringTableContainerSplitterTests : IDisposable
             FcbFragments.IdComparer);
     }
 
+    /// <summary>The old shape is refused outright: it is last-wins against every other localization
+    /// mod, which is the failure the split exists to remove.</summary>
+    [Fact]
+    public void A_whole_file_table_override_is_refused()
+    {
+        string root = Path.Combine(_sandbox, "legacy");
+        string dir = Path.Combine(root, "mods", @"languages\english");
+        Directory.CreateDirectory(dir);
+        File.WriteAllBytes(
+            Path.Combine(dir, StringTableContainerSplitter.FileName),
+            Table(("Items", "dart_rifle", "VSS Vintorez")));
+
+        InvalidDataException error = Assert.Throws<InvalidDataException>(
+            () => new FolderModLayer(root, "legacy"));
+
+        Assert.Contains("one file per section", error.Message);
+        Assert.Contains("rml fragments", error.Message);
+    }
+
     private Dictionary<string, string> Resolve(byte[] container, params FolderModLayer[] layers)
         => Resolve(container, null, layers);
 

@@ -114,6 +114,8 @@ internal static class ModPathHashing
             return ResolveHashAddressed(normalized, segments);
         }
 
+        GuardNotWholeStringTable(normalized, segments);
+
         // A named container's fragment: some segment before the last ends in .fcb.
         if (ContainerPathOf(segments) is { } containerPath)
         {
@@ -178,6 +180,28 @@ internal static class ModPathHashing
             $"'{normalized}' uses the removed NN_Name.xml group id space, which names no fragment - " +
             "staging it would append a phantom group rather than override anything. Re-export and " +
             "stage the archetype you meant to change.");
+    }
+
+    /// <summary>
+    /// Rejects a whole-file string table override. There is one <c>oasisstrings.rml</c> per language
+    /// and every localization mod has to touch it, so shipping the file means overriding all 11,394
+    /// strings to change ten - last-wins against every other such mod, and silent about it. That is
+    /// the failure the section split exists to remove, so the old shape is refused rather than
+    /// quietly accepted alongside it.
+    /// </summary>
+    private static void GuardNotWholeStringTable(string normalized, string[] segments)
+    {
+        if (!ContainerFormats.IsStringTable(segments[^1]))
+        {
+            return;
+        }
+
+        throw new InvalidDataException(
+            $"'{normalized}' overrides the whole string table, which splits into one file per "
+            + "section - so this would silently overwrite every other localization mod's work. Stage "
+            + $"only the sections you changed, under '{normalized}\\', named "
+            + "<section>.<number>.xml. `jackall-cli rml fragments <file.rml> --base <vanilla.rml>` "
+            + "writes exactly those.");
     }
 
     /// <summary>

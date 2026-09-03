@@ -64,14 +64,15 @@ public sealed class StringTableContainerSplitter : IContainerSplitter
         {
             XElement section = FragmentFromXml(xml);
             string name = NameOf(section);
-            if (FragmentId.NumberOf(id) != NameHash.Compute(name))
+            uint number = NameHash.Compute(name);
+            if (FragmentId.NumberOf(id) != number)
             {
                 throw new InvalidDataException(
                     $"A string table fragment staged as '{id}' describes section '{name}' instead. "
                     + $"Name it '{IdOf(name)}' - any label ahead of the number is yours to choose - "
                     + "or fix the section it names.");
             }
-            staged[NameHash.Compute(name)] = section;
+            staged[number] = section;
         }
 
         // An overridden section keeps its place, so a table nothing was staged against re-encodes to

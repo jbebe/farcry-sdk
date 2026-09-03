@@ -3,6 +3,7 @@ using System.IO.Hashing;
 using System.Text;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Format.Rml;
 using JackAll.Core.Naming;
 
 namespace JackAll.Core.Mods;
@@ -169,6 +170,13 @@ public static class LegacyPatchImporter
                 continue;
             }
 
+            if (named && ContainerFormats.IsStringTable(Path.GetFileName(path))
+                && TryImportStringTable(entry.Hash, legacyBytes, vanillaBytes, path,
+                    workspace, ref fragmentsImported, ref skipped))
+            {
+                continue;
+            }
+
             workspace.Stage(entry.Hash, named ? path : null, type.Extension, legacyBytes);
             imported++;
         }
@@ -251,6 +259,47 @@ public static class LegacyPatchImporter
             imported++;
         }
 
+        return true;
+    }
+
+    /// <summary>
+    /// Imports a legacy whole-file string table as the sections that differ from vanilla, which is
+    /// the only shape a layer may express one in. Returns false, staging nothing, when either side
+    /// isn't a readable table.
+    /// </summary>
+    /// <remarks>
+    /// A legacy mod always shipped the whole 946 KB file, so this is where nearly every localization
+    /// mod in existence gets turned into a diff. Sections the legacy table drops entirely are left
+    /// at vanilla: a fragment deletes nothing, and keeping a string the mod meant to remove is far
+    /// less damaging than removing every string it never meant to touch.
+    /// </remarks>
+    private static bool TryImportStringTable(
+        uint hash, byte[] legacyBytes, byte[]? vanillaBytes, string containerPath,
+        FolderModLayer workspace, ref int fragmentsImported, ref int skipped)
+    {
+        if (vanillaBytes is null
+            || !RmlDocument.TryDeserialize(legacyBytes, out _)
+            || !RmlDocument.TryDeserialize(vanillaBytes, out _))
+        {
+            return false;
+        }
+
+        StringTableContainerSplitter splitter = StringTableContainerSplitter.Instance;
+        IContainerTree legacy = splitter.Open(legacyBytes);
+        IContainerTree vanilla = splitter.Open(vanillaBytes);
+
+        foreach (FcbFragmentInfo section in legacy.List())
+        {
+            string xml = legacy.Extract(section.Id)!;
+            if (vanilla.Extract(section.Id) == xml)
+            {
+                skipped++;
+                continue;
+            }
+
+            workspace.Stage(hash, $"{containerPath}\\{section.Id}", "xml", new UTF8Encoding(false).GetBytes(xml));
+            fragmentsImported++;
+        }
         return true;
     }
 

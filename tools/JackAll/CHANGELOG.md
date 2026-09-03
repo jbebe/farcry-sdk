@@ -5,6 +5,14 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **`oasisstrings.rml` splits into one file per `<section>`** — a localization mod stages the
+  sections it changed instead of overriding all 11,394 strings. Two mods renaming different weapons
+  now compose, and because a section is written one `<string>` per line, so do two mods editing
+  different strings in the *same* section; only the same string twice conflicts, and that is
+  reported rather than swallowed. The VSS Vintorez ships five files and 59 KB in place of 946 KB.
+  **Breaking:** a whole-file `oasisstrings.rml` override is now refused, since it is last-wins
+  against every other localization mod and silent about it. `jackall-cli rml fragments` writes the
+  diff, and `mod import-legacy` splits one automatically.
 - **Unused files, in the Files tab** — "Hide unused game files" drops every base-game file the
   engine can never open and prunes the folders left holding nothing else; the rows that remain
   visible when it is off are italicised. Selecting one explains in the details pane *why* it is

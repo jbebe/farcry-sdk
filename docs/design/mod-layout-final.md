@@ -60,6 +60,9 @@ In practice the size thresholds reject far more than the identity rule does.
 gap in the tool: 11,394 strings live in one file, so every retranslation, weapon rename or dialogue
 tweak is a whole-file override today. Key is `section@name`.
 
+**Built**, as `StringTableContainerSplitter`. Two things this section did not anticipate, both
+settled by building it — see [below](#reopened-the-string-table-refuses-the-old-shape).
+
 Stop at the section — do **not** go per-string, even though `string@enum` is a perfect key (unique
 within every section, 0 duplicates measured). A section is already 1.7 KB, so per-string saves 1.6 KB
 of payload while turning a retranslation mod from 61 readable files into **11,394**. That is Rule 2
@@ -277,6 +280,29 @@ Two details are specific to MOVE:
   leave the state that holds them and 687 of those land deep inside another state, so a reference
   leaving a fragment travels as an address — the owning state's hash plus a chain of child ordinals —
   rather than as a pointer. `.fcb` and `depload` have no object-level back-references at all.
+
+## Reopened: the string table refuses the old shape
+
+The `stringtable` split is built. Two things the approval above did not anticipate.
+
+**A whole-file override is now refused outright, not merely discouraged.** Everywhere else a
+container splits, the whole-file shape stays legal and simply loses on payload — an author who ships
+one is only wasting bytes. The string table is the one container where that is not true: there is
+exactly one per language and *every* localization mod has to touch it, so a whole-file override is
+guaranteed to be last-wins against all of them, silently. Keeping both shapes legal would mean the
+split existed while the failure it removes still happened, so `ModPathHashing` rejects the file with
+a message naming `jackall-cli rml fragments`. The legacy importer splits one on the way in rather
+than failing, which is where nearly every existing localization mod will meet this. Nothing else
+adopts this rule.
+
+**The payload win is 16×, not 565×.** The measurement above is right about the median section, and
+wrong about the sections a mod actually edits — the same trap MOVE's Rule 2 reading fell into. The
+VSS Vintorez's ten strings land in `Tutorial` (26 KB), `WeaponBazaar` (18 KB), `StatisticService`
+(11 KB), `Items` and `Challenges`: **59 KB against 946 KB**, because a weapon name sits in the big
+prose-carrying sections, not the 1.7 KB median one. Still worth it — and the composition argument,
+which the approval treated as secondary, is now the primary one. Sections are rendered one
+`<string>` per line, so two mods editing *different lines of the same section* Diff3-merge cleanly;
+only the same string twice conflicts, and then it is reported rather than swallowed.
 
 ## Correction to fcb-deep-fragments.md
 

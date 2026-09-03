@@ -1412,15 +1412,29 @@ binds a bazaar crate to a string id and an icon by name:
 So renaming a weapon is a string-table edit, and re-skinning its icon is a texture edit. **Neither
 needs a config change**, because both are bound by name and you are replacing what the name points at.
 
-**The text** lives in `languages\<language>\oasisstrings.rml`, which `jackall-cli rml decode` /
-`rml encode` round-trips byte-identically. Ten strings name one weapon, and they are spread across
-five sections — the bazaar crate, both manuals, the item list, the challenge list, three statistics
-entries, and a second copy of the crate name under `Tutorial`. Search by string id rather than by
-value. Eleven languages ship the table; editing one leaves the other ten alone.
+**The text** lives in `languages\<language>\oasisstrings.rml`. Ten strings name one weapon, and they
+are spread across five sections — the bazaar crate, both manuals, the item list, the challenge list,
+three statistics entries, and a second copy of the crate name under `Tutorial`. Search by string id
+rather than by value. Eleven languages ship the table; editing one leaves the other ten alone.
 
-:::warning[Edit the copy the game loads]
-`oasisstrings.rml` ships in the **retail patch**, not only in `common.dat`. `mod build` reporting your
-file as `1 overridden` rather than `added` is the confirmation you took the right one.
+The table **splits into one file per `<section>`**, and that is the only shape a layer may stage it
+in — a whole-file override is refused, because it would silently overwrite every other localization
+mod's work. Edit a decoded copy, then let the tool write the diff:
+
+```
+jackall-cli rml decode oasisstrings.rml          # edit the strings you want
+jackall-cli rml encode oasisstrings.xml
+jackall-cli rml fragments oasisstrings.rml --base <retail>\oasisstrings.rml --out layer
+```
+
+For the VSS Vintorez that is five files and 59 KB in place of 946 KB, and a mod renaming a different
+weapon writes different sections — or different lines of the same one — so the two compose instead of
+clobbering each other.
+
+:::warning[Diff against the copy the game loads]
+`oasisstrings.rml` ships in the **retail patch**, not only in `common.dat`. Point `--base` at the
+patch copy; diffing against `common.dat`'s would stage sections that only differ because the patch
+changed them.
 :::
 
 **The icons** belong to no model, so they do not travel in a `.fc2model` pack and go through
