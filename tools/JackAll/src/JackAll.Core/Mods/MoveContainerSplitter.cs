@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Format.Move;
 using JackAll.Core.Format;
@@ -61,55 +59,10 @@ public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerS
     /// two units of one state.
     /// </param>
     public static string IdOf(MoveUnit unit, string? stateName = null)
-    {
-        string label = Sanitize(unit.LabelFor(stateName));
-        return label.Length == 0 ? $"{unit.Id}.xml" : $"{label}.{unit.Id}.xml";
-    }
+        => FragmentId.Of(unit.Id, unit.LabelFor(stateName));
 
-    /// <summary>The number a fragment id names, read through the same canonicalization
-    /// <see cref="FcbFragments.IdComparer"/> keys on, so two ids that comparer calls equal resolve to
-    /// one unit here too.</summary>
-    public static uint? UnitOf(string fragmentId) => HashOf(fragmentId);
-
-    private static uint? HashOf(string fragmentId)
-    {
-        if (!fragmentId.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        string stem = FcbFragments.Canonicalize(fragmentId)[..^".xml".Length];
-        if (stem.Length == 0)
-        {
-            return null;
-        }
-
-        // Canonicalization has already reduced a labelled id to its number. Anything left that is not
-        // numeric names the state outright, which still builds - it just cannot compare equal to the
-        // labelled form, so tooling never writes one.
-        return uint.TryParse(stem, NumberStyles.None, CultureInfo.InvariantCulture, out uint hash)
-            ? hash
-            : NameHash.Compute(stem);
-    }
-
-    /// <summary>A bare filename, with anything a path or a filesystem would object to reduced to an
-    /// underscore.</summary>
-    private static string Sanitize(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return string.Empty;
-        }
-
-        ReadOnlySpan<char> leaf = name.AsSpan(name.AsSpan().LastIndexOfAny('\\', '/') + 1).Trim();
-        StringBuilder text = new(leaf.Length);
-        foreach (char c in leaf)
-        {
-            text.Append(Path.GetInvalidFileNameChars().Contains(c) ? '_' : c);
-        }
-
-        return text.ToString();
-    }
+    /// <summary>The unit a fragment id names - see <see cref="FragmentId.NumberOf"/>.</summary>
+    public static uint? UnitOf(string fragmentId) => FragmentId.NumberOf(fragmentId);
 
     public IContainerTree Open(byte[] container) => new Tree(MoveCodec.Load(container), names);
 
@@ -159,7 +112,7 @@ public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerS
 
             MoveFragment fragment = MoveFragmentXml.Parse(xml);
             uint unitId = fragment.Unit.Id;
-            if (HashOf(id) != unitId)
+            if (FragmentId.NumberOf(id) != unitId)
             {
                 throw new InvalidDataException(
                     $"A MOVE fragment staged as '{id}' describes {fragment.Unit} instead, which is "
@@ -438,7 +391,7 @@ public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerS
                     : null;
             }
 
-            if (HashOf(fragmentId) is not { } id || Find(id) is not var (state, unit))
+            if (FragmentId.NumberOf(fragmentId) is not { } id || Find(id) is not var (state, unit))
             {
                 return null;
             }

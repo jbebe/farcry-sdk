@@ -1,5 +1,3 @@
-using System.Globalization;
-using System.Text;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Naming;
@@ -26,48 +24,9 @@ public sealed class DepLoadContainerSplitter(NameDatabase? names = null) : ICont
     /// </summary>
     public static DepLoadContainerSplitter Instance { get; } = new();
 
-    /// <summary>
-    /// The fragment id a resource is staged under: <c>&lt;label&gt;.&lt;crc32 decimal&gt;.xml</c>,
-    /// e.g. <c>dragunov.3882209901.xml</c>, or a bare <c>3882209901.xml</c> when there is no name to
-    /// read it by.
-    /// </summary>
-    /// <remarks>
-    /// The number binds and the label is decoration - the same cosmetic-name / authoritative-number
-    /// shape a placed entity's fragment uses (<c>Guard_12.2058514756624450165.xml</c>). That is what
-    /// makes every spelling of one resource compare equal under
-    /// <see cref="FcbFragments.IdComparer"/> with no special case: whoever writes the id may know a
-    /// name the reader does not, and vice versa, and they still land on one entry. Decimal precisely
-    /// because that comparer keys on a *numeric* tail.
-    ///
-    /// The label has to be a flat leaf. <see cref="FcbFragments.Canonicalize"/> strips a cosmetic
-    /// prefix only from the last path segment and keeps the directory, so a label spelled as a nested
-    /// path (<c>graphics\weapons\…\dragunov.xbg.3882209901.xml</c>) would canonicalize to
-    /// <c>graphics\weapons\…\3882209901.xml</c> and stop matching the bare form - which is exactly
-    /// the mismatch this scheme exists to avoid.
-    /// </remarks>
-    public static string IdOf(uint parentHash, string? name = null)
-    {
-        string label = Sanitize(name);
-        return label.Length == 0 ? $"{parentHash}.xml" : $"{label}.{parentHash}.xml";
-    }
-
-    /// <summary>The label part of an id: a bare filename, with anything a path or a filesystem would
-    /// object to reduced to an underscore. Empty when there is nothing usable to read by.</summary>
-    private static string Sanitize(string? name)
-    {
-        if (string.IsNullOrWhiteSpace(name))
-        {
-            return string.Empty;
-        }
-
-        ReadOnlySpan<char> leaf = name.AsSpan(name.AsSpan().LastIndexOfAny('\\', '/') + 1).Trim();
-        var text = new StringBuilder(leaf.Length);
-        foreach (char c in leaf)
-        {
-            text.Append(Path.GetInvalidFileNameChars().Contains(c) ? '_' : c);
-        }
-        return text.ToString();
-    }
+    /// <summary>The fragment id a resource is staged under - see <see cref="FragmentId"/>. The
+    /// binary stores only a CRC32, so that is the number.</summary>
+    public static string IdOf(uint parentHash, string? name = null) => FragmentId.Of(parentHash, name);
 
     public IContainerTree Open(byte[] container) => new Tree(DepLoadDocument.Decode(container), names);
 
@@ -86,7 +45,7 @@ public sealed class DepLoadContainerSplitter(NameDatabase? names = null) : ICont
         foreach ((string id, string xml) in fragmentXmlById)
         {
             DepLoadParent parent = DepLoadXml.FragmentFromXml(xml);
-            if (HashOf(id) != parent.Hash)
+            if (FragmentId.NumberOf(id) != parent.Hash)
             {
                 throw new InvalidDataException(
                     $"A depload fragment staged as '{id}' describes resource {parent.Hash} instead. "
@@ -128,29 +87,7 @@ public sealed class DepLoadContainerSplitter(NameDatabase? names = null) : ICont
     /// Public because a fragment row *is* a resource: anything asking what a row depends on, or what
     /// depends on it, needs the hash behind its id rather than the id's own text.
     /// </remarks>
-    public static uint? ResourceOf(string fragmentId) => HashOf(fragmentId);
-
-    private static uint? HashOf(string fragmentId)
-    {
-        if (!fragmentId.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
-        {
-            return null;
-        }
-
-        string canonical = FcbFragments.Canonicalize(fragmentId);
-        string stem = canonical[..^".xml".Length];
-        if (stem.Length == 0)
-        {
-            return null;
-        }
-
-        // Canonicalization has already reduced a labelled id to its number. Anything left that is not
-        // numeric is a hand-written id naming the resource outright, which still builds correctly -
-        // it just cannot compare equal to the labelled form, so tooling never writes one.
-        return uint.TryParse(stem, NumberStyles.None, CultureInfo.InvariantCulture, out uint hash)
-            ? hash
-            : NameHash.Compute(stem);
-    }
+    public static uint? ResourceOf(string fragmentId) => FragmentId.NumberOf(fragmentId);
 
     private sealed class Tree : IContainerTree
     {
@@ -168,7 +105,7 @@ public sealed class DepLoadContainerSplitter(NameDatabase? names = null) : ICont
         }
 
         public string? Extract(string fragmentId)
-            => HashOf(fragmentId) is { } hash && _byHash.TryGetValue(hash, out DepLoadParent? parent)
+            => FragmentId.NumberOf(fragmentId) is { } hash && _byHash.TryGetValue(hash, out DepLoadParent? parent)
                 ? DepLoadXml.FragmentToXml(parent)
                 : null;
 
