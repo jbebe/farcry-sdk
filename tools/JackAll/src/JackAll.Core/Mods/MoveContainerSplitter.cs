@@ -26,7 +26,7 @@ namespace JackAll.Core.Mods;
 ///
 /// See docs/docs/file-formats/move.md and docs/design/mod-layout-final.md.
 /// </remarks>
-public sealed class MoveContainerSplitter : IContainerSplitter
+public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerSplitter
 {
     /// <summary>
     /// The graphs that split. The `*named.bin` twins are deliberately absent: they set
@@ -35,6 +35,11 @@ public sealed class MoveContainerSplitter : IContainerSplitter
     /// </summary>
     private static readonly string[] Graphs = ["movemgr.bin", "dlc1.bin"];
 
+    /// <summary>
+    /// The nameless one, for a caller with no name table to hand. It lists fragments under a bare
+    /// <c>state_&lt;hex&gt;</c> label, which compares equal to any other spelling of the same number,
+    /// so a build never needs names.
+    /// </summary>
     public static MoveContainerSplitter Instance { get; } = new();
 
     public static bool IsMoveGraph(string fileName)
@@ -50,9 +55,14 @@ public sealed class MoveContainerSplitter : IContainerSplitter
     /// composite key inside the one thing <see cref="FcbFragments.IdComparer"/> can collapse, a
     /// numeric tail, and it is the same "type hash that is itself a name hash" shape `depload` uses.
     /// </remarks>
-    public static string IdOf(MoveUnit unit, string? name = null)
+    /// <param name="stateName">
+    /// The state's own name when one is known. It is the <em>stem</em> of the label, not the whole of
+    /// it: a weapon branch keeps its <c>_ch17_w39</c> tail, because that is the only thing separating
+    /// two units of one state.
+    /// </param>
+    public static string IdOf(MoveUnit unit, string? stateName = null)
     {
-        string label = Sanitize(name ?? unit.Label);
+        string label = Sanitize(unit.LabelFor(stateName));
         return label.Length == 0 ? $"{unit.Id}.xml" : $"{label}.{unit.Id}.xml";
     }
 
@@ -101,7 +111,7 @@ public sealed class MoveContainerSplitter : IContainerSplitter
         return text.ToString();
     }
 
-    public IContainerTree Open(byte[] container) => new Tree(MoveCodec.Load(container));
+    public IContainerTree Open(byte[] container) => new Tree(MoveCodec.Load(container), names);
 
     public string Canonicalize(string fragmentXml)
         => MoveFragmentXml.Render(MoveFragmentXml.Parse(fragmentXml));
@@ -406,9 +416,10 @@ public sealed class MoveContainerSplitter : IContainerSplitter
                + "broke a reference something else makes into it. Rebuild both together, or leave "
                + "the referenced state's shape alone.");
 
-    private sealed class Tree(MoveFile file) : IContainerTree
+    private sealed class Tree(MoveFile file, MoveNames? names) : IContainerTree
     {
         private readonly MoveStateIndex _index = MoveStateIndex.Build(file);
+        private readonly MoveNames _names = names ?? MoveNames.Empty;
 
         /// <summary>
         /// Which manager sections this graph has - none for an expansion, which is a bare
@@ -486,15 +497,16 @@ public sealed class MoveContainerSplitter : IContainerSplitter
                     continue;
                 }
 
+                string? name = _names.Of(hash);
                 IReadOnlyList<MoveUnits.Site> sites = MoveUnits.BranchesOf(state, hash);
                 HashSet<MoveObject> elided = [.. sites.Select(s => s.Branch)];
                 rows.Add(new FcbFragmentInfo(
-                    IdOf(new MoveUnit(hash, 0, null)), Weigh(state, elided)));
+                    IdOf(new MoveUnit(hash, 0, null), name), Weigh(state, elided)));
 
                 foreach (MoveUnit unit in sites.Select(s => s.Unit).Distinct())
                 {
                     long size = sites.Where(s => s.Unit == unit).Sum(s => Weigh(s.Branch, []));
-                    rows.Add(new FcbFragmentInfo(IdOf(unit), size));
+                    rows.Add(new FcbFragmentInfo(IdOf(unit, name), size));
                 }
             }
 

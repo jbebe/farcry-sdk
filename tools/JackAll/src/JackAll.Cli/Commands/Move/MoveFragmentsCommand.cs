@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
+using JackAll.Core;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
 using Spectre.Console;
@@ -43,7 +44,7 @@ public sealed class MoveFragmentsCommand : CliCommand<MoveFragmentsCommand.Setti
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
-        MoveContainerSplitter splitter = MoveContainerSplitter.Instance;
+        MoveContainerSplitter splitter = new(BundledAssets.LoadMoveNames());
         IContainerTree mine = splitter.Open(CliIO.ReadInput(settings.Input));
         IContainerTree? vanilla = settings.Base is null
             ? null

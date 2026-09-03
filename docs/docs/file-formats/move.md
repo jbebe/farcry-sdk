@@ -838,9 +838,8 @@ collapses the label and **the number is what binds**. For a state the number is 
 three engine-assigned values and no positional component, which is what keeps a composite key inside
 the one thing the comparer can collapse, a numeric tail.
 
-That the number binds matters more here than anywhere else: the loadable graph carries **no state
-names at all**, so JackAll can only ever list a bare number, while an author holding
-`movemgrnamed.bin` knows `Pawn_Generic_Aim`.
+That the number binds is what makes the label free to improve — see
+[Getting the names back](#getting-the-names-back), which recovers all 1,700 of them.
 
 Three details the format forces:
 
@@ -856,6 +855,43 @@ Three details the format forces:
 - **Elided branches leave `<branch unit="…"/>` behind**, matched back up by pre-order. Neither side
   records a position, so a fragment stays valid when an unrelated branch of the same state changes
   size.
+
+#### Getting the names back
+
+The loadable graph has no names, and the twin that does is a format
+[no engine reads](#the-named-twins-are-not-loadable) and that JackAll's decoder gets **1.9%** of the
+way through (it derails at `0x1073D` of 3,600,120 on `CTransitionLink`). Neither fact matters, because
+the names can be recovered without decoding anything:
+
+> Take every length-prefixed ASCII string out of `movemgrnamed.bin`. Hash each one. Keep the ones
+> whose CRC-32 equals a hash the **loadable** graph actually keys on.
+
+**The match is the proof.** A string that hashes to a hash the graph uses is that name; a wrong string
+cannot pass at a rate better than 2⁻³². The two files never have to agree structurally, so an
+undecoded authoring format costs nothing — and nothing has to be trusted, because every row proves
+itself.
+
+| field | hashes | recovered |
+|---|---:|---:|
+| `m_stateNameHash` | 1,700 | **1,700 (100%)** |
+| `m_package` | 101 | 101 (100%) |
+| `m_iModelHashNamePartID` | 73 | 73 (100%) |
+| `m_anchorPartName` | 37 | 37 (100%) |
+| `m_poseNameHash` | 70 | 0 |
+| `m_animNameHash` | 4,172 | 0 — a clip is a *game path*; the hashlist resolves those |
+
+`jackall-cli move names movemgrnamed.bin dlc1named.bin --out fc2.movenames.tsv` writes the table, and
+JackAll ships it as `assets/fc2.movenames.tsv` (1,880 rows), so fragments file under readable names
+out of the box:
+
+```
+Pawn_Generic_Reload_ch17_w39.1920121392.xml      the reload branch for weapon 39
+Pawn_Generic_Draw_ch18_w39.4037165567.xml        ... and the draw, gated on DesiredWeapon
+_packages.xml                                    the manager's package list
+```
+
+The table is **decoration**. It changes the label and never the number, so a build with no table
+produces the same graph under `state_<hex>` filenames — which is exactly why it was safe to add.
 
 #### The manager's four sections
 
@@ -1058,10 +1094,16 @@ is open.
 
 Still open:
 
-- **The named twins are ~90% decoded, and the last of it may not be recoverable from the
-  binaries.** See [What the named twins add](#what-the-named-twins-add). No shipped executable can
-  read a `0x20000` file, so the remaining authoring-only fields have to come from differential
-  reading against the loadable twin rather than from disassembly.
+- **The named twins are barely decoded, and it no longer matters much.** The shape of their
+  additions is known (see [What the named twins add](#what-the-named-twins-add)), but a real walk
+  derails at `0x1073D` of `movemgrnamed.bin`'s 3,600,120 bytes — **1.9%** — on `CTransitionLink`. No
+  shipped executable reads a `0x20000` file, so there is no disassembly to recover the rest from and
+  no oracle to check a guess against; only differential reading against the loadable twin.
+
+  The reason to care shrank, though: the one thing worth having from those files was the names, and
+  [hashing their strings against the loadable graph](#getting-the-names-back) recovers **100% of
+  them** without parsing the format at all. What remains unread is authoring metadata — GUIDs, and
+  whatever field sits around `CTransitionLink` — that nothing downstream needs.
 - **Nothing built with the writer has been loaded by the game yet.** Every claim below is verified
   against the format and against the shipped data; none of it is verified against a running
   `Dunia.dll`. Producing a file the parser accepts is necessary, not sufficient.

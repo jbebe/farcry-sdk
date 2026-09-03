@@ -24,9 +24,20 @@ public readonly record struct MoveUnit(uint StateHash, int Channel, int? Weapon)
         : $"movestate:{StateHash:x8}";
 
     /// <summary>A short, readable label for a fragment filename; the number after it is what binds.</summary>
-    public string Label => Weapon is { } weapon
-        ? $"state_{StateHash:x8}_ch{Channel}_w{weapon}"
-        : $"state_{StateHash:x8}";
+    public string Label => LabelFor(null);
+
+    /// <summary>
+    /// The label, using the state's real name when one is known.
+    /// </summary>
+    /// <remarks>
+    /// The weapon discriminator stays on the end whatever the stem is, because two units of one state
+    /// differ only by it - drop it and every branch of a state would file under one name.
+    /// </remarks>
+    public string LabelFor(string? stateName)
+    {
+        string stem = string.IsNullOrWhiteSpace(stateName) ? $"state_{StateHash:x8}" : stateName;
+        return Weapon is { } weapon ? $"{stem}_ch{Channel}_w{weapon}" : stem;
+    }
 
     public uint Id => Weapon is null ? StateHash : NameHash.Compute(Key);
 

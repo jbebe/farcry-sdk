@@ -219,6 +219,11 @@ app.Configure(config =>
                 "Splice a directory of per-state fragments back into a MOVE graph. Pass --expect to "
                 + "check the result against the binary the fragments came from.")
             .WithExample("move", "assemble", "vanilla.bin", "layer", "--expect", "modded.bin");
+        move.AddCommand<MoveNamesCommand>("names")
+            .WithDescription(
+                "Recover the names behind a graph's hashes from its *named.bin twin, by hashing the "
+                + "twin's strings and keeping the ones the loadable graph keys on.")
+            .WithExample("move", "names", "movemgrnamed.bin", "dlc1named.bin", "--out", "fc2.movenames.tsv");
         move.AddCommand<MoveHashCommand>("hash")
             .WithDescription("Print the CPathID a game path hashes to.")
             .WithExample("move", "hash", @"graphics\characters\clip.mab");

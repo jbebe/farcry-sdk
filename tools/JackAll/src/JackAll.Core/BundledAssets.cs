@@ -21,6 +21,20 @@ public static class BundledAssets
         return path is null ? NameDatabase.LoadFrom([]) : NameDatabase.Load(path);
     }
 
+    /// <summary>
+    /// The names behind a MOVE graph's hashes, so a fragment files under
+    /// <c>Pawn_Generic_Aim.1746764574.xml</c> rather than a bare number.
+    /// </summary>
+    /// <remarks>
+    /// Decoration only: the number is what binds, so a missing table costs readability and nothing
+    /// else. See <see cref="JackAll.Core.Format.Move.MoveNames"/> for how the rows are proved.
+    /// </remarks>
+    public static Format.Move.MoveNames LoadMoveNames()
+    {
+        string? path = Find(".movenames") ?? Find(Path.Combine("assets", "fc2.movenames.tsv"));
+        return path is null ? Format.Move.MoveNames.Empty : Format.Move.MoveNames.Load(path);
+    }
+
     public static FcbClassDefinitions LoadFcbClasses()
     {
         string? path = Find(".fcbclasses") ?? Find(Path.Combine("assets", "binary_classes.xml"));

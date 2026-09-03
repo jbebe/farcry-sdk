@@ -35,7 +35,7 @@ mods/ui/textures/hud/icons_weapons/hud_icon_sniperdart.xbt  the HUD and bazaar i
 mods/ui/textures/guns/gun_icon_sniperdart.xbt               the multiplayer weapon select
 mods/languages/english/oasisstrings.rml                     the weapon's name, ten strings
 mods/graphics/characters/.../vss_vintorez/...vssvi_i1.mab   the reload, at a new path
-mods/graphics/move/movemgr.bin/state_*_w39.*.xml            17 MOVE fragments, clips repointed
+mods/graphics/move/movemgr.bin/Pawn_Generic_*_w39.*.xml     17 MOVE fragments, clips repointed
 mods/soundbinary/004bf5e9.spk                               the shot, first person (stereo)
 mods/soundbinary/004bf5eb.spk                               the shot, third person (mono)
 mods/worlds/world1/generated/entitylibrary.fcb/...          four archetype fragments
@@ -58,7 +58,10 @@ no barrel at close range and grew one back at distance — LOD1 and below fold `
 branches the graph pins to `EquippedWeapon == 39`, so the mod stages those branches and nothing else:
 17 files, 265 KB, against the 1.8 MB `movemgr.bin` this used to ship whole. Every filename ends
 `_w39`, so a mod retargeting a different weapon cannot collide with it — where two whole-file copies
-of the graph would have silently overwritten each other. Regenerate them with
+of the graph would have silently overwritten each other. The names say which states they are
+(`Pawn_Generic_Reload_ch17_w39`, `Pawn_Generic_Draw_ch18_w39` — the draw is gated on *DesiredWeapon*,
+the weapon being switched to), and the number after each one is what actually binds. Regenerate them
+with
 `jackall-cli move fragments <edited.bin> --base <retail.bin> --out <dir>`, and check a set against the
 binary it came from with `move assemble … --expect`.
 

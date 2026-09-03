@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using JackAll.Cli.Infrastructure;
+using JackAll.Core;
 using JackAll.Core.Mods;
 using Spectre.Console;
 using Spectre.Console.Cli;

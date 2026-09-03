@@ -55,6 +55,9 @@
     <Content Include="..\..\assets\engine-roots.tsv" Link=".engineroots">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\assets\fc2.movenames.tsv" Link=".movenames">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

@@ -59,12 +59,30 @@ public static class ContainerFormats
         }
 
         // A MOVE graph is matched on its filename, so a container path ending in one is unambiguous.
-        // No NameDatabase arm: a state name is not a game path, so the hashlist cannot resolve one -
-        // every row lists under its bare number until the `movemgrnamed.bin` walk is finished.
+        // It takes no NameDatabase - a state name is not a game path, so the hashlist cannot resolve
+        // one - and reads its own bundled table instead, which is decoration over a binding number.
         return IsMoveGraph(Path.GetFileName(containerPath))
-            ? MoveContainerSplitter.Instance
+            ? MoveSplitter.Value
             : new FcbContainerSplitter(definitions);
     }
+
+    /// <summary>
+    /// The MOVE splitter, with names loaded once. <see cref="BundledAssets"/> walks the filesystem to
+    /// find the table, and <see cref="For"/> is called per container during a build.
+    /// </summary>
+    private static readonly Lazy<MoveContainerSplitter> MoveSplitter = new(() =>
+    {
+        try
+        {
+            return new MoveContainerSplitter(BundledAssets.LoadMoveNames());
+        }
+        catch (IOException)
+        {
+            // Labels are decoration; the number binds. A missing or unreadable table is not a reason
+            // to fail a build.
+            return MoveContainerSplitter.Instance;
+        }
+    });
 
     /// <summary>The container part of a staged fragment path, or null when it names no fragment -
     /// how a caller outside this assembly tells which format a fragment row belongs to.</summary>
