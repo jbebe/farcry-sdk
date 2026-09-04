@@ -612,4 +612,68 @@ public class LegacyPatchImporterTests : IDisposable
         }
         catch { /* temp dir cleanup is best-effort */ }
     }
+
+    private static float Nudge(float value, int ulps)
+        => BitConverter.Int32BitsToSingle(BitConverter.SingleToInt32Bits(value) + ulps);
+
+    private static string Frag(object value)
+        => $"""<object><field name="x">{value}</field></object>""";
+
+    /// <summary>
+    /// A community mod's editor rewrites every float it reads, so a fragment whose only difference is
+    /// that rounding is not an edit at all.
+    /// </summary>
+    [Fact]
+    public void A_float_inside_the_precision_interval_is_not_a_change()
+    {
+        const float value = 0.36544f;
+
+        Assert.True(LegacyPatchImporter.SameWithinFloatNoise(
+            Frag(value), Frag(Nudge(value, LegacyPatchImporter.FloatNoiseUlps))));
+    }
+
+    /// <summary>The other half of the interval: one step past it is a real edit and must still stage.
+    /// Without this the test above would pass just as well for a filter that swallowed everything.</summary>
+    [Fact]
+    public void A_float_past_the_precision_interval_is_still_a_change()
+    {
+        const float value = 0.36544f;
+
+        Assert.False(LegacyPatchImporter.SameWithinFloatNoise(
+            Frag(value), Frag(Nudge(value, LegacyPatchImporter.FloatNoiseUlps + 1))));
+        Assert.False(LegacyPatchImporter.SameWithinFloatNoise(Frag(value), Frag(0.4f)));
+    }
+
+    /// <summary>
+    /// Two whole numbers are compared exactly. These two ids are one apart and round to the same
+    /// float32, so a tolerance applied to every number would wave a changed id through as rounding.
+    /// </summary>
+    [Fact]
+    public void A_whole_number_is_compared_exactly_however_close_it_rounds()
+    {
+        Assert.False(LegacyPatchImporter.SameWithinFloatNoise(Frag("1073741824"), Frag("1073741825")));
+        Assert.True(LegacyPatchImporter.SameWithinFloatNoise(Frag("1073741824"), Frag("1073741824")));
+    }
+
+    /// <summary>The tolerance reaches values only - never a name, an attribute, or the shape.</summary>
+    [Fact]
+    public void Only_a_values_precision_is_forgiven()
+    {
+        Assert.False(LegacyPatchImporter.SameWithinFloatNoise(
+            """<object><field name="x">1.5</field></object>""",
+            """<object><field name="y">1.5</field></object>"""));
+        Assert.False(LegacyPatchImporter.SameWithinFloatNoise(
+            """<object><field name="x">1.5</field></object>""",
+            """<object><field name="x">1.5</field><field name="z">2.5</field></object>"""));
+        Assert.False(LegacyPatchImporter.SameWithinFloatNoise(Frag(1.5f), "not xml at all"));
+    }
+
+    /// <summary>A sign flip is a real change, not a rounding step across zero.</summary>
+    [Fact]
+    public void A_float_that_changes_sign_is_a_change()
+    {
+        float tiny = Nudge(0f, 2);
+
+        Assert.False(LegacyPatchImporter.SameWithinFloatNoise(Frag(tiny), Frag(-tiny)));
+    }
 }

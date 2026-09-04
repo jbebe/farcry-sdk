@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.IO.Compression;
 using System.IO.Hashing;
 using System.Text;
@@ -382,7 +383,7 @@ public static class LegacyPatchImporter
                 return $"it lists a fragment, {row.Id}, that it will not then hand over";
             }
 
-            if (xml == vanilla.Extract(row.Id))
+            if (vanilla.Extract(row.Id) is { } vanillaXml && SameWithinFloatNoise(vanillaXml, xml))
             {
                 unchanged++;
                 continue;
@@ -414,6 +415,86 @@ public static class LegacyPatchImporter
         fragmentsImported += changed.Count;
         skipped += unchanged;
         return null;
+    }
+
+    /// <summary>How far two floats may sit apart, in units in the last place, and still count as the
+    /// same value (see docs/modding/vortex.md).</summary>
+    public const int FloatNoiseUlps = 8;
+
+    /// <summary>Whether two fragments say the same thing, floats compared within
+    /// <see cref="FloatNoiseUlps"/>.</summary>
+    public static bool SameWithinFloatNoise(string vanillaXml, string legacyXml)
+    {
+        if (vanillaXml == legacyXml)
+        {
+            return true;
+        }
+
+        try
+        {
+            return SameElement(XElement.Parse(vanillaXml), XElement.Parse(legacyXml));
+        }
+        catch (System.Xml.XmlException)
+        {
+            return false;
+        }
+    }
+
+    private static bool SameElement(XElement a, XElement b)
+    {
+        if (a.Name != b.Name
+            || !a.Attributes().Select(x => (x.Name, x.Value))
+                .SequenceEqual(b.Attributes().Select(x => (x.Name, x.Value))))
+        {
+            return false;
+        }
+
+        List<XElement> mine = [.. a.Elements()];
+        List<XElement> theirs = [.. b.Elements()];
+        if (mine.Count != theirs.Count)
+        {
+            return false;
+        }
+
+        if (mine.Count == 0)
+        {
+            return SameValue(a.Value, b.Value);
+        }
+
+        for (int i = 0; i < mine.Count; i++)
+        {
+            if (!SameElement(mine[i], theirs[i]))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    // A whole number is compared exactly: a large id can round to its neighbour's float.
+    private static bool SameValue(string a, string b)
+        => a == b
+           || ((LooksFractional(a) || LooksFractional(b))
+               && float.TryParse(a, NumberStyles.Float, CultureInfo.InvariantCulture, out float x)
+               && float.TryParse(b, NumberStyles.Float, CultureInfo.InvariantCulture, out float y)
+               && WithinNoise(x, y));
+
+    private static bool LooksFractional(string text) => text.AsSpan().IndexOfAny(".eE") >= 0;
+
+    private static bool WithinNoise(float a, float b)
+    {
+        if (!float.IsFinite(a) || !float.IsFinite(b))
+        {
+            return false;
+        }
+
+        int vanillaBits = BitConverter.SingleToInt32Bits(a);
+        int legacyBits = BitConverter.SingleToInt32Bits(b);
+
+        // Opposite signs are a real change, and the raw bit distance across zero is meaningless.
+        return (vanillaBits < 0) == (legacyBits < 0)
+            && Math.Abs((long)vanillaBits - legacyBits) <= FloatNoiseUlps;
     }
 
     /// <summary>The shape the staged set actually rebuilds, for comparing against the shape the mod

@@ -5,6 +5,15 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **A legacy import no longer stages a mod's rounding as an edit** — the editors these mods were
+  built with rewrite every float they read, so a mod that moved one crate arrived claiming to
+  override every entity around it, at values differing from vanilla in the last bit or two. The
+  importer now compares floats with a precision interval of 8 units in the last place. Measured
+  against Scubrah's Patch, whose rounding reaches 7 ULP while its real edits start at 69,632, so the
+  two do not overlap. Staged fragments drop from **24,924 to 7,434** for Scubrah's Patch, 12,734 to
+  885 for Realism Plus Redux and 12,136 to 501 for Functional Outposts, with every whole-file
+  fallback, mission layer, deletion and real edit unchanged. Whole numbers are still compared
+  exactly, since a large id can round to the same float as its neighbour.
 - **`<world>.game.xml` is overridden one mission at a time** — the file that declares which mission
   layers exist and when each is on, so every mod adding a mission or an outpost had to override it
   whole and last-wins against every other such mod. It now splits per `<Mission>`, with the flat

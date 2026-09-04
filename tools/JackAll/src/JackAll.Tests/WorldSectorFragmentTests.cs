@@ -313,9 +313,10 @@ public class WorldSectorFragmentTests : IDisposable
         });
 
         FcbObject rebuilt = FcbDocument.Deserialize(assembled);
-        FcbObject created = Assert.Single(rebuilt.Children.Where(c =>
-            c.TypeHash == WorldHashes.MissionLayer
-            && FcbEntityFields.ReadString(c, WorldHashes.TextPathId) == added));
+        FcbObject created = Assert.Single(
+            rebuilt.Children,
+            c => c.TypeHash == WorldHashes.MissionLayer
+                && FcbEntityFields.ReadString(c, WorldHashes.TextPathId) == added);
 
         Assert.Equal(new byte[] { 1, 2, 3, 4 }, created.Values[headerHash]);
     }

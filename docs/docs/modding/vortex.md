@@ -208,6 +208,13 @@ are the mod, so every entry is diffed against the game's own original and only r
 kept — an entity-library `.fcb` one fragment at a time, other `.fcb`s by decoded shape, everything
 else byte for byte.
 
+Floats are compared with a precision interval of 8 units in the last place. The editors these mods
+were built with rewrite every float they read, so a mod that moved one crate would otherwise arrive
+claiming to override every entity around it, at values differing from vanilla only in the last bit.
+Measured against the community's largest mods, that rounding reaches 7 ULP while their real edits
+start four orders of magnitude further out, so nothing real is inside the interval. Whole numbers are
+compared exactly, since a large id can round to the same float as its neighbour.
+
 Needs the game's archives mounted, so it isn't cheap; expect tens of seconds.
 
 ### `mod build --game <dir> [--layer <dir|zip>]… [--force]`
