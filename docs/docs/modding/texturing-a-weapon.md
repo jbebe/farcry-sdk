@@ -154,7 +154,7 @@ SCOPE_HI      cluster 4   mat 6      144          <- the same material
 
 `SCOPE_HI` draws through the body's material. It is the zoomed sight picture, calibrated to a camera
 you cannot see, and [it is the only thing on screen while
-zoomed](./replacing-a-weapon.md#scope_hi-is-drawn-instead-of-the-rest-of-the-gun-not-on-top-of-it).
+zoomed](./replacing-a-weapon.md#e-scope_hi-is-drawn-instead-of-the-rest-of-the-gun).
 Overwrite the entry in place and you repaint 144 triangles of the scope along with the gun. Append,
 and the scope keeps what it had.
 
@@ -350,7 +350,7 @@ covers them reads as obviously wrong.
 
 To see it without firing 200 rounds, drop `iClipsForSelfDestruct` to 1 in a temporary layer — the
 whole condition ramp then runs inside a single magazine. See
-[jamming and breaking](./replacing-a-weapon.md#jamming-and-breaking-are-two-systems-in-two-archetypes).
+[jamming and breaking](./replacing-a-weapon.md#jamming-and-breaking).
 
 ## Step 7 — ship it
 
@@ -394,7 +394,7 @@ same codec — the same four file sizes to the byte as the weapon you replaced.
 ## What the offline gates cannot see
 
 Render the weapon and compare it against the donor — that rule
-[governs the mesh half](./replacing-a-weapon.md#the-rule-that-would-have-saved-this-project-the-most-time)
+[governs the mesh half](./replacing-a-weapon.md#k-render-it-and-compare-against-the-donor)
 and it still applies. `render_refs.py`'s `_lit` view is the one that matters here, because it uses
 EEVEE with the materials the file carries. It will catch an upside-down albedo, a body reading black,
 and a seam.
