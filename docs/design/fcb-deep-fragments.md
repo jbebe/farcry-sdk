@@ -126,7 +126,7 @@ produce two competing overrides.
 **Do not put the mission layer in the id.** Moving an entity between layers would silently change its
 identity and orphan the override.
 
-## Mission-layer placement — `_layers.xml`
+## Mission-layer placement — `_layout.xml`
 
 The rule above stands: an id never carries a layer. But the layer still has to be changeable, because
 the engine spawns an entity from **where it sits in the container**, not from what its
@@ -136,17 +136,17 @@ is always enabled (see `docs/docs/engine-internals/entity-instancing.md`). So an
 controls it. Editing the component alone is a silently wrong mod.
 
 Placement is therefore its own override unit, staged under the reserved id
-`<sector>.data.fcb\_layers.xml` — the same trick the MOVE graph's manager sections use. It reads as
+`<sector>.data.fcb\_layout.xml` — the same trick the MOVE graph's manager sections use. It reads as
 constraints, not a picture:
 
 ```xml
-<layers>
+<layout>
   <remove path="missions\storymissions\a2sm05\a2sm05_ai_disable" />
   <delete id="2054324264221284349" />
   <layer path="missions\outposts\w1_b_2\oiihvvl" pathId="FF7C43B9" before="main">
     <entity id="2053840442929193718" />
   </layer>
-</layers>
+</layout>
 ```
 
 Between them, fragments and this document are a structural diff of the sector, and the verbs are
@@ -176,7 +176,7 @@ decides whether it spawns. The entity's own `CMissionComponent` is separate, and
 layer but is tracked under the old one. Both mods do both: the moved entity in Realism Plus Redux
 carries `hidMissionLayerPath = FF7C43B9`, matching the layer it was nested into, and the import
 stages that as an ordinary content edit on the entity's own fragment beside the layout. A
-hand-authored `_layers.xml` on its own does half the job.
+hand-authored `_layout.xml` on its own does half the job.
 
 Note that the component's field holds `FFFFFFFF` when it names no layer, which is what most shipped
 entities carry. It means "unset", not "a layer with that id" — see

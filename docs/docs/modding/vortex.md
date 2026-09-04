@@ -108,7 +108,7 @@ override unit:
 | --- | --- | --- | --- |
 | Entity library (`entitylibrary*.fcb`) | one archetype | its `hidName`, dots as folders | `entitylibrary.fcb\vehicle\Land\DLC_Vehicle1_DLC1.xml` |
 | World sector (`worldsector*.data.fcb`) | one placed entity | `<hidName>.<disEntityId>.xml` | `worldsector17.data.fcb\StaticObject_201.2058514756624450165.xml` |
-| World sector (`worldsector*.data.fcb`) | which mission layer its entities sit in | `_layers.xml` | `worldsector17.data.fcb\_layers.xml` |
+| World sector (`worldsector*.data.fcb`) | which mission layer its entities sit in, and what it deletes | `_layout.xml` | `worldsector17.data.fcb\_layout.xml` |
 | World descriptor (`<world>.game.xml`) | one mission | its name, slashes as folders | `world1.game.xml\missions\outposts\w1_b_2\oiihvvl.xml` |
 | World descriptor (`<world>.game.xml`) | one section beside the missions | `_` plus the element name | `world1.game.xml\_environment.xml` |
 
@@ -120,7 +120,7 @@ pre-per-archetype group ids (`entitylibrary.fcb\NN_Name.xml`) are **rejected out
 in a container folder's root names no fragment, so rather than silently appending a phantom group the
 build fails and names the file. Re-export the archetype you meant to change.
 
-`_layers.xml` is the one id that names no single entity. It says which mission layer a sector's
+`_layout.xml` is the one id that names no single entity. It says which mission layer a sector's
 entities belong to — the one thing an entity's own fragment cannot say, since an override always
 lands where the base container already put it. It matters because the game spawns an entity from
 where it sits, not from the `CMissionComponent` on it, so moving an outpost's guards into a mission

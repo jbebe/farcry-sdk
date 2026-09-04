@@ -579,7 +579,7 @@ public class WorldSectorFragmentTests : IDisposable
 
     private static byte[] AppText(string xml) => System.Text.Encoding.UTF8.GetBytes(xml);
 
-    private static string Layout(string body) => $"<layers>{body}</layers>";
+    private static string Layout(string body) => $"<layout>{body}</layout>";
 
     private static ulong IdOf(FcbObject entity) => FcbEntityFields.ReadU64(entity, WorldHashes.DisEntityId);
 

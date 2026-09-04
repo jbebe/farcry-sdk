@@ -22,7 +22,7 @@ public sealed record LayerSpec(
 /// no layer and an override always lands where the base container already put it.
 /// </summary>
 /// <remarks>
-/// Staged as the reserved fragment id <c>_layers.xml</c> beside the sector's entity fragments, the
+/// Staged as the reserved fragment id <c>_layout.xml</c> beside the sector's entity fragments, the
 /// same way a MOVE graph's manager sections are (see <see cref="Move.MoveSections"/>). It reads as a
 /// set of constraints, not a full picture: anything unlisted stays where the base container has it,
 /// so applying a sector's own layout to itself is a no-op. Structural membership is what the engine
@@ -35,9 +35,9 @@ public sealed class WorldSectorLayout(
 {
     /// <summary>The reserved fragment id. The leading underscore keeps it out of the entity id space,
     /// whose ids all end in a number.</summary>
-    public const string Id = "_layers.xml";
+    public const string Id = "_layout.xml";
 
-    private const string LayersElement = "layers";
+    private const string LayoutElement = "layout";
 
     public IReadOnlyList<LayerSpec> Layers { get; } = layers;
 
@@ -263,10 +263,10 @@ public sealed class WorldSectorLayout(
     {
         XElement root = XDocument.Parse(xml).Root
             ?? throw new InvalidDataException("Empty mission-layer layout document.");
-        if (!root.Name.LocalName.Equals(LayersElement, StringComparison.Ordinal))
+        if (!root.Name.LocalName.Equals(LayoutElement, StringComparison.Ordinal))
         {
             throw new InvalidDataException(
-                $"A mission-layer layout is a <{LayersElement}> document, not <{root.Name.LocalName}>.");
+                $"A mission-layer layout is a <{LayoutElement}> document, not <{root.Name.LocalName}>.");
         }
 
         string[] removed = [.. root.Elements("remove")
@@ -328,7 +328,7 @@ public sealed class WorldSectorLayout(
     /// <summary>The canonical text, which is what a three-way merge compares.</summary>
     public string Render()
     {
-        var root = new XElement(LayersElement);
+        var root = new XElement(LayoutElement);
         foreach (string path in Removed)
         {
             root.Add(new XElement("remove", new XAttribute("path", path)));

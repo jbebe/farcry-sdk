@@ -34,7 +34,7 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   byte whole-file override**, so two mods adding different outposts finally merge. The plain-text
   multiplayer template keeps its whole-file override, since re-serializing it could not be
   round-tripped safely.
-- **An entity can be deleted from a sector without claiming the sector** — `_layers.xml` gained
+- **An entity can be deleted from a sector without claiming the sector** — `_layout.xml` gained
   `<delete id="…"/>`. Removing one crate used to mean a whole-file override, which outranked every
   other mod touching any of that sector's other entities. Deletion is still exclusive, because two
   mods disagreeing about whether something exists genuinely disagree, but it is now exclusive over
@@ -44,7 +44,7 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **A world sector's mission layers are overridable** — an entity is spawned from the layer it sits
   in, not from the `CMissionComponent` on it, so an outpost mod that moves guards into a mission
   layer of its own could not be expressed per fragment and landed as a whole-file override. A sector
-  now has one more override unit, `_layers.xml`, saying which layer its entities belong to; a mod
+  now has one more override unit, `_layout.xml`, saying which layer its entities belong to; a mod
   states only what it moved, and two mods re-filing different entities of one sector merge instead of
   fighting. Importing Realism Plus Redux takes its whole-file fallbacks from **96 to 8** and its
   staged fragments from 669 to **12,542**.
