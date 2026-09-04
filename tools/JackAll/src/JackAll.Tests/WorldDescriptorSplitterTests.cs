@@ -130,8 +130,11 @@ public class WorldDescriptorSplitterTests
         XElement root = RmlDocument.Deserialize(applied);
         XElement index = root.Element("MissionsDef")!.Element("MissionLayers")!;
         Assert.Equal(1, index.Elements("Layer").Count(l => (string?)l.Attribute("PathId") == layerPath));
+
+        // One layer per mission. Counted off the missions themselves rather than off List(), which
+        // also carries the descriptor's sections.
         Assert.Equal(
-            Splitter.Open(applied).List().Count,
+            root.Element("MissionsDef")!.Element("Missions")!.Elements("Mission").Count(),
             index.Elements("Layer").Count());
     }
 
@@ -228,5 +231,96 @@ public class WorldDescriptorSplitterTests
         var backward = new Dictionary<string, string>(forward.Reverse(), FcbFragments.IdComparer);
 
         Assert.Equal(Splitter.Apply(original, forward), Splitter.Apply(original, backward));
+    }
+
+    /// <summary>Every section splices straight back, the same gate the missions have to pass.</summary>
+    [Theory]
+    [MemberData(nameof(Descriptors))]
+    public void Every_section_extracts_and_splices_back_unchanged(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        IContainerTree tree = Splitter.Open(original);
+        string[] sections = [.. tree.List().Select(r => r.Id).Where(id => id.StartsWith('_'))];
+        if (sections.Length == 0) return;
+
+        Dictionary<string, string> staged = sections.ToDictionary(
+            id => id, id => tree.Extract(id)!, FcbFragments.IdComparer);
+
+        Assert.Equal(original, Splitter.Apply(original, staged));
+    }
+
+    /// <summary>
+    /// The descriptor's non-mission parts are their own override units. This is the edit that used to
+    /// cost a mod the whole file: Scubrah's Patch raises the shadow radius and view distance in
+    /// Environment, which no mission fragment could carry.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Descriptors))]
+    public void An_environment_edit_is_a_fragment_of_its_own(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        IContainerTree tree = Splitter.Open(original);
+        const string id = "_environment.xml";
+        if (tree.Extract(id) is not { } environment) return;
+
+        XElement edited = XElement.Parse(environment);
+        if (edited.Element("Shadow") is not { } shadow) return;
+        shadow.SetAttributeValue("DynamicShadowRadius", "1000");
+
+        byte[] applied = Splitter.Apply(
+            original, new Dictionary<string, string> { [id] = edited.ToString() });
+
+        XElement root = RmlDocument.Deserialize(applied);
+        Assert.Equal(
+            "1000",
+            (string?)root.Element("Environment")!.Element("Shadow")!.Attribute("DynamicShadowRadius"));
+
+        // The missions it sits beside are untouched, which is the whole point of splitting it out.
+        Assert.Equal(tree.List().Count, Splitter.Open(applied).List().Count);
+    }
+
+    /// <summary>
+    /// A section change no longer moves the skeleton, so an importer can now express it per fragment
+    /// instead of falling back to a whole-file override of the descriptor.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(Descriptors))]
+    public void A_section_edit_leaves_the_skeleton_alone(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        IContainerTree tree = Splitter.Open(original);
+        const string id = "_environment.xml";
+        if (tree.Extract(id) is not { } environment) return;
+
+        var ids = new HashSet<string>(tree.List().Select(r => r.Id), FcbFragments.IdComparer);
+        XElement edited = XElement.Parse(environment);
+        edited.SetAttributeValue("ModAdded", "1");
+
+        IContainerTree changed = Splitter.Open(
+            Splitter.Apply(original, new Dictionary<string, string> { [id] = edited.ToString() }));
+
+        Assert.Equal(tree.Skeleton(ids.Contains), changed.Skeleton(ids.Contains));
+    }
+
+    /// <summary>A section staged under the wrong id is refused rather than written somewhere odd.</summary>
+    [Theory]
+    [MemberData(nameof(Descriptors))]
+    public void A_section_staged_under_another_sections_name_is_refused(string path)
+    {
+        if (path.Length == 0) return;
+
+        byte[] original = File.ReadAllBytes(path);
+        if (Splitter.Open(original).Extract("_environment.xml") is not { } environment) return;
+
+        InvalidDataException error = Assert.Throws<InvalidDataException>(() => Splitter.Apply(
+            original, new Dictionary<string, string> { ["_grids.xml"] = environment }));
+
+        Assert.Contains("_environment.xml", error.Message);
     }
 }

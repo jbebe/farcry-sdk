@@ -44,10 +44,11 @@ public static class ContainerFormats
     /// <summary>
     /// Whether a fragment's base-game form is worth diffing against. A world sector's layout states
     /// only what a mod moved, while its vanilla form is the sector's whole placement, so a diff of
-    /// the two would read as the entire vanilla layout being deleted.
+    /// the two would read as the entire vanilla layout being deleted. Scoped to the container: a
+    /// world descriptor's `_layers.xml` is its terrain materials and diffs perfectly well.
     /// </summary>
-    public static bool HasComparableOriginal(string fragmentId)
-        => !WorldSectorLayout.IsLayoutId(fragmentId);
+    public static bool HasComparableOriginal(string container, string fragmentId)
+        => !WorldSectorLayout.IsLayoutId(fragmentId) || IsWorldDescriptor(container);
 
     public static bool IsDepLoad(string fileName)
         => fileName.EndsWith(DepLoadSuffix, StringComparison.OrdinalIgnoreCase);

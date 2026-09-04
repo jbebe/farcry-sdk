@@ -40,6 +40,10 @@ public sealed class WorldDescriptorContainerSplitter : IContainerSplitter
             .Where(s => s.Length > 0)
             .Select(FcbFragments.Sanitize)) + ".xml";
 
+    /// <summary>A section's id, named after the element so one nobody has seen yet still gets a
+    /// fragment. Reserved-prefixed the way <see cref="WorldSectorLayout.Id"/> is.</summary>
+    public static string SectionId(XName name) => "_" + name.LocalName.ToLowerInvariant() + ".xml";
+
     public IContainerTree Open(byte[] container) => new Tree(Decode(container));
 
     /// <summary>
@@ -69,10 +73,25 @@ public sealed class WorldDescriptorContainerSplitter : IContainerSplitter
             ?? throw new InvalidDataException(
                 "This descriptor has no <MissionsDef><Missions>, so it declares no mission to override.");
         Dictionary<string, XElement> byId = IndexMissions(root);
+        Dictionary<string, XElement> sections = IndexSections(root);
 
         foreach ((string id, string xml) in fragmentXmlById.OrderBy(kv => kv.Key, StringComparer.Ordinal))
         {
             XElement replacement = XElement.Parse(xml);
+            if (sections.TryGetValue(id, out XElement? section))
+            {
+                if (!FcbFragments.IdComparer.Equals(SectionId(replacement.Name), id))
+                {
+                    throw new InvalidDataException(
+                        $"A section fragment staged as '{id}' holds a <{replacement.Name.LocalName}>. "
+                        + $"Name the file '{SectionId(replacement.Name)}', or fix the section it holds.");
+                }
+
+                section.ReplaceWith(replacement);
+                sections[id] = replacement;
+                continue;
+            }
+
             string name = (string?)replacement.Attribute(NameAttribute) ?? "";
             if (name.Length == 0 || !FcbFragments.IdComparer.Equals(IdOf(name), id))
             {
@@ -134,8 +153,16 @@ public sealed class WorldDescriptorContainerSplitter : IContainerSplitter
         return byId;
     }
 
-    /// <summary>One mission in the shape every staged fragment is written in.</summary>
-    private static string Render(XElement mission) => FragmentXml.Render(mission, "  ");
+    /// <summary>Every top-level part of the descriptor that is not the missions.</summary>
+    private static IEnumerable<XElement> SectionsOf(XElement root)
+        => root.Elements().Where(e => e.Name != MissionsDefElement);
+
+    /// <summary>Every section under the id a mod stages it at.</summary>
+    private static Dictionary<string, XElement> IndexSections(XElement root)
+        => SectionsOf(root).ToDictionary(s => SectionId(s.Name), s => s, FcbFragments.IdComparer);
+
+    /// <summary>One fragment in the shape every staged fragment is written in.</summary>
+    private static string Render(XElement fragment) => FragmentXml.Render(fragment, "  ");
 
     private sealed class Tree : IContainerTree
     {
@@ -146,23 +173,41 @@ public sealed class WorldDescriptorContainerSplitter : IContainerSplitter
         {
             _root = root;
             _byId = IndexMissions(root);
+            foreach (XElement section in SectionsOf(root))
+            {
+                _byId[SectionId(section.Name)] = section;
+            }
         }
 
         public string? Extract(string fragmentId)
-            => _byId.TryGetValue(fragmentId, out XElement? mission) ? Render(mission) : null;
+            => _byId.TryGetValue(fragmentId, out XElement? fragment) ? Render(fragment) : null;
 
         public IReadOnlyList<FcbFragmentInfo> List()
             => [.. _byId.Select(kv => new FcbFragmentInfo(kv.Key, Render(kv.Value).Length))];
 
         /// <summary>
-        /// The descriptor with every mission reduced to a marker naming it, so an importer can tell
-        /// "these missions changed" from "something else in the file did". The flat layer index goes
+        /// The descriptor with every mission and every section reduced to a marker, so an importer
+        /// can tell "these parts changed" from "the file's own shape did". The flat layer index goes
         /// with them: it is rebuilt from the missions, so comparing it as well would report one
         /// change twice.
         /// </summary>
         public string? Skeleton(Func<string, bool> keep)
         {
-            var clone = new XElement(_root);
+            // Built rather than pruned: a section's whole subtree is most of the file's non-mission
+            // text, and cloning it only to replace it with a marker is the bulk of the work.
+            var clone = new XElement(_root.Name, _root.Attributes());
+            foreach (XElement child in _root.Elements())
+            {
+                if (child.Name == MissionsDefElement)
+                {
+                    clone.Add(new XElement(child));
+                }
+                else if (keep(SectionId(child.Name)))
+                {
+                    clone.Add(new XElement(child.Name));
+                }
+            }
+
             if (clone.Element(MissionsDefElement)?.Element(MissionLayersElement) is { } index)
             {
                 index.RemoveNodes();

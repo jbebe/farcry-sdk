@@ -61,7 +61,9 @@ public static class FileHandlerCatalog
             { IsFragment: true, FragmentId: { } id } when IsPlainDocumentFragment(file, id)
                 => BuildTextHandler(
                     file, readContent,
-                    ContainerFormats.HasComparableOriginal(id) ? readOriginal : static () => null),
+                    ContainerFormats.HasComparableOriginal(ContainerOf(file), id)
+                        ? readOriginal
+                        : static () => null),
             // Checked before the plain "xml" case below - a fragment's own VfsFile.Type.Extension is
             // also "xml" (see GameVfs.MergeFragments), but it needs the dedicated editor tab, not the
             // generic read-only text viewer.
@@ -97,11 +99,12 @@ public static class FileHandlerCatalog
             _ => null,
         };
 
-    /// <summary>Whether this fragment row is a plain document, read off the container its staged
-    /// path names.</summary>
+    /// <summary>The container a fragment row's staged path names.</summary>
+    private static string ContainerOf(VfsFile file) => ContainerFormats.ContainerPathOf(file.Path) ?? "";
+
+    /// <summary>Whether this fragment row is a plain document rather than an `.fcb` value tree.</summary>
     private static bool IsPlainDocumentFragment(VfsFile file, string fragmentId)
-        => ContainerFormats.IsPlainDocumentFragment(
-            ContainerFormats.ContainerPathOf(file.Path) ?? "", fragmentId);
+        => ContainerFormats.IsPlainDocumentFragment(ContainerOf(file), fragmentId);
 
     /// <summary>
     /// A plain read-only view for an unmodded (or origin-less) file, or - when <paramref name="file"/>

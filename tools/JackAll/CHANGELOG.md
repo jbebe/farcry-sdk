@@ -18,9 +18,17 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   name they carry rather than by position, so a component the mod added does not shield the untouched
   ones beside it. Whole numbers are still compared exactly, since a large id can round to the same
   float as its neighbour.
-- **`<world>.game.xml` is overridden one mission at a time** — the file that declares which mission
-  layers exist and when each is on, so every mod adding a mission or an outpost had to override it
-  whole and last-wins against every other such mod. It now splits per `<Mission>`, with the flat
+- **`<world>.game.xml` is overridden one mission — or one section — at a time** — the file that
+  declares which mission layers exist and when each is on, so every mod adding a mission or an
+  outpost had to override it whole and last-wins against every other such mod. It now splits per
+  `<Mission>` *and* per top-level section beside them (`_environment.xml`, `_grids.xml`,
+  `_layers.xml`, named after the element so a section nobody has seen yet still gets one). That
+  second half matters as much as the first: Scubrah's Patch raises the shadow radius and view
+  distance in `Environment`, and one such edit used to cost it the whole descriptor. Both of its
+  world descriptors now split — **275 KB of fragments in place of a 612 KB whole-file override for
+  world2**, with the environment edit isolated in a 3.8 KB fragment — taking its whole-file
+  fallbacks from 9 to 7. It also stops a whole-file override from marking all 1,515 of a
+  descriptor's missions as modded when the mod changed a handful. The flat
   `<MissionLayers>` index rebuilt from the missions rather than maintained by hand. Realism Plus
   Redux's world1 edit becomes **32 mission fragments totalling 12,758 bytes in place of a 365,187
   byte whole-file override**, so two mods adding different outposts finally merge. The plain-text

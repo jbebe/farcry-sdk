@@ -110,6 +110,7 @@ override unit:
 | World sector (`worldsector*.data.fcb`) | one placed entity | `<hidName>.<disEntityId>.xml` | `worldsector17.data.fcb\StaticObject_201.2058514756624450165.xml` |
 | World sector (`worldsector*.data.fcb`) | which mission layer its entities sit in | `_layers.xml` | `worldsector17.data.fcb\_layers.xml` |
 | World descriptor (`<world>.game.xml`) | one mission | its name, slashes as folders | `world1.game.xml\missions\outposts\w1_b_2\oiihvvl.xml` |
+| World descriptor (`<world>.game.xml`) | one section beside the missions | `_` plus the element name | `world1.game.xml\_environment.xml` |
 
 For an entity override the **trailing numeric `disEntityId` is authoritative and the name prefix
 cosmetic** — an override staged under a since-renamed entity still matches, and `2058514756624450165.xml`
@@ -134,6 +135,13 @@ has to edit it. Overriding it whole means last-wins on the one file all of those
 missions you add or change and nothing else: the flat `<MissionLayers>` index is rebuilt from them, so
 you never maintain two copies. The multiplayer template `tmpla.game.xml` ships as plain text rather
 than the compiled form and keeps its whole-file override.
+
+Everything in that file *beside* the missions splits too, one fragment per top-level section, named
+after the element: `_environment.xml` for the lighting, sky, shadow and draw-distance settings,
+`_grids.xml`, `_layers.xml` for the terrain materials. Without this a single changed shadow radius
+cost a mod the entire descriptor — and with it, every one of that world's missions, which then
+last-wins against every mission mod you install beside it. Sections are named rather than listed, so
+a section this documentation has never heard of still gets a fragment of its own.
 
 The sector layout is also where you **remove** something: `<delete id="2054324264221284349" />` takes that entity off
 the map. Deletion is the one edit that cannot merge, so it is exclusive over that entity and nothing
