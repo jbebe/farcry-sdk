@@ -50,13 +50,32 @@ public partial class TextFileHandler : UserControl
     /// across reloads (e.g. after an Import) without leaking a new <see cref="DiffLineColorizer"/> onto
     /// the editor each time.
     /// </summary>
+    private const string TrimmedDiffMessage =
+        "Showing only the changed lines plus a little context - Export… gets the whole file.";
+
+    private const string IdenticalMessage =
+        "Identical to the base game - a mod supplies this file but changed nothing in it. A whole-file "
+        + "override carries every part of its container, touched or not.";
+
     public void ApplyDiff(string originalText, string currentText)
     {
         Editor.TextArea.TextView.LineTransformers.Clear();
         IReadOnlyList<DiffLine> diffLines = DiffTextBuilder.BuildTrimmedDiff(originalText, currentText);
+        DiffBanner.Visibility = Visibility.Visible;
+
+        // Promising changed lines and then showing none reads as a broken diff, and this happens for
+        // real: every part of a whole-file override is modded whether the mod touched it or not.
+        if (!diffLines.Any(l => l.Kind is DiffLineKind.Added or DiffLineKind.Removed))
+        {
+            DiffBanner.Text = IdenticalMessage;
+            Editor.ShowLineNumbers = true;
+            Text = currentText;
+            return;
+        }
+
+        DiffBanner.Text = TrimmedDiffMessage;
         Text = string.Join(Environment.NewLine, diffLines.Select(l => l.Text));
         Editor.ShowLineNumbers = false;
-        DiffBanner.Visibility = Visibility.Visible;
         Editor.TextArea.TextView.LineTransformers.Add(new DiffLineColorizer(diffLines));
     }
 
