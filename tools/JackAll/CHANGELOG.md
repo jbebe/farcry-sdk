@@ -5,6 +5,19 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **A world's `omnis`, `managers` and `mapsdata` split per placed entity** — these three hold the same
+  `MissionLayer → Entity` structure a world sector does, and every one of the 6,985 entities across
+  the 74 shipped files carries a unique `disEntityId`. They were the last whole-file fallbacks the
+  large community mods had, and a whole-file override is last-wins against every other mod touching
+  the same file. Importing **Scubrah's Patch drops from 7 container fallbacks to 1**, Realism Plus
+  Redux from 5 to 1, and Functional Outposts to **0** — the one left in each case is
+  `entitylibrarypatchoverride.fcb`, which needs a group-level unit. `mapsdata` groups its layers one
+  level down under a node per level cell, so `_layout.xml` gained an `under` key: it holds one `main`
+  per cell — 25 of them in world1 — and a path alone no longer identifies a layer. A layer the layout
+  names now states its whole contents in order, so a moved entity does not land behind the ones that
+  never moved. Costs about 740 KB per world in assembly inflation, the same tax sectors already pay.
+  **The fragment cache is invalidated** (v5), since an older one would keep answering "doesn't split"
+  for these.
 - **A legacy import no longer stages a mod's rounding as an edit** — the editors these mods were
   built with rewrite every float they read, so a mod that moved one crate arrived claiming to
   override every entity around it, at values differing from vanilla in the last bit or two. The

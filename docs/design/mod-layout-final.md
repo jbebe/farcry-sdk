@@ -366,10 +366,39 @@ Consequences worth stating:
 ## Correction to fcb-deep-fragments.md
 
 It lists `mapsdata` and `sectorsdep` among containers whose "children carry no name field, so they
-cannot decompose." Both are in fact keyed, by a type hash that resolves to an uppercase level name —
-but the conclusion (leave them alone) is right, for the size reason above rather than the key reason.
+cannot decompose." Both are in fact keyed, by a type hash that resolves to an uppercase level name.
 
 `managers` and `omnis` are identified: `CFCXEditorDocument::ExportWorld` writes `%s%s.managers.fcb`
 and `%s%s.omnis.fcb` as per-world editor exports, siblings of `%s%s_depload.dat` and
-`%s%s_deploadnewparticles.rml`. Neither appeared as a distinct root shape in this survey, so neither
-is a live aggregate in the shipped archives.
+`%s%s_deploadnewparticles.rml`.
+
+## Reopened: `omnis`, `managers` and `mapsdata` split per entity
+
+The rejection above measured splitting `mapsdata` **per level cell** — 35 KB items against a 24 KB
+median file, amplification 1×. That measurement stands and that unit is still not worth having. It
+asked the wrong question: all three of these hold the same `MissionLayer → Entity` structure a world
+sector does, and the unit that matters is the **entity**, not the cell.
+
+| | measured over the 74 shipped files |
+|---|---|
+| entities carrying a `disEntityId` | **6,985 of 6,985**, unique within every file |
+| omnis / managers / mapsdata | 10 / 625 / 6,350 entities |
+| new VFS rows | +6,985, about **3.5%** on the ~201,000 the sectors added |
+| root hash | constant per kind — `crc32("Omnis")`, `crc32("Managers")`, `crc32("mapsdata")` |
+
+The driver is not amplification, it is collision avoidance — the same escape clause that reopened
+`depload`. These six files were the last whole-file fallbacks the two largest community mods had, and
+a whole-file override is last-wins against every other mod touching the same file. Importing
+Scubrah's Patch drops from **7 container fallbacks to 1**, Realism Plus Redux from 5 to 1, and
+Functional Outposts to **0**; the one left in each case is `entitylibrarypatchoverride.fcb`, which
+needs a group-level unit and is a separate question.
+
+Two things this cost, both accepted:
+
+- **Assembly inflation.** A fragment-assembled container is re-serialized without the shipped
+  backreferences: `world1.managers.fcb` measured 686 KB → 1,294 KB (1.89×), `mapsdata` 1.26×, `omnis`
+  2.09× — roughly 740 KB per world. Sectors already pay the same tax (1.74×); a whole-file override
+  did not, because it ships the mod's own bytes verbatim.
+- **A layer's identity is no longer its path.** `mapsdata` holds one `main` per level cell — 25 of
+  them in world1 — so `_layout.xml` qualifies a layer by its cell (`under`), and a layer it names
+  states its whole contents in order rather than only what moved.

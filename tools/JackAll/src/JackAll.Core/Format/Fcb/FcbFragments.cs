@@ -15,7 +15,10 @@ public readonly record struct FcbFragment(string Id, FcbObject Node);
 ///     fragment per <c>EntityPrototype</c>, keyed on its entity's <c>hidName</c> — the engine's own
 ///     archetype map key — with the dotted name mapped onto a path
 ///     (<c>vehicle\Land\DLC_Vehicle1_DLC1.xml</c>).
-///   - A world sector (root <c>WorldSector</c>): one fragment per placed <c>Entity</c> under any
+///   - A container that places entities in mission layers (see <see cref="IsLayerBearing"/>): a world
+///     sector, or a world's <c>omnis</c>, <c>managers</c> or <c>mapsdata</c>, the last of which groups
+///     its layers one level down under a node per level cell. One fragment per placed
+///     <c>Entity</c> under any
 ///     <c>MissionLayer</c>, keyed <c>&lt;hidName&gt;.&lt;disEntityId&gt;.xml</c>. The trailing numeric
 ///     id is authoritative and the name prefix cosmetic — see <see cref="Canonicalize"/> — because
 ///     <c>hidName</c> is not unique in a sector while <c>disEntityId</c> is the stable identity
@@ -104,15 +107,11 @@ public static class FcbFragments
     /// appends at the root.</summary>
     internal static FcbObject AppendTarget(FcbObject root, FcbObject addition)
     {
-        if (root.TypeHash == WorldHashes.WorldSector)
+        if (IsLayerBearing(root))
         {
             FcbObject? first = null;
-            foreach (FcbObject layer in root.Children)
+            foreach (FcbObject layer in LayersOf(root))
             {
-                if (layer.TypeHash != WorldHashes.MissionLayer)
-                {
-                    continue;
-                }
                 first ??= layer;
                 if (MissionLayers.IsMain(MissionLayers.NameOf(layer)))
                 {
@@ -128,6 +127,43 @@ public static class FcbFragments
         }
 
         return root;
+    }
+
+    /// <summary>
+    /// Whether this root places entities in mission layers - a world sector, a world's <c>omnis</c>,
+    /// <c>managers</c> or <c>mapsdata</c>. All four hold the same <c>MissionLayer -> Entity</c>
+    /// structure and split the same way.
+    /// </summary>
+    public static bool IsLayerBearing(FcbObject root)
+        => root.TypeHash == WorldHashes.WorldSector
+        || root.TypeHash == WorldHashes.Omnis
+        || root.TypeHash == WorldHashes.Managers
+        || root.TypeHash == WorldHashes.MapsData;
+
+    /// <summary>The nodes a layer-bearing root hangs its mission layers off: itself, except in
+    /// <c>mapsdata</c>, which groups them one level down under a node per level cell.</summary>
+    public static IEnumerable<FcbObject> LayerParentsOf(FcbObject root)
+        => root.TypeHash == WorldHashes.MapsData ? root.Children : [root];
+
+    /// <summary>Every mission layer of a layer-bearing root, however deeply it groups them.</summary>
+    public static IEnumerable<FcbObject> LayersOf(FcbObject root)
+        => KeyedLayersOf(root).Select(x => x.Layer);
+
+    /// <summary>Every mission layer with the level cell it hangs off, which is null when the root
+    /// holds it directly - the walk anything addressing a layer by name has to do.</summary>
+    public static IEnumerable<(string? Under, FcbObject Layer)> KeyedLayersOf(FcbObject root)
+    {
+        foreach (FcbObject parent in LayerParentsOf(root))
+        {
+            string? under = ReferenceEquals(parent, root) ? null : WorldSectorLayout.CellKey(parent);
+            foreach (FcbObject layer in parent.Children)
+            {
+                if (layer.TypeHash == WorldHashes.MissionLayer)
+                {
+                    yield return (under, layer);
+                }
+            }
+        }
     }
 
     /// <summary>A fragment's place in the tree, held as parent + index so a replacement can be
@@ -161,14 +197,10 @@ public static class FcbFragments
                 }
             }
         }
-        else if (root.TypeHash == WorldHashes.WorldSector)
+        else if (IsLayerBearing(root))
         {
-            foreach (FcbObject layer in root.Children)
+            foreach (FcbObject layer in LayersOf(root))
             {
-                if (layer.TypeHash != WorldHashes.MissionLayer)
-                {
-                    continue;
-                }
                 for (int i = 0; i < layer.Children.Count; i++)
                 {
                     FcbObject entity = layer.Children[i];

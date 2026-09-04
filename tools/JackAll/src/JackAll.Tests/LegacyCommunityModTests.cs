@@ -102,9 +102,9 @@ public sealed class LegacyCommunityModTests : IDisposable
         foreach ((uint containerHash, IReadOnlyList<FragmentOverride> staged) in workspace.FragmentOverrides)
         {
             // A layer overrides fragments of `depload` and string-table containers too, and neither
-            // is an FCB tree - this check is about world sectors specifically.
+            // is an FCB tree - this check is about the containers that place entities in layers.
             if (vfs.ReadOriginal(containerHash) is not { } vanilla
-                || TryReadSector(mod, containerHash) is not { } theirs)
+                || TryReadLayerBearing(mod, containerHash) is not { } theirs)
             {
                 continue;
             }
@@ -119,13 +119,14 @@ public sealed class LegacyCommunityModTests : IDisposable
         }
     }
 
-    /// <summary>The mod's own copy of a container, when it is a world sector at all.</summary>
-    private static FcbObject? TryReadSector(DuniaArchive mod, uint containerHash)
+    /// <summary>The mod's own copy of a container, when it places entities in mission layers at all -
+    /// a world sector, or a world's omnis, managers or mapsdata.</summary>
+    private static FcbObject? TryReadLayerBearing(DuniaArchive mod, uint containerHash)
     {
         try
         {
             FcbObject root = FcbDocument.Deserialize(mod.Read(containerHash));
-            return root.TypeHash == WorldHashes.WorldSector ? root : null;
+            return FcbFragments.IsLayerBearing(root) ? root : null;
         }
         catch (Exception ex) when (ex is InvalidDataException or EndOfStreamException or KeyNotFoundException)
         {
@@ -133,16 +134,17 @@ public sealed class LegacyCommunityModTests : IDisposable
         }
     }
 
-    /// <summary>Every placed entity of a sector and the mission layer it sits under.</summary>
-    private static SortedDictionary<ulong, string> PlacementOf(FcbObject sector)
+    /// <summary>Every placed entity and the mission layer it sits under, qualified by the level cell
+    /// where the container groups layers into cells - mapsdata holds one <c>main</c> per cell.</summary>
+    private static SortedDictionary<ulong, string> PlacementOf(FcbObject root)
     {
         var placement = new SortedDictionary<ulong, string>();
-        foreach (FcbObject layer in sector.Children.Where(c => c.TypeHash == WorldHashes.MissionLayer))
+        foreach ((string? cell, FcbObject layer) in FcbFragments.KeyedLayersOf(root))
         {
-            string name = FcbEntityFields.ReadString(layer, WorldHashes.TextPathId);
+            string key = LayerSpec.KeyOf(cell, MissionLayers.NameOf(layer));
             foreach (FcbObject entity in layer.Children.Where(e => e.TypeHash == WorldHashes.Entity))
             {
-                placement[FcbEntityFields.ReadU64(entity, WorldHashes.DisEntityId)] = name;
+                placement[FcbEntityFields.ReadU64(entity, WorldHashes.DisEntityId)] = key;
             }
         }
         return placement;

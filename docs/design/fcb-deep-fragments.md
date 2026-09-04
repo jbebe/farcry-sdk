@@ -36,9 +36,14 @@ If size matters, that is a **separate** change worth its own pass, and it helps 
 either teach `FcbDocument.Serialize` to emit backreferences, or have `Apply` copy untouched children's
 original bytes verbatim using the offsets `FcbDocument.DeserializeWithChildSizes` already returns.
 
-Also out of scope: containers with no natural key for their children (`mapsdata`, `managers`,
-`omnis`, `sectorsdep`). Their children carry no name field, so they cannot decompose. This is a
+Also out of scope: containers with no natural key for their children (`sectorsdep`). This is a
 per-shape recogniser mechanism, not a general one.
+
+**Corrected.** This paragraph used to list `mapsdata`, `managers` and `omnis` here too, on the
+grounds that "their children carry no name field". That was wrong: all three hold the same
+`MissionLayer → Entity` structure a sector does, and every one of the 6,985 entities across the 74
+shipped files carries a `disEntityId`, unique within its file. They split per entity, exactly like a
+sector — see [mod-layout-final.md](mod-layout-final.md).
 
 ## Starting state — read this first
 

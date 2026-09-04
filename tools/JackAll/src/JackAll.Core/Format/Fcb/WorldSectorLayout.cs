@@ -9,12 +9,23 @@ namespace JackAll.Core.Format.Fcb;
 /// outpost mods prepend theirs, so where a new layer lands is recorded rather than guessed.</param>
 /// <param name="Values">Header values besides the two path fields, carried verbatim. Empty for every
 /// layer in the retail corpus and in the mods built on it.</param>
+/// <param name="Under">The level cell this layer hangs off, as its type hash in hex - <c>mapsdata</c>
+/// groups its layers one level down. Null everywhere else, where layers sit on the root itself.</param>
 public sealed record LayerSpec(
     string Path,
     uint PathId,
     string? Before,
     IReadOnlyList<(uint Hash, byte[] Bytes)> Values,
-    IReadOnlyList<ulong> Entities);
+    IReadOnlyList<ulong> Entities,
+    string? Under = null)
+{
+    /// <summary>What identifies this layer in a container. A path alone is not enough: mapsdata holds
+    /// one <c>main</c> per level cell - 25 of them in world1 - so there the cell qualifies it.</summary>
+    public string Key => KeyOf(Under, Path);
+
+    /// <summary>The one spelling of that key, since it is the layout format's wire contract.</summary>
+    public static string KeyOf(string? under, string path) => under is null ? path : under + "\\" + path;
+}
 
 /// <summary>
 /// Which mission layer each placed entity of a world sector belongs to, as an override unit of its
@@ -75,6 +86,11 @@ public sealed class WorldSectorLayout(
     public static bool IsLayoutId(string fragmentId)
         => string.Equals(fragmentId, Id, StringComparison.OrdinalIgnoreCase);
 
+    /// <summary>How a <c>mapsdata</c> level cell is named in a layout. The cell carries no values at
+    /// all, so its type hash is the only identity it has, and 19 of the shipped ones hash from a name
+    /// nobody has recovered - hence the raw hash rather than a readable name.</summary>
+    public static string CellKey(FcbObject cell) => cell.TypeHash.ToString("X8", CultureInfo.InvariantCulture);
+
     /// <summary>The layer <paramref name="entityId"/> is listed under, or null when this document says
     /// nothing about it and the base container's own placement stands.</summary>
     public string? LayerOf(ulong entityId)
@@ -101,13 +117,8 @@ public sealed class WorldSectorLayout(
         }
 
         List<LayerSpec> layers = [];
-        foreach (FcbObject layer in root.Children)
+        foreach ((string? under, FcbObject layer) in FcbFragments.KeyedLayersOf(root))
         {
-            if (layer.TypeHash != WorldHashes.MissionLayer)
-            {
-                continue;
-            }
-
             string path = MissionLayers.NameOf(layer);
             layers.Add(new LayerSpec(
                 path,
@@ -116,7 +127,8 @@ public sealed class WorldSectorLayout(
                 Values: [.. layer.Values
                     .Where(v => v.Key != WorldHashes.TextPathId && v.Key != WorldHashes.PathId)
                     .Select(v => (v.Key, v.Value))],
-                Entities: byLayer.TryGetValue(layer, out List<ulong>? found) ? found : []));
+                Entities: byLayer.TryGetValue(layer, out List<ulong>? found) ? found : [],
+                Under: under));
         }
 
         return new WorldSectorLayout(layers);
@@ -130,35 +142,36 @@ public sealed class WorldSectorLayout(
     public static WorldSectorLayout? Diff(WorldSectorLayout vanilla, WorldSectorLayout target)
     {
         Dictionary<ulong, string> before = vanilla.PlacementByEntity();
-        var vanillaPaths = new HashSet<string>(vanilla.Layers.Select(l => l.Path), StringComparer.OrdinalIgnoreCase);
+        var vanillaKeys = new HashSet<string>(vanilla.Layers.Select(l => l.Key), StringComparer.OrdinalIgnoreCase);
 
         List<LayerSpec> changed = [];
         for (int i = 0; i < target.Layers.Count; i++)
         {
             LayerSpec layer = target.Layers[i];
-            bool isNew = !vanillaPaths.Contains(layer.Path);
+            bool isNew = !vanillaKeys.Contains(layer.Key);
             ulong[] moved = [.. layer.Entities.Where(id =>
                 !before.TryGetValue(id, out string? was)
-                || !was.Equals(layer.Path, StringComparison.OrdinalIgnoreCase))];
+                || !was.Equals(layer.Key, StringComparison.OrdinalIgnoreCase))];
 
             if (!isNew && moved.Length == 0)
             {
                 continue;
             }
 
+            // A layer worth mentioning states its whole contents, in order. Listing only what moved
+            // would leave the ones that did not sitting ahead of it, which is a different container.
             changed.Add(layer with
             {
                 // Only a layer being created needs a position, and it is the first layer after it
-                // that the base container already has.
+                // that the base container already has, in the same cell.
                 Before = isNew
-                    ? target.Layers.Skip(i + 1).FirstOrDefault(l => vanillaPaths.Contains(l.Path))?.Path
+                    ? target.Layers.Skip(i + 1).FirstOrDefault(l => l.Under == layer.Under && vanillaKeys.Contains(l.Key))?.Path
                     : null,
-                Entities = moved,
             });
         }
 
-        var targetPaths = new HashSet<string>(target.Layers.Select(l => l.Path), StringComparer.OrdinalIgnoreCase);
-        string[] gone = [.. vanilla.Layers.Select(l => l.Path).Where(p => !targetPaths.Contains(p))];
+        var targetKeys = new HashSet<string>(target.Layers.Select(l => l.Key), StringComparer.OrdinalIgnoreCase);
+        string[] gone = [.. vanilla.Layers.Where(l => !targetKeys.Contains(l.Key)).Select(l => l.Key)];
 
         Dictionary<ulong, string> after = target.PlacementByEntity();
         ulong[] deleted = [.. before.Keys.Where(id => !after.ContainsKey(id))];
@@ -210,8 +223,8 @@ public sealed class WorldSectorLayout(
             ids.Add(id);
         }
 
-        var ancestorPaths = new HashSet<string>(
-            ancestor.Layers.Select(l => l.Path), StringComparer.OrdinalIgnoreCase);
+        var ancestorKeys = new HashSet<string>(
+            ancestor.Layers.Select(l => l.Key), StringComparer.OrdinalIgnoreCase);
 
         List<LayerSpec> merged = [];
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -219,16 +232,16 @@ public sealed class WorldSectorLayout(
         // order would pick - the same rule the placements above already follow.
         foreach (LayerSpec layer in theirs.Layers.Concat(ours.Layers))
         {
-            if (!seen.Add(layer.Path))
+            if (!seen.Add(layer.Key))
             {
                 continue;
             }
 
-            ulong[] entities = byLayer.TryGetValue(layer.Path, out List<ulong>? ids) ? [.. ids.Order()] : [];
+            ulong[] entities = byLayer.TryGetValue(layer.Key, out List<ulong>? ids) ? [.. ids.Order()] : [];
 
             // A layer with nothing left to say still has to be stated when it is one the mods add,
             // or applying the merge would not create it.
-            if (entities.Length > 0 || !ancestorPaths.Contains(layer.Path))
+            if (entities.Length > 0 || !ancestorKeys.Contains(layer.Key))
             {
                 merged.Add(layer with { Entities = entities });
             }
@@ -253,7 +266,7 @@ public sealed class WorldSectorLayout(
         {
             foreach (ulong id in layer.Entities)
             {
-                placement[id] = layer.Path;
+                placement[id] = layer.Key;
             }
         }
         return placement;
@@ -278,7 +291,7 @@ public sealed class WorldSectorLayout(
             .Distinct()];
 
         List<LayerSpec> layers = [];
-        var paths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         var placed = new Dictionary<ulong, string>();
         foreach (XElement element in root.Elements("layer"))
         {
@@ -287,9 +300,12 @@ public sealed class WorldSectorLayout(
             {
                 throw new InvalidDataException("A <layer> in the layout names no path.");
             }
-            if (!paths.Add(path))
+
+            string? cell = (string?)element.Attribute("under");
+            string key = LayerSpec.KeyOf(cell, path);
+            if (!keys.Add(key))
             {
-                throw new InvalidDataException($"The layout lists mission layer '{path}' twice.");
+                throw new InvalidDataException($"The layout lists mission layer '{key}' twice.");
             }
 
             List<ulong> entities = [];
@@ -299,9 +315,9 @@ public sealed class WorldSectorLayout(
                 if (placed.TryGetValue(id, out string? already))
                 {
                     throw new InvalidDataException(
-                        $"The layout puts entity {id} under both '{already}' and '{path}'; it can only have one.");
+                        $"The layout puts entity {id} under both '{already}' and '{key}'; it can only have one.");
                 }
-                placed[id] = path;
+                placed[id] = key;
                 entities.Add(id);
             }
 
@@ -310,7 +326,8 @@ public sealed class WorldSectorLayout(
                 ParsePathId((string?)element.Attribute("pathId")) ?? NameHash.Compute(path),
                 (string?)element.Attribute("before"),
                 [.. element.Elements("value").Select(ParseValue)],
-                entities));
+                entities,
+                cell));
         }
 
         foreach (ulong id in deleted)
@@ -345,6 +362,10 @@ public sealed class WorldSectorLayout(
                 "layer",
                 new XAttribute("path", layer.Path),
                 new XAttribute("pathId", layer.PathId.ToString("X8", CultureInfo.InvariantCulture)));
+            if (layer.Under is { } cell)
+            {
+                element.Add(new XAttribute("under", cell));
+            }
             if (layer.Before is { } before)
             {
                 element.Add(new XAttribute("before", before));

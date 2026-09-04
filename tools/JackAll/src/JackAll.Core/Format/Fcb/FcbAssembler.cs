@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text;
 
 namespace JackAll.Core.Format.Fcb;
@@ -47,7 +48,8 @@ public static class FcbAssembler
         FcbObject root = FcbDocument.Deserialize(baseFcb);
         var remaining = new HashSet<string>(byId.Keys, FcbFragments.IdComparer);
 
-        foreach (FcbFragments.FragmentSlot slot in FcbFragments.Slots(root))
+        List<FcbFragments.FragmentSlot> slots = FcbFragments.Slots(root);
+        foreach (FcbFragments.FragmentSlot slot in slots)
         {
             if (remaining.Count == 0)
             {
@@ -65,12 +67,17 @@ public static class FcbAssembler
         // contradict each other, and keeping it is the lesser harm. Whoever assembled the set
         // reports that; here it only has to not act on it.
         Dictionary<string, FcbObject>? layers =
-            layout is null ? null : ApplyLayout(root, layout, [.. layout.Contested(byId.Keys)]);
+            layout is null ? null : ApplyLayout(root, layout, slots, [.. layout.Contested(byId.Keys)]);
 
         foreach (string id in remaining.OrderBy(x => x, StringComparer.Ordinal))
         {
             FcbObject addition = FcbXml.FromXml(byId[id]);
             LayerFor(root, layout, layers, addition).Children.Add(addition);
+        }
+
+        if (layout is not null && layers is not null)
+        {
+            Arrange(layout, layers);
         }
 
         return FcbDocument.Serialize(root);
@@ -82,31 +89,33 @@ public static class FcbAssembler
     /// nothing about keep the place the base container gave them.
     /// </summary>
     private static Dictionary<string, FcbObject> ApplyLayout(
-        FcbObject root, WorldSectorLayout layout, HashSet<ulong> contested)
+        FcbObject root, WorldSectorLayout layout, List<FcbFragments.FragmentSlot> slots,
+        HashSet<ulong> contested)
     {
-        if (root.TypeHash != WorldHashes.WorldSector)
+        if (!FcbFragments.IsLayerBearing(root))
         {
             throw new InvalidDataException(
-                $"'{WorldSectorLayout.Id}' describes a world sector's mission layers, and this container is not one.");
+                $"'{WorldSectorLayout.Id}' describes mission layers, and this container places none.");
         }
 
-        Dictionary<string, FcbObject> layers = LayersByPath(root);
+        Dictionary<string, FcbObject> layers = LayersByKey(root);
 
         // Node references rather than the (parent, index) slots they came from: the first move
         // shifts every later index in that layer, so indices taken up front go stale as soon as they
         // are used. Removing by reference does not care where the node ended up.
-        Dictionary<ulong, (FcbObject Node, FcbObject Parent)> byEntityId = FcbFragments.Slots(root)
+        Dictionary<ulong, (FcbObject Node, FcbObject Parent)> byEntityId = slots
             .ToDictionary(
                 s => FcbEntityFields.ReadU64(s.Node, WorldHashes.DisEntityId),
                 s => (s.Node, s.Parent));
 
         foreach (LayerSpec spec in layout.Layers)
         {
-            if (!layers.TryGetValue(spec.Path, out FcbObject? target))
+            if (!layers.TryGetValue(spec.Key, out FcbObject? target))
             {
+                FcbObject parent = CellFor(root, spec.Under);
                 target = BuildLayer(spec);
-                root.Children.Insert(InsertionPointFor(root, layers, spec.Before), target);
-                layers.Add(spec.Path, target);
+                parent.Children.Insert(InsertionPointFor(parent, layers, spec), target);
+                layers.Add(spec.Key, target);
             }
 
             foreach (ulong entityId in spec.Entities)
@@ -133,18 +142,72 @@ public static class FcbAssembler
             }
         }
 
-        foreach (string path in layout.Removed)
+        foreach (string key in layout.Removed)
         {
             // Only ever an empty grouping. A layer still holding entities is left in place: dropping
             // it would delete content, which no override may do.
-            if (layers.TryGetValue(path, out FcbObject? empty) && empty.Children.Count == 0)
+            if (layers.TryGetValue(key, out FcbObject? empty) && empty.Children.Count == 0)
             {
-                root.Children.Remove(empty);
-                layers.Remove(path);
+                foreach (FcbObject parent in FcbFragments.LayerParentsOf(root))
+                {
+                    parent.Children.Remove(empty);
+                }
+                layers.Remove(key);
             }
         }
 
         return layers;
+    }
+
+    /// <summary>Puts each listed layer's entities in the order the layout gives, once every addition
+    /// has landed - a moved entity is appended, so without this it sits behind the ones that stayed.
+    /// Only a layer the layout accounts for entirely is touched.</summary>
+    private static void Arrange(WorldSectorLayout layout, Dictionary<string, FcbObject> layers)
+    {
+        foreach (LayerSpec spec in layout.Layers)
+        {
+            if (!layers.TryGetValue(spec.Key, out FcbObject? layer)
+                || layer.Children.Count != spec.Entities.Count
+                || !NeedsArranging(layer, spec.Entities))
+            {
+                continue;
+            }
+
+            var wanted = new Dictionary<ulong, int>(spec.Entities.Count);
+            for (int i = 0; i < spec.Entities.Count; i++)
+            {
+                wanted[spec.Entities[i]] = i;
+            }
+
+            List<FcbObject> ordered = [.. layer.Children.OrderBy(c =>
+                wanted.TryGetValue(FcbEntityFields.ReadU64(c, WorldHashes.DisEntityId), out int at)
+                    ? at
+                    : int.MaxValue)];
+            layer.Children.Clear();
+            layer.Children.AddRange(ordered);
+        }
+    }
+
+    /// <summary>
+    /// Whether reordering this layer is both safe and necessary, answered in one allocation-free
+    /// pass. A child that is not an addressable entity makes it unsafe - the layout accounts for
+    /// entities only, and world2's mapsdata has a <c>BindingHierarchy</c> sitting among them - and a
+    /// layer already in the wanted order, which is the common case, makes it unnecessary.
+    /// </summary>
+    private static bool NeedsArranging(FcbObject layer, IReadOnlyList<ulong> wanted)
+    {
+        bool ordered = true;
+        for (int i = 0; i < wanted.Count; i++)
+        {
+            FcbObject child = layer.Children[i];
+            if (child.TypeHash != WorldHashes.Entity)
+            {
+                return false;
+            }
+            ordered &= FcbEntityFields.ReadU64(child, WorldHashes.DisEntityId) == wanted[i];
+        }
+
+        return !ordered;
     }
 
     /// <summary>Where a new node goes: the layer a staged layout files it under, or the shape's own
@@ -163,29 +226,44 @@ public static class FcbAssembler
         return FcbFragments.AppendTarget(root, addition);
     }
 
-    private static Dictionary<string, FcbObject> LayersByPath(FcbObject root)
+    /// <summary>Every mission layer under the key a layout addresses it by - qualified by its level
+    /// cell where the container groups layers into cells (see <see cref="LayerSpec.Key"/>).</summary>
+    /// <summary>Every mission layer under the key a layout addresses it by (see
+    /// <see cref="LayerSpec.Key"/>).</summary>
+    private static Dictionary<string, FcbObject> LayersByKey(FcbObject root)
     {
         var layers = new Dictionary<string, FcbObject>(StringComparer.OrdinalIgnoreCase);
-        foreach (FcbObject child in root.Children)
+        foreach ((string? under, FcbObject layer) in FcbFragments.KeyedLayersOf(root))
         {
-            if (child.TypeHash == WorldHashes.MissionLayer)
-            {
-                layers[MissionLayers.NameOf(child)] = child;
-            }
+            layers[LayerSpec.KeyOf(under, MissionLayers.NameOf(layer))] = layer;
         }
         return layers;
     }
 
-    /// <summary>The index a layer named by <paramref name="before"/> sits at, or one past the last
-    /// mission layer when it names nothing this container has.</summary>
-    private static int InsertionPointFor(FcbObject root, Dictionary<string, FcbObject> layers, string? before)
+    /// <summary>The node a new layer hangs off: the level cell the spec names, or the root. A cell the
+    /// container doesn't have falls back to the root rather than inventing one.</summary>
+    private static FcbObject CellFor(FcbObject root, string? under)
+        => under is not null
+           && uint.TryParse(under, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint cell)
+            ? FcbFragments.LayerParentsOf(root).FirstOrDefault(p => p.TypeHash == cell) ?? root
+            : root;
+
+    /// <summary>The index within <paramref name="parent"/> that the spec's <c>before</c> layer sits
+    /// at, or one past the last mission layer there when it names nothing.</summary>
+    private static int InsertionPointFor(
+        FcbObject parent, Dictionary<string, FcbObject> layers, LayerSpec spec)
     {
-        if (before is not null && layers.TryGetValue(before, out FcbObject? anchor))
+        if (spec.Before is { } before
+            && layers.TryGetValue(LayerSpec.KeyOf(spec.Under, before), out FcbObject? anchor))
         {
-            return root.Children.IndexOf(anchor);
+            int at = parent.Children.IndexOf(anchor);
+            if (at >= 0)
+            {
+                return at;
+            }
         }
 
-        int last = root.Children.FindLastIndex(c => c.TypeHash == WorldHashes.MissionLayer);
+        int last = parent.Children.FindLastIndex(c => c.TypeHash == WorldHashes.MissionLayer);
         return last + 1;
     }
 

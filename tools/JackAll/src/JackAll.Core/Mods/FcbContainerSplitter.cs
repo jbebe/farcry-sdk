@@ -94,7 +94,7 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
         {
             if (WorldSectorLayout.IsLayoutId(fragmentId))
             {
-                return _root.TypeHash == WorldHashes.WorldSector ? WorldSectorLayout.Of(_root).Render() : null;
+                return FcbFragments.IsLayerBearing(_root) ? WorldSectorLayout.Of(_root).Render() : null;
             }
 
             return _byId.TryGetValue(fragmentId, out (FcbObject Node, FcbObject Parent) found)
@@ -106,7 +106,7 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
         /// roots rather than through the rendered form <see cref="Extract"/> hands out.</summary>
         public (string Id, string Xml)? StructuralOverride(IContainerTree ancestor)
         {
-            if (ancestor is not Tree before || _root.TypeHash != WorldHashes.WorldSector)
+            if (ancestor is not Tree before || !FcbFragments.IsLayerBearing(_root))
             {
                 return null;
             }

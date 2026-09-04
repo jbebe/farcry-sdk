@@ -8,6 +8,15 @@ public static class WorldHashes
 {
     public static readonly uint WorldSector = FcbClassDefinitions.Crc32Ascii("WorldSector");
     public static readonly uint MissionLayer = FcbClassDefinitions.Crc32Ascii("MissionLayer");
+
+    /// <summary>The root of a world's <c>*.mapsdata.fcb</c>, whose children are the level cells that
+    /// hold its mission layers.</summary>
+    public static readonly uint MapsData = FcbClassDefinitions.Crc32Ascii("mapsdata");
+
+    /// <summary>The roots of a world's <c>*.omnis.fcb</c> and <c>*.managers.fcb</c>. Capitalised
+    /// unlike <see cref="MapsData"/>; both names are confirmed by FC3/FC4 class files.</summary>
+    public static readonly uint Omnis = FcbClassDefinitions.Crc32Ascii("Omnis");
+    public static readonly uint Managers = FcbClassDefinitions.Crc32Ascii("Managers");
     public static readonly uint Entity = FcbClassDefinitions.Crc32Ascii("Entity");
     public static readonly uint EntityPrototype = FcbClassDefinitions.Crc32Ascii("EntityPrototype");
     public static readonly uint Components = FcbClassDefinitions.Crc32Ascii("Components");

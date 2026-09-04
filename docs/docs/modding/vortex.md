@@ -109,6 +109,7 @@ override unit:
 | Entity library (`entitylibrary*.fcb`) | one archetype | its `hidName`, dots as folders | `entitylibrary.fcb\vehicle\Land\DLC_Vehicle1_DLC1.xml` |
 | World sector (`worldsector*.data.fcb`) | one placed entity | `<hidName>.<disEntityId>.xml` | `worldsector17.data.fcb\StaticObject_201.2058514756624450165.xml` |
 | World sector (`worldsector*.data.fcb`) | which mission layer its entities sit in, and what it deletes | `_layout.xml` | `worldsector17.data.fcb\_layout.xml` |
+| World `omnis` / `managers` / `mapsdata` | one placed entity, and `_layout.xml` beside them | as a world sector | `world1.mapsdata.fcb\GhostPatrol_3.2056427141129582236.xml` |
 | World descriptor (`<world>.game.xml`) | one mission | its name, slashes as folders | `world1.game.xml\missions\outposts\w1_b_2\oiihvvl.xml` |
 | World descriptor (`<world>.game.xml`) | one section beside the missions | `_` plus the element name | `world1.game.xml\_environment.xml` |
 
@@ -147,8 +148,10 @@ The sector layout is also where you **remove** something: `<delete id="205432426
 the map. Deletion is the one edit that cannot merge, so it is exclusive over that entity and nothing
 else — you can still delete a crate while another mod edits the barrel next to it. If another enabled
 mod edits the very entity you deleted, the edit wins, it stays, and the build tells you.
-Containers whose children carry no name/id (`mapsdata`, `managers`, …) don't split — only a
-whole-file override can touch those.
+A world's `omnis`, `managers` and `mapsdata` split the same way, because they hold the same mission
+layers and placed entities a sector does — `mapsdata` groups its layers one level down, under a node
+per level cell, so a layer there is named by its cell as well as its path. Containers whose children
+carry no name/id (`sectorsdep`, …) still don't split — only a whole-file override can touch those.
 
 ## The one destructive failure mode
 
