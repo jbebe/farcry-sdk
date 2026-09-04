@@ -72,6 +72,15 @@ public static class FcbXml
         FcbObject root, IReadOnlyList<FcbFragment> fragments, Func<string, bool> keep, FcbClassDefinitions defs)
     {
         var markerById = new Dictionary<FcbObject, string?>(ReferenceEqualityComparer.Instance);
+
+        // A declaration a later one supersedes is not part of the shape: the engine's map replaces on
+        // collision, so nothing can name it and nothing loads it. Leaving it in would make a mod that
+        // shipped one impossible to reproduce from fragments, for content the game never reads.
+        foreach (FcbObject shadowed in FcbFragments.ShadowedNodes(root))
+        {
+            markerById[shadowed] = null;
+        }
+
         foreach (FcbFragment fragment in fragments)
         {
             markerById[fragment.Node] = keep(fragment.Id) ? FcbFragments.Canonicalize(fragment.Id) : null;

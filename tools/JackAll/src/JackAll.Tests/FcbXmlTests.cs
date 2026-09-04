@@ -390,4 +390,47 @@ public class FcbXmlTests
         }
         return normalized;
     }
+
+    /// <summary>
+    /// A declaration a later one supersedes is unreachable - the engine's archetype map replaces on
+    /// collision - so it is neither listed nor part of the container's comparable shape. Scubrah's
+    /// Patch ships 27 of them, and leaving them in the shape cost it a whole-file override for
+    /// content the game never reads.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(SampleFiles))]
+    [Trait("Category", "RequiresFixture")]
+    public void A_superseded_declaration_is_neither_listed_nor_part_of_the_shape(string path)
+    {
+        if (string.IsNullOrEmpty(path)) return;
+
+        FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        IReadOnlyList<FcbFragment> fragments = FcbFragments.List(original);
+        if (fragments.Count == 0) return;
+
+        var ids = new HashSet<string>(fragments.Select(f => f.Id), FcbFragments.IdComparer);
+        FcbClassDefinitions defs = FcbClassDefinitions.Empty;
+
+        // One container declares the first archetype a second time in the last group, the way a mod
+        // that merged two library sources does; the other genuinely moves it there. The superseded
+        // copy is unreachable, so the two must read the same.
+        FcbObject duplicated = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        FcbObject moved = FcbDocument.Deserialize(File.ReadAllBytes(path));
+
+        // A separate decode, so the twin is a distinct node carrying identical content - the shape a
+        // merged library really has, and the one a reference-keyed walk can tell apart.
+        FcbObject donor = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        duplicated.Children[^1].Children.Add(FcbFragments.List(donor)[0].Node);
+
+        FcbObject original0 = FcbFragments.List(moved)[0].Node;
+        FcbObject owner = moved.Children.First(g => g.Children.Contains(original0));
+        owner.Children.Remove(original0);
+        moved.Children[^1].Children.Add(original0);
+
+        Assert.Equal(fragments.Count, FcbFragments.List(duplicated).Count);
+        Assert.Single(FcbFragments.ShadowedNodes(duplicated));
+        Assert.Equal(
+            FcbXml.SkeletonXml(moved, FcbFragments.List(moved), ids.Contains, defs),
+            FcbXml.SkeletonXml(duplicated, FcbFragments.List(duplicated), ids.Contains, defs));
+    }
 }

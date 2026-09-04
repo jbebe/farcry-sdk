@@ -12,17 +12,21 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   `<delete path="weapons\Grenades\M67.xml" />` for archetypes beside the numeric `<delete id>` a
   placed entity uses. **Realism Plus Redux now imports with no whole-file fallback at all** — its
   three removed IED variants become three `<delete path>` lines, and its staged fragments go from 949
-  to **2,151**. Scubrah's Patch still falls back on that one file, correctly: it declares 27
-  archetypes twice, and only the last of a duplicate pair is addressable, so no set of fragments can
-  reproduce it. A library's groups are also compared by name rather than position, since a mod appends
-  the groups it adds in its own order.
+  to **2,151**. A library's groups are compared by name rather than position, since a mod appends
+  the ones it adds in its own order. And a declaration a later one supersedes is now treated as the
+  dead weight it is: the engine's archetype map replaces on collision, so nothing can name it and
+  nothing loads it.
+  Scubrah's Patch ships 27 such copies - each shadowed by an untouched vanilla one - and they used to
+  cost it a whole-file override of the 8.6 MB library. **All three of the large community mods now
+  import with no whole-file fallback at all**, Scubrah's going from 1 to **0** and staging 10,534
+  fragments.
 - **A world's `omnis`, `managers` and `mapsdata` split per placed entity** — these three hold the same
   `MissionLayer → Entity` structure a world sector does, and every one of the 6,985 entities across
   the 74 shipped files carries a unique `disEntityId`. They were the last whole-file fallbacks the
   large community mods had, and a whole-file override is last-wins against every other mod touching
   the same file. Importing **Scubrah's Patch drops from 7 container fallbacks to 1**, Realism Plus
   Redux from 5 to 1, and Functional Outposts to **0** — the one left in each case is
-  `entitylibrarypatchoverride.fcb`, which needs a group-level unit. `mapsdata` groups its layers one
+  `entitylibrarypatchoverride.fcb`, which the entry above then closes. `mapsdata` groups its layers one
   level down under a node per level cell, so `_layout.xml` gained an `under` key: it holds one `main`
   per cell — 25 of them in world1 — and a path alone no longer identifies a layer. A layer the layout
   names now states its whole contents in order, so a moved entity does not land behind the ones that

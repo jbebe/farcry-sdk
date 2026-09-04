@@ -209,7 +209,11 @@ public static class FcbFragments
         public FcbObject Node => Parent.Children[Index];
     }
 
-    internal static List<FragmentSlot> Slots(FcbObject root)
+    internal static List<FragmentSlot> Slots(FcbObject root) => DedupKeepingLast(SlotsWithDuplicates(root));
+
+    /// <summary>The slots as the container declares them, before a later declaration of an id
+    /// supersedes an earlier one.</summary>
+    private static List<FragmentSlot> SlotsWithDuplicates(FcbObject root)
     {
         var slots = new List<FragmentSlot>();
         if (IsLibraryOfGroups(root))
@@ -250,10 +254,31 @@ public static class FcbFragments
             }
         }
 
-        return DedupKeepingLast(slots);
+        return slots;
     }
 
     /// <summary>Duplicate ids keep only their last occurrence — see <see cref="List"/>.</summary>
+    /// <summary>
+    /// Every node a later declaration of the same id supersedes. The engine's archetype map inserts
+    /// by name and replaces on collision (see docs/docs/engine-internals/entity-instancing.md), so
+    /// these are unreachable: nothing can name them, and nothing loads them.
+    /// </summary>
+    public static IReadOnlyList<FcbObject> ShadowedNodes(FcbObject root)
+    {
+        var seen = new HashSet<string>(IdComparer);
+        List<FcbObject> shadowed = [];
+        List<FragmentSlot> slots = SlotsWithDuplicates(root);
+        for (int i = slots.Count - 1; i >= 0; i--)
+        {
+            if (!seen.Add(slots[i].Id))
+            {
+                shadowed.Add(slots[i].Node);
+            }
+        }
+
+        return shadowed;
+    }
+
     private static List<FragmentSlot> DedupKeepingLast(List<FragmentSlot> slots)
     {
         var seen = new HashSet<string>(slots.Count, IdComparer);
