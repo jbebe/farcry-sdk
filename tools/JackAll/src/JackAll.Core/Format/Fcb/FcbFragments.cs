@@ -155,7 +155,7 @@ public static class FcbFragments
     {
         foreach (FcbObject parent in LayerParentsOf(root))
         {
-            string? under = ReferenceEquals(parent, root) ? null : WorldSectorLayout.CellKey(parent);
+            string? under = ReferenceEquals(parent, root) ? null : ContainerLayout.CellKey(parent);
             foreach (FcbObject layer in parent.Children)
             {
                 if (layer.TypeHash == WorldHashes.MissionLayer)

@@ -28,18 +28,18 @@ public sealed record LayerSpec(
 }
 
 /// <summary>
-/// Which mission layer each placed entity of a world sector belongs to, as an override unit of its
-/// own - the one thing about a sector a per-entity fragment cannot say, because a fragment id carries
-/// no layer and an override always lands where the base container already put it.
+/// What a container needs said about it beyond its own fragments: which mission layer each placed
+/// entity belongs to, and what to remove. A fragment id carries no layer and an override always lands
+/// where the base container already put it, so neither can be expressed one fragment at a time.
 /// </summary>
 /// <remarks>
-/// Staged as the reserved fragment id <c>_layout.xml</c> beside the sector's entity fragments, the
+/// Staged as the reserved fragment id <c>_layout.xml</c> beside the container's own fragments, the
 /// same way a MOVE graph's manager sections are (see <see cref="Move.MoveSections"/>). It reads as a
 /// set of constraints, not a full picture: anything unlisted stays where the base container has it,
-/// so applying a sector's own layout to itself is a no-op. Structural membership is what the engine
+/// so applying a container's own layout to itself is a no-op. Structural membership is what the engine
 /// spawns from - see docs/docs/engine-internals/entity-instancing.md.
 /// </remarks>
-public sealed class WorldSectorLayout(
+public sealed class ContainerLayout(
     IReadOnlyList<LayerSpec> layers,
     IReadOnlyList<string>? removed = null,
     IReadOnlyList<ulong>? deleted = null)
@@ -100,7 +100,7 @@ public sealed class WorldSectorLayout(
 
     /// <summary>Every layer of a decoded sector and every addressable entity under it, in document
     /// order.</summary>
-    public static WorldSectorLayout Of(FcbObject root)
+    public static ContainerLayout Of(FcbObject root)
     {
         var byLayer = new Dictionary<FcbObject, List<ulong>>(ReferenceEqualityComparer.Instance);
         foreach (FcbFragments.FragmentSlot slot in FcbFragments.Slots(root))
@@ -131,7 +131,7 @@ public sealed class WorldSectorLayout(
                 Under: under));
         }
 
-        return new WorldSectorLayout(layers);
+        return new ContainerLayout(layers);
     }
 
     /// <summary>
@@ -139,7 +139,7 @@ public sealed class WorldSectorLayout(
     /// <paramref name="target"/>'s: the layers that are new, and every entity that changed layer.
     /// Null when the two already agree.
     /// </summary>
-    public static WorldSectorLayout? Diff(WorldSectorLayout vanilla, WorldSectorLayout target)
+    public static ContainerLayout? Diff(ContainerLayout vanilla, ContainerLayout target)
     {
         Dictionary<ulong, string> before = vanilla.PlacementByEntity();
         var vanillaKeys = new HashSet<string>(vanilla.Layers.Select(l => l.Key), StringComparer.OrdinalIgnoreCase);
@@ -178,15 +178,15 @@ public sealed class WorldSectorLayout(
 
         return changed.Count == 0 && gone.Length == 0 && deleted.Length == 0
             ? null
-            : new WorldSectorLayout(changed, gone, deleted);
+            : new ContainerLayout(changed, gone, deleted);
     }
 
     /// <summary>
     /// Two layouts folded against their common ancestor. Layers union; an entity both sides moved, to
     /// different layers, is the one real conflict, since it can only have one parent.
     /// </summary>
-    public static (WorldSectorLayout Merged, bool Conflict) Merge(
-        WorldSectorLayout ancestor, WorldSectorLayout ours, WorldSectorLayout theirs)
+    public static (ContainerLayout Merged, bool Conflict) Merge(
+        ContainerLayout ancestor, ContainerLayout ours, ContainerLayout theirs)
     {
         Dictionary<ulong, string> baseline = ancestor.PlacementByEntity();
         Dictionary<ulong, string> mine = ours.PlacementByEntity();
@@ -256,7 +256,7 @@ public sealed class WorldSectorLayout(
         ulong[] deleted = [.. union.Where(id => !placements.ContainsKey(id)).Order()];
         conflict |= deleted.Length != union.Length;
 
-        return (new WorldSectorLayout(merged, removed, deleted), conflict);
+        return (new ContainerLayout(merged, removed, deleted), conflict);
     }
 
     private Dictionary<ulong, string> PlacementByEntity()
@@ -272,7 +272,7 @@ public sealed class WorldSectorLayout(
         return placement;
     }
 
-    public static WorldSectorLayout Parse(string xml)
+    public static ContainerLayout Parse(string xml)
     {
         XElement root = XDocument.Parse(xml).Root
             ?? throw new InvalidDataException("Empty mission-layer layout document.");
@@ -339,7 +339,7 @@ public sealed class WorldSectorLayout(
             }
         }
 
-        return new WorldSectorLayout(layers, removed, deleted);
+        return new ContainerLayout(layers, removed, deleted);
     }
 
     /// <summary>The canonical text, which is what a three-way merge compares.</summary>

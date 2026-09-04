@@ -210,7 +210,7 @@ public class WorldSectorFragmentTests : IDisposable
 
         byte[] assembled = FcbAssembler.Apply(baseFcb, new Dictionary<string, string>
         {
-            [WorldSectorLayout.Id] = Layout($"<layer path=\"{other}\"><entity id=\"{IdOf(target.Node)}\" /></layer>"),
+            [ContainerLayout.Id] = Layout($"<layer path=\"{other}\"><entity id=\"{IdOf(target.Node)}\" /></layer>"),
         });
 
         IContainerTree tree = splitter.Open(assembled);
@@ -252,7 +252,7 @@ public class WorldSectorFragmentTests : IDisposable
         string entities = string.Join("", ids.Select(id => $"<entity id=\"{id}\" />"));
         byte[] assembled = FcbAssembler.Apply(baseFcb, new Dictionary<string, string>
         {
-            [WorldSectorLayout.Id] = Layout($"<layer path=\"{added}\">{entities}</layer>"),
+            [ContainerLayout.Id] = Layout($"<layer path=\"{added}\">{entities}</layer>"),
         });
 
         FcbObject rebuilt = FcbDocument.Deserialize(assembled);
@@ -274,7 +274,7 @@ public class WorldSectorFragmentTests : IDisposable
 
         byte[] assembled = FcbAssembler.Apply(baseFcb, new Dictionary<string, string>
         {
-            [WorldSectorLayout.Id] = Layout(
+            [ContainerLayout.Id] = Layout(
                 $"<layer path=\"{added}\" before=\"main\"><entity id=\"{IdOf(target.Node)}\" /></layer>"),
         });
 
@@ -303,13 +303,13 @@ public class WorldSectorFragmentTests : IDisposable
         const string added = @"missions\outposts\test\headers";
         const uint headerHash = 0xBEEF0001;
 
-        var layout = WorldSectorLayout.Parse(Layout(
+        var layout = ContainerLayout.Parse(Layout(
             $"<layer path=\"{added}\"><value hash=\"{headerHash:X8}\">01020304</value></layer>"));
 
         // Through Render/Parse as well as Apply, since a staged layout is written out and read back.
         byte[] assembled = FcbAssembler.Apply(baseFcb, new Dictionary<string, string>
         {
-            [WorldSectorLayout.Id] = layout.Render(),
+            [ContainerLayout.Id] = layout.Render(),
         });
 
         FcbObject rebuilt = FcbDocument.Deserialize(assembled);
@@ -337,7 +337,7 @@ public class WorldSectorFragmentTests : IDisposable
         byte[] assembled = FcbAssembler.Apply(baseFcb, new Dictionary<string, string>
         {
             [$"{newId}.xml"] = FcbXml.ToXml(addition, FcbClassDefinitions.Empty),
-            [WorldSectorLayout.Id] = Layout($"<layer path=\"{added}\"><entity id=\"{newId}\" /></layer>"),
+            [ContainerLayout.Id] = Layout($"<layer path=\"{added}\"><entity id=\"{newId}\" /></layer>"),
         });
 
         FcbObject rebuilt = FcbDocument.Deserialize(assembled);
@@ -353,13 +353,13 @@ public class WorldSectorFragmentTests : IDisposable
 
         byte[] baseFcb = File.ReadAllBytes(FixturePath);
         var splitter = new FcbContainerSplitter(FcbClassDefinitions.Empty);
-        string own = splitter.Open(baseFcb).Extract(WorldSectorLayout.Id)!;
+        string own = splitter.Open(baseFcb).Extract(ContainerLayout.Id)!;
 
-        byte[] assembled = splitter.Apply(baseFcb, new Dictionary<string, string> { [WorldSectorLayout.Id] = own });
+        byte[] assembled = splitter.Apply(baseFcb, new Dictionary<string, string> { [ContainerLayout.Id] = own });
 
         TestSupport.AssertSameShape(FcbDocument.Deserialize(baseFcb), FcbDocument.Deserialize(assembled));
-        Assert.Null(WorldSectorLayout.Diff(
-            WorldSectorLayout.Of(FcbDocument.Deserialize(baseFcb)), WorldSectorLayout.Parse(own)));
+        Assert.Null(ContainerLayout.Diff(
+            ContainerLayout.Of(FcbDocument.Deserialize(baseFcb)), ContainerLayout.Parse(own)));
     }
 
     [Fact]
@@ -368,7 +368,7 @@ public class WorldSectorFragmentTests : IDisposable
         string xml = Layout(
             "<layer path=\"a\"><entity id=\"7\" /></layer><layer path=\"b\"><entity id=\"7\" /></layer>");
 
-        InvalidDataException error = Assert.Throws<InvalidDataException>(() => WorldSectorLayout.Parse(xml));
+        InvalidDataException error = Assert.Throws<InvalidDataException>(() => ContainerLayout.Parse(xml));
         Assert.Contains("7", error.Message);
     }
 
@@ -382,7 +382,7 @@ public class WorldSectorFragmentTests : IDisposable
         byte[] baseFcb = File.ReadAllBytes(FixturePath);
         byte[] assembled = FcbAssembler.Apply(baseFcb, new Dictionary<string, string>
         {
-            [WorldSectorLayout.Id] = Layout("<layer path=\"main\"><entity id=\"999999999999\" /></layer>"),
+            [ContainerLayout.Id] = Layout("<layer path=\"main\"><entity id=\"999999999999\" /></layer>"),
         });
 
         TestSupport.AssertSameShape(FcbDocument.Deserialize(baseFcb), FcbDocument.Deserialize(assembled));
@@ -409,9 +409,9 @@ public class WorldSectorFragmentTests : IDisposable
         var splitter = new FcbContainerSplitter(FcbClassDefinitions.Empty);
         Dictionary<string, string> resolved = TestSupport.ResolveFragments(
             splitter, baseFcb, SectorPath, conflicts: null,
-            MakeLayer("outposts", WorldSectorLayout.Id,
+            MakeLayer("outposts", ContainerLayout.Id,
                 AppText(Layout($"<layer path=\"a\"><entity id=\"{ids[0]}\" /></layer>"))),
-            MakeLayer("patrols", WorldSectorLayout.Id,
+            MakeLayer("patrols", ContainerLayout.Id,
                 AppText(Layout($"<layer path=\"b\"><entity id=\"{ids[1]}\" /></layer>"))));
 
         FcbObject rebuilt = FcbDocument.Deserialize(splitter.Apply(baseFcb, resolved));
@@ -437,13 +437,13 @@ public class WorldSectorFragmentTests : IDisposable
 
         Dictionary<string, string> resolved = TestSupport.ResolveFragments(
             splitter, baseFcb, SectorPath, conflicts,
-            MakeLayer("outposts2", WorldSectorLayout.Id, AppText(Layout(
+            MakeLayer("outposts2", ContainerLayout.Id, AppText(Layout(
                 $"<layer path=\"a\"><entity id=\"{ids[0]}\" /></layer><layer path=\"kept\"><entity id=\"{ids[1]}\" /></layer>"))),
-            MakeLayer("patrols2", WorldSectorLayout.Id, AppText(Layout(
+            MakeLayer("patrols2", ContainerLayout.Id, AppText(Layout(
                 $"<layer path=\"b\"><entity id=\"{ids[0]}\" /></layer>"))));
 
         FragmentConflict conflict = Assert.Single(conflicts);
-        Assert.True(WorldSectorLayout.IsLayoutId(conflict.FragmentId));
+        Assert.True(ContainerLayout.IsLayoutId(conflict.FragmentId));
 
         FcbObject rebuilt = FcbDocument.Deserialize(splitter.Apply(baseFcb, resolved));
         Assert.Equal("b", LayerOf(rebuilt, FcbFragments.Find(rebuilt, $"{ids[0]}.xml")!));
@@ -471,7 +471,7 @@ public class WorldSectorFragmentTests : IDisposable
         // Asking for it while its entities are still there must change nothing.
         byte[] refused = FcbAssembler.Apply(baseFcb, new Dictionary<string, string>
         {
-            [WorldSectorLayout.Id] = Layout($"<remove path=\"{name}\" />"),
+            [ContainerLayout.Id] = Layout($"<remove path=\"{name}\" />"),
         });
         TestSupport.AssertSameShape(original, FcbDocument.Deserialize(refused));
 
@@ -479,7 +479,7 @@ public class WorldSectorFragmentTests : IDisposable
         string moves = string.Join("", itsEntities.Select(id => $"<entity id=\"{id}\" />"));
         byte[] emptied = FcbAssembler.Apply(baseFcb, new Dictionary<string, string>
         {
-            [WorldSectorLayout.Id] = Layout($"<remove path=\"{name}\" /><layer path=\"main\">{moves}</layer>"),
+            [ContainerLayout.Id] = Layout($"<remove path=\"{name}\" /><layer path=\"main\">{moves}</layer>"),
         });
 
         FcbObject rebuilt = FcbDocument.Deserialize(emptied);
@@ -503,7 +503,7 @@ public class WorldSectorFragmentTests : IDisposable
 
         byte[] assembled = FcbAssembler.Apply(baseFcb, new Dictionary<string, string>
         {
-            [WorldSectorLayout.Id] = Layout($"<delete id=\"{doomed}\" />"),
+            [ContainerLayout.Id] = Layout($"<delete id=\"{doomed}\" />"),
         });
 
         FcbObject rebuilt = FcbDocument.Deserialize(assembled);
@@ -538,7 +538,7 @@ public class WorldSectorFragmentTests : IDisposable
         {
             [target.Id] = System.Text.Encoding.UTF8.GetString(
                 TestSupport.RenderWithValueSetAt(target.Node, [], 0xAAAA0001, [0x7B, 0, 0, 0])),
-            [WorldSectorLayout.Id] = Layout($"<delete id=\"{id}\" />"),
+            [ContainerLayout.Id] = Layout($"<delete id=\"{id}\" />"),
         };
 
         var splitter = new FcbContainerSplitter(FcbClassDefinitions.Empty);
@@ -552,7 +552,7 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void A_layout_that_both_deletes_and_places_one_entity_is_refused()
     {
-        InvalidDataException error = Assert.Throws<InvalidDataException>(() => WorldSectorLayout.Parse(
+        InvalidDataException error = Assert.Throws<InvalidDataException>(() => ContainerLayout.Parse(
             Layout("<delete id=\"7\" /><layer path=\"a\"><entity id=\"7\" /></layer>")));
 
         Assert.Contains("7", error.Message);
@@ -564,17 +564,17 @@ public class WorldSectorFragmentTests : IDisposable
     public void A_deletion_survives_being_canonicalised_and_merged()
     {
         var splitter = new FcbContainerSplitter(FcbClassDefinitions.Empty);
-        string once = splitter.Canonicalize(WorldSectorLayout.Id, Layout("<delete id=\"42\" />"));
+        string once = splitter.Canonicalize(ContainerLayout.Id, Layout("<delete id=\"42\" />"));
 
-        Assert.Equal(once, splitter.Canonicalize(WorldSectorLayout.Id, once));
-        Assert.Equal([42UL], WorldSectorLayout.Parse(once).Deleted);
+        Assert.Equal(once, splitter.Canonicalize(ContainerLayout.Id, once));
+        Assert.Equal([42UL], ContainerLayout.Parse(once).Deleted);
 
         // Two mods deleting different entities of one sector both get their way.
         (string merged, bool conflict) = splitter.Merge(
-            WorldSectorLayout.Id, Layout(""), Layout("<delete id=\"42\" />"), Layout("<delete id=\"43\" />"));
+            ContainerLayout.Id, Layout(""), Layout("<delete id=\"42\" />"), Layout("<delete id=\"43\" />"));
 
         Assert.False(conflict);
-        Assert.Equal([42UL, 43UL], WorldSectorLayout.Parse(merged).Deleted.Order());
+        Assert.Equal([42UL, 43UL], ContainerLayout.Parse(merged).Deleted.Order());
     }
 
     private static byte[] AppText(string xml) => System.Text.Encoding.UTF8.GetBytes(xml);

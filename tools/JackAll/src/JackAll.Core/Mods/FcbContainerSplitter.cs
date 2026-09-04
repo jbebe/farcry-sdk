@@ -19,8 +19,8 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
     public IContainerTree Open(FcbObject root) => new Tree(root, definitions);
 
     public string Canonicalize(string fragmentId, string fragmentXml)
-        => WorldSectorLayout.IsLayoutId(fragmentId)
-            ? WorldSectorLayout.Parse(fragmentXml).Render()
+        => ContainerLayout.IsLayoutId(fragmentId)
+            ? ContainerLayout.Parse(fragmentXml).Render()
             : FcbXml.CanonicalizeFragment(fragmentXml, definitions);
 
     /// <summary>
@@ -30,20 +30,20 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
     /// </summary>
     public (string Merged, bool Conflict) Merge(string fragmentId, string ancestor, string ours, string theirs)
     {
-        if (!WorldSectorLayout.IsLayoutId(fragmentId))
+        if (!ContainerLayout.IsLayoutId(fragmentId))
         {
             return IContainerSplitter.TextMerge(ancestor, ours, theirs);
         }
 
-        (WorldSectorLayout merged, bool conflict) = WorldSectorLayout.Merge(
+        (ContainerLayout merged, bool conflict) = ContainerLayout.Merge(
             ParseLayout(ancestor), ParseLayout(ours), ParseLayout(theirs));
         return (merged.Render(), conflict);
     }
 
     /// <summary>An absent ancestor is a sector nobody has re-filed yet, which is an empty layout
     /// rather than an error - the same way a missing fragment means new content.</summary>
-    private static WorldSectorLayout ParseLayout(string xml)
-        => xml.Length == 0 ? new WorldSectorLayout([]) : WorldSectorLayout.Parse(xml);
+    private static ContainerLayout ParseLayout(string xml)
+        => xml.Length == 0 ? new ContainerLayout([]) : ContainerLayout.Parse(xml);
 
     public byte[] Apply(byte[] baseBytes, IReadOnlyDictionary<string, string> fragmentXmlById)
         => FcbAssembler.Apply(baseBytes, fragmentXmlById);
@@ -53,12 +53,12 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
     public IReadOnlyList<(string FragmentId, string Kept, string Overruled)> Contradictions(
         IReadOnlyDictionary<string, string> resolved)
     {
-        if (!resolved.TryGetValue(WorldSectorLayout.Id, out string? layoutXml))
+        if (!resolved.TryGetValue(ContainerLayout.Id, out string? layoutXml))
         {
             return [];
         }
 
-        return [.. WorldSectorLayout.Parse(layoutXml).Contested(resolved.Keys)
+        return [.. ContainerLayout.Parse(layoutXml).Contested(resolved.Keys)
             .Select(id => (FcbFragments.EntityFragmentId(id), "the mod that edits it", "a mod that deletes it"))];
     }
 
@@ -92,9 +92,9 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
         /// </summary>
         public string? Extract(string fragmentId)
         {
-            if (WorldSectorLayout.IsLayoutId(fragmentId))
+            if (ContainerLayout.IsLayoutId(fragmentId))
             {
-                return FcbFragments.IsLayerBearing(_root) ? WorldSectorLayout.Of(_root).Render() : null;
+                return FcbFragments.IsLayerBearing(_root) ? ContainerLayout.Of(_root).Render() : null;
             }
 
             return _byId.TryGetValue(fragmentId, out (FcbObject Node, FcbObject Parent) found)
@@ -111,9 +111,9 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
                 return null;
             }
 
-            return WorldSectorLayout.Diff(WorldSectorLayout.Of(before._root), WorldSectorLayout.Of(_root))
+            return ContainerLayout.Diff(ContainerLayout.Of(before._root), ContainerLayout.Of(_root))
                 is { } diff
-                ? (WorldSectorLayout.Id, diff.Render())
+                ? (ContainerLayout.Id, diff.Render())
                 : null;
         }
 

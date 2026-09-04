@@ -28,7 +28,7 @@ public static class FcbAssembler
     /// <paramref name="baseFcb"/> unchanged, with no decode/encode round trip, when there is nothing
     /// to splice.
     ///
-    /// The reserved id <see cref="WorldSectorLayout.Id"/> is not a fragment but a world sector's
+    /// The reserved id <see cref="ContainerLayout.Id"/> is not a fragment but a world sector's
     /// mission-layer placement: it creates the layers it names and moves the entities it lists under
     /// them, which is the one edit no per-entity fragment can express.
     /// </summary>
@@ -43,7 +43,7 @@ public static class FcbAssembler
         // dictionary happened to use - this is the one place that has to get it right, so it doesn't
         // rely on every caller remembering to build theirs with FcbFragments.IdComparer too.
         var byId = new Dictionary<string, string>(fragmentXmlById, FcbFragments.IdComparer);
-        byId.Remove(WorldSectorLayout.Id, out string? layoutXml);
+        byId.Remove(ContainerLayout.Id, out string? layoutXml);
 
         FcbObject root = FcbDocument.Deserialize(baseFcb);
         var remaining = new HashSet<string>(byId.Keys, FcbFragments.IdComparer);
@@ -61,7 +61,7 @@ public static class FcbAssembler
             }
         }
 
-        WorldSectorLayout? layout = layoutXml is null ? null : WorldSectorLayout.Parse(layoutXml);
+        ContainerLayout? layout = layoutXml is null ? null : ContainerLayout.Parse(layoutXml);
 
         // An entity this override set also stages content for is not deleted: the two staged files
         // contradict each other, and keeping it is the lesser harm. Whoever assembled the set
@@ -89,13 +89,13 @@ public static class FcbAssembler
     /// nothing about keep the place the base container gave them.
     /// </summary>
     private static Dictionary<string, FcbObject> ApplyLayout(
-        FcbObject root, WorldSectorLayout layout, List<FcbFragments.FragmentSlot> slots,
+        FcbObject root, ContainerLayout layout, List<FcbFragments.FragmentSlot> slots,
         HashSet<ulong> contested)
     {
         if (!FcbFragments.IsLayerBearing(root))
         {
             throw new InvalidDataException(
-                $"'{WorldSectorLayout.Id}' describes mission layers, and this container places none.");
+                $"'{ContainerLayout.Id}' describes mission layers, and this container places none.");
         }
 
         Dictionary<string, FcbObject> layers = LayersByKey(root);
@@ -162,7 +162,7 @@ public static class FcbAssembler
     /// <summary>Puts each listed layer's entities in the order the layout gives, once every addition
     /// has landed - a moved entity is appended, so without this it sits behind the ones that stayed.
     /// Only a layer the layout accounts for entirely is touched.</summary>
-    private static void Arrange(WorldSectorLayout layout, Dictionary<string, FcbObject> layers)
+    private static void Arrange(ContainerLayout layout, Dictionary<string, FcbObject> layers)
     {
         foreach (LayerSpec spec in layout.Layers)
         {
@@ -213,7 +213,7 @@ public static class FcbAssembler
     /// <summary>Where a new node goes: the layer a staged layout files it under, or the shape's own
     /// default (see <see cref="FcbFragments.AppendTarget"/>).</summary>
     private static FcbObject LayerFor(
-        FcbObject root, WorldSectorLayout? layout, Dictionary<string, FcbObject>? layers, FcbObject addition)
+        FcbObject root, ContainerLayout? layout, Dictionary<string, FcbObject>? layers, FcbObject addition)
     {
         if (layout is not null
             && layers is not null

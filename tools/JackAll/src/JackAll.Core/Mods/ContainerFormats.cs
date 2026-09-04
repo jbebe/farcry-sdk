@@ -39,7 +39,7 @@ public static class ContainerFormats
     /// value tree, and so belongs in a text view instead of the value editor.
     /// </summary>
     public static bool IsPlainDocumentFragment(string container, string fragmentId)
-        => IsDepLoad(container) || IsWorldDescriptor(container) || WorldSectorLayout.IsLayoutId(fragmentId);
+        => IsDepLoad(container) || IsWorldDescriptor(container) || ContainerLayout.IsLayoutId(fragmentId);
 
     /// <summary>
     /// Whether a fragment's base-game form is worth diffing against. A world sector's layout states
@@ -48,7 +48,7 @@ public static class ContainerFormats
     /// world descriptor's `_layers.xml` is its terrain materials and diffs perfectly well.
     /// </summary>
     public static bool HasComparableOriginal(string container, string fragmentId)
-        => !WorldSectorLayout.IsLayoutId(fragmentId) || IsWorldDescriptor(container);
+        => !ContainerLayout.IsLayoutId(fragmentId) || IsWorldDescriptor(container);
 
     public static bool IsDepLoad(string fileName)
         => fileName.EndsWith(DepLoadSuffix, StringComparison.OrdinalIgnoreCase);

@@ -307,7 +307,7 @@ public class LegacyPatchImporterTests : IDisposable
         uint containerHash = NameHash.Compute(SectorPath);
         Assert.DoesNotContain(containerHash, workspace.Hashes);
         Assert.True(workspace.FragmentOverrides.TryGetValue(containerHash, out var staged));
-        Assert.Contains(staged!, o => WorldSectorLayout.IsLayoutId(o.FragmentId));
+        Assert.Contains(staged!, o => ContainerLayout.IsLayoutId(o.FragmentId));
 
         // The real test of the import: the staged pieces put the entity back under the mod's own
         // layer, without staging the sector.

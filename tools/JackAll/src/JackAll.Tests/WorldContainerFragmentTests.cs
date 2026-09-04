@@ -92,10 +92,10 @@ public class WorldContainerFragmentTests
         FcbObject root = FcbDocument.Deserialize(original);
         if (!FcbFragments.LayersOf(root).Any()) return;
 
-        WorldSectorLayout layout = WorldSectorLayout.Of(root);
-        Assert.Null(WorldSectorLayout.Diff(layout, WorldSectorLayout.Of(
+        ContainerLayout layout = ContainerLayout.Of(root);
+        Assert.Null(ContainerLayout.Diff(layout, ContainerLayout.Of(
             FcbDocument.Deserialize(FcbAssembler.Apply(
-                original, new Dictionary<string, string> { [WorldSectorLayout.Id] = layout.Render() })))));
+                original, new Dictionary<string, string> { [ContainerLayout.Id] = layout.Render() })))));
     }
 
     /// <summary>
@@ -109,7 +109,7 @@ public class WorldContainerFragmentTests
             .FirstOrDefault(p => Path.GetFileName(p).StartsWith("world", StringComparison.OrdinalIgnoreCase));
         if (path is null) return;
 
-        WorldSectorLayout layout = WorldSectorLayout.Of(FcbDocument.Deserialize(File.ReadAllBytes(path)));
+        ContainerLayout layout = ContainerLayout.Of(FcbDocument.Deserialize(File.ReadAllBytes(path)));
         LayerSpec[] mains = [.. layout.Layers.Where(l => MissionLayers.IsMain(l.Path))];
 
         Assert.True(mains.Length > 1, $"{Path.GetFileName(path)} has only {mains.Length} 'main' layer(s).");
@@ -127,12 +127,12 @@ public class WorldContainerFragmentTests
 
         byte[] original = File.ReadAllBytes(path);
         FcbObject root = FcbDocument.Deserialize(original);
-        string cell = WorldSectorLayout.CellKey(FcbFragments.LayerParentsOf(root).First());
+        string cell = ContainerLayout.CellKey(FcbFragments.LayerParentsOf(root).First());
         const string added = @"missions\ghostpatrols\test\patrol_01";
 
         byte[] assembled = FcbAssembler.Apply(original, new Dictionary<string, string>
         {
-            [WorldSectorLayout.Id] =
+            [ContainerLayout.Id] =
                 $"<layout><layer path=\"{added}\" under=\"{cell}\" /></layout>",
         });
 
@@ -141,7 +141,7 @@ public class WorldContainerFragmentTests
             .Single(p => p.Children.Any(c =>
                 c.TypeHash == WorldHashes.MissionLayer && MissionLayers.NameOf(c) == added));
 
-        Assert.Equal(cell, WorldSectorLayout.CellKey(owner));
+        Assert.Equal(cell, ContainerLayout.CellKey(owner));
         Assert.DoesNotContain(rebuilt.Children, c => c.TypeHash == WorldHashes.MissionLayer);
     }
 }

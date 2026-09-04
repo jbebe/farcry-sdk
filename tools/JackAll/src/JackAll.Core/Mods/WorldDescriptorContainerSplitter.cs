@@ -41,7 +41,7 @@ public sealed class WorldDescriptorContainerSplitter : IContainerSplitter
             .Select(FcbFragments.Sanitize)) + ".xml";
 
     /// <summary>A section's id, named after the element so one nobody has seen yet still gets a
-    /// fragment. Reserved-prefixed the way <see cref="WorldSectorLayout.Id"/> is.</summary>
+    /// fragment. Reserved-prefixed the way <see cref="ContainerLayout.Id"/> is.</summary>
     public static string SectionId(XName name) => "_" + name.LocalName.ToLowerInvariant() + ".xml";
 
     public IContainerTree Open(byte[] container) => new Tree(Decode(container));
