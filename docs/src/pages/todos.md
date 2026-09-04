@@ -137,4 +137,16 @@ what is left is what a modeler cannot do rather than what is broken.
       grammar around it moves — Polish and Russian pick up a preposition the bare name cannot inflect
       into
 - [x] VSS: downsample the textures to the sizes retail uses — 512² base and 1024² `_mip0`. The four
-      state files now weigh exactly what the Dart Rifle's do, 1.33 MiB against 5.33 MiB
+      state files now weigh exactly what the Dart Rifle's do, 1.33 MiB against 5.33 MiB. Confirmed in
+      game: at retail's tier the weapon reads as well as the guns Ubisoft shipped
+- [x] Does retail Far Cry 2 have a developer console? **Yes** — `~`/`` ` `` on a vanilla install,
+      and a leading `#` runs arbitrary Lua, bypassing the `ConsoleDeveloperOnly` gate. Documented in
+      [the developer console](/docs/engine-internals/developer-console). This disproved the repo's
+      own RE-verified claim that no console existed
+- [ ] Raise `console+0x68` (developer mode) from data rather than a patch. That would expose the
+      developer-only commands to `?` and to lookup, and make `console_dump_elements` run — its
+      `ConsoleElementsDump.txt` would be an authoritative engine-generated command table
+- [ ] `SwitchCamera` argument shape, and whether `Cameras.Camera.Editor` gives the retail game a
+      free-fly camera. `CCameraFreeComponent`/`CCameraGhostComponent` both have live factories
+- [ ] The correct scale for `Game:SetHealth` — 100 and 25 both kill the player
+- [ ] Whether `-exec <file>` and the `ConsoleCommands` config section actually work in retail

@@ -80,15 +80,18 @@ the full provenance note.
 
 ## Engine/binary quirks
 
-- **There is no in-game dev console** in Far Cry 2 — rules out console-command-based testing/debugging
-  workflows some other Dunia-era titles might support; testing changes always means a full
-  repack-and-relaunch cycle, or the map editor's `CTRL+G` live-playtest shortcut (see [Engine
-  Theory](./engine-theory.md)).
+- **There *is* an in-game dev console** — press `~` or `` ` `` during gameplay. It opens on a
+  vanilla retail install with no patching, and a leading `#` executes arbitrary Lua. See [the
+  developer console](../engine-internals/developer-console.md). It does not remove the repack cycle
+  for asset changes, but it does give a live scripting loop for gameplay state, and the map editor's
+  `CTRL+G` live-playtest shortcut remains (see [Engine Theory](./engine-theory.md)).
 
-  :::info[Verified via reverse engineering]
-  Confirmed at the binary level — see [command-line args](../engine-internals/command-line-args.md)'s
-  `-logFile` investigation: no logging facility or console sink exists anywhere reachable from boot in
-  the retail build.
+  :::info[Verified in a running game]
+  This page previously stated the opposite, as verified via reverse engineering. That was wrong. The
+  earlier conclusion came from [command-line args](../engine-internals/command-line-args.md)'s
+  `-logFile` investigation, which established that no *logging* facility survives in the retail
+  build — a correct finding about a different subsystem. `CXConsole` is constructed unconditionally
+  on the boot path, and the console was opened and driven in retail v1.03 on 2026-09-04.
   :::
 
 - **Weapon pickup/UI icons are partly hardcoded in `Dunia.dll` itself** — see [Data

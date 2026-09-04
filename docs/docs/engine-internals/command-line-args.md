@@ -260,7 +260,7 @@ Observed sub-mode behaviour:
 
 | Flag | Effect |
 |---|---|
-| `-exec <file>` | Execute a console/Lua command file at boot (read in `Process` before branching) |
+| `-exec <file>` | Execute a console/Lua command file at boot (read in `Process` before branching). The console it feeds is real and reachable — see [the developer console](./developer-console.md) — but this flag itself is still untested |
 | `-notracking` | Disables the telemetry/tracking client (read in `Process` before branching) |
 | `-ubidays` | Requests a `"ubidays"` UI mode in `CreateMainMenuNode` (`0x106622f0`) — a trade-show/kiosk build hook. No visible effect in retail |
 | `-openautomate` | QA automation path, below |

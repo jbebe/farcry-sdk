@@ -566,7 +566,7 @@ on the AK-47 and a 1911**, so re-verify before relying on any of it.
 11. **Start a new game** — `Inventory` and `CPickupWeapon` are captured in savegames. Ballistics are
     archetype-only and read fresh at spawn, so those you can iterate on a live save.
 
-There is no in-game dev console, so every iteration is a full repack and relaunch.
+Asset changes still need a full repack and relaunch — the [in-game console](../engine-internals/developer-console.md) helps with gameplay state, not with reloading art.
 `tools/misc/modpatcher/` is a working loose-file proxy that would make a faster inner loop for
 texture work, but its own notes warn that `LevelAsset_OpenStream` bypasses the hook — validate the
 final build through `patch.dat` regardless.

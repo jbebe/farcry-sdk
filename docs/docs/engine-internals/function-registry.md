@@ -79,10 +79,11 @@ line up on both sides:
 This is not merely a QA-only hook system — real gameplay code (diamond pickup, the main menu, mission
 selection, loading-screen text, malaria progression, player finalize, at minimum) calls out to the exe
 by name on genuine game events, with a silent no-op fallback if the exe never registered that name
-(`"carJoke"` is a concrete observed instance of that fallback in retail). Consistent with [Far Cry 2
-having no in-game dev console](../modding/gotchas.md) — this is an internal instrumentation/automation
-seam, not a player-facing console — while also explaining why most exe-side handlers were harmless dead
-stubs in retail: the call site tolerates them not existing at all. This is empirically confirmed, not
+(`"carJoke"` is a concrete observed instance of that fallback in retail). This registry is an internal
+instrumentation seam rather than the console itself — the two are distinct, though they meet: the
+[developer console](./developer-console.md) dispatches its `Namespace:Function(%%)` commands through
+this registry. It also explains why most exe-side handlers were harmless dead stubs in retail: the
+call site tolerates them not existing at all. This is empirically confirmed, not
 just structurally inferred: registering a handler for `"carJoke"` via a binary patch and testing live
 in-game measurably changed engine behavior (car interaction fully disabled).
 
