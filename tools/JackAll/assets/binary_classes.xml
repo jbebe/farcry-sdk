@@ -4007,6 +4007,7 @@ RegEx Search/Replace Pairs
 		<member hash="5B8B5FA5">String</member>
 		<member name="LowerRightBone">Hash</member>
 	</class>
+	<class name="Managers" />
 	<class name="mapsdata" />
 	<class name="Markers">
 		<member name="archMapEnabled">String</member>
@@ -4167,6 +4168,7 @@ RegEx Search/Replace Pairs
 		<member name="fZOffset">Float</member>
 		<member name="fXYOffset">Float</member>
 	</class>
+	<class name="Omnis" />
 	<class name="OnDamage">
 		<member name="selNextState">UInt32</member>
 	</class>
