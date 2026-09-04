@@ -383,10 +383,30 @@ public static class LegacyPatchImporter
                 return $"it lists a fragment, {row.Id}, that it will not then hand over";
             }
 
-            if (vanilla.Extract(row.Id) is { } vanillaXml && SameWithinFloatNoise(vanillaXml, xml))
+            if (vanilla.Extract(row.Id) is { } vanillaXml)
             {
-                unchanged++;
-                continue;
+                if (vanillaXml == xml)
+                {
+                    unchanged++;
+                    continue;
+                }
+
+                // Parsed once and handed to both walks: the comparison decides whether this is a real
+                // edit, and the restore then strips the editor's rounding off everything else it
+                // carries, which would otherwise overwrite vanilla's own values on build.
+                if (TryParse(vanillaXml) is { } original && TryParse(xml) is { } modded)
+                {
+                    if (SameElement(original, modded))
+                    {
+                        unchanged++;
+                        continue;
+                    }
+
+                    if (RestoreNoisyFloats(original, modded))
+                    {
+                        xml = splitter.Canonicalize(row.Id, modded.ToString());
+                    }
+                }
             }
 
             changed.Add((row.Id, xml));
@@ -424,27 +444,113 @@ public static class LegacyPatchImporter
     /// <summary>Whether two fragments say the same thing, floats compared within
     /// <see cref="FloatNoiseUlps"/>.</summary>
     public static bool SameWithinFloatNoise(string vanillaXml, string legacyXml)
-    {
-        if (vanillaXml == legacyXml)
-        {
-            return true;
-        }
+        => vanillaXml == legacyXml
+           || (TryParse(vanillaXml) is { } a && TryParse(legacyXml) is { } b && SameElement(a, b));
 
+    /// <summary>The legacy fragment with every float that differs from vanilla only by rounding put
+    /// back to vanilla's own value, or null when there was no such float.</summary>
+    public static string? WithoutFloatNoise(string vanillaXml, string legacyXml)
+        => TryParse(vanillaXml) is { } a && TryParse(legacyXml) is { } b && RestoreNoisyFloats(a, b)
+            ? b.ToString()
+            : null;
+
+    private static XElement? TryParse(string xml)
+    {
         try
         {
-            return SameElement(XElement.Parse(vanillaXml), XElement.Parse(legacyXml));
+            return XElement.Parse(xml);
         }
         catch (System.Xml.XmlException)
         {
-            return false;
+            return null;
         }
     }
 
+    /// <summary>Whether anything was put back.</summary>
+    private static bool RestoreNoisyFloats(XElement vanilla, XElement legacy)
+    {
+        if (vanilla.Name != legacy.Name)
+        {
+            return false;
+        }
+
+        if (!vanilla.HasElements && !legacy.HasElements)
+        {
+            bool noisy = SameAttributes(vanilla, legacy)
+                && vanilla.Value != legacy.Value
+                && SameValue(vanilla.Value, legacy.Value);
+            if (noisy)
+            {
+                legacy.Value = vanilla.Value;
+            }
+
+            return noisy;
+        }
+
+        bool restored = false;
+        foreach ((XElement a, XElement b) in Pair(vanilla, legacy))
+        {
+            restored |= RestoreNoisyFloats(a, b);
+        }
+
+        return restored;
+    }
+
+    /// <summary>Vanilla and legacy children side by side, matched by the key each carries so a
+    /// component the mod added cannot hide the untouched values beside it. Keyless children - a
+    /// vector's x/y/z - are matched by position.</summary>
+    private static IEnumerable<(XElement Vanilla, XElement Legacy)> Pair(XElement vanilla, XElement legacy)
+    {
+        if (KeyedChildren(vanilla) is { } byKey)
+        {
+            foreach (XElement child in legacy.Elements())
+            {
+                // Removing as it matches keeps one vanilla child from restoring two legacy ones.
+                if (KeyOf(child) is { } key && byKey.Remove((child.Name, key), out XElement? twin))
+                {
+                    yield return (twin, child);
+                }
+            }
+            yield break;
+        }
+
+        if (vanilla.Elements().Count() == legacy.Elements().Count())
+        {
+            foreach ((XElement a, XElement b) in vanilla.Elements().Zip(legacy.Elements()))
+            {
+                yield return (a, b);
+            }
+        }
+    }
+
+    /// <summary>The children indexed by the key each carries, or null when one has none or two share
+    /// one - the cases where only position can line them up.</summary>
+    private static Dictionary<(XName, string), XElement>? KeyedChildren(XElement parent)
+    {
+        var byKey = new Dictionary<(XName, string), XElement>();
+        foreach (XElement child in parent.Elements())
+        {
+            if (KeyOf(child) is not { } key || !byKey.TryAdd((child.Name, key), child))
+            {
+                return null;
+            }
+        }
+
+        return byKey;
+    }
+
+    private static string? KeyOf(XElement element)
+        => (string?)element.Attribute("name")
+           ?? (string?)element.Attribute("hash")
+           ?? (string?)element.Attribute("type");
+
+    private static bool SameAttributes(XElement a, XElement b)
+        => a.Attributes().Select(x => (x.Name, x.Value))
+            .SequenceEqual(b.Attributes().Select(x => (x.Name, x.Value)));
+
     private static bool SameElement(XElement a, XElement b)
     {
-        if (a.Name != b.Name
-            || !a.Attributes().Select(x => (x.Name, x.Value))
-                .SequenceEqual(b.Attributes().Select(x => (x.Name, x.Value))))
+        if (a.Name != b.Name || !SameAttributes(a, b))
         {
             return false;
         }

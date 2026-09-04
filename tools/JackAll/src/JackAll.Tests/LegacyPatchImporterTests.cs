@@ -676,4 +676,58 @@ public class LegacyPatchImporterTests : IDisposable
 
         Assert.False(LegacyPatchImporter.SameWithinFloatNoise(Frag(tiny), Frag(-tiny)));
     }
+
+    /// <summary>
+    /// A fragment staged for a real edit must not carry the editor's rounding on everything else:
+    /// those values would overwrite vanilla's own on build, which is the whole point of the interval.
+    /// </summary>
+    [Fact]
+    public void A_fragment_staged_for_a_real_edit_keeps_vanillas_other_floats()
+    {
+        const float slope = 60f;
+        string vanilla = $"""
+            <object><field name="slope">{slope}</field><field name="range">15</field></object>
+            """;
+        string legacy = $"""
+            <object><field name="slope">{Nudge(slope, 1)}</field><field name="range">40</field></object>
+            """;
+
+        string restored = Assert.IsType<string>(LegacyPatchImporter.WithoutFloatNoise(vanilla, legacy));
+
+        // The rounded float is vanilla's again; the real edit beside it survives untouched.
+        Assert.Contains(">60<", restored);
+        Assert.DoesNotContain("60.000004", restored);
+        Assert.Contains(">40<", restored);
+    }
+
+    /// <summary>Nothing to put back means nothing to re-render, so the fragment stages as it came.</summary>
+    [Fact]
+    public void A_fragment_with_no_rounding_is_left_exactly_as_it_is()
+    {
+        string vanilla = """<object><field name="range">15</field></object>""";
+        string legacy = """<object><field name="range">40</field></object>""";
+
+        Assert.Null(LegacyPatchImporter.WithoutFloatNoise(vanilla, legacy));
+        Assert.Null(LegacyPatchImporter.WithoutFloatNoise(vanilla, vanilla));
+    }
+
+    /// <summary>
+    /// A value the mod added beside an untouched one must not hide it. This is how a worldsector
+    /// guard arrives - it gains a mission component, and every other value on it is still rounded.
+    /// </summary>
+    [Fact]
+    public void A_value_the_mod_added_does_not_hide_the_rounding_beside_it()
+    {
+        const float slope = 60f;
+        string vanilla = $"""<object><field name="slope">{slope}</field></object>""";
+        string legacy = $"""
+            <object><field name="slope">{Nudge(slope, 1)}</field><field name="added">1</field></object>
+            """;
+
+        string restored = Assert.IsType<string>(LegacyPatchImporter.WithoutFloatNoise(vanilla, legacy));
+
+        Assert.Contains(">60<", restored);
+        Assert.DoesNotContain("60.000004", restored);
+        Assert.Contains("added", restored);
+    }
 }

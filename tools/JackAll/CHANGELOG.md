@@ -12,8 +12,12 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   against Scubrah's Patch, whose rounding reaches 7 ULP while its real edits start at 69,632, so the
   two do not overlap. Staged fragments drop from **24,924 to 7,434** for Scubrah's Patch, 12,734 to
   885 for Realism Plus Redux and 12,136 to 501 for Functional Outposts, with every whole-file
-  fallback, mission layer, deletion and real edit unchanged. Whole numbers are still compared
-  exactly, since a large id can round to the same float as its neighbour.
+  fallback, mission layer, deletion and real edit unchanged. A fragment that *is* staged, for a real
+  edit, also has its remaining floats put back to vanilla's own values, so it carries the edit and
+  nothing else — **1,653 values across 658 fragments** for Scubrah's Patch. Values are matched by the
+  name they carry rather than by position, so a component the mod added does not shield the untouched
+  ones beside it. Whole numbers are still compared exactly, since a large id can round to the same
+  float as its neighbour.
 - **`<world>.game.xml` is overridden one mission at a time** — the file that declares which mission
   layers exist and when each is on, so every mod adding a mission or an outpost had to override it
   whole and last-wins against every other such mod. It now splits per `<Mission>`, with the flat

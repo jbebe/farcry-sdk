@@ -215,6 +215,12 @@ Measured against the community's largest mods, that rounding reaches 7 ULP while
 start four orders of magnitude further out, so nothing real is inside the interval. Whole numbers are
 compared exactly, since a large id can round to the same float as its neighbour.
 
+The interval decides whether a fragment is staged at all, and then what it carries: a fragment kept
+for a real edit has its remaining floats put back to the game's own values, so it overrides the edit
+and nothing else. Values line up by the name they carry rather than by position, so a component the
+mod added does not shield the untouched values beside it. A fragment with no counterpart in the base
+game — an archetype the mod adds — is staged exactly as it came, since there is nothing to compare.
+
 Needs the game's archives mounted, so it isn't cheap; expect tens of seconds.
 
 ### `mod build --game <dir> [--layer <dir|zip>]… [--force]`
