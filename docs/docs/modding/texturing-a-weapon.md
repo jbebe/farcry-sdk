@@ -214,7 +214,8 @@ or a linear remap shifts hue.
   under that ceiling: the Dart Rifle's pair is a **512² base with a 10-level chain plus a 1024²
   single-level `_mip0`**, 1.33 MiB for four files, and the Dragunov's is 256²/512². Author at 2048
   and ship at 1024 — a 1024²/2048² pair is four times the pixels for a gun that is barely a metre of
-  screen space, and nothing in the game does that.
+  screen space, and nothing in the game does that. The VSS shipped at both tiers and was compared in
+  game: at retail's it reads as well as the guns Ubisoft shipped, so the extra 4 MB bought nothing.
 - **Ambient occlusion.** glTF packs AO in the same map's red channel. It is tempting and it was
   measured and rejected here: a quarter of the VSS's AO sits at zero, which is what a bake leaves
   *outside* the UV islands, and multiplying that in bleeds black across island edges at low mips.
