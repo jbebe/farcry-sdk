@@ -169,6 +169,13 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   three-way merge, load-order folding and `_hash\` addressing unchanged. `.fcb` and `depload.dat`
   are the two implementations; `stringtable` and `NewPartLib` need only an implementation each.
 
+### Fixed
+- **A layer holding an `oasisstrings.fragment.xml` can be built again.** The build picks a container's
+  splitter off the path of any one of its fragments, and a localization patch document expands into
+  fragments that exist only in memory — so none of them had a path, the container fell back to the
+  `_hash\<hash>.fcb` name, and every such layer died on "Not an .fcb file". An inline fragment now carries
+  the path it would have had as a staged file, which is what it is hashed as anyway.
+
 ## [1.0.0] - 2026-08-23
 
 First release.

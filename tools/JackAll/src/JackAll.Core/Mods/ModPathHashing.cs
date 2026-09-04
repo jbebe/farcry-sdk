@@ -100,6 +100,15 @@ internal static class ModPathHashing
             : normalized;
     }
 
+    /// <summary>What <see cref="IModLayer.PathOf"/> answers for a file staged at
+    /// <paramref name="relativePath"/>: its content path, or null for a <see cref="HashFolder"/> one,
+    /// which names no real path to recover.</summary>
+    public static string? NamedPathOf(string relativePath)
+    {
+        string normalized = ContentPathOf(relativePath);
+        return normalized.StartsWith(HashFolder + "\\", StringComparison.Ordinal) ? null : normalized;
+    }
+
     /// <summary>Whether the path's leaf is Vortex's placeholder (see
     /// <see cref="VortexEmptyFolderMarker"/>).</summary>
     private static bool IsVortexMarker(string normalizedPath)
@@ -122,15 +131,17 @@ internal static class ModPathHashing
         string containerPath,
         string documentXml,
         Dictionary<uint, FragmentMap> fragmentOverrides,
-        Dictionary<uint, byte[]> inlineFragments)
+        Dictionary<uint, InlineFragment> inlineFragments)
     {
         uint containerHash = NameHash.Compute(containerPath);
         foreach (OasisStringEdit edit in OasisStringsPatch.Parse(documentXml))
         {
             string fragmentId = StringTableContainerSplitter.IdOf(edit);
-            uint entryHash = NameHash.Compute($"{containerPath}\\{fragmentId}");
+            string path = $"{containerPath}\\{fragmentId}";
+            uint entryHash = NameHash.Compute(path);
 
-            inlineFragments[entryHash] = Encoding.UTF8.GetBytes(OasisStringsPatch.FragmentToXml(edit));
+            inlineFragments[entryHash] = new InlineFragment(
+                path, Encoding.UTF8.GetBytes(OasisStringsPatch.FragmentToXml(edit)));
             Add(new ModPathTarget(entryHash, containerHash, fragmentId), [], fragmentOverrides);
         }
     }
@@ -338,6 +349,11 @@ internal static class ModPathHashing
 
 /// <summary>What one relative path inside a mod resolves to — see <see cref="ModPathHashing.Resolve"/>.</summary>
 internal readonly record struct ModPathTarget(uint EntryHash, uint? ContainerHash, string? FragmentId);
+
+/// <summary>One fragment a layer serves out of a document rather than off disk — see
+/// <see cref="ModPathHashing.AddPatch"/>. <see cref="Path"/> is the path it would have had as a
+/// staged file.</summary>
+internal readonly record struct InlineFragment(string Path, byte[] Xml);
 
 /// <summary>One path's role in a layer (see <see cref="ModPathHashing.Classify"/>): a plugin payload
 /// file (<see cref="PluginPath"/> non-null), a content override (<see cref="Target"/> non-null), or

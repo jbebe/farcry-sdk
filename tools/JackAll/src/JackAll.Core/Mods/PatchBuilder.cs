@@ -142,10 +142,10 @@ public static class PatchBuilder
                     ?? throw new InvalidOperationException(
                         $"A fragment override targets {kv.Key:X8}, but no archive currently provides " +
                         "its vanilla ancestor.");
-                string display = ContainerDisplayPath(kv.Key, kv.Value.Values);
-                IContainerSplitter splitter = ContainerFormats.For(display, defs);
+                string containerPath = RecoveredContainerPath(kv.Key, kv.Value.Values);
+                IContainerSplitter splitter = ContainerFormats.For(containerPath, defs);
                 return (ContainerHash: kv.Key, VanillaBytes: vanillaBytes, Splitter: splitter,
-                    Tree: splitter.Open(vanillaBytes), Display: display);
+                    Tree: splitter.Open(vanillaBytes), Display: containerPath);
             })
             .ToDictionary(x => x.ContainerHash);
 
@@ -187,11 +187,13 @@ public static class PatchBuilder
     }
 
     /// <summary>
-    /// The container's display path for a conflict report, read off any contributor's staged fragment
-    /// path. A fragment-only layer never carries the container's own hash, so a hash-addressed one has
-    /// no recovered name to fall back on.
+    /// The container's own path, read off any contributor's staged fragment path. This is what
+    /// <see cref="ContainerFormats.For"/> picks the splitter from as well as what a conflict report
+    /// names, so a wrong answer here decodes the container as the wrong format. A fragment-only layer
+    /// never carries the container's own hash, so a hash-addressed one has no recovered name to fall
+    /// back on and gets a synthesized `.fcb` one.
     /// </summary>
-    private static string ContainerDisplayPath(
+    private static string RecoveredContainerPath(
         uint containerHash, IEnumerable<List<(IModLayer Layer, uint EntryHash)>> contributorsByFragment)
     {
         foreach ((IModLayer layer, uint entryHash) in contributorsByFragment.SelectMany(c => c))

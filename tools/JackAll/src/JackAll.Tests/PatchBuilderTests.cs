@@ -2,6 +2,7 @@ using System.IO.Compression;
 using JackAll.Core;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Format.Rml;
 using JackAll.Core.Mods;
 using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
@@ -577,6 +578,42 @@ public class PatchBuilderTests : IDisposable
         mod.Enabled = false;
         Assert.Equal(1, PatchBuilder.Build(_install, [mod]).Plugins.Removed);
         Assert.False(File.Exists(deployed));
+    }
+
+    /// <summary>
+    /// A localization patch document expands into fragments that exist only in memory, so it is the
+    /// one container whose name has to be recoverable from something other than a staged file. Get
+    /// that wrong and the build reaches for the `.fcb` splitter and dies on the signature.
+    /// </summary>
+    [Fact]
+    public void A_localization_patch_renames_one_string_and_leaves_the_rest_of_the_table_alone()
+    {
+        if (_install is null) return;
+
+        static IReadOnlyList<OasisStringEdit> Table(byte[] rml)
+            => [.. StringTableContainerSplitter.Strings(RmlDocument.Deserialize(rml))];
+
+        const string table = @"languages\english\oasisstrings.rml";
+        var renamed = new OasisStringEdit("Items", "dart_rifle", "VSS Vintorez");
+        var mod = MakeZipMod("localized", ($"mods/{OasisStringsPatch.PatchPathOf(table)}",
+            System.Text.Encoding.UTF8.GetBytes(OasisStringsPatch.Render([renamed]))));
+
+        uint tableHash = NameHash.Compute(table);
+        IReadOnlyList<OasisStringEdit> before;
+        // The originals are all this needs, and they come off the archives - no merged file index,
+        // no container decode.
+        using (var vfs = GameVfs.OpenForOriginalsOnly(_install, NameDatabase.LoadFrom([])))
+        {
+            before = Table(vfs.ReadOriginal(tableHash)!);
+            PatchBuilder.Build(_install, [mod], vfs.ReadOriginal);
+        }
+
+        using var rebuilt = DuniaArchive.Open(_install.PatchFat);
+        IReadOnlyList<OasisStringEdit> after = Table(rebuilt.Read(tableHash));
+
+        // Changed() sees no removals, so the count pins that half.
+        Assert.Equal(before.Count, after.Count);
+        Assert.Equal([renamed], OasisStringsPatch.Changed(after, before));
     }
 
     [Fact]

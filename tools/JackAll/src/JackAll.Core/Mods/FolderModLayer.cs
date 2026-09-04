@@ -15,7 +15,7 @@ public sealed class FolderModLayer : IModLayer
 
     /// <summary>Fragments whose bytes come from inside a file rather than being one - the strings a
     /// localization patch document states. Keyed like <see cref="_absolutePaths"/>, read first.</summary>
-    private readonly Dictionary<uint, byte[]> _inlineFragments = [];
+    private readonly Dictionary<uint, InlineFragment> _inlineFragments = [];
 
     public string Name { get; }
     public bool Enabled { get; set; } = true;
@@ -78,7 +78,7 @@ public sealed class FolderModLayer : IModLayer
     }
 
     public byte[] Read(uint hash)
-        => _inlineFragments.TryGetValue(hash, out byte[]? inline) ? inline
+        => _inlineFragments.TryGetValue(hash, out InlineFragment inline) ? inline.Xml
             : _absolutePaths.TryGetValue(hash, out string? path) ? File.ReadAllBytes(path)
             : throw new KeyNotFoundException($"'{Name}' does not override {hash:X8}.");
 
@@ -88,13 +88,10 @@ public sealed class FolderModLayer : IModLayer
             : throw new KeyNotFoundException($"'{Name}' has no plugin '{pluginPath}'.");
 
     public string? PathOf(uint hash)
-    {
-        if (!_absolutePaths.TryGetValue(hash, out string? absolute)) return null;
-        string relative = ModPathHashing.ContentPathOf(Path.GetRelativePath(RootPath, absolute));
-        return relative.StartsWith(ModPathHashing.HashFolder + "\\", StringComparison.Ordinal)
-            ? null
-            : relative;
-    }
+        => _inlineFragments.TryGetValue(hash, out InlineFragment inline) ? inline.Path
+            : _absolutePaths.TryGetValue(hash, out string? absolute)
+                ? ModPathHashing.NamedPathOf(Path.GetRelativePath(RootPath, absolute))
+                : null;
 
     /// <summary>
     /// Writes an override into the folder, under the reserved <c>mods\</c> wrapper — a game path

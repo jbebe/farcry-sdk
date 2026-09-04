@@ -26,7 +26,7 @@ public sealed class ZipModLayer : IModLayer
 
     /// <summary>Fragments whose bytes come from inside an entry rather than being one - the strings a
     /// localization patch document states. Keyed like <see cref="_entryNames"/>, read first.</summary>
-    private readonly Dictionary<uint, byte[]> _inlineFragments = [];
+    private readonly Dictionary<uint, InlineFragment> _inlineFragments = [];
     private readonly ConcurrentDictionary<string, byte[]> _pluginReadCache = new(StringComparer.Ordinal);
 
     public string Name { get; }
@@ -83,9 +83,9 @@ public sealed class ZipModLayer : IModLayer
 
     public byte[] Read(uint hash)
     {
-        if (_inlineFragments.TryGetValue(hash, out byte[]? inline))
+        if (_inlineFragments.TryGetValue(hash, out InlineFragment inline))
         {
-            return inline;
+            return inline.Xml;
         }
 
         if (!_entryNames.TryGetValue(hash, out string? entryName))
@@ -119,12 +119,8 @@ public sealed class ZipModLayer : IModLayer
             : throw new KeyNotFoundException($"'{Name}' has no plugin '{pluginPath}'.");
 
     public string? PathOf(uint hash)
-    {
-        string? name = _entryNames.GetValueOrDefault(hash);
-        if (name is null) return null;
-        string normalized = ModPathHashing.ContentPathOf(name);
-        return normalized.StartsWith(ModPathHashing.HashFolder + "\\", StringComparison.Ordinal)
-            ? null
-            : normalized;
-    }
+        => _inlineFragments.TryGetValue(hash, out InlineFragment inline) ? inline.Path
+            : _entryNames.GetValueOrDefault(hash) is { } name
+                ? ModPathHashing.NamedPathOf(name)
+                : null;
 }
