@@ -263,16 +263,16 @@ public static class FcbFragments
     /// by name and replaces on collision (see docs/docs/engine-internals/entity-instancing.md), so
     /// these are unreachable: nothing can name them, and nothing loads them.
     /// </summary>
-    public static IReadOnlyList<FcbObject> ShadowedNodes(FcbObject root)
+    public static IReadOnlyList<FcbFragment> Shadowed(FcbObject root)
     {
         var seen = new HashSet<string>(IdComparer);
-        List<FcbObject> shadowed = [];
+        List<FcbFragment> shadowed = [];
         List<FragmentSlot> slots = SlotsWithDuplicates(root);
         for (int i = slots.Count - 1; i >= 0; i--)
         {
             if (!seen.Add(slots[i].Id))
             {
-                shadowed.Add(slots[i].Node);
+                shadowed.Add(new FcbFragment(slots[i].Id, slots[i].Node));
             }
         }
 

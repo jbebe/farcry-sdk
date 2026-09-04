@@ -18,13 +18,17 @@ public sealed record LegacyImportNote(string ContainerPath, string Reason);
 /// harm than dropping it.</param>
 /// <param name="WholeFile">Containers staged whole instead. Not a failure, but it costs the mod its
 /// per-fragment merging, so it is reported rather than passed over in silence.</param>
+/// <param name="Unreachable">Content the mod shipped that the import did not carry across, because
+/// the engine cannot reach it either. Reported for the same reason as the above: the layer is not a
+/// byte-for-byte copy of the mod, and where it differs it should say so.</param>
 public sealed record LegacyImportResult(
     int TotalEntries,
     int Imported,
     int FragmentsImported,
     int Skipped,
     IReadOnlyList<LegacyImportNote> Refused,
-    IReadOnlyList<LegacyImportNote> WholeFile)
+    IReadOnlyList<LegacyImportNote> WholeFile,
+    IReadOnlyList<LegacyImportNote> Unreachable)
 {
     /// <summary>Value equality all the way down: the synthesized comparison would take the two lists
     /// by reference, so two identical imports would never compare equal.</summary>
@@ -33,10 +37,13 @@ public sealed record LegacyImportResult(
            && (TotalEntries, Imported, FragmentsImported, Skipped)
               == (other.TotalEntries, other.Imported, other.FragmentsImported, other.Skipped)
            && Refused.SequenceEqual(other.Refused)
-           && WholeFile.SequenceEqual(other.WholeFile);
+           && WholeFile.SequenceEqual(other.WholeFile)
+           && Unreachable.SequenceEqual(other.Unreachable);
 
     public override int GetHashCode()
-        => HashCode.Combine(TotalEntries, Imported, FragmentsImported, Skipped, Refused.Count, WholeFile.Count);
+        => HashCode.Combine(
+            TotalEntries, Imported, FragmentsImported, Skipped,
+            Refused.Count, WholeFile.Count, Unreachable.Count);
 }
 
 /// <summary>
@@ -159,7 +166,7 @@ public static class LegacyPatchImporter
         using DuniaArchive legacy = DuniaArchive.Open(fatPath, datPath);
 
         int imported = 0, fragmentsImported = 0, skipped = 0, processed = 0;
-        List<LegacyImportNote> refused = [], wholeFile = [];
+        List<LegacyImportNote> refused = [], wholeFile = [], unreachable = [];
         foreach (FatEntry entry in legacy.Entries)
         {
             processed++;
@@ -210,7 +217,7 @@ public static class LegacyPatchImporter
                 }
             }
             else if (TryImportContainer(entry.Hash, legacyBytes, vanillaBytes, named ? path : null, type,
-                         workspace, names, fcbDefinitions, refused, wholeFile, ref fragmentsImported,
+                         workspace, names, fcbDefinitions, refused, wholeFile, unreachable, ref fragmentsImported,
                          ref skipped, progress))
             {
                 continue;
@@ -221,7 +228,7 @@ public static class LegacyPatchImporter
         }
 
         return new LegacyImportResult(
-            legacy.Entries.Count, imported, fragmentsImported, skipped, refused, wholeFile);
+            legacy.Entries.Count, imported, fragmentsImported, skipped, refused, wholeFile, unreachable);
     }
 
     /// <summary>
@@ -258,7 +265,8 @@ public static class LegacyPatchImporter
     private static bool TryImportContainer(
         uint hash, byte[] legacyBytes, byte[]? vanillaBytes, string? knownPath, FileType type,
         FolderModLayer workspace, NameDatabase names, FcbClassDefinitions defs,
-        List<LegacyImportNote> refused, List<LegacyImportNote> wholeFile, ref int fragmentsImported,
+        List<LegacyImportNote> refused, List<LegacyImportNote> wholeFile,
+        List<LegacyImportNote> unreachable, ref int fragmentsImported,
         ref int skipped, IProgress<string>? progress)
     {
         if (ContainerPathFor(knownPath, type, hash) is not { } containerPath)
@@ -269,7 +277,7 @@ public static class LegacyPatchImporter
         IContainerSplitter splitter = ContainerFormats.For(containerPath, defs, names);
         string? refusal = StageFragments(
             splitter, legacyBytes, vanillaBytes, containerPath, hash, workspace,
-            ref fragmentsImported, ref skipped);
+            unreachable, ref fragmentsImported, ref skipped);
         if (refusal is null)
         {
             return true;
@@ -316,7 +324,8 @@ public static class LegacyPatchImporter
     /// </remarks>
     private static string? StageFragments(
         IContainerSplitter splitter, byte[] legacyBytes, byte[]? vanillaBytes, string containerPath,
-        uint hash, FolderModLayer workspace, ref int fragmentsImported, ref int skipped)
+        uint hash, FolderModLayer workspace, List<LegacyImportNote> unreachable,
+        ref int fragmentsImported, ref int skipped)
     {
         if (vanillaBytes is null)
         {
@@ -424,6 +433,17 @@ public static class LegacyPatchImporter
         foreach ((string id, string xml) in changed)
         {
             workspace.Stage(hash, $"{containerPath}\\{id}", "xml", Utf8.GetBytes(xml));
+        }
+
+        // Declarations the mod carries that a later one of the same id supersedes. The engine reaches
+        // only the last, so the layer is right without them - but it is no longer a byte-for-byte copy
+        // of what the mod shipped, and that is worth saying out loud.
+        int superseded = legacy.Unreachable().Count - vanilla.Unreachable().Count;
+        if (superseded > 0)
+        {
+            unreachable.Add(new LegacyImportNote(
+                containerPath,
+                $"{superseded} declaration(s) a later one supersedes, which the engine never reads"));
         }
 
         fragmentsImported += changed.Count;

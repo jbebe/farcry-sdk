@@ -428,7 +428,7 @@ public class FcbXmlTests
         moved.Children[^1].Children.Add(original0);
 
         Assert.Equal(fragments.Count, FcbFragments.List(duplicated).Count);
-        Assert.Single(FcbFragments.ShadowedNodes(duplicated));
+        Assert.Single(FcbFragments.Shadowed(duplicated));
         Assert.Equal(
             FcbXml.SkeletonXml(moved, FcbFragments.List(moved), ids.Contains, defs),
             FcbXml.SkeletonXml(duplicated, FcbFragments.List(duplicated), ids.Contains, defs));

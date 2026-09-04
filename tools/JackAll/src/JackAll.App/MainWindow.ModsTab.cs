@@ -112,6 +112,16 @@ public partial class MainWindow
                     + string.Join('\n', result.WholeFile.Take(shown).Select(r => $"  {r.ContainerPath} — {r.Reason}"))
                     + (result.WholeFile.Count > shown ? $"\n  ... and {result.WholeFile.Count - shown:N0} more" : ""));
             }
+
+            if (result.Unreachable.Count > 0)
+            {
+                const int shown = 10;
+                Warn(
+                    "This mod ships content the game itself never reads - a declaration a later one of the "
+                    + "same name replaces - so it was left behind rather than staged:\n\n"
+                    + string.Join('\n', result.Unreachable.Take(shown).Select(r => $"  {r.ContainerPath} — {r.Reason}"))
+                    + (result.Unreachable.Count > shown ? $"\n  ... and {result.Unreachable.Count - shown:N0} more" : ""));
+            }
         }
         catch (Exception ex)
         {

@@ -96,6 +96,7 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
                 stagedFiles = Directory.EnumerateFiles(settings.Out, "*", SearchOption.AllDirectories).Count(),
                 refused = result.Refused.Select(r => new { r.ContainerPath, r.Reason }),
                 wholeFile = result.WholeFile.Select(r => new { r.ContainerPath, r.Reason }),
+                unreachable = result.Unreachable.Select(r => new { r.ContainerPath, r.Reason }),
             });
             return 0;
         }
@@ -117,6 +118,13 @@ public sealed class ModImportLegacyCommand : CliCommand<ModImportLegacyCommand.S
             AnsiConsole.MarkupLine(
                 $"[yellow]Staged whole[/] {coarsened.ContainerPath.EscapeMarkup()}: "
                 + $"{coarsened.Reason.EscapeMarkup()}. It will outrank other mods touching that file.");
+        }
+
+        foreach (LegacyImportNote dropped in result.Unreachable)
+        {
+            AnsiConsole.MarkupLine(
+                $"[grey]Left behind[/] in {dropped.ContainerPath.EscapeMarkup()}: "
+                + $"{dropped.Reason.EscapeMarkup()}. The layer is right without them.");
         }
 
         return 0;

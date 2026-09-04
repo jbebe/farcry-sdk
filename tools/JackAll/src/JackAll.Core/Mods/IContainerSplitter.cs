@@ -87,6 +87,13 @@ public interface IContainerTree
     /// the one that exists. Null when the format has no such unit, or nothing structural differs.
     /// </summary>
     (string Id, string Xml)? StructuralOverride(IContainerTree ancestor) => null;
+
+    /// <summary>
+    /// Ids this container declares more than once, counted once per superseded declaration. The
+    /// engine resolves such a name to the last one, so the earlier copies are unreachable - nothing
+    /// can name them and no override can carry them. Empty for a format where an id is declared once.
+    /// </summary>
+    IReadOnlyList<string> Unreachable() => [];
 }
 
 /// <summary>

@@ -129,6 +129,9 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
                     null);
         }
 
+        public IReadOnlyList<string> Unreachable()
+            => [.. FcbFragments.Shadowed(_root).Select(f => f.Id)];
+
         public IReadOnlyList<FcbFragmentInfo> List()
             => [.. _fragments.Select(f => new FcbFragmentInfo(f.Id, FcbDocument.EncodedSize(f.Node)))];
 

@@ -38,6 +38,19 @@ three:
 Two callers fill that one map — `ReadFromXML` for a base library and `Override` for an override
 library — so **the last library loaded wins**.
 
+### A library's group order is not read
+
+`BuildArchetypesMap` is the only code that walks a library's tree. Its two callers do nothing with the
+root but retain it and hand it straight on, and `CXGame::LoadArchetypes` — their only caller — passes
+each loaded file through once. The two accessors that read the map back,
+`CEntityLibraryManager::GetArchetypeDescription` and `GetArchetypeName`, are bucket lookups keyed by
+the id; neither touches a group.
+
+Traversal order therefore reaches the game only as *which duplicate declaration survives the replace*,
+and a duplicate is confined to a single group by construction, since the key is
+`<group>.<prototype>`. **Reordering a library's groups cannot change any archetype the game
+resolves.** Reordering prototypes *within* a group still can.
+
 ## Which libraries load, and in what order
 
 `CXGame::LoadArchetypes` in the client:

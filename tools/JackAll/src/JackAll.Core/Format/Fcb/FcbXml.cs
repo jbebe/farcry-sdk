@@ -76,9 +76,9 @@ public static class FcbXml
         // A declaration a later one supersedes is not part of the shape: the engine's map replaces on
         // collision, so nothing can name it and nothing loads it. Leaving it in would make a mod that
         // shipped one impossible to reproduce from fragments, for content the game never reads.
-        foreach (FcbObject shadowed in FcbFragments.ShadowedNodes(root))
+        foreach (FcbFragment shadowed in FcbFragments.Shadowed(root))
         {
-            markerById[shadowed] = null;
+            markerById[shadowed.Node] = null;
         }
 
         foreach (FcbFragment fragment in fragments)

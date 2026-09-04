@@ -85,6 +85,10 @@ internal sealed record ImportLegacyPayload
     /// <summary>Containers staged whole rather than per fragment, in the same shape as
     /// <see cref="Refused"/>. Imported, but without their per-fragment merging.</summary>
     public IReadOnlyList<string> WholeFile { get; init; } = [];
+
+    /// <summary>Content the mod shipped that the import left behind, because the engine cannot reach
+    /// it either.</summary>
+    public IReadOnlyList<string> Unreachable { get; init; } = [];
 }
 
 internal sealed record RestorePayload

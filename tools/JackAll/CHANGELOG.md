@@ -19,7 +19,9 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   Scubrah's Patch ships 27 such copies - each shadowed by an untouched vanilla one - and they used to
   cost it a whole-file override of the 8.6 MB library. **All three of the large community mods now
   import with no whole-file fallback at all**, Scubrah's going from 1 to **0** and staging 10,534
-  fragments.
+  fragments. What was left behind is reported, in the app, the CLI and `--json`, the same way a
+  whole-file fallback is - the layer is correct without those copies, but it is no longer a
+  byte-for-byte transcription of the mod, and that should not pass in silence.
 - **A world's `omnis`, `managers` and `mapsdata` split per placed entity** — these three hold the same
   `MissionLayer → Entity` structure a world sector does, and every one of the 6,985 entities across
   the 74 shipped files carries a unique `disEntityId`. They were the last whole-file fallbacks the
