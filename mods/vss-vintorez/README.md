@@ -3,9 +3,9 @@
 Replaces the single-player **Dart Rifle** with a VSS Vintorez: the VSS's mesh on the Dragunov's
 skeleton and animation set, semi-automatic, ten-round magazine off the sniper ammo pool.
 
-**Status: complete and confirmed in game** — mesh, LOD tiers, textures, a worn appearance that grimes
-as the weapon degrades, the weapon on the ground, the muzzle socket, icons, name, and jam/break
-behaviour. The shot sound is replaced but **not yet confirmed in game**. See
+**Status: complete and confirmed in game** — mesh, LOD tiers, textures at retail's own tier, a worn
+appearance that grimes as the weapon degrades, the weapon on the ground, the muzzle socket, icons,
+name, and jam/break behaviour. The shot sound is replaced but **not yet confirmed in game**. See
 [what is left](#what-is-left) and [deliberate, not missing](#deliberate-not-missing).
 
 The procedure this mod was built by is written up in
