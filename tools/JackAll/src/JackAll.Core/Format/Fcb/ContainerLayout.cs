@@ -42,7 +42,7 @@ public sealed record LayerSpec(
 public sealed class ContainerLayout(
     IReadOnlyList<LayerSpec> layers,
     IReadOnlyList<string>? removed = null,
-    IReadOnlyList<ulong>? deleted = null)
+    IReadOnlyList<string>? deleted = null)
 {
     /// <summary>The reserved fragment id. The leading underscore keeps it out of the entity id space,
     /// whose ids all end in a number.</summary>
@@ -60,19 +60,19 @@ public sealed class ContainerLayout(
     public IReadOnlyList<string> Removed { get; } = removed ?? [];
 
     /// <summary>
-    /// Entities the sector should no longer have at all. The one operation in this document that
-    /// cannot merge: two mods that disagree about whether something exists genuinely disagree, so a
-    /// deletion is exclusive over that one entity - see <see cref="Contested"/> - rather than over
-    /// the whole container, which is what a whole-file override would cost.
+    /// Fragments the container should no longer have at all, as their ids. The one operation in this
+    /// document that cannot merge: two mods that disagree about whether something exists genuinely
+    /// disagree, so a deletion is exclusive over that one fragment - see <see cref="Contested"/> -
+    /// rather than over the whole container, which is what a whole-file override would cost.
     /// </summary>
-    public IReadOnlyList<ulong> Deleted { get; } = deleted ?? [];
+    public IReadOnlyList<string> Deleted { get; } = deleted ?? [];
 
     /// <summary>
-    /// The entities this layout deletes that <paramref name="stagedFragmentIds"/> also overrides.
-    /// Nobody can honour both, so the override wins and the entity stays: keeping something a mod
+    /// The fragments this layout deletes that <paramref name="stagedFragmentIds"/> also overrides.
+    /// Nobody can honour both, so the override wins and the fragment stays: keeping something a mod
     /// wanted gone is the lesser harm, and it is the same call the string table already makes.
     /// </summary>
-    public IReadOnlyList<ulong> Contested(IEnumerable<string> stagedFragmentIds)
+    public IReadOnlyList<string> Contested(IEnumerable<string> stagedFragmentIds)
     {
         if (Deleted.Count == 0)
         {
@@ -80,7 +80,7 @@ public sealed class ContainerLayout(
         }
 
         var staged = new HashSet<string>(stagedFragmentIds, FcbFragments.IdComparer);
-        return [.. Deleted.Where(id => staged.Contains(FcbFragments.EntityFragmentId(id)))];
+        return [.. Deleted.Where(staged.Contains)];
     }
 
     public static bool IsLayoutId(string fragmentId)
@@ -135,12 +135,16 @@ public sealed class ContainerLayout(
     }
 
     /// <summary>
-    /// What has to be said to turn <paramref name="vanilla"/>'s placement into
-    /// <paramref name="target"/>'s: the layers that are new, and every entity that changed layer.
-    /// Null when the two already agree.
+    /// What has to be said to turn <paramref name="vanillaRoot"/> into <paramref name="targetRoot"/>
+    /// beyond its own fragments: the layers that are new, every entity that changed layer, and every
+    /// fragment that is gone. Null when the two already agree. Taken from the roots rather than two
+    /// layouts because a deletion is a fragment-id difference, which a container with no mission
+    /// layers - an entity library - has just as much as a sector does.
     /// </summary>
-    public static ContainerLayout? Diff(ContainerLayout vanilla, ContainerLayout target)
+    public static ContainerLayout? Diff(FcbObject vanillaRoot, FcbObject targetRoot)
     {
+        ContainerLayout vanilla = Of(vanillaRoot);
+        ContainerLayout target = Of(targetRoot);
         Dictionary<ulong, string> before = vanilla.PlacementByEntity();
         var vanillaKeys = new HashSet<string>(vanilla.Layers.Select(l => l.Key), StringComparer.OrdinalIgnoreCase);
 
@@ -173,8 +177,13 @@ public sealed class ContainerLayout(
         var targetKeys = new HashSet<string>(target.Layers.Select(l => l.Key), StringComparer.OrdinalIgnoreCase);
         string[] gone = [.. vanilla.Layers.Where(l => !targetKeys.Contains(l.Key)).Select(l => l.Key)];
 
-        Dictionary<ulong, string> after = target.PlacementByEntity();
-        ulong[] deleted = [.. before.Keys.Where(id => !after.ContainsKey(id))];
+        // Keyed on fragment ids, not placement, so this sees an archetype a library dropped as
+        // readily as an entity a sector did.
+        var kept = new HashSet<string>(
+            FcbFragments.List(targetRoot).Select(f => f.Id), FcbFragments.IdComparer);
+        string[] deleted = [.. FcbFragments.List(vanillaRoot)
+            .Select(f => f.Id)
+            .Where(id => !kept.Contains(id))];
 
         return changed.Count == 0 && gone.Length == 0 && deleted.Length == 0
             ? null
@@ -252,8 +261,10 @@ public sealed class ContainerLayout(
         // A deletion one side makes and the other contradicts by re-filing that entity is the same
         // collision Contested describes, decided the same way: the entity stays, and the caller is
         // told. Deletions nobody contradicts simply union.
-        ulong[] union = [.. ours.Deleted.Union(theirs.Deleted)];
-        ulong[] deleted = [.. union.Where(id => !placements.ContainsKey(id)).Order()];
+        var placedIds = new HashSet<string>(
+            placements.Keys.Select(FcbFragments.EntityFragmentId), FcbFragments.IdComparer);
+        string[] union = [.. ours.Deleted.Union(theirs.Deleted, FcbFragments.IdComparer)];
+        string[] deleted = [.. union.Where(id => !placedIds.Contains(id)).Order(StringComparer.Ordinal)];
         conflict |= deleted.Length != union.Length;
 
         return (new ContainerLayout(merged, removed, deleted), conflict);
@@ -286,9 +297,9 @@ public sealed class ContainerLayout(
             .Select(e => (string?)e.Attribute("path") ?? "")
             .Where(p => p.Length > 0)];
 
-        ulong[] deleted = [.. root.Elements("delete")
-            .Select(e => ParseEntityId((string?)e.Attribute("id"), "a <delete>"))
-            .Distinct()];
+        string[] deleted = [.. root.Elements("delete")
+            .Select(ParseDeleted)
+            .Distinct(FcbFragments.IdComparer)];
 
         List<LayerSpec> layers = [];
         var keys = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -330,12 +341,18 @@ public sealed class ContainerLayout(
                 cell));
         }
 
-        foreach (ulong id in deleted)
+        var placedIds = new Dictionary<string, string>(FcbFragments.IdComparer);
+        foreach ((ulong id, string under) in placed)
         {
-            if (placed.TryGetValue(id, out string? under))
+            placedIds[FcbFragments.EntityFragmentId(id)] = under;
+        }
+
+        foreach (string id in deleted)
+        {
+            if (placedIds.TryGetValue(id, out string? under))
             {
                 throw new InvalidDataException(
-                    $"The layout both deletes entity {id} and puts it under '{under}'.");
+                    $"The layout both deletes {id} and puts it under '{under}'.");
             }
         }
 
@@ -351,9 +368,13 @@ public sealed class ContainerLayout(
             root.Add(new XElement("remove", new XAttribute("path", path)));
         }
 
-        foreach (ulong id in Deleted)
+        foreach (string id in Deleted)
         {
-            root.Add(new XElement("delete", new XAttribute("id", id.ToString(CultureInfo.InvariantCulture))));
+            root.Add(new XElement(
+                "delete",
+                IsNumericId(id)
+                    ? new XAttribute("id", id[..^4])
+                    : new XAttribute("path", id)));
         }
 
         foreach (LayerSpec layer in Layers)
@@ -386,6 +407,29 @@ public sealed class ContainerLayout(
 
         return FragmentXml.Render(root, "  ");
     }
+
+    /// <summary>
+    /// One <c>&lt;delete&gt;</c>, as the fragment id it names. A placed entity is spelled
+    /// <c>id="2054…"</c> and an archetype <c>path="weapons\Grenades\M67.xml"</c> - two attributes
+    /// rather than one, so a mistyped entity id fails loudly instead of quietly becoming a path that
+    /// matches nothing.
+    /// </summary>
+    private static string ParseDeleted(XElement element)
+    {
+        if ((string?)element.Attribute("path") is { Length: > 0 } path)
+        {
+            return path.Trim();
+        }
+
+        return FcbFragments.EntityFragmentId(ParseEntityId((string?)element.Attribute("id"), "a <delete>"));
+    }
+
+    /// <summary>Whether this id is a placed entity's, which is what decides how
+    /// <see cref="Render"/> spells it back out.</summary>
+    private static bool IsNumericId(string fragmentId)
+        => fragmentId.EndsWith(".xml", StringComparison.OrdinalIgnoreCase)
+        && fragmentId.Length > 4
+        && !fragmentId.AsSpan(0, fragmentId.Length - 4).ContainsAnyExceptInRange('0', '9');
 
     /// <summary>Accepts a bare <c>disEntityId</c> or the fragment id spelling of one, so a layout can
     /// be written by copying a fragment's own filename.</summary>

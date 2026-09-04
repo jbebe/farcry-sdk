@@ -59,7 +59,7 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
         }
 
         return [.. ContainerLayout.Parse(layoutXml).Contested(resolved.Keys)
-            .Select(id => (FcbFragments.EntityFragmentId(id), "the mod that edits it", "a mod that deletes it"))];
+            .Select(id => (FragmentId: id, Kept: "the mod that edits it", Overruled: "a mod that deletes it"))];
     }
 
     private sealed class Tree : IContainerTree
@@ -102,20 +102,12 @@ public sealed class FcbContainerSplitter(FcbClassDefinitions definitions) : ICon
                 : null;
         }
 
-        /// <summary>A world sector's mission-layer placement, diffed straight off the two decoded
-        /// roots rather than through the rendered form <see cref="Extract"/> hands out.</summary>
+        /// <summary>What this container needs said beyond its fragments, diffed straight off the two
+        /// decoded roots rather than through the rendered form <see cref="Extract"/> hands out.</summary>
         public (string Id, string Xml)? StructuralOverride(IContainerTree ancestor)
-        {
-            if (ancestor is not Tree before || !FcbFragments.IsLayerBearing(_root))
-            {
-                return null;
-            }
-
-            return ContainerLayout.Diff(ContainerLayout.Of(before._root), ContainerLayout.Of(_root))
-                is { } diff
+            => ancestor is Tree before && ContainerLayout.Diff(before._root, _root) is { } diff
                 ? (ContainerLayout.Id, diff.Render())
                 : null;
-        }
 
         public FragmentAncestry? AncestryOf(string fragmentId)
         {

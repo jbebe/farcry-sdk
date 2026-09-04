@@ -359,7 +359,7 @@ public class WorldSectorFragmentTests : IDisposable
 
         TestSupport.AssertSameShape(FcbDocument.Deserialize(baseFcb), FcbDocument.Deserialize(assembled));
         Assert.Null(ContainerLayout.Diff(
-            ContainerLayout.Of(FcbDocument.Deserialize(baseFcb)), ContainerLayout.Parse(own)));
+            FcbDocument.Deserialize(baseFcb), FcbDocument.Deserialize(assembled)));
     }
 
     [Fact]
@@ -567,14 +567,14 @@ public class WorldSectorFragmentTests : IDisposable
         string once = splitter.Canonicalize(ContainerLayout.Id, Layout("<delete id=\"42\" />"));
 
         Assert.Equal(once, splitter.Canonicalize(ContainerLayout.Id, once));
-        Assert.Equal([42UL], ContainerLayout.Parse(once).Deleted);
+        Assert.Equal(["42.xml"], ContainerLayout.Parse(once).Deleted);
 
         // Two mods deleting different entities of one sector both get their way.
         (string merged, bool conflict) = splitter.Merge(
             ContainerLayout.Id, Layout(""), Layout("<delete id=\"42\" />"), Layout("<delete id=\"43\" />"));
 
         Assert.False(conflict);
-        Assert.Equal([42UL, 43UL], ContainerLayout.Parse(merged).Deleted.Order());
+        Assert.Equal(["42.xml", "43.xml"], ContainerLayout.Parse(merged).Deleted.Order(StringComparer.Ordinal));
     }
 
     private static byte[] AppText(string xml) => System.Text.Encoding.UTF8.GetBytes(xml);

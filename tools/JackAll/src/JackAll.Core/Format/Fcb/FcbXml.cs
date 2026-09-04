@@ -77,7 +77,21 @@ public static class FcbXml
             markerById[fragment.Node] = keep(fragment.Id) ? FcbFragments.Canonicalize(fragment.Id) : null;
         }
 
-        return ToXml(Skeleton(root, markerById), defs);
+        FcbObject skeleton = Skeleton(root, markerById);
+
+        // A library's groups are ordered by name rather than compared where they sit: a mod appends
+        // the groups it adds in its own arbitrary order, and an override set that rebuilds the same
+        // groups with the same archetypes has rebuilt the container. Nothing else is reordered - a
+        // group's own archetypes stay in document order, which last-wins resolution depends on.
+        if (FcbFragments.IsLibraryOfGroups(root))
+        {
+            List<FcbObject> byName = [.. skeleton.Children.OrderBy(
+                g => FcbEntityFields.ReadString(g, WorldHashes.Name), StringComparer.OrdinalIgnoreCase)];
+            skeleton.Children.Clear();
+            skeleton.Children.AddRange(byName);
+        }
+
+        return ToXml(skeleton, defs);
     }
 
     private static FcbObject Skeleton(FcbObject node, Dictionary<FcbObject, string?> markerById)

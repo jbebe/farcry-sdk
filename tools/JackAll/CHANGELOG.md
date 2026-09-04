@@ -5,6 +5,17 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **An entity library can gain a group and lose an archetype** — a new archetype used to land in the
+  library's *last* group whatever its name said, and a mod that removed one fell back to a whole-file
+  override of `entitylibrarypatchoverride.fcb`, the file every FC2 mod touches. An archetype now joins
+  the group its own `hidName` names, created when the library has none, and `_layout.xml` gained
+  `<delete path="weapons\Grenades\M67.xml" />` for archetypes beside the numeric `<delete id>` a
+  placed entity uses. **Realism Plus Redux now imports with no whole-file fallback at all** — its
+  three removed IED variants become three `<delete path>` lines, and its staged fragments go from 949
+  to **2,151**. Scubrah's Patch still falls back on that one file, correctly: it declares 27
+  archetypes twice, and only the last of a duplicate pair is addressable, so no set of fragments can
+  reproduce it. A library's groups are also compared by name rather than position, since a mod appends
+  the groups it adds in its own order.
 - **A world's `omnis`, `managers` and `mapsdata` split per placed entity** — these three hold the same
   `MissionLayer → Entity` structure a world sector does, and every one of the 6,985 entities across
   the 74 shipped files carries a unique `disEntityId`. They were the last whole-file fallbacks the

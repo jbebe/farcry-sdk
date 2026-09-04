@@ -1,5 +1,6 @@
 using System.Buffers;
 using System.Globalization;
+using System.Text;
 
 namespace JackAll.Core.Format.Fcb;
 
@@ -102,9 +103,8 @@ public static class FcbFragments
     /// <summary>Where <see cref="FcbAssembler.Apply"/> attaches content whose fragment id matched
     /// nothing — new content a mod adds. A new node in a world sector joins the <c>main</c> mission
     /// layer (falling back to the first layer); in a library, a new <c>EntityLibraryGroup</c> joins
-    /// the root and anything else (a new archetype's prototype) joins the last group, since a
-    /// non-group at the root would stop the whole container from splitting. An unrecognised root
-    /// appends at the root.</summary>
+    /// the root and an archetype joins the group its own <c>hidName</c> names, which is created when
+    /// the library has no such group. An unrecognised root appends at the root.</summary>
     internal static FcbObject AppendTarget(FcbObject root, FcbObject addition)
     {
         if (IsLayerBearing(root))
@@ -123,10 +123,44 @@ public static class FcbFragments
 
         if (addition.TypeHash != WorldHashes.EntityLibrary && IsLibraryOfGroups(root))
         {
-            return root.Children[^1];
+            return GroupFor(root, addition);
         }
 
         return root;
+    }
+
+    /// <summary>
+    /// The library group an archetype belongs in, created and appended when absent. Named from the
+    /// addition's own <c>hidName</c> rather than its staged id, because a staged id arrives
+    /// lowercased (<c>NameHash.Normalize</c>) while the group carries the game data's real casing -
+    /// naming it from the id would build a different container than an import verified.
+    /// </summary>
+    private static FcbObject GroupFor(FcbObject root, FcbObject addition)
+    {
+        string hidName = FirstEntityName(addition);
+        int dot = hidName.IndexOf('.');
+
+        // Nothing to go on - an archetype with no name is unaddressable anyway, so it keeps the
+        // historical last-group fallback rather than inventing a group.
+        if (dot <= 0)
+        {
+            return root.Children[^1];
+        }
+
+        string name = hidName[..dot];
+        foreach (FcbObject group in root.Children)
+        {
+            if (Sanitize(FcbEntityFields.ReadString(group, WorldHashes.Name))
+                .Equals(Sanitize(name), StringComparison.OrdinalIgnoreCase))
+            {
+                return group;
+            }
+        }
+
+        var created = new FcbObject { TypeHash = WorldHashes.EntityLibrary };
+        created.Values.Add(WorldHashes.Name, FcbWire.NullTerminate(Encoding.UTF8.GetBytes(name)));
+        root.Children.Add(created);
+        return created;
     }
 
     /// <summary>
@@ -235,7 +269,7 @@ public static class FcbFragments
 
     /// <summary>An archetype's dotted <c>hidName</c> mapped onto a path id, one directory per
     /// namespace segment: <c>vehicle.Land.Jeep</c> → <c>vehicle\Land\Jeep.xml</c>.</summary>
-    private static string ArchetypeId(string hidName)
+    internal static string ArchetypeId(string hidName)
     {
         string[] segments = hidName.Split('.');
         for (int i = 0; i < segments.Length; i++)
@@ -256,7 +290,7 @@ public static class FcbFragments
             ? EntityFragmentId(disEntityId)
             : Sanitize(hidName) + "." + EntityFragmentId(disEntityId);
 
-    private static string FirstEntityName(FcbObject prototype)
+    internal static string FirstEntityName(FcbObject prototype)
     {
         foreach (FcbObject child in prototype.Children)
         {
@@ -272,7 +306,7 @@ public static class FcbFragments
         return "";
     }
 
-    private static bool IsLibraryOfGroups(FcbObject root)
+    internal static bool IsLibraryOfGroups(FcbObject root)
         => root.Values.Count == 0
         && root.TypeHash == WorldHashes.EntityLibraries
         && root.Children.Count > 0

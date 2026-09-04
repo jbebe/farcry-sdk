@@ -107,6 +107,7 @@ override unit:
 | Container | Unit | Id | Example |
 | --- | --- | --- | --- |
 | Entity library (`entitylibrary*.fcb`) | one archetype | its `hidName`, dots as folders | `entitylibrary.fcb\vehicle\Land\DLC_Vehicle1_DLC1.xml` |
+| Entity library (`entitylibrary*.fcb`) | which archetypes it deletes | `_layout.xml` | `entitylibrarypatchoverride.fcb\_layout.xml` |
 | World sector (`worldsector*.data.fcb`) | one placed entity | `<hidName>.<disEntityId>.xml` | `worldsector17.data.fcb\StaticObject_201.2058514756624450165.xml` |
 | World sector (`worldsector*.data.fcb`) | which mission layer its entities sit in, and what it deletes | `_layout.xml` | `worldsector17.data.fcb\_layout.xml` |
 | World `omnis` / `managers` / `mapsdata` | one placed entity, and `_layout.xml` beside them | as a world sector | `world1.mapsdata.fcb\GhostPatrol_3.2056427141129582236.xml` |
@@ -116,8 +117,8 @@ override unit:
 For an entity override the **trailing numeric `disEntityId` is authoritative and the name prefix
 cosmetic** — an override staged under a since-renamed entity still matches, and `2058514756624450165.xml`
 alone works too. An id matching nothing in the vanilla container *adds* that content instead: a new
-archetype joins the library's last group, a new entity joins the sector's `main` mission layer. The
-pre-per-archetype group ids (`entitylibrary.fcb\NN_Name.xml`) are **rejected outright**: one sitting
+archetype joins the group its own `hidName` names - created if the library has none - and a new entity
+joins the sector's `main` mission layer. The pre-per-archetype group ids (`entitylibrary.fcb\NN_Name.xml`) are **rejected outright**: one sitting
 in a container folder's root names no fragment, so rather than silently appending a phantom group the
 build fails and names the file. Re-export the archetype you meant to change.
 

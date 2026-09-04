@@ -388,12 +388,12 @@ public class LegacyPatchImporterTests : IDisposable
     }
 
     /// <summary>
-    /// A deleted archetype is a change no per-fragment override can express, so the import falls back
-    /// to the whole container - the only coarser unit left now that the group-per-file split is gone.
+    /// A deleted archetype imports as the container's fragments plus a layout that names it - the
+    /// same unit a sector's deleted entity gets, keyed on the archetype's path-shaped id.
     /// </summary>
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void A_change_deep_fragments_cannot_express_stages_the_whole_container()
+    public void A_deleted_archetype_imports_as_a_layout_that_names_it()
     {
         if (_legacySourceInstall is null || _cleanInstall is null) return;
 
@@ -401,6 +401,7 @@ public class LegacyPatchImporterTests : IDisposable
 
         VfsFile container;
         byte[] withOneArchetypeRemoved;
+        string removedId;
         using (var vfs = GameVfs.Load(_legacySourceInstall, names))
         {
             VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
@@ -408,6 +409,8 @@ public class LegacyPatchImporterTests : IDisposable
 
             FcbObject tree = FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!);
             FcbObject group = tree.Children.First(c => c.Children.Count > 1);
+            removedId = FcbFragments.List(tree)
+                .First(f => ReferenceEquals(f.Node, group.Children[0])).Id;
             group.Children.RemoveAt(0);
             withOneArchetypeRemoved = FcbDocument.Serialize(tree);
         }
@@ -433,13 +436,17 @@ public class LegacyPatchImporterTests : IDisposable
         LegacyImportResult result = LegacyPatchImporter.Import(
             legacyZipPath, workspace, names, FcbClassDefinitions.Empty, cleanVfs.ReadOriginal, cleanVfs.ReadOriginalHash);
 
-        Assert.Equal(1, result.Imported);
-        Assert.Equal(0, result.FragmentsImported);
+        Assert.Equal(0, result.Imported);
+        Assert.Empty(result.WholeFile);
 
         workspace.Rescan();
-        Assert.Contains((uint)container.Hash, workspace.Hashes);
-        Assert.DoesNotContain((uint)container.Hash, workspace.FragmentOverrides.Keys);
-        Assert.Empty(Directory.EnumerateFiles(workspaceDir, "*.xml", SearchOption.AllDirectories));
+        Assert.DoesNotContain((uint)container.Hash, workspace.Hashes);
+        IReadOnlyList<FragmentOverride>? staged = workspace.FragmentOverrides[(uint)container.Hash];
+
+        // The layout is what carries the deletion, and it names the archetype by its path-shaped id.
+        FragmentOverride layout = Assert.Single(staged!, o => ContainerLayout.IsLayoutId(o.FragmentId));
+        string xml = System.Text.Encoding.UTF8.GetString(workspace.Read(layout.EntryHash));
+        Assert.Equal([removedId], ContainerLayout.Parse(xml).Deleted);
     }
 
     [Fact]

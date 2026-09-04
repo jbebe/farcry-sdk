@@ -349,26 +349,12 @@ public static class LegacyPatchImporter
             return "this format is not compared by shape";
         }
 
-        (string Id, string Xml)? structural = null;
-        if (legacyShape != vanillaShape)
-        {
-            // The shapes differ because entities were re-filed or removed, both of which a structural
-            // override expresses. Anything else about the container having changed is caught by the
-            // reassembly check further down, not guessed at here.
-            if (legacy.StructuralOverride(vanilla) is not { } found)
-            {
-                return vanillaIds.IsSubsetOf(legacyIds)
-                    ? "something outside its fragments changed, or a fragment moved"
-                    : "it drops fragments, which an override cannot remove";
-            }
-            structural = found;
-        }
-
-        if (rows.Count == 0)
-        {
-            skipped++;
-            return null;
-        }
+        // A shape difference is a reason to verify, not to refuse. Entities re-filed or removed need a
+        // structural override to carry them; content merely added - a library group and the archetypes
+        // in it - the fragments express on their own. Either way the reassembly check below is what
+        // decides, since it compares what the staged set actually rebuilds.
+        bool shapeDiffers = legacyShape != vanillaShape;
+        (string Id, string Xml)? structural = shapeDiffers ? legacy.StructuralOverride(vanilla) : null;
 
         // Nothing is written until every fragment has been read, so a refusal found part way through
         // leaves the caller free to stage the whole file instead of on top of half a fragment set.
@@ -415,16 +401,24 @@ public static class LegacyPatchImporter
         if (structural is { } extra)
         {
             changed.Add(extra);
+        }
 
-            // Everything above is a diff of the two containers; this is the check that the diff
-            // actually rebuilds the mod's container. Without it a sector that was also reordered, or
-            // changed in some way outside its fragments, would import as a quietly wrong one.
-            if (Reassemble(splitter, vanillaBytes, changed, vanillaIds) != legacyShape)
-            {
-                return DescribeMovedFragments(legacy, vanilla, vanillaIds) is { } what
-                    ? $"{what}, and something else about it changed too"
-                    : "something outside its fragments changed, or a fragment moved";
-            }
+        // Everything above is a diff of the two containers; this is the check that the diff actually
+        // rebuilds the mod's container. Without it a sector that was also reordered, or changed in
+        // some way outside its fragments, would import as a quietly wrong one.
+        if (shapeDiffers && Reassemble(splitter, vanillaBytes, changed, vanillaIds) != legacyShape)
+        {
+            return DescribeMovedFragments(legacy, vanilla, vanillaIds) is { } what
+                ? $"{what}, and something else about it changed too"
+                : vanillaIds.IsSubsetOf(legacyIds)
+                    ? "something outside its fragments changed, or a fragment moved"
+                    : "it drops fragments, which an override cannot remove";
+        }
+
+        if (rows.Count == 0)
+        {
+            skipped++;
+            return null;
         }
 
         foreach ((string id, string xml) in changed)

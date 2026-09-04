@@ -93,9 +93,10 @@ public class WorldContainerFragmentTests
         if (!FcbFragments.LayersOf(root).Any()) return;
 
         ContainerLayout layout = ContainerLayout.Of(root);
-        Assert.Null(ContainerLayout.Diff(layout, ContainerLayout.Of(
+        Assert.Null(ContainerLayout.Diff(
+            root,
             FcbDocument.Deserialize(FcbAssembler.Apply(
-                original, new Dictionary<string, string> { [ContainerLayout.Id] = layout.Render() })))));
+                original, new Dictionary<string, string> { [ContainerLayout.Id] = layout.Render() }))));
     }
 
     /// <summary>

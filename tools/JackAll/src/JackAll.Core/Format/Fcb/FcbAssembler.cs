@@ -66,8 +66,32 @@ public static class FcbAssembler
         // An entity this override set also stages content for is not deleted: the two staged files
         // contradict each other, and keeping it is the lesser harm. Whoever assembled the set
         // reports that; here it only has to not act on it.
-        Dictionary<string, FcbObject>? layers =
-            layout is null ? null : ApplyLayout(root, layout, slots, [.. layout.Contested(byId.Keys)]);
+        Dictionary<string, FcbObject>? layers = null;
+        if (layout is not null)
+        {
+            // Deleting is something any container can do; declaring mission layers is not.
+            if (!FcbFragments.IsLayerBearing(root) && (layout.Layers.Count > 0 || layout.Removed.Count > 0))
+            {
+                throw new InvalidDataException(
+                    $"'{ContainerLayout.Id}' declares mission layers, and this container places none.");
+            }
+
+            // Taken before anything moves: a slot resolves its node through the parent's child list,
+            // so the first move or removal invalidates every later index.
+            Dictionary<string, (FcbObject Node, FcbObject Parent)> byFragmentId =
+                slots.ToDictionary(s => s.Id, s => (s.Node, s.Parent), FcbFragments.IdComparer);
+
+            layers = FcbFragments.IsLayerBearing(root) ? ApplyLayers(root, layout, slots) : null;
+            DeleteFragments(
+                layout, byFragmentId, new HashSet<string>(layout.Contested(byId.Keys), FcbFragments.IdComparer));
+
+            // After the deletions, since dropping the last entity out of a layer is exactly what
+            // leaves it empty enough to remove.
+            if (layers is not null)
+            {
+                RemoveEmptyLayers(root, layout, layers);
+            }
+        }
 
         foreach (string id in remaining.OrderBy(x => x, StringComparer.Ordinal))
         {
@@ -88,16 +112,9 @@ public static class FcbAssembler
     /// under the one it names, returning the sector's layers by path. Entities the layout says
     /// nothing about keep the place the base container gave them.
     /// </summary>
-    private static Dictionary<string, FcbObject> ApplyLayout(
-        FcbObject root, ContainerLayout layout, List<FcbFragments.FragmentSlot> slots,
-        HashSet<ulong> contested)
+    private static Dictionary<string, FcbObject> ApplyLayers(
+        FcbObject root, ContainerLayout layout, List<FcbFragments.FragmentSlot> slots)
     {
-        if (!FcbFragments.IsLayerBearing(root))
-        {
-            throw new InvalidDataException(
-                $"'{ContainerLayout.Id}' describes mission layers, and this container places none.");
-        }
-
         Dictionary<string, FcbObject> layers = LayersByKey(root);
 
         // Node references rather than the (parent, index) slots they came from: the first move
@@ -133,19 +150,21 @@ public static class FcbAssembler
             }
         }
 
-        foreach (ulong entityId in layout.Deleted)
-        {
-            if (!contested.Contains(entityId)
-                && byEntityId.TryGetValue(entityId, out (FcbObject Node, FcbObject Parent) doomed))
-            {
-                doomed.Parent.Children.Remove(doomed.Node);
-            }
-        }
+        return layers;
+    }
 
+    /// <summary>
+    /// Removes every fragment the layout deletes, keyed on the fragment id so it serves a library's
+    /// archetypes as readily as a sector's entities. A layout that only deletes is legal on any
+    /// container; one that declares layers is not (see <see cref="Apply"/>).
+    /// </summary>
+    /// <summary>Drops each layer the layout says to remove, but only once it holds nothing: removing
+    /// a layer that still has entities would delete content, which no override may do.</summary>
+    private static void RemoveEmptyLayers(
+        FcbObject root, ContainerLayout layout, Dictionary<string, FcbObject> layers)
+    {
         foreach (string key in layout.Removed)
         {
-            // Only ever an empty grouping. A layer still holding entities is left in place: dropping
-            // it would delete content, which no override may do.
             if (layers.TryGetValue(key, out FcbObject? empty) && empty.Children.Count == 0)
             {
                 foreach (FcbObject parent in FcbFragments.LayerParentsOf(root))
@@ -155,8 +174,22 @@ public static class FcbAssembler
                 layers.Remove(key);
             }
         }
+    }
 
-        return layers;
+    private static void DeleteFragments(
+        ContainerLayout layout,
+        Dictionary<string, (FcbObject Node, FcbObject Parent)> byId,
+        HashSet<string> contested)
+    {
+        foreach (string id in layout.Deleted)
+        {
+            // An id naming nothing is left alone rather than refused, the same leniency a move gets.
+            if (!contested.Contains(id)
+                && byId.TryGetValue(id, out (FcbObject Node, FcbObject Parent) doomed))
+            {
+                doomed.Parent.Children.Remove(doomed.Node);
+            }
+        }
     }
 
     /// <summary>Puts each listed layer's entities in the order the layout gives, once every addition
