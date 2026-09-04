@@ -42,6 +42,16 @@ package won't fix the real problem (20,228 wire crossings after layout).
       `fc2model set-material` / `set-texture` pair would need. Worth building when a third mod wants
       it; the mesh half stays a per-mod script, because appending a material and skipping `SCOPE_HI`
       is policy rather than a generic operation.
+- [ ] **A build picks a container's splitter off a *string*, and one caller can still synthesize the
+      wrong one.** `PatchBuilder.RecoveredContainerPath` reads the container's name off any
+      contributing fragment's staged path; a `mods\_hash\<hex>.game.xml\<mission>` override resolves
+      as a valid fragment but `PathOf` nulls every `_hash\` path, so the fallback names it
+      `_hash\<hex>.fcb` and the world descriptor is handed to the `.fcb` splitter — the same
+      "missing 'FCbn' signature" the localization fragments used to die on. `ContainerFormats.For`'s
+      doc still claims `.fcb` is the only format staged hash-addressed, which stopped being true when
+      world descriptors began splitting. The container path is known at index time in all three
+      producers and thrown away; carrying it on `ModPathTarget` would close this and collapse the
+      four places that re-derive it (`GameVfs`, `PatchBuilder`, `MainViewModel.Mods`, `For` itself).
 
 ## Tools/BlenderFC2
 
@@ -122,10 +132,9 @@ what is left is what a modeler cannot do rather than what is broken.
 - [ ] Whether the `Weapon` shader samples a normal map at all. No `NormalTexture1` slot appears on any
       of the nine `Weapon` materials across three weapons, so a texture path is not what is missing.
       Disassemble the template out of `shadersobj.fat`'s `obj10` tree, which keeps its reflection data
-- [ ] VSS: only the English `oasisstrings.rml` was renamed. The other ten shipped languages carry
-      the same ten strings and still say "Dart Rifle"
-- [ ] VSS: `pickups.Weapons.DartRifle_new.Multi.Dropped`, skipped on the single-player rule, so a
-      dropped VSS in multiplayer still has no barrel
-- [ ] VSS: downsample the textures to the sizes retail uses — 512² base and 1024² `_mip0`. They ship
-      at 1024² and 2048², which is four times the pixels and 5.33 MB against the Dart Rifle's 1.33 MB
-      for the same four files. `vss_worn_c.xbt` is single-file with no companion, so it goes to 512²
+- [x] VSS: the name in all eleven shipped languages, not only English. One
+      `oasisstrings.fragment.xml` per language; the name is a proper noun everywhere, so only the
+      grammar around it moves — Polish and Russian pick up a preposition the bare name cannot inflect
+      into
+- [x] VSS: downsample the textures to the sizes retail uses — 512² base and 1024² `_mip0`. The four
+      state files now weigh exactly what the Dart Rifle's do, 1.33 MiB against 5.33 MiB

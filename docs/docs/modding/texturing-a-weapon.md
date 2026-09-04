@@ -210,8 +210,11 @@ or a linear remap shifts hue.
 - **V orientation.** Blender holds images bottom-up and a PNG stores rows top-down. Read through
   Blender and write through a hand-rolled PNG writer that flips, and the two cancel. Get it wrong and
   every texture is upside down, which no numeric gate can see — look for lettering in a render.
-- **Size.** Retail ships nothing over 2048 and everything power-of-two. A 4096 source is halved. The
-  pair that ships is a **1024² base with an 11-level chain plus a 2048² single-level `_mip0`**.
+- **Size.** Retail ships nothing over 2048 and everything power-of-two, but a *weapon* sits well
+  under that ceiling: the Dart Rifle's pair is a **512² base with a 10-level chain plus a 1024²
+  single-level `_mip0`**, 1.33 MiB for four files, and the Dragunov's is 256²/512². Author at 2048
+  and ship at 1024 — a 1024²/2048² pair is four times the pixels for a gun that is barely a metre of
+  screen space, and nothing in the game does that.
 - **Ambient occlusion.** glTF packs AO in the same map's red channel. It is tempting and it was
   measured and rejected here: a quarter of the VSS's AO sits at zero, which is what a bake leaves
   *outside* the UV islands, and multiplying that in bleeds black across island edges at low mips.
@@ -352,7 +355,7 @@ whole condition ramp then runs inside a single magazine. See
 
 Do the whole thing through a `.fc2model` pack. Edit `materials/<name>.json` and swap the texture PNGs
 inside the zip, then set **`origin_sha256`** on each entry you touched — that field's presence is
-exactly what marks an entry modified. Set `levels` to the new chain length (12 for a 2048 image) and
+exactly what marks an entry modified. Set `levels` to the new chain length (11 for a 1024 image) and
 the applier does the rest:
 
 ```
@@ -384,8 +387,8 @@ Then **read it back out of the patch**, not out of your layer:
 jackall-cli archive extract "C:\Games\Far Cry 2\Data_Win32\patch.fat" --names --filter <weapon> -o check
 ```
 
-Both textures should come back as a 1024² base with 11 mips and a 2048² companion with one, in the
-same codec.
+Both textures should come back as a 512² base with 10 mips and a 1024² companion with one, in the
+same codec — the same four file sizes to the byte as the weapon you replaced.
 
 ## What the offline gates cannot see
 
@@ -430,5 +433,6 @@ the **Dragunov's** `spdra`. The framing is wrong by however far those two eyes d
 - **`SpecularPower` is lobe width and low is wide.**
 - **Set `DiffuseColorBase` equal to `DiffuseColor1`** so no condition or vertex channel re-tints.
 - **The `_mip0` companion is twice the base**, and the pack applier splits it for you.
+- **Ship a weapon at 1024**, a 512² base beside a 1024² `_mip0` — the tier every retail weapon uses.
 - **`origin_sha256` is what marks a pack entry modified.**
 - **No offline gate models the specular path.** That one needs the game.

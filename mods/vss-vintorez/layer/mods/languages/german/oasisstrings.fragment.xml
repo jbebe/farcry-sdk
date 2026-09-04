@@ -1,0 +1,22 @@
+<oasisstrings>
+  <section name="Tutorial">
+    <string enum="COMPUTER_ADVERT_01" value="Heimliches Vorgehen bevorzugt? Ziehen Sie die schallgedämpfte Makarow 6P9, die schallgedämpfte MP-5 oder das VSS Vintorez in Betracht. Ein heimlich operierender Saboteur kann auch Sprengsätze effektiv einsetzen. Ein Tarnanzug verringert die Sichtbarkeit und erleichtert das Schleichen. Eine Investition in Stealth-Ausrüstung macht sich schnell bezahlt, wenn Sie ahnungslose Gegner überfallen!" />
+    <string enum="WEAPONBAZAAR_DART_RIFLECRATE_NAME" value="VSS Vintorez" />
+  </section>
+  <section name="Challenges">
+    <string enum="dartrifle" value="VSS Vintorez" />
+  </section>
+  <section name="Items">
+    <string enum="dart_rifle" value="VSS Vintorez" />
+  </section>
+  <section name="StatisticService">
+    <string enum="Kills_Dart_Rifle" value="VSS Vintorez - Kills" />
+    <string enum="Executions_Dart_Rifle" value="VSS Vintorez - Hinrichtungen" />
+    <string enum="Headshots_Dart_Rifle" value="VSS Vintorez - Kopfschüsse" />
+  </section>
+  <section name="WeaponBazaar">
+    <string enum="WEAPONBAZAAR_DART_RIFLECRATE_NAME" value="VSS Vintorez" />
+    <string enum="WEAPONBAZAAR_DART_RIFLE_OPERATION_MANUAL_NAME" value="VSS Vintorez" />
+    <string enum="WEAPONBAZAAR_DART_RIFLE_REPAIR_MANUAL_NAME" value="VSS Vintorez" />
+  </section>
+</oasisstrings>

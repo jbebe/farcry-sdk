@@ -1,0 +1,22 @@
+<oasisstrings>
+  <section name="Tutorial">
+    <string enum="COMPUTER_ADVERT_01" value="Предпочитаете оставаться невидимой тенью? Подумайте о пистолете Макарова с глушителем 6П9, MP-5 с глушителем или о VSS Vintorez. Кроме того, диверсант может эффективно применять взрывные устройства. Камуфляжный костюм позволит замаскироваться. Покупая снаряжение для диверсантов, вы получаете скидку на ничего не подозревающих врагов!" />
+    <string enum="WEAPONBAZAAR_DART_RIFLECRATE_NAME" value="VSS Vintorez" />
+  </section>
+  <section name="Challenges">
+    <string enum="dartrifle" value="VSS Vintorez" />
+  </section>
+  <section name="Items">
+    <string enum="dart_rifle" value="VSS Vintorez" />
+  </section>
+  <section name="StatisticService">
+    <string enum="Kills_Dart_Rifle" value="Убито из VSS Vintorez" />
+    <string enum="Executions_Dart_Rifle" value="Казни из VSS Vintorez" />
+    <string enum="Headshots_Dart_Rifle" value="Выстрелов в голову из VSS Vintorez" />
+  </section>
+  <section name="WeaponBazaar">
+    <string enum="WEAPONBAZAAR_DART_RIFLECRATE_NAME" value="VSS Vintorez" />
+    <string enum="WEAPONBAZAAR_DART_RIFLE_OPERATION_MANUAL_NAME" value="VSS Vintorez" />
+    <string enum="WEAPONBAZAAR_DART_RIFLE_REPAIR_MANUAL_NAME" value="VSS Vintorez" />
+  </section>
+</oasisstrings>

@@ -15,8 +15,9 @@ mod; those pages are the method.
 
 ## What it changes
 
-Twenty-three files. Most are overrides of paths that already exist. Two are at paths invented for
-this mod, and they need different treatment:
+Twenty-three files, plus seventeen MOVE fragments and one localization patch per language. Most are
+overrides of paths that already exist. Two are at paths invented for this mod, and they need
+different treatment:
 
 - `vss_worn_c.xbt` loads from `patch.dat` with no hashlist and no `depload` entry — a texture reached
   through a material that is itself listed needs no registration.
@@ -33,7 +34,7 @@ mods/graphics/weapons/special/dart_rifle/vss_worn_c.xbt     the worn control map
 mods/graphics/_materials/FBOIVIN2-M-2007050148031384.xbm    DART_RIFLE_METAL, repointed
 mods/ui/textures/hud/icons_weapons/hud_icon_sniperdart.xbt  the HUD and bazaar icon
 mods/ui/textures/guns/gun_icon_sniperdart.xbt               the multiplayer weapon select
-mods/languages/english/oasisstrings.fragment.xml           the weapon's name, ten strings
+mods/languages/<language>/oasisstrings.fragment.xml         the name, ten strings x 11 languages
 mods/graphics/characters/.../vss_vintorez/...vssvi_i1.mab   the reload, at a new path
 mods/graphics/move/movemgr.bin/Pawn_Generic_*_w39.*.xml     17 MOVE fragments, clips repointed
 mods/soundbinary/004bf5e9.spk                               the shot, first person (stereo)
@@ -47,7 +48,8 @@ mods/worlds/world2/generated/world2_depload.dat/dragunov.3882209901.xml   the sa
 The name and the icons are bound by name in `engine\gamemodes\gamemodesconfig.xml`, so both are
 replacements of what a name points at rather than config edits. The bazaar name is **not**
 `sDisplayName` — it is `nameOasis="WEAPONBAZAAR_DART_RIFLECRATE_NAME"`, resolved against
-`oasisstrings.rml`.
+`oasisstrings.rml`. All eleven shipped languages carry the same ten strings and all eleven are
+renamed: "VSS Vintorez" is a proper noun in every one of them, so only the grammar around it moves.
 
 The four entitylibrary fragments are the weapon, its stats, and the two pickups. **The pickups carry
 their own part lists**, so until they were rebuilt from the Dragunov's the weapon on the ground had
@@ -190,8 +192,6 @@ The donor works in game, so any difference between the two images in the same vi
   control map uses it. **No `Weapon`-shader material declares a `NormalTexture1` slot at all**, across
   all nine on the Dragunov, the Dart Rifle and the sawed-off, so whether the shader would sample one
   is unknown. Settling it means disassembling the `Weapon` pixel shader out of `shadersobj.fat`.
-- **Only English is renamed.** Ten other languages ship `oasisstrings.rml` and still carry the same
-  ten strings saying "Dart Rifle" in the bazaar, the challenge list and the statistics.
 - **`pickups.Weapons.DartRifle_new.Multi.Dropped`** was skipped on the single-player rule, so a
   dropped VSS in multiplayer still has no barrel.
 

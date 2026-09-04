@@ -4,8 +4,9 @@ Replaces the single-player **Dart Rifle** with a VSS Vintorez: the VSS's mesh on
 skeleton and animation set, semi-automatic, a ten-round magazine off the sniper ammo pool, and the
 Dragunov's jam and break behaviour in place of a weapon that never failed.
 
-The mesh, the textures, the icons, the name, the shot sound and the reload all ship with it. Damage
-stays the Dart Rifle's — that is what keeps it a stealth weapon rather than a battle rifle.
+The mesh, the textures, the icons, the name in all eleven languages, the shot sound and the reload
+all ship with it. Damage stays the Dart Rifle's — that is what keeps it a stealth weapon rather than
+a battle rifle.
 
 ## Installing
 
@@ -28,8 +29,6 @@ behaviour.
 
 ## Known limitations
 
-- Only English is renamed. The other ten languages still say "Dart Rifle" in the bazaar, the
-  challenge list and the statistics.
 - A dropped VSS in multiplayer has no barrel — the multiplayer pickup was deliberately skipped.
 
 ## How it was made

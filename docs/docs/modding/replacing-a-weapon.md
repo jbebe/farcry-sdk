@@ -1415,7 +1415,23 @@ needs a config change**, because both are bound by name and you are replacing wh
 **The text** lives in `languages\<language>\oasisstrings.rml`. Ten strings name one weapon, and they
 are spread across five sections — the bazaar crate, both manuals, the item list, the challenge list,
 three statistics entries, and a second copy of the crate name under `Tutorial`. Search by string id
-rather than by value. Eleven languages ship the table; editing one leaves the other ten alone.
+rather than by value. Eleven languages ship the table and every one of them carries all ten strings,
+so a rename is eleven fragments or it is not finished.
+
+Do not translate the new name — a weapon's name is a proper noun and stays as it is. What moves is
+the grammar around it in the four strings that are not the bare name: the three statistics entries
+and the stealth-equipment advert. Some languages take the substitution unchanged ("Pfeilgewehr -
+Kills" becomes "VSS Vintorez - Kills"), and some inflect the old name into a case a foreign name
+cannot take, so the case has to become a preposition instead — Polish "Zabici strzelbą na strzałki"
+becomes "Zabici **z** VSS Vintorez", Russian "Выстрелов в голову дротиками" becomes "Выстрелов в
+голову **из** VSS Vintorez".
+
+:::note[Two languages are not where you expect]
+The retail patch carries ten tables and no Japanese one; `common.dat` carries ten and no Chinese one.
+Read each language's vanilla strings from whichever archive actually holds them. Staging a fragment
+for a language the patch has no table for still works — the build finds the ancestor in `common.dat`
+and the merged table is *added* to `patch.dat` rather than overriding an entry there.
+:::
 
 A mod states its localization edits in **one `oasisstrings.fragment.xml`** per language, holding only
 the strings it changes. That is the only shape a layer may stage — a whole-file override is refused,

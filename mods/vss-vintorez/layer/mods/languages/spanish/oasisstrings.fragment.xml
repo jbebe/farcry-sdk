@@ -1,0 +1,22 @@
+<oasisstrings>
+  <section name="Tutorial">
+    <string enum="COMPUTER_ADVERT_01" value="¿Prefieres el sigilo? Puedes usar el Makarov 6P9 con silenciador, el MP-5 con silenciador o el VSS Vintorez. La bomba artesanal también es útil para el saboteador sigiloso. Por último, el traje de camuflaje reduce la visibilidad y hace más fácil escabullirse. ¡Invierte en equipamiento de sigilo y pillarás a los enemigos desprevenidos!" />
+    <string enum="WEAPONBAZAAR_DART_RIFLECRATE_NAME" value="VSS Vintorez" />
+  </section>
+  <section name="Challenges">
+    <string enum="dartrifle" value="VSS Vintorez" />
+  </section>
+  <section name="Items">
+    <string enum="dart_rifle" value="VSS Vintorez" />
+  </section>
+  <section name="StatisticService">
+    <string enum="Kills_Dart_Rifle" value="Bajas con VSS Vintorez" />
+    <string enum="Executions_Dart_Rifle" value="Ejecuciones con VSS Vintorez" />
+    <string enum="Headshots_Dart_Rifle" value="Tiros en la cabeza con VSS Vintorez" />
+  </section>
+  <section name="WeaponBazaar">
+    <string enum="WEAPONBAZAAR_DART_RIFLECRATE_NAME" value="VSS Vintorez" />
+    <string enum="WEAPONBAZAAR_DART_RIFLE_OPERATION_MANUAL_NAME" value="VSS Vintorez" />
+    <string enum="WEAPONBAZAAR_DART_RIFLE_REPAIR_MANUAL_NAME" value="VSS Vintorez" />
+  </section>
+</oasisstrings>
