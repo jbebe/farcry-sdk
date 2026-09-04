@@ -66,22 +66,44 @@ The constructor zeroes two flags that matter later: `console+0x68` (developer mo
 ## The two gates
 
 Console elements carry two fields set at registration by the element constructor (`0x102927a0`):
-`+0x3c`, a context mask, and `+0x40`, the developer-only flag. Both the executor
-(`CXConsole::ExecuteCommand`, `0x10296150`) and the enumerator behind `?` (`0x102970e0`) apply the
-same pair of tests:
+`+0x3c`, a context mask, and `+0x40`, the developer-only flag. One predicate tests both, and the
+compiler emitted it **six times** — once out of line at `0x10291ae0`, and inlined at five call
+sites. Each copy is the same pair of tests:
 
 ```c
 if (console+0x68 == 0 && element+0x40 != 0) return;   // developer-only, developer mode off
 if ((console+0x64 & element+0x3c) == 0)      return;   // context mask mismatch
 ```
 
-Because the enumerator applies the same filter, a gated command is not merely refused — it is absent
-from the listing and unknown to lookup. Typing one reports `Unknown command: %s` rather than a
-permissions error.
+The copies matter individually, because they gate different things and lifting one does not lift the
+others. The four on the console's own path are:
+
+| Copy | Site | Gates |
+|---|---|---|
+| out of line, called by `ExecuteString` | `0x10291ae8` | whether a looked-up name counts as **found** |
+| `CXConsole::ExecuteCommand` | `0x1029616d` | whether a found command **runs** |
+| enumerator loop 1 | `0x1029714d` | whether a command is **listed** by `?` |
+| enumerator loop 2 | `0x102971d7` | the same, for the second collection |
+
+The remaining two (`0x10292ed4`, `0x10292f28`) sit behind element lookups the engine makes for
+itself — `InitCVars`, `SetupOnlineEngineRegistery`, per-frame `Update` — and are not on the path
+from a typed line to a command.
+
+Because the lookup copy runs first, a gated command is not merely refused — it is unknown to lookup
+and absent from the listing. Typing one reports `Unknown command: %s` rather than a permissions
+error. Lifting only the listing copies makes hidden commands *visible but still unrunnable*, which
+is the distinction the four-way split above exists to capture.
 
 `console+0x68` is zero for player-typed input. The only code that raises it (`0x10298ac0`) does so
-transiently around one internal call and lowers it again, so there is no persistent "developer mode"
-reachable from data.
+transiently around one internal call and lowers it again, so **there is no persistent "developer
+mode" reachable from data** — no config setting, command-line flag or batch file turns the hidden
+commands on. Lifting the gate takes a code change.
+
+What the gate reduces to is a single `jnz` that skips the developer test when the flag is set,
+repeated at three sites: one in `ExecuteCommand` and one in each of the enumerator's two loops.
+Turning each into `jmp` — one byte, `75` → `EB`, leaving the displacement alone — takes the test out
+of the path without touching the flag, and leaves the context mask working. UFCP ships that as an
+opt-in `Developer console` setting; see `mods/UFCP/src/options/developer_console.cpp`.
 
 :::info[Verified in a running game]
 `?` lists only ungated commands — observed set: `screenshot`, `clear`, `exec`, `showFps` and the
@@ -125,6 +147,37 @@ follow the `<ClassName>_GetInstance()` idiom used throughout the shipped Domino 
 
 ## Command inventory
 
+:::info[Verified in a running game]
+`console_dump_elements` is itself developer-gated, so it only runs with the gate lifted — UFCP's
+`Developer console` option is one way. It writes `ConsoleElementsDump.txt` to the save folder
+(`Documents\My Games\Far Cry 2\`), one command name per line. On retail v1.03 it lists **416
+commands** — the engine's own account of its console, and the authority for this section, so
+regenerate it rather than trusting the summary below if the two ever disagree:
+
+| Group | Count | What it is |
+|---|---|---|
+| `gfx_*` | 178 | Render settings, from config entries carrying `console="…"` |
+| `domino_*` | 117 | Registered at runtime by shipped mission graphs |
+| everything else | 121 | Hand-registered commands and the other config groups |
+
+Highlights not obvious from the disassembly:
+
+- **The cheats are console commands**, not only `-GameProfile_*` launch flags: `cheat_GodMode`,
+  `cheat_UnlimitedAmmo`, `cheat_UnlimitedReliability`, `cheat_AllWeaponsUnlock`,
+  `cheat_add_playerweapon`, `Cheat_AddDiamonds`, `cheat_set_pillar`. See
+  [cheats](../modding/guide/cheats.md) for the launch-flag form of the same switches.
+- **Time of day and weather are direct commands** — `env_Hour`, `env_Minutes`, `env_Seconds`,
+  `env_TimeScale`, `env_StormHour`, `env_WindDir`, `env_WindForce`, plus `set_weather`,
+  `set_weatherHour`, `set_weatherTimeScale`, `set_stormFactor`, `set_windDir`, `set_windForce`. No
+  Lua needed.
+- **Input preferences** the options screen never exposes: `look_Sensitivity`, `look_Sensitivity_x`,
+  `look_Sensitivity_y`, `look_Invert_x`, `look_Invert_y`, `look_HelpCrosshair`,
+  `mouse_Smoothness`, `mouse_Smoothness_Ironsight`.
+- `Magma_ToggleHUD`, `ai_IgnorePlayer`, `ai_DisplayAILimitInfo`, `rt_lod_freeze`,
+  `hack_draw_counters`, `scriptcallbacks`, `SetSetting`, `net_log_enable`/`disable`,
+  `snd_oppeak`/`snd_opstat`.
+:::
+
 Commands arrive from four independent sources.
 
 **1. Engine commands**, registered in `CCryEngine::Initialize`: `screenshot`, `snapshot`,
@@ -159,6 +212,26 @@ way, all in the `Stats` group.
 **4. Domino-registered commands.** Shipped mission graphs register their own commands at runtime via
 `CDominoConsoleCommandManager::RegisterConsoleCommand` — see [Domino scripts](./domino-scripts.md).
 
+## Why an unlocked console still has inert commands
+
+:::info[Verified in a running game]
+With the developer gate lifted, roughly half the listed commands do something and the rest do not.
+Two mechanisms account for that, and neither is the developer flag:
+
+**`domino_*` needs its graph loaded** — 117 of the 416, every one an entry point registered by a
+shipped mission graph (`AK47`, `A2SM07`, `StartLibraryMissions`, `Diff1`). Registration happens when
+the owning graph loads, so in the wrong act or world the name is listed and does nothing.
+
+**The context mask still applies.** The console's constructor sets `console+0x64 = 1`, and every
+element carries its own mask at `element+0x3c`; a command whose mask does not intersect the active
+context is refused no matter what the developer flag says. This is the gate that keeps
+multiplayer-only and editor-only commands out of a single-player session, and lifting it is a
+separate change from lifting the developer flag.
+
+A third, milder case: some `gfx_*` settings are read at startup or level load, so setting one takes
+effect on the next load rather than immediately.
+:::
+
 ## Batch files and startup hooks
 
 `CXConsole::RunBatch` reads a file and executes it line by line through the same `ExecuteString`
@@ -167,9 +240,13 @@ Because it uses the ordinary path, batch files receive no elevated privileges �
 commands inside one are gated exactly as if typed.
 
 Retail ships 14 such files under `scripts\console\` — QA batch lists such as `qc-sp-all-1.console`
-and `aidebugview.console`. Several reference commands whose backing config groups do not exist in
-the retail data (`Cheat_godmode`, `env_Hour`, `dv_add_debugview`), so they are not expected to work
-as shipped.
+and `aidebugview.console`. Checked against `ConsoleElementsDump.txt`, most of what they call still
+exists: `cheat_GodMode`, `cheat_UnlimitedAmmo`, `set_current_primary_buddy`, `env_Hour`,
+`env_TimeScale`, `gfx_DisableShadowGeneration`, `gfx_ShowFPS` and `gfx_SceneObjectMinSize` are all
+present (command lookup is case-insensitive, so the files' spellings match). What is gone is the
+debug-view and QA instrumentation: `dv_add_debugview`, `qc_ShowPlayerPos`, `Cheat_speed_factor`,
+`gfx_KillLodScale`, `SetRank`. So these batches are largely live, minus their overlays — with the
+caveat that every command in them is developer-gated.
 
 Two startup hooks exist:
 
@@ -185,7 +262,7 @@ Two startup hooks exist:
 |---|---|
 | `~` / `` ` `` | Console opens |
 | `?` | Lists ungated commands only |
-| `console_dump_elements` | `unknown command` — developer-gated |
+| `console_dump_elements` | `unknown command` — developer-gated. With the gate lifted it runs and writes 416 command names to `ConsoleElementsDump.txt` |
 | `#Game:AddDiamonds(500)` | Works; diamond count increases |
 | `#CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay(h, m)` | Works; time of day changes immediately |
 | `#Game:SetHealth(100)`, `(25)`, `(0.5)` | All kill the player. The handler reads a **float** defaulting to `1.0f`, so the argument is a 0.0–1.0 fraction rather than a percentage — but partial values still kill, so the working range is not yet established |
@@ -215,9 +292,21 @@ The camera signals in the shipped input maps (`active_camerafree`, `active_camer
 a separate route, and their handler names are absent from the retail PC binary — see Unknowns.
 :::
 
-The practical conclusion: retail has the camera *classes*, and the shipped input maps still bind
-keys to them, but neither route reaches a free-fly camera in the shipped PC build. Free-fly remains
-an editor-only capability, as [editor API surface](./editor-api-surface.md) describes.
+The command dump closes the third route: of the 416 commands the engine lists, **none is a free or
+ghost camera**. The only camera-adjacent entries are `set_debug_fov`, the six
+`SetFPCameraOffset*`/`SetWeaponCameraOffset*` nudges, `gfx_WidescreenFOV`, and
+`gfx_UpdateCullingCamera`/`gfx_UpdateRenderCamera` — culling-freeze toggles for inspecting what the
+renderer culls, not a camera you can fly.
+
+The practical conclusion: retail has the camera *classes*, the shipped input maps still bind keys to
+them, and the console can reach 416 commands — and not one of those three routes reaches a free-fly
+camera in the shipped PC build. Free-fly remains an editor-only capability, as
+[editor API surface](./editor-api-surface.md) describes.
+
+The one untested route left is a Domino box. `SwitchCamera` fails from the console only because it
+needs a script context, and a Domino box runs inside one — so a custom graph calling
+`SwitchCamera("Cameras.Camera.Editor")` is the remaining lead. None of the 117 shipped `domino_*`
+commands does anything camera-related, so this would mean authoring a graph, not triggering one.
 
 ## Unknowns
 
@@ -228,12 +317,11 @@ an editor-only capability, as [editor API surface](./editor-api-surface.md) desc
   implies a 0.0–1.0 fraction, yet `0.5` still kills. The value is passed on with two `0xffffffff`
   sentinels and a constant hash (`0x59f2984f`), suggesting it routes through the stim/damage system
   rather than writing a health field directly — which would explain why no partial value survives.
-- Whether `console+0x68` can be raised from data rather than by patching, which would expose the
-  developer-only commands to `?` and to normal lookup — and with it `console_dump_elements`, whose
-  output (`ConsoleElementsDump.txt`) would be an authoritative, engine-generated command table.
 - Whether `-exec` and the `ConsoleCommands` config section function in retail; both are traced but
   neither has been run.
-- The context mask semantics of `element+0x3c` versus `console+0x64`.
+- The context mask semantics of `element+0x3c` versus `console+0x64`. The console starts at `1`, and
+  a mismatch refuses the command, but which bit means single-player, multiplayer or editor — and
+  which commands carry which mask — has not been enumerated.
 - `inputactionmapcommon.xml` binds several QA signals — `create_issue`, `scry_openclose`,
   `debugmenu`, `active_camerafree`, `active_cameraghost`, `cheatpause_toggle`, `debug_logstats` —
   whose names do not appear in the retail PC binary, suggesting the handlers were stripped while the

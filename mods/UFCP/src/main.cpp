@@ -30,6 +30,7 @@ void ApplyExitTeardownFix();
 void InstallFovHook();
 void __cdecl OnFovChanged(const FCSE_SettingValue* value, void* userdata);
 void __cdecl OnAffinityChanged(const FCSE_SettingValue* value, void* userdata);
+void __cdecl OnDeveloperConsoleChanged(const FCSE_SettingValue* value, void* userdata);
 
 namespace {
     // Index order is the file format: these labels are what FCSE writes into bin\fcse.ini and reads
@@ -64,11 +65,13 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // options are in the state the player chose by the time this returns, and again on every
     // in-game change. There is no separate startup pass.
     //
-    // The FOV default is the game's own 75 and the affinity default is every processor, so a fresh
-    // install of UFCP applies its fixes and changes nothing else.
+    // The FOV default is the game's own 75, the affinity default is every processor, and the
+    // console is left as it shipped, so a fresh install of UFCP applies its fixes and changes
+    // nothing else.
     static const FCSE_Setting settings[] = {
         {"Field of view", FCSE_SLIDER(75), &OnFovChanged, nullptr, nullptr, 0, 65, 120},
         {"Processor affinity", FCSE_CHOICE(0), &OnAffinityChanged, nullptr, kAffinityModes, 4},
+        {"Developer console", FCSE_CHECKBOX(false), &OnDeveloperConsoleChanged, nullptr},
     };
     api->RegisterSettings("UFCP", settings, sizeof(settings) / sizeof(settings[0]));
 

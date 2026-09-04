@@ -26,13 +26,14 @@ content is unreachable in every copy of the game.
 ## Options
 
 Preferences, where the right answer depends on the player or their hardware. One row each in the Mod
-Configuration Menu, saved under `[UFCP]` in `bin\fcse.ini`. **Both default to leaving the game
+Configuration Menu, saved under `[UFCP]` in `bin\fcse.ini`. **Every one defaults to leaving the game
 exactly as it shipped**, so installing UFCP applies its fixes and changes nothing else.
 
 | Option | Range | Default |
 |---|---|---|
 | Field of view | 65–120 degrees | **75** — the game's own value, at which the feature disables itself entirely |
 | Processor affinity | All cores · Physical cores only · 4 cores · 1 core | **All cores** |
+| Developer console | On · Off | **Off** — the console stays as it shipped |
 
 **Field of view** substitutes the argument to `CCameraComponent`'s `fFOV` property setter. That
 property is set when a camera entity is created, so a change reaches the world on the next load
@@ -46,6 +47,16 @@ anything it was tested on (the reported symptom is NPCs visibly bouncing), and g
 machine makes that rarer at the cost of performance. *Physical cores only* drops SMT siblings; *4
 cores* and *1 core* count in physical cores where the topology can be read. It is the one feature
 here that needs no engine knowledge at all, so it works on any build.
+
+**Developer console** lifts the `ConsoleDeveloperOnly` filter from Far Cry 2's own console, which
+opens on `~` whether UFCP is installed or not. About 57 commands — `load_level`, `set_health`,
+`teleport_to_current_objective`, `aidebugtool`, `console_dump_elements` and the rest — are hidden
+from the `?` listing and from command lookup alike, so typing one answers "Unknown command"; with
+this on they are listed and they run. Only the developer test is lifted: the context mask that keeps
+multiplayer-only and editor-only commands out of a single-player console still applies. Note that
+none of this is needed to *script* the game — a `#` prefix already runs arbitrary Lua past every
+filter — so this is about making the built-in commands reachable by name. See
+[the developer console](../../docs/docs/engine-internals/developer-console.md).
 
 ## Jackal tapes
 
@@ -174,10 +185,14 @@ Everything below needs a real install:
 - **Savegame launch** *(run, works)*: `FCSE.exe -load <name>.sav` boots straight into that save.
 - **Exit crash** *(run, works)*: quitting through Exit Game ends with `RunGame returned true` and no
   `CRASH:` line — verified both from the menu and after a `-load` launch.
-- `bin\fcse.ini` gains a `[UFCP]` group with `Field of view = 75` and
-  `Processor affinity = All cores`.
+- `bin\fcse.ini` gains a `[UFCP]` group with `Field of view = 75`,
+  `Processor affinity = All cores` and `Developer console = false`.
 - Moving the FOV slider logs the new value; setting it back to 75 logs that the game's own value is
   no longer being overridden.
+- Toggling Developer console logs `developer console: on` or `off`; a build where a gate could not
+  be found says so instead of failing quietly.
 - **In-game, none of which has been run yet**: tapes in the southern map advance instead of
   repeating; the predecessor-mission envelope appears in the central town; Options → Game offers
-  Machete Type with three entries; a changed FOV takes effect after a load.
+  Machete Type with three entries; a changed FOV takes effect after a load; with Developer console
+  on, `~` then `?` lists `load_level` and friends, and `console_dump_elements` writes
+  `ConsoleElementsDump.txt`.
