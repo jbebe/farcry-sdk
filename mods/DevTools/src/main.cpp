@@ -7,7 +7,13 @@
 // One fix per file in src/fixes/, applied unconditionally, and one option per file in src/options/,
 // each a settings row FCSE persists in bin\fcse.ini. Adding either: write the file, then declare
 // and wire it below.
+//
+// src/engine/ and src/commands/ are neither: they are what the rest of this plugin calls to reach
+// the running game, with no setting of their own and no row in the menu.
 #include "fcse_api.h"
+
+#include "engine/console.h"
+#include "engine/game_thread.h"
 
 // -load <save>.sav crashes to desktop instead of launching into the save.
 void ApplyLoadSavegameFix();
@@ -30,6 +36,12 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // FCSE_Load runs before any Dunia.dll engine code, so the fix is in place before the game that
     // would read it starts.
     ApplyLoadSavegameFix();
+
+    // The console has no thread to run on without the frame hook, so it is not installed alone.
+    // Both are independent of the Developer console option below.
+    if (DevTools::GameThread::Install()) {
+        DevTools::Console::Install();
+    }
 
     // The callback fires from inside RegisterSettings carrying whatever fcse.ini holds, so the
     // console is in the state it was left in by the time this returns, and again on every in-game

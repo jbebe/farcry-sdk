@@ -33,6 +33,9 @@ endif()
 
 add_library(DevTools SHARED
   "src/main.cpp"
+  "src/commands/catalog.cpp"
+  "src/engine/console.cpp"
+  "src/engine/game_thread.cpp"
   "src/fixes/load_savegame.cpp"
   "src/options/developer_console.cpp"
 )

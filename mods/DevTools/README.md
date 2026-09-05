@@ -32,6 +32,30 @@ none of this is needed to *script* the game — a `#` prefix already runs arbitr
 filter — so this is about making the built-in commands reachable by name. See
 [the developer console](../../docs/docs/engine-internals/developer-console.md).
 
+## Command API
+
+Far Cry 2's console, callable from code. `src/engine/console.h` runs a line exactly as typing it
+would — `#` Lua escape included — and raises the developer flag for the duration, so a
+developer-only command runs whether or not the option above is on. `src/engine/game_thread.h` is
+the frame the work runs on: a line posted from anywhere is copied and executed at the end of the
+next one, on the thread the engine updates from.
+
+`src/commands/catalog.h` is the same thing as data. 277 commands, each with a category, what kind of
+argument it takes and what to call it, so whatever drives them enumerates the table instead of
+hard-coding names. 89 are described by hand, down to the values a cheat or a draw method accepts;
+the other 188 are Far Cry 2's own config settings, listed straight out of
+`ConsoleElementsDump.txt` and uniform enough to need nothing said about them.
+
+Only commands that still do something are in it. The engine registers 416 names, and a good number
+reach a handler that reads its arguments and returns, or set a value nothing looks at —
+`load_level`, `aidebugtool`, `runtests`, `SetMaxFrameRate` and the whole `set_weather` family among
+them. Which ones, and how each verdict was reached, is in
+[the developer console](../../docs/docs/engine-internals/developer-console.md).
+
+**Nothing here is a setting.** No row in the Mod Configuration Menu, no key in `bin\fcse.ini`, and
+nothing calls into the catalog yet: this is the half that has to exist before an on-screen overlay
+can be written against it.
+
 ## Savegame launch
 
 `-load` opens the save and parses it correctly, then dies in what it does next: a validation pass
@@ -110,3 +134,17 @@ Everything below needs a real install:
   be found says so instead of failing quietly.
 - **In-game, not yet run against this plugin**: with Developer console on, `~` then `?` lists
   `load_level` and friends, and `console_dump_elements` writes `ConsoleElementsDump.txt`.
+- **Command API** *(not yet run in game)*: `bin\fcse.log` shows `game thread: hooked the frame
+  update at 0x…` and `console: command API ready`. With nothing calling the catalog yet, exercising
+  it takes a temporary job posted from `FCSE_Load`, with `Developer console = false`:
+
+  ```cpp
+  DevTools::GameThread::Post([] {
+      DevTools::Console::Print("DevTools: command API online");
+      DevTools::Console::Execute("console_dump_elements");
+  });
+  ```
+
+  The printed line proves the queue drained on the game thread, and a rewritten
+  `ConsoleElementsDump.txt` proves the string, the call and the developer flag the API raises for
+  itself, since that command is one of the gated ones.

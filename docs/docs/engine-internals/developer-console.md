@@ -166,31 +166,39 @@ Highlights not obvious from the disassembly:
   `cheat_UnlimitedAmmo`, `cheat_UnlimitedReliability`, `cheat_AllWeaponsUnlock`,
   `cheat_add_playerweapon`, `Cheat_AddDiamonds`, `cheat_set_pillar`. See
   [cheats](../modding/guide/cheats.md) for the launch-flag form of the same switches.
-- **Time of day and weather are direct commands** — `env_Hour`, `env_Minutes`, `env_Seconds`,
-  `env_TimeScale`, `env_StormHour`, `env_WindDir`, `env_WindForce`, plus `set_weather`,
-  `set_weatherHour`, `set_weatherTimeScale`, `set_stormFactor`, `set_windDir`, `set_windForce`. No
-  Lua needed.
+- **Time of day and wind are direct commands** — `env_Hour`, `env_Minutes`, `env_Seconds`,
+  `env_TimeScale`, `env_StormHour`, `env_WindDir`, `env_WindForce`, `env_DelayShadowMovement`. No
+  Lua needed. The similar-looking `set_weather*` family is listed too, and is dead — see
+  [which commands still have something behind them](#which-commands-still-have-something-behind-them).
 - **Input preferences** the options screen never exposes: `look_Sensitivity`, `look_Sensitivity_x`,
   `look_Sensitivity_y`, `look_Invert_x`, `look_Invert_y`, `look_HelpCrosshair`,
   `mouse_Smoothness`, `mouse_Smoothness_Ironsight`.
-- `Magma_ToggleHUD`, `ai_IgnorePlayer`, `ai_DisplayAILimitInfo`, `rt_lod_freeze`,
-  `hack_draw_counters`, `scriptcallbacks`, `SetSetting`, `net_log_enable`/`disable`,
-  `snd_oppeak`/`snd_opstat`.
+- `Magma_ToggleHUD`, `ai_IgnorePlayer`, `ai_DisplayAILimitInfo`, `rt_lod_freeze`, `scriptcallbacks`,
+  `SetSetting`, `net_log_enable`/`disable`, `snd_oppeak`/`snd_opstat`.
 :::
 
 Commands arrive from four independent sources.
 
-**1. Engine commands**, registered in `CCryEngine::Initialize`: `screenshot`, `snapshot`,
-`snapshot_viewport`, `render_menu_only`, `console_dump_elements`, `clear`, `evict_resources`,
-`showFps`, `help`. Elsewhere: `quit`, `quitToMainMenu`, `slowframe`.
+**1. Engine commands**, registered in `CCryEngine::Initialize` through
+`CXConsole::AddCommand(name, functor, fn, …, help, mask, developerOnly)` (`0x10297040`):
+`screenshot`, `snapshot`, `snapshot_viewport`, `render_menu_only`, `console_dump_elements`,
+`clear`, `evict_resources`, `showFps`, `help`, `quit`. `CXGame`'s constructor adds
+`quitToMainMenu`, and engine services add `cheat_add_playerweapon`, `cheat_set_pillar`,
+`SetSetting`, `scriptcallbacks`, `get_ubiaccount_status` and the clan-tag pair. `slowframe` appears
+only in `CXGame`'s **destructor**, which unregisters it — nothing registers it, so it is not in the
+dump and cannot be typed.
 
-**2. Function-registry commands** — 57 in total, each registered with a `Namespace:Function(%%)`
-dispatch template, recoverable by sweeping the binary for that pattern. They are dispatched through
-the [named function-callback registry](./function-registry.md). Grouped by area:
+**2. Lua-template commands** — 61 in total (58 single-player plus three multiplayer chat commands),
+each registered with a `Namespace:Function(%%)` dispatch template, recoverable by sweeping the
+binary for that pattern. `ExecuteCommand` substitutes the arguments and runs the result as Lua, so
+what actually answers is a `CScriptObjectGame` method, registered by name in
+`CScriptObjectGame::InitializeTemplate` (`0x1070fdf0`) and `RegisterDebugCommands` (`0x1070f5e0`).
+That is the layer to check before trusting one of these: several of the names below are registered
+as commands but have no method behind them at all. Grouped by area:
 
 | Area | Commands |
 |---|---|
-| Level / flow | `load_level` (alias `map`), `EndOfGame`, `InGameCredits`, `PopUpObjective`, `runtests` |
+| Level / flow | `load_level`, `EndOfGame`, `InGameCredits`, `PopUpObjective`, `runtests` |
 | Player state | `set_health`, `hit_me`, `set_weapon_reliability`, `set_no_weapon_mode`, `debug_set_player_sickness`, `dbg_start_malaria`, `dbg_force_malaria` |
 | Cheats | `Cheat_AddDiamonds`, `SetWeaponDifficultyLevel` |
 | Movement | `teleport_to_current_objective` |
@@ -203,11 +211,24 @@ the [named function-callback registry](./function-registry.md). Grouped by area:
 | Chat (MP) | `say`, `say_team`, `tell` |
 | Misc | `debug_phonecall`, `debug_machetetest`, `anim_start_recording`, `get_local_player_id`, `get_mission_manager_status`, `get_buddies_manager_status` |
 
-**3. Config-derived settings.** `CConfig::LoadConfig` registers any config setting carrying a
-`console="…"` attribute as a command named `<Group>_<setting>`, built with `sprintf("%s_%s", …)`.
-This is why names such as `gfx_ShowFPS` and `Stats_Trace` appear in the game but exist nowhere in
-the binary as string literals. In retail, `config\defaultengineconfig.xml` exposes six settings this
-way, all in the `Stats` group.
+**3. Config-derived settings**, 207 of them, and the largest group by far. A setting is named
+`<prefix>_<member>` and is not a command in its own right: running it prints the member's value, and
+running it with an argument sets it. Neither spelling exists in the binary as a string literal,
+which is why `gfx_ShowFPS` and `cheat_GodMode` cannot be found by searching for them. Two mechanisms
+produce them:
+
+- `CNomadConfigObject::RegisterConsoleMembers` (`0x1029a710`) walks a config object's reflected
+  members and registers every one carrying `UseInConsole`, under the class's `ConsolePrefix` and
+  with `ConsoleDeveloperOnly` deciding the gate. `CRenderConfig` contributes the 178 `gfx_*`;
+  `CGameConfig` contributes `cheat_*` (4), `ai_*` (3), `env_*` (8), `look_*` (6) and `mouse_*` (2).
+- `CConfig::LoadConfig` (`0x102ad230`) registers any XML setting carrying a `console="…"` attribute,
+  building the name with `sprintf("%s_%s", …)`. In retail, `config\defaultengineconfig.xml` uses
+  this for six settings, all in the `Stats` group.
+
+`cheat_*` and `ai_IgnorePlayer` are the same members the `-GameProfile_*` launch flags set, so the
+console reaches at runtime what [cheats](../modding/guide/cheats.md) describes setting at launch.
+`env_*` are the live time-of-day and wind values: `CDynamicEnvironmentManager` copies them out of
+`CGameConfig` whenever they are marked dirty, at the top of its own update.
 
 **4. Domino-registered commands.** Shipped mission graphs register their own commands at runtime via
 `CDominoConsoleCommandManager::RegisterConsoleCommand` — see [Domino scripts](./domino-scripts.md).
@@ -231,6 +252,69 @@ separate change from lifting the developer flag.
 A third, milder case: some `gfx_*` settings are read at startup or level load, so setting one takes
 effect on the next load rather than immediately.
 :::
+
+## Which commands still have something behind them
+
+:::info[Verified via reverse engineering]
+Traced in the Steam `Dunia.dll` and cross-checked against the symbol-bearing Linux
+`FarCry2_server`, which names the classes the PC build only numbers. Registration alone proves
+nothing: the list below is what each name reaches once followed to a handler.
+:::
+
+Being registered and being implemented are different things, and the dump cannot tell them apart.
+These are the names that reach nothing:
+
+| Command | What it reaches |
+|---|---|
+| `load_level` | `Game:LoadLevel` is registered by neither build and defined in no shipped script — the call finds nil. `GameChangeWorldDefaultSpawnPoint(world)` is the live Lua equivalent. |
+| `RTSetDeltaTime` | `Game:RTSetDeltaTime` is registered nowhere, same as above. |
+| `runtests` | `System:RunTests` is bound in neither build. |
+| `SetMaxFrameRate` | The handler reads its two arguments and returns, in both builds. `gfx_MaxFps` is the live setting. |
+| `activate_log`, `deactivate_log` | Stubs; the logging facility they drove is gone, as [command-line args](./command-line-args.md) found separately. |
+| `aidebugtool` | Sets `CAIDebugTool`'s visibility flags, but nothing outside the AI engine's own constructor and destructor ever reads that singleton in either build — there is no view left to draw. |
+| `hack_draw_counters` | Registered as a variable with no reader anywhere in either build. |
+| `set_weather`, `set_windForce`, `set_windDir`, `set_stormFactor`, `set_weatherHour`, `set_weatherTimeScale`, `debug_showWeatherInfo`, `debug_envNetwork`, `gfx_EnableManualWeatherDemo` | Static `CVarCommand` objects belonging to the environment manager. Their values are written once by the static initialiser and read by nothing, in both builds. The live routes are the `env_*` settings and `CDynamicEnvironmentManager`'s own Lua methods. |
+
+`set_health` is a subtler case: the handler runs, but it passes the value to the health component's
+vtable slot `+0x10` with two `0xffffffff` sentinels and a constant hash, which is a stim rather than
+an assignment — matching the live result that every value tested kills.
+
+Most of the rest do work. The cheats, the `env_*` time and wind values, the buddy and mission
+setters, the camera nudges, the RealTree effects, `teleport_to_current_objective`, `hit_me`,
+`draw_method`, `Stats`, `Magma_ToggleHUD` and the capture commands all reach real code. Multiplayer
+and online commands (`SetSetting`, `cheat_set_pillar`, the clan-tag pair, `net_log_*`, the chat
+commands) are real too, but the context mask keeps them out of a single-player session.
+
+## Driving the console from code
+
+Everything above is reachable from a plugin without going near the input system, because
+`ExecuteString` has a narrow overload that takes a plain `std::string`:
+
+| Symbol | Steam address | Shape |
+|---|---|---|
+| `CXConsole` singleton | `0x11606280` | the pointer; null until `InitializeEngineServices` |
+| `CXConsole::ExecuteString(const std::string&)` | `0x10297d10` | `__thiscall`, `ret 4`; widens its argument and calls the wide overload |
+| `CXConsole::PrintLine` | `0x102956f0` | `__cdecl(console, char developerOnly, const char* format, …)`; prints when the second argument is 0, or when the developer flag is set |
+| `GetScriptSystem` | `0x102a9760` | `__cdecl`, a one-instruction read of the global at `0x11606728` |
+| `CScriptSystem::ExecuteBuffer` | `0x102a9ff0` | `__thiscall(this, code, length, chunkName)`, `ret 0xc`; 1 on success, and `chunkName` may be null |
+| `CCryEngine::Update` | `0x104cfc90` | `__thiscall(this, flags)`, `ret 4`; one frame |
+
+The string is MSVC's own layout — an allocator proxy, a 16-byte inline buffer that becomes a heap
+pointer once the text outgrows it, then size and capacity, 28 bytes in all. The proxy value is the
+same `0x10fd42d1` the engine writes into every empty narrow string. The callee takes a const
+reference, so a caller's buffer is only read, never freed.
+
+`CXConsole::RunBatch` takes exactly this route, one line at a time, which is what makes it the
+route to copy: a batch file and a plugin reach the console identically. Two things follow from that.
+The `#` escape works, because the wide overload handles it before any lookup. And a developer-only
+command needs the flag at `console+0x68` raised for the call — not because it would otherwise be
+refused, but because the same predicate gates the lookup, so the name comes back unknown. Raising
+it around the call and putting it back is what the engine itself does at `0x10298ac0`.
+
+`CCryEngine::Update` is the frame. Its only caller is `CXGame::Update`, and it dereferences the
+console singleton without a null check, so anything running from it is on the game thread with the
+engine already up — there is no earlier frame to defend against. DevTools uses it as the point at
+which queued work runs; see `mods/DevTools/src/engine/`.
 
 ## Batch files and startup hooks
 
