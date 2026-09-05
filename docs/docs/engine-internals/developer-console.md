@@ -152,7 +152,12 @@ follow the `<ClassName>_GetInstance()` idiom used throughout the shipped Domino 
 `Developer console` option is one way. It writes `ConsoleElementsDump.txt` to the save folder
 (`Documents\My Games\Far Cry 2\`), one command name per line. On retail v1.03 it lists **416
 commands** — the engine's own account of its console, and the authority for this section, so
-regenerate it rather than trusting the summary below if the two ever disagree:
+regenerate it rather than trusting the summary below if the two ever disagree.
+
+**When you run it changes what you get.** Run at the main menu it lists 292, with a single bare
+`domino_` and none of the 117 mission-graph entry points; run with a world loaded it lists all 416.
+That is the clearest demonstration of what source 4 below means — those commands exist only while
+the graph that registers them is loaded.
 
 | Group | Count | What it is |
 |---|---|---|

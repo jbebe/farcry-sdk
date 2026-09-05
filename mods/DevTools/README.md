@@ -134,9 +134,11 @@ Everything below needs a real install:
   be found says so instead of failing quietly.
 - **In-game, not yet run against this plugin**: with Developer console on, `~` then `?` lists
   `load_level` and friends, and `console_dump_elements` writes `ConsoleElementsDump.txt`.
-- **Command API** *(not yet run in game)*: `bin\fcse.log` shows `game thread: hooked the frame
-  update at 0x…` and `console: command API ready`. With nothing calling the catalog yet, exercising
-  it takes a temporary job posted from `FCSE_Load`, with `Developer console = false`:
+- **Command API** *(run, works — GOG v1.03, 2026-09-05)*: `bin\fcse.log` shows `game thread: hooked
+  the frame update at 0x104C2510` and `console: command API ready`. That address is the GOG one,
+  translated by the address library from the Steam address the source names, so this is also the
+  build-agnostic path confirmed on a build nobody opened. With nothing calling the catalog yet,
+  exercising it takes a temporary job posted from `FCSE_Load`, with `Developer console = false`:
 
   ```cpp
   DevTools::GameThread::Post([] {
@@ -145,6 +147,8 @@ Everything below needs a real install:
   });
   ```
 
-  The printed line proves the queue drained on the game thread, and a rewritten
-  `ConsoleElementsDump.txt` proves the string, the call and the developer flag the API raises for
-  itself, since that command is one of the gated ones.
+  `ConsoleElementsDump.txt` was rewritten with the option **off**, at a timestamp matching the
+  `console: > console_dump_elements` log line to the second. That command is developer-gated, so
+  that one file proves the whole path: the string laid out as the engine's own, the call into
+  `CXConsole::ExecuteString`, the queue draining on the game thread, and the developer flag the API
+  raises for itself rather than relying on the option.
