@@ -1,4 +1,4 @@
-"""Check every FCSE::Pattern in UFCP's sources against the shipped Dunia.dll builds.
+"""Check every FCSE::Pattern in an FCSE plugin's sources against the shipped Dunia.dll builds.
 
 A pattern is the only thing standing between a feature and the wrong bytes, and both ways it can be
 wrong are silent. Matching in two places resolves to nothing at runtime, because FCSE reports
@@ -7,15 +7,17 @@ was mistyped or the code moved, and again nothing happens and nothing is obvious
 shows up in a build, and in a game both look exactly like "that fix does not work on my machine".
 
 So the rule enforced here is: at least one build must match exactly once, and no build may match
-more than once. A pattern deliberately present in only one build - the predecessor-tapes gate is a
-privileges call on Steam and a registry read on GOG - passes on one and scores zero on the other,
+more than once. A pattern deliberately present in only one build - UFCP's predecessor-tapes gate is
+a privileges call on Steam and a registry read on GOG - passes on one and scores zero on the other,
 which is correct rather than a failure.
 
 Patterns are parsed out of the .cpp files rather than listed here, so this checks what is actually
-compiled into UFCP.dll and cannot drift away from it.
+compiled into the DLL and cannot drift away from it. Every plugin's patterns are checked the same
+way against the same two builds, which is why this lives in scripts/ rather than in either plugin.
 
-    python verify_patterns.py
-    python verify_patterns.py --uplay <path to Dunia.dll> --retail <path to Dunia.dll>
+    python ..\\..\\scripts\\verify_patterns.py                   # from mods/UFCP or mods/DevTools
+    python scripts\\verify_patterns.py mods\\UFCP\\src
+    python scripts\\verify_patterns.py --uplay <Dunia.dll> --retail <Dunia.dll>
 
 Needs pefile. Run it after adding or editing a pattern, and after any game update.
 """
@@ -29,7 +31,7 @@ import pefile
 
 DEFAULT_UPLAY = r"C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2\bin\Dunia.dll"
 DEFAULT_RETAIL = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                              "..", "..", "tmp", "compare-dlls", "dlls", "1.03.gog.Dunia.dll")
+                              "..", "tmp", "compare-dlls", "dlls", "1.03.gog.Dunia.dll")
 
 # FCSE::Pattern("aa bb" "cc dd") - adjacent string literals are concatenated by the compiler, and a
 # long pattern is usually wrapped across two of them, so every quoted chunk in the call is joined.
@@ -51,6 +53,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--uplay", default=DEFAULT_UPLAY, help="Steam/Ubisoft Connect Dunia.dll")
     parser.add_argument("--retail", default=DEFAULT_RETAIL, help="GOG/retail Dunia.dll")
+    parser.add_argument("source", nargs="?", default="src",
+                        help="plugin source tree to scan, defaulting to src\\ in the current "
+                             "directory - so a plugin runs this from its own folder")
     args = parser.parse_args()
 
     builds = {}
@@ -60,11 +65,14 @@ def main():
             return 2
         builds[name] = code_section(path)
 
-    source_root = os.path.join(os.path.dirname(os.path.abspath(__file__)), "src")
+    if not os.path.isdir(args.source):
+        print(f"error: no source tree at {os.path.abspath(args.source)}")
+        return 2
+
     failures = 0
     checked = 0
 
-    for path in sorted(glob.glob(os.path.join(source_root, "**", "*.cpp"), recursive=True)):
+    for path in sorted(glob.glob(os.path.join(args.source, "**", "*.cpp"), recursive=True)):
         with open(path, encoding="ascii") as handle:
             source = handle.read()
         for call in PATTERN_CALL.finditer(source):

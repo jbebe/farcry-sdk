@@ -5,6 +5,8 @@ overwritten, nothing survives uninstalling it, and it stacks with the data mods 
 
 Requires FCSE (the Far Cry Script Extender), the plugin loader, released from the same place as this
 archive — and Far Cry 2 v1.03, either the Steam/Ubisoft Connect build or the GOG/retail one.
+DevTools, released from the same place, is the separate plugin for working on the game rather than
+playing it: it holds the developer console and booting straight into a save with `-load`.
 
 ## Installing
 
@@ -30,7 +32,7 @@ and registry key they depended on are gone. Nothing anyone can still buy is bypa
 
 ## Options
 
-In the Mod Configuration Menu, on the Options screen. All three leave the game exactly as it shipped
+In the Mod Configuration Menu, on the Options screen. Both leave the game exactly as it shipped
 until you change them, and are saved in `bin\fcse.ini`.
 
 - **Field of view** — 65 to 120 degrees, default 75, which is the game's own value and turns the
@@ -39,8 +41,3 @@ until you change them, and are saved in `bin\fcse.ini`.
   the game to fewer processors is the long-standing workaround for the physics and timing artefacts
   the engine shows on machines far larger than anything it was tested on, such as NPCs visibly
   bouncing. It costs performance, which is why it is off by default.
-- **Developer console** — off by default. Far Cry 2 has its own console on the `~` key, but most of
-  its commands are marked developer-only and answer "Unknown command" even though they are there.
-  Turning this on lists and runs them: loading a level, setting health, teleporting to the current
-  objective, the AI debug view and about fifty more. Commands meant for multiplayer or the editor
-  stay hidden, because that is a separate filter this does not touch.

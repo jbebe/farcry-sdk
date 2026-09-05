@@ -1,0 +1,50 @@
+name: DevTools build
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'mods/DevTools/**'
+      # DevTools' entire dependency on the loader is this one header, and it is the plugin ABI: a
+      # change to FCSE_PluginAPI's layout or to FCSE_API_VERSION breaks every plugin built against
+      # the old one, and DevTools refuses to load rather than reading fields at the wrong offsets.
+      # That refusal is correct but silent from the loader's side, so the build that would have
+      # caught it runs here.
+      - 'tools/FCSE/include/fcse_api.h'
+      - '.github/workflows/devtools-ci.yml'
+  pull_request:
+    paths:
+      - 'mods/DevTools/**'
+      - 'tools/FCSE/include/fcse_api.h'
+      - '.github/workflows/devtools-ci.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    # A 32-bit MSVC/CMake build (Far Cry 2 is a 32-bit process) - see mods/DevTools/build.ps1, which
+    # this reuses as-is rather than re-deriving the vcvarsall dance. No .NET SDK step, unlike
+    # fcse-ci.yml: DevTools embeds no .mgb layouts, so JackAll is not in its build.
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: mods/DevTools
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build
+        shell: pwsh
+        run: .\build.ps1 -Config release
+
+      # There is no test step, deliberately - see mods/DevTools/README.md for why. The one thing
+      # this workflow genuinely cannot verify is the byte patterns: whether each one still matches
+      # exactly once on at least one shipped build and never twice on either. That needs a copy of
+      # the game, which does not belong in a repository, so scripts/verify_patterns.py is run
+      # locally instead. It is the check to re-run after touching a pattern.
+      - name: Verify the build
+        shell: pwsh
+        # Architecture, static CRT, and the FCSE_Load export - the three properties of this build
+        # that break silently, on a player's machine rather than here. See verify_build.ps1 for what
+        # each check reads and why. The release workflow runs the same script before packaging.
+        run: .\verify_build.ps1 -Config release

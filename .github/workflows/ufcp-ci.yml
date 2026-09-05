@@ -43,9 +43,10 @@ jobs:
       # checked below.
       #
       # The one thing this workflow genuinely cannot verify is the byte patterns - whether each one
-      # still matches exactly once in each shipped build. That needs a copy of the game, which does
-      # not belong in a repository, so mods/UFCP/verify_patterns.py is run locally instead. It is
-      # the check to re-run after touching a pattern.
+      # still matches exactly once on at least one shipped build and never twice on either. That
+      # needs a copy of the game, which does not belong in a repository, so
+      # scripts/verify_patterns.py is run locally instead. It is the check to re-run after touching
+      # a pattern.
       - name: Verify the build
         shell: pwsh
         # Architecture, static CRT, and the FCSE_Load export - the three properties of this build

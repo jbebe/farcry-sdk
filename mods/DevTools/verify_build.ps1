@@ -1,17 +1,17 @@
 <#
 .SYNOPSIS
-    Checks the properties of a built UFCP.dll that fail *silently* - the DLL still builds, still
+    Checks the properties of a built DevTools.dll that fail *silently* - the DLL still builds, still
     loads on a dev machine, and only breaks on a player's install.
 
 .DESCRIPTION
     Three things about this build can go wrong without producing a warning, let alone an error:
 
-      - Architecture. A 64-bit UFCP.dll builds perfectly well and can never load into Far Cry 2,
+      - Architecture. A 64-bit DevTools.dll builds perfectly well and can never load into Far Cry 2,
         which is a 32-bit process. FCSE reports it as a plugin that failed to load, with nothing to
         say why beyond the OS error.
 
-      - Static CRT (/MT). If the CMP0091 setting in CMakeLists.txt stops applying, UFCP.dll imports
-        MSVCP140/VCRUNTIME140/the UCRT apisets, and a player without the VS 2015-2022 x86
+      - Static CRT (/MT). If the CMP0091 setting in CMakeLists.txt stops applying, DevTools.dll
+        imports MSVCP140/VCRUNTIME140/the UCRT apisets, and a machine without the VS 2015-2022 x86
         redistributable has a plugin that silently never loads - while FCSE itself, which is /MT,
         starts fine and gives no hint that the missing runtime is the reason.
 
@@ -23,7 +23,7 @@
     PATH for a caller that has not been through vcvarsall (build.ps1 sets up the developer
     environment inside its own `cmd /c` and nothing inherits it).
 
-    Run by both UFCP workflows in .github/workflows - on every push and pull request, and again
+    Run by both DevTools workflows in .github/workflows - on every push and pull request, and again
     before a release is packaged - which is the reason it is a script here and not a step in either.
     See README.md's "Verification" section for the checks that still need a real install, and
     scripts/verify_patterns.py for the byte patterns, which need a copy of the game and therefore
@@ -44,7 +44,7 @@ param(
 $ErrorActionPreference = "Stop"
 
 $ProjectRoot = $PSScriptRoot
-$DllPath = Join-Path $ProjectRoot "out\build\x86-$Config\UFCP.dll"
+$DllPath = Join-Path $ProjectRoot "out\build\x86-$Config\DevTools.dll"
 
 if (-not (Test-Path $DllPath)) {
     throw "$DllPath does not exist - build it first with .\build.ps1 -Config $Config."
@@ -78,4 +78,4 @@ if (-not $image.Contains("FCSE_Load")) {
     throw "$DllPath does not export FCSE_Load - FCSE loads a plugin by that one name and skips any DLL without it. Check the extern `"C`" __declspec(dllexport) on it in src\main.cpp."
 }
 
-Write-Host "UFCP.dll ($Config): x86, static CRT, exports FCSE_Load." -ForegroundColor Green
+Write-Host "DevTools.dll ($Config): x86, static CRT, exports FCSE_Load." -ForegroundColor Green

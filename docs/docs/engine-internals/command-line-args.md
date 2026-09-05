@@ -156,7 +156,7 @@ is a usable world altitude, just not a safe one at the shipped values.
 
 | Flag | Effect |
 |---|---|
-| `-load <savename>.sav` | Loads a save directly, skipping the menus. **Crashes as shipped**, for the reason below; UFCP (`mods/UFCP`) fixes it, after which this is the one working way to boot straight into playable gameplay |
+| `-load <savename>.sav` | Loads a save directly, skipping the menus. **Crashes as shipped**, for the reason below; DevTools (`mods/DevTools`) fixes it, after which this is the one working way to boot straight into playable gameplay |
 
 :::note[Corrects an earlier claim on this page]
 This page previously said `-load` "kills the game instantly, for every value", that the value was
@@ -201,13 +201,13 @@ Inside `InitDuniaEngine` the call order is:
 So the save is read correctly and then bound against an engine that has not been constructed.
 `RunGame` turns the resulting fault into `return false`, which is the clean exit-code-0 observed.
 
-UFCP skips that pass while the engine is absent, returning the pass's own "resolved cleanly" result
+DevTools skips that pass while the engine is absent, returning the pass's own "resolved cleanly" result
 (`1`; `5` is its failure code). Live-confirmed: with the fix, `-load <name>.sav` boots directly into
 the save, playable, at ~840 MB working set.
 
 A name that matches **no** file still faults, at `0x106621B8`, and the fix above does not change
 that: on a failed load the thread returns its error code `10` and `FUN_10661f50` reads the resulting
-document pointer without checking it. That path is a separate bug from the one UFCP patches, and it
+document pointer without checking it. That path is a separate bug from the one DevTools patches, and it
 is only reachable by naming a save that is not there.
 
 ## Benchmark harness (`CreateBenchmarkNode`, entered whenever `-benchmark` is present)
@@ -340,7 +340,7 @@ usage errors surface as a real window titled `Error`; `-borderless` shows up as 
 | `-3dplatform d3d10` | Boots normally; which backend actually loaded was **not** confirmed |
 | `-world world1` *(alone)* | **Ignored.** Normal main menu, 246 MB |
 | `-ubidays` | **No visible effect** |
-| `-load <name>.sav` | **Works with UFCP.** Boots into the save at ~840 MB. Unpatched it faults at `0x104DBB80` |
+| `-load <name>.sav` | **Works with DevTools.** Boots into the save at ~840 MB. Unpatched it faults at `0x104DBB80` |
 | `-load <name>` *(no extension)* | File not found — faults at `0x106621B8` |
 | `-cmdfile <file>` | **Broken.** File contents never applied |
 | `-zzznotaflag` | Unknown flags are harmless — boots normally |

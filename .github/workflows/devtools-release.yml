@@ -1,0 +1,83 @@
+name: DevTools release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # Nexus Mods identifiers for the DevTools mod page. NEXUS_MOD_ID is the internal ID that
+  # v3/games/farcry2/mods/{id in the page URL} answers with, not the ID in the URL; the file ID is
+  # on the mod's Files tab under "API Info". An empty file ID skips the upload.
+  NEXUS_MOD_ID: ''
+  NEXUS_FILE_DEVTOOLS: ''
+
+jobs:
+  release:
+    # A 32-bit MSVC/CMake build (Far Cry 2 is a 32-bit process) - see mods/DevTools/build.ps1, which
+    # this reuses as-is rather than re-deriving the vcvarsall dance.
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: mods/DevTools
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare the release
+        id: release
+        uses: ./.github/actions/prepare-release
+        with:
+          directory: mods/DevTools
+          tag_prefix: devtools
+
+      - name: Build DevTools.dll
+        shell: pwsh
+        run: .\build.ps1 -Config release
+
+      - name: Verify the release build
+        shell: pwsh
+        # Architecture, static CRT and the FCSE_Load export: the three properties of this build that
+        # fail *silently* - the DLL still builds, still loads on a dev machine, and only breaks on
+        # an install, where the symptom is a plugin that is simply never there. See
+        # verify_build.ps1 for what each check reads. The same script runs on every push and pull
+        # request from devtools-ci.yml, so a release is not the first place a failure would be
+        # noticed.
+        run: .\verify_build.ps1 -Config release
+
+      - name: Stage release contents
+        shell: pwsh
+        # Laid out so the archive extracts straight into the game's bin\ folder with no rearranging:
+        #
+        #   plugins\DevTools.dll   "plugins", not "plugin" - FCSE scans bin\plugins\ by name
+        #   README.md              alongside it, as FCSE's own release zip does
+        #
+        # README-release.md rather than the repository's README.md: that one is written for someone
+        # working in the tree and links to sibling directories by relative path, every one of which
+        # is a dead link once the file is on its own inside a zip.
+        run: |
+          New-Item -ItemType Directory -Force -Path "stage\plugins" | Out-Null
+          Copy-Item "out\build\x86-release\DevTools.dll" "stage\plugins\DevTools.dll"
+          Copy-Item "README-release.md" "stage\README.md"
+
+      - name: Zip release artifact
+        shell: pwsh
+        run: Compress-Archive -Path "stage\*" -DestinationPath "devtools-${{ steps.release.outputs.version }}.zip"
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.release.outputs.tag }}" "devtools-${{ steps.release.outputs.version }}.zip" --title "DevTools ${{ steps.release.outputs.version }}" --target "${{ github.sha }}" --notes-file "${{ steps.release.outputs.notes_file }}"
+
+      - name: Upload DevTools to Nexus Mods
+        uses: ./.github/actions/nexus-upload
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          mod_id: ${{ env.NEXUS_MOD_ID }}
+          file_id: ${{ env.NEXUS_FILE_DEVTOOLS }}
+          filename: mods/DevTools/devtools-${{ steps.release.outputs.version }}.zip
+          version: ${{ steps.release.outputs.version }}
+          display_name: DevTools
+          changelog: ${{ steps.release.outputs.nexus }}
+          update_mod_version: 'true'

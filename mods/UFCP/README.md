@@ -6,6 +6,10 @@ UFCP is an [FCSE](../../tools/FCSE) plugin: it patches `Dunia.dll` in memory at 
 overwrites nothing, leaves no trace when uninstalled, and stacks with whatever data mods are already
 installed.
 
+This is the plugin a player installs. The things only someone working on the game wants — the
+developer console, booting straight into a save — are a separate plugin, [DevTools](../DevTools),
+so a player is not carrying them and a modder can install either or both.
+
 ## Fixes
 
 Applied unconditionally, with no setting — a fix that needs a switch is a preference in disguise.
@@ -15,7 +19,6 @@ Applied unconditionally, with no setting — a fix that needs a switch is a pref
 | Jackal tapes | The same Jackal tape recording — usually *#09. Stealing Boots* — plays every time in the southern map instead of advancing through the set. |
 | Predecessor tapes | Restores the seven Intel Bonus predecessor missions, which ship in the game files but are held behind an ownership check no longer able to succeed. |
 | Machetes | Restores the Primitive and Homemade machete variants, held behind the same kind of check. Pick one in the game's own Options → Game → Machete Type. |
-| Savegame launch | `-load <name>.sav` quit to desktop in a fraction of a second instead of booting straight into the save. The command line's own way to skip the menus, unusable as shipped. |
 | Exit crash | Quitting through Exit Game faulted instead of closing cleanly — the reason "Far Cry 2 crashes on exit" is folklore, and a guaranteed false positive on top of any real crash you are trying to read. |
 
 The two restorations are not a bypass of anything anyone can still buy. Both were Ubisoft promotions
@@ -33,7 +36,6 @@ exactly as it shipped**, so installing UFCP applies its fixes and changes nothin
 |---|---|---|
 | Field of view | 65–120 degrees | **75** — the game's own value, at which the feature disables itself entirely |
 | Processor affinity | All cores · Physical cores only · 4 cores · 1 core | **All cores** |
-| Developer console | On · Off | **Off** — the console stays as it shipped |
 
 **Field of view** substitutes the argument to `CCameraComponent`'s `fFOV` property setter. That
 property is set when a camera entity is created, so a change reaches the world on the next load
@@ -47,16 +49,6 @@ anything it was tested on (the reported symptom is NPCs visibly bouncing), and g
 machine makes that rarer at the cost of performance. *Physical cores only* drops SMT siblings; *4
 cores* and *1 core* count in physical cores where the topology can be read. It is the one feature
 here that needs no engine knowledge at all, so it works on any build.
-
-**Developer console** lifts the `ConsoleDeveloperOnly` filter from Far Cry 2's own console, which
-opens on `~` whether UFCP is installed or not. About 57 commands — `load_level`, `set_health`,
-`teleport_to_current_objective`, `aidebugtool`, `console_dump_elements` and the rest — are hidden
-from the `?` listing and from command lookup alike, so typing one answers "Unknown command"; with
-this on they are listed and they run. Only the developer test is lifted: the context mask that keeps
-multiplayer-only and editor-only commands out of a single-player console still applies. Note that
-none of this is needed to *script* the game — a `#` prefix already runs arbitrary Lua past every
-filter — so this is about making the built-in commands reachable by name. See
-[the developer console](../../docs/docs/engine-internals/developer-console.md).
 
 ## Jackal tapes
 
@@ -75,23 +67,6 @@ The community investigated this in 2011 and again in 2016 without finding a caus
 [Far Cry 2 Multi Fixer](https://github.com/FoxAhead/Far-Cry-2-Multi-Fixer) shipped the same one-byte
 edit without describing what it does. The annotated disassembly and the derivation are in
 [`src/fixes/jackal_tapes.cpp`](src/fixes/jackal_tapes.cpp).
-
-## Savegame launch
-
-`-load` opens the save and parses it correctly, then dies in what it does next: a validation pass
-that resolves the save's records against engine registries by name. The command line is dispatched
-from `InitDuniaEngine+0x52C` and those registries are not built until `CCryEngine::Initialize` at
-`+0x10CF`, so the pass always runs against an engine that does not exist yet and faults on the first
-registry it reads.
-
-The fix skips the pass while the engine is absent, returning the pass's own "resolved cleanly"
-result; once the engine is up it runs untouched. Skipping is safe rather than merely expedient: the
-pass discards every lookup result, and its only durable effect is a flag on a registry that has not
-been constructed, so before the engine exists there is nothing for it to accomplish.
-
-The save name needs its extension — `-load <name>.sav`, not `-load <name>`. That part is not a bug:
-the parser takes the basename verbatim and appends nothing, so a name without `.sav` genuinely
-matches no file.
 
 ## Exit crash
 
@@ -140,7 +115,7 @@ a registry read on GOG, with no counterpart in the other build at all. That is t
 build, and whichever resolves is the one that is there.
 
 Every pattern is checked against both shipped `Dunia.dll` builds, parsed straight out of these
-sources, by `verify_patterns.py`: exactly one match on at least one build, never two on any.
+sources, by `scripts/verify_patterns.py`: exactly one match on at least one build, never two on any.
 
 ## Building
 
@@ -174,25 +149,20 @@ holds no pure logic worth a suite, and stubbing the engine to manufacture some w
 
 *(automated — CI)* The build and `verify_build.ps1` in both configurations.
 
-*(automated — local, needs the game)* `python verify_patterns.py` re-checks every byte pattern
+*(automated — local, needs the game)* `python ..\..\scripts\verify_patterns.py` re-checks every byte pattern
 against both shipped `Dunia.dll` builds. It cannot run in CI, because that would mean putting a copy
 of the game in the repository. Run it after touching a pattern.
 
 Everything below needs a real install:
 
 - `bin\fcse.log` shows `UFCP loaded`, then `jackal tapes fixed`, `predecessor tapes unlocked`,
-  `machetes unlocked`, both guards installing, the FOV hook's address, and the affinity mask.
-- **Savegame launch** *(run, works)*: `FCSE.exe -load <name>.sav` boots straight into that save.
+  `machetes unlocked`, the exit guard installing, the FOV hook's address, and the affinity mask.
 - **Exit crash** *(run, works)*: quitting through Exit Game ends with `RunGame returned true` and no
-  `CRASH:` line — verified both from the menu and after a `-load` launch.
-- `bin\fcse.ini` gains a `[UFCP]` group with `Field of view = 75`,
-  `Processor affinity = All cores` and `Developer console = false`.
+  `CRASH:` line — verified from the menu.
+- `bin\fcse.ini` gains a `[UFCP]` group with `Field of view = 75` and
+  `Processor affinity = All cores`.
 - Moving the FOV slider logs the new value; setting it back to 75 logs that the game's own value is
   no longer being overridden.
-- Toggling Developer console logs `developer console: on` or `off`; a build where a gate could not
-  be found says so instead of failing quietly.
 - **In-game, none of which has been run yet**: tapes in the southern map advance instead of
   repeating; the predecessor-mission envelope appears in the central town; Options → Game offers
-  Machete Type with three entries; a changed FOV takes effect after a load; with Developer console
-  on, `~` then `?` lists `load_level` and friends, and `console_dump_elements` writes
-  `ConsoleElementsDump.txt`.
+  Machete Type with three entries; a changed FOV takes effect after a load.

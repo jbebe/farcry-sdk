@@ -102,8 +102,8 @@ commands on. Lifting the gate takes a code change.
 What the gate reduces to is a single `jnz` that skips the developer test when the flag is set,
 repeated at three sites: one in `ExecuteCommand` and one in each of the enumerator's two loops.
 Turning each into `jmp` — one byte, `75` → `EB`, leaving the displacement alone — takes the test out
-of the path without touching the flag, and leaves the context mask working. UFCP ships that as an
-opt-in `Developer console` setting; see `mods/UFCP/src/options/developer_console.cpp`.
+of the path without touching the flag, and leaves the context mask working. DevTools ships that as an
+opt-in `Developer console` setting; see `mods/DevTools/src/options/developer_console.cpp`.
 
 :::info[Verified in a running game]
 `?` lists only ungated commands — observed set: `screenshot`, `clear`, `exec`, `showFps` and the
@@ -148,7 +148,7 @@ follow the `<ClassName>_GetInstance()` idiom used throughout the shipped Domino 
 ## Command inventory
 
 :::info[Verified in a running game]
-`console_dump_elements` is itself developer-gated, so it only runs with the gate lifted — UFCP's
+`console_dump_elements` is itself developer-gated, so it only runs with the gate lifted — DevTools'
 `Developer console` option is one way. It writes `ConsoleElementsDump.txt` to the save folder
 (`Documents\My Games\Far Cry 2\`), one command name per line. On retail v1.03 it lists **416
 commands** — the engine's own account of its console, and the authority for this section, so

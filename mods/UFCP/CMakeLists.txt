@@ -35,11 +35,9 @@ add_library(UFCP SHARED
   "src/main.cpp"
   "src/fixes/jackal_tapes.cpp"
   "src/fixes/bonus_content.cpp"
-  "src/fixes/load_savegame.cpp"
   "src/fixes/exit_teardown.cpp"
   "src/options/fov.cpp"
   "src/options/affinity.cpp"
-  "src/options/developer_console.cpp"
 )
 
 # src/ on the path so every #include reads from the root of this tree - "fixes/fixes.h", never

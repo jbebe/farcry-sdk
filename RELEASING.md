@@ -13,6 +13,7 @@ schedule.
 | JackAll | `tools/JackAll` | `jackall-<version>` | |
 | FCSE | `tools/FCSE` | `fcse-<version>` | |
 | UFCP | `mods/UFCP` | `ufcp-<version>` | |
+| DevTools | `mods/DevTools` | `devtools-<version>` | |
 | Vortex extension | `tools/vortex-farcry2` | `vortex-<version>` | `info.json` |
 | Blender add-on | `tools/BlenderFC2` | `blenderfc2-<version>` | `blender_manifest.toml` |
 | VSS Vintorez | `mods/vss-vintorez` | `mod-vss-<version>` | |
