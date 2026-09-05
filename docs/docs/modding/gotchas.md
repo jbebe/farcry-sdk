@@ -30,9 +30,9 @@ the full provenance note.
   and wins regardless — **holds only for entity libraries, not for files.** An override staged at a
   DLC path in `patch.dat` is what the engine loads even though the vanilla file lives in
   `downloadcontent\dlc1\*.dat`: confirmed twice, once with a `.lua` and once with the DLC1 sawed-off's
-  mesh, and `mods/doom-super-shotgun` ships on exactly that. What genuinely loads last is the DLC's
-  own `entitylibrary.fcb`, merged over the patch by `CEntityLibraryManager::Override` — so *archetype*
-  edits to a DLC weapon are the ones a patch cannot win.
+  mesh. What genuinely loads last is the DLC's own `entitylibrary.fcb`, merged over the patch by
+  `CEntityLibraryManager::Override` — so *archetype* edits to a DLC weapon are the ones a patch cannot
+  win.
 
   :::info[Verified via reverse engineering]
   Confirmed directly: `CXGame::LoadArchetypes` loads the base entity library first, then calls

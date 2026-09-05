@@ -1,6 +1,0 @@
-# The mod is the layer and the README. The build machinery that produced it
-# — scripts, packs, reference renders, working notes — stays local.
-/*
-!/.gitignore
-!/README.md
-!/layer/

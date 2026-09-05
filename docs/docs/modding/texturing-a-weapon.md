@@ -5,9 +5,8 @@ sidebar_position: 7
 # Texturing a replaced weapon
 
 :::tip[Built, played, and confirmed in game]
-Two weapons in this repo have been through this end to end: `mods/doom-super-shotgun`, which
-replaces the DLC1 sawed-off, and `mods/vss-vintorez`, which replaces the Dart Rifle. Every number on
-this page is measured off one of them or off the retail set, and says which.
+`mods/vss-vintorez`, which replaces the Dart Rifle, has been through this end to end. Every number on
+this page is measured off it or off the retail set, and says which.
 :::
 
 [Replacing an existing weapon](./replacing-a-weapon.md) gets a donated mesh into the game wearing
@@ -179,8 +178,8 @@ the rest of this section is what it took to get each step right.
 
 ### The albedo needs a band, not a curve
 
-A physically based albedo is far too dark for a shader with no metalness input. The Doom source
-measured **0.05–0.12 luma** and read as black plastic once lit.
+A physically based albedo is far too dark for a shader with no metalness input. A raw PBR source can
+measure well under 0.10 luma and read as black plastic once lit.
 
 The fix is to fit it into a band with a floor and a ceiling — `0.13` to `0.52`, which is also what
 `tools/BlenderFC2` tells a modeler. Not a gamma lift: a gamma compresses the top, so it burns pale
@@ -188,19 +187,10 @@ areas to white under the game's sun while barely moving the darkest metal. And d
 before compression** — reaching a metal level from 0.05 needs about 8×, and DXT1 gives red five bits,
 so multiplying through `DiffuseColor1` afterwards bands it badly.
 
-**Anchor the fit on your own source's percentiles rather than hardcoding the curve.** The two worked
-examples are three to six times apart:
-
-| | Doom super shotgun | VSS Vintorez |
-| --- | --- | --- |
-| source luma p1–p99 | ~0.05–0.12 | **0.124–0.534** |
-| saturation, mean | red 1.4–3.7× blue | **0.072**, near neutral |
-| what it needs | a large lift | almost none |
-
-The VSS's author had already worked inside the target band. Copying the shotgun's `LIFT = 0.4` and
-`DESATURATE = 0.45` would have crushed a 4.3:1 range to 1.4:1 and flattened what little colour there
-was. Mapping the source's own p1–p99 onto the band instead is one rule that serves both: it is nearly
-identity for a well-authored source and a 5× lift for a dark one.
+**Anchor the fit on your own source's percentiles rather than hardcoding the curve.** The VSS's source
+luma sat at **0.124–0.534** p1–p99 with a near-neutral 0.072 mean saturation — already inside the
+target band, so it needed almost no lift. Mapping the source's own p1–p99 onto the band is one rule
+that serves any source: it is nearly identity for a well-authored one and a large lift for a dark one.
 
 Apply the scale to all three channels off a luma-derived factor, not to each channel independently,
 or a linear remap shifts hue.
@@ -235,21 +225,19 @@ Measured across the cases that exist:
 | --- | --- | ---: | ---: |
 | Dragunov, retail | `metalbrushed_d` tiled 5,5 | 0.208 | **0.092** |
 | Sawed-off, retail | `metalbrushed_d` tiled 5,5 | 0.405 | **0.180** |
-| Doom super shotgun, shipped and accepted | its own albedo | 1.547 | **0.412** |
 | VSS Vintorez, shipped | its own albedo | 0.640 | **0.213** |
 
 Retail runs 0.09 to 0.18. Note what the retail rows are doing: their `DiffuseTexture1` is a bright
 generic detail map and `DiffuseColor1` brings it **down**. Under this recipe the texture is the
 weapon's own and the tint usually brings it **up** — but not always, and that is the trap.
 
-The doom shotgun shipped at **2.29× its own donor** and was accepted in game. That ratio is the only
-figure here validated by playing, so it is the one to anchor on: apply it to *your* donor's level
-rather than copying doom's absolute 0.412, which belongs to a bright chrome weapon. For the VSS that
-gave 0.092 × 2.29 = 0.211, and a neutral tint of 0.64 against a texture mean of 0.332.
+The VSS shipped at **2.31× its Dragunov donor's level** (0.092 → 0.213) and was confirmed in game.
+That ratio is the figure here validated by playing, so anchor on it: apply it to *your* donor's level
+rather than copying the VSS's absolute 0.213, which belongs to its own texture mean of 0.332 and a
+neutral tint of 0.64.
 
 Leave the tint neutral unless the source needs correcting. The texture already carries the author's
-hue; the shotgun's cool `1.50, 1.55, 1.65` exists to counteract a source that was 3.7× as red as
-blue.
+hue.
 
 Set `DiffuseColorBase` **equal to** `DiffuseColor1` rather than leaving base at white. With the two
 equal the tint is a constant no mask channel and no vertex colour can move — which matters because

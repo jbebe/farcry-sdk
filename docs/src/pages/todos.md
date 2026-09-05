@@ -95,16 +95,11 @@ what is left is what a modeler cannot do rather than what is broken.
 
 ## Mod
 
-- [x] Create our first mod because that was the original plan — `mods/doom-super-shotgun`, then
-      `mods/vss-vintorez`
+- [x] Create our first mod because that was the original plan — `mods/vss-vintorez`
 - [x] VSS: textures. Done and confirmed in game; the method is
       [texturing a replaced weapon](/farcry-sdk/docs/modding/texturing-a-weapon)
 - [ ] VSS: split the body into steel and stock materials, so the stock stops sharing the steel's
       specular response. Needs the transplant re-run, not new textures
-- [ ] Point the doom mod's build scripts at the pack — `retexture.py`, `transplant.py`,
-      `unify_materials.py` and `verify.py` still import the Python `fc2fmt`, whose format code moved
-      into JackAll, so they no longer run as written. The scripts are gitignored and local, so this is
-      housekeeping — the method they encode is in `texturing-a-weapon.md`
 - [x] VSS: the pickup archetypes, so the weapon on the ground is complete at close range. Rebuilt
       from the Dragunov's pickups; `archWeapon` has to be repointed with them or the pickup hands
       over a Dragunov

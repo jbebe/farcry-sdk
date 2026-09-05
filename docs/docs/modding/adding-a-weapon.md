@@ -513,8 +513,8 @@ The first three are the same trap seen from three angles, and the plugin now nam
 driving **Metallic** raises `channel.metallic`, with the band below as the fix. The fourth it cannot
 see, because it is about where you make the cut.
 
-- **A physically based albedo is far too dark for this shader.** Doom's texture measured 0.05 to 0.12
-  luma and up to 3.7 times as red as blue, because its metal gets brightness from a metalness map
+- **A physically based albedo is far too dark for this shader.** A raw PBR source measured 0.05 to
+  0.12 luma and up to 3.7 times as red as blue, because its metal gets brightness from a metalness map
   this shader has no equivalent for. Lit, it reads as black plastic with rust.
 - **Fix it in the texture, not the material.** Reaching a metal level from 0.05 needs about 8x, and
   DXT1 gives red 5 bits — multiplying through `DiffuseColor1` afterwards bands it badly. Do it in
