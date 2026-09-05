@@ -2,7 +2,7 @@ schema_version = "1.0.0"
 
 id = "farcry2_formats"
 name = "Far Cry 2 Formats"
-version = "0.1.0"
+version = "0.2.0"
 tagline = "Import and edit Far Cry 2 model packs"
 maintainer = "FarCry2 modding tools"
 type = "add-on"

@@ -3,7 +3,7 @@
 Notable changes to the Far Cry 2 Blender add-on, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [0.2.0] - 2026-09-05
 
 ### Changed
 - **The animation list is sorted by name.** A pack lists its banks in export order, which for the
