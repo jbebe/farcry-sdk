@@ -1,13 +1,12 @@
 #include "engine/sky_state.h"
 
+#include "engine/log.h"
 #include "fcse_api.h"
 
 #include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
-#include <windows.h>
 
 namespace {
     // Where the sun's direction sits inside the renderer's scene state. The submission is handed a
@@ -38,7 +37,6 @@ namespace {
     SkyOverhaul::SkyState::Sun g_sun{};
 
     std::atomic<uint32_t> g_submitCount{0};
-    std::atomic<unsigned long> g_submitThreadId{0};
 
     void Publish(const SkyOverhaul::SkyState::Sun& sun) {
         const uint32_t sequence = g_sequence.load(std::memory_order_relaxed);
@@ -67,7 +65,6 @@ namespace {
                 sun.storm = *reinterpret_cast<const float*>(state + kStormFactor);
                 Publish(sun);
 
-                g_submitThreadId.store(GetCurrentThreadId(), std::memory_order_relaxed);
                 g_submitCount.fetch_add(1, std::memory_order_relaxed);
             }
         }
@@ -92,10 +89,8 @@ bool SkyOverhaul::SkyState::Install() {
         return false;
     }
 
-    char line[128];
-    std::snprintf(line, sizeof(line), "sky: sun-disc submission hooked at 0x%08zX",
-                  static_cast<size_t>(g_submitSunDisc.address()));
-    api->Log(line);
+    Logf("sky: sun-disc submission hooked at 0x%08zX",
+         static_cast<size_t>(g_submitSunDisc.address()));
     return true;
 }
 
@@ -122,6 +117,3 @@ uint32_t SkyOverhaul::SkyState::SubmitCount() {
     return g_submitCount.load(std::memory_order_relaxed);
 }
 
-unsigned long SkyOverhaul::SkyState::SubmitThreadId() {
-    return g_submitThreadId.load(std::memory_order_relaxed);
-}

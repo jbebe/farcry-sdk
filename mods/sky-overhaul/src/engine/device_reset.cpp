@@ -1,8 +1,7 @@
 #include "engine/device_reset.h"
 
+#include "engine/log.h"
 #include "fcse_api.h"
-
-#include <cstdio>
 
 namespace {
     // __thiscall taking only `this`, declared __fastcall because MSVC will not let a free function
@@ -25,17 +24,8 @@ namespace {
     DeviceCallbackFn g_originalRestore = nullptr;
     void (*g_onRelease)() = nullptr;
 
-    int g_linesLogged = 0;
-
-    void Log(const char* line) {
-        if (g_linesLogged < 20) {
-            g_linesLogged++;
-            FCSE::ApiPointer()->Log(line);
-        }
-    }
-
     void __fastcall TeardownDetour(void* self) {
-        Log("device reset: teardown - releasing what the plugin holds");
+        SkyOverhaul::Logf("device reset: teardown - releasing what the plugin holds");
         if (g_onRelease != nullptr) {
             g_onRelease();
         }
@@ -44,7 +34,7 @@ namespace {
 
     void __fastcall RestoreDetour(void* self) {
         g_originalRestore(self);
-        Log("device reset: restored");
+        SkyOverhaul::Logf("device reset: restored");
     }
 }
 
@@ -67,10 +57,8 @@ bool SkyOverhaul::DeviceReset::Install(void (*onRelease)()) {
 
     g_onRelease = onRelease;
 
-    char line[160];
-    std::snprintf(line, sizeof(line), "device reset: teardown at 0x%08zX, restore at 0x%08zX",
-                  static_cast<size_t>(g_teardown.address()),
-                  static_cast<size_t>(g_restore.address()));
-    api->Log(line);
+    Logf("device reset: teardown at 0x%08zX, restore at 0x%08zX",
+         static_cast<size_t>(g_teardown.address()),
+         static_cast<size_t>(g_restore.address()));
     return true;
 }

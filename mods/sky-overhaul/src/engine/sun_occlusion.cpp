@@ -5,9 +5,8 @@
 // moves behind a wall that is invisible.
 #include "engine/sun_occlusion.h"
 
+#include "engine/com.h"
 #include "engine/screen_draw.h"
-
-#include <cstdint>
 
 namespace {
     // Half the size of the patch drawn where the sun is, in pixels. Large enough that a thin branch
@@ -26,29 +25,22 @@ namespace {
     struct Measurement {
         // Two counts, because with multisampling a query counts samples rather than pixels and the
         // multiplier is not known here. Dividing one by the other cancels it, whatever it is.
-        IDirect3DQuery9* reachedScreen = nullptr; // depth testing on
-        IDirect3DQuery9* wouldHaveDrawn = nullptr; // depth testing off, so the total
+        //
+        // The first is drawn with depth testing on, the second with it off.
+        IDirect3DQuery9* reachedScreen = nullptr;
+        IDirect3DQuery9* wouldHaveDrawn = nullptr;
         bool inFlight = false;
     };
 
     Measurement g_slots[kSlots];
     int g_next = 0;
     IDirect3DDevice9* g_owner = nullptr;
+    float g_visibility = -1.0f;
 
-    volatile float g_visibility = -1.0f;
-    volatile unsigned long g_lastReached = 0;
-    volatile unsigned long g_lastTotal = 0;
-
-    void Release() {
+    void ReleaseQueries() {
         for (Measurement& slot : g_slots) {
-            if (slot.reachedScreen != nullptr) {
-                slot.reachedScreen->Release();
-                slot.reachedScreen = nullptr;
-            }
-            if (slot.wouldHaveDrawn != nullptr) {
-                slot.wouldHaveDrawn->Release();
-                slot.wouldHaveDrawn = nullptr;
-            }
+            SkyOverhaul::Release(slot.reachedScreen);
+            SkyOverhaul::Release(slot.wouldHaveDrawn);
             slot.inFlight = false;
         }
     }
@@ -60,13 +52,14 @@ namespace {
             return true;
         }
 
-        Release();
+        ReleaseQueries();
         g_owner = device;
         for (Measurement& slot : g_slots) {
+            // The driver does not offer occlusion queries.
             if (FAILED(device->CreateQuery(D3DQUERYTYPE_OCCLUSION, &slot.reachedScreen)) ||
                 FAILED(device->CreateQuery(D3DQUERYTYPE_OCCLUSION, &slot.wouldHaveDrawn))) {
-                Release();
-                return false; // the driver does not offer occlusion queries
+                ReleaseQueries();
+                return false;
             }
         }
         return true;
@@ -88,8 +81,6 @@ namespace {
             }
 
             slot.inFlight = false;
-            g_lastReached = reached;
-            g_lastTotal = total;
 
             // A patch that drew nothing at all measures nothing, and reporting that as "fully
             // occluded" would switch the glare off for a reason that has nothing to do with the
@@ -115,21 +106,19 @@ void SkyOverhaul::SunOcclusion::Sample(IDirect3DDevice9* device, float centreX, 
 
     Measurement& slot = g_slots[g_next];
     if (slot.inFlight) {
-        return; // every measurement still outstanding; try again next frame
+        // Every measurement still outstanding; try again next frame.
+        return;
     }
 
-    // The patch is slid back inside the viewport rather than clipped away, so a sun beyond the
-    // edge is still measured against the nearest geometry in its direction. The depth buffer holds
-    // only what the frustum covers, so this is as close to the sun as anything can be measured -
-    // and it is what keeps a wall between the player and an off-screen sun blocking the glare.
-    // Sliding rather than clipping also keeps both queries counting the same area, so the ratio
-    // stays honest instead of sagging towards the frame's edge.
+    // Sliding rather than clipping keeps both queries counting the same area, so the ratio stays
+    // honest instead of sagging towards the frame's edge.
     const float minX = static_cast<float>(viewport.X) + kHalfSize;
     const float minY = static_cast<float>(viewport.Y) + kHalfSize;
     const float maxX = static_cast<float>(viewport.X + viewport.Width) - kHalfSize;
     const float maxY = static_cast<float>(viewport.Y + viewport.Height) - kHalfSize;
     if (maxX <= minX || maxY <= minY) {
-        return; // a viewport smaller than the patch; nothing to measure against
+        // A viewport smaller than the patch; nothing to measure against.
+        return;
     }
 
     const float x = centreX < minX ? minX : (centreX > maxX ? maxX : centreX);
@@ -141,7 +130,9 @@ void SkyOverhaul::SunOcclusion::Sample(IDirect3DDevice9* device, float centreX, 
     const float bottom = y + kHalfSize;
 
     ScreenDraw draw(device);
-    device->SetRenderState(D3DRS_COLORWRITEENABLE, 0); // measure only; change nothing on screen
+
+    // Measure only; change nothing on screen.
+    device->SetRenderState(D3DRS_COLORWRITEENABLE, 0);
 
     slot.wouldHaveDrawn->Issue(D3DISSUE_BEGIN);
     draw.Quad(left, top, right, bottom, kPatchDepth);
@@ -161,14 +152,8 @@ float SkyOverhaul::SunOcclusion::Visibility() {
     return g_visibility;
 }
 
-void SkyOverhaul::SunOcclusion::LastCounts(unsigned long& reachedScreen,
-                                           unsigned long& wouldHaveDrawn) {
-    reachedScreen = g_lastReached;
-    wouldHaveDrawn = g_lastTotal;
-}
-
 void SkyOverhaul::SunOcclusion::ReleaseDeviceObjects() {
-    Release();
+    ReleaseQueries();
     g_owner = nullptr;
     g_visibility = -1.0f;
 }

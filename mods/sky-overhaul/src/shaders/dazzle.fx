@@ -42,6 +42,10 @@ float4 Curve : register(c4);
 //       burns where the sun's own image falls, not across everything the glare washes
 float4 Bleaching : register(c5);
 
+// How the haze divides between draining the picture's colour and flattening its contrast.
+static const float kHazeGrey = 0.6f;
+static const float kHazeFlat = 0.4f;
+
 // Lays the frame into the burn, weighted so that many frames average together.
 float4 AccumulatePS(float2 uv : TEXCOORD0) : COLOR0
 {
@@ -89,8 +93,8 @@ float4 MainPS(float2 uv : TEXCOORD0) : COLOR0
     // The eye's range is compressed while it recovers, so everything behind the afterimage loses a
     // little colour and a little contrast. This is what makes it read as an eye that has been
     // overloaded rather than as a shape laid over the picture.
-    colour = lerp(colour, dot(colour, grey).xxx, Recovery.a * 0.6f);
-    colour = lerp(colour, 0.5f, Recovery.a * 0.4f);
+    colour = lerp(colour, dot(colour, grey).xxx, Recovery.a * kHazeGrey);
+    colour = lerp(colour, 0.5f, Recovery.a * kHazeFlat);
 
     float bleached = smoothstep(Curve.x, Curve.y, saturate(tex2D(Bleach, uv).r));
     float3 burn = tex2D(Burn, uv).rgb;

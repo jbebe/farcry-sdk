@@ -1,40 +1,45 @@
 # Sky Overhaul
 
-An FCSE plugin for the sun's glare: a wash over the finished frame that brightens as the player looks
-toward the sun and fades as they look away.
+An FCSE plugin for the sun as something the eye cannot look at: a glare that washes over the finished
+frame as the player looks toward the sun, and a retinal afterimage left behind when they look away.
 
-**Nothing here is finished, and the mod ships no game files.** The layer is empty by design — the
-sun, the sky textures and every world's `<Sky>` data are the engine's own. What is in the tree is a
-working skeleton: the plugin builds, installs and runs, and the one behaviour it does not yet get
-right is called out below.
+**The mod ships no game files.** The layer is empty by design — the sun, the sky textures and every
+world's `<Sky>` data are the engine's own. Nothing here changes how the sun itself looks.
 
-## What works
+## What it does
 
-- **The sun's direction**, read out of the renderer's scene state by hooking the sun-disc draw, which
-  receives a pointer into it. `src/engine/sky_state.cpp`.
+- **The sun's direction**, read out of the renderer's scene state by hooking the sun-disc
+  submission, which receives a pointer into it. `src/engine/sky_state.cpp`.
 - **The angle to the sun**, from that direction and the view-projection matrix read back off the
-  Direct3D device.
-- **The glare itself**, a gradient fan centred on the sun's projected screen position, drawn
-  additively from an `EndScene` hook. `src/veil.cpp`.
+  Direct3D device at the sky pass.
+- **Cover**, from a hardware occlusion query: a patch drawn where the sun is with depth testing on
+  and colour writes off, counted against the same patch with depth testing off so the multisample
+  factor cancels. `src/engine/sun_occlusion.cpp`.
+- **The glare**, a wash that brightens toward the sun, raises contrast and drains colour, drawn over
+  the world's composite so it lands under the heads-up display. It weakens with a low sun, with
+  storms, and with anything standing between the player and the sun.
+- **The afterimage.** While the eye is dazzled the view accumulates into a burn texture and the light
+  that fell on it accumulates into a bleach mask. Looking away brings up a dark tinted core where the
+  sun's image sat, a faint desaturated negative of the whole view, and a haze over everything else.
+  It arms only after a held stare, deepens with how long that stare lasted, and fades over twice as
+  long as it took to build.
 - **Staying out of menus.** The sun-disc hook reports whether the engine drew a sky at all this
   frame; a frame without one gets nothing. No guessing at game state.
-- **Live tuning.** Strength and spread are FCSE settings, so they are sliders in the mod menu rather
-  than a rebuild.
+- **Live tuning.** Fourteen sliders in the mod menu, from glare strength through to the afterimage's
+  colour, so tuning never needs a rebuild.
 
-## What does not
+## How it is put together
 
-**Cover.** The glare is not yet blocked by walls. `src/engine/sun_occlusion.cpp` measures the sun
-with a hardware occlusion query during the sky pass, and the measurement comes back empty; the counts
-it reads are logged each second as `veil: cos ... query R/T visible ...`, which is where to start.
-The two things already ruled out are worth not repeating:
+Three seams, on two threads. The sun-disc submission runs on the game thread and only publishes,
+through a seqlock; every Direct3D call is made from `EndScene` on the render thread; and the engine's
+own device teardown is hooked so the plugin surrenders what it holds before a reset. It refuses to
+install unless it has all three, because a plugin holding a render target through a `Reset` breaks
+the reset itself.
 
-- The `SunOcclusionFactor` global is not this value. It scales water specular and reads 1.0
-  throughout play.
-- The glare cannot simply be depth-tested where it is drawn. No depth-stencil is attached that late
-  in the frame.
-
-Both are written up in [the sky and cloud system](../../docs/docs/engine-internals/sky-and-clouds.md)
-and [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
+`src/engine/` is the part that knows about the engine: following the frame and classifying its
+passes, publishing the sun, measuring cover, and putting back every piece of device state a
+screen-space draw disturbs. `src/dazzle.cpp` and `src/shaders/dazzle.fx` are the effect, and know
+about none of it.
 
 ## Requirements
 
@@ -42,8 +47,8 @@ Bloom on, in Options → Video or on the `<quality>` row in
 `Documents\My Games\Far Cry 2\GamerProfile.xml` matching the profile's `Quality`. The glare works
 without it, but the sun it sits beside is a flat disc until bloom runs.
 
-`Present` is hooked by DevTools, and FCSE gives an address to one plugin only, which is why this draws
-from `EndScene` instead. The two coexist.
+`Present` is hooked by DevTools, and FCSE gives an address to one plugin only, which is why this
+draws from `EndScene` instead. The two coexist.
 
 ## Building
 

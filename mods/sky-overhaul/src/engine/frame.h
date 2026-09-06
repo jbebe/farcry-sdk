@@ -12,17 +12,16 @@ namespace SkyOverhaul::Frame {
 // One pass worth acting on, as the renderer finishes it.
 struct Pass {
     IDirect3DDevice9* device;
+    // The pass's own render target, borrowed for the length of the callback.
+    IDirect3DSurface9* target;
     D3DSURFACE_DESC backBuffer;
     D3DVIEWPORT9 viewport;
     uint32_t frame;
-    // Counts only the frames with a world in them, so it paces anything that should not run in a
-    // menu.
-    uint32_t liveFrame;
-    // Which scene pass of this frame it is, counting from one. A frame has around seventeen, and
-    // only the last of them has the whole world's depth behind it.
-    uint32_t scenePass;
     // Whether a world was submitted for this frame, which is false in menus and loading screens.
     bool live;
+    // Whether this is the scene pass the sky is drawn in, which is the one with the world's depth
+    // complete and the camera it was drawn with still bound.
+    bool sky;
 };
 
 using PassFn = void (*)(const Pass&);

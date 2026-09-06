@@ -27,7 +27,4 @@ bool Latest(Sun& out);
 // drawn into it, which is what tells a menu or a loading screen from the game.
 uint32_t SubmitCount();
 
-// The thread submission runs on. Zero until the first submission.
-unsigned long SubmitThreadId();
-
 }

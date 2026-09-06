@@ -8,25 +8,28 @@
 #include "engine/device_reset.h"
 #include "engine/sky_state.h"
 
-void OnDeviceRelease();
-void __cdecl OnStrengthChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnSpreadChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnFalloffChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnContrastChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnDesaturationChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnVeilChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnElevationRampChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnAfterimageStrengthChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnAfterimageSecondsChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnAfterimageDarknessChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnAfterimageTintChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnAfterimageSaturationChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnAfterimageHazeChanged(const FCSE_SettingValue* value, void* userdata);
-void __cdecl OnAfterimageSizeChanged(const FCSE_SettingValue* value, void* userdata);
+namespace {
+    using SliderFn = void (*)(int);
+
+    void OnDeviceRelease() {
+        SkyOverhaul::Dazzle::ReleaseDeviceObjects();
+    }
+
+    // Every row is one slider feeding one setter, so the setter itself is the userdata FCSE hands
+    // back and one callback serves them all.
+    void __cdecl OnSliderChanged(const FCSE_SettingValue* value, void* userdata) {
+        reinterpret_cast<SliderFn>(userdata)(value->asSlider);
+    }
+
+    void* Setter(SliderFn setter) {
+        return reinterpret_cast<void*>(setter);
+    }
+}
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION) {
-        return false; // FCSE logs the refusal
+        // FCSE logs the refusal.
+        return false;
     }
 
     // Wires up the address library and the pattern scanner behind FCSE::Relocation, which is how
@@ -46,91 +49,38 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 
     // Each callback fires from inside RegisterSettings carrying whatever fcse.ini holds, so the
     // glare is in the state it was left in by the time this returns, and again on every change.
+    using namespace SkyOverhaul;
     static const FCSE_Setting settings[] = {
-        {"Sun glare strength", FCSE_SLIDER(100), &OnStrengthChanged, nullptr, nullptr, 0, 0, 200},
-        {"Sun glare spread", FCSE_SLIDER(57), &OnSpreadChanged, nullptr, nullptr, 0, 10, 180},
-        {"Sun glare falloff", FCSE_SLIDER(20), &OnFalloffChanged, nullptr, nullptr, 0, 10, 80},
-        {"Sun glare veil", FCSE_SLIDER(100), &OnVeilChanged, nullptr, nullptr, 0, 0, 100},
-        {"Sun glare contrast", FCSE_SLIDER(195), &OnContrastChanged, nullptr, nullptr, 0, 0, 400},
-        {"Sun glare desaturation", FCSE_SLIDER(129), &OnDesaturationChanged, nullptr, nullptr, 0, 0,
-         300},
-        {"Sun elevation ramp", FCSE_SLIDER(40), &OnElevationRampChanged, nullptr, nullptr, 0, 1,
-         45},
-        {"Afterimage strength", FCSE_SLIDER(100), &OnAfterimageStrengthChanged, nullptr, nullptr, 0,
+        {"Sun glare strength", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Dazzle::SetStrength),
+         nullptr, 0, 0, 200},
+        {"Sun glare spread", FCSE_SLIDER(57), &OnSliderChanged, Setter(&Dazzle::SetSpread), nullptr,
+         0, 10, 180},
+        {"Sun glare falloff", FCSE_SLIDER(20), &OnSliderChanged, Setter(&Dazzle::SetFalloff),
+         nullptr, 0, 10, 80},
+        {"Sun glare veil", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Dazzle::SetVeil), nullptr, 0,
          0, 100},
-        {"Afterimage seconds", FCSE_SLIDER(10), &OnAfterimageSecondsChanged, nullptr, nullptr, 0, 1,
-         10},
-        {"Afterimage darkness", FCSE_SLIDER(90), &OnAfterimageDarknessChanged, nullptr, nullptr, 0,
-         0, 100},
-        {"Afterimage tint", FCSE_SLIDER(35), &OnAfterimageTintChanged, nullptr, nullptr, 0, 0, 100},
-        {"Afterimage saturation", FCSE_SLIDER(30), &OnAfterimageSaturationChanged, nullptr, nullptr,
-         0, 0, 100},
-        {"Afterimage size", FCSE_SLIDER(25), &OnAfterimageSizeChanged, nullptr, nullptr, 0, 5,
-         100},
-        {"Afterimage haze", FCSE_SLIDER(35), &OnAfterimageHazeChanged, nullptr, nullptr, 0, 0,
-         100},
+        {"Sun glare contrast", FCSE_SLIDER(195), &OnSliderChanged, Setter(&Dazzle::SetContrast),
+         nullptr, 0, 0, 400},
+        {"Sun glare desaturation", FCSE_SLIDER(129), &OnSliderChanged,
+         Setter(&Dazzle::SetDesaturation), nullptr, 0, 0, 300},
+        {"Sun elevation ramp", FCSE_SLIDER(40), &OnSliderChanged,
+         Setter(&Dazzle::SetElevationRamp), nullptr, 0, 1, 45},
+        {"Afterimage strength", FCSE_SLIDER(100), &OnSliderChanged,
+         Setter(&Dazzle::SetAfterimageStrength), nullptr, 0, 0, 100},
+        {"Afterimage seconds", FCSE_SLIDER(10), &OnSliderChanged,
+         Setter(&Dazzle::SetAfterimageSeconds), nullptr, 0, 1, 10},
+        {"Afterimage darkness", FCSE_SLIDER(90), &OnSliderChanged,
+         Setter(&Dazzle::SetAfterimageDarkness), nullptr, 0, 0, 100},
+        {"Afterimage tint", FCSE_SLIDER(35), &OnSliderChanged, Setter(&Dazzle::SetAfterimageTint),
+         nullptr, 0, 0, 100},
+        {"Afterimage saturation", FCSE_SLIDER(30), &OnSliderChanged,
+         Setter(&Dazzle::SetAfterimageSaturation), nullptr, 0, 0, 100},
+        {"Afterimage size", FCSE_SLIDER(25), &OnSliderChanged, Setter(&Dazzle::SetAfterimageSize),
+         nullptr, 0, 5, 100},
+        {"Afterimage haze", FCSE_SLIDER(35), &OnSliderChanged, Setter(&Dazzle::SetAfterimageHaze),
+         nullptr, 0, 0, 100},
     };
     api->RegisterSettings("Sky Overhaul", settings, sizeof(settings) / sizeof(settings[0]));
 
     return true;
-}
-
-void OnDeviceRelease() {
-    SkyOverhaul::Dazzle::ReleaseDeviceObjects();
-}
-
-void __cdecl OnStrengthChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetStrength(value->asSlider);
-}
-
-void __cdecl OnSpreadChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetSpread(value->asSlider);
-}
-
-void __cdecl OnFalloffChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetFalloff(value->asSlider);
-}
-
-void __cdecl OnContrastChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetContrast(value->asSlider);
-}
-
-void __cdecl OnDesaturationChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetDesaturation(value->asSlider);
-}
-
-void __cdecl OnVeilChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetVeil(value->asSlider);
-}
-
-void __cdecl OnElevationRampChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetElevationRamp(value->asSlider);
-}
-
-void __cdecl OnAfterimageStrengthChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetAfterimageStrength(value->asSlider);
-}
-
-void __cdecl OnAfterimageSecondsChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetAfterimageSeconds(value->asSlider);
-}
-
-void __cdecl OnAfterimageDarknessChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetAfterimageDarkness(value->asSlider);
-}
-
-void __cdecl OnAfterimageTintChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetAfterimageTint(value->asSlider);
-}
-
-void __cdecl OnAfterimageSaturationChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetAfterimageSaturation(value->asSlider);
-}
-
-void __cdecl OnAfterimageHazeChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetAfterimageHaze(value->asSlider);
-}
-
-void __cdecl OnAfterimageSizeChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    SkyOverhaul::Dazzle::SetAfterimageSize(value->asSlider);
 }

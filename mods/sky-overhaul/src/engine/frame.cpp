@@ -1,13 +1,17 @@
 #include "engine/frame.h"
 
+#include "engine/log.h"
 #include "engine/sky_state.h"
 #include "fcse_api.h"
 
-#include <cstdio>
 #include <windows.h>
 
 namespace {
     constexpr size_t kEndSceneSlot = 42;
+
+    // The sky pass is the only one of the frame's scene passes whose depth range is squeezed
+    // against the far plane.
+    constexpr float kSkyPassMinZ = 0.9f;
 
     using EndSceneFn = HRESULT(__stdcall*)(IDirect3DDevice9*);
 
@@ -21,10 +25,9 @@ namespace {
     State g_state = State::AwaitingScene;
 
     uint32_t g_frame = 0;
-    uint32_t g_liveFrame = 0;
-    uint32_t g_scenePass = 0;
     uint32_t g_lastSubmitCount = 0;
     bool g_live = false;
+    bool g_deviceLost = false;
 
     // What the plugin would have to rebuild anything it holds on the device against. The back
     // buffer's surface is replaced by a reset even when its size does not change, so its identity
@@ -32,8 +35,6 @@ namespace {
     IDirect3DDevice9* g_device = nullptr;
     IDirect3DSurface9* g_backBufferSurface = nullptr;
     D3DSURFACE_DESC g_backBufferDesc = {};
-    int g_deviceLinesLogged = 0;
-    int g_lostLinesLogged = 0;
 
     struct SurfaceRef {
         IDirect3DSurface9* surface = nullptr;
@@ -54,18 +55,12 @@ namespace {
             return;
         }
 
-        if (g_deviceLinesLogged < 20) {
-            g_deviceLinesLogged++;
-            char line[224];
-            std::snprintf(line, sizeof(line),
-                          "device: frame %u, device %p (was %p), back buffer %p (was %p) "
+        SkyOverhaul::Logf("device: frame %u, device %p (was %p), back buffer %p (was %p) "
                           "%ux%u fmt %u ms %u",
                           g_frame, static_cast<void*>(device), static_cast<void*>(g_device),
                           static_cast<void*>(surface), static_cast<void*>(g_backBufferSurface),
                           desc.Width, desc.Height, static_cast<unsigned>(desc.Format),
                           static_cast<unsigned>(desc.MultiSampleType));
-            FCSE::ApiPointer()->Log(line);
-        }
 
         g_device = device;
         g_backBufferSurface = surface;
@@ -75,14 +70,16 @@ namespace {
     void Observe(IDirect3DDevice9* device) {
         const HRESULT cooperative = device->TestCooperativeLevel();
         if (cooperative != D3D_OK) {
-            if (g_lostLinesLogged < 10) {
-                g_lostLinesLogged++;
-                char line[128];
-                std::snprintf(line, sizeof(line), "device: not usable, TestCooperativeLevel 0x%08lX",
-                              static_cast<unsigned long>(cooperative));
-                FCSE::ApiPointer()->Log(line);
+            if (!g_deviceLost) {
+                g_deviceLost = true;
+                SkyOverhaul::Logf("device: not usable, TestCooperativeLevel 0x%08lX",
+                                  static_cast<unsigned long>(cooperative));
             }
             return;
+        }
+        if (g_deviceLost) {
+            g_deviceLost = false;
+            SkyOverhaul::Logf("device: usable again at frame %u", g_frame);
         }
 
         SurfaceRef target;
@@ -105,11 +102,6 @@ namespace {
         const bool haveDepth = SUCCEEDED(device->GetDepthStencilSurface(&depth.surface)) &&
                                depth.surface != nullptr;
 
-        D3DVIEWPORT9 viewport = {};
-        if (FAILED(device->GetViewport(&viewport))) {
-            return;
-        }
-
         const bool sceneSized = targetDesc.Width == backBufferDesc.Width &&
                                 targetDesc.Height == backBufferDesc.Height;
         const bool toBackBuffer = target.surface == backBuffer.surface;
@@ -128,13 +120,8 @@ namespace {
                 g_live = submitCount != g_lastSubmitCount;
                 g_lastSubmitCount = submitCount;
                 g_frame++;
-                if (g_live) {
-                    g_liveFrame++;
-                }
-                g_scenePass = 0;
                 g_state = State::InFrame;
             }
-            g_scenePass++;
             runScene = true;
         } else if (composite && g_state == State::InFrame) {
             runFinal = true;
@@ -145,14 +132,19 @@ namespace {
             return;
         }
 
+        D3DVIEWPORT9 viewport = {};
+        if (FAILED(device->GetViewport(&viewport))) {
+            return;
+        }
+
         SkyOverhaul::Frame::Pass pass;
         pass.device = device;
+        pass.target = target.surface;
         pass.backBuffer = backBufferDesc;
         pass.viewport = viewport;
         pass.frame = g_frame;
-        pass.liveFrame = g_liveFrame;
-        pass.scenePass = g_scenePass;
         pass.live = g_live;
+        pass.sky = runScene && viewport.MinZ >= kSkyPassMinZ;
 
         if (runScene && g_onScenePass != nullptr) {
             g_onScenePass(pass);
@@ -213,9 +205,6 @@ bool SkyOverhaul::Frame::Install(PassFn onScenePass, PassFn onFinalPass) {
     g_onScenePass = onScenePass;
     g_onFinalPass = onFinalPass;
 
-    char line[128];
-    std::snprintf(line, sizeof(line), "frame: following EndScene at 0x%08zX",
-                  reinterpret_cast<size_t>(endScene));
-    api->Log(line);
+    Logf("frame: following EndScene at 0x%08zX", reinterpret_cast<size_t>(endScene));
     return true;
 }

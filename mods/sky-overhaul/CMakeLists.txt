@@ -42,33 +42,32 @@ if (NOT FXC_EXECUTABLE)
 endif()
 
 set(DAZZLE_SHADER "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/dazzle.fx")
-set(DAZZLE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/dazzle_ps.h")
-set(ACCUMULATE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/dazzle_accumulate_ps.h")
-set(BLEACH_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/dazzle_bleach_ps.h")
-add_custom_command(
-  OUTPUT "${DAZZLE_HEADER}"
-  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
-  COMMAND "${FXC_EXECUTABLE}" /nologo /T ps_2_b /E MainPS /O3 /Vn g_dazzlePixelShader
-          /Fh "${DAZZLE_HEADER}" "${DAZZLE_SHADER}"
-  DEPENDS "${DAZZLE_SHADER}"
-  COMMENT "Compiling src/shaders/dazzle.fx (MainPS)"
-  VERBATIM)
-add_custom_command(
-  OUTPUT "${ACCUMULATE_HEADER}"
-  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
-  COMMAND "${FXC_EXECUTABLE}" /nologo /T ps_2_0 /E AccumulatePS /O3
-          /Vn g_dazzleAccumulatePixelShader /Fh "${ACCUMULATE_HEADER}" "${DAZZLE_SHADER}"
-  DEPENDS "${DAZZLE_SHADER}"
-  COMMENT "Compiling src/shaders/dazzle.fx (AccumulatePS)"
-  VERBATIM)
-add_custom_command(
-  OUTPUT "${BLEACH_HEADER}"
-  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
-  COMMAND "${FXC_EXECUTABLE}" /nologo /T ps_2_0 /E BleachPS /O3
-          /Vn g_dazzleBleachPixelShader /Fh "${BLEACH_HEADER}" "${DAZZLE_SHADER}"
-  DEPENDS "${DAZZLE_SHADER}"
-  COMMENT "Compiling src/shaders/dazzle.fx (BleachPS)"
-  VERBATIM)
+
+# entry point : profile : generated header : array name. MainPS needs ps_2_b for its instruction
+# count; the two accumulation passes fit in ps_2_0.
+set(DAZZLE_PASSES
+  "MainPS:ps_2_b:dazzle_ps.h:g_dazzlePixelShader"
+  "AccumulatePS:ps_2_0:dazzle_accumulate_ps.h:g_dazzleAccumulatePixelShader"
+  "BleachPS:ps_2_0:dazzle_bleach_ps.h:g_dazzleBleachPixelShader")
+
+set(DAZZLE_HEADERS "")
+foreach(PASS IN LISTS DAZZLE_PASSES)
+  string(REPLACE ":" ";" PARTS "${PASS}")
+  list(GET PARTS 0 ENTRY)
+  list(GET PARTS 1 PROFILE)
+  list(GET PARTS 2 HEADER_NAME)
+  list(GET PARTS 3 ARRAY_NAME)
+  set(HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/${HEADER_NAME}")
+  add_custom_command(
+    OUTPUT "${HEADER}"
+    COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
+    COMMAND "${FXC_EXECUTABLE}" /nologo /T ${PROFILE} /E ${ENTRY} /O3 /Vn ${ARRAY_NAME}
+            /Fh "${HEADER}" "${DAZZLE_SHADER}"
+    DEPENDS "${DAZZLE_SHADER}"
+    COMMENT "Compiling src/shaders/dazzle.fx (${ENTRY})"
+    VERBATIM)
+  list(APPEND DAZZLE_HEADERS "${HEADER}")
+endforeach()
 
 add_library(SkyOverhaul SHARED
   "src/main.cpp"
@@ -78,9 +77,7 @@ add_library(SkyOverhaul SHARED
   "src/engine/screen_draw.cpp"
   "src/engine/sky_state.cpp"
   "src/engine/sun_occlusion.cpp"
-  "${DAZZLE_HEADER}"
-  "${ACCUMULATE_HEADER}"
-  "${BLEACH_HEADER}"
+  ${DAZZLE_HEADERS}
 )
 
 # src/ on the path so every #include reads from the root of this tree - "engine/sky_state.h", never

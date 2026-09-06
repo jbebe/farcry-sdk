@@ -2,7 +2,9 @@
 // halves of the angle it depends on: the camera is a global, the sun is not.
 #include "dazzle.h"
 
+#include "engine/com.h"
 #include "engine/frame.h"
+#include "engine/log.h"
 #include "engine/screen_draw.h"
 #include "engine/sky_state.h"
 #include "engine/sun_occlusion.h"
@@ -13,7 +15,6 @@
 #include "dazzle_ps.h"
 
 #include <cmath>
-#include <cstdio>
 #include <cstring>
 
 namespace {
@@ -22,23 +23,32 @@ namespace {
     constexpr uint32_t kProjectionRegister = 8;
     constexpr uint32_t kCameraDirectionRegister = 46;
 
-    // The sky pass is the only one of the frame's world passes drawn through a viewport squeezed
-    // against the far plane, which is what tells it from the rest. It is also where the engine
-    // draws the sun, so the world's depth is complete and still bound.
-    constexpr float kSkyPassMinZ = 0.9f;
-
     constexpr float kPi = 3.14159265f;
 
+    constexpr float Radians(float degrees) {
+        return degrees * kPi / 180.0f;
+    }
+
+    constexpr float Clamp(float value, float low, float high) {
+        return value < low ? low : (value > high ? high : value);
+    }
+
     // How wide the glare's own gradient is allowed to get, whatever the spread is set to.
-    constexpr float kMaxRadiusRadians = 70.0f * kPi / 180.0f;
+    constexpr float kMaxRadiusRadians = Radians(70.0f);
+
+    // How far past the spread the occlusion query keeps running, so that its answer is already
+    // fresh by the time the angle brings it into use.
+    constexpr float kSampleMarginRadians = Radians(20.0f);
 
     // How much longer the eye takes to recover than it spent being dazzled.
     constexpr float kLinger = 2.0f;
 
     // The sun overstimulates the red and green cones hardest, so the fatigued response first skews
     // towards their complement and then drifts as the cone types recover at different rates.
-    constexpr float kCoreEarly[3] = {0.04f, 0.15f, 0.14f}; // dark desaturated cyan-green
-    constexpr float kCoreLate[3] = {0.13f, 0.05f, 0.15f};  // dark magenta-purple
+    //
+    // Dark desaturated cyan-green first, dark magenta-purple later.
+    constexpr float kCoreEarly[3] = {0.04f, 0.15f, 0.14f};
+    constexpr float kCoreLate[3] = {0.13f, 0.05f, 0.15f};
 
     // An afterimage does not decay smoothly. A slow wander in and out of visibility is most of
     // what sells it as something the eye is doing rather than something drawn on the screen.
@@ -54,10 +64,9 @@ namespace {
     constexpr float kArmSeconds = 1.5f;
     constexpr float kFullSeconds = 5.0f;
 
-    // Where the bleached core begins and where it becomes solid within the mask, and the gap between
-    // the two is its soft edge. Both sit low, because the mask is an average over the frames the eye
-    // spent dazzled, and a view that wanders never holds any one part of it at full strength for
-    // long.
+    // Where the bleached core begins and where it becomes solid within the mask, and the gap
+    // between the two is its soft edge. Both sit below the intensity a held stare reaches, so that
+    // stare fills the core rather than only approaching it.
     constexpr float kCoreLow = 0.08f;
     constexpr float kCoreHigh = 0.30f;
 
@@ -71,15 +80,17 @@ namespace {
     constexpr float kLongestFrame = 0.1f;
     constexpr float kRecoveryGap = 0.5f;
 
+    // How often the state of the glare is written to the log.
+    constexpr float kHeartbeatSeconds = 2.0f;
+
     // Written by the settings callbacks and read while drawing. Each is a lone aligned float that
     // no other value has to agree with, so a torn read is neither possible nor consequential.
     float g_strength = 1.0f;
-    float g_spreadRadians = 57.0f * kPi / 180.0f;
+    float g_spreadRadians = Radians(57.0f);
     float g_falloff = 2.0f;
     float g_contrast = 1.95f;
     float g_desaturation = 1.29f;
     float g_veil = 1.0f;
-    float g_elevationRamp = 40.0f * kPi / 180.0f;
     float g_afterimageStrength = 1.0f;
     float g_afterimageSeconds = 10.0f;
     float g_afterimageDarkness = 0.9f;
@@ -87,6 +98,13 @@ namespace {
     float g_afterimageHaze = 0.35f;
     float g_afterimageSize = 0.25f;
     float g_afterimageSaturation = 0.30f;
+
+    // Derived from the sliders when they change, because each would otherwise cost a transcendental
+    // on every frame for a value that only moves when the player moves a slider.
+    float g_spreadCos = std::cos(Radians(57.0f));
+    float g_sampleCos = std::cos(Radians(57.0f) + kSampleMarginRadians);
+    float g_glareRadius = 0.5f * std::tan(Radians(57.0f));
+    float g_elevationScale = 1.0f / std::sin(Radians(40.0f));
 
     // How hard the sun is glaring this frame, and how much of the afterimage that same light is
     // drowning out. The two are separate curves over the same angle.
@@ -113,6 +131,7 @@ namespace {
     float g_recovering = 0.0f;
     float g_burnWeight = 0.0f;
     float g_sinceLookAway = 0.0f;
+    float g_sinceHeartbeat = 0.0f;
     LARGE_INTEGER g_tickFrequency = {};
     LARGE_INTEGER g_lastTick = {};
 
@@ -123,7 +142,6 @@ namespace {
         float x;
         float y;
         float cosAngle;
-        float clipW;
         // One over the tangent of half the vertical field of view, which turns an angle into a
         // distance on screen.
         float verticalScale;
@@ -132,10 +150,6 @@ namespace {
     };
 
     SunInView g_thisFrame = {};
-
-    // The same reckoning done at the composite, only to check that the sky pass has the world's
-    // camera bound and not some other pass's.
-    SunInView g_atComposite = {};
 
     // Where the sun lands on screen, from the transform bound right now.
     bool ComputeSun(IDirect3DDevice9* device, const D3DVIEWPORT9& viewport, SunInView& out) {
@@ -170,7 +184,6 @@ namespace {
         const float cameraLength = std::sqrt(camera[0] * camera[0] + camera[1] * camera[1] +
                                              camera[2] * camera[2]);
 
-        out.clipW = clipW;
         out.inFront = clipW > 0.0001f;
         out.verticalScale = projection[5];
         out.elevation = sun.direction[2];
@@ -193,13 +206,6 @@ namespace {
         }
         return true;
     }
-
-    // The extremes since the last line, so a two-second bucket still shows a moment of cover even
-    // though only one line in it is written.
-    float g_lowestVisible = 2.0f;
-    float g_highestVisible = -1.0f;
-
-    uint32_t g_lastCoverFrame = 0;
 
     // A copy of the finished frame to read while overwriting it, and the shader that does the
     // overwriting. Both belong to the device and are surrendered before it is reset.
@@ -224,71 +230,77 @@ namespace {
     // fading up from what a previous dazzle left behind.
     bool g_burnRestart = false;
 
-    HRESULT g_burnTargetResult = S_OK;
-    uint32_t g_lastBurnLine = 0;
-
     void ReleaseCopy() {
-        if (g_sceneCopySurface != nullptr) {
-            g_sceneCopySurface->Release();
-            g_sceneCopySurface = nullptr;
-        }
-        if (g_sceneCopy != nullptr) {
-            g_sceneCopy->Release();
-            g_sceneCopy = nullptr;
-        }
-        if (g_burnSurface != nullptr) {
-            g_burnSurface->Release();
-            g_burnSurface = nullptr;
-        }
-        if (g_burn != nullptr) {
-            g_burn->Release();
-            g_burn = nullptr;
-        }
-        if (g_bleachSurface != nullptr) {
-            g_bleachSurface->Release();
-            g_bleachSurface = nullptr;
-        }
-        if (g_bleach != nullptr) {
-            g_bleach->Release();
-            g_bleach = nullptr;
-        }
+        SkyOverhaul::Release(g_sceneCopySurface);
+        SkyOverhaul::Release(g_sceneCopy);
+        SkyOverhaul::Release(g_burnSurface);
+        SkyOverhaul::Release(g_burn);
+        SkyOverhaul::Release(g_bleachSurface);
+        SkyOverhaul::Release(g_bleach);
         g_burnReady = false;
     }
 
-    // Draws one accumulation pass into `into`. An add blends this frame in by the weight the shader
-    // carries in its own alpha, averaging many frames; a maximum keeps whichever is brighter.
-    void AccumulateInto(IDirect3DDevice9* device, IDirect3DSurface9* into,
-                        IDirect3DPixelShader9* shader, const D3DSURFACE_DESC& backBuffer,
-                        const float* constants, D3DBLENDOP blend) {
-        IDirect3DSurface9* previous = nullptr;
-        if (FAILED(device->GetRenderTarget(0, &previous)) || previous == nullptr) {
+    void ReleaseShaders() {
+        SkyOverhaul::Release(g_shader);
+        SkyOverhaul::Release(g_accumulateShader);
+        SkyOverhaul::Release(g_bleachShader);
+    }
+
+    // How a frame is laid into an accumulation target: averaged in by the weight the shader carries
+    // in its own alpha, or kept only where it is brighter than what is already there.
+    enum class Blend { Mean, Peak };
+
+    // Draws one accumulation pass into `into`, then puts the pass's own target back.
+    void AccumulateInto(const SkyOverhaul::Frame::Pass& pass, IDirect3DSurface9* into,
+                        IDirect3DPixelShader9* shader, const float* constants, Blend blend) {
+        IDirect3DDevice9* device = pass.device;
+        if (FAILED(device->SetRenderTarget(0, into))) {
             return;
         }
 
-        g_burnTargetResult = device->SetRenderTarget(0, into);
-        if (SUCCEEDED(g_burnTargetResult)) {
-            {
-                SkyOverhaul::ScreenDraw draw(device);
-                device->SetPixelShader(shader);
-                device->SetTexture(0, g_sceneCopy);
-                // A maximum takes the source whole, so it must not be weighted by the alpha the
-                // running mean rides on.
-                const bool peak = blend == D3DBLENDOP_MAX;
-                device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-                device->SetRenderState(D3DRS_BLENDOP, blend);
-                device->SetRenderState(D3DRS_SRCBLEND, peak ? D3DBLEND_ONE : D3DBLEND_SRCALPHA);
-                device->SetRenderState(D3DRS_DESTBLEND,
-                                       peak ? D3DBLEND_ONE : D3DBLEND_INVSRCALPHA);
-                device->SetPixelShaderConstantF(0, constants, 6);
+        {
+            SkyOverhaul::ScreenDraw draw(device);
+            device->SetPixelShader(shader);
+            device->SetTexture(0, g_sceneCopy);
 
-                draw.Quad(0.0f, 0.0f, static_cast<float>(backBuffer.Width),
-                          static_cast<float>(backBuffer.Height));
-            }
-            device->SetRenderTarget(0, previous);
-            g_burnReady = true;
+            // A maximum takes the source whole, so it must not be weighted by the alpha the
+            // running mean rides on.
+            const bool peak = blend == Blend::Peak;
+            device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+            device->SetRenderState(D3DRS_BLENDOP, peak ? D3DBLENDOP_MAX : D3DBLENDOP_ADD);
+            device->SetRenderState(D3DRS_SRCBLEND, peak ? D3DBLEND_ONE : D3DBLEND_SRCALPHA);
+            device->SetRenderState(D3DRS_DESTBLEND, peak ? D3DBLEND_ONE : D3DBLEND_INVSRCALPHA);
+            device->SetPixelShaderConstantF(0, constants, 6);
+
+            draw.Quad(0.0f, 0.0f, static_cast<float>(pass.backBuffer.Width),
+                      static_cast<float>(pass.backBuffer.Height));
         }
 
-        previous->Release();
+        device->SetRenderTarget(0, pass.target);
+        g_burnReady = true;
+    }
+
+    // The compiled blob is a byte array and CreatePixelShader wants whole tokens, so it is copied
+    // into an aligned buffer on the way through.
+    template <size_t N>
+    HRESULT CreateShader(IDirect3DDevice9* device, const BYTE (&blob)[N],
+                         IDirect3DPixelShader9** out) {
+        static_assert(N % sizeof(DWORD) == 0,
+                      "the compiled shader is not a whole number of tokens");
+        DWORD tokens[N / sizeof(DWORD)];
+        std::memcpy(tokens, blob, N);
+        return device->CreatePixelShader(tokens, out);
+    }
+
+    HRESULT CreateTarget(IDirect3DDevice9* device, const D3DSURFACE_DESC& desc,
+                         IDirect3DTexture9** texture, IDirect3DSurface9** surface) {
+        const HRESULT created =
+            device->CreateTexture(desc.Width, desc.Height, 1, D3DUSAGE_RENDERTARGET, desc.Format,
+                                  D3DPOOL_DEFAULT, texture, nullptr);
+        if (FAILED(created)) {
+            return created;
+        }
+        return *texture == nullptr ? E_FAIL : (*texture)->GetSurfaceLevel(0, surface);
     }
 
     bool EnsureDeviceObjects(IDirect3DDevice9* device, const D3DSURFACE_DESC& backBuffer) {
@@ -298,45 +310,23 @@ namespace {
 
         if (g_owner != device) {
             ReleaseCopy();
-            if (g_shader != nullptr) {
-                g_shader->Release();
-                g_shader = nullptr;
-            }
-            if (g_accumulateShader != nullptr) {
-                g_accumulateShader->Release();
-                g_accumulateShader = nullptr;
-            }
-            if (g_bleachShader != nullptr) {
-                g_bleachShader->Release();
-                g_bleachShader = nullptr;
-            }
+            ReleaseShaders();
             g_owner = device;
         }
 
         if (g_shader == nullptr || g_accumulateShader == nullptr || g_bleachShader == nullptr) {
-            static_assert(sizeof(g_dazzlePixelShader) % sizeof(DWORD) == 0,
-                          "the compiled shader is not a whole number of tokens");
-            DWORD present[sizeof(g_dazzlePixelShader) / sizeof(DWORD)];
-            DWORD accumulate[sizeof(g_dazzleAccumulatePixelShader) / sizeof(DWORD)];
-            DWORD bleach[sizeof(g_dazzleBleachPixelShader) / sizeof(DWORD)];
-            std::memcpy(present, g_dazzlePixelShader, sizeof(g_dazzlePixelShader));
-            std::memcpy(accumulate, g_dazzleAccumulatePixelShader,
-                        sizeof(g_dazzleAccumulatePixelShader));
-            std::memcpy(bleach, g_dazzleBleachPixelShader, sizeof(g_dazzleBleachPixelShader));
-
-            const HRESULT created = device->CreatePixelShader(present, &g_shader);
-            const HRESULT createdAccumulate =
-                device->CreatePixelShader(accumulate, &g_accumulateShader);
-            const HRESULT createdBleach = device->CreatePixelShader(bleach, &g_bleachShader);
-            if (FAILED(created) || FAILED(createdAccumulate) || FAILED(createdBleach) ||
-                g_shader == nullptr || g_accumulateShader == nullptr || g_bleachShader == nullptr) {
+            const HRESULT present = CreateShader(device, g_dazzlePixelShader, &g_shader);
+            const HRESULT accumulate =
+                CreateShader(device, g_dazzleAccumulatePixelShader, &g_accumulateShader);
+            const HRESULT bleach =
+                CreateShader(device, g_dazzleBleachPixelShader, &g_bleachShader);
+            if (FAILED(present) || FAILED(accumulate) || FAILED(bleach) || g_shader == nullptr ||
+                g_accumulateShader == nullptr || g_bleachShader == nullptr) {
                 g_shaderRefused = true;
-                char line[128];
-                std::snprintf(line, sizeof(line),
-                              "dazzle: CreatePixelShader failed 0x%08lX / 0x%08lX",
-                              static_cast<unsigned long>(created),
-                              static_cast<unsigned long>(createdAccumulate));
-                FCSE::ApiPointer()->Log(line);
+                SkyOverhaul::Logf("dazzle: CreatePixelShader failed 0x%08lX / 0x%08lX / 0x%08lX",
+                                  static_cast<unsigned long>(present),
+                                  static_cast<unsigned long>(accumulate),
+                                  static_cast<unsigned long>(bleach));
                 return false;
             }
         }
@@ -347,47 +337,27 @@ namespace {
         }
 
         ReleaseCopy();
-        const HRESULT created =
-            device->CreateTexture(backBuffer.Width, backBuffer.Height, 1, D3DUSAGE_RENDERTARGET,
-                                  backBuffer.Format, D3DPOOL_DEFAULT, &g_sceneCopy, nullptr);
-        if (SUCCEEDED(created) &&
-            SUCCEEDED(device->CreateTexture(backBuffer.Width, backBuffer.Height, 1,
-                                            D3DUSAGE_RENDERTARGET, backBuffer.Format,
-                                            D3DPOOL_DEFAULT, &g_burn, nullptr)) &&
-            SUCCEEDED(device->CreateTexture(backBuffer.Width, backBuffer.Height, 1,
-                                            D3DUSAGE_RENDERTARGET, backBuffer.Format,
-                                            D3DPOOL_DEFAULT, &g_bleach, nullptr))) {
-            g_burn->GetSurfaceLevel(0, &g_burnSurface);
-            g_bleach->GetSurfaceLevel(0, &g_bleachSurface);
-        }
-        if (FAILED(created) || g_sceneCopy == nullptr || g_burnSurface == nullptr ||
-            g_bleachSurface == nullptr ||
-            FAILED(g_sceneCopy->GetSurfaceLevel(0, &g_sceneCopySurface))) {
+        const HRESULT copy = CreateTarget(device, backBuffer, &g_sceneCopy, &g_sceneCopySurface);
+        const HRESULT burn = CreateTarget(device, backBuffer, &g_burn, &g_burnSurface);
+        const HRESULT bleach = CreateTarget(device, backBuffer, &g_bleach, &g_bleachSurface);
+        if (FAILED(copy) || FAILED(burn) || FAILED(bleach)) {
             ReleaseCopy();
-            char line[160];
-            std::snprintf(line, sizeof(line), "dazzle: no %ux%u copy of the frame, 0x%08lX",
-                          backBuffer.Width, backBuffer.Height,
-                          static_cast<unsigned long>(created));
-            FCSE::ApiPointer()->Log(line);
+            SkyOverhaul::Logf("dazzle: no %ux%u copy of the frame, 0x%08lX / 0x%08lX / 0x%08lX",
+                              backBuffer.Width, backBuffer.Height,
+                              static_cast<unsigned long>(copy), static_cast<unsigned long>(burn),
+                              static_cast<unsigned long>(bleach));
             return false;
         }
 
         g_copyDesc = backBuffer;
-
-        char line[160];
-        std::snprintf(line, sizeof(line), "dazzle: drawing over %ux%u, format %u",
-                      backBuffer.Width, backBuffer.Height,
-                      static_cast<unsigned>(backBuffer.Format));
-        FCSE::ApiPointer()->Log(line);
+        SkyOverhaul::Logf("dazzle: drawing over %ux%u, format %u", backBuffer.Width,
+                          backBuffer.Height, static_cast<unsigned>(backBuffer.Format));
         return true;
     }
 
-    // Carries the eye's exposure forward by one frame and reports how strongly the afterimage
-    // should show. It fades over twice as long as the eye spent dazzled, so a short stare leaves a
-    // brief mark and a long one leaves a lasting one.
-    float AdvanceAfterimage(const Glare& glare, bool live) {
-        const float intensity = glare.intensity;
-
+    // Seconds since the previous composite, uncapped: what a long one means is the caller's to
+    // decide.
+    float FrameSeconds() {
         LARGE_INTEGER now;
         QueryPerformanceCounter(&now);
 
@@ -397,7 +367,13 @@ namespace {
                                          static_cast<double>(g_tickFrequency.QuadPart));
         }
         g_lastTick = now;
+        return elapsed;
+    }
 
+    // Carries the eye's exposure forward by one frame and reports how strongly the afterimage
+    // should show. It fades over twice as long as the eye spent dazzled, so a short stare leaves a
+    // brief mark and a long one leaves a lasting one.
+    float AdvanceAfterimage(const Glare& glare, bool live, float elapsed) {
         if (!live || elapsed > kRecoveryGap) {
             g_dazzled = false;
             g_exposure = 0.0f;
@@ -408,12 +384,12 @@ namespace {
             elapsed = kLongestFrame;
         }
 
-        const bool dazzled = g_dazzled ? intensity > kDazzleOff : intensity > kDazzleOn;
+        const bool dazzled = g_dazzled ? glare.intensity > kDazzleOff : glare.intensity > kDazzleOn;
         if (dazzled) {
             // A look back at the sun adds to what is already on the retina rather than wiping it.
-            // Only an eye that has finished recovering starts a fresh image, and an eye that has
-            // finished recovering is one whose exposure has already been cleared.
-            if (!g_dazzled && g_exposure <= 0.0f) {
+            // Only an eye that has finished recovering starts a fresh image, and that is exactly
+            // the eye whose exposure has already been cleared.
+            if (g_exposure <= 0.0f) {
                 g_sinceLookAway = 0.0f;
                 g_burnRestart = true;
             }
@@ -489,6 +465,13 @@ namespace {
         return envelope;
     }
 
+    // How much of the sun's disc reached the screen. A measurement that could not be made reads as
+    // unoccluded, so a silent failure cannot switch the glare off.
+    float VisibleFraction() {
+        const float measured = SkyOverhaul::SunOcclusion::Visibility();
+        return measured < 0.0f ? 1.0f : (measured > 1.0f ? 1.0f : measured);
+    }
+
     // How dazzled the eye is, from nothing to blinded, and how much of that light is drowning the
     // afterimage out.
     Glare Measure() {
@@ -496,41 +479,30 @@ namespace {
 
         // Deliberately not gated on the sun being in front of the camera: the whole point is that
         // the angle decides, and a wide spread reaches past a right angle.
-        if (g_strength <= 0.0f) {
-            return glare;
-        }
-
-        const float cosAngle = g_thisFrame.cosAngle < -1.0f
-                                   ? -1.0f
-                                   : (g_thisFrame.cosAngle > 1.0f ? 1.0f : g_thisFrame.cosAngle);
-        const float angle = std::acos(cosAngle);
-        if (angle >= g_spreadRadians) {
+        const float cosAngle = Clamp(g_thisFrame.cosAngle, -1.0f, 1.0f);
+        if (g_strength <= 0.0f || cosAngle <= g_spreadCos) {
             return glare;
         }
 
         // Raised to a power rather than eased symmetrically: full strength has to mean the sun in
         // the middle of the view, not merely somewhere on screen, so the curve has to fall away
         // from its peak immediately.
-        const float t = angle / g_spreadRadians;
+        const float t = std::acos(cosAngle) / g_spreadRadians;
         const float proximity = std::pow(1.0f - t, g_falloff);
 
         // A low sun is a weak one: its light travels further through the atmosphere.
-        const float ramp = std::sin(g_elevationRamp);
-        float elevation = ramp > 0.0001f ? g_thisFrame.elevation / ramp : 1.0f;
-        elevation = elevation < 0.0f ? 0.0f : (elevation > 1.0f ? 1.0f : elevation);
+        const float elevation = Clamp(g_thisFrame.elevation * g_elevationScale, 0.0f, 1.0f);
 
-        const float measured = SkyOverhaul::SunOcclusion::Visibility();
-        const float visible = measured < 0.0f ? 1.0f : (measured > 1.0f ? 1.0f : measured);
+        const float visible = VisibleFraction();
+        const float clear = 1.0f - Clamp(g_thisFrame.storm, 0.0f, 1.0f);
 
-        const float storm = g_thisFrame.storm > 1.0f ? 1.0f : g_thisFrame.storm;
-
-        glare.intensity = g_strength * proximity * elevation * visible * (1.0f - storm);
+        glare.intensity = g_strength * proximity * elevation * visible * clear;
 
         // Light hides the afterimage over a far wider cone than it brightens the frame over, and
         // it hides it completely wherever the sun is anywhere near the middle of the view - a low
         // sun blinds the eye to its own afterimage just as well as a high one, which is why the
         // elevation has no part in this. Only cover releases it early.
-        glare.hold = (1.0f - t * t) * visible * (1.0f - storm);
+        glare.hold = (1.0f - t * t) * visible * clear;
 
         return glare;
     }
@@ -541,32 +513,17 @@ namespace {
         if (!EnsureDeviceObjects(pass.device, pass.backBuffer)) {
             return;
         }
-
-        IDirect3DSurface9* backBuffer = nullptr;
-        if (FAILED(pass.device->GetRenderTarget(0, &backBuffer)) || backBuffer == nullptr) {
-            return;
-        }
-        const HRESULT copied =
-            pass.device->StretchRect(backBuffer, nullptr, g_sceneCopySurface, nullptr,
-                                     D3DTEXF_NONE);
-
-        backBuffer->Release();
-        if (FAILED(copied)) {
+        if (FAILED(pass.device->StretchRect(pass.target, nullptr, g_sceneCopySurface, nullptr,
+                                            D3DTEXF_NONE))) {
             return;
         }
 
         const float width = static_cast<float>(pass.backBuffer.Width);
         const float height = static_cast<float>(pass.backBuffer.Height);
+        const float radius = g_glareRadius * g_thisFrame.verticalScale;
 
-        // The vertical half of the frame spans the tangent of half the field of view, so the
-        // spread converts into the same units the texture coordinates are measured in. Capped well
-        // short of a right angle, where the tangent runs away and then turns negative - the veil,
-        // not this gradient, is what carries a spread wider than the screen.
-        const float radiusAngle =
-            g_spreadRadians > kMaxRadiusRadians ? kMaxRadiusRadians : g_spreadRadians;
-        const float radius = 0.5f * std::tan(radiusAngle) * g_thisFrame.verticalScale;
-
-        const bool showing = g_burnReady && afterimage > 0.0f;
+        const bool restart = g_burnRestart || !g_burnReady;
+        const Recovery shown = g_burnReady && afterimage > 0.0f ? g_recovery : Recovery{};
         const float constants[24] = {
             g_thisFrame.x / width,
             g_thisFrame.y / height,
@@ -578,15 +535,15 @@ namespace {
             g_veil,
             g_desaturation,
 
-            showing ? g_recovery.core : 0.0f,
-            g_burnRestart || !g_burnReady ? 1.0f : g_burnWeight,
-            showing ? g_recovery.surround : 0.0f,
-            showing ? g_recovery.flash : 0.0f,
+            shown.core,
+            restart ? 1.0f : g_burnWeight,
+            shown.surround,
+            shown.flash,
 
             g_recovery.colour[0],
             g_recovery.colour[1],
             g_recovery.colour[2],
-            showing ? g_recovery.haze : 0.0f,
+            shown.haze,
 
             kCoreLow,
             kCoreHigh,
@@ -602,18 +559,15 @@ namespace {
         // eye was looking at. Taken from the copy made before the glare is painted on, which is
         // what puts a dark spot where the sun was rather than a white one.
         if (g_dazzled) {
-            const bool restart = g_burnRestart || !g_burnReady;
             g_burnRestart = false;
-            AccumulateInto(pass.device, g_burnSurface, g_accumulateShader, pass.backBuffer,
-                           constants, D3DBLENDOP_ADD);
+            AccumulateInto(pass, g_burnSurface, g_accumulateShader, constants, Blend::Mean);
 
             // The bleach keeps the most light that fell on each part of the view rather than the
-            // average of it: a burned retina does not un-burn when the sun moves on. It also has
-            // to. At several hundred frames a second the mean's weight is a thousandth, which
-            // cannot move an eight-bit target by a single step, so the mask would sit frozen on
-            // the first frame of the stare - the weakest one there is.
-            AccumulateInto(pass.device, g_bleachSurface, g_bleachShader, pass.backBuffer, constants,
-                           restart ? D3DBLENDOP_ADD : D3DBLENDOP_MAX);
+            // average of it: a burned retina does not un-burn when the sun moves on. A mean could
+            // not do it anyway, since at a few hundred frames a second its weight rounds to nothing
+            // against an eight-bit target.
+            AccumulateInto(pass, g_bleachSurface, g_bleachShader, constants,
+                           restart ? Blend::Mean : Blend::Peak);
         }
 
         SkyOverhaul::ScreenDraw draw(pass.device);
@@ -627,13 +581,16 @@ namespace {
     }
 
     void OnScenePass(const SkyOverhaul::Frame::Pass& pass) {
-        // Only the sky pass is worth reading: it is the one the engine draws the sun in, so the
-        // world's depth is complete and still bound, and the transform is the one it drew with.
-        if (pass.viewport.MinZ < kSkyPassMinZ) {
+        if (!pass.sky || !pass.live) {
             return;
         }
-        if (!ComputeSun(pass.device, pass.viewport, g_thisFrame) || !g_thisFrame.inFront ||
-            !pass.live) {
+        if (!ComputeSun(pass.device, pass.viewport, g_thisFrame) || !g_thisFrame.inFront) {
+            return;
+        }
+
+        // Nothing outside the spread can read the answer, and the margin leaves the queries long
+        // enough to come back before the angle brings them into use.
+        if (g_thisFrame.cosAngle <= g_sampleCos) {
             return;
         }
 
@@ -643,69 +600,25 @@ namespace {
     }
 
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
-        ComputeSun(pass.device, pass.viewport, g_atComposite);
-
         // The composite is the last moment the world owns the frame: the interface is drawn after
         // it, so the glare lands under the heads-up display rather than over it.
+        const float elapsed = FrameSeconds();
         const Glare glare = pass.live ? Measure() : Glare{};
-        const float intensity = glare.intensity;
-        const float afterimage = AdvanceAfterimage(glare, pass.live);
-        if (intensity > 0.002f || afterimage > 0.002f) {
-            DrawDazzle(pass, intensity, afterimage);
+        const float afterimage = AdvanceAfterimage(glare, pass.live, elapsed);
+        if (glare.intensity > 0.002f || afterimage > 0.002f) {
+            DrawDazzle(pass, glare.intensity, afterimage);
         }
 
-        const float visible = SkyOverhaul::SunOcclusion::Visibility();
-        if (visible >= 0.0f) {
-            g_lowestVisible = visible < g_lowestVisible ? visible : g_lowestVisible;
-            g_highestVisible = visible > g_highestVisible ? visible : g_highestVisible;
-        }
-
-        if (pass.live && (g_dazzled || afterimage > 0.0f) && pass.frame - g_lastBurnLine >= 30) {
-            g_lastBurnLine = pass.frame;
-            char line[256];
-            std::snprintf(line, sizeof(line),
-                          "burn f%u: dazzled %d ready %d weight %.3f exposure %.2f recovering %.2f "
-                          "hold %.3f env %.3f core %.3f haze %.3f target 0x%08lX",
-                          pass.frame, g_dazzled ? 1 : 0, g_burnReady ? 1 : 0, g_burnWeight,
-                          g_exposure, g_recovering, glare.hold, afterimage, g_recovery.core,
-                          g_recovery.haze, static_cast<unsigned long>(g_burnTargetResult));
-            FCSE::ApiPointer()->Log(line);
-        }
-
-        // Anything short of fully visible gets a line of its own. Whether cover registers at all
-        // is the open question, and a two-second bucket can pass straight over the moment it does.
-        if (pass.live && visible >= 0.0f && visible < 0.9f && pass.frame - g_lastCoverFrame >= 10) {
-            g_lastCoverFrame = pass.frame;
-            unsigned long reached = 0;
-            unsigned long total = 0;
-            SkyOverhaul::SunOcclusion::LastCounts(reached, total);
-
-            char line[192];
-            std::snprintf(line, sizeof(line),
-                          "cover f%u: visible %.3f query %lu/%lu sun (%.0f %.0f) cos %.3f",
-                          pass.frame, visible, reached, total, g_thisFrame.x, g_thisFrame.y,
-                          g_thisFrame.cosAngle);
-            FCSE::ApiPointer()->Log(line);
-        }
-
-        // Two-second buckets, because what matters is how the measurement moves as the player
-        // walks into cover, and that happens whenever the player gets there.
-        if (pass.live && pass.frame % 120 == 0) {
-            unsigned long reached = 0;
-            unsigned long total = 0;
-            SkyOverhaul::SunOcclusion::LastCounts(reached, total);
-
-            char line[256];
-            std::snprintf(line, sizeof(line),
-                          "dazzle f%u: intensity %.3f | cos %.3f elev %.3f storm %.2f "
-                          "visible %.3f (low %.3f high %.3f) | sun (%.0f %.0f) inFront %d",
-                          pass.frame, intensity, g_thisFrame.cosAngle, g_thisFrame.elevation,
-                          g_thisFrame.storm, visible, g_lowestVisible, g_highestVisible,
-                          g_thisFrame.x, g_thisFrame.y, g_thisFrame.inFront ? 1 : 0);
-            FCSE::ApiPointer()->Log(line);
-
-            g_lowestVisible = 2.0f;
-            g_highestVisible = -1.0f;
+        g_sinceHeartbeat += elapsed;
+        if (pass.live && g_sinceHeartbeat >= kHeartbeatSeconds) {
+            g_sinceHeartbeat = 0.0f;
+            SkyOverhaul::Logf("dazzle f%u: intensity %.3f hold %.3f | cos %.3f elev %.3f "
+                              "storm %.2f visible %.3f | exposure %.2f recovering %.2f env %.3f "
+                              "| sun (%.0f %.0f) inFront %d",
+                              pass.frame, glare.intensity, glare.hold, g_thisFrame.cosAngle,
+                              g_thisFrame.elevation, g_thisFrame.storm, VisibleFraction(),
+                              g_exposure, g_recovering, afterimage, g_thisFrame.x, g_thisFrame.y,
+                              g_thisFrame.inFront ? 1 : 0);
         }
     }
 }
@@ -720,7 +633,18 @@ void SkyOverhaul::Dazzle::SetStrength(int percent) {
 }
 
 void SkyOverhaul::Dazzle::SetSpread(int degrees) {
-    g_spreadRadians = static_cast<float>(degrees) * kPi / 180.0f;
+    g_spreadRadians = Radians(static_cast<float>(degrees));
+    g_spreadCos = std::cos(g_spreadRadians);
+    g_sampleCos = std::cos(g_spreadRadians + kSampleMarginRadians > kPi
+                               ? kPi
+                               : g_spreadRadians + kSampleMarginRadians);
+
+    // The vertical half of the frame spans the tangent of half the field of view, so the spread
+    // converts into the same units the texture coordinates are measured in. Capped well short of a
+    // right angle, where the tangent runs away and then turns negative - the veil, not this
+    // gradient, is what carries a spread wider than the screen.
+    g_glareRadius =
+        0.5f * std::tan(g_spreadRadians > kMaxRadiusRadians ? kMaxRadiusRadians : g_spreadRadians);
 }
 
 void SkyOverhaul::Dazzle::SetFalloff(int tenths) {
@@ -740,7 +664,8 @@ void SkyOverhaul::Dazzle::SetVeil(int percent) {
 }
 
 void SkyOverhaul::Dazzle::SetElevationRamp(int degrees) {
-    g_elevationRamp = static_cast<float>(degrees) * kPi / 180.0f;
+    const float ramp = std::sin(Radians(static_cast<float>(degrees)));
+    g_elevationScale = ramp > 0.0001f ? 1.0f / ramp : 1.0f;
 }
 
 void SkyOverhaul::Dazzle::SetAfterimageStrength(int percent) {
@@ -773,18 +698,7 @@ void SkyOverhaul::Dazzle::SetAfterimageSaturation(int percent) {
 
 void SkyOverhaul::Dazzle::ReleaseDeviceObjects() {
     ReleaseCopy();
-    if (g_shader != nullptr) {
-        g_shader->Release();
-        g_shader = nullptr;
-    }
-    if (g_accumulateShader != nullptr) {
-        g_accumulateShader->Release();
-        g_accumulateShader = nullptr;
-    }
-    if (g_bleachShader != nullptr) {
-        g_bleachShader->Release();
-        g_bleachShader = nullptr;
-    }
-    g_owner = nullptr;
+    ReleaseShaders();
     SkyOverhaul::SunOcclusion::ReleaseDeviceObjects();
+    g_owner = nullptr;
 }
