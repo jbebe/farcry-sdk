@@ -90,6 +90,13 @@ what is left is what a modeler cannot do rather than what is broken.
 ## Tools/"dll plugins"
 
 - [ ] Lua script support for plugins so that simple changes don't have to be compiled
+- [ ] Sky Overhaul: the sun's glare is not blocked by cover. The occlusion query issued during the
+      sky pass comes back empty, and its counts are logged each second as `query R/T`. Ruled out
+      already: `SunOcclusionFactor` is water specular and reads 1.0 in play, and no depth-stencil is
+      attached late enough in the frame to depth-test the glare where it is drawn
+- [ ] How the permutation key in a `shadersobj` index table is derived from a shader's `#define`s.
+      The no-option permutation keys on the CRC32 of the shader's name, which is confirmed for 30
+      shaders; option-bearing ones can be enumerated but not addressed by name
 
 ## Tools/vortex-farcry2
 

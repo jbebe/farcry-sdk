@@ -25,6 +25,181 @@ The sky is built from three independent pieces every frame:
 Each piece has its own size ceiling, and they're wildly mismatched — which is the actual reason the
 sky "looks like a bad skybox" even though it isn't one.
 
+## What draws what
+
+`CSceneSky`'s constructor (`Dunia.dll:0x1037ac50`) builds five drawables, each owning one shader:
+
+| Object | Constructor | Shader | Options |
+| --- | --- | --- | --- |
+| Sky dome | `0x103d9040` | `SkyDome` | `SKY_STORM_BLEND`, `OPAQUE` |
+| Star sphere | `0x103d9190` | `StarSphere` | `ADDITIVE` |
+| Cloud noise | `0x103da580` | `CloudNoiseBlur`, `CloudNoiseCombine` | `LAYER1`, `LAYER2` |
+| Sun disk | `0x103ddc00` | `SkyDisk` | `TEXKILL` |
+| Sun/moon sprites | `0x103d9550` | `CelestialBody` | `VISIBILITY_TEST`, `TIME_OF_DAY_MAPPING`, `TIME_OF_DAY_COLOR`, `TEXKILL`, `ADDITIVE`, `FAKEHDR` |
+| Cloud layer | `0x103dce80` | `CloudLayer` | `LAYER1`, `LAYER2`, `COMBINE_LOW_OCTAVES`, `MASK_DESTCOLOR`, `CLOUD_QUALITY_*` |
+
+The dome and the cloud layer are both surfaces of revolution generated at load. The dome
+(`0x103d7d50`) is 16 rings by 32 segments. The cloud layer (`0x103dcd80`) is a **shallow bowl**,
+spun from a six-point profile of radius/height pairs stored at `0x10f95fc8`:
+
+```
+(-0.5, 0.20)  (0, 0.18)  (0.5, 0.11)  (0.8, 0.04)  (1.0, 0.01)  (1.5, 0.00)
+```
+
+The bowl flattens to zero height at its rim, and the cloud shader takes its noise coordinate from the
+bowl's own XY. That is the reason the clouds appear to meet the horizon rather than passing over it:
+the geometry they are painted on genuinely descends to eye level at the edge, so there is no
+perspective for the clouds to have.
+
+## The sky's own draw, and the state it reads
+
+One function draws the whole sky: `Dunia.dll:0x1037A150`. It opens by fetching the renderer's scene
+state, then calls each piece in turn, every one of them gated by a bit of a flags argument, so a
+viewport can ask for some of the sky and not the rest:
+
+| Bit | Draws | Function |
+| --- | --- | --- |
+| 1 | Star sphere | `0x103D8720` |
+| 2 | Sky dome | `0x103D92D0` |
+| 4 | Cloud layer | `0x103DA190` |
+| 8 | Sun disc | `0x103DD7B0` |
+| 0x10 | Sun and moon sprites | `0x103DC3C0` |
+
+The storm factor splits it: the dome and clouds draw while it is above zero, the star sphere, sun
+disc and a second cloud pass while it is below one, so a partial storm draws both and crossfades.
+
+The scene state it reads from is reached through an accessor that is **one instantiation of a
+template the renderer uses for every kind of component**, identical in bytes three times over in each
+shipped build. Anything hooking it would be both ambiguous and liable to be handed some other
+subsystem's state; arriving through one of the draws above is unambiguous by construction. The sun
+disc's call passes `state + 0x148` as the direction to orient itself by, which is what makes the
+whole block below addressable from outside.
+
+| Offset | Field |
+| --- | --- |
+| `+0x134` | `SunHorizonScaleStartElevation` |
+| `+0x140` | Sun disc HDR multiplier |
+| `+0x148` | **Sun direction**, three floats, unit length, Z up |
+| `+0x170` | `SunRange` |
+| `+0x178` | `SunMaxHorizontalScale` |
+| `+0x17C` | `SunMaxVerticalScale` |
+| `+0x1B8` | Storm factor, 0 to 1 |
+| `+0x1BC` | Time-of-day coordinate, the one every sky shader looks its colour ramp up with |
+
+The names come from `CSky::LoadSky` writing the world's `<Sky>` attributes into those same offsets.
+
+### `SunRange` does not change how big the sun looks
+
+The sun disc's vertex shader builds its geometry as `float4(Position.x, 1, Position.y, 1)` scaled by
+a `Scaling` vector the draw computes:
+
+```
+Scaling.x = ((SunMaxHorizontalScale - 1) * horizonBlend + 1) * SunRange
+Scaling.y = SunRange
+Scaling.z = ((SunMaxVerticalScale   - 1) * horizonBlend + 1) * SunRange
+```
+
+`Scaling.y` is the distance and `Scaling.x`/`.z` are the half-extents, so `SunRange` cancels out of
+the ratio and only moves the disc further away at proportionally greater size. What is left is
+`atan((SunMaxHorizontalScale - 1) × horizonBlend + 1)`, which at the shipped value of 1 is 45° — a
+**90°-wide** element. The sun disc is the broad glow around the sun, not the sun. What reads as the
+sun's body is the flare sprite's texture, whose shipped image is a hard-edged white disc filling the
+inner half of its own bitmap with no falloff at all; every soft edge in the stock game comes from
+bloom.
+
+## Shaders, and where their source is
+
+Every sky shader's compiled object can be located and replaced — see
+[`shadersobj`](../file-formats/shader-objects.md) and
+[replacing a shader](../modding/replacing-a-shader.md). The permutation compiled with no options
+keys on the CRC32 of the shader's name, which resolves `celestialbody`, `skydome`, `skydisk`,
+`starsphere`, `cloudnoisecombine` and `cloudnoiseblur` directly.
+
+The September 2008 Xbox 360 prototype ships the **HLSL source** for all of them, which retail does
+not. For `celestialbody` the prototype and the retail object are the same shader: recompiling the
+prototype's logic against the retail binding table reproduces the shipped bytecode instruction for
+instruction, differing only in the operand order of two commutative multiplies. Treat the prototype
+sources as an accurate guide that still has to be checked per shader.
+
+## Sun and moon: one shader, four shipped variants
+
+`CelestialBody` draws the sun flare, the moon and the moon flare. Its parameters arrive in a single
+`float4` at `c71` — `x` time-of-day coordinate, `y` visibility, `z` HDR multiplier, `w` horizon
+factor — plus two samplers: the sprite and its time-of-day colour ramp.
+
+Only four pixel-shader objects in the D3D9 tree bind `CelestialBodySampler`:
+
+| Object | Variant |
+| --- | --- |
+| `3ffcc3dd` | `ADDITIVE` + `TIME_OF_DAY_COLOR` |
+| `1a68de08` | `ADDITIVE` + `TIME_OF_DAY_COLOR` + `FAKEHDR` |
+| `433f72b2` | `TIME_OF_DAY_COLOR`, fog applied |
+| `34e1d970` | `TIME_OF_DAY_COLOR` + `FAKEHDR`, fog applied |
+
+`ADDITIVE` skips fog and scales by `BloomAdaptationFactor`; the fog variants run
+`ApplyFogNoBloom` instead. `FAKEHDR` appends the encode pair (`add -1`, `mul 0.125`) and drops
+`AlphaBlendEnable` from the render state. `TEXKILL` is compiled out entirely on PC, which is why
+eight permutations collapse onto four objects.
+
+The flares are the `ADDITIVE` pair, so which one runs depends on whether HDR is on: `3ffcc3dd` with
+`Hdr="1"`, `1a68de08` without.
+
+The render state both `ADDITIVE` variants use sets only four states:
+
+```
+AlphaBlendEnable=true   BlendOp=Add   ZWriteEnable=false   CullMode=None
+```
+
+It does **not** set `ZEnable`, so the flare inherits the depth test from whatever ran before it, and
+it does not set `SrcBlend`/`DestBlend` either. Nothing about the flare's occlusion is decided in its
+own render state.
+
+### The visibility term is a real occlusion query, and it stays inside the flare
+
+`Params.y` is not a constant. The `VISIBILITY_TEST` permutation draws the sprite with colour writes
+disabled into a 16×16 "Temp query surface", and the result becomes the sprite's own visibility
+multiplier. Standing behind a tree genuinely dims the flare, without the shader doing any work for it.
+
+:::warning[Not the same thing as `SunOcclusionFactor`]
+The `SunOcclusionFactor` global at `c63` sounds like this value and is not it. It is read by exactly
+one shipped shader — `water.fx`, as `specular *= SunOcclusionFactor * shadowFactor` — and sampled in
+a running game it holds `1.0` throughout play, in the open and behind cover alike. The flare's own
+visibility never leaves the draw that computes it.
+
+That matters to anything outside the renderer that wants to know whether the sun is visible: the
+engine has the answer and does not publish it. Measuring it again with an occlusion query of your own
+is the available route, and it has to be issued during the sky pass — see
+[presenting a frame](./presentation-and-input.md) for why nowhere later will do.
+:::
+
+## What a shader is given, and what it is not
+
+`CViewportShaderParameterProvider` (`Dunia.dll:0x103788F0`) registers the constants every shader in
+the frame can read without asking, at fixed registers. The camera is fully described:
+`ViewProjectionMatrix` at `c4`, `ProjectionMatrix` at `c8`, `ViewMatrix` at `c12`, `ViewPoint` at
+`c47`, `CameraDirection` at `c46`, plus fog at `c48`–`c52` and `BloomAdaptationFactor` at `c58`.
+
+**The sun's direction is not among them.** Nothing in the provider carries it, and the reason is
+structural rather than an oversight: every draw that needs the sun is already positioned at the sun.
+The flare and the sun disc are billboards placed there, so their own transform is the answer, and the
+cloud layer takes `SunDirection` as a parameter of its own for that draw alone.
+
+That is the whole difficulty behind any screen-space sun effect. Such an effect needs the angle
+between the view direction and the sun, and no shader in the game can be handed both halves of it. A
+fullscreen pass has the camera and not the sun; the flare's own shader has the sun and not, usefully,
+the camera — a pixel there knows its distance from the sun but not the sun's distance from the centre
+of the screen, and a wash built on the former paints a bright disc on the sky rather than a veil.
+
+Two further facts about the flare quad, both established by testing rather than by reading:
+
+- Its texture coordinate runs 0 to 1 with the sun at the centre, so distance across the quad is the
+  angle from the sun, scaled by whatever `SunFlareTextureSize` makes the quad.
+- Transforming the quad's local origin by its own `ModelViewProj` does **not** land on the sun, so
+  the sun's screen position cannot be recovered inside the shader that way.
+
+The consequence is that the angle has to come from the game side: read the sun out of the scene state
+above, read the camera back off the Direct3D device, and do the work outside the shader.
+
 ## The dome: a gradient, not an image
 
 `CSky` (`CSky::LoadSky` at `Dunia.dll:0x1018c880`, matched against the server's
@@ -211,16 +386,15 @@ constants and shipped asset choices, both changeable without a new engine featur
 
 ## Shader source status
 
-The sky/cloud pixel shaders themselves (`skydome.fx`, `cloudlayer.fx`, `cloudnoisecombine.fx`,
-`cloudnoiseblur.fx`, `celestialbody.fx`, `starsphere.fx`, `skydisk.fx`, plus includes
-`cloudshadows.inc.fx`, `skyfog.inc.fx`, `curvedhorizon.inc.fx`) compile into `shadersobj.fat` as
-`shadernumber_XXXXXXXX.pso`/`.vso` — permutation IDs, not paths, and per
-[asset-reachability.md](./asset-reachability.md) ~93% of that archive is unrecoverable by name. The
-D3D9 tree has no `CTAB`/reflection data and is a dead end for recovery; the D3D10 tree
-(`shadersobj/engine/shaders/obj10/`) is plain DXBC with `RDEF` intact, so names and constant buffers
-survive `fxc /dumpbin` — but only on the `-3dplatform d3d10` backend.
+The sky/cloud shaders (`skydome.fx`, `cloudlayer.fx`, `cloudnoisecombine.fx`, `cloudnoiseblur.fx`,
+`celestialbody.fx`, `starsphere.fx`, `skydisk.fx`, plus includes `cloudshadows.inc.fx`,
+`skyfog.inc.fx`, `curvedhorizon.inc.fx`) compile into `shadersobj.dat` as
+`shadernumber_XXXXXXXX.pso`/`.vso`, addressed by hash rather than by name.
 
-The two `fastinitdata_*.bin` files used above to confirm the cloud permutations are themselves a
-promising unexploited resource: a full shader name → permutation-defines table, for **every**
-shader in the game, not just the sky ones. That's very likely the missing key to resolving
-`shadersobj.fat`'s ~93% unknown rate — worth a dedicated pass independent of anything sky-related.
+That is no longer a dead end. The D3D9 objects carry a binding table naming every parameter as a
+CRC32, the index tables at the root of the tree resolve a shader's no-option permutation from its
+name, and a replacement compiled with `fxc` drops straight back in — the whole loop is
+[`shadersobj`](../file-formats/shader-objects.md) and
+[replacing a shader](../modding/replacing-a-shader.md). What is still unknown is how a permutation's
+`#define`s fold into an index key, which is what would let every one of the 147,140 permutations be
+addressed by name rather than found by its parameters.

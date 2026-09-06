@@ -23,7 +23,8 @@ in-process patcher if patching proves necessary.
 | Reads, no write path | Domino graphs, `.sdat` | Writers exist for both but are called only from tests. |
 | Round-trips, partial write path | `.xbg`, `.skeleton`, `.xbm`, `.mab`, `.rtx` | **JackAll** writes `.xbg`, `.skeleton`, `.xbm` and `.mab`, all byte-identical over the retail set; `tools/BlenderFC2` authors the edits as `.fc2model` packs and holds no format code of its own. A `.mab` clip is authored by rewriting the one clip that fits the rig and carrying the rest of the chain verbatim; re-encoding a whole bank from decoded fields alone returns 78.4% byte-identical, the shortfall being rotations authored on an exact tie. |
 | Container only | `.srl` (14,964 files), `.zsr` (14,964), `.nvm` (5,144) | Spatial data — roadmap dependencies, not standalone work. |
-| Sniffed, never parsed | `.hkx`, shader bins, `.bik`, `.feu`, `.wem` | See [Not doing](#not-doing-and-why). |
+| Sniffed, never parsed | `.hkx`, `.bik`, `.feu`, `.wem` | See [Not doing](#not-doing-and-why). |
+| Round-trips, full write path | shader objects (1,698 D3D9) | **JackAll** reads and rebuilds every one byte-identically; a replacement compiled with `fxc` drops back in. Parameter names survive as CRC32 and resolve at 99.8% against the 2008 prototype's HLSL. |
 | Parseable but unusable | `worldsector<N>.data.fcb` (5,230), `world1.mapsdata.fcb` | These *are* FCB — decoded today into a wall of `hidPos`/`hidAngles` floats with no spatial meaning. This is the wall. |
 
 All the gameplay data modders actually want — weapons, AI, economy, vehicles, patrols, missions — is
@@ -261,8 +262,7 @@ Stand up `JackAll.App.Tests` before either large App feature lands.
   new package buys styling and virtualization, not readability. If revisited, the order is: UI
   virtualization → Brandes-Köpf x-coordinate assignment and edge routing → semantic collapsing →
   persist node positions.
-- **Shaders** (permutation IDs, a documented hard ceiling), **`.bik`** (third-party), **`.hkx`** (deep
-  niche).
+- **`.bik`** (third-party), **`.hkx`** (deep niche).
 - **`.srl`, `.zsr` and `.nvm` as standalone tracks.** They are Track 1 dependencies. Decoded in
   isolation they're hex dumps; decoded alongside a map they're editable overlays. `.nvm` in
   particular only matters once you can place geometry — and regenerating a Recast graph wrong breaks

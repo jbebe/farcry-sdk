@@ -61,9 +61,12 @@ slots, `.mgb.desc` dependency lists, `depload.dat` manifests, an `.xbt` header n
 companion, a MOVE graph's clip hashes, an `.rtx` species' material slots. This is the only category
 a tool can follow, and it is what JackAll's reference index holds.
 
-**Id spaces with no path at all.** Shaders are addressed by permutation id; ~93% of
-`shadersobj.fat` has no recoverable name. `.sbao` streams *are* their id — the filename is the hex
-resource number. Nothing in this category can be shown unused, so it never is.
+**Id spaces with no path at all.** Shaders are addressed by permutation id, so no shader object's
+archive path can be recovered from a reference. The tree carries its own
+[index tables](../file-formats/shader-objects.md) mapping permutations to objects, which is a
+different question and does resolve every shipped object — but it yields the permutation a file
+serves, not a name that hashes back to its archive entry. `.sbao` streams *are* their id — the
+filename is the hex resource number. Nothing in this category can be shown unused, so it never is.
 
 ## Reading the verdicts
 
