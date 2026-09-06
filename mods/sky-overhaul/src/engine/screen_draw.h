@@ -25,7 +25,7 @@ public:
 
 private:
     IDirect3DDevice9* m_device;
-    DWORD m_renderStates[16] = {};
+    DWORD m_renderStates[20] = {};
     DWORD m_stageStates[6] = {};
     DWORD m_samplerStates[2][6] = {};
     IDirect3DVertexShader9* m_vertexShader = nullptr;
@@ -38,7 +38,7 @@ private:
     IDirect3DIndexBuffer9* m_indices = nullptr;
     DWORD m_vertexFormat = 0;
     D3DVIEWPORT9 m_viewport = {};
-    float m_pixelConstants[8] = {};
+    float m_pixelConstants[12] = {};
 };
 
 }

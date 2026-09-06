@@ -1,9 +1,13 @@
 // The dazzle, drawn over the finished frame.
 //
-// Compiled by fxc at build time into a header the plugin embeds, so the game needs no D3DX and the
-// build needs no DirectX SDK. See CMakeLists.txt.
+// Two entry points, compiled separately by fxc at build time into headers the plugin embeds, so
+// the game needs no D3DX and the build needs no DirectX SDK. See CMakeLists.txt.
 
 sampler2D Scene : register(s0);
+
+// What the eye has burned in: the view accumulated over the frames it spent dazzled, which is
+// where the smear comes from as the view moves.
+sampler2D Burn : register(s1);
 
 // x, y  the sun's place on screen, in texture coordinates
 // z     how strongly the eye is dazzled, 0 to 1
@@ -15,6 +19,16 @@ float4 Sun : register(c0);
 // z     how much of the glare covers the frame wherever the sun happens to be
 // w     how much colour drains at full dazzle
 float4 Shape : register(c1);
+
+// x     how strongly the burned-in view shows once the player looks away
+// y     how much of this frame is laid into the burn
+float4 After : register(c2);
+
+// Lays the frame into the burn, weighted so that many frames average together.
+float4 AccumulatePS(float2 uv : TEXCOORD0) : COLOR0
+{
+    return float4(tex2D(Scene, uv).rgb, After.y);
+}
 
 float4 MainPS(float2 uv : TEXCOORD0) : COLOR0
 {
@@ -43,6 +57,11 @@ float4 MainPS(float2 uv : TEXCOORD0) : COLOR0
 
     colour = saturate((colour - 0.5f) * (1.0f + Sun.w * Sun.z) + 0.5f);
     colour = lerp(colour, 1.0f, wash);
+
+    // The burn, inverted, laid over what the eye is looking at now. Read at its own size, so what
+    // softness it has is the smear it was built with rather than anything added here.
+    float3 burn = 1.0f - tex2D(Burn, uv).rgb;
+    colour = lerp(colour, burn, After.x);
 
     return float4(colour, 1.0f);
 }

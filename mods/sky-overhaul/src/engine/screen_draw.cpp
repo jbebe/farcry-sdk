@@ -6,6 +6,7 @@ namespace {
         D3DRS_CULLMODE,         D3DRS_LIGHTING,          D3DRS_FOGENABLE,
         D3DRS_STENCILENABLE,    D3DRS_SCISSORTESTENABLE, D3DRS_COLORWRITEENABLE,
         D3DRS_ALPHATESTENABLE,  D3DRS_ALPHABLENDENABLE,  D3DRS_SEPARATEALPHABLENDENABLE,
+        D3DRS_SRCBLEND,         D3DRS_DESTBLEND,
         D3DRS_SRGBWRITEENABLE,  D3DRS_CLIPPLANEENABLE,   D3DRS_SHADEMODE,
         D3DRS_BLENDOP,
     };
@@ -52,7 +53,7 @@ SkyOverhaul::ScreenDraw::ScreenDraw(IDirect3DDevice9* device) : m_device(device)
     m_device->GetIndices(&m_indices);
     m_device->GetFVF(&m_vertexFormat);
     m_device->GetViewport(&m_viewport);
-    m_device->GetPixelShaderConstantF(0, m_pixelConstants, 2);
+    m_device->GetPixelShaderConstantF(0, m_pixelConstants, 3);
 
     m_device->SetVertexShader(nullptr);
     m_device->SetPixelShader(nullptr);
@@ -125,7 +126,7 @@ SkyOverhaul::ScreenDraw::~ScreenDraw() {
     m_device->SetIndices(m_indices);
     m_device->SetFVF(m_vertexFormat);
     m_device->SetViewport(&m_viewport);
-    m_device->SetPixelShaderConstantF(0, m_pixelConstants, 2);
+    m_device->SetPixelShaderConstantF(0, m_pixelConstants, 3);
 
     if (m_vertexShader != nullptr) {
         m_vertexShader->Release();

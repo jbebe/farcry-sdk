@@ -43,13 +43,22 @@ endif()
 
 set(DAZZLE_SHADER "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/dazzle.fx")
 set(DAZZLE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/dazzle_ps.h")
+set(ACCUMULATE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/dazzle_accumulate_ps.h")
 add_custom_command(
   OUTPUT "${DAZZLE_HEADER}"
   COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
   COMMAND "${FXC_EXECUTABLE}" /nologo /T ps_2_0 /E MainPS /O3 /Vn g_dazzlePixelShader
           /Fh "${DAZZLE_HEADER}" "${DAZZLE_SHADER}"
   DEPENDS "${DAZZLE_SHADER}"
-  COMMENT "Compiling src/shaders/dazzle.fx"
+  COMMENT "Compiling src/shaders/dazzle.fx (MainPS)"
+  VERBATIM)
+add_custom_command(
+  OUTPUT "${ACCUMULATE_HEADER}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
+  COMMAND "${FXC_EXECUTABLE}" /nologo /T ps_2_0 /E AccumulatePS /O3
+          /Vn g_dazzleAccumulatePixelShader /Fh "${ACCUMULATE_HEADER}" "${DAZZLE_SHADER}"
+  DEPENDS "${DAZZLE_SHADER}"
+  COMMENT "Compiling src/shaders/dazzle.fx (AccumulatePS)"
   VERBATIM)
 
 add_library(SkyOverhaul SHARED
@@ -61,6 +70,7 @@ add_library(SkyOverhaul SHARED
   "src/engine/sky_state.cpp"
   "src/engine/sun_occlusion.cpp"
   "${DAZZLE_HEADER}"
+  "${ACCUMULATE_HEADER}"
 )
 
 # src/ on the path so every #include reads from the root of this tree - "engine/sky_state.h", never

@@ -16,6 +16,8 @@ void __cdecl OnContrastChanged(const FCSE_SettingValue* value, void* userdata);
 void __cdecl OnDesaturationChanged(const FCSE_SettingValue* value, void* userdata);
 void __cdecl OnVeilChanged(const FCSE_SettingValue* value, void* userdata);
 void __cdecl OnElevationRampChanged(const FCSE_SettingValue* value, void* userdata);
+void __cdecl OnAfterimageStrengthChanged(const FCSE_SettingValue* value, void* userdata);
+void __cdecl OnAfterimageSecondsChanged(const FCSE_SettingValue* value, void* userdata);
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION) {
@@ -49,6 +51,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          300},
         {"Sun elevation ramp", FCSE_SLIDER(40), &OnElevationRampChanged, nullptr, nullptr, 0, 1,
          45},
+        {"Afterimage strength", FCSE_SLIDER(60), &OnAfterimageStrengthChanged, nullptr, nullptr, 0,
+         0, 100},
+        {"Afterimage seconds", FCSE_SLIDER(10), &OnAfterimageSecondsChanged, nullptr, nullptr, 0, 1,
+         10},
     };
     api->RegisterSettings("Sky Overhaul", settings, sizeof(settings) / sizeof(settings[0]));
 
@@ -85,4 +91,12 @@ void __cdecl OnVeilChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
 
 void __cdecl OnElevationRampChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
     SkyOverhaul::Dazzle::SetElevationRamp(value->asSlider);
+}
+
+void __cdecl OnAfterimageStrengthChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
+    SkyOverhaul::Dazzle::SetAfterimageStrength(value->asSlider);
+}
+
+void __cdecl OnAfterimageSecondsChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
+    SkyOverhaul::Dazzle::SetAfterimageSeconds(value->asSlider);
 }

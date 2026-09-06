@@ -36,4 +36,11 @@ void SetVeil(int percent);
 // setting sun dazzles less than a midday one.
 void SetElevationRamp(int degrees);
 
+// How strongly the burned-in view shows once the player looks away, as a percentage.
+void SetAfterimageStrength(int percent);
+
+// The longest the eye's exposure can build up to, in seconds, which is also how long the
+// afterimage takes to fade after staring that long.
+void SetAfterimageSeconds(int seconds);
+
 }
