@@ -35,7 +35,7 @@
         <TextBlock x:Name="StatusLine" Foreground="#888" FontSize="11" TextWrapping="Wrap"
                    Margin="0,0,0,4" />
 
-        <Expander x:Name="IncomingExpander" IsExpanded="True" Margin="0,0,0,4">
+        <Expander x:Name="IncomingExpander" Margin="0,0,0,4">
             <DataGrid x:Name="IncomingGrid" Style="{StaticResource XrefGrid}"
                       RowStyle="{StaticResource XrefRowStyle}">
                 <DataGrid.Columns>
@@ -52,7 +52,7 @@
             </DataGrid>
         </Expander>
 
-        <Expander x:Name="OutgoingExpander" IsExpanded="True">
+        <Expander x:Name="OutgoingExpander">
             <DataGrid x:Name="OutgoingGrid" Style="{StaticResource XrefGrid}"
                       RowStyle="{StaticResource XrefRowStyle}">
                 <DataGrid.Columns>

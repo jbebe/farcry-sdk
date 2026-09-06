@@ -1,6 +1,5 @@
-using JackAll.Tools.World;
+﻿using JackAll.Tools.World;
 using JackAll.Tools.Xbg;
-using System.Text;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media.Media3D;
@@ -37,7 +36,11 @@ public partial class XbgFileHandler : UserControl
     private XbgModel? _model;
     private int _selectedLod;
 
-    private double _yaw = -0.7, _pitch = 0.35, _distance = 5;
+    /// <summary>How far above the model the camera sits, in radians. Fixed: the orbit is
+    /// horizontal-only, so nothing changes this.</summary>
+    private const double Elevation = 0.35;
+
+    private double _yaw = -0.7, _distance = 5;
     private Point3D _target;
     private double _near = 0.01, _far = 100;
     private Point _lastMouse;
@@ -90,18 +93,11 @@ public partial class XbgFileHandler : UserControl
         // The same selection the map editor draws: pristine parts only, each at its nearest tier.
         List<XbgSubmesh> submeshes = WorldModels.SubmeshesAt(_model, lod);
 
-        var sb = new StringBuilder();
         int totalVerts = submeshes.Select(s => s.Positions).Distinct().Sum(p => p.Length);
         int totalTris = submeshes.Sum(s => s.Indices.Length / 3);
         int parts = submeshes.Select(s => s.PartName).Distinct(StringComparer.OrdinalIgnoreCase).Count();
-        sb.AppendLine($"LOD {lod}: {parts} part(s), {submeshes.Count} submesh(es), " +
-                       $"{totalVerts:N0} vertices, {totalTris:N0} triangles");
-        foreach (string mat in submeshes.Select(s => s.MaterialName).Distinct().OrderBy(m => m))
-        {
-            sb.AppendLine($"  - {mat}");
-        }
-
-        StatusText.Text = sb.ToString().TrimEnd();
+        StatusText.Text = $"LOD {lod}: {parts} part(s), {submeshes.Count} submesh(es), " +
+                          $"{totalVerts:N0} vertices, {totalTris:N0} triangles";
 
         BuildScene(submeshes);
         FrameCamera(submeshes);
@@ -121,8 +117,9 @@ public partial class XbgFileHandler : UserControl
     {
         var root = new Model3DGroup();
         root.Children.Add(new AmbientLight(Color.FromRgb(0x60, 0x60, 0x60)));
-        root.Children.Add(new DirectionalLight(Color.FromRgb(0xB0, 0xB0, 0xB0), new Vector3D(-0.5, -0.8, -0.3)));
-        root.Children.Add(new DirectionalLight(Color.FromRgb(0x40, 0x40, 0x40), new Vector3D(0.6, 0.2, 0.7)));
+        // Z-up, so the key light shines downwards along -Z with the fill coming back up from below.
+        root.Children.Add(new DirectionalLight(Color.FromRgb(0xB0, 0xB0, 0xB0), new Vector3D(-0.5, -0.3, -0.8)));
+        root.Children.Add(new DirectionalLight(Color.FromRgb(0x40, 0x40, 0x40), new Vector3D(0.6, 0.7, 0.2)));
 
         foreach (XbgSubmesh sm in submeshes)
         {
@@ -166,18 +163,22 @@ public partial class XbgFileHandler : UserControl
         _near = radius * 0.01;
         _far = radius * 20;
         _yaw = -0.7;
-        _pitch = 0.35;
         UpdateCamera();
     }
 
+    /// <summary>
+    /// Orbits the camera. Z is up, matching the mesh data - the map editor's world is X east,
+    /// Y north, Z up and these vertices go into it unswapped, so anything treating Y as up lays the
+    /// model on its side.
+    /// </summary>
     private void UpdateCamera()
     {
         double cy = Math.Cos(_yaw), sy = Math.Sin(_yaw);
-        double cp = Math.Cos(_pitch), sp = Math.Sin(_pitch);
-        var dir = new Vector3D(cy * cp, sp, sy * cp);
+        double cp = Math.Cos(Elevation), sp = Math.Sin(Elevation);
+        var dir = new Vector3D(cy * cp, sy * cp, sp);
         Camera.Position = _target + dir * _distance;
         Camera.LookDirection = -dir;
-        Camera.UpDirection = new Vector3D(0, 1, 0);
+        Camera.UpDirection = new Vector3D(0, 0, 1);
         Camera.NearPlaneDistance = _near;
         Camera.FarPlaneDistance = _far;
     }
@@ -216,8 +217,8 @@ public partial class XbgFileHandler : UserControl
         Vector delta = pos - _lastMouse;
         _lastMouse = pos;
 
+        // Horizontal only - the model turns on the spot, and there is no elevation to lose track of.
         _yaw += delta.X * 0.01;
-        _pitch = Math.Clamp(_pitch - delta.Y * 0.01, -1.5, 1.5);
         UpdateCamera();
     }
 

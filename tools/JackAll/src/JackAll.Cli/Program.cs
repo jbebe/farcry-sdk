@@ -10,6 +10,8 @@ using JackAll.Cli.Commands.Rml;
 using JackAll.Cli.Commands.Sav;
 using JackAll.Cli.Commands.Sbao;
 using JackAll.Cli.Commands.Spk;
+using JackAll.Cli.Commands.Rml;
+using JackAll.Cli.Commands.Shader;
 using JackAll.Cli.Commands.Xbg;
 using JackAll.Cli.Commands.Xbt;
 using JackAll.Cli.Commands.Xref;
@@ -90,6 +92,31 @@ app.Configure(config =>
         pack.AddCommand<Fc2ModelInspectCommand>("inspect")
             .WithDescription("List what a pack holds and which of it has been changed.")
             .WithExample("fc2model", "inspect", "ak47.fc2model");
+    });
+
+    // --- compiled RML documents -------------------------------------------
+    config.AddBranch("rml", rml =>
+    {
+        rml.AddCommand<RmlDecodeCommand>("decode")
+            .WithDescription("Decode a compiled RML document, such as a <world>.game.xml, to XML.")
+            .WithExample("rml", "decode", "world1.game.xml", "--element", "Environment");
+        rml.AddCommand<RmlEncodeCommand>("encode")
+            .WithDescription("Recompile decoded XML back into an RML document.")
+            .WithExample("rml", "encode", "world1.decoded.xml");
+    });
+
+    // --- compiled shaders ------------------------------------------------
+    config.AddBranch("shader", shader =>
+    {
+        shader.AddCommand<ShaderExtractCommand>("extract")
+            .WithDescription("Split a .pso/.vso into its Direct3D bytecode and .xml binding table.")
+            .WithExample("shader", "extract", "shadernumber_3ffcc3dd.pso");
+        shader.AddCommand<ShaderBuildCommand>("build")
+            .WithDescription("Reassemble a shader object from bytecode and its .xml binding table.")
+            .WithExample("shader", "build", "shadernumber_3ffcc3dd.bin");
+        shader.AddCommand<ShaderIndexCommand>("index")
+            .WithDescription("Resolve a shader permutation to the object files it loads.")
+            .WithExample("shader", "index", "engine/shaders/obj", "--shader", "celestialbody");
     });
 
     // --- .xbg meshes -----------------------------------------------------

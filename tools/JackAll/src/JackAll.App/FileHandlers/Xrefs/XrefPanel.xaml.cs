@@ -1,4 +1,4 @@
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using JackAll.Core.Vfs;
@@ -71,10 +71,11 @@ public partial class XrefPanel : UserControl
         IncomingExpander.Header = $"Referenced by ({incoming.Count:N0})";
         OutgoingExpander.Header = $"References ({outgoing.Count:N0})";
 
-        // Collapsed when empty so two dead grids don't push the preview off screen, but the header
-        // still reports the zero - "nothing references this" is an answer, not an absence.
-        IncomingExpander.IsExpanded = incoming.Count > 0;
-        OutgoingExpander.IsExpanded = outgoing.Count > 0;
+        // Both start collapsed so the preview keeps the space, with the counts in the headers
+        // answering the common question - "nothing references this" is an answer, not an absence -
+        // and a click opening whichever list is worth reading.
+        IncomingExpander.IsExpanded = false;
+        OutgoingExpander.IsExpanded = false;
     }
 
     private void Row_Activated(object sender, MouseButtonEventArgs e)

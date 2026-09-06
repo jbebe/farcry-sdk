@@ -1,34 +1,47 @@
-using System.ComponentModel;
-using System.Xml.Linq;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core.Format.Rml;
 using Spectre.Console.Cli;
+using System.ComponentModel;
+using System.Xml.Linq;
 
 namespace JackAll.Cli.Commands.Rml;
 
-/// <summary>Decodes a binary .rml (Dunia's table-of-contents / resource-manifest XML) to plain,
-/// editable XML — the App's Rml export. Unlike .fcb, .rml never splits, so it's one file in, one out.</summary>
+/// <summary>
+/// Decodes a compiled RML document — a <c>&lt;world&gt;.game.xml</c> or an <c>oasisstrings.rml</c> —
+/// to readable XML; <c>rml encode</c> reads it back.
+/// </summary>
 public sealed class RmlDecodeCommand : CliCommand<RmlDecodeCommand.Settings>
 {
     public sealed class Settings : CommandSettings
     {
-        [CommandArgument(0, "<file.rml>")]
-        [Description("The binary .rml to decode.")]
+        [CommandArgument(0, "<file>")]
+        [Description("The compiled RML document to decode.")]
         public string Input { get; init; } = null!;
 
         [CommandOption("-o|--out <file.xml>")]
-        [Description("Output .xml path (default: the input path with an .xml extension).")]
+        [Description("Output XML path (default: the input path with a .decoded.xml extension).")]
         public string? Out { get; init; }
+
+        [CommandOption("-e|--element <name>")]
+        [Description("Write only this top-level section, e.g. Environment.")]
+        public string? Element { get; init; }
     }
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
-        string outPath = settings.Out ?? Path.ChangeExtension(settings.Input, ".xml");
+        XElement root = RmlDocument.Deserialize(CliIO.ReadInput(settings.Input));
 
-        byte[] data = CliIO.ReadInput(settings.Input);
-        XElement root = RmlDocument.Deserialize(data);
+        XElement selected = settings.Element is null
+            ? root
+            : root.Descendants().FirstOrDefault(e => e.Name.LocalName == settings.Element)
+              ?? throw new InvalidDataException(
+                  $"This document holds no <{settings.Element}> element.");
 
-        CliIO.WriteOutput(outPath, root.ToString());
+        string outPath = CliIO.ResolveOutput(
+            settings.Out, settings.Input,
+            Path.GetFileNameWithoutExtension(settings.Input) + ".decoded.xml");
+
+        CliIO.WriteOutput(outPath, selected.ToString());
         CliIO.ReportWrote(outPath);
         return 0;
     }
