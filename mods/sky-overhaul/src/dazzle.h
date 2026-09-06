@@ -43,4 +43,23 @@ void SetAfterimageStrength(int percent);
 // afterimage takes to fade after staring that long.
 void SetAfterimageSeconds(int seconds);
 
+// How darkly the bleached core blocks the view at its peak, as a percentage.
+void SetAfterimageDarkness(int percent);
+
+// How strongly the faint negative surround shows, as a percentage. Far weaker than the core: an
+// obvious bright halo is what makes an afterimage look painted on.
+void SetAfterimageTint(int percent);
+
+// How much of that negative's colour survives, as a percentage. Nought inverts only the light and
+// leaves it grey; a hundred gives the full complementary colours of a photographic negative.
+void SetAfterimageSaturation(int percent);
+
+// How far the eye's range compresses while it recovers, as a percentage. It drains a little colour
+// and contrast from the whole picture, not just from the blocked part.
+void SetAfterimageHaze(int percent);
+
+// How wide the bleached region is, as a percentage of the glare's own reach. The eye burns where
+// the sun's image falls, which is far tighter than everything the glare washes.
+void SetAfterimageSize(int percent);
+
 }

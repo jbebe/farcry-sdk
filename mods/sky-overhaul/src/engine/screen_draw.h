@@ -27,18 +27,18 @@ private:
     IDirect3DDevice9* m_device;
     DWORD m_renderStates[20] = {};
     DWORD m_stageStates[6] = {};
-    DWORD m_samplerStates[2][6] = {};
+    DWORD m_samplerStates[3][6] = {};
     IDirect3DVertexShader9* m_vertexShader = nullptr;
     IDirect3DPixelShader9* m_pixelShader = nullptr;
     IDirect3DVertexDeclaration9* m_vertexDeclaration = nullptr;
-    IDirect3DBaseTexture9* m_textures[2] = {};
+    IDirect3DBaseTexture9* m_textures[3] = {};
     IDirect3DVertexBuffer9* m_stream = nullptr;
     UINT m_streamOffset = 0;
     UINT m_streamStride = 0;
     IDirect3DIndexBuffer9* m_indices = nullptr;
     DWORD m_vertexFormat = 0;
     D3DVIEWPORT9 m_viewport = {};
-    float m_pixelConstants[12] = {};
+    float m_pixelConstants[32] = {};
 };
 
 }

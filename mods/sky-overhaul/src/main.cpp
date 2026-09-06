@@ -18,6 +18,11 @@ void __cdecl OnVeilChanged(const FCSE_SettingValue* value, void* userdata);
 void __cdecl OnElevationRampChanged(const FCSE_SettingValue* value, void* userdata);
 void __cdecl OnAfterimageStrengthChanged(const FCSE_SettingValue* value, void* userdata);
 void __cdecl OnAfterimageSecondsChanged(const FCSE_SettingValue* value, void* userdata);
+void __cdecl OnAfterimageDarknessChanged(const FCSE_SettingValue* value, void* userdata);
+void __cdecl OnAfterimageTintChanged(const FCSE_SettingValue* value, void* userdata);
+void __cdecl OnAfterimageSaturationChanged(const FCSE_SettingValue* value, void* userdata);
+void __cdecl OnAfterimageHazeChanged(const FCSE_SettingValue* value, void* userdata);
+void __cdecl OnAfterimageSizeChanged(const FCSE_SettingValue* value, void* userdata);
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION) {
@@ -51,10 +56,19 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          300},
         {"Sun elevation ramp", FCSE_SLIDER(40), &OnElevationRampChanged, nullptr, nullptr, 0, 1,
          45},
-        {"Afterimage strength", FCSE_SLIDER(60), &OnAfterimageStrengthChanged, nullptr, nullptr, 0,
+        {"Afterimage strength", FCSE_SLIDER(100), &OnAfterimageStrengthChanged, nullptr, nullptr, 0,
          0, 100},
         {"Afterimage seconds", FCSE_SLIDER(10), &OnAfterimageSecondsChanged, nullptr, nullptr, 0, 1,
          10},
+        {"Afterimage darkness", FCSE_SLIDER(90), &OnAfterimageDarknessChanged, nullptr, nullptr, 0,
+         0, 100},
+        {"Afterimage tint", FCSE_SLIDER(35), &OnAfterimageTintChanged, nullptr, nullptr, 0, 0, 100},
+        {"Afterimage saturation", FCSE_SLIDER(30), &OnAfterimageSaturationChanged, nullptr, nullptr,
+         0, 0, 100},
+        {"Afterimage size", FCSE_SLIDER(25), &OnAfterimageSizeChanged, nullptr, nullptr, 0, 5,
+         100},
+        {"Afterimage haze", FCSE_SLIDER(35), &OnAfterimageHazeChanged, nullptr, nullptr, 0, 0,
+         100},
     };
     api->RegisterSettings("Sky Overhaul", settings, sizeof(settings) / sizeof(settings[0]));
 
@@ -99,4 +113,24 @@ void __cdecl OnAfterimageStrengthChanged(const FCSE_SettingValue* value, void* /
 
 void __cdecl OnAfterimageSecondsChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
     SkyOverhaul::Dazzle::SetAfterimageSeconds(value->asSlider);
+}
+
+void __cdecl OnAfterimageDarknessChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
+    SkyOverhaul::Dazzle::SetAfterimageDarkness(value->asSlider);
+}
+
+void __cdecl OnAfterimageTintChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
+    SkyOverhaul::Dazzle::SetAfterimageTint(value->asSlider);
+}
+
+void __cdecl OnAfterimageSaturationChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
+    SkyOverhaul::Dazzle::SetAfterimageSaturation(value->asSlider);
+}
+
+void __cdecl OnAfterimageHazeChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
+    SkyOverhaul::Dazzle::SetAfterimageHaze(value->asSlider);
+}
+
+void __cdecl OnAfterimageSizeChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
+    SkyOverhaul::Dazzle::SetAfterimageSize(value->asSlider);
 }
