@@ -1,0 +1,3 @@
+# CMake's build tree, and the built plugin the layer only carries as a build artefact.
+out/
+layer/plugins/*.dll
