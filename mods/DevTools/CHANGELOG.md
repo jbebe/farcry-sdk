@@ -15,7 +15,13 @@ Notable changes to DevTools, loosely following
   `set_health`, `teleport_to_current_objective`, `aidebugtool`, `console_dump_elements` among them.
   Turning this on lists and runs them. The separate filter that keeps multiplayer-only and
   editor-only commands out of a single-player console is left alone.
-- **Command API**, for the on-screen overlay it exists to be written against. One call runs a
+- **Overlay**, on **Home**. The command catalog on screen, with a search box, a category filter, the
+  right control for each command's argument, and a note on hover. While it is open the game cannot
+  see the mouse or keyboard, so a click is only a click. It draws with Dear ImGui, pinned at
+  `v1.91.5`, cloned by CMake at configure time and compiled into the plugin - the first third-party
+  dependency this project has taken on, and the reason a first configure now needs a network
+  connection.
+- **Command API**, which the overlay is written against. One call runs a
   console line or a Lua chunk on the game thread, from anywhere, with developer-only commands
   reachable regardless of the option above; a catalog of 277 commands describes what to offer and
   what each takes. Only commands that still reach real code are listed - the survey that established

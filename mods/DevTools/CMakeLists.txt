@@ -27,18 +27,48 @@ endif()
 set(FCSE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include")
 if (NOT EXISTS "${FCSE_INCLUDE_DIR}/fcse_api.h")
   message(FATAL_ERROR "fcse_api.h was not found at ${FCSE_INCLUDE_DIR}. DevTools is an FCSE plugin "
-                      "and that header is its entire dependency - it is expected at "
+                      "and that header is its entire dependency on the loader - it is expected at "
                       "tools/FCSE/include relative to the repository root.")
 endif()
+
+# Dear ImGui - the overlay's widgets, and the one piece of third-party code here. Upstream ships no
+# CMakeLists.txt, so MakeAvailable populates and stops, and this is the same from-source static
+# library tools/FCSE/CMakeLists.txt builds MinHook as. The Win32 and D3D9 backends are the ones Far
+# Cry 2 calls for: a windowed message loop and Direct3DCreate9.
+include(FetchContent)
+FetchContent_Declare(
+  imgui
+  GIT_REPOSITORY https://github.com/ocornut/imgui.git
+  GIT_TAG        v1.91.5
+)
+FetchContent_MakeAvailable(imgui)
+
+add_library(imgui STATIC
+  "${imgui_SOURCE_DIR}/imgui.cpp"
+  "${imgui_SOURCE_DIR}/imgui_draw.cpp"
+  "${imgui_SOURCE_DIR}/imgui_tables.cpp"
+  "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
+  "${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp"
+  "${imgui_SOURCE_DIR}/backends/imgui_impl_dx9.cpp"
+  "${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp"
+)
+target_include_directories(imgui PUBLIC "${imgui_SOURCE_DIR}" "${imgui_SOURCE_DIR}/backends")
 
 add_library(DevTools SHARED
   "src/main.cpp"
   "src/commands/catalog.cpp"
   "src/engine/console.cpp"
   "src/engine/game_thread.cpp"
+  "src/engine/input.cpp"
+  "src/engine/renderer.cpp"
   "src/fixes/load_savegame.cpp"
   "src/options/developer_console.cpp"
+  "src/overlay/overlay.cpp"
 )
+
+# d3d9 for the overlay's own device handling, dinput8 for taking the mouse and keyboard off the game
+# while the overlay is up. Both ship with the Windows SDK; the legacy DirectX SDK is not needed.
+target_link_libraries(DevTools PRIVATE imgui d3d9 dinput8 dxguid)
 
 # src/ on the path so every #include reads from the root of this tree rather than relative to the
 # including file, and moving a file between folders does not rewrite anyone's includes.

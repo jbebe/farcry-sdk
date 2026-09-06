@@ -8,12 +8,13 @@
 // each a settings row FCSE persists in bin\fcse.ini. Adding either: write the file, then declare
 // and wire it below.
 //
-// src/engine/ and src/commands/ are neither: they are what the rest of this plugin calls to reach
-// the running game, with no setting of their own and no row in the menu.
+// src/engine/, src/commands/ and src/overlay/ are neither: the game's own seams, the catalog of what
+// to ask it for, and the UI that does the asking. None has a setting or a row in the menu.
 #include "fcse_api.h"
 
 #include "engine/console.h"
 #include "engine/game_thread.h"
+#include "overlay/overlay.h"
 
 // -load <save>.sav crashes to desktop instead of launching into the save.
 void ApplyLoadSavegameFix();
@@ -37,10 +38,12 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // would read it starts.
     ApplyLoadSavegameFix();
 
-    // The console has no thread to run on without the frame hook, so it is not installed alone.
-    // Both are independent of the Developer console option below.
-    if (DevTools::GameThread::Install()) {
-        DevTools::Console::Install();
+    // The frame the work runs on, the console it runs through, and the overlay that drives both.
+    // Each needs the one before it, so none of them is installed alone. All three are independent of
+    // the Developer console option below, because every line the console sends raises the developer
+    // flag for itself.
+    if (DevTools::GameThread::Install() && DevTools::Console::Install()) {
+        DevTools::Overlay::Install();
     }
 
     // The callback fires from inside RegisterSettings carrying whatever fcse.ini holds, so the

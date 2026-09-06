@@ -52,9 +52,24 @@ reach a handler that reads its arguments and returns, or set a value nothing loo
 them. Which ones, and how each verdict was reached, is in
 [the developer console](../../docs/docs/engine-internals/developer-console.md).
 
-**Nothing here is a setting.** No row in the Mod Configuration Menu, no key in `bin\fcse.ini`, and
-nothing calls into the catalog yet: this is the half that has to exist before an on-screen overlay
-can be written against it.
+**Nothing here is a setting.** No row in the Mod Configuration Menu and no key in `bin\fcse.ini`.
+
+## Overlay
+
+**Home** opens it, in game or in a menu. The catalog on screen: search, filter by category, an
+argument box or a pair of buttons depending on what the command takes, and a note on hover for the
+ones with something to warn about. Running one queues it for the engine's next frame, so the click
+and the command are never on the same thread as each other.
+
+While it is open the game cannot see your mouse or keyboard, so clicking a button does not also fire
+your weapon. Press Home again and input goes straight back.
+
+It draws with [Dear ImGui](https://github.com/ocornut/imgui), fetched at configure time and compiled
+into the plugin. Reaching Direct3D takes no address in `Dunia.dll` at all: a device built purely to
+be measured gives the vtable, `Present` and `Reset` are detoured through FCSE, and the back buffer is
+bound explicitly for the draw. Far Cry 2 ends a scene several times a frame and holds the mouse
+through DirectInput, and both of those shape the result — see
+[presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
 
 ## Savegame launch
 
@@ -75,10 +90,17 @@ matches no file.
 
 ## How a feature finds the code it patches
 
-Every site here is found by `FCSE::Relocation{FCSE::Pattern(...)}`, matched on the bytes about to be
-replaced, rather than by the address library — which is keyed by exact entries, function starts and
-data addresses, while each of these sites is *inside* a function, one branch displacement halfway
-down a loop. A pattern is one mechanism doing three jobs: it finds the code, it verifies the code is
+Every site *in `Dunia.dll`* is found one of two ways. The fixes and options patch code inside a
+function — a branch displacement halfway down a loop — so they use
+`FCSE::Relocation{FCSE::Pattern(...)}`, matched on the bytes about to be replaced, rather than the
+address library, which is keyed by exact entries: function starts and data addresses. The console
+bridge is the other case, all function starts and globals, so it uses the library directly.
+
+Direct3D and DirectInput are neither. Those functions live in `d3d9.dll` and `dinput8.dll`, shared by
+every object in the process, so the overlay builds one object of its own, reads the vtable, and
+hooks by index — no `Dunia.dll` address is involved and nothing about it is build-specific.
+
+A pattern is one mechanism doing three jobs: it finds the code, it verifies the code is
 what the feature was written against, and it works on any build whose code still looks the same
 rather than only the two that are mapped. FCSE reports a pattern that matched in more than one place
 as no match at all, so a feature either lands on its one site or logs that it could not.
@@ -94,9 +116,15 @@ sources, by `scripts/verify_patterns.py`: exactly one match on at least one buil
 .\build.ps1 -Install "C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2\bin"
 ```
 
-Needs the same x86 MSVC toolchain as FCSE, and nothing else — the whole dependency is
-`tools/FCSE/include/fcse_api.h`, the one header a third-party plugin would copy out of the tree. No
-.NET SDK, unlike FCSE: DevTools embeds no `.mgb` layouts, so JackAll is not in its build.
+Needs the same x86 MSVC toolchain as FCSE. Its whole dependency *on FCSE* is
+`tools/FCSE/include/fcse_api.h`, the one header a third-party plugin would copy out of the tree, and
+it never reaches into `tools/FCSE/src/`. No .NET SDK, unlike FCSE: DevTools embeds no `.mgb`
+layouts, so JackAll is not in its build.
+
+The overlay adds one third-party dependency, Dear ImGui, pinned at `v1.91.5` and cloned by CMake at
+**configure** time. So the first configure needs `git` and a network connection; an offline machine
+fails there rather than at compile. It is built from source into `DevTools.dll` — there is no second
+file to install.
 
 `.\verify_build.ps1 [-Config debug]` checks the three properties of a built `DevTools.dll` that fail
 *silently* — x86, static CRT, and the `FCSE_Load` export. All three produce a plugin that is simply

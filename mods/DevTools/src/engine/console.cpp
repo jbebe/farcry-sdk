@@ -76,7 +76,7 @@ namespace {
 
 namespace DevTools::Console {
 
-void Install() {
+bool Install() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
     g_console = FCSE::Data<void*>(FCSE::Uplay(0x01606280));
@@ -97,11 +97,12 @@ void Install() {
                       "console: %s was not found in this build - the command API is disabled",
                       missing);
         api->Log(line);
-        return;
+        return false;
     }
 
     g_installed = true;
     api->Log("console: command API ready");
+    return true;
 }
 
 bool IsReady() { return g_installed && *g_console != nullptr && GameThread::IsCurrent(); }

@@ -9,9 +9,9 @@
 namespace DevTools::Console {
 
 // Resolves the console and the calls into it. Call once from FCSE_Load, after FCSE::Bind and only
-// if the game thread was hooked. On failure it logs what was missing and everything below becomes
-// a no-op.
-void Install();
+// if the game thread was hooked. False means something was missing, which it logs, and everything
+// below is a no-op from then on.
+bool Install();
 
 // Installed, the console is up, and this is the game thread - what the two calls below need.
 bool IsReady();
