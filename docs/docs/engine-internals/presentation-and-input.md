@@ -52,6 +52,53 @@ does not run the same pipeline — which is a good way to misdiagnose it as a UI
 once. Present is outside the engine's scene, so the drawing needs a `BeginScene`/`EndScene` of its
 own, and the render target the game had bound has to be put back afterwards.
 
+### What a frame actually looks like from EndScene
+
+:::info[Verified in a running game]
+Counted by logging every `EndScene` of selected frames from an FCSE plugin, retail GOG v1.03 on
+2026-09-06, at 1280×720 with HDR and bloom on. Frame ordinals matched live frames exactly over a
+300-frame span, so the sequence below is one whole frame.
+:::
+
+| Order | Calls | Render target | Depth attached |
+|---|---|---|---|
+| World | 14–16 | offscreen, back-buffer size, `D3DMULTISAMPLE_4_SAMPLES` | yes, same size |
+| Bloom and luminance chain | ~16 | offscreen, 320×180 halving to 1×1, `A16B16G16R16F` | no |
+| Composite | 1 | **the back buffer** | **no** |
+| `Render2DView` (HUD, menus) | 2 | the back buffer | yes, its own surface |
+
+Two offscreen world targets alternate: an `A8R8G8B8` one and, once HDR is on, an
+`A16B16G16R16F` one. Both are multisampled and carry the scene's depth.
+
+**The composite is the only back-buffer pass with no depth surface**, and that is the reliable way
+to recognise it. `Render2DView` allocates a `DepthStencil` of its own (see
+[the sky and cloud system](./sky-and-clouds.md) for where the world's own passes come from), so
+"back buffer plus depth" means the interface, not the world. Recognising a pass this way puts an
+effect under the HUD rather than over it.
+
+:::warning[The shader constants at EndScene are stale]
+Do not try to tell passes apart by what is bound at `c4`/`c8`. Constants persist until something
+sets them, so at `EndScene` they hold whatever the pass's last draw left. The interface's passes
+report the *world's* projection, identical to the world's own passes, and a menu frame reports
+zeroes. Render-target identity, size and depth attachment are the only dependable discriminators.
+:::
+
+Only the **last** of the world passes has the whole scene's depth behind it, which matters to
+anything issuing an occlusion query. Which one that is cannot be known when it happens; it is only
+identifiable in retrospect, when the first non-world pass arrives.
+
+### Whether there is a render thread
+
+`CThreadingConfig` has a `RENDER_THREAD` entry, `engine\settings\defaultthreadingconfig.xml` ships
+it enabled (`ThreadCnt="1"`), and `Dunia.dll:0x103430A0` reads it and builds a `RenderThread`
+(`0x103B20A0`) when it is nonzero.
+
+Measured, `EndScene` nonetheless runs on **the same thread** as the game's own update: a hook on the
+sky's submission and a hook on `EndScene` report the same thread id, twice over on two runs. So on
+this build and machine the frame graph is executed inline and a plugin needs no cross-thread
+handling for Direct3D. Do not assume that holds everywhere — publish state across the boundary
+anyway if it is cheap, since the configuration that separates them plainly exists.
+
 ### The scene's depth is gone by the time the frame is
 
 The other half of the same point. By the composite stage — the pass with the back buffer bound, and
@@ -60,11 +107,19 @@ returns nothing. So anything drawn there is drawn over a flat image. A screen-sp
 to be occluded by the world cannot be depth-tested where it is drawn, and setting `D3DRS_ZENABLE` for
 it is silently a no-op rather than an error.
 
-Anything needing the scene's depth has to run while a pass that owns it is still open. Hooking one of
-the engine's own draws is the way in, and the sky's draws are a convenient place to stand for
-anything sun-related — see [the sky and cloud system](./sky-and-clouds.md). An occlusion query issued
-there reads back a few frames later, by which time the composite stage can use the answer without
-ever having needed the depth buffer itself.
+Anything needing the scene's depth has to run while a pass that owns it is still open, which means
+one of the world passes in the table above — recognised as an offscreen back-buffer-sized target
+with depth attached. An occlusion query issued there reads back a frame or two later, by which time
+the composite stage can use the answer without ever having needed the depth buffer itself.
+
+:::danger[Hooking one of the engine's own sky functions is not a way in]
+The obvious move — detour the sun's draw and issue the query from inside it — does not work, and
+fails silently rather than loudly. Those functions **submit packets and return**; the Direct3D calls
+happen later, when the frame graph is executed. A hook there runs before any of the frame's world
+passes, against whatever target and depth buffer the *previous* work left bound, so a query issued
+from it counts nothing and a draw lands somewhere invisible. See
+[the sky and cloud system](./sky-and-clouds.md#the-sky-draws-nothing-it-submits-packets).
+:::
 
 ## DirectInput 8, and the mouse messages that never arrive
 

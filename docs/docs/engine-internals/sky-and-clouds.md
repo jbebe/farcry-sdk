@@ -51,11 +51,28 @@ bowl's own XY. That is the reason the clouds appear to meet the horizon rather t
 the geometry they are painted on genuinely descends to eye level at the edge, so there is no
 perspective for the clouds to have.
 
-## The sky's own draw, and the state it reads
+## The sky draws nothing: it submits packets
 
-One function draws the whole sky: `Dunia.dll:0x1037A150`. It opens by fetching the renderer's scene
-state, then calls each piece in turn, every one of them gated by a bit of a flags argument, so a
-viewport can ask for some of the sky and not the rest:
+:::warning[These are not draws, whatever they are named]
+Every function below **fills a packet and appends it to a per-pass list**, then returns. Nothing in
+them touches Direct3D. The sun disc's is a 0x70-byte packet handed to `0x1039D550`, which forwards to
+`0x1043E980` to append it with a float sort key; the celestial-body and cloud submissions do the
+same into their own lists. The frame graph executes those lists afterwards.
+
+The consequence for anyone hooking them: **you are early**. A hook on the sun's submission runs
+before any of the frame's world passes, so the render target and depth buffer bound at that moment
+belong to whatever ran previously. An occlusion query issued there counts nothing — which is exactly
+what happened to a first attempt at a sun-glare effect, and it reads as "the query is broken" rather
+than "the query is in the wrong place". These functions are a fine place to *read* the sun's
+direction, and the wrong place to do anything with a device. Where the drawing actually happens is
+[presenting a frame](./presentation-and-input.md#what-a-frame-actually-looks-like-from-endscene).
+:::
+
+## The sky's own submission, and the state it reads
+
+One function submits the whole sky: `Dunia.dll:0x1037A150`. It opens by fetching the renderer's
+scene state, then calls each piece in turn, every one of them gated by a bit of a flags argument, so
+a viewport can ask for some of the sky and not the rest:
 
 | Bit | Draws | Function |
 | --- | --- | --- |
@@ -167,10 +184,18 @@ a running game it holds `1.0` throughout play, in the open and behind cover alik
 visibility never leaves the draw that computes it.
 
 That matters to anything outside the renderer that wants to know whether the sun is visible: the
-engine has the answer and does not publish it. Measuring it again with an occlusion query of your own
-is the available route, and it has to be issued during the sky pass — see
-[presenting a frame](./presentation-and-input.md) for why nowhere later will do.
+engine has the answer and does not publish it. Measuring it again with an occlusion query of your
+own is the available route, and it has to be issued from one of the frame's **world passes**, which
+are recognised at `EndScene` and are not the same thing as the sky's submission — see
+[presenting a frame](./presentation-and-input.md#what-a-frame-actually-looks-like-from-endscene).
 :::
+
+The flare's own `VISIBILITY_TEST` permutation is the engine doing exactly this: the shader body is
+`return 1` with `ColorWriteEnable = 0`, submitted with sort key `-1.0` into pass `0xE0`
+(`VisibilityTest`), and only when the renderer's HDR flag at `config+0x350` is zero. Its readback
+goes through `0x1042B2D0`, which calls `IDirect3DQuery9::GetData` with `D3DGETDATA_FLUSH` and
+divides by the sample count at `+0x14`. Where that result is then stored has not been traced; the
+device wrapper's surrounding functions are undefined code in the Ghidra project.
 
 ## What a shader is given, and what it is not
 

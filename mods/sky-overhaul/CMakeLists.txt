@@ -31,17 +31,43 @@ if (NOT EXISTS "${FCSE_INCLUDE_DIR}/fcse_api.h")
                       "tools/FCSE/include relative to the repository root.")
 endif()
 
+# fxc ships with the Windows SDK that the MSVC toolchain already requires, and vcvarsall puts its
+# folder on PATH - so the shader is compiled at build time and embedded as a header, and neither
+# the plugin nor the player needs D3DX or the long-dead DirectX SDK.
+find_program(FXC_EXECUTABLE NAMES fxc
+  HINTS "$ENV{WindowsSdkVerBinPath}x86" "$ENV{WindowsSdkVerBinPath}x64")
+if (NOT FXC_EXECUTABLE)
+  message(FATAL_ERROR "fxc.exe was not found. It ships with the Windows SDK; building from a "
+                      "developer prompt (or through build.ps1, which sets one up) puts it on PATH.")
+endif()
+
+set(DAZZLE_SHADER "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/dazzle.fx")
+set(DAZZLE_HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/dazzle_ps.h")
+add_custom_command(
+  OUTPUT "${DAZZLE_HEADER}"
+  COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
+  COMMAND "${FXC_EXECUTABLE}" /nologo /T ps_2_0 /E MainPS /O3 /Vn g_dazzlePixelShader
+          /Fh "${DAZZLE_HEADER}" "${DAZZLE_SHADER}"
+  DEPENDS "${DAZZLE_SHADER}"
+  COMMENT "Compiling src/shaders/dazzle.fx"
+  VERBATIM)
+
 add_library(SkyOverhaul SHARED
   "src/main.cpp"
-  "src/veil.cpp"
-  "src/engine/sun_occlusion.cpp"
+  "src/dazzle.cpp"
+  "src/engine/device_reset.cpp"
+  "src/engine/frame.cpp"
+  "src/engine/screen_draw.cpp"
   "src/engine/sky_state.cpp"
+  "src/engine/sun_occlusion.cpp"
+  "${DAZZLE_HEADER}"
 )
 
 # src/ on the path so every #include reads from the root of this tree - "engine/sky_state.h", never
 # "../engine/sky_state.h" - and moving a file between folders does not rewrite anyone's includes.
 target_include_directories(SkyOverhaul PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${CMAKE_CURRENT_BINARY_DIR}/generated"
   "${FCSE_INCLUDE_DIR}"
 )
 

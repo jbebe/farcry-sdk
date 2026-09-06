@@ -1,91 +1,74 @@
-// The sun's direction, read out of the engine as it draws the sun.
-//
-// No shader is given the sun's direction as a global - the engine binds 46 constants to every
-// shader and the sun is not among them, because the only draws that need it are already positioned
-// at the sun. A screen-space effect is not one of those, so the direction has to come from the game
-// side.
-//
-// The sky renderer (Steam Dunia.dll 0x1037A150) hands it to the sun-disc draw as the direction to
-// orient the disc by:
-//
-//     state = GetSceneState();
-//     ...
-//     DrawSunDisc(..., state + 0x148, *(state + 0x170) /* SunRange */,
-//                      *(state + 0x178) /* SunMaxHorizontalScale */,
-//                      *(state + 0x17C) /* SunMaxVerticalScale */, ...);
-//
-// which the values beside it confirm: 0x170, 0x178 and 0x17C are three of the numbers
-// CSky::LoadSky parses out of the world's <Sky> element, under exactly those names.
-//
-// The disc draw is hooked rather than the accessor above it. That accessor is one instantiation of
-// a template the renderer uses for every kind of scene component - it occurs three times in each
-// shipped build with identical bytes - so hooking it would be both ambiguous and liable to hand
-// back some other subsystem's state. Arriving through the draw makes it the sky's by construction,
-// and makes "did the engine draw a sky this frame" answerable at the same time.
 #include "engine/sky_state.h"
-
-#include "engine/sun_occlusion.h"
 
 #include "fcse_api.h"
 
+#include <atomic>
 #include <cmath>
+#include <cstddef>
 #include <cstdint>
 #include <cstdio>
-#include <d3d9.h>
+#include <windows.h>
 
 namespace {
-    // Where the renderer keeps the sun's direction inside the scene state, from the sky renderer's
-    // use of it. The pointer it passes is the state plus this, so it also recovers the state.
+    // Where the sun's direction sits inside the renderer's scene state. The submission is handed a
+    // pointer to it, which is also how the state itself is recovered.
     constexpr size_t kSunDirection = 0x148;
+    constexpr size_t kStormFactor = 0x1B8;
 
     // __thiscall with fourteen stack arguments, declared __fastcall because MSVC will not let a
-    // free function be __thiscall. ECX carries `this`, EDX is unused, and the fourteen arguments
-    // are on the stack in both conventions, so the callee cleans the same 56 bytes either way.
-    // Only the sixth is read; the rest are named to get that count, and the stack shape, right.
-    using DrawSunDiscFn = void(__fastcall*)(void* self, void* unused, uint32_t a2, uint32_t a3,
-                                            uint32_t a4, uint32_t a5, uint32_t a6,
-                                            const float* sunDirection, uint32_t a8, uint32_t a9,
-                                            uint32_t a10, uint32_t a11, uint32_t a12, uint32_t a13,
-                                            uint32_t a14, uint32_t a15);
+    // free function be __thiscall. Only the sixth stack argument is read; the rest are named to
+    // get the stack shape right, since the callee cleans it.
+    using SubmitSunDiscFn = void(__fastcall*)(void* self, void* unused, uint32_t a2, uint32_t a3,
+                                              uint32_t a4, uint32_t a5, uint32_t a6,
+                                              const float* sunDirection, uint32_t a8, uint32_t a9,
+                                              uint32_t a10, uint32_t a11, uint32_t a12,
+                                              uint32_t a13, uint32_t a14, uint32_t a15);
 
-    // The disc draw's prologue, up to its first call. Every byte is fixed - no absolute address and
-    // no relative branch falls inside it - and it occurs once in each shipped build.
-    FCSE::Relocation<DrawSunDiscFn> g_drawSunDisc{FCSE::Pattern(
+    // The submission's prologue, up to its first call. Every byte is fixed - no absolute address
+    // and no relative branch falls inside it - and it occurs once in each shipped build.
+    FCSE::Relocation<SubmitSunDiscFn> g_submitSunDisc{FCSE::Pattern(
         "55 8B EC 83 E4 F0 81 EC 34 01 00 00 53 8B D9 8B 4B 14 8B 43 10 56 8B 75 08 57 "
         "89 4C 24 14 6A 00 8B CE 89 44 24 14")};
 
-    DrawSunDiscFn g_original = nullptr;
+    SubmitSunDiscFn g_original = nullptr;
 
-    // Written on the game thread, read on the presenting one. A torn read costs one frame of a
-    // slightly wrong angle, which is invisible, so this is deliberately not synchronised.
-    volatile bool g_haveSun = false;
-    float g_sun[3] = {0.0f, 0.0f, 1.0f};
+    // A seqlock over the snapshot: the game thread writes it, the render thread reads it, and an
+    // odd sequence means a write is in flight. Zero means nothing has been published yet.
+    std::atomic<uint32_t> g_sequence{0};
+    SkyOverhaul::SkyState::Sun g_sun{};
 
-    // Raised every time the engine draws the sun and cleared by whoever asks, so a frame with no
-    // sky in it is distinguishable from one the player is looking at the world through.
-    volatile bool g_sunDrawn = false;
+    std::atomic<uint32_t> g_submitCount{0};
+    std::atomic<unsigned long> g_submitThreadId{0};
 
-    IDirect3DDevice9* g_device = nullptr;
+    void Publish(const SkyOverhaul::SkyState::Sun& sun) {
+        const uint32_t sequence = g_sequence.load(std::memory_order_relaxed);
+        g_sequence.store(sequence + 1, std::memory_order_relaxed);
+        std::atomic_thread_fence(std::memory_order_release);
+        g_sun = sun;
+        g_sequence.store(sequence + 2, std::memory_order_release);
+    }
 
-    void __fastcall DrawSunDiscDetour(void* self, void* unused, uint32_t a2, uint32_t a3,
-                                      uint32_t a4, uint32_t a5, uint32_t a6,
-                                      const float* sunDirection, uint32_t a8, uint32_t a9,
-                                      uint32_t a10, uint32_t a11, uint32_t a12, uint32_t a13,
-                                      uint32_t a14, uint32_t a15) {
+    void __fastcall SubmitSunDiscDetour(void* self, void* unused, uint32_t a2, uint32_t a3,
+                                        uint32_t a4, uint32_t a5, uint32_t a6,
+                                        const float* sunDirection, uint32_t a8, uint32_t a9,
+                                        uint32_t a10, uint32_t a11, uint32_t a12, uint32_t a13,
+                                        uint32_t a14, uint32_t a15) {
         if (sunDirection != nullptr) {
             const float length = std::sqrt(sunDirection[0] * sunDirection[0] +
                                            sunDirection[1] * sunDirection[1] +
                                            sunDirection[2] * sunDirection[2]);
             if (length > 0.0001f) {
-                g_sun[0] = sunDirection[0] / length;
-                g_sun[1] = sunDirection[1] / length;
-                g_sun[2] = sunDirection[2] / length;
-                g_haveSun = true;
-                g_sunDrawn = true;
+                const auto* state = reinterpret_cast<const uint8_t*>(sunDirection) - kSunDirection;
 
-                // Measured here, with this frame's direction, because this is the only point where
-                // the scene's depth buffer is still attached to test against.
-                SkyOverhaul::SunOcclusion::Sample(g_device, g_sun);
+                SkyOverhaul::SkyState::Sun sun;
+                sun.direction[0] = sunDirection[0] / length;
+                sun.direction[1] = sunDirection[1] / length;
+                sun.direction[2] = sunDirection[2] / length;
+                sun.storm = *reinterpret_cast<const float*>(state + kStormFactor);
+                Publish(sun);
+
+                g_submitThreadId.store(GetCurrentThreadId(), std::memory_order_relaxed);
+                g_submitCount.fetch_add(1, std::memory_order_relaxed);
             }
         }
 
@@ -97,40 +80,48 @@ namespace {
 bool SkyOverhaul::SkyState::Install() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
-    if (!g_drawSunDisc) {
-        api->Log("sun direction unavailable: the sun-disc draw was not found in this build");
+    if (!g_submitSunDisc) {
+        api->Log("sun unavailable: the sun-disc submission was not found in this build");
         return false;
     }
 
-    if (!api->Hook(reinterpret_cast<void*>(g_drawSunDisc.address()),
-                   reinterpret_cast<void*>(&DrawSunDiscDetour),
+    if (!api->Hook(reinterpret_cast<void*>(g_submitSunDisc.address()),
+                   reinterpret_cast<void*>(&SubmitSunDiscDetour),
                    reinterpret_cast<void**>(&g_original))) {
-        api->Log("sun direction unavailable: the sun-disc draw could not be hooked");
+        api->Log("sun unavailable: the sun-disc submission could not be hooked");
         return false;
     }
+
+    char line[128];
+    std::snprintf(line, sizeof(line), "sky: sun-disc submission hooked at 0x%08zX",
+                  static_cast<size_t>(g_submitSunDisc.address()));
+    api->Log(line);
     return true;
 }
 
-bool SkyOverhaul::SkyState::SunDirection(float out[3]) {
-    if (!g_haveSun) {
-        return false;
+bool SkyOverhaul::SkyState::Latest(Sun& out) {
+    // Bounded rather than spinning: a write takes nanoseconds, so failing to settle means the
+    // writer is stopped, and one frame without a sun is better than a stalled render thread.
+    for (int attempt = 0; attempt < 8; attempt++) {
+        const uint32_t before = g_sequence.load(std::memory_order_acquire);
+        if (before == 0 || (before & 1u) != 0) {
+            continue;
+        }
+
+        const Sun copy = g_sun;
+        std::atomic_thread_fence(std::memory_order_acquire);
+        if (g_sequence.load(std::memory_order_relaxed) == before) {
+            out = copy;
+            return true;
+        }
     }
-    out[0] = g_sun[0];
-    out[1] = g_sun[1];
-    out[2] = g_sun[2];
-    return true;
+    return false;
 }
 
-bool SkyOverhaul::SkyState::ConsumeSunDrawn() {
-    const bool drawn = g_sunDrawn;
-    g_sunDrawn = false;
-    return drawn;
+uint32_t SkyOverhaul::SkyState::SubmitCount() {
+    return g_submitCount.load(std::memory_order_relaxed);
 }
 
-void SkyOverhaul::SkyState::SetDevice(IDirect3DDevice9* device) {
-    g_device = device;
-}
-
-float SkyOverhaul::SkyState::SunVisibility() {
-    return SkyOverhaul::SunOcclusion::Visibility();
+unsigned long SkyOverhaul::SkyState::SubmitThreadId() {
+    return g_submitThreadId.load(std::memory_order_relaxed);
 }
