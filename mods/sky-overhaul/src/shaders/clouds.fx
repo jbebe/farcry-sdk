@@ -18,6 +18,10 @@
 // so much that it only exists there.
 #define CIRRUS_FORWARD 0.35f
 
+// How deep the hazy air under the sheet effectively is, in metres, which is the distance a ray
+// straight up spends in it. Everything below is that same depth divided by how slanted the ray is.
+#define CIRRUS_AIR 900.0f
+
 // How many texels across one repeat each volume holds, which is what turns a sample spacing into
 // the level of the noise that matches it.
 #define SHAPE_TEXELS 128.0f
@@ -198,9 +202,13 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     float sheet = coarse * 0.7f + fine * 0.3f;
     cover = saturate(Remap(sheet, 1.0f - Cirrus.z, 1.0f, 0.0f, 1.0f));
 
-    float sideways = travel * sqrt(saturate(1.0f - ray.z * ray.z));
-    float lost = 1.0f - exp(-sideways / max(Range.w, 1.0f));
-    cover *= 1.0f - lost;
+    // Haze is made by the air near the ground, and a sheet this high is above almost all of it.
+    // What dims it is not how far the ray went but how slanted it was while crossing that air:
+    // straight up crosses the layer once, and a ray near the horizon crosses many times as much of
+    // the same layer. Measuring the distance travelled instead leaves cirrus visible only in a
+    // cone overhead, because ten kilometres of it are gone by thirty degrees.
+    float airMass = CIRRUS_AIR / max(ray.z, 0.02f);
+    float lost = 1.0f - exp(-airMass / max(Range.w, 1.0f));
 
     // Ice does scatter forward harder than water does, but a sheet with a sharp lobe on it stops
     // being cloud and becomes a ring around the sun: at eight tenths the peak is forty-five times
