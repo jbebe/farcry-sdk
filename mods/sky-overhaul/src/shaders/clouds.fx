@@ -18,6 +18,15 @@
 // so much that it only exists there.
 #define CIRRUS_FORWARD 0.35f
 
+// How much of the sun the sheet returns. Ice scatters more of what reaches it than water does, and
+// there is no depth for any of it to be lost in.
+#define CIRRUS_ALBEDO 1.1f
+
+// The band of the slow field over which the sheet opens out from nothing to all of itself. Narrow
+// enough that there is clear sky between the banks, wide enough that they have edges.
+#define CIRRUS_MASK_LOW 0.40f
+#define CIRRUS_MASK_HIGH 0.66f
+
 // How deep the hazy air under the sheet effectively is, in metres, which is the distance a ray
 // straight up spends in it. Everything below is that same depth divided by how slanted the ray is.
 #define CIRRUS_AIR 900.0f
@@ -62,8 +71,10 @@ float4 BackColour : register(c78);
 float4 Range : register(c79);
 
 // x: the altitude of the high sheet. y: how many metres one repeat of its streaks covers.
-// z: how much of the sky it fills. w: how hard those streaks are drawn out across the wind.
+// z: how much of the sky its fibres reach across. w: how hard they are drawn out across the wind.
 float4 Cirrus : register(c85);
+// x: how solid a fibre is once it is there. y: how slow the field masking the sheet into banks is.
+float4 Sheet : register(c86);
 
 // The engine's own sky fog, register for register, so our clouds sit in the same haze the dome
 // does. See docs/docs/engine-internals/sky-and-clouds.md.
@@ -211,7 +222,15 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     float field = coarse * 0.65f + fine * 0.35f;
     float fibres = 1.0f - abs(field * 2.0f - 1.0f);
 
-    cover = saturate(Remap(fibres, 1.0f - Cirrus.z, 1.0f, 0.0f, 1.0f));
+    // Where the sheet stands at all, from a field far slower than the fibres themselves. Without
+    // it the same amount of cirrus is combed evenly over every part of the sky at once, and a sky
+    // with cirrus everywhere reads as a texture rather than as weather.
+    float mask = tex3Dlod(ShapeNoise, float4(at * Sheet.y, 0.83f, 0.0f)).r;
+    mask = saturate(Remap(mask, CIRRUS_MASK_LOW, CIRRUS_MASK_HIGH, 0.0f, 1.0f));
+
+    // Two controls, because they are two things. One decides how much sky has fibres in it, the
+    // other how solid a fibre is once it is there, and a sky can have any pairing of the two.
+    cover = saturate(Remap(fibres, 1.0f - Cirrus.z, 1.0f, 0.0f, 1.0f)) * mask * Sheet.x;
 
     // Haze is made by the air near the ground, and a sheet this high is above almost all of it.
     // What dims it is not how far the ray went but how slanted it was while crossing that air:
@@ -224,7 +243,8 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     // Ice does scatter forward harder than water does, but a sheet with a sharp lobe on it stops
     // being cloud and becomes a ring around the sun: at eight tenths the peak is forty-five times
     // the rest of the sky, which the sun disc behind it is already busy filling.
-    float3 light = SunColour.rgb * Phase(cosAngle, CIRRUS_FORWARD) * 0.5f + AmbientColour.rgb;
+    float3 light =
+        SunColour.rgb * Phase(cosAngle, CIRRUS_FORWARD) * CIRRUS_ALBEDO + AmbientColour.rgb;
     return lerp(light, horizon, lost);
 }
 
