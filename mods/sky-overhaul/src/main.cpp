@@ -8,9 +8,9 @@
 #include "dazzle.h"
 #include "engine/cloud_layer.h"
 #include "engine/device_reset.h"
-#include "engine/dome_draw.h"
 #include "engine/frame.h"
 #include "engine/sky_state.h"
+#include "sky.h"
 
 namespace {
     using SliderFn = void (*)(int);
@@ -18,12 +18,13 @@ namespace {
     void OnDeviceRelease() {
         SkyOverhaul::Dazzle::ReleaseDeviceObjects();
         SkyOverhaul::Clouds::ReleaseDeviceObjects();
+        SkyOverhaul::Sky::ReleaseDeviceObjects();
     }
 
-    // One frame, two effects and the census. Each decides for itself whether the pass is one it
-    // wants; the census goes first because it is the pass just ended that it is closing.
+    // One frame, three effects. Each decides for itself whether the pass is one it wants. The sky
+    // has already drawn itself from inside the pass by the time this runs.
     void OnScenePass(const SkyOverhaul::Frame::Pass& pass) {
-        SkyOverhaul::DomeDraw::OnScenePass(pass);
+        SkyOverhaul::Sky::OnScenePass(pass);
         SkyOverhaul::Clouds::OnScenePass(pass);
         SkyOverhaul::Dazzle::OnScenePass(pass);
     }
@@ -43,6 +44,11 @@ namespace {
     }
 
     // Index order is what the callback below switches on; the file stores the label.
+    const char* const kSkyModes[] = {"Engine", "Overhaul"};
+    void __cdecl OnSkyChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Sky::SetEnabled(value->asChoice == 1);
+    }
+
     const char* const kCloudModes[] = {"Engine", "Off", "Overhaul"};
     void __cdecl OnCloudsChanged(const FCSE_SettingValue* value, void*) {
         SkyOverhaul::CloudLayer::SetMode(value->asChoice == 0
@@ -73,9 +79,9 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         SkyOverhaul::Frame::Install(&OnScenePass, &OnFinalPass)) {
         SkyOverhaul::Dazzle::Install();
         SkyOverhaul::Clouds::Install();
-        // Watches the draws inside a pass rather than the passes themselves, which is where the
-        // sky dome has to be replaced from.
-        SkyOverhaul::DomeDraw::Install();
+        // Watches the draws inside a pass rather than the passes themselves, because that is where
+        // the dome is and a sky has to go under everything drawn after it.
+        SkyOverhaul::Sky::Install();
     }
 
     // The two publishers, which draw nothing. The sun's direction is the glare's, and the cloud
@@ -87,6 +93,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // glare is in the state it was left in by the time this returns, and again on every change.
     using namespace SkyOverhaul;
     static const FCSE_Setting settings[] = {
+        {"Sky", FCSE_CHOICE(0), &OnSkyChanged, nullptr, kSkyModes,
+         sizeof(kSkyModes) / sizeof(kSkyModes[0])},
         {"Clouds", FCSE_CHOICE(0), &OnCloudsChanged, nullptr, kCloudModes,
          sizeof(kCloudModes) / sizeof(kCloudModes[0])},
         {"Cloud base", FCSE_SLIDER(1200), &OnSliderChanged, Setter(&Clouds::SetBaseAltitude),

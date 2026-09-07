@@ -37,4 +37,9 @@ using PassFn = void (*)(const Pass&);
 // the frame cannot be followed, which it logs, and nothing is left hooked.
 bool Install(PassFn onScenePass, PassFn onFinalPass);
 
+// How many passes have ended so far. What a draw is in the middle of belongs to the pass that has
+// not ended yet, so this is the only thing that says two draws are in the same one - and a frame
+// can hold more than one sky pass, which makes the frame number the wrong answer.
+uint32_t PassSerial();
+
 }

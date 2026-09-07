@@ -50,7 +50,9 @@ set(SHADER_PASSES
   "dazzle.fx:AccumulatePS:ps_2_0:dazzle_accumulate_ps.h:g_dazzleAccumulatePixelShader"
   "dazzle.fx:BleachPS:ps_2_0:dazzle_bleach_ps.h:g_dazzleBleachPixelShader"
   "clouds.fx:MainVS:vs_3_0:clouds_vs.h:g_cloudsVertexShader"
-  "clouds.fx:MainPS:ps_3_0:clouds_ps.h:g_cloudsPixelShader")
+  "clouds.fx:MainPS:ps_3_0:clouds_ps.h:g_cloudsPixelShader"
+  "sky.fx:MainVS:vs_3_0:sky_vs.h:g_skyVertexShader"
+  "sky.fx:MainPS:ps_3_0:sky_ps.h:g_skyPixelShader")
 
 set(SHADER_HEADERS "")
 foreach(PASS IN LISTS SHADER_PASSES)
@@ -77,6 +79,7 @@ add_library(SkyOverhaul SHARED
   "src/main.cpp"
   "src/clouds.cpp"
   "src/dazzle.cpp"
+  "src/sky.cpp"
   "src/engine/camera.cpp"
   "src/engine/cloud_layer.cpp"
   "src/engine/device_reset.cpp"

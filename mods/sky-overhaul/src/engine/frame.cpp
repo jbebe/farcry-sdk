@@ -22,6 +22,7 @@ namespace {
     State g_state = State::AwaitingScene;
 
     uint32_t g_frame = 0;
+    uint32_t g_passSerial = 0;
     uint32_t g_lastSubmitCount = 0;
     bool g_live = false;
     bool g_deviceLost = false;
@@ -153,6 +154,9 @@ namespace {
 
     HRESULT __stdcall EndSceneDetour(IDirect3DDevice9* device) {
         Observe(device);
+        // Every pass, not only the ones anyone acts on: the draws this counts off are inside all
+        // of them.
+        g_passSerial++;
         return g_originalEndScene(device);
     }
 
@@ -178,4 +182,8 @@ bool SkyOverhaul::Frame::Install(PassFn onScenePass, PassFn onFinalPass) {
 
     Logf("frame: following EndScene at 0x%08zX", reinterpret_cast<size_t>(endScene));
     return true;
+}
+
+uint32_t SkyOverhaul::Frame::PassSerial() {
+    return g_passSerial;
 }
