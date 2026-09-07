@@ -21,8 +21,4 @@ void SetEnabled(bool enabled);
 
 void SetBaseAltitude(int metres);
 
-// Which derivation of the camera the draw uses: the inverted view-projection, or the basis the
-// engine publishes. They should agree, and the point of the switch is to see whether they do.
-void SetUseBasis(bool useBasis);
-
 }

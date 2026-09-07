@@ -36,16 +36,10 @@ namespace {
     // Written by the settings callbacks and read while drawing.
     bool g_enabled = false;
     float g_baseAltitude = 1200.0f;
-    bool g_useBasis = false;
 
-    // The widest the two camera derivations drifted apart, and the most sky passes any one frame
-    // held, both since the last heartbeat. A drift that only appears while the view is moving is
-    // the signature of a constant that is a frame behind the world it is drawn over.
-    float g_worstEyeError = 0.0f;
-    float g_worstRayError = 0.0f;
-    uint32_t g_skyPasses = 0;
-    uint32_t g_worstSkyPasses = 0;
-    uint32_t g_lastFrame = 0;
+    // Which frame was last drawn into. A frame can hold more than one pass the sky is drawn in,
+    // and drawing into each of them would blend the clouds over themselves.
+    uint32_t g_drawnFrame = 0;
 
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
@@ -102,120 +96,19 @@ namespace {
         return true;
     }
 
-    float Distance(const float* a, const float* b) {
-        const float x = a[0] - b[0];
-        const float y = a[1] - b[1];
-        const float z = a[2] - b[2];
-        return std::sqrt(x * x + y * y + z * z);
-    }
-
-    void Normalise(const float* from, float* out) {
-        const float length =
-            std::sqrt(from[0] * from[0] + from[1] * from[1] + from[2] * from[2]);
-        const float scale = length > 0.0001f ? 1.0f / length : 0.0f;
-        out[0] = from[0] * scale;
-        out[1] = from[1] * scale;
-        out[2] = from[2] * scale;
-    }
-
-    // The two derivations of one camera, compared on every frame rather than at the heartbeat, so
-    // that a disagreement appearing only while the view moves cannot hide between two samples.
-    void Track(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view) {
-        if (pass.frame != g_lastFrame) {
-            if (g_skyPasses > g_worstSkyPasses) {
-                g_worstSkyPasses = g_skyPasses;
-            }
-            g_skyPasses = 0;
-            g_lastFrame = pass.frame;
-        }
-        g_skyPasses++;
-
-        const float eyeError = Distance(view.eye, view.position);
-        if (eyeError > g_worstEyeError) {
-            g_worstEyeError = eyeError;
-        }
-
-        float fromMatrix[3];
-        float fromBasis[3];
-        Normalise(view.corners[0], fromMatrix);
-        Normalise(view.basisCorners[0], fromBasis);
-        const float rayError = Distance(fromMatrix, fromBasis);
-        if (rayError > g_worstRayError) {
-            g_worstRayError = rayError;
-        }
-    }
-
-    // Everything about the pass that a draw into it depends on, which is worth having in the log
-    // beside the first frames it was drawn into.
-    void LogPass(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view) {
-        SkyOverhaul::Logf("clouds: eye (%.2f %.2f %.2f) engine (%.2f %.2f %.2f) | worst eye %.4f "
-                          "ray %.6f | sky passes %u",
-                          view.eye[0], view.eye[1], view.eye[2], view.position[0],
-                          view.position[1], view.position[2], g_worstEyeError, g_worstRayError,
-                          g_worstSkyPasses);
-        SkyOverhaul::Logf("clouds: right (%.4f %.4f %.4f) up (%.4f %.4f %.4f) matrix corner "
-                          "(%.4f %.4f %.4f) basis corner (%.4f %.4f %.4f)",
-                          view.right[0], view.right[1], view.right[2], view.up[0], view.up[1],
-                          view.up[2], view.corners[0][0], view.corners[0][1], view.corners[0][2],
-                          view.basisCorners[0][0], view.basisCorners[0][1],
-                          view.basisCorners[0][2]);
-        SkyOverhaul::Logf("clouds: corners (%.2f %.2f %.2f) (%.2f %.2f %.2f) dir (%.2f %.2f %.2f) "
-                          "bloom %.3f",
-                          view.corners[0][0], view.corners[0][1], view.corners[0][2],
-                          view.corners[3][0], view.corners[3][1], view.corners[3][2],
-                          view.direction[0], view.direction[1], view.direction[2], view.bloom);
-        SkyOverhaul::Logf("clouds: fog colour (%.2f %.2f %.2f) range (%.2f %.2f %.2f) values "
-                          "(%.4f %.2f %.2f) height (%.4f %.2f %.2f %.2f)",
-                          view.fogColour[0], view.fogColour[1], view.fogColour[2],
-                          view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2],
-                          view.fogValues[0], view.fogValues[1], view.fogValues[2],
-                          view.fogHeightValues[0], view.fogHeightValues[1],
-                          view.fogHeightValues[2], view.fogHeightValues[3]);
-
-        D3DSURFACE_DESC target = {};
-        pass.target->GetDesc(&target);
-        IDirect3DSurface9* depth = nullptr;
-        D3DSURFACE_DESC depthDesc = {};
-        if (SUCCEEDED(pass.device->GetDepthStencilSurface(&depth)) && depth != nullptr) {
-            depth->GetDesc(&depthDesc);
-            depth->Release();
-        }
-        SkyOverhaul::Logf("clouds: target %ux%u fmt %u ms %u/%u, depth %ux%u fmt %u ms %u/%u",
-                          target.Width, target.Height, target.Format, target.MultiSampleType,
-                          target.MultiSampleQuality, depthDesc.Width, depthDesc.Height,
-                          depthDesc.Format, depthDesc.MultiSampleType,
-                          depthDesc.MultiSampleQuality);
-
-        DWORD bias = 0;
-        DWORD slope = 0;
-        DWORD multisample = 0;
-        DWORD mask = 0;
-        DWORD srgb = 0;
-        DWORD pointSize = 0;
-        DWORD tessellation = 0;
-        DWORD stencil = 0;
-        pass.device->GetRenderState(D3DRS_DEPTHBIAS, &bias);
-        pass.device->GetRenderState(D3DRS_SLOPESCALEDEPTHBIAS, &slope);
-        pass.device->GetRenderState(D3DRS_MULTISAMPLEANTIALIAS, &multisample);
-        pass.device->GetRenderState(D3DRS_MULTISAMPLEMASK, &mask);
-        pass.device->GetRenderState(D3DRS_SRGBWRITEENABLE, &srgb);
-        pass.device->GetRenderState(D3DRS_POINTSIZE, &pointSize);
-        pass.device->GetRenderState(D3DRS_ADAPTIVETESS_Y, &tessellation);
-        pass.device->GetRenderState(D3DRS_STENCILENABLE, &stencil);
-        SkyOverhaul::Logf("clouds: bias %08X/%08X msaa %u mask %08X srgb %u a2m %08X/%08X "
-                          "stencil %u",
-                          bias, slope, multisample, mask, srgb, pointSize, tessellation, stencil);
+    void LogPass(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
+                 float elapsed) {
+        SkyOverhaul::Logf("clouds f%u: eye (%.1f %.1f %.1f) base %.0f | dir (%.2f %.2f %.2f) "
+                          "bloom %.2f | %.2f ms",
+                          pass.frame, view.eye[0], view.eye[1], view.eye[2], g_baseAltitude,
+                          view.direction[0], view.direction[1], view.direction[2], view.bloom,
+                          elapsed * 1000.0f);
     }
 
     void Draw(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::CloudLayer::Lighting& lighting) {
-        // Two ways to say where the camera is and where each corner of the screen looks, so that
-        // one can be tried against the other in a running game rather than argued about.
-        const float* eye = g_useBasis ? view.position : view.eye;
-        const float(*corners)[3] = g_useBasis ? view.basisCorners : view.corners;
-
         const float constants[kConstantCount * 4] = {
-            eye[0], eye[1], eye[2], view.bloom,
+            view.eye[0], view.eye[1], view.eye[2], view.bloom,
             g_baseAltitude, 0.0f, 0.25f, kCellSize,
             lighting.sunColour[0], lighting.sunColour[1], lighting.sunColour[2], 0.0f,
             lighting.ambientColour[0], lighting.ambientColour[1], lighting.ambientColour[2], 0.0f,
@@ -233,7 +126,7 @@ namespace {
         pass.device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
         pass.device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCALPHA);
 
-        draw.ClipQuad(kSkyDepth, corners);
+        draw.ClipQuad(kSkyDepth, view.corners);
     }
 }
 
@@ -245,9 +138,10 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
     // Every scene pass arrives here and only one of them is the sky, so the clock is read after
     // the test rather than before it: ticking on all of them would leave the heartbeat measuring
     // the gap between two passes instead of the time between two frames.
-    if (!g_enabled || !pass.sky || !pass.live) {
+    if (!g_enabled || !pass.sky || !pass.live || pass.frame == g_drawnFrame) {
         return;
     }
+    g_drawnFrame = pass.frame;
     const float elapsed = FrameSeconds();
 
     Camera::View view;
@@ -257,16 +151,12 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
         return;
     }
 
-    Track(pass, view);
     Draw(pass, view, lighting);
 
     g_sinceHeartbeat += elapsed;
     if (g_sinceHeartbeat >= kHeartbeatSeconds) {
         g_sinceHeartbeat = 0.0f;
-        LogPass(pass, view);
-        g_worstEyeError = 0.0f;
-        g_worstRayError = 0.0f;
-        g_worstSkyPasses = 0;
+        LogPass(pass, view, elapsed);
     }
 }
 
@@ -279,10 +169,6 @@ void SkyOverhaul::Clouds::ReleaseDeviceObjects() {
 
 void SkyOverhaul::Clouds::SetEnabled(bool enabled) {
     g_enabled = enabled;
-}
-
-void SkyOverhaul::Clouds::SetUseBasis(bool useBasis) {
-    g_useBasis = useBasis;
 }
 
 void SkyOverhaul::Clouds::SetBaseAltitude(int metres) {

@@ -211,6 +211,52 @@ or `c46` during a world pass — see [what a shader is given](./sky-and-clouds.m
 for the full map — depends on state that a second plugin drawing into the same frame could
 legitimately overwrite. Nothing in the loader arbitrates device state; it arbitrates addresses only.
 
+### Getting the camera out of a pass, and the wrong way to do it
+
+A screen-space effect that reaches into the world needs where the camera is and where each pixel
+looks. Both are in the constants the viewport provider leaves bound, and all of them are live in
+the sky pass: `CameraPosition` at `c45`, `CameraDirection` at `c46`, `CameraRight` at `c53`,
+`CameraUp` at `c54`, and the projection at `c8`, whose first two diagonal entries are how far off
+centre the frustum's edges sit. The direction through a corner of the viewport is then
+
+```
+corner = direction + right * (±1 / projection[0][0]) + up * (±1 / projection[1][1])
+```
+
+:::warning[Inverting the view-projection is accurate enough for the position and not for the rays]
+The obvious alternative is to invert `ViewProjectionMatrix` at `c4` and unproject the corners.
+Measured against the registers above in a running game, that recovers the camera **position** to
+within 1.5 mm — but the **directions** only to within about 0.01 in unit-vector terms, which is
+half a degree, and half a degree is 35 m of error at a kilometre.
+
+The reason is the subtraction it ends with. A corner's direction comes out as a far-plane point
+minus a near-plane point, both unprojected from a transform built around world coordinates in the
+thousands, and the near plane here is 0.1 m away. The error is small against the world's scale and
+large against the tenth of a metre being recovered.
+
+It reads in game as a rigid layer stepping around a fixed position whenever the view moves, and
+holding still the moment it stops — not as blur or noise, which is what makes it easy to
+misdiagnose as aliasing.
+:::
+
+### What one measurement of the sky pass found
+
+All from a plugin logging its own draws, retail GOG v1.03 at 1280×720:
+
+- The world's colour target **alternates between `A16B16G16R16F` and `A8R8G8B8`** frame to frame,
+  both `D3DMULTISAMPLE_4_SAMPLES`, with a `D24S8` depth surface multisampled to match.
+- **A frame can hold more than one pass with the sky's viewport.** Usually one, but two while the
+  menu is open. Anything that blends has to draw into one of them only, or it composites over
+  itself.
+- **Depth bias, multisample mask, sRGB write, stencil and both alpha-to-coverage tokens are all at
+  their neutral values** in that pass, so a blended draw inherits nothing that would spoil it.
+- The **far plane is about 1000 m**, and the world's distance fog is fully saturated by 420 m
+  (`FogValues.x` is 1/400). An effect further out than that cannot use the distance fog the terrain
+  uses; the sky's own fog is a function of height and heading instead.
+- Drawing at depth **exactly 1.0 with `D3DCMP_LESSEQUAL`** occludes correctly at any distance,
+  because the sky writes no depth and the cleared far value is what remains wherever the world drew
+  nothing. A value merely close to one stops occluding roughly `near / (1 - z)` metres out.
+
 ### Bringing a shader of your own
 
 A plugin's own pixel shader needs no D3DX and no DirectX SDK. `fxc.exe` ships with the Windows SDK
@@ -221,8 +267,15 @@ aligned buffer on the way through.
 
 Target `ps_2_0` unless the instruction count forces `ps_2_b`. Both pair with the fixed-function
 vertex pipeline and a `D3DFVF_XYZRHW | D3DFVF_TEX1` quad, which is the documented Direct3D 9
-post-process pairing and needs no vertex shader at all. `ps_3_0` does not: it requires a matching
-`vs_3_0` and a vertex declaration, which is a great deal of machinery for a full-screen quad.
+post-process pairing and needs no vertex shader at all.
+
+`ps_3_0` is the second working shape, and worth the machinery once an effect needs loops, volume
+textures or screen-space derivatives. It requires a matching `vs_3_0`, which in turn requires a
+vertex declaration rather than an FVF, and a quad in clip space rather than a pretransformed one.
+That pairing is what carries a per-corner direction into the pixel shader: put the ray in the
+vertex, give every corner `w = 1` so the interpolation stays linear, and take **no** half-pixel
+offset — that rule is for reading a texture by screen position, and a direction belonging at the
+viewport's edge is already where a rasteriser interpolating to a pixel centre expects it.
 
 ### Which device vtable slots the repo's plugins hold
 
