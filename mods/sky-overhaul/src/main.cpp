@@ -41,6 +41,11 @@ namespace {
 
     // Index order is what the callback below switches on; the file stores the label.
     const char* const kCloudModes[] = {"Engine", "Off", "Overhaul"};
+    const char* const kCloudCameras[] = {"Matrix", "Basis"};
+
+    void __cdecl OnCloudCameraChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Clouds::SetUseBasis(value->asChoice == 1);
+    }
 
     void __cdecl OnCloudsChanged(const FCSE_SettingValue* value, void*) {
         SkyOverhaul::CloudLayer::SetMode(value->asChoice == 0
@@ -86,6 +91,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          sizeof(kCloudModes) / sizeof(kCloudModes[0])},
         {"Cloud base", FCSE_SLIDER(1200), &OnSliderChanged, Setter(&Clouds::SetBaseAltitude),
          nullptr, 0, 100, 4000},
+        {"Cloud camera", FCSE_CHOICE(0), &OnCloudCameraChanged, nullptr, kCloudCameras,
+         sizeof(kCloudCameras) / sizeof(kCloudCameras[0])},
         {"Sun glare strength", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Dazzle::SetStrength),
          nullptr, 0, 0, 200},
         {"Sun glare spread", FCSE_SLIDER(57), &OnSliderChanged, Setter(&Dazzle::SetSpread), nullptr,

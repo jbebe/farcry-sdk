@@ -36,6 +36,16 @@ namespace {
     // Written by the settings callbacks and read while drawing.
     bool g_enabled = false;
     float g_baseAltitude = 1200.0f;
+    bool g_useBasis = false;
+
+    // The widest the two camera derivations drifted apart, and the most sky passes any one frame
+    // held, both since the last heartbeat. A drift that only appears while the view is moving is
+    // the signature of a constant that is a frame behind the world it is drawn over.
+    float g_worstEyeError = 0.0f;
+    float g_worstRayError = 0.0f;
+    uint32_t g_skyPasses = 0;
+    uint32_t g_worstSkyPasses = 0;
+    uint32_t g_lastFrame = 0;
 
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
@@ -92,20 +102,63 @@ namespace {
         return true;
     }
 
+    float Distance(const float* a, const float* b) {
+        const float x = a[0] - b[0];
+        const float y = a[1] - b[1];
+        const float z = a[2] - b[2];
+        return std::sqrt(x * x + y * y + z * z);
+    }
+
+    void Normalise(const float* from, float* out) {
+        const float length =
+            std::sqrt(from[0] * from[0] + from[1] * from[1] + from[2] * from[2]);
+        const float scale = length > 0.0001f ? 1.0f / length : 0.0f;
+        out[0] = from[0] * scale;
+        out[1] = from[1] * scale;
+        out[2] = from[2] * scale;
+    }
+
+    // The two derivations of one camera, compared on every frame rather than at the heartbeat, so
+    // that a disagreement appearing only while the view moves cannot hide between two samples.
+    void Track(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view) {
+        if (pass.frame != g_lastFrame) {
+            if (g_skyPasses > g_worstSkyPasses) {
+                g_worstSkyPasses = g_skyPasses;
+            }
+            g_skyPasses = 0;
+            g_lastFrame = pass.frame;
+        }
+        g_skyPasses++;
+
+        const float eyeError = Distance(view.eye, view.position);
+        if (eyeError > g_worstEyeError) {
+            g_worstEyeError = eyeError;
+        }
+
+        float fromMatrix[3];
+        float fromBasis[3];
+        Normalise(view.corners[0], fromMatrix);
+        Normalise(view.basisCorners[0], fromBasis);
+        const float rayError = Distance(fromMatrix, fromBasis);
+        if (rayError > g_worstRayError) {
+            g_worstRayError = rayError;
+        }
+    }
+
     // Everything about the pass that a draw into it depends on, which is worth having in the log
     // beside the first frames it was drawn into.
     void LogPass(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view) {
-        SkyOverhaul::Logf("clouds: eye (%.2f %.2f %.2f) engine (%.2f %.2f %.2f) off by %.3f | view "
-                          "(%.1f %.1f %.1f)",
+        SkyOverhaul::Logf("clouds: eye (%.2f %.2f %.2f) engine (%.2f %.2f %.2f) | worst eye %.4f "
+                          "ray %.6f | sky passes %u",
                           view.eye[0], view.eye[1], view.eye[2], view.position[0],
-                          view.position[1], view.position[2],
-                          std::sqrt((view.eye[0] - view.position[0]) *
-                                        (view.eye[0] - view.position[0]) +
-                                    (view.eye[1] - view.position[1]) *
-                                        (view.eye[1] - view.position[1]) +
-                                    (view.eye[2] - view.position[2]) *
-                                        (view.eye[2] - view.position[2])),
-                          view.viewPoint[0], view.viewPoint[1], view.viewPoint[2]);
+                          view.position[1], view.position[2], g_worstEyeError, g_worstRayError,
+                          g_worstSkyPasses);
+        SkyOverhaul::Logf("clouds: right (%.4f %.4f %.4f) up (%.4f %.4f %.4f) matrix corner "
+                          "(%.4f %.4f %.4f) basis corner (%.4f %.4f %.4f)",
+                          view.right[0], view.right[1], view.right[2], view.up[0], view.up[1],
+                          view.up[2], view.corners[0][0], view.corners[0][1], view.corners[0][2],
+                          view.basisCorners[0][0], view.basisCorners[0][1],
+                          view.basisCorners[0][2]);
         SkyOverhaul::Logf("clouds: corners (%.2f %.2f %.2f) (%.2f %.2f %.2f) dir (%.2f %.2f %.2f) "
                           "bloom %.3f",
                           view.corners[0][0], view.corners[0][1], view.corners[0][2],
@@ -156,8 +209,13 @@ namespace {
 
     void Draw(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::CloudLayer::Lighting& lighting) {
+        // Two ways to say where the camera is and where each corner of the screen looks, so that
+        // one can be tried against the other in a running game rather than argued about.
+        const float* eye = g_useBasis ? view.position : view.eye;
+        const float(*corners)[3] = g_useBasis ? view.basisCorners : view.corners;
+
         const float constants[kConstantCount * 4] = {
-            view.eye[0], view.eye[1], view.eye[2], view.bloom,
+            eye[0], eye[1], eye[2], view.bloom,
             g_baseAltitude, 0.0f, 0.25f, kCellSize,
             lighting.sunColour[0], lighting.sunColour[1], lighting.sunColour[2], 0.0f,
             lighting.ambientColour[0], lighting.ambientColour[1], lighting.ambientColour[2], 0.0f,
@@ -175,7 +233,7 @@ namespace {
         pass.device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
         pass.device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCALPHA);
 
-        draw.ClipQuad(kSkyDepth, view.corners);
+        draw.ClipQuad(kSkyDepth, corners);
     }
 }
 
@@ -199,12 +257,16 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
         return;
     }
 
+    Track(pass, view);
     Draw(pass, view, lighting);
 
     g_sinceHeartbeat += elapsed;
     if (g_sinceHeartbeat >= kHeartbeatSeconds) {
         g_sinceHeartbeat = 0.0f;
         LogPass(pass, view);
+        g_worstEyeError = 0.0f;
+        g_worstRayError = 0.0f;
+        g_worstSkyPasses = 0;
     }
 }
 
@@ -217,6 +279,10 @@ void SkyOverhaul::Clouds::ReleaseDeviceObjects() {
 
 void SkyOverhaul::Clouds::SetEnabled(bool enabled) {
     g_enabled = enabled;
+}
+
+void SkyOverhaul::Clouds::SetUseBasis(bool useBasis) {
+    g_useBasis = useBasis;
 }
 
 void SkyOverhaul::Clouds::SetBaseAltitude(int metres) {

@@ -152,5 +152,19 @@ bool SkyOverhaul::Camera::Read(IDirect3DDevice9* device, View& out) {
         out.corners[corner][1] = atFar[1] - atNear[1];
         out.corners[corner][2] = atFar[2] - atNear[2];
     }
+
+    // The same corners from the basis: how far off centre a corner sits is the projection's own
+    // scale, and the camera's axes carry it into the world without touching a world coordinate.
+    const float horizontalScale = transforms[16 + 0];
+    const float across = horizontalScale != 0.0f ? 1.0f / horizontalScale : 0.0f;
+    const float down = out.verticalScale != 0.0f ? 1.0f / out.verticalScale : 0.0f;
+    for (int corner = 0; corner < 4; corner++) {
+        const float x = kCorners[corner][0] * across;
+        const float y = kCorners[corner][1] * down;
+        for (int axis = 0; axis < 3; axis++) {
+            out.basisCorners[corner][axis] =
+                out.direction[axis] + out.right[axis] * x + out.up[axis] * y;
+        }
+    }
     return true;
 }

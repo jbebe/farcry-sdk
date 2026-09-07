@@ -21,6 +21,11 @@ struct View {
     float eye[3];
     float corners[4][3];
 
+    // The same four directions built from the camera basis instead, which needs no inversion and
+    // no arithmetic on world-sized numbers. The two should agree; where they do not, this one is
+    // the better conditioned.
+    float basisCorners[4][3];
+
     // The same camera as the engine describes it, which is the cross-check on the inverse above.
     float direction[3];
     float right[3];
