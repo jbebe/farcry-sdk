@@ -27,4 +27,9 @@ void SetHaze(int percent);
 // noon sky.
 void SetBrightness(int percent);
 
+// How far the horizon is taken from the engine's own colour, which runs yellow-green, toward the
+// warm grey of dusty air. Zero leaves the engine's colour exactly as it is, which is the only
+// setting that cannot disagree with the fog the terrain fades into.
+void SetHorizonDust(int percent);
+
 }

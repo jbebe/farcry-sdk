@@ -42,6 +42,11 @@
 #define VIEW_STEPS 16
 #define LIGHT_STEPS 8
 
+// What dusty air reads as once the colour has been taken out of it: a warm grey rather than a
+// neutral one, because dust absorbs blue harder than it absorbs red. Multiplied by the horizon's
+// own brightness, so it stays the engine's horizon and only stops being yellow.
+#define HORIZON_DUST float3(1.09f, 1.00f, 0.86f)
+
 #define PI 3.14159265f
 
 // How high up the engine's own fog reads our sky, in metres. The engine measures its fog along the
@@ -53,8 +58,9 @@
 float4 Eye : register(c71);
 // xyz: the direction of the sun, pointing at it. w: zero in daylight, one at night.
 float4 Sun : register(c72);
-// x: how much haze the air carries. y: how bright the sun is. Both finished values, with the
-// weather already folded in.
+// x: how much haze the air carries. y: how bright the sun is, both finished values with the
+// weather already folded in. z: how far the horizon is taken from the engine's own colour toward
+// the colour of dust.
 float4 Air : register(c73);
 
 // The engine's own sky fog, register for register, so our sky meets the terrain in the colour the
@@ -166,6 +172,12 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float heading =
         acos(clamp(dot(normalize(ray.xy + 0.0001f), FogColourVector.xy), -1.0f, 1.0f)) / PI;
     float3 horizon = FogColour.rgb + FogColourRange.rgb * heading;
+
+    // The engine's own horizon runs yellow-green. Taking the colour out of it and putting back
+    // only the warmth leaves the brown-grey that dusty air actually is, and since what is left is
+    // still the engine's own brightness, it goes on tracking the hour by itself.
+    float grey = dot(horizon, float3(0.299f, 0.587f, 0.114f));
+    horizon = lerp(horizon, grey * HORIZON_DUST, Air.z);
 
     float fogHeight = saturate(ray.z * SKY_HEIGHT * FogHeightValues.x + FogHeightValues.y);
     float fog = saturate((fogHeight * FogHeightValues.z + FogHeightValues.w) * FogValues.z);

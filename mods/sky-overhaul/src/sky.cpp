@@ -37,6 +37,7 @@ namespace {
     bool g_enabled = false;
     float g_haze = 1.0f;
     float g_brightness = 1.0f;
+    float g_dust = 0.7f;
 
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
@@ -113,7 +114,7 @@ namespace {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
             lighting.night,
-            haze, intensity, 0.0f, 0.0f,
+            haze, intensity, g_dust, 0.0f,
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogValues[0], view.fogValues[1], view.fogValues[2], 0.0f,
@@ -167,4 +168,8 @@ void SkyOverhaul::Sky::SetHaze(int percent) {
 
 void SkyOverhaul::Sky::SetBrightness(int percent) {
     g_brightness = static_cast<float>(percent) * 0.01f;
+}
+
+void SkyOverhaul::Sky::SetHorizonDust(int percent) {
+    g_dust = static_cast<float>(percent) * 0.01f;
 }
