@@ -45,7 +45,7 @@ namespace {
     constexpr float kCirrusClearance = 2000.0f;
     constexpr float kCirrusFloor = 6000.0f;
     constexpr float kCirrusGrain = 1.0f / 12000.0f;
-    constexpr float kCirrusStretch = 0.16f;
+    constexpr float kCirrusStretch = 0.11f;
 
     // How much light bends forward off a droplet, and the two frequencies the detail and the
     // weather are read at relative to the shape.

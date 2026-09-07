@@ -193,14 +193,25 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     float travel = rise / ray.z;
     float2 at = (Eye.xy + ray.xy * travel + Wind.xy * 2.5f) * Cirrus.y;
 
-    // Squashed across the wind and left alone along it, which is what turns a field of noise into
-    // fibres rather than blobs.
-    float2 fibre = float2(at.x * Cirrus.w, at.y);
-    float coarse = tex3Dlod(ShapeNoise, float4(fibre, 0.31f, 0.0f)).r;
-    float fine = tex3Dlod(ShapeNoise, float4(fibre * 2.7f + 0.5f, 0.67f, 0.0f)).g;
+    // Squashed across the wind and left alone along it, so that whatever is read next comes out
+    // drawn in one direction. Only the smooth channel is read: the others are cellular, and a
+    // field of cells stretched out is a field of stretched cells, not a fibre.
+    float2 line = float2(at.x * Cirrus.w, at.y);
 
-    float sheet = coarse * 0.7f + fine * 0.3f;
-    cover = saturate(Remap(sheet, 1.0f - Cirrus.z, 1.0f, 0.0f, 1.0f));
+    // Bent by a slower copy of itself before it is read, which is what turns straight bands into
+    // the swept and hooked shapes cirrus actually forms.
+    float warp = tex3Dlod(ShapeNoise, float4(line * 0.4f, 0.11f, 0.0f)).r;
+    line.y += (warp - 0.5f) * 1.2f;
+
+    float coarse = tex3Dlod(ShapeNoise, float4(line, 0.31f, 0.0f)).r;
+    float fine = tex3Dlod(ShapeNoise, float4(line * 2.3f + 0.37f, 0.67f, 0.0f)).r;
+
+    // Taken along the crests of that field rather than at its peaks. A peak is an island and a
+    // crest is a line, and cirrus is made of lines.
+    float field = coarse * 0.65f + fine * 0.35f;
+    float fibres = 1.0f - abs(field * 2.0f - 1.0f);
+
+    cover = saturate(Remap(fibres, 1.0f - Cirrus.z, 1.0f, 0.0f, 1.0f));
 
     // Haze is made by the air near the ground, and a sheet this high is above almost all of it.
     // What dims it is not how far the ray went but how slanted it was while crossing that air:
