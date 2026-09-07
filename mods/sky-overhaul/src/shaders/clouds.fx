@@ -14,6 +14,10 @@
 // the horizon runs almost along the layer and would otherwise spread its samples over kilometres.
 #define MAX_STRIDE 90.0f
 
+// How much light the high sheet bends forward. Gentle: enough that it lifts toward the sun, not
+// so much that it only exists there.
+#define CIRRUS_FORWARD 0.35f
+
 // How many texels across one repeat each volume holds, which is what turns a sample spacing into
 // the level of the noise that matches it.
 #define SHAPE_TEXELS 128.0f
@@ -198,7 +202,10 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     float lost = 1.0f - exp(-sideways / max(Range.w, 1.0f));
     cover *= 1.0f - lost;
 
-    float3 light = SunColour.rgb * Phase(cosAngle, 0.8f) * 0.5f + AmbientColour.rgb;
+    // Ice does scatter forward harder than water does, but a sheet with a sharp lobe on it stops
+    // being cloud and becomes a ring around the sun: at eight tenths the peak is forty-five times
+    // the rest of the sky, which the sun disc behind it is already busy filling.
+    float3 light = SunColour.rgb * Phase(cosAngle, CIRRUS_FORWARD) * 0.5f + AmbientColour.rgb;
     return lerp(light, horizon, lost);
 }
 
