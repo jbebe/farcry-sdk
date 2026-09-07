@@ -10,11 +10,14 @@
 #define VIEW_STEPS 48
 #define LIGHT_STEPS 5
 
-// How far apart two samples may be before the march starts stepping over whole clouds, and how far
-// apart before the fine erosion stops being shape and becomes noise. A ray near the horizon runs
-// almost along the layer and would otherwise spread its samples over kilometres.
+// How far apart two samples may be before the march starts stepping over whole clouds. A ray near
+// the horizon runs almost along the layer and would otherwise spread its samples over kilometres.
 #define MAX_STRIDE 90.0f
-#define DETAIL_STRIDE 130.0f
+
+// How many texels across one repeat each volume holds, which is what turns a sample spacing into
+// the level of the noise that matches it.
+#define SHAPE_TEXELS 128.0f
+#define DETAIL_TEXELS 32.0f
 
 // The low frequencies a cloud's body is carved from, the high ones its edges are eroded by, and
 // where over the world clouds stand at all.
@@ -99,7 +102,8 @@ float Density(float3 world, float stride, uniform bool cheap) {
     // an almost constant slice out of the volume and every cloud in it comes out the same height.
     float acrossLayer = 1.0f / max(Layer.y * 3.0f, 1.0f);
     float3 shapeUv = float3((world.xy + Wind.xy) * Grain.x, world.z * acrossLayer);
-    float4 shape = tex3Dlod(ShapeNoise, float4(shapeUv, 0.0f));
+    float4 shape = tex3Dlod(ShapeNoise,
+                            float4(shapeUv, max(log2(stride * Grain.x * SHAPE_TEXELS), 0.0f)));
 
     // Three frequencies of billow, folded into one field, then used to carve the fourth.
     float billow = shape.g * 0.625f + shape.b * 0.25f + shape.a * 0.125f;
@@ -108,18 +112,20 @@ float Density(float3 world, float stride, uniform bool cheap) {
 
     float density = saturate(Remap(body, 1.0f - cloudiness, 1.0f, 0.0f, 1.0f));
 
-    // Erosion finer than the samples are apart is not shape any more, it is noise, so it is let go
-    // as the march coarsens rather than sampled into a dither.
-    float fineness = saturate(1.0f - stride / DETAIL_STRIDE);
-    if (cheap || density <= 0.0f || fineness <= 0.0f) {
+    if (cheap || density <= 0.0f) {
         return density * Layer.w;
     }
 
-    // Wispy at the base and billowy above it, which is how a real cloud's edge tears.
-    float3 detail = tex3Dlod(DetailNoise, float4(world * Grain.y, 0.0f)).rgb;
+    // Wispy at the base and billowy above it, which is how a real cloud's edge tears. Read at
+    // whatever level of the noise is as fine as the samples are apart: asking for more than that
+    // would return a different answer at every pixel and read as grain rather than as an edge.
+    float3 detail =
+        tex3Dlod(DetailNoise,
+                 float4(world * Grain.y, max(log2(stride * Grain.y * DETAIL_TEXELS), 0.0f)))
+            .rgb;
     float fine = detail.r * 0.625f + detail.g * 0.25f + detail.b * 0.125f;
     float erosion = lerp(1.0f - fine, fine, saturate(height * 4.0f));
-    density = saturate(Remap(density, erosion * Grain.w * fineness, 1.0f, 0.0f, 1.0f));
+    density = saturate(Remap(density, erosion * Grain.w, 1.0f, 0.0f, 1.0f));
     return density * Layer.w;
 }
 

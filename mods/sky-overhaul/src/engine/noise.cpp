@@ -17,8 +17,16 @@ namespace {
     constexpr int kDetailSize = 32;
     constexpr int kWeatherSize = 512;
 
-    std::vector<uint8_t> g_shapeBytes;
-    std::vector<uint8_t> g_detailBytes;
+    // Each volume as a whole mip chain rather than one level. A march that samples every ninety
+    // metres wants noise no finer than that: given the levels it can ask for the one that matches
+    // its own spacing, and the erosion softens with distance instead of tearing into a dither.
+    struct Chain {
+        int size = 0;
+        std::vector<std::vector<uint8_t>> levels;
+    };
+
+    Chain g_shapeChain;
+    Chain g_detailChain;
     std::vector<uint8_t> g_weatherBytes;
     std::atomic<bool> g_ready{false};
 
@@ -135,8 +143,44 @@ namespace {
         return static_cast<uint8_t>(clamped * 255.0f + 0.5f);
     }
 
+    // Each level is the one before it averaged eight texels at a time, which is what a sampler
+    // would have done had the format allowed it to build them itself.
+    void BuildLevels(Chain& chain) {
+        for (int size = chain.size / 2; size >= 1; size /= 2) {
+            const std::vector<uint8_t>& from = chain.levels.back();
+            const int wide = size * 2;
+            std::vector<uint8_t> level(static_cast<size_t>(size) * size * size * 4);
+            for (int z = 0; z < size; z++) {
+                for (int y = 0; y < size; y++) {
+                    for (int x = 0; x < size; x++) {
+                        for (int channel = 0; channel < 4; channel++) {
+                            int sum = 0;
+                            for (int corner = 0; corner < 8; corner++) {
+                                const size_t at =
+                                    ((static_cast<size_t>(z * 2 + ((corner >> 2) & 1)) * wide +
+                                      static_cast<size_t>(y * 2 + ((corner >> 1) & 1))) *
+                                         wide +
+                                     static_cast<size_t>(x * 2 + (corner & 1))) *
+                                    4;
+                                sum += from[at + channel];
+                            }
+                            level[(static_cast<size_t>(z) * size * size +
+                                   static_cast<size_t>(y) * size + x) *
+                                      4 +
+                                  channel] = static_cast<uint8_t>((sum + 4) / 8);
+                        }
+                    }
+                }
+            }
+            chain.levels.push_back(std::move(level));
+        }
+    }
+
     void Generate() {
-        g_shapeBytes.resize(static_cast<size_t>(kShapeSize) * kShapeSize * kShapeSize * 4);
+        g_shapeChain.size = kShapeSize;
+        g_shapeChain.levels.emplace_back(static_cast<size_t>(kShapeSize) * kShapeSize * kShapeSize *
+                                         4);
+        std::vector<uint8_t>& shape = g_shapeChain.levels.back();
         for (int z = 0; z < kShapeSize; z++) {
             for (int y = 0; y < kShapeSize; y++) {
                 for (int x = 0; x < kShapeSize; x++) {
@@ -148,15 +192,19 @@ namespace {
                                       4;
 
                     // Blue, green, red, alpha: the order Direct3D reads an A8R8G8B8 texel in.
-                    g_shapeBytes[at + 0] = Byte(Worley(u, v, w, 16, 303));
-                    g_shapeBytes[at + 1] = Byte(Worley(u, v, w, 8, 202));
-                    g_shapeBytes[at + 2] = Byte(ValueFbm(u * 4.0f, v * 4.0f, w * 4.0f, 4, 101));
-                    g_shapeBytes[at + 3] = Byte(Worley(u, v, w, 4, 404));
+                    shape[at + 0] = Byte(Worley(u, v, w, 16, 303));
+                    shape[at + 1] = Byte(Worley(u, v, w, 8, 202));
+                    shape[at + 2] = Byte(ValueFbm(u * 4.0f, v * 4.0f, w * 4.0f, 4, 101));
+                    shape[at + 3] = Byte(Worley(u, v, w, 4, 404));
                 }
             }
         }
+        BuildLevels(g_shapeChain);
 
-        g_detailBytes.resize(static_cast<size_t>(kDetailSize) * kDetailSize * kDetailSize * 4);
+        g_detailChain.size = kDetailSize;
+        g_detailChain.levels.emplace_back(static_cast<size_t>(kDetailSize) * kDetailSize *
+                                          kDetailSize * 4);
+        std::vector<uint8_t>& detail = g_detailChain.levels.back();
         for (int z = 0; z < kDetailSize; z++) {
             for (int y = 0; y < kDetailSize; y++) {
                 for (int x = 0; x < kDetailSize; x++) {
@@ -166,13 +214,14 @@ namespace {
                     const size_t at = (static_cast<size_t>(z) * kDetailSize * kDetailSize +
                                        static_cast<size_t>(y) * kDetailSize + x) *
                                       4;
-                    g_detailBytes[at + 0] = Byte(Worley(u, v, w, 16, 707));
-                    g_detailBytes[at + 1] = Byte(Worley(u, v, w, 8, 606));
-                    g_detailBytes[at + 2] = Byte(Worley(u, v, w, 4, 505));
-                    g_detailBytes[at + 3] = 255;
+                    detail[at + 0] = Byte(Worley(u, v, w, 16, 707));
+                    detail[at + 1] = Byte(Worley(u, v, w, 8, 606));
+                    detail[at + 2] = Byte(Worley(u, v, w, 4, 505));
+                    detail[at + 3] = 255;
                 }
             }
         }
+        BuildLevels(g_detailChain);
 
         g_weatherBytes.resize(static_cast<size_t>(kWeatherSize) * kWeatherSize * 4);
         for (int y = 0; y < kWeatherSize; y++) {
@@ -196,28 +245,34 @@ namespace {
         g_ready.store(true, std::memory_order_release);
     }
 
-    bool UploadVolume(IDirect3DDevice9* device, int size, const std::vector<uint8_t>& bytes,
+    bool UploadVolume(IDirect3DDevice9* device, const Chain& chain,
                       IDirect3DVolumeTexture9** out) {
-        if (FAILED(device->CreateVolumeTexture(size, size, size, 1, 0, D3DFMT_A8R8G8B8,
-                                               D3DPOOL_MANAGED, out, nullptr))) {
+        const UINT levels = static_cast<UINT>(chain.levels.size());
+        if (FAILED(device->CreateVolumeTexture(chain.size, chain.size, chain.size, levels, 0,
+                                               D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, out, nullptr))) {
             return false;
         }
-        D3DLOCKED_BOX box = {};
-        if (FAILED((*out)->LockBox(0, &box, nullptr, 0))) {
-            SkyOverhaul::Release(*out);
-            return false;
-        }
-        for (int z = 0; z < size; z++) {
-            auto* slice = static_cast<uint8_t*>(box.pBits) + static_cast<size_t>(z) * box.SlicePitch;
-            for (int y = 0; y < size; y++) {
-                std::memcpy(slice + static_cast<size_t>(y) * box.RowPitch,
-                            bytes.data() + (static_cast<size_t>(z) * size * size +
-                                            static_cast<size_t>(y) * size) *
-                                               4,
-                            static_cast<size_t>(size) * 4);
+        int size = chain.size;
+        for (UINT level = 0; level < levels; level++, size /= 2) {
+            D3DLOCKED_BOX box = {};
+            if (FAILED((*out)->LockBox(level, &box, nullptr, 0))) {
+                SkyOverhaul::Release(*out);
+                return false;
             }
+            const std::vector<uint8_t>& bytes = chain.levels[level];
+            for (int z = 0; z < size; z++) {
+                auto* slice =
+                    static_cast<uint8_t*>(box.pBits) + static_cast<size_t>(z) * box.SlicePitch;
+                for (int y = 0; y < size; y++) {
+                    std::memcpy(slice + static_cast<size_t>(y) * box.RowPitch,
+                                bytes.data() + (static_cast<size_t>(z) * size * size +
+                                                static_cast<size_t>(y) * size) *
+                                                   4,
+                                static_cast<size_t>(size) * 4);
+                }
+            }
+            (*out)->UnlockBox(level);
         }
-        (*out)->UnlockBox(0);
         return true;
     }
 
@@ -259,8 +314,8 @@ bool SkyOverhaul::Noise::Ensure(IDirect3DDevice9* device) {
         return false;
     }
 
-    if (!UploadVolume(device, kShapeSize, g_shapeBytes, &g_shape) ||
-        !UploadVolume(device, kDetailSize, g_detailBytes, &g_detail) ||
+    if (!UploadVolume(device, g_shapeChain, &g_shape) ||
+        !UploadVolume(device, g_detailChain, &g_detail) ||
         !UploadPlane(device, kWeatherSize, g_weatherBytes, &g_weather)) {
         ReleaseDeviceObjects();
         g_owner = device;
@@ -269,8 +324,9 @@ bool SkyOverhaul::Noise::Ensure(IDirect3DDevice9* device) {
         return false;
     }
 
-    Logf("clouds: noise ready, shape %d cubed, detail %d cubed, weather %d square", kShapeSize,
-         kDetailSize, kWeatherSize);
+    Logf("clouds: noise ready, shape %d cubed in %d levels, detail %d cubed in %d levels",
+         kShapeSize, static_cast<int>(g_shapeChain.levels.size()), kDetailSize,
+         static_cast<int>(g_detailChain.levels.size()));
     return true;
 }
 
