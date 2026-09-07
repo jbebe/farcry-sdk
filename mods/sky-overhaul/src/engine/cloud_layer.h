@@ -9,6 +9,13 @@
 
 namespace SkyOverhaul::CloudLayer {
 
+// Whether the engine draws its own clouds. Suppressing them is the same thing the engine does for
+// a world whose cloud layers are both disabled, and it takes the god-ray cloud mask with it.
+enum class Mode {
+    Engine,
+    Off,
+};
+
 // The cloud lighting for one frame, as the environment manager left it: the world's presets
 // already blended by time of day and by storm, so these are finished values rather than curves.
 struct Lighting {
@@ -55,8 +62,12 @@ bool Install();
 // The newest complete snapshot. False until the engine has submitted a cloud layer.
 bool Latest(Lighting& out);
 
-// Counts cloud-layer submissions. Unlike the sun disc's, this one runs at every hour, so a render
-// frame whose count differs from the previous one had a world drawn into it.
+// Counts cloud-layer submissions, suppressed ones included. Unlike the sun disc's, this one runs
+// at every hour, so a render frame whose count differs from the previous one had a world drawn
+// into it.
 uint32_t SubmitCount();
+
+// Takes effect on the next submission. Safe to call before anything has been submitted.
+void SetMode(Mode mode);
 
 }

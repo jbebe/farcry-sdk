@@ -41,10 +41,6 @@ namespace {
     constexpr float kSunColourScale = 1.9f;
     constexpr float kParallaxScale = 0.01f;
 
-    // How often the snapshot is written to the log, counted in submissions because this runs on
-    // the game thread, which owns no clock of the plugin's.
-    constexpr uint32_t kLogEvery = 2048;
-
     // Twelve stack arguments, of which only the sixth is read; the rest are named to get the stack
     // shape right, since the callee cleans it. __fastcall stands in for __thiscall, which MSVC
     // will not let a free function be.
@@ -66,6 +62,10 @@ namespace {
 
     SkyOverhaul::Seqlock<SkyOverhaul::CloudLayer::Lighting> g_lighting;
     std::atomic<uint32_t> g_submitCount{0};
+
+    // Written by the settings callback and read by the submission. A lone aligned value that no
+    // other has to agree with, so a torn read is neither possible nor consequential.
+    SkyOverhaul::CloudLayer::Mode g_mode = SkyOverhaul::CloudLayer::Mode::Engine;
 
     const float* Field(const uint8_t* state, size_t offset) {
         return reinterpret_cast<const float*>(state + offset);
@@ -138,24 +138,6 @@ namespace {
         out.timeOfDay = *Field(state, kTimeOfDay);
     }
 
-    void LogSnapshot(uint32_t count, const SkyOverhaul::CloudLayer::Lighting& lighting,
-                     uint32_t option17, uint32_t option18) {
-        SkyOverhaul::Logf("clouds n%u: sun (%.2f %.2f %.2f) light (%.2f %.2f %.2f) "
-                          "ambient (%.2f %.2f %.2f) back (%.2f %.2f %.2f)",
-                          count, lighting.sunDirection[0], lighting.sunDirection[1],
-                          lighting.sunDirection[2], lighting.sunColour[0], lighting.sunColour[1],
-                          lighting.sunColour[2], lighting.ambientColour[0],
-                          lighting.ambientColour[1], lighting.ambientColour[2],
-                          lighting.backSunColour[0], lighting.backSunColour[1],
-                          lighting.backSunColour[2]);
-        SkyOverhaul::Logf("clouds n%u: cover %.2f/%.2f on %d%d wind (%.2f %.2f %.2f %.2f) "
-                          "storm %.2f night %.2f tod %.2f opts %u%u",
-                          count, lighting.layer1[0], lighting.layer2[0],
-                          lighting.layer1Enabled ? 1 : 0, lighting.layer2Enabled ? 1 : 0,
-                          lighting.wind[0], lighting.wind[1], lighting.wind[2], lighting.wind[3],
-                          lighting.storm, lighting.night, lighting.timeOfDay, option17, option18);
-    }
-
     void __fastcall SubmitCloudsDetour(void* self, void* unused, uint32_t a2, uint32_t a3,
                                        uint32_t a4, uint32_t a5, uint32_t a6, const uint8_t* state,
                                        uint32_t a8, uint32_t a9, uint32_t a10, uint32_t a11,
@@ -164,14 +146,14 @@ namespace {
             SkyOverhaul::CloudLayer::Lighting lighting = {};
             Read(state, lighting);
             g_lighting.Publish(lighting);
-
-            const uint32_t count = g_submitCount.fetch_add(1, std::memory_order_relaxed) + 1;
-            if (count % kLogEvery == 0) {
-                LogSnapshot(count, lighting, a11, a12);
-            }
+            g_submitCount.fetch_add(1, std::memory_order_relaxed);
         }
 
-        g_original(self, unused, a2, a3, a4, a5, a6, state, a8, a9, a10, a11, a12, a13);
+        // Returning here is what the engine itself does for a world with no cloud layers enabled:
+        // the packets are never appended, so nothing downstream has anything to draw.
+        if (g_mode == SkyOverhaul::CloudLayer::Mode::Engine) {
+            g_original(self, unused, a2, a3, a4, a5, a6, state, a8, a9, a10, a11, a12, a13);
+        }
     }
 }
 
@@ -211,4 +193,18 @@ bool SkyOverhaul::CloudLayer::Latest(Lighting& out) {
 
 uint32_t SkyOverhaul::CloudLayer::SubmitCount() {
     return g_submitCount.load(std::memory_order_relaxed);
+}
+
+void SkyOverhaul::CloudLayer::SetMode(Mode mode) {
+    g_mode = mode;
+
+    const char* what = mode == Mode::Engine ? "the engine draws its own clouds"
+                                            : "the engine's clouds are suppressed";
+    Lighting lighting;
+    if (Latest(lighting)) {
+        Logf("clouds: %s - coverage %.2f, storm %.2f, night %.2f", what, lighting.layer1[0],
+             lighting.storm, lighting.night);
+        return;
+    }
+    Logf("clouds: %s", what);
 }

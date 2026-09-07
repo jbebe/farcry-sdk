@@ -25,6 +25,15 @@ namespace {
     void* Setter(SliderFn setter) {
         return reinterpret_cast<void*>(setter);
     }
+
+    // Index order is what the callback below switches on; the file stores the label.
+    const char* const kCloudModes[] = {"Engine", "Off"};
+
+    void __cdecl OnCloudsChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::CloudLayer::SetMode(value->asChoice == 0
+                                             ? SkyOverhaul::CloudLayer::Mode::Engine
+                                             : SkyOverhaul::CloudLayer::Mode::Off);
+    }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
@@ -56,6 +65,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // glare is in the state it was left in by the time this returns, and again on every change.
     using namespace SkyOverhaul;
     static const FCSE_Setting settings[] = {
+        {"Clouds", FCSE_CHOICE(0), &OnCloudsChanged, nullptr, kCloudModes,
+         sizeof(kCloudModes) / sizeof(kCloudModes[0])},
         {"Sun glare strength", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Dazzle::SetStrength),
          nullptr, 0, 0, 200},
         {"Sun glare spread", FCSE_SLIDER(57), &OnSliderChanged, Setter(&Dazzle::SetSpread), nullptr,
