@@ -22,11 +22,6 @@
 // there is no depth for any of it to be lost in.
 #define CIRRUS_ALBEDO 1.1f
 
-// The band of the slow field over which the sheet opens out from nothing to all of itself. Narrow
-// enough that there is clear sky between the banks, wide enough that they have edges.
-#define CIRRUS_MASK_LOW 0.40f
-#define CIRRUS_MASK_HIGH 0.66f
-
 // How deep the hazy air under the sheet effectively is, in metres, which is the distance a ray
 // straight up spends in it. Everything below is that same depth divided by how slanted the ray is.
 #define CIRRUS_AIR 900.0f
@@ -70,11 +65,9 @@ float4 BackColour : register(c78);
 // turns into that haze.
 float4 Range : register(c79);
 
-// x: the altitude of the high sheet. y: how many metres one repeat of its streaks covers.
-// z: how much of the sky its fibres reach across. w: how hard they are drawn out across the wind.
+// x: the altitude of the high sheet. y: how many metres one repeat of it covers. z: how much of
+// the sky it reaches across. w: how solid it is where it does.
 float4 Cirrus : register(c85);
-// x: how solid a fibre is once it is there. y: how slow the field masking the sheet into banks is.
-float4 Sheet : register(c86);
 
 // The engine's own sky fog, register for register, so our clouds sit in the same haze the dome
 // does. See docs/docs/engine-internals/sky-and-clouds.md.
@@ -188,12 +181,15 @@ float3 Scatter(float lit, float cosAngle) {
 }
 
 // The high sheet. Ice rather than water, thin enough that the sun passes almost straight through
-// it, and drawn out into fibres by a wind that at that altitude blows one way and hard. There is
-// no depth to march through, so it costs one intersection and two samples.
+// it, so there is no depth to march and it costs one intersection and one sample.
 //
-// It hazes on how far the ray travelled sideways rather than how far it travelled, because the air
-// that does the hazing is all near the ground: six kilometres straight up passes through very
-// little of it, and the same six kilometres along the horizon passes through nothing else.
+// The shape is layered noise taken as it comes, the way a paint program's cloud filter makes it:
+// nothing stretched, folded or warped. How much of the field survives is one control and how
+// solid what survives is is another, because they are two different things about a sky.
+//
+// It hazes on how slanted the view is rather than how far it went, because the air that does the
+// hazing is all near the ground: six kilometres straight up passes through very little of it, and
+// the same six kilometres along the horizon passes through nothing else.
 float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     cover = 0.0f;
     float rise = Cirrus.x - Eye.z;
@@ -204,33 +200,8 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     float travel = rise / ray.z;
     float2 at = (Eye.xy + ray.xy * travel + Wind.xy * 2.5f) * Cirrus.y;
 
-    // Squashed across the wind and left alone along it, so that whatever is read next comes out
-    // drawn in one direction. Only the smooth channel is read: the others are cellular, and a
-    // field of cells stretched out is a field of stretched cells, not a fibre.
-    float2 streak = float2(at.x * Cirrus.w, at.y);
-
-    // Bent by a slower copy of itself before it is read, which is what turns straight bands into
-    // the swept and hooked shapes cirrus actually forms.
-    float warp = tex3Dlod(ShapeNoise, float4(streak * 0.4f, 0.11f, 0.0f)).r;
-    streak.y += (warp - 0.5f) * 1.2f;
-
-    float coarse = tex3Dlod(ShapeNoise, float4(streak, 0.31f, 0.0f)).r;
-    float fine = tex3Dlod(ShapeNoise, float4(streak * 2.3f + 0.37f, 0.67f, 0.0f)).r;
-
-    // Taken along the crests of that field rather than at its peaks. A peak is an island and a
-    // crest is a line, and cirrus is made of lines.
-    float field = coarse * 0.65f + fine * 0.35f;
-    float fibres = 1.0f - abs(field * 2.0f - 1.0f);
-
-    // Where the sheet stands at all, from a field far slower than the fibres themselves. Without
-    // it the same amount of cirrus is combed evenly over every part of the sky at once, and a sky
-    // with cirrus everywhere reads as a texture rather than as weather.
-    float mask = tex3Dlod(ShapeNoise, float4(at * Sheet.y, 0.83f, 0.0f)).r;
-    mask = saturate(Remap(mask, CIRRUS_MASK_LOW, CIRRUS_MASK_HIGH, 0.0f, 1.0f));
-
-    // Two controls, because they are two things. One decides how much sky has fibres in it, the
-    // other how solid a fibre is once it is there, and a sky can have any pairing of the two.
-    cover = saturate(Remap(fibres, 1.0f - Cirrus.z, 1.0f, 0.0f, 1.0f)) * mask * Sheet.x;
+    float field = tex3Dlod(ShapeNoise, float4(at, 0.37f, 0.0f)).r;
+    cover = saturate(Remap(field, 1.0f - Cirrus.z, 1.0f, 0.0f, 1.0f)) * Cirrus.w;
 
     // Haze is made by the air near the ground, and a sheet this high is above almost all of it.
     // What dims it is not how far the ray went but how slanted it was while crossing that air:

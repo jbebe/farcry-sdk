@@ -18,7 +18,7 @@ namespace {
     // Above the engine's own globals, which occupy c0 to c64 and would be read back stale by the
     // next draw if a plugin wrote over them.
     constexpr UINT kFirstConstant = 71;
-    constexpr UINT kConstantCount = 16;
+    constexpr UINT kConstantCount = 15;
 
     // The far end of the depth range, where nothing but sky has been drawn: the world's geometry
     // is all nearer, so a less-or-equal test rejects the quad wherever anything stands, at any
@@ -44,11 +44,7 @@ namespace {
     // streaks covers, and how hard those streaks are squashed across the wind.
     constexpr float kCirrusClearance = 2000.0f;
     constexpr float kCirrusFloor = 6000.0f;
-    constexpr float kCirrusGrain = 1.0f / 12000.0f;
-    constexpr float kCirrusStretch = 0.11f;
-
-    // How slow the field that masks the sheet into banks is, against the fibres themselves.
-    constexpr float kCirrusMask = 0.09f;
+    constexpr float kCirrusGrain = 1.0f / 20000.0f;
 
     // How much light bends forward off a droplet, and the two frequencies the detail and the
     // weather are read at relative to the shape.
@@ -187,8 +183,7 @@ namespace {
             view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
             view.fogHeightValues[3],
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
-            cirrusAltitude, kCirrusGrain, g_cirrus, kCirrusStretch,
-            g_cirrusOpacity, kCirrusMask, 0.0f, 0.0f};
+            cirrusAltitude, kCirrusGrain, g_cirrus, g_cirrusOpacity};
 
         SkyOverhaul::ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
         pass.device->SetVertexShader(g_vertexShader);
