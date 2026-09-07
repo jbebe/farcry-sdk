@@ -97,6 +97,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          500, 12000},
         {"Cloud wind", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Clouds::SetWind), nullptr, 0, 0,
          500},
+        {"Cloud haze", FCSE_SLIDER(3000), &OnSliderChanged, Setter(&Clouds::SetHaze), nullptr, 0,
+         300, 20000},
         // Out of the menu while the clouds are being tuned, because the page only has room for one
         // feature's worth of rows. The glare keeps every value below as its own default.
         /*

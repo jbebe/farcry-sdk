@@ -36,4 +36,7 @@ void SetGrain(int metres);
 // How fast the layer drifts, as a multiple of the wind the engine is already blowing.
 void SetWind(int percent);
 
+// Over how many metres a cloud turns into the colour of the horizon behind it.
+void SetHaze(int metres);
+
 }

@@ -19,15 +19,11 @@
 #define SHAPE_TEXELS 128.0f
 #define DETAIL_TEXELS 32.0f
 
-// Temporarily off, to see the parameters without it: at zero every sample reads the finest level
-// of the noise however far apart the samples are, which is sharp and aliases.
-#define MATCH_LEVEL_TO_STRIDE 0
-
-#if MATCH_LEVEL_TO_STRIDE
-#define NoiseLevel(stride, grain, texels) max(log2((stride) * (grain) * (texels)), 0.0f)
-#else
+// The noise is read at its finest level wherever it is sampled. The volumes carry coarser levels
+// too, one for each halving of the sample spacing, but taking them costs more shape than it saves
+// grain: a cloud loses its bite long before it stops sparkling. The haze below does that work
+// instead, by turning a distant cloud into distant air rather than into a smoother cloud.
 #define NoiseLevel(stride, grain, texels) 0.0f
-#endif
 
 // The low frequencies a cloud's body is carved from, the high ones its edges are eroded by, and
 // where over the world clouds stand at all.
@@ -53,7 +49,8 @@ float4 AmbientColour : register(c77);
 // rgb: what reaches the eye through a thin edge, which is what makes a silver lining.
 float4 BackColour : register(c78);
 // x: how far out clouds are drawn. y: over what distance they fade to nothing before that.
-// z: how far the march itself runs, the rest being left to the haze.
+// z: how far the march itself runs, the rest being left to the haze. w: over how far a cloud
+// turns into that haze.
 float4 Range : register(c79);
 
 // The engine's own sky fog, register for register, so our clouds sit in the same haze the dome
@@ -241,7 +238,12 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // And distance on top of it, which the sky's own fog has no term for because the dome it was
     // written for is a fixed shape. A layer runs to the horizon, so without this the far half of
     // it stays as crisp as the near half and its repeats become a pattern in the sky.
-    float distant = saturate(enter / Range.x);
+    //
+    // Air scatters a constant fraction of what passes through each metre of it, so what survives
+    // falls away exponentially rather than in a straight line: near clouds keep almost all of
+    // their own colour, far ones are almost entirely the horizon's, and there is no distance at
+    // which the change announces itself.
+    float distant = 1.0f - exp(-enter / max(Range.w, 1.0f));
     fog = saturate(fog + distant * (1.0f - fog));
 
     float cover = (1.0f - transmittance) * reach;

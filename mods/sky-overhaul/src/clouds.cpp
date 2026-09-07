@@ -57,6 +57,7 @@ namespace {
     float g_detail = 0.35f;
     float g_grain = 4000.0f;
     float g_wind = 1.0f;
+    float g_haze = 3000.0f;
 
     // Which frame was last drawn into. A frame can hold more than one pass the sky is drawn in,
     // and drawing into each of them would blend the clouds over themselves.
@@ -163,7 +164,7 @@ namespace {
             lighting.sunColour[0], lighting.sunColour[1], lighting.sunColour[2], kLightStride,
             lighting.ambientColour[0], lighting.ambientColour[1], lighting.ambientColour[2], 0.0f,
             lighting.backSunColour[0], lighting.backSunColour[1], lighting.backSunColour[2], 0.0f,
-            kMaxDistance, kFadeDistance, kMarchDistance, 0.0f,
+            kMaxDistance, kFadeDistance, kMarchDistance, g_haze,
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogValues[0], view.fogValues[1], view.fogValues[2], 0.0f,
@@ -269,4 +270,8 @@ void SkyOverhaul::Clouds::SetGrain(int metres) {
 
 void SkyOverhaul::Clouds::SetWind(int percent) {
     g_wind = static_cast<float>(percent) / 100.0f;
+}
+
+void SkyOverhaul::Clouds::SetHaze(int metres) {
+    g_haze = static_cast<float>(metres);
 }
