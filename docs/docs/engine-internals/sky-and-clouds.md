@@ -53,6 +53,18 @@ bowl's own XY. That is the reason the clouds appear to meet the horizon rather t
 the geometry they are painted on genuinely descends to eye level at the edge, so there is no
 perspective for the clouds to have.
 
+### The clouds are 180 metres up
+
+That profile is in units of the sky's own model matrix, which the submission builds as the identity
+scaled by **1000** (`0x10e0f1f0`) and hands to each piece. World units are metres — a terrain height
+sample covers 0 to 512 of them, and vegetation positions are stored as global world metres — so the
+bowl's apex sits **180 m above the camera** and reaches eye level **1500 m out**, moving with the
+player rather than standing still in the world.
+
+Cumulus begins around 600 m and often sits far higher. FC2's clouds are lower than its own mountains
+are tall, which is most of why they read as a painted ceiling rather than as weather: not because
+the noise is coarse, but because the surface carrying it is barely above the treeline.
+
 ## The sky draws nothing: it submits packets
 
 :::warning[These are not draws, whatever they are named]
