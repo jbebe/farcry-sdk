@@ -14,9 +14,6 @@ struct View {
     // One over the tangent of half the vertical field of view, which turns an angle into a
     // distance on screen.
     float verticalScale;
-    // The planes the projection was built with, which bound how much depth precision there is.
-    float nearPlane;
-    float farPlane;
 
     // Where the camera is and the directions through the viewport's four corners, both derived
     // from the view-projection alone: top left, top right, bottom left, bottom right, which is
@@ -38,8 +35,6 @@ struct View {
     float fogValues[3];
     float fogHeightValues[4];
     float bloom;
-    // The engine's clock, as its shaders animate by.
-    float time;
 };
 
 // False when the device will not answer or the transform cannot be inverted, which is what a pass

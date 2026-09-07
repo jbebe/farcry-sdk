@@ -45,26 +45,25 @@ VertexOut MainVS(VertexIn input) {
 // carrying it along, and it stops well before the horizon, where cells would otherwise shrink past
 // a pixel and shimmer at every step.
 float4 MainPS(float3 rayIn : TEXCOORD0) : COLOR0 {
-    const float4 clear = float4(0.0f, 0.0f, 0.0f, 1.0f);
-
     float3 ray = normalize(rayIn);
     float rise = Slab.x - Eye.z;
-    if (ray.z <= 0.001f || rise <= 0.0f) {
-        return clear;
-    }
 
-    float travel = rise / ray.z;
-    float fade = saturate((Range.x - travel) / Range.y);
-    if (fade <= 0.0f) {
-        return clear;
-    }
+    // Clamped rather than branched around, because the pattern below is filtered by the screen
+    // derivatives of its own coordinate, and a derivative taken inside a branch is undefined.
+    float up = max(ray.z, 0.001f);
+    float travel = rise / up;
+    float2 uv = (Eye.xy + ray.xy * travel) / Slab.w;
 
-    float3 hit = Eye.xyz + ray * travel;
-    float2 cell = floor(hit.xy / Slab.w);
-    if (frac((cell.x + cell.y) * 0.5f) < 0.25f) {
-        return clear;
-    }
+    // The checker averaged over the pixel it covers rather than sampled at its centre. A hard edge
+    // here would crawl across the screen at every step, which reads as the whole grid shaking.
+    float2 footprint = max(abs(ddx(uv)), abs(ddy(uv))) + 0.001f;
+    float2 filtered = 2.0f * (abs(frac((uv - 0.5f * footprint) * 0.5f) - 0.5f) -
+                              abs(frac((uv + 0.5f * footprint) * 0.5f) - 0.5f)) / footprint;
+    float pattern = 0.5f - 0.5f * filtered.x * filtered.y;
+
+    float reach = saturate((Range.x - travel) / Range.y);
+    float coverage = pattern * reach * step(0.001f, ray.z) * step(0.0f, rise);
 
     float3 colour = AmbientColour.rgb + SunColour.rgb * Slab.z;
-    return float4(colour * Eye.w * fade, 1.0f - fade);
+    return float4(colour * Eye.w * coverage, 1.0f - coverage);
 }

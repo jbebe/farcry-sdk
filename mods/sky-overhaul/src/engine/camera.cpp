@@ -8,7 +8,6 @@ namespace {
     // Where the engine binds these for every shader in the frame.
     constexpr uint32_t kViewProjectionRegister = 4;
     constexpr uint32_t kCameraBlockRegister = 45;
-    constexpr uint32_t kGlobalScalarsRegister = 67;
 
     // c4 through c11: the view-projection and then the projection.
     constexpr UINT kViewProjectionCount = 8;
@@ -101,22 +100,14 @@ namespace {
 bool SkyOverhaul::Camera::Read(IDirect3DDevice9* device, View& out) {
     float transforms[kViewProjectionCount * 4] = {};
     float block[kCameraBlockCount * 4] = {};
-    float scalars[4] = {};
     if (FAILED(device->GetVertexShaderConstantF(kViewProjectionRegister, transforms,
                                                 kViewProjectionCount)) ||
-        FAILED(device->GetVertexShaderConstantF(kCameraBlockRegister, block, kCameraBlockCount)) ||
-        FAILED(device->GetVertexShaderConstantF(kGlobalScalarsRegister, scalars, 1))) {
+        FAILED(device->GetVertexShaderConstantF(kCameraBlockRegister, block, kCameraBlockCount))) {
         return false;
     }
 
     std::memcpy(out.viewProjection, transforms, sizeof(out.viewProjection));
     out.verticalScale = transforms[16 + 5];
-
-    // The projection carries the two planes in its third row.
-    const float depthScale = transforms[16 + 10];
-    const float depthOffset = transforms[16 + 11];
-    out.nearPlane = depthScale != 0.0f ? -depthOffset / depthScale : 0.0f;
-    out.farPlane = depthScale != 1.0f ? depthScale * out.nearPlane / (depthScale - 1.0f) : 0.0f;
 
     Copy3(block + kPosition, out.position);
     Copy3(block + kDirection, out.direction);
@@ -129,7 +120,6 @@ bool SkyOverhaul::Camera::Read(IDirect3DDevice9* device, View& out) {
     Copy3(block + kFogValues, out.fogValues);
     std::memcpy(out.fogHeightValues, block + kFogHeightValues, sizeof(out.fogHeightValues));
     out.bloom = block[kBloom];
-    out.time = scalars[1];
 
     float inverse[16];
     if (!Invert(out.viewProjection, inverse)) {

@@ -107,11 +107,10 @@ namespace {
                                         (view.eye[2] - view.position[2])),
                           view.viewPoint[0], view.viewPoint[1], view.viewPoint[2]);
         SkyOverhaul::Logf("clouds: corners (%.2f %.2f %.2f) (%.2f %.2f %.2f) dir (%.2f %.2f %.2f) "
-                          "bloom %.3f time %.1f planes %.3f/%.0f",
+                          "bloom %.3f",
                           view.corners[0][0], view.corners[0][1], view.corners[0][2],
                           view.corners[3][0], view.corners[3][1], view.corners[3][2],
-                          view.direction[0], view.direction[1], view.direction[2], view.bloom,
-                          view.time, view.nearPlane, view.farPlane);
+                          view.direction[0], view.direction[1], view.direction[2], view.bloom);
         SkyOverhaul::Logf("clouds: fog colour (%.2f %.2f %.2f) range (%.2f %.2f %.2f) values "
                           "(%.4f %.2f %.2f) height (%.4f %.2f %.2f %.2f)",
                           view.fogColour[0], view.fogColour[1], view.fogColour[2],
