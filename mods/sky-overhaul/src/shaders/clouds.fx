@@ -22,6 +22,11 @@
 // there is no depth for any of it to be lost in.
 #define CIRRUS_ALBEDO 1.1f
 
+// Where the two aircraft went: a unit normal and how far the line sits from the origin, in the
+// units the sheet is read in. Fixed, because they are scenery rather than traffic.
+#define TRAIL_A float3(0.60f, 0.80f, 0.22f)
+#define TRAIL_B float3(-0.94f, 0.34f, -0.55f)
+
 // How deep the hazy air under the sheet effectively is, in metres, which is the distance a ray
 // straight up spends in it. Everything below is that same depth divided by how slanted the ray is.
 #define CIRRUS_AIR 900.0f
@@ -68,6 +73,9 @@ float4 Range : register(c79);
 // x: the altitude of the high sheet. y: how many metres one repeat of it covers. z: how much of
 // the sky it reaches across. w: how solid it is where it does.
 float4 Cirrus : register(c85);
+// x: how strongly aircraft trails show. y: how wide a fresh one is. z: over what length one comes
+// and goes.
+float4 Trail : register(c86);
 
 // The engine's own sky fog, register for register, so our clouds sit in the same haze the dome
 // does. See docs/docs/engine-internals/sky-and-clouds.md.
@@ -180,6 +188,26 @@ float3 Scatter(float lit, float cosAngle) {
     return SunColour.rgb * total;
 }
 
+// What one aircraft left behind: a straight line at the sheet's altitude, narrow, and neither
+// uniform nor endless. `path` is the line's unit normal and how far it sits from the origin, in
+// the same units the sheet is read in.
+float Contrail(float2 at, float3 path) {
+    float across = abs(dot(at, path.xy) - path.z);
+    float along = dot(at, float2(-path.y, path.x));
+
+    // Whether there is a trail here at all, over a long wavelength. One aircraft passed once, and
+    // what it left has been spreading and tearing apart ever since, so a trail arrives in lengths
+    // rather than running unbroken from one horizon to the other.
+    float presence = tex3Dlod(ShapeNoise, float4(along * Trail.z, 0.71f, 0.29f, 0.0f)).r;
+    presence = saturate(Remap(presence, 0.42f, 0.72f, 0.0f, 1.0f));
+
+    // Wider where it is older, which is also where it is fainter: a trail does not end, it spreads
+    // until it is no longer a line.
+    float spread = Trail.y * (1.0f + (1.0f - presence) * 2.5f);
+    float core = saturate(1.0f - across / spread);
+    return core * core * presence;
+}
+
 // The high sheet. Ice rather than water, thin enough that the sun passes almost straight through
 // it, so there is no depth to march and it costs one intersection and one sample.
 //
@@ -202,6 +230,11 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
 
     float field = tex3Dlod(ShapeNoise, float4(at, 0.37f, 0.0f)).r;
     cover = saturate(Remap(field, 1.0f - Cirrus.z, 1.0f, 0.0f, 1.0f)) * Cirrus.w;
+
+    // Two aircraft, crossing. Added rather than blended in, because a trail is ice laid on top of
+    // whatever sky was already there and does not care how much cirrus it crosses.
+    float trails = Contrail(at, TRAIL_A) + Contrail(at, TRAIL_B);
+    cover = saturate(cover + trails * Trail.x);
 
     // Haze is made by the air near the ground, and a sheet this high is above almost all of it.
     // What dims it is not how far the ray went but how slanted it was while crossing that air:

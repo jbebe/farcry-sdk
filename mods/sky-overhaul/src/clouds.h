@@ -44,4 +44,7 @@ void SetHaze(int metres);
 void SetCirrus(int percent);
 void SetCirrusOpacity(int percent);
 
+// How strongly the two aircraft trails show, as a percentage. Zero leaves the sky to itself.
+void SetContrails(int percent);
+
 }

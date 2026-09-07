@@ -103,6 +103,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          100},
         {"Cirrus opacity", FCSE_SLIDER(70), &OnSliderChanged, Setter(&Clouds::SetCirrusOpacity),
          nullptr, 0, 0, 100},
+        {"Contrails", FCSE_SLIDER(60), &OnSliderChanged, Setter(&Clouds::SetContrails), nullptr, 0,
+         0, 100},
         // Out of the menu while the clouds are being tuned, because the page only has room for one
         // feature's worth of rows. The glare keeps every value below as its own default.
         /*

@@ -18,7 +18,7 @@ namespace {
     // Above the engine's own globals, which occupy c0 to c64 and would be read back stale by the
     // next draw if a plugin wrote over them.
     constexpr UINT kFirstConstant = 71;
-    constexpr UINT kConstantCount = 15;
+    constexpr UINT kConstantCount = 16;
 
     // The far end of the depth range, where nothing but sky has been drawn: the world's geometry
     // is all nearer, so a less-or-equal test rejects the quad wherever anything stands, at any
@@ -46,6 +46,11 @@ namespace {
     constexpr float kCirrusFloor = 6000.0f;
     constexpr float kCirrusGrain = 1.0f / 20000.0f;
 
+    // How wide a fresh trail is and over what length one comes and goes, both in the units the
+    // sheet is read in, so a repeat of them is one repeat of the cirrus.
+    constexpr float kTrailWidth = 0.011f;
+    constexpr float kTrailBreak = 0.055f;
+
     // How much light bends forward off a droplet, and the two frequencies the detail and the
     // weather are read at relative to the shape.
     constexpr float kForwardScatter = 0.55f;
@@ -66,6 +71,7 @@ namespace {
     float g_haze = 3000.0f;
     float g_cirrus = 0.35f;
     float g_cirrusOpacity = 0.7f;
+    float g_contrails = 0.6f;
 
     // Which frame was last drawn into. A frame can hold more than one pass the sky is drawn in,
     // and drawing into each of them would blend the clouds over themselves.
@@ -183,7 +189,8 @@ namespace {
             view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
             view.fogHeightValues[3],
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
-            cirrusAltitude, kCirrusGrain, g_cirrus, g_cirrusOpacity};
+            cirrusAltitude, kCirrusGrain, g_cirrus, g_cirrusOpacity,
+            g_contrails, kTrailWidth, kTrailBreak, 0.0f};
 
         SkyOverhaul::ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
         pass.device->SetVertexShader(g_vertexShader);
@@ -295,4 +302,8 @@ void SkyOverhaul::Clouds::SetCirrus(int percent) {
 
 void SkyOverhaul::Clouds::SetCirrusOpacity(int percent) {
     g_cirrusOpacity = static_cast<float>(percent) / 100.0f;
+}
+
+void SkyOverhaul::Clouds::SetContrails(int percent) {
+    g_contrails = static_cast<float>(percent) / 100.0f;
 }
