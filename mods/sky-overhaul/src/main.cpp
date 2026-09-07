@@ -136,7 +136,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          nullptr, 0, 0, 100},
         */
     };
-    api->RegisterSettings("Sky Overhaul", settings, sizeof(settings) / sizeof(settings[0]));
+    // Registered under the module name rather than a prettier one: the mod menu lists every
+    // loaded plugin and then every settings group that matched none of them, so a group named
+    // differently from its DLL arrives on that page twice, once empty.
+    api->RegisterSettings("SkyOverhaul", settings, sizeof(settings) / sizeof(settings[0]));
 
     return true;
 }
