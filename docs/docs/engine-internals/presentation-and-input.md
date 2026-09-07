@@ -84,8 +84,18 @@ zeroes. Render-target identity, size and depth attachment are the only dependabl
 :::
 
 Only the **last** of the world passes has the whole scene's depth behind it, which matters to
-anything issuing an occlusion query. Which one that is cannot be known when it happens; it is only
-identifiable in retrospect, when the first non-world pass arrives.
+anything issuing an occlusion query. It can be recognised while it is happening, by its viewport:
+
+:::info[Verified in a running game]
+The sky pass is the only world pass drawn through a viewport squeezed against the far plane. Its
+`MinZ` measures 0.999 to 1.000 where every other pass reports 0. Testing `MinZ >= 0.9` picks it out
+of the frame with no false positives over a 300-frame span, and it is the pass the engine draws the
+sun in, so the world's opaque depth is complete and the camera transform is the one it drew with.
+:::
+
+That has a consequence for anything drawn there. A screen-space quad inherits the pass's depth
+range, so its own vertex depth is remapped into the last thousandth before the far plane unless the
+viewport is reset to `MinZ = 0`, `MaxZ = 1` for the draw and restored afterwards.
 
 ### Whether there is a render thread
 
@@ -112,6 +122,18 @@ one of the world passes in the table above — recognised as an offscreen back-b
 with depth attached. An occlusion query issued there reads back a frame or two later, by which time
 the composite stage can use the answer without ever having needed the depth buffer itself.
 
+:::warning[The scene's depth cannot be read as a texture either]
+Depth testing against it works; sampling it does not. The world passes are multisampled four ways
+and their depth surface matches, and Direct3D 9 offers no way to bind a multisampled depth surface
+as a texture. The usual escape — creating an `INTZ` depth-format texture and binding it as the
+depth-stencil target so it can also be sampled — is defined only for single-sampled surfaces.
+
+So a screen-space effect that needs per-pixel depth, ambient occlusion being the obvious one, cannot
+simply read what the engine already has. It has to intercept the creation of the depth surface and
+substitute a single-sampled readable one, which costs the game its antialiasing. An occlusion query
+needs none of this, because it asks the hardware to count against depth rather than to hand it over.
+:::
+
 :::danger[Hooking one of the engine's own sky functions is not a way in]
 The obvious move — detour the sun's draw and issue the query from inside it — does not work, and
 fails silently rather than loudly. Those functions **submit packets and return**; the Direct3D calls
@@ -120,6 +142,103 @@ passes, against whatever target and depth buffer the *previous* work left bound,
 from it counts nothing and a draw lands somewhere invisible. See
 [the sky and cloud system](./sky-and-clouds.md#the-sky-draws-nothing-it-submits-packets).
 :::
+
+## Drawing into the world's frame
+
+Everything above describes where a pass is. This describes what the device does to anything drawn
+into one, all of it measured while building the sun-glare effect in `mods/sky-overhaul`.
+
+### The device is reset, not recreated
+
+`Dunia.dll:0x104225E0` calls `TestCooperativeLevel` and classifies `D3DERR_DEVICELOST` and
+`D3DERR_DEVICENOTRESET` separately, so an alt-tab or a resolution change goes through
+`IDirect3DDevice9::Reset` and the device pointer survives. Any `D3DPOOL_DEFAULT` resource still
+outstanding makes that `Reset` fail, and a failed reset is the game breaking rather than the plugin
+misbehaving, so a plugin holding a render target must release it first.
+
+The engine brackets its own reset with a teardown and a restore, each `__thiscall` taking only
+`this`. Detouring the teardown is the seam that lets a plugin let go in time.
+
+| Routine | GOG / retail v1.03 | Steam / Ubisoft Connect v1.03 |
+|---|---|---|
+| Device teardown, before `Reset` | `0x104168A0` | `0x104246E0` |
+| Device restore, after `Reset` | `0x10416F50` | `0x10424D90` |
+
+Detecting the change afterwards and rebuilding is not an alternative. The outstanding resource is
+exactly what stops the reset from happening, so there is nothing to detect.
+
+### An occlusion query counts samples, not pixels
+
+:::info[Verified in a running game]
+A 32×32 patch drawn into a world pass returns 4096, not 1024 — four samples per pixel, matching the
+`D3DMULTISAMPLE_4_SAMPLES` in the frame table. Readings of `0/4096` behind a wall, `4096/4096` in
+the open and fractional values through foliage confirm the counting works as expected once the
+patch is drawn in the right pass.
+:::
+
+The multiplier is a property of whichever surface the query ran against, and nothing publishes it.
+Issuing a second query over the same patch with depth testing off gives the total, and the ratio of
+the two cancels the multiplier whatever it is. That also survives a build or a preset that
+multisamples differently.
+
+### Eight-bit targets cannot accumulate small weights
+
+The world composites at back-buffer format, so a plugin's own accumulation targets usually are too.
+Blending a frame in at weight `w` moves the destination by `w` times the difference, and below about
+one part in 255 that product rounds to zero and the target never moves at all.
+
+This is not a corner case here. Measured frame rates reach roughly 490 per second at 1280×720 facing
+open sky, so a running mean over a five-second window has a per-frame weight near 0.0004 and stalls
+completely: the target keeps whatever the first frame wrote. The symptom is an accumulation that
+looks correct for a fraction of a second and then freezes, with nothing in any log. Either use a
+blend that does not depend on small increments, such as `D3DBLENDOP_MAX`, or give the target a
+format with room to accumulate.
+
+### What a mid-frame draw has to put back
+
+A draw at `Present` is after everything and can be careless. A draw inside a pass the engine still
+owns cannot, because the engine's redundant-state filtering assumes nothing else touched the device.
+The full list one screen-space quad disturbs is in `mods/sky-overhaul/src/engine/screen_draw.cpp`.
+Two entries on it are not obvious:
+
+- **Stream zero.** `DrawPrimitiveUP` leaves it unbound. An engine that filters redundant
+  `SetStreamSource` calls then re-binds nothing and draws nothing for the rest of the frame.
+- **The vertex declaration, not the vertex format.** With a declaration bound, `GetFVF` returns 0,
+  so restoring the format alone restores nothing.
+
+Shader constant registers are the asymmetric case. A plugin that reads the camera out of `c4`, `c8`
+or `c46` during a world pass — see [what a shader is given](./sky-and-clouds.md#what-a-shader-is-given-and-what-it-is-not)
+for the full map — depends on state that a second plugin drawing into the same frame could
+legitimately overwrite. Nothing in the loader arbitrates device state; it arbitrates addresses only.
+
+### Bringing a shader of your own
+
+A plugin's own pixel shader needs no D3DX and no DirectX SDK. `fxc.exe` ships with the Windows SDK
+the MSVC toolchain already requires, and a developer prompt puts it on `PATH`, so the shader can be
+compiled at build time straight into a header the plugin embeds and hands to `CreatePixelShader`.
+The generated array is bytes; `CreatePixelShader` wants whole tokens, so it has to be copied into an
+aligned buffer on the way through.
+
+Target `ps_2_0` unless the instruction count forces `ps_2_b`. Both pair with the fixed-function
+vertex pipeline and a `D3DFVF_XYZRHW | D3DFVF_TEX1` quad, which is the documented Direct3D 9
+post-process pairing and needs no vertex shader at all. `ps_3_0` does not: it requires a matching
+`vs_3_0` and a vertex declaration, which is a great deal of machinery for a full-screen quad.
+
+### Which device vtable slots the repo's plugins hold
+
+`IDirect3DDevice9`'s vtable is shared by every device in the process, so a throwaway device created
+at load is enough to read a slot from. No `Dunia.dll` address is involved and none of it is
+build-specific.
+
+| Slot | Function | Held by |
+|---|---|---|
+| 16 | `Reset` | DevTools |
+| 17 | `Present` | DevTools |
+| 42 | `EndScene` | Sky Overhaul |
+
+FCSE gives an address to one plugin and does not chain detours, so these three are the whole
+contention surface. Everything else on that vtable is free, including `TestCooperativeLevel`, which
+the engine calls before it resets and which is therefore a workable third release seam.
 
 ## DirectInput 8, and the mouse messages that never arrive
 
@@ -160,6 +279,12 @@ window subclassed, and the two DirectInput reads answered while it has the input
 `Dunia.dll` is involved, so none of it is build-specific — see `mods/DevTools/src/engine/` and
 `mods/DevTools/src/overlay/`.
 
+Sky Overhaul is the other shape: an effect that belongs *inside* the world's frame rather than over
+the finished one. It follows `EndScene`, classifies each pass, measures the sun against the scene's
+depth during the sky pass, and paints over the composite so the result lands under the interface.
+`mods/sky-overhaul/src/engine/` holds those three concerns — following the frame, guarding device
+state, and letting go before a reset — in modules that know nothing about the effect itself.
+
 ## Unknowns
 
 - Whether the `d3d10` platform is reachable in retail at all, and what resolves it if so. No D3D10 or
@@ -168,3 +293,8 @@ window subclassed, and the two DirectInput reads answered while it has the input
   device-level hook fires, so if a second path exists it is not the one in use.
 - Which cooperative-level flags the mouse is actually acquired with. The behaviour observed is
   exclusive, but the `SetCooperativeLevel` call itself has not been read.
+- Whether substituting a single-sampled `INTZ` depth surface at creation actually yields readable
+  scene depth here. The multisampling that rules out the direct route is measured; the substitution
+  is untried, and it would also have to force the colour targets to match.
+- Where the engine stores the result of its own flare visibility query. The readback wrapper is
+  known; the functions around it are undefined code in the Ghidra project.

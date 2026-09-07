@@ -188,6 +188,9 @@ engine has the answer and does not publish it. Measuring it again with an occlus
 own is the available route, and it has to be issued from one of the frame's **world passes**, which
 are recognised at `EndScene` and are not the same thing as the sky's submission — see
 [presenting a frame](./presentation-and-input.md#what-a-frame-actually-looks-like-from-endscene).
+The pass to issue it from is the sky pass, identifiable while it happens by a viewport `MinZ` of
+0.999 or more, where the world's opaque depth is complete. A query there counts samples rather than
+pixels, the same multiplier the engine divides out below.
 :::
 
 The flare's own `VISIBILITY_TEST` permutation is the engine doing exactly this: the shader body is
