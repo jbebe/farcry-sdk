@@ -196,15 +196,15 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     // Squashed across the wind and left alone along it, so that whatever is read next comes out
     // drawn in one direction. Only the smooth channel is read: the others are cellular, and a
     // field of cells stretched out is a field of stretched cells, not a fibre.
-    float2 line = float2(at.x * Cirrus.w, at.y);
+    float2 streak = float2(at.x * Cirrus.w, at.y);
 
     // Bent by a slower copy of itself before it is read, which is what turns straight bands into
     // the swept and hooked shapes cirrus actually forms.
-    float warp = tex3Dlod(ShapeNoise, float4(line * 0.4f, 0.11f, 0.0f)).r;
-    line.y += (warp - 0.5f) * 1.2f;
+    float warp = tex3Dlod(ShapeNoise, float4(streak * 0.4f, 0.11f, 0.0f)).r;
+    streak.y += (warp - 0.5f) * 1.2f;
 
-    float coarse = tex3Dlod(ShapeNoise, float4(line, 0.31f, 0.0f)).r;
-    float fine = tex3Dlod(ShapeNoise, float4(line * 2.3f + 0.37f, 0.67f, 0.0f)).r;
+    float coarse = tex3Dlod(ShapeNoise, float4(streak, 0.31f, 0.0f)).r;
+    float fine = tex3Dlod(ShapeNoise, float4(streak * 2.3f + 0.37f, 0.67f, 0.0f)).r;
 
     // Taken along the crests of that field rather than at its peaks. A peak is an island and a
     // crest is a line, and cirrus is made of lines.
