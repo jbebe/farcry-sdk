@@ -7,13 +7,16 @@
 // xyz: where the camera is, in world space with Z up. w: the frame's exposure.
 float4 Eye : register(c71);
 
-// x: how far the slab sits above the camera. y: how deep it is. z: how much of it is filled.
-// w: how wide one cell of the test pattern is.
+// x: the altitude the slab sits at, not a height above the camera. y: how deep it is. z: how much
+// of the sun's light reaches it. w: how wide one cell of the test pattern is.
 float4 Slab : register(c72);
 
 // The light the engine would have lit its own clouds by, this frame.
 float4 SunColour : register(c73);
 float4 AmbientColour : register(c74);
+
+// x: how far out the slab is still drawn. y: over what distance it fades away before that.
+float4 Range : register(c75);
 
 struct VertexIn {
     float4 position : POSITION0;
@@ -37,21 +40,31 @@ VertexOut MainVS(VertexIn input) {
 // Nothing volumetric yet: one flat slab in a checkerboard, which is the shape that shows whether
 // the ray and the camera are right. If either is wrong the pattern swims with the view instead of
 // staying put over the ground.
+//
+// The slab is at an altitude, so walking uphill or jumping moves the camera under it rather than
+// carrying it along, and it stops well before the horizon, where cells would otherwise shrink past
+// a pixel and shimmer at every step.
 float4 MainPS(float3 rayIn : TEXCOORD0) : COLOR0 {
     const float4 clear = float4(0.0f, 0.0f, 0.0f, 1.0f);
 
     float3 ray = normalize(rayIn);
-    if (ray.z <= 0.001f) {
+    float rise = Slab.x - Eye.z;
+    if (ray.z <= 0.001f || rise <= 0.0f) {
         return clear;
     }
 
-    float3 hit = Eye.xyz + ray * (Slab.x / ray.z);
+    float travel = rise / ray.z;
+    float fade = saturate((Range.x - travel) / Range.y);
+    if (fade <= 0.0f) {
+        return clear;
+    }
 
+    float3 hit = Eye.xyz + ray * travel;
     float2 cell = floor(hit.xy / Slab.w);
     if (frac((cell.x + cell.y) * 0.5f) < 0.25f) {
         return clear;
     }
 
     float3 colour = AmbientColour.rgb + SunColour.rgb * Slab.z;
-    return float4(colour * Eye.w, 0.0f);
+    return float4(colour * Eye.w * fade, 1.0f - fade);
 }

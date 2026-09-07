@@ -11,19 +11,25 @@
 #include "clouds_ps.h"
 #include "clouds_vs.h"
 
+#include <cmath>
+
 namespace {
     // Above the engine's own globals, which occupy c0 to c64 and would be read back stale by the
     // next draw if a plugin wrote over them.
     constexpr UINT kFirstConstant = 71;
-    constexpr UINT kConstantCount = 4;
+    constexpr UINT kConstantCount = 5;
 
     // The far end of the depth range, where nothing but sky has been drawn: the world's geometry
     // is all nearer, so a less-or-equal test rejects the quad wherever anything stands, at any
     // distance. A value short of one would stop occluding somewhere down the view distance.
     constexpr float kSkyDepth = 1.0f;
 
-    // How wide one cell of the test pattern is, in world units.
+    // How wide one cell of the test pattern is, in metres, and how far out it is drawn before
+    // fading away over the last of that. Well short of the horizon, where a cell would cover less
+    // than a pixel and alias into a shimmer at every step.
     constexpr float kCellSize = 250.0f;
+    constexpr float kMaxDistance = 8000.0f;
+    constexpr float kFadeDistance = 4000.0f;
 
     constexpr float kHeartbeatSeconds = 2.0f;
 
@@ -89,11 +95,17 @@ namespace {
     // Everything about the pass that a draw into it depends on, which is worth having in the log
     // beside the first frames it was drawn into.
     void LogPass(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view) {
-        SkyOverhaul::Logf("clouds: eye (%.1f %.1f %.1f) engine (%.1f %.1f %.1f) view (%.1f %.1f "
-                          "%.1f)",
+        SkyOverhaul::Logf("clouds: eye (%.2f %.2f %.2f) engine (%.2f %.2f %.2f) off by %.3f | view "
+                          "(%.1f %.1f %.1f)",
                           view.eye[0], view.eye[1], view.eye[2], view.position[0],
-                          view.position[1], view.position[2], view.viewPoint[0], view.viewPoint[1],
-                          view.viewPoint[2]);
+                          view.position[1], view.position[2],
+                          std::sqrt((view.eye[0] - view.position[0]) *
+                                        (view.eye[0] - view.position[0]) +
+                                    (view.eye[1] - view.position[1]) *
+                                        (view.eye[1] - view.position[1]) +
+                                    (view.eye[2] - view.position[2]) *
+                                        (view.eye[2] - view.position[2])),
+                          view.viewPoint[0], view.viewPoint[1], view.viewPoint[2]);
         SkyOverhaul::Logf("clouds: corners (%.2f %.2f %.2f) (%.2f %.2f %.2f) dir (%.2f %.2f %.2f) "
                           "bloom %.3f time %.1f planes %.3f/%.0f",
                           view.corners[0][0], view.corners[0][1], view.corners[0][2],
@@ -149,7 +161,8 @@ namespace {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             g_baseAltitude, 0.0f, 0.25f, kCellSize,
             lighting.sunColour[0], lighting.sunColour[1], lighting.sunColour[2], 0.0f,
-            lighting.ambientColour[0], lighting.ambientColour[1], lighting.ambientColour[2], 0.0f};
+            lighting.ambientColour[0], lighting.ambientColour[1], lighting.ambientColour[2], 0.0f,
+            kMaxDistance, kFadeDistance, 0.0f, 0.0f};
 
         SkyOverhaul::ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
         pass.device->SetVertexShader(g_vertexShader);
@@ -172,10 +185,13 @@ void SkyOverhaul::Clouds::Install() {
 }
 
 void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
-    const float elapsed = FrameSeconds();
+    // Every scene pass arrives here and only one of them is the sky, so the clock is read after
+    // the test rather than before it: ticking on all of them would leave the heartbeat measuring
+    // the gap between two passes instead of the time between two frames.
     if (!g_enabled || !pass.sky || !pass.live) {
         return;
     }
+    const float elapsed = FrameSeconds();
 
     Camera::View view;
     CloudLayer::Lighting lighting;

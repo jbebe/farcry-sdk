@@ -178,8 +178,10 @@ bool SkyOverhaul::ScreenDraw::ClipQuad(float depth, const float corners[4][3]) {
         return false;
     }
 
-    // Clip space with w of one, so the corners land on the viewport's edges whatever its size,
-    // and the half-texel offset a pretransformed quad needs does not arise.
+    // Clip space with w of one, so the corners land on the viewport's edges whatever its size and
+    // the interpolation across them stays linear. No half-pixel shift: that rule is for reading a
+    // texture by screen position, and here each corner's direction belongs at the viewport's edge,
+    // which is exactly where a rasteriser interpolating to a pixel centre expects it.
     const RayVertex quad[4] = {
         {-1.0f, 1.0f, depth, 1.0f, {corners[0][0], corners[0][1], corners[0][2]}},
         {1.0f, 1.0f, depth, 1.0f, {corners[1][0], corners[1][1], corners[1][2]}},
