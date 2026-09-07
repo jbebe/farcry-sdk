@@ -25,10 +25,16 @@ namespace {
     // distance. A value short of one would stop occluding somewhere down the view distance.
     constexpr float kSkyDepth = 1.0f;
 
-    // How far out clouds are drawn, and over how much of the last of that they fade away. A layer
-    // is a plane, so a ray near the horizon would otherwise run for ever.
-    constexpr float kMaxDistance = 40000.0f;
-    constexpr float kFadeDistance = 15000.0f;
+    // How far out clouds are drawn, over how much of the last of that they fade away, and how far
+    // the march itself runs. A layer is a plane, so a ray near the horizon would otherwise run for
+    // ever, and the samples would be spread so thin they stepped past whole clouds.
+    constexpr float kMaxDistance = 30000.0f;
+    constexpr float kFadeDistance = 22000.0f;
+    constexpr float kMarchDistance = 8000.0f;
+
+    // How fast the layer drifts at a wind of one, in metres a second. The engine's own wind offset
+    // advances too slowly to read as weather, so only its direction is taken from there.
+    constexpr float kWindSpeed = 9.0f;
 
     // How far apart the samples toward the sun are. Wide enough that five of them reach through a
     // whole cloud, which is what a shadow inside one needs.
@@ -55,6 +61,10 @@ namespace {
     // Which frame was last drawn into. A frame can hold more than one pass the sky is drawn in,
     // and drawing into each of them would blend the clouds over themselves.
     uint32_t g_drawnFrame = 0;
+
+    // How far the layer has drifted, in metres, kept here rather than derived from the wind so
+    // that changing the wind changes how fast the clouds move and not where they are.
+    float g_drift[2] = {0.0f, 0.0f};
 
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
@@ -120,25 +130,40 @@ namespace {
                           elapsed * 1000.0f);
     }
 
+    // Carries the layer along on the plugin's own clock, in the direction the engine is blowing.
+    // The offsets are wrapped by the shape's own repeat, which the noise tiles at, so a long
+    // session cannot drift far enough for the arithmetic to coarsen.
+    void Advance(const SkyOverhaul::CloudLayer::Lighting& lighting, float elapsed) {
+        float x = lighting.wind[0];
+        float y = lighting.wind[1];
+        const float length = std::sqrt(x * x + y * y);
+        if (length > 0.0001f) {
+            x /= length;
+            y /= length;
+        } else {
+            x = 1.0f;
+            y = 0.0f;
+        }
+
+        const float step = kWindSpeed * g_wind * elapsed;
+        g_drift[0] = std::fmod(g_drift[0] + x * step, g_grain);
+        g_drift[1] = std::fmod(g_drift[1] + y * step, g_grain);
+    }
+
     void Draw(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::CloudLayer::Lighting& lighting) {
-        // The engine's own wind, in the units its cloud shader scrolled by, carried up to the
-        // metres this layer is measured in so that our clouds drift with its weather.
-        const float drift = g_grain * g_wind;
-        const float shapeDrift[2] = {lighting.wind[0] * drift, lighting.wind[1] * drift};
-
         const float shapeGrain = 1.0f / g_grain;
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             g_baseAltitude, g_thickness, g_coverage, g_density,
-            shapeDrift[0], shapeDrift[1], shapeDrift[0] * 0.5f, shapeDrift[1] * 0.5f,
+            g_drift[0], g_drift[1], g_drift[0] * 0.5f, g_drift[1] * 0.5f,
             shapeGrain, shapeGrain * kDetailRepeats, shapeGrain * kWeatherRepeats, g_detail,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
             kForwardScatter,
             lighting.sunColour[0], lighting.sunColour[1], lighting.sunColour[2], kLightStride,
             lighting.ambientColour[0], lighting.ambientColour[1], lighting.ambientColour[2], 0.0f,
             lighting.backSunColour[0], lighting.backSunColour[1], lighting.backSunColour[2], 0.0f,
-            kMaxDistance, kFadeDistance, 0.0f, 0.0f,
+            kMaxDistance, kFadeDistance, kMarchDistance, 0.0f,
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogValues[0], view.fogValues[1], view.fogValues[2], 0.0f,
@@ -195,6 +220,7 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
         return;
     }
 
+    Advance(lighting, elapsed);
     Draw(pass, view, lighting);
 
     g_sinceHeartbeat += elapsed;

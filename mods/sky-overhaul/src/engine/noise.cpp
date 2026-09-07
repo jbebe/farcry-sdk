@@ -184,9 +184,11 @@ namespace {
                 // Two independent fields: how much cloud stands here, and how tall it grows.
                 const float cover = ValueFbm(u * 6.0f, v * 6.0f, 0.5f, 6, 909);
                 const float height = ValueFbm(u * 3.0f, v * 3.0f, 5.5f, 3, 808);
-                g_weatherBytes[at + 0] = Byte(height);
-                g_weatherBytes[at + 1] = Byte(height);
-                g_weatherBytes[at + 2] = Byte(cover);
+                // Blue is how much cloud stands here and red how tall it grows, which is the
+                // order a shader reading .b and .r out of an A8R8G8B8 texel wants them in.
+                g_weatherBytes[at + 0] = Byte(cover);
+                g_weatherBytes[at + 1] = Byte(cover);
+                g_weatherBytes[at + 2] = Byte(height);
                 g_weatherBytes[at + 3] = 255;
             }
         }

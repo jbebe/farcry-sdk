@@ -34,6 +34,7 @@ float4 AmbientColour : register(c77);
 // rgb: what reaches the eye through a thin edge, which is what makes a silver lining.
 float4 BackColour : register(c78);
 // x: how far out clouds are drawn. y: over what distance they fade to nothing before that.
+// z: how far the march itself runs, the rest being left to the haze.
 float4 Range : register(c79);
 
 // The engine's own sky fog, register for register, so our clouds sit in the same haze the dome
@@ -106,11 +107,33 @@ float Density(float3 world, uniform bool cheap) {
     return density * Layer.w;
 }
 
-// Two lobes: most light carries on forward past a droplet, a little of it comes back.
+// Most light carries on forward past a droplet, which is what makes a cloud glare when it stands
+// in front of the sun. The floor under the lobe stands for the light that has already bounced so
+// many times inside the cloud that it has forgotten which way it came in: without it a cloud is
+// black everywhere except toward the sun.
 float Phase(float cosAngle, float forward) {
     float squared = forward * forward;
-    float lobe = (1.0f - squared) / pow(1.0f + squared - 2.0f * forward * cosAngle, 1.5f);
-    return lerp(0.25f, lobe * 0.25f, 0.7f);
+    float lobe = (1.0f - squared) /
+                 pow(max(1.0f + squared - 2.0f * forward * cosAngle, 0.0001f), 1.5f);
+    return lerp(1.0f, lobe, 0.35f);
+}
+
+// Light that reached this point after any number of bounces, as three orders of scattering: each
+// one dimmer, spread wider, and reaching deeper into the cloud than the last. The deeper reach is
+// the whole trick, and it costs nothing, because a thinner cloud's transmittance is the one
+// already measured raised to a lesser power.
+float3 Scatter(float lit, float cosAngle) {
+    float total = 0.0f;
+    float brightness = 1.0f;
+    float depth = 1.0f;
+    float forward = Sun.w;
+    [unroll] for (int order = 0; order < 3; order++) {
+        total += Phase(cosAngle, forward) * pow(lit, depth) * brightness;
+        brightness *= 0.55f;
+        depth *= 0.5f;
+        forward *= 0.5f;
+    }
+    return SunColour.rgb * total;
 }
 
 // How much of the sun reaches a point, by marching toward it and counting what is in the way.
@@ -134,6 +157,11 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float enter = max(min(toFloor, toCeiling), 0.0f);
     float leave = min(max(toFloor, toCeiling), Range.x);
 
+    // The march covers only the near part of the layer. Spreading the same samples over the whole
+    // of it would step clean past clouds near the horizon, where the ray runs almost along the
+    // layer, and the shape would repeat visibly out there in any case.
+    leave = min(leave, enter + Range.z);
+
     float reach = saturate((Range.x - enter) / Range.y) * step(0.001f, ray.z) * step(enter, leave);
     float span = max(leave - enter, 0.0f);
     float stride = span / VIEW_STEPS;
@@ -144,7 +172,6 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float dither = frac(52.9829189f * frac(0.06711056f * screen.x + 0.00583715f * screen.y));
 
     float cosAngle = dot(ray, Sun.xyz);
-    float phase = Phase(cosAngle, Sun.w);
 
     float transmittance = 1.0f;
     float3 scattered = 0.0f;
@@ -157,11 +184,13 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
         if (density > 0.0005f) {
             float lit = SunReach(at);
 
-            // Dark where the cloud is thin and the light has not yet scattered into it, which is
-            // the shading that keeps an edge from looking like paper.
+            // Dark where the cloud is thin and the light has not yet scattered into it. Only worth
+            // anything looking toward the sun, where it is what keeps a bright edge from reading
+            // as paper; away from the sun it would only make an already dim cloud dimmer.
             float powder = 1.0f - exp(-density * 8.0f);
+            float thin = lerp(1.0f, powder, saturate(cosAngle));
 
-            float3 light = SunColour.rgb * lit * phase * powder +
+            float3 light = Scatter(lit, cosAngle) * thin +
                            BackColour.rgb * lit * saturate(-cosAngle) + AmbientColour.rgb;
 
             float transmit = exp(-density * stride);
@@ -177,6 +206,12 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 haze = FogColour.rgb + FogColourRange.rgb * fogHeading;
     float fogHeight = saturate(ray.z * 180.0f * FogHeightValues.x + FogHeightValues.y);
     float fog = saturate((fogHeight * FogHeightValues.z + FogHeightValues.w) * FogValues.z);
+
+    // And distance on top of it, which the sky's own fog has no term for because the dome it was
+    // written for is a fixed shape. A layer runs to the horizon, so without this the far half of
+    // it stays as crisp as the near half and its repeats become a pattern in the sky.
+    float distant = saturate(enter / Range.x);
+    fog = saturate(fog + distant * (1.0f - fog));
 
     float cover = (1.0f - transmittance) * reach;
     float3 colour = lerp(scattered * reach, haze * cover, fog);
