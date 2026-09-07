@@ -42,11 +42,6 @@
 #define VIEW_STEPS 16
 #define LIGHT_STEPS 8
 
-// What dusty air reads as once the colour has been taken out of it: a warm grey rather than a
-// neutral one, because dust absorbs blue harder than it absorbs red. Multiplied by the horizon's
-// own brightness, so it stays the engine's horizon and only stops being yellow.
-#define HORIZON_DUST float3(1.09f, 1.00f, 0.86f)
-
 #define PI 3.14159265f
 
 // How tightly the engine's own horizon colour is kept to the horizon. Our air already pales the
@@ -59,9 +54,8 @@
 float4 Eye : register(c71);
 // xyz: the direction of the sun, pointing at it. w: zero in daylight, one at night.
 float4 Sun : register(c72);
-// x: how much haze the air carries. y: how bright the sun is, both finished values with the
-// weather already folded in. z: how far the horizon is taken from the engine's own colour toward
-// the colour of dust.
+// x: how much haze the air carries. y: how bright the sun is. Both finished values, with the
+// weather already folded in.
 float4 Air : register(c73);
 
 // The engine's own sky fog, register for register, so our sky meets the terrain in the colour the
@@ -170,13 +164,10 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // so that the terrain fading into it and the sky arriving at it meet in one place.
     float heading =
         acos(clamp(dot(normalize(ray.xy + 0.0001f), FogColourVector.xy), -1.0f, 1.0f)) / PI;
+    // Whatever colour the world fades into, which is not necessarily the engine's own any more:
+    // these registers are retinted on their way to every shader that reads them, so the land, the
+    // water and this all arrive at the same horizon.
     float3 horizon = FogColour.rgb + FogColourRange.rgb * heading;
-
-    // The engine's own horizon runs yellow-green. Taking the colour out of it and putting back
-    // only the warmth leaves the brown-grey that dusty air actually is, and since what is left is
-    // still the engine's own brightness, it goes on tracking the hour by itself.
-    float grey = dot(horizon, float3(0.299f, 0.587f, 0.114f));
-    horizon = lerp(horizon, grey * HORIZON_DUST, Air.z);
 
     float fog = pow(saturate(1.0f - skyward.z), HORIZON_FALLOFF);
     colour = lerp(colour, horizon, fog);

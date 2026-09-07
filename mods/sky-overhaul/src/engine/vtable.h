@@ -16,4 +16,14 @@ constexpr size_t kSlotCount = 119;
 // object's own allocation and free it along with the device.
 void* Slot(size_t slot);
 
+// Whether `slot` really is SetVertexShaderConstantF, or SetPixelShaderConstantF when `pixel`.
+// Proved by calling it on a device of our own and reading back through the interface what it
+// should have written.
+//
+// Worth proving rather than assuming. Every other slot this plugin takes announces a wrong guess
+// immediately - the frame stops arriving, or nothing draws - but a constant setter one place out
+// is a call into a different function with mismatched arguments, which corrupts whatever it lands
+// on and blames something else.
+bool IsConstantSetter(size_t slot, bool pixel);
+
 }

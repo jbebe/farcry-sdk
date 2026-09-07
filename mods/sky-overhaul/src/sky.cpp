@@ -4,6 +4,7 @@
 #include "engine/cloud_layer.h"
 #include "engine/com.h"
 #include "engine/dome_draw.h"
+#include "engine/fog_tint.h"
 #include "engine/log.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
@@ -37,7 +38,6 @@ namespace {
     bool g_enabled = false;
     float g_haze = 1.0f;
     float g_brightness = 1.0f;
-    float g_dust = 0.7f;
 
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
@@ -114,7 +114,7 @@ namespace {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
             lighting.night,
-            haze, intensity, g_dust, 0.0f,
+            haze, intensity, 0.0f, 0.0f,
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f};
@@ -129,6 +129,9 @@ namespace {
 
 bool SkyOverhaul::Sky::Install() {
     QueryPerformanceFrequency(&g_tickFrequency);
+    // The world's own fog colour is followed whether or not our sky is drawn: it is what the land
+    // fades into, and a player who wants the horizon changed wants the land changed with it.
+    FogTint::Install();
     return DomeDraw::Install(&Draw);
 }
 
@@ -141,9 +144,10 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
         return;
     }
     g_sinceHeartbeat = 0.0f;
-    // A count that stands still is a dome that stopped being recognised, which is the one way this
-    // could fail without anything else saying so.
-    Logf("sky f%u: %u domes replaced", pass.frame, DomeDraw::SubstituteCount());
+    // Counts that stand still are the two ways this fails without anything else saying so: a dome
+    // that stopped being recognised, and a fog colour that is never being reached.
+    Logf("sky f%u: %u domes replaced, %u fog uploads retinted", pass.frame,
+         DomeDraw::SubstituteCount(), FogTint::TintCount());
 }
 
 void SkyOverhaul::Sky::ReleaseDeviceObjects() {
@@ -167,6 +171,3 @@ void SkyOverhaul::Sky::SetBrightness(int percent) {
     g_brightness = static_cast<float>(percent) * 0.01f;
 }
 
-void SkyOverhaul::Sky::SetHorizonDust(int percent) {
-    g_dust = static_cast<float>(percent) * 0.01f;
-}

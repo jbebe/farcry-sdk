@@ -8,6 +8,7 @@
 #include "dazzle.h"
 #include "engine/cloud_layer.h"
 #include "engine/device_reset.h"
+#include "engine/fog_tint.h"
 #include "engine/frame.h"
 #include "engine/sky_state.h"
 #include "sky.h"
@@ -98,8 +99,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Sky haze", FCSE_SLIDER(40), &OnSliderChanged, Setter(&Sky::SetHaze), nullptr, 0, 0, 100},
         {"Sky brightness", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Sky::SetBrightness), nullptr,
          0, 0, 200},
-        {"Horizon dust", FCSE_SLIDER(70), &OnSliderChanged, Setter(&Sky::SetHorizonDust), nullptr,
-         0, 0, 100},
+        {"Horizon dust", FCSE_SLIDER(70), &OnSliderChanged, Setter(&FogTint::SetDust), nullptr, 0,
+         0, 100},
         {"Clouds", FCSE_CHOICE(0), &OnCloudsChanged, nullptr, kCloudModes,
          sizeof(kCloudModes) / sizeof(kCloudModes[0])},
         {"Cloud base", FCSE_SLIDER(1200), &OnSliderChanged, Setter(&Clouds::SetBaseAltitude),
