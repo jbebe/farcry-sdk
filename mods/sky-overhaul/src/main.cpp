@@ -5,6 +5,7 @@
 #include "fcse_api.h"
 
 #include "dazzle.h"
+#include "engine/cloud_layer.h"
 #include "engine/device_reset.h"
 #include "engine/sky_state.h"
 
@@ -46,6 +47,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (SkyOverhaul::SkyState::Install() && SkyOverhaul::DeviceReset::Install(&OnDeviceRelease)) {
         SkyOverhaul::Dazzle::Install();
     }
+
+    // Independent of the glare: it draws nothing, and what it publishes is what a cloud of our own
+    // will be lit by.
+    SkyOverhaul::CloudLayer::Install();
 
     // Each callback fires from inside RegisterSettings carrying whatever fcse.ini holds, so the
     // glare is in the state it was left in by the time this returns, and again on every change.

@@ -1,6 +1,7 @@
 #include "engine/sky_state.h"
 
 #include "engine/log.h"
+#include "engine/seqlock.h"
 #include "fcse_api.h"
 
 #include <atomic>
@@ -31,20 +32,10 @@ namespace {
 
     SubmitSunDiscFn g_original = nullptr;
 
-    // A seqlock over the snapshot: the game thread writes it, the render thread reads it, and an
-    // odd sequence means a write is in flight. Zero means nothing has been published yet.
-    std::atomic<uint32_t> g_sequence{0};
-    SkyOverhaul::SkyState::Sun g_sun{};
+    // The game thread writes the snapshot and the render thread reads it.
+    SkyOverhaul::Seqlock<SkyOverhaul::SkyState::Sun> g_sun;
 
     std::atomic<uint32_t> g_submitCount{0};
-
-    void Publish(const SkyOverhaul::SkyState::Sun& sun) {
-        const uint32_t sequence = g_sequence.load(std::memory_order_relaxed);
-        g_sequence.store(sequence + 1, std::memory_order_relaxed);
-        std::atomic_thread_fence(std::memory_order_release);
-        g_sun = sun;
-        g_sequence.store(sequence + 2, std::memory_order_release);
-    }
 
     void __fastcall SubmitSunDiscDetour(void* self, void* unused, uint32_t a2, uint32_t a3,
                                         uint32_t a4, uint32_t a5, uint32_t a6,
@@ -63,7 +54,7 @@ namespace {
                 sun.direction[1] = sunDirection[1] / length;
                 sun.direction[2] = sunDirection[2] / length;
                 sun.night = *reinterpret_cast<const float*>(state + kNightFactor);
-                Publish(sun);
+                g_sun.Publish(sun);
 
                 g_submitCount.fetch_add(1, std::memory_order_relaxed);
             }
@@ -95,22 +86,7 @@ bool SkyOverhaul::SkyState::Install() {
 }
 
 bool SkyOverhaul::SkyState::Latest(Sun& out) {
-    // Bounded rather than spinning: a write takes nanoseconds, so failing to settle means the
-    // writer is stopped, and one frame without a sun is better than a stalled render thread.
-    for (int attempt = 0; attempt < 8; attempt++) {
-        const uint32_t before = g_sequence.load(std::memory_order_acquire);
-        if (before == 0 || (before & 1u) != 0) {
-            continue;
-        }
-
-        const Sun copy = g_sun;
-        std::atomic_thread_fence(std::memory_order_acquire);
-        if (g_sequence.load(std::memory_order_relaxed) == before) {
-            out = copy;
-            return true;
-        }
-    }
-    return false;
+    return g_sun.Latest(out);
 }
 
 uint32_t SkyOverhaul::SkyState::SubmitCount() {

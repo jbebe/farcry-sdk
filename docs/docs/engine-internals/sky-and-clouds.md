@@ -344,9 +344,9 @@ and nothing about suppressing the cloud layer's draw touches it.
 with twelve stack arguments, `RET 0x30`, and both layers inside it. Its first act is to return when
 both layer enables are clear, which is the engine's own way of drawing no clouds at all.
 
-Four of the twelve arguments matter to anything intercepting it. **Argument 5 is the renderer's
-scene state**, which every parameter below is read out of. Argument 8 is `GlobalCloudIntensity`.
-Arguments 9 and 10 are the option flags from bits 17 and 18 of the sky's flags. Argument 11 allows
+Four of the twelve arguments matter to anything intercepting it. **Argument 6 is the renderer's
+scene state**, which every parameter below is read out of. Argument 9 is `GlobalCloudIntensity`.
+Arguments 10 and 11 are the option flags from bits 17 and 18 of the sky's flags. Argument 12 allows
 a second, FakeHDR packet. The rest are the render context, materials and matrices that every sky
 submission is handed alike.
 

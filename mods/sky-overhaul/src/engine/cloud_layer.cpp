@@ -1,0 +1,214 @@
+#include "engine/cloud_layer.h"
+
+#include "engine/log.h"
+#include "engine/seqlock.h"
+#include "fcse_api.h"
+
+#include <atomic>
+#include <cmath>
+#include <cstddef>
+#include <cstdint>
+
+namespace {
+    // Where each of the cloud shader's parameters sits inside the renderer's scene state, which
+    // the submission is handed as its sixth argument.
+    constexpr size_t kStorm = 0x78;
+    constexpr size_t kSunDirection = 0x148;
+    constexpr size_t kSunColour = 0x160;
+    constexpr size_t kMoonDirection = 0x194;
+    constexpr size_t kMoonColour = 0x1A0;
+    constexpr size_t kNight = 0x1B8;
+    constexpr size_t kTimeOfDay = 0x1BC;
+    constexpr size_t kLayer1 = 0x1C8;
+    constexpr size_t kLayer1Enabled = 0x1DC;
+    constexpr size_t kWindLow = 0x1E0;
+    constexpr size_t kLayer2 = 0x1E8;
+    constexpr size_t kLayer2Enabled = 0x1FC;
+    constexpr size_t kWindHigh = 0x200;
+    constexpr size_t kDiffusePower = 0x214;
+    constexpr size_t kDiffuseColour = 0x220;
+    constexpr size_t kAmbientColour = 0x230;
+    constexpr size_t kBackPower = 0x240;
+    constexpr size_t kBackSunColour = 0x250;
+    constexpr size_t kBackMoonColour = 0x260;
+    constexpr size_t kScatterSunColour = 0x270;
+    constexpr size_t kScatterMoonColour = 0x280;
+    constexpr size_t kScatterPower = 0x290;
+    constexpr size_t kScatterBias = 0x294;
+
+    // What the engine scales these two by on the way into the shader, applied here so that a
+    // replacement lit by the snapshot is lit by the numbers the shipped clouds saw.
+    constexpr float kSunColourScale = 1.9f;
+    constexpr float kParallaxScale = 0.01f;
+
+    // How often the snapshot is written to the log, counted in submissions because this runs on
+    // the game thread, which owns no clock of the plugin's.
+    constexpr uint32_t kLogEvery = 2048;
+
+    // Twelve stack arguments, of which only the sixth is read; the rest are named to get the stack
+    // shape right, since the callee cleans it. __fastcall stands in for __thiscall, which MSVC
+    // will not let a free function be.
+    using SubmitCloudsFn = void(__fastcall*)(void* self, void* unused, uint32_t a2, uint32_t a3,
+                                             uint32_t a4, uint32_t a5, uint32_t a6,
+                                             const uint8_t* state, uint32_t a8, uint32_t a9,
+                                             uint32_t a10, uint32_t a11, uint32_t a12,
+                                             uint32_t a13);
+
+    // The address library carries this address, and resolving it that way is what proves the
+    // translation on the build it was not read from. The pattern is the second opinion: the
+    // prologue through both layer-enable tests, every byte of which is fixed.
+    FCSE::Relocation<SubmitCloudsFn> g_mapped{FCSE::Uplay(0x003DC3C0)};
+    FCSE::Relocation<SubmitCloudsFn> g_scanned{FCSE::Pattern(
+        "55 8B EC 83 E4 F0 83 EC 64 53 56 8B 75 1C 80 BE DC 01 00 00 00 8B D9 57 89 5C 24 0C "
+        "75 0D 80 BE FC 01 00 00 00")};
+
+    SubmitCloudsFn g_original = nullptr;
+
+    SkyOverhaul::Seqlock<SkyOverhaul::CloudLayer::Lighting> g_lighting;
+    std::atomic<uint32_t> g_submitCount{0};
+
+    const float* Field(const uint8_t* state, size_t offset) {
+        return reinterpret_cast<const float*>(state + offset);
+    }
+
+    void Copy3(const uint8_t* state, size_t offset, float* out) {
+        const float* from = Field(state, offset);
+        out[0] = from[0];
+        out[1] = from[1];
+        out[2] = from[2];
+    }
+
+    // Left as it is when it is too short to have a direction, which is what an unloaded world
+    // reads as.
+    void Normalise(float* direction) {
+        const float length = std::sqrt(direction[0] * direction[0] + direction[1] * direction[1] +
+                                       direction[2] * direction[2]);
+        if (length > 0.0001f) {
+            direction[0] /= length;
+            direction[1] /= length;
+            direction[2] /= length;
+        }
+    }
+
+    void CopyFormation(const uint8_t* state, size_t offset, float* out) {
+        const float* from = Field(state, offset);
+        out[0] = from[0];
+        out[1] = from[1];
+        out[2] = from[2];
+        out[3] = from[3] * kParallaxScale;
+    }
+
+    void Read(const uint8_t* state, SkyOverhaul::CloudLayer::Lighting& out) {
+        Copy3(state, kSunDirection, out.sunDirection);
+        Normalise(out.sunDirection);
+        Copy3(state, kMoonDirection, out.moonDirection);
+        Normalise(out.moonDirection);
+
+        Copy3(state, kSunColour, out.sunColour);
+        for (float& channel : out.sunColour) {
+            channel *= kSunColourScale;
+        }
+        Copy3(state, kMoonColour, out.moonColour);
+        Copy3(state, kDiffuseColour, out.diffuseColour);
+        Copy3(state, kAmbientColour, out.ambientColour);
+        Copy3(state, kBackSunColour, out.backSunColour);
+        Copy3(state, kBackMoonColour, out.backMoonColour);
+        Copy3(state, kScatterSunColour, out.scatterSunColour);
+        Copy3(state, kScatterMoonColour, out.scatterMoonColour);
+
+        out.diffusePower = *Field(state, kDiffusePower);
+        out.backPower = *Field(state, kBackPower);
+        out.scatterPower = *Field(state, kScatterPower);
+        out.scatterBias = *Field(state, kScatterBias);
+
+        CopyFormation(state, kLayer1, out.layer1);
+        CopyFormation(state, kLayer2, out.layer2);
+        out.layer1Enabled = state[kLayer1Enabled] != 0;
+        out.layer2Enabled = state[kLayer2Enabled] != 0;
+
+        const float* low = Field(state, kWindLow);
+        const float* high = Field(state, kWindHigh);
+        out.wind[0] = low[0];
+        out.wind[1] = low[1];
+        out.wind[2] = high[0];
+        out.wind[3] = high[1];
+
+        out.storm = *Field(state, kStorm);
+        out.night = *Field(state, kNight);
+        out.timeOfDay = *Field(state, kTimeOfDay);
+    }
+
+    void LogSnapshot(uint32_t count, const SkyOverhaul::CloudLayer::Lighting& lighting,
+                     uint32_t option17, uint32_t option18) {
+        SkyOverhaul::Logf("clouds n%u: sun (%.2f %.2f %.2f) light (%.2f %.2f %.2f) "
+                          "ambient (%.2f %.2f %.2f) back (%.2f %.2f %.2f)",
+                          count, lighting.sunDirection[0], lighting.sunDirection[1],
+                          lighting.sunDirection[2], lighting.sunColour[0], lighting.sunColour[1],
+                          lighting.sunColour[2], lighting.ambientColour[0],
+                          lighting.ambientColour[1], lighting.ambientColour[2],
+                          lighting.backSunColour[0], lighting.backSunColour[1],
+                          lighting.backSunColour[2]);
+        SkyOverhaul::Logf("clouds n%u: cover %.2f/%.2f on %d%d wind (%.2f %.2f %.2f %.2f) "
+                          "storm %.2f night %.2f tod %.2f opts %u%u",
+                          count, lighting.layer1[0], lighting.layer2[0],
+                          lighting.layer1Enabled ? 1 : 0, lighting.layer2Enabled ? 1 : 0,
+                          lighting.wind[0], lighting.wind[1], lighting.wind[2], lighting.wind[3],
+                          lighting.storm, lighting.night, lighting.timeOfDay, option17, option18);
+    }
+
+    void __fastcall SubmitCloudsDetour(void* self, void* unused, uint32_t a2, uint32_t a3,
+                                       uint32_t a4, uint32_t a5, uint32_t a6, const uint8_t* state,
+                                       uint32_t a8, uint32_t a9, uint32_t a10, uint32_t a11,
+                                       uint32_t a12, uint32_t a13) {
+        if (state != nullptr) {
+            SkyOverhaul::CloudLayer::Lighting lighting = {};
+            Read(state, lighting);
+            g_lighting.Publish(lighting);
+
+            const uint32_t count = g_submitCount.fetch_add(1, std::memory_order_relaxed) + 1;
+            if (count % kLogEvery == 0) {
+                LogSnapshot(count, lighting, a11, a12);
+            }
+        }
+
+        g_original(self, unused, a2, a3, a4, a5, a6, state, a8, a9, a10, a11, a12, a13);
+    }
+}
+
+bool SkyOverhaul::CloudLayer::Install() {
+    const FCSE_PluginAPI* api = FCSE::ApiPointer();
+
+    const uintptr_t mapped = g_mapped.address();
+    const uintptr_t scanned = g_scanned.address();
+    if (mapped == 0 && scanned == 0) {
+        api->Log("clouds unavailable: the cloud-layer submission was not found in this build");
+        return false;
+    }
+    if (mapped != scanned) {
+        Logf("clouds: the address library says 0x%08zX and the pattern says 0x%08zX, taking %s",
+             static_cast<size_t>(mapped), static_cast<size_t>(scanned),
+             scanned != 0 ? "the pattern" : "the library");
+    }
+
+    // A disagreement goes to the pattern, which is checked against both shipped builds before
+    // every release, where a translated address is only ever as good as the mapping behind it.
+    const uintptr_t target = scanned != 0 ? scanned : mapped;
+
+    if (!api->Hook(reinterpret_cast<void*>(target), reinterpret_cast<void*>(&SubmitCloudsDetour),
+                   reinterpret_cast<void**>(&g_original))) {
+        api->Log("clouds unavailable: the cloud-layer submission could not be hooked");
+        return false;
+    }
+
+    Logf("clouds: cloud-layer submission hooked at 0x%08zX on %s", static_cast<size_t>(target),
+         api->gameBuildId);
+    return true;
+}
+
+bool SkyOverhaul::CloudLayer::Latest(Lighting& out) {
+    return g_lighting.Latest(out);
+}
+
+uint32_t SkyOverhaul::CloudLayer::SubmitCount() {
+    return g_submitCount.load(std::memory_order_relaxed);
+}
