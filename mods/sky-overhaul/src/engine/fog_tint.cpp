@@ -1,6 +1,7 @@
 #include "engine/fog_tint.h"
 
 #include "engine/log.h"
+#include "engine/seqlock.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
@@ -10,86 +11,85 @@ namespace {
     constexpr size_t kSetVertexConstantSlot = 94;
     constexpr size_t kSetPixelConstantSlot = 109;
 
-    // Where the engine keeps the camera and everything hung off it. The fog colour is the near end
-    // of a ramp and the register after it the distance to the far end, which is read by heading
-    // against the sun - so a horizon is warmer looking into the light than away from it.
-    constexpr UINT kCameraBlock = 45;
+    // The near end of the fog's colour ramp and the distance from it to the far end. The engine
+    // reads the ramp by heading against its own fog vector, so a horizon is one colour looking
+    // along that vector and another looking against it.
     constexpr UINT kFogColour = 49;
     constexpr UINT kFogColourRange = 50;
-
-    // What dusty air reads as once the colour has been taken out of it: a warm grey rather than a
-    // neutral one, because dust absorbs blue harder than it absorbs red.
-    constexpr float kDust[3] = {1.09f, 1.00f, 0.86f};
 
     using SetConstantFn = HRESULT(__stdcall*)(IDirect3DDevice9*, UINT, const float*, UINT);
 
     SetConstantFn g_originalVertex = nullptr;
     SetConstantFn g_originalPixel = nullptr;
 
-    float g_dust = 0.0f;
+    struct Horizon {
+        float toward[3];
+        float away[3];
+    };
+
+    // Written once a frame by the sky and read on whatever thread uploads constants.
+    SkyOverhaul::Seqlock<Horizon> g_horizon;
+    bool g_have = false;
+    float g_match = 0.0f;
     uint32_t g_tints = 0;
 
-    // Keeps the brightness the engine chose and replaces only the hue, so the result still tracks
-    // the hour, the weather and the world without knowing anything about any of them.
-    void Dust(float* colour) {
-        const float grey = colour[0] * 0.299f + colour[1] * 0.587f + colour[2] * 0.114f;
-        for (size_t i = 0; i < 3; i++) {
-            colour[i] += (grey * kDust[i] - colour[i]) * g_dust;
-        }
-    }
-
-    // Sends the two registers again, retinted, rather than editing the upload on its way past. The
-    // engine hands over a block whose length it chose, and rewriting a copy of all of it would mean
+    // Sends the two registers again rather than editing the upload on its way past. The engine
+    // hands over a block whose length it chose, and rewriting a copy of all of it would mean
     // guessing how long that can be; two registers of our own cost one small upload and cannot
-    // disturb anything the caller did not already write there.
-    void Retint(IDirect3DDevice9* device, UINT start, const float* data, UINT count,
-                SetConstantFn set) {
-        if (g_dust <= 0.0f) {
+    // disturb anything the caller was not already writing there.
+    void Replace(IDirect3DDevice9* device, UINT start, const float* data, UINT count,
+                 SetConstantFn set) {
+        if (!g_have || g_match <= 0.0f) {
             return;
         }
-        // Only the camera block itself. A material free to use these registers for something of its
-        // own would be writing them from its own upload, which starts well past c45.
-        if (start > kCameraBlock || start + count <= kFogColourRange) {
+        // Any upload that covers both ends of the ramp, wherever it starts. The engine sets these
+        // from more than one place and not every one of them begins at the camera block, which is
+        // what a narrower test missed: the colour was replaced while the world loaded and written
+        // over on every frame after it.
+        if (start > kFogColour || start + count <= kFogColourRange) {
+            return;
+        }
+
+        Horizon horizon;
+        if (!g_horizon.Latest(horizon)) {
             return;
         }
 
         const float* colour = data + (kFogColour - start) * 4;
         const float* range = data + (kFogColourRange - start) * 4;
 
-        // Both ends of the ramp are dusted and the ramp rebuilt between them, because the second
-        // register is the distance from one colour to another rather than a colour itself.
+        // Both ends are moved and the ramp rebuilt between them, because the second register is the
+        // distance from one colour to another rather than a colour itself.
         float toward[3];
         float away[3];
         for (size_t i = 0; i < 3; i++) {
-            toward[i] = colour[i];
-            away[i] = colour[i] + range[i];
+            toward[i] = colour[i] + (horizon.toward[i] - colour[i]) * g_match;
+            away[i] = (colour[i] + range[i]) + (horizon.away[i] - (colour[i] + range[i])) * g_match;
         }
-        Dust(toward);
-        Dust(away);
 
-        const float tinted[8] = {toward[0],
-                                 toward[1],
-                                 toward[2],
-                                 colour[3],
-                                 away[0] - toward[0],
-                                 away[1] - toward[1],
-                                 away[2] - toward[2],
-                                 range[3]};
-        set(device, kFogColour, tinted, 2);
+        const float replaced[8] = {toward[0],
+                                   toward[1],
+                                   toward[2],
+                                   colour[3],
+                                   away[0] - toward[0],
+                                   away[1] - toward[1],
+                                   away[2] - toward[2],
+                                   range[3]};
+        set(device, kFogColour, replaced, 2);
         g_tints++;
     }
 
     HRESULT __stdcall SetVertexConstantDetour(IDirect3DDevice9* device, UINT start,
                                               const float* data, UINT count) {
         const HRESULT result = g_originalVertex(device, start, data, count);
-        Retint(device, start, data, count, g_originalVertex);
+        Replace(device, start, data, count, g_originalVertex);
         return result;
     }
 
     HRESULT __stdcall SetPixelConstantDetour(IDirect3DDevice9* device, UINT start,
                                              const float* data, UINT count) {
         const HRESULT result = g_originalPixel(device, start, data, count);
-        Retint(device, start, data, count, g_originalPixel);
+        Replace(device, start, data, count, g_originalPixel);
         return result;
     }
 
@@ -118,8 +118,22 @@ bool SkyOverhaul::FogTint::Install() {
     return true;
 }
 
-void SkyOverhaul::FogTint::SetDust(int percent) {
-    g_dust = static_cast<float>(percent) * 0.01f;
+void SkyOverhaul::FogTint::SetHorizon(const float toward[3], const float away[3]) {
+    Horizon horizon;
+    for (size_t i = 0; i < 3; i++) {
+        horizon.toward[i] = toward[i];
+        horizon.away[i] = away[i];
+    }
+    g_horizon.Publish(horizon);
+    g_have = true;
+}
+
+void SkyOverhaul::FogTint::Forget() {
+    g_have = false;
+}
+
+void SkyOverhaul::FogTint::SetMatch(int percent) {
+    g_match = static_cast<float>(percent) * 0.01f;
 }
 
 uint32_t SkyOverhaul::FogTint::TintCount() {

@@ -1,5 +1,7 @@
 #include "sky.h"
 
+#include "sky_model.h"
+
 #include "engine/camera.h"
 #include "engine/cloud_layer.h"
 #include "engine/com.h"
@@ -12,6 +14,8 @@
 
 #include "sky_ps.h"
 #include "sky_vs.h"
+
+#include <cmath>
 
 namespace {
     // Above the engine's own globals, which occupy c0 to c64 and would be read back stale by the
@@ -32,8 +36,9 @@ namespace {
     constexpr float kStormHaze = 2.0f;
     constexpr float kStormDimming = 0.5f;
 
-    // What the sun is worth in the shader before the slider scales it.
-    constexpr float kSunIntensity = 22.0f;
+    // What the sun is worth in the shader before the slider scales it. Set so that a clear noon sky
+    // reads right with the slider at its default rather than pinned at the top of its range.
+    constexpr float kSunIntensity = 44.0f;
 
     bool g_enabled = false;
     float g_haze = 1.0f;
@@ -110,6 +115,26 @@ namespace {
         const float intensity =
             kSunIntensity * g_brightness * (1.0f - lighting.storm * kStormDimming);
 
+        // What our air comes to at the horizon, along the engine's own fog heading and against it,
+        // which are the two ends of the ramp it colours its fog by. Handing those over is what
+        // makes the land meet the sky: both then fade into the same thing, and neither has to know
+        // about the other. Before the exposure, as the engine's own fog colour is.
+        float length = std::sqrt(view.fogColourVector[0] * view.fogColourVector[0] +
+                                 view.fogColourVector[1] * view.fogColourVector[1]);
+        if (length < 0.0001f) {
+            length = 1.0f;
+        }
+        const float toward[3] = {view.fogColourVector[0] / length, view.fogColourVector[1] / length,
+                                 0.0f};
+        const float away[3] = {-toward[0], -toward[1], 0.0f};
+        float towardColour[3];
+        float awayColour[3];
+        SkyOverhaul::SkyModel::Radiance(toward, lighting.sunDirection, view.eye[2], haze, intensity,
+                                        towardColour);
+        SkyOverhaul::SkyModel::Radiance(away, lighting.sunDirection, view.eye[2], haze, intensity,
+                                        awayColour);
+        SkyOverhaul::FogTint::SetHorizon(towardColour, awayColour);
+
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
@@ -160,6 +185,11 @@ void SkyOverhaul::Sky::ReleaseDeviceObjects() {
 void SkyOverhaul::Sky::SetEnabled(bool enabled) {
     g_enabled = enabled;
     DomeDraw::SetMode(enabled ? DomeDraw::Mode::Overhaul : DomeDraw::Mode::Engine);
+    // With the engine drawing its own sky there is nothing for the world's fog to agree with, so it
+    // goes back to the colour the engine chose.
+    if (!enabled) {
+        FogTint::Forget();
+    }
 }
 
 void SkyOverhaul::Sky::SetHaze(int percent) {
