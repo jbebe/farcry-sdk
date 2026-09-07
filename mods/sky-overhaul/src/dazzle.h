@@ -1,11 +1,17 @@
 // The sun, as something the eye cannot look at.
 #pragma once
 
+#include "engine/frame.h"
+
 namespace SkyOverhaul::Dazzle {
 
-// Follows the frame and takes over the finished image. Call once from FCSE_Load. False means the
-// frame cannot be followed, which it logs, and nothing is left hooked.
-bool Install();
+// Prepares the effect. Call once from FCSE_Load.
+void Install();
+
+// Measures the sun against the world's depth on the sky pass, and paints the glare over the
+// composite.
+void OnScenePass(const Frame::Pass& pass);
+void OnFinalPass(const Frame::Pass& pass);
 
 // Frees everything held on the device. Call before the engine resets it.
 void ReleaseDeviceObjects();

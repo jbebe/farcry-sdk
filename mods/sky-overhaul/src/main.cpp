@@ -4,9 +4,11 @@
 // already finished. See README.md for what is built and what is not.
 #include "fcse_api.h"
 
+#include "clouds.h"
 #include "dazzle.h"
 #include "engine/cloud_layer.h"
 #include "engine/device_reset.h"
+#include "engine/frame.h"
 #include "engine/sky_state.h"
 
 namespace {
@@ -14,6 +16,17 @@ namespace {
 
     void OnDeviceRelease() {
         SkyOverhaul::Dazzle::ReleaseDeviceObjects();
+        SkyOverhaul::Clouds::ReleaseDeviceObjects();
+    }
+
+    // One frame, two effects. Each decides for itself whether the pass is one it wants.
+    void OnScenePass(const SkyOverhaul::Frame::Pass& pass) {
+        SkyOverhaul::Clouds::OnScenePass(pass);
+        SkyOverhaul::Dazzle::OnScenePass(pass);
+    }
+
+    void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
+        SkyOverhaul::Dazzle::OnFinalPass(pass);
     }
 
     // Every row is one slider feeding one setter, so the setter itself is the userdata FCSE hands
@@ -27,12 +40,13 @@ namespace {
     }
 
     // Index order is what the callback below switches on; the file stores the label.
-    const char* const kCloudModes[] = {"Engine", "Off"};
+    const char* const kCloudModes[] = {"Engine", "Off", "Overhaul"};
 
     void __cdecl OnCloudsChanged(const FCSE_SettingValue* value, void*) {
         SkyOverhaul::CloudLayer::SetMode(value->asChoice == 0
                                              ? SkyOverhaul::CloudLayer::Mode::Engine
                                              : SkyOverhaul::CloudLayer::Mode::Off);
+        SkyOverhaul::Clouds::SetEnabled(value->asChoice == 2);
     }
 }
 
@@ -50,15 +64,18 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 
     api->Log("Sky Overhaul loaded");
 
-    // The glare needs the sun's direction, and it holds a copy of the frame that has to be
-    // surrendered before the engine resets the device. Without either seam it does not install:
+    // Both effects draw into a frame the engine owns and hold objects on its device, so neither is
+    // installed without the seam that follows the frame and the one that lets go before a reset:
     // a plugin holding a render target through a reset would break the reset itself.
-    if (SkyOverhaul::SkyState::Install() && SkyOverhaul::DeviceReset::Install(&OnDeviceRelease)) {
+    if (SkyOverhaul::DeviceReset::Install(&OnDeviceRelease) &&
+        SkyOverhaul::Frame::Install(&OnScenePass, &OnFinalPass)) {
         SkyOverhaul::Dazzle::Install();
+        SkyOverhaul::Clouds::Install();
     }
 
-    // Independent of the glare: it draws nothing, and what it publishes is what a cloud of our own
-    // will be lit by.
+    // The two publishers, which draw nothing. The sun's direction is the glare's, and the cloud
+    // layer's lighting is what a cloud of our own is lit by.
+    SkyOverhaul::SkyState::Install();
     SkyOverhaul::CloudLayer::Install();
 
     // Each callback fires from inside RegisterSettings carrying whatever fcse.ini holds, so the
@@ -67,6 +84,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     static const FCSE_Setting settings[] = {
         {"Clouds", FCSE_CHOICE(0), &OnCloudsChanged, nullptr, kCloudModes,
          sizeof(kCloudModes) / sizeof(kCloudModes[0])},
+        {"Cloud base", FCSE_SLIDER(1200), &OnSliderChanged, Setter(&Clouds::SetBaseAltitude),
+         nullptr, 0, 100, 4000},
         {"Sun glare strength", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Dazzle::SetStrength),
          nullptr, 0, 0, 200},
         {"Sun glare spread", FCSE_SLIDER(57), &OnSliderChanged, Setter(&Dazzle::SetSpread), nullptr,

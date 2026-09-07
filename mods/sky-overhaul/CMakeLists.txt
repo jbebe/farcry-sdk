@@ -41,36 +41,41 @@ if (NOT FXC_EXECUTABLE)
                       "developer prompt (or through build.ps1, which sets one up) puts it on PATH.")
 endif()
 
-set(DAZZLE_SHADER "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/dazzle.fx")
+# source file : entry point : profile : generated header : array name. The dazzle's MainPS needs
+# ps_2_b for its instruction count and the accumulation passes fit in ps_2_0; the clouds need the
+# loops and the volume samples of ps_3_0, which in turn requires a vertex shader of the same
+# generation rather than the fixed-function pipeline the others draw through.
+set(SHADER_PASSES
+  "dazzle.fx:MainPS:ps_2_b:dazzle_ps.h:g_dazzlePixelShader"
+  "dazzle.fx:AccumulatePS:ps_2_0:dazzle_accumulate_ps.h:g_dazzleAccumulatePixelShader"
+  "dazzle.fx:BleachPS:ps_2_0:dazzle_bleach_ps.h:g_dazzleBleachPixelShader"
+  "clouds.fx:MainVS:vs_3_0:clouds_vs.h:g_cloudsVertexShader"
+  "clouds.fx:MainPS:ps_3_0:clouds_ps.h:g_cloudsPixelShader")
 
-# entry point : profile : generated header : array name. MainPS needs ps_2_b for its instruction
-# count; the two accumulation passes fit in ps_2_0.
-set(DAZZLE_PASSES
-  "MainPS:ps_2_b:dazzle_ps.h:g_dazzlePixelShader"
-  "AccumulatePS:ps_2_0:dazzle_accumulate_ps.h:g_dazzleAccumulatePixelShader"
-  "BleachPS:ps_2_0:dazzle_bleach_ps.h:g_dazzleBleachPixelShader")
-
-set(DAZZLE_HEADERS "")
-foreach(PASS IN LISTS DAZZLE_PASSES)
+set(SHADER_HEADERS "")
+foreach(PASS IN LISTS SHADER_PASSES)
   string(REPLACE ":" ";" PARTS "${PASS}")
-  list(GET PARTS 0 ENTRY)
-  list(GET PARTS 1 PROFILE)
-  list(GET PARTS 2 HEADER_NAME)
-  list(GET PARTS 3 ARRAY_NAME)
+  list(GET PARTS 0 SOURCE_NAME)
+  list(GET PARTS 1 ENTRY)
+  list(GET PARTS 2 PROFILE)
+  list(GET PARTS 3 HEADER_NAME)
+  list(GET PARTS 4 ARRAY_NAME)
+  set(SOURCE "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/${SOURCE_NAME}")
   set(HEADER "${CMAKE_CURRENT_BINARY_DIR}/generated/${HEADER_NAME}")
   add_custom_command(
     OUTPUT "${HEADER}"
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
     COMMAND "${FXC_EXECUTABLE}" /nologo /T ${PROFILE} /E ${ENTRY} /O3 /Vn ${ARRAY_NAME}
-            /Fh "${HEADER}" "${DAZZLE_SHADER}"
-    DEPENDS "${DAZZLE_SHADER}"
-    COMMENT "Compiling src/shaders/dazzle.fx (${ENTRY})"
+            /Fh "${HEADER}" "${SOURCE}"
+    DEPENDS "${SOURCE}"
+    COMMENT "Compiling src/shaders/${SOURCE_NAME} (${ENTRY})"
     VERBATIM)
-  list(APPEND DAZZLE_HEADERS "${HEADER}")
+  list(APPEND SHADER_HEADERS "${HEADER}")
 endforeach()
 
 add_library(SkyOverhaul SHARED
   "src/main.cpp"
+  "src/clouds.cpp"
   "src/dazzle.cpp"
   "src/engine/camera.cpp"
   "src/engine/cloud_layer.cpp"
@@ -79,7 +84,7 @@ add_library(SkyOverhaul SHARED
   "src/engine/screen_draw.cpp"
   "src/engine/sky_state.cpp"
   "src/engine/sun_occlusion.cpp"
-  ${DAZZLE_HEADERS}
+  ${SHADER_HEADERS}
 )
 
 # src/ on the path so every #include reads from the root of this tree - "engine/sky_state.h", never

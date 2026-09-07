@@ -14,6 +14,9 @@ struct View {
     // One over the tangent of half the vertical field of view, which turns an angle into a
     // distance on screen.
     float verticalScale;
+    // The planes the projection was built with, which bound how much depth precision there is.
+    float nearPlane;
+    float farPlane;
 
     // Where the camera is and the directions through the viewport's four corners, both derived
     // from the view-projection alone: top left, top right, bottom left, bottom right, which is

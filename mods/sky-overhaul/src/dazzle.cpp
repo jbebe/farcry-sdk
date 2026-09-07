@@ -567,52 +567,51 @@ namespace {
         draw.Quad(0.0f, 0.0f, width, height);
     }
 
-    void OnScenePass(const SkyOverhaul::Frame::Pass& pass) {
-        if (!pass.sky || !pass.live) {
-            return;
-        }
-        if (!ComputeSun(pass.device, pass.viewport, g_thisFrame) || !g_thisFrame.inFront) {
-            return;
-        }
+}
 
-        // Nothing outside the spread can read the answer, and the margin leaves the queries long
-        // enough to come back before the angle brings them into use.
-        if (g_thisFrame.cosAngle <= g_sampleCos) {
-            return;
-        }
-
-        // Measured here rather than at the composite because a depth surface's contents are not
-        // guaranteed across being unbound, and the bloom chain between the two unbinds it.
-        SkyOverhaul::SunOcclusion::Sample(pass.device, g_thisFrame.x, g_thisFrame.y, pass.viewport);
+void SkyOverhaul::Dazzle::OnScenePass(const Frame::Pass& pass) {
+    if (!pass.sky || !pass.live) {
+        return;
+    }
+    if (!ComputeSun(pass.device, pass.viewport, g_thisFrame) || !g_thisFrame.inFront) {
+        return;
     }
 
-    void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
-        // The composite is the last moment the world owns the frame: the interface is drawn after
-        // it, so the glare lands under the heads-up display rather than over it.
-        const float elapsed = FrameSeconds();
-        const Glare glare = pass.live ? Measure() : Glare{};
-        const float afterimage = AdvanceAfterimage(glare, pass.live, elapsed);
-        if (glare.intensity > 0.002f || afterimage > 0.002f) {
-            DrawDazzle(pass, glare.intensity, afterimage);
-        }
+    // Nothing outside the spread can read the answer, and the margin leaves the queries long
+    // enough to come back before the angle brings them into use.
+    if (g_thisFrame.cosAngle <= g_sampleCos) {
+        return;
+    }
 
-        g_sinceHeartbeat += elapsed;
-        if (pass.live && g_sinceHeartbeat >= kHeartbeatSeconds) {
-            g_sinceHeartbeat = 0.0f;
-            SkyOverhaul::Logf("dazzle f%u: intensity %.3f hold %.3f | cos %.3f elev %.3f "
-                              "night %.2f visible %.3f | exposure %.2f recovering %.2f env %.3f "
-                              "| sun (%.0f %.0f) inFront %d",
-                              pass.frame, glare.intensity, glare.hold, g_thisFrame.cosAngle,
-                              g_thisFrame.elevation, g_thisFrame.night, VisibleFraction(),
-                              g_exposure, g_recovering, afterimage, g_thisFrame.x, g_thisFrame.y,
-                              g_thisFrame.inFront ? 1 : 0);
-        }
+    // Measured here rather than at the composite because a depth surface's contents are not
+    // guaranteed across being unbound, and the bloom chain between the two unbinds it.
+    SunOcclusion::Sample(pass.device, g_thisFrame.x, g_thisFrame.y, pass.viewport);
+}
+
+void SkyOverhaul::Dazzle::OnFinalPass(const Frame::Pass& pass) {
+    // The composite is the last moment the world owns the frame: the interface is drawn after it,
+    // so the glare lands under the heads-up display rather than over it.
+    const float elapsed = FrameSeconds();
+    const Glare glare = pass.live ? Measure() : Glare{};
+    const float afterimage = AdvanceAfterimage(glare, pass.live, elapsed);
+    if (glare.intensity > 0.002f || afterimage > 0.002f) {
+        DrawDazzle(pass, glare.intensity, afterimage);
+    }
+
+    g_sinceHeartbeat += elapsed;
+    if (pass.live && g_sinceHeartbeat >= kHeartbeatSeconds) {
+        g_sinceHeartbeat = 0.0f;
+        Logf("dazzle f%u: intensity %.3f hold %.3f | cos %.3f elev %.3f "
+             "night %.2f visible %.3f | exposure %.2f recovering %.2f env %.3f "
+             "| sun (%.0f %.0f) inFront %d",
+             pass.frame, glare.intensity, glare.hold, g_thisFrame.cosAngle, g_thisFrame.elevation,
+             g_thisFrame.night, VisibleFraction(), g_exposure, g_recovering, afterimage,
+             g_thisFrame.x, g_thisFrame.y, g_thisFrame.inFront ? 1 : 0);
     }
 }
 
-bool SkyOverhaul::Dazzle::Install() {
+void SkyOverhaul::Dazzle::Install() {
     QueryPerformanceFrequency(&g_tickFrequency);
-    return SkyOverhaul::Frame::Install(&OnScenePass, &OnFinalPass);
 }
 
 void SkyOverhaul::Dazzle::SetStrength(int percent) {
