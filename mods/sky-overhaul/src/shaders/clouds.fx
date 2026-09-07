@@ -24,8 +24,14 @@
 
 // Where the two aircraft went: a unit normal and how far the line sits from the origin, in the
 // units the sheet is read in. Fixed, because they are scenery rather than traffic.
-#define TRAIL_A float3(0.60f, 0.80f, 0.22f)
-#define TRAIL_B float3(-0.94f, 0.34f, -0.55f)
+//
+// Their headings are twenty degrees and forty-five, so they close at twenty-five. At that angle
+// two lines that both pass overhead must cross within a few kilometres, so only the first does:
+// the second runs some eight kilometres to one side, and the two meet twenty kilometres out, which
+// at this altitude is about seventeen degrees above the horizon. A pair of trails converging low
+// and far is what the sky actually does with them.
+#define TRAIL_A float3(-0.342f, 0.940f, 0.180f)
+#define TRAIL_B float3(-0.707f, 0.707f, -0.356f)
 
 // How deep the hazy air under the sheet effectively is, in metres, which is the distance a ray
 // straight up spends in it. Everything below is that same depth divided by how slanted the ray is.
