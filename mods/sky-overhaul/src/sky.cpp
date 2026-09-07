@@ -17,7 +17,7 @@ namespace {
     // next draw if a plugin wrote over them. The clouds use the same range: the two never draw in
     // one call, and each puts back what it found.
     constexpr UINT kFirstConstant = 71;
-    constexpr UINT kConstantCount = 2;
+    constexpr UINT kConstantCount = 8;
 
     // The far end of the depth range, where nothing but sky has been drawn. The dome is drawn with
     // a less-or-equal test against a cleared far plane, so this passes wherever no world stands and
@@ -26,7 +26,17 @@ namespace {
 
     constexpr float kHeartbeatSeconds = 5.0f;
 
+    // What a full storm does to the air: several times the haze, and rather less of the sun
+    // reaching it. That is what an overcast sky is, before a single cloud is drawn.
+    constexpr float kStormHaze = 2.0f;
+    constexpr float kStormDimming = 0.5f;
+
+    // What the sun is worth in the shader before the slider scales it.
+    constexpr float kSunIntensity = 22.0f;
+
     bool g_enabled = false;
+    float g_haze = 1.0f;
+    float g_brightness = 1.0f;
 
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
@@ -93,10 +103,23 @@ namespace {
             return false;
         }
 
+        // The weather is folded in here rather than in the shader, so that what crosses into it is
+        // one finished number for the air and one for the light.
+        const float haze = g_haze * (1.0f + lighting.storm * kStormHaze);
+        const float intensity =
+            kSunIntensity * g_brightness * (1.0f - lighting.storm * kStormDimming);
+
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
-            lighting.night};
+            lighting.night,
+            haze, intensity, 0.0f, 0.0f,
+            view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
+            view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
+            view.fogValues[0], view.fogValues[1], view.fogValues[2], 0.0f,
+            view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
+            view.fogHeightValues[3],
+            view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f};
 
         SkyOverhaul::DrawGuard guard(device, kFirstConstant, kConstantCount);
         device->SetVertexShader(g_vertexShader);
@@ -135,4 +158,13 @@ void SkyOverhaul::Sky::ReleaseDeviceObjects() {
 void SkyOverhaul::Sky::SetEnabled(bool enabled) {
     g_enabled = enabled;
     DomeDraw::SetMode(enabled ? DomeDraw::Mode::Overhaul : DomeDraw::Mode::Engine);
+}
+
+void SkyOverhaul::Sky::SetHaze(int percent) {
+    // Forty is a clear day, which is where the slider sits by default.
+    g_haze = static_cast<float>(percent) * 0.025f;
+}
+
+void SkyOverhaul::Sky::SetBrightness(int percent) {
+    g_brightness = static_cast<float>(percent) * 0.01f;
 }

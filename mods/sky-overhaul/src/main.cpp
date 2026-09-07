@@ -95,6 +95,9 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     static const FCSE_Setting settings[] = {
         {"Sky", FCSE_CHOICE(0), &OnSkyChanged, nullptr, kSkyModes,
          sizeof(kSkyModes) / sizeof(kSkyModes[0])},
+        {"Sky haze", FCSE_SLIDER(40), &OnSliderChanged, Setter(&Sky::SetHaze), nullptr, 0, 0, 100},
+        {"Sky brightness", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Sky::SetBrightness), nullptr,
+         0, 0, 200},
         {"Clouds", FCSE_CHOICE(0), &OnCloudsChanged, nullptr, kCloudModes,
          sizeof(kCloudModes) / sizeof(kCloudModes[0])},
         {"Cloud base", FCSE_SLIDER(1200), &OnSliderChanged, Setter(&Clouds::SetBaseAltitude),
