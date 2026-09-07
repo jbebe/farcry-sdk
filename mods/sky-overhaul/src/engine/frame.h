@@ -9,6 +9,11 @@
 
 namespace SkyOverhaul::Frame {
 
+// The sky pass is the only one of the frame's scene passes whose depth range is squeezed against
+// the far plane, which is how it is recognised. Shared, because anything watching the draws inside
+// a pass rather than the passes themselves has to recognise it the same way.
+constexpr float kSkyPassMinZ = 0.9f;
+
 // One pass worth acting on, as the renderer finishes it.
 struct Pass {
     IDirect3DDevice9* device;

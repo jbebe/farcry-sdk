@@ -2,16 +2,13 @@
 
 #include "engine/log.h"
 #include "engine/sky_state.h"
+#include "engine/vtable.h"
 #include "fcse_api.h"
 
 #include <windows.h>
 
 namespace {
     constexpr size_t kEndSceneSlot = 42;
-
-    // The sky pass is the only one of the frame's scene passes whose depth range is squeezed
-    // against the far plane.
-    constexpr float kSkyPassMinZ = 0.9f;
 
     using EndSceneFn = HRESULT(__stdcall*)(IDirect3DDevice9*);
 
@@ -144,7 +141,7 @@ namespace {
         pass.viewport = viewport;
         pass.frame = g_frame;
         pass.live = g_live;
-        pass.sky = runScene && viewport.MinZ >= kSkyPassMinZ;
+        pass.sky = runScene && viewport.MinZ >= SkyOverhaul::Frame::kSkyPassMinZ;
 
         if (runScene && g_onScenePass != nullptr) {
             g_onScenePass(pass);
@@ -159,38 +156,12 @@ namespace {
         return g_originalEndScene(device);
     }
 
-    // Every IDirect3DDevice9 in a process shares one vtable, so a device of our own is enough to
-    // name the function the game's device will call. The slot is read while that device is still
-    // alive: a wrapper can put its vtable in the object's own allocation.
-    void* ReadEndSceneSlot() {
-        IDirect3D9* d3d = Direct3DCreate9(D3D_SDK_VERSION);
-        if (d3d == nullptr) {
-            return nullptr;
-        }
-
-        D3DPRESENT_PARAMETERS present = {};
-        present.Windowed = TRUE;
-        present.SwapEffect = D3DSWAPEFFECT_DISCARD;
-        present.BackBufferFormat = D3DFMT_UNKNOWN;
-        present.hDeviceWindow = GetDesktopWindow();
-
-        IDirect3DDevice9* device = nullptr;
-        void* endScene = nullptr;
-        if (SUCCEEDED(d3d->CreateDevice(D3DADAPTER_DEFAULT, D3DDEVTYPE_HAL, present.hDeviceWindow,
-                                        D3DCREATE_SOFTWARE_VERTEXPROCESSING, &present, &device)) &&
-            device != nullptr) {
-            endScene = (*reinterpret_cast<void***>(device))[kEndSceneSlot];
-            device->Release();
-        }
-        d3d->Release();
-        return endScene;
-    }
 }
 
 bool SkyOverhaul::Frame::Install(PassFn onScenePass, PassFn onFinalPass) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
-    void* endScene = ReadEndSceneSlot();
+    void* endScene = Vtable::Slot(kEndSceneSlot);
     if (endScene == nullptr) {
         api->Log("frame: no Direct3D 9 device could be created to read the vtable from");
         return false;

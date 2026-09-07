@@ -8,6 +8,7 @@
 #include "dazzle.h"
 #include "engine/cloud_layer.h"
 #include "engine/device_reset.h"
+#include "engine/dome_draw.h"
 #include "engine/frame.h"
 #include "engine/sky_state.h"
 
@@ -19,8 +20,10 @@ namespace {
         SkyOverhaul::Clouds::ReleaseDeviceObjects();
     }
 
-    // One frame, two effects. Each decides for itself whether the pass is one it wants.
+    // One frame, two effects and the census. Each decides for itself whether the pass is one it
+    // wants; the census goes first because it is the pass just ended that it is closing.
     void OnScenePass(const SkyOverhaul::Frame::Pass& pass) {
+        SkyOverhaul::DomeDraw::OnScenePass(pass);
         SkyOverhaul::Clouds::OnScenePass(pass);
         SkyOverhaul::Dazzle::OnScenePass(pass);
     }
@@ -70,6 +73,9 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         SkyOverhaul::Frame::Install(&OnScenePass, &OnFinalPass)) {
         SkyOverhaul::Dazzle::Install();
         SkyOverhaul::Clouds::Install();
+        // Watches the draws inside a pass rather than the passes themselves, which is where the
+        // sky dome has to be replaced from.
+        SkyOverhaul::DomeDraw::Install();
     }
 
     // The two publishers, which draw nothing. The sun's direction is the glare's, and the cloud

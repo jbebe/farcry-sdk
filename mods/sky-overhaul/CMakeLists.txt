@@ -80,11 +80,13 @@ add_library(SkyOverhaul SHARED
   "src/engine/camera.cpp"
   "src/engine/cloud_layer.cpp"
   "src/engine/device_reset.cpp"
+  "src/engine/dome_draw.cpp"
   "src/engine/noise.cpp"
   "src/engine/frame.cpp"
   "src/engine/screen_draw.cpp"
   "src/engine/sky_state.cpp"
   "src/engine/sun_occlusion.cpp"
+  "src/engine/vtable.cpp"
   ${SHADER_HEADERS}
 )
 
