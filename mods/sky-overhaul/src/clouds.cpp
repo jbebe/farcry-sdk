@@ -4,6 +4,7 @@
 #include "engine/cloud_layer.h"
 #include "engine/com.h"
 #include "engine/log.h"
+#include "engine/noise.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "fcse_api.h"
@@ -17,25 +18,39 @@ namespace {
     // Above the engine's own globals, which occupy c0 to c64 and would be read back stale by the
     // next draw if a plugin wrote over them.
     constexpr UINT kFirstConstant = 71;
-    constexpr UINT kConstantCount = 5;
+    constexpr UINT kConstantCount = 14;
 
     // The far end of the depth range, where nothing but sky has been drawn: the world's geometry
     // is all nearer, so a less-or-equal test rejects the quad wherever anything stands, at any
     // distance. A value short of one would stop occluding somewhere down the view distance.
     constexpr float kSkyDepth = 1.0f;
 
-    // How wide one cell of the test pattern is, in metres, and how far out it is drawn before
-    // fading away over the last of that. Well short of the horizon, where a cell would cover less
-    // than a pixel and alias into a shimmer at every step.
-    constexpr float kCellSize = 250.0f;
-    constexpr float kMaxDistance = 8000.0f;
-    constexpr float kFadeDistance = 4000.0f;
+    // How far out clouds are drawn, and over how much of the last of that they fade away. A layer
+    // is a plane, so a ray near the horizon would otherwise run for ever.
+    constexpr float kMaxDistance = 40000.0f;
+    constexpr float kFadeDistance = 15000.0f;
+
+    // How far apart the samples toward the sun are. Wide enough that five of them reach through a
+    // whole cloud, which is what a shadow inside one needs.
+    constexpr float kLightStride = 90.0f;
+
+    // How much light bends forward off a droplet, and the two frequencies the detail and the
+    // weather are read at relative to the shape.
+    constexpr float kForwardScatter = 0.55f;
+    constexpr float kDetailRepeats = 11.0f;
+    constexpr float kWeatherRepeats = 0.18f;
 
     constexpr float kHeartbeatSeconds = 2.0f;
 
     // Written by the settings callbacks and read while drawing.
     bool g_enabled = false;
     float g_baseAltitude = 1200.0f;
+    float g_thickness = 700.0f;
+    float g_coverage = 0.45f;
+    float g_density = 0.04f;
+    float g_detail = 0.35f;
+    float g_grain = 4000.0f;
+    float g_wind = 1.0f;
 
     // Which frame was last drawn into. A frame can hold more than one pass the sky is drawn in,
     // and drawing into each of them would blend the clouds over themselves.
@@ -107,17 +122,45 @@ namespace {
 
     void Draw(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::CloudLayer::Lighting& lighting) {
+        // The engine's own wind, in the units its cloud shader scrolled by, carried up to the
+        // metres this layer is measured in so that our clouds drift with its weather.
+        const float drift = g_grain * g_wind;
+        const float shapeDrift[2] = {lighting.wind[0] * drift, lighting.wind[1] * drift};
+
+        const float shapeGrain = 1.0f / g_grain;
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
-            g_baseAltitude, 0.0f, 0.25f, kCellSize,
-            lighting.sunColour[0], lighting.sunColour[1], lighting.sunColour[2], 0.0f,
+            g_baseAltitude, g_thickness, g_coverage, g_density,
+            shapeDrift[0], shapeDrift[1], shapeDrift[0] * 0.5f, shapeDrift[1] * 0.5f,
+            shapeGrain, shapeGrain * kDetailRepeats, shapeGrain * kWeatherRepeats, g_detail,
+            lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
+            kForwardScatter,
+            lighting.sunColour[0], lighting.sunColour[1], lighting.sunColour[2], kLightStride,
             lighting.ambientColour[0], lighting.ambientColour[1], lighting.ambientColour[2], 0.0f,
-            kMaxDistance, kFadeDistance, 0.0f, 0.0f};
+            lighting.backSunColour[0], lighting.backSunColour[1], lighting.backSunColour[2], 0.0f,
+            kMaxDistance, kFadeDistance, 0.0f, 0.0f,
+            view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
+            view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
+            view.fogValues[0], view.fogValues[1], view.fogValues[2], 0.0f,
+            view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
+            view.fogHeightValues[3],
+            view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f};
 
         SkyOverhaul::ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
         pass.device->SetVertexShader(g_vertexShader);
         pass.device->SetPixelShader(g_pixelShader);
         pass.device->SetPixelShaderConstantF(kFirstConstant, constants, kConstantCount);
+
+        pass.device->SetTexture(0, SkyOverhaul::Noise::Shape());
+        pass.device->SetTexture(1, SkyOverhaul::Noise::Detail());
+        pass.device->SetTexture(2, SkyOverhaul::Noise::Weather());
+        for (DWORD sampler = 0; sampler < 3; sampler++) {
+            pass.device->SetSamplerState(sampler, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+            pass.device->SetSamplerState(sampler, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+            pass.device->SetSamplerState(sampler, D3DSAMP_ADDRESSW, D3DTADDRESS_WRAP);
+            pass.device->SetSamplerState(sampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+            pass.device->SetSamplerState(sampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+        }
 
         // Tested against the world's own depth, which this pass still owns, and blended the way
         // the engine's cloud layer blended: colour already multiplied in, alpha what survives.
@@ -132,6 +175,7 @@ namespace {
 
 void SkyOverhaul::Clouds::Install() {
     QueryPerformanceFrequency(&g_tickFrequency);
+    Noise::Start();
 }
 
 void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
@@ -147,7 +191,7 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
     Camera::View view;
     CloudLayer::Lighting lighting;
     if (!Camera::Read(pass.device, view) || !CloudLayer::Latest(lighting) ||
-        !EnsureDeviceObjects(pass.device)) {
+        !EnsureDeviceObjects(pass.device) || !Noise::Ensure(pass.device)) {
         return;
     }
 
@@ -161,6 +205,7 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
 }
 
 void SkyOverhaul::Clouds::ReleaseDeviceObjects() {
+    Noise::ReleaseDeviceObjects();
     Release(g_vertexShader);
     Release(g_pixelShader);
     g_owner = nullptr;
@@ -173,4 +218,28 @@ void SkyOverhaul::Clouds::SetEnabled(bool enabled) {
 
 void SkyOverhaul::Clouds::SetBaseAltitude(int metres) {
     g_baseAltitude = static_cast<float>(metres);
+}
+
+void SkyOverhaul::Clouds::SetThickness(int metres) {
+    g_thickness = static_cast<float>(metres);
+}
+
+void SkyOverhaul::Clouds::SetCoverage(int percent) {
+    g_coverage = static_cast<float>(percent) / 100.0f;
+}
+
+void SkyOverhaul::Clouds::SetDensity(int percent) {
+    g_density = static_cast<float>(percent) / 1000.0f;
+}
+
+void SkyOverhaul::Clouds::SetDetail(int percent) {
+    g_detail = static_cast<float>(percent) / 100.0f;
+}
+
+void SkyOverhaul::Clouds::SetGrain(int metres) {
+    g_grain = static_cast<float>(metres);
+}
+
+void SkyOverhaul::Clouds::SetWind(int percent) {
+    g_wind = static_cast<float>(percent) / 100.0f;
 }

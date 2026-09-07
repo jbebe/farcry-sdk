@@ -67,7 +67,7 @@ private:
 
     // As many as the effects bind, which is what has to be put back.
     static constexpr DWORD kSamplers = 3;
-    static constexpr UINT kMaxConstantRegisters = 8;
+    static constexpr UINT kMaxConstantRegisters = 16;
 
     static constexpr size_t kRenderStateCount = sizeof(kRenderStates) / sizeof(kRenderStates[0]);
     static constexpr size_t kStageStateCount = sizeof(kStageStates) / sizeof(kStageStates[0]);
