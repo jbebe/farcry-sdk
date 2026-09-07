@@ -49,10 +49,11 @@
 
 #define PI 3.14159265f
 
-// How high up the engine's own fog reads our sky, in metres. The engine measures its fog along the
-// dome's own mesh, whose shape is not written down anywhere; this is the height the clouds are
-// already faded by, so the two of them meet the horizon together.
-#define SKY_HEIGHT 180.0f
+// How tightly the engine's own horizon colour is kept to the horizon. Our air already pales the
+// sky toward the bottom by itself, so this is here for one reason only: the last few degrees above
+// the skyline have to be the colour the terrain fades into. Spread it any wider and the engine's
+// colour washes the whole sky, which is exactly what the dome it came from used to do.
+#define HORIZON_FALLOFF 8.0f
 
 // xyz: where the camera is, in world space with Z up. w: the frame's exposure.
 float4 Eye : register(c71);
@@ -67,9 +68,7 @@ float4 Air : register(c73);
 // terrain fades to. See docs/docs/engine-internals/sky-and-clouds.md.
 float4 FogColour : register(c74);
 float4 FogColourRange : register(c75);
-float4 FogValues : register(c76);
-float4 FogHeightValues : register(c77);
-float4 FogColourVector : register(c78);
+float4 FogColourVector : register(c76);
 
 struct VertexIn {
     float4 position : POSITION0;
@@ -179,8 +178,7 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float grey = dot(horizon, float3(0.299f, 0.587f, 0.114f));
     horizon = lerp(horizon, grey * HORIZON_DUST, Air.z);
 
-    float fogHeight = saturate(ray.z * SKY_HEIGHT * FogHeightValues.x + FogHeightValues.y);
-    float fog = saturate((fogHeight * FogHeightValues.z + FogHeightValues.w) * FogValues.z);
+    float fog = pow(saturate(1.0f - skyward.z), HORIZON_FALLOFF);
     colour = lerp(colour, horizon, fog);
 
     // The dome's own alpha, taken before the exposure as the dome takes it: opaque while there is

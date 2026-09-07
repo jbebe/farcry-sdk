@@ -17,7 +17,7 @@ namespace {
     // next draw if a plugin wrote over them. The clouds use the same range: the two never draw in
     // one call, and each puts back what it found.
     constexpr UINT kFirstConstant = 71;
-    constexpr UINT kConstantCount = 8;
+    constexpr UINT kConstantCount = 6;
 
     // The far end of the depth range, where nothing but sky has been drawn. The dome is drawn with
     // a less-or-equal test against a cleared far plane, so this passes wherever no world stands and
@@ -117,9 +117,6 @@ namespace {
             haze, intensity, g_dust, 0.0f,
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
-            view.fogValues[0], view.fogValues[1], view.fogValues[2], 0.0f,
-            view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
-            view.fogHeightValues[3],
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f};
 
         SkyOverhaul::DrawGuard guard(device, kFirstConstant, kConstantCount);
