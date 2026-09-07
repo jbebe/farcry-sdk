@@ -97,6 +97,9 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          500, 12000},
         {"Cloud wind", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Clouds::SetWind), nullptr, 0, 0,
          500},
+        // Out of the menu while the clouds are being tuned, because the page only has room for one
+        // feature's worth of rows. The glare keeps every value below as its own default.
+        /*
         {"Sun glare strength", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Dazzle::SetStrength),
          nullptr, 0, 0, 200},
         {"Sun glare spread", FCSE_SLIDER(57), &OnSliderChanged, Setter(&Dazzle::SetSpread), nullptr,
@@ -125,6 +128,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          nullptr, 0, 5, 100},
         {"Afterimage haze", FCSE_SLIDER(35), &OnSliderChanged, Setter(&Dazzle::SetAfterimageHaze),
          nullptr, 0, 0, 100},
+        */
     };
     api->RegisterSettings("Sky Overhaul", settings, sizeof(settings) / sizeof(settings[0]));
 
