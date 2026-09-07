@@ -10,6 +10,12 @@
 #define VIEW_STEPS 48
 #define LIGHT_STEPS 5
 
+// How far apart two samples may be before the march starts stepping over whole clouds, and how far
+// apart before the fine erosion stops being shape and becomes noise. A ray near the horizon runs
+// almost along the layer and would otherwise spread its samples over kilometres.
+#define MAX_STRIDE 90.0f
+#define DETAIL_STRIDE 130.0f
+
 // The low frequencies a cloud's body is carved from, the high ones its edges are eroded by, and
 // where over the world clouds stand at all.
 sampler3D ShapeNoise : register(s0);
@@ -68,17 +74,19 @@ float Remap(float value, float fromLow, float fromHigh, float toLow, float toHig
     return toLow + (value - fromLow) / (fromHigh - fromLow) * (toHigh - toLow);
 }
 
-// Flat at the bottom and rounded off at the top, which is the profile that reads as cumulus. The
-// weather map's own height field stretches or squashes it.
+// A cloud's base really is flat, and at the same altitude across the whole sky: it is the height
+// where rising air becomes cold enough for its water to condense. Its top is not, so the falloff
+// there is long and rounded, and the shape noise breaks it up further.
 float HeightProfile(float height, float tallness) {
-    float top = lerp(0.35f, 1.0f, tallness);
-    return saturate(Remap(height, 0.0f, 0.15f * top, 0.0f, 1.0f)) *
-           saturate(Remap(height, 0.6f * top, top, 1.0f, 0.0f));
+    float top = lerp(0.25f, 1.0f, tallness);
+    float base = saturate(Remap(height, 0.0f, 0.08f, 0.0f, 1.0f));
+    float crown = saturate(Remap(height, top * 0.25f, top, 1.0f, 0.0f));
+    return base * crown * crown;
 }
 
 // How much cloud stands at a point. `cheap` skips the erosion, which is most of the cost and none
 // of the shape, and is what the samples toward the sun use.
-float Density(float3 world, uniform bool cheap) {
+float Density(float3 world, float stride, uniform bool cheap) {
     float height = saturate((world.z - Layer.x) / Layer.y);
 
     float2 weatherUv = (world.xy + Wind.zw) * Grain.z;
@@ -86,7 +94,11 @@ float Density(float3 world, uniform bool cheap) {
     // Half is neutral, so the slider opens the sky out from the map or closes it down to nothing.
     float cloudiness = saturate(weather.b + Layer.z * 2.0f - 1.0f);
 
-    float3 shapeUv = (world + float3(Wind.xy, 0.0f)) * Grain.x;
+    // The layer is a few hundred metres deep and the shape repeats over thousands, so read across
+    // it far faster than along it. Sampled at one scale in all three axes, a layer this thin cuts
+    // an almost constant slice out of the volume and every cloud in it comes out the same height.
+    float acrossLayer = 1.0f / max(Layer.y * 3.0f, 1.0f);
+    float3 shapeUv = float3((world.xy + Wind.xy) * Grain.x, world.z * acrossLayer);
     float4 shape = tex3Dlod(ShapeNoise, float4(shapeUv, 0.0f));
 
     // Three frequencies of billow, folded into one field, then used to carve the fourth.
@@ -95,7 +107,11 @@ float Density(float3 world, uniform bool cheap) {
     body *= HeightProfile(height, weather.r);
 
     float density = saturate(Remap(body, 1.0f - cloudiness, 1.0f, 0.0f, 1.0f));
-    if (cheap || density <= 0.0f) {
+
+    // Erosion finer than the samples are apart is not shape any more, it is noise, so it is let go
+    // as the march coarsens rather than sampled into a dither.
+    float fineness = saturate(1.0f - stride / DETAIL_STRIDE);
+    if (cheap || density <= 0.0f || fineness <= 0.0f) {
         return density * Layer.w;
     }
 
@@ -103,7 +119,7 @@ float Density(float3 world, uniform bool cheap) {
     float3 detail = tex3Dlod(DetailNoise, float4(world * Grain.y, 0.0f)).rgb;
     float fine = detail.r * 0.625f + detail.g * 0.25f + detail.b * 0.125f;
     float erosion = lerp(1.0f - fine, fine, saturate(height * 4.0f));
-    density = saturate(Remap(density, erosion * Grain.w, 1.0f, 0.0f, 1.0f));
+    density = saturate(Remap(density, erosion * Grain.w * fineness, 1.0f, 0.0f, 1.0f));
     return density * Layer.w;
 }
 
@@ -141,7 +157,7 @@ float SunReach(float3 world) {
     float depth = 0.0f;
     [unroll] for (int i = 0; i < LIGHT_STEPS; i++) {
         float3 at = world + Sun.xyz * ((float)i + 0.5f) * SunColour.w;
-        depth += Density(at, true);
+        depth += Density(at, 0.0f, true);
     }
     return exp(-depth * SunColour.w);
 }
@@ -164,7 +180,7 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
 
     float reach = saturate((Range.x - enter) / Range.y) * step(0.001f, ray.z) * step(enter, leave);
     float span = max(leave - enter, 0.0f);
-    float stride = span / VIEW_STEPS;
+    float stride = min(span / VIEW_STEPS, MAX_STRIDE);
 
     // A different offset per pixel, so that what the coarse sampling misses lands as fine noise
     // instead of as bands. Fixed to the pixel rather than the frame: the game has nothing that
@@ -180,7 +196,7 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
             break;
         }
         float3 at = Eye.xyz + ray * (enter + ((float)i + dither) * stride);
-        float density = Density(at, false);
+        float density = Density(at, stride, false);
         if (density > 0.0005f) {
             float lit = SunReach(at);
 
