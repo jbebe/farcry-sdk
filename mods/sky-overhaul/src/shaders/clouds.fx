@@ -33,6 +33,12 @@
 #define TRAIL_A float3(-0.342f, 0.940f, 0.180f)
 #define TRAIL_B float3(-0.707f, 0.707f, -0.356f)
 
+// How far a trail wanders off the line the aircraft actually flew, as a multiple of its own width,
+// and how much of that wander is the shorter kink rather than the long slow drift. Enough that no
+// stretch of it reads as drawn, short of the squiggle that would stop reading as a trail at all.
+#define TRAIL_WANDER 5.0f
+#define TRAIL_KINK 0.35f
+
 // How deep the hazy air under the sheet effectively is, in metres, which is the distance a ray
 // straight up spends in it. Everything below is that same depth divided by how slanted the ray is.
 #define CIRRUS_AIR 900.0f
@@ -194,12 +200,24 @@ float3 Scatter(float lit, float cosAngle) {
     return SunColour.rgb * total;
 }
 
-// What one aircraft left behind: a straight line at the sheet's altitude, narrow, and neither
+// What one aircraft left behind: a line at the sheet's altitude, narrow, and neither straight,
 // uniform nor endless. `path` is the line's unit normal and how far it sits from the origin, in
 // the same units the sheet is read in.
 float Contrail(float2 at, float3 path, float seed) {
-    float across = abs(dot(at, path.xy) - path.z);
+    float across = dot(at, path.xy) - path.z;
     float along = dot(at, float2(-path.y, path.x));
+
+    // The aircraft flew straight; what it left did not stay that way. Air at that altitude does not
+    // move as one piece, so the trail is dragged sideways by however fast the layer it happens to
+    // be lying in is going - a long slow drift with a shorter kink riding on it. Both are read
+    // along the length only, so the whole width swings together and the edges stay clean: a trail
+    // wanders, it does not fray.
+    float drift = tex3Dlod(ShapeNoise,
+                           float4(along * Trail.z * 0.35f, seed + 0.11f, 0.61f, 0.0f)).r;
+    float kink = tex3Dlod(ShapeNoise,
+                          float4(along * Trail.z * 1.70f, seed + 0.11f, 0.83f, 0.0f)).r;
+    across -= Trail.y * TRAIL_WANDER * ((drift - 0.5f) + (kink - 0.5f) * TRAIL_KINK);
+    across = abs(across);
 
     // Whether there is a trail here at all, read along its length only, so a gap runs clean across
     // the width the way a real one does. One aircraft passed once and what it left has been
@@ -210,8 +228,10 @@ float Contrail(float2 at, float3 path, float seed) {
     presence = saturate(Remap(presence, 0.45f, 0.68f, 0.0f, 1.0f));
 
     // Wider where it is older, which is also where it is fainter: a trail does not end, it spreads
-    // until it is no longer a line.
-    float spread = Trail.y * (1.0f + (1.0f - presence) * 2.5f);
+    // until it is no longer a line. And wider in some places than others along the way, because the
+    // air it is spreading into is no more even than the air that moved it.
+    float puff = tex3Dlod(ShapeNoise, float4(along * Trail.z * 2.30f, seed + 0.41f, 0.17f, 0.0f)).r;
+    float spread = Trail.y * (1.0f + (1.0f - presence) * 2.5f) * (0.55f + puff);
     float core = saturate(1.0f - across / spread);
     return core * core * presence;
 }
