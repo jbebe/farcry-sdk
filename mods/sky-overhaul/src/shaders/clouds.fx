@@ -53,6 +53,10 @@ float4 BackColour : register(c78);
 // turns into that haze.
 float4 Range : register(c79);
 
+// x: the altitude of the high sheet. y: how many metres one repeat of its streaks covers.
+// z: how much of the sky it fills. w: how hard those streaks are drawn out across the wind.
+float4 Cirrus : register(c85);
+
 // The engine's own sky fog, register for register, so our clouds sit in the same haze the dome
 // does. See docs/docs/engine-internals/sky-and-clouds.md.
 float4 FogColour : register(c80);
@@ -164,6 +168,40 @@ float3 Scatter(float lit, float cosAngle) {
     return SunColour.rgb * total;
 }
 
+// The high sheet. Ice rather than water, thin enough that the sun passes almost straight through
+// it, and drawn out into fibres by a wind that at that altitude blows one way and hard. There is
+// no depth to march through, so it costs one intersection and two samples.
+//
+// It hazes on how far the ray travelled sideways rather than how far it travelled, because the air
+// that does the hazing is all near the ground: six kilometres straight up passes through very
+// little of it, and the same six kilometres along the horizon passes through nothing else.
+float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
+    cover = 0.0f;
+    float rise = Cirrus.x - Eye.z;
+    if (ray.z <= 0.02f || rise <= 0.0f || Cirrus.z <= 0.0f) {
+        return 0.0f;
+    }
+
+    float travel = rise / ray.z;
+    float2 at = (Eye.xy + ray.xy * travel + Wind.xy * 2.5f) * Cirrus.y;
+
+    // Squashed across the wind and left alone along it, which is what turns a field of noise into
+    // fibres rather than blobs.
+    float2 fibre = float2(at.x * Cirrus.w, at.y);
+    float coarse = tex3Dlod(ShapeNoise, float4(fibre, 0.31f, 0.0f)).r;
+    float fine = tex3Dlod(ShapeNoise, float4(fibre * 2.7f + 0.5f, 0.67f, 0.0f)).g;
+
+    float sheet = coarse * 0.7f + fine * 0.3f;
+    cover = saturate(Remap(sheet, 1.0f - Cirrus.z, 1.0f, 0.0f, 1.0f));
+
+    float sideways = travel * sqrt(saturate(1.0f - ray.z * ray.z));
+    float lost = 1.0f - exp(-sideways / max(Range.w, 1.0f));
+    cover *= 1.0f - lost;
+
+    float3 light = SunColour.rgb * Phase(cosAngle, 0.8f) * 0.5f + AmbientColour.rgb;
+    return lerp(light, horizon, lost);
+}
+
 // How much of the sun reaches a point, by marching toward it and counting what is in the way.
 float SunReach(float3 world) {
     float depth = 0.0f;
@@ -201,6 +239,16 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
 
     float cosAngle = dot(ray, Sun.xyz);
 
+    // The colour the sky goes toward at the horizon, which is where everything below ends up: the
+    // engine's own, by heading against the sun, so it matches the dome rather than approximating
+    // it. Worked out before either layer, because both fade into it.
+    float fogHeading =
+        acos(clamp(dot(normalize(ray.xy + 0.0001f), FogColourVector.xy), -1.0f, 1.0f)) / 3.14157f;
+    float3 horizon = FogColour.rgb + FogColourRange.rgb * fogHeading;
+
+    float cirrusCover = 0.0f;
+    float3 cirrus = HighCloud(ray, cosAngle, horizon, cirrusCover);
+
     float transmittance = 1.0f;
     float3 scattered = 0.0f;
     [loop] for (int i = 0; i < VIEW_STEPS; i++) {
@@ -227,11 +275,8 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
         }
     }
 
-    // The sky's fog, which is a function of where the ray points rather than how far it went: the
-    // colour by heading against the sun, the amount by height up the dome the engine draws.
-    float fogHeading = acos(clamp(dot(normalize(ray.xy + 0.0001f), FogColourVector.xy), -1.0f,
-                                  1.0f)) / 3.14157f;
-    float3 haze = FogColour.rgb + FogColourRange.rgb * fogHeading;
+    // The sky's own fog, whose amount is a function of height up the dome the engine draws rather
+    // than of distance.
     float fogHeight = saturate(ray.z * 180.0f * FogHeightValues.x + FogHeightValues.y);
     float fog = saturate((fogHeight * FogHeightValues.z + FogHeightValues.w) * FogValues.z);
 
@@ -247,6 +292,13 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     fog = saturate(fog + distant * (1.0f - fog));
 
     float cover = (1.0f - transmittance) * reach;
-    float3 colour = lerp(scattered * reach, haze * cover, fog);
+    float3 colour = lerp(scattered * reach, horizon * cover, fog);
+
+    // The sheet is above the layer, so from below it is behind it: what it sends down arrives
+    // dimmed by however much of the layer stands in the way.
+    float through = 1.0f - cover;
+    colour += cirrus * cirrusCover * through;
+    cover += cirrusCover * through;
+
     return float4(colour * Eye.w, 1.0f - cover);
 }

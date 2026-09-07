@@ -39,4 +39,7 @@ void SetWind(int percent);
 // Over how many metres a cloud turns into the colour of the horizon behind it.
 void SetHaze(int metres);
 
+// How much of the sky the high sheet of ice cloud fills, as a percentage. Zero leaves it out.
+void SetCirrus(int percent);
+
 }
