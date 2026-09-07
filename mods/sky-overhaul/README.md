@@ -16,8 +16,8 @@ world's `<Sky>` data are the engine's own. Nothing here changes how the sun itse
   and colour writes off, counted against the same patch with depth testing off so the multisample
   factor cancels. `src/engine/sun_occlusion.cpp`.
 - **The glare**, a wash that brightens toward the sun, raises contrast and drains colour, drawn over
-  the world's composite so it lands under the heads-up display. It weakens with a low sun, with
-  storms, and with anything standing between the player and the sun.
+  the world's composite so it lands under the heads-up display. It weakens with a low sun, at
+  night, and with anything standing between the player and the sun.
 - **The afterimage.** While the eye is dazzled the view accumulates into a burn texture and the light
   that fell on it accumulates into a bleach mask. Looking away brings up a dark tinted core where the
   sun's image sat, a faint desaturated negative of the whole view, and a haze over everything else.

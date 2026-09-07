@@ -12,7 +12,7 @@ namespace {
     // Where the sun's direction sits inside the renderer's scene state. The submission is handed a
     // pointer to it, which is also how the state itself is recovered.
     constexpr size_t kSunDirection = 0x148;
-    constexpr size_t kStormFactor = 0x1B8;
+    constexpr size_t kNightFactor = 0x1B8;
 
     // __thiscall with fourteen stack arguments, declared __fastcall because MSVC will not let a
     // free function be __thiscall. Only the sixth stack argument is read; the rest are named to
@@ -62,7 +62,7 @@ namespace {
                 sun.direction[0] = sunDirection[0] / length;
                 sun.direction[1] = sunDirection[1] / length;
                 sun.direction[2] = sunDirection[2] / length;
-                sun.storm = *reinterpret_cast<const float*>(state + kStormFactor);
+                sun.night = *reinterpret_cast<const float*>(state + kNightFactor);
                 Publish(sun);
 
                 g_submitCount.fetch_add(1, std::memory_order_relaxed);

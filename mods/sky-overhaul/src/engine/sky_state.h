@@ -12,8 +12,8 @@ namespace SkyOverhaul::SkyState {
 struct Sun {
     // Unit length, Z up.
     float direction[3];
-    // Zero in clear weather, one in a full storm.
-    float storm;
+    // Zero in daylight, one at night.
+    float night;
 };
 
 // Hooks the sun-disc submission. Call once from FCSE_Load. False means the sun is unavailable,

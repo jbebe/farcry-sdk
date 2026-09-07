@@ -27,16 +27,18 @@ sky "looks like a bad skybox" even though it isn't one.
 
 ## What draws what
 
-`CSceneSky`'s constructor (`Dunia.dll:0x1037ac50`) builds five drawables, each owning one shader:
+`CSceneSky`'s constructor (`Dunia.dll:0x1037ac50`) builds six objects, each owning one shader, and
+keeps each in a member of its own. Those members are what tie a submission below to the piece it
+draws, since every one of them is a `__thiscall` on one of these:
 
-| Object | Constructor | Shader | Options |
-| --- | --- | --- | --- |
-| Sky dome | `0x103d9040` | `SkyDome` | `SKY_STORM_BLEND`, `OPAQUE` |
-| Star sphere | `0x103d9190` | `StarSphere` | `ADDITIVE` |
-| Cloud noise | `0x103da580` | `CloudNoiseBlur`, `CloudNoiseCombine` | `LAYER1`, `LAYER2` |
-| Sun disk | `0x103ddc00` | `SkyDisk` | `TEXKILL` |
-| Sun/moon sprites | `0x103d9550` | `CelestialBody` | `VISIBILITY_TEST`, `TIME_OF_DAY_MAPPING`, `TIME_OF_DAY_COLOR`, `TEXKILL`, `ADDITIVE`, `FAKEHDR` |
-| Cloud layer | `0x103dce80` | `CloudLayer` | `LAYER1`, `LAYER2`, `COMBINE_LOW_OCTAVES`, `MASK_DESTCOLOR`, `CLOUD_QUALITY_*` |
+| Object | Member | Constructor | Shader | Options |
+| --- | --- | --- | --- | --- |
+| Cloud noise | `+0x04` | `0x103da580` | `CloudNoiseBlur`, `CloudNoiseCombine` | `LAYER1`, `LAYER2` |
+| Sky dome | `+0x08` | `0x103d9040` | `SkyDome` | `SKY_STORM_BLEND`, `OPAQUE` |
+| Sun disk | `+0x0C` | `0x103ddc00` | `SkyDisk` | `TEXKILL` |
+| Star sphere | `+0x10` | `0x103d9190` | `StarSphere` | `ADDITIVE` |
+| Sun/moon sprites | `+0x14` | `0x103d9550` | `CelestialBody` | `VISIBILITY_TEST`, `TIME_OF_DAY_MAPPING`, `TIME_OF_DAY_COLOR`, `TEXKILL`, `ADDITIVE`, `FAKEHDR` |
+| Cloud layer | `+0x18` | `0x103dce80` | `CloudLayer` | `LAYER1`, `LAYER2`, `COMBINE_LOW_OCTAVES`, `MASK_DESTCOLOR`, `CLOUD_QUALITY_*` |
 
 The dome and the cloud layer are both surfaces of revolution generated at load. The dome
 (`0x103d7d50`) is 16 rings by 32 segments. The cloud layer (`0x103dcd80`) is a **shallow bowl**,
@@ -74,16 +76,32 @@ One function submits the whole sky: `Dunia.dll:0x1037A150`. It opens by fetching
 scene state, then calls each piece in turn, every one of them gated by a bit of a flags argument, so
 a viewport can ask for some of the sky and not the rest:
 
-| Bit | Draws | Function |
-| --- | --- | --- |
-| 1 | Star sphere | `0x103D8720` |
-| 2 | Sky dome | `0x103D92D0` |
-| 4 | Cloud layer | `0x103DA190` |
-| 8 | Sun disc | `0x103DD7B0` |
-| 0x10 | Sun and moon sprites | `0x103DC3C0` |
+| Bit | Draws | `this` | Steam v1.03 | GOG v1.03 |
+| --- | --- | --- | --- | --- |
+| 1 | Sky dome | `+0x08` | `0x103D8720` | `0x103CA790` |
+| 2 | Star sphere | `+0x10` | `0x103D92D0` | `0x103CB340` |
+| 4 | Sun and moon sprites | `+0x14` | `0x103DA190` | `0x103CC200` |
+| 8 | Sun disc | `+0x0C` | `0x103DD7B0` | `0x103CF800` |
+| 0x10 | Cloud layer | `+0x18` | `0x103DC3C0` | `0x103CE420` |
 
-The storm factor splits it: the dome and clouds draw while it is above zero, the star sphere, sun
-disc and a second cloud pass while it is below one, so a partial storm draws both and crossfades.
+Bits 17 and 18 are option flags handed to the cloud layer; 18 is `MASK_DESTCOLOR`. The god-ray
+mask pass reaches the clouds this way, calling the same submission with `0x6001C` — sprites, sun
+disc and cloud layer, the last with `MASK_DESTCOLOR` — where the world's own viewports pass
+`0xFFFF`. It falls back to `0xC`, dropping the clouds, when the renderer's config has
+`DisableGodRayCloudMasking` set at `+0x3B8` or the scattering's mask intensity is at most 0.01.
+`+0x3A8` on the same config is `DisableSky`, and skips the whole submission.
+
+The **night factor** at `+0x1B8` splits the rest. While it is above zero the star sphere and the
+moon are submitted; while it is below one the sky dome, the sun disc and the sun are, the first two
+carrying `1 - factor` as their opacity, so dusk submits both sets and crossfades. The cloud layer
+sits outside both branches and is always submitted. The moon and the sun are one function called
+twice, told apart by the direction handed to it: `+0x188` for the moon, `+0x148` for the sun.
+
+:::warning[`+0x1B8` is the night factor, not the storm factor]
+An earlier revision of this page had it as the storm factor. What it gates says otherwise: stars
+and moon above zero, dome and sun below one, which is night, not weather. The storm factor is
+`+0x78`, the value the dome blends its storm gradient by.
+:::
 
 The scene state it reads from is reached through an accessor that is **one instantiation of a
 template the renderer uses for every kind of component**, identical in bytes three times over in each
@@ -94,15 +112,19 @@ whole block below addressable from outside.
 
 | Offset | Field |
 | --- | --- |
+| `+0x34`, `+0x54`, `+0x74` | The dome's three gradient rows: sun side, opposite side, storm. Halved on the way into `GradientFactors.xyz` |
+| `+0x78` | **Storm factor**, 0 to 1. `GradientFactors.w`, and above zero it is what compiles the dome with `SKY_STORM_BLEND` |
 | `+0x134` | `SunHorizonScaleStartElevation` |
 | `+0x140` | Sun disc HDR multiplier |
 | `+0x148` | **Sun direction**, three floats, unit length, Z up |
 | `+0x170` | `SunRange` |
 | `+0x178` | `SunMaxHorizontalScale` |
 | `+0x17C` | `SunMaxVerticalScale` |
-| `+0x1B8` | Storm factor, 0 to 1 |
+| `+0x188` | Moon direction, as the moon sprite is oriented by |
+| `+0x1B8` | **Night factor**, 0 to 1 |
 | `+0x1BC` | Time-of-day coordinate, the one every sky shader looks its colour ramp up with |
 
+Everything the cloud layer reads is in the same block, listed [below](#every-cloud-parameter-is-read-out-of-the-scene-state).
 The names come from `CSky::LoadSky` writing the world's `<Sky>` attributes into those same offsets.
 
 ### `SunRange` does not change how big the sun looks
@@ -244,10 +266,11 @@ colour gradient. The engine interpolates both the keyframe position (time of day
 itself (horizon to zenith) every frame. There's no per-pixel sky texture to enlarge — the dome's
 "resolution" is however many keyframes and gradient stops an artist gave it.
 
-## The clouds: generated on the GPU, into a hardcoded 512×512 target
+## The clouds: noise into a hardcoded 512×512 target
 
-This is the actual source of the bad-skybox look. `CloudLayer`'s render targets are allocated in
-its constructor, `Dunia.dll:0x103da580` (body ends `0x103da6c3`):
+This is the actual source of the bad-skybox look. The render targets belong to the cloud *noise*
+object at `CSceneSky+0x04` rather than to the cloud layer that paints with them, and are allocated
+in its constructor, `Dunia.dll:0x103da580` (body ends `0x103da6c3`):
 
 ```
 103da692  6a 01                 PUSH 1
@@ -308,7 +331,55 @@ retuning these leaves the shape unchanged, just sharper.
 **No cloud texture ships with the game.** Grepping every hashlist and the extracted asset tree for
 anything cloud-shaped outside UI (`ui/textures/common/clouds.xbt`, menu-only) and water
 (`terrain/water/watercloud_n.xbt`) finds nothing — because there's nothing to find. The clouds are
-pure noise, generated fresh every frame by `CloudNoiseCombine`/`CloudNoiseBlur`.
+pure noise, and only half of it is made on the GPU: each octave is filled on the CPU with an
+integer hash per texel (`0x103d6fd0`, two 8-bit channels), uploaded, and blurred by
+`CloudNoiseBlur`, which is what turns white noise into value noise; `CloudNoiseCombine` then sums
+the octaves. That whole chain runs from `0x1037A070` in the frame's setup, but only while a request
+is pending at `+0x0C` of the per-world sky record, which it clears — so it is not per-frame work,
+and nothing about suppressing the cloud layer's draw touches it.
+
+### One function submits the clouds, and it is the seam
+
+`Dunia.dll:0x103DC3C0`, GOG `0x103CE420`. A `__thiscall` on the cloud layer at `CSceneSky+0x18`
+with twelve stack arguments, `RET 0x30`, and both layers inside it. Its first act is to return when
+both layer enables are clear, which is the engine's own way of drawing no clouds at all.
+
+Four of the twelve arguments matter to anything intercepting it. **Argument 5 is the renderer's
+scene state**, which every parameter below is read out of. Argument 8 is `GlobalCloudIntensity`.
+Arguments 9 and 10 are the option flags from bits 17 and 18 of the sky's flags. Argument 11 allows
+a second, FakeHDR packet. The rest are the render context, materials and matrices that every sky
+submission is handed alike.
+
+### Every cloud parameter is read out of the scene state
+
+Not from the material, and not from the layer: the environment manager has already blended the
+world's presets by time of day and storm and written the results here, so these are the finished
+values for this frame.
+
+| Offset | Parameter |
+| --- | --- |
+| `+0x148` | Sun direction, negated into `SunDirection` |
+| `+0x160` | `SunColor`, four floats, scaled by 1.9 |
+| `+0x194` | The direction the clouds are lit from as `MoonDirection`, negated, and not the `+0x188` the moon sprite is placed by |
+| `+0x1A0` | `MoonColor` |
+| `+0x1C8` | `Layer1Formation`: coverage, falloff curve, normal strength, and parallax strength scaled by 0.01 |
+| `+0x1DC` | Layer 1 enabled, one byte |
+| `+0x1E0`, `+0x200` | `WindOffset.xy` and `.zw`, two scrolling offsets both layers use |
+| `+0x1E8` | `Layer2Formation`, the same four |
+| `+0x1FC` | Layer 2 enabled, one byte |
+| `+0x214` | `DiffuseLightingPower` |
+| `+0x220` | `DiffuseColor` |
+| `+0x230` | `AmbientColor` |
+| `+0x240` | `BackLightingPower` |
+| `+0x250` | `BackSunColor` |
+| `+0x260` | `BackMoonColor` |
+| `+0x270` | `SubsurfaceScatteringSunColor` |
+| `+0x280` | `SubsurfaceScatteringMoonColor` |
+| `+0x290` | `SubsurfaceScatteringPower` |
+| `+0x294` | `SubsurfaceScatteringBias` |
+
+That is the whole lighting environment the shipped clouds are lit by, which makes it also the whole
+lighting environment a replacement can be lit by without inventing one.
 
 ## The authored assets: nine small files, ~872 KB total
 

@@ -146,7 +146,7 @@ namespace {
         // distance on screen.
         float verticalScale;
         float elevation;
-        float storm;
+        float night;
     };
 
     SunInView g_thisFrame = {};
@@ -187,7 +187,7 @@ namespace {
         out.inFront = clipW > 0.0001f;
         out.verticalScale = projection[5];
         out.elevation = sun.direction[2];
-        out.storm = sun.storm;
+        out.night = sun.night;
         if (cameraLength > 0.0001f) {
             out.cosAngle = (camera[0] * sun.direction[0] + camera[1] * sun.direction[1] +
                             camera[2] * sun.direction[2]) /
@@ -494,15 +494,15 @@ namespace {
         const float elevation = Clamp(g_thisFrame.elevation * g_elevationScale, 0.0f, 1.0f);
 
         const float visible = VisibleFraction();
-        const float clear = 1.0f - Clamp(g_thisFrame.storm, 0.0f, 1.0f);
+        const float daylight = 1.0f - Clamp(g_thisFrame.night, 0.0f, 1.0f);
 
-        glare.intensity = g_strength * proximity * elevation * visible * clear;
+        glare.intensity = g_strength * proximity * elevation * visible * daylight;
 
         // Light hides the afterimage over a far wider cone than it brightens the frame over, and
         // it hides it completely wherever the sun is anywhere near the middle of the view - a low
         // sun blinds the eye to its own afterimage just as well as a high one, which is why the
         // elevation has no part in this. Only cover releases it early.
-        glare.hold = (1.0f - t * t) * visible * clear;
+        glare.hold = (1.0f - t * t) * visible * daylight;
 
         return glare;
     }
@@ -613,10 +613,10 @@ namespace {
         if (pass.live && g_sinceHeartbeat >= kHeartbeatSeconds) {
             g_sinceHeartbeat = 0.0f;
             SkyOverhaul::Logf("dazzle f%u: intensity %.3f hold %.3f | cos %.3f elev %.3f "
-                              "storm %.2f visible %.3f | exposure %.2f recovering %.2f env %.3f "
+                              "night %.2f visible %.3f | exposure %.2f recovering %.2f env %.3f "
                               "| sun (%.0f %.0f) inFront %d",
                               pass.frame, glare.intensity, glare.hold, g_thisFrame.cosAngle,
-                              g_thisFrame.elevation, g_thisFrame.storm, VisibleFraction(),
+                              g_thisFrame.elevation, g_thisFrame.night, VisibleFraction(),
                               g_exposure, g_recovering, afterimage, g_thisFrame.x, g_thisFrame.y,
                               g_thisFrame.inFront ? 1 : 0);
         }
