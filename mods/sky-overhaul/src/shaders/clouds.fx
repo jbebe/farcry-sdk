@@ -19,6 +19,16 @@
 #define SHAPE_TEXELS 128.0f
 #define DETAIL_TEXELS 32.0f
 
+// Temporarily off, to see the parameters without it: at zero every sample reads the finest level
+// of the noise however far apart the samples are, which is sharp and aliases.
+#define MATCH_LEVEL_TO_STRIDE 0
+
+#if MATCH_LEVEL_TO_STRIDE
+#define NoiseLevel(stride, grain, texels) max(log2((stride) * (grain) * (texels)), 0.0f)
+#else
+#define NoiseLevel(stride, grain, texels) 0.0f
+#endif
+
 // The low frequencies a cloud's body is carved from, the high ones its edges are eroded by, and
 // where over the world clouds stand at all.
 sampler3D ShapeNoise : register(s0);
@@ -102,8 +112,8 @@ float Density(float3 world, float stride, uniform bool cheap) {
     // an almost constant slice out of the volume and every cloud in it comes out the same height.
     float acrossLayer = 1.0f / max(Layer.y * 3.0f, 1.0f);
     float3 shapeUv = float3((world.xy + Wind.xy) * Grain.x, world.z * acrossLayer);
-    float4 shape = tex3Dlod(ShapeNoise,
-                            float4(shapeUv, max(log2(stride * Grain.x * SHAPE_TEXELS), 0.0f)));
+    float4 shape =
+        tex3Dlod(ShapeNoise, float4(shapeUv, NoiseLevel(stride, Grain.x, SHAPE_TEXELS)));
 
     // Three frequencies of billow, folded into one field, then used to carve the fourth.
     float billow = shape.g * 0.625f + shape.b * 0.25f + shape.a * 0.125f;
@@ -120,8 +130,7 @@ float Density(float3 world, float stride, uniform bool cheap) {
     // whatever level of the noise is as fine as the samples are apart: asking for more than that
     // would return a different answer at every pixel and read as grain rather than as an edge.
     float3 detail =
-        tex3Dlod(DetailNoise,
-                 float4(world * Grain.y, max(log2(stride * Grain.y * DETAIL_TEXELS), 0.0f)))
+        tex3Dlod(DetailNoise, float4(world * Grain.y, NoiseLevel(stride, Grain.y, DETAIL_TEXELS)))
             .rgb;
     float fine = detail.r * 0.625f + detail.g * 0.25f + detail.b * 0.125f;
     float erosion = lerp(1.0f - fine, fine, saturate(height * 4.0f));
