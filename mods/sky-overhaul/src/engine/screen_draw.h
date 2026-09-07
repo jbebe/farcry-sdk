@@ -7,12 +7,16 @@ namespace SkyOverhaul {
 
 // Saves everything a screen-space draw disturbs, sets a plain baseline, and restores it all when
 // it goes out of scope. The baseline is: no depth test or write, no stencil, no culling, no
-// lighting, no fog, no scissor, no alpha test or blend, full colour writes, point-sampled clamped
-// textures, no shaders, pre-transformed vertices, and the whole viewport at its natural depth
-// range. A caller that needs something else sets it after construction.
+// lighting, no fog, no scissor, no alpha test or blend, no depth bias, no alpha-to-coverage, full
+// colour writes, point-sampled clamped textures, no shaders, and the whole viewport at its natural
+// depth range. A caller that needs something else sets it after construction.
+//
+// `firstConstant` and `constantCount` are the pixel shader constant registers the caller will
+// write, which are the ones saved. The engine's own globals live at c0 to c64, so a shader of our
+// own puts its parameters above them.
 class ScreenDraw {
 public:
-    explicit ScreenDraw(IDirect3DDevice9* device);
+    ScreenDraw(IDirect3DDevice9* device, UINT firstConstant, UINT constantCount);
     ~ScreenDraw();
 
     ScreenDraw(const ScreenDraw&) = delete;
@@ -20,8 +24,18 @@ public:
 
     // A quad over the rectangle, in pixels, with texture coordinates running zero to one across
     // it and the half-pixel offset that lands texels on pixel centres. `depth` is what the depth
-    // test compares, which only matters when the caller has turned that test back on.
+    // test compares, which only matters when the caller has turned that test back on. Drawn
+    // through the fixed-function vertex pipeline, so it pairs only with a pixel shader.
     void Quad(float left, float top, float right, float bottom, float depth = 0.0f);
+
+    // A quad over the whole viewport at `depth` in clip space, carrying one direction per corner
+    // for the pixel shader to interpolate. Needs a vertex shader bound, which is what a pixel
+    // shader past ps_2_b requires anyway. False if the vertex declaration could not be made.
+    bool ClipQuad(float depth, const float corners[4][3]);
+
+    // Drops the vertex declaration ClipQuad keeps. A declaration survives a device reset, so this
+    // is only for a device going away.
+    static void ReleaseDeviceObjects();
 
 private:
     static constexpr D3DRENDERSTATETYPE kRenderStates[] = {
@@ -31,6 +45,11 @@ private:
         D3DRS_ALPHATESTENABLE, D3DRS_ALPHABLENDENABLE,  D3DRS_SEPARATEALPHABLENDENABLE,
         D3DRS_SRCBLEND,        D3DRS_DESTBLEND,         D3DRS_SRGBWRITEENABLE,
         D3DRS_CLIPPLANEENABLE, D3DRS_SHADEMODE,         D3DRS_BLENDOP,
+        D3DRS_DEPTHBIAS,       D3DRS_SLOPESCALEDEPTHBIAS,
+        D3DRS_MULTISAMPLEANTIALIAS, D3DRS_MULTISAMPLEMASK,
+        // The two the drivers overload to turn alpha into coverage, which would dither a quad
+        // whose alpha is a transmittance rather than an opacity.
+        D3DRS_POINTSIZE,       D3DRS_ADAPTIVETESS_Y,
     };
 
     // The two that still steer the fixed-function vertex side's texture coordinates even with a
@@ -41,13 +60,14 @@ private:
     };
 
     static constexpr D3DSAMPLERSTATETYPE kSamplerStates[] = {
-        D3DSAMP_ADDRESSU,  D3DSAMP_ADDRESSV,  D3DSAMP_MAGFILTER,
-        D3DSAMP_MINFILTER, D3DSAMP_MIPFILTER, D3DSAMP_SRGBTEXTURE,
+        D3DSAMP_ADDRESSU,   D3DSAMP_ADDRESSV,      D3DSAMP_ADDRESSW,
+        D3DSAMP_MAGFILTER,  D3DSAMP_MINFILTER,     D3DSAMP_MIPFILTER,
+        D3DSAMP_SRGBTEXTURE, D3DSAMP_MIPMAPLODBIAS, D3DSAMP_MAXMIPLEVEL,
     };
 
-    // As many as the effect binds and uploads, which is what has to be put back.
+    // As many as the effects bind, which is what has to be put back.
     static constexpr DWORD kSamplers = 3;
-    static constexpr UINT kPixelConstantRegisters = 6;
+    static constexpr UINT kMaxConstantRegisters = 8;
 
     static constexpr size_t kRenderStateCount = sizeof(kRenderStates) / sizeof(kRenderStates[0]);
     static constexpr size_t kStageStateCount = sizeof(kStageStates) / sizeof(kStageStates[0]);
@@ -67,7 +87,9 @@ private:
     IDirect3DIndexBuffer9* m_indices = nullptr;
     DWORD m_vertexFormat;
     D3DVIEWPORT9 m_viewport;
-    float m_pixelConstants[kPixelConstantRegisters * 4];
+    UINT m_firstConstant;
+    UINT m_constantCount;
+    float m_pixelConstants[kMaxConstantRegisters * 4];
 };
 
 }

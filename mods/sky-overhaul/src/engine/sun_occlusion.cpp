@@ -129,7 +129,8 @@ void SkyOverhaul::SunOcclusion::Sample(IDirect3DDevice9* device, float centreX, 
     const float right = x + kHalfSize;
     const float bottom = y + kHalfSize;
 
-    ScreenDraw draw(device);
+    // No pixel shader and no constants: the patch is a depth test, not a picture.
+    ScreenDraw draw(device, 0, 0);
 
     // Measure only; change nothing on screen.
     device->SetRenderState(D3DRS_COLORWRITEENABLE, 0);

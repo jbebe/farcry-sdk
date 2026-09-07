@@ -2,10 +2,12 @@
 // halves of the angle it depends on: the camera is a global, the sun is not.
 #include "dazzle.h"
 
+#include "engine/camera.h"
 #include "engine/com.h"
 #include "engine/frame.h"
 #include "engine/log.h"
 #include "engine/screen_draw.h"
+#include "engine/shader.h"
 #include "engine/sky_state.h"
 #include "engine/sun_occlusion.h"
 #include "fcse_api.h"
@@ -18,10 +20,6 @@
 #include <cstring>
 
 namespace {
-    // Where the engine binds these for every shader in the frame.
-    constexpr uint32_t kViewProjectionRegister = 4;
-    constexpr uint32_t kProjectionRegister = 8;
-    constexpr uint32_t kCameraDirectionRegister = 46;
 
     constexpr float kPi = 3.14159265f;
 
@@ -79,6 +77,9 @@ namespace {
     // than that is a menu or a level load, after which the eye has recovered.
     constexpr float kLongestFrame = 0.1f;
     constexpr float kRecoveryGap = 0.5f;
+
+    // How many pixel shader constant registers the effect writes, from register zero.
+    constexpr UINT kConstantRegisters = 6;
 
     // How often the state of the glare is written to the log.
     constexpr float kHeartbeatSeconds = 2.0f;
@@ -160,14 +161,12 @@ namespace {
             return false;
         }
 
-        float viewProjection[16] = {};
-        float projection[16] = {};
-        float camera[4] = {};
-        if (FAILED(device->GetVertexShaderConstantF(kViewProjectionRegister, viewProjection, 4)) ||
-            FAILED(device->GetVertexShaderConstantF(kProjectionRegister, projection, 4)) ||
-            FAILED(device->GetVertexShaderConstantF(kCameraDirectionRegister, camera, 1))) {
+        SkyOverhaul::Camera::View view;
+        if (!SkyOverhaul::Camera::Read(device, view)) {
             return false;
         }
+        const float* viewProjection = view.viewProjection;
+        const float* camera = view.direction;
 
         // The sun is a direction rather than a place, so it projects with w = 0: the point on the
         // far plane that direction points at, which is where the engine drew it.
@@ -185,7 +184,7 @@ namespace {
                                              camera[2] * camera[2]);
 
         out.inFront = clipW > 0.0001f;
-        out.verticalScale = projection[5];
+        out.verticalScale = view.verticalScale;
         out.elevation = sun.direction[2];
         out.night = sun.night;
         if (cameraLength > 0.0001f) {
@@ -259,7 +258,7 @@ namespace {
         }
 
         {
-            SkyOverhaul::ScreenDraw draw(device);
+            SkyOverhaul::ScreenDraw draw(device, 0, kConstantRegisters);
             device->SetPixelShader(shader);
             device->SetTexture(0, g_sceneCopy);
 
@@ -278,18 +277,6 @@ namespace {
 
         device->SetRenderTarget(0, pass.target);
         g_burnReady = true;
-    }
-
-    // The compiled blob is a byte array and CreatePixelShader wants whole tokens, so it is copied
-    // into an aligned buffer on the way through.
-    template <size_t N>
-    HRESULT CreateShader(IDirect3DDevice9* device, const BYTE (&blob)[N],
-                         IDirect3DPixelShader9** out) {
-        static_assert(N % sizeof(DWORD) == 0,
-                      "the compiled shader is not a whole number of tokens");
-        DWORD tokens[N / sizeof(DWORD)];
-        std::memcpy(tokens, blob, N);
-        return device->CreatePixelShader(tokens, out);
     }
 
     HRESULT CreateTarget(IDirect3DDevice9* device, const D3DSURFACE_DESC& desc,
@@ -315,11 +302,11 @@ namespace {
         }
 
         if (g_shader == nullptr || g_accumulateShader == nullptr || g_bleachShader == nullptr) {
-            const HRESULT present = CreateShader(device, g_dazzlePixelShader, &g_shader);
+            const HRESULT present = SkyOverhaul::CreateShader(device, g_dazzlePixelShader, &g_shader);
             const HRESULT accumulate =
-                CreateShader(device, g_dazzleAccumulatePixelShader, &g_accumulateShader);
+                SkyOverhaul::CreateShader(device, g_dazzleAccumulatePixelShader, &g_accumulateShader);
             const HRESULT bleach =
-                CreateShader(device, g_dazzleBleachPixelShader, &g_bleachShader);
+                SkyOverhaul::CreateShader(device, g_dazzleBleachPixelShader, &g_bleachShader);
             if (FAILED(present) || FAILED(accumulate) || FAILED(bleach) || g_shader == nullptr ||
                 g_accumulateShader == nullptr || g_bleachShader == nullptr) {
                 g_shaderRefused = true;
@@ -570,7 +557,7 @@ namespace {
                            restart ? Blend::Mean : Blend::Peak);
         }
 
-        SkyOverhaul::ScreenDraw draw(pass.device);
+        SkyOverhaul::ScreenDraw draw(pass.device, 0, kConstantRegisters);
         pass.device->SetPixelShader(g_shader);
         pass.device->SetTexture(0, g_sceneCopy);
         pass.device->SetTexture(1, g_burn);

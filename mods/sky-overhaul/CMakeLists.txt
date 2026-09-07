@@ -72,6 +72,7 @@ endforeach()
 add_library(SkyOverhaul SHARED
   "src/main.cpp"
   "src/dazzle.cpp"
+  "src/engine/camera.cpp"
   "src/engine/cloud_layer.cpp"
   "src/engine/device_reset.cpp"
   "src/engine/frame.cpp"
