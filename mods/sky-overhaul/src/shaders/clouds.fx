@@ -197,15 +197,17 @@ float3 Scatter(float lit, float cosAngle) {
 // What one aircraft left behind: a straight line at the sheet's altitude, narrow, and neither
 // uniform nor endless. `path` is the line's unit normal and how far it sits from the origin, in
 // the same units the sheet is read in.
-float Contrail(float2 at, float3 path) {
+float Contrail(float2 at, float3 path, float seed) {
     float across = abs(dot(at, path.xy) - path.z);
     float along = dot(at, float2(-path.y, path.x));
 
-    // Whether there is a trail here at all, over a long wavelength. One aircraft passed once, and
-    // what it left has been spreading and tearing apart ever since, so a trail arrives in lengths
-    // rather than running unbroken from one horizon to the other.
-    float presence = tex3Dlod(ShapeNoise, float4(along * Trail.z, 0.71f, 0.29f, 0.0f)).r;
-    presence = saturate(Remap(presence, 0.42f, 0.72f, 0.0f, 1.0f));
+    // Whether there is a trail here at all, read along its length only, so a gap runs clean across
+    // the width the way a real one does. One aircraft passed once and what it left has been
+    // tearing apart ever since, so it arrives in lengths with sky between them rather than running
+    // unbroken from one horizon to the other. The seed is what stops both aircraft from having
+    // torn up in exactly the same places.
+    float presence = tex3Dlod(ShapeNoise, float4(along * Trail.z, seed, 0.29f, 0.0f)).r;
+    presence = saturate(Remap(presence, 0.45f, 0.68f, 0.0f, 1.0f));
 
     // Wider where it is older, which is also where it is fainter: a trail does not end, it spreads
     // until it is no longer a line.
@@ -239,7 +241,7 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
 
     // Two aircraft, crossing. Added rather than blended in, because a trail is ice laid on top of
     // whatever sky was already there and does not care how much cirrus it crosses.
-    float trails = Contrail(at, TRAIL_A) + Contrail(at, TRAIL_B);
+    float trails = Contrail(at, TRAIL_A, 0.23f) + Contrail(at, TRAIL_B, 0.68f);
     cover = saturate(cover + trails * Trail.x);
 
     // Haze is made by the air near the ground, and a sheet this high is above almost all of it.

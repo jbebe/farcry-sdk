@@ -46,10 +46,11 @@ namespace {
     constexpr float kCirrusFloor = 6000.0f;
     constexpr float kCirrusGrain = 1.0f / 20000.0f;
 
-    // How wide a fresh trail is and over what length one comes and goes, both in the units the
-    // sheet is read in, so a repeat of them is one repeat of the cirrus.
+    // How wide a fresh trail is, and how fast the field breaking it up runs along its length. The
+    // second is what decides how many gaps there are across a sky: too slow and the field barely
+    // moves over the whole visible trail, which leaves one unbroken line.
     constexpr float kTrailWidth = 0.011f;
-    constexpr float kTrailBreak = 0.055f;
+    constexpr float kTrailBreak = 0.9f;
 
     // How much light bends forward off a droplet, and the two frequencies the detail and the
     // weather are read at relative to the shape.
