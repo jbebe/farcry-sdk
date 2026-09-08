@@ -41,6 +41,10 @@ _FCSE_NATIVE = {
     calls[#calls + 1] = { 'hook', target, detour }
     return target -- pretend the trampoline is the target
   end,
+  midhook = function(target, handler)
+    calls[#calls + 1] = { 'midhook', target, handler }
+    return true
+  end,
   add_function_cb = function(fn, name)
     calls[#calls + 1] = { 'add_function_cb', fn, name }
     return true
@@ -176,6 +180,29 @@ end)
 
 check("hook rejects a non-function handler", function()
   assert(not pcall(fcse.hook, 0x10001000, 'int(__cdecl*)(void*, void*)', 42))
+end)
+
+check("midhook forwards a numeric handler address", function()
+  calls = {}
+  local ok = fcse.midhook(0x10001005, function(ctx) end)
+  assert(ok == true, 'midhook returned ' .. tostring(ok))
+  assert(calls[1][1] == 'midhook')
+  assert(calls[1][2] == 0x10001005)
+  assert(type(calls[1][3]) == 'number', 'handler was ' .. type(calls[1][3]))
+  assert(calls[1][3] ~= 0, 'handler address is 0')
+end)
+
+check("midhook rejects a non-function handler", function()
+  assert(not pcall(fcse.midhook, 0x10001005, 42))
+end)
+
+-- The same numbers hook.cpp static_asserts against safetyhook's Context32 (172 bytes of fields,
+-- rounded up to the 8-byte alignment the uint64_t in fcse_xmm imposes).
+check("midhook context matches the loader's layout", function()
+  assert(ffi.sizeof('fcse_midhook_context') == 176)
+  assert(ffi.offsetof('fcse_midhook_context', 'eflags') == 128)
+  assert(ffi.offsetof('fcse_midhook_context', 'eax') == 152)
+  assert(ffi.offsetof('fcse_midhook_context', 'eip') == 168)
 end)
 
 check("command forwards name and a numeric address", function()

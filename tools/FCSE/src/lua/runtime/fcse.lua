@@ -233,9 +233,9 @@ end
 --------------------------------------------------------------------------------
 
 -- Holds every callback for the life of the process. An ffi callback is collectable like anything
--- else, and the only other reference is the raw pointer inside MinHook's trampoline - which the GC
--- cannot see. Collecting one turns the installed detour into a jump into freed memory the next time
--- the game calls it. This table is load-bearing; it is not a leak to tidy up.
+-- else, and the only other reference is the raw pointer inside the hook's own code stub - which the
+-- GC cannot see. Collecting one turns the installed hook into a jump into freed memory the next time
+-- the game reaches it. This table is load-bearing; it is not a leak to tidy up.
 local live_callbacks = {}
 
 local function retain(callback)
@@ -245,6 +245,15 @@ end
 
 local function address_of(callback)
   return tonumber(ffi.cast('uintptr_t', callback))
+end
+
+local function check_hook_args(name, address, handler)
+  if address == nil or address == 0 then
+    error(name .. ': null address', 3)
+  end
+  if type(handler) ~= 'function' then
+    error(name .. ': handler must be a function, got ' .. type(handler), 3)
+  end
 end
 
 -- Detours `address` to `handler`, returning a callable for the original.
@@ -261,12 +270,7 @@ end
 -- Returns nil (logged) if another script already owns a hook on that address: FCSE installs one
 -- detour per address and the first claimant keeps it.
 function fcse.hook(address, signature, handler)
-  if address == nil or address == 0 then
-    error('fcse.hook: null address', 2)
-  end
-  if type(handler) ~= 'function' then
-    error('fcse.hook: handler must be a function, got ' .. type(handler), 2)
-  end
+  check_hook_args('fcse.hook', address, handler)
 
   local callback = ffi.cast(signature, handler)
   local trampoline = C.hook(address, address_of(callback))
@@ -277,6 +281,41 @@ function fcse.hook(address, signature, handler)
 
   retain(callback)
   return ffi.cast(signature, trampoline)
+end
+
+-- The registers at the moment a mid-hook fires. Same layout as FCSE_MidHookContext in fcse_api.h.
+ffi.cdef[[
+typedef union {
+  uint8_t u8[16]; uint16_t u16[8]; uint32_t u32[4]; uint64_t u64[2]; float f32[4]; double f64[2];
+} fcse_xmm;
+typedef struct {
+  fcse_xmm xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
+  uintptr_t eflags, edi, esi, edx, ecx, ebx, eax, ebp, esp, trampoline_esp, eip;
+} fcse_midhook_context;
+]]
+
+-- Runs `handler` just before the instruction at `address`, handing it every register of that
+-- moment:
+--
+--   fcse.midhook(addr, function(ctx)
+--     fcse.log('eax =', ctx.eax)
+--     ctx.eax = 0
+--   end)
+--
+-- Writes to the general registers and eflags take effect when the instruction resumes; esp is
+-- read-only. The address is any instruction boundary, usually found with mem.scan. Returns false
+-- (logged) if another script or plugin already owns a hook there.
+function fcse.midhook(address, handler)
+  check_hook_args('fcse.midhook', address, handler)
+
+  local callback = ffi.cast('void(*)(fcse_midhook_context*)', handler)
+  if not C.midhook(address, address_of(callback)) then
+    callback:free()
+    return false
+  end
+
+  retain(callback)
+  return true
 end
 
 --------------------------------------------------------------------------------

@@ -5,7 +5,7 @@
 @rem
 @rem Upstream ships msvcbuild.bat instead of CMake, so this wraps it rather than reimplementing
 @rem LuaJIT's build - which is a real bootstrap (minilua -> buildvm_arch.h -> buildvm -> the lj_*def.h
-@rem tables and lj_vm.obj), not just a list of .c files. Same reasoning as the hand-rolled MinHook
+@rem tables and lj_vm.obj), not just a list of .c files. Same reasoning as the hand-rolled safetyhook
 @rem target in CMakeLists.txt: vendor upstream's own build, don't re-derive it.
 setlocal
 set SRC=%~1

@@ -65,19 +65,17 @@ testable.
 2. Read the real `MalariaCurve`/`PlayerSPFinalize` constants straight out of the real
    `FarCry2.exe` (`src/engine/stock_constants.cpp`) - see "Reimplementing the 12 stock handlers"
    below for why this is read at runtime instead of hardcoded.
-3. `MH_Initialize()` (MinHook, vendored via `CMakeLists.txt`'s `FetchContent`, same pattern as
-   `tools/misc/modpatcher`).
-4. Read `bin\fcse.ini` into memory (`src/api/settings_registry.cpp`). Must happen before any plugin
+3. Read `bin\fcse.ini` into memory (`src/api/settings_registry.cpp`). Must happen before any plugin
    loads: registration resolves each setting against this file and calls the plugin back with the
    result, so the file has to be there first. A missing file is the normal first-run case.
-5. Build the `FCSE_PluginAPI` struct (`src/api/plugin_api.cpp`) and load every `*.dll` in
+4. Build the `FCSE_PluginAPI` struct (`src/api/plugin_api.cpp`) and load every `*.dll` in
    `bin\plugins\` (`src/api/plugin_loader.cpp`), calling each one's required `FCSE_Load` export. This is the
    earliest safe point for a plugin to install `Hook()`/`Patch()` calls - nothing in `Dunia.dll`
    beyond its own `DllMain`/CRT init has run yet, and it's where plugins declare their settings.
-6. Write `bin\fcse.ini` back if anything changed. Every plugin has now declared what it has, so
+5. Write `bin\fcse.ini` back if anything changed. Every plugin has now declared what it has, so
    one write completes the file - a first run leaves a fully hand-editable config without the
    player ever opening the in-game menu.
-7. `RegisterGameFunctionProvider(&DebugCommands::Provider)` - `Provider()` is the callback
+6. `RegisterGameFunctionProvider(&DebugCommands::Provider)` - `Provider()` is the callback
    `Dunia.dll` invokes later, from inside `RunGame`, once `InitDuniaEngine` has succeeded (the only
    point at which `Dunia.dll`'s function registry is guaranteed constructed). It runs, **in this
    order**:
@@ -89,7 +87,7 @@ testable.
    already-claimed name is a **silent no-op** inside `Dunia.dll` itself. Running plugins first is
    what lets a plugin override one of the 12 stock names (e.g. change `AddDiamond`'s effect) -
    registering stock handlers first would make that impossible.
-8. `RunGame(hInstance, cmdLine)` - the game proceeds normally from here.
+7. `RunGame(hInstance, cmdLine)` - the game proceeds normally from here.
 
 ### Reimplementing the 12 stock handlers (`src/engine/debug_commands.cpp`)
 
@@ -112,11 +110,13 @@ See `include/fcse_api.h` for the authoritative, documented ABI. Summary, from "n
 1. **`AddFunctionCB(fn, name)`** - claim one of `Dunia.dll`'s named callback slots. Zero address
    knowledge needed, and version-independent (it's a string key). `function-registry.md` already
    documents ~17 real gameplay call sites reachable this way.
-2. **`Hook(target, detour, &original)`** - MinHook-backed function detouring, for internals with no
-   existing named-callback seam. `target` is an address you found via your own Ghidra work, named
+2. **`Hook(target, detour, &original)`** - safetyhook-backed function detouring, for internals with
+   no existing named-callback seam. `target` is an address you found via your own Ghidra work, named
    through `ResolveFrom`/`FCSE::Relocation` so it stays correct on both shipped builds - as
    `example_plugin` does for `magma::CRenderNomadImpl::BeginPageRendering`. Any other module's
-   exports work too.
+   exports work too. **`MidHook(target, handler)`** is the same tier one level down: it hooks a
+   single instruction anywhere inside a function and hands the handler every register of that
+   moment, to read or rewrite.
 3. **`Patch(address, data, size)`** - direct byte patching (`VirtualProtect` → `memcpy` → restore →
    `FlushInstructionCache`), for the same kind of small constant/branch-flip edit
    `reverse/patch_toRed.py`/`patch_incHB.py`/`patch_carJoke.py` apply *statically* to `Dunia.dll` on
@@ -195,6 +195,8 @@ This replaced a `bool*`-based API in `FCSE_API_VERSION` 3. The inversion is what
 possible at all: the old version only knew *where* a plugin's bool lived, never what it meant or
 what to call it in a file, so it could never write one back. `FCSE_API_VERSION` 4 added the three
 types beyond `Checkbox`, which grew `FCSE_Setting` - so a plugin built against 3 must be rebuilt.
+`FCSE_API_VERSION` 6 appended `MidHook` (and moved detouring from MinHook to safetyhook
+underneath), so a plugin built against 5 must be rebuilt too.
 
 ### Conflict handling
 
@@ -204,8 +206,8 @@ logging both plugin names - loud and debuggable instead of silently misbehaving:
 
 - `AddFunctionCB`: `src/api/function_registry.cpp` tracks name → owning module, independent of (and
   in addition to) `Dunia.dll`'s own silent no-op.
-- `Hook`: `src/api/hook.cpp` tracks target address → owning module, on top of MinHook's own
-  `MH_ERROR_ALREADY_CREATED` rejection.
+- `Hook`/`MidHook`: `src/api/hook.cpp` tracks target address → owning module, and rejects a new
+  hook within 5 bytes of an existing one - both kinds write a 5-byte jump at their target.
 - `Patch`: `src/api/patch.cpp` tracks claimed `(address, size)` ranges; a new claim overlapping a
   *different* module's existing claim is rejected. Overlap with your own earlier claim is fine.
 
@@ -247,7 +249,7 @@ Same `vswhere`/`vcvarsall.bat x86` dance as `tools/misc/modpatcher/build.ps1`. B
 plus `example_plugin.dll`. Tests are opt-in via `-Tests`; run them through `build.ps1` rather than
 calling `ctest` directly - like `cmake`, it only resolves from the developer environment this
 script sets up. `tests/` is a GoogleTest suite plus a Lua one - see `tests/CMakeLists.txt`;
-GoogleTest is fetched at configure time exactly like MinHook and LuaJIT, so there is nothing to
+GoogleTest is fetched at configure time exactly like safetyhook and LuaJIT, so there is nothing to
 install for it.
 
 The [.NET SDK](https://dotnet.microsoft.com/download) is a build prerequisite alongside the MSVC

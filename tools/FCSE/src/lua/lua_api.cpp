@@ -155,6 +155,19 @@ namespace {
         return 1;
     }
 
+    // ---- fcse.midhook ---------------------------------------------------------------------------
+
+    int Api_MidHook(lua_State* L) {
+        uintptr_t target = CheckAddress(L, 1, "midhook target");
+        uintptr_t handler = CheckAddress(L, 2, "midhook handler");
+
+        ScopedCallerIdentity identity(g_currentScript);
+        bool ok = HookManager::MidHook(reinterpret_cast<void*>(target),
+                                       reinterpret_cast<FCSE_MidHookHandler>(handler));
+        lua_pushboolean(L, ok ? 1 : 0);
+        return 1;
+    }
+
     // ---- fcse.command ---------------------------------------------------------------------------
 
     int Api_AddFunctionCB(lua_State* L) {
@@ -292,6 +305,7 @@ namespace {
         {"resolve", &Api_Resolve},
         {"patch", &Api_Patch},
         {"hook", &Api_Hook},
+        {"midhook", &Api_MidHook},
         {"add_function_cb", &Api_AddFunctionCB},
         {"register_setting", &Api_RegisterSetting},
         {"scan", &Api_Scan},

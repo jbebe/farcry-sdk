@@ -52,28 +52,26 @@ if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
 endif()
 
 include(FetchContent)
+# safetyhook's amalgamated release rather than its git repo: four source files and no CMakeLists.txt,
+# so MakeAvailable populates and stops instead of adding a foreign project to the build. The explicit
+# timestamp option silences a CMP0135 warning that would otherwise reach stderr, which is fatal
+# under build.ps1 (see the note in cmake/luajit.cmake).
 FetchContent_Declare(
-  minhook
-  GIT_REPOSITORY https://github.com/TsudaKageyu/minhook.git
-  GIT_TAG        v1.3.3
+  safetyhook
+  URL      https://github.com/cursey/safetyhook/releases/download/v0.7.0/safetyhook-amalgamated-zydis.zip
+  URL_HASH SHA256=505d4c07ec1c5b94a17f3906ca86afbe1264e738d8becaa244866694c6200c2c
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
 )
-# See the note in cmake/luajit.cmake: Populate is deprecated as of CMake 4.x and its warning goes to
-# stderr, which is fatal under build.ps1. MinHook ships no CMakeLists.txt either, so MakeAvailable
-# populates and stops rather than adding a subdirectory.
-FetchContent_MakeAvailable(minhook)
+FetchContent_MakeAvailable(safetyhook)
 
-# Upstream MinHook ships only Visual Studio project files, no CMake support - same minimal
-# from-source static-library target as tools/misc/modpatcher/CMakeLists.txt.
-add_library(minhook STATIC
-  "${minhook_SOURCE_DIR}/src/buffer.c"
-  "${minhook_SOURCE_DIR}/src/hook.c"
-  "${minhook_SOURCE_DIR}/src/trampoline.c"
-  "${minhook_SOURCE_DIR}/src/hde/hde32.c"
+add_library(safetyhook STATIC
+  "${safetyhook_SOURCE_DIR}/safetyhook.cpp"
+  "${safetyhook_SOURCE_DIR}/Zydis.c"
 )
-target_include_directories(minhook PUBLIC "${minhook_SOURCE_DIR}/include")
-target_include_directories(minhook PRIVATE "${minhook_SOURCE_DIR}/src")
+target_include_directories(safetyhook PUBLIC "${safetyhook_SOURCE_DIR}")
+target_compile_features(safetyhook PUBLIC cxx_std_23)
 
-# LuaJIT - the interpreter behind the Lua mods in bin\plugins\. Kept in its own module because, unlike MinHook, it
+# LuaJIT - the interpreter behind the Lua mods in bin\plugins\. Kept in its own module because, unlike safetyhook, it
 # cannot be expressed as a list of .c files: LuaJIT's build is a bootstrap that generates headers and
 # lj_vm.obj with tools it compiles first.
 include("${CMAKE_CURRENT_SOURCE_DIR}/cmake/luajit.cmake")
@@ -290,7 +288,7 @@ target_include_directories(FCSE PRIVATE
 # rc.exe, not something to hand the C++ compiler.
 set_source_files_properties("${FCSE_LUA_RUNTIME}" PROPERTIES HEADER_FILE_ONLY TRUE)
 
-target_link_libraries(FCSE PRIVATE fcse_core minhook luajit)
+target_link_libraries(FCSE PRIVATE fcse_core safetyhook luajit)
 
 # Ordering only - OBJECT_DEPENDS above already handles staleness. Without this the resource compile
 # and the .mgb encode are two independent leaves of the graph under generators that do not derive an
@@ -308,9 +306,8 @@ set_target_properties(FCSE PROPERTIES OUTPUT_NAME "FCSE")
 # simultaneously-loaded plugins can otherwise run a 32-bit process out of address space.
 target_link_options(FCSE PRIVATE "/LARGEADDRESSAWARE")
 
-if (CMAKE_VERSION VERSION_GREATER 3.12)
-  set_property(TARGET FCSE PROPERTY CXX_STANDARD 20)
-endif()
+# C++23 for std::expected in safetyhook's headers; fcse_core and the tests stay on 20.
+set_property(TARGET FCSE PROPERTY CXX_STANDARD 23)
 
 add_subdirectory(example_plugin)
 

@@ -42,9 +42,10 @@ tools to change engine behavior with:
    A plugin can claim one of these names outright, or **override one of FCSE's own 12 stock
    handlers** — plugin registrations run before FCSE's own, specifically so this works.
 2. **Detour a function** (`Hook`) — for engine internals with no existing named hook, backed by
-   [MinHook](https://github.com/TsudaKageyu/minhook). Needs the plugin author to have found the
+   [safetyhook](https://github.com/cursey/safetyhook). Needs the plugin author to have found the
    target address themselves (e.g. via Ghidra against a specific confirmed `Dunia.dll` build) —
-   FCSE hands back a working trampoline to call the original.
+   FCSE hands back a working trampoline to call the original. `MidHook` does the same for a single
+   instruction anywhere inside a function, handing the handler every register of that moment.
 3. **Patch bytes directly** (`Patch`) — for small constant/branch-flip edits, applied live and
    in-process instead of to a shared file on disk. This is the direct successor to what
    `reverse/patch_toRed.py`/`patch_incHB.py`/`patch_carJoke.py` already do *statically* against

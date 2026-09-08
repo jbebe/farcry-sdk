@@ -80,6 +80,7 @@ const FCSE_PluginAPI* PluginApi::Build(const BuildInfo& build) {
     api.Hook = &HookManager::Hook;
     api.Patch = &PatchManager::Patch;
     api.RegisterSettings = &SettingsRegistry::RegisterSettings;
+    api.MidHook = &HookManager::MidHook;
 
     return &api;
 }

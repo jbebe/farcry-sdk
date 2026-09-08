@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FCSE_API_VERSION 5
+#define FCSE_API_VERSION 6
 
 // Which Dunia.dll the game is running. Far Cry 2 v1.03 shipped as two different PC builds whose
 // images place the same code at different addresses, so a raw RVA is only ever true of one of them.
@@ -82,13 +82,36 @@ typedef uintptr_t (*FCSE_FindPatternFn)(const char* pattern, uint32_t* outMatchC
 // that specific named callback expects (see docs/docs/engine-internals/function-registry.md).
 typedef void (*FCSE_AddFunctionCBFn)(void* fn, const char* name);
 
-// Detours `target` to `detour` (MinHook-backed). On success, `*original` receives a callable
-// trampoline that runs the original function's overwritten prologue before jumping back into the
-// rest of the original function - call through it to preserve original behavior around your hook.
-// Returns false (and logs why) if `target` is null, MinHook itself fails, or another plugin
-// already owns a hook on this exact address - FCSE does not chain multiple hooks on one address,
-// first claimant wins.
+// Detours `target` to `detour`. On success, `*original` receives a callable trampoline that runs
+// the original function's overwritten prologue before jumping back into the rest of the original
+// function - call through it to preserve original behavior around your hook. Returns false (and
+// logs why) if `target` is null, its first instructions cannot be relocated, or another plugin
+// already owns a hook within 5 bytes of it - FCSE does not chain hooks, first claimant wins.
 typedef bool (*FCSE_HookFn)(void* target, void* detour, void** original);
+
+typedef union FCSE_Xmm {
+    uint8_t u8[16];
+    uint16_t u16[8];
+    uint32_t u32[4];
+    uint64_t u64[2];
+    float f32[4];
+    double f64[2];
+} FCSE_Xmm;
+
+// The registers at the moment a mid-hook fires. Same layout as safetyhook's Context32.
+typedef struct FCSE_MidHookContext {
+    FCSE_Xmm xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
+    uintptr_t eflags, edi, esi, edx, ecx, ebx, eax, ebp, esp, trampoline_esp, eip;
+} FCSE_MidHookContext;
+
+typedef void (*FCSE_MidHookHandler)(FCSE_MidHookContext* ctx);
+
+// Runs `handler` just before the instruction at `target`, handing it every register of that moment
+// in `ctx`. Writes to the general registers and eflags take effect when the instruction resumes;
+// `esp` is read-only, `eip` is where execution continues. `target` is any instruction boundary,
+// found with FindPattern (the address library only knows function starts). Same first-claimant
+// rule as Hook; a mid-hook inside a prologue another hook already displaced never fires.
+typedef bool (*FCSE_MidHookFn)(void* target, FCSE_MidHookHandler handler);
 
 // Overwrites `size` bytes at `address` with `data` (handles the VirtualProtect dance so `address`
 // doesn't need to already be writable). Returns false (and logs why) if the byte range overlaps a
@@ -264,6 +287,9 @@ typedef struct FCSE_PluginAPI {
 
     // Tier 4: valid to call from FCSE_Load. See FCSE_RegisterSettingsFn above.
     FCSE_RegisterSettingsFn RegisterSettings;
+
+    // Tier 2 as well, appended in API v6: valid to call from FCSE_Load (or later).
+    FCSE_MidHookFn MidHook;
 } FCSE_PluginAPI;
 
 // Required export. Called once per plugin, right after FCSE.exe loads Dunia.dll and before any

@@ -98,11 +98,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
 
     DebugCommands::Init(directory);
 
-    if (!HookManager::Initialize()) {
-        Log::Loader("MinHook failed to initialize - tier-2 Hook() calls will fail for every "
-                    "plugin this run; tier-1/tier-3 are unaffected");
-    }
-
     // FCSE's own hook, not a plugin's - installed here so it's in place well before the player
     // could ever reach the Options screen. See mods_tab.h for the full mechanism.
     ModsTab::Install();

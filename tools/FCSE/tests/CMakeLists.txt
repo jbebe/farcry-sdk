@@ -7,7 +7,7 @@
 # Everything else in src/ needs a live Dunia.dll to mean anything, so there is deliberately nothing
 # here that stubs the engine out to test around it.
 
-# GoogleTest, vendored the same way MinHook is (see the note in ../CMakeLists.txt) - a pinned tag
+# GoogleTest, vendored the same way safetyhook is (see the note in ../CMakeLists.txt) - a pinned tag
 # fetched at configure time, so the suite needs no system-wide install to build.
 include(FetchContent)
 FetchContent_Declare(
