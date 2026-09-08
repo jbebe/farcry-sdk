@@ -417,7 +417,9 @@ What the game does instead, in descending order of how much you get for free:
    materials per instance, as above.
 3. **Pre-authored slots.** Author more widgets than you need and drive the ones you use by name.
    This is the standard trick for a variable-length screen that is not a list — and it is what FCSE
-   does: ship a layout declaring 20 `FCSE_SLOT_nn` widgets, then bind them one per row.
+   does: ship a layout declaring 20 `FCSE_SLOT_nn` widgets, then bind them one per row. The slot
+   count is a limit on lines rather than on content, since a window over a longer list can rebind
+   all 20 whenever it moves.
 
 :::danger[Authoring a slot `HIDDEN` and revealing it from code does not work]
 It is the obvious way to build such a bank, and it fails in a way that costs a debugging session.

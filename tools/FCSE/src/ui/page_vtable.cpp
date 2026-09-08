@@ -32,18 +32,19 @@ namespace page {
     // is the same with our own content build in place of the Game tab's.
     void PageVtableThunk::Display() {
         void* page = reinterpret_cast<void*>(this);
-        if (g_pageReady) {
-            RebuildRows(page);
+        if (!g_pageReady) {
+            // This is the display Init() triggers, while the page's widgets are still being bound.
+            // Chaining straight to the base leaves an empty page for the fraction of a second
+            // before the player can reach it, and the next display builds it properly.
+            BaseDisplay(page);
+            return;
         }
-        // Else: this is the display Init() triggers, while the page's widgets are still being
-        // bound. Chaining straight to the base leaves an empty page for the fraction of a second
-        // before the player can reach it, and the next display builds it properly.
 
-        DWORD code = 0;
-        SehWritePointer(page, kDisplayResetFieldOffset, nullptr, &code);
-        if (!SehCall(&code, g_baseOptionPageDisplay, page)) {
-            LogFailed("CFCXBaseOptionPage::Display", code);
-        }
+        TakeOverRowList(page);
+
+        // Every visit to the page starts at the first row.
+        g_window.top = 0;
+        RedisplayContent(page);
     }
 
     // Slot +0x10. The stock body is the base class's per-frame tick followed by a switch on
@@ -121,21 +122,28 @@ namespace page {
 
     }
 
+    bool CopyVtable(const void* source, void** out, size_t slots, const char* what) {
+        DWORD code = 0;
+        for (size_t slot = 0; slot < slots; ++slot) {
+            if (!SehReadPointer(const_cast<void*>(source),
+                                static_cast<ptrdiff_t>(slot * sizeof(void*)), &out[slot], &code)) {
+                LogFailed((std::string("reading ") + what + "'s vtable").c_str(), code);
+                return false;
+            }
+        }
+        return true;
+    }
+
     // Point the page at FCSE's own copy of its class vtable, with the three Game-tab-specific slots
     // replaced. Must run before Init(), because Init triggers a display and the stock Display is
     // what would otherwise build - and bind ids to - the Game tab's own rows.
     bool InstallPageVtable(void* page, uintptr_t vtableAddress) {
-        DWORD code = 0;
-        for (size_t slot = 0; slot < kPageVtableSlots; ++slot) {
-            void* value = nullptr;
-            if (!SehReadPointer(reinterpret_cast<void*>(vtableAddress),
-                                 static_cast<ptrdiff_t>(slot * sizeof(void*)), &value, &code)) {
-                LogFailed("reading CFCXOptionGamePage's vtable", code);
-                return false;
-            }
-            g_pageVtable[slot] = value;
+        if (!CopyVtable(reinterpret_cast<void*>(vtableAddress), g_pageVtable, kPageVtableSlots,
+                        "CFCXOptionGamePage")) {
+            return false;
         }
 
+        DWORD code = 0;
         g_pageVtable[kDisplaySlot] = RawFunctionPointer(&PageVtableThunk::Display);
         g_pageVtable[kUpdateSlot] = RawFunctionPointer(&PageVtableThunk::Update);
         g_pageVtable[kSettingChangedSlot] = RawFunctionPointer(&PageVtableThunk::OnSettingChanged);

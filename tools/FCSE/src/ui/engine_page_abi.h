@@ -45,6 +45,33 @@ constexpr wchar_t kNoFallback[] = L"NO";
 constexpr char kLabelListParam[] = "SETTING_LABEL_LIST";
 constexpr size_t kSlotCount = 20;
 
+// magma::ListBox's fields, on both the page's row list and the spinner a value cell holds.
+constexpr ptrdiff_t kListBoxMaxVisibleOffset = 0x18; // byte; lines = min(this, item count)
+constexpr ptrdiff_t kListBoxFlagsOffset = 0x19;      // bit 0 = wrap at the ends
+constexpr unsigned char kListBoxWrapFlag = 0x01;
+constexpr ptrdiff_t kListBoxFirstVisibleOffset = 0xcc;
+constexpr ptrdiff_t kListBoxSelectedOffset = 0xd4;
+
+// magma::ListBox's class vtable, of which FCSE keeps one private copy shared by the row list and
+// the value spinners. Slot 27 is the input-navigation handler.
+constexpr size_t kListBoxVtableSlots = 45;
+constexpr size_t kListBoxNavSlot = 27;
+
+// The nav handler's result struct: the direction it was asked to move in, and a flag it raises
+// when it could not.
+constexpr ptrdiff_t kNavResultCodeOffset = 0x10;
+constexpr ptrdiff_t kNavResultFlagsOffset = 0x16;
+constexpr unsigned char kNavFlagUnhandled = 0x04;
+constexpr int kNavCodeUp = 0;
+constexpr int kNavCodeDown = 1;
+
+// The player index in the input event the nav handler is given.
+constexpr ptrdiff_t kNavEventUserOffset = 6;
+
+// Which input a highlight belongs to; the two are tracked separately.
+constexpr int kHighlightPointer = 0;
+constexpr int kHighlightKeyboard = 1;
+
 // CValueListSetting's value accessors, both of which take and return a pointer to the value.
 constexpr size_t kSettingSetValueSlot = 13; // vtable +0x34
 constexpr size_t kSettingGetValueSlot = 14; // vtable +0x38
@@ -126,5 +153,9 @@ using AddSliderSettingFn = void*(__thiscall*)(void* page, const wchar_t* label,
                                               const char* labelListParam, const char* settingParam,
                                               int minValue, int maxValue, int enabled,
                                               void* handler);
+using ListBoxSetSelectionFn = int(__thiscall*)(void* listBox, int index, int refresh, int scroll);
+using ListBoxSetHighlightFn = void(__thiscall*)(void* listBox, void* focusable, uint32_t user,
+                                                int index, int channel);
+using ListBoxNavFn = int(__thiscall*)(void* listBox, void* sender, void* event, uint8_t* result);
 
 }

@@ -97,6 +97,19 @@ endif()
 
 gtest_discover_tests(settings_registry_tests)
 
+# The settings page's scroll window - the only part of that page that means anything without a
+# running game, and the part that decides which plugin's row a control ends up bound to.
+add_executable(page_window_tests
+  "page_window_tests.cpp"
+)
+target_link_libraries(page_window_tests PRIVATE fcse_core GTest::gtest_main)
+
+if (CMAKE_VERSION VERSION_GREATER 3.12)
+  set_property(TARGET page_window_tests PROPERTY CXX_STANDARD 20)
+endif()
+
+gtest_discover_tests(page_window_tests)
+
 # Runs the real src/lua/runtime/fcse.lua against a stubbed native table, in the very interpreter
 # this build produced - so the dialect, the FFI behaviour and the runtime under test are all the
 # ones that will ship, not an approximation of them. Not wrapped in GoogleTest: the thing under test

@@ -2,15 +2,17 @@
 
 #include "api/settings_registry.h"
 #include "ui/engine_page_abi.h"
+#include "ui/page_window.h"
 
 #include <deque>
 #include <string>
 #include <vector>
 #include <windows.h>
 
-// Shared between the four translation units that build FCSE's settings page: fcse_page.cpp owns
-// the page's lifetime and state, page_rows.cpp builds and reads back its rows, page_slots.cpp
-// resolves and binds the layout's cells, page_vtable.cpp carries the class-vtable overrides.
+// Shared between the translation units that build FCSE's settings page: fcse_page.cpp owns the
+// page's lifetime and state, page_rows.cpp plans and builds its rows, page_slots.cpp resolves and
+// binds the layout's cells, page_vtable.cpp carries the class-vtable overrides, and
+// page_listbox.cpp takes the row list's navigation over to scroll the window.
 //
 // Internal to ui/ - ui/fcse_page.h is what the rest of the loader uses.
 namespace FCSE {
@@ -31,11 +33,17 @@ extern void* g_pageVtable[kPageVtableSlots];
 extern bool g_pageReady;
 extern bool g_rebuildRequested;
 
+// Which slice of the plan is on screen. Reset to the top on every visit to the page.
+extern Window g_window;
+
 void LogFailed(const char* what, DWORD code);
 
 // Owns every label ever handed to the engine, because AddButton is only known to store the
 // pointer rather than copy the text.
 std::deque<std::wstring>& LabelStorage();
+
+// Puts a label in that storage and returns the address the engine may keep.
+const wchar_t* StoreLabel(const std::wstring& text);
 
 std::wstring WidenAscii(const std::string& text);
 
@@ -58,6 +66,13 @@ bool SafeGetUserDataElement(void* userData, const NarrowString* name, void** out
                             DWORD* outCode);
 bool SafeEditBoxSetText(void* editBox, const WideString* text, DWORD* outCode);
 bool SafeSetSelected(void* magmaPage, void* focusable, DWORD* outCode);
+bool SafeSetSelection(void* listBox, int index, DWORD* outCode);
+bool SafeSetHighlight(void* listBox, void* focusable, uint32_t user, int index, int channel,
+                      DWORD* outCode);
+
+// False on a build whose mapping is missing the two magma::ListBox calls a scroll needs, which
+// leaves the page showing its first Window::kLines rows and nothing else.
+bool ScrollingAvailable();
 
 // The fields AddBoolSetting initialises on the CValueListSetting it creates:
 //   +0x44 the bound value widget, +0x4c the value array, +0x50 its length in bytes.
@@ -114,17 +129,30 @@ bool SafeReadEditText(void* widget, wchar_t* out, DWORD* outCode);
 void CacheSlotCells(void* page);
 void HideAllSlotCells();
 void* SlotCellElement(size_t row, CellKind kind);
+void* SlotCellWidget(size_t row, CellKind kind);
 void ShowSlotCell(size_t row, CellKind kind);
 void BindEditCell(SettingsRegistry::Setting* setting, size_t row);
 
 void SyncValuesFromControls();
-void AppendCaption(void* page, const std::wstring& text, size_t* row);
-void AppendPluginBlock(void* page, const std::string& displayName,
-                       const SettingsRegistry::Group* group, size_t* row);
 
 // Rebuilds the page's contents. Deferred to the next Update when requested from inside a walk of
 // the rows a rebuild destroys.
 void RebuildRows(void* page);
+
+// The stock Display's own two steps: clear the state field the Game tab's Update switch reads, then
+// run the base implementation.
+void BaseDisplay(void* page);
+
+// A rebuild the player sees without a fresh display - what a scroll does to put the new window up.
+void RedisplayContent(void* page);
+
+// Points this page's row list at FCSE's own copy of magma::ListBox's vtable, so a press past the
+// last row scrolls instead of stopping. A no-op once done, and on a build where scrolling is off.
+void TakeOverRowList(void* page);
+
+// Copies `slots` pointers from an engine class vtable into `out`, which the caller then overwrites
+// the slots it owns in. `what` names the table in the log if a read faults.
+bool CopyVtable(const void* source, void** out, size_t slots, const char* what);
 
 bool InstallPageVtable(void* page, uintptr_t vtableAddress);
 

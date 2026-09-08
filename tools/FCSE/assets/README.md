@@ -144,16 +144,21 @@ Rows are then built with the engine's own
 `CSettingsPage::AddBoolSetting(label, "SETTING_LABEL_LIST", "FCSE_SLOT_nn", …)`, which is why both of
 those names are `UserData` properties on the page area, each holding a `FullLink` to a widget.
 
-### The 20-row ceiling
+### The 20-line window
 
 `common.mgb` `36150990`'s ListBox declares a 20-row viewport, and the controls are absolutely
-positioned siblings that **do not scroll with the list**. Past 20 rows the labels slide out from
-under their controls. So 20 is the cap — per bank, at the same positions — and FCSE logs an overflow
-rather than calling `AddBoolSetting` with an `FCSE_SLOT_nn` this file does not declare;
-`GetUserDataElement` would miss and the row would silently have no control.
+positioned siblings that **do not scroll with the list**. So 20 lines is fixed, per bank, at the
+same positions — a 21st row would call `AddBoolSetting` with an `FCSE_SLOT_nn` this file does not
+declare, `GetUserDataElement` would miss, and the row would silently have no control.
 
-Both banks are indexed by **row**, not by setting: a caption row consumes an index exactly like a
-settings row does, because the cell sits at that row's y coordinate whether or not anything binds it.
+More than 20 rows are reached by scrolling the content rather than the layout: FCSE plans every row,
+keeps a 20-line window over that plan, and rebuilds all 20 lines whenever the window moves. See
+[the settings-page ABI](../../../docs/docs/engine-internals/fcse-settings-page-abi.md) for how the
+list's own refusal to move past its last row is what drives that.
+
+Both banks are indexed by **line**, not by setting: a caption consumes an index exactly like a
+settings row does, because the cell sits at that line's y coordinate whether or not anything binds
+it.
 
 Geometry is the Network tab's, the highest-anchored stock settings page and therefore the one with
 the most usable rows: nav at `(83,111)`, controls at `x=552` from `y=158`, stepping 28. Twenty rows

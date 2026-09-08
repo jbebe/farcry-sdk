@@ -101,7 +101,7 @@ draws the wrong thing*, not an error:
 | Package identified by a path other than the one its texture paths resolve against | Same white-quad failure, for every image at once — this is a real FCSE bug, fixed by naming the package `UI\fcse.mgb` |
 | `AreaLink` `PACKAGE` written as a path instead of a bare-name hash | Instance resolves to nothing; the sub-tree is missing |
 | `ISUSINGDUPLICATEDAREA="false"` on a list row template or a repeated button | All copies share one playhead and animate together |
-| More list items than `BUTTONCOUNT` | Fine for the list (it scrolls), but absolutely positioned siblings do not scroll with it |
+| More list items than `BUTTONCOUNT` | Fine for the list (it scrolls), but absolutely positioned siblings do not scroll with it — so rebuild the visible items from an offset instead of scrolling the list |
 | Element with zero keyframes | No geometry; nothing drawn |
 | Wrong `RectState` field order (l/t/r/b instead of **l/r/t/b**) | A plausible rectangle in the wrong place |
 | Colour read as RGBA instead of ARGB | `00FFFFFF` looks like opaque cyan instead of transparent white |

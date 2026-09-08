@@ -2,6 +2,18 @@
 
 Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **The Mod Configuration Menu scrolls.** Past the layout's twenty lines the page now moves a window
+  over its own list of rows, so a mod's settings are no longer cut off at the twentieth. Ported from
+  FC2JackalFix, which solved the same limit first.
+
+### Changed
+- Plugin ABI is now `FCSE_API_VERSION` 7: `FCSE_Setting` gained a `flags` field, whose one flag
+  `FCSE_SettingFlag_Hidden` keeps a setting in `fcse.ini` and out of the menu. Existing plugins need
+  no source change but must be rebuilt.
+
 ## [1.1.0] - 2026-08-23
 
 ### Changed

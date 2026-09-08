@@ -146,7 +146,7 @@ namespace page {
         return nullptr;
     }
 
-    // `row` is the zero-based row index, which is also the slot index - see AppendPluginBlock.
+    // `row` is the zero-based screen line, which is also the slot index - see AppendPlanRow.
     void ShowSlotCell(size_t row, CellKind kind) {
         void* element = SlotCellElement(row, kind);
         if (element == nullptr) {
@@ -216,21 +216,27 @@ namespace page {
         return SafeReadStringAt(widget, kEditBoxDisplayedTextOffset, out, kEditTextMax, outCode);
     }
 
-    // Seeds a Text row's field from the registry and reveals it. The widget hangs off the element at
-    // +0x14, same as every other magma widget.
-    void BindEditCell(SettingsRegistry::Setting* setting, size_t row) {
-        void* element = SlotCellElement(row, CellKind::Edit);
+    // The magma widget a cell's element owns, which is what the engine's own controls are bound to
+    // and what a value spinner is identified by when it hands its input on.
+    void* SlotCellWidget(size_t row, CellKind kind) {
+        void* element = SlotCellElement(row, kind);
         if (element == nullptr) {
-            return; // logged once at cache time
+            return nullptr;
         }
-
         DWORD code = 0;
         void* widget = nullptr;
-        if (!SehReadPointer(element, kElementWidgetOffset, &widget, &code) || widget == nullptr) {
-            Log::Loader("FcsePage: text field for row " + std::to_string(row + 1) +
-                        " has no widget - leaving it hidden");
+        return SehReadPointer(element, kElementWidgetOffset, &widget, &code) ? widget : nullptr;
+    }
+
+    // Seeds a Text row's field from the registry and reveals it.
+    void BindEditCell(SettingsRegistry::Setting* setting, size_t row) {
+        void* widget = SlotCellWidget(row, CellKind::Edit);
+        if (widget == nullptr) {
+            Log::Loader("FcsePage: no EditBox for row " + std::to_string(row + 1) +
+                        " - leaving its text field hidden");
             return;
         }
+        DWORD code = 0;
 
         // Seeded through the EditBox's own setter. The first attempt used
         // magma::TextBase::SetText and took the game down twice over - an EditBox derives from

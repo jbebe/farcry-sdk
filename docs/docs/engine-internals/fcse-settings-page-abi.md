@@ -152,6 +152,49 @@ moves. Going the other way — authored `HIDDEN`, revealed by code — is bit 1 
 The UserData property naming the row list is `SETTING_LABEL_LIST`, and there are 20 row slots. Both
 must match what `fcse.mgb` declares — see `tools/FCSE/assets/README.md`.
 
+## Scrolling past the twentieth line
+
+Twenty cells is the layout's limit and cannot be raised: they are absolutely positioned siblings of
+the row list and do not move when it scrolls. So the page scrolls the *content* instead. It plans
+every row it would show, keeps a twenty-line window over that plan, and moves the window one row at
+a time — rebuilding all twenty lines from the new offset, which puts each control back under the
+label that now sits on its line. This is a port of the same mechanism in FC2JackalFix, which solved
+it first for its own options page.
+
+**The scroll signal is the engine's own refusal.** `magma::ListBox`'s navigation handler declines to
+move the selection past its last row, and says so by raising bit `0x04` in the byte at `+0x16` of
+the result struct it is handed; `+0x10` of the same struct holds the direction it was asked for (0
+up, 1 down). Comparing that flag before and after the stock call is what distinguishes "this press
+ran off the end" from "something upstream had already given up". The list's wrap bit must be clear
+for that to happen at all, or the last row's Down silently returns to the first.
+
+The handler is vtable slot 27 of 45 on `magma::ListBox`. Every list in the game shares one class
+vtable, so it is swapped **per instance**, not hooked: copy the table — starting one slot *before*
+it, since the RTTI pointer lives there and has to travel with the copy — replace slot 27, and point
+this page's list at the copy. Two fields are then set on the instance itself: `+0x18` (byte) is the
+visible-line count, and bit 0 of `+0x19` is wrap.
+
+| Offset | Field |
+| --- | --- |
+| `+0x18` | max visible lines (byte); the viewport is `min(this, item count)` |
+| `+0x19` | flags; bit 0 is wrap-at-the-ends |
+| `+0xcc` | first visible item — reset to 0 after a rebuild, or the viewport disagrees with the window |
+| `+0xd0` | highlighted item |
+| `+0xd4` | selected item |
+
+Two calls move the selection by hand, and both are needed: `magma::ListBox::SetSelection`
+(`0x10a9c800`, `int __thiscall(list, int index, int refresh, int scroll)`) and
+`SetHighlight` (`0x10a9d1a0`, `void __thiscall(list, void* focusable, uint32 user, int index, int
+channel)`) — selecting a row does not light it. The channel is 1 for keyboard/controller and 0 for
+the pointer, tracked separately, which is why taking the light off a focused control means clearing
+both. The focusable and the user index are not obtainable on demand; they arrive as the nav
+handler's `sender` and at `+6` of its event, and are cached from there.
+
+**The value spinners get the same table.** A focused `FCSE_SLOT_nn` spinner is itself a
+`magma::ListBox` and only understands left and right, so Up and Down reach it and are refused there
+rather than at the row list. Repointing those instances too is what lets the same handler recognise
+the case by `this`, hand the rows the step, and give the highlight back.
+
 ## Text rows and the EditBox
 
 `magma::EditBox::SetText(const std::wstring&, bool)` (`0x10ab0220`) is the EditBox's **own** setter,

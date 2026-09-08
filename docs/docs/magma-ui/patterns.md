@@ -339,4 +339,5 @@ up. Full trail in [the menu system page](../engine-internals/magma-menu-system.m
 
 The row ceiling is the layout's: `#36150990`'s list declares a 20-row viewport, and absolutely
 positioned value controls do not scroll with it, so past 20 rows the labels slide out from under
-their controls.
+their controls. It is a ceiling on lines, not on content — FCSE shows more by keeping a 20-line
+window over its own list of rows and rebuilding every line when the window moves.

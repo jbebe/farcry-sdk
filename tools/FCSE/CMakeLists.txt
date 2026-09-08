@@ -258,6 +258,8 @@ add_executable(FCSE WIN32
   "src/ui/magma_package.h"
   "src/ui/menu_item_handler.h"
   "src/ui/page_internal.h"
+  "src/ui/page_window.h"
+  "src/ui/page_listbox.cpp"
   "src/ui/page_rows.cpp"
   "src/ui/page_slots.cpp"
   "src/ui/page_vtable.cpp"

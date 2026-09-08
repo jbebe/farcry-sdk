@@ -2,7 +2,6 @@
 
 #include "engine/address_library.h"
 #include "engine/address_symbols.h"
-#include "api/plugin_loader.h"
 #include "api/settings_registry.h"
 #include "engine/dunia_api.h"
 #include "log.h"
@@ -43,19 +42,22 @@ namespace page {
         PageSetSelectedFn g_pageSetSelected = nullptr;
         EditBoxSetTextFn g_editBoxSetText = nullptr;
         GetUserDataElementFn g_getUserDataElement = nullptr;
+        ListBoxSetSelectionFn g_listBoxSetSelection = nullptr;
+        ListBoxSetHighlightFn g_listBoxSetHighlight = nullptr;
         const wchar_t** g_yesText = nullptr;
         const wchar_t** g_noText = nullptr;
 
         bool g_installed = false;
     }
 
-    // Shared with the other three page files - see ui/page_internal.h for who needs which.
+    // Shared with the other four page files - see ui/page_internal.h for who needs which.
     DisplayFn g_baseOptionPageDisplay = nullptr;
     UpdateFn g_baseUpdate = nullptr;
     const void* g_emptyStringProxy = nullptr;
 
     void* g_page = nullptr;
     bool g_plainRows = false;
+    Window g_window;
 
     // FCSE's private copy of CFCXOptionGamePage's vtable. Static rather than heap-allocated because
     // the page outlives everything and a vtable that could be freed is a liability, not an asset.
@@ -267,6 +269,21 @@ namespace page {
         return SehCall(outCode, g_pageSetSelected, magmaPage, kAnyController, focusable);
     }
 
+    // Both flags on: moving the selection by hand has to ask for the redraw and the scroll the
+    // engine does not do on its own.
+    bool SafeSetSelection(void* listBox, int index, DWORD* outCode) {
+        return SehCall(outCode, g_listBoxSetSelection, listBox, index, 1, 1);
+    }
+
+    bool SafeSetHighlight(void* listBox, void* focusable, uint32_t user, int index, int channel,
+                          DWORD* outCode) {
+        return SehCall(outCode, g_listBoxSetHighlight, listBox, focusable, user, index, channel);
+    }
+
+    bool ScrollingAvailable() {
+        return g_listBoxSetSelection != nullptr && g_listBoxSetHighlight != nullptr;
+    }
+
     // Owns every label ever handed to the engine. Never freed, because AddButton is only known to
     // store the pointer rather than copy the text.
     //
@@ -278,6 +295,11 @@ namespace page {
     std::deque<std::wstring>& LabelStorage() {
         static std::deque<std::wstring> storage;
         return storage;
+    }
+
+    const wchar_t* StoreLabel(const std::wstring& text) {
+        LabelStorage().push_back(text);
+        return LabelStorage().back().c_str();
     }
 
     std::wstring WidenAscii(const std::string& text) {
@@ -314,7 +336,30 @@ namespace page {
             LogFailed("CSettingsPage::ClearSettings", code);
             // Fall through: appending below stale rows beats showing none at all.
         }
+        // Re-applied per rebuild: the row teardown above may have reset the title along with the
+        // rows, and it is cheap enough not to be worth finding out the hard way.
+        SetPageTitle(page, kTitle);
         FcsePage::AppendRows(page);
+
+        // The first row added takes the selection, so the list's own viewport goes back to the top
+        // to match - the window, not the ListBox, is what moved.
+        void* listBox = nullptr;
+        if (SehReadPointer(page, kRowListBoxOffset, &listBox, &code) && listBox != nullptr) {
+            SehWrite<int32_t>(listBox, kListBoxFirstVisibleOffset, 0, &code);
+        }
+    }
+
+    void BaseDisplay(void* page) {
+        DWORD code = 0;
+        SehWritePointer(page, kDisplayResetFieldOffset, nullptr, &code);
+        if (!SehCall(&code, g_baseOptionPageDisplay, page)) {
+            LogFailed("CFCXBaseOptionPage::Display", code);
+        }
+    }
+
+    void RedisplayContent(void* page) {
+        RebuildRows(page);
+        BaseDisplay(page);
     }
 
 
@@ -397,6 +442,17 @@ static bool EnsurePage(void* optionsMenuThis) {
         reinterpret_cast<const void*>(AddressLibrary::Address(Symbols::kEmptyStringProxy));
     g_yesText = reinterpret_cast<const wchar_t**>(AddressLibrary::Address(Symbols::kYesTextGlobal));
     g_noText = reinterpret_cast<const wchar_t**>(AddressLibrary::Address(Symbols::kNoTextGlobal));
+
+    // Outside kRequired: missing these costs scrolling, not the page.
+    g_listBoxSetSelection =
+        AddressLibrary::Function<ListBoxSetSelectionFn>(Symbols::kListBoxSetSelection);
+    g_listBoxSetHighlight =
+        AddressLibrary::Function<ListBoxSetHighlightFn>(Symbols::kListBoxSetHighlight);
+    if (!ScrollingAvailable()) {
+        Log::Loader("FcsePage: magma::ListBox::SetSelection/SetHighlight did not resolve on this "
+                    "build - the page will show its first " + std::to_string(Window::kLines) +
+                    " rows and not scroll");
+    }
 
     // Zero-initialized: CListMenuPage's own base-class fields (the row array and friends) are never
     // written by the ctor, and zero is what "empty row list" means.
@@ -489,57 +545,6 @@ bool FcsePage::Install(void* optionsMenuThis) {
     }
     Log::Loader("FcsePage: added the Mod Configuration Menu row to an Options screen");
     return true;
-}
-
-void FcsePage::AppendRows(void* page) {
-    // Re-applied per display: the rebuild this runs inside may have reset the title along with the
-    // rows, and it is cheap enough not to be worth finding out the hard way.
-    SetPageTitle(page, kTitle);
-
-    // The previous display's controls have already been read back and cleared by RebuildRows, which
-    // has to happen before ClearSettings destroys the objects they live on.
-
-    // Row index, not setting index. FCSE_SLOT_nn's value widget is an absolutely positioned sibling
-    // sitting at the nth row's y coordinate, so a caption row consumes a slot exactly like a
-    // settings row does - counting only the settings would slide every control up past its label.
-    size_t row = 0;
-
-    const std::vector<std::string>& plugins = PluginLoader::LoadedNames();
-
-    for (const std::string& plugin : plugins) {
-        AppendPluginBlock(page, plugin, SettingsRegistry::FindGroup(plugin), &row);
-    }
-
-    // A mod can reach this page without being a loaded DLL at all. LoadedNames() is plugin modules
-    // only, so every Lua script's group arrives here instead - and a plugin is free to register
-    // under a name other than its module name, which lands here too. Either way the group matched
-    // nothing above, and showing it under the name it chose beats hiding settings that exist in
-    // fcse.ini.
-    //
-    // This loop must run even when `plugins` is empty: returning early on "no DLLs" is what used to
-    // make a script-only install look like an empty page, with the script's rows sitting in the
-    // registry unread.
-    for (const SettingsRegistry::Group& group : SettingsRegistry::Groups()) {
-        bool alreadyShown = false;
-        for (const std::string& plugin : plugins) {
-            if (plugin == group.pluginName) {
-                alreadyShown = true;
-                break;
-            }
-        }
-        if (!alreadyShown) {
-            AppendPluginBlock(page, group.pluginName, &group, &row);
-        }
-    }
-
-    // Nothing from either source. AppendPluginBlock always emits at least a caption per mod, so a
-    // zero row count here means there is genuinely nothing installed rather than nothing configurable.
-    if (row == 0) {
-        AppendCaption(page, L"   (no mods installed)", &row);
-    }
-
-    Log::Loader("FcsePage: built " + std::to_string(row) + " row(s) of " +
-                std::to_string(kSlotCount));
 }
 
 }

@@ -1,5 +1,6 @@
 #include "ui/page_internal.h"
 
+#include "api/plugin_loader.h"
 #include "log.h"
 #include "ui/fcse_page.h"
 #include "ui/menu_item_handler.h"
@@ -8,9 +9,17 @@
 #include <cstdint>
 #include <cstdio>
 #include <string>
+#include <vector>
 
 namespace FCSE {
 namespace page {
+
+// One line of the page as planned, before any of it reaches the engine: a null setting is a caption
+// and the label is all there is to it.
+struct PlanRow {
+    std::wstring label;
+    SettingsRegistry::Setting* setting;
+};
 
 namespace {
 
@@ -118,14 +127,14 @@ namespace {
     // CSettingsPage - so the label is a plain button and the editing happens entirely in the cell.
     // This mirrors the stock Options > Network page, which authors bare EditBox elements at its row
     // positions rather than routing text through a dialog.
-    bool AppendTextRow(void* page, SettingsRegistry::Setting* setting, size_t row) {
-        LabelStorage().push_back(L"   " + WidenAscii(setting->name));
+    bool AppendTextRow(void* page, const PlanRow& row, size_t line) {
         DWORD code = 0;
-        if (!SafeAddButton(page, LabelStorage().back().c_str(), MenuItemHandler<FocusPayload>::Create({row}), &code)) {
+        if (!SafeAddButton(page, StoreLabel(row.label),
+                           MenuItemHandler<FocusPayload>::Create({line}), &code)) {
             LogFailed("AddButton (text row)", code);
             return false;
         }
-        BindEditCell(setting, row);
+        BindEditCell(row.setting, line);
         return true;
     }
 
@@ -239,17 +248,13 @@ namespace {
         }
     }
 
-    void AppendCaption(void* page, const std::wstring& text, size_t* row) {
-        if (*row >= kSlotCount) {
-            return;
-        }
-        LabelStorage().push_back(text);
+    bool AppendCaption(void* page, const std::wstring& text) {
         DWORD code = 0;
-        if (!SafeAddButton(page, LabelStorage().back().c_str(), nullptr, &code)) {
+        if (!SafeAddButton(page, StoreLabel(text), nullptr, &code)) {
             LogFailed("AddButton (caption row)", code);
-            return;
+            return false;
         }
-        ++*row;
+        return true;
     }
 
     // Whether the row's FCSE_SLOT_nn actually resolved to a widget. Add*Setting binds the value
@@ -264,20 +269,16 @@ namespace {
             LogFailed("reading the CValueListSetting's fields", code);
             return false;
         }
+        if (fields.widget != 0 && fields.values != 0 && fields.valuesLength != 0) {
+            return true;
+        }
         char detail[192];
         std::snprintf(detail, sizeof(detail),
-                      "FcsePage: %s -> setting=0x%08X widget=0x%08X values=0x%08X len=%u", slotParam,
-                      reinterpret_cast<unsigned>(settingObject), fields.widget, fields.values,
-                      fields.valuesLength);
+                      "FcsePage: %s did not bind a value widget - the row has no control, so it is "
+                      "left unseeded and unread (widget=0x%08X values=0x%08X len=%u)",
+                      slotParam, fields.widget, fields.values, fields.valuesLength);
         Log::Loader(detail);
-
-        if (fields.widget == 0 || fields.values == 0 || fields.valuesLength == 0) {
-            Log::Loader(std::string("FcsePage: ") + slotParam +
-                        " did not bind a value widget - the row has no control, so it is left "
-                        "unseeded and unread");
-            return false;
-        }
-        return true;
+        return false;
     }
 
     // Every native row below passes handler = 0, deliberately. Every settings row on the stock Game
@@ -289,13 +290,13 @@ namespace {
     // Each returns whether a row was added, which is what the caller counts - a row that was added
     // but failed to bind its control still occupies a slot.
 
-    bool AppendCheckboxRow(void* page, SettingsRegistry::Setting* setting, const char* slotParam,
-                           size_t row) {
-        LabelStorage().push_back(L"   " + WidenAscii(setting->name));
+    bool AppendCheckboxRow(void* page, const PlanRow& row, size_t line) {
+        char slotParam[kSlotParamMax];
+        SlotParamName(line, CellKind::Value, slotParam);
 
         void* settingObject = nullptr;
         DWORD code = 0;
-        if (!SafeAddBoolSetting(page, LabelStorage().back().c_str(), slotParam, YesText(), NoText(),
+        if (!SafeAddBoolSetting(page, StoreLabel(row.label), slotParam, YesText(), NoText(),
                                 &settingObject, &code)) {
             LogFailed("CSettingsPage::AddBoolSetting", code);
             return false;
@@ -306,19 +307,19 @@ namespace {
 
         // Seed the control from the registry, or the row would show whatever the list happens to
         // start on rather than the value in fcse.ini.
-        if (!SafeSetSettingValue(settingObject, setting->value.asCheckbox != 0, &code)) {
+        if (!SafeSetSettingValue(settingObject, row.setting->value.asCheckbox != 0, &code)) {
             LogFailed("CValueListSetting<bool>::SetValue", code);
             return true;
         }
-        ShowSlotCell(row, CellKind::Value);
-        LiveRows().push_back({setting, settingObject});
+        ShowSlotCell(line, CellKind::Value);
+        LiveRows().push_back({row.setting, settingObject});
         return true;
     }
 
-    bool AppendChoiceRow(void* page, SettingsRegistry::Setting* setting, const char* slotParam,
-                           size_t row) {
-        LabelStorage().push_back(L"   " + WidenAscii(setting->name));
-        const wchar_t* label = LabelStorage().back().c_str();
+    bool AppendChoiceRow(void* page, const PlanRow& row, size_t line) {
+        char slotParam[kSlotParamMax];
+        SlotParamName(line, CellKind::Value, slotParam);
+        const wchar_t* label = StoreLabel(row.label);
 
         // The item labels go into the same permanent storage as the row label. The engine's own
         // caller hands AddBoolSetting two process-lifetime globals, so nothing proves it copies the
@@ -328,11 +329,10 @@ namespace {
         // value into the setting's own vector as it walks them.
         std::vector<const wchar_t*> itemLabels;
         std::vector<unsigned> itemValues;
-        itemLabels.reserve(setting->choices.size());
-        itemValues.reserve(setting->choices.size());
-        for (size_t i = 0; i < setting->choices.size(); ++i) {
-            LabelStorage().push_back(WidenAscii(setting->choices[i]));
-            itemLabels.push_back(LabelStorage().back().c_str());
+        itemLabels.reserve(row.setting->choices.size());
+        itemValues.reserve(row.setting->choices.size());
+        for (size_t i = 0; i < row.setting->choices.size(); ++i) {
+            itemLabels.push_back(StoreLabel(WidenAscii(row.setting->choices[i])));
             itemValues.push_back(static_cast<unsigned>(i));
         }
 
@@ -348,23 +348,23 @@ namespace {
             return true;
         }
 
-        if (!SafeSetSettingValue(settingObject, setting->value.asChoice, &code)) {
+        if (!SafeSetSettingValue(settingObject, row.setting->value.asChoice, &code)) {
             LogFailed("CValueListSetting<unsigned>::SetValue", code);
             return true;
         }
-        ShowSlotCell(row, CellKind::Value);
-        LiveRows().push_back({setting, settingObject});
+        ShowSlotCell(line, CellKind::Value);
+        LiveRows().push_back({row.setting, settingObject});
         return true;
     }
 
-    bool AppendSliderRow(void* page, SettingsRegistry::Setting* setting, const char* slotParam,
-                           size_t row) {
-        LabelStorage().push_back(L"   " + WidenAscii(setting->name));
+    bool AppendSliderRow(void* page, const PlanRow& row, size_t line) {
+        char slotParam[kSlotParamMax];
+        SlotParamName(line, CellKind::Slider, slotParam);
 
         void* settingObject = nullptr;
         DWORD code = 0;
-        if (!SafeAddSliderSetting(page, LabelStorage().back().c_str(), slotParam, setting->minValue,
-                                  setting->maxValue, &settingObject, &code)) {
+        if (!SafeAddSliderSetting(page, StoreLabel(row.label), slotParam, row.setting->minValue,
+                                  row.setting->maxValue, &settingObject, &code)) {
             LogFailed("CSettingsPage::AddSliderSetting", code);
             return false;
         }
@@ -377,26 +377,23 @@ namespace {
             LogFailed("reading the CSliderSetting's fields", code);
             return true;
         }
-        char detail[192];
-        std::snprintf(detail, sizeof(detail),
-                      "FcsePage: %s -> setting=0x%08X widget=0x%08X element=0x%08X", slotParam,
-                      reinterpret_cast<unsigned>(settingObject), fields.widget, fields.element);
-        Log::Loader(detail);
-
         if (fields.widget == 0 || fields.element == 0) {
-            Log::Loader(std::string("FcsePage: ") + slotParam +
-                        " did not bind a slider widget - the row has no control, so it is left "
-                        "unseeded, unread and hidden");
+            char detail[192];
+            std::snprintf(detail, sizeof(detail),
+                          "FcsePage: %s did not bind a slider widget - the row has no control, so "
+                          "it is left unseeded, unread and hidden (widget=0x%08X element=0x%08X)",
+                          slotParam, fields.widget, fields.element);
+            Log::Loader(detail);
             return true;
         }
 
-        if (!SafeSetSettingValue(settingObject, static_cast<uint32_t>(setting->value.asSlider),
-                                 &code)) {
+        if (!SafeSetSettingValue(settingObject,
+                                 static_cast<uint32_t>(row.setting->value.asSlider), &code)) {
             LogFailed("CSliderSetting::SetValue", code);
             return true;
         }
-        ShowSlotCell(row, CellKind::Slider);
-        LiveRows().push_back({setting, settingObject});
+        ShowSlotCell(line, CellKind::Slider);
+        LiveRows().push_back({row.setting, settingObject});
         return true;
     }
 
@@ -406,8 +403,9 @@ namespace {
     // this was not tested against. Only a Checkbox is clickable here - cycling a Choice or dragging
     // a Slider is what the native controls are for, and a fallback that half-works would be worse
     // than one that plainly shows the value and sends the player to fcse.ini.
-    bool AppendPlainRow(void* page, SettingsRegistry::Setting* setting) {
-        std::wstring text = L"   " + WidenAscii(setting->name) + L"   ";
+    bool AppendPlainRow(void* page, const PlanRow& row) {
+        SettingsRegistry::Setting* setting = row.setting;
+        std::wstring text = row.label + L"   ";
         void* handler = nullptr;
         switch (setting->value.type) {
         case FCSE_SettingType_Checkbox:
@@ -429,76 +427,120 @@ namespace {
             break;
         }
 
-        LabelStorage().push_back(text);
         DWORD code = 0;
-        if (!SafeAddButton(page, LabelStorage().back().c_str(), handler, &code)) {
+        if (!SafeAddButton(page, StoreLabel(text), handler, &code)) {
             LogFailed("AddButton (plain row)", code);
             return false;
         }
         return true;
     }
 
-    void AppendPluginBlock(void* page, const std::string& displayName,
-                           const SettingsRegistry::Group* group, size_t* row) {
-        AppendCaption(page, L"Plugin: " + WidenAscii(displayName), row);
-
-        if (group == nullptr || group->settings.empty()) {
-            AppendCaption(page, L"   (no settings)", row);
-            return;
+    // Builds one line of the window. `line` is the screen line, which is also the slot index every
+    // cell bank is addressed by - see tools/FCSE/assets/README.md.
+    bool AppendPlanRow(void* page, const PlanRow& row, size_t line) {
+        if (row.setting == nullptr) {
+            return AppendCaption(page, row.label);
         }
+        if (g_plainRows) {
+            return AppendPlainRow(page, row);
+        }
+        switch (row.setting->value.type) {
+        case FCSE_SettingType_Checkbox:
+            return AppendCheckboxRow(page, row, line);
+        case FCSE_SettingType_Choice:
+            return AppendChoiceRow(page, row, line);
+        case FCSE_SettingType_Slider:
+            return AppendSliderRow(page, row, line);
+        case FCSE_SettingType_Text:
+            return AppendTextRow(page, row, line);
+        }
+        return AppendCaption(page, row.label + L" (unsupported type)");
+    }
 
-        for (const std::unique_ptr<SettingsRegistry::Setting>& setting : group->settings) {
-            if (*row >= kSlotCount) {
-                // The layout declares exactly kSlotCount value widgets. Past that the lookup would
-                // miss and the row would appear with no control at all, which is worse than an
-                // honest message.
-                Log::Loader("FcsePage: out of value slots (" + std::to_string(kSlotCount) +
-                            "), skipping \"" + setting->name + "\" and anything after it");
-                return;
-            }
+    // One plugin's block: its caption, then a line per setting it registered that the player is
+    // meant to see.
+    void PlanGroup(std::vector<PlanRow>& plan, const std::string& displayName,
+                   const SettingsRegistry::Group* group) {
+        plan.push_back({L"Plugin: " + WidenAscii(displayName), nullptr});
 
-            // Both slot banks are indexed by *row*, not by setting: their widgets are absolutely
-            // positioned siblings at the nth row's y coordinate, so a caption row consumes an index
-            // exactly like a settings row does. Every row has one cell of each kind authored at its
-            // position, because a row's type is not known until a plugin registers; binding one
-            // leaves the other unused, and unused is invisible for both.
-            char slotParam[kSlotParamMax];
-            SlotParamName(*row, CellKind::Value, slotParam);
-            char sliderSlotParam[kSlotParamMax];
-            SlotParamName(*row, CellKind::Slider, sliderSlotParam);
-
-            bool added = false;
-            if (g_plainRows) {
-                added = AppendPlainRow(page, setting.get());
-            } else {
-                switch (setting->value.type) {
-                case FCSE_SettingType_Checkbox:
-                    added = AppendCheckboxRow(page, setting.get(), slotParam, *row);
-                    break;
-                case FCSE_SettingType_Choice:
-                    added = AppendChoiceRow(page, setting.get(), slotParam, *row);
-                    break;
-                case FCSE_SettingType_Slider:
-                    added = AppendSliderRow(page, setting.get(), sliderSlotParam, *row);
-                    break;
-                case FCSE_SettingType_Text:
-                    // No slot cell: a string has no CUISettingBase behind it, so this is a plain
-                    // button showing its value, and clicking it opens the game's own text prompt.
-                    added = AppendTextRow(page, setting.get(), *row);
-                    break;
-                default:
-                    AppendCaption(page, L"   " + WidenAscii(setting->name) + L" (unsupported type)",
-                                  row);
-                    continue;
+        size_t before = plan.size();
+        if (group != nullptr) {
+            for (const std::unique_ptr<SettingsRegistry::Setting>& setting : group->settings) {
+                if ((setting->flags & FCSE_SettingFlag_Hidden) == 0) {
+                    plan.push_back({L"   " + WidenAscii(setting->name), setting.get()});
                 }
             }
-
-            if (!added) {
-                return; // the row list is in an unknown state; appending more would compound it
-            }
-            ++*row;
+        }
+        if (plan.size() == before) {
+            plan.push_back({L"   (no settings)", nullptr});
         }
     }
 
+    // Every row the page would show if the screen were tall enough, in display order. Rebuilt from
+    // the registry on each display, so a plugin that registers late is picked up with nothing to ask.
+    const std::vector<PlanRow>& BuildPlan() {
+        // Static because it is handed back by reference and read for the whole of the rebuild that
+        // asked for it.
+        static std::vector<PlanRow> plan;
+        plan.clear();
+
+        const std::vector<std::string>& plugins = PluginLoader::LoadedNames();
+        for (const std::string& plugin : plugins) {
+            PlanGroup(plan, plugin, SettingsRegistry::FindGroup(plugin));
+        }
+
+        // A mod can reach this page without being a loaded DLL at all. LoadedNames() is plugin
+        // modules only, so every Lua script's group arrives here instead - and a plugin is free to
+        // register under a name other than its module name, which lands here too. Either way the
+        // group matched nothing above, and showing it under the name it chose beats hiding settings
+        // that exist in fcse.ini.
+        //
+        // This loop must run even when `plugins` is empty: returning early on "no DLLs" is what used
+        // to make a script-only install look like an empty page, with the script's rows sitting in
+        // the registry unread.
+        for (const SettingsRegistry::Group& group : SettingsRegistry::Groups()) {
+            bool alreadyShown = false;
+            for (const std::string& plugin : plugins) {
+                if (plugin == group.pluginName) {
+                    alreadyShown = true;
+                    break;
+                }
+            }
+            if (!alreadyShown) {
+                PlanGroup(plan, group.pluginName, &group);
+            }
+        }
+
+        // Nothing from either source. PlanGroup always emits at least a caption per mod, so an empty
+        // plan means there is genuinely nothing installed rather than nothing configurable.
+        if (plan.empty()) {
+            plan.push_back({L"   (no mods installed)", nullptr});
+        }
+        return plan;
+    }
+
 }
+
+// Fills the layout's lines from the window's slice of the plan. The previous display's controls
+// have already been read back and destroyed by RebuildRows, which this runs inside.
+void FcsePage::AppendRows(void* page) {
+    using namespace page;
+
+    const std::vector<PlanRow>& plan = BuildPlan();
+    g_window.total = plan.size();
+
+    // The plan may have shrunk since the window was last moved.
+    g_window.Clamp();
+
+    size_t line = 0;
+    for (; line < g_window.Visible(); ++line) {
+        if (!AppendPlanRow(page, plan[g_window.RowOf(line)], line)) {
+            break; // the row list is in an unknown state; appending more would compound it
+        }
+    }
+
+    Log::Loader("FcsePage: built " + std::to_string(line) + " of " + std::to_string(plan.size()) +
+                " row(s), window top " + std::to_string(g_window.top));
+}
+
 }

@@ -14,6 +14,8 @@ steam_rva,kind,name,notes
 0x0081E9C0,func,kGamePageCtorRva,
 0x0087ED50,func,kBaseOptionPageDisplayRva,
 0x00A963A0,func,kGetUserDataElementRva,
+0x00A9C800,func,kListBoxSetSelectionRva,
+0x00A9D1A0,func,kListBoxSetHighlightRva,
 0x00AA5180,func,kPageSetSelectedRva,
 0x00AB0220,func,kEditBoxSetTextRva,
 0x00AB13F0,func,kElementSetVisibleRva,
