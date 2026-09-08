@@ -144,15 +144,20 @@ Rows are then built with the engine's own
 `CSettingsPage::AddBoolSetting(label, "SETTING_LABEL_LIST", "FCSE_SLOT_nn", …)`, which is why both of
 those names are `UserData` properties on the page area, each holding a `FullLink` to a widget.
 
-### The 20-line window
+### The 17-line window
 
 `common.mgb` `36150990`'s ListBox declares a 20-row viewport, and the controls are absolutely
-positioned siblings that **do not scroll with the list**. So 20 lines is fixed, per bank, at the
+positioned siblings that **do not scroll with the list**. So 20 cells is fixed, per bank, at the
 same positions — a 21st row would call `AddBoolSetting` with an `FCSE_SLOT_nn` this file does not
 declare, `GetUserDataElement` would miss, and the row would silently have no control.
 
-More than 20 rows are reached by scrolling the content rather than the layout: FCSE plans every row,
-keeps a 20-line window over that plan, and rebuilds all 20 lines whenever the window moves. See
+**Only 17 of those 20 are usable.** All twenty draw, but the menu's own frame crowds the last three
+to the point of being unreadable, so the page stops at 17 and leaves cells 18–20 hidden. That is a
+design limit of the surrounding artwork, not an engine one — `kUsableLineCount` in
+`src/ui/engine_page_abi.h` is the single place it is stated.
+
+More than 17 rows are reached by scrolling the content rather than the layout: FCSE plans every row,
+keeps a 17-line window over that plan, and rebuilds all 17 lines whenever the window moves. See
 [the settings-page ABI](../../../docs/docs/engine-internals/fcse-settings-page-abi.md) for how the
 list's own refusal to move past its last row is what drives that.
 

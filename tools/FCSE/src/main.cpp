@@ -128,8 +128,8 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     //
     // `Tick self check frames` under [fcse] in fcse.ini changes how many frames the one-off rate
     // check waits for (0 silences it). Read straight from the file rather than registered as a
-    // setting: it is meaningless to toggle mid-run, and the Mod Configuration Menu has only 20 rows
-    // to spend on things players actually want.
+    // setting: it is meaningless to toggle mid-run, so the Mod Configuration Menu is better spent
+    // on things players actually want.
     if (const std::string* frames = SettingsRegistry::RawValue("Tick self check frames")) {
         TickSource::SetSelfCheckTicks(std::atoi(frames->c_str()));
     }

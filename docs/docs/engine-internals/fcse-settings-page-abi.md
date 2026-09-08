@@ -152,14 +152,17 @@ moves. Going the other way — authored `HIDDEN`, revealed by code — is bit 1 
 The UserData property naming the row list is `SETTING_LABEL_LIST`, and there are 20 row slots. Both
 must match what `fcse.mgb` declares — see `tools/FCSE/assets/README.md`.
 
-## Scrolling past the twentieth line
+## Scrolling past the last line
 
 Twenty cells is the layout's limit and cannot be raised: they are absolutely positioned siblings of
-the row list and do not move when it scrolls. So the page scrolls the *content* instead. It plans
-every row it would show, keeps a twenty-line window over that plan, and moves the window one row at
-a time — rebuilding all twenty lines from the new offset, which puts each control back under the
-label that now sits on its line. This is a port of the same mechanism in FC2JackalFix, which solved
-it first for its own options page.
+the row list and do not move when it scrolls. Of those twenty, only the first **17** are usable —
+all twenty draw, but the menu's frame crowds the last three past readability, so FCSE stops there
+and leaves their cells hidden.
+
+So the page scrolls the *content* instead. It plans every row it would show, keeps a 17-line window
+over that plan, and moves the window one row at a time — rebuilding all 17 lines from the new
+offset, which puts each control back under the label that now sits on its line. This is a port of
+the same mechanism in FC2JackalFix, which solved it first for its own options page.
 
 **The scroll signal is the engine's own refusal.** `magma::ListBox`'s navigation handler declines to
 move the selection past its last row, and says so by raising bit `0x04` in the byte at `+0x16` of

@@ -10,7 +10,7 @@ namespace page {
 // The screen as a window over the page's plan of rows: it moves by rebuilding the layout's lines
 // from a different offset into the plan.
 struct Window {
-    static constexpr size_t kLines = kSlotCount;
+    static constexpr size_t kLines = kUsableLineCount;
     static constexpr size_t kNoRow = static_cast<size_t>(-1);
 
     size_t total = 0;

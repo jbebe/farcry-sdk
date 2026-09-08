@@ -45,6 +45,10 @@ constexpr wchar_t kNoFallback[] = L"NO";
 constexpr char kLabelListParam[] = "SETTING_LABEL_LIST";
 constexpr size_t kSlotCount = 20;
 
+// How many of those the page actually uses. All twenty draw, but the menu's frame crowds the last
+// three badly enough to be unreadable, so the window stops short and their cells stay hidden.
+constexpr size_t kUsableLineCount = 17;
+
 // magma::ListBox's fields, on both the page's row list and the spinner a value cell holds.
 constexpr ptrdiff_t kListBoxMaxVisibleOffset = 0x18; // byte; lines = min(this, item count)
 constexpr ptrdiff_t kListBoxFlagsOffset = 0x19;      // bit 0 = wrap at the ends
