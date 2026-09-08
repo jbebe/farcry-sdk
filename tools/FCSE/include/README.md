@@ -23,6 +23,9 @@ the first launch after you install it. Edit values there (changes apply on the n
 change them in-game from the Mod Configuration Menu under Options, which writes back to the same
 file.
 
+A few settings are in the file but not in the menu: a plugin can mark one hidden when it is a
+modder's knob rather than a player's, and those are edited in `bin\fcse.ini` only.
+
 A plugin with no group simply doesn't have any settings to configure. Groups belonging to plugins
 you've since removed are left alone rather than deleted, so uninstalling a plugin for a while
 doesn't lose how you had it set up.

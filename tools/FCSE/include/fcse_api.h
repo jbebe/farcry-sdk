@@ -24,7 +24,7 @@
 extern "C" {
 #endif
 
-#define FCSE_API_VERSION 6
+#define FCSE_API_VERSION 7
 
 // Which Dunia.dll the game is running. Far Cry 2 v1.03 shipped as two different PC builds whose
 // images place the same code at different addresses, so a raw RVA is only ever true of one of them.
@@ -146,6 +146,11 @@ typedef enum FCSE_SettingType {
     FCSE_SettingType_Text = 3,     // a string; a row opening the game's text prompt. Serialized raw
 } FCSE_SettingType;
 
+// Bit flags for FCSE_Setting::flags, which is otherwise 0.
+typedef enum FCSE_SettingFlags {
+    FCSE_SettingFlag_Hidden = 1, // keep it out of the in-game page; the file stays its interface
+} FCSE_SettingFlags;
+
 // A setting's value, tagged with its own type so this one callback signature keeps working as the
 // enum above grows. Read the member matching `type`; reading any other member is undefined.
 //
@@ -208,6 +213,8 @@ typedef void (*FCSE_SettingChangedFn)(const FCSE_SettingValue* value, void* user
 //   { "Difficulty", FCSE_CHOICE(1), &OnDifficulty, NULL, kLabels, 3 }
 //   { "Draw distance", FCSE_SLIDER(6), &OnDrawDistance, NULL, NULL, 0, 1, 10 }
 //   { "Server name", FCSE_TEXT(), &OnServerName, NULL, NULL, 0, 0, 0, "kilimanjaro", 24 }
+//   { "Trace allocs", FCSE_CHECKBOX(false), &OnTrace, NULL, NULL, 0, 0, 0, NULL, 0,
+//     FCSE_SettingFlag_Hidden }
 typedef struct FCSE_Setting {
     const char* name;
     FCSE_SettingValue defaultValue;
@@ -230,6 +237,10 @@ typedef struct FCSE_Setting {
     // maxTextLength of 0 means FCSE's own cap applies.
     const char* defaultText;
     uint32_t maxTextLength;
+
+    // Any of FCSE_SettingFlags. A Hidden setting still lives in the ini and still reaches
+    // onChanged; it just has no row on the page.
+    uint32_t flags;
 } FCSE_Setting;
 
 // Registers `settingCount` settings under `pluginName`, in display order. Valid to call from

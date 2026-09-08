@@ -324,6 +324,25 @@ TEST_F(SettingsRegistryTest, TheCallbackFiresAtRegistrationAndOnEveryAcceptedCha
     EXPECT_EQ(log.calls, 2) << "a no-op must not fire the callback";
 }
 
+// Hidden is the page's business alone: everything the registry does for a setting it still does.
+TEST_F(SettingsRegistryTest, AHiddenSettingRegistersReportsAndPersistsLikeAnyOther) {
+    Init();
+    CallbackLog log;
+    FCSE_Setting declared = Checkbox("Trace allocs", true);
+    declared.onChanged = &RecordChange;
+    declared.userdata = &log;
+    declared.flags = FCSE_SettingFlag_Hidden;
+    ASSERT_TRUE(Register("demo", {declared}));
+
+    EXPECT_EQ(Find("demo", "Trace allocs")->flags, FCSE_SettingFlag_Hidden);
+    EXPECT_EQ(log.calls, 1);
+    EXPECT_EQ(log.number, 1);
+
+    SettingsRegistry::Flush();
+    std::string written = ReadAll();
+    EXPECT_NE(written.find("Trace allocs = true"), std::string::npos) << written;
+}
+
 TEST_F(SettingsRegistryTest, TheCallbackReportsTheStoredValueNotThePluginsDefault) {
     WriteAll("[demo]\nDistance = 9\n");
     Init();

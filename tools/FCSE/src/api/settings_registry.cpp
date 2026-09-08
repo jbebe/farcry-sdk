@@ -299,6 +299,7 @@ bool SettingsRegistry::RegisterSettings(const char* pluginName, const FCSE_Setti
         setting->userdata = declared.userdata;
         setting->minValue = declared.minValue;
         setting->maxValue = declared.maxValue;
+        setting->flags = declared.flags;
         setting->maxTextLength =
             declared.maxTextLength != 0 ? declared.maxTextLength : kDefaultMaxTextLength;
         for (uint32_t choice = 0; choice < declared.choiceCount; ++choice) {

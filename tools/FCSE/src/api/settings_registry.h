@@ -37,6 +37,9 @@ public:
         int maxValue;                     // Slider
         std::string text;                 // Text - the value itself; value.asText points at this
         size_t maxTextLength;             // Text
+
+        // Any of FCSE_SettingFlags, as the plugin declared them.
+        uint32_t flags;
     };
 
     struct Group {
