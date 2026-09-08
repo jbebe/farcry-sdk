@@ -197,9 +197,10 @@ what to call it in a file, so it could never write one back. `FCSE_API_VERSION` 
 types beyond `Checkbox`, which grew `FCSE_Setting` - so a plugin built against 3 must be rebuilt.
 `FCSE_API_VERSION` 6 appended `MidHook` (and moved detouring from MinHook to safetyhook
 underneath), so a plugin built against 5 must be rebuilt too. `FCSE_API_VERSION` 7 appended
-`FCSE_Setting::flags`, whose one flag - `FCSE_SettingFlag_Hidden` - keeps a setting off the page
-while leaving it in the file and on `onChanged`, for the knobs that are a modder's rather than a
-player's.
+`FCSE_Setting::flags`: `FCSE_SettingFlag_Disabled` draws the row greyed out and unselectable, and
+`FCSE_SettingFlag_Hidden` keeps it off the page entirely. Both leave the value in `fcse.ini` and
+still deliver it through `onChanged` - they change the menu and nothing else. Prefer `Disabled`
+where either would do, since a row the player can see but not change says something is holding it.
 
 ### Conflict handling
 

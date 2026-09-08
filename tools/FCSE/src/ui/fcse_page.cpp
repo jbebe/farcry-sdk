@@ -192,23 +192,24 @@ namespace page {
     // Returns the CValueListSetting the engine built for this row, so its value can be seeded now
     // and read back later. Handler is always null - see the comment at the call site.
     bool SafeAddBoolSetting(void* page, const wchar_t* label, const char* slotParam,
-                            const wchar_t* yesText, const wchar_t* noText, void** outSetting,
-                            DWORD* outCode) {
+                            const wchar_t* yesText, const wchar_t* noText, bool enabled,
+                            void** outSetting, DWORD* outCode) {
         return SehCallRet(outCode, outSetting, g_addBoolSetting, page, label, kLabelListParam,
-                          slotParam, yesText, noText, 1, nullptr);
+                          slotParam, yesText, noText, enabled ? 1 : 0, nullptr);
     }
 
     bool SafeAddValueListSetting(void* page, const wchar_t* label, const char* slotParam,
                                  unsigned count, const wchar_t* const* itemLabels,
-                                 const unsigned* itemValues, void** outSetting, DWORD* outCode) {
+                                 const unsigned* itemValues, bool enabled, void** outSetting,
+                                 DWORD* outCode) {
         return SehCallRet(outCode, outSetting, g_addValueListSetting, page, label, kLabelListParam,
-                          slotParam, count, itemLabels, itemValues, 1, nullptr);
+                          slotParam, count, itemLabels, itemValues, enabled ? 1 : 0, nullptr);
     }
 
     bool SafeAddSliderSetting(void* page, const wchar_t* label, const char* slotParam, int minValue,
-                              int maxValue, void** outSetting, DWORD* outCode) {
+                              int maxValue, bool enabled, void** outSetting, DWORD* outCode) {
         return SehCallRet(outCode, outSetting, g_addSliderSetting, page, label, kLabelListParam,
-                          slotParam, minValue, maxValue, 1, nullptr);
+                          slotParam, minValue, maxValue, enabled ? 1 : 0, nullptr);
     }
 
     // The engine's cached localised strings when the player has been to the stock Game tab this

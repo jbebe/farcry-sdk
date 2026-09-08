@@ -121,6 +121,12 @@ namespace {
         }
     };
 
+    // A Disabled setting still gets its row - the engine draws it in the greyed ink and refuses to
+    // move the selection onto it.
+    bool RowEnabled(const PlanRow& row) {
+        return (row.setting->flags & FCSE_SettingFlag_Disabled) == 0;
+    }
+
     // A Text row: a label, and an EditBox cell the player types into.
     //
     // The row itself carries no handler and no CUISettingBase - there is no "string setting" in
@@ -133,6 +139,11 @@ namespace {
                            MenuItemHandler<FocusPayload>::Create({line}), &code)) {
             LogFailed("AddButton (text row)", code);
             return false;
+        }
+        if (!RowEnabled(row)) {
+            // Disabled before the cell is bound, so the field is never revealed for typing into.
+            DisableRowItem(page, line);
+            return true;
         }
         BindEditCell(row.setting, line);
         return true;
@@ -297,7 +308,7 @@ namespace {
         void* settingObject = nullptr;
         DWORD code = 0;
         if (!SafeAddBoolSetting(page, StoreLabel(row.label), slotParam, YesText(), NoText(),
-                                &settingObject, &code)) {
+                                RowEnabled(row), &settingObject, &code)) {
             LogFailed("CSettingsPage::AddBoolSetting", code);
             return false;
         }
@@ -340,7 +351,7 @@ namespace {
         DWORD code = 0;
         if (!SafeAddValueListSetting(page, label, slotParam,
                                      static_cast<unsigned>(itemLabels.size()), itemLabels.data(),
-                                     itemValues.data(), &settingObject, &code)) {
+                                     itemValues.data(), RowEnabled(row), &settingObject, &code)) {
             LogFailed("CSettingsPage::AddValueListSetting", code);
             return false;
         }
@@ -364,7 +375,7 @@ namespace {
         void* settingObject = nullptr;
         DWORD code = 0;
         if (!SafeAddSliderSetting(page, StoreLabel(row.label), slotParam, row.setting->minValue,
-                                  row.setting->maxValue, &settingObject, &code)) {
+                                  row.setting->maxValue, RowEnabled(row), &settingObject, &code)) {
             LogFailed("CSettingsPage::AddSliderSetting", code);
             return false;
         }
@@ -403,14 +414,16 @@ namespace {
     // this was not tested against. Only a Checkbox is clickable here - cycling a Choice or dragging
     // a Slider is what the native controls are for, and a fallback that half-works would be worse
     // than one that plainly shows the value and sends the player to fcse.ini.
-    bool AppendPlainRow(void* page, const PlanRow& row) {
+    bool AppendPlainRow(void* page, const PlanRow& row, size_t line) {
         SettingsRegistry::Setting* setting = row.setting;
         std::wstring text = row.label + L"   ";
         void* handler = nullptr;
         switch (setting->value.type) {
         case FCSE_SettingType_Checkbox:
             text += setting->value.asCheckbox ? kOnSuffix : kOffSuffix;
-            handler = MenuItemHandler<TogglePayload>::Create({setting});
+            if (RowEnabled(row)) {
+                handler = MenuItemHandler<TogglePayload>::Create({setting});
+            }
             break;
         case FCSE_SettingType_Choice:
             text += L"[" +
@@ -432,6 +445,9 @@ namespace {
             LogFailed("AddButton (plain row)", code);
             return false;
         }
+        if (!RowEnabled(row)) {
+            DisableRowItem(page, line);
+        }
         return true;
     }
 
@@ -442,7 +458,7 @@ namespace {
             return AppendCaption(page, row.label);
         }
         if (g_plainRows) {
-            return AppendPlainRow(page, row);
+            return AppendPlainRow(page, row, line);
         }
         switch (row.setting->value.type) {
         case FCSE_SettingType_Checkbox:
@@ -457,8 +473,9 @@ namespace {
         return AppendCaption(page, row.label + L" (unsupported type)");
     }
 
-    // One plugin's block: its caption, then a line per setting it registered that the player is
-    // meant to see.
+    // One plugin's block: its caption, then a line per setting the player is meant to see. A plugin
+    // whose settings are all Hidden reads as having none, which is what it has as far as the page
+    // is concerned.
     void PlanGroup(std::vector<PlanRow>& plan, const std::string& displayName,
                    const SettingsRegistry::Group* group) {
         plan.push_back({L"Plugin: " + WidenAscii(displayName), nullptr});

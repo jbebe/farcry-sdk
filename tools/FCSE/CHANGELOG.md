@@ -8,11 +8,14 @@ Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachang
 - **The Mod Configuration Menu scrolls.** Past the page's seventeen lines it now moves a window over
   its own list of rows, so a mod's settings are no longer cut off. Ported from FC2JackalFix, which
   solved the same limit first.
+- **A plugin can grey out a settings row, or keep it off the page** — `FCSE_SettingFlag_Disabled`
+  draws it locked and unselectable, value and all; `FCSE_SettingFlag_Hidden` omits it, leaving
+  `fcse.ini` as its only interface. Either way the setting keeps working everywhere else. Lua mods
+  get both as `fcse.setting{ … disabled = true, hidden = true }`.
 
 ### Changed
-- Plugin ABI is now `FCSE_API_VERSION` 7: `FCSE_Setting` gained a `flags` field, whose one flag
-  `FCSE_SettingFlag_Hidden` keeps a setting in `fcse.ini` and out of the menu. Existing plugins need
-  no source change but must be rebuilt.
+- Plugin ABI is now `FCSE_API_VERSION` 7: `FCSE_Setting` gained a `flags` field. Existing plugins
+  need no source change but must be rebuilt.
 
 ## [1.1.0] - 2026-08-23
 

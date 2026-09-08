@@ -56,6 +56,11 @@ constexpr unsigned char kListBoxWrapFlag = 0x01;
 constexpr ptrdiff_t kListBoxFirstVisibleOffset = 0xcc;
 constexpr ptrdiff_t kListBoxSelectedOffset = 0xd4;
 
+// The list's items: a pointer at +0x94 to an array of item pointers, one per row. The disabled byte
+// on an item is what SetSelection refuses to move onto, and what draws the row in the greyed ink.
+constexpr ptrdiff_t kListBoxItemsOffset = 0x94;
+constexpr ptrdiff_t kListItemDisabledOffset = 0x44;
+
 // magma::ListBox's class vtable, of which FCSE keeps one private copy shared by the row list and
 // the value spinners. Slot 27 is the input-navigation handler.
 constexpr size_t kListBoxVtableSlots = 45;

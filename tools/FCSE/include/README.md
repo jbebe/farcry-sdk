@@ -23,8 +23,10 @@ the first launch after you install it. Edit values there (changes apply on the n
 change them in-game from the Mod Configuration Menu under Options, which writes back to the same
 file.
 
-A few settings are in the file but not in the menu: a plugin can mark one hidden when it is a
-modder's knob rather than a player's, and those are edited in `bin\fcse.ini` only.
+A row that's greyed out is one the plugin has locked - it still has a value, and you can still edit
+it in `bin\fcse.ini`, but the menu won't let you change it while whatever locked it is in force. A
+plugin can also keep a setting out of the menu altogether when it's a modder's knob rather than a
+player's; those live in `bin\fcse.ini` only.
 
 A plugin with no group simply doesn't have any settings to configure. Groups belonging to plugins
 you've since removed are left alone rather than deleted, so uninstalling a plugin for a while

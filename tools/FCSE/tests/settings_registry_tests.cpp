@@ -324,19 +324,40 @@ TEST_F(SettingsRegistryTest, TheCallbackFiresAtRegistrationAndOnEveryAcceptedCha
     EXPECT_EQ(log.calls, 2) << "a no-op must not fire the callback";
 }
 
-// Hidden is the page's business alone: everything the registry does for a setting it still does.
+// Disabled is the page's business alone: everything the registry does for a setting it still does,
+// including accepting a change - only the row the player sees is locked.
+TEST_F(SettingsRegistryTest, ADisabledSettingRegistersReportsAndPersistsLikeAnyOther) {
+    Init();
+    CallbackLog log;
+    FCSE_Setting declared = Checkbox("Reload on save", true);
+    declared.onChanged = &RecordChange;
+    declared.userdata = &log;
+    declared.flags = FCSE_SettingFlag_Disabled;
+    ASSERT_TRUE(Register("demo", {declared}));
+
+    EXPECT_EQ(Find("demo", "Reload on save")->flags, FCSE_SettingFlag_Disabled);
+    EXPECT_EQ(log.calls, 1);
+    EXPECT_EQ(log.number, 1);
+
+    SettingsRegistry::Flush();
+    std::string written = ReadAll();
+    EXPECT_NE(written.find("Reload on save = true"), std::string::npos) << written;
+}
+
+// Same for Hidden, and the two are independent bits rather than a two-value state.
 TEST_F(SettingsRegistryTest, AHiddenSettingRegistersReportsAndPersistsLikeAnyOther) {
     Init();
     CallbackLog log;
     FCSE_Setting declared = Checkbox("Trace allocs", true);
     declared.onChanged = &RecordChange;
     declared.userdata = &log;
-    declared.flags = FCSE_SettingFlag_Hidden;
+    declared.flags = FCSE_SettingFlag_Hidden | FCSE_SettingFlag_Disabled;
     ASSERT_TRUE(Register("demo", {declared}));
 
-    EXPECT_EQ(Find("demo", "Trace allocs")->flags, FCSE_SettingFlag_Hidden);
+    const SettingsRegistry::Setting* stored = Find("demo", "Trace allocs");
+    EXPECT_TRUE(stored->flags & FCSE_SettingFlag_Hidden);
+    EXPECT_TRUE(stored->flags & FCSE_SettingFlag_Disabled);
     EXPECT_EQ(log.calls, 1);
-    EXPECT_EQ(log.number, 1);
 
     SettingsRegistry::Flush();
     std::string written = ReadAll();

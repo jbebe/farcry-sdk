@@ -209,6 +209,24 @@ namespace page {
 
     }
 
+    void DisableRowItem(void* page, size_t line) {
+        DWORD code = 0;
+        void* listBox = nullptr;
+        void* items = nullptr;
+        void* item = nullptr;
+        if (!SehReadPointer(page, kRowListBoxOffset, &listBox, &code) || listBox == nullptr ||
+            !SehReadPointer(listBox, kListBoxItemsOffset, &items, &code) || items == nullptr ||
+            !SehReadPointer(items, static_cast<ptrdiff_t>(line * sizeof(void*)), &item, &code) ||
+            item == nullptr) {
+            Log::Loader("FcsePage: no list item for line " + std::to_string(line + 1) +
+                        " - leaving the row enabled");
+            return;
+        }
+        if (!SehWriteByte(item, kListItemDisabledOffset, 1, &code)) {
+            LogFailed("disabling a row's list item", code);
+        }
+    }
+
     void TakeOverRowList(void* page) {
         if (!ScrollingAvailable()) {
             return; // logged once when the page was built

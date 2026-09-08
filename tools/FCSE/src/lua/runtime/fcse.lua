@@ -355,6 +355,10 @@ end
 -- on_changed fires immediately with whatever the file holds - so a script never reads its own config
 -- - and again after every in-game toggle.
 --
+-- Two optional booleans affect the menu only, never the file or on_changed: `disabled` shows the row
+-- greyed and unselectable, `hidden` keeps it off the page entirely. Prefer `disabled` where either
+-- would do - a row the player can see but not change says something is holding it.
+--
 -- Booleans only, that being the one type FCSE_SettingType currently defines.
 function fcse.setting(spec)
   if type(spec) ~= 'table' then
@@ -369,7 +373,13 @@ function fcse.setting(spec)
   if spec.on_changed ~= nil and type(spec.on_changed) ~= 'function' then
     error('fcse.setting: `on_changed` must be a function', 2)
   end
-  return C.register_setting(spec.name, spec.default, spec.on_changed)
+  if spec.disabled ~= nil and type(spec.disabled) ~= 'boolean' then
+    error('fcse.setting: `disabled` must be true or false', 2)
+  end
+  if spec.hidden ~= nil and type(spec.hidden) ~= 'boolean' then
+    error('fcse.setting: `hidden` must be true or false', 2)
+  end
+  return C.register_setting(spec.name, spec.default, spec.on_changed, spec.disabled, spec.hidden)
 end
 
 --------------------------------------------------------------------------------

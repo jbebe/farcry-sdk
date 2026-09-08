@@ -231,6 +231,12 @@ namespace {
         setting.defaultValue.asCheckbox = defaultValue;
         setting.onChanged = ref != LUA_NOREF ? &OnSettingChanged : nullptr;
         setting.userdata = reinterpret_cast<void*>(static_cast<intptr_t>(ref));
+        if (lua_toboolean(L, 4) != 0) {
+            setting.flags |= FCSE_SettingFlag_Disabled;
+        }
+        if (lua_toboolean(L, 5) != 0) {
+            setting.flags |= FCSE_SettingFlag_Hidden;
+        }
 
         // The group is the script's name, so each script gets its own [group] in fcse.ini and its
         // own rows in the Mod Configuration Menu without doing anything to earn it.

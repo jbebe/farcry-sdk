@@ -169,15 +169,19 @@ Geometry is the Network tab's, the highest-anchored stock settings page and ther
 the most usable rows: nav at `(83,111)`, controls at `x=552` from `y=158`, stepping 28. Twenty rows
 end at `y=690` on a 768px page.
 
-### The three decoration layers, and why the package is named `UI\fcse.mgb`
+### The two decoration layers, and why the package is named `UI\fcse.mgb`
 
-Three `Image` elements provide the page's paper, its smudge and its frame, in draw order:
+Two `Image` elements provide the page's paper and its frame, in draw order:
 
 | Element | Material | Texture |
 |---|---|---|
 | `#F0CC8C29` (Normal blend) | `notebook` | `\textures\hud\notebook.png` |
-| `jackal_track` (Multiply blend, 30%) | `jackal_track` | `\textures\common\jackal_track.png` |
 | `#E82DE1C0` (Modulate blend) | `frame_color_scratch` | `\textures\common\frame_color_scratch.png` |
+
+A third, `jackal_track` (`\textures\common\jackal_track.png`, Multiply at 30%), used to sit at
+`713,373`–`969,629` — the right-hand side of the page. It was removed: it decorated the space the
+settings rows do not use, and the page reads better without it. `materialExtra` went 4 → 3 with it,
+since that is the count of distinct texture paths.
 
 Unlike the chrome *areas*, these reference **materials**. The shipped options pages reach across to
 `\common.mgb` for them, which does not resolve from a package the engine did not ship — but that is

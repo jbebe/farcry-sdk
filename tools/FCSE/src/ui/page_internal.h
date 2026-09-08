@@ -54,13 +54,14 @@ const wchar_t* NoText();
 
 bool SafeAddButton(void* thisPtr, const wchar_t* label, void* handler, DWORD* outCode);
 bool SafeAddBoolSetting(void* page, const wchar_t* label, const char* slotParam,
-                        const wchar_t* yesText, const wchar_t* noText, void** outSetting,
-                        DWORD* outCode);
+                        const wchar_t* yesText, const wchar_t* noText, bool enabled,
+                        void** outSetting, DWORD* outCode);
 bool SafeAddValueListSetting(void* page, const wchar_t* label, const char* slotParam,
                              unsigned count, const wchar_t* const* itemLabels,
-                             const unsigned* itemValues, void** outSetting, DWORD* outCode);
+                             const unsigned* itemValues, bool enabled, void** outSetting,
+                             DWORD* outCode);
 bool SafeAddSliderSetting(void* page, const wchar_t* label, const char* slotParam, int minValue,
-                          int maxValue, void** outSetting, DWORD* outCode);
+                          int maxValue, bool enabled, void** outSetting, DWORD* outCode);
 bool SafeSetElementVisible(void* element, bool visible, DWORD* outCode);
 bool SafeGetUserDataElement(void* userData, const NarrowString* name, void** outElement,
                             DWORD* outCode);
@@ -149,6 +150,10 @@ void RedisplayContent(void* page);
 // Points this page's row list at FCSE's own copy of magma::ListBox's vtable, so a press past the
 // last row scrolls instead of stopping. A no-op once done, and on a build where scrolling is off.
 void TakeOverRowList(void* page);
+
+// Marks a built row disabled: greyed, and refused by SetSelection so the player cannot land on it.
+// For rows added through AddButton, which - unlike Add*Setting - has no enabled parameter.
+void DisableRowItem(void* page, size_t line);
 
 // Copies `slots` pointers from an engine class vtable into `out`, which the caller then overwrites
 // the slots it owns in. `what` names the table in the log if a read faults.
