@@ -387,21 +387,34 @@ ghost camera**. The only camera-adjacent entries are `set_debug_fov`, the six
 `gfx_UpdateCullingCamera`/`gfx_UpdateRenderCamera` — culling-freeze toggles for inspecting what the
 renderer culls, not a camera you can fly.
 
-The practical conclusion: retail has the camera *classes*, the shipped input maps still bind keys to
-them, and the console can reach 416 commands — and not one of those three routes reaches a free-fly
-camera in the shipped PC build. Free-fly remains an editor-only capability, as
-[editor API surface](./editor-api-surface.md) describes.
+So none of those three routes reaches a free-fly camera. Everything above stays true, and the
+conclusion this page used to draw from it — that free-fly is editor-only — does not follow, because
+all three routes were searched in the wrong place.
 
-The one untested route left is a Domino box. `SwitchCamera` fails from the console only because it
-needs a script context, and a Domino box runs inside one — so a custom graph calling
-`SwitchCamera("Cameras.Camera.Editor")` is the remaining lead. None of the 117 shipped `domino_*`
-commands does anything camera-related, so this would mean authoring a graph, not triggering one.
+:::info[Corrected — free-fly is reachable, from code]
+`Cameras.Camera.Free` **is not a string in either shipped `Dunia.dll`**, which is exactly why the
+survey above missed it: `.First`, `.Editor` and `.Spectator` turned up in a string scan and it did
+not. It is an **entity-library archetype, loaded from game data**, and
+`CCameraManager::SetActiveCameraByName` matches it case-insensitively against what the data set
+carries rather than against anything in the binary.
+
+Calling that function directly with the name activates the camera, in the retail PC build, with no
+editor and no script context. DevTools' Freecam option does this — see
+[the free camera and noclip](./free-camera-and-noclip.md). Two consequences of it being data:
+a heavily modded data set can simply not carry the archetype, and the switch **reports nothing**
+either way, so the only test that it worked is that the active camera changed.
+:::
+
+The lesson generalises beyond cameras: a capability absent from the binary's strings and from the
+command dump may still be reachable, because the name it answers to can live in the data. A Domino
+box calling `SwitchCamera("Cameras.Camera.Editor")` remains an untried route to the *editor* camera
+specifically, but it is no longer the only lead for free-fly.
 
 ## Unknowns
 
-- Whether any route reaches the free/ghost camera in the retail PC build. `SwitchCamera` is ruled
-  out from the console (it needs a script context); whether a Domino box, which *does* run inside
-  one, can drive it is untested.
+- Whether the *ghost* camera can be activated the same way the free camera can. `SwitchCamera` stays
+  ruled out from the console, and whether a Domino box can drive it is still untested — but neither
+  is needed for free-fly any more.
 - The working range for `Game:SetHealth`. The handler reads a float defaulting to `1.0f`, which
   implies a 0.0–1.0 fraction, yet `0.5` still kills. The value is passed on with two `0xffffffff`
   sentinels and a constant hash (`0x59f2984f`), suggesting it routes through the stim/damage system
