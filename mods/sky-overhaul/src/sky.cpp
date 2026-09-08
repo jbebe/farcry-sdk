@@ -44,6 +44,13 @@ namespace {
     float g_haze = 1.0f;
     float g_brightness = 1.0f;
 
+    // What went into the model last and what came out of it, kept for the heartbeat. After dark
+    // these are the numbers that say whether the sky is dark because the air really is unlit or
+    // because the model has nothing left to stand on.
+    float g_lastNight = 0.0f;
+    float g_lastStorm = 0.0f;
+    float g_lastHorizon[3] = {0.0f, 0.0f, 0.0f};
+
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
     IDirect3DPixelShader9* g_pixelShader = nullptr;
@@ -135,6 +142,12 @@ namespace {
                                         awayColour);
         SkyOverhaul::FogTint::SetHorizon(towardColour, awayColour);
 
+        g_lastNight = lighting.night;
+        g_lastStorm = lighting.storm;
+        for (size_t i = 0; i < 3; i++) {
+            g_lastHorizon[i] = towardColour[i];
+        }
+
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
@@ -171,8 +184,10 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
     g_sinceHeartbeat = 0.0f;
     // Counts that stand still are the two ways this fails without anything else saying so: a dome
     // that stopped being recognised, and a fog colour that is never being reached.
-    Logf("sky f%u: %u domes replaced, %u fog uploads retinted", pass.frame,
-         DomeDraw::SubstituteCount(), FogTint::TintCount());
+    Logf("sky f%u: %u domes replaced, %u fog uploads retinted | night %.2f storm %.2f | "
+         "horizon (%.4f %.4f %.4f)",
+         pass.frame, DomeDraw::SubstituteCount(), FogTint::TintCount(), g_lastNight, g_lastStorm,
+         g_lastHorizon[0], g_lastHorizon[1], g_lastHorizon[2]);
 }
 
 void SkyOverhaul::Sky::ReleaseDeviceObjects() {
