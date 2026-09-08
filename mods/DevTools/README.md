@@ -18,9 +18,13 @@ Applied unconditionally, with no setting.
 
 ## Options
 
-One row each in the Mod Configuration Menu, saved under `[DevTools]` in `bin\fcse.ini`. **Every one
-defaults to leaving the game exactly as it shipped**, so installing DevTools applies its fix and
-changes nothing else.
+One row each in the Mod Configuration Menu, saved under `[DevTools]` in `bin\fcse.ini`. FCSE owns
+the stored value, so whatever you set survives a relaunch.
+
+**Four are on out of the box** — the developer console, the FPS readout, the startup skip and the
+free camera on `F2` — because they are what the plugin is installed for. **Everything that changes
+how the game plays is off**: god mode, infinite ammo, unlocked weapons and diamonds. So installing
+DevTools opens the game up without altering a playthrough until you ask it to.
 
 **Developer console**, off by default, lifts the `ConsoleDeveloperOnly` filter from Far Cry 2's own
 console, which opens on `~` whether DevTools is installed or not. About 57 commands — `load_level`, `set_health`,
@@ -31,6 +35,90 @@ multiplayer-only and editor-only commands out of a single-player console still a
 none of this is needed to *script* the game — a `#` prefix already runs arbitrary Lua past every
 filter — so this is about making the built-in commands reachable by name. See
 [the developer console](../../docs/docs/engine-internals/developer-console.md).
+
+**Invincibility**, off by default, is three things rather than one. The `cheat_GodMode` profile flag,
+re-applied every frame because a profile reload puts the file's value back. A health floor, because
+that flag stops damage but never lifts a player who is already hurt back above the health-failure
+threshold — the floor tops the counter back up through the engine's own `SetToMax`, and leaves alone
+the three states that park the player below the threshold on purpose, so a scripted failure and a
+buddy rescue still play out. And vehicles, which the flag reaches not at all: both damage entry
+points on the physics component are hooked, for the vehicle the player is actually in. Drowning and
+scripted destruction stay lethal.
+
+**Infinite ammo**, off by default, sets the `cheat_UnlimitedAmmo` profile flag — and then puts the
+syringe back. Magazines and consumables come out of one shared decrementer that returns early while
+that flag is set, so unlimited ammo silently makes healing free and removes the malaria economy the
+campaign is built on. The three call sites that spend a syringe are identified by their return
+address and the flag is cleared around that one call. This corrects the `cheat_UnlimitedAmmo`
+catalog row too, which reaches the same flag by a different road.
+
+**Unlock all weapons**, off by default. The `cheat_AllWeaponsUnlock` flag bypasses the per-weapon
+unlock list, which is why its catalog row can only promise the weapons the current map offers; the
+two act-tag comparisons in `CWeaponBazaar::IsWeaponUnlocked` are what actually hold the rest back.
+Both are patched while this is on, so the bazaar stocks every act.
+
+**Diamonds**, `0` by default, is a target rather than a gift. `Cheat_AddDiamonds` adds a number and
+that is the end of it — the diamonds are real, they go into the next save, and a test run funded that
+way has rewritten the profile it ran on. This tops the wallet up to the setting every frame and
+remembers the shortfall as a grant: spending comes off the grant first, lowering the setting hands
+back only what is above it, and a save is written with the grant subtracted out. Set it to zero and
+the grant is handed back.
+
+**Noclip key** and **Freecam key**, both `Off` by default, are two ways to leave the ground, and only
+one can be up at a time. Neither is reachable from the console — see
+[the free camera and noclip](../../docs/docs/engine-internals/free-camera-and-noclip.md).
+
+**FPS counter**, off by default, writes the global behind the `showFps` console variable directly.
+The catalog row does the same thing, but does not survive a restart and cannot be used before the
+console registers the variable; this is delivered at load, so the readout is up for the loading
+screen too.
+
+**Skip system detection**, off by default, cuts the hardware probe out of startup. `systemdetection.dll`
+spins up WMI to enumerate the hardware and DxDiag to enumerate the display before the menu appears,
+and both are worth seconds on every launch. WMI is refused outright and DxDiag is proxied and cached,
+by redirecting one import in that one module. **This is the only option here that can crash on some
+machines**, which is why it is in DevTools rather than UFCP: seconds off a hundred relaunches is
+worth a risk no player should be asked to take.
+
+The probe runs once and early, before the menu, so switching this on has no effect on the launch you
+are in — it is saved and applies to the next one. The log says as much.
+
+## Camera modes
+
+Two ways to fly, bound from the Mod Configuration Menu and off until you bind them. Only one can be
+up at a time, and picking a key the other mode already holds leaves the one you just set unbound —
+one key toggling between both would leave no way back to the game. The log says when that happens.
+
+**Noclip** detaches the player: physics off, so no collision and no gravity, and the body flown
+directly. The view stays on the head, so it is still the player's camera and the HUD is still up,
+which is what makes it useful for walking a level rather than photographing one. The pause menu,
+quicksave and quickload are refused while it is up — saving a position the player could not have
+reached ends badly.
+
+**Freecam** leaves the player standing and detaches only the view, which is the one to use when the
+thing you want to look at is the player, or a firefight that has to keep happening while you watch.
+It activates a free camera the shipped game still carries and never uses. That camera is
+entity-library data rather than code, so a heavily modded data set can simply not have it; if so the
+log says as much.
+
+| | |
+|---|---|
+| `W` `A` `S` `D` | move |
+| `Space` / `Left Ctrl` | up / down |
+| mouse | steer |
+| arrow keys | steer, freecam only |
+| `Left Shift` / `Left Alt` | cycle speed up / down, ten steps, wrapping back to normal |
+
+Noclip's speed tops out lower than the free camera's, because the world still has to stream in
+around a body that is really there.
+
+## These and the `cheat_*` commands
+
+Five of the options above overlap a row in the command catalog — `cheat_GodMode`,
+`cheat_UnlimitedAmmo`, `cheat_AllWeaponsUnlock`, `Cheat_AddDiamonds` and `showFps`. The rows stay,
+because they are the game's own commands and cost nothing to keep, but each option above does
+strictly more than the row it overlaps, and the reasons are in each entry. If you want the shipped
+behaviour, the row is still there.
 
 ## Command API
 
@@ -56,10 +144,16 @@ them. Which ones, and how each verdict was reached, is in
 
 ## Overlay
 
-**Home** opens it, in game or in a menu. The catalog on screen: search, filter by category, an
-argument box or a pair of buttons depending on what the command takes, and a note on hover for the
-ones with something to warn about. Running one queues it for the engine's next frame, so the click
-and the command are never on the same thread as each other.
+**Home** opens it, in game or in a menu. The command catalog on screen, split across a tab per
+category — `All` first, then `Cheats`, `Player`, `Camera` and the rest — with an argument box or a
+pair of buttons depending on what each command takes, and a note on hover for the ones with something
+to warn about. There are more categories than fit across the window, so the tabs scroll and the small
+button at their left end lists them all. Running a command queues it for the engine's next frame, so
+the click and the command are never on the same thread as each other.
+
+The options above are not here: they live in the Mod Configuration Menu because that is what saves
+them. FCSE owns a setting's stored value and offers no way to write one back, so a switch in the
+overlay could change the running game but never the file.
 
 While it is open the game cannot see your mouse or keyboard, so clicking a button does not also fire
 your weapon. Press Home again and input goes straight back.

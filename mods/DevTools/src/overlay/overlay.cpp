@@ -57,7 +57,7 @@ namespace {
     std::vector<std::string> g_arguments;
     std::deque<std::string> g_history;
 
-    ImGuiTextFilter g_search;
+    // Which category tab is open, as an index into the labels below. 0 is "All".
     int g_category = 0;
     std::vector<const char*> g_categories;
 
@@ -196,11 +196,9 @@ namespace {
         return true;
     }
 
+    // Category 0 is "All".
     bool Matches(const Command& command) {
-        if (g_category > 0 && std::strcmp(command.category, g_categories[g_category]) != 0) {
-            return false;
-        }
-        return g_search.PassFilter(command.name) || g_search.PassFilter(command.id);
+        return g_category == 0 || std::strcmp(command.category, g_categories[g_category]) == 0;
     }
 
     void Send(const Command& command, const char* argument) {
@@ -260,6 +258,29 @@ namespace {
         ImGui::PopID();
     }
 
+    // Leaves room under the table for the history, which stays put while the categories change.
+    void DrawCommandTable() {
+        const float historyHeight = ImGui::GetTextLineHeightWithSpacing() * 6.0f;
+        if (!ImGui::BeginTable("commands", 3,
+                               ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg |
+                                   ImGuiTableFlags_BordersInnerH,
+                               ImVec2(0.0f, -historyHeight))) {
+            return;
+        }
+
+        ImGui::TableSetupColumn("Command", ImGuiTableColumnFlags_WidthFixed, 240.0f);
+        ImGui::TableSetupColumn("Argument", ImGuiTableColumnFlags_WidthStretch);
+        ImGui::TableSetupColumn("##run", ImGuiTableColumnFlags_WidthFixed, 48.0f);
+
+        const std::span<const Command> all = DevTools::Commands::All();
+        for (size_t index = 0; index < all.size(); ++index) {
+            if (Matches(all[index])) {
+                DrawCommandRow(all[index], index);
+            }
+        }
+        ImGui::EndTable();
+    }
+
     void DrawWindow() {
         bool open = true;
         ImGui::SetNextWindowSize(ImVec2(720.0f, 520.0f), ImGuiCond_FirstUseEver);
@@ -276,30 +297,18 @@ namespace {
             return;
         }
 
-        g_search.Draw("##search", 240.0f);
-        ImGui::SameLine();
-        ImGui::SetNextItemWidth(180.0f);
-        ImGui::Combo("##category", &g_category, g_categories.data(),
-                     static_cast<int>(g_categories.size()));
-        ImGui::SameLine();
-        ImGui::TextDisabled("%zu commands", DevTools::Commands::All().size());
-
-        const float historyHeight = ImGui::GetTextLineHeightWithSpacing() * 6.0f;
-        if (ImGui::BeginTable("commands", 3,
-                              ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg |
-                                  ImGuiTableFlags_BordersInnerH,
-                              ImVec2(0.0f, -historyHeight))) {
-            ImGui::TableSetupColumn("Command", ImGuiTableColumnFlags_WidthFixed, 240.0f);
-            ImGui::TableSetupColumn("Argument", ImGuiTableColumnFlags_WidthStretch);
-            ImGui::TableSetupColumn("##run", ImGuiTableColumnFlags_WidthFixed, 48.0f);
-
-            const std::span<const Command> all = DevTools::Commands::All();
-            for (size_t index = 0; index < all.size(); ++index) {
-                if (Matches(all[index])) {
-                    DrawCommandRow(all[index], index);
+        // Sixteen categories will not fit across the window, so they scroll rather than shrink, and
+        // the popup button is the way to reach one that has scrolled off.
+        if (ImGui::BeginTabBar("categories", ImGuiTabBarFlags_FittingPolicyScroll |
+                                                 ImGuiTabBarFlags_TabListPopupButton)) {
+            for (size_t category = 0; category < g_categories.size(); ++category) {
+                if (ImGui::BeginTabItem(g_categories[category])) {
+                    g_category = static_cast<int>(category);
+                    DrawCommandTable();
+                    ImGui::EndTabItem();
                 }
             }
-            ImGui::EndTable();
+            ImGui::EndTabBar();
         }
 
         ImGui::Separator();

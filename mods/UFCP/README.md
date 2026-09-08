@@ -20,6 +20,10 @@ Applied unconditionally, with no setting — a fix that needs a switch is a pref
 | Predecessor tapes | Restores the seven Intel Bonus predecessor missions, which ship in the game files but are held behind an ownership check no longer able to succeed. |
 | Machetes | Restores the Primitive and Homemade machete variants, held behind the same kind of check. Pick one in the game's own Options → Game → Machete Type. |
 | Exit crash | Quitting through Exit Game faulted instead of closing cleanly — the reason "Far Cry 2 crashes on exit" is folklore, and a guaranteed false positive on top of any real crash you are trying to read. |
+| Mouse speed cap | A fast flick turned the view less far than a slow one: the gamepad filter's output ceiling was applied to the mouse too, so quick movement saturated. |
+| Controller vibration | No pad ever rumbled on PC. The curves are evaluated and the dispatcher calls XInput — the two motor amplitudes were simply pushed as zeroes. |
+| High-precision timer | Loading screens ran far below the 30 FPS they are paced for, because the default 15.6 ms timer resolution overshoots every sleep. |
+| CPU and GPU utilisation | The job pool was sized for two-core machines, idle workers spun in the queue's critical section, the GPU could never run ahead a frame, and with a frame cap set the limiter burned a whole core busy-waiting. |
 
 The two restorations are not a bypass of anything anyone can still buy. Both were Ubisoft promotions
 that ended; the Steam build asks a retired Uplay privileges service and the GOG build reads a
@@ -29,20 +33,58 @@ content is unreachable in every copy of the game.
 ## Options
 
 Preferences, where the right answer depends on the player or their hardware. One row each in the Mod
-Configuration Menu, saved under `[UFCP]` in `bin\fcse.ini`. **Every one defaults to leaving the game
-exactly as it shipped**, so installing UFCP applies its fixes and changes nothing else.
+Configuration Menu, saved under `[UFCP]` in `bin\fcse.ini`. **All but three default to leaving the
+game exactly as it shipped.** The exceptions are skip intro, skip title screen and a 60 Hz frame
+cap, which are on out of the box because they are what someone installing a patch is asking for —
+each is one row away from the stock behaviour if you disagree.
 
 | Option | Range | Default |
 |---|---|---|
-| Field of view | 65–120 degrees | **75** — the game's own value, at which the feature disables itself entirely |
+| Field of view | 65–120 degrees | **75** — the game's own |
+| Viewmodel field of view | 45–140 degrees | **75** — the game's own |
+| Ironsight field of view | 0–140 degrees | **0** — the weapon's own |
+| Vehicle field of view | 0–140 degrees | **0** — the vehicle's own |
+| Mouse look sensitivity | 0.10×–5.00× | **1.00×** |
+| Controller look sensitivity | 0.05×–2.00× | **1.00×** |
+| Controller aim assist | on · off | **on** — the game's own helpers |
+| Aim toggle | on · off | **off** |
+| Controller aim toggle | on · off | **off** |
+| Sprint toggle | on · off | **off** |
+| Full turn rate while sprinting | on · off | **off** |
+| Skip intro videos | on · off | **on** |
+| Skip title screen | on · off | **on** |
+| Maximum frame rate | Game default · Unlocked · Screen refresh · 30–240 Hz | **60 Hz** |
+| Display mode | Game default · Borderless | **Game default** |
 | Processor affinity | All cores · Physical cores only · 4 cores · 1 core | **All cores** |
 
-**Field of view** substitutes the argument to `CCameraComponent`'s `fFOV` property setter. That
-property is set when a camera entity is created, so a change reaches the world on the next load
-rather than instantly, and it applies to every camera that sets `fFOV` — there is no separate
-"player camera" property to target. That is why 75 means "leave the engine alone" rather than "force
-75 everywhere". Past about 120 the first-person weapon models distort and the near plane clips,
-which is where the ceiling comes from.
+**Field of view** is not one number. The base setting substitutes the argument to
+`CCameraComponent`'s `fFOV` property setter, but a wider view alone breaks things around it, so
+fifteen further sites exist only to keep it honest: the weapon and arms draw in a nearer pass with
+their own projection, ladders and cutscenes frame shots a wide view spoils, the hang glider's own
+angle wins, muzzle particles are split between the two passes and come apart once the two
+projections differ, and the map's markers change pass inside a vehicle. Sights keep their own value
+unless the ironsight row is moved, and magnified optics are skipped entirely so scopes keep their
+zoom.
+
+**The two sensitivity rows** scale the value the game already loaded, so the in-game slider is left
+alone and either device can go past its ceiling. Which one applies follows what the player is
+actually looking with: pushing the right stick past the engine's dead zone claims the look, and any
+mouse or keyboard input hands it back.
+
+**Aim and sprint toggle** turn a tap into a latch by suppressing the button-up the engine would act
+on. A press longer than a quarter second still behaves exactly as it always did, tapping sprint
+while standing still cannot arm a run that never starts, and a latch is dropped when the action
+leaves the map — which is what brings the sights down on entering a vehicle.
+
+**Maximum frame rate** uses the engine's own limiter, `gfx_MaxFps`. It is set on the command line at
+launch and written into the render profile afterwards, which is what lets a change made from the
+menu take effect without a restart.
+
+**Display mode** asks the engine for `-borderless`, a flag it already understands, so it applies on
+the next launch. Fullscreen and windowed are on the game's own video page already.
+
+**Full turn rate while sprinting** is a preference rather than a fix: the yaw slowdown is an
+authored value the console builds have too.
 
 **Processor affinity** is a workaround, not a fix: the engine misbehaves on machines far larger than
 anything it was tested on (the reported symptom is NPCs visibly bouncing), and giving it a smaller
@@ -95,6 +137,43 @@ Options is opened, so no ordinary FCSE run avoids it, and an unmodded `FarCry2.e
 because the engine swallows the access violation itself and exits 0, leaving no Windows error
 record. Disabling `MagmaPackage::Load()` in a throwaway FCSE build settled it in one run: with the
 package never loaded, the guard still skipped a destroyed object.
+
+## Credits and licences
+
+Most of the input, field-of-view, startup and utilisation work here is ported from
+[FC2JackalFix](../../tools/third-party/FC2JackalFix) by Joshhhuaaa and TGP482, which found every one
+of those sites and documented them unusually well. Each ported file names the module it came from.
+FC2JackalFix's own field-of-view work credits FoxAhead's
+[Far Cry 2 Multi Fixer](https://github.com/FoxAhead/Far-Cry-2-Multi-Fixer) for the original `fFOV`
+substitution, as does `src/options/fov.cpp` here.
+
+Those files are covered by FC2JackalFix's licence, reproduced in full:
+
+```
+MIT License
+
+Copyright (c) 2026 Joshhhuaaa, TGP482
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+```
+
+The Jackal tapes, bonus content, exit teardown and processor affinity work is this repository's own.
 
 ## How a feature finds the code it patches
 

@@ -32,6 +32,8 @@
 // those too and IsLive does not walk them.
 #include "fcse_api.h"
 
+#include "engine/memory_probe.h"
+
 #include <cstdint>
 #include <cstdio>
 
@@ -50,32 +52,15 @@ namespace {
     // destroyed twice is the one thing a real fix would need, and this is where it surfaces.
     enum class Decay { Live, Unmapped, NoVtable, NoDestructor };
 
-    bool IsReadable(const void* address, SIZE_T size) {
-        MEMORY_BASIC_INFORMATION region;
-        if (VirtualQuery(address, &region, sizeof(region)) != sizeof(region)) {
-            return false;
-        }
-        if (region.State != MEM_COMMIT || (region.Protect & (PAGE_NOACCESS | PAGE_GUARD)) != 0) {
-            return false;
-        }
-
-        const auto start = static_cast<const uint8_t*>(address);
-        const auto regionEnd = static_cast<const uint8_t*>(region.BaseAddress) + region.RegionSize;
-        return start + size <= regionEnd;
-    }
-
-    // Never cache the region across calls. This fix exists because pages are decommitted and reused
-    // between them, so a remembered answer is exactly the stale one that must not be trusted.
-    //
     // The teardown reads the object's vector at +0x28, then calls the destructor in vtable slot
     // +0x0C. Both have to be there for any of it to mean anything.
     Decay Inspect(const void* object, const void* const** vtableOut) {
-        if (!IsReadable(object, 0x30)) {
+        if (!UFCP::IsReadable(object, 0x30)) {
             return Decay::Unmapped;
         }
 
         const void* const* vtable = *static_cast<const void* const* const*>(object);
-        if (vtable == nullptr || !IsReadable(vtable, 0x10)) {
+        if (vtable == nullptr || !UFCP::IsReadable(vtable, 0x10)) {
             return Decay::NoVtable;
         }
 

@@ -61,6 +61,8 @@ namespace {
         {FCSE::Relocation<uint8_t*>{FCSE::Pattern("80 7D 68 00 8D 7E 28 75 06 80 7F 40 00")}, 7},
     };
 
+    bool g_enabled = false;
+
     // Writes `opcode` over every gate, and reports whether all of them took it.
     bool WriteGates(uint8_t opcode) {
         const FCSE_PluginAPI* api = FCSE::ApiPointer();
@@ -75,10 +77,17 @@ namespace {
     }
 }
 
-void __cdecl OnDeveloperConsoleChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
+int GetDeveloperConsole() { return g_enabled ? 1 : 0; }
+
+void SetDeveloperConsole(int value) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
-    const bool enable = value->asCheckbox;
+    const bool enable = value != 0;
+    if (enable == g_enabled) {
+        return;
+    }
+
+    g_enabled = enable;
     const bool everyGate = WriteGates(enable ? kJmp : kJnz);
 
     // Disabling with a gate unresolved needs no warning: one that never resolved was never patched.

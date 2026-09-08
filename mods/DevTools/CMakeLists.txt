@@ -57,18 +57,35 @@ target_include_directories(imgui PUBLIC "${imgui_SOURCE_DIR}" "${imgui_SOURCE_DI
 add_library(DevTools SHARED
   "src/main.cpp"
   "src/commands/catalog.cpp"
+  "src/engine/camera.cpp"
   "src/engine/console.cpp"
+  "src/engine/debug_camera.cpp"
+  "src/engine/entity.cpp"
+  "src/engine/game_profile.cpp"
   "src/engine/game_thread.cpp"
   "src/engine/input.cpp"
+  "src/engine/keys.cpp"
+  "src/engine/pawn_tick.cpp"
+  "src/engine/player.cpp"
   "src/engine/renderer.cpp"
   "src/fixes/load_savegame.cpp"
   "src/options/developer_console.cpp"
+  "src/options/diamonds.cpp"
+  "src/options/fps_counter.cpp"
+  "src/options/freecam.cpp"
+  "src/options/infinite_ammo.cpp"
+  "src/options/invincibility.cpp"
+  "src/options/noclip.cpp"
+  "src/options/options.cpp"
+  "src/options/skip_system_detection.cpp"
+  "src/options/unlock_all_weapons.cpp"
   "src/overlay/overlay.cpp"
 )
 
 # d3d9 for the overlay's own device handling, dinput8 for taking the mouse and keyboard off the game
 # while the overlay is up. Both ship with the Windows SDK; the legacy DirectX SDK is not needed.
-target_link_libraries(DevTools PRIVATE imgui d3d9 dinput8 dxguid)
+# ole32 is for the one CoInitializeEx call that holds dxdiagn.dll loaded under the cached provider.
+target_link_libraries(DevTools PRIVATE imgui d3d9 dinput8 dxguid ole32)
 
 # src/ on the path so every #include reads from the root of this tree rather than relative to the
 # including file, and moving a file between folders does not rewrite anyone's includes.

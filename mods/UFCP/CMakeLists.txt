@@ -33,12 +33,31 @@ endif()
 
 add_library(UFCP SHARED
   "src/main.cpp"
+  "src/engine/command_line.cpp"
+  "src/engine/input_device.cpp"
+  "src/engine/memory_probe.cpp"
+  "src/engine/toggle_patch.cpp"
   "src/fixes/jackal_tapes.cpp"
   "src/fixes/bonus_content.cpp"
   "src/fixes/exit_teardown.cpp"
-  "src/options/fov.cpp"
+  "src/fixes/high_precision_timer.cpp"
+  "src/fixes/mouse_speed_cap.cpp"
+  "src/fixes/utilisation.cpp"
+  "src/fixes/vibration.cpp"
+  "src/options/aim_assist.cpp"
   "src/options/affinity.cpp"
+  "src/options/display_mode.cpp"
+  "src/options/fov.cpp"
+  "src/options/input_toggles.cpp"
+  "src/options/look_sensitivity.cpp"
+  "src/options/max_frame_rate.cpp"
+  "src/options/skip_intro.cpp"
+  "src/options/skip_title_screen.cpp"
+  "src/options/sprint_turn.cpp"
 )
+
+# timeBeginPeriod, for the loading screen's frame pacing.
+target_link_libraries(UFCP PRIVATE winmm)
 
 # src/ on the path so every #include reads from the root of this tree - "fixes/fixes.h", never
 # "../fixes/fixes.h" - and moving a file between folders does not rewrite anyone's includes.
