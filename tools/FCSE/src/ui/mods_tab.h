@@ -13,11 +13,10 @@ namespace FCSE {
 
 class ModsTab {
 public:
-    // Installs the hook via HookManager::Hook. Call once, after Dunia.dll is resolved and
-    // HookManager::Initialize() has run, any time before RunGame() (the hooked function only
-    // actually runs later, whenever the player first opens the Options screen). Logs and returns
-    // false if the hook can't be installed; the game still runs normally either way, just without a
-    // "Mods" tab.
+    // Installs the hook via HookManager::Hook. Call once, after Dunia.dll is resolved, any time
+    // before RunGame() (the hooked function only actually runs later, whenever the player first
+    // opens the Options screen). Logs and returns false if the hook can't be installed; the game
+    // still runs normally either way, just without a "Mods" tab.
     static bool Install();
 };
 

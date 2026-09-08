@@ -196,8 +196,7 @@ check("midhook rejects a non-function handler", function()
   assert(not pcall(fcse.midhook, 0x10001005, 42))
 end)
 
--- The same numbers hook.cpp static_asserts against safetyhook's Context32 (172 bytes of fields,
--- rounded up to the 8-byte alignment the uint64_t in fcse_xmm imposes).
+-- The same layout hook.cpp static_asserts against safetyhook's Context32.
 check("midhook context matches the loader's layout", function()
   assert(ffi.sizeof('fcse_midhook_context') == 176)
   assert(ffi.offsetof('fcse_midhook_context', 'eflags') == 128)

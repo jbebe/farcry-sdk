@@ -52,10 +52,9 @@ if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
 endif()
 
 include(FetchContent)
-# safetyhook's amalgamated release rather than its git repo: four source files and no CMakeLists.txt,
-# so MakeAvailable populates and stops instead of adding a foreign project to the build. The explicit
-# timestamp option silences a CMP0135 warning that would otherwise reach stderr, which is fatal
-# under build.ps1 (see the note in cmake/luajit.cmake).
+# safetyhook's amalgamated release rather than its git repo: it ships no CMakeLists.txt, so
+# MakeAvailable populates and stops instead of adding a foreign project to the build.
+# DOWNLOAD_EXTRACT_TIMESTAMP silences a CMP0135 warning on stderr, which build.ps1 treats as fatal.
 FetchContent_Declare(
   safetyhook
   URL      https://github.com/cursey/safetyhook/releases/download/v0.7.0/safetyhook-amalgamated-zydis.zip
@@ -69,6 +68,7 @@ add_library(safetyhook STATIC
   "${safetyhook_SOURCE_DIR}/Zydis.c"
 )
 target_include_directories(safetyhook PUBLIC "${safetyhook_SOURCE_DIR}")
+# std::expected in safetyhook's headers. PUBLIC, so linking it is what puts FCSE on C++23 too.
 target_compile_features(safetyhook PUBLIC cxx_std_23)
 
 # LuaJIT - the interpreter behind the Lua mods in bin\plugins\. Kept in its own module because, unlike safetyhook, it
@@ -305,9 +305,6 @@ set_target_properties(FCSE PROPERTIES OUTPUT_NAME "FCSE")
 # The whole point of this loader per docs/docs/todos.md's "Tools/dll plugins" entry: enough
 # simultaneously-loaded plugins can otherwise run a 32-bit process out of address space.
 target_link_options(FCSE PRIVATE "/LARGEADDRESSAWARE")
-
-# C++23 for std::expected in safetyhook's headers; fcse_core and the tests stay on 20.
-set_property(TARGET FCSE PROPERTY CXX_STANDARD 23)
 
 add_subdirectory(example_plugin)
 

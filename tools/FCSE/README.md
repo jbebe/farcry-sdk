@@ -206,8 +206,8 @@ logging both plugin names - loud and debuggable instead of silently misbehaving:
 
 - `AddFunctionCB`: `src/api/function_registry.cpp` tracks name → owning module, independent of (and
   in addition to) `Dunia.dll`'s own silent no-op.
-- `Hook`/`MidHook`: `src/api/hook.cpp` tracks target address → owning module, and rejects a new
-  hook within 5 bytes of an existing one - both kinds write a 5-byte jump at their target.
+- `Hook`/`MidHook`: `src/api/hook.cpp` tracks the byte range each hook displaced → owning module,
+  and rejects a new hook whose own jump would overlap one.
 - `Patch`: `src/api/patch.cpp` tracks claimed `(address, size)` ranges; a new claim overlapping a
   *different* module's existing claim is rejected. Overlap with your own earlier claim is fine.
 

@@ -85,8 +85,8 @@ typedef void (*FCSE_AddFunctionCBFn)(void* fn, const char* name);
 // Detours `target` to `detour`. On success, `*original` receives a callable trampoline that runs
 // the original function's overwritten prologue before jumping back into the rest of the original
 // function - call through it to preserve original behavior around your hook. Returns false (and
-// logs why) if `target` is null, its first instructions cannot be relocated, or another plugin
-// already owns a hook within 5 bytes of it - FCSE does not chain hooks, first claimant wins.
+// logs why) if `target` is null, its first instructions cannot be relocated, or another plugin's
+// hook already displaced the bytes there - FCSE does not chain hooks, first claimant wins.
 typedef bool (*FCSE_HookFn)(void* target, void* detour, void** original);
 
 typedef union FCSE_Xmm {
@@ -98,7 +98,8 @@ typedef union FCSE_Xmm {
     double f64[2];
 } FCSE_Xmm;
 
-// The registers at the moment a mid-hook fires. Same layout as safetyhook's Context32.
+// The registers at the moment a mid-hook fires. `trampoline_esp` is the stack of the relocated
+// instructions, the one seat from which `esp` can be changed at all.
 typedef struct FCSE_MidHookContext {
     FCSE_Xmm xmm0, xmm1, xmm2, xmm3, xmm4, xmm5, xmm6, xmm7;
     uintptr_t eflags, edi, esi, edx, ecx, ebx, eax, ebp, esp, trampoline_esp, eip;
@@ -110,7 +111,7 @@ typedef void (*FCSE_MidHookHandler)(FCSE_MidHookContext* ctx);
 // in `ctx`. Writes to the general registers and eflags take effect when the instruction resumes;
 // `esp` is read-only, `eip` is where execution continues. `target` is any instruction boundary,
 // found with FindPattern (the address library only knows function starts). Same first-claimant
-// rule as Hook; a mid-hook inside a prologue another hook already displaced never fires.
+// rule as Hook, over the same displaced byte ranges.
 typedef bool (*FCSE_MidHookFn)(void* target, FCSE_MidHookHandler handler);
 
 // Overwrites `size` bytes at `address` with `data` (handles the VirtualProtect dance so `address`
@@ -288,7 +289,7 @@ typedef struct FCSE_PluginAPI {
     // Tier 4: valid to call from FCSE_Load. See FCSE_RegisterSettingsFn above.
     FCSE_RegisterSettingsFn RegisterSettings;
 
-    // Tier 2 as well, appended in API v6: valid to call from FCSE_Load (or later).
+    // Tier 2: valid to call from FCSE_Load (or later).
     FCSE_MidHookFn MidHook;
 } FCSE_PluginAPI;
 

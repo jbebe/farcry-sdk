@@ -20,8 +20,8 @@ namespace FCSE {
 
 class TickSource {
 public:
-    // Installs the frame hook. Call after HookManager::Initialize, after Dunia is resolved, and
-    // after LuaHost::Init so there is an interpreter to tick. Returns false (logged) on failure.
+    // Installs the frame hook. Call after Dunia is resolved and after LuaHost::Init so there is an
+    // interpreter to tick. Returns false (logged) on failure.
     static bool Install();
 
     // Logs the measured frame rate once, after this many ticks, as a self-check that the hook is
