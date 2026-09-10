@@ -10,8 +10,8 @@
 #include <cstdint>
 
 namespace {
-    // Where each of the cloud shader's parameters sits inside the renderer's scene state, which
-    // the submission is handed as its sixth argument.
+    // Where each parameter read here sits inside the renderer's scene state, which the submission
+    // is handed as its sixth argument.
     constexpr size_t kStorm = 0x78;
     constexpr size_t kSunDirection = 0x148;
     constexpr size_t kSunColour = 0x160;
@@ -19,28 +19,13 @@ namespace {
     constexpr size_t kMoonDirection = 0x194;
     constexpr size_t kMoonColour = 0x1A0;
     constexpr size_t kNight = 0x1B8;
-    constexpr size_t kTimeOfDay = 0x1BC;
-    constexpr size_t kLayer1 = 0x1C8;
-    constexpr size_t kLayer1Enabled = 0x1DC;
-    constexpr size_t kWindLow = 0x1E0;
-    constexpr size_t kLayer2 = 0x1E8;
-    constexpr size_t kLayer2Enabled = 0x1FC;
-    constexpr size_t kWindHigh = 0x200;
-    constexpr size_t kDiffusePower = 0x214;
-    constexpr size_t kDiffuseColour = 0x220;
+    constexpr size_t kWind = 0x1E0;
     constexpr size_t kAmbientColour = 0x230;
-    constexpr size_t kBackPower = 0x240;
     constexpr size_t kBackSunColour = 0x250;
-    constexpr size_t kBackMoonColour = 0x260;
-    constexpr size_t kScatterSunColour = 0x270;
-    constexpr size_t kScatterMoonColour = 0x280;
-    constexpr size_t kScatterPower = 0x290;
-    constexpr size_t kScatterBias = 0x294;
 
-    // What the engine scales these two by on the way into the shader, applied here so that a
+    // What the engine scales the sun's colour by on the way into the shader, applied here so that a
     // replacement lit by the snapshot is lit by the numbers the shipped clouds saw.
     constexpr float kSunColourScale = 1.9f;
-    constexpr float kParallaxScale = 0.01f;
 
     // Twelve stack arguments, of which only the sixth is read; the rest are named to get the stack
     // shape right, since the callee cleans it. __fastcall stands in for __thiscall, which MSVC
@@ -91,14 +76,6 @@ namespace {
         }
     }
 
-    void CopyFormation(const uint8_t* state, size_t offset, float* out) {
-        const float* from = Field(state, offset);
-        out[0] = from[0];
-        out[1] = from[1];
-        out[2] = from[2];
-        out[3] = from[3] * kParallaxScale;
-    }
-
     void Read(const uint8_t* state, SkyOverhaul::CloudLayer::Lighting& out) {
         Copy3(state, kSunDirection, out.sunDirection);
         Normalise(out.sunDirection);
@@ -111,33 +88,15 @@ namespace {
             channel *= kSunColourScale;
         }
         Copy3(state, kMoonColour, out.moonColour);
-        Copy3(state, kDiffuseColour, out.diffuseColour);
         Copy3(state, kAmbientColour, out.ambientColour);
         Copy3(state, kBackSunColour, out.backSunColour);
-        Copy3(state, kBackMoonColour, out.backMoonColour);
-        Copy3(state, kScatterSunColour, out.scatterSunColour);
-        Copy3(state, kScatterMoonColour, out.scatterMoonColour);
 
-        out.diffusePower = *Field(state, kDiffusePower);
-        out.backPower = *Field(state, kBackPower);
-        out.scatterPower = *Field(state, kScatterPower);
-        out.scatterBias = *Field(state, kScatterBias);
-
-        CopyFormation(state, kLayer1, out.layer1);
-        CopyFormation(state, kLayer2, out.layer2);
-        out.layer1Enabled = state[kLayer1Enabled] != 0;
-        out.layer2Enabled = state[kLayer2Enabled] != 0;
-
-        const float* low = Field(state, kWindLow);
-        const float* high = Field(state, kWindHigh);
-        out.wind[0] = low[0];
-        out.wind[1] = low[1];
-        out.wind[2] = high[0];
-        out.wind[3] = high[1];
+        const float* wind = Field(state, kWind);
+        out.wind[0] = wind[0];
+        out.wind[1] = wind[1];
 
         out.storm = *Field(state, kStorm);
         out.night = *Field(state, kNight);
-        out.timeOfDay = *Field(state, kTimeOfDay);
     }
 
     void __fastcall SubmitCloudsDetour(void* self, void* unused, uint32_t a2, uint32_t a3,
@@ -199,14 +158,6 @@ uint32_t SkyOverhaul::CloudLayer::SubmitCount() {
 
 void SkyOverhaul::CloudLayer::SetMode(Mode mode) {
     g_mode = mode;
-
-    const char* what = mode == Mode::Engine ? "the engine draws its own clouds"
-                                            : "the engine's clouds are suppressed";
-    Lighting lighting;
-    if (Latest(lighting)) {
-        Logf("clouds: %s - coverage %.2f, storm %.2f, night %.2f", what, lighting.layer1[0],
-             lighting.storm, lighting.night);
-        return;
-    }
-    Logf("clouds: %s", what);
+    Logf("clouds: %s", mode == Mode::Engine ? "the engine draws its own clouds"
+                                            : "the engine's clouds are suppressed");
 }

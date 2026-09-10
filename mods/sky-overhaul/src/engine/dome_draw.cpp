@@ -37,9 +37,6 @@ namespace {
     // No pass has this serial, so the first dome of the session is not mistaken for a second one.
     uint32_t g_drawnPass = 0xFFFFFFFFu;
 
-    // The substitute draws, and a draw of ours must not be offered back to ourselves as a dome.
-    bool g_substituting = false;
-
     // Everything here is on the path every indexed draw in the process takes, some seventeen
     // hundred of them a frame, so the whole of it is two compares and a mode until a draw matches.
     bool Substitute(IDirect3DDevice9* device, D3DPRIMITIVETYPE type, UINT vertices,
@@ -47,8 +44,7 @@ namespace {
         if (primitives != kDomePrimitives || vertices != kDomeVertices || type != kDomeType) {
             return false;
         }
-        if (g_mode != SkyOverhaul::DomeDraw::Mode::Overhaul || g_substitute == nullptr ||
-            g_substituting) {
+        if (g_mode != SkyOverhaul::DomeDraw::Mode::Overhaul || g_substitute == nullptr) {
             return false;
         }
 
@@ -68,10 +64,7 @@ namespace {
             return false;
         }
 
-        g_substituting = true;
         const bool drawn = g_substitute(device);
-        g_substituting = false;
-
         if (drawn) {
             g_drawnPass = pass;
             g_substitutions++;

@@ -43,6 +43,7 @@
 #define LIGHT_STEPS 8
 
 #define PI 3.14159265f
+#define LUMA float3(0.299f, 0.587f, 0.114f)
 
 // How tightly the engine's own horizon colour is kept to the horizon. Our air already pales the
 // sky toward the bottom by itself, so this is here for one reason only: the last few degrees above
@@ -114,25 +115,6 @@ float4 Zenith : register(c77);
 float4 Ground : register(c78);
 // rgb: the darkest the sky is let go, which is the colour of the stars' own backdrop.
 float4 NightSky : register(c79);
-
-struct VertexIn {
-    float4 position : POSITION0;
-    float3 ray : TEXCOORD0;
-};
-
-struct VertexOut {
-    float4 position : POSITION0;
-    float3 ray : TEXCOORD0;
-};
-
-// The quad arrives in clip space already, carrying the world-space ray through each corner, so
-// there is nothing to transform and no vertex constant to depend on.
-VertexOut MainVS(VertexIn input) {
-    VertexOut output;
-    output.position = input.position;
-    output.ray = input.ray;
-    return output;
-}
 
 // How far a ray from inside a sphere runs before it leaves it.
 float SphereExit(float3 origin, float3 ray, float radius) {
@@ -217,15 +199,23 @@ float3 Scattered(float3 ray, float3 sun, float mie, float intensity) {
     return intensity * gathered;
 }
 
+// The colour the world fades into along a flat unit heading: the engine's fog ramp, read by that
+// heading's angle to its fog vector. Retinted by the plugin on its way here, so the land, the water
+// and this sky all arrive at the same horizon.
+float3 FogAlong(float2 heading) {
+    float angle = acos(clamp(dot(heading, FogColourVector.xy), -1.0f, 1.0f)) / PI;
+    return FogColour.rgb + FogColourRange.rgb * angle;
+}
+
 // How far a ray belongs to the far side of a low sun: nothing at the sun's own heading, half at a
 // right angle to it, everything opposite, eased at both ends so neither side shows where the turn
 // begins - and none of it unless the sun is low and the slider asks for some.
-float FarTurn(float3 ray) {
+float FarTurn(float2 heading) {
     float sunAcross = length(Sun.xy);
     if (Air.z <= 0.0f || sunAcross < 0.0001f) {
         return 0.0f;
     }
-    float facing = dot(normalize(ray.xy + 0.0001f), Sun.xy / sunAcross);
+    float facing = dot(heading, Sun.xy / sunAcross);
     float farness = smoothstep(0.0f, 1.0f, 0.5f - 0.5f * facing);
     float lowSun = (1.0f - smoothstep(GRADIENT_SUN_LOW, GRADIENT_SUN_HIGH, Sun.z)) *
                    smoothstep(GRADIENT_NIGHT_DEEP, GRADIENT_NIGHT_EDGE, Sun.z);
@@ -240,28 +230,26 @@ float3 TurnFromSun(float3 colour, float3 skyward, float turn) {
     if (turn <= 0.0f) {
         return colour;
     }
-    float2 toSun = normalize(Sun.xy);
     float below = saturate(1.0f - skyward.z);
     float hueAmount = turn * pow(below, GRADIENT_FALLOFF);
     float dimAmount = turn * pow(below, DIMMING_FALLOFF);
 
     // The fog's colour looking directly away from the sun, whichever end of its ramp that is: the
     // engine turns its fog vector round during the day and swaps the ramp's two ends with it.
-    float farHeading = acos(clamp(dot(-toSun, FogColourVector.xy), -1.0f, 1.0f)) / PI;
-    float3 farFog = FogColour.rgb + FogColourRange.rgb * farHeading;
+    float3 farFog = FogAlong(-normalize(Sun.xy));
 
     // That colour at a brightness of one, so it can carry any brightness. Capped, because a fog
     // colour with next to no red or green in it would otherwise ask for several times the light.
-    float3 luma = float3(0.299f, 0.587f, 0.114f);
-    float3 farHue = min(farFog / max(dot(farFog, luma), 0.0001f), 3.0f);
+    float3 farHue = min(farFog / max(dot(farFog, LUMA), 0.0001f), 3.0f);
 
-    float3 turned = lerp(colour, dot(colour, luma) * farHue, hueAmount);
+    float3 turned = lerp(colour, dot(colour, LUMA) * farHue, hueAmount);
     return turned * lerp(1.0f, Air.w, dimAmount);
 }
 
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 ray = normalize(rayIn);
-    float turn = FarTurn(ray);
+    float2 heading = normalize(ray.xy + 0.0001f);
+    float turn = FarTurn(heading);
 
     // Below the horizon there is no sky, only ground: mostly drawn over by the world, and where it is
     // not, those rays take a horizon's colour rather than marching off into the planet. On the far
@@ -275,34 +263,26 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // light back toward the zenith alone keeps an afternoon sky blue without blowing out its horizon.
     colour *= lerp(1.0f, Zenith.x, pow(skyward.z, ZENITH_HOLD_FALLOFF));
 
-    // Where the sky ends up at the horizon: the engine's own colour, by heading against the sun,
-    // so that the terrain fading into it and the sky arriving at it meet in one place.
-    float heading =
-        acos(clamp(dot(normalize(ray.xy + 0.0001f), FogColourVector.xy), -1.0f, 1.0f)) / PI;
-    // Whatever colour the world fades into, which is not necessarily the engine's own any more:
-    // these registers are retinted on their way to every shader that reads them, so the land, the
-    // water and this all arrive at the same horizon.
-    float3 horizon = FogColour.rgb + FogColourRange.rgb * heading;
-
+    // Where the sky ends up at the horizon: the colour the world fades into along this heading, so
+    // that the terrain fading into it and the sky arriving at it meet in one place.
     float fog = pow(saturate(1.0f - skyward.z), HORIZON_FALLOFF);
-    colour = lerp(colour, horizon, fog);
+    colour = lerp(colour, FogAlong(heading), fog);
     colour = TurnFromSun(colour, skyward, turn);
 
     // What shows below that horizon is ground the world never drew, so it turns from the sky's
     // colour toward earth's the further down the eye goes, at the brightness the horizon already has.
-    float3 luma = float3(0.299f, 0.587f, 0.114f);
     float ground = turn * saturate(-ray.z / BELOW_HORIZON_DEPTH) * Ground.x;
-    colour = lerp(colour, dot(colour, luma) * GROUND_HUE, ground);
+    colour = lerp(colour, dot(colour, LUMA) * GROUND_HUE, ground);
 
     // Air lit only once leaves the far side of a sun just below the horizon black, where the real sky
     // is still deep blue, so wherever the sky comes out darker than the night it is filled up to it.
-    float fill = saturate(1.0f - dot(colour, luma) / max(dot(NightSky.rgb, luma), 0.0001f));
+    float fill = saturate(1.0f - dot(colour, LUMA) / max(dot(NightSky.rgb, LUMA), 0.0001f));
     colour += NightSky.rgb * fill;
 
     // Opaque by day, and at night only as much as the sky is bright, taken before the exposure as
     // the dome takes it. The dome's own alpha keeps covering the stars until the night factor is
     // one, which hides them for hours before dawn.
-    float luminance = dot(colour, luma);
+    float luminance = dot(colour, LUMA);
     float alpha = saturate(saturate(1.0f - Sun.w / STARS_FADE) + luminance * 0.5f);
 
     // Half the frames are eight bits a channel, and a sky is the one thing in a game made entirely

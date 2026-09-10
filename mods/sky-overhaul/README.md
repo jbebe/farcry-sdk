@@ -8,8 +8,8 @@ halves the moon's size and is otherwise retail. Nothing here changes how the sun
 
 ## What it does
 
-- **The sun's direction**, read out of the renderer's scene state by hooking the sun-disc
-  submission, which receives a pointer into it. `src/engine/sky_state.cpp`.
+- **The sun's direction**, read out of the renderer's scene state by hooking the cloud-layer
+  submission, which receives a pointer into it at every hour. `src/engine/cloud_layer.cpp`.
 - **The angle to the sun**, from that direction and the view-projection matrix read back off the
   Direct3D device at the sky pass.
 - **Cover**, from a hardware occlusion query: a patch drawn where the sun is with depth testing on
@@ -26,12 +26,12 @@ halves the moon's size and is otherwise retail. Nothing here changes how the sun
 - **Staying out of menus.** The cloud-layer hook reports whether the engine drew a world at all
   this frame, at every hour of the night too; a frame without one gets nothing. No guessing at game
   state.
-- **Live tuning.** Fourteen sliders in the mod menu, from glare strength through to the afterimage's
-  colour, so tuning never needs a rebuild.
+- **Live tuning.** Fourteen glare settings in `fcse.ini`, from strength through to the
+  afterimage's colour, so tuning never needs a rebuild. The mod menu leaves them out.
 
 ## How it is put together
 
-Three seams, on two threads. The sun-disc submission runs on the game thread and only publishes,
+Three seams, on two threads. The cloud-layer submission runs on the game thread and only publishes,
 through a seqlock; every Direct3D call is made from `EndScene` on the render thread; and the engine's
 own device teardown is hooked so the plugin surrenders what it holds before a reset. It refuses to
 install unless it has all three, because a plugin holding a render target through a `Reset` breaks

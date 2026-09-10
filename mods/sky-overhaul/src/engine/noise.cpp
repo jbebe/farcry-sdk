@@ -3,9 +3,11 @@
 #include "engine/com.h"
 #include "engine/log.h"
 
+#include <algorithm>
 #include <atomic>
 #include <cmath>
 #include <cstdint>
+#include <cstring>
 #include <thread>
 #include <vector>
 
@@ -17,16 +19,8 @@ namespace {
     constexpr int kDetailSize = 32;
     constexpr int kWeatherSize = 512;
 
-    // Each volume as a whole mip chain rather than one level. A march that samples every ninety
-    // metres wants noise no finer than that: given the levels it can ask for the one that matches
-    // its own spacing, and the erosion softens with distance instead of tearing into a dither.
-    struct Chain {
-        int size = 0;
-        std::vector<std::vector<uint8_t>> levels;
-    };
-
-    Chain g_shapeChain;
-    Chain g_detailChain;
+    std::vector<uint8_t> g_shapeBytes;
+    std::vector<uint8_t> g_detailBytes;
     std::vector<uint8_t> g_weatherBytes;
     std::atomic<bool> g_ready{false};
 
@@ -139,140 +133,77 @@ namespace {
     }
 
     uint8_t Byte(float value) {
-        const float clamped = value < 0.0f ? 0.0f : (value > 1.0f ? 1.0f : value);
-        return static_cast<uint8_t>(clamped * 255.0f + 0.5f);
+        return static_cast<uint8_t>(std::clamp(value, 0.0f, 1.0f) * 255.0f + 0.5f);
     }
 
-    // Each level is the one before it averaged eight texels at a time, which is what a sampler
-    // would have done had the format allowed it to build them itself.
-    void BuildLevels(Chain& chain) {
-        for (int size = chain.size / 2; size >= 1; size /= 2) {
-            const std::vector<uint8_t>& from = chain.levels.back();
-            const int wide = size * 2;
-            std::vector<uint8_t> level(static_cast<size_t>(size) * size * size * 4);
-            for (int z = 0; z < size; z++) {
-                for (int y = 0; y < size; y++) {
-                    for (int x = 0; x < size; x++) {
-                        for (int channel = 0; channel < 4; channel++) {
-                            int sum = 0;
-                            for (int corner = 0; corner < 8; corner++) {
-                                const size_t at =
-                                    ((static_cast<size_t>(z * 2 + ((corner >> 2) & 1)) * wide +
-                                      static_cast<size_t>(y * 2 + ((corner >> 1) & 1))) *
-                                         wide +
-                                     static_cast<size_t>(x * 2 + (corner & 1))) *
-                                    4;
-                                sum += from[at + channel];
-                            }
-                            level[(static_cast<size_t>(z) * size * size +
-                                   static_cast<size_t>(y) * size + x) *
-                                      4 +
-                                  channel] = static_cast<uint8_t>((sum + 4) / 8);
-                        }
-                    }
+    // A block of texels `size` wide and high and `depth` deep, each written by `texel` from where
+    // it sits in the repeat, in the blue, green, red, alpha order Direct3D reads an A8R8G8B8 texel.
+    template <class Texel>
+    std::vector<uint8_t> Volume(int size, int depth, Texel texel) {
+        std::vector<uint8_t> bytes(static_cast<size_t>(size) * size * depth * 4);
+        uint8_t* at = bytes.data();
+        for (int z = 0; z < depth; z++) {
+            for (int y = 0; y < size; y++) {
+                for (int x = 0; x < size; x++, at += 4) {
+                    texel(static_cast<float>(x) / size, static_cast<float>(y) / size,
+                          static_cast<float>(z) / size, at);
                 }
             }
-            chain.levels.push_back(std::move(level));
         }
+        return bytes;
     }
 
     void Generate() {
-        g_shapeChain.size = kShapeSize;
-        g_shapeChain.levels.emplace_back(static_cast<size_t>(kShapeSize) * kShapeSize * kShapeSize *
-                                         4);
-        std::vector<uint8_t>& shape = g_shapeChain.levels.back();
-        for (int z = 0; z < kShapeSize; z++) {
-            for (int y = 0; y < kShapeSize; y++) {
-                for (int x = 0; x < kShapeSize; x++) {
-                    const float u = static_cast<float>(x) / kShapeSize;
-                    const float v = static_cast<float>(y) / kShapeSize;
-                    const float w = static_cast<float>(z) / kShapeSize;
-                    const size_t at = (static_cast<size_t>(z) * kShapeSize * kShapeSize +
-                                       static_cast<size_t>(y) * kShapeSize + x) *
-                                      4;
+        g_shapeBytes =
+            Volume(kShapeSize, kShapeSize, [](float u, float v, float w, uint8_t* texel) {
+                texel[0] = Byte(Worley(u, v, w, 16, 303));
+                texel[1] = Byte(Worley(u, v, w, 8, 202));
+                texel[2] = Byte(ValueFbm(u * 4.0f, v * 4.0f, w * 4.0f, 4, 101));
+                texel[3] = Byte(Worley(u, v, w, 4, 404));
+            });
 
-                    // Blue, green, red, alpha: the order Direct3D reads an A8R8G8B8 texel in.
-                    shape[at + 0] = Byte(Worley(u, v, w, 16, 303));
-                    shape[at + 1] = Byte(Worley(u, v, w, 8, 202));
-                    shape[at + 2] = Byte(ValueFbm(u * 4.0f, v * 4.0f, w * 4.0f, 4, 101));
-                    shape[at + 3] = Byte(Worley(u, v, w, 4, 404));
-                }
-            }
-        }
-        BuildLevels(g_shapeChain);
+        g_detailBytes =
+            Volume(kDetailSize, kDetailSize, [](float u, float v, float w, uint8_t* texel) {
+                texel[0] = Byte(Worley(u, v, w, 16, 707));
+                texel[1] = Byte(Worley(u, v, w, 8, 606));
+                texel[2] = Byte(Worley(u, v, w, 4, 505));
+                texel[3] = 255;
+            });
 
-        g_detailChain.size = kDetailSize;
-        g_detailChain.levels.emplace_back(static_cast<size_t>(kDetailSize) * kDetailSize *
-                                          kDetailSize * 4);
-        std::vector<uint8_t>& detail = g_detailChain.levels.back();
-        for (int z = 0; z < kDetailSize; z++) {
-            for (int y = 0; y < kDetailSize; y++) {
-                for (int x = 0; x < kDetailSize; x++) {
-                    const float u = static_cast<float>(x) / kDetailSize;
-                    const float v = static_cast<float>(y) / kDetailSize;
-                    const float w = static_cast<float>(z) / kDetailSize;
-                    const size_t at = (static_cast<size_t>(z) * kDetailSize * kDetailSize +
-                                       static_cast<size_t>(y) * kDetailSize + x) *
-                                      4;
-                    detail[at + 0] = Byte(Worley(u, v, w, 16, 707));
-                    detail[at + 1] = Byte(Worley(u, v, w, 8, 606));
-                    detail[at + 2] = Byte(Worley(u, v, w, 4, 505));
-                    detail[at + 3] = 255;
-                }
-            }
-        }
-        BuildLevels(g_detailChain);
-
-        g_weatherBytes.resize(static_cast<size_t>(kWeatherSize) * kWeatherSize * 4);
-        for (int y = 0; y < kWeatherSize; y++) {
-            for (int x = 0; x < kWeatherSize; x++) {
-                const float u = static_cast<float>(x) / kWeatherSize;
-                const float v = static_cast<float>(y) / kWeatherSize;
-                const size_t at = (static_cast<size_t>(y) * kWeatherSize + x) * 4;
-
-                // Two independent fields: how much cloud stands here, and how tall it grows.
-                const float cover = ValueFbm(u * 6.0f, v * 6.0f, 0.5f, 6, 909);
-                const float height = ValueFbm(u * 3.0f, v * 3.0f, 5.5f, 3, 808);
-                // Blue is how much cloud stands here and red how tall it grows, which is the
-                // order a shader reading .b and .r out of an A8R8G8B8 texel wants them in.
-                g_weatherBytes[at + 0] = Byte(cover);
-                g_weatherBytes[at + 1] = Byte(cover);
-                g_weatherBytes[at + 2] = Byte(height);
-                g_weatherBytes[at + 3] = 255;
-            }
-        }
+        // Two independent fields: blue is how much cloud stands here and red how tall it grows,
+        // where a shader reading .b and .r out of an A8R8G8B8 texel finds them.
+        g_weatherBytes = Volume(kWeatherSize, 1, [](float u, float v, float, uint8_t* texel) {
+            const float cover = ValueFbm(u * 6.0f, v * 6.0f, 0.5f, 6, 909);
+            texel[0] = Byte(cover);
+            texel[1] = Byte(cover);
+            texel[2] = Byte(ValueFbm(u * 3.0f, v * 3.0f, 5.5f, 3, 808));
+            texel[3] = 255;
+        });
 
         g_ready.store(true, std::memory_order_release);
     }
 
-    bool UploadVolume(IDirect3DDevice9* device, const Chain& chain,
+    bool UploadVolume(IDirect3DDevice9* device, int size, const std::vector<uint8_t>& bytes,
                       IDirect3DVolumeTexture9** out) {
-        const UINT levels = static_cast<UINT>(chain.levels.size());
-        if (FAILED(device->CreateVolumeTexture(chain.size, chain.size, chain.size, levels, 0,
-                                               D3DFMT_A8R8G8B8, D3DPOOL_MANAGED, out, nullptr))) {
+        if (FAILED(device->CreateVolumeTexture(size, size, size, 1, 0, D3DFMT_A8R8G8B8,
+                                               D3DPOOL_MANAGED, out, nullptr))) {
             return false;
         }
-        int size = chain.size;
-        for (UINT level = 0; level < levels; level++, size /= 2) {
-            D3DLOCKED_BOX box = {};
-            if (FAILED((*out)->LockBox(level, &box, nullptr, 0))) {
-                SkyOverhaul::Release(*out);
-                return false;
-            }
-            const std::vector<uint8_t>& bytes = chain.levels[level];
-            for (int z = 0; z < size; z++) {
-                auto* slice =
-                    static_cast<uint8_t*>(box.pBits) + static_cast<size_t>(z) * box.SlicePitch;
-                for (int y = 0; y < size; y++) {
-                    std::memcpy(slice + static_cast<size_t>(y) * box.RowPitch,
-                                bytes.data() + (static_cast<size_t>(z) * size * size +
-                                                static_cast<size_t>(y) * size) *
-                                                   4,
-                                static_cast<size_t>(size) * 4);
-                }
-            }
-            (*out)->UnlockBox(level);
+        D3DLOCKED_BOX box = {};
+        if (FAILED((*out)->LockBox(0, &box, nullptr, 0))) {
+            SkyOverhaul::Release(*out);
+            return false;
         }
+        const size_t row = static_cast<size_t>(size) * 4;
+        for (int z = 0; z < size; z++) {
+            auto* slice =
+                static_cast<uint8_t*>(box.pBits) + static_cast<size_t>(z) * box.SlicePitch;
+            for (int y = 0; y < size; y++) {
+                std::memcpy(slice + static_cast<size_t>(y) * box.RowPitch,
+                            bytes.data() + (static_cast<size_t>(z) * size + y) * row, row);
+            }
+        }
+        (*out)->UnlockBox(0);
         return true;
     }
 
@@ -314,8 +245,8 @@ bool SkyOverhaul::Noise::Ensure(IDirect3DDevice9* device) {
         return false;
     }
 
-    if (!UploadVolume(device, g_shapeChain, &g_shape) ||
-        !UploadVolume(device, g_detailChain, &g_detail) ||
+    if (!UploadVolume(device, kShapeSize, g_shapeBytes, &g_shape) ||
+        !UploadVolume(device, kDetailSize, g_detailBytes, &g_detail) ||
         !UploadPlane(device, kWeatherSize, g_weatherBytes, &g_weather)) {
         ReleaseDeviceObjects();
         g_owner = device;
@@ -324,9 +255,7 @@ bool SkyOverhaul::Noise::Ensure(IDirect3DDevice9* device) {
         return false;
     }
 
-    Logf("clouds: noise ready, shape %d cubed in %d levels, detail %d cubed in %d levels",
-         kShapeSize, static_cast<int>(g_shapeChain.levels.size()), kDetailSize,
-         static_cast<int>(g_detailChain.levels.size()));
+    Logf("clouds: noise ready, shape %d cubed, detail %d cubed", kShapeSize, kDetailSize);
     return true;
 }
 

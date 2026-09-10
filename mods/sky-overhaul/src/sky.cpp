@@ -3,18 +3,17 @@
 #include "sky_model.h"
 
 #include "engine/camera.h"
+#include "engine/clock.h"
 #include "engine/cloud_layer.h"
-#include "engine/com.h"
 #include "engine/dome_draw.h"
 #include "engine/fog_tint.h"
 #include "engine/log.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
-#include "fcse_api.h"
 
 #include "sky_ps.h"
-#include "sky_vs.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -28,8 +27,6 @@ namespace {
     // a less-or-equal test against a cleared far plane, so this passes wherever no world stands and
     // is rejected wherever one does.
     constexpr float kSkyDepth = 1.0f;
-
-    constexpr float kHeartbeatSeconds = 5.0f;
 
     // What a full storm does to the air: several times the haze, and rather less of the sun
     // reaching it. That is what an overcast sky is, before a single cloud is drawn.
@@ -68,69 +65,40 @@ namespace {
     float g_groundBrown = 0.5f;
     float g_nightSky = 1.0f;
 
-    // What went into the model last and what came out of it, kept for the heartbeat. After dark
-    // these are the numbers that say whether the sky is dark because the air really is unlit or
-    // because the model has nothing left to stand on.
-    float g_lastNight = 0.0f;
-    float g_lastStorm = 0.0f;
-    float g_lastExposure = 0.0f;
-    float g_lastZenithLift = 1.0f;
-    float g_lastHorizon[3] = {0.0f, 0.0f, 0.0f};
-    float g_lastAway[3] = {0.0f, 0.0f, 0.0f};
-    // Where the sun was and what the engine's own fog ends were, beside what the model made of the
-    // same moment - so a horizon that looks wrong can be put down to the air or to the engine.
-    float g_lastSunElevation = 0.0f;
-    float g_lastFogHeadingOffset = -1.0f;
-    float g_lastFogToward[3] = {0.0f, 0.0f, 0.0f};
-    float g_lastFogAway[3] = {0.0f, 0.0f, 0.0f};
-    // How much of that fog distant geometry actually gets: the distance terms and the height terms
-    // the engine multiplies together. Terrain the curved horizon has bent below the camera is fogged
-    // only as much as the height term allows at its lowest, whatever colour the fog is.
-    float g_lastFogValues[3] = {0.0f, 0.0f, 0.0f};
-    float g_lastFogHeight[4] = {0.0f, 0.0f, 0.0f, 0.0f};
-    // The light the engine hands the clouds, as the cloud layer publishes it: the sun's, the ambient,
-    // the back light and the moon's. After dark these say what the clouds have left to be lit by
-    // once the sun has gone.
-    float g_lastCloudSun[3] = {0.0f, 0.0f, 0.0f};
-    float g_lastCloudAmbient[3] = {0.0f, 0.0f, 0.0f};
-    float g_lastCloudBack[3] = {0.0f, 0.0f, 0.0f};
-    float g_lastMoon[3] = {0.0f, 0.0f, 0.0f};
-    // The moon's height, as the sine of its elevation.
-    float g_lastMoonUp = 0.0f;
+    // What the last dome was drawn from and what the model made of it, kept for the heartbeat.
+    struct Drawn {
+        SkyOverhaul::Camera::View view;
+        SkyOverhaul::CloudLayer::Lighting lighting;
+        float towardColour[3];
+        float awayColour[3];
+        float zenithLift;
+    };
 
-    IDirect3DDevice9* g_owner = nullptr;
-    IDirect3DVertexShader9* g_vertexShader = nullptr;
-    IDirect3DPixelShader9* g_pixelShader = nullptr;
+    Drawn g_last = {};
 
-    // Latched after a failure, so a device that cannot compile the pair is told once rather than
-    // asked at every dome.
-    bool g_refused = false;
-
-    LARGE_INTEGER g_tickFrequency = {};
-    LARGE_INTEGER g_lastTick = {};
-    float g_sinceHeartbeat = 0.0f;
-
-    float PassSeconds() {
-        LARGE_INTEGER now;
-        QueryPerformanceCounter(&now);
-        if (g_tickFrequency.QuadPart == 0 || g_lastTick.QuadPart == 0) {
-            g_lastTick = now;
-            return 0.0f;
-        }
-        const float seconds = static_cast<float>(now.QuadPart - g_lastTick.QuadPart) /
-                              static_cast<float>(g_tickFrequency.QuadPart);
-        g_lastTick = now;
-        return seconds < 0.0f ? 0.0f : seconds;
-    }
+    SkyOverhaul::PixelShader g_shader{"sky", g_skyPixelShader};
+    SkyOverhaul::Stopwatch g_clock;
+    SkyOverhaul::Heartbeat g_heartbeat{5.0f};
 
     float Luminance(const float colour[3]) {
         return colour[0] * 0.299f + colour[1] * 0.587f + colour[2] * 0.114f;
     }
 
     float SmoothStep(float from, float to, float value) {
-        float t = (value - from) / (to - from);
-        t = t < 0.0f ? 0.0f : (t > 1.0f ? 1.0f : t);
+        const float t = std::clamp((value - from) / (to - from), 0.0f, 1.0f);
         return t * t * (3.0f - 2.0f * t);
+    }
+
+    // The engine's fog heading, flat and unit length: the direction its fog ramp starts from.
+    void FogHeading(const SkyOverhaul::Camera::View& view, float out[3]) {
+        float length = std::sqrt(view.fogColourVector[0] * view.fogColourVector[0] +
+                                 view.fogColourVector[1] * view.fogColourVector[1]);
+        if (length < 0.0001f) {
+            length = 1.0f;
+        }
+        out[0] = view.fogColourVector[0] / length;
+        out[1] = view.fogColourVector[1] / length;
+        out[2] = 0.0f;
     }
 
     // How many times brighter the zenith has to be drawn to look as it would under an overhead sun,
@@ -144,38 +112,12 @@ namespace {
         SkyOverhaul::SkyModel::Radiance(up, up, eyeHeight, 0.0f, intensity, overhead);
         SkyOverhaul::SkyModel::Radiance(up, sun, eyeHeight, 0.0f, intensity, now);
         const float nowLuminance = Luminance(now);
-        float lift = nowLuminance > 1.0e-6f ? Luminance(overhead) / nowLuminance : kZenithHoldMax;
-        lift = lift < 1.0f ? 1.0f : (lift > kZenithHoldMax ? kZenithHoldMax : lift);
+        const float lift =
+            nowLuminance > 1.0e-6f
+                ? std::clamp(Luminance(overhead) / nowLuminance, 1.0f, kZenithHoldMax)
+                : kZenithHoldMax;
         const float kept = SmoothStep(kZenithHoldLow, kZenithHoldHigh, sun[2]) * g_zenithHold;
         return 1.0f + (lift - 1.0f) * kept;
-    }
-
-    bool EnsureDeviceObjects(IDirect3DDevice9* device) {
-        if (g_owner != device) {
-            SkyOverhaul::Release(g_vertexShader);
-            SkyOverhaul::Release(g_pixelShader);
-            g_owner = device;
-            g_refused = false;
-        }
-        if (g_vertexShader != nullptr && g_pixelShader != nullptr) {
-            return true;
-        }
-        if (g_refused) {
-            return false;
-        }
-
-        const HRESULT vertex = SkyOverhaul::CreateShader(device, g_skyVertexShader, &g_vertexShader);
-        const HRESULT pixel = SkyOverhaul::CreateShader(device, g_skyPixelShader, &g_pixelShader);
-        if (FAILED(vertex) || FAILED(pixel)) {
-            SkyOverhaul::Release(g_vertexShader);
-            SkyOverhaul::Release(g_pixelShader);
-            g_refused = true;
-            SkyOverhaul::Logf("sky: this device refused the shader pair (0x%08X, 0x%08X), so the "
-                              "engine keeps its dome",
-                              vertex, pixel);
-            return false;
-        }
-        return true;
     }
 
     // Runs from inside the dome's own draw call, with everything the engine set for it still bound.
@@ -183,12 +125,14 @@ namespace {
     // stars are drawn after this with no blend or depth mode of their own, and inherit whatever the
     // dome left behind.
     bool Draw(IDirect3DDevice9* device) {
-        SkyOverhaul::Camera::View view;
-        SkyOverhaul::CloudLayer::Lighting lighting;
-        if (!SkyOverhaul::Camera::Read(device, view) ||
-            !SkyOverhaul::CloudLayer::Latest(lighting) || !EnsureDeviceObjects(device)) {
+        IDirect3DPixelShader9* shader = g_shader.Get(device);
+        Drawn drawn;
+        if (shader == nullptr || !SkyOverhaul::Camera::Read(device, drawn.view) ||
+            !SkyOverhaul::CloudLayer::Latest(drawn.lighting)) {
             return false;
         }
+        const SkyOverhaul::Camera::View& view = drawn.view;
+        const SkyOverhaul::CloudLayer::Lighting& lighting = drawn.lighting;
 
         // The weather is folded in here rather than in the shader, so that what crosses into it is
         // one finished number for the air and one for the light.
@@ -200,57 +144,17 @@ namespace {
         // which are the two ends of the ramp it colours its fog by. Handing those over is what
         // makes the land meet the sky: both then fade into the same thing, and neither has to know
         // about the other. Before the exposure, as the engine's own fog colour is.
-        float length = std::sqrt(view.fogColourVector[0] * view.fogColourVector[0] +
-                                 view.fogColourVector[1] * view.fogColourVector[1]);
-        if (length < 0.0001f) {
-            length = 1.0f;
-        }
-        const float toward[3] = {view.fogColourVector[0] / length, view.fogColourVector[1] / length,
-                                 0.0f};
+        float toward[3];
+        FogHeading(view, toward);
         const float away[3] = {-toward[0], -toward[1], 0.0f};
-        float towardColour[3];
-        float awayColour[3];
         SkyOverhaul::SkyModel::Radiance(toward, lighting.sunDirection, view.eye[2], haze, intensity,
-                                        towardColour);
+                                        drawn.towardColour);
         SkyOverhaul::SkyModel::Radiance(away, lighting.sunDirection, view.eye[2], haze, intensity,
-                                        awayColour);
-        SkyOverhaul::FogTint::SetHorizon(towardColour, awayColour);
+                                        drawn.awayColour);
+        SkyOverhaul::FogTint::SetHorizon(drawn.towardColour, drawn.awayColour);
 
-        g_lastNight = lighting.night;
-        g_lastStorm = lighting.storm;
-        g_lastExposure = view.bloom;
-        for (size_t i = 0; i < 3; i++) {
-            g_lastHorizon[i] = towardColour[i];
-            g_lastAway[i] = awayColour[i];
-            g_lastFogToward[i] = view.fogColour[i];
-            g_lastFogAway[i] = view.fogColour[i] + view.fogColourRange[i];
-            g_lastFogValues[i] = view.fogValues[i];
-        }
-        for (size_t i = 0; i < 4; i++) {
-            g_lastFogHeight[i] = view.fogHeightValues[i];
-        }
-        for (size_t i = 0; i < 3; i++) {
-            g_lastCloudSun[i] = lighting.sunColour[i];
-            g_lastCloudAmbient[i] = lighting.ambientColour[i];
-            g_lastCloudBack[i] = lighting.backSunColour[i];
-            g_lastMoon[i] = lighting.moonColour[i];
-        }
-        g_lastMoonUp = lighting.moonDirection[2];
-        const float sunUp = lighting.sunDirection[2];
-        g_lastSunElevation = std::asin(sunUp < -1.0f ? -1.0f : (sunUp > 1.0f ? 1.0f : sunUp)) * kDegrees;
-        const float sunAcross = std::sqrt(lighting.sunDirection[0] * lighting.sunDirection[0] +
-                                          lighting.sunDirection[1] * lighting.sunDirection[1]);
-        if (sunAcross > 0.0001f) {
-            float cosine = (toward[0] * lighting.sunDirection[0] + toward[1] * lighting.sunDirection[1]) /
-                           sunAcross;
-            cosine = cosine < -1.0f ? -1.0f : (cosine > 1.0f ? 1.0f : cosine);
-            g_lastFogHeadingOffset = std::acos(cosine) * kDegrees;
-        } else {
-            g_lastFogHeadingOffset = -1.0f;
-        }
-
-        const float zenithLift = ZenithLift(lighting.sunDirection, view.eye[2], intensity);
-        g_lastZenithLift = zenithLift;
+        drawn.zenithLift = ZenithLift(lighting.sunDirection, view.eye[2], intensity);
+        g_last = drawn;
 
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
@@ -260,68 +164,74 @@ namespace {
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
-            zenithLift, 0.0f, 0.0f, 0.0f,
+            drawn.zenithLift, 0.0f, 0.0f, 0.0f,
             g_groundBrown, 0.0f, 0.0f, 0.0f,
             kNightSky[0] * g_nightSky, kNightSky[1] * g_nightSky, kNightSky[2] * g_nightSky, 0.0f};
 
         SkyOverhaul::DrawGuard guard(device, kFirstConstant, kConstantCount);
-        device->SetVertexShader(g_vertexShader);
-        device->SetPixelShader(g_pixelShader);
+        device->SetPixelShader(shader);
         device->SetPixelShaderConstantF(kFirstConstant, constants, kConstantCount);
         return guard.ClipQuad(kSkyDepth, view.corners);
     }
 }
 
-bool SkyOverhaul::Sky::Install() {
-    QueryPerformanceFrequency(&g_tickFrequency);
+void SkyOverhaul::Sky::Install() {
     // The world's own fog colour is followed whether or not our sky is drawn: it is what the land
     // fades into, and a player who wants the horizon changed wants the land changed with it.
     FogTint::Install();
-    return DomeDraw::Install(&Draw);
+    DomeDraw::Install(&Draw);
 }
 
 void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
-    if (!g_enabled || !pass.sky || !pass.live) {
+    if (!g_enabled || !pass.sky || !pass.live || !g_heartbeat.Due(g_clock.Lap())) {
         return;
     }
-    g_sinceHeartbeat += PassSeconds();
-    if (g_sinceHeartbeat < kHeartbeatSeconds) {
-        return;
+    const Camera::View& view = g_last.view;
+    const CloudLayer::Lighting& light = g_last.lighting;
+    const float* sun = light.sunDirection;
+
+    // The fog heading is the direction the engine's fog ramp starts from, measured against the sun:
+    // near zero means the ramp's first colour is the sun's side, as its name says.
+    float headingOffset = -1.0f;
+    const float sunAcross = std::sqrt(sun[0] * sun[0] + sun[1] * sun[1]);
+    if (sunAcross > 0.0001f) {
+        float toward[3];
+        FogHeading(view, toward);
+        const float cosine = (toward[0] * sun[0] + toward[1] * sun[1]) / sunAcross;
+        headingOffset = std::acos(std::clamp(cosine, -1.0f, 1.0f)) * kDegrees;
     }
-    g_sinceHeartbeat = 0.0f;
+    const float elevation = std::asin(std::clamp(sun[2], -1.0f, 1.0f)) * kDegrees;
+
     // Counts that stand still are the two ways this fails without anything else saying so: a dome
     // that stopped being recognised, and a fog colour that is never being reached.
     Logf("sky f%u: %u domes replaced, %u fog uploads retinted | night %.2f storm %.2f exposure %.2f "
          "zenith x%.2f",
-         pass.frame, DomeDraw::SubstituteCount(), FogTint::TintCount(), g_lastNight, g_lastStorm,
-         g_lastExposure, g_lastZenithLift);
-    // The fog heading is the direction the engine's fog ramp starts from, measured against the sun:
-    // near zero means the ramp's first colour is the sun's side, as its name says.
+         pass.frame, DomeDraw::SubstituteCount(), FogTint::TintCount(), light.night, light.storm,
+         view.bloom, g_last.zenithLift);
     Logf("sky f%u: sun %+.1f deg, fog heading %.0f deg off it | model toward (%.3f %.3f %.3f) "
          "away (%.3f %.3f %.3f)",
-         pass.frame, g_lastSunElevation, g_lastFogHeadingOffset, g_lastHorizon[0], g_lastHorizon[1],
-         g_lastHorizon[2], g_lastAway[0], g_lastAway[1], g_lastAway[2]);
+         pass.frame, elevation, headingOffset, g_last.towardColour[0], g_last.towardColour[1],
+         g_last.towardColour[2], g_last.awayColour[0], g_last.awayColour[1], g_last.awayColour[2]);
     Logf("sky f%u: engine fog toward (%.3f %.3f %.3f) away (%.3f %.3f %.3f)", pass.frame,
-         g_lastFogToward[0], g_lastFogToward[1], g_lastFogToward[2], g_lastFogAway[0],
-         g_lastFogAway[1], g_lastFogAway[2]);
+         view.fogColour[0], view.fogColour[1], view.fogColour[2],
+         view.fogColour[0] + view.fogColourRange[0], view.fogColour[1] + view.fogColourRange[1],
+         view.fogColour[2] + view.fogColourRange[2]);
     // Distance: per metre, offset, amount. Height: per metre, offset, then the value at the bottom of
     // the height band and how much more the top adds - so the fog on the lowest geometry is the
     // amount times the third height value.
     Logf("sky f%u: engine fog distance (%.5f %.3f %.3f) height (%.5f %.3f %.3f %.3f)", pass.frame,
-         g_lastFogValues[0], g_lastFogValues[1], g_lastFogValues[2], g_lastFogHeight[0],
-         g_lastFogHeight[1], g_lastFogHeight[2], g_lastFogHeight[3]);
+         view.fogValues[0], view.fogValues[1], view.fogValues[2], view.fogHeightValues[0],
+         view.fogHeightValues[1], view.fogHeightValues[2], view.fogHeightValues[3]);
     Logf("sky f%u: cloud light sun (%.3f %.3f %.3f) ambient (%.3f %.3f %.3f) back (%.3f %.3f %.3f) "
          "moon (%.3f %.3f %.3f) moon z %+.2f",
-         pass.frame, g_lastCloudSun[0], g_lastCloudSun[1], g_lastCloudSun[2], g_lastCloudAmbient[0],
-         g_lastCloudAmbient[1], g_lastCloudAmbient[2], g_lastCloudBack[0], g_lastCloudBack[1],
-         g_lastCloudBack[2], g_lastMoon[0], g_lastMoon[1], g_lastMoon[2], g_lastMoonUp);
+         pass.frame, light.sunColour[0], light.sunColour[1], light.sunColour[2],
+         light.ambientColour[0], light.ambientColour[1], light.ambientColour[2],
+         light.backSunColour[0], light.backSunColour[1], light.backSunColour[2],
+         light.moonColour[0], light.moonColour[1], light.moonColour[2], light.moonDirection[2]);
 }
 
 void SkyOverhaul::Sky::ReleaseDeviceObjects() {
-    Release(g_vertexShader);
-    Release(g_pixelShader);
-    g_owner = nullptr;
-    DrawGuard::ReleaseDeviceObjects();
+    g_shader.Release();
 }
 
 void SkyOverhaul::Sky::SetEnabled(bool enabled) {
@@ -362,4 +272,3 @@ void SkyOverhaul::Sky::SetGroundBrown(int percent) {
 void SkyOverhaul::Sky::SetNightSky(int percent) {
     g_nightSky = static_cast<float>(percent) * 0.01f;
 }
-

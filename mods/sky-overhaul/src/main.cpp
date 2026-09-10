@@ -10,7 +10,7 @@
 #include "engine/device_reset.h"
 #include "engine/fog_tint.h"
 #include "engine/frame.h"
-#include "engine/sky_state.h"
+#include "engine/screen_draw.h"
 #include "sky.h"
 
 namespace {
@@ -20,6 +20,7 @@ namespace {
         SkyOverhaul::Dazzle::ReleaseDeviceObjects();
         SkyOverhaul::Clouds::ReleaseDeviceObjects();
         SkyOverhaul::Sky::ReleaseDeviceObjects();
+        SkyOverhaul::DrawGuard::ReleaseDeviceObjects();
     }
 
     // One frame, three effects. Each decides for itself whether the pass is one it wants. The sky
@@ -42,6 +43,11 @@ namespace {
 
     void* Setter(SliderFn setter) {
         return reinterpret_cast<void*>(setter);
+    }
+
+    FCSE_Setting Hidden(FCSE_Setting setting) {
+        setting.flags |= FCSE_SettingFlag_Hidden;
+        return setting;
     }
 
     // Index order is what the callback below switches on; the file stores the label.
@@ -73,21 +79,19 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 
     api->Log("Sky Overhaul loaded");
 
-    // Both effects draw into a frame the engine owns and hold objects on its device, so neither is
+    // The effects draw into a frame the engine owns and hold objects on its device, so none is
     // installed without the seam that follows the frame and the one that lets go before a reset:
     // a plugin holding a render target through a reset would break the reset itself.
     if (SkyOverhaul::DeviceReset::Install(&OnDeviceRelease) &&
         SkyOverhaul::Frame::Install(&OnScenePass, &OnFinalPass)) {
-        SkyOverhaul::Dazzle::Install();
         SkyOverhaul::Clouds::Install();
         // Watches the draws inside a pass rather than the passes themselves, because that is where
         // the dome is and a sky has to go under everything drawn after it.
         SkyOverhaul::Sky::Install();
     }
 
-    // The two publishers, which draw nothing. The sun's direction is the glare's, and the cloud
-    // layer's lighting is what a cloud of our own is lit by.
-    SkyOverhaul::SkyState::Install();
+    // The publisher every effect reads, which draws nothing: the sun, the moon and the weather as
+    // the cloud layer is lit by them.
     SkyOverhaul::CloudLayer::Install();
 
     // Each callback fires from inside RegisterSettings carrying whatever fcse.ini holds, so the
@@ -139,38 +143,35 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          0, 100},
         {"Moon glow", FCSE_SLIDER(25), &OnSliderChanged, Setter(&Clouds::SetMoonGlow), nullptr, 0,
          0, 100},
-        // Out of the menu while the clouds are being tuned, because the page only has room for one
-        // feature's worth of rows. The glare keeps every value below as its own default.
-        /*
-        {"Sun glare strength", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Dazzle::SetStrength),
-         nullptr, 0, 0, 200},
-        {"Sun glare spread", FCSE_SLIDER(57), &OnSliderChanged, Setter(&Dazzle::SetSpread), nullptr,
-         0, 10, 180},
-        {"Sun glare falloff", FCSE_SLIDER(20), &OnSliderChanged, Setter(&Dazzle::SetFalloff),
-         nullptr, 0, 10, 80},
-        {"Sun glare veil", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Dazzle::SetVeil), nullptr, 0,
-         0, 100},
-        {"Sun glare contrast", FCSE_SLIDER(195), &OnSliderChanged, Setter(&Dazzle::SetContrast),
-         nullptr, 0, 0, 400},
-        {"Sun glare desaturation", FCSE_SLIDER(129), &OnSliderChanged,
-         Setter(&Dazzle::SetDesaturation), nullptr, 0, 0, 300},
-        {"Sun elevation ramp", FCSE_SLIDER(40), &OnSliderChanged,
-         Setter(&Dazzle::SetElevationRamp), nullptr, 0, 1, 45},
-        {"Afterimage strength", FCSE_SLIDER(100), &OnSliderChanged,
-         Setter(&Dazzle::SetAfterimageStrength), nullptr, 0, 0, 100},
-        {"Afterimage seconds", FCSE_SLIDER(10), &OnSliderChanged,
-         Setter(&Dazzle::SetAfterimageSeconds), nullptr, 0, 1, 10},
-        {"Afterimage darkness", FCSE_SLIDER(90), &OnSliderChanged,
-         Setter(&Dazzle::SetAfterimageDarkness), nullptr, 0, 0, 100},
-        {"Afterimage tint", FCSE_SLIDER(35), &OnSliderChanged, Setter(&Dazzle::SetAfterimageTint),
-         nullptr, 0, 0, 100},
-        {"Afterimage saturation", FCSE_SLIDER(30), &OnSliderChanged,
-         Setter(&Dazzle::SetAfterimageSaturation), nullptr, 0, 0, 100},
-        {"Afterimage size", FCSE_SLIDER(25), &OnSliderChanged, Setter(&Dazzle::SetAfterimageSize),
-         nullptr, 0, 5, 100},
-        {"Afterimage haze", FCSE_SLIDER(35), &OnSliderChanged, Setter(&Dazzle::SetAfterimageHaze),
-         nullptr, 0, 0, 100},
-        */
+        // The glare's, off the menu while the sky and clouds are tuned; fcse.ini still has them.
+        Hidden({"Sun glare strength", FCSE_SLIDER(100), &OnSliderChanged,
+                Setter(&Dazzle::SetStrength), nullptr, 0, 0, 200}),
+        Hidden({"Sun glare spread", FCSE_SLIDER(57), &OnSliderChanged, Setter(&Dazzle::SetSpread),
+                nullptr, 0, 10, 180}),
+        Hidden({"Sun glare falloff", FCSE_SLIDER(20), &OnSliderChanged,
+                Setter(&Dazzle::SetFalloff), nullptr, 0, 10, 80}),
+        Hidden({"Sun glare veil", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Dazzle::SetVeil),
+                nullptr, 0, 0, 100}),
+        Hidden({"Sun glare contrast", FCSE_SLIDER(195), &OnSliderChanged,
+                Setter(&Dazzle::SetContrast), nullptr, 0, 0, 400}),
+        Hidden({"Sun glare desaturation", FCSE_SLIDER(129), &OnSliderChanged,
+                Setter(&Dazzle::SetDesaturation), nullptr, 0, 0, 300}),
+        Hidden({"Sun elevation ramp", FCSE_SLIDER(40), &OnSliderChanged,
+                Setter(&Dazzle::SetElevationRamp), nullptr, 0, 1, 45}),
+        Hidden({"Afterimage strength", FCSE_SLIDER(100), &OnSliderChanged,
+                Setter(&Dazzle::SetAfterimageStrength), nullptr, 0, 0, 100}),
+        Hidden({"Afterimage seconds", FCSE_SLIDER(10), &OnSliderChanged,
+                Setter(&Dazzle::SetAfterimageSeconds), nullptr, 0, 1, 10}),
+        Hidden({"Afterimage darkness", FCSE_SLIDER(90), &OnSliderChanged,
+                Setter(&Dazzle::SetAfterimageDarkness), nullptr, 0, 0, 100}),
+        Hidden({"Afterimage tint", FCSE_SLIDER(35), &OnSliderChanged,
+                Setter(&Dazzle::SetAfterimageTint), nullptr, 0, 0, 100}),
+        Hidden({"Afterimage saturation", FCSE_SLIDER(30), &OnSliderChanged,
+                Setter(&Dazzle::SetAfterimageSaturation), nullptr, 0, 0, 100}),
+        Hidden({"Afterimage size", FCSE_SLIDER(25), &OnSliderChanged,
+                Setter(&Dazzle::SetAfterimageSize), nullptr, 0, 5, 100}),
+        Hidden({"Afterimage haze", FCSE_SLIDER(35), &OnSliderChanged,
+                Setter(&Dazzle::SetAfterimageHaze), nullptr, 0, 0, 100}),
     };
     // Registered under the module name rather than a prettier one: the mod menu lists every
     // loaded plugin and then every settings group that matched none of them, so a group named

@@ -1,6 +1,9 @@
 #include "engine/screen_draw.h"
 
 #include "engine/com.h"
+#include "engine/shader.h"
+
+#include "clip_quad_vs.h"
 
 namespace {
     constexpr DWORD kVertexFormat = D3DFVF_XYZRHW | D3DFVF_TEX1;
@@ -19,12 +22,13 @@ namespace {
     constexpr DWORD kAlphaToCoverageOffAmd = MAKEFOURCC('A', '2', 'M', '0');
     constexpr DWORD kAlphaToCoverageOffNvidia = D3DFMT_UNKNOWN;
 
-    // One per device, since a vertex declaration outlives a reset and only a new device needs a
-    // new one.
+    // What a ray quad draws through, and the device its declaration was made on.
     IDirect3DDevice9* g_declarationOwner = nullptr;
     IDirect3DVertexDeclaration9* g_rayDeclaration = nullptr;
+    SkyOverhaul::VertexShader g_rayShader{"clip quad", g_clipQuadVertexShader};
 
-    IDirect3DVertexDeclaration9* RayDeclaration(IDirect3DDevice9* device) {
+    // False if the device would not make them.
+    bool BindRay(IDirect3DDevice9* device) {
         if (g_declarationOwner != device) {
             SkyOverhaul::Release(g_rayDeclaration);
             g_declarationOwner = device;
@@ -36,7 +40,13 @@ namespace {
                 D3DDECL_END()};
             device->CreateVertexDeclaration(elements, &g_rayDeclaration);
         }
-        return g_rayDeclaration;
+        IDirect3DVertexShader9* shader = g_rayShader.Get(device);
+        if (g_rayDeclaration == nullptr || shader == nullptr) {
+            return false;
+        }
+        device->SetVertexDeclaration(g_rayDeclaration);
+        device->SetVertexShader(shader);
+        return true;
     }
 }
 
@@ -89,8 +99,7 @@ void SkyOverhaul::DrawGuard::Quad(float left, float top, float right, float bott
 }
 
 bool SkyOverhaul::DrawGuard::ClipQuad(float depth, const float corners[4][3]) {
-    IDirect3DVertexDeclaration9* declaration = RayDeclaration(m_device);
-    if (declaration == nullptr) {
+    if (!BindRay(m_device)) {
         return false;
     }
 
@@ -104,7 +113,6 @@ bool SkyOverhaul::DrawGuard::ClipQuad(float depth, const float corners[4][3]) {
         {-1.0f, -1.0f, depth, 1.0f, {corners[2][0], corners[2][1], corners[2][2]}},
         {1.0f, -1.0f, depth, 1.0f, {corners[3][0], corners[3][1], corners[3][2]}},
     };
-    m_device->SetVertexDeclaration(declaration);
     m_device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, quad, sizeof(RayVertex));
     return true;
 }
@@ -112,6 +120,7 @@ bool SkyOverhaul::DrawGuard::ClipQuad(float depth, const float corners[4][3]) {
 void SkyOverhaul::DrawGuard::ReleaseDeviceObjects() {
     Release(g_rayDeclaration);
     g_declarationOwner = nullptr;
+    g_rayShader.Release();
 }
 
 SkyOverhaul::ScreenDraw::ScreenDraw(IDirect3DDevice9* device, UINT firstConstant,

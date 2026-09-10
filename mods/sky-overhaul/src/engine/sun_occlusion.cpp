@@ -8,6 +8,8 @@
 #include "engine/com.h"
 #include "engine/screen_draw.h"
 
+#include <algorithm>
+
 namespace {
     // Half the size of the patch drawn where the sun is, in pixels. Large enough that a thin branch
     // shades part of it rather than all or none, small enough to stay the sun rather than the sky
@@ -121,8 +123,8 @@ void SkyOverhaul::SunOcclusion::Sample(IDirect3DDevice9* device, float centreX, 
         return;
     }
 
-    const float x = centreX < minX ? minX : (centreX > maxX ? maxX : centreX);
-    const float y = centreY < minY ? minY : (centreY > maxY ? maxY : centreY);
+    const float x = std::clamp(centreX, minX, maxX);
+    const float y = std::clamp(centreY, minY, maxY);
 
     const float left = x - kHalfSize;
     const float top = y - kHalfSize;

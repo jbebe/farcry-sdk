@@ -42,16 +42,14 @@ if (NOT FXC_EXECUTABLE)
 endif()
 
 # source file : entry point : profile : generated header : array name. The dazzle's MainPS needs
-# ps_2_b for its instruction count and the accumulation passes fit in ps_2_0; the clouds need the
-# loops and the volume samples of ps_3_0, which in turn requires a vertex shader of the same
-# generation rather than the fixed-function pipeline the others draw through.
+# ps_2_b for its instruction count and the accumulation passes fit in ps_2_0; the sky and the clouds
+# need ps_3_0 for their loops, which in turn needs the vs_3_0 ClipQuad draws through.
 set(SHADER_PASSES
   "dazzle.fx:MainPS:ps_2_b:dazzle_ps.h:g_dazzlePixelShader"
   "dazzle.fx:AccumulatePS:ps_2_0:dazzle_accumulate_ps.h:g_dazzleAccumulatePixelShader"
   "dazzle.fx:BleachPS:ps_2_0:dazzle_bleach_ps.h:g_dazzleBleachPixelShader"
-  "clouds.fx:MainVS:vs_3_0:clouds_vs.h:g_cloudsVertexShader"
+  "clip_quad.fx:MainVS:vs_3_0:clip_quad_vs.h:g_clipQuadVertexShader"
   "clouds.fx:MainPS:ps_3_0:clouds_ps.h:g_cloudsPixelShader"
-  "sky.fx:MainVS:vs_3_0:sky_vs.h:g_skyVertexShader"
   "sky.fx:MainPS:ps_3_0:sky_ps.h:g_skyPixelShader")
 
 set(SHADER_HEADERS "")
@@ -89,14 +87,14 @@ add_library(SkyOverhaul SHARED
   "src/engine/noise.cpp"
   "src/engine/frame.cpp"
   "src/engine/screen_draw.cpp"
-  "src/engine/sky_state.cpp"
+  "src/engine/shader.cpp"
   "src/engine/sun_occlusion.cpp"
   "src/engine/vtable.cpp"
   ${SHADER_HEADERS}
 )
 
-# src/ on the path so every #include reads from the root of this tree - "engine/sky_state.h", never
-# "../engine/sky_state.h" - and moving a file between folders does not rewrite anyone's includes.
+# src/ on the path so every #include reads from the root of this tree - "engine/frame.h", never
+# "../engine/frame.h" - and moving a file between folders does not rewrite anyone's includes.
 target_include_directories(SkyOverhaul PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
   "${CMAKE_CURRENT_BINARY_DIR}/generated"

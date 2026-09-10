@@ -7,7 +7,7 @@ namespace SkyOverhaul::Sky {
 
 // Prepares the effect and takes over the dome's draw. Call once from FCSE_Load. Nothing is drawn
 // until it is enabled.
-bool Install();
+void Install();
 
 // Runs on each of the frame's scene passes. Draws nothing - the sky is drawn from inside the pass,
 // not at the end of it - and only reports whether the dome is still being found.

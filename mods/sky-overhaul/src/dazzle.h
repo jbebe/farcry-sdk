@@ -5,9 +5,6 @@
 
 namespace SkyOverhaul::Dazzle {
 
-// Prepares the effect. Call once from FCSE_Load.
-void Install();
-
 // Measures the sun against the world's depth on the sky pass, and paints the glare over the
 // composite.
 void OnScenePass(const Frame::Pass& pass);

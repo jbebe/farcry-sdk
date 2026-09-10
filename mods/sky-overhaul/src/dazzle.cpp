@@ -3,21 +3,20 @@
 #include "dazzle.h"
 
 #include "engine/camera.h"
+#include "engine/clock.h"
+#include "engine/cloud_layer.h"
 #include "engine/com.h"
-#include "engine/frame.h"
 #include "engine/log.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
-#include "engine/sky_state.h"
 #include "engine/sun_occlusion.h"
-#include "fcse_api.h"
 
 #include "dazzle_accumulate_ps.h"
 #include "dazzle_bleach_ps.h"
 #include "dazzle_ps.h"
 
+#include <algorithm>
 #include <cmath>
-#include <cstring>
 
 namespace {
 
@@ -25,10 +24,6 @@ namespace {
 
     constexpr float Radians(float degrees) {
         return degrees * kPi / 180.0f;
-    }
-
-    constexpr float Clamp(float value, float low, float high) {
-        return value < low ? low : (value > high ? high : value);
     }
 
     // How wide the glare's own gradient is allowed to get, whatever the spread is set to.
@@ -81,9 +76,6 @@ namespace {
     // How many pixel shader constant registers the effect writes, from register zero.
     constexpr UINT kConstantRegisters = 6;
 
-    // How often the state of the glare is written to the log.
-    constexpr float kHeartbeatSeconds = 2.0f;
-
     // Written by the settings callbacks and read while drawing. Each is a lone aligned float that
     // no other value has to agree with, so a torn read is neither possible nor consequential.
     float g_strength = 1.0f;
@@ -132,9 +124,8 @@ namespace {
     float g_recovering = 0.0f;
     float g_burnWeight = 0.0f;
     float g_sinceLookAway = 0.0f;
-    float g_sinceHeartbeat = 0.0f;
-    LARGE_INTEGER g_tickFrequency = {};
-    LARGE_INTEGER g_lastTick = {};
+    SkyOverhaul::Stopwatch g_clock;
+    SkyOverhaul::Heartbeat g_heartbeat{2.0f};
 
     // Where the sun is relative to the view, measured at a scene pass and used at the composite.
     // Both run in that order on one thread, so this needs no synchronisation.
@@ -156,8 +147,8 @@ namespace {
     bool ComputeSun(IDirect3DDevice9* device, const D3DVIEWPORT9& viewport, SunInView& out) {
         out = SunInView{};
 
-        SkyOverhaul::SkyState::Sun sun;
-        if (!SkyOverhaul::SkyState::Latest(sun)) {
+        SkyOverhaul::CloudLayer::Lighting lighting;
+        if (!SkyOverhaul::CloudLayer::Latest(lighting)) {
             return false;
         }
 
@@ -165,31 +156,28 @@ namespace {
         if (!SkyOverhaul::Camera::Read(device, view)) {
             return false;
         }
+        const float* sun = lighting.sunDirection;
         const float* viewProjection = view.viewProjection;
         const float* camera = view.direction;
 
         // The sun is a direction rather than a place, so it projects with w = 0: the point on the
         // far plane that direction points at, which is where the engine drew it.
-        const float clipW = viewProjection[12] * sun.direction[0] +
-                            viewProjection[13] * sun.direction[1] +
-                            viewProjection[14] * sun.direction[2];
-        const float clipX = viewProjection[0] * sun.direction[0] +
-                            viewProjection[1] * sun.direction[1] +
-                            viewProjection[2] * sun.direction[2];
-        const float clipY = viewProjection[4] * sun.direction[0] +
-                            viewProjection[5] * sun.direction[1] +
-                            viewProjection[6] * sun.direction[2];
+        const float clipW =
+            viewProjection[12] * sun[0] + viewProjection[13] * sun[1] + viewProjection[14] * sun[2];
+        const float clipX =
+            viewProjection[0] * sun[0] + viewProjection[1] * sun[1] + viewProjection[2] * sun[2];
+        const float clipY =
+            viewProjection[4] * sun[0] + viewProjection[5] * sun[1] + viewProjection[6] * sun[2];
 
         const float cameraLength = std::sqrt(camera[0] * camera[0] + camera[1] * camera[1] +
                                              camera[2] * camera[2]);
 
         out.inFront = clipW > 0.0001f;
         out.verticalScale = view.verticalScale;
-        out.elevation = sun.direction[2];
-        out.night = sun.night;
+        out.elevation = sun[2];
+        out.night = lighting.night;
         if (cameraLength > 0.0001f) {
-            out.cosAngle = (camera[0] * sun.direction[0] + camera[1] * sun.direction[1] +
-                            camera[2] * sun.direction[2]) /
+            out.cosAngle = (camera[0] * sun[0] + camera[1] * sun[1] + camera[2] * sun[2]) /
                            cameraLength;
         }
         if (out.inFront) {
@@ -215,11 +203,10 @@ namespace {
     IDirect3DSurface9* g_burnSurface = nullptr;
     IDirect3DTexture9* g_bleach = nullptr;
     IDirect3DSurface9* g_bleachSurface = nullptr;
-    IDirect3DPixelShader9* g_shader = nullptr;
-    IDirect3DPixelShader9* g_accumulateShader = nullptr;
-    IDirect3DPixelShader9* g_bleachShader = nullptr;
+    SkyOverhaul::PixelShader g_shader{"dazzle", g_dazzlePixelShader};
+    SkyOverhaul::PixelShader g_accumulateShader{"dazzle accumulate", g_dazzleAccumulatePixelShader};
+    SkyOverhaul::PixelShader g_bleachShader{"dazzle bleach", g_dazzleBleachPixelShader};
     D3DSURFACE_DESC g_copyDesc = {};
-    bool g_shaderRefused = false;
 
     // Nothing has been burned in yet, so there is nothing to show. Without this the first
     // afterimage would be whatever the texture's memory happened to hold.
@@ -237,12 +224,6 @@ namespace {
         SkyOverhaul::Release(g_bleachSurface);
         SkyOverhaul::Release(g_bleach);
         g_burnReady = false;
-    }
-
-    void ReleaseShaders() {
-        SkyOverhaul::Release(g_shader);
-        SkyOverhaul::Release(g_accumulateShader);
-        SkyOverhaul::Release(g_bleachShader);
     }
 
     // How a frame is laid into an accumulation target: averaged in by the weight the shader carries
@@ -269,7 +250,7 @@ namespace {
             device->SetRenderState(D3DRS_BLENDOP, peak ? D3DBLENDOP_MAX : D3DBLENDOP_ADD);
             device->SetRenderState(D3DRS_SRCBLEND, peak ? D3DBLEND_ONE : D3DBLEND_SRCALPHA);
             device->SetRenderState(D3DRS_DESTBLEND, peak ? D3DBLEND_ONE : D3DBLEND_INVSRCALPHA);
-            device->SetPixelShaderConstantF(0, constants, 6);
+            device->SetPixelShaderConstantF(0, constants, kConstantRegisters);
 
             draw.Quad(0.0f, 0.0f, static_cast<float>(pass.backBuffer.Width),
                       static_cast<float>(pass.backBuffer.Height));
@@ -291,31 +272,14 @@ namespace {
     }
 
     bool EnsureDeviceObjects(IDirect3DDevice9* device, const D3DSURFACE_DESC& backBuffer) {
-        if (g_shaderRefused) {
-            return false;
-        }
-
         if (g_owner != device) {
             ReleaseCopy();
-            ReleaseShaders();
             g_owner = device;
         }
 
-        if (g_shader == nullptr || g_accumulateShader == nullptr || g_bleachShader == nullptr) {
-            const HRESULT present = SkyOverhaul::CreateShader(device, g_dazzlePixelShader, &g_shader);
-            const HRESULT accumulate =
-                SkyOverhaul::CreateShader(device, g_dazzleAccumulatePixelShader, &g_accumulateShader);
-            const HRESULT bleach =
-                SkyOverhaul::CreateShader(device, g_dazzleBleachPixelShader, &g_bleachShader);
-            if (FAILED(present) || FAILED(accumulate) || FAILED(bleach) || g_shader == nullptr ||
-                g_accumulateShader == nullptr || g_bleachShader == nullptr) {
-                g_shaderRefused = true;
-                SkyOverhaul::Logf("dazzle: CreatePixelShader failed 0x%08lX / 0x%08lX / 0x%08lX",
-                                  static_cast<unsigned long>(present),
-                                  static_cast<unsigned long>(accumulate),
-                                  static_cast<unsigned long>(bleach));
-                return false;
-            }
+        if (g_shader.Get(device) == nullptr || g_accumulateShader.Get(device) == nullptr ||
+            g_bleachShader.Get(device) == nullptr) {
+            return false;
         }
 
         if (g_sceneCopy != nullptr && g_copyDesc.Width == backBuffer.Width &&
@@ -340,21 +304,6 @@ namespace {
         SkyOverhaul::Logf("dazzle: drawing over %ux%u, format %u", backBuffer.Width,
                           backBuffer.Height, static_cast<unsigned>(backBuffer.Format));
         return true;
-    }
-
-    // Seconds since the previous composite, uncapped: what a long one means is the caller's to
-    // decide.
-    float FrameSeconds() {
-        LARGE_INTEGER now;
-        QueryPerformanceCounter(&now);
-
-        float elapsed = 0.0f;
-        if (g_lastTick.QuadPart != 0 && g_tickFrequency.QuadPart != 0) {
-            elapsed = static_cast<float>(static_cast<double>(now.QuadPart - g_lastTick.QuadPart) /
-                                         static_cast<double>(g_tickFrequency.QuadPart));
-        }
-        g_lastTick = now;
-        return elapsed;
     }
 
     // Carries the eye's exposure forward by one frame and reports how strongly the afterimage
@@ -466,7 +415,7 @@ namespace {
 
         // Deliberately not gated on the sun being in front of the camera: the whole point is that
         // the angle decides, and a wide spread reaches past a right angle.
-        const float cosAngle = Clamp(g_thisFrame.cosAngle, -1.0f, 1.0f);
+        const float cosAngle = std::clamp(g_thisFrame.cosAngle, -1.0f, 1.0f);
         if (g_strength <= 0.0f || cosAngle <= g_spreadCos) {
             return glare;
         }
@@ -478,10 +427,10 @@ namespace {
         const float proximity = std::pow(1.0f - t, g_falloff);
 
         // A low sun is a weak one: its light travels further through the atmosphere.
-        const float elevation = Clamp(g_thisFrame.elevation * g_elevationScale, 0.0f, 1.0f);
+        const float elevation = std::clamp(g_thisFrame.elevation * g_elevationScale, 0.0f, 1.0f);
 
         const float visible = VisibleFraction();
-        const float daylight = 1.0f - Clamp(g_thisFrame.night, 0.0f, 1.0f);
+        const float daylight = 1.0f - std::clamp(g_thisFrame.night, 0.0f, 1.0f);
 
         glare.intensity = g_strength * proximity * elevation * visible * daylight;
 
@@ -511,7 +460,7 @@ namespace {
 
         const bool restart = g_burnRestart || !g_burnReady;
         const Recovery shown = g_burnReady && afterimage > 0.0f ? g_recovery : Recovery{};
-        const float constants[24] = {
+        const float constants[kConstantRegisters * 4] = {
             g_thisFrame.x / width,
             g_thisFrame.y / height,
             intensity,
@@ -547,22 +496,23 @@ namespace {
         // what puts a dark spot where the sun was rather than a white one.
         if (g_dazzled) {
             g_burnRestart = false;
-            AccumulateInto(pass, g_burnSurface, g_accumulateShader, constants, Blend::Mean);
+            AccumulateInto(pass, g_burnSurface, g_accumulateShader.Get(pass.device), constants,
+                           Blend::Mean);
 
             // The bleach keeps the most light that fell on each part of the view rather than the
             // average of it: a burned retina does not un-burn when the sun moves on. A mean could
             // not do it anyway, since at a few hundred frames a second its weight rounds to nothing
             // against an eight-bit target.
-            AccumulateInto(pass, g_bleachSurface, g_bleachShader, constants,
+            AccumulateInto(pass, g_bleachSurface, g_bleachShader.Get(pass.device), constants,
                            restart ? Blend::Mean : Blend::Peak);
         }
 
         SkyOverhaul::ScreenDraw draw(pass.device, 0, kConstantRegisters);
-        pass.device->SetPixelShader(g_shader);
+        pass.device->SetPixelShader(g_shader.Get(pass.device));
         pass.device->SetTexture(0, g_sceneCopy);
         pass.device->SetTexture(1, g_burn);
         pass.device->SetTexture(2, g_bleach);
-        pass.device->SetPixelShaderConstantF(0, constants, 6);
+        pass.device->SetPixelShaderConstantF(0, constants, kConstantRegisters);
 
         draw.Quad(0.0f, 0.0f, width, height);
     }
@@ -591,16 +541,14 @@ void SkyOverhaul::Dazzle::OnScenePass(const Frame::Pass& pass) {
 void SkyOverhaul::Dazzle::OnFinalPass(const Frame::Pass& pass) {
     // The composite is the last moment the world owns the frame: the interface is drawn after it,
     // so the glare lands under the heads-up display rather than over it.
-    const float elapsed = FrameSeconds();
+    const float elapsed = g_clock.Lap();
     const Glare glare = pass.live ? Measure() : Glare{};
     const float afterimage = AdvanceAfterimage(glare, pass.live, elapsed);
     if (glare.intensity > 0.002f || afterimage > 0.002f) {
         DrawDazzle(pass, glare.intensity, afterimage);
     }
 
-    g_sinceHeartbeat += elapsed;
-    if (pass.live && g_sinceHeartbeat >= kHeartbeatSeconds) {
-        g_sinceHeartbeat = 0.0f;
+    if (pass.live && g_heartbeat.Due(elapsed)) {
         Logf("dazzle f%u: intensity %.3f hold %.3f | cos %.3f elev %.3f "
              "night %.2f visible %.3f | exposure %.2f recovering %.2f env %.3f "
              "| sun (%.0f %.0f) inFront %d",
@@ -608,10 +556,6 @@ void SkyOverhaul::Dazzle::OnFinalPass(const Frame::Pass& pass) {
              g_thisFrame.night, VisibleFraction(), g_exposure, g_recovering, afterimage,
              g_thisFrame.x, g_thisFrame.y, g_thisFrame.inFront ? 1 : 0);
     }
-}
-
-void SkyOverhaul::Dazzle::Install() {
-    QueryPerformanceFrequency(&g_tickFrequency);
 }
 
 void SkyOverhaul::Dazzle::SetStrength(int percent) {
@@ -684,7 +628,9 @@ void SkyOverhaul::Dazzle::SetAfterimageSaturation(int percent) {
 
 void SkyOverhaul::Dazzle::ReleaseDeviceObjects() {
     ReleaseCopy();
-    ReleaseShaders();
+    g_shader.Release();
+    g_accumulateShader.Release();
+    g_bleachShader.Release();
     SkyOverhaul::SunOcclusion::ReleaseDeviceObjects();
     g_owner = nullptr;
 }

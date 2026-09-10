@@ -31,12 +31,11 @@ public:
     void Quad(float left, float top, float right, float bottom, float depth = 0.0f);
 
     // A quad over the whole viewport at `depth` in clip space, carrying one direction per corner
-    // for the pixel shader to interpolate. Needs a vertex shader bound, which is what a pixel
-    // shader past ps_2_b requires anyway. False if the vertex declaration could not be made.
+    // to a ps_3_0 pixel shader's TEXCOORD0 through a vertex shader of its own. False if the device
+    // would not make that shader or its declaration.
     bool ClipQuad(float depth, const float corners[4][3]);
 
-    // Drops the vertex declaration ClipQuad keeps. A declaration survives a device reset, so this
-    // is only for a device going away.
+    // Drops the vertex shader and declaration ClipQuad keeps, which its next call makes again.
     static void ReleaseDeviceObjects();
 
 protected:

@@ -1,17 +1,16 @@
 #include "clouds.h"
 
 #include "engine/camera.h"
+#include "engine/clock.h"
 #include "engine/cloud_layer.h"
-#include "engine/com.h"
 #include "engine/log.h"
 #include "engine/noise.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
-#include "fcse_api.h"
 
 #include "clouds_ps.h"
-#include "clouds_vs.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -69,8 +68,6 @@ namespace {
     constexpr float kDetailRepeats = 11.0f;
     constexpr float kWeatherRepeats = 0.18f;
 
-    constexpr float kHeartbeatSeconds = 2.0f;
-
     // Written by the settings callbacks and read while drawing.
     bool g_enabled = false;
     float g_baseAltitude = 1200.0f;
@@ -95,17 +92,9 @@ namespace {
     // that changing the wind changes how fast the clouds move and not where they are.
     float g_drift[2] = {0.0f, 0.0f};
 
-    IDirect3DDevice9* g_owner = nullptr;
-    IDirect3DVertexShader9* g_vertexShader = nullptr;
-    IDirect3DPixelShader9* g_pixelShader = nullptr;
-
-    // Latched after a failure, so a device that cannot compile the pair is told once rather than
-    // asked every frame.
-    bool g_refused = false;
-
-    LARGE_INTEGER g_tickFrequency = {};
-    LARGE_INTEGER g_lastTick = {};
-    float g_sinceHeartbeat = 0.0f;
+    SkyOverhaul::PixelShader g_shader{"clouds", g_cloudsPixelShader};
+    SkyOverhaul::Stopwatch g_clock;
+    SkyOverhaul::Heartbeat g_heartbeat{2.0f};
 
     // The one light the shader marches toward, and the glow of the air around the moon.
     struct Light {
@@ -121,7 +110,7 @@ namespace {
         const float rising = (kSunGone - lighting.sunDirection[2]) / kMoonRising;
         const float share = sun ? 0.0f : (rising < 1.0f ? rising : 1.0f);
         const float up = (lighting.moonDirection[2] + kMoonBelow) / kMoonBelow;
-        const float glow = share * (up < 0.0f ? 0.0f : (up > 1.0f ? 1.0f : up)) * g_moonGlow;
+        const float glow = share * std::clamp(up, 0.0f, 1.0f) * g_moonGlow;
 
         Light light;
         for (int c = 0; c < 3; c++) {
@@ -131,49 +120,6 @@ namespace {
             light.glow[c] = kMoonColour[c] * glow;
         }
         return light;
-    }
-
-    float FrameSeconds() {
-        LARGE_INTEGER now;
-        QueryPerformanceCounter(&now);
-        if (g_tickFrequency.QuadPart == 0 || g_lastTick.QuadPart == 0) {
-            g_lastTick = now;
-            return 0.0f;
-        }
-        const float seconds = static_cast<float>(now.QuadPart - g_lastTick.QuadPart) /
-                              static_cast<float>(g_tickFrequency.QuadPart);
-        g_lastTick = now;
-        return seconds < 0.0f ? 0.0f : seconds;
-    }
-
-    bool EnsureDeviceObjects(IDirect3DDevice9* device) {
-        if (g_owner != device) {
-            SkyOverhaul::Release(g_vertexShader);
-            SkyOverhaul::Release(g_pixelShader);
-            g_owner = device;
-            g_refused = false;
-        }
-        if (g_vertexShader != nullptr && g_pixelShader != nullptr) {
-            return true;
-        }
-        if (g_refused) {
-            return false;
-        }
-
-        const HRESULT vertex =
-            SkyOverhaul::CreateShader(device, g_cloudsVertexShader, &g_vertexShader);
-        const HRESULT pixel =
-            SkyOverhaul::CreateShader(device, g_cloudsPixelShader, &g_pixelShader);
-        if (FAILED(vertex) || FAILED(pixel)) {
-            SkyOverhaul::Release(g_vertexShader);
-            SkyOverhaul::Release(g_pixelShader);
-            g_refused = true;
-            SkyOverhaul::Logf("clouds: this device refused the shader pair (0x%08X, 0x%08X), so "
-                              "nothing will be drawn",
-                              vertex, pixel);
-            return false;
-        }
-        return true;
     }
 
     void LogPass(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
@@ -205,7 +151,8 @@ namespace {
         g_drift[1] = std::fmod(g_drift[1] + y * step, g_grain);
     }
 
-    void Draw(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
+    void Draw(const SkyOverhaul::Frame::Pass& pass, IDirect3DPixelShader9* shader,
+              const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::CloudLayer::Lighting& lighting) {
         // Kept clear of the layer below it however high that is set, so the two never interleave.
         const float above = g_baseAltitude + g_thickness + kCirrusClearance;
@@ -234,8 +181,7 @@ namespace {
             light.glow[0], light.glow[1], light.glow[2], 0.0f};
 
         SkyOverhaul::ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
-        pass.device->SetVertexShader(g_vertexShader);
-        pass.device->SetPixelShader(g_pixelShader);
+        pass.device->SetPixelShader(shader);
         pass.device->SetPixelShaderConstantF(kFirstConstant, constants, kConstantCount);
 
         pass.device->SetTexture(0, SkyOverhaul::Noise::Shape());
@@ -247,7 +193,6 @@ namespace {
             pass.device->SetSamplerState(sampler, D3DSAMP_ADDRESSW, D3DTADDRESS_WRAP);
             pass.device->SetSamplerState(sampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
             pass.device->SetSamplerState(sampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-            pass.device->SetSamplerState(sampler, D3DSAMP_MIPFILTER, D3DTEXF_LINEAR);
         }
 
         // Tested against the world's own depth, which this pass still owns, and blended the way
@@ -262,7 +207,6 @@ namespace {
 }
 
 void SkyOverhaul::Clouds::Install() {
-    QueryPerformanceFrequency(&g_tickFrequency);
     Noise::Start();
 }
 
@@ -274,31 +218,27 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
         return;
     }
     g_drawnFrame = pass.frame;
-    const float elapsed = FrameSeconds();
+    const float elapsed = g_clock.Lap();
 
+    IDirect3DPixelShader9* shader = g_shader.Get(pass.device);
     Camera::View view;
     CloudLayer::Lighting lighting;
-    if (!Camera::Read(pass.device, view) || !CloudLayer::Latest(lighting) ||
-        !EnsureDeviceObjects(pass.device) || !Noise::Ensure(pass.device)) {
+    if (shader == nullptr || !Camera::Read(pass.device, view) || !CloudLayer::Latest(lighting) ||
+        !Noise::Ensure(pass.device)) {
         return;
     }
 
     Advance(lighting, elapsed);
-    Draw(pass, view, lighting);
+    Draw(pass, shader, view, lighting);
 
-    g_sinceHeartbeat += elapsed;
-    if (g_sinceHeartbeat >= kHeartbeatSeconds) {
-        g_sinceHeartbeat = 0.0f;
+    if (g_heartbeat.Due(elapsed)) {
         LogPass(pass, view, elapsed);
     }
 }
 
 void SkyOverhaul::Clouds::ReleaseDeviceObjects() {
     Noise::ReleaseDeviceObjects();
-    Release(g_vertexShader);
-    Release(g_pixelShader);
-    g_owner = nullptr;
-    ScreenDraw::ReleaseDeviceObjects();
+    g_shader.Release();
 }
 
 void SkyOverhaul::Clouds::SetEnabled(bool enabled) {

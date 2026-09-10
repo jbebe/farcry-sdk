@@ -54,16 +54,7 @@
 // about the width of the sun or the moon, so the light leaves a cloud the way it leaves a hilltop.
 #define LIGHT_PENUMBRA 0.01f
 
-// How many texels across one repeat each volume holds, which is what turns a sample spacing into
-// the level of the noise that matches it.
-#define SHAPE_TEXELS 128.0f
-#define DETAIL_TEXELS 32.0f
-
-// The noise is read at its finest level wherever it is sampled. The volumes carry coarser levels
-// too, one for each halving of the sample spacing, but taking them costs more shape than it saves
-// grain: a cloud loses its bite long before it stops sparkling. The haze below does that work
-// instead, by turning a distant cloud into distant air rather than into a smoother cloud.
-#define NoiseLevel(stride, grain, texels) 0.0f
+#define PI 3.14159265f
 
 // The low frequencies a cloud's body is carved from, the high ones its edges are eroded by, and
 // where over the world clouds stand at all.
@@ -110,25 +101,6 @@ float4 FogValues : register(c82);
 float4 FogHeightValues : register(c83);
 float4 FogColourVector : register(c84);
 
-struct VertexIn {
-    float4 position : POSITION0;
-    float3 ray : TEXCOORD0;
-};
-
-struct VertexOut {
-    float4 position : POSITION0;
-    float3 ray : TEXCOORD0;
-};
-
-// The quad arrives in clip space already, carrying the world-space ray through each corner, so
-// there is nothing to transform and no vertex constant to depend on.
-VertexOut MainVS(VertexIn input) {
-    VertexOut output;
-    output.position = input.position;
-    output.ray = input.ray;
-    return output;
-}
-
 float Remap(float value, float fromLow, float fromHigh, float toLow, float toHigh) {
     return toLow + (value - fromLow) / (fromHigh - fromLow) * (toHigh - toLow);
 }
@@ -145,7 +117,7 @@ float HeightProfile(float height, float tallness) {
 
 // How much cloud stands at a point. `cheap` skips the erosion, which is most of the cost and none
 // of the shape, and is what the samples toward the light use.
-float Density(float3 world, float stride, uniform bool cheap) {
+float Density(float3 world, uniform bool cheap) {
     float height = saturate((world.z - Layer.x) / Layer.y);
 
     float2 weatherUv = (world.xy + Wind.zw) * Grain.z;
@@ -158,8 +130,7 @@ float Density(float3 world, float stride, uniform bool cheap) {
     // an almost constant slice out of the volume and every cloud in it comes out the same height.
     float acrossLayer = 1.0f / max(Layer.y * 3.0f, 1.0f);
     float3 shapeUv = float3((world.xy + Wind.xy) * Grain.x, world.z * acrossLayer);
-    float4 shape =
-        tex3Dlod(ShapeNoise, float4(shapeUv, NoiseLevel(stride, Grain.x, SHAPE_TEXELS)));
+    float4 shape = tex3Dlod(ShapeNoise, float4(shapeUv, 0.0f));
 
     // Three frequencies of billow, folded into one field, then used to carve the fourth.
     float billow = shape.g * 0.625f + shape.b * 0.25f + shape.a * 0.125f;
@@ -172,12 +143,8 @@ float Density(float3 world, float stride, uniform bool cheap) {
         return density * Layer.w;
     }
 
-    // Wispy at the base and billowy above it, which is how a real cloud's edge tears. Read at
-    // whatever level of the noise is as fine as the samples are apart: asking for more than that
-    // would return a different answer at every pixel and read as grain rather than as an edge.
-    float3 detail =
-        tex3Dlod(DetailNoise, float4(world * Grain.y, NoiseLevel(stride, Grain.y, DETAIL_TEXELS)))
-            .rgb;
+    // Wispy at the base and billowy above it, which is how a real cloud's edge tears.
+    float3 detail = tex3Dlod(DetailNoise, float4(world * Grain.y, 0.0f)).rgb;
     float fine = detail.r * 0.625f + detail.g * 0.25f + detail.b * 0.125f;
     float erosion = lerp(1.0f - fine, fine, saturate(height * 4.0f));
     density = saturate(Remap(density, erosion * Grain.w, 1.0f, 0.0f, 1.0f));
@@ -208,16 +175,14 @@ float Phase(float cosAngle, float forward) {
 // one dimmer, spread wider, and reaching deeper into the cloud than the last. The deeper reach is
 // the whole trick, and it costs nothing, because a thinner cloud's transmittance is the one
 // already measured raised to a lesser power.
-float3 Scatter(float lit, float cosAngle) {
+float3 Scatter(float lit, float3 lobes) {
     float total = 0.0f;
     float brightness = 1.0f;
     float depth = 1.0f;
-    float forward = Light.w;
     [unroll] for (int order = 0; order < 3; order++) {
-        total += Phase(cosAngle, forward) * pow(lit, depth) * brightness;
+        total += lobes[order] * pow(lit, depth) * brightness;
         brightness *= 0.55f;
         depth *= 0.5f;
-        forward *= 0.5f;
     }
     return LightColour.rgb * total;
 }
@@ -264,10 +229,6 @@ float Contrail(float2 at, float3 path, float seed) {
 // The shape is layered noise taken as it comes, the way a paint program's cloud filter makes it:
 // nothing stretched, folded or warped. How much of the field survives is one control and how
 // solid what survives is is another, because they are two different things about a sky.
-//
-// It hazes on how slanted the view is rather than how far it went, because the air that does the
-// hazing is all near the ground: six kilometres straight up passes through very little of it, and
-// the same six kilometres along the horizon passes through nothing else.
 float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     cover = 0.0f;
     float rise = Cirrus.x - Eye.z;
@@ -306,9 +267,14 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
 // How much of the light reaches a point, by marching toward it and counting what is in the way.
 float LightReach(float3 world) {
     float depth = 0.0f;
-    [unroll] for (int i = 0; i < LIGHT_STEPS; i++) {
+    [loop] for (int i = 0; i < LIGHT_STEPS; i++) {
         float3 at = world + Light.xyz * ((float)i + 0.5f) * LightColour.w;
-        depth += Density(at, 0.0f, true);
+        // Past the floor or the ceiling the march only moves further out, where there is no cloud.
+        float height = (at.z - Layer.x) / Layer.y;
+        if (height <= 0.0f || height >= 1.0f) {
+            break;
+        }
+        depth += Density(at, true);
     }
     return exp(-depth * LightColour.w);
 }
@@ -348,6 +314,10 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
 
     float cosAngle = dot(ray, Light.xyz);
 
+    // Each order of scattering's lobe toward the eye, the forward bend halving with every order.
+    float3 lobes = float3(Phase(cosAngle, Light.w), Phase(cosAngle, Light.w * 0.5f),
+                          Phase(cosAngle, Light.w * 0.25f));
+
     // Taken once at the middle of the layer rather than at every sample: the whole layer loses the
     // light within the same degree, and a degree of its travel is minutes of the day.
     float above = LightAbove(Layer.x + 0.5f * Layer.y);
@@ -356,7 +326,7 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // engine's own, by heading against the sun, so it matches the dome rather than approximating
     // it. Worked out before either layer, because both fade into it.
     float fogHeading =
-        acos(clamp(dot(normalize(ray.xy + 0.0001f), FogColourVector.xy), -1.0f, 1.0f)) / 3.14157f;
+        acos(clamp(dot(normalize(ray.xy + 0.0001f), FogColourVector.xy), -1.0f, 1.0f)) / PI;
     float3 horizon = FogColour.rgb + FogColourRange.rgb * fogHeading;
 
     float cirrusCover = 0.0f;
@@ -365,11 +335,13 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float transmittance = 1.0f;
     float3 scattered = 0.0f;
     [loop] for (int i = 0; i < VIEW_STEPS; i++) {
-        if (transmittance < 0.01f) {
+        // Nothing further along can show: a ray with no reach is multiplied away below, and cloud
+        // this solid already hides whatever lies behind it.
+        if (reach <= 0.0f || transmittance < 0.01f) {
             break;
         }
         float3 at = Eye.xyz + ray * (enter + ((float)i + dither) * stride);
-        float density = Density(at, stride, false);
+        float density = Density(at, false);
         if (density > 0.0005f) {
             float lit = LightReach(at);
 
@@ -379,7 +351,7 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
             float powder = 1.0f - exp(-density * 8.0f);
             float thin = lerp(1.0f, powder, saturate(cosAngle));
 
-            float3 light = (Scatter(lit, cosAngle) * thin +
+            float3 light = (Scatter(lit, lobes) * thin +
                             BackColour.rgb * lit * saturate(-cosAngle)) * above +
                            AmbientColour.rgb;
 

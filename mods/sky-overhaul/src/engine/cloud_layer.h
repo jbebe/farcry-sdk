@@ -19,40 +19,22 @@ enum class Mode {
 // The cloud lighting for one frame, as the environment manager left it: the world's presets
 // already blended by time of day and by storm, so these are finished values rather than curves.
 struct Lighting {
-    // Unit length, Z up, pointing at the light. The sun's is published here as well as by the sun
-    // disc because this submission is the one that still runs at night.
+    // Unit length, Z up, pointing at the light.
     float sunDirection[3];
     float moonDirection[3];
 
     float sunColour[3];
     float moonColour[3];
-    float diffuseColour[3];
     float ambientColour[3];
     float backSunColour[3];
-    float backMoonColour[3];
-    float scatterSunColour[3];
-    float scatterMoonColour[3];
 
-    float diffusePower;
-    float backPower;
-    float scatterPower;
-    float scatterBias;
-
-    // Coverage, falloff curve, normal strength, parallax strength.
-    float layer1[4];
-    float layer2[4];
-    bool layer1Enabled;
-    bool layer2Enabled;
-
-    // Two scrolling offsets, both of which each layer reads.
-    float wind[4];
+    // How far the lower layer has scrolled, whose direction is the wind's.
+    float wind[2];
 
     // Zero in clear weather, one in a full storm.
     float storm;
     // Zero in daylight, one at night.
     float night;
-    // What every sky shader looks its colour ramp up with.
-    float timeOfDay;
 };
 
 // Hooks the cloud-layer submission. Call once from FCSE_Load. False means the submission was not
