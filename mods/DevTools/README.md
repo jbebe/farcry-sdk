@@ -151,12 +151,18 @@ to warn about. There are more categories than fit across the window, so the tabs
 button at their left end lists them all. Running a command queues it for the engine's next frame, so
 the click and the command are never on the same thread as each other.
 
+Other plugins can add windows of their own. Each time Home opens the overlay, the open windows are
+laid out side by side — DevTools' first, then the rest in the order they were added — and after that
+each can be dragged anywhere. A window's close button closes only that window, and it stays closed
+until the game restarts: the bar across the top lists every closed window, and a click opens it
+again.
+
 The options above are not here: they live in the Mod Configuration Menu because that is what saves
 them. FCSE owns a setting's stored value and offers no way to write one back, so a switch in the
 overlay could change the running game but never the file.
 
 While it is open the game cannot see your mouse or keyboard, so clicking a button does not also fire
-your weapon. Press Home again and input goes straight back.
+your weapon. Press Home again, or close the last open window, and input goes straight back.
 
 It draws with [Dear ImGui](https://github.com/ocornut/imgui), fetched at configure time and compiled
 into the plugin. Reaching Direct3D takes no address in `Dunia.dll` at all: a device built purely to
@@ -164,6 +170,25 @@ be measured gives the vtable, `Present` and `Reset` are detoured through FCSE, a
 bound explicitly for the draw. Far Cry 2 ends a scene several times a frame and holds the mouse
 through DirectInput, and both of those shape the result — see
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
+
+### Adding a window from another plugin
+
+`include/devtools_api.h` is the contract, the way `fcse_api.h` is FCSE's, and says what DevTools does
+with a window and what it refuses. A plugin adds one from its `FCSE_OnRegisterFunctions`, which runs
+once every plugin has loaded:
+
+```cpp
+#include "devtools_api.h"
+
+void DrawMyWindow(void*) { ImGui::TextUnformatted("Hello from my plugin"); }
+
+extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI* api) {
+    DevTools::Overlay::AddWindow(api, "My plugin", 360.0f, 200.0f, &DrawMyWindow);
+}
+```
+
+It builds its own Dear ImGui by including `include/devtools_imgui.cmake` and linking `imgui`.
+[Sky Overhaul](../sky-overhaul) is the working example.
 
 ## Savegame launch
 
@@ -215,14 +240,15 @@ Needs the same x86 MSVC toolchain as FCSE. Its whole dependency *on FCSE* is
 it never reaches into `tools/FCSE/src/`. No .NET SDK, unlike FCSE: DevTools embeds no `.mgb`
 layouts, so JackAll is not in its build.
 
-The overlay adds one third-party dependency, Dear ImGui, pinned at `v1.91.5` and cloned by CMake at
-**configure** time. So the first configure needs `git` and a network connection; an offline machine
+The overlay adds one third-party dependency, Dear ImGui, pinned at `v1.91.5` in
+`include/devtools_imgui.cmake` and cloned by CMake at **configure** time. So the first configure needs `git` and a network connection; an offline machine
 fails there rather than at compile. It is built from source into `DevTools.dll` — there is no second
 file to install.
 
-`.\verify_build.ps1 [-Config debug]` checks the three properties of a built `DevTools.dll` that fail
-*silently* — x86, static CRT, and the `FCSE_Load` export. All three produce a plugin that is simply
-never there, with FCSE itself starting up perfectly. Both it and the build run in the release
+`.\verify_build.ps1 [-Config debug]` checks the properties of a built `DevTools.dll` that fail
+*silently* — x86, static CRT, the `FCSE_Load` export, and the `DevTools_GetOverlayAPI` export other
+plugins find the overlay by. Each leaves a plugin, or another plugin's window, simply never there,
+with FCSE itself starting up perfectly. Both it and the build run in the release
 configuration on every push and pull request touching `mods/DevTools` or the plugin ABI header
 (`.github/workflows/devtools-ci.yml`), and again before a release is packaged
 (`.github/workflows/devtools-release.yml`, dispatched with a version, producing
@@ -274,3 +300,7 @@ Everything below needs a real install:
   that one file proves the whole path: the string laid out as the engine's own, the call into
   `CXConsole::ExecuteString`, the queue draining on the game thread, and the developer flag the API
   raises for itself rather than relying on the option.
+- **Overlay windows** *(not yet run)*: with Sky Overhaul installed alongside, `bin\fcse.log` shows
+  `overlay: added the 'DevTools' window` and later `overlay: added the 'Sky Overhaul' window`. Home
+  lays the two out side by side under the bar, either can be dragged, closing one lists it in the bar
+  and a click brings it back where it was, and closing the last gives the game its input back.

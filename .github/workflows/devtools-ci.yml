@@ -44,7 +44,7 @@ jobs:
       # locally instead. It is the check to re-run after touching a pattern.
       - name: Verify the build
         shell: pwsh
-        # Architecture, static CRT, and the FCSE_Load export - the three properties of this build
-        # that break silently, on a player's machine rather than here. See verify_build.ps1 for what
-        # each check reads and why. The release workflow runs the same script before packaging.
+        # The properties of this build that break silently, on a player's machine rather than here.
+        # See verify_build.ps1 for what each check reads and why. The release workflow runs the same
+        # script before packaging.
         run: .\verify_build.ps1 -Config release

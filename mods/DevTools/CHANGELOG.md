@@ -50,6 +50,11 @@ Notable changes to DevTools, loosely following
   `v1.91.5`, cloned by CMake at configure time and compiled into the plugin - the first third-party
   dependency this project has taken on, and the reason a first configure now needs a network
   connection.
+- **Windows from other plugins** in the overlay. `include/devtools_api.h` lets another FCSE plugin
+  add a window with one call. Each time Home opens the overlay the windows are laid out side by side,
+  and they can be dragged anywhere after that; each closes on its own, a bar lists the closed ones to
+  open again, and closing the last gives the game its input back. A plugin built against a different
+  Dear ImGui, or a title already taken, is refused in `fcse.log`.
 - **Command API**, which the overlay is written against. One call runs a
   console line or a Lua chunk on the game thread, from anywhere, with developer-only commands
   reachable regardless of the option above; a catalog of 277 commands describes what to offer and

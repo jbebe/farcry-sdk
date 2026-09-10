@@ -1,4 +1,5 @@
-// The developer overlay: the command catalog, on screen, on Home.
+// The developer overlay on Home: the command catalog, and any window another plugin adds through
+// include/devtools_api.h.
 #pragma once
 
 namespace DevTools::Overlay {

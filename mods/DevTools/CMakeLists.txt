@@ -31,28 +31,12 @@ if (NOT EXISTS "${FCSE_INCLUDE_DIR}/fcse_api.h")
                       "tools/FCSE/include relative to the repository root.")
 endif()
 
-# Dear ImGui - the overlay's widgets, and the one piece of third-party code here. Upstream ships no
-# CMakeLists.txt, so MakeAvailable populates and stops, and this is the same from-source static
-# library tools/FCSE/CMakeLists.txt builds MinHook as. The Win32 and D3D9 backends are the ones Far
-# Cry 2 calls for: a windowed message loop and Direct3DCreate9.
-include(FetchContent)
-FetchContent_Declare(
-  imgui
-  GIT_REPOSITORY https://github.com/ocornut/imgui.git
-  GIT_TAG        v1.91.5
-)
-FetchContent_MakeAvailable(imgui)
-
-add_library(imgui STATIC
-  "${imgui_SOURCE_DIR}/imgui.cpp"
-  "${imgui_SOURCE_DIR}/imgui_draw.cpp"
-  "${imgui_SOURCE_DIR}/imgui_tables.cpp"
-  "${imgui_SOURCE_DIR}/imgui_widgets.cpp"
-  "${imgui_SOURCE_DIR}/misc/cpp/imgui_stdlib.cpp"
-  "${imgui_SOURCE_DIR}/backends/imgui_impl_dx9.cpp"
-  "${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp"
-)
-target_include_directories(imgui PUBLIC "${imgui_SOURCE_DIR}" "${imgui_SOURCE_DIR}/backends")
+# Dear ImGui - the overlay's widgets, and the one piece of third-party code here. The library comes
+# from include/devtools_imgui.cmake, identical in every plugin that adds a window. The Win32 and D3D9
+# backends are DevTools' alone and compiled into the plugin below: they are what Far Cry 2 calls for,
+# a windowed message loop and Direct3DCreate9.
+set(DEVTOOLS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/include")
+include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
 
 add_library(DevTools SHARED
   "src/main.cpp"
@@ -80,6 +64,8 @@ add_library(DevTools SHARED
   "src/options/skip_system_detection.cpp"
   "src/options/unlock_all_weapons.cpp"
   "src/overlay/overlay.cpp"
+  "${imgui_SOURCE_DIR}/backends/imgui_impl_dx9.cpp"
+  "${imgui_SOURCE_DIR}/backends/imgui_impl_win32.cpp"
 )
 
 # d3d9 for the overlay's own device handling, dinput8 for taking the mouse and keyboard off the game
@@ -91,7 +77,9 @@ target_link_libraries(DevTools PRIVATE imgui d3d9 dinput8 dxguid ole32)
 # including file, and moving a file between folders does not rewrite anyone's includes.
 target_include_directories(DevTools PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
+  "${DEVTOOLS_INCLUDE_DIR}"
   "${FCSE_INCLUDE_DIR}"
+  "${imgui_SOURCE_DIR}/backends"
 )
 
 # No "lib" prefix and no decoration: bin\plugins\DevTools.dll is what the player installs and what

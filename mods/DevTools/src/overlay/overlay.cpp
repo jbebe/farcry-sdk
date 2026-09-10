@@ -8,6 +8,7 @@
 #include "overlay/overlay.h"
 
 #include "commands/catalog.h"
+#include "devtools_api.h"
 #include "engine/game_thread.h"
 #include "engine/input.h"
 #include "engine/renderer.h"
@@ -16,8 +17,10 @@
 #include "imgui.h"
 #include "imgui_impl_dx9.h"
 #include "imgui_impl_win32.h"
+#include "imgui_internal.h"
 #include "misc/cpp/imgui_stdlib.h"
 
+#include <cstdio>
 #include <cstring>
 #include <d3d9.h>
 #include <deque>
@@ -44,13 +47,38 @@ namespace {
         LPARAM lparam;
     };
 
+    // One window in the overlay, DevTools' own or another plugin's.
+    struct Window {
+        std::string title;
+        DevTools_BindImGuiFn bind;
+        DevTools_DrawWindowFn draw;
+        void* userData;
+        // The size it was last drawn at, which the next layout spaces the windows by.
+        ImVec2 size;
+        bool open = true;
+    };
+
     std::mutex g_messageLock;
     std::vector<QueuedMessage> g_messages;
+
+    // Every window added, in order, from whichever thread added it. Nothing is ever removed.
+    std::mutex g_registryLock;
+    std::vector<Window> g_registered;
+
+    // The drawing thread's copy of that list, which is where a window's size and open state live.
+    std::vector<Window> g_windows;
 
     // Whether starting has been tried, not whether it worked: a failure that is retried is a
     // failure logged once a frame and an ImGui context leaked every time.
     bool g_startAttempted = false;
     bool g_running = false;
+
+    // Whether the overlay is on the frame at all, which is what a window is accepted against.
+    bool g_installed = false;
+
+    // Whether the overlay was up last frame. ImGuiCond_Appearing cannot see it reopen, because no
+    // frame runs while it is hidden.
+    bool g_wasVisible = false;
 
     // One editable argument per command, in catalog order, so what was typed survives a change of
     // category and a scroll away.
@@ -141,6 +169,58 @@ namespace {
         io.AddKeyEvent(ImGuiMod_Alt, keys.alt);
     }
 
+    // Logs why a window is not added, and refuses it.
+    bool Refuse(const char* reason, const char* title) {
+        char line[256];
+        std::snprintf(line, sizeof(line), "overlay: %s - the '%s' window is not added", reason,
+                      title);
+        FCSE::ApiPointer()->Log(line);
+        return false;
+    }
+
+    bool RegisterWindow(const DevTools_ImGuiLayout* imgui, DevTools_BindImGuiFn bind,
+                        const char* title, float width, float height, DevTools_DrawWindowFn draw,
+                        void* userData) {
+        if (title == nullptr || title[0] == '\0' || bind == nullptr || draw == nullptr) {
+            return Refuse("a window needs a title, a bind and a draw function",
+                          title == nullptr ? "" : title);
+        }
+        if (!g_installed) {
+            return Refuse("the overlay is not running this launch", title);
+        }
+
+        const DevTools_ImGuiLayout own = DevTools::Overlay::ImGuiLayout();
+        if (imgui == nullptr || std::memcmp(imgui, &own, sizeof(own)) != 0) {
+            char reason[128];
+            std::snprintf(reason, sizeof(reason),
+                          "built against Dear ImGui %u where DevTools has %u, or with a different "
+                          "layout",
+                          imgui == nullptr ? 0u : imgui->versionNum, own.versionNum);
+            return Refuse(reason, title);
+        }
+
+        // Compared the way ImGui names a window, so two titles it would draw as one are caught.
+        const ImGuiID id = ImHashStr(title);
+        std::lock_guard<std::mutex> held(g_registryLock);
+        for (const Window& window : g_registered) {
+            if (ImHashStr(window.title.c_str()) == id) {
+                return Refuse("the overlay already has a window by that title", title);
+            }
+        }
+        g_registered.push_back({title, bind, draw, userData, ImVec2(width, height)});
+
+        char line[256];
+        std::snprintf(line, sizeof(line), "overlay: added the '%s' window", title);
+        FCSE::ApiPointer()->Log(line);
+        return true;
+    }
+
+    void AdoptRegistered() {
+        std::lock_guard<std::mutex> held(g_registryLock);
+        g_windows.insert(g_windows.end(), g_registered.begin() + g_windows.size(),
+                         g_registered.end());
+    }
+
     void BuildCategories() {
         g_categories.push_back("All");
         for (const Command& command : DevTools::Commands::All()) {
@@ -173,6 +253,10 @@ namespace {
         io.IniFilename = nullptr;
         // The game hides the system cursor and never puts it back, so the overlay draws its own.
         io.MouseDrawCursor = true;
+        // A mistake in another plugin's window is reported on that window, not as an assert that
+        // stops the game or a line in a debug log nothing reads.
+        io.ConfigErrorRecoveryEnableAssert = false;
+        io.ConfigErrorRecoveryEnableDebugLog = false;
 
         if (!ImGui_ImplWin32_Init(created.hFocusWindow) || !ImGui_ImplDX9_Init(device)) {
             api->Log("overlay: ImGui would not attach to the game's device - there is no overlay "
@@ -281,22 +365,8 @@ namespace {
         ImGui::EndTable();
     }
 
-    void DrawWindow() {
-        bool open = true;
-        ImGui::SetNextWindowSize(ImVec2(720.0f, 520.0f), ImGuiCond_FirstUseEver);
-        const bool drawing = ImGui::Begin("DevTools", &open);
-
-        // Closing from the window's own title bar has to hand the game its input back, the same as
-        // the key does.
-        if (!open) {
-            SetVisible(false);
-        }
-
-        if (!drawing) {
-            ImGui::End();
-            return;
-        }
-
+    // DevTools' own window: the catalog, a tab per category, and what was run.
+    void DrawCatalog(void*) {
         // Sixteen categories will not fit across the window, so they scroll rather than shrink, and
         // the popup button is the way to reach one that has scrolled off.
         if (ImGui::BeginTabBar("categories", ImGuiTabBarFlags_FittingPolicyScroll |
@@ -319,8 +389,85 @@ namespace {
                 ImGui::TextUnformatted(line.c_str());
             }
         }
+    }
 
-        ImGui::End();
+    // The bar across the top, listing each closed window until a click opens it again.
+    void DrawBar() {
+        if (!ImGui::BeginMainMenuBar()) {
+            return;
+        }
+
+        bool anyClosed = false;
+        for (Window& window : g_windows) {
+            if (!window.open) {
+                anyClosed = true;
+                if (ImGui::MenuItem(window.title.c_str())) {
+                    window.open = true;
+                }
+            }
+        }
+        if (!anyClosed) {
+            ImGui::TextDisabled("Closed windows are listed here");
+        }
+
+        ImGui::EndMainMenuBar();
+    }
+
+    // Every open window, laid out side by side on the frame the overlay opens, and left wherever it
+    // is dragged after that.
+    void DrawWindows(bool opened) {
+        // The screen under the bar, which BeginMainMenuBar has already taken its height out of.
+        const ImRect area =
+            static_cast<ImGuiViewportP*>(ImGui::GetMainViewport())->GetBuildWorkRect();
+        const ImVec2 gap = ImGui::GetStyle().WindowPadding;
+        const float rowStart = area.Min.x + gap.x;
+        ImVec2 next(rowStart, area.Min.y + gap.y);
+        float rowHeight = 0.0f;
+        bool closedOne = false;
+        bool anyOpen = false;
+
+        DevTools_ImGuiBinding binding{ImGui::GetCurrentContext()};
+        ImGui::GetAllocatorFunctions(&binding.MemAlloc, &binding.MemFree, &binding.memUserData);
+
+        for (Window& window : g_windows) {
+            if (!window.open) {
+                continue;
+            }
+
+            if (opened) {
+                // A window that would cross the right edge starts a new row under the tallest of
+                // this one, unless it is already the first in its row.
+                if (next.x > rowStart && next.x + window.size.x > area.Max.x) {
+                    next = ImVec2(rowStart, next.y + rowHeight + gap.y);
+                    rowHeight = 0.0f;
+                }
+                ImGui::SetNextWindowPos(next, ImGuiCond_Always);
+                next.x += window.size.x + gap.x;
+                rowHeight = ImMax(rowHeight, window.size.y);
+            }
+
+            ImGui::SetNextWindowSize(window.size, ImGuiCond_FirstUseEver);
+            const bool drawing = ImGui::Begin(window.title.c_str(), &window.open);
+            window.size = ImGui::GetWindowSize();
+            if (drawing) {
+                // Whatever the draw leaves unbalanced is closed here, so it cannot reach the windows
+                // drawn after it.
+                ImGuiErrorRecoveryState state;
+                ImGui::ErrorRecoveryStoreState(&state);
+                window.bind(&binding);
+                window.draw(window.userData);
+                ImGui::ErrorRecoveryTryToRecoverState(&state);
+            }
+            ImGui::End();
+
+            closedOne = closedOne || !window.open;
+            anyOpen = anyOpen || window.open;
+        }
+
+        // Closing the last window closes the overlay, rather than holding the game's input for a bar.
+        if (closedOne && !anyOpen) {
+            SetVisible(false);
+        }
     }
 
     void Draw(IDirect3DDevice9* device) {
@@ -328,7 +475,11 @@ namespace {
             g_startAttempted = true;
             g_running = Start(device);
         }
-        if (!g_running || !Visible()) {
+
+        const bool visible = g_running && Visible();
+        const bool opened = visible && !g_wasVisible;
+        g_wasVisible = visible;
+        if (!visible) {
             return;
         }
 
@@ -339,7 +490,9 @@ namespace {
         FeedRawKeys();
         ImGui::NewFrame();
 
-        DrawWindow();
+        AdoptRegistered();
+        DrawBar();
+        DrawWindows(opened);
 
         ImGui::Render();
         ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
@@ -354,6 +507,20 @@ namespace {
 
 namespace DevTools::Overlay {
 
-bool Install() { return Renderer::Install(&Draw, &OnDeviceLost); }
+bool Install() {
+    g_installed = Renderer::Install(&Draw, &OnDeviceLost);
 
+    // DevTools' own window is added the way any plugin's is, and first, since every FCSE_Load runs
+    // before any plugin can add one.
+    const DevTools_ImGuiLayout layout = ImGuiLayout();
+    return g_installed && RegisterWindow(&layout, &BindImGui, "DevTools", 720.0f, 520.0f,
+                                         &DrawCatalog, nullptr);
+}
+
+}
+
+// How another plugin reaches the overlay: it finds DevTools.dll and asks for this by name.
+extern "C" __declspec(dllexport) const DevTools_OverlayAPI* DevTools_GetOverlayAPI() {
+    static const DevTools_OverlayAPI api{DEVTOOLS_OVERLAY_API_VERSION, &RegisterWindow};
+    return &api;
 }

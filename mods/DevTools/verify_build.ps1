@@ -4,7 +4,7 @@
     loads on a dev machine, and only breaks on a player's install.
 
 .DESCRIPTION
-    Three things about this build can go wrong without producing a warning, let alone an error:
+    These things about this build can go wrong without producing a warning, let alone an error:
 
       - Architecture. A 64-bit DevTools.dll builds perfectly well and can never load into Far Cry 2,
         which is a 32-bit process. FCSE reports it as a plugin that failed to load, with nothing to
@@ -19,7 +19,10 @@
         DLL without it. Losing __declspec(dllexport) leaves a DLL that is found, loaded, and
         ignored.
 
-    All three are read straight out of the built image rather than through dumpbin, which is not on
+      - The DevTools_GetOverlayAPI export, which another plugin finds the overlay by. Without it,
+        every plugin that adds a window logs that DevTools is not installed.
+
+    All are read straight out of the built image rather than through dumpbin, which is not on
     PATH for a caller that has not been through vcvarsall (build.ps1 sets up the developer
     environment inside its own `cmd /c` and nothing inherits it).
 
@@ -78,4 +81,10 @@ if (-not $image.Contains("FCSE_Load")) {
     throw "$DllPath does not export FCSE_Load - FCSE loads a plugin by that one name and skips any DLL without it. Check the extern `"C`" __declspec(dllexport) on it in src\main.cpp."
 }
 
-Write-Host "DevTools.dll ($Config): x86, static CRT, exports FCSE_Load." -ForegroundColor Green
+# The same for the overlay's export. The header's helper spells that name too, but DevTools never
+# calls the helper, so nothing compiled into this DLL does.
+if (-not $image.Contains("DevTools_GetOverlayAPI")) {
+    throw "$DllPath does not export DevTools_GetOverlayAPI - every plugin adding a window to the overlay would log that DevTools is not installed. Check the extern `"C`" __declspec(dllexport) on it in src\overlay\overlay.cpp."
+}
+
+Write-Host "DevTools.dll ($Config): x86, static CRT, exports FCSE_Load and DevTools_GetOverlayAPI." -ForegroundColor Green
