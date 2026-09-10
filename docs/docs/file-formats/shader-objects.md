@@ -70,6 +70,19 @@ The globals every shader inherits are bound at fixed registers, listed in the pr
 `globalparameterproviders.inc.fx` and registered at runtime by `CViewportShaderParameterProvider`
 (`Dunia.dll:0x103788f0`). `ViewProjectionMatrix` is always `c4`, `FogColorVector` `c48`,
 `BloomAdaptationFactor` `c58`, `SunOcclusionFactor` `c63`. A shader's own parameters start at `c71`.
+`SkyColor`, `GroundColor` and `LightColor` are among those own parameters rather than the globals, so
+their register changes from one object to the next.
+
+### Naming a draw in a running game
+
+:::info[Verified in a running game]
+Retail GOG v1.03, logged from an FCSE plugin hooking the device's draw calls.
+:::
+
+The bytecode a bound shader returns through `GetFunction` is the bytecode stored in its object here,
+byte for byte. A draw seen at the device is therefore named by matching that bytecode's size and
+CRC-32 against the export. Not every draw matches: some vertex shaders bound in the sky pass match no
+object in the export.
 
 ## Render states
 

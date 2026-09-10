@@ -138,6 +138,9 @@ whole block below addressable from outside.
 
 Everything the cloud layer reads is in the same block, listed [below](#every-cloud-parameter-is-read-out-of-the-scene-state).
 The names come from `CSky::LoadSky` writing the world's `<Sky>` attributes into those same offsets.
+The per-frame values in the block — the sun and moon directions, the night factor and the
+time-of-day coordinate — are written by the environment manager, described in
+[time of day, light and shadow](./time-of-day-and-lighting.md).
 
 ### `SunRange` does not change how big the sun looks
 
@@ -241,6 +244,20 @@ the frame can read without asking, at fixed registers. The camera is fully descr
 `ViewProjectionMatrix` at `c4`, `ProjectionMatrix` at `c8`, `ViewMatrix` at `c12`, `ViewPoint` at
 `c47`, `CameraDirection` at `c46`, plus fog at `c48`–`c52` and `BloomAdaptationFactor` at `c58`.
 
+The fog's colour is a ramp swept by heading, not one colour. The prototype's `fog.inc.fx`, whose
+register table matches retail, takes the horizontal direction from the camera to the fogged point,
+dots it with `FogColorVector` (`c48`), and turns that into a factor of roughly `acos(cos) / π`: 0
+looking along the vector, 1 looking the other way. The colour is then
+`FogColor + factor × FogColorRange` (`c49`, `c50`).
+
+:::info[Verified in a running game]
+Read off the device every few seconds by an FCSE plugin, retail GOG v1.03. At dawn the two ends of the
+ramp read (0.75, 0.52, 0.12) and (0.29, 0.23, 0.32), the Clear fog preset's sun-side orange and
+far-side purple for that hour. Which end faces the sun is not fixed: at dawn `FogColorVector` pointed
+at the sun and `FogColor` held the sun side's colour, while at dusk it pointed away and `FogColor`
+held the far side's. `BloomAdaptationFactor` read 1.0 at every hour sampled.
+:::
+
 **The sun's direction is not among them.** Nothing in the provider carries it, and the reason is
 structural rather than an oversight: every draw that needs the sun is already positioned at the sun.
 The flare and the sun disc are billboards placed there, so their own transform is the answer, and the
@@ -277,6 +294,27 @@ Each curve is a set of time-of-day keyframes, and each keyframe carries its own 
 colour gradient. The engine interpolates both the keyframe position (time of day) and the gradient
 itself (horizon to zenith) every frame. There's no per-pixel sky texture to enlarge — the dome's
 "resolution" is however many keyframes and gradient stops an artist gave it.
+
+### The dome's draw call
+
+:::info[Verified in a running game]
+Logged from an FCSE plugin hooking `DrawIndexedPrimitive`, retail GOG v1.03 at 1280×720, at noon,
+dusk and night.
+:::
+
+The dome reaches the device as **one indexed triangle strip of 714 vertices and 1450 triangles**,
+stride 16 from index 0, drawn once per sky pass at every hour. No other draw in the sky pass shares
+those counts. It draws through the sky pass's viewport (`MinZ` 0.999) with the depth test on at
+`LESSEQUAL`, depth writes off and culling off.
+
+It blends `SrcAlpha` over `InvSrcAlpha` **at every hour, noon included**, so the `OPAQUE`
+permutation is not the one the retail sky runs. The prototype's `skydome.fx` gives that alpha as
+`saturate(opacity + gray(colour) × 0.5)`, with gray weights (0.3, 0.59, 0.11) and `opacity` the
+`1 - night` the dome is submitted with. The sprites and star sphere draw after it in the same pass and
+set no blend or depth state of their own, so they inherit the dome's.
+
+Stage 0 holds a 64×512 DXT5 texture, the size and format of `sky_color_sun.xbt`. The dome is not
+texture-free, as the overview at the top of this page puts it.
 
 ## The clouds: noise into a hardcoded 512×512 target
 
@@ -473,6 +511,8 @@ visibly under the fake path in a way it wouldn't under the real one.
 mask above as its occlusion input. `CEnvironmentAdaptiveBloom` (16 members) is the game's tonemap
 and colour-grade stage — it touches the whole frame, not just the sky, since `_SkyColor` also feeds
 world ambient lighting as a directional hemisphere term (see [`.xbm`/`.xbg`](../file-formats/xbm-xbg.md)).
+Its members and the retail values are listed in
+[environment presets](../modding/environment-presets.md#the-colour-grade).
 
 Console/config surface confirmed via strings in `Dunia.dll`:
 

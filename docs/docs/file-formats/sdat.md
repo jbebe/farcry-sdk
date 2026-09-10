@@ -227,8 +227,9 @@ one. `world1.game.xml` holds 1,725 `<Layer>` elements in total; the other 1,680 
 document-wide search instead of by that parent shifts every layer index.
 
 The same file's `<Environment>` block mixes GUID references into `<world>.managers.fcb` (the
-`Lighting`/`Fog`/`Sky` preset slots, whose `CEnvironment*` objects have no decoded field names) with
-a handful of literal, immediately usable values:
+`Lighting`/`Fog`/`Sky` preset slots, whose `CEnvironment*` objects decode with named fields — see
+[environment presets](../modding/environment-presets.md); an earlier revision of this page had them
+undecoded) with a handful of literal, immediately usable values:
 
 ```xml
 <DefaultEnvSettings DefaultStormFactor="0" DefaultHour="11" DefaultMin="30" />

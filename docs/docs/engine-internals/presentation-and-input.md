@@ -288,8 +288,15 @@ build-specific.
 | 16 | `Reset` | DevTools |
 | 17 | `Present` | DevTools |
 | 42 | `EndScene` | Sky Overhaul |
+| 82 | `DrawIndexedPrimitive` | Sky Overhaul |
+| 94 | `SetVertexShaderConstantF` | Sky Overhaul |
+| 109 | `SetPixelShaderConstantF` | Sky Overhaul |
 
-FCSE gives an address to one plugin and does not chain detours, so these three are the whole
+Slot 82 is where the sky dome is recognised, by the signature in
+[the sky and cloud system](./sky-and-clouds.md#the-domes-draw-call). The two constant setters see
+every upload of the fog colour at `c49`–`c50`.
+
+FCSE gives an address to one plugin and does not chain detours, so these six are the whole
 contention surface. Everything else on that vtable is free, including `TestCooperativeLevel`, which
 the engine calls before it resets and which is therefore a workable third release seam.
 
