@@ -128,8 +128,7 @@ bool SkyOverhaul::CloudLayer::Install() {
     }
     if (mapped != scanned) {
         FCSE::Logf("clouds: the address library says 0x%08zX and the pattern says 0x%08zX, "
-                   "taking %s",
-                   static_cast<size_t>(mapped), static_cast<size_t>(scanned),
+                   "taking %s", static_cast<size_t>(mapped), static_cast<size_t>(scanned),
                    scanned != 0 ? "the pattern" : "the library");
     }
 

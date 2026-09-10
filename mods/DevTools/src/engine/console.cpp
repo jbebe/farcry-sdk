@@ -77,8 +77,6 @@ namespace {
 namespace DevTools::Console {
 
 bool Install() {
-    const FCSE_PluginAPI* api = FCSE::ApiPointer();
-
     g_console = FCSE::Data<void*>(FCSE::Uplay(0x01606280));
     g_stringProxy = FCSE::Data<const void>(FCSE::Uplay(0x00FD42D1));
 
@@ -98,17 +96,15 @@ bool Install() {
     }
 
     g_installed = true;
-    api->Log("console: command API ready");
+    FCSE::ApiPointer()->Log("console: command API ready");
     return true;
 }
 
 bool IsReady() { return g_installed && *g_console != nullptr && GameThread::IsCurrent(); }
 
 bool Execute(const char* line) {
-    const FCSE_PluginAPI* api = FCSE::ApiPointer();
-
     if (!IsReady()) {
-        api->Log("console: not ready - the line was not run");
+        FCSE::ApiPointer()->Log("console: not ready - the line was not run");
         return false;
     }
 

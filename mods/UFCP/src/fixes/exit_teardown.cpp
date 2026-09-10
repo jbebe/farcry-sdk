@@ -67,7 +67,7 @@ namespace {
         return vtable[3] == nullptr ? Decay::NoDestructor : Decay::Live;
     }
 
-    void ReportOnce(const FCSE_PluginAPI* api, Decay decay, const void* const* vtable) {
+    void ReportOnce(Decay decay, const void* const* vtable) {
         if (g_reported) {
             return;
         }
@@ -75,7 +75,7 @@ namespace {
 
         if (decay == Decay::NoDestructor) {
             FCSE::Logf("exit teardown: skipped a destroyed object, vtable Dunia+0x%tX",
-                       reinterpret_cast<uintptr_t>(vtable) - api->duniaBase);
+                       reinterpret_cast<uintptr_t>(vtable) - FCSE::ApiPointer()->duniaBase);
         } else {
             FCSE::Logf("exit teardown: skipped a destroyed object (%s)",
                        decay == Decay::Unmapped ? "unmapped" : "no vtable");
@@ -86,7 +86,7 @@ namespace {
         const void* const* vtable = nullptr;
         const Decay decay = Inspect(object, &vtable);
         if (decay != Decay::Live) {
-            ReportOnce(FCSE::ApiPointer(), decay, vtable);
+            ReportOnce(decay, vtable);
             return;
         }
 

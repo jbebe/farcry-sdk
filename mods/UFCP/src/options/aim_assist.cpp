@@ -61,15 +61,13 @@ namespace {
 }
 
 void InstallAimAssistHook() {
-    const FCSE_PluginAPI* api = FCSE::ApiPointer();
-
     size_t installed = 0;
     for (size_t site = 0; site < kSiteCount; ++site) {
         if (!g_sites[site]) {
             continue;
         }
 
-        installed += api->MidHook(
+        installed += FCSE::ApiPointer()->MidHook(
             reinterpret_cast<void*>(g_sites[site].address() + kHelperBlockStart), kHandlers[site]);
     }
 

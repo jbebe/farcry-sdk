@@ -187,7 +187,8 @@ extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_Plugin
 }
 ```
 
-It builds its own Dear ImGui by including `include/devtools_imgui.cmake` and linking `imgui`.
+It calls `FCSE::Bind` in its `FCSE_Load`, which is what lets `AddWindow` log a failure, and builds its
+own Dear ImGui by including `include/devtools_imgui.cmake` and linking `imgui`.
 [Sky Overhaul](../sky-overhaul) is the working example.
 
 ## Savegame launch

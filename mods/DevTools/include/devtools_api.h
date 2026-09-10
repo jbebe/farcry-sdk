@@ -83,8 +83,8 @@ inline void BindImGui(const DevTools_ImGuiBinding* imgui) {
     ImGui::SetAllocatorFunctions(imgui->MemAlloc, imgui->MemFree, imgui->memUserData);
 }
 
-// DevTools_AddWindowFn for this module, once DevTools.dll is found and its API version matches;
-// either failure is logged.
+// DevTools_AddWindowFn for this module, once DevTools.dll is found and its API version matches.
+// Either failure is logged through FCSE::Logf, so call FCSE::Bind in FCSE_Load first.
 inline bool AddWindow(const char* title, float width, float height, DevTools_DrawWindowFn draw,
                       void* userData = nullptr) {
     HMODULE devTools = GetModuleHandleW(L"DevTools.dll");

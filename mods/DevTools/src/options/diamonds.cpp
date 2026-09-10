@@ -233,8 +233,6 @@ void InstallDiamondsHooks() {
 int GetDiamonds() { return g_target; }
 
 void SetDiamonds(int value) {
-    const FCSE_PluginAPI* api = FCSE::ApiPointer();
-
     if (value == g_target) {
         return;
     }
@@ -245,6 +243,6 @@ void SetDiamonds(int value) {
     if (g_target > 0) {
         FCSE::Logf("diamonds: %d", g_target);
     } else {
-        api->Log("diamonds: off - any grant outstanding is handed back");
+        FCSE::Logf("diamonds: off - any grant outstanding is handed back");
     }
 }

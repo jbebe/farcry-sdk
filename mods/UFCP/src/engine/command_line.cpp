@@ -101,15 +101,13 @@ namespace {
     }
 
     bool __cdecl RunGameDetour(HINSTANCE* instance, const char* commandLine) {
-        const FCSE_PluginAPI* api = FCSE::ApiPointer();
-
         g_engineThread = GetCurrentThreadId();
 
         const char* original = commandLine != nullptr ? commandLine : "";
 
         if (!BuildCommandLine(original)) {
-            api->Log("command line: the engine's command line is too long to add to - passing it "
-                     "through unchanged");
+            FCSE::ApiPointer()->Log("command line: the engine's command line is too long to add "
+                                    "to - passing it through unchanged");
             return g_originalRunGame(instance, original);
         }
 

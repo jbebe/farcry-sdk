@@ -134,8 +134,9 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 
     api->Log("example_plugin loaded");
 
-    // Wires up the address library behind FCSE::Relocation. Without it every Relocation stays
-    // unresolved, which is why this is the first thing FCSE_Load does.
+    // Wires up the address library behind FCSE::Relocation, and FCSE::Logf. Without it every
+    // Relocation stays unresolved and Logf writes nothing, which is why this is the first thing
+    // FCSE_Load does.
     if (!FCSE::Bind(api)) {
         api->Log("example_plugin: this FCSE predates the address library (API v5) - the UI shake "
                  "needs it, so only the red-UI effect will work");
@@ -152,8 +153,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
                              reinterpret_cast<void*>(&BeginPageRenderingDetour),
                              reinterpret_cast<void**>(&g_originalBeginPageRendering))) {
             FCSE::Logf("example_plugin: hooked magma::CRenderNomadImpl::BeginPageRendering at "
-                       "0x%08zX",
-                       static_cast<size_t>(g_beginPageRendering.address()));
+                       "0x%08zX", static_cast<size_t>(g_beginPageRendering.address()));
         }
         // Hook() having failed is already logged by FCSE, naming the plugin that won the address.
         // g_originalBeginPageRendering stays null in that case, which is exactly why the detour is

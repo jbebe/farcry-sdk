@@ -238,8 +238,8 @@ enough to disambiguate lines from the loader and multiple plugins landing within
 millisecond, which plain millisecond timestamps aren't.
 
 A C++ plugin formats a line printf-style with `FCSE::Logf`, from the convenience layer at the bottom
-of `include/fcse_api.h`. It writes through `Log`, so the line is tagged with the plugin like any
-other, and one longer than 1023 characters is cut short and ends in `...`.
+of `include/fcse_api.h`, once `FCSE::Bind` has run. It writes through `Log`, so the line is tagged
+with the plugin like any other, and one longer than 1023 characters is cut short and ends in `...`.
 
 ## Building
 

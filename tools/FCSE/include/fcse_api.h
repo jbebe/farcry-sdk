@@ -399,7 +399,7 @@ struct Pattern {
     explicit constexpr Pattern(const char* p) : text(p) {}
 };
 
-// The API pointer every Relocation resolves through. Set it once, first thing in FCSE_Load.
+// The API pointer every Relocation and Logf goes through. Set it once, first thing in FCSE_Load.
 // Kept as a plain global rather than passed to each Relocation so that relocations can be declared
 // at namespace scope, which is where they read best.
 inline const FCSE_PluginAPI*& ApiPointer() {
@@ -407,9 +407,9 @@ inline const FCSE_PluginAPI*& ApiPointer() {
     return api;
 }
 
-// Call once from FCSE_Load before touching any Relocation. Returns false if this FCSE is older
-// than the address library (API v5), in which case nothing here can work and the plugin should
-// either fall back to duniaBase or refuse to load.
+// Call once from FCSE_Load before touching any Relocation or Logf. Returns false if this FCSE is
+// older than the address library (API v5), in which case nothing here can work, Logf included, and
+// the plugin should either fall back to duniaBase and Log or refuse to load.
 inline bool Bind(const FCSE_PluginAPI* api) {
     if (api == nullptr || api->apiVersion < 5 || api->ResolveFrom == nullptr ||
         api->FindPattern == nullptr) {
@@ -425,8 +425,8 @@ inline FCSE_GameBuild RunningBuild() {
     return api == nullptr ? FCSE_GAME_BUILD_UNKNOWN : api->gameBuild;
 }
 
-// Log, with the message formatted printf-style. Does nothing before Bind, and a line too long for
-// the buffer is cut short and ends in "...".
+// Log, with the message formatted printf-style. Does nothing before Bind, and a line longer than
+// 1023 characters is cut short and ends in "...".
 inline void Logf(const char* format, ...) {
     const FCSE_PluginAPI* api = ApiPointer();
     if (api == nullptr) {

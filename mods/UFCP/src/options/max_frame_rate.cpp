@@ -117,13 +117,11 @@ void InstallMaxFrameRateHook() {
 }
 
 void __cdecl OnMaxFrameRateChanged(const FCSE_SettingValue* value, void* /*userdata*/) {
-    const FCSE_PluginAPI* api = FCSE::ApiPointer();
-
     g_mode = value->asChoice;
 
     if (g_mode == kGameDefault) {
         UFCP::SetCommandLineSwitch(kMaxFpsSwitch, nullptr);
-        api->Log("max frame rate: the game's own - not capped by UFCP");
+        FCSE::ApiPointer()->Log("max frame rate: the game's own - not capped by UFCP");
         return;
     }
 
