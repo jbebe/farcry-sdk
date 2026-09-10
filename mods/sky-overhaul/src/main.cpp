@@ -133,7 +133,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          nullptr, 0, 0, 100},
         {"Contrails", FCSE_SLIDER(60), &OnSliderChanged, Setter(&Clouds::SetContrails), nullptr, 0,
          0, 100},
-        {"Moonlight", FCSE_SLIDER(30), &OnSliderChanged, Setter(&Clouds::SetMoonlight), nullptr, 0,
+        {"Moonlight", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Clouds::SetMoonlight), nullptr, 0,
          0, 100},
         // Out of the menu while the clouds are being tuned, because the page only has room for one
         // feature's worth of rows. The glare keeps every value below as its own default.

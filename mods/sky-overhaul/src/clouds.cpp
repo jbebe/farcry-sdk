@@ -46,7 +46,7 @@ namespace {
     constexpr float kMoonRising = 0.13f;
 
     // Moonlight at full strength, and the share of it a thin edge lets through.
-    constexpr float kMoonColour[3] = {0.8f, 0.9f, 1.0f};
+    constexpr float kMoonColour[3] = {1.6f, 1.8f, 2.0f};
     constexpr float kMoonBackShare = 0.13f;
 
     // The high sheet: how far above the layer it sits at least, how many metres one repeat of its
