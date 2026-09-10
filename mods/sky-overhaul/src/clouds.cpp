@@ -176,13 +176,25 @@ namespace {
         return true;
     }
 
+    // The angle between where the camera looks and one reading of the moon.
+    float DegreesOff(const float view[3], const float moon[3]) {
+        float cosine = view[0] * moon[0] + view[1] * moon[1] + view[2] * moon[2];
+        cosine = cosine < -1.0f ? -1.0f : (cosine > 1.0f ? 1.0f : cosine);
+        return std::acos(cosine) * 57.29578f;
+    }
+
     void LogPass(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
-                 float elapsed) {
+                 const SkyOverhaul::CloudLayer::Lighting& lighting, float elapsed) {
         SkyOverhaul::Logf("clouds f%u: eye (%.1f %.1f %.1f) base %.0f | dir (%.2f %.2f %.2f) "
                           "bloom %.2f | %.2f ms",
                           pass.frame, view.eye[0], view.eye[1], view.eye[2], g_baseAltitude,
                           view.direction[0], view.direction[1], view.direction[2], view.bloom,
                           elapsed * 1000.0f);
+        SkyOverhaul::Logf("clouds f%u: moon off the view by %.0f deg as drawn, %.0f by columns, "
+                          "%.0f as the engine's cloud light",
+                          pass.frame, DegreesOff(view.direction, lighting.moonDirection),
+                          DegreesOff(view.direction, lighting.moonByColumns),
+                          DegreesOff(view.direction, lighting.moonCloudLight));
     }
 
     // Carries the layer along on the plugin's own clock, in the direction the engine is blowing.
@@ -289,7 +301,7 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
     g_sinceHeartbeat += elapsed;
     if (g_sinceHeartbeat >= kHeartbeatSeconds) {
         g_sinceHeartbeat = 0.0f;
-        LogPass(pass, view, elapsed);
+        LogPass(pass, view, lighting, elapsed);
     }
 }
 

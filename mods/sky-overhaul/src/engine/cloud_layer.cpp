@@ -15,8 +15,11 @@ namespace {
     constexpr size_t kStorm = 0x78;
     constexpr size_t kSunDirection = 0x148;
     constexpr size_t kSunColour = 0x160;
-    // The moon's direction in the world. The 0x188 its sprite is handed holds still all night.
-    constexpr size_t kMoonDirection = 0x194;
+    // The moon as its sprite is placed: the moon at sunrise, turned by the 4x4 block at kMoonTurn.
+    constexpr size_t kMoonSprite = 0x188;
+    constexpr size_t kMoonTurn = 0xB0;
+    // The direction the engine lights its own clouds from by the moon.
+    constexpr size_t kMoonCloudLight = 0x194;
     constexpr size_t kMoonColour = 0x1A0;
     constexpr size_t kNight = 0x1B8;
     constexpr size_t kTimeOfDay = 0x1BC;
@@ -102,8 +105,19 @@ namespace {
     void Read(const uint8_t* state, SkyOverhaul::CloudLayer::Lighting& out) {
         Copy3(state, kSunDirection, out.sunDirection);
         Normalise(out.sunDirection);
-        Copy3(state, kMoonDirection, out.moonDirection);
+
+        const float* sprite = Field(state, kMoonSprite);
+        const float* turn = Field(state, kMoonTurn);
+        for (int c = 0; c < 3; c++) {
+            out.moonDirection[c] =
+                sprite[0] * turn[c] + sprite[1] * turn[4 + c] + sprite[2] * turn[8 + c];
+            out.moonByColumns[c] = turn[4 * c] * sprite[0] + turn[4 * c + 1] * sprite[1] +
+                                   turn[4 * c + 2] * sprite[2];
+        }
         Normalise(out.moonDirection);
+        Normalise(out.moonByColumns);
+        Copy3(state, kMoonCloudLight, out.moonCloudLight);
+        Normalise(out.moonCloudLight);
 
         Copy3(state, kSunColour, out.sunColour);
         for (float& channel : out.sunColour) {
