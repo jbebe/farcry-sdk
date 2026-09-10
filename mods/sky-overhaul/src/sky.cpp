@@ -91,6 +91,9 @@ namespace {
     float g_lastCloudAmbient[3] = {0.0f, 0.0f, 0.0f};
     float g_lastCloudBack[3] = {0.0f, 0.0f, 0.0f};
     float g_lastMoon[3] = {0.0f, 0.0f, 0.0f};
+    // The height of the direction the clouds are lit from by the moon, as published. The docs have
+    // that vector negated relative to the moon, so the sign is logged rather than assumed.
+    float g_lastMoonUp = 0.0f;
 
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
@@ -229,6 +232,7 @@ namespace {
             g_lastCloudBack[i] = lighting.backSunColour[i];
             g_lastMoon[i] = lighting.moonColour[i];
         }
+        g_lastMoonUp = lighting.moonDirection[2];
         const float sunUp = lighting.sunDirection[2];
         g_lastSunElevation = std::asin(sunUp < -1.0f ? -1.0f : (sunUp > 1.0f ? 1.0f : sunUp)) * kDegrees;
         const float sunAcross = std::sqrt(lighting.sunDirection[0] * lighting.sunDirection[0] +
@@ -303,10 +307,10 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
          g_lastFogValues[0], g_lastFogValues[1], g_lastFogValues[2], g_lastFogHeight[0],
          g_lastFogHeight[1], g_lastFogHeight[2], g_lastFogHeight[3]);
     Logf("sky f%u: cloud light sun (%.3f %.3f %.3f) ambient (%.3f %.3f %.3f) back (%.3f %.3f %.3f) "
-         "moon (%.3f %.3f %.3f)",
+         "moon (%.3f %.3f %.3f) moon z %+.2f",
          pass.frame, g_lastCloudSun[0], g_lastCloudSun[1], g_lastCloudSun[2], g_lastCloudAmbient[0],
          g_lastCloudAmbient[1], g_lastCloudAmbient[2], g_lastCloudBack[0], g_lastCloudBack[1],
-         g_lastCloudBack[2], g_lastMoon[0], g_lastMoon[1], g_lastMoon[2]);
+         g_lastCloudBack[2], g_lastMoon[0], g_lastMoon[1], g_lastMoon[2], g_lastMoonUp);
 }
 
 void SkyOverhaul::Sky::ReleaseDeviceObjects() {
