@@ -3,9 +3,8 @@
 An FCSE plugin for the sun as something the eye cannot look at: a glare that washes over the finished
 frame as the player looks toward the sun, and a retinal afterimage left behind when they look away.
 
-**The layer ships two data fragments per campaign world.** The world descriptor's `<Environment>`
-halves the moon's size, and the preset library in `managers.fcb` changes only the clear and jungle
-lighting at night. Nothing here changes how the sun itself looks.
+**The layer ships one data fragment per campaign world.** The world descriptor's `<Environment>`
+halves the moon's size and is otherwise retail. Nothing here changes how the sun itself looks.
 
 ## What it does
 
