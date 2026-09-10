@@ -36,9 +36,18 @@ namespace {
     // advances too slowly to read as weather, so only its direction is taken from there.
     constexpr float kWindSpeed = 9.0f;
 
-    // How far apart the samples toward the sun are. Wide enough that five of them reach through a
+    // How far apart the samples toward the light are. Wide enough that five of them reach through a
     // whole cloud, which is what a shadow inside one needs.
     constexpr float kLightStride = 90.0f;
+
+    // The sun's height, as a sine, below which no layer can see it and the moon lights the clouds.
+    constexpr float kSunGone = -0.07f;
+    // How much further the sun sinks, as a sine, while the moonlight comes up to full.
+    constexpr float kMoonRising = 0.13f;
+
+    // Moonlight at full strength, and the share of it a thin edge lets through.
+    constexpr float kMoonColour[3] = {0.8f, 0.9f, 1.0f};
+    constexpr float kMoonBackShare = 0.13f;
 
     // The high sheet: how far above the layer it sits at least, how many metres one repeat of its
     // streaks covers, and how hard those streaks are squashed across the wind.
@@ -73,6 +82,7 @@ namespace {
     float g_cirrus = 0.35f;
     float g_cirrusOpacity = 0.7f;
     float g_contrails = 0.6f;
+    float g_moonlight = 0.3f;
 
     // Which frame was last drawn into. A frame can hold more than one pass the sky is drawn in,
     // and drawing into each of them would blend the clouds over themselves.
@@ -93,6 +103,28 @@ namespace {
     LARGE_INTEGER g_tickFrequency = {};
     LARGE_INTEGER g_lastTick = {};
     float g_sinceHeartbeat = 0.0f;
+
+    // The one light the shader marches toward.
+    struct Light {
+        float direction[3];
+        float colour[3];
+        float back[3];
+    };
+
+    // The sun until it has set for every layer, then the moon, coming up as the sun sinks further.
+    Light ChooseLight(const SkyOverhaul::CloudLayer::Lighting& lighting) {
+        const bool sun = lighting.sunDirection[2] > kSunGone;
+        const float rising = (kSunGone - lighting.sunDirection[2]) / kMoonRising;
+        const float moon = (rising < 1.0f ? rising : 1.0f) * g_moonlight;
+
+        Light light;
+        for (int c = 0; c < 3; c++) {
+            light.direction[c] = sun ? lighting.sunDirection[c] : lighting.moonDirection[c];
+            light.colour[c] = sun ? lighting.sunColour[c] : kMoonColour[c] * moon;
+            light.back[c] = sun ? lighting.backSunColour[c] : light.colour[c] * kMoonBackShare;
+        }
+        return light;
+    }
 
     float FrameSeconds() {
         LARGE_INTEGER now;
@@ -172,17 +204,17 @@ namespace {
         const float above = g_baseAltitude + g_thickness + kCirrusClearance;
         const float cirrusAltitude = above > kCirrusFloor ? above : kCirrusFloor;
 
+        const Light light = ChooseLight(lighting);
         const float shapeGrain = 1.0f / g_grain;
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             g_baseAltitude, g_thickness, g_coverage, g_density,
             g_drift[0], g_drift[1], g_drift[0] * 0.5f, g_drift[1] * 0.5f,
             shapeGrain, shapeGrain * kDetailRepeats, shapeGrain * kWeatherRepeats, g_detail,
-            lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
-            kForwardScatter,
-            lighting.sunColour[0], lighting.sunColour[1], lighting.sunColour[2], kLightStride,
+            light.direction[0], light.direction[1], light.direction[2], kForwardScatter,
+            light.colour[0], light.colour[1], light.colour[2], kLightStride,
             lighting.ambientColour[0], lighting.ambientColour[1], lighting.ambientColour[2], 0.0f,
-            lighting.backSunColour[0], lighting.backSunColour[1], lighting.backSunColour[2], 0.0f,
+            light.back[0], light.back[1], light.back[2], 0.0f,
             kMaxDistance, kFadeDistance, kMarchDistance, g_haze,
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
@@ -307,4 +339,8 @@ void SkyOverhaul::Clouds::SetCirrusOpacity(int percent) {
 
 void SkyOverhaul::Clouds::SetContrails(int percent) {
     g_contrails = static_cast<float>(percent) / 100.0f;
+}
+
+void SkyOverhaul::Clouds::SetMoonlight(int percent) {
+    g_moonlight = static_cast<float>(percent) / 100.0f;
 }

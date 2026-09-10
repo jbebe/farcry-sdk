@@ -5,7 +5,7 @@
 // transmittance, blended with (one, source alpha).
 
 // How many samples the view ray takes through the layer, and how many the light ray takes toward
-// the sun from each of those. Fixed rather than a constant so the loops unroll and the shader
+// the light from each of those. Fixed rather than a constant so the loops unroll and the shader
 // needs no integer registers.
 #define VIEW_STEPS 48
 #define LIGHT_STEPS 5
@@ -18,8 +18,8 @@
 // so much that it only exists there.
 #define CIRRUS_FORWARD 0.35f
 
-// How much of the sun the sheet returns. Ice scatters more of what reaches it than water does, and
-// there is no depth for any of it to be lost in.
+// How much of the light the sheet returns. Ice scatters more of what reaches it than water does,
+// and there is no depth for any of it to be lost in.
 #define CIRRUS_ALBEDO 1.1f
 
 // Where the two aircraft went: a unit normal and how far the line sits from the origin, in the
@@ -43,13 +43,13 @@
 // straight up spends in it. Everything below is that same depth divided by how slanted the ray is.
 #define CIRRUS_AIR 900.0f
 
-// The planet a cloud sits above, in metres, which is what hides the sun from it once the sun has set
-// by more than the horizon dips at that height - about a degree for a cloud a kilometre up.
+// The planet a cloud sits above, in metres, which is what hides the light from it once the light
+// has set by more than the horizon dips at that height - about a degree a kilometre up.
 #define PLANET_RADIUS 6371000.0f
 
-// Over how much of the sun's elevation, as a sine, a cloud goes from sunlit to the earth's shadow:
-// about the sun's own width, so the light leaves a cloud the way it leaves a hilltop, not at a line.
-#define SUN_PENUMBRA 0.01f
+// Over how much of the light's elevation, as a sine, a cloud goes from lit to the earth's shadow:
+// about the width of the sun or the moon, so the light leaves a cloud the way it leaves a hilltop.
+#define LIGHT_PENUMBRA 0.01f
 
 // How many texels across one repeat each volume holds, which is what turns a sample spacing into
 // the level of the noise that matches it.
@@ -77,10 +77,10 @@ float4 Wind : register(c73);
 // x, y, z: how many metres one repeat of the shape, the detail and the weather covers.
 // w: how hard the detail bites into the edges.
 float4 Grain : register(c74);
-// xyz: the direction of the sun. w: how much light bends forward off a droplet.
-float4 Sun : register(c75);
-// rgb: the sun's colour. w: how far apart the samples toward it are.
-float4 SunColour : register(c76);
+// xyz: the direction of the sun or the moon. w: how much light bends forward off a droplet.
+float4 Light : register(c75);
+// rgb: that light's colour. w: how far apart the samples toward it are.
+float4 LightColour : register(c76);
 // rgb: what the sky and ground light the cloud with from every other direction.
 float4 AmbientColour : register(c77);
 // rgb: what reaches the eye through a thin edge, which is what makes a silver lining.
@@ -139,7 +139,7 @@ float HeightProfile(float height, float tallness) {
 }
 
 // How much cloud stands at a point. `cheap` skips the erosion, which is most of the cost and none
-// of the shape, and is what the samples toward the sun use.
+// of the shape, and is what the samples toward the light use.
 float Density(float3 world, float stride, uniform bool cheap) {
     float height = saturate((world.z - Layer.x) / Layer.y);
 
@@ -179,13 +179,13 @@ float Density(float3 world, float stride, uniform bool cheap) {
     return density * Layer.w;
 }
 
-// Whether the sun is still above the horizon as seen from this height, from one in full daylight to
-// nought in the earth's shadow. Measuring the light only through the cloud in front of the sun
-// would light a cloud from underneath all night, because a sun below the horizon still has a short
-// way out through the cloud's own base.
-float SunAbove(float height) {
+// Whether the light is still above the horizon as seen from this height, from one in full view to
+// nought in the earth's shadow. Measuring it only through the cloud in front of it would light a
+// cloud from underneath all night, because a light below the horizon still has a short way out
+// through the cloud's own base.
+float LightAbove(float height) {
     float dip = sqrt(max(2.0f * height / PLANET_RADIUS, 0.0f));
-    return smoothstep(-dip - SUN_PENUMBRA, -dip + SUN_PENUMBRA, Sun.z);
+    return smoothstep(-dip - LIGHT_PENUMBRA, -dip + LIGHT_PENUMBRA, Light.z);
 }
 
 // Most light carries on forward past a droplet, which is what makes a cloud glare when it stands
@@ -207,14 +207,14 @@ float3 Scatter(float lit, float cosAngle) {
     float total = 0.0f;
     float brightness = 1.0f;
     float depth = 1.0f;
-    float forward = Sun.w;
+    float forward = Light.w;
     [unroll] for (int order = 0; order < 3; order++) {
         total += Phase(cosAngle, forward) * pow(lit, depth) * brightness;
         brightness *= 0.55f;
         depth *= 0.5f;
         forward *= 0.5f;
     }
-    return SunColour.rgb * total;
+    return LightColour.rgb * total;
 }
 
 // What one aircraft left behind: a line at the sheet's altitude, narrow, and neither straight,
@@ -293,19 +293,19 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     // being cloud and becomes a ring around the sun: at eight tenths the peak is forty-five times
     // the rest of the sky, which the sun disc behind it is already busy filling.
     float3 light =
-        SunColour.rgb * Phase(cosAngle, CIRRUS_FORWARD) * CIRRUS_ALBEDO * SunAbove(Cirrus.x) +
+        LightColour.rgb * Phase(cosAngle, CIRRUS_FORWARD) * CIRRUS_ALBEDO * LightAbove(Cirrus.x) +
         AmbientColour.rgb;
     return lerp(light, horizon, lost);
 }
 
-// How much of the sun reaches a point, by marching toward it and counting what is in the way.
-float SunReach(float3 world) {
+// How much of the light reaches a point, by marching toward it and counting what is in the way.
+float LightReach(float3 world) {
     float depth = 0.0f;
     [unroll] for (int i = 0; i < LIGHT_STEPS; i++) {
-        float3 at = world + Sun.xyz * ((float)i + 0.5f) * SunColour.w;
+        float3 at = world + Light.xyz * ((float)i + 0.5f) * LightColour.w;
         depth += Density(at, 0.0f, true);
     }
-    return exp(-depth * SunColour.w);
+    return exp(-depth * LightColour.w);
 }
 
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
@@ -333,11 +333,11 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // would blend a moving pattern away, so a moving one would only flicker.
     float dither = frac(52.9829189f * frac(0.06711056f * screen.x + 0.00583715f * screen.y));
 
-    float cosAngle = dot(ray, Sun.xyz);
+    float cosAngle = dot(ray, Light.xyz);
 
-    // Taken once at the middle of the layer rather than at every sample: the whole layer leaves the
-    // sun within the same degree, and a degree of the sun's travel is minutes of the day.
-    float sunlit = SunAbove(Layer.x + 0.5f * Layer.y);
+    // Taken once at the middle of the layer rather than at every sample: the whole layer loses the
+    // light within the same degree, and a degree of its travel is minutes of the day.
+    float above = LightAbove(Layer.x + 0.5f * Layer.y);
 
     // The colour the sky goes toward at the horizon, which is where everything below ends up: the
     // engine's own, by heading against the sun, so it matches the dome rather than approximating
@@ -358,16 +358,16 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
         float3 at = Eye.xyz + ray * (enter + ((float)i + dither) * stride);
         float density = Density(at, stride, false);
         if (density > 0.0005f) {
-            float lit = SunReach(at);
+            float lit = LightReach(at);
 
             // Dark where the cloud is thin and the light has not yet scattered into it. Only worth
-            // anything looking toward the sun, where it is what keeps a bright edge from reading
-            // as paper; away from the sun it would only make an already dim cloud dimmer.
+            // anything looking toward the light, where it is what keeps a bright edge from reading
+            // as paper; away from it it would only make an already dim cloud dimmer.
             float powder = 1.0f - exp(-density * 8.0f);
             float thin = lerp(1.0f, powder, saturate(cosAngle));
 
             float3 light = (Scatter(lit, cosAngle) * thin +
-                            BackColour.rgb * lit * saturate(-cosAngle)) * sunlit +
+                            BackColour.rgb * lit * saturate(-cosAngle)) * above +
                            AmbientColour.rgb;
 
             float transmit = exp(-density * stride);

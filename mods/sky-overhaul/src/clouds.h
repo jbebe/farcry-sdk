@@ -47,4 +47,7 @@ void SetCirrusOpacity(int percent);
 // How strongly the two aircraft trails show, as a percentage. Zero leaves the sky to itself.
 void SetContrails(int percent);
 
+// How strongly the moon lights the clouds once the sun has set, as a percentage.
+void SetMoonlight(int percent);
+
 }
