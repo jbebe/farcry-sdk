@@ -457,6 +457,12 @@ is close to the worst possible use of DXT and a plausible second source of bandi
 the render path (below). `sun_flare.xbt` and `moon_flare.xbt` are the two known uncompressed
 textures in the entire shipped game (see [`.xbt`](../file-formats/xbt.md)).
 
+`moon_flare.xbt` is a lookup as well. With `TIME_OF_DAY_MAPPING` the `CelestialBody` shader reads its
+texture at (distance from the sprite's centre, time-of-day coordinate), so the 32 columns are a
+radial profile and the 512 rows the hours. The shipped profile is a soft near-white glow, about
+20/255 at the centre and gone three quarters of the way out, almost the same in every row. Retail
+`world1` and `world2` never show it: their `<Sky>` sets `MoonFlareTextureSize="0"`.
+
 `starsphere.xbg` is a real mesh (10,320 verts × 32-byte stride, 3 submeshes) with three `Unlit`
 materials, each a single `DiffuseTexture1` slot into `background_d`, `milkyway_d` and `star_d`
 respectively; `milkyway_d` (additive blend) is already at the largest dimension observed anywhere in
