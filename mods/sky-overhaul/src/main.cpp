@@ -99,6 +99,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Sky haze", FCSE_SLIDER(40), &OnSliderChanged, Setter(&Sky::SetHaze), nullptr, 0, 0, 100},
         {"Sky brightness", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Sky::SetBrightness), nullptr,
          0, 0, 300},
+        {"Horizon gradient", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Sky::SetHorizonGradient),
+         nullptr, 0, 0, 100},
         {"Horizon match", FCSE_SLIDER(100), &OnSliderChanged, Setter(&FogTint::SetMatch), nullptr,
          0, 0, 100},
         {"Clouds", FCSE_CHOICE(0), &OnCloudsChanged, nullptr, kCloudModes,

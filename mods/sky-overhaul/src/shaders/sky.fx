@@ -50,12 +50,23 @@
 // colour washes the whole sky, which is exactly what the dome it came from used to do.
 #define HORIZON_FALLOFF 8.0f
 
+// Over what height of the sun the horizon's turn away from it fades out, as the sine of the sun's
+// elevation: full strength below about eight degrees, gone by twenty-five. A high sun lights the
+// horizon evenly all the way round, so noon is left exactly as it was.
+#define GRADIENT_SUN_LOW 0.14f
+#define GRADIENT_SUN_HIGH 0.42f
+
+// How far up from the skyline that turn reaches. Wider than the engine's fog colour, so the band of
+// sky above the skyline turns along with the skyline itself.
+#define GRADIENT_FALLOFF 4.0f
+
 // xyz: where the camera is, in world space with Z up. w: the frame's exposure.
 float4 Eye : register(c71);
 // xyz: the direction of the sun, pointing at it. w: zero in daylight, one at night.
 float4 Sun : register(c72);
 // x: how much haze the air carries. y: how bright the sun is. Both finished values, with the
-// weather already folded in.
+// weather already folded in. z: how far the horizon's hue turns from the sun's side to the far
+// side's, from nothing to all the way.
 float4 Air : register(c73);
 
 // The engine's own sky fog, register for register, so our sky meets the terrain in the colour the
@@ -166,6 +177,38 @@ float3 Scattered(float3 ray, float3 sun, float mie, float intensity) {
     return intensity * gathered;
 }
 
+// The horizon's colour as the eye turns away from a low sun: the sun's own warmth where it stands,
+// turning toward the hue the engine gives the far side of its fog as the eye comes round. Only the
+// hue is exchanged; each point keeps the brightness it already had, so the far side is exactly as
+// bright as before and the stars come through it as they did.
+float3 TurnFromSun(float3 colour, float3 ray, float3 skyward) {
+    float sunAcross = length(Sun.xy);
+    if (Air.z <= 0.0f || sunAcross < 0.0001f) {
+        return colour;
+    }
+    float2 toSun = Sun.xy / sunAcross;
+
+    // Nothing at the sun's own heading, half at a right angle to it, everything opposite - eased at
+    // both ends, so neither the sun's side nor the far side shows where the turn begins.
+    float facing = dot(normalize(ray.xy + 0.0001f), toSun);
+    float farness = smoothstep(0.0f, 1.0f, 0.5f - 0.5f * facing);
+    float lowSun = 1.0f - smoothstep(GRADIENT_SUN_LOW, GRADIENT_SUN_HIGH, Sun.z);
+    float nearHorizon = pow(saturate(1.0f - skyward.z), GRADIENT_FALLOFF);
+    float amount = Air.z * farness * lowSun * nearHorizon;
+
+    // The fog's colour looking directly away from the sun, whichever end of its ramp that is: the
+    // engine turns its fog vector round during the day and swaps the ramp's two ends with it.
+    float farHeading = acos(clamp(dot(-toSun, FogColourVector.xy), -1.0f, 1.0f)) / PI;
+    float3 farFog = FogColour.rgb + FogColourRange.rgb * farHeading;
+
+    // That colour at a brightness of one, so it can carry any brightness. Capped, because a fog
+    // colour with next to no red or green in it would otherwise ask for several times the light.
+    float3 luma = float3(0.299f, 0.587f, 0.114f);
+    float3 farHue = min(farFog / max(dot(farFog, luma), 0.0001f), 3.0f);
+
+    return lerp(colour, dot(colour, luma) * farHue, amount);
+}
+
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 ray = normalize(rayIn);
 
@@ -185,6 +228,7 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
 
     float fog = pow(saturate(1.0f - skyward.z), HORIZON_FALLOFF);
     colour = lerp(colour, horizon, fog);
+    colour = TurnFromSun(colour, ray, skyward);
 
     // The dome's own alpha, taken before the exposure as the dome takes it: opaque while there is
     // daylight, and at night only as much as the sky is bright, which is what lets the stars

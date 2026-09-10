@@ -52,12 +52,14 @@ namespace {
     bool g_enabled = false;
     float g_haze = 1.0f;
     float g_brightness = 1.0f;
+    float g_gradient = 1.0f;
 
     // What went into the model last and what came out of it, kept for the heartbeat. After dark
     // these are the numbers that say whether the sky is dark because the air really is unlit or
     // because the model has nothing left to stand on.
     float g_lastNight = 0.0f;
     float g_lastStorm = 0.0f;
+    float g_lastExposure = 0.0f;
     float g_lastHorizon[3] = {0.0f, 0.0f, 0.0f};
     float g_lastAway[3] = {0.0f, 0.0f, 0.0f};
     // Where the sun was and what the engine's own fog ends were, beside what the model made of the
@@ -160,6 +162,7 @@ namespace {
 
         g_lastNight = lighting.night;
         g_lastStorm = lighting.storm;
+        g_lastExposure = view.bloom;
         for (size_t i = 0; i < 3; i++) {
             g_lastHorizon[i] = towardColour[i];
             g_lastAway[i] = awayColour[i];
@@ -183,7 +186,7 @@ namespace {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
             lighting.night,
-            haze, intensity, 0.0f, 0.0f,
+            haze, intensity, g_gradient, 0.0f,
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f};
@@ -215,8 +218,9 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
     g_sinceHeartbeat = 0.0f;
     // Counts that stand still are the two ways this fails without anything else saying so: a dome
     // that stopped being recognised, and a fog colour that is never being reached.
-    Logf("sky f%u: %u domes replaced, %u fog uploads retinted | night %.2f storm %.2f", pass.frame,
-         DomeDraw::SubstituteCount(), FogTint::TintCount(), g_lastNight, g_lastStorm);
+    Logf("sky f%u: %u domes replaced, %u fog uploads retinted | night %.2f storm %.2f exposure %.2f",
+         pass.frame, DomeDraw::SubstituteCount(), FogTint::TintCount(), g_lastNight, g_lastStorm,
+         g_lastExposure);
     // The fog heading is the direction the engine's fog ramp starts from, measured against the sun:
     // near zero means the ramp's first colour is the sun's side, as its name says.
     Logf("sky f%u: sun %+.1f deg, fog heading %.0f deg off it | model toward (%.3f %.3f %.3f) "
@@ -252,5 +256,9 @@ void SkyOverhaul::Sky::SetHaze(int percent) {
 
 void SkyOverhaul::Sky::SetBrightness(int percent) {
     g_brightness = static_cast<float>(percent) * 0.01f;
+}
+
+void SkyOverhaul::Sky::SetHorizonGradient(int percent) {
+    g_gradient = static_cast<float>(percent) * 0.01f;
 }
 

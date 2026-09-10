@@ -29,4 +29,9 @@ void SetHaze(int percent);
 // noon sky.
 void SetBrightness(int percent);
 
+// How far a low sun's horizon turns from the sun's own warm hue to the far side's as the eye comes
+// round, as a percentage. Zero leaves the horizon one colour all the way round. A high sun is never
+// affected, whatever this is set to.
+void SetHorizonGradient(int percent);
+
 }
