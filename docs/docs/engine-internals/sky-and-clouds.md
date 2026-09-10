@@ -132,7 +132,7 @@ whole block below addressable from outside.
 | `+0x170` | `SunRange` |
 | `+0x178` | `SunMaxHorizontalScale` |
 | `+0x17C` | `SunMaxVerticalScale` |
-| `+0x188` | Moon direction, as the moon sprite is oriented by |
+| `+0x188` | Moon direction as its sprite is handed it, together with the 4×4 block at `+0xB0`. Its height read +0.17 at every hour in a running game, so it is not the moon's direction in the world |
 | `+0x1B8` | **Night factor**, 0 to 1 |
 | `+0x1BC` | Time-of-day coordinate, the one every sky shader looks its colour ramp up with |
 
@@ -410,7 +410,7 @@ values for this frame.
 | --- | --- |
 | `+0x148` | Sun direction, negated into `SunDirection` |
 | `+0x160` | `SunColor`, four floats, scaled by 1.9 |
-| `+0x194` | The direction the clouds are lit from as `MoonDirection`, negated, and not the `+0x188` the moon sprite is placed by |
+| `+0x194` | The direction the clouds are lit from as `MoonDirection`, negated. Unlike `+0x188` it moves with the time of day: its height read -0.26 at 21:00 and +0.66 after midnight |
 | `+0x1A0` | `MoonColor` |
 | `+0x1C8` | `Layer1Formation`: coverage, falloff curve, normal strength, and parallax strength scaled by 0.01 |
 | `+0x1DC` | Layer 1 enabled, one byte |
