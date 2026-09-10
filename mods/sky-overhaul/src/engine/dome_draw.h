@@ -33,6 +33,13 @@ bool Install(SubstituteFn substitute);
 // Takes effect on the next draw.
 void SetMode(Mode mode);
 
+// Something that sees every indexed draw as it passes, before the dome is looked for. This hook is
+// the only one the device's indexed draw can have, so anything else that needs to watch those
+// draws watches them through here.
+using ObserveFn = void (*)(IDirect3DDevice9* device, D3DPRIMITIVETYPE type, UINT vertices,
+                           UINT primitives);
+void SetObserver(ObserveFn observer);
+
 // How many domes have been replaced. A count that stops climbing while the mode is Overhaul is a
 // dome that stopped being recognised, which is the one failure that would otherwise be silent.
 uint32_t SubstituteCount();

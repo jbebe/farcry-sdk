@@ -28,6 +28,7 @@ namespace {
 
     DrawIndexedPrimitiveFn g_original = nullptr;
     SkyOverhaul::DomeDraw::SubstituteFn g_substitute = nullptr;
+    SkyOverhaul::DomeDraw::ObserveFn g_observer = nullptr;
     SkyOverhaul::DomeDraw::Mode g_mode = SkyOverhaul::DomeDraw::Mode::Engine;
 
     uint32_t g_substitutions = 0;
@@ -83,6 +84,9 @@ namespace {
                                                  INT baseVertexIndex, UINT minVertexIndex,
                                                  UINT numVertices, UINT startIndex,
                                                  UINT primitiveCount) {
+        if (g_observer != nullptr) {
+            g_observer(device, type, numVertices, primitiveCount);
+        }
         if (Substitute(device, type, numVertices, primitiveCount)) {
             return D3D_OK;
         }
@@ -113,6 +117,10 @@ bool SkyOverhaul::DomeDraw::Install(SubstituteFn substitute) {
 
 void SkyOverhaul::DomeDraw::SetMode(Mode mode) {
     g_mode = mode;
+}
+
+void SkyOverhaul::DomeDraw::SetObserver(ObserveFn observer) {
+    g_observer = observer;
 }
 
 uint32_t SkyOverhaul::DomeDraw::SubstituteCount() {

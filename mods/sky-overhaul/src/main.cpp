@@ -8,6 +8,7 @@
 #include "dazzle.h"
 #include "engine/cloud_layer.h"
 #include "engine/device_reset.h"
+#include "engine/draw_census.h"
 #include "engine/fog_tint.h"
 #include "engine/frame.h"
 #include "engine/sky_state.h"
@@ -20,17 +21,20 @@ namespace {
         SkyOverhaul::Dazzle::ReleaseDeviceObjects();
         SkyOverhaul::Clouds::ReleaseDeviceObjects();
         SkyOverhaul::Sky::ReleaseDeviceObjects();
+        SkyOverhaul::DrawCensus::ReleaseDeviceObjects();
     }
 
     // One frame, three effects. Each decides for itself whether the pass is one it wants. The sky
     // has already drawn itself from inside the pass by the time this runs.
     void OnScenePass(const SkyOverhaul::Frame::Pass& pass) {
+        SkyOverhaul::DrawCensus::OnScenePass(pass);
         SkyOverhaul::Sky::OnScenePass(pass);
         SkyOverhaul::Clouds::OnScenePass(pass);
         SkyOverhaul::Dazzle::OnScenePass(pass);
     }
 
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
+        SkyOverhaul::DrawCensus::OnFinalPass(pass);
         SkyOverhaul::Dazzle::OnFinalPass(pass);
     }
 
@@ -83,6 +87,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         // Watches the draws inside a pass rather than the passes themselves, because that is where
         // the dome is and a sky has to go under everything drawn after it.
         SkyOverhaul::Sky::Install();
+        // Temporary: names the draw behind the black band below the far horizon, then goes.
+        SkyOverhaul::DrawCensus::Install();
     }
 
     // The two publishers, which draw nothing. The sun's direction is the glare's, and the cloud
