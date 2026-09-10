@@ -50,4 +50,7 @@ void SetContrails(int percent);
 // How strongly the moon lights the clouds once the sun has set, as a percentage.
 void SetMoonlight(int percent);
 
+// How brightly the air glows around the moon, as a percentage. Zero leaves the moon bare.
+void SetMoonGlow(int percent);
+
 }

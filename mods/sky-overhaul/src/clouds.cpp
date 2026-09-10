@@ -18,7 +18,7 @@ namespace {
     // Above the engine's own globals, which occupy c0 to c64 and would be read back stale by the
     // next draw if a plugin wrote over them.
     constexpr UINT kFirstConstant = 71;
-    constexpr UINT kConstantCount = 16;
+    constexpr UINT kConstantCount = 17;
 
     // The far end of the depth range, where nothing but sky has been drawn: the world's geometry
     // is all nearer, so a less-or-equal test rejects the quad wherever anything stands, at any
@@ -48,6 +48,8 @@ namespace {
     // Moonlight at full strength, and the share of it a thin edge lets through.
     constexpr float kMoonColour[3] = {1.6f, 1.8f, 2.0f};
     constexpr float kMoonBackShare = 0.13f;
+    // How far below the horizon, as a sine, the moon's glow takes to fade out.
+    constexpr float kMoonBelow = 0.1f;
 
     // The high sheet: how far above the layer it sits at least, how many metres one repeat of its
     // streaks covers, and how hard those streaks are squashed across the wind.
@@ -82,7 +84,8 @@ namespace {
     float g_cirrus = 0.35f;
     float g_cirrusOpacity = 0.7f;
     float g_contrails = 0.6f;
-    float g_moonlight = 0.3f;
+    float g_moonlight = 1.0f;
+    float g_moonGlow = 0.25f;
 
     // Which frame was last drawn into. A frame can hold more than one pass the sky is drawn in,
     // and drawing into each of them would blend the clouds over themselves.
@@ -104,24 +107,28 @@ namespace {
     LARGE_INTEGER g_lastTick = {};
     float g_sinceHeartbeat = 0.0f;
 
-    // The one light the shader marches toward.
+    // The one light the shader marches toward, and the glow of the air around the moon.
     struct Light {
         float direction[3];
         float colour[3];
         float back[3];
+        float glow[3];
     };
 
     // The sun until it has set for every layer, then the moon, coming up as the sun sinks further.
     Light ChooseLight(const SkyOverhaul::CloudLayer::Lighting& lighting) {
         const bool sun = lighting.sunDirection[2] > kSunGone;
         const float rising = (kSunGone - lighting.sunDirection[2]) / kMoonRising;
-        const float moon = (rising < 1.0f ? rising : 1.0f) * g_moonlight;
+        const float share = sun ? 0.0f : (rising < 1.0f ? rising : 1.0f);
+        const float up = (lighting.moonDirection[2] + kMoonBelow) / kMoonBelow;
+        const float glow = share * (up < 0.0f ? 0.0f : (up > 1.0f ? 1.0f : up)) * g_moonGlow;
 
         Light light;
         for (int c = 0; c < 3; c++) {
             light.direction[c] = sun ? lighting.sunDirection[c] : lighting.moonDirection[c];
-            light.colour[c] = sun ? lighting.sunColour[c] : kMoonColour[c] * moon;
+            light.colour[c] = sun ? lighting.sunColour[c] : kMoonColour[c] * share * g_moonlight;
             light.back[c] = sun ? lighting.backSunColour[c] : light.colour[c] * kMoonBackShare;
+            light.glow[c] = kMoonColour[c] * glow;
         }
         return light;
     }
@@ -223,7 +230,8 @@ namespace {
             view.fogHeightValues[3],
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
             cirrusAltitude, kCirrusGrain, g_cirrus, g_cirrusOpacity,
-            g_contrails, kTrailWidth, kTrailBreak, 0.0f};
+            g_contrails, kTrailWidth, kTrailBreak, 0.0f,
+            light.glow[0], light.glow[1], light.glow[2], 0.0f};
 
         SkyOverhaul::ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
         pass.device->SetVertexShader(g_vertexShader);
@@ -343,4 +351,8 @@ void SkyOverhaul::Clouds::SetContrails(int percent) {
 
 void SkyOverhaul::Clouds::SetMoonlight(int percent) {
     g_moonlight = static_cast<float>(percent) / 100.0f;
+}
+
+void SkyOverhaul::Clouds::SetMoonGlow(int percent) {
+    g_moonGlow = static_cast<float>(percent) / 100.0f;
 }

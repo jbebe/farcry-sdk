@@ -91,8 +91,7 @@ namespace {
     float g_lastCloudAmbient[3] = {0.0f, 0.0f, 0.0f};
     float g_lastCloudBack[3] = {0.0f, 0.0f, 0.0f};
     float g_lastMoon[3] = {0.0f, 0.0f, 0.0f};
-    // The height of the direction the clouds are lit from by the moon, as published. The docs have
-    // that vector negated relative to the moon, so the sign is logged rather than assumed.
+    // The moon's height, as the sine of its elevation.
     float g_lastMoonUp = 0.0f;
 
     IDirect3DDevice9* g_owner = nullptr;

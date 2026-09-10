@@ -22,6 +22,9 @@
 // and there is no depth for any of it to be lost in.
 #define CIRRUS_ALBEDO 1.1f
 
+// How tightly the glow around the moon hugs it: a seventh of it is left ten degrees out.
+#define MOON_GLOW_FORWARD 0.9f
+
 // Where the two aircraft went: a unit normal and how far the line sits from the origin, in the
 // units the sheet is read in. Fixed, because they are scenery rather than traffic.
 //
@@ -96,6 +99,8 @@ float4 Cirrus : register(c85);
 // x: how strongly aircraft trails show. y: how wide a fresh one is. z: over what length one comes
 // and goes.
 float4 Trail : register(c86);
+// rgb: how brightly the air glows right beside the moon, and nothing while the sun lights the sky.
+float4 MoonGlow : register(c87);
 
 // The engine's own sky fog, register for register, so our clouds sit in the same haze the dome
 // does. See docs/docs/engine-internals/sky-and-clouds.md.
@@ -308,6 +313,14 @@ float LightReach(float3 world) {
     return exp(-depth * LightColour.w);
 }
 
+// The glow of the air around the moon along a ray: all of it against the disc, falling away the
+// way a forward-scattering lobe does.
+float3 MoonHalo(float cosAngle) {
+    float g = MOON_GLOW_FORWARD;
+    float falloff = (1.0f - g) * (1.0f - g) / max(1.0f + g * g - 2.0f * g * cosAngle, 0.0001f);
+    return MoonGlow.rgb * pow(falloff, 1.5f);
+}
+
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 ray = normalize(rayIn);
 
@@ -400,6 +413,11 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float through = 1.0f - cover;
     colour += cirrus * cirrusCover * through;
     cover += cirrusCover * through;
+
+    // The moon's glow is behind both layers, and dithered wherever it is lit: a faint gradient on a
+    // black sky is where eight bits a channel band worst.
+    float3 halo = MoonHalo(cosAngle);
+    colour += (halo + (dither - 0.5f) / 255.0f * saturate(halo.b * 255.0f)) * (1.0f - cover);
 
     return float4(colour * Eye.w, 1.0f - cover);
 }
