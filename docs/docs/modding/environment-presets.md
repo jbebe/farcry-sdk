@@ -207,7 +207,10 @@ that stays.
 ### The colour grade
 
 `CEnvironmentAdaptiveBloom`'s scalars are not keyed by time, so each preset grades noon and midnight
-alike. How the remap is applied was not traced.
+alike. In the September 2008 prototype's `posteffect_adaptivebloom.fx`, the final pass clamps the
+frame to 0–1, raises each channel to its own power from `ColorRemapData`, bends the result with a
+cubic contrast curve from `ContrastData`, then blends toward grey by `Saturation`. How the preset's
+`fColorRemap` values become those powers was not traced in retail.
 
 | Preset | Remap R / G / B | Contrast | Saturation | Intensity | Threshold | `curveMaximumLuminance` night → noon |
 | --- | --- | --- | --- | --- | --- | --- |

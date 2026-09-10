@@ -176,4 +176,5 @@ Retail GOG v1.03, with `mods/sky-overhaul` logging the scene state.
 - The writer of `+0x2F0`, and so whether presets follow the day-cycle scale.
 - What `+0x178` holds, which offsets the moon's shadow angle.
 - What reads the three untraced override blocks.
-- How `CEnvironmentAdaptiveBloom`'s colour remap is applied.
+- How `CEnvironmentAdaptiveBloom`'s `fColorRemap` values become the final pass's per-channel powers
+  ([environment presets](../modding/environment-presets.md#the-colour-grade)).
