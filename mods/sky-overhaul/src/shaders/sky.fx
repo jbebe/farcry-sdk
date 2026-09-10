@@ -71,6 +71,11 @@
 #define GRADIENT_NIGHT_DEEP -0.21f
 #define GRADIENT_NIGHT_EDGE -0.10f
 
+// How far down from the zenith the hold on its brightness reaches, as a power of the ray's height:
+// all of it overhead, half at forty-five degrees, next to none at the skyline, which is brighter in
+// the afternoon than at noon already and needs nothing added.
+#define ZENITH_HOLD_FALLOFF 2.0f
+
 // xyz: where the camera is, in world space with Z up. w: the frame's exposure.
 float4 Eye : register(c71);
 // xyz: the direction of the sun, pointing at it. w: zero in daylight, one at night.
@@ -86,6 +91,10 @@ float4 Air : register(c73);
 float4 FogColour : register(c74);
 float4 FogColourRange : register(c75);
 float4 FogColourVector : register(c76);
+
+// x: how many times brighter than the air alone the zenith is drawn. One while the sun is overhead,
+// more as it comes down, and back to one by sunset.
+float4 Zenith : register(c77);
 
 struct VertexIn {
     float4 position : POSITION0;
@@ -232,6 +241,11 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // rays take the horizon's own colour rather than marching off into the planet.
     float3 skyward = normalize(float3(ray.xy, max(ray.z, 0.0f)));
     float3 colour = Scattered(skyward, Sun.xyz, Air.x, Air.y);
+
+    // As the sun comes down the air overhead loses nearly half its light while the sun's side and
+    // the skyline gain more than that, and the frame's exposure does not move to meet either. Giving
+    // light back toward the zenith alone keeps an afternoon sky blue without blowing out its horizon.
+    colour *= lerp(1.0f, Zenith.x, pow(skyward.z, ZENITH_HOLD_FALLOFF));
 
     // Where the sky ends up at the horizon: the engine's own colour, by heading against the sun,
     // so that the terrain fading into it and the sky arriving at it meet in one place.

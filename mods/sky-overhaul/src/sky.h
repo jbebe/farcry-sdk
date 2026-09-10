@@ -39,4 +39,9 @@ void SetHorizonGradient(int percent);
 // facing away from the sun.
 void SetFarHorizonBrightness(int percent);
 
+// How much of the brightness the zenith loses as the sun comes down is given back, as a
+// percentage. A hundred keeps the sky overhead as bright as under an overhead sun until the sun is
+// low, then lets it darken into sunset; zero leaves the zenith to the air alone.
+void SetZenithHold(int percent);
+
 }
