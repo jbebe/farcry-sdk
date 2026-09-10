@@ -4,7 +4,6 @@
 #include "engine/input.h"
 #include "fcse_api.h"
 
-#include <cstdio>
 #include <windows.h>
 
 namespace {
@@ -67,18 +66,13 @@ const char* const* ChoiceLabels(size_t& count) {
 int FromChoice(size_t choice) { return choice < kKeyCount ? kVirtualKeys[choice] : 0; }
 
 void LogBinding(const char* name, size_t choice, int bound) {
-    const FCSE_PluginAPI* api = FCSE::ApiPointer();
-
-    char line[96];
     if (bound != 0) {
-        std::snprintf(line, sizeof(line), "%s: bound to %s", name, kLabels[choice]);
+        FCSE::Logf("%s: bound to %s", name, kLabels[choice]);
     } else if (FromChoice(choice) != 0) {
-        std::snprintf(line, sizeof(line), "%s: %s is already taken - left unbound", name,
-                      kLabels[choice]);
+        FCSE::Logf("%s: %s is already taken - left unbound", name, kLabels[choice]);
     } else {
-        std::snprintf(line, sizeof(line), "%s: off", name);
+        FCSE::Logf("%s: off", name);
     }
-    api->Log(line);
 }
 
 }

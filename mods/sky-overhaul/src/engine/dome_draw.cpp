@@ -1,7 +1,6 @@
 #include "engine/dome_draw.h"
 
 #include "engine/frame.h"
-#include "engine/log.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
@@ -99,8 +98,8 @@ bool SkyOverhaul::DomeDraw::Install(SubstituteFn substitute) {
     }
 
     g_substitute = substitute;
-    Logf("dome: watching for %u vertices and %u triangles at the far plane", kDomeVertices,
-         kDomePrimitives);
+    FCSE::Logf("dome: watching for %u vertices and %u triangles at the far plane", kDomeVertices,
+               kDomePrimitives);
     return true;
 }
 

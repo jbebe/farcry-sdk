@@ -92,11 +92,8 @@ bool Install() {
     }
 
     if (missing != nullptr) {
-        char line[192];
-        std::snprintf(line, sizeof(line),
-                      "console: %s was not found in this build - the command API is disabled",
-                      missing);
-        api->Log(line);
+        FCSE::Logf("console: %s was not found in this build - the command API is disabled",
+                   missing);
         return false;
     }
 
@@ -115,9 +112,7 @@ bool Execute(const char* line) {
         return false;
     }
 
-    char logged[256];
-    std::snprintf(logged, sizeof(logged), "console: > %s", line);
-    api->Log(logged);
+    FCSE::Logf("console: > %s", line);
 
     NarrowString text;
     std::string spill;

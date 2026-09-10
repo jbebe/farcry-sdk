@@ -1,7 +1,7 @@
 #include "engine/noise.h"
 
 #include "engine/com.h"
-#include "engine/log.h"
+#include "fcse_api.h"
 
 #include <algorithm>
 #include <atomic>
@@ -251,11 +251,12 @@ bool SkyOverhaul::Noise::Ensure(IDirect3DDevice9* device) {
         ReleaseDeviceObjects();
         g_owner = device;
         g_refused = true;
-        Logf("clouds: this device would not take the noise textures, so nothing will be drawn");
+        FCSE::Logf("clouds: this device would not take the noise textures, so nothing will be "
+                   "drawn");
         return false;
     }
 
-    Logf("clouds: noise ready, shape %d cubed, detail %d cubed", kShapeSize, kDetailSize);
+    FCSE::Logf("clouds: noise ready, shape %d cubed, detail %d cubed", kShapeSize, kDetailSize);
     return true;
 }
 

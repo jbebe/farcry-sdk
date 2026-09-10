@@ -16,7 +16,6 @@
 #include "fcse_api.h"
 
 #include <cstdint>
-#include <cstdio>
 
 namespace {
     // XINPUT_STATE at this+0x14: dwPacketNumber, then the XINPUT_GAMEPAD behind it.
@@ -185,9 +184,7 @@ void InstallInputDeviceTracking() {
 
     // Every feature that asks which device is in use degrades to "keyboard and mouse" without this,
     // which is the stock behaviour, so a partial install is worth reporting but not worth refusing.
-    char line[128];
-    std::snprintf(line, sizeof(line), "input device: tracking %d of 4 drivers", installed);
-    api->Log(line);
+    FCSE::Logf("input device: tracking %d of 4 drivers", installed);
 }
 
 }

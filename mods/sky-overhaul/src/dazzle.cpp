@@ -6,10 +6,10 @@
 #include "engine/clock.h"
 #include "engine/cloud_layer.h"
 #include "engine/com.h"
-#include "engine/log.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "engine/sun_occlusion.h"
+#include "fcse_api.h"
 
 #include "dazzle_accumulate_ps.h"
 #include "dazzle_bleach_ps.h"
@@ -293,16 +293,15 @@ namespace {
         const HRESULT bleach = CreateTarget(device, backBuffer, &g_bleach, &g_bleachSurface);
         if (FAILED(copy) || FAILED(burn) || FAILED(bleach)) {
             ReleaseCopy();
-            SkyOverhaul::Logf("dazzle: no %ux%u copy of the frame, 0x%08lX / 0x%08lX / 0x%08lX",
-                              backBuffer.Width, backBuffer.Height,
-                              static_cast<unsigned long>(copy), static_cast<unsigned long>(burn),
-                              static_cast<unsigned long>(bleach));
+            FCSE::Logf("dazzle: no %ux%u copy of the frame, 0x%08lX / 0x%08lX / 0x%08lX",
+                       backBuffer.Width, backBuffer.Height, static_cast<unsigned long>(copy),
+                       static_cast<unsigned long>(burn), static_cast<unsigned long>(bleach));
             return false;
         }
 
         g_copyDesc = backBuffer;
-        SkyOverhaul::Logf("dazzle: drawing over %ux%u, format %u", backBuffer.Width,
-                          backBuffer.Height, static_cast<unsigned>(backBuffer.Format));
+        FCSE::Logf("dazzle: drawing over %ux%u, format %u", backBuffer.Width, backBuffer.Height,
+                   static_cast<unsigned>(backBuffer.Format));
         return true;
     }
 
@@ -549,12 +548,13 @@ void SkyOverhaul::Dazzle::OnFinalPass(const Frame::Pass& pass) {
     }
 
     if (pass.live && g_heartbeat.Due(elapsed)) {
-        Logf("dazzle f%u: intensity %.3f hold %.3f | cos %.3f elev %.3f "
-             "night %.2f visible %.3f | exposure %.2f recovering %.2f env %.3f "
-             "| sun (%.0f %.0f) inFront %d",
-             pass.frame, glare.intensity, glare.hold, g_thisFrame.cosAngle, g_thisFrame.elevation,
-             g_thisFrame.night, VisibleFraction(), g_exposure, g_recovering, afterimage,
-             g_thisFrame.x, g_thisFrame.y, g_thisFrame.inFront ? 1 : 0);
+        FCSE::Logf("dazzle f%u: intensity %.3f hold %.3f | cos %.3f elev %.3f "
+                   "night %.2f visible %.3f | exposure %.2f recovering %.2f env %.3f "
+                   "| sun (%.0f %.0f) inFront %d",
+                   pass.frame, glare.intensity, glare.hold, g_thisFrame.cosAngle,
+                   g_thisFrame.elevation, g_thisFrame.night, VisibleFraction(), g_exposure,
+                   g_recovering, afterimage, g_thisFrame.x, g_thisFrame.y,
+                   g_thisFrame.inFront ? 1 : 0);
     }
 }
 

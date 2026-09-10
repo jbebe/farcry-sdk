@@ -182,8 +182,8 @@ once every plugin has loaded:
 
 void DrawMyWindow(void*) { ImGui::TextUnformatted("Hello from my plugin"); }
 
-extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI* api) {
-    DevTools::Overlay::AddWindow(api, "My plugin", 360.0f, 200.0f, &DrawMyWindow);
+extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI*) {
+    DevTools::Overlay::AddWindow("My plugin", 360.0f, 200.0f, &DrawMyWindow);
 }
 ```
 

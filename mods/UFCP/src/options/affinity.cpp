@@ -22,8 +22,6 @@
 
 #include <windows.h>
 
-#include <cstdio>
-
 namespace {
     // Indices into the choice labels declared in main.cpp. The order is the file format - renaming
     // a label is free, reordering them silently changes what a saved fcse.ini means.
@@ -115,15 +113,10 @@ void __cdecl OnAffinityChanged(const FCSE_SettingValue* value, void* /*userdata*
     }
 
     if (!SetProcessAffinityMask(GetCurrentProcess(), wanted)) {
-        char line[128];
-        std::snprintf(line, sizeof(line), "affinity: could not be set to 0x%08zX, error %lu",
-                      static_cast<size_t>(wanted), GetLastError());
-        api->Log(line);
+        FCSE::Logf("affinity: could not be set to 0x%08zX, error %lu", static_cast<size_t>(wanted),
+                   GetLastError());
         return;
     }
 
-    char line[128];
-    std::snprintf(line, sizeof(line), "affinity: running on mask 0x%08zX",
-                  static_cast<size_t>(wanted));
-    api->Log(line);
+    FCSE::Logf("affinity: running on mask 0x%08zX", static_cast<size_t>(wanted));
 }

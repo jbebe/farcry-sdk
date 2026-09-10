@@ -30,7 +30,6 @@
 #include <atomic>
 #include <cmath>
 #include <cstdint>
-#include <cstdio>
 #include <cstring>
 #include <mutex>
 
@@ -1208,10 +1207,7 @@ void InstallFovHook() {
                      &IronsightHandler);
     }
 
-    char line[128];
-    std::snprintf(line, sizeof(line), "fov: hooked the camera at 0x%08zX",
-                  static_cast<size_t>(g_setter.address()));
-    api->Log(line);
+    FCSE::Logf("fov: hooked the camera at 0x%08zX", static_cast<size_t>(g_setter.address()));
 }
 
 void __cdecl OnFovChanged(const FCSE_SettingValue* value, void* /*userdata*/) {

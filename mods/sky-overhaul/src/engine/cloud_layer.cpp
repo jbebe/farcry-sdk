@@ -1,6 +1,5 @@
 #include "engine/cloud_layer.h"
 
-#include "engine/log.h"
 #include "engine/seqlock.h"
 #include "fcse_api.h"
 
@@ -128,9 +127,10 @@ bool SkyOverhaul::CloudLayer::Install() {
         return false;
     }
     if (mapped != scanned) {
-        Logf("clouds: the address library says 0x%08zX and the pattern says 0x%08zX, taking %s",
-             static_cast<size_t>(mapped), static_cast<size_t>(scanned),
-             scanned != 0 ? "the pattern" : "the library");
+        FCSE::Logf("clouds: the address library says 0x%08zX and the pattern says 0x%08zX, "
+                   "taking %s",
+                   static_cast<size_t>(mapped), static_cast<size_t>(scanned),
+                   scanned != 0 ? "the pattern" : "the library");
     }
 
     // A disagreement goes to the pattern, which is checked against both shipped builds before
@@ -143,8 +143,8 @@ bool SkyOverhaul::CloudLayer::Install() {
         return false;
     }
 
-    Logf("clouds: cloud-layer submission hooked at 0x%08zX on %s", static_cast<size_t>(target),
-         api->gameBuildId);
+    FCSE::Logf("clouds: cloud-layer submission hooked at 0x%08zX on %s",
+               static_cast<size_t>(target), api->gameBuildId);
     return true;
 }
 
@@ -158,6 +158,6 @@ uint32_t SkyOverhaul::CloudLayer::SubmitCount() {
 
 void SkyOverhaul::CloudLayer::SetMode(Mode mode) {
     g_mode = mode;
-    Logf("clouds: %s", mode == Mode::Engine ? "the engine draws its own clouds"
-                                            : "the engine's clouds are suppressed");
+    FCSE::Logf("clouds: %s", mode == Mode::Engine ? "the engine draws its own clouds"
+                                                  : "the engine's clouds are suppressed");
 }

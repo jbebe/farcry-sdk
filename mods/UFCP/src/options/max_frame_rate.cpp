@@ -137,7 +137,5 @@ void __cdecl OnMaxFrameRateChanged(const FCSE_SettingValue* value, void* /*userd
 
     ApplyLive();
 
-    char line[128];
-    std::snprintf(line, sizeof(line), "max frame rate: %d", fps);
-    api->Log(line);
+    FCSE::Logf("max frame rate: %d", fps);
 }

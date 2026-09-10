@@ -1,6 +1,5 @@
 #include "engine/device_reset.h"
 
-#include "engine/log.h"
 #include "fcse_api.h"
 
 namespace {
@@ -25,7 +24,7 @@ namespace {
     void (*g_onRelease)() = nullptr;
 
     void __fastcall TeardownDetour(void* self) {
-        SkyOverhaul::Logf("device reset: teardown - releasing what the plugin holds");
+        FCSE::Logf("device reset: teardown - releasing what the plugin holds");
         if (g_onRelease != nullptr) {
             g_onRelease();
         }
@@ -34,7 +33,7 @@ namespace {
 
     void __fastcall RestoreDetour(void* self) {
         g_originalRestore(self);
-        SkyOverhaul::Logf("device reset: restored");
+        FCSE::Logf("device reset: restored");
     }
 }
 
@@ -57,8 +56,8 @@ bool SkyOverhaul::DeviceReset::Install(void (*onRelease)()) {
 
     g_onRelease = onRelease;
 
-    Logf("device reset: teardown at 0x%08zX, restore at 0x%08zX",
-         static_cast<size_t>(g_teardown.address()),
-         static_cast<size_t>(g_restore.address()));
+    FCSE::Logf("device reset: teardown at 0x%08zX, restore at 0x%08zX",
+               static_cast<size_t>(g_teardown.address()),
+               static_cast<size_t>(g_restore.address()));
     return true;
 }

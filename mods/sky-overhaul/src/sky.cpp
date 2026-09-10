@@ -7,9 +7,9 @@
 #include "engine/cloud_layer.h"
 #include "engine/dome_draw.h"
 #include "engine/fog_tint.h"
-#include "engine/log.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
+#include "fcse_api.h"
 
 #include "sky_ps.h"
 
@@ -225,30 +225,34 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
 
     // Counts that stand still are the two ways this fails without anything else saying so: a dome
     // that stopped being recognised, and a fog colour that is never being reached.
-    Logf("sky f%u: %u domes replaced, %u fog uploads retinted | night %.2f storm %.2f exposure %.2f "
-         "zenith x%.2f",
-         pass.frame, DomeDraw::SubstituteCount(), FogTint::TintCount(), light.night, light.storm,
-         view.bloom, g_last.zenithLift);
-    Logf("sky f%u: sun %+.1f deg, fog heading %.0f deg off it | model toward (%.3f %.3f %.3f) "
-         "away (%.3f %.3f %.3f)",
-         pass.frame, elevation, headingOffset, g_last.towardColour[0], g_last.towardColour[1],
-         g_last.towardColour[2], g_last.awayColour[0], g_last.awayColour[1], g_last.awayColour[2]);
-    Logf("sky f%u: engine fog toward (%.3f %.3f %.3f) away (%.3f %.3f %.3f)", pass.frame,
-         view.fogColour[0], view.fogColour[1], view.fogColour[2],
-         view.fogColour[0] + view.fogColourRange[0], view.fogColour[1] + view.fogColourRange[1],
-         view.fogColour[2] + view.fogColourRange[2]);
+    FCSE::Logf("sky f%u: %u domes replaced, %u fog uploads retinted | night %.2f storm %.2f "
+               "exposure %.2f zenith x%.2f",
+               pass.frame, DomeDraw::SubstituteCount(), FogTint::TintCount(), light.night,
+               light.storm, view.bloom, g_last.zenithLift);
+    FCSE::Logf("sky f%u: sun %+.1f deg, fog heading %.0f deg off it | model toward "
+               "(%.3f %.3f %.3f) away (%.3f %.3f %.3f)",
+               pass.frame, elevation, headingOffset, g_last.towardColour[0], g_last.towardColour[1],
+               g_last.towardColour[2], g_last.awayColour[0], g_last.awayColour[1],
+               g_last.awayColour[2]);
+    FCSE::Logf("sky f%u: engine fog toward (%.3f %.3f %.3f) away (%.3f %.3f %.3f)", pass.frame,
+               view.fogColour[0], view.fogColour[1], view.fogColour[2],
+               view.fogColour[0] + view.fogColourRange[0],
+               view.fogColour[1] + view.fogColourRange[1],
+               view.fogColour[2] + view.fogColourRange[2]);
     // Distance: per metre, offset, amount. Height: per metre, offset, then the value at the bottom of
     // the height band and how much more the top adds - so the fog on the lowest geometry is the
     // amount times the third height value.
-    Logf("sky f%u: engine fog distance (%.5f %.3f %.3f) height (%.5f %.3f %.3f %.3f)", pass.frame,
-         view.fogValues[0], view.fogValues[1], view.fogValues[2], view.fogHeightValues[0],
-         view.fogHeightValues[1], view.fogHeightValues[2], view.fogHeightValues[3]);
-    Logf("sky f%u: cloud light sun (%.3f %.3f %.3f) ambient (%.3f %.3f %.3f) back (%.3f %.3f %.3f) "
-         "moon (%.3f %.3f %.3f) moon z %+.2f",
-         pass.frame, light.sunColour[0], light.sunColour[1], light.sunColour[2],
-         light.ambientColour[0], light.ambientColour[1], light.ambientColour[2],
-         light.backSunColour[0], light.backSunColour[1], light.backSunColour[2],
-         light.moonColour[0], light.moonColour[1], light.moonColour[2], light.moonDirection[2]);
+    FCSE::Logf("sky f%u: engine fog distance (%.5f %.3f %.3f) height (%.5f %.3f %.3f %.3f)",
+               pass.frame, view.fogValues[0], view.fogValues[1], view.fogValues[2],
+               view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
+               view.fogHeightValues[3]);
+    FCSE::Logf("sky f%u: cloud light sun (%.3f %.3f %.3f) ambient (%.3f %.3f %.3f) "
+               "back (%.3f %.3f %.3f) moon (%.3f %.3f %.3f) moon z %+.2f",
+               pass.frame, light.sunColour[0], light.sunColour[1], light.sunColour[2],
+               light.ambientColour[0], light.ambientColour[1], light.ambientColour[2],
+               light.backSunColour[0], light.backSunColour[1], light.backSunColour[2],
+               light.moonColour[0], light.moonColour[1], light.moonColour[2],
+               light.moonDirection[2]);
 }
 
 void SkyOverhaul::Sky::ReleaseDeviceObjects() {

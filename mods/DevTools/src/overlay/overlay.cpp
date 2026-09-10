@@ -20,7 +20,6 @@
 #include "imgui_internal.h"
 #include "misc/cpp/imgui_stdlib.h"
 
-#include <cstdio>
 #include <cstring>
 #include <d3d9.h>
 #include <deque>
@@ -171,10 +170,7 @@ namespace {
 
     // Logs why a window is not added, and refuses it.
     bool Refuse(const char* reason, const char* title) {
-        char line[256];
-        std::snprintf(line, sizeof(line), "overlay: %s - the '%s' window is not added", reason,
-                      title);
-        FCSE::ApiPointer()->Log(line);
+        FCSE::Logf("overlay: %s - the '%s' window is not added", reason, title);
         return false;
     }
 
@@ -191,12 +187,10 @@ namespace {
 
         const DevTools_ImGuiLayout own = DevTools::Overlay::ImGuiLayout();
         if (imgui == nullptr || std::memcmp(imgui, &own, sizeof(own)) != 0) {
-            char reason[128];
-            std::snprintf(reason, sizeof(reason),
-                          "built against Dear ImGui %u where DevTools has %u, or with a different "
-                          "layout",
-                          imgui == nullptr ? 0u : imgui->versionNum, own.versionNum);
-            return Refuse(reason, title);
+            FCSE::Logf("overlay: built against Dear ImGui %u where DevTools has %u, or with a "
+                       "different layout - the '%s' window is not added",
+                       imgui == nullptr ? 0u : imgui->versionNum, own.versionNum, title);
+            return false;
         }
 
         // Compared the way ImGui names a window, so two titles it would draw as one are caught.
@@ -209,9 +203,7 @@ namespace {
         }
         g_registered.push_back({title, bind, draw, userData, ImVec2(width, height)});
 
-        char line[256];
-        std::snprintf(line, sizeof(line), "overlay: added the '%s' window", title);
-        FCSE::ApiPointer()->Log(line);
+        FCSE::Logf("overlay: added the '%s' window", title);
         return true;
     }
 

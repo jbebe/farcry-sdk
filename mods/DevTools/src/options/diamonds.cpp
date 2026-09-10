@@ -23,7 +23,6 @@
 #include "fcse_api.h"
 
 #include <cstdint>
-#include <cstdio>
 
 namespace {
     constexpr ptrdiff_t kEconomyDiamondCount = 0x10;
@@ -243,7 +242,9 @@ void SetDiamonds(int value) {
     // Without the save hook a grant would become permanent, which is the one thing this must not do.
     g_target = (g_originalSerialise != nullptr) ? value : 0;
 
-    char line[96];
-    std::snprintf(line, sizeof(line), "diamonds: %d", g_target);
-    api->Log(g_target > 0 ? line : "diamonds: off - any grant outstanding is handed back");
+    if (g_target > 0) {
+        FCSE::Logf("diamonds: %d", g_target);
+    } else {
+        api->Log("diamonds: off - any grant outstanding is handed back");
+    }
 }

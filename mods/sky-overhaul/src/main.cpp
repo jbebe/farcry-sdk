@@ -191,6 +191,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
 }
 
 // Runs after every plugin's FCSE_Load, so DevTools has loaded by now if it is installed at all.
-extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI* api) {
-    DevTools::Overlay::AddWindow(api, "Sky Overhaul", 360.0f, 100.0f, &DrawOverlayWindow);
+extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI*) {
+    DevTools::Overlay::AddWindow("Sky Overhaul", 360.0f, 100.0f, &DrawOverlayWindow);
 }

@@ -3,10 +3,10 @@
 #include "engine/camera.h"
 #include "engine/clock.h"
 #include "engine/cloud_layer.h"
-#include "engine/log.h"
 #include "engine/noise.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
+#include "fcse_api.h"
 
 #include "clouds_ps.h"
 
@@ -124,11 +124,11 @@ namespace {
 
     void LogPass(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
                  float elapsed) {
-        SkyOverhaul::Logf("clouds f%u: eye (%.1f %.1f %.1f) base %.0f | dir (%.2f %.2f %.2f) "
-                          "bloom %.2f | %.2f ms",
-                          pass.frame, view.eye[0], view.eye[1], view.eye[2], g_baseAltitude,
-                          view.direction[0], view.direction[1], view.direction[2], view.bloom,
-                          elapsed * 1000.0f);
+        FCSE::Logf("clouds f%u: eye (%.1f %.1f %.1f) base %.0f | dir (%.2f %.2f %.2f) "
+                   "bloom %.2f | %.2f ms",
+                   pass.frame, view.eye[0], view.eye[1], view.eye[2], g_baseAltitude,
+                   view.direction[0], view.direction[1], view.direction[2], view.bloom,
+                   elapsed * 1000.0f);
     }
 
     // Carries the layer along on the plugin's own clock, in the direction the engine is blowing.

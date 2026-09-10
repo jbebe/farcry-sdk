@@ -1,7 +1,6 @@
 #include "engine/frame.h"
 
 #include "engine/cloud_layer.h"
-#include "engine/log.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
@@ -53,12 +52,12 @@ namespace {
             return;
         }
 
-        SkyOverhaul::Logf("device: frame %u, device %p (was %p), back buffer %p (was %p) "
-                          "%ux%u fmt %u ms %u",
-                          g_frame, static_cast<void*>(device), static_cast<void*>(g_device),
-                          static_cast<void*>(surface), static_cast<void*>(g_backBufferSurface),
-                          desc.Width, desc.Height, static_cast<unsigned>(desc.Format),
-                          static_cast<unsigned>(desc.MultiSampleType));
+        FCSE::Logf("device: frame %u, device %p (was %p), back buffer %p (was %p) "
+                   "%ux%u fmt %u ms %u",
+                   g_frame, static_cast<void*>(device), static_cast<void*>(g_device),
+                   static_cast<void*>(surface), static_cast<void*>(g_backBufferSurface),
+                   desc.Width, desc.Height, static_cast<unsigned>(desc.Format),
+                   static_cast<unsigned>(desc.MultiSampleType));
 
         g_device = device;
         g_backBufferSurface = surface;
@@ -70,14 +69,14 @@ namespace {
         if (cooperative != D3D_OK) {
             if (!g_deviceLost) {
                 g_deviceLost = true;
-                SkyOverhaul::Logf("device: not usable, TestCooperativeLevel 0x%08lX",
-                                  static_cast<unsigned long>(cooperative));
+                FCSE::Logf("device: not usable, TestCooperativeLevel 0x%08lX",
+                           static_cast<unsigned long>(cooperative));
             }
             return;
         }
         if (g_deviceLost) {
             g_deviceLost = false;
-            SkyOverhaul::Logf("device: usable again at frame %u", g_frame);
+            FCSE::Logf("device: usable again at frame %u", g_frame);
         }
 
         SurfaceRef target;
@@ -180,7 +179,7 @@ bool SkyOverhaul::Frame::Install(PassFn onScenePass, PassFn onFinalPass) {
     g_onScenePass = onScenePass;
     g_onFinalPass = onFinalPass;
 
-    Logf("frame: following EndScene at 0x%08zX", reinterpret_cast<size_t>(endScene));
+    FCSE::Logf("frame: following EndScene at 0x%08zX", reinterpret_cast<size_t>(endScene));
     return true;
 }
 

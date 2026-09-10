@@ -8,7 +8,6 @@
 #include "fcse_api.h"
 
 #include <cstdint>
-#include <cstdio>
 #include <mutex>
 #include <utility>
 #include <vector>
@@ -74,10 +73,8 @@ bool Install() {
         return false;
     }
 
-    char line[128];
-    std::snprintf(line, sizeof(line), "game thread: hooked the frame update at 0x%08zX",
-                  static_cast<size_t>(g_update.address()));
-    api->Log(line);
+    FCSE::Logf("game thread: hooked the frame update at 0x%08zX",
+               static_cast<size_t>(g_update.address()));
     return true;
 }
 

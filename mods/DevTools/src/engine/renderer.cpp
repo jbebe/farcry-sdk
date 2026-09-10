@@ -10,7 +10,6 @@
 
 #include "fcse_api.h"
 
-#include <cstdio>
 #include <d3d9.h>
 #include <windows.h>
 
@@ -127,10 +126,7 @@ bool Install(DrawFn draw, DeviceLostFn onDeviceLost) {
         return false;
     }
 
-    char line[128];
-    std::snprintf(line, sizeof(line), "renderer: drawing from Present at 0x%08zX",
-                  reinterpret_cast<size_t>(present));
-    api->Log(line);
+    FCSE::Logf("renderer: drawing from Present at 0x%08zX", reinterpret_cast<size_t>(present));
     return true;
 }
 

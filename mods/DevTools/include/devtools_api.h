@@ -69,8 +69,6 @@ typedef const DevTools_OverlayAPI* (*DevTools_GetOverlayAPIFn)(void);
 #include "imgui.h"
 #include "imgui_internal.h"
 
-#include <cstdio>
-
 namespace DevTools::Overlay {
 
 // This module's Dear ImGui, described for DevTools to compare against its own.
@@ -86,30 +84,24 @@ inline void BindImGui(const DevTools_ImGuiBinding* imgui) {
 }
 
 // DevTools_AddWindowFn for this module, once DevTools.dll is found and its API version matches;
-// either failure is logged through `api`.
-inline bool AddWindow(const FCSE_PluginAPI* api, const char* title, float width, float height,
-                      DevTools_DrawWindowFn draw, void* userData = nullptr) {
-    char line[256];
-
+// either failure is logged.
+inline bool AddWindow(const char* title, float width, float height, DevTools_DrawWindowFn draw,
+                      void* userData = nullptr) {
     HMODULE devTools = GetModuleHandleW(L"DevTools.dll");
     auto getOverlay = devTools == nullptr
                           ? nullptr
                           : reinterpret_cast<DevTools_GetOverlayAPIFn>(
                                 GetProcAddress(devTools, "DevTools_GetOverlayAPI"));
     if (getOverlay == nullptr) {
-        std::snprintf(line, sizeof(line), "DevTools is not installed - the '%s' window is not drawn",
-                      title);
-        api->Log(line);
+        FCSE::Logf("DevTools is not installed - the '%s' window is not drawn", title);
         return false;
     }
 
     const DevTools_OverlayAPI* overlay = getOverlay();
     if (overlay->apiVersion != DEVTOOLS_OVERLAY_API_VERSION) {
-        std::snprintf(line, sizeof(line),
-                      "DevTools' overlay API is version %u and this plugin was built for %d - the "
-                      "'%s' window is not drawn",
-                      overlay->apiVersion, DEVTOOLS_OVERLAY_API_VERSION, title);
-        api->Log(line);
+        FCSE::Logf("DevTools' overlay API is version %u and this plugin was built for %d - the "
+                   "'%s' window is not drawn",
+                   overlay->apiVersion, DEVTOOLS_OVERLAY_API_VERSION, title);
         return false;
     }
 

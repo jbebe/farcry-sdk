@@ -1,7 +1,7 @@
 #include "engine/shader.h"
 
 #include "engine/com.h"
-#include "engine/log.h"
+#include "fcse_api.h"
 
 #include <cstring>
 #include <vector>
@@ -38,8 +38,8 @@ Interface* SkyOverhaul::Shader<Interface>::Get(IDirect3DDevice9* device) {
     if (FAILED(created)) {
         SkyOverhaul::Release(m_shader);
         m_refused = true;
-        Logf("%s: this device refused the shader (0x%08lX)", m_name,
-             static_cast<unsigned long>(created));
+        FCSE::Logf("%s: this device refused the shader (0x%08lX)", m_name,
+                   static_cast<unsigned long>(created));
     }
     return m_shader;
 }

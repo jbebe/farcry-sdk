@@ -114,10 +114,7 @@ namespace {
         }
 
         if (std::strcmp(g_commandLine, original) != 0) {
-            char line[512];
-            std::snprintf(line, sizeof(line), "command line:%s",
-                          g_commandLine + std::strlen(original));
-            api->Log(line);
+            FCSE::Logf("command line:%s", g_commandLine + std::strlen(original));
         }
 
         return g_originalRunGame(instance, g_commandLine);

@@ -1,6 +1,5 @@
 #include "engine/fog_tint.h"
 
-#include "engine/log.h"
 #include "engine/seqlock.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
@@ -95,8 +94,8 @@ namespace {
 
     bool Take(size_t slot, bool pixel, void* detour, SetConstantFn* original) {
         if (!SkyOverhaul::Vtable::IsConstantSetter(slot, pixel)) {
-            SkyOverhaul::Logf("fog: slot %u is not the %s constant setter, so it is left alone",
-                              static_cast<unsigned>(slot), pixel ? "pixel" : "vertex");
+            FCSE::Logf("fog: slot %u is not the %s constant setter, so it is left alone",
+                       static_cast<unsigned>(slot), pixel ? "pixel" : "vertex");
             return false;
         }
         return FCSE::ApiPointer()->Hook(SkyOverhaul::Vtable::Slot(slot), detour,
@@ -110,11 +109,12 @@ bool SkyOverhaul::FogTint::Install() {
     const bool pixel = Take(kSetPixelConstantSlot, true,
                             reinterpret_cast<void*>(&SetPixelConstantDetour), &g_originalPixel);
     if (!vertex && !pixel) {
-        Logf("fog: neither constant setter could be followed, so the world keeps its own colour");
+        FCSE::Logf("fog: neither constant setter could be followed, so the world keeps its own "
+                   "colour");
         return false;
     }
-    Logf("fog: following the %s%s%s constant upload", vertex ? "vertex" : "",
-         vertex && pixel ? " and " : "", pixel ? "pixel" : "");
+    FCSE::Logf("fog: following the %s%s%s constant upload", vertex ? "vertex" : "",
+               vertex && pixel ? " and " : "", pixel ? "pixel" : "");
     return true;
 }
 

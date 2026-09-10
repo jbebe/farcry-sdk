@@ -21,7 +21,6 @@
 #include "engine/input_device.h"
 
 #include <cstdint>
-#include <cstdio>
 
 namespace {
     constexpr size_t kSiteCount = 4;
@@ -75,10 +74,8 @@ void InstallAimAssistHook() {
     }
 
     if (installed != kSiteCount) {
-        char line[128];
-        std::snprintf(line, sizeof(line), "aim assist: %zu of %zu helpers can be skipped on this "
-                                          "build", installed, kSiteCount);
-        api->Log(line);
+        FCSE::Logf("aim assist: %zu of %zu helpers can be skipped on this build", installed,
+                   kSiteCount);
     }
 }
 

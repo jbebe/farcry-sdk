@@ -35,7 +35,6 @@
 #include "engine/memory_probe.h"
 
 #include <cstdint>
-#include <cstdio>
 
 #include <windows.h>
 
@@ -74,16 +73,13 @@ namespace {
         }
         g_reported = true;
 
-        char line[160];
         if (decay == Decay::NoDestructor) {
-            std::snprintf(line, sizeof(line),
-                          "exit teardown: skipped a destroyed object, vtable Dunia+0x%tX",
-                          reinterpret_cast<uintptr_t>(vtable) - api->duniaBase);
+            FCSE::Logf("exit teardown: skipped a destroyed object, vtable Dunia+0x%tX",
+                       reinterpret_cast<uintptr_t>(vtable) - api->duniaBase);
         } else {
-            std::snprintf(line, sizeof(line), "exit teardown: skipped a destroyed object (%s)",
-                          decay == Decay::Unmapped ? "unmapped" : "no vtable");
+            FCSE::Logf("exit teardown: skipped a destroyed object (%s)",
+                       decay == Decay::Unmapped ? "unmapped" : "no vtable");
         }
-        api->Log(line);
     }
 
     void __fastcall Teardown(void* self, void* unused, void* owner, void* object) {
