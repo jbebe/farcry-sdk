@@ -23,8 +23,4 @@ bool Install();
 // The newest complete snapshot. False until the engine has submitted a sun.
 bool Latest(Sun& out);
 
-// Counts sun submissions. A render frame whose count differs from the previous one had a world
-// drawn into it, which is what tells a menu or a loading screen from the game.
-uint32_t SubmitCount();
-
 }

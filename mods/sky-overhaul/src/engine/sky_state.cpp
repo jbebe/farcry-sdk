@@ -4,7 +4,6 @@
 #include "engine/seqlock.h"
 #include "fcse_api.h"
 
-#include <atomic>
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
@@ -35,8 +34,6 @@ namespace {
     // The game thread writes the snapshot and the render thread reads it.
     SkyOverhaul::Seqlock<SkyOverhaul::SkyState::Sun> g_sun;
 
-    std::atomic<uint32_t> g_submitCount{0};
-
     void __fastcall SubmitSunDiscDetour(void* self, void* unused, uint32_t a2, uint32_t a3,
                                         uint32_t a4, uint32_t a5, uint32_t a6,
                                         const float* sunDirection, uint32_t a8, uint32_t a9,
@@ -55,8 +52,6 @@ namespace {
                 sun.direction[2] = sunDirection[2] / length;
                 sun.night = *reinterpret_cast<const float*>(state + kNightFactor);
                 g_sun.Publish(sun);
-
-                g_submitCount.fetch_add(1, std::memory_order_relaxed);
             }
         }
 
@@ -87,9 +82,5 @@ bool SkyOverhaul::SkyState::Install() {
 
 bool SkyOverhaul::SkyState::Latest(Sun& out) {
     return g_sun.Latest(out);
-}
-
-uint32_t SkyOverhaul::SkyState::SubmitCount() {
-    return g_submitCount.load(std::memory_order_relaxed);
 }
 

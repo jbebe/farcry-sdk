@@ -1,7 +1,7 @@
 #include "engine/frame.h"
 
+#include "engine/cloud_layer.h"
 #include "engine/log.h"
-#include "engine/sky_state.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
@@ -114,7 +114,7 @@ namespace {
         bool runFinal = false;
         if (scene) {
             if (g_state == State::AwaitingScene) {
-                const uint32_t submitCount = SkyOverhaul::SkyState::SubmitCount();
+                const uint32_t submitCount = SkyOverhaul::CloudLayer::SubmitCount();
                 g_live = submitCount != g_lastSubmitCount;
                 g_lastSubmitCount = submitCount;
                 g_frame++;

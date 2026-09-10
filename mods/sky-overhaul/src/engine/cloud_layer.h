@@ -23,10 +23,6 @@ struct Lighting {
     // disc because this submission is the one that still runs at night.
     float sunDirection[3];
     float moonDirection[3];
-    // The same moon read two other ways, the matrix taken by columns and the direction the engine
-    // lights its own clouds from, kept until a look at the moon has said which one is drawn.
-    float moonByColumns[3];
-    float moonCloudLight[3];
 
     float sunColour[3];
     float moonColour[3];
@@ -66,9 +62,8 @@ bool Install();
 // The newest complete snapshot. False until the engine has submitted a cloud layer.
 bool Latest(Lighting& out);
 
-// Counts cloud-layer submissions, suppressed ones included. Unlike the sun disc's, this one runs
-// at every hour, so a render frame whose count differs from the previous one had a world drawn
-// into it.
+// Counts cloud-layer submissions, suppressed ones included. It runs at every hour, so a render
+// frame whose count differs from the previous one had a world drawn into it.
 uint32_t SubmitCount();
 
 // Takes effect on the next submission. Safe to call before anything has been submitted.

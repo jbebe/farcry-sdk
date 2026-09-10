@@ -23,8 +23,9 @@ halves the moon's size and is otherwise retail. Nothing here changes how the sun
   sun's image sat, a faint desaturated negative of the whole view, and a haze over everything else.
   It arms only after a held stare, deepens with how long that stare lasted, and fades over twice as
   long as it took to build.
-- **Staying out of menus.** The sun-disc hook reports whether the engine drew a sky at all this
-  frame; a frame without one gets nothing. No guessing at game state.
+- **Staying out of menus.** The cloud-layer hook reports whether the engine drew a world at all
+  this frame, at every hour of the night too; a frame without one gets nothing. No guessing at game
+  state.
 - **Live tuning.** Fourteen sliders in the mod menu, from glare strength through to the afterimage's
   colour, so tuning never needs a rebuild.
 
