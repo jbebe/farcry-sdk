@@ -237,6 +237,10 @@ Timestamps are local time at Windows' native 100ns `FILETIME` resolution (via
 enough to disambiguate lines from the loader and multiple plugins landing within the same
 millisecond, which plain millisecond timestamps aren't.
 
+A C++ plugin formats a line printf-style with `FCSE::Logf`, from the convenience layer at the bottom
+of `include/fcse_api.h`. It writes through `Log`, so the line is tagged with the plugin like any
+other, and one longer than 1023 characters is cut short and ends in `...`.
+
 ## Building
 
 Requires the `x86-debug` or `x86-release` CMake preset - **never `x64-*`**: Far Cry 2 is a 32-bit

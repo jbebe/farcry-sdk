@@ -12,6 +12,9 @@ Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachang
   draws it locked and unselectable, value and all; `FCSE_SettingFlag_Hidden` omits it, leaving
   `fcse.ini` as its only interface. Either way the setting keeps working everywhere else. Lua mods
   get both as `fcse.setting{ … disabled = true, hidden = true }`.
+- **Formatted log lines for C++ plugins** — `FCSE::Logf(format, ...)` in `fcse_api.h` formats
+  printf-style and writes through `Log`, so a plugin no longer sizes a buffer for every message.
+  Header-only: `FCSE_API_VERSION` is unchanged and existing plugins keep loading.
 
 ### Changed
 - Plugin ABI is now `FCSE_API_VERSION` 7: `FCSE_Setting` gained a `flags` field. Existing plugins

@@ -13,7 +13,6 @@
 #include "fcse_api.h"
 
 #include <cstdint>
-#include <cstdio>
 
 namespace {
     const FCSE_PluginAPI* g_api = nullptr;
@@ -141,10 +140,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         api->Log("example_plugin: this FCSE predates the address library (API v5) - the UI shake "
                  "needs it, so only the red-UI effect will work");
     } else {
-        char line[192];
-        std::snprintf(line, sizeof(line), "example_plugin: game build %s, address mapping v%s",
-                      api->gameBuildId, api->addressMapping);
-        api->Log(line);
+        FCSE::Logf("example_plugin: game build %s, address mapping v%s", api->gameBuildId,
+                   api->addressMapping);
 
         // A missing address must never become a jump: check once, here, and disable the feature
         // rather than discovering it halfway through a frame.
@@ -154,11 +151,9 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         } else if (api->Hook(reinterpret_cast<void*>(g_beginPageRendering.address()),
                              reinterpret_cast<void*>(&BeginPageRenderingDetour),
                              reinterpret_cast<void**>(&g_originalBeginPageRendering))) {
-            std::snprintf(line, sizeof(line),
-                          "example_plugin: hooked magma::CRenderNomadImpl::BeginPageRendering at "
-                          "0x%08zX",
-                          static_cast<size_t>(g_beginPageRendering.address()));
-            api->Log(line);
+            FCSE::Logf("example_plugin: hooked magma::CRenderNomadImpl::BeginPageRendering at "
+                       "0x%08zX",
+                       static_cast<size_t>(g_beginPageRendering.address()));
         }
         // Hook() having failed is already logged by FCSE, naming the plugin that won the address.
         // g_originalBeginPageRendering stays null in that case, which is exactly why the detour is

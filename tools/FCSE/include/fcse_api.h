@@ -7,9 +7,9 @@
 // This header has no dependency on the rest of the FCSE source tree - copy it into a plugin
 // project as-is. It is the only file a plugin needs.
 //
-// C plugins get the struct and its function pointers. C++ plugins additionally get the
-// Relocation helpers at the bottom, which are what most plugins should use for engine
-// addresses.
+// C plugins get the struct and its function pointers. C++ plugins additionally get the helpers at
+// the bottom: Relocation, which is what most plugins should use for engine addresses, and Logf, for
+// a formatted log line.
 #pragma once
 
 #include <stdbool.h>
@@ -123,6 +123,7 @@ typedef bool (*FCSE_PatchFn)(void* address, const void* data, size_t size);
 
 // Writes one line to bin\fcse.log, tagged with the calling plugin's own module name (resolved
 // automatically - no need to pass an identifier). See the FCSE README for the exact line format.
+// C++ plugins can format the line with FCSE::Logf.
 typedef void (*FCSE_LogFn)(const char* message);
 
 // Tier 4: persistent, player-editable settings.
@@ -368,7 +369,10 @@ typedef void (*FCSE_OnRegisterFunctionsFn)(const FCSE_PluginAPI* api);
 // swapped by accident.
 #ifdef __cplusplus
 
+#include <cstdarg>
 #include <cstdint>
+#include <cstdio>
+#include <cstring>
 
 namespace FCSE {
 
@@ -419,6 +423,28 @@ inline bool Bind(const FCSE_PluginAPI* api) {
 inline FCSE_GameBuild RunningBuild() {
     const FCSE_PluginAPI* api = ApiPointer();
     return api == nullptr ? FCSE_GAME_BUILD_UNKNOWN : api->gameBuild;
+}
+
+// Log, with the message formatted printf-style. Does nothing before Bind, and a line too long for
+// the buffer is cut short and ends in "...".
+inline void Logf(const char* format, ...) {
+    const FCSE_PluginAPI* api = ApiPointer();
+    if (api == nullptr) {
+        return;
+    }
+
+    char line[1024];
+    va_list args;
+    va_start(args, format);
+    const int length = std::vsnprintf(line, sizeof(line), format, args);
+    va_end(args);
+    if (length < 0) {
+        return;
+    }
+    if (static_cast<size_t>(length) >= sizeof(line)) {
+        std::memcpy(line + sizeof(line) - 4, "...", 4);
+    }
+    api->Log(line);
 }
 
 // A lazily-resolved engine address, typed.
