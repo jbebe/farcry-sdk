@@ -87,6 +87,10 @@
 // Dry earth at a brightness of one, so it can carry whatever brightness the horizon above it has.
 #define GROUND_HUE float3(1.236f, 0.939f, 0.692f)
 
+// Over how much of the night factor, from its daylight end, the stars come out: the engine stops
+// drawing them at zero, so they fade in that stretch rather than vanish at once.
+#define STARS_FADE 0.15f
+
 // xyz: where the camera is, in world space with Z up. w: the frame's exposure.
 float4 Eye : register(c71);
 // xyz: the direction of the sun, pointing at it. w: zero in daylight, one at night.
@@ -288,11 +292,11 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float ground = turn * saturate(-ray.z / BELOW_HORIZON_DEPTH) * Ground.x;
     colour = lerp(colour, dot(colour, luma) * GROUND_HUE, ground);
 
-    // The dome's own alpha, taken before the exposure as the dome takes it: opaque while there is
-    // daylight, and at night only as much as the sky is bright, which is what lets the stars
-    // through.
+    // Opaque by day, and at night only as much as the sky is bright, taken before the exposure as
+    // the dome takes it. The dome's own alpha keeps covering the stars until the night factor is
+    // one, which hides them for hours before dawn.
     float luminance = dot(colour, float3(0.299f, 0.587f, 0.114f));
-    float alpha = saturate((1.0f - Sun.w) + luminance * 0.5f);
+    float alpha = saturate(saturate(1.0f - Sun.w / STARS_FADE) + luminance * 0.5f);
 
     // Half the frames are eight bits a channel, and a sky is the one thing in a game made entirely
     // of gradients - so the last bit is broken up on purpose, which is cheaper than any number of
