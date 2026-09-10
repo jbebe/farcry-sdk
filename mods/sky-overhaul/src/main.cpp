@@ -2,7 +2,9 @@
 //
 // Nothing here changes how the sun itself looks. The glare is added over a frame the engine has
 // already finished. See README.md for what is built and what is not.
+#include "devtools_api.h"
 #include "fcse_api.h"
+#include "imgui.h"
 
 #include "clouds.h"
 #include "dazzle.h"
@@ -62,6 +64,11 @@ namespace {
                                              ? SkyOverhaul::CloudLayer::Mode::Engine
                                              : SkyOverhaul::CloudLayer::Mode::Off);
         SkyOverhaul::Clouds::SetEnabled(value->asChoice == 2);
+    }
+
+    // The window in DevTools' overlay, a placeholder until there is tuning to put in it.
+    void DrawOverlayWindow(void*) {
+        ImGui::TextUnformatted("Sky Overhaul's tuning will be here.");
     }
 }
 
@@ -181,4 +188,9 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     api->RegisterSettings("SkyOverhaul", settings, sizeof(settings) / sizeof(settings[0]));
 
     return true;
+}
+
+// Runs after every plugin's FCSE_Load, so DevTools has loaded by now if it is installed at all.
+extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI* api) {
+    DevTools::Overlay::AddWindow(api, "Sky Overhaul", 360.0f, 100.0f, &DrawOverlayWindow);
 }

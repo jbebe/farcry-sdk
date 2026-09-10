@@ -27,9 +27,14 @@ endif()
 set(FCSE_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include")
 if (NOT EXISTS "${FCSE_INCLUDE_DIR}/fcse_api.h")
   message(FATAL_ERROR "fcse_api.h was not found at ${FCSE_INCLUDE_DIR}. SkyOverhaul is an FCSE "
-                      "plugin and that header is its entire dependency - it is expected at "
-                      "tools/FCSE/include relative to the repository root.")
+                      "plugin and that header is its entire dependency on the loader - it is "
+                      "expected at tools/FCSE/include relative to the repository root.")
 endif()
+
+# DevTools' overlay contract and the Dear ImGui it pins - the one thing taken from another mod. The
+# window they add appears only with DevTools installed; without it the plugin runs unchanged.
+set(DEVTOOLS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../DevTools/include")
+include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
 
 # fxc ships with the Windows SDK that the MSVC toolchain already requires, and vcvarsall puts its
 # folder on PATH - so the shader is compiled at build time and embedded as a header, and neither
@@ -98,12 +103,14 @@ add_library(SkyOverhaul SHARED
 target_include_directories(SkyOverhaul PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/src"
   "${CMAKE_CURRENT_BINARY_DIR}/generated"
+  "${DEVTOOLS_INCLUDE_DIR}"
   "${FCSE_INCLUDE_DIR}"
 )
 
 # The wash is drawn through the game's own device, so the plugin links Direct3D only to name the
-# interface and read its vtable; it never creates a device of the game's.
-target_link_libraries(SkyOverhaul PRIVATE d3d9)
+# interface and read its vtable; it never creates a device of the game's. Dear ImGui is the core
+# alone, drawing into DevTools' context - the backends are DevTools'.
+target_link_libraries(SkyOverhaul PRIVATE d3d9 imgui)
 
 # No "lib" prefix and no decoration: bin\plugins\SkyOverhaul.dll is what the player installs and
 # what fcse.log names in every line this plugin writes.

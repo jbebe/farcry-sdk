@@ -28,6 +28,9 @@ halves the moon's size and is otherwise retail. Nothing here changes how the sun
   state.
 - **Live tuning.** Fourteen glare settings in `fcse.ini`, from strength through to the
   afterimage's colour, so tuning never needs a rebuild. The mod menu leaves them out.
+- **A window in DevTools' overlay.** With [DevTools](../DevTools) installed, Home shows a Sky Overhaul
+  window beside DevTools' own — a placeholder for now. Without DevTools, `fcse.log` says so once and
+  nothing else changes.
 
 ## How it is put together
 
@@ -61,6 +64,9 @@ jackall-cli mod build --game "C:\Games\Far Cry 2" --layer mods\sky-overhaul\laye
 
 The layer carries the built DLL under `layer\plugins\`, which `mod build` syncs into `bin\plugins`.
 `build.ps1 -Install "<game>\bin"` copies it directly instead, for a faster loop.
+
+The first configure clones the Dear ImGui that `mods/DevTools/include/devtools_imgui.cmake` pins, so
+it needs `git`, a network connection, and `mods/DevTools` beside this folder.
 
 ## Background
 
