@@ -78,6 +78,11 @@ namespace {
     float g_lastFogHeadingOffset = -1.0f;
     float g_lastFogToward[3] = {0.0f, 0.0f, 0.0f};
     float g_lastFogAway[3] = {0.0f, 0.0f, 0.0f};
+    // How much of that fog distant geometry actually gets: the distance terms and the height terms
+    // the engine multiplies together. Terrain the curved horizon has bent below the camera is fogged
+    // only as much as the height term allows at its lowest, whatever colour the fog is.
+    float g_lastFogValues[3] = {0.0f, 0.0f, 0.0f};
+    float g_lastFogHeight[4] = {0.0f, 0.0f, 0.0f, 0.0f};
 
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
@@ -205,6 +210,10 @@ namespace {
             g_lastAway[i] = awayColour[i];
             g_lastFogToward[i] = view.fogColour[i];
             g_lastFogAway[i] = view.fogColour[i] + view.fogColourRange[i];
+            g_lastFogValues[i] = view.fogValues[i];
+        }
+        for (size_t i = 0; i < 4; i++) {
+            g_lastFogHeight[i] = view.fogHeightValues[i];
         }
         const float sunUp = lighting.sunDirection[2];
         g_lastSunElevation = std::asin(sunUp < -1.0f ? -1.0f : (sunUp > 1.0f ? 1.0f : sunUp)) * kDegrees;
@@ -272,6 +281,12 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
     Logf("sky f%u: engine fog toward (%.3f %.3f %.3f) away (%.3f %.3f %.3f)", pass.frame,
          g_lastFogToward[0], g_lastFogToward[1], g_lastFogToward[2], g_lastFogAway[0],
          g_lastFogAway[1], g_lastFogAway[2]);
+    // Distance: per metre, offset, amount. Height: per metre, offset, then the value at the bottom of
+    // the height band and how much more the top adds - so the fog on the lowest geometry is the
+    // amount times the third height value.
+    Logf("sky f%u: engine fog distance (%.5f %.3f %.3f) height (%.5f %.3f %.3f %.3f)", pass.frame,
+         g_lastFogValues[0], g_lastFogValues[1], g_lastFogValues[2], g_lastFogHeight[0],
+         g_lastFogHeight[1], g_lastFogHeight[2], g_lastFogHeight[3]);
 }
 
 void SkyOverhaul::Sky::ReleaseDeviceObjects() {
