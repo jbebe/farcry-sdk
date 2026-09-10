@@ -44,4 +44,9 @@ void SetFarHorizonBrightness(int percent);
 // low, then lets it darken into sunset; zero leaves the zenith to the air alone.
 void SetZenithHold(int percent);
 
+// How far below the horizon on the far side of a low sun turns from the horizon's own colour toward
+// brown, as a percentage: that region is ground the world never drew, seen through the far side's
+// air. Zero keeps it the horizon's colour; a hundred makes it fully brown at the same brightness.
+void SetGroundBrown(int percent);
+
 }

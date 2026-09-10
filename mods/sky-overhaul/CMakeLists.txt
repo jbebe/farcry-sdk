@@ -85,7 +85,6 @@ add_library(SkyOverhaul SHARED
   "src/engine/cloud_layer.cpp"
   "src/engine/device_reset.cpp"
   "src/engine/dome_draw.cpp"
-  "src/engine/draw_census.cpp"
   "src/engine/fog_tint.cpp"
   "src/engine/noise.cpp"
   "src/engine/frame.cpp"
