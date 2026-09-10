@@ -53,6 +53,7 @@ namespace {
     float g_haze = 1.0f;
     float g_brightness = 1.0f;
     float g_gradient = 1.0f;
+    float g_farBrightness = 0.3f;
 
     // What went into the model last and what came out of it, kept for the heartbeat. After dark
     // these are the numbers that say whether the sky is dark because the air really is unlit or
@@ -186,7 +187,7 @@ namespace {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
             lighting.night,
-            haze, intensity, g_gradient, 0.0f,
+            haze, intensity, g_gradient, g_farBrightness,
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f};
@@ -260,5 +261,9 @@ void SkyOverhaul::Sky::SetBrightness(int percent) {
 
 void SkyOverhaul::Sky::SetHorizonGradient(int percent) {
     g_gradient = static_cast<float>(percent) * 0.01f;
+}
+
+void SkyOverhaul::Sky::SetFarHorizonBrightness(int percent) {
+    g_farBrightness = static_cast<float>(percent) * 0.01f;
 }
 
