@@ -112,6 +112,8 @@ float4 FogColourVector : register(c76);
 float4 Zenith : register(c77);
 // x: how far the ground below the far side's horizon turns brown, from none to all the way.
 float4 Ground : register(c78);
+// rgb: the darkest the sky is let go, which is the colour of the stars' own backdrop.
+float4 NightSky : register(c79);
 
 struct VertexIn {
     float4 position : POSITION0;
@@ -292,10 +294,15 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float ground = turn * saturate(-ray.z / BELOW_HORIZON_DEPTH) * Ground.x;
     colour = lerp(colour, dot(colour, luma) * GROUND_HUE, ground);
 
+    // Air lit only once leaves the far side of a sun just below the horizon black, where the real sky
+    // is still deep blue, so wherever the sky comes out darker than the night it is filled up to it.
+    float fill = saturate(1.0f - dot(colour, luma) / max(dot(NightSky.rgb, luma), 0.0001f));
+    colour += NightSky.rgb * fill;
+
     // Opaque by day, and at night only as much as the sky is bright, taken before the exposure as
     // the dome takes it. The dome's own alpha keeps covering the stars until the night factor is
     // one, which hides them for hours before dawn.
-    float luminance = dot(colour, float3(0.299f, 0.587f, 0.114f));
+    float luminance = dot(colour, luma);
     float alpha = saturate(saturate(1.0f - Sun.w / STARS_FADE) + luminance * 0.5f);
 
     // Half the frames are eight bits a channel, and a sky is the one thing in a game made entirely

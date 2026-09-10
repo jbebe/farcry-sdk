@@ -49,4 +49,9 @@ void SetZenithHold(int percent);
 // air. Zero keeps it the horizon's colour; a hundred makes it fully brown at the same brightness.
 void SetGroundBrown(int percent);
 
+// How dark the sky is allowed to go, as a percentage of the stars' own backdrop colour. It only
+// fills in where the air comes out darker than that, so daylight is never touched. Zero leaves a
+// sky just under the sun's reach black.
+void SetNightSky(int percent);
+
 }

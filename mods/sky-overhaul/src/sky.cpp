@@ -22,7 +22,7 @@ namespace {
     // next draw if a plugin wrote over them. The clouds use the same range: the two never draw in
     // one call, and each puts back what it found.
     constexpr UINT kFirstConstant = 71;
-    constexpr UINT kConstantCount = 8;
+    constexpr UINT kConstantCount = 9;
 
     // The far end of the depth range, where nothing but sky has been drawn. The dome is drawn with
     // a less-or-equal test against a cleared far plane, so this passes wherever no world stands and
@@ -56,6 +56,9 @@ namespace {
     // reads right with the slider at its default rather than pinned at the top of its range.
     constexpr float kSunIntensity = 44.0f;
 
+    // The star sphere's backdrop, which is the colour of the night sky between the stars.
+    constexpr float kNightSky[3] = {0.039f, 0.055f, 0.094f};
+
     bool g_enabled = false;
     float g_haze = 1.0f;
     float g_brightness = 1.0f;
@@ -63,6 +66,7 @@ namespace {
     float g_farBrightness = 0.3f;
     float g_zenithHold = 1.0f;
     float g_groundBrown = 0.5f;
+    float g_nightSky = 1.0f;
 
     // What went into the model last and what came out of it, kept for the heartbeat. After dark
     // these are the numbers that say whether the sky is dark because the air really is unlit or
@@ -257,7 +261,8 @@ namespace {
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
             zenithLift, 0.0f, 0.0f, 0.0f,
-            g_groundBrown, 0.0f, 0.0f, 0.0f};
+            g_groundBrown, 0.0f, 0.0f, 0.0f,
+            kNightSky[0] * g_nightSky, kNightSky[1] * g_nightSky, kNightSky[2] * g_nightSky, 0.0f};
 
         SkyOverhaul::DrawGuard guard(device, kFirstConstant, kConstantCount);
         device->SetVertexShader(g_vertexShader);
@@ -352,5 +357,9 @@ void SkyOverhaul::Sky::SetZenithHold(int percent) {
 
 void SkyOverhaul::Sky::SetGroundBrown(int percent) {
     g_groundBrown = static_cast<float>(percent) * 0.01f;
+}
+
+void SkyOverhaul::Sky::SetNightSky(int percent) {
+    g_nightSky = static_cast<float>(percent) * 0.01f;
 }
 
