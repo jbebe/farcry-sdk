@@ -15,8 +15,8 @@ namespace {
     constexpr size_t kStorm = 0x78;
     constexpr size_t kSunDirection = 0x148;
     constexpr size_t kSunColour = 0x160;
-    // Where the moon is drawn, rather than the 0x194 the engine lights its own clouds from.
-    constexpr size_t kMoonDirection = 0x188;
+    // The moon's direction in the world. The 0x188 its sprite is handed holds still all night.
+    constexpr size_t kMoonDirection = 0x194;
     constexpr size_t kMoonColour = 0x1A0;
     constexpr size_t kNight = 0x1B8;
     constexpr size_t kTimeOfDay = 0x1BC;
