@@ -43,6 +43,14 @@
 // straight up spends in it. Everything below is that same depth divided by how slanted the ray is.
 #define CIRRUS_AIR 900.0f
 
+// The planet a cloud sits above, in metres, which is what hides the sun from it once the sun has set
+// by more than the horizon dips at that height - about a degree for a cloud a kilometre up.
+#define PLANET_RADIUS 6371000.0f
+
+// Over how much of the sun's elevation, as a sine, a cloud goes from sunlit to the earth's shadow:
+// about the sun's own width, so the light leaves a cloud the way it leaves a hilltop, not at a line.
+#define SUN_PENUMBRA 0.01f
+
 // How many texels across one repeat each volume holds, which is what turns a sample spacing into
 // the level of the noise that matches it.
 #define SHAPE_TEXELS 128.0f
@@ -171,6 +179,15 @@ float Density(float3 world, float stride, uniform bool cheap) {
     return density * Layer.w;
 }
 
+// Whether the sun is still above the horizon as seen from this height, from one in full daylight to
+// nought in the earth's shadow. Measuring the light only through the cloud in front of the sun
+// would light a cloud from underneath all night, because a sun below the horizon still has a short
+// way out through the cloud's own base.
+float SunAbove(float height) {
+    float dip = sqrt(max(2.0f * height / PLANET_RADIUS, 0.0f));
+    return smoothstep(-dip - SUN_PENUMBRA, -dip + SUN_PENUMBRA, Sun.z);
+}
+
 // Most light carries on forward past a droplet, which is what makes a cloud glare when it stands
 // in front of the sun. The floor under the lobe stands for the light that has already bounced so
 // many times inside the cloud that it has forgotten which way it came in: without it a cloud is
@@ -276,7 +293,8 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     // being cloud and becomes a ring around the sun: at eight tenths the peak is forty-five times
     // the rest of the sky, which the sun disc behind it is already busy filling.
     float3 light =
-        SunColour.rgb * Phase(cosAngle, CIRRUS_FORWARD) * CIRRUS_ALBEDO + AmbientColour.rgb;
+        SunColour.rgb * Phase(cosAngle, CIRRUS_FORWARD) * CIRRUS_ALBEDO * SunAbove(Cirrus.x) +
+        AmbientColour.rgb;
     return lerp(light, horizon, lost);
 }
 
@@ -317,6 +335,10 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
 
     float cosAngle = dot(ray, Sun.xyz);
 
+    // Taken once at the middle of the layer rather than at every sample: the whole layer leaves the
+    // sun within the same degree, and a degree of the sun's travel is minutes of the day.
+    float sunlit = SunAbove(Layer.x + 0.5f * Layer.y);
+
     // The colour the sky goes toward at the horizon, which is where everything below ends up: the
     // engine's own, by heading against the sun, so it matches the dome rather than approximating
     // it. Worked out before either layer, because both fade into it.
@@ -344,8 +366,9 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
             float powder = 1.0f - exp(-density * 8.0f);
             float thin = lerp(1.0f, powder, saturate(cosAngle));
 
-            float3 light = Scatter(lit, cosAngle) * thin +
-                           BackColour.rgb * lit * saturate(-cosAngle) + AmbientColour.rgb;
+            float3 light = (Scatter(lit, cosAngle) * thin +
+                            BackColour.rgb * lit * saturate(-cosAngle)) * sunlit +
+                           AmbientColour.rgb;
 
             float transmit = exp(-density * stride);
             scattered += light * transmittance * (1.0f - transmit);

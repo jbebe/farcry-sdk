@@ -84,6 +84,13 @@ namespace {
     // only as much as the height term allows at its lowest, whatever colour the fog is.
     float g_lastFogValues[3] = {0.0f, 0.0f, 0.0f};
     float g_lastFogHeight[4] = {0.0f, 0.0f, 0.0f, 0.0f};
+    // The light the engine hands the clouds, as the cloud layer publishes it: the sun's, the ambient,
+    // the back light and the moon's. After dark these say what the clouds have left to be lit by
+    // once the sun has gone.
+    float g_lastCloudSun[3] = {0.0f, 0.0f, 0.0f};
+    float g_lastCloudAmbient[3] = {0.0f, 0.0f, 0.0f};
+    float g_lastCloudBack[3] = {0.0f, 0.0f, 0.0f};
+    float g_lastMoon[3] = {0.0f, 0.0f, 0.0f};
 
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
@@ -216,6 +223,12 @@ namespace {
         for (size_t i = 0; i < 4; i++) {
             g_lastFogHeight[i] = view.fogHeightValues[i];
         }
+        for (size_t i = 0; i < 3; i++) {
+            g_lastCloudSun[i] = lighting.sunColour[i];
+            g_lastCloudAmbient[i] = lighting.ambientColour[i];
+            g_lastCloudBack[i] = lighting.backSunColour[i];
+            g_lastMoon[i] = lighting.moonColour[i];
+        }
         const float sunUp = lighting.sunDirection[2];
         g_lastSunElevation = std::asin(sunUp < -1.0f ? -1.0f : (sunUp > 1.0f ? 1.0f : sunUp)) * kDegrees;
         const float sunAcross = std::sqrt(lighting.sunDirection[0] * lighting.sunDirection[0] +
@@ -289,6 +302,11 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
     Logf("sky f%u: engine fog distance (%.5f %.3f %.3f) height (%.5f %.3f %.3f %.3f)", pass.frame,
          g_lastFogValues[0], g_lastFogValues[1], g_lastFogValues[2], g_lastFogHeight[0],
          g_lastFogHeight[1], g_lastFogHeight[2], g_lastFogHeight[3]);
+    Logf("sky f%u: cloud light sun (%.3f %.3f %.3f) ambient (%.3f %.3f %.3f) back (%.3f %.3f %.3f) "
+         "moon (%.3f %.3f %.3f)",
+         pass.frame, g_lastCloudSun[0], g_lastCloudSun[1], g_lastCloudSun[2], g_lastCloudAmbient[0],
+         g_lastCloudAmbient[1], g_lastCloudAmbient[2], g_lastCloudBack[0], g_lastCloudBack[1],
+         g_lastCloudBack[2], g_lastMoon[0], g_lastMoon[1], g_lastMoon[2]);
 }
 
 void SkyOverhaul::Sky::ReleaseDeviceObjects() {
