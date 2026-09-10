@@ -461,7 +461,9 @@ textures in the entire shipped game (see [`.xbt`](../file-formats/xbt.md)).
 texture at (distance from the sprite's centre, time-of-day coordinate), so the 32 columns are a
 radial profile and the 512 rows the hours. The shipped profile is a soft near-white glow, about
 20/255 at the centre and gone three quarters of the way out, almost the same in every row. Retail
-`world1` and `world2` never show it: their `<Sky>` sets `MoonFlareTextureSize="0"`.
+`world1` and `world2` never show it: their `<Sky>` sets `MoonFlareTextureSize="0"`. Raised to 0.25 in a
+running game it draws as distinct concentric rings, each fainter than the last, rather than a soft
+glow; the profile holds only about twenty levels of brightness.
 
 `starsphere.xbg` is a real mesh (10,320 verts × 32-byte stride, 3 submeshes) with three `Unlit`
 materials, each a single `DiffuseTexture1` slot into `background_d`, `milkyway_d` and `star_d`
