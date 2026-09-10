@@ -37,6 +37,13 @@
 // would put a second sun around the first.
 #define MIE_FORWARD 0.70f
 
+// How strongly ozone absorbs each colour per metre where it is densest, and where that is: a layer
+// centred twenty-five kilometres up and gone fifteen either side. It takes green and red out of light
+// that has come a long way through the upper air, which is what keeps a dawn zenith blue.
+#define OZONE_ABSORPTION float3(0.650e-6f, 1.881e-6f, 0.085e-6f)
+#define OZONE_CENTRE 25000.0f
+#define OZONE_WIDTH 15000.0f
+
 // How many samples the view ray takes through the air, and how many each of those takes toward the
 // sun to find out how much light got that far.
 #define VIEW_STEPS 16
@@ -113,7 +120,8 @@ float4 FogColourVector : register(c76);
 float4 Zenith : register(c77);
 // x: how far the ground below the far side's horizon turns brown, from none to all the way.
 float4 Ground : register(c78);
-// rgb: the darkest the sky is let go, which is the colour of the stars' own backdrop.
+// rgb: the darkest the sky is let go: the stars' own backdrop, lifted toward the day's blue around
+// sunrise and sunset.
 float4 NightSky : register(c79);
 
 // How far a ray from inside a sphere runs before it leaves it.
@@ -133,14 +141,20 @@ bool InShadow(float3 origin, float3 ray) {
     return discriminant >= 0.0f && -along - sqrt(discriminant) > 0.0f;
 }
 
-// How much air a ray toward the sun passes through, counted separately for the two kinds of it.
-float2 SunDepth(float3 from, float3 sun) {
+// How dense the ozone layer is at a height, from one at its centre to nothing at its edges.
+float OzoneDensity(float height) {
+    return saturate(1.0f - abs(height - OZONE_CENTRE) / OZONE_WIDTH);
+}
+
+// How much air, haze and ozone a ray toward the sun passes through, counted separately.
+float3 SunDepth(float3 from, float3 sun) {
     float stride = SphereExit(from, sun, ATMOSPHERE_RADIUS) / LIGHT_STEPS;
-    float2 depth = 0.0f;
+    float3 depth = 0.0f;
     [unroll] for (int i = 0; i < LIGHT_STEPS; i++) {
         float3 at = from + sun * (((float)i + 0.5f) * stride);
         float height = length(at) - PLANET_RADIUS;
-        depth += exp(-height / float2(RAYLEIGH_HEIGHT, MIE_HEIGHT)) * stride;
+        depth += float3(exp(-height / float2(RAYLEIGH_HEIGHT, MIE_HEIGHT)), OzoneDensity(height)) *
+                 stride;
     }
     return depth;
 }
@@ -180,15 +194,17 @@ float3 Scattered(float3 ray, float3 sun, float mie, float intensity) {
         float height = length(at) - PLANET_RADIUS;
         float2 density = exp(-height / float2(RAYLEIGH_HEIGHT, MIE_HEIGHT));
 
-        float3 extinction = RAYLEIGH_BETA * density.x + (MIE_EXTINCTION * mie) * density.y;
+        float3 extinction = RAYLEIGH_BETA * density.x + (MIE_EXTINCTION * mie) * density.y +
+                            OZONE_ABSORPTION * OzoneDensity(height);
         float3 scattering = RAYLEIGH_BETA * (density.x * rayleighPhase) +
                             (MIE_BETA * mie * density.y * miePhase);
 
         // What is left of the sunlight after reaching this stretch of air.
         float3 lit = 0.0f;
         if (!InShadow(at, sun)) {
-            float2 sunDepth = SunDepth(at, sun);
-            lit = exp(-(RAYLEIGH_BETA * sunDepth.x + (MIE_EXTINCTION * mie) * sunDepth.y));
+            float3 sunDepth = SunDepth(at, sun);
+            lit = exp(-(RAYLEIGH_BETA * sunDepth.x + (MIE_EXTINCTION * mie) * sunDepth.y +
+                        OZONE_ABSORPTION * sunDepth.z));
         }
 
         float3 transmit = exp(-extinction * stride);

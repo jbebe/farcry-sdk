@@ -11,6 +11,9 @@ namespace {
     constexpr float kMieBeta = 3.996e-6f;
     constexpr float kMieExtinction = 4.440e-6f;
     constexpr float kMieForward = 0.70f;
+    constexpr float kOzoneAbsorption[3] = {0.650e-6f, 1.881e-6f, 0.085e-6f};
+    constexpr float kOzoneCentre = 25000.0f;
+    constexpr float kOzoneWidth = 15000.0f;
     constexpr int kViewSteps = 16;
     constexpr int kLightSteps = 8;
     constexpr float kPi = 3.14159265f;
@@ -33,10 +36,16 @@ namespace {
         return discriminant >= 0.0f && -along - std::sqrt(discriminant) > 0.0f;
     }
 
-    void SunDepth(const float from[3], const float sun[3], float out[2]) {
+    float OzoneDensity(float height) {
+        const float density = 1.0f - std::fabs(height - kOzoneCentre) / kOzoneWidth;
+        return density > 0.0f ? density : 0.0f;
+    }
+
+    void SunDepth(const float from[3], const float sun[3], float out[3]) {
         const float stride = SphereExit(from, sun, kAtmosphereRadius) / kLightSteps;
         out[0] = 0.0f;
         out[1] = 0.0f;
+        out[2] = 0.0f;
         for (int i = 0; i < kLightSteps; i++) {
             const float distance = (static_cast<float>(i) + 0.5f) * stride;
             const float at[3] = {from[0] + sun[0] * distance, from[1] + sun[1] * distance,
@@ -44,6 +53,7 @@ namespace {
             const float height = std::sqrt(Dot(at, at)) - kPlanetRadius;
             out[0] += std::exp(-height / kRayleighHeight) * stride;
             out[1] += std::exp(-height / kMieHeight) * stride;
+            out[2] += OzoneDensity(height) * stride;
         }
     }
 }
@@ -78,20 +88,23 @@ void SkyOverhaul::SkyModel::Radiance(const float ray[3], const float sun[3], flo
         const float height = std::sqrt(Dot(at, at)) - kPlanetRadius;
         const float rayleighDensity = std::exp(-height / kRayleighHeight);
         const float mieDensity = std::exp(-height / kMieHeight);
+        const float ozoneDensity = OzoneDensity(height);
 
         float lit[3] = {0.0f, 0.0f, 0.0f};
         if (!InShadow(at, sun)) {
-            float sunDepth[2];
+            float sunDepth[3];
             SunDepth(at, sun, sunDepth);
             for (int channel = 0; channel < 3; channel++) {
                 lit[channel] = std::exp(-(kRayleighBeta[channel] * sunDepth[0] +
-                                          kMieExtinction * mie * sunDepth[1]));
+                                          kMieExtinction * mie * sunDepth[1] +
+                                          kOzoneAbsorption[channel] * sunDepth[2]));
             }
         }
 
         for (int channel = 0; channel < 3; channel++) {
-            const float extinction =
-                kRayleighBeta[channel] * rayleighDensity + kMieExtinction * mie * mieDensity;
+            const float extinction = kRayleighBeta[channel] * rayleighDensity +
+                                     kMieExtinction * mie * mieDensity +
+                                     kOzoneAbsorption[channel] * ozoneDensity;
             const float scattering = kRayleighBeta[channel] * rayleighDensity * rayleighPhase +
                                      kMieBeta * mie * mieDensity * miePhase;
             const float transmit = std::exp(-extinction * stride);

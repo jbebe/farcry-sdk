@@ -54,4 +54,8 @@ void SetGroundBrown(int percent);
 // sky just under the sun's reach black.
 void SetNightSky(int percent);
 
+// How far that floor is lifted toward the day's blue around sunrise and sunset, as a percentage:
+// from twelve degrees below the horizon to sunrise, and gone six degrees above.
+void SetTwilightSky(int percent);
+
 }

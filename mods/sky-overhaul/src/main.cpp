@@ -113,6 +113,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
          nullptr, 0, 0, 100},
         {"Night sky", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Sky::SetNightSky), nullptr, 0, 0,
          300},
+        {"Twilight sky", FCSE_SLIDER(100), &OnSliderChanged, Setter(&Sky::SetTwilightSky), nullptr,
+         0, 0, 300},
         {"Horizon match", FCSE_SLIDER(100), &OnSliderChanged, Setter(&FogTint::SetMatch), nullptr,
          0, 0, 100},
         {"Clouds", FCSE_CHOICE(0), &OnCloudsChanged, nullptr, kCloudModes,

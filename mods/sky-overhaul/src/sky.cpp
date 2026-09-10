@@ -55,6 +55,13 @@ namespace {
 
     // The star sphere's backdrop, which is the colour of the night sky between the stars.
     constexpr float kNightSky[3] = {0.039f, 0.055f, 0.094f};
+    // The day sky's blue at a luminance of one, which that floor is lifted toward around sunrise and
+    // sunset, and how bright the lift is at its height.
+    constexpr float kTwilightHue[3] = {0.50f, 1.04f, 2.11f};
+    constexpr float kTwilightLuminance = 0.08f;
+    // The sun's heights, as sines, where that lift begins below the horizon and has gone above it.
+    constexpr float kTwilightDeep = -0.21f;
+    constexpr float kTwilightEnd = 0.105f;
 
     bool g_enabled = false;
     float g_haze = 1.0f;
@@ -64,6 +71,7 @@ namespace {
     float g_zenithHold = 1.0f;
     float g_groundBrown = 0.5f;
     float g_nightSky = 1.0f;
+    float g_twilight = 1.0f;
 
     // What the last dome was drawn from and what the model made of it, kept for the heartbeat.
     struct Drawn {
@@ -87,6 +95,13 @@ namespace {
     float SmoothStep(float from, float to, float value) {
         const float t = std::clamp((value - from) / (to - from), 0.0f, 1.0f);
         return t * t * (3.0f - 2.0f * t);
+    }
+
+    // How much of the lift toward the day's blue the night floor gets for a sun at this height: none
+    // twelve degrees below the horizon, all of it at sunrise, none again six degrees above.
+    float Twilight(float sunUp) {
+        return SmoothStep(kTwilightDeep, 0.0f, sunUp) *
+               (1.0f - SmoothStep(0.0f, kTwilightEnd, sunUp));
     }
 
     // The engine's fog heading, flat and unit length: the direction its fog ramp starts from.
@@ -156,6 +171,12 @@ namespace {
         drawn.zenithLift = ZenithLift(lighting.sunDirection, view.eye[2], intensity);
         g_last = drawn;
 
+        const float twilight = Twilight(lighting.sunDirection[2]) * kTwilightLuminance * g_twilight;
+        float darkest[3];
+        for (int c = 0; c < 3; c++) {
+            darkest[c] = kNightSky[c] * g_nightSky + kTwilightHue[c] * twilight;
+        }
+
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
@@ -166,7 +187,7 @@ namespace {
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
             drawn.zenithLift, 0.0f, 0.0f, 0.0f,
             g_groundBrown, 0.0f, 0.0f, 0.0f,
-            kNightSky[0] * g_nightSky, kNightSky[1] * g_nightSky, kNightSky[2] * g_nightSky, 0.0f};
+            darkest[0], darkest[1], darkest[2], 0.0f};
 
         SkyOverhaul::DrawGuard guard(device, kFirstConstant, kConstantCount);
         device->SetPixelShader(shader);
@@ -271,4 +292,8 @@ void SkyOverhaul::Sky::SetGroundBrown(int percent) {
 
 void SkyOverhaul::Sky::SetNightSky(int percent) {
     g_nightSky = static_cast<float>(percent) * 0.01f;
+}
+
+void SkyOverhaul::Sky::SetTwilightSky(int percent) {
+    g_twilight = static_cast<float>(percent) * 0.01f;
 }
