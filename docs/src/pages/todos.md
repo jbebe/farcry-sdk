@@ -52,6 +52,11 @@ package won't fix the real problem (20,228 wire crossings after layout).
       world descriptors began splitting. The container path is known at index time in all three
       producers and thrown away; carrying it on `ModPathTarget` would close this and collapse the
       four places that re-derive it (`GameVfs`, `PatchBuilder`, `MainViewModel.Mods`, `For` itself).
+- [ ] **Finer environment fragments, so sky and terrain mods can coexist.**
+      `world1.game.xml\_environment.xml` replaces the whole `<Environment>` block, so the sky mod's
+      moon-size edit carries retail shadow radius and view distance and collides with a shadow mod.
+      Every preset edit, whether lighting, fog or bloom, collides with every other, because the whole
+      preset library is one entity fragment. The engine already gives each preset a name and a GUID.
 
 ## Tools/BlenderFC2
 
@@ -86,6 +91,9 @@ what is left is what a modeler cannot do rather than what is broken.
 - [ ] **Known bug: no mouse cursor on the Mod Configuration page.**
 - [ ] Two faults seen in `fcse.log` and not yet chased: `FCSE.exe+0x14ABB` (in FCSE's own code) and
   a recurring `Dunia.dll+0xAD4095` in magma's draw-collection walk.
+- [ ] **Hook chaining, for more than one rendering plugin.** FCSE gives an address to one plugin, and
+  Sky Overhaul holds the Direct3D slots for `EndScene`, `DrawIndexedPrimitive` and both
+  shader-constant setters, so a terrain shader plugin wanting them would be refused.
 
 ## Tools/"dll plugins"
 
@@ -148,3 +156,27 @@ what is left is what a modeler cannot do rather than what is broken.
       free-fly camera. `CCameraFreeComponent`/`CCameraGhostComponent` both have live factories
 - [ ] The correct scale for `Game:SetHealth` — 100 and 25 both kill the player
 - [ ] Whether `-exec <file>` and the `ConsoleCommands` config section actually work in retail
+
+## Mods/sky-overhaul
+
+What the sky needs to be a complete package, in order: fog first, since it is the seam; then storms
+and clouds together; then the light-shaft mask and the glare; then reflections. Out of scope, for
+other mods: the terrain lighting presets, shadows, and the final colour grade.
+
+- [ ] **Fog, as part of the air.** The sky owns the fog's colour at every hour; fog distances stay
+      with the presets. The mechanism exists (the `Horizon match` retint), but its processor-side
+      copy of the sky has no night floor, dawn lift or moon, so turned up it fogs the world black
+      after dark. Doing it through fog presets would collide with any lighting mod, since every preset
+      lives in one JackAll fragment
+- [ ] **Weather.** Clouds ignore storms, `SetScriptedStormFactorOverride` never reaches the storm
+      factor the sky reads, and rain never appeared under any preset
+- [ ] **Light shafts ignore our clouds.** The engine's clouds also feed the light-shaft mask, and
+      suppressing them removes it. Retail shades no terrain with clouds, so there are no cloud shadows
+      to replace
+- [ ] **The sun glare cannot see our clouds.** Its occlusion query tests depth, and our clouds write
+      none
+- [ ] **Water reflections.** Unverified: our clouds are drawn only in the main sky pass, so water may
+      reflect a sky without them
+- [ ] **Sun colour (optional).** The near-white dawn light-shaft tint and the flare colour
+- [ ] **Publish the sky's light (optional).** The sun's colour at the ground and the sky's ambient
+      light, for a lighting mod to match
