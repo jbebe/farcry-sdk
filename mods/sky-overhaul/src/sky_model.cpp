@@ -51,35 +51,7 @@ namespace {
 void SkyOverhaul::SkyModel::Radiance(const float ray[3], const float sun[3], float eyeHeight,
                                      float mie, float intensity, float out[3]) {
     const float origin[3] = {0.0f, 0.0f, kPlanetRadius + eyeHeight};
-    const float stride = SphereExit(origin, ray, kAtmosphereRadius) / kViewSteps;
-
-    float depth[2] = {0.0f, 0.0f};
-    float rayleighSum[3] = {0.0f, 0.0f, 0.0f};
-    float mieSum[3] = {0.0f, 0.0f, 0.0f};
-
-    for (int i = 0; i < kViewSteps; i++) {
-        const float distance = (static_cast<float>(i) + 0.5f) * stride;
-        const float at[3] = {origin[0] + ray[0] * distance, origin[1] + ray[1] * distance,
-                             origin[2] + ray[2] * distance};
-        const float height = std::sqrt(Dot(at, at)) - kPlanetRadius;
-        const float density[2] = {std::exp(-height / kRayleighHeight) * stride,
-                                  std::exp(-height / kMieHeight) * stride};
-        depth[0] += density[0];
-        depth[1] += density[1];
-
-        if (InShadow(at, sun)) {
-            continue;
-        }
-        float sunDepth[2];
-        SunDepth(at, sun, sunDepth);
-        for (int channel = 0; channel < 3; channel++) {
-            const float survives =
-                std::exp(-(kRayleighBeta[channel] * (depth[0] + sunDepth[0]) +
-                           kMieExtinction * mie * (depth[1] + sunDepth[1])));
-            rayleighSum[channel] += survives * density[0];
-            mieSum[channel] += survives * density[1];
-        }
-    }
+    const float span = SphereExit(origin, ray, kAtmosphereRadius);
 
     const float cosAngle = Dot(ray, sun);
     const float rayleighPhase = 3.0f / (16.0f * kPi) * (1.0f + cosAngle * cosAngle);
@@ -89,8 +61,47 @@ void SkyOverhaul::SkyModel::Radiance(const float ray[3], const float sun[3], flo
                            ((2.0f + g * g) * std::pow(denominator > 0.0001f ? denominator : 0.0001f,
                                                       1.5f));
 
+    // Samples crowded toward the eye, each stretch between them integrated exactly, as the shader
+    // does and for the reason it gives.
+    float through[3] = {1.0f, 1.0f, 1.0f};
+    float gathered[3] = {0.0f, 0.0f, 0.0f};
+    for (int i = 0; i < kViewSteps; i++) {
+        const float inner = static_cast<float>(i) / kViewSteps;
+        const float outer = static_cast<float>(i + 1) / kViewSteps;
+        const float fromEye = span * inner * inner;
+        const float toEye = span * outer * outer;
+        const float stride = toEye - fromEye;
+        const float middle = 0.5f * (fromEye + toEye);
+
+        const float at[3] = {origin[0] + ray[0] * middle, origin[1] + ray[1] * middle,
+                             origin[2] + ray[2] * middle};
+        const float height = std::sqrt(Dot(at, at)) - kPlanetRadius;
+        const float rayleighDensity = std::exp(-height / kRayleighHeight);
+        const float mieDensity = std::exp(-height / kMieHeight);
+
+        float lit[3] = {0.0f, 0.0f, 0.0f};
+        if (!InShadow(at, sun)) {
+            float sunDepth[2];
+            SunDepth(at, sun, sunDepth);
+            for (int channel = 0; channel < 3; channel++) {
+                lit[channel] = std::exp(-(kRayleighBeta[channel] * sunDepth[0] +
+                                          kMieExtinction * mie * sunDepth[1]));
+            }
+        }
+
+        for (int channel = 0; channel < 3; channel++) {
+            const float extinction =
+                kRayleighBeta[channel] * rayleighDensity + kMieExtinction * mie * mieDensity;
+            const float scattering = kRayleighBeta[channel] * rayleighDensity * rayleighPhase +
+                                     kMieBeta * mie * mieDensity * miePhase;
+            const float transmit = std::exp(-extinction * stride);
+            const float safe = extinction > 1.0e-12f ? extinction : 1.0e-12f;
+            gathered[channel] += through[channel] * scattering * lit[channel] * (1.0f - transmit) / safe;
+            through[channel] *= transmit;
+        }
+    }
+
     for (int channel = 0; channel < 3; channel++) {
-        out[channel] = intensity * (kRayleighBeta[channel] * rayleighPhase * rayleighSum[channel] +
-                                    kMieBeta * mie * miePhase * mieSum[channel]);
+        out[channel] = intensity * gathered[channel];
     }
 }

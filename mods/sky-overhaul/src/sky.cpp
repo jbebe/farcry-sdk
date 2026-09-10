@@ -36,6 +36,15 @@ namespace {
     constexpr float kStormHaze = 2.0f;
     constexpr float kStormDimming = 0.5f;
 
+    // The dust clean air carries anyway, as a fraction of the haze a clear day has, under whatever
+    // the slider adds. Without any, air scatters sunlight forward and back alike, so a low sun lights
+    // the far half of the sky as brightly as its own: three degrees after sunrise the far horizon was
+    // at seven tenths of the sun's side, and this floor brings it to a third. Near a high sun the sky
+    // comes out a fifth brighter, and the zenith does not change.
+    constexpr float kCleanAirHaze = 0.3f;
+
+    constexpr float kDegrees = 57.29578f;
+
     // What the sun is worth in the shader before the slider scales it. Set so that a clear noon sky
     // reads right with the slider at its default rather than pinned at the top of its range.
     constexpr float kSunIntensity = 44.0f;
@@ -50,6 +59,13 @@ namespace {
     float g_lastNight = 0.0f;
     float g_lastStorm = 0.0f;
     float g_lastHorizon[3] = {0.0f, 0.0f, 0.0f};
+    float g_lastAway[3] = {0.0f, 0.0f, 0.0f};
+    // Where the sun was and what the engine's own fog ends were, beside what the model made of the
+    // same moment - so a horizon that looks wrong can be put down to the air or to the engine.
+    float g_lastSunElevation = 0.0f;
+    float g_lastFogHeadingOffset = -1.0f;
+    float g_lastFogToward[3] = {0.0f, 0.0f, 0.0f};
+    float g_lastFogAway[3] = {0.0f, 0.0f, 0.0f};
 
     IDirect3DDevice9* g_owner = nullptr;
     IDirect3DVertexShader9* g_vertexShader = nullptr;
@@ -118,7 +134,7 @@ namespace {
 
         // The weather is folded in here rather than in the shader, so that what crosses into it is
         // one finished number for the air and one for the light.
-        const float haze = g_haze * (1.0f + lighting.storm * kStormHaze);
+        const float haze = (kCleanAirHaze + g_haze) * (1.0f + lighting.storm * kStormHaze);
         const float intensity =
             kSunIntensity * g_brightness * (1.0f - lighting.storm * kStormDimming);
 
@@ -146,6 +162,21 @@ namespace {
         g_lastStorm = lighting.storm;
         for (size_t i = 0; i < 3; i++) {
             g_lastHorizon[i] = towardColour[i];
+            g_lastAway[i] = awayColour[i];
+            g_lastFogToward[i] = view.fogColour[i];
+            g_lastFogAway[i] = view.fogColour[i] + view.fogColourRange[i];
+        }
+        const float sunUp = lighting.sunDirection[2];
+        g_lastSunElevation = std::asin(sunUp < -1.0f ? -1.0f : (sunUp > 1.0f ? 1.0f : sunUp)) * kDegrees;
+        const float sunAcross = std::sqrt(lighting.sunDirection[0] * lighting.sunDirection[0] +
+                                          lighting.sunDirection[1] * lighting.sunDirection[1]);
+        if (sunAcross > 0.0001f) {
+            float cosine = (toward[0] * lighting.sunDirection[0] + toward[1] * lighting.sunDirection[1]) /
+                           sunAcross;
+            cosine = cosine < -1.0f ? -1.0f : (cosine > 1.0f ? 1.0f : cosine);
+            g_lastFogHeadingOffset = std::acos(cosine) * kDegrees;
+        } else {
+            g_lastFogHeadingOffset = -1.0f;
         }
 
         const float constants[kConstantCount * 4] = {
@@ -184,10 +215,17 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
     g_sinceHeartbeat = 0.0f;
     // Counts that stand still are the two ways this fails without anything else saying so: a dome
     // that stopped being recognised, and a fog colour that is never being reached.
-    Logf("sky f%u: %u domes replaced, %u fog uploads retinted | night %.2f storm %.2f | "
-         "horizon (%.4f %.4f %.4f)",
-         pass.frame, DomeDraw::SubstituteCount(), FogTint::TintCount(), g_lastNight, g_lastStorm,
-         g_lastHorizon[0], g_lastHorizon[1], g_lastHorizon[2]);
+    Logf("sky f%u: %u domes replaced, %u fog uploads retinted | night %.2f storm %.2f", pass.frame,
+         DomeDraw::SubstituteCount(), FogTint::TintCount(), g_lastNight, g_lastStorm);
+    // The fog heading is the direction the engine's fog ramp starts from, measured against the sun:
+    // near zero means the ramp's first colour is the sun's side, as its name says.
+    Logf("sky f%u: sun %+.1f deg, fog heading %.0f deg off it | model toward (%.3f %.3f %.3f) "
+         "away (%.3f %.3f %.3f)",
+         pass.frame, g_lastSunElevation, g_lastFogHeadingOffset, g_lastHorizon[0], g_lastHorizon[1],
+         g_lastHorizon[2], g_lastAway[0], g_lastAway[1], g_lastAway[2]);
+    Logf("sky f%u: engine fog toward (%.3f %.3f %.3f) away (%.3f %.3f %.3f)", pass.frame,
+         g_lastFogToward[0], g_lastFogToward[1], g_lastFogToward[2], g_lastFogAway[0],
+         g_lastFogAway[1], g_lastFogAway[2]);
 }
 
 void SkyOverhaul::Sky::ReleaseDeviceObjects() {

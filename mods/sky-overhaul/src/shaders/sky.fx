@@ -114,42 +114,56 @@ float2 SunDepth(float3 from, float3 sun) {
 
 // What one look through the air comes back with: sunlight scattered into the eye once, from every
 // point along the ray that can still see the sun.
+//
+// The samples crowd toward the eye, where a ray along the horizon gathers nearly all of its light,
+// and the stretch of air between two of them is integrated exactly rather than treated as one
+// point. A stretch near the horizon is thick enough to lose all of its blue before its far end, so
+// charging that whole loss against its own light starves the blue and turns every horizon yellow,
+// on both sides of the sky and at every hour. Against three thousand evenly spaced samples, this
+// stays within a few percent at sixteen.
 float3 Scattered(float3 ray, float3 sun, float mie, float intensity) {
     float3 origin = float3(0.0f, 0.0f, PLANET_RADIUS + Eye.z);
-    float stride = SphereExit(origin, ray, ATMOSPHERE_RADIUS) / VIEW_STEPS;
-
-    float2 depth = 0.0f;
-    float3 rayleighSum = 0.0f;
-    float3 mieSum = 0.0f;
-
-    [loop] for (int i = 0; i < VIEW_STEPS; i++) {
-        float3 at = origin + ray * (((float)i + 0.5f) * stride);
-        float height = length(at) - PLANET_RADIUS;
-        float2 density = exp(-height / float2(RAYLEIGH_HEIGHT, MIE_HEIGHT)) * stride;
-        depth += density;
-
-        if (!InShadow(at, sun)) {
-            float2 sunDepth = SunDepth(at, sun);
-            // What is left of the sunlight after reaching this point, and of the scattered light
-            // after coming back to the eye.
-            float3 survives = exp(-(RAYLEIGH_BETA * (depth.x + sunDepth.x) +
-                                    (MIE_EXTINCTION * mie) * (depth.y + sunDepth.y)));
-            rayleighSum += survives * density.x;
-            mieSum += survives * density.y;
-        }
-    }
+    float span = SphereExit(origin, ray, ATMOSPHERE_RADIUS);
 
     // How much of what it scatters each kind sends in the direction the eye happens to be looking.
-    // Air sends it nearly everywhere; haze throws most of it forward, which is the glare around a
-    // low sun.
+    // Air sends it forward and back alike; haze throws most of it forward, which is the glow around
+    // a low sun and the only thing that makes the sun's half of the sky brighter than the other.
     float cosAngle = dot(ray, sun);
     float rayleighPhase = 3.0f / (16.0f * PI) * (1.0f + cosAngle * cosAngle);
     float g = MIE_FORWARD;
     float miePhase = 3.0f / (8.0f * PI) * ((1.0f - g * g) * (1.0f + cosAngle * cosAngle)) /
                      ((2.0f + g * g) * pow(max(1.0f + g * g - 2.0f * g * cosAngle, 0.0001f), 1.5f));
 
-    return intensity * (RAYLEIGH_BETA * rayleighPhase * rayleighSum +
-                        (MIE_BETA * mie) * miePhase * mieSum);
+    float3 through = 1.0f;
+    float3 gathered = 0.0f;
+    [loop] for (int i = 0; i < VIEW_STEPS; i++) {
+        float inner = (float)i / VIEW_STEPS;
+        float outer = (float)(i + 1) / VIEW_STEPS;
+        float fromEye = span * inner * inner;
+        float toEye = span * outer * outer;
+        float stride = toEye - fromEye;
+
+        float3 at = origin + ray * (0.5f * (fromEye + toEye));
+        float height = length(at) - PLANET_RADIUS;
+        float2 density = exp(-height / float2(RAYLEIGH_HEIGHT, MIE_HEIGHT));
+
+        float3 extinction = RAYLEIGH_BETA * density.x + (MIE_EXTINCTION * mie) * density.y;
+        float3 scattering = RAYLEIGH_BETA * (density.x * rayleighPhase) +
+                            (MIE_BETA * mie * density.y * miePhase);
+
+        // What is left of the sunlight after reaching this stretch of air.
+        float3 lit = 0.0f;
+        if (!InShadow(at, sun)) {
+            float2 sunDepth = SunDepth(at, sun);
+            lit = exp(-(RAYLEIGH_BETA * sunDepth.x + (MIE_EXTINCTION * mie) * sunDepth.y));
+        }
+
+        float3 transmit = exp(-extinction * stride);
+        gathered += through * scattering * lit * (1.0f - transmit) / max(extinction, 1.0e-12f);
+        through *= transmit;
+    }
+
+    return intensity * gathered;
 }
 
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {

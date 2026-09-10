@@ -20,7 +20,9 @@ void ReleaseDeviceObjects();
 void SetEnabled(bool enabled);
 
 // How much dust and water the air carries, as a percentage: none is a hard blue sky over a sharp
-// horizon, plenty is a white one. The weather adds to whatever this asks for.
+// horizon, plenty is a white one. The weather adds to whatever this asks for. None still leaves the
+// little that clean air always carries, because that is what makes the sun's half of a low sky
+// brighter than the far half.
 void SetHaze(int percent);
 
 // How bright the sunlight reaching the air is, as a percentage of what it takes to expose a clear
