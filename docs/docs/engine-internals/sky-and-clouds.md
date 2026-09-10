@@ -109,6 +109,11 @@ carrying `1 - factor` as their opacity, so dusk submits both sets and crossfades
 sits outside both branches and is always submitted. The moon and the sun are one function called
 twice, told apart by the direction handed to it: `+0x188` for the moon, `+0x148` for the sun.
 
+Once the night factor reaches one, which retail skies do for a couple of hours around midnight, the
+dome and the sun disc are not submitted at all. Anything that tells a live world from a menu by
+whether the sun disc was submitted sees a menu for those hours; the cloud layer's submission is the
+one that goes on every frame.
+
 :::warning[`+0x1B8` is the night factor, not the storm factor]
 An earlier revision of this page had it as the storm factor. What it gates says otherwise: stars
 and moon above zero, dome and sun below one, which is night, not weather. The storm factor is
@@ -410,7 +415,7 @@ values for this frame.
 | --- | --- |
 | `+0x148` | Sun direction, negated into `SunDirection` |
 | `+0x160` | `SunColor`, four floats, scaled by 1.9 |
-| `+0x194` | The direction the clouds are lit from as `MoonDirection`, negated. Unlike `+0x188` it moves with the time of day: its height read -0.26 at 21:00 and +0.66 after midnight |
+| `+0x194` | The direction the clouds are lit from as `MoonDirection`, negated. It is the moon's direction in the world: in a running game it equalled `+0x188` turned by the `+0xB0` block in row order at every sample, and lay within a degree of a camera centred on the drawn moon |
 | `+0x1A0` | `MoonColor` |
 | `+0x1C8` | `Layer1Formation`: coverage, falloff curve, normal strength, and parallax strength scaled by 0.01 |
 | `+0x1DC` | Layer 1 enabled, one byte |
