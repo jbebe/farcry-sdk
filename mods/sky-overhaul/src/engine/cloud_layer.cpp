@@ -18,6 +18,7 @@ namespace {
     constexpr size_t kMoonDirection = 0x194;
     constexpr size_t kMoonColour = 0x1A0;
     constexpr size_t kNight = 0x1B8;
+    constexpr size_t kTimeOfDay = 0x1BC;
     constexpr size_t kWind = 0x1E0;
     constexpr size_t kAmbientColour = 0x230;
     constexpr size_t kBackSunColour = 0x250;
@@ -96,6 +97,7 @@ namespace {
 
         out.storm = *Field(state, kStorm);
         out.night = *Field(state, kNight);
+        out.timeOfDay = *Field(state, kTimeOfDay);
     }
 
     void __fastcall SubmitCloudsDetour(void* self, void* unused, uint32_t a2, uint32_t a3,

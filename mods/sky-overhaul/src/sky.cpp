@@ -34,7 +34,7 @@ namespace {
     constexpr float kStormDimming = 0.5f;
 
     // How much haze clear air carries, before a storm adds to it.
-    constexpr float kClearHaze = 1.3f;
+    constexpr float kClearHaze = 0.6f;
 
     constexpr float kDegrees = 57.29578f;
 
@@ -124,10 +124,9 @@ namespace {
         const float haze = kClearHaze * (1.0f + lighting.storm * kStormHaze);
         const float intensity = kSunIntensity * (1.0f - lighting.storm * kStormDimming);
 
-        // What our air comes to at the horizon, along the engine's own fog heading and against it,
-        // which are the two ends of the ramp it colours its fog by. Handing those over is what
-        // makes the land meet the sky: both then fade into the same thing, and neither has to know
-        // about the other. Before the exposure, as the engine's own fog colour is.
+        // What our air comes to at the horizon, along the engine's own fog heading and against it:
+        // the two ends of the ramp whose hue the land's fog takes. Before the exposure, as the
+        // engine's own fog colour is.
         float toward[3];
         FogHeading(view, toward);
         const float away[3] = {-toward[0], -toward[1], 0.0f};

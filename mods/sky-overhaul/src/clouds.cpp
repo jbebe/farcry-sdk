@@ -50,8 +50,8 @@ namespace {
     constexpr float kMoonColour[3] = {1.6f, 1.8f, 2.0f};
     constexpr float kMoonBackShare = 0.13f;
     constexpr float kMoonGlow = 0.25f;
-    // How far below the horizon, as a sine, the moon's glow takes to fade out.
-    constexpr float kMoonBelow = 0.1f;
+    // How high the moon climbs, as a sine, while its light and its glow come up to full.
+    constexpr float kMoonUp = 0.2f;
 
     // The high sheet: how far above the layer it sits at least, how many metres one repeat of its
     // streaks covers, and how hard those streaks are squashed across the wind.
@@ -95,20 +95,20 @@ namespace {
         float glow[3];
     };
 
-    // The sun until it has set for every layer, then the moon, coming up as the sun sinks further.
+    // The sun until it has set for every layer, then the moon, coming up as the sun sinks further
+    // and as the moon itself climbs.
     Light ChooseLight(const SkyOverhaul::CloudLayer::Lighting& lighting) {
         const bool sun = lighting.sunDirection[2] > kSunGone;
         const float rising = (kSunGone - lighting.sunDirection[2]) / kMoonRising;
         const float share = sun ? 0.0f : (rising < 1.0f ? rising : 1.0f);
-        const float up = (lighting.moonDirection[2] + kMoonBelow) / kMoonBelow;
-        const float glow = share * std::clamp(up, 0.0f, 1.0f) * kMoonGlow;
+        const float moon = share * std::clamp(lighting.moonDirection[2] / kMoonUp, 0.0f, 1.0f);
 
         Light light;
         for (int c = 0; c < 3; c++) {
             light.direction[c] = sun ? lighting.sunDirection[c] : lighting.moonDirection[c];
-            light.colour[c] = sun ? lighting.sunColour[c] : kMoonColour[c] * share;
+            light.colour[c] = sun ? lighting.sunColour[c] : kMoonColour[c] * moon;
             light.back[c] = sun ? lighting.backSunColour[c] : light.colour[c] * kMoonBackShare;
-            light.glow[c] = kMoonColour[c] * glow;
+            light.glow[c] = kMoonColour[c] * moon * kMoonGlow;
         }
         return light;
     }

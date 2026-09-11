@@ -2,9 +2,9 @@
 //
 // The horizon a player sees is not the sky. It is the land, fogged out, and the engine fogs it to a
 // colour of its own - so a sky recoloured on its own meets that land at a seam, and the colour that
-// wins is the engine's. This intercepts the two registers that colour is carried in and puts the
-// sky's own horizon there, so the terrain, the water, the engine's sky and both of our layers all
-// arrive at one colour.
+// wins is the engine's. This intercepts the two registers that colour is carried in and gives it
+// the hue of the sky's own horizon at the engine's brightness, shaded, so the land reads as the
+// shadowed side under the lit sky.
 #pragma once
 
 #include <cstdint>

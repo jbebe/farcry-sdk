@@ -6,6 +6,8 @@
 
 #include <d3d9.h>
 
+#include <algorithm>
+
 namespace {
     constexpr size_t kSetVertexConstantSlot = 94;
     constexpr size_t kSetPixelConstantSlot = 109;
@@ -16,20 +18,62 @@ namespace {
     constexpr UINT kFogColour = 49;
     constexpr UINT kFogColourRange = 50;
 
+    // How much darker than the engine's own fog the land is kept.
+    constexpr float kShade = 0.6f;
+    // The most one channel of the sky's hue may ask for.
+    constexpr float kHueCap = 3.0f;
+    // A sky darker than this has no hue to lend.
+    constexpr float kHuelessSky = 1.0e-3f;
+
     using SetConstantFn = HRESULT(__stdcall*)(IDirect3DDevice9*, UINT, const float*, UINT);
 
     SetConstantFn g_originalVertex = nullptr;
     SetConstantFn g_originalPixel = nullptr;
 
+    // The sky's horizon hue at a luminance of one, along the fog heading and against it, and whether
+    // each end has one.
     struct Horizon {
-        float toward[3];
-        float away[3];
+        float towardHue[3];
+        float awayHue[3];
+        bool towardHasHue;
+        bool awayHasHue;
     };
 
     // Written once a frame by the sky and read on whatever thread uploads constants.
     SkyOverhaul::Seqlock<Horizon> g_horizon;
     bool g_have = false;
     uint32_t g_tints = 0;
+
+    float Luminance(const float colour[3]) {
+        return colour[0] * 0.299f + colour[1] * 0.587f + colour[2] * 0.114f;
+    }
+
+    // A colour at a luminance of one, each channel capped. False, with nothing written, for a colour
+    // too dark to have a hue.
+    bool Hue(const float colour[3], float out[3]) {
+        const float luminance = Luminance(colour);
+        if (luminance < kHuelessSky) {
+            return false;
+        }
+        for (size_t i = 0; i < 3; i++) {
+            const float hue = colour[i] / luminance;
+            out[i] = hue < kHueCap ? hue : kHueCap;
+        }
+        return true;
+    }
+
+    // The engine's fog colour at its own brightness in the sky's hue, shaded, or the engine's own
+    // where the sky has no hue.
+    void Shade(const float engine[3], const float hue[3], bool hasHue, float out[3]) {
+        if (!hasHue) {
+            std::copy_n(engine, 3, out);
+            return;
+        }
+        const float brightness = Luminance(engine) * kShade;
+        for (size_t i = 0; i < 3; i++) {
+            out[i] = hue[i] * brightness;
+        }
+    }
 
     // Sends the two registers again rather than editing the upload on its way past. The engine
     // hands over a block whose length it chose, and rewriting a copy of all of it would mean
@@ -55,16 +99,23 @@ namespace {
 
         const float* colour = data + (kFogColour - start) * 4;
         const float* range = data + (kFogColourRange - start) * 4;
+        const float engineAway[3] = {colour[0] + range[0], colour[1] + range[1],
+                                     colour[2] + range[2]};
+
+        float toward[3];
+        float away[3];
+        Shade(colour, horizon.towardHue, horizon.towardHasHue, toward);
+        Shade(engineAway, horizon.awayHue, horizon.awayHasHue, away);
 
         // Both ends are replaced and the ramp rebuilt between them, because the second register is
         // the distance from one colour to another rather than a colour itself.
-        const float replaced[8] = {horizon.toward[0],
-                                   horizon.toward[1],
-                                   horizon.toward[2],
+        const float replaced[8] = {toward[0],
+                                   toward[1],
+                                   toward[2],
                                    colour[3],
-                                   horizon.away[0] - horizon.toward[0],
-                                   horizon.away[1] - horizon.toward[1],
-                                   horizon.away[2] - horizon.toward[2],
+                                   away[0] - toward[0],
+                                   away[1] - toward[1],
+                                   away[2] - toward[2],
                                    range[3]};
         set(device, kFogColour, replaced, 2);
         g_tints++;
@@ -111,11 +162,9 @@ bool SkyOverhaul::FogTint::Install() {
 }
 
 void SkyOverhaul::FogTint::SetHorizon(const float toward[3], const float away[3]) {
-    Horizon horizon;
-    for (size_t i = 0; i < 3; i++) {
-        horizon.toward[i] = toward[i];
-        horizon.away[i] = away[i];
-    }
+    Horizon horizon = {};
+    horizon.towardHasHue = Hue(toward, horizon.towardHue);
+    horizon.awayHasHue = Hue(away, horizon.awayHue);
     g_horizon.Publish(horizon);
     g_have = true;
 }

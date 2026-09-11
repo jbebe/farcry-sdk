@@ -103,7 +103,7 @@
 
 // Over how much of the night factor, from its daylight end, the stars come out: the engine stops
 // drawing them at zero, so they fade in that stretch rather than vanish at once.
-#define STARS_FADE 0.15f
+#define STARS_FADE 0.02f
 
 // The star sphere's backdrop, which is the colour of the night sky between the stars.
 #define NIGHT_SKY float3(0.039f, 0.055f, 0.094f)
@@ -116,6 +116,15 @@
 #define TWILIGHT_DEEP -0.21f
 #define TWILIGHT_END 0.105f
 
+// The glow along the skyline toward a sun still below the horizon: orange at a luminance of one, how
+// bright it is at its height, the sun's heights, as sines, where it begins and where it is brightest
+// before sunrise takes over, and how tightly it hugs the skyline, as a power of the ray's height.
+#define DAWN_GLOW_HUE float3(1.80f, 0.75f, 0.18f)
+#define DAWN_GLOW_LUMINANCE 0.10f
+#define DAWN_GLOW_DEEP -0.34f
+#define DAWN_GLOW_PEAK -0.10f
+#define DAWN_GLOW_FALLOFF 6.0f
+
 // xyz: where the camera is, in world space with Z up. w: the frame's exposure.
 float4 Eye : register(c71);
 // xyz: the direction of the sun, pointing at it. w: zero in daylight, one at night.
@@ -125,8 +134,7 @@ float4 Sun : register(c72);
 // while the sun is overhead, more as it comes down, and back to one by sunset.
 float4 Air : register(c73);
 
-// The engine's own sky fog, register for register, so our sky meets the terrain in the colour the
-// terrain fades to. See docs/docs/engine-internals/sky-and-clouds.md.
+// The engine's own sky fog, register for register. See docs/docs/engine-internals/sky-and-clouds.md.
 float4 FogColour : register(c74);
 float4 FogColourRange : register(c75);
 float4 FogColourVector : register(c76);
@@ -222,23 +230,26 @@ float3 Scattered(float3 ray, float3 sun, float mie, float intensity) {
     return intensity * gathered;
 }
 
-// The colour the world fades into along a flat unit heading: the engine's fog ramp, read by that
-// heading's angle to its fog vector. Retinted by the plugin on its way here, so the land, the water
-// and this sky all arrive at the same horizon.
+// The engine's fog colour along a flat unit heading: its fog ramp, read by that heading's angle to
+// its fog vector.
 float3 FogAlong(float2 heading) {
     float angle = acos(clamp(dot(heading, FogColourVector.xy), -1.0f, 1.0f)) / PI;
     return FogColour.rgb + FogColourRange.rgb * angle;
 }
 
-// How far a ray belongs to the far side of a low sun: nothing at the sun's own heading, half at a
+// How far a heading belongs to the far side of the sun: nothing at the sun's own heading, half at a
 // right angle to it, everything opposite, eased at both ends so neither side shows where the turn
-// begins - and none of it unless the sun is low.
-float FarTurn(float2 heading) {
+// begins. Half all the way round a sun that is straight up or down.
+float Farness(float2 heading) {
     float sunAcross = length(Sun.xy);
     if (sunAcross < 0.0001f) {
-        return 0.0f;
+        return 0.5f;
     }
-    float farness = smoothstep(0.0f, 1.0f, 0.5f - 0.5f * dot(heading, Sun.xy / sunAcross));
+    return smoothstep(0.0f, 1.0f, 0.5f - 0.5f * dot(heading, Sun.xy / sunAcross));
+}
+
+// How far a ray at that farness takes the far side's horizon: none unless the sun is low.
+float FarTurn(float farness) {
     float lowSun = (1.0f - smoothstep(GRADIENT_SUN_LOW, GRADIENT_SUN_HIGH, Sun.z)) *
                    smoothstep(GRADIENT_NIGHT_DEEP, GRADIENT_NIGHT_EDGE, Sun.z);
     return farness * lowSun;
@@ -275,10 +286,20 @@ float3 NightFloor() {
     return NIGHT_SKY + TWILIGHT_HUE * (twilight * TWILIGHT_LUMINANCE);
 }
 
+// The glow along the skyline toward a sun just below the horizon.
+float3 DawnGlow(float farness, float below) {
+    float rise = smoothstep(DAWN_GLOW_DEEP, DAWN_GLOW_PEAK, Sun.z) *
+                 (1.0f - smoothstep(DAWN_GLOW_PEAK, 0.0f, Sun.z));
+    float sunward = 1.0f - farness;
+    return DAWN_GLOW_HUE *
+           (DAWN_GLOW_LUMINANCE * rise * sunward * sunward * pow(below, DAWN_GLOW_FALLOFF));
+}
+
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 ray = normalize(rayIn);
     float2 heading = normalize(ray.xy + 0.0001f);
-    float turn = FarTurn(heading);
+    float farness = Farness(heading);
+    float turn = FarTurn(farness);
 
     // Below the horizon there is no sky, only ground: mostly drawn over by the world, and where it is
     // not, those rays take a horizon's colour rather than marching off into the planet. On the far
@@ -294,8 +315,7 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // light back toward the zenith alone keeps an afternoon sky blue without blowing out its horizon.
     colour *= lerp(1.0f, Air.z, pow(skyward.z, ZENITH_HOLD_FALLOFF));
 
-    // Where the sky ends up at the horizon: the colour the world fades into along this heading, so
-    // that the terrain fading into it and the sky arriving at it meet in one place.
+    // Where the sky ends up at the horizon: the engine's own fog colour along this heading.
     float fog = pow(below, HORIZON_FALLOFF);
     colour = lerp(colour, FogAlong(heading), fog);
     colour = TurnFromSun(colour, below, turn);
@@ -310,6 +330,8 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 darkest = NightFloor();
     float fill = saturate(1.0f - dot(colour, LUMA) / max(dot(darkest, LUMA), 0.0001f));
     colour += darkest * fill;
+
+    colour += DawnGlow(farness, below);
 
     // Opaque by day, and at night only as much as the sky is bright, taken before the exposure as
     // the dome takes it. The dome's own alpha keeps covering the stars until the night factor is

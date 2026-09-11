@@ -1,5 +1,6 @@
 #include "tuning.h"
 
+#include "engine/cloud_layer.h"
 #include "engine/time_of_day.h"
 #include "fcse_api.h"
 
@@ -194,8 +195,20 @@ namespace {
         return changed;
     }
 
+    void DrawNow() {
+        SkyOverhaul::CloudLayer::Lighting lighting;
+        if (!SkyOverhaul::CloudLayer::Latest(lighting)) {
+            ImGui::TextDisabled("No world has been drawn yet.");
+            return;
+        }
+        const int minutes = static_cast<int>(lighting.timeOfDay * 24.0f * 60.0f) % (24 * 60);
+        ImGui::Text("Sun's time %02d:%02d", minutes / 60, minutes % 60);
+    }
+
     // A tab per moment. Picking one sends the game's clock to its hour, from which the day runs on.
     void DrawMoments() {
+        DrawNow();
+
         // Eight moments do not fit across the window, so they scroll rather than cut their names.
         if (!ImGui::BeginTabBar("moments", ImGuiTabBarFlags_FittingPolicyScroll |
                                                ImGuiTabBarFlags_TabListPopupButton)) {
