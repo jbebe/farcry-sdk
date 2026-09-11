@@ -191,6 +191,10 @@ It calls `FCSE::Bind` in its `FCSE_Load`, which is what lets `AddWindow` log a f
 own Dear ImGui by including `include/devtools_imgui.cmake` and linking `imgui`.
 [Sky Overhaul](../sky-overhaul) is the working example.
 
+`DevTools::Overlay::PostLine` runs a line in the game's console from the same plugin, as if typed:
+`#` escapes to Lua, developer-only commands are reachable, and the line runs at the end of the next
+frame, so a window can post one straight from its draw. Sky Overhaul's window sets the clock this way.
+
 ## Savegame launch
 
 `-load` opens the save and parses it correctly, then dies in what it does next: a validation pass

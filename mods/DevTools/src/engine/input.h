@@ -24,13 +24,15 @@ void SetCaptured(bool captured);
 bool IsCaptured();
 
 // The buttons and modifiers, asked for rather than waited on: the game's hold on the mouse means no
-// button message is ever delivered, and the thread that draws is not the one messages arrive on, so
+// mouse message is ever delivered, and the thread that draws is not the one messages arrive on, so
 // its own key state is always empty.
 struct RawKeys {
     bool mouse[3];
     bool control;
     bool shift;
     bool alt;
+    // Wheel travel since the last poll, WHEEL_DELTA per notch.
+    long wheel;
 };
 
 RawKeys PollRawKeys();

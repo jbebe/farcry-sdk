@@ -1,7 +1,7 @@
 // The contract for adding a window to DevTools' overlay from another FCSE plugin. DevTools owns the
 // frame, the input, and each window's title bar, position and close button; a plugin registers once
 // and draws what is inside. Both sides build the Dear ImGui pinned in devtools_imgui.cmake and share
-// one ImGuiContext. A C++ plugin needs only DevTools::Overlay::AddWindow, at the bottom.
+// one ImGuiContext. A C++ plugin needs only DevTools::Overlay::AddWindow and PostLine, at the bottom.
 #pragma once
 
 #include <stdbool.h>
@@ -13,7 +13,7 @@ extern "C" {
 #endif
 
 // Bumped by any change to the structs or signatures below.
-#define DEVTOOLS_OVERLAY_API_VERSION 1
+#define DEVTOOLS_OVERLAY_API_VERSION 2
 
 // A module's Dear ImGui as another module sees it: the version, and the size of each struct the two
 // share. A window whose layout differs from DevTools' own is refused.
@@ -53,10 +53,16 @@ typedef bool (*DevTools_AddWindowFn)(const DevTools_ImGuiLayout* imgui, DevTools
                                      const char* title, float width, float height,
                                      DevTools_DrawWindowFn draw, void* userData);
 
+// Runs one line in Far Cry 2's console as if it had been typed, `#` escaping to Lua and developer-only
+// commands included. The line is copied and runs at the end of the game's next frame, so it can be
+// posted from any thread, a window's draw included.
+typedef void (*DevTools_PostLineFn)(const char* line);
+
 typedef struct DevTools_OverlayAPI {
     // Always DEVTOOLS_OVERLAY_API_VERSION for this layout - compare before using anything below.
     uint32_t apiVersion;
     DevTools_AddWindowFn AddWindow;
+    DevTools_PostLineFn PostLine;
 } DevTools_OverlayAPI;
 
 // DevTools.dll exports one function of this type, named DevTools_GetOverlayAPI.
@@ -83,21 +89,26 @@ inline void BindImGui(const DevTools_ImGuiBinding* imgui) {
     ImGui::SetAllocatorFunctions(imgui->MemAlloc, imgui->MemFree, imgui->memUserData);
 }
 
-// DevTools_AddWindowFn for this module, once DevTools.dll is found and its API version matches.
-// Either failure is logged through FCSE::Logf, so call FCSE::Bind in FCSE_Load first.
-inline bool AddWindow(const char* title, float width, float height, DevTools_DrawWindowFn draw,
-                      void* userData = nullptr) {
+// DevTools' overlay API, or null when DevTools.dll is not loaded.
+inline const DevTools_OverlayAPI* FindOverlay() {
     HMODULE devTools = GetModuleHandleW(L"DevTools.dll");
     auto getOverlay = devTools == nullptr
                           ? nullptr
                           : reinterpret_cast<DevTools_GetOverlayAPIFn>(
                                 GetProcAddress(devTools, "DevTools_GetOverlayAPI"));
-    if (getOverlay == nullptr) {
+    return getOverlay == nullptr ? nullptr : getOverlay();
+}
+
+// DevTools_AddWindowFn for this module, once DevTools.dll is found and its API version matches.
+// Either failure is logged through FCSE::Logf, so call FCSE::Bind in FCSE_Load first.
+inline bool AddWindow(const char* title, float width, float height, DevTools_DrawWindowFn draw,
+                      void* userData = nullptr) {
+    const DevTools_OverlayAPI* overlay = FindOverlay();
+    if (overlay == nullptr) {
         FCSE::Logf("DevTools is not installed - the '%s' window is not drawn", title);
         return false;
     }
 
-    const DevTools_OverlayAPI* overlay = getOverlay();
     if (overlay->apiVersion != DEVTOOLS_OVERLAY_API_VERSION) {
         FCSE::Logf("DevTools' overlay API is version %u and this plugin was built for %d - the "
                    "'%s' window is not drawn",
@@ -107,6 +118,14 @@ inline bool AddWindow(const char* title, float width, float height, DevTools_Dra
 
     const DevTools_ImGuiLayout layout = ImGuiLayout();
     return overlay->AddWindow(&layout, &BindImGui, title, width, height, draw, userData);
+}
+
+// DevTools_PostLineFn, once DevTools.dll is found and its API version matches, and nothing otherwise.
+inline void PostLine(const char* line) {
+    const DevTools_OverlayAPI* overlay = FindOverlay();
+    if (overlay != nullptr && overlay->apiVersion == DEVTOOLS_OVERLAY_API_VERSION) {
+        overlay->PostLine(line);
+    }
 }
 
 }

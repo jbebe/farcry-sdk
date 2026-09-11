@@ -9,6 +9,7 @@
 
 #include "commands/catalog.h"
 #include "devtools_api.h"
+#include "engine/console.h"
 #include "engine/game_thread.h"
 #include "engine/input.h"
 #include "engine/renderer.h"
@@ -110,19 +111,6 @@ namespace {
         case WM_SYSKEYUP:
         case WM_CHAR:
         case WM_SYSCHAR:
-        case WM_MOUSEMOVE:
-        case WM_LBUTTONDOWN:
-        case WM_LBUTTONUP:
-        case WM_LBUTTONDBLCLK:
-        case WM_RBUTTONDOWN:
-        case WM_RBUTTONUP:
-        case WM_RBUTTONDBLCLK:
-        case WM_MBUTTONDOWN:
-        case WM_MBUTTONUP:
-        case WM_XBUTTONDOWN:
-        case WM_XBUTTONUP:
-        case WM_MOUSEWHEEL:
-        case WM_MOUSEHWHEEL:
         case WM_SETFOCUS:
         case WM_KILLFOCUS:
             return true;
@@ -137,6 +125,10 @@ namespace {
         if (message == WM_KEYDOWN && wparam == kToggleKey) {
             SetVisible(!Visible());
             return true;
+        }
+        // ImGui reads the mouse without its messages, so they are only kept from the game.
+        if (message >= WM_MOUSEFIRST && message <= WM_MOUSELAST) {
+            return Visible();
         }
 
         if (!Visible() || !IsInterestingMessage(message)) {
@@ -162,8 +154,8 @@ namespace {
         }
     }
 
-    // The buttons and modifiers the message queue never carries, because the game holds the mouse
-    // and because this is not the thread messages arrive on.
+    // The buttons, wheel and modifiers the message queue never carries, because the game holds the
+    // mouse and because this is not the thread messages arrive on.
     void FeedRawKeys() {
         const DevTools::Input::RawKeys keys = DevTools::Input::PollRawKeys();
 
@@ -171,6 +163,7 @@ namespace {
         for (int button = 0; button < 3; ++button) {
             io.AddMouseButtonEvent(button, keys.mouse[button]);
         }
+        io.AddMouseWheelEvent(0.0f, static_cast<float>(keys.wheel) / WHEEL_DELTA);
         io.AddKeyEvent(ImGuiMod_Ctrl, keys.control);
         io.AddKeyEvent(ImGuiMod_Shift, keys.shift);
         io.AddKeyEvent(ImGuiMod_Alt, keys.alt);
@@ -569,6 +562,7 @@ bool Install() {
 
 // How another plugin reaches the overlay: it finds DevTools.dll and asks for this by name.
 extern "C" __declspec(dllexport) const DevTools_OverlayAPI* DevTools_GetOverlayAPI() {
-    static const DevTools_OverlayAPI api{DEVTOOLS_OVERLAY_API_VERSION, &RegisterWindow};
+    static const DevTools_OverlayAPI api{DEVTOOLS_OVERLAY_API_VERSION, &RegisterWindow,
+                                         &DevTools::Console::PostLine};
     return &api;
 }

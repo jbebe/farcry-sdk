@@ -95,6 +95,7 @@ add_library(SkyOverhaul SHARED
   "src/engine/screen_draw.cpp"
   "src/engine/shader.cpp"
   "src/engine/sun_occlusion.cpp"
+  "src/engine/time_of_day.cpp"
   "src/engine/vtable.cpp"
   ${SHADER_HEADERS}
 )

@@ -33,6 +33,16 @@ namespace {
     // on whichever thread it makes it.
     std::atomic<bool> g_captured{false};
 
+    // Wheel travel the game's mouse reads carried while captured, until the overlay polls it.
+    std::atomic<long> g_wheel{0};
+
+    // A keyboard reports its 7 key at the offset a mouse reports the wheel on.
+    bool IsMouse(IDirectInputDevice8A* device) {
+        DIDEVCAPS caps{sizeof(caps)};
+        return SUCCEEDED(device->GetCapabilities(&caps)) &&
+               GET_DIDEVICE_TYPE(caps.dwDevType) == DI8DEVTYPE_MOUSE;
+    }
+
     HRESULT __stdcall GetDeviceStateDetour(IDirectInputDevice8A* device, DWORD bytes, void* data) {
         if (g_captured) {
             // An idle device rather than a refused read, which the engine would take for a lost one.
@@ -45,11 +55,20 @@ namespace {
     HRESULT __stdcall GetDeviceDataDetour(IDirectInputDevice8A* device, DWORD objectBytes,
                                           DIDEVICEOBJECTDATA* data, DWORD* count, DWORD flags) {
         HRESULT read = g_originalGetDeviceData(device, objectBytes, data, count, flags);
-        if (g_captured && count != nullptr) {
-            // Drained and then reported as empty: left unread, the events pile up and arrive
-            // together the moment the overlay closes.
-            *count = 0;
+        if (!g_captured || count == nullptr) {
+            return read;
         }
+
+        if (SUCCEEDED(read) && data != nullptr && IsMouse(device)) {
+            for (DWORD event = 0; event < *count; ++event) {
+                if (data[event].dwOfs == DIMOFS_Z) {
+                    g_wheel += static_cast<LONG>(data[event].dwData);
+                }
+            }
+        }
+        // Drained and then reported as empty: left unread, the events pile up and arrive together
+        // the moment the overlay closes.
+        *count = 0;
         return read;
     }
 
@@ -141,7 +160,8 @@ RawKeys PollRawKeys() {
     return {{down(VK_LBUTTON), down(VK_RBUTTON), down(VK_MBUTTON)},
             down(VK_CONTROL),
             down(VK_SHIFT),
-            down(VK_MENU)};
+            down(VK_MENU),
+            g_wheel.exchange(0)};
 }
 
 }

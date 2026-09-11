@@ -54,7 +54,8 @@ Notable changes to DevTools, loosely following
   add a window with one call. Each time Home opens the overlay the windows are laid out side by side,
   and they can be dragged anywhere after that; each closes on its own, a bar lists the closed ones to
   open again, and closing the last gives the game its input back. A plugin built against a different
-  Dear ImGui, or a title already taken, is refused in `fcse.log`.
+  Dear ImGui, or a title already taken, is refused in `fcse.log`. The same header lets a plugin post
+  a line to the game's console, which runs at the end of the next frame.
 - **Command API**, which the overlay is written against. One call runs a
   console line or a Lua chunk on the game thread, from anywhere, with developer-only commands
   reachable regardless of the option above; a catalog of 277 commands describes what to offer and
