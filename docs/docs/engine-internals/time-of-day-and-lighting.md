@@ -26,13 +26,15 @@ curved-horizon variables into the renderer's config and binding the world's temp
 2. Every override's blend advances (below).
 3. The clock advances by the frame's game time multiplied by the time scale, unless it is held
    (below). Passing midnight counts a day and sends `COneDayCompletedEvent`.
-4. `UpdateWeather`, the storm factor, zone blending and wind. The force starts from `env_WindForce`,
+4. `UpdateWeather`, the storm factor, zone blending and wind ([storm, rain and wind](#storm-rain-and-wind)). The force starts from `env_WindForce`,
    but while the flag at `CGameControllerManager` `+4` is clear it is replaced by the zone-blended
    wind preset's. It is then lerped toward the storm's wind and, again only while that flag is
    clear, scaled by a random fluctuation, clamped to 0–250 (the setting's help text says 0–600) and
    lerped toward a wind override's `fWindForce`. The direction is replaced by
    `EvaluateWindDirection`'s (`0x09158380`), which reads `env_WindDir` only as the start of its next
-   random drift. In a running game, `env_WindForce` has no visible effect and `SetWindOverride` does.
+   random drift: each new segment starts from the direction at `+0x3DC`. While `WindOverideEnable`
+   (`+0x1D0`) is set, the direction at `+0x1D4` replaces the drift's. In a running game,
+   `env_WindForce` has no visible effect and `SetWindOverride` does.
 5. `CSky::Update` places the sun and the moon.
 6. Fog: the zone-blended preset, lerped toward the storm's fog by the storm transition curve, then
    toward a fog override. The result goes to `C3DEngine`'s fog setters and to `CSky::UpdateFog`.
@@ -41,7 +43,7 @@ curved-horizon variables into the renderer's config and binding the world's temp
 8. `UpdateSky`: the sky gradients, the storm sky, and the clouds' formation, material and light.
 9. `UpdateLight` chooses the scene light, `GenerateSunOcclusion` runs, and `CSky::UpdateShadow` aims
    the shadows if that light casts them.
-10. Network time, rain probability and rain.
+10. Network time, then [the rain roll and rain](#rain).
 
 ## Overrides blend over a duration
 
@@ -59,8 +61,9 @@ factor.
 | Wind | `+0x1A0` | `+0x1B4` | `Update` |
 | Depth of field | `+0x1DC` | `+0x1F0` | `Update` |
 
-Three more blocks of the same shape end at `+0x17C`, `+0x1CC` and `+0x20C`. What reads them is not
-traced.
+Three more blocks of the same shape end at `+0x17C`, `+0x1CC` and `+0x20C`. The one ending at
+`+0x1CC` is the scripted [storm](#storm) override, with the storm's value where the others hold a
+preset, at `+0x1B8`. What reads the other two is not traced.
 
 The Lua override methods on `CDynamicEnvironmentManager` ([Lua API surface](./lua-api-surface.md))
 and the Domino boxes `OverrideEnvironmentFog`, `OverrideEnvironmentCloud` and
@@ -167,6 +170,87 @@ and `scale` is the material's `fSunLightColorSamplingScale` (`CCloudMaterial` `+
 material and that lighting go to `CSky::SetClouds`. A scale above 1 squeezes the day's lighting into a
 shorter span around noon, for the clouds only.
 
+## Storm, rain and wind
+
+The manager offsets in this section read the same in `Dunia.dll` (Steam v1.03).
+
+### Storm
+
+The storm is a factor from 0 to 1 that every frame recomputes, not an event that starts and stops.
+
+1. `UpdateWeather` (`0x0915A000`) adds the frame's game time times the time scale, in hours, to the
+   storm hour at `+0x480`. It skips this while the storm override's weight is above zero, and does
+   nothing at all while `+0x30` is set. The clock's shadow-movement hold does not stop it.
+2. `GetStormFactorFromCurve` (`0x09157C00`) evaluates the world's `CEnvironmentWeather` preset, the
+   `Storm` set's `Intensity`, at the storm hour. The hour goes back to zero once it passes the curve's
+   last knot, so the curve loops. The result is clamped to 0–1 and stored at `+0x484`.
+3. That value is multiplied by one minus the desert zone's weight. The weight used follows the zone
+   blend's (`+0x258`) at no more than 1/120 per second.
+4. `GetStormFactor` (`0x09157510`) lerps `+0x484` toward the scripted value at `+0x1B8` by the
+   override's weight at `+0x1CC`.
+
+`SetScriptedStormFactorOverride(value, seconds)` clamps the value into `+0x1B8` and blends the weight
+to 1 over the seconds given. `RemoveScriptedStormFactorOverride(seconds)` blends it back to 0. The
+manager's environment reset (`Dunia.dll` Steam `0x1011CF70`) clears the blend, so an override does not
+survive it.
+
+Zone blending reads the weights of the player's `CZoneInfoComponent`. Savannah, plus whatever no zone
+covers, goes to `+0x230`, jungle to `+0x244` and desert to `+0x258`, each blended over half a second.
+
+While the flag at `CGameControllerManager` `+4` is set, the curve is replaced by
+`SetMultiplayerWeather`: either a fixed factor or the curve started from a chosen point.
+
+### Rain
+
+`EvaluateRainProbability` (`0x09158950`) decides whether it rains. It is skipped while `+0x14` is set,
+and takes layer 1's cloud coverage as `UpdateSky` returns it, with the storm clouds and a cloud
+override already blended in.
+
+| Condition | Effect |
+| --- | --- |
+| Desert weight at least 0.6, or coverage at or below the threshold and below 0.63 | The raining flag at `+0x49C` is cleared and the timer at `+0x4A0` set to 180 |
+| Coverage above the threshold at `+0x4A4` | The timer counts down by frame time times the time scale. When it expires, a roll sets the flag, true with a probability of about the coverage less a random tenth, then picks a new threshold from 0.63–0.75 and a new timer of 180–195 times the time scale |
+| Anything else | Nothing changes |
+
+`UpdateRain` (`0x0915F650`) acts on the flag through the `CRainComponent` of the entity the terminal
+is focused on, and does nothing when that entity has none.
+
+- **Starting and stopping:** it starts or stops the component whenever the flag disagrees with the
+  component's own state. It sets the target at `+0x48C` to 1 or 0 and blends the intensity at `+0x498`
+  toward it over five seconds.
+- **Angle:** 270° plus 35° times the square of force/180 (capped at 1), turned by the drift direction
+  at `+0x4B0` less 90°.
+- **Sound:** the intensity also goes to the ambience manager.
+
+`BindTemplates` binds only the lighting, cloud and fog transitions, so nothing reads the two retail
+`Default.Transition.Rain` presets. `SetNewWeather` and `StartRain` are empty.
+
+### Wind
+
+Step 4 of the update builds the force. The storm's contribution is its wind preset's `fWindForce`
+times `1.1 + 0.2 sin(2π × storm hour)`.
+
+- **Fluctuation:** `EvaluateWindForceFluctuation` (`0x09157CB0`) eases the multiplier toward a random
+  target from 0.8 to 1.5, and picks a new target every 900 × time-scale seconds of game time.
+- **Direction:** `EvaluateWindDirection` picks a new target within about ten degrees every
+  240 × time-scale seconds, biased to keep turning the same way.
+
+`ApplyWindToEnvironment` (`0x09158660`) sends the force at `+0x3D8` and the direction at `+0x3DC` to:
+
+- RealTree's vegetation;
+- the clouds, which scroll at the force times 0.7;
+- the 3D engine's and the physics world's wind velocity, the force times 0.0917 truncated, along the
+  direction;
+- the ambience manager.
+
+`GetWindForce` (`0x091581E0`) returns `+0x3D8`. Its readers:
+
+| Reader | What it does with the force |
+| --- | --- |
+| Fire propagation | Also reads the direction |
+| `CFanComponent` | Spins at force/250 |
+| `CFCXParticleAmbianceComponent` | Starts its particles above 70, at full strength by 250 |
+
 ## Measured, not explained
 
 :::info[Verified in a running game]
@@ -181,6 +265,6 @@ Retail GOG v1.03, with `mods/sky-overhaul` logging the scene state.
 
 - The writer of `+0x2F0`, and so whether presets follow the day-cycle scale.
 - What `+0x178` holds, which offsets the moon's shadow angle.
-- What reads the three untraced override blocks.
+- What reads the two untraced override blocks.
 - How `CEnvironmentAdaptiveBloom`'s `fColorRemap` values become the final pass's per-channel powers
   ([environment presets](../modding/environment-presets.md#the-colour-grade)).

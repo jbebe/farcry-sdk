@@ -25,6 +25,7 @@
 #include "engine/keys.h"
 #include "engine/pawn_tick.h"
 #include "engine/player.h"
+#include "engine/weather.h"
 #include "options/options.h"
 #include "overlay/overlay.h"
 
@@ -117,8 +118,10 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // Each needs the one before it, so none of them is installed alone. All three are independent of
     // the Developer console option below, because every line the console sends raises the developer
     // flag for itself.
-    if (DevTools::GameThread::Install() && DevTools::Console::Install()) {
-        DevTools::Overlay::Install();
+    if (DevTools::GameThread::Install() && DevTools::Console::Install() &&
+        DevTools::Overlay::Install()) {
+        // Only the overlay forces weather, so there is nothing to hook without it.
+        DevTools::Weather::Install();
     }
 
     // The player, the flags hung off their profile, and the frame all of it runs on. Subscribers are

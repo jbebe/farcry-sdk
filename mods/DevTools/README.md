@@ -151,6 +151,14 @@ to warn about. There are more categories than fit across the window, so the tabs
 button at their left end lists them all. Running a command queues it for the engine's next frame, so
 the click and the command are never on the same thread as each other.
 
+The Environment tab puts the clock and the weather above its commands. Storm, rain and wind each
+offer Engine, Off, and a way to force them: a storm strength, rain on, a wind speed and direction.
+Forced rain falls under a clear sky. Under each is what the engine is doing with it right now: the
+storm's curve and override, the cloud cover rain is rolled against and when it rolls next, the wind's
+force and direction. The forces are written into the environment manager on every engine frame
+rather than sent as console lines, and nothing is saved: each launch starts with the engine's own
+weather.
+
 Other plugins can add windows of their own. Each time Home opens the overlay, the open windows are
 laid out side by side — DevTools' first, then the rest in the order they were added — and after that
 each can be dragged anywhere. A window's close button closes only that window, and it stays closed
@@ -218,7 +226,8 @@ Every site *in `Dunia.dll`* is found one of two ways. The fixes and options patc
 function — a branch displacement halfway down a loop — so they use
 `FCSE::Relocation{FCSE::Pattern(...)}`, matched on the bytes about to be replaced, rather than the
 address library, which is keyed by exact entries: function starts and data addresses. The console
-bridge is the other case, all function starts and globals, so it uses the library directly.
+bridge and the weather hooks are the other case, all function starts and globals, so they use the
+library directly.
 
 Direct3D and DirectInput are neither. Those functions live in `d3d9.dll` and `dinput8.dll`, shared by
 every object in the process, so the overlay builds one object of its own, reads the vtable, and
@@ -309,3 +318,8 @@ Everything below needs a real install:
   `overlay: added the 'DevTools' window` and later `overlay: added the 'Sky Overhaul' window`. Home
   lays the two out side by side under the bar, either can be dragged, closing one lists it in the bar
   and a click brings it back where it was, and closing the last gives the game its input back.
+- **Weather controls** *(not yet run)*: `bin\fcse.log` shows `weather: hooked` for the rain roll, the
+  wind push and the rain update. On the Environment tab, Storm forced to 1.00 reads storm 1.00 at
+  override weight 1.00 and the sky turns stormy; Rain On under a clear sky starts rain at once, its
+  intensity climbing over five seconds; Wind Off stills the trees, and 250 bends them and slants the
+  rain.

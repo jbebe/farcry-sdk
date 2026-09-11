@@ -13,6 +13,7 @@
 #include "engine/game_thread.h"
 #include "engine/input.h"
 #include "engine/renderer.h"
+#include "engine/weather.h"
 #include "fcse_api.h"
 
 #include "imgui.h"
@@ -21,7 +22,6 @@
 #include "imgui_internal.h"
 #include "misc/cpp/imgui_stdlib.h"
 
-#include <cmath>
 #include <cstring>
 #include <d3d9.h>
 #include <deque>
@@ -86,12 +86,13 @@ namespace {
     std::vector<std::string> g_arguments;
     std::deque<std::string> g_history;
 
-    // What the environment sliders last sent. The game's own values are never read, so each starts
-    // at zero until it is moved.
+    // What the clock sliders last sent. The game's clock is never read, so each starts at zero until
+    // it is moved.
     int g_hour = 0;
     int g_minutes = 0;
-    int g_windPreset = 0;
-    int g_windDirection = 0;
+
+    // The weather the Environment tab forces, for this session only.
+    DevTools::Weather::Wanted g_weather;
 
     // Which category tab is open, as an index into the labels below. 0 is "All".
     int g_category = 0;
@@ -359,7 +360,74 @@ namespace {
         ImGui::EndTable();
     }
 
-    // The Environment tab: sliders for what is worth dragging, and every command folded under them.
+    // One weather's heading and its Engine, Off and forcing choices. True when the choice changed.
+    bool DrawWeatherMode(const char* label, DevTools::Weather::Mode& mode, const char* forceLabel) {
+        using DevTools::Weather::Mode;
+
+        ImGui::SeparatorText(label);
+        ImGui::PushID(label);
+        const Mode before = mode;
+        const char* const choices[] = {"Engine", "Off", forceLabel};
+        for (int choice = 0; choice < 3; ++choice) {
+            if (choice > 0) {
+                ImGui::SameLine();
+            }
+            if (ImGui::RadioButton(choices[choice], mode == static_cast<Mode>(choice))) {
+                mode = static_cast<Mode>(choice);
+            }
+        }
+        ImGui::PopID();
+        return mode != before;
+    }
+
+    // Forces for storm, rain and wind, each above what the engine is doing with it right now.
+    void DrawWeather() {
+        using DevTools::Weather::Mode;
+
+        const DevTools::Weather::Snapshot now = DevTools::Weather::Read();
+        if (!now.live) {
+            ImGui::TextDisabled("Weather reads nothing until a world is running.");
+        }
+
+        bool changed = DrawWeatherMode("Storm", g_weather.storm, "Force");
+        if (g_weather.storm == Mode::Force) {
+            changed |= ImGui::SliderFloat("Strength", &g_weather.stormStrength, 0.0f, 1.0f, "%.2f");
+        }
+        if (now.live) {
+            ImGui::TextDisabled("Storm %.2f - curve %.2f at storm hour %.1f, desert %.2f", now.storm,
+                                now.curveStorm, now.stormHour, now.desert);
+            ImGui::TextDisabled("Override %.2f at weight %.2f", now.overrideValue,
+                                now.overrideWeight);
+        }
+
+        changed |= DrawWeatherMode("Rain", g_weather.rain, "On");
+        if (now.live) {
+            ImGui::TextDisabled("%s, intensity %.2f - cloud cover %.2f, rolls above %.2f",
+                                now.raining ? "Raining" : "Dry", now.rainIntensity, now.cloudCover,
+                                now.rollThreshold);
+            if (now.rainUnseen) {
+                ImGui::TextDisabled("Raining, but the player has no rain component to show it");
+            } else if (now.nextRoll >= 0.0f) {
+                ImGui::TextDisabled("Next roll in %.0f s", now.nextRoll);
+            }
+        }
+
+        changed |= DrawWeatherMode("Wind", g_weather.wind, "Force");
+        if (g_weather.wind == Mode::Force) {
+            changed |= ImGui::SliderFloat("Speed", &g_weather.windForce, 0.0f, 250.0f, "%.0f");
+            changed |=
+                ImGui::SliderFloat("Direction", &g_weather.windDegrees, 0.0f, 360.0f, "%.0f deg");
+        }
+        if (now.live) {
+            ImGui::TextDisabled("Force %.0f at %.0f deg", now.windForce, now.windDegrees);
+        }
+
+        if (changed) {
+            DevTools::Weather::Set(g_weather);
+        }
+    }
+
+    // The Environment tab: the clock, the weather, and every command folded under them.
     void DrawEnvironment() {
         if (ImGui::SliderInt("Hour", &g_hour, 0, 23)) {
             g_minutes = 0;
@@ -370,28 +438,9 @@ namespace {
             SendSetting("env_Minutes", g_minutes);
         }
 
-        const Command& wind = *DevTools::Commands::Find("SetWindOverride");
-        const int lastPreset = static_cast<int>(wind.choices.size()) - 1;
-        // The format is the preset's label, so the slider reads as a name rather than a number.
-        if (ImGui::SliderInt("Wind", &g_windPreset, 0, lastPreset, wind.choices[g_windPreset].label,
-                             ImGuiSliderFlags_NoInput)) {
-            Send(wind, wind.choices[g_windPreset].value);
-        }
-        ImGui::SameLine();
-        if (ImGui::Button("Clear override")) {
-            Send(*DevTools::Commands::Find("RemoveWindOverride"), nullptr);
-        }
+        DrawWeather();
 
-        // Compared in whole degrees, not by SliderAngle's return, which a held drag can set every
-        // frame because degrees do not survive its round trip through radians exactly.
-        float radians = static_cast<float>(g_windDirection) * IM_PI / 180.0f;
-        ImGui::SliderAngle("Wind direction", &radians, 0.0f, 360.0f);
-        const int degrees = static_cast<int>(std::lround(radians * 180.0f / IM_PI));
-        if (degrees != g_windDirection) {
-            g_windDirection = degrees;
-            SendSetting("env_WindDir", g_windDirection);
-        }
-
+        ImGui::Spacing();
         if (ImGui::CollapsingHeader("Raw commands")) {
             DrawCommandTable();
         }

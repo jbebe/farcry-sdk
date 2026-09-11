@@ -52,6 +52,7 @@ add_library(DevTools SHARED
   "src/engine/pawn_tick.cpp"
   "src/engine/player.cpp"
   "src/engine/renderer.cpp"
+  "src/engine/weather.cpp"
   "src/fixes/load_savegame.cpp"
   "src/options/developer_console.cpp"
   "src/options/diamonds.cpp"
