@@ -16,17 +16,14 @@ namespace SkyOverhaul::FogTint {
 bool Install();
 
 // What the sky comes to at the horizon, looking along the engine's own fog heading and against it -
-// the two ends of the ramp the engine already colours its fog by. Published once a frame from the
+// the two ends of the ramp the engine already colours its fog by - and how far, from nought to one,
+// the world's fog is carried from the engine's colour toward those. Published once a frame from the
 // sky, which is the only thing that knows.
-void SetHorizon(const float toward[3], const float away[3]);
+void SetHorizon(const float toward[3], const float away[3], float match);
 
 // Stops replacing anything until a horizon is published again, for when there is no sky of ours to
 // agree with.
 void Forget();
-
-// How far the world's fog is carried from the engine's own colour toward the sky's, as a
-// percentage. Zero leaves every constant exactly as the engine set it.
-void SetMatch(int percent);
 
 // How many uploads have been changed. A count that stops climbing is a fog colour that is being
 // reached once and then written over, which is the failure that looks like a slider doing nothing.

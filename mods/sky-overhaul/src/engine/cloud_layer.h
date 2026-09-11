@@ -35,6 +35,9 @@ struct Lighting {
     float storm;
     // Zero in daylight, one at night.
     float night;
+    // The sun's height as a fraction of its day: a quarter at sunrise, a half overhead, three quarters
+    // at sunset.
+    float timeOfDay;
 };
 
 // Hooks the cloud-layer submission. Call once from FCSE_Load. False means the submission was not

@@ -1,5 +1,6 @@
 #include "sky_model.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -59,7 +60,8 @@ namespace {
 }
 
 void SkyOverhaul::SkyModel::Radiance(const float ray[3], const float sun[3], float eyeHeight,
-                                     float mie, float intensity, float out[3]) {
+                                     float mie, const float hazeColour[3], float intensity,
+                                     float out[3]) {
     const float origin[3] = {0.0f, 0.0f, kPlanetRadius + eyeHeight};
     const float span = SphereExit(origin, ray, kAtmosphereRadius);
 
@@ -106,7 +108,7 @@ void SkyOverhaul::SkyModel::Radiance(const float ray[3], const float sun[3], flo
                                      kMieExtinction * mie * mieDensity +
                                      kOzoneAbsorption[channel] * ozoneDensity;
             const float scattering = kRayleighBeta[channel] * rayleighDensity * rayleighPhase +
-                                     kMieBeta * mie * mieDensity * miePhase;
+                                     kMieBeta * mie * mieDensity * miePhase * hazeColour[channel];
             const float transmit = std::exp(-extinction * stride);
             const float safe = extinction > 1.0e-12f ? extinction : 1.0e-12f;
             gathered[channel] += through[channel] * scattering * lit[channel] * (1.0f - transmit) / safe;
@@ -116,5 +118,27 @@ void SkyOverhaul::SkyModel::Radiance(const float ray[3], const float sun[3], flo
 
     for (int channel = 0; channel < 3; channel++) {
         out[channel] = intensity * gathered[channel];
+    }
+}
+
+void SkyOverhaul::SkyModel::Horizon(const float heading[3], const float sun[3], float eyeHeight,
+                                    float mie, float intensity, const Tuning::Values& tuning,
+                                    float out[3]) {
+    Radiance(heading, sun, eyeHeight, mie, tuning.hazeColour, intensity, out);
+
+    // The shader's Farness, which is half all the way round a sun straight up or down.
+    const float across = std::sqrt(sun[0] * sun[0] + sun[1] * sun[1]);
+    float farness = 0.5f;
+    if (across >= 0.0001f) {
+        const float facing = (heading[0] * sun[0] + heading[1] * sun[1]) / across;
+        const float t = std::clamp(0.5f - 0.5f * facing, 0.0f, 1.0f);
+        farness = t * t * (3.0f - 2.0f * t);
+    }
+
+    for (int channel = 0; channel < 3; channel++) {
+        const float nearColour = tuning.nearHorizonColour[channel] * tuning.nearHorizonBrightness;
+        const float horizonColour =
+            nearColour + (tuning.farHorizonColour[channel] - nearColour) * farness;
+        out[channel] *= tuning.skyColour[channel] * horizonColour;
     }
 }

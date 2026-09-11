@@ -10,6 +10,7 @@
 #include "engine/shader.h"
 #include "engine/sun_occlusion.h"
 #include "fcse_api.h"
+#include "tuning.h"
 
 #include "dazzle_accumulate_ps.h"
 #include "dazzle_bleach_ps.h"
@@ -76,28 +77,7 @@ namespace {
     // How many pixel shader constant registers the effect writes, from register zero.
     constexpr UINT kConstantRegisters = 6;
 
-    // Written by the settings callbacks and read while drawing. Each is a lone aligned float that
-    // no other value has to agree with, so a torn read is neither possible nor consequential.
-    float g_strength = 1.0f;
-    float g_spreadRadians = Radians(57.0f);
-    float g_falloff = 2.0f;
-    float g_contrast = 1.95f;
-    float g_desaturation = 1.29f;
-    float g_veil = 1.0f;
-    float g_afterimageStrength = 1.0f;
-    float g_afterimageSeconds = 10.0f;
-    float g_afterimageDarkness = 0.9f;
-    float g_afterimageTint = 0.35f;
-    float g_afterimageHaze = 0.35f;
-    float g_afterimageSize = 0.25f;
-    float g_afterimageSaturation = 0.30f;
-
-    // Derived from the sliders when they change, because each would otherwise cost a transcendental
-    // on every frame for a value that only moves when the player moves a slider.
-    float g_spreadCos = std::cos(Radians(57.0f));
-    float g_sampleCos = std::cos(Radians(57.0f) + kSampleMarginRadians);
-    float g_glareRadius = 0.5f * std::tan(Radians(57.0f));
-    float g_elevationScale = 1.0f / std::sin(Radians(40.0f));
+    using SkyOverhaul::Tuning::Values;
 
     // How hard the sun is glaring this frame, and how much of the afterimage that same light is
     // drowning out. The two are separate curves over the same angle.
@@ -139,6 +119,7 @@ namespace {
         float verticalScale;
         float elevation;
         float night;
+        float timeOfDay;
     };
 
     SunInView g_thisFrame = {};
@@ -176,6 +157,7 @@ namespace {
         out.verticalScale = view.verticalScale;
         out.elevation = sun[2];
         out.night = lighting.night;
+        out.timeOfDay = lighting.timeOfDay;
         if (cameraLength > 0.0001f) {
             out.cosAngle = (camera[0] * sun[0] + camera[1] * sun[1] + camera[2] * sun[2]) /
                            cameraLength;
@@ -308,7 +290,7 @@ namespace {
     // Carries the eye's exposure forward by one frame and reports how strongly the afterimage
     // should show. It fades over twice as long as the eye spent dazzled, so a short stare leaves a
     // brief mark and a long one leaves a lasting one.
-    float AdvanceAfterimage(const Glare& glare, bool live, float elapsed) {
+    float AdvanceAfterimage(const Glare& glare, const Values& v, bool live, float elapsed) {
         if (!live || elapsed > kRecoveryGap) {
             g_dazzled = false;
             g_exposure = 0.0f;
@@ -329,8 +311,8 @@ namespace {
                 g_burnRestart = true;
             }
             g_exposure += elapsed;
-            if (g_exposure > g_afterimageSeconds) {
-                g_exposure = g_afterimageSeconds;
+            if (g_exposure > v.afterimageSeconds) {
+                g_exposure = v.afterimageSeconds;
             }
 
             // A running mean over every frame of the stare rather than over the last moment of it,
@@ -385,11 +367,11 @@ namespace {
         const float presence = left * emerging * maturity;
         const float pulse =
             1.0f + kPulseDepth * std::sin(2.0f * kPi * kPulseHertz * g_sinceLookAway);
-        const float envelope = g_afterimageStrength * presence * pulse;
+        const float envelope = v.afterimageStrength * presence * pulse;
 
-        g_recovery.core = envelope * g_afterimageDarkness;
-        g_recovery.surround = envelope * g_afterimageTint;
-        g_recovery.haze = g_afterimageStrength * presence * g_afterimageHaze;
+        g_recovery.core = envelope * v.afterimageDarkness;
+        g_recovery.surround = envelope * v.afterimageTint;
+        g_recovery.haze = v.afterimageStrength * presence * v.afterimageHaze;
         g_recovery.flash = phase < kFlashUntil
                                ? kFlashStrength * (1.0f - phase / kFlashUntil) * emerging * maturity
                                : 0.0f;
@@ -409,29 +391,31 @@ namespace {
 
     // How dazzled the eye is, from nothing to blinded, and how much of that light is drowning the
     // afterimage out.
-    Glare Measure() {
+    Glare Measure(const Values& v) {
         Glare glare = {};
 
         // Deliberately not gated on the sun being in front of the camera: the whole point is that
         // the angle decides, and a wide spread reaches past a right angle.
+        const float spread = Radians(v.glareSpread);
         const float cosAngle = std::clamp(g_thisFrame.cosAngle, -1.0f, 1.0f);
-        if (g_strength <= 0.0f || cosAngle <= g_spreadCos) {
+        if (v.glareStrength <= 0.0f || cosAngle <= std::cos(spread)) {
             return glare;
         }
 
         // Raised to a power rather than eased symmetrically: full strength has to mean the sun in
         // the middle of the view, not merely somewhere on screen, so the curve has to fall away
         // from its peak immediately.
-        const float t = std::acos(cosAngle) / g_spreadRadians;
-        const float proximity = std::pow(1.0f - t, g_falloff);
+        const float t = std::acos(cosAngle) / spread;
+        const float proximity = std::pow(1.0f - t, v.glareFalloff);
 
         // A low sun is a weak one: its light travels further through the atmosphere.
-        const float elevation = std::clamp(g_thisFrame.elevation * g_elevationScale, 0.0f, 1.0f);
+        const float elevation = std::clamp(
+            g_thisFrame.elevation / std::sin(Radians(v.elevationRamp)), 0.0f, 1.0f);
 
         const float visible = VisibleFraction();
         const float daylight = 1.0f - std::clamp(g_thisFrame.night, 0.0f, 1.0f);
 
-        glare.intensity = g_strength * proximity * elevation * visible * daylight;
+        glare.intensity = v.glareStrength * proximity * elevation * visible * daylight;
 
         // Light hides the afterimage over a far wider cone than it brightens the frame over, and
         // it hides it completely wherever the sun is anywhere near the middle of the view - a low
@@ -444,7 +428,8 @@ namespace {
 
     // Takes a copy of the finished frame and paints it back through the shader. The copy is needed
     // because the shader reads the same pixels it writes, which no blend state can express.
-    void DrawDazzle(const SkyOverhaul::Frame::Pass& pass, float intensity, float afterimage) {
+    void DrawDazzle(const SkyOverhaul::Frame::Pass& pass, const Values& v, float intensity,
+                    float afterimage) {
         if (!EnsureDeviceObjects(pass.device, pass.backBuffer)) {
             return;
         }
@@ -455,7 +440,12 @@ namespace {
 
         const float width = static_cast<float>(pass.backBuffer.Width);
         const float height = static_cast<float>(pass.backBuffer.Height);
-        const float radius = g_glareRadius * g_thisFrame.verticalScale;
+        // The vertical half of the frame spans the tangent of half the field of view, so the spread
+        // converts into the units the texture coordinates are measured in. Capped short of a right
+        // angle, where the tangent runs away; the veil carries a spread wider than the screen.
+        const float radius =
+            0.5f * std::tan(std::clamp(Radians(v.glareSpread), 0.0f, kMaxRadiusRadians)) *
+            g_thisFrame.verticalScale;
 
         const bool restart = g_burnRestart || !g_burnReady;
         const Recovery shown = g_burnReady && afterimage > 0.0f ? g_recovery : Recovery{};
@@ -463,12 +453,12 @@ namespace {
             g_thisFrame.x / width,
             g_thisFrame.y / height,
             intensity,
-            g_contrast,
+            v.glareContrast,
 
             radius,
             width / height,
-            g_veil,
-            g_desaturation,
+            v.glareVeil,
+            v.glareDesaturation,
 
             shown.core,
             restart ? 1.0f : g_burnWeight,
@@ -482,10 +472,10 @@ namespace {
 
             kCoreLow,
             kCoreHigh,
-            g_afterimageSaturation,
+            v.afterimageSaturation,
             0.0f,
 
-            radius * g_afterimageSize,
+            radius * v.afterimageSize,
             0.0f,
             0.0f,
             0.0f};
@@ -528,7 +518,9 @@ void SkyOverhaul::Dazzle::OnScenePass(const Frame::Pass& pass) {
 
     // Nothing outside the spread can read the answer, and the margin leaves the queries long
     // enough to come back before the angle brings them into use.
-    if (g_thisFrame.cosAngle <= g_sampleCos) {
+    const Tuning::Values v = Tuning::Evaluate(g_thisFrame.timeOfDay);
+    const float sampled = std::clamp(Radians(v.glareSpread) + kSampleMarginRadians, 0.0f, kPi);
+    if (g_thisFrame.cosAngle <= std::cos(sampled)) {
         return;
     }
 
@@ -541,10 +533,11 @@ void SkyOverhaul::Dazzle::OnFinalPass(const Frame::Pass& pass) {
     // The composite is the last moment the world owns the frame: the interface is drawn after it,
     // so the glare lands under the heads-up display rather than over it.
     const float elapsed = g_clock.Lap();
-    const Glare glare = pass.live ? Measure() : Glare{};
-    const float afterimage = AdvanceAfterimage(glare, pass.live, elapsed);
+    const Tuning::Values v = Tuning::Evaluate(g_thisFrame.timeOfDay);
+    const Glare glare = pass.live ? Measure(v) : Glare{};
+    const float afterimage = AdvanceAfterimage(glare, v, pass.live, elapsed);
     if (glare.intensity > 0.002f || afterimage > 0.002f) {
-        DrawDazzle(pass, glare.intensity, afterimage);
+        DrawDazzle(pass, v, glare.intensity, afterimage);
     }
 
     if (pass.live && g_heartbeat.Due(elapsed)) {
@@ -556,74 +549,6 @@ void SkyOverhaul::Dazzle::OnFinalPass(const Frame::Pass& pass) {
                    g_recovering, afterimage, g_thisFrame.x, g_thisFrame.y,
                    g_thisFrame.inFront ? 1 : 0);
     }
-}
-
-void SkyOverhaul::Dazzle::SetStrength(int percent) {
-    g_strength = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Dazzle::SetSpread(int degrees) {
-    g_spreadRadians = Radians(static_cast<float>(degrees));
-    g_spreadCos = std::cos(g_spreadRadians);
-    g_sampleCos = std::cos(g_spreadRadians + kSampleMarginRadians > kPi
-                               ? kPi
-                               : g_spreadRadians + kSampleMarginRadians);
-
-    // The vertical half of the frame spans the tangent of half the field of view, so the spread
-    // converts into the same units the texture coordinates are measured in. Capped well short of a
-    // right angle, where the tangent runs away and then turns negative - the veil, not this
-    // gradient, is what carries a spread wider than the screen.
-    g_glareRadius =
-        0.5f * std::tan(g_spreadRadians > kMaxRadiusRadians ? kMaxRadiusRadians : g_spreadRadians);
-}
-
-void SkyOverhaul::Dazzle::SetFalloff(int tenths) {
-    g_falloff = static_cast<float>(tenths) / 10.0f;
-}
-
-void SkyOverhaul::Dazzle::SetContrast(int percent) {
-    g_contrast = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Dazzle::SetDesaturation(int percent) {
-    g_desaturation = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Dazzle::SetVeil(int percent) {
-    g_veil = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Dazzle::SetElevationRamp(int degrees) {
-    const float ramp = std::sin(Radians(static_cast<float>(degrees)));
-    g_elevationScale = ramp > 0.0001f ? 1.0f / ramp : 1.0f;
-}
-
-void SkyOverhaul::Dazzle::SetAfterimageStrength(int percent) {
-    g_afterimageStrength = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Dazzle::SetAfterimageSeconds(int seconds) {
-    g_afterimageSeconds = static_cast<float>(seconds);
-}
-
-void SkyOverhaul::Dazzle::SetAfterimageDarkness(int percent) {
-    g_afterimageDarkness = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Dazzle::SetAfterimageTint(int percent) {
-    g_afterimageTint = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Dazzle::SetAfterimageHaze(int percent) {
-    g_afterimageHaze = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Dazzle::SetAfterimageSize(int percent) {
-    g_afterimageSize = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Dazzle::SetAfterimageSaturation(int percent) {
-    g_afterimageSaturation = static_cast<float>(percent) / 100.0f;
 }
 
 void SkyOverhaul::Dazzle::ReleaseDeviceObjects() {

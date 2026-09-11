@@ -19,38 +19,4 @@ void ReleaseDeviceObjects();
 // at once and the sky compared against either.
 void SetEnabled(bool enabled);
 
-// Where the layer's floor sits and how deep it is, in metres.
-void SetBaseAltitude(int metres);
-void SetThickness(int metres);
-
-// How much of the sky is filled, as a percentage.
-void SetCoverage(int percent);
-
-// How solid the cloud is where it is filled, and how hard its edges are torn, as percentages.
-void SetDensity(int percent);
-void SetDetail(int percent);
-
-// How wide one repeat of the shape is, in metres, which is how large a single cloud reads.
-void SetGrain(int metres);
-
-// How fast the layer drifts, as a multiple of the wind the engine is already blowing.
-void SetWind(int percent);
-
-// Over how many metres a cloud turns into the colour of the horizon behind it.
-void SetHaze(int metres);
-
-// How much of the sky the high sheet of ice cloud reaches across, as a percentage. Zero leaves it
-// out. How solid it is where it does reach is a separate thing.
-void SetCirrus(int percent);
-void SetCirrusOpacity(int percent);
-
-// How strongly the two aircraft trails show, as a percentage. Zero leaves the sky to itself.
-void SetContrails(int percent);
-
-// How strongly the moon lights the clouds once the sun has set, as a percentage.
-void SetMoonlight(int percent);
-
-// How brightly the air glows around the moon, as a percentage. Zero leaves the moon bare.
-void SetMoonGlow(int percent);
-
 }

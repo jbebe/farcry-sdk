@@ -24,12 +24,12 @@ namespace {
     struct Horizon {
         float toward[3];
         float away[3];
+        float match;
     };
 
     // Written once a frame by the sky and read on whatever thread uploads constants.
     SkyOverhaul::Seqlock<Horizon> g_horizon;
     bool g_have = false;
-    float g_match = 0.0f;
     uint32_t g_tints = 0;
 
     // Sends the two registers again rather than editing the upload on its way past. The engine
@@ -38,7 +38,7 @@ namespace {
     // disturb anything the caller was not already writing there.
     void Replace(IDirect3DDevice9* device, UINT start, const float* data, UINT count,
                  SetConstantFn set) {
-        if (!g_have || g_match <= 0.0f) {
+        if (!g_have) {
             return;
         }
         // Any upload that covers both ends of the ramp, wherever it starts. The engine sets these
@@ -50,7 +50,7 @@ namespace {
         }
 
         Horizon horizon;
-        if (!g_horizon.Latest(horizon)) {
+        if (!g_horizon.Latest(horizon) || horizon.match <= 0.0f) {
             return;
         }
 
@@ -62,8 +62,9 @@ namespace {
         float toward[3];
         float away[3];
         for (size_t i = 0; i < 3; i++) {
-            toward[i] = colour[i] + (horizon.toward[i] - colour[i]) * g_match;
-            away[i] = (colour[i] + range[i]) + (horizon.away[i] - (colour[i] + range[i])) * g_match;
+            toward[i] = colour[i] + (horizon.toward[i] - colour[i]) * horizon.match;
+            away[i] =
+                (colour[i] + range[i]) + (horizon.away[i] - (colour[i] + range[i])) * horizon.match;
         }
 
         const float replaced[8] = {toward[0],
@@ -118,22 +119,19 @@ bool SkyOverhaul::FogTint::Install() {
     return true;
 }
 
-void SkyOverhaul::FogTint::SetHorizon(const float toward[3], const float away[3]) {
+void SkyOverhaul::FogTint::SetHorizon(const float toward[3], const float away[3], float match) {
     Horizon horizon;
     for (size_t i = 0; i < 3; i++) {
         horizon.toward[i] = toward[i];
         horizon.away[i] = away[i];
     }
+    horizon.match = match;
     g_horizon.Publish(horizon);
     g_have = true;
 }
 
 void SkyOverhaul::FogTint::Forget() {
     g_have = false;
-}
-
-void SkyOverhaul::FogTint::SetMatch(int percent) {
-    g_match = static_cast<float>(percent) * 0.01f;
 }
 
 uint32_t SkyOverhaul::FogTint::TintCount() {

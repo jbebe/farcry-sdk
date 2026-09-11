@@ -15,6 +15,14 @@ namespace {
     constexpr Choice kDrawMethods[] = {{"Solid", "0"}, {"Wireframe", "1"}};
     constexpr Choice kFovPresets[] = {
         {"Default", "-1"}, {"Narrow", "1"}, {"Wide", "2"}, {"Very wide", "3"}};
+    // Weakest first, each labelled with its fWindForce, and blended to instantly.
+    constexpr Choice kWindPresets[] = {
+        {"HoD (10)", "\"Default.HoD.Wind\", 0"},
+        {"Jungle (10)", "\"Default.Jungle.Wind\", 0"},
+        {"Clear (60)", "\"Default.Clear.Wind\", 0"},
+        {"Desert (100)", "\"Default.Desert.Wind\", 0"},
+        {"Storm (120)", "\"Default.Storm.Wind\", 0"},
+        {"SandStorm (150)", "\"Default.SandStorm.Wind\", 0"}};
 
 // A config setting with nothing to say about it beyond its name and where it belongs.
 #define DEVTOOLS_SETTING(settingName, settingCategory)                                             \
@@ -93,7 +101,8 @@ namespace {
         {"env_Seconds", "Seconds", "Environment", Arg::Int, {}, nullptr, nullptr},
         {"env_TimeScale", "Time scale", "Environment", Arg::Int, {}, nullptr, nullptr},
         {"env_StormHour", "Storm hour", "Environment", Arg::Int, {}, nullptr, nullptr},
-        {"env_WindForce", "Wind force", "Environment", Arg::Int, {}, nullptr, nullptr},
+        {"env_WindForce", "Wind force", "Environment", Arg::Int, {}, nullptr,
+         "Overwritten every frame by the world's wind - a wind override is what changes it."},
         {"env_WindDir", "Wind direction", "Environment", Arg::Int, {}, nullptr, nullptr},
         {"env_DelayShadowMovement", "Shadow movement delay", "Environment", Arg::Int, {}, nullptr,
          nullptr},
@@ -106,6 +115,11 @@ namespace {
         {"RemoveStormFactor", "Clear the storm factor", "Environment", Arg::String, {},
          "#CDynamicEnvironmentManager_GetInstance():RemoveScriptedStormFactorOverride(%s)",
          "How long to blend back, in seconds."},
+        {"SetWindOverride", "Wind override", "Environment", Arg::Enum, kWindPresets,
+         "#CDynamicEnvironmentManager_GetInstance():SetWindOverride(%s)", nullptr},
+        {"RemoveWindOverride", "Clear the wind override", "Environment", Arg::None, {},
+         "#CDynamicEnvironmentManager_GetInstance():RemoveWindOverride(\"\", 0)",
+         "Back to the world's own wind. The name it takes is ignored."},
 
         {"set_debug_fov", "Field of view", "Camera", Arg::Enum, kFovPresets, nullptr,
          "A preset rather than an angle."},

@@ -20,6 +20,7 @@
 #include "imgui_internal.h"
 #include "misc/cpp/imgui_stdlib.h"
 
+#include <cmath>
 #include <cstring>
 #include <d3d9.h>
 #include <deque>
@@ -83,6 +84,13 @@ namespace {
     // category and a scroll away.
     std::vector<std::string> g_arguments;
     std::deque<std::string> g_history;
+
+    // What the environment sliders last sent. The game's own values are never read, so each starts
+    // at zero until it is moved.
+    int g_hour = 0;
+    int g_minutes = 0;
+    int g_windPreset = 0;
+    int g_windDirection = 0;
 
     // Which category tab is open, as an index into the labels below. 0 is "All".
     int g_category = 0;
@@ -334,13 +342,14 @@ namespace {
         ImGui::PopID();
     }
 
-    // Leaves room under the table for the history, which stays put while the categories change.
+    void SendSetting(const char* id, int value) {
+        Send(*DevTools::Commands::Find(id), std::to_string(value).c_str());
+    }
+
     void DrawCommandTable() {
-        const float historyHeight = ImGui::GetTextLineHeightWithSpacing() * 6.0f;
         if (!ImGui::BeginTable("commands", 3,
                                ImGuiTableFlags_ScrollY | ImGuiTableFlags_RowBg |
-                                   ImGuiTableFlags_BordersInnerH,
-                               ImVec2(0.0f, -historyHeight))) {
+                                   ImGuiTableFlags_BordersInnerH)) {
             return;
         }
 
@@ -357,8 +366,49 @@ namespace {
         ImGui::EndTable();
     }
 
+    // The Environment tab: sliders for what is worth dragging, and every command folded under them.
+    void DrawEnvironment() {
+        if (ImGui::SliderInt("Hour", &g_hour, 0, 23)) {
+            g_minutes = 0;
+            SendSetting("env_Hour", g_hour);
+            SendSetting("env_Minutes", g_minutes);
+        }
+        if (ImGui::SliderInt("Minutes", &g_minutes, 0, 59)) {
+            SendSetting("env_Minutes", g_minutes);
+        }
+
+        const Command& wind = *DevTools::Commands::Find("SetWindOverride");
+        const int lastPreset = static_cast<int>(wind.choices.size()) - 1;
+        // The format is the preset's label, so the slider reads as a name rather than a number.
+        if (ImGui::SliderInt("Wind", &g_windPreset, 0, lastPreset, wind.choices[g_windPreset].label,
+                             ImGuiSliderFlags_NoInput)) {
+            Send(wind, wind.choices[g_windPreset].value);
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Clear override")) {
+            Send(*DevTools::Commands::Find("RemoveWindOverride"), nullptr);
+        }
+
+        // Compared in whole degrees, not by SliderAngle's return, which a held drag can set every
+        // frame because degrees do not survive its round trip through radians exactly.
+        float radians = static_cast<float>(g_windDirection) * IM_PI / 180.0f;
+        ImGui::SliderAngle("Wind direction", &radians, 0.0f, 360.0f);
+        const int degrees = static_cast<int>(std::lround(radians * 180.0f / IM_PI));
+        if (degrees != g_windDirection) {
+            g_windDirection = degrees;
+            SendSetting("env_WindDir", g_windDirection);
+        }
+
+        if (ImGui::CollapsingHeader("Raw commands")) {
+            DrawCommandTable();
+        }
+    }
+
     // DevTools' own window: the catalog, a tab per category, and what was run.
     void DrawCatalog(void*) {
+        // Kept free under the tabs for the history, which stays put while the categories change.
+        const float historyHeight = ImGui::GetTextLineHeightWithSpacing() * 6.0f;
+
         // Sixteen categories will not fit across the window, so they scroll rather than shrink, and
         // the popup button is the way to reach one that has scrolled off.
         if (ImGui::BeginTabBar("categories", ImGuiTabBarFlags_FittingPolicyScroll |
@@ -366,7 +416,13 @@ namespace {
             for (size_t category = 0; category < g_categories.size(); ++category) {
                 if (ImGui::BeginTabItem(g_categories[category])) {
                     g_category = static_cast<int>(category);
-                    DrawCommandTable();
+                    ImGui::BeginChild("tab", ImVec2(0.0f, -historyHeight));
+                    if (std::strcmp(g_categories[category], "Environment") == 0) {
+                        DrawEnvironment();
+                    } else {
+                        DrawCommandTable();
+                    }
+                    ImGui::EndChild();
                     ImGui::EndTabItem();
                 }
             }

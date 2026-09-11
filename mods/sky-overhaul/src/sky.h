@@ -19,43 +19,4 @@ void ReleaseDeviceObjects();
 // Whether our sky replaces the engine's dome.
 void SetEnabled(bool enabled);
 
-// How much dust and water the air carries, as a percentage: none is a hard blue sky over a sharp
-// horizon, plenty is a white one. The weather adds to whatever this asks for. None still leaves the
-// little that clean air always carries, because that is what makes the sun's half of a low sky
-// brighter than the far half.
-void SetHaze(int percent);
-
-// How bright the sunlight reaching the air is, as a percentage of what it takes to expose a clear
-// noon sky.
-void SetBrightness(int percent);
-
-// How far a low sun's horizon turns from the sun's side to the far side's as the eye comes round,
-// as a percentage. Zero leaves the horizon the same all the way round. A high sun is never
-// affected, whatever this is set to.
-void SetHorizonGradient(int percent);
-
-// How bright the far side of a low sun's horizon ends up, as a percentage of the light the air
-// sends from there. A hundred changes only its hue; lower darkens it toward the side of the sky
-// facing away from the sun.
-void SetFarHorizonBrightness(int percent);
-
-// How much of the brightness the zenith loses as the sun comes down is given back, as a
-// percentage. A hundred keeps the sky overhead as bright as under an overhead sun until the sun is
-// low, then lets it darken into sunset; zero leaves the zenith to the air alone.
-void SetZenithHold(int percent);
-
-// How far below the horizon on the far side of a low sun turns from the horizon's own colour toward
-// brown, as a percentage: that region is ground the world never drew, seen through the far side's
-// air. Zero keeps it the horizon's colour; a hundred makes it fully brown at the same brightness.
-void SetGroundBrown(int percent);
-
-// How dark the sky is allowed to go, as a percentage of the stars' own backdrop colour. It only
-// fills in where the air comes out darker than that, so daylight is never touched. Zero leaves a
-// sky just under the sun's reach black.
-void SetNightSky(int percent);
-
-// How far that floor is lifted toward the day's blue around sunrise and sunset, as a percentage:
-// from twelve degrees below the horizon to sunrise, and gone six degrees above.
-void SetTwilightSky(int percent);
-
 }

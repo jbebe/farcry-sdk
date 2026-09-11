@@ -1,6 +1,7 @@
 #include "sky.h"
 
 #include "sky_model.h"
+#include "tuning.h"
 
 #include "engine/camera.h"
 #include "engine/clock.h"
@@ -21,7 +22,7 @@ namespace {
     // next draw if a plugin wrote over them. The clouds use the same range: the two never draw in
     // one call, and each puts back what it found.
     constexpr UINT kFirstConstant = 71;
-    constexpr UINT kConstantCount = 9;
+    constexpr UINT kConstantCount = 13;
 
     // The far end of the depth range, where nothing but sky has been drawn. The dome is drawn with
     // a less-or-equal test against a cleared far plane, so this passes wherever no world stands and
@@ -53,25 +54,13 @@ namespace {
     // reads right with the slider at its default rather than pinned at the top of its range.
     constexpr float kSunIntensity = 44.0f;
 
-    // The star sphere's backdrop, which is the colour of the night sky between the stars.
-    constexpr float kNightSky[3] = {0.039f, 0.055f, 0.094f};
-    // The day sky's blue at a luminance of one, which that floor is lifted toward around sunrise and
-    // sunset, and how bright the lift is at its height.
-    constexpr float kTwilightHue[3] = {0.50f, 1.04f, 2.11f};
+    // How bright the night floor's lift toward the twilight colour is at its height, and the sun's
+    // heights, as sines, where that lift begins below the horizon and has gone above it.
     constexpr float kTwilightLuminance = 0.08f;
-    // The sun's heights, as sines, where that lift begins below the horizon and has gone above it.
     constexpr float kTwilightDeep = -0.21f;
     constexpr float kTwilightEnd = 0.105f;
 
     bool g_enabled = false;
-    float g_haze = 1.0f;
-    float g_brightness = 1.0f;
-    float g_gradient = 1.0f;
-    float g_farBrightness = 0.3f;
-    float g_zenithHold = 1.0f;
-    float g_groundBrown = 0.5f;
-    float g_nightSky = 1.0f;
-    float g_twilight = 1.0f;
 
     // What the last dome was drawn from and what the model made of it, kept for the heartbeat.
     struct Drawn {
@@ -115,23 +104,23 @@ namespace {
         out[1] = view.fogColourVector[1] / length;
         out[2] = 0.0f;
     }
-
     // How many times brighter the zenith has to be drawn to look as it would under an overhead sun,
     // measured by the model on clean air. Haze is left out on purpose: with the sun overhead its
     // glow sits right on the zenith, and a reference that includes it would ask for the aureole's
     // brightness all afternoon rather than the sky's.
-    float ZenithLift(const float sun[3], float eyeHeight, float intensity) {
+    float ZenithLift(const float sun[3], float eyeHeight, float intensity, float hold) {
         const float up[3] = {0.0f, 0.0f, 1.0f};
+        const float white[3] = {1.0f, 1.0f, 1.0f};
         float overhead[3];
         float now[3];
-        SkyOverhaul::SkyModel::Radiance(up, up, eyeHeight, 0.0f, intensity, overhead);
-        SkyOverhaul::SkyModel::Radiance(up, sun, eyeHeight, 0.0f, intensity, now);
+        SkyOverhaul::SkyModel::Radiance(up, up, eyeHeight, 0.0f, white, intensity, overhead);
+        SkyOverhaul::SkyModel::Radiance(up, sun, eyeHeight, 0.0f, white, intensity, now);
         const float nowLuminance = Luminance(now);
         const float lift =
             nowLuminance > 1.0e-6f
                 ? std::clamp(Luminance(overhead) / nowLuminance, 1.0f, kZenithHoldMax)
                 : kZenithHoldMax;
-        const float kept = SmoothStep(kZenithHoldLow, kZenithHoldHigh, sun[2]) * g_zenithHold;
+        const float kept = SmoothStep(kZenithHoldLow, kZenithHoldHigh, sun[2]) * hold;
         return 1.0f + (lift - 1.0f) * kept;
     }
 
@@ -148,12 +137,18 @@ namespace {
         }
         const SkyOverhaul::Camera::View& view = drawn.view;
         const SkyOverhaul::CloudLayer::Lighting& lighting = drawn.lighting;
+        const SkyOverhaul::Tuning::Values v = SkyOverhaul::Tuning::Evaluate(lighting.timeOfDay);
 
         // The weather is folded in here rather than in the shader, so that what crosses into it is
         // one finished number for the air and one for the light.
-        const float haze = (kCleanAirHaze + g_haze) * (1.0f + lighting.storm * kStormHaze);
+        const float haze = (kCleanAirHaze + v.skyHaze) * (1.0f + lighting.storm * kStormHaze);
         const float intensity =
-            kSunIntensity * g_brightness * (1.0f - lighting.storm * kStormDimming);
+            kSunIntensity * v.skyBrightness * (1.0f - lighting.storm * kStormDimming);
+
+        float nearColour[3];
+        for (int c = 0; c < 3; c++) {
+            nearColour[c] = v.nearHorizonColour[c] * v.nearHorizonBrightness;
+        }
 
         // What our air comes to at the horizon, along the engine's own fog heading and against it,
         // which are the two ends of the ramp it colours its fog by. Handing those over is what
@@ -162,32 +157,38 @@ namespace {
         float toward[3];
         FogHeading(view, toward);
         const float away[3] = {-toward[0], -toward[1], 0.0f};
-        SkyOverhaul::SkyModel::Radiance(toward, lighting.sunDirection, view.eye[2], haze, intensity,
-                                        drawn.towardColour);
-        SkyOverhaul::SkyModel::Radiance(away, lighting.sunDirection, view.eye[2], haze, intensity,
-                                        drawn.awayColour);
-        SkyOverhaul::FogTint::SetHorizon(drawn.towardColour, drawn.awayColour);
+        SkyOverhaul::SkyModel::Horizon(toward, lighting.sunDirection, view.eye[2], haze, intensity,
+                                       v, drawn.towardColour);
+        SkyOverhaul::SkyModel::Horizon(away, lighting.sunDirection, view.eye[2], haze, intensity,
+                                       v, drawn.awayColour);
+        SkyOverhaul::FogTint::SetHorizon(drawn.towardColour, drawn.awayColour, v.horizonMatch);
 
-        drawn.zenithLift = ZenithLift(lighting.sunDirection, view.eye[2], intensity);
+        drawn.zenithLift =
+            ZenithLift(lighting.sunDirection, view.eye[2], intensity, v.zenithHold);
         g_last = drawn;
 
-        const float twilight = Twilight(lighting.sunDirection[2]) * kTwilightLuminance * g_twilight;
+        const float twilight =
+            Twilight(lighting.sunDirection[2]) * kTwilightLuminance * v.twilightSky;
         float darkest[3];
         for (int c = 0; c < 3; c++) {
-            darkest[c] = kNightSky[c] * g_nightSky + kTwilightHue[c] * twilight;
+            darkest[c] = v.nightSkyColour[c] * v.nightSky + v.twilightColour[c] * twilight;
         }
 
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
             lighting.night,
-            haze, intensity, g_gradient, g_farBrightness,
+            haze, intensity, v.horizonGradient, v.farHorizonBrightness,
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
             drawn.zenithLift, 0.0f, 0.0f, 0.0f,
-            g_groundBrown, 0.0f, 0.0f, 0.0f,
-            darkest[0], darkest[1], darkest[2], 0.0f};
+            v.groundBrown, v.groundColour[0], v.groundColour[1], v.groundColour[2],
+            darkest[0], darkest[1], darkest[2], 0.0f,
+            v.skyColour[0], v.skyColour[1], v.skyColour[2], 0.0f,
+            v.hazeColour[0], v.hazeColour[1], v.hazeColour[2], 0.0f,
+            nearColour[0], nearColour[1], nearColour[2], 0.0f,
+            v.farHorizonColour[0], v.farHorizonColour[1], v.farHorizonColour[2], 0.0f};
 
         SkyOverhaul::DrawGuard guard(device, kFirstConstant, kConstantCount);
         device->SetPixelShader(shader);
@@ -225,10 +226,10 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
 
     // Counts that stand still are the two ways this fails without anything else saying so: a dome
     // that stopped being recognised, and a fog colour that is never being reached.
-    FCSE::Logf("sky f%u: %u domes replaced, %u fog uploads retinted | night %.2f storm %.2f "
-               "exposure %.2f zenith x%.2f",
-               pass.frame, DomeDraw::SubstituteCount(), FogTint::TintCount(), light.night,
-               light.storm, view.bloom, g_last.zenithLift);
+    FCSE::Logf("sky f%u: %u domes replaced, %u fog uploads retinted | time of day %.3f night %.2f "
+               "storm %.2f exposure %.2f zenith x%.2f",
+               pass.frame, DomeDraw::SubstituteCount(), FogTint::TintCount(), light.timeOfDay,
+               light.night, light.storm, view.bloom, g_last.zenithLift);
     FCSE::Logf("sky f%u: sun %+.1f deg, fog heading %.0f deg off it | model toward "
                "(%.3f %.3f %.3f) away (%.3f %.3f %.3f)",
                pass.frame, elevation, headingOffset, g_last.towardColour[0], g_last.towardColour[1],
@@ -267,37 +268,4 @@ void SkyOverhaul::Sky::SetEnabled(bool enabled) {
     if (!enabled) {
         FogTint::Forget();
     }
-}
-
-void SkyOverhaul::Sky::SetHaze(int percent) {
-    // Forty is a clear day, which is where the slider sits by default.
-    g_haze = static_cast<float>(percent) * 0.025f;
-}
-
-void SkyOverhaul::Sky::SetBrightness(int percent) {
-    g_brightness = static_cast<float>(percent) * 0.01f;
-}
-
-void SkyOverhaul::Sky::SetHorizonGradient(int percent) {
-    g_gradient = static_cast<float>(percent) * 0.01f;
-}
-
-void SkyOverhaul::Sky::SetFarHorizonBrightness(int percent) {
-    g_farBrightness = static_cast<float>(percent) * 0.01f;
-}
-
-void SkyOverhaul::Sky::SetZenithHold(int percent) {
-    g_zenithHold = static_cast<float>(percent) * 0.01f;
-}
-
-void SkyOverhaul::Sky::SetGroundBrown(int percent) {
-    g_groundBrown = static_cast<float>(percent) * 0.01f;
-}
-
-void SkyOverhaul::Sky::SetNightSky(int percent) {
-    g_nightSky = static_cast<float>(percent) * 0.01f;
-}
-
-void SkyOverhaul::Sky::SetTwilightSky(int percent) {
-    g_twilight = static_cast<float>(percent) * 0.01f;
 }

@@ -84,6 +84,7 @@ add_library(SkyOverhaul SHARED
   "src/dazzle.cpp"
   "src/sky.cpp"
   "src/sky_model.cpp"
+  "src/tuning.cpp"
   "src/engine/camera.cpp"
   "src/engine/cloud_layer.cpp"
   "src/engine/device_reset.cpp"

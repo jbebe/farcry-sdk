@@ -92,9 +92,6 @@
 // Over how far below the horizon that ground turns brown, as a sine: fully by about three degrees.
 #define BELOW_HORIZON_DEPTH 0.05f
 
-// Dry earth at a brightness of one, so it can carry whatever brightness the horizon above it has.
-#define GROUND_HUE float3(1.236f, 0.939f, 0.692f)
-
 // Over how much of the night factor, from its daylight end, the stars come out: the engine stops
 // drawing them at zero, so they fade in that stretch rather than vanish at once.
 #define STARS_FADE 0.15f
@@ -118,11 +115,19 @@ float4 FogColourVector : register(c76);
 // x: how many times brighter than the air alone the zenith is drawn. One while the sun is overhead,
 // more as it comes down, and back to one by sunset.
 float4 Zenith : register(c77);
-// x: how far the ground below the far side's horizon turns brown, from none to all the way.
+// x: how far the ground below the far side's horizon turns toward yzw, the ground's colour at a
+// brightness of one, so it can carry whatever brightness the horizon above it has.
 float4 Ground : register(c78);
 // rgb: the darkest the sky is let go: the stars' own backdrop, lifted toward the day's blue around
 // sunrise and sunset.
 float4 NightSky : register(c79);
+
+// rgb: what the light the air scatters is multiplied by, and the haze's share of it.
+float4 SkyColour : register(c80);
+float4 HazeColour : register(c81);
+// rgb: what the sky toward the horizon is multiplied by, on the sun's side and on the far side.
+float4 NearHorizon : register(c82);
+float4 FarHorizon : register(c83);
 
 // How far a ray from inside a sphere runs before it leaves it.
 float SphereExit(float3 origin, float3 ray, float radius) {
@@ -197,7 +202,7 @@ float3 Scattered(float3 ray, float3 sun, float mie, float intensity) {
         float3 extinction = RAYLEIGH_BETA * density.x + (MIE_EXTINCTION * mie) * density.y +
                             OZONE_ABSORPTION * OzoneDensity(height);
         float3 scattering = RAYLEIGH_BETA * (density.x * rayleighPhase) +
-                            (MIE_BETA * mie * density.y * miePhase);
+                            (MIE_BETA * mie * density.y * miePhase) * HazeColour.rgb;
 
         // What is left of the sunlight after reaching this stretch of air.
         float3 lit = 0.0f;
@@ -223,16 +228,23 @@ float3 FogAlong(float2 heading) {
     return FogColour.rgb + FogColourRange.rgb * angle;
 }
 
-// How far a ray belongs to the far side of a low sun: nothing at the sun's own heading, half at a
+// How far a heading belongs to the far side of the sun: nothing at the sun's own heading, half at a
 // right angle to it, everything opposite, eased at both ends so neither side shows where the turn
-// begins - and none of it unless the sun is low and the slider asks for some.
-float FarTurn(float2 heading) {
+// begins. Half all the way round a sun that is straight up or down.
+float Farness(float2 heading) {
     float sunAcross = length(Sun.xy);
-    if (Air.z <= 0.0f || sunAcross < 0.0001f) {
+    if (sunAcross < 0.0001f) {
+        return 0.5f;
+    }
+    return smoothstep(0.0f, 1.0f, 0.5f - 0.5f * dot(heading, Sun.xy / sunAcross));
+}
+
+// How far a ray at that farness takes the far side's horizon: none unless the sun is low and the
+// slider asks for some.
+float FarTurn(float farness) {
+    if (Air.z <= 0.0f) {
         return 0.0f;
     }
-    float facing = dot(heading, Sun.xy / sunAcross);
-    float farness = smoothstep(0.0f, 1.0f, 0.5f - 0.5f * facing);
     float lowSun = (1.0f - smoothstep(GRADIENT_SUN_LOW, GRADIENT_SUN_HIGH, Sun.z)) *
                    smoothstep(GRADIENT_NIGHT_DEEP, GRADIENT_NIGHT_EDGE, Sun.z);
     return Air.z * farness * lowSun;
@@ -242,11 +254,10 @@ float FarTurn(float2 heading) {
 // darker and taking the hue the engine gives the far side of its fog as the eye comes round. Air
 // alone lights the far side of a low sky nearly as brightly as the sun's side, which reads as light
 // coming from where the earth's shadow ought to be.
-float3 TurnFromSun(float3 colour, float3 skyward, float turn) {
+float3 TurnFromSun(float3 colour, float below, float turn) {
     if (turn <= 0.0f) {
         return colour;
     }
-    float below = saturate(1.0f - skyward.z);
     float hueAmount = turn * pow(below, GRADIENT_FALLOFF);
     float dimAmount = turn * pow(below, DIMMING_FALLOFF);
 
@@ -265,7 +276,8 @@ float3 TurnFromSun(float3 colour, float3 skyward, float turn) {
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 ray = normalize(rayIn);
     float2 heading = normalize(ray.xy + 0.0001f);
-    float turn = FarTurn(heading);
+    float farness = Farness(heading);
+    float turn = FarTurn(farness);
 
     // Below the horizon there is no sky, only ground: mostly drawn over by the world, and where it is
     // not, those rays take a horizon's colour rather than marching off into the planet. On the far
@@ -273,22 +285,28 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // the far side's darkening goes deepest.
     float3 skyward = normalize(float3(ray.xy, max(ray.z, BELOW_HORIZON_LIFT * turn)));
     float3 colour = Scattered(skyward, Sun.xyz, Air.x, Air.y);
+    // One at the skyline, nought overhead.
+    float below = saturate(1.0f - skyward.z);
 
     // As the sun comes down the air overhead loses nearly half its light while the sun's side and
     // the skyline gain more than that, and the frame's exposure does not move to meet either. Giving
     // light back toward the zenith alone keeps an afternoon sky blue without blowing out its horizon.
     colour *= lerp(1.0f, Zenith.x, pow(skyward.z, ZENITH_HOLD_FALLOFF));
 
+    // The colours this hour is given, the horizon's over the same band the turn from the sun takes.
+    float3 horizonColour = lerp(NearHorizon.rgb, FarHorizon.rgb, farness);
+    colour *= SkyColour.rgb * lerp(1.0f, horizonColour, pow(below, GRADIENT_FALLOFF));
+
     // Where the sky ends up at the horizon: the colour the world fades into along this heading, so
     // that the terrain fading into it and the sky arriving at it meet in one place.
-    float fog = pow(saturate(1.0f - skyward.z), HORIZON_FALLOFF);
+    float fog = pow(below, HORIZON_FALLOFF);
     colour = lerp(colour, FogAlong(heading), fog);
-    colour = TurnFromSun(colour, skyward, turn);
+    colour = TurnFromSun(colour, below, turn);
 
     // What shows below that horizon is ground the world never drew, so it turns from the sky's
     // colour toward earth's the further down the eye goes, at the brightness the horizon already has.
     float ground = turn * saturate(-ray.z / BELOW_HORIZON_DEPTH) * Ground.x;
-    colour = lerp(colour, dot(colour, LUMA) * GROUND_HUE, ground);
+    colour = lerp(colour, dot(colour, LUMA) * Ground.yzw, ground);
 
     // Air lit only once leaves the far side of a sun just below the horizon black, where the real sky
     // is still deep blue, so wherever the sky comes out darker than the night it is filled up to it.

@@ -7,6 +7,7 @@
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "fcse_api.h"
+#include "tuning.h"
 
 #include "clouds_ps.h"
 
@@ -44,8 +45,7 @@ namespace {
     // How much further the sun sinks, as a sine, while the moonlight comes up to full.
     constexpr float kMoonRising = 0.13f;
 
-    // Moonlight at full strength, and the share of it a thin edge lets through.
-    constexpr float kMoonColour[3] = {1.6f, 1.8f, 2.0f};
+    // The share of the moonlight a thin edge lets through.
     constexpr float kMoonBackShare = 0.13f;
     // How far below the horizon, as a sine, the moon's glow takes to fade out.
     constexpr float kMoonBelow = 0.1f;
@@ -68,21 +68,9 @@ namespace {
     constexpr float kDetailRepeats = 11.0f;
     constexpr float kWeatherRepeats = 0.18f;
 
-    // Written by the settings callbacks and read while drawing.
+    using SkyOverhaul::Tuning::Values;
+
     bool g_enabled = false;
-    float g_baseAltitude = 1200.0f;
-    float g_thickness = 700.0f;
-    float g_coverage = 0.45f;
-    float g_density = 0.04f;
-    float g_detail = 0.35f;
-    float g_grain = 4000.0f;
-    float g_wind = 1.0f;
-    float g_haze = 3000.0f;
-    float g_cirrus = 0.35f;
-    float g_cirrusOpacity = 0.7f;
-    float g_contrails = 0.6f;
-    float g_moonlight = 1.0f;
-    float g_moonGlow = 0.25f;
 
     // Which frame was last drawn into. A frame can hold more than one pass the sky is drawn in,
     // and drawing into each of them would blend the clouds over themselves.
@@ -105,28 +93,28 @@ namespace {
     };
 
     // The sun until it has set for every layer, then the moon, coming up as the sun sinks further.
-    Light ChooseLight(const SkyOverhaul::CloudLayer::Lighting& lighting) {
+    Light ChooseLight(const SkyOverhaul::CloudLayer::Lighting& lighting, const Values& v) {
         const bool sun = lighting.sunDirection[2] > kSunGone;
         const float rising = (kSunGone - lighting.sunDirection[2]) / kMoonRising;
         const float share = sun ? 0.0f : (rising < 1.0f ? rising : 1.0f);
         const float up = (lighting.moonDirection[2] + kMoonBelow) / kMoonBelow;
-        const float glow = share * std::clamp(up, 0.0f, 1.0f) * g_moonGlow;
+        const float glow = share * std::clamp(up, 0.0f, 1.0f) * v.moonGlow;
 
         Light light;
         for (int c = 0; c < 3; c++) {
             light.direction[c] = sun ? lighting.sunDirection[c] : lighting.moonDirection[c];
-            light.colour[c] = sun ? lighting.sunColour[c] : kMoonColour[c] * share * g_moonlight;
+            light.colour[c] = sun ? lighting.sunColour[c] : v.moonColour[c] * share * v.moonlight;
             light.back[c] = sun ? lighting.backSunColour[c] : light.colour[c] * kMoonBackShare;
-            light.glow[c] = kMoonColour[c] * glow;
+            light.glow[c] = v.moonColour[c] * glow;
         }
         return light;
     }
 
     void LogPass(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
-                 float elapsed) {
+                 const Values& v, float elapsed) {
         FCSE::Logf("clouds f%u: eye (%.1f %.1f %.1f) base %.0f | dir (%.2f %.2f %.2f) "
                    "bloom %.2f | %.2f ms",
-                   pass.frame, view.eye[0], view.eye[1], view.eye[2], g_baseAltitude,
+                   pass.frame, view.eye[0], view.eye[1], view.eye[2], v.cloudBase,
                    view.direction[0], view.direction[1], view.direction[2], view.bloom,
                    elapsed * 1000.0f);
     }
@@ -134,7 +122,8 @@ namespace {
     // Carries the layer along on the plugin's own clock, in the direction the engine is blowing.
     // The offsets are wrapped by the shape's own repeat, which the noise tiles at, so a long
     // session cannot drift far enough for the arithmetic to coarsen.
-    void Advance(const SkyOverhaul::CloudLayer::Lighting& lighting, float elapsed) {
+    void Advance(const SkyOverhaul::CloudLayer::Lighting& lighting, const Values& v,
+                 float elapsed) {
         float x = lighting.wind[0];
         float y = lighting.wind[1];
         const float length = std::sqrt(x * x + y * y);
@@ -146,38 +135,38 @@ namespace {
             y = 0.0f;
         }
 
-        const float step = kWindSpeed * g_wind * elapsed;
-        g_drift[0] = std::fmod(g_drift[0] + x * step, g_grain);
-        g_drift[1] = std::fmod(g_drift[1] + y * step, g_grain);
+        const float step = kWindSpeed * v.cloudWind * elapsed;
+        g_drift[0] = std::fmod(g_drift[0] + x * step, v.cloudSize);
+        g_drift[1] = std::fmod(g_drift[1] + y * step, v.cloudSize);
     }
 
     void Draw(const SkyOverhaul::Frame::Pass& pass, IDirect3DPixelShader9* shader,
               const SkyOverhaul::Camera::View& view,
-              const SkyOverhaul::CloudLayer::Lighting& lighting) {
+              const SkyOverhaul::CloudLayer::Lighting& lighting, const Values& v) {
         // Kept clear of the layer below it however high that is set, so the two never interleave.
-        const float above = g_baseAltitude + g_thickness + kCirrusClearance;
+        const float above = v.cloudBase + v.cloudThickness + kCirrusClearance;
         const float cirrusAltitude = above > kCirrusFloor ? above : kCirrusFloor;
 
-        const Light light = ChooseLight(lighting);
-        const float shapeGrain = 1.0f / g_grain;
+        const Light light = ChooseLight(lighting, v);
+        const float shapeGrain = 1.0f / v.cloudSize;
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
-            g_baseAltitude, g_thickness, g_coverage, g_density,
+            v.cloudBase, v.cloudThickness, v.cloudCoverage, v.cloudDensity,
             g_drift[0], g_drift[1], g_drift[0] * 0.5f, g_drift[1] * 0.5f,
-            shapeGrain, shapeGrain * kDetailRepeats, shapeGrain * kWeatherRepeats, g_detail,
+            shapeGrain, shapeGrain * kDetailRepeats, shapeGrain * kWeatherRepeats, v.cloudDetail,
             light.direction[0], light.direction[1], light.direction[2], kForwardScatter,
             light.colour[0], light.colour[1], light.colour[2], kLightStride,
             lighting.ambientColour[0], lighting.ambientColour[1], lighting.ambientColour[2], 0.0f,
             light.back[0], light.back[1], light.back[2], 0.0f,
-            kMaxDistance, kFadeDistance, kMarchDistance, g_haze,
+            kMaxDistance, kFadeDistance, kMarchDistance, v.cloudHaze,
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogValues[0], view.fogValues[1], view.fogValues[2], 0.0f,
             view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
             view.fogHeightValues[3],
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
-            cirrusAltitude, kCirrusGrain, g_cirrus, g_cirrusOpacity,
-            g_contrails, kTrailWidth, kTrailBreak, 0.0f,
+            cirrusAltitude, kCirrusGrain, v.cirrus, v.cirrusOpacity,
+            v.contrails, kTrailWidth, kTrailBreak, 0.0f,
             light.glow[0], light.glow[1], light.glow[2], 0.0f};
 
         SkyOverhaul::ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
@@ -228,11 +217,12 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
         return;
     }
 
-    Advance(lighting, elapsed);
-    Draw(pass, shader, view, lighting);
+    const Tuning::Values v = Tuning::Evaluate(lighting.timeOfDay);
+    Advance(lighting, v, elapsed);
+    Draw(pass, shader, view, lighting, v);
 
     if (g_heartbeat.Due(elapsed)) {
-        LogPass(pass, view, elapsed);
+        LogPass(pass, view, v, elapsed);
     }
 }
 
@@ -243,56 +233,4 @@ void SkyOverhaul::Clouds::ReleaseDeviceObjects() {
 
 void SkyOverhaul::Clouds::SetEnabled(bool enabled) {
     g_enabled = enabled;
-}
-
-void SkyOverhaul::Clouds::SetBaseAltitude(int metres) {
-    g_baseAltitude = static_cast<float>(metres);
-}
-
-void SkyOverhaul::Clouds::SetThickness(int metres) {
-    g_thickness = static_cast<float>(metres);
-}
-
-void SkyOverhaul::Clouds::SetCoverage(int percent) {
-    g_coverage = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Clouds::SetDensity(int percent) {
-    g_density = static_cast<float>(percent) / 1000.0f;
-}
-
-void SkyOverhaul::Clouds::SetDetail(int percent) {
-    g_detail = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Clouds::SetGrain(int metres) {
-    g_grain = static_cast<float>(metres);
-}
-
-void SkyOverhaul::Clouds::SetWind(int percent) {
-    g_wind = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Clouds::SetHaze(int metres) {
-    g_haze = static_cast<float>(metres);
-}
-
-void SkyOverhaul::Clouds::SetCirrus(int percent) {
-    g_cirrus = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Clouds::SetCirrusOpacity(int percent) {
-    g_cirrusOpacity = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Clouds::SetContrails(int percent) {
-    g_contrails = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Clouds::SetMoonlight(int percent) {
-    g_moonlight = static_cast<float>(percent) / 100.0f;
-}
-
-void SkyOverhaul::Clouds::SetMoonGlow(int percent) {
-    g_moonGlow = static_cast<float>(percent) / 100.0f;
 }
