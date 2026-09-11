@@ -47,6 +47,14 @@ const config = {
         docs: {
           routeBasePath: 'docs',
           sidebarPath: './sidebars.js',
+          // Docusaurus's default excludes, plus CLAUDE.md files that live inside the content tree.
+          exclude: [
+            '**/_*.{js,jsx,ts,tsx,md,mdx}',
+            '**/_*/**',
+            '**/*.test.{js,jsx,ts,tsx}',
+            '**/__tests__/**',
+            '**/CLAUDE.md',
+          ],
           editUrl: 'https://github.com/jbebe/farcry-sdk/edit/main/docs/docs/',
         },
         blog: false,
@@ -150,6 +158,18 @@ const config = {
         theme: prismThemes.github,
         darkTheme: prismThemes.dracula,
         additionalLanguages: ['lua', 'csharp', 'cpp', 'powershell'],
+        // The default highlight, plus a blue one for the Almost Complete Guide's two-colour snippets.
+        magicComments: [
+          {
+            className: 'theme-code-block-highlighted-line',
+            line: 'highlight-next-line',
+            block: {start: 'highlight-start', end: 'highlight-end'},
+          },
+          {
+            className: 'code-block-highlight-blue',
+            line: 'highlight-blue-next-line',
+          },
+        ],
       },
     }),
 };
