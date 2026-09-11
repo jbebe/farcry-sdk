@@ -13,4 +13,7 @@ void OnFinalPass(const Frame::Pass& pass);
 // Frees everything held on the device. Call before the engine resets it.
 void ReleaseDeviceObjects();
 
+// Whether the glare and the afterimage are drawn at all.
+void SetEnabled(bool enabled);
+
 }

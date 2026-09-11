@@ -14,6 +14,8 @@
 #include "sky.h"
 #include "tuning.h"
 
+#include <iterator>
+
 namespace {
     void OnDeviceRelease() {
         SkyOverhaul::Dazzle::ReleaseDeviceObjects();
@@ -32,6 +34,25 @@ namespace {
 
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
         SkyOverhaul::Dazzle::OnFinalPass(pass);
+    }
+
+    // Index order is what the callbacks below switch on; fcse.ini stores the label.
+    const char* const kModes[] = {"Engine", "Overhaul"};
+    const char* const kCloudModes[] = {"Engine", "Off", "Overhaul"};
+
+    void __cdecl OnSkyChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Sky::SetEnabled(value->asChoice == 1);
+    }
+
+    void __cdecl OnCloudsChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::CloudLayer::SetMode(value->asChoice == 0
+                                             ? SkyOverhaul::CloudLayer::Mode::Engine
+                                             : SkyOverhaul::CloudLayer::Mode::Off);
+        SkyOverhaul::Clouds::SetEnabled(value->asChoice == 2);
+    }
+
+    void __cdecl OnSunChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Dazzle::SetEnabled(value->asChoice == 1);
     }
 }
 
@@ -64,8 +85,19 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // the cloud layer is lit by them.
     SkyOverhaul::CloudLayer::Install();
 
-    // Before any engine code runs, so the sky is in the state it was left in from the first frame.
+    // Before any engine code runs, so the first frame already draws with the stored values.
     SkyOverhaul::Tuning::Load();
+
+    // Only which parts are on; every value they draw with is tuned in bin\sky-overhaul.ini. Each
+    // callback fires from inside RegisterSettings with what fcse.ini holds.
+    static const FCSE_Setting settings[] = {
+        {"Sky", FCSE_CHOICE(0), &OnSkyChanged, nullptr, kModes, std::size(kModes)},
+        {"Clouds", FCSE_CHOICE(0), &OnCloudsChanged, nullptr, kCloudModes, std::size(kCloudModes)},
+        {"Sun", FCSE_CHOICE(1), &OnSunChanged, nullptr, kModes, std::size(kModes)},
+    };
+    // Registered under the module name: the mod menu lists every loaded plugin and then every group
+    // that matched none, so a group named apart from its DLL would arrive twice, once empty.
+    api->RegisterSettings("SkyOverhaul", settings, std::size(settings));
 
     return true;
 }

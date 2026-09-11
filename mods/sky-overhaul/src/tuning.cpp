@@ -1,9 +1,7 @@
 #include "tuning.h"
 
-#include "clouds.h"
 #include "engine/cloud_layer.h"
 #include "fcse_api.h"
-#include "sky.h"
 
 #include "imgui.h"
 
@@ -15,16 +13,14 @@
 #include <filesystem>
 #include <fstream>
 #include <iterator>
-#include <span>
 #include <string>
 #include <string_view>
 
 namespace {
     using SkyOverhaul::Tuning::Values;
 
-    // A scalar is one float and a colour three, linear and allowed above one. A choice is the index
-    // of its label.
-    enum class Kind { Scalar, Colour, Choice };
+    // A scalar is one float and a colour three, linear and allowed above one.
+    enum class Kind { Scalar, Colour };
 
     // Whether a value holds for the whole day or is set per key moment and blended between them.
     enum class Span { Day, Moment };
@@ -44,7 +40,6 @@ namespace {
         float max;
         // A scalar's printf format, which carries its unit.
         const char* format;
-        std::span<const char* const> choices;
         // Shown when the row is hovered.
         const char* help;
     };
@@ -75,29 +70,17 @@ namespace {
     constexpr Parameter Scalar(const char* group, const char* key, Span span, size_t offset,
                                float value, float min, float max, const char* format,
                                const char* help) {
-        return {key, group, Kind::Scalar, span, offset, {value}, min, max, format, {}, help};
+        return {key, group, Kind::Scalar, span, offset, {value}, min, max, format, help};
     }
 
     constexpr Parameter Colour(const char* group, const char* key, size_t offset, float red,
                                float green, float blue, const char* help) {
-        return {key,  group, Kind::Colour, kMoment, offset, {red, green, blue}, 0.0f, kBrightest,
-                "",   {},    help};
+        return {key, group, Kind::Colour, kMoment, offset, {red, green, blue}, 0.0f, kBrightest,
+                "", help};
     }
-
-    constexpr Parameter Choice(const char* key, size_t offset,
-                               std::span<const char* const> choices, const char* help) {
-        return {key, "", Kind::Choice, kDay, offset, {}, 0.0f, 0.0f, "", choices, help};
-    }
-
-    constexpr const char* kSkyModes[] = {"Engine", "Overhaul"};
-    constexpr const char* kCloudModes[] = {"Engine", "Off", "Overhaul"};
 
     // In the order the file and the window list them.
     constexpr Parameter kParameters[] = {
-        Choice("Sky", offsetof(Values, skyMode), kSkyModes, "Whether our sky replaces the engine's."),
-        Choice("Clouds", offsetof(Values, cloudMode), kCloudModes,
-               "The engine's clouds, none, or ours. The engine's also feed the light shafts."),
-
         Scalar("Air", "Sky haze", kMoment, offsetof(Values, skyHaze), 1.0f, 0.0f, 2.5f, "%.2f",
                "How much dust and water the air carries: none is a hard blue sky over a sharp "
                "horizon, plenty a white one. Storms add to it."),
@@ -265,14 +248,6 @@ namespace {
     // Leaves the row as it was when the text is not a value of its kind.
     void ReadValue(const Parameter& parameter, std::string_view text, Values& values) {
         float* field = Field(values, parameter);
-        if (parameter.kind == Kind::Choice) {
-            const auto found = std::find(parameter.choices.begin(), parameter.choices.end(), text);
-            if (found != parameter.choices.end()) {
-                field[0] = static_cast<float>(found - parameter.choices.begin());
-            }
-            return;
-        }
-
         float read[3];
         const char* at = text.data();
         const char* end = at + text.size();
@@ -297,14 +272,10 @@ namespace {
             }
             out.append(parameter.key).append(" = ");
             const float* field = Field(values, parameter);
-            if (parameter.kind == Kind::Choice) {
-                out.append(parameter.choices[static_cast<size_t>(field[0])]);
-            } else {
-                for (int channel = 0; channel < Channels(parameter); channel++) {
-                    char text[32];
-                    const char* end = std::to_chars(text, text + sizeof(text), field[channel]).ptr;
-                    out.append(channel == 0 ? "" : " ").append(text, end - text);
-                }
+            for (int channel = 0; channel < Channels(parameter); channel++) {
+                char text[32];
+                const char* end = std::to_chars(text, text + sizeof(text), field[channel]).ptr;
+                out.append(channel == 0 ? "" : " ").append(text, end - text);
             }
             out.append("\n");
         }
@@ -336,14 +307,6 @@ namespace {
         const float start = kMoments[from].hour - (kMoments[from].hour > hour ? 24.0f : 0.0f);
         const float end = kMoments[to].hour + (kMoments[to].hour <= start ? 24.0f : 0.0f);
         return {hour, from, to, (hour - start) / (end - start)};
-    }
-
-    void ApplyChoices() {
-        SkyOverhaul::Sky::SetEnabled(g_day.skyMode == 1.0f);
-        SkyOverhaul::CloudLayer::SetMode(g_day.cloudMode == 0.0f
-                                             ? SkyOverhaul::CloudLayer::Mode::Engine
-                                             : SkyOverhaul::CloudLayer::Mode::Off);
-        SkyOverhaul::Clouds::SetEnabled(g_day.cloudMode == 2.0f);
     }
 
     void Save() {
@@ -379,24 +342,17 @@ namespace {
                 field[channel] = std::clamp(field[channel], parameter.min, parameter.max);
             }
             break;
-        case Kind::Choice: {
-            int index = static_cast<int>(field[0]);
-            changed = ImGui::Combo(parameter.key, &index, parameter.choices.data(),
-                                   static_cast<int>(parameter.choices.size()));
-            field[0] = static_cast<float>(index);
-            break;
-        }
         }
         ImGui::SetItemTooltip("%s", parameter.help);
         return changed;
     }
 
-    // Every row of a span but the modes, under a heading wherever the group changes.
+    // Every row of a span, under a heading wherever the group changes.
     bool DrawGroups(Span span, Values& values) {
         bool changed = false;
         const char* group = nullptr;
         for (const Parameter& parameter : kParameters) {
-            if (parameter.span != span || parameter.kind == Kind::Choice) {
+            if (parameter.span != span) {
                 continue;
             }
             if (group == nullptr || std::strcmp(group, parameter.group) != 0) {
@@ -512,20 +468,12 @@ void SkyOverhaul::Tuning::Load() {
         }
     }
 
-    ApplyChoices();
     Save();
 }
 
 void SkyOverhaul::Tuning::DrawWindow(void*) {
     ImGui::PushItemWidth(-ImGui::GetFontSize() * 12.0f);
     bool changed = false;
-
-    for (const Parameter& parameter : kParameters) {
-        if (parameter.kind == Kind::Choice && DrawRow(parameter, g_day)) {
-            ApplyChoices();
-            changed = true;
-        }
-    }
 
     DrawNow();
 

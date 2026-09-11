@@ -49,8 +49,8 @@ namespace {
     SkyOverhaul::Seqlock<SkyOverhaul::CloudLayer::Lighting> g_lighting;
     std::atomic<uint32_t> g_submitCount{0};
 
-    // Written by the tuning window and read by the submission. A lone aligned value that no other
-    // has to agree with, so a torn read is neither possible nor consequential.
+    // Written by the settings callback and read by the submission. A lone aligned value that no
+    // other has to agree with, so a torn read is neither possible nor consequential.
     SkyOverhaul::CloudLayer::Mode g_mode = SkyOverhaul::CloudLayer::Mode::Engine;
 
     const float* Field(const uint8_t* state, size_t offset) {

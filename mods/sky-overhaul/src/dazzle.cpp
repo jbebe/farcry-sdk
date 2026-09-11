@@ -97,6 +97,8 @@ namespace {
 
     Recovery g_recovery = {};
 
+    bool g_enabled = false;
+
     // How long the eye has been dazzled and how much of that is left to recover. The afterimage
     // fades over twice as long as it took to build.
     bool g_dazzled = false;
@@ -509,7 +511,7 @@ namespace {
 }
 
 void SkyOverhaul::Dazzle::OnScenePass(const Frame::Pass& pass) {
-    if (!pass.sky || !pass.live) {
+    if (!g_enabled || !pass.sky || !pass.live) {
         return;
     }
     if (!ComputeSun(pass.device, pass.viewport, g_thisFrame) || !g_thisFrame.inFront) {
@@ -533,14 +535,16 @@ void SkyOverhaul::Dazzle::OnFinalPass(const Frame::Pass& pass) {
     // The composite is the last moment the world owns the frame: the interface is drawn after it,
     // so the glare lands under the heads-up display rather than over it.
     const float elapsed = g_clock.Lap();
+    // Switched off reads as a frame with no world in it, which also clears what was burned in.
+    const bool live = g_enabled && pass.live;
     const Tuning::Values v = Tuning::Evaluate(g_thisFrame.timeOfDay);
-    const Glare glare = pass.live ? Measure(v) : Glare{};
-    const float afterimage = AdvanceAfterimage(glare, v, pass.live, elapsed);
+    const Glare glare = live ? Measure(v) : Glare{};
+    const float afterimage = AdvanceAfterimage(glare, v, live, elapsed);
     if (glare.intensity > 0.002f || afterimage > 0.002f) {
         DrawDazzle(pass, v, glare.intensity, afterimage);
     }
 
-    if (pass.live && g_heartbeat.Due(elapsed)) {
+    if (live && g_heartbeat.Due(elapsed)) {
         FCSE::Logf("dazzle f%u: intensity %.3f hold %.3f | cos %.3f elev %.3f "
                    "night %.2f visible %.3f | exposure %.2f recovering %.2f env %.3f "
                    "| sun (%.0f %.0f) inFront %d",
@@ -558,4 +562,8 @@ void SkyOverhaul::Dazzle::ReleaseDeviceObjects() {
     g_bleachShader.Release();
     SkyOverhaul::SunOcclusion::ReleaseDeviceObjects();
     g_owner = nullptr;
+}
+
+void SkyOverhaul::Dazzle::SetEnabled(bool enabled) {
+    g_enabled = enabled;
 }

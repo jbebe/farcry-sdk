@@ -7,9 +7,6 @@ namespace SkyOverhaul::Tuning {
 // Every tunable value, in the units the effects use. Floats only, so the table in tuning.cpp
 // addresses each by offset.
 struct Values {
-    float skyMode;
-    float cloudMode;
-
     float skyHaze;
     float hazeColour[3];
     float skyBrightness;
@@ -65,8 +62,8 @@ struct Values {
 // per-moment value blended between the key moments either side of it.
 Values Evaluate(float timeOfDay);
 
-// Reads bin\sky-overhaul.ini over the defaults, applies the modes, and writes the file back
-// complete, which is also how it first appears.
+// Reads bin\sky-overhaul.ini over the defaults and writes the file back complete, which is also how
+// it first appears.
 void Load();
 
 // Draws the window in DevTools' overlay.
