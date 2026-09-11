@@ -91,8 +91,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // Only which parts are on; every value they draw with is tuned in bin\sky-overhaul.ini. Each
     // callback fires from inside RegisterSettings with what fcse.ini holds.
     static const FCSE_Setting settings[] = {
-        {"Sky", FCSE_CHOICE(0), &OnSkyChanged, nullptr, kModes, std::size(kModes)},
-        {"Clouds", FCSE_CHOICE(0), &OnCloudsChanged, nullptr, kCloudModes, std::size(kCloudModes)},
+        {"Sky", FCSE_CHOICE(1), &OnSkyChanged, nullptr, kModes, std::size(kModes)},
+        {"Clouds", FCSE_CHOICE(2), &OnCloudsChanged, nullptr, kCloudModes, std::size(kCloudModes)},
         {"Sun", FCSE_CHOICE(1), &OnSunChanged, nullptr, kModes, std::size(kModes)},
     };
     // Registered under the module name: the mod menu lists every loaded plugin and then every group
