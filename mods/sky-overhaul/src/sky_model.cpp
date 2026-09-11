@@ -1,5 +1,6 @@
 #include "sky_model.h"
 
+#include <algorithm>
 #include <cmath>
 
 namespace {
@@ -17,6 +18,15 @@ namespace {
     constexpr int kViewSteps = 16;
     constexpr int kLightSteps = 8;
     constexpr float kPi = 3.14159265f;
+
+    // The storm factor's resting level.
+    constexpr float kStormCalm = 0.2f;
+    // How much haze fair air carries, and what a full storm does to the air: more haze, far less of
+    // the sun reaching it, and its colour drained most of the way to grey.
+    constexpr float kClearHaze = 0.75f;
+    constexpr float kStormHaze = 1.4f;
+    constexpr float kStormDimming = 0.7f;
+    constexpr float kStormGrey = 0.85f;
 
     float Dot(const float a[3], const float b[3]) {
         return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
@@ -56,6 +66,39 @@ namespace {
             out[2] += OzoneDensity(height) * stride;
         }
     }
+
+    // The share of each colour of sunlight that reaches `at`, measured from the planet's centre.
+    void Lit(const float at[3], const float sun[3], float mie, float out[3]) {
+        if (InShadow(at, sun)) {
+            out[0] = 0.0f;
+            out[1] = 0.0f;
+            out[2] = 0.0f;
+            return;
+        }
+        float depth[3];
+        SunDepth(at, sun, depth);
+        for (int channel = 0; channel < 3; channel++) {
+            out[channel] = std::exp(-(kRayleighBeta[channel] * depth[0] +
+                                      kMieExtinction * mie * depth[1] +
+                                      kOzoneAbsorption[channel] * depth[2]));
+        }
+    }
+}
+
+float SkyOverhaul::SkyModel::Storminess(float storm) {
+    return std::clamp((storm - kStormCalm) / (1.0f - kStormCalm), 0.0f, 1.0f);
+}
+
+float SkyOverhaul::SkyModel::Haze(float storminess) {
+    return kClearHaze * (1.0f + storminess * kStormHaze);
+}
+
+float SkyOverhaul::SkyModel::SunShare(float storminess) {
+    return 1.0f - storminess * kStormDimming;
+}
+
+float SkyOverhaul::SkyModel::Grey(float storminess) {
+    return storminess * kStormGrey;
 }
 
 void SkyOverhaul::SkyModel::Radiance(const float ray[3], const float sun[3], float eyeHeight,
@@ -90,16 +133,8 @@ void SkyOverhaul::SkyModel::Radiance(const float ray[3], const float sun[3], flo
         const float mieDensity = std::exp(-height / kMieHeight);
         const float ozoneDensity = OzoneDensity(height);
 
-        float lit[3] = {0.0f, 0.0f, 0.0f};
-        if (!InShadow(at, sun)) {
-            float sunDepth[3];
-            SunDepth(at, sun, sunDepth);
-            for (int channel = 0; channel < 3; channel++) {
-                lit[channel] = std::exp(-(kRayleighBeta[channel] * sunDepth[0] +
-                                          kMieExtinction * mie * sunDepth[1] +
-                                          kOzoneAbsorption[channel] * sunDepth[2]));
-            }
-        }
+        float lit[3];
+        Lit(at, sun, mie, lit);
 
         for (int channel = 0; channel < 3; channel++) {
             const float extinction = kRayleighBeta[channel] * rayleighDensity +
@@ -117,4 +152,9 @@ void SkyOverhaul::SkyModel::Radiance(const float ray[3], const float sun[3], flo
     for (int channel = 0; channel < 3; channel++) {
         out[channel] = intensity * gathered[channel];
     }
+}
+
+void SkyOverhaul::SkyModel::Sunlight(const float sun[3], float height, float mie, float out[3]) {
+    const float at[3] = {0.0f, 0.0f, kPlanetRadius + height};
+    Lit(at, sun, mie, out);
 }

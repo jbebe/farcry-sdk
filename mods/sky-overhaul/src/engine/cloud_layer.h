@@ -1,8 +1,8 @@
 // The engine's own cloud layer, followed at the one function that submits it.
 //
-// That submission reads every parameter the shipped clouds are lit by out of the renderer's scene
-// state, so following it is also how a replacement reaches a lighting environment that already
-// agrees with the sky dome. See docs/docs/engine-internals/sky-and-clouds.md.
+// That submission reads the shipped clouds' parameters out of the renderer's scene state: where the
+// sun and the moon are, the ambient light, the wind and the weather. See
+// docs/docs/engine-internals/sky-and-clouds.md.
 #pragma once
 
 #include <cstdint>
@@ -23,10 +23,8 @@ struct Lighting {
     float sunDirection[3];
     float moonDirection[3];
 
-    float sunColour[3];
     float moonColour[3];
     float ambientColour[3];
-    float backSunColour[3];
 
     // How far the lower layer has scrolled, whose direction is the wind's.
     float wind[2];

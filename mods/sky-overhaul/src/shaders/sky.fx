@@ -131,7 +131,8 @@ float4 Eye : register(c71);
 float4 Sun : register(c72);
 // x: how much haze the air carries. y: how bright the sun is. Both finished values, with the
 // weather already folded in. z: how many times brighter than the air alone the zenith is drawn: one
-// while the sun is overhead, more as it comes down, and back to one by sunset.
+// while the sun is overhead, more as it comes down, and back to one by sunset. w: how far a storm
+// drains the sky's colour toward grey.
 float4 Air : register(c73);
 
 // The engine's own sky fog, register for register. See docs/docs/engine-internals/sky-and-clouds.md.
@@ -332,6 +333,7 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     colour += darkest * fill;
 
     colour += DawnGlow(farness, below);
+    colour = lerp(colour, dot(colour, LUMA), Air.w);
 
     // Opaque by day, and at night only as much as the sky is bright, taken before the exposure as
     // the dome takes it. The dome's own alpha keeps covering the stars until the night factor is

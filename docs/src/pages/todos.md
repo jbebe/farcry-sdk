@@ -166,8 +166,9 @@ other mods: the terrain lighting presets, shadows, and the final colour grade.
       sky's horizon hue at the engine's brightness, shaded darker, and leaves it the engine's after
       dark, where its processor-side copy of the sky has no light. Doing it through fog presets would
       collide with any lighting mod, since every preset lives in one JackAll fragment
-- [ ] **Weather.** Clouds ignore storms, `SetScriptedStormFactorOverride` never reaches the storm
-      factor the sky reads, and rain never appeared under any preset
+- [ ] **Weather.** A storm now thickens our clouds and spreads an opaque cirrus sheet, and the world
+      data points the storm's fog at the clear preset. Still open: `SetScriptedStormFactorOverride`
+      never reaches the storm factor the sky reads, and rain has not appeared without DevTools
 - [ ] **Light shafts ignore our clouds.** The engine's clouds also feed the light-shaft mask, and
       suppressing them removes it. Retail shades no terrain with clouds, so there are no cloud shadows
       to replace

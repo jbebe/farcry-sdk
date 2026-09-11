@@ -28,14 +28,6 @@ namespace {
     // is rejected wherever one does.
     constexpr float kSkyDepth = 1.0f;
 
-    // What a full storm does to the air: several times the haze, and rather less of the sun
-    // reaching it. That is what an overcast sky is, before a single cloud is drawn.
-    constexpr float kStormHaze = 2.0f;
-    constexpr float kStormDimming = 0.5f;
-
-    // How much haze clear air carries, before a storm adds to it.
-    constexpr float kClearHaze = 0.6f;
-
     constexpr float kDegrees = 57.29578f;
 
     // The most the zenith may be lifted, and the height of the sun over which that lift is let go,
@@ -46,7 +38,7 @@ namespace {
     constexpr float kZenithHoldHigh = 0.423f;
 
     // What the sun is worth in the shader.
-    constexpr float kSunIntensity = 44.0f;
+    constexpr float kSunIntensity = 41.4f;
 
     bool g_enabled = false;
 
@@ -119,10 +111,10 @@ namespace {
         const SkyOverhaul::Camera::View& view = drawn.view;
         const SkyOverhaul::CloudLayer::Lighting& lighting = drawn.lighting;
 
-        // The weather is folded in here rather than in the shader, so that what crosses into it is
-        // one finished number for the air and one for the light.
-        const float haze = kClearHaze * (1.0f + lighting.storm * kStormHaze);
-        const float intensity = kSunIntensity * (1.0f - lighting.storm * kStormDimming);
+        // The weather is folded in here, so what crosses into the shader is already finished.
+        const float storminess = SkyOverhaul::SkyModel::Storminess(lighting.storm);
+        const float haze = SkyOverhaul::SkyModel::Haze(storminess);
+        const float intensity = kSunIntensity * SkyOverhaul::SkyModel::SunShare(storminess);
 
         // What our air comes to at the horizon, along the engine's own fog heading and against it:
         // the two ends of the ramp whose hue the land's fog takes. Before the exposure, as the
@@ -143,7 +135,7 @@ namespace {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
             lighting.night,
-            haze, intensity, drawn.zenithLift, 0.0f,
+            haze, intensity, drawn.zenithLift, SkyOverhaul::SkyModel::Grey(storminess),
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f};
@@ -205,11 +197,8 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
                pass.frame, view.fogValues[0], view.fogValues[1], view.fogValues[2],
                view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
                view.fogHeightValues[3]);
-    FCSE::Logf("sky f%u: cloud light sun (%.3f %.3f %.3f) ambient (%.3f %.3f %.3f) "
-               "back (%.3f %.3f %.3f) moon (%.3f %.3f %.3f) moon z %+.2f",
-               pass.frame, light.sunColour[0], light.sunColour[1], light.sunColour[2],
-               light.ambientColour[0], light.ambientColour[1], light.ambientColour[2],
-               light.backSunColour[0], light.backSunColour[1], light.backSunColour[2],
+    FCSE::Logf("sky f%u: cloud ambient (%.3f %.3f %.3f) moon (%.3f %.3f %.3f) moon z %+.2f",
+               pass.frame, light.ambientColour[0], light.ambientColour[1], light.ambientColour[2],
                light.moonColour[0], light.moonColour[1], light.moonColour[2],
                light.moonDirection[2]);
 }

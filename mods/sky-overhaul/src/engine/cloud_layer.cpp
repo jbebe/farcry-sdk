@@ -13,7 +13,6 @@ namespace {
     // is handed as its sixth argument.
     constexpr size_t kStorm = 0x78;
     constexpr size_t kSunDirection = 0x148;
-    constexpr size_t kSunColour = 0x160;
     // The moon's direction in the world, which is where its sprite is drawn.
     constexpr size_t kMoonDirection = 0x194;
     constexpr size_t kMoonColour = 0x1A0;
@@ -21,11 +20,6 @@ namespace {
     constexpr size_t kTimeOfDay = 0x1BC;
     constexpr size_t kWind = 0x1E0;
     constexpr size_t kAmbientColour = 0x230;
-    constexpr size_t kBackSunColour = 0x250;
-
-    // What the engine scales the sun's colour by on the way into the shader, applied here so that a
-    // replacement lit by the snapshot is lit by the numbers the shipped clouds saw.
-    constexpr float kSunColourScale = 1.9f;
 
     // Twelve stack arguments, of which only the sixth is read; the rest are named to get the stack
     // shape right, since the callee cleans it. __fastcall stands in for __thiscall, which MSVC
@@ -83,13 +77,8 @@ namespace {
         Copy3(state, kMoonDirection, out.moonDirection);
         Normalise(out.moonDirection);
 
-        Copy3(state, kSunColour, out.sunColour);
-        for (float& channel : out.sunColour) {
-            channel *= kSunColourScale;
-        }
         Copy3(state, kMoonColour, out.moonColour);
         Copy3(state, kAmbientColour, out.ambientColour);
-        Copy3(state, kBackSunColour, out.backSunColour);
 
         const float* wind = Field(state, kWind);
         out.wind[0] = wind[0];

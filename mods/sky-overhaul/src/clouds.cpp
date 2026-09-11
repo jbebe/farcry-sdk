@@ -1,5 +1,7 @@
 #include "clouds.h"
 
+#include "sky_model.h"
+
 #include "engine/camera.h"
 #include "engine/clock.h"
 #include "engine/cloud_layer.h"
@@ -45,13 +47,21 @@ namespace {
     // How much further the sun sinks, as a sine, while the moonlight comes up to full.
     constexpr float kMoonRising = 0.13f;
 
-    // Moonlight at full strength, the share of it a thin edge lets through, and how brightly the air
-    // glows around the moon.
+    // How bright sunlight is on the clouds where our air lets all of it through.
+    constexpr float kSunlight = 6.6f;
+
+    // Moonlight at full strength, the share of either light a thin edge lets through, and how
+    // brightly the air glows around the moon.
     constexpr float kMoonColour[3] = {1.6f, 1.8f, 2.0f};
-    constexpr float kMoonBackShare = 0.13f;
+    constexpr float kBackShare = 0.13f;
     constexpr float kMoonGlow = 0.25f;
     // How high the moon climbs, as a sine, while its light and its glow come up to full.
     constexpr float kMoonUp = 0.2f;
+
+    // What a full storm makes of the layer's coverage and water and of the high sheet's opacity.
+    constexpr float kStormCoverage = 0.9f;
+    constexpr float kStormDensity = 0.09f;
+    constexpr float kStormCirrusOpacity = 0.8f;
 
     // The high sheet: how far above the layer it sits at least, how many metres one repeat of its
     // streaks covers, and how hard those streaks are squashed across the wind.
@@ -95,31 +105,54 @@ namespace {
         float glow[3];
     };
 
+    // The day's values carried toward an overcast sky as the storm rises: more of the sky filled,
+    // more water, the high sheet across all of it, and no aircraft above.
+    Values Weathered(Values v, float storminess) {
+        v.cloudCoverage += (kStormCoverage - v.cloudCoverage) * storminess;
+        v.cloudDensity += (kStormDensity - v.cloudDensity) * storminess;
+        v.cirrus += (1.0f - v.cirrus) * storminess;
+        v.cirrusOpacity += (kStormCirrusOpacity - v.cirrusOpacity) * storminess;
+        v.contrails -= v.contrails * storminess;
+        return v;
+    }
+
     // The sun until it has set for every layer, then the moon, coming up as the sun sinks further
-    // and as the moon itself climbs.
-    Light ChooseLight(const SkyOverhaul::CloudLayer::Lighting& lighting) {
+    // and as the moon itself climbs. The sun's light is what our own air lets through to the middle
+    // of the layer, dimmed as the sky is in a storm.
+    Light ChooseLight(const SkyOverhaul::CloudLayer::Lighting& lighting, const Values& v,
+                      float storminess) {
         const bool sun = lighting.sunDirection[2] > kSunGone;
         const float rising = (kSunGone - lighting.sunDirection[2]) / kMoonRising;
         const float share = sun ? 0.0f : (rising < 1.0f ? rising : 1.0f);
         const float moon = share * std::clamp(lighting.moonDirection[2] / kMoonUp, 0.0f, 1.0f);
 
+        float sunlight[3];
+        SkyOverhaul::SkyModel::Sunlight(lighting.sunDirection,
+                                        v.cloudBase + 0.5f * v.cloudThickness,
+                                        SkyOverhaul::SkyModel::Haze(storminess), sunlight);
+        const float sunBrightness = kSunlight * SkyOverhaul::SkyModel::SunShare(storminess);
+
         Light light;
         for (int c = 0; c < 3; c++) {
             light.direction[c] = sun ? lighting.sunDirection[c] : lighting.moonDirection[c];
-            light.colour[c] = sun ? lighting.sunColour[c] : kMoonColour[c] * moon;
-            light.back[c] = sun ? lighting.backSunColour[c] : light.colour[c] * kMoonBackShare;
+            light.colour[c] = sun ? sunlight[c] * sunBrightness : kMoonColour[c] * moon;
+            light.back[c] = light.colour[c] * kBackShare;
             light.glow[c] = kMoonColour[c] * moon * kMoonGlow;
         }
         return light;
     }
 
     void LogPass(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
-                 const Values& v, float elapsed) {
+                 const Light& light, const Values& v, float storm, float elapsed) {
         FCSE::Logf("clouds f%u: eye (%.1f %.1f %.1f) base %.0f | dir (%.2f %.2f %.2f) "
                    "bloom %.2f | %.2f ms",
                    pass.frame, view.eye[0], view.eye[1], view.eye[2], v.cloudBase,
                    view.direction[0], view.direction[1], view.direction[2], view.bloom,
                    elapsed * 1000.0f);
+        FCSE::Logf("clouds f%u: storm %.2f coverage %.2f density %.3f cirrus %.2f opacity %.2f "
+                   "| light (%.3f %.3f %.3f)",
+                   pass.frame, storm, v.cloudCoverage, v.cloudDensity, v.cirrus, v.cirrusOpacity,
+                   light.colour[0], light.colour[1], light.colour[2]);
     }
 
     // Carries the layer along on the plugin's own clock, in the direction the engine is blowing.
@@ -145,12 +178,12 @@ namespace {
 
     void Draw(const SkyOverhaul::Frame::Pass& pass, IDirect3DPixelShader9* shader,
               const SkyOverhaul::Camera::View& view,
-              const SkyOverhaul::CloudLayer::Lighting& lighting, const Values& v) {
+              const SkyOverhaul::CloudLayer::Lighting& lighting, const Light& light,
+              const Values& v, float storminess) {
         // Kept clear of the layer below it however high that is set, so the two never interleave.
         const float above = v.cloudBase + v.cloudThickness + kCirrusClearance;
         const float cirrusAltitude = above > kCirrusFloor ? above : kCirrusFloor;
 
-        const Light light = ChooseLight(lighting);
         const float shapeGrain = 1.0f / v.cloudSize;
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
@@ -170,7 +203,7 @@ namespace {
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f,
             cirrusAltitude, kCirrusGrain, v.cirrus, v.cirrusOpacity,
             v.contrails, kTrailWidth, kTrailBreak, 0.0f,
-            light.glow[0], light.glow[1], light.glow[2], 0.0f};
+            light.glow[0], light.glow[1], light.glow[2], SkyOverhaul::SkyModel::Grey(storminess)};
 
         SkyOverhaul::ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
         pass.device->SetPixelShader(shader);
@@ -220,12 +253,14 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
         return;
     }
 
-    const Tuning::Values v = Tuning::Current();
+    const float storminess = SkyModel::Storminess(lighting.storm);
+    const Tuning::Values v = Weathered(Tuning::Current(), storminess);
+    const Light light = ChooseLight(lighting, v, storminess);
     Advance(lighting, v, elapsed);
-    Draw(pass, shader, view, lighting, v);
+    Draw(pass, shader, view, lighting, light, v, storminess);
 
     if (g_heartbeat.Due(elapsed)) {
-        LogPass(pass, view, v, elapsed);
+        LogPass(pass, view, light, v, lighting.storm, elapsed);
     }
 }
 

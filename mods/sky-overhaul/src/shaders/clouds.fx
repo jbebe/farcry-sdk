@@ -55,6 +55,7 @@
 #define LIGHT_PENUMBRA 0.01f
 
 #define PI 3.14159265f
+#define LUMA float3(0.299f, 0.587f, 0.114f)
 
 // The low frequencies a cloud's body is carved from, the high ones its edges are eroded by, and
 // where over the world clouds stand at all.
@@ -91,6 +92,7 @@ float4 Cirrus : register(c85);
 // and goes.
 float4 Trail : register(c86);
 // rgb: how brightly the air glows right beside the moon, and nothing while the sun lights the sky.
+// w: how far a storm drains everything drawn here toward grey.
 float4 MoonGlow : register(c87);
 
 // The engine's own sky fog, register for register, so our clouds sit in the same haze the dome
@@ -391,5 +393,6 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 halo = MoonHalo(cosAngle);
     colour += (halo + (dither - 0.5f) / 255.0f * saturate(halo.b * 255.0f)) * (1.0f - cover);
 
+    colour = lerp(colour, dot(colour, LUMA), MoonGlow.w);
     return float4(colour * Eye.w, 1.0f - cover);
 }
