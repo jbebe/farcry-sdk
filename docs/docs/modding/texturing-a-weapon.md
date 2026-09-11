@@ -62,15 +62,14 @@ and one control map. It is *not* the ceiling it looks like, though; see below.
 
 ## A weapon is not limited to the texture paths it owns
 
-:::tip[Verified in a running game — this page used to say the opposite]
+:::tip[Verified in a running game]
 **A texture at a path that exists in no shipped archive, in no hashlist, and in no world's `depload`
-loads from `patch.dat` and renders.** The two-owned-paths ceiling every earlier version of this page
-described is not real.
+loads from `patch.dat` and renders.**
 :::
 
-It was settled with a canary: a solid magenta 1024² texture staged at
-`graphics\weapons\special\dart_rifle\vss_test_d.xbt` — a path invented for the test — with the
-material's `DiffuseTexture1` pointed at it. The gun came back magenta.
+The canary: a solid magenta 1024² texture staged at
+`graphics\weapons\special\dart_rifle\vss_test_d.xbt` — an invented path — with the material's
+`DiffuseTexture1` pointed at it. The gun renders magenta.
 
 What that means in practice:
 
@@ -82,7 +81,7 @@ What that means in practice:
 - **`depload` does not gate it.** At least for a texture reached through a material that is itself in
   `depload` — which is the case that matters, since your material is one the replaced weapon owned.
 - **So a weapon can have as many textures as it needs**: a second control map for the degradation
-  look, and a normal map if the shader turns out to sample one.
+  look, and a normal map if the shader samples one.
 
 The one thing you cannot synthesize is the `.xbt` header, which is why the canary borrows one. Take
 it from a texture with **no `_mip0` companion** — a UI icon is ideal — because the header carries the
@@ -132,8 +131,8 @@ material  owned   GRAPHICS\_MATERIALS\FBOIVIN2-M-2007050162241150.xbm   the wood
 `world1_depload.dat` and `world2_depload.dat`, sited against `dart_rifle.xbg`. A material at a path
 you invented would not be, and that is the untested ground worth staying off.
 
-**If nothing comes back `owned`, stop and say so.** That is a real gap, not something to work around
-by inventing a path.
+**If nothing comes back `owned`, there is no material to take.** That is a real gap, not something to
+work around by inventing a path.
 
 ## Step 2 — repoint the mesh, and append rather than overwrite
 
@@ -171,10 +170,8 @@ Modern models ship **metallic-roughness**; older ones ship specular-glossiness. 
 engine reads. Roughness is the lossy direction — Blender has no `SpecularPower` and Dunia has no
 roughness.
 
-Both weapons were converted by a short numpy script run headless in Blender — a hundred-odd lines
-that reads the source maps, box-filters them down, and writes two PNGs. The scripts themselves are
-hardcoded to their own weapon and are not in the repo; everything they encode is on this page, and
-the rest of this section is what it took to get each step right.
+The conversion is a short numpy script run headless in Blender — a hundred-odd lines that read the
+source maps, box-filter them down, and write two PNGs.
 
 ### The albedo needs a band, not a curve
 
@@ -204,12 +201,11 @@ or a linear remap shifts hue.
   under that ceiling: the Dart Rifle's pair is a **512² base with a 10-level chain plus a 1024²
   single-level `_mip0`**, 1.33 MiB for four files, and the Dragunov's is 256²/512². Author at 2048
   and ship at 1024 — a 1024²/2048² pair is four times the pixels for a gun that is barely a metre of
-  screen space, and nothing in the game does that. The VSS shipped at both tiers and was compared in
-  game: at retail's it reads as well as the guns Ubisoft shipped, so the extra 4 MB bought nothing.
-- **Ambient occlusion.** glTF packs AO in the same map's red channel. It is tempting and it was
-  measured and rejected here: a quarter of the VSS's AO sits at zero, which is what a bake leaves
-  *outside* the UV islands, and multiplying that in bleeds black across island edges at low mips.
-  Check the distribution before you use it.
+  screen space, and nothing in the game does that. Compared in game on the VSS, retail's tier reads as
+  well as the guns Ubisoft shipped, so the larger tier's extra 4 MB buys nothing.
+- **Ambient occlusion.** glTF packs AO in the same map's red channel. A quarter of the VSS's AO sits
+  at zero, which is what a bake leaves *outside* the UV islands, and multiplying that in bleeds black
+  across island edges at low mips. Check the distribution before you use it.
 
 ## Step 4 — get the level right
 
@@ -247,9 +243,9 @@ low-vertex-colour areas *brighter* rather than darker.
 ## Step 5 — get the specular right
 
 :::danger[`SpecularColorBase` is what every texel gets where the mask asks for nothing]
-This is the one that cost the most time on the VSS, and the render gates cannot see it. The gun
-looked correct in every offline check and came back from the first playtest reading as **one polished
-surface** — stock, receiver and suppressor all equally glossy.
+The render gates cannot see this. A VSS with a high `SpecularColorBase` looks correct in every
+offline check and reads in game as **one polished surface** — stock, receiver and suppressor all
+equally glossy.
 :::
 
 Specular is a separate additive Blinn term, and the pair `SpecularColorBase`/`SpecularColor1` has the
@@ -270,7 +266,7 @@ as measured and the mechanism as very likely.
 `SpecularColorBase` is what a texel gets when red is zero. Set it high and no mask can make anything
 matte. Measured:
 
-| | VSS, first attempt | Dragunov, retail | VSS, shipped |
+| | VSS, glossy build | Dragunov, retail | VSS, shipped |
 | --- | ---: | ---: | ---: |
 | `SpecularColorBase` | 0.600 | **0.043** | 0.043 |
 | `SpecularColor1` | 2.000 | 2.000 | 2.000 |
@@ -282,8 +278,8 @@ matte. Measured:
 Two things to copy from that table.
 
 **A working weapon's specular control is bimodal.** Over half the Dragunov's surface sits at
-0.02–0.09 — effectively matte — and a quarter sits at 0.71–0.97. It is not a mid-grey map. The first
-VSS attempt was a flat band sitting on a floor higher than the Dragunov's value over half its gun,
+0.02–0.09 — effectively matte — and a quarter sits at 0.71–0.97. It is not a mid-grey map. The glossy
+VSS build's was a flat band sitting on a floor higher than the Dragunov's value over half its gun,
 which is exactly what "polished shoe" looks like.
 
 **`SpecularPower` is lobe width, and low is wide.** Retail runs 2 to 20 with a mode of 8; the
@@ -362,12 +358,10 @@ path from a bare `.dds`.
 The applier also refuses to write a `shared` entry that was edited, which is the gate that keeps
 step 1 honest.
 
-:::note[There used to be a Python route, and it moved]
-Older material-editing scripts imported `fc2fmt`, a Python `.xbm`/`.xbg` library that sat under
-`tools/BlenderFC2/`. **That code was ported into JackAll** when the add-on was rebuilt on the pack —
-the `.xbm` reader and writer live in `JackAll.Tools` now, which is why the add-on carries no format
-code of its own. The capability did not go away; the Python entry point did, and the pack is the
-route that replaced it.
+:::note[The `.xbm` code lives in JackAll]
+The `.xbm` reader and writer are in `JackAll.Tools`, which is why the add-on carries no format code
+of its own; the pack is the route to them. `fc2fmt`, the Python `.xbm`/`.xbg` library some
+material-editing scripts import, is not in the repo — its code is in JackAll.
 :::
 
 Then **read it back out of the patch**, not out of your layer:
@@ -383,15 +377,14 @@ same codec — the same four file sizes to the byte as the weapon you replaced.
 
 Render the weapon and compare it against the donor — that rule
 [governs the mesh half](./replacing-a-weapon.md#k-render-it-and-compare-against-the-donor)
-and it still applies. `render_refs.py`'s `_lit` view is the one that matters here, because it uses
-EEVEE with the materials the file carries. It will catch an upside-down albedo, a body reading black,
-and a seam.
+and it applies here too. The view that matters is a lit one, rendered in EEVEE with the materials
+the file carries. It will catch an upside-down albedo, a body reading black, and a seam.
 
 It will not catch the specular, and that is worth knowing precisely. The add-on's material preview
 drives Blender's roughness from `SpecularTexture1` and `SpecularColor1`; it models **neither
 `SpecularColorBase` nor the control map's red**. Those are the two inputs that decide whether the gun
-reads matte or polished, so between a first attempt and a fixed one the render looks essentially
-identical. Only the game shows it.
+reads matte or polished, so a glossy build and a fixed one render essentially identically. Only the
+game shows it.
 
 One more, if your build takes its animation from a different weapon than its mesh path: the sight
 render derives its eye from whichever aim bank the pack carries, and a pack collects banks by model

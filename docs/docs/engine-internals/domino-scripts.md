@@ -9,14 +9,14 @@ Source: `tools/third-party/Far Cry 2 Sep 8 2008 prototype/common.nfo` — a plai
 `<FatInfo><File Path="..." Crc="..." FileTime="..."/></FatInfo>` sidecar manifest that ships next to
 every `.fat` archive in this prototype, listing every packed file's path without needing to touch the
 binary `.fat`/`.dat` format at all. This is a real, complete file listing, not RE-derived — but it's
-*only* filenames; no script text has been extracted (see "What's not here yet" below). Cross-referenced
-against the binary-side Domino architecture already documented in [Engine
+*only* filenames; the script contents below come from the retail corpus. Cross-referenced against the
+binary-side Domino architecture documented in [Engine
 Architecture](./architecture.md#domino--lua-loads-through-the-same-generic-vfs-as-every-other-asset)
 and [the Lua API surface](./lua-api-surface.md).
 :::
 
 `common.nfo` lists **1,069 `.lua` files** under `domino\`, split cleanly into two roles that map
-directly onto the `CDominoBox*` classes already found in the binary: `domino\system\` is a fixed
+directly onto the `CDominoBox*` classes in the binary: `domino\system\` is a fixed
 library of reusable node types, and `domino\user\` is every mission's own authored graph, built by
 wiring those nodes together.
 
@@ -24,7 +24,7 @@ wiring those nodes together.
 
 229 files (~115 distinct node types, each shipped as both `name.lua` and a `name.debug.lua`
 instrumented twin — a real build convention, not a naming accident). Every file is a **single reusable
-node type** — this is the concrete confirmation that "Domino" is FC2's node-based visual-scripting
+node type** — confirming that "Domino" is FC2's node-based visual-scripting
 system (its own in-house Blueprint/Kismet equivalent), and that a "box" in `CDominoBoxInstance::CreateBox`
 /`CDominoBoxResource::RegisterBox` (see [Engine Architecture](./architecture.md)) is literally one
 instance of one of these node types dropped into a mission's graph. A level designer wires nodes
@@ -51,7 +51,7 @@ directly):
 | Entity/world plumbing | `getentityname`, `getentityinprefab`, `removeentity`, `setvisibility`, `setcamera`, `triggerstate`, `inputlistener`, `messagelistener`, `stopdominobrain`, `achievementdata` |
 
 This lines up closely with — and gives concrete node-level granularity to — the global Lua functions
-already catalogued in [the Lua API surface page](./lua-api-surface.md) (e.g. `SpawnReinforcementScenario`,
+catalogued in [the Lua API surface page](./lua-api-surface.md) (e.g. `SpawnReinforcementScenario`,
 `StartDefenceReversal`, `PopUpObjective`, `PlayEmotion` all have an obvious node-name counterpart here).
 
 ## `domino\user\` — 832 authored mission graphs
@@ -83,8 +83,7 @@ Plus dedicated subfolders for content that isn't a single mission's graph:
 A handful of loose `ubidays.*` files (`techdemo`, `stagedemo`, `playdemo`, `longdemo`, `benchmarkdemo`,
 `briefing_warren`, `briefing_frank`) are trade-show demo scripts — internal Ubisoft event build content
 (the name is almost certainly "Ubi Days," an internal Ubisoft showcase event), not shipped retail
-content. A nice bit of archaeology: pre-release demo builds got their own dedicated mission graphs,
-separate from the real campaign.
+content.
 
 ## What a graph file actually contains
 

@@ -36,13 +36,13 @@ for this project, plus every third-party tool kept around for reference or as a 
   — post-processes raw JSON exports from the third-party [DiscordChatExporter](https://github.com/Tyrrrz/DiscordChatExporter)
   into a compact form usable for research, so full modding-Discord history can be searched/grepped
   locally.
-- **`sbao_tool.py`** (`tools/misc/sbao/`) — an early proof-of-concept `.sbao` sound-format decoder.
-  Superseded — its logic was folded into JackAll's built-in `.sbao` handler.
+- **`sbao_tool.py`** (`tools/misc/sbao/`) — a proof-of-concept `.sbao` sound-format decoder whose
+  logic JackAll's built-in `.sbao` handler contains.
 - **ModPatcher** (`tools/misc/modpatcher/`) — a proof-of-concept `dinput8.dll` proxy that hooks
   `Dunia.dll`'s `VFS_ResolvePath` to redirect asset loading to a loose `Data_Win32\Loose\` folder
-  (Skyrim/STALKER-style loose-file overrides), instead of repacking `.fat`/`.dat` archives. Worked
-  and was dynamically verified end-to-end, but JackAll's `patch.dat`-based approach was chosen
-  instead for shareability — kept for reference. See its
+  (Skyrim/STALKER-style loose-file overrides), instead of repacking `.fat`/`.dat` archives. It is
+  dynamically verified end-to-end; JackAll uses the `patch.dat`-based approach instead, for
+  shareability, and the proxy is kept for reference. See its
   [README](https://github.com/jbebe/farcry-sdk/tree/main/tools/misc/modpatcher) for the full
   DLL-proxy/inline-hook writeup.
 
@@ -61,7 +61,7 @@ structure and any `README`/notes are tracked in the repo unless noted otherwise.
 | **RunGUI** | GUI wrapper around a pinned Gibbed.Dunia SVN build (r179) adding XBT↔DDS image conversion and custom `.fat`/`.dat` unpacking. | based on Gibbed's SVN builds (`svn.gib.me`) |
 | **FCBConverter** | Unpacks/packs `.fat`/`.dat` archives and converts the FCB binary object format to/from an editable XML representation. Built mainly for later Far Cry titles but usable on FC2. | [downloads.fcmodding.com](https://downloads.fcmodding.com/others/fcbconverter/) |
 | **Ubitunedec / DecUbiSnd** | Decodes and exports `.spk`/sound data embedded in Ubisoft `.dat` archives (character voices, music, dialogue). | [github.com/beawy/Ubitunedec](https://github.com/beawy/Ubitunedec) |
-| **Dunia-Engine-XBG-Blender-Importer** | Blender add-on importing/editing/re-exporting `.xbg` 3D models across ten Ubisoft titles including FC2, grown from an Avatar-only importer. Currently the most active lead for custom mesh modding. | [github.com/Quiet-Joker/Dunia-Engine-XBG-Blender-Importer](https://github.com/Quiet-Joker/Dunia-Engine-XBG-Blender-Importer) |
+| **Dunia-Engine-XBG-Blender-Importer** | Blender add-on importing/editing/re-exporting `.xbg` 3D models across ten Ubisoft titles including FC2, grown from an Avatar-only importer. The most active lead for custom mesh modding. | [github.com/Quiet-Joker/Dunia-Engine-XBG-Blender-Importer](https://github.com/Quiet-Joker/Dunia-Engine-XBG-Blender-Importer) |
 | **Material and Texture Extractor** | Extracts textures/materials referenced by `.xbg` mesh files into folders mirroring the original resource directory structure, driven by a `PATH.INI`. | shared directly in the FC2 modding Discord (not on GitHub) |
 | **xbmEditor1** | Double-click editor for `.xbm` material files. | shared directly in the FC2 modding Discord (not on GitHub) |
 | **SkeleTree** | Cross-game skeleton/rig reader, confirmed working on Avatar (2009), FC2, and FC3. | shared directly in Discord (not on GitHub) — the one third-party binary actually committed here |
@@ -70,5 +70,5 @@ structure and any `README`/notes are tracked in the repo unless noted otherwise.
 | **Far Cry 2 Dedicated Server (debug)** | Debug build of the Linux dedicated server binary, kept for reverse-engineering cross-reference against `Dunia.dll`. | community-shared debug build, not publicly linked |
 | **Far Cry 2 Xbox (debug)** | Debug/dev Xbox 360 build (`.xex`/`.xdb` symbols, `.nfo` manifests) — source of the Domino Lua mission-scripting system and QA cheat-script findings documented in [Engine Internals](/docs/category/engine-internals). | community-shared debug build, not publicly linked |
 
-For the full research trail behind this list — forum threads, Discord provenance, and tools not
-yet pulled into the repo — see [Sources](/docs/modding/sources#tools).
+For the forum threads, Discord provenance and tools not in the repo, see
+[Sources](/docs/modding/sources#tools).

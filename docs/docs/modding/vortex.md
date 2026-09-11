@@ -58,7 +58,7 @@ Checked in this order:
 
 | # | Archive shape | Handling |
 | --- | --- | --- |
-| 1 | A `patch.dat`, anywhere in the archive | **Legacy mod.** Its `patch.fat` has to sit beside it — a lone `patch.dat` is rejected with the reason. Converted at install time via `mod import-legacy` into an ordinary layer. **This is how most existing Far Cry 2 mods are distributed** — see [Mods Survey](./mods-survey.md). We can't force any structure on these (they predate this extension), so the pair is all that's recognized — everything else in the archive (readmes, screenshots, alternate versions) is not part of the conversion, and a confirmation dialog says so before install proceeds. |
+| 1 | A `patch.dat`, anywhere in the archive | **Legacy mod.** Its `patch.fat` has to sit beside it — a lone `patch.dat` is rejected with the reason. Converted at install time via `mod import-legacy` into an ordinary layer. **This is how most existing Far Cry 2 mods are distributed** — see [Mods Survey](./mods-survey.md). Their layout is not fixed (they predate this extension), so the pair is all that's recognized — everything else in the archive (readmes, screenshots, alternate versions) is not part of the conversion, and a confirmation dialog says so before install proceeds. |
 | 2 | `FCSE.exe`, anywhere | **The FCSE loader/host program itself** (not a plugin). Deployed to `bin\`. |
 | 3 | A top-level `plugins\` folder and/or `mods\` folder | **Mod layer.** See the packaging convention below. The archive is staged as-is; the reserved folders are read natively by JackAll at build time — `mods\` compiles into `patch.dat`, `plugins\` mirrors into `bin\plugins\`. |
 
@@ -118,7 +118,7 @@ For an entity override the **trailing numeric `disEntityId` is authoritative and
 cosmetic** — an override staged under a since-renamed entity still matches, and `2058514756624450165.xml`
 alone works too. An id matching nothing in the vanilla container *adds* that content instead: a new
 archetype joins the group its own `hidName` names - created if the library has none - and a new entity
-joins the sector's `main` mission layer. The pre-per-archetype group ids (`entitylibrary.fcb\NN_Name.xml`) are **rejected outright**: one sitting
+joins the sector's `main` mission layer. Whole-group ids (`entitylibrary.fcb\NN_Name.xml`) are **rejected outright**: one sitting
 in a container folder's root names no fragment, so rather than silently appending a phantom group the
 build fails and names the file. Re-export the archetype you meant to change.
 
@@ -141,8 +141,8 @@ than the compiled form and keeps its whole-file override.
 Everything in that file *beside* the missions splits too, one fragment per top-level section, named
 after the element: `_environment.xml` for the lighting, sky, shadow and draw-distance settings,
 `_grids.xml`, `_layers.xml` for the terrain materials. Without this a single changed shadow radius
-cost a mod the entire descriptor — and with it, every one of that world's missions, which then
-last-wins against every mission mod you install beside it. Sections are named rather than listed, so
+would cost a mod the entire descriptor — and with it, every one of that world's missions, which would
+then last-win against every mission mod you install beside it. Sections are named rather than listed, so
 a section this documentation has never heard of still gets a fragment of its own.
 
 The sector layout is also where you **remove** something: `<delete id="2054324264221284349" />` takes that entity off

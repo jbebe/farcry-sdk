@@ -5,15 +5,12 @@ sidebar_position: 19
 # `Dunia.dll` — Presenting a Frame, and Who Owns the Mouse
 
 :::info[Verified in a running game]
-Established while building DevTools' overlay and confirmed against retail Far Cry 2 (GOG v1.03,
-`fc2_103_retail`) on 2026-09-05. The addresses are Steam v1.03; see [the overview](./overview.md) for
-binary identification. What follows is what anyone drawing over this game, or taking input from it,
-runs into first.
+Confirmed against retail Far Cry 2 (GOG v1.03, `fc2_103_retail`). The addresses are Steam v1.03;
+see [the overview](./overview.md) for binary identification.
 :::
 
 Far Cry 2 draws with Direct3D 9 and reads the player with DirectInput 8. Neither is negotiable from
-outside: both are chosen in `Dunia.dll` before any plugin gets a say. This page is the shape of both,
-because an overlay that ignores either produces exactly the artefacts described below.
+outside: both are chosen in `Dunia.dll` before any plugin gets a say.
 
 ## Direct3D 9, and a second renderer that is not there
 
@@ -30,7 +27,7 @@ Two windows exist before the game's own, and neither is the one to draw into:
 | `NomadSplash` | `0x10006130` | The startup splash, a layered window fed a PNG through GDI+. FCSE recolours it. |
 | `NomadTool9` | `0x1037c1a0` | A hidden 1×1 window created only to hold a throwaway device. |
 
-`NomadTool9` is worth knowing about because it is the same trick an overlay wants. The engine
+`NomadTool9` is the same trick an overlay wants. The engine
 `LoadLibraryA("d3d9.dll")`, `GetProcAddress`es `Direct3DCreate9`, creates a device against that 1×1
 window, and asks it what the hardware can do. Anyone who needs `IDirect3DDevice9`'s vtable can do
 precisely this and release the device again: every device in the process shares d3d9.dll's vtable, so
@@ -38,7 +35,7 @@ one device of your own names the functions the game's device will call.
 
 ### EndScene is not once a frame
 
-The load-bearing detail. Far Cry 2 renders through offscreen passes and composites them — HDR,
+Far Cry 2 renders through offscreen passes and composites them — HDR,
 bloom, tone mapping — so `EndScene` is called **several times per frame**, once per pass, and only
 some of those have the back buffer bound.
 
@@ -55,8 +52,8 @@ own, and the render target the game had bound has to be put back afterwards.
 ### What a frame actually looks like from EndScene
 
 :::info[Verified in a running game]
-Counted by logging every `EndScene` of selected frames from an FCSE plugin, retail GOG v1.03 on
-2026-09-06, at 1280×720 with HDR and bloom on. Frame ordinals matched live frames exactly over a
+Counted by logging every `EndScene` of selected frames from an FCSE plugin, retail GOG v1.03, at
+1280×720 with HDR and bloom on. Frame ordinals matched live frames exactly over a
 300-frame span, so the sequence below is one whole frame.
 :::
 
@@ -104,7 +101,7 @@ it enabled (`ThreadCnt="1"`), and `Dunia.dll:0x103430A0` reads it and builds a `
 (`0x103B20A0`) when it is nonzero.
 
 Measured, `EndScene` nonetheless runs on **the same thread** as the game's own update: a hook on the
-sky's submission and a hook on `EndScene` report the same thread id, twice over on two runs. So on
+sky's submission and a hook on `EndScene` report the same thread id. So on
 this build and machine the frame graph is executed inline and a plugin needs no cross-thread
 handling for Direct3D. Do not assume that holds everywhere — publish state across the boundary
 anyway if it is cheap, since the configuration that separates them plainly exists.
@@ -145,8 +142,8 @@ from it counts nothing and a draw lands somewhere invisible. See
 
 ## Drawing into the world's frame
 
-Everything above describes where a pass is. This describes what the device does to anything drawn
-into one, all of it measured while building the sun-glare effect in `mods/sky-overhaul`.
+What the device does to anything drawn into a pass, all of it measured with the sun-glare effect in
+`mods/sky-overhaul`.
 
 ### The device is reset, not recreated
 
@@ -239,9 +236,9 @@ holding still the moment it stops — not as blur or noise, which is what makes 
 misdiagnose as aliasing.
 :::
 
-### What one measurement of the sky pass found
+### The sky pass's state
 
-All from a plugin logging its own draws, retail GOG v1.03 at 1280×720:
+Measured from a plugin logging its own draws, retail GOG v1.03 at 1280×720:
 
 - The world's colour target **alternates between `A16B16G16R16F` and `A8R8G8B8`** frame to frame,
   both `D3DMULTISAMPLE_4_SAMPLES`, with a `D24S8` depth surface multisampled to match.

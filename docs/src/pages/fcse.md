@@ -7,8 +7,8 @@ description: Introduce FCSE, the SKSE-style DLL plugin loader for Far Cry 2
 
 Some engine behavior can't be reached through game assets at all. The Dunia engine is versatile,
 but Ubisoft had to force some kind of abstract domain on top of it so that it doesn't become "the
-next Unity or Unreal" — and that domain logic stayed compiled directly into `Dunia.dll`. Until now,
-the only way to change it was to ship your own patched copy of that file, which works for exactly
+next Unity or Unreal" — and that domain logic stayed compiled directly into `Dunia.dll`. Without
+FCSE, the only way to change it is to ship your own patched copy of that file, which works for exactly
 one mod at a time: two differently-patched copies of `Dunia.dll` can't coexist, so the moment two
 mods both want to touch engine internals, one of them loses.
 
@@ -49,7 +49,7 @@ tools to change engine behavior with:
 3. **Patch bytes directly** (`Patch`) — for small constant/branch-flip edits, applied live and
    in-process instead of to a shared file on disk. This is the direct successor to what
    `reverse/patch_toRed.py`/`patch_incHB.py`/`patch_carJoke.py` already do *statically* against
-   `Dunia.dll` before launch — same idea, but any number of plugins can now each apply their own
+   `Dunia.dll` before launch — same idea, but any number of plugins can each apply their own
    edit without agreeing on one shared pre-patched binary.
 
 **Conflicts are loud, not silent.** If two plugins target the same name/address, FCSE doesn't try

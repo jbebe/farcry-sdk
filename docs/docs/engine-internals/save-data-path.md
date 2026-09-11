@@ -12,10 +12,8 @@ See [the overview](./overview.md) for binary identification.
 (`0x10e0f4a0`). The first is confirmed used: `InitDuniaEngine` (`0x10004900`) pushes it at
 `0x10004954` and passes it into `FUN_10003840`, which concatenates it with a `"\"` separator
 (`DAT_10e09b60`) via generic `std::string` append plumbing — building the **relative** path component
-`My Games\Far Cry 2\`. The root it gets joined onto isn't resolved in this same call (the temporaries
-`FUN_10003840` builds are stack-local and destroyed before return, so either Ghidra is missing a hidden
-RVO/return-by-reference parameter in its signature, or the persisted destination is a global written
-through a pointer not yet traced).
+`My Games\Far Cry 2\`. The root it gets joined onto isn't resolved in this same call (see
+[Unknowns](#unknowns)).
 
 ## The root is Shell-API-resolved, not an environment variable
 
@@ -34,8 +32,8 @@ real caller) evidence that `%USERPROFILE%` is not how the save folder is built.
 
 The folder shown to the user as `Documents\My Games\Far Cry 2\` is built by calling
 `SHGetFolderPathA`/`W` (almost certainly with `CSIDL_PERSONAL`/`CSIDL_MYDOCUMENTS`, asking Shell32 for
-the "My Documents" special folder — the exact CSIDL constant and call site weren't pinned down past the
-lazy-import table) and appending the `My Games\Far Cry 2\` string above. This is the standard
+the "My Documents" special folder — the exact CSIDL constant and call site are not pinned down past
+the lazy-import table) and appending the `My Games\Far Cry 2\` string above. This is the standard
 Vista-era `Documents\My Games\<title>` convention shared by most licensed middleware of this
 generation, and matches the community-sourced note that [custom maps install to
 `Documents\My Games\FarCry2\usermaps\`](../modding/gotchas.md). Since `SHGetFolderPathA` — not a raw
@@ -51,7 +49,7 @@ folder.
 - The exact call site that invokes the resolved `SHGetFolderPathA` pointer, and the CSIDL constant
   passed to it.
 - Where `FUN_10003840`'s built string actually ends up persisted — its own locals are stack-scoped and
-  destroyed before return, so either a missed hidden-return-pointer parameter or an untraced global
-  write is responsible.
+  destroyed before return, so either Ghidra is missing a hidden RVO/return-by-reference parameter in
+  its signature, or the destination is a global written through an untraced pointer.
 - How `"\My Games"` (the shorter, standalone string at `0x10e0f4a0`) is used — its only xrefs land
   inside unfinished/uncreated `Function` regions (`~0x10047300`), not a proper Ghidra function yet.

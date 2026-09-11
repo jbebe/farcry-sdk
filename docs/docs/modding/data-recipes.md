@@ -38,7 +38,7 @@ Started](./getting-started.md) for the full provenance note.
 ### Recoil, jamming, and reliability
 
 - **The `42_weapons.xml` crash workaround**: overriding `42_weapons.xml` directly in the patch folder
-  crashes the game on load, every time, reproducibly — renaming it doesn't help. The only working
+  crashes the game on load, every time — renaming it doesn't help. The only working
   method: copy the target weapon's entire data block out of `42_weapons.xml` (in `world1`/`world2`)
   and paste it **into the existing corresponding weapon section of `22_weapons.xml`** (normally
   MP-only) inside `mymod\patch`. This smuggles SP-relevant changes (recoil, jam probability) through a
@@ -55,7 +55,7 @@ Started](./getting-started.md) for the full provenance note.
 
 ### Magazine capacity and ammo
 
-- **Magazine capacity** (long unsolved, cracked in 2012): in `41_WeaponProperties.xml`, search hash
+- **Magazine capacity**: in `41_WeaponProperties.xml`, search hash
   `4FBDD114` to jump to any weapon's ammo block:
 
   | Hash | Meaning |
@@ -127,28 +127,27 @@ with observed behavior).
   genuinely silent weapon in play (mercs don't react to gunfire at range). `bIsSilent` alone does
   nothing; it needs the sound-hash swap too. Reliability is inconsistent: AS50↔Flare Gun and FN
   FAL↔Dragunov-with-fire-mode-change both worked for different testers, but at least one other
-  combination resulted in losing sound entirely. A `bEmitLight` bool also exists per-weapon; no
-  confirmed visual effect was ever observed from toggling it.
+  combination resulted in losing sound entirely. A `bEmitLight` bool also exists per-weapon; toggling
+  it has no confirmed visual effect.
 - **Full-auto conversion + sound looping**: a separate gotcha from the `iBurstLength` issue above — a
   `.spk` sound authored for a 3-round burst, used as the fire sound for a weapon modded to genuinely
   full-auto, audibly "repeats 3 times with a pause" instead of looping smoothly; the burst-length
   baked into the sound asset doesn't automatically stretch to match a changed fire rate/mode. Fix:
   manually re-edit the sound to loop as a short burst.
-- **Weapon fields confirmed via live sound/scope modding** (Discord, `modding`, Dec 2025–Jan 2026,
-  Gabor): `bUseHiResScope` (Boolean, in the weapon's `generated` entity data, not
-  `41_WeaponProperties.xml`) — toggling to `False` changes scope behavior; `iAnimationValue`
-  reportedly affects which crosshair is used. A recurring silent-failure cause: fdx4061 spent real
-  time on an invisible-effect bug before realizing he needed `m16.multi` specifically, not the base
-  `m16` entry.
+- **Weapon fields confirmed via live sound/scope modding** (Discord, `modding`, Gabor):
+  `bUseHiResScope` (Boolean, in the weapon's `generated` entity data, not `41_WeaponProperties.xml`)
+  — toggling to `False` changes scope behavior; `iAnimationValue` reportedly affects which crosshair
+  is used. A recurring silent-failure cause: an invisible-effect bug of fdx4061's came from editing
+  the base `m16` entry when `m16.multi` was the one needed.
 - **Weapon skins/textures**: full texture replacement (no simple color/tint parameter exists) has been
   demonstrated across most base weapons plus UI/loading-screen images, via Gibbed's tools. Whole-mesh
-  *swapping between existing characters* was achieved as early as 2022 (see the buddy model-swap
-  recipe below); static *object import from another Dunia title* (Avatar) was achieved by 2024–2025
-  (see [Engine Theory](./engine-theory.md) and [`.xbm`/`.xbg`](../file-formats/xbm-xbg.md)). Importing
-  a wholly new, from-scratch custom model was the last unsolved piece — resolved as of July 2026 by
-  Quiet_Joker's `Dunia-Engine-XBG-Blender-Importer`, see the [`.xbm`/`.xbg` format page](../file-formats/xbm-xbg.md).
+  *swapping between existing characters* works (see the buddy model-swap recipe below), and so does
+  static *object import from another Dunia title* (Avatar — see [Engine Theory](./engine-theory.md)
+  and [`.xbm`/`.xbg`](../file-formats/xbm-xbg.md)). A wholly new, from-scratch custom model imports
+  through Quiet_Joker's `Dunia-Engine-XBG-Blender-Importer` — see the [`.xbm`/`.xbg` format
+  page](../file-formats/xbm-xbg.md).
 - **Buddy character model-swap recipe** (cosmetic reskin between *existing* buddies, not custom
-  import — Discord, `🔨-fc2-modding`, Jan 2022, Hunter/FC_Redux's author): locate the desired buddy's
+  import — Discord, `🔨-fc2-modding`, Hunter/FC_Redux's author): locate the desired buddy's
   `.xbg` model inside `worlds.fat`'s `graphics` folder, copy it into the corresponding folder inside
   `entitylibrarypatchoverride.fcb`, and rename it to match the buddy slot you want to replace (e.g.
   copy `paul.xbg`, rename to `frank.xbg`, to make Frank appear with Paul's model). Useful for making a
@@ -156,10 +155,10 @@ with observed behavior).
   almost always means `worlds.dat` itself has been moved/deleted from the data folder, not a problem
   with the swap itself.
 - **Weapon pickup/UI icons are partly hardcoded in `Dunia.dll` itself**, a genuine exception to the
-  "everything's in FCB/XML" pattern (Discord, `🔨-fc2-modding`, Jul 2022, extensive investigation by
+  "everything's in FCB/XML" pattern (Discord, `🔨-fc2-modding`, extensive investigation by
   Boggalog/scubrah/Hunter/legendhavoc175): each weapon's HUD icon is selected via its `sName` value,
-  looked up against an icon list; SP uses `hud.mgb`, MP uses `hud_mp.mgb` — both currently unworkable
-  by any available tool. Machetes (and MP-specific mounted guns) have no icon entry, falling back to
+  looked up against an icon list; SP uses `hud.mgb`, MP uses `hud_mp.mgb` — both unworkable by any
+  available tool. Machetes (and MP-specific mounted guns) have no icon entry, falling back to
   the sawed-off shotgun's icon. A working fix was found via direct `Dunia.dll` hex-editing: repointing
   an unused internal icon slot (the "dlc6" placeholder) to the machete texture, and reassigning the
   sawed-off's own `sName` so the fallback no longer collides — a confirmed real case of the community
@@ -218,7 +217,7 @@ with observed behavior).
   with the stealth bonus is the community's most-praised realism tweak (credited to forum member
   Diablo_Lobo).
 - **Sniper range**: vanilla `fMaxRange` for sniper rifles is **400** (Discord, `🔨-fc3-and-bd-modding`,
-  2023-02-28, "Low"); `RangeMultipliers` were not applied on a per-difficulty basis in FC2.
+  "Low"); `RangeMultipliers` are not applied on a per-difficulty basis in FC2.
 - **Grenade drop chance**: `<ChanceToDropGrenade Casual="1" Experimented="0.5" Hardcore="0.33"
   Infamous="0.25"/>` in `gamemodesconfig.xml` — set any tier to `1` for every killed merc to drop a
   grenade.
@@ -239,10 +238,10 @@ with observed behavior).
   accel/decel `30`/`30`, sprint decel `20`, climb `1.4` — outruns vehicles entirely.
 - **Player gravity**: `fGravity` in `player.xml` — a small/negative value (e.g. `-1`) approximates
   low/moon gravity for glider-less "flying" experimentation. Vanilla default confirmed as `-20`,
-  identical between FC2 and FC3 (Discord, `🔨-fc3-and-bd-modding`, 2023-02-28, "Low").
-- **The hang glider was never successfully modded** — flight time, agility, and glider-based actions
-  (e.g. dropping grenades while gliding) all remained unrealized despite extensive searching of the
-  vehicle data file.
+  identical between FC2 and FC3 (Discord, `🔨-fc3-and-bd-modding`, "Low").
+- **The hang glider has never been successfully modded** — flight time, agility, and glider-based
+  actions (e.g. dropping grenades while gliding) have no known fields despite extensive searching of
+  the vehicle data file.
 
 ## Economy & progression
 
@@ -277,7 +276,7 @@ with observed behavior).
   to break/crash the game. Earning the same or higher amounts gradually through legitimate play
   (2000+) was reported as stable — front-loading is the risky path, not the total amount.
 - **Diamond case respawn/quantity data lives in `OA_MissionPickups.xml`** (Discord, `🔨-fc2-modding`,
-  Aug 2022, "LowPoly"): individual diamond case pickups are defined here, distinguished by a value
+  "LowPoly"): individual diamond case pickups are defined here, distinguished by a value
   field — most regular cases use `1`, `2`, or `3`; the player's starting case uses `10`. Per-case
   diamond editing is a single well-structured file, not tedious per-sector hand-editing.
 
@@ -287,7 +286,7 @@ with observed behavior).
   references (`FirstAttackTime`, `BetweenAttackTime`, `MinorAttackQte`, `MinorAttackDuration`) to
   `Curves.PlayerSicknessCurves.HealthMax_Infamous` — an unrelated always-high curve, effectively
   disabling attacks. Confirmed working by multiple independent testers.
-- **Ambient sound regions** (Discord, Far Cry 2 Multiplayer, `modding`, Mar 2026, Gabor): FC2 has
+- **Ambient sound regions** (Discord, Far Cry 2 Multiplayer, `modding`, Gabor): FC2 has
   exactly **7 defined ambient sound regions** — `Desert`, `Jungle`, `Savannah` (pure biomes) plus 4
   transition/blend regions `tDes_Jun`, `tDesSav`, `tJun_Sav`, `tLake`. Which region plays for a given
   patch of terrain is driven by which ground texture is assigned there — the sound-region name is a

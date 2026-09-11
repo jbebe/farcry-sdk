@@ -61,7 +61,7 @@ Resource kinds across the corpus:
 `ID` paths are backslash-separated and relative to the data root; the loader prepends a literal
 `"UI\"` when it builds the `.mgb`'s filename, so what you write here must match the archive layout.
 
-**`crc_ID` is unresolved.** It is not a plain CRC32 of the `ID` string (several variants tried), and
+**`crc_ID` is unresolved.** It is not a CRC32 of the `ID` string, plain or in several variants, and
 nothing on the `.mgb` load path verifies it — most likely a build-time cache key from Magma's asset
 pipeline. Copy it from a sibling entry or leave a shipped value in place; nothing observed reads it.
 
@@ -133,8 +133,7 @@ the literals `b_prompt1`–`b_prompt4` and `p_prompts_navbar` exist in the binar
 
 ### The screen-specific blocks
 
-The rest of the vocabulary belongs to one page each. Catalogued here so you recognise them rather
-than to imply they generalise:
+The rest of the vocabulary belongs to one page each, and none of it generalises:
 
 | Block | Seen in | Shape |
 |---|---|---|
@@ -145,8 +144,7 @@ than to imply they generalise:
 | `avatar_list` | `sp_avatar` | `<avatar …/>` (9) |
 | `infoBox`, `iconMaterial`, `pingIntervals`, `server_operation_types`, `hudsetup` | MP/HUD | single-purpose config |
 
-The `path` attributes are worth noticing on their own: `a_inventory_object/a_inventory_icons_anim/a_inventory_icons`
-is a **slash-separated path of readable element names** into the Magma tree. Since the `.mgb` keeps
+The `path` attribute `a_inventory_object/a_inventory_icons_anim/a_inventory_icons` is a **slash-separated path of readable element names** into the Magma tree. Since the `.mgb` keeps
 only CRC32 hashes, these strings are one of the few places real names survive — hash them and you
 recover names the binary lost.
 

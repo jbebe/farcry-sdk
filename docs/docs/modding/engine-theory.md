@@ -6,14 +6,14 @@ sidebar_position: 9
 
 :::note[Community-reported]
 Architecture theory in this section is explicitly not officially confirmed — treat it as the
-community's best working model, not verified fact. Where reverse engineering has since confirmed or
-corrected part of it, that's called out inline. See [Getting Started](./getting-started.md) for the
+community's best working model, not verified fact. Where reverse engineering confirms or corrects
+part of it, that's called out inline. See [Getting Started](./getting-started.md) for the
 full provenance note.
 :::
 
 ## Engine architecture theory
 
-- **Why checkpoints respawn when you leave and return**: the working theory (from a 2016–2017 thread,
+- **Why checkpoints respawn when you leave and return**: the working theory (from a community thread,
   partly corroborated by the "Infamous Fusion" mod's own developer) is that the original Dunia engine
   (as used in FC2) keeps only very limited state memory — effectively just the player's current
   zone/vicinity, with no persistent record of previously cleared areas beyond that. "Local state" is
@@ -23,7 +23,7 @@ full provenance note.
   state or restored from last-known global state — there is no partial/percentage repopulation
   possible, and enemy stat parameters (aggressiveness, FOV, speed) are fixed once per definition rather
   than scaling per difficulty level. A concrete mitigation proof-of-concept exists (Discord,
-  `🔨-fc2-modding`, Mar 2022, scubrah): increasing the distance the player can travel away from
+  `🔨-fc2-modding`, scubrah): increasing the distance the player can travel away from
   specific world sectors before those sectors "reload" reduces how easily a checkpoint's AI/state
   resets from ordinary movement — never released as a finished mod, but it confirms the reload-radius
   is a tunable value, not a hardcoded engine constant.
@@ -31,9 +31,9 @@ full provenance note.
   except in a small number of specifically-designed endless-spawn zones (the two main hub towns, and
   "cease fire" zones after violating them). Reinforcement counts for these endless zones are
   described by the "Infamous Fusion" developer as currently infinite but changeable to end after a
-  while — a middle ground *is* technically possible at the engine-data level, even though no public mod
-  had implemented it as of the sources reviewed here. A separate 2016 experiment found only a binary
-  on/off toggle (mercs stay dead forever, globally, once cleared).
+  while — a middle ground *is* technically possible at the engine-data level, though no public mod in
+  the reviewed sources implements it. A separate experiment found only a binary on/off toggle (mercs
+  stay dead forever, globally, once cleared).
 - **The infamous "11MB player.xml" bloat is not evidence of sloppy original development** — Gibbed
   clarified this directly: the original binary (`entitylibrarypatchoverride.fcb`) is only ~2.5MiB. The
   binary format supports referencing shared/duplicated data, and the original developers used that
@@ -46,8 +46,8 @@ full provenance note.
   engine/design experiment ahead of FC3, with several systems (the cut "watch" item, underused faction
   infighting, DLC content walled off from the patch system) left unfinished or dialed back.
 - **Buddy characters are a scripted "facade,"** confirmed by a knowledgeable modder citing Clint
-  Hocking's own interviews directly (Discord, `🔨-fc2-modding`, Nov 2021, "Hunter" — later revealed as
-  the actual author of the well-known FC_Redux mod): buddies are effectively stationary
+  Hocking's own interviews directly (Discord, `🔨-fc2-modding`, "Hunter", the author of the
+  well-known FC_Redux mod): buddies are effectively stationary
   mission-givers until their scripted "rescue" sequence triggers, after which they walk around briefly
   and despawn once you leave the map square — they don't persistently roam the world. A theoretical
   workaround (untested): swap a buddy's model onto a neutral/generic patrol NPC on an existing patrol
@@ -70,27 +70,27 @@ full provenance note.
   confirmed by multiple modders independently discovering near-identical folder/file trees for each
   map.
 - **Community sentiment: FC2's Dunia 1 had stronger shaderwork/dynamics than FC3's Dunia 2** (Discord,
-  `🔨-fc3-and-bd-modding`, 2021-11-28) — Uktena: *"FC2's was pretty good"*; legendhavoc175: *"better
+  `🔨-fc3-and-bd-modding`) — Uktena: *"FC2's was pretty good"*; legendhavoc175: *"better
   shaderwork than FC3, that's for sure"*; Uktena: *"More dynamic stuff too."* Opinion, not a spec claim,
   but consistent across multiple independent posters. Related, also anecdotal: Watch Dogs 1's Disrupt
   engine is claimed to be a fork of FC2's Dunia specifically (not FC3's) — *"yeah WD's disrupt is a
   fork of FC2 dunia"* (みる97, same thread) — with a separate poster describing Disrupt as "built
   between dunia1 and dunia2 (fc3)," FC2 feeling physically closer to Disrupt than to FC3+ (Discord,
-  `🔨-fc4-and-p-modding`, 2022-07-08, legendhavoc175).
+  `🔨-fc4-and-p-modding`, legendhavoc175).
 - **A second, independent pair of witnesses corroborates the FC2/Avatar shared-engine kinship**
   already established via Gabor (see [Sources](./sources.md)): *"People have discovered the first
   Avatar game share a lot of similarities with FC2 Dunia — you can inject/port over Avatar models into
-  the game and it will work"* (Low, Discord `🔨-fc3-and-bd-modding`, 2025-01-22), with EVERGREEN adding
+  the game and it will work"* (Low, Discord `🔨-fc3-and-bd-modding`), with EVERGREEN adding
   a first-hand account of trying (and failing) to restore an early trailer's compass while knowing
-  Avatar used the same engine and file format for the most part. Consistent with, and predating, the
-  working cross-title tooling documented on the [`.xbm`/`.xbg` format page](../file-formats/xbm-xbg.md).
+  Avatar used the same engine and file format for the most part. Consistent with the working
+  cross-title tooling documented on the [`.xbm`/`.xbg` format page](../file-formats/xbm-xbg.md).
 
 ## Map Editor
 
 FC2 ships with a built-in in-game map editor, used for building custom multiplayer maps (and reused as
 the base for several community "editor mods" that unlock extra content — see [Mods
-Survey](./mods-survey.md)). Source: ModDB's "Far Cry 2 Map Editor Run Through" tutorial (Henley, Dec
-2008), the canonical beginner reference linked from fc2mp.com.
+Survey](./mods-survey.md)). Source: ModDB's "Far Cry 2 Map Editor Run Through" tutorial (Henley), the
+canonical beginner reference linked from fc2mp.com.
 
 - **Launching**: `FC2Editor.exe` in the game's `bin` folder — `...\Steam\SteamApps\common\Far Cry
   2\bin\` (Steam) or `...\Ubisoft\Far Cry 2\bin\` (retail/Uplay). "File → New Map of Nature"
@@ -150,31 +150,29 @@ Survey](./mods-survey.md)). Source: ModDB's "Far Cry 2 Map Editor Run Through" t
 
 ### Custom multiplayer map heightmap format
 
-(Discord, `map-editor`, Jan 2026, worked out live by Gabor and fdx4061): a full MP map is 512m × 512m,
-divided into an 8×8 grid of `.sdat` sector files (64 total, confirmed correct). The community's
-original guess for the per-file byte layout — "each sector's heightmap is 513×513 values, 2 bytes per
-value (u16), little-endian, no header" —
+(Discord, `map-editor`, worked out by Gabor and fdx4061): a full MP map is 512m × 512m, divided into
+an 8×8 grid of `.sdat` sector files (64 total, confirmed). The community write-up gives the per-file
+byte layout as "each sector's heightmap is 513×513 values, 2 bytes per value (u16), little-endian, no
+header".
 
 :::info[Verified via reverse engineering]
-Turned out to be wrong, corrected by reverse-engineering `FarCry2_server` — see the [`.sdat` format
-page](../file-formats/sdat.md): each `.sdat` is a generic 20-byte-header chunk container wrapping a
-572-byte metadata block, a packed 65×65-vertex grid (64×64 quads — **not** 513×513; 513 is the *whole
-map's* vertex count across all 8 sectors, not one sector's), a hole-mask table, and a variable trailing
-record array. The 513×513 figure itself is still correct as the whole-map figure (8 sectors × 64 quads
-+ 1 shared edge), just mis-applied to a single file in the earlier community write-up. The meters =
-u16 ÷ 128 conversion carries over into the corrected format but wasn't independently re-confirmed at
-the byte level — see that page's Unknowns.
+That per-file layout is wrong — see the [`.sdat` format page](../file-formats/sdat.md), traced in
+`FarCry2_server`: each `.sdat` is a generic 20-byte-header chunk container wrapping a 572-byte
+metadata block, a packed 65×65-vertex grid (64×64 quads — **not** 513×513), a hole-mask table, and a
+variable trailing record array. 513×513 is the *whole map's* vertex count (8 sectors × 64 quads + 1
+shared edge), not one sector's. The meters = u16 ÷ 128 conversion carries over to the real format but
+is not independently confirmed at the byte level — see that page's Unknowns.
 :::
 
 Gotcha: adjacent sectors duplicate their shared edge row/column — when stitching sectors together or
 computing total grid size, that overlap must be excluded on one side, or the reconstructed map comes
 out both larger and subtly misaligned. Whether the sector count itself (8×8) can be increased to build
-larger MP maps is unresolved — Gabor tried briefly and it failed; increasing the *playable zone* size
-within the existing fixed sector grid works fine and is a separate, already-solved thing.
+larger MP maps is unresolved — a brief attempt by Gabor failed; increasing the *playable zone* size
+within the existing fixed sector grid works and is a separate matter.
 
 ### Custom map file structure
 
-(Discord, `map-editor`, Dec 2025): a saved custom map folder splits into two halves — an `ige`
+(Discord, `map-editor`): a saved custom map folder splits into two halves — an `ige`
 ("in-game-editor") subfolder holding the editor's own working copy of the whole map (the only thing
 the map editor itself reads back in when you reopen a map for further editing), and everything else,
 generated purely for the shipped game to read at runtime (this is where the sector `.sdat` files live)
@@ -192,11 +190,11 @@ unsaved edits — save before testing.
 The map editor supports cross-title asset import, but not cross-title level porting. Gabor discovered
 the FC2/Avatar (2009) shared-Dunia-engine connection after a community member swapped an Avatar buggy
 model into FC2, then found importing further Avatar objects into the FC2 editor's object library
-"isn't hard actually" — he's since imported 1,700+ objects from Avatar: The Game as static/decorative
+"isn't hard actually" — he has imported 1,700+ objects from Avatar: The Game as static/decorative
 props (his own "FC2 editor mod," distinct from Janne252's/Fino's/Al's/Multi editor mod — see [Mods
 Survey](./mods-survey.md)). Vehicle animations don't transfer: Avatar's vehicle rigs were built for a
 third-person camera, FC2's for first-person, so imported Avatar vehicles can only be added as static
 (non-drivable) decoration. You cannot load or edit an actual Avatar game level inside the FC2 editor
-even with the format kinship — the only bridge that exists today is one-directional (Avatar *objects*
-into FC2 *maps*), not full level conversion; a hypothetical dedicated `csdat`↔`sdat` level converter was
-discussed as technically plausible but not built by anyone.
+even with the format kinship — the only bridge is one-directional (Avatar *objects* into FC2 *maps*),
+not full level conversion; a dedicated `csdat`↔`sdat` level converter is considered technically
+plausible but does not exist.

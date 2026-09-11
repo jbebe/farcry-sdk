@@ -23,15 +23,14 @@ see [The Menu System](./magma-menu-system.md).
 FCSE constructs `CFCXOptionGamePage` — the concrete leaf — at `kGamePageCtor` (`0x1081e9c0`),
 allocating `0x210` bytes for it.
 
-**Not the tidier-looking `CFCXBaseOptionPage` one class below it** (`0x1087ec80`). That base was
-tried on 2026-08-08 and is **abstract**: constructing it works and the page displays, but `Back`
-kills the process with `R6025 "pure virtual function call"`. Its content-build slot at
-`vtable+0x3c` being a plain `RET` says nothing about the rest of the table — do not read that as
-"concrete" again.
+**Not the tidier-looking `CFCXBaseOptionPage` one class below it** (`0x1087ec80`). That base is
+**abstract**: constructing it works and the page displays, but `Back` kills the process with
+`R6025 "pure virtual function call"`. Its content-build slot at `vtable+0x3c` being a plain `RET`
+says nothing about the rest of the table.
 
 `CUIPageBase::Init` (`0x10109410`) turns the page's authored name into a bound `magma::Page` and
-its widgets. Nothing in the engine calls it implicitly, which is why every earlier hand-built page
-displayed nothing and then faulted.
+its widgets. Nothing in the engine calls it implicitly; a hand-built page that skips it displays
+nothing and then faults.
 
 ## The private vtable, and why it is a copy
 
@@ -50,13 +49,12 @@ FCSE takes a private copy and replaces five slots:
 | 21 | `+0x54` | `0x108200e0` | refresh → `CFCXOptionGamePage::UpdateSettingsFromOptions` (`0x1081f800`) |
 
 **Five is exact.** Everything about this class specific to the Game tab hangs off these slots, and
-nothing reaches it any other way. Scanning the class's whole translation unit for instructions
-forming the address of anything in the button-id block found 24 of them, in exactly five functions
-— `RefreshOptionList`, `FUN_1081f4f0`, `FUN_1081f6c0`, and the apply/refresh pair — each reachable
-only through one of the slots above. An earlier version of FCSE replaced only three, and the two it
-missed were found the way such things always are: the game crashed.
+nothing reaches it any other way. The class's whole translation unit holds 24 instructions forming
+the address of anything in the button-id block, in exactly five functions — `RefreshOptionList`,
+`FUN_1081f4f0`, `FUN_1081f6c0`, and the apply/refresh pair — each reachable only through one of the
+slots above.
 
-### Why the apply/refresh pair mattered
+### The apply/refresh null dereference
 
 The page stores ten **button ids** at `+0x1d8..+0x1fc`, one per Game-tab option. Both functions do:
 
@@ -68,9 +66,9 @@ value = setting->vtable[14](setting);         // ...and the call dereferences it
 ```
 
 On the stock Game tab the ids always resolve to a setting of the expected type, so the shipped bug
-never fires. FCSE's page cleared the native rows and appended its own, which were handed the same
-button ids back with the wrong types — a bool value-list where `SETTING_SENSITIVITY` expects a
-slider — so the type check failed and the null was dereferenced. Resetting the ids to `-1` is not a
+never fires. A page that clears the native rows and appends its own hands the same button ids back
+with the wrong types — a bool value-list where `SETTING_SENSITIVITY` expects a slider — so the type
+check fails and the null is dereferenced. Resetting the ids to `-1` is not a
 fix either: `std::map::operator[]` inserts a null for a missing key and the same dereference
 follows.
 
@@ -162,7 +160,7 @@ and leaves their cells hidden.
 So the page scrolls the *content* instead. It plans every row it would show, keeps a 17-line window
 over that plan, and moves the window one row at a time — rebuilding all 17 lines from the new
 offset, which puts each control back under the label that now sits on its line. This is a port of
-the same mechanism in FC2JackalFix, which solved it first for its own options page.
+the same mechanism in FC2JackalFix's own options page.
 
 **The scroll signal is the engine's own refusal.** `magma::ListBox`'s navigation handler declines to
 move the selection past its last row, and says so by raising bit `0x04` in the byte at `+0x16` of
@@ -202,20 +200,19 @@ the case by `this`, hand the rows the step, and give the highlight back.
 
 `magma::EditBox::SetText(const std::wstring&, bool)` (`0x10ab0220`) is the EditBox's **own** setter,
 not `TextBase`'s. An EditBox derives from `Widget`, so `magma::TextBase::SetText` writes through the
-wrong layout: that was tried, and it corrupted the widget badly enough that the CRT faulted and then
-magma's draw pass did.
+wrong layout, corrupting the widget badly enough that the CRT faults and then magma's draw pass
+does.
 
 The engine clamps to the layout's `maxLength` itself (a `u16` at `widget+0x18`), and the trailing
 bool copies the value into the committed string beside the displayed one — which is what a caller
 seeding a field wants, so FCSE passes `true`. It ends by marking the text dirty, which is what
-actually makes the field re-render; writing the string in memory would not have.
+actually makes the field re-render; writing the string in memory alone does not.
 
 `magma::Page::SetSelected(int controller, Focusable* element)` (`0x10aa5180`) moves input focus to
 an element — what the dispatcher does for the `SetFocusNomad` action. It is needed because an
 EditBox authored beside the row list has no `NEIGHBORS`, so nothing routes focus into it on its own.
 FCSE passes controller **255**, the "any controller" value the layout's own `DEFAULT_ELEMENT` uses;
-the engine's own call site passes the real main-controller id (from `0x104fe5a0`) instead, which is
-the next thing to try if 255 ever stops taking.
+the engine's own call site passes the real main-controller id (from `0x104fe5a0`) instead.
 
 `magma::TextBase::SetText` (`0x1007d770`) takes a **raw** `wchar_t*`, so no string object has to be
 forged for a plain label.
@@ -279,20 +276,18 @@ which is why this route avoids the `InsertNode` crash entirely.
 The engine's `IMenuItemHandler` is a struct whose first member is a vtable pointer. FCSE hand-rolls
 these with 8 slots, one real entry and the rest safe no-ops.
 
-**Slot 1 is the activate slot.** That is not a guess: an instrumented run on 2026-08-08 logged slot
-1 and only slot 1 for a row click, and slot 0 is independently known to be the MSVC scalar deleting
-destructor.
+**Slot 1 is the activate slot.** An instrumented run logs slot 1 and only slot 1 for a row click,
+and slot 0 is independently known to be the MSVC scalar deleting destructor.
 
 ## Localised YES/NO
 
 `RefreshOptionList` fills the `YES`/`NO` strings lazily, once per process, guarded by bits 1 and 2
 of the flag word at `0x1164fca8`. The pointers themselves are at `0x1164fca4` (YES) and `0x1164fca0`
-(NO). Since FCSE's page no longer runs `RefreshOptionList`, they are only populated if the player
+(NO). Since FCSE's page does not run `RefreshOptionList`, they are only populated if the player
 has opened the stock Game tab at least once — so FCSE reads both defensively and falls back to
 English literals.
 
-Doing it properly means calling the OASIS lookup directly. Its shape is recovered and recorded here
-so it can be picked up without re-deriving it:
+The direct route is the OASIS lookup:
 
 ```c
 const wchar_t* __thiscall Oasis::GetLocalizedString(   // 0x104d1e40
@@ -302,5 +297,5 @@ const wchar_t* __thiscall Oasis::GetLocalizedString(   // 0x104d1e40
     void* extra);                  // *(void**)0x10f9d874
 ```
 
-It is left undone because it is 40 lines of string marshalling for a cosmetic gain, and every other
+FCSE does not call it: it is 40 lines of string marshalling for a cosmetic gain, and every other
 label on the page is plugin-supplied English anyway.

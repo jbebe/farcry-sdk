@@ -47,16 +47,16 @@ sample count) is duplicated in the wrapper; it all lives in the Vorbis stream it
 **The one real constraint: replacement audio must be 48000 Hz stereo.** Every retail music file's
 embedded Vorbis header is 48000 Hz, 2 channels — FC2 plays music at 48 kHz, so a replacement Ogg at a
 different rate plays at the wrong speed. This is the actual explanation for the Steam guide's "reduce
-the track speed by −8.120% (×0.919)" instruction for menu music: `44100 / 48000 = 0.91875`. People were
-exporting 44.1 kHz Ogg from Audacity (playing too fast at 48 kHz) and compensating by pre-slowing the
-audio. The correct fix is simply to **export at 48 kHz** — no speed adjustment needed.
+the track speed by −8.120% (×0.919)" instruction for menu music: `44100 / 48000 = 0.91875`. That
+instruction compensates for a 44.1 kHz Ogg exported from Audacity (which plays too fast at 48 kHz) by
+pre-slowing the audio. The correct fix is to **export at 48 kHz** — no speed adjustment needed.
 `sbao_tool.py repack` refuses a non-48 kHz Ogg for exactly this reason.
 
 ## Short SFX: IMA-ADPCM
 
 No `OggS` signature (sample: `tools/misc/format-samples/004ae237.sbao`, starts `8d 06 08 02` — notably
 *not* the `02 1F 00 10` magic the long-audio layout and `.spk` records share, so this sub-type's outer
-envelope hasn't been directly confirmed to match `.spk`'s `FlatCopy` record shape byte-for-byte).
+envelope is not confirmed to match `.spk`'s `FlatCopy` record shape byte-for-byte).
 
 The codec itself is confirmed: standard IMA-ADPCM, the same DARE `TImaAdpcm` data as `.spk`'s
 `FlatCopy` records — found via direct byte-search of `Dunia.dll` for the canonical IMA-ADPCM tables and
@@ -69,13 +69,11 @@ dialects (`ubi_v3`/`v5`/`v6`/interleaved, decodable by the third-party tool `Ubi
 titles like *XIII* and *Splinter Cell*) — confirmed by running `Ubitunedec` directly against a real
 short-SFX sample: every structural decoder rejects the file on its own signature check, and the
 buffer-scan mode finds no recognizable chunk (while correctly finding the `OggS` chunk in a real
-long-audio sample, confirming the tool itself works). Genuinely just two unrelated codecs that both
-happen to be "an ADPCM."
+long-audio sample, confirming the tool itself works).
 
 ## Known file id
 
-`004b177b.sbao` = English main-menu theme (confirmed: matches the Steam guide's stated id and the
-user-labelled `main_theme_004b177b.sbao`). Archive-relative path is `soundbinary\004b177b.sbao`
+`004b177b.sbao` = English main-menu theme (confirmed: matches the Steam guide's stated id). Archive-relative path is `soundbinary\004b177b.sbao`
 (consistent with the `soundbinary\<hash>.spk` entries in the community filelists).
 
 ## Loose-file override path

@@ -8,7 +8,7 @@ sidebar_position: 2
 Element and attribute names are the authored names recovered by joining `magma::BinaryLoadVisitor`
 (wire order → object offset) against `magma::LoadVisitor` (XML name → object offset). Names marked
 **(provisional)** come from a class's XML vocabulary rather than the per-field join — their width
-and position are verified, only the label is a guess. Full working record:
+and position are verified, only the label is a guess. The full join is on
 [`.mgb` field names](../file-formats/mgb-field-names.md).
 
 Frequencies quoted as "n/N" are counts over the 50-package vanilla corpus.
@@ -477,9 +477,9 @@ meanings (its id-11/12 actions come in matched `SetFocus`/`KillFocus` pairs, and
 `ACTIONNAME` is a raw `CRC32(name)` handed to `ActionServer::MakeAction`. The full registry — all 6
 standard plus 81 game actions, where they are registered and how they dispatch — is on
 [Interop with the Dunia engine](./engine-interop.md#actions-a-registry-compiled-into-the-binary).
-**The registry is closed
-and lives in the game binary** — you cannot define a new action from data. Names recovered by
-hashing every ASCII run in `Dunia.dll`; the three engine ones first, then the game's:
+**The registry is closed and lives in the game binary** — you cannot define a new action from data.
+Names recovered by hashing every ASCII run in `Dunia.dll`; the three engine ones first, then the
+game's:
 
 | Action | Uses | Arguments (`UserData` keys) |
 |---|---|---|

@@ -20,17 +20,17 @@ in-process patcher if patching proves necessary.
 | Tier | Formats | State |
 |---|---|---|
 | Solved end-to-end | `.fat`/`.dat`, `.fcb`, `.rml`, `.mgb`, `.xbt`, `.sbao`, `.spk`, `.sav`, `depload` | Round-trip + editor + mod pipeline. Nothing more needed. |
-| Reads, no write path | Domino graphs, `.sdat` | Writers exist for both but are called only from tests. |
+| Round-trips, full write path | shader objects (1,698 D3D9) | **JackAll** reads and rebuilds every one byte-identically; a replacement compiled with `fxc` drops back in. Parameter names survive as CRC32 and resolve at 99.8% against the 2008 prototype's HLSL. |
 | Round-trips, partial write path | `.xbg`, `.skeleton`, `.xbm`, `.mab`, `.rtx` | **JackAll** writes `.xbg`, `.skeleton`, `.xbm` and `.mab`, all byte-identical over the retail set; `tools/BlenderFC2` authors the edits as `.fc2model` packs and holds no format code of its own. A `.mab` clip is authored by rewriting the one clip that fits the rig and carrying the rest of the chain verbatim; re-encoding a whole bank from decoded fields alone returns 78.4% byte-identical, the shortfall being rotations authored on an exact tie. |
+| Reads, no write path | Domino graphs, `.sdat` | Writers exist for both but are called only from tests. |
 | Container only | `.srl` (14,964 files), `.zsr` (14,964), `.nvm` (5,144) | Spatial data — roadmap dependencies, not standalone work. |
 | Sniffed, never parsed | `.hkx`, `.bik`, `.feu`, `.wem` | See [Not doing](#not-doing-and-why). |
-| Round-trips, full write path | shader objects (1,698 D3D9) | **JackAll** reads and rebuilds every one byte-identically; a replacement compiled with `fxc` drops back in. Parameter names survive as CRC32 and resolve at 99.8% against the 2008 prototype's HLSL. |
 | Parseable but unusable | `worldsector<N>.data.fcb` (5,230), `world1.mapsdata.fcb` | These *are* FCB — decoded today into a wall of `hidPos`/`hidAngles` floats with no spatial meaning. This is the wall. |
 
 All the gameplay data modders actually want — weapons, AI, economy, vehicles, patrols, missions — is
 already decoded. The remaining value is not more parsers.
 
-## Four findings that change the roadmap
+## Findings that shape the roadmap
 
 **1. The 8×8 sector cap is not an engine limit, and is not blocking.** The grid is data-driven:
 `<world>.game.xml` carries a `Grids` → `GridWorldMaps` block with `SectorCountX`/`SectorCountY`,
@@ -38,8 +38,8 @@ already decoded. The remaining value is not more parsers.
 `0x102A16E0`, written by `CFCXEditorDocument::ExportWorld` @ `0x107E28B0`. Shipped MP maps are
 10×10; campaign worlds are 80×80 (25 levels × 16×16, row stride 80). **80 / 8 = a 10×10 grid of
 editor-sized windows per campaign world** — campaign editing ships with zero binary patching.
-`BattlefieldSize` moves the playable zone only; every MP map is 100 sectors regardless, so
-`Size.ExtraLarge` is a dead hypothesis.
+`BattlefieldSize` moves the playable zone only; every MP map is 100 sectors regardless,
+`Size.ExtraLarge` included.
 
 **2. The four `ige\` files are not a research problem.** Their reader and writer are ~3.1 KB of
 already-located code: `CFCXEditorDocument::DoSave` @ `0x107E4990` (strings `%sheightmap.raw`,
@@ -62,7 +62,7 @@ non-brush mutation survives Save + Export. Separately, the 7 biome scripts ship 
 - [File manifest](/docs/modding/file-manifest) says `world1.mapdata.fcb`; the shipped name is
   `world1.mapsdata.fcb`.
 - [.xbm/.xbg](/docs/file-formats/xbm-xbg) calls the Blender importer broken, while the vendored
-  copy's README now claims skeleton export, HKX collision export and full material export.
+  copy's README claims skeleton export, HKX collision export and full material export.
 
 ## Track 1 — Campaign levels in Ubisoft's editor
 
@@ -81,9 +81,8 @@ mount (`JackAll.Core/Vfs/GameVfs.cs`):
 
 - Decode and diff the `Grids`/`GridWorldMaps` block across `ige_map`, `tmpla`, `world1` and
   `mp_11_l_savanna`. Expect 8/8, 8/8, 80/80, 10/10.
-- Round-trip `levels\ige_map\generated\sdat\sd0.sdat` through `JackAll.Tools/Sdat/SdatSector.cs` —
-  **the first real `.sdat` sample the project has ever had.** Confirm or correct the provisional
-  `MetersPerUnit = 1f/128f`.
+- Round-trip `levels\ige_map\generated\sdat\sd0.sdat` through `JackAll.Tools/Sdat/SdatSector.cs`.
+  Confirm or correct the provisional `MetersPerUnit = 1f/128f`.
 - Diff that sector's 572-byte `SSectorDataChunk` header against campaign
   `levels\w1_a_1\...\sd5120.sdat`. A structural difference kills the track on day one (K3).
 - Set-overlap `ingameeditor\object_inventory.xml` against `world1` `entitylibrary.fcb` — answers the
@@ -169,9 +168,9 @@ zero shell changes, and the whole `FCE_*` surface is reachable from a 200-line P
 | K6 | `FC2Editor.exe` won't launch (DRM / .NET 3.5 / D3D9 on Win11) | Double-click it. Fallback: the in-game editor under FCSE |
 | K7 | Redistributing extracted campaign bytes | Architectural: build the ige set locally from the user's own install, ship code never map data — the existing Vortex/mod-installer pattern |
 
-The Ghidra MCP bridge was down while this was written; most addresses above came instead from
-`tools/FCSE/tools/addrlib/cache/fc2_103_uplay.functions.jsonl` (63,571 functions with per-function
-string and callee tables), which is faster for this kind of lookup.
+Most addresses above come from `tools/FCSE/tools/addrlib/cache/fc2_103_uplay.functions.jsonl`
+(63,571 functions with per-function string and callee tables), a faster source than Ghidra for this
+kind of lookup.
 
 ## Track 2 — Semantic FCB content index
 
@@ -204,8 +203,8 @@ The cheapest wins in the tool.
   dirty-tracking header the FCB/XML editors already have. Scope to **save and parameter editing, not
   topology** — control edges are handler synthesis, data edges are a resolver's inference, and
   `GraphBuilder`'s projection has no inverse. De-risk first with an identity round-trip → pack →
-  play, since nobody has yet shown an edited mission *topology* running (the 2011/2016 community
-  contradiction in [Gotchas](/docs/modding/gotchas) is still unresolved). Small.
+  play, since nobody has yet shown an edited mission *topology* running (the conflicting community
+  reports on Lua overriding in [Gotchas](/docs/modding/gotchas) are unresolved). Small.
 - **UVs and materials in the `.xbg` OBJ export.** The `Uv0` flag is already in `XbgModel`'s stride
   table, just untracked, and the reference implementation is local in the vendored Blender importer.
   Then `MaterialName` → `.xbm` → `.xbt` → `.mtl` reuses chains JackAll already resolves. Small.
@@ -214,17 +213,15 @@ The cheapest wins in the tool.
 
 ## Track 4 — Textured preview
 
-**The `.xbm` writer landed.** `JackAll.Tools/Xbm/XbmFile.cs` parses standalone and inline `LTMD` and
-writes the container back — 2,379 of 2,379 shipped materials byte-identical — finding the chunk by
-walking the container rather than scanning for its tag. A rewritten material ships and loads in game
-(`mods/vss-vintorez`). The layout, the section order and the one material that repeats a key inside a
-section are documented in [xbm-xbg](/docs/file-formats/xbm-xbg).
+`JackAll.Tools/Xbm/XbmFile.cs` parses standalone and inline `LTMD` and writes the container back —
+2,379 of 2,379 shipped materials byte-identical — finding the chunk by walking the container rather
+than scanning for its tag. A rewritten material ships and loads in game (`mods/vss-vintorez`). The
+layout, the section order and the one material that repeats a key inside a section are documented in
+[xbm-xbg](/docs/file-formats/xbm-xbg).
 
-What is left is the demo feature it unlocks.
-
-That in turn unlocks the best demo feature in the tool: a **textured 3D preview that honours the mod
-stack**. Every viewer today renders the shipped asset; nothing renders the modded result in context.
-Large, but it folds in Track 3's UV work.
+The `.xbm` writer unlocks the best demo feature in the tool: a **textured 3D preview that honours the
+mod stack**. Every viewer today renders the shipped asset; nothing renders the modded result in
+context. Large, but it folds in Track 3's UV work.
 
 ## Track 5 — Localization / string-table editor
 
@@ -251,12 +248,10 @@ Stand up `JackAll.App.Tests` before either large App feature lands.
 
 ## Not doing, and why
 
-- **A second `.xbg` writer.** Done, and not needed twice: `JackAll.Tools/Xbg/XbgFile.cs` writes
-  containers byte-identically over the retail set, and `fc2model export`/`extract` is the
-  send-to/receive-from-Blender staging path this entry used to propose building. The claims this
-  entry told us to re-verify — skeleton, HKX collision and full material export — belong to the
-  *third-party* vendored importer, not to `tools/BlenderFC2`, which makes none of them; `.hkx` is
-  still unparsed by anything here.
+- **A second `.xbg` writer.** `JackAll.Tools/Xbg/XbgFile.cs` writes containers byte-identically over
+  the retail set, and `fc2model export`/`extract` is the send-to/receive-from-Blender staging path.
+  The skeleton, HKX collision and full material export claims belong to the *third-party* vendored
+  importer, not to `tools/BlenderFC2`, which makes none of them; `.hkx` is unparsed by anything here.
 - **Swapping the Domino graph package.** The Nodify 7.3.0 complaints are real but cosmetic; the
   actual problem is 20,228 wire crossings *after* four Sugiyama sweeps on `a1bu00_storymission`. A
   new package buys styling and virtualization, not readability. If revisited, the order is: UI

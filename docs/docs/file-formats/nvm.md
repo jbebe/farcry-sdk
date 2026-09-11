@@ -6,23 +6,21 @@ sidebar_position: 11
 
 :::info[Verified via reverse engineering]
 Traced live via GhidraMCP against `FarCry2_server`. Covers the level-file/sector-file container
-structure, the per-sector header, and the full field-order layout of a sector's content (node graph,
-vertex positions, cover points, obstacles, spatial index) — but not yet the byte layout inside those
-per-element classes themselves (`CNavMeshNode`, `CNavCover`, etc. — see Unknowns). Before this pass,
-`.nvm` had no reverse-engineering work behind it at all — see [the file
-manifest](../modding/file-manifest.md#6-navigation-mesh-nvm--locked), where it was the one format with
-a "Locked" status and zero RE.
+structure, the per-sector header, the full field-order layout of a sector's content (node graph,
+vertex positions, cover points, obstacles, spatial index) and the on-disk bytes of `CNavMeshNode` —
+but not the byte layout inside the other per-element classes (`CNavCover`, etc. — see Unknowns). See
+also [the file manifest](../modding/file-manifest.md#6-navigation-mesh-nvm--locked).
 :::
 
-Confirmed built on the open-source **Recast** navmesh library (community-reported, via a leaked
-internal build-tool plugin list — `RecastNavmeshCompiler`/`Exporter`; not independently re-verified
-here). This page covers Dunia's own file/header structure wrapping whatever Recast-derived mesh data
-lives inside a sector — not Recast's own format.
+Built on the open-source **Recast** navmesh library (community-reported, via a leaked internal
+build-tool plugin list — `RecastNavmeshCompiler`/`Exporter`; not independently verified). This page
+covers Dunia's own file/header structure wrapping whatever Recast-derived mesh data lives inside a
+sector — not Recast's own format.
 
 ## A missing navmesh crashes the engine, it does not merely disable AI
 
 The in-game editor's cooker emits no `.nvm` at all — no `ige_map` or `mp_*` level ships one, because
-multiplayer has no AI and the gap was never noticed. Placing campaign AI archetypes into an editor
+multiplayer has no AI. Placing campaign AI archetypes into an editor
 map therefore produces a world where the AI system runs against no navigation data.
 
 Observed live: a converted campaign region carrying 34 `enemy_archetypes` NPCs and 226
@@ -44,7 +42,7 @@ places actors. The generator is already compiled into the engine (`CNavmeshGener
 
 ## A two-tier file scheme, unlike every other per-sector format
 
-Every other per-sector format documented so far (`.sdat`, `.srl`, `.zsr`) packs one physical file per
+Every other per-sector format (`.sdat`, `.srl`, `.zsr`) packs one physical file per
 sector, addressed by a flat or 2D index. `.nvm` is structured differently: one **level file**
 (`nv\nv.nvm`) holds a header plus a per-sector descriptor table, and — depending on a mode flag read
 from that header — the actual sector mesh data lives in **separate satellite files**,
@@ -112,13 +110,13 @@ handles both save and load, branching on the `CNavArchive`'s own internal write-
 being split into separate reader/writer functions.
 
 Every one of these functions also guards blocks of fields behind a check on `CNavArchive+0x48` — an
-integer carried by the archive itself, not the sector or level. Initially this looked like a size
-threshold ("small vs. large navmesh"), but `CNavMeshSector::SerializeDataContent` alone checks it
-against **eight different graduated values** (`0x10000`, `0x125ff`, `0x13000`, `0x13200`, `0x133ff`,
-`0x13400`, `0x134ff`, `0x13600`) to decide whether to read/write successive optional field blocks. That
-many distinct thresholds only makes sense as a **stored format version number**, each threshold marking
-a point where a new field or array was added to the format — standard incremental-versioning
-serialization, not a small/large split. Treat `CNavArchive+0x48` as "format version" going forward.
+integer carried by the archive itself, not the sector or level. It is not a size threshold ("small
+vs. large navmesh"): `CNavMeshSector::SerializeDataContent` alone checks it against **eight different
+graduated values** (`0x10000`, `0x125ff`, `0x13000`, `0x13200`, `0x133ff`, `0x13400`, `0x134ff`,
+`0x13600`) to decide whether to read/write successive optional field blocks. That many distinct
+thresholds only makes sense as a **stored format version number**, each threshold marking a point
+where a new field or array was added to the format — standard incremental-versioning serialization.
+`CNavArchive+0x48` is the "format version" throughout this page.
 
 ## `CNavMeshLevel::SerializeData` — the level-file header
 
@@ -157,7 +155,7 @@ it in a `CNavArchive`, allocates a `CNavMeshSector` (`0x78` / 120 bytes), and ca
 spatial-region culling against `CWorldRegion::Includes` (sectors outside the currently-relevant world
 region get dropped via `CNavMeshSector::DeleteSector` rather than kept resident), updates two bitmask
 grids at `this+0x84`/`this+0xa0` (present/pending-load flags per sector, same bit-per-sector-index
-pattern seen in other systems this session), fires a `CNavMeshSector::NotifySectorEvent`, and clears
+pattern seen in other systems), fires a `CNavMeshSector::NotifySectorEvent`, and clears
 `CPathManager`'s cached pathfinding results — a loaded sector invalidates any in-flight path queries
 that might have assumed it was still absent.
 
@@ -165,8 +163,7 @@ that might have assumed it was still absent.
 
 `CNavMeshSector::SerializeData` (`0x09a21d20`) is vtable slot 0, the method `LoadIndSector` calls
 through a virtual dispatch. It splits into two: `SerializeDataHeader` (`0x09a21710`) then, if that
-succeeds, `SerializeDataContent` (`0x09a1e780`) — by far the richest function traced in this whole
-format.
+succeeds, `SerializeDataContent` (`0x09a1e780`) — the richest function in this format.
 
 **Header** (`SerializeDataHeader`): sector id/coordinates and bounding box (already known from the
 constructor), followed by two constant-looking values written unconditionally on save — `0x4e764d68`
@@ -212,10 +209,9 @@ CNavMeshQTree                a spatial index over the node list, built fresh fro
 rebuilding runtime-only derived structures (adjacency, the live A* graph) from what was just
 deserialized, before the sector is marked ready (`this[0x5e] = 0`).
 
-This gives a genuinely complete structural map of what a navmesh sector contains: a polygon/node graph
-(`CNavMeshNode`), quantized vertex positions, two flavors of AI cover point, dynamic obstacles, and a
-baked spatial index — everything needed to actually decode geometry now has a named target class and a
-known position in the byte stream.
+A navmesh sector therefore contains a polygon/node graph (`CNavMeshNode`), quantized vertex
+positions, two flavors of AI cover point, dynamic obstacles, and a baked spatial index — each with a
+named class and a known position in the byte stream.
 
 ## Measured per-sector header
 
@@ -292,7 +288,7 @@ Implemented in `JackAll.Tools/World/WorldNavMesh.cs`.
   scalar fields (`+0x5c`, `+0x64`, `+0x6c`, `+0x70`/`+0x74`) — only their storage location and
   read/write order are confirmed, not what they represent.
 - The byte layout inside `CNavCover`, `CDynamicNavCover`, `CNavMeshObstacle`, and `CNavMeshQTree` —
-  each has its own `SerializeData`, none opened yet. `CNavMeshNode` is decoded (above), but what its
+  each has its own `SerializeData`, none decoded. `CNavMeshNode` is decoded (above), but what its
   non-positional fields mean — which of the `u32`s index neighbours, which index the vertex array —
   is not.
 - The purpose of the second quantized-vertex array, and the relationship between the inline
@@ -303,5 +299,4 @@ Implemented in `JackAll.Tools/World/WorldNavMesh.cs`.
   a global setting, a per-level authoring choice, or tied to the format version the same way the
   header-length gate is.
 - Whether `nv\nv.nvm` (the writer's "same index twice" `MakeSectorFileName(true)` branch) is ever
-  actually reached in practice, or is dead/legacy code — no confirmed caller was found using that
-  branch during this pass.
+  actually reached in practice, or is dead/legacy code — no caller using that branch is known.

@@ -6,21 +6,15 @@ sidebar_position: 18
 
 :::info[Verified in a running game]
 Opened and driven in retail Far Cry 2 (Steam v1.03, vanilla install, stock `bin\FarCry2.exe`, no
-command-line arguments, no mod layer) on 2026-09-04. The command inventory and gating logic below
-were traced first in the disassembly and then confirmed against the running game.
-:::
-
-:::note[Corrects an earlier claim]
-This page replaces the previous statement that "there is no in-game dev console in Far Cry 2", which
-appeared in [modding gotchas](../modding/gotchas.md). That claim was drawn from the `-logFile`
-investigation in [command-line args](./command-line-args.md), which correctly established that no
-*logging* facility survives in the retail build. The console is a separate subsystem, and it does
-survive. See [the overview](./overview.md) for binary identification and the address table.
+command-line arguments, no mod layer). The command inventory and gating logic below were traced in
+the disassembly and confirmed against the running game. See [the overview](./overview.md) for binary
+identification and the address table.
 :::
 
 Retail Far Cry 2 ships a working developer console. It is constructed on the boot path, populated
 with commands, bound to a key in the shipped input maps, and reachable by a player on an unmodified
-install with no patching.
+install with no patching. Only the *logging* facility is gone from the retail build (see
+[command-line args](./command-line-args.md)); the console is a separate subsystem.
 
 ## Opening it
 
@@ -275,7 +269,7 @@ These are the names that reach nothing:
 | `RTSetDeltaTime` | `Game:RTSetDeltaTime` is registered nowhere, same as above. |
 | `runtests` | `System:RunTests` is bound in neither build. |
 | `SetMaxFrameRate` | The handler reads its two arguments and returns, in both builds. `gfx_MaxFps` is the live setting. |
-| `activate_log`, `deactivate_log` | Stubs; the logging facility they drove is gone, as [command-line args](./command-line-args.md) found separately. |
+| `activate_log`, `deactivate_log` | Stubs; the logging facility they drove is gone (see [command-line args](./command-line-args.md)). |
 | `aidebugtool` | Sets `CAIDebugTool`'s visibility flags, but nothing outside the AI engine's own constructor and destructor ever reads that singleton in either build — there is no view left to draw. |
 | `hack_draw_counters` | Registered as a variable with no reader anywhere in either build. |
 | `set_weather`, `set_windForce`, `set_windDir`, `set_stormFactor`, `set_weatherHour`, `set_weatherTimeScale`, `debug_showWeatherInfo`, `debug_envNetwork`, `gfx_EnableManualWeatherDemo` | Static `CVarCommand` objects belonging to the environment manager. Their values are written once by the static initialiser and read by nothing, in both builds. The live routes are the `env_*` settings and `CDynamicEnvironmentManager`'s own Lua methods. |
@@ -354,7 +348,7 @@ Two startup hooks exist:
 | `console_dump_elements` | `unknown command` — developer-gated. With the gate lifted it runs and writes 416 command names to `ConsoleElementsDump.txt` |
 | `#Game:AddDiamonds(500)` | Works; diamond count increases |
 | `#CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay(h, m)` | Works; time of day changes immediately |
-| `#Game:SetHealth(100)`, `(25)`, `(0.5)` | All kill the player. The handler reads a **float** defaulting to `1.0f`, so the argument is a 0.0–1.0 fraction rather than a percentage — but partial values still kill, so the working range is not yet established |
+| `#Game:SetHealth(100)`, `(25)`, `(0.5)` | All kill the player. The handler reads a **float** defaulting to `1.0f`, so the argument is a 0.0–1.0 fraction rather than a percentage — but partial values still kill, so the working range is not established |
 | `#Game:ChangeFOV(n)` | A **preset index, not degrees**: `-1` default, `1` narrow, `2` wide, `3` very wide. `100` is rejected |
 | `#System:Log("…")` | No visible effect — the binding exists, the sink does not |
 | `#SwitchCamera(…)` | Silent no-op, no error — see below |
@@ -387,16 +381,14 @@ ghost camera**. The only camera-adjacent entries are `set_debug_fov`, the six
 `gfx_UpdateCullingCamera`/`gfx_UpdateRenderCamera` — culling-freeze toggles for inspecting what the
 renderer culls, not a camera you can fly.
 
-So none of those three routes reaches a free-fly camera. Everything above stays true, and the
-conclusion this page used to draw from it — that free-fly is editor-only — does not follow, because
-all three routes were searched in the wrong place.
+So none of those three routes reaches a free-fly camera from the console. Free-fly is still
+reachable, from code.
 
-:::info[Corrected — free-fly is reachable, from code]
-`Cameras.Camera.Free` **is not a string in either shipped `Dunia.dll`**, which is exactly why the
-survey above missed it: `.First`, `.Editor` and `.Spectator` turned up in a string scan and it did
-not. It is an **entity-library archetype, loaded from game data**, and
-`CCameraManager::SetActiveCameraByName` matches it case-insensitively against what the data set
-carries rather than against anything in the binary.
+:::info[Free-fly is reachable, from code]
+`Cameras.Camera.Free` **is not a string in either shipped `Dunia.dll`**, so a string scan finds
+`.First`, `.Editor` and `.Spectator` and not it. It is an **entity-library archetype, loaded from
+game data**, and `CCameraManager::SetActiveCameraByName` matches it case-insensitively against what
+the data set carries rather than against anything in the binary.
 
 Calling that function directly with the name activates the camera, in the retail PC build, with no
 editor and no script context. DevTools' Freecam option does this — see
@@ -405,16 +397,14 @@ a heavily modded data set can simply not carry the archetype, and the switch **r
 either way, so the only test that it worked is that the active camera changed.
 :::
 
-The lesson generalises beyond cameras: a capability absent from the binary's strings and from the
-command dump may still be reachable, because the name it answers to can live in the data. A Domino
-box calling `SwitchCamera("Cameras.Camera.Editor")` remains an untried route to the *editor* camera
-specifically, but it is no longer the only lead for free-fly.
+This holds beyond cameras: a capability absent from the binary's strings and from the command dump
+may still be reachable, because the name it answers to can live in the data. A Domino box calling
+`SwitchCamera("Cameras.Camera.Editor")` is an untried route to the *editor* camera specifically.
 
 ## Unknowns
 
 - Whether the *ghost* camera can be activated the same way the free camera can. `SwitchCamera` stays
-  ruled out from the console, and whether a Domino box can drive it is still untested — but neither
-  is needed for free-fly any more.
+  ruled out from the console, and whether a Domino box can drive it is untested.
 - The working range for `Game:SetHealth`. The handler reads a float defaulting to `1.0f`, which
   implies a 0.0–1.0 fraction, yet `0.5` still kills. The value is passed on with two `0xffffffff`
   sentinels and a constant hash (`0x59f2984f`), suggesting it routes through the stim/damage system

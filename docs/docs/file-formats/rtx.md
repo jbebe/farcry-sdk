@@ -156,7 +156,7 @@ the tree meets the ground.
 All four corner offsets sit at the card radius from the leaf's position, but they are measurably
 **not coplanar** — only 1,569 of 20,107 shipped cards are — so a card is a twisted quad rather than a
 flat one. The file does not record which order the corners go in; the three bytes at `+0x58` take
-only 8 distinct values across the corpus and look like an ordering, but have not been confirmed.
+only 8 distinct values across the corpus and look like an ordering, but are not confirmed as one.
 
 Species with no foliage still carry a placeholder: both euphorbia cacti have exactly one card, of
 radius 0.03.
@@ -192,8 +192,7 @@ to back. Vertices are `0x94` bytes:
 The rest is the leaf's own cloth simulation — which vertices it is pinned to and how far from each it
 hangs. Indices are `u16` triangle lists.
 
-A record also carries a nine-digit decimal string at `+0x1C`. (The earlier note on this page reported
-a repeated decimal string in the payload and guessed at a build stamp; this is what it was.)
+A record also carries a nine-digit decimal string at `+0x1C`.
 
 ## Materials
 
@@ -220,16 +219,15 @@ foliage. That matches the geometry: a species has leaf cards or modelled leaves,
 
 The paths name a **`.mlm`**, which ships in no archive. The material that does ship is the `.xbm` of
 the same stem — `graphics\_materials\smaingot-M-2007100145957056.mlm` resolves to
-`graphics\_materials\smaingot-m-2007100145957056.xbm`. This corrects an earlier note on this page:
-the payload *does* reference other assets, just as plain strings rather than as the path hashes the
-rest of the engine keys on, which is why a hash scan found nothing.
+`graphics\_materials\smaingot-m-2007100145957056.xbm`. The payload references other assets as plain
+strings rather than as the path hashes the rest of the engine keys on, so a hash scan finds nothing.
 
 ## Placement
 
-`.rtx` names a species, not a location. Placement is resolved: it lives in the per-sector landmark
+`.rtx` names a species, not a location. Placement lives in the per-sector landmark
 files, under a `CCollectionComponent`'s `VegetationZoneData`, and a `.rtx` is referenced there the
 same way a mesh is — by the CRC32 of its own path. See
-[It lives in the landmark files](../engine-internals/terrain-and-vegetation.md#it-lives-in-the-landmark-files)
+[Retail campaign vegetation lives in the landmark files](../engine-internals/terrain-and-vegetation.md#retail-campaign-vegetation-lives-in-the-landmark-files)
 and [Resource ids are path hashes](../engine-internals/terrain-and-vegetation.md#resource-ids-are-path-hashes-and-most-of-the-scatter-is-grass).
 
 RealTree is the smaller half of that scatter: 60 distinct `.rtx` resources against roughly 101,000

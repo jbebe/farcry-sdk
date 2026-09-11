@@ -90,8 +90,6 @@ stored inside the same packed block. `CSector::GetSurfaceType` returns `0xff` fo
 `CTerrain::GetSurfaceType` maps that to `0`, so a caller reading through `CTerrain` cannot tell a
 hole from surface type 0.
 
-The low five bits of the `Flags` byte are not read by anything traced so far.
-
 ## Normals
 
 Terrain normals are stored as two bytes per cell in two separate planes, and Z is reconstructed
@@ -152,35 +150,10 @@ resources, per-resource cluster counts, bounding volumes, per-cluster instance c
 Z positions, Z orientation data, colours, and a list of cluster records. Splitting instance data
 across parallel arrays rather than an array of structs is consistent throughout.
 
-## Retail campaign levels carry no authored collection data
+## Retail campaign vegetation lives in the landmark files
 
 The collection system above is the **editor's** authoring mechanism. A shipped campaign level does not
-store its vegetation the same way. Checked against `world1` and `world2`:
-
-- **No collection mask file exists.** A level cell ships only `.fcb`, `.xbt`, `.zsr`, `.sdat`, `.srl`
-  and one `.xml`. The `ige/collection.mask` written by `SaveMasks` appears only inside
-  [`.fc2map`](../file-formats/fc2map.md) documents.
-- **No cluster or collection instances in sector data.** Across 40 `worldsector*.data.fcb` files in
-  `w1_c_2` there are none at all; across 40 in `w2_b_2` there are two `CRealtreeComponent`, which are
-  individually placed trees rather than scattered vegetation. Sector files in these cells are a few
-  kilobytes, far too small to hold per-instance placement.
-- **Nothing in the sector descriptor.** `sector<id>.desc.fcb` holds `DetailTexMask`, the sector id,
-  the neighbour list and landmark/mission references, and no collection fields.
-- **Nothing in `mapsdata.fcb`.**
-
-What does exist is a definition list: `<world>.managers.fcb` holds a `Collections` node with 144
-`Collection` entries, each carrying a name, an asset GUID and a hash. The names are biome-shaped —
-`FCX_SemiDesert01`, `FCX_Desert01`, `FCX_RoadDesert01`, `FCX_EmptyVoid`. The entity library
-separately declares `CGrassDisplacementComponent` and `CVegetationSlowdownComponent` on archetypes.
-
-So the 144 collections are a palette, and the per-location assignment that selects among them is not
-present in the level files in any form found so far. The `.sdat` `EnvSettings` blob was examined as
-the remaining per-sector store and is a raw memory snapshot whose varying words look like retained
-pointers (`0x07xxxxxx`), not an authored slot table.
-
-### It lives in the landmark files
-
-Resolved: campaign vegetation placement is in
+store its vegetation the same way: placement is in
 `levels/<cell>/generated/worldsectors/landmarkfar_<sectorId>.data.fcb`, keyed by **global** sector id.
 Each holds one `WorldSector` → `MissionLayer` → `Entity` whose `Components` carry a
 `CCollectionComponent`:
@@ -250,10 +223,32 @@ instances** across 5,377 landmark files:
 Sampling is treacherous here: a few hundred landmark files taken in directory order land in desert
 sectors, which are rock-heavy and grass-light, and give the opposite ratio. Count the world.
 
-Three things this is **not**, each checked directly: vegetation is not placed as entities (33,000
-sampled entities contain about 16 plant props); it is not in `worldsector*.data.fcb`, the sector
-descriptors, `mapsdata.fcb`, `managers.fcb` or the entity library (833 sectors sampled world-wide);
-and no collection mask file ships with a retail level.
+### Where campaign vegetation is not
+
+Checked against `world1` and `world2`:
+
+- **No collection mask file exists.** A level cell ships only `.fcb`, `.xbt`, `.zsr`, `.sdat`, `.srl`
+  and one `.xml`. The `ige/collection.mask` written by `SaveMasks` appears only inside
+  [`.fc2map`](../file-formats/fc2map.md) documents.
+- **Not placed as entities, and no cluster or collection instances in sector data.** Across 40
+  `worldsector*.data.fcb` files in `w1_c_2` there are none at all; across 40 in `w2_b_2` there are two
+  `CRealtreeComponent`, which are individually placed trees rather than scattered vegetation. Sector
+  files in these cells are a few kilobytes, far too small to hold per-instance placement, and 33,000
+  sampled entities contain about 16 plant props.
+- **Nothing in the sector descriptor.** `sector<id>.desc.fcb` holds `DetailTexMask`, the sector id,
+  the neighbour list and landmark/mission references, and no collection fields.
+- **Nothing in `mapsdata.fcb`, `managers.fcb` or the entity library** (833 sectors sampled
+  world-wide).
+
+What `<world>.managers.fcb` does hold is a definition list: a `Collections` node with 144
+`Collection` entries, each carrying a name, an asset GUID and a hash. The names are biome-shaped —
+`FCX_SemiDesert01`, `FCX_Desert01`, `FCX_RoadDesert01`, `FCX_EmptyVoid`. The entity library
+separately declares `CGrassDisplacementComponent` and `CVegetationSlowdownComponent` on archetypes.
+
+So the 144 collections are a palette, and no per-location assignment selecting among them is present
+in the sector data, descriptors or masks. The `.sdat` `EnvSettings` blob, the remaining per-sector
+store, is a raw memory snapshot whose varying words look like retained pointers (`0x07xxxxxx`), not
+an authored slot table.
 
 ## Not mapped
 

@@ -14,14 +14,13 @@ something you can actually read and edit, and packs your changes back into a `pa
 normal, unmodified game loads. No DLL, no injection, nothing running inside the game process.
 
 The name is for the Jackal, and for "jack of all trades". One tool for the whole job instead of six
-converters and a batch file, which is what we had before.
+converters and a batch file.
 
 **[Download the latest release](https://github.com/jbebe/farcry-sdk/releases?q=jackall&expanded=true)**.
 `jackall-<version>.zip` is the app, `jackall-cli-<version>.zip` is the command line version. Both are
 a single exe. You don't need .NET installed and there is nothing to set up.
 
-Source code, if you want to check what it does:
-[`tools/JackAll`](https://github.com/jbebe/farcry-sdk/tree/main/tools/JackAll).
+Source code: [`tools/JackAll`](https://github.com/jbebe/farcry-sdk/tree/main/tools/JackAll).
 
 ## What it can do
 
@@ -37,14 +36,13 @@ that ships a full replacement `patch.dat` and `patch.fat`, and most FC2 mods are
 mod**: it compares that mod to a clean game and keeps only the files it really changed.
 
 **Deploy mods** builds everything into the game, **Revert to original** puts the clean archive back.
-You can't wreck your install by clicking too much. JackAll saves your original `patch.dat` once as
-`patch.dat.vanilla`, and every build starts from that backup again, never from the file that happens
-to be there. So building twice gives you the exact same bytes, turning a mod off really removes it,
-and a failed build leaves the game untouched. If two mods change different parts of the same file
-they get merged instead of one of them winning silently. **Check for dead edits** finds edits that a
-later entity library overrides, which is the kind of change that looks fine in the tool and does
-nothing in game. A mod can also carry a `plugins\` folder, and that one goes to `bin\plugins\` for
-[FCSE](/fcse) instead of into the archive.
+JackAll saves your original `patch.dat` once as `patch.dat.vanilla`, and every build starts from that
+backup again, never from the file that happens to be there. So building twice gives you the exact
+same bytes, turning a mod off really removes it, and a failed build leaves the game untouched. If
+two mods change different parts of the same file they get merged instead of one of them winning
+silently. **Check for dead edits** finds edits that a later entity library overrides, which is the
+kind of change that looks fine in the tool and does nothing in game. A mod can also carry a
+`plugins\` folder, and that one goes to `bin\plugins\` for [FCSE](/fcse) instead of into the archive.
 
 ### Files
 
@@ -72,8 +70,8 @@ and not hex, and not XML either. Big files like an entity library are split into
 entity, so opening a weapon opens that weapon instead of a huge document. Nothing is written until
 you press save.
 
-When you save, only that one entity piece lands in your workspace, as a small file. That is the
-thing that lets two mods live together, and it's explained in [How to use](#how-to-use) below. The
+When you save, only that one entity piece lands in your workspace, as a small file. That is what
+lets two mods live together; see [How to use](#how-to-use). The
 same editor also opens the `PersistenceDB` inside a savegame, because a save is the same kind of
 file.
 
@@ -121,9 +119,9 @@ can filter them by mission layer, search them, and click them either in the list
 
 Everything without a model gets its own symbol so you can still find it: lights in their own color,
 trigger boxes as wireframe, AI cover and guard spots, door and window hints for the AI, particle and
-sound emitters, and the navmesh nodes the AI walks on. Right now it's a viewer. You can select
-things, read their values and drag a move gizmo, but the gizmo only lives until you close the app.
-Nothing gets saved yet.
+sound emitters, and the navmesh nodes the AI walks on. It's a viewer: you can select things, read
+their values and drag a move gizmo, but the gizmo only lives until you close the app. Nothing goes
+back into the files.
 
 ### Library
 
@@ -147,8 +145,8 @@ got stuck is fixable without starting the campaign over.
 
 It's also here to explain something that has confused FC2 modders for about fifteen years: a save
 stores values that overlap with almost every entity library, and an `.fcb` mod cannot override what
-the save already has. That's why a data mod usually needs a new game. Being able to see what your
-save is holding beats guessing.
+the save already has. That's why a data mod usually needs a new game: if one looks like it does
+nothing, start a new game before you decide the mod is broken.
 
 ### Menus and mission logic
 
@@ -162,8 +160,9 @@ options page inside the game possible at all. See [Magma UI](/docs/category/magm
 
 Domino is the mission scripting system, and it ships as generated Lua. JackAll rebuilds a script from
 `domino\user\` into the box and wire graph it was made in, lays it out for you, takes the pin names
-from the node scripts and the original names from the `*.debug.lua` file next to it. It's read only
-for now: you can see what a mission does, you just can't change it here yet.
+from the node scripts and the original names from the `*.debug.lua` file next to it. It's read only:
+you can see what a mission does, but there's no way back to the Lua. Both it and the Map tab say
+viewer on purpose, so nobody spends an evening editing and then loses it.
 
 ## Format support
 
@@ -200,26 +199,23 @@ and `.zsr` (streaming data), `.luab` and `.luac` (compiled Lua), `.loc`, `.mater
 
 ## Where it's going
 
-JackAll started as a mod installer, and that part has moved out of the way. The install pipeline is
-now a **[Vortex extension](https://www.nexusmods.com/site/mods/2143)**, so FC2 mods install from
-Nexus like they do for any other game. The extension is only a front end, not a second tool: Vortex
-does the downloading, staging, enabling and load order, and every step that needs the real game
-archives calls JackAll's command line. That way the mod rules exist in one place and can't drift
-apart. If you only want to install mods, use Vortex. JackAll is what you want when you're making one.
-The pipeline is written up on the [Vortex page](/docs/modding/vortex).
+The install pipeline is a **[Vortex extension](https://www.nexusmods.com/site/mods/2143)**, so FC2
+mods install from Nexus like they do for any other game. The extension is only a front end, not a
+second tool: Vortex does the downloading, staging, enabling and load order, and every step that needs
+the real game archives calls JackAll's command line. That way the mod rules exist in one place and
+can't drift apart. If you only want to install mods, use Vortex. JackAll is what you want when you're
+making one. The pipeline is written up on the [Vortex page](/docs/modding/vortex).
 
-The rest grew way past "file manager". There's a real 3D map editor forming over the actual worlds, a
-real model exporter with its own file format and a Blender add-on on the other side of it, a visual
-editor for Domino missions, an archetype browser that resolves the override chains, and a savegame
-editor. A few of those don't exist anywhere else for this game, in any form. Some are still viewers,
-and the plan is that each one gets its write path, in the order the [roadmap](/todos/roadmap) argues
-for.
+The rest goes well past a file manager: a 3D map editor forming over the actual worlds, a model
+exporter with its own file format and a Blender add-on on the other side of it, a visual editor for
+Domino missions, an archetype browser that resolves the override chains, and a savegame editor. A few
+of those don't exist anywhere else for this game, in any form. Some are still viewers, and the plan is
+that each one gets its write path, in the order the [roadmap](/todos/roadmap) argues for.
 
 None of this is really specific to Far Cry 2. Dunia is Ubisoft's engine across a decade of games and
 the formats are close relatives: an `.fcb` is an `.fcb`, an archive is an archive, a mesh is more or
-less the same mesh. Nothing stops someone from teaching JackAll Far Cry 3, 4, 5, 6 or whatever number
-they're on when you read this. That's more work than one person can do, which is exactly why the
-source is public.
+less the same mesh. Nothing stops someone from teaching JackAll Far Cry 3, 4, 5 or 6. That's more
+work than one person can do, which is exactly why the source is public.
 
 ## How to use
 
@@ -244,16 +240,6 @@ only that piece, on a path like `entitylibrary.fcb\vehicle\land\jeep.xml`. Two m
 entities never meet. Two mods on different fields of the same entity get merged against the original
 version. Only a real conflict, same field with two different values, needs you, and then JackAll
 shows it as a conflict instead of quietly picking one.
-
-**Two editors are read only right now.** The Map tab draws the world and lets you select things and
-read their values, and the move gizmo only lasts until you close the app. Nothing goes back into the
-files yet. The Domino editor rebuilds a mission graph so you can read it, and there's no way back to
-the Lua. Both are still worth having for understanding the game, and they say viewer on purpose, so
-nobody spends an evening editing and then loses it.
-
-**One thing worth repeating.** A savegame keeps values that overlap almost every entity library, and
-an `.fcb` mod cannot override what the save already stored. If your data mod looks like it does
-nothing, start a new game before you decide the mod is broken.
 
 ## CLI
 
@@ -306,7 +292,7 @@ thousand textures, or a completely different mod manager. The JSON is the stable
 result, stderr is progress, and a failure is `{"ok":false,"error":"…"}` with exit code 1, never a
 random line on the wrong stream.
 
-Vortex is the proof that it works. It drives `jackall-mi.exe`, a smaller build with only the four
+Vortex drives `jackall-mi.exe`, a smaller build with only the four
 commands an installer really needs, and its JSON is identical to `jackall-cli`'s `mod` commands. So
 the extension can use either one, and neither of them is a rewrite of the other.
 

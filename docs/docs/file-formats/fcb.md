@@ -48,7 +48,9 @@ One object is: `childCount`-varint, TypeHash, `valueCount`-varint, that many val
 - **Varints** (`childCount` and `valueCount`, this object's own counts): a marker byte `< 0xFE` is the
   literal value; `0xFE` or `0xFF` both mean "read the next 4 bytes (LE) as the literal value instead."
   **Neither marker carries backreference meaning at this position** — this differs materially from how
-  Gibbed's tooling, and JackAll's original port, treated it (see "Correction" below).
+  Gibbed's tooling treats it. No real fixture uses `0xFE` here; JackAll pins the behavior with a
+  synthetic regression test (`FcbDocumentTests.cs`,
+  `An_objects_own_value_count_never_means_backreference_even_with_marker_0xFE`).
 - **Object registration**: right after TypeHash is read, the object's pool address is appended to a
   growing array. Index = its ordinal among everything parsed so far, in file order.
 - **Value entries**: nameHash (u32), then a size-varint: `< 0xFE` → that many payload bytes follow;
@@ -95,20 +97,10 @@ consistent with it counting something narrower than "every named field," though 
 proven beyond the pool-usage argument. This has no bearing on correctness — nothing in `FcbDocument.cs`
 depends on this field's precise meaning; it's written on output purely for structural completeness.
 
-## Correction to JackAll's port
-
-Before this investigation, `FcbDocument.Deserialize` threw if an object's own `valueCount` marker byte
-was `0xFE`, treating it the same as the (genuinely different) object-level child-list backreference
-marker. The engine never does this — `0xFE` and `0xFF` are equivalent "read 4 more bytes" markers for
-an object's own `childCount`/`valueCount` fields, with no backreference meaning at that position. No
-real fixture happened to trigger this, so it was a latent, never-triggered bug — fixed regardless, with
-a synthetic regression test (`FcbDocumentTests.cs`,
-`An_objects_own_value_count_never_means_backreference_even_with_marker_0xFE`).
-
 ## Unknowns
 
 - The exact original semantics of `totalValueCount` — would need either a real sample with a nonzero
   count-to-childslot mismatch to falsify the current hypothesis, or the original offline compiler
   (`.fcb` compilation happens in an external build tool, not the shipped game).
-- A real `.fcb` sample with flags bit 0 set (the string-hashed TypeHash path) — none seen yet, so
+- A real `.fcb` sample with flags bit 0 set (the string-hashed TypeHash path) — none is known, so
   `Fcb_ReadTypeHash`'s alternate branch is understood from static analysis only.

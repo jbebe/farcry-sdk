@@ -37,21 +37,21 @@ package won't fix the real problem (20,228 wire crossings after layout).
   - Revamp the visual interface, find a good graph wpf package
 - [ ] **Nothing writes into a `.fc2model`.** `fc2model` has `export`/`extract`/`inspect` only, so
       retexturing a weapon means hand-editing the pack's JSON — which is what
-      [texturing a replaced weapon](/farcry-sdk/docs/modding/texturing-a-weapon) currently
-      prescribes. `Fc2ModelBundle` and `MaterialDocument` already model everything a
-      `fc2model set-material` / `set-texture` pair would need. Worth building when a third mod wants
-      it; the mesh half stays a per-mod script, because appending a material and skipping `SCOPE_HI`
-      is policy rather than a generic operation.
+      [texturing a replaced weapon](/farcry-sdk/docs/modding/texturing-a-weapon) prescribes.
+      `Fc2ModelBundle` and `MaterialDocument` already model everything a `fc2model set-material` /
+      `set-texture` pair would need. Worth building when a third mod wants it; the mesh half stays a
+      per-mod script, because appending a material and skipping `SCOPE_HI` is policy rather than a
+      generic operation.
 - [ ] **A build picks a container's splitter off a *string*, and one caller can still synthesize the
       wrong one.** `PatchBuilder.RecoveredContainerPath` reads the container's name off any
       contributing fragment's staged path; a `mods\_hash\<hex>.game.xml\<mission>` override resolves
       as a valid fragment but `PathOf` nulls every `_hash\` path, so the fallback names it
-      `_hash\<hex>.fcb` and the world descriptor is handed to the `.fcb` splitter — the same
-      "missing 'FCbn' signature" the localization fragments used to die on. `ContainerFormats.For`'s
-      doc still claims `.fcb` is the only format staged hash-addressed, which stopped being true when
-      world descriptors began splitting. The container path is known at index time in all three
-      producers and thrown away; carrying it on `ModPathTarget` would close this and collapse the
-      four places that re-derive it (`GameVfs`, `PatchBuilder`, `MainViewModel.Mods`, `For` itself).
+      `_hash\<hex>.fcb` and the world descriptor is handed to the `.fcb` splitter, which fails with
+      "missing 'FCbn' signature". `ContainerFormats.For`'s doc claims `.fcb` is the only format
+      staged hash-addressed, which is false now that world descriptors split. The container path is
+      known at index time in all three producers and thrown away; carrying it on `ModPathTarget`
+      would close this and collapse the four places that re-derive it (`GameVfs`, `PatchBuilder`,
+      `MainViewModel.Mods`, `For` itself).
 - [ ] **Finer environment fragments, so sky and terrain mods can coexist.**
       `world1.game.xml\_environment.xml` replaces the whole `<Environment>` block, so the sky mod's
       moon-size edit carries retail shadow radius and view distance and collides with a shadow mod.
@@ -106,35 +106,34 @@ what is left is what a modeler cannot do rather than what is broken.
 
 ## Mod
 
-- [x] Create our first mod because that was the original plan — `mods/vss-vintorez`
-- [x] VSS: textures. Done and confirmed in game; the method is
+- [x] Create a first mod — `mods/vss-vintorez`
+- [x] VSS: textures, confirmed in game; the method is
       [texturing a replaced weapon](/farcry-sdk/docs/modding/texturing-a-weapon)
 - [ ] VSS: split the body into steel and stock materials, so the stock stops sharing the steel's
       specular response. Needs the transplant re-run, not new textures
 - [x] VSS: the pickup archetypes, so the weapon on the ground is complete at close range. Rebuilt
       from the Dragunov's pickups; `archWeapon` has to be repointed with them or the pickup hands
       over a Dragunov
-- [x] VSS: the LOD tiers. LOD1/LOD2 were budgeted per cluster instead of per part; LOD3/LOD4 were
-      forty slivers rather than a gun, and are now floored at LOD2's budget
-- [x] Move `FX_FIRE` to the VSS's muzzle — done through the archetype's baked skeleton, which is
+- [x] VSS: the LOD tiers. LOD1/LOD2 are budgeted per part rather than per cluster; LOD3/LOD4 are
+      floored at LOD2's budget, since below it they come out as forty slivers rather than a gun
+- [x] Move `FX_FIRE` to the VSS's muzzle — through the archetype's baked skeleton, which is
       per-archetype, rather than the rig file, which every world's Dart Rifle still names
-- [x] VSS: lethality. Measured rather than done — the weapon already kills (`selFireStrategy` is
-      `Bullet`, both hit-location severities are `Kill`, and nothing spawns a dart). Its damage
+- [x] VSS: lethality. The weapon kills (`selFireStrategy` is `Bullet`, both hit-location severities
+      are `Kill`, and nothing spawns a dart). Its damage
       number stays the Dart Rifle's on purpose; a suppressed stealth weapon is what it is for
 - [x] VSS: HUD and bazaar icons. Both redrawn; they are bound by name in `gamemodesconfig.xml`, so
       replacing the texture is the whole job
 - [x] Find where the weapon-bazaar name comes from; it is not `sDisplayName`. It is
       `nameOasis="WEAPONBAZAAR_*_NAME"` in `engine\gamemodes\gamemodesconfig.xml`, resolved against
       `languages\<language>\oasisstrings.rml`. Ten strings name one weapon across five sections
-- [x] VSS: jamming and breaking. Both confirmed in game, then set to the Dragunov's values. Jamming
+- [x] VSS: jamming and breaking. Both confirmed in game and set to the Dragunov's values. Jamming
       is `fJamProbabilityPerReload` in `ReliabilityLevelsData` on the **weapon** archetype, per
       reload and zero at full condition; breaking is `iClipsForSelfDestruct` on `WeaponProperties`
-- [ ] What `nForcedFailure*` actually governs. Raising it from 0 to 20 produced no failures at all,
+- [ ] What `nForcedFailure*` actually governs. Raising it from 0 to 20 produces no failures at all,
       and Mike's rusty Dragunov carries the same values as an ordinary one
-- [x] VSS: the weapon never *looks* degraded. Fixed with a hand-painted rust map on a second control
-      map — and the reason it was blocked, "a weapon owns only two texture paths", turned out to be
-      false: **a texture at an invented path loads from `patch.dat` with no hashlist and no `depload`
-      entry**, proven with a magenta canary. That removes the ceiling for every weapon mod
+- [x] VSS: a degraded look, through a hand-painted rust map on a second control map. **A texture at
+      an invented path loads from `patch.dat` with no hashlist and no `depload` entry**, proven with
+      a magenta canary, so no weapon mod is limited to the texture paths its donor owns
 - [ ] Whether the `Weapon` shader samples a normal map at all. No `NormalTexture1` slot appears on any
       of the nine `Weapon` materials across three weapons, so a texture path is not what is missing.
       Disassemble the template out of `shadersobj.fat`'s `obj10` tree, which keeps its reflection data
@@ -143,12 +142,11 @@ what is left is what a modeler cannot do rather than what is broken.
       grammar around it moves — Polish and Russian pick up a preposition the bare name cannot inflect
       into
 - [x] VSS: downsample the textures to the sizes retail uses — 512² base and 1024² `_mip0`. The four
-      state files now weigh exactly what the Dart Rifle's do, 1.33 MiB against 5.33 MiB. Confirmed in
+      state files weigh exactly what the Dart Rifle's do, 1.33 MiB against 5.33 MiB. Confirmed in
       game: at retail's tier the weapon reads as well as the guns Ubisoft shipped
 - [x] Does retail Far Cry 2 have a developer console? **Yes** — `~`/`` ` `` on a vanilla install,
       and a leading `#` runs arbitrary Lua, bypassing the `ConsoleDeveloperOnly` gate. Documented in
-      [the developer console](/docs/engine-internals/developer-console). This disproved the repo's
-      own RE-verified claim that no console existed
+      [the developer console](/docs/engine-internals/developer-console)
 - [ ] Raise `console+0x68` (developer mode) from data rather than a patch. That would expose the
       developer-only commands to `?` and to lookup, and make `console_dump_elements` run — its
       `ConsoleElementsDump.txt` would be an authoritative engine-generated command table

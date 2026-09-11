@@ -27,8 +27,7 @@ that is the whole of what it can do alone. Everything else is a contract with co
 
 ## The runtime object model
 
-Everything below assumes this shape. It is worth getting right first, because the C++ API is split
-across three object families that the `.mgb` vocabulary presents as one thing.
+The C++ API is split across three object families that the `.mgb` vocabulary presents as one thing.
 
 ```
 magma::Engine                     one per process; owns loaded packages
@@ -144,8 +143,8 @@ directly off `Dunia.dll 0x10ab8000`'s string references, the sixth confirmed by
 `CRC32("Stop") = 0x1964B988`, the hash on 1,279 corpus keyframes.
 
 **`PushPage` and `PopPage` are registered and no shipped package uses either** (0 uses of
-`#3FDC56C2` / `#2BB5AD8B` across all 50). That is the one unexplored data-only capability worth
-poking: page navigation without native code. Their argument keys are unknown for the same reason —
+`#3FDC56C2` / `#2BB5AD8B` across all 50). They are the one unexplored data-only capability: page
+navigation without native code. Their argument keys are unknown for the same reason —
 there is no shipped example to read them off.
 
 ### The 81 game actions
@@ -190,7 +189,7 @@ CFCXMainHudUI        CFCXHudService          CSavePointSaveGamePage  CGameOverLo
 CFCXMultiCreateMapRotationPage   CValueListSetting<unsigned int>     …
 ```
 
-### The routing, traced
+### The routing
 
 Signals reach those classes through **`CMagmaActionDispatcher::OnActionSignal(const CStringID&,
 magma::Action*)`** (`0x095f6370`). Decompiled, it does four things in this order:
@@ -223,8 +222,8 @@ So dispatch is a **global, ordered chain of responsibility, not page scoping**. 
   responding.
 - **There is a global kill switch.** The byte at `dispatcher+4` gates the entire loop.
   `CFCXUiService::DisableMagmaActionDispatcherOneFrame()` (`0x091eed00`) clears it and sets a flag to
-  restore it next frame — used to swallow input during transitions. Note the five built-in actions
-  below sit *outside* this gate and still fire while listeners are muted.
+  restore it next frame — used to swallow input during transitions. The five built-in actions below
+  sit *outside* this gate and still fire while listeners are muted.
 
 ### Five actions the dispatcher handles itself
 
@@ -343,6 +342,27 @@ them, and `Page::HasPushedPageHandlerType(const Handler::ObjectTypeInfo*)` tests
 hooks that let native code inject rendering into a Magma page rather than merely reposition
 authored content.
 
+## Page lifecycle
+
+`CUIPageBase` is the base every menu screen derives from. Its surface is small, and a native page
+must participate in all of it:
+
+| Group | Methods |
+|---|---|
+| Lifetime | `Init()` / `DoInit()`, `Unload()` / `DoUnload()`, `Shutdown()` / `DoShutdown()` |
+| Display | `Display()`, `Hide()`, `Update(float)`, `GetShowCursor()`, `GetLayer()`, `GetTopLevel()` |
+| Binding | `SetPage(magma::Page*)`, `FetchMagmaElements()`, `ConfigPage()` |
+| Navigation | `PushPage()`, `PopPage()` |
+| Events | `OnActionSignal(const CStringID&, magma::Action*)`, `AddListener`/`RemoveListener(IMagmaActionListener*)`, `IsActionListenerEnabled()` / `OnIsActionListenerEnabled()`, `AddEventHandler`/`RemoveEventHandler(CEventHandlerNomadUI*)` |
+| Composition | `RegisterModule`/`UnRegisterModule(IUIModule*)`, `AddCommand`/`RemoveCommand(CUICommand*)`, `ExecuteCommands()` |
+
+`Init()` is the step that binds the C++ object to its layout, by hashing the page's authored name and
+resolving it through `GenericObjectServer::FindGenericObject` — which is why a page's `.mgb` must be
+loaded before its class is constructed, and why skipping `Init()` produces a page object whose
+element pointers are all null. `FetchMagmaElements()` is the override where a derived page grabs and
+caches the widgets it will drive; `ConfigPage()` is a pure forward to a vtable slot, i.e. a
+derived-class hook with no base behaviour.
+
 ## Reading and writing parameters
 
 `magma::UserData` is the parameter store. Every element, and every `Action` object, is a `UserData`
@@ -387,12 +407,80 @@ re-instantiates another `Area`. Rather than editing the shared source area, you 
 times with different labels is exactly this mechanism, and it is why `AreaInstance` is the
 second-most common element in the corpus.
 
-Nothing in a `.mgb` is substituted at **load** time — there is no templating pass. These overrides
-are applied by code after the package is live.
+These overrides are applied by code after the package is live.
+
+## How runtime data reaches a widget
+
+Nothing in a `.mgb` is filled in at load time — there is no templating pass and no substitution.
+Native code **finds live objects by name hash and writes into them** (the nearest thing to binding
+is the per-instance `AreaInstance` override described [above](#per-instance-overrides-on-areainstance),
+which is also applied by code after load):
+
+| Call | Call sites | Role |
+|---|---|---|
+| `magma::Package::FindArea` | 20 | area by name |
+| `magma::Area::FindElement` | 60 | element by name |
+| `magma::UserData::GetUserDataElement` | 12 | resolve a `FullLink` property to a widget |
+| `magma::ListBox::AddItem` | 81 | append a row |
+| `magma::ListBox::RemoveAllItems` | 70 | clear before a rebuild |
+| `magma::Element::SetVisible` | 94 | show/hide |
+| `magma::Slider::SetValue` | 16 | push a value |
+| `magma::TextBase::SetString` | — | push text |
+
+### The name contract, in both directions
+
+- **Names the code demands of your layout.** `CUIPageBase::FetchMagmaElements` looks up
+  `p_menu_nav` → `l_menu_nav_list` and `a_title_bar` → `t_page_title` by hardcoded name. Miss one and
+  the page renders empty — `AddButton` returns −1 and does nothing.
+- **Names your layout offers to the code.** The `SETTING_*` `UserData` `FullLink` properties are a
+  manifest: "the widget you will ask for as `SETTING_DIFFICULTY` is this one". That is the closest
+  thing Magma has to a binding, and it carries a pointer, not a value.
+
+Both are covered with worked examples in
+[binding a page to native code](./patterns.md#binding-a-page-to-native-code).
+
+## Element names are indirected through XML config
+
+The name a page looks up is not always a literal in the binary. Two cooperating systems put an XML
+file in between.
+
+**`CFCXUiService::AddMagmaUIConfig(CMagmaConfigUIResource*)`** (`0x091f0640`) walks a config
+resource's XML children, hashes each node's *name* with `magma::Id::Hash`, and inserts it into a
+`std::map<magma::Id, XmlNodeRef>` on the service, recursing into nested resource containers. The
+result is a registry of config nodes keyed by hashed name.
+
+**`CMagmaFacade::GetWidgetFromXml<T>(magma::Area* root, XmlNodeRef& cfg, const char* childTag,
+T*& out)`** then resolves a widget through one of those nodes. Both compiled specializations
+(`magma::Text` at `0x08a65860`, `magma::AreaInstance` at `0x08a656c0`) are byte-for-byte the same
+shape:
+
+1. `cfg->findChild(childTag)` — bail if absent, leaving `out` untouched;
+2. read the **`path`** attribute → `CMagmaFacade::FindAreaRecurse(root, path)`;
+3. read the **`text`** attribute → `magma::Area::FindElement(area, name)`;
+4. type-check `*(T**)(element + 0x14)` with `IsKindOf(T::Type)`; `nullptr` on mismatch.
+
+So a config node child looks like `<someTag path="a_containing_area" text="t_the_element"/>`, and
+the attribute names are fixed regardless of widget type. `GetAreaFromXml` is the same for areas.
+
+Separately, **`CMagmaElementFactory`** (singleton, ctor `0x09283310`) is a fuller version of the
+same idea: `LoadFromXML(const XmlConstNodeRef&)` parses a config into per-page `CFactoryPage`
+objects — each holding a package name, page attributes, an element map and a material map keyed by
+`CStringID` — with `ParseItems` and `ParseMaterials` doing the reading. Pages then ask for logical
+names: `GetElement(pageId, id)`, `GetText`, `GetListBox`, `GetImage`, `GetAreaInstance`,
+`GetButtonInstance`, `GetPrivateElement`, `GetMaterial`, `GetElementName(pageId, id)`,
+`GetPackageName(pageId)`, `GetPageAttributes(pageId)`. `CFactoryPage::CacheElements(Area*,
+Package*)` and `CElement::Cache(Area*)` resolve the logical names against a live package once, and
+`RebuildElement`, `CopyElements(pageA, pageB)`, `Finalize(pageId)` and `Reset()` manage the lifetime.
+
+The modding consequence: where a screen goes through the factory or `GetWidgetFromXml`,
+**the binding between code and layout is a data file, not a hardcoded string** — you can re-point it
+at differently-named widgets without patching code. Where a screen calls `FindElement` with a
+literal (as `CUIPageBase::FetchMagmaElements` does for `p_menu_nav` and `a_title_bar`), you cannot.
+Which screens use which is not enumerated.
 
 ## Adding widgets at runtime
 
-The blunt answer: **you don't, and neither does the game.**
+**You don't, and neither does the game.**
 
 The mutation API exists and is complete — `Area::AppendElement(Element*)`,
 `Area::InsertElement(Element*, int)`, `RemoveElement`, `LinkElement`/`UnLinkElement`,
@@ -422,8 +510,7 @@ What the game does instead, in descending order of how much you get for free:
    all 20 whenever it moves.
 
 :::danger[Authoring a slot `HIDDEN` and revealing it from code does not work]
-It is the obvious way to build such a bank, and it fails in a way that costs a debugging session.
-`HIDDEN` and `magma::Element::SetVisible` are **different bits of the same flags byte** at
+It is the obvious way to build such a bank. `HIDDEN` and `magma::Element::SetVisible` are **different bits of the same flags byte** at
 `element+0x34`: `SetVisible` (`0x10ab13f0`) writes bit 0, while the authored `HIDDEN` flag is bit 1 —
 and magma's draw collection (`0x10ad3fb0`) skips any element whose bit 1 is set. So `SetVisible(true)`
 on an authored-hidden element leaves it in a state that is neither drawn nor inert, and the engine
@@ -444,7 +531,7 @@ clipping.
 :::warning[Rebuilds discard anything you appended out-of-band]
 `RemoveAllItems` at 70 call sites against `AddItem` at 81 is the shape of the whole system: screens
 **rebuild their lists from scratch** every time they display. Anything inserted outside that rebuild
-disappears on the next `Display()` — the trap FCSE hit twice.
+disappears on the next `Display()`.
 :::
 
 ## Settings rows
@@ -472,8 +559,6 @@ CUISettingBase* AddSliderSetting    (page, const wchar_t* label, const char* lab
                                      int enabled, void* handler);
 ```
 
-Three things are worth reading off that table.
-
 **The bool row and the dropdown are the same widget.** `#652FD37C` is a `ListBox` with
 `BUTTONCOUNT="1"` — a one-item viewport that scrolls whatever was added to it. Two items is a
 toggle, four is the Difficulty row. A layout that declares one kind of cell per row already supports
@@ -498,11 +583,11 @@ row appears with no control rather than failing.
 
 ### Text entry is an authored element, not a dialog
 
-Worth stating plainly because the obvious guess is wrong: **`CGameMessageBoxEditBox` is not a text
-prompt.** Raising it live produces the "you have unsaved changes" confirmation, not something a
-player can type into. The message-box family is for confirmations.
+**`CGameMessageBoxEditBox` is not a text prompt.** Raised live, it produces the "you have unsaved
+changes" confirmation, not something a player can type into. The message-box family is for
+confirmations.
 
-The way the game actually takes text is far simpler, and the stock **Options → Network** page is the
+The game takes text in a far simpler way, and the stock **Options → Network** page is the
 reference: it authors bare **`EditBox` elements directly on the page area**, six of them, at the row
 positions immediately below its four spinner rows. Each is a top-level element of type `EditBox`
 carrying:
@@ -515,7 +600,7 @@ Two consequences for a mod. First, no modal and no new engine call are needed �
 authoring. Second, those elements are **not** reachable through the page's `SETTING_*` links: the
 stock page resolves them through the XML element factory, which is why their name hashes appear
 nowhere in `Dunia.dll`. A layout you own can do better by giving each one a `FullLink` property like
-any other slot — but note that every `FullLink` in the shipped corpus is a 5-id chain *through an
+any other slot — but every `FullLink` in the shipped corpus is a 5-id chain *through an
 instanced area* (package, page, element, area, widget); a 3-id chain naming a direct element is
 unattested. The safe shape is therefore a small local area holding the `EditBox`, instanced once per
 row, exactly like the value and slider cells.
@@ -591,8 +676,8 @@ class's translation unit for instructions that form the address of anything in t
 So a mod can construct the real class — which is what correctly initialises the settings map, the
 embedded strings and the secondary vptrs — and then point the object at a **private copy of its
 vtable** with those five slots replaced. Replacing only some of them is not a partial fix, it is a
-delayed crash: an earlier attempt at this replaced three, and the two it missed surfaced as an
-access violation the first time a player changed a value.
+delayed crash: with three of the five replaced, the other two surface as an access violation the
+first time a player changes a value.
 
 `+0x4c` is worth calling out, because it is the hook such a page actually wants.
 `CSettingsPage::OnActionSignal` (`0x10cdde80`) offers each incoming action to every setting it owns,
@@ -610,72 +695,11 @@ neutralising that slot makes it inert no matter what writes it.
 Nothing is patched, so the stock screen that shares the class is unaffected *by construction* rather
 than by a `this`-comparison inside a global hook, and the option ids simply stay at the `-1` the
 constructor left them at, because only `RefreshOptionList` ever fills them. Hand-rolling a page class
-from scratch instead is the tempting alternative and the wrong one: `CFCXBaseOptionPage` is abstract,
-and constructing it works right up until the input path calls one of its pure virtuals and the
+from scratch instead does not work: `CFCXBaseOptionPage` is abstract, and constructing it works right up until the input path calls one of its pure virtuals and the
 process dies with R6025.
 
 Get the vtable's size right — it is 26 slots for `CFCXOptionGamePage`, and the bytes after it are
 string data, not a 27th entry.
-
-## Element names are indirected through XML config
-
-The name a page looks up is not always a literal in the binary. Two cooperating systems put an XML
-file in between.
-
-**`CFCXUiService::AddMagmaUIConfig(CMagmaConfigUIResource*)`** (`0x091f0640`) walks a config
-resource's XML children, hashes each node's *name* with `magma::Id::Hash`, and inserts it into a
-`std::map<magma::Id, XmlNodeRef>` on the service, recursing into nested resource containers. The
-result is a registry of config nodes keyed by hashed name.
-
-**`CMagmaFacade::GetWidgetFromXml<T>(magma::Area* root, XmlNodeRef& cfg, const char* childTag,
-T*& out)`** then resolves a widget through one of those nodes. Both compiled specializations
-(`magma::Text` at `0x08a65860`, `magma::AreaInstance` at `0x08a656c0`) are byte-for-byte the same
-shape:
-
-1. `cfg->findChild(childTag)` — bail if absent, leaving `out` untouched;
-2. read the **`path`** attribute → `CMagmaFacade::FindAreaRecurse(root, path)`;
-3. read the **`text`** attribute → `magma::Area::FindElement(area, name)`;
-4. type-check `*(T**)(element + 0x14)` with `IsKindOf(T::Type)`; `nullptr` on mismatch.
-
-So a config node child looks like `<someTag path="a_containing_area" text="t_the_element"/>`, and
-the attribute names are fixed regardless of widget type. `GetAreaFromXml` is the same for areas.
-
-Separately, **`CMagmaElementFactory`** (singleton, ctor `0x09283310`) is a fuller version of the
-same idea: `LoadFromXML(const XmlConstNodeRef&)` parses a config into per-page `CFactoryPage`
-objects — each holding a package name, page attributes, an element map and a material map keyed by
-`CStringID` — with `ParseItems` and `ParseMaterials` doing the reading. Pages then ask for logical
-names: `GetElement(pageId, id)`, `GetText`, `GetListBox`, `GetImage`, `GetAreaInstance`,
-`GetButtonInstance`, `GetPrivateElement`, `GetMaterial`, `GetElementName(pageId, id)`,
-`GetPackageName(pageId)`, `GetPageAttributes(pageId)`. `CFactoryPage::CacheElements(Area*,
-Package*)` and `CElement::Cache(Area*)` resolve the logical names against a live package once, and
-`RebuildElement`, `CopyElements(pageA, pageB)`, `Finalize(pageId)` and `Reset()` manage the lifetime.
-
-The modding consequence is real: where a screen goes through the factory or `GetWidgetFromXml`,
-**the binding between code and layout is a data file, not a hardcoded string** — you can re-point it
-at differently-named widgets without patching code. Where a screen calls `FindElement` with a
-literal (as `CUIPageBase::FetchMagmaElements` does for `p_menu_nav` and `a_title_bar`), you cannot.
-Which screens use which was not enumerated.
-
-## Page lifecycle
-
-`CUIPageBase` is the base every menu screen derives from. Its surface is small and worth knowing in
-full, because a native page must participate in all of it:
-
-| Group | Methods |
-|---|---|
-| Lifetime | `Init()` / `DoInit()`, `Unload()` / `DoUnload()`, `Shutdown()` / `DoShutdown()` |
-| Display | `Display()`, `Hide()`, `Update(float)`, `GetShowCursor()`, `GetLayer()`, `GetTopLevel()` |
-| Binding | `SetPage(magma::Page*)`, `FetchMagmaElements()`, `ConfigPage()` |
-| Navigation | `PushPage()`, `PopPage()` |
-| Events | `OnActionSignal(const CStringID&, magma::Action*)`, `AddListener`/`RemoveListener(IMagmaActionListener*)`, `IsActionListenerEnabled()` / `OnIsActionListenerEnabled()`, `AddEventHandler`/`RemoveEventHandler(CEventHandlerNomadUI*)` |
-| Composition | `RegisterModule`/`UnRegisterModule(IUIModule*)`, `AddCommand`/`RemoveCommand(CUICommand*)`, `ExecuteCommands()` |
-
-`Init()` is the step that binds the C++ object to its layout, by hashing the page's authored name and
-resolving it through `GenericObjectServer::FindGenericObject` — which is why a page's `.mgb` must be
-loaded before its class is constructed, and why skipping `Init()` produces a page object whose
-element pointers are all null. `FetchMagmaElements()` is the override where a derived page grabs and
-caches the widgets it will drive; `ConfigPage()` is a pure forward to a vtable slot, i.e. a
-derived-class hook with no base behaviour.
 
 ## There is no Lua in the menus
 
@@ -686,39 +710,9 @@ menu-adjacent entries in the whole binding table are game-state toggles like `Se
 and `SetShowRescueBuddyInMenu`. Menu logic is compiled C++ with no scripting layer, which is why
 adding behaviour means a native plugin rather than a script.
 
-## How runtime data reaches a widget
-
-Nothing in a `.mgb` is filled in at load time — there is no templating pass and no substitution.
-Native code **finds live objects by name hash and writes into them** (the nearest thing to binding
-is the per-instance `AreaInstance` override described [above](#per-instance-overrides-on-areainstance),
-which is also applied by code after load):
-
-| Call | Call sites | Role |
-|---|---|---|
-| `magma::Package::FindArea` | 20 | area by name |
-| `magma::Area::FindElement` | 60 | element by name |
-| `magma::UserData::GetUserDataElement` | 12 | resolve a `FullLink` property to a widget |
-| `magma::ListBox::AddItem` | 81 | append a row |
-| `magma::ListBox::RemoveAllItems` | 70 | clear before a rebuild |
-| `magma::Element::SetVisible` | 94 | show/hide |
-| `magma::Slider::SetValue` | 16 | push a value |
-| `magma::TextBase::SetString` | — | push text |
-
-### The name contract, in both directions
-
-- **Names the code demands of your layout.** `CUIPageBase::FetchMagmaElements` looks up
-  `p_menu_nav` → `l_menu_nav_list` and `a_title_bar` → `t_page_title` by hardcoded name. Miss one and
-  the page renders empty — `AddButton` returns −1 and does nothing.
-- **Names your layout offers to the code.** The `SETTING_*` `UserData` `FullLink` properties are a
-  manifest: "the widget you will ask for as `SETTING_DIFFICULTY` is this one". That is the closest
-  thing Magma has to a binding, and it carries a pointer, not a value.
-
-Both are covered with worked examples in
-[binding a page to native code](./patterns.md#binding-a-page-to-native-code).
-
 ## What is genuinely data-driven
 
-Worth knowing precisely, because it is the part you can use with no code at all:
+The part you can use with no code at all:
 
 - **Timelines.** Keyframes plus `Stop`/`Continue`/`GotoFrameIndex`/`GotoKeyframe` are a real state
   machine — fades, reveals, page-flip animations and button states all run with no native
@@ -745,7 +739,7 @@ Worth knowing precisely, because it is the part you can use with no code at all:
    example: ship a layout declaring 20 `FCSE_SLOT_nn` widgets, then call against those names.
 4. **New behaviour** always means code. There is no data-only path to a new action.
 
-And if you are writing that native plugin, the shape it must take is now fully determined:
+The shape that native plugin must take:
 
 | You want to… | Do this |
 |---|---|

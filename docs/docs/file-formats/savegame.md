@@ -6,8 +6,8 @@ sidebar_position: 9
 
 :::info[Verified via reverse engineering]
 Confirmed byte-for-byte against a real save (`178430170947.sav`, 1,854,505 bytes, from
-`Documents\My Games\Far Cry 2\Saved Games\`): offsets were hypothesized from the raw hex, then
-checked against the decompiled writer/reader functions' own arithmetic. Traced primarily against
+`Documents\My Games\Far Cry 2\Saved Games\`), with offsets checked against the decompiled
+writer/reader functions' own arithmetic. Traced primarily against
 **`FarCry2_server`** (the Linux dedicated-server binary), not `Dunia.dll` — see "Which binary" below.
 No prior community tooling documented this format at the byte level.
 :::
@@ -40,20 +40,19 @@ no padding or alignment between sections. Measured against the sample file:
 
 `Dunia.dll` (the Windows client — see [engine overview](../engine-internals/overview.md)) contains
 the same `.sav`/`CGameFile*`/`CScreenShot`/`CPersistenceDB` code, but none of it is exported or named,
-and its RTTI hasn't been recovered for these classes. The Ghidra project also contains a third
-program besides `Dunia.dll` and the launcher: **`FarCry2_server`**, the Linux dedicated-server ELF
-(`list_segments` confirms `.dynamic`/`.got.plt`, ~`0x08048000` load base; `list_imports` shows POSIX
+and its RTTI is not recovered for these classes. **`FarCry2_server`** is the Linux dedicated-server
+ELF (`list_segments` confirms `.dynamic`/`.got.plt`, ~`0x08048000` load base; `list_imports` shows POSIX
 imports like `pthread_create`/`gethostbyname`/`listen`). Its symbols are GCC/Itanium-mangled and the
 binary is largely unstripped (`.symtab`/`.strtab` present), so real C++ class and method names survive
 even though a headless server never actually writes a player save. Because the dedicated server links
 the same shared engine source, it's the better source for names here; byte offsets below were
 independently re-verified against the real Windows-written save file regardless. Addresses in the
-`0x08xxxxxx`–`0x0axxxxxx` range in this note belong to `FarCry2_server`, not `Dunia.dll`.
+`0x08xxxxxx`–`0x0axxxxxx` range on this page belong to `FarCry2_server`, not `Dunia.dll`.
 
 ## Section 1 — `CGameFileHeader` base (20 bytes, offset `0x00`)
 
 `CGameFileHeader::GetSaveSize()` (`0x091e3810`) hardcodes a return of `0x14` — this base header is
-always exactly 20 bytes. Its `WriteToFile`/`ReadFromFile` weren't located under that name, so the
+always exactly 20 bytes. Its `WriteToFile`/`ReadFromFile` are not located under that name, so the
 field meanings below are inferred from the real bytes rather than decompiled directly:
 
 | Offset | Size | Field | Measured value | Confidence |
@@ -64,8 +63,8 @@ field meanings below are inferred from the real bytes rather than decompiled dir
 | `0x0C` | 4 | float, likely player Z | ≈17.9 | medium — plausible elevation on world1 |
 
 The 3-float reading is circumstantial: [command-line args](../engine-internals/command-line-args.md)
-already predicted a `PlayerPos`-shaped property gets read back after `-load`, and the X/Y magnitudes
-match `world1`'s map extents. Treat as a strong hypothesis, not a confirmed field mapping.
+notes that a `PlayerPos`-shaped property is read back after `-load`, and the X/Y magnitudes match
+`world1`'s map extents. It is a strong hypothesis, not a confirmed field mapping.
 
 ## Section 2 — `CCampaignGameFileHeader` extension (offset `0x14`)
 
@@ -88,9 +87,9 @@ strings inside the embedded `.fcb` blob, which are null-terminated). Measured:
 | `0x31` | 4 | u32 | 8 |
 | `0x35` | 4 | u32 | 2 |
 
-No `GetDifficulty`/`GetAct`/`GetChapter` accessor was found on this class to pin down the trailing
-three u32s definitively (a `Difficulty`-named accessor cluster exists elsewhere in the engine, but
-wasn't confirmed wired to this class). Plausible reading of `(1, 8, 2)`: difficulty tier, an
+No `GetDifficulty`/`GetAct`/`GetChapter` accessor on this class pins down the trailing three u32s
+definitively (a `Difficulty`-named accessor cluster exists elsewhere in the engine, but is not
+confirmed wired to this class). Plausible reading of `(1, 8, 2)`: difficulty tier, an
 act/chapter progress marker, and a third small enum — not confirmed.
 
 ## Section 3 — `CScreenShot` (thumbnail, offset `0x39`)
@@ -108,11 +107,11 @@ mirrors of each other and both match the real file byte-for-byte:
 | `0xB449` | 4 | metadata-entry count (u32) | 0 |
 
 Size formula confirmed exactly: `width * height * channels * bitsPerChannel / 8`. Pixel channel order
-(RGBA vs BGRA) wasn't distinguished from this one sample — low, similar-magnitude values across all 3
+(RGBA vs BGRA) is not distinguished from this one sample — low, similar-magnitude values across all 3
 channels are consistent with either, matching a dark/foliage-heavy screenshot. The per-entry metadata
-format (`WriteMetaDataInfoToFile`/`ReadMetaDataInfoFromFile`) wasn't traced — this sample has zero
+format (`WriteMetaDataInfoToFile`/`ReadMetaDataInfoFromFile`) is not traced — this sample has zero
 entries. Capture-side entry points (`CGameFilesService::GrabScreenshotEv`, `CScreenShot::Capture`)
-weren't decompiled.
+are not decompiled.
 
 ## Section 4 — `CCampaignGameFileData` (offset `0xB44D`): DLC list + embedded `.fcb` blob
 
@@ -207,7 +206,7 @@ save's exported tree:
 | `Entities` / `Hierarchy` / `HierarchiesQueue` / `OmniEntities` | various | 2 each — top-level container tags, used once or twice near the root |
 | `BindingHierarchy` | `0xE2C5EA2C` | 0 — registered, but never seen as a plain value; likely a child-object reference rather than a scalar |
 
-### Closing the remaining gap: dictionary attack against the binary's own strings
+### Dictionary attack against the binary's own strings
 
 Beyond the class-scoped and hand-curated matches above, `binary_classes.xml`'s **flat** namespace (any
 member/class name anywhere in the file, regardless of which class declared it) resolves more by
@@ -218,9 +217,9 @@ the same hash — `Flags` similarly rejected on a 1-vs-4-byte mismatch).
 
 Since every field name reaching `PushBackMember` is a literal string sitting in the binary's own
 rodata, a full scan of `FarCry2_server` and `Dunia.dll` for printable-ASCII runs (rather than reading
-individual `RegisterProperties` functions one at a time) turned up the rest: CRC32-hash every
+individual `RegisterProperties` functions one at a time) resolves the rest: CRC32-hash every
 plausible-identifier string found in either binary and keep the ones matching a hash actually present
-in a real save's tree. This resolved 964 additional hashes unambiguously (zero collisions among
+in a real save's tree. This resolves 964 additional hashes unambiguously (zero collisions among
 matches). Combined:
 
 | Source | Distinct hashes resolved |
@@ -317,36 +316,10 @@ unique ID, not a timestamp, slot number, or hash. It carries no ordering or date
 `CFCXEditorGameFilesService::GenerateSaveFileName` (the custom-map/editor path) is a sibling using
 `GameFileUtils::GenerateCustomMapFileName`, presumed to follow the same pattern but not decompiled.
 
-## Unknowns
-
-- `CGameFileHeader`'s own `WriteToFile`/`ReadFromFile` weren't located under that name — Section 1's
-  field meanings are inferred from real bytes, not decompiled directly.
-- `CCampaignGameFileHeader`'s trailing three u32s (guessed: difficulty/act/chapter) have no traced
-  accessor confirming their meaning.
-- The `u32 = 0` field between the DLC list and the embedded `.fcb` blob — present and measured,
-  purpose unknown.
-- Screenshot pixel channel order (RGBA vs BGRA) — not distinguished from the one sample checked.
-- Whether the three Section-1 floats are really `PlayerPos` — plausible but not cross-checked against
-  a live `-load`-and-read-back test or a decompiled accessor.
-- ~19% of distinct hashes in the sample save (203 of 1,046) still don't resolve to any string found in
-  the portion of the binaries' string tables scanned so far.
-- Whether the four-section container layout is identical for quicksaves, manual saves, and checkpoint
-  autosaves — only one save file was inspected byte-for-byte.
-- What decides whether a given entity gets a persisted record at all — only the read side
-  (`RestoreEntity`) was traced; "only entities that changed state get persisted" is carried over from
-  community/developer-sourced theory, not independently re-derived.
-- Which specific fields each entity class's own `RegisterProperties` captures — the mechanism is
-  confirmed, but the 300+ anonymous `RegisterProperties` functions weren't individually attributed to
-  class names.
-- The entity-spawn path upstream of `CGhostManager::OnFinalize` (where `entitylibrary.fcb` is actually
-  read to build a fresh entity) wasn't retraced from this angle — see [`.fcb`](./fcb.md) and
-  [archives](./archives-fat-dat.md) for the general asset-loading path.
-
 ## Entity-Library Overlap
 
-A direct follow-up to the mechanism above: which specific `entitylibrary.fcb` classes and fields does
-`RestoreEntity`'s overlay actually touch in a real save? Answered by exporting one real save's full
-`PersistenceDB` tree (via JackAll's Saves tab, which renders it in the same `type="..."`/`name="..."`
+Which specific `entitylibrary.fcb` classes and fields `RestoreEntity`'s overlay touches in a real save
+is measured by exporting one real save's full `PersistenceDB` tree (via JackAll's Saves tab, which renders it in the same `type="..."`/`name="..."`
 shape as an ordinary resolved `.fcb`) and cross-referencing every `<object type="X">` whose `X` is a
 real `binary_classes.xml` class name against its child `<value name="Y">` names, by plain string
 equality — no hash-matching needed once both sides share the same rendered shape.
@@ -1142,10 +1115,31 @@ class names, 2,009 member names).
 - Savegame-only fields aren't necessarily irrelevant to modding — most (e.g. `AIObject`'s AI-state
   fields) are genuinely dynamic runtime state with no design-time equivalent, but a few (e.g.
   `Health`/`Stamina`'s `MaxValue`) are plausibly an internally differently-named mirror of a real
-  design field that this pass's literal string-equality check couldn't match.
+  design field that the literal string-equality check cannot match.
 
-## Unknowns (entity-library overlap)
+## Unknowns
 
+- `CGameFileHeader`'s own `WriteToFile`/`ReadFromFile` are not located under that name — Section 1's
+  field meanings are inferred from real bytes, not decompiled directly.
+- `CCampaignGameFileHeader`'s trailing three u32s (guessed: difficulty/act/chapter) have no traced
+  accessor confirming their meaning.
+- The `u32 = 0` field between the DLC list and the embedded `.fcb` blob — present and measured,
+  purpose unknown.
+- Screenshot pixel channel order (RGBA vs BGRA) — not distinguished from the one sample checked.
+- Whether the three Section-1 floats are really `PlayerPos` — plausible but not cross-checked against
+  a live `-load`-and-read-back test or a decompiled accessor.
+- 23 of the 1,046 distinct hashes in the sample save remain unresolved.
+- Whether the four-section container layout is identical for quicksaves, manual saves, and checkpoint
+  autosaves — only one save file was inspected byte-for-byte.
+- What decides whether a given entity gets a persisted record at all — only the read side
+  (`RestoreEntity`) is traced; "only entities that changed state get persisted" is carried over from
+  community/developer-sourced theory, not independently re-derived.
+- Which specific fields each entity class's own `RegisterProperties` captures — the mechanism is
+  confirmed, but the 300+ anonymous `RegisterProperties` functions are not individually attributed to
+  class names.
+- The entity-spawn path upstream of `CGhostManager::OnFinalize` (where `entitylibrary.fcb` is actually
+  read to build a fresh entity) is not traced from this angle — see [`.fcb`](./fcb.md) and
+  [archives](./archives-fat-dat.md) for the general asset-loading path.
 - Attributing a captured field block to a *specific* entity archetype, not just the shared component
   class that captured it — e.g. which playable/NPC archetypes actually reference the `CGameAgent`/
   `Body` AI-tuning cluster.
@@ -1153,7 +1147,7 @@ class names, 2,009 member names).
   `CurrentHealth` on several phys components) are an aliased/renamed mirror of a real
   `entitylibrary.fcb` field, or genuinely archetype-less runtime state — would need each component's
   `RegisterProperties` compared directly against its `entitylibrary.fcb` declaration.
-- How much the 237/574 figures move across the other ~30 save files in the same folder, and whether
+- How much the 237/574 figures move across other saves, and whether
   any classes/fields are load-bearing across every playthrough versus only longer/more-completionist
   ones.
 

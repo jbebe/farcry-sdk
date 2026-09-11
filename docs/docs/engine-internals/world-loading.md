@@ -80,8 +80,7 @@ patching.
 
 For a trigger volume to fire it, `CProximityTriggerComponent` is the only trigger type with geometry
 — roughly 4,000 in `world1`, `vectorSize` is the box and the entity's `hidAngles.Z` the yaw. See
-[Entities](./entity-instancing.md); whether `vectorSize` is a full or half extent is still open
-there.
+[Entities](./entity-instancing.md); whether `vectorSize` is a full or half extent is open there.
 
 ## What a world is made of
 
@@ -162,7 +161,7 @@ which files the engine opens by name. See [archives](../file-formats/archives-fa
 Everything above is the mechanism. None of it amounts to a demonstration that a **new** world loads.
 :::
 
-- **No world outside the shipped set has ever been loaded.** Travel is proven only for
+- **No world outside the shipped set is known to load.** Travel is proven only for
   `world1` → `world2`, both of which ship complete trees. Whether the single-player boot path,
   mission manager or save state assume a known world is untested — note that `LoadState` carries the
   `"world1"` literal too.

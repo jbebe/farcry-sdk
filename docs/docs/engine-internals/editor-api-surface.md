@@ -21,38 +21,33 @@ a thin WinForms shell: every `FC2Editor.Nomad` class is a managed wrapper around
 (`F`ar`C`ry`E`ditor). **338 such externs exist**, exclusively in `FC2Editor.Nomad` (`FC2Editor.Tools`
 has none — its classes only call up into the `Nomad` wrappers).
 
-All 338 names already exist as correctly-named exports in `Dunia.dll` — the PC binary's export table
-carries these names independent of anything in the C# source. What it didn't have was correct
-signatures: every one of these functions decompiled as a bare `undefined FCE_Xxx(void)` regardless of
-its real parameter count (e.g. `FCE_CollectionManager_WriteMaskCircle` showed as taking no arguments,
-despite genuinely taking five: `cx, cy, radius, id, update`). Since the C# `extern` declarations are
-Microsoft's own P/Invoke marshaling — ground truth for the real calling convention, parameter count,
-order, and types — they were used to set a correct typed prototype on every matching Ghidra function.
+The PC binary's export table carries these names independent of anything in the C# source, but not
+their signatures: without them every one of these functions decompiles as a bare
+`undefined FCE_Xxx(void)` regardless of its real parameter count (e.g.
+`FCE_CollectionManager_WriteMaskCircle` shows as taking no arguments, despite genuinely taking five:
+`cx, cy, radius, id, update`). The C# `extern` declarations are Microsoft's own P/Invoke marshaling —
+ground truth for the real calling convention, parameter count, order, and types — and every matching
+Ghidra function carries a typed prototype taken from them: 316 unique names at 317 addresses
+(`FCE_Document_Export` exists at two separate addresses, `0x1082b750` and `0x10a21200`). The other 22
+names share addresses with unrelated functions — see
+[Names folded onto shared addresses](#names-folded-onto-shared-addresses). Two exports exist in the
+binary that this particular editor build never calls (`ShutdownDuniaEngine`,
+`FCE_ObjectRenderer_SetActive`), so the export table is a superset of what this WinForms shell
+consumes.
 
-**Result**: 317 of 338 addresses updated (316 unique names; `FCE_Document_Export` exists at two
-separate addresses, `0x1082b750` and `0x10a21200`, both updated identically). 100% of resolved
-addresses took their new prototype without error. 22 names from the C# source have no matching export
-in this binary — see [Not found](#not-found-in-the-binary); no address was guessed for any of them.
-Two exports exist in the binary that this particular editor build never calls (`ShutdownDuniaEngine`,
-`FCE_ObjectRenderer_SetActive`) — left untouched, confirming the export table is a superset of what
-this WinForms shell consumes.
-
-Every function below now has a decompiler-confirmed, source-verified signature — not inferred from
+Every function below has a decompiler-confirmed, source-verified signature — not inferred from
 disassembly, but taken directly from the original developers' own interop layer.
 
 ## Second source: the Linux dedicated-server ELF
 
 `FarCry2_server` exports the same `FCE_*` surface and keeps far more type information than
 `Dunia.dll` — real class names, member-function names, and a distinct address per function where the
-Windows build folds identical bodies together. Annotating all ~345 exports there corroborates this
-page and settles several of its open questions.
+Windows build folds identical bodies together. Its ~345 exports corroborate this page.
 
-**The empty stubs are genuinely empty.** This page reasoned from identical-COMDAT folding that
-`FCE_Document_Export` and the pivot mutators must be compiled-out stubs. The ELF confirms it
-directly rather than by inference: `FCE_Document_Export` and all ten
+**The empty stubs are genuinely empty.** In the ELF, `FCE_Document_Export` and all ten
 `FCE_Inventory_Object_*Pivot*` / `*ZOffset` functions each occupy their own address, take no
-arguments, and have bodies consisting of a bare `return` (or `return 0`). Nothing was folded away —
-there is nothing there to fold.
+arguments, and have bodies consisting of a bare `return` (or `return 0`) — so the identical-COMDAT
+folding that merges them in `Dunia.dll` merges compiled-out stubs, and nothing is folded away.
 
 Behaviour that the C# interop layer does not show:
 
@@ -103,8 +98,7 @@ Map lifecycle: `Load`/`Save(mapPath, mapName)`, `Reset`, `Validate`, `FinalizeMa
 `CFCXEditorToolTerrainTerrace` is a complete tool class that the stock editor never wires to a
 toolbar — the terrain toolbar binds F1–F7 to Bump, RaiseLower, SetHeight, Smooth, Ramp, Noise and
 Erosion, with no entry for it. Driving it directly shows why: brief applications terrace correctly,
-but held application diverges and destroys the terrain. It was finished enough to ship and not
-finished enough to expose.
+but held application diverges and destroys the terrain.
 :::
 
 ### TerrainManager / TerrainManipulator
@@ -281,10 +275,10 @@ budgets, and per-type count caps — plus the four multiplayer game-mode rule se
 rejects content by archetype. `CFCXEditor::ValidateIngame` additionally *destroys* the entities of
 any object whose error carries flag `0x40`, rather than only reporting it.
 
-## Not found in the binary
+## Names folded onto shared addresses
 
-22 of the 338 C#-declared names have no matching export in this build of `Dunia.dll` — verified
-individually, not just via a bulk substring search; no address was guessed for any of them:
+22 of the 338 C#-declared names do not turn up as functions of their own in a by-name lookup of this
+build of `Dunia.dll`:
 
 `FCE_ImageMap_Destroy`, `FCE_Inventory_Object_AddPivot`, `FCE_Inventory_Object_ClearPivots`,
 `FCE_Inventory_Object_GetParent`, `FCE_Inventory_Object_SavePivots`,
@@ -299,12 +293,10 @@ individually, not just via a bulk substring search; no address was guessed for a
 
 Most cluster into two shapes: pure mutators on inventory entries (`SetPivot`, `SetZOffset`,
 `SetAutoPivot`, `AddPivot`, `ClearPivots`, `SavePivots`), or `Destroy`/`GetParent`/`GetDisplay`
-siblings of functions that *were* found right next to them in the same class.
+siblings of functions that have their own address right next to them in the same class.
 
-:::note[Corrected]
-The folding theory above is confirmed, and the "absent" conclusion is not. Enumerating the export
-table of the GOG build resolves **all 22** of these names — they exist, sharing addresses with
-unrelated trivial functions through identical-COMDAT folding. Examples:
+Enumerating the export table of the GOG build resolves **all 22** of these names — they exist,
+sharing addresses with unrelated trivial functions through identical-COMDAT folding. Examples:
 `FCE_Wilderness_Desert` and `FCE_Document_Export` at `0x10669070`; `FCE_ImageMap_Destroy`,
 `FCE_Spline_Destroy` and `FCE_ValidationReport_Destroy` at `0x1032ea30`;
 `FCE_Inventory_Object_GetParent` and `FCE_ScriptFunction_GetPrototype` at `0x108808b0`;
@@ -312,8 +304,7 @@ unrelated trivial functions through identical-COMDAT folding. Examples:
 
 The export table carries **818 entries** in total, addressing 1:1 with ordinals, so a name that
 appears missing is more likely folded onto a shared address than genuinely absent.
-:::
 
-A quirk worth remembering when reading other decompiled signatures in this DLL: a `void`-looking C#
+When reading other decompiled signatures in this DLL: a `void`-looking C#
 wrapper doesn't always mean the native function is `void` — `FCE_SplineZone_Reset` and the
 `FCE_ScriptFunction_Get*` family return a pointer that their C# callers silently discard.

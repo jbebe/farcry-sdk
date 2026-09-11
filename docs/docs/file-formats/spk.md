@@ -121,8 +121,8 @@ each one means:
 | `11` | `[4]`; then a table at byte offset `[5]`, `[6]` entries of 3 words | iterates **every** entry, recursing | `-1` | 8 |
 | `12` | an array at byte offset `[2]`, `[3]` entries of 1 word | iterates **every** entry, recursing | `-1` | 65 |
 
-Counts are over the 4,895 `.spk` files extracted into this repo's `tmp/`, which is not a full install
-— treat them as proportions, not totals. Types `5`/`6`/`7`/`9` appear in none of them.
+Counts are over 4,895 extracted `.spk` files, which is not a full install — they are proportions, not
+totals. Types `5`/`6`/`7`/`9` appear in none of them.
 
 ### Types `11` and `12` carry a tail
 
@@ -236,7 +236,7 @@ three banks whose preambles carry `0x004BF5EA` (`004bf5e9`, `00449311`, `804e1b3
 three `depload` lists as that bank's children, and `004bf5eb` — a leaf nothing wraps — carries only
 its own id. Self is not at a fixed position in the list; treat it as a set, not a sequence.
 
-That also explains the earlier statistic: the word before a preamble's trailing entry resolves to a
+That matches the statistics: the word before a preamble's trailing entry resolves to a
 real id elsewhere in the corpus 98.3% of the time, is usually not the bank's own id (30%), and is
 rarely a numeric neighbour (`±1`, 8.8%) — the behaviour of a parent reference, not of a sibling or a
 sequence number.
@@ -266,7 +266,7 @@ record's own 40-byte core is immediately followed by Ogg bytes. Sample rate and 
 straight out of the embedded Vorbis ID packet rather than needing the sibling `TransformedFixed128`
 record's own sample-rate field.
 
-Since it's a complete, independently-valid audio file, no proprietary decode work was needed beyond
+Since it's a complete, independently-valid audio file, no proprietary decode work is needed beyond
 detection — any standard Ogg Vorbis decoder handles it, and replacing one is just dropping in a
 different valid Ogg Vorbis stream of the same sample rate/channel count. No playback-length metadata
 to keep in sync — the container is self-describing.
@@ -334,9 +334,9 @@ instead of stopping cleanly. Whatever governs total playback length is not simpl
 reader runs out of input bytes."
 
 `TImaAdpcm_DecodeStream` (`0x10a7f9e0`) carries a counter at offset `+0x30`, decremented every decode
-call — **not** a "total remaining samples" gate seeded from `TransformedFixed128` word `[20]` as first
-suspected (a fix patching word `[20]` to the replacement's real sample count was tried and had no
-effect on the symptom). It's actually an internal look-ahead **buffer** counter — decoded samples
+call. It is **not** a "total remaining samples" gate seeded from `TransformedFixed128` word `[20]` —
+patching word `[20]` to the replacement's real sample count has no effect on the symptom. It is an
+internal look-ahead **buffer** counter — decoded samples
 sitting in a scratch buffer waiting to be handed to the caller, refilled from the byte-stream reader and
 drained every call, unrelated to total clip length.
 
@@ -352,12 +352,11 @@ same-or-longer than the original, so whatever the real length-governing mechanis
 the buffer. Ogg Vorbis records need no such workaround — the container is self-describing.
 
 **Untested candidate**: `TransformedFixed128` word `[2]` is the sibling's audio byte length, exactly,
-in all 3,211 paired records — a far better-behaved field than word `[20]`, which was the one actually
-tried and ruled out. Neither JackAll's importer nor `jackall-cli spk import` updates it, so every
-replacement made so far has shipped a descriptor still declaring the *original* clip's length. That is
-exactly the shape of a read-length gate, and it would explain the symptom directly. It has **not** been
-tested in game. Rewriting `[2]` (and `[22]`, which mirrors it) to the replacement's real stream length
-is the obvious experiment.
+in all 3,211 paired records — a far better-behaved field than word `[20]`. Neither JackAll's importer
+nor `jackall-cli spk import` updates it, so a replacement ships a descriptor still declaring the
+*original* clip's length. That is exactly the shape of a read-length gate, and it would explain the
+symptom directly. Rewriting `[2]` (and `[22]`, which mirrors it) to the replacement's real stream
+length is **not** tested in game.
 
 ## Unknowns
 

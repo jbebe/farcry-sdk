@@ -6,13 +6,13 @@ sidebar_position: 10
 
 :::info[Verified via reverse engineering]
 Traced live via GhidraMCP against `FarCry2_server`. Covers the container/attribution level — exact
-per-sector size, owning manager class, and grid indexing are confirmed; the internal record layout
-within each sector's blob is not (see Unknowns).
+per-sector size, owning manager class, and grid indexing are confirmed; what the per-cell values mean
+is not (see Unknowns).
 :::
 
 Two of the three files found alongside `.sdat` in every world sector (see [`.sdat`'s sibling-files
-note](./sdat.md#sibling-per-sector-files-srl-and-zsr) for the original hash-list discovery — 14,964 of
-each across the install, matching the sector count exactly): `generated\worldsectors\sectorN.srl` and
+note](./sdat.md#sibling-per-sector-files-srl-and-zsr) — 14,964 of each across the install, matching
+the sector count exactly): `generated\worldsectors\sectorN.srl` and
 `generated\worldsectors\zonesectorN.zsr`.
 
 ## What the acronyms mean
@@ -22,6 +22,10 @@ export driver, same class family that writes `.sdat` — see `ExportSDAT` there)
 
 - **`.srl` = "Sound Region Layer"** — written by `ExportSoundRegionLayer` (`0x08cb1930`).
 - **`.zsr` = "Zone Sector"** — written by `ExportZones` (`0x08cb42a0`-ish, caller of `CZoneLogicManager::GetSectorData`).
+
+`%ssector%d.srl` is referenced only by `ExportSoundRegionLayer`, and the resource class is
+`CSRLResource` — so `.srl` is the sound region layer, not a general serialization blob as the
+extension suggests.
 
 ## Container: none — a raw, fixed-size per-sector memory dump
 
@@ -46,10 +50,20 @@ file.Write(data, 0x1000 /* = 4096 bytes, exact */);
   (`this+0xf4`/`this+0xf6`), meaning the zone grid isn't guaranteed to start at world sector `(0,0)`.
 - Both confirm the same 8×8-sectors-per-level grid used everywhere else in this engine.
 
-## What's semantically inside each block
+## Grid shape
 
-Neither format's raw on-disk bytes were decoded field-by-field, but the class families that own this
-data give strong content-type context:
+Both files are fixed-size per-cell byte grids: `.srl` is 1,024 bytes (32×32, one byte per 2×2 quads)
+and `.zsr` is 4,096 bytes (64×64, one byte per quad). `.srl`'s low nibble tracks biome — sampled
+across `world1`, Desert sectors are 97.9% `0x00`, Jungle values end in `1` and Woodland values end in
+`2`, with the high nibble varying within a biome. That correlation is ambient sound following the
+biome, not vegetation: vegetation placement lives in the
+[landmark files](../engine-internals/terrain-and-vegetation.md#retail-campaign-vegetation-lives-in-the-landmark-files).
+`.zsr` is bimodal per sector — a sector is either almost entirely `0xFF` or almost entirely covered —
+which reads as zone membership rather than a painted per-cell field.
+
+## Owning class families
+
+The class families that own this data give strong content-type context:
 
 **`.srl` (ambiance/sound regions)** — a rich, time-of-day-driven soundscape system:
 `SSoundRegion` (the base record), `SSoundRegionLevel` (a volume/intensity level, sortable via
@@ -67,32 +81,13 @@ as every other per-entity capability documented in [Engine
 Architecture](../engine-internals/architecture.md)) that presumably lets a placed entity define or
 query which zone it's in.
 
-## Confirmed owner and grid shape
-
-`%ssector%d.srl` is referenced only by `ExportSoundRegionLayer`, and the resource class is
-`CSRLResource` — so `.srl` is the sound region layer, not a general serialization blob as the
-extension suggests.
-
-Both files are fixed-size per-cell byte grids: `.srl` is 1,024 bytes (32×32, one byte per 2×2 quads)
-and `.zsr` is 4,096 bytes (64×64, one byte per quad). `.srl`'s low nibble tracks biome — sampled
-across `world1`, Desert sectors are 97.9% `0x00`, Jungle values end in `1` and Woodland values end in
-`2`, with the high nibble varying within a biome. That correlation is ambient sound following the
-biome, not vegetation: vegetation placement lives in the
-[landmark files](../engine-internals/terrain-and-vegetation.md#it-lives-in-the-landmark-files).
-`.zsr` is bimodal per sector — a sector is either almost entirely `0xFF` or almost entirely covered —
-which reads as zone membership rather than a painted per-cell field.
-
 ## Unknowns
 
-- **The actual on-disk record layout for either format.** `SSoundRegion` contains a `std::string`
-  member (a name/virtual-name field) — a runtime C++ object with a heap pointer can't survive a direct
-  `memcpy`-to-disk-and-back round trip, so the raw 1024-byte `.srl` blob is very unlikely to be a literal
-  array of live `SSoundRegion` objects. Either there's a separate, flattened POD structure this data
-  gets serialized to/from (not yet located), or `CAmbianceManager`'s per-sector block holds something
-  simpler than the full runtime record set and the richer `SSoundRegion*` family is reconstructed
-  elsewhere at load time. Not resolved.
+- **How the per-cell values relate to the `SSoundRegion*` records.** `SSoundRegion` contains a
+  `std::string` member (a name/virtual-name field) — a runtime C++ object with a heap pointer can't
+  survive a direct `memcpy`-to-disk-and-back round trip, so the raw 1024-byte `.srl` blob is very
+  unlikely to be a literal array of live `SSoundRegion` objects. Where the richer `SSoundRegion*`
+  family is reconstructed from at load time is not resolved.
 - Whether `.zsr`'s `CZoneLogicRegion` records serialize any more directly — `CBasicRegionEntity`'s own
-  fields weren't traced.
+  fields are not traced.
 - The exact meaning of `CZoneLogicRegion`'s three default-`1.0` floats.
-- Whether either file has *any* internal structure (record count, per-record size prefix) or is purely
-  a fixed-layout struct array with a size implied entirely by the constant 1024/4096-byte total.

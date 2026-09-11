@@ -8,14 +8,14 @@ sidebar_position: 5
 No community mod has ever added a new weapon — [the survey](./mods-survey.md) turns up only
 rebalances, reskins and unlocks — and every other weapon page on this site edits an existing entry.
 This page is built from two things instead: Ubisoft's own DLC1 weapon pack, decoded field by field
-out of `tmp/gamefiles`, and the engine code that consumes it, traced through GhidraMCP against
+out of the retail files, and the engine code that consumes it, traced through GhidraMCP against
 `FarCry2_server`.
 
-**The art half is solved and no longer needs this page.** A weapon whose mesh, materials and textures
-were all authored here has been built, installed and played, and the twenty-odd one-off scripts that
-took have since become [one file and one plugin](#geometry-materials-and-textures-one-file-one-plugin).
-The archetype half — the seven `.fcb` records, `iAnimationValue`, `depload`, spawning a weapon that
-did not previously exist — is still a procedure nobody has run end to end.
+**The art half is solved.** A weapon whose mesh, materials and textures were all authored from
+scratch has been built, installed and played; the art pipeline is
+[one file and one plugin](#geometry-materials-and-textures-one-file-one-plugin). The archetype half
+— the seven `.fcb` records, `iAnimationValue`, `depload`, spawning a weapon that did not previously
+exist — has not been run end to end.
 :::
 
 ## The reference implementation
@@ -95,14 +95,13 @@ For the sawed-off the first four are `WeaponProperties.DLC1.SawedOffShotgun`, `s
 languages. Anything reaching the weapon bazaar, the manuals, the challenge list or the statistics
 screen *is* localized: the `<Item>` in `engine\gamemodes\gamemodesconfig.xml` carries
 `nameOasis="WEAPONBAZAAR_<WEAPON>_CRATE_NAME"`, resolved against `languages\<lang>\oasisstrings.rml`,
-and `sDisplayName` has no effect there — it was set to an unmistakable canary and the bazaar went on
-showing the vanilla name.
+and `sDisplayName` has no effect there — set to an unmistakable canary, the bazaar still shows the
+vanilla name.
 
 ## Every `Hash` field is CRC32 of its companion string
 
-This is the single most useful thing to know when authoring weapon data by hand, and it dissolves
-the long-standing "magazine capacity and fire mode are hash-only" complaint in
-[gotchas](./gotchas.md).
+This is the single most useful thing to know when authoring weapon data by hand, and it answers the
+community's "magazine capacity and fire mode are hash-only" complaint in [gotchas](./gotchas.md).
 
 Weapon records pair each `Hash` field with an adjacent string field whose *own* name hash is
 unresolved, so it decodes as a bare `hash="…"` attribute:
@@ -212,10 +211,8 @@ is what the animation graph in [`movemgr.bin`](../file-formats/move.md) tests to
 clips. The shipped graph covers indices 0–43; confirmed against shipped data, `DLC1.Crossbow` = 41,
 `DLC1.SawedOffShotgun` = 42, `DLC1.SilencedShotgun` = 43.
 
-:::warning[This page used to call 44 a hard ceiling. It isn't one.]
-The earlier claim was that the `EquippedWeapon` enum is *declared* in the base file's
-`CMoveValueContainer`, so nothing could add a 45th value. Tracing the serializer disproved every
-step of that:
+:::warning[44 is not a hard ceiling]
+Nothing in the engine limits `EquippedWeapon` to 44 values:
 
 - `movemgr.bin` holds **no channel names and no enum value names at all** — five bytes of
   `{type, mirrorable}` per channel, and zero occurrences of `EquippedWeapon` or `SawedOffShotgun`.
@@ -224,28 +221,28 @@ step of that:
   range check against any declared value count.
 - `iAnimationValue` is a plain `int` property registered on `CEquipmentBase` (not `CFCXWeapon`) with
   no clamp at the registration site.
-- The string evidence was misread — exact-case `SawedOffShotgun` appears **zero** times in all six
-  `Dunia.dll` builds. What's there is lowercase `sawedoffshotgun`, the model/package name.
+- Exact-case `SawedOffShotgun` appears **zero** times in all six `Dunia.dll` builds. What's there
+  is lowercase `sawedoffshotgun`, the model/package name.
 
 The number 44 is authoring metadata. See
 [the weapon ceiling](../file-formats/move.md#equippedweapon--the-weapon-ceiling) for the full
 evidence.
 :::
 
-What this changes in practice is less than it sounds. The barrier was never permission to use index
-44 — it's that **index 44 has no states behind it**, so a character holding that weapon finds no
-matching move. Supplying those states is the actual work, and it is the ordinary expansion path DLC1
-used. Two things also remain untested in game: whether the code driving channel 17 each frame passes
-the value through unclamped, and what the graph does when nothing matches.
+In practice the barrier is not permission to use index 44 — it's that **index 44 has no states
+behind it**, so a character holding that weapon finds no matching move. Supplying those states is
+the actual work, and it is the ordinary expansion path DLC1 used. Two things remain untested in
+game: whether the code driving channel 17 each frame passes the value through unclamped, and what
+the graph does when nothing matches.
 
 So, cheapest first:
 
 1. **Reuse an index**, and name your model after the weapon that owns it — set `sPartName` to
    `dlc1_sawedoff_shotgun` and you inherit the entire DLC1 animation graph for free. Costs you that
-   weapon. This is what every shipped mod in this repo does, and it stays the right default.
+   weapon. This is what every shipped mod in this repo does, and it is the right default.
 2. **Commandeer a slot that nothing uses.** `Ratchet`, `Phone`, `Watch`, `MapCompass` and `Compass`
    are candidates; check what actually references them first.
-3. **Ship a MOVE expansion that covers a new index.** No longer ruled out — an expansion needs no
+3. **Ship a MOVE expansion that covers a new index.** Possible — an expansion needs no
    value container, and its criteria can name 44 as readily as 43. The format is
    [fully decoded and writable](../file-formats/move.md#writing-move-files); a reference codec in
    `tools/misc/move-python-reference/` will clone an existing weapon's states onto a new index for
@@ -254,7 +251,7 @@ So, cheapest first:
    in `common/config/defaultengineconfig.xml`), so repointing it is cheap to try — but note the
    file's channel count is fixed at exactly 105 by `MSAnim::LoadMoves`.
 
-:::note[Corrects an earlier community claim]
+:::note[Corrects a community claim]
 `iAnimationValue` is described in [data-recipes](./data-recipes.md) as "reportedly affects which
 crosshair is used". That is wrong — it is the `EquippedWeapon` index. The crosshair comes from
 `CommonProperties.crosshairMagmaAreaName`.
@@ -262,9 +259,9 @@ crosshair is used". That is wrong — it is the `EquippedWeapon` index. The cros
 
 ## HUD icon and kill-message code
 
-[gotchas](./gotchas.md) records weapon icons as effectively blocked: partly hardcoded in
-`Dunia.dll`, with `hud.mgb` unworkable by any tool. Both halves are now out of date, and there is a
-sanctioned escape hatch that needs no binary patching at all.
+Community sources ([gotchas](./gotchas.md)) record weapon icons as effectively blocked: partly
+hardcoded in `Dunia.dll`, with `hud.mgb` unworkable by any tool. Neither half is a block, and there
+is a sanctioned escape hatch that needs no binary patching at all.
 
 The icon is selected from `CommonProperties.sName`, hashed into `CFCXWeaponIconMap` (`0x08a68fd0`),
 a compiled-in `hash_map<u32, int>`. Its key strings sit contiguously at `0x0a14496f` in
@@ -289,7 +286,7 @@ glyphs and says so outright:
 edit, no sweep across the eighteen localized UI folders. Six free slots — and note this is a
 different budget from `iAnimationValue`, which reserves nothing.
 
-`.mgb` is in any case fully round-trippable now (`jackall-cli mgb decode/encode/verify`), so a
+`.mgb` is in any case fully round-trippable (`jackall-cli mgb decode/encode/verify`), so a
 seventh icon is a normal edit rather than a wall; the `dlc1`…`dlc6` path is just cheaper.
 
 ## Placement
@@ -380,10 +377,6 @@ written `.xbg` back at full part count with its own reload still posing it. Noth
 reaches past the add-on into a file format.
 :::
 
-The art half used to mean roughly twenty one-off scripts, a trip outside the repo to convert a
-texture, and a working knowledge of chunk padding, bone palettes, mip companions and the `Weapon`
-shader's missing albedo slot. It is now one file and one plugin.
-
 ```
 jackall-cli fc2model export graphics/weapons/dlc/sawed_off_shotgun/dlc1_sawedoff_shotgun.xbg \
     --game "C:\Games\Far Cry 2" --clips -o shotgun.fc2model
@@ -400,11 +393,11 @@ Open it with **File ▸ Import ▸ Far Cry 2 Model Pack**, work, and export it b
 written — a texture travels as PNG, so re-encoding an untouched one would recompress it on every
 save.
 
-Four things the plugin now does that this page used to have to explain:
+Four things the plugin does:
 
 - **It tells you where geometry belongs.** *Measure motion* reports, per bone, the worst rotation and
   translation across every bank the pack carries. The table below is what it prints for the
-  sawed-off; you no longer have to know it in advance.
+  sawed-off.
 - **It refuses an export that would silently lose your work** — a new object export would skip, a
   part dragged in object mode (positions are object-local, so the drag is discarded), a part left
   unwrapped, a vertex in no vertex group. Each says what to do instead.
@@ -416,17 +409,17 @@ Four things the plugin now does that this page used to have to explain:
 Every rule is silent on the game's own models: retail is the definition of valid, so a rule that
 fires on a shipped weapon is a wrong rule.
 
-### What it still cannot do
+### What it cannot do
 
-- **Remove a part, or add a node or an LOD.** A part can now be added — select the mesh and use
+- **Remove a part, or add a node or an LOD.** A part can be added — select the mesh and use
   **Add as New Part**, and export appends it, leaving every part already there untouched (see
   [adding a part](../file-formats/xbm-xbg.md#adding-a-part-to-a-model-that-shipped-without-one)).
-  Removing one, and adding a node or a whole LOD tier, still have no scene-to-document path.
-  Reusing the donor's parts is still the easier road where it fits, since `CGraphicComponent` hashes
+  Removing one, and adding a node or a whole LOD tier, have no scene-to-document path.
+  Reusing the donor's parts is the easier road where it fits, since `CGraphicComponent` hashes
   part names exact-case and the MOVE graph and `.skeleton` bind to them: an added part draws, but
   nothing outside the mesh knows its name.
 - **No split UVs, normals or colours** — the file stores all three per vertex, so a seam must be a
-  duplicated vertex. The plugin now counts them for you instead of letting the first corner quietly
+  duplicated vertex. The plugin counts them for you instead of letting the first corner quietly
   win.
 - **`.hkx` collision is untouched.** Reshape a weapon and it keeps the donor's collision shape.
 
@@ -434,9 +427,8 @@ fires on a shipped weapon is a wrong rule.
 
 :::info[Verified in a running game]
 A donated mesh with its own textures and materials, built through `tools/BlenderFC2`, packaged with
-`jackall-cli mod build` and played. Eight files, all overrides of existing paths. New paths would
-have been fine too — a texture at an invented path has since been shown to load with no hashlist
-entry and no `depload` work — but overriding kept the first build to one variable.
+`jackall-cli mod build` and played. Eight files, all overrides of existing paths. New paths work too
+— a texture at an invented path loads with no hashlist entry and no `depload` work.
 :::
 
 The replacement was the DLC1 sawed-off: `dlc1_sawedoff_shotgun.xbg` (all six LODs), its two state
@@ -446,8 +438,8 @@ the `_ref.skeleton` and all 49 `.mab` clips were left alone.
 **`patch.dat` overrides a file whose home is a DLC archive.** This is the load-bearing assumption
 under any DLC-content mod and it holds: an override staged at `graphics\weapons\dlc\…` in
 `patch.dat` is what the engine loads, even though the vanilla file lives in
-`downloadcontent\dlc1\entitylibrary.dat`. Confirmed twice — once with a `.lua` whose home is
-`downloadcontent\dlc1\dominos.dat`, once with the weapon mesh itself.
+`downloadcontent\dlc1\entitylibrary.dat`. Confirmed with a `.lua` whose home is
+`downloadcontent\dlc1\dominos.dat`, and with the weapon mesh itself.
 
 ### Which part you put geometry in decides how it animates
 
@@ -507,9 +499,9 @@ PNGs inside a `.fc2model` pack and let the applier re-encode and split the pair;
 **The replacement may change dimensions** — 512²/1024² was raised to 1024²/2048² and loaded fine, so
 the `_mip0` relationship is "twice the base", not a fixed size.
 
-### Four things that went wrong, and why
+### Four traps, and why
 
-The first three are the same trap seen from three angles, and the plugin now names it: a material
+The first three are the same trap seen from three angles, and the plugin names it: a material
 driving **Metallic** raises `channel.metallic`, with the band below as the fix. The fourth it cannot
 see, because it is about where you make the cut.
 
@@ -527,9 +519,9 @@ see, because it is about where you make the cut.
   clusters and the boundary interleaves triangle by triangle. That is invisible while both clusters
   draw the same thing and reads as a row of saw teeth the moment their materials differ.
 
-## Not solved
+## Status by piece
 
-| Gap | Detail |
+| Piece | Detail |
 |---|---|
 | **`.xbm` materials** | Solved, in JackAll. All 2,379 shipped materials round-trip byte-identically and rewritten ones load in game — see [xbm-xbg](../file-formats/xbm-xbg.md#the-xbm-body-and-writing-one-back). A pack carries them as JSON, so nothing outside JackAll parses one. |
 | **`.hkx` collision** | Not parsed at all. Reuse the donor's — a reshaped weapon keeps its collision shape. |
@@ -538,12 +530,12 @@ see, because it is about where you make the cut.
 | **Adding a node or an LOD** | The container [carries either](../file-formats/xbm-xbg.md#a-container-can-be-authored-not-just-edited), but nothing turns a Blender bone into a node or generates a new LOD tier. |
 | **MOVE authoring** | Header, class-ID table, channel table and merge semantics are decoded; per-state record interiors are not. See [move](../file-formats/move.md). |
 | **New `.spk` sound ids** | Only replacement of an existing record is documented; how a new id is minted is not. |
-| **Missing `depload` entries** | Solved for textures, at least. A texture at a path present in no archive, no hashlist and no `depload` list loads from `patch.dat` and renders — verified with a magenta canary on a weapon material. See [texturing a weapon](./texturing-a-weapon.md#a-weapon-is-not-limited-to-the-texture-paths-it-owns). Whether the same holds for a mesh or a sound is still untested. |
+| **Missing `depload` entries** | Solved for textures. A texture at a path present in no archive, no hashlist and no `depload` list loads from `patch.dat` and renders — verified with a magenta canary on a weapon material. See [texturing a weapon](./texturing-a-weapon.md#a-weapon-is-not-limited-to-the-texture-paths-it-owns). Whether the same holds for a mesh or a sound is untested. |
 
 The vendored `tools/third-party/Dunia-Engine-XBG-Blender-Importer/` additionally claims `.xbm`, `.xbt`
 and HKX+MOPP export, which would close the `.hkx` row — but
-[xbm-xbg](../file-formats/xbm-xbg.md) records its weapon XBG import as **confirmed broken, reproduced
-on the AK-47 and a 1911**, so re-verify before relying on any of it.
+[xbm-xbg](../file-formats/xbm-xbg.md) records its weapon XBG import as **confirmed broken on the
+AK-47 and a 1911**, so re-verify before relying on any of it.
 
 ## Checklist
 
@@ -566,7 +558,7 @@ on the AK-47 and a 1911**, so re-verify before relying on any of it.
 11. **Start a new game** — `Inventory` and `CPickupWeapon` are captured in savegames. Ballistics are
     archetype-only and read fresh at spawn, so those you can iterate on a live save.
 
-Asset changes still need a full repack and relaunch — the [in-game console](../engine-internals/developer-console.md) helps with gameplay state, not with reloading art.
+Asset changes need a full repack and relaunch — the [in-game console](../engine-internals/developer-console.md) helps with gameplay state, not with reloading art.
 `tools/misc/modpatcher/` is a working loose-file proxy that would make a faster inner loop for
 texture work, but its own notes warn that `LevelAsset_OpenStream` bypasses the hook — validate the
 final build through `patch.dat` regardless.

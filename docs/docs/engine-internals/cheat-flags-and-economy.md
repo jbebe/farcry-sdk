@@ -69,8 +69,7 @@ The pawn keeps **no pointer to the vehicle it is in**, so the link has to be wal
 entity at `+0x0C`, then the physics component. The entity's async job must be flushed first (Uplay
 `0x004DD4F0`), which means main thread only.
 
-`GetVehiclePhysics` (Uplay `0x000649F0`) is worth a note: its bytes are shared with 69 other component
-getters, and telling them apart by pattern needs the call displacement left unwildcarded — which
+`GetVehiclePhysics` (Uplay `0x000649F0`) shares its bytes with 69 other component getters, and telling them apart by pattern needs the call displacement left unwildcarded — which
 differs between builds. The address library knows the entry, so this is one case where the table is
 strictly better than a pattern.
 

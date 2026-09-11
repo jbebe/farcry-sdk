@@ -59,8 +59,8 @@ stdcall would never produce this).
 
 Most of these are dead stubs in the retail build — the real implementations likely live elsewhere, or
 these hooks are QA-only and unused in shipped gameplay. Only a handful do real arithmetic. `param_1`/
-`param_2` are raw pointers passed by whatever calls the callback (presumably `Dunia.dll`'s debug
-console); their target types weren't recovered beyond what the decompiler inferred.
+`param_2` are raw pointers passed by whatever calls the callback; their target types aren't recovered
+beyond what the decompiler infers.
 
 | Function (renamed) | Address | Registered name(s) | Behavior |
 |---|---|---|---|
@@ -85,8 +85,8 @@ with these being disabled/no-op paths in the shipped build rather than active di
 
 `tools/FCSE` (see its `README.md`, and [the FCSE flagship page](/fcse) for the player-facing summary)
 is a from-scratch reimplementation of this file's `WinMain` as a separate launcher exe, `FCSE.exe`,
-that adds SKSE-style third-party DLL plugin loading between the two calls documented above. Building it
-confirmed two things about the exe's export-table dependencies:
+that adds SKSE-style third-party DLL plugin loading between the two calls documented above. It relies
+on two facts about the exe's export-table dependencies:
 
 - `RegisterGameFunctionProvider` and `AddFunctionCB` are both plain, undecorated `Dunia.dll` exports —
   `GetProcAddress` resolves them by literal name, no C++ decoration involved, unlike `RunGame` (which
@@ -130,7 +130,5 @@ launching the game. Two consequences:
 ## Unknowns
 
 - The float constant behind `MalariaCurve` (`0x4020fc`) and the constant behind `PlayerSPFinalize`
-  (`0x402100`) haven't been read/typed.
-- What `menuJoke` actually gates in the main-menu construction it's called from (`toRed` is resolved —
-  see [function registry](./function-registry.md)).
-- `RunGame`'s own argument parsing beyond the `-openautomate` flag hasn't been dug into further.
+  (`0x402100`) aren't read or typed.
+- What `menuJoke` actually gates in the main-menu construction it's called from.

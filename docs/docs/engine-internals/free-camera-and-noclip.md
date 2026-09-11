@@ -1,8 +1,8 @@
 # The free camera and noclip
 
 How to detach the view, and how to detach the player, in the retail PC build. Neither is reachable
-from the console — [the developer console](./developer-console.md) works through why the survey that
-looked for them came up empty. Both are RE-verified against Steam and GOG 1.03 and implemented in
+from the console — see [the developer console](./developer-console.md). Both are RE-verified against
+Steam and GOG 1.03 and implemented in
 `mods/DevTools/src/engine/`.
 
 ## The camera manager
@@ -36,7 +36,7 @@ game data**, not against strings in `Dunia.dll`. Four are useful:
 | `Cameras.Camera.Spectator` | yes |
 | `Cameras.Camera.Free` | **no — data only** |
 
-That last row is the whole reason free-fly was written off as editor-only. It works in retail.
+Because of that last row, a string scan of the binary misses the free camera. It works in retail.
 
 The function **reports nothing**. The only way to know whether a switch took is to read the active
 camera back through `CCameraManager::GetActiveCamera` (Uplay `0x0057C1B0`) and see that it changed.

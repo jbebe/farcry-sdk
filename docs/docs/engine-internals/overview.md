@@ -26,7 +26,7 @@ Create Function pass in the GUI first — the MCP tool surface has no "create fu
   DVD/GOG/Uplay/1.00–1.02 builds are differently sized and not guaranteed to share these offsets.
 - **Ubisoft's Dunia Engine**, publicly documented as derived from CryEngine (heavily modified). Also
   powers *Avatar: The Game* (2009) — confirmed at the asset level (shared skeleton/rig tooling works
-  across both titles, see [`.xbm`/`.xbg`](../file-formats/xbm-xbg.md)), not yet confirmed at the
+  across both titles, see [`.xbm`/`.xbg`](../file-formats/xbm-xbg.md)), not confirmed at the
   binary level.
 - **MSVC 2008-era toolchain** (the launcher exe links `MSVCR80.dll`). A real C++ engine core — RTTI,
   vtables, and class hierarchies throughout, unlike the launcher's flat C-style code. Keep Ghidra's
@@ -41,13 +41,13 @@ Create Function pass in the GUI first — the MCP tool surface has no "create fu
   `"SCRIPTS\MissionTools.lua"`, and the interpreter's own error strings (`"value for 'lua_getinfo' is
   not a function"`). `"Lua 4.1 (alpha)"` is a rare, semi-official PUC-Rio branch that briefly existed
   between the released Lua 4.0 and 5.0 — a known fingerprint of CryEngine's historical bundled Lua
-  fork, and the first binary-level confirmation of the CryEngine-derivation claim. See [the Lua API
+  fork, and binary-level confirmation of the CryEngine-derivation claim. See [the Lua API
   surface](./lua-api-surface.md) for the full exposed API map.
 - **Also links licensed Havok middleware** for physics/animation, confirmed via string: `"Havok
   Physics evaluation key has expired or is invalid...Please contact Havok.com..."` (and an equivalent
   Havok Animation string) — not a from-scratch physics/animation system.
   :::note[Community-reported]
-  A specific version surfaced independently (Discord, 2022-12-10): **Havok 5.5.0 r1**. Not
+  Community sources give a specific version (Discord): **Havok 5.5.0 r1**. Not
   cross-checked against the binary by disassembly, but consistent with the evaluation-key string and a
   useful starting point for `.hkx`/physics RE.
   :::
@@ -63,20 +63,19 @@ Create Function pass in the GUI first — the MCP tool surface has no "create fu
 
 ### `FarCry2_server` — the Linux dedicated-server build
 
-Discovered while researching the [savegame format](../file-formats/savegame.md) — the Ghidra project
-also contains a third program, named `FarCry2_server` in its project metadata. It's the Linux
-dedicated-server binary: an ELF (`.dynamic`/`.got.plt`, load base `~0x08048000`), POSIX/glibc imports
-(`pthread_create`, `mkdir`, `gethostbyname`, ...), GCC/Itanium-mangled C++ symbols
+The Ghidra project also contains a program named `FarCry2_server` in its project metadata. It's the
+Linux dedicated-server binary: an ELF (`.dynamic`/`.got.plt`, load base `~0x08048000`), POSIX/glibc
+imports (`pthread_create`, `mkdir`, `gethostbyname`, ...), GCC/Itanium-mangled C++ symbols
 (`_ZN14CPersistenceDB...`), and — unlike `Dunia.dll` — largely **unstripped**, with a real
-`.symtab`/`.strtab` giving genuine class/method names for shared engine code (persistence, save/load,
-screenshot/thumbnail, and game-file-list systems are all present and linked in, even though a headless
-server never itself writes a player `.sav`).
+`.symtab`/`.strtab` giving genuine class/method names for shared engine code (persistence, save/load
+— see the [savegame format](../file-formats/savegame.md) — screenshot/thumbnail, and game-file-list
+systems are all present and linked in, even though a headless server never itself writes a player
+`.sav`).
 
 **Any address in this project starting `0x08`/`0x09`/`0x0a` belongs to `FarCry2_server`, not
 `Dunia.dll`** — every other page in this note set uses `Dunia.dll`'s `0x10xxxxxx` PC load addresses
-unless it says otherwise. Its better symbol coverage is worth cross-referencing against `Dunia.dll`
-going forward: it can name a PC-side function whose Windows binary only has a bare `FUN_`/`DAT_`
-address.
+unless it says otherwise. Its better symbol coverage can name a PC-side function whose Windows binary
+only has a bare `FUN_`/`DAT_` address.
 
 **Not a stripped-down server SKU — the full game with only the renderer compiled out.**
 `SceneRendererFacade::HasRenderer()` is hardcoded to `return 0` (a compile-time constant, not a
@@ -95,11 +94,10 @@ never compiled into this binary at all. See [Engine Architecture](./architecture
 main loop.
 
 :::note[Community-reported]
-The Linux dedicated server was reportedly shipped as an accidental debug build (Discord, 2022-07-13) —
-consistent with the unstripped `.symtab`/`.strtab` confirmed above. Separately, a community member
-("bajuh") reported independently reverse-engineering `Dunia.dll` with Ghidra, cross-referencing this
-same Linux server binary, specifically to build an FCB-editing tool (Discord, 2026-07-17) — a possible
-prior-art/collaboration lead if that tool or writeup surfaces publicly.
+The Linux dedicated server was reportedly shipped as an accidental debug build (Discord) — consistent
+with the unstripped `.symtab`/`.strtab` confirmed above. Separately, a community member ("bajuh")
+reported reverse-engineering `Dunia.dll` with Ghidra, cross-referencing this same Linux server binary,
+specifically to build an FCB-editing tool (Discord).
 :::
 
 ## Named symbols (`Dunia.dll`, Steam v1.03)

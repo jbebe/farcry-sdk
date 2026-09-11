@@ -194,11 +194,11 @@ Every bone with `m_eOriConst != 0` is derived by the engine, and no clip keys an
 them at 0.5/0.5, and twelve arm twist bones at `m_eOriConst 3` distributing a joint's roll at
 weights 1.0, 0.75, 0.5 and 0.25 along each chain.
 
-The fields are read straight out of `SerializeBone`, but **where the engine evaluates them has not
-been traced** — neither `GetJointRotationsAtTime` nor `GenerateOrientationForJoint` touches them, and
+The fields are read straight out of `SerializeBone`, but **where the engine evaluates them is not
+traced** — neither `GetJointRotationsAtTime` nor `GenerateOrientationForJoint` touches them, and
 the latter falls back to `m_ChildToParent` for any bone a clip does not key. Reading them as
-world-space blends and applying that to a rig was tried and measurably made the deformation worse, so
-the semantics should be considered open.
+world-space blends and applying that to a rig makes the deformation measurably worse, so the
+semantics are open.
 
 ## Tooling
 

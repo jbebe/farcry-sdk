@@ -6,8 +6,7 @@ sidebar_position: 16
 
 :::info[Verified via reverse engineering]
 Traced live via GhidraMCP against **`FarCry2_server`** (the Linux dedicated-server ELF, unstripped
-symbols), while adding moonlight to `mods/sky-overhaul`. Addresses and object offsets on this page are
-that binary's. Anything measured in a running game says so where it appears.
+symbols). Addresses and object offsets on this page are that binary's. Anything measured in a running game says so where it appears.
 :::
 
 The environment manager turns a world's presets and the clock into this frame's sun, moon, fog, light
@@ -23,10 +22,17 @@ curved-horizon variables into the renderer's config and binding the world's temp
 1. `UpdateVars` applies the `env_*` settings when they have changed: `env_Hour`, `env_Minutes`,
    `env_Seconds`, `env_StormHour`, `env_TimeScale`, `env_WindForce`, `env_WindDir` and
    `env_DelayShadowMovement` (see the [developer console](./developer-console.md)).
+   Step 4 overwrites both wind settings.
 2. Every override's blend advances (below).
 3. The clock advances by the frame's game time multiplied by the time scale, unless it is held
    (below). Passing midnight counts a day and sends `COneDayCompletedEvent`.
-4. `UpdateWeather`, the storm factor, zone blending and wind.
+4. `UpdateWeather`, the storm factor, zone blending and wind. The force starts from `env_WindForce`,
+   but while the flag at `CGameControllerManager` `+4` is clear it is replaced by the zone-blended
+   wind preset's. It is then lerped toward the storm's wind and, again only while that flag is
+   clear, scaled by a random fluctuation, clamped to 0–250 (the setting's help text says 0–600) and
+   lerped toward a wind override's `fWindForce`. The direction is replaced by
+   `EvaluateWindDirection`'s (`0x09158380`), which reads `env_WindDir` only as the start of its next
+   random drift. In a running game, `env_WindForce` has no visible effect and `SetWindOverride` does.
 5. `CSky::Update` places the sun and the moon.
 6. Fog: the zone-blended preset, lerped toward the storm's fog by the storm transition curve, then
    toward a fog override. The result goes to `C3DEngine`'s fog setters and to `CSky::UpdateFog`.
@@ -53,13 +59,13 @@ factor.
 | Wind | `+0x1A0` | `+0x1B4` | `Update` |
 | Depth of field | `+0x1DC` | `+0x1F0` | `Update` |
 
-Three more blocks of the same shape end at `+0x17C`, `+0x1CC` and `+0x20C`. What reads them was not
+Three more blocks of the same shape end at `+0x17C`, `+0x1CC` and `+0x20C`. What reads them is not
 traced.
 
 The Lua override methods on `CDynamicEnvironmentManager` ([Lua API surface](./lua-api-surface.md))
 and the Domino boxes `OverrideEnvironmentFog`, `OverrideEnvironmentCloud` and
 `OverrideEnvironmentWind` each take a preset by name and a transition duration, which is what these
-blocks hold; the call path between them was not traced. Retail content uses the boxes during play.
+blocks hold; the call path between them is not traced. Retail content uses the boxes during play.
 Act 2's Border Storm graph (`a2sm05_reprisal1.a2sm05_borderstorm.lua`) drives the shared box
 `Common_CustomBoxes.SetEnvironmentEffects` with `TransitionDuration = 7`, through its
 `SandStorm_Light` input, which overrides the clouds with `Default.Storm.Cloud`, the wind with
@@ -104,7 +110,7 @@ no other offset on this page carries over by adding `0x10`.
 :::
 
 `GetNormalizedTimeOfDay` (`0x09156C80`) returns `+0x2F0` of the manager, and the lighting, fog, cloud
-and sky presets are all evaluated at it. Its writer was not found, so whether presets follow the raw
+and sky presets are all evaluated at it. Its writer is not found, so whether presets follow the raw
 clock or the day-cycle scale is open.
 
 ## The scene light is the sun or the moon, whichever is brighter
@@ -142,7 +148,7 @@ preset, the moon's colour against the ambient; retail's values are in
 casts shadows:
 
 1. It starts from the day angle at `+0x94`. For the moon it adds the arc cosine of the value at
-   `+0x178`, wrapped into one turn. What `+0x178` holds was not traced.
+   `+0x178`, wrapped into one turn. What `+0x178` holds is not traced.
 2. Angles between π/2 and 3π/2 are mirrored to `π - angle`, so dawn and dusk are handled alike, and
    mirrored back at the end. For the sun, an angle past 3π/2 counts as negative.
 3. Below `gfx_SunShadow_InertiaStartAngle` the angle stops following the body and eases toward
@@ -167,9 +173,9 @@ shorter span around noon, for the clouds only.
 Retail GOG v1.03, with `mods/sky-overhaul` logging the scene state.
 :::
 
-- `SetScriptedStormFactorOverride(1.0, 3)` through the developer console did not lift the storm
+- `SetScriptedStormFactorOverride(1.0, 3)` through the developer console does not lift the storm
   factor the sky reads above 0.10–0.20.
-- No rain appeared under any weather tried.
+- No rain appears under any weather tried.
 
 ## Open
 

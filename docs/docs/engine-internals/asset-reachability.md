@@ -17,9 +17,6 @@ noise for anyone reading the data: worse, the largest of them *look* load-bearin
 the level. It is not. The engine loads the `.dat` beside it and only falls back to the XML when the
 binary is missing, which never happens in a shipped install.
 
-This page describes how the engine names files, and what falls out when you follow only the names
-it can actually produce.
-
 ## How a file becomes reachable
 
 Every load ultimately goes through one CRC32 lookup into the mounted archives (see

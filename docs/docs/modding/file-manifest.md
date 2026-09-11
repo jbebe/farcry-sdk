@@ -47,7 +47,7 @@ Inside the archives above: compiled object-definition trees — weapons, vehicle
 
 **Tools**: `Gibbed.Dunia.ConvertBinary` (fcb ⇄ xml). **Exception — Locked**: `downloadcontent/dlc1/entitylibrary.fcb` (DLC weapon data) cannot be decompiled by ConvertBinary at all; the only known path in is a raw hex editor (see [Getting Started](./getting-started.md) and [Data Recipes](./data-recipes.md)).
 
-`enemy_archetypes.xml` is confirmed community-established as the AI-tuning file for things like enemy FOV/view distance/cover occlusion (Discord, `🔨-fc3-and-bd-modding`, 2025-11-27) — referenced by a user asking for its FC3 equivalent, unanswered in-thread, but implying the filename is common knowledge for anyone tuning FC2 enemy perception.
+`enemy_archetypes.xml` is confirmed community-established as the AI-tuning file for things like enemy FOV/view distance/cover occlusion (Discord, `🔨-fc3-and-bd-modding`) — referenced by a user asking for its FC3 equivalent, unanswered in-thread, but implying the filename is common knowledge for anyone tuning FC2 enemy perception.
 
 A related but distinct binary format, `depload.dat` (a dependency/"parents" chunk, not an object tree — not decodable by `ConvertBinary` at all), is not FCBConverter-supported and has its own [format page](../file-formats/depload.md).
 
@@ -58,41 +58,40 @@ A related but distinct binary format, `depload.dat` (a dependency/"parents" chun
 - `worlds.fat/graphics/**/*.xbg` — meshes, incl. character/buddy models
 - `worlds.fat/graphics/**/*.xbm` — materials
 
-Byte-level format documented as of 2026 (section order, alignment rule, bone-palette mechanism) — see [the `.xbm`/`.xbg` format page](../file-formats/xbm-xbg.md). `Dunia-Engine-XBG-Blender-Importer` gives a real import/export path, but is pre-alpha — weapon-xbg import is currently broken, HKX collision export doesn't work yet. Texture-only reskins (no mesh edits) have been standard practice since 2011.
+Byte-level format documented (section order, alignment rule, bone-palette mechanism) — see [the `.xbm`/`.xbg` format page](../file-formats/xbm-xbg.md). `Dunia-Engine-XBG-Blender-Importer` gives a real import/export path, but is pre-alpha — weapon-xbg import is broken and HKX collision export doesn't work. Texture-only reskins (no mesh edits) are standard practice.
 
 ## 4. Textures (.xbt) — Partial
 
 Compressed texture assets referenced by `.xbm` materials, packed inside the same archives (`worlds.fat/**/*.xbt`).
 
-`.xbt → .dds` extraction is solid and has been for years (010 Editor templates, `xbt2dds`). Repacking `.dds → .xbt` was historically the shakier direction but is implicitly solved in practice — the community has shipped full weapon reskins since 2011–2012.
+`.xbt → .dds` extraction is solid (010 Editor templates, `xbt2dds`). Repacking `.dds → .xbt` is the less documented direction but is implicitly solved in practice — the community has shipped full weapon reskins.
 
 ## 5. Terrain / Heightmaps (.sdat) — Tooled
 
 Per-sector heightmap + auxiliary terrain data (`worlds.fat/…/worldsectors/*.sdat`). Each multiplayer map is 512m×512m, divided into an 8×8 grid of sectors.
 
 :::info[Verified via reverse engineering]
-The community's own byte-layout guess for these files was wrong — see [the `.sdat` format
-page](../file-formats/sdat.md) for the confirmed real layout (a generic chunked container, not a
-bare heightmap array).
+Community write-ups describe these files as a bare heightmap array; they are a generic chunked
+container — see [the `.sdat` format page](../file-formats/sdat.md) for the confirmed layout.
 :::
 
 A Blender plugin can reportedly read *and* edit these directly. Whether the 8×8 sector grid itself can be enlarged is unresolved.
 
-Two sibling per-sector files, `.srl` (sound regions) and `.zsr` (gameplay zones), were hash-list-only
-until now — see [`.srl`/`.zsr`](../file-formats/srl-zsr.md) for the confirmed container level (fixed
+Two sibling per-sector files, `.srl` (sound regions) and `.zsr` (gameplay zones), are covered by
+[`.srl`/`.zsr`](../file-formats/srl-zsr.md), which confirms the container level (fixed
 1024/4096-byte raw dumps, no header).
 
 ## 6. Navigation Mesh (.nvm) — Locked
 
 AI pathfinding navmesh data, compiled from level geometry (`worlds.fat/**/*.nvm`).
 
-Confirmed built on the open-source **Recast** library (via a leaked internal build-tool plugin list — `RecastNavmeshCompiler`/`Exporter`), but no FC2-specific decode/edit tool has surfaced in this research.
+Confirmed built on the open-source **Recast** library (via a leaked internal build-tool plugin list — `RecastNavmeshCompiler`/`Exporter`), but no FC2-specific decode/edit tool is known.
 
 :::info[Verified via reverse engineering]
-The container/file-structure level is now reverse-engineered — see [the `.nvm` format
+The container/file-structure level is reverse-engineered — see [the `.nvm` format
 page](../file-formats/nvm.md): a two-tier scheme (one level file plus per-sector satellite files),
-distinct from every other per-sector format in this manifest. Still no tool, and the actual per-sector
-mesh/triangle payload isn't decoded yet, so this stays **Locked** in practice.
+distinct from every other per-sector format in this manifest. There is no tool, and the per-sector
+mesh/triangle payload is not decoded, so this stays **Locked** in practice.
 :::
 
 ## 7. Audio — Partial
@@ -105,10 +104,10 @@ Voice, SFX, and ambient sound — both a top-level archive pair and packed sound
 - `worlds.fat/**/*.sbao` — soundbinary objects
 - `scripts/game/barkdata/*.bank`
 
-Active community `.spk` editing exists ("enough to mod them, but not everything" — Gabor). `DARE.INI` pairs with `bin/eax.dll` (Creative EAX) but hasn't been deeply researched here.
+Active community `.spk` editing exists ("enough to mod them, but not everything" — Gabor). `DARE.INI` pairs with `bin/eax.dll` (Creative EAX) but is not researched in depth.
 
 :::info[Verified via reverse engineering]
-`.spk`'s container format is now reverse-engineered and tooled — see [the `.spk` format
+`.spk`'s container format is reverse-engineered and tooled — see [the `.spk` format
 page](../file-formats/spk.md): magic `0x53504B01`, a record count, an id table, then
 variable-length `{preamble, size, payload}` records, 4-byte aligned. Verified byte-for-byte against
 every `.spk` in a real install (8,282 files, 42,215 records, zero failures) and implemented in
@@ -126,7 +125,7 @@ Cutscenes and intro/outro movies, RAD Game Tools' Bink format.
 - `Data_Win32/ui/video/ending.bik`
 - `bin/binkw32.dll` — Bink codec
 
-Standard, well-documented third-party format with its own public tooling ecosystem — not FC2-specific, so not covered by the modding research.
+Standard, well-documented third-party format with its own public tooling ecosystem — not FC2-specific, so not covered here.
 
 ## 9. Lua Scripts — Partial
 
@@ -138,9 +137,9 @@ Real embedded Lua, packed inside `worlds.fat`'s "domino" AI subsystem — confir
 - `worlds.fat/…/common_hq_doorman*.lua`
 
 Whether a *patched* Lua file is honored at runtime is contested — see [Gotchas](./gotchas.md) for
-the conflicting reports (one 2011 report says the game silently reads the original; a 2016 report
-and a 2022 outpost-respawn-timer mod both confirm patched Lua working). Treat as
-subsystem-dependent, not uniformly reliable.
+the conflicting reports (one report says the game silently reads the original; a later report and an
+outpost-respawn-timer mod both confirm patched Lua working). Treat as subsystem-dependent, not
+uniformly reliable.
 
 ## 10. Menu/UI Resources (.mgb / .mgb.desc) — Partial
 
@@ -221,7 +220,7 @@ Per-language UI resource folders for the launcher/benchmark tooling (distinct fr
 
 - `bin/Resources/{cs,de,es,fr,it,nl,pl,ru,uk,us}/`
 
-Not investigated in the modding research — likely satellite `.resources.dll`-style assemblies for the .NET launcher/benchmark tools, not gameplay-relevant.
+Not investigated — likely satellite `.resources.dll`-style assemblies for the .NET launcher/benchmark tools, not gameplay-relevant.
 
 ## 16. Top-Level Docs & Install Metadata — Out of scope
 

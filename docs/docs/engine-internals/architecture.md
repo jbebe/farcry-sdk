@@ -28,8 +28,8 @@ main(argc, argv)                        0x08276870
           } while RunDuniaEngine() returns true
 ```
 
-`main` just concatenates `argv` back into one string and hands it to `RunGame`. `RunGame`'s loop
-structure is the real story: `RunDuniaEngine` returning `true` means "reinit and go again" — this is
+`main` just concatenates `argv` back into one string and hands it to `RunGame`. In `RunGame`'s loop,
+`RunDuniaEngine` returning `true` means "reinit and go again" — this is
 the resolution-change/settings-apply/level-switch restart path, not just a one-shot run. Each
 iteration is a full init → play → teardown cycle.
 
@@ -41,7 +41,7 @@ engine itself rather than owning the loop), not called from this binary's own `m
 ## Init (`InitDuniaEngine`)
 
 Decompiles as ~600 lines, but almost all of it is inlined `std::string` construction (path-building
-for `MyGames/FarCry2/…`) that Ghidra couldn't fold away — the actual sequence, in order:
+for `MyGames/FarCry2/…`) that Ghidra can't fold away — the actual sequence, in order:
 
 1. **`Gear::StartEngine()`** — lowest-level bootstrap (memory/profiling instrumentation bracket; matches
    `Gear::ShutDownEngine()` at the very end of this same function, so it brackets *init itself*, not
@@ -51,7 +51,7 @@ for `MyGames/FarCry2/…`) that Ghidra couldn't fold away — the actual sequenc
 3. `CFCXGameCmdLineParser` — parses `-dedicated`, `-norender`, `-editorpc`, `-borderless`, and friends
    into globals consumed later in this same function.
 4. **`CCryEngine`** singleton constructed; `InitializeCore()` then `InitializeEngineServices()` — the
-   generic engine core, confirming (alongside the Lua/Havok fingerprints already in
+   generic engine core, confirming (alongside the Lua/Havok fingerprints in
    [Overview](./overview.md)) that Dunia's top-level class is still literally named `CCryEngine`.
 5. `CNomadNotificationManager`, `CGameErrorManager` singletons constructed.
 6. `CFCXGameCmdLineParser::Process()` — cmd line applied.
@@ -122,7 +122,7 @@ is presumably how the editor/server/client trim which phases run. Categorized:
 | **Animation** | `MSAnim::Update` |
 | **Ambient / vegetation** | `CDynamicAmbientUpdateManager::UpdatePrePhysics` / `UpdatePostPhysics`, `CAmbianceManager::Update`, `RTxcManager` tick + `PostUpdate` — `RTxcManager` ("Real Tree" component manager) is what reads the `.rtx` vegetation files — see [`.rtx`](../file-formats/rtx.md) |
 | **Rendering-adjacent** | `CMovieSystem::Update` (cutscenes), `CDecalManager::Update`, `CSky`/fog (via `CDynamicEnvironmentManager`), `CBufferFrameID::Increment3DFrameID` |
-| **Audio** | `GetSoundSystem()->Update()` (opaque interface call — the concrete class wasn't named in this binary; likely the DARE middleware named in [the sound section of the file manifest](../modding/file-manifest.md#7-audio--partial)), `CSubtitleManager::Update` |
+| **Audio** | `GetSoundSystem()->Update()` (opaque interface call — the concrete class isn't named in this binary; likely the DARE middleware named in [the sound section of the file manifest](../modding/file-manifest.md#7-audio--partial)), `CSubtitleManager::Update` |
 | **Networking** | `Echo::CNetEngine::Update` (confirms `Echo` is the network-engine namespace), `CSessionManager::Update`, `CCommandRequestManager::Update`, `CCommandManager::Update` |
 | **Console / debug** | `CXConsole` update, `CDebugInfoManager::Update`, `CErrorImpl::Update`, `FatalError::Display()` (polled — see threading below) |
 | **Async job join** | `CJobScheduler::Wait(...)` + `CParticlesSystemMgr::FinalizeUpdate()` — the main thread blocks here for particle work queued on the job system |
@@ -135,8 +135,7 @@ is presumably how the editor/server/client trim which phases run. Categorized:
 family — `CFCXGame*` (`CFCXGameplayManager`, `CFCXGameModeDeathMatch`, `CFCXGameSoundService`,
 `CFCXGameSettingsService`, `CFCXGameMessageService`, `CFCXGameStartOperation`, …) — sits above both:
 "FCX" reads as an internal *Far Cry X* codename layer for UI/game-mode/session-flow glue, distinct from
-both the engine core and the low-level `CGame` update. Not investigated further here; worth its own
-pass if game-mode/UI flow becomes the focus.
+both the engine core and the low-level `CGame` update.
 
 ### Middleware/subsystem namespaces identified from class names
 
@@ -145,7 +144,7 @@ pass if game-mode/UI flow becomes the focus.
 | `hk*` (`hkpConstraintQueryIn`, `hkSimpleContactConstraintData`, …) | Havok physics (confirmed at binary level here beyond the evaluation-key string in [Overview](./overview.md); `hkpMultithreadingUtil` also confirms Havok manages its own worker-thread pool independently of `CJobScheduler`) |
 | `Echo::*` | The network engine (`Echo::CNetEngine`, `Echo::INetEvent`, `Echo::NetDiscoveryEvent`) |
 | `Domino*` | Lua-backed mission/AI sequencing (delay/sound/sequence managers) |
-| `Magma`/`CMagma*` | UI system (`CMagmaInputListener` seen here; full `.mgb` binary format traced separately in [file-formats/mgb](../file-formats/mgb.md)) |
+| `Magma`/`CMagma*` | UI system (`CMagmaInputListener` seen here; full `.mgb` binary format in [file-formats/mgb](../file-formats/mgb.md)) |
 | `Agora*` | Ubisoft's online services SDK (auth, connection tasks) |
 | `*DemonWare*` | Backend-as-a-service layer used for accounts/profiles/matchmaking (`AccountDemonWareTask*`) |
 | `RTxc*` | Vegetation ("Real Tree") LOD/rendering manager |
@@ -153,9 +152,9 @@ pass if game-mode/UI flow becomes the focus.
 
 ## Background threads
 
-The main loop itself is single-threaded (no separate render thread), but the engine is not: searching
-for named-thread call sites (`InternalSetThreadName`, which every one of these passes its own literal
-name string to) surfaces a fixed roster of long-lived worker threads:
+The main loop itself is single-threaded (no separate render thread), but the engine is not: the
+named-thread call sites (`InternalSetThreadName`, which every one of these passes its own literal
+name string to) give a fixed roster of long-lived worker threads:
 
 | Thread class | Apparent role |
 |---|---|
@@ -174,11 +173,6 @@ confirms the engine's crash/error-dialog path is deliberately thread-aware: a ba
 a fatal error and hand off to the main thread to actually display it, rather than showing UI off-thread.
 
 ## Subsystems, one level deeper
-
-The dispatch table above names the "what"; this section is the "how" for the branches that looked
-most likely to pay off — entity update, vegetation, networking, game-mode flow, mission scripting, and
-AI. (Networking is included for completeness but deliberately wasn't pursued further — this project's
-focus is single-player.)
 
 ### `CEntitySystem::Update` — entities tick via a dependency-graph job scheduler, not a loop
 
@@ -205,9 +199,8 @@ step (pre-physics / post-physics — the two flag values `CEntitySystem::Update`
 Practical read: an entity's `.fcb`-defined components (see [`.fcb`](../file-formats/fcb.md)) aren't
 just data — each one that needs a per-frame tick apparently implements `IEntityTask`, and the engine is
 free to run independent components of independent entities in parallel across `CJobScheduler`'s worker
-pool, joining only where a real dependency exists. This is a substantially more sophisticated update
-architecture than a naive entity loop, and worth keeping in mind before assuming component update order
-is deterministic or single-threaded.
+pool, joining only where a real dependency exists — so component update order is not safe to assume
+deterministic or single-threaded.
 
 ### `RTxcManager` — `.rtx` is a live vegetation simulation, not a static mesh
 
@@ -217,7 +210,7 @@ than a mesh format. The concrete component classes it manages:
 | Class | Role |
 |---|---|
 | `RTxcSkeletonDyn` / `RTxcSkeletonRdr` / `RTxcSkeletonRdrUncompressed` | The branch hierarchy — a dynamic (simulation) copy and a render copy, with a compressed and uncompressed render variant |
-| `RTxcSimulation` / `RTxcSimulationHRT` / `RTxcSimulationPRT` | Wind-sway physics simulation — two named techniques (`HRT`/`PRT`, not yet decoded further) |
+| `RTxcSimulation` / `RTxcSimulationHRT` / `RTxcSimulationPRT` | Wind-sway physics simulation — two named techniques (`HRT`/`PRT`, not decoded) |
 | `RTxcLOD` | Level-of-detail selection |
 | `RTxcDefoliantNode` / `RTxcDefoliantLeaf` / `RTxcDefoliantHLeaf` | Per-leaf-cluster defoliation state — this is the binary-level confirmation of FC2's marketed "shoot the leaves off trees" foliage system |
 | `RTxcRegenNode` / `RTxcRegenLeaf` / `RTxcRegenHLeaf` | The inverse of defoliation — leaves regrowing over time |
@@ -227,9 +220,8 @@ than a mesh format. The concrete component classes it manages:
 `CRTxEngineResource` (the loadable top-level resource — `CreateInstance` at `0x095bcd14` is its
 factory) owns a hashtable of `SRealtreeSound`, keyed by an `int` event id — confirming individual trees
 carry their own associated sounds (rustling, breaking, burning), tying this system directly into the
-audio layer, not just rendering/physics. This class taxonomy is what made the format tractable: it
-named the parts to look for, and `RTxcManager::LoadSkeletal` turned out to spell the layout out in
-full. The geometry half is decoded — see [`.rtx`](../file-formats/rtx.md); the simulation state these
+audio layer, not just rendering/physics. `RTxcManager::LoadSkeletal` spells the format's layout out
+in full. The geometry half is decoded — see [`.rtx`](../file-formats/rtx.md); the simulation state these
 classes own is not.
 
 ### `Echo::CNetEngine` — an object-replication network engine
@@ -248,18 +240,17 @@ surrounding class names sketch a fairly complete home-grown replication engine:
   first, the standard pattern for keeping bandwidth-limited replication responsive.
 - **Per-connection packing**: `Echo::CPackerConnection`, and a sorted `Echo::CProtocolEntry` protocol
   table (`IsNetProtocolEntryLesserThan`).
-- **Voice**: `Echo::CNetVoicePeerMessage` — ties directly to the `CVoiceThread` background thread found
+- **Voice**: `Echo::CNetVoicePeerMessage` — ties directly to the `CVoiceThread` background thread listed
   above.
 - **Async operations**: `Echo::IOperation` / `COperationNotifier` — connection/matchmaking-style
   operations that complete asynchronously and notify back into `RunMainUpdate`.
 
-Wire-format/protocol-level detail wasn't pursued further here — this is enough to know where to look
-(`CNetObjectManager` for the object-relevance/replication logic, `Echo::CNetData*` templates for the
-per-field serialization) if multiplayer-facing modding or protocol understanding becomes a goal.
+The wire format and protocol are not decoded. The object-relevance/replication logic lives in
+`CNetObjectManager`, and the per-field serialization in the `Echo::CNetData*` templates.
 
 ### The `CFCXGameMode*` family — a thin FC2 layer over a generic engine strategy pattern
 
-Confirms the "two class families" pattern from earlier holds one level deeper. `CFCXGameModeSingle`'s
+The "two class families" pattern holds one level deeper. `CFCXGameModeSingle`'s
 constructor is exactly:
 
 ```cpp
@@ -291,8 +282,8 @@ the mode-selection mechanism itself.
 
 ### "Domino" — Lua loads through the same generic VFS as every other asset
 
-Domino has a much larger class footprint than the three managers named in the main dispatch table
-suggested. The family breaks down by role:
+Domino has a much larger class footprint than the three managers named in the main dispatch table.
+The family breaks down by role:
 
 | Class(es) | Role |
 |---|---|
@@ -313,7 +304,7 @@ Every `GenericFunctionToCall<...>`/`GenericFunctionToCall2<...>` template instan
 `RegisterConsoleCommand`, `LoadResource`, …) is that method being wrapped for direct Lua callability —
 this is the concrete binding mechanism behind the Lua API surface documented on
 [the Lua API page](./lua-api-surface.md). For what the actual `.lua` script files built on top of this
-binding layer look like — Domino turns out to be node-based visual scripting, not hand-written Lua, with
+binding layer look like — Domino is node-based visual scripting, not hand-written Lua, with
 a ~115-node standard library and 832 authored mission graphs — see [Domino
 Scripts](./domino-scripts.md).
 
@@ -331,14 +322,14 @@ called from `lua_dofile`/`luaB_loadfile` — resolves its path via `CFileManager
 goes through; there is no Lua-specific or archive-only special case. This means the community
 disagreement in [Gotchas](../modding/gotchas.md) over whether a patched `.lua` file is honored at
 runtime isn't really a question about Lua at all — it reduces to the same question that already governs
-every other patched asset (see [archives](../file-formats/archives-fat-dat.md)), and the negative 2011
+every other patched asset (see [archives](../file-formats/archives-fat-dat.md)), and the negative
 report is more plausibly explained by a wrong archive/path or a stale resource-cache entry than by the
 engine special-casing script files.
 
-`CDominoDelayManager::Update` (`0x093bf270`) is worth a specific callout: each expired `CDominoDelay`
-calls `CScriptCallbackSystem::CallCallback(...)` directly — confirming a "delay" is literally a deferred
-Lua function call, i.e. this is the concrete mechanism behind the reinforcement/respawn timers already
-noted in [the file manifest](../modding/file-manifest.md#9-lua-scripts--partial).
+In `CDominoDelayManager::Update` (`0x093bf270`), each expired `CDominoDelay` calls
+`CScriptCallbackSystem::CallCallback(...)` directly — confirming a "delay" is literally a deferred
+Lua function call, i.e. this is the concrete mechanism behind the reinforcement/respawn timers noted
+in [the file manifest](../modding/file-manifest.md#9-lua-scripts--partial).
 
 ### `CAIEngine` — a classic sense/decide/plan/act architecture, group-aware
 
@@ -360,15 +351,13 @@ types):
   the same level as the AI's own senses and decisions, not through a side channel.
 
 Also registered here: `CPersonalitySystem` (very likely the code-side counterpart to the
-`enemy_archetypes.xml` FOV/awareness tuning already noted in
+`enemy_archetypes.xml` FOV/awareness tuning noted in
 [the file manifest](../modding/file-manifest.md#2-entity--object-binary-data-fcb--tooled) and
 [Patrols](../modding/guide/patrols.md)), `CAIDebugTool`, `CPathManager`/`CPathfinderNodePool`
-(pathfinding), and — worth flagging on its own — **`CNavMeshSectorResource`**, registered as a real
-streamed resource type (`CResourceManager::RegisterNewResourceType` +
-`StreamingManager::RegisterAllocCallBack`, the same pattern used for ordinary world-streamed data).
-That's the runtime loader for `.nvm`, the one file format in [the file
-manifest](../modding/file-manifest.md#6-navigation-mesh-nvm--locked) with no RE work behind it at all —
-a concrete class name and load path to start from whenever `.nvm` gets picked up.
+(pathfinding), and **`CNavMeshSectorResource`**, registered as a real streamed resource type
+(`CResourceManager::RegisterNewResourceType` + `StreamingManager::RegisterAllocCallBack`, the same
+pattern used for ordinary world-streamed data). That's the runtime loader for `.nvm` (see [the file
+manifest](../modding/file-manifest.md#6-navigation-mesh-nvm--locked)).
 
 ### `MSAnim` — animation is a resource-registration hub, not a per-frame animator
 
@@ -383,10 +372,9 @@ pair, `CFaceActorResource`/`CFaceAnimResource` (plus a `CFaceAnimModel::LoadFaci
 anything per frame.**
 
 The actual per-frame work happens in `CAnimationComponent` — and it has the exact same dual-vtable
-construction pattern already seen on `CDominoComponent`, confirming it's a real `CEntityComponent`/
+construction pattern as `CDominoComponent`, confirming it's a real `CEntityComponent`/
 `IEntityTask`, sitting directly in the dependency-graph job scheduler documented under
-`CEntitySystem::Update` above, not a separate animation "subsystem tick." More interesting: its
-constructor wires up its own internal mini pipeline of named callback stages —
+`CEntitySystem::Update` above, not a separate animation "subsystem tick." Its constructor wires up its own internal mini pipeline of named callback stages —
 `PrePhysTree`/`PostPhysTree`, `PrePhysFacial`/a matching facial stream, `RegisterStreamUpdateMatrix`/
 `GetCodeUpdateMatrix` — each backed by its own `CJobStreams` instance (the same job-stream mechanism
 `CJobScheduler` runs). **Animation evaluation is itself split into pre-physics and post-physics job
@@ -412,7 +400,7 @@ foundational level). `CInventoryItem` specializes into `CInventoryItemWeapon`, `
 `CInventoryItemAmmoPouch`. UI never touches inventory data directly — `CInventoryViewPawn` and
 `CInventoryViewWeapon` are adapter/projection objects (one `CInventoryViewWeapon` is allocated directly
 inside `CWeapon`'s own constructor), the same "the UI layer only ever sees a view object, never the raw
-system" shape already seen for `CFCXGameplayManager` as a Lua-facing service.
+system" shape as `CFCXGameplayManager` as a Lua-facing service.
 
 **Weapons compose a fire mode as a strategy object.** `CWeapon` (`: CEquipmentBase`) doesn't hardcode
 how it fires — `CWeaponFireStrategy` is a base class with one concrete subclass per fire-mode archetype:
@@ -421,7 +409,7 @@ how it fires — `CWeaponFireStrategy` is a base class with one concrete subclas
 (improvised explosives). Each strategy has a matching `*Properties` class
 (`CWeaponFireBulletProperties`, etc.) plus a shared `CWeaponPropertiesCommon` and a central
 `CWeaponsPropertiesRepository` — this is the runtime-side counterpart of the `.fcb`-driven weapon
-stat tuning already documented in [the file manifest](../modding/file-manifest.md#2-entity--object-binary-data-fcb--tooled)
+stat tuning documented in [the file manifest](../modding/file-manifest.md#2-entity--object-binary-data-fcb--tooled)
 (`41_WeaponProperties.xml.fcb`): the strategy object is the behavior, the Properties object is the data
 that parameterizes it, and they're deliberately factored apart.
 
@@ -433,23 +421,23 @@ parallel `CWeaponEventReloadAbort`. Weapon degradation (jamming) is modeled the 
 weapon-degradation mechanic, implemented as explicit state-transition events rather than a hidden
 durability counter. Persistence uses a Memento pattern — `CWeaponMemento`, `CWeaponControllerMemento`,
 `CWeaponProjectileMemento`, `CWeaponProjectileControllerMemento`, `CWeaponIEDMemento` — the most likely
-concrete answer to the still-open "which fields does each entity class's `RegisterProperties` capture"
+concrete answer to the open "which fields does each entity class's `RegisterProperties` capture"
 question in [the savegame page's Unknowns](../file-formats/savegame.md#unknowns): weapon save/restore
 almost certainly serializes through these Memento objects rather than ad hoc field-by-field capture.
 
 `CWeaponBazaar` (the arms-dealer/shop system, with `UnlockItem` exposed to Lua the same way
-`CFCXGameplayManager::SetMapArmy` was) is the progression/economy layer sitting on top of all of the
+`CFCXGameplayManager::SetMapArmy` is) is the progression/economy layer sitting on top of all of the
 above — a separate concern from how a weapon fires or persists.
 
 ### World streaming — generic resources plus a declared dependency graph, half-invisible on this binary
 
-Two honest limits up front: `C3DEngine::PreUpdate` is an empty stub on this build, and (per
+Two limits: `C3DEngine::PreUpdate` is an empty stub on this build, and (per
 [Overview](./overview.md)) rendering itself was compiled out entirely — so whatever actually decides
 "which sectors are near the camera right now" on the real PC client, driven by view/visibility, isn't
 present to trace here. What *is* traceable is everything underneath that decision.
 
 `StreamingManager` itself is small and generic: a `CStringID → allocator-callback` hashtable. Every
-resource-owning subsystem traced so far — `CAIEngine` (workspace/navmesh sectors), `MSAnim` (movement/
+resource-owning subsystem traced here — `CAIEngine` (workspace/navmesh sectors), `MSAnim` (movement/
 skeleton/facial resources), `RTxcManager` — registers its own allocation callback into this one table
 via `StreamingManager::RegisterAllocCallBack`. Streaming isn't a bespoke system per content type; it's
 one generic allocation-callback registry that every content type plugs into, matching the same
@@ -474,17 +462,15 @@ memory card / disk / cloud — inherited from the multi-platform, console-orient
 this build targets Linux), setting a state field rather than blocking. The handler names spell out an
 explicit state machine: `HandleOp_LoadGameFile_AutoLoad_SelectStorageDevice_Complete` →
 `HandleOp_LoadGameFile_AutoLoad_Loading_Complete`, the same completion-callback shape as the
-`Echo::IOperation`/`COperationNotifier` async-operation pattern already found in networking — save/load
+`Echo::IOperation`/`COperationNotifier` async-operation pattern used in networking — save/load
 is just another async operation on that same generic mechanism, not a special case.
 
-The more interesting result is what happens per entity. `CPersistenceDB::RestoreEntity` — after cutting
-through its hashtable bookkeeping (a fairly ordinary two-level `entity-id → record` lookup) — bottoms
+Per entity, `CPersistenceDB::RestoreEntity` — past its hashtable bookkeeping (a fairly ordinary two-level `entity-id → record` lookup) — bottoms
 out in one call: `CNomadObjectDescriptor::LoadState(entity, serializableNode)`. `CNomadObject` is the
 *same* base class found under the AI object hierarchy and AI task hierarchy in the [`CAIEngine`
-section](#caiengine--a-classic-sensedecideplanact-architecture-group-aware) above — see the next section
-for why that's the real point. **Persistence isn't bespoke per-entity-class serialization code; it's one
+section](#caiengine--a-classic-sensedecideplanact-architecture-group-aware) above. **Persistence isn't bespoke per-entity-class serialization code; it's one
 generic reflection framework (`ISerializableNode`/`CNomadObjectDescriptor`) that anything built on
-`CNomadObject` gets for free.** That's the concrete architectural answer to the still-open "what does
+`CNomadObject` gets for free.** That's the concrete architectural answer to the open "what does
 each entity class's `RegisterProperties` actually capture" question in [the savegame page's
 Unknowns](../file-formats/savegame.md#unknowns) — it's whatever that class's `CNomadObjectDescriptor`
 declares, the same mechanism every other reflectable object in the engine uses, not hand-rolled
@@ -497,7 +483,7 @@ genuine, statically-linked, unmodified Havok Physics SDK — `hkpWorld`, `hkpWor
 `hkpWorldOperationQueue` (bodies are added/removed from the simulation through a deferred operation
 queue, not mutated mid-step), `hkpWorldCinfo`, `hkpWorldMaintenanceMgr` are all real Havok classes, not
 FC2 reimplementations. `CPhysWorldThreadMemory`/`Impl` is per-thread scratch memory, tied to the
-`CPhysTimeStepThread` background thread found in the main-loop section — Havok's standard thread-local
+`CPhysTimeStepThread` background thread — Havok's standard thread-local
 allocation pattern. The facade/impl split (`CPhysWorldImplBase` abstract, `CPhysWorldImpl` the concrete
 Havok-backed implementation) is the same generic-interface/concrete-backend layering used throughout
 this codebase (`CGame`/`CXGame`, `CGameMode`/`CFCXGameMode*`) — Havok is just the backend slotted behind
@@ -513,13 +499,12 @@ cluster variant presumably batched for efficiency), and `CVehicleWheeledPhysComp
 ### The unifying spine: `CNomadObject`
 
 Decompiling `CEntity::GetComponent<CPhysComponent>()` surfaces its full ancestry:
-`CPhysComponent : CEntityComponent : CNomadObject`. That closes a loop that's been visible piece by
-piece across this whole document: `CNomadObject` is also the root of the **AI object** hierarchy
+`CPhysComponent : CEntityComponent : CNomadObject`. `CNomadObject` is also the root of the **AI object** hierarchy
 (`CAIObjectRoot → CAIObject → CAgent`) and the **AI task** hierarchy
 (`CTaskRoot → {CAction, CDecision, CScanner, CPlan → CBrain}`) documented under `CAIEngine`, and it's
 what makes the generic **persistence** mechanism (`CNomadObjectDescriptor::LoadState`) possible at all.
 
-Querying the full `GetComponent<T>` instantiation list turns up the breadth of what specializes
+The full `GetComponent<T>` instantiation list shows the breadth of what specializes
 `CEntityComponent`/`CNomadObject` in practice: AI (`CAIComponent`, `CFCXAIComponent`), animation
 (`CAnimationComponent`, `CSimpleAnimationComponent`), physics (the `CPhysComponent` family above),
 graphics (`CGraphicComponent`, `CBaseGraphicComponent`, `CCustomMaterialComponent`), vegetation
@@ -531,7 +516,7 @@ weapons (`CGadget`, `CMountedWeapon`, `CWeapon`), triggers and gameplay volumes
 marker for whether an instance gets a save record at all, the other open question in
 [savegame.md](../file-formats/savegame.md#unknowns)).
 
-**The practical shape of the whole engine, stated plainly**: almost everything that isn't pure
+**The practical shape of the whole engine**: almost everything that isn't pure
 engine-core plumbing is a `CNomadObject`. Entity components are one specialization of it, fetched by
 name (`CStringID`) through `GetComponent<T>`, scheduled every frame through the dependency-graph job
 system documented at the top of this page. AI objects and AI tasks are a second specialization, wired

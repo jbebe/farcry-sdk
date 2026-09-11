@@ -200,8 +200,7 @@ The third-party Blender importer calls table entry 6 `Events`. The engine reads 
 five sections named in this table.
 :::
 
-An exporter quirk worth knowing when writing a parser that walks the file linearly rather than
-through the table: **the tag array is always emitted, even when empty**, and then the table slot is
+An exporter quirk matters to a parser that walks the file linearly rather than through the table: **the tag array is always emitted, even when empty**, and then the table slot is
 left at zero. That leaves 16 zero bytes after the animated translations in the 7,679 clips with no
 tags, and nothing points at them.
 
@@ -408,11 +407,6 @@ The encoder itself is held separately, with those verbatim bytes thrown away: fr
 alone, **99.9% of banks keep every clip, section and mask where it was** and **78.4% return
 byte-identical** — the shortfall being rotations that cannot be re-encoded exactly, compounded over a
 chain of up to 35 clips.
-
-A section has to be taken at its *intrinsic* length for that to work. The block a reader slices runs
-to wherever the next section starts, so it carries the alignment padding and the sixteen-byte
-separator with it, and re-laying those adds them a second time — one separator per clip, on every
-shipped bank.
 
 `tools/BlenderFC2/addon/import_mab.py` turns a clip into a Blender Action, and `export_mab.py` puts
 one back. Because a clip stores a

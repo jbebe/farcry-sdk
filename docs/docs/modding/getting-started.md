@@ -6,10 +6,9 @@ sidebar_position: 1
 
 :::note[Community-reported]
 Distilled from the **OpenWorldGames (OWG) forum**, board "[Single player
-modding](https://www.openworldgames.org/owg/forums/index.php?board=169.0)" (~81 threads, active
-2011–2017, some still get replies today) — the successor to the original Something Awful thread
-where Gibbed first published his tools — plus Discord exports from two active servers, "Far Cry 2
-Multiplayer" and "Far Cry Modding Community". Not independently verified by reverse engineering;
+modding](https://www.openworldgames.org/owg/forums/index.php?board=169.0)" (~81 threads) — the
+successor to the original Something Awful thread where Gibbed first published his tools — plus
+Discord exports from two active servers, "Far Cry 2 Multiplayer" and "Far Cry Modding Community". Not independently verified by reverse engineering;
 treated as the most probable explanation where it hasn't been RE-confirmed. See [the
 intro](../intro.md) for how RE-verified and community-reported claims are distinguished across this
 site. Discord-sourced facts are tagged inline as `(Discord, <server>, "<channel/thread>")`.
@@ -18,8 +17,8 @@ site. Discord-sourced facts are tagged inline as `(Discord, <server>, "<channel/
 Mod-specific downloads are tracked in [Mods Survey](./mods-survey.md); tools and communities in
 [Sources](./sources.md). Concrete gameplay-tuning recipes are on [Data Recipes](./data-recipes.md).
 Known unresolved problems are on [Gotchas](./gotchas.md), and engine architecture theory plus the map
-editor are on [Engine Theory](./engine-theory.md). If you'd rather use a mod manager than hand-edit
-`patch.dat`, see [Vortex](./vortex.md) for the tooling built in this repo.
+editor are on [Engine Theory](./engine-theory.md). A mod manager that builds `patch.dat` for you is
+on [Vortex](./vortex.md).
 
 ## The modding model
 
@@ -31,9 +30,9 @@ any other `.fcb` could be overridden without touching the (huge) originals — t
 mechanism every mod, and every modding tool, ultimately exploits.
 
 Because there's no load order or compatibility layer, combining two independently-built mods means
-manually merging their underlying XML edits into one patch (this is exactly the gap [Far Cry 2
-Universal Patcher](./mods-survey.md) was later built to address). No official SDK was ever released —
-every tool covered here is fan-built reverse engineering.
+manually merging their underlying XML edits into one patch (the gap [Far Cry 2 Universal
+Patcher](./mods-survey.md) addresses). No official SDK was ever released — every tool covered here
+is fan-built reverse engineering.
 
 ## Toolchain
 
@@ -55,11 +54,11 @@ every tool covered here is fan-built reverse engineering.
 
 - **Bootstrap package**: extract into `Far Cry 2\modding`, run `bootstrap.bat`, edit XML under
   `modding\mymod\...`, run `build_patch.bat` to produce `patch.fat`/`patch.dat`, copy into
-  `Data_Win32` (back up the originals first). This superseded an older manual process, still described
-  in some guides: mirror the original folder path for any file you want to override under
-  `modding\mypatch` instead (e.g. `modding\mypatch\engine\gamemodes\gamemodesconfig.xml`), run
-  `build_patch.bat`, then rename your existing archive files' extensions (e.g. to
-  `.steamdat`/`.steamfat`) before copying the new pair in, so the game won't load the originals.
+  `Data_Win32` (back up the originals first). An older manual process, still described in some
+  guides, mirrors the original folder path for any file you want to override under `modding\mypatch`
+  instead (e.g. `modding\mypatch\engine\gamemodes\gamemodesconfig.xml`), runs `build_patch.bat`, then
+  renames your existing archive files' extensions (e.g. to `.steamdat`/`.steamfat`) before copying
+  the new pair in, so the game won't load the originals.
 
 ### Round-tripping `.fcb` values by hand
 
@@ -109,22 +108,21 @@ every small edit to isolate mistakes. A decimal-locale gotcha: a comma instead o
   `2_vehicle.xml` this way guarantees a crash whenever a DLC vehicle (Unimog, Quad) spawns near your
   changes (reproducible near Petro Sahel) — drop the vehicle file from your DLC mod and keep only the
   weapon edits, which do work via this path.
-- **FCBConverter's CRC32 hash-collision problem**, root-caused live by its own author (Discord, Far
-  Cry Modding Community, `🔨-fc2-modding`, Jun 2021 — ArmanIII and Steve64b): FC2 hashes filenames
+- **FCBConverter's CRC32 hash-collision problem**, root-caused by its own author (Discord, Far Cry
+  Modding Community, `🔨-fc2-modding` — ArmanIII and Steve64b): FC2 hashes filenames
   with CRC32 (unlike FC3+'s CRC64), so cross-game master filelists risk real collisions — e.g.
   `4A724578` maps to both `levels\ige_map\generated\sdat\sd10_shadow.xbt` and
   `scripts\game\barkdata\1436645.bank` within FC2's own filelist. FCBConverter's loader silently keeps
   whichever entry appears first and drops the rest. **Fix**: maintain separate, per-game filelists
-  rather than one shared master list. The same session found and fixed a related bug: single-file
-  extraction (`FCBConverter <fat> <output dir> <desired file>`) wasn't passing the detected FAT
-  version through for FC2 specifically, silently unpacking the entire fat instead of the requested
-  file. Separately, the output-directory argument must be an absolute path — a relative path fails
+  rather than one shared master list. A related bug, fixed by the author: single-file extraction
+  (`FCBConverter <fat> <output dir> <desired file>`) did not pass the detected FAT version through
+  for FC2 specifically, silently unpacking the entire fat instead of the requested file. Separately, the output-directory argument must be an absolute path — a relative path fails
   `Directory.Exists()` silently.
 - **A worldsector `.fcb` carries its own internal ID + grid coordinates**, confirmed from a real hash
   lookup: `worlds.fat\levels\mp_10_l_fishingvillage\generated\worldsectors\worldsector23.data.fcb`
   resolves to `WorldSector: Id=23 X=3 Y=2`.
 - **`.xbg` mesh files can embed their own texture/material references, extractable without hex
-  editing** (Discord, Far Cry 2 Multiplayer, `tools-and-mods`, Feb 2026, tool by fdx4061): a standalone
+  editing** (Discord, Far Cry 2 Multiplayer, `tools-and-mods`, tool by fdx4061): a standalone
   `EXTRACTOR.exe`, placed alongside a batch of `.xbg` files, generates a `PATH.ini` on first run (edit
   it to point at your unpacked resource directories — only the first non-commented line is used), then
   on a second run extracts every referenced texture/material into subfolders mirroring the original
@@ -135,11 +133,11 @@ every small edit to isolate mistakes. A decimal-locale gotcha: a comma instead o
 
 ### Manually merging two mods
 
-Before [Far Cry 2 Universal Patcher](./mods-survey.md) existed, two techniques were used:
+Without [Far Cry 2 Universal Patcher](./mods-survey.md), two techniques merge mods by hand:
 
 - **Fine-grained** (wobatt): extract both mods' XML into separate folders, then use WinMerge to
   line-by-line diff the two folders against each other and manually reconcile differences.
-- **Coarse-grained** (Discord, `🔨-fc2-modding`, 2026-07-20/22, "Yorzar"): install one overhaul mod
+- **Coarse-grained** (Discord, `🔨-fc2-modding`, "Yorzar"): install one overhaul mod
   normally, unpack both mods' patch archives, then copy whole top-level folders from the second mod's
   unpacked tree over the first's (`_UNKNOWN`, `databases`, `domino`, `downloadedcontent`, selected
   `graphics` subfolders, `levels`, `Scripts`, `Ui`, `Worlds`), then repack. Faster than a real
@@ -167,12 +165,11 @@ name:
 | `worlds.fat\worlds\world1\generated\world1.mapdata.fcb` | Patrol vehicle routes, raw XYZ coordinates with no in-game reference frame — editing routes is "hours of trial and error" without dedicated tooling. |
 | `10_Ghostpatrols.xml` | Every patrol type's faction-color assignment plus optional vehicle passenger slots — see [Data Recipes](./data-recipes.md)'s faction-infighting recipe. |
 | `*.sdat` (per-world-sector terrain) | See the [`.sdat` format page](../file-formats/sdat.md). |
-| Vehicle files (`Vehicles_world1.xml`) | Vehicle model/mounting data. The hang glider's flight parameters were never found despite extensive searching. A `Chassis`-section `fHealth` value exists for ground vehicles, but recompiling a patch that changes it reliably crashes the game — unresolved, suspected DLC-folder conflict. |
+| Vehicle files (`Vehicles_world1.xml`) | Vehicle model/mounting data. The hang glider's flight parameters have not been found despite extensive searching. A `Chassis`-section `fHealth` value exists for ground vehicles, but recompiling a patch that changes it reliably crashes the game — unresolved, suspected DLC-folder conflict. |
 
 ## Locally preserved reference files (`research/reference-files/`)
 
-Primary-source material mined from Discord exports, worth keeping independently of the (disposable,
-since-deleted) raw export:
+Primary-source material mined from Discord exports:
 
 - **`tools/third-party/FC2Editor_Source/`** — genuine, working C# source for the stock map editor
   (422 entries, half a byte-identical `Backup/` duplicate). Built on a custom "Nomad" engine layer

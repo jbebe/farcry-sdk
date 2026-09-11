@@ -18,9 +18,8 @@ registers a method scoped to that manager's Lua handle, typically obtained via a
 global first (several of which are themselves in the global list below, e.g. `GetBuddiesManager`,
 `GetFCXMissionManager`).
 
-Surveyed every one of the ~260 call sites (`get_xrefs_to` on `0x102aa850`, fully enumerated) across
-~30 distinct registration functions, each corresponding to one exposed class or global batch. This is
-the authoritative map of the engine's Lua scripting surface — the source for `SCRIPTS\MissionTools.lua`
+The ~260 call sites (every xref to `0x102aa850`) sit in ~30 distinct registration functions, each
+corresponding to one exposed class or global batch. This is the authoritative map of the engine's Lua scripting surface — the source for `SCRIPTS\MissionTools.lua`
 and friends.
 
 ## Global functions (namespace = 0, callable from anywhere)
@@ -100,11 +99,11 @@ Each of these manager classes also exposes a much larger set of plain data **pro
 functions) through a separate, parallel reflection mechanism (`FUN_1029b000`/property-descriptor
 structs with `GetNameHash("PropertyName", ...)`, visible interleaved in the same registration
 functions — e.g. `CFCXMissionManager` also exposes `CurrentAct`, `MissionTime`,
-`InfMinCoefficient`, etc. as readable/writable fields). Those aren't part of this function survey but
-are readable from the same decompiled registration functions if needed.
+`InfMinCoefficient`, etc. as readable/writable fields). Those are not listed here, but are readable
+from the same decompiled registration functions.
 
 ## Unknowns
 
 - One registration call site (`0x10738c38`) sits outside any function Ghidra has identified as a
   `Function` object — needs a manual Disassemble+Create-Function pass in the GUI before it's readable
-  via MCP. Every other one of the ~260 sites has been surveyed.
+  via MCP. Every other one of the ~260 sites is covered above.

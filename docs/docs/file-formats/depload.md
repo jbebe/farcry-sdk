@@ -5,7 +5,7 @@ sidebar_position: 3
 # `depload.dat` — Dependency Chunk
 
 :::info[Verified via reverse engineering, corrects an earlier community write-up]
-Originally documented community-side (Discord, Far Cry Modding Community, 2026-04-09 — a from-scratch
+Originally documented community-side (Discord, Far Cry Modding Community — a from-scratch
 black-box exchange between **fdx4061** and **ArmanIII**; not supported by FCBConverter, hence the
 from-scratch approach: *"fcb converter doesn't support fc2 depload.dat"*). Independently confirmed and
 extended by disassembly, traced live via GhidraMCP against the same more heavily-symbolized
@@ -40,11 +40,11 @@ null. See [what loads the child bank](./spk.md#what-loads-the-child-bank-depload
 1. Calls `CWorldDescriptorImpl::LoadDep()` (`0x09c2b0c0`), which loads the current world's own
    `<world>/generated/<world>_depload.dat` (format string `"%s%s_depload.dat"`), and its sibling
    `"%s%s_deploadnewparticles.rml"` — a second, RML-format dependency file for particle effects. RML
-   is a separate container and a solved one: `jackall-cli rml decode` / `rml encode` round-trip
-   `oasisstrings.rml` byte-identically at 946 KB. Its *contents* are out of scope here. If the binary
-   `.dat` isn't found, it falls back to a same-named `_depload.xml` (a plain `XmlParser::parse` path).
-   Nearly every world ships that XML twin beside its binary — 25 of them, up to 5.3 MB — and they
-   carry the same parents the binary does, with names restored; see
+   is a separate container: `jackall-cli rml decode` / `rml encode` round-trip `oasisstrings.rml`
+   byte-identically at 946 KB. If the binary `.dat` isn't found, it falls back to a same-named
+   `_depload.xml` (a plain `XmlParser::parse` path). Besides the small `common/ui/localized/*/ui/`
+   ones, nearly every world ships that XML twin beside its binary — 25 of them, up to 5.3 MB — and
+   they carry the same parents the binary does, with names restored; see
    [The type table](#the-type-table). Whether the loader's fallback actually consumes that exact
    shape is untested, since the binary is always present.
 2. Then walks every installed DLC via `CDlcService::GetDepLoads()` and loads each one's own
@@ -77,7 +77,7 @@ offset  size  field
 ```
 
 **Entries are sorted ascending by CRC32, treated as unsigned 32-bit.** Confirmed both empirically
-(community finding) and now directly in the disassembly, which binary-searches this array by CRC32 on
+(community finding) and directly in the disassembly, which binary-searches this array by CRC32 on
 load — a binary search only works if the array is actually kept sorted, so the engine itself depends on
 this invariant, not just tooling built to read the file.
 
@@ -101,31 +101,21 @@ A parent's children are `childHash[childIndex .. childIndex+childCount)` (and th
 `childTypeIndex`) — `childIndex` is a slice start into the two per-child arrays, confirmed directly from
 the load loop. Each child's actual type hash is `typeHash[childTypeIndex[i]]`.
 
-**Correction from an earlier pass at this format**: this was first written up, from disassembly alone
-before a real sample was available, as *three* parallel per-child arrays (hash, flag byte, second
-CRC32), all the same length. Decoding two real shipped files (`entitylibrary_depload.dat`: 433 parents,
-1,314 children; `worlds/tmpla/generated/tmpla_depload.dat`: 9,134 parents, 25,838 children) falsified
-that: the third array's count-prefix is nowhere near the child count in either file, and every observed
-"flag" byte fell inside `[0, thirdArrayCount)` — conclusive for "the third array is a small
-deduplicated type-hash table indexed by the second array," not a third per-child field.
-(`LoadBinaryFile` also does its own runtime interning of type hashes into an in-memory table with a
-per-child byte index after the file is read — a second, unrelated dedup pass over already-parsed data,
-structurally similar to the file's own table, which is almost certainly why the first pass conflated
-the two.)
-
-The semantic meaning of the resolved `typeHash` itself (e.g. "this dependency is a texture" vs. "a
-mesh") is confirmed to be a per-resource-*type* value shared by many children, but not resolved further
-— would need either a struct definition recovered from whatever consumes `CResourceDataBase`'s parsed
-arrays, or empirical correlation against known resource types across several real files.
+Two real shipped files (`entitylibrary_depload.dat`: 433 parents, 1,314 children;
+`worlds/tmpla/generated/tmpla_depload.dat`: 9,134 parents, 25,838 children) bear this out: the third
+array's count-prefix is nowhere near the child count in either file, and every `childTypeIndex` byte
+falls inside `[0, typeTableCount)`. The third array is a small deduplicated type-hash table indexed by
+the second, not a third per-child field. (`LoadBinaryFile` also does its own runtime interning of type
+hashes into an in-memory table with a per-child byte index after the file is read — a second,
+unrelated dedup pass over already-parsed data, structurally similar to the file's own table.)
 
 ## Animations are not like textures
 
-:::tip[Solved: a `.mab` is reachable only through its animation package]
+:::tip[A `.mab` is reachable only through its animation package]
 Measured in game. An animation clip at a path present in **no shipped archive** loads and plays
 normally, provided it is listed as a `CAnimationResource` child of the `CAnimationPackageResource`
 that the weapon's **`sPartName`** names. Registering a clip in a `depload` *is* adding it to an
-animation package — they are the same act, which is why the two candidate explanations below
-collapsed into one.
+animation package — they are the same act.
 
 Three configurations, one variable each time:
 
@@ -146,18 +136,14 @@ nothing, and fails silently.
 Edit it with [`jackall-cli depload add`](#editing) rather than by hand.
 :::
 
-The measurements that led there are kept below, since they are what a similar investigation would
-have to repeat.
-
-:::note[How it was found: an unlisted clip did not load]
-Measured in game, twice, while repointing the VSS Vintorez's clips (see
-[MOVE](./move.md#which-clips-does-a-weapon-play)):
+:::note[An unlisted clip does not load]
+Measured in game, on the VSS Vintorez's clips (see [MOVE](./move.md#which-clips-does-a-weapon-play)):
 
 - A `.mab` staged into `patch.dat` at an **invented** path — present in the archive, referenced by
-  `movemgr.bin`, listed in no `depload` — **never played**. The MOVE state machine entered the
-  reload state and never left it: no reload, no fire, and the weapon stayed dead until the player
-  switched away and the state was re-entered from scratch. Switching back left it dead again.
-- The **same bytes** at a real shipped path played immediately.
+  `movemgr.bin`, listed in no `depload` — **never plays**. The MOVE state machine enters the
+  reload state and never leaves it: no reload, no fire, and the weapon stays dead until the player
+  switches away and the state is re-entered from scratch. Switching back leaves it dead again.
+- The **same bytes** at a real shipped path play immediately.
 
 The correlation is exact. The working clip's `CPathID` (`70AEAAE4`,
 `…\pneu_dart_model_389\1stge_uppb_reload_+000fw_sp389_i1.mab`) appears in **26 of the 27** shipped
@@ -165,18 +151,14 @@ The correlation is exact. The working clip's `CPathID` (`70AEAAE4`,
 **none**.
 :::
 
-That was the circumstantial stage: it showed an unlisted clip does not load, not that `depload` was
-what stopped it. Registering an invented path and retesting is what settled it — see the box above.
+The one community report of a corrupted `depload` describes **animations misbehaving** specifically
+(see [Hand-editing gotcha](#hand-editing-gotcha)), which is the same mechanism seen from the other
+side — a parents array the engine can no longer binary-search loses the package lookup.
 
-Worth noting alongside it: the one community report of a corrupted `depload` describes
-**animations misbehaving** specifically (see [Hand-editing gotcha](#hand-editing-gotcha)), which is
-the same mechanism seen from the other side — a parents array the engine can no longer binary-search
-loses the package lookup.
-
-Reusing a real path the mod already owns still works and needs no `depload` edit, so it stays the
-simpler option when a free slot exists: `jackall-cli move clips --weapon N --shared-only` tells you
-which of a replaced weapon's own clip slots no other weapon plays. Registering a new path is what
-scales past that, and what a mod adding genuinely new content has to do.
+Reusing a real path the mod already owns needs no `depload` edit, so it stays the simpler option when
+a free slot exists: `jackall-cli move clips --weapon N --shared-only` lists which of a replaced
+weapon's own clip slots no other weapon plays. Registering a new path is what scales past that, and
+what a mod adding genuinely new content has to do.
 
 ## The type table
 
@@ -215,11 +197,8 @@ hashes to the value observed in a real type table, with none left over:
 | `06EA6087` | `CFrankensteinPoseResource` | | `84A30AF0` | `CAnimationPackageResource` |
 | `221AD401` | `CMovementResource` | | `3AE88EFD` | `CPhysResource` |
 
-An earlier pass left eight of these unnamed after a guess-list of ~60 plausible `C*Resource` names.
-Guessing was the wrong instrument: the names are in the shipped data. Six are stated outright by the
-world twins' `crc_Type` attributes, and the rest fall out of matching child hashes against the same
-twins — `CFrankensteinPoseResource` and `CParticlesEmitterParamResource` were never going to be
-guessed.
+The names are in the shipped data. Six are stated outright by the world twins' `crc_Type` attributes,
+and the rest fall out of matching child hashes against the same twins.
 
 `CRealtreeResource`, `CStateMachineBlobResource` and `CResource` appear in the twins as parents but
 never as anyone's child, so they never enter a type table.
@@ -308,8 +287,3 @@ The format's own ceilings are `childIndex`/`childCount` being `u16` (65,535 chil
   all 9,718 parents, but 381 parents recur through the nesting and 2,032 localized
   `soundbinary\loc\*.spk` children disagree with the `.dat`, so the XML is a readable sibling rather
   than the file the binary is built from.
-
-Resolved since the first revision: the `_depload.xml` fallback has real samples, and not only the
-small `common/ui/localized/*/ui/` ones — **every world ships a full twin** beside its binary
-(`world1_depload.xml` is 5.3 MB, and 25 of them exist). They are nested parent/children with the
-resource class as the element name, which is what identified the type table.

@@ -7,12 +7,12 @@ sidebar_position: 8
 :::info[Verified via reverse engineering]
 See [the overview](./overview.md) for binary identification, and [the editor API surface](./editor-api-surface.md)
 for how the map editor drives the engine in general. A small, self-documenting reflection API in
-`Wilderness.cs` (`FCE_Script_GetNumFunctions`/`GetFunction` → `.Name`/`.Prototype`/`.Description`) turns
-out to be introspection over a genuine, fully-fledged scripting language for procedural terrain
-generation — recovered entirely from static data in the binary, with no need to run the game or editor.
+`Wilderness.cs` (`FCE_Script_GetNumFunctions`/`GetFunction` → `.Name`/`.Prototype`/`.Description`) is
+introspection over a genuine, fully-fledged scripting language for procedural terrain generation —
+recovered entirely from static data in the binary, with no need to run the game or editor.
 :::
 
-## How it was found
+## The function table
 
 `FCE_Script_GetNumFunctions` (`0x1088f860`) and `FCE_Script_GetFunction` (`0x1088da00`) decompile to:
 
@@ -34,9 +34,9 @@ void * FCE_ScriptFunction_GetName(void *ptr)        { return *(void **)ptr; }   
 void * FCE_ScriptFunction_GetDescription(void *ptr) { return *(void **)(ptr + 8); }   // offset 8
 ```
 
-(`FCE_ScriptFunction_GetPrototype` wasn't found under that exact export name — see [the API surface
-page's "not found" list](./editor-api-surface.md#not-found-in-the-binary) — but its slot is obvious
-from the struct's construction: offset 4.)
+(`FCE_ScriptFunction_GetPrototype` has no address of its own — see [the API surface page's folded
+names](./editor-api-surface.md#names-folded-onto-shared-addresses) — but its slot is obvious from the
+struct's construction: offset 4.)
 
 Tracing the one write site for `DAT_11650a68` (`FUN_108342a0`, the overall editor-context constructor)
 leads to `FUN_10889440`, the table's actual builder — a long, flat sequence of `{name, prototype,
@@ -143,8 +143,7 @@ aren't equally hardcoded native functions.
 
 ## Why this matters
 
-This is a complete, developer-authored language reference, extracted with zero runtime execution —
-purely from decompiling one registration function. It means:
+The table is a complete, developer-authored language reference. It means:
 
 - A modder could, in principle, hand-write a Wilderness script (plain text, `var = Func(args);` per
   line) and load it via `FCE_Wilderness_Script`/`RunScriptBuffer` to procedurally paint terrain,
@@ -160,6 +159,4 @@ purely from decompiling one registration function. It means:
 - Any actual `.ws`-style script file (or whatever extension `FCE_Wilderness_Script` expects) inside
   the game's shipped archives, which would show real syntax in practice (comments, variable naming
   conventions, whether biome presets like Savannah/Jungle are implemented this way vs. as hardcoded
-  natives like `FCE_Wilderness_Desert`) — none found yet. Worth a targeted search of
-  `worlds.fat`/`common.fat` for a matching extension or a `wilderness`/`nature` folder next time either
-  archive is being browsed.
+  natives like `FCE_Wilderness_Desert`) — none is known.

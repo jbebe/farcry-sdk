@@ -72,9 +72,9 @@ call (see [Unknowns](#unknowns)). Their order among themselves is not establishe
 after the patch, so a DLC library wins over it.
 
 :::info[Measured in a running game — the flag selects the suffix-less library in single-player]
-Which branch the campaign takes was settled by experiment rather than inference. The same weapon
-archetype was staged into all six single-player containers at once, each carrying a different
-magazine size, and the game was asked which one it saw:
+Which branch the campaign takes is measured, not inferred: the same weapon archetype staged into all
+six single-player containers at once, each carrying a different magazine size, shows which one the
+game reads:
 
 ```
 worlds\tmpla\generated\entitylibrary.fcb        21
@@ -356,8 +356,8 @@ through the archetype fallback, so they are only mesh-less if you skip that step
 
 ## Unknowns
 
-- What the flag at `+0xC4` selects between the two bases. The obvious write sites were searched and
-  none of them is this field.
+- What the flag at `+0xC4` selects between the two bases. None of the obvious write sites writes this
+  field.
 - Whether Dunia's loop after the patch override is literally `CDlcService::GetEntityLibraries`. In
   `FarCry2_server` it is: `CXGame::LoadArchetypes` (`0x08888750`) calls
   `CDlcService::GetEntityLibraries(CryVector<CryStringBase<char>>&)` and feeds each returned path

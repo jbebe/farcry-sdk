@@ -8,8 +8,8 @@ sidebar_position: 6
 Fully decoded. Every field layout on this page is transcribed from a decompile of the matching
 `magma::BinaryLoadVisitor::Visit*` method in the Linux dedicated-server binary `FarCry2_server` (which
 retains complete `magma::` C++ symbols), and cross-checked against the PC `Dunia.dll` via live IDA
-tracing. A from-scratch reimplementation of this spec parses **all 50 files** of the local `.mgb`
-corpus byte-perfectly — see [Validation](#validation).
+tracing. A from-scratch reimplementation of this spec parses **all 50 files** of a `.mgb` corpus
+byte-perfectly — see [Validation](#validation).
 
 Corrects an existing community claim: the [Almost Complete Guide](../modding/guide/file-management.md)
 (§".mgb and .desc files") says both formats "can only be edited with a hex editor." That's only true
@@ -17,7 +17,7 @@ of `.mgb` — see "The file pair" below.
 :::
 
 :::tip[Authoring, not parsing?]
-This page is the wire format — what a *tool* needs. If you want to build or edit a screen, start at
+This page is the wire format — what a *tool* needs. To build or edit a screen, start at
 [Magma UI](../magma-ui/index.md): the model, the XML vocabulary, the patterns shipped screens use,
 and the limits of the format.
 :::
@@ -61,8 +61,8 @@ This confirms the internal class names directly from shipped data (`CMagmaConfig
 `CMagmaUIResource`, `CTextureResource`). The `<dependencies>` tree is a literal, human-readable
 manifest of which other `.mgb.desc`, `.mgb`, and `.xbt` files a screen needs loaded. Anyone wanting to
 edit UI text bindings, nav-bar prompts, or resource dependencies should edit `.desc` — it needs no
-reversing at all. `crc_ID` is not a plain CRC32 of the `ID` path string (several candidate variants
-were tried by hand, none matched) — still open, see [Unknowns](#unknowns).
+reversing at all. `crc_ID` is not a plain CRC32 of the `ID` path string (no hand-tried candidate
+variant matches) — open, see [Unknowns](#unknowns).
 
 `.mgb` (60,697 bytes) is binary, starting:
 
@@ -80,8 +80,7 @@ width silently corrupts everything downstream.
 
 ## Reading this page
 
-Two mechanical facts underpin everything below. Both are easy to get wrong, and each produced a
-generation of incorrect models in earlier revisions of this page.
+Two mechanical facts underpin everything below. Both are easy to get wrong.
 
 ### Reader primitive widths
 
@@ -106,9 +105,7 @@ An object's vptr points at virtual slot 0, which sits at offset `+0x08` inside t
 (`+0x00` is offset-to-top, `+0x04` is the typeinfo pointer). So a `CALL [vtable + 0x7c]` in a
 decompile resolves to whatever symbol is listed at **`+0x84`** in a vtable dump.
 
-Miss this and every base-class call lands one slot early: it is what made earlier revisions of this
-page describe `VisitRectState`'s base call as `VisitRotationState`-but-untrusted, and led to a wholly
-invented "per-owner-widget tail" model for keyframe states. `FarCry2_server`'s
+Miss this and every base-class call lands one slot early. `FarCry2_server`'s
 `magma::BinaryLoadVisitor::vtable` is at `0x0a3fc300` (the `CBinaryLoadVisitorNomad` subclass, which
 overrides only platform I/O, is at `0x0a3d1ca0`); `Dunia.dll`'s equivalent is at `0x10ee7bcc`, where
 every slot sits **4 bytes lower** than the corresponding `FarCry2_server` dump offset (MSVC vtables
@@ -125,12 +122,11 @@ Field names on this page are the engine's own authored names, not invented label
 - `LoadVisitor::ReadX` → object offset → XML element name
 
 For example `VisitRectState` writes four `u16`s to `+0x24`/`+0x26`/`+0x28`/`+0x2a`, and `ReadRectState`
-(`0x0a065130`) reads `LEFT`, `RIGHT`, `TOP`, `BOTTOM` into those same four — which is also how the
-non-obvious ordering was caught. Where a field is stored through a named setter rather than a direct
+(`0x0a065130`) reads `LEFT`, `RIGHT`, `TOP`, `BOTTOM` into those same four. Where a field is stored through a named setter rather than a direct
 offset write (`Area::SetStaticBox`, `Slider::SetRange`, `Focusable::SetInputController`), the setter
 name is used instead.
 
-A handful of classes still carry names inferred from their XML vocabulary rather than the per-field
+A handful of classes carry names inferred from their XML vocabulary rather than the per-field
 join — `ListBox`, `Slider`, `EditBox` and a few package-level records. Those are marked in
 [the field-names companion page](./mgb-field-names.md), which holds the full per-offset join
 including each class's known XML vocabulary. Their *widths and order* are offset-verified like everything else; only the labels are
@@ -146,7 +142,7 @@ Reached from `Open` (`0x0a060070`, vtable slot `+0x130`), called by `magma::Engi
 | `0-4` | `4D 41 47 4D 41` | magic | `"MAGMA"`, manual 5-byte compare — mismatch → error `4` |
 | `5-8` | `CD 00 00 AB` | sentinel | only byte `8` (`0xAB`) is checked — mismatch switches to `BinaryInvertReadSerializer` and re-checks byte `5`, error `6` if that also fails |
 | `9-12` | `90 AB 1E 00` → LE u32 `0x1EAB90` | format/build version | must equal `0x1EAB90` (2,010,000) exactly or load fails with error `5` — the same check and error as the XML loader's `magma::LoadVisitor::VisitPackage` (`0x0a06a370`). `.mgb` and `.mgb.desc` share one version epoch |
-| `13` | `00` | flag byte | read via a bool read; purpose never pinned down |
+| `13` | `00` | flag byte | read via a bool read; purpose unknown |
 | `14` | `A7` = 167 | type-table entry count | a single byte, not a u16 |
 | `15 .. 15+4×166` | — | type table | 166 raw LE u32 `Id`s (count −1) |
 
@@ -221,10 +217,10 @@ names for free); and a live hook on `Register` (`0x10a982b0` on `Dunia.dll`) tha
 `MOV EAX,imm32 ; RET` accessor → the imm32 → its first field, the real `const char*` name.
 
 **Not every entry needs a name.** A typical file's table has ~128 non-zero entries of which ~35 stay
-unresolved, including `0x86F001E3`, historically the most-investigated hash on this page. That no
-longer blocks anything: the three Factory dispatchers below accept only a small closed set of classes,
-so a parser only has to recognise *those*, and an unresolved hash simply never appears in a slot that
-matters. `0x86F001E3` in particular occurs only in type tables, never as a live type byte.
+unresolved, including `0x86F001E3`. That blocks nothing: the three Factory dispatchers below accept
+only a small closed set of classes, so a parser only has to recognise *those*, and an unresolved hash
+simply never appears in a slot that matters. `0x86F001E3` in particular occurs only in type tables,
+never as a live type byte, and `Handler` never appears as a live type byte anywhere in the corpus.
 
 ## The three Factory dispatchers — the key to the whole format
 
@@ -270,10 +266,7 @@ a `Factory::MakeXState` call:
 | `RectState` | `Placeholder`, `Window` |
 | `ScaleState` | `AreaInstance`, `AutonomousAreaInstance`, `ButtonInstance`, `CheckBoxInstance`, `RadioButtonInstance`, `PageInstance`, `ListBox`, `EditBox`, `Slider` |
 
-This is a **compile-time 1:1 map** — nothing about it is per-instance, per-file or data-driven. Earlier
-revisions of this page modelled keyframe states as a single universal `RectState` plus a mysterious
-"per-owner-widget tail" of 24/28/42/51/65 bytes; those five widths are simply
-`RectState`/`ScaleState`/`TextState`/`RectShapeState`/`ImageState`.
+This is a **compile-time 1:1 map** — nothing about it is per-instance, per-file or data-driven.
 
 ### `Factory::MakeActionExecuter(ActionExecuter::ObjectTypeInfo const*)` @ `0x0a0483c0`
 
@@ -324,11 +317,9 @@ The whole file body, in order. Everything past the last line is in-memory post-p
 --- end of file-consuming reads ---
 ```
 
-**The two trailing tables** were, for a long time, the page's "global focus area" and "second area"
-mysteries: `VisitPackage` builds them through hardcoded `Factory` vtable slots rather than the type
-table, so no type byte identifies them and static analysis kept dead-ending. Resolving the `Factory`
-vtable settles it — slot `+0x18` is `Factory::MakeStringTable` and slot `+0x20` is
-`Factory::MakeGenericObjectTable`:
+**The two trailing tables** are built by `VisitPackage` through hardcoded `Factory` vtable slots
+rather than the type table, so no type byte identifies them. Slot `+0x18` is
+`Factory::MakeStringTable` and slot `+0x20` is `Factory::MakeGenericObjectTable`:
 
 - **`VisitStringTable`** @ `0x0a05e9a0`: `VisitNamedObject` → `u32 count` → `count ×` **StringResource**
   (`VisitStringResource` @ `0x0a0611c0`: `VisitNamedObject` → `u32 charCount` → `charCount` UTF-16
@@ -336,8 +327,7 @@ vtable settles it — slot `+0x18` is `Factory::MakeStringTable` and slot `+0x20
 - **`VisitGenericObjectTable`** @ `0x0a05e7c0`: `VisitNamedObject` → `u32 count` → `count ×`
   **GenericObject** (`VisitGenericObject` @ `0x0a05de70`: `VisitNamedObject` → a `FullLink`).
 
-Both are commonly empty (`count == 0`, 8 bytes), which is exactly why an earlier live trace measured
-them as "two chained u32 reads" and concluded they were a fixed 8-byte record. `options.mgb`'s string
+Both are commonly empty (`count == 0`, 8 bytes). `options.mgb`'s string
 table holds one entry, the string `"0123456789"`; its generic-object table holds 16 objects.
 
 ## Shared records
@@ -407,8 +397,8 @@ widget->Accept(visitor)         — the widget's OWN fields (WIDGET in the XML)
 ```
 
 That last line is the subtle one. `VisitElement`'s decompile shows no serializer calls after the
-keyframe loop, so earlier revisions of this page treated the tail as pure in-memory finalization; in
-fact it dispatches straight into `VisitImage`/`VisitText`/`VisitAreaInstance`/… which read real bytes.
+keyframe loop, yet the tail dispatches straight into `VisitImage`/`VisitText`/`VisitAreaInstance`/…
+which read real bytes.
 And because `VisitFocusable` calls `VisitElement` *first*, a `Focusable`-wrapped element's own tail
 comes **after** the widget body:
 
@@ -465,7 +455,7 @@ the classic 9-slice border layout, with `FILL` and the four edges stretchable.
 VisitNamedObject                — u32 name hash
 ActionCaller
 u32 IDX                         — the frame index; stored truncated to u16, but 4 bytes are consumed
-u32 INTERPOLATION               — a timing-strategy type id (the XML authors it as a class name)
+u32 INTERPOLATION               — the easing curve, a Util::GetType group-0 value
 state->Accept(visitor)          — the concrete State, chosen by Factory::MakeState from the
                                   OWNING WIDGET's class. Never re-declared per keyframe, and
                                   never read from the stream.
@@ -492,16 +482,14 @@ State  (8)  ──▶ RotationState (16) ──┬─▶ PosState  (20) ──�
 | `ImageState` | `0x0a05fa20` | `SHADOWCOLOR` u32, `SHADOWOFFSETX`/`Y` (2× u8), `TILING` x/y + `OFFSET` x/y (4× float), `FLIPHORIZONTAL`/`FLIPVERTICAL`/`ACTUALSIZE` (3× bool), `COLOR1`..`COLOR4` (4× u32) |
 | `RectShapeState` | `0x0a05f950` | `OUTLINEWEIGHT` u8, `OUTLINECOLOR` u32, `FILLCOLOR1`..`FILLCOLOR4` (4× u32), `SHADOWCOLOR` u32, `SHADOWOFFSETX`/`Y` (2× u8) |
 
-Note `RectState`'s order — **left, right, top, bottom**, not the l/t/r/b anyone would guess. And
-`State`'s two `u32`s are not a frame-time range: an earlier revision of this page called them
-`start`/`end`, which was a guess that happened to look reasonable.
+Note `RectState`'s order — **left, right, top, bottom**, not the l/t/r/b anyone would guess.
 
 `TEXTCOLOR` (alias `COLOR`) in the XML writes the inherited `STATECOLOR` field rather than being a
 field of its own. When `COLORn` (n>1) is absent from the XML the loader copies `COLOR1`, which is
 what identifies those four as the corner colours of a gradient quad.
 
-Every colour word in this hierarchy is **ARGB** (`0xAARRGGBB`), authored `A R G B` — see the
-correction under [`State` in the field-name join](./mgb-field-names.md#state--readstate--0x0a066400)
+Every colour word in this hierarchy is **ARGB** (`0xAARRGGBB`), authored `A R G B` — see
+[`State` in the field-name join](./mgb-field-names.md#state--readstate--0x0a066400)
 for the packing and the corpus evidence.
 
 Note `PosState` and `RectState` are **siblings** under `RotationState`, not a chain — both write their
@@ -530,18 +518,18 @@ flat action list already read, not new actions.
 ## Validation
 
 `tools/JackAll/src/JackAll.Tools/Mgb/mgb_parser.py` is a direct transcription of this page.
-Against the 50-file corpus in `tmp/menu/` (gitignored):
+Against a 50-file corpus:
 
 - **50/50 files parse to exactly `file_size`**, every declared area consumed, zero bytes left over and
   zero unread trailing data.
-- **Read-for-read identity with the running game.** `C:\temp\handler_semantic.txt` (produced by
-  `reverse/ida/Dunia.dll/trace_handler_semantic.idc`, which breakpoints the shared reader-entry
+- **Read-for-read identity with the running game.** A live trace
+  (`reverse/ida/Dunia.dll/trace_handler_semantic.idc`, which breakpoints the shared reader-entry
   primitive at `Dunia.dll 0x10AE7BF0` plus `VisitElement`/`VisitUserData`/`VisitFullLink` directly)
   logs the reader's byte cursor for every primitive read in `controller.mgb`'s `0x0E00–0x1100` window.
   The parser reproduces **all 258 read offsets exactly**, and all 17 visitor entry points land on the
   same cursors.
-- **Area boundaries match live ground truth.** `C:\temp\controller_areas.txt` records the real
-  per-area cursor positions during a live load; the parser's own seven area offsets
+- **Area boundaries match live ground truth.** Against the real per-area cursor positions recorded
+  during a live load, the parser's own seven area offsets
   (`0x3E9`, `0x4EB`, `0xE3F`, `0x1276`, `0x1693`, `0x1879`, `0x1BDD`) match all seven.
 - **Two independent implementations agree on every decoded value.** The C# codec and the Python
   reference each emit a canonical dump of the whole corpus — page sizes, material paths, area and
@@ -564,7 +552,7 @@ Against the 50-file corpus in `tmp/menu/` (gitignored):
 
 This last point matters because "parses without throwing" is a weak signal for this format — a wrong
 model can land on a structurally plausible offset by coincidence and silently under-read thousands of
-bytes while reporting success. Several earlier revisions of this page did exactly that.
+bytes while reporting success.
 
 ## Implementation — reading, writing and editing
 
@@ -588,13 +576,12 @@ primitives. The binary codecs implement them as no-ops, because in a `.mgb` nest
 the order of reads and nothing more. They exist so a text codec can recover the tree that the binary
 format expresses only through the shape of the call graph.
 
-Three rules make byte-exact round-tripping work, and are worth repeating for anyone writing a third
-implementation:
+Three rules make byte-exact round-tripping work:
 
 - **Derive counts, don't store them.** List lengths come from the live collection on write, so an
   edited tree can't disagree with its own counts. The one exception is the `u32` after
   `materialCount`, which is a setter argument rather than a loop bound — preserve it rather than
-  recomputing, since nothing checks it and a future model of it may be wrong.
+  recomputing, since nothing checks it.
 - **Keep strings as raw bytes.** ANSI and UTF-16 payloads round-trip as `byte[]`, decoded only for
   display. Going through a `string` risks a non-reversible encoding on unexpected content.
 - **Keep floats as raw bits.** Store the `u32` and reinterpret for display, so NaN payloads and
@@ -669,30 +656,6 @@ absent optional is an omitted attribute, never an empty one, because `null` and 
 different bytes. Reading is strict — a misspelled attribute or an undefined element is an error
 naming the offender, rather than the silent degradation Magma's own XML loader does.
 
-### Corrections to earlier revisions
-
-Kept short, because the details are no longer useful — but worth recording so they are not
-re-derived:
-
-- The vtable-offset shift (see [Reading this page](#elf-vtable-offsets-are-shifted-by-8)) invalidated
-  the old vtable map and every base-class relationship inferred from it.
-- Keyframe states were modelled as one universal `RectState` plus a per-owner-widget "tail" of
-  24/28/42/51/65 bytes. Those are five distinct `State` classes selected by `Factory::MakeState`.
-- `Placeholder` was modelled as zero-byte in an element list, with a `container_type_name`-scoped
-  exception for `Page`. It is never zero-byte there: like every other widget it is wrapped in a real
-  `Element`, whose body it shares. (Its *own* widget body is empty, which is what the original
-  observation was really about.)
-- `Handler` was believed to be a real element type with a bespoke body — four successive models were
-  built for it. It was an artifact: the `Placeholder` bug above desynced `controller.mgb` by one
-  element, and the byte that looked like a `Handler` type slot was the middle of an `Image`'s body.
-  `Handler` never appears as a live type byte anywhere in the corpus.
-- The "global focus area" and "second area" are `StringTable` and `GenericObjectTable`; the earlier
-  "two chained u32 reads" measurement was a correct observation of the empty case only.
-- `LoadFontFamily` was modelled from a live byte-diff as a fixed 45-byte structure plus a UTF-16
-  name. It is byte-identical to `LoadMaterial`; the 45 bytes were several adjacent records.
-- Assorted per-file fallbacks (`type_slot == 10` → zero-byte, an `is_empty_type_slot` shortcut,
-  hardcoded orphan slot lists) were all compensating for the above and are gone.
-
 ## Class hierarchy and load flow
 
 `FarCry2_server`'s `magma::` namespace: `CResource → CResourceContainer → CMagmaResourceContainer →
@@ -744,10 +707,10 @@ structural:
 - **`.desc`'s `crc_ID` attribute** — confirmed not to be a CRC32 that the `.mgb` load path checks
   anywhere, which rules out one hypothesis but not what it actually is. Plausibly a build-time-only
   cache key from Magma's asset pipeline, never re-verified at runtime.
-- **~35 unresolved type-table hashes per file**, including `0x86F001E3`. Extensively hunted (≈900
-  hand-guessed names, ~190 RTTI-recovered names, and a live `Register` hook capturing 98 real class
-  names — no match for any of them). This no longer blocks anything: none of them ever appear as a
-  live type byte, so they are table entries the shipped files never use.
+- **~35 unresolved type-table hashes per file**, including `0x86F001E3`. None matches ≈900
+  hand-guessed names, ~190 RTTI-recovered names, or the 98 real class names a live `Register` hook
+  captures. This blocks nothing: none of them ever appear as a live type byte, so they are table
+  entries the shipped files never use.
 - **`Dunia.dll`-only divergence.** All field layouts come from `FarCry2_server`'s portable code and
   were spot-checked live against `Dunia.dll` in one region of one file. The corpus-wide byte-exact
   result makes a divergence unlikely, but only that one window is directly verified.

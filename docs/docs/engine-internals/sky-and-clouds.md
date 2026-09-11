@@ -7,9 +7,7 @@ sidebar_position: 16
 :::info[Verified via reverse engineering]
 Traced live via GhidraMCP against **`Dunia.dll`** (Steam v1.03) for the render-side code, and cross-
 checked against **`FarCry2_server`** (the Linux dedicated-server ELF, unstripped symbols) for class
-and member names. Investigated while scoping a "bigger/better skybox" mod request — the short
-version is that there is no skybox to enlarge; the answer is a runtime system with its own,
-separately-sized pieces.
+and member names.
 :::
 
 ## There is no skybox
@@ -17,7 +15,7 @@ separately-sized pieces.
 FC2 does not render a big background texture (a cubemap or a wrapped panorama) behind the world.
 The sky is built from three independent pieces every frame:
 
-1. A **gradient dome**, coloured by keyframed time-of-day curves — no texture at all.
+1. A **gradient dome**, coloured by keyframed time-of-day curves rather than a sky image.
 2. **Procedurally generated clouds** — noise combined into a render target at runtime, not sampled
    from a shipped cloud texture.
 3. A small set of **authored sprites and one mesh** for the sun, moon and stars.
@@ -75,9 +73,8 @@ same into their own lists. The frame graph executes those lists afterwards.
 
 The consequence for anyone hooking them: **you are early**. A hook on the sun's submission runs
 before any of the frame's world passes, so the render target and depth buffer bound at that moment
-belong to whatever ran previously. An occlusion query issued there counts nothing — which is exactly
-what happened to a first attempt at a sun-glare effect, and it reads as "the query is broken" rather
-than "the query is in the wrong place". These functions are a fine place to *read* the sun's
+belong to whatever ran previously. An occlusion query issued there counts nothing, which reads as
+"the query is broken" rather than "the query is in the wrong place". These functions are a fine place to *read* the sun's
 direction, and the wrong place to do anything with a device. Where the drawing actually happens is
 [presenting a frame](./presentation-and-input.md#what-a-frame-actually-looks-like-from-endscene).
 :::
@@ -113,12 +110,6 @@ Once the night factor reaches one, which retail skies do for a couple of hours a
 dome and the sun disc are not submitted at all. Anything that tells a live world from a menu by
 whether the sun disc was submitted sees a menu for those hours; the cloud layer's submission is the
 one that goes on every frame.
-
-:::warning[`+0x1B8` is the night factor, not the storm factor]
-An earlier revision of this page had it as the storm factor. What it gates says otherwise: stars
-and moon above zero, dome and sun below one, which is night, not weather. The storm factor is
-`+0x78`, the value the dome blends its storm gradient by.
-:::
 
 The scene state it reads from is reached through an accessor that is **one instantiation of a
 template the renderer uses for every kind of component**, identical in bytes three times over in each
@@ -318,8 +309,7 @@ permutation is not the one the retail sky runs. The prototype's `skydome.fx` giv
 `1 - night` the dome is submitted with. The sprites and star sphere draw after it in the same pass and
 set no blend or depth state of their own, so they inherit the dome's.
 
-Stage 0 holds a 64×512 DXT5 texture, the size and format of `sky_color_sun.xbt`. The dome is not
-texture-free, as the overview at the top of this page puts it.
+Stage 0 holds a 64×512 DXT5 texture, the size and format of `sky_color_sun.xbt`.
 
 ## The clouds: noise into a hardcoded 512×512 target
 
@@ -383,9 +373,9 @@ a flat texture; `fSubsurfaceScattering*` is the sunset glow through cloud edges.
 by the shipped `.managers.fcb` for a 512×512 target — raising the target's resolution without
 retuning these leaves the shape unchanged, just sharper.
 
-**No cloud texture ships with the game.** Grepping every hashlist and the extracted asset tree for
-anything cloud-shaped outside UI (`ui/textures/common/clouds.xbt`, menu-only) and water
-(`terrain/water/watercloud_n.xbt`) finds nothing — because there's nothing to find. The clouds are
+**No cloud texture ships with the game.** Nothing cloud-shaped exists in any hashlist or the
+extracted asset tree outside UI (`ui/textures/common/clouds.xbt`, menu-only) and water
+(`terrain/water/watercloud_n.xbt`). The clouds are
 pure noise, and only half of it is made on the GPU: each octave is filled on the CPU with an
 integer hash per texel (`0x103d6fd0`, two 8-bit channels), uploaded, and blurred by
 `CloudNoiseBlur`, which is what turns white noise into value noise; `CloudNoiseCombine` then sums
@@ -505,7 +495,7 @@ them touched, since the path strings don't change. Only *renaming/relocating* an
 editing all 26.
 
 The same seven texture paths are also present as literal strings inside `Dunia.dll` itself
-(`asset-reachability.md` already documented this half) — a second, parallel reachability path to the
+(see [asset reachability](./asset-reachability.md)) — a second, parallel reachability path to the
 same files, which is presumably why they stay loadable even though the depload manifest
 (`world1_depload.xml`) only lists the star-sphere half (`starsphere.xbg` + its three materials +
 `background_d`/`milkyway_d`/`star_d`), omitting the six sun/moon/sky textures entirely.
@@ -536,10 +526,10 @@ Console/config surface confirmed via strings in `Dunia.dll`:
 
 ## Why the sky "looks like a bad skybox" without being one
 
-Put together, the mismatch is the story:
+Put together:
 
-- The dome colour has essentially unlimited precision (it's math, not a texture) but renders through
-  an 8-bit path by default.
+- The dome colour comes from keyframed gradients and a DXT5 ramp, and renders through an 8-bit path
+  by default.
 - The clouds — the most visually dominant, highest-frequency element — are capped at 512×512 for the
   whole sky, with a 64×64 shadow/occlusion mask underneath that.
 - The authored sprites (moon, sun flare, stars) are all well under what the format allows (2048 on an
@@ -555,10 +545,9 @@ The sky/cloud shaders (`skydome.fx`, `cloudlayer.fx`, `cloudnoisecombine.fx`, `c
 `skyfog.inc.fx`, `curvedhorizon.inc.fx`) compile into `shadersobj.dat` as
 `shadernumber_XXXXXXXX.pso`/`.vso`, addressed by hash rather than by name.
 
-That is no longer a dead end. The D3D9 objects carry a binding table naming every parameter as a
-CRC32, the index tables at the root of the tree resolve a shader's no-option permutation from its
+The D3D9 objects carry a binding table naming every parameter as a CRC32, the index tables at the root of the tree resolve a shader's no-option permutation from its
 name, and a replacement compiled with `fxc` drops straight back in — the whole loop is
 [`shadersobj`](../file-formats/shader-objects.md) and
-[replacing a shader](../modding/replacing-a-shader.md). What is still unknown is how a permutation's
+[replacing a shader](../modding/replacing-a-shader.md). What is unknown is how a permutation's
 `#define`s fold into an index key, which is what would let every one of the 147,140 permutations be
 addressed by name rather than found by its parameters.

@@ -6,7 +6,7 @@ sidebar_position: 12
 
 :::info[Verified via reverse engineering]
 Companion to [the `.mgb` format page](./mgb.md), which carries the wire layout. This page is the
-per-field working record: which object offset each wire field lands on, and therefore which authored
+per-field record: which object offset each wire field lands on, and therefore which authored
 name belongs to it.
 :::
 
@@ -33,10 +33,8 @@ Fields are listed in **wire order**. "off" is the object offset both visitors ag
 | 0 | u32 | `+0x08` | `INTERPOLATIONFLAGS` | `%u`; defaults to `ALL_INTERPOLATION_FLAGS` when absent |
 | 1 | u32 | `+0x10` | `STATECOLOR` | `%d %d %d %d` → packed ARGB |
 
-**Correction**: earlier passes called these `start`/`end` (a time range). They are not.
-
-**Correction**: an earlier pass called every colour word here "packed RGBA". It is **ARGB** —
-`0xAARRGGBB`, alpha in the high byte, authored `A R G B`. `ReadState` packs the four `%d` components
+Every colour word here is packed **ARGB** — `0xAARRGGBB`, alpha in the high byte, authored
+`A R G B`. `ReadState` packs the four `%d` components
 first-component-highest (`c1 << 24 | c2 << 16 | c3 << 8 | c4`), which fixes the order but not which
 one is alpha; the shipped data fixes that. Across the 500 vanilla packages the two commonest state
 colours are `0xFFFFFFFF` (80,240 uses) and `0x00FFFFFF` (7,010), and every other colour in use
@@ -346,7 +344,7 @@ Values are as stored — note groups 13 and 19-21 are **not** 0-based.
 | 20 | focus events | 11 `SetFocus`, 12 `KillFocus`, 13 `Activate`, 14 `Escape` |
 | 21 | page events | 11 `EnterPage`, 12 `ExitPage`, 13 `Overlapped`, 14 `UnOverlapped`, 15 `Tick` |
 
-Group 16 is worth lining up against [the `UserData` type tags](./mgb.md): the wire tags there are
+Group 16 is not [the `UserData` type tags](./mgb.md): the wire tags there are
 `0x02` u32, `0x07` float, `0x0c` bool, `0x10` string, `0x11`/`0x12`/`0x15` links, `0x13` string
 resource — a different numbering from this authoring-side list, so the two are not interchangeable.
 
@@ -370,9 +368,8 @@ rather than name similarity:
 | `Image` `BLENDINGMODE` | 9 | `ReadImage+0x8d` |
 | `Image` `ADDRESSINGMODEU`/`V` | 10 | `ReadImage+0x142`, `+0x24e` |
 
-**Correction**: an earlier pass described `INTERPOLATION` as "a timing-strategy type id". It is not —
-it is a plain group-0 value (`None`, `Linear`, `Square`, `Root`, `Sin`, `Circle`, `CircleDecel`), and
-every one of the 105,160 keyframes in the shipped packages holds a value in 0-5. The timing-strategy
+`INTERPOLATION` is a plain group-0 value (`None`, `Linear`, `Square`, `Root`, `Sin`, `Circle`,
+`CircleDecel`), and every one of the 105,160 keyframes in the shipped packages holds a value in 0-5. The timing-strategy
 *type slot* is a different field: `AreaLink`'s `TIMING`.
 
 Groups 4/5/14/15 name the **slots** of `Button`/`CheckBox`'s `TIMINGS` array rather than a value any

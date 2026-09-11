@@ -28,7 +28,7 @@ header and any DDS tool opens the rest.
 pointer and size, but the streaming-texture loader reads `Reserved` as flags: bit `0x100` resets two
 LOD-tracking fields on the resource object, and the low byte is stored and consumed later for
 streaming decisions. It varies per asset (1, 2 and 4 all appear across ~130 sampled files) with no
-correlation yet found to DDS format, companion presence, or naming. Because neither `Reserved` nor
+correlation found to DDS format, companion presence, or naming. Because neither `Reserved` nor
 `Hash` can be synthesized, there is no honest "build an `.xbt` from a bare `.dds`" path — every
 header byte has to come from a real file.
 
@@ -58,8 +58,8 @@ The split exists so the engine can drop the largest level under memory pressure 
 rest of the chain.
 
 **A replacement may change the dimensions.** The pair is "companion at twice the base", not a fixed
-size: a weapon's 512² base and 1024² companion were rebuilt at 1024² and 2048², keeping the original
-headers, and the engine loaded them. Nothing in the header carries a size — the loader reads it from
+size: the sawed-off's 512² base and 1024² companion rebuilt at 1024² and 2048², keeping the original
+headers, load fine. Nothing in the header carries a size — the loader reads it from
 the DDS.
 
 Sizes cluster tightly: base textures are mostly 256×256 (487 files) or 512×512 (91), and companions
@@ -88,11 +88,7 @@ not beside them. The terrain layers under `sdat\` are excluded — they are
 | uncompressed | 2 — both sky domes |
 
 None of this is enforced by the tools. A block compressor pads an odd size rather than refusing one,
-so a 300x300 texture builds and loads; what it does not do is halve cleanly through a mip chain. The
-unanimity is worth knowing precisely because nothing checks it.
-
-**A replacement may change dimensions.** The sawed-off's 512²/1024² pair was raised to 1024²/2048²
-and loaded fine — the `_mip0` relationship is "twice the base", not a fixed size.
+so a 300x300 texture builds and loads; what it does not do is halve cleanly through a mip chain.
 
 **DXT1 carries one bit of alpha.** A soft gradient dropped into a DXT1 slot becomes a hard cutout,
 and nothing in the material can change the codec, so the choice is the slot or the edge.
@@ -139,7 +135,7 @@ one is a separate TEXCOORD, used for the mask, colour and shadow atlases.
 The 64 is inferred, not read out of the engine. `Tiling` reaches the sector's static shader data
 untouched — `C3DEngine::LoadTerrainLayersFromXML` → `STerrainLayer` (offsets 0x18/0x24/0x30) →
 `CSector::InitializeLayers` — so the conversion to `_DetailUVScaling` happens in renderer code not
-yet located in either binary. What supports 64 is measurement: reading `Tiling` as world units per
+located in either binary. What supports 64 is measurement: reading `Tiling` as world units per
 repeat makes those tyres 10 m across, those stones 0.8 m and those mud cells 1.7 m, and the engine's
 own baked far-field albedo (below), which is exactly one texel per world unit, carries no periodicity
 at a 20-texel lag that a 20-unit repeat could not hide.

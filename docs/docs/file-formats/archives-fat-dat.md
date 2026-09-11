@@ -132,35 +132,34 @@ whose uncompressed-size bits are non-zero — a 3-way dispatch on a 2-bit scheme
 
 | Scheme | Handler | Status |
 |---|---|---|
-| 0 | `0x10258c50` | Unreachable in practice — real `Compression=None` entries always carry `UncompressedSize=0`, so they never reach the dispatcher. Parses its own variable-length prefix; not investigated further in `Dunia.dll` itself — but see the `FarCry2_server` cross-reference below, which names this handler's likely real codec. |
+| 0 | `0x10258c50` | Unreachable in practice — real `Compression=None` entries always carry `UncompressedSize=0`, so they never reach the dispatcher. Parses its own variable-length prefix; not traced further in `Dunia.dll` itself — the `FarCry2_server` cross-reference below names this handler's likely real codec. |
 | 1 | `ArchiveEntry_DecompressLzo1x` (`0x10258d60`) → `Lzo1x_Decompress` (`0x1025a620`) | Confirmed LZO1X — matches JackAll's `Lzo1x.cs` state machine constant-for-constant. |
 | 2 | `ArchiveEntry_DecompressZlib` (`0x10258d00`) → `Zlib_DecompressChunked` (`0x1025d1c0`) → `Zlib_InflateRawBlock` (`0x1025d110`) | Confirmed real zlib (raw DEFLATE, `windowBits=-15`), unrelated to the separate Quazal-networking zlib instance elsewhere in the binary. |
 
 ### Cross-reference: the same dispatch, named, in `FarCry2_server`
 
 `FarCry2_server` (see [Overview](../engine-internals/overview.md) for why it's the better-symbolized
-binary of the two) names the actual archive class this whole page was reverse-engineered blind: real
-strings confirm the container class is **`CCryArchive`**, with a `CFatItem`
-(`FatLessThanCrc`/`FatLessThanSeekPos`-sorted, matching the CRC32-keyed `.fat` layout already documented
-above) and a `CNfoItem` (the plaintext `.nfo` sidecar manifest — see the community-reported note in
-[Getting Started](../modding/getting-started.md)), managed by `CCryArchiveManager`.
+binary of the two) names the archive class: real strings confirm the container class is
+**`CCryArchive`**, with a `CFatItem` (`FatLessThanCrc`/`FatLessThanSeekPos`-sorted, matching the
+CRC32-keyed `.fat` layout above) and a `CNfoItem` (the plaintext `.nfo` sidecar manifest — see the
+community-reported note in [Getting Started](../modding/getting-started.md)), managed by
+`CCryArchiveManager`.
 
 `CCryArchive::Decompress(IFile*, uint size, uint scheme)` (`0x09c70c00`) is the same 3-way scheme
 dispatch, and it names real codecs for all three branches: **`scheme == 0` → `LZMA_DecompressInPlace`**,
 `scheme == 1` → `LZO_DecompressInPlace` (matches scheme 1 above), `scheme == 2` →
 `EdgeZlib_DecompressInPlace` (Sony's SPU-accelerated, bitstream-compatible reimplementation of zlib —
-consistent with, not a contradiction of, the "confirmed real zlib" finding for scheme 2 above; it's the
-same DEFLATE bitstream, a different concrete library backing it, plausible given this source tree is
-shared across platforms). Scheme 0 dispatching to a real codec (LZMA) rather than "no compression" lines
-up with what `Dunia.dll` already established: the actual "uncompressed" case is signaled by
-`UncompressedSize=0` and short-circuits before this dispatch ever runs, so scheme value `0` itself was
-never confirmed to mean "none" — `Dunia.dll`'s own scheme-0 handler (`0x10258c50`) was left
-un-investigated for exactly this reason. Treat "scheme 0 is LZMA" as a strong lead, not a final
-confirmation — the two binaries' scheme dispatchers weren't cross-checked byte-for-byte against each
-other, only reasoned about via matching structure and consistent behavior.
+the same DEFLATE bitstream as scheme 2 above, a different concrete library backing it, plausible given
+this source tree is shared across platforms). Scheme 0 dispatching to a real codec (LZMA) rather than
+"no compression" lines up with `Dunia.dll`: the actual "uncompressed" case is signaled by
+`UncompressedSize=0` and short-circuits before this dispatch ever runs, so scheme value `0` itself is
+not confirmed to mean "none", and `Dunia.dll`'s own scheme-0 handler (`0x10258c50`) is not traced.
+"Scheme 0 is LZMA" is a strong lead, not a final confirmation — the two binaries' scheme dispatchers
+are not cross-checked byte-for-byte against each other, only matched by structure and consistent
+behavior.
 
 Every shipped FC2 archive (~215k entries scanned via JackAll) uses only schemes 0 and 1 — scheme 2
-never appears in real data, so this had to be settled by disassembly rather than sampling.
+never appears in real data, so it is known from disassembly alone.
 
 **Scheme 2 is not a plain raw-deflate stream over the whole entry.** `Zlib_DecompressChunked` wraps it
 in a bespoke container: a header gives a block count and fixed block size (rounded to a multiple of 16,
@@ -168,8 +167,8 @@ capped at `0x10000`), and each block carries its own 16-bit length prefix (`0` =
 otherwise raw-DEFLATE), with the cursor padded to stay 16-byte aligned between blocks.
 `System.IO.Compression.DeflateStream`/`ZLibStream` cannot decode this directly — `ZLibStream`
 additionally expects a zlib header and Adler32 trailer that don't exist here. JackAll's
-`DuniaArchive.cs` currently calls `ZLibStream` and is consequently wrong on both counts — harmless
-today only because no shipped data exercises this path. A conforming encoder for scheme 2 means
+`DuniaArchive.cs` calls `ZLibStream` and is wrong on both counts, which is harmless only because no
+shipped data exercises this path. A conforming encoder for scheme 2 means
 reproducing this exact chunk container, not calling into `System.IO.Compression`.
 
 ## Recommended hook point for a loose-file mod loader
@@ -195,17 +194,17 @@ the binary-search/hash internals and no risk of corrupting the in-memory FAT tab
 library path plus a long relative asset path could realistically overflow it — keep the loose-mod root
 short, or verify the concatenated length before rewriting.
 
-### Status: implemented and dynamically verified
+### Implementation
 
-This hook design was built (`tools/modpatcher/`, ships as a `dinput8.dll` proxy) and confirmed against
-a real launch: the `VFS_ResolvePath` hook installs cleanly and logs every boot-time asset request
+This hook design is implemented in `tools/modpatcher/` (ships as a `dinput8.dll` proxy) and verified
+on a real launch: the `VFS_ResolvePath` hook installs cleanly and logs every boot-time asset request
 (configs, scripts, sound, archive containers, `entitylibrary.fcb`,
 `EntityLibraryPatchOverride.fcb`) passing through it with zero crashes across a full boot-through-
-world-load sequence. The override itself was proven end-to-end: an **empty** file placed at
-`Data_Win32\Loose\worlds\worlds.dat` crashed the game exactly where a corrupt `worlds.dat` would —
+world-load sequence. The override works end-to-end: an **empty** file placed at
+`Data_Win32\Loose\worlds\worlds.dat` crashes the game exactly where a corrupt `worlds.dat` would —
 direct proof the rewritten-path mechanism substitutes the loose file rather than merely logging past
-it. `Dunia.dll`'s static imports were confirmed to include `DINPUT8.dll`, validating the proxy-DLL
-hook-installation approach.
+it. `Dunia.dll`'s static imports include `DINPUT8.dll`, which is what makes the proxy-DLL
+hook-installation approach work.
 
 ### Coverage gap: a second, lower-level path bypasses the hook
 
@@ -225,7 +224,8 @@ per-world-sector [`.sdat` terrain files](./sdat.md).
 which live in the same hash-indexed archive storage and plausibly stream the same way). Extending
 coverage means hooking `ArchiveEntry_FindAndOpen` itself — the true shared choke point — but it
 receives an already-computed hash, not a string, so the path-rewrite trick doesn't directly apply; it
-would need a precomputed hash→loose-file lookup table built at startup instead. Not started.
+would need a precomputed hash→loose-file lookup table built at startup instead. That extension is not
+implemented.
 
 ## Unknowns
 
@@ -233,7 +233,7 @@ would need a precomputed hash→loose-file lookup table built at startup instead
   implementation found. Could be a second, engine-native hook point.
 - Whether `DAT_10ff0ef8`'s search-path list (`+8`/`+0xc`) is ever populated with more than archives —
   i.e. whether a dormant/dev-only code path already adds loose directories to this same list, which
-  would be a cleaner hook than the detour above if it exists. Worth searching for writers to
-  `DAT_10ff0ef8+8`/`+0xc`.
+  would be a cleaner hook than the detour above if it exists. Writers to `DAT_10ff0ef8+8`/`+0xc` are
+  not traced.
 - `FUN_102487d0`'s exact record layout beyond hash/offset — not needed for the detour design, but would
   matter for building a real in-process virtual archive instead of a path-rewrite detour.

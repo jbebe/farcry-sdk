@@ -30,7 +30,7 @@ key fb20db90  (celestialbody, no options)
   rs   6fc67631  h31\shadernumber_6fc67631.rs
 ```
 
-Permutations compiled **with** options cannot be addressed by name yet. Find those by their
+Permutations compiled **with** options cannot be addressed by name. Find those by their
 parameter tables instead: extract candidates and look for the samplers only that shader declares.
 Only four objects in the whole D3D9 tree bind `CelestialBodySampler`, and disassembling them tells
 you which is which — the one multiplying by `BloomAdaptationFactor` is the `ADDITIVE` variant, the

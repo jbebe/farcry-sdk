@@ -98,7 +98,7 @@ draws the wrong thing*, not an error:
 | `p_menu_nav` / `l_menu_nav_list` / `a_title_bar` / `t_page_title` missing or misnamed | `FetchMagmaElements` misses, `AddButton` returns −1, rows silently never appear |
 | A `SETTING_*` `UserData` key the native side asks for is absent | `GetUserDataElement` misses; that row has no value control |
 | Material `PACKAGE` written as `common` instead of `\common.mgb` | Material does not resolve; the image draws as an **untextured white quad**. A full-screen one washes out the whole page |
-| Package identified by a path other than the one its texture paths resolve against | Same white-quad failure, for every image at once — this is a real FCSE bug, fixed by naming the package `UI\fcse.mgb` |
+| Package identified by a path other than the one its texture paths resolve against | Same white-quad failure, for every image at once — FCSE avoids it by naming its package `UI\fcse.mgb` |
 | `AreaLink` `PACKAGE` written as a path instead of a bare-name hash | Instance resolves to nothing; the sub-tree is missing |
 | `ISUSINGDUPLICATEDAREA="false"` on a list row template or a repeated button | All copies share one playhead and animate together |
 | More list items than `BUTTONCOUNT` | Fine for the list (it scrolls), but absolutely positioned siblings do not scroll with it — so rebuild the visible items from an offset instead of scrolling the list |
@@ -115,7 +115,7 @@ about those.
 
 ## Failures that crash
 
-Short list, and all of them are prevented by using the encoder rather than splicing bytes:
+All of them are prevented by using the encoder rather than splicing bytes:
 
 - A type slot resolving to a class outside `MakeArea` / `MakeElement` / `MakeState` /
   `MakeActionExecuter` — the result is dereferenced with no guard.

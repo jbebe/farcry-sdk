@@ -14,17 +14,16 @@ file-format research — as distinct from [Mods Survey](./mods-survey.md), which
 ## Forums & discussion sites
 
 - **[OpenWorldGames (OWG) — "Single player modding" board](https://www.openworldgames.org/owg/forums/index.php?board=169.0)**
-  — the richest technical source for FC2 modding, ~81 threads (2011–2017, still occasionally active).
-  Gibbed himself posted his tool announcement and workflow directly here ([topic
-  2390](https://www.openworldgames.org/owg/forums/index.php/topic,2390.0.html)), and the forum has
-  hosted his tools ever since. wobatt (author of an improved XML/hash decoder) is also a regular
+  — the richest technical source for FC2 modding, ~81 threads. Gibbed posted his tool announcement
+  and workflow here ([topic 2390](https://www.openworldgames.org/owg/forums/index.php/topic,2390.0.html)),
+  and the forum hosts his tools. wobatt (author of an improved XML/hash decoder) is also a regular
   poster. The technical distillation of this forum is [Getting Started](./getting-started.md) and its
   sibling pages.
 - **[guru3D — "Far Cry 2 Mod info and help thread"](https://forums.guru3d.com/threads/far-cry-2-mod-info-and-help-thread.395033/)**
-  — short (8 posts, 2014), mostly a funnel into OWG, plus one user's working example patch. Real new
-  content folded into [Getting Started](./getting-started.md)/[Data Recipes](./data-recipes.md): the
-  full per-biome FOV field structure, the full detection-duration field list, and the
-  `gamemodesconfig.xml`-in-two-archives report now folded into [Gotchas](./gotchas.md).
+  — short (8 posts), mostly a funnel into OWG, plus one user's working example patch. Its new content
+  is on [Getting Started](./getting-started.md)/[Data Recipes](./data-recipes.md) (the full per-biome
+  FOV field structure, the full detection-duration field list) and [Gotchas](./gotchas.md) (the
+  `gamemodesconfig.xml`-in-two-archives report).
 - **[guru3D — general FC2 release thread](https://forums.guru3d.com/threads/the-guru3d-far-cry-2-thread.276864/)**
   — general release discussion (reviews, DRM gripes, DX9/DX10 comparisons), not modding-technical.
   One useful fact: patch 1.3 removes the SecuROM DRM.
@@ -32,21 +31,21 @@ file-format research — as distinct from [Mods Survey](./mods-survey.md), which
   pages, cross-reference material.
 - **["An Almost Complete Guide to Far Cry 2 Modding"](./guide)** (Boggalog) — the community's closest
   thing to an SDK/reference manual, covering packing/unpacking, XML editing/decoding, hex editing,
-  texture conversion, and `.fat`/`.dat` handling. Saved locally in full; treat it as a standing
-  reference to search directly for specific questions rather than something summarized here.
+  texture conversion, and `.fat`/`.dat` handling. The full guide is on this site, not summarized
+  elsewhere.
 
 ## File-format reverse-engineering references
 
 - **[ZenHAX — "Ubisoft file format (FAT2/FAT3)"](https://www.zenhax.com/viewtopic.php@t=11.html)** and
   **["Far Cry 4 'Dunia' .fat/.dat archives"](https://www.zenhax.com/viewtopic.php@t=378.html)** — the
-  original source for the FAT-version lineage: FC2 uses `-v5`, FC3/4 use `-v9`, FC5 uses `-v10` (later
-  independently corroborated via fcmodding.com's own FCBConverter docs).
+  original source for the FAT-version lineage: FC2 uses `-v5`, FC3/4 use `-v9`, FC5 uses `-v10`
+  (corroborated by fcmodding.com's FCBConverter docs).
 - **[XeNTaX — "Far Cry 3 .FAT decryption"](https://forum.xentax.com/viewtopic.php?f=10&t=9927)** and
   **["Far Cry 5 .Fat and .Dat Files"](https://forum.xentax.com/viewtopic.php?f=10&t=17888)** —
   later-game format work, useful for cross-referencing container structure even though FC2's version
   differs.
 - **[QuickBMS](https://aluigi.altervista.org/quickbms.htm)** — universal script-driven extractor;
-  likely has an existing FC2-compatible BMS script worth checking before writing a custom unpacker.
+  possibly has an existing FC2-compatible BMS script.
 
 ## Dedicated modding sites
 
@@ -63,8 +62,7 @@ file-format research — as distinct from [Mods Survey](./mods-survey.md), which
   section.
 - **[GameBanana — Far Cry 2 Hub](https://gamebanana.com/games/983)** — mods, tutorials, Q&A. Its
   tutorials contributed the exact `FC2Editor.exe` launch paths and the
-  `Documents\My Games\FarCry2\usermaps\` install path (folded into [Engine
-  Theory](./engine-theory.md)).
+  `Documents\My Games\FarCry2\usermaps\` install path (on [Engine Theory](./engine-theory.md)).
 
 ## Tools
 
@@ -94,7 +92,7 @@ file-format research — as distinct from [Mods Survey](./mods-survey.md), which
 - **[farcry2_sdk](https://github.com/tylerjharden/farcry2_sdk)** — a C#/.NET wrapper and SDK for
   interfacing with the FC2 game and editor on Windows, directly addressing the "no official SDK" gap.
 - **[Dunia-Engine-XBG-Blender-Importer](https://github.com/Quiet-Joker/Dunia-Engine-XBG-Blender-Importer)**
-  — the current, actively-developed answer to custom 3D model import/export for FC2, described in full
+  — an actively developed custom 3D model import/export tool for FC2, described in full
   on the [`.xbm`/`.xbg` format page](../file-formats/xbm-xbg.md): real (if pre-alpha/buggy) mesh import
   and export/injection, built for Avatar: The Game but working for FC2 given the shared engine
   lineage. Author: **Quiet_Joker**.
@@ -122,21 +120,21 @@ file-format research — as distinct from [Mods Survey](./mods-survey.md), which
 
 - **["Far Cry Modding Community"](https://discord.com/invite/farcry-modding-846424998888734731)** —
   general Far Cry series modding server, ~17,400 members, covers tutorials/tools across the whole
-  series. Its `⭐ Far Cry 2 / 🔨-fc2-modding` channel is the single richest source in this whole
-  project — FCBConverter's author, SCHTEVE's author, Redux's author, and the author of the tool that
-  finally solved custom mesh import all post directly and in dialogue with each other there.
+  series. Its `⭐ Far Cry 2 / 🔨-fc2-modding` channel is the richest single source for these
+  pages — FCBConverter's author, SCHTEVE's author, Redux's author, and the author of the custom mesh
+  import tool all post there, in dialogue with each other.
 - **"Far Cry 2 Multiplayer"** (fc2mp.com's Discord) — 4 channels: `other-fc2-stuff`, `tools-and-mods`,
   `modding`, `map-editor`.
 
 ## Key community figures
 
-- **gibbed** ("Rick") — original tool author, posted directly on OWG in 2011, personally clarified
-  several format questions.
+- **gibbed** ("Rick") — original tool author, posted on OWG, personally clarified several format
+  questions.
 - **wobatt** — built the improved XML/hash decoder and a modified Gibbed toolset; documented the DLC
   entity-editing recipe.
 - **stoatoats** — author of "RealMod" (ModDB); demonstrated direct hex-editing of DLC's
   `entitylibrary.fcb`.
-- **Art Blade**, **PZ** — OWG admins, did much of the early (2011) file-format spelunking.
+- **Art Blade**, **PZ** — OWG admins, did much of the early file-format spelunking.
 - **TheStranger**, **nexor**, **OWGKID**, **Knightmare** (found the magazine-capacity hash map and
   the ballistic spread-angle conversion formula), **TheFishlord** (author of the Realistic Weapons
   Pack mods and the `42_weapons.xml`-crash workaround), **shelmez** (weapon texture reskins),
@@ -144,9 +142,9 @@ file-format research — as distinct from [Mods Survey](./mods-survey.md), which
   developer on "Infamous Fusion"), **Rhynder** (original full-auto AR-16 fix, early enemy-respawn Lua
   investigation), **Vaatho** (faction infighting, vehicle HP attempts), **LinkHero** (ammo pickup
   hash table, dart rifle fire-mode fix), **chiconspiracy** (hit-location/accuracy breakthrough) —
-  recurring OWG technical contributors, 2011–2017.
+  recurring OWG technical contributors.
 
-**Currently active (2025–2026, "Far Cry 2 Multiplayer" Discord):**
+**Active on the "Far Cry 2 Multiplayer" Discord:**
 
 - **Gabor** — the server's most technically deep active contributor. Owns/maintains a from-scratch
   `.xbm`↔XML and `.xbg`↔XML converter, a Dunia world-sector map visualiser, and cross-references
@@ -157,14 +155,14 @@ file-format research — as distinct from [Mods Survey](./mods-survey.md), which
 - **JasperZebra** — author of `FARCRY_2_Diamond_Editor`, `Borderless_Window_Maker`,
   `AVATAR-The-Game-Level-Editor`, and `XBT-Thumbnail-Provider`.
 
-**Currently active (2021–2026, "Far Cry Modding Community" Discord, `🔨-fc2-modding` channel):**
+**Active on the "Far Cry Modding Community" Discord, `🔨-fc2-modding` channel:**
 
 - **Hunter** — the most prolific and knowledgeable contributor in this channel, and the actual author
   of "FC_Redux." Deep practical knowledge across weapon modding, buddy/character model swapping,
   `Dunia.dll` binary patching (the weapon-icon fix, see [Data Recipes](./data-recipes.md)), and
-  general troubleshooting since 2021. First-hand source for the "buddies are a scripted facade"
+  general troubleshooting. First-hand source for the "buddies are a scripted facade"
   explanation.
-- **ArmanIII** — author of FCBConverter; personally debugged and fixed live FC2-specific bugs in his
+- **ArmanIII** — author of FCBConverter; debugged and fixed FC2-specific bugs in his
   own tool in this channel (see [Getting Started](./getting-started.md)). Also shipped a Far Cry 2
   Mod Installer.
 - **Steve64b** — author of SCHTEVE; ArmanIII's regular collaborator/tester.
@@ -175,9 +173,9 @@ file-format research — as distinct from [Mods Survey](./mods-survey.md), which
   drove filelist-completion work, and does ongoing Blender/mesh investigation; RaZoR-FIN does
   coop/multiplayer experimentation and archetype-override research.
 - **Quiet_Joker** — author of `Dunia-Engine-XBG-Blender-Importer`, the tool that resolved the
-  character-mesh/bone-palette mystery in mid-2026.
-- **thatdarnowl**, **MysteryPL**, **sharp_razor8** — active 2026 testers/collaborators on
-  Quiet_Joker's importer, surfacing concrete bugs in real time.
+  character-mesh/bone-palette mystery.
+- **thatdarnowl**, **MysteryPL**, **sharp_razor8** — testers/collaborators on Quiet_Joker's
+  importer, surfacing concrete bugs.
 - **bajuh** — independently reverse-engineering `Dunia.dll` with Ghidra, cross-referencing the Linux
   FC2 dedicated server binary (see [the engine overview](../engine-internals/overview.md)), aiming to
   build an FCB-editing tool.

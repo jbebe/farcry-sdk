@@ -10,8 +10,7 @@ See [the overview](./overview.md) for binary identification.
 
 :::info[Verified in a running game]
 Every entry in the [live-test results](#live-test-results) below was checked against the retail
-`FarCry2.exe` on 2026-08-31, not inferred from the disassembly alone. Where a live run contradicted
-what the code read like, the live result wins and the page says so.
+`FarCry2.exe`, not inferred from the disassembly alone.
 :::
 
 Traced from `RunGame` (`0x10006510`) down through `InitDuniaEngine` (`0x10004900`) and its callees,
@@ -73,21 +72,15 @@ Note that `-client` is **not** a branch in this chain. It is only read *inside*
 | Headless | `-norender` only takes the headless path together with `-dedicated` |
 | `-online` | incompatible with `-noagora` — the combination is a hard error |
 
-:::note[Corrects an earlier claim on this page]
-This page previously stated that `-world <name>` / `-map <name>` "load directly into a level,
-skipping the main menu". **That is false on their own.** `-world`/`-map` are parsed only inside
-`CreateBenchmarkNode`, which `Process` only reaches when `-benchmark` is present. Live-tested:
-`FarCry2.exe -world world1` boots to the ordinary main menu with a 246 MB working set, identical to
-a no-argument launch (248 MB).
+`-world`/`-map` are parsed only inside `CreateBenchmarkNode`, which `Process` only reaches when
+`-benchmark` is present, so on their own they do not load a level: `FarCry2.exe -world world1` boots
+to the ordinary main menu with a 246 MB working set, identical to a no-argument launch (248 MB).
 
-It also stated that `-join` "hard-aborts if `-login` is absent". **Also false.** The `-login` gate
-lives in `CreateHostNode`; `-join` routes to `CreateClientNode`, which has no such gate.
-Live-tested: `-join 127.0.0.1` boots normally, with and without `-login`.
+The `-login` gate lives in `CreateHostNode`; `-join` routes to `CreateClientNode`, which has no such
+gate, and `-join 127.0.0.1` boots normally with and without `-login`.
 
-Finally, the `-benchmark` usage error was described as being triggered by an invalid sub-mode value.
-The actual gate is the **absence of `-world`/`-map`** — the sub-mode string is only compared against
-`"playback"` to decide whether `-benchmarkinputname` may substitute for it.
-:::
+The `-benchmark` usage error is triggered by the **absence of `-world`/`-map`** — the sub-mode string
+is only compared against `"playback"` to decide whether `-benchmarkinputname` may substitute for it.
 
 ## Window / bootstrap flags (checked directly in `InitDuniaEngine`, before engine subsystems init)
 
@@ -104,10 +97,7 @@ The actual gate is the **absence of `-world`/`-map`** — the sub-mode string is
 
 ## Engine flags (`CCryEngine::Initialize`, `0x104d0510`)
 
-:::note[Not previously documented]
-This whole cluster was missing from earlier versions of this page. The strings live together at
-`0x10e6a334`–`0x10e6a3d0` and are read via `FUN_104d0420`.
-:::
+The strings live together at `0x10e6a334`–`0x10e6a3d0` and are read via `FUN_104d0420`.
 
 | Flag | Effect |
 |---|---|
@@ -158,12 +148,8 @@ is a usable world altitude, just not a safe one at the shipped values.
 |---|---|
 | `-load <savename>.sav` | Loads a save directly, skipping the menus. **Crashes as shipped**, for the reason below; DevTools (`mods/DevTools`) fixes it, after which this is the one working way to boot straight into playable gameplay |
 
-:::note[Corrects an earlier claim on this page]
-This page previously said `-load` "kills the game instantly, for every value", that the value was
-therefore irrelevant, and that the blocking save load never worked. All three were wrong, and the
-error was methodological: **every** failure here exits in about 0.3 s with exit code 0, so exit
-timing cannot tell them apart. Running under FCSE, whose crash handler names the faulting address,
-separates them immediately:
+**Every** `-load` failure exits in about 0.3 s with exit code 0, so exit timing cannot tell them
+apart. Running under FCSE, whose crash handler names the faulting address, separates them:
 
 | Command | Fault | Meaning |
 |---|---|---|
@@ -172,7 +158,6 @@ separates them immediately:
 
 The extension is required and is not a bug: `FUN_102a18f0` is a plain `basename`, and the parser
 appends nothing, so a name without `.sav` matches no file.
-:::
 
 `GameFileUtils::GenerateRelativeFileName(name, mode)` (`0x101e9b20`) builds the path. The mode
 switch is `0 → "Saved Games\"`, `1 → "Benchmarks\Playbacks\"`, `2 → "user_maps\"`,
@@ -260,7 +245,7 @@ Observed sub-mode behaviour:
 
 | Flag | Effect |
 |---|---|
-| `-exec <file>` | Execute a console/Lua command file at boot (read in `Process` before branching). The console it feeds is real and reachable — see [the developer console](./developer-console.md) — but this flag itself is still untested |
+| `-exec <file>` | Execute a console/Lua command file at boot (read in `Process` before branching). The console it feeds is real and reachable — see [the developer console](./developer-console.md) — but this flag itself is untested |
 | `-notracking` | Disables the telemetry/tracking client (read in `Process` before branching) |
 | `-ubidays` | Requests a `"ubidays"` UI mode in `CreateMainMenuNode` (`0x106622f0`) — a trade-show/kiosk build hook. No visible effect in retail |
 | `-openautomate` | QA automation path, below |
@@ -285,7 +270,7 @@ file regardless of whether `-cmdfile` works.
 
 ## `-logFile` appears dead in the retail build
 
-Live-tested (`.\FarCry2.exe -logFile C:\path\engine.log`): **no file is created.** Traced why in
+Live-tested (`.\FarCry2.exe -logFile C:\path\engine.log`): **no file is created.** The reason, in
 `ParseGameConfigFlags` and its caller `InitDuniaEngine`:
 
 - The flag is genuinely parsed — `FUN_1003f7f0(cmdline, "-logFile", param_1 + 0x13)` captures the path
@@ -295,22 +280,19 @@ Live-tested (`.\FarCry2.exe -logFile C:\path\engine.log`): **no file is created.
   after it, `nomouse`/`noexmouse`/`nopad`, are read back at fixed stack offsets and drive
   `DAT_10fd42c0..c2`, so the frame layout is confirmed, not guessed). The logfile string sits at
   `this+0x4c` in that frame.
-- Full disassembly of `InitDuniaEngine` was read end to end looking for any read of that `this+0x4c`
-  stack slot after the parse — none exists. No `CreateFileA`/`fopen`/log-write call anywhere in the
-  function takes that buffer as an argument.
+- Nothing in `InitDuniaEngine`'s full disassembly reads that `this+0x4c` stack slot after the parse.
+  No `CreateFileA`/`fopen`/log-write call anywhere in the function takes that buffer as an argument.
 - The RTTI-derived class list does contain a `CLog`, but its mangled RTTI name is
   `.?AVCLog@MassiveAdClient3@@` — it belongs to the third-party **MassiveAdClient3** in-game-advertising
   SDK linked into this DLL, not an engine logging facility. No other `Log`-named class or function
   exists in the binary.
-- Consistent with the independently-sourced community finding that [Far Cry 2 retail has no in-game
-  dev console](../modding/gotchas.md) — debug/dev-facing instrumentation reads as compiled-out or
-  stubbed for the shipped build, not merely hidden behind a flag.
 
 **Conclusion**: `-logFile`'s value is captured and then goes nowhere within the boot path — vestigial
 parsing left over from a development build whose actual log sink was stripped for retail, not a flag
-the user is invoking wrong. Not proven for the entire 20MB DLL (this traced one function's disassembly
-exhaustively, not every one of the ~90k functions in the binary), but no plausible consumer turned up
-anywhere reachable from boot.
+the user is invoking wrong. Not proven for the entire 20MB DLL (one function's disassembly is traced
+exhaustively, not every one of the ~90k functions in the binary), but no plausible consumer is known
+anywhere reachable from boot. The [developer console](./developer-console.md), a separate subsystem,
+does survive.
 
 ## Live-test results
 
@@ -345,12 +327,12 @@ usage errors surface as a real window titled `Error`; `-borderless` shows up as 
 | `-cmdfile <file>` | **Broken.** File contents never applied |
 | `-zzznotaflag` | Unknown flags are harmless — boots normally |
 
-`-3dplatform` could not be verified: a 64-bit host cannot enumerate a WOW64 process's loaded modules
-(`tasklist /m` returns only the WOW64 shim), so there was no way to observe which D3D DLL loaded.
+`-3dplatform` is unverified: a 64-bit host cannot enumerate a WOW64 process's loaded modules
+(`tasklist /m` returns only the WOW64 shim), so which D3D DLL loads cannot be observed that way.
 
 ## Flags this page does not cover behaviourally
 
-These are parsed for certain but have no signal observable from outside the process, and were not
+These are parsed for certain but have no signal observable from outside the process, and are not
 individually verified: `-noexmouse`, `-nopad`, `-nobf`, `-nocompile`, `-runscriptindebug`,
 `-zombieai`, `-usearchivecache`, `-noarchivecache`, `-d3dmts`, `-nosndocc`, `-novoicechat`,
 `-nomovecache`, `-norigidchars`, `-nospuheightfield`, `-16bitbroadphase`, the `-benchmark*`
@@ -375,8 +357,7 @@ The complete set is 58 dash-prefixed strings in `Dunia.dll`, in three clusters:
 Ghidra's string index misses six real flags — `-map`, `-lan`, `-vip`, `-ctf`, `-3dplatform` and
 `-16bitbroadphase` — because they sit in padding gaps between indexed strings or begin with a digit.
 They are only visible by dumping those three address ranges as raw bytes and reading the
-null-terminated runs directly. Any future re-enumeration should dump the ranges, not grep the string
-table.
+null-terminated runs directly, not by searching the string table.
 :::
 
 ## Unknowns

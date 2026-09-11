@@ -66,7 +66,7 @@ Install the resulting `farcry2_formats-<version>.zip` through **Edit ▸ Prefere
 
 :::warning[Check you are not running a stale binary]
 Any prebuilt `jackall-cli.exe` lying around in `tools/JackAll/publish/` may predate the `fc2model`
-work. If `jackall-cli fc2model --help` says *Unknown command*, publish again.
+commands. If `jackall-cli fc2model --help` says *Unknown command*, publish again.
 :::
 
 ## Step 1 — choose the donor
@@ -224,8 +224,8 @@ containers you name and is silent about whether the game opens them.
 
 :::tip[Settling "which file is live", for any format]
 Stage the **same edit into every candidate container at once, each carrying a different value**, and
-launch once — the value you observe names the winner. That is how the list above was settled: six
-containers, six magazine sizes, one launch, `world2` on the HUD. It is cheaper than a bisection and
+launch once — the value you observe names the winner. Six containers, six magazine sizes and one
+launch settle the list above, with `world2`'s value on the HUD. It is cheaper than a bisection and
 cannot be fooled by a plausible-sounding inference. Pick something visible without ambiguity — a
 magazine size or an ammo count, not a name some other subsystem might supply.
 :::
@@ -277,7 +277,7 @@ a BOM silently, so a fragment can validate as XML and still be rejected. **Windo
 :::note[There is no round trip through the whole container]
 `fcb decode` splits an entity library into group files; `fcb encode` refuses multi-file XML.
 Fragments are the route. Applying them re-encodes the container, which inflates it — `patch.dat`
-went 9.9 → 49.7 MB once both worlds were covered. See `docs/design/fcb-deep-fragments.md`.
+grows from 9.9 to 49.7 MB once both worlds are covered. See `docs/design/fcb-deep-fragments.md`.
 :::
 
 ### Build, verify, restore
@@ -563,8 +563,8 @@ whole `ReliabilityLevelsData` block — is **identical** between a pristine weap
 
 :::note[`nForcedFailure*` is not understood — copy your donor's]
 The Dart Rifle carries `0` on all four difficulties where the Dragunov carries 2/2, 1/1, 0/1, 0/0.
-Raising the Dart Rifle's alone produced no failures at all until `fJamProbabilityPerReload` changed,
-so what the fields govern is still open. Take the values from the weapon whose reliability you want
+Raising the Dart Rifle's alone produces no failures at all until `fJamProbabilityPerReload` changes,
+so what the fields govern is open. Take the values from the weapon whose reliability you want
 rather than reasoning about them.
 :::
 
@@ -1357,6 +1357,6 @@ The PBR-to-legacy conversion, finding a material you are allowed to own, and the
 that decide whether the weapon reads matte or polished are all on [texturing a replaced
 weapon](./texturing-a-weapon.md).
 
-Three things nobody has needed yet, so they are unwritten rather than impossible: a second material
+Three things are unwritten rather than impossible: a second material
 for a part of the body, a normal map where a weapon owns no third texture path, and the `.Multi`
 pickup for multiplayer.

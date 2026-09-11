@@ -7,9 +7,9 @@ sidebar_position: 5
 :::note[Community-reported]
 Source: Discord, Far Cry 2 Multiplayer, `modding` channel, an extended live reverse-engineering
 exchange between **Gabor** (unreleased XBM↔XML/XBG↔XML converter, built over "years") and **fdx4061**
-(author of an XBM editor and an XBG texture/material extractor), April 2026 — the deepest byte-level
-documentation of this format found anywhere in the community. Not yet independently verified by
-disassembly; see [intro](../intro.md) for how RE-verified and community-reported claims are
+(author of an XBM editor and an XBG texture/material extractor) — the deepest byte-level
+documentation of this format found anywhere in the community. This section is not independently
+verified by disassembly; see [intro](../intro.md) for how RE-verified and community-reported claims are
 distinguished on this site.
 :::
 
@@ -112,8 +112,8 @@ distance to the furthest vertex in 99.3% of parts, but its centre is the box cen
 it comes from a minimal-enclosing-sphere fit. `XOBB`/`HPSB` carry the same pair for the whole model,
 in model space, and their sphere behaves the same way.
 
-This retires the community reading of these ten as a bare min/max pair, which holds for 18 of 18,533
-— it was reading the sphere as the box.
+The community reads these ten as a bare min/max pair, which holds for 18 of 18,533 — that reading
+takes the sphere for the box.
 
 **Alignment padding is a descending byte counter, not zeros.** Nine bytes of padding before the
 vertex or index section are written `09 08 07 06 05 04 03 02 01`. A file padded with zeros still
@@ -193,7 +193,7 @@ they are divided. The division is completely regular, which is what makes an exp
 - Nothing is left over at the end of either block.
 
 Measured across every shipped mesh: 29,296 of 29,296 clusters and 9,746 of 9,746 LODs, with no
-exceptions to any of the four. Two consequences worth knowing before writing a reader:
+exceptions to any of the four. Two consequences for a reader:
 
 **Every vertex is referenced by a triangle** — 29,296 of 29,296 clusters have no spare vertices, and
 no shipped mesh contains a degenerate triangle or a `0xFFFF` strip-restart index. A reader that
@@ -320,13 +320,6 @@ Green is the layer-2 blend weight, and `DiffuseTexture2` on a weapon material is
 second layer at all, and the rust arrives as its condition falls. Red and blue barely move; the
 broken mask is a rust map with the other two channels carried over.
 
-:::note[Corrects an earlier reading of this]
-This section used to say, from the sawed-off's `state01` alone, that "a shipped weapon never blends
-its second tiling layer in at all". That is true of a **clean** mask and false in general — it is the
-whole mechanism by which a rifle gets visibly filthy. Measuring one of a pair is what made it look
-like a rule.
-:::
-
 `MaskTiling1` is 1,1 on all three of the sawed-off's materials while `DiffuseTiling1` runs 6 to 12,
 which is the shape to expect: the mask is per-model and in the model's own UVs, the detail maps tile
 over it.
@@ -378,8 +371,7 @@ albedo = lerp(layer1, layer2, mask.g * saturate(vertexColour.g))
 alpha  = d1.a
 ```
 
-The two weights are worth stating separately, because neither is guessable from the asset files and
-both are easy to get half-right:
+Neither weight is guessable from the asset files, and both are easy to get half-right:
 
 - **Layer-1 tint weight** is `MaskTexture1.b × vertexColour.b`. Reading the vertex channel alone
   paints the full `DiffuseColor1` over the whole surface — on a material whose `DiffuseColor1` is a
@@ -405,8 +397,8 @@ a UV channel.
 
 `UVGroupMapChannel0` is 0 on every retail material and layer 1 always sits on group 0, so layer 1
 always reads UV set 0. Which group the mask and layer 2 use is **not recorded in the `.xbm`** — only
-the group-to-channel table is — and it could not be recovered by correlating tiling values against
-the table, so that mapping is still open.
+the group-to-channel table is — and correlating tiling values against the table does not recover
+it, so that mapping is open.
 
 Tiling is a real number, not a formality: 1,227 of 2,235 retail materials tile at something other
 than 1, up to 20×.
@@ -431,9 +423,8 @@ Three structural facts, each visible if a renderer gets it wrong:
   its texture and a shadowed one keeps colour from the sky term.
 - **Specular is a separate additive Blinn term.** The `.xbm` carries its inputs as
   `SpecularColorBase`/`SpecularColor1` — the same *pair shape* as the diffuse tints, though **how the
-  two combine was never traced**: only the diffuse half of the pair-lerp was read out of the retail
-  shader, and driving the specular pair by the same mask weight is an assumption the renderer here
-  makes explicit. What is measured is the consequence: a high `SpecularColorBase` makes a surface
+  two combine is not traced**: only the diffuse half of the pair-lerp is read out of the retail
+  shader, so driving the specular pair by the same mask weight is an assumption. What is measured is the consequence: a high `SpecularColorBase` makes a surface
   glossy everywhere the mask asks for nothing.
 
   With `SpecularPower`; measured across the 2,208 retail materials, 2,129 carry a non-zero power —
@@ -513,9 +504,8 @@ Read out of `LoadGeomResource` (`0x097fd440`) and `CGeometryResource::ClientProc
 (`0x097fb3f0`), and measured across every cluster in the retail set.
 :::
 
-This was the open edge of the format. Neither Gabor nor fdx4061 had it as of April 2026 ("I don't
-know how bone palettes work... that's why I still can't create a character-type xbg" — fdx4061).
-The chain is:
+The community tools do not cover this ("I don't know how bone palettes work... that's why I still
+can't create a character-type xbg" — fdx4061). The chain is:
 
 **cluster palette slot → `EDON` node → that node's `skinIndex` → `MB2O` inverse-bind matrix.**
 
@@ -556,8 +546,8 @@ See [`.mab`](./mab.md) for how a clip then addresses those bones by skeleton bon
 **3,133 of 3,133 byte-identical**.
 :::
 
-Editing a container in place preserves whatever was not understood, which is why every exporter so
-far has done that — and why none could add a part or an LOD. Originating one instead requires
+Editing a container in place preserves whatever was not understood, which is why exporters do that —
+and why none of them can add a part or an LOD. Originating one instead requires
 knowing which fields carry information and which are bookkeeping. Almost all of them are bookkeeping:
 
 | Field | Derived from |
@@ -672,12 +662,12 @@ the `.xbg`, so the add-on carries no format code. What follows is the community 
 alongside.
 
 **`Dunia-Engine-XBG-Blender-Importer`** (Quiet_Joker) is the current working answer to custom mesh
-import, v3.0 released 2026-07-04. Originally built for *Avatar: The Game*, ported from a Blender
+import, as of v3.0. Originally built for *Avatar: The Game*, ported from a Blender
 2.49b-era script lineage; FC2 support works "more or less" because "Avatar shares the same stuff as far
 cry 2." Confirmed working: static object import, character import (with some broken clothing/UV-tiling
 material loading), and a real export/injection workflow — import with "Separate Primitives" on, edit or
 replace geometry in Blender, select only the objects to write out, then export (the script writes
-whatever is currently selected). Confirmed broken as of its release: weapon XBG import (reproduced on
+whatever is currently selected). Confirmed broken in v3.0: weapon XBG import (reproduced on
 the AK-47 and a 1911), HKX (Havok collision mesh) export, and export reliability generally reported by
 at least one other user. FC2 `.xbg` files live in `Data_Win32\worlds\worlds.fat`, not the more obvious
 `common` archive. Treat as pre-alpha but actively developed.
@@ -687,15 +677,13 @@ only way of importing xbgs back into the game for fc was to use the unreal engin
 id-daemon" — id-daemon is independently credited elsewhere for FCBConverter (see [Getting
 Started](../modding/getting-started.md)).
 
-A modder porting FC2 models into FC3 (Ganic, several models ported 2023–2024) hit the same wall from
-the opposite side: raw geometry porting works, but there's no clean `.xbm` (material) converter, and
-rebuilding an `.xbg` from scratch fails on material indices/bone weighting — the same unsolved edge of
-this format the FC2-side investigation above was working from.
+A modder porting FC2 models into FC3 (Ganic, several models ported) hit the same wall from the
+opposite side: raw geometry porting works, but there's no clean `.xbm` (material) converter, and
+rebuilding an `.xbg` from scratch fails on material indices/bone weighting.
 
-A cross-game skeleton-reading tool (`SkeleTree`, fdx4061, preserved in
-`research/reference-files/tool-archives/`) works across Avatar (2009), Far Cry 2, and Far Cry 3 — direct
-evidence these three titles share a compatible skeleton/rig format at the binary level, beyond the
-broader Dunia lineage.
+A cross-game skeleton-reading tool (`SkeleTree`, fdx4061) works across Avatar (2009), Far Cry 2, and
+Far Cry 3 — direct evidence these three titles share a compatible skeleton/rig format at the binary
+level, beyond the broader Dunia lineage.
 
 `.spk` filenames are themselves hashes (e.g. `004492b8.spk`), consistent with the hash-based naming
 established for FCB/archive content — see [`.spk`](./spk.md).

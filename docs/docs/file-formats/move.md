@@ -4,11 +4,10 @@ sidebar_position: 20
 
 # `movemgr.bin` — MOVE animation graph
 
-:::info[Verified via reverse engineering — first documentation of this format]
-No community write-up, tool, or prior note covers this format, and nothing on this site referenced
-it before. Everything below was traced live through GhidraMCP against the symbolized
-`FarCry2_server` binary and then checked byte-for-byte against the shipped files in
-`tmp/gamefiles`. Claims that are measured rather than read out of the disassembly say so.
+:::info[Verified via reverse engineering]
+No community write-up or tool covers this format. Everything below is traced live through GhidraMCP
+against the symbolized `FarCry2_server` binary and checked byte-for-byte against the shipped files.
+Claims that are measured rather than read out of the disassembly say so.
 See [intro](../intro.md) for how RE-verified and community-reported claims are distinguished.
 :::
 
@@ -167,8 +166,8 @@ read anything.
 
 ### The three idioms every record is built from
 
-Above the primitives, the whole format is those primitives arranged by three recurring patterns.
-Learn these and the [record catalogue](#every-record-in-full) reads as a formality.
+Above the primitives, the whole format — every layout in [the record catalogue](#every-record-in-full)
+— is those primitives arranged by three recurring patterns.
 
 **Inheritance is inlined, and not always at the front.** A derived class serializes its base by
 calling the base's `Serialize` directly, so the base's fields land *inline* in the stream at the
@@ -288,7 +287,7 @@ as `gMvM`. All 47 constants, recovered by decompiling every `GetSerializationCla
 | `4D635046` | `FPcM` | `TMoveCriteriaPerc<float>` |
 
 The shape of the graph is legible from a census of those byte signatures — naive substring counts
-over the two named files, so treat them as close rather than exact:
+over the two named files, so they are close rather than exact:
 
 | Class | `movemgrnamed.bin` | `dlc1named.bin` |
 |---|---|---|
@@ -353,7 +352,7 @@ with exactly these rules reaches the channel table at `0x40`, ends it at `0x24D`
 list at `0x16B4`, ends the blend sets at `0x1774`, and lands on `FF FF FF FF 'MSvM'` — the state
 machine, declaring **1,700 states**. No drift anywhere, which is what validates the whole chain.
 
-Two incidental findings from that walk:
+The walk also shows two details of the package list:
 
 - The 126 animation-package names are the same identifiers `depload.dat` uses
   (`ak47`, `dart_rifle`, `6p9`, `mgl140`, `turret_browning`, `buddyrescue_*`, `pkg_a1lm01_se01`…).
@@ -620,9 +619,8 @@ retail data.
 
 ### What the named twins add
 
-The named files are the same graph with authoring metadata woven in, and the additions are now
-mostly known — enough to walk `movemgrnamed.bin` through hundreds of objects, though not yet to the
-end:
+The named files are the same graph with authoring metadata woven in, and the additions are mostly
+known — enough to walk `movemgrnamed.bin` through hundreds of objects, though not to the end:
 
 - `CMoveObject` gains `str name` + a **16-byte GUID** after its version. This is where every state,
   group and parameter name lives, and it is what makes the named files roughly twice the size.
@@ -636,7 +634,7 @@ end:
   (`RightPass`↔`LeftPass`, `RightFront`↔`LeftFront`).
 
 At least one authoring-only field remains unaccounted for around `CTransitionLink`, which is where a
-full named walk still stops. Since no shipped binary can read these files, the disassembly cannot
+full named walk stops. Since no shipped binary can read these files, the disassembly cannot
 settle the remainder — only more differential reading against the loadable twin can.
 
 ## Writing MOVE files
@@ -770,8 +768,7 @@ command reports the count and exits non-zero, because a graph that verifies, loa
 wrong in one situation is the worst failure mode available. **46 clips** have both governed and
 ungoverned sites and are exactly where this fires.
 
-The honest framing is that `repoint --weapon` retargets a weapon's *own branches* and cannot
-retarget shared behaviour at all. Making shared behaviour differ per weapon means cloning the
+`repoint --weapon` retargets a weapon's *own branches* and cannot retarget shared behaviour at all. Making shared behaviour differ per weapon means cloning the
 states so the sites become governed — an expansion, not a repoint.
 
 :::danger[Repoint at a path the game already has, not an invented one]
@@ -797,9 +794,9 @@ produces a graph that parses cleanly and plays nothing.
 
 ### Splitting a graph for mods
 
-A mod that retargets one clip used to ship the whole 1.8 MB graph, and whole-file overrides are
-**last-wins and silent** — so two mods that each touched an animation could not coexist, and the
-loser was never told. JackAll now splits `movemgr.bin` and `dlc1.bin` into fragments the same way it
+A mod that ships the whole 1.8 MB graph to retarget one clip is a whole-file override, and those are
+**last-wins and silent** — two mods that each touch an animation cannot coexist, and the loser is
+never told. JackAll splits `movemgr.bin` and `dlc1.bin` into fragments the same way it
 splits `.fcb` and [`depload.dat`](./depload.md#editing), staged under the same
 `<container>.<ext>\<fragmentId>` convention.
 
@@ -928,7 +925,7 @@ _packages.xml                                    the manager's package list
 ```
 
 The table is **decoration**. It changes the label and never the number, so a build with no table
-produces the same graph under `state_<hex>` filenames — which is exactly why it was safe to add.
+produces the same graph under `state_<hex>` filenames — which is what makes it safe.
 
 #### The manager's four sections
 
@@ -942,8 +939,8 @@ those are runs of ops rather than subtrees. They split under four reserved ids:
 | `_blendsets.xml` | the blend set, its 16 categories and their poses | 2.9 KB |
 | `_transitions.xml` | the default transition and the 16×16 matrix | 10.4 KB |
 
-Four rather than one because a combined manager fragment is ~38 KB, over the ~20 KB line the repo's
-mod-layout design note sets for a fragment — and because splitting on these seams means the only one
+Four rather than one because a combined manager fragment is ~38 KB, over the ~20 KB line set for a
+fragment — and because splitting on these seams means the only one
 a mod realistically edits, `_packages.xml`, contains no pointers at all.
 `_packages.xml` is what a new weapon has to be registered in, alongside its
 [`depload`](./depload.md#animations-are-not-like-textures) package.
@@ -962,7 +959,7 @@ jackall-cli move fragments movemgr.bin --base <retail>.bin --out layer   # split
 jackall-cli move assemble <retail>.bin layer --expect movemgr.bin        # splice, and check
 ```
 
-`move assemble --expect` is the honest gate on a fragment set: it rebuilds and compares against the
+`move assemble --expect` is the gate on a fragment set: it rebuilds and compares against the
 binary the fragments came from. The VSS mod's 17 fragments reproduce its 1,858,293-byte graph
 **byte-for-byte**.
 
@@ -1057,10 +1054,8 @@ index; the crosshair comes from `CommonProperties.crosshairMagmaAreaName`, a pla
 Magma area.
 :::
 
-:::danger[This page previously claimed a hard 44-weapon ceiling. That was wrong.]
-An earlier revision argued that the 44-entry list is declared in `CMoveValueContainer`, that an
-expansion cannot redeclare it, and therefore that `iAnimationValue` "has to be one of 0–43". Every
-step of that reasoning fails against the bytes and the disassembly:
+:::danger[The 44-entry list is not a hard weapon ceiling]
+Nothing restricts `iAnimationValue` to 0–43:
 
 - **The list is not in the loadable file.** `movemgr.bin` contains no channel names and no enum
   value names — zero occurrences of `EquippedWeapon` or `SawedOffShotgun`. Each channel is five
@@ -1071,9 +1066,9 @@ step of that reasoning fails against the bytes and the disassembly:
 - **Criteria compare integers.** `m_eValueID` is one byte of channel index, `m_Value` a signed
   32-bit comparand. Nothing range-checks either against a declared value count.
 - **`iAnimationValue` is a plain `int`.** It is registered on `CEquipmentBase` at offset `0x20`
-  (`RegisterProperties`, `0x09020150`) with no clamp — not on `CFCXWeapon`, as stated earlier.
-- **The string evidence was misread.** Across all six `Dunia.dll` builds in `tmp/compare-dlls/`,
-  exact-case `SawedOffShotgun` appears **0** times and `EquippedWeapon` **0** times. What is present
+  (`RegisterProperties`, `0x09020150`) with no clamp.
+- **No string reserves the enum.** Across six `Dunia.dll` builds, exact-case `SawedOffShotgun`
+  appears **0** times and `EquippedWeapon` **0** times. What is present
   — once per build, v1.0 included — is lowercase `sawedoffshotgun`, which is the *model/animation
   package* name, not the MOVE enum value. It says nothing about enum reservation.
 
@@ -1094,7 +1089,7 @@ states behind it, so a character holding it would find no matching move and fall
 the graph's defaults are. Supplying those states is the actual work, and it is the ordinary
 expansion path — the same one DLC1 used.
 
-Two caveats worth stating plainly, because neither has been tested in game:
+Two caveats, neither tested in game:
 
 - Whether the code that drives channel 17 each frame passes `iAnimationValue` through unclamped has
   not been traced end to end; only the property registration and the container's storage were.
@@ -1131,23 +1126,20 @@ is open.
 
 Still open:
 
-- **The named twins are barely decoded, and it no longer matters much.** The shape of their
-  additions is known (see [What the named twins add](#what-the-named-twins-add)), but a real walk
+- **The named twins are barely decoded.** The shape of their additions is known (see [What the named twins add](#what-the-named-twins-add)), but a real walk
   derails at `0x1073D` of `movemgrnamed.bin`'s 3,600,120 bytes — **1.9%** — on `CTransitionLink`. No
   shipped executable reads a `0x20000` file, so there is no disassembly to recover the rest from and
   no oracle to check a guess against; only differential reading against the loadable twin.
 
-  The reason to care shrank, though: the one thing worth having from those files was the names, and
+  The one thing worth having from those files is the names, and
   [hashing their strings against the loadable graph](#getting-the-names-back) recovers **100% of
   them** without parsing the format at all. What remains unread is authoring metadata — GUIDs, and
   whatever field sits around `CTransitionLink` — that nothing downstream needs.
-- **Nothing built with the writer has been loaded by the game yet.** Every claim below is verified
+- **Nothing built with the writer has been loaded by the game.** Every claim below is verified
   against the format and against the shipped data; none of it is verified against a running
   `Dunia.dll`. Producing a file the parser accepts is necessary, not sufficient.
 - **Whether the `files/Move File` config key can be overridden** from `OverrideEngineConfig.xml` is
-  untested, and remains the cheapest experiment available. Note the earlier framing of this
-  experiment — "a replacement graph with a longer `EquippedWeapon` list" — was based on a
-  misunderstanding: there is no list in the file to lengthen.
+  untested, and is the cheapest experiment available.
 - **Whether the engine drives channel 17 unclamped** with an `iAnimationValue` of 44 or more, and
   what the graph does when no state matches, are the two in-game questions the weapon work actually
   turns on.
