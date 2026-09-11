@@ -162,9 +162,9 @@ and clouds together; then the light-shaft mask and the glare; then reflections. 
 other mods: the terrain lighting presets, shadows, and the final colour grade.
 
 - [ ] **Fog, as part of the air.** The sky owns the fog's colour at every hour; fog distances stay
-      with the presets. The mechanism exists (the `Horizon match` retint), but its processor-side
-      copy of the sky has no night floor, dawn lift or moon, so turned up it fogs the world black
-      after dark. Doing it through fog presets would collide with any lighting mod, since every preset
+      with the presets. The mechanism exists (the fog retint in `src/engine/fog_tint.cpp`), but its
+      processor-side copy of the sky has no night floor, dawn lift or moon, so it fogs the world
+      black after dark. Doing it through fog presets would collide with any lighting mod, since every preset
       lives in one JackAll fragment
 - [ ] **Weather.** Clouds ignore storms, `SetScriptedStormFactorOverride` never reaches the storm
       factor the sky reads, and rain never appeared under any preset

@@ -45,8 +45,11 @@ namespace {
     // How much further the sun sinks, as a sine, while the moonlight comes up to full.
     constexpr float kMoonRising = 0.13f;
 
-    // The share of the moonlight a thin edge lets through.
+    // Moonlight at full strength, the share of it a thin edge lets through, and how brightly the air
+    // glows around the moon.
+    constexpr float kMoonColour[3] = {1.6f, 1.8f, 2.0f};
     constexpr float kMoonBackShare = 0.13f;
+    constexpr float kMoonGlow = 0.25f;
     // How far below the horizon, as a sine, the moon's glow takes to fade out.
     constexpr float kMoonBelow = 0.1f;
 
@@ -93,19 +96,19 @@ namespace {
     };
 
     // The sun until it has set for every layer, then the moon, coming up as the sun sinks further.
-    Light ChooseLight(const SkyOverhaul::CloudLayer::Lighting& lighting, const Values& v) {
+    Light ChooseLight(const SkyOverhaul::CloudLayer::Lighting& lighting) {
         const bool sun = lighting.sunDirection[2] > kSunGone;
         const float rising = (kSunGone - lighting.sunDirection[2]) / kMoonRising;
         const float share = sun ? 0.0f : (rising < 1.0f ? rising : 1.0f);
         const float up = (lighting.moonDirection[2] + kMoonBelow) / kMoonBelow;
-        const float glow = share * std::clamp(up, 0.0f, 1.0f) * v.moonGlow;
+        const float glow = share * std::clamp(up, 0.0f, 1.0f) * kMoonGlow;
 
         Light light;
         for (int c = 0; c < 3; c++) {
             light.direction[c] = sun ? lighting.sunDirection[c] : lighting.moonDirection[c];
-            light.colour[c] = sun ? lighting.sunColour[c] : v.moonColour[c] * share * v.moonlight;
+            light.colour[c] = sun ? lighting.sunColour[c] : kMoonColour[c] * share;
             light.back[c] = sun ? lighting.backSunColour[c] : light.colour[c] * kMoonBackShare;
-            light.glow[c] = v.moonColour[c] * glow;
+            light.glow[c] = kMoonColour[c] * glow;
         }
         return light;
     }
@@ -147,7 +150,7 @@ namespace {
         const float above = v.cloudBase + v.cloudThickness + kCirrusClearance;
         const float cirrusAltitude = above > kCirrusFloor ? above : kCirrusFloor;
 
-        const Light light = ChooseLight(lighting, v);
+        const Light light = ChooseLight(lighting);
         const float shapeGrain = 1.0f / v.cloudSize;
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
@@ -217,7 +220,7 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
         return;
     }
 
-    const Tuning::Values v = Tuning::Evaluate(lighting.timeOfDay);
+    const Tuning::Values v = Tuning::Current();
     Advance(lighting, v, elapsed);
     Draw(pass, shader, view, lighting, v);
 

@@ -29,17 +29,14 @@ halves the moon's size and is otherwise retail. Nothing here changes how the sun
 - **Switching each part.** The mod menu, and the `[SkyOverhaul]` group in `fcse.ini`, holds only
   which parts are on: Sky (Engine or Overhaul), Clouds (Engine, Off or Overhaul) and Sun (Engine, or
   Overhaul for the glare and the afterimage).
-- **Tuning by the hour.** Every value the sky, the clouds and the glare use is kept in
-  `bin\sky-overhaul.ini`, beside `fcse.ini`, which is written on the first launch. The sky's look and the
-  moonlight are set per key moment of the sun's day - Night, Dawn, Sunrise, Morning, Noon, Afternoon,
-  Sunset and Dusk - and blended between the two moments either side of the hour. The clouds and the
-  glare hold for the whole day. `src/tuning.cpp`.
+- **Tuning.** The clouds' and the glare's values are kept in `bin\sky-overhaul.ini`, beside
+  `fcse.ini`, which is written on the first launch. The sky has none: it follows the sun alone.
+  `src/tuning.cpp`.
 - **A window in DevTools' overlay.** With [DevTools](../DevTools) installed, Home shows a Sky Overhaul
-  window that edits all of it, in Sun, Sky and Clouds tabs of sliders and colour pickers. Sun and
-  Clouds hold the values that last the whole day; Sky holds a tab per moment with that moment's sky
-  and moonlight; picking one sets the game's clock to its hour, and the day runs on from there. Each
-  edit is saved to the file when it is let go, and one moment can be shown at every
-  hour while it is tuned. Without DevTools, `fcse.log` says so once and the file is the only way in.
+  window that edits that file in Sun and Clouds tabs of sliders, saving each edit when it is let go.
+  Its Sky tab holds a tab per key moment of the sun's day - Night, Dawn, Sunrise, Morning, Noon,
+  Afternoon, Sunset and Dusk - and picking one sets the game's clock to its hour, from which the day
+  runs on. Without DevTools, `fcse.log` says so once and the file is the only way in.
 
 ## How it is put together
 

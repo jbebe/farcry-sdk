@@ -24,7 +24,6 @@ namespace {
     struct Horizon {
         float toward[3];
         float away[3];
-        float match;
     };
 
     // Written once a frame by the sky and read on whatever thread uploads constants.
@@ -50,30 +49,22 @@ namespace {
         }
 
         Horizon horizon;
-        if (!g_horizon.Latest(horizon) || horizon.match <= 0.0f) {
+        if (!g_horizon.Latest(horizon)) {
             return;
         }
 
         const float* colour = data + (kFogColour - start) * 4;
         const float* range = data + (kFogColourRange - start) * 4;
 
-        // Both ends are moved and the ramp rebuilt between them, because the second register is the
-        // distance from one colour to another rather than a colour itself.
-        float toward[3];
-        float away[3];
-        for (size_t i = 0; i < 3; i++) {
-            toward[i] = colour[i] + (horizon.toward[i] - colour[i]) * horizon.match;
-            away[i] =
-                (colour[i] + range[i]) + (horizon.away[i] - (colour[i] + range[i])) * horizon.match;
-        }
-
-        const float replaced[8] = {toward[0],
-                                   toward[1],
-                                   toward[2],
+        // Both ends are replaced and the ramp rebuilt between them, because the second register is
+        // the distance from one colour to another rather than a colour itself.
+        const float replaced[8] = {horizon.toward[0],
+                                   horizon.toward[1],
+                                   horizon.toward[2],
                                    colour[3],
-                                   away[0] - toward[0],
-                                   away[1] - toward[1],
-                                   away[2] - toward[2],
+                                   horizon.away[0] - horizon.toward[0],
+                                   horizon.away[1] - horizon.toward[1],
+                                   horizon.away[2] - horizon.toward[2],
                                    range[3]};
         set(device, kFogColour, replaced, 2);
         g_tints++;
@@ -119,13 +110,12 @@ bool SkyOverhaul::FogTint::Install() {
     return true;
 }
 
-void SkyOverhaul::FogTint::SetHorizon(const float toward[3], const float away[3], float match) {
+void SkyOverhaul::FogTint::SetHorizon(const float toward[3], const float away[3]) {
     Horizon horizon;
     for (size_t i = 0; i < 3; i++) {
         horizon.toward[i] = toward[i];
         horizon.away[i] = away[i];
     }
-    horizon.match = match;
     g_horizon.Publish(horizon);
     g_have = true;
 }

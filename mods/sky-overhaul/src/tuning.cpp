@@ -1,6 +1,5 @@
 #include "tuning.h"
 
-#include "engine/cloud_layer.h"
 #include "engine/time_of_day.h"
 #include "fcse_api.h"
 
@@ -8,7 +7,6 @@
 
 #include <algorithm>
 #include <charconv>
-#include <cmath>
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
@@ -18,12 +16,6 @@
 
 namespace {
     using SkyOverhaul::Tuning::Values;
-
-    // A scalar is one float and a colour three, linear and allowed above one.
-    enum class Kind { Scalar, Colour };
-
-    // Whether a value holds for the whole day or is set per key moment and blended between them.
-    enum class Span { Day, Moment };
 
     // What a value tunes, which is the window's tab it is drawn in.
     struct Category {
@@ -37,18 +29,15 @@ namespace {
     };
 
     struct Parameter {
-        // The key in the file and the label in the window, unique within its span.
+        // The key in the file and the label in the window.
         const char* key;
         const Group* group;
-        Kind kind;
-        Span span;
         // Its member's offsetof in Values.
         size_t offset;
-        float defaults[3];
-        // A scalar's and a colour's every channel is held to these.
+        float defaultValue;
         float min;
         float max;
-        // A scalar's printf format, which carries its unit.
+        // The printf format, which carries its unit.
         const char* format;
         // Shown when the row is hovered.
         const char* help;
@@ -57,194 +46,89 @@ namespace {
     // A named hour in the sun's day, which has sunrise at 06:00 and sunset at 18:00.
     struct Moment {
         const char* name;
-        float hour;
+        int hour;
     };
-
-    // An hour of the sun's day, the two moments either side of it, and how far it is from the first
-    // toward the second.
-    struct Between {
-        float hour;
-        size_t from;
-        size_t to;
-        float weight;
-    };
-
-    // The most any colour channel is let go, which is several times what the brightest default asks.
-    constexpr float kBrightest = 4.0f;
-
-    constexpr const char* kDaySection = "Day";
 
     constexpr Category kSun = {"Sun"};
-    constexpr Category kSky = {"Sky"};
     constexpr Category kClouds = {"Clouds"};
 
-    // In the order the window's tabs list them.
-    constexpr const Category* kCategories[] = {&kSun, &kSky, &kClouds};
-
-    constexpr Span kDay = Span::Day;
-    constexpr Span kMoment = Span::Moment;
-
-    constexpr Group kAir = {"Air", &kSky};
-    constexpr Group kHorizon = {"Horizon", &kSky};
-    constexpr Group kBelowHorizon = {"Below the horizon", &kSky};
-    constexpr Group kNight = {"Night", &kSky};
     constexpr Group kCloudLayer = {"Cloud layer", &kClouds};
     constexpr Group kHighCloud = {"High cloud", &kClouds};
-    constexpr Group kMoon = {"Moon", &kClouds};
     constexpr Group kSunGlare = {"Sun glare", &kSun};
     constexpr Group kAfterimage = {"Afterimage", &kSun};
 
-    constexpr Parameter Scalar(const Group& group, const char* key, Span span, size_t offset,
-                               float value, float min, float max, const char* format,
-                               const char* help) {
-        return {key, &group, Kind::Scalar, span, offset, {value}, min, max, format, help};
-    }
-
-    constexpr Parameter Colour(const Group& group, const char* key, size_t offset, float red,
-                               float green, float blue, const char* help) {
-        return {key, &group, Kind::Colour, kMoment, offset, {red, green, blue}, 0.0f, kBrightest,
-                "", help};
-    }
-
     // In the order the file and the window list them.
     constexpr Parameter kParameters[] = {
-        Scalar(kAir, "Sky haze", kMoment, offsetof(Values, skyHaze), 1.0f, 0.0f, 2.5f, "%.2f",
-               "How much dust and water the air carries: none is a hard blue sky over a sharp "
-               "horizon, plenty a white one. Storms add to it."),
-        Colour(kAir, "Haze colour", offsetof(Values, hazeColour), 1.0f, 1.0f, 1.0f,
-               "What the light the haze scatters is multiplied by: the glow around the sun and the "
-               "pale of the horizon."),
-        Scalar(kAir, "Sky brightness", kMoment, offsetof(Values, skyBrightness), 1.0f, 0.0f, 3.0f,
-               "%.2f", "How bright the sunlight reaching the air is, against a clear noon sky."),
-        Colour(kAir, "Sky colour", offsetof(Values, skyColour), 1.0f, 1.0f, 1.0f,
-               "What all the light the air scatters is multiplied by."),
-        Scalar(kAir, "Zenith hold", kMoment, offsetof(Values, zenithHold), 1.0f, 0.0f, 1.0f, "%.2f",
-               "How much of the brightness the zenith loses as the sun comes down is given back."),
+        {"Cloud coverage", &kCloudLayer, offsetof(Values, cloudCoverage), 0.41f, 0.0f, 1.0f, "%.2f",
+         "How much of the sky the layer fills."},
+        {"Cloud density", &kCloudLayer, offsetof(Values, cloudDensity), 0.031f, 0.005f, 0.3f, "%.3f",
+         "How solid the cloud is where it is filled."},
+        {"Cloud detail", &kCloudLayer, offsetof(Values, cloudDetail), 0.73f, 0.0f, 1.0f, "%.2f",
+         "How hard the cloud's edges are torn."},
+        {"Cloud haze", &kCloudLayer, offsetof(Values, cloudHaze), 9477.0f, 300.0f, 20000.0f,
+         "%.0f m", "Over how far a cloud turns into the horizon behind it."},
+        {"Cloud base", &kCloudLayer, offsetof(Values, cloudBase), 1013.0f, 100.0f, 4000.0f, "%.0f m",
+         "Where the layer's floor sits."},
+        {"Cloud thickness", &kCloudLayer, offsetof(Values, cloudThickness), 1981.0f, 100.0f, 3000.0f,
+         "%.0f m", "How deep the layer is."},
+        {"Cloud size", &kCloudLayer, offsetof(Values, cloudSize), 7545.0f, 500.0f, 12000.0f,
+         "%.0f m", "How wide one repeat of the shape is, which is how large a cloud reads."},
+        {"Cloud wind", &kCloudLayer, offsetof(Values, cloudWind), 1.0f, 0.0f, 5.0f, "%.2f",
+         "How fast the layer drifts, as a multiple of the engine's wind."},
+        {"Cirrus", &kHighCloud, offsetof(Values, cirrus), 0.33f, 0.0f, 1.0f, "%.2f",
+         "How much of the sky the high sheet of ice cloud reaches across."},
+        {"Cirrus opacity", &kHighCloud, offsetof(Values, cirrusOpacity), 0.1f, 0.0f, 1.0f, "%.2f",
+         "How solid that sheet is where it reaches."},
+        {"Contrails", &kHighCloud, offsetof(Values, contrails), 0.04f, 0.0f, 1.0f, "%.2f",
+         "How strongly the two aircraft trails show."},
 
-        Scalar(kHorizon, "Horizon gradient", kMoment, offsetof(Values, horizonGradient), 1.0f, 0.0f,
-               1.0f, "%.2f",
-               "How far a low sun's horizon turns from the sun's side to the far side's. A high sun "
-               "is never affected."),
-        Colour(kHorizon, "Near horizon colour", offsetof(Values, nearHorizonColour), 1.0f, 1.0f,
-               1.0f, "What the sky toward the horizon is multiplied by on the sun's side."),
-        Scalar(kHorizon, "Near horizon brightness", kMoment,
-               offsetof(Values, nearHorizonBrightness), 1.0f, 0.0f, 3.0f, "%.2f",
-               "How bright the sky toward the horizon is on the sun's side."),
-        Colour(kHorizon, "Far horizon colour", offsetof(Values, farHorizonColour), 1.0f, 1.0f, 1.0f,
-               "What the sky toward the horizon is multiplied by on the side away from the sun."),
-        Scalar(kHorizon, "Far horizon brightness", kMoment, offsetof(Values, farHorizonBrightness),
-               0.3f, 0.0f, 1.0f, "%.2f",
-               "How bright the far side of a low sun's horizon ends up, as a share of the light the "
-               "air sends from there."),
-        Scalar(kHorizon, "Horizon match", kMoment, offsetof(Values, horizonMatch), 1.0f, 0.0f, 1.0f,
-               "%.2f",
-               "How far the world's distant fog is carried from the engine's colour toward the "
-               "sky's horizon."),
+        {"Sun glare strength", &kSunGlare, offsetof(Values, glareStrength), 1.0f, 0.0f, 2.0f, "%.2f",
+         "Peak brightness with the sun dead centre. Zero turns the glare off."},
+        {"Sun glare spread", &kSunGlare, offsetof(Values, glareSpread), 57.0f, 10.0f, 180.0f,
+         "%.0f deg", "How far off centre the sun gets before the glare reaches nothing."},
+        {"Sun glare falloff", &kSunGlare, offsetof(Values, glareFalloff), 2.0f, 1.0f, 8.0f, "%.1f",
+         "How sharply the glare falls away from dead centre."},
+        {"Sun glare veil", &kSunGlare, offsetof(Values, glareVeil), 1.0f, 0.0f, 1.0f, "%.2f",
+         "How much of the glare covers the frame wherever the sun sits in it."},
+        {"Sun glare contrast", &kSunGlare, offsetof(Values, glareContrast), 1.95f, 0.0f, 4.0f,
+         "%.2f", "How hard the contrast is pushed at full dazzle."},
+        {"Sun glare desaturation", &kSunGlare, offsetof(Values, glareDesaturation), 1.29f, 0.0f,
+         3.0f, "%.2f",
+         "How fast colour drains as the dazzle rises. One reaches grey only at full dazzle."},
+        {"Sun elevation ramp", &kSunGlare, offsetof(Values, elevationRamp), 40.0f, 1.0f, 45.0f,
+         "%.0f deg", "The sun's elevation at which the glare reaches full strength."},
 
-        Scalar(kBelowHorizon, "Below horizon brown", kMoment, offsetof(Values, groundBrown), 0.5f,
-               0.0f, 1.0f, "%.2f",
-               "How far the ground the world never drew, below a low sun's far horizon, turns from "
-               "the horizon's colour toward the one below."),
-        Colour(kBelowHorizon, "Below horizon colour", offsetof(Values, groundColour), 1.236f,
-               0.939f, 0.692f,
-               "That ground's colour at a brightness of one; it keeps the horizon's brightness."),
-
-        Scalar(kNight, "Night sky", kMoment, offsetof(Values, nightSky), 1.0f, 0.0f, 3.0f, "%.2f",
-               "How dark the sky may go, as a multiple of the colour below. It only fills in where "
-               "the air comes out darker."),
-        Colour(kNight, "Night sky colour", offsetof(Values, nightSkyColour), 0.039f, 0.055f, 0.094f,
-               "The darkest the sky is let go: the stars' own backdrop."),
-        Scalar(kNight, "Twilight sky", kMoment, offsetof(Values, twilightSky), 1.0f, 0.0f, 3.0f,
-               "%.2f",
-               "How far that floor is lifted toward the colour below from twelve degrees below the "
-               "horizon to six above."),
-        Colour(kNight, "Twilight colour", offsetof(Values, twilightColour), 0.50f, 1.04f, 2.11f,
-               "The colour of that lift at a luminance of one."),
-
-        Scalar(kMoon, "Moonlight", kMoment, offsetof(Values, moonlight), 1.0f, 0.0f, 1.0f, "%.2f",
-               "How strongly the moon lights the clouds once the sun has set."),
-        Colour(kMoon, "Moon colour", offsetof(Values, moonColour), 1.6f, 1.8f, 2.0f,
-               "The moonlight on the clouds and the glow around the moon, at full strength."),
-        Scalar(kMoon, "Moon glow", kMoment, offsetof(Values, moonGlow), 0.25f, 0.0f, 1.0f, "%.2f",
-               "How brightly the air glows around the moon."),
-
-        Scalar(kCloudLayer, "Cloud coverage", kDay, offsetof(Values, cloudCoverage), 0.45f, 0.0f,
-               1.0f, "%.2f", "How much of the sky the layer fills."),
-        Scalar(kCloudLayer, "Cloud density", kDay, offsetof(Values, cloudDensity), 0.04f, 0.005f,
-               0.3f, "%.3f", "How solid the cloud is where it is filled."),
-        Scalar(kCloudLayer, "Cloud detail", kDay, offsetof(Values, cloudDetail), 0.35f, 0.0f, 1.0f,
-               "%.2f", "How hard the cloud's edges are torn."),
-        Scalar(kCloudLayer, "Cloud haze", kDay, offsetof(Values, cloudHaze), 3000.0f, 300.0f,
-               20000.0f, "%.0f m", "Over how far a cloud turns into the horizon behind it."),
-        Scalar(kCloudLayer, "Cloud base", kDay, offsetof(Values, cloudBase), 1200.0f, 100.0f,
-               4000.0f, "%.0f m", "Where the layer's floor sits."),
-        Scalar(kCloudLayer, "Cloud thickness", kDay, offsetof(Values, cloudThickness), 700.0f,
-               100.0f, 3000.0f, "%.0f m", "How deep the layer is."),
-        Scalar(kCloudLayer, "Cloud size", kDay, offsetof(Values, cloudSize), 4000.0f, 500.0f,
-               12000.0f, "%.0f m", "How wide one repeat of the shape is, which is how large a cloud reads."),
-        Scalar(kCloudLayer, "Cloud wind", kDay, offsetof(Values, cloudWind), 1.0f, 0.0f, 5.0f,
-               "%.2f", "How fast the layer drifts, as a multiple of the engine's wind."),
-        Scalar(kHighCloud, "Cirrus", kDay, offsetof(Values, cirrus), 0.35f, 0.0f, 1.0f, "%.2f",
-               "How much of the sky the high sheet of ice cloud reaches across."),
-        Scalar(kHighCloud, "Cirrus opacity", kDay, offsetof(Values, cirrusOpacity), 0.7f, 0.0f,
-               1.0f, "%.2f", "How solid that sheet is where it reaches."),
-        Scalar(kHighCloud, "Contrails", kDay, offsetof(Values, contrails), 0.6f, 0.0f, 1.0f, "%.2f",
-               "How strongly the two aircraft trails show."),
-
-        Scalar(kSunGlare, "Sun glare strength", kDay, offsetof(Values, glareStrength), 1.0f, 0.0f,
-               2.0f, "%.2f", "Peak brightness with the sun dead centre. Zero turns the glare off."),
-        Scalar(kSunGlare, "Sun glare spread", kDay, offsetof(Values, glareSpread), 57.0f, 10.0f,
-               180.0f, "%.0f deg", "How far off centre the sun gets before the glare reaches nothing."),
-        Scalar(kSunGlare, "Sun glare falloff", kDay, offsetof(Values, glareFalloff), 2.0f, 1.0f,
-               8.0f, "%.1f", "How sharply the glare falls away from dead centre."),
-        Scalar(kSunGlare, "Sun glare veil", kDay, offsetof(Values, glareVeil), 1.0f, 0.0f, 1.0f,
-               "%.2f", "How much of the glare covers the frame wherever the sun sits in it."),
-        Scalar(kSunGlare, "Sun glare contrast", kDay, offsetof(Values, glareContrast), 1.95f, 0.0f,
-               4.0f, "%.2f", "How hard the contrast is pushed at full dazzle."),
-        Scalar(kSunGlare, "Sun glare desaturation", kDay, offsetof(Values, glareDesaturation),
-               1.29f, 0.0f, 3.0f, "%.2f",
-               "How fast colour drains as the dazzle rises. One reaches grey only at full dazzle."),
-        Scalar(kSunGlare, "Sun elevation ramp", kDay, offsetof(Values, elevationRamp), 40.0f, 1.0f,
-               45.0f, "%.0f deg", "The sun's elevation at which the glare reaches full strength."),
-
-        Scalar(kAfterimage, "Afterimage strength", kDay, offsetof(Values, afterimageStrength), 1.0f,
-               0.0f, 1.0f, "%.2f", "How strongly the burned-in view shows once the player looks away."),
-        Scalar(kAfterimage, "Afterimage seconds", kDay, offsetof(Values, afterimageSeconds), 10.0f,
-               1.0f, 10.0f, "%.1f s",
-               "The longest the exposure builds up to, which is also how long it takes to fade."),
-        Scalar(kAfterimage, "Afterimage darkness", kDay, offsetof(Values, afterimageDarkness), 0.9f,
-               0.0f, 1.0f, "%.2f", "How darkly the bleached core blocks the view at its peak."),
-        Scalar(kAfterimage, "Afterimage tint", kDay, offsetof(Values, afterimageTint), 0.35f, 0.0f,
-               1.0f, "%.2f", "How strongly the faint negative surround shows."),
-        Scalar(kAfterimage, "Afterimage saturation", kDay, offsetof(Values, afterimageSaturation),
-               0.30f, 0.0f, 1.0f, "%.2f", "How much of that negative's colour survives."),
-        Scalar(kAfterimage, "Afterimage size", kDay, offsetof(Values, afterimageSize), 0.25f, 0.05f,
-               1.0f, "%.2f", "How wide the bleached region is, as a share of the glare's reach."),
-        Scalar(kAfterimage, "Afterimage haze", kDay, offsetof(Values, afterimageHaze), 0.35f, 0.0f,
-               1.0f, "%.2f", "How far the whole picture's range compresses while the eye recovers."),
+        {"Afterimage strength", &kAfterimage, offsetof(Values, afterimageStrength), 1.0f, 0.0f, 1.0f,
+         "%.2f", "How strongly the burned-in view shows once the player looks away."},
+        {"Afterimage seconds", &kAfterimage, offsetof(Values, afterimageSeconds), 10.0f, 1.0f,
+         10.0f, "%.1f s",
+         "The longest the exposure builds up to, which is also how long it takes to fade."},
+        {"Afterimage darkness", &kAfterimage, offsetof(Values, afterimageDarkness), 0.9f, 0.0f, 1.0f,
+         "%.2f", "How darkly the bleached core blocks the view at its peak."},
+        {"Afterimage tint", &kAfterimage, offsetof(Values, afterimageTint), 0.35f, 0.0f, 1.0f,
+         "%.2f", "How strongly the faint negative surround shows."},
+        {"Afterimage saturation", &kAfterimage, offsetof(Values, afterimageSaturation), 0.30f, 0.0f,
+         1.0f, "%.2f", "How much of that negative's colour survives."},
+        {"Afterimage size", &kAfterimage, offsetof(Values, afterimageSize), 0.25f, 0.05f, 1.0f,
+         "%.2f", "How wide the bleached region is, as a share of the glare's reach."},
+        {"Afterimage haze", &kAfterimage, offsetof(Values, afterimageHaze), 0.35f, 0.0f, 1.0f,
+         "%.2f", "How far the whole picture's range compresses while the eye recovers."},
     };
 
     constexpr Moment kMoments[] = {
-        {"Night", 0.0f},  {"Dawn", 5.0f},       {"Sunrise", 6.0f}, {"Morning", 8.0f},
-        {"Noon", 12.0f},  {"Afternoon", 16.0f}, {"Sunset", 18.0f}, {"Dusk", 19.0f},
+        {"Night", 0}, {"Dawn", 5},       {"Sunrise", 6}, {"Morning", 8},
+        {"Noon", 12}, {"Afternoon", 16}, {"Sunset", 18}, {"Dusk", 19},
     };
 
-    Values g_day = {};
-    Values g_moments[std::size(kMoments)] = {};
-    // The moment shown at every hour while it is tuned, or -1. Never stored.
-    int g_preview = -1;
+    Values g_values = {};
     // The moment whose tab was open when the moments last drew, or -1 before they first did.
     int g_openMoment = -1;
     // Set by an edit and cleared by the save that follows once nothing is held, so a slider writes
     // the file when it is let go rather than on every frame it moves.
     bool g_unsaved = false;
 
-    float* Field(Values& values, const Parameter& parameter) {
-        return reinterpret_cast<float*>(reinterpret_cast<char*>(&values) + parameter.offset);
-    }
-
-    int Channels(const Parameter& parameter) {
-        return parameter.kind == Kind::Colour ? 3 : 1;
+    float* Field(const Parameter& parameter) {
+        return reinterpret_cast<float*>(reinterpret_cast<char*>(&g_values) + parameter.offset);
     }
 
     // Beside fcse.ini, in the folder the process was started from.
@@ -273,76 +157,13 @@ namespace {
         return text.substr(first, text.find_last_not_of(" \t\r") - first + 1);
     }
 
-    // Leaves the row as it was when the text is not a value of its kind.
-    void ReadValue(const Parameter& parameter, std::string_view text, Values& values) {
-        float* field = Field(values, parameter);
-        float read[3];
-        const char* at = text.data();
-        const char* end = at + text.size();
-        for (int channel = 0; channel < Channels(parameter); channel++) {
-            at = std::find_if(at, end, [](char c) { return c != ' '; });
-            const auto [next, error] = std::from_chars(at, end, read[channel]);
-            if (error != std::errc{}) {
-                return;
-            }
-            at = next;
-        }
-        for (int channel = 0; channel < Channels(parameter); channel++) {
-            field[channel] = std::clamp(read[channel], parameter.min, parameter.max);
-        }
-    }
-
-    void WriteSection(std::string& out, const char* name, Span span, Values& values) {
-        out.append("\n[").append(name).append("]\n");
-        for (const Parameter& parameter : kParameters) {
-            if (parameter.span != span) {
-                continue;
-            }
-            out.append(parameter.key).append(" = ");
-            const float* field = Field(values, parameter);
-            for (int channel = 0; channel < Channels(parameter); channel++) {
-                char text[32];
-                const char* end = std::to_chars(text, text + sizeof(text), field[channel]).ptr;
-                out.append(channel == 0 ? "" : " ").append(text, end - text);
-            }
-            out.append("\n");
-        }
-    }
-
-    // The stored values a section of the file holds, or null for one it does not know.
-    Values* Section(std::string_view name) {
-        for (size_t i = 0; i < std::size(kMoments); i++) {
-            if (name == kMoments[i].name) {
-                return &g_moments[i];
-            }
-        }
-        return name == kDaySection ? &g_day : nullptr;
-    }
-
-    // Where a time-of-day coordinate falls among the moments, wrapping across midnight.
-    Between Locate(float timeOfDay) {
-        const float hour =
-            std::isfinite(timeOfDay) ? (timeOfDay - std::floor(timeOfDay)) * 24.0f : 0.0f;
-
-        size_t from = std::size(kMoments) - 1;
-        for (size_t i = 0; i < std::size(kMoments); i++) {
-            if (kMoments[i].hour <= hour) {
-                from = i;
-            }
-        }
-        const size_t to = (from + 1) % std::size(kMoments);
-
-        const float start = kMoments[from].hour - (kMoments[from].hour > hour ? 24.0f : 0.0f);
-        const float end = kMoments[to].hour + (kMoments[to].hour <= start ? 24.0f : 0.0f);
-        return {hour, from, to, (hour - start) / (end - start)};
-    }
-
     void Save() {
         std::string text = "; Sky Overhaul. Edited in its window in DevTools' overlay; edits made "
                            "here by hand\n; are read at launch or by that window's Reload.\n";
-        WriteSection(text, kDaySection, Span::Day, g_day);
-        for (size_t i = 0; i < std::size(kMoments); i++) {
-            WriteSection(text, kMoments[i].name, Span::Moment, g_moments[i]);
+        for (const Parameter& parameter : kParameters) {
+            char value[32];
+            const char* end = std::to_chars(value, value + sizeof(value), *Field(parameter)).ptr;
+            text.append(parameter.key).append(" = ").append(value, end - value).append("\n");
         }
 
         std::ofstream file(File(), std::ios::trunc);
@@ -353,179 +174,75 @@ namespace {
         }
     }
 
-    // True when the row changed.
-    bool DrawRow(const Parameter& parameter, Values& values) {
-        float* field = Field(values, parameter);
-        bool changed = false;
-        switch (parameter.kind) {
-        case Kind::Scalar:
-            changed = ImGui::SliderFloat(parameter.key, field, parameter.min, parameter.max,
-                                         parameter.format, ImGuiSliderFlags_AlwaysClamp);
-            break;
-        case Kind::Colour:
-            changed = ImGui::ColorEdit3(parameter.key, field,
-                                        ImGuiColorEditFlags_Float | ImGuiColorEditFlags_HDR);
-            // HDR leaves the picker unbounded above.
-            for (int channel = 0; changed && channel < 3; channel++) {
-                field[channel] = std::clamp(field[channel], parameter.min, parameter.max);
-            }
-            break;
-        }
-        ImGui::SetItemTooltip("%s", parameter.help);
-        return changed;
-    }
-
-    // Every row of a span and a category, under a heading wherever the group changes. A titled
-    // category's name goes above its first row, so one with no rows draws nothing.
-    bool DrawGroups(Span span, const Category& category, bool titled, Values& values) {
+    // Every row of a category, under a heading wherever the group changes. True when one changed.
+    bool DrawGroups(const Category& category) {
         bool changed = false;
         const Group* group = nullptr;
         for (const Parameter& parameter : kParameters) {
-            if (parameter.span != span || parameter.group->category != &category) {
+            if (parameter.group->category != &category) {
                 continue;
-            }
-            if (titled && group == nullptr) {
-                ImGui::Spacing();
-                ImGui::TextColored(ImGui::GetStyleColorVec4(ImGuiCol_HeaderActive), "%s",
-                                   category.name);
             }
             if (parameter.group != group) {
                 group = parameter.group;
                 ImGui::SeparatorText(group->name);
             }
-            changed |= DrawRow(parameter, values);
+            changed |= ImGui::SliderFloat(parameter.key, Field(parameter), parameter.min,
+                                          parameter.max, parameter.format,
+                                          ImGuiSliderFlags_AlwaysClamp);
+            ImGui::SetItemTooltip("%s", parameter.help);
         }
         return changed;
     }
 
-    void DrawNow() {
-        SkyOverhaul::CloudLayer::Lighting lighting;
-        if (!SkyOverhaul::CloudLayer::Latest(lighting)) {
-            ImGui::TextDisabled("No world has been drawn yet.");
-            return;
-        }
-        const Between between = Locate(lighting.timeOfDay);
-        const int minutes = static_cast<int>(between.hour * 60.0f);
-        ImGui::Text("Sun's time %02d:%02d - %.0f%% %s, %.0f%% %s", minutes / 60, minutes % 60,
-                    (1.0f - between.weight) * 100.0f, kMoments[between.from].name,
-                    between.weight * 100.0f, kMoments[between.to].name);
-    }
-
-    // A moment's header row: its hour, whether it is shown at every hour, and copying it to the
-    // others. Picking its tab sends the clock to its hour. True when the copy was made.
-    bool DrawMomentHeader(size_t index) {
-        const int moment = static_cast<int>(index);
-        const int minutes = static_cast<int>(kMoments[index].hour * 60.0f);
-        if (g_openMoment >= 0 && g_openMoment != moment) {
-            SkyOverhaul::TimeOfDay::Set(minutes);
-        }
-        g_openMoment = moment;
-        ImGui::Text("At %02d:%02d", minutes / 60, minutes % 60);
-
-        // While a moment is shown at every hour, it is the open tab's.
-        bool shown = g_preview >= 0;
-        if (shown) {
-            g_preview = moment;
-        }
-        ImGui::SameLine();
-        if (ImGui::Checkbox("Show at every hour", &shown)) {
-            g_preview = shown ? moment : -1;
-        }
-
-        ImGui::SameLine();
-        if (ImGui::Button("Copy to every moment")) {
-            ImGui::OpenPopup("copy");
-        }
-        bool copied = false;
-        if (ImGui::BeginPopup("copy")) {
-            ImGui::Text("Overwrite every other moment with %s?", kMoments[index].name);
-            if (ImGui::Button("Overwrite")) {
-                const Values source = g_moments[index];
-                std::fill(std::begin(g_moments), std::end(g_moments), source);
-                copied = true;
-                ImGui::CloseCurrentPopup();
-            }
-            ImGui::EndPopup();
-        }
-        return copied;
-    }
-
-    // A tab per moment, each listing its values category by category. True when one changed.
-    bool DrawMoments() {
-        DrawNow();
-
+    // A tab per moment. Picking one sends the game's clock to its hour, from which the day runs on.
+    void DrawMoments() {
         // Eight moments do not fit across the window, so they scroll rather than cut their names.
         if (!ImGui::BeginTabBar("moments", ImGuiTabBarFlags_FittingPolicyScroll |
                                                ImGuiTabBarFlags_TabListPopupButton)) {
-            return false;
+            return;
         }
-        bool changed = false;
-        for (size_t i = 0; i < std::size(kMoments); i++) {
+        for (int i = 0; i < static_cast<int>(std::size(kMoments)); i++) {
             if (!ImGui::BeginTabItem(kMoments[i].name)) {
                 continue;
             }
-            changed |= DrawMomentHeader(i);
-            for (const Category* category : kCategories) {
-                changed |= DrawGroups(Span::Moment, *category, true, g_moments[i]);
+            if (g_openMoment >= 0 && g_openMoment != i) {
+                SkyOverhaul::TimeOfDay::Set(kMoments[i].hour * 60);
             }
+            g_openMoment = i;
+            ImGui::Text("At %02d:00", kMoments[i].hour);
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
-        return changed;
     }
 }
 
-SkyOverhaul::Tuning::Values SkyOverhaul::Tuning::Evaluate(float timeOfDay) {
-    Between between = Locate(timeOfDay);
-    if (g_preview >= 0) {
-        between.from = between.to = static_cast<size_t>(g_preview);
-    }
-    Values& from = g_moments[between.from];
-    Values& to = g_moments[between.to];
-
-    Values result = g_day;
-    for (const Parameter& parameter : kParameters) {
-        if (parameter.span != Span::Moment) {
-            continue;
-        }
-        const float* a = Field(from, parameter);
-        const float* b = Field(to, parameter);
-        float* out = Field(result, parameter);
-        for (int channel = 0; channel < Channels(parameter); channel++) {
-            out[channel] = a[channel] + (b[channel] - a[channel]) * between.weight;
-        }
-    }
-    return result;
+SkyOverhaul::Tuning::Values SkyOverhaul::Tuning::Current() {
+    return g_values;
 }
 
 void SkyOverhaul::Tuning::Load() {
-    Values defaults = {};
     for (const Parameter& parameter : kParameters) {
-        std::copy_n(parameter.defaults, Channels(parameter), Field(defaults, parameter));
+        *Field(parameter) = parameter.defaultValue;
     }
-    g_day = defaults;
-    std::fill(std::begin(g_moments), std::end(g_moments), defaults);
 
     std::ifstream file(File());
     FCSE::Logf("tuning: %s %s", file.is_open() ? "reading" : "creating", Path());
 
-    Values* section = nullptr;
+    // A value that is not a number leaves its row at the default.
     std::string line;
     while (std::getline(file, line)) {
         const std::string_view text = Trim(line);
-        if (text.size() >= 2 && text.front() == '[' && text.back() == ']') {
-            section = Section(text.substr(1, text.size() - 2));
-            continue;
-        }
         const size_t equals = text.find('=');
-        if (section == nullptr || equals == std::string_view::npos) {
+        if (equals == std::string_view::npos) {
             continue;
         }
-        const Span span = section == &g_day ? Span::Day : Span::Moment;
         const std::string_view key = Trim(text.substr(0, equals));
+        const std::string_view value = Trim(text.substr(equals + 1));
         for (const Parameter& parameter : kParameters) {
-            if (parameter.span == span && key == parameter.key) {
-                ReadValue(parameter, Trim(text.substr(equals + 1)), *section);
+            float read = 0.0f;
+            if (key == parameter.key &&
+                std::from_chars(value.data(), value.data() + value.size(), read).ec == std::errc{}) {
+                *Field(parameter) = std::clamp(read, parameter.min, parameter.max);
             }
         }
     }
@@ -535,17 +252,18 @@ void SkyOverhaul::Tuning::Load() {
 
 void SkyOverhaul::Tuning::DrawWindow(void*) {
     ImGui::PushItemWidth(-ImGui::GetFontSize() * 12.0f);
-    bool changed = false;
 
     if (ImGui::BeginTabBar("categories")) {
-        for (const Category* category : kCategories) {
-            if (!ImGui::BeginTabItem(category->name)) {
-                continue;
-            }
-            changed |= DrawGroups(Span::Day, *category, false, g_day);
-            if (category == &kSky) {
-                changed |= DrawMoments();
-            }
+        if (ImGui::BeginTabItem(kSun.name)) {
+            g_unsaved |= DrawGroups(kSun);
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem("Sky")) {
+            DrawMoments();
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem(kClouds.name)) {
+            g_unsaved |= DrawGroups(kClouds);
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
@@ -559,7 +277,6 @@ void SkyOverhaul::Tuning::DrawWindow(void*) {
     ImGui::TextDisabled("%s", Path());
     ImGui::PopItemWidth();
 
-    g_unsaved |= changed;
     if (g_unsaved && !ImGui::IsAnyItemActive()) {
         Save();
         g_unsaved = false;

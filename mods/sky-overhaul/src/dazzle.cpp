@@ -121,7 +121,6 @@ namespace {
         float verticalScale;
         float elevation;
         float night;
-        float timeOfDay;
     };
 
     SunInView g_thisFrame = {};
@@ -159,7 +158,6 @@ namespace {
         out.verticalScale = view.verticalScale;
         out.elevation = sun[2];
         out.night = lighting.night;
-        out.timeOfDay = lighting.timeOfDay;
         if (cameraLength > 0.0001f) {
             out.cosAngle = (camera[0] * sun[0] + camera[1] * sun[1] + camera[2] * sun[2]) /
                            cameraLength;
@@ -520,7 +518,7 @@ void SkyOverhaul::Dazzle::OnScenePass(const Frame::Pass& pass) {
 
     // Nothing outside the spread can read the answer, and the margin leaves the queries long
     // enough to come back before the angle brings them into use.
-    const Tuning::Values v = Tuning::Evaluate(g_thisFrame.timeOfDay);
+    const Tuning::Values v = Tuning::Current();
     const float sampled = std::clamp(Radians(v.glareSpread) + kSampleMarginRadians, 0.0f, kPi);
     if (g_thisFrame.cosAngle <= std::cos(sampled)) {
         return;
@@ -537,7 +535,7 @@ void SkyOverhaul::Dazzle::OnFinalPass(const Frame::Pass& pass) {
     const float elapsed = g_clock.Lap();
     // Switched off reads as a frame with no world in it, which also clears what was burned in.
     const bool live = g_enabled && pass.live;
-    const Tuning::Values v = Tuning::Evaluate(g_thisFrame.timeOfDay);
+    const Tuning::Values v = Tuning::Current();
     const Glare glare = live ? Measure(v) : Glare{};
     const float afterimage = AdvanceAfterimage(glare, v, live, elapsed);
     if (glare.intensity > 0.002f || afterimage > 0.002f) {

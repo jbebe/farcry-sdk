@@ -88,8 +88,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // Before any engine code runs, so the first frame already draws with the stored values.
     SkyOverhaul::Tuning::Load();
 
-    // Only which parts are on; every value they draw with is tuned in bin\sky-overhaul.ini. Each
-    // callback fires from inside RegisterSettings with what fcse.ini holds.
+    // Only which parts are on; the clouds' and the glare's values are tuned in bin\sky-overhaul.ini.
+    // Each callback fires from inside RegisterSettings with what fcse.ini holds.
     static const FCSE_Setting settings[] = {
         {"Sky", FCSE_CHOICE(1), &OnSkyChanged, nullptr, kModes, std::size(kModes)},
         {"Clouds", FCSE_CHOICE(2), &OnCloudsChanged, nullptr, kCloudModes, std::size(kCloudModes)},
