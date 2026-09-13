@@ -45,9 +45,10 @@ namespace {
     }
 
     void __cdecl OnCloudsChanged(const FCSE_SettingValue* value, void*) {
-        SkyOverhaul::CloudLayer::SetMode(value->asChoice == 0
-                                             ? SkyOverhaul::CloudLayer::Mode::Engine
-                                             : SkyOverhaul::CloudLayer::Mode::Off);
+        using SkyOverhaul::CloudLayer::Mode;
+        SkyOverhaul::CloudLayer::SetMode(value->asChoice == 0   ? Mode::Engine
+                                         : value->asChoice == 1 ? Mode::Off
+                                                                : Mode::MaskOnly);
         SkyOverhaul::Clouds::SetEnabled(value->asChoice == 2);
     }
 

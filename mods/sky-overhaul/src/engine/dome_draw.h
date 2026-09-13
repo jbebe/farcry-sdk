@@ -6,6 +6,9 @@
 // submitted, dropped, and a sky of ours drawn in its place. Everything the engine draws after it
 // then lands on our sky exactly as it landed on the engine's.
 //
+// The same hook replaces the god-ray mask's cloud draw, the one draw that multiplies its target by
+// what it lets through, so that the mask follows our clouds rather than the engine's.
+//
 // See docs/docs/engine-internals/presentation-and-input.md for what named that call.
 #pragma once
 
@@ -32,6 +35,11 @@ bool Install(SubstituteFn substitute);
 
 // Takes effect on the next draw.
 void SetMode(Mode mode);
+
+// Draws in place of the god-ray mask's cloud draw, with the device set as that draw found it. True
+// means it drew, and the engine's draw is dropped.
+void SetMaskSubstitute(SubstituteFn mask);
+
 // How many domes have been replaced. A count that stops climbing while the mode is Overhaul is a
 // dome that stopped being recognised, which is the one failure that would otherwise be silent.
 uint32_t SubstituteCount();

@@ -89,10 +89,12 @@ namespace {
         out.timeOfDay = *Field(state, kTimeOfDay);
     }
 
+    // `mask` holds, in its low byte, the MASK_DESTCOLOR flag the god-ray mask pass submits with.
     void __fastcall SubmitCloudsDetour(void* self, void* unused, uint32_t a2, uint32_t a3,
                                        uint32_t a4, uint32_t a5, uint32_t a6, const uint8_t* state,
                                        uint32_t a8, uint32_t a9, uint32_t a10, uint32_t a11,
-                                       uint32_t a12, uint32_t a13) {
+                                       uint32_t mask, uint32_t a13) {
+        using SkyOverhaul::CloudLayer::Mode;
         if (state != nullptr) {
             SkyOverhaul::CloudLayer::Lighting lighting = {};
             Read(state, lighting);
@@ -102,8 +104,8 @@ namespace {
 
         // Returning here is what the engine itself does for a world with no cloud layers enabled:
         // the packets are never appended, so nothing downstream has anything to draw.
-        if (g_mode == SkyOverhaul::CloudLayer::Mode::Engine) {
-            g_original(self, unused, a2, a3, a4, a5, a6, state, a8, a9, a10, a11, a12, a13);
+        if (g_mode == Mode::Engine || (g_mode == Mode::MaskOnly && (mask & 0xFF) != 0)) {
+            g_original(self, unused, a2, a3, a4, a5, a6, state, a8, a9, a10, a11, mask, a13);
         }
     }
 }
@@ -148,6 +150,8 @@ uint32_t SkyOverhaul::CloudLayer::SubmitCount() {
 
 void SkyOverhaul::CloudLayer::SetMode(Mode mode) {
     g_mode = mode;
-    FCSE::Logf("clouds: %s", mode == Mode::Engine ? "the engine draws its own clouds"
-                                                  : "the engine's clouds are suppressed");
+    FCSE::Logf("clouds: %s", mode == Mode::Engine   ? "the engine draws its own clouds"
+                             : mode == Mode::Off    ? "the engine's clouds are suppressed"
+                                                    : "the engine's clouds are suppressed but for "
+                                                      "the god-ray mask");
 }

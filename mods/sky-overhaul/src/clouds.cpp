@@ -5,6 +5,7 @@
 #include "engine/camera.h"
 #include "engine/clock.h"
 #include "engine/cloud_layer.h"
+#include "engine/dome_draw.h"
 #include "engine/noise.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
@@ -12,6 +13,7 @@
 #include "tuning.h"
 
 #include "clouds_cover_ps.h"
+#include "clouds_mask_ps.h"
 #include "clouds_ps.h"
 
 #include <algorithm>
@@ -104,6 +106,7 @@ namespace {
 
     SkyOverhaul::PixelShader g_shader{"clouds", g_cloudsPixelShader};
     SkyOverhaul::PixelShader g_coverShader{"clouds cover", g_cloudsCoverPixelShader};
+    SkyOverhaul::PixelShader g_maskShader{"clouds mask", g_cloudsMaskPixelShader};
     SkyOverhaul::Stopwatch g_clock;
     SkyOverhaul::Heartbeat g_heartbeat{2.0f};
 
@@ -253,6 +256,7 @@ namespace {
 
 void SkyOverhaul::Clouds::Install() {
     Noise::Start();
+    DomeDraw::SetMaskSubstitute(&DrawMask);
 }
 
 void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
@@ -296,10 +300,27 @@ bool SkyOverhaul::Clouds::DrawCover(IDirect3DDevice9* device, float left, float 
     return guard.ClipQuad(depth, g_corners, left, top, right, bottom);
 }
 
+bool SkyOverhaul::Clouds::DrawMask(IDirect3DDevice9* device) {
+    IDirect3DPixelShader9* shader = g_enabled && g_drawn ? g_maskShader.Get(device) : nullptr;
+    if (shader == nullptr) {
+        return false;
+    }
+    ScreenDraw draw(device, kFirstConstant, kConstantCount);
+    Bind(device, shader);
+
+    // As the engine's own mask clouds blend: the mask multiplied down by the cover, over the sky only.
+    device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
+    device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
+    device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR);
+    return draw.ClipQuad(kSkyDepth, g_corners);
+}
+
 void SkyOverhaul::Clouds::ReleaseDeviceObjects() {
     Noise::ReleaseDeviceObjects();
     g_shader.Release();
     g_coverShader.Release();
+    g_maskShader.Release();
 }
 
 void SkyOverhaul::Clouds::SetEnabled(bool enabled) {

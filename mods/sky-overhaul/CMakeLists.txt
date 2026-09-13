@@ -56,6 +56,7 @@ set(SHADER_PASSES
   "clip_quad.fx:MainVS:vs_3_0:clip_quad_vs.h:g_clipQuadVertexShader"
   "clouds.fx:MainPS:ps_3_0:clouds_ps.h:g_cloudsPixelShader"
   "clouds.fx:CoverPS:ps_3_0:clouds_cover_ps.h:g_cloudsCoverPixelShader"
+  "clouds.fx:MaskPS:ps_3_0:clouds_mask_ps.h:g_cloudsMaskPixelShader"
   "sky.fx:MainPS:ps_3_0:sky_ps.h:g_skyPixelShader")
 
 set(SHADER_HEADERS "")

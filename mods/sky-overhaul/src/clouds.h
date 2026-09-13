@@ -17,6 +17,10 @@ void OnScenePass(const Frame::Pass& pass);
 bool DrawCover(IDirect3DDevice9* device, float left, float top, float right, float bottom,
                float depth);
 
+// Draws the clouds' cover into the god-ray mask, multiplying it by what the clouds let through.
+// False while no clouds are being drawn.
+bool DrawMask(IDirect3DDevice9* device);
+
 // Surrenders what belongs to the device, before it is reset.
 void ReleaseDeviceObjects();
 

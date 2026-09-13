@@ -14,6 +14,8 @@ namespace SkyOverhaul::CloudLayer {
 enum class Mode {
     Engine,
     Off,
+    // Suppressed everywhere but the god-ray mask pass, whose cloud draw is there to be replaced.
+    MaskOnly,
 };
 
 // The cloud lighting for one frame, as the environment manager left it: the world's presets

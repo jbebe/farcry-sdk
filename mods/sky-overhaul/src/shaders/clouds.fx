@@ -408,14 +408,13 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     return float4(colour * Eye.w, 1.0f - cover);
 }
 
-// Discards a pixel with the likelihood that the clouds, as MainPS draws them, cover its ray.
-float4 CoverPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
+// How much of a ray the clouds cover, as MainPS draws them, with the march offset by `dither`.
+float Cover(float3 rayIn, float dither) {
     float3 ray = normalize(rayIn);
     float enter;
     float stride;
     float reach;
     Span(ray, enter, stride, reach);
-    float dither = Dither(screen);
 
     float transmittance = 1.0f;
     [loop] for (int i = 0; i < VIEW_STEPS; i++) {
@@ -432,8 +431,17 @@ float4 CoverPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
 
     float cirrusCover = 0.0f;
     HighCloud(ray, dot(ray, Light.xyz), 0.0f, cirrusCover);
-    cover += cirrusCover * (1.0f - cover);
+    return cover + cirrusCover * (1.0f - cover);
+}
 
-    clip(dither - cover);
+// Discards a pixel with the likelihood that the clouds cover its ray.
+float4 CoverPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
+    float dither = Dither(screen);
+    clip(dither - Cover(rayIn, dither));
     return 0.0f;
+}
+
+// What the clouds cover of a pixel's ray, for the god-ray mask to be multiplied down by.
+float4 MaskPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
+    return Cover(rayIn, Dither(screen));
 }

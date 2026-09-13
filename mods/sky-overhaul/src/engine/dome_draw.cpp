@@ -27,6 +27,7 @@ namespace {
 
     DrawIndexedPrimitiveFn g_original = nullptr;
     SkyOverhaul::DomeDraw::SubstituteFn g_substitute = nullptr;
+    SkyOverhaul::DomeDraw::SubstituteFn g_maskSubstitute = nullptr;
     SkyOverhaul::DomeDraw::Mode g_mode = SkyOverhaul::DomeDraw::Mode::Engine;
 
     uint32_t g_substitutions = 0;
@@ -35,6 +36,7 @@ namespace {
     // pass - the world's own and the one behind an open menu - and each of them needs its own sky.
     // No pass has this serial, so the first dome of the session is not mistaken for a second one.
     uint32_t g_drawnPass = 0xFFFFFFFFu;
+    uint32_t g_maskedPass = 0xFFFFFFFFu;
 
     // Everything here is on the path every indexed draw in the process takes, some seventeen
     // hundred of them a frame, so the whole of it is two compares and a mode until a draw matches.
@@ -71,11 +73,46 @@ namespace {
         return drawn;
     }
 
+    // The mask's clouds are the one strip, measured over whole frames, that blends as zero over the
+    // inverse of its own colour. Strips are rare, so the blend is only read for those.
+    bool SubstituteMask(IDirect3DDevice9* device, D3DPRIMITIVETYPE type) {
+        if (type != D3DPT_TRIANGLESTRIP || g_maskSubstitute == nullptr) {
+            return false;
+        }
+        DWORD source = 0;
+        DWORD destination = 0;
+        DWORD blend = FALSE;
+        device->GetRenderState(D3DRS_SRCBLEND, &source);
+        device->GetRenderState(D3DRS_DESTBLEND, &destination);
+        device->GetRenderState(D3DRS_ALPHABLENDENABLE, &blend);
+        if (source != D3DBLEND_ZERO || destination != D3DBLEND_INVSRCCOLOR || !blend) {
+            return false;
+        }
+
+        // A second mask draw in one pass would multiply the mask down twice.
+        const uint32_t pass = SkyOverhaul::Frame::PassSerial();
+        if (pass == g_maskedPass) {
+            return true;
+        }
+        D3DVIEWPORT9 viewport = {};
+        if (FAILED(device->GetViewport(&viewport)) ||
+            viewport.MinZ < SkyOverhaul::Frame::kSkyPassMinZ) {
+            return false;
+        }
+
+        const bool drawn = g_maskSubstitute(device);
+        if (drawn) {
+            g_maskedPass = pass;
+        }
+        return drawn;
+    }
+
     HRESULT __stdcall DrawIndexedPrimitiveDetour(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
                                                  INT baseVertexIndex, UINT minVertexIndex,
                                                  UINT numVertices, UINT startIndex,
                                                  UINT primitiveCount) {
-        if (Substitute(device, type, numVertices, primitiveCount)) {
+        if (Substitute(device, type, numVertices, primitiveCount) ||
+            SubstituteMask(device, type)) {
             return D3D_OK;
         }
         return g_original(device, type, baseVertexIndex, minVertexIndex, numVertices, startIndex,
@@ -105,6 +142,10 @@ bool SkyOverhaul::DomeDraw::Install(SubstituteFn substitute) {
 
 void SkyOverhaul::DomeDraw::SetMode(Mode mode) {
     g_mode = mode;
+}
+
+void SkyOverhaul::DomeDraw::SetMaskSubstitute(SubstituteFn mask) {
+    g_maskSubstitute = mask;
 }
 uint32_t SkyOverhaul::DomeDraw::SubstituteCount() {
     return g_substitutions;

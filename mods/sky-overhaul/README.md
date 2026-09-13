@@ -25,6 +25,9 @@ Nothing here changes how the sun itself looks.
   sun's image sat, a faint desaturated negative of the whole view, and a haze over everything else.
   It arms only after a held stare, deepens with how long that stare lasted, and fades over twice as
   long as it took to build.
+- **Light shafts through our clouds.** The engine still submits its clouds to the god-ray mask pass,
+  and that one draw is replaced by our clouds' cover, blended as the engine's own, so the rays stop
+  where our clouds stand. `MaskPS` in `src/shaders/clouds.fx`, and `src/engine/dome_draw.cpp`.
 - **Staying out of menus.** The cloud-layer hook reports whether the engine drew a world at all
   this frame, at every hour of the night too; a frame without one gets nothing. No guessing at game
   state.

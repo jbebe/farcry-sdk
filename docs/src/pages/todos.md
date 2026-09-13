@@ -169,9 +169,9 @@ other mods: the terrain lighting presets, shadows, and the final colour grade.
 - [ ] **Weather.** A storm now thickens our clouds and spreads an opaque cirrus sheet, and the world
       data points the storm's fog at the clear preset. Still open: `SetScriptedStormFactorOverride`
       never reaches the storm factor the sky reads, and rain has not appeared without DevTools
-- [ ] **Light shafts ignore our clouds.** The engine's clouds also feed the light-shaft mask, and
-      suppressing them removes it. Retail shades no terrain with clouds, so there are no cloud shadows
-      to replace
+- [x] **Light shafts follow our clouds.** The god-ray mask pass's cloud draw is replaced by our
+      clouds' cover, blended as the engine's own. Retail shades no terrain with clouds, so there are no
+      cloud shadows to replace
 - [x] **The sun glare sees our clouds.** Its occlusion patch is drawn through a shader that discards
       pixels as far as the clouds cover them
 - [ ] **Water reflections.** Unverified: our clouds are drawn only in the main sky pass, so water may
