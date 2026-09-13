@@ -58,10 +58,12 @@ namespace {
     // How high the moon climbs, as a sine, while its light and its glow come up to full.
     constexpr float kMoonUp = 0.2f;
 
-    // What a full storm makes of the layer's coverage and water and of the high sheet's opacity.
-    constexpr float kStormCoverage = 0.9f;
+    // What a full storm makes of the layer's coverage and water and of the high sheet's opacity, and
+    // how much of the sky's light it takes from the base of its water-laden cloud.
+    constexpr float kStormCoverage = 0.65f;
     constexpr float kStormDensity = 0.09f;
     constexpr float kStormCirrusOpacity = 0.8f;
+    constexpr float kStormBaseShade = 0.8f;
 
     // The high sheet: how far above the layer it sits at least, how many metres one repeat of its
     // streaks covers, and how hard those streaks are squashed across the wind.
@@ -192,7 +194,8 @@ namespace {
             shapeGrain, shapeGrain * kDetailRepeats, shapeGrain * kWeatherRepeats, v.cloudDetail,
             light.direction[0], light.direction[1], light.direction[2], kForwardScatter,
             light.colour[0], light.colour[1], light.colour[2], kLightStride,
-            lighting.ambientColour[0], lighting.ambientColour[1], lighting.ambientColour[2], 0.0f,
+            lighting.ambientColour[0], lighting.ambientColour[1], lighting.ambientColour[2],
+            storminess * kStormBaseShade,
             light.back[0], light.back[1], light.back[2], 0.0f,
             kMaxDistance, kFadeDistance, kMarchDistance, v.cloudHaze,
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,

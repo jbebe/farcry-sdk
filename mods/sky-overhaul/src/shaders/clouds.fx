@@ -76,7 +76,8 @@ float4 Grain : register(c74);
 float4 Light : register(c75);
 // rgb: that light's colour. w: how far apart the samples toward it are.
 float4 LightColour : register(c76);
-// rgb: what the sky and ground light the cloud with from every other direction.
+// rgb: what the sky and ground light the cloud with from every other direction. w: how much of that
+// a storm takes away at the layer's base, less toward its top.
 float4 AmbientColour : register(c77);
 // rgb: what reaches the eye through a thin edge, which is what makes a silver lining.
 float4 BackColour : register(c78);
@@ -353,9 +354,10 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
             float powder = 1.0f - exp(-density * 8.0f);
             float thin = lerp(1.0f, powder, saturate(cosAngle));
 
+            float height = saturate((at.z - Layer.x) / Layer.y);
             float3 light = (Scatter(lit, lobes) * thin +
                             BackColour.rgb * lit * saturate(-cosAngle)) * above +
-                           AmbientColour.rgb;
+                           AmbientColour.rgb * lerp(1.0f - AmbientColour.w, 1.0f, height);
 
             float transmit = exp(-density * stride);
             scattered += light * transmittance * (1.0f - transmit);
