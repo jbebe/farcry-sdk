@@ -117,6 +117,35 @@ bool SkyOverhaul::DrawGuard::ClipQuad(float depth, const float corners[4][3]) {
     return true;
 }
 
+bool SkyOverhaul::DrawGuard::ClipQuad(float depth, const float corners[4][3], float left, float top,
+                                      float right, float bottom) {
+    if (!BindRay(m_device)) {
+        return false;
+    }
+
+    D3DVIEWPORT9 viewport;
+    m_device->GetViewport(&viewport);
+    const float width = static_cast<float>(viewport.Width);
+    const float height = static_cast<float>(viewport.Height);
+
+    // Where the whole quad would put that point, half a pixel back as Quad's edges are.
+    const auto corner = [&](float x, float y) {
+        const float u = (x - 0.5f - static_cast<float>(viewport.X)) / width;
+        const float v = (y - 0.5f - static_cast<float>(viewport.Y)) / height;
+        RayVertex vertex = {2.0f * u - 1.0f, 1.0f - 2.0f * v, depth, 1.0f, {}};
+        for (int i = 0; i < 3; i++) {
+            const float upper = corners[0][i] + (corners[1][i] - corners[0][i]) * u;
+            const float lower = corners[2][i] + (corners[3][i] - corners[2][i]) * u;
+            vertex.ray[i] = upper + (lower - upper) * v;
+        }
+        return vertex;
+    };
+    const RayVertex quad[4] = {corner(left, top), corner(right, top), corner(left, bottom),
+                               corner(right, bottom)};
+    m_device->DrawPrimitiveUP(D3DPT_TRIANGLESTRIP, 2, quad, sizeof(RayVertex));
+    return true;
+}
+
 void SkyOverhaul::DrawGuard::ReleaseDeviceObjects() {
     Release(g_rayDeclaration);
     g_declarationOwner = nullptr;

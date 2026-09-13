@@ -2,6 +2,8 @@
 // halves of the angle it depends on: the camera is a global, the sun is not.
 #include "dazzle.h"
 
+#include "clouds.h"
+
 #include "engine/camera.h"
 #include "engine/clock.h"
 #include "engine/cloud_layer.h"
@@ -526,7 +528,8 @@ void SkyOverhaul::Dazzle::OnScenePass(const Frame::Pass& pass) {
 
     // Measured here rather than at the composite because a depth surface's contents are not
     // guaranteed across being unbound, and the bloom chain between the two unbinds it.
-    SunOcclusion::Sample(pass.device, g_thisFrame.x, g_thisFrame.y, pass.viewport);
+    SunOcclusion::Sample(pass.device, g_thisFrame.x, g_thisFrame.y, pass.viewport,
+                         &Clouds::DrawCover);
 }
 
 void SkyOverhaul::Dazzle::OnFinalPass(const Frame::Pass& pass) {

@@ -172,8 +172,8 @@ other mods: the terrain lighting presets, shadows, and the final colour grade.
 - [ ] **Light shafts ignore our clouds.** The engine's clouds also feed the light-shaft mask, and
       suppressing them removes it. Retail shades no terrain with clouds, so there are no cloud shadows
       to replace
-- [ ] **The sun glare cannot see our clouds.** Its occlusion query tests depth, and our clouds write
-      none
+- [x] **The sun glare sees our clouds.** Its occlusion patch is drawn through a shader that discards
+      pixels as far as the clouds cover them
 - [ ] **Water reflections.** Unverified: our clouds are drawn only in the main sky pass, so water may
       reflect a sky without them
 - [ ] **Sun colour (optional).** The near-white dawn light-shaft tint and the flare colour

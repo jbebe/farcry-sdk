@@ -14,11 +14,12 @@ Nothing here changes how the sun itself looks.
 - **The angle to the sun**, from that direction and the view-projection matrix read back off the
   Direct3D device at the sky pass.
 - **Cover**, from a hardware occlusion query: a patch drawn where the sun is with depth testing on
-  and colour writes off, counted against the same patch with depth testing off so the multisample
-  factor cancels. `src/engine/sun_occlusion.cpp`.
+  and colour writes off, through a shader that discards its pixels as far as our clouds cover them,
+  counted against the same patch with depth testing off so the multisample factor cancels.
+  `src/engine/sun_occlusion.cpp`, and `CoverPS` in `src/shaders/clouds.fx`.
 - **The glare**, a wash that brightens toward the sun, raises contrast and drains colour, drawn over
   the world's composite so it lands under the heads-up display. It weakens with a low sun, at
-  night, and with anything standing between the player and the sun.
+  night, and with anything standing between the player and the sun, our clouds included.
 - **The afterimage.** While the eye is dazzled the view accumulates into a burn texture and the light
   that fell on it accumulates into a bleach mask. Looking away brings up a dark tinted core where the
   sun's image sat, a faint desaturated negative of the whole view, and a haze over everything else.

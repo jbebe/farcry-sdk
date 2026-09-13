@@ -35,6 +35,11 @@ public:
     // would not make that shader or its declaration.
     bool ClipQuad(float depth, const float corners[4][3]);
 
+    // The same over a rectangle of the viewport, in pixels, with its edges where Quad puts them and
+    // each corner's direction the one the whole quad gives that point of the screen.
+    bool ClipQuad(float depth, const float corners[4][3], float left, float top, float right,
+                  float bottom);
+
     // Drops the vertex shader and declaration ClipQuad keeps, which its next call makes again.
     static void ReleaseDeviceObjects();
 

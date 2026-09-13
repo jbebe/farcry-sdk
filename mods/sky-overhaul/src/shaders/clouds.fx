@@ -290,15 +290,14 @@ float3 MoonHalo(float cosAngle) {
     return MoonGlow.rgb * pow(falloff, 1.5f);
 }
 
-float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
-    float3 ray = normalize(rayIn);
-
-    // Where the ray is inside the layer. Below the horizon, or above a layer the camera has
-    // climbed over, there is nothing to march.
+// Where a ray is inside the layer: how far out it enters, how far apart the march's samples are, and
+// how much of it the distance fade leaves. Below the horizon, or above a layer the camera has
+// climbed over, there is nothing to march.
+void Span(float3 ray, out float enter, out float stride, out float reach) {
     float up = max(ray.z, 0.0001f);
     float toFloor = (Layer.x - Eye.z) / up;
     float toCeiling = (Layer.x + Layer.y - Eye.z) / up;
-    float enter = max(min(toFloor, toCeiling), 0.0f);
+    enter = max(min(toFloor, toCeiling), 0.0f);
     float leave = min(max(toFloor, toCeiling), Range.x);
 
     // The march covers only the near part of the layer. Spreading the same samples over the whole
@@ -306,14 +305,24 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     // layer, and the shape would repeat visibly out there in any case.
     leave = min(leave, enter + Range.z);
 
-    float reach = saturate((Range.x - enter) / Range.y) * step(0.001f, ray.z) * step(enter, leave);
-    float span = max(leave - enter, 0.0f);
-    float stride = min(span / VIEW_STEPS, MAX_STRIDE);
+    reach = saturate((Range.x - enter) / Range.y) * step(0.001f, ray.z) * step(enter, leave);
+    stride = min(max(leave - enter, 0.0f) / VIEW_STEPS, MAX_STRIDE);
+}
 
-    // A different offset per pixel, so that what the coarse sampling misses lands as fine noise
-    // instead of as bands. Fixed to the pixel rather than the frame: the game has nothing that
-    // would blend a moving pattern away, so a moving one would only flicker.
-    float dither = frac(52.9829189f * frac(0.06711056f * screen.x + 0.00583715f * screen.y));
+// A different value per pixel, so that what the coarse sampling misses lands as fine noise instead
+// of as bands. Fixed to the pixel rather than the frame: the game has nothing that would blend a
+// moving pattern away, so a moving one would only flicker.
+float Dither(float2 screen) {
+    return frac(52.9829189f * frac(0.06711056f * screen.x + 0.00583715f * screen.y));
+}
+
+float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
+    float3 ray = normalize(rayIn);
+    float enter;
+    float stride;
+    float reach;
+    Span(ray, enter, stride, reach);
+    float dither = Dither(screen);
 
     float cosAngle = dot(ray, Light.xyz);
 
@@ -397,4 +406,34 @@ float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
 
     colour = lerp(colour, dot(colour, LUMA), MoonGlow.w);
     return float4(colour * Eye.w, 1.0f - cover);
+}
+
+// Discards a pixel with the likelihood that the clouds, as MainPS draws them, cover its ray.
+float4 CoverPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
+    float3 ray = normalize(rayIn);
+    float enter;
+    float stride;
+    float reach;
+    Span(ray, enter, stride, reach);
+    float dither = Dither(screen);
+
+    float transmittance = 1.0f;
+    [loop] for (int i = 0; i < VIEW_STEPS; i++) {
+        if (reach <= 0.0f || transmittance < 0.01f) {
+            break;
+        }
+        float3 at = Eye.xyz + ray * (enter + ((float)i + dither) * stride);
+        float density = Density(at, false);
+        if (density > 0.0005f) {
+            transmittance *= exp(-density * stride);
+        }
+    }
+    float cover = (1.0f - transmittance) * reach;
+
+    float cirrusCover = 0.0f;
+    HighCloud(ray, dot(ray, Light.xyz), 0.0f, cirrusCover);
+    cover += cirrusCover * (1.0f - cover);
+
+    clip(dither - cover);
+    return 0.0f;
 }

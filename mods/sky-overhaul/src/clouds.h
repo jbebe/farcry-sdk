@@ -12,6 +12,11 @@ void Install();
 // Runs on each of the frame's scene passes; draws on the sky one.
 void OnScenePass(const Frame::Pass& pass);
 
+// Draws the rectangle, in pixels, at `depth` through the clouds as last drawn, discarding its
+// pixels as far as the clouds cover them. False while no clouds are being drawn.
+bool DrawCover(IDirect3DDevice9* device, float left, float top, float right, float bottom,
+               float depth);
+
 // Surrenders what belongs to the device, before it is reset.
 void ReleaseDeviceObjects();
 

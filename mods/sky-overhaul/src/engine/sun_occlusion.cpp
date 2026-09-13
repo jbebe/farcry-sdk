@@ -99,7 +99,7 @@ namespace {
 }
 
 void SkyOverhaul::SunOcclusion::Sample(IDirect3DDevice9* device, float centreX, float centreY,
-                                       const D3DVIEWPORT9& viewport) {
+                                       const D3DVIEWPORT9& viewport, CoverFn cover) {
     if (device == nullptr || !EnsureQueries(device)) {
         return;
     }
@@ -131,7 +131,7 @@ void SkyOverhaul::SunOcclusion::Sample(IDirect3DDevice9* device, float centreX, 
     const float right = x + kHalfSize;
     const float bottom = y + kHalfSize;
 
-    // No pixel shader and no constants: the patch is a depth test, not a picture.
+    // No constants of its own: the plain patch is a depth test, and `cover` saves what it writes.
     ScreenDraw draw(device, 0, 0);
 
     // Measure only; change nothing on screen.
@@ -144,7 +144,9 @@ void SkyOverhaul::SunOcclusion::Sample(IDirect3DDevice9* device, float centreX, 
     device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
 
     slot.reachedScreen->Issue(D3DISSUE_BEGIN);
-    draw.Quad(left, top, right, bottom, kPatchDepth);
+    if (!cover(device, left, top, right, bottom, kPatchDepth)) {
+        draw.Quad(left, top, right, bottom, kPatchDepth);
+    }
     slot.reachedScreen->Issue(D3DISSUE_END);
 
     slot.inFlight = true;

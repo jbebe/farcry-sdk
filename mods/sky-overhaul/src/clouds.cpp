@@ -11,10 +11,12 @@
 #include "fcse_api.h"
 #include "tuning.h"
 
+#include "clouds_cover_ps.h"
 #include "clouds_ps.h"
 
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 
 namespace {
     // Above the engine's own globals, which occupy c0 to c64 and would be read back stale by the
@@ -95,7 +97,13 @@ namespace {
     // that changing the wind changes how fast the clouds move and not where they are.
     float g_drift[2] = {0.0f, 0.0f};
 
+    // What the clouds were last drawn with, which the sun's cover is drawn through again.
+    float g_constants[kConstantCount * 4] = {};
+    float g_corners[4][3] = {};
+    bool g_drawn = false;
+
     SkyOverhaul::PixelShader g_shader{"clouds", g_cloudsPixelShader};
+    SkyOverhaul::PixelShader g_coverShader{"clouds cover", g_cloudsCoverPixelShader};
     SkyOverhaul::Stopwatch g_clock;
     SkyOverhaul::Heartbeat g_heartbeat{2.0f};
 
@@ -178,6 +186,23 @@ namespace {
         g_drift[1] = std::fmod(g_drift[1] + y * step, v.cloudSize);
     }
 
+    // The shader, this frame's constants and the noise, sampled the way the shape expects.
+    void Bind(IDirect3DDevice9* device, IDirect3DPixelShader9* shader) {
+        device->SetPixelShader(shader);
+        device->SetPixelShaderConstantF(kFirstConstant, g_constants, kConstantCount);
+
+        device->SetTexture(0, SkyOverhaul::Noise::Shape());
+        device->SetTexture(1, SkyOverhaul::Noise::Detail());
+        device->SetTexture(2, SkyOverhaul::Noise::Weather());
+        for (DWORD sampler = 0; sampler < 3; sampler++) {
+            device->SetSamplerState(sampler, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
+            device->SetSamplerState(sampler, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
+            device->SetSamplerState(sampler, D3DSAMP_ADDRESSW, D3DTADDRESS_WRAP);
+            device->SetSamplerState(sampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
+            device->SetSamplerState(sampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
+        }
+    }
+
     void Draw(const SkyOverhaul::Frame::Pass& pass, IDirect3DPixelShader9* shader,
               const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::CloudLayer::Lighting& lighting, const Light& light,
@@ -207,21 +232,13 @@ namespace {
             cirrusAltitude, kCirrusGrain, v.cirrus, v.cirrusOpacity,
             v.contrails, kTrailWidth, kTrailBreak, 0.0f,
             light.glow[0], light.glow[1], light.glow[2], SkyOverhaul::SkyModel::Grey(storminess)};
+        std::copy(std::begin(constants), std::end(constants), g_constants);
+        for (int corner = 0; corner < 4; corner++) {
+            std::copy_n(view.corners[corner], 3, g_corners[corner]);
+        }
 
         SkyOverhaul::ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
-        pass.device->SetPixelShader(shader);
-        pass.device->SetPixelShaderConstantF(kFirstConstant, constants, kConstantCount);
-
-        pass.device->SetTexture(0, SkyOverhaul::Noise::Shape());
-        pass.device->SetTexture(1, SkyOverhaul::Noise::Detail());
-        pass.device->SetTexture(2, SkyOverhaul::Noise::Weather());
-        for (DWORD sampler = 0; sampler < 3; sampler++) {
-            pass.device->SetSamplerState(sampler, D3DSAMP_ADDRESSU, D3DTADDRESS_WRAP);
-            pass.device->SetSamplerState(sampler, D3DSAMP_ADDRESSV, D3DTADDRESS_WRAP);
-            pass.device->SetSamplerState(sampler, D3DSAMP_ADDRESSW, D3DTADDRESS_WRAP);
-            pass.device->SetSamplerState(sampler, D3DSAMP_MAGFILTER, D3DTEXF_LINEAR);
-            pass.device->SetSamplerState(sampler, D3DSAMP_MINFILTER, D3DTEXF_LINEAR);
-        }
+        Bind(pass.device, shader);
 
         // Tested against the world's own depth, which this pass still owns, and blended the way
         // the engine's cloud layer blended: colour already multiplied in, alpha what survives.
@@ -230,7 +247,7 @@ namespace {
         pass.device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
         pass.device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCALPHA);
 
-        draw.ClipQuad(kSkyDepth, view.corners);
+        g_drawn = draw.ClipQuad(kSkyDepth, view.corners);
     }
 }
 
@@ -246,6 +263,7 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
         return;
     }
     g_drawnFrame = pass.frame;
+    g_drawn = false;
     const float elapsed = g_clock.Lap();
 
     IDirect3DPixelShader9* shader = g_shader.Get(pass.device);
@@ -267,9 +285,21 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
     }
 }
 
+bool SkyOverhaul::Clouds::DrawCover(IDirect3DDevice9* device, float left, float top, float right,
+                                    float bottom, float depth) {
+    IDirect3DPixelShader9* shader = g_enabled && g_drawn ? g_coverShader.Get(device) : nullptr;
+    if (shader == nullptr) {
+        return false;
+    }
+    DrawGuard guard(device, kFirstConstant, kConstantCount);
+    Bind(device, shader);
+    return guard.ClipQuad(depth, g_corners, left, top, right, bottom);
+}
+
 void SkyOverhaul::Clouds::ReleaseDeviceObjects() {
     Noise::ReleaseDeviceObjects();
     g_shader.Release();
+    g_coverShader.Release();
 }
 
 void SkyOverhaul::Clouds::SetEnabled(bool enabled) {

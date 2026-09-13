@@ -55,6 +55,7 @@ set(SHADER_PASSES
   "dazzle.fx:BleachPS:ps_2_0:dazzle_bleach_ps.h:g_dazzleBleachPixelShader"
   "clip_quad.fx:MainVS:vs_3_0:clip_quad_vs.h:g_clipQuadVertexShader"
   "clouds.fx:MainPS:ps_3_0:clouds_ps.h:g_cloudsPixelShader"
+  "clouds.fx:CoverPS:ps_3_0:clouds_cover_ps.h:g_cloudsCoverPixelShader"
   "sky.fx:MainPS:ps_3_0:sky_ps.h:g_skyPixelShader")
 
 set(SHADER_HEADERS "")
