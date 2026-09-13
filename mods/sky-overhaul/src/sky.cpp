@@ -169,12 +169,16 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
     }
     const float elevation = std::asin(std::clamp(sun[2], -1.0f, 1.0f)) * kDegrees;
 
-    // Counts that stand still are the two ways this fails without anything else saying so: a dome
-    // that stopped being recognised, and a fog colour that is never being reached.
-    FCSE::Logf("sky f%u: %u domes replaced, %u fog uploads retinted | night %.2f storm %.2f "
-               "exposure %.2f zenith x%.2f",
-               pass.frame, DomeDraw::SubstituteCount(), FogTint::TintCount(), light.night,
-               light.storm, view.bloom, g_last.zenithLift);
+    // Counts that stand still are the ways this fails without anything else saying so: a dome or a
+    // moon that stopped being recognised, and a fog colour that is never being reached.
+    float moonVisibility = 0.0f;
+    float moonMultiplier = 0.0f;
+    DomeDraw::MoonParameters(moonVisibility, moonMultiplier);
+    FCSE::Logf("sky f%u: %u domes replaced, %u moons unfogged (visibility %.3f x%.2f), %u fog "
+               "uploads retinted | night %.2f storm %.2f exposure %.2f zenith x%.2f",
+               pass.frame, DomeDraw::SubstituteCount(), DomeDraw::UnfoggedMoonCount(),
+               moonVisibility, moonMultiplier, FogTint::TintCount(), light.night, light.storm,
+               view.bloom, g_last.zenithLift);
     FCSE::Logf("sky f%u: sun %+.1f deg, fog heading %.0f deg off it | model toward "
                "(%.3f %.3f %.3f) away (%.3f %.3f %.3f)",
                pass.frame, elevation, headingOffset, g_last.towardColour[0], g_last.towardColour[1],

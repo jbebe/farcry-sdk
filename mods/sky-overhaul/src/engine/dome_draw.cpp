@@ -22,6 +22,22 @@ namespace {
     constexpr UINT kDomeVertices = 714;
     constexpr UINT kDomePrimitives = 1450;
 
+    // The moon shares the celestial sprites' counts with the sun's flare, and is told from it by
+    // its pixel shader: the two fogged CelestialBody objects, 292 bytes with HDR on and 348 without.
+    // The flare's two are additive, unfogged, and 276 and 320.
+    constexpr UINT kSpriteVertices = 6;
+    constexpr UINT kSpritePrimitives = 4;
+    constexpr UINT kMoonShaderSizes[] = {292, 348};
+
+    // FogValues in the vertex shader, whose third component scales the whole of the sky's fog.
+    constexpr UINT kFogValues = 51;
+
+    // The moon's parameters in the pixel shader: time of day, visibility, HDR multiplier, horizon
+    // factor. The texture is scaled by visibility times the multiplier, and the world's own
+    // multiplier of ten saturates a high, unfogged moon to a white disc.
+    constexpr UINT kMoonParams = 71;
+    constexpr float kMoonPeak = 1.0f;
+
     using DrawIndexedPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, INT,
                                                        UINT, UINT, UINT, UINT);
 
@@ -31,6 +47,9 @@ namespace {
     SkyOverhaul::DomeDraw::Mode g_mode = SkyOverhaul::DomeDraw::Mode::Engine;
 
     uint32_t g_substitutions = 0;
+    uint32_t g_unfoggedMoons = 0;
+    float g_moonVisibility = 0.0f;
+    float g_moonMultiplier = 0.0f;
 
     // Which pass was last drawn into, rather than which frame: a frame can hold more than one sky
     // pass - the world's own and the one behind an open menu - and each of them needs its own sky.
@@ -107,6 +126,26 @@ namespace {
         return drawn;
     }
 
+    bool IsMoon(IDirect3DDevice9* device, UINT vertices, UINT primitives) {
+        if (primitives != kSpritePrimitives || vertices != kSpriteVertices ||
+            g_mode != SkyOverhaul::DomeDraw::Mode::Overhaul) {
+            return false;
+        }
+        D3DVIEWPORT9 viewport = {};
+        if (FAILED(device->GetViewport(&viewport)) ||
+            viewport.MinZ < SkyOverhaul::Frame::kSkyPassMinZ) {
+            return false;
+        }
+        IDirect3DPixelShader9* shader = nullptr;
+        if (FAILED(device->GetPixelShader(&shader)) || shader == nullptr) {
+            return false;
+        }
+        UINT size = 0;
+        shader->GetFunction(nullptr, &size);
+        shader->Release();
+        return size == kMoonShaderSizes[0] || size == kMoonShaderSizes[1];
+    }
+
     HRESULT __stdcall DrawIndexedPrimitiveDetour(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
                                                  INT baseVertexIndex, UINT minVertexIndex,
                                                  UINT numVertices, UINT startIndex,
@@ -114,6 +153,32 @@ namespace {
         if (Substitute(device, type, numVertices, primitiveCount) ||
             SubstituteMask(device, type)) {
             return D3D_OK;
+        }
+
+        // The engine fogs the moon by the height of its sprite, which hides all but a high moon in
+        // the night's near-black fog; our sky already carries the air's colour in front of it.
+        // Without that fog the moon is also held under saturation, so its face stays readable.
+        float fog[4] = {};
+        float params[4] = {};
+        if (IsMoon(device, numVertices, primitiveCount) &&
+            SUCCEEDED(device->GetVertexShaderConstantF(kFogValues, fog, 1)) &&
+            SUCCEEDED(device->GetPixelShaderConstantF(kMoonParams, params, 1))) {
+            g_moonVisibility = params[1];
+            g_moonMultiplier = params[2];
+            const float peak = params[1] * params[2];
+            float held[4] = {params[0], params[1], params[2], params[3]};
+            if (peak > kMoonPeak) {
+                held[2] *= kMoonPeak / peak;
+            }
+            const float unfogged[4] = {fog[0], fog[1], 0.0f, fog[3]};
+            device->SetVertexShaderConstantF(kFogValues, unfogged, 1);
+            device->SetPixelShaderConstantF(kMoonParams, held, 1);
+            const HRESULT drawn = g_original(device, type, baseVertexIndex, minVertexIndex,
+                                             numVertices, startIndex, primitiveCount);
+            device->SetPixelShaderConstantF(kMoonParams, params, 1);
+            device->SetVertexShaderConstantF(kFogValues, fog, 1);
+            g_unfoggedMoons++;
+            return drawn;
         }
         return g_original(device, type, baseVertexIndex, minVertexIndex, numVertices, startIndex,
                           primitiveCount);
@@ -149,4 +214,13 @@ void SkyOverhaul::DomeDraw::SetMaskSubstitute(SubstituteFn mask) {
 }
 uint32_t SkyOverhaul::DomeDraw::SubstituteCount() {
     return g_substitutions;
+}
+
+uint32_t SkyOverhaul::DomeDraw::UnfoggedMoonCount() {
+    return g_unfoggedMoons;
+}
+
+void SkyOverhaul::DomeDraw::MoonParameters(float& visibility, float& multiplier) {
+    visibility = g_moonVisibility;
+    multiplier = g_moonMultiplier;
 }

@@ -37,6 +37,9 @@ collides with any other mod that edits a preset. Nothing here changes how the su
   Drawn at the sky pass through a quad at the far plane that passes the depth test only where the
   world drew, so the sky is never touched. Optional faint grain in the darkest parts.
   `src/night.cpp` and `src/shaders/night.fx`.
+- **The moon without the engine's fog.** The engine fogs the moon's sprite by its height, which hid
+  all but a high moon in the night's near-black fog. Its one draw is recognised in the sky pass and
+  drawn with the fog amount at zero. `src/engine/dome_draw.cpp`.
 - **Staying out of menus.** The cloud-layer hook reports whether the engine drew a world at all
   this frame, at every hour of the night too; a frame without one gets nothing. No guessing at game
   state.

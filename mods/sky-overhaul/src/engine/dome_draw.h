@@ -7,7 +7,8 @@
 // then lands on our sky exactly as it landed on the engine's.
 //
 // The same hook replaces the god-ray mask's cloud draw, the one draw that multiplies its target by
-// what it lets through, so that the mask follows our clouds rather than the engine's.
+// what it lets through, so that the mask follows our clouds rather than the engine's, and draws the
+// moon without the fog the engine hides a low moon in.
 //
 // See docs/docs/engine-internals/presentation-and-input.md for what named that call.
 #pragma once
@@ -43,5 +44,11 @@ void SetMaskSubstitute(SubstituteFn mask);
 // How many domes have been replaced. A count that stops climbing while the mode is Overhaul is a
 // dome that stopped being recognised, which is the one failure that would otherwise be silent.
 uint32_t SubstituteCount();
+
+// How many moons have been drawn without the engine's fog.
+uint32_t UnfoggedMoonCount();
+
+// The visibility and HDR multiplier the engine handed the last moon drawn, before the cap.
+void MoonParameters(float& visibility, float& multiplier);
 
 }
