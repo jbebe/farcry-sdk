@@ -21,13 +21,13 @@ namespace {
     constexpr size_t kWind = 0x1E0;
     constexpr size_t kAmbientColour = 0x230;
 
-    // Twelve stack arguments, of which only the sixth is read; the rest are named to get the stack
-    // shape right, since the callee cleans it. __fastcall stands in for __thiscall, which MSVC
-    // will not let a free function be.
+    // Twelve stack arguments, of which the sixth and the eleventh are read; the rest are named to
+    // get the stack shape right, since the callee cleans it. __fastcall stands in for __thiscall,
+    // which MSVC will not let a free function be.
     using SubmitCloudsFn = void(__fastcall*)(void* self, void* unused, uint32_t a2, uint32_t a3,
                                              uint32_t a4, uint32_t a5, uint32_t a6,
                                              const uint8_t* state, uint32_t a8, uint32_t a9,
-                                             uint32_t a10, uint32_t a11, uint32_t a12,
+                                             uint32_t a10, uint32_t a11, uint32_t mask,
                                              uint32_t a13);
 
     // The address library carries this address, and resolving it that way is what proves the

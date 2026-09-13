@@ -47,7 +47,8 @@ protected:
     IDirect3DDevice9* m_device;
 
 private:
-    static constexpr UINT kMaxConstantRegisters = 16;
+    // More than any draw here writes: the clouds take seventeen.
+    static constexpr UINT kMaxConstantRegisters = 32;
 
     IDirect3DVertexShader9* m_vertexShader = nullptr;
     IDirect3DPixelShader9* m_pixelShader = nullptr;

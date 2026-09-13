@@ -206,7 +206,20 @@ namespace {
         }
     }
 
-    void Draw(const SkyOverhaul::Frame::Pass& pass, IDirect3DPixelShader9* shader,
+    // A quad over the sky through the shader, tested against the world's own depth, which the pass
+    // still owns, and blended source over destination.
+    bool DrawSky(IDirect3DDevice9* device, IDirect3DPixelShader9* shader, D3DBLEND source,
+                 D3DBLEND destination) {
+        SkyOverhaul::ScreenDraw draw(device, kFirstConstant, kConstantCount);
+        Bind(device, shader);
+        device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
+        device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
+        device->SetRenderState(D3DRS_SRCBLEND, source);
+        device->SetRenderState(D3DRS_DESTBLEND, destination);
+        return draw.ClipQuad(kSkyDepth, g_corners);
+    }
+
+    void Draw(IDirect3DDevice9* device, IDirect3DPixelShader9* shader,
               const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::CloudLayer::Lighting& lighting, const Light& light,
               const Values& v, float storminess) {
@@ -240,23 +253,14 @@ namespace {
             std::copy_n(view.corners[corner], 3, g_corners[corner]);
         }
 
-        SkyOverhaul::ScreenDraw draw(pass.device, kFirstConstant, kConstantCount);
-        Bind(pass.device, shader);
-
-        // Tested against the world's own depth, which this pass still owns, and blended the way
-        // the engine's cloud layer blended: colour already multiplied in, alpha what survives.
-        pass.device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
-        pass.device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-        pass.device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ONE);
-        pass.device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCALPHA);
-
-        g_drawn = draw.ClipQuad(kSkyDepth, view.corners);
+        // Blended the way the engine's cloud layer blended: colour already multiplied in, alpha
+        // what survives.
+        g_drawn = DrawSky(device, shader, D3DBLEND_ONE, D3DBLEND_SRCALPHA);
     }
 }
 
 void SkyOverhaul::Clouds::Install() {
     Noise::Start();
-    DomeDraw::SetMaskSubstitute(&DrawMask);
 }
 
 void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
@@ -282,7 +286,7 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
     const Tuning::Values v = Weathered(Tuning::Current(), storminess);
     const Light light = ChooseLight(lighting, v, storminess);
     Advance(lighting, v, elapsed);
-    Draw(pass, shader, view, lighting, light, v, storminess);
+    Draw(pass.device, shader, view, lighting, light, v, storminess);
 
     if (g_heartbeat.Due(elapsed)) {
         LogPass(pass, view, light, v, lighting.storm, elapsed);
@@ -301,19 +305,12 @@ bool SkyOverhaul::Clouds::DrawCover(IDirect3DDevice9* device, float left, float 
 }
 
 bool SkyOverhaul::Clouds::DrawMask(IDirect3DDevice9* device) {
-    IDirect3DPixelShader9* shader = g_enabled && g_drawn ? g_maskShader.Get(device) : nullptr;
+    IDirect3DPixelShader9* shader = g_drawn ? g_maskShader.Get(device) : nullptr;
     if (shader == nullptr) {
         return false;
     }
-    ScreenDraw draw(device, kFirstConstant, kConstantCount);
-    Bind(device, shader);
-
-    // As the engine's own mask clouds blend: the mask multiplied down by the cover, over the sky only.
-    device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
-    device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
-    device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
-    device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_INVSRCCOLOR);
-    return draw.ClipQuad(kSkyDepth, g_corners);
+    // As the engine's own mask clouds blend: the mask multiplied down by the cover.
+    return DrawSky(device, shader, D3DBLEND_ZERO, D3DBLEND_INVSRCCOLOR);
 }
 
 void SkyOverhaul::Clouds::ReleaseDeviceObjects() {
@@ -325,4 +322,5 @@ void SkyOverhaul::Clouds::ReleaseDeviceObjects() {
 
 void SkyOverhaul::Clouds::SetEnabled(bool enabled) {
     g_enabled = enabled;
+    DomeDraw::SetMaskSubstitute(enabled ? &DrawMask : nullptr);
 }

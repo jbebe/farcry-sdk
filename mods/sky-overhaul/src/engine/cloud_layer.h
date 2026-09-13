@@ -10,9 +10,10 @@
 namespace SkyOverhaul::CloudLayer {
 
 // Whether the engine draws its own clouds. Suppressing them is the same thing the engine does for
-// a world whose cloud layers are both disabled, and it takes the god-ray cloud mask with it.
+// a world whose cloud layers are both disabled.
 enum class Mode {
     Engine,
+    // Suppressed everywhere, the god-ray mask included.
     Off,
     // Suppressed everywhere but the god-ray mask pass, whose cloud draw is there to be replaced.
     MaskOnly,

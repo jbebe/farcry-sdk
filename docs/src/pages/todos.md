@@ -174,8 +174,8 @@ other mods: the terrain lighting presets, shadows, and the final colour grade.
       cloud shadows to replace
 - [x] **The sun glare sees our clouds.** Its occlusion patch is drawn through a shader that discards
       pixels as far as the clouds cover them
-- [ ] **Water reflections.** Unverified: our clouds are drawn only in the main sky pass, so water may
-      reflect a sky without them
+- [x] **Water reflections.** Our clouds are drawn only in the main sky pass; checked in game, the
+      reflections look right as they are
 - [ ] **Sun colour (optional).** The near-white dawn light-shaft tint and the flare colour
 - [ ] **Publish the sky's light (optional).** The sun's colour at the ground and the sky's ambient
       light, for a lighting mod to match

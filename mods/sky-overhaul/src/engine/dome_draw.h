@@ -1,4 +1,4 @@
-// The engine's own sky dome, replaced at the one draw call that is it.
+// The engine's own sky dome and god-ray mask clouds, each replaced at the one draw call that is it.
 //
 // Our clouds are drawn when a pass ends, which is after everything in it - but a sky belongs under
 // the sun, the moon and the stars, so it has to be drawn where the dome is drawn. There is no seam
@@ -23,9 +23,9 @@ enum class Mode {
     Overhaul,
 };
 
-// Draws a sky in the dome's place, with the device set exactly as the dome would have found it.
-// True means it drew, and the dome's own draw is dropped; false leaves the engine to draw it, so a
-// substitute that cannot draw yet costs nothing but the sky it did not replace.
+// Draws in place of one of the engine's draws, with the device set exactly as that draw found it.
+// True means it drew, and the engine's own draw is dropped; false leaves the engine to draw it, so
+// a substitute that cannot draw yet costs nothing but what it did not replace.
 using SubstituteFn = bool (*)(IDirect3DDevice9* device);
 
 // Takes over the device's draw entry point. Call once from FCSE_Load. False means it could not be
