@@ -16,6 +16,10 @@ float Haze(float storminess);
 // The share of the sun's light that reaches the air at that storminess.
 float SunShare(float storminess);
 
+// How far the moon's light has come up, from nought on the horizon to one once it has climbed, for a
+// moon direction's height.
+float MoonRise(float moonHeight);
+
 // How far the sky's colour is drained toward grey at that storminess.
 float Grey(float storminess);
 

@@ -8,6 +8,7 @@
 #include "engine/clock.h"
 #include "engine/cloud_layer.h"
 #include "engine/com.h"
+#include "engine/render_target.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "engine/sun_occlusion.h"
@@ -244,17 +245,6 @@ namespace {
         g_burnReady = true;
     }
 
-    HRESULT CreateTarget(IDirect3DDevice9* device, const D3DSURFACE_DESC& desc,
-                         IDirect3DTexture9** texture, IDirect3DSurface9** surface) {
-        const HRESULT created =
-            device->CreateTexture(desc.Width, desc.Height, 1, D3DUSAGE_RENDERTARGET, desc.Format,
-                                  D3DPOOL_DEFAULT, texture, nullptr);
-        if (FAILED(created)) {
-            return created;
-        }
-        return *texture == nullptr ? E_FAIL : (*texture)->GetSurfaceLevel(0, surface);
-    }
-
     bool EnsureDeviceObjects(IDirect3DDevice9* device, const D3DSURFACE_DESC& backBuffer) {
         if (g_owner != device) {
             ReleaseCopy();
@@ -272,9 +262,11 @@ namespace {
         }
 
         ReleaseCopy();
-        const HRESULT copy = CreateTarget(device, backBuffer, &g_sceneCopy, &g_sceneCopySurface);
-        const HRESULT burn = CreateTarget(device, backBuffer, &g_burn, &g_burnSurface);
-        const HRESULT bleach = CreateTarget(device, backBuffer, &g_bleach, &g_bleachSurface);
+        const HRESULT copy =
+            SkyOverhaul::CreateTarget(device, backBuffer, &g_sceneCopy, &g_sceneCopySurface);
+        const HRESULT burn = SkyOverhaul::CreateTarget(device, backBuffer, &g_burn, &g_burnSurface);
+        const HRESULT bleach =
+            SkyOverhaul::CreateTarget(device, backBuffer, &g_bleach, &g_bleachSurface);
         if (FAILED(copy) || FAILED(burn) || FAILED(bleach)) {
             ReleaseCopy();
             FCSE::Logf("dazzle: no %ux%u copy of the frame, 0x%08lX / 0x%08lX / 0x%08lX",

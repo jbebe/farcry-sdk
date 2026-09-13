@@ -3,9 +3,12 @@
 An FCSE plugin for the sun as something the eye cannot look at: a glare that washes over the finished
 frame as the player looks toward the sun, and a retinal afterimage left behind when they look away.
 
-**The layer ships one data fragment per campaign world.** The world descriptor's `<Environment>`
-halves the moon's size and points the storm's fog at the clear preset, and is otherwise retail.
-Nothing here changes how the sun itself looks.
+**The layer ships two data fragments per campaign world.** The world descriptor's `<Environment>`
+halves the moon's size and points the storm's fog at the clear preset, and is otherwise retail. The
+preset library in `managers.fcb` changes only the night in the clear, jungle, storm and cloudy
+lighting: a dimmer blue-grey ambient, no rim light, and a brighter moon that lights the ground only
+once it has risen, so moonlit ground has shading and shadows. It replaces the whole library, so it
+collides with any other mod that edits a preset. Nothing here changes how the sun itself looks.
 
 ## What it does
 
@@ -28,17 +31,23 @@ Nothing here changes how the sun itself looks.
 - **Light shafts through our clouds.** The engine still submits its clouds to the god-ray mask pass,
   and that one draw is replaced by our clouds' cover, blended as the engine's own, so the rays stop
   where our clouds stand. `MaskPS` in `src/shaders/clouds.fx`, and `src/engine/dome_draw.cpp`.
+- **The world at night as the eye sees it.** Once the sun is well down, the world's colour drains
+  where it is dark toward the blue-grey of rod vision, reds going dark first, while fires, lamps
+  and headlights keep theirs. A high, uncovered moon lets it keep more; a storm takes that away.
+  Drawn at the sky pass through a quad at the far plane that passes the depth test only where the
+  world drew, so the sky is never touched. Optional faint grain in the darkest parts.
+  `src/night.cpp` and `src/shaders/night.fx`.
 - **Staying out of menus.** The cloud-layer hook reports whether the engine drew a world at all
   this frame, at every hour of the night too; a frame without one gets nothing. No guessing at game
   state.
 - **Switching each part.** The mod menu, and the `[SkyOverhaul]` group in `fcse.ini`, holds only
-  which parts are on: Sky (Engine or Overhaul), Clouds (Engine, Off or Overhaul) and Sun (Engine, or
-  Overhaul for the glare and the afterimage).
-- **Tuning.** The clouds' and the glare's values are kept in `bin\sky-overhaul.ini`, beside
+  which parts are on: Sky (Engine or Overhaul), Clouds (Engine, Off or Overhaul), Sun (Engine, or
+  Overhaul for the glare and the afterimage) and Night (Engine or Overhaul).
+- **Tuning.** The clouds', the glare's and the night's values are kept in `bin\sky-overhaul.ini`, beside
   `fcse.ini`, which is written on the first launch. The sky has none: it follows the sun alone.
   `src/tuning.cpp`.
 - **A window in DevTools' overlay.** With [DevTools](../DevTools) installed, Home shows a Sky Overhaul
-  window that edits that file in Sun and Clouds tabs of sliders, saving each edit when it is let go.
+  window that edits that file in Sun, Clouds and Night tabs of sliders, saving each edit when it is let go.
   Its Sky tab holds a tab per key moment of the sun's day - Night, Dawn, Sunrise, Morning, Noon,
   Afternoon, Sunset and Dusk - and picking one sets the game's clock to its hour, from which the day
   runs on. Without DevTools, `fcse.log` says so once and the file is the only way in.

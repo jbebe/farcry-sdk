@@ -14,6 +14,10 @@ namespace SkyOverhaul::Frame {
 // a pass rather than the passes themselves has to recognise it the same way.
 constexpr float kSkyPassMinZ = 0.9f;
 
+// The far end of the depth range, which the sky holds exactly: the world's geometry is all nearer,
+// at any distance, and a depth short of one would stop telling the two apart somewhere down the view.
+constexpr float kFarDepth = 1.0f;
+
 // One pass worth acting on, as the renderer finishes it.
 struct Pass {
     IDirect3DDevice9* device;
@@ -24,8 +28,9 @@ struct Pass {
     uint32_t frame;
     // Whether a world was submitted for this frame, which is false in menus and loading screens.
     bool live;
-    // Whether this is the scene pass the sky is drawn in, which is the one with the world's depth
-    // complete and the camera it was drawn with still bound.
+    // Whether this is the frame's first scene pass the sky is drawn in, which is the one with the
+    // world's depth complete and the camera it was drawn with still bound. A menu frame can hold a
+    // second, and an effect drawn into both would lay itself over itself.
     bool sky;
 };
 

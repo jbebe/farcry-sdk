@@ -23,11 +23,6 @@ namespace {
     constexpr UINT kFirstConstant = 71;
     constexpr UINT kConstantCount = 6;
 
-    // The far end of the depth range, where nothing but sky has been drawn. The dome is drawn with
-    // a less-or-equal test against a cleared far plane, so this passes wherever no world stands and
-    // is rejected wherever one does.
-    constexpr float kSkyDepth = 1.0f;
-
     constexpr float kDegrees = 57.29578f;
 
     // The most the zenith may be lifted, and the height of the sun over which that lift is let go,
@@ -143,7 +138,7 @@ namespace {
         SkyOverhaul::DrawGuard guard(device, kFirstConstant, kConstantCount);
         device->SetPixelShader(shader);
         device->SetPixelShaderConstantF(kFirstConstant, constants, kConstantCount);
-        return guard.ClipQuad(kSkyDepth, view.corners);
+        return guard.ClipQuad(SkyOverhaul::Frame::kFarDepth, view.corners);
     }
 }
 

@@ -11,6 +11,7 @@
 #include "engine/device_reset.h"
 #include "engine/frame.h"
 #include "engine/screen_draw.h"
+#include "night.h"
 #include "sky.h"
 #include "tuning.h"
 
@@ -21,15 +22,17 @@ namespace {
         SkyOverhaul::Dazzle::ReleaseDeviceObjects();
         SkyOverhaul::Clouds::ReleaseDeviceObjects();
         SkyOverhaul::Sky::ReleaseDeviceObjects();
+        SkyOverhaul::Night::ReleaseDeviceObjects();
         SkyOverhaul::DrawGuard::ReleaseDeviceObjects();
     }
 
-    // One frame, three effects. Each decides for itself whether the pass is one it wants. The sky
-    // has already drawn itself from inside the pass by the time this runs.
+    // Each effect decides for itself whether the pass is one it wants. The sky has already drawn
+    // itself from inside the pass by the time this runs.
     void OnScenePass(const SkyOverhaul::Frame::Pass& pass) {
         SkyOverhaul::Sky::OnScenePass(pass);
         SkyOverhaul::Clouds::OnScenePass(pass);
         SkyOverhaul::Dazzle::OnScenePass(pass);
+        SkyOverhaul::Night::OnScenePass(pass);
     }
 
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
@@ -54,6 +57,10 @@ namespace {
 
     void __cdecl OnSunChanged(const FCSE_SettingValue* value, void*) {
         SkyOverhaul::Dazzle::SetEnabled(value->asChoice == 1);
+    }
+
+    void __cdecl OnNightChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Night::SetEnabled(value->asChoice == 1);
     }
 }
 
@@ -95,6 +102,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Sky", FCSE_CHOICE(1), &OnSkyChanged, nullptr, kModes, std::size(kModes)},
         {"Clouds", FCSE_CHOICE(2), &OnCloudsChanged, nullptr, kCloudModes, std::size(kCloudModes)},
         {"Sun", FCSE_CHOICE(1), &OnSunChanged, nullptr, kModes, std::size(kModes)},
+        {"Night", FCSE_CHOICE(1), &OnNightChanged, nullptr, kModes, std::size(kModes)},
     };
     // Registered under the module name: the mod menu lists every loaded plugin and then every group
     // that matched none, so a group named apart from its DLL would arrive twice, once empty.

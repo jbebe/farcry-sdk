@@ -28,6 +28,9 @@ namespace {
     constexpr float kStormDimming = 0.7f;
     constexpr float kStormGrey = 0.85f;
 
+    // How high the moon climbs, as a sine, while its light comes up to full.
+    constexpr float kMoonUp = 0.2f;
+
     float Dot(const float a[3], const float b[3]) {
         return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     }
@@ -95,6 +98,10 @@ float SkyOverhaul::SkyModel::Haze(float storminess) {
 
 float SkyOverhaul::SkyModel::SunShare(float storminess) {
     return 1.0f - storminess * kStormDimming;
+}
+
+float SkyOverhaul::SkyModel::MoonRise(float moonHeight) {
+    return std::clamp(moonHeight / kMoonUp, 0.0f, 1.0f);
 }
 
 float SkyOverhaul::SkyModel::Grey(float storminess) {

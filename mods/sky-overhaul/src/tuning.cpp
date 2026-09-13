@@ -52,11 +52,13 @@ namespace {
 
     constexpr Category kSun = {"Sun"};
     constexpr Category kClouds = {"Clouds"};
+    constexpr Category kNight = {"Night"};
 
     constexpr Group kCloudLayer = {"Cloud layer", &kClouds};
     constexpr Group kHighCloud = {"High cloud", &kClouds};
     constexpr Group kSunGlare = {"Sun glare", &kSun};
     constexpr Group kAfterimage = {"Afterimage", &kSun};
+    constexpr Group kNightVision = {"Night vision", &kNight};
 
     // In the order the file and the window list them.
     constexpr Parameter kParameters[] = {
@@ -114,6 +116,18 @@ namespace {
          "%.2f", "How wide the bleached region is, as a share of the glare's reach."},
         {"Afterimage haze", &kAfterimage, offsetof(Values, afterimageHaze), 0.35f, 0.0f, 1.0f,
          "%.2f", "How far the whole picture's range compresses while the eye recovers."},
+
+        {"Night strength", &kNightVision, offsetof(Values, nightStrength), 1.0f, 0.0f, 1.0f, "%.2f",
+         "How far the world drains to rod vision once the sun is down. Zero turns it off."},
+        {"Night colour retained above", &kNightVision, offsetof(Values, nightColourAbove), 0.45f,
+         0.02f, 2.0f, "%.2f",
+         "The brightness at and above which a pixel keeps its colour: fires, lamps, headlights."},
+        {"Purkinje shift", &kNightVision, offsetof(Values, nightPurkinje), 0.7f, 0.0f, 1.0f, "%.2f",
+         "How far the drained picture turns from grey to the rods' blue-grey, with reds going dark."},
+        {"Night moon colour", &kNightVision, offsetof(Values, nightMoonColour), 0.5f, 0.0f, 1.0f,
+         "%.2f", "How much colour a high, uncovered moon lets the world keep. Moonless is grey."},
+        {"Night noise", &kNightVision, offsetof(Values, nightNoise), 0.0f, 0.0f, 1.0f, "%.2f",
+         "Faint moving grain in the darkest parts of the view."},
     };
 
     constexpr Moment kMoments[] = {
@@ -277,6 +291,10 @@ void SkyOverhaul::Tuning::DrawWindow(void*) {
         }
         if (ImGui::BeginTabItem(kClouds.name)) {
             g_unsaved |= DrawGroups(kClouds);
+            ImGui::EndTabItem();
+        }
+        if (ImGui::BeginTabItem(kNight.name)) {
+            g_unsaved |= DrawGroups(kNight);
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();

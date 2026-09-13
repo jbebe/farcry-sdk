@@ -47,8 +47,8 @@ if (NOT FXC_EXECUTABLE)
 endif()
 
 # source file : entry point : profile : generated header : array name. The dazzle's MainPS needs
-# ps_2_b for its instruction count and the accumulation passes fit in ps_2_0; the sky and the clouds
-# need ps_3_0 for their loops, which in turn needs the vs_3_0 ClipQuad draws through.
+# ps_2_b for its instruction count and the accumulation passes fit in ps_2_0; everything drawn inside
+# a world pass needs ps_3_0, which in turn needs the vs_3_0 ClipQuad draws through.
 set(SHADER_PASSES
   "dazzle.fx:MainPS:ps_2_b:dazzle_ps.h:g_dazzlePixelShader"
   "dazzle.fx:AccumulatePS:ps_2_0:dazzle_accumulate_ps.h:g_dazzleAccumulatePixelShader"
@@ -57,7 +57,8 @@ set(SHADER_PASSES
   "clouds.fx:MainPS:ps_3_0:clouds_ps.h:g_cloudsPixelShader"
   "clouds.fx:CoverPS:ps_3_0:clouds_cover_ps.h:g_cloudsCoverPixelShader"
   "clouds.fx:MaskPS:ps_3_0:clouds_mask_ps.h:g_cloudsMaskPixelShader"
-  "sky.fx:MainPS:ps_3_0:sky_ps.h:g_skyPixelShader")
+  "sky.fx:MainPS:ps_3_0:sky_ps.h:g_skyPixelShader"
+  "night.fx:MainPS:ps_3_0:night_ps.h:g_nightPixelShader")
 
 set(SHADER_HEADERS "")
 foreach(PASS IN LISTS SHADER_PASSES)
@@ -84,6 +85,7 @@ add_library(SkyOverhaul SHARED
   "src/main.cpp"
   "src/clouds.cpp"
   "src/dazzle.cpp"
+  "src/night.cpp"
   "src/sky.cpp"
   "src/sky_model.cpp"
   "src/tuning.cpp"

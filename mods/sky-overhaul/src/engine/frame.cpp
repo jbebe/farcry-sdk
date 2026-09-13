@@ -21,6 +21,7 @@ namespace {
     State g_state = State::AwaitingScene;
 
     uint32_t g_frame = 0;
+    uint32_t g_skyFrame = 0;
     uint32_t g_passSerial = 0;
     uint32_t g_lastSubmitCount = 0;
     bool g_live = false;
@@ -141,7 +142,11 @@ namespace {
         pass.viewport = viewport;
         pass.frame = g_frame;
         pass.live = g_live;
-        pass.sky = runScene && viewport.MinZ >= SkyOverhaul::Frame::kSkyPassMinZ;
+        pass.sky = runScene && viewport.MinZ >= SkyOverhaul::Frame::kSkyPassMinZ &&
+                   g_skyFrame != g_frame;
+        if (pass.sky) {
+            g_skyFrame = g_frame;
+        }
 
         if (runScene && g_onScenePass != nullptr) {
             g_onScenePass(pass);

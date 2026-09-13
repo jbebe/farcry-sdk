@@ -1,5 +1,5 @@
-// Every value the clouds and the glare are tuned by, kept in bin\sky-overhaul.ini and edited in
-// DevTools' overlay.
+// Every value the clouds, the glare and the night are tuned by, kept in bin\sky-overhaul.ini and
+// edited in DevTools' overlay.
 #pragma once
 
 namespace SkyOverhaul::Tuning {
@@ -35,6 +35,12 @@ struct Values {
     float afterimageSaturation;
     float afterimageSize;
     float afterimageHaze;
+
+    float nightStrength;
+    float nightColourAbove;
+    float nightPurkinje;
+    float nightMoonColour;
+    float nightNoise;
 };
 
 // What the effects draw with.

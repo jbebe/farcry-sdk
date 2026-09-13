@@ -26,11 +26,6 @@ namespace {
     constexpr UINT kFirstConstant = 71;
     constexpr UINT kConstantCount = 17;
 
-    // The far end of the depth range, where nothing but sky has been drawn: the world's geometry
-    // is all nearer, so a less-or-equal test rejects the quad wherever anything stands, at any
-    // distance. A value short of one would stop occluding somewhere down the view distance.
-    constexpr float kSkyDepth = 1.0f;
-
     // How far out clouds are drawn, over how much of the last of that they fade away, and how far
     // the march itself runs. A layer is a plane, so a ray near the horizon would otherwise run for
     // ever, and the samples would be spread so thin they stepped past whole clouds.
@@ -59,8 +54,6 @@ namespace {
     constexpr float kMoonColour[3] = {1.6f, 1.8f, 2.0f};
     constexpr float kBackShare = 0.13f;
     constexpr float kMoonGlow = 0.25f;
-    // How high the moon climbs, as a sine, while its light and its glow come up to full.
-    constexpr float kMoonUp = 0.2f;
 
     // What a full storm makes of the layer's coverage and water and of the high sheet's opacity, and
     // how much of the sky's light it takes from the base of its water-laden cloud.
@@ -90,10 +83,6 @@ namespace {
     using SkyOverhaul::Tuning::Values;
 
     bool g_enabled = false;
-
-    // Which frame was last drawn into. A frame can hold more than one pass the sky is drawn in,
-    // and drawing into each of them would blend the clouds over themselves.
-    uint32_t g_drawnFrame = 0;
 
     // How far the layer has drifted, in metres, kept here rather than derived from the wind so
     // that changing the wind changes how fast the clouds move and not where they are.
@@ -137,7 +126,7 @@ namespace {
         const bool sun = lighting.sunDirection[2] > kSunGone;
         const float rising = (kSunGone - lighting.sunDirection[2]) / kMoonRising;
         const float share = sun ? 0.0f : (rising < 1.0f ? rising : 1.0f);
-        const float moon = share * std::clamp(lighting.moonDirection[2] / kMoonUp, 0.0f, 1.0f);
+        const float moon = share * SkyOverhaul::SkyModel::MoonRise(lighting.moonDirection[2]);
 
         float sunlight[3];
         SkyOverhaul::SkyModel::Sunlight(lighting.sunDirection,
@@ -216,7 +205,7 @@ namespace {
         device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
         device->SetRenderState(D3DRS_SRCBLEND, source);
         device->SetRenderState(D3DRS_DESTBLEND, destination);
-        return draw.ClipQuad(kSkyDepth, g_corners);
+        return draw.ClipQuad(SkyOverhaul::Frame::kFarDepth, g_corners);
     }
 
     void Draw(IDirect3DDevice9* device, IDirect3DPixelShader9* shader,
@@ -267,10 +256,9 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
     // Every scene pass arrives here and only one of them is the sky, so the clock is read after
     // the test rather than before it: ticking on all of them would leave the heartbeat measuring
     // the gap between two passes instead of the time between two frames.
-    if (!g_enabled || !pass.sky || !pass.live || pass.frame == g_drawnFrame) {
+    if (!g_enabled || !pass.sky || !pass.live) {
         return;
     }
-    g_drawnFrame = pass.frame;
     g_drawn = false;
     const float elapsed = g_clock.Lap();
 
