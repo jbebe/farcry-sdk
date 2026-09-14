@@ -25,16 +25,8 @@
 // How tightly the glow around the moon hugs it: a seventh of it is left ten degrees out.
 #define MOON_GLOW_FORWARD 0.9f
 
-// Where the two aircraft went: a unit normal and how far the line sits from the origin, in the
-// units the sheet is read in. Fixed, because they are scenery rather than traffic.
-//
-// Their headings are twenty degrees and forty-five, so they close at twenty-five. At that angle
-// two lines that both pass overhead must cross within a few kilometres, so only the first does:
-// the second runs some eight kilometres to one side, and the two meet twenty kilometres out, which
-// at this altitude is about seventeen degrees above the horizon. A pair of trails converging low
-// and far is what the sky actually does with them.
-#define TRAIL_A float3(-0.342f, 0.940f, 0.180f)
-#define TRAIL_B float3(-0.707f, 0.707f, -0.356f)
+// How many aircraft trails a day can hold.
+#define TRAIL_COUNT 3
 
 // How far a trail wanders off the line the aircraft actually flew, as a multiple of its own width,
 // and how much of that wander is the shorter kink rather than the long slow drift. Enough that no
@@ -105,6 +97,9 @@ float4 Trail : register(c86);
 // rgb: how brightly the air glows right beside the moon, and nothing while the sun lights the sky.
 // w: how far a storm drains everything drawn here toward grey.
 float4 MoonGlow : register(c87);
+// Where today's aircraft went. xy: a trail's unit normal. z: how far it sits from the world's origin
+// along that, in the units the sheet is read in. w: the seed that tears it up, or nought for no trail.
+float4 Trails[TRAIL_COUNT] : register(c88);
 
 // The engine's own sky fog, register for register, so our clouds sit in the same haze the dome
 // does. See docs/docs/engine-internals/sky-and-clouds.md.
@@ -204,6 +199,9 @@ float3 Scatter(float lit, float3 lobes) {
 // uniform nor endless. `path` is the line's unit normal and how far it sits from the origin, in
 // the same units the sheet is read in.
 float Contrail(float2 at, float3 path, float seed) {
+    if (seed <= 0.0f) {
+        return 0.0f;
+    }
     float across = dot(at, path.xy) - path.z;
     float along = dot(at, float2(-path.y, path.x));
 
@@ -250,14 +248,18 @@ float3 HighCloud(float3 ray, float cosAngle, float3 horizon, out float cover) {
     }
 
     float travel = rise / ray.z;
-    float2 at = (Eye.xy + ray.xy * travel + Wind.xy * 2.5f) * Cirrus.y;
+    float2 overhead = (Eye.xy + ray.xy * travel) * Cirrus.y;
+    float2 at = overhead + Wind.xy * 2.5f * Cirrus.y;
 
     float field = tex3Dlod(ShapeNoise, float4(at, 0.37f, 0.0f)).r;
     cover = saturate(Remap(field, 1.0f - Cirrus.z, 1.0f, 0.0f, 1.0f)) * Cirrus.w;
 
-    // Two aircraft, crossing. Added rather than blended in, because a trail is ice laid on top of
-    // whatever sky was already there and does not care how much cirrus it crosses.
-    float trails = Contrail(at, TRAIL_A, 0.23f) + Contrail(at, TRAIL_B, 0.68f);
+    // Added rather than blended in, because a trail is ice laid on top of whatever sky was already
+    // there and does not care how much cirrus it crosses. They stay over the world, not the wind.
+    float trails = 0.0f;
+    [unroll] for (int i = 0; i < TRAIL_COUNT; i++) {
+        trails += Contrail(overhead, Trails[i].xyz, Trails[i].w);
+    }
     cover = saturate(cover + trails * Trail.x);
 
     // Haze is made by the air near the ground, and a sheet this high is above almost all of it.

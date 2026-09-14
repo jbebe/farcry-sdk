@@ -22,7 +22,7 @@
 namespace {
     // Above the clouds' registers, which the shadow draw binds for itself. The last is the blur's,
     // set per blur pass.
-    constexpr UINT kFirstConstant = 88;
+    constexpr UINT kFirstConstant = 91;
     constexpr UINT kFrameConstants = 6;
     constexpr UINT kBlurConstant = kFirstConstant + kFrameConstants;
 

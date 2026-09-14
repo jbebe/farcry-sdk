@@ -272,6 +272,10 @@ IDirect3DTexture9* SkyOverhaul::Noise::Weather() {
     return g_weather;
 }
 
+float SkyOverhaul::Noise::Random(int x, int y, int z, uint32_t seed) {
+    return Unit(Hash(x, y, z, seed));
+}
+
 void SkyOverhaul::Noise::ReleaseDeviceObjects() {
     Release(g_shape);
     Release(g_detail);

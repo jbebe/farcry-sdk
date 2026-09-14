@@ -26,7 +26,11 @@ namespace {
     // Above the engine's own globals, which occupy c0 to c64 and would be read back stale by the
     // next draw if a plugin wrote over them.
     constexpr UINT kFirstConstant = 71;
-    constexpr UINT kConstantCount = 17;
+    // The trails' registers come last.
+    constexpr UINT kTrailCount = 3;
+    constexpr UINT kConstantCount = 17 + kTrailCount;
+
+    constexpr double kPi = 3.14159265358979;
 
     // How far out clouds are drawn, over how much of the last of that they fade away, and how far
     // the march itself runs. A layer is a plane, so a ray near the horizon would otherwise run for
@@ -39,7 +43,7 @@ namespace {
     constexpr double kWindSpeed = 0.9;
     // Clock seconds for the wind to turn once round, and the radians it turns in one.
     constexpr double kWindTurn = 3.0 * 86400.0;
-    constexpr double kWindTurnRate = 2.0 * 3.14159265358979 / kWindTurn;
+    constexpr double kWindTurnRate = 2.0 * kPi / kWindTurn;
 
     // How far apart the samples toward the light are. Wide enough that five of them reach through a
     // whole cloud, which is what a shadow inside one needs.
@@ -77,6 +81,11 @@ namespace {
     // moves over the whole visible trail, which leaves one unbroken line.
     constexpr float kTrailWidth = 0.011f;
     constexpr float kTrailBreak = 0.9f;
+
+    // How far across the campaign world a trail's point is rolled from, in metres, and the seed the
+    // rolls are hashed with.
+    constexpr float kWorldExtent = 5120.0f;
+    constexpr uint32_t kTrailSeed = 0x7A11u;
 
     // How much light bends forward off a droplet, and the two frequencies the detail and the
     // weather are read at relative to the shape.
@@ -170,6 +179,24 @@ namespace {
         out[1] = static_cast<float>(radius * (1.0 - std::cos(angle)));
     }
 
+    // Day `day`'s aircraft trails, as the shader's registers take them: one to three, each through a
+    // random point over the world in a random direction.
+    int RollTrails(int day, float out[kTrailCount * 4]) {
+        using SkyOverhaul::Noise::Random;
+        const int count = 1 + (std::min)(static_cast<int>(Random(day, 0, 0, kTrailSeed) * 3.0f), 2);
+        for (int i = 0; i < static_cast<int>(kTrailCount); i++) {
+            float* line = out + i * 4;
+            const float heading = Random(day, i, 1, kTrailSeed) * static_cast<float>(kPi);
+            const float x = Random(day, i, 2, kTrailSeed) * kWorldExtent;
+            const float y = Random(day, i, 3, kTrailSeed) * kWorldExtent;
+            line[0] = -std::sin(heading);
+            line[1] = std::cos(heading);
+            line[2] = (line[0] * x + line[1] * y) * kCirrusGrain;
+            line[3] = i < count ? 0.05f + 0.9f * Random(day, i, 4, kTrailSeed) : 0.0f;
+        }
+        return count;
+    }
+
     // The shader, this frame's constants and the noise, sampled the way the shape expects.
     void Bind(IDirect3DDevice9* device, IDirect3DPixelShader9* shader) {
         device->SetPixelShader(shader);
@@ -203,13 +230,14 @@ namespace {
     void Draw(IDirect3DDevice9* device, IDirect3DPixelShader9* shader,
               const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::CloudLayer::Lighting& lighting, const Light& light,
-              const Values& v, float storminess, const float drift[2]) {
+              const Values& v, float storminess, const float drift[2],
+              const float trails[kTrailCount * 4]) {
         // Kept clear of the layer below it however high that is set, so the two never interleave.
         const float above = v.cloudBase + v.cloudThickness + kCirrusClearance;
         const float cirrusAltitude = above > kCirrusFloor ? above : kCirrusFloor;
 
         const float shapeGrain = 1.0f / v.cloudSize;
-        const float constants[kConstantCount * 4] = {
+        const float constants[(kConstantCount - kTrailCount) * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             v.cloudBase, v.cloudThickness, v.cloudCoverage, v.cloudDensity,
             drift[0], drift[1], drift[0] * 0.5f, drift[1] * 0.5f,
@@ -229,7 +257,8 @@ namespace {
             cirrusAltitude, kCirrusGrain, v.cirrus, v.cirrusOpacity,
             v.contrails, kTrailWidth, kTrailBreak, 0.0f,
             light.glow[0], light.glow[1], light.glow[2], SkyOverhaul::SkyModel::Grey(storminess)};
-        std::copy(std::begin(constants), std::end(constants), g_constants);
+        std::copy_n(trails, kTrailCount * 4,
+                    std::copy(std::begin(constants), std::end(constants), g_constants));
         for (int corner = 0; corner < 4; corner++) {
             std::copy_n(view.corners[corner], 3, g_corners[corner]);
         }
@@ -271,10 +300,14 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
     if (TimeOfDay::Elapsed(gameSeconds)) {
         Drift(gameSeconds, v, drift);
     }
-    Draw(pass.device, shader, view, lighting, light, v, storminess, drift);
+    const int day = static_cast<int>(gameSeconds / 86400.0);
+    float trails[kTrailCount * 4];
+    const int trailCount = RollTrails(day, trails);
+    Draw(pass.device, shader, view, lighting, light, v, storminess, drift, trails);
 
     if (g_heartbeat.Due(elapsed)) {
         LogPass(pass, view, light, v, lighting.storm, elapsed, gameSeconds, drift);
+        FCSE::Logf("clouds f%u: day %d holds %d trail(s)", pass.frame, day, trailCount);
     }
 }
 
