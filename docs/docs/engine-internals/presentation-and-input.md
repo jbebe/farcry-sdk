@@ -94,6 +94,35 @@ That has a consequence for anything drawn there. A screen-space quad inherits th
 range, so its own vertex depth is remapped into the last thousandth before the far plane unless the
 viewport is reset to `MinZ = 0`, `MaxZ = 1` for the draw and restored afterwards.
 
+### The world's passes in order
+
+:::info[Verified in a running game]
+Retail GOG v1.03 at 1920×1080 with four-sample multisampling, one whole frame recorded from an FCSE
+plugin: each pass's target, depth surface and viewport at `EndScene`, and the render states of every
+draw inside it. A frame in play held 51 to 64 passes up to the composite.
+:::
+
+The world half of the frame runs in this order:
+
+1. **Shadow map cascades**, three pairs of solid then alpha-tested draws into a `NULL`-format
+   6144×2048 target with a depth surface of their own.
+2. **The water reflection**, at 1024×1024 with its own multisampled depth.
+3. **A near-plane depth pass** of about 10 to 17 draws through a viewport of `MinZ` 0 to 0.001,
+   which is the first-person weapon. The stencil is cleared here.
+4. **The depth prepass**, solid draws then alpha-tested ones, writing depth and the linear depth
+   with the stencil off.
+5. **The main colour pass for solid geometry**, depth-tested against that depth without writing it.
+6. **The foliage colour pass**, every draw with `ZFUNC` equal, so foliage is coloured only where its
+   own depth landed. Taking foliage out of the depth prepass would take it out of the frame.
+7. **Further colour passes and 12 or so blended draws**, some of them reading the linear depth.
+   Every draw in passes 5 to 7 runs with the stencil enabled.
+8. **The sky pass.**
+9. **About 18 blended draws**, then a stencil clear and a handful of solid draws, most likely the
+   weapon's colour.
+10. **Bloom, luminance and the composite.**
+
+The world's depth-stencil surface is the same one from the near-plane pass through the sky pass.
+
 ### Whether there is a render thread
 
 `CThreadingConfig` has a `RENDER_THREAD` entry, `engine\settings\defaultthreadingconfig.xml` ships
@@ -189,7 +218,8 @@ stores 255ths, so every byte is rounded to the nearest 255th on the way in.
   bytes as 256ths: 38 cm too far by 100 m. This follows from the packing; one step read back at
   3.93 m jumped 2.4 cm from the row before it.
 - **Lone texels read about a centimetre off the surface around them.** On rows stepping 1.24 cm
-  apart, one step was 2.44 cm and the next 0.14 cm. Where they come from is not established.
+  apart, one step was 2.44 cm and the next 0.14 cm. They are the storage too: the same frame held
+  in half floats has none, below.
 - **Texels half a top-byte step out are rare.** A repair for them changed 8 texels in a column read
   back every two seconds for a minute. Averaging the bytes of multisamples that lie either side of a
   step would make those, so the resolve does not do it often.
@@ -207,6 +237,32 @@ texture and removed it again. In game:
 - Taking each texel as the median of the three by three around it first was the last thing tried,
   and what it did was not recorded.
 :::
+
+### Storing it in half floats
+
+:::info[Verified in a running game]
+Retail GOG v1.03 at 1920×1080 with four-sample multisampling. The format was switched from an FCSE
+plugin while the player stood still, so both formats were read back over the same frame content.
+:::
+
+`CSceneRenderer::PrepareFrameGraph` passes each target's format as a raw `D3DFORMAT` pushed onto the
+stack, `0x15` for both `"Linear depth"` (Steam `0x10347659`) and `"LinearDepthMSAA"` (Steam
+`0x10347b8d`). Writing `0x71`, `D3DFMT_A16B16G16R16F`, over both bytes stores the same packing
+exactly. The two have to change together, since the resolve needs them to agree.
+
+- **The renderer takes it.** The targets are requested by name and format every frame, so the change
+  applies on the next frame, no restart. Water, soft particles, fire and Sky Overhaul's cloud shadows
+  all read the texture and looked unchanged.
+- **Every artefact above goes.** Over 3.5 to 8 m of ground, the 8-bit texture had three backward
+  steps of about 15 mm and four lone texels 8 to 12 mm off. The half-float one had none of them.
+- **What remains is the ground.** Deviations of 3 to 20 mm sit on the same rows with the same size
+  in both formats, so they are relief the renderer really drew.
+- **The 8-bit decode reads short** by the same weighting error: 3.2 cm at 8.3 m.
+- **Normals from it are clean.** On bare ground, 98% of texels turn by less than 2° from one row to
+  the next at a one-pixel baseline, and the count grows with a wider baseline, which is what real
+  bumps do and noise does not.
+
+Half floats cost twice the memory of both targets: about 41 MB more at 1080p with four samples.
 
 ### Cut-out materials
 
@@ -231,10 +287,62 @@ on stream 0 covered 25 to 45%. Two-sided draws covered 30 to 50%, and blended or
 none.
 
 The engine's `.rs` render-state files use only the stencil's top bit. Marking draws with `0x40`
-collides with nothing, and the marks are still there at the sky pass. Screen-space ambient
-occlusion built on the linear depth turned grass noisy, with lighter rings that moved over grass
-patches as the camera turned. Both went once instanced and alpha-tested draws were marked and left
-out.
+collides with nothing, and the marks are still there at the sky pass.
+
+### Marking foliage in the stencil
+
+:::info[Verified in a running game]
+Retail GOG v1.03 at 1920×1080 with four-sample multisampling, marks drawn from an FCSE plugin and
+shown by drawing through the stencil at the sky pass.
+:::
+
+- **Mark in the depth prepass.** Every draw in the colour passes already runs with the stencil
+  enabled, so a mark that waits for draws with the stencil off never happens there. The depth prepass
+  draws with it off, and nothing clears the stencil between it and the sky pass.
+- **Clear the bit on every other depth-prepass draw.** Only foliage marks, but a solid draw in front
+  of foliage has to take the mark away again.
+- **Restrict it to the world's depth surface.** The shadow cascades and the water reflection write
+  depth too, into surfaces of their own.
+- **Put back every stencil state changed.** The engine filters redundant state, so a stencil function
+  left behind is what its next stencilled draw runs under.
+- **Neither render state names foliage.** Marking instanced and alpha-tested draws also marks the
+  rocks the collection system scatters, cut-out road signs, and tree trunks in the distance.
+- **Its vertex shader does.** The grass material's shaders are the only ones that bind the wind and
+  mesh decompression without a world matrix, and the leaf shaders bind the leaf morph or
+  level-of-detail constants. Matching the bound vertex shader's CRC-32 against those objects marks
+  grass and leaves and nothing else. See
+  [shader objects](../file-formats/shader-objects.md#finding-an-object-by-what-it-binds).
+
+A shader cannot read the stencil. To use the marks as a texture, draw white through them into a
+render target at the world's multisampling, which can share the world's depth-stencil surface, and
+`StretchRect` it into a plain texture. What arrives is each pixel's share of foliage samples.
+
+### Ambient occlusion on this frame
+
+:::info[Verified in a running game]
+Retail GOG v1.03 at 1920×1080 with four-sample multisampling, from an FCSE plugin that was built,
+tested and then removed from Sky Overhaul.
+:::
+
+Ground-truth ambient occlusion works on the half-float linear depth. It ran at half resolution,
+with 2 slices and 6 steps per side and a fixed 4×4 pattern cancelled by a depth-aware blur. It was
+drawn at the sky pass, so most blended draws and the weapon come after it. Flat ground stayed
+white, corners darkened, and nothing moved with the camera.
+
+- **Foliage has to be left out twice.** As a receiver it shades every blade. As an occluder it
+  darkens the ground behind and between the grass.
+- **A pixel only partly covered by a blade counts as foliage.** Its resolved depth lies between the
+  blade and the ground, which the occlusion reads as a small occluder floating in front. Those move
+  with the wind, and the ground behind grass flickered until any coverage at all was excluded.
+- **The ambient term is separable only in source.** The prototype's `aaa.fx` adds a hemisphere
+  ambient after the direct light has been shadowed, so one multiply there would touch nothing else.
+  Retail ships compiled shaders, so a plugin multiplies the finished colour instead.
+- **Ubisoft's own attempt came later.** The Far Cry 3 Blood Dragon debug package in
+  `tools/third-party` carries a port of NVIDIA's HBAO as a Direct3D 11 compute shader over a linear
+  depth texture. Its Direct3D 9 blur variant samples an encoded depth through the same
+  `DepthVPSampler` state.
+
+It was not taken further, in favour of other work.
 
 :::danger[Hooking one of the engine's own sky functions is not a way in]
 The obvious move — detour the sun's draw and issue the query from inside it — does not work, and
@@ -460,6 +568,8 @@ state, and letting go before a reset — in modules that know nothing about the 
   is untried, and it would also have to force the colour targets to match.
 - Whether water surfaces write `"Linear depth"`, and whether the resolve is the engine's own
   `StretchRect` or a shader of its own.
-- Where the lone texels a centimetre off in `"Linear depth"` come from.
+- Whether the colour passes' stencil write mask covers bit `0x40`. Marks made in the depth prepass
+  survive to the sky pass, so it does not clear them, but it has not been read.
+- What the dozen blended draws before the sky pass are.
 - Where the engine stores the result of its own flare visibility query. The readback wrapper is
   known; the functions around it are undefined code in the Ghidra project.

@@ -176,10 +176,10 @@ other mods: the daytime terrain lighting presets and the engine's own sun shadow
       pixels as far as the clouds cover them
 - [x] **Water reflections.** Our clouds are drawn only in the main sky pass; checked in game, the
       reflections look right as they are
-- [x] **Ambient occlusion: dropped.** Grass could be left out, but the engine's packed depth steps
-      back 1.5 cm every 3.9 m and has lone texels a centimetre off, and normals taken from it drew
-      dark lines and then dots on the ground. What was learned is in
-      [presenting a frame](/docs/engine-internals/presentation-and-input#how-far-neighbouring-texels-can-be-trusted)
+- [x] **Ambient occlusion: dropped.** The steps and lone texels in the engine's depth were 8-bit
+      storage, and half floats removed them. Ground-truth occlusion then ran clean in game with grass
+      and leaves masked out, and was set aside for other work. What was learned is in
+      [presenting a frame](/docs/engine-internals/presentation-and-input#ambient-occlusion-on-this-frame)
 - [x] **Cloud shadows.** The ground marches toward the sun through our clouds' density, at half
       resolution from the engine's linear depth. Confirmed in game, grass included
 - [x] **The colour grade.** The final pass's saturation, powers and contrast drawn with our values.

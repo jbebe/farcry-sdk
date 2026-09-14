@@ -87,12 +87,22 @@ object in the export.
 ### Finding an object by what it binds
 
 A permutation whose index key is unknown can still be found by a parameter it binds, since every
-binding row carries the name's CRC-32. Two searches over the D3D9 `obj` tree:
+binding row carries the name's CRC-32. Searches over the D3D9 `obj` tree:
 
 | Parameter | Objects | Register |
 | --- | --- | --- |
 | `DepthVPSampler` | 74, bytecode 196 to 5,332 bytes | `s0` in every one |
 | `Saturation`, `ColorRemapData`, `ContrastData` | 7 | `c71` to `c73` in the 244, 316 and 388 byte objects; `c73` to `c75` in the 440, 496, 512 and 568 byte ones |
+| `WindSimParamsX` and `MeshDecompression`, without `WorldMatrix` | 39 `.vso`, the grass material | — |
+| `LeavesMorphFact`, `LeavesEquations`, `DistanceFactors` or `LevelLOD`, without `TrunkStencil` or `TrunkUVDecompression` | 97 `.vso`, tree leaves | — |
+
+The grass material places its instances from vertex data, so its per-instance wind and rotation
+never appear as constants; the combination above is what is left to find it by. The tree trunk binds
+`DistanceFactors` and `LevelLOD` too, which is why the trunk's own constants rule it out.
+
+A row's registers-occupied field is nonzero for many viewport globals in every shader searched, the
+water reflection constants in grass among them, so a global's row alone does not show that a
+shader reads it. The material's own parameters are the ones to search by.
 
 The seven are the final pass of the prototype's `posteffect_adaptivebloom.fx`. The four larger ones
 also bind `BloomParams` at `c71`, `LuminanceRange` at `c72` and `LuminanceAdaptationRange` at `c76`
