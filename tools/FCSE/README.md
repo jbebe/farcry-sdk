@@ -251,6 +251,7 @@ process, and neither `FCSE.exe` nor a plugin DLL built for it can load as 64-bit
 .\build.ps1 -Config debug
 .\build.ps1 -Tests     # also run ctest
 .\build.ps1 -Zip       # also package out\fcse-release.zip + out\fcse-plugins-release.zip
+.\build.ps1 -Install "C:\Games\Far Cry 2\bin"   # also copy FCSE.exe into the game
 ```
 
 Same `vswhere`/`vcvarsall.bat x86` dance as `tools/misc/modpatcher/build.ps1`. Builds `FCSE.exe`

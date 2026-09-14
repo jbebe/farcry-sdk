@@ -23,11 +23,17 @@
     the example plugin/script separately - each laid out so its contents extract straight into the
     game's bin\ folder. Off by default.
 
+.PARAMETER Install
+    Path to the game's bin folder (the one holding FarCry2.exe). FCSE.exe is copied into it, after the
+    tests when -Tests is also given. The example plugin is not, since it would load into the game.
+    Off by default.
+
 .EXAMPLE
     .\build.ps1
     .\build.ps1 -Config debug
     .\build.ps1 -Tests
     .\build.ps1 -Zip
+    .\build.ps1 -Install "C:\Games\Far Cry 2\bin"
 #>
 param(
     [ValidateSet("release", "debug")]
@@ -35,10 +41,17 @@ param(
 
     [switch]$Tests,
 
-    [switch]$Zip
+    [switch]$Zip,
+
+    [string]$Install
 )
 
 $ErrorActionPreference = "Stop"
+
+# Checked before the build, so a wrong path fails in seconds rather than after it.
+if ($Install -and -not (Test-Path (Join-Path $Install "FarCry2.exe"))) {
+    throw "$Install does not look like the game's bin folder - no FarCry2.exe in it."
+}
 
 $ProjectRoot = $PSScriptRoot
 $Preset = "x86-$Config"
@@ -106,4 +119,10 @@ if ($Zip) {
         Compress-Archive -Path (Join-Path $StageRoot "$Name\*") -DestinationPath $ZipPath
         Write-Host "Packaged: $ZipPath" -ForegroundColor Green
     }
+}
+
+if ($Install) {
+    # Fails while the game is running from FCSE.exe, which holds the file open.
+    Copy-Item $OutputExe (Join-Path $Install "FCSE.exe") -Force
+    Write-Host "Installed: $(Join-Path $Install 'FCSE.exe')" -ForegroundColor Green
 }
