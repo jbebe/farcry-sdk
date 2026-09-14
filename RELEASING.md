@@ -17,6 +17,7 @@ schedule.
 | Vortex extension | `tools/vortex-farcry2` | `vortex-<version>` | `info.json` |
 | Blender add-on | `tools/BlenderFC2` | `blenderfc2-<version>` | `blender_manifest.toml` |
 | VSS Vintorez | `mods/vss-vintorez` | `mod-vss-<version>` | |
+| Sky Overhaul | `mods/sky-overhaul` | `sky-overhaul-<version>` | |
 
 The Blender add-on's release installs Blender on the runner before it builds. Blender builds its own
 extension zips — a hand-made one will not install — so that is a build prerequisite there in the way

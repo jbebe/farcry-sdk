@@ -1,0 +1,73 @@
+name: Sky Overhaul release
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+env:
+  # https://www.nexusmods.com/farcry2/mods/377. NEXUS_MOD_ID is the internal ID that
+  # v3/games/farcry2/mods/377 answers with, not the 377 in the URL; the file ID is on the mod's Files
+  # tab under "API Info". An empty file ID skips the upload.
+  NEXUS_MOD_ID: '6317896892793'
+  NEXUS_FILE_SKY_OVERHAUL: '7965942'
+
+jobs:
+  release:
+    # A 32-bit MSVC/CMake build (Far Cry 2 is a 32-bit process) - see mods/sky-overhaul/build.ps1,
+    # which this reuses as-is. Its first configure clones the Dear ImGui that mods/DevTools pins, which
+    # is why the whole repository is checked out rather than this folder alone.
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: mods/sky-overhaul
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Prepare the release
+        id: release
+        uses: ./.github/actions/prepare-release
+        with:
+          directory: mods/sky-overhaul
+          tag_prefix: sky-overhaul
+
+      - name: Build SkyOverhaul.dll
+        shell: pwsh
+        run: .\build.ps1 -Config release
+
+      - name: Stage release contents
+        shell: pwsh
+        # A JackAll layer, which both installers read as-is: mods\ is game data and plugins\ is what
+        # JackAll deploys into bin\plugins. The layer's .gitkeep is dropped, since an installer would
+        # deploy it too. README-release.md rather than README.md, which links to sibling folders by
+        # relative path, every one of which is dead once the file is alone inside a zip.
+        run: |
+          if ($PSVersionTable.PSVersion.Major -lt 7) { throw 'PowerShell 7+ is required - older Compress-Archive writes backslash entry paths, which no installer reads.' }
+          Copy-Item "layer" "stage" -Recurse
+          Remove-Item "stage\plugins\.gitkeep"
+          Copy-Item "out\build\x86-release\SkyOverhaul.dll" "stage\plugins\SkyOverhaul.dll"
+          Copy-Item "README-release.md" "stage\README.md"
+          if (-not (Test-Path "stage\mods")) { throw 'stage\mods is missing - the zip would not be a layer.' }
+
+      - name: Zip release artifact
+        shell: pwsh
+        run: Compress-Archive -Path "stage\*" -DestinationPath "sky-overhaul-${{ steps.release.outputs.version }}.zip"
+
+      - name: Publish GitHub release
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ steps.release.outputs.tag }}" "sky-overhaul-${{ steps.release.outputs.version }}.zip" --title "Sky Overhaul ${{ steps.release.outputs.version }}" --target "${{ github.sha }}" --notes-file "${{ steps.release.outputs.notes_file }}"
+
+      - name: Upload Sky Overhaul to Nexus Mods
+        uses: ./.github/actions/nexus-upload
+        with:
+          api_key: ${{ secrets.NEXUSMODS_API_KEY }}
+          mod_id: ${{ env.NEXUS_MOD_ID }}
+          file_id: ${{ env.NEXUS_FILE_SKY_OVERHAUL }}
+          filename: mods/sky-overhaul/sky-overhaul-${{ steps.release.outputs.version }}.zip
+          version: ${{ steps.release.outputs.version }}
+          display_name: Sky Overhaul
+          changelog: ${{ steps.release.outputs.nexus }}
+          update_mod_version: 'true'
