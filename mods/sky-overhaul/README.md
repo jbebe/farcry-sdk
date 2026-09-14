@@ -40,16 +40,13 @@ collides with any other mod that edits a preset. Nothing here changes how the su
 - **The moon without the engine's fog.** The engine fogs the moon's sprite by its height, which hid
   all but a high moon in the night's near-black fog. Its one draw is recognised in the sky pass and
   drawn with the fog amount at zero. `src/engine/dome_draw.cpp`.
-- **Ambient occlusion by day and night.** Creases, contacts and corners darken where the sky's light
-  cannot reach them. Worked out at half resolution from the engine's own linear depth, a texture
-  its water and soft particles read, which is found by recognising those draws' shaders. Blurred
-  along surfaces, faded out with distance, and multiplied into the world at the sky pass, never
-  nearer than a metre, so the player's weapon stays clean. Grass still takes it and turns noisy
-  under it. `src/occlusion.cpp`, `src/shaders/occlusion.fx`, `src/engine/depth_texture.cpp`.
 - **Cloud shadows.** Ground under our clouds loses sunlight as they drift over it. Each patch of
   ground marches up through the cloud layer toward the sun, through the same density the clouds are
-  drawn from, so a shadow is where its cloud is and moves with it. Needs Clouds on Overhaul. Drawn
-  into the same half-resolution pass as the occlusion. `ShadowPS` in `src/shaders/clouds.fx`.
+  drawn from, so a shadow is where its cloud is and moves with it. Needs Clouds on Overhaul. Worked
+  out at half resolution from the engine's own linear depth, a texture its water and soft particles
+  read, which is found by recognising those draws' shaders. Blurred along surfaces and multiplied
+  into the world at the sky pass, never nearer than a metre, so the player's weapon stays clean.
+  `src/shadows.cpp`, `ShadowPS` in `src/shaders/clouds.fx`, `src/engine/depth_texture.cpp`.
 - **The colour grade.** The final pass's saturation, per-channel powers and contrast curve drawn with
   values of our own, recognised by its shader and put back after its draw. Replaces the weather
   preset's grade in every weather. `src/grade.cpp`.
@@ -58,12 +55,12 @@ collides with any other mod that edits a preset. Nothing here changes how the su
   state.
 - **Switching each part.** The mod menu, and the `[SkyOverhaul]` group in `fcse.ini`, holds only
   which parts are on: Sky (Engine or Overhaul), Clouds (Engine, Off or Overhaul), Sun (Engine, or
-  Overhaul for the glare and the afterimage), Night, Occlusion, Shadows and Grade (each Engine or
-  Overhaul). The last three start on Engine.
+  Overhaul for the glare and the afterimage), Night, Shadows and Grade (each Engine or Overhaul).
+  The last two start on Engine.
 - **Tuning.** Every effect's values are kept in `bin\sky-overhaul.ini`, beside `fcse.ini`, which is
   written on the first launch. The sky has none: it follows the sun alone. `src/tuning.cpp`.
 - **A window in DevTools' overlay.** With [DevTools](../DevTools) installed, Home shows a Sky Overhaul
-  window that edits that file in Sun, Clouds, Night, Occlusion, Shadows and Grade tabs of sliders,
+  window that edits that file in Sun, Clouds, Night, Shadows and Grade tabs of sliders,
   saving each edit when it is let go.
   Its Sky tab holds a tab per key moment of the sun's day - Night, Dawn, Sunrise, Morning, Noon,
   Afternoon, Sunset and Dusk - and picking one sets the game's clock to its hour, from which the day
@@ -88,8 +85,8 @@ Bloom on, in Options → Video or on the `<quality>` row in
 `Documents\My Games\Far Cry 2\GamerProfile.xml` matching the profile's `Quality`. The glare works
 without it, but the sun it sits beside is a flat disc until bloom runs.
 
-`DepthPassQuality` high or above for the occlusion and the cloud shadows: below it the engine
-writes no linear depth, and `fcse.log` says so once.
+`DepthPassQuality` high or above for the cloud shadows: below it the engine writes no linear depth,
+and `fcse.log` says so once.
 
 `Present` is hooked by DevTools, and FCSE gives an address to one plugin only, which is why this
 draws from `EndScene` instead. The two coexist.

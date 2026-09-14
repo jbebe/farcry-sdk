@@ -170,8 +170,43 @@ sky pass.
   and 1023.75 while loading.
 - **Where nothing was drawn it holds white**, which decodes to just past the view distance: 1003.8 m.
 - **The first-person weapon leaves it at zero.**
-- **Screen-space ambient occlusion built on it turns grass noisy**, with rings of lighter occlusion
-  around the camera that move over grass patches as it turns. Not yet explained.
+
+### How far neighbouring texels can be trusted
+
+:::info[Verified in a running game]
+Retail GOG v1.03 at 1920×1080 with four-sample multisampling, one column of the texture read back
+from an FCSE plugin at the sky pass, looking down at open ground.
+:::
+
+The prototype's `CompressDepthValue` hands each byte over as a multiple of 1/256, and the channel
+stores 255ths, so every byte is rounded to the nearest 255th on the way in.
+
+- **The middle byte holds 127 across two of its steps**, halfway through every step of the top byte:
+  at 1.95 m, 5.86 m, 9.77 m and so on. The lowest byte wraps underneath it, so the depth there reads
+  1.5 cm nearer than the texel before. At 5.87 m, on rows stepping 1.24 cm apart, three rows read
+  (1, 127, 100), (1, 127, 53) and (1, 128, 6): 5.8724, 5.8696 and 5.8821 m.
+- **Past each step of the top byte the depth reads a further 1.5 cm long**, since `c56` weighs the
+  bytes as 256ths: 38 cm too far by 100 m. This follows from the packing; one step read back at
+  3.93 m jumped 2.4 cm from the row before it.
+- **Lone texels read about a centimetre off the surface around them.** On rows stepping 1.24 cm
+  apart, one step was 2.44 cm and the next 0.14 cm. Where they come from is not established.
+- **Texels half a top-byte step out are rare.** A repair for them changed 8 texels in a column read
+  back every two seconds for a minute. Averaging the bytes of multisamples that lie either side of a
+  step would make those, so the resolve does not do it often.
+
+:::warning[A surface normal taken from neighbouring texels breaks on all of these]
+A 1.5 cm step is inside the tolerance any depth comparison already allows. A normal is not, because
+it is taken from depth differences one pixel apart. Sky Overhaul built ambient occlusion on this
+texture and removed it again. In game:
+
+- Taking each axis from the neighbour nearer in depth, the usual guard against silhouettes, picks
+  the neighbour across a backward step wherever rows lie more than 0.77 cm apart. It drew a faint
+  dark line across the ground at 5.87 m that turned with the camera.
+- Taking each axis from the side whose next two texels run straight on through the pixel removed
+  the lines, and left dark dots at the lone texels that ran along the terrain as the camera moved.
+- Taking each texel as the median of the three by three around it first was the last thing tried,
+  and what it did was not recorded.
+:::
 
 ### Cut-out materials
 
@@ -191,7 +226,15 @@ from an FCSE plugin that stencil-marked draws and counted the marked samples at 
 
 Neither state names the grass. Draws with alpha-to-coverage on covered about 5% of the frame's
 samples, the detailed blades nearest the camera. Draws with alpha test on covered about 7%. The grass
-carpet that fills the rest of the field is drawn some other way.
+carpet that fills the rest of the field is instanced: draws with `D3DSTREAMSOURCE_INDEXEDDATA` set
+on stream 0 covered 25 to 45%. Two-sided draws covered 30 to 50%, and blended or depth-equal ones
+none.
+
+The engine's `.rs` render-state files use only the stencil's top bit. Marking draws with `0x40`
+collides with nothing, and the marks are still there at the sky pass. Screen-space ambient
+occlusion built on the linear depth turned grass noisy, with lighter rings that moved over grass
+patches as the camera turned. Both went once instanced and alpha-tested draws were marked and left
+out.
 
 :::danger[Hooking one of the engine's own sky functions is not a way in]
 The obvious move — detour the sun's draw and issue the query from inside it — does not work, and
@@ -417,6 +460,6 @@ state, and letting go before a reset — in modules that know nothing about the 
   is untried, and it would also have to force the colour targets to match.
 - Whether water surfaces write `"Linear depth"`, and whether the resolve is the engine's own
   `StretchRect` or a shader of its own.
-- What draws the grass carpet beyond the detailed blades, and how a draw call can recognise it.
+- Where the lone texels a centimetre off in `"Linear depth"` come from.
 - Where the engine stores the result of its own flare visibility query. The readback wrapper is
   known; the functions around it are undefined code in the Ghidra project.

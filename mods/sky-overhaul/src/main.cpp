@@ -14,7 +14,7 @@
 #include "engine/screen_draw.h"
 #include "grade.h"
 #include "night.h"
-#include "occlusion.h"
+#include "shadows.h"
 #include "sky.h"
 #include "tuning.h"
 
@@ -26,7 +26,7 @@ namespace {
         SkyOverhaul::Clouds::ReleaseDeviceObjects();
         SkyOverhaul::Sky::ReleaseDeviceObjects();
         SkyOverhaul::Night::ReleaseDeviceObjects();
-        SkyOverhaul::Occlusion::ReleaseDeviceObjects();
+        SkyOverhaul::Shadows::ReleaseDeviceObjects();
         SkyOverhaul::DrawGuard::ReleaseDeviceObjects();
         SkyOverhaul::KnownShaders::Forget();
     }
@@ -36,7 +36,7 @@ namespace {
     void OnScenePass(const SkyOverhaul::Frame::Pass& pass) {
         SkyOverhaul::Sky::OnScenePass(pass);
         SkyOverhaul::Clouds::OnScenePass(pass);
-        SkyOverhaul::Occlusion::OnScenePass(pass);
+        SkyOverhaul::Shadows::OnScenePass(pass);
         SkyOverhaul::Dazzle::OnScenePass(pass);
         SkyOverhaul::Night::OnScenePass(pass);
     }
@@ -70,12 +70,8 @@ namespace {
         SkyOverhaul::Night::SetEnabled(value->asChoice == 1);
     }
 
-    void __cdecl OnOcclusionChanged(const FCSE_SettingValue* value, void*) {
-        SkyOverhaul::Occlusion::SetAmbientEnabled(value->asChoice == 1);
-    }
-
     void __cdecl OnShadowsChanged(const FCSE_SettingValue* value, void*) {
-        SkyOverhaul::Occlusion::SetShadowsEnabled(value->asChoice == 1);
+        SkyOverhaul::Shadows::SetEnabled(value->asChoice == 1);
     }
 
     void __cdecl OnGradeChanged(const FCSE_SettingValue* value, void*) {
@@ -122,7 +118,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Clouds", FCSE_CHOICE(2), &OnCloudsChanged, nullptr, kCloudModes, std::size(kCloudModes)},
         {"Sun", FCSE_CHOICE(1), &OnSunChanged, nullptr, kModes, std::size(kModes)},
         {"Night", FCSE_CHOICE(1), &OnNightChanged, nullptr, kModes, std::size(kModes)},
-        {"Occlusion", FCSE_CHOICE(0), &OnOcclusionChanged, nullptr, kModes, std::size(kModes)},
         {"Shadows", FCSE_CHOICE(0), &OnShadowsChanged, nullptr, kModes, std::size(kModes)},
         {"Grade", FCSE_CHOICE(0), &OnGradeChanged, nullptr, kModes, std::size(kModes)},
     };

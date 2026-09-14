@@ -1,4 +1,4 @@
-#include "occlusion.h"
+#include "shadows.h"
 
 #include "clouds.h"
 
@@ -14,19 +14,16 @@
 #include "fcse_api.h"
 #include "tuning.h"
 
-#include "occlusion_ambient_ps.h"
-#include "occlusion_apply_ps.h"
-#include "occlusion_blur_ps.h"
+#include "shadows_apply_ps.h"
+#include "shadows_blur_ps.h"
 
 #include <algorithm>
 
 namespace {
-    using SkyOverhaul::Tuning::Values;
-
     // Above the clouds' registers, which the shadow draw binds for itself. The last is the blur's,
     // set per blur pass.
     constexpr UINT kFirstConstant = 88;
-    constexpr UINT kFrameConstants = 7;
+    constexpr UINT kFrameConstants = 6;
     constexpr UINT kBlurConstant = kFirstConstant + kFrameConstants;
 
     constexpr DWORD kDepthSampler = 3;
@@ -49,11 +46,10 @@ namespace {
         IDirect3DSurface9* surface;
     };
 
-    bool g_ambient = false;
-    bool g_shadows = false;
+    bool g_enabled = false;
 
     IDirect3DDevice9* g_owner = nullptr;
-    // The occlusion at half resolution, and the other half of its blur.
+    // The shadows at half resolution, and the other half of their blur.
     Target g_halves[2] = {};
     UINT g_width = 0;
     UINT g_height = 0;
@@ -62,9 +58,8 @@ namespace {
 
     uint32_t g_passesWithoutDepth = 0;
 
-    SkyOverhaul::PixelShader g_ambientShader{"occlusion", g_occlusionAmbientPixelShader};
-    SkyOverhaul::PixelShader g_blurShader{"occlusion blur", g_occlusionBlurPixelShader};
-    SkyOverhaul::PixelShader g_applyShader{"occlusion apply", g_occlusionApplyPixelShader};
+    SkyOverhaul::PixelShader g_blurShader{"shadows blur", g_shadowsBlurPixelShader};
+    SkyOverhaul::PixelShader g_applyShader{"shadows apply", g_shadowsApplyPixelShader};
 
     SkyOverhaul::Stopwatch g_clock;
     SkyOverhaul::Heartbeat g_heartbeat{2.0f};
@@ -97,7 +92,7 @@ namespace {
             if (FAILED(created)) {
                 ReleaseTargets();
                 g_refused = true;
-                FCSE::Logf("occlusion: no %ux%u target, 0x%08lX", desc.Width, desc.Height,
+                FCSE::Logf("shadows: no %ux%u target, 0x%08lX", desc.Width, desc.Height,
                            static_cast<unsigned long>(created));
                 return false;
             }
@@ -130,19 +125,16 @@ namespace {
         draw.ClipQuad(0.0f, kNoRays);
     }
 
-    // The occlusion and the shadows at half resolution and blurred, then multiplied into the world
-    // wherever it drew beyond arm's length.
+    // The shadows at half resolution and blurred, then multiplied into the world wherever it drew
+    // beyond arm's length.
     bool Draw(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
-              const SkyOverhaul::DepthTexture::Found& depth, const Values& v, float sun) {
+              const SkyOverhaul::DepthTexture::Found& depth, float strength, float sun) {
         IDirect3DDevice9* device = pass.device;
-        const bool ambient = g_ambient && v.occlusionStrength > 0.0f;
-        const bool shadowed = g_shadows && v.shadowStrength > 0.0f && sun > 0.0f;
-        IDirect3DPixelShader9* ambientShader = g_ambientShader.Get(device);
         IDirect3DPixelShader9* blurShader = g_blurShader.Get(device);
         IDirect3DPixelShader9* applyShader = g_applyShader.Get(device);
-        if ((!ambient && !shadowed) || g_refused || ambientShader == nullptr ||
-            blurShader == nullptr || applyShader == nullptr || view.horizontalScale == 0.0f ||
-            view.verticalScale == 0.0f || !EnsureTargets(device, pass.backBuffer)) {
+        if (strength <= 0.0f || sun <= 0.0f || g_refused || blurShader == nullptr ||
+            applyShader == nullptr || view.horizontalScale == 0.0f || view.verticalScale == 0.0f ||
+            !EnsureTargets(device, pass.backBuffer)) {
             return false;
         }
 
@@ -154,8 +146,7 @@ namespace {
             view.right[0], view.right[1], view.right[2], 0.0f,
             view.up[0], view.up[1], view.up[2], 0.0f,
             view.direction[0], view.direction[1], view.direction[2], 0.0f,
-            v.occlusionRadius, v.occlusionStrength, v.occlusionFade, 0.0f,
-            v.shadowStrength, sun, 0.0f, 0.0f};
+            strength, sun, 0.0f, 0.0f};
 
         SkyOverhaul::ScreenDraw draw(device, kFirstConstant, kFrameConstants + 1);
         device->SetPixelShaderConstantF(kFirstConstant, constants, kFrameConstants);
@@ -171,22 +162,13 @@ namespace {
         device->SetRenderTarget(0, g_halves[0].surface);
         device->Clear(0, nullptr, D3DCLEAR_TARGET, 0xFFFFFFFF, 1.0f, 0);
 
-        if (ambient) {
-            device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_RED);
-            device->SetPixelShader(ambientShader);
-            draw.ClipQuad(0.0f, kNoRays);
-        }
-        if (shadowed) {
-            device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA);
-            SkyOverhaul::Clouds::DrawShadow(device);
-            device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
-            device->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
-            device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
-            device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
-        }
+        device->SetRenderState(D3DRS_COLORWRITEENABLE, D3DCOLORWRITEENABLE_ALPHA);
+        SkyOverhaul::Clouds::DrawShadow(device);
+        device->SetSamplerState(0, D3DSAMP_ADDRESSU, D3DTADDRESS_CLAMP);
+        device->SetSamplerState(0, D3DSAMP_ADDRESSV, D3DTADDRESS_CLAMP);
+        device->SetSamplerState(0, D3DSAMP_MAGFILTER, D3DTEXF_POINT);
+        device->SetSamplerState(0, D3DSAMP_MINFILTER, D3DTEXF_POINT);
 
-        device->SetRenderState(D3DRS_COLORWRITEENABLE,
-                               D3DCOLORWRITEENABLE_RED | D3DCOLORWRITEENABLE_ALPHA);
         device->SetPixelShader(blurShader);
         BlurInto(device, draw, g_halves[0], g_halves[1], 1.0f, 0.0f);
         BlurInto(device, draw, g_halves[1], g_halves[0], 0.0f, 1.0f);
@@ -216,8 +198,8 @@ namespace {
     }
 }
 
-void SkyOverhaul::Occlusion::OnScenePass(const Frame::Pass& pass) {
-    if ((!g_ambient && !g_shadows) || !pass.sky || !pass.live) {
+void SkyOverhaul::Shadows::OnScenePass(const Frame::Pass& pass) {
+    if (!g_enabled || !pass.sky || !pass.live) {
         return;
     }
     const float elapsed = g_clock.Lap();
@@ -225,7 +207,7 @@ void SkyOverhaul::Occlusion::OnScenePass(const Frame::Pass& pass) {
     DepthTexture::Found depth = {};
     if (!DepthTexture::Latest(depth)) {
         if (++g_passesWithoutDepth == kPatience) {
-            FCSE::Logf("occlusion: no draw has shown the linear depth texture, so nothing is "
+            FCSE::Logf("shadows: no draw has shown the linear depth texture, so nothing is "
                        "darkened. It needs DepthPassQuality high or above.");
         }
         return;
@@ -235,33 +217,25 @@ void SkyOverhaul::Occlusion::OnScenePass(const Frame::Pass& pass) {
     if (!Camera::Read(pass.device, view) || !CloudLayer::Latest(lighting)) {
         return;
     }
-    const Values v = Tuning::Current();
     const float sun =
         std::clamp((lighting.sunDirection[2] - kSunLow) / (kSunHigh - kSunLow), 0.0f, 1.0f);
-    const bool drawn = Draw(pass, view, depth, v, sun);
+    const bool drawn = Draw(pass, view, depth, Tuning::Current().shadowStrength, sun);
 
     if (g_heartbeat.Due(elapsed)) {
-        FCSE::Logf("occlusion f%u: ambient %d shadows %d | sun %.2f | drawn %d", pass.frame,
-                   g_ambient ? 1 : 0, g_shadows ? 1 : 0, sun, drawn ? 1 : 0);
+        FCSE::Logf("shadows f%u: sun %.2f | drawn %d", pass.frame, sun, drawn ? 1 : 0);
     }
 }
 
-void SkyOverhaul::Occlusion::ReleaseDeviceObjects() {
+void SkyOverhaul::Shadows::ReleaseDeviceObjects() {
     ReleaseTargets();
     DepthTexture::ReleaseDeviceObjects();
-    g_ambientShader.Release();
     g_blurShader.Release();
     g_applyShader.Release();
     g_owner = nullptr;
     g_refused = false;
 }
 
-void SkyOverhaul::Occlusion::SetAmbientEnabled(bool enabled) {
-    g_ambient = enabled;
-    DomeDraw::SetWatchDepth(g_ambient || g_shadows);
-}
-
-void SkyOverhaul::Occlusion::SetShadowsEnabled(bool enabled) {
-    g_shadows = enabled;
-    DomeDraw::SetWatchDepth(g_ambient || g_shadows);
+void SkyOverhaul::Shadows::SetEnabled(bool enabled) {
+    g_enabled = enabled;
+    DomeDraw::SetWatchDepth(enabled);
 }

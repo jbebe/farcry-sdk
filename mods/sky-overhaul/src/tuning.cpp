@@ -55,20 +55,17 @@ namespace {
     constexpr Category kSky = {"Sky"};
     constexpr Category kClouds = {"Clouds"};
     constexpr Category kNight = {"Night"};
-    constexpr Category kOcclusion = {"Occlusion"};
     constexpr Category kShadows = {"Shadows"};
     constexpr Category kGrade = {"Grade"};
 
     // The window's tabs, in order.
-    constexpr const Category* kTabs[] = {&kSun,       &kSky,     &kClouds, &kNight,
-                                         &kOcclusion, &kShadows, &kGrade};
+    constexpr const Category* kTabs[] = {&kSun, &kSky, &kClouds, &kNight, &kShadows, &kGrade};
 
     constexpr Group kCloudLayer = {"Cloud layer", &kClouds};
     constexpr Group kHighCloud = {"High cloud", &kClouds};
     constexpr Group kSunGlare = {"Sun glare", &kSun};
     constexpr Group kAfterimage = {"Afterimage", &kSun};
     constexpr Group kNightVision = {"Night vision", &kNight};
-    constexpr Group kAmbientOcclusion = {"Ambient occlusion", &kOcclusion};
     constexpr Group kCloudShadows = {"Cloud shadows", &kShadows};
     constexpr Group kColourGrade = {"Colour grade", &kGrade};
 
@@ -141,12 +138,6 @@ namespace {
         {"Night noise", &kNightVision, offsetof(Values, nightNoise), 0.0f, 0.0f, 1.0f, "%.2f",
          "Faint moving grain in the darkest parts of the view."},
 
-        {"Occlusion strength", &kAmbientOcclusion, offsetof(Values, occlusionStrength), 0.6f, 0.0f,
-         1.0f, "%.2f", "How dark creases, contacts and corners go where the sky's light cannot reach."},
-        {"Occlusion radius", &kAmbientOcclusion, offsetof(Values, occlusionRadius), 1.0f, 0.25f,
-         4.0f, "%.2f m", "How far around a point geometry counts as blocking its light."},
-        {"Occlusion fade", &kAmbientOcclusion, offsetof(Values, occlusionFade), 120.0f, 20.0f,
-         500.0f, "%.0f m", "The distance by which the occlusion has faded out, halfway there at half."},
         {"Cloud shadow strength", &kCloudShadows, offsetof(Values, shadowStrength), 0.5f, 0.0f, 1.0f,
          "%.2f", "How much of the light on sunlit ground a cloud overhead takes away."},
 

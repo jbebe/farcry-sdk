@@ -65,7 +65,7 @@
 #define SHADOW_FADE_START 300.0f
 #define SHADOW_FADE_END 600.0f
 
-#include "occlusion.inc.fx"
+#include "shadows.inc.fx"
 
 // The low frequencies a cloud's body is carved from, the high ones its edges are eroded by, and
 // where over the world clouds stand at all.
@@ -319,13 +319,20 @@ void Span(float3 ray, out float enter, out float stride, out float reach) {
     stride = min(max(leave - enter, 0.0f) / VIEW_STEPS, MAX_STRIDE);
 }
 
+// A different value per pixel, so that what the coarse sampling misses lands as fine noise instead
+// of as bands. Fixed to the pixel rather than the frame: the game has nothing that would blend a
+// moving pattern away, so a moving one would only flicker.
+float Dither(float2 screen) {
+    return frac(52.9829189f * frac(0.06711056f * screen.x + 0.00583715f * screen.y));
+}
+
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 ray = normalize(rayIn);
     float enter;
     float stride;
     float reach;
     Span(ray, enter, stride, reach);
-    float dither = PixelNoise(screen);
+    float dither = Dither(screen);
 
     float cosAngle = dot(ray, Light.xyz);
 
@@ -439,14 +446,14 @@ float Cover(float3 rayIn, float dither) {
 
 // Discards a pixel with the likelihood that the clouds cover its ray.
 float4 CoverPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
-    float dither = PixelNoise(screen);
+    float dither = Dither(screen);
     clip(dither - Cover(rayIn, dither));
     return 0.0f;
 }
 
 // What the clouds cover of a pixel's ray, for the god-ray mask to be multiplied down by.
 float4 MaskPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
-    return Cover(rayIn, PixelNoise(screen));
+    return Cover(rayIn, Dither(screen));
 }
 
 // What the clouds leave of the sunlight on the ground under a half-resolution pixel, in alpha,
