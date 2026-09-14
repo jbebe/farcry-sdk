@@ -18,7 +18,6 @@ namespace {
     constexpr size_t kMoonColour = 0x1A0;
     constexpr size_t kNight = 0x1B8;
     constexpr size_t kTimeOfDay = 0x1BC;
-    constexpr size_t kWind = 0x1E0;
     constexpr size_t kAmbientColour = 0x230;
 
     // Twelve stack arguments, of which the sixth and the eleventh are read; the rest are named to
@@ -79,10 +78,6 @@ namespace {
 
         Copy3(state, kMoonColour, out.moonColour);
         Copy3(state, kAmbientColour, out.ambientColour);
-
-        const float* wind = Field(state, kWind);
-        out.wind[0] = wind[0];
-        out.wind[1] = wind[1];
 
         out.storm = *Field(state, kStorm);
         out.night = *Field(state, kNight);

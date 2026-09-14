@@ -9,6 +9,7 @@
 #include "engine/noise.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
+#include "engine/time_of_day.h"
 #include "fcse_api.h"
 #include "tuning.h"
 
@@ -34,9 +35,11 @@ namespace {
     constexpr float kFadeDistance = 22000.0f;
     constexpr float kMarchDistance = 8000.0f;
 
-    // How fast the layer drifts at a wind of one, in metres a second. The engine's own wind offset
-    // advances too slowly to read as weather, so only its direction is taken from there.
-    constexpr float kWindSpeed = 9.0f;
+    // Metres a clock second the layer drifts at a wind of one. The clock runs ten times faster than play.
+    constexpr double kWindSpeed = 0.9;
+    // Clock seconds for the wind to turn once round, and the radians it turns in one.
+    constexpr double kWindTurn = 3.0 * 86400.0;
+    constexpr double kWindTurnRate = 2.0 * 3.14159265358979 / kWindTurn;
 
     // How far apart the samples toward the light are. Wide enough that five of them reach through a
     // whole cloud, which is what a shadow inside one needs.
@@ -84,10 +87,6 @@ namespace {
     using SkyOverhaul::Tuning::Values;
 
     bool g_enabled = false;
-
-    // How far the layer has drifted, in metres, kept here rather than derived from the wind so
-    // that changing the wind changes how fast the clouds move and not where they are.
-    float g_drift[2] = {0.0f, 0.0f};
 
     // What the clouds were last drawn with, which the sun's cover is drawn through again.
     float g_constants[kConstantCount * 4] = {};
@@ -147,7 +146,8 @@ namespace {
     }
 
     void LogPass(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
-                 const Light& light, const Values& v, float storm, float elapsed) {
+                 const Light& light, const Values& v, float storm, float elapsed,
+                 double gameSeconds, const float drift[2]) {
         FCSE::Logf("clouds f%u: eye (%.1f %.1f %.1f) base %.0f | dir (%.2f %.2f %.2f) "
                    "bloom %.2f | %.2f ms",
                    pass.frame, view.eye[0], view.eye[1], view.eye[2], v.cloudBase,
@@ -157,27 +157,17 @@ namespace {
                    "| light (%.3f %.3f %.3f)",
                    pass.frame, storm, v.cloudCoverage, v.cloudDensity, v.cirrus, v.cirrusOpacity,
                    light.colour[0], light.colour[1], light.colour[2]);
+        FCSE::Logf("clouds f%u: clock %.0f s at scale %.1f | drift (%.0f %.0f)", pass.frame,
+                   gameSeconds, SkyOverhaul::TimeOfDay::Scale(), drift[0], drift[1]);
     }
 
-    // Carries the layer along on the plugin's own clock, in the direction the engine is blowing.
-    // The offsets are wrapped by the shape's own repeat, which the noise tiles at, so a long
-    // session cannot drift far enough for the arithmetic to coarsen.
-    void Advance(const SkyOverhaul::CloudLayer::Lighting& lighting, const Values& v,
-                 float elapsed) {
-        float x = lighting.wind[0];
-        float y = lighting.wind[1];
-        const float length = std::sqrt(x * x + y * y);
-        if (length > 0.0001f) {
-            x /= length;
-            y /= length;
-        } else {
-            x = 1.0f;
-            y = 0.0f;
-        }
-
-        const float step = kWindSpeed * v.cloudWind * elapsed;
-        g_drift[0] = std::fmod(g_drift[0] + x * step, v.cloudSize);
-        g_drift[1] = std::fmod(g_drift[1] + y * step, v.cloudSize);
+    // Where the layer has drifted to, in metres, by `gameSeconds`, round the circle the turning wind
+    // traces.
+    void Drift(double gameSeconds, const Values& v, float out[2]) {
+        const double angle = std::fmod(gameSeconds, kWindTurn) * kWindTurnRate;
+        const double radius = kWindSpeed * v.cloudWind / kWindTurnRate;
+        out[0] = static_cast<float>(radius * std::sin(angle));
+        out[1] = static_cast<float>(radius * (1.0 - std::cos(angle)));
     }
 
     // The shader, this frame's constants and the noise, sampled the way the shape expects.
@@ -213,7 +203,7 @@ namespace {
     void Draw(IDirect3DDevice9* device, IDirect3DPixelShader9* shader,
               const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::CloudLayer::Lighting& lighting, const Light& light,
-              const Values& v, float storminess) {
+              const Values& v, float storminess, const float drift[2]) {
         // Kept clear of the layer below it however high that is set, so the two never interleave.
         const float above = v.cloudBase + v.cloudThickness + kCirrusClearance;
         const float cirrusAltitude = above > kCirrusFloor ? above : kCirrusFloor;
@@ -222,7 +212,7 @@ namespace {
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             v.cloudBase, v.cloudThickness, v.cloudCoverage, v.cloudDensity,
-            g_drift[0], g_drift[1], g_drift[0] * 0.5f, g_drift[1] * 0.5f,
+            drift[0], drift[1], drift[0] * 0.5f, drift[1] * 0.5f,
             shapeGrain, shapeGrain * kDetailRepeats, shapeGrain * kWeatherRepeats, v.cloudDetail,
             light.direction[0], light.direction[1], light.direction[2], kForwardScatter,
             light.colour[0], light.colour[1], light.colour[2], kLightStride,
@@ -251,6 +241,7 @@ namespace {
 }
 
 void SkyOverhaul::Clouds::Install() {
+    TimeOfDay::Install();
     Noise::Start();
 }
 
@@ -275,11 +266,15 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
     const float storminess = SkyModel::Storminess(lighting.storm);
     const Tuning::Values v = Weathered(Tuning::Current(), storminess);
     const Light light = ChooseLight(lighting, v, storminess);
-    Advance(lighting, v, elapsed);
-    Draw(pass.device, shader, view, lighting, light, v, storminess);
+    double gameSeconds = 0.0;
+    float drift[2] = {};
+    if (TimeOfDay::Elapsed(gameSeconds)) {
+        Drift(gameSeconds, v, drift);
+    }
+    Draw(pass.device, shader, view, lighting, light, v, storminess, drift);
 
     if (g_heartbeat.Due(elapsed)) {
-        LogPass(pass, view, light, v, lighting.storm, elapsed);
+        LogPass(pass, view, light, v, lighting.storm, elapsed, gameSeconds, drift);
     }
 }
 

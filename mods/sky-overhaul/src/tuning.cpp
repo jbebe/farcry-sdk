@@ -88,7 +88,8 @@ namespace {
         {"Cloud size", &kCloudLayer, offsetof(Values, cloudSize), 7545.0f, 500.0f, 12000.0f,
          "%.0f m", "How wide one repeat of the shape is, which is how large a cloud reads."},
         {"Cloud wind", &kCloudLayer, offsetof(Values, cloudWind), 1.0f, 0.0f, 5.0f, "%.2f",
-         "How fast the layer drifts, as a multiple of the engine's wind."},
+         "How fast the layer drifts. The sky moves with it, since where it has drifted to follows "
+         "from the game's clock."},
         {"Cirrus", &kHighCloud, offsetof(Values, cirrus), 0.41f, 0.0f, 1.0f, "%.2f",
          "How much of the sky the high sheet of ice cloud reaches across."},
         {"Cirrus opacity", &kHighCloud, offsetof(Values, cirrusOpacity), 0.04f, 0.0f, 1.0f, "%.2f",

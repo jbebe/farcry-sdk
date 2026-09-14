@@ -1,7 +1,7 @@
 // The engine's own cloud layer, followed at the one function that submits it.
 //
 // That submission reads the shipped clouds' parameters out of the renderer's scene state: where the
-// sun and the moon are, the ambient light, the wind and the weather. See
+// sun and the moon are, the ambient light and the weather. See
 // docs/docs/engine-internals/sky-and-clouds.md.
 #pragma once
 
@@ -28,9 +28,6 @@ struct Lighting {
 
     float moonColour[3];
     float ambientColour[3];
-
-    // How far the lower layer has scrolled, whose direction is the wind's.
-    float wind[2];
 
     // Zero in clear weather, one in a full storm.
     float storm;
