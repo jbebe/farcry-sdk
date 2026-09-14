@@ -6,6 +6,7 @@
 namespace {
     // Where the engine binds these for every shader in the frame.
     constexpr uint32_t kViewProjectionRegister = 4;
+    constexpr uint32_t kCameraDistancesRegister = 40;
     constexpr uint32_t kCameraBlockRegister = 45;
 
     // c4 through c11: the view-projection and then the projection.
@@ -38,17 +39,24 @@ namespace {
 bool SkyOverhaul::Camera::Read(IDirect3DDevice9* device, View& out) {
     float transforms[kViewProjectionCount * 4] = {};
     float block[kCameraBlockCount * 4] = {};
+    // Near, far, the view distance and its inverse.
+    float distances[4] = {};
     if (FAILED(device->GetVertexShaderConstantF(kViewProjectionRegister, transforms,
                                                 kViewProjectionCount)) ||
-        FAILED(device->GetVertexShaderConstantF(kCameraBlockRegister, block, kCameraBlockCount))) {
+        FAILED(device->GetVertexShaderConstantF(kCameraBlockRegister, block, kCameraBlockCount)) ||
+        FAILED(device->GetVertexShaderConstantF(kCameraDistancesRegister, distances, 1))) {
         return false;
     }
 
     std::memcpy(out.viewProjection, transforms, sizeof(out.viewProjection));
     out.verticalScale = transforms[16 + 5];
+    out.horizontalScale = transforms[16 + 0];
+    out.viewDistance = distances[2];
 
     Copy3(block + kPosition, out.eye);
     Copy3(block + kDirection, out.direction);
+    Copy3(block + kRight, out.right);
+    Copy3(block + kUp, out.up);
     Copy3(block + kFogColourVector, out.fogColourVector);
     Copy3(block + kFogColour, out.fogColour);
     Copy3(block + kFogColourRange, out.fogColourRange);
@@ -60,16 +68,14 @@ bool SkyOverhaul::Camera::Read(IDirect3DDevice9* device, View& out) {
     // that into the world. Inverting the view-projection instead recovers the position to a
     // millimetre but the directions only to within half a degree, which is metres of wander by the
     // time a ray has travelled a kilometre.
-    const float horizontalScale = transforms[16 + 0];
-    const float across = horizontalScale != 0.0f ? 1.0f / horizontalScale : 0.0f;
+    const float across = out.horizontalScale != 0.0f ? 1.0f / out.horizontalScale : 0.0f;
     const float down = out.verticalScale != 0.0f ? 1.0f / out.verticalScale : 0.0f;
-    const float* right = block + kRight;
-    const float* up = block + kUp;
     for (int corner = 0; corner < 4; corner++) {
         const float x = kCorners[corner][0] * across;
         const float y = kCorners[corner][1] * down;
         for (int axis = 0; axis < 3; axis++) {
-            out.corners[corner][axis] = out.direction[axis] + right[axis] * x + up[axis] * y;
+            out.corners[corner][axis] =
+                out.direction[axis] + out.right[axis] * x + out.up[axis] * y;
         }
     }
     return true;

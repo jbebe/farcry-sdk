@@ -12,8 +12,9 @@ struct View {
     // World to clip, as the engine's own shaders transform by, row by row.
     float viewProjection[16];
     // One over the tangent of half the vertical field of view, which turns an angle into a
-    // distance on screen.
+    // distance on screen, and the same across.
     float verticalScale;
+    float horizontalScale;
 
     // Where the camera is, and the directions through the viewport's four corners: top left, top
     // right, bottom left, bottom right, which is the order ScreenDraw::ClipQuad takes them in.
@@ -21,6 +22,11 @@ struct View {
     float eye[3];
     float corners[4][3];
     float direction[3];
+    float right[3];
+    float up[3];
+
+    // The distance the engine's linear depth is a fraction of.
+    float viewDistance;
 
     // The fog every sky shader applies, and the exposure the whole frame is scaled by.
     float fogColourVector[3];

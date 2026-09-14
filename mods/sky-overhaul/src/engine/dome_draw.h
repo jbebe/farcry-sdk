@@ -10,6 +10,9 @@
 // what it lets through, so that the mask follows our clouds rather than the engine's, and draws the
 // moon without the fog the engine hides a low moon in.
 //
+// It also watches the draws named by their pixel shader, in DrawPrimitive too: those that read the
+// linear depth, and the final pass's colour grade, which it can draw with values of our own.
+//
 // See docs/docs/engine-internals/presentation-and-input.md for what named that call.
 #pragma once
 
@@ -40,6 +43,14 @@ void SetMode(Mode mode);
 // Draws in place of the god-ray mask's cloud draw, with the device set as that draw found it. True
 // means it drew, and the engine's draw is dropped.
 void SetMaskSubstitute(SubstituteFn mask);
+
+// Draws the final pass's colour grade with other values. `engine` holds Saturation, ColorRemapData
+// and ContrastData as the engine set them, a register each; the draw takes `out` instead.
+using GradeFn = void (*)(const float engine[12], float out[12]);
+void SetGrade(GradeFn grade);
+
+// Whether the draws that read the linear depth are watched for its texture.
+void SetWatchDepth(bool watch);
 
 // How many domes have been replaced. A count that stops climbing while the mode is Overhaul is a
 // dome that stopped being recognised, which is the one failure that would otherwise be silent.

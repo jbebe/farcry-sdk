@@ -84,6 +84,21 @@ byte for byte. A draw seen at the device is therefore named by matching that byt
 CRC-32 against the export. Not every draw matches: some vertex shaders bound in the sky pass match no
 object in the export.
 
+### Finding an object by what it binds
+
+A permutation whose index key is unknown can still be found by a parameter it binds, since every
+binding row carries the name's CRC-32. Two searches over the D3D9 `obj` tree:
+
+| Parameter | Objects | Register |
+| --- | --- | --- |
+| `DepthVPSampler` | 74, bytecode 196 to 5,332 bytes | `s0` in every one |
+| `Saturation`, `ColorRemapData`, `ContrastData` | 7 | `c71` to `c73` in the 244, 316 and 388 byte objects; `c73` to `c75` in the 440, 496, 512 and 568 byte ones |
+
+The seven are the final pass of the prototype's `posteffect_adaptivebloom.fx`. The four larger ones
+also bind `BloomParams` at `c71`, `LuminanceRange` at `c72` and `LuminanceAdaptationRange` at `c76`
+with the adapted luminance at `s2`; the 244-byte one binds no bloom at all. No retail object binds the
+prototype's `PowLUTSampler` variant.
+
 ## Render states
 
 A `.rs` is **plain text**, one `Key=Value` per line, and matches the `technique` block of the shader's

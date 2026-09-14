@@ -126,10 +126,72 @@ as a texture. The usual escape — creating an `INTZ` depth-format texture and b
 depth-stencil target so it can also be sampled — is defined only for single-sampled surfaces.
 
 So a screen-space effect that needs per-pixel depth, ambient occlusion being the obvious one, cannot
-simply read what the engine already has. It has to intercept the creation of the depth surface and
-substitute a single-sampled readable one, which costs the game its antialiasing. An occlusion query
-needs none of this, because it asks the hardware to count against depth rather than to hand it over.
+simply read the depth-stencil surface. It has to read the engine's own linear depth instead, below,
+or intercept the creation of the depth surface and substitute a single-sampled readable one, which
+costs the game its antialiasing. An occlusion query needs none of this, because it asks the hardware
+to count against depth rather than to hand it over.
 :::
+
+### The engine keeps a readable linear depth of its own
+
+:::info[Verified via reverse engineering]
+Read from `Dunia.dll` (Steam v1.03) and the shipped shader objects.
+:::
+
+`CSceneRenderer::PrepareFrameGraph` (`0x10347040`) creates a render target named `"Linear depth"`,
+an `A8R8G8B8` texture at the scene's size, whenever the renderer config's `+0x4A0` is zero. With
+multisampling on it also creates `"LinearDepthMSAA"`, a multisampled surface of the same size and
+format, for the depth pass to draw into before the texture is filled from it. `"Linear depth SS"`
+belongs to the other renderer, `CSceneRendererD3D10::PrepareFrameGraph` (`0x10356BC0`).
+
+That config value is most likely the depth pass mode, which was not traced to its register call. In
+the `DepthPass` group of `engine\settings\defaultrenderconfig.xml`, `high`, `veryhigh` and `ultrahigh`
+are `DepthPassMode="full"` with `DepthPassNoPixel="0"`; `low` and `medium` are partial passes with
+`DepthPassNoPixel="1"`, which would write no colour.
+
+The texture reaches shaders as `DepthVPSampler`, one of the viewport's global parameters registered
+in `0x103788F0`. Seventy-four pixel shaders in the D3D9 `shadersobj` tree bind it, all at `s0`.
+The prototype's `depth.inc.fx` gives the packing: view depth along `CameraDirection`, divided by the
+view distance, split across red, green and blue as 24 bits. `UncompressDepthWeights` at `c56` turns a
+texel back into that fraction, `UncompressDepthWeightsWS` at `c57` into world units, and
+`CameraDistances` at `c40` holds near, far, view distance and its inverse.
+
+No seam hands the texture over. It can be found by recognising one of those 74 shaders as it
+draws, by the CRC-32 of its bytecode, and reading what is bound at `s0`. Sky Overhaul's
+`src/engine/depth_texture.cpp` does that.
+
+:::info[Verified in a running game]
+Retail GOG v1.03 at 1920×1080 with four-sample multisampling, read back from an FCSE plugin at the
+sky pass.
+:::
+
+- **It is complete and in place by the sky pass**, and one texture for the whole session.
+- **`c56` holds (1, 1/256, 1/65536)** and `c57` the same times the view distance, 999.9 in the world
+  and 1023.75 while loading.
+- **Where nothing was drawn it holds white**, which decodes to just past the view distance: 1003.8 m.
+- **The first-person weapon leaves it at zero.**
+- **Screen-space ambient occlusion built on it turns grass noisy**, with rings of lighter occlusion
+  around the camera that move over grass patches as it turns. Not yet explained.
+
+### Cut-out materials
+
+:::info[Verified via reverse engineering]
+Read from `Dunia.dll` (Steam v1.03).
+:::
+
+Around `0x1040E9CC` the renderer sets up a cut-out material. With alpha-to-coverage it goes through
+the drivers' own switches, `D3DRS_ADAPTIVETESS_Y` set to `'ATOC'` on NVIDIA and `D3DRS_POINTSIZE` set
+to `'A2M1'` on AMD, and back to zero or `'A2M0'` for everything else. Either way it then sets
+`D3DRS_ALPHATESTENABLE`, followed by the material's `D3DRS_ALPHAREF`.
+
+:::info[Verified in a running game]
+Retail GOG v1.03 at 1920×1080 with four-sample multisampling, standing in a grass field, counted
+from an FCSE plugin that stencil-marked draws and counted the marked samples at the sky pass.
+:::
+
+Neither state names the grass. Draws with alpha-to-coverage on covered about 5% of the frame's
+samples, the detailed blades nearest the camera. Draws with alpha test on covered about 7%. The grass
+carpet that fills the rest of the field is drawn some other way.
 
 :::danger[Hooking one of the engine's own sky functions is not a way in]
 The obvious move — detour the sun's draw and issue the query from inside it — does not work, and
@@ -353,5 +415,8 @@ state, and letting go before a reset — in modules that know nothing about the 
 - Whether substituting a single-sampled `INTZ` depth surface at creation actually yields readable
   scene depth here. The multisampling that rules out the direct route is measured; the substitution
   is untried, and it would also have to force the colour targets to match.
+- Whether water surfaces write `"Linear depth"`, and whether the resolve is the engine's own
+  `StretchRect` or a shader of its own.
+- What draws the grass carpet beyond the detailed blades, and how a draw call can recognise it.
 - Where the engine stores the result of its own flare visibility query. The readback wrapper is
   known; the functions around it are undefined code in the Ghidra project.

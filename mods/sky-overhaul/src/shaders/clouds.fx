@@ -57,6 +57,16 @@
 #define PI 3.14159265f
 #define LUMA float3(0.299f, 0.587f, 0.114f)
 
+// How many samples a patch of ground takes up through the layer toward the sun, for its shadow.
+#define SHADOW_STEPS 6
+
+// Where the cloud shadows start to fade and where they are gone, in metres: the fog has the land
+// by then.
+#define SHADOW_FADE_START 300.0f
+#define SHADOW_FADE_END 600.0f
+
+#include "occlusion.inc.fx"
+
 // The low frequencies a cloud's body is carved from, the high ones its edges are eroded by, and
 // where over the world clouds stand at all.
 sampler3D ShapeNoise : register(s0);
@@ -309,20 +319,13 @@ void Span(float3 ray, out float enter, out float stride, out float reach) {
     stride = min(max(leave - enter, 0.0f) / VIEW_STEPS, MAX_STRIDE);
 }
 
-// A different value per pixel, so that what the coarse sampling misses lands as fine noise instead
-// of as bands. Fixed to the pixel rather than the frame: the game has nothing that would blend a
-// moving pattern away, so a moving one would only flicker.
-float Dither(float2 screen) {
-    return frac(52.9829189f * frac(0.06711056f * screen.x + 0.00583715f * screen.y));
-}
-
 float4 MainPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
     float3 ray = normalize(rayIn);
     float enter;
     float stride;
     float reach;
     Span(ray, enter, stride, reach);
-    float dither = Dither(screen);
+    float dither = PixelNoise(screen);
 
     float cosAngle = dot(ray, Light.xyz);
 
@@ -436,12 +439,38 @@ float Cover(float3 rayIn, float dither) {
 
 // Discards a pixel with the likelihood that the clouds cover its ray.
 float4 CoverPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
-    float dither = Dither(screen);
+    float dither = PixelNoise(screen);
     clip(dither - Cover(rayIn, dither));
     return 0.0f;
 }
 
 // What the clouds cover of a pixel's ray, for the god-ray mask to be multiplied down by.
 float4 MaskPS(float3 rayIn : TEXCOORD0, float2 screen : VPOS) : COLOR0 {
-    return Cover(rayIn, Dither(screen));
+    return Cover(rayIn, PixelNoise(screen));
+}
+
+// What the clouds leave of the sunlight on the ground under a half-resolution pixel, in alpha,
+// found by marching from the ground up through the layer toward the sun. It depends on where the
+// point is and nothing else about the pixel, so it stays as smooth as the cloud over grass whose
+// every blade faces its own way.
+float4 ShadowPS(float2 screen : VPOS) : COLOR0 {
+    float2 uv = FullFromHalf(screen);
+    float z = Metres(uv);
+    if (z <= 0.0f || z >= SHADOW_FADE_END) {
+        return 1.0f;
+    }
+    float3 ground = Eye.xyz + ViewRay(uv) * z;
+
+    float up = max(Light.z, 0.05f);
+    float enter = max((Layer.x - ground.z) / up, 0.0f);
+    float leave = max((Layer.x + Layer.y - ground.z) / up, enter);
+    float stride = (leave - enter) / SHADOW_STEPS;
+    float depth = 0.0f;
+    [unroll] for (int i = 0; i < SHADOW_STEPS; i++) {
+        depth += Density(ground + Light.xyz * (enter + ((float)i + 0.5f) * stride), true);
+    }
+    float blocked = 1.0f - exp(-depth * stride);
+
+    float fade = 1.0f - smoothstep(SHADOW_FADE_START, SHADOW_FADE_END, z);
+    return 1.0f - blocked * fade * Shade.y;
 }

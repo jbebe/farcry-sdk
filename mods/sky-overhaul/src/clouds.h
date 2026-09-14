@@ -21,6 +21,11 @@ bool DrawCover(IDirect3DDevice9* device, float left, float top, float right, flo
 // False while no clouds are being drawn.
 bool DrawMask(IDirect3DDevice9* device);
 
+// Draws, over the whole bound target, what the clouds as last drawn leave of the sunlight on the
+// ground, read from the linear depth and constants the caller has bound for the occlusion. Leaves
+// the clouds' noise and its sampling bound. False while no clouds are being drawn.
+bool DrawShadow(IDirect3DDevice9* device);
+
 // Surrenders what belongs to the device, before it is reset.
 void ReleaseDeviceObjects();
 

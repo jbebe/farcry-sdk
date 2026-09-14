@@ -225,6 +225,17 @@ All but `Default` hold a minimum luminance of 0.1 and adaptation factors between
 `Default` has 0.25, 0 and 3. The times to adapt up and down are 1.5 and 0.5, except `Storm` (2 and 1),
 `ScriptedEvent` (1.5 and 1) and `Default` (2 and 3).
 
+:::info[Verified in a running game]
+Retail GOG v1.03, world 1, calm weather at sunrise. The three registers were read inside the final
+pass's own draw call, which goes through `DrawPrimitive`.
+:::
+
+The final pass was handed a saturation of 0.500, powers of (0.910, 1.056, 1.441) and a
+`ContrastData` of (−0.176, 0.264, 0.912). That contrast is exactly (−2c, 3c, 1 − c) for c = 0.088,
+the cubic `lerp(x, smoothstep(x), c)`, which keeps black and white where they are. No preset holds
+0.088, so what reaches the shader is already a blend of presets. The powers sit where 1 − remap
+would put a similar blend, which fits but is not proven.
+
 ### Clear fog
 
 `Default.Clear.Fog`'s two colours:

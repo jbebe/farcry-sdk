@@ -57,8 +57,15 @@ set(SHADER_PASSES
   "clouds.fx:MainPS:ps_3_0:clouds_ps.h:g_cloudsPixelShader"
   "clouds.fx:CoverPS:ps_3_0:clouds_cover_ps.h:g_cloudsCoverPixelShader"
   "clouds.fx:MaskPS:ps_3_0:clouds_mask_ps.h:g_cloudsMaskPixelShader"
+  "clouds.fx:ShadowPS:ps_3_0:clouds_shadow_ps.h:g_cloudsShadowPixelShader"
   "sky.fx:MainPS:ps_3_0:sky_ps.h:g_skyPixelShader"
-  "night.fx:MainPS:ps_3_0:night_ps.h:g_nightPixelShader")
+  "night.fx:MainPS:ps_3_0:night_ps.h:g_nightPixelShader"
+  "occlusion.fx:AmbientPS:ps_3_0:occlusion_ambient_ps.h:g_occlusionAmbientPixelShader"
+  "occlusion.fx:BlurPS:ps_3_0:occlusion_blur_ps.h:g_occlusionBlurPixelShader"
+  "occlusion.fx:ApplyPS:ps_3_0:occlusion_apply_ps.h:g_occlusionApplyPixelShader")
+
+# Included by more than one shader source, so any change to it recompiles them all.
+set(SHADER_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/occlusion.inc.fx")
 
 set(SHADER_HEADERS "")
 foreach(PASS IN LISTS SHADER_PASSES)
@@ -75,7 +82,7 @@ foreach(PASS IN LISTS SHADER_PASSES)
     COMMAND "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/generated"
     COMMAND "${FXC_EXECUTABLE}" /nologo /T ${PROFILE} /E ${ENTRY} /O3 /Vn ${ARRAY_NAME}
             /Fh "${HEADER}" "${SOURCE}"
-    DEPENDS "${SOURCE}"
+    DEPENDS "${SOURCE}" ${SHADER_INCLUDES}
     COMMENT "Compiling src/shaders/${SOURCE_NAME} (${ENTRY})"
     VERBATIM)
   list(APPEND SHADER_HEADERS "${HEADER}")
@@ -85,15 +92,19 @@ add_library(SkyOverhaul SHARED
   "src/main.cpp"
   "src/clouds.cpp"
   "src/dazzle.cpp"
+  "src/grade.cpp"
   "src/night.cpp"
+  "src/occlusion.cpp"
   "src/sky.cpp"
   "src/sky_model.cpp"
   "src/tuning.cpp"
   "src/engine/camera.cpp"
   "src/engine/cloud_layer.cpp"
+  "src/engine/depth_texture.cpp"
   "src/engine/device_reset.cpp"
   "src/engine/dome_draw.cpp"
   "src/engine/fog_tint.cpp"
+  "src/engine/known_shaders.cpp"
   "src/engine/noise.cpp"
   "src/engine/frame.cpp"
   "src/engine/screen_draw.cpp"

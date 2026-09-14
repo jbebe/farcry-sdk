@@ -10,8 +10,11 @@
 #include "engine/cloud_layer.h"
 #include "engine/device_reset.h"
 #include "engine/frame.h"
+#include "engine/known_shaders.h"
 #include "engine/screen_draw.h"
+#include "grade.h"
 #include "night.h"
+#include "occlusion.h"
 #include "sky.h"
 #include "tuning.h"
 
@@ -23,7 +26,9 @@ namespace {
         SkyOverhaul::Clouds::ReleaseDeviceObjects();
         SkyOverhaul::Sky::ReleaseDeviceObjects();
         SkyOverhaul::Night::ReleaseDeviceObjects();
+        SkyOverhaul::Occlusion::ReleaseDeviceObjects();
         SkyOverhaul::DrawGuard::ReleaseDeviceObjects();
+        SkyOverhaul::KnownShaders::Forget();
     }
 
     // Each effect decides for itself whether the pass is one it wants. The sky has already drawn
@@ -31,12 +36,14 @@ namespace {
     void OnScenePass(const SkyOverhaul::Frame::Pass& pass) {
         SkyOverhaul::Sky::OnScenePass(pass);
         SkyOverhaul::Clouds::OnScenePass(pass);
+        SkyOverhaul::Occlusion::OnScenePass(pass);
         SkyOverhaul::Dazzle::OnScenePass(pass);
         SkyOverhaul::Night::OnScenePass(pass);
     }
 
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
         SkyOverhaul::Dazzle::OnFinalPass(pass);
+        SkyOverhaul::Grade::OnFinalPass(pass);
     }
 
     // Index order is what the callbacks below switch on; fcse.ini stores the label.
@@ -61,6 +68,18 @@ namespace {
 
     void __cdecl OnNightChanged(const FCSE_SettingValue* value, void*) {
         SkyOverhaul::Night::SetEnabled(value->asChoice == 1);
+    }
+
+    void __cdecl OnOcclusionChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Occlusion::SetAmbientEnabled(value->asChoice == 1);
+    }
+
+    void __cdecl OnShadowsChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Occlusion::SetShadowsEnabled(value->asChoice == 1);
+    }
+
+    void __cdecl OnGradeChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Grade::SetEnabled(value->asChoice == 1);
     }
 }
 
@@ -96,13 +115,16 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // Before any engine code runs, so the first frame already draws with the stored values.
     SkyOverhaul::Tuning::Load();
 
-    // Only which parts are on; the clouds' and the glare's values are tuned in bin\sky-overhaul.ini.
+    // Only which parts are on; every effect's values are tuned in bin\sky-overhaul.ini.
     // Each callback fires from inside RegisterSettings with what fcse.ini holds.
     static const FCSE_Setting settings[] = {
         {"Sky", FCSE_CHOICE(1), &OnSkyChanged, nullptr, kModes, std::size(kModes)},
         {"Clouds", FCSE_CHOICE(2), &OnCloudsChanged, nullptr, kCloudModes, std::size(kCloudModes)},
         {"Sun", FCSE_CHOICE(1), &OnSunChanged, nullptr, kModes, std::size(kModes)},
         {"Night", FCSE_CHOICE(1), &OnNightChanged, nullptr, kModes, std::size(kModes)},
+        {"Occlusion", FCSE_CHOICE(0), &OnOcclusionChanged, nullptr, kModes, std::size(kModes)},
+        {"Shadows", FCSE_CHOICE(0), &OnShadowsChanged, nullptr, kModes, std::size(kModes)},
+        {"Grade", FCSE_CHOICE(0), &OnGradeChanged, nullptr, kModes, std::size(kModes)},
     };
     // Registered under the module name: the mod menu lists every loaded plugin and then every group
     // that matched none, so a group named apart from its DLL would arrive twice, once empty.

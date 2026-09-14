@@ -1,6 +1,8 @@
 #include "engine/dome_draw.h"
 
+#include "engine/depth_texture.h"
 #include "engine/frame.h"
+#include "engine/known_shaders.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
@@ -23,11 +25,10 @@ namespace {
     constexpr UINT kDomePrimitives = 1450;
 
     // The moon shares the celestial sprites' counts with the sun's flare, and is told from it by
-    // its pixel shader: the two fogged CelestialBody objects, 292 bytes with HDR on and 348 without.
-    // The flare's two are additive, unfogged, and 276 and 320.
+    // its pixel shader: one of the two fogged CelestialBody objects rather than the flare's
+    // additive, unfogged pair.
     constexpr UINT kSpriteVertices = 6;
     constexpr UINT kSpritePrimitives = 4;
-    constexpr UINT kMoonShaderSizes[] = {292, 348};
 
     // FogValues in the vertex shader, whose third component scales the whole of the sky's fog.
     constexpr UINT kFogValues = 51;
@@ -38,12 +39,25 @@ namespace {
     constexpr UINT kMoonParams = 71;
     constexpr float kMoonPeak = 1.0f;
 
+    constexpr size_t kDrawPrimitiveSlot = 81;
+
+    // A full-screen pass is one or two triangles, which spares every other draw the shader lookup
+    // while only the grade is watched for.
+    constexpr UINT kScreenPrimitives = 2;
+
+    // Saturation, ColorRemapData and ContrastData, a register each.
+    constexpr UINT kGradeRegisters = 3;
+
     using DrawIndexedPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, INT,
                                                        UINT, UINT, UINT, UINT);
+    using DrawPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, UINT, UINT);
 
     DrawIndexedPrimitiveFn g_original = nullptr;
+    DrawPrimitiveFn g_originalPlain = nullptr;
     SkyOverhaul::DomeDraw::SubstituteFn g_substitute = nullptr;
     SkyOverhaul::DomeDraw::SubstituteFn g_maskSubstitute = nullptr;
+    SkyOverhaul::DomeDraw::GradeFn g_grade = nullptr;
+    bool g_watchDepth = false;
     SkyOverhaul::DomeDraw::Mode g_mode = SkyOverhaul::DomeDraw::Mode::Engine;
 
     uint32_t g_substitutions = 0;
@@ -136,14 +150,42 @@ namespace {
             viewport.MinZ < SkyOverhaul::Frame::kSkyPassMinZ) {
             return false;
         }
-        IDirect3DPixelShader9* shader = nullptr;
-        if (FAILED(device->GetPixelShader(&shader)) || shader == nullptr) {
-            return false;
+        using SkyOverhaul::KnownShaders::Kind;
+        return SkyOverhaul::KnownShaders::Bound(device).kind == Kind::Moon;
+    }
+
+    // The draws named by their pixel shader: a depth reader shows the linear depth texture, and the
+    // grade is drawn with our values and its own put back. `draw` is the engine's call.
+    template <class Draw>
+    HRESULT WatchShaders(IDirect3DDevice9* device, UINT primitives, Draw draw) {
+        using SkyOverhaul::KnownShaders::Kind;
+        const bool gradeShape = g_grade != nullptr && primitives <= kScreenPrimitives;
+        if (!g_watchDepth && !gradeShape) {
+            return draw();
         }
-        UINT size = 0;
-        shader->GetFunction(nullptr, &size);
-        shader->Release();
-        return size == kMoonShaderSizes[0] || size == kMoonShaderSizes[1];
+        const SkyOverhaul::KnownShaders::Known known = SkyOverhaul::KnownShaders::Bound(device);
+        if (known.kind == Kind::DepthReader && g_watchDepth) {
+            SkyOverhaul::DepthTexture::Observe(device);
+        }
+
+        float engine[kGradeRegisters * 4] = {};
+        float ours[kGradeRegisters * 4] = {};
+        if (!gradeShape || known.kind != Kind::Grade ||
+            FAILED(device->GetPixelShaderConstantF(known.firstRegister, engine, kGradeRegisters))) {
+            return draw();
+        }
+        g_grade(engine, ours);
+        device->SetPixelShaderConstantF(known.firstRegister, ours, kGradeRegisters);
+        const HRESULT drawn = draw();
+        device->SetPixelShaderConstantF(known.firstRegister, engine, kGradeRegisters);
+        return drawn;
+    }
+
+    HRESULT __stdcall DrawPrimitiveDetour(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
+                                          UINT startVertex, UINT primitiveCount) {
+        return WatchShaders(device, primitiveCount, [&] {
+            return g_originalPlain(device, type, startVertex, primitiveCount);
+        });
     }
 
     HRESULT __stdcall DrawIndexedPrimitiveDetour(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
@@ -180,8 +222,10 @@ namespace {
             g_unfoggedMoons++;
             return drawn;
         }
-        return g_original(device, type, baseVertexIndex, minVertexIndex, numVertices, startIndex,
-                          primitiveCount);
+        return WatchShaders(device, primitiveCount, [&] {
+            return g_original(device, type, baseVertexIndex, minVertexIndex, numVertices,
+                              startIndex, primitiveCount);
+        });
     }
 }
 
@@ -202,6 +246,13 @@ bool SkyOverhaul::DomeDraw::Install(SubstituteFn substitute) {
     g_substitute = substitute;
     FCSE::Logf("dome: watching for %u vertices and %u triangles at the far plane", kDomeVertices,
                kDomePrimitives);
+
+    // The final pass draws its grade through it. Not worth refusing the sky over.
+    void* plain = Vtable::Slot(kDrawPrimitiveSlot);
+    if (plain == nullptr || !api->Hook(plain, reinterpret_cast<void*>(&DrawPrimitiveDetour),
+                                       reinterpret_cast<void**>(&g_originalPlain))) {
+        api->Log("dome: DrawPrimitive is not watched, so the grade cannot be changed");
+    }
     return true;
 }
 
@@ -212,6 +263,15 @@ void SkyOverhaul::DomeDraw::SetMode(Mode mode) {
 void SkyOverhaul::DomeDraw::SetMaskSubstitute(SubstituteFn mask) {
     g_maskSubstitute = mask;
 }
+
+void SkyOverhaul::DomeDraw::SetGrade(GradeFn grade) {
+    g_grade = grade;
+}
+
+void SkyOverhaul::DomeDraw::SetWatchDepth(bool watch) {
+    g_watchDepth = watch;
+}
+
 uint32_t SkyOverhaul::DomeDraw::SubstituteCount() {
     return g_substitutions;
 }

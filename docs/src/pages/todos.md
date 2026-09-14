@@ -159,7 +159,7 @@ what is left is what a modeler cannot do rather than what is broken.
 
 What the sky needs to be a complete package, in order: fog first, since it is the seam; then storms
 and clouds together; then the light-shaft mask and the glare; then reflections. Out of scope, for
-other mods: the terrain lighting presets, shadows, and the final colour grade.
+other mods: the daytime terrain lighting presets and the engine's own sun shadows.
 
 - [ ] **Fog, as part of the air.** The sky owns the fog's colour at every hour; fog distances stay
       with the presets. The fog retint in `src/engine/fog_tint.cpp` gives the land's distant fog the
@@ -176,6 +176,13 @@ other mods: the terrain lighting presets, shadows, and the final colour grade.
       pixels as far as the clouds cover them
 - [x] **Water reflections.** Our clouds are drawn only in the main sky pass; checked in game, the
       reflections look right as they are
+- [ ] **Ambient occlusion.** Half-resolution occlusion from the engine's linear depth, multiplied into
+      the world at the sky pass. Works, but grass turns noisy under it, with lighter rings around the
+      camera. Grass should take none; neither alpha-to-coverage nor alpha test names the grass carpet
+- [x] **Cloud shadows.** The ground marches toward the sun through our clouds' density, in the same
+      pass. Confirmed in game, grass included
+- [x] **The colour grade.** The final pass's saturation, powers and contrast drawn with our values.
+      Confirmed in game. Open: how the presets' `fColorRemap*` become the shader's powers
 - [ ] **Sun colour (optional).** The near-white dawn light-shaft tint and the flare colour
 - [ ] **Publish the sky's light (optional).** The sun's colour at the ground and the sky's ambient
       light, for a lighting mod to match

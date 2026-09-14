@@ -15,6 +15,7 @@
 #include "clouds_cover_ps.h"
 #include "clouds_mask_ps.h"
 #include "clouds_ps.h"
+#include "clouds_shadow_ps.h"
 
 #include <algorithm>
 #include <cmath>
@@ -96,6 +97,7 @@ namespace {
     SkyOverhaul::PixelShader g_shader{"clouds", g_cloudsPixelShader};
     SkyOverhaul::PixelShader g_coverShader{"clouds cover", g_cloudsCoverPixelShader};
     SkyOverhaul::PixelShader g_maskShader{"clouds mask", g_cloudsMaskPixelShader};
+    SkyOverhaul::PixelShader g_shadowShader{"clouds shadow", g_cloudsShadowPixelShader};
     SkyOverhaul::Stopwatch g_clock;
     SkyOverhaul::Heartbeat g_heartbeat{2.0f};
 
@@ -301,11 +303,22 @@ bool SkyOverhaul::Clouds::DrawMask(IDirect3DDevice9* device) {
     return DrawSky(device, shader, D3DBLEND_ZERO, D3DBLEND_INVSRCCOLOR);
 }
 
+bool SkyOverhaul::Clouds::DrawShadow(IDirect3DDevice9* device) {
+    IDirect3DPixelShader9* shader = g_enabled && g_drawn ? g_shadowShader.Get(device) : nullptr;
+    if (shader == nullptr) {
+        return false;
+    }
+    DrawGuard guard(device, kFirstConstant, kConstantCount);
+    Bind(device, shader);
+    return guard.ClipQuad(0.0f, g_corners);
+}
+
 void SkyOverhaul::Clouds::ReleaseDeviceObjects() {
     Noise::ReleaseDeviceObjects();
     g_shader.Release();
     g_coverShader.Release();
     g_maskShader.Release();
+    g_shadowShader.Release();
 }
 
 void SkyOverhaul::Clouds::SetEnabled(bool enabled) {

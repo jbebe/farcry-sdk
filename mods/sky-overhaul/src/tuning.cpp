@@ -51,14 +51,26 @@ namespace {
     };
 
     constexpr Category kSun = {"Sun"};
+    // Holds no rows, only the moments.
+    constexpr Category kSky = {"Sky"};
     constexpr Category kClouds = {"Clouds"};
     constexpr Category kNight = {"Night"};
+    constexpr Category kOcclusion = {"Occlusion"};
+    constexpr Category kShadows = {"Shadows"};
+    constexpr Category kGrade = {"Grade"};
+
+    // The window's tabs, in order.
+    constexpr const Category* kTabs[] = {&kSun,       &kSky,     &kClouds, &kNight,
+                                         &kOcclusion, &kShadows, &kGrade};
 
     constexpr Group kCloudLayer = {"Cloud layer", &kClouds};
     constexpr Group kHighCloud = {"High cloud", &kClouds};
     constexpr Group kSunGlare = {"Sun glare", &kSun};
     constexpr Group kAfterimage = {"Afterimage", &kSun};
     constexpr Group kNightVision = {"Night vision", &kNight};
+    constexpr Group kAmbientOcclusion = {"Ambient occlusion", &kOcclusion};
+    constexpr Group kCloudShadows = {"Cloud shadows", &kShadows};
+    constexpr Group kColourGrade = {"Colour grade", &kGrade};
 
     // In the order the file and the window list them.
     constexpr Parameter kParameters[] = {
@@ -128,6 +140,27 @@ namespace {
          "%.2f", "How much colour a high, uncovered moon lets the world keep. Moonless is grey."},
         {"Night noise", &kNightVision, offsetof(Values, nightNoise), 0.0f, 0.0f, 1.0f, "%.2f",
          "Faint moving grain in the darkest parts of the view."},
+
+        {"Occlusion strength", &kAmbientOcclusion, offsetof(Values, occlusionStrength), 0.6f, 0.0f,
+         1.0f, "%.2f", "How dark creases, contacts and corners go where the sky's light cannot reach."},
+        {"Occlusion radius", &kAmbientOcclusion, offsetof(Values, occlusionRadius), 1.0f, 0.25f,
+         4.0f, "%.2f m", "How far around a point geometry counts as blocking its light."},
+        {"Occlusion fade", &kAmbientOcclusion, offsetof(Values, occlusionFade), 120.0f, 20.0f,
+         500.0f, "%.0f m", "The distance by which the occlusion has faded out, halfway there at half."},
+        {"Cloud shadow strength", &kCloudShadows, offsetof(Values, shadowStrength), 0.5f, 0.0f, 1.0f,
+         "%.2f", "How much of the light on sunlit ground a cloud overhead takes away."},
+
+        {"Grade saturation", &kColourGrade, offsetof(Values, gradeSaturation), 0.5f, 0.0f, 1.5f,
+         "%.2f", "How much colour the final picture keeps. One is the scene's own; the engine's 0.5."},
+        {"Grade contrast", &kColourGrade, offsetof(Values, gradeContrast), 0.09f, -0.5f, 1.0f, "%.2f",
+         "How hard the S-curve bends the picture's tones. Zero leaves them straight."},
+        {"Grade red", &kColourGrade, offsetof(Values, gradeRed), 0.91f, 0.5f, 2.0f, "%.2f",
+         "The power red is raised to. Below one lifts it, above one sinks it."},
+        {"Grade green", &kColourGrade, offsetof(Values, gradeGreen), 1.06f, 0.5f, 2.0f, "%.2f",
+         "The power green is raised to. Below one lifts it, above one sinks it."},
+        {"Grade blue", &kColourGrade, offsetof(Values, gradeBlue), 1.44f, 0.5f, 2.0f, "%.2f",
+         "The power blue is raised to. Below one lifts it, above one sinks it; the engine's high "
+         "value is most of its yellow cast."},
     };
 
     constexpr Moment kMoments[] = {
@@ -281,20 +314,15 @@ void SkyOverhaul::Tuning::DrawWindow(void*) {
     ImGui::PushItemWidth(-ImGui::GetFontSize() * 12.0f);
 
     if (ImGui::BeginTabBar("categories")) {
-        if (ImGui::BeginTabItem(kSun.name)) {
-            g_unsaved |= DrawGroups(kSun);
-            ImGui::EndTabItem();
-        }
-        if (ImGui::BeginTabItem("Sky")) {
-            DrawMoments();
-            ImGui::EndTabItem();
-        }
-        if (ImGui::BeginTabItem(kClouds.name)) {
-            g_unsaved |= DrawGroups(kClouds);
-            ImGui::EndTabItem();
-        }
-        if (ImGui::BeginTabItem(kNight.name)) {
-            g_unsaved |= DrawGroups(kNight);
+        for (const Category* category : kTabs) {
+            if (!ImGui::BeginTabItem(category->name)) {
+                continue;
+            }
+            if (category == &kSky) {
+                DrawMoments();
+            } else {
+                g_unsaved |= DrawGroups(*category);
+            }
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();
