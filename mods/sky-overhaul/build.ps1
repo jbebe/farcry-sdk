@@ -1,6 +1,7 @@
 <#
 .SYNOPSIS
-    Builds SkyOverhaul.dll with the correct 32-bit toolchain, and optionally installs it into the game.
+    Builds SkyOverhaul.dll with the correct 32-bit toolchain, and optionally installs it and the data
+    layer into the game.
 
 .DESCRIPTION
     Wraps the vcvarsall.bat x86 + cmake --preset/--build dance, the same way tools/FCSE/build.ps1
@@ -12,7 +13,10 @@
 
 .PARAMETER Install
     Path to the game's bin folder (the one holding FarCry2.exe and FCSE.exe). The built DLL is
-    copied into its plugins\ subfolder, which is created if missing. Off by default.
+    copied into its plugins\ subfolder and into layer\plugins\, and the layer is then built into the
+    game's patch with jackall-cli, which needs a Release build of tools\JackAll. That patch holds
+    the vanilla files plus this layer alone, so any other layer built into it before is dropped.
+    Off by default.
 
 .EXAMPLE
     .\build.ps1
@@ -31,6 +35,8 @@ $ErrorActionPreference = "Stop"
 $ProjectRoot = $PSScriptRoot
 $Preset = "x86-$Config"
 $BuildDir = Join-Path $ProjectRoot "out\build\$Preset"
+$Layer = Join-Path $ProjectRoot "layer"
+$JackAll = Join-Path $ProjectRoot "..\..\tools\JackAll\src\JackAll.Cli\bin\Release\net10.0\jackall-cli.exe"
 
 $VsWhere = "${env:ProgramFiles(x86)}\Microsoft Visual Studio\Installer\vswhere.exe"
 if (-not (Test-Path $VsWhere)) {
@@ -45,6 +51,16 @@ if (-not (Test-Path $VcVarsAll)) {
     throw "vcvarsall.bat not found at expected path: $VcVarsAll"
 }
 
+# Checked before the build, so a missing tool fails in seconds rather than after it.
+if ($Install) {
+    if (-not (Test-Path (Join-Path $Install "FarCry2.exe"))) {
+        throw "$Install does not look like the game's bin folder - no FarCry2.exe in it."
+    }
+    if (-not (Test-Path $JackAll)) {
+        throw "jackall-cli.exe not found at $JackAll - build tools\JackAll in Release first."
+    }
+}
+
 Write-Host "Configuring ($Preset)..." -ForegroundColor Cyan
 & cmd /c "`"$VcVarsAll`" x86 >nul 2>nul && cd /d `"$ProjectRoot`" && cmake --preset $Preset"
 if ($LASTEXITCODE -ne 0) { throw "CMake configure failed (exit $LASTEXITCODE)." }
@@ -57,13 +73,20 @@ $OutputDll = Join-Path $BuildDir "SkyOverhaul.dll"
 Write-Host "Build succeeded: $OutputDll" -ForegroundColor Green
 
 if ($Install) {
-    # FCSE scans bin\plugins\ by name, so that is the only place this can go. It creates the folder
-    # itself on first run, but installing before ever launching FCSE is the normal order.
-    if (-not (Test-Path (Join-Path $Install "FarCry2.exe"))) {
-        throw "$Install does not look like the game's bin folder - no FarCry2.exe in it."
-    }
+    # FCSE scans bin\plugins\ by name. Copied there as well as into the layer because jackall-cli
+    # leaves alone a plugin it did not deploy unless the bytes already match.
     $PluginDir = Join-Path $Install "plugins"
     New-Item -ItemType Directory -Force -Path $PluginDir | Out-Null
     Copy-Item $OutputDll (Join-Path $PluginDir "SkyOverhaul.dll") -Force
+    Copy-Item $OutputDll (Join-Path $Layer "plugins\SkyOverhaul.dll") -Force
     Write-Host "Installed: $(Join-Path $PluginDir 'SkyOverhaul.dll')" -ForegroundColor Green
+
+    Write-Host "Building the layer into the game's patch..." -ForegroundColor Cyan
+    # jackall-cli reports progress on stderr, which Windows PowerShell turns into a terminating
+    # error under "Stop" whenever the output is redirected. The exit code is the real verdict.
+    $ErrorActionPreference = "Continue"
+    & $JackAll mod build --game (Split-Path $Install -Parent) --layer $Layer 2>&1 | ForEach-Object { Write-Host "$_" }
+    $ErrorActionPreference = "Stop"
+    if ($LASTEXITCODE -ne 0) { throw "jackall-cli mod build failed (exit $LASTEXITCODE)." }
+    Write-Host "Installed the layer: $Layer" -ForegroundColor Green
 }

@@ -93,13 +93,13 @@ draws from `EndScene` instead. The two coexist.
 ## Building
 
 ```
-.\build.ps1
+.\build.ps1 -Install "C:\Games\Far Cry 2\bin"
 python ..\..\scripts\verify_patterns.py
-jackall-cli mod build --game "C:\Games\Far Cry 2" --layer mods\sky-overhaul\layer
 ```
 
-The layer carries the built DLL under `layer\plugins\`, which `mod build` syncs into `bin\plugins`.
-`build.ps1 -Install "<game>\bin"` copies it directly instead, for a faster loop.
+`-Install` copies the built DLL into `bin\plugins` and `layer\plugins\`, then builds the layer into
+the game's patch with `jackall-cli mod build`, which needs a Release build of `tools\JackAll`. The
+patch holds only this layer afterwards, so build any other layer in the same command by hand.
 
 The first configure clones the Dear ImGui that `mods/DevTools/include/devtools_imgui.cmake` pins, so
 it needs `git`, a network connection, and `mods/DevTools` beside this folder.
