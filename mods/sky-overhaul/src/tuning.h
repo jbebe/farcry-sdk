@@ -4,8 +4,7 @@
 
 namespace SkyOverhaul::Tuning {
 
-// Every tunable value, in the units the effects use. Floats only, so the table in tuning.cpp
-// addresses each by offset.
+// Every tunable value. Floats only, so the table in tuning.cpp addresses each by offset.
 struct Values {
     float cloudCoverage;
     float cloudDensity;
@@ -46,9 +45,9 @@ struct Values {
 
     float gradeSaturation;
     float gradeContrast;
-    float gradeRed;
-    float gradeGreen;
-    float gradeBlue;
+    float gradeBrightness;
+    float gradeWarmth;
+    float gradeTint;
 };
 
 // What the effects draw with.

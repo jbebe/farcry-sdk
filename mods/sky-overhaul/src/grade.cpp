@@ -6,8 +6,14 @@
 #include "tuning.h"
 
 #include <algorithm>
+#include <cmath>
 
 namespace {
+    using SkyOverhaul::Tuning::Values;
+
+    // The weights the final pass takes its grey by.
+    constexpr float kGreyWeights[3] = {0.3086f, 0.6094f, 0.0820f};
+
     // Saturation, ColorRemapData and ContrastData, as the engine last set them and as they were
     // drawn instead.
     float g_engine[12] = {};
@@ -17,21 +23,45 @@ namespace {
     SkyOverhaul::Stopwatch g_clock;
     SkyOverhaul::Heartbeat g_heartbeat{2.0f};
 
-    // The final pass raises each channel c to its own power, bends it by c(Z + c(Y + cX)) from
-    // ContrastData, then blends toward grey by the saturation. Ours is the cubic
-    // lerp(c, smoothstep(c), contrast), which keeps black and white where they are.
+    // The power each channel is raised to, whose geometric mean is the brightness.
+    void Powers(const Values& v, float out[3]) {
+        const float tint = v.gradeTint / 3.0f;
+        out[0] = v.gradeBrightness * std::exp(-v.gradeWarmth - tint);
+        out[1] = v.gradeBrightness * std::exp(2.0f * tint);
+        out[2] = v.gradeBrightness * std::exp(v.gradeWarmth - tint);
+    }
+
+    // ContrastData for lerp(c, smoothstep(c), contrast), which keeps black and white.
+    void Contrast(const Values& v, float out[3]) {
+        out[0] = -2.0f * v.gradeContrast;
+        out[1] = 3.0f * v.gradeContrast;
+        out[2] = 1.0f - v.gradeContrast;
+    }
+
     void Override(const float engine[12], float out[12]) {
-        const SkyOverhaul::Tuning::Values v = SkyOverhaul::Tuning::Current();
+        const Values v = SkyOverhaul::Tuning::Current();
         std::copy_n(engine, 12, g_engine);
         std::copy_n(engine, 12, out);
         out[0] = v.gradeSaturation;
-        out[4] = v.gradeRed;
-        out[5] = v.gradeGreen;
-        out[6] = v.gradeBlue;
-        out[8] = -2.0f * v.gradeContrast;
-        out[9] = 3.0f * v.gradeContrast;
-        out[10] = 1.0f - v.gradeContrast;
+        Powers(v, out + 4);
+        Contrast(v, out + 8);
         std::copy_n(out, 12, g_ours);
+    }
+}
+
+void SkyOverhaul::Grade::Apply(const Values& v, const float in[3], float out[3]) {
+    float powers[3];
+    float contrast[3];
+    Powers(v, powers);
+    Contrast(v, contrast);
+    float grey = 0.0f;
+    for (int i = 0; i < 3; i++) {
+        const float c = std::pow(std::clamp(in[i], 0.0f, 1.0f), powers[i]);
+        out[i] = c * (contrast[2] + c * (contrast[1] + c * contrast[0]));
+        grey += kGreyWeights[i] * out[i];
+    }
+    for (int i = 0; i < 3; i++) {
+        out[i] = grey + (out[i] - grey) * v.gradeSaturation;
     }
 }
 

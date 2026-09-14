@@ -1,5 +1,7 @@
 #include "tuning.h"
 
+#include "grade.h"
+
 #include "engine/cloud_layer.h"
 #include "engine/time_of_day.h"
 #include "fcse_api.h"
@@ -71,9 +73,9 @@ namespace {
 
     // In the order the file and the window list them.
     constexpr Parameter kParameters[] = {
-        {"Cloud coverage", &kCloudLayer, offsetof(Values, cloudCoverage), 0.68f, 0.0f, 1.0f, "%.2f",
+        {"Cloud coverage", &kCloudLayer, offsetof(Values, cloudCoverage), 0.44f, 0.0f, 1.0f, "%.2f",
          "How much of the sky the layer fills."},
-        {"Cloud density", &kCloudLayer, offsetof(Values, cloudDensity), 0.022f, 0.005f, 0.3f, "%.3f",
+        {"Cloud density", &kCloudLayer, offsetof(Values, cloudDensity), 0.021f, 0.005f, 0.3f, "%.3f",
          "How solid the cloud is where it is filled."},
         {"Cloud detail", &kCloudLayer, offsetof(Values, cloudDetail), 0.7f, 0.0f, 1.0f, "%.2f",
          "How hard the cloud's edges are torn."},
@@ -89,7 +91,7 @@ namespace {
          "How fast the layer drifts, as a multiple of the engine's wind."},
         {"Cirrus", &kHighCloud, offsetof(Values, cirrus), 0.41f, 0.0f, 1.0f, "%.2f",
          "How much of the sky the high sheet of ice cloud reaches across."},
-        {"Cirrus opacity", &kHighCloud, offsetof(Values, cirrusOpacity), 0.11f, 0.0f, 1.0f, "%.2f",
+        {"Cirrus opacity", &kHighCloud, offsetof(Values, cirrusOpacity), 0.04f, 0.0f, 1.0f, "%.2f",
          "How solid that sheet is where it reaches."},
         {"Contrails", &kHighCloud, offsetof(Values, contrails), 0.04f, 0.0f, 1.0f, "%.2f",
          "How strongly the two aircraft trails show."},
@@ -128,30 +130,29 @@ namespace {
 
         {"Night strength", &kNightVision, offsetof(Values, nightStrength), 1.0f, 0.0f, 1.0f, "%.2f",
          "How far the world drains to rod vision once the sun is down. Zero turns it off."},
-        {"Night colour retained above", &kNightVision, offsetof(Values, nightColourAbove), 0.45f,
+        {"Night colour retained above", &kNightVision, offsetof(Values, nightColourAbove), 0.59f,
          0.02f, 2.0f, "%.2f",
          "The brightness at and above which a pixel keeps its colour: fires, lamps, headlights."},
-        {"Purkinje shift", &kNightVision, offsetof(Values, nightPurkinje), 0.7f, 0.0f, 1.0f, "%.2f",
+        {"Purkinje shift", &kNightVision, offsetof(Values, nightPurkinje), 0.75f, 0.0f, 1.0f, "%.2f",
          "How far the drained picture turns from grey to the rods' blue-grey, with reds going dark."},
         {"Night moon colour", &kNightVision, offsetof(Values, nightMoonColour), 0.5f, 0.0f, 1.0f,
          "%.2f", "How much colour a high, uncovered moon lets the world keep. Moonless is grey."},
-        {"Night noise", &kNightVision, offsetof(Values, nightNoise), 0.0f, 0.0f, 1.0f, "%.2f",
+        {"Night noise", &kNightVision, offsetof(Values, nightNoise), 1.0f, 0.0f, 1.0f, "%.2f",
          "Faint moving grain in the darkest parts of the view."},
 
         {"Cloud shadow strength", &kCloudShadows, offsetof(Values, shadowStrength), 0.5f, 0.0f, 1.0f,
          "%.2f", "How much of the light on sunlit ground a cloud overhead takes away."},
 
-        {"Grade saturation", &kColourGrade, offsetof(Values, gradeSaturation), 0.5f, 0.0f, 1.5f,
+        {"Grade saturation", &kColourGrade, offsetof(Values, gradeSaturation), 0.57f, 0.0f, 1.5f,
          "%.2f", "How much colour the final picture keeps. One is the scene's own; the engine's 0.5."},
-        {"Grade contrast", &kColourGrade, offsetof(Values, gradeContrast), 0.09f, -0.5f, 1.0f, "%.2f",
+        {"Grade contrast", &kColourGrade, offsetof(Values, gradeContrast), 0.13f, -0.5f, 1.0f, "%.2f",
          "How hard the S-curve bends the picture's tones. Zero leaves them straight."},
-        {"Grade red", &kColourGrade, offsetof(Values, gradeRed), 0.91f, 0.5f, 2.0f, "%.2f",
-         "The power red is raised to. Below one lifts it, above one sinks it."},
-        {"Grade green", &kColourGrade, offsetof(Values, gradeGreen), 1.06f, 0.5f, 2.0f, "%.2f",
-         "The power green is raised to. Below one lifts it, above one sinks it."},
-        {"Grade blue", &kColourGrade, offsetof(Values, gradeBlue), 1.44f, 0.5f, 2.0f, "%.2f",
-         "The power blue is raised to. Below one lifts it, above one sinks it; the engine's high "
-         "value is most of its yellow cast."},
+        {"Grade brightness", &kColourGrade, offsetof(Values, gradeBrightness), 1.09f, 0.5f, 2.0f,
+         "%.2f", "Above one darkens the mid tones, below one lifts them. The engine's is about 1.12."},
+        {"Grade warmth", &kColourGrade, offsetof(Values, gradeWarmth), 0.05f, -0.5f, 0.5f, "%.2f",
+         "Above zero warms the picture, below cools it. The engine's 0.23 is its yellow cast."},
+        {"Grade tint", &kColourGrade, offsetof(Values, gradeTint), -0.07f, -0.5f, 0.5f, "%.2f",
+         "Below zero turns the picture green, above turns it magenta."},
     };
 
     constexpr Moment kMoments[] = {
@@ -231,6 +232,37 @@ namespace {
             ImGui::SetItemTooltip("%s", parameter.help);
         }
         return changed;
+    }
+
+    // A ramp from black to white as the scene holds it, and under it as the grade would leave it.
+    void DrawGreys() {
+        // Odd, so the middle step is mid grey.
+        constexpr int kSteps = 17;
+        ImGui::SeparatorText("Greys, before and after");
+
+        const float width = ImGui::GetContentRegionAvail().x;
+        const float cell = width / kSteps;
+        const float height = ImGui::GetFrameHeight() * 1.5f;
+        const ImVec2 origin = ImGui::GetCursorScreenPos();
+        ImDrawList* list = ImGui::GetWindowDrawList();
+        float mid[3] = {};
+        for (int i = 0; i < kSteps; i++) {
+            const float grey = static_cast<float>(i) / (kSteps - 1);
+            const float before[3] = {grey, grey, grey};
+            float after[3];
+            SkyOverhaul::Grade::Apply(g_values, before, after);
+            if (i == kSteps / 2) {
+                std::copy_n(after, 3, mid);
+            }
+            const float x = origin.x + cell * i;
+            list->AddRectFilled({x, origin.y}, {x + cell, origin.y + height},
+                                ImGui::ColorConvertFloat4ToU32({grey, grey, grey, 1.0f}));
+            list->AddRectFilled({x, origin.y + height}, {x + cell, origin.y + 2.0f * height},
+                                ImGui::ColorConvertFloat4ToU32({after[0], after[1], after[2], 1.0f}));
+        }
+        ImGui::Dummy({width, 2.0f * height});
+        ImGui::Text("Mid grey becomes %.0f %.0f %.0f", mid[0] * 255.0f, mid[1] * 255.0f,
+                    mid[2] * 255.0f);
     }
 
     void DrawNow() {
@@ -313,6 +345,9 @@ void SkyOverhaul::Tuning::DrawWindow(void*) {
                 DrawMoments();
             } else {
                 g_unsaved |= DrawGroups(*category);
+            }
+            if (category == &kGrade) {
+                DrawGreys();
             }
             ImGui::EndTabItem();
         }
