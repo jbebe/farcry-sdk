@@ -69,6 +69,7 @@ namespace {
     constexpr Group kAfterimage = {"Afterimage", &kSun};
     constexpr Group kNightVision = {"Night vision", &kNight};
     constexpr Group kCloudShadows = {"Cloud shadows", &kShadows};
+    constexpr Group kAmbientOcclusion = {"Ambient occlusion", &kShadows};
     constexpr Group kColourGrade = {"Colour grade", &kGrade};
 
     // In the order the file and the window list them.
@@ -143,6 +144,23 @@ namespace {
 
         {"Cloud shadow strength", &kCloudShadows, offsetof(Values, shadowStrength), 0.5f, 0.0f, 1.0f,
          "%.2f", "How much of the light on sunlit ground a cloud overhead takes away."},
+
+        {"Occlusion strength", &kAmbientOcclusion, offsetof(Values, occlusionStrength), 0.5f, 0.0f,
+         1.0f, "%.2f",
+         "How much of the light a fully occluded point loses. Zero turns it off."},
+        {"Occlusion radius", &kAmbientOcclusion, offsetof(Values, occlusionRadius), 0.8f, 0.1f, 3.0f,
+         "%.2f m", "How far from a point the surfaces around it still hide the sky from it."},
+        {"Occlusion screen limit", &kAmbientOcclusion, offsetof(Values, occlusionScreenLimit), 32.0f,
+         2.0f, 128.0f, "%.0f px",
+         "The most half-resolution pixels the radius may cover, so a wall at arm's length does not "
+         "spread its occlusion across the screen."},
+        {"Occlusion fade distance", &kAmbientOcclusion, offsetof(Values, occlusionFadeDistance),
+         150.0f, 10.0f, 400.0f, "%.0f m",
+         "The distance by which the occlusion has faded out, beginning from half of it."},
+        {"Occlusion root reach", &kAmbientOcclusion, offsetof(Values, occlusionRootReach), 0.25f,
+         0.01f, 2.0f, "%.2f m",
+         "How far in front of the ground grass and leaves still take its occlusion, so grass "
+         "darkens at its roots and not at its tips."},
 
         {"Grade saturation", &kColourGrade, offsetof(Values, gradeSaturation), 0.57f, 0.0f, 1.5f,
          "%.2f", "How much colour the final picture keeps. One is the scene's own; the engine's 0.5."},

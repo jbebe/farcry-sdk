@@ -1,4 +1,4 @@
-// The engine's own pixel shaders that a draw is recognised by, named by their bytecode.
+// The engine's own shaders that a draw is recognised by, named by their bytecode.
 //
 // The device hands back the exact bytecode shipped in shadersobj, so a CRC-32 of it names the
 // object. See docs/docs/file-formats/shader-objects.md.
@@ -27,6 +27,9 @@ struct Known {
 // What the pixel shader bound right now is. Remembered per shader, so only the first draw through
 // each one pays for reading its bytecode.
 Known Bound(IDirect3DDevice9* device);
+
+// Whether the bound vertex shader is grass's or tree leaves'. Remembered per shader, like Bound.
+bool IsFoliageBound(IDirect3DDevice9* device);
 
 // Forgets every shader seen, whose addresses a new device may reuse.
 void Forget();

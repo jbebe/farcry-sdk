@@ -8,12 +8,16 @@
 #include "clouds.h"
 #include "dazzle.h"
 #include "engine/cloud_layer.h"
+#include "engine/depth_texture.h"
 #include "engine/device_reset.h"
+#include "engine/dome_draw.h"
 #include "engine/frame.h"
 #include "engine/known_shaders.h"
 #include "engine/screen_draw.h"
+#include "engine/solid_depth.h"
 #include "grade.h"
 #include "night.h"
+#include "occlusion.h"
 #include "shadows.h"
 #include "sky.h"
 #include "tuning.h"
@@ -27,6 +31,9 @@ namespace {
         SkyOverhaul::Sky::ReleaseDeviceObjects();
         SkyOverhaul::Night::ReleaseDeviceObjects();
         SkyOverhaul::Shadows::ReleaseDeviceObjects();
+        SkyOverhaul::Occlusion::ReleaseDeviceObjects();
+        SkyOverhaul::SolidDepth::ReleaseDeviceObjects();
+        SkyOverhaul::DepthTexture::ReleaseDeviceObjects();
         SkyOverhaul::DrawGuard::ReleaseDeviceObjects();
         SkyOverhaul::KnownShaders::Forget();
     }
@@ -37,6 +44,8 @@ namespace {
         SkyOverhaul::Sky::OnScenePass(pass);
         SkyOverhaul::Clouds::OnScenePass(pass);
         SkyOverhaul::Shadows::OnScenePass(pass);
+        SkyOverhaul::SolidDepth::OnScenePass(pass);
+        SkyOverhaul::Occlusion::OnScenePass(pass);
         SkyOverhaul::Dazzle::OnScenePass(pass);
         SkyOverhaul::Night::OnScenePass(pass);
     }
@@ -44,6 +53,7 @@ namespace {
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
         SkyOverhaul::Dazzle::OnFinalPass(pass);
         SkyOverhaul::Grade::OnFinalPass(pass);
+        SkyOverhaul::SolidDepth::OnFinalPass(pass);
     }
 
     // Index order is what the callbacks below switch on; fcse.ini stores the label.
@@ -70,12 +80,30 @@ namespace {
         SkyOverhaul::Night::SetEnabled(value->asChoice == 1);
     }
 
+    // The two parts that read the engine's linear depth, which is only found while one of them is on.
+    bool g_shadows = false;
+    bool g_occlusion = false;
+
+    void WatchDepth() {
+        SkyOverhaul::DomeDraw::SetWatchDepth(g_shadows || g_occlusion);
+    }
+
     void __cdecl OnShadowsChanged(const FCSE_SettingValue* value, void*) {
-        SkyOverhaul::Shadows::SetEnabled(value->asChoice == 1);
+        g_shadows = value->asChoice == 1;
+        SkyOverhaul::Shadows::SetEnabled(g_shadows);
+        WatchDepth();
     }
 
     void __cdecl OnGradeChanged(const FCSE_SettingValue* value, void*) {
         SkyOverhaul::Grade::SetEnabled(value->asChoice == 1);
+    }
+
+    const char* const kOcclusionModes[] = {"Off", "On"};
+
+    void __cdecl OnOcclusionChanged(const FCSE_SettingValue* value, void*) {
+        g_occlusion = value->asChoice == 1;
+        SkyOverhaul::Occlusion::SetEnabled(g_occlusion);
+        WatchDepth();
     }
 }
 
@@ -120,6 +148,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Night", FCSE_CHOICE(1), &OnNightChanged, nullptr, kModes, std::size(kModes)},
         {"Shadows", FCSE_CHOICE(1), &OnShadowsChanged, nullptr, kModes, std::size(kModes)},
         {"Grade", FCSE_CHOICE(1), &OnGradeChanged, nullptr, kModes, std::size(kModes)},
+        {"Occlusion", FCSE_CHOICE(0), &OnOcclusionChanged, nullptr, kOcclusionModes,
+         std::size(kOcclusionModes)},
     };
     // Registered under the module name: the mod menu lists every loaded plugin and then every group
     // that matched none, so a group named apart from its DLL would arrive twice, once empty.

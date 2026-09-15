@@ -51,6 +51,9 @@ bool SkyOverhaul::Camera::Read(IDirect3DDevice9* device, View& out) {
     std::memcpy(out.viewProjection, transforms, sizeof(out.viewProjection));
     out.verticalScale = transforms[16 + 5];
     out.horizontalScale = transforms[16 + 0];
+    out.depthScale = transforms[16 + 10];
+    out.depthOffset = transforms[16 + 11];
+    out.wFromDepth = transforms[16 + 14];
     out.viewDistance = distances[2];
 
     Copy3(block + kPosition, out.eye);
@@ -79,4 +82,15 @@ bool SkyOverhaul::Camera::Read(IDirect3DDevice9* device, View& out) {
         }
     }
     return true;
+}
+
+float SkyOverhaul::Camera::BufferDepth(const View& view, float metres) {
+    const float* m = view.viewProjection;
+    float p[3];
+    for (int i = 0; i < 3; i++) {
+        p[i] = view.eye[i] + view.direction[i] * metres;
+    }
+    const float z = m[8] * p[0] + m[9] * p[1] + m[10] * p[2] + m[11];
+    const float w = m[12] * p[0] + m[13] * p[1] + m[14] * p[2] + m[15];
+    return w > 0.0f ? z / w : 0.0f;
 }

@@ -10,8 +10,9 @@
 // what it lets through, so that the mask follows our clouds rather than the engine's, and draws the
 // moon without the fog the engine hides a low moon in.
 //
-// It also watches the draws named by their pixel shader, in DrawPrimitive too: those that read the
-// linear depth, and the final pass's colour grade, which it can draw with values of our own.
+// It also watches the draws named by their shaders, in DrawPrimitive too: those that read the linear
+// depth, the final pass's colour grade, which it can draw with values of our own, and the world's
+// depth pass, which it draws again into the solid depth.
 //
 // See docs/docs/engine-internals/presentation-and-input.md for what named that call.
 #pragma once

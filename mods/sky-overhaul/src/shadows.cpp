@@ -1,13 +1,13 @@
 #include "shadows.h"
 
 #include "clouds.h"
+#include "depth_constants.h"
 
 #include "engine/camera.h"
 #include "engine/clock.h"
 #include "engine/cloud_layer.h"
 #include "engine/com.h"
 #include "engine/depth_texture.h"
-#include "engine/dome_draw.h"
 #include "engine/render_target.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
@@ -22,16 +22,10 @@
 namespace {
     // Above the clouds' registers, which the shadow draw binds for itself. The last is the blur's,
     // set per blur pass.
-    constexpr UINT kFirstConstant = 91;
-    constexpr UINT kFrameConstants = 6;
+    constexpr UINT kFirstConstant = SkyOverhaul::DepthConstants::kFirst;
+    constexpr UINT kFrameConstants = SkyOverhaul::DepthConstants::kCount + 1;
     constexpr UINT kBlurConstant = kFirstConstant + kFrameConstants;
 
-    constexpr DWORD kDepthSampler = 3;
-
-    // Nothing nearer than this is darkened, which keeps the player's own weapon and hands clean.
-    constexpr float kNearest = 1.0f;
-    // The share of the view distance past which the depth is the engine's clear, not geometry.
-    constexpr float kFarthestShare = 0.995f;
     // The sun's height, as a sine, over which its shadows come in.
     constexpr float kSunLow = 0.05f;
     constexpr float kSunHigh = 0.15f;
@@ -102,18 +96,6 @@ namespace {
         return true;
     }
 
-    // The depth buffer's value for a point `metres` along the camera's axis.
-    float BufferDepth(const SkyOverhaul::Camera::View& view, float metres) {
-        const float* m = view.viewProjection;
-        float p[3];
-        for (int i = 0; i < 3; i++) {
-            p[i] = view.eye[i] + view.direction[i] * metres;
-        }
-        const float z = m[8] * p[0] + m[9] * p[1] + m[10] * p[2] + m[11];
-        const float w = m[12] * p[0] + m[13] * p[1] + m[14] * p[2] + m[15];
-        return w > 0.0f ? z / w : 0.0f;
-    }
-
     void BlurInto(IDirect3DDevice9* device, SkyOverhaul::DrawGuard& draw, const Target& from,
                   const Target& into, float axisX, float axisY) {
         const float blur[4] = {axisX, axisY, 1.0f / static_cast<float>((g_width + 1) / 2),
@@ -125,8 +107,7 @@ namespace {
         draw.ClipQuad(0.0f, kNoRays);
     }
 
-    // The shadows at half resolution and blurred, then multiplied into the world wherever it drew
-    // beyond arm's length.
+    // The shadows at half resolution and blurred, then multiplied into the world.
     bool Draw(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
               const SkyOverhaul::DepthTexture::Found& depth, float strength, float sun) {
         IDirect3DDevice9* device = pass.device;
@@ -138,24 +119,14 @@ namespace {
             return false;
         }
 
-        const float constants[kFrameConstants * 4] = {
-            depth.metreWeights[0], depth.metreWeights[1], depth.metreWeights[2],
-            view.viewDistance * kFarthestShare,
-            1.0f / view.horizontalScale, 1.0f / view.verticalScale,
-            1.0f / static_cast<float>(g_width), 1.0f / static_cast<float>(g_height),
-            view.right[0], view.right[1], view.right[2], 0.0f,
-            view.up[0], view.up[1], view.up[2], 0.0f,
-            view.direction[0], view.direction[1], view.direction[2], 0.0f,
-            strength, sun, 0.0f, 0.0f};
-
         SkyOverhaul::ScreenDraw draw(device, kFirstConstant, kFrameConstants + 1);
-        device->SetPixelShaderConstantF(kFirstConstant, constants, kFrameConstants);
-        device->SetTexture(kDepthSampler, depth.texture);
+        SkyOverhaul::DepthConstants::Set(device, view, depth, g_width, g_height);
+        const float shade[4] = {strength, sun, 0.0f, 0.0f};
+        device->SetPixelShaderConstantF(kFirstConstant + SkyOverhaul::DepthConstants::kCount, shade,
+                                        1);
 
         // A half-resolution target cannot share the world's multisampled depth, and switching
         // targets resets the scissor rectangle the engine may be counting on.
-        IDirect3DSurface9* sceneDepth = nullptr;
-        device->GetDepthStencilSurface(&sceneDepth);
         RECT scissor = {};
         device->GetScissorRect(&scissor);
         device->SetDepthStencilSurface(nullptr);
@@ -174,19 +145,16 @@ namespace {
         BlurInto(device, draw, g_halves[1], g_halves[0], 0.0f, 1.0f);
 
         device->SetRenderTarget(0, pass.target);
-        device->SetDepthStencilSurface(sceneDepth);
-        SkyOverhaul::Release(sceneDepth);
+        device->SetDepthStencilSurface(pass.depth);
         device->SetScissorRect(&scissor);
         D3DVIEWPORT9 wholeRange = pass.viewport;
         wholeRange.MinZ = 0.0f;
         wholeRange.MaxZ = 1.0f;
         device->SetViewport(&wholeRange);
 
-        // Passes the depth test only where the world drew beyond arm's length, and the sky, which
-        // the shader leaves alone. The world target's alpha carries brightness for the bloom.
+        // The shader leaves the sky and the weapon alone, which the engine's depth holds nothing
+        // for. The world target's alpha carries brightness for the bloom.
         device->SetTexture(0, g_halves[0].texture);
-        device->SetRenderState(D3DRS_ZENABLE, D3DZB_TRUE);
-        device->SetRenderState(D3DRS_ZFUNC, D3DCMP_LESS);
         device->SetRenderState(D3DRS_ALPHABLENDENABLE, TRUE);
         device->SetRenderState(D3DRS_SRCBLEND, D3DBLEND_ZERO);
         device->SetRenderState(D3DRS_DESTBLEND, D3DBLEND_SRCCOLOR);
@@ -194,7 +162,7 @@ namespace {
                                                            D3DCOLORWRITEENABLE_GREEN |
                                                            D3DCOLORWRITEENABLE_BLUE);
         device->SetPixelShader(applyShader);
-        return draw.ClipQuad(BufferDepth(view, kNearest), kNoRays);
+        return draw.ClipQuad(0.0f, kNoRays);
     }
 }
 
@@ -228,7 +196,6 @@ void SkyOverhaul::Shadows::OnScenePass(const Frame::Pass& pass) {
 
 void SkyOverhaul::Shadows::ReleaseDeviceObjects() {
     ReleaseTargets();
-    DepthTexture::ReleaseDeviceObjects();
     g_blurShader.Release();
     g_applyShader.Release();
     g_owner = nullptr;
@@ -237,5 +204,4 @@ void SkyOverhaul::Shadows::ReleaseDeviceObjects() {
 
 void SkyOverhaul::Shadows::SetEnabled(bool enabled) {
     g_enabled = enabled;
-    DomeDraw::SetWatchDepth(enabled);
 }

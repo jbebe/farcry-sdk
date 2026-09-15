@@ -21,8 +21,10 @@ constexpr float kFarDepth = 1.0f;
 // One pass worth acting on, as the renderer finishes it.
 struct Pass {
     IDirect3DDevice9* device;
-    // The pass's own render target, borrowed for the length of the callback.
+    // The pass's own render target and depth-stencil surface, borrowed for the length of the
+    // callback. The composite has no depth surface.
     IDirect3DSurface9* target;
+    IDirect3DSurface9* depth;
     D3DSURFACE_DESC backBuffer;
     D3DVIEWPORT9 viewport;
     uint32_t frame;

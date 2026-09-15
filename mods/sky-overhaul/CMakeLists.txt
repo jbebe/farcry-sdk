@@ -61,10 +61,15 @@ set(SHADER_PASSES
   "sky.fx:MainPS:ps_3_0:sky_ps.h:g_skyPixelShader"
   "night.fx:MainPS:ps_3_0:night_ps.h:g_nightPixelShader"
   "shadows.fx:BlurPS:ps_3_0:shadows_blur_ps.h:g_shadowsBlurPixelShader"
-  "shadows.fx:ApplyPS:ps_3_0:shadows_apply_ps.h:g_shadowsApplyPixelShader")
+  "shadows.fx:ApplyPS:ps_3_0:shadows_apply_ps.h:g_shadowsApplyPixelShader"
+  "occlusion.fx:GtaoPS:ps_3_0:occlusion_gtao_ps.h:g_occlusionGtaoPixelShader"
+  "occlusion.fx:BlurPS:ps_3_0:occlusion_blur_ps.h:g_occlusionBlurPixelShader"
+  "occlusion.fx:ApplyPS:ps_3_0:occlusion_apply_ps.h:g_occlusionApplyPixelShader")
 
-# Included by more than one shader source, so any change to it recompiles them all.
-set(SHADER_INCLUDES "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/shadows.inc.fx")
+# Included by more than one shader source, so any change to them recompiles them all.
+set(SHADER_INCLUDES
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/depth.inc.fx"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src/shaders/shadows.inc.fx")
 
 set(SHADER_HEADERS "")
 foreach(PASS IN LISTS SHADER_PASSES)
@@ -93,6 +98,7 @@ add_library(SkyOverhaul SHARED
   "src/dazzle.cpp"
   "src/grade.cpp"
   "src/night.cpp"
+  "src/occlusion.cpp"
   "src/shadows.cpp"
   "src/sky.cpp"
   "src/sky_model.cpp"
@@ -108,6 +114,7 @@ add_library(SkyOverhaul SHARED
   "src/engine/frame.cpp"
   "src/engine/screen_draw.cpp"
   "src/engine/shader.cpp"
+  "src/engine/solid_depth.cpp"
   "src/engine/sun_occlusion.cpp"
   "src/engine/time_of_day.cpp"
   "src/engine/vtable.cpp"

@@ -3,6 +3,14 @@
 Notable changes to Sky Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [1.1.0] - 2026-09-15
+
+### Added
+- **Ambient occlusion**, darkening the corners and creases the light doesn't reach, from a depth of
+  the world drawn a second time at half resolution, without its grass, leaves or the player's own
+  weapon, blurred and multiplied into the world at the sky pass alongside the cloud shadows. Switched
+  on its own in the Mod Configuration menu.
+
 ## [1.0.0] - 2026-09-14
 
 ### Added

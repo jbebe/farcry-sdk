@@ -45,7 +45,7 @@ collides with any other mod that edits a preset. Nothing here changes how the su
   drawn from, so a shadow is where its cloud is and moves with it. Needs Clouds on Overhaul. Worked
   out at half resolution from the engine's own linear depth, a texture its water and soft particles
   read, which is found by recognising those draws' shaders. Blurred along surfaces and multiplied
-  into the world at the sky pass, never nearer than a metre, so the player's weapon stays clean.
+  into the world at the sky pass, where the linear depth holds nothing for the player's weapon.
   `src/shadows.cpp`, `ShadowPS` in `src/shaders/clouds.fx`, `src/engine/depth_texture.cpp`.
 - **The colour grade.** The final pass's saturation, per-channel powers and contrast curve drawn with
   values of our own, recognised by its shader and put back after its draw. Replaces the weather

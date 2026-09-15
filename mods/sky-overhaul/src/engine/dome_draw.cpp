@@ -3,6 +3,7 @@
 #include "engine/depth_texture.h"
 #include "engine/frame.h"
 #include "engine/known_shaders.h"
+#include "engine/solid_depth.h"
 #include "engine/vtable.h"
 #include "fcse_api.h"
 
@@ -154,11 +155,16 @@ namespace {
         return SkyOverhaul::KnownShaders::Bound(device).kind == Kind::Moon;
     }
 
-    // The draws named by their pixel shader: a depth reader shows the linear depth texture, and the
-    // grade is drawn with our values and its own put back. `draw` is the engine's call.
+    // The draws named by their shaders: one of the world's depth pass is drawn again into the solid
+    // depth, a depth reader shows the linear depth texture, and the grade is drawn with our values
+    // and its own put back. `draw` is the engine's call.
     template <class Draw>
     HRESULT WatchShaders(IDirect3DDevice9* device, UINT primitives, Draw draw) {
         using SkyOverhaul::KnownShaders::Kind;
+        if (SkyOverhaul::SolidDepth::Begin(device)) {
+            draw();
+            SkyOverhaul::SolidDepth::End(device);
+        }
         const bool gradeShape = g_grade != nullptr && primitives <= kScreenPrimitives;
         if (!g_watchDepth && !gradeShape) {
             return draw();

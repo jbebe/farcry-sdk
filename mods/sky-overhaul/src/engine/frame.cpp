@@ -138,6 +138,7 @@ namespace {
         SkyOverhaul::Frame::Pass pass;
         pass.device = device;
         pass.target = target.surface;
+        pass.depth = depth.surface;
         pass.backBuffer = backBufferDesc;
         pass.viewport = viewport;
         pass.frame = g_frame;

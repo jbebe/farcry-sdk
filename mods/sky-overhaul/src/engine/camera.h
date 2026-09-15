@@ -15,6 +15,11 @@ struct View {
     // distance on screen, and the same across.
     float verticalScale;
     float horizontalScale;
+    // The projection's depth terms: clip depth is view depth times the scale plus the offset, and
+    // w is view depth times the last.
+    float depthScale;
+    float depthOffset;
+    float wFromDepth;
 
     // Where the camera is, and the directions through the viewport's four corners: top left, top
     // right, bottom left, bottom right, which is the order ScreenDraw::ClipQuad takes them in.
@@ -39,5 +44,8 @@ struct View {
 
 // False when the device will not answer, which is what a pass with nothing bound yet looks like.
 bool Read(IDirect3DDevice9* device, View& out);
+
+// The depth buffer's value for a point `metres` along the camera's axis.
+float BufferDepth(const View& view, float metres);
 
 }
