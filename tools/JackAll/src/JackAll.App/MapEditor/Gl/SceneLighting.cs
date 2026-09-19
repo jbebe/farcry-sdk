@@ -92,7 +92,7 @@ public static class SceneLighting
     /// every shader branch that exists to make the map look like the game rather than to show what
     /// is in it. Off, the frame is one geometry pass of flatly lit textures.
     /// </summary>
-    public static bool Demo { get; set; } = true;
+    public static bool Demo { get; set; }
 
     /// <summary>
     /// The sky as a GLSL function, shared so water reflects exactly the sky that gets drawn rather

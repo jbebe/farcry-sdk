@@ -119,10 +119,13 @@ public sealed class EntityTreeNode : TreeNodeBase<EntityTreeNode>
     {
         foreach (WorldEntity entity in entities.OrderBy(e => e.Name, StringComparer.OrdinalIgnoreCase))
         {
-            parent.AddChild(new EntityTreeNode(
-                entity.Name.Length > 0 ? entity.Name : $"#{entity.Id}", entity));
+            parent.AddChild(new EntityTreeNode(LabelOf(entity), entity));
         }
     }
+
+    /// <summary>An entity's name, or its id when it has none.</summary>
+    public static string LabelOf(WorldEntity entity)
+        => entity.Name.Length > 0 ? entity.Name : $"#{entity.Id}";
 
     /// <summary>The name with its trailing index removed, so <c>StaticObject_2001</c> files under
     /// <c>StaticObject</c>.</summary>

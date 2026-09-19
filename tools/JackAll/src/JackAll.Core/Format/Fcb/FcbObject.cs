@@ -18,4 +18,19 @@ public sealed class FcbObject
     public Dictionary<uint, byte[]> Values { get; } = [];
 
     public List<FcbObject> Children { get; } = [];
+
+    /// <summary>A deep copy - no value array or child is shared with this node.</summary>
+    public FcbObject Clone()
+    {
+        var copy = new FcbObject { TypeHash = TypeHash };
+        foreach ((uint hash, byte[] value) in Values)
+        {
+            copy.Values[hash] = (byte[])value.Clone();
+        }
+        foreach (FcbObject child in Children)
+        {
+            copy.Children.Add(child.Clone());
+        }
+        return copy;
+    }
 }

@@ -54,6 +54,7 @@ public sealed class EntityMarkerLayer : IDisposable
     private readonly int _vao;
     private readonly int _instanceBuffer;
     private int _instanceCount;
+    private int _capacity;
     private readonly int _uProjection;
     private readonly int _uWorldSize;
     private readonly int _uScreenScale;
@@ -69,12 +70,13 @@ public sealed class EntityMarkerLayer : IDisposable
         => SetInstances(instances, instanceCount);
 
     /// <summary>A layer whose stream is refilled via <see cref="SetInstances"/> - the program, VAO
-    /// and capacity-sized buffer survive every refill, so a rebuild is one BufferSubData.</summary>
+    /// and buffer survive every refill, so a rebuild is one BufferSubData unless it outgrows the buffer.</summary>
     public EntityMarkerLayer(int capacity)
     {
+        _capacity = Math.Max(1, capacity);
         _instanceBuffer = GL.GenBuffer();
         GL.BindBuffer(BufferTarget.ArrayBuffer, _instanceBuffer);
-        GL.BufferData(BufferTarget.ArrayBuffer, Math.Max(1, capacity) * Stride * sizeof(float),
+        GL.BufferData(BufferTarget.ArrayBuffer, _capacity * Stride * sizeof(float),
             IntPtr.Zero, BufferUsageHint.DynamicDraw);
 
         _vao = GL.GenVertexArray();
@@ -181,6 +183,13 @@ public sealed class EntityMarkerLayer : IDisposable
         }
 
         GL.BindBuffer(BufferTarget.ArrayBuffer, _instanceBuffer);
+        if (count > _capacity)
+        {
+            // Reallocated under the same name, so the VAO's binding stays valid.
+            _capacity = count * 2;
+            GL.BufferData(BufferTarget.ArrayBuffer, _capacity * Stride * sizeof(float),
+                IntPtr.Zero, BufferUsageHint.DynamicDraw);
+        }
         GL.BufferSubData(BufferTarget.ArrayBuffer, IntPtr.Zero, count * Stride * sizeof(float), instances);
     }
 

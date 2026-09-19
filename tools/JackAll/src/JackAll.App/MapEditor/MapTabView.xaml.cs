@@ -31,6 +31,8 @@ public partial class MapTabView : UserControl
 
     private sealed record FieldRow(string Name, string Value);
 
+    private sealed record NearbyRow(WorldEntity Entity, string Name, string Distance);
+
     /// <summary>One mission layer in the filter list. <see cref="IsVisible"/> is written by its
     /// checkbox, so it is a settable property rather than a record positional.</summary>
     private sealed class MissionLayerRow
@@ -41,14 +43,23 @@ public partial class MapTabView : UserControl
         public string Display => PathId.Length == 0 ? "(unnamed)" : PathId;
     }
 
-    private Fc2World? _world;
-    private EntityMarkerLayer? _markerLayer;
+    /// <summary>The loaded world's unsaved pastes, moves and deletes.</summary>
+    private WorldEditSession? _edits;
+
+    /// <summary>What Ctrl+V places, and the entity it was copied from so a paste can draw with its
+    /// meshes. Survives loading another world, which is how an entity moves between worlds.</summary>
+    private (CopiedEntity Copy, WorldEntity Original)? _clipboard;
+
     private EntityModelLayer? _modelLayer;
     private WorldEntity? _selectedEntity;
     private List<WorldEntity> _positionedEntities = [];
     private List<WorldEntity> _visibleEntities = [];
     private List<MissionLayerRow> _missionLayers = [];
     private bool _markersDirty;
+
+    /// <summary>The Nearby tab's rows, and where the camera stood when Update was last pressed.</summary>
+    private NearbyRow[] _nearby = [];
+    private System.Numerics.Vector3 _nearbyCameraAt;
     private RenderTargets? _targets;
     private PostProcess? _post;
     private ShadowCascades? _cascades;
@@ -63,9 +74,6 @@ public partial class MapTabView : UserControl
     /// </summary>
     private static readonly OpenTK.Mathematics.Vector3 BackgroundLinear =
         SceneLighting.Linear(BackgroundColour);
-
-    /// <summary>Refilled per marker rebuild; sized for every positioned entity of the world.</summary>
-    private float[] _markerStaging = [];
 
     /// <summary>Built once per world; the mission-layer and search filters only change visibility.</summary>
     private EntityTreeNode? _entityTree;
@@ -186,6 +194,12 @@ public partial class MapTabView : UserControl
     private async void Load_Click(object sender, System.Windows.RoutedEventArgs e)
     {
         if (_vm is null || MapPicker.SelectedItem is not TerrainMap map) return;
+        if (_edits is { IsDirty: true } && System.Windows.MessageBox.Show(
+                System.Windows.Window.GetWindow(this), "Loading discards the entity edits you have not saved.",
+                "JackAll", System.Windows.MessageBoxButton.OKCancel) != System.Windows.MessageBoxResult.OK)
+        {
+            return;
+        }
 
         LoadButton.IsEnabled = false;
         try
@@ -228,7 +242,7 @@ public partial class MapTabView : UserControl
             _pendingLoad = loaded;
             ShowSurfaceLegend(terrain, loaded.Table);
             _archetypes = loaded.Archetypes;
-            ShowEntities(loaded.World, loaded.Archetypes);
+            ShowEntities(loaded.World, map.SectorsPerSide);
             WorldModelSet models = loaded.Models;
             _modelStatusText =
                 $"{models.ModelIndicesByEntity.Count:N0} of {_positionedEntities.Count:N0} entities " +
@@ -239,6 +253,7 @@ public partial class MapTabView : UserControl
             int center = terrain.Side / 2;
             _camera.Position = new OpenTK.Mathematics.Vector3(
                 center, center, terrain.HeightMetersAt(center, center) + 150);
+            PinNearby();
             ViewportHint.Visibility = System.Windows.Visibility.Collapsed;
             StatusText.Text = $"{map.Name}: {map.SectorsPerSide}x{map.SectorsPerSide} sectors, " +
                               $"{terrain.MinHeight / 128f:F0}-{terrain.MaxHeight / 128f:F0} m";
@@ -317,10 +332,6 @@ public partial class MapTabView : UserControl
             _modelSet = pending.Models;
             _modelLayer = new EntityModelLayer(
                 pending.Models, _vm is { } modelVm ? modelVm.ReadByPath : _ => null, MarkerColour);
-            int positioned = pending.World.Entities.Count(e => e.Position is not null);
-            _markerStaging = new float[positioned * EntityMarkerLayer.Stride];
-            _markerLayer?.Dispose();
-            _markerLayer = new EntityMarkerLayer(positioned);
             _markersDirty = true;
             _heightTexture = new HeightTexture(pending.Terrain);
             _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
@@ -359,20 +370,7 @@ public partial class MapTabView : UserControl
         if (_markersDirty)
         {
             _markersDirty = false;
-            if (_modelLayer is { } modelLayer && EntityDrawMode.SelectedIndex != ModeMarkers)
-            {
-                modelLayer.SetVisible(_visibleEntities, _camera.Position, DrawRing);
-            }
-
-            // The draw mode speaks only for entities that resolved to geometry: Models draws them as
-            // meshes and nothing else, so the mode no longer smuggles the leftovers back in as
-            // markers. The mesh-less ones belong to their category layers either way - and the ones
-            // a dedicated layer already draws are held back here too, or a light picks up a second
-            // marker on top of the one the Lights layer gives it.
-            List<WorldEntity> markerEntities = EntityDrawMode.SelectedIndex == ModeModels
-                ? []
-                : [.. _visibleEntities.Where(OwnedByThisLayer)];
-            _markerLayer?.SetInstances(FillMarkers(markerEntities), markerEntities.Count);
+            _modelLayer?.SetVisible(_visibleEntities, _camera.Position, DrawRing);
             RebuildCategoryMarkers();
         }
 
@@ -406,7 +404,7 @@ public partial class MapTabView : UserControl
         OpenTK.Mathematics.Matrix4 viewProjection = _camera.View() * _camera.Projection(aspect);
 
         SceneLighting.Exposure = (float)ExposureSlider.Value;
-        bool drawEntityModels = LayerCatalog.Entities.IsVisible && EntityDrawMode.SelectedIndex != ModeMarkers;
+        bool drawEntityModels = LayerCatalog.Entities.IsVisible;
 
         SceneLighting.Shadows = null;
         SceneLighting.OcclusionMap = 0;
@@ -510,12 +508,6 @@ public partial class MapTabView : UserControl
         {
             _navMeshLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
                 MarkerStyle.World(1.5f));
-        }
-
-        if (LayerCatalog.Entities.IsVisible)
-        {
-            _markerLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
-                MarkerStyle.World(MarkerWorldSize));
         }
 
         foreach ((EntityCategory category, MarkerGlyph glyph, MapLayer layer, _, _, _) in DrawnCategories)
@@ -682,7 +674,10 @@ public partial class MapTabView : UserControl
             return;
         }
 
-        (System.Numerics.Vector3 min, System.Numerics.Vector3 max) = LocalBoundsOf(entity);
+        // A trigger is outlined by its volume, as the Triggers layer draws it. Only the outline: as a
+        // click target, a trigger spanning a town would take every click on the buildings inside it.
+        (System.Numerics.Vector3 min, System.Numerics.Vector3 max) =
+            WorldTriggers.SizeOf(entity) is { } volume ? (volume * -0.5f, volume * 0.5f) : LocalBoundsOf(entity);
         System.Numerics.Vector3 size = max - min;
         System.Numerics.Vector3 centre = (min + max) * 0.5f;
         System.Numerics.Matrix4x4 model =
@@ -752,13 +747,22 @@ public partial class MapTabView : UserControl
         StatusText.Text = $"{entity.Name}  {moved.X:0.00}, {moved.Y:0.00}, {moved.Z:0.00}";
     }
 
-    /// <summary>Ends a drag, optionally putting the entity back where it was grabbed from.</summary>
+    /// <summary>Ends a drag, either recording the move for the next save or putting the entity back
+    /// where it was grabbed from.</summary>
     private void EndDrag(bool revert)
     {
-        if (_grab is { } grab && revert && _selectedEntity is { } entity)
+        if (_grab is { } grab && _selectedEntity is { } entity && entity.Position != grab.Origin)
         {
-            entity.Position = grab.Origin;
-            _markersDirty = true;
+            if (revert)
+            {
+                entity.Position = grab.Origin;
+                _markersDirty = true;
+            }
+            else
+            {
+                _edits?.Moved(entity);
+                RefreshSaveButton();
+            }
         }
 
         _grab = null;
@@ -806,9 +810,8 @@ public partial class MapTabView : UserControl
     /// <summary>Holding shift multiplies the fly speed.</summary>
     private const float SprintFactor = 10f;
 
-    /// <summary>World size of a billboard marker, and so of the box that makes a mesh-less entity
-    /// clickable.</summary>
-    private const float MarkerWorldSize = 3f;
+    /// <summary>World size of the box that makes a mesh-less entity clickable.</summary>
+    private const float MeshlessPickSize = 3f;
 
     /// <summary>Floor on each axis of a pick box, so a flat or tiny model is still a target.</summary>
     private const float MinPickExtent = 0.35f;
@@ -868,10 +871,25 @@ public partial class MapTabView : UserControl
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
-        // Nothing here saves, so a move is only undone by putting it back. Escape mid-drag is that.
+        // Escape mid-drag puts the entity back where it was grabbed from.
         if (e.Key == Key.Escape && _grab is not null)
         {
             EndDrag(revert: true);
+            e.Handled = true;
+        }
+        else if (Viewport.IsKeyboardFocused && Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.C)
+        {
+            CopySelected();
+            e.Handled = true;
+        }
+        else if (Viewport.IsKeyboardFocused && Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.V)
+        {
+            PasteAt(Mouse.GetPosition(Viewport));
+            e.Handled = true;
+        }
+        else if (Viewport.IsKeyboardFocused && e.Key == Key.Delete)
+        {
+            DeleteSelected();
             e.Handled = true;
         }
         else if (Viewport.IsKeyboardFocused && e.Key is Key.W or Key.A or Key.S or Key.D or Key.Q or Key.E)
@@ -1024,10 +1042,10 @@ public partial class MapTabView : UserControl
         UpdateSurfaceLegendVisibility();
     }
 
-    private void ShowEntities(Fc2World world, ArchetypeIndex archetypes)
+    private void ShowEntities(Fc2World world, int sectorsPerSide)
     {
-        _world = world;
-        _selectedEntity = null;
+        _edits = new WorldEditSession(world, sectorsPerSide);
+        ClearSelection();
         _grab = null;
         _hoveredArm = GizmoAxis.None;
         _positionedEntities = [.. world.Entities.Where(e => e.Position is not null)];
@@ -1037,11 +1055,7 @@ public partial class MapTabView : UserControl
             .Select(g => new MissionLayerRow { PathId = g.Key, Count = g.Count() })
             .OrderByDescending(r => r.Count)];
         MissionLayerList.ItemsSource = _missionLayers;
-
-        _entityTree = EntityTreeNode.Build(_positionedEntities, archetypes);
-        EntityTree.ItemsSource = _entityTree.Children;
-
-        ApplyMissionLayerFilter();
+        EntitySetChanged();
     }
 
     /// <summary>Rebuilds what the viewport and list show from the ticked mission layers.</summary>
@@ -1050,6 +1064,7 @@ public partial class MapTabView : UserControl
         HashSet<string> visible = [.. _missionLayers.Where(r => r.IsVisible).Select(r => r.PathId)];
         _visibleEntities = [.. _positionedEntities.Where(e => visible.Contains(e.LayerPathId))];
         _markersDirty = true;
+        RefreshNearby();
         ApplyEntityFilter();
     }
 
@@ -1073,27 +1088,6 @@ public partial class MapTabView : UserControl
         ApplyMissionLayerFilter();
     }
 
-    /// <summary>Markers are one instance each: position plus a colour keyed to the archetype, so the
-    /// same kind of object reads the same everywhere.</summary>
-    private float[] FillMarkers(List<WorldEntity> entities)
-    {
-        float[] stream = _markerStaging;
-        for (int i = 0; i < entities.Count; i++)
-        {
-            WorldEntity entity = entities[i];
-            System.Numerics.Vector3 position = entity.Position!.Value;
-            (byte r, byte g, byte b) = MarkerColour(entity);
-            int at = i * EntityMarkerLayer.Stride;
-            stream[at] = position.X;
-            stream[at + 1] = position.Y;
-            stream[at + 2] = position.Z;
-            stream[at + 3] = r / 255f;
-            stream[at + 4] = g / 255f;
-            stream[at + 5] = b / 255f;
-        }
-        return stream;
-    }
-
     /// <summary>The glyph, layer toggle and colour each drawn category gets. Categories a dedicated
     /// layer already owns are absent, which is what keeps a light from being drawn twice.</summary>
     private static readonly (EntityCategory Category, MarkerGlyph Glyph, MapLayer Layer, float R, float G, float B)[]
@@ -1109,14 +1103,6 @@ public partial class MapTabView : UserControl
     /// it is worth drawing one at all.</summary>
     private const float GlyphPixels = 13f;
     private const float GlyphMaxDistance = 220f;
-
-    /// <summary>Whether the Entities layer is the one that should draw this entity's marker. An
-    /// entity that resolved to a mesh always is; a mesh-less one belongs to whichever layer owns its
-    /// category, and only falls here when no other layer does.</summary>
-    private bool OwnedByThisLayer(WorldEntity entity)
-        => _modelSet is not { } models
-            || models.ModelIndicesByEntity.ContainsKey(entity)
-            || !WorldEntityCategories.Of(entity.Node).HasOwnLayer();
 
     /// <summary>Refills each category layer from the entities the model layer could not draw. Runs
     /// only on a marker rebuild, so it costs nothing per frame.</summary>
@@ -1172,15 +1158,9 @@ public partial class MapTabView : UserControl
         }
     }
 
-    /// <summary>Colour keyed to the archetype, shared by markers and model tints so the same kind
-    /// of object reads the same in both forms.</summary>
+    /// <summary>Model tint keyed to the archetype, so the same kind of object reads the same everywhere.</summary>
     private static (byte R, byte G, byte B) MarkerColour(WorldEntity entity)
         => SurfaceTypeTexture.ColourFor((byte)(StableHash(entity.ArchetypeName) & 0x7F));
-
-    private const int ModeModels = 0;
-    private const int ModeMarkers = 1;
-
-    private void EntityDrawMode_Changed(object sender, SelectionChangedEventArgs e) => _markersDirty = true;
 
     /// <summary>One marker per plant, coloured by the resource it instantiates so a species reads
     /// the same across the map.</summary>
@@ -1318,6 +1298,59 @@ public partial class MapTabView : UserControl
             : $"{shown:N0} of {_positionedEntities.Count:N0} entities";
     }
 
+    /// <summary>Moves the Nearby tab's centre to where the camera is now.</summary>
+    private void PinNearby()
+    {
+        _nearbyCameraAt = ToNumerics(_camera.Position);
+        RefreshNearby();
+    }
+
+    /// <summary>Lists the entities within the range slider of the pinned spot, nearest first. A changed
+    /// range or mission layer rebuilds it around that spot, not around the camera.</summary>
+    private void RefreshNearby()
+    {
+        // The slider's initial value raises its event before the list is built.
+        if (NearbyList is null)
+        {
+            return;
+        }
+
+        float range = (float)NearbyRange.Value;
+        _nearby = [.. _visibleEntities
+            .Select(e => (Entity: e, Distance: System.Numerics.Vector3.Distance(e.Position!.Value, _nearbyCameraAt)))
+            .Where(c => c.Distance <= range)
+            .OrderBy(c => c.Distance)
+            .Select(c => new NearbyRow(c.Entity, EntityTreeNode.LabelOf(c.Entity), $"{c.Distance:F1} m"))];
+        NearbyList.ItemsSource = _nearby;
+        ShowInNearby(_selectedEntity);
+    }
+
+    private void NearbyRange_ValueChanged(object sender, System.Windows.RoutedPropertyChangedEventArgs<double> e)
+        => RefreshNearby();
+
+    private void UpdateNearby_Click(object sender, System.Windows.RoutedEventArgs e) => PinNearby();
+
+    private void ShowInNearby(WorldEntity? entity)
+        => NearbyList.SelectedItem = Array.Find(_nearby, row => ReferenceEquals(row.Entity, entity));
+
+    private void NearbyList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (NearbyList.SelectedItem is NearbyRow row && !ReferenceEquals(row.Entity, _selectedEntity))
+        {
+            SelectAndReveal(row.Entity);
+        }
+    }
+
+    /// <summary>Selects an entity picked outside the tree, and shows its row in the tree too.</summary>
+    private void SelectAndReveal(WorldEntity entity)
+    {
+        Select(entity);
+        if (_entityTree is not null)
+        {
+            EntityTreeNode.Reveal(_entityTree, entity);
+        }
+    }
+
     private void EntityTree_SelectedItemChanged(
         object sender, System.Windows.RoutedPropertyChangedEventArgs<object> e)
     {
@@ -1330,12 +1363,16 @@ public partial class MapTabView : UserControl
     private void Select(WorldEntity entity)
     {
         _selectedEntity = entity;
+        ShowInNearby(entity);
         EntityHeading.Text = $"{entity.Name}  ({entity.LayerPathId})";
 
         // A standalone entity names no archetype, and three quarters of a world is standalone.
         ShowArchetypeButton.IsEnabled =
             entity.ArchetypeName.Length > 0 && _archetypes?.Winner(entity.ArchetypeName) is not null;
-        OpenSectorButton.IsEnabled = true;
+        // An unsaved paste has no fragment to open yet.
+        OpenSectorButton.IsEnabled = !entity.IsNew;
+        CopyButton.IsEnabled = true;
+        DeleteButton.IsEnabled = true;
 
         JackAll.Core.Format.Fcb.FcbClassDefinitions defs = FcbDefinitionsProvider.Value.Value;
         JackAll.Core.Format.Fcb.FcbClass entityClass = defs.GetClass(entity.Node.TypeHash);
@@ -1376,10 +1413,10 @@ public partial class MapTabView : UserControl
     }
 
     /// <summary>Local-space extent of what an entity draws: the union of its models, or a box the
-    /// size of the billboard for the mesh-less ones so they stay clickable.</summary>
+    /// size of <see cref="MeshlessPickSize"/> for the mesh-less ones so they stay clickable.</summary>
     private (System.Numerics.Vector3 Min, System.Numerics.Vector3 Max) LocalBoundsOf(WorldEntity entity)
     {
-        var half = new System.Numerics.Vector3(MarkerWorldSize * 0.5f);
+        var half = new System.Numerics.Vector3(MeshlessPickSize * 0.5f);
         if (_modelSet is not { } set || !set.ModelIndicesByEntity.TryGetValue(entity, out int[]? models))
         {
             return (-half, half);
@@ -1492,11 +1529,7 @@ public partial class MapTabView : UserControl
 
         if (best is not null)
         {
-            Select(best);
-            if (_entityTree is not null)
-            {
-                EntityTreeNode.Reveal(_entityTree, best);
-            }
+            SelectAndReveal(best);
         }
     }
 
@@ -1513,6 +1546,155 @@ public partial class MapTabView : UserControl
         if (_selectedEntity is { } entity)
         {
             SectorEditorRequested?.Invoke(entity.HomeSector.SourcePath, entity.Id);
+        }
+    }
+
+    private void Copy_Click(object sender, System.Windows.RoutedEventArgs e) => CopySelected();
+
+    private void Delete_Click(object sender, System.Windows.RoutedEventArgs e) => DeleteSelected();
+
+    private void CopySelected()
+    {
+        if (_selectedEntity is not { } entity || _edits is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _clipboard = (CopiedEntity.Of(entity, _edits.World.Name), entity);
+            StatusText.Text = $"Copied {entity.Name} - Ctrl+V in the viewport places it under the cursor";
+        }
+        catch (InvalidOperationException ex)
+        {
+            StatusText.Text = ex.Message;
+        }
+    }
+
+    private void PasteAt(System.Windows.Point point)
+    {
+        if (_clipboard is not { } clip || _edits is null)
+        {
+            return;
+        }
+        if (TerrainUnder(point) is not { } ground)
+        {
+            StatusText.Text = "Point the cursor at the ground to paste";
+            return;
+        }
+
+        WorldEntity pasted;
+        try
+        {
+            pasted = _edits.Paste(clip.Copy, ground);
+        }
+        catch (InvalidOperationException ex)
+        {
+            StatusText.Text = ex.Message;
+            return;
+        }
+
+        // Copied from another world, the original has no meshes here and the paste stays a marker
+        // until a save and reload bakes it.
+        if (_modelLayer?.AddCopy(pasted, clip.Original) is { } models)
+        {
+            _modelSet!.ModelIndicesByEntity[pasted] = models;
+        }
+        _positionedEntities.Add(pasted);
+        EntitySetChanged();
+        Select(pasted);
+        EntityTreeNode.Reveal(_entityTree!, pasted);
+        StatusText.Text = $"Pasted {pasted.Name} into sector {pasted.HomeSector.SectorId}";
+    }
+
+    private void DeleteSelected()
+    {
+        if (_selectedEntity is not { } entity || _edits is null)
+        {
+            return;
+        }
+
+        _edits.Delete(entity);
+        _positionedEntities.Remove(entity);
+        ClearSelection();
+        EntitySetChanged();
+        StatusText.Text = $"Deleted {entity.Name}";
+    }
+
+    /// <summary>The inverse of <see cref="Select"/>: nothing picked, so nothing to act on.</summary>
+    private void ClearSelection()
+    {
+        _selectedEntity = null;
+        NearbyList.SelectedItem = null;
+        EntityHeading.Text = "";
+        EntityFields.ItemsSource = null;
+        ShowArchetypeButton.IsEnabled = OpenSectorButton.IsEnabled = CopyButton.IsEnabled = DeleteButton.IsEnabled = false;
+    }
+
+    private void RefreshSaveButton() => SaveButton.IsEnabled = _edits is { IsDirty: true };
+
+    /// <summary>Refreshes everything listing the world's entities after one is added or removed.</summary>
+    private void EntitySetChanged()
+    {
+        _entityTree = EntityTreeNode.Build(_positionedEntities, _archetypes!);
+        EntityTree.ItemsSource = _entityTree.Children;
+        ApplyMissionLayerFilter();
+        RefreshSaveButton();
+        Viewport.InvalidateVisual();
+    }
+
+    /// <summary>Where the ray under a viewport point first reaches the ground, or null when it
+    /// leaves the map without doing so.</summary>
+    private System.Numerics.Vector3? TerrainUnder(System.Windows.Point point)
+    {
+        if (_terrain is not { } terrain)
+        {
+            return null;
+        }
+
+        (System.Numerics.Vector3 origin, System.Numerics.Vector3 direction) = RayAt(point);
+        for (float t = 0f; t < PasteReach; t += PasteStep)
+        {
+            System.Numerics.Vector3 at = origin + direction * t;
+            int x = (int)MathF.Round(at.X), y = (int)MathF.Round(at.Y);
+            if (x < 0 || y < 0 || x >= terrain.Side || y >= terrain.Side)
+            {
+                continue;
+            }
+
+            float ground = terrain.HeightMetersAt(x, y);
+            if (at.Z <= ground)
+            {
+                return new System.Numerics.Vector3(at.X, at.Y, ground);
+            }
+        }
+        return null;
+    }
+
+    /// <summary>How far, and in what steps, a paste looks along the cursor ray for the ground.</summary>
+    private const float PasteReach = 2000f;
+    private const float PasteStep = 0.25f;
+
+    private async void Save_Click(object sender, System.Windows.RoutedEventArgs e)
+    {
+        if (_vm is null || _edits is not { IsDirty: true } edits)
+        {
+            return;
+        }
+
+        SaveButton.IsEnabled = false;
+        try
+        {
+            (int staged, IReadOnlyList<string> report) = await _vm.SaveWorldEdits(edits);
+            StatusText.Text = $"Staged {staged} files into the workspace";
+            System.Windows.MessageBox.Show(System.Windows.Window.GetWindow(this),
+                string.Join('\n', report), "Map edits saved");
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or System.IO.InvalidDataException or System.IO.IOException)
+        {
+            RefreshSaveButton();
+            System.Windows.MessageBox.Show(System.Windows.Window.GetWindow(this), ex.Message, "JackAll",
+                System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
     }
 

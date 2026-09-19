@@ -181,8 +181,8 @@ public sealed class WorldModelSet
     public required IReadOnlyList<WorldModel> Models { get; init; }
 
     /// <summary>Indices into <see cref="Models"/> per entity - one per graphics slot it filled. An
-    /// entity absent here keeps its billboard marker.</summary>
-    public required IReadOnlyDictionary<WorldEntity, int[]> ModelIndicesByEntity { get; init; }
+    /// entity absent here keeps its billboard marker. A paste adds its copy under the original's.</summary>
+    public required Dictionary<WorldEntity, int[]> ModelIndicesByEntity { get; init; }
 
     /// <summary>Referenced paths the VFS missed or the parser could not turn into triangles.</summary>
     public required int FailedPathCount { get; init; }
@@ -205,6 +205,10 @@ public static class WorldModels
 
     /// <summary>An FC2 sector is 64 m on a side.</summary>
     public const float SectorMeters = 64f;
+
+    /// <summary>The grid column and row a world position falls in.</summary>
+    public static (int X, int Y) SectorOf(Vector3 position)
+        => ((int)MathF.Floor(position.X / SectorMeters), (int)MathF.Floor(position.Y / SectorMeters));
 
     /// <summary>The detail tiers as Chebyshev distances in sectors from the camera's: fine within
     /// <see cref="FineRadius"/>, coarse within <see cref="CoarseRadius"/>, marker beyond.</summary>

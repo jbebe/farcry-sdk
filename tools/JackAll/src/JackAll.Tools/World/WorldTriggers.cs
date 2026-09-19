@@ -69,4 +69,10 @@ public static class WorldTriggers
         }
         return triggers;
     }
+
+    /// <summary>The full extent of the entity's trigger box, or null when it has none.</summary>
+    public static Vector3? SizeOf(WorldEntity entity)
+        => FcbEntityFields.FindComponent(entity.Node, ProximityTrigger) is { } trigger
+            ? FcbEntityFields.ReadVector3(trigger, VectorSize)
+            : null;
 }

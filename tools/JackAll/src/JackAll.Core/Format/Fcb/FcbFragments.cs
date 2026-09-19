@@ -249,7 +249,7 @@ public static class FcbFragments
                         continue;
                     }
                     ulong disEntityId = BitConverter.ToUInt64(idBytes, 0);
-                    slots.Add(new FragmentSlot(EntityId(FcbEntityFields.ReadString(entity, WorldHashes.HidName), disEntityId), layer, i));
+                    slots.Add(new FragmentSlot(EntityFragmentId(FcbEntityFields.ReadString(entity, WorldHashes.HidName), disEntityId), layer, i));
                 }
             }
         }
@@ -310,7 +310,8 @@ public static class FcbFragments
     public static string EntityFragmentId(ulong disEntityId)
         => disEntityId.ToString(CultureInfo.InvariantCulture) + ".xml";
 
-    private static string EntityId(string hidName, ulong disEntityId)
+    /// <summary>The named form a placed entity's fragment row carries, e.g. <c>Guard_12.2058514756624450165.xml</c>.</summary>
+    public static string EntityFragmentId(string hidName, ulong disEntityId)
         => hidName.Length == 0
             ? EntityFragmentId(disEntityId)
             : Sanitize(hidName) + "." + EntityFragmentId(disEntityId);

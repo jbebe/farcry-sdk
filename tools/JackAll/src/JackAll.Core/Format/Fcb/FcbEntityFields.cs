@@ -59,6 +59,8 @@ public static class FcbEntityFields
         return null;
     }
 
+    public static byte[] StringBytes(string text) => [.. Encoding.UTF8.GetBytes(text), 0];
+
     public static byte[] Vector3Bytes(Vector3 v)
     {
         var bytes = new byte[12];

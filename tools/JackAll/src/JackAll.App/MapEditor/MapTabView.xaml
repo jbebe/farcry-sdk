@@ -5,7 +5,7 @@
              xmlns:mapEditor="clr-namespace:JackAll.App.MapEditor">
 
     <DockPanel>
-        <!-- Save/Deploy stay disabled until an editing phase lands; only world load works. -->
+        <!-- Deploy stays disabled; the patch is built from the main window as for any other edit. -->
         <Border DockPanel.Dock="Top" Padding="0,0,0,6">
             <DockPanel>
                 <TextBlock x:Name="StatusText" DockPanel.Dock="Right" VerticalAlignment="Center"
@@ -16,12 +16,14 @@
                               ToolTip="Every map that ships terrain: the two campaign worlds, the multiplayer maps, and tmpla" />
                     <Button x:Name="LoadButton" Content="Load" IsEnabled="False" Padding="12,3" Margin="0,0,4,0"
                             Click="Load_Click" />
-                    <Button Content="Save" IsEnabled="False" Padding="12,3" Margin="0,0,4,0" />
+                    <Button x:Name="SaveButton" Content="Save" IsEnabled="False" Padding="12,3" Margin="0,0,4,0"
+                            Click="Save_Click"
+                            ToolTip="Stages the pasted, moved and deleted entities into your workspace, with the archetypes and depload entries a paste needs" />
                     <Button Content="Deploy" IsEnabled="False" Padding="12,3" />
                     <CheckBox x:Name="GroundCollision" Content="Ground collision" IsChecked="True"
                               VerticalAlignment="Center" Margin="12,0,0,0"
                               ToolTip="Slows the camera to a stop as it approaches the terrain instead of flying through it" />
-                    <CheckBox x:Name="DemoMode" Content="Demo mode" IsChecked="True"
+                    <CheckBox x:Name="DemoMode" Content="Demo mode" IsChecked="False"
                               VerticalAlignment="Center" Margin="10,0,0,0"
                               ToolTip="Everything that costs: sun shadows, ambient occlusion, sky, haze, real water, the far model ring, and a continuous redraw. Off, the viewport is flatly lit textures, drawn once per change" />
                     <TextBlock Text="Exposure" VerticalAlignment="Center" Foreground="#888" Margin="14,0,4,0" />
@@ -80,66 +82,101 @@
             <!-- Context panel: swaps per selected layer; the mock shows what each panel will hold. -->
             <Border Grid.Column="2" BorderThickness="1" BorderBrush="#DDD" Padding="10,8">
                 <Grid>
-                <!-- Entities get a real panel rather than the mock: a searchable list over a
-                     read-only field view. It sits outside the scroll viewer so the list virtualizes. -->
+                <!-- Entities get a real panel rather than the mock: the nearest entities or a searchable
+                     tree, over a read-only field view. It sits outside the scroll viewer so the lists virtualize. -->
                 <DockPanel x:Name="EntityPanel" Visibility="Collapsed">
-                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                        <TextBlock Text="Draw as" VerticalAlignment="Center" Foreground="#888" Margin="0,0,6,0" />
-                        <ComboBox x:Name="EntityDrawMode" SelectedIndex="0" SelectionChanged="EntityDrawMode_Changed">
-                            <ComboBoxItem Content="Models" />
-                            <ComboBoxItem Content="Markers" />
-                            <ComboBoxItem Content="Both" />
-                        </ComboBox>
-                    </DockPanel>
                     <TextBlock x:Name="ModelStatus" DockPanel.Dock="Top" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,4" />
-                    <TextBox x:Name="EntitySearch" DockPanel.Dock="Top" Margin="0,0,0,6"
-                             TextChanged="EntitySearch_TextChanged"
-                             ToolTip="Filters by name or archetype" />
-                    <TextBlock x:Name="EntityCount" DockPanel.Dock="Top" Foreground="#888" Margin="0,0,0,4" />
                     <Grid>
                         <Grid.RowDefinitions>
                             <RowDefinition Height="*" MinHeight="80" />
                             <RowDefinition Height="4" />
-                            <RowDefinition Height="180" MinHeight="60" />
+                            <RowDefinition Height="450" MinHeight="450" />
                         </Grid.RowDefinitions>
-                        <TreeView x:Name="EntityTree" Grid.Row="0"
-                                  SelectedItemChanged="EntityTree_SelectedItemChanged"
-                                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                  VirtualizingStackPanel.IsVirtualizing="True"
-                                  VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                  ScrollViewer.CanContentScroll="True">
-                            <TreeView.ItemTemplate>
-                                <HierarchicalDataTemplate DataType="{x:Type mapEditor:EntityTreeNode}"
-                                                          ItemsSource="{Binding Children}">
-                                    <TextBlock Text="{Binding Header}" TextTrimming="CharacterEllipsis" />
-                                </HierarchicalDataTemplate>
-                            </TreeView.ItemTemplate>
-                            <!-- Declared here rather than as ItemContainerStyle so it applies at every depth. -->
-                            <TreeView.Resources>
-                                <Style TargetType="TreeViewItem">
-                                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                                    <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsVisible}" Value="False">
-                                            <Setter Property="Visibility" Value="Collapsed" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TreeView.Resources>
-                        </TreeView>
+                        <TabControl Grid.Row="0">
+                            <TabItem Header="Nearby">
+                                <DockPanel Margin="0,4,0,0">
+                                    <Button DockPanel.Dock="Top" Content="Update" Padding="7,3" Margin="0,0,0,6"
+                                            HorizontalAlignment="Left" Click="UpdateNearby_Click"
+                                            ToolTip="Lists the entities around where the camera is now" />
+                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                                        <TextBlock Text="Max distance" VerticalAlignment="Center" Foreground="#888"
+                                                   Margin="0,0,6,0" />
+                                        <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="#888"
+                                                   Width="36" TextAlignment="Right"
+                                                   Text="{Binding Value, ElementName=NearbyRange, StringFormat={}{0:0} m}" />
+                                        <Slider x:Name="NearbyRange" Minimum="1" Maximum="100" Value="50"
+                                                VerticalAlignment="Center" ValueChanged="NearbyRange_ValueChanged"
+                                                ToolTip="Lists only entities within this distance of where Update was pressed" />
+                                    </DockPanel>
+                                    <ListBox x:Name="NearbyList" SelectionChanged="NearbyList_SelectionChanged"
+                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                             VirtualizingStackPanel.IsVirtualizing="True"
+                                             VirtualizingStackPanel.VirtualizationMode="Recycling">
+                                        <ListBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <DockPanel>
+                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Distance}"
+                                                               Foreground="#888" Margin="6,0,0,0" />
+                                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                </DockPanel>
+                                            </DataTemplate>
+                                        </ListBox.ItemTemplate>
+                                    </ListBox>
+                                </DockPanel>
+                            </TabItem>
+                            <TabItem Header="All">
+                                <DockPanel Margin="0,4,0,0">
+                                    <TextBox x:Name="EntitySearch" DockPanel.Dock="Top" Margin="0,0,0,6"
+                                             TextChanged="EntitySearch_TextChanged"
+                                             ToolTip="Filters by name or archetype" />
+                                    <TextBlock x:Name="EntityCount" DockPanel.Dock="Top" Foreground="#888" Margin="0,0,0,4" />
+                                    <TreeView x:Name="EntityTree"
+                                              SelectedItemChanged="EntityTree_SelectedItemChanged"
+                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                                              VirtualizingStackPanel.IsVirtualizing="True"
+                                              VirtualizingStackPanel.VirtualizationMode="Recycling"
+                                              ScrollViewer.CanContentScroll="True">
+                                        <TreeView.ItemTemplate>
+                                            <HierarchicalDataTemplate DataType="{x:Type mapEditor:EntityTreeNode}"
+                                                                      ItemsSource="{Binding Children}">
+                                                <TextBlock Text="{Binding Header}" TextTrimming="CharacterEllipsis" />
+                                            </HierarchicalDataTemplate>
+                                        </TreeView.ItemTemplate>
+                                        <!-- Declared here rather than as ItemContainerStyle so it applies at every depth. -->
+                                        <TreeView.Resources>
+                                            <Style TargetType="TreeViewItem">
+                                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                                <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsVisible}" Value="False">
+                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TreeView.Resources>
+                                    </TreeView>
+                                </DockPanel>
+                            </TabItem>
+                        </TabControl>
                         <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" Background="Transparent" />
                         <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
                             <StackPanel>
                                 <TextBlock x:Name="EntityHeading" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                                <WrapPanel Margin="0,6,0,0">
                                     <Button x:Name="ShowArchetypeButton" Content="Archetype in Library"
-                                            Padding="7,3" Margin="0,0,6,0" IsEnabled="False"
+                                            Padding="7,3" Margin="0,0,6,4" IsEnabled="False"
                                             Click="ShowArchetype_Click"
                                             ToolTip="Opens the Library tab on the archetype this entity merges over. Disabled for a standalone entity, which has none." />
                                     <Button x:Name="OpenSectorButton" Content="Open entity in XML editor"
-                                            Padding="7,3" IsEnabled="False" Click="OpenSector_Click"
+                                            Padding="7,3" Margin="0,0,6,4" IsEnabled="False" Click="OpenSector_Click"
                                             ToolTip="Opens this entity's own fragment of its worldsector.data.fcb, so saving stages just this one entity. Falls back to the whole sector for an entity with no disEntityId." />
-                                </StackPanel>
+                                    <Button x:Name="CopyButton" Content="Copy" Padding="7,3" Margin="0,0,6,4"
+                                            IsEnabled="False" Click="Copy_Click"
+                                            ToolTip="Ctrl+C. Holds this entity for Ctrl+V in the viewport, which places a clone on the ground under the cursor - in this world or, after loading another, in that one" />
+                                    <Button x:Name="DeleteButton" Content="Delete" Padding="7,3" Margin="0,0,6,4"
+                                            IsEnabled="False" Click="Delete_Click"
+                                            ToolTip="Del. Removes this entity from its sector on the next Save" />
+                                </WrapPanel>
                                 <ItemsControl x:Name="EntityFields" Margin="0,8,0,0">
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
@@ -252,6 +289,8 @@
                     <TextBlock Text="Load a world to see its terrain" FontSize="11" Foreground="#888"
                                HorizontalAlignment="Center" Margin="0,4,0,0" />
                     <TextBlock Text="Right-drag look - WASD move, Q/E down/up - Shift to sprint - wheel changes speed"
+                               FontSize="11" Foreground="#888" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                    <TextBlock Text="Ctrl+C copy the selected entity - Ctrl+V paste it at the cursor - Del delete it - Save stages the edits"
                                FontSize="11" Foreground="#888" HorizontalAlignment="Center" Margin="0,2,0,0" />
                 </StackPanel>
             </Grid>

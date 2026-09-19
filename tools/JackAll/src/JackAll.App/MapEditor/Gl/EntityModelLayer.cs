@@ -104,6 +104,8 @@ public sealed class EntityModelLayer : IDisposable
         public required Tier FineTier;
         public required Tier CoarseTier;
         public required float[] Staging;
+        /// <summary>Instances the entity rows can place; the staging grows to it on the next pass.</summary>
+        public int Wanted;
         public int FineCount, CoarseCount;
         public int FineFloats, CoarseFloats;
         public int CoarseStart;
@@ -225,6 +227,7 @@ public sealed class EntityModelLayer : IDisposable
                 FineTier = Tier.Of(model.MaterialRanges),
                 CoarseTier = Tier.Of(model.CoarseMaterialRanges),
                 Staging = new float[capacity[i] * InstanceStride],
+                Wanted = capacity[i],
                 Facing = model.BillboardFacing ?? System.Numerics.Vector2.Zero,
             };
             if (mesh.FineTier.Blended.Length > 0 || mesh.CoarseTier.Blended.Length > 0)
@@ -499,9 +502,10 @@ public sealed class EntityModelLayer : IDisposable
     /// <summary>Chebyshev distance in sectors, which is what makes a ring a square box of sectors
     /// around the camera's own rather than a circle.</summary>
     private static int SectorDistance(System.Numerics.Vector3 position, int cameraX, int cameraY)
-        => Math.Max(
-            Math.Abs((int)MathF.Floor(position.X / WorldModels.SectorMeters) - cameraX),
-            Math.Abs((int)MathF.Floor(position.Y / WorldModels.SectorMeters) - cameraY));
+    {
+        (int x, int y) = WorldModels.SectorOf(position);
+        return Math.Max(Math.Abs(x - cameraX), Math.Abs(y - cameraY));
+    }
 
     /// <summary>Writes one placement into a mesh's staging, fine from the front and coarse from the
     /// back. A mesh whose staging is full drops the rest, which only a scatter can reach.</summary>
@@ -558,6 +562,23 @@ public sealed class EntityModelLayer : IDisposable
         }
     }
 
+    /// <summary>Draws <paramref name="copy"/> with <paramref name="original"/>'s meshes and tint.
+    /// Returns those meshes, or null when the original draws none.</summary>
+    public int[]? AddCopy(WorldEntity copy, WorldEntity original)
+    {
+        if (!_rows.TryGetValue(original, out Row row))
+        {
+            return null;
+        }
+
+        _rows[copy] = row;
+        foreach (int model in row.Models)
+        {
+            _meshes[model].Wanted++;
+        }
+        return row.Models;
+    }
+
     public List<WorldEntity> SetVisible(List<WorldEntity> visible, Vector3 cameraPosition, int ring)
     {
         int cameraX = (int)MathF.Floor(cameraPosition.X / WorldModels.SectorMeters);
@@ -565,6 +586,17 @@ public sealed class EntityModelLayer : IDisposable
 
         foreach (Mesh mesh in _meshes)
         {
+            if (mesh.Wanted * InstanceStride > mesh.Staging.Length)
+            {
+                // Doubled, so pasting copies one at a time does not reallocate on every paste. The
+                // buffer keeps its name, so the VAO's bindings stay valid.
+                int capacity = mesh.Wanted * 2;
+                mesh.Staging = new float[capacity * InstanceStride];
+                GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
+                GL.BufferData(BufferTarget.ArrayBuffer, capacity * InstanceStrideBytes,
+                    IntPtr.Zero, BufferUsageHint.DynamicDraw);
+            }
+
             mesh.FineCount = 0;
             mesh.CoarseCount = 0;
             mesh.FineFloats = 0;

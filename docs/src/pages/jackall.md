@@ -119,9 +119,16 @@ can filter them by mission layer, search them, and click them either in the list
 
 Everything without a model gets its own symbol so you can still find it: lights in their own color,
 trigger boxes as wireframe, AI cover and guard spots, door and window hints for the AI, particle and
-sound emitters, and the navmesh nodes the AI walks on. It's a viewer: you can select things, read
-their values and drag a move gizmo, but the gizmo only lives until you close the app. Nothing goes
-back into the files.
+sound emitters, and the navmesh nodes the AI walks on.
+
+Placed objects can be edited too. Drag one with the move gizmo, delete it with Del, or copy it with
+Ctrl+C and paste a clone with Ctrl+V on the ground under the cursor, in the same world or, after
+loading the other one, in that. Save stages the edits into your workspace: each moved or pasted
+object as its own piece of its sector file, each deleted one as a delete in the sector's
+`_layout.xml`. A paste from the other world also brings its archetype into this world's library, and
+lists any mesh this world's depload is missing, copied from the depload that ships it. A paste always
+goes into the `main` mission layer, and an object that owns other objects (a prefab) can't be copied.
+Terrain, roads and vegetation are still view only.
 
 ### Library
 
@@ -161,8 +168,8 @@ options page inside the game possible at all. See [Magma UI](/docs/category/magm
 Domino is the mission scripting system, and it ships as generated Lua. JackAll rebuilds a script from
 `domino\user\` into the box and wire graph it was made in, lays it out for you, takes the pin names
 from the node scripts and the original names from the `*.debug.lua` file next to it. It's read only:
-you can see what a mission does, but there's no way back to the Lua. Both it and the Map tab say
-viewer on purpose, so nobody spends an evening editing and then loses it.
+you can see what a mission does, but there's no way back to the Lua. It says viewer on purpose, so
+nobody spends an evening editing and then loses it.
 
 ## Format support
 

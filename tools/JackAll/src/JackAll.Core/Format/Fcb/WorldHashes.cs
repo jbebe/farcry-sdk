@@ -38,6 +38,9 @@ public static class WorldHashes
     public static readonly uint HidPosPrecise = FcbClassDefinitions.Crc32Ascii("hidPos_precise");
     public static readonly uint HidAngles = FcbClassDefinitions.Crc32Ascii("hidAngles");
 
+    /// <summary>The list of entities a prefab entity owns, one <c>Child</c> per owned id.</summary>
+    public static readonly uint EntityChildren = FcbClassDefinitions.Crc32Ascii("Children");
+
     /// <summary>The component carrying an entity's mission-layer path. It files a live entity into a
     /// layer; it does not decide which layer's data the entity is spawned from - see
     /// docs/docs/engine-internals/entity-instancing.md.</summary>
