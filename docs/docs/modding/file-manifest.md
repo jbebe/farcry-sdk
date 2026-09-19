@@ -90,8 +90,9 @@ Confirmed built on the open-source **Recast** library (via a leaked internal bui
 :::info[Verified via reverse engineering]
 The container/file-structure level is reverse-engineered — see [the `.nvm` format
 page](../file-formats/nvm.md): a two-tier scheme (one level file plus per-sector satellite files),
-distinct from every other per-sector format in this manifest. There is no tool, and the per-sector
-mesh/triangle payload is not decoded, so this stays **Locked** in practice.
+distinct from every other per-sector format in this manifest. The triangle mesh and its links are
+decoded, and JackAll's map viewer draws them, but nothing can write or regenerate a navmesh, so this
+stays **Locked** in practice.
 :::
 
 ## 7. Audio — Partial

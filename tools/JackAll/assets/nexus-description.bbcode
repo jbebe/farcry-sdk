@@ -60,7 +60,7 @@ The Blender side is a separate download here on Nexus: [url=https://www.nexusmod
 
 The Map tab loads a world and lets you fly around it in 3D. On the side you get the list of layers a FC2 map is built from, and you can toggle each one. The terrain draws with its real textures and its baked lighting, plus water, roads, rivers, footpaths, the drawn zone outlines, and the vegetation of every sector with each plant as its own model. Placed objects draw as real models or as markers, you can filter them by mission layer, search them, and click them either in the list or in the viewport.
 
-Everything without a model gets its own symbol so you can still find it: lights in their own color, trigger boxes as wireframe, AI cover and guard spots, door and window hints for the AI, particle and sound emitters, and the navmesh nodes the AI walks on. Right now it's a viewer. You can select things, read their values and drag a move gizmo, but the gizmo only lives until you close the app. Nothing gets saved yet.
+Everything without a model gets its own symbol so you can still find it: lights in their own color, trigger boxes as wireframe, AI cover and guard spots, door and window hints for the AI, particle and sound emitters, and the navmesh the AI walks on, as its triangles and the links between them. Right now it's a viewer. You can select things, read their values and drag a move gizmo, but the gizmo only lives until you close the app. Nothing gets saved yet.
 
 [size=4][b]Library[/b][/size]
 
@@ -105,7 +105,7 @@ Everything below is JackAll's own code, one implementation per format, tested ag
 [*][b].sbao[/b] - streamed audio: music and dialogue. Splits into header and ogg, plays it, exports ogg or mp3, imports anything ffmpeg reads[/*]
 [*][b].spk[/b] - sound banks. Lists and groups the records, extracts and imports ogg vorbis and IMA ADPCM[/*]
 [*][b].sdat[/b] - terrain per sector: heights, surface types, water, baked light. Read only. It's what the map viewport draws, plus a grayscale height preview per file[/*]
-[*][b].nvm[/b] - AI navmesh. Read only: the walkable nodes and the normal their slope is checked against[/*]
+[*][b].nvm[/b] - AI navmesh. Read only: the walkable triangles, their corners and the links between them[/*]
 [*][b].sav[/b] - savegames. Reads the header, screenshot and DLC list, edits and writes the PersistenceDB[/*]
 [*][b]depload.dat[/b] - dependency list per asset. Parsed. Feeds the reference panel and has its own view[/*]
 [*][b]Domino .lua (+ .debug.lua)[/b] - generated mission scripts. Parsed back into a node graph, with pin names and the original editor names[/*]

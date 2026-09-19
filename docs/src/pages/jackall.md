@@ -119,7 +119,7 @@ can filter them by mission layer, search them, and click them either in the list
 
 Everything without a model gets its own symbol so you can still find it: lights in their own color,
 trigger boxes as wireframe, AI cover and guard spots, door and window hints for the AI, particle and
-sound emitters, and the navmesh nodes the AI walks on.
+sound emitters, and the navmesh the AI walks on, as its triangles and the links between them.
 
 Placed objects can be edited too. Drag one with the move gizmo, delete it with Del, or copy it with
 Ctrl+C and paste a clone with Ctrl+V on the ground under the cursor, in the same world or, after
@@ -192,7 +192,7 @@ game actually ships. The format notes are under [File Formats](/docs/category/fi
 | `.sbao` | Streamed audio: music and dialogue | Splits into header and ogg, plays it, exports ogg or mp3, imports anything ffmpeg reads |
 | `.spk` | Sound banks | Lists and groups the records, extracts and imports ogg vorbis and IMA ADPCM |
 | `.sdat` | Terrain per sector: heights, surface types, water, baked light | Read only. It's what the map viewport draws, plus a grayscale height preview per file |
-| `.nvm` | AI navmesh | Read only: the walkable nodes and the normal their slope is checked against |
+| `.nvm` | AI navmesh | Read only: the walkable triangles, their corners and the links between them |
 | `.sav` | Savegames | Reads the header, screenshot and DLC list, edits and writes the `PersistenceDB` |
 | `depload.dat` | Dependency list per asset | Parsed. Feeds the reference panel and has its own view |
 | Domino `.lua` (+ `.debug.lua`) | Generated mission scripts | Parsed back into a node graph, with pin names and the original editor names |

@@ -184,11 +184,11 @@ u16  field_0x5c
 --- CNavArchive::SetPackedVectorSettings() runs here: every vec3 below this point is quantized to
     3×int16, scaled relative to this sector's own bounding-box center/extent ---
 u32  field_0x64                           (version >= 0x13200)
-u32[field_0x64]              a raw (no per-element parser) block of u32s
+u32[field_0x64]              the link block: every node's neighbours, addressed from the node
 u32  nodeCount
-CNavMeshNode[nodeCount]      the actual navmesh graph — 48 bytes each on disk, own SerializeData
+CNavMeshNode[nodeCount]      one triangle each — 48 bytes on disk, own SerializeData
 u32  vertexCount             its own count, unrelated to nodeCount
-f32vec3[vertexCount] → packed  quantized vertex positions, 6 bytes each on disk
+f32vec3[vertexCount] → packed  the triangles' corners, 6 bytes each on disk
 --- obstacles appear only on versions in [0x10000, 0x13600); retail 0x14100 skips the block ---
 u32  obstacleCount
 CNavMeshObstacle[obstacleCount]  dynamic blockers — 40 bytes each, own SerializeData
@@ -209,9 +209,9 @@ CNavMeshQTree                a spatial index over the node list, built fresh fro
 rebuilding runtime-only derived structures (adjacency, the live A* graph) from what was just
 deserialized, before the sector is marked ready (`this[0x5e] = 0`).
 
-A navmesh sector therefore contains a polygon/node graph (`CNavMeshNode`), quantized vertex
-positions, two flavors of AI cover point, dynamic obstacles, and a baked spatial index — each with a
-named class and a known position in the byte stream.
+A navmesh sector therefore contains a triangle mesh (`CNavMeshNode`, one per triangle) with its
+adjacency, quantized vertex positions, two flavors of AI cover point, dynamic obstacles, and a baked
+spatial index — each with a named class and a known position in the byte stream.
 
 ## Measured per-sector header
 
@@ -256,29 +256,56 @@ decoded alongside the header it came from — there is no world-wide constant.
 ## `CNavMeshNode` — 48 bytes on disk
 
 `CNavMeshNode::SerializeData` (`0x09a11e50`) writes 48 bytes for a current-version archive, against
-the 60 the class occupies in memory:
+the 60 the class occupies in memory. Each node is one triangle of the mesh:
 
 ```
-+0x00  u32                        +0x15  u8   normal x    ┐ signed, /127
-+0x04  u16                        +0x16  u8   normal y    │
-+0x06  u16                        +0x17  u8   normal z    ┘
-+0x08  u16                        +0x18  u8   flag         (version >= 0x13900)
-+0x0A  u8                         +0x19  u8   flag         (version >= 0x13900)
-+0x0B  u32                        +0x1A  u32 ×3            neighbour or edge references
-+0x0F  int16 x, y, z  packed      +0x26  u32 ×2 + u16
++0x00  u32    60 - the object's size, discarded on read
++0x04  u16    sector id - the file's own
++0x06  u16    node index - its position in the array
++0x08  u16    1, or a number unique to the node (meaning unknown)
++0x0A  u8     link count - 3 for almost every node, up to 16 seen
++0x0B  u32    link offset - index of the node's first entry in the link block
++0x0F  int16 x, y, z  packed - the triangle's centroid
++0x15  s8 ×3  normal x, y, z, /127
++0x18  u8     flag (version >= 0x13900, meaning unknown)
++0x19  u8     flag (version >= 0x13900, meaning unknown)
++0x1A  u32 ×3 vertex indices into the vertex array after the node array
++0x26  10 bytes, unknown
 ```
 
 The three normal bytes are what the engine dots against world up and compares to
 `NavMeshUtils::COS_ANGLE_SLOPE_LIMIT` to set the node's "too steep" bit, so slope is readable
 straight from the file without touching the terrain.
 
+### Links
+
+A node's neighbours are the `link count` entries of the link block starting at `link offset`. Each
+entry is `(neighbour node index << 16) | neighbour sector id`, and `0xFFFEFFFF` means nothing is on
+the other side. The first three entries belong to the triangle's edges in order: entry k is the
+neighbour across the edge from corner k to corner k + 1, and an empty one marks where the walkable
+area ends. Any entries past the third are extra neighbours: T-junctions, where a longer edge meets
+two shorter ones, and triangles across a sector boundary.
+
+A neighbour in another sector is addressed by that sector's id and an index into its own node array,
+so the mesh is continuous across sector files. Entries past a node's link count belong to something
+else and must not be read as its links.
+
 Older versions are shorter: below `0x13800` the position is a full `f32vec3` rather than packed,
 below `0x13701` there is an extra byte, and below `0x13900` the two flag bytes are absent.
 
 :::note[Verified]
-Parsed across four `w1_c_2` sectors: 1,003 / 635 / 1,179 / 840 nodes, **every one** landing inside its
-own sector's bounding box, spanning the full 64 m in X and Y with heights of 16–37 m. A wrong stride
-or scale scatters positions immediately, so the layout above is confirmed rather than inferred.
+Measured on retail files, against the read path of `CNavMeshNode::SerializeData`:
+
+- In every sector checked, each node's position is the centroid of the three vertices it indexes.
+  The check covered 774 nodes in `w1_b_2` sector 4979, and every node of `w1_c_2` sectors 2576 and
+  2577.
+- Every vertex index is in range, across all 328,386 nodes of `w1_b_2`.
+- Link entry k names the triangle that shares edge k in every same-sector case except T-junctions.
+- Of 92 cross-sector links out of sector 4979, 90 share an exact world-space edge with their target.
+  The other 2 are T-junction pieces of one edge.
+- World1 totals 2,810,555 triangles and 3,243,697 vertices over 2,560 sector files. 349 of those
+  files are empty, and the mesh has 3,712,778 neighbouring pairs.
+
 Implemented in `JackAll.Tools/World/WorldNavMesh.cs`.
 :::
 
@@ -288,9 +315,8 @@ Implemented in `JackAll.Tools/World/WorldNavMesh.cs`.
   scalar fields (`+0x5c`, `+0x64`, `+0x6c`, `+0x70`/`+0x74`) — only their storage location and
   read/write order are confirmed, not what they represent.
 - The byte layout inside `CNavCover`, `CDynamicNavCover`, `CNavMeshObstacle`, and `CNavMeshQTree` —
-  each has its own `SerializeData`, none decoded. `CNavMeshNode` is decoded (above), but what its
-  non-positional fields mean — which of the `u32`s index neighbours, which index the vertex array —
-  is not.
+  each has its own `SerializeData`, none decoded. `CNavMeshNode` is decoded (above) except its two
+  flag bytes, the id word at `+0x08` and the trailing 10 bytes.
 - The purpose of the second quantized-vertex array, and the relationship between the inline
   `CNavMeshQTreeWriter`-built tree and the second `CNavMeshQTree` serialized unconditionally at the end
   of `SerializeDataContent` — possibly one is a full-precision editor-time tree and the other a

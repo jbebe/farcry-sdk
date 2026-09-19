@@ -161,12 +161,14 @@ public static class LayerCatalog
             ["Show emitters", "Fixed size on screen", "Effect and sound names not yet resolved"])
         { IsVisible = false };
 
-    /// <summary>Draws a marker per walkable node while visible, green where the ground is flat
-    /// enough to walk and red where the engine's slope limit rejects it.</summary>
+    /// <summary>Draws the walkable triangles tinted by slope, their edges by kind, and optionally the
+    /// links between neighbouring triangles.</summary>
     public static readonly MapLayer NavMesh =
         new("Markers", "Navmesh", "Ready",
-            "Where the AI can walk - one node per walkable patch, only on campaign sectors.",
-            ["Show walkable nodes", "Steep nodes tinted red", "Generation after sculpting (unsolved)"])
+            "Where the AI can walk - the triangle mesh each campaign sector ships, and which " +
+            "triangles connect.",
+            ["Show the mesh, its edges and its links", "Steep triangles tinted red",
+             "Mesh boundary and sector seams marked", "Generation after sculpting (unsolved)"])
         { IsVisible = false };
 
     public static readonly MapLayer[] Layers =

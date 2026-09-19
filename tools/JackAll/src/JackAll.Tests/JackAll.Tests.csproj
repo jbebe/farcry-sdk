@@ -103,6 +103,17 @@
              Condition="Exists('$(Fc2Levels)\w2_b_2\generated\worldsectors\landmarknear4427.data.fcb')">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <!-- Two neighbouring navmesh sectors, so links that cross the seam between them resolve. -->
+    <Content Include="$(Fc2Levels)\w1_c_2\generated\nv\sectors\nv_2576.nvm"
+             Link="Fixtures\Nvm\nv_2576.nvm"
+             Condition="Exists('$(Fc2Levels)\w1_c_2\generated\nv\sectors\nv_2576.nvm')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
+    <Content Include="$(Fc2Levels)\w1_c_2\generated\nv\sectors\nv_2577.nvm"
+             Link="Fixtures\Nvm\nv_2577.nvm"
+             Condition="Exists('$(Fc2Levels)\w1_c_2\generated\nv\sectors\nv_2577.nvm')">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <!-- A terrain layer texture and the "_mip0.xbt" its header names, which is where its real top
          level lives; plus one from the same folder whose header names nothing, so both branches of
          the companion lookup are covered. Kept to the smallest such pair in the tree. -->

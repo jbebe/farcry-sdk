@@ -25,7 +25,7 @@ public partial class MapTabView : UserControl
         TerrainMap Map, WorldTerrain Terrain, SectorDetailLayers DetailLayers, TerrainLayerTable Table,
         Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines,
         IReadOnlyList<VegetationInstance> Vegetation, ScatterSet VegetationModels,
-        IReadOnlyList<NavMeshNode> NavNodes,
+        NavMesh NavMesh,
         IReadOnlyList<WorldLight> Lights, IReadOnlyList<TriggerVolume> Triggers,
         ArchetypeIndex Archetypes, WorldModelSet Models, WorldEnvironment Environment);
 
@@ -113,7 +113,7 @@ public partial class MapTabView : UserControl
     /// Rebuilt into the layer whenever the camera crosses a sector.</summary>
     private ScatterInstance[] _vegetationInstances = [];
     private bool _vegetationDirty;
-    private EntityMarkerLayer? _navMeshLayer;
+    private NavMeshLayer? _navMeshLayer;
     private EntityMarkerLayer? _lightLayer;
 
     /// <summary>One marker layer per mesh-less category, each with its own glyph and its own toggle
@@ -224,7 +224,7 @@ public partial class MapTabView : UserControl
                 ScatterSet vegetationModels = WorldVegetation.Split(
                     scatter, WorldVegetation.ResourcesById(vm.AllKnownPaths), vm.ReadByPath, progress);
                 IReadOnlyList<VegetationInstance> vegetation = vegetationModels.Markers;
-                IReadOnlyList<NavMeshNode> navNodes = WorldNavMesh.Load(map, vm.ReadByPath, progress);
+                NavMesh navMesh = WorldNavMesh.Load(map, vm.ReadByPath, progress);
                 IReadOnlyList<WorldLight> lights = WorldLights.Load(world.Entities);
                 IReadOnlyList<TriggerVolume> triggers = WorldTriggers.Load(world.Entities);
                 // Groups the entity tree the way the Library tab groups archetypes, and is what the
@@ -235,7 +235,7 @@ public partial class MapTabView : UserControl
                 WorldModelSet models = WorldModels.Load(world.Entities, archetypes, vm.ReadByPath, progress);
                 return new PendingLoad(
                     map, terrain, detail, table, world, shapes, splines, vegetation, vegetationModels,
-                    navNodes, lights, triggers, archetypes, models, environment);
+                    navMesh, lights, triggers, archetypes, models, environment);
             });
 
             WorldTerrain terrain = loaded.Terrain;
@@ -309,7 +309,8 @@ public partial class MapTabView : UserControl
             _vegetationInstances = pending.VegetationModels.Instances;
             _vegetationDirty = true;
             _navMeshLayer?.Dispose();
-            _navMeshLayer = new EntityMarkerLayer(BuildNavMeshMarkers(pending.NavNodes), pending.NavNodes.Count);
+            _navMeshLayer = new NavMeshLayer(pending.NavMesh);
+            NavMeshStatus.Text = Describe(pending.NavMesh);
             _lightLayer?.Dispose();
             _lightLayer = new EntityMarkerLayer(BuildLightMarkers(pending.Lights), pending.Lights.Count);
             LightStatus.Text = Describe(pending.Lights);
@@ -506,8 +507,8 @@ public partial class MapTabView : UserControl
 
         if (LayerCatalog.NavMesh.IsVisible)
         {
-            _navMeshLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
-                MarkerStyle.World(1.5f));
+            _navMeshLayer?.Draw(viewProjection, _camera.Position, NavMeshSurface.IsChecked == true,
+                NavMeshEdges.IsChecked == true, NavMeshLinks.IsChecked == true);
         }
 
         foreach ((EntityCategory category, MarkerGlyph glyph, MapLayer layer, _, _, _) in DrawnCategories)
@@ -1182,26 +1183,6 @@ public partial class MapTabView : UserControl
         return stream;
     }
 
-    /// <summary>One marker per walkable node, shading from green to red as the node's normal tips
-    /// away from vertical - the same measure the engine's slope limit tests.</summary>
-    private static float[] BuildNavMeshMarkers(IReadOnlyList<NavMeshNode> nodes)
-    {
-        var stream = new float[nodes.Count * EntityMarkerLayer.Stride];
-        for (int i = 0; i < nodes.Count; i++)
-        {
-            NavMeshNode node = nodes[i];
-            float flat = Math.Clamp(node.Normal.Z, 0f, 1f);
-            int at = i * EntityMarkerLayer.Stride;
-            stream[at] = node.Position.X;
-            stream[at + 1] = node.Position.Y;
-            stream[at + 2] = node.Position.Z;
-            stream[at + 3] = 1f - flat;
-            stream[at + 4] = flat;
-            stream[at + 5] = 0.25f;
-        }
-        return stream;
-    }
-
     /// <summary>Each trigger box as its twelve edges: the two rectangles plus the four uprights.
     /// Reusing the polyline layer keeps this to line data rather than a renderer of its own.</summary>
     private static List<WorldShape> BuildTriggerOutlines(IReadOnlyList<TriggerVolume> triggers)
@@ -1221,6 +1202,11 @@ public partial class MapTabView : UserControl
         }
         return outlines;
     }
+
+    private static string Describe(NavMesh mesh) => mesh.NodeCount == 0
+        ? "No navmesh in this map."
+        : $"{mesh.NodeCount:N0} triangles, {mesh.Vertices.Length:N0} vertices and " +
+          $"{mesh.LinkCount:N0} links across {mesh.SectorCount:N0} sectors.";
 
     private static string Describe(IReadOnlyList<TriggerVolume> triggers)
     {
@@ -1705,6 +1691,9 @@ public partial class MapTabView : UserControl
                 ? System.Windows.Visibility.Visible
                 : System.Windows.Visibility.Collapsed;
         TexturePanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Textures)
+            ? System.Windows.Visibility.Visible
+            : System.Windows.Visibility.Collapsed;
+        NavMeshPanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.NavMesh)
             ? System.Windows.Visibility.Visible
             : System.Windows.Visibility.Collapsed;
         LightPanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Lights)
