@@ -17,6 +17,7 @@
 #include "engine/build_id.h"
 #include "engine/debug_commands.h"
 #include "engine/dunia_api.h"
+#include "engine/dunia_log.h"
 #include "engine/splash.h"
 #include "loader_paths.h"
 #include "log.h"
@@ -107,6 +108,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     // See splash.h for why it detours a gdiplus import rather than anything in the game.
     Splash::Install();
 
+    // Also FCSE's own: the engine's console lines, script errors and stdout have nowhere to go in
+    // retail, and from here on they land in bin\Dunia.log. See dunia_log.h.
+    DuniaLog::Install();
+
     // Before any plugin can register: registration resolves each setting against what this loads,
     // and fires the plugin's callback with the result, so the file has to be in memory first.
     SettingsRegistry::Init(LoaderPaths::In(L"fcse.ini"));
@@ -150,6 +155,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE /*hPrevInstance*/, LPSTR lpCmd
     // otherwise, and that is the one outcome worth saying out loud.
     TickSource::Finish();
     LuaHost::Shutdown();
+    DuniaLog::Shutdown();
     HookManager::Shutdown();
     CrashLog::Shutdown();
     Log::Shutdown();

@@ -42,7 +42,7 @@ Grouped by what a file talks to.
 | --- | --- |
 | `src/` | The entry point (`main.cpp`), and the pieces everything uses: `log`, `loader_paths`, `crash_log`, `caller_identity`, `ini_file` |
 | `src/util/` | Leaf Win32 helpers with no FCSE state - string conversion, directory walking, PE headers, embedded resources, the SEH guards and the member-pointer cast |
-| `src/engine/` | Anything that reaches into the running game: `dunia_api`, `build_id`, `address_library`, `debug_commands`, `splash`, `stock_constants` |
+| `src/engine/` | Anything that reaches into the running game: `dunia_api`, `build_id`, `address_library`, `debug_commands`, `dunia_log`, `splash`, `stock_constants` |
 | `src/api/` | What plugins and scripts both call: `plugin_api` (the struct they receive), `plugin_loader`, `hook`, `patch`, `function_registry`, `pattern_scan`, `settings_registry` |
 | `src/ui/` | FCSE's own settings page - see below |
 | `src/lua/` | The script host: `lua_host`, `lua_api`, `tick_source`, and `runtime/fcse.lua` |
@@ -240,6 +240,21 @@ millisecond, which plain millisecond timestamps aren't.
 A C++ plugin formats a line printf-style with `FCSE::Logf`, from the convenience layer at the bottom
 of `include/fcse_api.h`, once `FCSE::Bind` has run. It writes through `Log`, so the line is tagged
 with the plugin like any other, and one longer than 1023 characters is cut short and ends in `...`.
+
+`bin\Dunia.log` is the engine's own output, in the same line shape. Retail `Dunia.dll` still
+produces it but has nowhere to send it; `src/engine/dunia_log.cpp` intercepts each sink and tags the
+line with where it came from:
+
+| Tag | Source |
+| --- | --- |
+| `script` | `System:Log` and `System:LogToConsole` - what the shipped mission scripts log with |
+| `console` | every line the developer console shows, typed input and `?` listings included |
+| `lua` | every script error, with the failing function and file when the engine knows them |
+| `stdout`, `stderr` | the C runtime's standard streams - Lua's `print` and `io.write`, among others |
+| `debug` | `OutputDebugStringA` |
+
+Which engine functions those are, and what else in the binary writes logs, is in
+[`docs/docs/engine-internals/engine-logging.md`](../../docs/docs/engine-internals/engine-logging.md).
 
 ## Building
 

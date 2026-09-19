@@ -1,5 +1,7 @@
 #include "ini_file.h"
 
+#include "util/text.h"
+
 #include <windows.h>
 
 namespace FCSE {
@@ -12,29 +14,6 @@ namespace {
         }
         size_t end = text.find_last_not_of(" \t");
         return text.substr(begin, end - begin + 1);
-    }
-
-    // Splits on '\n' and drops a trailing '\r', so both CRLF and LF files read identically. The
-    // final line is returned whether or not the file ends with a newline.
-    std::vector<std::string> SplitLines(const std::string& text) {
-        std::vector<std::string> lines;
-        size_t start = 0;
-        while (start <= text.size()) {
-            size_t end = text.find('\n', start);
-            if (end == std::string::npos) {
-                if (start < text.size()) {
-                    lines.push_back(text.substr(start));
-                }
-                break;
-            }
-            std::string line = text.substr(start, end - start);
-            if (!line.empty() && line.back() == '\r') {
-                line.pop_back();
-            }
-            lines.push_back(std::move(line));
-            start = end + 1;
-        }
-        return lines;
     }
 
     bool ReadWholeFile(const std::wstring& path, std::string* out, bool* missing) {

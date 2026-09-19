@@ -14,7 +14,8 @@ is one instruction whichever language it is written in.
 Check `bin\fcse.log` after launching to confirm what happened: which plugins were found and
 loaded, what each one registered/hooked/patched, and whether anything conflicted with another
 installed plugin (if two plugins both try to claim the same thing, the loser is named in the log,
-not silently ignored).
+not silently ignored). `bin\Dunia.log` next to it is the game's own output - mission-script log
+lines, console lines, Lua `print` and every script error - which the retail game otherwise discards.
 
 ## Configuring plugins
 

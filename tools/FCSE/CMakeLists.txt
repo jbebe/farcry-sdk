@@ -214,6 +214,8 @@ add_library(fcse_core STATIC
   "src/util/resource.cpp"
   "src/util/resource.h"
   "src/util/seh.h"
+  "src/util/text.cpp"
+  "src/util/text.h"
   "src/util/win_string.cpp"
   "src/util/win_string.h"
 )
@@ -241,6 +243,8 @@ add_executable(FCSE WIN32
   "src/engine/debug_commands.h"
   "src/engine/splash.cpp"
   "src/engine/splash.h"
+  "src/engine/dunia_log.cpp"
+  "src/engine/dunia_log.h"
   "src/api/plugin_api.cpp"
   "src/api/plugin_api.h"
   "src/api/plugin_loader.cpp"
