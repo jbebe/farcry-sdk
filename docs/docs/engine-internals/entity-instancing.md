@@ -270,6 +270,84 @@ in the container itself.
 `entSpawnMissionTrigger` on an entity is a spawn-point property whose accessor has no callers on the
 traced binary. It is not part of this mechanism.
 
+### World-scope `mapsdata` is gated the same way
+
+:::info[Verified via reverse engineering]
+Traced via GhidraMCP against `FarCry2_server` (`CXGame::LoadWorld`, `CWorld::AddGlobalSpawn`,
+`CGlobalSpawn::AddLayer`, `CWorld::GlobalSpawn`, `CWorld::OnLayerStateChanged`). Not yet read in
+the retail `Dunia.dll`.
+:::
+
+Sector data is not the only layered container. `CXGame::LoadWorld` opens `<world>.mapsdata.fcb`,
+and for each map descriptor hands the matching node to `CWorld::AddGlobalSpawn`. That walks the
+node's `MissionLayer` children and registers each with `CGlobalSpawn::AddLayer`, one
+`CGlobalSpawn::SLayerSpawn` per layer. `CWorld::GlobalSpawn(CPathID const&)` spawns a layer across
+every registered global spawn, and has two callers: `LoadWorld` and `CWorld::OnLayerStateChanged`.
+A mapsdata entity nested under a mission layer therefore appears when that layer turns on, like a
+sector entity.
+
+### Which containers carry mission layers
+
+:::info[Verified against the retail corpus]
+Every `worldsector*.data.fcb` under `worlds/` (5,100 files: both campaign worlds and the
+multiplayer maps), `world1`'s `mapsdata`, `managers` and `omnis`, and a one-in-ten sample of the
+landmark files (727 `landmarkfar_*`, 498 `landmarknear*`).
+:::
+
+| Container | Content under `MissionLayer` | Under a layer other than `main` |
+|---|---|---|
+| `worldsector*.data.fcb` | every placed entity | 9,139 of 188,632 entities, in 436 layers |
+| `<world>.mapsdata.fcb` | shapes (`CBasicShapeEntity`), regions (`CGameRegion`, `CSocialRegion`, `CZoneLogicRegion`, `CBurnableRegion`, `CWagerRegion`), `COmniMapEntity`, `CSpawnPoint`, `CGameElementEntity`, `CFcxSplineCollectionEntity` | `world1`: 163 of 1,210 entities, in 52 layers; all 25 spline collections sit in `main` |
+| `<world>.managers.fcb` | the manager singletons | none in `world1` |
+| `<world>.omnis.fcb` | `COmniEntity` Domino hosts | none in `world1` |
+| `landmarkfar_*.data.fcb` | `CSectorEntity` vegetation collections and event entities | 2 entities in 1 file of 727, under `missions\librarymissions\a2lm12\misnsubv_planeflight` |
+| `landmarknear*.data.fcb` | `CSectorEntity` collections, event entities, a few Realtree and prefab entities | none |
+
+In the sector files the non-`main` layers hold every kind of mesh-less entity from the table
+[below](#a-third-of-a-worlds-entities-draw-nothing), not only props:
+
+| Component on the entity | Under a non-`main` layer |
+|---|---|
+| `CFCXAIComponent` | 993 |
+| `CProximityTriggerComponent` | 246 |
+| `CNewParticlesComponent` | 102 |
+| `CEntranceInfoComponent` | 77 |
+| `CSoundComponent` | 74 |
+| `CDynamicLightComponent` | 21 |
+| `CRealtreeComponent` | 1 |
+
+Sector descriptors (`sector<id>.desc.fcb`), `sectorsdep`, preload lists, terrain, water and navmesh
+(`.nvm`) contain no `MissionLayer` node.
+
+Layer names are paths. Across the sector files and `world1`'s mapsdata, `main` accounts for 5,124
+layer nodes. The other names outside `missions\` are the multiplayer modes `fcxvip` (111), `fcxctf` (76), `fcxdeathmatch` (47), `fcxteamdeathmatch` (44),
+plus `benchmark` (14) and a handful under `leveldesign\w2c3\a10_capital\`. Mission layers group under
+`missions\` by family:
+
+| Family | Layer nodes |
+|---|---|
+| `safehouse` | 698 |
+| `weaponbazaar` | 280 |
+| `storymissions` | 238 |
+| `librarymissions` | 211 |
+| `_disableformission` | 134 |
+| `buddyunlockmissions` | 54 |
+| `buddysidequests` | 39 |
+| `convoymissions` | 30 |
+| `openingsequence` | 28 |
+| `assassinationmissions` | 27 |
+| `grinmissions` | 24 |
+| `randomencounters` | 19 |
+| `carvertapemissions` | 17 |
+| `vendormissions` | 15 |
+| `ubidays` | 5 |
+
+### Prefab instances are placed entities
+
+Sector files place `CPrefabEntity` (5,248, 126 of them outside `main`) and
+`CScriptedScenePrefabEntity` (160, 75 outside `main`) entities, e.g. `Lighting.LanternExplotator_62`.
+They sit directly under a mission layer like any other entity.
+
 ## Components read off an instance
 
 Two component layouts confirmed from shipped sector data. Both hang off an entity's `Components`
@@ -365,5 +443,7 @@ through the archetype fallback, so they are only mesh-less if you skip that step
   walked at `0x1c` stride, each loaded through the same resolver slot and merged the same way — but
   the call itself has not been read there. Either way the DLC libraries land *after* the patch, so
   they win over it.
+- What a placed `CPrefabEntity` spawns, and whether it resolves against the `CPrefabManager`
+  descriptions in `<world>.managers.fcb` (see [object inventory](../file-formats/object-inventory.md)).
 - Attribute-level precedence inside a merged node: an instance field present in both must win for the
   merge to be useful, but `CReadOnlyMergeNode`'s attribute accessors have not been opened.

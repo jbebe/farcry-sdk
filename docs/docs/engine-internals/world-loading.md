@@ -134,7 +134,9 @@ a rectangle of the sector grid and names the level that supplies it. That is the
 campaign worlds 80×80 covered by 16×16 level cells.
 
 `MissionsDef` matters for content: entities spawn from the mission layer they are nested under, so a
-world needs at least one enabled layer for anything to appear.
+world needs at least one enabled layer for anything to appear. That holds for the world-scope
+`<world>.mapsdata.fcb` as well as the sector files — see
+[which containers carry mission layers](entity-instancing.md#which-containers-carry-mission-layers).
 
 ### The per-level side
 
