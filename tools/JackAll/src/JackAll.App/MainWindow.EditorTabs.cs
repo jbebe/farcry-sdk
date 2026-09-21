@@ -93,7 +93,7 @@ public partial class MainWindow
     private TabItem DocumentTab(FcbDocumentViewModel vm, Action onRemoved)
     {
         var tab = new TabItem { Content = new FcbDocumentView(vm) };
-        tab.Header = BuildClosableTabHeader(tab, vm, onRemoved);
+        MakeClosable(tab, vm, onRemoved);
         return tab;
     }
 
@@ -210,7 +210,7 @@ public partial class MainWindow
             var tab = new TabItem { Content = view };
             // No dirty-tracking wrapper like the XML and MGB editors get: this tab is read-only, so
             // there is never anything to prompt about on the way out.
-            tab.Header = BuildClosableTabHeader(tab, vm.Title, () => RemoveTab(tab, onRemoved), out _);
+            MakeClosable(tab, vm.Title, () => RemoveTab(tab, onRemoved));
             return tab;
         });
 
@@ -255,10 +255,8 @@ public partial class MainWindow
 
             var view = new MgbTabView(file.FileName, content, bytes => ReplaceGuarded(file, bytes), _vm.ReadByPath);
             var tab = new TabItem { Content = view };
-            tab.Header = BuildClosableTabHeader(tab, view.Title,
-                () => CloseMgbEditorTab(tab, view, onRemoved),
-                out TextBlock title);
-            view.DirtyChanged += () => title.Text = view.IsDirty ? $"{view.Title} *" : view.Title;
+            MakeClosable(tab, view.Title, () => CloseMgbEditorTab(tab, view, onRemoved));
+            view.DirtyChanged += () => tab.Header = view.IsDirty ? $"{view.Title} *" : view.Title;
             return tab;
         });
 
@@ -287,10 +285,12 @@ public partial class MainWindow
 
     // ------------------------------------------------------------ tab chrome
 
-    /// <summary>Title plus a "×" close button; middle-click and Ctrl+W run <paramref name="onClose"/> too.
-    /// <paramref name="titleText"/> comes back out so a caller tracking unsaved changes can retitle it.</summary>
-    private FrameworkElement BuildClosableTabHeader(TabItem tab, string title, Action onClose, out TextBlock titleText)
+    /// <summary>Styles <paramref name="tab"/> as a document tab, whose ×, middle-click and Ctrl+W all run
+    /// <paramref name="onClose"/>. The header stays a string, so a caller retitles it by setting it.</summary>
+    private void MakeClosable(TabItem tab, string title, Action onClose)
     {
+        tab.Style = (Style)FindResource("DocumentTab");
+        tab.Header = title;
         tab.Tag = onClose;
         tab.MouseDown += (_, e) =>
         {
@@ -298,42 +298,20 @@ public partial class MainWindow
             onClose();
             e.Handled = true;
         };
-
-        titleText = new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
-        var close = new Button
-        {
-            Content = "×",
-            Padding = new Thickness(4, 0, 4, 0),
-            MinWidth = 0,
-            Margin = new Thickness(0),
-            VerticalAlignment = VerticalAlignment.Center,
-            Focusable = false,
-            ToolTip = "Close (Ctrl+W)",
-        };
-        close.Click += (_, _) => onClose();
-
-        var panel = new StackPanel { Orientation = Orientation.Horizontal };
-        panel.Children.Add(titleText);
-        panel.Children.Add(close);
-        return panel;
     }
 
-    /// <summary>The XML editor's header: <see cref="BuildClosableTabHeader"/> plus the dirty marker and
-    /// the unsaved-changes prompt its two (fragment and savegame) tab flavours both need.</summary>
-    private FrameworkElement BuildClosableTabHeader(TabItem tab, FcbDocumentViewModel vm, Action onRemoved)
+    /// <summary>The XML editor's tab: <see cref="MakeClosable(TabItem, string, Action)"/> plus the dirty
+    /// marker and the unsaved-changes prompt its two (fragment and savegame) tab flavours both need.</summary>
+    private void MakeClosable(TabItem tab, FcbDocumentViewModel vm, Action onRemoved)
     {
-        FrameworkElement header = BuildClosableTabHeader(tab, vm.Title,
-            async () => await CloseEditorTabAsync(tab, vm, onRemoved),
-            out TextBlock title);
-
+        MakeClosable(tab, vm.Title, async () => await CloseEditorTabAsync(tab, vm, onRemoved));
         vm.PropertyChanged += (_, e) =>
         {
             if (e.PropertyName == nameof(FcbDocumentViewModel.IsDirty))
             {
-                title.Text = vm.IsDirty ? $"{vm.Title} *" : vm.Title;
+                tab.Header = vm.IsDirty ? $"{vm.Title} *" : vm.Title;
             }
         };
-        return header;
     }
 
     /// <summary>Prompts for unsaved changes before closing - Save runs the exact same

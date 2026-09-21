@@ -3,9 +3,9 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <StackPanel>
         <StackPanel Orientation="Horizontal">
-            <Button x:Name="PlayButton" Content="▶ Play" Click="Play_Click" Padding="8,6" Margin="0,0,8,0" IsEnabled="False" />
-            <Button x:Name="PauseButton" Content="❚❚ Pause" Click="Pause_Click" Padding="8,6" Margin="0,0,8,0" IsEnabled="False" />
-            <Button x:Name="StopButton" Content="■ Stop" Click="Stop_Click" Padding="8,6" IsEnabled="False" />
+            <Button x:Name="PlayButton" Content="▶ Play" Click="Play_Click" Margin="0,0,8,0" IsEnabled="False" />
+            <Button x:Name="PauseButton" Content="❚❚ Pause" Click="Pause_Click" Margin="0,0,8,0" IsEnabled="False" />
+            <Button x:Name="StopButton" Content="■ Stop" Click="Stop_Click" IsEnabled="False" />
         </StackPanel>
         <Grid Margin="0,8,0,0">
             <Grid.ColumnDefinitions>
@@ -16,7 +16,7 @@
                     IsMoveToPointEnabled="True" IsEnabled="False"
                     PreviewMouseDown="SeekBar_PreviewMouseDown" PreviewMouseUp="SeekBar_PreviewMouseUp"
                     ValueChanged="SeekBar_ValueChanged" VerticalAlignment="Center" />
-            <TextBlock x:Name="TimeText" Grid.Column="1" Margin="8,0,0,0" FontFamily="Consolas" FontSize="12"
+            <TextBlock x:Name="TimeText" Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource Mono}"
                        VerticalAlignment="Center" Text="0:00 / 0:00" />
         </Grid>
         <MediaElement x:Name="Player" Visibility="Collapsed"

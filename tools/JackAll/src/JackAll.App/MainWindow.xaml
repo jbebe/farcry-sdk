@@ -21,58 +21,11 @@
         <local:ModuleNameMultiConverter x:Key="ModuleNameConverter" />
         <local:UnusedFileConverter x:Key="UnusedFileConverter" />
 
-        <Style x:Key="Toolbar" TargetType="Button">
-            <Setter Property="Padding" Value="10,5" />
-            <Setter Property="Margin" Value="0,0,6,0" />
-            <Setter Property="MinWidth" Value="86" />
-        </Style>
-
-        <!-- The Saves grid's cell template sets its own local Foreground on the muted lines below the
-             save name (FileName, DLC) rather than relying on DataGridRow's inherited value - a local
-             value always wins over the row's own Foreground setter/trigger, so without this style
-             those two lines would stay grey-on-blue (unreadable) even once the row goes white-on-blue
-             selected. Same selected+focused trigger shape as FolderTemplate/FileGrid's RowStyle. -->
-        <Style x:Key="MutedSaveText" TargetType="TextBlock">
-            <Setter Property="Foreground" Value="#888" />
-            <Style.Triggers>
-                <MultiDataTrigger>
-                    <MultiDataTrigger.Conditions>
-                        <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True" />
-                        <Condition Binding="{Binding Path=(Selector.IsSelectionActive), RelativeSource={RelativeSource AncestorType=DataGridRow}}" Value="True" />
-                    </MultiDataTrigger.Conditions>
-                    <Setter Property="Foreground" Value="White" />
-                </MultiDataTrigger>
-            </Style.Triggers>
-        </Style>
-
-        <!--
-            One grey/black convention, applied in two places: a folder in the tree (grey = nothing
-            changed anywhere inside it, black = it contains at least one changed file — see
-            FolderTemplate below) and a row in the Files tab's grid (grey = untouched base game,
-            black = a mod or the workspace changed this exact file — see FileGrid's RowStyle).
-        -->
-
+        <!-- The Files tab's grey/black convention: a folder is grey until a mod or the workspace changed
+             something inside it (FolderTree's style), a file until it was changed itself (FileGrid's). -->
         <HierarchicalDataTemplate x:Key="FolderTemplate" DataType="{x:Type local:FolderNode}"
                                   ItemsSource="{Binding Children}">
             <StackPanel Orientation="Horizontal">
-                <StackPanel.Style>
-                    <Style TargetType="StackPanel">
-                        <Setter Property="TextElement.Foreground" Value="Gray" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding ContainsMods}" Value="True">
-                                <Setter Property="TextElement.Foreground" Value="Black" />
-                            </DataTrigger>
-                            <!-- Wins over the ContainsMods setter above so selected text stays readable on the blue highlight. -->
-                            <MultiDataTrigger>
-                                <MultiDataTrigger.Conditions>
-                                    <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True" />
-                                    <Condition Binding="{Binding Path=(Selector.IsSelectionActive), RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True" />
-                                </MultiDataTrigger.Conditions>
-                                <Setter Property="TextElement.Foreground" Value="White" />
-                            </MultiDataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </StackPanel.Style>
                 <TextBlock Margin="0,0,4,0">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
@@ -117,13 +70,14 @@
     </Window.Resources>
 
     <DockPanel>
-        <Border DockPanel.Dock="Bottom" Background="#F0F0F0" BorderBrush="#DDD" BorderThickness="0,1,0,0">
+        <Border DockPanel.Dock="Bottom" Background="{DynamicResource SurfaceInertBrush}"
+                BorderBrush="{DynamicResource BorderHairlineBrush}" BorderThickness="0,1,0,0">
             <Grid>
                 <DockPanel Margin="8,5,24,5">
                     <!-- Only a folder export is interruptible - it's the one operation that can run
                          for minutes writing gigabytes, and stopping it early still leaves everything
                          it already wrote on disk. -->
-                    <Button DockPanel.Dock="Right" Content="Cancel" Padding="8,0" Margin="8,0,0,0"
+                    <Button DockPanel.Dock="Right" Content="Cancel" Style="{StaticResource DenseButton}" Margin="8,0,0,0"
                             Click="CancelExport_Click"
                             Visibility="{Binding IsExporting, Converter={StaticResource BoolToVis}}" />
                     <ProgressBar DockPanel.Dock="Right" Width="120" Height="12" IsIndeterminate="True"
@@ -142,37 +96,36 @@
                     <Border DockPanel.Dock="Bottom" Padding="0,10,0,0">
                         <DockPanel>
                             <Button DockPanel.Dock="Right" Content="Deploy mods" Click="BuildAndApply_Click"
-                                    Padding="16,7" FontWeight="SemiBold" MinWidth="130" />
+                                    Style="{StaticResource PrimaryButton}" />
                             <Button DockPanel.Dock="Right" Content="Revert to original" Click="RestoreVanilla_Click"
-                                    Style="{StaticResource Toolbar}" Margin="0,0,16,0" />
+                                    Style="{StaticResource ToolbarButton}" Margin="0,0,16,0" />
                             <StackPanel Orientation="Horizontal">
-                                <Button Content="Import mod" Click="AddMod_Click" Style="{StaticResource Toolbar}" />
-                                <Button Content="Import legacy mod" Click="ImportLegacy_Click" Style="{StaticResource Toolbar}" />
-                                <Button Content="Apply .fc2model" Click="ApplyPack_Click" Style="{StaticResource Toolbar}"
+                                <Button Content="Import mod" Click="AddMod_Click" Style="{StaticResource ToolbarButton}" />
+                                <Button Content="Import legacy mod" Click="ImportLegacy_Click" Style="{StaticResource ToolbarButton}" />
+                                <Button Content="Apply .fc2model" Click="ApplyPack_Click" Style="{StaticResource ToolbarButton}"
                                         ToolTip="Encodes a model pack a 3D editor changed and stages the changed files into the workspace." />
-                                <Button Content="Rescan mods" Click="RescanMods_Click" Style="{StaticResource Toolbar}"
+                                <Button Content="Rescan mods" Click="RescanMods_Click" Style="{StaticResource ToolbarButton}"
                                         ToolTip="Re-reads every mod's zip and the workspace folder from disk - picks up a mod replaced or edited outside JackAll without needing a restart." />
-                                <Button Content="Check for dead edits" Click="LintArchetypes_Click" Style="{StaticResource Toolbar}"
+                                <Button Content="Check for dead edits" Click="LintArchetypes_Click" Style="{StaticResource ToolbarButton}"
                                         ToolTip="Finds archetype edits a later entity library overrides, which change the file but nothing in game." />
                             </StackPanel>
                         </DockPanel>
                     </Border>
 
                     <DockPanel DockPanel.Dock="Top" Style="{StaticResource TabToolbar}">
-                        <TextBlock VerticalAlignment="Center" Foreground="#555" TextWrapping="Wrap"
+                        <TextBlock VerticalAlignment="Center" Style="{StaticResource Secondary}" TextWrapping="Wrap"
                                    Text="Mods are applied top to bottom - if two of them change the same file, the lower one wins. Workspace, the staging area for new mods, always goes last." />
                     </DockPanel>
 
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" MinWidth="300" />
-                            <ColumnDefinition Width="4" />
+                            <ColumnDefinition Width="{StaticResource SplitterSize}" />
                             <ColumnDefinition Width="320" MinWidth="240" />
                         </Grid.ColumnDefinitions>
 
-                    <DataGrid x:Name="ModGrid" Grid.Column="0" ItemsSource="{Binding Mods}" AutoGenerateColumns="False"
-                              CanUserAddRows="False" CanUserReorderColumns="False" CanUserSortColumns="False"
-                              HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                    <DataGrid x:Name="ModGrid" Grid.Column="0" ItemsSource="{Binding Mods}"
+                              CanUserReorderColumns="False" CanUserSortColumns="False"
                               SelectionMode="Single" RowHeight="30"
                               SelectionChanged="ModGrid_SelectionChanged">
                         <DataGrid.Columns>
@@ -198,10 +151,10 @@
                                                     </Style.Triggers>
                                                 </Style>
                                             </StackPanel.Style>
-                                            <Button Content="&#9650;" Click="MoveUp_Click"
-                                                    Padding="0" MinWidth="0" Width="22" Height="22" Margin="0,0,2,0" />
-                                            <Button Content="&#9660;" Click="MoveDown_Click"
-                                                    Padding="0" MinWidth="0" Width="22" Height="22" />
+                                            <Button Content="&#9650;" Click="MoveUp_Click" Style="{StaticResource DenseButton}"
+                                                    Padding="0" Width="22" Height="22" Margin="0,0,2,0" />
+                                            <Button Content="&#9660;" Click="MoveDown_Click" Style="{StaticResource DenseButton}"
+                                                    Padding="0" Width="22" Height="22" />
                                         </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
@@ -214,13 +167,13 @@
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
-                            <DataGridTextColumn Header="Mod" Binding="{Binding Name}" Width="*" IsReadOnly="True" />
+                            <DataGridTextColumn Header="Mod" Binding="{Binding Name}" Width="*" />
                         </DataGrid.Columns>
                         <DataGrid.RowStyle>
                             <Style TargetType="DataGridRow">
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsWorkspace}" Value="True">
-                                        <Setter Property="Background" Value="#F5F7FA" />
+                                        <Setter Property="Background" Value="{DynamicResource SurfaceAltBrush}" />
                                         <Setter Property="FontStyle" Value="Italic" />
                                     </DataTrigger>
                                 </Style.Triggers>
@@ -228,18 +181,18 @@
                         </DataGrid.RowStyle>
                     </DataGrid>
 
-                        <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="Transparent" />
+                        <GridSplitter Grid.Column="1" />
 
                         <!-- ==================== Details sidebar: selected mod's files ==================== -->
-                        <Border Grid.Column="2" BorderBrush="#DDD" BorderThickness="1,0,0,0" Padding="12,0,0,0">
+                        <Border Grid.Column="2" BorderBrush="{DynamicResource BorderHairlineBrush}" BorderThickness="1,0,0,0" Padding="12,0,0,0">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="Select a mod to see its files." Style="{StaticResource EmptyHint}"
                                            Visibility="{Binding NoSelectedMod, Converter={StaticResource BoolToVis}}" />
 
                                 <DockPanel DockPanel.Dock="Top" Visibility="{Binding HasSelectedMod, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock DockPanel.Dock="Top" Text="{Binding SelectedMod.Name}" FontWeight="Bold" FontSize="14"
-                                               TextWrapping="Wrap" Margin="0,0,0,4" />
-                                    <TextBlock DockPanel.Dock="Top" Text="{Binding SelectedMod.FileCountText}" Foreground="#777"
+                                    <TextBlock DockPanel.Dock="Top" Text="{Binding SelectedMod.Name}" Style="{StaticResource Heading}"
+                                               Margin="0,0,0,4" />
+                                    <TextBlock DockPanel.Dock="Top" Text="{Binding SelectedMod.FileCountText}" Style="{StaticResource Secondary}"
                                                Margin="0,0,0,8" />
 
                                     <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,10">
@@ -247,13 +200,13 @@
                                              the staging folder itself - same destination OpenWorkspace_Click
                                              used to go to before this button replaced it. -->
                                         <Button Content="Open location" Click="OpenModLocation_Click"
-                                                Padding="10,5" Margin="0,0,6,0" />
+                                                Margin="0,0,6,0" />
 
                                         <!-- The workspace holds the user's own edits and can't be removed -
                                              see RemoveMod_Click's guard. -->
-                                        <Button Content="Remove" Click="RemoveMod_Click" Padding="10,5">
+                                        <Button Content="Remove" Click="RemoveMod_Click">
                                             <Button.Style>
-                                                <Style TargetType="Button">
+                                                <Style TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
                                                     <Style.Triggers>
                                                         <DataTrigger Binding="{Binding SelectedMod.IsWorkspace}" Value="True">
                                                             <Setter Property="Visibility" Value="Collapsed" />
@@ -290,9 +243,8 @@
                         <TextBlock Style="{StaticResource StatusText}" Text="{Binding SavesStatus}" />
                     </DockPanel>
 
-                    <Border DockPanel.Dock="Top" Background="#FFF7E0" BorderBrush="#E0C060" BorderThickness="1"
-                            Padding="10,8" Margin="0,0,0,8">
-                        <TextBlock TextWrapping="Wrap" Foreground="#5A4A00">
+                    <Border DockPanel.Dock="Top" Style="{StaticResource WarningCallout}" Margin="0,0,0,8">
+                        <TextBlock TextWrapping="Wrap">
                             <Run FontWeight="Bold" Text="Mods and existing saves: " />
                             <Run Text="a save file persists values overlapping with almost every entity-library." />
                             <LineBreak />
@@ -305,7 +257,7 @@
                     <Grid>
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="400" MinWidth="300" />
-                            <ColumnDefinition Width="4" />
+                            <ColumnDefinition Width="{StaticResource SplitterSize}" />
                             <ColumnDefinition Width="*" MinWidth="280" />
                         </Grid.ColumnDefinitions>
 
@@ -313,23 +265,20 @@
                              before (widest, expands), column 2 is the fixed-width "deploy" checkbox. -->
                         <DataGrid x:Name="SavesGrid" Grid.Column="0" ItemsSource="{Binding Saves}"
                                   SelectionChanged="SavesGrid_SelectionChanged"
-                                  IsEnabled="{Binding SavesGridEnabled}"
-                                  AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Single"
-                                  HeadersVisibility="Column" GridLinesVisibility="Horizontal" RowHeight="106"
-                                  CanUserAddRows="False" CanUserResizeRows="False">
+                                  IsEnabled="{Binding SavesGridEnabled}" SelectionMode="Single" RowHeight="106">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn Header="Save" Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate>
                                             <StackPanel Orientation="Horizontal" Margin="0,8">
-                                                <Border Width="128" Height="90" Background="#222" BorderBrush="#999" BorderThickness="1">
+                                                <Border Width="128" Height="90" Background="{DynamicResource WellBrush}"
+                                                        BorderBrush="{DynamicResource BorderEmphasisBrush}" BorderThickness="1">
                                                     <Grid>
                                                         <Image Source="{Binding Thumbnail}" Stretch="Uniform"
                                                                Visibility="{Binding HasThumbnail, Converter={StaticResource BoolToVis}}" />
-                                                        <TextBlock Text="no preview" Foreground="#AAA" FontSize="10"
-                                                                   HorizontalAlignment="Center" VerticalAlignment="Center">
+                                                        <TextBlock Text="no preview" HorizontalAlignment="Center" VerticalAlignment="Center">
                                                             <TextBlock.Style>
-                                                                <Style TargetType="TextBlock">
+                                                                <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
                                                                     <Setter Property="Visibility" Value="Collapsed" />
                                                                     <Style.Triggers>
                                                                         <DataTrigger Binding="{Binding HasThumbnail}" Value="False">
@@ -342,17 +291,18 @@
                                                     </Grid>
                                                 </Border>
                                                 <StackPanel Margin="12,0,0,0" VerticalAlignment="Center">
-                                                    <TextBlock FontWeight="Bold" FontSize="13">
+                                                    <TextBlock Style="{StaticResource Heading}">
                                                         <Run Text="{Binding PlayerName, Mode=OneWay}" />
                                                         <Run Text=" — " />
                                                         <Run Text="{Binding WorldName, Mode=OneWay}" />
                                                     </TextBlock>
-                                                    <TextBlock Text="{Binding FileName}" Style="{StaticResource MutedSaveText}" FontSize="11" Margin="0,2,0,4" />
+                                                    <TextBlock Text="{Binding FileName}" Style="{StaticResource GridMutedText}"
+                                                               FontSize="{StaticResource FontSizeSecondary}" Margin="0,2,0,4" />
                                                     <TextBlock Text="{Binding LastWriteTimeText}" Margin="0,0,0,2" />
                                                     <TextBlock Margin="0,0,0,2">
                                                         <Run Text="{Binding PersistedObjectCountText, Mode=OneWay}" />
                                                     </TextBlock>
-                                                    <TextBlock Style="{StaticResource MutedSaveText}" FontSize="11">
+                                                    <TextBlock Style="{StaticResource GridMutedText}" FontSize="{StaticResource FontSizeSecondary}">
                                                         <Run Text="DLC: " /><Run Text="{Binding DlcText, Mode=OneWay}" />
                                                     </TextBlock>
                                                 </StackPanel>
@@ -363,17 +313,16 @@
                             </DataGrid.Columns>
                         </DataGrid>
 
-                        <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="Transparent" />
+                        <GridSplitter Grid.Column="1" />
 
                         <!-- ==================== Details sidebar ==================== -->
-                        <Border Grid.Column="2" BorderBrush="#DDD" BorderThickness="1,0,0,0" Padding="12,0,0,0">
+                        <Border Grid.Column="2" BorderBrush="{DynamicResource BorderHairlineBrush}" BorderThickness="1,0,0,0" Padding="12,0,0,0">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="Select a save to see its details." Style="{StaticResource EmptyHint}"
                                            Visibility="{Binding NoSelectedSave, Converter={StaticResource BoolToVis}}" />
 
                                 <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelectedSave, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="{Binding SelectedSave.FileName}" FontWeight="Bold" FontSize="14"
-                                               TextWrapping="Wrap" Margin="0,0,0,8" />
+                                    <TextBlock Text="{Binding SelectedSave.FileName}" Style="{StaticResource Heading}" Margin="0,0,0,8" />
 
                                     <!-- Every known header field - see reverse/dunia/savegame_format.md
                                          for what each one actually is. -->
@@ -387,50 +336,50 @@
                                             <RowDefinition /><RowDefinition /><RowDefinition />
                                         </Grid.RowDefinitions>
 
-                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="World" Foreground="#777" />
+                                        <TextBlock Grid.Row="0" Grid.Column="0" Text="World" Style="{StaticResource Secondary}" />
                                         <TextBlock Grid.Row="0" Grid.Column="1" Text="{Binding SelectedSave.WorldName}" TextWrapping="Wrap" />
 
-                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Player" Foreground="#777" />
+                                        <TextBlock Grid.Row="1" Grid.Column="0" Text="Player" Style="{StaticResource Secondary}" />
                                         <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding SelectedSave.PlayerName}" TextWrapping="Wrap" />
 
-                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Saved" Foreground="#777" />
+                                        <TextBlock Grid.Row="2" Grid.Column="0" Text="Saved" Style="{StaticResource Secondary}" />
                                         <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding SelectedSave.LastWriteTimeText}" TextWrapping="Wrap" />
 
-                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Thumbnail" Foreground="#777" />
+                                        <TextBlock Grid.Row="3" Grid.Column="0" Text="Thumbnail" Style="{StaticResource Secondary}" />
                                         <TextBlock Grid.Row="3" Grid.Column="1" TextWrapping="Wrap">
                                             <Run Text="{Binding SelectedSave.Info.ThumbnailWidth, Mode=OneWay}" />
                                             <Run Text="×" />
                                             <Run Text="{Binding SelectedSave.Info.ThumbnailHeight, Mode=OneWay}" />
                                         </TextBlock>
 
-                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Persisted" Foreground="#777" />
+                                        <TextBlock Grid.Row="4" Grid.Column="0" Text="Persisted" Style="{StaticResource Secondary}" />
                                         <TextBlock Grid.Row="4" Grid.Column="1" Text="{Binding SelectedSave.PersistedObjectCountText}" TextWrapping="Wrap" />
 
-                                        <TextBlock Grid.Row="5" Grid.Column="0" Text="DLC" Foreground="#777" />
+                                        <TextBlock Grid.Row="5" Grid.Column="0" Text="DLC" Style="{StaticResource Secondary}" />
                                         <TextBlock Grid.Row="5" Grid.Column="1" Text="{Binding SelectedSave.DlcText}" TextWrapping="Wrap" />
 
-                                        <TextBlock Grid.Row="6" Grid.Column="0" Text="File" Foreground="#777" />
+                                        <TextBlock Grid.Row="6" Grid.Column="0" Text="File" Style="{StaticResource Secondary}" />
                                         <TextBlock Grid.Row="6" Grid.Column="1" Text="{Binding SelectedSave.Info.FilePath}"
-                                                   TextWrapping="Wrap" FontSize="11" Foreground="#888" />
+                                                   Style="{StaticResource Note}" />
                                     </Grid>
 
                                     <Separator Margin="0,0,0,10" />
 
-                                    <TextBlock Text="{Binding SelectedSaveDetails.StatusText}" Foreground="#666"
+                                    <TextBlock Text="{Binding SelectedSaveDetails.StatusText}" Style="{StaticResource Secondary}"
                                                TextWrapping="Wrap" Margin="0,0,0,8" />
 
                                     <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                                         <!-- Deletes the actual .sav file from disk - see DeleteSave_Click's
                                              confirmation prompt before this runs. -->
-                                        <Button Content="Delete…" Padding="10,5" Margin="0,0,6,0"
+                                        <Button Content="Delete…" Margin="0,0,6,0"
                                                 Click="DeleteSave_Click" IsEnabled="{Binding SavesGridEnabled}" />
 
                                         <!-- Writes a separate new save with this one's persisted entities dropped. -->
-                                        <Button Content="Purge persisted entities…" Padding="10,5" Margin="0,0,6,0"
+                                        <Button Content="Purge persisted entities…" Margin="0,0,6,0"
                                                 Click="PurgeSave_Click" IsEnabled="{Binding SavesGridEnabled}" />
 
                                         <!-- Opens this save's PersistenceDB in the FCB document editor; see OpenSaveFcbEditorTab. -->
-                                        <Button Content="Open value editor…" Padding="10,5"
+                                        <Button Content="Open value editor…"
                                                 Click="OpenSaveFcbEditor_Click"
                                                 Visibility="{Binding SelectedSaveDetails.ShowDocument, Converter={StaticResource BoolToVis}}" />
                                     </StackPanel>
@@ -456,11 +405,11 @@
                             <TextBox.Tag>
                                 <TextBlock>
                                     <Run Text="Matches any word - narrow with " />
-                                    <Run Text="ext:&lt;type&gt;" FontStyle="Normal" FontFamily="Consolas" />
+                                    <Run Text="ext:&lt;type&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
                                     <Run Text=", " />
-                                    <Run Text="arch:&lt;module&gt;" FontStyle="Normal" FontFamily="Consolas" />
+                                    <Run Text="arch:&lt;module&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
                                     <Run Text=", " />
-                                    <Run Text="hash:&lt;hex&gt;" FontStyle="Normal" FontFamily="Consolas" />
+                                    <Run Text="hash:&lt;hex&gt;" FontStyle="Normal" FontFamily="{StaticResource MonoFont}" />
                                 </TextBlock>
                             </TextBox.Tag>
                         </TextBox>
@@ -469,9 +418,9 @@
                     <Grid>
                         <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="230" MinWidth="160" />
-                        <ColumnDefinition Width="4" />
+                        <ColumnDefinition Width="{StaticResource SplitterSize}" />
                         <ColumnDefinition Width="630" MinWidth="300" />
-                        <ColumnDefinition Width="4" />
+                        <ColumnDefinition Width="{StaticResource SplitterSize}" />
                         <ColumnDefinition Width="*" MinWidth="230" />
                     </Grid.ColumnDefinitions>
 
@@ -505,7 +454,7 @@
                                 expander triangle is dropped from the template below, since the folder
                                 emoji already marks a row as expandable and the triangle duplicated it.
                             -->
-                            <Style TargetType="{x:Type TreeViewItem}">
+                            <Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource StateTreeItem}">
                                 <EventSetter Event="PreviewMouseLeftButtonDown" Handler="FolderTree_ItemClicked" />
                                 <!-- Right-click selects the row before its menu opens, so the menu (and
                                      the details pane, and the file list) all act on the folder actually
@@ -517,6 +466,7 @@
                                      rebuild (every edit rebuilds it from scratch) can restore what was
                                      open instead of collapsing everything back down. -->
                                 <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                                <Setter Property="local:RowState.IsChanged" Value="{Binding ContainsMods}" />
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="{x:Type TreeViewItem}">
@@ -539,7 +489,7 @@
                                                 </Trigger>
                                                 <Trigger Property="IsSelected" Value="True">
                                                     <Setter TargetName="Bd" Property="Background"
-                                                            Value="{DynamicResource {x:Static SystemColors.ControlBrushKey}}" />
+                                                            Value="{DynamicResource SelectionInactiveBrush}" />
                                                 </Trigger>
                                                 <MultiTrigger>
                                                     <MultiTrigger.Conditions>
@@ -547,7 +497,7 @@
                                                         <Condition Property="Selector.IsSelectionActive" Value="True" />
                                                     </MultiTrigger.Conditions>
                                                     <Setter TargetName="Bd" Property="Background"
-                                                            Value="{DynamicResource {x:Static SystemColors.HighlightBrushKey}}" />
+                                                            Value="{DynamicResource SelectionBrush}" />
                                                 </MultiTrigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -557,14 +507,12 @@
                         </TreeView.Resources>
                     </TreeView>
 
-                    <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="Transparent" />
+                    <GridSplitter Grid.Column="1" />
 
                     <DockPanel Grid.Column="2" Margin="6,0">
                         <DataGrid x:Name="FileGrid" ItemsSource="{Binding VisibleFiles}"
                                   SelectionChanged="FileGrid_SelectionChanged"
-                                  AutoGenerateColumns="False" IsReadOnly="True" SelectionMode="Extended"
-                                  GridLinesVisibility="None" HeadersVisibility="Column"
-                                  EnableRowVirtualization="True" EnableColumnVirtualization="True">
+                                  SelectionMode="Extended" EnableColumnVirtualization="True">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Name" Binding="{Binding FileName}" Width="*" />
                                 <DataGridTextColumn Header="Size" Binding="{Binding Size, StringFormat={}{0:N0}}" Width="80" />
@@ -579,41 +527,27 @@
                                     </DataGridTextColumn.Binding>
                                 </DataGridTextColumn>
                             </DataGrid.Columns>
-                            <!-- Same grey/black convention as the tree (see the note above FolderTemplate):
-                                 grey = untouched base game, black = a mod or the workspace changed it. -->
                             <DataGrid.RowStyle>
-                                <Style TargetType="DataGridRow">
-                                    <Setter Property="Foreground" Value="Gray" />
+                                <Style TargetType="DataGridRow" BasedOn="{StaticResource StateGridRow}">
+                                    <Setter Property="local:RowState.IsChanged" Value="{Binding IsModded}" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding IsModded}" Value="True">
-                                            <Setter Property="Foreground" Value="Black" />
-                                        </DataTrigger>
                                         <!-- Italic rather than another Foreground: grey/black already
                                              means "untouched/changed", and a dead file can be either. -->
                                         <DataTrigger Binding="{Binding Converter={StaticResource UnusedFileConverter}}" Value="True">
                                             <Setter Property="FontStyle" Value="Italic" />
                                             <Setter Property="ToolTip" Value="The game never reads this file - editing it will have no effect." />
                                         </DataTrigger>
-                                        <!-- Wins over the IsModded setter above so selected text stays readable on the blue highlight. -->
-                                        <MultiTrigger>
-                                            <MultiTrigger.Conditions>
-                                                <Condition Property="IsSelected" Value="True" />
-                                                <Condition Property="Selector.IsSelectionActive" Value="True" />
-                                            </MultiTrigger.Conditions>
-                                            <Setter Property="Foreground" Value="White" />
-                                        </MultiTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </DataGrid.RowStyle>
                         </DataGrid>
                     </DockPanel>
 
-                    <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Stretch" Background="Transparent" />
+                    <GridSplitter Grid.Column="3" />
 
-                    <Border Grid.Column="4" BorderBrush="#DDD" BorderThickness="1,0,0,0" Padding="12,0,0,0">
+                    <Border Grid.Column="4" BorderBrush="{DynamicResource BorderHairlineBrush}" BorderThickness="1,0,0,0" Padding="12,0,0,0">
                         <DockPanel>
-                            <TextBlock DockPanel.Dock="Bottom" Foreground="#888" TextWrapping="Wrap" FontSize="11"
-                                       Margin="0,10,0,0"
+                            <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Note}" Margin="0,10,0,0"
                                        Text="Replacing a file stages it in your workspace. Nothing reaches the game until you press Deploy mods on the Mods tab." />
 
                             <!-- Docked below the preview rather than inside it: references are worth
@@ -632,28 +566,25 @@
                                            Visibility="{Binding NoSelectedFolder, Converter={StaticResource BoolToVis}}" />
 
                                 <StackPanel Visibility="{Binding HasSelectedFolder, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="{Binding SelectedFolder.Name}" FontWeight="Bold" FontSize="14"
-                                               TextWrapping="Wrap" Margin="0,0,0,8" />
+                                    <TextBlock Text="{Binding SelectedFolder.Name}" Style="{StaticResource Heading}" Margin="0,0,0,8" />
                                     <TextBlock Text="{Binding SelectedFolder.FullPath}" TextWrapping="Wrap"
                                                Margin="0,0,0,12" />
                                     <Button Content="Export folder…" Click="ExportFolder_Click"
-                                            HorizontalAlignment="Left" Padding="8,6" />
-                                    <TextBlock Foreground="#888" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0"
+                                            HorizontalAlignment="Left" />
+                                    <TextBlock Style="{StaticResource Note}" Margin="0,8,0,0"
                                                Text="Writes every file at or below this folder to disk, keeping the folder structure. Honours the 'only mod files' switch, but not the search box." />
                                 </StackPanel>
                             </StackPanel>
 
                             <StackPanel DockPanel.Dock="Top" Visibility="{Binding IsMultiSelection, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="{Binding MultiSelectCountText}" FontWeight="Bold" FontSize="14"
-                                           TextWrapping="Wrap" Margin="0,0,0,8" />
+                                <TextBlock Text="{Binding MultiSelectCountText}" Style="{StaticResource Heading}" Margin="0,0,0,8" />
                                 <TextBlock Text="{Binding MultiSelectSizeText}" Margin="0,0,0,12" />
                                 <Button Content="Export all…" Click="ExportAll_Click"
-                                        HorizontalAlignment="Left" Padding="8,6" />
+                                        HorizontalAlignment="Left" />
                             </StackPanel>
 
                             <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelection, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="{Binding SelectedFile.FileName}" FontWeight="Bold" FontSize="14"
-                                           TextWrapping="Wrap" Margin="0,0,0,8" />
+                                <TextBlock Text="{Binding SelectedFile.FileName}" Style="{StaticResource Heading}" Margin="0,0,0,8" />
 
                                 <TextBlock TextWrapping="Wrap" Margin="0,0,0,6">
                                     <Run Text="{Binding SizeText, Mode=OneWay}" /><Run Text="  •  " /><Run Text="{Binding OriginText, Mode=OneWay}" />
@@ -661,51 +592,45 @@
 
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                     <TextBlock Text="{Binding HashText}" VerticalAlignment="Center"
-                                               FontFamily="Consolas" TextTrimming="CharacterEllipsis" />
-                                    <Button Content="Copy" Click="CopyHash_Click" Padding="6,0" Margin="6,0,0,0" />
+                                               Style="{StaticResource Mono}" TextTrimming="CharacterEllipsis" />
+                                    <Button Content="Copy" Click="CopyHash_Click" Style="{StaticResource DenseButton}" Margin="6,0,0,0" />
                                 </StackPanel>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,0,0,6">
                                     <TextBlock Text="{Binding PathText}" VerticalAlignment="Top" TextWrapping="Wrap" />
-                                    <Button Content="Copy" Click="CopyPath_Click" Padding="6,0" Margin="6,0,0,0"
+                                    <Button Content="Copy" Click="CopyPath_Click" Style="{StaticResource DenseButton}" Margin="6,0,0,0"
                                             VerticalAlignment="Top" />
                                 </StackPanel>
 
                                 <TextBlock Text="{Binding ModOrigin}" TextWrapping="Wrap" Margin="0,0,0,6"
                                            Visibility="{Binding CanRevert, Converter={StaticResource BoolToVis}}" />
 
-                                <TextBlock Text="{Binding NamingNote}" TextWrapping="Wrap" Foreground="#888"
-                                           FontSize="11" Margin="0,0,0,6"
+                                <TextBlock Text="{Binding NamingNote}" Style="{StaticResource Note}" Margin="0,0,0,6"
                                            Visibility="{Binding HasNamingNote, Converter={StaticResource BoolToVis}}" />
 
-                                <TextBlock Text="{Binding AncestryText}" TextWrapping="Wrap" Foreground="#888"
-                                           FontSize="11" Margin="0,0,0,6"
+                                <TextBlock Text="{Binding AncestryText}" Style="{StaticResource Note}" Margin="0,0,0,6"
                                            Visibility="{Binding HasAncestry, Converter={StaticResource BoolToVis}}" />
 
                                 <!-- Same weight as the reach note below: both are cases where an edit
                                      looks staged and does nothing in game. -->
-                                <Border Background="#FBF0DC" BorderBrush="#E0BE73" BorderThickness="1"
-                                        Padding="6,4" Margin="0,0,0,6" CornerRadius="2"
+                                <Border Style="{StaticResource WarningCallout}" Margin="0,0,0,6"
                                         Visibility="{Binding HasLayerMismatchNote, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="{Binding LayerMismatchNote}" TextWrapping="Wrap"
-                                               Foreground="#6B4E12" FontSize="11" />
+                                    <TextBlock Text="{Binding LayerMismatchNote}" TextWrapping="Wrap" />
                                 </Border>
 
                                 <!-- Louder than NamingNote above on purpose: an unknown name is a
                                      curiosity, a dead file is an evening about to be wasted. -->
-                                <Border Background="#FBF0DC" BorderBrush="#E0BE73" BorderThickness="1"
-                                        Padding="6,4" Margin="0,0,0,6" CornerRadius="2"
+                                <Border Style="{StaticResource WarningCallout}" Margin="0,0,0,6"
                                         Visibility="{Binding HasReachNote, Converter={StaticResource BoolToVis}}">
-                                    <TextBlock Text="{Binding ReachNote}" TextWrapping="Wrap"
-                                               Foreground="#6B4E12" FontSize="11" />
+                                    <TextBlock Text="{Binding ReachNote}" TextWrapping="Wrap" />
                                 </Border>
 
                                 <StackPanel Orientation="Horizontal" Margin="0,8,0,0">
-                                    <Button Content="Export…" Click="Export_Click" Margin="0,0,6,0" Padding="8,6" />
-                                    <Button Content="Export original…" Click="ExportOriginal_Click" Margin="0,0,6,0" Padding="8,6"
+                                    <Button Content="Export…" Click="Export_Click" Margin="0,0,6,0" />
+                                    <Button Content="Export original…" Click="ExportOriginal_Click" Margin="0,0,6,0"
                                             Visibility="{Binding HasOriginal, Converter={StaticResource BoolToVis}}" />
-                                    <Button Content="Replace…" Click="Replace_Click" Margin="0,0,6,0" Padding="8,6" />
-                                    <Button Content="Revert" Click="Revert_Click" Padding="8,6"
+                                    <Button Content="Replace…" Click="Replace_Click" Margin="0,0,6,0" />
+                                    <Button Content="Revert" Click="Revert_Click"
                                             Visibility="{Binding CanRevertFromWorkspace, Converter={StaticResource BoolToVis}}" />
                                 </StackPanel>
 
@@ -714,9 +639,9 @@
                                      version so it wins over everything below it" without a round trip
                                      through the filesystem. -->
                                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                                    <Button Content="Mirror…" Click="Mirror_Click" Margin="0,0,6,0" Padding="8,6"
+                                    <Button Content="Mirror…" Click="Mirror_Click" Margin="0,0,6,0"
                                             ToolTip="Copy the asset while keeping the folder structure" />
-                                    <Button Content="Mirror original…" Click="MirrorOriginal_Click" Padding="8,6"
+                                    <Button Content="Mirror original…" Click="MirrorOriginal_Click"
                                             Visibility="{Binding HasOriginal, Converter={StaticResource BoolToVis}}"
                                             ToolTip="Copy the asset while keeping the folder structure" />
                                 </StackPanel>
@@ -726,9 +651,9 @@
                                      the entries an editor changed back into the workspace. -->
                                 <StackPanel Orientation="Horizontal" Margin="0,6,0,0"
                                             Visibility="{Binding SelectionIsModel, Converter={StaticResource BoolToVis}}">
-                                    <Button Content="Export as .fc2model…" Click="ExportPack_Click" Margin="0,0,6,0" Padding="8,6"
+                                    <Button Content="Export as .fc2model…" Click="ExportPack_Click" Margin="0,0,6,0"
                                             ToolTip="Collect this model, its materials, textures and rig into one decoded pack" />
-                                    <Button Content="…with animations" Click="ExportPackWithClips_Click" Padding="8,6"
+                                    <Button Content="…with animations" Click="ExportPackWithClips_Click"
                                             ToolTip="Also carry every animation bank that names this model" />
                                 </StackPanel>
                             </StackPanel>
@@ -738,14 +663,10 @@
                                 <ContentControl x:Name="PreviewHost" Visibility="Collapsed" />
 
                                 <!-- Shown instead of PreviewHost when the file's type has no handler. -->
-                                <Border x:Name="NoPreviewPanel" Visibility="Collapsed" Background="#ECECEC">
-                                    <Border BorderBrush="#808080" BorderThickness="1,1,0,0">
-                                        <Border BorderBrush="White" BorderThickness="0,0,1,1" Padding="16">
-                                            <TextBlock Text="No preview available for this file type." Foreground="#666"
-                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
-                                                       TextAlignment="Center" TextWrapping="Wrap" />
-                                        </Border>
-                                    </Border>
+                                <Border x:Name="NoPreviewPanel" Visibility="Collapsed" Style="{StaticResource InertFrame}" Padding="16">
+                                    <TextBlock Text="No preview available for this file type." Style="{StaticResource Secondary}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center"
+                                               TextAlignment="Center" TextWrapping="Wrap" />
                                 </Border>
                             </Grid>
                         </DockPanel>

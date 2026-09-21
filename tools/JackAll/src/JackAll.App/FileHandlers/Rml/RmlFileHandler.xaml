@@ -3,17 +3,16 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:text="clr-namespace:JackAll.App.FileHandlers.Text">
     <DockPanel Margin="16">
-        <TextBlock x:Name="StatusText" DockPanel.Dock="Top" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" />
+        <TextBlock x:Name="StatusText" DockPanel.Dock="Top" Style="{StaticResource Mono}" TextWrapping="Wrap" />
 
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,16,0,0">
             <Button x:Name="ExportButton" Content="Export XML…" Click="Export_Click"
-                    Padding="8,6" Margin="0,0,8,0" IsEnabled="False" />
-            <Button x:Name="ImportButton" Content="Import XML…" Click="Import_Click"
-                    Padding="8,6" />
+                    Margin="0,0,8,0" IsEnabled="False" />
+            <Button x:Name="ImportButton" Content="Import XML…" Click="Import_Click" />
         </StackPanel>
 
         <!-- The whole decoded tree. -->
-        <Border Margin="0,16,0,0" Background="#FAFAFA" BorderBrush="#DDD" BorderThickness="1">
+        <Border Margin="0,16,0,0" Style="{StaticResource PreviewFrame}">
             <text:TextFileHandler x:Name="Preview" Extension="xml" />
         </Border>
     </DockPanel>

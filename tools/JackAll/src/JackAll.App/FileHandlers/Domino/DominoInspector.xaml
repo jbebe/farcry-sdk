@@ -4,19 +4,10 @@
              xmlns:audio="clr-namespace:JackAll.App.FileHandlers.Audio">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-        <Style x:Key="SectionHeader" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="9" />
-            <Setter Property="FontWeight" Value="SemiBold" />
-            <Setter Property="Foreground" Value="#888" />
-            <Setter Property="Margin" Value="0,12,0,4" />
+        <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
         </Style>
-        <Style x:Key="FieldLabel" TargetType="TextBlock">
-            <Setter Property="FontSize" Value="10" />
-            <Setter Property="Foreground" Value="#666" />
-        </Style>
-        <Style x:Key="FieldValue" TargetType="TextBlock">
-            <Setter Property="FontFamily" Value="Consolas" />
-            <Setter Property="FontSize" Value="11" />
+        <Style x:Key="FieldValue" TargetType="TextBlock" BasedOn="{StaticResource MonoSmall}">
             <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Margin" Value="0,0,0,4" />
         </Style>
@@ -30,8 +21,8 @@
                 </ItemsControl.ItemsPanel>
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
-                        <Button Content="{Binding Label}" Click="Action_Click" FontSize="10"
-                                Padding="6,1" Margin="0,2,4,0" />
+                        <Button Content="{Binding Label}" Click="Action_Click" FontSize="{StaticResource FontSizeSmall}"
+                                Style="{StaticResource DenseButton}" Margin="0,2,4,0" />
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
@@ -39,32 +30,32 @@
     </UserControl.Resources>
 
     <DockPanel>
-    <Border x:Name="PlayerSection" DockPanel.Dock="Bottom" Visibility="Collapsed" Background="#F4F4F4"
-            BorderBrush="#DDD" BorderThickness="0,1,0,0" Padding="10,6">
+    <Border x:Name="PlayerSection" DockPanel.Dock="Bottom" Visibility="Collapsed" Background="{DynamicResource SurfaceAltBrush}"
+            BorderBrush="{DynamicResource BorderHairlineBrush}" BorderThickness="0,1,0,0" Padding="10,6">
         <StackPanel>
-            <TextBlock x:Name="PlayerLabel" FontFamily="Consolas" FontSize="11" Margin="0,0,0,4" />
+            <TextBlock x:Name="PlayerLabel" Style="{StaticResource MonoSmall}" Margin="0,0,0,4" />
             <audio:AudioPreviewPanel x:Name="Player" />
-            <TextBlock x:Name="PlayerStatus" FontSize="10" Foreground="#A06000" TextWrapping="Wrap" />
+            <TextBlock x:Name="PlayerStatus" Style="{StaticResource Caption}" Foreground="{DynamicResource WarningTextBrush}" TextWrapping="Wrap" />
         </StackPanel>
     </Border>
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10,8">
         <StackPanel x:Name="Root">
             <TextBlock x:Name="EmptyNotice"
                        Text="Select a box on the canvas to inspect it."
-                       FontSize="11" Style="{StaticResource EmptyHint}" Margin="0,4" />
+                       FontSize="{StaticResource FontSizeSecondary}" Style="{StaticResource EmptyHint}" Margin="0,4" />
 
             <StackPanel x:Name="Details" Visibility="Collapsed">
-                <TextBlock x:Name="NodeTitle" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock x:Name="NodeTitle" Style="{StaticResource Heading}" />
                 <TextBlock x:Name="NodeCategory" Style="{StaticResource FieldLabel}" Margin="0,1,0,0" />
-                <TextBlock x:Name="NodeDescription" FontSize="11" TextWrapping="Wrap" Margin="0,8,0,0" />
+                <TextBlock x:Name="NodeDescription" FontSize="{StaticResource FontSizeSecondary}" TextWrapping="Wrap" Margin="0,8,0,0" />
                 <TextBlock x:Name="NodeDescriptionSource" Text="Written from the box's Lua implementation."
-                           FontSize="9" Foreground="#999" Margin="0,2,0,0" />
+                           Style="{StaticResource Caption}" Margin="0,2,0,0" />
                 <ContentControl x:Name="NodeActions" ContentTemplate="{StaticResource ActionButtons}" Margin="0,6,0,0" />
 
                 <TextBlock Text="TYPE" Style="{StaticResource SectionHeader}" />
                 <TextBlock x:Name="NodeTypePath" Style="{StaticResource FieldValue}" />
-                <TextBlock x:Name="NodeInstance" Style="{StaticResource FieldValue}" Foreground="#666" />
-                <TextBlock x:Name="SignatureNotice" Style="{StaticResource FieldValue}" Foreground="#A06000"
+                <TextBlock x:Name="NodeInstance" Style="{StaticResource FieldValue}" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock x:Name="SignatureNotice" Style="{StaticResource FieldValue}" Foreground="{DynamicResource WarningTextBrush}"
                            Visibility="Collapsed" />
 
                 <TextBlock x:Name="ParamsHeader" Text="PARAMETERS" Style="{StaticResource SectionHeader}" />
@@ -76,11 +67,11 @@
                                     <ColumnDefinition Width="Auto" MinWidth="110" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{Binding Name}" FontSize="10" Foreground="#555" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource FieldLabel}" Margin="0,0,8,0" />
                                 <StackPanel Grid.Column="1">
-                                    <TextBlock Text="{Binding Value}" FontFamily="Consolas" FontSize="11"
+                                    <TextBlock Text="{Binding Value}" Style="{StaticResource MonoSmall}"
                                                TextWrapping="Wrap" ToolTip="{Binding Value}" />
-                                    <TextBlock Text="{Binding Resolved}" FontSize="10" Foreground="#2F5E8C" TextWrapping="Wrap"
+                                    <TextBlock Text="{Binding Resolved}" FontSize="{StaticResource FontSizeSmall}" Foreground="#2F5E8C" TextWrapping="Wrap"
                                                Visibility="{Binding HasResolved, Converter={StaticResource BoolToVisibility}}" />
                                     <Image Source="{Binding Thumbnail}" MaxWidth="160" MaxHeight="160" HorizontalAlignment="Left"
                                            Margin="0,2,0,0" Stretch="Uniform" />
@@ -105,13 +96,13 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
-                                <TextBlock Text="{Binding Direction}" FontSize="11" Foreground="#8A8A8A" />
-                                <TextBlock Grid.Column="1" Text="{Binding Name}" FontFamily="Consolas" FontSize="11"
+                                <TextBlock Text="{Binding Direction}" Style="{StaticResource Note}" />
+                                <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource MonoSmall}"
                                            TextWrapping="Wrap" />
-                                <TextBlock Grid.Column="2" Text="{Binding Detail}" FontSize="10" Foreground="#888"
+                                <TextBlock Grid.Column="2" Text="{Binding Detail}" Style="{StaticResource Caption}"
                                            Margin="6,0,0,0" />
                                 <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Note}"
-                                           FontSize="10" Foreground="#777" TextWrapping="Wrap" Margin="0,1,0,2"
+                                           Style="{StaticResource Caption}" TextWrapping="Wrap" Margin="0,1,0,2"
                                            Visibility="{Binding HasNote, Converter={StaticResource BoolToVisibility}}" />
                             </Grid>
                         </DataTemplate>
@@ -123,14 +114,14 @@
                  the box, not the script it lives in. -->
             <StackPanel x:Name="GraphSection">
                 <TextBlock Text="GRAPH" Style="{StaticResource SectionHeader}" />
-                <TextBlock x:Name="GraphSummary" Style="{StaticResource FieldValue}" Foreground="#555" />
+                <TextBlock x:Name="GraphSummary" Style="{StaticResource FieldValue}" Foreground="{DynamicResource TextSecondaryBrush}" />
 
                 <TextBlock x:Name="DepsHeader" Text="REGISTERED NODE TYPES" Style="{StaticResource SectionHeader}"
                            Visibility="Collapsed" />
                 <ItemsControl x:Name="DepList">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="10" Foreground="#555"
+                            <TextBlock Text="{Binding}" Style="{StaticResource MonoSmall}" Foreground="{DynamicResource TextSecondaryBrush}"
                                        TextWrapping="Wrap" Margin="0,0,0,2" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
@@ -141,7 +132,7 @@
                 <ItemsControl x:Name="ResourceList">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding}" FontFamily="Consolas" FontSize="10" Foreground="#555"
+                            <TextBlock Text="{Binding}" Style="{StaticResource MonoSmall}" Foreground="{DynamicResource TextSecondaryBrush}"
                                        TextWrapping="Wrap" Margin="0,0,0,2" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>

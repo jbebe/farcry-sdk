@@ -3,21 +3,20 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:audio="clr-namespace:JackAll.App.FileHandlers.Audio">
     <DockPanel Margin="16">
-        <TextBlock x:Name="StatusText" DockPanel.Dock="Top" FontFamily="Consolas" FontSize="12" TextWrapping="Wrap" />
+        <TextBlock x:Name="StatusText" DockPanel.Dock="Top" Style="{StaticResource Mono}" TextWrapping="Wrap" />
 
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,16,0,0">
-            <TextBlock Text="Export as:" VerticalAlignment="Center" Margin="0,0,8,0" />
+            <TextBlock Text="Export as:" Style="{StaticResource ToolbarLabel}" Margin="0,0,8,0" />
             <ComboBox x:Name="ExportFormatCombo" Width="220" SelectedIndex="0" VerticalAlignment="Center">
                 <ComboBoxItem Content="Ogg Vorbis (original)" />
                 <ComboBoxItem Content="MP3 (good quality, VBR)" />
             </ComboBox>
             <Button x:Name="ExportButton" Content="Export…" Click="Export_Click"
-                    Padding="8,6" Margin="8,0,0,0" IsEnabled="False" />
-            <Button x:Name="ImportButton" Content="Import…" Click="Import_Click"
-                    Padding="8,6" Margin="16,0,0,0" />
+                    Margin="8,0,0,0" IsEnabled="False" />
+            <Button x:Name="ImportButton" Content="Import…" Click="Import_Click" Margin="16,0,0,0" />
         </StackPanel>
 
-        <Border DockPanel.Dock="Top" Margin="0,16,0,0" Background="#ECECEC" BorderBrush="#DDD" BorderThickness="1" Padding="12">
+        <Border DockPanel.Dock="Top" Margin="0,16,0,0" Style="{StaticResource InertFrame}" Padding="12">
             <StackPanel>
                 <TextBlock Text="Preview" FontWeight="Bold" Margin="0,0,0,8" />
                 <audio:AudioPreviewPanel x:Name="Preview" />

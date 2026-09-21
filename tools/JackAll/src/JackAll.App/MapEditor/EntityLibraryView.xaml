@@ -5,7 +5,7 @@
     <Grid>
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="240" MinWidth="120" />
-            <ColumnDefinition Width="4" />
+            <ColumnDefinition Width="{StaticResource SplitterSize}" />
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
@@ -18,11 +18,11 @@
             </TreeView.ItemTemplate>
         </TreeView>
 
-        <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" />
+        <GridSplitter Grid.Column="1" />
 
         <DockPanel Grid.Column="2">
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
-                <TextBlock DockPanel.Dock="Right" Foreground="#888" VerticalAlignment="Center" Margin="8,0,0,0"
+                <TextBlock DockPanel.Dock="Right" Style="{StaticResource Muted}" VerticalAlignment="Center" Margin="8,0,0,0"
                            Text="{Binding CountText}" />
                 <TextBox Style="{StaticResource SearchBox}" Tag="Search archetypes by full name…"
                          Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=250}" />

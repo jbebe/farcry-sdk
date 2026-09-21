@@ -67,13 +67,13 @@ public partial class TextFileHandler : UserControl
         // real: every part of a whole-file override is modded whether the mod touched it or not.
         if (!diffLines.Any(l => l.Kind is DiffLineKind.Added or DiffLineKind.Removed))
         {
-            DiffBanner.Text = IdenticalMessage;
+            DiffBannerText.Text = IdenticalMessage;
             Editor.ShowLineNumbers = true;
             Text = currentText;
             return;
         }
 
-        DiffBanner.Text = TrimmedDiffMessage;
+        DiffBannerText.Text = TrimmedDiffMessage;
         Text = string.Join(Environment.NewLine, diffLines.Select(l => l.Text));
         Editor.ShowLineNumbers = false;
         Editor.TextArea.TextView.LineTransformers.Add(new DiffLineColorizer(diffLines));

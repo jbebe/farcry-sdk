@@ -7,19 +7,19 @@
     <DockPanel>
         <!-- Deploy stays disabled; the patch is built from the main window as for any other edit. -->
         <DockPanel x:Name="Toolbar" DockPanel.Dock="Top" Style="{StaticResource TabToolbar}">
-            <TextBlock x:Name="StatusText" Style="{StaticResource StatusText}" Foreground="#555"
+            <TextBlock x:Name="StatusText" Style="{StaticResource StatusText}"
                        Text="Waiting for the game archives to load" />
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="Map:" Style="{StaticResource ToolbarLabel}" />
                 <ComboBox x:Name="MapPicker" VerticalAlignment="Center" Width="190" IsEnabled="False" Margin="0,0,8,0"
                           DisplayMemberPath="Name"
                           ToolTip="Every map that ships terrain: the two campaign worlds, the multiplayer maps, and tmpla" />
-                <Button x:Name="LoadButton" Content="Load" IsEnabled="False" Padding="12,3" Margin="0,0,4,0"
+                <Button x:Name="LoadButton" Content="Load" IsEnabled="False" Margin="0,0,4,0"
                         Click="Load_Click" />
-                <Button x:Name="SaveButton" Content="Save" IsEnabled="False" Padding="12,3" Margin="0,0,4,0"
+                <Button x:Name="SaveButton" Content="Save" IsEnabled="False" Margin="0,0,4,0"
                         Click="Save_Click"
                         ToolTip="Stages the added, moved, edited and deleted entities into your workspace, with the archetypes and depload entries an addition needs" />
-                <Button Content="Deploy" IsEnabled="False" Padding="12,3" />
+                <Button Content="Deploy" IsEnabled="False" />
 
                 <ToggleButton x:Name="LayersButton" Content="Layers ▾" Padding="10,3" Margin="12,0,0,0">
                     <!-- Off while the popup is open, so the click that closes it does not reopen it. -->
@@ -35,18 +35,17 @@
                 </ToggleButton>
                 <Popup x:Name="LayersPopup" IsOpen="{Binding IsChecked, ElementName=LayersButton}" StaysOpen="False"
                        PlacementTarget="{Binding ElementName=LayersButton}" Placement="Bottom">
-                    <Border Background="White" BorderBrush="#AAA" BorderThickness="1" Padding="10,8">
+                    <Border Style="{StaticResource PopupSurface}">
                         <ScrollViewer MaxHeight="640" VerticalScrollBarVisibility="Auto">
                             <StackPanel Width="260">
-                                <Button Content="Uncheck all" Padding="0,2" Margin="0,0,0,4" Click="UncheckAll_Click"
+                                <Button Content="Uncheck all" Style="{StaticResource DenseButton}" Margin="0,0,0,4" Click="UncheckAll_Click"
                                         ToolTip="Hides every layer except the heightmap" />
                                 <ItemsControl x:Name="LayerList">
                                     <ItemsControl.GroupStyle>
                                         <GroupStyle>
                                             <GroupStyle.HeaderTemplate>
                                                 <DataTemplate>
-                                                    <TextBlock Text="{Binding Name}" FontSize="10" FontWeight="SemiBold"
-                                                               Foreground="#888" Margin="0,8,0,2" />
+                                                    <TextBlock Text="{Binding Name}" Style="{StaticResource SectionHeader}" Margin="0,8,0,2" />
                                                 </DataTemplate>
                                             </GroupStyle.HeaderTemplate>
                                         </GroupStyle>
@@ -59,7 +58,7 @@
                                     </ItemsControl.ItemTemplate>
                                 </ItemsControl>
 
-                                <TextBlock Text="NAVMESH SHOWS" FontSize="10" FontWeight="SemiBold" Foreground="#888" Margin="0,10,0,2" />
+                                <TextBlock Text="NAVMESH SHOWS" Style="{StaticResource SectionHeader}" Margin="0,10,0,2" />
                                 <CheckBox x:Name="NavMeshSurface" Content="Surface" IsChecked="True" Margin="12,1,0,0"
                                           ToolTip="Walkable triangles, green where flat and red where steep" />
                                 <CheckBox x:Name="NavMeshEdges" Content="Edges" IsChecked="True" Margin="12,1,0,0"
@@ -73,10 +72,10 @@
                                             <DataTemplate>
                                                 <DockPanel Margin="0,0,0,3">
                                                     <Border Width="11" Height="11" DockPanel.Dock="Left" Margin="0,0,6,0"
-                                                            VerticalAlignment="Center" BorderBrush="#999" BorderThickness="1"
+                                                            VerticalAlignment="Center" BorderBrush="{DynamicResource BorderEmphasisBrush}" BorderThickness="1"
                                                             Background="{Binding Swatch}" />
                                                     <TextBlock DockPanel.Dock="Right" Text="{Binding Coverage}"
-                                                               Foreground="#888" Margin="6,0,0,0" />
+                                                               Style="{StaticResource Muted}" Margin="6,0,0,0" />
                                                     <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
                                                 </DockPanel>
                                             </DataTemplate>
@@ -101,11 +100,11 @@
                 <CheckBox x:Name="DemoMode" Content="Demo mode" IsChecked="False"
                           VerticalAlignment="Center" Margin="10,0,0,0"
                           ToolTip="Everything that costs: sun shadows, ambient occlusion, sky, haze, real water, the far model ring, and a continuous redraw. Off, the viewport is flatly lit textures, drawn once per change" />
-                <TextBlock Text="Exposure" VerticalAlignment="Center" Foreground="#888" Margin="14,0,4,0" />
+                <TextBlock Text="Exposure" VerticalAlignment="Center" Style="{StaticResource Muted}" Margin="14,0,4,0" />
                 <Slider x:Name="ExposureSlider" Width="90" Minimum="0.5" Maximum="3.0" Value="1.8"
                         VerticalAlignment="Center" TickFrequency="0.1" IsSnapToTickEnabled="False"
                         ToolTip="Scene exposure, applied to the terrain, the models and the scatter alike" />
-                <TextBlock VerticalAlignment="Center" Foreground="#888" FontSize="11" Margin="4,0,0,0"
+                <TextBlock VerticalAlignment="Center" Style="{StaticResource Note}" Margin="4,0,0,0"
                            Text="{Binding Value, ElementName=ExposureSlider, StringFormat={}{0:0.00}x}" />
             </StackPanel>
         </DockPanel>
@@ -113,20 +112,20 @@
         <Grid>
             <Grid.RowDefinitions>
                 <RowDefinition Height="*" MinHeight="200" />
-                <RowDefinition Height="4" />
+                <RowDefinition Height="{StaticResource SplitterSize}" />
                 <RowDefinition Height="200" MinHeight="80" />
             </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="260" MinWidth="160" />
-                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="{StaticResource SplitterSize}" />
                 <ColumnDefinition Width="*" MinWidth="300" />
-                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="{StaticResource SplitterSize}" />
                 <ColumnDefinition Width="340" MinWidth="220" />
             </Grid.ColumnDefinitions>
 
             <mapEditor:HierarchyView x:Name="Hierarchy" Grid.Row="0" Grid.Column="0" />
 
-            <GridSplitter Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" />
+            <GridSplitter Grid.Row="0" Grid.Column="1" />
 
             <Grid Grid.Row="0" Grid.Column="2">
                 <glWpf:GLWpfControl x:Name="Viewport" Focusable="True" AllowDrop="True"
@@ -141,23 +140,23 @@
 
                 <StackPanel x:Name="ViewportHint" VerticalAlignment="Center" HorizontalAlignment="Center"
                             IsHitTestVisible="False">
-                    <TextBlock Text="3D viewport" FontSize="16" Foreground="#666" HorizontalAlignment="Center" />
-                    <TextBlock Text="Load a world to see its terrain" FontSize="11" Foreground="#888"
+                    <TextBlock Text="3D viewport" FontSize="16" Style="{StaticResource Secondary}" HorizontalAlignment="Center" />
+                    <TextBlock Text="Load a world to see its terrain" Style="{StaticResource Note}"
                                HorizontalAlignment="Center" Margin="0,4,0,0" />
                     <TextBlock Text="Right-drag look - WASD move, Q/E down/up - Shift to sprint - wheel changes speed"
-                               FontSize="11" Foreground="#888" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                               Style="{StaticResource Note}" HorizontalAlignment="Center" Margin="0,2,0,0" />
                     <TextBlock Text="Click to select, Ctrl+click to add - T move, R rotate - Ctrl+C / Ctrl+V copy and paste - Del delete"
-                               FontSize="11" Foreground="#888" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                               Style="{StaticResource Note}" HorizontalAlignment="Center" Margin="0,2,0,0" />
                     <TextBlock Text="Drag an archetype from the library below onto the ground to place it - Save stages the edits"
-                               FontSize="11" Foreground="#888" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                               Style="{StaticResource Note}" HorizontalAlignment="Center" Margin="0,2,0,0" />
                 </StackPanel>
             </Grid>
 
-            <GridSplitter Grid.Row="0" Grid.Column="3" HorizontalAlignment="Stretch" Background="Transparent" />
+            <GridSplitter Grid.Row="0" Grid.Column="3" />
 
             <mapEditor:InspectorView x:Name="Inspector" Grid.Row="0" Grid.Column="4" Margin="6,0,0,0" />
 
-            <GridSplitter Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" HorizontalAlignment="Stretch"
+            <GridSplitter Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5"
                           VerticalAlignment="Stretch" ResizeDirection="Rows" Background="Transparent" />
 
             <mapEditor:EntityLibraryView x:Name="Library" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="5" />

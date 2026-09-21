@@ -6,9 +6,9 @@
     <!-- One scalar field: a plain value, a whole Vector2/3/4, or one labelled Matrix4 cell. -->
     <DataTemplate DataType="{x:Type fcbEditor:ScalarField}">
         <DockPanel Margin="0,2">
-            <TextBlock DockPanel.Dock="Left" Text="{Binding Label}" Width="28" VerticalAlignment="Center" Foreground="#666">
+            <TextBlock DockPanel.Dock="Left" Text="{Binding Label}" Width="28" VerticalAlignment="Center">
                 <TextBlock.Style>
-                    <Style TargetType="TextBlock">
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource Secondary}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding Label}" Value="{x:Null}">
                                 <Setter Property="Visibility" Value="Collapsed" />
@@ -19,18 +19,13 @@
             </TextBlock>
             <!-- The Grid is what fills the column; whichever editor shows stretches to it. -->
             <Grid>
-                <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Padding="3,1">
+                <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}">
                     <TextBox.Style>
                         <!-- Width is a Setter, not an attribute, so the Label trigger below can override it. -->
-                        <Style TargetType="TextBox">
+                        <Style TargetType="TextBox" BasedOn="{StaticResource ValidatedTextBox}">
                             <Setter Property="Width" Value="180" />
                             <Setter Property="HorizontalAlignment" Value="Left" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsValid}" Value="False">
-                                    <Setter Property="BorderBrush" Value="Red" />
-                                    <Setter Property="BorderThickness" Value="1.5" />
-                                    <Setter Property="Background" Value="#FFF0F0" />
-                                </DataTrigger>
                                 <DataTrigger Binding="{Binding Label}" Value="{x:Null}">
                                     <Setter Property="Width" Value="NaN" />
                                     <Setter Property="HorizontalAlignment" Value="Stretch" />
@@ -55,9 +50,8 @@
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsValid}" Value="False">
-                                    <Setter Property="BorderBrush" Value="Red" />
-                                    <Setter Property="BorderThickness" Value="1.5" />
-                                    <Setter Property="Background" Value="#FFF0F0" />
+                                    <Setter Property="BorderBrush" Value="{DynamicResource DangerBrush}" />
+                                    <Setter Property="Background" Value="{DynamicResource InvalidBgBrush}" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding Type}" Value="Rml">
                                     <Setter Property="Visibility" Value="Visible" />
@@ -68,17 +62,11 @@
                 </fcbEditor:RmlTextEditor>
 
                 <!-- A field with a known option list - see EnumChoices. -->
-                <ComboBox ItemsSource="{Binding EnumChoices}" SelectedIndex="{Binding SelectedEnumIndex}"
-                          Padding="3,1">
+                <ComboBox ItemsSource="{Binding EnumChoices}" SelectedIndex="{Binding SelectedEnumIndex}">
                     <ComboBox.Style>
-                        <Style TargetType="ComboBox">
+                        <Style TargetType="ComboBox" BasedOn="{StaticResource ValidatedComboBox}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsValid}" Value="False">
-                                    <Setter Property="BorderBrush" Value="Red" />
-                                    <Setter Property="BorderThickness" Value="1.5" />
-                                    <Setter Property="Background" Value="#FFF0F0" />
-                                </DataTrigger>
                                 <DataTrigger Binding="{Binding HasEnumChoices}" Value="True">
                                     <Setter Property="Visibility" Value="Visible" />
                                 </DataTrigger>
@@ -113,14 +101,14 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <DockPanel Margin="0,1">
-                            <Button DockPanel.Dock="Right" Content="×" Padding="6,0" Margin="4,0,0,0"
+                            <Button DockPanel.Dock="Right" Content="×" Style="{StaticResource DenseButton}" Margin="4,0,0,0"
                                     Tag="{Binding}" Click="RemoveNumberArrayItem_Click" />
                             <ContentControl Content="{Binding}" />
                         </DockPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <Button Content="+ Add item" HorizontalAlignment="Left" Margin="0,4,0,0" Padding="6,2"
+            <Button Content="+ Add item" HorizontalAlignment="Left" Margin="0,4,0,0" Style="{StaticResource DenseButton}"
                     Click="AddNumberArrayItem_Click" />
         </StackPanel>
     </DataTemplate>
@@ -131,14 +119,14 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <DockPanel Margin="0,1">
-                            <Button DockPanel.Dock="Right" Content="×" Padding="6,0" Margin="4,0,0,0"
+                            <Button DockPanel.Dock="Right" Content="×" Style="{StaticResource DenseButton}" Margin="4,0,0,0"
                                     Tag="{Binding}" Click="RemoveBoolArrayItem_Click" />
                             <ContentControl Content="{Binding}" />
                         </DockPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <Button Content="+ Add item" HorizontalAlignment="Left" Margin="0,4,0,0" Padding="6,2"
+            <Button Content="+ Add item" HorizontalAlignment="Left" Margin="0,4,0,0" Style="{StaticResource DenseButton}"
                     Click="AddBoolArrayItem_Click" />
         </StackPanel>
     </DataTemplate>
@@ -149,14 +137,14 @@
                 <ItemsControl.ItemTemplate>
                     <DataTemplate>
                         <DockPanel Margin="0,3">
-                            <Button DockPanel.Dock="Right" Content="×" Padding="6,0" Margin="4,0,0,0"
+                            <Button DockPanel.Dock="Right" Content="×" Style="{StaticResource DenseButton}" Margin="4,0,0,0"
                                     VerticalAlignment="Top" Tag="{Binding}" Click="RemoveVectorArrayItem_Click" />
                             <ContentControl Content="{Binding}" />
                         </DockPanel>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
             </ItemsControl>
-            <Button Content="+ Add item" HorizontalAlignment="Left" Margin="0,4,0,0" Padding="6,2"
+            <Button Content="+ Add item" HorizontalAlignment="Left" Margin="0,4,0,0" Style="{StaticResource DenseButton}"
                     Click="AddVectorArrayItem_Click" />
         </StackPanel>
     </DataTemplate>
@@ -171,7 +159,7 @@
                     <Setter Property="BorderBrush" Value="Transparent" />
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding Row.IsChangedFromVanilla}" Value="True">
-                            <Setter Property="Background" Value="#FFF6D6" />
+                            <Setter Property="Background" Value="{DynamicResource WarningBgBrush}" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Origin}" Value="Inherited">
                             <Setter Property="Opacity" Value="0.55" />
@@ -181,17 +169,17 @@
                             <Setter Property="ToolTip" Value="Not set: the engine keeps its own default. Editing writes it into the instance." />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Origin}" Value="Overridden">
-                            <Setter Property="BorderBrush" Value="#E08A00" />
+                            <Setter Property="BorderBrush" Value="{DynamicResource WarningAccentBrush}" />
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
             </Border.Style>
             <DockPanel>
-                <Button DockPanel.Dock="Right" Content="Restore" Padding="5,0" Margin="6,0,0,0"
+                <Button DockPanel.Dock="Right" Content="Restore" Margin="6,0,0,0"
                         VerticalAlignment="Center" Click="RestoreField_Click"
                         ToolTip="Sets this field back to the value the document had when it was opened">
                     <Button.Style>
-                        <Style TargetType="Button">
+                        <Style TargetType="Button" BasedOn="{StaticResource DenseButton}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Row.IsChangedFromVanilla}" Value="True">
@@ -201,11 +189,11 @@
                         </Style>
                     </Button.Style>
                 </Button>
-                <Button DockPanel.Dock="Right" Content="Revert" Padding="5,0" Margin="6,0,0,0"
+                <Button DockPanel.Dock="Right" Content="Revert" Margin="6,0,0,0"
                         VerticalAlignment="Center" Click="RevertField_Click"
                         ToolTip="Removes this override, so the archetype's value applies again">
                     <Button.Style>
-                        <Style TargetType="Button">
+                        <Style TargetType="Button" BasedOn="{StaticResource DenseButton}">
                             <Setter Property="Visibility" Value="Collapsed" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding CanRevert}" Value="True">

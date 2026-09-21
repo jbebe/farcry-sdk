@@ -26,22 +26,22 @@
             </TextBlock>
 
             <StackPanel Visibility="{Binding HasEntity, Converter={StaticResource Visible}}">
-                <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap" />
-                <TextBlock Text="{Binding Details}" Foreground="#777" TextWrapping="Wrap" Margin="0,2,0,0" />
+                <TextBlock Text="{Binding Heading}" Style="{StaticResource Heading}" />
+                <TextBlock Text="{Binding Details}" Style="{StaticResource Secondary}" TextWrapping="Wrap" Margin="0,2,0,0" />
                 <WrapPanel Margin="0,6,0,4">
-                    <Button Content="Open archetype" Padding="7,2" Margin="0,0,6,4" IsEnabled="{Binding CanShowArchetype}"
+                    <Button Content="Open archetype" Style="{StaticResource DenseButton}" Margin="0,0,6,4" IsEnabled="{Binding CanShowArchetype}"
                             Click="ShowArchetype_Click"
                             ToolTip="Opens the Archetypes tab on the archetype this entity merges over" />
-                    <Button Content="Open in FCB editor" Padding="7,2" Margin="0,0,6,4" IsEnabled="{Binding CanOpenSector}"
+                    <Button Content="Open in FCB editor" Style="{StaticResource DenseButton}" Margin="0,0,6,4" IsEnabled="{Binding CanOpenSector}"
                             Click="OpenSector_Click"
                             ToolTip="Opens this entity's own fragment of its sector file. Not for an unsaved addition, which has no fragment yet." />
-                    <Button Content="Copy" Padding="7,2" Margin="0,0,6,4" Click="Copy_Click"
+                    <Button Content="Copy" Style="{StaticResource DenseButton}" Margin="0,0,6,4" Click="Copy_Click"
                             ToolTip="Ctrl+C. Holds this entity for Ctrl+V in the viewport" />
-                    <Button Content="Delete" Padding="7,2" Margin="0,0,6,4" Click="Delete_Click"
+                    <Button Content="Delete" Style="{StaticResource DenseButton}" Margin="0,0,6,4" Click="Delete_Click"
                             ToolTip="Del. Removes the selected entities on the next Save" />
                 </WrapPanel>
 
-                <TextBlock Text="TRANSFORM" FontSize="9" FontWeight="SemiBold" Foreground="#888" Margin="0,4,0,2" />
+                <TextBlock Text="TRANSFORM" Style="{StaticResource SectionHeader}" Margin="0,4,0,2" />
                 <ItemsControl ItemsSource="{Binding Transform}" />
 
                 <fcbEditor:EntityInspectorView DataContext="{Binding Inspector}" Margin="0,8,0,0" />

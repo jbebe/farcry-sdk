@@ -6,19 +6,19 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
     </UserControl.Resources>
     <DockPanel Margin="16">
-        <Border x:Name="AudioPanel" DockPanel.Dock="Bottom" Margin="0,16,0,0" Background="#ECECEC"
-                BorderBrush="#DDD" BorderThickness="1" Padding="12" Visibility="Collapsed">
+        <Border x:Name="AudioPanel" DockPanel.Dock="Bottom" Margin="0,16,0,0" Style="{StaticResource InertFrame}"
+                Padding="12" Visibility="Collapsed">
             <StackPanel>
                 <TextBlock Text="Audio preview" FontWeight="Bold" Margin="0,0,0,8" />
                 <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
                     <Button x:Name="ExportAudioButton" Content="Export as .wav…" Click="ExportAudio_Click"
-                            Padding="8,6" Margin="0,0,8,0" IsEnabled="False" />
+                            Margin="0,0,8,0" IsEnabled="False" />
                     <Button x:Name="ImportAudioButton" Content="Import…" Click="ImportAudio_Click"
-                            Padding="8,6" IsEnabled="False" />
+                            IsEnabled="False" />
                 </StackPanel>
                 <audio:AudioPreviewPanel x:Name="AudioPreview" />
-                <TextBlock x:Name="AudioStatusText" Margin="0,8,0,0" FontFamily="Consolas" FontSize="11"
-                           TextWrapping="Wrap" Foreground="#555" />
+                <TextBlock x:Name="AudioStatusText" Margin="0,8,0,0" Style="{StaticResource MonoSmall}"
+                           TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
             </StackPanel>
         </Border>
 
@@ -28,16 +28,14 @@
                   Margin="0,0,0,8" Checked="ShowRawDetailsCheckBox_Changed" Unchecked="ShowRawDetailsCheckBox_Changed" />
 
         <DockPanel LastChildFill="True">
-            <Border x:Name="RawDetailsPanel" DockPanel.Dock="Bottom" Margin="0,8,0,0" Background="#F7F7F7"
-                    BorderBrush="#DDD" BorderThickness="1" Padding="10" MaxHeight="220" Visibility="Collapsed">
+            <Border x:Name="RawDetailsPanel" DockPanel.Dock="Bottom" Margin="0,8,0,0" Style="{StaticResource PreviewFrame}"
+                    Padding="10" MaxHeight="220" Visibility="Collapsed">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <TextBlock x:Name="RawDetailsText" FontFamily="Consolas" FontSize="11" TextWrapping="Wrap" />
+                    <TextBlock x:Name="RawDetailsText" Style="{StaticResource MonoSmall}" TextWrapping="Wrap" />
                 </ScrollViewer>
             </Border>
 
-            <DataGrid x:Name="RecordsGrid" AutoGenerateColumns="False" IsReadOnly="True"
-                      CanUserAddRows="False" CanUserDeleteRows="False" CanUserReorderColumns="False"
-                      CanUserResizeRows="False" GridLinesVisibility="Horizontal" HeadersVisibility="Column"
+            <DataGrid x:Name="RecordsGrid" CanUserReorderColumns="False"
                       SelectionMode="Single" SelectionChanged="RecordsGrid_SelectionChanged">
                 <DataGrid.GroupStyle>
                     <GroupStyle>
@@ -52,9 +50,7 @@
                     <DataGridTextColumn Header="#" Binding="{Binding IndexLabel}" Width="40" />
                     <DataGridTextColumn Header="Id" Binding="{Binding IdHex}" Width="110">
                         <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="FontFamily" Value="Consolas" />
-                            </Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource Mono}" />
                         </DataGridTextColumn.ElementStyle>
                     </DataGridTextColumn>
                     <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="120" />
@@ -65,7 +61,7 @@
                                 <Button Content="{Binding LinkButtonText}" Click="GoToLink_Click"
                                         IsEnabled="{Binding CanNavigateLink}"
                                         Visibility="{Binding ShowLinkButton, Converter={StaticResource BoolToVis}}"
-                                        Padding="6,2" FontSize="11" />
+                                        Style="{StaticResource DenseButton}" FontSize="{StaticResource FontSizeSecondary}" />
                             </DataTemplate>
                         </DataGridTemplateColumn.CellTemplate>
                     </DataGridTemplateColumn>

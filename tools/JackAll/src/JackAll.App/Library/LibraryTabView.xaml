@@ -13,10 +13,9 @@
                 <TextBlock Text="{Binding Label}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
-                            <Setter Property="Foreground" Value="#333" />
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding ContainsShadowed}" Value="True">
-                                    <Setter Property="Foreground" Value="#B00" />
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding IsShadowed}" Value="True">
                                     <Setter Property="FontWeight" Value="SemiBold" />
@@ -25,7 +24,7 @@
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
-                <TextBlock Text="{Binding Chain}" Margin="8,0,0,0" FontSize="10.5" Foreground="#888"
+                <TextBlock Text="{Binding Chain}" Margin="8,0,0,0" Style="{StaticResource Caption}"
                            VerticalAlignment="Center" />
             </StackPanel>
         </HierarchicalDataTemplate>
@@ -33,40 +32,39 @@
         <!-- One layer in the selected archetype's chain. The last row wins; the rest are what an edit
              would silently miss. -->
         <DataTemplate x:Key="ChainRowTemplate" DataType="{x:Type library:ChainRow}">
-            <Border Padding="7,5" Margin="0,0,0,3" BorderThickness="1" CornerRadius="2">
+            <Border Padding="7,5" Margin="0,0,0,3">
                 <Border.Style>
-                    <Style TargetType="Border">
-                        <Setter Property="Background" Value="#FAFAFA" />
-                        <Setter Property="BorderBrush" Value="#DDD" />
+                    <Style TargetType="Border" BasedOn="{StaticResource PreviewFrame}">
+                        <Setter Property="CornerRadius" Value="{StaticResource CalloutRadius}" />
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding Wins}" Value="True">
-                                <Setter Property="Background" Value="#EAF6EA" />
-                                <Setter Property="BorderBrush" Value="#A8D2A8" />
+                                <Setter Property="Background" Value="{DynamicResource OkBgBrush}" />
+                                <Setter Property="BorderBrush" Value="{DynamicResource OkBorderBrush}" />
                             </DataTrigger>
                         </Style.Triggers>
                     </Style>
                 </Border.Style>
                 <StackPanel>
                     <DockPanel>
-                        <TextBlock DockPanel.Dock="Right" Text="{Binding Verdict}" FontSize="10.5"
+                        <TextBlock DockPanel.Dock="Right" Text="{Binding Verdict}" FontSize="{StaticResource FontSizeSmall}"
                                    VerticalAlignment="Center" Margin="6,0,0,0">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
-                                    <Setter Property="Foreground" Value="#B00" />
+                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding Wins}" Value="True">
-                                            <Setter Property="Foreground" Value="#2A7A2A" />
+                                            <Setter Property="Foreground" Value="{DynamicResource OkTextBrush}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <TextBlock Text="{Binding ShortName}" FontWeight="SemiBold" FontSize="11.5" />
+                        <TextBlock Text="{Binding ShortName}" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSecondary}" />
                     </DockPanel>
-                    <TextBlock Text="{Binding Path}" FontSize="10.5" Foreground="#777" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding FragmentId}" FontSize="10.5" Foreground="#999" />
-                    <TextBlock Text="Load order for this layer is not confirmed in Dunia.dll" FontSize="10"
-                               Foreground="#96701E" TextWrapping="Wrap" Margin="0,2,0,0"
+                    <TextBlock Text="{Binding Path}" Style="{StaticResource Caption}" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding FragmentId}" Style="{StaticResource Caption}" />
+                    <TextBlock Text="Load order for this layer is not confirmed in Dunia.dll" Style="{StaticResource Caption}"
+                               Foreground="{DynamicResource WarningTextBrush}" TextWrapping="Wrap" Margin="0,2,0,0"
                                Visibility="{Binding IsUnconfirmed, Converter={StaticResource BoolToVis}}" />
                 </StackPanel>
             </Border>
@@ -84,16 +82,16 @@
                 <ComboBoxItem Content="Campaign client (_full)" />
                 <ComboBoxItem Content="Dedicated server (base)" />
             </ComboBox>
-            <Button x:Name="LoadButton" Content="Load" Padding="10,5" Margin="16,0,0,0"
+            <Button x:Name="LoadButton" Content="Load" Margin="16,0,0,0"
                     VerticalAlignment="Center" IsEnabled="False" Click="Load_Click" />
         </DockPanel>
 
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="340" MinWidth="220" />
-                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="{StaticResource SplitterSize}" />
                 <ColumnDefinition Width="*" MinWidth="360" />
-                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="{StaticResource SplitterSize}" />
                 <ColumnDefinition Width="260" MinWidth="180" />
             </Grid.ColumnDefinitions>
 
@@ -105,29 +103,21 @@
                 </DockPanel>
 
                 <TreeView x:Name="ArchetypeTree" ItemTemplate="{StaticResource ArchetypeTemplate}"
-                          BorderBrush="#CCC" BorderThickness="1"
+                          BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1"
                           VirtualizingStackPanel.IsVirtualizing="True"
                           VirtualizingStackPanel.VirtualizationMode="Recycling"
                           ScrollViewer.CanContentScroll="True"
                           SelectedItemChanged="ArchetypeTree_SelectedItemChanged">
                     <!-- Declared here rather than as ItemContainerStyle so it applies at every depth. -->
                     <TreeView.Resources>
-                        <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
-                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsVisible}" Value="False">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
+                        <Style TargetType="TreeViewItem" BasedOn="{StaticResource BoundTreeItem}" />
                     </TreeView.Resources>
                 </TreeView>
             </DockPanel>
 
-            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="Transparent" />
+            <GridSplitter Grid.Column="1" />
 
-            <Border Grid.Column="2" BorderBrush="#CCC" BorderThickness="1">
+            <Border Grid.Column="2" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1">
                 <Grid>
                     <TextBlock x:Name="EditorPlaceholder" Margin="14" Style="{StaticResource EmptyHint}"
                                Text="Select an archetype to edit the definition the game reads." />
@@ -135,11 +125,11 @@
                 </Grid>
             </Border>
 
-            <GridSplitter Grid.Column="3" Width="4" HorizontalAlignment="Stretch" Background="Transparent" />
+            <GridSplitter Grid.Column="3" />
 
             <DockPanel Grid.Column="4">
                 <TextBlock DockPanel.Dock="Top" Text="Override chain" FontWeight="SemiBold" Margin="0,0,0,6" />
-                <TextBlock x:Name="ChainHint" DockPanel.Dock="Bottom" FontSize="10.5" Foreground="#888"
+                <TextBlock x:Name="ChainHint" DockPanel.Dock="Bottom" Style="{StaticResource Caption}"
                            TextWrapping="Wrap" Margin="0,6,0,0"
                            Text="Click a layer to inspect its own copy." />
                 <ListBox x:Name="ChainList" ItemTemplate="{StaticResource ChainRowTemplate}"

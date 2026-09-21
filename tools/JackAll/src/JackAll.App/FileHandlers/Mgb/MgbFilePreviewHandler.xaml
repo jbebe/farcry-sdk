@@ -2,12 +2,12 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <DockPanel Margin="16">
-        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Foreground="#666" Margin="0,0,0,12"
+        <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Style="{StaticResource Secondary}" Margin="0,0,0,12"
                    Text="A Magma UI package - open it in the MGB editor to browse and edit its areas, widgets, keyframes and strings." />
         <Button x:Name="OpenButton" DockPanel.Dock="Top" Content="Open in MGB Editor…" Click="OpenEditor_Click"
-                Padding="10,6" HorizontalAlignment="Left" Margin="0,0,0,16" />
+                HorizontalAlignment="Left" Margin="0,0,0,16" />
 
         <TextBlock x:Name="SummaryText" TextWrapping="Wrap" VerticalAlignment="Top"
-                   FontFamily="Consolas" FontSize="11" Foreground="#666" />
+                   Style="{StaticResource MonoSmall}" Foreground="{DynamicResource TextSecondaryBrush}" />
     </DockPanel>
 </UserControl>

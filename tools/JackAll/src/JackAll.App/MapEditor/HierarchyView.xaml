@@ -6,18 +6,18 @@
         <BooleanToVisibilityConverter x:Key="Visible" />
         <Style x:Key="RowToggle" TargetType="ToggleButton">
             <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
-            <Setter Property="FontSize" Value="11" />
+            <Setter Property="FontSize" Value="{StaticResource FontSizeSecondary}" />
             <Setter Property="Width" Value="18" />
             <Setter Property="Height" Value="16" />
             <Setter Property="Margin" Value="0,0,2,0" />
             <Setter Property="Padding" Value="0" />
             <Setter Property="Background" Value="Transparent" />
             <Setter Property="BorderThickness" Value="0" />
-            <Setter Property="Foreground" Value="#BBB" />
+            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
             <Setter Property="Focusable" Value="False" />
             <Style.Triggers>
                 <Trigger Property="IsChecked" Value="True">
-                    <Setter Property="Foreground" Value="#C0392B" />
+                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
                 </Trigger>
             </Style.Triggers>
         </Style>
@@ -30,18 +30,18 @@
         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,2">
             <CheckBox Content="Modified only" IsChecked="{Binding ModifiedOnly}" Margin="0,0,10,2"
                       ToolTip="Shows only what this session added, moved, edited or deleted" />
-            <Button Content="All layers" Padding="6,1" Margin="0,0,4,2" Click="AllLayers_Click" />
-            <Button Content="Only main" Padding="6,1" Margin="0,0,0,2" Click="OnlyMain_Click" />
+            <Button Content="All layers" Style="{StaticResource DenseButton}" Margin="0,0,4,2" Click="AllLayers_Click" />
+            <Button Content="Only main" Style="{StaticResource DenseButton}" Margin="0,0,0,2" Click="OnlyMain_Click" />
         </WrapPanel>
         <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
             <CheckBox DockPanel.Dock="Left" Content="Near camera" VerticalAlignment="Center"
                       IsChecked="{Binding NearCamera}"
                       ToolTip="Lists only entities within this distance of where the camera stood when ticked" />
-            <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="#888" Width="36" TextAlignment="Right"
+            <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Style="{StaticResource Muted}" Width="36" TextAlignment="Right"
                        Text="{Binding NearRange, StringFormat={}{0:0} m}" />
             <Slider Minimum="1" Maximum="200" Value="{Binding NearRange, Delay=150}" VerticalAlignment="Center" Margin="6,0,0,0" />
         </DockPanel>
-        <TextBlock DockPanel.Dock="Top" Foreground="#888" Margin="0,0,0,4" Text="{Binding CountText}" />
+        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Muted}" Margin="0,0,0,4" Text="{Binding CountText}" />
 
         <TreeView x:Name="Tree" ItemsSource="{Binding Roots}"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
@@ -68,11 +68,11 @@
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsModified}" Value="True">
                                             <Setter Property="FontStyle" Value="Italic" />
-                                            <Setter Property="Foreground" Value="#B35C00" />
+                                            <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
                                         </DataTrigger>
                                         <DataTrigger Binding="{Binding IsDeleted}" Value="True">
                                             <Setter Property="TextDecorations" Value="Strikethrough" />
-                                            <Setter Property="Foreground" Value="#999" />
+                                            <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
@@ -96,7 +96,7 @@
                             <Setter Property="Visibility" Value="Collapsed" />
                         </DataTrigger>
                         <DataTrigger Binding="{Binding IsSelected}" Value="True">
-                            <Setter Property="Background" Value="#CCE4F7" />
+                            <Setter Property="Background" Value="{DynamicResource SelectionSoftBrush}" />
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>

@@ -7,11 +7,13 @@
         <fh:ExtensionToHighlightingConverter x:Key="ExtensionToHighlighting" />
     </UserControl.Resources>
     <DockPanel>
-        <TextBlock x:Name="DiffBanner" DockPanel.Dock="Top" Visibility="Collapsed" TextWrapping="Wrap"
-                   Background="#FFF8E1" Foreground="#7A5B00" Padding="6,4" FontSize="11" Margin="0,0,0,4"
-                   Text="Showing only the changed lines plus a little context - Export… gets the whole file." />
+        <Border x:Name="DiffBanner" DockPanel.Dock="Top" Visibility="Collapsed" Style="{StaticResource WarningCallout}"
+                Margin="0,0,0,4">
+            <TextBlock x:Name="DiffBannerText" TextWrapping="Wrap"
+                       Text="Showing only the changed lines plus a little context - Export… gets the whole file." />
+        </Border>
         <avalonEdit:TextEditor x:Name="Editor" IsReadOnly="True" ShowLineNumbers="True" WordWrap="False"
-                                FontFamily="Consolas" FontSize="12" Background="#FAFAFA"
+                                FontFamily="{StaticResource MonoFont}" Background="{DynamicResource SurfaceAltBrush}"
                                 SyntaxHighlighting="{Binding Extension, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource ExtensionToHighlighting}}" />
     </DockPanel>
 </UserControl>

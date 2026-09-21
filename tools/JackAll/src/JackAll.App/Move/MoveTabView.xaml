@@ -6,8 +6,8 @@
         <HierarchicalDataTemplate x:Key="ObjectTemplate" DataType="{x:Type move:MoveTreeNode}"
                                   ItemsSource="{Binding Children}">
             <StackPanel Orientation="Horizontal">
-                <TextBlock Text="{Binding Label}" Foreground="#333" />
-                <TextBlock Text="{Binding Detail}" Margin="8,0,0,0" FontSize="10.5" Foreground="#888"
+                <TextBlock Text="{Binding Label}" />
+                <TextBlock Text="{Binding Detail}" Margin="8,0,0,0" Style="{StaticResource Caption}"
                            VerticalAlignment="Center" />
             </StackPanel>
         </HierarchicalDataTemplate>
@@ -18,16 +18,16 @@
             <TextBlock x:Name="StatusText" Style="{StaticResource StatusText}" Text="Pick a graph and Load" />
             <TextBlock Text="Graph:" Style="{StaticResource ToolbarLabel}" />
             <ComboBox x:Name="GraphPicker" Width="380" VerticalAlignment="Center" IsEnabled="False" />
-            <Button x:Name="LoadButton" Content="Load" Padding="10,5" Margin="16,0,0,0"
+            <Button x:Name="LoadButton" Content="Load" Margin="16,0,0,0"
                     VerticalAlignment="Center" IsEnabled="False" Click="Load_Click" />
-            <Button x:Name="ExportButton" Content="Export XML…" Padding="10,5" Margin="8,0,0,0"
+            <Button x:Name="ExportButton" Content="Export XML…" Margin="8,0,0,0"
                     VerticalAlignment="Center" IsEnabled="False" Click="Export_Click" />
         </DockPanel>
 
         <Grid>
             <Grid.ColumnDefinitions>
                 <ColumnDefinition Width="420" MinWidth="240" />
-                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="{StaticResource SplitterSize}" />
                 <ColumnDefinition Width="*" MinWidth="320" />
             </Grid.ColumnDefinitions>
 
@@ -36,34 +36,23 @@
                          TextChanged="Filter_Changed" />
 
                 <TreeView x:Name="ObjectTree" ItemTemplate="{StaticResource ObjectTemplate}"
-                          BorderBrush="#CCC" BorderThickness="1"
+                          BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1"
                           VirtualizingStackPanel.IsVirtualizing="True"
                           VirtualizingStackPanel.VirtualizationMode="Recycling"
                           ScrollViewer.CanContentScroll="True"
                           SelectedItemChanged="ObjectTree_SelectedItemChanged">
                     <TreeView.Resources>
-                        <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
-                            <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                            <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding IsVisible}" Value="False">
-                                    <Setter Property="Visibility" Value="Collapsed" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
+                        <Style TargetType="TreeViewItem" BasedOn="{StaticResource BoundTreeItem}" />
                     </TreeView.Resources>
                 </TreeView>
             </DockPanel>
 
-            <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="Transparent" />
+            <GridSplitter Grid.Column="1" />
 
             <DockPanel Grid.Column="2">
                 <TextBlock x:Name="DetailHeader" DockPanel.Dock="Top" FontWeight="SemiBold"
                            Margin="0,0,0,6" Text="Select an object to see its fields." />
-                <DataGrid x:Name="FieldGrid" AutoGenerateColumns="False" IsReadOnly="True"
-                          HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                          BorderBrush="#CCC" BorderThickness="1" RowHeaderWidth="0"
-                          EnableRowVirtualization="True">
+                <DataGrid x:Name="FieldGrid" BorderThickness="1">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Field" Binding="{Binding Name}" Width="240" />
                         <DataGridTextColumn Header="Type" Binding="{Binding Kind}" Width="90" />

@@ -15,7 +15,7 @@
                     <Expander.Header>
                         <StackPanel Orientation="Horizontal">
                             <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
-                            <Button Content="Remove" Padding="5,0" Margin="8,0,0,0" Click="RemoveComponent_Click"
+                            <Button Content="Remove" Style="{StaticResource DenseButton}" Margin="8,0,0,0" Click="RemoveComponent_Click"
                                     Visibility="{Binding CanRemove, Converter={StaticResource Visible}}"
                                     ToolTip="Removes this component from the instance" />
                         </StackPanel>
@@ -32,7 +32,7 @@
     <StackPanel>
         <ItemsControl ItemsSource="{Binding Sections}" />
         <DockPanel Margin="0,8,0,0">
-            <Button DockPanel.Dock="Right" Content="Add component" Padding="7,2" Margin="6,0,0,0"
+            <Button DockPanel.Dock="Right" Content="Add component" Style="{StaticResource DenseButton}" Margin="6,0,0,0"
                     Click="AddComponent_Click"
                     ToolTip="Adds the chosen component to this instance. Its properties stay at the engine's defaults until edited." />
             <ComboBox x:Name="ComponentToAdd" ItemsSource="{Binding AddableComponents}" IsEditable="True"
