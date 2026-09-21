@@ -73,20 +73,19 @@
         </DataTemplate>
     </UserControl.Resources>
 
-    <DockPanel Margin="6">
-        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8" LastChildFill="False">
-            <TextBlock Text="World:" VerticalAlignment="Center" Margin="0,0,6,0" />
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Style="{StaticResource TabToolbar}" LastChildFill="False">
+            <TextBlock x:Name="StatusText" Style="{StaticResource StatusText}" Text="Pick a world and Load" />
+            <TextBlock Text="World:" Style="{StaticResource ToolbarLabel}" />
             <ComboBox x:Name="WorldPicker" Width="150" VerticalAlignment="Center" IsEnabled="False" />
-            <TextBlock Text="Reads as:" VerticalAlignment="Center" Margin="16,0,6,0" />
+            <TextBlock Text="Reads as:" Style="{StaticResource ToolbarLabel}" Margin="16,0,6,0" />
             <ComboBox x:Name="ProfilePicker" Width="180" VerticalAlignment="Center"
                       SelectedIndex="0" ToolTip="Which binary's library load order to resolve against.">
                 <ComboBoxItem Content="Campaign client (_full)" />
                 <ComboBoxItem Content="Dedicated server (base)" />
             </ComboBox>
             <Button x:Name="LoadButton" Content="Load" Padding="10,5" Margin="16,0,0,0"
-                    IsEnabled="False" Click="Load_Click" />
-            <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="16,0,0,0" Foreground="#666"
-                       Text="Pick a world and Load" />
+                    VerticalAlignment="Center" IsEnabled="False" Click="Load_Click" />
         </DockPanel>
 
         <Grid>
@@ -102,7 +101,7 @@
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
                     <CheckBox x:Name="ShadowedOnly" DockPanel.Dock="Right" Content="Overridden only"
                               VerticalAlignment="Center" Margin="6,0,0,0" Click="Filter_Changed" />
-                    <TextBox x:Name="SearchBox" Padding="4,2" TextChanged="Filter_Changed" />
+                    <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" TextChanged="Filter_Changed" />
                 </DockPanel>
 
                 <TreeView x:Name="ArchetypeTree" ItemTemplate="{StaticResource ArchetypeTemplate}"
@@ -130,8 +129,8 @@
 
             <Border Grid.Column="2" BorderBrush="#CCC" BorderThickness="1">
                 <Grid>
-                    <TextBlock x:Name="EditorPlaceholder" Margin="14" Foreground="#888" TextWrapping="Wrap"
-                               Text="Select an archetype to edit the definition the game actually reads." />
+                    <TextBlock x:Name="EditorPlaceholder" Margin="14" Style="{StaticResource EmptyHint}"
+                               Text="Select an archetype to edit the definition the game reads." />
                     <ContentControl x:Name="EditorHost" />
                 </Grid>
             </Border>

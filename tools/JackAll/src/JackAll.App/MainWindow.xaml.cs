@@ -23,6 +23,9 @@ public partial class MainWindow : Window
     public static readonly RoutedCommand NavigateBackCommand = new();
     public static readonly RoutedCommand NavigateForwardCommand = new();
 
+    private static readonly RoutedCommand CloseDocumentTabCommand = new();
+    private static readonly RoutedCommand SelectTabCommand = new();
+
     public MainWindow()
     {
         InitializeComponent();
@@ -39,6 +42,15 @@ public partial class MainWindow : Window
             NavigateForwardCommand,
             (_, _) => _vm.NavigateForward(),
             (_, e) => e.CanExecute = _vm.CanNavigateForward));
+        CommandBindings.Add(new CommandBinding(CloseDocumentTabCommand, (_, _) => CloseSelectedDocumentTab()));
+        CommandBindings.Add(new CommandBinding(SelectTabCommand, (_, e) => MainTabs.SelectedIndex = (int)e.Parameter));
+
+        InputBindings.Add(new KeyBinding(CloseDocumentTabCommand, Key.W, ModifierKeys.Control));
+        // Ctrl+1..N pick the fixed tabs, the ones before the document divider.
+        for (int i = 0; i < Math.Min(MainTabs.Items.IndexOf(DocumentDivider), 9); i++)
+        {
+            InputBindings.Add(new KeyBinding(SelectTabCommand, Key.D1 + i, ModifierKeys.Control) { CommandParameter = i });
+        }
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

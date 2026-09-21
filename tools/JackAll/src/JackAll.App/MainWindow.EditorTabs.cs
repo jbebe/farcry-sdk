@@ -9,11 +9,12 @@ using JackAll.Core.Vfs;
 using JackAll.Tools.Sav;
 using JackAll.Tools.World;
 using System.Windows.Controls;
+using System.Windows.Input;
 using System.Windows;
 
 namespace JackAll.App;
 
-/// <summary>The editor tabs MainWindow opens next to the three static ones: fragment XML, save-game
+/// <summary>The document tabs MainWindow opens after the fixed ones: fragment XML, save-game
 /// tree, Domino graph, and Magma UI package - each with its own open-or-focus registry.</summary>
 public partial class MainWindow
 {
@@ -40,7 +41,30 @@ public partial class MainWindow
         registry[key] = tab;
         MainTabs.Items.Add(tab);
         MainTabs.SelectedItem = tab;
+        UpdateDocumentDivider();
     }
+
+    /// <summary>Drops a document tab and selects its left neighbour.</summary>
+    private void RemoveTab(TabItem tab, Action onRemoved)
+    {
+        onRemoved();
+        if (MainTabs.SelectedItem == tab)
+        {
+            int left = MainTabs.Items.IndexOf(tab) - 1;
+            MainTabs.SelectedIndex = MainTabs.Items[left] == DocumentDivider ? left - 1 : left;
+        }
+        MainTabs.Items.Remove(tab);
+        UpdateDocumentDivider();
+    }
+
+    /// <summary>Shows the divider only while a document tab follows it.</summary>
+    private void UpdateDocumentDivider()
+        => DocumentDivider.Visibility = MainTabs.Items.IndexOf(DocumentDivider) < MainTabs.Items.Count - 1
+            ? Visibility.Visible
+            : Visibility.Collapsed;
+
+    /// <summary>A document tab keeps its close action in <c>Tag</c>; fixed tabs have none.</summary>
+    private void CloseSelectedDocumentTab() => ((MainTabs.SelectedItem as TabItem)?.Tag as Action)?.Invoke();
 
     // ------------------------------------------------------------ fragment XML editor tabs
 
@@ -185,11 +209,7 @@ public partial class MainWindow
             var tab = new TabItem { Content = view };
             // No dirty-tracking wrapper like the XML and MGB editors get: this tab is read-only, so
             // there is never anything to prompt about on the way out.
-            tab.Header = BuildClosableTabHeader(vm.Title, () =>
-            {
-                onRemoved();
-                MainTabs.Items.Remove(tab);
-            }, out _);
+            tab.Header = BuildClosableTabHeader(tab, vm.Title, () => RemoveTab(tab, onRemoved), out _);
             return tab;
         });
 
@@ -234,7 +254,7 @@ public partial class MainWindow
 
             var view = new MgbTabView(file.FileName, content, bytes => ReplaceGuarded(file, bytes), _vm.ReadByPath);
             var tab = new TabItem { Content = view };
-            tab.Header = BuildClosableTabHeader(view.Title,
+            tab.Header = BuildClosableTabHeader(tab, view.Title,
                 () => CloseMgbEditorTab(tab, view, onRemoved),
                 out TextBlock title);
             view.DirtyChanged += () => title.Text = view.IsDirty ? $"{view.Title} *" : view.Title;
@@ -261,19 +281,23 @@ public partial class MainWindow
             }
         }
 
-        onRemoved();
-        MainTabs.Items.Remove(tab);
+        RemoveTab(tab, onRemoved);
     }
 
     // ------------------------------------------------------------ tab chrome
 
-    /// <summary>Title plus a small "×" close button, since the three static tabs (Mods/Saves/Files) are
-    /// the only ones that don't need one - matches the plain-code-behind tab management above rather
-    /// than pulling in a DataTemplate/ItemsSource restructuring for a TabControl that otherwise stays as
-    /// declared in XAML. <paramref name="titleText"/> comes back out so a caller whose content tracks
-    /// unsaved changes can retitle it; a read-only tab just discards it.</summary>
-    private static FrameworkElement BuildClosableTabHeader(string title, Action onClose, out TextBlock titleText)
+    /// <summary>Title plus a "×" close button; middle-click and Ctrl+W run <paramref name="onClose"/> too.
+    /// <paramref name="titleText"/> comes back out so a caller tracking unsaved changes can retitle it.</summary>
+    private FrameworkElement BuildClosableTabHeader(TabItem tab, string title, Action onClose, out TextBlock titleText)
     {
+        tab.Tag = onClose;
+        tab.MouseDown += (_, e) =>
+        {
+            if (e.ChangedButton != MouseButton.Middle) return;
+            onClose();
+            e.Handled = true;
+        };
+
         titleText = new TextBlock { Text = title, VerticalAlignment = VerticalAlignment.Center, Margin = new Thickness(0, 0, 6, 0) };
         var close = new Button
         {
@@ -283,7 +307,7 @@ public partial class MainWindow
             Margin = new Thickness(0),
             VerticalAlignment = VerticalAlignment.Center,
             Focusable = false,
-            ToolTip = "Close",
+            ToolTip = "Close (Ctrl+W)",
         };
         close.Click += (_, _) => onClose();
 
@@ -297,7 +321,7 @@ public partial class MainWindow
     /// the unsaved-changes prompt its two (fragment and savegame) tab flavours both need.</summary>
     private FrameworkElement BuildClosableTabHeader(TabItem tab, FcbDocumentViewModel vm, Action onRemoved)
     {
-        FrameworkElement header = BuildClosableTabHeader(vm.Title,
+        FrameworkElement header = BuildClosableTabHeader(tab, vm.Title,
             async () => await CloseEditorTabAsync(tab, vm, onRemoved),
             out TextBlock title);
 
@@ -335,7 +359,6 @@ public partial class MainWindow
             }
         }
 
-        onRemoved();
-        MainTabs.Items.Remove(tab);
+        RemoveTab(tab, onRemoved);
     }
 }

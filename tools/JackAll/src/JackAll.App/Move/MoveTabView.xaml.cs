@@ -91,7 +91,7 @@ public partial class MoveTabView : UserControl
             _root.IsExpanded = true;
             ObjectTree.ItemsSource = new[] { _root };
             FieldGrid.ItemsSource = null;
-            DetailHeader.Text = "Select an object to see its fields";
+            DetailHeader.Text = "Select an object to see its fields.";
             ExportButton.IsEnabled = true;
 
             string names = channels is null ? "no channel names beside it" : $"{channels.Count} channels named";

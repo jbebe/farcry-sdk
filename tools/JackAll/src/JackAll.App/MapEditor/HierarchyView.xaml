@@ -24,9 +24,9 @@
     </UserControl.Resources>
 
     <DockPanel>
-        <TextBox DockPanel.Dock="Top" Margin="0,0,0,4"
-                 Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=250}"
-                 ToolTip="Filters by name or archetype" />
+        <TextBox DockPanel.Dock="Top" Margin="0,0,0,4" Style="{StaticResource SearchBox}"
+                 Tag="Filter by name or archetype…"
+                 Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=250}" />
         <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,2">
             <CheckBox Content="Modified only" IsChecked="{Binding ModifiedOnly}" Margin="0,0,10,2"
                       ToolTip="Shows only what this session added, moved, edited or deleted" />

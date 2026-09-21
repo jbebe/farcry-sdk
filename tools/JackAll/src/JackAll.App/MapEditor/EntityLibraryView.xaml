@@ -24,8 +24,8 @@
             <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
                 <TextBlock DockPanel.Dock="Right" Foreground="#888" VerticalAlignment="Center" Margin="8,0,0,0"
                            Text="{Binding CountText}" />
-                <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=250}"
-                         ToolTip="Searches every archetype by its full name" />
+                <TextBox Style="{StaticResource SearchBox}" Tag="Search archetypes by full name…"
+                         Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=250}" />
             </DockPanel>
             <ListBox x:Name="Items" ItemsSource="{Binding Items}" DisplayMemberPath="FullName"
                      VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"

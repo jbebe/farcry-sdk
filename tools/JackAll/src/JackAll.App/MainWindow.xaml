@@ -158,8 +158,10 @@
                         </DockPanel>
                     </Border>
 
-                    <TextBlock DockPanel.Dock="Top" Margin="0,0,0,8" Foreground="#555" TextWrapping="Wrap"
-                               Text="Mods are applied top to bottom - if two of them change the same file, the lower one wins. Workspace (staging are for new mods) always go last." />
+                    <DockPanel DockPanel.Dock="Top" Style="{StaticResource TabToolbar}">
+                        <TextBlock VerticalAlignment="Center" Foreground="#555" TextWrapping="Wrap"
+                                   Text="Mods are applied top to bottom - if two of them change the same file, the lower one wins. Workspace, the staging area for new mods, always goes last." />
+                    </DockPanel>
 
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -231,7 +233,7 @@
                         <!-- ==================== Details sidebar: selected mod's files ==================== -->
                         <Border Grid.Column="2" BorderBrush="#DDD" BorderThickness="1,0,0,0" Padding="12,0,0,0">
                             <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="Pick a mod to see its files." Foreground="#888"
+                                <TextBlock DockPanel.Dock="Top" Text="Select a mod to see its files." Style="{StaticResource EmptyHint}"
                                            Visibility="{Binding NoSelectedMod, Converter={StaticResource BoolToVis}}" />
 
                                 <DockPanel DockPanel.Dock="Top" Visibility="{Binding HasSelectedMod, Converter={StaticResource BoolToVis}}">
@@ -284,6 +286,10 @@
             <!-- ============================= SAVES ============================= -->
             <TabItem Header="Saves">
                 <DockPanel Margin="6">
+                    <DockPanel DockPanel.Dock="Top" Style="{StaticResource TabToolbar}">
+                        <TextBlock Style="{StaticResource StatusText}" Text="{Binding SavesStatus}" />
+                    </DockPanel>
+
                     <Border DockPanel.Dock="Top" Background="#FFF7E0" BorderBrush="#E0C060" BorderThickness="1"
                             Padding="10,8" Margin="0,0,0,8">
                         <TextBlock TextWrapping="Wrap" Foreground="#5A4A00">
@@ -295,8 +301,6 @@
                             <Run Text="That's why modding requires the player to start a new game every time they install a mod that touches .fcb files." />
                         </TextBlock>
                     </Border>
-
-                    <TextBlock DockPanel.Dock="Top" Text="{Binding SavesStatus}" Foreground="#666" Margin="0,0,0,8" />
 
                     <Grid>
                         <Grid.ColumnDefinitions>
@@ -364,7 +368,7 @@
                         <!-- ==================== Details sidebar ==================== -->
                         <Border Grid.Column="2" BorderBrush="#DDD" BorderThickness="1,0,0,0" Padding="12,0,0,0">
                             <DockPanel>
-                                <TextBlock DockPanel.Dock="Top" Text="Pick a save to see its details." Foreground="#888"
+                                <TextBlock DockPanel.Dock="Top" Text="Select a save to see its details." Style="{StaticResource EmptyHint}"
                                            Visibility="{Binding NoSelectedSave, Converter={StaticResource BoolToVis}}" />
 
                                 <StackPanel DockPanel.Dock="Top" Visibility="{Binding HasSelectedSave, Converter={StaticResource BoolToVis}}">
@@ -440,46 +444,25 @@
             <!-- ============================= FILES ============================= -->
             <TabItem Header="Files" x:Name="FilesTabItem">
                 <DockPanel Margin="6">
-                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+                    <DockPanel DockPanel.Dock="Top" Style="{StaticResource TabToolbar}">
                         <CheckBox DockPanel.Dock="Left" Margin="0,0,16,0" Content="Show only mod files"
                                   IsChecked="{Binding OnlyMods}" VerticalAlignment="Center" />
                         <CheckBox DockPanel.Dock="Left" Margin="0,0,16,0" Content="Hide unused game files"
                                   IsChecked="{Binding HideUnused}" VerticalAlignment="Center"
                                   ToolTip="Hides base game files the engine can never open - authoring twins, console leftovers, and the un-stripped development world. Your own edits are never hidden." />
-                        <TextBlock DockPanel.Dock="Left" Text="Filter:" Margin="0,0,6,0" VerticalAlignment="Center" />
-                        <TextBox Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}"
-                                 VerticalAlignment="Center" Padding="4,2">
-                            <!--
-                                WPF's TextBox has no native placeholder property, so the hint is faked
-                                the standard way: swap in a VisualBrush of the hint text as the
-                                Background while empty, and revert to the normal one once there's real
-                                content - the default chrome (border, focus outline) is untouched since
-                                Background is the only thing being swapped.
-                            -->
-                            <TextBox.Style>
-                                <Style TargetType="TextBox">
-                                    <Style.Triggers>
-                                        <Trigger Property="Text" Value="">
-                                            <Setter Property="Background">
-                                                <Setter.Value>
-                                                    <VisualBrush AlignmentX="Left" AlignmentY="Center" Stretch="None">
-                                                        <VisualBrush.Visual>
-                                                            <TextBlock Margin="4,0,0,0" Foreground="#999" FontStyle="Italic">
-                                                                <Run Text="Matches any word - narrow with " />
-                                                                <Run Text="ext:&lt;type&gt;" FontStyle="Normal" FontFamily="Consolas" />
-                                                                <Run Text=", " />
-                                                                <Run Text="arch:&lt;module&gt;" FontStyle="Normal" FontFamily="Consolas" />
-                                                                <Run Text=", " />
-                                                                <Run Text="hash:&lt;hex&gt;" FontStyle="Normal" FontFamily="Consolas" />
-                                                            </TextBlock>
-                                                        </VisualBrush.Visual>
-                                                    </VisualBrush>
-                                                </Setter.Value>
-                                            </Setter>
-                                        </Trigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBox.Style>
+                        <TextBlock DockPanel.Dock="Left" Text="Filter:" Style="{StaticResource ToolbarLabel}" />
+                        <TextBox Style="{StaticResource SearchBox}" VerticalAlignment="Center"
+                                 Text="{Binding FilterText, UpdateSourceTrigger=PropertyChanged}">
+                            <TextBox.Tag>
+                                <TextBlock>
+                                    <Run Text="Matches any word - narrow with " />
+                                    <Run Text="ext:&lt;type&gt;" FontStyle="Normal" FontFamily="Consolas" />
+                                    <Run Text=", " />
+                                    <Run Text="arch:&lt;module&gt;" FontStyle="Normal" FontFamily="Consolas" />
+                                    <Run Text=", " />
+                                    <Run Text="hash:&lt;hex&gt;" FontStyle="Normal" FontFamily="Consolas" />
+                                </TextBlock>
+                            </TextBox.Tag>
                         </TextBox>
                     </DockPanel>
 
@@ -631,7 +614,7 @@
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Bottom" Foreground="#888" TextWrapping="Wrap" FontSize="11"
                                        Margin="0,10,0,0"
-                                       Text="Replacing a file stages it in your workspace. Nothing reaches the game until you press Deploy all mods on the Mods tab." />
+                                       Text="Replacing a file stages it in your workspace. Nothing reaches the game until you press Deploy mods on the Mods tab." />
 
                             <!-- Docked below the preview rather than inside it: references are worth
                                  showing for every selected file, including the ~25% whose type has no
@@ -645,7 +628,7 @@
                                  dead space. -->
                             <StackPanel DockPanel.Dock="Top"
                                         Visibility="{Binding NoSelection, Converter={StaticResource BoolToVis}}">
-                                <TextBlock Text="Nothing selected." Foreground="#888"
+                                <TextBlock Text="Select a file or folder to see its details." Style="{StaticResource EmptyHint}"
                                            Visibility="{Binding NoSelectedFolder, Converter={StaticResource BoolToVis}}" />
 
                                 <StackPanel Visibility="{Binding HasSelectedFolder, Converter={StaticResource BoolToVis}}">
@@ -776,15 +759,18 @@
                 <mapEditor:MapTabView x:Name="MapTab" Margin="6" />
             </TabItem>
 
-            <!-- ============================ LIBRARY ============================ -->
-            <TabItem Header="Library" x:Name="LibraryTabItem">
+            <!-- =========================== ARCHETYPES =========================== -->
+            <TabItem Header="Archetypes" x:Name="LibraryTabItem">
                 <library:LibraryTabView x:Name="LibraryTab" Margin="6" />
             </TabItem>
 
-            <!-- ============================= MOVE ============================== -->
-            <TabItem Header="Move" x:Name="MoveTabItem">
+            <!-- ========================== MOVE GRAPHS ========================== -->
+            <TabItem Header="Move graphs" x:Name="MoveTabItem">
                 <move:MoveTabView x:Name="MoveTab" Margin="6" />
             </TabItem>
+
+            <!-- Document tabs open after this; shown only while one is (see EditorTabs). -->
+            <TabItem x:Name="DocumentDivider" Style="{StaticResource TabDivider}" Visibility="Collapsed" />
         </TabControl>
     </DockPanel>
 </Window>

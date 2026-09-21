@@ -13,16 +13,15 @@
         </HierarchicalDataTemplate>
     </UserControl.Resources>
 
-    <DockPanel Margin="6">
-        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8" LastChildFill="False">
-            <TextBlock Text="Graph:" VerticalAlignment="Center" Margin="0,0,6,0" />
+    <DockPanel>
+        <DockPanel DockPanel.Dock="Top" Style="{StaticResource TabToolbar}" LastChildFill="False">
+            <TextBlock x:Name="StatusText" Style="{StaticResource StatusText}" Text="Pick a graph and Load" />
+            <TextBlock Text="Graph:" Style="{StaticResource ToolbarLabel}" />
             <ComboBox x:Name="GraphPicker" Width="380" VerticalAlignment="Center" IsEnabled="False" />
             <Button x:Name="LoadButton" Content="Load" Padding="10,5" Margin="16,0,0,0"
-                    IsEnabled="False" Click="Load_Click" />
+                    VerticalAlignment="Center" IsEnabled="False" Click="Load_Click" />
             <Button x:Name="ExportButton" Content="Export XML…" Padding="10,5" Margin="8,0,0,0"
-                    IsEnabled="False" Click="Export_Click" />
-            <TextBlock x:Name="StatusText" VerticalAlignment="Center" Margin="16,0,0,0" Foreground="#666"
-                       Text="Pick a graph and Load" />
+                    VerticalAlignment="Center" IsEnabled="False" Click="Export_Click" />
         </DockPanel>
 
         <Grid>
@@ -33,7 +32,7 @@
             </Grid.ColumnDefinitions>
 
             <DockPanel Grid.Column="0">
-                <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Padding="4,2" Margin="0,0,0,6"
+                <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Style="{StaticResource SearchBox}" Margin="0,0,0,6"
                          TextChanged="Filter_Changed" />
 
                 <TreeView x:Name="ObjectTree" ItemTemplate="{StaticResource ObjectTemplate}"
@@ -60,7 +59,7 @@
 
             <DockPanel Grid.Column="2">
                 <TextBlock x:Name="DetailHeader" DockPanel.Dock="Top" FontWeight="SemiBold"
-                           Margin="0,0,0,6" Text="Select an object to see its fields" />
+                           Margin="0,0,0,6" Text="Select an object to see its fields." />
                 <DataGrid x:Name="FieldGrid" AutoGenerateColumns="False" IsReadOnly="True"
                           HeadersVisibility="Column" GridLinesVisibility="Horizontal"
                           BorderBrush="#CCC" BorderThickness="1" RowHeaderWidth="0"

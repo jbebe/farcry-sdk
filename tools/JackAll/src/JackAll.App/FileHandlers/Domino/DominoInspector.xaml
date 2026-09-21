@@ -51,7 +51,7 @@
         <StackPanel x:Name="Root">
             <TextBlock x:Name="EmptyNotice"
                        Text="Select a box on the canvas to inspect it."
-                       FontSize="11" Foreground="#888" TextWrapping="Wrap" Margin="0,4" />
+                       FontSize="11" Style="{StaticResource EmptyHint}" Margin="0,4" />
 
             <StackPanel x:Name="Details" Visibility="Collapsed">
                 <TextBlock x:Name="NodeTitle" FontSize="14" FontWeight="SemiBold" TextWrapping="Wrap" />

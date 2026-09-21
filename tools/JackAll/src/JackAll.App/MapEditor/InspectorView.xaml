@@ -13,9 +13,9 @@
 
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
-            <TextBlock Text="Select an entity in the hierarchy or the viewport." Foreground="#888" TextWrapping="Wrap">
+            <TextBlock Text="Select an entity in the hierarchy or the viewport.">
                 <TextBlock.Style>
-                    <Style TargetType="TextBlock">
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyHint}">
                         <Style.Triggers>
                             <DataTrigger Binding="{Binding HasEntity}" Value="True">
                                 <Setter Property="Visibility" Value="Collapsed" />
@@ -29,9 +29,9 @@
                 <TextBlock Text="{Binding Heading}" FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap" />
                 <TextBlock Text="{Binding Details}" Foreground="#777" TextWrapping="Wrap" Margin="0,2,0,0" />
                 <WrapPanel Margin="0,6,0,4">
-                    <Button Content="Archetype in Library" Padding="7,2" Margin="0,0,6,4" IsEnabled="{Binding CanShowArchetype}"
+                    <Button Content="Open archetype" Padding="7,2" Margin="0,0,6,4" IsEnabled="{Binding CanShowArchetype}"
                             Click="ShowArchetype_Click"
-                            ToolTip="Opens the Library tab on the archetype this entity merges over" />
+                            ToolTip="Opens the Archetypes tab on the archetype this entity merges over" />
                     <Button Content="Open in FCB editor" Padding="7,2" Margin="0,0,6,4" IsEnabled="{Binding CanOpenSector}"
                             Click="OpenSector_Click"
                             ToolTip="Opens this entity's own fragment of its sector file. Not for an unsaved addition, which has no fragment yet." />

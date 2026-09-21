@@ -641,7 +641,7 @@ settle the remainder — only more differential reading against the loadable twi
 
 **JackAll reads and writes MOVE graphs.** `jackall-cli move decode / encode / verify` converts to
 and from [the XML form](#an-editable-xml-form) and checks a graph reads back to itself, and the
-app's **Move tab** browses a graph as the ownership tree it reads back as, labelling criteria with
+app's **Move graphs tab** browses a graph as the ownership tree it reads back as, labelling criteria with
 the channel and enum value they test.
 
 ```
