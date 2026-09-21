@@ -434,20 +434,9 @@ public sealed class ContainerLayout(
     /// <summary>Accepts a bare <c>disEntityId</c> or the fragment id spelling of one, so a layout can
     /// be written by copying a fragment's own filename.</summary>
     private static ulong ParseEntityId(string? text, string where)
-        => TryParseEntityId((text ?? "").Trim(), out ulong id)
+        => FcbFragments.TryParseEntityId((text ?? "").Trim(), out ulong id)
             ? id
             : throw new InvalidDataException($"'{text}' in {where} is not an entity id.");
-
-    private static bool TryParseEntityId(string text, out ulong id)
-    {
-        string canonical = FcbFragments.Canonicalize(text);
-        if (canonical.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
-        {
-            canonical = canonical[..^4];
-        }
-
-        return ulong.TryParse(canonical, NumberStyles.None, CultureInfo.InvariantCulture, out id);
-    }
 
     private static uint? ParsePathId(string? text)
         => text is null

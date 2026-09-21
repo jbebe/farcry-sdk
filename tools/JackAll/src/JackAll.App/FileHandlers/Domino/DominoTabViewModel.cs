@@ -10,7 +10,7 @@ namespace JackAll.App.FileHandlers.Domino;
 /// instead of throwing so a file that doesn't fit the recognized statement shapes (or isn't a `user\`
 /// graph at all) still opens, just without a graph.
 ///
-/// Two things beyond the graph itself get pulled in through <paramref name="readByPath"/>, both
+/// Two things beyond the graph itself get pulled in through <see cref="Services"/>, both
 /// optional and both silently skipped when unavailable: the node type scripts each box refers to (for
 /// pin signatures) and the `*.debug.lua` twin (for the editor's original box and pin names).
 /// </summary>
@@ -23,13 +23,17 @@ public sealed class DominoTabViewModel
     public DominoDebugTwin? Twin { get; }
     public string? ParseError { get; }
 
+    /// <summary>Null when the tab was opened without the rest of JackAll behind it.</summary>
+    public DominoServices? Services { get; }
+
     /// <param name="gamePath">The graph's own game-relative path, used to find its debug twin. Null
     /// when the file didn't come from the VFS.</param>
-    /// <param name="readByPath">Reads any game-relative path's bytes as text, or returns null.</param>
-    public DominoTabViewModel(string title, string sourceText, string? gamePath = null, Func<string, string?>? readByPath = null)
+    public DominoTabViewModel(string title, string sourceText, string? gamePath = null, DominoServices? services = null)
     {
         Title = title;
         SourceText = sourceText;
+        Services = services;
+        Func<string, string?>? readByPath = services is null ? null : services.ReadText;
 
         try
         {

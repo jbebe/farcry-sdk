@@ -245,6 +245,12 @@ public sealed class SpkRecord
     /// <see cref="ImaAdpcm.Decode"/>. Null for any other record type.</summary>
     public byte[]? FlatCopyAudioStream =>
         Core?.Type == SpkRecordType.FlatCopy ? Payload[SpkRecordCore.Size..] : null;
+
+    /// <summary>The IDs this record plays: a composite event's children, else its one link.</summary>
+    public IReadOnlyList<uint> Links =>
+        SimpleFixed68 is { IsComposite: true } composite ? composite.ChildIds
+        : (TransformedFixed128?.FlatCopySiblingId ?? SimpleFixed68?.LinkedId) is { } link ? [link]
+        : [];
 }
 
 /// <summary>

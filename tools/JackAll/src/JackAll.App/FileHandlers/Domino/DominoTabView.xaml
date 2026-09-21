@@ -187,6 +187,7 @@
                                          OutputConnectorTemplate="{StaticResource OutputPortTemplate}"
                                          MinWidth="{Binding Width}"
                                          ToolTip="{Binding Tooltip}"
+                                         MouseDoubleClick="Node_MouseDoubleClick"
                                          Background="{Binding Converter={StaticResource NodeBrush}}"
                                          HeaderBrush="{Binding Converter={StaticResource NodeBrush}}"
                                          ContentBrush="Transparent"
@@ -227,6 +228,15 @@
                             <ComboBoxItem Content="5 hops" />
                         </ComboBox>
                         <TextBlock x:Name="FocusStatus" FontSize="11" Foreground="#666"
+                                   VerticalAlignment="Center" Margin="8,0,0,0" />
+
+                        <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="10,2" />
+
+                        <TextBlock Text="Find" FontSize="11" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBox x:Name="FindBox" Width="150" FontSize="11" VerticalContentAlignment="Center"
+                                 KeyDown="FindBox_KeyDown" TextChanged="FindBox_TextChanged"
+                                 ToolTip="Ctrl+F. Matches box titles, names and parameter values; Enter jumps to the next match." />
+                        <TextBlock x:Name="FindStatus" FontSize="11" Foreground="#666"
                                    VerticalAlignment="Center" Margin="8,0,0,0" />
                     </StackPanel>
                 </Border>
@@ -276,11 +286,11 @@
 
         <GridSplitter Grid.Column="1" Width="4" HorizontalAlignment="Stretch" Background="#DDD" />
 
-        <TabControl Grid.Column="2">
-            <TabItem Header="Inspector">
+        <TabControl Grid.Column="2" x:Name="SideTabs">
+            <TabItem Header="Inspector" x:Name="InspectorTab">
                 <domino:DominoInspector x:Name="Inspector" />
             </TabItem>
-            <TabItem Header="Lua source">
+            <TabItem Header="Lua source" x:Name="LuaTab">
                 <text:TextFileHandler x:Name="SourceView" Extension="lua" />
             </TabItem>
         </TabControl>

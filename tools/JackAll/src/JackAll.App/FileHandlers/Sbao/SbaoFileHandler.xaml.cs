@@ -19,7 +19,6 @@ public partial class SbaoFileHandler : UserControl
     private readonly Action<byte[]> _replaceContent;
     private byte[]? _header;
     private byte[]? _ogg;
-    private string? _tempOggPath;
     private string? _tempWavPath;
 
     public SbaoFileHandler(string fileName, byte[] content, Action<byte[]> replaceContent)
@@ -82,11 +81,7 @@ public partial class SbaoFileHandler : UserControl
 
         try
         {
-            _tempOggPath = Path.Combine(Path.GetTempPath(), $"jackall_sbao_{Guid.NewGuid():N}.ogg");
-            _tempWavPath = Path.ChangeExtension(_tempOggPath, ".wav");
-            await File.WriteAllBytesAsync(_tempOggPath, ogg);
-            await FfmpegAudio.TranscodeToWavAsync(_tempOggPath, _tempWavPath);
-
+            _tempWavPath = await SoundPreview.OggToTempWavAsync(ogg);
             Preview.Open(_tempWavPath);
         }
         catch (Exception ex)
@@ -119,7 +114,7 @@ public partial class SbaoFileHandler : UserControl
         {
             if (asMp3)
             {
-                string tempOgg = Path.Combine(Path.GetTempPath(), $"jackall_sbao_export_{Guid.NewGuid():N}.ogg");
+                string tempOgg = SoundPreview.TempPath(".ogg");
                 try
                 {
                     await File.WriteAllBytesAsync(tempOgg, _ogg);
@@ -127,7 +122,7 @@ public partial class SbaoFileHandler : UserControl
                 }
                 finally
                 {
-                    TryDelete(tempOgg);
+                    SoundPreview.TryDelete(tempOgg);
                 }
             }
             else
@@ -166,7 +161,7 @@ public partial class SbaoFileHandler : UserControl
         }
 
         ImportButton.IsEnabled = false;
-        string tempOgg = Path.Combine(Path.GetTempPath(), $"jackall_sbao_import_{Guid.NewGuid():N}.ogg");
+        string tempOgg = SoundPreview.TempPath(".ogg");
         try
         {
             StatusText.Text += "\n\nTranscoding to 48 kHz stereo Ogg Vorbis…";
@@ -199,33 +194,14 @@ public partial class SbaoFileHandler : UserControl
         }
         finally
         {
-            TryDelete(tempOgg);
+            SoundPreview.TryDelete(tempOgg);
             ImportButton.IsEnabled = true;
         }
     }
 
     private void DeleteTempFiles()
     {
-        TryDelete(_tempOggPath);
-        TryDelete(_tempWavPath);
-        _tempOggPath = null;
+        SoundPreview.TryDelete(_tempWavPath);
         _tempWavPath = null;
-    }
-
-    private static void TryDelete(string? path)
-    {
-        if (path is null)
-        {
-            return;
-        }
-
-        try
-        {
-            File.Delete(path);
-        }
-        catch
-        {
-            // Best-effort cleanup of our own temp scratch files - a lingering one isn't worth surfacing.
-        }
     }
 }

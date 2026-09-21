@@ -64,7 +64,6 @@ namespace JackAll.App.FileHandlers.Spk;
 public partial class SpkFileHandler : UserControl
 {
     private const int PayloadPreviewBytes = 16;
-    private const int FallbackSampleRateHz = 32000; // most common real-install TransformedFixed128 rate
 
     private readonly string _fileName;
     private readonly Action<byte[]> _replaceContent;
@@ -371,10 +370,10 @@ public partial class SpkFileHandler : UserControl
             {
                 ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(audio);
                 int? sampleRate = package.TryGetFlatCopySampleRate(r);
-                int rate = sampleRate ?? FallbackSampleRateHz;
+                int rate = sampleRate ?? SoundPreview.FallbackSampleRateHz;
                 int frames = decoded.Samples.Length / decoded.Channels;
                 string channelLabel = decoded.Channels == 2 ? "Stereo" : "Mono";
-                string rateLabel = sampleRate is { } hz ? $"{hz} Hz" : $"~{FallbackSampleRateHz} Hz (no rate on record)";
+                string rateLabel = sampleRate is { } hz ? $"{hz} Hz" : $"~{SoundPreview.FallbackSampleRateHz} Hz (no rate on record)";
                 return $"{channelLabel} · {rateLabel} · IMA-ADPCM · {FormatTime(TimeSpan.FromSeconds((double)frames / rate))} · {FormatBytes(audio.Length)}{DescribeLengthMismatch(package, r)}";
             }
             catch (Exception ex)
@@ -560,27 +559,9 @@ public partial class SpkFileHandler : UserControl
         ExportAudioButton.IsEnabled = false;
         AudioStatusText.Text = "";
 
-        byte[] stream = record.FlatCopyAudioStream!;
-        string? tempOgg = null;
         try
         {
-            _tempWavPath = Path.Combine(Path.GetTempPath(), $"jackall_spk_{Guid.NewGuid():N}.wav");
-
-            if (SbaoAudio.TryReadVorbisId(stream) is not null)
-            {
-                // Already a complete Ogg Vorbis bitstream (see class remarks) - ffmpeg can transcode
-                // it to wav for preview directly, the same way SbaoFileHandler previews its own Ogg
-                // payload; no codec work of our own needed here.
-                tempOgg = Path.Combine(Path.GetTempPath(), $"jackall_spk_{Guid.NewGuid():N}.ogg");
-                await File.WriteAllBytesAsync(tempOgg, stream);
-                await FfmpegAudio.TranscodeToWavAsync(tempOgg, _tempWavPath);
-            }
-            else
-            {
-                byte[] wav = DecodeImaAdpcmToWav(record, out _);
-                await File.WriteAllBytesAsync(_tempWavPath, wav);
-            }
-
+            _tempWavPath = await SoundPreview.RecordToTempWavAsync(_package!, record);
             AudioPreview.Open(_tempWavPath);
             ExportAudioButton.IsEnabled = true;
         }
@@ -588,19 +569,6 @@ public partial class SpkFileHandler : UserControl
         {
             AudioStatusText.Text = $"Couldn't decode this record's audio: {ex.Message}";
         }
-        finally
-        {
-            TryDelete(tempOgg);
-        }
-    }
-
-    private byte[] DecodeImaAdpcmToWav(SpkRecord record, out int sampleRate)
-    {
-        byte[] stream = record.FlatCopyAudioStream
-            ?? throw new InvalidOperationException("Selected record has no FlatCopy audio stream.");
-        ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(stream);
-        sampleRate = _package?.TryGetFlatCopySampleRate(record) ?? FallbackSampleRateHz;
-        return WavAudio.Write(decoded.Samples, decoded.Channels, sampleRate);
     }
 
     private void ExportAudio_Click(object sender, RoutedEventArgs e)
@@ -635,7 +603,7 @@ public partial class SpkFileHandler : UserControl
             }
             else
             {
-                byte[] wav = DecodeImaAdpcmToWav(record, out int sampleRate);
+                byte[] wav = SoundPreview.ImaAdpcmToWav(_package!, record, out int sampleRate);
                 File.WriteAllBytes(dialog.FileName, wav);
                 AudioStatusText.Text = $"Exported to:\n{dialog.FileName}\n({sampleRate} Hz)";
             }
@@ -669,7 +637,7 @@ public partial class SpkFileHandler : UserControl
         }
 
         ImportAudioButton.IsEnabled = false;
-        string tempBase = Path.Combine(Path.GetTempPath(), $"jackall_spk_import_{Guid.NewGuid():N}");
+        string tempBase = SoundPreview.TempPath("");
         string tempOgg = tempBase + ".ogg";
         string tempWav = tempBase + ".wav";
         try
@@ -690,7 +658,7 @@ public partial class SpkFileHandler : UserControl
             {
                 ImaAdpcm.DecodedAudio currentDecoded = ImaAdpcm.Decode(currentStream);
                 int channels = currentDecoded.Channels;
-                int sampleRate = _package.TryGetFlatCopySampleRate(record) ?? FallbackSampleRateHz;
+                int sampleRate = SoundPreview.SampleRateOf(_package, record);
 
                 AudioStatusText.Text = $"Transcoding to {sampleRate} Hz, {channels}-channel PCM…";
                 await FfmpegAudio.TranscodeToPcmWavAsync(dialog.FileName, tempWav, sampleRate, channels);
@@ -734,8 +702,8 @@ public partial class SpkFileHandler : UserControl
         }
         finally
         {
-            TryDelete(tempOgg);
-            TryDelete(tempWav);
+            SoundPreview.TryDelete(tempOgg);
+            SoundPreview.TryDelete(tempWav);
             ImportAudioButton.IsEnabled = true;
         }
     }
@@ -749,24 +717,7 @@ public partial class SpkFileHandler : UserControl
             return;
         }
 
-        TryDelete(_tempWavPath);
+        SoundPreview.TryDelete(_tempWavPath);
         _tempWavPath = null;
-    }
-
-    private static void TryDelete(string? path)
-    {
-        if (path is null)
-        {
-            return;
-        }
-
-        try
-        {
-            File.Delete(path);
-        }
-        catch
-        {
-            // Best-effort cleanup of our own temp scratch file - a lingering one isn't worth surfacing.
-        }
     }
 }

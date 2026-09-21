@@ -193,10 +193,7 @@ public partial class MainWindow
                 return null;
             }
 
-            // The tab resolves two more things through the VFS: every node type the graph refers to (for
-            // pin signatures) and the graph's own `*.debug.lua` twin (for the editor's original box and pin
-            // names). Both are optional - a null return just means that enrichment is skipped.
-            var vm = new DominoTabViewModel(file.FileName, source, file.NameIsKnown ? file.Path : null, ReadDominoText);
+            var vm = new DominoTabViewModel(file.FileName, source, file.NameIsKnown ? file.Path : null, DominoServices);
             var view = new DominoTabView(vm);
             var tab = new TabItem { Content = view };
             // No dirty-tracking wrapper like the XML and MGB editors get: this tab is read-only, so
@@ -209,21 +206,21 @@ public partial class MainWindow
             return tab;
         });
 
-    /// <summary>Reads a Domino script by its game-relative path, for the node catalog and debug-twin
-    /// lookups. Returns null for anything the VFS can't resolve, which is the normal outcome for a mod
-    /// that references a node type this install doesn't have.</summary>
-    private string? ReadDominoText(string gameRelativePath)
-    {
-        try
+    private DominoServices? _dominoServices;
+
+    private DominoServices DominoServices => _dominoServices ??= new(
+        _vm.ReadByPath,
+        _vm.Read,
+        path => _vm.FindByHash(NameHash.Compute(path)),
+        _vm.ResolveSoundResource,
+        _vm.FindEntityFragment,
+        file =>
         {
-            byte[]? bytes = _vm.ReadByPath(gameRelativePath);
-            return bytes is null ? null : AppText.DecodeUtf8(bytes);
-        }
-        catch (Exception)
-        {
-            return null;
-        }
-    }
+            MainTabs.SelectedItem = FilesTabItem;
+            _vm.NavigateTo(file);
+        },
+        OpenFcbEditorTab,
+        OpenDominoEditorTab);
 
     // ------------------------------------------------------------ mgb package editor tabs
 

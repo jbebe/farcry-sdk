@@ -112,8 +112,22 @@ public sealed class DominoConnectorViewModel : Observable
     /// <summary>What the pin means, from the box description catalog; null when it's self-evident.</summary>
     public string? Note { get; init; }
 
+    /// <summary>The value the box is configured with and what it names in the game, when known.</summary>
+    public string? Value
+    {
+        get => _value;
+        set
+        {
+            _value = value;
+            OnPropertyChanged(nameof(Tooltip));
+        }
+    }
+
+    private string? _value;
+
     public string Tooltip => Kind == PortKind.Data
         ? $"{Name}  —  {DominoTypes.Describe(Type)}"
+          + (Value is null ? "" : $"\n{Value}")
           + (Note is null ? "" : $"\n{Note}")
           + (HasSupplier ? $"\nSupplied through self.{SuppliedByVariable} - click the chip to go to its source." : "")
           + (IsHub ? $"\nRead by {FanOut} boxes; wires are suppressed to keep the graph readable." : "")

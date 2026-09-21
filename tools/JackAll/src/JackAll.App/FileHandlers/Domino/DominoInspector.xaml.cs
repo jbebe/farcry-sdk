@@ -1,5 +1,7 @@
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
+using JackAll.App.Audio;
 using JackAll.Tools.Domino.Graphs;
 using JackAll.Tools.Domino;
 using JackAll.Tools.Domino.Nodes;
@@ -16,18 +18,33 @@ namespace JackAll.App.FileHandlers.Domino;
 /// </summary>
 public partial class DominoInspector : UserControl
 {
-    private sealed record ParamRow(string Name, string Value);
+    private sealed record ParamRow(string Name, string Value, string? Resolved, IReadOnlyList<DominoAction> Actions, ImageSource? Thumbnail)
+    {
+        public bool HasResolved => Resolved is not null;
+    }
 
     private sealed record PinRow(string Direction, string Name, string Detail, string? Note)
     {
         public bool HasNote => Note is not null;
     }
 
-    public DominoInspector() => InitializeComponent();
+    private ReconstructedGraph? _graph;
+    private DominoValueActions? _values;
+    private string? _playing;
+    private int _playRequest;
+
+    public DominoInspector()
+    {
+        InitializeComponent();
+        Unloaded += (_, _) => StopPlayer();
+    }
 
     /// <summary>Fills in the graph-level sections, which don't change with selection.</summary>
-    public void ShowGraph(ReconstructedGraph? graph, DominoDebugTwin? twin, string statusText)
+    /// <param name="values">Resolves and acts on parameter values; null leaves them as plain text.</param>
+    public void ShowGraph(ReconstructedGraph? graph, DominoDebugTwin? twin, string statusText, DominoValueActions? values)
     {
+        _graph = graph;
+        _values = values;
         GraphSummary.Text = graph is null
             ? statusText
             : $"{graph.Nodes.Count} boxes, {graph.Edges.Count} control edges, {graph.DataEdges.Count} data edges"
@@ -52,7 +69,9 @@ public partial class DominoInspector : UserControl
     }
 
     /// <param name="canvas">Supplies the boxes a boundary node feeds.</param>
-    public void ShowNode(DominoNodeViewModel? vm, DominoGraphViewModel? canvas)
+    /// <param name="nodeActions">What can be done with the box as a whole.</param>
+    /// <param name="refs">What the box's parameter values name.</param>
+    public void ShowNode(DominoNodeViewModel? vm, DominoGraphViewModel? canvas, IReadOnlyList<DominoAction> nodeActions, IReadOnlyList<ValueRef> refs)
     {
         // The graph-level sections are the fallback view. Once a box is selected they'd just be noise
         // above the thing actually being inspected.
@@ -76,6 +95,7 @@ public partial class DominoInspector : UserControl
         NodeDescription.Text = node.Signature?.Doc?.Summary;
         NodeDescription.Visibility = NodeDescriptionSource.Visibility =
             node.Signature?.Doc is null ? Visibility.Collapsed : Visibility.Visible;
+        NodeActions.Content = nodeActions;
         NodeTypePath.Text = node.NodeTypePath;
         NodeInstance.Text = vm.Subtitle;
 
@@ -89,16 +109,71 @@ public partial class DominoInspector : UserControl
             _ => string.Empty,
         };
 
-        var parameters = node.Params
-            .OrderBy(p => p.Key, StringComparer.Ordinal)
-            .Select(p => new ParamRow(p.Key, DominoExprPreview.Full(p.Value)))
-            .ToList();
+        var parameters = BuildParamRows(node, refs);
         ParamList.ItemsSource = parameters;
         ParamsHeader.Visibility = parameters.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         var pins = BuildPinRows(node.Signature);
         PinList.ItemsSource = pins;
         PinsHeader.Visibility = pins.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+    }
+
+    private List<ParamRow> BuildParamRows(GraphNode node, IReadOnlyList<ValueRef> refs)
+    {
+        var rows = new List<ParamRow>();
+        foreach ((string pin, var expr) in node.Params.OrderBy(p => p.Key, StringComparer.Ordinal))
+        {
+            ValueRef? value = refs.FirstOrDefault(r => r.Pin == pin);
+            rows.Add(_values is null || _graph is null
+                ? new ParamRow(pin, DominoExprPreview.Full(expr), null, [], null)
+                : new ParamRow(pin, DominoExprPreview.Full(expr), _values.Explain(expr, value, _graph),
+                    value is null ? [] : _values.For(value), value is null ? null : _values.Thumbnail(value)));
+        }
+        return rows;
+    }
+
+    private void Action_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: DominoAction action })
+        {
+            action.Run();
+        }
+    }
+
+    /// <summary>Decodes a sound with <paramref name="makeWav"/> and plays it in the docked player. A
+    /// newer request supersedes one still decoding.</summary>
+    public async void Play(string label, Func<Task<string>> makeWav)
+    {
+        int request = ++_playRequest;
+        StopPlayer();
+        PlayerSection.Visibility = Visibility.Visible;
+        PlayerLabel.Text = label;
+        PlayerStatus.Text = "Decoding…";
+
+        try
+        {
+            string wav = await makeWav();
+            if (request != _playRequest)
+            {
+                SoundPreview.TryDelete(wav);
+                return;
+            }
+            _playing = wav;
+            PlayerStatus.Text = "";
+            Player.Open(wav);
+            Player.Play();
+        }
+        catch (Exception ex) when (request == _playRequest)
+        {
+            PlayerStatus.Text = ex.Message;
+        }
+    }
+
+    private void StopPlayer()
+    {
+        Player.Reset();
+        SoundPreview.TryDelete(_playing);
+        _playing = null;
     }
 
     private static List<PinRow> BuildPinRows(NodeSignature? signature)

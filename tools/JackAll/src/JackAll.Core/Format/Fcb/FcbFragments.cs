@@ -310,6 +310,18 @@ public static class FcbFragments
     public static string EntityFragmentId(ulong disEntityId)
         => disEntityId.ToString(CultureInfo.InvariantCulture) + ".xml";
 
+    /// <summary>The <c>disEntityId</c> a bare or named entity fragment id spells.</summary>
+    public static bool TryParseEntityId(string fragmentId, out ulong id)
+    {
+        string canonical = Canonicalize(fragmentId);
+        if (canonical.EndsWith(".xml", StringComparison.OrdinalIgnoreCase))
+        {
+            canonical = canonical[..^4];
+        }
+
+        return ulong.TryParse(canonical, NumberStyles.None, CultureInfo.InvariantCulture, out id);
+    }
+
     /// <summary>The named form a placed entity's fragment row carries, e.g. <c>Guard_12.2058514756624450165.xml</c>.</summary>
     public static string EntityFragmentId(string hidName, ulong disEntityId)
         => hidName.Length == 0

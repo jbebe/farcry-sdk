@@ -88,4 +88,11 @@ public partial class TextFileHandler : UserControl
         DiffBanner.Visibility = Visibility.Collapsed;
         Text = text;
     }
+
+    /// <summary>Selects a range of the text and scrolls it into view.</summary>
+    public void Select(int start, int length)
+    {
+        Editor.Select(start, length);
+        Editor.ScrollTo(Editor.Document.GetLineByOffset(start).LineNumber, 0);
+    }
 }

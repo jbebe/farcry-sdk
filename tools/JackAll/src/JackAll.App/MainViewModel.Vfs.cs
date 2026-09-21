@@ -26,17 +26,22 @@ public sealed partial class MainViewModel
     /// A sound id is <b>not</b> a path hash, so <see cref="FindByHash"/> can't answer this directly:
     /// bank `0x004bf5e9` lives at a path whose hash is something else entirely. The engine itself
     /// turns the id into a filename (<c>soundbinary\&lt;id:08x&gt;.spk</c>, and the same shape with a
-    /// `.sbao` extension for a streamed object — see the `.spk` docs page's loading pipeline), so
-    /// deriving that path and hashing it is both the correct lookup and one that needs no index built.
+    /// `.sbao` extension for a streamed object, under <c>loc\</c> for a voice line — see the `.spk` docs
+    /// page's loading pipeline), so deriving that path and hashing it is both the correct lookup and one
+    /// that needs no index built.
     ///
     /// The reference index is the fallback, for the minority of ids that name a record *inside* some
     /// other bank rather than a bank of their own — it knows which file defines each id, but only once
     /// the background pass has finished, which is why it isn't the primary route.
     /// </remarks>
     public VfsFile? ResolveSoundResource(uint id)
-        => FindByHash(NameHash.Compute($@"soundbinary\{id:x8}.spk"))
-            ?? FindByHash(NameHash.Compute($@"soundbinary\{id:x8}.sbao"))
+        => SoundPaths(id).Select(path => FindByHash(NameHash.Compute(path))).FirstOrDefault(f => f is not null)
             ?? ResolveReference(RefSpace.SoundResource, id);
+
+    private static IEnumerable<string> SoundPaths(uint id) =>
+        from folder in new[] { "", @"loc\" }
+        from extension in new[] { ".spk", ".sbao" }
+        select $@"soundbinary\{folder}{id:x8}{extension}";
 
     /// <summary>Every resolved path in the merged filesystem - the map editor filters this down to
     /// one world's sector and terrain files rather than probing synthesized paths against the
@@ -87,6 +92,34 @@ public sealed partial class MainViewModel
             f.ContainerHash == containerHash
             && f.FragmentId is not null
             && FcbFragments.IdComparer.Equals(f.FragmentId, fragmentId));
+
+    /// <summary>A placed entity's fragment row, searched across every container by its
+    /// <c>disEntityId</c>. Null until the background fragment pass has reached it.</summary>
+    public VfsFile? FindEntityFragment(ulong entityId)
+    {
+        if (_vfs is null)
+        {
+            return null;
+        }
+        if (_entityIndex is null || !ReferenceEquals(_entityIndexOf, _vfs.Files) || _entityIndexSize != _vfs.Files.Count)
+        {
+            _entityIndexOf = _vfs.Files;
+            _entityIndexSize = _vfs.Files.Count;
+            _entityIndex = [];
+            foreach (VfsFile file in _vfs.Files.Values)
+            {
+                if (file.FragmentId is { } fragment && FcbFragments.TryParseEntityId(System.IO.Path.GetFileName(fragment), out ulong id))
+                {
+                    _entityIndex.TryAdd(id, file);
+                }
+            }
+        }
+        return _entityIndex.GetValueOrDefault(entityId);
+    }
+
+    private Dictionary<ulong, VfsFile>? _entityIndex;
+    private IReadOnlyDictionary<ulong, VfsFile>? _entityIndexOf;
+    private int _entityIndexSize;
 
     /// <summary>What "saving" means for a fragment editor, wherever it was opened from: render the
     /// edited tree and stage it over <paramref name="file"/>.</summary>

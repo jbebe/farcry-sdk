@@ -442,7 +442,7 @@
             </TabItem>
 
             <!-- ============================= FILES ============================= -->
-            <TabItem Header="Files">
+            <TabItem Header="Files" x:Name="FilesTabItem">
                 <DockPanel Margin="6">
                     <DockPanel DockPanel.Dock="Top" Margin="0,0,0,8">
                         <CheckBox DockPanel.Dock="Left" Margin="0,0,16,0" Content="Show only mod files"

@@ -37,6 +37,8 @@ public partial class AudioPreviewPanel : UserControl
         PlayButton.IsEnabled = true;
     }
 
+    public void Play() => Player.Play();
+
     /// <summary>Stops playback, releases the media file, and disables the transport.</summary>
     public void Reset()
     {
