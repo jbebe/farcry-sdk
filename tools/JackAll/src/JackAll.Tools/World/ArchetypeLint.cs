@@ -35,8 +35,7 @@ public static class ArchetypeLint
     /// </summary>
     public static IReadOnlyList<DeadEdit> Run(
         IEnumerable<StagedFragment> staged, IEnumerable<string> knownPaths,
-        Func<string, byte[]?> readByPath, LibraryProfile profile = LibraryProfile.Client,
-        IProgress<string>? progress = null)
+        Func<string, byte[]?> readByPath, IProgress<string>? progress = null)
     {
         List<StagedFragment> edits = [.. staged];
         if (edits.Count == 0)
@@ -51,7 +50,7 @@ public static class ArchetypeLint
 
         foreach (string world in ArchetypeIndex.DiscoverWorlds(paths))
         {
-            ArchetypeLayer libraryBase = ArchetypeIndex.BaseLayer(world, profile);
+            ArchetypeLayer libraryBase = ArchetypeIndex.BaseLayer(world);
             uint baseHash = NameHash.Compute(libraryBase.Path);
             List<StagedFragment> touching = [.. edits.Where(e => e.ContainerHash == baseHash)];
             if (touching.Count == 0)

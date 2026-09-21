@@ -223,7 +223,7 @@ public sealed partial class MainViewModel
     /// changes and the game reads the other copy. Resolved through the merged filesystem, so a layer
     /// that adds an archetype to a later library counts toward the answer.
     /// </summary>
-    public async Task<IReadOnlyList<DeadEdit>> LintArchetypes(LibraryProfile profile = LibraryProfile.Client)
+    public async Task<IReadOnlyList<DeadEdit>> LintArchetypes()
     {
         if (_vfs is null)
         {
@@ -233,7 +233,7 @@ public sealed partial class MainViewModel
         List<StagedFragment> staged = [.. ArchetypeLint.StagedFragmentsOf(Layers)];
         var progress = new Progress<string>(s => Status = s);
         List<string> paths = [.. AllKnownPaths];
-        return await Task.Run(() => ArchetypeLint.Run(staged, paths, ReadByPath, profile, progress));
+        return await Task.Run(() => ArchetypeLint.Run(staged, paths, ReadByPath, progress));
     }
 
     /// <summary>

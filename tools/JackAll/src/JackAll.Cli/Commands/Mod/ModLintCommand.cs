@@ -26,23 +26,12 @@ public sealed class ModLintCommand : CliCommand<ModLintCommand.Settings>
         [CommandOption("-l|--layer <dir>")]
         [Description("A mod layer to check, lowest priority first. Repeatable.")]
         public string[] Layers { get; init; } = [];
-
-        [CommandOption("--profile <client|server>")]
-        [Description("Which binary's library load order to resolve against. Defaults to client.")]
-        public string? Profile { get; init; }
     }
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
         GameInstall install = GameInstall.TryOpen(settings.Game, out string error)
             ?? throw new InvalidOperationException(error);
-
-        LibraryProfile profile = settings.Profile?.ToLowerInvariant() switch
-        {
-            null or "client" => LibraryProfile.Client,
-            "server" => LibraryProfile.Server,
-            _ => throw new InvalidOperationException($"Unknown profile '{settings.Profile}'; use client or server."),
-        };
 
         List<IModLayer> layers = [.. settings.Layers.Select(ModPipeline.OpenLayer)];
         var progress = new SyncProgress(JsonOutput.Report);
@@ -63,7 +52,7 @@ public sealed class ModLintCommand : CliCommand<ModLintCommand.Settings>
         IReadOnlyList<DeadEdit> dead = ArchetypeLint.Run(
             ArchetypeLint.StagedFragmentsOf(layers),
             vfs.Files.Values.Where(f => f.NameIsKnown).Select(f => f.Path),
-            vfs.ReadByPath, profile, progress);
+            vfs.ReadByPath, progress);
 
         return Report(settings, layers, dead);
     }

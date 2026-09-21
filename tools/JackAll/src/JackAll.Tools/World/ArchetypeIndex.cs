@@ -4,16 +4,6 @@ using JackAll.Core.Format.Fcb;
 
 namespace JackAll.Tools.World;
 
-/// <summary>Which binary's library load order to resolve against; they disagree on the base.</summary>
-public enum LibraryProfile
-{
-    /// <summary>Resolves against <c>entitylibrary_full.fcb</c>.</summary>
-    Client,
-
-    /// <summary>Resolves against <c>entitylibrary.fcb</c>; the dedicated server never mentions the full one.</summary>
-    Server,
-}
-
 /// <summary>One library in the chain, at the position the engine loads it.</summary>
 /// <param name="IsConfirmed">False for a layer whose load is only established in the dedicated
 /// server binary, not yet read in <c>Dunia.dll</c>.</param>
@@ -26,7 +16,6 @@ public sealed record ArchetypeLayer(string Path, bool IsConfirmed = true)
         {
             string[] segments = Path.Split('\\', StringSplitOptions.RemoveEmptyEntries);
             string file = segments[^1];
-            if (file.Equals("entitylibrary_full.fcb", StringComparison.OrdinalIgnoreCase)) return "full";
             if (file.Equals("entitylibrarypatchoverride.fcb", StringComparison.OrdinalIgnoreCase)) return "patch";
             if (Path.StartsWith(@"worlds\", StringComparison.OrdinalIgnoreCase)) return "base";
 
@@ -130,7 +119,7 @@ public sealed partial class ArchetypeIndex
         }
     }
 
-    [GeneratedRegex(@"^worlds\\(?<world>[^\\]+)\\generated\\entitylibrary(_full)?\.fcb$", RegexOptions.IgnoreCase)]
+    [GeneratedRegex(@"^worlds\\(?<world>[^\\]+)\\generated\\entitylibrary\.fcb$", RegexOptions.IgnoreCase)]
     private static partial Regex WorldLibraryPattern();
 
     /// <summary>Worlds that ship an entity library, from a curated path list rather than by probing
@@ -168,26 +157,17 @@ public sealed partial class ArchetypeIndex
     /// The libraries a world resolves against, in the order <c>CXGame::LoadArchetypes</c> loads them:
     /// one base, then the patch override, then whatever <c>CDlcService::GetEntityLibraries</c> returns.
     /// </summary>
-    /// <remarks>
-    /// The base is an either/or - the engine branches on a flag and loads one of the two, never both -
-    /// so the patch override wins over whichever was chosen. Which base the flag selects is not
-    /// decoded, hence <paramref name="profile"/> rather than a guess.
-    /// </remarks>
     /// <param name="dlcLibraries">DLC entity libraries the caller found, sorted for determinism; the
     /// engine's own order among them is not established.</param>
-    public static IReadOnlyList<ArchetypeLayer> LayerPaths(
-        string mapName, LibraryProfile profile = LibraryProfile.Server,
-        IEnumerable<string>? dlcLibraries = null)
-        => [BaseLayer(mapName, profile), .. SharedLayers(dlcLibraries)];
+    public static IReadOnlyList<ArchetypeLayer> LayerPaths(string mapName, IEnumerable<string>? dlcLibraries = null)
+        => [BaseLayer(mapName), .. SharedLayers(dlcLibraries)];
 
-    /// <summary>Whichever of the two bases <paramref name="profile"/> selects.</summary>
-    public static ArchetypeLayer BaseLayer(string mapName, LibraryProfile profile)
-        => new(profile == LibraryProfile.Client
-            ? $@"worlds\{mapName}\generated\entitylibrary_full.fcb"
-            : $@"worlds\{mapName}\generated\entitylibrary.fcb");
+    /// <summary>The world's own library; the <c>entitylibrary_full.fcb</c> beside it is never read.</summary>
+    public static ArchetypeLayer BaseLayer(string mapName)
+        => new($@"worlds\{mapName}\generated\entitylibrary.fcb");
 
     /// <summary>
-    /// The layers loading after the base, which every world shares and the profile does not affect.
+    /// The layers loading after the base, which every world shares.
     /// Because an earlier layer can never shadow a later one, resolving just these answers what
     /// overrides an edit to the patch override or a DLC library, for every world at once.
     /// </summary>
@@ -202,8 +182,8 @@ public sealed partial class ArchetypeIndex
 
     public static ArchetypeIndex Load(
         string mapName, Func<string, byte[]?> readByPath, IProgress<string>? progress = null,
-        LibraryProfile profile = LibraryProfile.Server, IEnumerable<string>? dlcLibraries = null)
-        => Load(LayerPaths(mapName, profile, dlcLibraries), readByPath, progress);
+        IEnumerable<string>? dlcLibraries = null)
+        => Load(LayerPaths(mapName, dlcLibraries), readByPath, progress);
 
     public static ArchetypeIndex Load(
         IReadOnlyList<ArchetypeLayer> layers, Func<string, byte[]?> readByPath,

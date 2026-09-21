@@ -52,13 +52,11 @@ public class ArchetypeChainTests
         Assert.NotEmpty(placed);
 
         byte[]? Read(string path) => File.Exists(Path.Combine(ArchiveRoot, path)) ? File.ReadAllBytes(Path.Combine(ArchiveRoot, path)) : null;
-        ArchetypeIndex single = ArchetypeIndex.Load(world, Read, profile: LibraryProfile.Server);
-        ArchetypeIndex full = ArchetypeIndex.Load(world, Read, profile: LibraryProfile.Client);
+        ArchetypeIndex single = ArchetypeIndex.Load(world, Read);
 
         List<string> missing = [.. placed.Where(n => single.Winner(n) is null).Order()];
         Assert.True(missing.Count == 0,
-            $"{missing.Count} of {placed.Count} placed archetypes are not in {world}'s entitylibrary.fcb "
-            + $"({missing.Count(n => full.Winner(n) is not null)} of them are in _full): "
+            $"{missing.Count} of {placed.Count} placed archetypes are not in {world}'s entitylibrary.fcb: "
             + string.Join(", ", missing.Take(20)));
     }
 }

@@ -9,14 +9,13 @@ namespace JackAll.App;
 /// and placed entities by id. Each loads once, until the next reindex.</summary>
 public sealed partial class MainViewModel
 {
-    private readonly Dictionary<(string World, LibraryProfile Profile), Task<ArchetypeIndex>> _archetypeIndexes = [];
+    private readonly Dictionary<string, Task<ArchetypeIndex>> _archetypeIndexes = [];
     private readonly Dictionary<string, Task<IReadOnlyDictionary<ulong, WorldEntity>>> _placedIndexes = [];
 
     /// <summary>The archetypes <paramref name="world"/> resolves against, as the merged filesystem stands now.</summary>
-    public Task<ArchetypeIndex> ArchetypesOf(
-        string world, LibraryProfile profile = LibraryProfile.Server, IProgress<string>? progress = null)
-        => Cached(_archetypeIndexes, (world.ToLowerInvariant(), profile),
-            () => ArchetypeIndex.Load(world, ReadByPath, progress, profile, ArchetypeIndex.DiscoverDlcLibraries(AllKnownPaths)));
+    public Task<ArchetypeIndex> ArchetypesOf(string world, IProgress<string>? progress = null)
+        => Cached(_archetypeIndexes, world.ToLowerInvariant(),
+            () => ArchetypeIndex.Load(world, ReadByPath, progress, ArchetypeIndex.DiscoverDlcLibraries(AllKnownPaths)));
 
     /// <summary>Every entity placed in <paramref name="world"/>'s sectors, by id; empty for an unknown world.</summary>
     public Task<IReadOnlyDictionary<ulong, WorldEntity>> PlacedEntitiesOf(string world)

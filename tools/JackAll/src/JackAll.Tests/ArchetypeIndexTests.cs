@@ -70,7 +70,6 @@ public class ArchetypeIndexTests
     public void Each_layer_gets_a_distinguishing_short_name()
     {
         Assert.Equal("base", new ArchetypeLayer(BasePath).ShortName);
-        Assert.Equal("full", new ArchetypeLayer(@"worlds\world1\generated\entitylibrary_full.fcb").ShortName);
         Assert.Equal("patch", new ArchetypeLayer(PatchPath).ShortName);
         Assert.Equal("dlc1", new ArchetypeLayer(@"downloadcontent\dlc1\generated\entitylibrary.fcb").ShortName);
         Assert.Equal("dlc_jungle", new ArchetypeLayer(@"downloadcontent\dlc_jungle\entitylibrary.fcb").ShortName);
@@ -225,8 +224,7 @@ public class ArchetypeIndexTests
             .First(c => c.Count > 1)[0];
 
         IReadOnlyList<DeadEdit> dead = ArchetypeLint.Run(
-            [new StagedFragment("my-mod", baseHash, shadowed.FragmentId!)], knownPaths, ReadFixture,
-            LibraryProfile.Server);
+            [new StagedFragment("my-mod", baseHash, shadowed.FragmentId!)], knownPaths, ReadFixture);
 
         Assert.Contains(shadowed.Name, dead.Select(d => d.Archetype));
         Assert.All(dead, d => Assert.Equal(PatchPath, d.WinningPath));
@@ -234,7 +232,7 @@ public class ArchetypeIndexTests
 
         IReadOnlyList<DeadEdit> live = ArchetypeLint.Run(
             [new StagedFragment("my-mod", NameHash.Compute(PatchPath), shadowed.FragmentId!)],
-            knownPaths, ReadFixture, LibraryProfile.Server);
+            knownPaths, ReadFixture);
         Assert.Empty(live);
     }
 

@@ -84,9 +84,8 @@ public partial class LibraryTabView : UserControl
         LoadButton.IsEnabled = false;
         try
         {
-            LibraryProfile profile = ProfilePicker.SelectedIndex == 0 ? LibraryProfile.Client : LibraryProfile.Server;
             IProgress<string> progress = new Progress<string>(s => StatusText.Text = s);
-            ArchetypeIndex index = await vm.ArchetypesOf(world, profile, progress);
+            ArchetypeIndex index = await vm.ArchetypesOf(world, progress);
             ArchetypeTreeNode root = await Task.Run(() => ArchetypeTreeNode.Build(index));
 
             _index = index;

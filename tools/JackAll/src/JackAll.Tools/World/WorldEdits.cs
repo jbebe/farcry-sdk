@@ -284,7 +284,7 @@ public static class WorldEditDependencies
 
     /// <summary>The library single-player reads for <paramref name="world"/> - see
     /// docs/docs/engine-internals/entity-instancing.md.</summary>
-    public static string LibraryPathOf(string world) => ArchetypeIndex.BaseLayer(world, LibraryProfile.Server).Path;
+    public static string LibraryPathOf(string world) => ArchetypeIndex.BaseLayer(world).Path;
 
     /// <summary>
     /// The resources <paramref name="meshPaths"/> need listed in <paramref name="world"/>'s depload,

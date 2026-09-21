@@ -76,12 +76,6 @@
             <TextBlock x:Name="StatusText" Style="{StaticResource StatusText}" Text="Pick a world and Load" />
             <TextBlock Text="World:" Style="{StaticResource ToolbarLabel}" />
             <ComboBox x:Name="WorldPicker" Width="150" VerticalAlignment="Center" IsEnabled="False" />
-            <TextBlock Text="Reads as:" Style="{StaticResource ToolbarLabel}" Margin="16,0,6,0" />
-            <ComboBox x:Name="ProfilePicker" Width="180" VerticalAlignment="Center"
-                      SelectedIndex="0" ToolTip="Which binary's library load order to resolve against.">
-                <ComboBoxItem Content="Campaign client (_full)" />
-                <ComboBoxItem Content="Dedicated server (base)" />
-            </ComboBox>
             <Button x:Name="LoadButton" Content="Load" Margin="16,0,0,0"
                     VerticalAlignment="Center" IsEnabled="False" Click="Load_Click" />
         </DockPanel>
