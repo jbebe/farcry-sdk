@@ -30,6 +30,13 @@ public sealed class ArchetypeTreeNode : TreeNodeBase<ArchetypeTreeNode>
     /// is something contested inside it.</summary>
     public bool ContainsShadowed { get; private set; }
 
+    /// <summary>The group rows directly below this one, for a tree that shows folders only.</summary>
+    public IEnumerable<ArchetypeTreeNode> Groups => Children.Where(c => c.FullName is null);
+
+    /// <summary>Every archetype at or below this row.</summary>
+    public IEnumerable<ArchetypeTreeNode> Archetypes()
+        => FullName is null ? Children.SelectMany(c => c.Archetypes()) : [this];
+
     /// <summary>Groups every name in <paramref name="index"/> per <see cref="ArchetypeIndex.SplitForDisplay"/>.</summary>
     public static ArchetypeTreeNode Build(ArchetypeIndex index)
     {

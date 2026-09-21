@@ -203,7 +203,7 @@ public sealed class FcbObjectNodeView : TreeNodeBase<FcbObjectNodeView>
     /// <returns>The dropdown choices per "selXxx" value's name hash, and the resolved type names of
     /// the "enumXxx" child objects that supplied one - <see cref="BuildNode"/> hides exactly those from
     /// the tree, since they're the raw form of what the returned choices already expose.</returns>
-    private static (Dictionary<uint, IReadOnlyList<string>> Choices, HashSet<string> GroupTypeNames) FindEnumChoices(
+    internal static (Dictionary<uint, IReadOnlyList<string>> Choices, HashSet<string> GroupTypeNames) FindEnumChoices(
         FcbObject obj, FcbClass ownClass)
     {
         var choices = new Dictionary<uint, IReadOnlyList<string>>();
@@ -296,7 +296,7 @@ public sealed class FcbObjectNodeView : TreeNodeBase<FcbObjectNodeView>
         Parent?.OnChildContainsChangeFlipped(after);
     }
 
-    private static string? FindIdentifyingText(FcbObject obj, FcbClass ownClass)
+    internal static string? FindIdentifyingText(FcbObject obj, FcbClass ownClass)
     {
         if (obj.Values.TryGetValue(NameFieldHash, out byte[]? nameBytes)
             && FcbValueCodec.TryDecode(FcbMemberType.String, nameBytes, out object nameValue))

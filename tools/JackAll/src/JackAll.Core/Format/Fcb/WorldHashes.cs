@@ -48,6 +48,11 @@ public static class WorldHashes
     public static readonly uint HidMissionLayerPath = FcbClassDefinitions.Crc32Ascii("hidMissionLayerPath");
 
     public static readonly uint CGraphicComponent = FcbClassDefinitions.Crc32Ascii("CGraphicComponent");
+
+    /// <summary>The component every shipped placed instance carries, with its (usually empty) links.</summary>
+    public static readonly uint CEventComponent = FcbClassDefinitions.Crc32Ascii("CEventComponent");
+    public static readonly uint HidLinks = FcbClassDefinitions.Crc32Ascii("hidLinks");
+    public static readonly uint HidHasAliasName = FcbClassDefinitions.Crc32Ascii("hidHasAliasName");
     /// <summary>The .xbg path on a graphics component (or on its per-slot "object" children).</summary>
     public static readonly uint TextObjModel = FcbClassDefinitions.Crc32Ascii("text_objModel");
     /// <summary>The parts of a mesh an entity actually draws, semicolon-delimited. Empty on almost

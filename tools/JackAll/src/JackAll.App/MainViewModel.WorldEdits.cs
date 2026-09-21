@@ -10,9 +10,9 @@ namespace JackAll.App;
 public sealed partial class MainViewModel
 {
     /// <summary>
-    /// Stages every pending paste, move and delete of <paramref name="session"/>, plus what a paste
-    /// needs beyond its sector: its archetype in this world's library and its meshes in this world's
-    /// depload. Returns the number of files staged and one line per file or problem.
+    /// Stages every pending addition, move, edit and delete of <paramref name="session"/>, plus what an
+    /// addition needs beyond its sector: its archetype in this world's library and its meshes in this
+    /// world's depload. Returns the number of files staged and one line per file or problem.
     /// </summary>
     public async Task<(int Staged, IReadOnlyList<string> Report)> SaveWorldEdits(WorldEditSession session)
     {
@@ -41,14 +41,17 @@ public sealed partial class MainViewModel
                 Stage($@"{fragment.ContainerPath}\{fragment.FragmentId}", FcbXml.ToXml(fragment.Node, definitions));
             }
 
-            foreach (IGrouping<string, DeletedEntity> container in deleted.GroupBy(d => d.ContainerPath, StringComparer.OrdinalIgnoreCase))
+            ILookup<string, DeletedEntity> deletes = deleted.ToLookup(d => d.ContainerPath, StringComparer.OrdinalIgnoreCase);
+            ILookup<string, LayerSpec> placements = session.LayerPlacements()
+                .ToLookup(p => p.ContainerPath, p => p.Layer, StringComparer.OrdinalIgnoreCase);
+            foreach (string container in deletes.Select(g => g.Key).Union(placements.Select(g => g.Key), StringComparer.OrdinalIgnoreCase))
             {
-                StageDeletes(workspace, vfs, container.Key, [.. container], Stage, report);
+                StageLayout(workspace, vfs, container, [.. deletes[container]], [.. placements[container]], Stage, report);
             }
 
             string world = session.World.Name;
-            List<CopiedEntity> pastes = [.. session.Pastes];
-            if (pastes.Count == 0)
+            List<CopiedEntity> added = [.. session.Additions];
+            if (added.Count == 0)
             {
                 return;
             }
@@ -72,7 +75,7 @@ public sealed partial class MainViewModel
             }
 
             var meshes = new List<string>();
-            foreach (CopiedEntity paste in pastes)
+            foreach (CopiedEntity paste in added)
             {
                 FcbObject? archetype = paste.ArchetypeName.Length > 0 ? ArchetypeOf(paste) : null;
                 IReadOnlyList<string> own = WorldModels.MeshPaths(paste.Node);
@@ -88,21 +91,21 @@ public sealed partial class MainViewModel
             }
             report.AddRange(unresolved.Select(mesh =>
                 $"{mesh} is in no shipped depload - register it with 'jackall-cli depload add'"));
-
-            session.Saved();
         });
 
+        session.Saved();
         Reindex();
         return (staged, report);
     }
 
     /// <summary>
-    /// Deletes entities from one sector file. An entity the workspace itself added is simply unstaged;
-    /// a retail one is merged into the sector's staged <c>_layout.xml</c> as a delete.
+    /// What one sector file's staged <c>_layout.xml</c> must say: the entities deleted from it and the
+    /// mission layers new entities are filed under. An entity the workspace itself added is simply
+    /// unstaged rather than deleted.
     /// </summary>
-    private static void StageDeletes(
+    private static void StageLayout(
         FolderModLayer workspace, Core.Vfs.GameVfs vfs, string containerPath, IReadOnlyList<DeletedEntity> deleted,
-        Action<string, string> stage, List<string> report)
+        IReadOnlyList<LayerSpec> placements, Action<string, string> stage, List<string> report)
     {
         uint containerHash = NameHash.Compute(containerPath);
         IReadOnlyList<FragmentOverride> staged =
@@ -132,7 +135,7 @@ public sealed partial class MainViewModel
             }
         }
 
-        if (retailDeletes.Count == 0)
+        if (retailDeletes.Count == 0 && placements.Count == 0)
         {
             return;
         }
@@ -142,7 +145,7 @@ public sealed partial class MainViewModel
             ? new ContainerLayout([])
             : ContainerLayout.Parse(AppText.DecodeUtf8(workspace.Read(layout.EntryHash)));
         (ContainerLayout merged, bool conflict) = ContainerLayout.Merge(
-            new ContainerLayout([]), existing, new ContainerLayout([], deleted: retailDeletes));
+            new ContainerLayout([]), existing, new ContainerLayout(placements, deleted: retailDeletes));
         stage($@"{containerPath}\{ContainerLayout.Id}", merged.Render());
         if (conflict)
         {

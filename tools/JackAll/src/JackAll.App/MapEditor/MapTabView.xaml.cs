@@ -1,21 +1,18 @@
-﻿using System.Windows.Controls;
+using System.Windows.Controls;
 using System.Windows.Controls.Primitives;
 using System.Windows.Data;
 using System.Windows.Input;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.MapEditor.Gl;
 using JackAll.Tools.World;
-using OpenTK.Graphics.OpenGL4;
 using OpenTK.Wpf;
 
 namespace JackAll.App.MapEditor;
 
 /// <summary>
-/// The map editor tab: layer list, per-layer context panel, 3D viewport. Currently read-only
-/// terrain (L1) - loading a world streams its 6400 sdat sectors into one heightfield rendered by a
-/// fly camera; each editing phase replaces one layer's mock context with its real panel. GL objects
-/// are created and destroyed only inside <see cref="Viewport_Render"/>, the one place a context is
-/// current.
+/// The map editor tab: hierarchy, 3D viewport, inspector and entity library. The panels are
+/// view-models over the loaded world; this class composes them and owns the viewport. GL objects are
+/// created and destroyed only inside <see cref="Viewport_Render"/>, the one place a context is current.
 /// </summary>
 public partial class MapTabView : UserControl
 {
@@ -29,21 +26,12 @@ public partial class MapTabView : UserControl
         IReadOnlyList<WorldLight> Lights, IReadOnlyList<TriggerVolume> Triggers,
         ArchetypeIndex Archetypes, WorldModelSet Models, WorldEnvironment Environment);
 
-    private sealed record FieldRow(string Name, string Value);
+    private readonly SelectionSet _selection = new();
+    private readonly HierarchyViewModel _hierarchy;
+    private readonly InspectorViewModel _inspector;
+    private readonly EntityLibraryViewModel _library = new();
 
-    private sealed record NearbyRow(WorldEntity Entity, string Name, string Distance);
-
-    /// <summary>One mission layer in the filter list. <see cref="IsVisible"/> is written by its
-    /// checkbox, so it is a settable property rather than a record positional.</summary>
-    private sealed class MissionLayerRow
-    {
-        public required string PathId { get; init; }
-        public required int Count { get; init; }
-        public bool IsVisible { get; set; } = true;
-        public string Display => PathId.Length == 0 ? "(unnamed)" : PathId;
-    }
-
-    /// <summary>The loaded world's unsaved pastes, moves and deletes.</summary>
+    /// <summary>The loaded world's unsaved additions, moves, edits and deletes.</summary>
     private WorldEditSession? _edits;
 
     /// <summary>What Ctrl+V places, and the entity it was copied from so a paste can draw with its
@@ -51,15 +39,9 @@ public partial class MapTabView : UserControl
     private (CopiedEntity Copy, WorldEntity Original)? _clipboard;
 
     private EntityModelLayer? _modelLayer;
-    private WorldEntity? _selectedEntity;
     private List<WorldEntity> _positionedEntities = [];
-    private List<WorldEntity> _visibleEntities = [];
-    private List<MissionLayerRow> _missionLayers = [];
     private bool _markersDirty;
 
-    /// <summary>The Nearby tab's rows, and where the camera stood when Update was last pressed.</summary>
-    private NearbyRow[] _nearby = [];
-    private System.Numerics.Vector3 _nearbyCameraAt;
     private RenderTargets? _targets;
     private PostProcess? _post;
     private ShadowCascades? _cascades;
@@ -75,9 +57,6 @@ public partial class MapTabView : UserControl
     private static readonly OpenTK.Mathematics.Vector3 BackgroundLinear =
         SceneLighting.Linear(BackgroundColour);
 
-    /// <summary>Built once per world; the mission-layer and search filters only change visibility.</summary>
-    private EntityTreeNode? _entityTree;
-
     /// <summary>The model stats line without its live texture-memory suffix.</summary>
     private string _modelStatusText = "";
 
@@ -90,8 +69,8 @@ public partial class MapTabView : UserControl
     /// <summary>Raised for "Archetype in Library" - the host owns cross-tab navigation.</summary>
     public event Action<string, string>? ArchetypeRequested;
 
-    /// <summary>Raised for "Open entity in XML editor", with the sector's game-relative path and the
-    /// entity to open.</summary>
+    /// <summary>Raised for "Open in XML editor", with the sector's game-relative path and the entity
+    /// to open.</summary>
     public event Action<string, ulong>? SectorEditorRequested;
 
     private PendingLoad? _pendingLoad;
@@ -121,12 +100,6 @@ public partial class MapTabView : UserControl
     private readonly Dictionary<EntityCategory, EntityMarkerLayer> _categoryLayers = [];
     private ShapeLayer? _triggerLayer;
     private SkyLayer? _sky;
-    private SelectionBoxLayer? _selectionBox;
-    private TranslateGizmoLayer? _gizmo;
-
-    /// <summary>The arm being dragged, or the one under the cursor when nothing is held.</summary>
-    private GizmoGrab? _grab;
-    private GizmoAxis _hoveredArm = GizmoAxis.None;
 
     private double _frameSeconds;
     private int _frames;
@@ -146,7 +119,6 @@ public partial class MapTabView : UserControl
         var view = new ListCollectionView(LayerCatalog.Layers);
         view.GroupDescriptions.Add(new PropertyGroupDescription(nameof(MapLayer.Group)));
         LayerList.ItemsSource = view;
-        LayerList.SelectedItem = LayerCatalog.Layers[0];
 
         // Layer visibility is what the frame actually reads, so the redraw hangs off the property
         // rather than off the checkbox - code that hides a layer without a click still redraws.
@@ -155,22 +127,44 @@ public partial class MapTabView : UserControl
             layer.PropertyChanged += (_, _) => Viewport.InvalidateVisual();
         }
 
-        // The rest of the tab has no such state to watch, so its controls are caught as routed
-        // events at the root. Checked and Unchecked are not redundant with Click: a box toggled by
+        // The toolbar's other controls have no such state to watch, so they are caught as routed
+        // events on it. Checked and Unchecked are not redundant with Click: a box toggled by
         // anything other than a click - a binding, an automation peer - raises only the former, and
         // with the viewport idle there is no next frame to notice the change on its own.
-        AddHandler(ButtonBase.ClickEvent,
+        Toolbar.AddHandler(ButtonBase.ClickEvent,
             new System.Windows.RoutedEventHandler(Redraw), handledEventsToo: true);
-        AddHandler(ToggleButton.CheckedEvent,
+        Toolbar.AddHandler(ToggleButton.CheckedEvent,
             new System.Windows.RoutedEventHandler(Redraw), handledEventsToo: true);
-        AddHandler(ToggleButton.UncheckedEvent,
+        Toolbar.AddHandler(ToggleButton.UncheckedEvent,
             new System.Windows.RoutedEventHandler(Redraw), handledEventsToo: true);
-        AddHandler(Selector.SelectionChangedEvent,
-            new SelectionChangedEventHandler(Redraw), handledEventsToo: true);
-        AddHandler(Slider.ValueChangedEvent,
+        Toolbar.AddHandler(Slider.ValueChangedEvent,
             new System.Windows.RoutedPropertyChangedEventHandler<double>(Redraw), handledEventsToo: true);
-        AddHandler(TreeView.SelectedItemChangedEvent,
-            new System.Windows.RoutedPropertyChangedEventHandler<object>(Redraw), handledEventsToo: true);
+
+        _hierarchy = new HierarchyViewModel(_selection, () => (System.Numerics.Vector3)_camera.Position);
+        _inspector = new InspectorViewModel(_selection);
+        Hierarchy.DataContext = _hierarchy;
+        Inspector.DataContext = _inspector;
+        Library.DataContext = _library;
+
+        _selection.Changed += Viewport.InvalidateVisual;
+        _hierarchy.VisibleSetChanged += () =>
+        {
+            _markersDirty = true;
+            Viewport.InvalidateVisual();
+        };
+        _inspector.Edited += (entity, moved) =>
+        {
+            _markersDirty |= moved;
+            _hierarchy.RefreshModified([entity]);
+            RefreshSaveButton();
+            Viewport.InvalidateVisual();
+        };
+        Hierarchy.DeleteRequested += DeleteSelected;
+        Hierarchy.PlaceRequested += PlaceAtViewCentre;
+        Inspector.ShowArchetypeRequested += ShowArchetype;
+        Inspector.OpenSectorRequested += OpenSector;
+        Inspector.CopyRequested += CopySelected;
+        Inspector.DeleteRequested += DeleteSelected;
 
         Viewport.Start(new GLWpfControlSettings { MajorVersion = 3, MinorVersion = 3 });
         Viewport.SizeChanged += Redraw;
@@ -227,10 +221,10 @@ public partial class MapTabView : UserControl
                 NavMesh navMesh = WorldNavMesh.Load(map, vm.ReadByPath, progress);
                 IReadOnlyList<WorldLight> lights = WorldLights.Load(world.Entities);
                 IReadOnlyList<TriggerVolume> triggers = WorldTriggers.Load(world.Entities);
-                // Groups the entity tree the way the Library tab groups archetypes, and is what the
-                // "Archetype in Library" jump resolves against.
+                // The library single-player reads, and the one a save stages into - see
+                // docs/docs/engine-internals/entity-instancing.md.
                 ArchetypeIndex archetypes = ArchetypeIndex.Load(
-                    map.Name, vm.ReadByPath, progress, LibraryProfile.Client,
+                    map.Name, vm.ReadByPath, progress, LibraryProfile.Server,
                     ArchetypeIndex.DiscoverDlcLibraries(vm.AllKnownPaths));
                 WorldModelSet models = WorldModels.Load(world.Entities, archetypes, vm.ReadByPath, progress);
                 return new PendingLoad(
@@ -242,6 +236,7 @@ public partial class MapTabView : UserControl
             _pendingLoad = loaded;
             ShowSurfaceLegend(terrain, loaded.Table);
             _archetypes = loaded.Archetypes;
+            _library.Load(loaded.Archetypes);
             ShowEntities(loaded.World, map.SectorsPerSide);
             WorldModelSet models = loaded.Models;
             _modelStatusText =
@@ -249,11 +244,10 @@ public partial class MapTabView : UserControl
                 $"have models ({models.Models.Count:N0} unique meshes" +
                 (models.FailedPathCount > 0 ? $", {models.FailedPathCount:N0} meshes failed" : "") +
                 (models.EntitiesWithoutMesh > 0 ? $", {models.EntitiesWithoutMesh:N0} named none" : "") + ")";
-            ModelStatus.Text = _modelStatusText;
+            LayerCatalog.Entities.Status = _modelStatusText;
             int center = terrain.Side / 2;
             _camera.Position = new OpenTK.Mathematics.Vector3(
                 center, center, terrain.HeightMetersAt(center, center) + 150);
-            PinNearby();
             ViewportHint.Visibility = System.Windows.Visibility.Collapsed;
             StatusText.Text = $"{map.Name}: {map.SectorsPerSide}x{map.SectorsPerSide} sectors, " +
                               $"{terrain.MinHeight / 128f:F0}-{terrain.MaxHeight / 128f:F0} m";
@@ -266,564 +260,16 @@ public partial class MapTabView : UserControl
         }
     }
 
-    private void Viewport_Render(TimeSpan delta)
-    {
-        ShowFrameRate(delta);
-
-        // A viewport that only redraws on demand hands out the whole idle gap as its delta, and
-        // advancing the camera or the clock by seconds at once flings both.
-        float step = MathF.Min((float)delta.TotalSeconds, MaxStep);
-        SceneLighting.Time += step;
-
-        GlDebug.Install();
-
-        // Scoped for the throwing paths below - a shader typo in a lazy layer, a failed world swap.
-        // Leaving a pass framebuffer bound blacks the viewport for the rest of the session.
-        using GlState frame = new();
-        GlState.BeginFrame();
-
-        SyncPresentation();
-
-        if (_pendingLoad is { } pending)
-        {
-            // Swap inside the render callback so GL resources live and die with a context.
-            _pendingLoad = null;
-            _terrainMesh?.Dispose();
-            _heightTexture?.Dispose();
-            _surfaceTexture?.Dispose();
-            _terrainTextures?.Dispose();
-            _waterLayer?.Dispose();
-            _terrain = pending.Terrain;
-            _shapeLayer?.Dispose();
-            _splineLayer?.Dispose();
-            _waterLayer = new WaterLayer(pending.Terrain);
-            _waterLayer.SetVisible(_camera.Position);
-            _shapeLayer = new ShapeLayer(pending.Shapes);
-            _splineLayer = new ShapeLayer(pending.Splines);
-            _vegetationLayer?.Dispose();
-            _vegetationLayer = new EntityMarkerLayer(BuildVegetationMarkers(pending.Vegetation), pending.Vegetation.Count);
-            _vegetationModelLayer?.Dispose();
-            _vegetationModelLayer = new EntityModelLayer(
-                pending.VegetationModels.Models, _vm is { } vegVm ? vegVm.ReadByPath : _ => null,
-                ScatterCapacity(pending.VegetationModels));
-            _vegetationInstances = pending.VegetationModels.Instances;
-            _vegetationDirty = true;
-            _navMeshLayer?.Dispose();
-            _navMeshLayer = new NavMeshLayer(pending.NavMesh);
-            NavMeshStatus.Text = Describe(pending.NavMesh);
-            _lightLayer?.Dispose();
-            _lightLayer = new EntityMarkerLayer(BuildLightMarkers(pending.Lights), pending.Lights.Count);
-            LightStatus.Text = Describe(pending.Lights);
-            // Sized for every positioned entity, because which category an entity lands in is not
-            // known until the model layer has had its pass; the live counts do the real limiting.
-            int categoryCapacity = pending.World.Entities.Count(e => e.Position is not null);
-            foreach (EntityMarkerLayer stale in _categoryLayers.Values)
-            {
-                stale.Dispose();
-            }
-            _categoryLayers.Clear();
-            foreach ((EntityCategory category, _, _, _, _, _) in DrawnCategories)
-            {
-                _categoryLayers[category] = new EntityMarkerLayer(categoryCapacity);
-            }
-            _triggerLayer?.Dispose();
-            _triggerLayer = new ShapeLayer(BuildTriggerOutlines(pending.Triggers));
-            TriggerStatus.Text = Describe(pending.Triggers);
-            _modelLayer?.Dispose();
-            _modelSet = pending.Models;
-            _modelLayer = new EntityModelLayer(
-                pending.Models, _vm is { } modelVm ? modelVm.ReadByPath : _ => null, MarkerColour);
-            _markersDirty = true;
-            _heightTexture = new HeightTexture(pending.Terrain);
-            _surfaceTexture = new SurfaceTypeTexture(pending.Terrain);
-            _terrainTextures = _vm is { } vm
-                ? new TerrainTextureSet(pending.Map, pending.DetailLayers, pending.Table, vm.ReadByPath)
-                : null;
-            _terrainMesh = new TerrainMesh3D(_heightTexture, _surfaceTexture, _terrainTextures);
-            SceneLighting.Fog = pending.Environment;
-            TextureStatus.Text = _terrainTextures is { } set
-                ? $"{set.LayersLoaded} of {pending.Table.Layers.Count} layer textures loaded " +
-                  $"({set.DetailBytes / (1024 * 1024)} MB); blend mask {set.WeightSide}x{set.WeightSide}." +
-                  (set.FailedLayers.Count > 0 ? $" Missing: {string.Join(", ", set.FailedLayers)}." : "")
-                : "No terrain textures loaded.";
-        }
-
-        // The model tiers are keyed to the camera's sector, so crossing a boundary re-buckets the
-        // instance streams the same way a mission-layer toggle does.
-        var sector = ((int)MathF.Floor(_camera.Position.X / WorldModels.SectorMeters),
-            (int)MathF.Floor(_camera.Position.Y / WorldModels.SectorMeters));
-        if (sector != _cameraSector)
-        {
-            _cameraSector = sector;
-            _markersDirty = true;
-            _vegetationDirty = true;
-            _waterLayer?.SetVisible(_camera.Position);
-        }
-
-        if (_vegetationDirty && _vegetationModelLayer is { } vegetationModels)
-        {
-            _vegetationDirty = false;
-            vegetationModels.SetVisible(_vegetationInstances, _camera.Position, DrawRing);
-        }
-
-        // Toggling a mission layer changes which markers exist, so the instance stream is rebuilt
-        // here where a GL context is current rather than on the click.
-        if (_markersDirty)
-        {
-            _markersDirty = false;
-            _modelLayer?.SetVisible(_visibleEntities, _camera.Position, DrawRing);
-            RebuildCategoryMarkers();
-        }
-
-        int width = Viewport.FrameBufferWidth;
-        int height = Viewport.FrameBufferHeight;
-
-        // Collapsed or mid-layout: there is no surface to size the offscreen targets against.
-        if (width <= 0 || height <= 0)
-        {
-            return;
-        }
-
-        GL.Viewport(0, 0, width, height);
-
-        // Nothing loaded yet, so there is no scene to resolve - clear the control's own buffer and
-        // leave, rather than clearing an offscreen one nothing will read. This one is the only clear
-        // that reaches an 8-bit buffer directly, so it takes the colour as authored.
-        if (_terrain is null || _terrainMesh is null)
-        {
-            GL.ClearColor(BackgroundColour.X, BackgroundColour.Y, BackgroundColour.Z, 1f);
-            GL.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
-            return;
-        }
-
-        _targets ??= new RenderTargets();
-        _targets.Resize(width, height, SceneLighting.Demo);
-        _post ??= new PostProcess();
-
-        ApplyFlyKeys(step);
-        float aspect = (float)(Viewport.ActualWidth / Math.Max(Viewport.ActualHeight, 1));
-        OpenTK.Mathematics.Matrix4 viewProjection = _camera.View() * _camera.Projection(aspect);
-
-        SceneLighting.Exposure = (float)ExposureSlider.Value;
-        bool drawEntityModels = LayerCatalog.Entities.IsVisible;
-
-        SceneLighting.Shadows = null;
-        SceneLighting.OcclusionMap = 0;
-        if (SceneLighting.Demo)
-        {
-            SceneLighting.Shadows = DrawShadowMaps(drawEntityModels, aspect);
-            SceneLighting.OcclusionMap = DrawOcclusion(drawEntityModels, viewProjection, aspect);
-        }
-
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.SceneFramebuffer);
-        GL.Viewport(0, 0, width, height);
-
-        GL.ClearColor(BackgroundLinear.X, BackgroundLinear.Y, BackgroundLinear.Z, 1f);
-
-        // The occlusion pass leaves behind the depth its prepass laid down, which is exactly what
-        // the opaque pass tests against - so only the colour needs clearing when it ran.
-        GL.Clear(SceneLighting.OcclusionMap == 0
-            ? ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit
-            : ClearBufferMask.ColorBufferBit);
-
-        if (SceneLighting.Demo)
-        {
-            _sky ??= new SkyLayer();
-            _sky.Draw(viewProjection, _camera.Position);
-        }
-        if (LayerCatalog.Heightmap.IsVisible)
-        {
-            _terrainMesh.Draw(viewProjection, _camera.Position, new TerrainDrawOptions(
-                ShowTextures: LayerCatalog.Textures.IsVisible,
-                TintBySurfaceType: LayerCatalog.SurfaceData.IsVisible,
-                ShowShadow: LayerCatalog.Shadow.IsVisible));
-        }
-
-        // Every opaque surface goes in before the water. The water blends and never writes depth,
-        // so it can only occlude what is already in the depth buffer: drawn first, a boat below
-        // the surface paints straight over it and reads as floating in a hole.
-        if (LayerCatalog.Vegetation.IsVisible)
-        {
-            _vegetationModelLayer?.Draw(viewProjection, _camera.Position);
-        }
-        if (drawEntityModels)
-        {
-            _modelLayer?.Draw(viewProjection, _camera.Position);
-        }
-
-        if (LayerCatalog.Water.IsVisible && _waterLayer is { HasVisibleWater: true })
-        {
-            // The water reads both what is behind it and how far away that is, and a pass cannot
-            // sample an image the draw it is part of is bound to. Depth as well as colour, because
-            // the water is depth-testing against the live buffer while it reads this one. The flat
-            // pane reads neither, so the copy is part of the presentation.
-            if (SceneLighting.Demo)
-            {
-                GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _targets.SceneFramebuffer);
-                GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, _targets.ColourCopyFramebuffer);
-                GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-                    ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit,
-                    BlitFramebufferFilter.Nearest);
-                GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.SceneFramebuffer);
-            }
-
-            _waterLayer.Draw(viewProjection, _camera.Position, _targets);
-        }
-
-        // The scene is complete, so resolve it to a displayable image here. Everything after this
-        // point is an indicator drawn at exactly the colour it was authored in - run a selection box
-        // or a category glyph through the tonemap and it comes back muted.
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets.PresentFramebuffer);
-        _post.Composite(_targets.Colour);
-
-        // Indicators from here on: lines and markers that are meant to read through the water, not
-        // sit under it.
-        if (LayerCatalog.Shapes.IsVisible)
-        {
-            _shapeLayer?.Draw(viewProjection);
-        }
-
-        if (LayerCatalog.Roads.IsVisible)
-        {
-            _splineLayer?.Draw(viewProjection);
-        }
-
-        if (LayerCatalog.Vegetation.IsVisible)
-        {
-            _vegetationLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
-                MarkerStyle.World(2f));
-        }
-
-        if (LayerCatalog.Triggers.IsVisible)
-        {
-            _triggerLayer?.Draw(viewProjection);
-        }
-
-        if (LayerCatalog.Lights.IsVisible)
-        {
-            _lightLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
-                MarkerStyle.World(4f));
-        }
-
-        if (LayerCatalog.NavMesh.IsVisible)
-        {
-            _navMeshLayer?.Draw(viewProjection, _camera.Position, NavMeshSurface.IsChecked == true,
-                NavMeshEdges.IsChecked == true, NavMeshLinks.IsChecked == true);
-        }
-
-        foreach ((EntityCategory category, MarkerGlyph glyph, MapLayer layer, _, _, _) in DrawnCategories)
-        {
-            if (layer.IsVisible && _categoryLayers.TryGetValue(category, out EntityMarkerLayer? markers))
-            {
-                markers.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
-                    MarkerStyle.Screen(glyph, GlyphPixels, (float)Viewport.ActualHeight,
-                        Camera3D.VerticalFovRadians, GlyphMaxDistance));
-            }
-        }
-
-        DrawSelectionBox(viewProjection);
-
-        // Colour only: the control's depth is a 24-bit renderbuffer and the scene's is a 32-bit
-        // float texture, and a depth blit between two formats is an error.
-        GL.BindFramebuffer(FramebufferTarget.ReadFramebuffer, _targets.PresentFramebuffer);
-        GL.BindFramebuffer(FramebufferTarget.DrawFramebuffer, Viewport.Framebuffer);
-        GL.BlitFramebuffer(0, 0, width, height, 0, 0, width, height,
-            ClearBufferMask.ColorBufferBit, BlitFramebufferFilter.Nearest);
-
-        // Keep drawing only while something is still moving. The water is the one thing in the scene
-        // that animates, and only under the presentation. A texture reaches the GPU inside the very
-        // Draw this frame may have skipped, so a layer only counts as streaming while it is drawn -
-        // untick Entities mid-load and waiting on it would spin forever, making no progress.
-        // Otherwise this frame is the one the viewport holds until an input or a control asks again.
-        Viewport.RenderContinuously = _flyKeys.Count > 0 || _looking
-            || (SceneLighting.Demo && LayerCatalog.Water.IsVisible
-                && _waterLayer is { HasVisibleWater: true })
-            || (drawEntityModels && _modelLayer is { Streaming: true })
-            || (LayerCatalog.Vegetation.IsVisible && _vegetationModelLayer is { Streaming: true });
-    }
-
-    /// <summary>The longest step the camera and the water clock will take from one frame. An idle
-    /// viewport can be seconds between frames, and neither is meant to cover that in one go.</summary>
-    private const float MaxStep = 0.1f;
-
-    /// <summary>How far out, in sectors, a model or a scatter placement still draws as geometry.
-    /// The far tier is the presentation's; off it, only the near ring draws.</summary>
-    private static int DrawRing
-        => SceneLighting.Demo ? WorldModels.CoarseRadius : WorldModels.FineRadius;
-
-    /// <summary>
-    /// Takes the Demo checkbox and, when it has moved, everything that follows from it: the draw
-    /// ring changes, so both instance streams are rebuilt, and switching off frees the 64 MB cascade
-    /// array. Read here rather than on the click because that freeing needs a current GL context.
-    /// </summary>
-    private void SyncPresentation()
-    {
-        bool demo = DemoMode.IsChecked == true;
-        if (demo == SceneLighting.Demo)
-        {
-            return;
-        }
-
-        SceneLighting.Demo = demo;
-        _markersDirty = true;
-        _vegetationDirty = true;
-
-        // The occlusion and sky layers own nothing but shader programs, so they are kept: disposing
-        // them would reclaim a few KB and cost three compiles the next time Demo comes back on.
-        if (!demo)
-        {
-            _cascades?.Dispose();
-            _cascades = null;
-        }
-    }
-
-    /// <summary>
-    /// A depth-only pass from the camera, and the occlusion computed off it. The prepass is the same
-    /// <c>DrawDepth</c> the cascades use, pointed at the eye instead of the sun - occlusion has to be
-    /// ready before the surfaces that consume it are shaded, and a forward pass cannot sample a
-    /// depth buffer it is still writing.
-    /// </summary>
-    private int DrawOcclusion(
-        bool drawEntityModels, OpenTK.Mathematics.Matrix4 viewProjection, float aspect)
-    {
-        _occlusion ??= new AmbientOcclusion();
-
-        GL.BindFramebuffer(FramebufferTarget.Framebuffer, _targets!.SceneFramebuffer);
-        GL.Viewport(0, 0, _targets.Width, _targets.Height);
-        GL.Clear(ClearBufferMask.DepthBufferBit);
-        DrawCasters(viewProjection, drawEntityModels);
-
-        return _occlusion.Render(_targets, _camera.Projection(aspect));
-    }
-
-    /// <summary>Everything that writes depth, from one viewpoint. The cascades and the prepass want
-    /// the same set - the only difference between them is where it is seen from.</summary>
-    private void DrawCasters(OpenTK.Mathematics.Matrix4 viewProjection, bool drawEntityModels)
-    {
-        if (LayerCatalog.Heightmap.IsVisible)
-        {
-            _terrainMesh?.DrawDepth(viewProjection, _camera.Position);
-        }
-        if (LayerCatalog.Vegetation.IsVisible)
-        {
-            _vegetationModelLayer?.DrawDepth(viewProjection, _camera.Position);
-        }
-        if (drawEntityModels)
-        {
-            _modelLayer?.DrawDepth(viewProjection, _camera.Position);
-        }
-    }
-
-    /// <summary>
-    /// The sun's depth of the scene, one pass per cascade. The terrain casts as well as receives:
-    /// the lightmap baked into it covers the ground and nothing standing on it, so a hut in a hill's
-    /// shade would stay lit without this.
-    /// </summary>
-    /// <remarks>The bias is entirely in the lookup rather than a polygon offset here, because the
-    /// terrain's own draw sets and clears <c>PolygonOffsetFill</c> for its coarse patch and would
-    /// take an outer one with it.</remarks>
-    private ShadowCascades DrawShadowMaps(bool drawEntityModels, float aspect)
-    {
-        _cascades ??= new ShadowCascades();
-        _cascades.Fit(_camera, aspect);
-
-        for (int cascade = 0; cascade < ShadowCascades.Count; cascade++)
-        {
-            _cascades.BeginCascade(cascade);
-            DrawCasters(_cascades.Matrices[cascade], drawEntityModels);
-        }
-        return _cascades;
-    }
-
-    /// <summary>
-    /// How many placements of one scatter mesh a frame may hold. Sizing to the world's own count is
-    /// what the entity layer does, but the scatter counts differently: world 1 places 794,000 tufts
-    /// of one grass alone, and a buffer for all of them would be 29 MB of the ~1% ever inside the
-    /// draw radius. Anything past the cap in a single ring simply does not draw.
-    /// </summary>
-    private const int MaxScatterPerMesh = 40_000;
-
-    private static int[] ScatterCapacity(ScatterSet scatter)
-    {
-        var capacity = new int[scatter.Models.Count];
-        foreach (ScatterInstance instance in scatter.Instances)
-        {
-            capacity[instance.Model]++;
-        }
-
-        for (int i = 0; i < capacity.Length; i++)
-        {
-            capacity[i] = Math.Min(capacity[i], MaxScatterPerMesh);
-        }
-
-        return capacity;
-    }
-
-    /// <summary>The billboard axes for the 3D view: the camera's own right, and the up that squares
-    /// with it, so every marker layer faces the viewer the same way.</summary>
-    private OpenTK.Mathematics.Vector3 Right() => _camera.Right;
-
-    private OpenTK.Mathematics.Vector3 Up()
-        => OpenTK.Mathematics.Vector3.Cross(_camera.Right, _camera.Forward);
-
-    /// <summary>Outlines the selected entity with the same box picking tests against, so what the
-    /// click targets and what the highlight shows are always the one volume.</summary>
-    private void DrawSelectionBox(OpenTK.Mathematics.Matrix4 viewProjection)
-    {
-        if (_selectedEntity is not { Position: { } position } entity)
-        {
-            return;
-        }
-
-        // A trigger is outlined by its volume, as the Triggers layer draws it. Only the outline: as a
-        // click target, a trigger spanning a town would take every click on the buildings inside it.
-        (System.Numerics.Vector3 min, System.Numerics.Vector3 max) =
-            WorldTriggers.SizeOf(entity) is { } volume ? (volume * -0.5f, volume * 0.5f) : LocalBoundsOf(entity);
-        System.Numerics.Vector3 size = max - min;
-        System.Numerics.Vector3 centre = (min + max) * 0.5f;
-        System.Numerics.Matrix4x4 model =
-            System.Numerics.Matrix4x4.CreateScale(size)
-            * System.Numerics.Matrix4x4.CreateTranslation(centre)
-            * entity.Rotation
-            * System.Numerics.Matrix4x4.CreateTranslation(position);
-
-        _selectionBox ??= new SelectionBoxLayer();
-        _selectionBox.Draw(viewProjection, GlMatrix.From(model), new OpenTK.Mathematics.Vector3(1f, 0.85f, 0.2f));
-
-        _gizmo ??= new TranslateGizmoLayer();
-        _gizmo.Draw(viewProjection, position, GizmoScale(position), _grab?.Axis ?? _hoveredArm);
-    }
-
-    /// <summary>The gizmo's world size where the entity stands, holding it at a constant on-screen
-    /// size. The one definition - hit testing and drawing both go through it, so what lights up under
-    /// the cursor is what a click grabs.</summary>
-    private float GizmoScale(System.Numerics.Vector3 origin)
-        => TranslateGizmo.Scale(
-            origin, ToNumerics(_camera.Position), Camera3D.VerticalFovRadians,
-            (float)Viewport.ActualHeight, GizmoPixels);
-
-    /// <summary>The world ray under a viewport point, in the numerics types the world model uses.</summary>
-    private (System.Numerics.Vector3 Origin, System.Numerics.Vector3 Direction) RayAt(
-        System.Windows.Point point)
-    {
-        (OpenTK.Mathematics.Vector3 origin, OpenTK.Mathematics.Vector3 direction) = _camera.Ray(
-            point.X, point.Y, Viewport.ActualWidth, Math.Max(Viewport.ActualHeight, 1));
-        return (ToNumerics(origin), ToNumerics(direction));
-    }
-
-    private static System.Numerics.Vector3 ToNumerics(OpenTK.Mathematics.Vector3 v)
-        => new(v.X, v.Y, v.Z);
-
-    /// <summary>The arm under a viewport point, or None when the selection has no gizmo to grab.</summary>
-    private GizmoGrab? GrabAt(System.Windows.Point point)
-    {
-        if (!LayerCatalog.Entities.IsVisible || _selectedEntity is not { Position: { } origin })
-        {
-            return null;
-        }
-
-        (System.Numerics.Vector3 rayOrigin, System.Numerics.Vector3 direction) = RayAt(point);
-        return TranslateGizmo.Grab(rayOrigin, direction, origin, GizmoScale(origin));
-    }
-
-    /// <summary>Moves the held entity to where the cursor has dragged its arm.</summary>
-    private void DragTo(System.Windows.Point point)
-    {
-        if (_grab is not { } grab || _selectedEntity is not { } entity)
-        {
-            return;
-        }
-
-        (System.Numerics.Vector3 origin, System.Numerics.Vector3 direction) = RayAt(point);
-        if (TranslateGizmo.Follow(grab, origin, direction) is not { } moved)
-        {
-            return;
-        }
-
-        entity.Position = moved;
-
-        // The instance streams are uploaded from entity positions, so the move shows up by asking
-        // for the same rebuild a mission-layer toggle does.
-        _markersDirty = true;
-        StatusText.Text = $"{entity.Name}  {moved.X:0.00}, {moved.Y:0.00}, {moved.Z:0.00}";
-    }
-
-    /// <summary>Ends a drag, either recording the move for the next save or putting the entity back
-    /// where it was grabbed from.</summary>
-    private void EndDrag(bool revert)
-    {
-        if (_grab is { } grab && _selectedEntity is { } entity && entity.Position != grab.Origin)
-        {
-            if (revert)
-            {
-                entity.Position = grab.Origin;
-                _markersDirty = true;
-            }
-            else
-            {
-                _edits?.Moved(entity);
-                RefreshSaveButton();
-            }
-        }
-
-        _grab = null;
-
-        // Not while the right button still holds it for looking, or the camera loses the mouse
-        // halfway through a turn.
-        if (!_looking)
-        {
-            Viewport.ReleaseMouseCapture();
-        }
-    }
-
-    /// <summary>Averages over a quarter second: a per-frame number is unreadable, and the average is
-    /// the one that matters while judging whether a layer costs anything. Counted only while the
-    /// previous frame had already asked for another - the gap after an idle viewport is how long
-    /// nothing wanted a frame, and averaging it in reports seconds per frame that nobody waited.
-    /// </summary>
-    private void ShowFrameRate(TimeSpan delta)
-    {
-        if (!Viewport.RenderContinuously)
-        {
-            return;
-        }
-
-        _frameSeconds += delta.TotalSeconds;
-        _frames++;
-        if (_frameSeconds < 0.25)
-        {
-            return;
-        }
-
-        FpsText.Text = $"{_frames / _frameSeconds:0} fps";
-        _frameSeconds = 0;
-        _frames = 0;
-
-        string status = _modelStatusText + (_modelLayer is { TextureBytesResident: > 0 } layer
-            ? $" · {layer.TextureBytesResident / 1048576.0:F0} MB textures"
-            : "");
-        if (_modelStatusText.Length > 0 && ModelStatus.Text != status)
-        {
-            ModelStatus.Text = status;
-        }
-    }
-
     /// <summary>Holding shift multiplies the fly speed.</summary>
     private const float SprintFactor = 10f;
 
-    /// <summary>World size of the box that makes a mesh-less entity clickable.</summary>
-    private const float MeshlessPickSize = 3f;
-
-    /// <summary>Floor on each axis of a pick box, so a flat or tiny model is still a target.</summary>
-    private const float MinPickExtent = 0.35f;
-
-    /// <summary>Viewport height the move gizmo holds, whatever it is standing on and however far
-    /// away - a gizmo that shrinks with its entity stops being grabbable well before it stops being
-    /// visible.</summary>
-    private const float GizmoPixels = 110f;
-
     /// <summary>How far above the terrain the camera is held when ground collision is on.</summary>
     private const float GroundClearance = 1f;
+
+    /// <summary>Roughly how many pixels of viewport height a category glyph holds, and how far out
+    /// it is worth drawing one at all.</summary>
+    private const float GlyphPixels = 13f;
+    private const float GlyphMaxDistance = 220f;
 
     private void ApplyFlyKeys(float dt)
     {
@@ -872,28 +318,33 @@ public partial class MapTabView : UserControl
 
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
-        // Escape mid-drag puts the entity back where it was grabbed from.
-        if (e.Key == Key.Escape && _grab is not null)
+        bool viewport = Viewport.IsKeyboardFocused;
+        if (e.Key == Key.Escape && IsDragging)
         {
             EndDrag(revert: true);
             e.Handled = true;
         }
-        else if (Viewport.IsKeyboardFocused && Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.C)
+        else if (viewport && Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.C)
         {
             CopySelected();
             e.Handled = true;
         }
-        else if (Viewport.IsKeyboardFocused && Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.V)
+        else if (viewport && Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.V)
         {
             PasteAt(Mouse.GetPosition(Viewport));
             e.Handled = true;
         }
-        else if (Viewport.IsKeyboardFocused && e.Key == Key.Delete)
+        else if (viewport && e.Key == Key.Delete)
         {
             DeleteSelected();
             e.Handled = true;
         }
-        else if (Viewport.IsKeyboardFocused && e.Key is Key.W or Key.A or Key.S or Key.D or Key.Q or Key.E)
+        else if (viewport && Keyboard.Modifiers == ModifierKeys.None && e.Key is Key.T or Key.R)
+        {
+            (e.Key == Key.T ? MoveMode : RotateMode).IsChecked = true;
+            e.Handled = true;
+        }
+        else if (viewport && e.Key is Key.W or Key.A or Key.S or Key.D or Key.Q or Key.E)
         {
             // Auto-repeat fires this for as long as the key is held, by which point the frame has
             // already asked for continuous redraws - only the first press has to wake it.
@@ -929,16 +380,15 @@ public partial class MapTabView : UserControl
         {
             System.Windows.Point point = e.GetPosition(Viewport);
 
-            // The gizmo gets first refusal on the click: its arms stand in front of the entity they
-            // move, so a click that lands on one must not fall through and reselect what is behind.
-            _grab = GrabAt(point);
-            if (_grab is not null)
+            // The gizmo gets first refusal on the click: it stands in front of the entities it
+            // moves, so a click that lands on it must not fall through and reselect what is behind.
+            if (BeginDrag(point))
             {
                 Viewport.CaptureMouse();
             }
             else
             {
-                PickEntityAt(point);
+                PickAt(point, Keyboard.Modifiers.HasFlag(ModifierKeys.Control));
             }
         }
     }
@@ -951,7 +401,7 @@ public partial class MapTabView : UserControl
             _looking = false;
             Viewport.ReleaseMouseCapture();
         }
-        else if (e.ChangedButton == MouseButton.Left && _grab is not null)
+        else if (e.ChangedButton == MouseButton.Left && IsDragging)
         {
             EndDrag(revert: false);
         }
@@ -960,7 +410,7 @@ public partial class MapTabView : UserControl
     private void Viewport_MouseMove(object sender, MouseEventArgs e)
     {
         System.Windows.Point p = e.GetPosition(Viewport);
-        if (_grab is not null)
+        if (IsDragging)
         {
             DragTo(p);
             Viewport.InvalidateVisual();
@@ -975,12 +425,10 @@ public partial class MapTabView : UserControl
             return;
         }
 
-        // A plain hover changes nothing unless it moves onto or off a gizmo arm, and redrawing the
+        // A plain hover changes nothing unless it moves onto or off a gizmo handle, and redrawing the
         // scene for every mouse move across the viewport is the cost this mode exists to avoid.
-        GizmoAxis hovered = GrabAt(p)?.Axis ?? GizmoAxis.None;
-        if (hovered != _hoveredArm)
+        if (HoverGizmo(p))
         {
-            _hoveredArm = hovered;
             Viewport.InvalidateVisual();
         }
     }
@@ -1006,17 +454,6 @@ public partial class MapTabView : UserControl
         }
     }
 
-    private void LayerList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (LayerList.SelectedItem is not MapLayer layer)
-            return;
-        ContextTitle.Text = layer.Name;
-        ContextReadiness.Text = layer.Readiness.ToUpperInvariant();
-        ContextSummary.Text = layer.Summary;
-        ContextControls.ItemsSource = layer.Controls;
-        UpdateSurfaceLegendVisibility();
-    }
-
     private sealed record SurfaceLegendRow(System.Windows.Media.Brush Swatch, string Label, string Coverage);
 
     /// <summary>
@@ -1040,581 +477,17 @@ public partial class MapTabView : UserControl
                     $"{100.0 * entry.Samples / total:F1}%");
             })
             .ToList();
-        UpdateSurfaceLegendVisibility();
     }
 
     private void ShowEntities(Fc2World world, int sectorsPerSide)
     {
         _edits = new WorldEditSession(world, sectorsPerSide);
-        ClearSelection();
-        _grab = null;
-        _hoveredArm = GizmoAxis.None;
+        _inspector.Session = _edits;
+        _inspector.Archetypes = _archetypes;
+        CancelDrag();
+        _selection.Clear();
         _positionedEntities = [.. world.Entities.Where(e => e.Position is not null)];
-
-        _missionLayers = [.. _positionedEntities
-            .GroupBy(e => e.LayerPathId)
-            .Select(g => new MissionLayerRow { PathId = g.Key, Count = g.Count() })
-            .OrderByDescending(r => r.Count)];
-        MissionLayerList.ItemsSource = _missionLayers;
         EntitySetChanged();
-    }
-
-    /// <summary>Rebuilds what the viewport and list show from the ticked mission layers.</summary>
-    private void ApplyMissionLayerFilter()
-    {
-        HashSet<string> visible = [.. _missionLayers.Where(r => r.IsVisible).Select(r => r.PathId)];
-        _visibleEntities = [.. _positionedEntities.Where(e => visible.Contains(e.LayerPathId))];
-        _markersDirty = true;
-        RefreshNearby();
-        ApplyEntityFilter();
-    }
-
-    private void MissionLayerToggle_Click(object sender, System.Windows.RoutedEventArgs e) =>
-        ApplyMissionLayerFilter();
-
-    private void MissionLayersAll_Click(object sender, System.Windows.RoutedEventArgs e) =>
-        SetAllMissionLayers(_ => true);
-
-    private void MissionLayersMain_Click(object sender, System.Windows.RoutedEventArgs e) =>
-        SetAllMissionLayers(row => row.PathId.Equals("main", StringComparison.OrdinalIgnoreCase));
-
-    private void SetAllMissionLayers(Func<MissionLayerRow, bool> visible)
-    {
-        foreach (MissionLayerRow row in _missionLayers)
-        {
-            row.IsVisible = visible(row);
-        }
-        MissionLayerList.ItemsSource = null;
-        MissionLayerList.ItemsSource = _missionLayers;
-        ApplyMissionLayerFilter();
-    }
-
-    /// <summary>The glyph, layer toggle and colour each drawn category gets. Categories a dedicated
-    /// layer already owns are absent, which is what keeps a light from being drawn twice.</summary>
-    private static readonly (EntityCategory Category, MarkerGlyph Glyph, MapLayer Layer, float R, float G, float B)[]
-        DrawnCategories =
-        [
-            (EntityCategory.Event, MarkerGlyph.Diamond, LayerCatalog.EventNodes, 0.55f, 0.60f, 0.70f),
-            (EntityCategory.Ai, MarkerGlyph.Cone, LayerCatalog.AiPoints, 0.45f, 0.75f, 0.55f),
-            (EntityCategory.Entrance, MarkerGlyph.Doorway, LayerCatalog.Entrances, 0.85f, 0.70f, 0.35f),
-            (EntityCategory.Emitter, MarkerGlyph.Burst, LayerCatalog.Emitters, 0.80f, 0.50f, 0.75f),
-        ];
-
-    /// <summary>Roughly how many pixels of viewport height a category glyph holds, and how far out
-    /// it is worth drawing one at all.</summary>
-    private const float GlyphPixels = 13f;
-    private const float GlyphMaxDistance = 220f;
-
-    /// <summary>Refills each category layer from the entities the model layer could not draw. Runs
-    /// only on a marker rebuild, so it costs nothing per frame.</summary>
-    private void RebuildCategoryMarkers()
-    {
-        if (_modelSet is not { } models || _categoryLayers.Count == 0)
-        {
-            return;
-        }
-
-        var byCategory = new Dictionary<EntityCategory, List<WorldEntity>>();
-        foreach (WorldEntity entity in _visibleEntities)
-        {
-            if (models.ModelIndicesByEntity.ContainsKey(entity))
-            {
-                continue;
-            }
-
-            EntityCategory category = WorldEntityCategories.Of(entity.Node);
-            if (category.HasOwnLayer())
-            {
-                continue;
-            }
-
-            if (!byCategory.TryGetValue(category, out List<WorldEntity>? bucket))
-            {
-                byCategory[category] = bucket = [];
-            }
-            bucket.Add(entity);
-        }
-
-        foreach ((EntityCategory category, _, _, float r, float g, float b) in DrawnCategories)
-        {
-            if (!_categoryLayers.TryGetValue(category, out EntityMarkerLayer? layer))
-            {
-                continue;
-            }
-
-            List<WorldEntity> entities = byCategory.GetValueOrDefault(category) ?? [];
-            var stream = new float[Math.Max(1, entities.Count) * EntityMarkerLayer.Stride];
-            for (int i = 0; i < entities.Count; i++)
-            {
-                System.Numerics.Vector3 position = entities[i].Position!.Value;
-                int at = i * EntityMarkerLayer.Stride;
-                stream[at] = position.X;
-                stream[at + 1] = position.Y;
-                stream[at + 2] = position.Z;
-                stream[at + 3] = r;
-                stream[at + 4] = g;
-                stream[at + 5] = b;
-            }
-            layer.SetInstances(stream, entities.Count);
-        }
-    }
-
-    /// <summary>Model tint keyed to the archetype, so the same kind of object reads the same everywhere.</summary>
-    private static (byte R, byte G, byte B) MarkerColour(WorldEntity entity)
-        => SurfaceTypeTexture.ColourFor((byte)(StableHash(entity.ArchetypeName) & 0x7F));
-
-    /// <summary>One marker per plant, coloured by the resource it instantiates so a species reads
-    /// the same across the map.</summary>
-    private static float[] BuildVegetationMarkers(IReadOnlyList<VegetationInstance> vegetation)
-    {
-        var stream = new float[vegetation.Count * EntityMarkerLayer.Stride];
-        for (int i = 0; i < vegetation.Count; i++)
-        {
-            VegetationInstance plant = vegetation[i];
-            (byte r, byte g, byte b) = SurfaceTypeTexture.ColourFor((byte)(plant.ResourceId & 0x7F));
-            int at = i * EntityMarkerLayer.Stride;
-            stream[at] = plant.Position.X;
-            stream[at + 1] = plant.Position.Y;
-            stream[at + 2] = plant.Position.Z;
-            stream[at + 3] = r / 255f;
-            stream[at + 4] = g / 255f;
-            stream[at + 5] = b / 255f;
-        }
-        return stream;
-    }
-
-    /// <summary>Each trigger box as its twelve edges: the two rectangles plus the four uprights.
-    /// Reusing the polyline layer keeps this to line data rather than a renderer of its own.</summary>
-    private static List<WorldShape> BuildTriggerOutlines(IReadOnlyList<TriggerVolume> triggers)
-    {
-        var outlines = new List<WorldShape>(triggers.Count * 6);
-        foreach (TriggerVolume trigger in triggers)
-        {
-            System.Numerics.Vector3[] c = trigger.Corners();
-            string kind = trigger.Enabled ? "trigger" : "trigger-off";
-
-            outlines.Add(new WorldShape(kind, trigger.Name, "box", [c[0], c[1], c[3], c[2], c[0]]));
-            outlines.Add(new WorldShape(kind, trigger.Name, "box", [c[4], c[5], c[7], c[6], c[4]]));
-            for (int i = 0; i < 4; i++)
-            {
-                outlines.Add(new WorldShape(kind, trigger.Name, "box", [c[i], c[i + 4]]));
-            }
-        }
-        return outlines;
-    }
-
-    private static string Describe(NavMesh mesh) => mesh.NodeCount == 0
-        ? "No navmesh in this map."
-        : $"{mesh.NodeCount:N0} triangles, {mesh.Vertices.Length:N0} vertices and " +
-          $"{mesh.LinkCount:N0} links across {mesh.SectorCount:N0} sectors.";
-
-    private static string Describe(IReadOnlyList<TriggerVolume> triggers)
-    {
-        if (triggers.Count == 0)
-        {
-            return "No proximity triggers in this map.";
-        }
-
-        int off = triggers.Count(t => !t.Enabled);
-        int rotated = triggers.Count(t => t.Yaw != 0);
-        return $"{triggers.Count:N0} proximity triggers; {rotated:N0} rotated" +
-               (off > 0 ? $", {off:N0} start disabled." : ".") +
-               " vectorSize is drawn as the box's full extent, centred on the entity - neither is " +
-               "confirmed from the engine.";
-    }
-
-    /// <summary>One marker per light in its own emitted colour, dimmed hard when the light ships
-    /// disabled so the two read apart at a glance.</summary>
-    private static float[] BuildLightMarkers(IReadOnlyList<WorldLight> lights)
-    {
-        var stream = new float[lights.Count * EntityMarkerLayer.Stride];
-        for (int i = 0; i < lights.Count; i++)
-        {
-            WorldLight light = lights[i];
-            float dim = light.Enabled ? 1f : 0.2f;
-            int at = i * EntityMarkerLayer.Stride;
-            stream[at] = light.Position.X;
-            stream[at + 1] = light.Position.Y;
-            stream[at + 2] = light.Position.Z;
-            stream[at + 3] = light.Colour.X * dim;
-            stream[at + 4] = light.Colour.Y * dim;
-            stream[at + 5] = light.Colour.Z * dim;
-        }
-        return stream;
-    }
-
-    private static string Describe(IReadOnlyList<WorldLight> lights)
-    {
-        if (lights.Count == 0)
-        {
-            return "No lights in this map.";
-        }
-
-        int spots = lights.Count(l => l.IsSpot);
-        int off = lights.Count(l => !l.Enabled);
-        return $"{lights.Count:N0} lights: {lights.Count - spots:N0} omni, {spots:N0} spot" +
-               (off > 0 ? $"; {off:N0} start disabled." : ".");
-    }
-
-    private static uint StableHash(string text)
-    {
-        uint hash = 2166136261;
-        foreach (char c in text)
-        {
-            hash = (hash ^ c) * 16777619;
-        }
-        return hash;
-    }
-
-    private void EntitySearch_TextChanged(object sender, System.Windows.Controls.TextChangedEventArgs e) =>
-        ApplyEntityFilter();
-
-    private void ApplyEntityFilter()
-    {
-        if (_entityTree is null)
-        {
-            return;
-        }
-
-        HashSet<string> layers = [.. _missionLayers.Where(r => r.IsVisible).Select(r => r.PathId)];
-        int shown = EntityTreeNode.ApplyFilter(_entityTree, EntitySearch.Text.Trim(), layers);
-
-        EntityCount.Text = shown == _positionedEntities.Count
-            ? $"{_positionedEntities.Count:N0} entities"
-            : $"{shown:N0} of {_positionedEntities.Count:N0} entities";
-    }
-
-    /// <summary>Moves the Nearby tab's centre to where the camera is now.</summary>
-    private void PinNearby()
-    {
-        _nearbyCameraAt = ToNumerics(_camera.Position);
-        RefreshNearby();
-    }
-
-    /// <summary>Lists the entities within the range slider of the pinned spot, nearest first. A changed
-    /// range or mission layer rebuilds it around that spot, not around the camera.</summary>
-    private void RefreshNearby()
-    {
-        // The slider's initial value raises its event before the list is built.
-        if (NearbyList is null)
-        {
-            return;
-        }
-
-        float range = (float)NearbyRange.Value;
-        _nearby = [.. _visibleEntities
-            .Select(e => (Entity: e, Distance: System.Numerics.Vector3.Distance(e.Position!.Value, _nearbyCameraAt)))
-            .Where(c => c.Distance <= range)
-            .OrderBy(c => c.Distance)
-            .Select(c => new NearbyRow(c.Entity, EntityTreeNode.LabelOf(c.Entity), $"{c.Distance:F1} m"))];
-        NearbyList.ItemsSource = _nearby;
-        ShowInNearby(_selectedEntity);
-    }
-
-    private void NearbyRange_ValueChanged(object sender, System.Windows.RoutedPropertyChangedEventArgs<double> e)
-        => RefreshNearby();
-
-    private void UpdateNearby_Click(object sender, System.Windows.RoutedEventArgs e) => PinNearby();
-
-    private void ShowInNearby(WorldEntity? entity)
-        => NearbyList.SelectedItem = Array.Find(_nearby, row => ReferenceEquals(row.Entity, entity));
-
-    private void NearbyList_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        if (NearbyList.SelectedItem is NearbyRow row && !ReferenceEquals(row.Entity, _selectedEntity))
-        {
-            SelectAndReveal(row.Entity);
-        }
-    }
-
-    /// <summary>Selects an entity picked outside the tree, and shows its row in the tree too.</summary>
-    private void SelectAndReveal(WorldEntity entity)
-    {
-        Select(entity);
-        if (_entityTree is not null)
-        {
-            EntityTreeNode.Reveal(_entityTree, entity);
-        }
-    }
-
-    private void EntityTree_SelectedItemChanged(
-        object sender, System.Windows.RoutedPropertyChangedEventArgs<object> e)
-    {
-        if (e.NewValue is EntityTreeNode { Entity: { } entity })
-        {
-            Select(entity);
-        }
-    }
-
-    private void Select(WorldEntity entity)
-    {
-        _selectedEntity = entity;
-        ShowInNearby(entity);
-        EntityHeading.Text = $"{entity.Name}  ({entity.LayerPathId})";
-
-        // A standalone entity names no archetype, and three quarters of a world is standalone.
-        ShowArchetypeButton.IsEnabled =
-            entity.ArchetypeName.Length > 0 && _archetypes?.Winner(entity.ArchetypeName) is not null;
-        // An unsaved paste has no fragment to open yet.
-        OpenSectorButton.IsEnabled = !entity.IsNew;
-        CopyButton.IsEnabled = true;
-        DeleteButton.IsEnabled = true;
-
-        JackAll.Core.Format.Fcb.FcbClassDefinitions defs = FcbDefinitionsProvider.Value.Value;
-        JackAll.Core.Format.Fcb.FcbClass entityClass = defs.GetClass(entity.Node.TypeHash);
-        var rows = new List<FieldRow>
-        {
-            new("sector", entity.HomeSector.SectorId.ToString()),
-            new("disEntityId", entity.Id.ToString()),
-        };
-        foreach ((uint hash, byte[] value) in entity.Node.Values)
-        {
-            rows.Add(new FieldRow(entityClass.FindMember(hash)?.Name ?? $"{hash:X8}", Describe(value)));
-        }
-        foreach (IGrouping<uint, JackAll.Core.Format.Fcb.FcbObject> group in
-            entity.Node.Children.GroupBy(c => c.TypeHash))
-        {
-            string name = defs.GetClass(group.Key).Name ?? $"{group.Key:X8}";
-            rows.Add(new FieldRow("component", group.Count() > 1 ? $"{name} x{group.Count()}" : name));
-        }
-        EntityFields.ItemsSource = rows;
-    }
-
-    /// <summary>Best-effort decode for display: the shapes that actually occur on entity fields.</summary>
-    private static string Describe(byte[] value)
-    {
-        if (value.Length > 1 && value[^1] == 0 &&
-            value.Take(value.Length - 1).All(b => b >= 32 && b < 127))
-        {
-            return System.Text.Encoding.ASCII.GetString(value, 0, value.Length - 1);
-        }
-        return value.Length switch
-        {
-            1 => value[0].ToString(),
-            4 => $"{BitConverter.ToInt32(value)}  ({BitConverter.ToSingle(value):0.###})",
-            8 => BitConverter.ToUInt64(value).ToString(),
-            12 => $"{BitConverter.ToSingle(value, 0):0.##}, {BitConverter.ToSingle(value, 4):0.##}, {BitConverter.ToSingle(value, 8):0.##}",
-            _ => Convert.ToHexString(value.Take(16).ToArray()) + (value.Length > 16 ? "..." : ""),
-        };
-    }
-
-    /// <summary>Local-space extent of what an entity draws: the union of its models, or a box the
-    /// size of <see cref="MeshlessPickSize"/> for the mesh-less ones so they stay clickable.</summary>
-    private (System.Numerics.Vector3 Min, System.Numerics.Vector3 Max) LocalBoundsOf(WorldEntity entity)
-    {
-        var half = new System.Numerics.Vector3(MeshlessPickSize * 0.5f);
-        if (_modelSet is not { } set || !set.ModelIndicesByEntity.TryGetValue(entity, out int[]? models))
-        {
-            return (-half, half);
-        }
-
-        var min = new System.Numerics.Vector3(float.MaxValue);
-        var max = new System.Numerics.Vector3(float.MinValue);
-        foreach (int index in models)
-        {
-            min = System.Numerics.Vector3.Min(min, set.Models[index].LocalMin);
-            max = System.Numerics.Vector3.Max(max, set.Models[index].LocalMax);
-        }
-
-        // A model whose bake produced nothing, and any axis too thin to hit, still needs a target.
-        if (min.X > max.X)
-        {
-            return (-half, half);
-        }
-
-        for (int axis = 0; axis < 3; axis++)
-        {
-            if (max[axis] - min[axis] < MinPickExtent)
-            {
-                float centre = (min[axis] + max[axis]) * 0.5f;
-                min[axis] = centre - MinPickExtent * 0.5f;
-                max[axis] = centre + MinPickExtent * 0.5f;
-            }
-        }
-
-        return (min, max);
-    }
-
-    /// <summary>Slab test; returns the near hit distance along the ray, or null when it misses. A
-    /// ray starting inside the box counts as a hit at zero.</summary>
-    private static float? RayHitsBox(
-        System.Numerics.Vector3 origin, System.Numerics.Vector3 direction,
-        System.Numerics.Vector3 min, System.Numerics.Vector3 max)
-    {
-        float near = 0f, far = float.MaxValue;
-        for (int axis = 0; axis < 3; axis++)
-        {
-            float o = origin[axis], d = direction[axis];
-            float lo = axis == 0 ? min.X : axis == 1 ? min.Y : min.Z;
-            float hi = axis == 0 ? max.X : axis == 1 ? max.Y : max.Z;
-            if (MathF.Abs(d) < 1e-6f)
-            {
-                if (o < lo || o > hi)
-                {
-                    return null;
-                }
-                continue;
-            }
-
-            float t1 = (lo - o) / d, t2 = (hi - o) / d;
-            if (t1 > t2)
-            {
-                (t1, t2) = (t2, t1);
-            }
-
-            near = MathF.Max(near, t1);
-            far = MathF.Min(far, t2);
-            if (near > far)
-            {
-                return null;
-            }
-        }
-
-        return near;
-    }
-
-    /// <summary>
-    /// Picks the entity whose drawn volume the click ray enters first. Testing the real bounds rather
-    /// than the projected origin is what makes a model clickable anywhere on its body, and taking the
-    /// nearest hit along the ray means the thing in front wins instead of whatever happens to project
-    /// closest to the cursor.
-    /// </summary>
-    private void PickEntityAt(System.Windows.Point point)
-    {
-        if (_visibleEntities.Count == 0)
-        {
-            return;
-        }
-
-        (System.Numerics.Vector3 origin, System.Numerics.Vector3 direction) = RayAt(point);
-
-        WorldEntity? best = null;
-        float bestDistance = float.MaxValue;
-        foreach (WorldEntity entity in _visibleEntities)
-        {
-            if (entity.Position is not { } position)
-            {
-                continue;
-            }
-
-            // Into the entity's own space rather than growing its box to fit the world axes, so a
-            // rotated building is no easier to miss than an unrotated one.
-            System.Numerics.Matrix4x4 inverse = System.Numerics.Matrix4x4.Transpose(entity.Rotation);
-            System.Numerics.Vector3 localOrigin =
-                System.Numerics.Vector3.Transform(origin - position, inverse);
-            System.Numerics.Vector3 localDirection =
-                System.Numerics.Vector3.Transform(direction, inverse);
-
-            (System.Numerics.Vector3 min, System.Numerics.Vector3 max) = LocalBoundsOf(entity);
-            if (RayHitsBox(localOrigin, localDirection, min, max) is { } distance && distance < bestDistance)
-            {
-                bestDistance = distance;
-                best = entity;
-            }
-        }
-
-        if (best is not null)
-        {
-            SelectAndReveal(best);
-        }
-    }
-
-    private void ShowArchetype_Click(object sender, System.Windows.RoutedEventArgs e)
-    {
-        if (_selectedEntity is { ArchetypeName.Length: > 0 } entity && _pendingLoad is { } loaded)
-        {
-            ArchetypeRequested?.Invoke(loaded.Map.Name, entity.ArchetypeName);
-        }
-    }
-
-    private void OpenSector_Click(object sender, System.Windows.RoutedEventArgs e)
-    {
-        if (_selectedEntity is { } entity)
-        {
-            SectorEditorRequested?.Invoke(entity.HomeSector.SourcePath, entity.Id);
-        }
-    }
-
-    private void Copy_Click(object sender, System.Windows.RoutedEventArgs e) => CopySelected();
-
-    private void Delete_Click(object sender, System.Windows.RoutedEventArgs e) => DeleteSelected();
-
-    private void CopySelected()
-    {
-        if (_selectedEntity is not { } entity || _edits is null)
-        {
-            return;
-        }
-
-        try
-        {
-            _clipboard = (CopiedEntity.Of(entity, _edits.World.Name), entity);
-            StatusText.Text = $"Copied {entity.Name} - Ctrl+V in the viewport places it under the cursor";
-        }
-        catch (InvalidOperationException ex)
-        {
-            StatusText.Text = ex.Message;
-        }
-    }
-
-    private void PasteAt(System.Windows.Point point)
-    {
-        if (_clipboard is not { } clip || _edits is null)
-        {
-            return;
-        }
-        if (TerrainUnder(point) is not { } ground)
-        {
-            StatusText.Text = "Point the cursor at the ground to paste";
-            return;
-        }
-
-        WorldEntity pasted;
-        try
-        {
-            pasted = _edits.Paste(clip.Copy, ground);
-        }
-        catch (InvalidOperationException ex)
-        {
-            StatusText.Text = ex.Message;
-            return;
-        }
-
-        // Copied from another world, the original has no meshes here and the paste stays a marker
-        // until a save and reload bakes it.
-        if (_modelLayer?.AddCopy(pasted, clip.Original) is { } models)
-        {
-            _modelSet!.ModelIndicesByEntity[pasted] = models;
-        }
-        _positionedEntities.Add(pasted);
-        EntitySetChanged();
-        Select(pasted);
-        EntityTreeNode.Reveal(_entityTree!, pasted);
-        StatusText.Text = $"Pasted {pasted.Name} into sector {pasted.HomeSector.SectorId}";
-    }
-
-    private void DeleteSelected()
-    {
-        if (_selectedEntity is not { } entity || _edits is null)
-        {
-            return;
-        }
-
-        _edits.Delete(entity);
-        _positionedEntities.Remove(entity);
-        ClearSelection();
-        EntitySetChanged();
-        StatusText.Text = $"Deleted {entity.Name}";
-    }
-
-    /// <summary>The inverse of <see cref="Select"/>: nothing picked, so nothing to act on.</summary>
-    private void ClearSelection()
-    {
-        _selectedEntity = null;
-        NearbyList.SelectedItem = null;
-        EntityHeading.Text = "";
-        EntityFields.ItemsSource = null;
-        ShowArchetypeButton.IsEnabled = OpenSectorButton.IsEnabled = CopyButton.IsEnabled = DeleteButton.IsEnabled = false;
     }
 
     private void RefreshSaveButton() => SaveButton.IsEnabled = _edits is { IsDirty: true };
@@ -1622,44 +495,14 @@ public partial class MapTabView : UserControl
     /// <summary>Refreshes everything listing the world's entities after one is added or removed.</summary>
     private void EntitySetChanged()
     {
-        _entityTree = EntityTreeNode.Build(_positionedEntities, _archetypes!);
-        EntityTree.ItemsSource = _entityTree.Children;
-        ApplyMissionLayerFilter();
+        if (_edits is null || _archetypes is null)
+        {
+            return;
+        }
+        _hierarchy.Rebuild(_positionedEntities, _edits.Deleted, _archetypes, _edits.IsModified);
         RefreshSaveButton();
         Viewport.InvalidateVisual();
     }
-
-    /// <summary>Where the ray under a viewport point first reaches the ground, or null when it
-    /// leaves the map without doing so.</summary>
-    private System.Numerics.Vector3? TerrainUnder(System.Windows.Point point)
-    {
-        if (_terrain is not { } terrain)
-        {
-            return null;
-        }
-
-        (System.Numerics.Vector3 origin, System.Numerics.Vector3 direction) = RayAt(point);
-        for (float t = 0f; t < PasteReach; t += PasteStep)
-        {
-            System.Numerics.Vector3 at = origin + direction * t;
-            int x = (int)MathF.Round(at.X), y = (int)MathF.Round(at.Y);
-            if (x < 0 || y < 0 || x >= terrain.Side || y >= terrain.Side)
-            {
-                continue;
-            }
-
-            float ground = terrain.HeightMetersAt(x, y);
-            if (at.Z <= ground)
-            {
-                return new System.Numerics.Vector3(at.X, at.Y, ground);
-            }
-        }
-        return null;
-    }
-
-    /// <summary>How far, and in what steps, a paste looks along the cursor ray for the ground.</summary>
-    private const float PasteReach = 2000f;
-    private const float PasteStep = 0.25f;
 
     private async void Save_Click(object sender, System.Windows.RoutedEventArgs e)
     {
@@ -1673,6 +516,7 @@ public partial class MapTabView : UserControl
         {
             (int staged, IReadOnlyList<string> report) = await _vm.SaveWorldEdits(edits);
             StatusText.Text = $"Staged {staged} files into the workspace";
+            EntitySetChanged();
             System.Windows.MessageBox.Show(System.Windows.Window.GetWindow(this),
                 string.Join('\n', report), "Map edits saved");
         }
@@ -1682,34 +526,5 @@ public partial class MapTabView : UserControl
             System.Windows.MessageBox.Show(System.Windows.Window.GetWindow(this), ex.Message, "JackAll",
                 System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
         }
-    }
-
-    private void UpdateSurfaceLegendVisibility()
-    {
-        SurfaceLegend.Visibility =
-            ReferenceEquals(LayerList.SelectedItem, LayerCatalog.SurfaceData) && SurfaceLegendRows.ItemsSource is not null
-                ? System.Windows.Visibility.Visible
-                : System.Windows.Visibility.Collapsed;
-        TexturePanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Textures)
-            ? System.Windows.Visibility.Visible
-            : System.Windows.Visibility.Collapsed;
-        NavMeshPanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.NavMesh)
-            ? System.Windows.Visibility.Visible
-            : System.Windows.Visibility.Collapsed;
-        LightPanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Lights)
-            ? System.Windows.Visibility.Visible
-            : System.Windows.Visibility.Collapsed;
-        TriggerPanel.Visibility = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Triggers)
-            ? System.Windows.Visibility.Visible
-            : System.Windows.Visibility.Collapsed;
-
-        // Entities take over the whole context column rather than sitting under the mock text.
-        bool entities = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.Entities);
-        bool missions = ReferenceEquals(LayerList.SelectedItem, LayerCatalog.MissionLayers);
-        EntityPanel.Visibility = entities ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
-        MissionLayerPanel.Visibility = missions ? System.Windows.Visibility.Visible : System.Windows.Visibility.Collapsed;
-        ContextInfo.Visibility = entities || missions
-            ? System.Windows.Visibility.Collapsed
-            : System.Windows.Visibility.Visible;
     }
 }

@@ -5,10 +5,11 @@ using OpenTK.Mathematics;
 namespace JackAll.App.MapEditor.Gl;
 
 /// <summary>
-/// Draws the move gizmo's three arms. One unit arrow along +Z lives in the buffer and each arm is a
-/// rotation of it, so the whole gizmo is three draws of the same geometry.
+/// Draws a gizmo's three handles: the move gizmo's arrows or the rotate gizmo's rings. One handle
+/// built around +Z lives in the buffer and each axis is a rotation of it, so the whole gizmo is three
+/// draws of the same geometry.
 /// </summary>
-public sealed class TranslateGizmoLayer : IDisposable
+public sealed class GizmoLayer : IDisposable
 {
     /// <summary>Where the shaft starts and stops, and where the head widens, along a unit arm.</summary>
     private const float ShaftStart = 0.08f;
@@ -16,6 +17,9 @@ public sealed class TranslateGizmoLayer : IDisposable
     private const float ShaftRadius = 0.018f;
     private const float HeadRadius = 0.07f;
     private const int Sides = 10;
+
+    /// <summary>How many segments make a ring's circle.</summary>
+    private const int RingSegments = 64;
 
     private static readonly Vector3 Highlight = new(1f, 0.92f, 0.4f);
 
@@ -27,10 +31,16 @@ public sealed class TranslateGizmoLayer : IDisposable
     private readonly int _uModel;
     private readonly int _uTint;
 
-    public TranslateGizmoLayer()
+    private GizmoLayer(List<Vector3> triangles)
     {
-        float[] arrow = UnitArrow();
-        _vertexCount = arrow.Length / 3;
+        _vertexCount = triangles.Count;
+        var floats = new float[triangles.Count * 3];
+        for (int i = 0; i < triangles.Count; i++)
+        {
+            floats[i * 3] = triangles[i].X;
+            floats[i * 3 + 1] = triangles[i].Y;
+            floats[i * 3 + 2] = triangles[i].Z;
+        }
 
         _program = new ShaderProgram(
             """
@@ -54,21 +64,21 @@ public sealed class TranslateGizmoLayer : IDisposable
         GL.BindVertexArray(_vao);
         _vbo = GL.GenBuffer();
         GL.BindBuffer(BufferTarget.ArrayBuffer, _vbo);
-        GL.BufferData(BufferTarget.ArrayBuffer, arrow.Length * sizeof(float), arrow,
+        GL.BufferData(BufferTarget.ArrayBuffer, floats.Length * sizeof(float), floats,
             BufferUsageHint.StaticDraw);
         GL.EnableVertexAttribArray(0);
         GL.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, 3 * sizeof(float), 0);
         GL.BindVertexArray(0);
     }
 
-    /// <summary>A shaft, a cone and the cap under it, as a triangle list along +Z of unit length.</summary>
-    private static float[] UnitArrow()
+    /// <summary>The move gizmo: a shaft, a cone and the cap under it, along +Z of unit length.</summary>
+    public static GizmoLayer Arrows()
     {
         var vertices = new List<Vector3>();
         for (int side = 0; side < Sides; side++)
         {
-            (float cosA, float sinA) = Turn(side);
-            (float cosB, float sinB) = Turn(side + 1);
+            (float cosA, float sinA) = Turn(side, Sides);
+            (float cosB, float sinB) = Turn(side + 1, Sides);
 
             Vector3 shaftA = new(cosA * ShaftRadius, sinA * ShaftRadius, 0f);
             Vector3 shaftB = new(cosB * ShaftRadius, sinB * ShaftRadius, 0f);
@@ -80,21 +90,40 @@ public sealed class TranslateGizmoLayer : IDisposable
             Add(vertices, headA + Along(ShaftEnd), headB + Along(ShaftEnd), Along(1f));
             Add(vertices, headB + Along(ShaftEnd), headA + Along(ShaftEnd), Along(ShaftEnd));
         }
-
-        var floats = new float[vertices.Count * 3];
-        for (int i = 0; i < vertices.Count; i++)
-        {
-            floats[i * 3] = vertices[i].X;
-            floats[i * 3 + 1] = vertices[i].Y;
-            floats[i * 3 + 2] = vertices[i].Z;
-        }
-
-        return floats;
+        return new GizmoLayer(vertices);
     }
 
-    private static (float Cos, float Sin) Turn(int side)
+    /// <summary>The rotate gizmo: a thin tube round the unit circle in the plane square to +Z, in the
+    /// same basis <see cref="RotateGizmo"/> measures its angles in.</summary>
+    public static GizmoLayer Rings()
     {
-        float angle = MathHelper.TwoPi * side / Sides;
+        var vertices = new List<Vector3>();
+        for (int segment = 0; segment < RingSegments; segment++)
+        {
+            (float cosA, float sinA) = Turn(segment, RingSegments);
+            (float cosB, float sinB) = Turn(segment + 1, RingSegments);
+            for (int side = 0; side < Sides; side++)
+            {
+                (float cosS, float sinS) = Turn(side, Sides);
+                (float cosT, float sinT) = Turn(side + 1, Sides);
+                Vector3 a0 = OnTube(cosA, sinA, cosS, sinS), a1 = OnTube(cosA, sinA, cosT, sinT);
+                Vector3 b0 = OnTube(cosB, sinB, cosS, sinS), b1 = OnTube(cosB, sinB, cosT, sinT);
+                Add(vertices, a0, b0, b1);
+                Add(vertices, a0, b1, a1);
+            }
+        }
+        return new GizmoLayer(vertices);
+
+        static Vector3 OnTube(float cosRing, float sinRing, float cosTube, float sinTube)
+        {
+            float reach = 1f + (cosTube * ShaftRadius);
+            return new Vector3(cosRing * reach, sinRing * reach, sinTube * ShaftRadius);
+        }
+    }
+
+    private static (float Cos, float Sin) Turn(int step, int steps)
+    {
+        float angle = MathHelper.TwoPi * step / steps;
         return (MathF.Cos(angle), MathF.Sin(angle));
     }
 
@@ -108,12 +137,12 @@ public sealed class TranslateGizmoLayer : IDisposable
     }
 
     /// <summary>
-    /// The three arms at <paramref name="origin"/>, sized so the gizmo holds its screen size, with
+    /// The three handles at <paramref name="origin"/>, sized so the gizmo holds its screen size, with
     /// <paramref name="active"/> lit up.
     /// </summary>
     /// <remarks>
-    /// Depth testing and culling both stay off while this draws: an arm you cannot see because the
-    /// entity's own model swallows it is an arm you cannot grab, and the arrow is not wound for
+    /// Depth testing and culling both stay off while this draws: a handle you cannot see because the
+    /// entity's own model swallows it is a handle you cannot grab, and the geometry is not wound for
     /// culling. Culling is put back the way it was found rather than simply switched on - the rest of
     /// the map draws with it off, and leaving it on turns every mesh in the world inside out.
     /// </remarks>

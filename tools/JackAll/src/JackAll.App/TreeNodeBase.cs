@@ -27,20 +27,20 @@ public abstract class TreeNodeBase<T> : INotifyPropertyChanged
     public bool IsExpanded
     {
         get => _isExpanded;
-        set { if (_isExpanded == value) return; _isExpanded = value; OnPropertyChanged(); }
+        set => Set(ref _isExpanded, value);
     }
 
     public bool IsSelected
     {
         get => _isSelected;
-        set { if (_isSelected == value) return; _isSelected = value; OnPropertyChanged(); }
+        set => Set(ref _isSelected, value);
     }
 
     /// <summary>Drives the row's <c>Visibility</c> - see <see cref="ApplyFilter"/>.</summary>
     public bool IsVisible
     {
         get => _isVisible;
-        set { if (_isVisible == value) return; _isVisible = value; OnPropertyChanged(); }
+        set => Set(ref _isVisible, value);
     }
 
     protected void AddChild(T child)
@@ -86,4 +86,14 @@ public abstract class TreeNodeBase<T> : INotifyPropertyChanged
 
     protected void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+
+    protected void Set(ref bool field, bool value, [CallerMemberName] string? name = null)
+    {
+        if (field == value)
+        {
+            return;
+        }
+        field = value;
+        OnPropertyChanged(name);
+    }
 }

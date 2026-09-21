@@ -6,7 +6,7 @@
 
     <DockPanel>
         <!-- Deploy stays disabled; the patch is built from the main window as for any other edit. -->
-        <Border DockPanel.Dock="Top" Padding="0,0,0,6">
+        <Border x:Name="Toolbar" DockPanel.Dock="Top" Padding="0,0,0,6">
             <DockPanel>
                 <TextBlock x:Name="StatusText" DockPanel.Dock="Right" VerticalAlignment="Center"
                            Foreground="#555" Text="Waiting for the game archives to load" />
@@ -18,8 +18,83 @@
                             Click="Load_Click" />
                     <Button x:Name="SaveButton" Content="Save" IsEnabled="False" Padding="12,3" Margin="0,0,4,0"
                             Click="Save_Click"
-                            ToolTip="Stages the pasted, moved and deleted entities into your workspace, with the archetypes and depload entries a paste needs" />
+                            ToolTip="Stages the added, moved, edited and deleted entities into your workspace, with the archetypes and depload entries an addition needs" />
                     <Button Content="Deploy" IsEnabled="False" Padding="12,3" />
+
+                    <ToggleButton x:Name="LayersButton" Content="Layers ▾" Padding="10,3" Margin="12,0,0,0">
+                        <!-- Off while the popup is open, so the click that closes it does not reopen it. -->
+                        <ToggleButton.Style>
+                            <Style TargetType="ToggleButton">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsOpen, ElementName=LayersPopup}" Value="True">
+                                        <Setter Property="IsHitTestVisible" Value="False" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </ToggleButton.Style>
+                    </ToggleButton>
+                    <Popup x:Name="LayersPopup" IsOpen="{Binding IsChecked, ElementName=LayersButton}" StaysOpen="False"
+                           PlacementTarget="{Binding ElementName=LayersButton}" Placement="Bottom">
+                        <Border Background="White" BorderBrush="#AAA" BorderThickness="1" Padding="10,8">
+                            <ScrollViewer MaxHeight="640" VerticalScrollBarVisibility="Auto">
+                                <StackPanel Width="260">
+                                    <Button Content="Uncheck all" Padding="0,2" Margin="0,0,0,4" Click="UncheckAll_Click"
+                                            ToolTip="Hides every layer except the heightmap" />
+                                    <ItemsControl x:Name="LayerList">
+                                        <ItemsControl.GroupStyle>
+                                            <GroupStyle>
+                                                <GroupStyle.HeaderTemplate>
+                                                    <DataTemplate>
+                                                        <TextBlock Text="{Binding Name}" FontSize="10" FontWeight="SemiBold"
+                                                                   Foreground="#888" Margin="0,8,0,2" />
+                                                    </DataTemplate>
+                                                </GroupStyle.HeaderTemplate>
+                                            </GroupStyle>
+                                        </ItemsControl.GroupStyle>
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate DataType="{x:Type mapEditor:MapLayer}">
+                                                <CheckBox Content="{Binding Name}" IsChecked="{Binding IsVisible}" Margin="0,1"
+                                                          ToolTip="{Binding ToolTip}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+
+                                    <TextBlock Text="NAVMESH SHOWS" FontSize="10" FontWeight="SemiBold" Foreground="#888" Margin="0,10,0,2" />
+                                    <CheckBox x:Name="NavMeshSurface" Content="Surface" IsChecked="True" Margin="12,1,0,0"
+                                              ToolTip="Walkable triangles, green where flat and red where steep" />
+                                    <CheckBox x:Name="NavMeshEdges" Content="Edges" IsChecked="True" Margin="12,1,0,0"
+                                              ToolTip="Shared edges faint, the edge of the walkable area white, sector seams magenta" />
+                                    <CheckBox x:Name="NavMeshLinks" Content="Links" IsChecked="False" Margin="12,1,0,0"
+                                              ToolTip="A line between the centres of every two triangles the AI can step between" />
+
+                                    <Expander Header="Surface types" Margin="0,10,0,0">
+                                        <ItemsControl x:Name="SurfaceLegendRows" Margin="0,4,0,0">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate>
+                                                    <DockPanel Margin="0,0,0,3">
+                                                        <Border Width="11" Height="11" DockPanel.Dock="Left" Margin="0,0,6,0"
+                                                                VerticalAlignment="Center" BorderBrush="#999" BorderThickness="1"
+                                                                Background="{Binding Swatch}" />
+                                                        <TextBlock DockPanel.Dock="Right" Text="{Binding Coverage}"
+                                                                   Foreground="#888" Margin="6,0,0,0" />
+                                                        <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
+                                                    </DockPanel>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                    </Expander>
+                                </StackPanel>
+                            </ScrollViewer>
+                        </Border>
+                    </Popup>
+
+                    <RadioButton x:Name="MoveMode" Content="Move (T)" IsChecked="True" GroupName="Gizmo"
+                                 VerticalAlignment="Center" Margin="12,0,0,0"
+                                 ToolTip="The gizmo moves the selection along the world axes" />
+                    <RadioButton x:Name="RotateMode" Content="Rotate (R)" GroupName="Gizmo"
+                                 VerticalAlignment="Center" Margin="8,0,0,0"
+                                 ToolTip="The gizmo turns each selected entity about its own origin, round the world axes" />
+
                     <CheckBox x:Name="GroundCollision" Content="Ground collision" IsChecked="True"
                               VerticalAlignment="Center" Margin="12,0,0,0"
                               ToolTip="Slows the camera to a stop as it approaches the terrain instead of flying through it" />
@@ -37,257 +112,29 @@
         </Border>
 
         <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*" MinHeight="200" />
+                <RowDefinition Height="4" />
+                <RowDefinition Height="200" MinHeight="80" />
+            </Grid.RowDefinitions>
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="180" MinWidth="140" />
-                <ColumnDefinition Width="4" />
-                <ColumnDefinition Width="300" MinWidth="220" />
+                <ColumnDefinition Width="260" MinWidth="160" />
                 <ColumnDefinition Width="4" />
                 <ColumnDefinition Width="*" MinWidth="300" />
+                <ColumnDefinition Width="4" />
+                <ColumnDefinition Width="340" MinWidth="220" />
             </Grid.ColumnDefinitions>
 
-            <!-- Layer list: the checkbox is the planned viewport-overlay toggle, selection picks
-                 which editing panel shows in the middle column. -->
-            <DockPanel Grid.Column="0">
-            <Button DockPanel.Dock="Top" Content="Uncheck all" Padding="0,3" Margin="0,0,0,4"
-                    Click="UncheckAll_Click"
-                    ToolTip="Hides every layer except the heightmap" />
-            <ListBox x:Name="LayerList" SelectionChanged="LayerList_SelectionChanged"
-                     BorderThickness="1" BorderBrush="#DDD">
-                <ListBox.GroupStyle>
-                    <GroupStyle>
-                        <GroupStyle.HeaderTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Name}" FontSize="10" FontWeight="SemiBold"
-                                           Foreground="#888" Margin="4,8,0,2" />
-                            </DataTemplate>
-                        </GroupStyle.HeaderTemplate>
-                    </GroupStyle>
-                </ListBox.GroupStyle>
-                <ListBox.ItemTemplate>
-                    <DataTemplate>
-                        <StackPanel Orientation="Horizontal">
-                            <!-- Only the layers a renderer reads get a toggle; the rest are the
-                                 roadmap, and a checkbox on one would do nothing. -->
-                            <CheckBox IsChecked="{Binding IsVisible}" Visibility="{Binding ToggleVisibility}"
-                                      VerticalAlignment="Center" Margin="0,0,6,0" />
-                            <TextBlock Text="{Binding Name}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </DataTemplate>
-                </ListBox.ItemTemplate>
-            </ListBox>
-            </DockPanel>
+            <mapEditor:HierarchyView x:Name="Hierarchy" Grid.Row="0" Grid.Column="0" />
 
-            <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" />
+            <GridSplitter Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" />
 
-            <!-- Context panel: swaps per selected layer; the mock shows what each panel will hold. -->
-            <Border Grid.Column="2" BorderThickness="1" BorderBrush="#DDD" Padding="10,8">
-                <Grid>
-                <!-- Entities get a real panel rather than the mock: the nearest entities or a searchable
-                     tree, over a read-only field view. It sits outside the scroll viewer so the lists virtualize. -->
-                <DockPanel x:Name="EntityPanel" Visibility="Collapsed">
-                    <TextBlock x:Name="ModelStatus" DockPanel.Dock="Top" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,4" />
-                    <Grid>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="*" MinHeight="80" />
-                            <RowDefinition Height="4" />
-                            <RowDefinition Height="450" MinHeight="450" />
-                        </Grid.RowDefinitions>
-                        <TabControl Grid.Row="0">
-                            <TabItem Header="Nearby">
-                                <DockPanel Margin="0,4,0,0">
-                                    <Button DockPanel.Dock="Top" Content="Update" Padding="7,3" Margin="0,0,0,6"
-                                            HorizontalAlignment="Left" Click="UpdateNearby_Click"
-                                            ToolTip="Lists the entities around where the camera is now" />
-                                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                                        <TextBlock Text="Max distance" VerticalAlignment="Center" Foreground="#888"
-                                                   Margin="0,0,6,0" />
-                                        <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="#888"
-                                                   Width="36" TextAlignment="Right"
-                                                   Text="{Binding Value, ElementName=NearbyRange, StringFormat={}{0:0} m}" />
-                                        <Slider x:Name="NearbyRange" Minimum="1" Maximum="100" Value="50"
-                                                VerticalAlignment="Center" ValueChanged="NearbyRange_ValueChanged"
-                                                ToolTip="Lists only entities within this distance of where Update was pressed" />
-                                    </DockPanel>
-                                    <ListBox x:Name="NearbyList" SelectionChanged="NearbyList_SelectionChanged"
-                                             ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                             VirtualizingStackPanel.IsVirtualizing="True"
-                                             VirtualizingStackPanel.VirtualizationMode="Recycling">
-                                        <ListBox.ItemTemplate>
-                                            <DataTemplate>
-                                                <DockPanel>
-                                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Distance}"
-                                                               Foreground="#888" Margin="6,0,0,0" />
-                                                    <TextBlock Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                                </DockPanel>
-                                            </DataTemplate>
-                                        </ListBox.ItemTemplate>
-                                    </ListBox>
-                                </DockPanel>
-                            </TabItem>
-                            <TabItem Header="All">
-                                <DockPanel Margin="0,4,0,0">
-                                    <TextBox x:Name="EntitySearch" DockPanel.Dock="Top" Margin="0,0,0,6"
-                                             TextChanged="EntitySearch_TextChanged"
-                                             ToolTip="Filters by name or archetype" />
-                                    <TextBlock x:Name="EntityCount" DockPanel.Dock="Top" Foreground="#888" Margin="0,0,0,4" />
-                                    <TreeView x:Name="EntityTree"
-                                              SelectedItemChanged="EntityTree_SelectedItemChanged"
-                                              ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                                              VirtualizingStackPanel.IsVirtualizing="True"
-                                              VirtualizingStackPanel.VirtualizationMode="Recycling"
-                                              ScrollViewer.CanContentScroll="True">
-                                        <TreeView.ItemTemplate>
-                                            <HierarchicalDataTemplate DataType="{x:Type mapEditor:EntityTreeNode}"
-                                                                      ItemsSource="{Binding Children}">
-                                                <TextBlock Text="{Binding Header}" TextTrimming="CharacterEllipsis" />
-                                            </HierarchicalDataTemplate>
-                                        </TreeView.ItemTemplate>
-                                        <!-- Declared here rather than as ItemContainerStyle so it applies at every depth. -->
-                                        <TreeView.Resources>
-                                            <Style TargetType="TreeViewItem">
-                                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                                                <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
-                                                <Style.Triggers>
-                                                    <DataTrigger Binding="{Binding IsVisible}" Value="False">
-                                                        <Setter Property="Visibility" Value="Collapsed" />
-                                                    </DataTrigger>
-                                                </Style.Triggers>
-                                            </Style>
-                                        </TreeView.Resources>
-                                    </TreeView>
-                                </DockPanel>
-                            </TabItem>
-                        </TabControl>
-                        <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" Background="Transparent" />
-                        <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto">
-                            <StackPanel>
-                                <TextBlock x:Name="EntityHeading" FontWeight="SemiBold" TextWrapping="Wrap" />
-                                <WrapPanel Margin="0,6,0,0">
-                                    <Button x:Name="ShowArchetypeButton" Content="Archetype in Library"
-                                            Padding="7,3" Margin="0,0,6,4" IsEnabled="False"
-                                            Click="ShowArchetype_Click"
-                                            ToolTip="Opens the Library tab on the archetype this entity merges over. Disabled for a standalone entity, which has none." />
-                                    <Button x:Name="OpenSectorButton" Content="Open entity in XML editor"
-                                            Padding="7,3" Margin="0,0,6,4" IsEnabled="False" Click="OpenSector_Click"
-                                            ToolTip="Opens this entity's own fragment of its worldsector.data.fcb, so saving stages just this one entity. Falls back to the whole sector for an entity with no disEntityId." />
-                                    <Button x:Name="CopyButton" Content="Copy" Padding="7,3" Margin="0,0,6,4"
-                                            IsEnabled="False" Click="Copy_Click"
-                                            ToolTip="Ctrl+C. Holds this entity for Ctrl+V in the viewport, which places a clone on the ground under the cursor - in this world or, after loading another, in that one" />
-                                    <Button x:Name="DeleteButton" Content="Delete" Padding="7,3" Margin="0,0,6,4"
-                                            IsEnabled="False" Click="Delete_Click"
-                                            ToolTip="Del. Removes this entity from its sector on the next Save" />
-                                </WrapPanel>
-                                <ItemsControl x:Name="EntityFields" Margin="0,8,0,0">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate>
-                                            <DockPanel Margin="0,0,0,2">
-                                                <TextBlock DockPanel.Dock="Left" Text="{Binding Name}" Width="110"
-                                                           Foreground="#666" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Text="{Binding Value}" FontFamily="Consolas" FontSize="11"
-                                                           TextWrapping="Wrap" />
-                                            </DockPanel>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </StackPanel>
-                        </ScrollViewer>
-                    </Grid>
-                </DockPanel>
-
-                <!-- Mission layers filter which entities are drawn and listed. -->
-                <DockPanel x:Name="MissionLayerPanel" Visibility="Collapsed">
-                    <TextBlock DockPanel.Dock="Top" Foreground="#888" TextWrapping="Wrap" Margin="0,0,0,6"
-                               Text="Each sector scopes its entities into layers. Unticking one hides its entities everywhere." />
-                    <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                        <Button Content="All" Click="MissionLayersAll_Click" Padding="10,2" Margin="0,0,4,0" />
-                        <Button Content="Only main" Click="MissionLayersMain_Click" Padding="10,2" />
-                    </DockPanel>
-                    <ListBox x:Name="MissionLayerList" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
-                        <ListBox.ItemTemplate>
-                            <DataTemplate>
-                                <DockPanel Margin="0,1">
-                                    <CheckBox DockPanel.Dock="Left" IsChecked="{Binding IsVisible}"
-                                              Click="MissionLayerToggle_Click" Margin="0,0,6,0" />
-                                    <TextBlock DockPanel.Dock="Right" Text="{Binding Count}" Foreground="#888"
-                                               Margin="6,0,0,0" />
-                                    <TextBlock Text="{Binding Display}" TextTrimming="CharacterEllipsis" />
-                                </DockPanel>
-                            </DataTemplate>
-                        </ListBox.ItemTemplate>
-                    </ListBox>
-                </DockPanel>
-
-                <ScrollViewer x:Name="ContextInfo" VerticalScrollBarVisibility="Auto">
-                    <StackPanel>
-                        <TextBlock x:Name="ContextTitle" FontSize="14" FontWeight="SemiBold" />
-                        <TextBlock x:Name="ContextReadiness" FontSize="10" Foreground="#888" Margin="0,1,0,0" />
-                        <TextBlock x:Name="ContextSummary" TextWrapping="Wrap" Foreground="#555" Margin="0,8,0,0" />
-                        <TextBlock Text="PLANNED CONTROLS" FontSize="9" FontWeight="SemiBold"
-                                   Foreground="#888" Margin="0,14,0,4" />
-                        <ItemsControl x:Name="ContextControls">
-                            <ItemsControl.ItemTemplate>
-                                <DataTemplate>
-                                    <TextBlock TextWrapping="Wrap" Margin="0,0,0,3">
-                                        <Run Text="- " /><Run Text="{Binding Mode=OneWay}" />
-                                    </TextBlock>
-                                </DataTemplate>
-                            </ItemsControl.ItemTemplate>
-                        </ItemsControl>
-
-                        <!-- How an atlas texel maps onto a sector cell could not be settled from the
-                             shipped data, so it is a toggle until a look at real terrain decides it. -->
-                        <StackPanel x:Name="TexturePanel" Visibility="Collapsed">
-                            <TextBlock x:Name="TextureStatus" Foreground="#888" TextWrapping="Wrap" Margin="0,12,0,0" />
-                        </StackPanel>
-
-                        <StackPanel x:Name="TriggerPanel" Visibility="Collapsed">
-                            <TextBlock x:Name="TriggerStatus" Foreground="#888" TextWrapping="Wrap" Margin="0,12,0,0" />
-                        </StackPanel>
-
-                        <StackPanel x:Name="LightPanel" Visibility="Collapsed">
-                            <TextBlock x:Name="LightStatus" Foreground="#888" TextWrapping="Wrap" Margin="0,12,0,0" />
-                        </StackPanel>
-
-                        <StackPanel x:Name="NavMeshPanel" Visibility="Collapsed">
-                            <CheckBox x:Name="NavMeshSurface" Content="Surface" IsChecked="True" Margin="0,12,0,0"
-                                      ToolTip="Walkable triangles, green where flat and red where steep" />
-                            <CheckBox x:Name="NavMeshEdges" Content="Edges" IsChecked="True" Margin="0,4,0,0"
-                                      ToolTip="Shared edges faint, the edge of the walkable area white, sector seams magenta" />
-                            <CheckBox x:Name="NavMeshLinks" Content="Links" IsChecked="False" Margin="0,4,0,0"
-                                      ToolTip="A line between the centres of every two triangles the AI can step between" />
-                            <TextBlock x:Name="NavMeshStatus" Foreground="#888" TextWrapping="Wrap" Margin="0,12,0,0" />
-                        </StackPanel>
-
-                        <StackPanel x:Name="SurfaceLegend" Visibility="Collapsed">
-                            <TextBlock Text="SURFACE TYPES" FontSize="9" FontWeight="SemiBold"
-                                       Foreground="#888" Margin="0,14,0,4" />
-                            <ItemsControl x:Name="SurfaceLegendRows">
-                                <ItemsControl.ItemTemplate>
-                                    <DataTemplate>
-                                        <DockPanel Margin="0,0,0,3">
-                                            <Border Width="11" Height="11" DockPanel.Dock="Left" Margin="0,0,6,0"
-                                                    VerticalAlignment="Center" BorderBrush="#999" BorderThickness="1"
-                                                    Background="{Binding Swatch}" />
-                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Coverage}"
-                                                       Foreground="#888" Margin="6,0,0,0" />
-                                            <TextBlock Text="{Binding Label}" TextTrimming="CharacterEllipsis" />
-                                        </DockPanel>
-                                    </DataTemplate>
-                                </ItemsControl.ItemTemplate>
-                            </ItemsControl>
-                        </StackPanel>
-                    </StackPanel>
-                </ScrollViewer>
-                </Grid>
-            </Border>
-
-            <GridSplitter Grid.Column="3" HorizontalAlignment="Stretch" Background="Transparent" />
-
-            <Grid Grid.Column="4">
-                <glWpf:GLWpfControl x:Name="Viewport" Focusable="True"
+            <Grid Grid.Row="0" Grid.Column="2">
+                <glWpf:GLWpfControl x:Name="Viewport" Focusable="True" AllowDrop="True"
                                     Render="Viewport_Render"
                                     MouseDown="Viewport_MouseDown" MouseUp="Viewport_MouseUp"
-                                    MouseMove="Viewport_MouseMove" MouseWheel="Viewport_MouseWheel" />
+                                    MouseMove="Viewport_MouseMove" MouseWheel="Viewport_MouseWheel"
+                                    DragOver="Viewport_DragOver" Drop="Viewport_Drop" />
                 <Border VerticalAlignment="Top" HorizontalAlignment="Right" Margin="0,6,8,0"
                         Background="#66000000" Padding="6,2" CornerRadius="3" IsHitTestVisible="False">
                     <TextBlock x:Name="FpsText" Foreground="#CFC" FontFamily="Consolas" FontSize="11" />
@@ -300,10 +147,21 @@
                                HorizontalAlignment="Center" Margin="0,4,0,0" />
                     <TextBlock Text="Right-drag look - WASD move, Q/E down/up - Shift to sprint - wheel changes speed"
                                FontSize="11" Foreground="#888" HorizontalAlignment="Center" Margin="0,2,0,0" />
-                    <TextBlock Text="Ctrl+C copy the selected entity - Ctrl+V paste it at the cursor - Del delete it - Save stages the edits"
+                    <TextBlock Text="Click to select, Ctrl+click to add - T move, R rotate - Ctrl+C / Ctrl+V copy and paste - Del delete"
+                               FontSize="11" Foreground="#888" HorizontalAlignment="Center" Margin="0,2,0,0" />
+                    <TextBlock Text="Drag an archetype from the library below onto the ground to place it - Save stages the edits"
                                FontSize="11" Foreground="#888" HorizontalAlignment="Center" Margin="0,2,0,0" />
                 </StackPanel>
             </Grid>
+
+            <GridSplitter Grid.Row="0" Grid.Column="3" HorizontalAlignment="Stretch" Background="Transparent" />
+
+            <mapEditor:InspectorView x:Name="Inspector" Grid.Row="0" Grid.Column="4" Margin="6,0,0,0" />
+
+            <GridSplitter Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch" ResizeDirection="Rows" Background="Transparent" />
+
+            <mapEditor:EntityLibraryView x:Name="Library" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="5" />
         </Grid>
     </DockPanel>
 </UserControl>

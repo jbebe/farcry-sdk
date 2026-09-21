@@ -3,7 +3,7 @@ namespace JackAll.App.FileHandlers.Domino;
 /// <summary>One wire between two ports. Both endpoints are always real connectors - a graph-boundary
 /// connection gets a <see cref="NodeRole.Boundary"/> node to attach to rather than a dangling end, so
 /// nodify always has two anchors to draw between.</summary>
-public sealed class DominoConnectionViewModel : DominoObservable
+public sealed class DominoConnectionViewModel : Observable
 {
     private bool _isFaded;
 

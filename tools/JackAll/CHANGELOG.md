@@ -2,6 +2,32 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **The Map tab is laid out like a scene editor** — a hierarchy of every placed entity under its
+  mission layer on the left, the viewport in the middle, an inspector on the right and the world's
+  entity library along the bottom. The layer toggles moved into a Layers menu over the viewport.
+- **Select several entities, move and rotate them** — Ctrl and Shift in the hierarchy, Ctrl+click in
+  the viewport; T and R switch between the move arrows and the rotate rings, which act on the whole
+  selection. A turn saves as `hidAngles`.
+- **Edit an entity's fields** — the inspector shows the instance merged over its archetype, the way
+  the game reads it: inherited values greyed, the instance's own overrides marked, each one
+  revertable. An edit is staged as that entity's fragment on Save.
+- **Place new entities from the library** — drag an archetype onto the ground, or onto a mission
+  layer in the hierarchy. The new instance carries only what every shipped instance does and
+  inherits the rest; its archetype and meshes are staged the way a paste's are.
+- **Hide and lock** entities for the session, and **Modified only** lists what the session changed.
+
+### Changed
+- **The Map tab resolves archetypes against `entitylibrary.fcb`**, the library single-player reads
+  and the one a save stages into, instead of `entitylibrary_full.fcb`.
+
+### Fixed
+- **Saving map edits with nothing added left them pending** — a save of only moves or deletes now
+  clears them like any other.
+- **A moved entity that had no `hidAngles` of its own lost a rotation** given to it.
+
 ## [1.1.0-beta] - 2026-09-04
 
 ### Added

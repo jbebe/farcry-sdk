@@ -38,6 +38,29 @@ internal static class TreeViewBehaviors
         item.IsExpanded = !item.IsExpanded;
     }
 
+    /// <summary>
+    /// The container for the last item of <paramref name="path"/>, realizing each level's containers on
+    /// the way down, or null when one was virtualized away. <paramref name="onEach"/> runs on every
+    /// container reached, before the next level is looked up.
+    /// </summary>
+    public static TreeViewItem? RealizePath(ItemsControl root, IEnumerable<object> path, Action<TreeViewItem>? onEach = null)
+    {
+        ItemsControl parent = root;
+        TreeViewItem? item = null;
+        foreach (object step in path)
+        {
+            parent.UpdateLayout();
+            if (parent.ItemContainerGenerator.ContainerFromItem(step) is not TreeViewItem container)
+            {
+                return null;
+            }
+            item = container;
+            onEach?.Invoke(item);
+            parent = item;
+        }
+        return item;
+    }
+
     /// <summary>The nearest ancestor of type <typeparamref name="T"/>, starting at (and including)
     /// <paramref name="node"/> itself.</summary>
     public static T? Ancestor<T>(DependencyObject? node) where T : DependencyObject

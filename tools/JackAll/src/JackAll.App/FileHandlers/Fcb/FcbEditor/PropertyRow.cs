@@ -330,7 +330,7 @@ public sealed class PropertyRow : INotifyPropertyChanged
 
     /// <summary>True when every field in this row currently parses (arrays: every item) - the same
     /// check <c>FcbEditorTabViewModel</c> aggregates across the whole tab to gate Save.</summary>
-    private bool IsRowValid => Editor switch
+    public bool IsRowValid => Editor switch
     {
         ScalarField scalar => scalar.IsValid,
         BoolField => true,

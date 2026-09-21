@@ -112,16 +112,16 @@ public static class EntityHierarchy
         public Folder Sub(string name, int order = 0)
             => _subs.TryGetValue(name, out Folder? found) ? found : _subs[name] = new Folder(name, order);
 
+        public string Label { get; } = label;
+
+        public int Order { get; } = order;
+
         public HierarchyGroup Freeze()
-            => new(label,
+            => new(Label,
                 [.. _subs.Values
                     .OrderBy(f => f.Order)
                     .ThenBy(f => f.Label, StringComparer.OrdinalIgnoreCase)
                     .Select(f => f.Freeze())],
                 [.. Entities.OrderBy(LabelOf, StringComparer.OrdinalIgnoreCase)]);
-
-        private string Label => label;
-
-        private int Order => order;
     }
 }

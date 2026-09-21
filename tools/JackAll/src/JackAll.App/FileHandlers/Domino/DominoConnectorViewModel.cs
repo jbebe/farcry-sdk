@@ -17,7 +17,7 @@ public enum PortKind
 /// ended up on screen) and read by every connection attached to this port, which is why it must raise
 /// change notifications - it is the only channel by which a wire learns where to draw itself.
 /// </summary>
-public sealed class DominoConnectorViewModel : DominoObservable
+public sealed class DominoConnectorViewModel : Observable
 {
     private Point _anchor;
     private bool _isConnected;

@@ -81,22 +81,12 @@ public partial class MainWindow : Window
         FolderNode? target = _vm.FindFolder(file.Directory);
         if (target is null || target == _vm.SelectedFolder) return;
 
-        ItemsControl parent = FolderTree;
-        TreeViewItem? item = null;
-        foreach (FolderNode node in _vm.GetAncestorChain(target))
+        // Null when a level was virtualized out of existence or the tree changed underneath us.
+        if (TreeViewBehaviors.RealizePath(FolderTree, _vm.GetAncestorChain(target), c => c.IsExpanded = true)
+            is not { } item)
         {
-            parent.UpdateLayout(); // realizes containers for the level we're about to look up
-            if (parent.ItemContainerGenerator.ContainerFromItem(node) is not TreeViewItem container)
-            {
-                return; // virtualized out of existence, or the tree changed underneath us - bail quietly
-            }
-
-            item = container;
-            item.IsExpanded = true;
-            parent = item;
+            return;
         }
-
-        if (item is null) return;
 
         // Selecting a TreeViewItem also moves keyboard focus to it, which would otherwise pull focus
         // (and, worse, the DataGrid's own selection) away from the file just clicked — restore both

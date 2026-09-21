@@ -20,7 +20,7 @@ namespace JackAll.App.FileHandlers.Domino;
 /// control-out pin it exposes. Without them a sub-graph's interface is invisible, and nodify has no
 /// second anchor to draw those connections against.
 /// </summary>
-public sealed class DominoGraphViewModel : DominoObservable
+public sealed class DominoGraphViewModel : Observable
 {
     private readonly Dictionary<string, DominoNodeViewModel> _byNodeId = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DominoNodeViewModel> _graphInputs = new(StringComparer.Ordinal);

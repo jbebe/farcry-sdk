@@ -1,0 +1,36 @@
+<UserControl x:Class="JackAll.App.MapEditor.EntityLibraryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:library="clr-namespace:JackAll.App.Library">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="240" MinWidth="120" />
+            <ColumnDefinition Width="4" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <TreeView Grid.Column="0" ItemsSource="{Binding Folders}" SelectedItemChanged="Folders_SelectedItemChanged"
+                  VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
+            <TreeView.ItemTemplate>
+                <HierarchicalDataTemplate DataType="{x:Type library:ArchetypeTreeNode}" ItemsSource="{Binding Groups}">
+                    <TextBlock Text="{Binding Label}" />
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
+        </TreeView>
+
+        <GridSplitter Grid.Column="1" HorizontalAlignment="Stretch" Background="Transparent" />
+
+        <DockPanel Grid.Column="2">
+            <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+                <TextBlock DockPanel.Dock="Right" Foreground="#888" VerticalAlignment="Center" Margin="8,0,0,0"
+                           Text="{Binding CountText}" />
+                <TextBox Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=250}"
+                         ToolTip="Searches every archetype by its full name" />
+            </DockPanel>
+            <ListBox x:Name="Items" ItemsSource="{Binding Items}" DisplayMemberPath="FullName"
+                     VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling"
+                     PreviewMouseLeftButtonDown="Items_MouseDown" PreviewMouseMove="Items_MouseMove"
+                     ToolTip="Drag an archetype onto the ground in the viewport, or onto a mission layer in the hierarchy, to place it" />
+        </DockPanel>
+    </Grid>
+</UserControl>

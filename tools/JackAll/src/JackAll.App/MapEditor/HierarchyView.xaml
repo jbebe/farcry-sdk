@@ -1,0 +1,106 @@
+<UserControl x:Class="JackAll.App.MapEditor.HierarchyView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mapEditor="clr-namespace:JackAll.App.MapEditor">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="Visible" />
+        <Style x:Key="RowToggle" TargetType="ToggleButton">
+            <Setter Property="FontFamily" Value="Segoe MDL2 Assets" />
+            <Setter Property="FontSize" Value="11" />
+            <Setter Property="Width" Value="18" />
+            <Setter Property="Height" Value="16" />
+            <Setter Property="Margin" Value="0,0,2,0" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="Foreground" Value="#BBB" />
+            <Setter Property="Focusable" Value="False" />
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Foreground" Value="#C0392B" />
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
+    <DockPanel>
+        <TextBox DockPanel.Dock="Top" Margin="0,0,0,4"
+                 Text="{Binding Search, UpdateSourceTrigger=PropertyChanged, Delay=250}"
+                 ToolTip="Filters by name or archetype" />
+        <WrapPanel DockPanel.Dock="Top" Margin="0,0,0,2">
+            <CheckBox Content="Modified only" IsChecked="{Binding ModifiedOnly}" Margin="0,0,10,2"
+                      ToolTip="Shows only what this session added, moved, edited or deleted" />
+            <Button Content="All layers" Padding="6,1" Margin="0,0,4,2" Click="AllLayers_Click" />
+            <Button Content="Only main" Padding="6,1" Margin="0,0,0,2" Click="OnlyMain_Click" />
+        </WrapPanel>
+        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,4">
+            <CheckBox DockPanel.Dock="Left" Content="Near camera" VerticalAlignment="Center"
+                      IsChecked="{Binding NearCamera}"
+                      ToolTip="Lists only entities within this distance of where the camera stood when ticked" />
+            <TextBlock DockPanel.Dock="Right" VerticalAlignment="Center" Foreground="#888" Width="36" TextAlignment="Right"
+                       Text="{Binding NearRange, StringFormat={}{0:0} m}" />
+            <Slider Minimum="1" Maximum="200" Value="{Binding NearRange, Delay=150}" VerticalAlignment="Center" Margin="6,0,0,0" />
+        </DockPanel>
+        <TextBlock DockPanel.Dock="Top" Foreground="#888" Margin="0,0,0,4" Text="{Binding CountText}" />
+
+        <TreeView x:Name="Tree" ItemsSource="{Binding Roots}"
+                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                  VirtualizingStackPanel.IsVirtualizing="True"
+                  VirtualizingStackPanel.VirtualizationMode="Recycling"
+                  ScrollViewer.CanContentScroll="True"
+                  KeyDown="Tree_KeyDown">
+            <TreeView.ItemTemplate>
+                <HierarchicalDataTemplate DataType="{x:Type mapEditor:EntityTreeNode}" ItemsSource="{Binding Children}">
+                    <DockPanel>
+                        <CheckBox DockPanel.Dock="Left" VerticalAlignment="Center" Margin="0,0,4,0" Focusable="False"
+                                  Visibility="{Binding IsLayer, Converter={StaticResource Visible}}"
+                                  IsChecked="{Binding IsChecked}" Click="LayerTick_Click"
+                                  ToolTip="Unticked, this layer's entities are neither drawn nor listed" />
+                        <ToggleButton DockPanel.Dock="Left" Style="{StaticResource RowToggle}" Content="&#xED1A;"
+                                      IsChecked="{Binding IsHidden, Mode=OneWay}" Click="Hide_Click"
+                                      ToolTip="Hide: neither drawn nor pickable in the viewport. Editor state for this session only." />
+                        <ToggleButton DockPanel.Dock="Left" Style="{StaticResource RowToggle}" Content="&#xE72E;"
+                                      IsChecked="{Binding IsLocked, Mode=OneWay}" Click="Lock_Click"
+                                      ToolTip="Lock: drawn, but a viewport click passes through it. Editor state for this session only." />
+                        <TextBlock Text="{Binding Header}" TextTrimming="CharacterEllipsis" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsModified}" Value="True">
+                                            <Setter Property="FontStyle" Value="Italic" />
+                                            <Setter Property="Foreground" Value="#B35C00" />
+                                        </DataTrigger>
+                                        <DataTrigger Binding="{Binding IsDeleted}" Value="True">
+                                            <Setter Property="TextDecorations" Value="Strikethrough" />
+                                            <Setter Property="Foreground" Value="#999" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </DockPanel>
+                </HierarchicalDataTemplate>
+            </TreeView.ItemTemplate>
+            <!-- Declared here rather than as ItemContainerStyle so it applies at every depth; IsSelected
+                 is the selection set, drawn by hand rather than bound to the tree's single selection. -->
+            <TreeView.Resources>
+                <Style TargetType="TreeViewItem">
+                    <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+                    <Setter Property="Focusable" Value="False" />
+                    <Setter Property="AllowDrop" Value="{Binding IsLayer}" />
+                    <EventSetter Event="PreviewMouseLeftButtonDown" Handler="Row_MouseDown" />
+                    <EventSetter Event="Drop" Handler="Row_Drop" />
+                    <EventSetter Event="DragOver" Handler="Row_DragOver" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsVisible}" Value="False">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding IsSelected}" Value="True">
+                            <Setter Property="Background" Value="#CCE4F7" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </TreeView.Resources>
+        </TreeView>
+    </DockPanel>
+</UserControl>

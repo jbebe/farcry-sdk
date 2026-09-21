@@ -3,286 +3,117 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:fcbEditor="clr-namespace:JackAll.App.FileHandlers.Fcb.FcbEditor">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <fcbEditor:PropertyEditorTemplates />
+            </ResourceDictionary.MergedDictionaries>
+            <BooleanToVisibilityConverter x:Key="BoolToVis" />
 
-        <!-- Grey = nothing under this object differs from vanilla, black = it (or something inside
-             it) does - the same grey/black convention the Files tab's own folder tree already uses
-             for "contains a mod change" (see MainWindow.xaml). -->
-        <HierarchicalDataTemplate x:Key="OutlineTemplate" DataType="{x:Type fcbEditor:FcbObjectNodeView}"
-                                   ItemsSource="{Binding Children}">
-            <TextBlock Text="{Binding Label}">
-                <TextBlock.Style>
-                    <Style TargetType="TextBlock">
-                        <!-- Base default has to be a Setter, not a local Foreground attribute on the
-                             TextBlock - a local value beats every Style trigger below, which is why the
-                             selected/changed triggers wouldn't otherwise ever take effect. -->
-                        <Setter Property="Foreground" Value="Gray" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding ContainsChange}" Value="True">
-                                <Setter Property="Foreground" Value="Black" />
-                                <Setter Property="FontWeight" Value="SemiBold" />
-                            </DataTrigger>
-                            <!-- Wins over the ContainsChange setter above so selected text stays readable on the blue highlight. -->
-                            <MultiDataTrigger>
-                                <MultiDataTrigger.Conditions>
-                                    <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True" />
-                                    <Condition Binding="{Binding Path=(Selector.IsSelectionActive), RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True" />
-                                </MultiDataTrigger.Conditions>
-                                <Setter Property="Foreground" Value="White" />
-                            </MultiDataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </TextBlock.Style>
-            </TextBlock>
-        </HierarchicalDataTemplate>
-
-        <!-- One scalar text field - a plain top-level value, an unsplit Vector2/3/4 (see
-             FcbFieldFormat - those render as a single comma-separated field, never split into
-             components), or one component of a Matrix4. Label is only set for a Matrix4 component -
-             everything else fills the rest of the value column instead of sizing to a fixed width;
-             a DockPanel (not a horizontal StackPanel, which never stretches a child along its own
-             stacking axis regardless of that child's own HorizontalAlignment) is what makes the fill
-             actually take effect. -->
-        <DataTemplate DataType="{x:Type fcbEditor:ScalarField}">
-            <DockPanel Margin="0,2">
-                <TextBlock DockPanel.Dock="Left" Text="{Binding Label}" Width="28" VerticalAlignment="Center" Foreground="#666">
+            <!-- Grey = nothing under this object differs from vanilla, black = it (or something inside
+                 it) does - the same grey/black convention the Files tab's own folder tree already uses
+                 for "contains a mod change" (see MainWindow.xaml). -->
+            <HierarchicalDataTemplate x:Key="OutlineTemplate" DataType="{x:Type fcbEditor:FcbObjectNodeView}"
+                                       ItemsSource="{Binding Children}">
+                <TextBlock Text="{Binding Label}">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
+                            <!-- Base default has to be a Setter, not a local Foreground attribute on the
+                                 TextBlock - a local value beats every Style trigger below, which is why the
+                                 selected/changed triggers wouldn't otherwise ever take effect. -->
+                            <Setter Property="Foreground" Value="Gray" />
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding Label}" Value="{x:Null}">
-                                    <Setter Property="Visibility" Value="Collapsed" />
+                                <DataTrigger Binding="{Binding ContainsChange}" Value="True">
+                                    <Setter Property="Foreground" Value="Black" />
+                                    <Setter Property="FontWeight" Value="SemiBold" />
                                 </DataTrigger>
+                                <!-- Wins over the ContainsChange setter above so selected text stays readable on the blue highlight. -->
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding IsSelected, RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True" />
+                                        <Condition Binding="{Binding Path=(Selector.IsSelectionActive), RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True" />
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Foreground" Value="White" />
+                                </MultiDataTrigger>
                             </Style.Triggers>
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
-                <!-- The Grid (not the TextBox/RmlTextEditor directly) is what DockPanel's LastChildFill
-                     stretches to fill the value column's remaining width - both children then stretch
-                     to the Grid's own width the normal Grid-cell way, whichever of them Visibility
-                     leaves showing. -->
-                <Grid>
-                    <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Padding="3,1">
-                        <TextBox.Style>
-                            <!-- Width lives in a Setter (not a local attribute), same reason as
-                                 PropertyRowTemplate's Border above - a local value would always beat the
-                                 Label trigger below. -->
-                            <Style TargetType="TextBox">
-                                <Setter Property="Width" Value="180" />
-                                <Setter Property="HorizontalAlignment" Value="Left" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsValid}" Value="False">
-                                        <Setter Property="BorderBrush" Value="Red" />
-                                        <Setter Property="BorderThickness" Value="1.5" />
-                                        <Setter Property="Background" Value="#FFF0F0" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding Label}" Value="{x:Null}">
-                                        <Setter Property="Width" Value="NaN" />
-                                        <Setter Property="HorizontalAlignment" Value="Stretch" />
-                                    </DataTrigger>
-                                    <!-- A Rml field shows the editor below instead. -->
-                                    <DataTrigger Binding="{Binding Type}" Value="Rml">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                    <!-- A "selXxx" field backed by a sibling "enumXxx" object shows the
-                                         dropdown below instead - see FcbObjectNodeView.BuildNode. -->
-                                    <DataTrigger Binding="{Binding HasEnumChoices}" Value="True">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBox.Style>
-                    </TextBox>
+            </HierarchicalDataTemplate>
 
-                    <!-- A decoded .rml document is nested XML, not a one-line value - only shown (and
-                         only takes up any space) for a Rml field; every other scalar type keeps the
-                         plain TextBox above. -->
-                    <fcbEditor:RmlTextEditor Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}" Margin="0,1">
-                        <fcbEditor:RmlTextEditor.Style>
-                            <Style TargetType="fcbEditor:RmlTextEditor">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsValid}" Value="False">
-                                        <Setter Property="BorderBrush" Value="Red" />
-                                        <Setter Property="BorderThickness" Value="1.5" />
-                                        <Setter Property="Background" Value="#FFF0F0" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding Type}" Value="Rml">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </fcbEditor:RmlTextEditor.Style>
-                    </fcbEditor:RmlTextEditor>
 
-                    <!-- A "selXxx" field with a known option list (see FcbObjectNodeView.BuildNode's
-                         "selXxx"/"enumXxx" convention) - only a fixed dropdown selection reaches
-                         SelectedEnumIndex, so unlike the TextBox above, this can't actually go invalid;
-                         the red-border trigger is here purely for parity/defense-in-depth. -->
-                    <ComboBox ItemsSource="{Binding EnumChoices}" SelectedIndex="{Binding SelectedEnumIndex}"
-                              Padding="3,1">
-                        <ComboBox.Style>
-                            <Style TargetType="ComboBox">
-                                <Setter Property="Visibility" Value="Collapsed" />
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsValid}" Value="False">
-                                        <Setter Property="BorderBrush" Value="Red" />
-                                        <Setter Property="BorderThickness" Value="1.5" />
-                                        <Setter Property="Background" Value="#FFF0F0" />
-                                    </DataTrigger>
-                                    <DataTrigger Binding="{Binding HasEnumChoices}" Value="True">
-                                        <Setter Property="Visibility" Value="Visible" />
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </ComboBox.Style>
-                    </ComboBox>
-                </Grid>
-            </DockPanel>
-        </DataTemplate>
+            <!-- One property-grid row: Name | Type | Value. Columns share size groups with the header
+                 below (see the Grid.IsSharedSizeScope on the panel that hosts both), so every row and the
+                 header line up like a real table even though each row is its own Grid. A row whose value
+                 differs from vanilla gets a light yellow background and a "Restore" button next to its
+                 editor - both bound to IsChangedFromVanilla, which is live (see
+                 PropertyRow.RecomputeChangedFromVanilla), so fixing a value back to original clears them
+                 immediately, not just at save. Background, not a border, so a changed row doesn't shift
+                 its neighbors by growing a border's thickness. -->
+            <DataTemplate x:Key="PropertyRowTemplate" DataType="{x:Type fcbEditor:PropertyRow}">
+                <Border>
+                    <Border.Style>
+                        <!-- Background/BorderBrush/Thickness live entirely in the style (not as element
+                             attributes), since a local attribute value would always beat the trigger below. -->
+                        <Style TargetType="Border">
+                            <Setter Property="BorderBrush" Value="#E3E3E3" />
+                            <Setter Property="BorderThickness" Value="0,0,0,1" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsChangedFromVanilla}" Value="True">
+                                    <Setter Property="Background" Value="#FFF6D6" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Border.Style>
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="PropName" MinWidth="140" />
+                            <ColumnDefinition Width="Auto" SharedSizeGroup="PropType" MinWidth="90" />
+                            <!-- No SharedSizeGroup here, unlike the two Auto columns above - a shared size
+                                 group forces WPF to measure a column by its content's desired size even
+                                 when it's "*", which is exactly what was stopping this one from stretching.
+                                 It doesn't need syncing across rows anyway: every row Grid already gets the
+                                 same total width and the same synced Auto columns, so the remaining "*"
+                                 space naturally comes out equal without also sharing this column. -->
+                            <ColumnDefinition Width="*" />
+                        </Grid.ColumnDefinitions>
 
-        <DataTemplate DataType="{x:Type fcbEditor:BoolField}">
-            <CheckBox IsChecked="{Binding Value}" VerticalAlignment="Center" Margin="0,2" />
-        </DataTemplate>
-
-        <!-- Matrix4 only now - a wrapped grid of already-labeled ScalarFields (R#C#), reusing the
-             ScalarField template above. Vector2/3/4 render as a single comma-separated ScalarField
-             instead (see FcbFieldFormat), so they never reach this template. -->
-        <DataTemplate DataType="{x:Type fcbEditor:VectorFieldGroup}">
-            <ItemsControl ItemsSource="{Binding Components}">
-                <ItemsControl.ItemsPanel>
-                    <ItemsPanelTemplate>
-                        <WrapPanel Orientation="Horizontal" />
-                    </ItemsPanelTemplate>
-                </ItemsControl.ItemsPanel>
-            </ItemsControl>
-        </DataTemplate>
-
-        <DataTemplate DataType="{x:Type fcbEditor:NumberArrayGroup}">
-            <StackPanel>
-                <ItemsControl ItemsSource="{Binding Items}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <DockPanel Margin="0,1">
-                                <Button DockPanel.Dock="Right" Content="×" Padding="6,0" Margin="4,0,0,0"
-                                        Tag="{Binding}" Click="RemoveNumberArrayItem_Click" />
-                                <ContentControl Content="{Binding}" />
+                        <Border Grid.Column="0" BorderBrush="#E3E3E3" BorderThickness="0,0,1,0" Padding="8,6">
+                            <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <Border Grid.Column="1" BorderBrush="#E3E3E3" BorderThickness="0,0,1,0" Padding="8,6">
+                            <TextBlock Text="{Binding Type}" Foreground="#777" FontSize="11.5"
+                                       VerticalAlignment="Center" />
+                        </Border>
+                        <Border Grid.Column="2" Padding="8,5">
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="Restore" Padding="6,2" Margin="10,0,0,0"
+                                        VerticalAlignment="Center" Click="RestoreOriginal_Click">
+                                    <Button.Style>
+                                        <Style TargetType="Button">
+                                            <Setter Property="Visibility" Value="Collapsed" />
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsChangedFromVanilla}" Value="True">
+                                                    <Setter Property="Visibility" Value="Visible" />
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Button.Style>
+                                </Button>
+                                <ContentControl Content="{Binding Editor}" VerticalAlignment="Center" />
                             </DockPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <Button Content="+ Add item" HorizontalAlignment="Left" Margin="0,4,0,0" Padding="6,2"
-                        Click="AddNumberArrayItem_Click" />
-            </StackPanel>
-        </DataTemplate>
+                        </Border>
+                    </Grid>
+                </Border>
+            </DataTemplate>
 
-        <DataTemplate DataType="{x:Type fcbEditor:BoolArrayGroup}">
-            <StackPanel>
-                <ItemsControl ItemsSource="{Binding Items}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <DockPanel Margin="0,1">
-                                <Button DockPanel.Dock="Right" Content="×" Padding="6,0" Margin="4,0,0,0"
-                                        Tag="{Binding}" Click="RemoveBoolArrayItem_Click" />
-                                <ContentControl Content="{Binding}" />
-                            </DockPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <Button Content="+ Add item" HorizontalAlignment="Left" Margin="0,4,0,0" Padding="6,2"
-                        Click="AddBoolArrayItem_Click" />
-            </StackPanel>
-        </DataTemplate>
-
-        <DataTemplate DataType="{x:Type fcbEditor:VectorArrayGroup}">
-            <StackPanel>
-                <ItemsControl ItemsSource="{Binding Items}">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate>
-                            <DockPanel Margin="0,3">
-                                <Button DockPanel.Dock="Right" Content="×" Padding="6,0" Margin="4,0,0,0"
-                                        VerticalAlignment="Top" Tag="{Binding}" Click="RemoveVectorArrayItem_Click" />
-                                <ContentControl Content="{Binding}" />
-                            </DockPanel>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
-                <Button Content="+ Add item" HorizontalAlignment="Left" Margin="0,4,0,0" Padding="6,2"
-                        Click="AddVectorArrayItem_Click" />
-            </StackPanel>
-        </DataTemplate>
-
-        <!-- One property-grid row: Name | Type | Value. Columns share size groups with the header
-             below (see the Grid.IsSharedSizeScope on the panel that hosts both), so every row and the
-             header line up like a real table even though each row is its own Grid. A row whose value
-             differs from vanilla gets a light yellow background and a "Restore" button next to its
-             editor - both bound to IsChangedFromVanilla, which is live (see
-             PropertyRow.RecomputeChangedFromVanilla), so fixing a value back to original clears them
-             immediately, not just at save. Background, not a border, so a changed row doesn't shift
-             its neighbors by growing a border's thickness. -->
-        <DataTemplate x:Key="PropertyRowTemplate" DataType="{x:Type fcbEditor:PropertyRow}">
-            <Border>
-                <Border.Style>
-                    <!-- Background/BorderBrush/Thickness live entirely in the style (not as element
-                         attributes), since a local attribute value would always beat the trigger below. -->
-                    <Style TargetType="Border">
-                        <Setter Property="BorderBrush" Value="#E3E3E3" />
-                        <Setter Property="BorderThickness" Value="0,0,0,1" />
-                        <Style.Triggers>
-                            <DataTrigger Binding="{Binding IsChangedFromVanilla}" Value="True">
-                                <Setter Property="Background" Value="#FFF6D6" />
-                            </DataTrigger>
-                        </Style.Triggers>
-                    </Style>
-                </Border.Style>
-                <Grid>
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="PropName" MinWidth="140" />
-                        <ColumnDefinition Width="Auto" SharedSizeGroup="PropType" MinWidth="90" />
-                        <!-- No SharedSizeGroup here, unlike the two Auto columns above - a shared size
-                             group forces WPF to measure a column by its content's desired size even
-                             when it's "*", which is exactly what was stopping this one from stretching.
-                             It doesn't need syncing across rows anyway: every row Grid already gets the
-                             same total width and the same synced Auto columns, so the remaining "*"
-                             space naturally comes out equal without also sharing this column. -->
-                        <ColumnDefinition Width="*" />
-                    </Grid.ColumnDefinitions>
-
-                    <Border Grid.Column="0" BorderBrush="#E3E3E3" BorderThickness="0,0,1,0" Padding="8,6">
-                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold" TextWrapping="Wrap"
-                                   VerticalAlignment="Center" />
-                    </Border>
-                    <Border Grid.Column="1" BorderBrush="#E3E3E3" BorderThickness="0,0,1,0" Padding="8,6">
-                        <TextBlock Text="{Binding Type}" Foreground="#777" FontSize="11.5"
-                                   VerticalAlignment="Center" />
-                    </Border>
-                    <Border Grid.Column="2" Padding="8,5">
-                        <DockPanel>
-                            <Button DockPanel.Dock="Right" Content="Restore" Padding="6,2" Margin="10,0,0,0"
-                                    VerticalAlignment="Center" Click="RestoreOriginal_Click">
-                                <Button.Style>
-                                    <Style TargetType="Button">
-                                        <Setter Property="Visibility" Value="Collapsed" />
-                                        <Style.Triggers>
-                                            <DataTrigger Binding="{Binding IsChangedFromVanilla}" Value="True">
-                                                <Setter Property="Visibility" Value="Visible" />
-                                            </DataTrigger>
-                                        </Style.Triggers>
-                                    </Style>
-                                </Button.Style>
-                            </Button>
-                            <ContentControl Content="{Binding Editor}" VerticalAlignment="Center" />
-                        </DockPanel>
-                    </Border>
-                </Grid>
-            </Border>
-        </DataTemplate>
-
-        <!-- The header row, sharing PropName/PropType/PropValue's column sizes with every data row -->
-        <Style x:Key="PropertyTableHeaderCell" TargetType="TextBlock">
-            <Setter Property="FontWeight" Value="Bold" />
-            <Setter Property="Padding" Value="8,6" />
-            <Setter Property="Foreground" Value="#444" />
-        </Style>
+            <!-- The header row, sharing PropName/PropType/PropValue's column sizes with every data row -->
+            <Style x:Key="PropertyTableHeaderCell" TargetType="TextBlock">
+                <Setter Property="FontWeight" Value="Bold" />
+                <Setter Property="Padding" Value="8,6" />
+                <Setter Property="Foreground" Value="#444" />
+            </Style>
+        </ResourceDictionary>
     </UserControl.Resources>
 
     <DockPanel Margin="6">

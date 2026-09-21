@@ -17,7 +17,7 @@ public enum NodeRole
 }
 
 /// <summary>One node on the nodify canvas.</summary>
-public sealed class DominoNodeViewModel : DominoObservable
+public sealed class DominoNodeViewModel : Observable
 {
     private Point _location;
     private bool _isSelected;

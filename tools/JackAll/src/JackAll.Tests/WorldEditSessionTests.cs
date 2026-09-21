@@ -197,7 +197,7 @@ public class WorldEditSessionTests
         Assert.Equal(archetype.Name, FcbEntityFields.ReadString(added, WorldHashes.TplCreatureType));
         Assert.Equal(InSector, FcbEntityFields.ReadVector3(added, WorldHashes.HidPos));
         Assert.Equal(InSector, FcbEntityFields.ReadVector3(added, WorldHashes.HidPosPrecise));
-        Assert.NotNull(FcbEntityFields.FindComponent(added, FcbClassDefinitions.Crc32Ascii("CEventComponent")));
+        Assert.NotNull(FcbEntityFields.FindComponent(added, WorldHashes.CEventComponent));
         Assert.Equal(entities.Count + 1, EntitiesOf(root).Count());
     }
 

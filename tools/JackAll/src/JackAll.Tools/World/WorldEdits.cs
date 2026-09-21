@@ -41,13 +41,9 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     /// <summary>Above every retail id (they start 0x1C8...), so a pasted id cannot collide with one.</summary>
     private const ulong NewIdFloor = 0x4000_0000_0000_0000;
 
-    private static readonly uint CEventComponent = FcbClassDefinitions.Crc32Ascii("CEventComponent");
-    private static readonly uint HidHasAliasName = FcbClassDefinitions.Crc32Ascii("hidHasAliasName");
-    private static readonly uint HidLinks = FcbClassDefinitions.Crc32Ascii("hidLinks");
-
     private readonly HashSet<WorldEntity> _touched = [];
     private readonly HashSet<WorldEntity> _deleted = [];
-    private readonly Dictionary<WorldEntity, CopiedEntity> _pasted = [];
+    private readonly Dictionary<WorldEntity, CopiedEntity> _added = [];
 
     /// <summary>Each field-edited entity's own copy of its node; kept past a save so a later edit
     /// builds on the saved one.</summary>
@@ -55,13 +51,13 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
 
     public Fc2World World => world;
 
-    public bool IsDirty => _touched.Count + _deleted.Count + _pasted.Count > 0;
+    public bool IsDirty => _touched.Count + _deleted.Count + _added.Count > 0;
 
     /// <summary>Deleted since the last save.</summary>
     public IReadOnlyCollection<WorldEntity> Deleted => _deleted;
 
     /// <summary>Added, moved or field-edited since the last save.</summary>
-    public bool IsModified(WorldEntity entity) => _pasted.ContainsKey(entity) || _touched.Contains(entity);
+    public bool IsModified(WorldEntity entity) => _added.ContainsKey(entity) || _touched.Contains(entity);
 
     /// <summary>Adds a clone of <paramref name="copy"/> at <paramref name="position"/>, filed under
     /// <c>main</c> in the sector file that position falls in.</summary>
@@ -88,9 +84,9 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         (ulong id, string name) = NewIdentity(group < 0 ? archetype.Name : archetype.Name[(group + 1)..]);
 
         byte[] at = FcbEntityFields.Vector3Bytes(position);
-        var events = new FcbObject { TypeHash = CEventComponent };
-        events.Values[HidHasAliasName] = [0];
-        events.Children.Add(new FcbObject { TypeHash = HidLinks });
+        var events = new FcbObject { TypeHash = WorldHashes.CEventComponent };
+        events.Values[WorldHashes.HidHasAliasName] = [0];
+        events.Children.Add(new FcbObject { TypeHash = WorldHashes.HidLinks });
         var components = new FcbObject { TypeHash = WorldHashes.Components };
         components.Children.Add(events);
         var node = new FcbObject { TypeHash = WorldHashes.Entity };
@@ -108,7 +104,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     /// entity stays filed in the sector it was loaded from.</summary>
     public void Moved(WorldEntity entity)
     {
-        if (!_pasted.ContainsKey(entity))
+        if (!_added.ContainsKey(entity))
         {
             _touched.Add(entity);
         }
@@ -136,7 +132,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     /// <summary>Records a change made through <see cref="EditableNode"/>.</summary>
     public void Edited(WorldEntity entity)
     {
-        if (!_pasted.ContainsKey(entity))
+        if (!_added.ContainsKey(entity))
         {
             _touched.Add(entity);
         }
@@ -147,21 +143,21 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         world.Entities.Remove(entity);
         _touched.Remove(entity);
         _working.Remove(entity);
-        if (!_pasted.Remove(entity))
+        if (!_added.Remove(entity))
         {
             _deleted.Add(entity);
         }
     }
 
     /// <summary>Every source a pending addition was built from.</summary>
-    public IEnumerable<CopiedEntity> Pastes => _pasted.Values;
+    public IEnumerable<CopiedEntity> Additions => _added.Values;
 
     /// <summary>
     /// The mission layers pending additions outside <c>main</c> must be filed under, per sector file.
     /// A fragment carries no layer, so without these a new entity lands in <c>main</c>.
     /// </summary>
     public IReadOnlyList<(string ContainerPath, LayerSpec Layer)> LayerPlacements()
-        => [.. _pasted.Keys
+        => [.. _added.Keys
             .Where(e => !MissionLayers.IsMain(e.LayerPathId))
             .GroupBy(e => (e.HomeSector.SourcePath, e.LayerPathId))
             .Select(g => (g.Key.SourcePath, new LayerSpec(
@@ -171,7 +167,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     /// <summary>The fragments to stage and the entities to delete, per sector file.</summary>
     public (IReadOnlyList<EntityFragment> Fragments, IReadOnlyList<DeletedEntity> Deleted) Pending()
     {
-        List<EntityFragment> fragments = [.. _pasted.Keys.Concat(_touched).Select(entity =>
+        List<EntityFragment> fragments = [.. _added.Keys.Concat(_touched).Select(entity =>
             new EntityFragment(
                 entity.HomeSector.SourcePath,
                 FcbFragments.EntityFragmentId(FcbEntityFields.ReadString(entity.Node, WorldHashes.HidName), entity.Id),
@@ -184,11 +180,11 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     /// so moving it again restages its fragment and deleting it goes through the workspace.</summary>
     public void Saved()
     {
-        foreach (WorldEntity entity in _pasted.Keys)
+        foreach (WorldEntity entity in _added.Keys)
         {
             entity.IsNew = false;
         }
-        _pasted.Clear();
+        _added.Clear();
         _touched.Clear();
         _deleted.Clear();
     }
@@ -228,7 +224,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
             IsNew = true,
         };
         world.Entities.Add(entity);
-        _pasted[entity] = source;
+        _added[entity] = source;
         return entity;
     }
 
@@ -241,10 +237,9 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     {
         foreach (WorldSectorDocument sector in world.SectorsById.Values)
         {
-            foreach (FcbObject layer in sector.PristineRoot.Children)
+            foreach (FcbObject layer in FcbFragments.LayersOf(sector.PristineRoot))
             {
-                if (layer.TypeHash == WorldHashes.MissionLayer
-                    && MissionLayers.NameOf(layer).Equals(path, StringComparison.OrdinalIgnoreCase)
+                if (MissionLayers.NameOf(layer).Equals(path, StringComparison.OrdinalIgnoreCase)
                     && MissionLayers.PathIdOf(layer) is { } id)
                 {
                     return id;
