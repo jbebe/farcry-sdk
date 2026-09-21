@@ -269,7 +269,7 @@
                                             <!-- Declared here (not ItemContainerStyle) so it applies at every
                                                  depth - same single-click-to-toggle behavior as FolderTree,
                                                  reusing its handler since the logic doesn't depend on FolderNode. -->
-                                            <Style TargetType="{x:Type TreeViewItem}">
+                                            <Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource {x:Type TreeViewItem}}">
                                                 <EventSetter Event="PreviewMouseLeftButtonDown" Handler="FolderTree_ItemClicked" />
                                             </Style>
                                         </TreeView.Resources>

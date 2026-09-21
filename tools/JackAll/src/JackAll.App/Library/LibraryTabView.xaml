@@ -113,7 +113,7 @@
                           SelectedItemChanged="ArchetypeTree_SelectedItemChanged">
                     <!-- Declared here rather than as ItemContainerStyle so it applies at every depth. -->
                     <TreeView.Resources>
-                        <Style TargetType="TreeViewItem">
+                        <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
                             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                             <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                             <Style.Triggers>

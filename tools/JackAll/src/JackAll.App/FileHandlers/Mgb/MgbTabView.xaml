@@ -215,7 +215,7 @@
             <TreeView x:Name="Tree" SelectedItemChanged="Tree_SelectedItemChanged" BorderThickness="1"
                       BorderBrush="#DDD">
                 <TreeView.ItemContainerStyle>
-                    <Style TargetType="TreeViewItem">
+                    <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                     </Style>
                 </TreeView.ItemContainerStyle>

@@ -56,7 +56,7 @@
                             <HierarchicalDataTemplate DataType="{x:Type fcbEditor:NodeView}" ItemsSource="{Binding Items}">
                                 <TextBlock Text="{Binding Title}" Foreground="#555" FontWeight="SemiBold" />
                             </HierarchicalDataTemplate>
-                            <Style TargetType="{x:Type TreeViewItem}">
+                            <Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource {x:Type TreeViewItem}}">
                                 <Setter Property="HorizontalContentAlignment" Value="Stretch" />
                                 <Setter Property="Focusable" Value="False" />
                             </Style>
@@ -113,7 +113,7 @@
                       VirtualizingStackPanel.VirtualizationMode="Recycling"
                       ScrollViewer.CanContentScroll="True">
                 <TreeView.Resources>
-                    <Style TargetType="{x:Type TreeViewItem}">
+                    <Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource {x:Type TreeViewItem}}">
                         <EventSetter Event="PreviewMouseLeftButtonDown" Handler="OutlineTree_ItemClicked" />
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                         <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />

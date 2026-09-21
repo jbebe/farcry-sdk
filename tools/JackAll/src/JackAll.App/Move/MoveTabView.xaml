@@ -43,7 +43,7 @@
                           ScrollViewer.CanContentScroll="True"
                           SelectedItemChanged="ObjectTree_SelectedItemChanged">
                     <TreeView.Resources>
-                        <Style TargetType="TreeViewItem">
+                        <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
                             <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                             <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                             <Style.Triggers>

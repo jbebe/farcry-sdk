@@ -84,7 +84,7 @@
             <!-- Declared here rather than as ItemContainerStyle so it applies at every depth; IsSelected
                  is the selection set, drawn by hand rather than bound to the tree's single selection. -->
             <TreeView.Resources>
-                <Style TargetType="TreeViewItem">
+                <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
                     <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                     <Setter Property="Focusable" Value="False" />
                     <Setter Property="AllowDrop" Value="{Binding IsLayer}" />
