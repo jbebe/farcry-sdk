@@ -880,9 +880,52 @@
     {
      "name": "SoundParams",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CSoundOcclusionManager::SZoneParam"
+     "kind": "group",
+     "cpp": "CSoundOcclusionManager::SZoneParam",
+     "members": [
+      {
+       "name": "fOcclusionVolume",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fOcclusionFilter",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "sndReverb",
+       "flags": 3,
+       "kind": "value",
+       "type": "String",
+       "cpp": "unsigned_int"
+      },
+      {
+       "name": "fEchoLength",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "EnterSounds",
+       "flags": 3,
+       "kind": "container",
+       "element": "Sound",
+       "wrapped": true
+      },
+      {
+       "name": "ExitSounds",
+       "flags": 3,
+       "kind": "container",
+       "element": "Sound",
+       "wrapped": true
+      }
+     ]
     },
     {
      "name": "EntrancesList",
@@ -1230,9 +1273,17 @@
     {
      "name": "SavedActiveChallenges",
      "flags": 12,
-     "kind": "value",
-     "type": null,
-     "cpp": "CChallengeComponent::SSavedActiveChallenges"
+     "kind": "group",
+     "cpp": "CChallengeComponent::SSavedActiveChallenges",
+     "members": [
+      {
+       "name": "Challenges",
+       "flags": 12,
+       "kind": "container",
+       "element": "Challenge",
+       "wrapped": true
+      }
+     ]
     }
    ]
   },
@@ -1253,9 +1304,132 @@
     {
      "name": "CharacterParams",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CPhysCharacterControllerEntityCreateParams"
+     "kind": "group",
+     "cpp": "CPhysCharacterControllerEntityCreateParams",
+     "members": [
+      {
+       "name": "StandDimensions",
+       "flags": 3,
+       "kind": "group",
+       "cpp": "CPhysCharacterControllerStanceDimensions",
+       "members": [
+        {
+         "name": "vecStandCapsulePointA",
+         "flags": 3,
+         "kind": "value",
+         "type": "Vector3",
+         "cpp": "ndVec_tpl<float,3>"
+        },
+        {
+         "name": "vecStandCapsulePointB",
+         "flags": 3,
+         "kind": "value",
+         "type": "Vector3",
+         "cpp": "ndVec_tpl<float,3>"
+        },
+        {
+         "name": "fStandCapsuleRadius",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        }
+       ]
+      },
+      {
+       "name": "CrouchDimensions",
+       "flags": 3,
+       "kind": "group",
+       "cpp": "CPhysCharacterControllerStanceDimensions",
+       "members": [
+        {
+         "name": "vecStandCapsulePointA",
+         "flags": 3,
+         "kind": "value",
+         "type": "Vector3",
+         "cpp": "ndVec_tpl<float,3>"
+        },
+        {
+         "name": "vecStandCapsulePointB",
+         "flags": 3,
+         "kind": "value",
+         "type": "Vector3",
+         "cpp": "ndVec_tpl<float,3>"
+        },
+        {
+         "name": "fStandCapsuleRadius",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        }
+       ]
+      },
+      {
+       "name": "SwimDimensions",
+       "flags": 3,
+       "kind": "group",
+       "cpp": "CPhysCharacterControllerStanceDimensions",
+       "members": [
+        {
+         "name": "vecStandCapsulePointA",
+         "flags": 3,
+         "kind": "value",
+         "type": "Vector3",
+         "cpp": "ndVec_tpl<float,3>"
+        },
+        {
+         "name": "vecStandCapsulePointB",
+         "flags": 3,
+         "kind": "value",
+         "type": "Vector3",
+         "cpp": "ndVec_tpl<float,3>"
+        },
+        {
+         "name": "fStandCapsuleRadius",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        }
+       ]
+      },
+      {
+       "name": "fMass",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "bUpdateRotation",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "bUseRigidBased",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "fMaxSlope",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fMaxTerrainSlope",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      }
+     ]
     },
     {
      "name": "RagdollCollideSpeedLimit",
@@ -1301,9 +1475,31 @@
       {
        "name": "SavedRagdoll",
        "flags": 12,
-       "kind": "value",
-       "type": null,
-       "cpp": "CCharacterPhysComponent::SSavedRagdoll"
+       "kind": "group",
+       "cpp": "CCharacterPhysComponent::SSavedRagdoll",
+       "members": [
+        {
+         "name": "Bones",
+         "flags": 12,
+         "kind": "container",
+         "element": "hidBone",
+         "wrapped": true
+        },
+        {
+         "name": "Pos",
+         "flags": 12,
+         "kind": "value",
+         "type": "Vector3",
+         "cpp": "ndVec_tpl<float,3>"
+        },
+        {
+         "name": "Rot",
+         "flags": 12,
+         "kind": "value",
+         "type": "Vector4",
+         "cpp": "Gear::Quaternion4<float>"
+        }
+       ]
       }
      ]
     },
@@ -1347,9 +1543,31 @@
     {
      "name": "VegetationData",
      "flags": 1,
-     "kind": "value",
-     "type": null,
-     "cpp": "StSerialVegetationData"
+     "kind": "group",
+     "cpp": "StSerialVegetationData",
+     "members": [
+      {
+       "name": "dataVersion",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt32",
+       "cpp": "unsigned_int"
+      },
+      {
+       "name": "bboxMin",
+       "flags": 2,
+       "kind": "value",
+       "type": null,
+       "cpp": "ndVec_tpl<float,3>const&"
+      },
+      {
+       "name": "bboxMax",
+       "flags": 2,
+       "kind": "value",
+       "type": null,
+       "cpp": "ndVec_tpl<float,3>const&"
+      }
+     ]
     }
    ]
   },
@@ -1363,16 +1581,24 @@
     {
      "name": "IgnitorZonesListState",
      "flags": 12,
-     "kind": "value",
-     "type": null,
-     "cpp": "CCollectionIgnitorComponent::SIgnitorZoneStates"
+     "kind": "group",
+     "cpp": "CCollectionIgnitorComponent::SIgnitorZoneStates",
+     "members": [
+      {
+       "name": "ZoneStates",
+       "flags": 12,
+       "kind": "container",
+       "element": "ZoneState",
+       "wrapped": true
+      }
+     ]
     },
     {
      "name": "IgnitorZonesList",
      "flags": 2,
-     "kind": "value",
-     "type": null,
-     "cpp": "StCollectionIgnitorComponentSerializationData"
+     "kind": "group",
+     "cpp": "StCollectionIgnitorComponentSerializationData",
+     "members": []
     },
     {
      "name": "IgnitorZonesList",
@@ -1951,9 +2177,24 @@
     {
      "name": "curveCurve",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CCurveObj"
+     "kind": "group",
+     "cpp": "CCurveObj",
+     "members": [
+      {
+       "name": "Knots",
+       "flags": 3,
+       "kind": "container",
+       "element": "Knot",
+       "wrapped": true
+      },
+      {
+       "name": "hidNumKnots",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt32",
+       "cpp": "unsigned_int"
+      }
+     ]
     }
    ]
   },
@@ -2070,9 +2311,66 @@
     {
      "name": "LuaState",
      "flags": 12,
-     "kind": "value",
-     "type": null,
-     "cpp": "CSerializableScriptObject"
+     "kind": "group",
+     "cpp": "CSerializableScriptObject",
+     "members": [
+      {
+       "name": "KeyType",
+       "flags": 12,
+       "kind": "value",
+       "type": "UInt8",
+       "cpp": "unsigned_char"
+      },
+      {
+       "name": "Key",
+       "flags": 12,
+       "kind": "value",
+       "type": "String",
+       "cpp": "CryStringBase<char>"
+      },
+      {
+       "name": "Variables",
+       "flags": 12,
+       "kind": "container",
+       "element": "hidVariables",
+       "wrapped": true
+      },
+      {
+       "name": "Childrens",
+       "flags": 12,
+       "kind": "container",
+       "element": "hidChildrens",
+       "wrapped": true
+      },
+      {
+       "name": "Callbacks",
+       "flags": 12,
+       "kind": "container",
+       "element": "hidCallbacks",
+       "wrapped": true
+      },
+      {
+       "name": "Listeners",
+       "flags": 12,
+       "kind": "container",
+       "element": "hidListeners",
+       "wrapped": true
+      },
+      {
+       "name": "Delays",
+       "flags": 12,
+       "kind": "container",
+       "element": "hidDelays",
+       "wrapped": true
+      },
+      {
+       "name": "Sinks",
+       "flags": 12,
+       "kind": "container",
+       "element": "hidSinks",
+       "wrapped": true
+      }
+     ]
     }
    ]
   },
@@ -2218,9 +2516,167 @@
     {
      "name": "light",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CSceneObjectHandle<CSceneLight>"
+     "kind": "embedded",
+     "cpp": "CSceneLight",
+     "members": [
+      {
+       "name": "hidType",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt32",
+       "cpp": "unsigned_int"
+      },
+      {
+       "name": "Omni",
+       "flags": 3,
+       "kind": "conditional",
+       "condition": "CSceneLight::IsOmni",
+       "members": [
+        {
+         "name": "fRadius",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        }
+       ]
+      },
+      {
+       "name": "Directional",
+       "flags": 3,
+       "kind": "conditional",
+       "condition": "CSceneLight::IsDirectional",
+       "members": [
+        {
+         "name": "fWidth",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fHeight",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fDepth",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        }
+       ]
+      },
+      {
+       "name": "Spot",
+       "flags": 3,
+       "kind": "conditional",
+       "condition": "CSceneLight::IsSpot",
+       "members": [
+        {
+         "name": "fOuterAngle",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fInnerAngle",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fRadius",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "bCastShadow",
+         "flags": 3,
+         "kind": "value",
+         "type": "Bool",
+         "cpp": "bool"
+        },
+        {
+         "name": "fShadowFactor",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        }
+       ]
+      },
+      {
+       "name": "bEnabled",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "clrColor",
+       "flags": 3,
+       "kind": "value",
+       "type": "Vector3",
+       "cpp": "ndVec_tpl<float,3>"
+      },
+      {
+       "name": "fIntensity",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "llgLightGroup",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt32",
+       "cpp": "unsigned_int"
+      },
+      {
+       "name": "fTurnOffFallOff",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fTurnOffDistance",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fFlickeringFrequency",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fFlickeringAmplitude",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fFlickeringNoise",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      }
+     ]
     },
     {
      "name": "Enable",
@@ -2872,16 +3328,32 @@
     {
      "name": "ExplodeStims",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CStimArray"
+     "kind": "group",
+     "cpp": "CStimArray",
+     "members": [
+      {
+       "name": "Stims",
+       "flags": 3,
+       "kind": "container",
+       "element": "Stim",
+       "wrapped": true
+      }
+     ]
     },
     {
      "name": "RemainStims",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CStimArray"
+     "kind": "group",
+     "cpp": "CStimArray",
+     "members": [
+      {
+       "name": "Stims",
+       "flags": 3,
+       "kind": "container",
+       "element": "Stim",
+       "wrapped": true
+      }
+     ]
     },
     {
      "name": "bShouldExplodeUnderwater",
@@ -4197,9 +4669,31 @@
     {
      "name": "RainEffect",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CFireManager::SRainEffect"
+     "kind": "group",
+     "cpp": "CFireManager::SRainEffect",
+     "members": [
+      {
+       "name": "TimeToIncreaseWetnessLevel",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "TimeToDecreaseWetnessLevel",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "BudgetDecreaseRatePerSecond",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt8",
+       "cpp": "unsigned_char"
+      }
+     ]
     },
     {
      "name": "iNumberOfTotalSoundVoiceAllowed",
@@ -6502,9 +6996,32 @@
     {
      "name": "hidWaterSplashTimer",
      "flags": 12,
-     "kind": "value",
-     "type": null,
-     "cpp": "CLifeTimer"
+     "kind": "group",
+     "cpp": "CLifeTimer",
+     "members": [
+      {
+       "name": "LifeTime",
+       "flags": 12,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "StartTime",
+       "flags": 12,
+       "kind": "group",
+       "cpp": "CTimeAbsolute",
+       "members": [
+        {
+         "name": "RelativeTime",
+         "flags": 12,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        }
+       ]
+      }
+     ]
     }
    ]
   },
@@ -6767,9 +7284,17 @@
     {
      "name": "SavedParticleSystems",
      "flags": 12,
-     "kind": "value",
-     "type": null,
-     "cpp": "CParticleFXComponent::SParticleFXComponentState"
+     "kind": "group",
+     "cpp": "CParticleFXComponent::SParticleFXComponentState",
+     "members": [
+      {
+       "name": "Effects",
+       "flags": 12,
+       "kind": "container",
+       "element": "Effect",
+       "wrapped": true
+      }
+     ]
     }
    ]
   },
@@ -6783,9 +7308,52 @@
     {
      "name": "ParticleParams",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CPhysParticleEntityCreateParams"
+     "kind": "group",
+     "cpp": "CPhysParticleEntityCreateParams",
+     "members": [
+      {
+       "name": "fMass",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fRadius",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fFriction",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fRestitution",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "bEnabled",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "nSurfaceIdx",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt8",
+       "cpp": "unsigned_char"
+      }
+     ]
     }
    ]
   },
@@ -6872,9 +7440,31 @@
     {
      "name": "CurrentTag",
      "flags": 12,
-     "kind": "value",
-     "type": null,
-     "cpp": "CBeautifierTag"
+     "kind": "group",
+     "cpp": "CBeautifierTag",
+     "members": [
+      {
+       "name": "sType",
+       "flags": 15,
+       "kind": "value",
+       "type": "Hash",
+       "cpp": "CNoCaseStringID"
+      },
+      {
+       "name": "sContext",
+       "flags": 15,
+       "kind": "value",
+       "type": "Hash",
+       "cpp": "CNoCaseStringID"
+      },
+      {
+       "name": "sMode",
+       "flags": 15,
+       "kind": "value",
+       "type": "Hash",
+       "cpp": "CNoCaseStringID"
+      }
+     ]
     },
     {
      "name": "Enable",
@@ -7700,9 +8290,66 @@
     {
      "name": "recoil",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CProceduralRecoil"
+     "kind": "embedded",
+     "cpp": "CProceduralRecoil",
+     "members": [
+      {
+       "name": "hurtleanPitchMin",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtleanPitchMax",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtleanYawMin",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtleanYawMax",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtleanRollMin",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtleanRollMax",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtSpeedIn",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtSpeedOut",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      }
+     ]
     }
    ]
   },
@@ -7790,9 +8437,66 @@
     {
      "name": "RecoilThirdPerson",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CProceduralRecoil"
+     "kind": "embedded",
+     "cpp": "CProceduralRecoil",
+     "members": [
+      {
+       "name": "hurtleanPitchMin",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtleanPitchMax",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtleanYawMin",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtleanYawMax",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtleanRollMin",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtleanRollMax",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtSpeedIn",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "hurtSpeedOut",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      }
+     ]
     }
    ]
   },
@@ -9093,9 +9797,381 @@
     {
      "name": "Biofeedback",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CPlayerBiofeedback"
+     "kind": "group",
+     "cpp": "CPlayerBiofeedback",
+     "members": [
+      {
+       "name": "BiofeedbackSounds",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "sndBioBreathStartSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndBioBreathStopSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndtpBioBreathSoundType",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int"
+        },
+        {
+         "name": "fOnDamageDontPlayBioSoundTimer",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        }
+       ]
+      },
+      {
+       "name": "OutOfWaterBreathing",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "fUnderwaterTimeBeforeOutOfWaterSound",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "sndOutOfWaterBreathStartSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndOutOfWaterBreathStopSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndtpOutOfWaterBreathSoundType",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int"
+        }
+       ]
+      },
+      {
+       "name": "Drowning",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "sndDrowningWarningStartSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndDrowningWarningStopSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndtpDrowningWarningSoundType",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int"
+        },
+        {
+         "name": "fDrowningWarningFrequency",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "sndDrownedSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndtpDrownedSoundType",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int"
+        }
+       ]
+      },
+      {
+       "name": "Malaria",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "sndMalariaStartSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndMalariaStopSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndtpBioBreathSoundType",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int"
+        }
+       ]
+      },
+      {
+       "name": "Health",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "sndHealthFailureStartSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndHealthFailureStopSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndtpHealthFailureSoundType",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int"
+        },
+        {
+         "name": "sndDeathSound",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndtpDeathSoundType",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int"
+        },
+        {
+         "name": "mixHealthFailurePreset",
+         "flags": 3,
+         "kind": "value",
+         "type": "Hash",
+         "cpp": "CStringID"
+        },
+        {
+         "name": "mixLowHealthPreset",
+         "flags": 3,
+         "kind": "value",
+         "type": "Hash",
+         "cpp": "CStringID"
+        },
+        {
+         "name": "mixMediumHealthPreset",
+         "flags": 3,
+         "kind": "value",
+         "type": "Hash",
+         "cpp": "CStringID"
+        }
+       ]
+      },
+      {
+       "name": "IronsightBreathingSounds",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "sndIronsightBreathStartSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndIronsightBreathStopSoundID",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndtpIronsightBreathSoundType",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int"
+        },
+        {
+         "name": "fTimeInIronsightBeforeBreathing",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "mixIronsightPreset",
+         "flags": 3,
+         "kind": "value",
+         "type": "Hash",
+         "cpp": "CStringID"
+        }
+       ]
+      },
+      {
+       "name": "Stamina",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "sndswtpStaminaSwitchType",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndswvlSoundSwitchLowStamina",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndswvlSoundSwitchMediumStamina",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "fVolumeAttenuation",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "mixLowStaminaPreset",
+         "flags": 3,
+         "kind": "value",
+         "type": "Hash",
+         "cpp": "CStringID"
+        },
+        {
+         "name": "mixMediumStaminaPreset",
+         "flags": 3,
+         "kind": "value",
+         "type": "Hash",
+         "cpp": "CStringID"
+        }
+       ]
+      },
+      {
+       "name": "StaminaThreshold",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "fLowStaminaThreshold",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fMediumStaminaThreshold",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        }
+       ]
+      },
+      {
+       "name": "Infamy",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "sndswtpInfamySwitchType",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndswvlSoundSwitchLowInfamy",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int"
+        },
+        {
+         "name": "sndswvlSoundSwitchHighInfamy",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int"
+        }
+       ]
+      },
+      {
+       "name": "InfamyThreshold",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "fHighInfamyThreshold",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        }
+       ]
+      },
+      {
+       "name": "DesertDrainFX",
+       "flags": 12,
+       "kind": "value",
+       "type": "Hash",
+       "cpp": "CNoCaseStringID"
+      }
+     ]
     },
     {
      "name": "DirtyWaterFX",
@@ -9281,16 +10357,88 @@
     {
      "name": "CurrentFX",
      "flags": 12,
-     "kind": "value",
-     "type": null,
-     "cpp": "CPostFxManager::SFX"
+     "kind": "group",
+     "cpp": "CPostFxManager::SFX",
+     "members": [
+      {
+       "name": "Name",
+       "flags": 12,
+       "kind": "value",
+       "type": "Hash",
+       "cpp": "CNoCaseStringID"
+      },
+      {
+       "name": "FxIntensity",
+       "flags": 12,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "Time",
+       "flags": 12,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "Transition",
+       "flags": 12,
+       "kind": "value",
+       "type": null,
+       "cpp": "CPostFxManager::ETransition"
+      },
+      {
+       "name": "DirectFadeIndex",
+       "flags": 12,
+       "kind": "value",
+       "type": "Int32",
+       "cpp": "int"
+      }
+     ]
     },
     {
      "name": "TargetFX",
      "flags": 12,
-     "kind": "value",
-     "type": null,
-     "cpp": "CPostFxManager::SFX"
+     "kind": "group",
+     "cpp": "CPostFxManager::SFX",
+     "members": [
+      {
+       "name": "Name",
+       "flags": 12,
+       "kind": "value",
+       "type": "Hash",
+       "cpp": "CNoCaseStringID"
+      },
+      {
+       "name": "FxIntensity",
+       "flags": 12,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "Time",
+       "flags": 12,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "Transition",
+       "flags": 12,
+       "kind": "value",
+       "type": null,
+       "cpp": "CPostFxManager::ETransition"
+      },
+      {
+       "name": "DirectFadeIndex",
+       "flags": 12,
+       "kind": "value",
+       "type": "Int32",
+       "cpp": "int"
+      }
+     ]
     },
     {
      "name": "RequestedFXs",
@@ -10029,9 +11177,45 @@
     {
      "name": "Stim",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CPhysStimSettings"
+     "kind": "group",
+     "cpp": "CPhysStimSettings",
+     "members": [
+      {
+       "name": "bPierceStim",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "bCrushStim",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "bBurnStim",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "fBulletImpulseScale",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fExplosionImpulseScale",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      }
+     ]
     },
     {
      "name": "ResourceIndex",
@@ -11024,9 +12208,52 @@
     {
      "name": "SoundPoint",
      "flags": 1,
-     "kind": "value",
-     "type": null,
-     "cpp": "SSoundPoint"
+     "kind": "group",
+     "cpp": "SSoundPoint",
+     "members": [
+      {
+       "name": "SingleObject",
+       "flags": 1,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "hidSingleObject",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "dissndStart",
+       "flags": 3,
+       "kind": "value",
+       "type": "String",
+       "cpp": "unsigned_int"
+      },
+      {
+       "name": "dissndStop",
+       "flags": 3,
+       "kind": "value",
+       "type": "String",
+       "cpp": "unsigned_int"
+      },
+      {
+       "name": "disInaudibleDistance",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "sndtpType",
+       "flags": 3,
+       "kind": "value",
+       "type": "Int32",
+       "cpp": "int"
+      }
+     ]
     },
     {
      "name": "sndptSoundPoint",
@@ -12081,9 +13308,206 @@
     {
      "name": "BoatParams",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CPhysFloatingVehicleEntityCreateParams"
+     "kind": "group",
+     "cpp": "CPhysFloatingVehicleEntityCreateParams",
+     "members": [
+      {
+       "name": "fMass",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "vectorChassisUnitInertia",
+       "flags": 3,
+       "kind": "value",
+       "type": "Vector3",
+       "cpp": "ndVec_tpl<float,3>"
+      },
+      {
+       "name": "fVolumeScale",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fSpheresZOffset",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "vectorCenterOfMassOffset",
+       "flags": 3,
+       "kind": "value",
+       "type": "Vector3",
+       "cpp": "ndVec_tpl<float,3>"
+      },
+      {
+       "name": "fSideFriction",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fForwardFriction",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fReverseFriction",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fDownFriction",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fDownRotateFriction",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fUpDownFriction",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fMotorAutoRevDownPerSec",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fMotorRevUpPerSec",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fMotorReverseRevUpPerSec",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fMotorMaxRPM",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fForwardEnginePower",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fReverseEnginePower",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fEngineBrakingPower",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "vectorMotorPos",
+       "flags": 3,
+       "kind": "value",
+       "type": "Vector3",
+       "cpp": "ndVec_tpl<float,3>"
+      },
+      {
+       "name": "bEngineMustBeInWater",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "fMaxSteerSpeed",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fSteerAngleLowSpeed",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fSteerAngleHighSpeed",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fSteerMaxSpeed",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fAngularDamping",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fRollDamping",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fPitchDamping",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "bForcePPU",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      }
+     ]
     },
     {
      "name": "fRudderAngleScale",
@@ -12222,9 +13646,122 @@
     {
      "name": "ParagliderParams",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CPhysParagliderVehicleEntityCreateParams"
+     "kind": "group",
+     "cpp": "CPhysParagliderVehicleEntityCreateParams",
+     "members": [
+      {
+       "name": "fMass",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fMaxRollAngle",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fRollVelScale",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fRollVelMax",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fRollAcc",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fMaxPitchAngle",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fPitchVelScale",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fPitchVelMax",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fPitchAcc",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fPitchSpeedScale",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fRollAngleToTurnSpeed",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fTurnAcc",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fUpPitchAngleSpeedFade",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fBaseSpeed",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fSpeedTurnMax",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fDownSpeed",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      }
+     ]
     }
    ]
   },
@@ -12422,9 +13959,17 @@
     {
      "name": "SavedParts",
      "flags": 12,
-     "kind": "value",
-     "type": null,
-     "cpp": "CVehiclePhysComponent::SSavedParts"
+     "kind": "group",
+     "cpp": "CVehiclePhysComponent::SSavedParts",
+     "members": [
+      {
+       "name": "Parts",
+       "flags": 12,
+       "kind": "container",
+       "element": "Part",
+       "wrapped": true
+      }
+     ]
     },
     {
      "name": "ExternalConstraints",
@@ -12469,9 +14014,222 @@
     {
      "name": "WheeledParams",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CPhysWheeledVehicleEntityCreateParams"
+     "kind": "group",
+     "cpp": "CPhysWheeledVehicleEntityCreateParams",
+     "members": [
+      {
+       "name": "fMass",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fEnginePower",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fExtraClimbEnginePower",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fGearBoxTopSpeed",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "nGears",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt32",
+       "cpp": "unsigned_int"
+      },
+      {
+       "name": "vectorCenterOfMassOffset",
+       "flags": 3,
+       "kind": "value",
+       "type": "Vector3",
+       "cpp": "ndVec_tpl<float,3>"
+      },
+      {
+       "name": "fTorqueRollFactor",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fTorquePitchFactor",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fTorqueYawFactor",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fExtraTorqueFactor",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fChassisUnitInertiaYaw",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fChassisUnitInertiaRoll",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fChassisUnitInertiaPitch",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fGroundFrictionReduceMinAngle",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fGroundFrictionReduceMaxAngle",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fRearWheelHandBrakeFrictionScale",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "Steering",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "bUseTimedSteering",
+         "flags": 3,
+         "kind": "value",
+         "type": "Bool",
+         "cpp": "bool"
+        },
+        {
+         "name": "Timed",
+         "flags": 3,
+         "kind": "conditional",
+         "condition": "CPhysWheeledVehicleEntityCreateParams::TimedSteering",
+         "members": [
+          {
+           "name": "fMaxSpeed",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          },
+          {
+           "name": "fLowMaxAngle",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          },
+          {
+           "name": "fHighMaxAngle",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          },
+          {
+           "name": "fLowDirectMaxAngle",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          },
+          {
+           "name": "fHighDirectMaxAngle",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          },
+          {
+           "name": "fLowSteerSpeed",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          },
+          {
+           "name": "fHighSteerSpeed",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          }
+         ]
+        },
+        {
+         "name": "Normal",
+         "flags": 3,
+         "kind": "conditional",
+         "condition": "CPhysWheeledVehicleEntityCreateParams::NotTimedSteering",
+         "members": [
+          {
+           "name": "fMaxSteer",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          },
+          {
+           "name": "fMaxSpeedFullSteeringAngle",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Wheels",
+       "flags": 3,
+       "kind": "container",
+       "element": "Wheel",
+       "wrapped": true
+      }
+     ]
     },
     {
      "name": "hidWheelPrimitives",
@@ -12579,9 +14337,32 @@
     {
      "name": "WagerTimer",
      "flags": 12,
-     "kind": "value",
-     "type": null,
-     "cpp": "CLifeTimer"
+     "kind": "group",
+     "cpp": "CLifeTimer",
+     "members": [
+      {
+       "name": "LifeTime",
+       "flags": 12,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "StartTime",
+       "flags": 12,
+       "kind": "group",
+       "cpp": "CTimeAbsolute",
+       "members": [
+        {
+         "name": "RelativeTime",
+         "flags": 12,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        }
+       ]
+      }
+     ]
     },
     {
      "name": "IsPlayerInRegion",
@@ -12663,9 +14444,799 @@
     {
      "name": "CommonProperties",
      "flags": 3,
-     "kind": "value",
-     "type": null,
-     "cpp": "CWeaponPropertiesCommon"
+     "kind": "group",
+     "cpp": "CWeaponPropertiesCommon",
+     "members": [
+      {
+       "name": "sName",
+       "flags": 3,
+       "kind": "value",
+       "type": "String",
+       "cpp": "CryStringBase<char>"
+      },
+      {
+       "name": "sDisplayName",
+       "flags": 3,
+       "kind": "value",
+       "type": "String",
+       "cpp": "CryStringBase<char>"
+      },
+      {
+       "name": "fReloadTime",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "bAutoReload",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "bIsSilent",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "bVisibleHolstered",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "bEmitLight",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "selReloadType",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt32",
+       "cpp": "unsigned_int",
+       "labels": [
+        "Magazine",
+        "Bullet",
+        "None"
+       ]
+      },
+      {
+       "name": "selWeaponClass",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt32",
+       "cpp": "unsigned_int",
+       "labels": [
+        "Machete",
+        "Pistol",
+        "Assault",
+        "Shotgun",
+        "Sniper",
+        "RPG",
+        "CarlGustav",
+        "Flamethrower",
+        "Mortar",
+        "IED"
+       ]
+      },
+      {
+       "name": "selFireStrategy",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt32",
+       "cpp": "unsigned_int",
+       "labels": [
+        "Bullet",
+        "Melee",
+        "Flame",
+        "Mortar",
+        "Projectile",
+        "IED"
+       ]
+      },
+      {
+       "name": "selReticleType",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt32",
+       "cpp": "unsigned_int",
+       "labels": [
+        "Type1",
+        "Type2",
+        "Type3"
+       ]
+      },
+      {
+       "name": "FireRate",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "fBusyDuration",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "iFireRate",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "selFireRateMode",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int",
+         "labels": [
+          "SingleShot",
+          "FullAuto",
+          "PrepareShot"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Ammo",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "ammoAmmoType",
+         "flags": 3,
+         "kind": "value",
+         "type": "Hash",
+         "cpp": "CNoCaseStringID"
+        },
+        {
+         "name": "iAmmoInClip",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int"
+        },
+        {
+         "name": "iMaxAmmo",
+         "flags": 1,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int"
+        },
+        {
+         "name": "iMaxAmmoCasual",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int[4]"
+        },
+        {
+         "name": "iMaxAmmoExperimented",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int[4]"
+        },
+        {
+         "name": "iMaxAmmoHardcore",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int[4]"
+        },
+        {
+         "name": "iMaxAmmoInfamous",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int[4]"
+        },
+        {
+         "name": "bUsesClips",
+         "flags": 3,
+         "kind": "value",
+         "type": "Bool",
+         "cpp": "bool"
+        },
+        {
+         "name": "bIsAmmoVisible",
+         "flags": 3,
+         "kind": "value",
+         "type": "Bool",
+         "cpp": "bool"
+        }
+       ]
+      },
+      {
+       "name": "Recoil",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "iRecoilRecoveryLevel",
+         "flags": 3,
+         "kind": "value",
+         "type": "Int32",
+         "cpp": "int"
+        },
+        {
+         "name": "fRecoilAchieveTime",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fRecoilAnimationWeight",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fRecoilMax",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "RecoilIK",
+         "flags": 3,
+         "kind": "group",
+         "members": [
+          {
+           "name": "fIKRecoilBurstSpeedIn",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          },
+          {
+           "name": "fIKRecoilBurstPitchRandom",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          },
+          {
+           "name": "fIKRecoilBurstSpeedOut",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          },
+          {
+           "name": "fIKRecoilBurstPitchRate",
+           "flags": 3,
+           "kind": "value",
+           "type": "Float",
+           "cpp": "float"
+          },
+          {
+           "name": "vIKRecoilBurstOffset",
+           "flags": 3,
+           "kind": "value",
+           "type": "Vector3",
+           "cpp": "ndVec_tpl<float,3>"
+          }
+         ]
+        }
+       ]
+      },
+      {
+       "name": "IronSight",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "fMoveSpeedFactor",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "bCanIronsight",
+         "flags": 3,
+         "kind": "value",
+         "type": "Bool",
+         "cpp": "bool"
+        },
+        {
+         "name": "fLookSensitivityFactor",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fIronsightFOV",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fIronsightTransitionTime",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fIronsightRecoilFactor",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fIronsightPrepareDelay",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "bIronsightCanPrepare",
+         "flags": 3,
+         "kind": "value",
+         "type": "Bool",
+         "cpp": "bool"
+        },
+        {
+         "name": "archTransitionCurve",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "CryStringBase<char>"
+        },
+        {
+         "name": "archAnimPlaybackCurve",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "CryStringBase<char>"
+        },
+        {
+         "name": "IronsightFX",
+         "flags": 3,
+         "kind": "value",
+         "type": "Hash",
+         "cpp": "CNoCaseStringID"
+        }
+       ]
+      },
+      {
+       "name": "crosshairMagmaAreaName",
+       "flags": 3,
+       "kind": "value",
+       "type": "String",
+       "cpp": "CryStringBase<char>"
+      },
+      {
+       "name": "iBaseAccuracyLevel",
+       "flags": 3,
+       "kind": "value",
+       "type": "Int32",
+       "cpp": "int"
+      },
+      {
+       "name": "fRange",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "vectorEffectiveRange",
+       "flags": 3,
+       "kind": "value",
+       "type": "Vector2",
+       "cpp": "ndVec_tpl<float,2>"
+      },
+      {
+       "name": "vectorEffectiveRangeIS",
+       "flags": 3,
+       "kind": "value",
+       "type": "Vector2",
+       "cpp": "ndVec_tpl<float,2>"
+      },
+      {
+       "name": "fUnjamTime",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "selJamType",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt32",
+       "cpp": "unsigned_int",
+       "labels": [
+        "Malfunction",
+        "StrategyManaged"
+       ]
+      },
+      {
+       "name": "iClipsForSelfDestruct",
+       "flags": 3,
+       "kind": "value",
+       "type": "Int32",
+       "cpp": "int"
+      },
+      {
+       "name": "bIsIndestructible",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "bIsBreakable",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "fLookSensitivityFactor",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fMoveSpeedFactor",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fForcedReliability",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fInitialJamCounter",
+       "flags": 3,
+       "kind": "value",
+       "type": "Int32",
+       "cpp": "int"
+      },
+      {
+       "name": "archPickupArchetype",
+       "flags": 3,
+       "kind": "value",
+       "type": "String",
+       "cpp": "CryStringBase<char>"
+      },
+      {
+       "name": "fShootingAngle",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "fShootingIronsightAngle",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "bSingleHitHealthFailure",
+       "flags": 3,
+       "kind": "value",
+       "type": "Bool",
+       "cpp": "bool"
+      },
+      {
+       "name": "fHealthFailureChanceModifier",
+       "flags": 3,
+       "kind": "value",
+       "type": "Float",
+       "cpp": "float"
+      },
+      {
+       "name": "AIShootingSystem",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "archTargetDistanceCurve",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "CryStringBase<char>"
+        },
+        {
+         "name": "archSuccessfulHitCurve",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "CryStringBase<char>"
+        },
+        {
+         "name": "fSuccessfulBulletHitTimer",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "nForcedFailureMin",
+         "flags": 1,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int[4]"
+        },
+        {
+         "name": "nForcedFailureMax",
+         "flags": 1,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int[4]"
+        },
+        {
+         "name": "nForcedFailureMinCausal",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int[4]"
+        },
+        {
+         "name": "nForcedFailureMaxCausal",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int[4]"
+        },
+        {
+         "name": "nForcedFailureMinExperimented",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int[4]"
+        },
+        {
+         "name": "nForcedFailureMaxExperimented",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int[4]"
+        },
+        {
+         "name": "nForcedFailureMinHardcore",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int[4]"
+        },
+        {
+         "name": "nForcedFailureMaxHardcore",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int[4]"
+        },
+        {
+         "name": "nForcedFailureMinInfamous",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int[4]"
+        },
+        {
+         "name": "nForcedFailureMaxInfamous",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int[4]"
+        },
+        {
+         "name": "fBurstLengthLong_Max",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fBurstLengthLong_Min",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fBurstLengthMid_Max",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fBurstLengthMid_Min",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fBurstLengthShort_Max",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fBurstLengthShort_Min",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fBurstWaitLong_Max",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fBurstWaitLong_Min",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fBurstWaitMid_Max",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fBurstWaitMid_Min",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fBurstWaitShort_Max",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        },
+        {
+         "name": "fBurstWaitShort_Min",
+         "flags": 3,
+         "kind": "value",
+         "type": "Float",
+         "cpp": "float"
+        }
+       ]
+      },
+      {
+       "name": "Torso",
+       "flags": 3,
+       "kind": "conditional",
+       "condition": "CWeaponPropertiesCommon::IsWeaponCausingHealthFailure",
+       "members": [
+        {
+         "name": "selHitLocation_Torso_Severity",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int",
+         "labels": [
+          "Normal_Damage",
+          "HealthFailureLevel_1",
+          "HealthFailureLevel_2",
+          "HealthFailureLevel_3",
+          "Kill"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "Limb",
+       "flags": 3,
+       "kind": "conditional",
+       "condition": "CWeaponPropertiesCommon::IsWeaponCausingHealthFailure",
+       "members": [
+        {
+         "name": "selHitLocation_Limb_Severity",
+         "flags": 3,
+         "kind": "value",
+         "type": "UInt32",
+         "cpp": "unsigned_int",
+         "labels": [
+          "Normal_Damage",
+          "HealthFailureLevel_1",
+          "HealthFailureLevel_2",
+          "HealthFailureLevel_3",
+          "Kill"
+         ]
+        }
+       ]
+      },
+      {
+       "name": "selCategory",
+       "flags": 3,
+       "kind": "value",
+       "type": "UInt32",
+       "cpp": "unsigned_int",
+       "labels": [
+        "Hand To Hand",
+        "Primary",
+        "Secondary",
+        "Special"
+       ]
+      },
+      {
+       "name": "HolsterHandle",
+       "flags": 3,
+       "kind": "value",
+       "type": "Hash",
+       "cpp": "CNoCaseStringID"
+      },
+      {
+       "name": "AICurve",
+       "flags": 3,
+       "kind": "group",
+       "members": [
+        {
+         "name": "archDamageMultiplierVisibleCurve",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "CryStringBase<char>"
+        },
+        {
+         "name": "archDamageMultiplierNotVisibleCurve",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "CryStringBase<char>"
+        },
+        {
+         "name": "archPrimaryBulletChanceOfSuccessCurve",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "CryStringBase<char>"
+        },
+        {
+         "name": "archSecondaryBulletChanceOfSuccessCurve",
+         "flags": 3,
+         "kind": "value",
+         "type": "String",
+         "cpp": "CryStringBase<char>"
+        }
+       ]
+      }
+     ]
     },
     {
      "name": "FireStrategyProperties",

@@ -171,7 +171,7 @@ def assemble(events, owner, registrar, registrar_addr):
     A slot value is ("int", n), ("str", s), ("func", name) or
     ("vtable", demangled, mangled, addr).
     """
-    allocs, slots, pushed, index_of = {}, {}, [], {}
+    allocs, slots, pushed, seen = {}, {}, [], set()
     labels = {}
     last_enum = None
     bases, inherits = [], []
@@ -182,8 +182,8 @@ def assemble(events, owner, registrar, registrar_addr):
             slots[ev[1]] = {}
         elif tag == "slot" and ev[1] in slots:
             slots[ev[1]][ev[2]] = ev[3]
-        elif tag == "push" and ev[1] in allocs and ev[1] not in index_of:
-            index_of[ev[1]] = len(pushed)
+        elif tag == "push" and ev[1] in allocs and ev[1] not in seen:
+            seen.add(ev[1])
             pushed.append((ev[1], ev[2]))
             vt = slots[ev[1]].get(OFF_VPTR)
             kind = describe_handler(vt[1])["kind"] if vt and vt[0] == "vtable" else None

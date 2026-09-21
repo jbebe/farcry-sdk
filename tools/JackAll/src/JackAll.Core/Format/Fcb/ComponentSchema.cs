@@ -10,29 +10,15 @@ namespace JackAll.Core.Format.Fcb;
 /// </summary>
 public sealed class ComponentSchema
 {
-    private readonly Dictionary<uint, SchemaClass> _byHash;
+    public static ComponentSchema Empty { get; } = new() { Classes = [] };
 
-    private ComponentSchema(IReadOnlyList<SchemaClass> classes)
-    {
-        Classes = classes;
-        _byHash = classes.ToDictionary(c => FcbClassDefinitions.Crc32Ascii(c.Name));
-    }
-
-    public static ComponentSchema Empty { get; } = new([]);
-
-    public IReadOnlyList<SchemaClass> Classes { get; }
+    public required IReadOnlyList<SchemaClass> Classes { get; init; }
 
     public static ComponentSchema Load(string path)
-    {
-        SchemaDocument? document = JsonSerializer.Deserialize(File.ReadAllText(path), ComponentSchemaJson.Default.SchemaDocument);
-        return new ComponentSchema(document?.Classes ?? []);
-    }
-
-    public SchemaClass? Find(uint classHash) => _byHash.GetValueOrDefault(classHash);
+        => new() { Classes = JsonSerializer.Deserialize(File.ReadAllText(path), ComponentSchemaJson.Default.SchemaDocument)?.Classes ?? [] };
 }
 
-public sealed record SchemaClass(
-    string Name, string? Parent, string Kind, bool Creatable, IReadOnlyList<string> Uses, IReadOnlyList<SchemaMember> Members)
+public sealed record SchemaClass(string Name, string? Parent, string Kind, bool Creatable, IReadOnlyList<SchemaMember> Members)
 {
     public bool IsComponent => Kind == "component";
 }
@@ -40,21 +26,19 @@ public sealed record SchemaClass(
 /// <summary>
 /// A <c>value</c>; a <c>container</c> of child nodes tagged <see cref="Element"/>, inside a child
 /// named after the member when <see cref="Wrapped"/>; a <c>group</c> whose members sit in a child
-/// named after it; or a <c>conditional</c> group whose members sit in the same node.
+/// named after it; or a <c>conditional</c> group or <c>embedded</c> class whose members sit in the
+/// same node.
 /// </summary>
 public sealed record SchemaMember(
     string Name,
     string Kind,
-    int? Flags,
     string? Type,
-    string? Cpp,
     IReadOnlyList<string>? Labels,
     string? Element,
     bool? Wrapped,
-    string? Condition,
     IReadOnlyList<SchemaMember>? Members);
 
-internal sealed record SchemaDocument(string? Generator, IReadOnlyList<SchemaClass> Classes);
+internal sealed record SchemaDocument(IReadOnlyList<SchemaClass> Classes);
 
 [JsonSourceGenerationOptions(PropertyNamingPolicy = JsonKnownNamingPolicy.CamelCase)]
 [JsonSerializable(typeof(SchemaDocument))]

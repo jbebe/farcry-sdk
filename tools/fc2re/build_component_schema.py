@@ -2,14 +2,8 @@
 #
 #   python build_component_schema.py [out] [..\JackAll\assets\component_schema.json]
 #
-# Reads out/register_properties.jsonl, out/register_properties_classes.jsonl and
-# out/component_uses.jsonl, keeps every class whose registry chain reaches
-# CEntityComponent or CBaseEntity, and writes one JSON document. A member is a
-# "value", a "container" of child nodes tagged "element" (inside a child named
-# after the member when "wrapped"), a "group" whose members live in a child
-# named after it, or a "conditional" group loaded from the same node. The report
-# compares the wire types it derives with binary_classes.xml wherever both
-# name the same member.
+# Keeps the classes whose registry chain reaches CEntityComponent or CBaseEntity
+# and reports where its wire types disagree with binary_classes.xml.
 
 import json
 import os
@@ -17,6 +11,9 @@ import re
 import sys
 import xml.etree.ElementTree as ET
 from collections import Counter
+
+from derive_size_floors import load_jsonl
+from dump_properties import ACCESSOR_KINDS, CONTAINER_KINDS
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOTS = {"CEntityComponent": "component", "CBaseEntity": "entity"}
@@ -41,10 +38,9 @@ VECTORS = {
 }
 RE_VECTOR = re.compile(r"^CryVector<(?P<item>.+?),NoLock,CryVectorProperties<32u,5u,26u>>$")
 RE_ARRAY = re.compile(r"^(?P<item>.+)\[\d+\]$")
-DATA_KINDS = frozenset((
-    "CGenericMember", "CVirtualMember", "CVirtualMemberRef", "COffsetMember",
-    "CVirtualMemberIntrinsicGetCopy", "CVirtualMemberIntrinsicGetRef"))
-CONTAINER_KINDS = frozenset(("CContainerMember", "CEnumContainerMember"))
+RE_HANDLE = re.compile(r"^CSceneObjectHandle<(?P<cls>.+)>$")
+STRUCT_HANDLERS = ("GenericTypeHandler", "NoChildTypeHandler")
+DATA_KINDS = ACCESSOR_KINDS | {"CGenericMember", "COffsetMember"}
 
 
 def wire_type(value_type, handler):
@@ -66,11 +62,6 @@ def wire_type(value_type, handler):
     return SCALARS.get(value_type)
 
 
-def load_jsonl(path):
-    with open(path, encoding="utf-8") as fh:
-        return [json.loads(line) for line in fh if line.strip()]
-
-
 def parent_of(klass):
     for key in ("inherits", "bases"):
         if klass.get(key):
@@ -86,9 +77,20 @@ def chain(name, parents):
     return seen
 
 
-def build_members(rows):
-    """Registry rows of one class -> nested member list (groups hold their members)."""
-    by_index = {r["index"]: r for r in rows}
+def embedded_class(row, rows_of):
+    """The registered class a struct-typed member loads, if it has one."""
+    m = RE_HANDLE.match(row["value_type"] or "")
+    cls = m.group("cls") if m else row["value_type"]
+    return cls if cls in rows_of and row["handler"].startswith(STRUCT_HANDLERS) else None
+
+
+def build_members(rows, rows_of, parents, seen=()):
+    """Registry rows of one class -> nested member list (groups hold their members).
+
+    A member whose type is itself a registered class expands into that class's members:
+    NoChildTypeHandler loads them from the same node ("embedded"), GenericTypeHandler from a
+    child named after the member ("group").
+    """
     children = {}
     for r in rows:
         children.setdefault(r["parent"], []).append(r)
@@ -103,7 +105,13 @@ def build_members(rows):
             if not name or kind in ("CSerializationEvent", "CEnumMember"):
                 continue
             m = {"name": name, "flags": r["flags"]}
-            if kind in DATA_KINDS:
+            embedded = embedded_class(r, rows_of) if kind in DATA_KINDS else None
+            if embedded and embedded not in seen:
+                m["kind"] = "embedded" if r["handler"].startswith("NoChildTypeHandler") else "group"
+                m["cpp"] = embedded
+                m["members"] = [x for c in reversed(chain(embedded, parents)) if c in rows_of
+                                for x in build_members(rows_of[c], rows_of, parents, seen + (embedded,))]
+            elif kind in DATA_KINDS:
                 m["kind"] = "value"
                 m["type"] = wire_type(r["value_type"], r["handler"])
                 m["cpp"] = r["value_type"]
@@ -127,7 +135,6 @@ def build_members(rows):
             out.append(m)
         return out
 
-    assert all(r["parent"] is None or r["parent"] in by_index for r in rows)
     return emit(None)
 
 
@@ -181,7 +188,7 @@ def main():
             "kind": kinds.get(name, "base"),
             "creatable": bool(u.get("creatable")),
             "uses": sorted(t for t in u.get("uses", {}) if kinds.get(t) == "component"),
-            "members": build_members(rows_of.get(name, [])),
+            "members": build_members(rows_of.get(name, []), rows_of, parents),
         })
 
     with open(target, "w", encoding="utf-8", newline="\n") as fh:
@@ -190,7 +197,7 @@ def main():
         fh.write("\n")
 
     members = [m for c in out for m in walk(c["members"])]
-    data = [m for m in members if "cpp" in m]
+    data = [m for m in members if m["kind"] == "value"]
     print("classes: %d (%d components, %d entities, %d bases), %d creatable components" % (
         len(out), sum(c["kind"] == "component" for c in out), sum(c["kind"] == "entity" for c in out),
         sum(c["kind"] == "base" for c in out), sum(c["kind"] == "component" and c["creatable"] for c in out)))

@@ -20,10 +20,16 @@ public sealed class InspectorViewModel : Observable
         WorldHashes.HidPos, WorldHashes.HidPosPrecise, WorldHashes.HidAngles,
     ];
 
+    private static readonly Lazy<(string Name, uint Hash)[]> Creatable = new(() =>
+    [
+        .. FcbDefinitionsProvider.Schema.Value.Classes
+            .Where(c => c.IsComponent && c.Creatable)
+            .Select(c => (c.Name, FcbClassDefinitions.Crc32Ascii(c.Name))),
+    ]);
+
     private readonly SelectionSet _selection;
     private WorldEntity? _entity;
     private MergedNode? _merged;
-    private bool _showHidden;
     private IReadOnlyList<string> _addableComponents = [];
     private string _heading = "";
     private string _details = "";
@@ -81,19 +87,6 @@ public sealed class InspectorViewModel : Observable
     {
         get => _sections;
         private set => Set(ref _sections, value);
-    }
-
-    /// <summary>Shows the <c>hidXxx</c> fields the original editor kept out of its property grid.</summary>
-    public bool ShowHidden
-    {
-        get => _showHidden;
-        set
-        {
-            if (Set(ref _showHidden, value))
-            {
-                BuildSections();
-            }
-        }
     }
 
     /// <summary>Creatable components the entity does not have yet.</summary>
@@ -179,18 +172,12 @@ public sealed class InspectorViewModel : Observable
             return;
         }
         var sections = new List<InspectorSection>();
-        AddSections(entity, merged, FcbDefinitionsProvider.Value.Value.GetClass(merged.TypeHash), 0, sections);
+        AddSections(entity, merged, FcbDefinitionsProvider.Value.Value.GetClass(merged.TypeHash), true, sections);
         Sections = sections;
 
         HashSet<uint> present = [.. ComponentsNode()?.Children.Select(c => c.TypeHash) ?? []];
-        AddableComponents = [.. FcbDefinitionsProvider.Schema.Value.Classes
-            .Where(c => c.IsComponent && c.Creatable && !present.Contains(FcbClassDefinitions.Crc32Ascii(c.Name)))
-            .Select(c => c.Name)];
+        AddableComponents = [.. Creatable.Value.Where(c => !present.Contains(c.Hash)).Select(c => c.Name)];
     }
-
-    private bool Shown(FcbMember? member)
-        => _showHidden || member?.Name is not { Length: > 3 } name || !name.StartsWith("hid", StringComparison.Ordinal)
-           || !char.IsUpper(name[3]);
 
     /// <summary>Re-reads the entity's position and angles, after a gizmo moved it.</summary>
     public void RefreshTransform()
@@ -225,38 +212,43 @@ public sealed class InspectorViewModel : Observable
         return new InspectorField(row, FieldOrigin.InstanceOnly);
     }
 
-    private void AddSections(WorldEntity entity, MergedNode node, FcbClass own, int depth, List<InspectorSection> sections)
+    /// <summary>Adds <paramref name="node"/>'s section to <paramref name="into"/> and nests everything
+    /// below it inside that section, so collapsing a component hides its whole subtree. The entity's
+    /// own children stay top-level, one foldout per component.</summary>
+    private void AddSections(WorldEntity entity, MergedNode node, FcbClass own, bool isRoot, List<InspectorSection> into)
     {
         (Dictionary<uint, IReadOnlyList<string>> choices, HashSet<string> enumGroups) = EnumsOf(node, own);
-        List<MergedField> fields = [.. node.Fields.Where(f => (depth > 0 || !NotFields.Contains(f.Hash)) && Shown(own.FindMember(f.Hash)))];
+        List<MergedField> fields = [.. node.Fields.Where(f => !isRoot || !NotFields.Contains(f.Hash))];
         bool isComponent = node.Parent?.TypeHash == WorldHashes.Components;
         if (isComponent)
         {
-            HashSet<uint> set = [.. node.Fields.Select(f => f.Hash)];
-            fields.AddRange(own.AllMembers()
-                .Where(m => !set.Contains(m.Hash) && m.Member.Type != FcbMemberType.BinHex && Shown(m.Member))
-                .Select(m => new MergedField(m.Hash, FcbValueCodec.Zero(m.Member.Type), null, FieldOrigin.Unset)));
+            fields.AddRange(node.UnsetFields(own));
         }
+
+        InspectorSection? section = null;
         if (fields.Count > 0 || isComponent)
         {
             string label = FcbObjectNodeView.FindIdentifyingText(node.Instance ?? node.Archetype!, own) is { Length: > 0 } text
                 ? $"{own.Name ?? $"{node.TypeHash:X8}"} - {text}"
                 : own.Name ?? $"{node.TypeHash:X8}";
-            string origin = node.Instance is null ? "  (inherited)" : node.Archetype is null && depth > 0 ? "  (own)" : "";
-            sections.Add(new InspectorSection(
-                label + origin, depth,
+            string origin = node.Instance is null ? "  (inherited)" : node.Archetype is null && !isRoot ? "  (own)" : "";
+            section = new InspectorSection(
+                label + origin,
                 () => [.. fields.Select(f => BuildField(entity, node, own, f, choices.GetValueOrDefault(f.Hash)))],
                 isComponent && node.Archetype is null ? () => RemoveComponent(node) : null)
             {
-                IsExpanded = depth == 0,
-            });
+                IsExpanded = isRoot,
+            };
+            into.Add(section);
         }
+
+        List<InspectorSection> below = isRoot || section is null ? into : section.Children;
         foreach (MergedNode child in node.Children)
         {
             FcbClass childClass = own.Resolve(child.TypeHash);
             if (!enumGroups.Contains(childClass.Name ?? ""))
             {
-                AddSections(entity, child, childClass, depth + 1, sections);
+                AddSections(entity, child, childClass, false, below);
             }
         }
     }
@@ -284,8 +276,7 @@ public sealed class InspectorViewModel : Observable
     {
         FcbMember? member = own.FindMember(field.Hash);
         PropertyRow row = PropertyRow.Build(
-            field.Hash, member?.Name, member?.Type ?? FcbMemberType.BinHex, field.Value, field.ArchetypeValue,
-            choices ?? member?.Labels);
+            field.Hash, member?.Name, member?.Type ?? FcbMemberType.BinHex, field.Value, field.ArchetypeValue, choices);
         var inspected = new InspectorField(row, field.Origin);
         row.Changed += () =>
         {
@@ -325,8 +316,9 @@ public sealed class InspectorViewModel : Observable
 /// <summary>One node of the merged entity: a component, a slot, or the entity itself. Its rows are
 /// built the first time it is opened - an NPC carries thousands of fields and few are ever looked at.</summary>
 public sealed class InspectorSection(
-    string title, int depth, Func<IReadOnlyList<InspectorField>> build, Action? remove = null) : Observable
+    string title, Func<IReadOnlyList<InspectorField>> build, Action? remove = null) : Observable
 {
+    private readonly List<InspectorSection> _children = [];
     private IReadOnlyList<InspectorField>? _fields;
     private bool _isExpanded;
 
@@ -337,8 +329,6 @@ public sealed class InspectorSection(
 
     public void Remove() => remove?.Invoke();
 
-    public System.Windows.Thickness Indent { get; } = new(depth * 12, 0, 0, 0);
-
     public bool IsExpanded
     {
         get => _isExpanded;
@@ -347,11 +337,17 @@ public sealed class InspectorSection(
             if (Set(ref _isExpanded, value))
             {
                 OnPropertyChanged(nameof(Fields));
+                OnPropertyChanged(nameof(Sections));
             }
         }
     }
 
     public IReadOnlyList<InspectorField> Fields => _isExpanded ? _fields ??= build() : [];
+
+    /// <summary>The nodes below this one, shown inside it.</summary>
+    public IReadOnlyList<InspectorSection> Sections => _isExpanded ? _children : [];
+
+    internal List<InspectorSection> Children => _children;
 }
 
 /// <summary>One field of the merged entity and which side its value comes from.</summary>

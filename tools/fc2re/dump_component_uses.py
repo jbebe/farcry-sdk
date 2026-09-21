@@ -1,10 +1,5 @@
-# Harvest which classes each class looks up on its entity, and which classes the
-# entity-component factory can create (PyGhidra).
-#
-# Components never declare what they need; a component reaches a sibling with
-# CEntity::GetComponent<T>() from inside its own methods. Every such call site
-# is recorded, so `uses` means "looks up", not "requires" -- most callers
-# tolerate a null result.
+# Harvest every CEntity::GetComponent<T>() call each class makes, and which
+# classes the factory can create (PyGhidra). A lookup is a use, not a requirement.
 #
 # Output: component_uses.jsonl, one row per class with a CreateObject or a
 # GetComponent<T> call:

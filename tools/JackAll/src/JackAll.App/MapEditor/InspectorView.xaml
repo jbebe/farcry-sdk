@@ -53,6 +53,24 @@
                     </DockPanel>
                 </Border>
             </DataTemplate>
+
+            <!-- A node and everything below it; collapsing it hides the whole subtree. -->
+            <DataTemplate DataType="{x:Type mapEditor:InspectorSection}">
+                <Expander IsExpanded="{Binding IsExpanded}">
+                    <Expander.Header>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                            <Button Content="Remove" Padding="5,0" Margin="8,0,0,0" Click="RemoveComponent_Click"
+                                    Visibility="{Binding CanRemove, Converter={StaticResource Visible}}"
+                                    ToolTip="Removes this component from the instance on the next Save" />
+                        </StackPanel>
+                    </Expander.Header>
+                    <StackPanel Margin="14,2,0,4">
+                        <ItemsControl ItemsSource="{Binding Fields}" />
+                        <ItemsControl ItemsSource="{Binding Sections}" />
+                    </StackPanel>
+                </Expander>
+            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -89,26 +107,7 @@
                 <TextBlock Text="TRANSFORM" FontSize="9" FontWeight="SemiBold" Foreground="#888" Margin="0,4,0,2" />
                 <ItemsControl ItemsSource="{Binding Transform}" />
 
-                <CheckBox Content="Show hidden (hid) fields" IsChecked="{Binding ShowHidden}" Margin="0,8,0,0"
-                          ToolTip="Fields the original editor kept out of its property grid" />
-
-                <ItemsControl ItemsSource="{Binding Sections}" Margin="0,4,0,0">
-                    <ItemsControl.ItemTemplate>
-                        <DataTemplate DataType="{x:Type mapEditor:InspectorSection}">
-                            <Expander IsExpanded="{Binding IsExpanded}" Margin="{Binding Indent}">
-                                <Expander.Header>
-                                    <StackPanel Orientation="Horizontal">
-                                        <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
-                                        <Button Content="Remove" Padding="5,0" Margin="8,0,0,0" Click="RemoveComponent_Click"
-                                                Visibility="{Binding CanRemove, Converter={StaticResource Visible}}"
-                                                ToolTip="Removes this component from the instance on the next Save" />
-                                    </StackPanel>
-                                </Expander.Header>
-                                <ItemsControl ItemsSource="{Binding Fields}" Margin="14,2,0,4" />
-                            </Expander>
-                        </DataTemplate>
-                    </ItemsControl.ItemTemplate>
-                </ItemsControl>
+                <ItemsControl ItemsSource="{Binding Sections}" Margin="0,8,0,0" />
 
                 <DockPanel Margin="0,8,0,0">
                     <Button DockPanel.Dock="Right" Content="Add component" Padding="7,2" Margin="6,0,0,0"

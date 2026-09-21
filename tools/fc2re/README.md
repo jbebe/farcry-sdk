@@ -19,6 +19,9 @@ graph are all recoverable as ABI-specified data; field layouts are the part that
 | Path | What it is |
 |---|---|
 | `dump_properties.py` | Extracts Nomad property descriptors from `CLASS::RegisterProperties` |
+| `dump_component_uses.py` | Records creatable classes and their `GetComponent<T>` lookups |
+| `build_component_schema.py` | Builds JackAll's component schema from the two dumps above; no Ghidra needed |
+| `decompiled.py` | Helpers for the dumpers that read decompiled C text |
 | `dump_class_sizes.py` | Recovers exact `sizeof(T)` from allocation sites |
 | `dump_vtables.py` | Harvests vtables and the RTTI inheritance graph |
 | `derive_size_floors.py` | Combines size evidence into bounds; no Ghidra needed |
@@ -42,6 +45,9 @@ dump_properties  ─┐
 dump_class_sizes ─┼─► derive_size_floors ─► apply_properties ─► apply_vtables ─► apply_inheritance
 dump_vtables     ─┘
 ```
+
+JackAll's component schema is a separate branch: `dump_properties` and `dump_component_uses`, then
+`build_component_schema`.
 
 `apply_properties` needs `--vtables` so it leaves offset 0 free in polymorphic classes, and it and
 `apply_vtables` both take `--sizes out/class_sizes_merged.jsonl`.
@@ -74,9 +80,9 @@ means. Two rules and one assumption:
   `std::_Deque_iterator`, `__gnu_cxx::__normal_iterator` and `ndRectT` are all nearer 16 bytes, and
   sizing one at 4 would misplace every parameter after it.
 
-Enum constant *names* are not recoverable from this binary: `CEnumMember`'s spare descriptor slot
-is a bitfield, `CEnumMember::Load` is a stub, and `GetEnumeratedTypeEntries` belongs to the
-`magma::` UI type system rather than the game.
+Enum constant *names* are recoverable after all, though not from `CEnumMember::Load`, which is a
+stub: `RegisterProperties` stores each label into the enum member's entry list as it registers it,
+so `dump_properties.py` reads them there (86 enums).
 
 Scripts follow the conventions in `tmp/compare-dlls/*.py`: PyGhidra rather than Jython, a dual
 entry point so each runs both headless and in the Script Manager, lazy Java type binding, `jstr()`
@@ -106,54 +112,48 @@ python tests/test_parse_registrations.py
 ## What `dump_properties.py` recovers
 
 1,049 classes have a `RegisterProperties()` that builds one `CMemberBase` per serialized field and
-pushes it into the class descriptor:
+pushes it into the class descriptor, or into a group member's own list:
 
 ```c
 p = (CMemberBase *)CMemMng::NMalloc(0x14, 0);
-*(char **)(p + 4) = "BarkEventTag";
-*(undefined4 *)(p + 0xc) = 0;            // byte offset in the owning class
-*(undefined ***)p = &PTR_Load_0a3a3468;  // handler vtable, names the member type
-CNomadObjectDescriptor::PushBackMember((CryVector *)ms_descriptor, p);
+p->vptr = PTR_vtable_0a415dec + 8;   // handler vtable: kind, value type, handler, flag bits
+p->field_0x4 = "selDensity";         // name
+p->field_0xc = 0x10;                 // byte offset in the owning class
+CNomadObjectDescriptor::PushBackMember(ms_descriptor, p);
 ```
 
-So each row carries a real **field name, byte offset and type** — `Bark` comes out as
-`BarkEventTag` at 0x00, `SourceActorTag` at 0x04, through `IsGeneric` at 0x3C. The handler vtable
-resolves to a `_ZTV14CGenericMember...` symbol whose template arguments name the owner and member
-type.
+The dumper reads this from **p-code**, not decompiled text: it follows each `NMalloc` result through
+its stores and resolves every stored value through the PIC GOT. That keeps it independent of how
+`CMemberBase` is typed in the database — typing it broke the earlier text parser — and it recovers
+all 5,755 members with their kind. The demangled vtable namespace, e.g.
+`CGenericMember<CRigidPhysComponent,bool,GenericTypeHandler<bool>,3u>`, gives the value type, the
+type handler and the flag bits (1 load, 2 save, 4 load state, 8 save state, 16 described).
 
-The parser keys records by the variable holding the pointer, bracketed by `NMalloc` and
-`PushBackMember`, so interleaved construction still resolves and the real handler vtable overrides
-the one the base constructor wrote.
-
-### Descriptor kinds
-
-Not every descriptor is a field at an offset. The handler's `_ZTV` name gives the kind, read off
-the Itanium length prefix rather than by splitting on the first template marker:
-
-| kind | meaning |
-|---|---|
-| `CGenericMember` | plain field |
-| `COffsetMember` | field reached by an offset adjustment |
-| `CContainerMember` | container field, carries the element name |
-| `CSerializationEvent` | load/save hook — **not a field, legitimately has no offset** |
-| `CGroupMember`, `CConditionalGroupMember` | grouping wrappers over other members |
-| `CVirtualMember` | accessor-backed, no direct storage |
-
-Because grouping wrappers and their members can point at the same offset, offsets are not unique
-within a class — treat a duplicate as a grouping relationship, not a conflict.
+What each member kind means for where its data sits in a `.fcb` node is in
+`docs/docs/engine-internals/entity-component-schema.md`.
 
 ### Output
 
-`out/register_properties.jsonl` — one row per descriptor, with `kind`, `name`, `offset`, `flags`,
-`alloc_size`, `handler_symbol` and container child names. Rows that yield no usable name are kept
-with `complete: false` rather than dropped, so gaps stay visible.
+`out/register_properties.jsonl` — one row per member: `kind`, `name`, `offset`, `value_type`,
+`handler`, `flags`, `parent` (the index of the group it was pushed into), `element_index` for
+array elements, `setter`/`getter` for accessors and a conditional group's predicate, `callback` for
+serialization events, `child_name`/`child_name_2`/`wrapped` for containers, `labels` for enums, and
+`handler_symbol`. Rows that yield no usable name are kept with `complete: false`, so gaps stay
+visible.
 
 `out/register_properties_classes.jsonl` — one row per registrar, with the base classes named by
-its `BASE::RegisterProperties()` calls. Classes that add no fields of their own still appear here,
-which makes this an independent cross-check on the `_ZTI` inheritance graph.
+its `BASE::RegisterProperties()` calls and the class whose members it copies (`inherits`).
 
-The field-name hashes (`CStringID`) are what **fcb** data files key on, which makes this table
-useful to JackAll and the file-format docs as well.
+## `dump_component_uses.py` and `build_component_schema.py`
+
+`dump_component_uses.py` records, per class, whether it has a `CreateObject` (the factory can build
+it) and every `CEntity::GetComponent<T>` call its methods make. It needs no decompiler.
+
+`build_component_schema.py` needs no Ghidra: it keeps the classes whose registry chain reaches
+`CEntityComponent` or `CBaseEntity`, nests members the way the loader reads them, maps each C++
+value type to a JackAll wire type and writes `tools/JackAll/assets/component_schema.json`. Its report
+compares those types with `binary_classes.xml` wherever both name a member; every disagreement so far
+is signedness or hash-versus-integer, never a different byte shape.
 
 ## What `dump_class_sizes.py` recovers
 

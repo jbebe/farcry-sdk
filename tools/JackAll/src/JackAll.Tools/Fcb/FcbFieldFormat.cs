@@ -41,13 +41,16 @@ public static class FcbFieldFormat
         _ => throw new NotSupportedException($"'{type}' is not a scalar text field."),
     };
 
-    /// <summary>The value a brand-new array item/vector component starts out as, before the user has
-    /// typed anything — zero, empty, or all-zero bytes depending on the type.</summary>
+    /// <summary>The value a brand-new field, array item or vector component starts out as, before the
+    /// user has typed anything — false, zero, or empty, in the CLR type <see cref="FcbValueCodec"/> uses.</summary>
     public static object DefaultValue(FcbMemberType type) => type switch
     {
         FcbMemberType.String => string.Empty,
-        FcbMemberType.Hash or FcbMemberType.Enum
-            or FcbMemberType.UInt8 or FcbMemberType.UInt16 or FcbMemberType.UInt32 or FcbMemberType.UInt64 => 0u,
+        FcbMemberType.Bool or FcbMemberType.Bool16 or FcbMemberType.Bool32 => false,
+        FcbMemberType.Hash or FcbMemberType.Enum or FcbMemberType.UInt32 => 0u,
+        FcbMemberType.UInt8 => (byte)0,
+        FcbMemberType.UInt16 => (ushort)0,
+        FcbMemberType.UInt64 => 0UL,
         FcbMemberType.Float => 0f,
         FcbMemberType.Int8 => (sbyte)0,
         FcbMemberType.Int16 => (short)0,
@@ -57,7 +60,13 @@ public static class FcbFieldFormat
         FcbMemberType.Vector2 => new float[2],
         FcbMemberType.Vector3 => new float[3],
         FcbMemberType.Vector4 => new float[4],
-        _ => throw new NotSupportedException($"'{type}' is not a scalar text field."),
+        FcbMemberType.Matrix4 => new float[16],
+        FcbMemberType.UInt32Array or FcbMemberType.HashArray => Array.Empty<uint>(),
+        FcbMemberType.Int32Array => Array.Empty<int>(),
+        FcbMemberType.FloatArray => Array.Empty<float>(),
+        FcbMemberType.Bool32Array => Array.Empty<bool>(),
+        FcbMemberType.Vector3Array => Array.Empty<float[]>(),
+        _ => throw new NotSupportedException($"Unsupported FCB value type '{type}'."),
     };
 
     private static int VectorComponentCount(FcbMemberType type) => type switch

@@ -47,7 +47,14 @@ public enum FcbMemberType
 
 /// <summary>A member's decoded name (if the config has one), its declared wire type, and the labels
 /// of the values an enum index member can take.</summary>
-public sealed record FcbMember(string? Name, FcbMemberType Type, IReadOnlyList<string>? Labels = null);
+public sealed record FcbMember(string? Name, FcbMemberType Type, IReadOnlyList<string>? Labels = null)
+{
+    /// <summary>Whether the name carries the original editor's <paramref name="prefix"/> convention:
+    /// <c>hidPos</c> has <c>hid</c>, <c>hidden</c> does not.</summary>
+    public bool HasPrefix(string prefix)
+        => Name is { } name && name.Length > prefix.Length && name.StartsWith(prefix, StringComparison.Ordinal)
+           && char.IsUpper(name[prefix.Length]);
+}
 
 /// <summary>
 /// Something that can resolve a class hash relative to some scope — either <see cref="FcbClass"/>
@@ -210,7 +217,7 @@ public sealed class FcbClassDefinitions : IFcbClassScope
                         declaring.Members[hash] = known with { Labels = known.Labels ?? member.Labels };
                     }
                     break;
-                case "conditional":
+                case "conditional" or "embedded":
                     AddSchemaMembers(cls, member.Members ?? []);
                     break;
                 case "group":

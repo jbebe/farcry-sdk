@@ -18,6 +18,13 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   layer in the hierarchy. The new instance carries only what every shipped instance does and
   inherits the rest; its archetype and meshes are staged the way a paste's are.
 - **Hide and lock** entities for the session, and **Modified only** lists what the session changed.
+- **Component properties from the engine itself** — `.fcb` names, types and enum dropdowns now also
+  come from the properties Far Cry 2 registers for every entity and component class
+  (`assets/component_schema.json`), filling in what `binary_classes.xml` lacks. The XML still wins
+  wherever it already defines a member.
+- **Add and remove components** in the Map tab's inspector. A component shows every property it
+  registers; unset ones are faint and keep the engine's default until edited. Collapsing a
+  component folds away everything inside it, its groups and slots included.
 
 ### Changed
 - **The Map tab resolves archetypes against `entitylibrary.fcb`**, the library single-player reads

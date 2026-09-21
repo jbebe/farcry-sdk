@@ -195,10 +195,9 @@ public sealed class FcbObjectNodeView : TreeNodeBase<FcbObjectNodeView>
     /// Detects the base game's own "selXxx"/"enumXxx" data convention: a UInt32 value named e.g.
     /// "selType" paired with a sibling child object named "enumType", whose own children (each an
     /// "enum" object) hold one ordered String "Value" apiece - the option list the original Far Cry 2
-    /// editor rendered as a dropdown, baked directly into the instance data rather than declared in
-    /// binary_classes.xml (every "selXxx" member seen there is plain UInt32 - see
-    /// docs/docs/modding/gotchas.md's <c>selCategory</c> note). Index i's plain integer value is i
-    /// itself - <see cref="ScalarField.SelectedEnumIndex"/> relies on that.
+    /// editor rendered as a dropdown, baked directly into the instance data. Members without such a
+    /// group fall back to the labels the engine registers (<see cref="FcbMember.Labels"/>). Index i's
+    /// plain integer value is i itself - <see cref="ScalarField.SelectedEnumIndex"/> relies on that.
     /// </summary>
     /// <returns>The dropdown choices per "selXxx" value's name hash, and the resolved type names of
     /// the "enumXxx" child objects that supplied one - <see cref="BuildNode"/> hides exactly those from
@@ -209,10 +208,19 @@ public sealed class FcbObjectNodeView : TreeNodeBase<FcbObjectNodeView>
         var choices = new Dictionary<uint, IReadOnlyList<string>>();
         var groupTypeNames = new HashSet<string>();
 
+        // The labels the engine registers; an "enumXxx" group in the data below replaces them.
+        foreach ((uint hash, FcbMember member) in ownClass.AllMembers())
+        {
+            if (member.Labels is { Count: > 0 } labels)
+            {
+                choices[hash] = labels;
+            }
+        }
+
         foreach ((uint nameHash, byte[] _) in obj.Values)
         {
-            if (ownClass.FindMember(nameHash) is not { Name: { Length: > 3 } name, Type: FcbMemberType.UInt32 }
-                || !name.StartsWith("sel", StringComparison.Ordinal) || !char.IsUpper(name[3]))
+            if (ownClass.FindMember(nameHash) is not { Name: { } name, Type: FcbMemberType.UInt32 } member
+                || !member.HasPrefix("sel"))
             {
                 continue;
             }

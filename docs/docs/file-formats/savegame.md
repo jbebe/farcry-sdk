@@ -259,11 +259,12 @@ entity class captures whatever it wants persisted purely by having already calle
 machinery recursively for every child `CEntityProxy` too. This is called from
 `CGhostManager::OnFinalize`, and mirrored on the read side by `RestoreEntity`'s `LoadState` call below.
 
-There are 300+ anonymous `RegisterProperties` functions in `FarCry2_server`, one per entity/component
-class, none individually attributable to a class name by a plain search. The dictionary-attack
-technique above recovers plausible field *names* for large blocks of this state (the 27- and 54-hash
-clusters read as one buddy/merc's full AI-brain block and a look/animation-state block respectively)
-without needing to individually decompile and attribute each `RegisterProperties` call.
+An earlier pass here counted 300+ `RegisterProperties` functions and took them to be anonymous. They
+are not: all 1,049 in `FarCry2_server` carry their class name, and every member they register has
+been dumped with its name, type and flag bits — see
+[the component and property registry](../engine-internals/entity-component-schema.md). A save
+carries the members with flag bit 8 set; the dictionary attack above remains the way to name a hash
+found in a save without consulting that dump.
 
 ## Mod compatibility: a per-property overlay, not a full freeze
 
@@ -1134,9 +1135,6 @@ class names, 2,009 member names).
 - What decides whether a given entity gets a persisted record at all — only the read side
   (`RestoreEntity`) is traced; "only entities that changed state get persisted" is carried over from
   community/developer-sourced theory, not independently re-derived.
-- Which specific fields each entity class's own `RegisterProperties` captures — the mechanism is
-  confirmed, but the 300+ anonymous `RegisterProperties` functions are not individually attributed to
-  class names.
 - The entity-spawn path upstream of `CGhostManager::OnFinalize` (where `entitylibrary.fcb` is actually
   read to build a fresh entity) is not traced from this angle — see [`.fcb`](./fcb.md) and
   [archives](./archives-fat-dat.md) for the general asset-loading path.

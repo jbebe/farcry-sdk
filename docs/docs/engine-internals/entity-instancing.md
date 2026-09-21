@@ -405,7 +405,9 @@ They sit directly under a mission layer like any other entity.
 ## Components read off an instance
 
 Two component layouts confirmed from shipped sector data. Both hang off an entity's `Components`
-child and are read the same way whether they came from the instance or were inherited.
+child and are read the same way whether they came from the instance or were inherited. Every
+component's full property list, with types and enum choices, is in
+[the component and property registry](./entity-component-schema.md).
 
 ### `CDynamicLightComponent` — every placed light
 

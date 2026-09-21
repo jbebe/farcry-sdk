@@ -419,11 +419,11 @@ actually deducted, presumably where an abort is still possible) → `CWeaponEven
 parallel `CWeaponEventReloadAbort`. Weapon degradation (jamming) is modeled the same way:
 `CWeaponCanBreakEvent` / `CWeaponBrokeEvent` — this is the binary-level confirmation of FC2's
 weapon-degradation mechanic, implemented as explicit state-transition events rather than a hidden
-durability counter. Persistence uses a Memento pattern — `CWeaponMemento`, `CWeaponControllerMemento`,
-`CWeaponProjectileMemento`, `CWeaponProjectileControllerMemento`, `CWeaponIEDMemento` — the most likely
-concrete answer to the open "which fields does each entity class's `RegisterProperties` capture"
-question in [the savegame page's Unknowns](../file-formats/savegame.md#unknowns): weapon save/restore
-almost certainly serializes through these Memento objects rather than ad hoc field-by-field capture.
+durability counter. The Memento classes — `CWeaponMemento`, `CWeaponControllerMemento`,
+`CWeaponProjectileMemento`, `CWeaponProjectileControllerMemento`, `CWeaponIEDMemento` — were first
+read here as the weapon's save path. They are its network replication instead: `CWeapon::ReadNetMemento`
+and `WriteNetMemento` are called from `CWeaponNetworkComponent`. A weapon saves through its registered
+members like any other entity; see [the component and property registry](./entity-component-schema.md).
 
 `CWeaponBazaar` (the arms-dealer/shop system, with `UnlockItem` exposed to Lua the same way
 `CFCXGameplayManager::SetMapArmy` is) is the progression/economy layer sitting on top of all of the
@@ -470,11 +470,10 @@ out in one call: `CNomadObjectDescriptor::LoadState(entity, serializableNode)`. 
 *same* base class found under the AI object hierarchy and AI task hierarchy in the [`CAIEngine`
 section](#caiengine--a-classic-sensedecideplanact-architecture-group-aware) above. **Persistence isn't bespoke per-entity-class serialization code; it's one
 generic reflection framework (`ISerializableNode`/`CNomadObjectDescriptor`) that anything built on
-`CNomadObject` gets for free.** That's the concrete architectural answer to the open "what does
-each entity class's `RegisterProperties` actually capture" question in [the savegame page's
-Unknowns](../file-formats/savegame.md#unknowns) — it's whatever that class's `CNomadObjectDescriptor`
-declares, the same mechanism every other reflectable object in the engine uses, not hand-rolled
-per-class code.
+`CNomadObject` gets for free.** What each entity class captures is whatever its
+`CNomadObjectDescriptor` declares, the same mechanism every other reflectable object in the engine
+uses, not hand-rolled per-class code; every class's list is in
+[the component and property registry](./entity-component-schema.md).
 
 ### Physics — Havok is linked directly, not wrapped behind a home-grown abstraction
 

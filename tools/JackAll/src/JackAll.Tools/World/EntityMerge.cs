@@ -1,4 +1,5 @@
 using JackAll.Core.Format.Fcb;
+using JackAll.Tools.Fcb;
 
 namespace JackAll.Tools.World;
 
@@ -73,6 +74,14 @@ public sealed class MergedNode
             return fields;
         }
     }
+
+    /// <summary>The typed members of <paramref name="cls"/> neither side sets, at their zero value; the
+    /// engine keeps its own default for each until one is written.</summary>
+    public IEnumerable<MergedField> UnsetFields(FcbClass cls) => cls.AllMembers()
+        .Where(m => m.Member.Type != FcbMemberType.BinHex
+                    && Instance?.Values.ContainsKey(m.Hash) != true && Archetype?.Values.ContainsKey(m.Hash) != true)
+        .Select(m => new MergedField(
+            m.Hash, FcbValueCodec.Encode(m.Member.Type, FcbFieldFormat.DefaultValue(m.Member.Type)), null, FieldOrigin.Unset));
 
     /// <summary>The merge of <paramref name="instance"/> over <paramref name="archetype"/>; a
     /// standalone entity passes null and every field reads as its own.</summary>

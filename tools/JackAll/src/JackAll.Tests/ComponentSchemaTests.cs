@@ -68,6 +68,15 @@ public class ComponentSchemaTests
     }
 
     [Fact]
+    public void An_embedded_class_puts_its_members_in_the_same_node()
+    {
+        FcbClass light = Merged().GetClass(H("CDynamicLightComponent"));
+
+        Assert.Equal(FcbMemberType.Float, light.FindMember(H("fIntensity"))?.Type);
+        Assert.Equal(FcbMemberType.Vector3, light.FindMember(H("clrColor"))?.Type);
+    }
+
+    [Fact]
     public void A_group_is_a_child_node_and_a_wrapped_container_names_its_elements()
     {
         FcbClassDefinitions merged = Merged();
@@ -79,12 +88,26 @@ public class ComponentSchemaTests
     }
 
     [Fact]
+    public void A_component_lists_what_it_does_not_set_at_the_types_zero()
+    {
+        var light = new FcbObject { TypeHash = H("CDynamicLightComponent") };
+        light.Values[H("fIntensity")] = BitConverter.GetBytes(2f);
+
+        List<Tools.World.MergedField> unset = [.. Tools.World.MergedNode.Of(light, null)
+            .UnsetFields(Merged().GetClass(light.TypeHash))];
+
+        Assert.DoesNotContain(unset, f => f.Hash == H("fIntensity"));
+        Tools.World.MergedField color = Assert.Single(unset, f => f.Hash == H("clrColor"));
+        Assert.Equal(new byte[12], color.Value);
+        Assert.Equal(Tools.World.FieldOrigin.Unset, color.Origin);
+    }
+
+    [Fact]
     public void Only_registered_components_are_offered_as_creatable()
     {
         List<SchemaClass> creatable = [.. Schema.Value.Classes.Where(c => c.IsComponent && c.Creatable)];
 
         Assert.Contains(creatable, c => c.Name == "CDynamicLightComponent");
         Assert.DoesNotContain(creatable, c => c.Name == "CEntityComponent");
-        Assert.All(creatable, c => Assert.NotNull(Schema.Value.Find(H(c.Name))));
     }
 }
