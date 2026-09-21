@@ -4,7 +4,9 @@
              StartupUri="MainWindow.xaml">
     <Application.Resources>
         <ResourceDictionary>
+            <!-- The brush file stays first: ThemeManager replaces that slot to switch theme. -->
             <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Brushes.Light.xaml" />
                 <ResourceDictionary Source="Themes/Theme.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>

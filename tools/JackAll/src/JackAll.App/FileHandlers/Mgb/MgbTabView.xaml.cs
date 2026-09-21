@@ -452,6 +452,6 @@ public partial class MgbTabView : UserControl
     private void SetStatus(string? message, bool ok)
     {
         StatusText.Text = message ?? string.Empty;
-        StatusText.Foreground = ok ? Brushes.DarkGreen : Brushes.DarkRed;
+        StatusText.SetResourceReference(TextBlock.ForegroundProperty, ok ? "OkTextBrush" : "DangerBrush");
     }
 }

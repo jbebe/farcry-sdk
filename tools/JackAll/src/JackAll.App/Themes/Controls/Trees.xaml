@@ -1,6 +1,12 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
                     xmlns:local="clr-namespace:JackAll.App">
+    <Style TargetType="TreeView">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
+        <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+    </Style>
+
     <!-- The one expand/collapse glyph every tree row and foldout uses: + closed, - open. -->
     <Style x:Key="DisclosureGlyph" TargetType="TextBlock">
         <Setter Property="Text" Value="+" />
@@ -34,6 +40,7 @@
     </Style>
 
     <Style TargetType="TreeViewItem">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="Padding" Value="2,1" />
         <Setter Property="Template">
             <Setter.Value>
@@ -114,6 +121,7 @@
 
     <!-- A foldout: the whole header row toggles it. -->
     <Style TargetType="Expander">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Expander">

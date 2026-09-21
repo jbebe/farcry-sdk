@@ -66,7 +66,7 @@
                                 <TextBlock Text="{Binding Name}" Style="{StaticResource Caption}" Margin="0,0,8,0" />
                                 <StackPanel Grid.Column="1">
                                     <TextBlock Text="{Binding Value}" Style="{StaticResource MonoSmall}" ToolTip="{Binding Value}" />
-                                    <TextBlock Text="{Binding Resolved}" FontSize="{StaticResource FontSizeSmall}" Foreground="#2F5E8C" TextWrapping="Wrap"
+                                    <TextBlock Text="{Binding Resolved}" FontSize="{StaticResource FontSizeSmall}" Foreground="{DynamicResource LinkBrush}" TextWrapping="Wrap"
                                                Visibility="{Binding HasResolved, Converter={StaticResource BoolToVisibility}}" />
                                     <Image Source="{Binding Thumbnail}" MaxWidth="160" MaxHeight="160" HorizontalAlignment="Left"
                                            Margin="0,2,0,0" Stretch="Uniform" />

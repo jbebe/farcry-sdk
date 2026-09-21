@@ -13,8 +13,9 @@ public partial class TextFileHandler : UserControl
         nameof(Text), typeof(string), typeof(TextFileHandler),
         new PropertyMetadata(string.Empty, (d, e) => ((TextFileHandler)d).Editor.Text = (string)e.NewValue));
 
-    public static readonly DependencyProperty ExtensionProperty =
-        DependencyProperty.Register(nameof(Extension), typeof(string), typeof(TextFileHandler));
+    public static readonly DependencyProperty ExtensionProperty = DependencyProperty.Register(
+        nameof(Extension), typeof(string), typeof(TextFileHandler),
+        new PropertyMetadata(null, (d, e) => ((TextFileHandler)d).Editor.SyntaxHighlighting = SyntaxTheme.For((string?)e.NewValue)));
 
     public string Text
     {
@@ -22,14 +23,18 @@ public partial class TextFileHandler : UserControl
         set => SetValue(TextProperty, value);
     }
 
-    /// <summary>Drives which highlighting definition Editor.xaml picks — see ExtensionToHighlightingConverter.</summary>
+    /// <summary>Drives which highlighting definition the editor gets — see <see cref="SyntaxTheme"/>.</summary>
     public string Extension
     {
         get => (string)GetValue(ExtensionProperty);
         set => SetValue(ExtensionProperty, value);
     }
 
-    public TextFileHandler() => InitializeComponent();
+    public TextFileHandler()
+    {
+        InitializeComponent();
+        SyntaxTheme.Bind(Editor, () => Extension);
+    }
 
     /// <summary>
     /// The trimmed, color-coded view for a modded text file (see <see cref="DiffTextBuilder"/>/

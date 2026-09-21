@@ -1,19 +1,17 @@
 <UserControl x:Class="JackAll.App.FileHandlers.Text.TextFileHandler"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
-             xmlns:fh="clr-namespace:JackAll.App.FileHandlers.Text">
-    <UserControl.Resources>
-        <fh:ExtensionToHighlightingConverter x:Key="ExtensionToHighlighting" />
-    </UserControl.Resources>
+             xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit">
     <DockPanel>
         <Border x:Name="DiffBanner" DockPanel.Dock="Top" Visibility="Collapsed" Style="{StaticResource WarningCallout}"
                 Margin="0,0,0,4">
             <TextBlock x:Name="DiffBannerText" TextWrapping="Wrap"
                        Text="Showing only the changed lines plus a little context - Export… gets the whole file." />
         </Border>
+        <!-- Highlighting is set from code: it depends on the theme as well as on Extension. -->
         <avalonEdit:TextEditor x:Name="Editor" IsReadOnly="True" ShowLineNumbers="True" WordWrap="False"
                                 FontFamily="{StaticResource MonoFont}" Background="{DynamicResource SurfaceAltBrush}"
-                                SyntaxHighlighting="{Binding Extension, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource ExtensionToHighlighting}}" />
+                                Foreground="{DynamicResource TextPrimaryBrush}"
+                                LineNumbersForeground="{DynamicResource TextMutedBrush}" />
     </DockPanel>
 </UserControl>

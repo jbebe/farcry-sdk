@@ -15,11 +15,6 @@ namespace JackAll.App.FileHandlers.Text;
 /// </summary>
 internal sealed class DiffLineColorizer(IReadOnlyList<DiffLine> lines) : DocumentColorizingTransformer
 {
-    private static readonly Brush AddedBackground = Freeze(new SolidColorBrush(Color.FromRgb(0xE6, 0xFF, 0xED)));
-    private static readonly Brush RemovedBackground = Freeze(new SolidColorBrush(Color.FromRgb(0xFF, 0xEE, 0xF0)));
-    private static readonly Brush AddedForeground = Freeze(new SolidColorBrush(Color.FromRgb(0x0A, 0x66, 0x1E)));
-    private static readonly Brush RemovedForeground = Freeze(new SolidColorBrush(Color.FromRgb(0x8A, 0x1F, 0x11)));
-    private static readonly Brush GapForeground = Freeze(new SolidColorBrush(Color.FromRgb(0x88, 0x88, 0x88)));
     private static readonly Typeface GapTypeface =
         new(new FontFamily("Consolas"), FontStyles.Italic, FontWeights.Normal, FontStretches.Normal);
 
@@ -36,16 +31,16 @@ internal sealed class DiffLineColorizer(IReadOnlyList<DiffLine> lines) : Documen
             case DiffLineKind.Added:
                 ChangeLinePart(line.Offset, line.EndOffset, e =>
                 {
-                    e.TextRunProperties.SetBackgroundBrush(AddedBackground);
-                    e.TextRunProperties.SetForegroundBrush(AddedForeground);
+                    e.TextRunProperties.SetBackgroundBrush(Themed("DiffAddedBgBrush"));
+                    e.TextRunProperties.SetForegroundBrush(Themed("DiffAddedTextBrush"));
                 });
                 break;
 
             case DiffLineKind.Removed:
                 ChangeLinePart(line.Offset, line.EndOffset, e =>
                 {
-                    e.TextRunProperties.SetBackgroundBrush(RemovedBackground);
-                    e.TextRunProperties.SetForegroundBrush(RemovedForeground);
+                    e.TextRunProperties.SetBackgroundBrush(Themed("DiffRemovedBgBrush"));
+                    e.TextRunProperties.SetForegroundBrush(Themed("DiffRemovedTextBrush"));
                     e.TextRunProperties.SetTextDecorations(TextDecorations.Strikethrough);
                 });
                 break;
@@ -53,16 +48,13 @@ internal sealed class DiffLineColorizer(IReadOnlyList<DiffLine> lines) : Documen
             case DiffLineKind.Gap:
                 ChangeLinePart(line.Offset, line.EndOffset, e =>
                 {
-                    e.TextRunProperties.SetForegroundBrush(GapForeground);
+                    e.TextRunProperties.SetForegroundBrush(Themed("TextMutedBrush"));
                     e.TextRunProperties.SetTypeface(GapTypeface);
                 });
                 break;
         }
     }
 
-    private static Brush Freeze(Brush brush)
-    {
-        brush.Freeze();
-        return brush;
-    }
+    /// <summary>Looked up per line, so a theme switch repaints the diff with the rest of the editor.</summary>
+    private static Brush Themed(string key) => (Brush)Application.Current.FindResource(key);
 }

@@ -2,13 +2,13 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:avalonEdit="http://icsharpcode.net/sharpdevelop/avalonedit"
-             BorderBrush="{DynamicResource BorderEmphasisBrush}" BorderThickness="1" Background="{DynamicResource SurfaceBrush}">
+             BorderBrush="{DynamicResource ControlBorderBrush}" BorderThickness="1" Background="{DynamicResource InputBrush}">
     <!-- A decoded .rml document is nested XML, not a one-line value, so the Rml field in the property
          grid (see FcbFieldFormat, PropertyEditorTemplates' ScalarField template) gets this instead of the
          plain single-line TextBox every other scalar type uses. Height isn't set here - the
          code-behind grows it with the document up to a capped number of lines (see UpdateHeight),
          past which the rest scrolls via the editor's own ScrollViewer instead of growing further. -->
-    <avalonEdit:TextEditor x:Name="Editor" FontFamily="{StaticResource MonoFont}"
+    <avalonEdit:TextEditor x:Name="Editor" FontFamily="{StaticResource MonoFont}" Foreground="{DynamicResource TextPrimaryBrush}"
                             ShowLineNumbers="False" WordWrap="False"
                             HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                             BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource AncestorType=UserControl}}"

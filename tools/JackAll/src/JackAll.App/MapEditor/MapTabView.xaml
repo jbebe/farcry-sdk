@@ -24,7 +24,7 @@
                 <ToggleButton x:Name="LayersButton" Content="Layers ▾" Padding="10,3" Margin="12,0,0,0">
                     <!-- Off while the popup is open, so the click that closes it does not reopen it. -->
                     <ToggleButton.Style>
-                        <Style TargetType="ToggleButton">
+                        <Style TargetType="ToggleButton" BasedOn="{StaticResource {x:Type ToggleButton}}">
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding IsOpen, ElementName=LayersPopup}" Value="True">
                                     <Setter Property="IsHitTestVisible" Value="False" />

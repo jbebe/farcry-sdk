@@ -28,7 +28,11 @@ public partial class MainWindow : Window
 
     public MainWindow()
     {
+        // Before the first element loads, so nothing is ever painted in the wrong theme.
+        ThemeManager.Apply(_vm.Config.Theme);
         InitializeComponent();
+        ThemePicker.SelectedIndex = (int)_vm.Config.Theme;
+        SourceInitialized += (_, _) => ThemeManager.ApplyTitleBar(this);
         DataContext = _vm;
         Loaded += OnLoaded;
         Closing += (_, _) => _vm.SaveConfig();
@@ -51,6 +55,17 @@ public partial class MainWindow : Window
         {
             InputBindings.Add(new KeyBinding(SelectTabCommand, Key.D1 + i, ModifierKeys.Control) { CommandParameter = i });
         }
+    }
+
+    /// <summary>The picker's items are in <see cref="AppTheme"/> order. The choice reaches config.ini
+    /// with the save on close.</summary>
+    private void ThemePicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        var theme = (AppTheme)ThemePicker.SelectedIndex;
+        if (theme == _vm.Config.Theme) return;
+
+        _vm.Config.Theme = theme;
+        ThemeManager.Apply(theme);
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

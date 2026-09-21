@@ -20,6 +20,7 @@ public sealed class AppConfig
 {
     private const string GameSection = "game";
     private const string ModsSection = "mods";
+    private const string UiSection = "ui";
     private const char DisabledMarker = '!';
 
     private static string ExeDir => AppContext.BaseDirectory;
@@ -108,6 +109,8 @@ public sealed class AppConfig
     /// </summary>
     public bool WorkspaceEnabled { get; set; } = true;
 
+    public AppTheme Theme { get; set; } = AppTheme.System;
+
     public sealed record ModEntry(string Path, bool Enabled);
 
     public static AppConfig Load()
@@ -125,6 +128,11 @@ public sealed class AppConfig
         {
             GamePath = data[GameSection]["path"]?.Trim() ?? string.Empty,
         };
+
+        if (Enum.TryParse(data[UiSection]["theme"]?.Trim(), ignoreCase: true, out AppTheme theme))
+        {
+            config.Theme = theme;
+        }
 
         string workspaceValue = data[ModsSection]["0"]?.Trim() ?? string.Empty;
         if (workspaceValue.Length > 0)
@@ -178,6 +186,10 @@ public sealed class AppConfig
         {
             data[ModsSection][index++.ToString()] = mod.Enabled ? mod.Path : DisabledMarker + mod.Path;
         }
+
+        data.Sections.AddSection(UiSection);
+        data.Sections.GetSectionData(UiSection).Comments.Add(" theme is system, light or dark - system follows the Windows app mode");
+        data[UiSection]["theme"] = Theme.ToString().ToLowerInvariant();
 
         new FileIniDataParser().WriteFile(ConfigPath, data);
     }

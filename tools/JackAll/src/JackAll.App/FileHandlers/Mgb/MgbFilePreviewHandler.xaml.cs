@@ -29,7 +29,7 @@ public partial class MgbFilePreviewHandler : UserControl
             // Nothing the editor could show either, so don't offer to open an empty tree - the reason
             // it failed is more useful here.
             SummaryText.Text = $"Couldn't read this file: {ex.Message}";
-            SummaryText.Foreground = Brushes.DarkRed;
+            SummaryText.SetResourceReference(TextBlock.ForegroundProperty, "DangerBrush");
             OpenButton.IsEnabled = false;
         }
     }

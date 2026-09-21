@@ -7,9 +7,9 @@
     <UserControl.Resources>
         <ResourceDictionary>
             <!--
-              Nodify's own light theme. Without it the library falls back to its dark defaults - light
-              text on dark connectors and headers - which reads as broken against this app's light
-              chrome and against the node fills below. Merged here rather than app-wide so it only
+              Nodify's own light theme, in both app themes: the node fills and the port and wire
+              palette below are tuned for a light ground, so the dark theme dims the canvas
+              (CanvasBrush) instead of inverting it. Merged here rather than app-wide so it only
               affects this tab.
             -->
             <ResourceDictionary.MergedDictionaries>
@@ -21,7 +21,7 @@
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
             <!-- Box and pin tooltips carry a sentence or two of description; wrap them. -->
-            <Style TargetType="ToolTip">
+            <Style TargetType="ToolTip" BasedOn="{StaticResource {x:Type ToolTip}}">
                 <Setter Property="ContentTemplate">
                     <Setter.Value>
                         <DataTemplate>
@@ -160,7 +160,7 @@
             <ColumnDefinition Width="1*" MinWidth="260" />
         </Grid.ColumnDefinitions>
 
-        <Border Grid.Column="0" Background="{DynamicResource SurfaceAltBrush}" BorderBrush="{DynamicResource BorderHairlineBrush}"
+        <Border Grid.Column="0" Background="{DynamicResource CanvasBrush}" BorderBrush="{DynamicResource BorderHairlineBrush}"
                 BorderThickness="0,0,1,0" ClipToBounds="True">
             <Grid>
                 <nodify:NodifyEditor x:Name="Editor"
@@ -214,7 +214,7 @@
                         <TextBlock x:Name="StatusText" Style="{StaticResource MonoSmall}" MaxWidth="560" VerticalAlignment="Center" />
                         <Button x:Name="FitButton" Content="Fit" Margin="12,0,0,0" Style="{StaticResource DenseButton}" Click="FitButton_Click" />
 
-                        <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="10,2" />
+                        <Rectangle Width="1" Margin="10,2" Fill="{DynamicResource BorderStrongBrush}" />
 
                         <TextBlock Text="Focus" Style="{StaticResource ToolbarLabel}" FontSize="{StaticResource FontSizeSecondary}" />
                         <ComboBox x:Name="FocusSelector" Width="96" SelectedIndex="0"
@@ -229,7 +229,7 @@
                         <TextBlock x:Name="FocusStatus" Style="{StaticResource Secondary}" FontSize="{StaticResource FontSizeSecondary}"
                                    VerticalAlignment="Center" Margin="8,0,0,0" />
 
-                        <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="10,2" />
+                        <Rectangle Width="1" Margin="10,2" Fill="{DynamicResource BorderStrongBrush}" />
 
                         <TextBlock Text="Find" Style="{StaticResource ToolbarLabel}" FontSize="{StaticResource FontSizeSecondary}" />
                         <TextBox x:Name="FindBox" Width="150" FontSize="{StaticResource FontSizeSecondary}"

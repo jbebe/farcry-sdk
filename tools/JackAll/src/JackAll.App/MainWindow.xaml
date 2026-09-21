@@ -7,7 +7,8 @@
         xmlns:library="clr-namespace:JackAll.App.Library"
         xmlns:move="clr-namespace:JackAll.App.Move"
         Title="JackAll - Far Cry 2 Mod Manager" Height="720" Width="1180"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextPrimaryBrush}">
 
     <!-- Browser-style history for following references. Bound at the window so they work wherever
          focus happens to be after a jump, not only while the Xrefs grid has it. -->
@@ -80,6 +81,13 @@
                     <Button DockPanel.Dock="Right" Content="Cancel" Style="{StaticResource DenseButton}" Margin="8,0,0,0"
                             Click="CancelExport_Click"
                             Visibility="{Binding IsExporting, Converter={StaticResource BoolToVis}}" />
+                    <ComboBox x:Name="ThemePicker" DockPanel.Dock="Right" Width="110" Margin="12,0,0,0"
+                              FontSize="{StaticResource FontSizeSecondary}" SelectionChanged="ThemePicker_SelectionChanged"
+                              ToolTip="System follows the Windows app mode">
+                        <ComboBoxItem Content="System theme" />
+                        <ComboBoxItem Content="Light theme" />
+                        <ComboBoxItem Content="Dark theme" />
+                    </ComboBox>
                     <ProgressBar DockPanel.Dock="Right" Width="120" Height="12" IsIndeterminate="True"
                                  Visibility="{Binding Busy, Converter={StaticResource BoolToVis}}" />
                     <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" />

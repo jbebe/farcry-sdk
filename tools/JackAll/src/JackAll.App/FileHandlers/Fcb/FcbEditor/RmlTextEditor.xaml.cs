@@ -1,6 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
-using ICSharpCode.AvalonEdit.Highlighting;
+using JackAll.App.FileHandlers.Text;
 using JackAll.Tools.Fcb;
 
 namespace JackAll.App.FileHandlers.Fcb.FcbEditor;
@@ -37,7 +37,7 @@ public partial class RmlTextEditor : UserControl
     public RmlTextEditor()
     {
         InitializeComponent();
-        Editor.SyntaxHighlighting = HighlightingManager.Instance.GetDefinitionByExtension(".xml");
+        SyntaxTheme.Bind(Editor, () => "xml");
         Editor.TextChanged += (_, _) =>
         {
             UpdateHeight();
