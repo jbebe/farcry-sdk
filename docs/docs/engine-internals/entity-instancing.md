@@ -6,8 +6,9 @@ sidebar_position: 14
 
 :::info[Verified via reverse engineering]
 Traced via GhidraMCP against `FarCry2_server` (`CEntityLibraryManager::BuildArchetypesMap`,
-`CEntitySystem::SpawnEntityFromNode`, `CReadOnlyMergeNode::BuildChildrenEntries`) and `Dunia.dll`
-(`CXGame::LoadArchetypes`), with counts measured from a retail install.
+`CEntitySystem::SpawnEntityFromNode`, `CReadOnlyMergeNode::BuildChildrenEntries` and its attribute
+accessors) and `Dunia.dll` (`CXGame::LoadArchetypes`, the spawn and the merge node's accessors), with
+counts measured from a retail install.
 :::
 
 An object in the world is described by up to three things at once: the library that defines its
@@ -147,6 +148,59 @@ archetype child with the same tag:
 
 So an instance **overrides what it names and inherits the rest**, at node granularity, recursively.
 It is a lazy read-only view over both trees — nothing is copied or flattened at load time.
+
+### Attributes: the instance wins
+
+:::info[Verified via reverse engineering]
+Every `CReadOnlyMergeNode::getAttr*` and `getAttrEncode64` overload in `FarCry2_server`
+(`0x09cc6d30`–`0x09cc78e0`), and the same accessors in retail `Dunia.dll` (merge node built by
+`CReadOnlyMergeNode_Construct` at `0x10cf45b0`, vtable `0x10f49ab8`).
+:::
+
+The merge node holds the archetype at `+0x8` and the instance at `+0xC`. Every attribute accessor
+asks the **instance** first and returns its value when the instance has the attribute; only on a
+miss does it ask the archetype. A field present on both sides therefore takes the instance's value,
+and a field only the archetype has is inherited.
+
+`getAttributesCount` on a merge node returns 0: the engine never enumerates a merged node's
+attributes, it only looks them up by id.
+
+### A missing archetype drops the entity
+
+`SpawnEntityFromNode` has three outcomes for an instance carrying `tplCreatureType`:
+
+| case | result |
+|---|---|
+| the archetype resolves and has an `Entity` child | spawned from the merge |
+| the archetype resolves but has no `Entity` child | spawned from the instance alone |
+| the name resolves to no archetype | **not spawned**: the call returns the invalid entity proxy |
+
+Retail `Dunia.dll` (`CEntitySystem_SpawnEntityFromNode`, `0x104e99a0`) takes the same three branches.
+A typo in `tplCreatureType`, or an archetype missing from the library the world loads, makes the
+entity silently absent.
+
+After the merge, the spawn reads `hidEntityClass` and `disEntityId` through the merged node, so a
+library `Entity` supplies the class and the instance supplies the id.
+
+### Minimal placed instance
+
+:::info[Verified against the retail corpus]
+786 archetype-bound entities across 60 `w1_b_2` worldsector files.
+:::
+
+| field | carried by |
+|---|---|
+| `tplCreatureType`, `hidName`, `disEntityId`, `hidPos`, `hidPos_precise` | 786 of 786 |
+| `hidAngles` | 622 |
+| `hidResourceCount` | 567 |
+| `hidEntityClass` | 0 — the library `Entity` supplies it |
+| `Components` → `CEventComponent` (`hidHasAliasName`, empty `hidLinks`) | 786 of 786 |
+| `Components` → `CGraphicComponent` with only the baked ambient fields | 682 |
+
+The attributes appear in the order `tplCreatureType`, `hidName`, `disEntityId`,
+`hidResourceCount`, `hidPos`, `hidAngles`, `hidPos_precise`. The graphic component on an instance
+holds only the export's baked sky-occlusion and ground-colour values; the mesh comes from the
+archetype.
 
 Sampling 146 placed entities across `world1` sectors: **48** carry `tplCreatureType` and therefore
 merge against an archetype; the other 98 stand alone. All 146 carry their own `Components` child, and
@@ -445,5 +499,6 @@ through the archetype fallback, so they are only mesh-less if you skip that step
   they win over it.
 - What a placed `CPrefabEntity` spawns, and whether it resolves against the `CPrefabManager`
   descriptions in `<world>.managers.fcb` (see [object inventory](../file-formats/object-inventory.md)).
-- Attribute-level precedence inside a merged node: an instance field present in both must win for the
-  merge to be useful, but `CReadOnlyMergeNode`'s attribute accessors have not been opened.
+- Whether an instance with only the minimal fields above, and no baked graphic component, spawns in a
+  running game. The corpus shows 104 archetype-bound instances without one; none has been placed and
+  watched.
