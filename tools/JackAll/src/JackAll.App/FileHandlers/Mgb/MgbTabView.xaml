@@ -83,8 +83,8 @@
                          Style="{StaticResource ValueBox}" ToolTip="{Binding Error}"
                          VerticalAlignment="Center" />
 
-                <TextBlock Text="{Binding ColorDescription}" Style="{StaticResource MonoSmall}"
-                           Foreground="{DynamicResource TextMutedBrush}" VerticalAlignment="Center" Margin="8,0,0,0"
+                <TextBlock Text="{Binding ColorDescription}" Style="{StaticResource MonoNote}"
+                           VerticalAlignment="Center" Margin="8,0,0,0"
                            ToolTip="The authored &quot;A R G B&quot; form" />
 
                 <Popup IsOpen="{Binding IsChecked, ElementName=SwatchButton, Mode=TwoWay}"
@@ -166,8 +166,7 @@
                                Visibility="{Binding HasResolvedText, Converter={StaticResource BoolToVisibility}}"
                                ToolTip="Resolved through languages\english\oasisstrings.xml" />
 
-                    <TextBlock Text="{Binding TexturePathNote}" TextWrapping="Wrap" Margin="0,2,0,0"
-                               Style="{StaticResource MonoSmall}" Foreground="{DynamicResource TextMutedBrush}"
+                    <TextBlock Text="{Binding TexturePathNote}" Margin="0,2,0,0" Style="{StaticResource MonoNote}"
                                Visibility="{Binding HasTexturePathNote, Converter={StaticResource BoolToVisibility}}" />
 
                     <Border Style="{StaticResource PreviewFrame}" Margin="0,4,0,6" Padding="2" HorizontalAlignment="Left"
@@ -181,8 +180,7 @@
     </UserControl.Resources>
 
     <DockPanel Margin="12">
-        <TextBlock x:Name="HeaderText" DockPanel.Dock="Top" Style="{StaticResource Mono}"
-                   TextWrapping="Wrap" Margin="0,0,0,8" />
+        <TextBlock x:Name="HeaderText" DockPanel.Dock="Top" Style="{StaticResource Mono}" TextWrapping="Wrap" Margin="0,0,0,8" />
 
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,8">
             <Button x:Name="AddButton" Content="Add…" Click="AddButton_Click" Margin="0,0,6,0" />
@@ -205,14 +203,13 @@
                 <ColumnDefinition Width="3*" MinWidth="260" />
             </Grid.ColumnDefinitions>
 
-            <TreeView x:Name="Tree" SelectedItemChanged="Tree_SelectedItemChanged" BorderThickness="1"
+            <TreeView x:Name="Tree" SelectedItemChanged="Tree_SelectedItemChanged"
                       BorderBrush="{DynamicResource BorderHairlineBrush}">
-                <!-- Declared here rather than as ItemContainerStyle so it applies at every depth. -->
-                <TreeView.Resources>
+                <TreeView.ItemContainerStyle>
                     <Style TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                     </Style>
-                </TreeView.Resources>
+                </TreeView.ItemContainerStyle>
                 <TreeView.ItemTemplate>
                     <HierarchicalDataTemplate ItemsSource="{Binding Children}">
                         <TextBlock Text="{Binding Label}" Style="{StaticResource Mono}" />

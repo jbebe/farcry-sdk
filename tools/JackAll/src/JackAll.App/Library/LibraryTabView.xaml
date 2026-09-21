@@ -107,12 +107,8 @@
                           VirtualizingStackPanel.IsVirtualizing="True"
                           VirtualizingStackPanel.VirtualizationMode="Recycling"
                           ScrollViewer.CanContentScroll="True"
-                          SelectedItemChanged="ArchetypeTree_SelectedItemChanged">
-                    <!-- Declared here rather than as ItemContainerStyle so it applies at every depth. -->
-                    <TreeView.Resources>
-                        <Style TargetType="TreeViewItem" BasedOn="{StaticResource BoundTreeItem}" />
-                    </TreeView.Resources>
-                </TreeView>
+                          ItemContainerStyle="{StaticResource BoundTreeItem}"
+                          SelectedItemChanged="ArchetypeTree_SelectedItemChanged" />
             </DockPanel>
 
             <GridSplitter Grid.Column="1" />

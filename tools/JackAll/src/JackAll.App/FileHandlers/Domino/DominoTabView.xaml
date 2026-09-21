@@ -209,17 +209,14 @@
                 </nodify:NodifyEditor>
 
                 <!-- Status strip -->
-                <Border Background="{DynamicResource OverlayBrush}" BorderBrush="{DynamicResource BorderStrongBrush}"
-                        BorderThickness="1" CornerRadius="3"
-                        HorizontalAlignment="Left" VerticalAlignment="Top" Margin="8" Padding="8,4">
+                <Border Style="{StaticResource CanvasOverlay}" HorizontalAlignment="Left" VerticalAlignment="Top" Padding="8,4">
                     <StackPanel Orientation="Horizontal">
-                        <TextBlock x:Name="StatusText" Style="{StaticResource MonoSmall}"
-                                   TextWrapping="Wrap" MaxWidth="560" VerticalAlignment="Center" />
+                        <TextBlock x:Name="StatusText" Style="{StaticResource MonoSmall}" MaxWidth="560" VerticalAlignment="Center" />
                         <Button x:Name="FitButton" Content="Fit" Margin="12,0,0,0" Style="{StaticResource DenseButton}" Click="FitButton_Click" />
 
                         <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="10,2" />
 
-                        <TextBlock Text="Focus" FontSize="{StaticResource FontSizeSecondary}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBlock Text="Focus" Style="{StaticResource ToolbarLabel}" FontSize="{StaticResource FontSizeSecondary}" />
                         <ComboBox x:Name="FocusSelector" Width="96" SelectedIndex="0"
                                   SelectionChanged="FocusSelector_SelectionChanged"
                                   ToolTip="Fade everything more than N steps from the selected box.">
@@ -234,7 +231,7 @@
 
                         <Separator Style="{StaticResource {x:Static ToolBar.SeparatorStyleKey}}" Margin="10,2" />
 
-                        <TextBlock Text="Find" FontSize="{StaticResource FontSizeSecondary}" VerticalAlignment="Center" Margin="0,0,6,0" />
+                        <TextBlock Text="Find" Style="{StaticResource ToolbarLabel}" FontSize="{StaticResource FontSizeSecondary}" />
                         <TextBox x:Name="FindBox" Width="150" FontSize="{StaticResource FontSizeSecondary}"
                                  KeyDown="FindBox_KeyDown" TextChanged="FindBox_TextChanged"
                                  ToolTip="Ctrl+F. Matches box titles, names and parameter values; Enter jumps to the next match." />
@@ -244,29 +241,27 @@
                 </Border>
 
                 <!-- Legend. The swatches repeat NodeBrushConverter and PortBrushConverter, the canvas palette. -->
-                <Border Background="{DynamicResource OverlayBrush}" BorderBrush="{DynamicResource BorderStrongBrush}"
-                        BorderThickness="1" CornerRadius="3"
-                        HorizontalAlignment="Left" VerticalAlignment="Bottom" Margin="8" Padding="8,5">
+                <Border Style="{StaticResource CanvasOverlay}" HorizontalAlignment="Left" VerticalAlignment="Bottom" Padding="8,5">
                     <StackPanel>
                         <TextBlock Text="BOXES" Style="{StaticResource SectionHeader}" Margin="0,0,0,3" />
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,2">
                             <Border Width="10" Height="10" Background="#E8F0FE" BorderBrush="#9AA6B8" BorderThickness="1" />
-                            <TextBlock Text="persistent" FontSize="{StaticResource FontSizeCaption}" Margin="4,0,10,0" />
+                            <TextBlock Text="persistent" FontSize="{StaticResource FontSizeTiny}" Margin="4,0,10,0" />
                             <Border Width="10" Height="10" Background="#FCF3E3" BorderBrush="#C6A87A" BorderThickness="1" />
-                            <TextBlock Text="pooled" FontSize="{StaticResource FontSizeCaption}" Margin="4,0,10,0" />
+                            <TextBlock Text="pooled" FontSize="{StaticResource FontSizeTiny}" Margin="4,0,10,0" />
                             <Border Width="10" Height="10" Background="#E6F7E9" BorderBrush="#8FBF98" BorderThickness="1" />
-                            <TextBlock Text="sub-graph" FontSize="{StaticResource FontSizeCaption}" Margin="4,0,10,0" />
+                            <TextBlock Text="sub-graph" FontSize="{StaticResource FontSizeTiny}" Margin="4,0,10,0" />
                             <Border Width="10" Height="10" Background="#EFEFEF" BorderBrush="{DynamicResource BorderEmphasisBrush}" BorderThickness="1" />
-                            <TextBlock Text="graph boundary" FontSize="{StaticResource FontSizeCaption}" Margin="4,0,0,0" />
+                            <TextBlock Text="graph boundary" FontSize="{StaticResource FontSizeTiny}" Margin="4,0,0,0" />
                         </StackPanel>
                         <TextBlock Text="WIRES" Style="{StaticResource SectionHeader}" Margin="0,4,0,3" />
                         <StackPanel Orientation="Horizontal">
                             <Rectangle Width="14" Height="2" Fill="#5A6472" VerticalAlignment="Center" />
-                            <TextBlock Text="control" FontSize="{StaticResource FontSizeCaption}" Margin="4,0,10,0" />
+                            <TextBlock Text="control" FontSize="{StaticResource FontSizeTiny}" Margin="4,0,10,0" />
                             <Rectangle Width="14" Height="2" Fill="#2E7D32" VerticalAlignment="Center" />
-                            <TextBlock Text="data (colored by type)" FontSize="{StaticResource FontSizeCaption}" Margin="4,0,10,0" />
+                            <TextBlock Text="data (colored by type)" FontSize="{StaticResource FontSizeTiny}" Margin="4,0,10,0" />
                             <Rectangle Width="14" Height="2" Fill="#B08A3C" VerticalAlignment="Center" />
-                            <TextBlock Text="ambiguous producer" FontSize="{StaticResource FontSizeCaption}" Margin="4,0,0,0" />
+                            <TextBlock Text="ambiguous producer" FontSize="{StaticResource FontSizeTiny}" Margin="4,0,0,0" />
                         </StackPanel>
                     </StackPanel>
                 </Border>

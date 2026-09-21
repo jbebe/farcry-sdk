@@ -6,7 +6,7 @@
         <TextBlock x:Name="StatusText" DockPanel.Dock="Top" Style="{StaticResource Mono}" TextWrapping="Wrap" />
 
         <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,16,0,0">
-            <TextBlock Text="Export as:" Style="{StaticResource ToolbarLabel}" Margin="0,0,8,0" />
+            <TextBlock Text="Export as:" Style="{StaticResource ToolbarLabel}" />
             <ComboBox x:Name="ExportFormatCombo" Width="220" SelectedIndex="0" VerticalAlignment="Center">
                 <ComboBoxItem Content="Ogg Vorbis (original)" />
                 <ComboBoxItem Content="MP3 (good quality, VBR)" />

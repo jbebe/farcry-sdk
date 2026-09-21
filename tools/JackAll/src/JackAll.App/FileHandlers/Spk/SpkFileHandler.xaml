@@ -17,8 +17,7 @@
                             IsEnabled="False" />
                 </StackPanel>
                 <audio:AudioPreviewPanel x:Name="AudioPreview" />
-                <TextBlock x:Name="AudioStatusText" Margin="0,8,0,0" Style="{StaticResource MonoSmall}"
-                           TextWrapping="Wrap" Foreground="{DynamicResource TextSecondaryBrush}" />
+                <TextBlock x:Name="AudioStatusText" Margin="0,8,0,0" Style="{StaticResource MonoNote}" />
             </StackPanel>
         </Border>
 
@@ -31,7 +30,7 @@
             <Border x:Name="RawDetailsPanel" DockPanel.Dock="Bottom" Margin="0,8,0,0" Style="{StaticResource PreviewFrame}"
                     Padding="10" MaxHeight="220" Visibility="Collapsed">
                 <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <TextBlock x:Name="RawDetailsText" Style="{StaticResource MonoSmall}" TextWrapping="Wrap" />
+                    <TextBlock x:Name="RawDetailsText" Style="{StaticResource MonoSmall}" />
                 </ScrollViewer>
             </Border>
 
@@ -48,11 +47,7 @@
                 </DataGrid.GroupStyle>
                 <DataGrid.Columns>
                     <DataGridTextColumn Header="#" Binding="{Binding IndexLabel}" Width="40" />
-                    <DataGridTextColumn Header="Id" Binding="{Binding IdHex}" Width="110">
-                        <DataGridTextColumn.ElementStyle>
-                            <Style TargetType="TextBlock" BasedOn="{StaticResource Mono}" />
-                        </DataGridTextColumn.ElementStyle>
-                    </DataGridTextColumn>
+                    <DataGridTextColumn Header="Id" Binding="{Binding IdHex}" Width="110" ElementStyle="{StaticResource Mono}" />
                     <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="120" />
                     <DataGridTextColumn Header="Summary" Binding="{Binding Summary}" Width="*" />
                     <DataGridTemplateColumn Header="" Width="90">

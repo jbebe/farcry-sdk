@@ -9,7 +9,7 @@
 
     <!-- An upper-case label over a group of fields. -->
     <Style x:Key="SectionHeader" TargetType="TextBlock">
-        <Setter Property="FontSize" Value="{DynamicResource FontSizeCaption}" />
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeTiny}" />
         <Setter Property="FontWeight" Value="SemiBold" />
         <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
         <Setter Property="Margin" Value="0,12,0,4" />
@@ -44,6 +44,12 @@
     <Style x:Key="MonoSmall" TargetType="TextBlock">
         <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
         <Setter Property="FontSize" Value="{DynamicResource FontSizeSecondary}" />
+        <Setter Property="TextWrapping" Value="Wrap" />
+    </Style>
+
+    <!-- A dump or a path in monospace that matters less than the value it explains. -->
+    <Style x:Key="MonoNote" TargetType="TextBlock" BasedOn="{StaticResource MonoSmall}">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
     </Style>
 
     <Style x:Key="ToolbarLabel" TargetType="TextBlock">
@@ -68,6 +74,7 @@
     <!-- A muted line inside a template cell. Its own Foreground would stay grey on the selection
          highlight, so it follows the row's selection itself. -->
     <Style x:Key="GridMutedText" TargetType="TextBlock">
+        <Setter Property="FontSize" Value="{DynamicResource FontSizeSecondary}" />
         <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
         <Style.Triggers>
             <MultiDataTrigger>

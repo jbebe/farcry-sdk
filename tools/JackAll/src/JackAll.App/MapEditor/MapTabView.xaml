@@ -156,8 +156,7 @@
 
             <mapEditor:InspectorView x:Name="Inspector" Grid.Row="0" Grid.Column="4" Margin="6,0,0,0" />
 
-            <GridSplitter Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5"
-                          VerticalAlignment="Stretch" ResizeDirection="Rows" Background="Transparent" />
+            <GridSplitter Grid.Row="1" Grid.Column="0" Grid.ColumnSpan="5" ResizeDirection="Rows" />
 
             <mapEditor:EntityLibraryView x:Name="Library" Grid.Row="2" Grid.Column="0" Grid.ColumnSpan="5" />
         </Grid>

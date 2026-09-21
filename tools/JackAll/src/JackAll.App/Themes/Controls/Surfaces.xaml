@@ -10,7 +10,7 @@
     <Style TargetType="GridSplitter">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="VerticalAlignment" Value="Stretch" />
-        <Setter Property="Background" Value="{DynamicResource SplitterBrush}" />
+        <Setter Property="Background" Value="Transparent" />
     </Style>
 
     <!-- A boxed sentence the reader should not miss; its text inherits the colour and size. -->
@@ -24,21 +24,27 @@
         <Setter Property="TextElement.FontSize" Value="{DynamicResource FontSizeSecondary}" />
     </Style>
 
-    <Style x:Key="OkCallout" TargetType="Border">
-        <Setter Property="Background" Value="{DynamicResource OkBgBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource OkBorderBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="Padding" Value="{DynamicResource CalloutPadding}" />
-        <Setter Property="CornerRadius" Value="{DynamicResource CalloutRadius}" />
-        <Setter Property="TextElement.Foreground" Value="{DynamicResource OkTextBrush}" />
-        <Setter Property="TextElement.FontSize" Value="{DynamicResource FontSizeSecondary}" />
-    </Style>
-
     <Style x:Key="PopupSurface" TargetType="Border">
         <Setter Property="Background" Value="{DynamicResource SurfaceBrush}" />
         <Setter Property="BorderBrush" Value="{DynamicResource BorderEmphasisBrush}" />
         <Setter Property="BorderThickness" Value="1" />
         <Setter Property="Padding" Value="10,8" />
+    </Style>
+
+    <!-- A panel floating over a canvas: a status strip, a legend. -->
+    <Style x:Key="CanvasOverlay" TargetType="Border">
+        <Setter Property="Background" Value="{DynamicResource OverlayBrush}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderStrongBrush}" />
+        <Setter Property="BorderThickness" Value="1" />
+        <Setter Property="CornerRadius" Value="3" />
+        <Setter Property="Margin" Value="8" />
+    </Style>
+
+    <!-- The details column on the right of a tab, ruled off from the content. -->
+    <Style x:Key="SidebarPane" TargetType="Border">
+        <Setter Property="BorderBrush" Value="{DynamicResource BorderHairlineBrush}" />
+        <Setter Property="BorderThickness" Value="1,0,0,0" />
+        <Setter Property="Padding" Value="12,0,0,0" />
     </Style>
 
     <!-- The frame around a file preview: text, image, model. -->
@@ -49,9 +55,7 @@
     </Style>
 
     <!-- The frame around something that is not a live document: a panel, a notice, a raw dump. -->
-    <Style x:Key="InertFrame" TargetType="Border">
+    <Style x:Key="InertFrame" TargetType="Border" BasedOn="{StaticResource PreviewFrame}">
         <Setter Property="Background" Value="{DynamicResource SurfaceInertBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource BorderHairlineBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
     </Style>
 </ResourceDictionary>

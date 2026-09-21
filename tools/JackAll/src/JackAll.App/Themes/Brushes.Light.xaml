@@ -1,0 +1,40 @@
+<!-- Every colour the app paints with. A dark theme is a second copy of this file. Selection is the
+     exception: it follows the OS accent, and the inactive pair is what
+     SystemColors.InactiveSelectionHighlightBrush resolves to. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:po="http://schemas.microsoft.com/winfx/2006/xaml/presentation/options"
+                    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+                    mc:Ignorable="po">
+    <SolidColorBrush x:Key="SurfaceBrush" Color="#FFFFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="SurfaceAltBrush" Color="#FFFAFAFA" po:Freeze="True" />
+    <SolidColorBrush x:Key="SurfaceInertBrush" Color="#FFECECEC" po:Freeze="True" />
+    <SolidColorBrush x:Key="OverlayBrush" Color="#E8FFFFFF" po:Freeze="True" />
+    <SolidColorBrush x:Key="WellBrush" Color="#FF222222" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="BorderHairlineBrush" Color="#FFDDDDDD" po:Freeze="True" />
+    <SolidColorBrush x:Key="BorderStrongBrush" Color="#FFCCCCCC" po:Freeze="True" />
+    <SolidColorBrush x:Key="BorderEmphasisBrush" Color="#FFAAAAAA" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="TextPrimaryBrush" Color="#FF000000" po:Freeze="True" />
+    <SolidColorBrush x:Key="TextSecondaryBrush" Color="#FF666666" po:Freeze="True" />
+    <SolidColorBrush x:Key="TextMutedBrush" Color="#FF888888" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="SelectionBrush" Color="{x:Static SystemColors.HighlightColor}" po:Freeze="True" />
+    <SolidColorBrush x:Key="SelectionTextBrush" Color="{x:Static SystemColors.HighlightTextColor}" po:Freeze="True" />
+    <SolidColorBrush x:Key="SelectionInactiveBrush" Color="{x:Static SystemColors.ControlColor}" po:Freeze="True" />
+    <SolidColorBrush x:Key="SelectionInactiveTextBrush" Color="{x:Static SystemColors.ControlTextColor}" po:Freeze="True" />
+    <SolidColorBrush x:Key="SelectionSoftBrush" Color="#FFCCE4F7" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="WarningBgBrush" Color="#FFFFF4E0" po:Freeze="True" />
+    <SolidColorBrush x:Key="WarningBorderBrush" Color="#FFE0C060" po:Freeze="True" />
+    <SolidColorBrush x:Key="WarningTextBrush" Color="#FF6B4E10" po:Freeze="True" />
+    <SolidColorBrush x:Key="WarningAccentBrush" Color="#FFE08A00" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="OkBgBrush" Color="#FFEAF6EA" po:Freeze="True" />
+    <SolidColorBrush x:Key="OkBorderBrush" Color="#FFA8D2A8" po:Freeze="True" />
+    <SolidColorBrush x:Key="OkTextBrush" Color="#FF2A7A2A" po:Freeze="True" />
+
+    <SolidColorBrush x:Key="DangerBrush" Color="#FFBB0000" po:Freeze="True" />
+    <SolidColorBrush x:Key="InvalidBgBrush" Color="#FFFFF0F0" po:Freeze="True" />
+</ResourceDictionary>

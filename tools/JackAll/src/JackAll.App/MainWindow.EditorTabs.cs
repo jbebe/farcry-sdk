@@ -93,7 +93,14 @@ public partial class MainWindow
     private TabItem DocumentTab(FcbDocumentViewModel vm, Action onRemoved)
     {
         var tab = new TabItem { Content = new FcbDocumentView(vm) };
-        MakeClosable(tab, vm, onRemoved);
+        MakeClosable(tab, vm.Title, async () => await CloseEditorTabAsync(tab, vm, onRemoved));
+        vm.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(FcbDocumentViewModel.IsDirty))
+            {
+                ItemState.SetIsChanged(tab, vm.IsDirty);
+            }
+        };
         return tab;
     }
 
@@ -256,7 +263,7 @@ public partial class MainWindow
             var view = new MgbTabView(file.FileName, content, bytes => ReplaceGuarded(file, bytes), _vm.ReadByPath);
             var tab = new TabItem { Content = view };
             MakeClosable(tab, view.Title, () => CloseMgbEditorTab(tab, view, onRemoved));
-            view.DirtyChanged += () => tab.Header = view.IsDirty ? $"{view.Title} *" : view.Title;
+            view.DirtyChanged += () => ItemState.SetIsChanged(tab, view.IsDirty);
             return tab;
         });
 
@@ -286,7 +293,7 @@ public partial class MainWindow
     // ------------------------------------------------------------ tab chrome
 
     /// <summary>Styles <paramref name="tab"/> as a document tab, whose ×, middle-click and Ctrl+W all run
-    /// <paramref name="onClose"/>. The header stays a string, so a caller retitles it by setting it.</summary>
+    /// <paramref name="onClose"/>. An editor marks unsaved changes with <see cref="ItemState"/>.</summary>
     private void MakeClosable(TabItem tab, string title, Action onClose)
     {
         tab.Style = (Style)FindResource("DocumentTab");
@@ -297,20 +304,6 @@ public partial class MainWindow
             if (e.ChangedButton != MouseButton.Middle) return;
             onClose();
             e.Handled = true;
-        };
-    }
-
-    /// <summary>The XML editor's tab: <see cref="MakeClosable(TabItem, string, Action)"/> plus the dirty
-    /// marker and the unsaved-changes prompt its two (fragment and savegame) tab flavours both need.</summary>
-    private void MakeClosable(TabItem tab, FcbDocumentViewModel vm, Action onRemoved)
-    {
-        MakeClosable(tab, vm.Title, async () => await CloseEditorTabAsync(tab, vm, onRemoved));
-        vm.PropertyChanged += (_, e) =>
-        {
-            if (e.PropertyName == nameof(FcbDocumentViewModel.IsDirty))
-            {
-                tab.Header = vm.IsDirty ? $"{vm.Title} *" : vm.Title;
-            }
         };
     }
 

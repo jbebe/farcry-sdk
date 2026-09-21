@@ -41,7 +41,7 @@
                             ToolTip="Del. Removes the selected entities on the next Save" />
                 </WrapPanel>
 
-                <TextBlock Text="TRANSFORM" Style="{StaticResource SectionHeader}" Margin="0,4,0,2" />
+                <TextBlock Text="TRANSFORM" Style="{StaticResource SectionHeader}" />
                 <ItemsControl ItemsSource="{Binding Transform}" />
 
                 <fcbEditor:EntityInspectorView DataContext="{Binding Inspector}" Margin="0,8,0,0" />

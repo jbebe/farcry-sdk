@@ -7,8 +7,7 @@
         <TextBlock DockPanel.Dock="Top" TextWrapping="Wrap" Style="{StaticResource Secondary}" Margin="0,12,0,0"
                    Text="Expand this file in the tree to browse one resource at a time. Each entry is that resource's whole dependency list, and mirroring one to the workspace stages it as a fragment override - the same unit a mod ships." />
 
-        <TextBlock x:Name="TypesText" DockPanel.Dock="Top" TextWrapping="Wrap" Margin="0,12,0,0"
-                   Style="{StaticResource MonoSmall}" Foreground="{DynamicResource TextSecondaryBrush}" />
+        <TextBlock x:Name="TypesText" DockPanel.Dock="Top" Margin="0,12,0,0" Style="{StaticResource MonoNote}" />
 
         <TextBlock />
     </DockPanel>

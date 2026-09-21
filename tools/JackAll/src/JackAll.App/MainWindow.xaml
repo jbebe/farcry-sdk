@@ -151,9 +151,9 @@
                                                     </Style.Triggers>
                                                 </Style>
                                             </StackPanel.Style>
-                                            <Button Content="&#9650;" Click="MoveUp_Click" Style="{StaticResource DenseButton}"
+                                            <Button Content="&#9650;" Click="MoveUp_Click"
                                                     Padding="0" Width="22" Height="22" Margin="0,0,2,0" />
-                                            <Button Content="&#9660;" Click="MoveDown_Click" Style="{StaticResource DenseButton}"
+                                            <Button Content="&#9660;" Click="MoveDown_Click"
                                                     Padding="0" Width="22" Height="22" />
                                         </StackPanel>
                                     </DataTemplate>
@@ -184,7 +184,7 @@
                         <GridSplitter Grid.Column="1" />
 
                         <!-- ==================== Details sidebar: selected mod's files ==================== -->
-                        <Border Grid.Column="2" BorderBrush="{DynamicResource BorderHairlineBrush}" BorderThickness="1,0,0,0" Padding="12,0,0,0">
+                        <Border Grid.Column="2" Style="{StaticResource SidebarPane}">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="Select a mod to see its files." Style="{StaticResource EmptyHint}"
                                            Visibility="{Binding NoSelectedMod, Converter={StaticResource BoolToVis}}" />
@@ -296,13 +296,12 @@
                                                         <Run Text=" — " />
                                                         <Run Text="{Binding WorldName, Mode=OneWay}" />
                                                     </TextBlock>
-                                                    <TextBlock Text="{Binding FileName}" Style="{StaticResource GridMutedText}"
-                                                               FontSize="{StaticResource FontSizeSecondary}" Margin="0,2,0,4" />
+                                                    <TextBlock Text="{Binding FileName}" Style="{StaticResource GridMutedText}" Margin="0,2,0,4" />
                                                     <TextBlock Text="{Binding LastWriteTimeText}" Margin="0,0,0,2" />
                                                     <TextBlock Margin="0,0,0,2">
                                                         <Run Text="{Binding PersistedObjectCountText, Mode=OneWay}" />
                                                     </TextBlock>
-                                                    <TextBlock Style="{StaticResource GridMutedText}" FontSize="{StaticResource FontSizeSecondary}">
+                                                    <TextBlock Style="{StaticResource GridMutedText}">
                                                         <Run Text="DLC: " /><Run Text="{Binding DlcText, Mode=OneWay}" />
                                                     </TextBlock>
                                                 </StackPanel>
@@ -316,7 +315,7 @@
                         <GridSplitter Grid.Column="1" />
 
                         <!-- ==================== Details sidebar ==================== -->
-                        <Border Grid.Column="2" BorderBrush="{DynamicResource BorderHairlineBrush}" BorderThickness="1,0,0,0" Padding="12,0,0,0">
+                        <Border Grid.Column="2" Style="{StaticResource SidebarPane}">
                             <DockPanel>
                                 <TextBlock DockPanel.Dock="Top" Text="Select a save to see its details." Style="{StaticResource EmptyHint}"
                                            Visibility="{Binding NoSelectedSave, Converter={StaticResource BoolToVis}}" />
@@ -466,7 +465,7 @@
                                      rebuild (every edit rebuilds it from scratch) can restore what was
                                      open instead of collapsing everything back down. -->
                                 <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                                <Setter Property="local:RowState.IsChanged" Value="{Binding ContainsMods}" />
+                                <Setter Property="local:ItemState.IsChanged" Value="{Binding ContainsMods}" />
                                 <Setter Property="Template">
                                     <Setter.Value>
                                         <ControlTemplate TargetType="{x:Type TreeViewItem}">
@@ -529,7 +528,7 @@
                             </DataGrid.Columns>
                             <DataGrid.RowStyle>
                                 <Style TargetType="DataGridRow" BasedOn="{StaticResource StateGridRow}">
-                                    <Setter Property="local:RowState.IsChanged" Value="{Binding IsModded}" />
+                                    <Setter Property="local:ItemState.IsChanged" Value="{Binding IsModded}" />
                                     <Style.Triggers>
                                         <!-- Italic rather than another Foreground: grey/black already
                                              means "untouched/changed", and a dead file can be either. -->
@@ -545,7 +544,7 @@
 
                     <GridSplitter Grid.Column="3" />
 
-                    <Border Grid.Column="4" BorderBrush="{DynamicResource BorderHairlineBrush}" BorderThickness="1,0,0,0" Padding="12,0,0,0">
+                    <Border Grid.Column="4" Style="{StaticResource SidebarPane}">
                         <DockPanel>
                             <TextBlock DockPanel.Dock="Bottom" Style="{StaticResource Note}" Margin="0,10,0,0"
                                        Text="Replacing a file stages it in your workspace. Nothing reaches the game until you press Deploy mods on the Mods tab." />

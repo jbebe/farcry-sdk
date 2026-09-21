@@ -106,7 +106,7 @@
                 <TreeView.Resources>
                     <Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource StateTreeItem}">
                         <EventSetter Event="PreviewMouseLeftButtonDown" Handler="OutlineTree_ItemClicked" />
-                        <Setter Property="local:RowState.IsChanged" Value="{Binding ContainsChange}" />
+                        <Setter Property="local:ItemState.IsChanged" Value="{Binding ContainsChange}" />
                         <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
                         <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                         <Setter Property="Visibility" Value="{Binding IsVisible, Converter={StaticResource BoolToVis}}" />

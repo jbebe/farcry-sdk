@@ -5,7 +5,7 @@
     <Style x:Key="DisclosureGlyph" TargetType="TextBlock">
         <Setter Property="Text" Value="+" />
         <Setter Property="FontFamily" Value="{DynamicResource MonoFont}" />
-        <Setter Property="FontSize" Value="{DynamicResource FontSizeHeading}" />
+        <Setter Property="FontSize" Value="14" />
         <Setter Property="Width" Value="18" />
         <Setter Property="TextAlignment" Value="Center" />
         <Setter Property="VerticalAlignment" Value="Center" />
@@ -95,11 +95,11 @@
         </Style.Triggers>
     </Style>
 
-    <!-- Grey until RowState.IsChanged, readable on the selection highlight either way. -->
+    <!-- Grey until ItemState.IsChanged, readable on the selection highlight either way. -->
     <Style x:Key="StateTreeItem" TargetType="TreeViewItem" BasedOn="{StaticResource {x:Type TreeViewItem}}">
         <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
         <Style.Triggers>
-            <Trigger Property="local:RowState.IsChanged" Value="True">
+            <Trigger Property="local:ItemState.IsChanged" Value="True">
                 <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
             </Trigger>
             <MultiTrigger>

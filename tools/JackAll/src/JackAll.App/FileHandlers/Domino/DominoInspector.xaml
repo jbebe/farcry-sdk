@@ -4,11 +4,7 @@
              xmlns:audio="clr-namespace:JackAll.App.FileHandlers.Audio">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
-        <Style x:Key="FieldLabel" TargetType="TextBlock" BasedOn="{StaticResource Caption}">
-            <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
-        </Style>
         <Style x:Key="FieldValue" TargetType="TextBlock" BasedOn="{StaticResource MonoSmall}">
-            <Setter Property="TextWrapping" Value="Wrap" />
             <Setter Property="Margin" Value="0,0,0,4" />
         </Style>
         <!-- One button per action a value or box offers; the click runs the bound DominoAction. -->
@@ -42,11 +38,11 @@
         <StackPanel x:Name="Root">
             <TextBlock x:Name="EmptyNotice"
                        Text="Select a box on the canvas to inspect it."
-                       FontSize="{StaticResource FontSizeSecondary}" Style="{StaticResource EmptyHint}" Margin="0,4" />
+                       Style="{StaticResource Note}" Margin="0,4" />
 
             <StackPanel x:Name="Details" Visibility="Collapsed">
                 <TextBlock x:Name="NodeTitle" Style="{StaticResource Heading}" />
-                <TextBlock x:Name="NodeCategory" Style="{StaticResource FieldLabel}" Margin="0,1,0,0" />
+                <TextBlock x:Name="NodeCategory" Style="{StaticResource Caption}" Margin="0,1,0,0" />
                 <TextBlock x:Name="NodeDescription" FontSize="{StaticResource FontSizeSecondary}" TextWrapping="Wrap" Margin="0,8,0,0" />
                 <TextBlock x:Name="NodeDescriptionSource" Text="Written from the box's Lua implementation."
                            Style="{StaticResource Caption}" Margin="0,2,0,0" />
@@ -67,10 +63,9 @@
                                     <ColumnDefinition Width="Auto" MinWidth="110" />
                                     <ColumnDefinition Width="*" />
                                 </Grid.ColumnDefinitions>
-                                <TextBlock Text="{Binding Name}" Style="{StaticResource FieldLabel}" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding Name}" Style="{StaticResource Caption}" Margin="0,0,8,0" />
                                 <StackPanel Grid.Column="1">
-                                    <TextBlock Text="{Binding Value}" Style="{StaticResource MonoSmall}"
-                                               TextWrapping="Wrap" ToolTip="{Binding Value}" />
+                                    <TextBlock Text="{Binding Value}" Style="{StaticResource MonoSmall}" ToolTip="{Binding Value}" />
                                     <TextBlock Text="{Binding Resolved}" FontSize="{StaticResource FontSizeSmall}" Foreground="#2F5E8C" TextWrapping="Wrap"
                                                Visibility="{Binding HasResolved, Converter={StaticResource BoolToVisibility}}" />
                                     <Image Source="{Binding Thumbnail}" MaxWidth="160" MaxHeight="160" HorizontalAlignment="Left"
@@ -97,8 +92,7 @@
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
                                 <TextBlock Text="{Binding Direction}" Style="{StaticResource Note}" />
-                                <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource MonoSmall}"
-                                           TextWrapping="Wrap" />
+                                <TextBlock Grid.Column="1" Text="{Binding Name}" Style="{StaticResource MonoSmall}" />
                                 <TextBlock Grid.Column="2" Text="{Binding Detail}" Style="{StaticResource Caption}"
                                            Margin="6,0,0,0" />
                                 <TextBlock Grid.Row="1" Grid.Column="1" Grid.ColumnSpan="2" Text="{Binding Note}"
@@ -121,8 +115,8 @@
                 <ItemsControl x:Name="DepList">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding}" Style="{StaticResource MonoSmall}" Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap" Margin="0,0,0,2" />
+                            <TextBlock Text="{Binding}" Style="{StaticResource MonoNote}"
+                                       Margin="0,0,0,2" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -132,8 +126,8 @@
                 <ItemsControl x:Name="ResourceList">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <TextBlock Text="{Binding}" Style="{StaticResource MonoSmall}" Foreground="{DynamicResource TextSecondaryBrush}"
-                                       TextWrapping="Wrap" Margin="0,0,0,2" />
+                            <TextBlock Text="{Binding}" Style="{StaticResource MonoNote}"
+                                       Margin="0,0,0,2" />
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>

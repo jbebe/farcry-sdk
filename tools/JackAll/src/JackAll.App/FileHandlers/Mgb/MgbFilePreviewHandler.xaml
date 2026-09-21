@@ -7,7 +7,6 @@
         <Button x:Name="OpenButton" DockPanel.Dock="Top" Content="Open in MGB Editor…" Click="OpenEditor_Click"
                 HorizontalAlignment="Left" Margin="0,0,0,16" />
 
-        <TextBlock x:Name="SummaryText" TextWrapping="Wrap" VerticalAlignment="Top"
-                   Style="{StaticResource MonoSmall}" Foreground="{DynamicResource TextSecondaryBrush}" />
+        <TextBlock x:Name="SummaryText" VerticalAlignment="Top" Style="{StaticResource MonoNote}" />
     </DockPanel>
 </UserControl>

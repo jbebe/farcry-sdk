@@ -14,7 +14,8 @@
         </Setter>
     </Style>
 
-    <!-- A document tab: its Header is the title, its Tag the close action the × runs. -->
+    <!-- A document tab: its Header is the title, its Tag the close action the × runs, and
+         ItemState.IsChanged on it shows the unsaved-changes marker. -->
     <Style x:Key="DocumentTab" TargetType="TabItem">
         <Setter Property="HeaderTemplate">
             <Setter.Value>
@@ -24,6 +25,18 @@
                                 Margin="6,0,0,0" VerticalAlignment="Center" Focusable="False" ToolTip="Close (Ctrl+W)"
                                 Command="{x:Static local:MainWindow.CloseDocumentTabCommand}"
                                 CommandParameter="{Binding RelativeSource={RelativeSource AncestorType=TabItem}}" />
+                        <TextBlock DockPanel.Dock="Right" Text=" *" VerticalAlignment="Center">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding Path=(local:ItemState.IsChanged), RelativeSource={RelativeSource AncestorType=TabItem}}" Value="True">
+                                            <Setter Property="Visibility" Value="Visible" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
                         <TextBlock Text="{Binding}" VerticalAlignment="Center" />
                     </DockPanel>
                 </DataTemplate>

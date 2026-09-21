@@ -40,11 +40,8 @@
                           VirtualizingStackPanel.IsVirtualizing="True"
                           VirtualizingStackPanel.VirtualizationMode="Recycling"
                           ScrollViewer.CanContentScroll="True"
-                          SelectedItemChanged="ObjectTree_SelectedItemChanged">
-                    <TreeView.Resources>
-                        <Style TargetType="TreeViewItem" BasedOn="{StaticResource BoundTreeItem}" />
-                    </TreeView.Resources>
-                </TreeView>
+                          ItemContainerStyle="{StaticResource BoundTreeItem}"
+                          SelectedItemChanged="ObjectTree_SelectedItemChanged" />
             </DockPanel>
 
             <GridSplitter Grid.Column="1" />
@@ -52,7 +49,7 @@
             <DockPanel Grid.Column="2">
                 <TextBlock x:Name="DetailHeader" DockPanel.Dock="Top" FontWeight="SemiBold"
                            Margin="0,0,0,6" Text="Select an object to see its fields." />
-                <DataGrid x:Name="FieldGrid" BorderThickness="1">
+                <DataGrid x:Name="FieldGrid">
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Field" Binding="{Binding Name}" Width="240" />
                         <DataGridTextColumn Header="Type" Binding="{Binding Kind}" Width="90" />
