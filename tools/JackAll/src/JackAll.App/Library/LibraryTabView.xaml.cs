@@ -8,25 +8,23 @@ using JackAll.Tools.World;
 
 namespace JackAll.App.Library;
 
-/// <summary>One library in the selected archetype's chain, and whether the engine reads it.</summary>
-public sealed record ChainRow(ArchetypeDefinition Definition, bool Wins, string? OverriddenBy)
+/// <summary>One mod's edit to the selected archetype, and whether it lands on the copy the game reads.</summary>
+public sealed record ModRow(string Mod, ArchetypeDefinition Definition, bool IsLive)
 {
-    public string ShortName => Definition.Layer.ShortName;
     public string Path => Definition.Layer.Path;
-    public string? FragmentId => Definition.FragmentId;
-    public bool IsUnconfirmed => !Definition.Layer.IsConfirmed;
-    public string Verdict => Wins ? "the game reads this" : "dead";
+    public string Verdict => IsLive ? "the game reads this" : "dead";
 }
 
 /// <summary>
-/// The Library tab: the archetype namespace resolved the way the engine resolves it, so a definition
-/// some later library overrides is visible as dead instead of looking editable. Editing reuses the
-/// ordinary FCB editor, hosted here against the fragment the selected declaration lives in.
+/// The Library tab: every archetype a world resolves, opened on the definition the game reads, with
+/// the mods editing it listed beside it. Editing reuses the ordinary FCB editor, hosted here against
+/// the fragment the declaration lives in.
 /// </summary>
 public partial class LibraryTabView : UserControl
 {
     private MainViewModel? _vm;
     private ArchetypeIndex? _index;
+    private StagedEdits _edits = new([]);
     private ArchetypeTreeNode? _root;
     private string? _loadedWorld;
 
@@ -86,9 +84,15 @@ public partial class LibraryTabView : UserControl
         {
             IProgress<string> progress = new Progress<string>(s => StatusText.Text = s);
             ArchetypeIndex index = await vm.ArchetypesOf(world, progress);
-            ArchetypeTreeNode root = await Task.Run(() => ArchetypeTreeNode.Build(index));
+            var edits = new StagedEdits(vm.Layers);
+            (ArchetypeTreeNode root, int modded) = await Task.Run(() =>
+            {
+                ArchetypeTreeNode built = ArchetypeTreeNode.Build(index, edits);
+                return (built, built.Archetypes().Count(a => a.IsModded));
+            });
 
             _index = index;
+            _edits = edits;
             _root = root;
             _loadedWorld = world;
             _fragments.Clear();
@@ -96,9 +100,7 @@ public partial class LibraryTabView : UserControl
 
             ArchetypeTree.ItemsSource = root.Children;
             ApplyFilter();
-            StatusText.Text =
-                $"{index.Count:N0} archetypes over {index.Layers.Count} libraries, "
-                + $"{index.Overridden.Count():N0} overridden";
+            StatusText.Text = $"{index.Count:N0} archetypes, {modded:N0} edited by mods";
         }
         catch (Exception ex)
         {
@@ -118,7 +120,7 @@ public partial class LibraryTabView : UserControl
 
         foreach (ArchetypeTreeNode child in _root.Children)
         {
-            ArchetypeTreeNode.ApplyFilter(child, SearchBox.Text.Trim(), ShadowedOnly.IsChecked == true);
+            ArchetypeTreeNode.ApplyFilter(child, SearchBox.Text.Trim(), ModdedOnly.IsChecked == true);
         }
     }
 
@@ -130,53 +132,57 @@ public partial class LibraryTabView : UserControl
             return;
         }
 
-        IReadOnlyList<ArchetypeDefinition> chain = _index.DefinitionsOf(name);
-        string winner = chain[^1].Layer.Path;
-        ChainList.ItemsSource = chain
-            .Select((definition, i) => new ChainRow(definition, i == chain.Count - 1, winner))
-            .ToList();
+        IReadOnlyList<ArchetypeDefinition> declarations = _index.DefinitionsOf(name);
+        List<ModRow> mods =
+        [
+            .. declarations.SelectMany(d => _edits.SourcesOf(d).Select(mod => new ModRow(mod, d, d == declarations[^1]))),
+        ];
+        ModList.ItemsSource = mods;
+        ModHint.Text = mods.Count == 0
+            ? "No enabled mod edits this archetype."
+            : "In load order - a later mod wins where two touch the same field. Click one to open the copy it edits.";
 
-        // Opens on the definition the engine reads; the shadowed ones stay one click away.
-        ChainList.SelectedIndex = chain.Count - 1;
+        ShowDeclaration(declarations[^1]);
     }
 
-    private void ChainList_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void ModList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (ChainList.SelectedItem is ChainRow row)
+        if (ModList.SelectedItem is ModRow row)
         {
-            ShowDeclaration(row);
+            ShowDeclaration(row.Definition);
         }
     }
 
     private void ClearSelection()
     {
-        ChainList.ItemsSource = null;
+        ModList.ItemsSource = null;
+        ModHint.Text = string.Empty;
         EditorHost.Content = null;
         EditorPlaceholder.Visibility = Visibility.Visible;
     }
 
     /// <summary>Loads the fragment this declaration lives in, positioned on the declaration itself.</summary>
-    private void ShowDeclaration(ChainRow row)
+    private void ShowDeclaration(ArchetypeDefinition definition)
     {
-        if (_vm is not { } vm) return;
+        if (_vm is not { } vm || _index?.Winner(definition.Name) is not { } winner) return;
 
-        if (FindFragment(vm, row.Definition) is not { } fragment)
+        if (FindFragment(vm, definition) is not { } fragment)
         {
-            StatusText.Text = $"{row.Path} has no fragment row for {row.FragmentId}";
+            StatusText.Text = $"{definition.Layer.Path} has no fragment row for {definition.FragmentId}";
             return;
         }
 
         try
         {
             FcbDocumentViewModel editor = vm.OpenFragmentDocument(fragment);
-            editor.Notice = row.Wins
+            editor.Notice = definition == winner
                 ? null
-                : $"'{row.Definition.Name}' is declared again by {row.OverriddenBy}, which loads later. "
+                : $"'{definition.Name}' is declared again by {winner.Layer.Path}, which loads later. "
                   + "That copy is what the game reads, so editing this one changes the file and nothing in game.";
 
             EditorHost.Content = new FcbDocumentView(editor);
             EditorPlaceholder.Visibility = Visibility.Collapsed;
-            editor.TryReveal(WorldHashes.HidName, row.Definition.Name);
+            editor.TryReveal(WorldHashes.HidName, definition.Name);
         }
         catch (Exception ex)
         {

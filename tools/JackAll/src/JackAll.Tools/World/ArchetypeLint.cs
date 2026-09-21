@@ -7,6 +7,21 @@ namespace JackAll.Tools.World;
 /// declaration.</summary>
 public readonly record struct StagedFragment(string Source, uint ContainerHash, string FragmentId);
 
+/// <summary>Which enabled mods stage which fragment, in load order.</summary>
+public sealed class StagedEdits(IEnumerable<IModLayer> layers)
+{
+    private readonly Dictionary<uint, Dictionary<string, List<(IModLayer Layer, uint EntryHash)>>> _overrides =
+        FragmentMerge.BuildOverrideIndex(layers.Where(l => l.Enabled));
+
+    /// <summary>The mods staging the fragment <paramref name="definition"/> lives in.</summary>
+    public IEnumerable<string> SourcesOf(ArchetypeDefinition definition)
+        => definition.FragmentId is { } id
+           && _overrides.TryGetValue(definition.ContainerHash, out var byId)
+           && byId.TryGetValue(id, out var contributors)
+            ? contributors.Select(c => c.Layer.Name)
+            : [];
+}
+
 /// <summary>
 /// A staged edit to an archetype some later library declares again. The file changes, the game reads
 /// the other copy.

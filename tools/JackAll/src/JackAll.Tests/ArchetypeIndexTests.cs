@@ -1,5 +1,6 @@
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Mods;
 using JackAll.Tools.World;
 
 namespace JackAll.Tests;
@@ -64,17 +65,6 @@ public class ArchetypeIndexTests
     /// engine-side measurement. The base's 650 is a property of this fixture, which is some world's
     /// library but not world1's (that one declares 1,419).
     /// </summary>
-    /// <summary>A DLC library lives under its own folder plus a "generated" subfolder, so the naive
-    /// parent-folder label would call every one of them "generated".</summary>
-    [Fact]
-    public void Each_layer_gets_a_distinguishing_short_name()
-    {
-        Assert.Equal("base", new ArchetypeLayer(BasePath).ShortName);
-        Assert.Equal("patch", new ArchetypeLayer(PatchPath).ShortName);
-        Assert.Equal("dlc1", new ArchetypeLayer(@"downloadcontent\dlc1\generated\entitylibrary.fcb").ShortName);
-        Assert.Equal("dlc_jungle", new ArchetypeLayer(@"downloadcontent\dlc_jungle\entitylibrary.fcb").ShortName);
-    }
-
     [Fact]
     [Trait("Category", "RequiresFixture")]
     public void The_chain_resolves_the_expected_archetype_counts()
@@ -234,6 +224,38 @@ public class ArchetypeIndexTests
             [new StagedFragment("my-mod", NameHash.Compute(PatchPath), shadowed.FragmentId!)],
             knownPaths, ReadFixture);
         Assert.Empty(live);
+    }
+
+    /// <summary>A staged fragment is attributed to the declaration living in it, and to no other copy.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_staged_fragment_names_the_mod_on_the_declaration_it_edits()
+    {
+        if (!FixturesPresent) return;
+
+        ArchetypeIndex index = LoadChain();
+        ArchetypeDefinition shadowed = index.Overridden.Select(index.DefinitionsOf).First()[0];
+
+        string sandbox = Path.Combine(Path.GetTempPath(), "jackall-staged-" + Guid.NewGuid().ToString("N"));
+        try
+        {
+            FolderModLayer Staging(string name)
+            {
+                string file = Path.Combine(sandbox, name, "mods", BasePath, shadowed.FragmentId!);
+                Directory.CreateDirectory(Path.GetDirectoryName(file)!);
+                File.WriteAllText(file, "<object />");
+                return new FolderModLayer(Path.Combine(sandbox, name), name);
+            }
+
+            var edits = new StagedEdits([Staging("first"), Staging("second")]);
+
+            Assert.Equal(["first", "second"], edits.SourcesOf(shadowed));
+            Assert.Empty(edits.SourcesOf(index.Winner(shadowed.Name)!));
+        }
+        finally
+        {
+            Directory.Delete(sandbox, recursive: true);
+        }
     }
 
     /// <summary>

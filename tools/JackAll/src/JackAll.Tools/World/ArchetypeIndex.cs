@@ -5,33 +5,7 @@ using JackAll.Core.Format.Fcb;
 namespace JackAll.Tools.World;
 
 /// <summary>One library in the chain, at the position the engine loads it.</summary>
-/// <param name="IsConfirmed">False for a layer whose load is only established in the dedicated
-/// server binary, not yet read in <c>Dunia.dll</c>.</param>
-public sealed record ArchetypeLayer(string Path, bool IsConfirmed = true)
-{
-    /// <summary>This layer's role in the chain, short enough to sit in a badge or a lint line.</summary>
-    public string ShortName
-    {
-        get
-        {
-            string[] segments = Path.Split('\\', StringSplitOptions.RemoveEmptyEntries);
-            string file = segments[^1];
-            if (file.Equals("entitylibrarypatchoverride.fcb", StringComparison.OrdinalIgnoreCase)) return "patch";
-            if (Path.StartsWith(@"worlds\", StringComparison.OrdinalIgnoreCase)) return "base";
-
-            // A DLC library sits in its own folder but under a "generated" subfolder, which would
-            // otherwise name every one of them identically.
-            for (int i = segments.Length - 2; i >= 0; i--)
-            {
-                if (!segments[i].Equals("generated", StringComparison.OrdinalIgnoreCase))
-                {
-                    return segments[i];
-                }
-            }
-            return "dlc";
-        }
-    }
-}
+public sealed record ArchetypeLayer(string Path);
 
 /// <summary>One declaration of an archetype: what declares it, and the node it declares.</summary>
 /// <param name="FragmentId">The declaration's own fragment id (see <see cref="FcbFragments"/> — one
@@ -56,14 +30,7 @@ public sealed partial class ArchetypeIndex
 {
     private readonly Dictionary<string, List<ArchetypeDefinition>> _byName;
 
-    private ArchetypeIndex(Dictionary<string, List<ArchetypeDefinition>> byName, IReadOnlyList<ArchetypeLayer> layers)
-    {
-        _byName = byName;
-        Layers = layers;
-    }
-
-    /// <summary>The libraries this index was built from, in load order.</summary>
-    public IReadOnlyList<ArchetypeLayer> Layers { get; }
+    private ArchetypeIndex(Dictionary<string, List<ArchetypeDefinition>> byName) => _byName = byName;
 
     /// <summary>Distinct archetype names, whatever declares them.</summary>
     public IReadOnlyCollection<string> Names => _byName.Keys;
@@ -177,7 +144,7 @@ public sealed partial class ArchetypeIndex
             new(@"generated\entitylibrarypatchoverride.fcb"),
             .. (dlcLibraries ?? [])
                 .OrderBy(p => p, StringComparer.OrdinalIgnoreCase)
-                .Select(dlc => new ArchetypeLayer(dlc, IsConfirmed: false)),
+                .Select(dlc => new ArchetypeLayer(dlc)),
         ];
 
     public static ArchetypeIndex Load(
@@ -204,7 +171,7 @@ public sealed partial class ArchetypeIndex
 
         progress?.Report(
             $"Resolved {byName.Count:N0} archetypes, {byName.Count(p => p.Value.Count > 1):N0} overridden");
-        return new ArchetypeIndex(byName, layers);
+        return new ArchetypeIndex(byName);
     }
 
     /// <summary>

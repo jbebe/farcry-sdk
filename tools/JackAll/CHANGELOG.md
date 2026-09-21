@@ -29,6 +29,12 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ### Changed
 - **The Map tab resolves archetypes against `entitylibrary.fcb`**, the library single-player reads
   and the one a save stages into, instead of `entitylibrary_full.fcb`.
+- **The Library tab shows which mods edit an archetype** instead of which game library overrides
+  which. Each archetype opens on the definition the game reads; the side panel lists the enabled
+  mods editing it in load order, marking an edit dead when it lands on a copy the game doesn't
+  read. "Overridden only" became "Modded only", and the "Reads as" picker is gone.
+- **`mod lint` checks the library single-player reads** — it used to default to
+  `entitylibrary_full.fcb`; the `--profile` option is removed.
 
 ### Fixed
 - **Saving map edits with nothing added left them pending** — a save of only moves or deletes now

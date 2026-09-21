@@ -20,15 +20,13 @@ public sealed class ArchetypeTreeNode : TreeNodeBase<ArchetypeTreeNode>
     /// <summary>The engine's key for this archetype, or null for a group row.</summary>
     public string? FullName { get; }
 
-    /// <summary>The chain of layers declaring this archetype, in load order - null for a group row.</summary>
-    public string? Chain { get; private set; }
+    /// <summary>The mods editing this archetype, in load order - null for a group row.</summary>
+    public string? Mods { get; private set; }
 
-    /// <summary>True when a later library declares this name too, so the earlier copies are dead.</summary>
-    public bool IsShadowed { get; private set; }
+    public bool IsModded => !string.IsNullOrEmpty(Mods);
 
-    /// <summary>True for a group holding any shadowed archetype, so a collapsed branch still shows there
-    /// is something contested inside it.</summary>
-    public bool ContainsShadowed { get; private set; }
+    /// <summary>True for a group holding any modded archetype, so a collapsed branch still shows it.</summary>
+    public bool ContainsModded { get; private set; }
 
     /// <summary>The group rows directly below this one, for a tree that shows folders only.</summary>
     public IEnumerable<ArchetypeTreeNode> Groups => Children.Where(c => c.FullName is null);
@@ -38,12 +36,11 @@ public sealed class ArchetypeTreeNode : TreeNodeBase<ArchetypeTreeNode>
         => FullName is null ? Children.SelectMany(c => c.Archetypes()) : [this];
 
     /// <summary>Groups every name in <paramref name="index"/> per <see cref="ArchetypeIndex.SplitForDisplay"/>.</summary>
-    public static ArchetypeTreeNode Build(ArchetypeIndex index)
+    public static ArchetypeTreeNode Build(ArchetypeIndex index, StagedEdits? edits = null)
     {
         var root = new ArchetypeTreeNode("Archetypes", null);
         foreach (string name in index.Names.OrderBy(n => n, StringComparer.OrdinalIgnoreCase))
         {
-            IReadOnlyList<ArchetypeDefinition> chain = index.DefinitionsOf(name);
             (IReadOnlyList<string> groups, string label) = index.SplitForDisplay(name);
 
             ArchetypeTreeNode parent = root;
@@ -54,16 +51,17 @@ public sealed class ArchetypeTreeNode : TreeNodeBase<ArchetypeTreeNode>
 
             var leaf = new ArchetypeTreeNode(label, name)
             {
-                IsShadowed = chain.Count > 1,
-                Chain = string.Join(" → ", chain.Select(d => d.Layer.ShortName)),
+                Mods = edits is null
+                    ? null
+                    : string.Join(", ", index.DefinitionsOf(name).SelectMany(edits.SourcesOf).Distinct()),
             };
             parent.AddChild(leaf);
 
-            if (leaf.IsShadowed)
+            if (leaf.IsModded)
             {
                 for (ArchetypeTreeNode? node = leaf; node is not null; node = node.Parent)
                 {
-                    node.ContainsShadowed = true;
+                    node.ContainsModded = true;
                 }
             }
         }
@@ -85,12 +83,12 @@ public sealed class ArchetypeTreeNode : TreeNodeBase<ArchetypeTreeNode>
         return group;
     }
 
-    /// <summary>Shows only archetypes matching the search text, and optionally only shadowed ones.</summary>
-    public static void ApplyFilter(ArchetypeTreeNode node, string filter, bool shadowedOnly)
+    /// <summary>Shows only archetypes matching the search text, and optionally only modded ones.</summary>
+    public static void ApplyFilter(ArchetypeTreeNode node, string filter, bool moddedOnly)
         => ApplyFilter(node, n =>
             n.FullName is not null
             && (filter.Length == 0 || n.FullName.Contains(filter, StringComparison.OrdinalIgnoreCase))
-            && (!shadowedOnly || n.IsShadowed));
+            && (!moddedOnly || n.IsModded));
 
     /// <summary>Expands the path down to <paramref name="fullName"/> and selects it.</summary>
     public static ArchetypeTreeNode? Reveal(ArchetypeTreeNode node, string fullName)

@@ -3,10 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:library="clr-namespace:JackAll.App.Library">
     <UserControl.Resources>
-        <BooleanToVisibilityConverter x:Key="BoolToVis" />
-
-        <!-- Grey = only one library declares this, so an edit to it is live. Red = a later library
-             declares it too, so every copy but the last is dead. -->
+        <!-- Highlighted = an enabled mod edits this archetype, or something inside this group. -->
         <HierarchicalDataTemplate x:Key="ArchetypeTemplate" DataType="{x:Type library:ArchetypeTreeNode}"
                                   ItemsSource="{Binding Children}">
             <StackPanel Orientation="Horizontal">
@@ -14,30 +11,29 @@
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding ContainsShadowed}" Value="True">
-                                    <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+                                <DataTrigger Binding="{Binding ContainsModded}" Value="True">
+                                    <Setter Property="Foreground" Value="{DynamicResource OkTextBrush}" />
                                 </DataTrigger>
-                                <DataTrigger Binding="{Binding IsShadowed}" Value="True">
+                                <DataTrigger Binding="{Binding IsModded}" Value="True">
                                     <Setter Property="FontWeight" Value="SemiBold" />
                                 </DataTrigger>
                             </Style.Triggers>
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
-                <TextBlock Text="{Binding Chain}" Margin="8,0,0,0" Style="{StaticResource Caption}"
+                <TextBlock Text="{Binding Mods}" Margin="8,0,0,0" Style="{StaticResource Caption}"
                            VerticalAlignment="Center" />
             </StackPanel>
         </HierarchicalDataTemplate>
 
-        <!-- One layer in the selected archetype's chain. The last row wins; the rest are what an edit
-             would silently miss. -->
-        <DataTemplate x:Key="ChainRowTemplate" DataType="{x:Type library:ChainRow}">
+        <!-- One mod editing the selected archetype. Dead = it edits a copy the game doesn't read. -->
+        <DataTemplate x:Key="ModRowTemplate" DataType="{x:Type library:ModRow}">
             <Border Padding="7,5" Margin="0,0,0,3">
                 <Border.Style>
                     <Style TargetType="Border" BasedOn="{StaticResource PreviewFrame}">
                         <Setter Property="CornerRadius" Value="{StaticResource CalloutRadius}" />
                         <Style.Triggers>
-                            <DataTrigger Binding="{Binding Wins}" Value="True">
+                            <DataTrigger Binding="{Binding IsLive}" Value="True">
                                 <Setter Property="Background" Value="{DynamicResource OkBgBrush}" />
                                 <Setter Property="BorderBrush" Value="{DynamicResource OkBorderBrush}" />
                             </DataTrigger>
@@ -52,20 +48,16 @@
                                 <Style TargetType="TextBlock">
                                     <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
                                     <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Wins}" Value="True">
+                                        <DataTrigger Binding="{Binding IsLive}" Value="True">
                                             <Setter Property="Foreground" Value="{DynamicResource OkTextBrush}" />
                                         </DataTrigger>
                                     </Style.Triggers>
                                 </Style>
                             </TextBlock.Style>
                         </TextBlock>
-                        <TextBlock Text="{Binding ShortName}" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSecondary}" />
+                        <TextBlock Text="{Binding Mod}" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSecondary}" />
                     </DockPanel>
                     <TextBlock Text="{Binding Path}" Style="{StaticResource Caption}" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding FragmentId}" Style="{StaticResource Caption}" />
-                    <TextBlock Text="Load order for this layer is not confirmed in Dunia.dll" Style="{StaticResource Caption}"
-                               Foreground="{DynamicResource WarningTextBrush}" TextWrapping="Wrap" Margin="0,2,0,0"
-                               Visibility="{Binding IsUnconfirmed, Converter={StaticResource BoolToVis}}" />
                 </StackPanel>
             </Border>
         </DataTemplate>
@@ -91,7 +83,7 @@
 
             <DockPanel Grid.Column="0">
                 <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
-                    <CheckBox x:Name="ShadowedOnly" DockPanel.Dock="Right" Content="Overridden only"
+                    <CheckBox x:Name="ModdedOnly" DockPanel.Dock="Right" Content="Modded only"
                               VerticalAlignment="Center" Margin="6,0,0,0" Click="Filter_Changed" />
                     <TextBox x:Name="SearchBox" Style="{StaticResource SearchBox}" TextChanged="Filter_Changed" />
                 </DockPanel>
@@ -118,13 +110,12 @@
             <GridSplitter Grid.Column="3" />
 
             <DockPanel Grid.Column="4">
-                <TextBlock DockPanel.Dock="Top" Text="Override chain" FontWeight="SemiBold" Margin="0,0,0,6" />
-                <TextBlock x:Name="ChainHint" DockPanel.Dock="Bottom" Style="{StaticResource Caption}"
-                           TextWrapping="Wrap" Margin="0,6,0,0"
-                           Text="Click a layer to inspect its own copy." />
-                <ListBox x:Name="ChainList" ItemTemplate="{StaticResource ChainRowTemplate}"
+                <TextBlock DockPanel.Dock="Top" Text="Mods editing this" FontWeight="SemiBold" Margin="0,0,0,6" />
+                <TextBlock x:Name="ModHint" DockPanel.Dock="Bottom" Style="{StaticResource Caption}"
+                           TextWrapping="Wrap" Margin="0,6,0,0" />
+                <ListBox x:Name="ModList" ItemTemplate="{StaticResource ModRowTemplate}"
                          BorderThickness="0" HorizontalContentAlignment="Stretch"
-                         SelectionChanged="ChainList_SelectionChanged" />
+                         SelectionChanged="ModList_SelectionChanged" />
             </DockPanel>
         </Grid>
     </DockPanel>
