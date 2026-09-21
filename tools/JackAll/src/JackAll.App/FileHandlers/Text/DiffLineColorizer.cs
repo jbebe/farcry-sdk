@@ -29,32 +29,28 @@ internal sealed class DiffLineColorizer(IReadOnlyList<DiffLine> lines) : Documen
         switch (lines[index].Kind)
         {
             case DiffLineKind.Added:
-                ChangeLinePart(line.Offset, line.EndOffset, e =>
-                {
-                    e.TextRunProperties.SetBackgroundBrush(Themed("DiffAddedBgBrush"));
-                    e.TextRunProperties.SetForegroundBrush(Themed("DiffAddedTextBrush"));
-                });
+                Paint(line, Themed("DiffAddedBgBrush"), Themed("DiffAddedTextBrush"));
                 break;
 
             case DiffLineKind.Removed:
-                ChangeLinePart(line.Offset, line.EndOffset, e =>
-                {
-                    e.TextRunProperties.SetBackgroundBrush(Themed("DiffRemovedBgBrush"));
-                    e.TextRunProperties.SetForegroundBrush(Themed("DiffRemovedTextBrush"));
-                    e.TextRunProperties.SetTextDecorations(TextDecorations.Strikethrough);
-                });
+                Paint(line, Themed("DiffRemovedBgBrush"), Themed("DiffRemovedTextBrush"),
+                    e => e.TextRunProperties.SetTextDecorations(TextDecorations.Strikethrough));
                 break;
 
             case DiffLineKind.Gap:
-                ChangeLinePart(line.Offset, line.EndOffset, e =>
-                {
-                    e.TextRunProperties.SetForegroundBrush(Themed("TextMutedBrush"));
-                    e.TextRunProperties.SetTypeface(GapTypeface);
-                });
+                Paint(line, null, Themed("TextMutedBrush"), e => e.TextRunProperties.SetTypeface(GapTypeface));
                 break;
         }
     }
 
-    /// <summary>Looked up per line, so a theme switch repaints the diff with the rest of the editor.</summary>
+    private void Paint(DocumentLine line, Brush? background, Brush foreground, Action<VisualLineElement>? extra = null)
+        => ChangeLinePart(line.Offset, line.EndOffset, e =>
+        {
+            if (background is not null) e.TextRunProperties.SetBackgroundBrush(background);
+            e.TextRunProperties.SetForegroundBrush(foreground);
+            extra?.Invoke(e);
+        });
+
+    /// <summary>Looked up per line, not per run of text and not once for all: a theme switch repaints the diff.</summary>
     private static Brush Themed(string key) => (Brush)Application.Current.FindResource(key);
 }

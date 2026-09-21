@@ -82,12 +82,9 @@
                             Click="CancelExport_Click"
                             Visibility="{Binding IsExporting, Converter={StaticResource BoolToVis}}" />
                     <ComboBox x:Name="ThemePicker" DockPanel.Dock="Right" Width="110" Margin="12,0,0,0"
-                              FontSize="{StaticResource FontSizeSecondary}" SelectionChanged="ThemePicker_SelectionChanged"
-                              ToolTip="System follows the Windows app mode">
-                        <ComboBoxItem Content="System theme" />
-                        <ComboBoxItem Content="Light theme" />
-                        <ComboBoxItem Content="Dark theme" />
-                    </ComboBox>
+                              FontSize="{StaticResource FontSizeSecondary}" ItemStringFormat="{}{0} theme"
+                              SelectionChanged="ThemePicker_SelectionChanged"
+                              ToolTip="System follows the Windows app mode" />
                     <ProgressBar DockPanel.Dock="Right" Width="120" Height="12" IsIndeterminate="True"
                                  Visibility="{Binding Busy, Converter={StaticResource BoolToVis}}" />
                     <TextBlock Text="{Binding Status}" TextTrimming="CharacterEllipsis" />

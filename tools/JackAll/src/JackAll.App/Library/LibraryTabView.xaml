@@ -89,7 +89,6 @@
                 </DockPanel>
 
                 <TreeView x:Name="ArchetypeTree" ItemTemplate="{StaticResource ArchetypeTemplate}"
-                          BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1"
                           VirtualizingStackPanel.IsVirtualizing="True"
                           VirtualizingStackPanel.VirtualizationMode="Recycling"
                           ScrollViewer.CanContentScroll="True"

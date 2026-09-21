@@ -31,7 +31,8 @@ public partial class MainWindow : Window
         // Before the first element loads, so nothing is ever painted in the wrong theme.
         ThemeManager.Apply(_vm.Config.Theme);
         InitializeComponent();
-        ThemePicker.SelectedIndex = (int)_vm.Config.Theme;
+        ThemePicker.ItemsSource = Enum.GetValues<AppTheme>();
+        ThemePicker.SelectedItem = _vm.Config.Theme;
         SourceInitialized += (_, _) => ThemeManager.ApplyTitleBar(this);
         DataContext = _vm;
         Loaded += OnLoaded;
@@ -57,15 +58,16 @@ public partial class MainWindow : Window
         }
     }
 
-    /// <summary>The picker's items are in <see cref="AppTheme"/> order. The choice reaches config.ini
-    /// with the save on close.</summary>
     private void ThemePicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        var theme = (AppTheme)ThemePicker.SelectedIndex;
+        var theme = (AppTheme)ThemePicker.SelectedItem;
         if (theme == _vm.Config.Theme) return;
 
         _vm.Config.Theme = theme;
         ThemeManager.Apply(theme);
+
+        // Config.Save, not SaveConfig: that one rebuilds the mod list from rows that may not be loaded yet.
+        _vm.Config.Save();
     }
 
     private void OnViewModelPropertyChanged(object? sender, PropertyChangedEventArgs e)

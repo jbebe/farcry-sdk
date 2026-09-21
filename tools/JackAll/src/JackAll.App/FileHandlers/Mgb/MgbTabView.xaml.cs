@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Media;
 using JackAll.Core.Format.Rml;
 using JackAll.Tools.Mgb;
 using Microsoft.Win32;

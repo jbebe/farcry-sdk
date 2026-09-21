@@ -1,7 +1,8 @@
 <!-- Stock button chrome hardcodes light colours, so these carry their own flat template. -->
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <Style TargetType="Button">
+    <!-- Shared by Button and ToggleButton; the checked trigger never fires on a plain Button. -->
+    <Style x:Key="ButtonChrome" TargetType="ButtonBase">
         <Setter Property="Padding" Value="{DynamicResource ButtonPadding}" />
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
@@ -12,7 +13,7 @@
         <Setter Property="FocusVisualStyle" Value="{x:Null}" />
         <Setter Property="Template">
             <Setter.Value>
-                <ControlTemplate TargetType="Button">
+                <ControlTemplate TargetType="ButtonBase">
                     <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
                             BorderThickness="{TemplateBinding BorderThickness}" SnapsToDevicePixels="True">
                         <ContentPresenter Margin="{TemplateBinding Padding}" RecognizesAccessKey="True"
@@ -30,41 +31,7 @@
                         <Trigger Property="IsPressed" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlPressedBrush}" />
                         </Trigger>
-                        <Trigger Property="IsEnabled" Value="False">
-                            <Setter Property="Foreground" Value="{DynamicResource TextDisabledBrush}" />
-                            <Setter TargetName="Bd" Property="Opacity" Value="0.6" />
-                        </Trigger>
-                    </ControlTemplate.Triggers>
-                </ControlTemplate>
-            </Setter.Value>
-        </Setter>
-    </Style>
-
-    <!-- The same chrome, held down while checked. -->
-    <Style TargetType="ToggleButton">
-        <Setter Property="Padding" Value="{DynamicResource ButtonPadding}" />
-        <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
-        <Setter Property="Background" Value="{DynamicResource ControlBrush}" />
-        <Setter Property="BorderBrush" Value="{DynamicResource ControlBorderBrush}" />
-        <Setter Property="BorderThickness" Value="1" />
-        <Setter Property="HorizontalContentAlignment" Value="Center" />
-        <Setter Property="VerticalContentAlignment" Value="Center" />
-        <Setter Property="FocusVisualStyle" Value="{x:Null}" />
-        <Setter Property="Template">
-            <Setter.Value>
-                <ControlTemplate TargetType="ToggleButton">
-                    <Border x:Name="Bd" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
-                            BorderThickness="{TemplateBinding BorderThickness}" SnapsToDevicePixels="True">
-                        <ContentPresenter Margin="{TemplateBinding Padding}" RecognizesAccessKey="True"
-                                          HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
-                                          VerticalAlignment="{TemplateBinding VerticalContentAlignment}" />
-                    </Border>
-                    <ControlTemplate.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlHoverBrush}" />
-                            <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
-                        </Trigger>
-                        <Trigger Property="IsChecked" Value="True">
+                        <Trigger Property="ToggleButton.IsChecked" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource ControlPressedBrush}" />
                             <Setter TargetName="Bd" Property="BorderBrush" Value="{DynamicResource AccentBrush}" />
                         </Trigger>
@@ -77,6 +44,10 @@
             </Setter.Value>
         </Setter>
     </Style>
+
+    <Style TargetType="Button" BasedOn="{StaticResource ButtonChrome}" />
+
+    <Style TargetType="ToggleButton" BasedOn="{StaticResource ButtonChrome}" />
 
     <!-- A button in a tab's toolbar row. -->
     <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">

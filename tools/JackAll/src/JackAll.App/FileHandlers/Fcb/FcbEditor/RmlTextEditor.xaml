@@ -8,7 +8,7 @@
          plain single-line TextBox every other scalar type uses. Height isn't set here - the
          code-behind grows it with the document up to a capped number of lines (see UpdateHeight),
          past which the rest scrolls via the editor's own ScrollViewer instead of growing further. -->
-    <avalonEdit:TextEditor x:Name="Editor" FontFamily="{StaticResource MonoFont}" Foreground="{DynamicResource TextPrimaryBrush}"
+    <avalonEdit:TextEditor x:Name="Editor"
                             ShowLineNumbers="False" WordWrap="False"
                             HorizontalScrollBarVisibility="Auto" VerticalScrollBarVisibility="Auto"
                             BorderThickness="{Binding BorderThickness, RelativeSource={RelativeSource AncestorType=UserControl}}"

@@ -26,11 +26,11 @@ internal static class SyntaxTheme
         _ => null,
     };
 
-    /// <summary>Highlights <paramref name="editor"/> now and again on every theme change, for as long
-    /// as it is loaded. A diff view's line colours repaint with it.</summary>
+    /// <summary>Highlights <paramref name="editor"/> when it loads and again on every theme change,
+    /// for as long as it is loaded. A diff view's line colours repaint with it.</summary>
     public static void Bind(TextEditor editor, Func<string?> extension)
     {
-        void Apply(object? sender, EventArgs e)
+        void Apply()
         {
             editor.SyntaxHighlighting = For(extension());
             editor.TextArea.TextView.Redraw();
@@ -40,7 +40,7 @@ internal static class SyntaxTheme
         {
             ThemeManager.Changed -= Apply;
             ThemeManager.Changed += Apply;
-            Apply(null, EventArgs.Empty);
+            Apply();
         };
         editor.Unloaded += (_, _) => ThemeManager.Changed -= Apply;
     }
@@ -59,60 +59,29 @@ internal static class SyntaxTheme
 
         if (ThemeManager.IsDark)
         {
-            var lifter = new ColourLifter();
-            foreach (XshdElement element in xshd.Elements)
+            // Both definitions declare every colour by name at the top level; rules only refer to them.
+            foreach (XshdColor color in xshd.Elements.OfType<XshdColor>())
             {
-                element.AcceptVisitor(lifter);
+                if (color.Foreground?.GetColor(null) is Color foreground)
+                {
+                    color.Foreground = new SimpleHighlightingBrush(Lift(foreground));
+                }
             }
         }
 
         return Cache[(resource, ThemeManager.IsDark)] = HighlightingLoader.Load(xshd, HighlightingManager.Instance);
     }
 
-    /// <summary>Walks every colour a definition declares, named or inline.</summary>
-    private sealed class ColourLifter : IXshdVisitor
+    /// <summary>Blends a colour whose luminance would sink into a dark ground halfway to white.</summary>
+    private static Color Lift(Color c)
     {
-        public object? VisitColor(XshdColor color)
-        {
-            if (color.Foreground?.GetColor(null) is Color foreground)
-            {
-                color.Foreground = new SimpleHighlightingBrush(Lift(foreground));
-            }
-            return null;
-        }
+        double luminance = (0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B) / 255;
+        if (luminance >= 0.45) return c;
 
-        public object? VisitRuleSet(XshdRuleSet ruleSet)
-        {
-            ruleSet.AcceptElements(this);
-            return null;
-        }
-
-        public object? VisitSpan(XshdSpan span)
-        {
-            span.SpanColorReference.InlineElement?.AcceptVisitor(this);
-            span.BeginColorReference.InlineElement?.AcceptVisitor(this);
-            span.EndColorReference.InlineElement?.AcceptVisitor(this);
-            span.RuleSetReference.InlineElement?.AcceptVisitor(this);
-            return null;
-        }
-
-        public object? VisitKeywords(XshdKeywords keywords) => keywords.ColorReference.InlineElement?.AcceptVisitor(this);
-
-        public object? VisitRule(XshdRule rule) => rule.ColorReference.InlineElement?.AcceptVisitor(this);
-
-        public object? VisitImport(XshdImport import) => import.RuleSetReference.InlineElement?.AcceptVisitor(this);
-
-        /// <summary>Blends a colour whose luminance would sink into a dark ground halfway to white.</summary>
-        private static Color Lift(Color c)
-        {
-            double luminance = (0.2126 * c.R + 0.7152 * c.G + 0.0722 * c.B) / 255;
-            if (luminance >= 0.45) return c;
-
-            const double blend = 0.55;
-            return Color.FromRgb(
-                (byte)(c.R + (255 - c.R) * blend),
-                (byte)(c.G + (255 - c.G) * blend),
-                (byte)(c.B + (255 - c.B) * blend));
-        }
+        const double blend = 0.55;
+        return Color.FromRgb(
+            (byte)(c.R + (255 - c.R) * blend),
+            (byte)(c.G + (255 - c.G) * blend),
+            (byte)(c.B + (255 - c.B) * blend));
     }
 }

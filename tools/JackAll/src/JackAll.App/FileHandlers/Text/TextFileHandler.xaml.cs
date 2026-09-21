@@ -13,9 +13,8 @@ public partial class TextFileHandler : UserControl
         nameof(Text), typeof(string), typeof(TextFileHandler),
         new PropertyMetadata(string.Empty, (d, e) => ((TextFileHandler)d).Editor.Text = (string)e.NewValue));
 
-    public static readonly DependencyProperty ExtensionProperty = DependencyProperty.Register(
-        nameof(Extension), typeof(string), typeof(TextFileHandler),
-        new PropertyMetadata(null, (d, e) => ((TextFileHandler)d).Editor.SyntaxHighlighting = SyntaxTheme.For((string?)e.NewValue)));
+    public static readonly DependencyProperty ExtensionProperty =
+        DependencyProperty.Register(nameof(Extension), typeof(string), typeof(TextFileHandler));
 
     public string Text
     {
@@ -23,7 +22,8 @@ public partial class TextFileHandler : UserControl
         set => SetValue(TextProperty, value);
     }
 
-    /// <summary>Drives which highlighting definition the editor gets — see <see cref="SyntaxTheme"/>.</summary>
+    /// <summary>Drives which highlighting definition the editor gets when it loads — see
+    /// <see cref="SyntaxTheme"/>. Every host sets it before then.</summary>
     public string Extension
     {
         get => (string)GetValue(ExtensionProperty);

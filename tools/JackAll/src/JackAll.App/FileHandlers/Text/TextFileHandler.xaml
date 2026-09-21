@@ -10,8 +10,6 @@
         </Border>
         <!-- Highlighting is set from code: it depends on the theme as well as on Extension. -->
         <avalonEdit:TextEditor x:Name="Editor" IsReadOnly="True" ShowLineNumbers="True" WordWrap="False"
-                                FontFamily="{StaticResource MonoFont}" Background="{DynamicResource SurfaceAltBrush}"
-                                Foreground="{DynamicResource TextPrimaryBrush}"
-                                LineNumbersForeground="{DynamicResource TextMutedBrush}" />
+                                Background="{DynamicResource SurfaceAltBrush}" />
     </DockPanel>
 </UserControl>

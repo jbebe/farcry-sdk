@@ -36,7 +36,6 @@
                          TextChanged="Filter_Changed" />
 
                 <TreeView x:Name="ObjectTree" ItemTemplate="{StaticResource ObjectTemplate}"
-                          BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1"
                           VirtualizingStackPanel.IsVirtualizing="True"
                           VirtualizingStackPanel.VirtualizationMode="Recycling"
                           ScrollViewer.CanContentScroll="True"

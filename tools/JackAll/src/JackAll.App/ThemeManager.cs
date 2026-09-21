@@ -18,27 +18,45 @@ public static class ThemeManager
 {
     private const int DwmUseImmersiveDarkMode = 20;
 
+    private static AppTheme _requested;
+
+    // App.xaml merges the light brushes, so false is what is loaded before the first Apply.
     public static bool IsDark { get; private set; }
 
-    public static event EventHandler? Changed;
+    public static event Action? Changed;
+
+    static ThemeManager()
+    {
+        // The System theme follows Windows while the app runs, not only at startup.
+        SystemEvents.UserPreferenceChanged += (_, e) =>
+        {
+            if (e.Category == UserPreferenceCategory.General && _requested == AppTheme.System)
+            {
+                Application.Current?.Dispatcher.Invoke(() => Apply(AppTheme.System));
+            }
+        };
+    }
 
     public static void Apply(AppTheme theme)
     {
-        IsDark = theme == AppTheme.Dark || (theme == AppTheme.System && !WindowsAppsUseLightTheme());
+        _requested = theme;
+        bool dark = theme == AppTheme.Dark || (theme == AppTheme.System && !WindowsAppsUseLightTheme());
+        if (dark == IsDark) return;
+
+        IsDark = dark;
 
         // App.xaml merges the brush file first, so that slot is the one to replace.
-        var brushes = new ResourceDictionary
+        Application.Current.Resources.MergedDictionaries[0] = new ResourceDictionary
         {
-            Source = new Uri($"/Themes/Brushes.{(IsDark ? "Dark" : "Light")}.xaml", UriKind.Relative),
+            Source = new Uri($"/Themes/Brushes.{(dark ? "Dark" : "Light")}.xaml", UriKind.Relative),
         };
-        Application.Current.Resources.MergedDictionaries[0] = brushes;
 
         foreach (Window window in Application.Current.Windows)
         {
             ApplyTitleBar(window);
         }
 
-        Changed?.Invoke(null, EventArgs.Empty);
+        Changed?.Invoke();
     }
 
     /// <summary>Asks DWM for a dark caption. A window calls this once its handle exists.</summary>
