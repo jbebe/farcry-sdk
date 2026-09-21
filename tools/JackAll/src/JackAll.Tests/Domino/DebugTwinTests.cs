@@ -135,7 +135,7 @@ public class DebugTwinTests
         ReconstructedGraph graph = GraphBuilder.Build(Classify(release), catalog: null, twin);
 
         Assert.Equal("box_SetMissionBarkBankState_0", graph.Nodes.Single(n => n.Id == "p:0").OriginalName);
-        Assert.Equal("box_Delay_1", graph.Nodes.Single(n => n.Id == "p:1").DisplayName);
+        Assert.Equal("box_Delay_1", graph.Nodes.Single(n => n.Id == "p:1").OriginalName);
     }
 
     [Fact]

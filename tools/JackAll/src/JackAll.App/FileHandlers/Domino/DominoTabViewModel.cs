@@ -39,7 +39,7 @@ public sealed class DominoTabViewModel
             Twin = LoadTwin(gamePath, readByPath);
 
             Graph = GraphBuilder.Build(userGraph, catalog, Twin);
-            Canvas = new DominoGraphViewModel(Graph, SugiyamaLayout.Layout(Graph), Twin);
+            Canvas = new DominoGraphViewModel(Graph, SugiyamaLayout.Order(Graph), Twin);
         }
         catch (Exception ex)
         {

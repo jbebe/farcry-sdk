@@ -41,7 +41,8 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from apply_vtables import split_scopes
 from dump_class_sizes import base_class_name
-from dump_properties import jstr, to_statements
+from decompiled import to_statements
+from dump_properties import jstr
 
 PROGRESS_EVERY = 200
 

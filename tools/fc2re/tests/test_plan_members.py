@@ -19,9 +19,9 @@ VEC_H = ("_ZTV16CContainerMemberI4Bark9CryVectorI9BarkState6NoLock"
 
 
 def row(name, offset, handler=STRID_H, kind="CGenericMember", index=0,
-        flags=0):
+        element_index=None):
     return {"name": name, "offset": offset, "handler_symbol": handler,
-            "kind": kind, "index": index, "flags": flags}
+            "kind": kind, "index": index, "element_index": element_index}
 
 
 def test_reads_length_prefixed_name():
@@ -94,9 +94,9 @@ def test_real_field_still_placed_when_a_wrapper_shares_offset_zero():
 
 def test_array_elements_collapse_to_index_zero_with_siblings_named():
     members, skipped = plan_members([
-        row("RedArmy", 180, kind="COffsetMember", flags=1),
-        row("BlueArmy", 180, kind="COffsetMember", flags=0),
-        row("GreyArmy", 180, kind="COffsetMember", flags=2),
+        row("RedArmy", 180, kind="COffsetMember", element_index=1),
+        row("BlueArmy", 180, kind="COffsetMember", element_index=0),
+        row("GreyArmy", 180, kind="COffsetMember", element_index=2),
     ])
     assert len(members) == 1
     assert members[0]["name"] == "BlueArmy"

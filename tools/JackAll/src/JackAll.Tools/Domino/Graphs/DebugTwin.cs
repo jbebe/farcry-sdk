@@ -131,6 +131,19 @@ public sealed record DominoDebugTwin(
             && long.TryParse(boxName.AsSpan(underscore + 1), out id);
     }
 
+    /// <summary>Splits a `box_Set_Entity_2`-style name into `Set_Entity` and 2.</summary>
+    public static bool TryParseBoxName(string boxName, out string stem, out long id)
+    {
+        stem = string.Empty;
+        if (!TryParseBoxId(boxName, out id))
+        {
+            return false;
+        }
+        stem = boxName[..boxName.LastIndexOf('_')];
+        stem = stem.StartsWith("box_", StringComparison.Ordinal) ? stem[4..] : stem;
+        return true;
+    }
+
     /// <summary>`"DocumentContainer|R:\main\...\A1LM02_ReapSew.domino.xml|@A1LM02_BriefingSubvPawnBrief|430462006"`
     /// - the source document, the graph within it, and the connection's own ID.</summary>
     private static (string? Document, string? Graph, string Id) SplitContainer(string container)

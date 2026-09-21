@@ -8,10 +8,11 @@ namespace JackAll.Core;
 /// names and `.fcb` members the same way.
 /// </summary>
 /// <remarks>
-/// Both CLIs copy <c>assets/fc2.hashlist</c> and <c>assets/binary_classes.xml</c> next to the exe as
-/// <c>.itemhashes</c>/<c>.fcbclasses</c>; the walk-up fallback keeps a <c>dotnet run</c> straight from
-/// source working too. Neither is fatal if missing - names fall back to bare hashes and `.fcb` members
-/// to BinHex, exactly as in the App.
+/// Both CLIs copy <c>assets/fc2.hashlist</c>, <c>assets/binary_classes.xml</c> and
+/// <c>assets/component_schema.json</c> next to the exe as <c>.itemhashes</c>/<c>.fcbclasses</c>/
+/// <c>.componentschema</c>; the walk-up fallback keeps a <c>dotnet run</c> straight from source working
+/// too. None is fatal if missing - names fall back to bare hashes and `.fcb` members to BinHex, exactly
+/// as in the App.
 /// </remarks>
 public static class BundledAssets
 {
@@ -38,7 +39,13 @@ public static class BundledAssets
     public static FcbClassDefinitions LoadFcbClasses()
     {
         string? path = Find(".fcbclasses") ?? Find(Path.Combine("assets", "binary_classes.xml"));
-        return path is null ? FcbClassDefinitions.Empty : FcbClassDefinitions.Load(path);
+        return path is null ? FcbClassDefinitions.Empty : FcbClassDefinitions.Load(path, LoadComponentSchema());
+    }
+
+    public static ComponentSchema LoadComponentSchema()
+    {
+        string? path = Find(".componentschema") ?? Find(Path.Combine("assets", "component_schema.json"));
+        return path is null ? ComponentSchema.Empty : ComponentSchema.Load(path);
     }
 
     /// <summary>Resolves a bundled asset by its beside-the-exe name or its in-repo path, the same

@@ -45,7 +45,7 @@ NO_STORAGE_KINDS = frozenset((
 ))
 
 # An array element: several share one base offset and are told apart by the
-# index in their flags slot. The element stride is not recorded anywhere, so
+# element_index. The element stride is not recorded anywhere, so
 # only index 0 is placed and its siblings are named in the comment.
 ARRAY_KIND = "COffsetMember"
 
@@ -170,8 +170,7 @@ def plan_members(rows, polymorphic=False):
     used_names = set()
     for off in offsets:
         group = sorted(at_offset[off],
-                       key=lambda r: (r.get("flags") if r.get("flags")
-                                      is not None else 0, r.get("index", 0)))
+                       key=lambda r: (r.get("element_index") or 0, r.get("index", 0)))
         head = group[0]
         siblings = group[1:]
         if siblings:

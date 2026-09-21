@@ -63,6 +63,9 @@
     <Content Include="..\..\assets\binary_classes.xml" Link=".fcbclasses">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\assets\component_schema.json" Link=".componentschema">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

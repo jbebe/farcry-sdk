@@ -45,8 +45,9 @@ public enum FcbMemberType
     Matrix4,
 }
 
-/// <summary>A member's decoded name (if the config has one) and its declared wire type.</summary>
-public sealed record FcbMember(string? Name, FcbMemberType Type);
+/// <summary>A member's decoded name (if the config has one), its declared wire type, and the labels
+/// of the values an enum index member can take.</summary>
+public sealed record FcbMember(string? Name, FcbMemberType Type, IReadOnlyList<string>? Labels = null);
 
 /// <summary>
 /// Something that can resolve a class hash relative to some scope — either <see cref="FcbClass"/>
@@ -100,6 +101,23 @@ public sealed class FcbClass : IFcbClassScope
         return Master.GetClass(hash);
     }
 
+    /// <summary>Every member this class declares or inherits; a redeclared hash comes out once, from
+    /// the nearest class.</summary>
+    public IEnumerable<(uint Hash, FcbMember Member)> AllMembers()
+    {
+        var seen = new HashSet<uint>();
+        for (FcbClass? current = this; current is not null; current = current.Super)
+        {
+            foreach ((uint hash, FcbMember member) in current.Members)
+            {
+                if (seen.Add(hash))
+                {
+                    yield return (hash, member);
+                }
+            }
+        }
+    }
+
     /// <summary>Finds a member by hash, walking the superclass chain (members aren't nested, unlike classes).</summary>
     public FcbMember? FindMember(uint hash)
     {
@@ -138,15 +156,90 @@ public sealed class FcbClassDefinitions : IFcbClassScope
     /// <summary>No config loaded — every class/member falls back to hash-only/BinHex.</summary>
     public static FcbClassDefinitions Empty { get; } = new();
 
-    public static FcbClassDefinitions Load(string path)
+    /// <summary>Loads <paramref name="path"/>, then fills in what <paramref name="schema"/> knows and it
+    /// does not: classes, members, superclasses and enum labels. The XML wins every member both define.</summary>
+    public static FcbClassDefinitions Load(string path, ComponentSchema? schema = null)
     {
         var defs = new FcbClassDefinitions();
         XElement root = XDocument.Load(path).Root
             ?? throw new InvalidDataException("binary_classes.xml has no root <classes> element.");
 
         LoadClasses(defs, root.Elements("class"), defs._topLevel);
+        IReadOnlyList<SchemaClass> schemaClasses = schema?.Classes ?? [];
+        foreach (SchemaClass schemaClass in schemaClasses)
+        {
+            uint hash = Crc32Ascii(schemaClass.Name);
+            if (!defs._topLevel.TryGetValue(hash, out FcbClass? cls))
+            {
+                defs._topLevel[hash] = cls = new FcbClass(defs) { Name = schemaClass.Name };
+            }
+            cls.SuperName ??= schemaClass.Parent;
+        }
         ResolveSupers(defs._topLevel.Values);
+        // After the supers, so a member the XML declares on a base class is found, not shadowed.
+        foreach (SchemaClass schemaClass in schemaClasses)
+        {
+            AddSchemaMembers(defs._topLevel[Crc32Ascii(schemaClass.Name)], schemaClass.Members);
+        }
         return defs;
+    }
+
+    private static void AddSchemaMembers(FcbClass cls, IReadOnlyList<SchemaMember> members)
+    {
+        foreach (SchemaMember member in members)
+        {
+            switch (member.Kind)
+            {
+                case "value":
+                    uint hash = Crc32Ascii(member.Name);
+                    FcbClass? declaring = cls;
+                    while (declaring is not null && !declaring.Members.ContainsKey(hash))
+                    {
+                        declaring = declaring.Super;
+                    }
+                    if (declaring is null)
+                    {
+                        cls.Members[hash] = new FcbMember(
+                            member.Name,
+                            Enum.TryParse(member.Type, out FcbMemberType type) ? type : FcbMemberType.BinHex,
+                            member.Labels);
+                    }
+                    else
+                    {
+                        FcbMember known = declaring.Members[hash];
+                        declaring.Members[hash] = known with { Labels = known.Labels ?? member.Labels };
+                    }
+                    break;
+                case "conditional":
+                    AddSchemaMembers(cls, member.Members ?? []);
+                    break;
+                case "group":
+                    AddSchemaMembers(ChildClass(cls, member.Name), member.Members ?? []);
+                    break;
+                case "container":
+                    FcbClass holder = member.Wrapped == true ? ChildClass(cls, member.Name) : cls;
+                    if (member.Element is { Length: > 0 } element)
+                    {
+                        ChildClass(holder, element);
+                    }
+                    break;
+            }
+        }
+    }
+
+    /// <summary>The class a child node tagged <paramref name="name"/> resolves to under
+    /// <paramref name="owner"/>, nested there when no named class already answers for it.</summary>
+    private static FcbClass ChildClass(FcbClass owner, string name)
+    {
+        uint hash = Crc32Ascii(name);
+        FcbClass existing = owner.Resolve(hash);
+        if (existing.Name is not null)
+        {
+            return existing;
+        }
+        var nested = new FcbClass(owner.Master) { Name = name };
+        owner.Nested[hash] = nested;
+        return nested;
     }
 
     /// <summary>Flat top-level lookup - never null, falls back to an unnamed placeholder class.</summary>

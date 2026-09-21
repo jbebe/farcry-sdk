@@ -10,7 +10,7 @@
             </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="Visible" />
 
-            <!-- Inherited rows are greyed; an override is marked on the left and can be reverted. -->
+            <!-- Inherited rows are greyed, unset ones fainter still; an override is marked on the left and can be reverted. -->
             <DataTemplate DataType="{x:Type mapEditor:InspectorField}">
                 <Border BorderThickness="3,0,0,0" Padding="4,1,0,1" Margin="0,0,0,1">
                     <Border.Style>
@@ -19,6 +19,10 @@
                             <Style.Triggers>
                                 <DataTrigger Binding="{Binding Origin}" Value="Inherited">
                                     <Setter Property="Opacity" Value="0.55" />
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding Origin}" Value="Unset">
+                                    <Setter Property="Opacity" Value="0.4" />
+                                    <Setter Property="ToolTip" Value="Not set: the engine keeps its own default. Editing writes it into the instance." />
                                 </DataTrigger>
                                 <DataTrigger Binding="{Binding Origin}" Value="Overridden">
                                     <Setter Property="BorderBrush" Value="#E08A00" />
@@ -85,15 +89,34 @@
                 <TextBlock Text="TRANSFORM" FontSize="9" FontWeight="SemiBold" Foreground="#888" Margin="0,4,0,2" />
                 <ItemsControl ItemsSource="{Binding Transform}" />
 
-                <ItemsControl ItemsSource="{Binding Sections}" Margin="0,8,0,0">
+                <CheckBox Content="Show hidden (hid) fields" IsChecked="{Binding ShowHidden}" Margin="0,8,0,0"
+                          ToolTip="Fields the original editor kept out of its property grid" />
+
+                <ItemsControl ItemsSource="{Binding Sections}" Margin="0,4,0,0">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate DataType="{x:Type mapEditor:InspectorSection}">
-                            <Expander Header="{Binding Title}" IsExpanded="{Binding IsExpanded}" Margin="{Binding Indent}">
+                            <Expander IsExpanded="{Binding IsExpanded}" Margin="{Binding Indent}">
+                                <Expander.Header>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
+                                        <Button Content="Remove" Padding="5,0" Margin="8,0,0,0" Click="RemoveComponent_Click"
+                                                Visibility="{Binding CanRemove, Converter={StaticResource Visible}}"
+                                                ToolTip="Removes this component from the instance on the next Save" />
+                                    </StackPanel>
+                                </Expander.Header>
                                 <ItemsControl ItemsSource="{Binding Fields}" Margin="14,2,0,4" />
                             </Expander>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
+                <DockPanel Margin="0,8,0,0">
+                    <Button DockPanel.Dock="Right" Content="Add component" Padding="7,2" Margin="6,0,0,0"
+                            Click="AddComponent_Click"
+                            ToolTip="Adds the chosen component to this instance. Its properties stay at the engine's defaults until edited." />
+                    <ComboBox x:Name="ComponentToAdd" ItemsSource="{Binding AddableComponents}" IsEditable="True"
+                              IsTextSearchEnabled="True" />
+                </DockPanel>
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

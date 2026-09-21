@@ -20,6 +20,17 @@
             <domino:NodeBrushConverter x:Key="NodeBrush" />
             <BooleanToVisibilityConverter x:Key="BoolToVisibility" />
 
+            <!-- Box and pin tooltips carry a sentence or two of description; wrap them. -->
+            <Style TargetType="ToolTip">
+                <Setter Property="ContentTemplate">
+                    <Setter.Value>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}" TextWrapping="Wrap" MaxWidth="380" />
+                        </DataTemplate>
+                    </Setter.Value>
+                </Setter>
+            </Style>
+
         <!--
           A port row reads as a slightly lighter tone of whatever node colour is behind it: the wash is
           translucent white, so it adapts to all four node fills without needing to know which one it
@@ -164,6 +175,7 @@
                             <Setter Property="Location" Value="{Binding Location, Mode=TwoWay}" />
                             <Setter Property="IsSelected" Value="{Binding IsSelected, Mode=TwoWay}" />
                             <Setter Property="Opacity" Value="{Binding Opacity}" />
+                            <Setter Property="ActualSize" Value="{Binding ActualSize, Mode=OneWayToSource}" />
                         </Style>
                     </nodify:NodifyEditor.ItemContainerStyle>
 
@@ -174,7 +186,7 @@
                                          InputConnectorTemplate="{StaticResource InputPortTemplate}"
                                          OutputConnectorTemplate="{StaticResource OutputPortTemplate}"
                                          MinWidth="{Binding Width}"
-                                         ToolTip="{Binding Subtitle}"
+                                         ToolTip="{Binding Tooltip}"
                                          Background="{Binding Converter={StaticResource NodeBrush}}"
                                          HeaderBrush="{Binding Converter={StaticResource NodeBrush}}"
                                          ContentBrush="Transparent"

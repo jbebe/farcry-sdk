@@ -34,8 +34,8 @@ from collections import Counter, defaultdict
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from dump_properties import (jstr, parse_int, to_statements,
-                             symbol_trailing_addr)
+from decompiled import parse_int, symbol_trailing_addr, to_statements
+from dump_properties import jstr
 
 # Allocators whose first argument is a byte count.
 ALLOCATOR_NAMES = ("NMalloc", "NMallocAligned", "operator.new",

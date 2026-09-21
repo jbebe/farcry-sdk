@@ -10,8 +10,13 @@ namespace JackAll.App.FileHandlers.Fcb;
 /// </summary>
 public static class FcbDefinitionsProvider
 {
+    public static readonly Lazy<ComponentSchema> Schema = new(() =>
+        File.Exists(AppConfig.ComponentSchemaFile)
+            ? ComponentSchema.Load(AppConfig.ComponentSchemaFile)
+            : ComponentSchema.Empty);
+
     public static readonly Lazy<FcbClassDefinitions> Value = new(() =>
         File.Exists(AppConfig.BinaryClassesFile)
-            ? FcbClassDefinitions.Load(AppConfig.BinaryClassesFile)
+            ? FcbClassDefinitions.Load(AppConfig.BinaryClassesFile, Schema.Value)
             : FcbClassDefinitions.Empty);
 }

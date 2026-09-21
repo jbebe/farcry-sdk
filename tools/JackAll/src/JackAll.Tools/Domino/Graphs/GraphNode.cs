@@ -42,8 +42,17 @@ public sealed record GraphNode(
     /// with.</summary>
     public string? OriginalName { get; init; }
 
-    /// <summary>What to show on the node: the editor's own box name when the twin gave us one, else the
-    /// node type's display name, else the bare file name.</summary>
-    public string DisplayName =>
-        OriginalName ?? Signature?.DisplayName ?? NodeSignature.ShortNameFor(NodeTypePath);
+    /// <summary>What kind of box this is, e.g. `Scripted Scene Prefab`.</summary>
+    public string TypeTitle => Signature?.Title ?? NodeSignature.ShortNameFor(NodeTypePath);
+
+    /// <summary>Which box of that kind: the editor name without its `box_` prefix and `_N` suffix, and
+    /// the editor box ID - `box_BRIEFING_SUBVERT_7` → `BRIEFING_SUBVERT  ·  #7`.</summary>
+    public string InstanceLabel => (OriginalName, Ref) switch
+    {
+        (_, PooledBoxRef) => $"pooled, in {OwnerFunction}",
+        ({ } name, _) when DominoDebugTwin.TryParseBoxName(name, out string stem, out long id) => $"{stem}  ·  #{id}",
+        ({ } name, _) => name,
+        (null, InstanceBoxRef instance) => $"#{instance.Slot}",
+        _ => string.Empty,
+    };
 }

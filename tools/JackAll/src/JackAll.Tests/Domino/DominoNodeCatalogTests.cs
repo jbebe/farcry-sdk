@@ -155,6 +155,51 @@ public class DominoNodeCatalogTests
     }
 
     [Fact]
+    public void A_system_node_carries_its_description_and_a_readable_title()
+    {
+        var catalog = CatalogOf((@"domino\system\delay.lua", DelayNode));
+
+        NodeSignature signature = catalog.Resolve("Domino/System/Delay.lua")!;
+
+        Assert.NotNull(signature.Doc);
+        Assert.Contains("Seconds", signature.Doc.Pins.Keys);
+        Assert.Equal("Scripted Scene Prefab", (signature with { DisplayName = "ScriptedScenePrefab" }).Title);
+        Assert.Equal("AI Follow Path", (signature with { DisplayName = "AIFollowPath" }).Title);
+    }
+
+    [Fact]
+    public void Every_real_system_node_has_a_description_naming_only_its_own_pins()
+    {
+        if (DominoCorpus.SystemDirectory is not { } dir) return;
+
+        var catalog = new DominoNodeCatalog(path =>
+        {
+            string candidate = Path.Combine(dir, Path.GetFileName(path));
+            return File.Exists(candidate) ? File.ReadAllText(candidate) : null;
+        });
+
+        var failures = new List<string>();
+        foreach (string file in Directory.EnumerateFiles(dir, "*.lua"))
+        {
+            NodeSignature? signature = catalog.Resolve($"Domino/System/{Path.GetFileName(file)}");
+            if (signature?.Doc is not { } doc)
+            {
+                failures.Add($"{Path.GetFileName(file)}: no description");
+                continue;
+            }
+
+            var pins = signature.ControlIns.Select(p => p.Name)
+                .Concat(signature.ControlOuts.Select(p => p.Name))
+                .Concat(signature.DataIns.Select(p => p.Name))
+                .Concat(signature.DataOuts.Select(p => p.Name))
+                .ToHashSet(StringComparer.Ordinal);
+            failures.AddRange(doc.Pins.Keys.Where(p => !pins.Contains(p)).Select(p => $"{Path.GetFileName(file)}: no pin {p}"));
+        }
+
+        Assert.True(failures.Count == 0, string.Join('\n', failures.Take(20)));
+    }
+
+    [Fact]
     public void Every_real_system_node_resolves_to_a_declared_signature()
     {
         if (DominoCorpus.SystemDirectory is not { } dir) return;

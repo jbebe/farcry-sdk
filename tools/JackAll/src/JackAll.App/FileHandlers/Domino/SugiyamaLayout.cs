@@ -1,3 +1,4 @@
+using System.Windows;
 using JackAll.Tools.Domino;
 using JackAll.Tools.Domino.Graphs;
 
@@ -5,6 +6,14 @@ namespace JackAll.App.FileHandlers.Domino;
 
 /// <summary>One node positioned for display, sized to fit the ports it actually has.</summary>
 public sealed record PositionedNode(GraphNode Node, double X, double Y, double Width, double Height);
+
+/// <summary>The ordering half of a layout - each band's columns in their crossing-reduced order, and
+/// the lone boxes - plus each node's estimated size for the first frame.
+/// <see cref="SugiyamaLayout.Place"/> turns it into coordinates for whichever sizes it is given.</summary>
+public sealed record LayeredLayout(
+    IReadOnlyList<IReadOnlyList<IReadOnlyList<GraphNode>>> Bands,
+    IReadOnlyList<GraphNode> Singletons,
+    IReadOnlyDictionary<string, Size> Estimated);
 
 /// <summary>
 /// Layered ("Sugiyama") graph layout, run once per connected component.
@@ -27,11 +36,11 @@ public sealed record PositionedNode(GraphNode Node, double X, double Y, double W
 /// </summary>
 public static class SugiyamaLayout
 {
-    private const double ColumnGap = 110;
-    private const double RowGap = 28;
+    internal const double ColumnGap = 110;
+    internal const double RowGap = 28;
     private const double HeaderHeight = 34;
     private const double PortHeight = 17;
-    private const double MinNodeHeight = 56;
+    internal const double MinNodeHeight = 56;
 
     // Node width is measured from the port names a node actually has - see WidthOf. These are the
     // fixed costs around the text: the connector dot and its spacing, the port row's border padding,
@@ -62,37 +71,45 @@ public static class SugiyamaLayout
     /// `a1lm01_copkiller` from 175 to 115.</summary>
     private const int OrderingSweeps = 4;
 
-    public static IReadOnlyList<PositionedNode> Layout(ReconstructedGraph graph)
+    /// <summary>Everything that doesn't depend on node sizes: bands, columns and their order.</summary>
+    public static LayeredLayout Order(ReconstructedGraph graph)
     {
+        Dictionary<string, Size> sizes = EstimateSizes(graph);
         if (graph.Nodes.Count == 0)
         {
-            return [];
+            return new LayeredLayout([], [], sizes);
         }
 
         var index = graph.Nodes.Select((node, i) => (node, i)).ToDictionary(t => t.node.Id, t => t.i, StringComparer.Ordinal);
         List<(int From, int To)> edges = CollectEdges(graph, index);
-        Dictionary<string, double> widths = ComputeWidths(graph);
-
         List<List<int>> components = FindComponents(graph.Nodes.Count, edges);
 
         // Largest first, so the graph's main body is at the top rather than buried under fragments.
-        var bands = components.Where(c => c.Count > 1).OrderByDescending(c => c.Count).ToList();
-        var singletons = components.Where(c => c.Count == 1).Select(c => c[0]).ToList();
+        var bands = components
+            .Where(c => c.Count > 1)
+            .OrderByDescending(c => c.Count)
+            .Select(c => OrderComponent(graph, c, edges))
+            .ToList();
+        var singletons = components.Where(c => c.Count == 1).Select(c => graph.Nodes[c[0]]).ToList();
 
-        var positioned = new List<PositionedNode>(graph.Nodes.Count);
+        return new LayeredLayout(bands, singletons, sizes);
+    }
+
+    /// <summary>Coordinates for an ordered layout, spacing every node by the size
+    /// <paramref name="sizeOf"/> reports - the estimate first, then what nodify actually rendered.</summary>
+    public static List<PositionedNode> Place(LayeredLayout layout, Func<GraphNode, Size> sizeOf)
+    {
+        var positioned = new List<PositionedNode>();
         double bandTop = 0;
 
-        foreach (List<int> component in bands)
+        foreach (IReadOnlyList<IReadOnlyList<GraphNode>> band in layout.Bands)
         {
-            List<PositionedNode> laid = LayoutComponent(graph, component, edges, widths);
-            foreach (PositionedNode p in laid)
-            {
-                positioned.Add(p with { Y = p.Y + bandTop });
-            }
+            List<PositionedNode> laid = AssignCoordinates(band, sizeOf);
+            positioned.AddRange(laid.Select(p => p with { Y = p.Y + bandTop }));
             bandTop += laid.Max(p => p.Y + p.Height) + BandGap;
         }
 
-        positioned.AddRange(PackSingletons(graph, singletons, bandTop, widths));
+        positioned.AddRange(PackSingletons(layout.Singletons, bandTop, sizeOf));
         return positioned;
     }
 
@@ -104,9 +121,10 @@ public static class SugiyamaLayout
     ///
     /// Port names come from the node type's signature where there is one, plus any pin the graph
     /// actually references - the same union the view model builds ports from, so the measured width
-    /// matches what gets rendered.
+    /// matches what gets rendered. Height is a row per port on the longer side; it is only a first
+    /// guess, replaced by the rendered height once nodify has measured the node.
     /// </summary>
-    private static Dictionary<string, double> ComputeWidths(ReconstructedGraph graph)
+    private static Dictionary<string, Size> EstimateSizes(ReconstructedGraph graph)
     {
         var inputs = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
         var outputs = new Dictionary<string, HashSet<string>>(StringComparer.Ordinal);
@@ -151,7 +169,7 @@ public static class SugiyamaLayout
             }
         }
 
-        var widths = new Dictionary<string, double>(StringComparer.Ordinal);
+        var sizes = new Dictionary<string, Size>(StringComparer.Ordinal);
         foreach (GraphNode node in graph.Nodes)
         {
             double chipWidth = chips.TryGetValue(node.Id, out HashSet<string>? c) && c.Count > 0
@@ -167,14 +185,17 @@ public static class SugiyamaLayout
                 : outputs[node.Id].Max(n => TextMetrics.Width(n, PortFontSize)) + ConnectorWidth + PortRowPadding;
 
             double headerWidth = Math.Max(
-                TextMetrics.Width(node.DisplayName, 12, bold: true),
-                TextMetrics.Width(node.NodeTypePath, 9)) + HeaderPadding;
+                TextMetrics.Width(node.TypeTitle, 12, bold: true),
+                TextMetrics.Width(node.InstanceLabel, 9)) + HeaderPadding;
 
             double content = Math.Max(headerWidth, inputWidth + outputWidth + PortColumnGap);
-            widths[node.Id] = Math.Clamp(content, NodeMinWidth, NodeMaxWidth);
+            int rows = Math.Max(inputs[node.Id].Count, outputs[node.Id].Count);
+            sizes[node.Id] = new Size(
+                Math.Clamp(content, NodeMinWidth, NodeMaxWidth),
+                Math.Max(MinNodeHeight, HeaderHeight + (rows * PortHeight) + 10));
         }
 
-        return widths;
+        return sizes;
     }
 
     /// <summary>The edges layout is allowed to constrain on: control flow, plus the data flow that is
@@ -263,12 +284,11 @@ public static class SugiyamaLayout
         return components;
     }
 
-    /// <summary>Lays one component out with its top-left at (0,0).</summary>
-    private static List<PositionedNode> LayoutComponent(
+    /// <summary>One component's columns, left to right, each ordered top to bottom.</summary>
+    private static List<IReadOnlyList<GraphNode>> OrderComponent(
         ReconstructedGraph graph,
         List<int> component,
-        List<(int From, int To)> allEdges,
-        Dictionary<string, double> widths)
+        List<(int From, int To)> allEdges)
     {
         var members = component.ToHashSet();
         var edges = allEdges.Where(e => members.Contains(e.From) && members.Contains(e.To)).ToList();
@@ -280,7 +300,7 @@ public static class SugiyamaLayout
         List<List<int>> layers = GroupIntoLayers(component, layer);
         ReduceCrossings(layers, forward);
 
-        return AssignCoordinates(graph, layers, widths);
+        return layers.Select(l => (IReadOnlyList<GraphNode>)l.Select(i => graph.Nodes[i]).ToList()).ToList();
     }
 
     /// <summary>Edges that close a cycle, found by depth-first search: an edge into a node currently on
@@ -429,27 +449,26 @@ public static class SugiyamaLayout
         layer.Sort((a, b) => keys[a].CompareTo(keys[b]));
     }
 
+    /// <summary>Lays one band out with its top-left at (0,0).</summary>
     private static List<PositionedNode> AssignCoordinates(
-        ReconstructedGraph graph,
-        List<List<int>> layers,
-        Dictionary<string, double> widths)
+        IReadOnlyList<IReadOnlyList<GraphNode>> columns,
+        Func<GraphNode, Size> sizeOf)
     {
         var positioned = new List<PositionedNode>();
         double x = 0;
 
-        foreach (List<int> layer in layers)
+        foreach (IReadOnlyList<GraphNode> column in columns)
         {
             double y = 0;
             // Columns are spaced by their widest member, so a node that grew to fit a long pin name
             // doesn't run into the next column.
-            double columnWidth = layer.Count == 0 ? NodeMinWidth : layer.Max(i => widths[graph.Nodes[i].Id]);
+            double columnWidth = column.Count == 0 ? NodeMinWidth : column.Max(n => sizeOf(n).Width);
 
-            foreach (int nodeIndex in layer)
+            foreach (GraphNode node in column)
             {
-                GraphNode node = graph.Nodes[nodeIndex];
-                double height = HeightOf(node);
-                positioned.Add(new PositionedNode(node, x, y, widths[node.Id], height));
-                y += height + RowGap;
+                Size size = sizeOf(node);
+                positioned.Add(new PositionedNode(node, x, y, size.Width, size.Height));
+                y += size.Height + RowGap;
             }
             x += columnWidth + ColumnGap;
         }
@@ -482,28 +501,21 @@ public static class SugiyamaLayout
     /// <summary>Boxes connected to nothing at all - 14 of them in `a1bu00_storymission`. A band each
     /// would be absurd, so they go in a grid under everything else.</summary>
     private static IEnumerable<PositionedNode> PackSingletons(
-        ReconstructedGraph graph,
-        List<int> singletons,
+        IReadOnlyList<GraphNode> singletons,
         double top,
-        Dictionary<string, double> widths)
+        Func<GraphNode, Size> sizeOf)
     {
-        double cell = singletons.Count == 0 ? NodeMinWidth : singletons.Max(i => widths[graph.Nodes[i].Id]);
+        double cell = singletons.Count == 0 ? NodeMinWidth : singletons.Max(n => sizeOf(n).Width);
+        double y = top;
 
-        for (int i = 0; i < singletons.Count; i++)
+        foreach (GraphNode[] row in singletons.Chunk(SingletonsPerRow))
         {
-            GraphNode node = graph.Nodes[singletons[i]];
-            double x = (i % SingletonsPerRow) * (cell + ColumnGap);
-            double y = top + ((i / SingletonsPerRow) * (MinNodeHeight + RowGap));
-            yield return new PositionedNode(node, x, y, widths[node.Id], HeightOf(node));
+            for (int i = 0; i < row.Length; i++)
+            {
+                Size size = sizeOf(row[i]);
+                yield return new PositionedNode(row[i], i * (cell + ColumnGap), y, size.Width, size.Height);
+            }
+            y += row.Max(n => sizeOf(n).Height) + RowGap;
         }
-    }
-
-    /// <summary>Tall enough for every port to get its own row, since nodify anchors each connector at
-    /// its own vertical position - undersize the node and the ports overlap.</summary>
-    private static double HeightOf(GraphNode node)
-    {
-        int inputs = (node.Signature?.ControlIns.Count ?? 1) + (node.Signature?.DataIns.Count ?? 0);
-        int outputs = (node.Signature?.ControlOuts.Count ?? 1) + (node.Signature?.DataOuts.Count ?? 0);
-        return Math.Max(MinNodeHeight, HeaderHeight + (Math.Max(inputs, outputs) * PortHeight) + 10);
     }
 }

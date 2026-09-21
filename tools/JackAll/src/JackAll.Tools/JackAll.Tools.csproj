@@ -24,4 +24,8 @@
     <PackageReference Include="Loretta.CodeAnalysis.Lua" Version="0.2.13" />
   </ItemGroup>
 
+  <ItemGroup>
+    <EmbeddedResource Include="Domino\Nodes\DominoBoxDocs.json" LogicalName="JackAll.Tools.Domino.Nodes.DominoBoxDocs.json" />
+  </ItemGroup>
+
 </Project>

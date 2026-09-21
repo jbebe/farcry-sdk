@@ -217,7 +217,7 @@ public sealed class DominoNodeCatalog
         && name.Length > prefix.Length
         && name.AsSpan(prefix.Length).ToString().All(char.IsAsciiDigit);
 
-    private static bool IsDummyFunction(ExpressionSyntax expr) =>
+    internal static bool IsDummyFunction(ExpressionSyntax expr) =>
         expr is IdentifierNameSyntax { Name: "DummyFunction" };
 
     /// <summary>Recognizes `self.FieldName` (and nothing else), returning the field name.</summary>

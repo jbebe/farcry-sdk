@@ -222,6 +222,32 @@ public static class FcbValueCodec
         _ => throw new NotSupportedException($"Unsupported FCB value type '{type}'."),
     };
 
+    /// <summary>The bytes of <paramref name="type"/>'s zero value: false, 0, an empty string or array.</summary>
+    public static byte[] Zero(FcbMemberType type) => Encode(type, type switch
+    {
+        FcbMemberType.String => "",
+        FcbMemberType.Bool or FcbMemberType.Bool16 or FcbMemberType.Bool32 => false,
+        FcbMemberType.Float => 0f,
+        FcbMemberType.Int8 => (sbyte)0,
+        FcbMemberType.UInt8 => (byte)0,
+        FcbMemberType.Int16 => (short)0,
+        FcbMemberType.UInt16 => (ushort)0,
+        FcbMemberType.Int32 => 0,
+        FcbMemberType.UInt32 or FcbMemberType.Hash or FcbMemberType.Enum => 0u,
+        FcbMemberType.Int64 => 0L,
+        FcbMemberType.UInt64 => 0UL,
+        FcbMemberType.Vector2 => new float[2],
+        FcbMemberType.Vector3 => new float[3],
+        FcbMemberType.Vector4 => new float[4],
+        FcbMemberType.Matrix4 => new float[16],
+        FcbMemberType.UInt32Array or FcbMemberType.HashArray => Array.Empty<uint>(),
+        FcbMemberType.Int32Array => Array.Empty<int>(),
+        FcbMemberType.FloatArray => Array.Empty<float>(),
+        FcbMemberType.Bool32Array => Array.Empty<bool>(),
+        FcbMemberType.Vector3Array => Array.Empty<float[]>(),
+        _ => Array.Empty<byte>(),
+    });
+
     private static float[] ReadFloats(byte[] value, int offset, int count)
     {
         var result = new float[count];

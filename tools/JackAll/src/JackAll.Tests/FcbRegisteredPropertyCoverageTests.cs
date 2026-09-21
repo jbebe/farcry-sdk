@@ -4,17 +4,16 @@ using JackAll.Core.Format.Fcb;
 namespace JackAll.Tests;
 
 /// <summary>
-/// Why the 5,680 field names recovered from <c>RegisterProperties</c>
-/// (tools/fc2re/out/register_properties.jsonl) are not wired into <see cref="FcbClassDefinitions"/>,
-/// measured rather than assumed.
+/// What the field names recovered from <c>RegisterProperties</c>
+/// (tools/fc2re/out/register_properties.jsonl) can and cannot add to <c>binary_classes.xml</c> for
+/// real entity libraries, measured rather than assumed.
 /// </summary>
 /// <remarks>
 /// The vocabulary genuinely matches - most member hashes in real entity libraries are names the
-/// registry knows - but the bundled <c>binary_classes.xml</c> already names almost all of those, and
-/// the values it cannot name are ones the registry does not know either. So the registry would add
-/// names to roughly one value in six thousand, at the cost of a second name source to keep in sync.
-/// These tests pin that measurement so revisiting it is cheap and any improvement upstream shows up
-/// as a failure here.
+/// registry knows - but the XML already names almost all of those, and the values it cannot name are
+/// ones the registry does not know either: they are keys derived from content, not property names.
+/// The registry reaches JackAll through <see cref="ComponentSchema"/> for its types, enum labels and
+/// unset properties instead. These tests pin the measurement so any improvement upstream shows up here.
 /// </remarks>
 public class FcbRegisteredPropertyCoverageTests
 {
@@ -37,10 +36,7 @@ public class FcbRegisteredPropertyCoverageTests
             $"Needs {RegisteredPropertiesPath}, {ClassesFixture} and .fcb samples; the coverage "
             + "measurement silently no-opped.");
 
-    /// <summary>
-    /// The registry's names are the same vocabulary real .fcb member hashes are CRC32 of - the reason
-    /// this source looked promising, and worth keeping recorded even though it is not wired in.
-    /// </summary>
+    /// <summary>The registry's names are the same vocabulary real .fcb member hashes are CRC32 of.</summary>
     [Fact]
     [Trait("Category", "RequiresFixture")]
     public void The_registrys_member_names_are_the_same_vocabulary_as_fcb_member_names()
@@ -51,13 +47,13 @@ public class FcbRegisteredPropertyCoverageTests
         (_, Dictionary<uint, string> flat) = LoadRegistry();
 
         Assert.Equal(1650, present.Count);
-        Assert.Equal(1436, flat.Keys.Count(present.Contains));
+        Assert.Equal(1449, flat.Keys.Count(present.Contains));
     }
 
     /// <summary>
-    /// The reason it is not wired in: of the values <c>binary_classes.xml</c> leaves unnamed, the
-    /// registry names a negligible share. The scoped count is zero because the registry's declaring
-    /// class is not the .fcb node's own type - only its member names transfer, not its class scoping.
+    /// Of the values <c>binary_classes.xml</c> leaves unnamed, the registry names a negligible share.
+    /// The scoped count is zero because the registry's declaring class is not the .fcb node's own
+    /// type - only its member names transfer, not its class scoping.
     /// </summary>
     [Fact]
     [Trait("Category", "RequiresFixture")]

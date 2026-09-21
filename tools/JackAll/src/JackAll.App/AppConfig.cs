@@ -67,6 +67,10 @@ public sealed class AppConfig
     /// </summary>
     public static string BinaryClassesFile => Path.Combine(DataDir, ".fcbclasses");
 
+    /// <summary>The engine's registered entity and component classes, merged over
+    /// <see cref="BinaryClassesFile"/>. Missing is not fatal: the XML alone still loads.</summary>
+    public static string ComponentSchemaFile => Path.Combine(DataDir, ".componentschema");
+
     /// <summary>
     /// Reference archive hashes for a clean 1.03 install (see
     /// <see cref="JackAll.Core.VanillaHashes"/>) — same shipped-asset treatment as

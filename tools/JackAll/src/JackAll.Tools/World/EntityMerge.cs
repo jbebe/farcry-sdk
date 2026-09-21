@@ -8,6 +8,9 @@ public enum FieldOrigin
     InstanceOnly,
     Overridden,
     Inherited,
+
+    /// <summary>Set by neither side, so the engine keeps its own default.</summary>
+    Unset,
 }
 
 /// <summary>One field of a merged node: the value the engine reads, and the archetype's own.</summary>
@@ -79,6 +82,32 @@ public sealed class MergedNode
     /// <summary>Writes a field into the instance, creating the instance side of this node first when
     /// it is inherited whole.</summary>
     public void SetValue(uint hash, byte[] value) => Materialize().Values[hash] = value;
+
+    /// <summary>Appends <paramref name="child"/> to the instance, creating the instance side of this
+    /// node first when it is inherited whole. A tag the archetype already has here would pair with the
+    /// archetype's child instead, so that is refused.</summary>
+    public MergedNode AddChild(FcbObject child)
+    {
+        if (_children.Any(c => c.TypeHash == child.TypeHash && c.Archetype is not null))
+        {
+            throw new InvalidOperationException("The archetype already has a child with this tag.");
+        }
+        Materialize().Children.Add(child);
+        var node = new MergedNode(child, null, this);
+        _children.Add(node);
+        return node;
+    }
+
+    /// <summary>Removes a child the instance added. An archetype's child cannot be removed from an
+    /// instance: the engine merges, it never subtracts.</summary>
+    public void RemoveChild(MergedNode child)
+    {
+        if (child.Archetype is not null || child.Instance is null || !_children.Remove(child))
+        {
+            throw new InvalidOperationException("Only a child the instance added can be removed.");
+        }
+        Instance!.Children.Remove(child.Instance);
+    }
 
     /// <summary>Removes the instance's own value so the archetype's shows through again, and drops
     /// instance nodes the removal leaves empty.</summary>

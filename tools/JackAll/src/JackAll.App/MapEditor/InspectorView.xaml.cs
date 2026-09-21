@@ -31,4 +31,22 @@ public partial class InspectorView : UserControl
             field.Revert();
         }
     }
+
+    private void RemoveComponent_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: InspectorSection section })
+        {
+            section.Remove();
+        }
+    }
+
+    private void AddComponent_Click(object sender, RoutedEventArgs e)
+    {
+        if (DataContext is InspectorViewModel inspector && ComponentToAdd.Text is { Length: > 0 } name
+            && inspector.AddableComponents.Contains(name))
+        {
+            inspector.AddComponent(name);
+            ComponentToAdd.Text = "";
+        }
+    }
 }

@@ -80,6 +80,9 @@
     <Content Include="..\..\assets\binary_classes.xml" Link="data\.fcbclasses">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\assets\component_schema.json" Link="data\.componentschema">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="..\..\assets\vanilla_hashes.ini" Link="data\.archivehashes">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

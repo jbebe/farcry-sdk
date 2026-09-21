@@ -43,6 +43,37 @@ public class GraphBuilderTests
     }
 
     [Fact]
+    public void Init_literals_become_variable_defaults_but_out_anchors_and_boxes_do_not()
+    {
+        var graph = BuildFrom("""
+            function export:Init()
+                self.TheBigTruck = "2053887370209530241";
+                self.Finished = DummyFunction;
+                self.box_Delay_3 = cbox:CreateBox("Domino/System/Delay.lua");
+            end;
+
+            function export:f_1_Out()
+                self.Later = "not a default";
+            end;
+            """);
+
+        Assert.Equal("\"2053887370209530241\"", graph.VariableDefaults["TheBigTruck"]);
+        Assert.Single(graph.VariableDefaults);
+    }
+
+    [Fact]
+    public void An_instance_label_drops_the_editor_name_decoration()
+    {
+        var graph = BuildFrom("""
+            function export:Init()
+                self.box_BRIEFING_SUBVERT_7 = cbox:CreateBox("Domino/System/Delay.lua");
+            end;
+            """);
+
+        Assert.Equal("BRIEFING_SUBVERT  ·  #7", Assert.Single(graph.Nodes).InstanceLabel);
+    }
+
+    [Fact]
     public void The_same_pooled_path_in_two_functions_becomes_two_separate_nodes()
     {
         var graph = BuildFrom("""

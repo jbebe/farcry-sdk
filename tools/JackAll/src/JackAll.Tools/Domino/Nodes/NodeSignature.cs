@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace JackAll.Tools.Domino.Nodes;
 
 /// <summary>Where a <see cref="NodeSignature"/>'s pin list came from, which is also how much to trust
@@ -21,7 +23,7 @@ public enum SignatureOrigin
 /// (<see cref="SignatureOrigin.Inferred"/>). The viewer needs one shape for both, since a graph mixes
 /// them freely and a port has to be drawn either way.
 /// </summary>
-public sealed record NodeSignature(
+public sealed partial record NodeSignature(
     string TypePath,
     string DisplayName,
     string? Category,
@@ -32,6 +34,21 @@ public sealed record NodeSignature(
     bool Stateless,
     SignatureOrigin Origin)
 {
+    /// <summary>What the box does, for a `system\` box the bundled catalog covers.</summary>
+    public BoxDoc? Doc { get; init; }
+
+    /// <summary>The catalog's note on one pin, or null when it has none.</summary>
+    public string? NoteFor(string pin) => Doc?.Pins.GetValueOrDefault(pin);
+
+    /// <summary>The type name to title a box with: <see cref="DisplayName"/>, with a declared box's
+    /// CamelCase split into words (`ScriptedScenePrefab` → `Scripted Scene Prefab`).</summary>
+    public string Title => Origin == SignatureOrigin.Declared && !DisplayName.Contains(' ')
+        ? SplitCamelCase().Replace(DisplayName, " ")
+        : DisplayName;
+
+    [GeneratedRegex("(?<=[a-z0-9])(?=[A-Z])|(?<=[A-Z])(?=[A-Z][a-z])")]
+    private static partial Regex SplitCamelCase();
+
     /// <summary>The type name a node shows when it has no friendlier <see cref="NodeDisplay.Text"/> -
     /// the file's base name, e.g. `Domino/System/SetMissionBarkBankState.lua` becomes
     /// `SetMissionBarkBankState`. Sub-graph paths are dotted (`Common_MissionBriefings.BASEBRIEF_CONVO.lua`),
@@ -57,5 +74,8 @@ public sealed record NodeSignature(
         reflection.DataIns,
         reflection.DataOuts,
         reflection.Stateless,
-        SignatureOrigin.Declared);
+        SignatureOrigin.Declared)
+    {
+        Doc = DominoBoxDocs.For(typePath),
+    };
 }

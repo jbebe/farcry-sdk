@@ -22,6 +22,9 @@ public sealed class InspectorViewModel : Observable
 
     private readonly SelectionSet _selection;
     private WorldEntity? _entity;
+    private MergedNode? _merged;
+    private bool _showHidden;
+    private IReadOnlyList<string> _addableComponents = [];
     private string _heading = "";
     private string _details = "";
     private bool _canShowArchetype;
@@ -80,6 +83,26 @@ public sealed class InspectorViewModel : Observable
         private set => Set(ref _sections, value);
     }
 
+    /// <summary>Shows the <c>hidXxx</c> fields the original editor kept out of its property grid.</summary>
+    public bool ShowHidden
+    {
+        get => _showHidden;
+        set
+        {
+            if (Set(ref _showHidden, value))
+            {
+                BuildSections();
+            }
+        }
+    }
+
+    /// <summary>Creatable components the entity does not have yet.</summary>
+    public IReadOnlyList<string> AddableComponents
+    {
+        get => _addableComponents;
+        private set => Set(ref _addableComponents, value);
+    }
+
     /// <summary>Shows the primary selection. The same entity again only updates the heading, so the
     /// sections a user opened stay open.</summary>
     public void Refresh()
@@ -93,6 +116,7 @@ public sealed class InspectorViewModel : Observable
         }
 
         _entity = entity;
+        _merged = null;
         OnPropertyChanged(nameof(HasEntity));
         OnPropertyChanged(nameof(CanOpenSector));
         if (entity is null || Session is null)
@@ -100,6 +124,7 @@ public sealed class InspectorViewModel : Observable
             Heading = Details = "";
             Transform = [];
             Sections = [];
+            AddableComponents = [];
             return;
         }
 
@@ -114,11 +139,58 @@ public sealed class InspectorViewModel : Observable
                     : $"archetype {entity.ArchetypeName}");
 
         RefreshTransform();
-        MergedNode merged = MergedNode.Of(Session.EditableNode(entity), archetype);
+        _merged = MergedNode.Of(Session.EditableNode(entity), archetype);
+        BuildSections();
+    }
+
+    /// <summary>Adds an empty <paramref name="className"/> component to the instance; its registered
+    /// properties show as unset until one is edited.</summary>
+    public void AddComponent(string className)
+    {
+        if (_entity is not { } entity || _merged is not { } merged || Session is null)
+        {
+            return;
+        }
+        MergedNode components = ComponentsNode() ?? merged.AddChild(new FcbObject { TypeHash = WorldHashes.Components });
+        components.AddChild(new FcbObject { TypeHash = FcbClassDefinitions.Crc32Ascii(className) });
+        Session.Edited(entity);
+        Edited?.Invoke(entity, false);
+        BuildSections();
+    }
+
+    private void RemoveComponent(MergedNode component)
+    {
+        if (_entity is not { } entity || Session is null)
+        {
+            return;
+        }
+        ComponentsNode()!.RemoveChild(component);
+        Session.Edited(entity);
+        Edited?.Invoke(entity, false);
+        BuildSections();
+    }
+
+    private MergedNode? ComponentsNode() => _merged?.Children.FirstOrDefault(c => c.TypeHash == WorldHashes.Components);
+
+    private void BuildSections()
+    {
+        if (_entity is not { } entity || _merged is not { } merged)
+        {
+            return;
+        }
         var sections = new List<InspectorSection>();
         AddSections(entity, merged, FcbDefinitionsProvider.Value.Value.GetClass(merged.TypeHash), 0, sections);
         Sections = sections;
+
+        HashSet<uint> present = [.. ComponentsNode()?.Children.Select(c => c.TypeHash) ?? []];
+        AddableComponents = [.. FcbDefinitionsProvider.Schema.Value.Classes
+            .Where(c => c.IsComponent && c.Creatable && !present.Contains(FcbClassDefinitions.Crc32Ascii(c.Name)))
+            .Select(c => c.Name)];
     }
+
+    private bool Shown(FcbMember? member)
+        => _showHidden || member?.Name is not { Length: > 3 } name || !name.StartsWith("hid", StringComparison.Ordinal)
+           || !char.IsUpper(name[3]);
 
     /// <summary>Re-reads the entity's position and angles, after a gizmo moved it.</summary>
     public void RefreshTransform()
@@ -156,8 +228,16 @@ public sealed class InspectorViewModel : Observable
     private void AddSections(WorldEntity entity, MergedNode node, FcbClass own, int depth, List<InspectorSection> sections)
     {
         (Dictionary<uint, IReadOnlyList<string>> choices, HashSet<string> enumGroups) = EnumsOf(node, own);
-        List<MergedField> fields = [.. node.Fields.Where(f => depth > 0 || !NotFields.Contains(f.Hash))];
-        if (fields.Count > 0)
+        List<MergedField> fields = [.. node.Fields.Where(f => (depth > 0 || !NotFields.Contains(f.Hash)) && Shown(own.FindMember(f.Hash)))];
+        bool isComponent = node.Parent?.TypeHash == WorldHashes.Components;
+        if (isComponent)
+        {
+            HashSet<uint> set = [.. node.Fields.Select(f => f.Hash)];
+            fields.AddRange(own.AllMembers()
+                .Where(m => !set.Contains(m.Hash) && m.Member.Type != FcbMemberType.BinHex && Shown(m.Member))
+                .Select(m => new MergedField(m.Hash, FcbValueCodec.Zero(m.Member.Type), null, FieldOrigin.Unset)));
+        }
+        if (fields.Count > 0 || isComponent)
         {
             string label = FcbObjectNodeView.FindIdentifyingText(node.Instance ?? node.Archetype!, own) is { Length: > 0 } text
                 ? $"{own.Name ?? $"{node.TypeHash:X8}"} - {text}"
@@ -165,7 +245,8 @@ public sealed class InspectorViewModel : Observable
             string origin = node.Instance is null ? "  (inherited)" : node.Archetype is null && depth > 0 ? "  (own)" : "";
             sections.Add(new InspectorSection(
                 label + origin, depth,
-                () => [.. fields.Select(f => BuildField(entity, node, own, f, choices.GetValueOrDefault(f.Hash)))])
+                () => [.. fields.Select(f => BuildField(entity, node, own, f, choices.GetValueOrDefault(f.Hash)))],
+                isComponent && node.Archetype is null ? () => RemoveComponent(node) : null)
             {
                 IsExpanded = depth == 0,
             });
@@ -203,7 +284,8 @@ public sealed class InspectorViewModel : Observable
     {
         FcbMember? member = own.FindMember(field.Hash);
         PropertyRow row = PropertyRow.Build(
-            field.Hash, member?.Name, member?.Type ?? FcbMemberType.BinHex, field.Value, field.ArchetypeValue, choices);
+            field.Hash, member?.Name, member?.Type ?? FcbMemberType.BinHex, field.Value, field.ArchetypeValue,
+            choices ?? member?.Labels);
         var inspected = new InspectorField(row, field.Origin);
         row.Changed += () =>
         {
@@ -242,12 +324,18 @@ public sealed class InspectorViewModel : Observable
 
 /// <summary>One node of the merged entity: a component, a slot, or the entity itself. Its rows are
 /// built the first time it is opened - an NPC carries thousands of fields and few are ever looked at.</summary>
-public sealed class InspectorSection(string title, int depth, Func<IReadOnlyList<InspectorField>> build) : Observable
+public sealed class InspectorSection(
+    string title, int depth, Func<IReadOnlyList<InspectorField>> build, Action? remove = null) : Observable
 {
     private IReadOnlyList<InspectorField>? _fields;
     private bool _isExpanded;
 
     public string Title { get; } = title;
+
+    /// <summary>Only a component the instance added can be removed.</summary>
+    public bool CanRemove => remove is not null;
+
+    public void Remove() => remove?.Invoke();
 
     public System.Windows.Thickness Indent { get; } = new(depth * 12, 0, 0, 0);
 

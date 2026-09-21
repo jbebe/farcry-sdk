@@ -6,10 +6,12 @@ namespace JackAll.Tools.Domino.Graphs;
 ///
 /// <see cref="Edges"/> is control flow (what fires next); <see cref="DataEdges"/> is data flow (what
 /// value comes from where), which the generated code hides behind graph-level variables and
-/// <see cref="DataFlowResolver"/> reconstitutes.</summary>
+/// <see cref="DataFlowResolver"/> reconstitutes. <see cref="VariableDefaults"/> is the Lua value `Init()`
+/// gives each graph variable.</summary>
 public sealed record ReconstructedGraph(
     IReadOnlyList<GraphNode> Nodes,
     IReadOnlyList<GraphEdge> Edges,
     IReadOnlyList<DataEdge> DataEdges,
     IReadOnlyList<string> RegisteredDependencies,
-    IReadOnlyList<(string Name, string Type)> LoadedResources);
+    IReadOnlyList<(string Name, string Type)> LoadedResources,
+    IReadOnlyDictionary<string, string> VariableDefaults);

@@ -39,6 +39,35 @@ public class EntityMergeTests
     }
 
     [Fact]
+    public void An_added_child_materializes_the_inherited_parent_and_can_be_removed_again()
+    {
+        FcbObject instance = Node(WorldHashes.Entity);
+        MergedNode merged = MergedNode.Of(instance, Archetype());
+        MergedNode other = merged.Children[2];
+
+        MergedNode added = other.AddChild(Node(Extra, (X, 5)));
+
+        FcbObject materialized = Assert.Single(instance.Children);
+        Assert.Equal(Other, materialized.TypeHash);
+        Assert.Same(added.Instance, Assert.Single(materialized.Children));
+        Assert.Same(added, other.Children.Last());
+
+        other.RemoveChild(added);
+
+        Assert.Empty(materialized.Children);
+        Assert.DoesNotContain(added, other.Children);
+    }
+
+    [Fact]
+    public void A_child_the_archetype_has_can_be_neither_added_again_nor_removed()
+    {
+        MergedNode merged = MergedNode.Of(Node(WorldHashes.Entity), Archetype());
+
+        Assert.Throws<InvalidOperationException>(() => merged.AddChild(Node(Other)));
+        Assert.Throws<InvalidOperationException>(() => merged.RemoveChild(merged.Children[2]));
+    }
+
+    [Fact]
     public void The_instance_wins_a_shared_field_and_inherits_the_rest()
     {
         FcbObject instance = Node(WorldHashes.Entity, (A, 9), (C, 3));

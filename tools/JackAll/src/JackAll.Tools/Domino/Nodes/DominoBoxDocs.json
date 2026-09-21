@@ -1,0 +1,1487 @@
+{
+  "acceptedmissioncount": {
+    "summary": "Reads from the mission manager how many missions the player has accepted for each faction, then fires Out.",
+    "pins": {
+      "Blue": "Accepted-mission count for the blue faction (the APR, per MissionFaction's mapping).",
+      "Red": "Accepted-mission count for the red faction (the UFLL, per MissionFaction's mapping)."
+    }
+  },
+  "achievementdata": {
+    "summary": "Passes a string to the engine's SendAchievementData call, presumably to report achievement progress, then fires Out. What strings it accepts is not visible from the script.",
+    "pins": {
+      "Data": "Opaque string handed straight to SendAchievementData; no default."
+    }
+  },
+  "addhistorypointstoprimarybuddy": {
+    "summary": "Adds history points to the player's current primary buddy through the buddies manager, then fires Out. Does nothing if Points is unset.",
+    "pins": {
+      "Points": "Required; the box does nothing and Out does not fire when unset."
+    }
+  },
+  "addscriptedsceneparticipant": {
+    "summary": "Registers an object as a participant of a scripted scene (Add) or unregisters it (Remove). Add waits until both entities are loaded before registering, so Out may fire later.",
+    "pins": {
+      "ScriptedSceneEntity": "The scripted scene entity the object joins or leaves.",
+      "ObjectEntity": "The entity added to or removed from the scene.",
+      "Out": "Fires once the participant is registered (after both entities load) or right after Remove."
+    }
+  },
+  "animalfollowpath": {
+    "summary": "Makes an animal walk along a path entity (Start) or stops it (Stop). Out fires immediately; Finished fires when the engine reports the path is complete.",
+    "pins": {
+      "Entity": "The animal to move. Entity, Path and Speed are all required for Start.",
+      "Path": "Path entity to follow.",
+      "Speed": "Movement speed value handed straight to the engine; units not visible in the script.",
+      "Loop": "Loop the path; defaults to false.",
+      "UseAvoidance": "Steer around obstacles; defaults to false.",
+      "Finished": "Fires on the animal's FollowScriptedPathFinished event."
+    }
+  },
+  "animationpackage": {
+    "summary": "Attaches or detaches a named animation package on an entity, which the engine applies through AttachAnimationPackage / DetachAnimationPackage. If the entity is not loaded yet, the box waits for it to spawn before acting.",
+    "pins": {
+      "PackageName": "Name of the animation package to attach or detach.",
+      "Out": "Fires once the package has been attached or detached, possibly after waiting for the entity to spawn."
+    }
+  },
+  "areascoutingevents": {
+    "summary": "Listens to a major location (area) for scouting discoveries, firing an output when the player has scouted its supplies, tactical points, vehicles, or everything. On Enable it also asks the area to resend its current scouting state, so already-made discoveries fire again.",
+    "pins": {
+      "Area": "A major location entity (CMajorLocationEntity).",
+      "DiscoverEverything": "Fires when the area reports that everything in it has been scouted."
+    }
+  },
+  "assignbuddy": {
+    "summary": "Activates a buddy mission and spawns the buddy assigned to it at a spawn point. Out fires once the buddy is positioned; BuddyReady fires once it is also fully spawned.",
+    "pins": {
+      "SpawnPoint": "Entity the buddy is spawned and positioned at. Required.",
+      "BUMission": "Name of the buddy mission to activate; the buddies manager picks the buddy from it. Required.",
+      "Layer": "Mission layer to spawn into; defaults to \"Main\".",
+      "Unarmed": "Spawn the buddy without weapons; defaults to false.",
+      "BuddyReady": "Fires when the positioned buddy has finished spawning; may coincide with Out.",
+      "SpawnedBuddy": "The buddy entity returned by the buddies manager."
+    }
+  },
+  "attachanchor": {
+    "summary": "Anchors a pawn to an object entity by calling the engine's AttachAnchor, waiting first until both are loaded. Out fires once attached, or at once if either input is missing.",
+    "pins": {
+      "PawnEntity": "The pawn to anchor.",
+      "ObjectEntity": "The object to anchor the pawn to."
+    }
+  },
+  "bargeassault": {
+    "summary": "Controls the scripted barge-assault sequence: Start begins it on a barge entity, Stop ends it, Breakdown and Repaired tell the engine the barge broke down or was fixed, and EnableZone/DisableZone switch numbered zones of the assault on or off. Each input just forwards to an engine call; the box has no outputs.",
+    "pins": {
+      "Start": "Does nothing if BargeEntity is unset.",
+      "BargeEntity": "The barge vehicle the assault is run on; needed only by Start.",
+      "ZoneId": "Number of the assault zone to enable or disable; EnableZone/DisableZone do nothing if unset."
+    }
+  },
+  "bedroll": {
+    "summary": "Enables or disables a bedroll (the sleep/save point) so the player can or cannot use it.",
+    "pins": {
+      "BedrollEntity": "A bedroll entity; nothing happens and Out does not fire if unset."
+    }
+  },
+  "bind": {
+    "summary": "Attaches EntityA to EntityB (optionally to one of B's bones) so it moves with it, or undoes that attachment. The work is done by the engine's Bind/UnBind calls.",
+    "pins": {
+      "BoneName": "Bone on EntityB to attach to; empty or unset means the entity itself.",
+      "RemoveOffset": "Presumably snaps A onto the attach point instead of keeping its current offset; defaults to false."
+    }
+  },
+  "broadcastmessage": {
+    "summary": "Broadcasts a named message to every MessageListener box (in any running script) listening for that name, then fires Out. Does nothing, and Out does not fire, if Message is unset.",
+    "pins": {
+      "Message": "Arbitrary message name; must match the Message of the MessageListener boxes that should react."
+    }
+  },
+  "buddyavailability": {
+    "summary": "Asks the buddies manager whether a primary buddy (Primary) or a rescue buddy (Rescue) is currently available, and fires Available or NotAvailable accordingly.",
+    "pins": {
+      "Availability": "True when the queried buddy type is available."
+    }
+  },
+  "buddybetrayal": {
+    "summary": "Asks the engine to start the buddy-betrayal sequence (StartBuddyBetrayal), setting up the army for the scene where a buddy betrays the player, then fires Out."
+  },
+  "buddydied": {
+    "summary": "Tells the buddies manager a buddy died, recording it either as mercy-killed by the player or as betrayed. Fires Out afterwards.",
+    "pins": {
+      "MercyKilled": "Record the buddy as mercy-killed (player put them down).",
+      "Betrayed": "Record the buddy as betrayed.",
+      "Buddy": "The buddy entity; required, nothing happens when unset."
+    }
+  },
+  "buddyhealthevents": {
+    "summary": "While enabled, listens to a buddy's health and buddy-down events: damage taken, going down, dying while down, and being healed from down.",
+    "pins": {
+      "TakesDamage": "Fires whenever the buddy's health counter changes.",
+      "BuddyDown": "Fires when the buddy goes down (needs rescuing).",
+      "BuddyDownDied": "Fires when the downed buddy dies.",
+      "BuddyDownHealed": "Fires when the downed buddy is healed.",
+      "Value": "New health value from the last TakesDamage event.",
+      "Instigator": "Entity that caused the last health change.",
+      "Reason": "Engine-supplied reason for the last health change."
+    }
+  },
+  "buddyrescue": {
+    "summary": "Switches the buddy-rescue mechanic on or off in the buddies manager (Activate/Deactivate), or blocks and unblocks it with separate engine calls (Block/Unblock). Fires Out after each.",
+    "pins": {
+      "Block": "Calls the engine's BlockBuddyRescue; separate from Deactivate.",
+      "Unblock": "Calls the engine's UnblockBuddyRescue."
+    }
+  },
+  "buddyrescuestate": {
+    "summary": "Checks whether a rescue buddy is currently available and fires Activated if so, Deactivated otherwise."
+  },
+  "buddystate": {
+    "summary": "Looks up a buddy by name and fires two outputs: Locked or Unlocked, then Alive, MercyKilled or Betrayed for the buddy's life state.",
+    "pins": {
+      "Buddy": "Buddy name string (not an entity); nothing fires when unset.",
+      "Alive": "Fires when the life state is Alive; no life output fires for any other state."
+    }
+  },
+  "buddywager": {
+    "summary": "Runs a buddy 'wager' encounter in a wager region: once both the region and the buddy are loaded it enables the wager and fires Wager_Loaded, then reports when real combat starts, when all mercenaries die (success) or when time runs out (failure). If Enable is sent while either entity is unloaded, the box waits for both to spawn before enabling.",
+    "pins": {
+      "Enable": "Does nothing unless both WagerRegion and Buddy are set.",
+      "Disable": "Turns the wager off on the region and drops all listeners; fires no output.",
+      "WagerRegion": "The wager region entity that runs the encounter and sends its combat/success/failure events.",
+      "Timer": "Main time limit sent to the region when the wager starts; defaults to -1 (unit not visible in the script, likely seconds).",
+      "SecondaryTimer": "Second timer value sent to the region with Timer; defaults to -1. What it times is not visible in the script.",
+      "Buddy": "The buddy character taking part in the wager.",
+      "Wager_Loaded": "Fires once the wager is actually enabled, possibly later than Enable if entities had to load.",
+      "Wager_Failure_TimeLimitReached": "Also fires if the region or the buddy unloads while the wager is running."
+    }
+  },
+  "bypass_librarymissionoffer": {
+    "summary": "Debug/skip helper: asks the mission manager to bypass the pending library (side) mission offer, as if the player had dealt with it, then fires Out."
+  },
+  "bypass_playerstate": {
+    "summary": "Debug/skip helper that forces player state: sets the malaria pill count, sickness level and base infamy, and adds diamonds. Each input is applied only if connected or set; then Out fires.",
+    "pins": {
+      "SicknessLevel": "Malaria sickness level passed straight to SetSicknessLevel; scale not visible in the script.",
+      "AdditionalDiamond": "Diamonds added to the player's current total, not an absolute count."
+    }
+  },
+  "bypass_setbuddiesstatus": {
+    "summary": "Debug/skip helper that forces the state of all twelve buddies (unlocked, history points, life state) and sets the primary and secondary buddy, for jumping into the campaign mid-way. Unset per-buddy inputs are left unchanged; then Out fires.",
+    "pins": {
+      "MartyLifeState": "Integer life-state code passed to the buddies manager; the same meaning applies to every <Buddy>LifeState pin. Values not documented in the script.",
+      "MartyHistoryPts": "Buddy history (friendship) points; the same applies to every <Buddy>HistoryPts pin.",
+      "PrimaryBuddy": "Buddy name such as \"Marty_Alencar\" (first_last). Unset clears the primary buddy.",
+      "SecondaryBuddy": "Buddy name such as \"Flora_Guillen\" (first_last). Unset clears the secondary buddy."
+    }
+  },
+  "bypass_setmissionsstatus": {
+    "summary": "Debug/skip helper that marks campaign missions as done so a later mission can be tested. For every mission pin that is set, it makes it the current mission, gives its reward and completes it; library missions are also accepted first, buddy missions activated first. Then Out fires.",
+    "pins": {
+      "A1SM01": "Leave unset to skip the mission. For story (SM/GM) and buddy (BU) missions any value completes it; the same applies to every mission pin.",
+      "A1LM01": "Library mission: 0 = completed, 1 = subverted, any other value = only accepted and rewarded. Same for every ?LM?? pin."
+    }
+  },
+  "bypass_setwinningfaction": {
+    "summary": "Debug/skip helper that tells the mission manager which faction won a given act, then fires Out. Nothing is set if WinningFaction is unset.",
+    "pins": {
+      "WinningFaction": "Faction name string passed to the mission manager; accepted values not listed in the script.",
+      "Act": "Act number; defaults to 1 when unset."
+    }
+  },
+  "camerashakeandrumble": {
+    "summary": "Plays a named camera shake plus gamepad rumble on the player, scaled by an intensity multiplier, then fires Out.",
+    "pins": {
+      "SendEvent": "Does nothing (and fires no Out) if EventName is unset.",
+      "EventName": "Name of a camera-shake/rumble definition known to the engine.",
+      "IntensityModifier": "Multiplier on the shake strength; defaults to 1.0."
+    }
+  },
+  "changehealpreference": {
+    "summary": "Tells the engine whether the player's heal action should treat malaria before wounds (ChangeHealingPreference), then fires Out.",
+    "pins": {
+      "MalariaFirst": "True to prefer taking malaria medicine over healing wounds; passed straight to the engine."
+    }
+  },
+  "changemaparmy": {
+    "summary": "Asks the gameplay manager to change which army (colour) a named location shows as on the map, via SetMapArmy. Out always fires, even when an input is missing and nothing is changed.",
+    "pins": {
+      "MapName": "Name of the map location to recolour.",
+      "MapColor": "Army colour/name string to show for it.",
+      "World": "World number as an integer, unlike other boxes that take the world as a string."
+    }
+  },
+  "changeworld": {
+    "summary": "Moves the player to another world (for example the second map), at a given spawn point or at the world's default spawn point, and prints a 'Switching to world' debug message on screen.",
+    "pins": {
+      "World": "World name string, e.g. \"world2\". Nothing happens if unset.",
+      "SpawnPoint": "Spawn point entity in the target world; the default spawn point is used if unset."
+    }
+  },
+  "cheat_setrescuebuddy": {
+    "summary": "Debug/demo box that forces which buddy is the rescue buddy, bypassing the mission manager. It logs a warning that it must not be used in final content.",
+    "pins": {
+      "BuddyName": "Buddy's display name; defaults to \"Flora Guillen\"."
+    }
+  },
+  "checkautorunenabled": {
+    "summary": "Gate that fires Out only when the Domino manager reports script autorun as enabled; otherwise nothing happens."
+  },
+  "checkcombatmercsinradius": {
+    "summary": "While enabled, asks a pawn to watch for combat mercenaries within a radius around it and fires CombatMercsFound or NoCombatMercs as the pawn reports.",
+    "pins": {
+      "Pawn": "Pawn whose surroundings are checked.",
+      "Radius": "Search radius around the pawn, presumably in metres.",
+      "IncludeMercInAlert": "Also count mercs that are only alerted, not yet in combat; defaults to false.",
+      "CombatMercsFound": "Fires on the pawn's CombatMercFound event.",
+      "NoCombatMercs": "Fires on the pawn's NoCombatMercFound event."
+    }
+  },
+  "checkisunderattack": {
+    "summary": "While enabled, asks a pawn to report when it is attacked and fires UnderAttack each time it does.",
+    "pins": {
+      "CheckForFire": "Also treat fire as an attack; defaults to false."
+    }
+  },
+  "checkplayerinfov": {
+    "summary": "While enabled, asks a pawn to report when the player enters or leaves its field of view within a distance, firing EnterFOV and ExitFOV.",
+    "pins": {
+      "Distance": "Maximum sight distance for the check, presumably in metres; required.",
+      "DestroyEventListener": "Stops listening for events without telling the pawn to stop checking."
+    }
+  },
+  "checkproximityradius": {
+    "summary": "While enabled, asks a pawn to report the player entering or leaving a radius around it, firing EnterRadius and ExitRadius. Four independent radius slots let several boxes watch the same pawn; if the pawn is unloaded while the player is inside, ExitRadius fires.",
+    "pins": {
+      "Radius": "Radius around the pawn, presumably in metres; required.",
+      "RadiusSlot": "Which radius to use: 0 Beckon, 1 Greet, 2 Exit, 3 Betrayal. Defaults to 0.",
+      "ProximityTrigger1": "Optional extra trigger entity passed to the pawn's check; purpose not visible in the script.",
+      "ProximityTrigger2": "Optional second extra trigger entity, as ProximityTrigger1.",
+      "DestroyEventListener": "Stops listening for events without telling the pawn to stop checking."
+    }
+  },
+  "checksocialregionstatus": {
+    "summary": "Asks a social region (an AI group's territory) to report whether it is currently idle or in combat, then keeps reporting when it switches between the two, until StopChecking.",
+    "pins": {
+      "AlreadyIdle": "Fires once, in reply to StartChecking, if the region is idle at that moment.",
+      "AlreadyCombat": "Fires once, in reply to StartChecking, if the region is already in combat.",
+      "SwitchedToIdle": "Fires each time the region calms down from combat to idle.",
+      "SwitchedToCombat": "Fires each time the region goes from idle into combat."
+    }
+  },
+  "closescript": {
+    "summary": "Shuts down the script this box lives in by removing its owning Domino entity. No output; anything a StartScript box waits on for this script receives Closed."
+  },
+  "compareanims": {
+    "summary": "Compares two animation references and fires Equal or NotEqual. Fires nothing if either input is unset."
+  },
+  "compareboolean": {
+    "summary": "Tests boolean A (and optionally B) and fires every output whose condition holds, so several outputs can fire from one trigger. A_is_True/A_is_False depend on A alone; the combined outputs need B set.",
+    "pins": {
+      "A_and_B": "Fires when A and B are both true; requires B set.",
+      "A_or_B": "Fires when at least one of A and B is true; requires B set.",
+      "A_xor_B": "Fires when A and B differ; requires B set."
+    }
+  },
+  "compareentity": {
+    "summary": "Compares two entity ids, fires Equal or NotEqual and writes the result to Result. Two unset inputs count as equal.",
+    "pins": {
+      "Result": "True when the entities are the same entity, false otherwise."
+    }
+  },
+  "comparefloats": {
+    "summary": "Compares floats A and B and fires every output whose relation holds (e.g. A_lt_B, A_le_B and A_ne_B together). Values within Tolerance count as equal; nothing fires if A or B is unset.",
+    "pins": {
+      "Tolerance": "Maximum difference still treated as equal; absolute value used, defaults to 0."
+    }
+  },
+  "compareintegers": {
+    "summary": "Compares integers A and B and fires every output whose relation holds (e.g. A_lt_B, A_le_B and A_ne_B together). Nothing fires if A or B is unset."
+  },
+  "comparestrings": {
+    "summary": "Compares strings A and B and fires two outputs: one of A_eq_B / A_neq_B, then one of A_contains_B / A_ncontains_B. Nothing fires if either string is unset.",
+    "pins": {
+      "A_contains_B": "Fires when B appears in A as a plain (case-sensitive, non-pattern) substring."
+    }
+  },
+  "compounddestructibility": {
+    "summary": "Makes a compound physics object (a destructible built from parts) able or unable to take damage.",
+    "pins": {
+      "Entity": "An entity with a compound physics component (CCompoundPhysComponent)."
+    }
+  },
+  "compoundobject": {
+    "summary": "Listens to a compound physics object (a multi-state destructible) and fires when it changes damage state or is destroyed, reporting the new state number.",
+    "pins": {
+      "Entity": "An entity with a compound physics component.",
+      "StateChange": "Fires each time the object moves to a new damage state.",
+      "StateID": "State index reported by the most recent StateChange or Destroyed event."
+    }
+  },
+  "consolecommand": {
+    "summary": "Debug hook: on In, registers Command as a developer console command. Each time it is typed in the console, Out fires with the text after the command in Parameter. The command stays registered until the script shuts down.",
+    "pins": {
+      "Parameter": "Argument string typed after the command in the console."
+    }
+  },
+  "convoymission": {
+    "summary": "Starts a convoy mission on a convoy entity and waits for its result: Success fires when the convoy reports success, Failure when it reports failure. Cancel tells a running convoy to call itself off.",
+    "pins": {
+      "Start": "Does nothing if ConvoyEntity is unset.",
+      "Cancel": "Only acts if the convoy was started by this box and has not finished yet.",
+      "ConvoyEntity": "The convoy entity that runs the mission and sends SuccessfulConvoy/FailedConvoy events."
+    }
+  },
+  "currentgreetingheard": {
+    "summary": "Records in the mission manager which greeting the player has just heard for a mission: each input stores its own greeting stage (libstart, betrayed, first, second, third), then fires Out. Pairs with GetCurrentGreeting.",
+    "pins": {
+      "Mission": "Mission name; if unset, no input does anything and Out does not fire."
+    }
+  },
+  "custompopuptutorialmessagebox": {
+    "summary": "Opens a tutorial message box using a specific UI page layout, with localized title, text and button label. Out fires once the player dismisses it.",
+    "pins": {
+      "PageId": "Name of the UI page layout to use for the box.",
+      "TitleLocId": "Localization string id for the title, not literal text.",
+      "TextLocId": "Localization string id for the body text, not literal text.",
+      "ButtonLocId": "Localization string id for the button label; empty by default."
+    }
+  },
+  "custompopuptutorialmessageboxwithami": {
+    "summary": "Like CustomPopUpTutorialMessageBox, but also passes an action map id, presumably so the text can show the key bound to an input action. Out fires once the player dismisses it.",
+    "pins": {
+      "PageId": "Name of the UI page layout to use for the box.",
+      "TitleLocId": "Localization string id for the title, not literal text.",
+      "TextLocId": "Localization string id for the body text, not literal text.",
+      "ButtonLocId": "Localization string id for the button label; empty by default.",
+      "ActionMapId": "Input action-map id handed to the message box; empty by default."
+    }
+  },
+  "defencereversal": {
+    "summary": "Controls the 'defence reversal' scripted attack: StartAttack launches it at a given attack level (optionally at Mike's place, marking the betrayed buddies), StopAttack ends it, and SetupBuddiesForMikes places a primary buddy for the Mike's place version. Each fires Out when it acts.",
+    "pins": {
+      "AttackLevel": "Intensity level passed to StartDefenceReversal; defaults to 0. Meaning of each level is not visible in the script.",
+      "IsMikesPlace": "True if the attack happens at Mike's place; also marks buddies as betrayed. Defaults to false.",
+      "PrimaryBuddyAtMikes": "The buddy used by SetupBuddiesForMikes; that input does nothing if unset."
+    }
+  },
+  "defencereversallastbuddyevent": {
+    "summary": "While enabled, fires LastBuddyInBuddyDown when the buddies manager raises its defence-reversal event, which by its name means the last available buddy has gone down."
+  },
+  "defendlocation": {
+    "summary": "Orders a pawn to defend a location within a radius (Start) or to stop (Stop). Start waits for the location entity to load; Stopped fires once the pawn confirms it has stopped.",
+    "pins": {
+      "DefendRadius": "Radius around the location to defend, presumably in metres; required.",
+      "DefendLocation": "Entity marking the location to defend; required.",
+      "Started": "Fires once the defend order is sent.",
+      "Stopped": "Fires on the pawn's DefendLocationStopped event."
+    }
+  },
+  "delay": {
+    "summary": "Timer: Start begins counting Seconds and TimeElapsed fires later when it runs out. Pause, Resume, Stop and Restart control the running timer; Start again re-arms it with the current Seconds.",
+    "pins": {
+      "Seconds": "Delay length in seconds; defaults to 1 when unset.",
+      "Pause": "Freezes the countdown; Resume continues it. Ignored if Start was never triggered.",
+      "Restart": "Restarts the countdown from the full duration."
+    }
+  },
+  "dentalplan": {
+    "summary": "Starts or stops the combat sequence of the 'Dental Plan' mission through the engine calls StartDentalPlan/StopDentalPlan, then fires Out."
+  },
+  "desertlistener": {
+    "summary": "Fires when an entity enters or leaves desert terrain, as reported by the entity's OnDesertChange event.",
+    "pins": {
+      "EntityId": "The entity to watch, typically the player."
+    }
+  },
+  "desertoverridesetting": {
+    "summary": "Adds or removes an override that forces a world sector to count as low desert and/or high desert, then fires Out. The override is keyed by world and sector; what 'desert' drives in game is not visible in the script.",
+    "pins": {
+      "World": "Name of the world the sector belongs to.",
+      "Sector": "Sector id within World; Remove clears the override for this World/Sector pair.",
+      "IsLowDesert": "Used only by Add.",
+      "IsHighDesert": "Used only by Add."
+    }
+  },
+  "desertstorm": {
+    "summary": "Asks the engine to start or stop a desert storm effect, optionally aimed at a destination entity, then fires Out.",
+    "pins": {
+      "Destination": "Entity passed to StartDesertStorm; its exact role (likely where the storm heads) is not visible in the script."
+    }
+  },
+  "detectsocialengagement": {
+    "summary": "Asks a pawn to start or stop detecting a social engagement (a conversation or interaction with it). Fires SocialDetected when one is detected and SocialAborted when the stop is acknowledged.",
+    "pins": {
+      "SocialAborted": "Fires on the pawn's SocialEngagementAborted event after StopDetection."
+    }
+  },
+  "dlc1weaponsspawn": {
+    "summary": "DLC content: spawns a DLC1 weapon crate with a crossbow, silenced shotgun and sawed-off shotgun at one of ten hard-coded safehouse positions, chosen by the id of the entity that owns this script. Spawns nothing if the owner is not one of those ten; Out is declared but never fired."
+  },
+  "door": {
+    "summary": "Locks or unlocks a door for use, and optionally listens for it being pushed or pulled open.",
+    "pins": {
+      "Out": "Fires after SetAsUsable or SetAsUnusable; the listening inputs do not fire it.",
+      "OnPush": "Fires when the door is pushed open, while listening.",
+      "OnPull": "Fires when the door is pulled open, while listening."
+    }
+  },
+  "dospecialcharactercombat": {
+    "summary": "Sends a special-character pawn into its special combat behaviour and fires Out when the pawn reports that it has started.",
+    "pins": {
+      "IsOutdoor": "Tells the pawn the fight is outdoors; defaults to false.",
+      "Out": "Fires on the pawn's StartedSpecialCombat event."
+    }
+  },
+  "entityremoved": {
+    "summary": "Waits until an entity is removed from the world, then fires Removed once. If the entity is already invalid when triggered, Removed fires straight away.",
+    "pins": {
+      "Removed": "Fires once when the entity is removed, or immediately if it no longer exists."
+    }
+  },
+  "evaluateproximityradius": {
+    "summary": "One-shot check of whether the player is inside a radius around a pawn, firing InsideRadius or OutsideRadius. If the pawn is not loaded it fires OutsideRadius at once.",
+    "pins": {
+      "Radius": "Radius around the pawn, presumably in metres; required.",
+      "ProximityTrigger1": "Optional extra trigger entity passed to the pawn's check; purpose not visible in the script.",
+      "ProximityTrigger2": "Optional second extra trigger entity, as ProximityTrigger1."
+    }
+  },
+  "floatarithmetics": {
+    "summary": "Computes A op B into Target, where the operation is chosen by which input you trigger (Add, Sub, Mul, Div, Mod, Min, Max), then fires Out. Nothing happens if A or B is unset.",
+    "pins": {
+      "Div": "Plain float division; dividing by zero is not guarded."
+    }
+  },
+  "floatingtutorialmessagebox": {
+    "summary": "Shows a small non-blocking tutorial hint with localized text. Hide removes it; Finished fires when it is hidden, either by Hide or when the engine dismisses it.",
+    "pins": {
+      "TextLocId": "Localization string id for the hint text, not literal text."
+    }
+  },
+  "floatingtutorialmessageboxwithami": {
+    "summary": "Like FloatingTutorialMessageBox, but also passes an action map id, presumably so the hint can show the key bound to an input action. Finished fires when it is hidden.",
+    "pins": {
+      "TextLocId": "Localization string id for the hint text, not literal text.",
+      "ActionMapId": "Input action-map id handed to the message box; empty by default."
+    }
+  },
+  "followpath": {
+    "summary": "Makes a pawn follow a path entity (Start) or stop (Stop). Out fires immediately; Finished fires when the pawn reports the path is complete.",
+    "pins": {
+      "Entity": "The pawn to move. Entity, Path and Speed are all required for Start.",
+      "Speed": "Movement speed value handed to the pawn; units not visible in the script.",
+      "Loop": "Loop the path; defaults to false.",
+      "UseAvoidance": "Steer around obstacles; defaults to false.",
+      "Finished": "Fires on the pawn's FollowScriptedPathFinished event."
+    }
+  },
+  "forcesocialregiontocombat": {
+    "summary": "Asks the engine to force a social region into combat state via ForceSocialRegionToCombat().",
+    "pins": {
+      "SocialRegion": "Not passed to the engine call; the implementation ignores it."
+    }
+  },
+  "foreach": {
+    "summary": "Loops over a string array: for each element it sets String and fires Out, then fires Finished once. Unset Array goes straight to Finished.",
+    "pins": {
+      "Array": "A string array (list) value, despite the plain string type.",
+      "Out": "Fires once per element, synchronously, with String set to that element."
+    }
+  },
+  "gameelementobjective": {
+    "summary": "Changes the state of a map element (an objective marker shown on the map): enable, disable, or mark it as available. Each input sends the matching event to its map element component.",
+    "pins": {
+      "GameElement": "An entity with a map element component (CMapElementComponent)."
+    }
+  },
+  "getbetrayedbuddylist": {
+    "summary": "Reads the list of buddies the player has betrayed and outputs up to ten names, then fires Out. Unused slots are left empty.",
+    "pins": {
+      "Betrayed01": "First betrayed buddy's name; later slots follow in list order."
+    }
+  },
+  "getbuddylist": {
+    "summary": "Reads the buddies manager's buddy list and outputs up to six names in order, then fires Out. Unused slots are left empty.",
+    "pins": {
+      "Primary": "First entry of the list, the primary buddy.",
+      "Secondary": "Second entry, the secondary buddy."
+    }
+  },
+  "getclosestautomaticprefab": {
+    "summary": "Finds the automatic prefab closest to a pawn, waiting for the pawn to load if needed, then fires Out. Prefab is empty if none is found or no pawn is given.",
+    "pins": {
+      "Prefab": "The closest automatic prefab entity, or empty when none."
+    }
+  },
+  "getcurrentgreeting": {
+    "summary": "Looks up which greeting stage a mission's giver is at and fires the matching output (Libstart, Betrayed, First, Second, Third or None). Pairs with CurrentGreetingHeard.",
+    "pins": {
+      "Mission": "Mission name; if unset or the stage is unrecognised, no output fires."
+    }
+  },
+  "getentityinprefab": {
+    "summary": "Looks up an object by name inside a placed prefab and outputs it as an entity. If the prefab is not loaded yet, it waits for it to spawn first.",
+    "pins": {
+      "ObjectName": "Name of the object inside the prefab.",
+      "ObjectEntity": "The found object; left unchanged if PrefabEntity is unset.",
+      "Out": "Fires after the lookup, possibly delayed until the prefab spawns. Also fires immediately if PrefabEntity is unset."
+    }
+  },
+  "getentityname": {
+    "summary": "Debug helper that writes an entity's name to Name and fires Out. Long gives the full dotted name, Short only the part after the last dot; an unset entity gives \"invalid id\"."
+  },
+  "getlocalplayer": {
+    "summary": "Outputs the local player's entity, for wiring into other boxes' Player inputs, then fires Out."
+  },
+  "getmalariapillscount": {
+    "summary": "Outputs how many malaria pills the player currently carries, then fires Out."
+  },
+  "getmissionstate": {
+    "summary": "Checks whether a mission (a mission layer) is currently enabled and fires Enabled or Disabled accordingly.",
+    "pins": {
+      "Mission": "Mission/layer name as known to the game mission manager.",
+      "Disabled": "Also fires when Mission is unset or the mission cannot be found."
+    }
+  },
+  "getprimarybuddyname": {
+    "summary": "Outputs the name of the player's current primary buddy and fires Out."
+  },
+  "gettimeofday": {
+    "summary": "Reads the current in-game time of day and outputs it as hour and minute.",
+    "pins": {
+      "Hour": "0-23.",
+      "Minute": "0-59."
+    }
+  },
+  "givemissionreward": {
+    "summary": "Asks the mission manager to hand out a mission's reward to the player, then fires Out.",
+    "pins": {
+      "Mission": "Mission name; if unset nothing happens and Out does not fire."
+    }
+  },
+  "healthevents": {
+    "summary": "While enabled, listens to a pawn's health events: damage taken, health reaching its failure threshold, death, and being healed from buddy-down.",
+    "pins": {
+      "TakesDamage": "Fires whenever the pawn's health counter changes.",
+      "HealthFailure": "Fires when the health counter crosses its Failure threshold.",
+      "Killed": "Fires when the pawn dies; Value is set to 0.",
+      "BuddyDownHealed": "Fires when the pawn is healed from buddy-down.",
+      "Value": "New health value from the last event.",
+      "Instigator": "Entity responsible for the last event.",
+      "Reason": "Engine-supplied reason for the last damage or death."
+    }
+  },
+  "heardbriefing": {
+    "summary": "Checks whether the player has already heard a mission's briefing and fires True or False.",
+    "pins": {
+      "Mission": "Mission name; if unset neither output fires."
+    }
+  },
+  "indexlist": {
+    "summary": "Fires the Index-th of its Output pins (1-based). Nothing fires if Index is unset, below 1 or above the number of outputs.",
+    "pins": {
+      "Index": "1-based: 1 fires the first Output pin."
+    }
+  },
+  "inputlistener": {
+    "summary": "While enabled, fires Move whenever the player entity reports a movement input (InputDominoMove event). Disable stops listening.",
+    "pins": {
+      "Player": "The player entity to listen to; Enable does nothing if unset.",
+      "Move": "Fires on every movement-input event until Disable, not just once."
+    }
+  },
+  "integerarithmetics": {
+    "summary": "Computes A op B into Target, where the operation is chosen by which input you trigger (Add, Sub, Mul, Div, Mod, Min, Max), then fires Out. Nothing happens if A or B is unset.",
+    "pins": {
+      "Div": "Integer division rounded down (floor); dividing by zero is not guarded."
+    }
+  },
+  "interruptanim": {
+    "summary": "Interrupts an animation started on a pawn by a Play Anim box and fires Interrupted when the pawn confirms. Fires Interrupted at once if no animation is tracked or the play command has not been sent yet.",
+    "pins": {
+      "CancelInterrupt": "Withdraws an interrupt command that is still queued and not yet sent.",
+      "PawnAgent": "Pawn whose Play Anim animation to interrupt."
+    }
+  },
+  "interruptbark": {
+    "summary": "Interrupts a bark (short spoken line) started on a pawn by a PlayBark box and fires Interrupted when the pawn confirms. Fires Interrupted at once if no bark is tracked or the bark command has not been sent yet.",
+    "pins": {
+      "PawnAgent": "Pawn whose PlayBark bark to interrupt."
+    }
+  },
+  "ispartnermissionunlocked": {
+    "summary": "Checks whether a partner (buddy) mission is unlocked and fires Unlocked or Locked.",
+    "pins": {
+      "PartnerMissionId": "Numeric partner mission id; if unset the box reports Locked."
+    }
+  },
+  "jackaltapes": {
+    "summary": "New tells the mission manager the player has found another Jackal tape; Stop stops the tape currently playing. Both then fire Out."
+  },
+  "jacksbuddy": {
+    "summary": "Starts or stops the combat sequence of the 'Jack's Buddy' mission through the engine calls StartJacksBuddy/StopJacksBuddy, then fires Out."
+  },
+  "killbuddy": {
+    "summary": "Kills a buddy outright through the engine's KillPawnAgent call and fires Out. Despite its input's name, the script sends no stimulus itself.",
+    "pins": {
+      "SendPierceStim": "The trigger input; it kills the buddy directly via KillPawnAgent.",
+      "Buddy": "Buddy entity to kill; nothing happens when unset."
+    }
+  },
+  "loadambxscript": {
+    "summary": "Starts or stops a named amBX script (the Philips amBX ambient light/fan/rumble peripheral), then fires Out.",
+    "pins": {
+      "Script": "Name of the amBX script; if unset nothing is sent but Out still fires.",
+      "StartStop": "True starts the script, false stops it."
+    }
+  },
+  "logtoconsole": {
+    "summary": "Debug helper that writes each connected input to the engine log with a type label (arrays in String are joined), then fires Out. Logs \"Entity is a nil value\" if every input is unset.",
+    "pins": {
+      "String": "Plain string, or a string array which is logged as \"Array= a b c\"."
+    }
+  },
+  "lookattarget": {
+    "summary": "Makes a pawn look at a target entity (Start), waiting for the pawn to load first, or stops it looking (Stop). Out fires after either; Start fires Out at once if an input is missing."
+  },
+  "lookattrigger": {
+    "summary": "Listens to a look-at trigger and fires when it enters or leaves the player's field of view.",
+    "pins": {
+      "Trigger": "A look-at trigger entity.",
+      "EnterFOV": "Fires when the trigger comes into the player's view.",
+      "LeaveFOV": "Fires when the trigger goes out of the player's view."
+    }
+  },
+  "manageinventory": {
+    "summary": "Edits the player's inventory: AddWeapon/AddGadget spawn an item and give it to the player, RefillAmmo refills weapon ammo, RefillSyrettes refills syrettes, and the Remove inputs strip all items, all weapons or all gadgets. Finished fires when the action is done; for the Add inputs that is after the item finishes spawning.",
+    "pins": {
+      "AddWeapon": "Does nothing if WeaponType is unset.",
+      "AddGadget": "Does nothing if WeaponType is unset; gadgets spawn the same way as weapons.",
+      "RefillSyrettes": "Always refills to 3 syrettes.",
+      "WeaponType": "Name of the weapon or gadget to spawn, used by AddWeapon and AddGadget.",
+      "Finished": "For AddWeapon/AddGadget this fires later, once the spawned item exists."
+    }
+  },
+  "manageweapon": {
+    "summary": "Draw has the player draw a weapon (first selecting one from WeaponCategory if given); Holster puts it away. Both fire Finished right away.",
+    "pins": {
+      "WeaponCategory": "Weapon slot/category to select before drawing; if unset the current weapon is drawn."
+    }
+  },
+  "messagelistener": {
+    "summary": "Waits for a named message sent by a BroadcastMessage box: after Enable, Out fires every time that message is broadcast, until Disable.",
+    "pins": {
+      "Message": "Message name to listen for; read when Enable fires, so change it and re-Enable to switch.",
+      "Out": "Fires once per matching broadcast while enabled."
+    }
+  },
+  "missioncompleted": {
+    "summary": "Tells the mission manager that a mission has been completed, then fires Out.",
+    "pins": {
+      "Mission": "Mission name; if unset nothing happens and Out does not fire."
+    }
+  },
+  "missionfaction": {
+    "summary": "Looks up which faction a mission belongs to and fires APR (blue), UFLL (red) or Other (no faction).",
+    "pins": {
+      "Mission": "Mission name; if unset no output fires."
+    }
+  },
+  "missionsubverted": {
+    "summary": "Sets a library (faction) mission's state to Subverted in the mission manager, meaning the player took a buddy's alternative to it, then fires Out.",
+    "pins": {
+      "Mission": "Mission name; if unset nothing happens and Out does not fire."
+    }
+  },
+  "moveto": {
+    "summary": "Orders a pawn to move to a destination entity (Start) or stop moving (Stop). Started, Finished, Failed and Stopped fire as the pawn reports each event.",
+    "pins": {
+      "UseCombat": "Move in combat mode; defaults to false.",
+      "MoveSpeed": "Speed setting handed to the pawn; defaults to 3. Units or scale not visible in the script.",
+      "Destination": "Entity to move to; required with PawnAgent.",
+      "Finished": "Fires on arrival (MoveToFinished).",
+      "Failed": "Fires if the pawn cannot complete the move (MoveToFailed).",
+      "Stopped": "Fires when the pawn acknowledges a Stop."
+    }
+  },
+  "multipleand": {
+    "summary": "Waits until every one of its Condition inputs has been triggered at least once (in any order), then fires Out. Reset forgets which conditions were seen.",
+    "pins": {
+      "AutoReset": "If true, resets itself each time Out fires so it can trigger again; otherwise extra triggers keep firing Out.",
+      "Condition": "Dynamic: add as many Condition pins as needed; each counts once."
+    }
+  },
+  "navmeshdeadzone": {
+    "summary": "Turns a navmesh dead-zone volume on or off; while on, AI pathfinding treats that area as blocked.",
+    "pins": {
+      "NavmeshDeadZone": "An entity with a navmesh toggle component (CAIToggleNavmeshComponent)."
+    }
+  },
+  "objectivepopup": {
+    "summary": "Pushes an objective notification onto the objective HUD, then fires Out. Nothing is shown if Type or Text is unset.",
+    "pins": {
+      "Section": "Objective HUD section; defaults to \"Tutorial\".",
+      "Type": "Objective type string passed to the HUD manager; accepted values not listed in the script.",
+      "Text": "Text or localization id to display; the script does not show which.",
+      "Time": "How long it stays on screen, in seconds; defaults to 5."
+    }
+  },
+  "objectivestate": {
+    "summary": "Sets the current objective state shown to the player, optionally with a popup, then fires Out.",
+    "pins": {
+      "ObjectiveState": "Objective state identifier passed to the engine; empty string if unset.",
+      "ShowPopup": "Whether to show the objective popup; defaults to true when unset."
+    }
+  },
+  "onceonly": {
+    "summary": "Lets the first trigger of In through to Out and blocks every later one.",
+    "pins": {
+      "Reset": "Its implementation is empty, so it does not actually re-arm the box."
+    }
+  },
+  "outputorder": {
+    "summary": "Fires all of its Out pins one after another, in pin order, each time In is triggered. Use it to control the order in which several branches run.",
+    "pins": {
+      "Out": "Dynamic: add as many Out pins as needed; they fire first to last."
+    }
+  },
+  "overrideenvironmenadaptivebloom": {
+    "summary": "Overrides the environment's adaptive bloom (automatic glow/exposure) with a named setting, blending in over a transition time, or removes that override.",
+    "pins": {
+      "adaptiveBloomdSetting": "Name of the adaptive bloom preset. Required, including for RemoveOverride.",
+      "TransitionDuration": "Blend time, presumably in seconds. Defaults to 0 (instant)."
+    }
+  },
+  "overrideenvironmentcloud": {
+    "summary": "Overrides the sky's cloud setting with a named preset, blending in over a transition time, or removes that override.",
+    "pins": {
+      "CloudSetting": "Name of the cloud preset. Required, including for RemoveOverride.",
+      "TransitionDuration": "Blend time, presumably in seconds. Defaults to 0 (instant)."
+    }
+  },
+  "overrideenvironmentdepthoffield": {
+    "summary": "Overrides the depth-of-field (distance blur) setting with a named preset, blending in over a transition time, or removes that override.",
+    "pins": {
+      "depthOfFieldSetting": "Name of the depth-of-field preset. Required, including for RemoveOverride.",
+      "TransitionDuration": "Blend time, presumably in seconds. Defaults to 0 (instant)."
+    }
+  },
+  "overrideenvironmentfog": {
+    "summary": "Overrides the environment fog with a named preset, blending in over a transition time, or removes that override.",
+    "pins": {
+      "FogSetting": "Name of the fog preset. Required, including for RemoveOverride.",
+      "TransitionDuration": "Blend time, presumably in seconds. Defaults to 0 (instant)."
+    }
+  },
+  "overrideenvironmentlighting": {
+    "summary": "Overrides the environment lighting with a named preset, blending in over a transition time, or removes that override.",
+    "pins": {
+      "LightingSetting": "Name of the lighting preset. Required, including for RemoveOverride.",
+      "TransitionDuration": "Blend time, presumably in seconds. Defaults to 0 (instant)."
+    }
+  },
+  "overrideenvironmentstormfactor": {
+    "summary": "Forces the weather's storm intensity to a given factor, blending in over a transition time, or hands storm control back to the normal weather system.",
+    "pins": {
+      "Factor": "Storm intensity to force, presumably 0 (calm) to 1 (full storm). Ignored by RemoveOverride.",
+      "TransitionDuration": "Blend time, presumably in seconds. Defaults to 0 (instant)."
+    }
+  },
+  "overrideenvironmentwind": {
+    "summary": "Overrides the wind with a named preset, blending in over a transition time, or removes that override.",
+    "pins": {
+      "WindSetting": "Name of the wind preset. Required, including for RemoveOverride.",
+      "TransitionDuration": "Blend time, presumably in seconds. Defaults to 0 (instant)."
+    }
+  },
+  "overridemap": {
+    "summary": "Replaces the texture of a named in-game map with another texture, then fires Out.",
+    "pins": {
+      "Map": "Name of the map to override; if unset nothing is changed but Out still fires.",
+      "Texture": "Replacement texture; if unset an empty name is passed, likely clearing the override."
+    }
+  },
+  "particlesystem": {
+    "summary": "Controls a placed particle effect: start (play), pause, stop, or clean (presumably clearing particles already emitted).",
+    "pins": {
+      "ParticleSystem": "An entity with a particles component (CNewParticlesComponent)."
+    }
+  },
+  "partnertapes": {
+    "summary": "Tells the mission manager the player has found a named partner tape, then fires Out.",
+    "pins": {
+      "Tape": "Tape name; if unset nothing happens and Out does not fire."
+    }
+  },
+  "pawninteraction": {
+    "summary": "While enabled, makes a pawn usable by the player and fires PlayerInteracted each time the player uses it. Disable makes the pawn unusable again.",
+    "pins": {
+      "IgnoreOrientation": "Allow use regardless of which way the player faces the pawn, by its name; defaults to false.",
+      "KeepPawnState": "Only listen for use; leave the pawn's usability flag untouched on Enable and Disable.",
+      "PlayerInteracted": "Fires on the pawn's Use event."
+    }
+  },
+  "pawninteractivestate": {
+    "summary": "Makes a pawn usable (Enable) or unusable (Disable) by the player without listening for the use itself, then fires Out.",
+    "pins": {
+      "IgnoreOrientation": "Allow use regardless of which way the player faces the pawn, by its name; defaults to false."
+    }
+  },
+  "pawninvinciblestate": {
+    "summary": "Makes a pawn invincible (SetInvincible) or vulnerable again (UnsetInvincible) by sending events to its counters component, then fires Out."
+  },
+  "phonecall": {
+    "summary": "Rings the player's phone with a call using the given sound. Out fires immediately; later CallPicked fires when the player answers, VoiceFinished when the voice line ends, CallTimeout when it goes unanswered and HangUpCall when the player hangs up. Disable stops listening for those events.",
+    "pins": {
+      "In": "Does nothing if PhonecallSound is unset.",
+      "PhonecallSound": "The sound (voice line) played as the call."
+    }
+  },
+  "pickuplistener": {
+    "summary": "Fires once when a pickup is picked up, then stops listening.",
+    "pins": {
+      "PickedUp": "Fires once; call Enable again to listen for another pickup."
+    }
+  },
+  "pickupmissionitem": {
+    "summary": "Fires once when a mission item is picked up, then stops listening. Works the same way as PickupListener.",
+    "pins": {
+      "PickedUpItem": "Fires once; call Enable again to listen again."
+    }
+  },
+  "pickupstate": {
+    "summary": "Makes a pickup collectable or not collectable by the player.",
+    "pins": {
+      "Pickup": "A pickup entity; nothing happens and Out does not fire if unset."
+    }
+  },
+  "playanim": {
+    "summary": "Plays an animation on a pawn. Started fires when it begins, Finished fires when the animation is nearly over, and RealFinish fires when it has actually ended.",
+    "pins": {
+      "LoopAnim": "Loop the animation; defaults to false.",
+      "AnimFile": "Animation to play; required, an error is logged when unset.",
+      "Finished": "Fires on the pawn's FinishingSoonPlayAnim event, shortly before the end, not at it.",
+      "RealFinish": "Fires when the animation has actually finished (FinishedPlayAnim)."
+    }
+  },
+  "playbark": {
+    "summary": "Makes a pawn speak a bark (a short spoken line) picked by mission and block name. Started and Finished fire as the line begins and ends, and the player is notified that someone talked each time.",
+    "pins": {
+      "OtherAgent": "Optional entity the bark is aimed at or involves; defaults to none.",
+      "Mission": "Dialogue mission name the bark belongs to; required.",
+      "Block": "Dialogue block name within the mission; required."
+    }
+  },
+  "playemotion": {
+    "summary": "Sets a pawn's emotion, picked by which input fires (Afraid, Angry, Bored, Happy and so on), via the engine's PlayEmotion call, then fires Out.",
+    "pins": {
+      "Mefiant": "Suspicious/distrustful (French \"méfiant\")."
+    }
+  },
+  "playercanaccessmedicine": {
+    "summary": "Asks the engine whether the player can currently get malaria medicine and fires Yes or No."
+  },
+  "playerheal": {
+    "summary": "Sends the player entity a 'healing done' event on its SP counters component, telling it a heal has finished, then fires Out.",
+    "pins": {
+      "Player": "The player entity; if unset nothing happens and Out does not fire."
+    }
+  },
+  "playerhealthevents": {
+    "summary": "While enabled, fires ScriptedDeath when the player entity reports it died and MalariaBlackout when it has a malaria blackout. Disable stops listening.",
+    "pins": {
+      "Player": "The player entity to listen to; Enable does nothing if unset.",
+      "ScriptedDeath": "Fires on the player's PlayerDied event; see SetScriptedDeathMode for death handled by script."
+    }
+  },
+  "playermalariaevents": {
+    "summary": "While enabled, fires MalariaBlackout whenever the player entity has a malaria blackout. Disable stops listening. It is PlayerHealthEvents without the death output.",
+    "pins": {
+      "Player": "The player entity to listen to; Enable does nothing if unset."
+    }
+  },
+  "playmusic": {
+    "summary": "Asks the music manager to play a music cue, optionally fading out the current music first and tied to an entity, then fires Out. Nothing plays if SoundId or SoundType is unset, but Out still fires.",
+    "pins": {
+      "FadeOutTime": "Fade-out time, presumably in seconds; unset passes -1 (engine default).",
+      "Object": "Optional entity the music is tied to; unset passes no entity."
+    }
+  },
+  "playsound": {
+    "summary": "Plays a sound on an entity. If the entity is not loaded yet, it waits until it spawns. Started fires when playback begins and Finished when it ends; nothing happens if any input is unset.",
+    "pins": {
+      "Entity": "Entity the sound is emitted from; may be one that has not spawned yet."
+    }
+  },
+  "playsyncanim": {
+    "summary": "Plays two paired animations on two pawns at the same time, with pawn A leading. Outputs track pawn A's animation: Started when it begins, Finished near its end, RealFinish when it has ended.",
+    "pins": {
+      "AnimFileA": "Animation for pawn A; both animation files are required.",
+      "AnimFileB": "Animation for pawn B.",
+      "Finished": "Fires on pawn A's FinishingSoonPlayAnim event, shortly before the end.",
+      "RealFinish": "Fires when pawn A's animation has actually finished."
+    }
+  },
+  "popupconfirmationmessagebox": {
+    "summary": "Opens a yes/no confirmation box with localized title and text, and fires Yes or No depending on the player's choice.",
+    "pins": {
+      "TitleLocId": "Localization string id for the title, not literal text.",
+      "TextLocId": "Localization string id for the body text, not literal text."
+    }
+  },
+  "popupendofgame": {
+    "summary": "Asks the engine to show the end-of-game screen, then fires Out immediately."
+  },
+  "popupingamecredits": {
+    "summary": "Asks the engine to show the in-game credits, then fires Out immediately."
+  },
+  "popuptutorialmessagebox": {
+    "summary": "Opens a modal tutorial message box with localized title, text and button label. Out fires once the player dismisses it.",
+    "pins": {
+      "TitleLocId": "Localization string id for the title, not literal text.",
+      "TextLocId": "Localization string id for the body text, not literal text.",
+      "ButtonLocId": "Localization string id for the button label; empty by default."
+    }
+  },
+  "popuptutorialmessageboxwithami": {
+    "summary": "Like PopUpTutorialMessageBox, but also passes an action map id, presumably so the text can show the key bound to an input action. Out fires once the player dismisses it.",
+    "pins": {
+      "TitleLocId": "Localization string id for the title, not literal text.",
+      "TextLocId": "Localization string id for the body text, not literal text.",
+      "ButtonLocId": "Localization string id for the button label; empty by default.",
+      "ActionMapId": "Input action-map id handed to the message box; empty by default."
+    }
+  },
+  "postfx": {
+    "summary": "Turns a named post-processing screen effect on or off, then fires Out.",
+    "pins": {
+      "PostFxName": "Name of the post-process effect; if unset nothing happens and Out does not fire."
+    }
+  },
+  "proximitytrigger": {
+    "summary": "Enables a proximity trigger volume and fires when something enters it, leaves it, or uses it, outputting the entity involved. Disable stops listening but does not switch the trigger itself off.",
+    "pins": {
+      "CheckNow": "If true, Enter fires immediately on Enable for each entity already inside the trigger.",
+      "Use": "Fires when the player uses the trigger (usable triggers; see TriggerState).",
+      "Collider": "The entity that caused the latest Enter, Leave or Use."
+    }
+  },
+  "radio": {
+    "summary": "Turns the in-world radio broadcasts on or off, via the engine's EnableRadioBroadcast call.",
+    "pins": {
+      "Value": "True to enable broadcasts, false to disable. If unset nothing changes, but Out still fires."
+    }
+  },
+  "random": {
+    "summary": "Fires one of its Output pins at random, never repeating one until all have fired. When all have fired it stops, unless AutoReset is on or Reset is triggered.",
+    "pins": {
+      "AutoReset": "If true, starts a fresh round automatically after every output has fired once.",
+      "Output": "Dynamic: add as many Output pins as needed."
+    }
+  },
+  "randomboolean": {
+    "summary": "Sets Target to true or false with equal probability, then fires Out."
+  },
+  "randomfloat": {
+    "summary": "Sets Target to a random float between Min and Max, then fires Out. Nothing happens if Min or Max is unset."
+  },
+  "randominteger": {
+    "summary": "Sets Target to a random integer from Min to Max inclusive, then fires Out. Nothing happens if Min or Max is unset."
+  },
+  "reinforcementregion": {
+    "summary": "Changes how a game region spawns mercenary reinforcements by passing a density and threshold to the engine, then fires Out.",
+    "pins": {
+      "GameRegion": "The region entity whose reinforcement spawning is changed; nothing happens if unset.",
+      "MercDensity": "New merc density value; defaults to -1. Exact meaning is not visible in the script.",
+      "MercThreshold": "New merc threshold value; defaults to -1. Exact meaning is not visible in the script."
+    }
+  },
+  "removebuddy": {
+    "summary": "Removes a buddy from the world through the buddies manager and fires Out.",
+    "pins": {
+      "Instant": "Remove immediately rather than the default removal; defaults to false.",
+      "Buddy": "Buddy entity to remove; nothing happens when unset."
+    }
+  },
+  "removecallbacks": {
+    "summary": "Does nothing in retail: its call to remove an entity's script callbacks is commented out. It only writes a trace line and fires Out."
+  },
+  "removeentitiesintrigger": {
+    "summary": "Deletes every entity currently inside a proximity trigger volume, via DeleteEntityInTrigger. Out always fires.",
+    "pins": {
+      "ProximityTriggerEntity": "A proximity trigger entity whose contents are removed."
+    }
+  },
+  "removeentity": {
+    "summary": "Removes an entity from the world. Out always fires, even if Entity is unset."
+  },
+  "rescuebuddyevent": {
+    "summary": "While enabled, listens to the buddies manager: Changed fires when the rescue buddy changes, Spawned when the rescue buddy spawns.",
+    "pins": {
+      "SpawnedBuddy": "The rescue buddy's entity, set when Spawned fires."
+    }
+  },
+  "rescuebuddyinmenu": {
+    "summary": "Shows or hides the rescue buddy in the menu via the buddies manager, then fires Out."
+  },
+  "safehousestatus": {
+    "summary": "Checks whether a safe house is locked and fires Locked or UnLocked.",
+    "pins": {
+      "SafeHouse": "The safe house entity; if unset neither output fires."
+    }
+  },
+  "saveafterteleport": {
+    "summary": "Asks the player entity to save the game on its next update, meant for use right after teleporting the player so the save records the new position."
+  },
+  "scriptedaimode": {
+    "summary": "Switches the global scripted AI mode on or off, via EnableScriptedAIMode/DisableScriptedAIMode. What the mode changes in AI behaviour is not visible from the script."
+  },
+  "scriptedsceneprefab": {
+    "summary": "Starts or stops a scripted scene (a prefab-driven staged scene), optionally adding up to two extra participants. Start waits until the scene and all given participants are loaded before starting.",
+    "pins": {
+      "ScriptedSceneEntity": "A scripted-scene prefab entity (CScriptedScenePrefabEntity).",
+      "OptionalParticipant1": "Extra character to add to the scene; optional.",
+      "OptionalParticipant2": "Second extra character to add to the scene; optional.",
+      "Out": "Fires once the scene has started (after any spawn waits) or has been told to stop."
+    }
+  },
+  "selectmission": {
+    "summary": "Asks the mission manager to choose the next mission(s) to offer and outputs the result, then fires Out.",
+    "pins": {
+      "Missions": "Whatever GetFCXMissionManager():SelectMission() returns, declared as a string; may hold more than one mission."
+    }
+  },
+  "sendchangestateevent": {
+    "summary": "Moves a compound physics object (a multi-state destructible) to its next state, or forces it into a specific state. ForceState waits for the entity to spawn if needed.",
+    "pins": {
+      "StateID": "Target state index for ForceState; ForceState does nothing if unset.",
+      "Out": "Fires immediately, even when ForceState is still waiting for the entity to spawn."
+    }
+  },
+  "sendpiercestim": {
+    "summary": "Sends a pierce (bullet-type damage) stimulus to a target entity, optionally from an origin entity, then fires Out.",
+    "pins": {
+      "Origin": "Optional entity the stimulus comes from; when unset it has no origin.",
+      "StimLevel": "Stimulus strength; defaults to 15."
+    }
+  },
+  "sendplaygame": {
+    "summary": "Asks the engine to send its PlayGame signal (an opaque engine call, apparently to start or resume gameplay), then fires Out."
+  },
+  "sendsocialeventtopawn": {
+    "summary": "Sends a social event command to a pawn and fires Out straight away. What the pawn does with it is up to the engine."
+  },
+  "sequence": {
+    "summary": "Plays, stops, pauses or resumes a named cinematic (movie system) sequence.",
+    "pins": {
+      "SequenceName": "Name of the movie sequence."
+    }
+  },
+  "sequencetimer": {
+    "summary": "Fires TimeReached when a named cinematic sequence reaches a given time.",
+    "pins": {
+      "Seconds": "Time into the sequence, in seconds. Defaults to 0.",
+      "SequenceName": "Name of the movie sequence; nothing happens if unset.",
+      "Out": "Fires immediately once the listener is set up.",
+      "TimeReached": "Fires when the sequence reaches Seconds."
+    }
+  },
+  "setactionmap": {
+    "summary": "Changes the player's input action map (which controls do what): In and Set replace it, Push stacks a new one on top, and Pop removes a named one. Every input fires Out.",
+    "pins": {
+      "ActionMapName": "Name of the action map; if unset nothing changes but Out still fires."
+    }
+  },
+  "setanimation": {
+    "summary": "Copies AnimFile into Target (the variable wired to it), then fires Out. If AnimFile is unset, Target is left unchanged but Out still fires."
+  },
+  "setboolean": {
+    "summary": "Writes a boolean into Target, then fires Out: FromBool copies Bool, True and False set it directly, Toggle writes the opposite of Bool.",
+    "pins": {
+      "Toggle": "Writes NOT Bool into Target; wire Bool and Target to the same variable to flip it."
+    }
+  },
+  "setbuddydown": {
+    "summary": "Turns the buddy-down state on or off for a buddy (being downed and needing rescue instead of dying), and separately turns its 'buddy down success' on or off, by sending events to its AI component. Fires Out after each.",
+    "pins": {
+      "EnableBuddyDownSuccess": "Sends CFCXAIComponent_EnableBuddyDownSuccess; exact effect not visible in the script.",
+      "DisableBuddyDownSuccess": "Sends CFCXAIComponent_DisableBuddyDownSuccess.",
+      "Buddy": "Buddy entity; nothing happens and Out does not fire when unset."
+    }
+  },
+  "setbuddyhealth": {
+    "summary": "Sets up a buddy's maximum health through the engine's SetupBuddyHealth call, then fires Out.",
+    "pins": {
+      "Health": "Maximum health value to give the buddy; required."
+    }
+  },
+  "setbuddysavepointmode": {
+    "summary": "Switches a buddy's save-point mode on (Set) or off (Unset) and fires Out. Asks the buddy to change its behaviour, presumably to act as the buddy found at a safehouse save point."
+  },
+  "setcamera": {
+    "summary": "Switches the view to a cinematic camera entity, or back to the normal player camera when no camera is given, then fires Out.",
+    "pins": {
+      "CinematicCamera": "Camera entity to view through; leave unset to return to the player camera."
+    }
+  },
+  "setcameralimits": {
+    "summary": "Limits how far the player can turn the camera left, right, up and down, by sending the four limits to the player entity, then fires Out.",
+    "pins": {
+      "Player": "The player entity; if unset nothing happens and Out does not fire.",
+      "Left": "Left turn limit; defaults to 0. Unit (likely degrees) is not visible in the script.",
+      "Right": "Right turn limit; defaults to 0.",
+      "Up": "Upward look limit; defaults to 0.",
+      "Down": "Downward look limit; defaults to 0."
+    }
+  },
+  "setcurrentmission": {
+    "summary": "Makes the named mission the current (active) mission in the mission manager, then fires Out.",
+    "pins": {
+      "Mission": "Mission name; if unset nothing happens and Out does not fire."
+    }
+  },
+  "setentity": {
+    "summary": "Copies Entity into Target (the variable wired to it), then fires Out. An unset Entity clears Target."
+  },
+  "setfloat": {
+    "summary": "Writes Float into Target (FromFloat) or converts Integer to a float (ConvertInteger), then fires Out. Nothing happens if the chosen input is unset."
+  },
+  "sethudmode": {
+    "summary": "Switches the HUD between cinematic mode (for cutscene-like moments) and normal mode, then fires Out."
+  },
+  "setinteger": {
+    "summary": "Writes Integer into Target, or converts Float by rounding down (FloorFloat) or to the nearest integer (RoundFloat, .5 rounds up), then fires Out. Nothing happens if the chosen input is unset."
+  },
+  "setlibrarymissionstate": {
+    "summary": "Records a library (faction) mission's state in the mission manager: HeardBriefing marks its briefing as heard, Accepted marks it as accepted. Both then fire Out.",
+    "pins": {
+      "Mission": "Mission name; if unset nothing happens and Out does not fire."
+    }
+  },
+  "setlookattargets": {
+    "summary": "Assigns a pawn's look-at targets for four roles (player, boss, helper, guard), waiting for the pawn to load first, then fires Out.",
+    "pins": {
+      "Target_Player": "Entity used as the player look-at target; defaults to the pawn itself.",
+      "Target_Boss": "Entity used as the boss look-at target; defaults to the pawn itself.",
+      "Target_Helper": "Entity used as the helper look-at target; defaults to the pawn itself.",
+      "Target_Guard": "Entity used as the guard look-at target; defaults to the pawn itself."
+    }
+  },
+  "setmalaria": {
+    "summary": "Controls the player's malaria: start or stop malaria 'bubble' mode, set how limited the pill supply is (limited, not-so-limited, unlimited), set the sickness level, end a blackout, or force a bubble blackout or a minor attack. Each input fires Out once it has acted.",
+    "pins": {
+      "SetSicknessLevel": "Does nothing if SicknessLevel is unset; does not need Player.",
+      "StopMalariaBlackout": "Ends a blackout in progress; does not need Player.",
+      "Player": "The player entity; every input except SetSicknessLevel and StopMalariaBlackout does nothing without it.",
+      "SicknessLevel": "Malaria sickness level passed to the engine; its range is not visible in the script."
+    }
+  },
+  "setmissionbarkbankstate": {
+    "summary": "Loads or unloads a mission's bark bank (the set of short NPC voice lines for that mission). Optionally reports when the bank has finished loading for a given character.",
+    "pins": {
+      "MissionTag": "Mission tag naming the bark bank. An empty string only logs a warning.",
+      "PawnForLoadedEvent": "Optional character; if set, Loaded fires when the bank is ready for them.",
+      "Out": "Fires right away after the load/unload request.",
+      "Loaded": "Fires when the bank has loaded; needs PawnForLoadedEvent to be set."
+    }
+  },
+  "setmissionstate": {
+    "summary": "Enables, disables or turns off a mission (a mission layer). Out always fires; an unknown or empty mission name is only logged.",
+    "pins": {
+      "Mission": "Mission/layer name as known to the game mission manager.",
+      "Off": "Calls the mission's Off(), a separate state from Disable; how the two differ is not visible here."
+    }
+  },
+  "setmusicstate": {
+    "summary": "Tells the music manager which world's music set to use, then fires Out.",
+    "pins": {
+      "WorldId": "World number passed to the music manager (e.g. which of the two maps); exact values not in the script."
+    }
+  },
+  "setscripteddeathmode": {
+    "summary": "Turns scripted-death mode on or off, then fires Out. With it on, the player's death is presumably left to the mission script (see PlayerHealthEvents' ScriptedDeath) instead of the normal death handling."
+  },
+  "setsidequestmissionstate": {
+    "summary": "Records the state of a buddy side-quest in the buddies manager: Accepted marks the named buddy's side-quest as accepted, Canceled and Succeeded end the current one. Each fires Out.",
+    "pins": {
+      "Accepted": "Does nothing if Buddy is unset.",
+      "Buddy": "Name of the buddy offering the side-quest; only used by Accepted."
+    }
+  },
+  "setstring": {
+    "summary": "Writes a string into Target, then fires Out: copies String, or converts Integer, Float or Boolean (\"true\"/\"false\") to text depending on which input is triggered. Nothing happens if the chosen input is unset."
+  },
+  "settimeofday": {
+    "summary": "Sets the in-game clock to a given hour and minute, or advances it by that many hours and minutes, wrapping past midnight.",
+    "pins": {
+      "Hour": "0-23. Defaults to 0; IncrementTimeOfDay clamps it to 0-23.",
+      "Minute": "0-59. Defaults to 0; IncrementTimeOfDay clamps it to 0-59.",
+      "IncrementTimeOfDay": "Adds Hour and Minute to the current time instead of setting it."
+    }
+  },
+  "settoscriptedcollisiongroup": {
+    "summary": "Moves an entity into the 'scripted' collision group, via SetToScriptedCollisionGroup, waiting for it to spawn if it is not loaded yet. What that group collides with is not visible from the script.",
+    "pins": {
+      "Out": "Fires once the collision group has been set, possibly after waiting for the entity to spawn."
+    }
+  },
+  "setupplayerforanchoranim": {
+    "summary": "Prepares the player entity to play an anchored animation (one tied to a fixed position in the world), optionally letting the player still move the camera, then fires Out.",
+    "pins": {
+      "Player": "The player entity; if unset nothing happens and Out does not fire.",
+      "CameraControl": "Whether the player keeps camera control during the animation; defaults to false."
+    }
+  },
+  "setvisibility": {
+    "summary": "Shows or hides an entity.",
+    "pins": {
+      "Visible": "Defaults to true (show)."
+    }
+  },
+  "setwaterlevel": {
+    "summary": "Sets the water surface height in one sector of a world, via the Domino water level manager.",
+    "pins": {
+      "Level": "Water surface height, presumably in world units (metres). Required.",
+      "World": "World name; defaults to \"world2\".",
+      "SectorId": "Sector whose water level changes. Required."
+    }
+  },
+  "setweaponsafemode": {
+    "summary": "Puts the player's weapon into safe mode (lowered, cannot fire) or back to normal by sending a command to the player entity, then fires Out.",
+    "pins": {
+      "Player": "The player entity to command; not checked for being set."
+    }
+  },
+  "shootattarget": {
+    "summary": "Orders a pawn to shoot at a target entity, waiting for the target to load first. Started fires when the pawn reports it has begun shooting.",
+    "pins": {
+      "Target": "Entity to shoot at; if unset the command is still sent without a target."
+    }
+  },
+  "simplenode": {
+    "summary": "Pass-through: fires Out whenever In fires. Useful as a junction for tidying wires."
+  },
+  "simpleplayanim": {
+    "summary": "Plays an animation on a simple object (not an AI pawn). Started and Finished fire when the object reports the animation starting and ending.",
+    "pins": {
+      "Entity": "Object entity to animate; Entity and AnimFile are required.",
+      "LoopAnim": "Loop the animation; defaults to false."
+    }
+  },
+  "socialregion": {
+    "summary": "Enables or disables a social region (an area that groups AI into a shared idle/combat state).",
+    "pins": {
+      "SocialRegion": "A social region entity (CSocialRegion)."
+    }
+  },
+  "soundmixing": {
+    "summary": "Starts or stops a sound-mixing preset (the engine's mix override, such as ducking some sound groups), then fires Out."
+  },
+  "spawnbuddy": {
+    "summary": "Spawns a named buddy at a spawn point through the buddies manager. Out fires once the buddy is positioned; BuddyReady fires once it has also fully spawned. Nothing fires if the buddy cannot be spawned.",
+    "pins": {
+      "BuddyName": "Name of the buddy to spawn; required.",
+      "SpawnPoint": "Entity the buddy is spawned and positioned at; required.",
+      "Layer": "Mission layer to spawn into; defaults to \"Main\".",
+      "Unarmed": "Spawn the buddy without weapons; defaults to false.",
+      "BuddyReady": "Fires when the positioned buddy has finished spawning; may coincide with Out."
+    }
+  },
+  "spawnmissionitem": {
+    "summary": "Spawns a pickup mission item of a given archetype on a pawn and fires Out, with the item, once the engine reports it spawned.",
+    "pins": {
+      "Pawn": "Pawn the item is spawned for; presumably it drops or carries it.",
+      "ItemArchetype": "Archetype name of the pickup item to spawn.",
+      "SpawnedItem": "The spawned item entity."
+    }
+  },
+  "spawnprimarybuddy": {
+    "summary": "Spawns the player's current primary buddy at a spawn point. Out fires once the buddy is positioned, or at once with an empty SpawnedBuddy if no primary buddy is available; BuddyReady fires once it has fully spawned.",
+    "pins": {
+      "SpawnPoint": "Entity the buddy is spawned and positioned at; required.",
+      "Layer": "Mission layer to spawn into; defaults to \"Main\".",
+      "Unarmed": "Spawn the buddy without weapons; defaults to false.",
+      "BuddyReady": "Fires when the positioned buddy has finished spawning; may coincide with Out.",
+      "SpawnedBuddy": "The spawned buddy, or empty when no primary buddy is available."
+    }
+  },
+  "spawnreinforcement": {
+    "summary": "Starts a reinforcement scenario from a reinforcement point towards a target, waiting until both entities are loaded, then fires Out.",
+    "pins": {
+      "ReinforcementPoint": "Entity the reinforcements come from; required.",
+      "Target": "Entity the reinforcements go after; required.",
+      "ReactOnlyToPlayer": "Reinforcements react only to the player; defaults to false."
+    }
+  },
+  "startdefoliantfx": {
+    "summary": "Starts the defoliant visual effect at up to six entities with a given radius, then fires Out. It uses the longest run of set entities starting at Entity1.",
+    "pins": {
+      "Radius": "Radius of the effect; if unset nothing happens. Unit (likely metres) is not visible in the script.",
+      "Entity1": "Required; with it unset nothing happens.",
+      "Entity2": "Later entities are used only if every earlier one is set too."
+    }
+  },
+  "startscript": {
+    "summary": "Spawns another Domino script as its own entity and outputs its id in Domino. Started fires once it has spawned and Closed when it is removed. Triggering In again stops the previous instance before starting a new one.",
+    "pins": {
+      "Script": "The Domino script (box class) to launch.",
+      "Domino": "Entity id of the launched script; feed it to StopScript to stop it."
+    }
+  },
+  "statuslistener": {
+    "summary": "Fires whenever an entity spawns (streams in) or is removed from the world, until disabled."
+  },
+  "stimsemitter": {
+    "summary": "Turns a stims emitter on or off. A stims emitter is a component that sends stimuli (such as sounds or alerts) that AI can perceive.",
+    "pins": {
+      "StimsEmitter": "An entity with a stims emitter component (CStimsEmitterComponent)."
+    }
+  },
+  "stopdominobrain": {
+    "summary": "Tells a pawn to end its Domino-scripted behaviour, handing it back to its normal AI, and fires Out when the pawn reports it has ended.",
+    "pins": {
+      "Out": "Fires on the pawn's DominoEnded event."
+    }
+  },
+  "stopscript": {
+    "summary": "Stops a running Domino script by removing its entity; Stopped fires once it has been removed.",
+    "pins": {
+      "Domino": "Entity id of a running script, typically the Domino output of a StartScript box."
+    }
+  },
+  "stringconcatenate": {
+    "summary": "Appends a value to Input and writes the result to Target, then fires Out. The triggered pin picks which value is appended: String, Integer, Float or Boolean (as \"true\"/\"false\").",
+    "pins": {
+      "Input": "String to append to; if unset, Target becomes just the appended value.",
+      "WithFloat": "Floats are formatted with %f (six decimals) when Input is set."
+    }
+  },
+  "subvertedmissioncount": {
+    "summary": "Reads from the mission manager how many missions the player has subverted for each faction, then fires Out.",
+    "pins": {
+      "Blue": "Subverted-mission count for the blue faction (the APR).",
+      "Red": "Subverted-mission count for the red faction (the UFLL)."
+    }
+  },
+  "switch": {
+    "summary": "Fires its Output pins in turn: the first trigger fires the first output, the next trigger the second, and so on. When all have fired it stops, unless AutoReset is on or Reset is triggered.",
+    "pins": {
+      "AutoReset": "If true, wraps around to the first output after the last has fired.",
+      "Output": "Dynamic: add as many Output pins as needed."
+    }
+  },
+  "teleportentity": {
+    "summary": "Teleports an entity to a destination entity's position and fires Out. Out fires even when an input is missing and nothing moved.",
+    "pins": {
+      "PawnEntity": "Entity to teleport; any entity, not only pawns.",
+      "Destination": "Entity whose location is the teleport destination."
+    }
+  },
+  "testifnil": {
+    "summary": "Fires Is_nil if every input is unset, otherwise Is_not_nil. Connect one input to check whether a variable has a value."
+  },
+  "texttoscreen": {
+    "summary": "Debug helper that draws text on screen for a while (arrays are joined), then fires Out immediately. Nothing is drawn if Text is unset.",
+    "pins": {
+      "Duration": "Display time, presumably in seconds; defaults to 1."
+    }
+  },
+  "threestringlog": {
+    "summary": "Debug helper that joins the set strings with \" : \" and writes the line to the engine log, then fires Out."
+  },
+  "townescape": {
+    "summary": "Starts or stops the 'town escape' sequence through the engine calls StartTownEscape/StopTownEscape, then fires Out."
+  },
+  "triggerpusher": {
+    "summary": "Tells a pusher entity to push obstacles out of its way (engine event CPusher_PushObstalceAway).",
+    "pins": {
+      "Pusher": "A pusher entity (CPusher)."
+    }
+  },
+  "triggerstate": {
+    "summary": "Enables or disables a trigger, or makes a proximity trigger usable or not usable by the player. SetAsUsable can also set whether use requires looking at the trigger or facing it within an angle.",
+    "pins": {
+      "Trigger": "A trigger entity; usability inputs need a proximity trigger component.",
+      "CheckLookAt": "Used only by SetAsUsable: whether the player must look at the trigger to use it. Unset leaves it unchanged.",
+      "CheckAngle": "Used only by SetAsUsable: whether an angle check applies. Unset leaves it unchanged."
+    }
+  },
+  "tutorial": {
+    "summary": "Launches a tutorial of the given type and fires TutorialCompleted when the engine reports it is done.",
+    "pins": {
+      "LaunchTutorial": "Ignored if Player or TutorialType is unset, or a tutorial from this box is still running.",
+      "TutorialType": "Numeric tutorial id; the mapping to tutorials is not visible in the script.",
+      "ForceTutorial": "Presumably shows the tutorial even if it was already seen or tutorials are off; defaults to false."
+    }
+  },
+  "unloadmoviesequence": {
+    "summary": "Unloads a cinematic sequence from the movie system and registers it with the mission manager as a sequence to unload.",
+    "pins": {
+      "Sequence": "Name of the movie sequence; nothing happens and Out does not fire if unset."
+    }
+  },
+  "usableentity": {
+    "summary": "Makes an entity usable or not usable by the player, sets the size of its use area, and optionally listens for the player using it.",
+    "pins": {
+      "Entity": "An entity with a usable component (CUsableComponent).",
+      "BoxSize": "Size of the use area for SetSize; units not visible from the script. SetSize does nothing if unset.",
+      "Out": "Fires after SetAsUsable, SetAsUnusable and SetSize; the listening inputs do not fire it.",
+      "OnUse": "Fires each time the player uses the entity, while listening."
+    }
+  },
+  "usestp": {
+    "summary": "Tells a pawn to start (Start) or stop (Stop, Abort) using an STP, an engine behaviour the script does not explain. Started and Stopped fire as the pawn reports each.",
+    "pins": {
+      "Abort": "Stops the STP with the abort flag set, presumably ending it immediately.",
+      "Stopped": "Fires on the pawn's STPFinished event, or at once if nothing was started."
+    }
+  },
+  "vehicledamage": {
+    "summary": "Listens to a vehicle and fires each time it changes damage state, reporting the new state number.",
+    "pins": {
+      "StateID": "Damage state index reported by the most recent StateChange."
+    }
+  },
+  "vehiclefollowpath": {
+    "summary": "Puts one or two pawns into a vehicle (GetIn), then drives the vehicle along a path (Start) or stops it (Stop). InVehicle fires after GetIn; Out fires after Start or Stop; Finished fires when the path is complete.",
+    "pins": {
+      "GetIn": "Seats Pawn1 and optional Pawn2 in the vehicle, waiting for it to load.",
+      "Pawn1": "First pawn to seat, presumably the driver; required for GetIn.",
+      "Pawn2": "Optional second pawn to seat.",
+      "Speed": "Driving speed handed to the engine; units not visible in the script.",
+      "Loop": "Loop the path; defaults to false.",
+      "UseAvoidance": "Steer around obstacles; defaults to false.",
+      "Finished": "Fires on the vehicle's FollowScriptedPathFinished event."
+    }
+  },
+  "vehiclelistener": {
+    "summary": "Watches a character and fires when they get into or out of one specific vehicle.",
+    "pins": {
+      "Pawn": "Character to watch, e.g. the player; required to enable.",
+      "Vehicle": "Only entering or leaving this vehicle fires an output."
+    }
+  },
+  "vehicleride": {
+    "summary": "Places a character into a vehicle seat as a passenger, or takes them out again. It waits for both the vehicle and the character to spawn first.",
+    "pins": {
+      "User": "The character to seat in or remove from the vehicle.",
+      "SeatIndex": "Seat to use; the default when unset is not visible from the script.",
+      "Finished": "Fires once the bind or unbind has been done."
+    }
+  },
+  "vehiclestate": {
+    "summary": "Changes a vehicle's state: usable or not usable by the player, destructible or indestructible, or engine broken."
+  },
+  "wasbetrayed": {
+    "summary": "Checks whether the given faction was betrayed and fires True or False. Trigger Red to ask about the red faction (UFLL) or Blue for the blue faction (APR)."
+  },
+  "weaponbazaar": {
+    "summary": "Unlocks an item for sale at the weapon shop (the bazaar), then fires Out.",
+    "pins": {
+      "Item": "Name of the shop item to unlock; if unset nothing happens and Out does not fire."
+    }
+  },
+  "winningfaction": {
+    "summary": "Asks the mission manager which faction came out ahead in Act 1 or Act 2 and fires Blue (APR), Red (UFLL) or None."
+  }
+}

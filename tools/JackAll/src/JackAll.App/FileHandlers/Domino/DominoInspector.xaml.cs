@@ -18,7 +18,10 @@ public partial class DominoInspector : UserControl
 {
     private sealed record ParamRow(string Name, string Value);
 
-    private sealed record PinRow(string Direction, string Name, string Detail);
+    private sealed record PinRow(string Direction, string Name, string Detail, string? Note)
+    {
+        public bool HasNote => Note is not null;
+    }
 
     public DominoInspector() => InitializeComponent();
 
@@ -48,7 +51,8 @@ public partial class DominoInspector : UserControl
         }
     }
 
-    public void ShowNode(DominoNodeViewModel? vm)
+    /// <param name="canvas">Supplies the boxes a boundary node feeds.</param>
+    public void ShowNode(DominoNodeViewModel? vm, DominoGraphViewModel? canvas)
     {
         // The graph-level sections are the fallback view. Once a box is selected they'd just be noise
         // above the thing actually being inspected.
@@ -59,7 +63,7 @@ public partial class DominoInspector : UserControl
             Details.Visibility = Visibility.Collapsed;
             EmptyNotice.Visibility = Visibility.Visible;
             EmptyNotice.Text = vm is { IsBoundary: true }
-                ? $"“{vm.Title}” is this graph's own {vm.Subtitle}, not a box."
+                ? $"{vm.Tooltip}{ReadersText(vm, canvas)}"
                 : "Select a box on the canvas to inspect it.";
             return;
         }
@@ -67,8 +71,11 @@ public partial class DominoInspector : UserControl
         EmptyNotice.Visibility = Visibility.Collapsed;
         Details.Visibility = Visibility.Visible;
 
-        NodeTitle.Text = node.DisplayName;
+        NodeTitle.Text = vm.Title;
         NodeCategory.Text = node.Signature?.Category ?? "uncategorized";
+        NodeDescription.Text = node.Signature?.Doc?.Summary;
+        NodeDescription.Visibility = NodeDescriptionSource.Visibility =
+            node.Signature?.Doc is null ? Visibility.Collapsed : Visibility.Visible;
         NodeTypePath.Text = node.NodeTypePath;
         NodeInstance.Text = vm.Subtitle;
 
@@ -102,11 +109,18 @@ public partial class DominoInspector : UserControl
         }
 
         var rows = new List<PinRow>();
-        rows.AddRange(signature.ControlIns.Select(p => new PinRow("in ▸", p.Name, p.Dynamic ? "dynamic" : "")));
+        rows.AddRange(signature.ControlIns.Select(p => new PinRow("in ▸", p.Name, p.Dynamic ? "dynamic" : "", signature.NoteFor(p.Name))));
         rows.AddRange(signature.ControlOuts.Select(p => new PinRow("out ▸", p.Name,
-            string.Join(" ", new[] { p.Delayed ? "delayed" : null, p.Dynamic ? "dynamic" : null }.Where(s => s is not null)))));
-        rows.AddRange(signature.DataIns.Select(p => new PinRow("in ●", p.Name, p.Type)));
-        rows.AddRange(signature.DataOuts.Select(p => new PinRow("out ●", p.Name, p.Type)));
+            string.Join(" ", new[] { p.Delayed ? "delayed" : null, p.Dynamic ? "dynamic" : null }.Where(s => s is not null)),
+            signature.NoteFor(p.Name))));
+        rows.AddRange(signature.DataIns.Select(p => new PinRow("in ●", p.Name, DominoTypes.Describe(p.Type), signature.NoteFor(p.Name))));
+        rows.AddRange(signature.DataOuts.Select(p => new PinRow("out ●", p.Name, DominoTypes.Describe(p.Type), signature.NoteFor(p.Name))));
         return rows;
+    }
+
+    private static string ReadersText(DominoNodeViewModel boundary, DominoGraphViewModel? canvas)
+    {
+        var readers = canvas?.ReadersOf(boundary).Select(r => $"• {r.Title}  ({r.Subtitle})").ToList() ?? [];
+        return readers.Count == 0 ? "" : $"\n\nRead by:\n{string.Join("\n", readers)}";
     }
 }

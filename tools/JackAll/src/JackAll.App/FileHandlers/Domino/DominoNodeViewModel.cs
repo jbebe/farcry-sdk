@@ -29,38 +29,46 @@ public sealed class DominoNodeViewModel : Observable
         Role = NodeRole.Box;
         _location = new Point(positioned.X, positioned.Y);
         Width = positioned.Width;
-        Title = node.DisplayName;
-        Subtitle = BuildSubtitle(node);
+        Title = node.TypeTitle;
+        Subtitle = node.InstanceLabel;
         Category = node.Signature?.Category;
+        Tooltip = node.Signature?.Doc is { } doc ? $"{Title}\n{doc.Summary}" : $"{Title}\n{node.NodeTypePath}";
     }
 
-    private DominoNodeViewModel(string title, string subtitle, Point location)
+    private DominoNodeViewModel(string title, string subtitle, string tooltip)
     {
         Node = null;
         Role = NodeRole.Boundary;
-        _location = location;
         // Measured like any other node: a graph input named PrimaryBuddy_Entity does not fit in a
         // fixed-width box, and an overflowing port drags its wire's anchor outside the node.
-        Width = Math.Clamp(TextMetrics.Width(title, 11) + 70, 150, 320);
+        Width = Math.Clamp(Math.Max(TextMetrics.Width(title, 11) + 70, TextMetrics.Width(subtitle, 9) + 30), 150, 320);
         Title = title;
         Subtitle = subtitle;
+        Tooltip = tooltip;
         Category = null;
     }
 
-    /// <summary>A boundary node standing for one of the graph's own data inputs - a variable the parent
-    /// graph supplies. Its single output feeds every box that reads that variable.</summary>
-    public static DominoNodeViewModel GraphInput(string variable, Point location)
+    /// <summary>A boundary node standing for a graph variable boxes read but no box writes. Its single
+    /// output feeds every box that reads it. <paramref name="type"/> is the declared type of the pins
+    /// reading it, when they agree; <paramref name="initValue"/> is what `Init()` sets it to.</summary>
+    public static DominoNodeViewModel GraphInput(string variable, string? type, string? initValue)
     {
-        var vm = new DominoNodeViewModel(variable, "graph input", location);
-        vm.Output.Add(new DominoConnectorViewModel(variable, PortKind.Data) { Title = variable });
+        string kind = DominoTypes.Describe(type);
+        var vm = initValue is null
+            ? new DominoNodeViewModel(variable, $"graph input  ·  {kind}",
+                $"self.{variable} ({kind}): nothing in this graph sets it, so a parent graph using this one as a box supplies it.")
+            : new DominoNodeViewModel(variable, $"graph variable  ·  {kind} = {initValue}",
+                $"self.{variable} ({kind}): set to {initValue} when the graph starts (in Init), then read by the boxes wired to it.");
+        vm.Output.Add(new DominoConnectorViewModel(variable, PortKind.Data, type) { Title = variable });
         return vm;
     }
 
     /// <summary>A boundary node standing for one of the graph's own control-out pins - what it fires
     /// when used as a sub-box by a parent.</summary>
-    public static DominoNodeViewModel GraphExit(string pin, Point location)
+    public static DominoNodeViewModel GraphExit(string pin)
     {
-        var vm = new DominoNodeViewModel(pin, "graph output", location);
+        var vm = new DominoNodeViewModel(pin, "graph output",
+            $"{pin}: an output this graph fires. A parent graph using this one as a box can wire it onward.");
         vm.Input.Add(new DominoConnectorViewModel(pin, PortKind.Control) { Title = pin });
         return vm;
     }
@@ -73,6 +81,12 @@ public sealed class DominoNodeViewModel : Observable
     public string Subtitle { get; }
     public string? Category { get; }
     public double Width { get; }
+
+    /// <summary>What the box does, or what the boundary node stands for.</summary>
+    public string Tooltip { get; }
+
+    /// <summary>The size nodify rendered this node at, written back by its container.</summary>
+    public Size ActualSize { get; set; }
 
     public ObservableCollection<DominoConnectorViewModel> Input { get; } = [];
     public ObservableCollection<DominoConnectorViewModel> Output { get; } = [];
@@ -116,17 +130,4 @@ public sealed class DominoNodeViewModel : Observable
     /// <summary>True when the node type's script couldn't be read, so there is no pin list - the node is
     /// drawn from whatever the graph itself referenced rather than from a signature.</summary>
     public bool SignatureMissing => Role == NodeRole.Box && Node?.Signature is null;
-
-    /// <summary>The line under the title: what kind of box this is and where it lives in the script.</summary>
-    private static string BuildSubtitle(GraphNode node)
-    {
-        string type = NodeSignature.ShortNameFor(node.NodeTypePath);
-        return node.Ref switch
-        {
-            InstanceBoxRef i => $"{type}  ·  self[{i.Slot}]",
-            NamedInstanceBoxRef => type,
-            PooledBoxRef => $"{type}  ·  pooled, in {node.OwnerFunction}",
-            _ => type,
-        };
-    }
 }

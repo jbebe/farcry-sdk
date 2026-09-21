@@ -43,16 +43,36 @@ public partial class DominoTabView : UserControl
         vm.Canvas.PropertyChanged += OnCanvasPropertyChanged;
         _ready = true;
 
-        // The editor only knows its viewport size once it has been arranged, so the initial fit has to
-        // wait for the first layout pass rather than running here.
-        Loaded += (_, _) => FitToScreen();
+        // Node heights are only known once nodify has rendered them, so the layout is redone from the
+        // measured sizes after the first pass, and the initial fit waits for that. LayoutUpdated fires
+        // for the whole window, so the handler only listens while this tab is shown.
+        Loaded += (_, _) =>
+        {
+            if (!_measured)
+            {
+                Editor.LayoutUpdated += ApplyMeasuredLayout;
+            }
+        };
+        Unloaded += (_, _) => Editor.LayoutUpdated -= ApplyMeasuredLayout;
+    }
+
+    private bool _measured;
+
+    private void ApplyMeasuredLayout(object? sender, EventArgs e)
+    {
+        if (_vm.Canvas?.TryApplyMeasuredLayout() == true)
+        {
+            _measured = true;
+            Editor.LayoutUpdated -= ApplyMeasuredLayout;
+            Dispatcher.BeginInvoke(FitToScreen, System.Windows.Threading.DispatcherPriority.Loaded);
+        }
     }
 
     private void OnCanvasPropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName == nameof(DominoGraphViewModel.SelectedNode))
         {
-            Inspector.ShowNode(_vm.Canvas?.SelectedNode);
+            Inspector.ShowNode(_vm.Canvas?.SelectedNode, _vm.Canvas);
         }
         if (e.PropertyName is nameof(DominoGraphViewModel.SelectedNode) or nameof(DominoGraphViewModel.NodesInFocus))
         {

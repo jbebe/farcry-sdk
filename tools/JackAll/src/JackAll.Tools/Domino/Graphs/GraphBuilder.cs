@@ -56,6 +56,7 @@ public static class GraphBuilder
         public readonly List<(string, string)> LoadedResources = new();
         public readonly List<DataEvent> DataEvents = new();
         public readonly List<PendingEdge> PendingEdges = new();
+        public readonly Dictionary<string, string> VariableDefaults = new(StringComparer.Ordinal);
         public int StatementOrder;
     }
 
@@ -182,9 +183,15 @@ public static class GraphBuilder
                         events.Add(new EntryEvent(EntryEventKind.GraphExit, null, null, null, pin.PinName));
                         break;
 
+                    case SetGraphFieldStmt field when fn.Name == "Init"
+                                                      && !field.FieldName.StartsWith("box_", StringComparison.Ordinal)
+                                                      && !DominoNodeCatalog.IsDummyFunction(field.Value):
+                        state.VariableDefaults[field.FieldName] = DominoExprPreview.Full(field.Value);
+                        break;
+
                     // CreateBoxStmt: handled by RegisterPersistentBoxes.
-                    // RebindSelfToGraphStmt, ReadDataStmt, SetGraphFieldStmt, TraceConnectionStmt,
-                    // OtherStmt: no node/edge effect.
+                    // RebindSelfToGraphStmt, ReadDataStmt, TraceConnectionStmt, OtherStmt: no node/edge
+                    // effect.
                 }
             }
 
@@ -292,7 +299,8 @@ public static class GraphBuilder
             .ToList();
 
         return new ReconstructedGraph(
-            nodes, edges, DataFlowResolver.Resolve(state.DataEvents, controlAdjacency), state.RegisteredDeps, state.LoadedResources);
+            nodes, edges, DataFlowResolver.Resolve(state.DataEvents, controlAdjacency), state.RegisteredDeps, state.LoadedResources,
+            state.VariableDefaults);
     }
 
     /// <summary>A persistent box's `self[N]` slot is its original editor box ID, which is what the debug
