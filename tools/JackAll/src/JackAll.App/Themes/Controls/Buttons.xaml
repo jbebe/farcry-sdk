@@ -1,0 +1,27 @@
+<!-- No BasedOn on the implicit style: the theme template still applies underneath it. A third-party
+     canvas that needs stock buttons back puts an empty <Style TargetType="Button"/> in its resources. -->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <Style TargetType="Button">
+        <Setter Property="Padding" Value="{DynamicResource ButtonPadding}" />
+    </Style>
+
+    <!-- A button in a tab's toolbar row. -->
+    <Style x:Key="ToolbarButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="MinWidth" Value="86" />
+        <Setter Property="Margin" Value="0,0,6,0" />
+    </Style>
+
+    <!-- A small button beside a value: ×, Copy, Restore. -->
+    <Style x:Key="DenseButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Padding" Value="{DynamicResource DensePadding}" />
+        <Setter Property="MinWidth" Value="0" />
+    </Style>
+
+    <!-- The one action a tab is for: Deploy, Save. -->
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource {x:Type Button}}">
+        <Setter Property="Padding" Value="{DynamicResource PrimaryPadding}" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="MinWidth" Value="130" />
+    </Style>
+</ResourceDictionary>

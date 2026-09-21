@@ -63,8 +63,9 @@ public partial class MainWindow
             ? Visibility.Visible
             : Visibility.Collapsed;
 
-    /// <summary>A document tab keeps its close action in <c>Tag</c>; fixed tabs have none.</summary>
-    private void CloseSelectedDocumentTab() => ((MainTabs.SelectedItem as TabItem)?.Tag as Action)?.Invoke();
+    /// <summary>Closes <paramref name="tab"/>, or the selected tab when Ctrl+W passes none. A
+    /// document tab keeps its close action in <c>Tag</c>, fixed tabs have none.</summary>
+    private void CloseDocumentTab(TabItem? tab) => ((tab ?? MainTabs.SelectedItem as TabItem)?.Tag as Action)?.Invoke();
 
     // ------------------------------------------------------------ fragment XML editor tabs
 

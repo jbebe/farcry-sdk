@@ -23,7 +23,7 @@ public partial class MainWindow : Window
     public static readonly RoutedCommand NavigateBackCommand = new();
     public static readonly RoutedCommand NavigateForwardCommand = new();
 
-    private static readonly RoutedCommand CloseDocumentTabCommand = new();
+    public static readonly RoutedCommand CloseDocumentTabCommand = new();
     private static readonly RoutedCommand SelectTabCommand = new();
 
     public MainWindow()
@@ -42,7 +42,7 @@ public partial class MainWindow : Window
             NavigateForwardCommand,
             (_, _) => _vm.NavigateForward(),
             (_, e) => e.CanExecute = _vm.CanNavigateForward));
-        CommandBindings.Add(new CommandBinding(CloseDocumentTabCommand, (_, _) => CloseSelectedDocumentTab()));
+        CommandBindings.Add(new CommandBinding(CloseDocumentTabCommand, (_, e) => CloseDocumentTab(e.Parameter as TabItem)));
         CommandBindings.Add(new CommandBinding(SelectTabCommand, (_, e) => MainTabs.SelectedIndex = (int)e.Parameter));
 
         InputBindings.Add(new KeyBinding(CloseDocumentTabCommand, Key.W, ModifierKeys.Control));

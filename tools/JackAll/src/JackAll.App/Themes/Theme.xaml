@@ -1,0 +1,20 @@
+<!--
+    The design system. Views take brushes with DynamicResource, metrics and styles with StaticResource,
+    and declare no colour of their own. Inside this folder a reference to another file is always
+    DynamicResource: a StaticResource cannot see a sibling dictionary while these load.
+-->
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <ResourceDictionary Source="Colors.Light.xaml" />
+        <ResourceDictionary Source="Brushes.xaml" />
+        <ResourceDictionary Source="Metrics.xaml" />
+        <ResourceDictionary Source="Controls/Text.xaml" />
+        <ResourceDictionary Source="Controls/Buttons.xaml" />
+        <ResourceDictionary Source="Controls/Inputs.xaml" />
+        <ResourceDictionary Source="Controls/Tabs.xaml" />
+        <ResourceDictionary Source="Controls/Trees.xaml" />
+        <ResourceDictionary Source="Controls/DataGrids.xaml" />
+        <ResourceDictionary Source="Controls/Surfaces.xaml" />
+    </ResourceDictionary.MergedDictionaries>
+</ResourceDictionary>
