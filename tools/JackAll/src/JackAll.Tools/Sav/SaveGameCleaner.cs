@@ -17,17 +17,6 @@ public sealed record PurgeReport(int DatabasesEmptied, int RecordsRemoved, int O
 /// </summary>
 public static class SaveGameCleaner
 {
-    private static readonly uint PersistenceDbTag = FcbClassDefinitions.Crc32Ascii("PersistenceDB");
-
-    /// <summary>The record containers <c>CPersistenceDB::SaveDB</c> creates on every PersistenceDB node.</summary>
-    private static readonly uint[] RecordContainerTags =
-    [
-        FcbClassDefinitions.Crc32Ascii("HierarchiesQueue"),
-        FcbClassDefinitions.Crc32Ascii("Hierarchy"),
-        FcbClassDefinitions.Crc32Ascii("Entities"),
-        FcbClassDefinitions.Crc32Ascii("OmniEntities"),
-    ];
-
     /// <summary>
     /// Purges <paramref name="info"/>'s persisted entities into a new save, leaving the source file
     /// untouched. <paramref name="destPath"/> defaults to a fresh game-style name in the source's own
@@ -66,7 +55,7 @@ public static class SaveGameCleaner
             databases++;
             foreach (FcbObject container in database.Children)
             {
-                if (!RecordContainerTags.Contains(container.TypeHash))
+                if (!PersistenceHashes.RecordContainers.Contains(container.TypeHash))
                 {
                     continue;
                 }
@@ -86,7 +75,7 @@ public static class SaveGameCleaner
         while (pending.Count > 0)
         {
             FcbObject node = pending.Pop();
-            if (node.TypeHash == PersistenceDbTag)
+            if (node.TypeHash == PersistenceHashes.PersistenceDb)
             {
                 yield return node;
                 continue;

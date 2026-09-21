@@ -235,13 +235,14 @@ public sealed class FcbClassDefinitions : IFcbClassScope
     }
 
     /// <summary>The class a child node tagged <paramref name="name"/> resolves to under
-    /// <paramref name="owner"/>, nested there when no named class already answers for it.</summary>
+    /// <paramref name="owner"/>: an existing one, named if it was hash-only, else a new nested one.</summary>
     private static FcbClass ChildClass(FcbClass owner, string name)
     {
         uint hash = Crc32Ascii(name);
         FcbClass existing = owner.Resolve(hash);
-        if (existing.Name is not null)
+        if (!ReferenceEquals(existing, owner.Master._unknown))
         {
+            existing.Name ??= name;
             return existing;
         }
         var nested = new FcbClass(owner.Master) { Name = name };
@@ -254,6 +255,20 @@ public sealed class FcbClassDefinitions : IFcbClassScope
 
     /// <inheritdoc cref="IFcbClassScope.Resolve"/>
     FcbClass IFcbClassScope.Resolve(uint hash) => GetClass(hash);
+
+    /// <summary>Every class, nested ones included.</summary>
+    public IEnumerable<FcbClass> AllClasses()
+    {
+        var pending = new Stack<FcbClass>(_topLevel.Values);
+        while (pending.TryPop(out FcbClass? cls))
+        {
+            yield return cls;
+            foreach (FcbClass nested in cls.Nested.Values)
+            {
+                pending.Push(nested);
+            }
+        }
+    }
 
     private static void LoadClasses(FcbClassDefinitions defs, IEnumerable<XElement> nodes, Dictionary<uint, FcbClass> into)
     {

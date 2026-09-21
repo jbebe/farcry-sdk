@@ -49,6 +49,20 @@ public class ComponentSchemaTests
         }
     }
 
+    /// <summary>A hash-only class the XML nests, such as the <c>FX</c> slot under <c>FXs</c>, is named
+    /// by the schema rather than replaced by an empty one.</summary>
+    [Fact]
+    public void No_member_the_xml_declares_is_lost_in_a_nested_class()
+    {
+        static HashSet<(uint, string?, FcbMemberType)> Members(FcbClassDefinitions defs)
+            => [.. defs.AllClasses().SelectMany(c => c.AllMembers()).Select(m => (m.Hash, m.Member.Name, m.Member.Type))];
+
+        HashSet<(uint, string?, FcbMemberType)> lost = Members(FcbClassDefinitions.Load(ClassesPath));
+        lost.ExceptWith(Members(Merged()));
+
+        Assert.Empty(lost);
+    }
+
     [Fact]
     public void Every_schema_class_resolves_by_name_and_inherits_its_parents_members()
     {

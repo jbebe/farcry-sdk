@@ -15,8 +15,10 @@ public partial class MainWindow
 
     private void OpenSaveFcbEditor_Click(object sender, RoutedEventArgs e)
     {
-        if (_vm.SelectedSave is not { } save || _vm.SelectedSaveDetails?.DocumentXml is not { } xml) return;
-        OpenSaveFcbEditorTab(save, xml);
+        if (_vm.SelectedSave is { } save)
+        {
+            OpenSaveFcbEditorTab(save);
+        }
     }
 
     private async void PurgeSave_Click(object sender, RoutedEventArgs e)

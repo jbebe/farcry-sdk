@@ -53,7 +53,7 @@ public static class FcbValueCodec
                     return true;
 
                 case FcbMemberType.String:
-                    if (value.Length < 1 || value[^1] != 0) break;
+                    if (value.Length < 1 || value[^1] != 0 || HasControlBytes(value.AsSpan(0, value.Length - 1))) break;
                     decoded = System.Text.Encoding.UTF8.GetString(value, 0, value.Length - 1);
                     return true;
 
@@ -242,4 +242,17 @@ public static class FcbValueCodec
         return result;
     }
 
+    /// <summary>A control byte other than tab, LF or CR: such bytes were never text, and XML cannot carry them.</summary>
+    private static bool HasControlBytes(ReadOnlySpan<byte> text)
+    {
+        for (int i = text.IndexOfAnyInRange((byte)0, (byte)0x1F); i >= 0; i = text.IndexOfAnyInRange((byte)0, (byte)0x1F))
+        {
+            if (text[i] is not ((byte)'\t' or (byte)'\n' or (byte)'\r'))
+            {
+                return true;
+            }
+            text = text[(i + 1)..];
+        }
+        return false;
+    }
 }

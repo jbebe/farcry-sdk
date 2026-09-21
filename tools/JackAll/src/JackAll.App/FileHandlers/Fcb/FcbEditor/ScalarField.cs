@@ -27,7 +27,7 @@ public sealed class ScalarField : INotifyPropertyChanged
     public string? Label { get; }
 
     /// <summary>Non-null only for a "selXxx" value backed by a sibling "enumXxx" object in the data
-    /// (see <see cref="FcbObjectNodeView.BuildNode"/>'s remarks) - the ordered option names a dropdown
+    /// or registered by the engine - the ordered option names a dropdown
     /// shows in place of this field's plain <see cref="Text"/> box. Index i's underlying value is
     /// exactly i (see <see cref="SelectedEnumIndex"/>).</summary>
     public IReadOnlyList<string>? EnumChoices { get; }
@@ -93,7 +93,7 @@ public sealed class ScalarField : INotifyPropertyChanged
 
     /// <summary>
     /// Two-way dropdown view of <see cref="Text"/> for an <see cref="EnumChoices"/>-backed field - the
-    /// plain UInt32 value already *is* the option's index (see <see cref="FcbObjectNodeView.BuildNode"/>'s
+    /// plain UInt32 value already *is* the option's index (see <c>FcbNodeViews.FindEnumChoices</c>'s
     /// remarks), so this just routes through the same Text/Revalidate pipeline every other field uses,
     /// formatted/parsed as a plain integer exactly like an ordinary UInt32 box would be.
     /// </summary>

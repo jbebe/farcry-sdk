@@ -53,9 +53,7 @@ public sealed partial class TerrainMap
                 continue;
             }
 
-            string level = terrain.Groups["level"].Value.ToLowerInvariant();
-            Match cell = SpCellPattern().Match(level);
-            string name = cell.Success ? $"world{cell.Groups["digit"].Value}" : level;
+            string name = NameOfLevel(terrain.Groups["level"].Value);
             if (!byName.TryGetValue(name, out List<(string, int)>? sectors))
             {
                 byName[name] = sectors = [];
@@ -80,6 +78,30 @@ public sealed partial class TerrainMap
             ? string.CompareOrdinal(a.Name, b.Name)
             : a.IsCampaign ? -1 : 1);
         return maps;
+    }
+
+    /// <summary>The map a <c>levels\</c> or <c>worlds\</c> game path belongs to, or null for any other path.</summary>
+    public static string? MapOfPath(string path)
+    {
+        string[] segments = path.Split('\\', 3);
+        if (segments.Length < 3)
+        {
+            return null;
+        }
+        return segments[0].ToLowerInvariant() switch
+        {
+            "levels" => NameOfLevel(segments[1]),
+            "worlds" => segments[1].ToLowerInvariant(),
+            _ => null,
+        };
+    }
+
+    /// <summary>A single-player level cell belongs to its world; any other level is a map of its own.</summary>
+    private static string NameOfLevel(string level)
+    {
+        level = level.ToLowerInvariant();
+        Match cell = SpCellPattern().Match(level);
+        return cell.Success ? $"world{cell.Groups["digit"].Value}" : level;
     }
 
     private bool IsCampaign => Name.StartsWith("world", StringComparison.Ordinal);

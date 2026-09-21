@@ -2,6 +2,7 @@ using JackAll.App.FileHandlers.Domino;
 using JackAll.App.FileHandlers.Fcb;
 using JackAll.App.FileHandlers.Fcb.FcbEditor;
 using JackAll.App.FileHandlers.Mgb;
+using JackAll.App.FileHandlers.Sav;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Vfs;
@@ -50,32 +51,26 @@ public partial class MainWindow
     private void OpenFcbEditorTab(VfsFile file)
         => OpenOrFocusEditorTab(_openEditors, file.Hash, onRemoved =>
         {
-            string xml;
-            string? originalXml;
+            FcbDocumentViewModel vm;
             try
             {
-                xml = AppText.DecodeUtf8(_vm.Read(file));
-                // Null for a mod-added fragment (no archive provides its container) - nothing to diff
-                // against, so every value in it just reads as unremarkable base content.
-                originalXml = _vm.ReadOriginalFragment(file);
+                vm = _vm.OpenFragmentDocument(file);
             }
             catch (Exception ex)
             {
                 Warn($"Couldn't open '{file.FileName}': {ex.Message}");
                 return null;
             }
-
-            var vm = new FcbEditorTabViewModel(
-                file.FileName, file.Hash, xml, originalXml, FcbDefinitionsProvider.Value.Value,
-                _vm.StageFragmentEdits(file))
-            {
-                Notice = _vm.LayerMismatchNoteFor(file),
-            };
-            var view = new FcbEditorTabView(vm);
-            var tab = new TabItem { Content = view };
-            tab.Header = BuildClosableTabHeader(tab, vm, onRemoved);
-            return tab;
+            vm.Notice = _vm.LayerMismatchNoteFor(file);
+            return DocumentTab(vm, onRemoved);
         });
+
+    private TabItem DocumentTab(FcbDocumentViewModel vm, Action onRemoved)
+    {
+        var tab = new TabItem { Content = new FcbDocumentView(vm) };
+        tab.Header = BuildClosableTabHeader(tab, vm, onRemoved);
+        return tab;
+    }
 
     /// <summary>
     /// The Map tab's "Open entity in XML editor": worldsector containers split into one fragment per
@@ -101,34 +96,21 @@ public partial class MainWindow
 
         OpenOrFocusEditorTab(_openEditors, file.Hash, onRemoved =>
         {
-            FcbObject root;
-            FcbObject? vanilla;
             try
             {
-                // A container is binary, not a fragment's XML - parse it, and never round-trip it
-                // through XML, which is neither what it is on disk nor what has to be written back.
-                root = FcbDocument.Deserialize(_vm.Read(file));
-                vanilla = _vm.ReadOriginal(file) is { } original ? FcbDocument.Deserialize(original) : null;
+                return DocumentTab(_vm.OpenContainerDocument(file), onRemoved);
             }
             catch (Exception ex)
             {
                 Warn($"Couldn't open '{file.FileName}': {ex.Message}");
                 return null;
             }
-
-            var vm = new FcbEditorTabViewModel(
-                file.FileName, file.Hash, root, vanilla,
-                FcbDefinitionsProvider.Value.Value, _vm.StageContainerEdits(file));
-            var view = new FcbEditorTabView(vm);
-            var tab = new TabItem { Content = view };
-            tab.Header = BuildClosableTabHeader(tab, vm, onRemoved);
-            return tab;
         });
 
         // After the open-or-focus, so picking a second entity in a sector that is already open still
         // moves to it rather than just raising the tab.
         if (_openEditors.TryGetValue(file.Hash, out TabItem? open)
-            && open.Content is FcbEditorTabView editor)
+            && open.Content is FcbDocumentView editor)
         {
             editor.ViewModel.TryReveal(WorldHashes.DisEntityId, BitConverter.GetBytes(entityId));
         }
@@ -140,23 +122,32 @@ public partial class MainWindow
     private readonly Dictionary<string, TabItem> _openSaveEditors =
         new(StringComparer.OrdinalIgnoreCase);
 
-    /// <summary>The Saves tab's "Open in FCB Editor…" launcher - same tree/property-grid view the Files
-    /// tab's fragments get, and just as editable: Save here writes straight back into <paramref name="save"/>'s
-    /// own `.sav` file via <see cref="SaveGameDocument.WriteFcbRoot"/>, in place, no confirmation and no
-    /// backup - unlike a mod fragment there's no workspace/deploy step in between, so this really is the
-    /// player's real save the moment Save is clicked. <paramref name="documentXml"/> is only ever parsed
-    /// to build the tree; what actually gets written back is <c>root</c>, the tree <see cref="FcbEditorTabViewModel"/>
-    /// mutates in place as rows are edited - never <paramref name="documentXml"/> itself again.</summary>
-    private void OpenSaveFcbEditorTab(SaveRow save, string documentXml)
+    /// <summary>The Saves tab's "Open in FCB Editor…": the save's <c>PersistenceDB</c> in the same editor
+    /// as any document. Save writes the player's real <c>.sav</c> in place, with no backup.</summary>
+    private void OpenSaveFcbEditorTab(SaveRow save)
         => OpenOrFocusEditorTab(_openSaveEditors, save.Info.FilePath, onRemoved =>
         {
-            var vm = new FcbEditorTabViewModel(
-                save.FileName, hash: 0, documentXml, vanillaXml: null, FcbDefinitionsProvider.Value.Value,
-                persist: async root =>
+            FcbObject root;
+            try
+            {
+                root = SaveGameDocument.ReadFcbRoot(save.Info);
+            }
+            catch (Exception ex)
+            {
+                Warn($"Couldn't open '{save.FileName}': {ex.Message}");
+                return null;
+            }
+
+            string world = save.Info.WorldName;
+            var entities = new SaveGameBases(
+                world, id => _vm.PlacedEntitiesOf(world).GetAwaiter().GetResult().GetValueOrDefault(id), _vm.ArchetypeLookup(world));
+            return DocumentTab(new FcbDocumentViewModel(
+                save.FileName, root, baseline: null, new FcbEditContext(SaveGameNames.Shared.Value),
+                persist: async edited =>
                 {
                     try
                     {
-                        await Task.Run(() => SaveGameDocument.WriteFcbRoot(save.Info, root, save.Info.FilePath));
+                        await Task.Run(() => SaveGameDocument.WriteFcbRoot(save.Info, edited, save.Info.FilePath));
                         _vm.RefreshSaveRow(save.Info.FilePath);
                         return null;
                     }
@@ -165,11 +156,7 @@ public partial class MainWindow
                         return $"Couldn't write '{save.FileName}' back to disk: {ex.Message}";
                     }
                 },
-                useSaveGameNameHarvest: true);
-            var view = new FcbEditorTabView(vm);
-            var tab = new TabItem { Content = view };
-            tab.Header = BuildClosableTabHeader(tab, vm, onRemoved);
-            return tab;
+                entities), onRemoved);
         });
 
     // ------------------------------------------------------------ domino graph editor tabs
@@ -308,7 +295,7 @@ public partial class MainWindow
 
     /// <summary>The XML editor's header: <see cref="BuildClosableTabHeader"/> plus the dirty marker and
     /// the unsaved-changes prompt its two (fragment and savegame) tab flavours both need.</summary>
-    private FrameworkElement BuildClosableTabHeader(TabItem tab, FcbEditorTabViewModel vm, Action onRemoved)
+    private FrameworkElement BuildClosableTabHeader(TabItem tab, FcbDocumentViewModel vm, Action onRemoved)
     {
         FrameworkElement header = BuildClosableTabHeader(vm.Title,
             async () => await CloseEditorTabAsync(tab, vm, onRemoved),
@@ -316,7 +303,7 @@ public partial class MainWindow
 
         vm.PropertyChanged += (_, e) =>
         {
-            if (e.PropertyName == nameof(FcbEditorTabViewModel.IsDirty))
+            if (e.PropertyName == nameof(FcbDocumentViewModel.IsDirty))
             {
                 title.Text = vm.IsDirty ? $"{vm.Title} *" : vm.Title;
             }
@@ -325,9 +312,9 @@ public partial class MainWindow
     }
 
     /// <summary>Prompts for unsaved changes before closing - Save runs the exact same
-    /// <see cref="FcbEditorTabViewModel.SaveAsync"/> path as the tab's own Save button. A failed save
+    /// <see cref="FcbDocumentViewModel.SaveAsync"/> path as the tab's own Save button. A failed save
     /// leaves the tab open rather than closing anyway, so a bad edit is never silently discarded.</summary>
-    private async Task CloseEditorTabAsync(TabItem tab, FcbEditorTabViewModel vm, Action onRemoved)
+    private async Task CloseEditorTabAsync(TabItem tab, FcbDocumentViewModel vm, Action onRemoved)
     {
         if (vm.IsDirty)
         {

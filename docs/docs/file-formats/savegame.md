@@ -241,10 +241,9 @@ look/animation-state cluster (`UsingLook`, `AimAngles`, `BarkLookAngles`, `FovOv
 `WorldDiamonds`, `MainHud`, `BlueArmy`/`RedArmy`/`GreyArmy`/`NeutralArmy`.
 
 JackAll ships this as `tools/JackAll/assets/savegame_field_names.tsv` (964 rows), applied by the Saves
-tab after `binary_classes.xml`'s own resolution and a small hand-curated tag table, name-only —
-deliberately kept out of the round-trip-critical `FcbClassDefinitions`/`FcbXml` machinery the Files
-tab's mod-editing depends on, since neither resolution method is verified as rigorously as
-`binary_classes.xml`'s own provenance.
+tab after `binary_classes.xml`'s own resolution and a small hand-curated tag table, name-only. It is
+a fallback consulted only for a save, never merged into `FcbClassDefinitions`, since neither
+resolution method is verified as rigorously as `binary_classes.xml`'s own provenance.
 
 ## How a persisted entity's dynamic state is captured
 

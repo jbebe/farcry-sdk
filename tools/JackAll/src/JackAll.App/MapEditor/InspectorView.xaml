@@ -1,76 +1,13 @@
 <UserControl x:Class="JackAll.App.MapEditor.InspectorView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:fcbEditor="clr-namespace:JackAll.App.FileHandlers.Fcb.FcbEditor"
-             xmlns:mapEditor="clr-namespace:JackAll.App.MapEditor">
+             xmlns:fcbEditor="clr-namespace:JackAll.App.FileHandlers.Fcb.FcbEditor">
     <UserControl.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
                 <fcbEditor:PropertyEditorTemplates />
             </ResourceDictionary.MergedDictionaries>
             <BooleanToVisibilityConverter x:Key="Visible" />
-
-            <!-- Inherited rows are greyed, unset ones fainter still; an override is marked on the left and can be reverted. -->
-            <DataTemplate DataType="{x:Type mapEditor:InspectorField}">
-                <Border BorderThickness="3,0,0,0" Padding="4,1,0,1" Margin="0,0,0,1">
-                    <Border.Style>
-                        <Style TargetType="Border">
-                            <Setter Property="BorderBrush" Value="Transparent" />
-                            <Style.Triggers>
-                                <DataTrigger Binding="{Binding Origin}" Value="Inherited">
-                                    <Setter Property="Opacity" Value="0.55" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Origin}" Value="Unset">
-                                    <Setter Property="Opacity" Value="0.4" />
-                                    <Setter Property="ToolTip" Value="Not set: the engine keeps its own default. Editing writes it into the instance." />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding Origin}" Value="Overridden">
-                                    <Setter Property="BorderBrush" Value="#E08A00" />
-                                    <Setter Property="Background" Value="#FFF6D6" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Border.Style>
-                    <DockPanel>
-                        <Button DockPanel.Dock="Right" Content="Revert" Padding="5,0" Margin="6,0,0,0"
-                                VerticalAlignment="Center" Click="Revert_Click"
-                                Visibility="{Binding CanRevert, Converter={StaticResource Visible}}"
-                                ToolTip="Removes this override from the instance, so the archetype's value applies again" />
-                        <TextBlock DockPanel.Dock="Left" Width="120" Text="{Binding Row.DisplayName}"
-                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis"
-                                   ToolTip="{Binding Row.Type}">
-                            <TextBlock.Style>
-                                <Style TargetType="TextBlock">
-                                    <Style.Triggers>
-                                        <DataTrigger Binding="{Binding Origin}" Value="Overridden">
-                                            <Setter Property="FontWeight" Value="SemiBold" />
-                                        </DataTrigger>
-                                    </Style.Triggers>
-                                </Style>
-                            </TextBlock.Style>
-                        </TextBlock>
-                        <ContentControl Content="{Binding Row.Editor}" VerticalAlignment="Center" />
-                    </DockPanel>
-                </Border>
-            </DataTemplate>
-
-            <!-- A node and everything below it; collapsing it hides the whole subtree. -->
-            <DataTemplate DataType="{x:Type mapEditor:InspectorSection}">
-                <Expander IsExpanded="{Binding IsExpanded}">
-                    <Expander.Header>
-                        <StackPanel Orientation="Horizontal">
-                            <TextBlock Text="{Binding Title}" VerticalAlignment="Center" />
-                            <Button Content="Remove" Padding="5,0" Margin="8,0,0,0" Click="RemoveComponent_Click"
-                                    Visibility="{Binding CanRemove, Converter={StaticResource Visible}}"
-                                    ToolTip="Removes this component from the instance on the next Save" />
-                        </StackPanel>
-                    </Expander.Header>
-                    <StackPanel Margin="14,2,0,4">
-                        <ItemsControl ItemsSource="{Binding Fields}" />
-                        <ItemsControl ItemsSource="{Binding Sections}" />
-                    </StackPanel>
-                </Expander>
-            </DataTemplate>
         </ResourceDictionary>
     </UserControl.Resources>
 
@@ -95,7 +32,7 @@
                     <Button Content="Archetype in Library" Padding="7,2" Margin="0,0,6,4" IsEnabled="{Binding CanShowArchetype}"
                             Click="ShowArchetype_Click"
                             ToolTip="Opens the Library tab on the archetype this entity merges over" />
-                    <Button Content="Open in XML editor" Padding="7,2" Margin="0,0,6,4" IsEnabled="{Binding CanOpenSector}"
+                    <Button Content="Open in FCB editor" Padding="7,2" Margin="0,0,6,4" IsEnabled="{Binding CanOpenSector}"
                             Click="OpenSector_Click"
                             ToolTip="Opens this entity's own fragment of its sector file. Not for an unsaved addition, which has no fragment yet." />
                     <Button Content="Copy" Padding="7,2" Margin="0,0,6,4" Click="Copy_Click"
@@ -107,15 +44,7 @@
                 <TextBlock Text="TRANSFORM" FontSize="9" FontWeight="SemiBold" Foreground="#888" Margin="0,4,0,2" />
                 <ItemsControl ItemsSource="{Binding Transform}" />
 
-                <ItemsControl ItemsSource="{Binding Sections}" Margin="0,8,0,0" />
-
-                <DockPanel Margin="0,8,0,0">
-                    <Button DockPanel.Dock="Right" Content="Add component" Padding="7,2" Margin="6,0,0,0"
-                            Click="AddComponent_Click"
-                            ToolTip="Adds the chosen component to this instance. Its properties stay at the engine's defaults until edited." />
-                    <ComboBox x:Name="ComponentToAdd" ItemsSource="{Binding AddableComponents}" IsEditable="True"
-                              IsTextSearchEnabled="True" />
-                </DockPanel>
+                <fcbEditor:EntityInspectorView DataContext="{Binding Inspector}" Margin="0,8,0,0" />
             </StackPanel>
         </StackPanel>
     </ScrollViewer>

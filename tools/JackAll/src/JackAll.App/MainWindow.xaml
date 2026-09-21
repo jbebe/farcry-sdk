@@ -425,11 +425,7 @@
                                         <Button Content="Purge persisted entities…" Padding="10,5" Margin="0,0,6,0"
                                                 Click="PurgeSave_Click" IsEnabled="{Binding SavesGridEnabled}" />
 
-                                        <!-- Opens the same tree/property-grid editor tab the Files tab's
-                                             fragments use (FcbEditorTabView) over this save's PersistenceDB
-                                             tree - editable there too, writing straight back into this
-                                             save's own .sav file, see MainWindow.xaml.cs's
-                                             OpenSaveFcbEditorTab. -->
+                                        <!-- Opens this save's PersistenceDB in the FCB document editor; see OpenSaveFcbEditorTab. -->
                                         <Button Content="Open value editor…" Padding="10,5"
                                                 Click="OpenSaveFcbEditor_Click"
                                                 Visibility="{Binding SelectedSaveDetails.ShowDocument, Converter={StaticResource BoolToVis}}" />

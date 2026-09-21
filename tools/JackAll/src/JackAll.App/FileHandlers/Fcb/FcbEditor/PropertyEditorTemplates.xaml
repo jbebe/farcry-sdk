@@ -39,8 +39,7 @@
                                 <DataTrigger Binding="{Binding Type}" Value="Rml">
                                     <Setter Property="Visibility" Value="Collapsed" />
                                 </DataTrigger>
-                                <!-- A "selXxx" field backed by a sibling "enumXxx" object shows the
-                                     dropdown below instead - see FcbObjectNodeView.BuildNode. -->
+                                <!-- A field with a known option list shows the dropdown below instead. -->
                                 <DataTrigger Binding="{Binding HasEnumChoices}" Value="True">
                                     <Setter Property="Visibility" Value="Collapsed" />
                                 </DataTrigger>
@@ -68,7 +67,7 @@
                     </fcbEditor:RmlTextEditor.Style>
                 </fcbEditor:RmlTextEditor>
 
-                <!-- A "selXxx" field with a known option list - see FcbObjectNodeView.FindEnumChoices. -->
+                <!-- A field with a known option list - see EnumChoices. -->
                 <ComboBox ItemsSource="{Binding EnumChoices}" SelectedIndex="{Binding SelectedEnumIndex}"
                           Padding="3,1">
                     <ComboBox.Style>
@@ -160,5 +159,76 @@
             <Button Content="+ Add item" HorizontalAlignment="Left" Margin="0,4,0,0" Padding="6,2"
                     Click="AddVectorArrayItem_Click" />
         </StackPanel>
+    </DataTemplate>
+
+    <!-- One field of an edited node. Inherited is greyed and unset fainter still; an override is marked
+         on the left and can be reverted; a value that differs from the document's baseline is tinted
+         and can be restored. -->
+    <DataTemplate DataType="{x:Type fcbEditor:FieldView}">
+        <Border BorderThickness="3,0,0,0" Padding="4,1,0,1" Margin="0,0,0,1">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <Setter Property="BorderBrush" Value="Transparent" />
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding Row.IsChangedFromVanilla}" Value="True">
+                            <Setter Property="Background" Value="#FFF6D6" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Origin}" Value="Inherited">
+                            <Setter Property="Opacity" Value="0.55" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Origin}" Value="Unset">
+                            <Setter Property="Opacity" Value="0.4" />
+                            <Setter Property="ToolTip" Value="Not set: the engine keeps its own default. Editing writes it into the instance." />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Origin}" Value="Overridden">
+                            <Setter Property="BorderBrush" Value="#E08A00" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="Restore" Padding="5,0" Margin="6,0,0,0"
+                        VerticalAlignment="Center" Click="RestoreField_Click"
+                        ToolTip="Sets this field back to the value the document had when it was opened">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Row.IsChangedFromVanilla}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <Button DockPanel.Dock="Right" Content="Revert" Padding="5,0" Margin="6,0,0,0"
+                        VerticalAlignment="Center" Click="RevertField_Click"
+                        ToolTip="Removes this override, so the archetype's value applies again">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CanRevert}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
+                <TextBlock DockPanel.Dock="Left" Width="160" Text="{Binding Row.DisplayName}"
+                           VerticalAlignment="Center" TextTrimming="CharacterEllipsis" ToolTip="{Binding Row.Type}">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Origin}" Value="Overridden">
+                                    <Setter Property="FontWeight" Value="SemiBold" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <ContentControl Content="{Binding Row.Editor}" VerticalAlignment="Center" />
+            </DockPanel>
+        </Border>
     </DataTemplate>
 </ResourceDictionary>

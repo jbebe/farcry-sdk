@@ -223,9 +223,7 @@ public partial class MapTabView : UserControl
                 IReadOnlyList<TriggerVolume> triggers = WorldTriggers.Load(world.Entities);
                 // The library single-player reads, and the one a save stages into - see
                 // docs/docs/engine-internals/entity-instancing.md.
-                ArchetypeIndex archetypes = ArchetypeIndex.Load(
-                    map.Name, vm.ReadByPath, progress, LibraryProfile.Server,
-                    ArchetypeIndex.DiscoverDlcLibraries(vm.AllKnownPaths));
+                ArchetypeIndex archetypes = vm.ArchetypesOf(map.Name, progress: progress).GetAwaiter().GetResult();
                 WorldModelSet models = WorldModels.Load(world.Entities, archetypes, vm.ReadByPath, progress);
                 return new PendingLoad(
                     map, terrain, detail, table, world, shapes, splines, vegetation, vegetationModels,

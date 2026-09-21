@@ -148,23 +148,15 @@ public sealed class PropertyRow : INotifyPropertyChanged
             if (_isChangedFromVanilla == value) return;
             _isChangedFromVanilla = value;
             OnPropertyChanged();
-            ChangedFromVanillaFlagChanged?.Invoke(this);
         }
     }
 
     /// <summary>Raised on any edit anywhere in this row - a keystroke, a checkbox toggle, an array
-    /// add/remove - so the tab view model can mark itself dirty without polling.</summary>
+    /// add/remove.</summary>
     public event Action? Changed;
 
-    /// <summary>Raised whenever any <see cref="ScalarField"/> in this row flips valid/invalid - what
-    /// the tab view model's Save-blocking invalid-field count is built from.</summary>
+    /// <summary>Raised whenever any <see cref="ScalarField"/> in this row flips valid/invalid.</summary>
     public event Action<ScalarField>? FieldValidityChanged;
-
-    /// <summary>Raised whenever <see cref="IsChangedFromVanilla"/> flips - what the owning
-    /// <see cref="FcbObjectNodeView"/>'s tree-wide "contains a change" indicator is built from. Not
-    /// raised for this row's own initial state (nothing subscribes until after <see cref="Build"/>
-    /// returns), only for edits after that.</summary>
-    public event Action<PropertyRow>? ChangedFromVanillaFlagChanged;
 
     private PropertyRow(uint nameHash, string? name, FcbMemberType type, byte[]? originalBytes)
     {
@@ -182,7 +174,7 @@ public sealed class PropertyRow : INotifyPropertyChanged
     /// binary_classes.xml entry never blocks editing a real value, it just shows the bytes plainly.
     /// </summary>
     /// <param name="enumChoices">Non-null only for a "selXxx" value with a sibling "enumXxx" object in
-    /// the data (see <see cref="FcbObjectNodeView.BuildNode"/>'s remarks) - renders as a dropdown of
+    /// the data, or for a member the engine registers labels for - renders as a dropdown of
     /// these names instead of a plain integer box (see <see cref="ScalarField.SelectedEnumIndex"/>).</param>
     public static PropertyRow Build(
         uint nameHash, string? name, FcbMemberType declaredType, byte[] rawBytes, byte[]? originalBytes,
@@ -236,10 +228,6 @@ public sealed class PropertyRow : INotifyPropertyChanged
         }
 
         row.Wire();
-        // Silent - nothing has subscribed to ChangedFromVanillaFlagChanged yet, so this seeds
-        // IsChangedFromVanilla without notifying anyone. FcbObjectNodeView already accounted for this
-        // row's initial state via its own cheap byte-level pass (see FcbObjectNodeView.CountOwnChanges);
-        // this call is what keeps IsChangedFromVanilla itself correct from the moment the row exists.
         row.RecomputeChangedFromVanilla();
         return row;
 
@@ -328,8 +316,7 @@ public sealed class PropertyRow : INotifyPropertyChanged
         RecomputeChangedFromVanilla();
     }
 
-    /// <summary>True when every field in this row currently parses (arrays: every item) - the same
-    /// check <c>FcbEditorTabViewModel</c> aggregates across the whole tab to gate Save.</summary>
+    /// <summary>True when every field in this row currently parses (arrays: every item).</summary>
     public bool IsRowValid => Editor switch
     {
         ScalarField scalar => scalar.IsValid,
@@ -354,15 +341,19 @@ public sealed class PropertyRow : INotifyPropertyChanged
         IsChangedFromVanilla = !IsRowValid || !_originalBytes.AsSpan().SequenceEqual(EncodeValue());
     }
 
-    /// <summary>Sets this row back to its vanilla value - only meaningful while
-    /// <see cref="IsChangedFromVanilla"/> is true (there's nothing to restore otherwise). Setting
-    /// individual fields' own <c>Text</c>/<c>Value</c> already raises every event needed to update
-    /// validity/dirty state; the array cases replace <c>Items</c> directly (a restore can change an
-    /// array's length, which no single item's own change can) and so call <see cref="RaiseChanged"/>
-    /// explicitly at the end, since nothing else would.</summary>
+    /// <summary>Sets this row back to its baseline value, when it has one.</summary>
     public void RestoreOriginal()
     {
-        if (_originalBytes is null || !FcbValueCodec.TryDecode(Type, _originalBytes, out object original))
+        if (_originalBytes is not null)
+        {
+            Show(_originalBytes);
+        }
+    }
+
+    /// <summary>Sets the editor to <paramref name="bytes"/>, raising the same events an edit would.</summary>
+    public void Show(byte[] bytes)
+    {
+        if (!FcbValueCodec.TryDecode(Type, bytes, out object original))
         {
             return;
         }
@@ -419,9 +410,7 @@ public sealed class PropertyRow : INotifyPropertyChanged
         }
     }
 
-    /// <summary>Packs this row's current (already-validated) value back to raw bytes for
-    /// <see cref="FcbObject.Values"/> - only ever called once every field across the whole tab is
-    /// confirmed valid (see <c>FcbEditorTabViewModel.SaveAsync</c>).</summary>
+    /// <summary>Packs this row's current value back to raw bytes; only valid once <see cref="IsRowValid"/>.</summary>
     public byte[] EncodeValue() => Editor switch
     {
         ScalarField scalar => FcbValueCodec.Encode(Type, scalar.Value),

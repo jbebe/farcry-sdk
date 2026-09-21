@@ -211,6 +211,7 @@ public sealed partial class MainViewModel
             Status = $"Couldn't rebuild the file list: {ex.Message}";
             return;
         }
+        ForgetWorldIndexes();
 
         // BuildTree() always ends by assigning SelectedFolder, and that setter already calls
         // RefreshFileList() on every set (even a no-op one) - a second call here would just cancel

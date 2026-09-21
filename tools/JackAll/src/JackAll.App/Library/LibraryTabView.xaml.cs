@@ -86,13 +86,8 @@ public partial class LibraryTabView : UserControl
         {
             LibraryProfile profile = ProfilePicker.SelectedIndex == 0 ? LibraryProfile.Client : LibraryProfile.Server;
             IProgress<string> progress = new Progress<string>(s => StatusText.Text = s);
-            IReadOnlyList<string> dlc = ArchetypeIndex.DiscoverDlcLibraries(vm.AllKnownPaths);
-
-            (ArchetypeIndex index, ArchetypeTreeNode root) = await Task.Run(() =>
-            {
-                ArchetypeIndex loaded = ArchetypeIndex.Load(world, vm.ReadByPath, progress, profile, dlc);
-                return (loaded, ArchetypeTreeNode.Build(loaded));
-            });
+            ArchetypeIndex index = await vm.ArchetypesOf(world, profile, progress);
+            ArchetypeTreeNode root = await Task.Run(() => ArchetypeTreeNode.Build(index));
 
             _index = index;
             _root = root;
@@ -174,18 +169,13 @@ public partial class LibraryTabView : UserControl
 
         try
         {
-            string xml = AppText.DecodeUtf8(vm.Read(fragment));
-            var editor = new FcbEditorTabViewModel(
-                fragment.FileName, fragment.Hash, xml, vm.ReadOriginalFragment(fragment),
-                FcbDefinitionsProvider.Value.Value, vm.StageFragmentEdits(fragment))
-            {
-                Notice = row.Wins
-                    ? null
-                    : $"'{row.Definition.Name}' is declared again by {row.OverriddenBy}, which loads later. "
-                      + "That copy is what the game reads, so editing this one changes the file and nothing in game.",
-            };
+            FcbDocumentViewModel editor = vm.OpenFragmentDocument(fragment);
+            editor.Notice = row.Wins
+                ? null
+                : $"'{row.Definition.Name}' is declared again by {row.OverriddenBy}, which loads later. "
+                  + "That copy is what the game reads, so editing this one changes the file and nothing in game.";
 
-            EditorHost.Content = new FcbEditorTabView(editor);
+            EditorHost.Content = new FcbDocumentView(editor);
             EditorPlaceholder.Visibility = Visibility.Collapsed;
             editor.TryReveal(WorldHashes.HidName, row.Definition.Name);
         }

@@ -239,8 +239,8 @@ tests** — no test project references it — while the byte-level code beneath 
 it's about to become load-bearing.
 
 26 of the 63 App files have no `System.Windows` dependency and are testable today with nothing but a
-csproj reference: `SugiyamaLayout`, `FcbEditorTabViewModel`, `PropertyRow`, `ScalarField`,
-`FcbFieldFormat`, `SaveGameXmlRenderer`, `OasisStringTable`, `DiffTextBuilder` and others. The one
+csproj reference: `SugiyamaLayout`, `FcbDocumentViewModel`, `PropertyRow`, `ScalarField`,
+`FcbFieldFormat`, `SaveGameNames`, `OasisStringTable`, `DiffTextBuilder` and others. The one
 snag is that `MainViewModel` pulls in `System.Windows.Media.Imaging` for exactly one line
 (`Int32Rect`, save thumbnails) — extract that and the app's central view model becomes testable.
 

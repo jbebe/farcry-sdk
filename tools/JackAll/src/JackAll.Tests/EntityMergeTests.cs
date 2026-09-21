@@ -76,7 +76,7 @@ public class EntityMergeTests
         Assert.Equal(
             [(A, FieldOrigin.Overridden, (byte)9), (C, FieldOrigin.InstanceOnly, (byte)3), (B, FieldOrigin.Inherited, (byte)2)],
             merged.Fields.Select(f => (f.Hash, f.Origin, f.Value[0])));
-        Assert.Equal(1, merged.Fields[0].ArchetypeValue![0]);
+        Assert.Equal(1, merged.Fields[0].BaseValue![0]);
     }
 
     [Fact]
@@ -91,7 +91,7 @@ public class EntityMergeTests
         Assert.Equal(11, merged.Children[0].Fields.Single().Value[0]);
         Assert.Equal(FieldOrigin.Overridden, merged.Children[0].Fields.Single().Origin);
         Assert.Null(merged.Children[1].Instance);
-        Assert.Null(merged.Children[3].Archetype);
+        Assert.Null(merged.Children[3].Base);
     }
 
     /// <summary>A standalone entity has no archetype, so everything on it is its own.</summary>
@@ -178,6 +178,36 @@ public class EntityMergeTests
         Assert.Equal([A], instance.Values.Keys);
     }
 
+    /// <summary>A save's state over an instance over its archetype: each layer wins what it sets.</summary>
+    [Fact]
+    public void A_merge_stacks_on_a_flattened_merge()
+    {
+        FcbObject instance = Node(WorldHashes.Entity, (A, 9));
+        instance.Children.Add(Node(Slot, (X, 11)));
+        FcbObject state = Node(WorldHashes.Entity, (B, 7));
+        state.Children.Add(Node(Slot, (C, 4)));
+
+        MergedNode stacked = MergedNode.Of(state, MergedNode.Of(instance, Archetype()).Flatten());
+
+        Assert.Equal(
+            [(B, FieldOrigin.Overridden, (byte)7), (A, FieldOrigin.Inherited, (byte)9)],
+            stacked.Fields.Select(f => (f.Hash, f.Origin, f.Value[0])));
+        Assert.Equal([Slot, Slot, Other], stacked.Children.Select(c => c.TypeHash));
+        Assert.Equal(
+            [(C, FieldOrigin.InstanceOnly, (byte)4), (X, FieldOrigin.Inherited, (byte)11)],
+            stacked.Children[0].Fields.Select(f => (f.Hash, f.Origin, f.Value[0])));
+        Assert.Equal(20, stacked.Children[1].ValueOf(X)![0]);
+    }
+
+    [Fact]
+    public void Pairing_by_tag_takes_the_first_unpaired_match()
+    {
+        uint[] left = [Slot, Other, Slot, Extra];
+        uint[] right = [Other, Slot, Slot];
+
+        Assert.Equal([1, 0, 2, -1], MergedNode.PairByTag(left, right, t => t));
+    }
+
     private static string SectorPath => Path.Combine(
         Fc2Corpus.Root, @"worlds\worlds\levels\w1_b_2\generated\worldsectors\worldsector4027.data.fcb");
 
@@ -231,13 +261,13 @@ public class EntityMergeTests
             Assert.Equal(value, fields[hash].Value);
             Assert.NotEqual(FieldOrigin.Inherited, fields[hash].Origin);
         }
-        foreach ((uint hash, byte[] value) in node.Archetype?.Values ?? [])
+        foreach ((uint hash, byte[] value) in node.Base?.Values ?? [])
         {
-            Assert.Equal(value, fields[hash].ArchetypeValue);
+            Assert.Equal(value, fields[hash].BaseValue);
         }
         Assert.Equal(
-            (node.Instance?.Children.Count ?? 0) + (node.Archetype?.Children.Count ?? 0),
-            node.Children.Sum(c => (c.Instance is null ? 0 : 1) + (c.Archetype is null ? 0 : 1)));
+            (node.Instance?.Children.Count ?? 0) + (node.Base?.Children.Count ?? 0),
+            node.Children.Sum(c => (c.Instance is null ? 0 : 1) + (c.Base is null ? 0 : 1)));
         foreach (MergedNode child in node.Children)
         {
             AssertCovers(child);

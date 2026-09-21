@@ -34,13 +34,10 @@ public static class FcbXml
 {
     /// <summary>
     /// Converts a parsed FCB tree to one XML document — a whole container's root or a single
-    /// fragment's node alike.
+    /// fragment's node alike. <paramref name="fallback"/> names what <paramref name="defs"/> cannot.
     /// </summary>
-    public static string ToXml(FcbObject obj, FcbClassDefinitions defs)
-    {
-        (XElement el, _) = WriteObject(obj, defs);
-        return Render(el);
-    }
+    public static string ToXml(FcbObject obj, FcbClassDefinitions defs, IFcbNames? fallback = null)
+        => Render(WriteObject(obj, defs, fallback));
 
     /// <summary>
     /// Every override-unit id of <paramref name="root"/> (see <see cref="FcbFragments"/> for the
@@ -150,13 +147,13 @@ public static class FcbXml
     public static string CanonicalizeFragment(string fragmentXml, FcbClassDefinitions defs)
         => ToXml(FromXml(fragmentXml), defs);
 
-    private static (XElement Element, FcbClass OwnClass) WriteObject(FcbObject obj, IFcbClassScope scope)
+    private static XElement WriteObject(FcbObject obj, IFcbClassScope scope, IFcbNames? fallback)
     {
         FcbClass ownClass = scope.Resolve(obj.TypeHash);
         var el = new XElement("object");
-        if (ownClass.Name is not null)
+        if (FcbNames.ClassNameOf(ownClass, obj.TypeHash, fallback) is { } className)
         {
-            el.SetAttributeValue("type", ownClass.Name);
+            el.SetAttributeValue("type", className);
         }
         else
         {
@@ -165,16 +162,15 @@ public static class FcbXml
 
         foreach ((uint nameHash, byte[] value) in obj.Values)
         {
-            WriteValueEntry(el, nameHash, ownClass.FindMember(nameHash), value);
+            WriteValueEntry(el, nameHash, FcbNames.MemberOf(ownClass, nameHash, value, fallback), value);
         }
 
         foreach (FcbObject child in obj.Children)
         {
-            (XElement childEl, _) = WriteObject(child, ownClass);
-            el.Add(childEl);
+            el.Add(WriteObject(child, ownClass, fallback));
         }
 
-        return (el, ownClass);
+        return el;
     }
 
     private static void WriteValueEntry(XElement parent, uint nameHash, FcbMember? member, byte[] value)
@@ -227,8 +223,8 @@ public static class FcbXml
                 return true;
 
             case FcbMemberType.String:
-                if (value.Length < 1 || value[^1] != 0) return false;
-                el.Value = Encoding.UTF8.GetString(value, 0, value.Length - 1);
+                if (!FcbValueCodec.TryDecode(FcbMemberType.String, value, out object text)) return false;
+                el.Value = (string)text;
                 return true;
 
             case FcbMemberType.Enum:

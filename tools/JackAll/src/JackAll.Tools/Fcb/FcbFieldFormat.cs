@@ -30,7 +30,7 @@ public static class FcbFieldFormat
         FcbMemberType.UInt64 => ((ulong)value).ToString(CultureInfo.InvariantCulture),
         FcbMemberType.BinHex => Convert.ToHexString((byte[])value),
         // Same nested-document convention FcbXml.ToXml uses for its own <value type="Rml"> text: shown
-        // indented in the multi-line RmlTextEditor (see FcbEditorTabView's ScalarField template) when
+        // indented in the multi-line RmlTextEditor (see PropertyEditorTemplates' ScalarField template) when
         // the bytes decode as a well-formed .rml document, opaque hex otherwise (a value that isn't
         // actually an embedded document, or was hand-edited into something else).
         FcbMemberType.Rml => FcbXml.TryDecodeRmlValue((byte[])value) is { } rml

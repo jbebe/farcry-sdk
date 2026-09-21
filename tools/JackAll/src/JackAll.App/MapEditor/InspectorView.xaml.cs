@@ -23,30 +23,4 @@ public partial class InspectorView : UserControl
     private void Copy_Click(object sender, RoutedEventArgs e) => CopyRequested?.Invoke();
 
     private void Delete_Click(object sender, RoutedEventArgs e) => DeleteRequested?.Invoke();
-
-    private void Revert_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { DataContext: InspectorField field })
-        {
-            field.Revert();
-        }
-    }
-
-    private void RemoveComponent_Click(object sender, RoutedEventArgs e)
-    {
-        if (sender is FrameworkElement { DataContext: InspectorSection section })
-        {
-            section.Remove();
-        }
-    }
-
-    private void AddComponent_Click(object sender, RoutedEventArgs e)
-    {
-        if (DataContext is InspectorViewModel inspector && ComponentToAdd.Text is { Length: > 0 } name
-            && inspector.AddableComponents.Contains(name))
-        {
-            inspector.AddComponent(name);
-            ComponentToAdd.Text = "";
-        }
-    }
 }

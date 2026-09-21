@@ -56,11 +56,7 @@ public sealed partial class MainViewModel
                 return;
             }
 
-            var indexes = new Dictionary<string, ArchetypeIndex>(StringComparer.OrdinalIgnoreCase);
-            ArchetypeIndex IndexOf(string name) => indexes.TryGetValue(name, out ArchetypeIndex? index)
-                ? index
-                : indexes[name] = ArchetypeIndex.Load(name, ReadByPath, progress, LibraryProfile.Server,
-                    ArchetypeIndex.DiscoverDlcLibraries(paths));
+            ArchetypeIndex IndexOf(string name) => ArchetypesOf(name, progress: progress).GetAwaiter().GetResult();
 
             var archetypes = new Dictionary<string, FcbObject?>(StringComparer.OrdinalIgnoreCase);
             FcbObject? ArchetypeOf(CopiedEntity paste)

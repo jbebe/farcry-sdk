@@ -3,7 +3,7 @@
 # rodata + symbol table against every hash actually seen in a real save's exported
 # PersistenceDB tree (byte-exact match, both directions verified via Ghidra MCP over the
 # live fc2.gpr project). See reverse/dunia/savegame_format.md for methodology and caveats.
-# Name-only: this table does not assert a wire type (see SaveGameFieldCatalog for that).
+# Name-only: this table does not assert a wire type (see SaveGameNames for that).
 7A33C5A1	KeyType
 4A2D3B32	hidVariables
 B083E9A2	ValueType

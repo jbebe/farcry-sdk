@@ -3,7 +3,7 @@ using JackAll.Tools.Fcb;
 
 namespace JackAll.Tools.World;
 
-/// <summary>Which side of a merged entity a field's value comes from.</summary>
+/// <summary>Which side of a merged node a field's value comes from.</summary>
 public enum FieldOrigin
 {
     InstanceOnly,
@@ -14,38 +14,44 @@ public enum FieldOrigin
     Unset,
 }
 
-/// <summary>One field of a merged node: the value the engine reads, and the archetype's own.</summary>
-public sealed record MergedField(uint Hash, byte[] Value, byte[]? ArchetypeValue, FieldOrigin Origin);
+/// <summary>One field of a merged node: the value the engine reads, and the base's own.</summary>
+public sealed record MergedField(uint Hash, byte[] Value, byte[]? BaseValue, FieldOrigin Origin);
 
 /// <summary>
-/// A placed entity as the engine reads it: the instance merged over its archetype the way
-/// <c>CReadOnlyMergeNode</c> does, plus the writes an editor needs. Children pair by tag, first
-/// unpaired match; the instance wins every field it has. See
+/// An editable node read over a base the way <c>CReadOnlyMergeNode</c> reads an instance over its
+/// archetype, plus the writes an editor needs. Children pair by tag, first unpaired match; the
+/// instance wins every field it has. A node with no base reads as all its own. See
 /// docs/docs/engine-internals/entity-instancing.md.
 /// </summary>
 public sealed class MergedNode
 {
-    private readonly List<MergedNode> _children = [];
+    private List<MergedNode>? _children;
 
-    private MergedNode(FcbObject? instance, FcbObject? archetype, MergedNode? parent)
+    private MergedNode(FcbObject? instance, FcbObject? @base, MergedNode? parent)
     {
         Instance = instance;
-        Archetype = archetype;
+        Base = @base;
         Parent = parent;
     }
 
     /// <summary>The instance's own node, or null while every field here is inherited.</summary>
     public FcbObject? Instance { get; private set; }
 
-    public FcbObject? Archetype { get; }
+    /// <summary>What the instance merges over: an archetype, or null.</summary>
+    public FcbObject? Base { get; }
 
     public MergedNode? Parent { get; }
 
-    public uint TypeHash => (Instance ?? Archetype)!.TypeHash;
+    public uint TypeHash => (Instance ?? Base)!.TypeHash;
 
-    public IReadOnlyList<MergedNode> Children => _children;
+    /// <summary>The node the engine would read first for display: the instance, else the base.</summary>
+    public FcbObject Shown => (Instance ?? Base)!;
 
-    /// <summary>Instance fields in instance order, then the archetype's remaining ones.</summary>
+    public IReadOnlyList<MergedNode> Children => Kids;
+
+    private List<MergedNode> Kids => _children ??= BuildChildren();
+
+    /// <summary>Instance fields in instance order, then the base's remaining ones.</summary>
     public IReadOnlyList<MergedField> Fields
     {
         get
@@ -56,14 +62,14 @@ public sealed class MergedNode
                 foreach ((uint hash, byte[] value) in Instance.Values)
                 {
                     byte[]? inherited = null;
-                    Archetype?.Values.TryGetValue(hash, out inherited);
+                    Base?.Values.TryGetValue(hash, out inherited);
                     fields.Add(new MergedField(
                         hash, value, inherited, inherited is null ? FieldOrigin.InstanceOnly : FieldOrigin.Overridden));
                 }
             }
-            if (Archetype is not null)
+            if (Base is not null)
             {
-                foreach ((uint hash, byte[] value) in Archetype.Values)
+                foreach ((uint hash, byte[] value) in Base.Values)
                 {
                     if (Instance is null || !Instance.Values.ContainsKey(hash))
                     {
@@ -75,50 +81,89 @@ public sealed class MergedNode
         }
     }
 
+    /// <summary>The value the engine reads for <paramref name="hash"/>, or null when neither side sets it.</summary>
+    public byte[]? ValueOf(uint hash)
+        => Instance?.Values.GetValueOrDefault(hash) ?? Base?.Values.GetValueOrDefault(hash);
+
     /// <summary>The typed members of <paramref name="cls"/> neither side sets, at their zero value; the
     /// engine keeps its own default for each until one is written.</summary>
     public IEnumerable<MergedField> UnsetFields(FcbClass cls) => cls.AllMembers()
         .Where(m => m.Member.Type != FcbMemberType.BinHex
-                    && Instance?.Values.ContainsKey(m.Hash) != true && Archetype?.Values.ContainsKey(m.Hash) != true)
+                    && Instance?.Values.ContainsKey(m.Hash) != true && Base?.Values.ContainsKey(m.Hash) != true)
         .Select(m => new MergedField(
             m.Hash, FcbValueCodec.Encode(m.Member.Type, FcbFieldFormat.DefaultValue(m.Member.Type)), null, FieldOrigin.Unset));
 
-    /// <summary>The merge of <paramref name="instance"/> over <paramref name="archetype"/>; a
-    /// standalone entity passes null and every field reads as its own.</summary>
-    public static MergedNode Of(FcbObject instance, FcbObject? archetype)
-        => Build(instance, archetype, null);
+    /// <summary>The merge of <paramref name="instance"/> over <paramref name="base"/>; a node with no
+    /// base passes null and every field reads as its own.</summary>
+    public static MergedNode Of(FcbObject instance, FcbObject? @base)
+        => new(instance, @base, null);
+
+    /// <summary>A standalone copy of what the engine reads here, for a merge to stack on as its base.</summary>
+    public FcbObject Flatten()
+    {
+        var flat = new FcbObject { TypeHash = TypeHash };
+        foreach (MergedField field in Fields)
+        {
+            flat.Values[field.Hash] = field.Value;
+        }
+        flat.Children.AddRange(Children.Select(c => c.Flatten()));
+        return flat;
+    }
+
+    /// <summary>For each item of <paramref name="left"/>, the index of its partner in
+    /// <paramref name="right"/> - the first unpaired one with the same tag - or -1.</summary>
+    public static int[] PairByTag<T>(IReadOnlyList<T> left, IReadOnlyList<T> right, Func<T, uint> tagOf)
+    {
+        var byTag = new Dictionary<uint, Queue<int>>();
+        for (int r = 0; r < right.Count; r++)
+        {
+            uint tag = tagOf(right[r]);
+            if (!byTag.TryGetValue(tag, out Queue<int>? queue))
+            {
+                byTag[tag] = queue = new Queue<int>();
+            }
+            queue.Enqueue(r);
+        }
+
+        var partners = new int[left.Count];
+        for (int l = 0; l < left.Count; l++)
+        {
+            partners[l] = byTag.GetValueOrDefault(tagOf(left[l]))?.TryDequeue(out int r) == true ? r : -1;
+        }
+        return partners;
+    }
 
     /// <summary>Writes a field into the instance, creating the instance side of this node first when
     /// it is inherited whole.</summary>
     public void SetValue(uint hash, byte[] value) => Materialize().Values[hash] = value;
 
     /// <summary>Appends <paramref name="child"/> to the instance, creating the instance side of this
-    /// node first when it is inherited whole. A tag the archetype already has here would pair with the
-    /// archetype's child instead, so that is refused.</summary>
+    /// node first when it is inherited whole. A tag the base already has here would pair with the
+    /// base's child instead, so that is refused.</summary>
     public MergedNode AddChild(FcbObject child)
     {
-        if (_children.Any(c => c.TypeHash == child.TypeHash && c.Archetype is not null))
+        if (Kids.Any(c => c.TypeHash == child.TypeHash && c.Base is not null))
         {
-            throw new InvalidOperationException("The archetype already has a child with this tag.");
+            throw new InvalidOperationException("The base already has a child with this tag.");
         }
         Materialize().Children.Add(child);
         var node = new MergedNode(child, null, this);
-        _children.Add(node);
+        Kids.Add(node);
         return node;
     }
 
-    /// <summary>Removes a child the instance added. An archetype's child cannot be removed from an
+    /// <summary>Removes a child the instance added. A base's child cannot be removed from an
     /// instance: the engine merges, it never subtracts.</summary>
     public void RemoveChild(MergedNode child)
     {
-        if (child.Archetype is not null || child.Instance is null || !_children.Remove(child))
+        if (child.Base is not null || child.Instance is null || !Kids.Remove(child))
         {
             throw new InvalidOperationException("Only a child the instance added can be removed.");
         }
         Instance!.Children.Remove(child.Instance);
     }
 
-    /// <summary>Removes the instance's own value so the archetype's shows through again, and drops
+    /// <summary>Removes the instance's own value so the base's shows through again, and drops
     /// instance nodes the removal leaves empty.</summary>
     public void Revert(uint hash)
     {
@@ -135,48 +180,39 @@ public sealed class MergedNode
         }
     }
 
-    private static MergedNode Build(FcbObject? instance, FcbObject? archetype, MergedNode? parent)
+    private List<MergedNode> BuildChildren()
     {
-        var node = new MergedNode(instance, archetype, parent);
-        var archetypeChildren = archetype?.Children ?? [];
-        var pairs = new FcbObject?[archetypeChildren.Count];
-        var appended = new List<FcbObject>();
-        foreach (FcbObject child in instance?.Children ?? [])
+        List<FcbObject> own = Instance?.Children ?? [];
+        List<FcbObject> inherited = Base?.Children ?? [];
+        int[] partners = PairByTag(own, inherited, c => c.TypeHash);
+        var pairs = new FcbObject?[inherited.Count];
+        var children = new List<MergedNode>(Math.Max(own.Count, inherited.Count));
+        for (int i = 0; i < own.Count; i++)
         {
-            int slot = -1;
-            for (int i = 0; i < archetypeChildren.Count; i++)
+            if (partners[i] >= 0)
             {
-                if (pairs[i] is null && archetypeChildren[i].TypeHash == child.TypeHash)
-                {
-                    slot = i;
-                    break;
-                }
-            }
-            if (slot < 0)
-            {
-                appended.Add(child);
-            }
-            else
-            {
-                pairs[slot] = child;
+                pairs[partners[i]] = own[i];
             }
         }
 
-        for (int i = 0; i < archetypeChildren.Count; i++)
+        for (int i = 0; i < inherited.Count; i++)
         {
-            node._children.Add(Build(pairs[i], archetypeChildren[i], node));
+            children.Add(new MergedNode(pairs[i], inherited[i], this));
         }
-        foreach (FcbObject child in appended)
+        for (int i = 0; i < own.Count; i++)
         {
-            node._children.Add(Build(child, null, node));
+            if (partners[i] < 0)
+            {
+                children.Add(new MergedNode(own[i], null, this));
+            }
         }
-        return node;
+        return children;
     }
 
     /// <summary>
-    /// The instance node for this position, created on demand. Pairing is by tag in order, so an
-    /// archetype child's same-tag siblings ahead of it get an empty instance node too, or the new one
-    /// would pair with the wrong slot.
+    /// The instance node for this position, created on demand. Pairing is by tag in order, so a base
+    /// child's same-tag siblings ahead of it get an empty instance node too, or the new one would pair
+    /// with the wrong slot.
     /// </summary>
     private FcbObject Materialize()
     {
@@ -186,7 +222,7 @@ public sealed class MergedNode
         }
 
         FcbObject parent = Parent!.Materialize();
-        foreach (MergedNode sibling in Parent._children)
+        foreach (MergedNode sibling in Parent.Kids)
         {
             if (sibling.TypeHash == TypeHash && sibling.Instance is null)
             {
@@ -212,9 +248,10 @@ public sealed class MergedNode
         {
             return false;
         }
-        for (int i = Parent._children.Count - 1; i >= 0; i--)
+        List<MergedNode> siblings = Parent.Kids;
+        for (int i = siblings.Count - 1; i >= 0; i--)
         {
-            MergedNode sibling = Parent._children[i];
+            MergedNode sibling = siblings[i];
             if (sibling.TypeHash != TypeHash || sibling.Instance is null)
             {
                 continue;
@@ -226,9 +263,9 @@ public sealed class MergedNode
 
             parent.Children.Remove(empty);
             sibling.Instance = null;
-            if (sibling.Archetype is null)
+            if (sibling.Base is null)
             {
-                Parent._children.RemoveAt(i);
+                siblings.RemoveAt(i);
             }
         }
         return Instance is null;
