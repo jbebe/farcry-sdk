@@ -148,6 +148,76 @@ public class WorldEditSessionTests
         Assert.Equal([@"graphics\nowhere.xbg"], unresolved);
     }
 
+    /// <summary>A field edit stages the entity whole, with the edit in it, and leaves the loaded tree alone.</summary>
+    [Fact]
+    public void A_field_edit_stages_the_entity_with_the_edit_and_everything_else_it_had()
+    {
+        if (!File.Exists(FixturePath)) return;
+
+        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load();
+        WorldEntity edited = entities[0];
+        uint field = FcbClassDefinitions.Crc32Ascii("bEditedByTest");
+        MergedNode.Of(session.EditableNode(edited), null).SetValue(field, [1]);
+        session.Edited(edited);
+
+        Assert.True(session.IsModified(edited));
+        Assert.False(edited.Node.Values.ContainsKey(field));
+        FcbObject staged = Assert.Single(EntitiesOf(Assemble(baseFcb, session)),
+            e => FcbEntityFields.ReadU64(e, WorldHashes.DisEntityId) == edited.Id);
+        Assert.Equal([1], staged.Values[field]);
+        Assert.Equal(edited.Node.Values.Count + 1, staged.Values.Count);
+        Assert.Equal(edited.Node.Children.Count, staged.Children.Count);
+    }
+
+    /// <summary>A placement carries the fields every shipped archetype-bound instance does, and lands
+    /// under the mission layer it was dropped on once the sector's layout files it there.</summary>
+    [Fact]
+    public void A_placement_is_a_minimal_instance_filed_under_its_mission_layer()
+    {
+        if (!File.Exists(FixturePath)) return;
+
+        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load();
+        string layer = entities.First(e => e.LayerPathId != MissionLayers.MainName).LayerPathId;
+        var archetype = new ArchetypeDefinition(
+            "OA_Props.Props.Crate01", new ArchetypeLayer("library.fcb"), 0, null, new FcbObject { TypeHash = WorldHashes.Entity });
+        WorldEntity placed = session.Place(archetype, InSector, layer);
+
+        Assert.Equal("Props.Crate01_1", placed.Name);
+        (string container, LayerSpec spec) = Assert.Single(session.LayerPlacements());
+        Assert.Equal(SectorPath, container);
+        Assert.Equal([placed.Id], spec.Entities);
+
+        (IReadOnlyList<EntityFragment> fragments, _) = session.Pending();
+        var overrides = fragments.ToDictionary(f => f.FragmentId, f => FcbXml.ToXml(f.Node, FcbClassDefinitions.Empty));
+        overrides[ContainerLayout.Id] = new ContainerLayout([spec]).Render();
+        FcbObject root = FcbDocument.Deserialize(FcbAssembler.Apply(baseFcb, overrides));
+
+        FcbObject added = Assert.Single(LayerNamed(root, layer).Children,
+            e => FcbEntityFields.ReadU64(e, WorldHashes.DisEntityId) == placed.Id);
+        Assert.Equal(archetype.Name, FcbEntityFields.ReadString(added, WorldHashes.TplCreatureType));
+        Assert.Equal(InSector, FcbEntityFields.ReadVector3(added, WorldHashes.HidPos));
+        Assert.Equal(InSector, FcbEntityFields.ReadVector3(added, WorldHashes.HidPosPrecise));
+        Assert.NotNull(FcbEntityFields.FindComponent(added, FcbClassDefinitions.Crc32Ascii("CEventComponent")));
+        Assert.Equal(entities.Count + 1, EntitiesOf(root).Count());
+    }
+
+    /// <summary>A turn saves as <c>hidAngles</c>, whether or not the entity carried them before.</summary>
+    [Fact]
+    public void A_turn_saves_its_angles()
+    {
+        if (!File.Exists(FixturePath)) return;
+
+        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load();
+        WorldEntity turned = entities[0];
+        turned.Angles = new System.Numerics.Vector3(5f, -10f, 135f);
+        session.Moved(turned);
+        turned.Node.Values.Remove(WorldHashes.HidAngles);
+
+        FcbObject staged = Assert.Single(EntitiesOf(Assemble(baseFcb, session)),
+            e => FcbEntityFields.ReadU64(e, WorldHashes.DisEntityId) == turned.Id);
+        Assert.Equal(turned.Angles, FcbEntityFields.ReadVector3(staged, WorldHashes.HidAngles));
+    }
+
     private static (WorldEditSession Session, byte[] BaseFcb, List<WorldEntity> Entities) Load()
     {
         byte[] baseFcb = File.ReadAllBytes(FixturePath);
