@@ -81,6 +81,19 @@ public class ComponentSchemaTests
         Assert.NotEmpty(layer!.Labels!);
     }
 
+    [Theory]
+    [InlineData("CAnimationComponent", "fileSkeleton")]
+    [InlineData("CStaticGraphicComponent", "objModel")]
+    [InlineData("CPawnSoundAndFXComponent", "psSwimMoveHands")]
+    public void A_path_hash_member_is_a_path(string cls, string member)
+        => Assert.True(Merged().GetClass(H(cls)).FindMember(H(member))?.IsPath);
+
+    [Theory]
+    [InlineData("CAIComponent", "Type")]
+    [InlineData("CPickupAmmo", "ammoAmmoType")]
+    public void A_name_hash_member_is_not_a_path(string cls, string member)
+        => Assert.False(Merged().GetClass(H(cls)).FindMember(H(member))?.IsPath);
+
     [Fact]
     public void An_embedded_class_puts_its_members_in_the_same_node()
     {

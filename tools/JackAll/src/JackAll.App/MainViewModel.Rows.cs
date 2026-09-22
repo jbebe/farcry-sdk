@@ -10,7 +10,7 @@ using System.Windows;
 
 namespace JackAll.App;
 
-/// <summary>A folder in the merged tree. Children are built once, on demand.</summary>
+/// <summary>A folder in the merged tree, built by <see cref="FolderTree"/>.</summary>
 public sealed class FolderNode(string name, string fullPath)
 {
     public string Name { get; } = name;
@@ -25,8 +25,8 @@ public sealed class FolderNode(string name, string fullPath)
     public bool ContainsUsedFiles { get; set; }
 
     /// <summary>
-    /// Two-way bound to the TreeViewItem's own IsExpanded (see the implicit TreeViewItem style in
-    /// MainWindow.xaml) — carried over by <see cref="MainViewModel.BuildTree"/> when it rebuilds the
+    /// Two-way bound to the TreeViewItem's own IsExpanded (see the FolderTreeItem style in
+    /// Themes/Controls/Trees.xaml) — carried over by <see cref="MainViewModel.BuildTree"/> when it rebuilds the
     /// tree from scratch (every FolderNode is a brand-new instance each time, so without this every
     /// edit would silently collapse the whole tree back to nothing expanded). A plain mutable
     /// property, not INotifyPropertyChanged-backed, is enough: it's only ever set before this node is

@@ -3,6 +3,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using JackAll.App.Picker;
 using JackAll.Core.Format.Move;
 using Microsoft.Win32;
 
@@ -182,11 +183,13 @@ public partial class MoveTabView : UserControl
         }
     }
 
-    private void Match_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    private void BrowseClip_Click(object sender, RoutedEventArgs e)
     {
-        if (_model is not null && sender is ListBox { SelectedItem: string path })
+        if (_model is not null
+            && FilePicker.Show(this, new FilePickerRequest(
+                "Pick an animation bank", Extension: "mab", InitialPath: _model.ClipForm.Path, NeedsRealPath: true)) is { } file)
         {
-            _model.ClipForm.Path = path;
+            _model.ClipForm.Path = file.Path;
         }
     }
 

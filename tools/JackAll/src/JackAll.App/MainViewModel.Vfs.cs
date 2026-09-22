@@ -20,6 +20,12 @@ public sealed partial class MainViewModel
     /// points to.</summary>
     public VfsFile? FindByHash(ulong key) => _vfs?.Files.GetValueOrDefault(key);
 
+    /// <summary>The path an archive hash names, from the merged filesystem or else the hashlist.</summary>
+    public string? PathOf(uint hash)
+        => FindByHash(hash) is { NameIsKnown: true } file ? file.Path
+            : _names is { } names && names.TryResolve(hash, out string path) ? path
+            : null;
+
     /// <summary>
     /// The file a sound id lives in — for an `.spk` row's jump to whatever bank a reference points at.
     /// </summary>
@@ -47,8 +53,10 @@ public sealed partial class MainViewModel
     /// <summary>Every resolved path in the merged filesystem - the map editor filters this down to
     /// one world's sector and terrain files rather than probing synthesized paths against the
     /// hash-only index (CRC32 collisions with unrelated entries are real).</summary>
-    public IEnumerable<string> AllKnownPaths
-        => _vfs is null ? [] : _vfs.Files.Values.Where(f => f.NameIsKnown).Select(f => f.Path);
+    public IEnumerable<string> AllKnownPaths => AllFiles.Where(f => f.NameIsKnown).Select(f => f.Path);
+
+    /// <summary>Every row of the merged filesystem, fragments included.</summary>
+    public IEnumerable<VfsFile> AllFiles => _vfs?.Files.Values ?? [];
 
     /// <inheritdoc cref="GameVfs.ReadByPath"/>
     public byte[]? ReadByPath(string path) => _vfs?.ReadByPath(path);

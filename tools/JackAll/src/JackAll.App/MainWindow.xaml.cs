@@ -1,5 +1,6 @@
 using JackAll.App.FileHandlers;
 using JackAll.App.FileHandlers.Mgb;
+using JackAll.App.Picker;
 using JackAll.Core.Format.Rml;
 using JackAll.Core.Vfs;
 using JackAll.Core;
@@ -206,6 +207,7 @@ public partial class MainWindow : Window
         // overrides oasisstrings.xml resolves through its version. Nothing is read here - the table
         // parses on the first lookup that wants it (see OasisStringTable's remarks).
         OasisStringTable.UseSource(_vm.ReadByPath);
+        FilePicker.UseSource(_vm);
 
         await _vm.InitializeAsync();
         await MapTab.InitializeAsync(_vm);

@@ -276,11 +276,13 @@
                             <StackPanel DataContext="{Binding ClipForm}" Margin="0,6,0,0"
                                         Visibility="{Binding HasClip, Converter={StaticResource Visible}}">
                                 <TextBlock Text="Clip path" Style="{StaticResource Caption}" />
-                                <TextBox Text="{Binding Path, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource MonoFont}"
-                                         TextWrapping="Wrap" AutomationProperties.AutomationId="MoveClipPath" />
-                                <ListBox ItemsSource="{Binding Matches}" MaxHeight="140" Margin="0,2,0,0"
-                                         SelectionChanged="Match_SelectionChanged"
-                                         Visibility="{Binding HasMatches, Converter={StaticResource Visible}}" />
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="Browse…" Style="{StaticResource DenseButton}"
+                                            Margin="4,0,0,0" VerticalAlignment="Top" Click="BrowseClip_Click"
+                                            AutomationProperties.AutomationId="MoveBrowseClip" />
+                                    <TextBox Text="{Binding Path, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource MonoFont}"
+                                             TextWrapping="Wrap" AutomationProperties.AutomationId="MoveClipPath" />
+                                </DockPanel>
                                 <mab:MabPlayer x:Name="ClipPlayer" Margin="0,6,0,0" />
                                 <Grid Margin="0,6,0,0" Visibility="{Binding HasTiming, Converter={StaticResource Visible}}">
                                     <Grid.ColumnDefinitions>

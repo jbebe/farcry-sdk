@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
+using JackAll.App.Picker;
 using JackAll.Core.Format.Rml;
 using JackAll.Tools.Mgb;
 using Microsoft.Win32;
@@ -281,6 +282,22 @@ public partial class MgbTabView : UserControl
         }
         list.Remove(_selected.Target);
         Rebuild("Deleted.");
+    }
+
+    private void BrowseTexture_Click(object sender, RoutedEventArgs e)
+    {
+        if (((FrameworkElement)sender).DataContext is not MgbPropertyRow row)
+        {
+            return;
+        }
+
+        var request = new FilePickerRequest(
+            "Pick a texture", Extension: "xbt", Folder: "ui",
+            InitialPath: row.Text.Length == 0 ? null : MgbTextureResolver.ToArchivePath(row.Text), NeedsRealPath: true);
+        if (FilePicker.Show(this, request) is { } file)
+        {
+            row.Text = MgbTextureResolver.ToTexturePath(file.Path);
+        }
     }
 
     private void MoveUpButton_Click(object sender, RoutedEventArgs e) => Move(-1);

@@ -5,6 +5,13 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **Pick files from the archives** — a field that holds a game file's path or its hash has a …
+  button that opens a file picker over the merged archives: a folder tree, the file list, search with
+  the Files tab's `ext:`/`arch:`/`hash:` words, and a File name box that takes a typed path. It sits
+  on an entity's model, skeleton, effect and other path fields, on its `snd…` sound fields (picking a
+  `soundbinary\` bank writes its id), on the Animations tab's clip path (replacing the suggestion
+  list), and on a Magma material's texture. A path hash or sound id now shows the file it names under
+  the value.
 - **Play a `.mab`** — selecting an animation bank in the Files tab draws the rigs it drives as
   stick figures: the bank's own rig in blue, each weapon or prop the tag table names in orange, hung
   from the bone it says. Play, scrub with the slider, orbit and zoom. The same player sits under the

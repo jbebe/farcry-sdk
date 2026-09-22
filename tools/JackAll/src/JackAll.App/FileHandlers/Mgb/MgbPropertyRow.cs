@@ -270,7 +270,7 @@ public sealed class MgbPropertyRow : INotifyPropertyChanged
         }
     }
 
-    private bool IsTexturePath { get; init; }
+    public bool IsTexturePath { get; private init; }
 
     /// <summary>Builds the grid for one record. Returns an empty list for a grouping row.</summary>
     public static List<MgbPropertyRow> For(object? target, MgbRowContext? context = null)

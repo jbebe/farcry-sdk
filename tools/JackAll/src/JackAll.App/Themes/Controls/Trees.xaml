@@ -119,6 +119,72 @@
         </Style.Triggers>
     </Style>
 
+    <!-- A folder of the merged filesystem: an open or closed folder glyph, then its name. -->
+    <HierarchicalDataTemplate x:Key="FolderTemplate" DataType="{x:Type local:FolderNode}"
+                              ItemsSource="{Binding Children}">
+        <StackPanel Orientation="Horizontal">
+            <TextBlock Margin="0,0,4,0">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Text" Value="&#128193;" />
+                        <Style.Triggers>
+                            <!-- No subfolders and no files at all — shown open since there's nothing to reveal. -->
+                            <DataTrigger Binding="{Binding IsEmpty}" Value="True">
+                                <Setter Property="Text" Value="&#128194;" />
+                            </DataTrigger>
+                            <DataTrigger Binding="{Binding IsExpanded, RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True">
+                                <Setter Property="Text" Value="&#128194;" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
+            <TextBlock Text="{Binding Name}" />
+        </StackPanel>
+    </HierarchicalDataTemplate>
+
+    <!-- A FolderNode row: no chevron, since the folder glyph already marks it expandable and a click
+         anywhere on the row toggles it (TreeViewBehaviors.ToggleExpandOnItemClick). -->
+    <Style x:Key="FolderTreeItem" TargetType="TreeViewItem" BasedOn="{StaticResource StateTreeItem}">
+        <Setter Property="Padding" Value="2" />
+        <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
+        <Setter Property="local:ItemState.IsChanged" Value="{Binding ContainsMods}" />
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="TreeViewItem">
+                    <StackPanel>
+                        <Border x:Name="Bd"
+                                Padding="{TemplateBinding Padding}"
+                                Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                SnapsToDevicePixels="True">
+                            <ContentPresenter x:Name="PART_Header"
+                                              ContentSource="Header"
+                                              HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
+                        </Border>
+                        <ItemsPresenter x:Name="ItemsHost" Margin="19,0,0,0" Visibility="Collapsed" />
+                    </StackPanel>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsExpanded" Value="True">
+                            <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible" />
+                        </Trigger>
+                        <Trigger Property="IsSelected" Value="True">
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectionInactiveBrush}" />
+                        </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="True" />
+                                <Condition Property="Selector.IsSelectionActive" Value="True" />
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectionBrush}" />
+                        </MultiTrigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- A foldout: the whole header row toggles it. -->
     <Style TargetType="Expander">
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />

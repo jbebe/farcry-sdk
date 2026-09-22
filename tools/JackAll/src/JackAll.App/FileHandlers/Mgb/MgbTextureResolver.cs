@@ -46,6 +46,10 @@ public sealed class MgbTextureResolver(Func<string, byte[]?> readByPath)
     public static string ToArchivePath(string texturePath)
         => Path.ChangeExtension(@"ui\" + texturePath.TrimStart('\\', '/').Replace('/', '\\'), ".xbt");
 
+    /// <summary>The inverse of <see cref="ToArchivePath"/>, for a texture under <c>ui\</c>.</summary>
+    public static string ToTexturePath(string archivePath)
+        => @"\" + Path.ChangeExtension(archivePath[(archivePath.IndexOf('\\') + 1)..], ".png");
+
     private ImageSource? Load(string texturePath)
     {
         try

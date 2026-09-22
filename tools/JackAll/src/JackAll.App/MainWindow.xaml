@@ -22,33 +22,8 @@
         <local:ModuleNameMultiConverter x:Key="ModuleNameConverter" />
         <local:UnusedFileConverter x:Key="UnusedFileConverter" />
 
-        <!-- The Files tab's grey/black convention: a folder is grey until a mod or the workspace changed
-             something inside it (FolderTree's style), a file until it was changed itself (FileGrid's). -->
-        <HierarchicalDataTemplate x:Key="FolderTemplate" DataType="{x:Type local:FolderNode}"
-                                  ItemsSource="{Binding Children}">
-            <StackPanel Orientation="Horizontal">
-                <TextBlock Margin="0,0,4,0">
-                    <TextBlock.Style>
-                        <Style TargetType="TextBlock">
-                            <Setter Property="Text" Value="&#128193;" />
-                            <Style.Triggers>
-                                <!-- No subfolders and no files at all — shown open since there's nothing to reveal. -->
-                                <DataTrigger Binding="{Binding IsEmpty}" Value="True">
-                                    <Setter Property="Text" Value="&#128194;" />
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding IsExpanded, RelativeSource={RelativeSource AncestorType=TreeViewItem}}" Value="True">
-                                    <Setter Property="Text" Value="&#128194;" />
-                                </DataTrigger>
-                            </Style.Triggers>
-                        </Style>
-                    </TextBlock.Style>
-                </TextBlock>
-                <TextBlock Text="{Binding Name}" />
-            </StackPanel>
-        </HierarchicalDataTemplate>
-
         <!-- The Mods tab's per-mod details tree (see MainViewModel.SelectedModFiles) - no
-             grey/black "contains changes" coloring here, unlike FolderTemplate above: every node in
+             grey/black "contains changes" coloring here, unlike the Files tab's FolderTemplate: every node in
              this tree is already part of the selected mod's own overrides. -->
         <HierarchicalDataTemplate x:Key="ModFileTemplate" DataType="{x:Type local:ModFileNode}"
                                   ItemsSource="{Binding Children}">
@@ -448,65 +423,13 @@
                             </ContextMenu>
                         </TreeView.ContextMenu>
                         <TreeView.Resources>
-                            <!--
-                                Declared here rather than as TreeView.ItemContainerStyle so it applies
-                                at every depth, not just the roots.
-
-                                A single click anywhere on the row expands or collapses the folder, the
-                                way VS Code's explorer does — hunting for the chevron is a needless
-                                precision task when the whole row is a valid target. The default
-                                expander triangle is dropped from the template below, since the folder
-                                emoji already marks a row as expandable and the triangle duplicated it.
-                            -->
-                            <Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource StateTreeItem}">
+                            <Style TargetType="{x:Type TreeViewItem}" BasedOn="{StaticResource FolderTreeItem}">
                                 <EventSetter Event="PreviewMouseLeftButtonDown" Handler="FolderTree_ItemClicked" />
                                 <!-- Right-click selects the row before its menu opens, so the menu (and
                                      the details pane, and the file list) all act on the folder actually
                                      under the cursor - WPF's TreeView doesn't select on right-click by
                                      itself, which would otherwise export whatever was selected before. -->
                                 <EventSetter Event="PreviewMouseRightButtonDown" Handler="FolderTree_ItemRightClicked" />
-                                <Setter Property="Padding" Value="2" />
-                                <!-- Round-trips expand/collapse to FolderNode.IsExpanded, so a tree
-                                     rebuild (every edit rebuilds it from scratch) can restore what was
-                                     open instead of collapsing everything back down. -->
-                                <Setter Property="IsExpanded" Value="{Binding IsExpanded, Mode=TwoWay}" />
-                                <Setter Property="local:ItemState.IsChanged" Value="{Binding ContainsMods}" />
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="{x:Type TreeViewItem}">
-                                            <StackPanel>
-                                                <Border x:Name="Bd"
-                                                        Padding="{TemplateBinding Padding}"
-                                                        Background="{TemplateBinding Background}"
-                                                        BorderBrush="{TemplateBinding BorderBrush}"
-                                                        BorderThickness="{TemplateBinding BorderThickness}"
-                                                        SnapsToDevicePixels="True">
-                                                    <ContentPresenter x:Name="PART_Header"
-                                                                      ContentSource="Header"
-                                                                      HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}" />
-                                                </Border>
-                                                <ItemsPresenter x:Name="ItemsHost" Margin="19,0,0,0" Visibility="Collapsed" />
-                                            </StackPanel>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsExpanded" Value="True">
-                                                    <Setter TargetName="ItemsHost" Property="Visibility" Value="Visible" />
-                                                </Trigger>
-                                                <Trigger Property="IsSelected" Value="True">
-                                                    <Setter TargetName="Bd" Property="Background"
-                                                            Value="{DynamicResource SelectionInactiveBrush}" />
-                                                </Trigger>
-                                                <MultiTrigger>
-                                                    <MultiTrigger.Conditions>
-                                                        <Condition Property="IsSelected" Value="True" />
-                                                        <Condition Property="Selector.IsSelectionActive" Value="True" />
-                                                    </MultiTrigger.Conditions>
-                                                    <Setter TargetName="Bd" Property="Background"
-                                                            Value="{DynamicResource SelectionBrush}" />
-                                                </MultiTrigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
                             </Style>
                         </TreeView.Resources>
                     </TreeView>

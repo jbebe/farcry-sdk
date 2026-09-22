@@ -17,6 +17,33 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
+            <Button DockPanel.Dock="Right" Content="…" Margin="4,0,0,0" VerticalAlignment="Top"
+                    Click="PickFile_Click" ToolTip="Pick a file from the game archives"
+                    AutomationProperties.AutomationId="FcbPickFile">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource DenseButton}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsFilePath}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
+            <!-- The file a path hash names, under its hex. -->
+            <TextBlock DockPanel.Dock="Bottom" Text="{Binding ResolvedPath}" ToolTip="{Binding ResolvedPath}"
+                       TextTrimming="CharacterEllipsis" Margin="0,1,0,0">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock" BasedOn="{StaticResource MonoNote}">
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding ResolvedPath}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
             <!-- The Grid is what fills the column; whichever editor shows stretches to it. -->
             <Grid>
                 <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}">
@@ -79,7 +106,7 @@
     </DataTemplate>
 
     <DataTemplate DataType="{x:Type fcbEditor:BoolField}">
-        <CheckBox IsChecked="{Binding Value}" VerticalAlignment="Center" Margin="0,2" />
+        <CheckBox IsChecked="{Binding Value}" HorizontalAlignment="Right" VerticalAlignment="Center" Margin="0,2" />
     </DataTemplate>
 
     <!-- Matrix4 only now - a wrapped grid of already-labeled ScalarFields (R#C#), reusing the

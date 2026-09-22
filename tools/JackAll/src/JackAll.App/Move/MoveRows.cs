@@ -110,13 +110,12 @@ public sealed record MoveClipRow(MoveClipSite Site, string Role, string Path)
     public string FileName => System.IO.Path.GetFileNameWithoutExtension(Path);
 }
 
-/// <summary>The clip editor under the rule detail: a path with suggestions, and the clip's timing.</summary>
+/// <summary>The clip editor under the rule detail: a path, and the clip's timing.</summary>
 /// <param name="library">Every <c>.mab</c> path the game ships, sorted case-insensitively.</param>
 public sealed class MoveClipForm(string[] library) : Observable
 {
     private MoveClipRow? _clip;
     private string _path = string.Empty;
-    private IReadOnlyList<string> _matches = [];
     private string _blend = string.Empty;
     private string _speed = string.Empty;
     private string _start = string.Empty;
@@ -149,31 +148,7 @@ public sealed class MoveClipForm(string[] library) : Observable
 
     public bool HasTiming => Clip?.Site.Owner.FieldF32("m_flBlendTime") is not null;
 
-    public string Path
-    {
-        get => _path;
-        set
-        {
-            if (Set(ref _path, value))
-            {
-                Matches = Suggest(value);
-            }
-        }
-    }
-
-    public IReadOnlyList<string> Matches
-    {
-        get => _matches;
-        private set
-        {
-            if (Set(ref _matches, value))
-            {
-                OnPropertyChanged(nameof(HasMatches));
-            }
-        }
-    }
-
-    public bool HasMatches => Matches.Count > 0;
+    public string Path { get => _path; set => Set(ref _path, value); }
 
     public string Blend { get => _blend; set => Set(ref _blend, value); }
 
@@ -186,18 +161,6 @@ public sealed class MoveClipForm(string[] library) : Observable
     public bool Interruptible { get => _interruptible; set => Set(ref _interruptible, value); }
 
     public bool IsShipped(string path) => Array.BinarySearch(library, path, StringComparer.OrdinalIgnoreCase) >= 0;
-
-    /// <summary>Shipped clips whose path holds every word typed, once enough is typed to narrow them.</summary>
-    private IReadOnlyList<string> Suggest(string text)
-    {
-        string[] words = text.Split([' ', '\\', '/'], StringSplitOptions.RemoveEmptyEntries);
-        if (words.Sum(w => w.Length) < 3 || IsShipped(text))
-        {
-            return [];
-        }
-
-        return [.. library.Where(p => words.All(w => p.Contains(w, StringComparison.OrdinalIgnoreCase))).Take(200)];
-    }
 
     private static string Format(float? value)
         => value?.ToString("0.###", CultureInfo.InvariantCulture) ?? string.Empty;

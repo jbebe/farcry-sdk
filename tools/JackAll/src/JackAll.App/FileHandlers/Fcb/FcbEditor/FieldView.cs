@@ -40,7 +40,7 @@ public sealed class FieldView(PropertyRow row, FieldOrigin origin) : Observable
     {
         FcbMember? member = context.Member(cls, field.Hash, field.Value);
         PropertyRow row = PropertyRow.Build(
-            field.Hash, member?.Name, member?.Type ?? FcbMemberType.BinHex, field.Value, baseline, choices);
+            field.Hash, member?.Name, member?.Type ?? FcbMemberType.BinHex, field.Value, baseline, choices, FileRefOf(member));
         var view = new FieldView(row, field.Origin);
         bool wasInherited = field.Origin == FieldOrigin.Inherited;
 
@@ -74,4 +74,14 @@ public sealed class FieldView(PropertyRow row, FieldOrigin origin) : Observable
         };
         return view;
     }
+
+    /// <summary>
+    /// What file a member names. A sound id is a String the engine reads as an unsigned int, or one
+    /// named <c>snd…</c>/<c>dissnd…</c> by the original editor's convention.
+    /// </summary>
+    private static FileRef FileRefOf(FcbMember? member)
+        => member is null ? FileRef.None
+            : member.IsPath ? FileRef.PathHash
+            : member.Cpp == "unsigned_int" || member.HasPrefix("snd") || member.HasPrefix("dissnd") ? FileRef.SoundId
+            : FileRef.None;
 }

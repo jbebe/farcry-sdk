@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using JackAll.App.Picker;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.Fcb;
 
@@ -41,11 +42,27 @@ public sealed class ScalarField : INotifyPropertyChanged
     /// field on every keystroke.</summary>
     public event Action<ScalarField>? ValidityChanged;
 
-    public ScalarField(FcbMemberType type, object initialValue, string? label = null, IReadOnlyList<string>? enumChoices = null)
+    /// <summary>Which game file the value names, if any, so the file picker is offered.</summary>
+    public FileRef FileRef { get; }
+
+    public bool IsFilePath => FileRef != FileRef.None;
+
+    /// <summary>The file a path hash or sound id names, when anything knows it.</summary>
+    public string? ResolvedPath => FileRef switch
+    {
+        FileRef.PathHash when IsValid && Value is uint hash => FilePicker.PathOf(hash),
+        FileRef.SoundId when TryParseSoundId(Text, out uint id) => FilePicker.SoundBankOf(id),
+        _ => null,
+    };
+
+    public ScalarField(
+        FcbMemberType type, object initialValue, string? label = null, IReadOnlyList<string>? enumChoices = null,
+        FileRef fileRef = FileRef.None)
     {
         Type = type;
         Label = label;
         EnumChoices = enumChoices;
+        FileRef = fileRef;
         _text = FcbFieldFormat.Format(type, initialValue);
         _value = initialValue;
         _isValid = true;
@@ -65,6 +82,7 @@ public sealed class ScalarField : INotifyPropertyChanged
             Revalidate();
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedEnumIndex));
+            OnPropertyChanged(nameof(ResolvedPath));
         }
     }
 
@@ -117,6 +135,16 @@ public sealed class ScalarField : INotifyPropertyChanged
         }
     }
 
+    /// <summary>A sound id as the data writes it: <c>0x</c> and eight uppercase hex digits.</summary>
+    public static string SoundIdText(uint id) => $"0x{id:X8}";
+
+    private static bool TryParseSoundId(string text, out uint id)
+    {
+        text = text.Trim();
+        return uint.TryParse(text.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? text[2..] : text,
+            NumberStyles.HexNumber, CultureInfo.InvariantCulture, out id);
+    }
+
     private void Revalidate()
     {
         if (FcbFieldFormat.TryParse(Type, _text, out object parsed, out string? error))
@@ -135,6 +163,21 @@ public sealed class ScalarField : INotifyPropertyChanged
     public event PropertyChangedEventHandler? PropertyChanged;
     private void OnPropertyChanged([CallerMemberName] string? name = null)
         => PropertyChanged?.Invoke(this, new PropertyChangedEventArgs(name));
+}
+
+/// <summary>What game file a field's value names.</summary>
+public enum FileRef
+{
+    None,
+
+    /// <summary>A String holding an archive path.</summary>
+    Path,
+
+    /// <summary>A Hash holding an archive path's CRC32.</summary>
+    PathHash,
+
+    /// <summary>A String holding a sound id, which names <c>soundbinary\&lt;id:08x&gt;.spk</c>.</summary>
+    SoundId,
 }
 
 /// <summary>A plain Bool/Bool16/Bool32 leaf - no text parsing, so no invalid state is possible; a

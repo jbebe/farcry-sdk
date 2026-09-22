@@ -13,8 +13,14 @@
              same MgbPropertyRow; they differ only in how its value is presented. -->
 
         <DataTemplate x:Key="TextEditor">
-            <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
-                     Style="{StaticResource ValueBox}" ToolTip="{Binding Error}" />
+            <DockPanel>
+                <Button DockPanel.Dock="Right" Content="…" Style="{StaticResource DenseButton}" Margin="4,0,0,0"
+                        Click="BrowseTexture_Click" ToolTip="Pick a texture from the game archives"
+                        Visibility="{Binding IsTexturePath, Converter={StaticResource BoolToVisibility}}"
+                        AutomationProperties.AutomationId="MgbBrowseTexture" />
+                <TextBox Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                         Style="{StaticResource ValueBox}" ToolTip="{Binding Error}" />
+            </DockPanel>
         </DataTemplate>
 
         <DataTemplate x:Key="BoolEditor">

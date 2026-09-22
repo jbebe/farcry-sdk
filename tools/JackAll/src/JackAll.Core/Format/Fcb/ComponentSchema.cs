@@ -27,12 +27,13 @@ public sealed record SchemaClass(string Name, string? Parent, string Kind, bool 
 /// A <c>value</c>; a <c>container</c> of child nodes tagged <see cref="Element"/>, inside a child
 /// named after the member when <see cref="Wrapped"/>; a <c>group</c> whose members sit in a child
 /// named after it; or a <c>conditional</c> group or <c>embedded</c> class whose members sit in the
-/// same node.
+/// same node. <see cref="Cpp"/> is the engine's own value type, e.g. <c>CPathID</c>.
 /// </summary>
 public sealed record SchemaMember(
     string Name,
     string Kind,
     string? Type,
+    string? Cpp,
     IReadOnlyList<string>? Labels,
     string? Element,
     bool? Wrapped,

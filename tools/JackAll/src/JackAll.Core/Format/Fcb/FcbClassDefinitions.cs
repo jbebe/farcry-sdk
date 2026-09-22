@@ -45,10 +45,13 @@ public enum FcbMemberType
     Matrix4,
 }
 
-/// <summary>A member's decoded name (if the config has one), its declared wire type, and the labels
-/// of the values an enum index member can take.</summary>
-public sealed record FcbMember(string? Name, FcbMemberType Type, IReadOnlyList<string>? Labels = null)
+/// <summary>A member's decoded name (if the config has one), its declared wire type, the labels
+/// of the values an enum index member can take, and the engine's C++ value type.</summary>
+public sealed record FcbMember(string? Name, FcbMemberType Type, IReadOnlyList<string>? Labels = null, string? Cpp = null)
 {
+    /// <summary>Whether the value is an archive path's hash (<c>CPathID</c>).</summary>
+    public bool IsPath => Cpp?.StartsWith("CPathID", StringComparison.Ordinal) == true;
+
     /// <summary>Whether the name carries the original editor's <paramref name="prefix"/> convention:
     /// <c>hidPos</c> has <c>hid</c>, <c>hidden</c> does not.</summary>
     public bool HasPrefix(string prefix)
@@ -209,12 +212,13 @@ public sealed class FcbClassDefinitions : IFcbClassScope
                         cls.Members[hash] = new FcbMember(
                             member.Name,
                             Enum.TryParse(member.Type, out FcbMemberType type) ? type : FcbMemberType.BinHex,
-                            member.Labels);
+                            member.Labels,
+                            member.Cpp);
                     }
                     else
                     {
                         FcbMember known = declaring.Members[hash];
-                        declaring.Members[hash] = known with { Labels = known.Labels ?? member.Labels };
+                        declaring.Members[hash] = known with { Labels = known.Labels ?? member.Labels, Cpp = known.Cpp ?? member.Cpp };
                     }
                     break;
                 case "conditional" or "embedded":

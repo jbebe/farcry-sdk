@@ -499,10 +499,7 @@ public sealed partial class MoveRulesViewModel(MainViewModel vm) : Observable
     }
 
     /// <summary>A clip path for a hash, or null when no known path hashes to it.</summary>
-    public string? PathOf(uint hash)
-        => _typedPaths.TryGetValue(hash, out string? typed) ? typed
-            : vm.Names is { } names && names.TryResolve(hash, out string path) ? path
-            : null;
+    public string? PathOf(uint hash) => _typedPaths.TryGetValue(hash, out string? typed) ? typed : vm.PathOf(hash);
 
     /// <summary>Everything that depends on which objects the session holds, after a load or a revert.</summary>
     private void Reload()

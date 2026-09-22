@@ -3,7 +3,6 @@ using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 using JackAll.Tools.Reach;
 using System.Collections.ObjectModel;
-using System.Globalization;
 using System.IO;
 
 namespace JackAll.App;
@@ -79,7 +78,7 @@ public sealed partial class MainViewModel
     /// shows every match across the whole tree instead of just the selected folder (the folder tree
     /// stays put for navigation, it just stops constraining the list). '/' and '\' are treated as
     /// equivalent since paths mix both conventions. An <c>ext:xbt</c>-shaped token filters by file
-    /// type instead (see <see cref="ParseFilter"/>) and can combine with plain text, e.g.
+    /// type instead (see <see cref="FileFilter"/>) and can combine with plain text, e.g.
     /// <c>"ext:xbt cliff"</c>.
     /// </summary>
     public string FilterText
@@ -313,45 +312,22 @@ public sealed partial class MainViewModel
 
         string? previous = SelectedFolder?.FullPath;
 
-        // Every FolderNode below is a brand-new instance - captured before _folderIndex is cleared,
-        // so the tree doesn't silently collapse back to nothing expanded on every edit (see
-        // FolderNode.IsExpanded).
-        var previouslyExpanded = new HashSet<string>(
-            _folderIndex.Values.Where(n => n.IsExpanded).Select(n => n.FullPath),
-            StringComparer.OrdinalIgnoreCase);
-
-        var root = new FolderNode("", "");
-        _folderIndex.Clear();
-        _folderIndex[""] = root;
-
-        foreach (VfsFile file in _vfs.Files.Values)
+        FolderNode root = FolderTree.Build(_vfs.Files.Values, _folderIndex, onFile: (node, file) =>
         {
-            FolderNode node = EnsureFolder(_folderIndex, root, file.Directory, previouslyExpanded);
-            node.HasFiles = true;
-            if (file.IsModded)
-            {
-                // Light up the whole path to a modded file, so you can find your edits by
-                // descending the tree instead of remembering where you put them.
-                for (FolderNode? n = node; n is not null; n = ParentOf(_folderIndex, n))
-                {
-                    n.ContainsMods = true;
-                }
-            }
             if (!IsUnusedFile(file))
             {
                 // Stops at the first ancestor already marked: unlike mods this is true of nearly
                 // every file, so walking the full chain each time would be ~200,000 redundant walks.
-                for (FolderNode? n = node; n is { ContainsUsedFiles: false }; n = ParentOf(_folderIndex, n))
+                for (FolderNode? n = node; n is { ContainsUsedFiles: false }; n = FolderTree.ParentOf(_folderIndex, n))
                 {
                     n.ContainsUsedFiles = true;
                 }
             }
-        }
+        });
 
-        SortRecursively(root);
         if (OnlyMods || HideUnused)
         {
-            Prune(root, n => (!OnlyMods || n.ContainsMods) && (!HideUnused || n.ContainsUsedFiles));
+            FolderTree.Prune(root, n => (!OnlyMods || n.ContainsMods) && (!HideUnused || n.ContainsUsedFiles));
         }
 
         Roots.Clear();
@@ -375,15 +351,7 @@ public sealed partial class MainViewModel
     /// The chain of folders from a top-level root down to (and including) <paramref name="node"/> —
     /// what code-behind needs to expand/reveal a folder in the tree view that isn't already showing.
     /// </summary>
-    public IReadOnlyList<FolderNode> GetAncestorChain(FolderNode node)
-    {
-        var chain = new List<FolderNode>();
-        for (FolderNode? current = node; current is not null; current = ParentOf(_folderIndex, current))
-        {
-            chain.Insert(0, current);
-        }
-        return chain;
-    }
+    public IReadOnlyList<FolderNode> GetAncestorChain(FolderNode node) => FolderTree.AncestorChain(_folderIndex, node);
 
     /// <summary>
     /// Every file "Export folder…" would write for <paramref name="folder"/>: everything at or below
@@ -516,60 +484,6 @@ public sealed partial class MainViewModel
     /// <summary>Whether a folder export is running, so the status bar can offer to cancel it.</summary>
     public bool IsExporting => _exportCts is not null;
 
-    /// <summary>Drops every branch <paramref name="keep"/> rejects, for the view filters that prune
-    /// the directory tree as well as the file list.</summary>
-    private static void Prune(FolderNode node, Func<FolderNode, bool> keep)
-    {
-        var kept = node.Children.Where(keep).ToList();
-        node.Children.Clear();
-        foreach (FolderNode child in kept)
-        {
-            Prune(child, keep);
-            node.Children.Add(child);
-        }
-    }
-
-    private static FolderNode? ParentOf(Dictionary<string, FolderNode> index, FolderNode node)
-    {
-        string? parent = Path.GetDirectoryName(node.FullPath);
-        return string.IsNullOrEmpty(parent) ? null : index.GetValueOrDefault(parent);
-    }
-
-    private static FolderNode EnsureFolder(
-        Dictionary<string, FolderNode> index, FolderNode root, string directory, HashSet<string> previouslyExpanded)
-    {
-        if (string.IsNullOrEmpty(directory))
-        {
-            return root;
-        }
-        if (index.TryGetValue(directory, out FolderNode? existing))
-        {
-            return existing;
-        }
-
-        string parentPath = Path.GetDirectoryName(directory) ?? string.Empty;
-        FolderNode parent = EnsureFolder(index, root, parentPath, previouslyExpanded);
-
-        var node = new FolderNode(Path.GetFileName(directory), directory)
-        {
-            IsExpanded = previouslyExpanded.Contains(directory),
-        };
-        parent.Children.Add(node);
-        index[directory] = node;
-        return node;
-    }
-
-    private static void SortRecursively(FolderNode node)
-    {
-        var sorted = node.Children.OrderBy(c => c.Name, StringComparer.OrdinalIgnoreCase).ToList();
-        node.Children.Clear();
-        foreach (FolderNode child in sorted)
-        {
-            SortRecursively(child);
-            node.Children.Add(child);
-        }
-    }
-
     private CancellationTokenSource? _refreshCts;
     private const int FilterDebounceMilliseconds = 250;
 
@@ -610,7 +524,7 @@ public sealed partial class MainViewModel
         }
 
         GameVfs vfs = _vfs;
-        (string[] includes, string[] excludes, string? extFilter, string? archFilter, uint? hashFilter) = ParseFilter(_filterText);
+        FileFilter filter = FileFilter.Parse(_filterText);
         string? folderPath = SelectedFolder?.FullPath;
         bool onlyMods = OnlyMods;
         bool hideUnused = HideUnused;
@@ -624,27 +538,9 @@ public sealed partial class MainViewModel
             matches = await Task.Run(() =>
             {
                 IEnumerable<VfsFile> files;
-                if (includes.Length > 0 || excludes.Length > 0 || extFilter is not null || archFilter is not null || hashFilter is not null)
+                if (!filter.IsEmpty)
                 {
-                    files = vfs.Files.Values.Where(f =>
-                    {
-                        var normalizedPath = NormalizeSlashes(f.Path);
-                        // Filter for exclusion first, skip file early
-                        if (excludes.Length > 0 && excludes.Any(x => normalizedPath.Contains(x, StringComparison.OrdinalIgnoreCase)))
-                            return false;
-
-                        if (hashFilter is { } hash && f.Hash != hash)
-                            return false;
-
-                        if (archFilter is not null && !vfs.DisplayModuleName(f).Contains(archFilter, StringComparison.OrdinalIgnoreCase))
-                            return false;
-
-                        // Include and extension comes after that
-                        var extMatch = extFilter is null || string.Equals(f.Type.Extension, extFilter, StringComparison.OrdinalIgnoreCase);
-                        var includesMatch = includes.Length == 0 || includes.All(x => normalizedPath.Contains(x, StringComparison.OrdinalIgnoreCase));
-
-                        return extMatch && includesMatch;
-                    });
+                    files = vfs.Files.Values.Where(f => filter.Matches(f, vfs.DisplayModuleName));
                 }
                 else if (folderPath is not null)
                 {
@@ -685,54 +581,5 @@ public sealed partial class MainViewModel
                 VisibleFiles.Add(file);
             }
         }
-    }
-
-    private static string NormalizeSlashes(string path) => path.Replace('/', '\\');
-
-    /// <summary>
-    /// Pulls the special <c>ext:xbt</c>/<c>arch:dlc1</c>/<c>hash:1a2b3c4d</c>-shaped tokens out of the
-    /// filter text, leaving whatever's left as the ordinary path substring needle. Whitespace-delimited
-    /// and freely combinable, e.g. <c>"ext:xbt cliff"</c>: only .xbt files whose path also contains
-    /// "cliff". <c>arch:</c> matches against <see cref="GameVfs.DisplayModuleName"/> (so both the bare
-    /// archive name and, for a colliding one, its disambiguated "folder/name" form work); <c>hash:</c>
-    /// takes a hex CRC32 (with or without a leading "0x") and matches <see cref="VfsFile.Hash"/> exactly
-    /// - an unparsable hash: value is dropped rather than falling back to a literal text match, since a
-    /// mistyped hash is never a meaningful path substring.
-    /// </summary>
-    private static (string[] Includes, string[] Excludes, string? Extension, string? Archive, uint? Hash) ParseFilter(string filterText)
-    {
-        string? extension = null;
-        string? archive = null;
-        uint? hash = null;
-        var includes = new List<string>();
-        var excludes = new List<string>();
-
-        foreach (string token in filterText.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-        {
-            if (token.StartsWith("ext:", StringComparison.OrdinalIgnoreCase))
-                extension = token[4..].TrimStart('.');
-            else if (token.StartsWith("arch:", StringComparison.OrdinalIgnoreCase))
-                archive = token[5..];
-            else if (token.StartsWith("hash:", StringComparison.OrdinalIgnoreCase))
-            {
-                string hex = token[5..];
-                if (hex.StartsWith("0x", StringComparison.OrdinalIgnoreCase))
-                    hex = hex[2..];
-                if (uint.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint parsed))
-                    hash = parsed;
-            }
-            else if (token.StartsWith("-", StringComparison.OrdinalIgnoreCase) && token.Length > 1)
-                excludes.Add(token[1..]);
-            else
-                includes.Add(token);
-        }
-
-        return (
-            includes.Select(NormalizeSlashes).ToArray(),
-            excludes.Select(NormalizeSlashes).ToArray(),
-            extension is { Length: > 0 } ? extension : null,
-            archive is { Length: > 0 } ? archive : null,
-            hash
-        );
     }
 }

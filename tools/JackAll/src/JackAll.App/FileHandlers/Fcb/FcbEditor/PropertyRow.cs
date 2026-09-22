@@ -3,6 +3,7 @@ using System.Collections.Specialized;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Xrefs;
 using JackAll.Tools.Fcb;
 
 namespace JackAll.App.FileHandlers.Fcb.FcbEditor;
@@ -176,9 +177,11 @@ public sealed class PropertyRow : INotifyPropertyChanged
     /// <param name="enumChoices">Non-null only for a "selXxx" value with a sibling "enumXxx" object in
     /// the data, or for a member the engine registers labels for - renders as a dropdown of
     /// these names instead of a plain integer box (see <see cref="ScalarField.SelectedEnumIndex"/>).</param>
+    /// <param name="fileRef">What file the member is declared to name; a String whose value looks like a
+    /// path counts as one too.</param>
     public static PropertyRow Build(
         uint nameHash, string? name, FcbMemberType declaredType, byte[] rawBytes, byte[]? originalBytes,
-        IReadOnlyList<string>? enumChoices = null)
+        IReadOnlyList<string>? enumChoices = null, FileRef fileRef = FileRef.None)
     {
         FcbMemberType type = declaredType != FcbMemberType.BinHex && FcbValueCodec.TryDecode(declaredType, rawBytes, out _)
             ? declaredType
@@ -223,7 +226,13 @@ public sealed class PropertyRow : INotifyPropertyChanged
                 break;
             default:
                 // String, Hash, Enum, every plain integer/Float, BinHex/Rml.
-                row.Scalar = new ScalarField(type, decoded, enumChoices: enumChoices);
+                FileRef reference = (type, fileRef) switch
+                {
+                    (FcbMemberType.Hash, FileRef.PathHash) or (FcbMemberType.String, FileRef.SoundId) => fileRef,
+                    (FcbMemberType.String, _) when ReferencePaths.LooksLikeGamePath(decoded as string) => FileRef.Path,
+                    _ => FileRef.None,
+                };
+                row.Scalar = new ScalarField(type, decoded, enumChoices: enumChoices, fileRef: reference);
                 break;
         }
 
