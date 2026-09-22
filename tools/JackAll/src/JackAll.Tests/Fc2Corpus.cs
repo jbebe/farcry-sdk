@@ -28,6 +28,10 @@ internal static class Fc2Corpus
             ? Directory.EnumerateFiles(Root, "*" + extension, SearchOption.AllDirectories).Order()
             : [];
 
+    /// <summary>The one file with this name, or null when the corpus lacks it.</summary>
+    public static string? Named(string extension, string fileName)
+        => Find(extension).FirstOrDefault(p => Path.GetFileName(p).Equals(fileName, StringComparison.OrdinalIgnoreCase));
+
     public static string MissingMessage(string extension)
         => $"{Root} holds no *{extension}, so every gate over them silently no-opped. "
            + $"Point {OverrideVariable} at an extracted export, or accept that this checkout cannot run them.";

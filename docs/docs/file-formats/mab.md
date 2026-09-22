@@ -403,6 +403,12 @@ and requires it back: **4,436 of 4,436 byte-identical**, because a clip nobody e
 sections and bone masks verbatim. Only a section an editor cleared is re-encoded, which is what lets
 one clip in a chain be rewritten without disturbing the others.
 
+`MabPose` poses a `.skeleton` from a clip — a clip's rotation or offset for a bone replaces the
+rig's rest value, and a bone the clip leaves out keeps it. JackAll's Files tab previews a bank with
+it: the bank's own rig, resolved from the folder above the bank's `animations` tree, plus each
+participant's `_ref.skeleton` hung from the bone its tag record names, drawn as stick figures and
+played through.
+
 The encoder itself is held separately, with those verbatim bytes thrown away: from the decoded fields
 alone, **99.9% of banks keep every clip, section and mask where it was** and **78.4% return
 byte-identical** — the shortfall being rotations that cannot be re-encoded exactly, compounded over a

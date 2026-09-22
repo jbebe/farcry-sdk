@@ -142,14 +142,7 @@ public static class Fc2ModelBuilder
     /// </remarks>
     private static Fc2ModelClip Index(MabFile bank, string clipPath, string file, string model)
     {
-        (int Tracks, int LastFrame, int Rate)? timing = null;
-        foreach (int slot in (int[])
-                 [MabClip.SectionKeyframeRotation, MabClip.SectionAnimatedTranslation,
-                  MabClip.SectionRootTranslation, MabClip.SectionRootRotation])
-        {
-            timing ??= bank.TrackHeaderOf(slot);
-        }
-
+        (int LastFrame, int Rate)? timing = bank.Timing();
         MabParticipant? mine = bank.Participants()
             .FirstOrDefault(p => p.Name.Equals(model, StringComparison.OrdinalIgnoreCase));
         return new Fc2ModelClip

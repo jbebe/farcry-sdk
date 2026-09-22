@@ -1,6 +1,7 @@
 using System.IO;
 using JackAll.Core.Vfs;
 using JackAll.Tools.Fc2Model;
+using JackAll.Tools.Mab;
 
 namespace JackAll.App;
 
@@ -45,6 +46,14 @@ public sealed partial class MainViewModel
         => ClipSearch.For(
             model.Path,
             [.. AllKnownPaths.Where(path => path.EndsWith(".mab", StringComparison.OrdinalIgnoreCase))],
+            ReadByPath);
+
+    /// <summary>The rigs a bank plays on: its own and one per prop it names.</summary>
+    public BankRigs FindRigs(VfsFile bank, MabFile parsed)
+        => ClipSearch.RigsFor(
+            bank.Path,
+            parsed,
+            [.. AllKnownPaths.Where(path => path.EndsWith(Fc2ModelBuilder.RigSuffix, StringComparison.OrdinalIgnoreCase))],
             ReadByPath);
 
     /// <summary>

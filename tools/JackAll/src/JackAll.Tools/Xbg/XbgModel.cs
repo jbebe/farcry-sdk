@@ -118,17 +118,16 @@ public sealed partial class XbgModel
     }
 
     public static (Vector3 Min, Vector3 Max) Bounds(IEnumerable<XbgSubmesh> submeshes)
+        => Bounds(submeshes.SelectMany(s => s.Indices.Select(i => s.Place(s.Positions[i]))));
+
+    public static (Vector3 Min, Vector3 Max) Bounds(IEnumerable<Vector3> points)
     {
         var min = new Vector3(float.MaxValue);
         var max = new Vector3(float.MinValue);
-        foreach (XbgSubmesh submesh in submeshes)
+        foreach (Vector3 point in points)
         {
-            foreach (int i in submesh.Indices)
-            {
-                Vector3 placed = submesh.Place(submesh.Positions[i]);
-                min = Vector3.Min(min, placed);
-                max = Vector3.Max(max, placed);
-            }
+            min = Vector3.Min(min, point);
+            max = Vector3.Max(max, point);
         }
 
         return min.X > max.X ? (Vector3.Zero, Vector3.Zero) : (min, max);

@@ -262,6 +262,20 @@ public class MabClip
         return (U16(block, 0), U16(block, 2), U16(block, 4));
     }
 
+    /// <summary>(last frame, frames per second) from the first keyed section the clip carries.</summary>
+    public (int LastFrame, int Rate)? Timing()
+    {
+        foreach (int slot in (int[])
+                 [SectionKeyframeRotation, SectionAnimatedTranslation, SectionRootTranslation, SectionRootRotation])
+        {
+            if (TrackHeaderOf(slot) is { } header)
+            {
+                return (header.LastFrame, header.Rate);
+            }
+        }
+        return null;
+    }
+
     /// <summary>Every skeleton bone id this clip addresses, in ascending order.</summary>
     public List<int> BoneIds()
         => [.. Masks.SelectMany(MaskBones).Distinct().Order()];

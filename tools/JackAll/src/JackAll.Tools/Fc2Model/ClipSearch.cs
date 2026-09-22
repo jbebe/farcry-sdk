@@ -1,6 +1,10 @@
 using JackAll.Tools.Mab;
+using JackAll.Tools.Skeleton;
 
 namespace JackAll.Tools.Fc2Model;
+
+/// <summary>The rigs a bank drives: its own, and one per prop it names, by the prop's name.</summary>
+public sealed record BankRigs(SkeletonFile? Owner, Dictionary<string, SkeletonFile> Participants);
 
 /// <summary>
 /// Finds the animation banks that move a given model.
@@ -53,6 +57,42 @@ public static class ClipSearch
             }
         }
         return found;
+    }
+
+    /// <summary>
+    /// The rig a bank's own clip plays on, and the rig of each prop its tag table names.
+    /// </summary>
+    /// <remarks>
+    /// Every shipped bank sits under some folder's <c>animations</c> tree, and that folder holds
+    /// its rig: <c>characters\_common</c> for the human banks, an animal's own folder for the rest.
+    /// Where a folder holds several, <c>pelvis_ref</c> is the one every human shares. A prop's rig
+    /// is named after the prop, <c>ak47_ref.skeleton</c> for <c>ak47</c>.
+    /// </remarks>
+    public static BankRigs RigsFor(
+        string bankPath, MabClip bank, IEnumerable<string> rigPaths, Func<string, byte[]?> read)
+    {
+        List<(string Path, string Key)> rigs = [.. rigPaths.Select(p => (p, p.Replace('\\', '/').ToLowerInvariant()))];
+        SkeletonFile? Load(string? path) => path is not null && read(path) is { } bytes ? SkeletonFile.Parse(bytes) : null;
+
+        string bank_ = bankPath.Replace('\\', '/').ToLowerInvariant();
+        int cut = bank_.IndexOf("/animations/", StringComparison.Ordinal);
+        string folder = cut < 0 ? "" : bank_[..(cut + 1)];
+        List<string> own = [.. rigs
+            .Where(r => folder.Length > 0 && r.Key.StartsWith(folder) && r.Key.IndexOf('/', folder.Length) < 0)
+            .OrderBy(r => r.Key.EndsWith("/pelvis_ref.skeleton") ? 0 : 1)
+            .Select(r => r.Path)];
+
+        Dictionary<string, SkeletonFile> props = new(StringComparer.OrdinalIgnoreCase);
+        foreach (MabParticipant participant in bank.Participants().Where(p => p.IsPrimary))
+        {
+            string suffix = $"/{participant.Name.ToLowerInvariant()}{Fc2ModelBuilder.RigSuffix}";
+            if (!props.ContainsKey(participant.Name)
+                && Load(rigs.FirstOrDefault(r => r.Key.EndsWith(suffix)).Path) is { } rig)
+            {
+                props[participant.Name] = rig;
+            }
+        }
+        return new BankRigs(Load(own.FirstOrDefault()), props);
     }
 
     private static string Stem(string gamePath)

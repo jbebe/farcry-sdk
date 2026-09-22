@@ -1,6 +1,7 @@
 using System.Windows.Controls;
 using JackAll.App.FileHandlers.DepLoad;
 using JackAll.App.FileHandlers.Fcb;
+using JackAll.App.FileHandlers.Mab;
 using JackAll.App.FileHandlers.Mgb;
 using JackAll.App.FileHandlers.Rml;
 using JackAll.App.FileHandlers.Sbao;
@@ -12,6 +13,8 @@ using JackAll.App.FileHandlers.Xbm;
 using JackAll.App.FileHandlers.Xbt;
 using JackAll.Core.Mods;
 using JackAll.Core.Vfs;
+using JackAll.Tools.Fc2Model;
+using JackAll.Tools.Mab;
 
 namespace JackAll.App.FileHandlers;
 
@@ -48,11 +51,13 @@ public static class FileHandlerCatalog
     /// is the domino\user\ case's counterpart to <paramref name="openEditor"/>, handing off to the
     /// graph-reconstruction tab, and <paramref name="openMgbEditor"/> is the mgb case's, handing off
     /// to the Magma UI package editor tab (see <see cref="MgbFilePreviewHandler"/>).
+    /// <paramref name="findRigs"/> is the mab case's, resolving the rigs a bank plays on, which are
+    /// filed elsewhere (see <see cref="MabFileHandler"/>).
     /// </summary>
     public static UserControl? CreateView(
         VfsFile file, Func<byte[]> readContent, Action<byte[]> replaceContent, Action openEditor,
         Func<byte[]?> readOriginal, Func<uint, VfsFile?> resolveSoundId, Action<VfsFile> navigateTo,
-        Action openDominoEditor, Action openMgbEditor)
+        Action openDominoEditor, Action openMgbEditor, Func<MabFile, BankRigs> findRigs)
         => file switch
         {
             // A dependency list, a mission element and a sector's layer placement are all small
@@ -83,6 +88,7 @@ public static class FileHandlerCatalog
             { Type.Extension: "xml" or "lua" or "desc" or "mgb.desc" } => BuildTextHandler(file, readContent, readOriginal),
             { Type.Extension: "xbt" } => new XbtFileHandler(file.FileName, readContent(), replaceContent),
             { Type.Extension: "xbg" } => new XbgFileHandler(file.FileName, readContent()),
+            { Type.Extension: "mab" } => new MabFileHandler(file.FileName, readContent(), findRigs),
             { Type.Extension: "xbm" } => new XbmFileHandler(file.FileName, readContent()),
             { Type.Extension: "sbao" } => new SbaoFileHandler(file.FileName, readContent(), replaceContent),
             { Type.Extension: "fcb" } => new FcbFileHandler(file, readContent(), replaceContent, readOriginal),

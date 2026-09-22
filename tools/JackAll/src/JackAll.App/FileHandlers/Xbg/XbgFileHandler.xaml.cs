@@ -1,7 +1,6 @@
 ﻿using JackAll.Tools.World;
 using JackAll.Tools.Xbg;
 using System.Windows.Controls;
-using System.Windows.Input;
 using System.Windows.Media.Media3D;
 using System.Windows.Media;
 using System.Windows;
@@ -35,20 +34,12 @@ public partial class XbgFileHandler : UserControl
 
     private XbgModel? _model;
     private int _selectedLod;
-
-    /// <summary>How far above the model the camera sits, in radians. Fixed: the orbit is
-    /// horizontal-only, so nothing changes this.</summary>
-    private const double Elevation = 0.35;
-
-    private double _yaw = -0.7, _distance = 5;
-    private Point3D _target;
-    private double _near = 0.01, _far = 100;
-    private Point _lastMouse;
-    private bool _dragging;
+    private readonly OrbitViewport _orbit;
 
     public XbgFileHandler(string fileName, byte[] content)
     {
         InitializeComponent();
+        _orbit = new OrbitViewport(Viewport);
         Load(fileName, content);
     }
 
@@ -155,82 +146,6 @@ public partial class XbgFileHandler : UserControl
     private void FrameCamera(List<XbgSubmesh> submeshes)
     {
         (System.Numerics.Vector3 min, System.Numerics.Vector3 max) = XbgModel.Bounds(submeshes);
-        System.Numerics.Vector3 center = (min + max) / 2f;
-        float radius = Math.Max(0.01f, (max - min).Length() / 2f);
-
-        _target = new Point3D(center.X, center.Y, center.Z);
-        _distance = radius * 2.5;
-        _near = radius * 0.01;
-        _far = radius * 20;
-        _yaw = -0.7;
-        UpdateCamera();
-    }
-
-    /// <summary>
-    /// Orbits the camera. Z is up, matching the mesh data - the map editor's world is X east,
-    /// Y north, Z up and these vertices go into it unswapped, so anything treating Y as up lays the
-    /// model on its side.
-    /// </summary>
-    private void UpdateCamera()
-    {
-        double cy = Math.Cos(_yaw), sy = Math.Sin(_yaw);
-        double cp = Math.Cos(Elevation), sp = Math.Sin(Elevation);
-        var dir = new Vector3D(cy * cp, sy * cp, sp);
-        Camera.Position = _target + dir * _distance;
-        Camera.LookDirection = -dir;
-        Camera.UpDirection = new Vector3D(0, 0, 1);
-        Camera.NearPlaneDistance = _near;
-        Camera.FarPlaneDistance = _far;
-    }
-
-    private void Viewport_MouseDown(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ChangedButton != MouseButton.Left)
-        {
-            return;
-        }
-
-        _dragging = true;
-        _lastMouse = e.GetPosition(Viewport);
-        Viewport.CaptureMouse();
-    }
-
-    private void Viewport_MouseUp(object sender, MouseButtonEventArgs e)
-    {
-        if (e.ChangedButton != MouseButton.Left)
-        {
-            return;
-        }
-
-        _dragging = false;
-        Viewport.ReleaseMouseCapture();
-    }
-
-    private void Viewport_MouseMove(object sender, MouseEventArgs e)
-    {
-        if (!_dragging || _model is null)
-        {
-            return;
-        }
-
-        Point pos = e.GetPosition(Viewport);
-        Vector delta = pos - _lastMouse;
-        _lastMouse = pos;
-
-        // Horizontal only - the model turns on the spot, and there is no elevation to lose track of.
-        _yaw += delta.X * 0.01;
-        UpdateCamera();
-    }
-
-    private void Viewport_MouseWheel(object sender, MouseWheelEventArgs e)
-    {
-        if (_model is null)
-        {
-            return;
-        }
-
-        double factor = Math.Pow(0.9, e.Delta / 120.0);
-        _distance = Math.Clamp(_distance * factor, _near * 2, _far / 2);
-        UpdateCamera();
+        _orbit.Frame(min, max);
     }
 }
