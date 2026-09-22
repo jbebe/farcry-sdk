@@ -77,6 +77,9 @@ public sealed class ShapeLayer : IDisposable
         "sound" => (0.95f, 0.75f, 0.25f),
         "trigger" => (0.95f, 0.90f, 0.20f),
         "trigger-off" => (0.45f, 0.42f, 0.15f),
+        "link" => (0.95f, 0.45f, 0.75f),
+        "handle" => (0.35f, 0.95f, 0.85f),
+        "handle-active" => (1f, 0.92f, 0.4f),
         _ => (0.35f, 0.85f, 0.95f),
     };
 

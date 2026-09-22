@@ -31,6 +31,36 @@
                     </Style>
                 </Button.Style>
             </Button>
+            <!-- A colour's swatch, which opens a slider per channel. -->
+            <Grid DockPanel.Dock="Left" Margin="0,0,4,0" VerticalAlignment="Center">
+                <Grid.Style>
+                    <Style TargetType="Grid">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsColour}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Grid.Style>
+                <ToggleButton x:Name="SwatchButton" Width="22" Height="18" Padding="0" ToolTip="Pick the colour">
+                    <Border Background="{Binding Swatch}" BorderBrush="{DynamicResource BorderStrongBrush}" BorderThickness="1"
+                            Width="16" Height="12" />
+                </ToggleButton>
+                <Popup IsOpen="{Binding IsChecked, ElementName=SwatchButton}" StaysOpen="False"
+                       PlacementTarget="{Binding ElementName=SwatchButton}" Placement="Bottom">
+                    <Border Style="{StaticResource PopupSurface}">
+                        <StackPanel Width="200">
+                            <TextBlock Text="Red" Style="{StaticResource Secondary}" />
+                            <Slider Minimum="0" Maximum="1" Value="{Binding Red}" SmallChange="0.01" LargeChange="0.1" />
+                            <TextBlock Text="Green" Style="{StaticResource Secondary}" />
+                            <Slider Minimum="0" Maximum="1" Value="{Binding Green}" SmallChange="0.01" LargeChange="0.1" />
+                            <TextBlock Text="Blue" Style="{StaticResource Secondary}" />
+                            <Slider Minimum="0" Maximum="1" Value="{Binding Blue}" SmallChange="0.01" LargeChange="0.1" />
+                        </StackPanel>
+                    </Border>
+                </Popup>
+            </Grid>
             <!-- The file a path hash names, under its hex. -->
             <TextBlock DockPanel.Dock="Bottom" Text="{Binding ResolvedPath}" ToolTip="{Binding ResolvedPath}"
                        TextTrimming="CharacterEllipsis" Margin="0,1,0,0">

@@ -93,6 +93,11 @@ public static class LayerCatalog
         new("Markers", "Lights",
             "Every placed light, from the CDynamicLightComponent on ordinary entities, in its own colour.");
 
+    public static readonly MapLayer Links =
+        new("Markers", "Event links",
+            "A line from each entity to every entity its event links send to - a light switched off by a trigger, a sound played by an AI point.")
+        { IsVisible = false };
+
     /// <summary>
     /// The four categories of mesh-less entity that no other layer draws. They are split rather
     /// than pooled because they are what a third of a world's entities are, and one undifferentiated
@@ -134,6 +139,7 @@ public static class LayerCatalog
 
         Lights,
         Triggers,
+        Links,
         Emitters,
         AiPoints,
         Entrances,

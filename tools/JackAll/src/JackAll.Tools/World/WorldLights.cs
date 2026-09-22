@@ -30,13 +30,14 @@ public static class WorldLights
     /// <summary>hidType 1 is an omni light; 3 is a spot, which additionally carries the two angles.</summary>
     private const uint SpotType = 3;
 
-    public static IReadOnlyList<WorldLight> Load(IEnumerable<WorldEntity> entities)
+    /// <param name="nodeOf">The node to read each entity from, so unsaved edits show; the loaded one by default.</param>
+    public static IReadOnlyList<WorldLight> Load(IEnumerable<WorldEntity> entities, Func<WorldEntity, FcbObject>? nodeOf = null)
     {
         var lights = new List<WorldLight>();
         foreach (WorldEntity entity in entities)
         {
             if (entity.Position is not { } position ||
-                FcbEntityFields.FindComponent(entity.Node, DynamicLight) is not { } light)
+                FcbEntityFields.FindComponent(nodeOf?.Invoke(entity) ?? entity.Node, DynamicLight) is not { } light)
             {
                 continue;
             }

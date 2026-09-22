@@ -23,7 +23,6 @@ public partial class MapTabView : UserControl
         Fc2World World, IReadOnlyList<WorldShape> Shapes, IReadOnlyList<WorldShape> Splines,
         IReadOnlyList<VegetationInstance> Vegetation, ScatterSet VegetationModels,
         NavMesh NavMesh,
-        IReadOnlyList<WorldLight> Lights, IReadOnlyList<TriggerVolume> Triggers,
         ArchetypeIndex Archetypes, WorldModelSet Models, WorldEnvironment Environment);
 
     private readonly SelectionSet _selection = new();
@@ -146,7 +145,11 @@ public partial class MapTabView : UserControl
         Inspector.DataContext = _inspector;
         Library.DataContext = _library;
 
-        _selection.Changed += Viewport.InvalidateVisual;
+        _selection.Changed += () =>
+        {
+            _handlesDirty = true;
+            Viewport.InvalidateVisual();
+        };
         _hierarchy.VisibleSetChanged += () =>
         {
             _markersDirty = true;
@@ -157,7 +160,7 @@ public partial class MapTabView : UserControl
             _markersDirty |= moved;
             _hierarchy.RefreshModified([entity]);
             RefreshSaveButton();
-            Viewport.InvalidateVisual();
+            OverlaysChanged();
         };
         Hierarchy.DeleteRequested += DeleteSelected;
         Hierarchy.PlaceRequested += PlaceAtViewCentre;
@@ -165,6 +168,8 @@ public partial class MapTabView : UserControl
         Inspector.OpenSectorRequested += OpenSector;
         Inspector.CopyRequested += CopySelected;
         Inspector.DeleteRequested += DeleteSelected;
+        Inspector.LinkPickRequested += StartLinkPick;
+        _inspector.EntityById = EntityById;
 
         Viewport.Start(new GLWpfControlSettings { MajorVersion = 3, MinorVersion = 3 });
         Viewport.SizeChanged += Redraw;
@@ -219,15 +224,13 @@ public partial class MapTabView : UserControl
                     scatter, WorldVegetation.ResourcesById(vm.AllKnownPaths), vm.ReadByPath, progress);
                 IReadOnlyList<VegetationInstance> vegetation = vegetationModels.Markers;
                 NavMesh navMesh = WorldNavMesh.Load(map, vm.ReadByPath, progress);
-                IReadOnlyList<WorldLight> lights = WorldLights.Load(world.Entities);
-                IReadOnlyList<TriggerVolume> triggers = WorldTriggers.Load(world.Entities);
                 // The library single-player reads, and the one a save stages into - see
                 // docs/docs/engine-internals/entity-instancing.md.
                 ArchetypeIndex archetypes = vm.ArchetypesOf(map.Name, progress: progress).GetAwaiter().GetResult();
                 WorldModelSet models = WorldModels.Load(world.Entities, archetypes, vm.ReadByPath, progress);
                 return new PendingLoad(
                     map, terrain, detail, table, world, shapes, splines, vegetation, vegetationModels,
-                    navMesh, lights, triggers, archetypes, models, environment);
+                    navMesh, archetypes, models, environment);
             });
 
             WorldTerrain terrain = loaded.Terrain;
@@ -324,6 +327,11 @@ public partial class MapTabView : UserControl
             EndDrag(revert: true);
             e.Handled = true;
         }
+        else if (e.Key == Key.Escape && _pickingLinkTarget)
+        {
+            CancelLinkPick();
+            e.Handled = true;
+        }
         else if ((viewport || Hierarchy.IsKeyboardFocusWithin) && IsUndoKey(e.Key, out bool redo))
         {
             if (redo)
@@ -394,7 +402,7 @@ public partial class MapTabView : UserControl
 
             // The gizmo gets first refusal on the click: it stands in front of the entities it
             // moves, so a click that lands on it must not fall through and reselect what is behind.
-            if (BeginDrag(point))
+            if (BeginDrag(point) || BeginHandleDrag(point))
             {
                 Viewport.CaptureMouse();
             }
@@ -496,6 +504,8 @@ public partial class MapTabView : UserControl
         _edits = new WorldEditSession(world, sectorsPerSide);
         _inspector.Session = _edits;
         _inspector.Archetypes = _archetypes;
+        _inspector.LoadLinkCatalog(world.Entities);
+        _overlaysDirty = true;
         StartHistory();
         CancelDrag();
         _selection.Clear();

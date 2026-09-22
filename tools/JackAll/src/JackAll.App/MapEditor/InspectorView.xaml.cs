@@ -23,4 +23,17 @@ public partial class InspectorView : UserControl
     private void Copy_Click(object sender, RoutedEventArgs e) => CopyRequested?.Invoke();
 
     private void Delete_Click(object sender, RoutedEventArgs e) => DeleteRequested?.Invoke();
+
+    /// <summary>Asks the viewport to take the next click as a link target.</summary>
+    public event Action? LinkPickRequested;
+
+    private void LinkPick_Click(object sender, RoutedEventArgs e) => LinkPickRequested?.Invoke();
+
+    private void RemoveLink_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { Tag: LinkRow row } && DataContext is InspectorViewModel inspector)
+        {
+            inspector.RemoveLink(row);
+        }
+    }
 }

@@ -1,0 +1,76 @@
+using JackAll.Core.Format.Fcb;
+using JackAll.Tools.World;
+
+namespace JackAll.Tests;
+
+/// <summary>Event links and prefab members, written and read back, and read off a retail sector.</summary>
+public class EntityLinksTests
+{
+    private static readonly string RetailSector = Path.Combine(
+        Fc2Corpus.Root, "worlds", "worlds", "levels", "w1_b_2", "generated", "worldsectors", "worldsector3859.data.fcb");
+
+    [Fact]
+    public void A_link_added_to_an_entity_without_events_reads_back_as_written()
+    {
+        var entity = new FcbObject { TypeHash = WorldHashes.Entity };
+        var link = new EntityLink("OnStateChange", 42, "CLightEvent", "DeactivateLight");
+
+        EntityLinks.Add(entity, link);
+
+        Assert.Equal([link], EntityLinks.Read(entity));
+    }
+
+    [Fact]
+    public void Removing_a_link_leaves_the_others_in_order()
+    {
+        var entity = new FcbObject { TypeHash = WorldHashes.Entity };
+        EntityLinks.Add(entity, new EntityLink("A", 1, "CSoundEvent", "PlaySound"));
+        EntityLinks.Add(entity, new EntityLink("B", 2, "CSoundEvent", "PlaySound"));
+        EntityLinks.Add(entity, new EntityLink("C", 3, "CSoundEvent", "PlaySound"));
+
+        EntityLinks.RemoveAt(entity, 1);
+
+        Assert.Equal(["A", "C"], EntityLinks.Read(entity).Select(l => l.Output));
+    }
+
+    [Fact]
+    public void Retargeting_rewrites_both_copies_of_the_target_id()
+    {
+        var entity = new FcbObject { TypeHash = WorldHashes.Entity };
+        EntityLinks.Add(entity, new EntityLink("A", 1, "CLightEvent", "ActivateLight"));
+
+        EntityLinks.Retarget(entity, new Dictionary<ulong, ulong> { [1] = 9 });
+
+        FcbObject link = FcbEntityFields.FindComponent(entity, WorldHashes.CEventComponent)!.Children[0].Children[0];
+        Assert.Equal(9ul, EntityLinks.Read(entity)[0].TargetId);
+        Assert.Equal(9ul, BitConverter.ToUInt64(link.Children[0].Values[0xDCC35857]));
+    }
+
+    [Fact]
+    public void Prefab_members_read_back_as_written()
+    {
+        var entity = new FcbObject { TypeHash = WorldHashes.Entity };
+        PrefabChild[] members = [new("Crate_1", 5), new("Crate_2", 6)];
+
+        EntityGroups.SetChildren(entity, members);
+
+        Assert.True(EntityGroups.IsPrefab(entity));
+        Assert.Equal(members, EntityGroups.ChildrenOf(entity));
+    }
+
+    /// <summary>The link documented in entity-instancing.md: a light switched off on a state change.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_retail_link_and_its_prefab_read_as_documented()
+    {
+        if (!File.Exists(RetailSector)) return;
+
+        List<FcbObject> entities = [.. FcbDocument.Deserialize(File.ReadAllBytes(RetailSector)).Children
+            .SelectMany(layer => layer.Children).Where(e => e.TypeHash == WorldHashes.Entity)];
+
+        EntityLink link = Assert.Single(entities.SelectMany(EntityLinks.Read),
+            l => l.TargetId == 2058516086820713175 && l.EventName == "DeactivateLight");
+        Assert.Equal(("OnStateChange", "CLightEvent"), (link.Output, link.EventClass));
+        Assert.Contains(entities.SelectMany(EntityGroups.ChildrenOf), c => c is { Name: "SpotLight_646", Id: 2058516086820713175 });
+    }
+}

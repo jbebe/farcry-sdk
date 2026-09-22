@@ -66,6 +66,6 @@ public partial class MapTabView
         _markersDirty = true;
         _inspector.Reload();
         StatusText.Text = $"{verb} {step.Label}";
-        Viewport.InvalidateVisual();
+        OverlaysChanged();
     }
 }

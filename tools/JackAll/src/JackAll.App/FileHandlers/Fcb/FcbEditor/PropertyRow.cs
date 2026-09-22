@@ -196,7 +196,12 @@ public sealed class PropertyRow : INotifyPropertyChanged
                 row.Bool = new BoolField(b);
                 break;
             case float[] vec when type is FcbMemberType.Vector2 or FcbMemberType.Vector3 or FcbMemberType.Vector4:
-                row.Scalar = new ScalarField(type, vec);
+                // The engine's registry names its Vector3 colours clr*, and one vColor.
+                row.Scalar = new ScalarField(type, vec)
+                {
+                    IsColour = type == FcbMemberType.Vector3
+                        && (name?.StartsWith("clr", StringComparison.Ordinal) == true || name == "vColor"),
+                };
                 break;
             case float[] mat when type == FcbMemberType.Matrix4:
                 row.Vector = VectorFieldGroup.ForMatrix(mat);

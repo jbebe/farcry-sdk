@@ -11,7 +11,7 @@ namespace JackAll.App.MapEditor;
 /// <see cref="EntityInspector"/>. An edit goes straight into the instance and is pending until the
 /// next save.
 /// </summary>
-public sealed class InspectorViewModel : Observable
+public sealed partial class InspectorViewModel : Observable
 {
     /// <summary>Identity and placement: shown in the heading and the Transform section, not as fields.</summary>
     private static readonly HashSet<uint> NotFields =
@@ -106,6 +106,7 @@ public sealed class InspectorViewModel : Observable
             Heading = Details = "";
             Transform = [];
             Inspector = null;
+            Links = [];
             return;
         }
 
@@ -119,15 +120,23 @@ public sealed class InspectorViewModel : Observable
         FcbObject node = Session.EditableNode(entity);
         _before = node.Clone();
         var context = new FcbEditContext();
-        context.Edited += () =>
-        {
-            Session.Edited(entity);
-            FcbObject after = node.Clone();
-            History?.Push(new NodeEditStep(Session, entity, _before, after, $"Edit {entity.Name}"));
-            _before = after;
-            Edited?.Invoke(entity, false);
-        };
+        context.Edited += () => Commit(entity, $"Edit {entity.Name}");
         Inspector = new EntityInspector(MergedNode.Of(node, archetype), null, context, NotFields);
+        RefreshLinks();
+    }
+
+    /// <summary>Records a change already written into the entity's node as one undoable step.</summary>
+    private void Commit(WorldEntity entity, string label)
+    {
+        if (Session is not { } session || _before is null)
+        {
+            return;
+        }
+        session.Edited(entity);
+        FcbObject after = session.EditableNode(entity).Clone();
+        History?.Push(new NodeEditStep(session, entity, _before, after, label));
+        _before = after;
+        Edited?.Invoke(entity, false);
     }
 
     /// <summary>Rebuilds the inspector over the same entity, after an undo changed what it shows.</summary>

@@ -197,7 +197,7 @@ public static class TranslateGizmo
 
     /// <summary>Where the ray and the arm's line come closest, as distances along each. Null when
     /// the two are within a hair of parallel.</summary>
-    private static (float Ray, float Arm)? ClosestApproach(
+    public static (float Ray, float Arm)? ClosestApproach(
         Vector3 rayOrigin, Vector3 rayDirection, Vector3 armOrigin, Vector3 arm)
     {
         Vector3 between = rayOrigin - armOrigin;

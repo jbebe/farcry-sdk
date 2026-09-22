@@ -38,7 +38,7 @@ public partial class MapTabView
     /// from here, and Escape returns here.</summary>
     private readonly Dictionary<WorldEntity, Placement> _dragStart = [];
 
-    private bool IsDragging => _moveGrab is not null || _rotateGrab is not null;
+    private bool IsDragging => _moveGrab is not null || _rotateGrab is not null || _handleGrab is not null;
 
     private bool Rotating => RotateMode.IsChecked == true;
 
@@ -56,7 +56,7 @@ public partial class MapTabView
 
             // A trigger is outlined by its volume, as the Triggers layer draws it. Only the outline: as
             // a click target, a trigger spanning a town would take every click on the buildings inside it.
-            (Vector3 min, Vector3 max) = WorldTriggers.SizeOf(entity) is { } volume
+            (Vector3 min, Vector3 max) = _edits is { } edits && WorldTriggers.SizeOf(edits.CurrentNode(entity)) is { } volume
                 ? (volume * -0.5f, volume * 0.5f)
                 : LocalBoundsOf(entity);
             Matrix4x4 model = Matrix4x4.CreateScale(max - min)
@@ -115,9 +115,10 @@ public partial class MapTabView
     private bool HoverGizmo(Point point)
     {
         GizmoAxis hovered = HandleAt(point, out _, out _);
+        bool component = HoverHandle(point);
         if (hovered == _hovered)
         {
-            return false;
+            return component;
         }
         _hovered = hovered;
         return true;
@@ -148,6 +149,12 @@ public partial class MapTabView
     /// <summary>Moves or turns the held selection to where the cursor has dragged the handle.</summary>
     private void DragTo(Point point)
     {
+        if (_handleGrab is not null)
+        {
+            DragHandle(point);
+            return;
+        }
+
         (Vector3 origin, Vector3 direction) = RayAt(point);
         if (_moveGrab is { } move && TranslateGizmo.Follow(move, origin, direction) is { } moved)
         {
@@ -180,6 +187,11 @@ public partial class MapTabView
     /// back where it was grabbed.</summary>
     private void EndDrag(bool revert)
     {
+        if (_handleGrab is not null)
+        {
+            EndHandleDrag(revert);
+        }
+
         List<WorldEntity> changed = [.. _dragStart
             .Where(p => p.Key.Position != p.Value.Position || p.Key.Angles != p.Value.Angles)
             .Select(p => p.Key)];
@@ -195,6 +207,10 @@ public partial class MapTabView
             }
         }
         _markersDirty |= changed.Count > 0;
+        if (changed.Count > 0)
+        {
+            OverlaysChanged();
+        }
         if (!revert && changed.Count > 0 && _edits is { } edits)
         {
             _history.Push(new MoveStep(edits, changed.ToDictionary(
@@ -217,6 +233,8 @@ public partial class MapTabView
     {
         _moveGrab = null;
         _rotateGrab = null;
+        _handleGrab = null;
+        _handleBefore = null;
         _hovered = GizmoAxis.None;
         _dragStart.Clear();
     }
@@ -228,6 +246,10 @@ public partial class MapTabView
         (Vector3 origin, Vector3 direction) = RayAt(point);
         WorldEntity? hit = EntityPicking.Pick(
             origin, direction, _hierarchy.VisibleEntities.Where(_hierarchy.IsPickable), LocalBoundsOf);
+        if (CompleteLinkPick(hit))
+        {
+            return;
+        }
         if (hit is null)
         {
             if (!add)

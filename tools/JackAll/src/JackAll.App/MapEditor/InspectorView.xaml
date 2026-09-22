@@ -44,6 +44,34 @@
                 <TextBlock Text="TRANSFORM" Style="{StaticResource SectionHeader}" />
                 <ItemsControl ItemsSource="{Binding Transform}" />
 
+                <TextBlock Text="LINKS" Style="{StaticResource SectionHeader}" Margin="0,8,0,0"
+                           ToolTip="When this entity raises an output, the target receives an event" />
+                <ItemsControl ItemsSource="{Binding Links}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel Margin="0,1">
+                                <Button DockPanel.Dock="Right" Content="×" Style="{StaticResource DenseButton}" Margin="4,0,0,0"
+                                        Tag="{Binding}" Click="RemoveLink_Click" ToolTip="Remove this link" />
+                                <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis" ToolTip="{Binding Text}"
+                                           VerticalAlignment="Center" />
+                            </DockPanel>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+                <Grid Margin="0,4,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="Auto" />
+                    </Grid.ColumnDefinitions>
+                    <ComboBox IsEditable="True" ItemsSource="{Binding LinkOutputs}" Text="{Binding NewLinkOutput, UpdateSourceTrigger=PropertyChanged}"
+                              Margin="0,0,4,0" ToolTip="The output of this entity that fires the link" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding LinkEvents}" SelectedItem="{Binding NewLinkEvent}"
+                              Margin="0,0,4,0" ToolTip="The event the target receives - every kind this world's links send" />
+                    <Button Grid.Column="2" Content="Link to…" Style="{StaticResource DenseButton}" Click="LinkPick_Click"
+                            ToolTip="Then click the target entity in the viewport. Escape cancels." />
+                </Grid>
+
                 <fcbEditor:EntityInspectorView DataContext="{Binding Inspector}" Margin="0,8,0,0" />
             </StackPanel>
         </StackPanel>

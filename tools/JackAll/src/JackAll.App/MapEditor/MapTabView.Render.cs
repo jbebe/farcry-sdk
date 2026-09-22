@@ -53,9 +53,6 @@ public partial class MapTabView
             _navMeshLayer?.Dispose();
             _navMeshLayer = new NavMeshLayer(pending.NavMesh);
             LayerCatalog.NavMesh.Status = WorldMarkers.Describe(pending.NavMesh);
-            _lightLayer?.Dispose();
-            _lightLayer = new EntityMarkerLayer(WorldMarkers.BuildLightMarkers(pending.Lights), pending.Lights.Count);
-            LayerCatalog.Lights.Status = WorldMarkers.Describe(pending.Lights);
             // Sized for every positioned entity, because which category an entity lands in is not
             // known until the model layer has had its pass; the live counts do the real limiting.
             int categoryCapacity = pending.World.Entities.Count(e => e.Position is not null);
@@ -68,9 +65,6 @@ public partial class MapTabView
             {
                 _categoryLayers[category] = new EntityMarkerLayer(categoryCapacity);
             }
-            _triggerLayer?.Dispose();
-            _triggerLayer = new ShapeLayer(WorldMarkers.BuildTriggerOutlines(pending.Triggers));
-            LayerCatalog.Triggers.Status = WorldMarkers.Describe(pending.Triggers);
             _modelLayer?.Dispose();
             _modelSet = pending.Models;
             _modelLayer = new EntityModelLayer(
@@ -107,6 +101,8 @@ public partial class MapTabView
             _vegetationDirty = false;
             vegetationModels.SetVisible(_vegetationInstances, _camera.Position, DrawRing);
         }
+
+        RebuildOverlays();
 
         // Toggling a mission layer changes which markers exist, so the instance stream is rebuilt
         // here where a GL context is current rather than on the click.
@@ -244,6 +240,11 @@ public partial class MapTabView
             _triggerLayer?.Draw(viewProjection);
         }
 
+        if (LayerCatalog.Links.IsVisible)
+        {
+            _linkLayer?.Draw(viewProjection);
+        }
+
         if (LayerCatalog.Lights.IsVisible)
         {
             _lightLayer?.Draw(viewProjection, _camera.Position, Right(), Up(), flattenZ: false,
@@ -267,6 +268,7 @@ public partial class MapTabView
         }
 
         DrawSelection(viewProjection);
+        DrawHandles(viewProjection);
 
         // Colour only: the control's depth is a 24-bit renderbuffer and the scene's is a 32-bit
         // float texture, and a depth blit between two formats is an error.

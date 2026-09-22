@@ -52,13 +52,14 @@ public static class WorldTriggers
     private static readonly uint VectorSize = FcbClassDefinitions.Crc32Ascii("vectorSize");
     private static readonly uint Enabled = FcbClassDefinitions.Crc32Ascii("bEnabled");
 
-    public static IReadOnlyList<TriggerVolume> Load(IEnumerable<WorldEntity> entities)
+    /// <param name="nodeOf">The node to read each entity from, so unsaved edits show; the loaded one by default.</param>
+    public static IReadOnlyList<TriggerVolume> Load(IEnumerable<WorldEntity> entities, Func<WorldEntity, FcbObject>? nodeOf = null)
     {
         var triggers = new List<TriggerVolume>();
         foreach (WorldEntity entity in entities)
         {
             if (entity.Position is not { } position ||
-                FcbEntityFields.FindComponent(entity.Node, ProximityTrigger) is not { } trigger ||
+                FcbEntityFields.FindComponent(nodeOf?.Invoke(entity) ?? entity.Node, ProximityTrigger) is not { } trigger ||
                 FcbEntityFields.ReadVector3(trigger, VectorSize) is not { } size)
             {
                 continue;
@@ -71,8 +72,8 @@ public static class WorldTriggers
     }
 
     /// <summary>The full extent of the entity's trigger box, or null when it has none.</summary>
-    public static Vector3? SizeOf(WorldEntity entity)
-        => FcbEntityFields.FindComponent(entity.Node, ProximityTrigger) is { } trigger
+    public static Vector3? SizeOf(FcbObject node)
+        => FcbEntityFields.FindComponent(node, ProximityTrigger) is { } trigger
             ? FcbEntityFields.ReadVector3(trigger, VectorSize)
             : null;
 }

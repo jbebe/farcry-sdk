@@ -83,6 +83,13 @@ public sealed class ScalarField : INotifyPropertyChanged
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedEnumIndex));
             OnPropertyChanged(nameof(ResolvedPath));
+            if (IsColour)
+            {
+                OnPropertyChanged(nameof(Swatch));
+                OnPropertyChanged(nameof(Red));
+                OnPropertyChanged(nameof(Green));
+                OnPropertyChanged(nameof(Blue));
+            }
         }
     }
 
@@ -134,6 +141,35 @@ public sealed class ScalarField : INotifyPropertyChanged
             }
         }
     }
+
+    /// <summary>A Vector3 that is an RGB colour from 0 to 1, shown with a swatch and channel sliders.</summary>
+    public bool IsColour { get; init; }
+
+    public System.Windows.Media.Brush? Swatch
+        => IsColour && Value is float[] c
+            ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(Byte(c[0]), Byte(c[1]), Byte(c[2])))
+            : null;
+
+    public double Red { get => Channel(0); set => SetChannel(0, value); }
+
+    public double Green { get => Channel(1); set => SetChannel(1, value); }
+
+    public double Blue { get => Channel(2); set => SetChannel(2, value); }
+
+    private double Channel(int index) => Value is float[] c ? c[index] : 0;
+
+    /// <summary>Goes through <see cref="Text"/>, so a slider edit is an ordinary edit.</summary>
+    private void SetChannel(int index, double value)
+    {
+        if (Value is float[] c)
+        {
+            float[] next = (float[])c.Clone();
+            next[index] = (float)Math.Round(value, 3);
+            Text = FcbFieldFormat.Format(Type, next);
+        }
+    }
+
+    private static byte Byte(float channel) => (byte)Math.Clamp(channel * 255f, 0f, 255f);
 
     /// <summary>A sound id as the data writes it: <c>0x</c> and eight uppercase hex digits.</summary>
     public static string SoundIdText(uint id) => $"0x{id:X8}";
