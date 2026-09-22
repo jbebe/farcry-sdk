@@ -402,6 +402,51 @@ Sector files place `CPrefabEntity` (5,248, 126 of them outside `main`) and
 `CScriptedScenePrefabEntity` (160, 75 outside `main`) entities, e.g. `Lighting.LanternExplotator_62`.
 They sit directly under a mission layer like any other entity.
 
+:::info[Verified against the retail corpus]
+All 233 prefab entities in `w1_b_2`'s 250 sectors.
+:::
+
+A prefab entity carries no `tplCreatureType`. It names its class in the string at hash `D2B3429E`
+(`CPrefabEntity`), and its members are a `Children` list of `Child` records, each a `Name` string
+and the child's `disEntityId` at hash `11D3633A`. The children are **not nested**: each is an
+ordinary sibling entity elsewhere in the file.
+
+| Measured over 2,866 `Child` records | |
+|---|---|
+| child found in the level's sectors | 2,019 |
+| of those, under the parent's own mission layer | 2,019 |
+| of those, in the parent's own sector file | 1,922 |
+| child distance from the parent's `hidPos` | 0 to 19 m, median 3.9 m |
+| a child that is itself a prefab | 0 |
+
+So a child's `hidPos` is global like every other entity's, and moving a prefab means moving each
+child. The 847 unresolved children most likely sit in sectors of neighbouring levels.
+
+## Event links
+
+:::info[Verified against the retail corpus]
+All 320 links in `w1_b_2`'s 250 sectors. `ige_map.managers.fcb` carries 25 `hidLinks`, all empty.
+:::
+
+`CEventComponent/hidLinks` is a list of `Link` records. Each one wires an event the owning entity
+raises to an event sent to a target entity.
+
+| where | name or hash | type | meaning |
+|---|---|---|---|
+| `Link` | `AB7AED5F` | string | the output raised, e.g. `OnStateChange`, `STPSpecialActionTriggered` |
+| `Link` | `7D1A6B64` | Int64 | target `disEntityId` |
+| `Link` | `Event` | child | the event sent |
+| `Event` | `CF68E402` | string | event class, e.g. `CLightEvent` |
+| `Event` | `25368426` | u32 | CRC32 of that class name |
+| `Event` | `hidEventName` | string | e.g. `DeactivateLight`, `PlaySound` |
+| `Event` | `83F9B027` | u32 | 1 in all 320 |
+| `Event` | `DCC35857` | Int64 | the target id again, equal in all 320 |
+| `Event` | `hidType` | u32 | |
+
+Some event classes append their own parameters, `CSoundEvent` five of them. 313 of the 320 targets
+resolve inside the level, 309 in the source's own sector file. Link sources are mostly AI smart
+terrain points, compound physics objects and time-of-day or relay triggers.
+
 ## Components read off an instance
 
 Two component layouts confirmed from shipped sector data. Both hang off an entity's `Components`
@@ -499,8 +544,9 @@ through the archetype fallback, so they are only mesh-less if you skip that step
   walked at `0x1c` stride, each loaded through the same resolver slot and merged the same way — but
   the call itself has not been read there. Either way the DLC libraries land *after* the patch, so
   they win over it.
-- What a placed `CPrefabEntity` spawns, and whether it resolves against the `CPrefabManager`
-  descriptions in `<world>.managers.fcb` (see [object inventory](../file-formats/object-inventory.md)).
+- Whether a placed `CPrefabEntity` does anything at runtime beyond listing its children, and whether
+  it relates to the `CPrefabManager` descriptions in `<world>.managers.fcb` (see
+  [object inventory](../file-formats/object-inventory.md)).
 - Whether an instance with only the minimal fields above, and no baked graphic component, spawns in a
   running game. The corpus shows 104 archetype-bound instances without one; none has been placed and
   watched.
