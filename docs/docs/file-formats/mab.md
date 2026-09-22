@@ -404,8 +404,8 @@ sections and bone masks verbatim. Only a section an editor cleared is re-encoded
 one clip in a chain be rewritten without disturbing the others.
 
 `MabPose` poses a `.skeleton` from a clip — a clip's rotation or offset for a bone replaces the
-rig's rest value, and a bone the clip leaves out keeps it. JackAll's Files tab previews a bank with
-it: the bank's own rig, resolved from the folder above the bank's `animations` tree, plus each
+rig's rest value, and a bone the clip leaves out keeps it. JackAll previews a bank with it, in the
+Files tab and under the Animations tab's clip path: the bank's own rig, resolved from the folder above the bank's `animations` tree, plus each
 participant's `_ref.skeleton` hung from the bone its tag record names, drawn as stick figures and
 played through.
 

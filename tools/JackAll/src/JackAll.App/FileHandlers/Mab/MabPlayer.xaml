@@ -1,20 +1,22 @@
-<UserControl x:Class="JackAll.App.FileHandlers.Mab.MabFileHandler"
+<UserControl x:Class="JackAll.App.FileHandlers.Mab.MabPlayer"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
-    <DockPanel Margin="16">
+    <DockPanel>
         <TextBlock x:Name="StatusText" DockPanel.Dock="Top" Style="{StaticResource Mono}" TextWrapping="Wrap" />
 
-        <StackPanel x:Name="Toolbar" DockPanel.Dock="Top" Margin="0,12,0,0" Visibility="Collapsed">
+        <StackPanel x:Name="Toolbar" DockPanel.Dock="Top" Margin="0,8,0,0" Visibility="Collapsed">
             <DockPanel>
-                <Button x:Name="PlayButton" DockPanel.Dock="Left" Content="Pause" Width="60" Style="{StaticResource DenseButton}" Click="PlayButton_Click" />
+                <ToggleButton x:Name="PlayToggle" DockPanel.Dock="Left" Width="32" Content="▶" ToolTip="Play or pause"
+                              Checked="PlayToggle_Changed" Unchecked="PlayToggle_Changed" />
                 <Button DockPanel.Dock="Right" Content="Reset view" Style="{StaticResource DenseButton}" Click="ResetViewButton_Click" />
                 <TextBlock x:Name="FrameText" Style="{StaticResource ToolbarLabel}" Margin="12,0" />
             </DockPanel>
             <Slider x:Name="FrameSlider" Margin="0,8,0,0" ValueChanged="FrameSlider_ValueChanged" />
         </StackPanel>
 
-        <!-- Fills whatever space DockPanel has left. -->
-        <Border Margin="0,16,0,0" Style="{StaticResource PreviewFrame}" Background="{DynamicResource WellBrush}">
+        <!-- Fills what the host leaves; the minimum keeps it open inside a stacked column. -->
+        <Border x:Name="Frame" Margin="0,8,0,0" MinHeight="180" Style="{StaticResource PreviewFrame}"
+                Background="{DynamicResource WellBrush}" Visibility="Collapsed">
             <Viewport3D x:Name="Viewport" ClipToBounds="True">
                 <Viewport3D.Camera>
                     <PerspectiveCamera FieldOfView="45" />

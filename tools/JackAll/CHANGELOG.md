@@ -5,9 +5,10 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
-- **Play a `.mab` in the Files tab** — selecting an animation bank draws the rigs it drives as stick
-  figures and plays the clip through: the bank's own rig in blue, each weapon or prop the tag table
-  names in orange, hung from the bone it says. Scrub with the slider, pause, orbit and zoom.
+- **Play a `.mab`** — selecting an animation bank in the Files tab draws the rigs it drives as
+  stick figures: the bank's own rig in blue, each weapon or prop the tag table names in orange, hung
+  from the bone it says. Play, scrub with the slider, orbit and zoom. The same player sits under the
+  Animations tab's clip path, so a retargeted clip can be seen before it is applied.
 - **Animations tab: edit the MOVE graph as rules** — replaces the Move graphs tab. Pick a weapon and
   a state, set what the character is doing, and every rule is marked as playing, possibly playing or
   beaten by an earlier one, the way the engine searches a state. Retarget a rule's clips, change its

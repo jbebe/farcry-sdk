@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
@@ -13,7 +14,9 @@ namespace JackAll.App.Move;
 /// </summary>
 public partial class MoveTabView : UserControl
 {
+    private MainViewModel? _vm;
     private MoveRulesViewModel? _model;
+    private MoveClipForm? _clipForm;
     private MoveTreeNode? _rawRoot;
     private string? _loadedGraph;
 
@@ -38,6 +41,7 @@ public partial class MoveTabView : UserControl
     /// <summary>Binds the tab to its view model; called as the window is built, before anything is loaded.</summary>
     public void Attach(MainViewModel vm)
     {
+        _vm = vm;
         _model = new MoveRulesViewModel(vm);
         _model.PropertyChanged += (_, e) =>
         {
@@ -53,8 +57,54 @@ public partial class MoveTabView : UserControl
                     RulesGrid.ScrollIntoView(row);
                 }
             }
+            else if (e.PropertyName == nameof(MoveRulesViewModel.ClipForm))
+            {
+                WatchClipForm();
+            }
         };
         DataContext = _model;
+        WatchClipForm();
+    }
+
+    /// <summary>Follows the clip form the model holds now; a graph load replaces it.</summary>
+    private void WatchClipForm()
+    {
+        if (_clipForm is not null)
+        {
+            _clipForm.PropertyChanged -= ClipForm_PropertyChanged;
+        }
+        _clipForm = _model?.ClipForm;
+        if (_clipForm is not null)
+        {
+            _clipForm.PropertyChanged += ClipForm_PropertyChanged;
+        }
+        ShowClip();
+    }
+
+    private void ClipForm_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(MoveClipForm.Path))
+        {
+            ShowClip();
+        }
+    }
+
+    /// <summary>Previews the bank the clip path names, or says why it cannot.</summary>
+    private void ShowClip()
+    {
+        string path = _clipForm?.Path ?? string.Empty;
+        if (_vm is null || path.Length == 0)
+        {
+            ClipPlayer.Fail("Name a bank to preview it.");
+        }
+        else if (_vm.ReadByPath(path) is not { } bytes)
+        {
+            ClipPlayer.Fail($"No file at {path}.");
+        }
+        else
+        {
+            ClipPlayer.Load(Path.GetFileName(path), bytes, bank => _vm.FindRigs(path, bank));
+        }
     }
 
     /// <summary>Lists the graphs once the VFS is loaded and its paths become discoverable.</summary>

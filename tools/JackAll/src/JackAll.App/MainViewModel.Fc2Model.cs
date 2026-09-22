@@ -49,9 +49,9 @@ public sealed partial class MainViewModel
             ReadByPath);
 
     /// <summary>The rigs a bank plays on: its own and one per prop it names.</summary>
-    public BankRigs FindRigs(VfsFile bank, MabFile parsed)
+    public BankRigs FindRigs(string bankPath, MabFile parsed)
         => ClipSearch.RigsFor(
-            bank.Path,
+            bankPath,
             parsed,
             [.. AllKnownPaths.Where(path => path.EndsWith(Fc2ModelBuilder.RigSuffix, StringComparison.OrdinalIgnoreCase))],
             ReadByPath);

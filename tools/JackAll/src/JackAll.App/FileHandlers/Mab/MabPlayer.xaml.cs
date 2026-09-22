@@ -12,14 +12,14 @@ using JackAll.Tools.Xbg;
 namespace JackAll.App.FileHandlers.Mab;
 
 /// <summary>
-/// The file handler for .mab animation banks - the rigs a bank drives, drawn as stick figures and
-/// played through.
+/// Plays a .mab animation bank: the rigs it drives, drawn as stick figures, with a scrub bar.
 /// </summary>
 /// <remarks>
 /// No mesh: the bones alone show where a hand goes and where a magazine travels. Each prop the tag
-/// table names is hung from the bone its record says, on the bank's own figure.
+/// table names is hung from the bone its record says, on the bank's own figure. It is the file
+/// inspector's .mab view and the preview under the Animations tab's clip path.
 /// </remarks>
-public partial class MabFileHandler : UserControl
+public partial class MabPlayer : UserControl
 {
     private const float BoneWidth = 0.008f;
     private static readonly Color OwnerColour = Color.FromRgb(0x8F, 0xB4, 0xE0);
@@ -33,24 +33,56 @@ public partial class MabFileHandler : UserControl
     private readonly OrbitViewport _orbit;
     private DateTime _lastTick;
 
-    public MabFileHandler(string fileName, byte[] content, Func<MabFile, BankRigs> findRigs)
+    public MabPlayer()
     {
         InitializeComponent();
         _orbit = new OrbitViewport(Viewport);
         _clock.Tick += (_, _) => Advance();
-        Unloaded += (_, _) => _clock.Stop();
+        Unloaded += (_, _) => PlayToggle.IsChecked = false;
+    }
+
+    /// <summary>The file inspector's view of a bank, loaded and inset like its siblings.</summary>
+    public static MabPlayer Open(string fileName, byte[] content, Func<MabFile, BankRigs> findRigs)
+    {
+        var player = new MabPlayer { Margin = new Thickness(16) };
+        player.Load(fileName, content, findRigs);
+        return player;
+    }
+
+    /// <summary>Shows a bank, paused at its first frame, or the reason it could not be read.</summary>
+    public void Load(string fileName, byte[] content, Func<MabFile, BankRigs> findRigs)
+    {
+        Clear();
         try
         {
             MabFile bank = MabFile.Parse(content);
-            Load(fileName, bank, findRigs(bank));
+            Build(fileName, bank, findRigs(bank));
         }
         catch (Exception ex)
         {
-            StatusText.Text = $"Couldn't read this file: {ex.Message}";
+            Fail($"Couldn't read {fileName}: {ex.Message}");
         }
     }
 
-    private void Load(string fileName, MabFile bank, BankRigs rigs)
+    /// <summary>Shows a message in place of a bank.</summary>
+    public void Fail(string message)
+    {
+        Clear();
+        StatusText.Text = message;
+    }
+
+    private void Clear()
+    {
+        PlayToggle.IsChecked = false;
+        FrameSlider.Value = 0;
+        _figures.Clear();
+        Viewport.Children.Clear();
+        Toolbar.Visibility = Visibility.Collapsed;
+        Frame.Visibility = Visibility.Collapsed;
+        StatusText.Text = string.Empty;
+    }
+
+    private void Build(string fileName, MabFile bank, BankRigs rigs)
     {
         List<string> missing = [];
         if (rigs.Owner is not null && MabPose.Fits(rigs.Owner, bank))
@@ -86,10 +118,9 @@ public partial class MabFileHandler : UserControl
 
         FrameSlider.Maximum = _figures.Max(f => f.Pose.LastFrame);
         Toolbar.Visibility = Visibility.Visible;
+        Frame.Visibility = Visibility.Visible;
         Pose(0);
         ResetView();
-        _lastTick = DateTime.UtcNow;
-        _clock.Start();
     }
 
     private void Add(SkeletonFile rig, MabClip clip, int? anchor, Color colour)
@@ -182,18 +213,18 @@ public partial class MabFileHandler : UserControl
 
     private static Point3D Point(Vector3 v) => new(v.X, v.Y, v.Z);
 
-    private void PlayButton_Click(object sender, RoutedEventArgs e)
+    private void PlayToggle_Changed(object sender, RoutedEventArgs e)
     {
-        if (_clock.IsEnabled)
-        {
-            _clock.Stop();
-            PlayButton.Content = "Play";
-        }
-        else
+        if (PlayToggle.IsChecked == true && _figures.Count > 0)
         {
             _lastTick = DateTime.UtcNow;
             _clock.Start();
-            PlayButton.Content = "Pause";
+            PlayToggle.Content = "❚❚";
+        }
+        else
+        {
+            _clock.Stop();
+            PlayToggle.Content = "▶";
         }
     }
 

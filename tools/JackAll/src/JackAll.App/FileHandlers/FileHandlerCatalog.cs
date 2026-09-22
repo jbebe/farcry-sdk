@@ -52,7 +52,7 @@ public static class FileHandlerCatalog
     /// graph-reconstruction tab, and <paramref name="openMgbEditor"/> is the mgb case's, handing off
     /// to the Magma UI package editor tab (see <see cref="MgbFilePreviewHandler"/>).
     /// <paramref name="findRigs"/> is the mab case's, resolving the rigs a bank plays on, which are
-    /// filed elsewhere (see <see cref="MabFileHandler"/>).
+    /// filed elsewhere (see <see cref="MabPlayer"/>).
     /// </summary>
     public static UserControl? CreateView(
         VfsFile file, Func<byte[]> readContent, Action<byte[]> replaceContent, Action openEditor,
@@ -88,7 +88,7 @@ public static class FileHandlerCatalog
             { Type.Extension: "xml" or "lua" or "desc" or "mgb.desc" } => BuildTextHandler(file, readContent, readOriginal),
             { Type.Extension: "xbt" } => new XbtFileHandler(file.FileName, readContent(), replaceContent),
             { Type.Extension: "xbg" } => new XbgFileHandler(file.FileName, readContent()),
-            { Type.Extension: "mab" } => new MabFileHandler(file.FileName, readContent(), findRigs),
+            { Type.Extension: "mab" } => MabPlayer.Open(file.FileName, readContent(), findRigs),
             { Type.Extension: "xbm" } => new XbmFileHandler(file.FileName, readContent()),
             { Type.Extension: "sbao" } => new SbaoFileHandler(file.FileName, readContent(), replaceContent),
             { Type.Extension: "fcb" } => new FcbFileHandler(file, readContent(), replaceContent, readOriginal),
