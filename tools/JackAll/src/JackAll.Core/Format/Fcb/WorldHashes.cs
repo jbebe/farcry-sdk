@@ -38,6 +38,9 @@ public static class WorldHashes
     public static readonly uint HidPosPrecise = FcbClassDefinitions.Crc32Ascii("hidPos_precise");
     public static readonly uint HidAngles = FcbClassDefinitions.Crc32Ascii("hidAngles");
     public static readonly uint HidEntityClass = FcbClassDefinitions.Crc32Ascii("hidEntityClass");
+
+    /// <summary>The class name a class-bound entity such as a prefab carries beside <see cref="HidEntityClass"/>.</summary>
+    public const uint EntityClassName = 0xD2B3429E;
     public static readonly uint HidResourceCount = FcbClassDefinitions.Crc32Ascii("hidResourceCount");
     public static readonly uint HidConstEntity = FcbClassDefinitions.Crc32Ascii("hidConstEntity");
 
@@ -51,6 +54,15 @@ public static class WorldHashes
     public static readonly uint HidMissionLayerPath = FcbClassDefinitions.Crc32Ascii("hidMissionLayerPath");
 
     public static readonly uint CGraphicComponent = FcbClassDefinitions.Crc32Ascii("CGraphicComponent");
+
+    /// <summary>The only trigger with geometry: a <see cref="VectorSize"/> box turned by the entity's yaw.</summary>
+    public static readonly uint CProximityTriggerComponent = FcbClassDefinitions.Crc32Ascii("CProximityTriggerComponent");
+    public static readonly uint VectorSize = FcbClassDefinitions.Crc32Ascii("vectorSize");
+
+    /// <summary>Every placed light: <see cref="HidType"/> 1 omni, 3 spot, reaching <see cref="FRadius"/>.</summary>
+    public static readonly uint CDynamicLightComponent = FcbClassDefinitions.Crc32Ascii("CDynamicLightComponent");
+    public static readonly uint HidType = FcbClassDefinitions.Crc32Ascii("hidType");
+    public static readonly uint FRadius = FcbClassDefinitions.Crc32Ascii("fRadius");
 
     /// <summary>The component every shipped placed instance carries, with its (usually empty) links.</summary>
     public static readonly uint CEventComponent = FcbClassDefinitions.Crc32Ascii("CEventComponent");

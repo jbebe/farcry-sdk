@@ -87,8 +87,8 @@ public class EntityLinksTests
         Assert.NotEmpty(prefabs);
         Assert.All(prefabs, p =>
         {
-            Assert.StartsWith("C", FcbEntityFields.ReadString(p, EntityGroups.EntityClassName));
-            Assert.Equal(FcbClassDefinitions.Crc32Ascii(FcbEntityFields.ReadString(p, EntityGroups.EntityClassName)),
+            Assert.StartsWith("C", FcbEntityFields.ReadString(p, WorldHashes.EntityClassName));
+            Assert.Equal(FcbClassDefinitions.Crc32Ascii(FcbEntityFields.ReadString(p, WorldHashes.EntityClassName)),
                 FcbEntityFields.ReadU32(p, WorldHashes.HidEntityClass));
         });
     }

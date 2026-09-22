@@ -15,7 +15,6 @@ public static class EntityLinks
     private static readonly uint Link = FcbClassDefinitions.Crc32Ascii("Link");
     private static readonly uint Event = FcbClassDefinitions.Crc32Ascii("Event");
     private static readonly uint EventName = FcbClassDefinitions.Crc32Ascii("hidEventName");
-    private static readonly uint EventType = FcbClassDefinitions.Crc32Ascii("hidType");
     private const uint Output = 0xAB7AED5F;
     private const uint Target = 0x7D1A6B64;
     private const uint EventClass = 0xCF68E402;
@@ -38,7 +37,7 @@ public static class EntityLinks
         ev.Values[EventName] = FcbEntityFields.StringBytes(link.EventName);
         ev.Values[EventFlag] = BitConverter.GetBytes(1u);
         ev.Values[EventTarget] = BitConverter.GetBytes(link.TargetId);
-        ev.Values[EventType] = BitConverter.GetBytes(1u);
+        ev.Values[WorldHashes.HidType] = BitConverter.GetBytes(1u);
 
         var node = new FcbObject { TypeHash = Link };
         node.Values[Output] = FcbEntityFields.StringBytes(link.Output);
@@ -82,25 +81,32 @@ public static class EntityLinks
         => FcbEntityFields.FindComponent(entity, WorldHashes.CEventComponent)?.Children
             .FirstOrDefault(c => c.TypeHash == WorldHashes.HidLinks);
 
-    private static FcbObject CreateLinksNode(FcbObject entity)
+    /// <summary>The event component every placed entity carries even when it links nothing.</summary>
+    public static FcbObject NewEventComponent()
     {
-        FcbObject events = FcbEntityFields.FindComponent(entity, WorldHashes.CEventComponent) ?? AddEventComponent(entity);
-        var links = new FcbObject { TypeHash = WorldHashes.HidLinks };
-        events.Children.Add(links);
-        return links;
+        var events = new FcbObject { TypeHash = WorldHashes.CEventComponent };
+        events.Values[WorldHashes.HidHasAliasName] = [0];
+        events.Children.Add(new FcbObject { TypeHash = WorldHashes.HidLinks });
+        return events;
     }
 
-    private static FcbObject AddEventComponent(FcbObject entity)
+    private static FcbObject CreateLinksNode(FcbObject entity)
     {
+        if (FcbEntityFields.FindComponent(entity, WorldHashes.CEventComponent) is { } existing)
+        {
+            var links = new FcbObject { TypeHash = WorldHashes.HidLinks };
+            existing.Children.Add(links);
+            return links;
+        }
+
         FcbObject? components = entity.Children.FirstOrDefault(c => c.TypeHash == WorldHashes.Components);
         if (components is null)
         {
             components = new FcbObject { TypeHash = WorldHashes.Components };
             entity.Children.Add(components);
         }
-        var events = new FcbObject { TypeHash = WorldHashes.CEventComponent };
-        events.Values[WorldHashes.HidHasAliasName] = [0];
+        FcbObject events = NewEventComponent();
         components.Children.Add(events);
-        return events;
+        return events.Children[0];
     }
 }

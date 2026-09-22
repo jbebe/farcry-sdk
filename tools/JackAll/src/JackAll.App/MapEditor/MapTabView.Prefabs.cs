@@ -17,21 +17,11 @@ public partial class MapTabView
             return members;
         }
 
-        List<WorldEntity> prefabs = [.. entities.Where(e => EntityGroups.IsPrefab(edits.CurrentNode(e)))];
-        if (prefabs.Count == 0)
-        {
-            return members;
-        }
-        Dictionary<ulong, WorldEntity> byId = [];
-        foreach (WorldEntity entity in edits.World.Entities)
-        {
-            byId.TryAdd(entity.Id, entity);
-        }
-        foreach (WorldEntity prefab in prefabs)
+        foreach (WorldEntity prefab in entities)
         {
             foreach (PrefabChild child in EntityGroups.ChildrenOf(edits.CurrentNode(prefab)))
             {
-                if (byId.GetValueOrDefault(child.Id) is { } member)
+                if (edits.EntityById(child.Id) is { } member)
                 {
                     members.TryAdd(member, prefab);
                 }
@@ -54,7 +44,7 @@ public partial class MapTabView
         }
 
         Directory.CreateDirectory(AppConfig.PrefabsDir);
-        string name = string.Concat(prefab.Name.Select(c => Path.GetInvalidFileNameChars().Contains(c) ? '_' : c));
+        string name = FcbFragments.Sanitize(prefab.Name);
         string path = Path.Combine(AppConfig.PrefabsDir, name + PrefabBundle.Extension);
         File.WriteAllText(path, PrefabBundle.Write(edits.Copy(prefab)));
         _library.LoadPrefabs();
@@ -122,7 +112,8 @@ public partial class MapTabView
 
         List<WorldEntity> members = [.. MembersOf(prefabs).Keys];
         _history.Push(PresenceStep.Deleted(edits, [.. prefabs.Select(edits.Delete)]));
-        _positionedEntities.RemoveAll(prefabs.Contains);
+        var gone = new HashSet<WorldEntity>(prefabs);
+        _positionedEntities.RemoveAll(gone.Contains);
         _selection.Replace(members);
         EntitySetChanged();
         StatusText.Text = $"Ungrouped {members.Count} entities";

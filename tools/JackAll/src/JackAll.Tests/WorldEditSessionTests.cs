@@ -112,7 +112,7 @@ public class WorldEditSessionTests
         Assert.Equal((members[0].Position!.Value + members[1].Position!.Value) / 2f, prefab.Position);
         Assert.Equal(MissionLayers.MainName, prefab.LayerPathId);
         Assert.Equal(members.Select(m => m.Id), EntityGroups.ChildrenOf(prefab.Node).Select(c => c.Id));
-        Assert.Equal(EntityGroups.PrefabClass, FcbEntityFields.ReadString(prefab.Node, EntityGroups.EntityClassName));
+        Assert.Equal(EntityGroups.PrefabClass, FcbEntityFields.ReadString(prefab.Node, WorldHashes.EntityClassName));
     }
 
     [Fact]

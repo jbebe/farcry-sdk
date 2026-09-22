@@ -50,7 +50,14 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     /// builds on the saved one.</summary>
     private readonly Dictionary<WorldEntity, FcbObject> _working = [];
 
+    /// <summary>Every live entity by id, and every name taken, kept in step with the world's list.</summary>
+    private readonly Dictionary<ulong, WorldEntity> _byId = IndexById(world.Entities);
+    private readonly HashSet<string> _names = [.. world.Entities.Select(e => e.Name)];
+
     public Fc2World World => world;
+
+    /// <summary>The live entity with this id, or null when the world places none.</summary>
+    public WorldEntity? EntityById(ulong id) => _byId.GetValueOrDefault(id);
 
     public bool IsDirty => _touched.Count + _deleted.Count + _added.Count > 0;
 
@@ -68,7 +75,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         return new CopiedEntity(node.Clone(), world.Name)
         {
             Members = [.. EntityGroups.ChildrenOf(node)
-                .Select(child => world.Entities.FirstOrDefault(e => e.Id == child.Id))
+                .Select(child => EntityById(child.Id))
                 .OfType<WorldEntity>()
                 .Where(m => m.Position is not null)
                 .Select(m => new CopiedMember(CurrentNode(m).Clone(), m.Position!.Value - origin, m))],
@@ -85,11 +92,11 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     {
         WorldSectorDocument sector = SectorAt(position) ?? throw NoSector();
         var ids = new Dictionary<ulong, ulong>();
-        List<WorldEntity> pasted = [AddClone(copy, copy.Node, sector, position, ids)];
+        List<WorldEntity> pasted = [AddClone(copy, sector, position, ids)];
         foreach (CopiedMember member in copy.Members)
         {
             Vector3 at = position + member.Offset;
-            pasted.Add(AddClone(new CopiedEntity(member.Node, copy.SourceWorld), member.Node, SectorAt(at) ?? sector, at, ids));
+            pasted.Add(AddClone(new CopiedEntity(member.Node, copy.SourceWorld), SectorAt(at) ?? sector, at, ids));
         }
 
         if (EntityGroups.IsPrefab(pasted[0].Node))
@@ -127,18 +134,11 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         Vector3 centre = placed.Aggregate(Vector3.Zero, (sum, m) => sum + m.Position!.Value) / placed.Count;
         WorldSectorDocument sector = SectorAt(centre) ?? placed[0].HomeSector;
         (ulong id, string name) = NewIdentity("Prefab");
-        byte[] at = FcbEntityFields.Vector3Bytes(centre);
-        var node = new FcbObject { TypeHash = WorldHashes.Entity };
-        node.Values[WorldHashes.HidName] = FcbEntityFields.StringBytes(name);
-        node.Values[WorldHashes.DisEntityId] = BitConverter.GetBytes(id);
-        node.Values[EntityGroups.EntityClassName] = FcbEntityFields.StringBytes(EntityGroups.PrefabClass);
+        FcbObject node = NewEntityNode(id, name, centre);
+        node.Values[WorldHashes.EntityClassName] = FcbEntityFields.StringBytes(EntityGroups.PrefabClass);
         node.Values[WorldHashes.HidEntityClass] = BitConverter.GetBytes(FcbClassDefinitions.Crc32Ascii(EntityGroups.PrefabClass));
         node.Values[WorldHashes.HidResourceCount] = BitConverter.GetBytes(0u);
-        node.Values[WorldHashes.HidPos] = at;
-        node.Values[WorldHashes.HidAngles] = FcbEntityFields.Vector3Bytes(default);
-        node.Values[WorldHashes.HidPosPrecise] = (byte[])at.Clone();
         node.Values[WorldHashes.HidConstEntity] = [0];
-        node.Children.Add(EventComponents());
         EntityGroups.SetChildren(node, placed.Select(m => new PrefabChild(m.Name, m.Id)));
         return Add(new CopiedEntity(node, world.Name), node, sector, placed[0].LayerPathId, id, name, centre);
     }
@@ -155,37 +155,35 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         int group = archetype.Name.IndexOf('.');
         (ulong id, string name) = NewIdentity(group < 0 ? archetype.Name : archetype.Name[(group + 1)..]);
 
-        byte[] at = FcbEntityFields.Vector3Bytes(position);
-        var node = new FcbObject { TypeHash = WorldHashes.Entity };
+        FcbObject node = NewEntityNode(id, name, position);
         node.Values[WorldHashes.TplCreatureType] = FcbEntityFields.StringBytes(archetype.Name);
+        return Add(new CopiedEntity(node, world.Name), node, sector, layerPathId, id, name, position);
+    }
+
+    /// <summary>What every entity this session creates carries: identity, placement, and the event
+    /// component with an empty link list.</summary>
+    private static FcbObject NewEntityNode(ulong id, string name, Vector3 position)
+    {
+        byte[] at = FcbEntityFields.Vector3Bytes(position);
+        var components = new FcbObject { TypeHash = WorldHashes.Components };
+        components.Children.Add(EntityLinks.NewEventComponent());
+        var node = new FcbObject { TypeHash = WorldHashes.Entity };
         node.Values[WorldHashes.HidName] = FcbEntityFields.StringBytes(name);
         node.Values[WorldHashes.DisEntityId] = BitConverter.GetBytes(id);
         node.Values[WorldHashes.HidPos] = at;
         node.Values[WorldHashes.HidAngles] = FcbEntityFields.Vector3Bytes(default);
         node.Values[WorldHashes.HidPosPrecise] = (byte[])at.Clone();
-        node.Children.Add(EventComponents());
-        return Add(new CopiedEntity(node, world.Name), node, sector, layerPathId, id, name, position);
+        node.Children.Add(components);
+        return node;
     }
 
-    /// <summary>The components every placed entity carries even when it links nothing: an event
-    /// component with an empty link list.</summary>
-    private static FcbObject EventComponents()
-    {
-        var events = new FcbObject { TypeHash = WorldHashes.CEventComponent };
-        events.Values[WorldHashes.HidHasAliasName] = [0];
-        events.Children.Add(new FcbObject { TypeHash = WorldHashes.HidLinks });
-        var components = new FcbObject { TypeHash = WorldHashes.Components };
-        components.Children.Add(events);
-        return components;
-    }
-
-    /// <summary>Adds a clone of <paramref name="node"/> under a new id and name, recording the id it
+    /// <summary>Adds a clone of <paramref name="source"/>'s node under a new id and name, recording the id it
     /// replaces in <paramref name="ids"/>.</summary>
-    private WorldEntity AddClone(CopiedEntity source, FcbObject node, WorldSectorDocument sector, Vector3 position, Dictionary<ulong, ulong> ids)
+    private WorldEntity AddClone(CopiedEntity source, WorldSectorDocument sector, Vector3 position, Dictionary<ulong, ulong> ids)
     {
-        (ulong id, string name) = NewIdentity(FcbEntityFields.ReadString(node, WorldHashes.HidName));
-        FcbObject clone = node.Clone();
-        ids[FcbEntityFields.ReadU64(node, WorldHashes.DisEntityId)] = id;
+        (ulong id, string name) = NewIdentity(FcbEntityFields.ReadString(source.Node, WorldHashes.HidName));
+        FcbObject clone = source.Node.Clone();
+        ids[FcbEntityFields.ReadU64(source.Node, WorldHashes.DisEntityId)] = id;
         clone.Values[WorldHashes.DisEntityId] = BitConverter.GetBytes(id);
         clone.Values[WorldHashes.HidName] = FcbEntityFields.StringBytes(name);
         return Add(source, clone, sector, MissionLayers.MainName, id, name, position);
@@ -237,7 +235,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     {
         var record = new DeletedRecord(
             entity, _working.GetValueOrDefault(entity), _touched.Contains(entity), _added.GetValueOrDefault(entity));
-        world.Entities.Remove(entity);
+        Untrack(entity);
         _touched.Remove(entity);
         _working.Remove(entity);
         _restored.Remove(entity);
@@ -253,7 +251,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     public void Restore(DeletedRecord record)
     {
         WorldEntity entity = record.Entity;
-        world.Entities.Add(entity);
+        Track(entity);
         if (record.Working is { } working)
         {
             _working[entity] = working;
@@ -263,12 +261,12 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
             _added[entity] = source;
             return;
         }
-        if (!_deleted.Remove(entity))
+        bool deleteWasSaved = !_deleted.Remove(entity);
+        if (deleteWasSaved)
         {
             _restored.Add(entity);
-            _touched.Add(entity);
         }
-        else if (record.WasTouched)
+        if (deleteWasSaved || record.WasTouched)
         {
             _touched.Add(entity);
         }
@@ -353,7 +351,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
             Angles = FcbEntityFields.ReadVector3(node, WorldHashes.HidAngles) ?? default,
             IsNew = true,
         };
-        world.Entities.Add(entity);
+        Track(entity);
         _added[entity] = source;
         return entity;
     }
@@ -397,15 +395,41 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         {
             id = NewIdFloor | (BitConverter.ToUInt64(RandomNumberGenerator.GetBytes(8)) & (NewIdFloor - 1));
         }
-        while (world.Entities.Any(e => e.Id == id));
+        while (_byId.ContainsKey(id));
 
-        HashSet<string> taken = [.. world.Entities.Select(e => e.Name)];
         int n = 1;
-        while (taken.Contains($"{stem}_{n}"))
+        while (_names.Contains($"{stem}_{n}"))
         {
             n++;
         }
         return (id, $"{stem}_{n}");
+    }
+
+    private void Track(WorldEntity entity)
+    {
+        world.Entities.Add(entity);
+        _byId[entity.Id] = entity;
+        _names.Add(entity.Name);
+    }
+
+    /// <summary>Its name stays taken, since another entity may share it.</summary>
+    private void Untrack(WorldEntity entity)
+    {
+        world.Entities.Remove(entity);
+        if (_byId.GetValueOrDefault(entity.Id) == entity)
+        {
+            _byId.Remove(entity.Id);
+        }
+    }
+
+    private static Dictionary<ulong, WorldEntity> IndexById(IEnumerable<WorldEntity> entities)
+    {
+        var byId = new Dictionary<ulong, WorldEntity>();
+        foreach (WorldEntity entity in entities)
+        {
+            byId.TryAdd(entity.Id, entity);
+        }
+        return byId;
     }
 }
 

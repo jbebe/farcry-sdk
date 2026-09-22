@@ -46,12 +46,6 @@ public partial class MapTabView
     /// <summary>The link lines from the edited nodes. Needs the GL context.</summary>
     private void RebuildLinkLayer(WorldEditSession edits)
     {
-        Dictionary<ulong, WorldEntity> byId = [];
-        foreach (WorldEntity entity in edits.World.Entities)
-        {
-            byId.TryAdd(entity.Id, entity);
-        }
-
         var lines = new List<WorldShape>();
         foreach (WorldEntity source in edits.World.Entities)
         {
@@ -61,7 +55,7 @@ public partial class MapTabView
             }
             foreach (EntityLink link in EntityLinks.Read(edits.CurrentNode(source)))
             {
-                if (byId.GetValueOrDefault(link.TargetId) is { Position: { } to })
+                if (edits.EntityById(link.TargetId) is { Position: { } to })
                 {
                     lines.Add(new WorldShape("link", link.EventName, source.Name, [from, to]));
                 }
@@ -72,5 +66,5 @@ public partial class MapTabView
         LayerCatalog.Links.Status = $"{lines.Count:N0} links";
     }
 
-    private WorldEntity? EntityById(ulong id) => _edits?.World.Entities.FirstOrDefault(e => e.Id == id);
+    private WorldEntity? EntityById(ulong id) => _edits?.EntityById(id);
 }

@@ -208,7 +208,7 @@ public partial class MapTabView
         {
             if (revert)
             {
-                (entity.Position, entity.Angles) = (_dragStart[entity].Position, _dragStart[entity].Angles);
+                _dragStart[entity].ApplyTo(entity);
             }
             else
             {
@@ -450,8 +450,8 @@ public partial class MapTabView
             && _modelSet?.ModelIndicesByEntity.ContainsKey(e) == true);
 
     /// <summary>Adds entities through the session as one step, draws each with the meshes of the
-    /// matching <paramref name="drawLike"/> entry when there is one, and selects them, a prefab last so
-    /// it is the primary.</summary>
+    /// matching <paramref name="drawLike"/> entry when there is one, and selects them with the first,
+    /// a paste's root, as the primary.</summary>
     private IReadOnlyList<WorldEntity>? Add(Func<IReadOnlyList<WorldEntity>> add, IReadOnlyList<WorldEntity?> drawLike)
     {
         IReadOnlyList<WorldEntity> added;

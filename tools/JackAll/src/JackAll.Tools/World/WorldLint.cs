@@ -32,13 +32,12 @@ public static class WorldLint
         Func<IEnumerable<string>, IReadOnlySet<string>> unresolvedMeshes)
     {
         var findings = new List<WorldFinding>();
-        HashSet<ulong> ids = [.. session.World.Entities.Select(e => e.Id)];
         HashSet<ulong> deleted = [.. session.Deleted.Select(e => e.Id)];
         foreach (WorldEntity entity in session.World.Entities)
         {
             FcbObject node = session.CurrentNode(entity);
             bool edited = session.IsModified(entity);
-            bool Broken(ulong target) => !ids.Contains(target) && (edited || deleted.Contains(target));
+            bool Broken(ulong target) => session.EntityById(target) is null && (edited || deleted.Contains(target));
             FcbObject? archetype = null;
             if (entity.ArchetypeName.Length > 0 && (archetype = archetypes.Winner(entity.ArchetypeName)?.Node) is null)
             {

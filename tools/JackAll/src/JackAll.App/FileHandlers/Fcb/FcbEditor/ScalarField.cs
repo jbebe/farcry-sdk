@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
+using System.Windows.Media;
 using JackAll.App.Picker;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.Fcb;
@@ -145,9 +146,9 @@ public sealed class ScalarField : INotifyPropertyChanged
     /// <summary>A Vector3 that is an RGB colour from 0 to 1, shown with a swatch and channel sliders.</summary>
     public bool IsColour { get; init; }
 
-    public System.Windows.Media.Brush? Swatch
+    public Brush? Swatch
         => IsColour && Value is float[] c
-            ? new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(Byte(c[0]), Byte(c[1]), Byte(c[2])))
+            ? new SolidColorBrush(Color.FromRgb(Byte(c[0]), Byte(c[1]), Byte(c[2])))
             : null;
 
     public double Red { get => Channel(0); set => SetChannel(0, value); }

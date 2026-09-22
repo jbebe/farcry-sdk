@@ -40,7 +40,8 @@ public sealed class FieldView(PropertyRow row, FieldOrigin origin) : Observable
     {
         FcbMember? member = context.Member(cls, field.Hash, field.Value);
         PropertyRow row = PropertyRow.Build(
-            field.Hash, member?.Name, member?.Type ?? FcbMemberType.BinHex, field.Value, baseline, choices, FileRefOf(member));
+            field.Hash, member?.Name, member?.Type ?? FcbMemberType.BinHex, field.Value, baseline, choices, FileRefOf(member),
+            member?.IsColour == true);
         var view = new FieldView(row, field.Origin);
         bool wasInherited = field.Origin == FieldOrigin.Inherited;
 

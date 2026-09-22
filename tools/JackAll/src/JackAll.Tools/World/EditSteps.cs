@@ -7,6 +7,12 @@ namespace JackAll.Tools.World;
 public readonly record struct Placement(Vector3 Position, Vector3 Angles)
 {
     public static Placement Of(WorldEntity entity) => new(entity.Position!.Value, entity.Angles);
+
+    public void ApplyTo(WorldEntity entity)
+    {
+        entity.Position = Position;
+        entity.Angles = Angles;
+    }
 }
 
 /// <summary>Entities moved or turned, one drag or one typed transform.</summary>
@@ -16,7 +22,12 @@ public sealed class MoveStep(
     WorldEditSession session, IReadOnlyDictionary<WorldEntity, (Placement Before, Placement After)> moves,
     string? mergeKey = null) : IEditStep
 {
+    private readonly string? _mergeKey = mergeKey;
     private IReadOnlyDictionary<WorldEntity, (Placement Before, Placement After)> _moves = moves;
+
+    /// <summary>One entity moved from <paramref name="before"/> to where it now stands.</summary>
+    public static MoveStep Of(WorldEditSession session, WorldEntity entity, Placement before, string? mergeKey = null)
+        => new(session, new Dictionary<WorldEntity, (Placement, Placement)> { [entity] = (before, Placement.Of(entity)) }, mergeKey);
 
     public string Label => _moves.Count == 1 ? $"Move {_moves.Keys.First().Name}" : $"Move {_moves.Count} entities";
 
@@ -30,26 +41,22 @@ public sealed class MoveStep(
 
     public bool TryMerge(IEditStep next)
     {
-        if (mergeKey is null || next is not MoveStep other || other.MergeKey != mergeKey
-            || _moves.Count != 1 || other._moves.Count != 1 || !_moves.Keys.SequenceEqual(other._moves.Keys))
+        if (_mergeKey is null || next is not MoveStep other || other._mergeKey != _mergeKey
+            || _moves.Count != 1 || other._moves.Count != 1 || _moves.Keys.Single() != other._moves.Keys.Single())
         {
             return false;
         }
 
-        WorldEntity entity = _moves.Keys.First();
+        WorldEntity entity = _moves.Keys.Single();
         _moves = new Dictionary<WorldEntity, (Placement, Placement)> { [entity] = (_moves[entity].Before, other._moves[entity].After) };
         return true;
     }
-
-    private string? MergeKey => mergeKey;
 
     private void Apply(Func<(Placement Before, Placement After), Placement> pick)
     {
         foreach ((WorldEntity entity, (Placement, Placement) move) in _moves)
         {
-            Placement placement = pick(move);
-            entity.Position = placement.Position;
-            entity.Angles = placement.Angles;
+            pick(move).ApplyTo(entity);
             session.Moved(entity);
         }
     }
@@ -59,6 +66,7 @@ public sealed class MoveStep(
 public sealed class NodeEditStep(WorldEditSession session, WorldEntity entity, FcbObject before, FcbObject after, string label)
     : IEditStep
 {
+    private readonly WorldEntity _entity = entity;
     private FcbObject _after = after;
 
     /// <summary>The one value the edit changed, or null when it changed more or changed structure.</summary>
@@ -66,7 +74,7 @@ public sealed class NodeEditStep(WorldEditSession session, WorldEntity entity, F
 
     public string Label => label;
 
-    public IReadOnlyCollection<WorldEntity> Entities => [entity];
+    public IReadOnlyCollection<WorldEntity> Entities => [_entity];
 
     public bool ChangesMembership => false;
 
@@ -76,7 +84,7 @@ public sealed class NodeEditStep(WorldEditSession session, WorldEntity entity, F
 
     public bool TryMerge(IEditStep next)
     {
-        if (next is not NodeEditStep other || other.Target != entity || _changed is null || other._changed != _changed)
+        if (next is not NodeEditStep other || other._entity != _entity || _changed is null || other._changed != _changed)
         {
             return false;
         }
@@ -84,49 +92,49 @@ public sealed class NodeEditStep(WorldEditSession session, WorldEntity entity, F
         return true;
     }
 
-    private WorldEntity Target => entity;
-
     private void Apply(FcbObject state)
     {
-        session.EditableNode(entity).Overwrite(state);
-        session.Edited(entity);
+        session.EditableNode(_entity).Overwrite(state);
+        session.Edited(_entity);
     }
 
     /// <summary>The path of the single value that differs between the two trees, or null.</summary>
     private static string? SoleChange(FcbObject a, FcbObject b)
     {
-        var found = new List<string>();
-        Collect(a, b, "", found);
-        return found.Count == 1 ? found[0] : null;
+        string? changed = null;
+        return Walk(a, b, "", ref changed) ? changed : null;
     }
 
-    private static void Collect(FcbObject a, FcbObject b, string path, List<string> found)
+    /// <summary>False once the trees differ in shape or in a second value.</summary>
+    private static bool Walk(FcbObject a, FcbObject b, string path, ref string? changed)
     {
-        if (found.Count > 1)
-        {
-            return;
-        }
         if (a.TypeHash != b.TypeHash || a.Children.Count != b.Children.Count || a.Values.Count != b.Values.Count)
         {
-            found.AddRange([path, path]);
-            return;
+            return false;
         }
         foreach ((uint hash, byte[] value) in a.Values)
         {
             if (!b.Values.TryGetValue(hash, out byte[]? other))
             {
-                found.AddRange([path, path]);
-                return;
+                return false;
             }
             if (!value.AsSpan().SequenceEqual(other))
             {
-                found.Add($"{path}/{hash:X8}");
+                if (changed is not null)
+                {
+                    return false;
+                }
+                changed = $"{path}/{hash:X8}";
             }
         }
         for (int i = 0; i < a.Children.Count; i++)
         {
-            Collect(a.Children[i], b.Children[i], $"{path}/{i}", found);
+            if (!Walk(a.Children[i], b.Children[i], $"{path}/{i}", ref changed))
+            {
+                return false;
+            }
         }
+        return true;
     }
 }
 
@@ -135,7 +143,6 @@ public sealed class PresenceStep : IEditStep
 {
     private readonly WorldEditSession _session;
     private readonly IReadOnlyList<WorldEntity> _entities;
-    private readonly string _label;
 
     /// <summary>What restores the entities while they are gone; empty while they are present.</summary>
     private IReadOnlyList<DeletedRecord> _records;
@@ -145,7 +152,7 @@ public sealed class PresenceStep : IEditStep
         _session = session;
         _entities = entities;
         _records = records;
-        _label = label;
+        Label = label;
     }
 
     public static PresenceStep Added(WorldEditSession session, IReadOnlyList<WorldEntity> entities)
@@ -155,7 +162,7 @@ public sealed class PresenceStep : IEditStep
         => new(session, [.. records.Select(r => r.Entity)], records,
             records.Count == 1 ? $"Delete {records[0].Entity.Name}" : $"Delete {records.Count} entities");
 
-    public string Label => _label;
+    public string Label { get; }
 
     public IReadOnlyCollection<WorldEntity> Entities => _entities;
 

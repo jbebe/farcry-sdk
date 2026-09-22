@@ -350,8 +350,8 @@ public static class FcbFragments
         && root.Children.Count > 0
         && root.Children.All(c => c.TypeHash == WorldHashes.EntityLibrary);
 
-    /// <summary>A name made safe to use as one path segment of a fragment id.</summary>
-    internal static string Sanitize(string name)
+    /// <summary>A name made safe to use as one path segment: of a fragment id, or a file name.</summary>
+    public static string Sanitize(string name)
     {
         if (name.AsSpan().IndexOfAny(InvalidFileNameChars) < 0)
         {

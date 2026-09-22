@@ -179,9 +179,10 @@ public sealed class PropertyRow : INotifyPropertyChanged
     /// these names instead of a plain integer box (see <see cref="ScalarField.SelectedEnumIndex"/>).</param>
     /// <param name="fileRef">What file the member is declared to name; a String whose value looks like a
     /// path counts as one too.</param>
+    /// <param name="isColour">Whether the member is a colour, which gets a swatch.</param>
     public static PropertyRow Build(
         uint nameHash, string? name, FcbMemberType declaredType, byte[] rawBytes, byte[]? originalBytes,
-        IReadOnlyList<string>? enumChoices = null, FileRef fileRef = FileRef.None)
+        IReadOnlyList<string>? enumChoices = null, FileRef fileRef = FileRef.None, bool isColour = false)
     {
         FcbMemberType type = declaredType != FcbMemberType.BinHex && FcbValueCodec.TryDecode(declaredType, rawBytes, out _)
             ? declaredType
@@ -196,12 +197,7 @@ public sealed class PropertyRow : INotifyPropertyChanged
                 row.Bool = new BoolField(b);
                 break;
             case float[] vec when type is FcbMemberType.Vector2 or FcbMemberType.Vector3 or FcbMemberType.Vector4:
-                // The engine's registry names its Vector3 colours clr*, and one vColor.
-                row.Scalar = new ScalarField(type, vec)
-                {
-                    IsColour = type == FcbMemberType.Vector3
-                        && (name?.StartsWith("clr", StringComparison.Ordinal) == true || name == "vColor"),
-                };
+                row.Scalar = new ScalarField(type, vec) { IsColour = isColour && type == FcbMemberType.Vector3 };
                 break;
             case float[] mat when type == FcbMemberType.Matrix4:
                 row.Vector = VectorFieldGroup.ForMatrix(mat);

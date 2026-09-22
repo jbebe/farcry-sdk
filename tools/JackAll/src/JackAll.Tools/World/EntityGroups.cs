@@ -15,16 +15,12 @@ public static class EntityGroups
     public const string PrefabClass = "CPrefabEntity";
 
     private static readonly uint Child = FcbClassDefinitions.Crc32Ascii("Child");
-    private static readonly uint Name = FcbClassDefinitions.Crc32Ascii("Name");
     private const uint ChildId = 0x11D3633A;
-
-    /// <summary>The entity's own class name, which only a class-bound entity such as a prefab carries.</summary>
-    public const uint EntityClassName = 0xD2B3429E;
 
     public static IReadOnlyList<PrefabChild> ChildrenOf(FcbObject entity)
         => ListOf(entity) is { } list
             ? [.. list.Children.Where(c => c.TypeHash == Child)
-                .Select(c => new PrefabChild(FcbEntityFields.ReadString(c, Name), FcbEntityFields.ReadU64(c, ChildId)))]
+                .Select(c => new PrefabChild(FcbEntityFields.ReadString(c, WorldHashes.Name), FcbEntityFields.ReadU64(c, ChildId)))]
             : [];
 
     public static bool IsPrefab(FcbObject entity) => ListOf(entity) is not null;
@@ -37,25 +33,10 @@ public static class EntityGroups
         foreach (PrefabChild child in children)
         {
             var node = new FcbObject { TypeHash = Child };
-            node.Values[Name] = FcbEntityFields.StringBytes(child.Name);
+            node.Values[WorldHashes.Name] = FcbEntityFields.StringBytes(child.Name);
             node.Values[ChildId] = BitConverter.GetBytes(child.Id);
             list.Children.Add(node);
         }
-    }
-
-    /// <summary>Which entity lists each one as a member, over <paramref name="entities"/>.</summary>
-    public static IReadOnlyDictionary<ulong, WorldEntity> ParentsById(
-        IEnumerable<WorldEntity> entities, Func<WorldEntity, FcbObject> nodeOf)
-    {
-        var parents = new Dictionary<ulong, WorldEntity>();
-        foreach (WorldEntity entity in entities)
-        {
-            foreach (PrefabChild child in ChildrenOf(nodeOf(entity)))
-            {
-                parents.TryAdd(child.Id, entity);
-            }
-        }
-        return parents;
     }
 
     private static FcbObject? ListOf(FcbObject entity)

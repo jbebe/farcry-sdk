@@ -177,9 +177,7 @@ public sealed partial class InspectorViewModel : Observable
             if (Session is { } session)
             {
                 session.Moved(entity);
-                History?.Push(new MoveStep(session,
-                    new Dictionary<WorldEntity, (Placement, Placement)> { [entity] = (before, Placement.Of(entity)) },
-                    mergeKey: name));
+                History?.Push(MoveStep.Of(session, entity, before, mergeKey: name));
             }
             Edited?.Invoke(entity, true);
         };

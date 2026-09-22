@@ -36,8 +36,6 @@ public enum EntityCategory
 /// carry.</summary>
 public static class WorldEntityCategories
 {
-    private static readonly uint DynamicLight = FcbClassDefinitions.Crc32Ascii("CDynamicLightComponent");
-    private static readonly uint ProximityTrigger = FcbClassDefinitions.Crc32Ascii("CProximityTriggerComponent");
     private static readonly uint Realtree = FcbClassDefinitions.Crc32Ascii("CRealtreeComponent");
     private static readonly uint NewParticles = FcbClassDefinitions.Crc32Ascii("CNewParticlesComponent");
     private static readonly uint Sound = FcbClassDefinitions.Crc32Ascii("CSoundComponent");
@@ -53,8 +51,8 @@ public static class WorldEntityCategories
     /// </summary>
     public static EntityCategory Of(FcbObject node)
     {
-        if (Has(node, DynamicLight)) return EntityCategory.Light;
-        if (Has(node, ProximityTrigger)) return EntityCategory.Trigger;
+        if (Has(node, WorldHashes.CDynamicLightComponent)) return EntityCategory.Light;
+        if (Has(node, WorldHashes.CProximityTriggerComponent)) return EntityCategory.Trigger;
         if (Has(node, Realtree)) return EntityCategory.Vegetation;
         if (Has(node, NewParticles) || Has(node, Sound)) return EntityCategory.Emitter;
         if (Has(node, EntranceInfo) || Has(node, BuildingInfo)) return EntityCategory.Entrance;

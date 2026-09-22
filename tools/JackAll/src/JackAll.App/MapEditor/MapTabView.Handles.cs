@@ -86,7 +86,8 @@ public partial class MapTabView
             HandleKind.Radius => $"radius {value:0.00} m",
             _ => $"cone {value:0.0}°",
         };
-        OverlaysChanged();
+        _handlesDirty = true;
+        Viewport.InvalidateVisual();
     }
 
     private void EndHandleDrag(bool revert)
@@ -164,15 +165,17 @@ public partial class MapTabView
         {
             float size = GizmoScale(face.Point) * (FaceHandlePixels / GizmoPixels);
             Matrix4x4 model = Matrix4x4.CreateScale(size) * Matrix4x4.CreateTranslation(face.Point);
-            _selectionBox.Draw(viewProjection, GlMatrix.From(model),
-                face == active ? new OpenTK.Mathematics.Vector3(1f, 0.92f, 0.4f) : new OpenTK.Mathematics.Vector3(0.35f, 0.95f, 0.85f));
+            (float r, float g, float b) = ShapeLayer.TintFor(KindOf(face == active));
+            _selectionBox.Draw(viewProjection, GlMatrix.From(model), new OpenTK.Mathematics.Vector3(r, g, b));
         }
     }
+
+    private static string KindOf(bool active) => active ? "handle-active" : "handle";
 
     /// <summary>A ring, and for a cone the four lines from the light to its rim.</summary>
     private static IEnumerable<WorldShape> LinesOf(EntityHandle ring, bool active)
     {
-        string kind = active ? "handle-active" : "handle";
+        string kind = KindOf(active);
         IReadOnlyList<Vector3> rim = EntityHandles.RingPoints(ring);
         yield return new WorldShape(kind, "", "", rim);
         if (ring.Kind is HandleKind.OuterCone or HandleKind.InnerCone)

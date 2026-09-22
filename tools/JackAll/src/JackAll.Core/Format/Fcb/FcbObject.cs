@@ -38,14 +38,13 @@ public sealed class FcbObject
     /// object, so whatever holds a reference to it sees the new content.</summary>
     public void Overwrite(FcbObject source)
     {
-        FcbObject copy = source.Clone();
-        TypeHash = copy.TypeHash;
+        TypeHash = source.TypeHash;
         Values.Clear();
-        foreach ((uint hash, byte[] value) in copy.Values)
+        foreach ((uint hash, byte[] value) in source.Values)
         {
-            Values[hash] = value;
+            Values[hash] = (byte[])value.Clone();
         }
         Children.Clear();
-        Children.AddRange(copy.Children);
+        Children.AddRange(source.Children.Select(child => child.Clone()));
     }
 }

@@ -20,15 +20,12 @@ public sealed record WorldLight(
 /// </remarks>
 public static class WorldLights
 {
-    private static readonly uint DynamicLight = FcbClassDefinitions.Crc32Ascii("CDynamicLightComponent");
-    private static readonly uint Type = FcbClassDefinitions.Crc32Ascii("hidType");
-    private static readonly uint Radius = FcbClassDefinitions.Crc32Ascii("fRadius");
     private static readonly uint Colour = FcbClassDefinitions.Crc32Ascii("clrColor");
     private static readonly uint Intensity = FcbClassDefinitions.Crc32Ascii("fIntensity");
     private static readonly uint Enabled = FcbClassDefinitions.Crc32Ascii("bEnabled");
 
     /// <summary>hidType 1 is an omni light; 3 is a spot, which additionally carries the two angles.</summary>
-    private const uint SpotType = 3;
+    public const uint SpotType = 3;
 
     /// <param name="nodeOf">The node to read each entity from, so unsaved edits show; the loaded one by default.</param>
     public static IReadOnlyList<WorldLight> Load(IEnumerable<WorldEntity> entities, Func<WorldEntity, FcbObject>? nodeOf = null)
@@ -37,7 +34,7 @@ public static class WorldLights
         foreach (WorldEntity entity in entities)
         {
             if (entity.Position is not { } position ||
-                FcbEntityFields.FindComponent(nodeOf?.Invoke(entity) ?? entity.Node, DynamicLight) is not { } light)
+                FcbEntityFields.FindComponent(nodeOf?.Invoke(entity) ?? entity.Node, WorldHashes.CDynamicLightComponent) is not { } light)
             {
                 continue;
             }
@@ -46,9 +43,9 @@ public static class WorldLights
                 entity.Name,
                 position,
                 FcbEntityFields.ReadVector3(light, Colour) ?? Vector3.One,
-                FcbEntityFields.ReadFloat(light, Radius) ?? 0f,
+                FcbEntityFields.ReadFloat(light, WorldHashes.FRadius) ?? 0f,
                 FcbEntityFields.ReadFloat(light, Intensity) ?? 1f,
-                FcbEntityFields.ReadU32(light, Type) == SpotType,
+                FcbEntityFields.ReadU32(light, WorldHashes.HidType) == SpotType,
                 FcbEntityFields.ReadBool(light, Enabled)));
         }
         return lights;

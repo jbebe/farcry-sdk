@@ -52,6 +52,10 @@ public sealed record FcbMember(string? Name, FcbMemberType Type, IReadOnlyList<s
     /// <summary>Whether the value is an archive path's hash (<c>CPathID</c>).</summary>
     public bool IsPath => Cpp?.StartsWith("CPathID", StringComparison.Ordinal) == true;
 
+    /// <summary>Whether the value is an RGB colour from 0 to 1. The engine gives these no type of their
+    /// own, only its naming: <c>clr*</c>, and one <c>vColor</c>.</summary>
+    public bool IsColour => Type == FcbMemberType.Vector3 && (HasPrefix("clr") || Name == "vColor");
+
     /// <summary>Whether the name carries the original editor's <paramref name="prefix"/> convention:
     /// <c>hidPos</c> has <c>hid</c>, <c>hidden</c> does not.</summary>
     public bool HasPrefix(string prefix)

@@ -49,14 +49,8 @@ public static class EntityHandles
     /// <summary>How far along a spot its cone is drawn when it names no reach of its own.</summary>
     private const float DefaultReach = 2f;
 
-    private static readonly uint ProximityTrigger = FcbClassDefinitions.Crc32Ascii("CProximityTriggerComponent");
-    private static readonly uint VectorSize = FcbClassDefinitions.Crc32Ascii("vectorSize");
-    private static readonly uint DynamicLight = FcbClassDefinitions.Crc32Ascii("CDynamicLightComponent");
-    private static readonly uint LightType = FcbClassDefinitions.Crc32Ascii("hidType");
-    private static readonly uint Radius = FcbClassDefinitions.Crc32Ascii("fRadius");
     private static readonly uint OuterAngle = FcbClassDefinitions.Crc32Ascii("fOuterAngle");
     private static readonly uint InnerAngle = FcbClassDefinitions.Crc32Ascii("fInnerAngle");
-    private const uint SpotType = 3;
 
     /// <summary>The handles <paramref name="node"/>'s components offer, placed where the entity stands.</summary>
     public static IReadOnlyList<EntityHandle> For(WorldEntity entity, FcbObject node)
@@ -67,11 +61,10 @@ public static class EntityHandles
         }
 
         var handles = new List<EntityHandle>();
-        if (FcbEntityFields.FindComponent(node, ProximityTrigger) is { } trigger
-            && FcbEntityFields.ReadVector3(trigger, VectorSize) is { } size)
+        if (FcbEntityFields.FindComponent(node, WorldHashes.CProximityTriggerComponent) is { } trigger
+            && FcbEntityFields.ReadVector3(trigger, WorldHashes.VectorSize) is { } size)
         {
-            (float sin, float cos) = MathF.SinCos(entity.Angles.Z * (MathF.PI / 180f));
-            Vector3[] axes = [new(cos, sin, 0f), new(-sin, cos, 0f), Vector3.UnitZ];
+            Vector3[] axes = TriggerVolume.Axes(entity.Angles.Z);
             for (int face = 0; face < 6; face++)
             {
                 int axis = face / 2;
@@ -80,11 +73,11 @@ public static class EntityHandles
             }
         }
 
-        if (FcbEntityFields.FindComponent(node, DynamicLight) is { } light)
+        if (FcbEntityFields.FindComponent(node, WorldHashes.CDynamicLightComponent) is { } light)
         {
-            float radius = FcbEntityFields.ReadFloat(light, Radius) ?? 0f;
+            float radius = FcbEntityFields.ReadFloat(light, WorldHashes.FRadius) ?? 0f;
             handles.Add(new EntityHandle(HandleKind.Radius, 0, position, Vector3.UnitZ, radius));
-            if (FcbEntityFields.ReadU32(light, LightType) == SpotType)
+            if (FcbEntityFields.ReadU32(light, WorldHashes.HidType) == WorldLights.SpotType)
             {
                 Vector3 forward = SpotDirection(entity.Angles);
                 float reach = radius > MinExtent ? radius : DefaultReach;
@@ -163,18 +156,18 @@ public static class EntityHandles
     {
         if (handle.Kind == HandleKind.Face)
         {
-            FcbObject trigger = FcbEntityFields.FindComponent(node, ProximityTrigger)!;
-            Vector3 size = FcbEntityFields.ReadVector3(trigger, VectorSize) ?? Vector3.One;
+            FcbObject trigger = FcbEntityFields.FindComponent(node, WorldHashes.CProximityTriggerComponent)!;
+            Vector3 size = FcbEntityFields.ReadVector3(trigger, WorldHashes.VectorSize) ?? Vector3.One;
             size[handle.Axis] = value;
-            trigger.Values[VectorSize] = FcbEntityFields.Vector3Bytes(size);
+            trigger.Values[WorldHashes.VectorSize] = FcbEntityFields.Vector3Bytes(size);
             return;
         }
 
-        FcbObject light = FcbEntityFields.FindComponent(node, DynamicLight)!;
+        FcbObject light = FcbEntityFields.FindComponent(node, WorldHashes.CDynamicLightComponent)!;
         switch (handle.Kind)
         {
             case HandleKind.Radius:
-                light.Values[Radius] = BitConverter.GetBytes(value);
+                light.Values[WorldHashes.FRadius] = BitConverter.GetBytes(value);
                 break;
             case HandleKind.OuterCone:
                 light.Values[OuterAngle] = BitConverter.GetBytes(value);
