@@ -148,8 +148,8 @@ public sealed class PresenceStep : IEditStep
         _label = label;
     }
 
-    public static PresenceStep Added(WorldEditSession session, WorldEntity entity)
-        => new(session, [entity], [], $"Add {entity.Name}");
+    public static PresenceStep Added(WorldEditSession session, IReadOnlyList<WorldEntity> entities)
+        => new(session, entities, [], entities.Count == 1 ? $"Add {entities[0].Name}" : $"Add {entities.Count} entities");
 
     public static PresenceStep Deleted(WorldEditSession session, IReadOnlyList<DeletedRecord> records)
         => new(session, [.. records.Select(r => r.Entity)], records,

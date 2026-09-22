@@ -38,6 +38,9 @@ public partial class MapTabView
     /// from here, and Escape returns here.</summary>
     private readonly Dictionary<WorldEntity, Placement> _dragStart = [];
 
+    /// <summary>Each dragged prefab member and its prefab, which a turn carries it round.</summary>
+    private Dictionary<WorldEntity, WorldEntity> _orbits = [];
+
     private bool IsDragging => _moveGrab is not null || _rotateGrab is not null || _handleGrab is not null;
 
     private bool Rotating => RotateMode.IsChecked == true;
@@ -136,11 +139,12 @@ public partial class MapTabView
         _moveGrab = move;
         _rotateGrab = rotate;
         _dragStart.Clear();
-        foreach (WorldEntity entity in _selection.Items)
+        _orbits = MembersOf(_selection.Items);
+        foreach (WorldEntity entity in _selection.Items.Concat(_orbits.Keys))
         {
             if (entity.Position is { } position && _hierarchy.CanEdit(entity))
             {
-                _dragStart[entity] = new Placement(position, entity.Angles);
+                _dragStart.TryAdd(entity, new Placement(position, entity.Angles));
             }
         }
         return true;
@@ -167,9 +171,14 @@ public partial class MapTabView
         }
         else if (_rotateGrab is { } rotate && RotateGizmo.Follow(rotate, origin, direction) is { } degrees)
         {
-            foreach ((WorldEntity entity, (_, Vector3 angles)) in _dragStart)
+            Matrix4x4 turn = Matrix4x4.CreateFromAxisAngle(TranslateGizmo.Direction(rotate.Axis), degrees * (MathF.PI / 180f));
+            foreach ((WorldEntity entity, (Vector3 position, Vector3 angles)) in _dragStart)
             {
                 entity.Angles = RotateGizmo.Apply(angles, rotate.Axis, degrees);
+                if (_orbits.GetValueOrDefault(entity) is { } prefab && _dragStart.TryGetValue(prefab, out Placement pivot))
+                {
+                    entity.Position = pivot.Position + Vector3.Transform(position - pivot.Position, turn);
+                }
             }
             StatusText.Text = $"turned {degrees:0.0}° about {rotate.Axis}";
         }
@@ -237,6 +246,7 @@ public partial class MapTabView
         _handleBefore = null;
         _hovered = GizmoAxis.None;
         _dragStart.Clear();
+        _orbits = [];
     }
 
     /// <summary>Selects what a click lands on: Ctrl adds or removes it, a plain click replaces the
@@ -368,7 +378,7 @@ public partial class MapTabView
 
         try
         {
-            _clipboard = (CopiedEntity.Of(entity, _edits.World.Name), entity);
+            _clipboard = (_edits.Copy(entity), entity);
             StatusText.Text = $"Copied {entity.Name} - Ctrl+V in the viewport places it under the cursor";
         }
         catch (InvalidOperationException ex)
@@ -388,7 +398,7 @@ public partial class MapTabView
             StatusText.Text = "Point the cursor at the ground to paste";
             return;
         }
-        if (Add(() => edits.Paste(clip.Copy, ground), clip.Original) is { } pasted)
+        if (Add(() => edits.Paste(clip.Copy, ground), [clip.Original, .. clip.Copy.Members.Select(m => m.Original)]) is [var pasted, ..])
         {
             StatusText.Text = $"Pasted {pasted.Name} into sector {pasted.HomeSector.SectorId}";
         }
@@ -401,7 +411,7 @@ public partial class MapTabView
             return;
         }
 
-        List<WorldEntity> doomed = [.. _selection.Items];
+        List<WorldEntity> doomed = SelectionWithMembers();
         _history.Push(PresenceStep.Deleted(_edits, [.. doomed.Select(_edits.Delete)]));
         var gone = new HashSet<WorldEntity>(doomed);
         _positionedEntities.RemoveAll(gone.Contains);
@@ -426,22 +436,25 @@ public partial class MapTabView
             return;
         }
 
-        // Any loaded instance of the same archetype lends its meshes; otherwise the new one is a
-        // marker until a save and reload bakes it.
-        WorldEntity? lookalike = _positionedEntities.FirstOrDefault(e =>
-            e.ArchetypeName.Equals(archetypeName, StringComparison.OrdinalIgnoreCase)
-            && _modelSet?.ModelIndicesByEntity.ContainsKey(e) == true);
-        if (Add(() => edits.Place(archetype, ground, layer), lookalike) is { } placed)
+        if (Add(() => [edits.Place(archetype, ground, layer)], [LookalikeOf(archetypeName)]) is [var placed])
         {
             StatusText.Text = $"Placed {placed.Name} in {layer}, sector {placed.HomeSector.SectorId}";
         }
     }
 
-    /// <summary>Adds an entity through the session, draws it with <paramref name="drawLike"/>'s meshes
-    /// when there is one, and selects it.</summary>
-    private WorldEntity? Add(Func<WorldEntity> add, WorldEntity? drawLike)
+    /// <summary>A loaded instance of the archetype to lend a new entity its meshes; without one the
+    /// new entity is a marker until a save and reload bakes it.</summary>
+    private WorldEntity? LookalikeOf(string archetypeName)
+        => archetypeName.Length == 0 ? null : _positionedEntities.FirstOrDefault(e =>
+            e.ArchetypeName.Equals(archetypeName, StringComparison.OrdinalIgnoreCase)
+            && _modelSet?.ModelIndicesByEntity.ContainsKey(e) == true);
+
+    /// <summary>Adds entities through the session as one step, draws each with the meshes of the
+    /// matching <paramref name="drawLike"/> entry when there is one, and selects them, a prefab last so
+    /// it is the primary.</summary>
+    private IReadOnlyList<WorldEntity>? Add(Func<IReadOnlyList<WorldEntity>> add, IReadOnlyList<WorldEntity?> drawLike)
     {
-        WorldEntity added;
+        IReadOnlyList<WorldEntity> added;
         try
         {
             added = add();
@@ -452,21 +465,25 @@ public partial class MapTabView
             return null;
         }
 
-        if (drawLike is not null && _modelLayer?.AddCopy(added, drawLike) is { } models)
+        for (int i = 0; i < added.Count; i++)
         {
-            _modelSet!.ModelIndicesByEntity[added] = models;
+            if (i < drawLike.Count && drawLike[i] is { } like && _modelLayer?.AddCopy(added[i], like) is { } models)
+            {
+                _modelSet!.ModelIndicesByEntity[added[i]] = models;
+            }
+            _positionedEntities.Add(added[i]);
         }
-        _positionedEntities.Add(added);
         _history.Push(PresenceStep.Added(_edits!, added));
         EntitySetChanged();
-        _selection.Replace([added]);
-        Reveal(added);
+        _selection.Replace([.. added.Skip(1), added[0]]);
+        Reveal(added[0]);
         return added;
     }
 
     private void Viewport_DragOver(object sender, DragEventArgs e)
     {
         Vector3? ground = e.Data.GetDataPresent(EntityLibraryViewModel.DragFormat)
+            || e.Data.GetDataPresent(EntityLibraryViewModel.PrefabDragFormat)
             ? TerrainUnder(e.GetPosition(Viewport))
             : null;
         e.Effects = ground is null ? DragDropEffects.None : DragDropEffects.Copy;
@@ -482,8 +499,16 @@ public partial class MapTabView
         if (e.Data.GetData(EntityLibraryViewModel.DragFormat) is string archetype)
         {
             Place(archetype, Core.Format.Fcb.MissionLayers.MainName, e.GetPosition(Viewport));
-            Viewport.Focus();
-            e.Handled = true;
         }
+        else if (e.Data.GetData(EntityLibraryViewModel.PrefabDragFormat) is string bundle)
+        {
+            PastePrefab(bundle, e.GetPosition(Viewport));
+        }
+        else
+        {
+            return;
+        }
+        Viewport.Focus();
+        e.Handled = true;
     }
 }

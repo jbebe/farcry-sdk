@@ -144,6 +144,7 @@ public partial class MapTabView : UserControl
         Hierarchy.DataContext = _hierarchy;
         Inspector.DataContext = _inspector;
         Library.DataContext = _library;
+        _library.LoadPrefabs();
 
         _selection.Changed += () =>
         {
@@ -344,6 +345,19 @@ public partial class MapTabView : UserControl
             }
             e.Handled = true;
         }
+        else if ((viewport || Hierarchy.IsKeyboardFocusWithin) && e.Key == Key.G
+            && Keyboard.Modifiers.HasFlag(ModifierKeys.Control))
+        {
+            if (Keyboard.Modifiers.HasFlag(ModifierKeys.Shift))
+            {
+                UngroupSelected();
+            }
+            else
+            {
+                GroupSelected();
+            }
+            e.Handled = true;
+        }
         else if (viewport && Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.C)
         {
             CopySelected();
@@ -522,7 +536,7 @@ public partial class MapTabView : UserControl
         {
             return;
         }
-        _hierarchy.Rebuild(_positionedEntities, _edits.Deleted, _archetypes, _edits.IsModified);
+        _hierarchy.Rebuild(_positionedEntities, _edits.Deleted, _archetypes, _edits.IsModified, _edits.CurrentNode);
         RefreshSaveButton();
         Viewport.InvalidateVisual();
     }

@@ -170,8 +170,8 @@ public class EditHistoryTests
 
         (WorldEditSession session, _, List<WorldEntity> entities) = Load();
         var history = new EditHistory();
-        WorldEntity pasted = session.Paste(CopiedEntity.Of(entities[1], "mp_14_woodlands"), InSector);
-        history.Push(PresenceStep.Added(session, pasted));
+        WorldEntity pasted = session.Paste(CopiedEntity.Of(entities[1], "mp_14_woodlands"), InSector)[0];
+        history.Push(PresenceStep.Added(session, [pasted]));
 
         history.Undo();
         Assert.DoesNotContain(pasted, session.World.Entities);
@@ -190,8 +190,8 @@ public class EditHistoryTests
 
         (WorldEditSession session, _, List<WorldEntity> entities) = Load();
         var history = new EditHistory();
-        WorldEntity pasted = session.Paste(CopiedEntity.Of(entities[1], "mp_14_woodlands"), InSector);
-        history.Push(PresenceStep.Added(session, pasted));
+        WorldEntity pasted = session.Paste(CopiedEntity.Of(entities[1], "mp_14_woodlands"), InSector)[0];
+        history.Push(PresenceStep.Added(session, [pasted]));
         session.Saved();
 
         history.Undo();

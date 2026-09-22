@@ -13,7 +13,9 @@ public class EntityHierarchyTests
     private static readonly ArchetypeIndex NoLibrary =
         ArchetypeIndex.Load([new ArchetypeLayer("missing.fcb")], _ => null);
 
-    private static List<WorldEntity> Entities()
+    private static List<WorldEntity> Entities() => [.. World().Entities];
+
+    private static Fc2World World()
     {
         byte[] bytes = File.ReadAllBytes(FixturePath);
         var map = new TerrainMap
@@ -22,7 +24,7 @@ public class EntityHierarchyTests
             SectorsPerSide = 10,
             Sectors = [(@"levels\mp_14_woodlands\generated\sdat\sd56.sdat", 56)],
         };
-        return [.. WorldLoader.Load(map, p => p.Equals(SectorPath, StringComparison.OrdinalIgnoreCase) ? bytes : null).Entities];
+        return WorldLoader.Load(map, p => p.Equals(SectorPath, StringComparison.OrdinalIgnoreCase) ? bytes : null);
     }
 
     private static IEnumerable<WorldEntity> All(HierarchyGroup group)
@@ -43,6 +45,27 @@ public class EntityHierarchyTests
         {
             Assert.All(All(layer), e => Assert.Equal(layer.LayerPathId, e.LayerPathId));
         }
+    }
+
+    /// <summary>A prefab's row holds it and its members, ending on the prefab so a click on the row
+    /// makes the prefab the primary selection; the members appear nowhere else.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void A_prefab_is_a_group_of_its_members_ending_on_itself()
+    {
+        if (!File.Exists(FixturePath)) return;
+
+        Fc2World world = World();
+        List<WorldEntity> entities = world.Entities;
+        var session = new WorldEditSession(world, 10);
+        List<WorldEntity> members = [.. entities.Where(e => e.LayerPathId == MissionLayers.MainName).Take(2)];
+        WorldEntity prefab = session.Group(members);
+
+        HierarchyGroup main = EntityHierarchy.Build(entities, NoLibrary)[0];
+        HierarchyGroup prefabs = main.Groups.Single(g => g.Label == EntityHierarchy.Prefabs);
+        HierarchyGroup row = prefabs.Groups.Single().Groups.Single();
+        Assert.Equal([.. members, prefab], row.Entities);
+        Assert.Equal(entities.Count, EntityHierarchy.Build(entities, NoLibrary).SelectMany(All).Count());
     }
 
     [Fact]

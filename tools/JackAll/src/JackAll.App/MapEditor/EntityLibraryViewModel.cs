@@ -1,7 +1,11 @@
+using System.IO;
 using JackAll.App.Library;
 using JackAll.Tools.World;
 
 namespace JackAll.App.MapEditor;
+
+/// <summary>A prefab bundle on disk.</summary>
+public sealed record SavedPrefab(string Name, string Path);
 
 /// <summary>The Map tab's entity library: the archetypes the loaded world can place, as folders and
 /// a searchable list to drag from.</summary>
@@ -9,6 +13,25 @@ public sealed class EntityLibraryViewModel : Observable
 {
     /// <summary>The drag-and-drop format carrying an archetype's full name.</summary>
     public const string DragFormat = "JackAll.Archetype";
+
+    /// <summary>The drag-and-drop format carrying a saved prefab's file path.</summary>
+    public const string PrefabDragFormat = "JackAll.Prefab";
+
+    private IReadOnlyList<SavedPrefab> _prefabs = [];
+
+    /// <summary>The prefabs saved from the Map tab, any world's.</summary>
+    public IReadOnlyList<SavedPrefab> Prefabs
+    {
+        get => _prefabs;
+        private set => Set(ref _prefabs, value);
+    }
+
+    public void LoadPrefabs()
+        => Prefabs = Directory.Exists(AppConfig.PrefabsDir)
+            ? [.. Directory.EnumerateFiles(AppConfig.PrefabsDir, "*" + PrefabBundle.Extension)
+                .Order(StringComparer.OrdinalIgnoreCase)
+                .Select(path => new SavedPrefab(Path.GetFileNameWithoutExtension(path), path))]
+            : [];
 
     /// <summary>A list longer than this is cut; a search narrows it.</summary>
     private const int MaxItems = 2000;

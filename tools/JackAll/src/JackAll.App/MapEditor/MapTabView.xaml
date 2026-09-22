@@ -25,6 +25,12 @@
                         Click="Undo_Click" ToolTip="Undo (Ctrl+Z)" />
                 <Button x:Name="RedoButton" Content="Redo" IsEnabled="False" Margin="0,0,4,0"
                         Click="Redo_Click" ToolTip="Redo (Ctrl+Y)" />
+                <Button Content="Group" Margin="12,0,4,0" Click="Group_Click"
+                        ToolTip="Ctrl+G. Makes the selection the members of a new prefab, which then moves, turns, copies and deletes as one" />
+                <Button Content="Ungroup" Margin="0,0,4,0" Click="Ungroup_Click"
+                        ToolTip="Ctrl+Shift+G. Removes the selected prefabs and leaves their members where they are" />
+                <Button Content="Save prefab" Margin="0,0,4,0" Click="SavePrefab_Click"
+                        ToolTip="Keeps the selected prefab and its members in the entity library's Prefabs, to drag into any world" />
 
                 <Button x:Name="CheckButton" Content="Check" IsEnabled="False" Margin="12,0,0,0" Click="Check_Click"
                         ToolTip="Looks for what would fail silently in game: unknown archetypes, characters where there is no navmesh, links and prefab members aimed at deleted entities, moved entities outside their sector" />

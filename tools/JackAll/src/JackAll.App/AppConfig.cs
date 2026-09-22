@@ -43,6 +43,10 @@ public sealed class AppConfig
     /// </summary>
     public static string NamesFile => Path.Combine(DataDir, ".itemhashes");
 
+    /// <summary>The Map tab's saved prefabs, one bundle each. Outside the workspace, which would take
+    /// every file in it for mod content.</summary>
+    public static string PrefabsDir => Path.Combine(DataDir, "prefabs");
+
     /// <summary>
     /// Sniffed file types for the game's read-only archives, plus decoded `.fcb` fragment structure
     /// (see <c>FcbFragments</c>) — one file for both, since they share the same lifecycle:

@@ -31,7 +31,7 @@ public class WorldEditSessionTests
 
         (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load();
         WorldEntity original = entities.First(e => e.LayerPathId != MissionLayers.MainName);
-        WorldEntity pasted = session.Paste(CopiedEntity.Of(original, "mp_14_woodlands"), InSector);
+        WorldEntity pasted = session.Paste(CopiedEntity.Of(original, "mp_14_woodlands"), InSector)[0];
 
         FcbObject root = Assemble(baseFcb, session);
         List<FcbObject> all = EntitiesOf(root).ToList();
@@ -75,7 +75,7 @@ public class WorldEditSessionTests
         (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load();
         WorldEntity doomed = entities[0];
         session.Delete(doomed);
-        WorldEntity pasted = session.Paste(CopiedEntity.Of(entities[1], "mp_14_woodlands"), InSector);
+        WorldEntity pasted = session.Paste(CopiedEntity.Of(entities[1], "mp_14_woodlands"), InSector)[0];
         session.Delete(pasted);
 
         (IReadOnlyList<EntityFragment> fragments, IReadOnlyList<DeletedEntity> deleted) = session.Pending();
@@ -101,20 +101,86 @@ public class WorldEditSessionTests
     }
 
     [Fact]
-    public void A_prefab_owning_other_entities_cannot_be_copied()
+    public void Grouping_makes_a_prefab_at_the_members_centre_listing_them_in_their_layer()
     {
-        var children = new FcbObject { TypeHash = WorldHashes.EntityChildren };
-        children.Children.Add(new FcbObject { TypeHash = FcbClassDefinitions.Crc32Ascii("Child") });
-        var node = new FcbObject { TypeHash = WorldHashes.Entity };
-        node.Children.Add(children);
-        var entity = new WorldEntity
-        {
-            Node = node,
-            HomeSector = new WorldSectorDocument { SourcePath = SectorPath, SectorId = 56, PristineRoot = new FcbObject() },
-            LayerPathId = MissionLayers.MainName,
-        };
+        if (!File.Exists(FixturePath)) return;
 
-        Assert.Throws<InvalidOperationException>(() => CopiedEntity.Of(entity, "world1"));
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        List<WorldEntity> members = [.. entities.Where(e => e.LayerPathId == MissionLayers.MainName).Take(2)];
+        WorldEntity prefab = session.Group(members);
+
+        Assert.Equal((members[0].Position!.Value + members[1].Position!.Value) / 2f, prefab.Position);
+        Assert.Equal(MissionLayers.MainName, prefab.LayerPathId);
+        Assert.Equal(members.Select(m => m.Id), EntityGroups.ChildrenOf(prefab.Node).Select(c => c.Id));
+        Assert.Equal(EntityGroups.PrefabClass, FcbEntityFields.ReadString(prefab.Node, EntityGroups.EntityClassName));
+    }
+
+    [Fact]
+    public void Grouping_across_mission_layers_is_refused()
+    {
+        if (!File.Exists(FixturePath)) return;
+
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        WorldEntity inMain = entities.First(e => e.LayerPathId == MissionLayers.MainName);
+        WorldEntity elsewhere = entities.First(e => e.LayerPathId != MissionLayers.MainName);
+
+        Assert.Throws<InvalidOperationException>(() => session.Group([inMain, elsewhere]));
+    }
+
+    /// <summary>A pasted prefab lists its own new members, never the originals, and links between
+    /// members follow them.</summary>
+    [Fact]
+    public void Pasting_a_prefab_brings_its_members_with_new_ids_where_they_stood_relative_to_it()
+    {
+        if (!File.Exists(FixturePath)) return;
+
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        List<WorldEntity> members = [.. entities.Where(e => e.LayerPathId == MissionLayers.MainName).Take(2)];
+        EntityLinks.Add(session.EditableNode(members[0]), new EntityLink("OnStateChange", members[1].Id, "CLightEvent", "ActivateLight"));
+        WorldEntity prefab = session.Group(members);
+
+        var at = new Vector3(420f, 360f, 20f);
+        IReadOnlyList<WorldEntity> pasted = session.Paste(session.Copy(prefab), at);
+
+        Assert.Equal(3, pasted.Count);
+        Assert.Equal(pasted.Skip(1).Select(m => m.Id), EntityGroups.ChildrenOf(pasted[0].Node).Select(c => c.Id));
+        Assert.DoesNotContain(pasted, p => entities.Any(e => e.Id == p.Id) || p.Id == prefab.Id);
+        Assert.Equal(members[0].Position!.Value - prefab.Position!.Value, pasted[1].Position!.Value - at);
+        Assert.Equal(pasted[2].Id, EntityLinks.Read(pasted[1].Node).Single().TargetId);
+    }
+
+    /// <summary>A prefab saved as a bundle pastes back with the same members in the same places.</summary>
+    [Fact]
+    public void A_prefab_bundle_reads_back_as_the_copy_it_was_written_from()
+    {
+        if (!File.Exists(FixturePath)) return;
+
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        WorldEntity prefab = session.Group([.. entities.Where(e => e.LayerPathId == MissionLayers.MainName).Take(2)]);
+        CopiedEntity copy = session.Copy(prefab);
+
+        CopiedEntity read = PrefabBundle.Read(PrefabBundle.Write(copy));
+
+        Assert.Equal(copy.SourceWorld, read.SourceWorld);
+        Assert.Equal(FcbXml.ToXml(copy.Node, FcbClassDefinitions.Empty), FcbXml.ToXml(read.Node, FcbClassDefinitions.Empty));
+        Assert.Equal(copy.Members.Select(m => m.Offset), read.Members.Select(m => m.Offset));
+        Assert.Equal(copy.Members.Select(m => FcbXml.ToXml(m.Node, FcbClassDefinitions.Empty)),
+            read.Members.Select(m => FcbXml.ToXml(m.Node, FcbClassDefinitions.Empty)));
+        Assert.Equal(3, session.Paste(read, InSector).Count);
+    }
+
+    /// <summary>A copy of a prefab whose members are gone must not claim the original's members.</summary>
+    [Fact]
+    public void A_pasted_prefab_never_lists_the_originals_members()
+    {
+        if (!File.Exists(FixturePath)) return;
+
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        WorldEntity prefab = session.Group([.. entities.Where(e => e.LayerPathId == MissionLayers.MainName).Take(2)]);
+
+        WorldEntity pasted = session.Paste(CopiedEntity.Of(prefab, "mp_14_woodlands"), InSector)[0];
+
+        Assert.Empty(EntityGroups.ChildrenOf(pasted.Node));
     }
 
     [Fact]

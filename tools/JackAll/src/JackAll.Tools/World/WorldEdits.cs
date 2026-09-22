@@ -6,22 +6,18 @@ using JackAll.Core.Format.Fcb;
 
 namespace JackAll.Tools.World;
 
-/// <summary>A placed entity lifted out of a loaded world, to be pasted into it or into another.</summary>
+/// <summary>A prefab member copied with its prefab: its node, where it stood relative to the prefab,
+/// and the entity it came from, which a paste draws it like, when it came from one.</summary>
+public sealed record CopiedMember(FcbObject Node, Vector3 Offset, WorldEntity? Original);
+
+/// <summary>A placed entity lifted out of a loaded world, to be pasted into it or into another. A
+/// prefab carries its members along, so the paste can give them new ids and list those instead.</summary>
 public sealed record CopiedEntity(FcbObject Node, string SourceWorld)
 {
-    /// <summary>A copy is an exact clone apart from identity and placement, so an entity that owns
-    /// other entities cannot be one: the clone would claim the original's children.</summary>
-    public static CopiedEntity Of(WorldEntity entity, string world)
-    {
-        FcbObject? children = entity.Node.Children.FirstOrDefault(c => c.TypeHash == WorldHashes.EntityChildren);
-        if (children is { Children.Count: > 0 })
-        {
-            throw new InvalidOperationException(
-                $"'{entity.Name}' is a prefab owning {children.Children.Count} other entities; copy those instead.");
-        }
+    public IReadOnlyList<CopiedMember> Members { get; init; } = [];
 
-        return new CopiedEntity(entity.Node.Clone(), world);
-    }
+    /// <summary>An exact clone apart from identity and placement, which a paste assigns.</summary>
+    public static CopiedEntity Of(WorldEntity entity, string world) => new(entity.Node.Clone(), world);
 
     public string ArchetypeName => FcbEntityFields.ReadString(Node, WorldHashes.TplCreatureType);
 }
@@ -64,16 +60,87 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     /// <summary>Added, moved or field-edited since the last save.</summary>
     public bool IsModified(WorldEntity entity) => _added.ContainsKey(entity) || _touched.Contains(entity);
 
-    /// <summary>Adds a clone of <paramref name="copy"/> at <paramref name="position"/>, filed under
-    /// <c>main</c> in the sector file that position falls in.</summary>
-    public WorldEntity Paste(CopiedEntity copy, Vector3 position)
+    /// <summary>Copies an entity with its edits, and a prefab with the members it lists.</summary>
+    public CopiedEntity Copy(WorldEntity entity)
+    {
+        FcbObject node = CurrentNode(entity);
+        Vector3 origin = entity.Position ?? default;
+        return new CopiedEntity(node.Clone(), world.Name)
+        {
+            Members = [.. EntityGroups.ChildrenOf(node)
+                .Select(child => world.Entities.FirstOrDefault(e => e.Id == child.Id))
+                .OfType<WorldEntity>()
+                .Where(m => m.Position is not null)
+                .Select(m => new CopiedMember(CurrentNode(m).Clone(), m.Position!.Value - origin, m))],
+        };
+    }
+
+    /// <summary>
+    /// Adds a clone of <paramref name="copy"/> at <paramref name="position"/>, filed under <c>main</c>
+    /// in the sector file that position falls in, and its members around it. Every clone gets a new id
+    /// and name, and the prefab's list and any links between them follow. Returns the root, then each
+    /// member in the copy's order.
+    /// </summary>
+    public IReadOnlyList<WorldEntity> Paste(CopiedEntity copy, Vector3 position)
     {
         WorldSectorDocument sector = SectorAt(position) ?? throw NoSector();
-        (ulong id, string name) = NewIdentity(FcbEntityFields.ReadString(copy.Node, WorldHashes.HidName));
-        FcbObject node = copy.Node.Clone();
-        node.Values[WorldHashes.DisEntityId] = BitConverter.GetBytes(id);
+        var ids = new Dictionary<ulong, ulong>();
+        List<WorldEntity> pasted = [AddClone(copy, copy.Node, sector, position, ids)];
+        foreach (CopiedMember member in copy.Members)
+        {
+            Vector3 at = position + member.Offset;
+            pasted.Add(AddClone(new CopiedEntity(member.Node, copy.SourceWorld), member.Node, SectorAt(at) ?? sector, at, ids));
+        }
+
+        if (EntityGroups.IsPrefab(pasted[0].Node))
+        {
+            EntityGroups.SetChildren(pasted[0].Node, pasted.Skip(1).Select(m => new PrefabChild(m.Name, m.Id)));
+        }
+        foreach (WorldEntity entity in pasted)
+        {
+            EntityLinks.Retarget(entity.Node, ids);
+        }
+        return pasted;
+    }
+
+    /// <summary>
+    /// Groups <paramref name="members"/> under a new prefab entity at their centre, laid out as every
+    /// retail prefab is: a class-bound entity listing its members by name and id. They must share one
+    /// mission layer, as every retail prefab's members do.
+    /// </summary>
+    public WorldEntity Group(IReadOnlyList<WorldEntity> members)
+    {
+        List<WorldEntity> placed = [.. members.Where(m => m.Position is not null)];
+        if (placed.Count == 0)
+        {
+            throw new InvalidOperationException("Select the entities to group first.");
+        }
+        if (placed.Select(m => m.LayerPathId).Distinct(StringComparer.OrdinalIgnoreCase).Count() > 1)
+        {
+            throw new InvalidOperationException("A prefab's members share one mission layer, and these span several.");
+        }
+        if (placed.Any(m => EntityGroups.IsPrefab(CurrentNode(m))))
+        {
+            throw new InvalidOperationException("A prefab cannot hold another prefab; no retail one does.");
+        }
+
+        Vector3 centre = placed.Aggregate(Vector3.Zero, (sum, m) => sum + m.Position!.Value) / placed.Count;
+        WorldSectorDocument sector = SectorAt(centre) ?? placed[0].HomeSector;
+        (ulong id, string name) = NewIdentity("Prefab");
+        byte[] at = FcbEntityFields.Vector3Bytes(centre);
+        var node = new FcbObject { TypeHash = WorldHashes.Entity };
         node.Values[WorldHashes.HidName] = FcbEntityFields.StringBytes(name);
-        return Add(copy, node, sector, MissionLayers.MainName, id, name, position);
+        node.Values[WorldHashes.DisEntityId] = BitConverter.GetBytes(id);
+        node.Values[EntityGroups.EntityClassName] = FcbEntityFields.StringBytes(EntityGroups.PrefabClass);
+        node.Values[WorldHashes.HidEntityClass] = BitConverter.GetBytes(FcbClassDefinitions.Crc32Ascii(EntityGroups.PrefabClass));
+        node.Values[WorldHashes.HidResourceCount] = BitConverter.GetBytes(0u);
+        node.Values[WorldHashes.HidPos] = at;
+        node.Values[WorldHashes.HidAngles] = FcbEntityFields.Vector3Bytes(default);
+        node.Values[WorldHashes.HidPosPrecise] = (byte[])at.Clone();
+        node.Values[WorldHashes.HidConstEntity] = [0];
+        node.Children.Add(EventComponents());
+        EntityGroups.SetChildren(node, placed.Select(m => new PrefabChild(m.Name, m.Id)));
+        return Add(new CopiedEntity(node, world.Name), node, sector, placed[0].LayerPathId, id, name, centre);
     }
 
     /// <summary>
@@ -89,11 +156,6 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         (ulong id, string name) = NewIdentity(group < 0 ? archetype.Name : archetype.Name[(group + 1)..]);
 
         byte[] at = FcbEntityFields.Vector3Bytes(position);
-        var events = new FcbObject { TypeHash = WorldHashes.CEventComponent };
-        events.Values[WorldHashes.HidHasAliasName] = [0];
-        events.Children.Add(new FcbObject { TypeHash = WorldHashes.HidLinks });
-        var components = new FcbObject { TypeHash = WorldHashes.Components };
-        components.Children.Add(events);
         var node = new FcbObject { TypeHash = WorldHashes.Entity };
         node.Values[WorldHashes.TplCreatureType] = FcbEntityFields.StringBytes(archetype.Name);
         node.Values[WorldHashes.HidName] = FcbEntityFields.StringBytes(name);
@@ -101,8 +163,32 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         node.Values[WorldHashes.HidPos] = at;
         node.Values[WorldHashes.HidAngles] = FcbEntityFields.Vector3Bytes(default);
         node.Values[WorldHashes.HidPosPrecise] = (byte[])at.Clone();
-        node.Children.Add(components);
+        node.Children.Add(EventComponents());
         return Add(new CopiedEntity(node, world.Name), node, sector, layerPathId, id, name, position);
+    }
+
+    /// <summary>The components every placed entity carries even when it links nothing: an event
+    /// component with an empty link list.</summary>
+    private static FcbObject EventComponents()
+    {
+        var events = new FcbObject { TypeHash = WorldHashes.CEventComponent };
+        events.Values[WorldHashes.HidHasAliasName] = [0];
+        events.Children.Add(new FcbObject { TypeHash = WorldHashes.HidLinks });
+        var components = new FcbObject { TypeHash = WorldHashes.Components };
+        components.Children.Add(events);
+        return components;
+    }
+
+    /// <summary>Adds a clone of <paramref name="node"/> under a new id and name, recording the id it
+    /// replaces in <paramref name="ids"/>.</summary>
+    private WorldEntity AddClone(CopiedEntity source, FcbObject node, WorldSectorDocument sector, Vector3 position, Dictionary<ulong, ulong> ids)
+    {
+        (ulong id, string name) = NewIdentity(FcbEntityFields.ReadString(node, WorldHashes.HidName));
+        FcbObject clone = node.Clone();
+        ids[FcbEntityFields.ReadU64(node, WorldHashes.DisEntityId)] = id;
+        clone.Values[WorldHashes.DisEntityId] = BitConverter.GetBytes(id);
+        clone.Values[WorldHashes.HidName] = FcbEntityFields.StringBytes(name);
+        return Add(source, clone, sector, MissionLayers.MainName, id, name, position);
     }
 
     /// <summary>An unsaved paste follows its position into whichever sector file it lands in; any other

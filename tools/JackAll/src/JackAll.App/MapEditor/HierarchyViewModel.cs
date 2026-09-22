@@ -95,7 +95,7 @@ public sealed class HierarchyViewModel : Observable
     /// toggles of the entities still in it.</summary>
     public void Rebuild(
         IReadOnlyList<WorldEntity> entities, IReadOnlyCollection<WorldEntity> deleted, ArchetypeIndex index,
-        Func<WorldEntity, bool> isModified)
+        Func<WorldEntity, bool> isModified, Func<WorldEntity, Core.Format.Fcb.FcbObject>? nodeOf = null)
     {
         _entities = [.. entities];
         _isModified = isModified;
@@ -104,7 +104,7 @@ public sealed class HierarchyViewModel : Observable
         var deletedSet = new HashSet<WorldEntity>(deleted);
 
         List<EntityTreeNode> roots = EntityTreeNode.Build(
-            EntityHierarchy.Build(entities.Concat(deleted), index), deletedSet, _rows);
+            EntityHierarchy.Build(entities.Concat(deleted), index, nodeOf), deletedSet, _rows);
         foreach (EntityTreeNode layer in roots)
         {
             layer.IsChecked = !_uncheckedLayers.Contains(layer.LayerPathId!);

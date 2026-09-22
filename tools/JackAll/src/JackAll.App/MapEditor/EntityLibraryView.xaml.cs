@@ -20,16 +20,28 @@ public partial class EntityLibraryView : UserControl
 
     private void Items_MouseDown(object sender, MouseButtonEventArgs e) => _pressedAt = e.GetPosition(Items);
 
+    private void Items_MouseMove(object sender, MouseEventArgs e)
+        => DragFrom(Items, e, row => row is ArchetypeTreeNode { FullName: { } name }
+            ? new DataObject(EntityLibraryViewModel.DragFormat, name)
+            : null);
+
+    private void Prefabs_MouseDown(object sender, MouseButtonEventArgs e) => _pressedAt = e.GetPosition(PrefabList);
+
+    private void Prefabs_MouseMove(object sender, MouseEventArgs e)
+        => DragFrom(PrefabList, e, row => row is SavedPrefab prefab
+            ? new DataObject(EntityLibraryViewModel.PrefabDragFormat, prefab.Path)
+            : null);
+
     /// <summary>Starts the drag once the pointer has moved far enough to mean it; starting it on the
     /// press itself would swallow the click that selects the row.</summary>
-    private void Items_MouseMove(object sender, MouseEventArgs e)
+    private void DragFrom(ListBox list, MouseEventArgs e, Func<object?, DataObject?> payload)
     {
         if (e.LeftButton != MouseButtonState.Pressed || _pressedAt is not { } pressed)
         {
             return;
         }
 
-        Vector moved = e.GetPosition(Items) - pressed;
+        Vector moved = e.GetPosition(list) - pressed;
         if (Math.Abs(moved.X) < SystemParameters.MinimumHorizontalDragDistance
             && Math.Abs(moved.Y) < SystemParameters.MinimumVerticalDragDistance)
         {
@@ -37,10 +49,9 @@ public partial class EntityLibraryView : UserControl
         }
 
         _pressedAt = null;
-        if (TreeViewBehaviors.Ancestor<ListBoxItem>(e.OriginalSource as DependencyObject) is
-            { DataContext: ArchetypeTreeNode { FullName: { } name } })
+        if (payload(TreeViewBehaviors.Ancestor<ListBoxItem>(e.OriginalSource as DependencyObject)?.DataContext) is { } data)
         {
-            DragDrop.DoDragDrop(Items, new DataObject(EntityLibraryViewModel.DragFormat, name), DragDropEffects.Copy);
+            DragDrop.DoDragDrop(list, data, DragDropEffects.Copy);
         }
     }
 }

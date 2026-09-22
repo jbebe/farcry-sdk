@@ -73,4 +73,23 @@ public class EntityLinksTests
         Assert.Equal(("OnStateChange", "CLightEvent"), (link.Output, link.EventClass));
         Assert.Contains(entities.SelectMany(EntityGroups.ChildrenOf), c => c is { Name: "SpotLight_646", Id: 2058516086820713175 });
     }
+
+    /// <summary>A grouped prefab is built with the class fields every retail one carries.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Every_retail_prefab_names_its_class_as_a_new_group_does()
+    {
+        if (!File.Exists(RetailSector)) return;
+
+        List<FcbObject> prefabs = [.. FcbDocument.Deserialize(File.ReadAllBytes(RetailSector)).Children
+            .SelectMany(layer => layer.Children).Where(EntityGroups.IsPrefab)];
+
+        Assert.NotEmpty(prefabs);
+        Assert.All(prefabs, p =>
+        {
+            Assert.StartsWith("C", FcbEntityFields.ReadString(p, EntityGroups.EntityClassName));
+            Assert.Equal(FcbClassDefinitions.Crc32Ascii(FcbEntityFields.ReadString(p, EntityGroups.EntityClassName)),
+                FcbEntityFields.ReadU32(p, WorldHashes.HidEntityClass));
+        });
+    }
 }

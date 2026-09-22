@@ -9,14 +9,21 @@
             <ColumnDefinition Width="*" />
         </Grid.ColumnDefinitions>
 
-        <TreeView Grid.Column="0" ItemsSource="{Binding Folders}" SelectedItemChanged="Folders_SelectedItemChanged"
-                  VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
-            <TreeView.ItemTemplate>
-                <HierarchicalDataTemplate DataType="{x:Type library:ArchetypeTreeNode}" ItemsSource="{Binding Groups}">
-                    <TextBlock Text="{Binding Label}" />
-                </HierarchicalDataTemplate>
-            </TreeView.ItemTemplate>
-        </TreeView>
+        <DockPanel Grid.Column="0">
+            <Expander DockPanel.Dock="Top" Header="Prefabs" Margin="0,0,0,4"
+                      ToolTip="Prefabs saved with Save prefab. Drag one onto the ground in the viewport to paste it">
+                <ListBox x:Name="PrefabList" ItemsSource="{Binding Prefabs}" DisplayMemberPath="Name" MaxHeight="160"
+                         PreviewMouseLeftButtonDown="Prefabs_MouseDown" PreviewMouseMove="Prefabs_MouseMove" />
+            </Expander>
+            <TreeView ItemsSource="{Binding Folders}" SelectedItemChanged="Folders_SelectedItemChanged"
+                      VirtualizingStackPanel.IsVirtualizing="True" VirtualizingStackPanel.VirtualizationMode="Recycling">
+                <TreeView.ItemTemplate>
+                    <HierarchicalDataTemplate DataType="{x:Type library:ArchetypeTreeNode}" ItemsSource="{Binding Groups}">
+                        <TextBlock Text="{Binding Label}" />
+                    </HierarchicalDataTemplate>
+                </TreeView.ItemTemplate>
+            </TreeView>
+        </DockPanel>
 
         <GridSplitter Grid.Column="1" />
 

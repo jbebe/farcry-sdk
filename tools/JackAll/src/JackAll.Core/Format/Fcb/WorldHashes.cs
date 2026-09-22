@@ -37,6 +37,9 @@ public static class WorldHashes
     public static readonly uint HidPos = FcbClassDefinitions.Crc32Ascii("hidPos");
     public static readonly uint HidPosPrecise = FcbClassDefinitions.Crc32Ascii("hidPos_precise");
     public static readonly uint HidAngles = FcbClassDefinitions.Crc32Ascii("hidAngles");
+    public static readonly uint HidEntityClass = FcbClassDefinitions.Crc32Ascii("hidEntityClass");
+    public static readonly uint HidResourceCount = FcbClassDefinitions.Crc32Ascii("hidResourceCount");
+    public static readonly uint HidConstEntity = FcbClassDefinitions.Crc32Ascii("hidConstEntity");
 
     /// <summary>The list of entities a prefab entity owns, one <c>Child</c> per owned id.</summary>
     public static readonly uint EntityChildren = FcbClassDefinitions.Crc32Ascii("Children");
