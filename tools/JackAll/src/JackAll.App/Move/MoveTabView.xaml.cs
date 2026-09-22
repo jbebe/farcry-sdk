@@ -1,116 +1,183 @@
 using System.IO;
 using System.Windows;
 using System.Windows.Controls;
-using JackAll.Core;
-using JackAll.Core.Naming;
+using System.Windows.Input;
 using JackAll.Core.Format.Move;
 using Microsoft.Win32;
 
 namespace JackAll.App.Move;
 
 /// <summary>
-/// The Move tab: the animation graph the engine picks clips with, browsable as the ownership tree
-/// it reads back as. Read-only - editing goes through <c>jackall-cli move decode/encode</c>.
+/// The Animations tab: pick a weapon and a situation, see which rule the engine picks, and change
+/// what a rule plays, when it plays, or where it sits in the search.
 /// </summary>
-/// <remarks>Criteria and channels are labelled from the named twin's channel table when the export
-/// has one, which is the difference between "17 == 42" and "EquippedWeapon == SawedOffShotgun".
-/// The loadable graphs carry no names at all.</remarks>
 public partial class MoveTabView : UserControl
 {
-    private MainViewModel? _vm;
-    private MoveFile? _file;
-    private MoveTreeNode? _root;
-    private IReadOnlyList<MoveChannel>? _channels;
+    private MoveRulesViewModel? _model;
+    private MoveTreeNode? _rawRoot;
+    private string? _loadedGraph;
 
-    public MoveTabView() => InitializeComponent();
-
-    /// <summary>Called by MainWindow once the VFS is loaded and its paths become discoverable.</summary>
-    public void Initialize(MainViewModel vm)
+    public MoveTabView()
     {
-        _vm = vm;
-        List<string> graphs = [.. Discover(vm.AllKnownPaths)];
+        InitializeComponent();
 
-        GraphPicker.ItemsSource = graphs;
-        GraphPicker.SelectedIndex = 0;
-        GraphPicker.IsEnabled = graphs.Count > 0;
-        LoadButton.IsEnabled = graphs.Count > 0;
-        StatusText.Text = graphs.Count > 0
-            ? $"{graphs.Count} graphs - pick one and Load"
-            : "No MOVE graphs found";
+        // The base graph opens the first time the tab is shown, so nothing is parsed for a tab never visited.
+        IsVisibleChanged += (_, e) =>
+        {
+            if (e.NewValue is true && _loadedGraph is null && GraphPicker.Items.Count > 0)
+            {
+                GraphPicker.SelectedIndex = 0;
+            }
+        };
     }
 
-    /// <summary>
-    /// The loadable graphs. A named twin is the authoring form: <c>CreateFromStream</c> rejects it
-    /// and only ~90% of it is decoded, so listing it would offer a file that cannot be opened.
-    /// </summary>
-    private static IEnumerable<string> Discover(IEnumerable<string> paths) =>
-        paths.Where(p =>
-                p.EndsWith(".bin", StringComparison.OrdinalIgnoreCase)
-                && p.Replace('/', '\\').Contains("\\move\\", StringComparison.OrdinalIgnoreCase)
-                && !Path.GetFileNameWithoutExtension(p)
-                    .EndsWith("named", StringComparison.OrdinalIgnoreCase))
-            .Order(StringComparer.OrdinalIgnoreCase);
+    public bool IsDirty => _model?.IsDirty == true;
 
-    /// <summary>The named twin beside a graph, which is the only place channel names survive.</summary>
-    private byte[]? ReadNamedTwin(string path)
+    public event Action? DirtyChanged;
+
+    /// <summary>Binds the tab to its view model; called as the window is built, before anything is loaded.</summary>
+    public void Attach(MainViewModel vm)
     {
-        string twin = Path.Combine(
-            Path.GetDirectoryName(path) ?? string.Empty,
-            Path.GetFileNameWithoutExtension(path) + "named.bin");
-        return _vm?.ReadByPath(twin);
+        _model = new MoveRulesViewModel(vm);
+        _model.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MoveRulesViewModel.IsDirty))
+            {
+                DirtyChanged?.Invoke();
+            }
+            else if (e.PropertyName == nameof(MoveRulesViewModel.SelectedRule))
+            {
+                RefreshRaw();
+                if (_model.SelectedRule is { } row)
+                {
+                    RulesGrid.ScrollIntoView(row);
+                }
+            }
+        };
+        DataContext = _model;
     }
 
-    private async void Load_Click(object sender, RoutedEventArgs e)
+    /// <summary>Lists the graphs once the VFS is loaded and its paths become discoverable.</summary>
+    public void Initialize()
     {
-        if (_vm is null || GraphPicker.SelectedItem is not string path)
+        _model?.Initialize();
+        if (IsVisible && GraphPicker.Items.Count > 0)
+        {
+            GraphPicker.SelectedIndex = 0;
+        }
+    }
+
+    /// <summary>Stages the unsaved edits; the text is why they could not be, or null.</summary>
+    public Task<string?> SaveAsync() => _model?.SaveAsync() ?? Task.FromResult<string?>(null);
+
+    private async void GraphPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_model is null || GraphPicker.SelectedItem is not string path || path == _loadedGraph)
         {
             return;
         }
 
-        LoadButton.IsEnabled = false;
-        StatusText.Text = "Loading…";
-        try
+        if (IsDirty && MessageBox.Show(Window.GetWindow(this), "Discard the unsaved animation edits?",
+                "Unsaved changes", MessageBoxButton.YesNo, MessageBoxImage.Warning) != MessageBoxResult.Yes)
         {
-            byte[] data = _vm.ReadByPath(path)
-                ?? throw new MoveFormatException($"{path} could not be read");
-            byte[]? namedData = ReadNamedTwin(path);
+            GraphPicker.SelectedItem = _loadedGraph;
+            return;
+        }
 
-            (MoveFile file, MoveTreeNode root, IReadOnlyList<MoveChannel>? channels) =
-                await Task.Run(() =>
-                {
-                    MoveFile parsed = MoveCodec.Load(data);
-                    IReadOnlyList<MoveChannel>? table = namedData is null
-                        ? null
-                        : MoveCodec.ChannelTable(namedData);
-                    return (parsed, MoveTreeNode.Build(parsed, table), table);
-                });
+        _loadedGraph = path;
+        await _model.LoadAsync(path);
+    }
 
-            _file = file;
-            _root = root;
-            _channels = channels;
-            _root.IsExpanded = true;
-            ObjectTree.ItemsSource = new[] { _root };
+    private void SituationDone_Click(object sender, RoutedEventArgs e) => SituationToggle.IsChecked = false;
+
+    private void OpenGoTo_Click(object sender, RoutedEventArgs e) => _model?.OpenGoTo();
+
+    private void RulesGrid_PreviewMouseDown(object sender, MouseButtonEventArgs e) => SituationToggle.IsChecked = false;
+
+    private async void Save_Click(object sender, RoutedEventArgs e)
+    {
+        if (await SaveAsync() is { } error)
+        {
+            MessageBox.Show(Window.GetWindow(this), error, "Not saved", MessageBoxButton.OK, MessageBoxImage.Warning);
+        }
+    }
+
+    private void Revert_Click(object sender, RoutedEventArgs e) => _model?.Revert();
+
+    private void ResetSituation_Click(object sender, RoutedEventArgs e) => _model?.ResetSituation();
+
+    private void ApplyClip_Click(object sender, RoutedEventArgs e) => _model?.ApplyClip();
+
+    private void AddCondition_Click(object sender, RoutedEventArgs e) => _model?.AddCondition();
+
+    private void UpdateCondition_Click(object sender, RoutedEventArgs e) => _model?.UpdateCondition();
+
+    private void RemoveCondition_Click(object sender, RoutedEventArgs e) => _model?.RemoveCondition();
+
+    private void Duplicate_Click(object sender, RoutedEventArgs e) => _model?.Duplicate();
+
+    private void Earlier_Click(object sender, RoutedEventArgs e) => _model?.Move(-1);
+
+    private void Later_Click(object sender, RoutedEventArgs e) => _model?.Move(+1);
+
+    private void CloneWeapon_Click(object sender, RoutedEventArgs e) => _model?.CloneWeapon();
+
+    private void Delete_Click(object sender, RoutedEventArgs e)
+    {
+        if (_model?.SelectedRule is { } rule
+            && MessageBox.Show(Window.GetWindow(this), $"Delete rule {rule.Number}? The state then never plays it.",
+                "Delete rule", MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes)
+        {
+            _model.Delete();
+        }
+    }
+
+    private void Match_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (_model is not null && sender is ListBox { SelectedItem: string path })
+        {
+            _model.ClipForm.Path = path;
+        }
+    }
+
+    private void RawToggle_Changed(object sender, RoutedEventArgs e) => RefreshRaw();
+
+    private void RefreshRaw()
+    {
+        if (RawToggle.IsChecked != true || _model?.SelectedRule?.Rule.Node is not { } node || _model.Channels is not { } channels)
+        {
+            _rawRoot = null;
+            RawTree.ItemsSource = null;
             FieldGrid.ItemsSource = null;
-            DetailHeader.Text = "Select an object to see its fields.";
-            ExportButton.IsEnabled = true;
+            return;
+        }
 
-            string names = channels is null ? "no channel names beside it" : $"{channels.Count} channels named";
-            StatusText.Text =
-                $"{file.Objects.Count:N0} objects, {file.StateMachine?.Field("nbState") ?? 0} states - {names}";
-        }
-        catch (Exception ex) when (ex is MoveFormatException or IOException)
+        _rawRoot = MoveTreeNode.Build(node, channels);
+        _rawRoot.IsExpanded = true;
+        RawTree.ItemsSource = new[] { _rawRoot };
+        FieldGrid.ItemsSource = MoveTreeNode.Fields(node, channels);
+        MoveTreeNode.Filter(_rawRoot, RawSearch.Text.Trim());
+    }
+
+    private void RawTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    {
+        if (e.NewValue is MoveTreeNode node && _model?.Channels is { } channels)
         {
-            StatusText.Text = ex.Message;
+            FieldGrid.ItemsSource = MoveTreeNode.Fields(node.Target, channels);
         }
-        finally
+    }
+
+    private void RawSearch_Changed(object sender, TextChangedEventArgs e)
+    {
+        if (_rawRoot is not null)
         {
-            LoadButton.IsEnabled = true;
+            MoveTreeNode.Filter(_rawRoot, RawSearch.Text.Trim());
         }
     }
 
     private void Export_Click(object sender, RoutedEventArgs e)
     {
-        if (_file is null)
+        if (_model?.File is not { } file)
         {
             return;
         }
@@ -120,34 +187,9 @@ public partial class MoveTabView : UserControl
             Filter = "XML documents (*.xml)|*.xml",
             FileName = Path.GetFileNameWithoutExtension(GraphPicker.SelectedItem as string ?? "movemgr") + ".xml",
         };
-        if (dialog.ShowDialog() != true)
+        if (dialog.ShowDialog() == true)
         {
-            return;
-        }
-
-        NameDatabase names = BundledAssets.LoadNames();
-        MoveLabels labels = new(
-            _channels, hash => names.TryResolve(hash, out string path) ? path : null);
-        File.WriteAllText(dialog.FileName, MoveXml.ToXml(_file, labels));
-        StatusText.Text = $"Wrote {dialog.FileName}";
-    }
-
-    private void ObjectTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
-    {
-        if (e.NewValue is not MoveTreeNode node)
-        {
-            return;
-        }
-
-        DetailHeader.Text = $"{node.Target.ClassName} #{node.Target.Index}";
-        FieldGrid.ItemsSource = MoveTreeNode.Fields(node.Target, _channels);
-    }
-
-    private void Filter_Changed(object sender, TextChangedEventArgs e)
-    {
-        if (_root is not null)
-        {
-            MoveTreeNode.Filter(_root, SearchBox.Text.Trim());
+            File.WriteAllText(dialog.FileName, MoveXml.ToXml(file, new MoveLabels(_model.Channels?.Named, _model.PathOf)));
         }
     }
 }

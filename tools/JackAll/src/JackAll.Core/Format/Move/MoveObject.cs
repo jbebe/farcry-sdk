@@ -92,6 +92,54 @@ public sealed class MoveObject(string className)
         return false;
     }
 
+    /// <summary>The object the first pointer op carrying this field name points at.</summary>
+    public MoveObject? FieldTarget(string name) => Ops.FirstOrDefault(op => op.Name == name).Target;
+
+    /// <summary>The value of the first float op carrying this field name.</summary>
+    public float? FieldF32(string name)
+    {
+        foreach (MoveOp op in Ops)
+        {
+            if (op.Name == name && op.Kind == MoveOpKind.F32)
+            {
+                return BitConverter.ToSingle(op.Bytes!);
+            }
+        }
+
+        return null;
+    }
+
+    public bool SetFieldF32(string name, float value)
+    {
+        for (int i = 0; i < Ops.Count; i++)
+        {
+            if (Ops[i].Name == name && Ops[i].Kind == MoveOpKind.F32)
+            {
+                Ops[i] = MoveOp.Blob(MoveOpKind.F32, name, BitConverter.GetBytes(value));
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /// <summary>This object and everything it owns, in the order a reader creates them.</summary>
+    public IEnumerable<MoveObject> Subtree()
+    {
+        Stack<MoveObject> pending = new([this]);
+        while (pending.TryPop(out MoveObject? node))
+        {
+            yield return node;
+            for (int i = node.Ops.Count - 1; i >= 0; i--)
+            {
+                if (node.Ops[i].Kind == MoveOpKind.PointerNew)
+                {
+                    pending.Push(node.Ops[i].Target!);
+                }
+            }
+        }
+    }
+
     public override string ToString() => $"{ClassName} #{Index}";
 }
 
@@ -114,6 +162,9 @@ public sealed class MoveFile
     public MoveObject? StateMachine =>
         Objects.FirstOrDefault(o => o.ClassName == "CMoveStateMachine");
 
+    /// <summary>The <c>CMoveMgr</c>, which an expansion such as <c>dlc1.bin</c> does not have.</summary>
+    public MoveObject? Manager => Objects.FirstOrDefault(o => o.ClassName == "CMoveMgr");
+
     /// <summary>
     /// Rebuilds <see cref="Objects"/> by walking the ownership tree from the root, in the order a
     /// reader recreates them.
@@ -126,21 +177,7 @@ public sealed class MoveFile
     public void Reindex()
     {
         Objects.Clear();
-        Walk(Root);
-
-        void Walk(MoveObject node)
-        {
-            foreach (MoveOp op in node.Ops)
-            {
-                if (op.Kind != MoveOpKind.PointerNew)
-                {
-                    continue;
-                }
-
-                Objects.Add(op.Target!);
-                Walk(op.Target!);
-            }
-        }
+        Objects.AddRange(Root.Subtree().Skip(1));
     }
 }
 

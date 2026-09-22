@@ -690,7 +690,7 @@
             </TabItem>
 
             <!-- ========================== MOVE GRAPHS ========================== -->
-            <TabItem Header="Move graphs" x:Name="MoveTabItem">
+            <TabItem Header="Animations" x:Name="MoveTabItem">
                 <move:MoveTabView x:Name="MoveTab" Margin="6" />
             </TabItem>
 

@@ -35,8 +35,10 @@ public partial class MainWindow : Window
         ThemePicker.SelectedItem = _vm.Config.Theme;
         SourceInitialized += (_, _) => ThemeManager.ApplyTitleBar(this);
         DataContext = _vm;
+        MoveTab.Attach(_vm);
+        MoveTab.DirtyChanged += () => ItemState.SetIsChanged(MoveTabItem, MoveTab.IsDirty);
         Loaded += OnLoaded;
-        Closing += (_, _) => _vm.SaveConfig();
+        Closing += OnClosing;
         _vm.PropertyChanged += OnViewModelPropertyChanged;
 
         CommandBindings.Add(new CommandBinding(
@@ -154,6 +156,40 @@ public partial class MainWindow : Window
         XrefsPanel.Show(_vm, file);
     }
 
+    /// <summary>Set once the unsaved-edits prompt has been answered, so the second close goes through.</summary>
+    private bool _closeConfirmed;
+
+    /// <summary>
+    /// The Animations tab is a fixed tab with no close of its own, so its unsaved edits are asked about
+    /// here. Saving is asynchronous, so the first close is cancelled and repeated once it is done.
+    /// </summary>
+    private async void OnClosing(object? sender, CancelEventArgs e)
+    {
+        if (!_closeConfirmed && MoveTab.IsDirty)
+        {
+            e.Cancel = true;
+            MessageBoxResult choice = MessageBox.Show(this,
+                "The Animations tab has unsaved changes.\n\nSave before closing?",
+                "Unsaved changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
+            if (choice == MessageBoxResult.Cancel)
+            {
+                return;
+            }
+
+            if (choice == MessageBoxResult.Yes && await MoveTab.SaveAsync() is { } error)
+            {
+                MessageBox.Show(this, error, "Not saved", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
+
+            _closeConfirmed = true;
+            Close();
+            return;
+        }
+
+        _vm.SaveConfig();
+    }
+
     private async void OnLoaded(object sender, RoutedEventArgs e)
     {
         if (GameInstall.TryOpen(_vm.Config.GamePath, out _) is null && !await PromptForGameFolderAsync())
@@ -174,7 +210,7 @@ public partial class MainWindow : Window
         await _vm.InitializeAsync();
         await MapTab.InitializeAsync(_vm);
         LibraryTab.Initialize(_vm);
-        MoveTab.Initialize(_vm);
+        MoveTab.Initialize();
 
         // The Map tab owns neither the Library tab nor the editor registry, so it asks.
         MapTab.ArchetypeRequested += async (world, archetype) =>

@@ -5,6 +5,13 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 ## [Unreleased]
 
 ### Added
+- **Animations tab: edit the MOVE graph as rules** — replaces the Move graphs tab. Pick a weapon and
+  a state, set what the character is doing, and every rule is marked as playing, possibly playing or
+  beaten by an earlier one, the way the engine searches a state. Retarget a rule's clips, change its
+  timing and conditions, copy it as a variant, move it earlier or later, delete it, or copy a
+  weapon's whole set of animations to a new index. Save stages only the fragments the edits touch,
+  after checking they rebuild the edited graph exactly. The raw object tree is still there behind
+  **Raw graph**.
 - **The Map tab is laid out like a scene editor** — a hierarchy of every placed entity under its
   mission layer on the left, the viewport in the middle, an inspector on the right and the world's
   entity library along the bottom. The layer toggles moved into a Layers menu over the viewport.
@@ -40,6 +47,10 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **Saving map edits with nothing added left them pending** — a save of only moves or deletes now
   clears them like any other.
 - **A moved entity that had no `hidAngles` of its own lost a rotation** given to it.
+- **A MOVE fragment that reshaped a state holding a nested state failed to build**, or could point
+  the state machine's slot at the wrong object — the slot is now rebuilt by name only.
+- **The released app named no MOVE states** — it did not ship the MOVE names table, so states and
+  their fragments showed as bare hashes outside a source checkout.
 
 ## [1.1.0-beta] - 2026-09-04
 

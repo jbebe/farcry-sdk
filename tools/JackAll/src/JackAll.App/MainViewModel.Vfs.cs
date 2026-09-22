@@ -2,6 +2,7 @@ using JackAll.App.FileHandlers.Fcb;
 using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Mods;
+using JackAll.Core.Naming;
 using JackAll.Core.Vfs;
 using JackAll.Core.Xrefs;
 using JackAll.Tools.World;
@@ -204,6 +205,37 @@ public sealed partial class MainViewModel
     public void Replace(VfsFile file, byte[] content)
     {
         Workspace!.Stage(WorkspaceKeyOf(file), StagePathOf(file), file.Type.Extension, content);
+        Reindex();
+    }
+
+    /// <summary>The hashlist every name in the app is resolved through.</summary>
+    public NameDatabase? Names => _names;
+
+    /// <summary>
+    /// Stages several fragments of one container with a single reindex. A fragment back to its
+    /// retail text has the workspace's copy dropped instead, unless an enabled mod overrides it.
+    /// </summary>
+    public void StageFragments(VfsFile container, IEnumerable<(string Id, string Xml, bool IsVanilla)> fragments)
+    {
+        FolderModLayer workspace = Workspace!;
+        IReadOnlyDictionary<string, VfsFile> rows = FragmentsOf(container.EngineHash);
+        foreach ((string id, string xml, bool isVanilla) in fragments)
+        {
+            string path = (rows.TryGetValue(id, out VfsFile? row) ? StagePathOf(row) : null)
+                ?? $"{container.Path}\\{id}";
+            bool overriddenBelow = Layers.Any(layer => layer != workspace && layer.Enabled
+                && layer.FragmentOverrides.TryGetValue(container.EngineHash, out IReadOnlyList<FragmentOverride>? overrides)
+                && overrides.Any(o => FcbFragments.IdComparer.Equals(o.FragmentId, id)));
+            if (isVanilla && !overriddenBelow)
+            {
+                workspace.Unstage(FolderModLayer.StorageKeyOf(path));
+            }
+            else
+            {
+                workspace.Stage(FolderModLayer.StorageKeyOf(path), path, "xml", AppText.EncodeUtf8(xml));
+            }
+        }
+
         Reindex();
     }
 

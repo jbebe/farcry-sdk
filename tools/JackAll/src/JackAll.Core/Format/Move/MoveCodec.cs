@@ -100,7 +100,8 @@ public static class MoveCodec
                     break;
                 case "m_szName" when pendingType is { } type:
                     values = [];
-                    channels.Add(new MoveChannel(Text(op.Bytes), type == 5 ? values : null));
+                    channels.Add(new MoveChannel(
+                        Text(op.Bytes), type == (uint)MoveValueType.Enum ? values : null, (MoveValueType)type));
                     pendingType = null;
                     break;
                 case "m_szEnumValue":
@@ -116,8 +117,21 @@ public static class MoveCodec
         bytes is null ? string.Empty : System.Text.Encoding.Latin1.GetString(bytes);
 }
 
-/// <summary>One value channel: its name, and its value names when it is an enum.</summary>
-public sealed record MoveChannel(string Name, IReadOnlyList<string>? Values);
+/// <summary>One value channel: its name, its type, and its value names when it is an enum.</summary>
+public sealed record MoveChannel(string Name, IReadOnlyList<string>? Values, MoveValueType Type);
+
+/// <summary>What a value channel holds - <c>EMoveValType</c>, as <c>m_eMVType</c> stores it.</summary>
+public enum MoveValueType
+{
+    Unknown = 0,
+    Int = 1,
+    Float = 2,
+    Bool = 3,
+    Angle = 4,
+    Enum = 5,
+    UInt8 = 6,
+    EntityId = 7,
+}
 
 /// <summary>
 /// What a MOVE graph's opaque integers mean. Everything here is informational - the builder

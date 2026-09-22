@@ -3,6 +3,46 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:move="clr-namespace:JackAll.App.Move">
     <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="Visible" />
+
+        <CollectionViewSource x:Key="StateView" Source="{Binding States}">
+            <CollectionViewSource.GroupDescriptions>
+                <PropertyGroupDescription PropertyName="Group" />
+            </CollectionViewSource.GroupDescriptions>
+        </CollectionViewSource>
+
+        <!-- The name over each of the three panels. -->
+        <Style x:Key="PanelTitle" TargetType="TextBlock">
+            <Setter Property="FontWeight" Value="SemiBold" />
+            <Setter Property="VerticalAlignment" Value="Center" />
+        </Style>
+
+        <!-- A round "?" that explains the section beside it on hover. -->
+        <Style x:Key="HelpBadge" TargetType="Border">
+            <Setter Property="Width" Value="15" />
+            <Setter Property="Height" Value="15" />
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="BorderBrush" Value="{DynamicResource TextMutedBrush}" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Cursor" Value="Help" />
+            <Setter Property="ToolTipService.InitialShowDelay" Value="0" />
+            <Setter Property="ToolTipService.ShowDuration" Value="60000" />
+        </Style>
+
+        <!-- Bold on the rule that plays; grey on rules that cannot. -->
+        <Style x:Key="RuleRow" TargetType="DataGridRow">
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsQuiet}" Value="True">
+                    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+                </DataTrigger>
+                <DataTrigger Binding="{Binding Verdict}" Value="Plays">
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                    <Setter Property="Background" Value="{DynamicResource OkBgBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
         <HierarchicalDataTemplate x:Key="ObjectTemplate" DataType="{x:Type move:MoveTreeNode}"
                                   ItemsSource="{Binding Children}">
             <StackPanel Orientation="Horizontal">
@@ -15,48 +55,367 @@
 
     <DockPanel>
         <DockPanel DockPanel.Dock="Top" Style="{StaticResource TabToolbar}" LastChildFill="False">
-            <TextBlock x:Name="StatusText" Style="{StaticResource StatusText}" Text="Pick a graph and Load" />
+            <TextBlock Style="{StaticResource StatusText}" Text="{Binding Status}" />
             <TextBlock Text="Graph:" Style="{StaticResource ToolbarLabel}" />
-            <ComboBox x:Name="GraphPicker" Width="380" VerticalAlignment="Center" IsEnabled="False" />
-            <Button x:Name="LoadButton" Content="Load" Margin="16,0,0,0"
-                    VerticalAlignment="Center" IsEnabled="False" Click="Load_Click" />
-            <Button x:Name="ExportButton" Content="Export XML…" Margin="8,0,0,0"
-                    VerticalAlignment="Center" IsEnabled="False" Click="Export_Click" />
+            <ComboBox x:Name="GraphPicker" Width="300" VerticalAlignment="Center" ItemsSource="{Binding Graphs}"
+                      IsEnabled="{Binding CanLoad}" SelectionChanged="GraphPicker_SelectionChanged"
+                      AutomationProperties.AutomationId="MoveGraphPicker" />
+            <Button Content="Save" Margin="20,0,0,0" VerticalAlignment="Center" Style="{StaticResource PrimaryButton}"
+                    IsEnabled="{Binding CanSave}" Click="Save_Click" AutomationProperties.AutomationId="MoveSaveButton" />
+            <Button Content="Revert" Margin="8,0,0,0" VerticalAlignment="Center" IsEnabled="{Binding CanSave}"
+                    Click="Revert_Click" AutomationProperties.AutomationId="MoveRevertButton" />
         </DockPanel>
 
-        <Grid>
+        <Grid IsEnabled="{Binding IsLoaded}">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="420" MinWidth="240" />
+                <ColumnDefinition Width="270" MinWidth="200" />
                 <ColumnDefinition Width="{StaticResource SplitterSize}" />
-                <ColumnDefinition Width="*" MinWidth="320" />
+                <ColumnDefinition Width="*" MinWidth="420" />
+                <ColumnDefinition Width="{StaticResource SplitterSize}" />
+                <ColumnDefinition Width="420" MinWidth="320" />
             </Grid.ColumnDefinitions>
 
+            <!-- Situations: the states of the graph, narrowed to the picked weapon. -->
             <DockPanel Grid.Column="0">
-                <TextBox x:Name="SearchBox" DockPanel.Dock="Top" Style="{StaticResource SearchBox}" Margin="0,0,0,6"
-                         TextChanged="Filter_Changed" />
-
-                <TreeView x:Name="ObjectTree" ItemTemplate="{StaticResource ObjectTemplate}"
-                          VirtualizingStackPanel.IsVirtualizing="True"
-                          VirtualizingStackPanel.VirtualizationMode="Recycling"
-                          ScrollViewer.CanContentScroll="True"
-                          ItemContainerStyle="{StaticResource BoundTreeItem}"
-                          SelectedItemChanged="ObjectTree_SelectedItemChanged" />
+                <TextBlock DockPanel.Dock="Top" Text="Situations" Style="{StaticResource PanelTitle}" />
+                <TextBlock DockPanel.Dock="Top" Style="{StaticResource Note}" Margin="0,2,0,10"
+                           Text="Each is one state of the animation graph - reloading, drawing, aiming. Pick one to see its rules. The filter also finds rules by condition or clip: try Crouched Jammed." />
+                <Grid DockPanel.Dock="Top" Margin="0,0,0,6">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="Weapon" Style="{StaticResource ToolbarLabel}" Margin="0,0,8,0" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Weapons}" SelectedItem="{Binding Weapon}"
+                              AutomationProperties.AutomationId="MoveWeaponPicker" />
+                </Grid>
+                <TextBox DockPanel.Dock="Top" Style="{StaticResource SearchBox}" Margin="0,0,0,6"
+                         Tag="Name, condition or clip…"
+                         ToolTip="Every word has to appear in the situation's name or in one of its rules - its weapon, conditions or clip."
+                         Text="{Binding StateFilter, UpdateSourceTrigger=PropertyChanged}"
+                         AutomationProperties.AutomationId="MoveStateFilter" />
+                <CheckBox DockPanel.Dock="Top" Margin="0,0,0,6" Content="Only where it has its own animations"
+                          IsChecked="{Binding OwnSituationsOnly}"
+                          Visibility="{Binding HasWeapon, Converter={StaticResource Visible}}" />
+                <ListBox ItemsSource="{Binding Source={StaticResource StateView}}" SelectedItem="{Binding SelectedState}"
+                         IsSynchronizedWithCurrentItem="False" DisplayMemberPath="Name"
+                         VirtualizingPanel.IsVirtualizingWhenGrouping="True" VirtualizingPanel.IsVirtualizing="True"
+                         AutomationProperties.AutomationId="MoveStateList">
+                    <ListBox.GroupStyle>
+                        <GroupStyle>
+                            <GroupStyle.HeaderTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Name}" Style="{StaticResource SectionHeader}" Margin="4,10,0,2" />
+                                </DataTemplate>
+                            </GroupStyle.HeaderTemplate>
+                        </GroupStyle>
+                    </ListBox.GroupStyle>
+                </ListBox>
             </DockPanel>
 
             <GridSplitter Grid.Column="1" />
 
-            <DockPanel Grid.Column="2">
-                <TextBlock x:Name="DetailHeader" DockPanel.Dock="Top" FontWeight="SemiBold"
-                           Margin="0,0,0,6" Text="Select an object to see its fields." />
-                <DataGrid x:Name="FieldGrid">
+            <!-- Rules: what the picked situation can play, in the order the engine tries them. -->
+            <Grid Grid.Column="2">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <DockPanel Grid.Row="0" LastChildFill="False">
+                    <TextBlock Text="Rules" Style="{StaticResource PanelTitle}" />
+                    <ToggleButton x:Name="SituationToggle" DockPanel.Dock="Right" MinWidth="150"
+                                  HorizontalContentAlignment="Stretch" IsEnabled="{Binding HasSituationRows}"
+                                  AutomationProperties.AutomationId="MoveSituationToggle">
+                        <DockPanel>
+                            <TextBlock DockPanel.Dock="Right" Text="▾" Margin="10,0,0,0" />
+                            <TextBlock Text="{Binding SituationSummary}" />
+                        </DockPanel>
+                    </ToggleButton>
+                    <CheckBox x:Name="RawToggle" DockPanel.Dock="Right" Content="Raw graph" Margin="0,0,16,0"
+                              VerticalAlignment="Center" Checked="RawToggle_Changed" Unchecked="RawToggle_Changed"
+                              AutomationProperties.AutomationId="MoveRawToggle" />
+                </DockPanel>
+
+                <TextBlock Grid.Row="1" Style="{StaticResource Note}" Margin="0,4,0,6"
+                           Text="The engine tries them top to bottom and plays the first whose conditions all pass.   ▶ plays   ? plays unless an earlier rule applies   – an earlier rule always wins" />
+
+                <DataGrid x:Name="RulesGrid" Grid.Row="2" ItemsSource="{Binding Rules}" SelectedItem="{Binding SelectedRule}"
+                          RowStyle="{StaticResource RuleRow}" SelectionMode="Single"
+                          PreviewMouseDown="RulesGrid_PreviewMouseDown" AutomationProperties.AutomationId="MoveRulesGrid">
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Field" Binding="{Binding Name}" Width="240" />
-                        <DataGridTextColumn Header="Type" Binding="{Binding Kind}" Width="90" />
-                        <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="200" />
-                        <DataGridTextColumn Header="Means" Binding="{Binding Note}" Width="*" />
+                        <DataGridTextColumn Header="" Binding="{Binding Glyph}" Width="26" />
+                        <DataGridTextColumn Header="#" Binding="{Binding Number}" Width="42" />
+                        <DataGridTextColumn Header="Weapon" Binding="{Binding Weapon}" Width="120" />
+                        <DataGridTextColumn Header="Plays when" Binding="{Binding When}" Width="*" />
+                        <DataGridTextColumn Header="Plays" Binding="{Binding Plays}" Width="280" />
+                        <DataGridTextColumn Header="Blend (s)" Binding="{Binding Blend}" Width="64" />
+                        <DataGridTextColumn Header="Also used by" Binding="{Binding SharedWith}" Width="150" />
                     </DataGrid.Columns>
                 </DataGrid>
-            </DockPanel>
+
+                <!-- The situation, dropped down over the rules from its button. -->
+                <Border Grid.Row="1" Grid.RowSpan="2" Panel.ZIndex="1" Width="360" Margin="0,2,0,0"
+                        HorizontalAlignment="Right" VerticalAlignment="Top" Style="{StaticResource PopupSurface}"
+                        Visibility="{Binding IsChecked, ElementName=SituationToggle, Converter={StaticResource Visible}}">
+                    <StackPanel>
+                        <DockPanel>
+                            <Button DockPanel.Dock="Right" Content="Reset" Style="{StaticResource DenseButton}"
+                                    Click="ResetSituation_Click" />
+                            <TextBlock Text="What the character is doing" Style="{StaticResource PanelTitle}" />
+                        </DockPanel>
+                        <TextBlock Style="{StaticResource Note}" Margin="0,4,0,10"
+                                   Text="Set what you know; &quot;any&quot; matches every value. Angles are in degrees." />
+                        <ScrollViewer MaxHeight="380" VerticalScrollBarVisibility="Auto">
+                            <ItemsControl ItemsSource="{Binding SituationRows}" Grid.IsSharedSizeScope="True"
+                                          AutomationProperties.AutomationId="MoveSituation">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type move:MoveSituationRow}">
+                                        <Grid Margin="0,0,0,5">
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto" SharedSizeGroup="Channel" />
+                                                <ColumnDefinition Width="*" />
+                                            </Grid.ColumnDefinitions>
+                                            <TextBlock Text="{Binding Name}" Style="{StaticResource Secondary}"
+                                                       VerticalAlignment="Center" Margin="0,0,12,0" />
+                                            <ComboBox Grid.Column="1" ItemsSource="{Binding Options}" SelectedItem="{Binding Selected}"
+                                                      Visibility="{Binding IsChoice, Converter={StaticResource Visible}}" />
+                                            <TextBox Grid.Column="1" Text="{Binding Text, UpdateSourceTrigger=PropertyChanged}"
+                                                     ToolTip="A number. Empty means any."
+                                                     Visibility="{Binding IsText, Converter={StaticResource Visible}}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </ScrollViewer>
+                        <Button Content="Done" HorizontalAlignment="Right" Margin="0,6,0,0" Click="SituationDone_Click" />
+                    </StackPanel>
+                </Border>
+
+                <!-- The selected rule as the file stores it. -->
+                <Grid Grid.Row="3" Height="280" Margin="0,8,0,0"
+                      Visibility="{Binding IsChecked, ElementName=RawToggle, Converter={StaticResource Visible}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="{StaticResource SplitterSize}" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <DockPanel Grid.Column="0">
+                        <DockPanel DockPanel.Dock="Top" Margin="0,0,0,6">
+                            <Button DockPanel.Dock="Right" Content="Export XML…" Margin="6,0,0,0"
+                                    Style="{StaticResource DenseButton}" Click="Export_Click" />
+                            <TextBox x:Name="RawSearch" Style="{StaticResource SearchBox}" TextChanged="RawSearch_Changed" />
+                        </DockPanel>
+                        <TreeView x:Name="RawTree" ItemTemplate="{StaticResource ObjectTemplate}"
+                                  ItemContainerStyle="{StaticResource BoundTreeItem}"
+                                  VirtualizingStackPanel.IsVirtualizing="True"
+                                  SelectedItemChanged="RawTree_SelectedItemChanged" />
+                    </DockPanel>
+                    <GridSplitter Grid.Column="1" />
+                    <DataGrid x:Name="FieldGrid" Grid.Column="2">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Field" Binding="{Binding Name}" Width="200" />
+                            <DataGridTextColumn Header="Type" Binding="{Binding Kind}" Width="70" />
+                            <DataGridTextColumn Header="Value" Binding="{Binding Value}" Width="120" />
+                            <DataGridTextColumn Header="Means" Binding="{Binding Note}" Width="*" />
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Grid>
+            </Grid>
+
+            <GridSplitter Grid.Column="3" />
+
+            <!-- The selected rule, editable. -->
+            <Border Grid.Column="4" Style="{StaticResource SidebarPane}">
+                <Grid>
+                    <TextBlock Text="Pick a situation, then a rule, to see and change what it plays.">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock" BasedOn="{StaticResource EmptyHint}">
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding HasRule}" Value="True">
+                                        <Setter Property="Visibility" Value="Collapsed" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <ScrollViewer VerticalScrollBarVisibility="Auto"
+                                  Visibility="{Binding HasRule, Converter={StaticResource Visible}}">
+                        <StackPanel Margin="0,0,8,12">
+                            <TextBlock Text="{Binding DetailTitle}" Style="{StaticResource Heading}" />
+                            <TextBlock Text="{Binding DetailNote}" Style="{StaticResource Note}" Margin="0,4,0,0" />
+                            <Button HorizontalAlignment="Left" Margin="0,8,0,0" Click="OpenGoTo_Click"
+                                    ToolTip="This rule continues the search in another situation. Its rules decide what plays."
+                                    Visibility="{Binding HasGoTo, Converter={StaticResource Visible}}"
+                                    AutomationProperties.AutomationId="MoveOpenGoTo">
+                                <!-- A TextBlock, so the underscores in a state name are not read as access keys. -->
+                                <TextBlock Text="{Binding GoToName, StringFormat='Open {0}'}" />
+                            </Button>
+                            <Border Style="{StaticResource WarningCallout}" Margin="0,8,0,0"
+                                    Visibility="{Binding HasMessage, Converter={StaticResource Visible}}">
+                                <TextBlock Text="{Binding Message}" TextWrapping="Wrap"
+                                           AutomationProperties.AutomationId="MoveMessage" />
+                            </Border>
+
+                            <TextBlock Text="PLAYS" Style="{StaticResource SectionHeader}" />
+                            <ListBox ItemsSource="{Binding Clips}" SelectedItem="{Binding ClipForm.Clip}" MaxHeight="150"
+                                     AutomationProperties.AutomationId="MoveClipList">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type move:MoveClipRow}">
+                                        <StackPanel ToolTip="{Binding Path}">
+                                            <TextBlock Text="{Binding FileName}" />
+                                            <TextBlock Text="{Binding Role}" Style="{StaticResource Caption}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+
+                            <StackPanel DataContext="{Binding ClipForm}" Margin="0,6,0,0"
+                                        Visibility="{Binding HasClip, Converter={StaticResource Visible}}">
+                                <TextBlock Text="Clip path" Style="{StaticResource Caption}" />
+                                <TextBox Text="{Binding Path, UpdateSourceTrigger=PropertyChanged}" FontFamily="{StaticResource MonoFont}"
+                                         TextWrapping="Wrap" AutomationProperties.AutomationId="MoveClipPath" />
+                                <ListBox ItemsSource="{Binding Matches}" MaxHeight="140" Margin="0,2,0,0"
+                                         SelectionChanged="Match_SelectionChanged"
+                                         Visibility="{Binding HasMatches, Converter={StaticResource Visible}}" />
+                                <Grid Margin="0,6,0,0" Visibility="{Binding HasTiming, Converter={StaticResource Visible}}">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                        <RowDefinition Height="Auto" />
+                                    </Grid.RowDefinitions>
+                                    <TextBlock Grid.Column="0" Text="Blend in (s)" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="1" Text="Speed ×" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="2" Text="Start (s)" Style="{StaticResource Caption}" />
+                                    <TextBlock Grid.Column="3" Text="Stop (s)" Style="{StaticResource Caption}" />
+                                    <TextBox Grid.Row="1" Grid.Column="0" Margin="0,0,4,0" Text="{Binding Blend}" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Margin="0,0,4,0" Text="{Binding Speed}" />
+                                    <TextBox Grid.Row="1" Grid.Column="2" Margin="0,0,4,0" Text="{Binding Start}" />
+                                    <TextBox Grid.Row="1" Grid.Column="3" Text="{Binding Stop}" />
+                                    <CheckBox Grid.Row="2" Grid.ColumnSpan="4" Margin="0,6,0,0"
+                                              Content="Can be interrupted" IsChecked="{Binding Interruptible}" />
+                                </Grid>
+                                <Button Content="Apply clip changes" HorizontalAlignment="Left" Margin="0,8,0,0"
+                                        Click="ApplyClip_Click" AutomationProperties.AutomationId="MoveApplyClip" />
+                            </StackPanel>
+
+                            <TextBlock Text="PLAYS WHEN" Style="{StaticResource SectionHeader}" />
+                            <ListBox ItemsSource="{Binding Conditions}" SelectedItem="{Binding SelectedCondition}" MaxHeight="170"
+                                     AutomationProperties.AutomationId="MoveConditionList">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type move:MoveConditionRow}">
+                                        <DockPanel>
+                                            <TextBlock DockPanel.Dock="Right" Text="{Binding Source}" Style="{StaticResource Caption}"
+                                                       Margin="8,0,0,0" VerticalAlignment="Center" />
+                                            <TextBlock Text="{Binding Text}" TextTrimming="CharacterEllipsis" />
+                                        </DockPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                            <TextBlock Style="{StaticResource Note}" Margin="0,2,0,0"
+                                       Text="A condition on a group applies to every rule inside it. Conditions join the ones before them, left to right." />
+
+                            <Grid DataContext="{Binding ConditionForm}" Margin="0,6,0,0">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="80" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+                                <ComboBox Grid.Column="0" Margin="0,0,4,0" ItemsSource="{Binding Channels}"
+                                          SelectedItem="{Binding Channel}" IsTextSearchEnabled="True"
+                                          AutomationProperties.AutomationId="MoveConditionChannel" />
+                                <ComboBox Grid.Column="1" Margin="0,0,4,0" ItemsSource="{Binding Ops}" SelectedItem="{Binding Op}" />
+                                <ComboBox Grid.Column="2" ItemsSource="{Binding Values}" SelectedItem="{Binding Value}"
+                                          Visibility="{Binding IsChoice, Converter={StaticResource Visible}}" />
+                                <DockPanel Grid.Column="2" Visibility="{Binding IsTyped, Converter={StaticResource Visible}}">
+                                    <TextBox DockPanel.Dock="Right" Width="60" Margin="4,0,0,0" Text="{Binding High}"
+                                             Visibility="{Binding IsRange, Converter={StaticResource Visible}}" />
+                                    <TextBox Text="{Binding Low}" />
+                                </DockPanel>
+                                <CheckBox Grid.Row="1" Grid.ColumnSpan="3" Margin="0,6,0,0" IsChecked="{Binding IsOr}"
+                                          Content="Join with &quot;or&quot; instead of &quot;and&quot;" />
+                            </Grid>
+                            <WrapPanel Margin="0,6,0,0">
+                                <Button Content="Add to this rule" Style="{StaticResource DenseButton}" Margin="0,0,6,0"
+                                        Click="AddCondition_Click" AutomationProperties.AutomationId="MoveAddCondition" />
+                                <Button Content="Change selected" Style="{StaticResource DenseButton}" Margin="0,0,6,0"
+                                        Click="UpdateCondition_Click" />
+                                <Button Content="Remove selected" Style="{StaticResource DenseButton}"
+                                        Click="RemoveCondition_Click" />
+                            </WrapPanel>
+
+                            <StackPanel Orientation="Horizontal">
+                                <TextBlock Text="ORDER" Style="{StaticResource SectionHeader}" />
+                                <Border Style="{StaticResource HelpBadge}" Margin="6,8,0,0">
+                                    <Border.ToolTip>
+                                        <TextBlock MaxWidth="340" TextWrapping="Wrap">
+                                            <Run Text="The engine tries a situation's rules from the top of the list down and plays the first one whose conditions all pass. These buttons change where this rule sits in that list." />
+                                            <LineBreak /><LineBreak />
+                                            <Run FontWeight="SemiBold" Text="Duplicate" />
+                                            <Run Text="puts a copy of this rule just above it. The copy wins while its conditions are the same, so add a condition to it to make a variant for one case - only when Jammed, say." />
+                                            <LineBreak /><LineBreak />
+                                            <Run FontWeight="SemiBold" Text="Move up / Move down" />
+                                            <Run Text="swaps this rule with its neighbour in the same group, which changes which of the two is tried first." />
+                                            <LineBreak /><LineBreak />
+                                            <Run FontWeight="SemiBold" Text="Delete" />
+                                            <Run Text="removes the rule. Whatever it covered falls through to the next rule that matches." />
+                                        </TextBlock>
+                                    </Border.ToolTip>
+                                    <TextBlock Text="?" FontSize="{StaticResource FontSizeTiny}" FontWeight="SemiBold"
+                                               Foreground="{DynamicResource TextMutedBrush}"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                            </StackPanel>
+                            <WrapPanel>
+                                <Button Content="Duplicate" Style="{StaticResource DenseButton}" Margin="0,0,6,0"
+                                        Click="Duplicate_Click" AutomationProperties.AutomationId="MoveDuplicate"
+                                        ToolTip="Put a copy of this rule just above it, to make a variant for one case." />
+                                <Button Content="Move up" Style="{StaticResource DenseButton}" Margin="0,0,6,0" Click="Earlier_Click"
+                                        ToolTip="Try this rule before the one above it in its group." />
+                                <Button Content="Move down" Style="{StaticResource DenseButton}" Margin="0,0,6,0" Click="Later_Click"
+                                        ToolTip="Try this rule after the one below it in its group." />
+                                <Button Content="Delete" Style="{StaticResource DenseButton}" Click="Delete_Click"
+                                        ToolTip="Remove this rule; what it covered falls through to the next match." />
+                            </WrapPanel>
+
+                            <TextBlock Text="ALSO ATTACHED" Style="{StaticResource SectionHeader}" />
+                            <TextBlock Text="{Binding Techs}" Style="{StaticResource MonoNote}" TextWrapping="Wrap" />
+
+                            <StackPanel Visibility="{Binding HasWeapon, Converter={StaticResource Visible}}">
+                                <TextBlock Text="WEAPON SET" Style="{StaticResource SectionHeader}" />
+                                <TextBlock Style="{StaticResource Note}"
+                                           Text="Copies every animation this weapon has of its own onto another weapon index - the value a new weapon archetype puts in iAnimationValue. The package moves the copies' own clips into a newly registered animation package." />
+                                <Grid Margin="0,6,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="60" />
+                                        <ColumnDefinition Width="Auto" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Index" Style="{StaticResource ToolbarLabel}" />
+                                    <TextBox Grid.Column="1" Text="{Binding CloneTarget}" />
+                                    <TextBlock Grid.Column="2" Text="Package" Style="{StaticResource ToolbarLabel}" Margin="10,0,6,0" />
+                                    <TextBox Grid.Column="3" Text="{Binding ClonePackage}" ToolTip="Optional" />
+                                </Grid>
+                                <Button Content="Copy weapon set" HorizontalAlignment="Left" Margin="0,6,0,0"
+                                        Click="CloneWeapon_Click" AutomationProperties.AutomationId="MoveCloneWeapon" />
+                            </StackPanel>
+                        </StackPanel>
+                    </ScrollViewer>
+                </Grid>
+            </Border>
         </Grid>
     </DockPanel>
 </UserControl>

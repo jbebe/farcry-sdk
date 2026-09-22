@@ -65,7 +65,10 @@ public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerS
     /// <summary>The unit a fragment id names - see <see cref="FragmentId.NumberOf"/>.</summary>
     public static uint? UnitOf(string fragmentId) => FragmentId.NumberOf(fragmentId);
 
-    public IContainerTree Open(byte[] container) => new Tree(MoveCodec.Load(container), names);
+    public IContainerTree Open(byte[] container) => Open(MoveCodec.Load(container));
+
+    /// <summary>A parsed graph, which the tree reads but never changes.</summary>
+    public IContainerTree Open(MoveFile file) => new Tree(file, names);
 
     public string Canonicalize(string fragmentId, string fragmentXml)
         => MoveFragmentXml.Render(MoveFragmentXml.Parse(fragmentXml));
@@ -158,7 +161,7 @@ public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerS
                 if (op.Kind == MoveOpKind.PointerRef
                     && index.StateOf(op.Target!) is { } target && doomed.Contains(target))
                 {
-                    inbound.Add((obj, i, index.AddressOf(op.Target!)!.Value));
+                    inbound.Add((obj, i, InboundAddress(index, op.Target!)));
                 }
             }
         }
@@ -361,6 +364,12 @@ public sealed class MoveContainerSplitter(MoveNames? names = null) : IContainerS
             }
         }
     }
+
+    /// <summary>A listed state by its own hash, which still names it after the state holding it changes shape.</summary>
+    private static MoveAddress InboundAddress(MoveStateIndex index, MoveObject target)
+        => MoveStateIndex.NameHashOf(target) is { } hash && index.ByHash(hash) == target
+            ? new MoveAddress(hash, string.Empty)
+            : index.AddressOf(target)!.Value;
 
     private static MoveObject Seat(MoveStateIndex index, MoveAddress address)
         => index.Resolve(address)

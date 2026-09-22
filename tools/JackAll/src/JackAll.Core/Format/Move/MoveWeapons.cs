@@ -26,39 +26,8 @@ public static class MoveWeapons
 
     private const string ClipField = "m_animNameHash";
 
-    /// <summary>
-    /// The weapon this object's own criteria pin it to, if any.
-    /// </summary>
-    /// <remarks>
-    /// Both weapon channels count. A draw or holster branch is gated on <c>DesiredWeapon</c> - the
-    /// weapon being switched to - rather than <c>EquippedWeapon</c>, so a rule that reads only
-    /// channel 17 misses those sites entirely: three of the five sites playing the Dart Rifle's
-    /// draw clip are pinned by channel 18.
-    /// </remarks>
-    public static int? WeaponOf(MoveObject obj)
-    {
-        foreach (MoveOp op in obj.Ops)
-        {
-            if (op.Name != "CMoveCriteria" || op.Target is not { } criterion)
-            {
-                continue;
-            }
-
-            if (criterion.ClassName != "CMoveCriteriaEnumEqual")
-            {
-                continue;
-            }
-
-            uint? channel = criterion.Field("m_eValueID");
-            if (channel is EquippedWeaponChannel or DesiredWeaponChannel
-                && criterion.Field("m_Value") is { } value)
-            {
-                return unchecked((int)value);
-            }
-        }
-
-        return null;
-    }
+    /// <summary>The weapon this object's own criteria pin it to, if any - see <see cref="MoveUnits.PinOf"/>.</summary>
+    public static int? WeaponOf(MoveObject obj) => MoveUnits.PinOf(obj)?.Weapon;
 
     /// <summary>Every EquippedWeapon index that scopes anything, in order.</summary>
     public static IReadOnlyList<int> Indices(MoveFile file) =>
@@ -126,19 +95,17 @@ public static class MoveWeapons
     /// <summary>The clip hashes each weapon index's scopes reach.</summary>
     public static IReadOnlyDictionary<int, IReadOnlySet<uint>> ClipsByWeapon(MoveFile file)
     {
-        Dictionary<int, IReadOnlySet<uint>> result = [];
-        foreach (int weapon in Indices(file))
+        Dictionary<int, HashSet<uint>> result = [];
+        foreach (MoveObject root in file.Objects)
         {
-            HashSet<uint> clips = [];
-            foreach (MoveObject root in file.Objects.Where(o => WeaponOf(o) == weapon))
+            if (WeaponOf(root) is { } weapon)
             {
-                Collect(root, weapon, clips, []);
+                result.TryAdd(weapon, []);
+                Collect(root, weapon, result[weapon], []);
             }
-
-            result[weapon] = clips;
         }
 
-        return result;
+        return result.ToDictionary(p => p.Key, p => (IReadOnlySet<uint>)p.Value);
     }
 
     /// <summary>What <paramref name="weapon"/> plays, with each clip's sharing worked out.</summary>

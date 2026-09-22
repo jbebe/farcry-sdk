@@ -76,6 +76,9 @@ public sealed class MoveStateIndex
     /// scaffolding (the manager, the value container, the machine, its transition refs).</summary>
     public MoveObject? StateOf(MoveObject obj) => _stateOf.GetValueOrDefault(obj);
 
+    /// <summary>The object whose <c>PointerNew</c> created this one, or null for a root.</summary>
+    public MoveObject? OwnerOf(MoveObject obj) => _owners.GetValueOrDefault(obj);
+
     public static uint? NameHashOf(MoveObject state) => state.Field("m_stateNameHash");
 
     public static MoveStateIndex Build(MoveFile file)

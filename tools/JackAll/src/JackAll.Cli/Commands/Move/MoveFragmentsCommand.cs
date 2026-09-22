@@ -51,25 +51,8 @@ public sealed class MoveFragmentsCommand : CliCommand<MoveFragmentsCommand.Setti
             : splitter.Open(CliIO.ReadInput(settings.Base));
 
         IReadOnlyList<FcbFragmentInfo> rows = mine.List();
-        List<(string Id, string Xml)> changed = [];
-        int added = 0;
-        foreach (FcbFragmentInfo row in rows)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-            string xml = mine.Extract(row.Id)!;
-            string? before = vanilla?.Extract(row.Id);
-            if (vanilla is not null && before == xml)
-            {
-                continue;
-            }
-
-            if (vanilla is not null && before is null)
-            {
-                added++;
-            }
-
-            changed.Add((row.Id, xml));
-        }
+        IReadOnlyList<FragmentChange> changed = FragmentDiff.Changed(mine, vanilla, rows.Select(r => r.Id));
+        int added = changed.Count(c => c.Added);
 
         AnsiConsole.MarkupLine(
             $"[grey]{settings.Input.EscapeMarkup()}[/]: {rows.Count} units, "
@@ -84,9 +67,9 @@ public sealed class MoveFragmentsCommand : CliCommand<MoveFragmentsCommand.Setti
         }
 
         long bytes = changed.Sum(c => (long)c.Xml.Length);
-        foreach ((string id, string xml) in changed.Take(settings.List ? int.MaxValue : 10))
+        foreach (FragmentChange change in changed.Take(settings.List ? int.MaxValue : 10))
         {
-            AnsiConsole.MarkupLine($"    {id.EscapeMarkup()}  [grey]{xml.Length:N0} B[/]");
+            AnsiConsole.MarkupLine($"    {change.Id.EscapeMarkup()}  [grey]{change.Xml.Length:N0} B[/]");
         }
 
         if (!settings.List && changed.Count > 10)
@@ -100,9 +83,9 @@ public sealed class MoveFragmentsCommand : CliCommand<MoveFragmentsCommand.Setti
         }
 
         string directory = settings.Out ?? settings.Input + ".fragments";
-        foreach ((string id, string xml) in changed)
+        foreach (FragmentChange change in changed)
         {
-            CliIO.WriteOutput(Path.Combine(directory, id), xml);
+            CliIO.WriteOutput(Path.Combine(directory, change.Id), change.Xml);
         }
 
         AnsiConsole.MarkupLine(

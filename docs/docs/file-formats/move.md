@@ -471,6 +471,36 @@ and a full signed 32-bit comparand. Nothing consults a value count, a name, or a
 time or at evaluation time. The `TMoveCriteria*` template family (`Equal`, `NotEqual`, `Intv`,
 `Perc` over `int`/`float`/`bool`/`uint8`/`CAngle`) differs only in the width and type of `m_Value`.
 
+### How a criteria list is evaluated
+
+`CMoveDescriptor::EvaluateCriterias` (`0x09bac6a0`) folds a descriptor's criteria left to right.
+Each criterion's `m_logicOperator` joins it to the result of everything before it: `0` is AND, `1`
+is OR, and the first criterion's operator is ignored. There is no precedence, so `[A, B (1), C (0)]`
+is `(A or B) and C`. An empty list passes.
+
+Measured over `movemgr.bin`, 3,342 criteria carry `0` and 541 carry `1`.
+
+### How a state picks a clip
+
+A state is searched, not looked up. `CMoveDescriptorGroup::GetNextMovement` (`0x09b583f0`) walks a
+group's `CMoveDescriptor` list in order, evaluates each child's criteria, and descends into the first
+child whose criteria pass. If nothing inside that child resolves, the walk backs out and tries the
+next sibling. The first node reached that ends the search is what plays, so a state's leaves, in
+pre-order, are its priority order.
+
+| Class | `GetNextMovement` | Does |
+|---|---|---|
+| `CMoveGroup` | `0x09bacf00` | searches its children, but only when `m_branchEnable` is set; 3 of 3,806 are off |
+| `CBaseAnimGroup` and every parameter class | `0x09b7a5b0` | ends the search on itself: a clip, a blend, a set of variants |
+| `CDoNothing` | `0x09b7b4d0` | ends the search on itself, so nothing new plays |
+| `CFrankensteinParameter` | `0x09b7b920` | ends the search on itself |
+| `CMoveComment` | `0x09babb60` | never matches |
+| `CMoveStateRef` | `0x09b70360` | searches the state `m_state` names |
+| `CMoveBaseState` | `0x09b78b80` | searches the object at `+0x1C` first, then its own children |
+
+A blend group's children are its samples, played together along `m_eAxisValueID`. They are not
+competing choices. What fills a state's `+0x1C` slot has not been traced.
+
 ### State identity
 
 `CMoveBaseState::Serialize` (`0x09b78c60`) is where a state gets its name, and it explains why the
@@ -640,9 +670,16 @@ settle the remainder — only more differential reading against the loadable twi
 ## Writing MOVE files
 
 **JackAll reads and writes MOVE graphs.** `jackall-cli move decode / encode / verify` converts to
-and from [the XML form](#an-editable-xml-form) and checks a graph reads back to itself, and the
-app's **Move graphs tab** browses a graph as the ownership tree it reads back as, labelling criteria with
-the channel and enum value they test.
+and from [the XML form](#an-editable-xml-form) and checks a graph reads back to itself.
+
+The app's **Animations tab** shows a graph as rules: pick a weapon and a state, set what the
+character is doing, and each rule is marked as playing, possibly playing, or beaten by an earlier one,
+following [how a state picks a clip](#how-a-state-picks-a-clip). A rule's clips, timing and criteria
+are editable, as is its place in the search, and a weapon's whole set of branches can be copied to a
+new index. Saving stages only the [fragments](#splitting-a-graph-for-mods) the edits touch. Before
+anything is staged, the fragments are spliced back onto the loaded graph and have to reproduce the
+edited one byte for byte. The tab's **Raw graph** pane still shows the selected rule as the file
+stores it.
 
 ```
 jackall-cli move decode movemgr.bin --names movemgrnamed.bin

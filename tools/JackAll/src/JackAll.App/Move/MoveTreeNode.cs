@@ -1,5 +1,6 @@
 using System.Globalization;
 using JackAll.Core.Format.Move;
+using JackAll.Core.Format.Move.Rules;
 
 namespace JackAll.App.Move;
 
@@ -13,9 +14,6 @@ public sealed record MoveFieldRow(string Kind, string Name, string Value, string
 /// </summary>
 public sealed class MoveTreeNode : TreeNodeBase<MoveTreeNode>
 {
-    private static readonly string[] StateClasses =
-        ["CMoveState", "CLayeredState", "CSyncState", "CFrankensteinState"];
-
     private MoveTreeNode(MoveObject target, string label, string detail)
     {
         Target = target;
@@ -30,24 +28,15 @@ public sealed class MoveTreeNode : TreeNodeBase<MoveTreeNode>
     /// <summary>The one thing worth reading at a glance: what a criterion tests, a state's hash.</summary>
     public string Detail { get; }
 
-    public static MoveTreeNode Build(MoveFile file, IReadOnlyList<MoveChannel>? channels)
-    {
-        MoveObject root = file.Root.Ops
-            .Where(op => op.Kind == MoveOpKind.PointerNew)
-            .Select(op => op.Target!)
-            .FirstOrDefault() ?? throw new MoveFormatException("this graph has no root object");
-
-        return BuildNode(root, channels);
-    }
-
-    private static MoveTreeNode BuildNode(MoveObject target, IReadOnlyList<MoveChannel>? channels)
+    /// <summary>One object and everything it owns.</summary>
+    public static MoveTreeNode Build(MoveObject target, MoveChannels channels)
     {
         MoveTreeNode node = new(target, target.ClassName, Describe(target, channels));
         foreach (MoveOp op in target.Ops)
         {
             if (op.Kind == MoveOpKind.PointerNew)
             {
-                node.AddChild(BuildNode(op.Target!, channels));
+                node.AddChild(Build(op.Target!, channels));
             }
         }
 
@@ -55,18 +44,14 @@ public sealed class MoveTreeNode : TreeNodeBase<MoveTreeNode>
     }
 
     /// <summary>Every field of one object, with the channel and enum names filled in.</summary>
-    public static IReadOnlyList<MoveFieldRow> Fields(
-        MoveObject target, IReadOnlyList<MoveChannel>? channels)
+    public static IReadOnlyList<MoveFieldRow> Fields(MoveObject target, MoveChannels channels)
     {
-        uint? channel = target.Field("m_eValueID");
-        List<MoveFieldRow> rows = [];
-        foreach (MoveOp op in target.Ops)
-        {
-            rows.Add(new MoveFieldRow(
-                op.Kind.ToString(), op.Name, Value(op), Note(op, channels, channel)));
-        }
-
-        return rows;
+        int? channel = (int?)target.Field("m_eValueID");
+        return
+        [
+            .. target.Ops.Select(op => new MoveFieldRow(
+                op.Kind.ToString(), op.Name, Value(op), Note(op, channels, channel))),
+        ];
     }
 
     private static string Value(MoveOp op) => op.Kind switch
@@ -83,37 +68,21 @@ public sealed class MoveTreeNode : TreeNodeBase<MoveTreeNode>
         _ => "null",
     };
 
-    private static string Note(
-        MoveOp op, IReadOnlyList<MoveChannel>? channels, uint? channel)
+    private static string Note(MoveOp op, MoveChannels channels, int? channel) => op.Name switch
     {
-        if (channels is null)
-        {
-            return string.Empty;
-        }
+        "m_eValueID" => channels.NameOf((int)op.Number),
+        "m_Value" when channel is { } id => channels.Format(id, unchecked((int)op.Number)),
+        _ => string.Empty,
+    };
 
-        if (op.Name == "m_eValueID" && op.Number < channels.Count)
-        {
-            return channels[(int)op.Number].Name;
-        }
-
-        if (op.Name != "m_Value" || channel is not { } id || id >= channels.Count)
-        {
-            return string.Empty;
-        }
-
-        IReadOnlyList<string>? values = channels[(int)id].Values;
-        int index = unchecked((int)op.Number);
-        return values is not null && index >= 0 && index < values.Count ? values[index] : string.Empty;
-    }
-
-    private static string Describe(MoveObject target, IReadOnlyList<MoveChannel>? channels)
+    private static string Describe(MoveObject target, MoveChannels channels)
     {
         if (target.ClassName.Contains("Criteria", StringComparison.Ordinal))
         {
-            return DescribeCriterion(target, channels);
+            return new MoveCondition(target).Describe(channels);
         }
 
-        if (StateClasses.Contains(target.ClassName) && target.Field("m_stateNameHash") is { } hash)
+        if (MoveStateIndex.NameHashOf(target) is { } hash)
         {
             string parent = target.Field("aliasID") is { } alias && alias != 0xFFFFFFFF
                 ? $" -> parent 0x{alias:X8}"
@@ -121,37 +90,7 @@ public sealed class MoveTreeNode : TreeNodeBase<MoveTreeNode>
             return $"0x{hash:X8}{parent}";
         }
 
-        return target.ClassName switch
-        {
-            "CMoveStateMachine" => $"{target.Field("nbState") ?? 0} states",
-            "CMoveValueContainer" => $"{target.Field("ms_iNumMoveValue") ?? 0} channels",
-            _ => string.Empty,
-        };
-    }
-
-    private static string DescribeCriterion(MoveObject target, IReadOnlyList<MoveChannel>? channels)
-    {
-        if (target.Field("m_eValueID") is not { } id)
-        {
-            return string.Empty;
-        }
-
-        string name = channels is not null && id < channels.Count
-            ? channels[(int)id].Name
-            : $"channel {id}";
-        if (target.Field("m_Value") is not { } raw)
-        {
-            return name;
-        }
-
-        int value = unchecked((int)raw);
-        IReadOnlyList<string>? values =
-            channels is not null && id < channels.Count ? channels[(int)id].Values : null;
-        string shown = values is not null && value >= 0 && value < values.Count
-            ? values[value]
-            : value.ToString(CultureInfo.InvariantCulture);
-        string op = target.ClassName.Contains("NotEqual", StringComparison.Ordinal) ? "!=" : "==";
-        return $"{name} {op} {shown}";
+        return string.Empty;
     }
 
     public static void Filter(MoveTreeNode root, string query) =>

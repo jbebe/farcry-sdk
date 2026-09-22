@@ -77,25 +77,25 @@ public static class MoveUnits
     /// The weapon this object's own criteria pin it to, as a channel and value.
     /// </summary>
     /// <remarks>
-    /// Both weapon channels count, for the reason <see cref="MoveWeapons.WeaponOf"/> gives: a draw or
-    /// holster branch is gated on <c>DesiredWeapon</c> rather than <c>EquippedWeapon</c>, and the VSS
-    /// mod edits two such branches.
+    /// Both weapon channels count: a draw or holster branch is gated on <c>DesiredWeapon</c>, the
+    /// weapon being switched to, and three of the five sites playing the Dart Rifle's draw clip are
+    /// pinned that way.
     /// </remarks>
     public static (int Channel, int Weapon)? PinOf(MoveObject obj)
+        => PinCriterionOf(obj) is { } criterion
+            ? ((int)criterion.Field("m_eValueID")!.Value, unchecked((int)criterion.Field("m_Value")!.Value))
+            : null;
+
+    /// <summary>The criterion <see cref="PinOf"/> reads the pin from.</summary>
+    public static MoveObject? PinCriterionOf(MoveObject obj)
     {
         foreach (MoveOp op in obj.Ops)
         {
-            if (op.Name != "CMoveCriteria" || op.Target is not { } criterion
-                || criterion.ClassName != "CMoveCriteriaEnumEqual")
+            if (op.Name == "CMoveCriteria" && op.Target is { ClassName: "CMoveCriteriaEnumEqual" } criterion
+                && criterion.Field("m_eValueID") is MoveWeapons.EquippedWeaponChannel or MoveWeapons.DesiredWeaponChannel
+                && criterion.Field("m_Value") is not null)
             {
-                continue;
-            }
-
-            uint? channel = criterion.Field("m_eValueID");
-            if (channel is MoveWeapons.EquippedWeaponChannel or MoveWeapons.DesiredWeaponChannel
-                && criterion.Field("m_Value") is { } value)
-            {
-                return ((int)channel.Value, unchecked((int)value));
+                return criterion;
             }
         }
 
