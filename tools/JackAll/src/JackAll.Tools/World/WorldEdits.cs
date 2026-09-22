@@ -134,6 +134,9 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         return node;
     }
 
+    /// <summary>The entity's node with its unsaved field edits, without starting a copy of it.</summary>
+    public FcbObject CurrentNode(WorldEntity entity) => _working.GetValueOrDefault(entity) ?? entity.Node;
+
     /// <summary>Records a change made through <see cref="EditableNode"/>.</summary>
     public void Edited(WorldEntity entity)
     {
@@ -234,7 +237,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     /// alone. An entity with no angles of its own gets them only once it is actually turned.</summary>
     private FcbObject Placed(WorldEntity entity)
     {
-        FcbObject node = (_working.GetValueOrDefault(entity) ?? entity.Node).Clone();
+        FcbObject node = CurrentNode(entity).Clone();
         byte[] position = FcbEntityFields.Vector3Bytes(entity.Position!.Value);
         node.Values[WorldHashes.HidPos] = position;
         if (node.Values.ContainsKey(WorldHashes.HidPosPrecise))
@@ -291,11 +294,13 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     }
 
     private WorldSectorDocument? SectorAt(Vector3 position)
+        => SectorIdAt(position) is { } id ? world.SectorsById.GetValueOrDefault(id) : null;
+
+    /// <summary>The id of the sector a position falls in, or null off the map.</summary>
+    public int? SectorIdAt(Vector3 position)
     {
         (int x, int y) = WorldModels.SectorOf(position);
-        return x >= 0 && y >= 0 && x < sectorsPerSide && y < sectorsPerSide
-            ? world.SectorsById.GetValueOrDefault(y * sectorsPerSide + x)
-            : null;
+        return x >= 0 && y >= 0 && x < sectorsPerSide && y < sectorsPerSide ? y * sectorsPerSide + x : null;
     }
 
     /// <summary>An id no loaded entity has, and <paramref name="stem"/> numbered past every name taken.</summary>
@@ -326,6 +331,13 @@ public static class WorldEditDependencies
     /// <summary>The library single-player reads for <paramref name="world"/> - see
     /// docs/docs/engine-internals/entity-instancing.md.</summary>
     public static string LibraryPathOf(string world) => ArchetypeIndex.BaseLayer(world).Path;
+
+    /// <summary>What an entity draws: its own meshes, else its archetype's.</summary>
+    public static IReadOnlyList<string> MeshesOf(FcbObject node, FcbObject? archetype)
+    {
+        IReadOnlyList<string> own = WorldModels.MeshPaths(node);
+        return own.Count > 0 || archetype is null ? own : WorldModels.MeshPaths(archetype);
+    }
 
     /// <summary>
     /// The resources <paramref name="meshPaths"/> need listed in <paramref name="world"/>'s depload,

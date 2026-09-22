@@ -234,6 +234,8 @@ public partial class MapTabView : UserControl
             _pendingLoad = loaded;
             ShowSurfaceLegend(terrain, loaded.Table);
             _archetypes = loaded.Archetypes;
+            _loadedMap = map;
+            CheckButton.IsEnabled = true;
             _library.Load(loaded.Archetypes);
             ShowEntities(loaded.World, map.SectorsPerSide);
             WorldModelSet models = loaded.Models;
@@ -517,7 +519,7 @@ public partial class MapTabView : UserControl
 
     private async void Save_Click(object sender, System.Windows.RoutedEventArgs e)
     {
-        if (_vm is null || _edits is not { IsDirty: true } edits)
+        if (_vm is null || _edits is not { IsDirty: true } edits || !await ConfirmSave())
         {
             return;
         }

@@ -107,11 +107,7 @@ public static class WorldNavMesh
         Parallel.For(0, map.Sectors.Count, index =>
         {
             (string path, int sectorId) = map.Sectors[index];
-            string file = path
-                .Replace(@"\sdat\", @"\nv\sectors\", StringComparison.OrdinalIgnoreCase)
-                .Replace($"sd{sectorId}.sdat", $"nv_{sectorId}.nvm", StringComparison.OrdinalIgnoreCase);
-
-            if (readByPath(file) is { } bytes)
+            if (readByPath(PathOf(path, sectorId)) is { } bytes)
             {
                 perSector[index] = ReadSector(bytes);
             }
@@ -122,6 +118,12 @@ public static class WorldNavMesh
             $"Loaded {map.Name} navmesh: {mesh.NodeCount:N0} triangles across {mesh.SectorCount:N0} sectors");
         return mesh;
     }
+
+    /// <summary>The navmesh file of the sector whose terrain is <paramref name="sdatPath"/>.</summary>
+    public static string PathOf(string sdatPath, int sectorId)
+        => sdatPath
+            .Replace(@"\sdat\", @"\nv\sectors\", StringComparison.OrdinalIgnoreCase)
+            .Replace($"sd{sectorId}.sdat", $"nv_{sectorId}.nvm", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>Reads one sector file, or returns null if it is not a navmesh this can decode.</summary>
     public static NavMeshSector? ReadSector(byte[] b)

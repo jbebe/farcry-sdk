@@ -77,9 +77,8 @@ public sealed partial class MainViewModel
             var meshes = new List<string>();
             foreach (CopiedEntity paste in added)
             {
-                FcbObject? archetype = paste.ArchetypeName.Length > 0 ? ArchetypeOf(paste) : null;
-                IReadOnlyList<string> own = WorldModels.MeshPaths(paste.Node);
-                meshes.AddRange(own.Count > 0 || archetype is null ? own : WorldModels.MeshPaths(archetype));
+                meshes.AddRange(WorldEditDependencies.MeshesOf(
+                    paste.Node, paste.ArchetypeName.Length > 0 ? ArchetypeOf(paste) : null));
             }
 
             (IReadOnlyList<DepLoadParent> additions, IReadOnlyList<string> unresolved) =
@@ -97,6 +96,21 @@ public sealed partial class MainViewModel
         Reindex();
         return (staged, report);
     }
+
+    /// <summary>Runs <see cref="WorldLint"/> over <paramref name="session"/> against the merged filesystem.</summary>
+    public Task<IReadOnlyList<WorldFinding>> CheckWorld(WorldEditSession session, TerrainMap map, ArchetypeIndex archetypes)
+        => Task.Run(() =>
+        {
+            List<string> paths = [.. AllKnownPaths];
+            HashSet<string> known = new(paths, StringComparer.OrdinalIgnoreCase);
+            Dictionary<int, string> sdat = map.Sectors.ToDictionary(s => s.SectorId, s => s.Path);
+            return WorldLint.Run(
+                session, archetypes,
+                sector => sdat.TryGetValue(sector, out string? path) && known.Contains(WorldNavMesh.PathOf(path, sector)),
+                meshes => known.Contains(WorldEditDependencies.DepLoadPathOf(session.World.Name))
+                    ? WorldEditDependencies.DepLoadAdditions(session.World.Name, meshes, ReadByPath, paths).Unresolved.ToHashSet(StringComparer.OrdinalIgnoreCase)
+                    : new HashSet<string>());
+        });
 
     /// <summary>
     /// What one sector file's staged <c>_layout.xml</c> must say: the entities deleted from it and the

@@ -2,7 +2,8 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:glWpf="clr-namespace:OpenTK.Wpf;assembly=GLWpfControl"
-             xmlns:mapEditor="clr-namespace:JackAll.App.MapEditor">
+             xmlns:mapEditor="clr-namespace:JackAll.App.MapEditor"
+             xmlns:world="clr-namespace:JackAll.Tools.World;assembly=JackAll.Tools">
 
     <DockPanel>
         <!-- Deploy stays disabled; the patch is built from the main window as for any other edit. -->
@@ -24,6 +25,33 @@
                         Click="Undo_Click" ToolTip="Undo (Ctrl+Z)" />
                 <Button x:Name="RedoButton" Content="Redo" IsEnabled="False" Margin="0,0,4,0"
                         Click="Redo_Click" ToolTip="Redo (Ctrl+Y)" />
+
+                <Button x:Name="CheckButton" Content="Check" IsEnabled="False" Margin="12,0,0,0" Click="Check_Click"
+                        ToolTip="Looks for what would fail silently in game: unknown archetypes, characters where there is no navmesh, links and prefab members aimed at deleted entities, moved entities outside their sector" />
+                <Popup x:Name="CheckPopup" StaysOpen="False" PlacementTarget="{Binding ElementName=CheckButton}" Placement="Bottom">
+                    <Border Style="{StaticResource PopupSurface}">
+                        <StackPanel Width="440">
+                            <TextBlock x:Name="CheckSummary" Style="{StaticResource SectionHeader}" Margin="0,0,0,4" />
+                            <ListBox x:Name="FindingsList" MaxHeight="520" SelectionChanged="FindingsList_SelectionChanged"
+                                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                                <ListBox.ItemTemplate>
+                                    <DataTemplate DataType="{x:Type world:WorldFinding}">
+                                        <StackPanel Margin="0,2">
+                                            <TextBlock>
+                                                <Run Text="{Binding Severity, Mode=OneWay}" FontWeight="SemiBold" />
+                                                <Run Text="·" />
+                                                <Run Text="{Binding Kind, Mode=OneWay}" FontWeight="SemiBold" />
+                                                <Run Text="·" />
+                                                <Run Text="{Binding Entity.Name, Mode=OneWay}" />
+                                            </TextBlock>
+                                            <TextBlock Text="{Binding Message}" TextWrapping="Wrap" Opacity="0.8" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ListBox.ItemTemplate>
+                            </ListBox>
+                        </StackPanel>
+                    </Border>
+                </Popup>
 
                 <ToggleButton x:Name="LayersButton" Content="Layers ▾" Padding="10,3" Margin="12,0,0,0">
                     <!-- Off while the popup is open, so the click that closes it does not reopen it. -->
