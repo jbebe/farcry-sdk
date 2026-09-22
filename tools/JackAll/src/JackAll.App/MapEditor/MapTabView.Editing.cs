@@ -36,7 +36,7 @@ public partial class MapTabView
 
     /// <summary>Where each dragged entity stood and faced when the drag began: every step is solved
     /// from here, and Escape returns here.</summary>
-    private readonly Dictionary<WorldEntity, (Vector3 Position, Vector3 Angles)> _dragStart = [];
+    private readonly Dictionary<WorldEntity, Placement> _dragStart = [];
 
     private bool IsDragging => _moveGrab is not null || _rotateGrab is not null;
 
@@ -139,7 +139,7 @@ public partial class MapTabView
         {
             if (entity.Position is { } position && _hierarchy.CanEdit(entity))
             {
-                _dragStart[entity] = (position, entity.Angles);
+                _dragStart[entity] = new Placement(position, entity.Angles);
             }
         }
         return true;
@@ -187,7 +187,7 @@ public partial class MapTabView
         {
             if (revert)
             {
-                (entity.Position, entity.Angles) = _dragStart[entity];
+                (entity.Position, entity.Angles) = (_dragStart[entity].Position, _dragStart[entity].Angles);
             }
             else
             {
@@ -195,8 +195,10 @@ public partial class MapTabView
             }
         }
         _markersDirty |= changed.Count > 0;
-        if (!revert && changed.Count > 0)
+        if (!revert && changed.Count > 0 && _edits is { } edits)
         {
+            _history.Push(new MoveStep(edits, changed.ToDictionary(
+                e => e, e => (_dragStart[e], Placement.Of(e)))));
             _hierarchy.RefreshModified(changed);
             RefreshSaveButton();
         }
@@ -378,10 +380,7 @@ public partial class MapTabView
         }
 
         List<WorldEntity> doomed = [.. _selection.Items];
-        foreach (WorldEntity entity in doomed)
-        {
-            _edits.Delete(entity);
-        }
+        _history.Push(PresenceStep.Deleted(_edits, [.. doomed.Select(_edits.Delete)]));
         var gone = new HashSet<WorldEntity>(doomed);
         _positionedEntities.RemoveAll(gone.Contains);
         _selection.Clear();
@@ -436,6 +435,7 @@ public partial class MapTabView
             _modelSet!.ModelIndicesByEntity[added] = models;
         }
         _positionedEntities.Add(added);
+        _history.Push(PresenceStep.Added(_edits!, added));
         EntitySetChanged();
         _selection.Replace([added]);
         Reveal(added);

@@ -12,7 +12,7 @@ namespace JackAll.Tests;
 [Trait("Category", "RequiresFixture")]
 public class WorldEditSessionTests
 {
-    private const string FixturePath = "Fixtures/WorldSector/worldsector56.data.fcb";
+    internal const string FixturePath = "Fixtures/WorldSector/worldsector56.data.fcb";
     private const string SectorPath = @"levels\mp_14_woodlands\generated\worldsectors\worldsector56.data.fcb";
     private const int SectorsPerSide = 10;
 
@@ -218,7 +218,7 @@ public class WorldEditSessionTests
         Assert.Equal(turned.Angles, FcbEntityFields.ReadVector3(staged, WorldHashes.HidAngles));
     }
 
-    private static (WorldEditSession Session, byte[] BaseFcb, List<WorldEntity> Entities) Load()
+    internal static (WorldEditSession Session, byte[] BaseFcb, List<WorldEntity> Entities) Load()
     {
         byte[] baseFcb = File.ReadAllBytes(FixturePath);
         var map = new TerrainMap
@@ -232,14 +232,14 @@ public class WorldEditSessionTests
         return (new WorldEditSession(world, SectorsPerSide), baseFcb, [.. world.Entities]);
     }
 
-    private static FcbObject Assemble(byte[] baseFcb, WorldEditSession session)
+    internal static FcbObject Assemble(byte[] baseFcb, WorldEditSession session)
     {
         (IReadOnlyList<EntityFragment> fragments, _) = session.Pending();
         return FcbDocument.Deserialize(FcbAssembler.Apply(baseFcb, fragments.ToDictionary(
             f => f.FragmentId, f => FcbXml.ToXml(f.Node, FcbClassDefinitions.Empty))));
     }
 
-    private static IEnumerable<FcbObject> EntitiesOf(FcbObject root)
+    internal static IEnumerable<FcbObject> EntitiesOf(FcbObject root)
         => root.Children
             .Where(layer => layer.TypeHash == WorldHashes.MissionLayer)
             .SelectMany(layer => layer.Children)

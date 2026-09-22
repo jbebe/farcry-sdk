@@ -40,6 +40,12 @@ public sealed class InspectorViewModel : Observable
     /// <summary>What the selected entity merges over; set once a world loads.</summary>
     public ArchetypeIndex? Archetypes { get; set; }
 
+    /// <summary>Where each edit is recorded for undo; set once a world loads.</summary>
+    public EditHistory? History { get; set; }
+
+    /// <summary>The inspected node as the last recorded step left it - the before of the next one.</summary>
+    private FcbObject? _before;
+
     /// <summary>Raised after any edit, with the entity; a transform edit is also a move.</summary>
     public event Action<WorldEntity, bool>? Edited;
 
@@ -110,13 +116,25 @@ public sealed class InspectorViewModel : Observable
             + ArchetypeBases.Line(entity.ArchetypeName, archetype is not null);
 
         RefreshTransform();
+        FcbObject node = Session.EditableNode(entity);
+        _before = node.Clone();
         var context = new FcbEditContext();
         context.Edited += () =>
         {
             Session.Edited(entity);
+            FcbObject after = node.Clone();
+            History?.Push(new NodeEditStep(Session, entity, _before, after, $"Edit {entity.Name}"));
+            _before = after;
             Edited?.Invoke(entity, false);
         };
-        Inspector = new EntityInspector(MergedNode.Of(Session.EditableNode(entity), archetype), null, context, NotFields);
+        Inspector = new EntityInspector(MergedNode.Of(node, archetype), null, context, NotFields);
+    }
+
+    /// <summary>Rebuilds the inspector over the same entity, after an undo changed what it shows.</summary>
+    public void Reload()
+    {
+        _entity = null;
+        Refresh();
     }
 
     /// <summary>Re-reads the entity's position and angles, after a gizmo moved it.</summary>
@@ -145,8 +163,15 @@ public sealed class InspectorViewModel : Observable
                 return;
             }
             float[] v = (float[])row.Scalar!.Value;
+            Placement before = Placement.Of(entity);
             apply(entity, new Vector3(v[0], v[1], v[2]));
-            Session?.Moved(entity);
+            if (Session is { } session)
+            {
+                session.Moved(entity);
+                History?.Push(new MoveStep(session,
+                    new Dictionary<WorldEntity, (Placement, Placement)> { [entity] = (before, Placement.Of(entity)) },
+                    mergeKey: name));
+            }
             Edited?.Invoke(entity, true);
         };
         return new FieldView(row, FieldOrigin.InstanceOnly);

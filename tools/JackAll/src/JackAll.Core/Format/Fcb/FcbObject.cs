@@ -33,4 +33,19 @@ public sealed class FcbObject
         }
         return copy;
     }
+
+    /// <summary>Makes this node a deep copy of <paramref name="source"/> while staying the same
+    /// object, so whatever holds a reference to it sees the new content.</summary>
+    public void Overwrite(FcbObject source)
+    {
+        FcbObject copy = source.Clone();
+        TypeHash = copy.TypeHash;
+        Values.Clear();
+        foreach ((uint hash, byte[] value) in copy.Values)
+        {
+            Values[hash] = value;
+        }
+        Children.Clear();
+        Children.AddRange(copy.Children);
+    }
 }

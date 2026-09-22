@@ -32,6 +32,10 @@ public sealed record EntityFragment(string ContainerPath, string FragmentId, Fcb
 /// <summary>A placed entity removed from its sector.</summary>
 public sealed record DeletedEntity(string ContainerPath, ulong Id, string Name);
 
+/// <summary>A deleted entity and the session state it had: its edited node, whether it was pending a
+/// save, and the source it was added from when it was new.</summary>
+public sealed record DeletedRecord(WorldEntity Entity, FcbObject? Working, bool WasTouched, CopiedEntity? Source);
+
 /// <summary>
 /// The Map tab's unsaved edits to one loaded world: entities added, moved, field-edited and deleted.
 /// Loaded entity nodes stay pristine; <see cref="Pending"/> writes each edit into a clone.
@@ -44,6 +48,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     private readonly HashSet<WorldEntity> _touched = [];
     private readonly HashSet<WorldEntity> _deleted = [];
     private readonly Dictionary<WorldEntity, CopiedEntity> _added = [];
+    private readonly HashSet<WorldEntity> _restored = [];
 
     /// <summary>Each field-edited entity's own copy of its node; kept past a save so a later edit
     /// builds on the saved one.</summary>
@@ -138,16 +143,51 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         }
     }
 
-    public void Delete(WorldEntity entity)
+    /// <summary>Removes the entity, returning what <see cref="Restore"/> needs to put it back.</summary>
+    public DeletedRecord Delete(WorldEntity entity)
     {
+        var record = new DeletedRecord(
+            entity, _working.GetValueOrDefault(entity), _touched.Contains(entity), _added.GetValueOrDefault(entity));
         world.Entities.Remove(entity);
         _touched.Remove(entity);
         _working.Remove(entity);
+        _restored.Remove(entity);
         if (!_added.Remove(entity))
         {
             _deleted.Add(entity);
         }
+        return record;
     }
+
+    /// <summary>Puts a deleted entity back as it was. One whose delete was already saved is restaged,
+    /// and its id listed in <see cref="Restored"/> so the save takes the staged delete back out.</summary>
+    public void Restore(DeletedRecord record)
+    {
+        WorldEntity entity = record.Entity;
+        world.Entities.Add(entity);
+        if (record.Working is { } working)
+        {
+            _working[entity] = working;
+        }
+        if (record.Source is { } source)
+        {
+            _added[entity] = source;
+            return;
+        }
+        if (!_deleted.Remove(entity))
+        {
+            _restored.Add(entity);
+            _touched.Add(entity);
+        }
+        else if (record.WasTouched)
+        {
+            _touched.Add(entity);
+        }
+    }
+
+    /// <summary>Entities whose saved delete has been undone since the last save.</summary>
+    public IEnumerable<DeletedEntity> Restored
+        => _restored.Select(e => new DeletedEntity(e.HomeSector.SourcePath, e.Id, e.Name));
 
     /// <summary>Every source a pending addition was built from.</summary>
     public IEnumerable<CopiedEntity> Additions => _added.Values;
@@ -187,6 +227,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         _added.Clear();
         _touched.Clear();
         _deleted.Clear();
+        _restored.Clear();
     }
 
     /// <summary>The entity's node with its edits and placement written in; the node itself is left

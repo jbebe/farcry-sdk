@@ -322,6 +322,18 @@ public partial class MapTabView : UserControl
             EndDrag(revert: true);
             e.Handled = true;
         }
+        else if ((viewport || Hierarchy.IsKeyboardFocusWithin) && IsUndoKey(e.Key, out bool redo))
+        {
+            if (redo)
+            {
+                Redo();
+            }
+            else
+            {
+                Undo();
+            }
+            e.Handled = true;
+        }
         else if (viewport && Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.C)
         {
             CopySelected();
@@ -482,6 +494,7 @@ public partial class MapTabView : UserControl
         _edits = new WorldEditSession(world, sectorsPerSide);
         _inspector.Session = _edits;
         _inspector.Archetypes = _archetypes;
+        StartHistory();
         CancelDrag();
         _selection.Clear();
         _positionedEntities = [.. world.Entities.Where(e => e.Position is not null)];

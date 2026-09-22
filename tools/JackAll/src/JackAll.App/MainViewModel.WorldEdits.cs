@@ -44,9 +44,13 @@ public sealed partial class MainViewModel
             ILookup<string, DeletedEntity> deletes = deleted.ToLookup(d => d.ContainerPath, StringComparer.OrdinalIgnoreCase);
             ILookup<string, LayerSpec> placements = session.LayerPlacements()
                 .ToLookup(p => p.ContainerPath, p => p.Layer, StringComparer.OrdinalIgnoreCase);
-            foreach (string container in deletes.Select(g => g.Key).Union(placements.Select(g => g.Key), StringComparer.OrdinalIgnoreCase))
+            ILookup<string, DeletedEntity> restored = session.Restored.ToLookup(d => d.ContainerPath, StringComparer.OrdinalIgnoreCase);
+            foreach (string container in deletes.Select(g => g.Key)
+                .Union(placements.Select(g => g.Key), StringComparer.OrdinalIgnoreCase)
+                .Union(restored.Select(g => g.Key), StringComparer.OrdinalIgnoreCase))
             {
-                StageLayout(workspace, vfs, container, [.. deletes[container]], [.. placements[container]], Stage, report);
+                StageLayout(workspace, vfs, container, [.. deletes[container]], [.. placements[container]],
+                    [.. restored[container]], Stage, report);
             }
 
             string world = session.World.Name;
@@ -97,11 +101,12 @@ public sealed partial class MainViewModel
     /// <summary>
     /// What one sector file's staged <c>_layout.xml</c> must say: the entities deleted from it and the
     /// mission layers new entities are filed under. An entity the workspace itself added is simply
-    /// unstaged rather than deleted.
+    /// unstaged rather than deleted, and a restored one has its earlier staged delete taken out.
     /// </summary>
     private static void StageLayout(
         FolderModLayer workspace, Core.Vfs.GameVfs vfs, string containerPath, IReadOnlyList<DeletedEntity> deleted,
-        IReadOnlyList<LayerSpec> placements, Action<string, string> stage, List<string> report)
+        IReadOnlyList<LayerSpec> placements, IReadOnlyList<DeletedEntity> restored, Action<string, string> stage,
+        List<string> report)
     {
         uint containerHash = NameHash.Compute(containerPath);
         IReadOnlyList<FragmentOverride> staged =
@@ -131,15 +136,17 @@ public sealed partial class MainViewModel
             }
         }
 
-        if (retailDeletes.Count == 0 && placements.Count == 0)
+        FragmentOverride layout = staged.FirstOrDefault(f => ContainerLayout.IsLayoutId(f.FragmentId));
+        if (retailDeletes.Count == 0 && placements.Count == 0 && (restored.Count == 0 || layout.FragmentId is null))
         {
             return;
         }
 
-        FragmentOverride layout = staged.FirstOrDefault(f => ContainerLayout.IsLayoutId(f.FragmentId));
         ContainerLayout existing = layout.FragmentId is null
             ? new ContainerLayout([])
             : ContainerLayout.Parse(AppText.DecodeUtf8(workspace.Read(layout.EntryHash)));
+        HashSet<string> undeleted = new(restored.Select(r => FcbFragments.EntityFragmentId(r.Id)), FcbFragments.IdComparer);
+        existing = new ContainerLayout(existing.Layers, existing.Removed, [.. existing.Deleted.Where(id => !undeleted.Contains(id))]);
         (ContainerLayout merged, bool conflict) = ContainerLayout.Merge(
             new ContainerLayout([]), existing, new ContainerLayout(placements, deleted: retailDeletes));
         stage($@"{containerPath}\{ContainerLayout.Id}", merged.Render());

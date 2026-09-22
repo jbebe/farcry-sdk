@@ -20,6 +20,10 @@
                         Click="Save_Click"
                         ToolTip="Stages the added, moved, edited and deleted entities into your workspace, with the archetypes and depload entries an addition needs" />
                 <Button Content="Deploy" IsEnabled="False" />
+                <Button x:Name="UndoButton" Content="Undo" IsEnabled="False" Margin="12,0,4,0"
+                        Click="Undo_Click" ToolTip="Undo (Ctrl+Z)" />
+                <Button x:Name="RedoButton" Content="Redo" IsEnabled="False" Margin="0,0,4,0"
+                        Click="Redo_Click" ToolTip="Redo (Ctrl+Y)" />
 
                 <ToggleButton x:Name="LayersButton" Content="Layers ▾" Padding="10,3" Margin="12,0,0,0">
                     <!-- Off while the popup is open, so the click that closes it does not reopen it. -->
