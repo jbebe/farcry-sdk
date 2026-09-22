@@ -41,7 +41,7 @@ public class TranslateGizmoTests
         GizmoGrab grabbed = Grab(Origin + (arm * (Scale * 0.5f)));
 
         Assert.Equal(expected, grabbed.Axis);
-        Assert.Equal(Scale * 0.5f, grabbed.Along, 2);
+        Assert.Equal(Scale * 0.5f, grabbed.Grip.Length(), 2);
         Assert.Equal(Origin, grabbed.Origin);
     }
 
@@ -143,7 +143,7 @@ public class TranslateGizmoTests
     [Fact]
     public void An_arm_seen_end_on_refuses_to_solve()
     {
-        var grabbed = new GizmoGrab(GizmoAxis.X, Origin, 2f);
+        var grabbed = new GizmoGrab(GizmoAxis.X, Origin, new Vector3(2f, 0f, 0f));
         Vector3 eye = Origin - new Vector3(40f, 0f, 0f);
 
         Assert.Null(TranslateGizmo.Follow(grabbed, eye, Vector3.UnitX));
@@ -169,6 +169,92 @@ public class TranslateGizmoTests
 
         // A rotation and nothing else, or the arrow arrives stretched or mirrored.
         Assert.Equal(1f, orientation.GetDeterminant(), 4);
+    }
+
+    /// <summary>A ray from above and to one side, which sees every plane square at a slant.</summary>
+    private static (Vector3 Origin, Vector3 Direction) AimFromAbove(Vector3 at)
+        => Aim(at, Origin + new Vector3(-9f, -13f, 17f));
+
+    private static Vector3 MidSquare(GizmoAxis plane)
+    {
+        (GizmoAxis u, GizmoAxis v) = TranslateGizmo.ArmsOf(plane);
+        float mid = (TranslateGizmo.PlaneStart + TranslateGizmo.PlaneEnd) * 0.5f * Scale;
+        return Origin + ((TranslateGizmo.Direction(u) + TranslateGizmo.Direction(v)) * mid);
+    }
+
+    [Theory]
+    [InlineData(GizmoAxis.PlaneXY)]
+    [InlineData(GizmoAxis.PlaneXZ)]
+    [InlineData(GizmoAxis.PlaneYZ)]
+    public void A_click_on_a_plane_square_grabs_that_plane(GizmoAxis plane)
+    {
+        (Vector3 eye, Vector3 direction) = AimFromAbove(MidSquare(plane));
+
+        Assert.Equal(plane, TranslateGizmo.Grab(eye, direction, Origin, Scale)?.Axis);
+    }
+
+    /// <summary>The square sits away from the origin; the corner the arms meet in stays empty.</summary>
+    [Fact]
+    public void A_click_between_the_origin_and_the_square_grabs_nothing()
+    {
+        float inside = TranslateGizmo.PlaneStart * 0.5f * Scale;
+        (Vector3 eye, Vector3 direction) = AimFromAbove(Origin + new Vector3(inside, inside, 0f) + new Vector3(0.3f, 0.3f, 0f));
+
+        Assert.NotEqual(GizmoAxis.PlaneXY, TranslateGizmo.Grab(eye, direction, Origin, Scale)?.Axis);
+    }
+
+    [Theory]
+    [InlineData(GizmoAxis.PlaneXY)]
+    [InlineData(GizmoAxis.PlaneXZ)]
+    [InlineData(GizmoAxis.PlaneYZ)]
+    public void Grabbing_a_plane_alone_does_not_move_the_entity(GizmoAxis plane)
+    {
+        (Vector3 eye, Vector3 direction) = AimFromAbove(MidSquare(plane));
+        GizmoGrab grabbed = TranslateGizmo.Grab(eye, direction, Origin, Scale)!.Value;
+
+        Vector3 followed = TranslateGizmo.Follow(grabbed, eye, direction)!.Value;
+
+        Assert.Equal(0f, Vector3.Distance(Origin, followed), 3);
+    }
+
+    /// <summary>A plane drag goes wherever the cursor points within the plane and never off it.</summary>
+    [Fact]
+    public void A_plane_drag_follows_the_cursor_and_keeps_to_its_plane()
+    {
+        (Vector3 eye, Vector3 direction) = AimFromAbove(MidSquare(GizmoAxis.PlaneXY));
+        GizmoGrab grabbed = TranslateGizmo.Grab(eye, direction, Origin, Scale)!.Value;
+
+        var slide = new Vector3(3f, -2f, 0f);
+        (Vector3 dragEye, Vector3 dragDirection) = AimFromAbove(MidSquare(GizmoAxis.PlaneXY) + slide);
+        Vector3 moved = TranslateGizmo.Follow(grabbed, dragEye, dragDirection)!.Value;
+
+        Assert.Equal(Origin.X + slide.X, moved.X, 3);
+        Assert.Equal(Origin.Y + slide.Y, moved.Y, 3);
+        Assert.Equal(Origin.Z, moved.Z, 3);
+    }
+
+    [Fact]
+    public void A_plane_seen_edge_on_refuses_to_solve()
+    {
+        var grabbed = new GizmoGrab(GizmoAxis.PlaneXY, Origin, new Vector3(1f, 1f, 0f));
+        Vector3 eye = Origin + new Vector3(-40f, 0f, 0f);
+
+        Assert.Null(TranslateGizmo.Follow(grabbed, eye, Vector3.UnitX));
+    }
+
+    /// <summary>The square model is drawn in XY, so each plane's orientation must carry it onto
+    /// that plane's own two arms.</summary>
+    [Theory]
+    [InlineData(GizmoAxis.PlaneXY)]
+    [InlineData(GizmoAxis.PlaneXZ)]
+    [InlineData(GizmoAxis.PlaneYZ)]
+    public void A_planes_orientation_carries_the_square_onto_its_arms(GizmoAxis plane)
+    {
+        (GizmoAxis u, GizmoAxis v) = TranslateGizmo.ArmsOf(plane);
+        Matrix4x4 orientation = TranslateGizmo.PlaneOrientation(plane);
+
+        Assert.Equal(TranslateGizmo.Direction(u), Vector3.Transform(Vector3.UnitX, orientation));
+        Assert.Equal(TranslateGizmo.Direction(v), Vector3.Transform(Vector3.UnitY, orientation));
     }
 
     /// <summary>The gizmo holds its size on screen, so its world size tracks how far off it is.</summary>
