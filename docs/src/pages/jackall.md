@@ -127,8 +127,14 @@ loading the other one, in that. Save stages the edits into your workspace: each 
 object as its own piece of its sector file, each deleted one as a delete in the sector's
 `_layout.xml`. A paste from the other world also brings its archetype into this world's library, and
 lists any mesh this world's depload is missing, copied from the depload that ships it. A paste always
-goes into the `main` mission layer, and an object that owns other objects (a prefab) can't be copied.
-Terrain, roads and vegetation are still view only.
+goes into the `main` mission layer. Ctrl+Z and Ctrl+Y undo and redo every edit, even past a Save.
+
+A selected trigger box has a handle on each face and a light has a ring for its radius, plus its cone
+if it's a spot, so both can be resized in place. The Event links layer draws which entity sends
+events to which, and the inspector adds a link by clicking its target. A prefab moves, turns, copies
+and deletes together with its members. Group makes one from the selection, and Save prefab keeps it
+in the library to drag into any world. Check lists what would fail in game before you save, such as
+a character placed where there is no navmesh. Terrain, roads and vegetation are still view only.
 
 ### Library
 

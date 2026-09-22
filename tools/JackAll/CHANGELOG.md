@@ -36,6 +36,25 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   layer in the hierarchy. The new instance carries only what every shipped instance does and
   inherits the rest; its archetype and meshes are staged the way a paste's are.
 - **Hide and lock** entities for the session, and **Modified only** lists what the session changed.
+- **Undo and redo on the Map tab** — Ctrl+Z and Ctrl+Y, or the toolbar buttons, over moves, turns,
+  field edits, added components, placements, pastes and deletes. Typing into one field is one step.
+  Undoing past a Save restages the entity, and an undone delete takes its staged delete back out.
+- **Move on a plane** — the move gizmo has a square between each pair of arrows that drags the
+  selection across that plane.
+- **Check** — lists what would fail silently in game: an archetype the world doesn't declare, a
+  character in a sector with no navmesh (which crashes the game), links and prefab members pointing
+  at deleted entities, a moved entity outside the sector it's filed in, and a new mesh no depload
+  lists. Save runs it first and asks before saving errors. An untouched retail world reports nothing.
+- **Resize triggers and lights in the viewport** — a selected trigger box has a handle on each face,
+  a light a ring for its radius, and a spot its cone rims. A colour field such as `clrColor` gets a
+  swatch with a slider per channel.
+- **Event links** — an **Event links** layer draws a line from each entity to every entity its links
+  send to. The inspector lists the selected entity's links, removes them, and adds one by picking the
+  target in the viewport, offering the outputs and events the world's own links use.
+- **Prefabs** — the hierarchy files each prefab with its members. Moving, turning, copying and
+  deleting a prefab carries its members along. **Group** (Ctrl+G) makes the selection a new prefab
+  and **Ungroup** removes one. **Save prefab** keeps it in the entity library's Prefabs, to drag into
+  any world.
 - **Component properties from the engine itself** — `.fcb` names, types and enum dropdowns now also
   come from the properties Far Cry 2 registers for every entity and component class
   (`assets/component_schema.json`), filling in what `binary_classes.xml` lacks. The XML still wins
