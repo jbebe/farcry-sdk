@@ -57,11 +57,7 @@ public partial class MapTabView
                 continue;
             }
 
-            // A trigger is outlined by its volume, as the Triggers layer draws it. Only the outline: as
-            // a click target, a trigger spanning a town would take every click on the buildings inside it.
-            (Vector3 min, Vector3 max) = _edits is { } edits && WorldTriggers.SizeOf(edits.CurrentNode(entity)) is { } volume
-                ? (volume * -0.5f, volume * 0.5f)
-                : LocalBoundsOf(entity);
+            (Vector3 min, Vector3 max) = OutlineBoundsOf(entity);
             Matrix4x4 model = Matrix4x4.CreateScale(max - min)
                 * Matrix4x4.CreateTranslation((min + max) * 0.5f)
                 * entity.Rotation
@@ -288,6 +284,13 @@ public partial class MapTabView
         }
     }
 
+    /// <summary>Local-space extent of an entity's outline: a trigger's volume, as the Triggers layer
+    /// draws it, else what it draws. Only the outline: as a click target, a trigger spanning a town
+    /// would take every click on the buildings inside it.</summary>
+    private (Vector3 Min, Vector3 Max) OutlineBoundsOf(WorldEntity entity)
+        => _edits is { } edits && WorldTriggers.SizeOf(edits.CurrentNode(entity)) is { } volume
+            ? (volume * -0.5f, volume * 0.5f)
+            : LocalBoundsOf(entity);
     /// <summary>Local-space extent of what an entity draws: the union of its models, or a box the
     /// size of <see cref="MeshlessPickSize"/> for the mesh-less ones so they stay clickable.</summary>
     private (Vector3 Min, Vector3 Max) LocalBoundsOf(WorldEntity entity)

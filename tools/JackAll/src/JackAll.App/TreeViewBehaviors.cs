@@ -40,7 +40,7 @@ internal static class TreeViewBehaviors
 
     /// <summary>
     /// The container for the last item of <paramref name="path"/>, realizing each level's containers on
-    /// the way down, or null when one was virtualized away. <paramref name="onEach"/> runs on every
+    /// the way down, or null when one cannot be found. <paramref name="onEach"/> runs on every
     /// container reached, before the next level is looked up.
     /// </summary>
     public static TreeViewItem? RealizePath(ItemsControl root, IEnumerable<object> path, Action<TreeViewItem>? onEach = null)
@@ -50,7 +50,7 @@ internal static class TreeViewBehaviors
         foreach (object step in path)
         {
             parent.UpdateLayout();
-            if (parent.ItemContainerGenerator.ContainerFromItem(step) is not TreeViewItem container)
+            if (ContainerFor(parent, step) is not TreeViewItem container)
             {
                 return null;
             }
@@ -59,6 +59,48 @@ internal static class TreeViewBehaviors
             parent = item;
         }
         return item;
+    }
+
+    /// <summary>The container for <paramref name="item"/>, scrolling a virtualizing panel to it first
+    /// when it has none yet - a row far down a long list only gets one once it is near the view.</summary>
+    private static TreeViewItem? ContainerFor(ItemsControl parent, object item)
+    {
+        if (parent.ItemContainerGenerator.ContainerFromItem(item) is TreeViewItem found)
+        {
+            return found;
+        }
+
+        int index = parent.Items.IndexOf(item);
+        if (index < 0 || ItemsHost(parent) is not VirtualizingPanel panel)
+        {
+            return null;
+        }
+        panel.BringIndexIntoViewPublic(index);
+        parent.UpdateLayout();
+        return parent.ItemContainerGenerator.ContainerFromItem(item) as TreeViewItem;
+    }
+
+    /// <summary>The panel an items control lays its containers out in: the nearest one under its
+    /// template's items presenter.</summary>
+    private static VirtualizingPanel? ItemsHost(ItemsControl control)
+    {
+        control.ApplyTemplate();
+        var pending = new Queue<DependencyObject>([control]);
+        while (pending.TryDequeue(out DependencyObject? node))
+        {
+            if (node is ItemsPresenter presenter)
+            {
+                presenter.ApplyTemplate();
+                return VisualTreeHelper.GetChildrenCount(presenter) > 0
+                    ? VisualTreeHelper.GetChild(presenter, 0) as VirtualizingPanel
+                    : null;
+            }
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(node); i++)
+            {
+                pending.Enqueue(VisualTreeHelper.GetChild(node, i));
+            }
+        }
+        return null;
     }
 
     /// <summary>The nearest ancestor of type <typeparamref name="T"/>, starting at (and including)

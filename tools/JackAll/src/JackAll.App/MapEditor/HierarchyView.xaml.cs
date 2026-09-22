@@ -52,7 +52,14 @@ public partial class HierarchyView : UserControl
         Model.Click(node, Keyboard.Modifiers);
         Tree.Focus();
         e.Handled = true;
+        if (node is { IsEntity: true, Entity: { } entity })
+        {
+            EntityClicked?.Invoke(entity);
+        }
     }
+
+    /// <summary>Raised after a click on an entity's own row, with that entity.</summary>
+    public event Action<Tools.World.WorldEntity>? EntityClicked;
 
     private void Hide_Click(object sender, RoutedEventArgs e)
     {

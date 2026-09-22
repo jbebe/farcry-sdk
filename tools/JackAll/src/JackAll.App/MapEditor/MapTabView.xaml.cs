@@ -165,6 +165,7 @@ public partial class MapTabView : UserControl
         };
         Hierarchy.DeleteRequested += DeleteSelected;
         Hierarchy.PlaceRequested += PlaceAtViewCentre;
+        Hierarchy.EntityClicked += Focus;
         Inspector.ShowArchetypeRequested += ShowArchetype;
         Inspector.OpenSectorRequested += OpenSector;
         Inspector.CopyRequested += CopySelected;
