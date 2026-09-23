@@ -1,5 +1,6 @@
 using JackAll.Tools.Domino;
 using JackAll.Tools.Domino.Graphs;
+using Loretta.CodeAnalysis.Lua;
 
 namespace JackAll.Tests;
 
@@ -140,16 +141,59 @@ public class UserGraphWriterTests
         Assert.Equal(reconstructed1.Edges.Single().Target, reconstructed2.Edges.Single().Target);
     }
 
+    [Fact]
+    public void A_dynamic_fire_keeps_its_slot_when_written_in_blackbox_form()
+    {
+        var graph = Classify("""
+            function export:f_5_Killed()
+                self[7]._type.Condition(self[7], 1);
+            end;
+            """);
+
+        string canonical = UserGraphWriter.WriteCanonical(graph);
+
+        Assert.Contains("self[7]._type.Condition(self[7], 1);", canonical);
+        var fire = Assert.IsType<FireControlInStmt>(Classify(canonical).Functions.Single().Body.Single());
+        Assert.Equal(1, fire.Index);
+    }
+
+    [Fact]
+    public void An_edited_statement_changes_only_its_own_line()
+    {
+        const string source = "function export:en_1()\r\n\t-- the bark\r\n\tself[1].GreetBark = \"GREET\";\r\n\tself[1].ExitBark_ = \"EXITA\";\r\nend;\r\n";
+        UserGraph graph = Classify(source);
+        UserGraphFunction fn = graph.Functions.Single();
+        var edited = (SetParamStmt)fn.Body[1];
+        UserGraph changed = graph with
+        {
+            Functions = [fn with { Body = [fn.Body[0], edited with { Value = SyntaxFactory.ParseExpression("\"EXITB\"") }] }],
+        };
+
+        Assert.Equal(source.Replace("EXITA", "EXITB"), UserGraphWriter.Write(changed));
+    }
+
     [Theory]
-    [InlineData(DominoFixtures.FastTravel)]
+    [InlineData(DominoFixtures.HealthEven)]
     [InlineData(DominoFixtures.FastTravelTwin)]
-    public void A_real_graph_round_trips_stably_through_the_writer(string script)
+    public void A_real_graph_written_back_unchanged_is_byte_for_byte_the_source(string script)
     {
         if (Fixture.ReadText(script) is not { } source) return;
 
-        string generated1 = UserGraphWriter.Write(Classify(source));
-        string generated2 = UserGraphWriter.Write(Classify(generated1));
-
-        Assert.Equal(generated1, generated2);
+        Assert.Equal(source, UserGraphWriter.Write(Classify(source)));
     }
+
+    [Theory]
+    [InlineData(DominoFixtures.HealthEven)]
+    [InlineData(DominoFixtures.FastTravelTwin)]
+    public void A_real_graph_written_in_blackbox_form_has_the_same_tokens_as_the_source(string script)
+    {
+        if (Fixture.ReadText(script) is not { } source) return;
+
+        string canonical = UserGraphWriter.WriteCanonical(Classify(source));
+
+        Assert.Equal(Tokens(source), Tokens(canonical));
+    }
+
+    private static List<string> Tokens(string source) =>
+        DominoLuaSource.Parse(source).DescendantTokens().Select(t => t.Text).ToList();
 }

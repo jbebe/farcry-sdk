@@ -1,39 +1,43 @@
+using System.Text.RegularExpressions;
+
 namespace JackAll.Tools.Domino.Graphs;
 
 /// <summary>
 /// One connection exactly as the original Domino editor recorded it, recovered from a
-/// `*.debug.lua`'s `TraceConnection` call.
+/// `*.debug.lua`'s `TraceConnection` call. Every trace sits directly before the fire it describes;
+/// <see cref="Function"/> and <see cref="FireOrdinal"/> say which fire that is.
 ///
 /// <see cref="SourceBox"/>/<see cref="TargetBox"/> are null when that end is the graph itself rather
-/// than a box - a graph's own control-in firing inward, or a box firing the graph's control-out.
-/// Pin labels are the human strings the editor displayed, spaces and all (`"Greet finished"`), which is
-/// what makes them worth keeping: the generated Lua only ever has the mangled identifier
-/// (`Greet_finished`).
+/// than a box - a graph's own control-in firing inward. Pin labels are the human strings the editor
+/// displayed, spaces and all (`"Greet finished"`); the generated Lua only has the mangled identifier.
 /// </summary>
 public sealed record TracedConnection(
     string ConnectionId,
     string? SourceBox,
     string SourcePinLabel,
     string? TargetBox,
-    string TargetPinLabel);
+    string TargetPinLabel)
+{
+    public string Function { get; init; } = "";
+
+    public int FireOrdinal { get; init; }
+}
 
 /// <summary>
 /// The contents of a mission graph's `*.debug.lua` twin - the same graph, compiled with instrumentation
-/// that restates every control connection verbatim. 16,005 of these across the corpus.
+/// that restates every control connection it fires.
 ///
-/// Worth reading for two reasons. It carries names the release file threw away: each box is
-/// `box_&lt;DisplayText&gt;_&lt;id&gt;` (`box_Set_Entity_2`, from `&lt;Display Text="Set Entity"/&gt;`),
-/// where the id is the box's original `.domino.xml` identifier - the same number the release file uses
-/// as its `self[N]` slot. And because it is an independent statement of the same topology, it can be
-/// diffed against what <see cref="GraphBuilder"/> inferred, which is the only external check available
-/// on the reconstruction.
-///
-/// It covers control connections only; data links never appear.
+/// It carries names the release file threw away: each box is `box_&lt;DisplayText&gt;_&lt;id&gt;`
+/// (`box_Set_Entity_2`), where the id is the box's original `.domino.xml` identifier - pooled boxes
+/// included. And because it is an independent statement of the same topology, it is what
+/// <see cref="GraphBuilder"/>'s reconstruction is checked against. Graph exits (`self:Pin()`) and data
+/// links are never traced.
 /// </summary>
 public sealed record DominoDebugTwin(
     string? DocumentPath,
     string? GraphName,
-    IReadOnlyList<TracedConnection> Connections)
+    IReadOnlyList<TracedConnection> Connections,
+    UserGraph Graph)
 {
     /// <summary>Rebuilds the twin's view of a graph from its parsed `*.debug.lua`. Returns null when the
     /// file carries no `TraceConnection` calls at all - i.e. it isn't actually a debug twin.</summary>
@@ -45,24 +49,39 @@ public sealed record DominoDebugTwin(
 
         foreach (UserGraphFunction fn in twinGraph.Functions)
         {
+            TraceConnectionStmt? pending = null;
+            int fires = 0;
             foreach (UserGraphStmt stmt in fn.Body)
             {
-                if (stmt is not TraceConnectionStmt trace)
+                if (stmt is TraceConnectionStmt trace)
+                {
+                    pending = trace;
+                    continue;
+                }
+                if (stmt is not FireControlInStmt)
                 {
                     continue;
                 }
+                if (pending is not null)
+                {
+                    (string? doc, string? graph, string id) = SplitContainer(pending.DocumentContainer);
+                    documentPath ??= doc;
+                    graphName ??= graph;
 
-                (string? doc, string? graph, string id) = SplitContainer(trace.DocumentContainer);
-                documentPath ??= doc;
-                graphName ??= graph;
-
-                (string? sourceBox, string sourcePin) = SplitPinLabel(trace.SourcePinLabel);
-                (string? targetBox, string targetPin) = SplitPinLabel(trace.TargetPinLabel);
-                connections.Add(new TracedConnection(id, sourceBox, sourcePin, targetBox, targetPin));
+                    (string? sourceBox, string sourcePin) = SplitPinLabel(pending.SourcePinLabel);
+                    (string? targetBox, string targetPin) = SplitPinLabel(pending.TargetPinLabel);
+                    connections.Add(new TracedConnection(id, sourceBox, sourcePin, targetBox, targetPin)
+                    {
+                        Function = fn.Name,
+                        FireOrdinal = fires,
+                    });
+                    pending = null;
+                }
+                fires++;
             }
         }
 
-        return connections.Count > 0 ? new DominoDebugTwin(documentPath, graphName, connections) : null;
+        return connections.Count > 0 ? new DominoDebugTwin(documentPath, graphName, connections, twinGraph) : null;
     }
 
     /// <summary>The path of a graph's debug twin, given the graph's own path. The two always sit
@@ -77,14 +96,9 @@ public sealed record DominoDebugTwin(
         luaPath.EndsWith(".debug.lua", StringComparison.OrdinalIgnoreCase);
 
     /// <summary>
-    /// Converts an editor pin label to the identifier the generated Lua uses for it. A designer could
-    /// type anything into a pin name, so BlackBox mangles it into something Lua will accept: every
-    /// character outside `[A-Za-z0-9_]` becomes an underscore, and a name that would then start with a
-    /// digit gets one more prefixed.
-    ///
-    /// `"Greet finished"` → `Greet_finished`, `"Free, if this pawn"` → `Free__if_this_pawn` (the comma
-    /// and the space each produce one), `"4a. Wager finished, Buddy healthy"` →
-    /// `_4a__Wager_finished__Buddy_healthy`.
+    /// Converts an editor pin label to the identifier the generated Lua uses for it: every character
+    /// outside `[A-Za-z0-9_]` becomes an underscore, and a name that would then start with a digit gets
+    /// one more prefixed. `"4a. Wager finished, Buddy healthy"` → `_4a__Wager_finished__Buddy_healthy`.
     /// </summary>
     public static string ToIdentifier(string pinLabel)
     {
@@ -99,9 +113,7 @@ public sealed record DominoDebugTwin(
         return mangled.Length > 0 && char.IsAsciiDigit(mangled[0]) ? '_' + mangled : mangled;
     }
 
-    /// <summary>Every box name the twin mentions, indexed by the trailing original box ID. For a
-    /// persistent box that ID is also its `self[N]` slot, which is what lets a reconstructed node
-    /// recover its real name.</summary>
+    /// <summary>Every box name the twin mentions, indexed by its editor ID.</summary>
     public IReadOnlyDictionary<long, string> BoxNamesById
     {
         get
@@ -156,8 +168,7 @@ public sealed record DominoDebugTwin(
     }
 
     /// <summary>`"box_Set_Entity_2.FromEntity"` splits into box and pin; a label with no dot is one of
-    /// the graph's own pins, so the box is null. Box names never contain a dot (they're built from a
-    /// display name), so the first dot is the separator.</summary>
+    /// the graph's own pins, so the box is null.</summary>
     private static (string? Box, string Pin) SplitPinLabel(string label)
     {
         int dot = label.IndexOf('.');
@@ -165,94 +176,107 @@ public sealed record DominoDebugTwin(
     }
 }
 
-/// <summary>The outcome of diffing a reconstruction against its debug twin. <see cref="NotComparable"/>
-/// counts connections skipped because an endpoint is a pooled box: the twin numbers those with their
-/// original editor IDs, which the release file discards when it collapses them onto a shared runtime
-/// slot, so there is no sound way to line them up one-to-one.</summary>
-public sealed record TwinValidation(
-    int Matched,
-    int MissingFromReconstruction,
-    int ExtraInReconstruction,
-    int NotComparable,
-    IReadOnlyList<string> Details)
+/// <summary>
+/// Pairs a release graph's functions with its twin's. BlackBox emits both files' functions in the same
+/// order, so the pairing is positional - and it only counts once every paired body says the same thing
+/// with the twin's traces dropped and its names (`self.box_X_N`, `f_box_X_N_Pin`, `OnEnter_box_X_N`,
+/// `_sld_Pin_box_X_N`, `Sub.debug.lua`) rewritten to the release file's (`self[N]`, `f_N_Pin`, `en_N`,
+/// `_sld_Pin_N`, `Sub.lua`).
+/// </summary>
+internal sealed partial class TwinAlignment
 {
-    public bool IsClean => MissingFromReconstruction == 0 && ExtraInReconstruction == 0;
-}
+    private readonly Dictionary<string, string> _twinByRelease = new(StringComparer.Ordinal);
+    private readonly Dictionary<(string Function, int Ordinal), TracedConnection> _traces = new();
 
-/// <summary>Cross-checks a <see cref="GraphBuilder"/> reconstruction against the independent topology
-/// its debug twin records. Comparison is limited to box-to-box control connections where both ends are
-/// persistent boxes - graph-boundary connections aren't <see cref="GraphEdge"/>s (they originate in an
-/// entry function, not from a wired pin), and pooled occurrences can't be aligned by ID.</summary>
-public static class DebugTwinValidator
-{
-    public static TwinValidation Validate(ReconstructedGraph graph, DominoDebugTwin twin)
+    public List<string> Problems { get; } = [];
+
+    public TwinAlignment(UserGraph release, DominoDebugTwin twin)
     {
-        var nameByNodeId = new Dictionary<string, string>(StringComparer.Ordinal);
-        IReadOnlyDictionary<long, string> namesById = twin.BoxNamesById;
-
-        foreach (GraphNode node in graph.Nodes)
+        IReadOnlyList<UserGraphFunction> releaseFns = release.Functions;
+        IReadOnlyList<UserGraphFunction> twinFns = twin.Graph.Functions;
+        if (releaseFns.Count != twinFns.Count)
         {
-            switch (node.Ref)
+            Problems.Add($"the twin has {twinFns.Count} functions, the release file {releaseFns.Count}");
+            return;
+        }
+
+        var releaseRoles = GraphFunctions.Classify(release);
+        var twinRoles = GraphFunctions.Classify(twin.Graph);
+        var releaseByTwin = new Dictionary<string, string>(StringComparer.Ordinal);
+        for (int i = 0; i < releaseFns.Count; i++)
+        {
+            GraphFunction r = releaseRoles[releaseFns[i].Name];
+            GraphFunction t = twinRoles[twinFns[i].Name];
+            if (r.Role != t.Role || r.BoxId != t.BoxId)
             {
-                case InstanceBoxRef instance when namesById.TryGetValue(instance.Slot, out string? name):
-                    nameByNodeId[node.Id] = name;
-                    break;
-                case NamedInstanceBoxRef named:
-                    nameByNodeId[node.Id] = named.FieldName;
-                    break;
+                Problems.Add($"function {i} is {releaseFns[i].Name} in the release file but {twinFns[i].Name} in the twin");
+                return;
+            }
+            releaseByTwin[twinFns[i].Name] = releaseFns[i].Name;
+            _twinByRelease[releaseFns[i].Name] = twinFns[i].Name;
+        }
+
+        for (int i = 0; i < releaseFns.Count; i++)
+        {
+            var releaseBody = releaseFns[i].Body.Select(UserGraphWriter.Canonical).ToList();
+            var twinBody = twinFns[i].Body
+                .Where(stmt => stmt is not TraceConnectionStmt)
+                .Select(stmt => Normalize(UserGraphWriter.Canonical(stmt), releaseByTwin))
+                .ToList();
+            if (!releaseBody.SequenceEqual(twinBody, StringComparer.Ordinal))
+            {
+                int at = releaseBody.Zip(twinBody).TakeWhile(p => p.First == p.Second).Count();
+                Problems.Add($"{releaseFns[i].Name} differs from its twin at statement {at}");
             }
         }
 
-        var reconstructed = new HashSet<string>(StringComparer.Ordinal);
-        int notComparable = 0;
-
-        foreach (GraphEdge edge in graph.Edges)
+        foreach (TracedConnection trace in twin.Connections)
         {
-            if (edge.Target != EdgeTarget.Node || edge.TargetNodeId is null || edge.TargetPin is null)
-            {
-                continue;
-            }
-            if (!nameByNodeId.TryGetValue(edge.SourceNodeId, out string? source)
-                || !nameByNodeId.TryGetValue(edge.TargetNodeId, out string? target))
-            {
-                notComparable++;
-                continue;
-            }
-            reconstructed.Add(Key(source, edge.SourcePin, target, edge.TargetPin));
+            _traces[(trace.Function, trace.FireOrdinal)] = trace;
         }
-
-        var knownNames = new HashSet<string>(nameByNodeId.Values, StringComparer.Ordinal);
-        var traced = new HashSet<string>(StringComparer.Ordinal);
-        foreach (TracedConnection c in twin.Connections)
-        {
-            if (c.SourceBox is null || c.TargetBox is null)
-            {
-                notComparable++; // a graph-boundary connection, which has no GraphEdge counterpart
-                continue;
-            }
-            if (!knownNames.Contains(c.SourceBox) || !knownNames.Contains(c.TargetBox))
-            {
-                notComparable++; // pooled occurrence - the twin's ID has no release-file equivalent
-                continue;
-            }
-            traced.Add(Key(c.SourceBox, DominoDebugTwin.ToIdentifier(c.SourcePinLabel), c.TargetBox, DominoDebugTwin.ToIdentifier(c.TargetPinLabel)));
-        }
-
-        var missing = traced.Except(reconstructed, StringComparer.Ordinal).ToList();
-        var extra = reconstructed.Except(traced, StringComparer.Ordinal).ToList();
-
-        var details = missing.Select(m => $"missing: {m}")
-            .Concat(extra.Select(e => $"extra:   {e}"))
-            .ToList();
-
-        return new TwinValidation(
-            traced.Intersect(reconstructed, StringComparer.Ordinal).Count(),
-            missing.Count,
-            extra.Count,
-            notComparable,
-            details);
     }
 
-    private static string Key(string sourceBox, string sourcePin, string targetBox, string targetPin) =>
-        $"{sourceBox}.{sourcePin} -> {targetBox}.{targetPin}";
+    public bool IsProven => Problems.Count == 0;
+
+    /// <summary>The trace the twin records for a release function's Nth fire.</summary>
+    public TracedConnection? TraceFor(string releaseFunction, int fireOrdinal) =>
+        IsProven && _twinByRelease.TryGetValue(releaseFunction, out string? twinFunction)
+        && _traces.TryGetValue((twinFunction, fireOrdinal), out TracedConnection? trace)
+            ? trace
+            : null;
+
+    /// <summary>Rewrites a twin statement in release terms, including its sub-graphs, which a twin names by
+    /// their own twins.</summary>
+    private static string Normalize(string statement, Dictionary<string, string> releaseByTwin)
+    {
+        string subGraphs = statement.Replace(".debug.lua\"", ".lua\"", StringComparison.Ordinal);
+        string temporaries = TwinTemporary().Replace(subGraphs, m => $"_sld_{m.Groups["pin"].Value}_{m.Groups["id"].Value}");
+        string boxes = TwinBoxRef().Replace(temporaries, m => $"self[{m.Groups["id"].Value}]");
+        return OwnHandler().Replace(boxes, m =>
+            releaseByTwin.TryGetValue(m.Groups["name"].Value, out string? name) ? $"self._type.{name}" : m.Value);
+    }
+
+    [GeneratedRegex(@"self\.box_\w+_(?<id>\d+)\b")]
+    private static partial Regex TwinBoxRef();
+
+    // `_sld_Target_box_String_Concatenate_8` is the release file's `_sld_Target_8`.
+    [GeneratedRegex(@"_sld_(?<pin>\w+?)_box_\w+_(?<id>\d+)\b")]
+    private static partial Regex TwinTemporary();
+
+    [GeneratedRegex(@"self\._type\.(?<name>\w+)")]
+    private static partial Regex OwnHandler();
+}
+
+/// <summary>
+/// The outcome of checking a reconstruction against its debug twin. Every traced fire has to be one
+/// of the reconstruction's edges, source and target alike; <see cref="NamedFromTwin"/> counts the ones
+/// whose target box only got its ID from the twin itself, so agree by construction.
+/// </summary>
+public sealed record TwinValidation(
+    int TracedFires,
+    int Matched,
+    int NamedFromTwin,
+    IReadOnlyList<string> Problems)
+{
+    public bool IsClean => Problems.Count == 0;
 }

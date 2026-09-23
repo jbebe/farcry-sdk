@@ -118,6 +118,35 @@ public class UserGraphParserTests
     }
 
     [Fact]
+    public void Recognizes_a_dynamic_control_in_fire_and_its_slot_count()
+    {
+        var fn = Classify("""
+            function export:Init(cbox)
+                self[7]._DynamicAnchors = {
+                    Condition = 2,
+                };
+                self[7]._type.Condition(self[7], 1);
+            end;
+            """).Functions.Single();
+
+        var anchors = Assert.IsType<SetDynamicAnchorsStmt>(fn.Body[0]);
+        Assert.Equal([new KeyValuePair<string, int>("Condition", 2)], anchors.Counts);
+        Assert.Equal(new FireControlInStmt(new InstanceBoxRef(7), "Condition", 1), fn.Body[1]);
+    }
+
+    [Fact]
+    public void A_fire_on_a_box_other_than_its_receiver_is_not_classified()
+    {
+        var fn = Classify("""
+            function export:f_1_Out()
+                self[7]._type.Condition(self[8], 1);
+            end;
+            """).Functions.Single();
+
+        Assert.IsType<OtherStmt>(Assert.Single(fn.Body));
+    }
+
+    [Fact]
     public void Recognizes_own_handler_calls_and_own_pin_fires()
     {
         var graph = Classify("""

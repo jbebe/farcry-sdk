@@ -19,16 +19,10 @@ public static class UserGraphParser
 
         foreach (StatementSyntax stmt in root.Statements.Statements)
         {
-            if (stmt is FunctionDeclarationStatementSyntax
-                {
-                    Name: MethodFunctionNameSyntax { BaseName: SimpleFunctionNameSyntax { Name.Text: "export" }, Name.Text: var fnName },
-                } fn)
+            if (stmt is FunctionDeclarationStatementSyntax fn && ReadHeader(fn) is { } header)
             {
-                var parameters = fn.Parameters.Parameters
-                    .Select(p => p is NamedParameterSyntax named ? named.Name : "...")
-                    .ToList();
-                var body = fn.Body.Statements.Select(ClassifyStmt).ToList();
-                functions.Add(new UserGraphFunction(fnName, parameters, body, fn.SpanStart));
+                var body = fn.Body.Statements.Select(Classify).ToList();
+                functions.Add(new UserGraphFunction(header.Name, header.Parameters, body, fn.SpanStart) { Syntax = fn });
             }
             else
             {
@@ -36,15 +30,21 @@ public static class UserGraphParser
             }
         }
 
-        return new UserGraph(functions, topLevelOther);
+        return new UserGraph(functions, topLevelOther) { EndOfFile = root.EndOfFileToken.ToFullString() };
     }
 
-    private static UserGraphStmt ClassifyStmt(StatementSyntax stmt) => stmt switch
+    /// <summary>The name and parameters of a `function export:Name(...)`; null for any other function.</summary>
+    internal static (string Name, IReadOnlyList<string> Parameters)? ReadHeader(FunctionDeclarationStatementSyntax fn) =>
+        fn.Name is MethodFunctionNameSyntax { BaseName: SimpleFunctionNameSyntax { Name.Text: "export" }, Name.Text: var name }
+            ? (name, fn.Parameters.Parameters.Select(p => p is NamedParameterSyntax named ? named.Name : "...").ToList())
+            : null;
+
+    public static UserGraphStmt Classify(StatementSyntax stmt) => (stmt switch
     {
         ExpressionStatementSyntax e => ClassifyExpressionStmt(e) ?? new OtherStmt(stmt),
         AssignmentStatementSyntax a => ClassifyAssignmentStmt(a) ?? new OtherStmt(stmt),
         _ => new OtherStmt(stmt),
-    };
+    }) with { Syntax = stmt };
 
     // The six expression-statement shapes are mutually exclusive, so their order carries no meaning.
     private static UserGraphStmt? ClassifyExpressionStmt(ExpressionStatementSyntax stmt) =>
@@ -63,6 +63,7 @@ public static class UserGraphParser
         ?? TryMatchRebindSelfToGraph(stmt)
         ?? TryMatchSetGraphBackref(stmt)
         ?? TryMatchWireDynamicPin(stmt)
+        ?? TryMatchDynamicAnchors(stmt)
         ?? TryMatchBoxFieldAssignment(stmt)
         ?? TryMatchReadData(stmt)
         ?? TryMatchSetGraphField(stmt);
@@ -98,17 +99,29 @@ public static class UserGraphParser
             ? new CallOwnHandlerStmt(handler)
             : null;
 
-    // Box._type.PinName(Box);
-    private static UserGraphStmt? TryMatchFireControlIn(ExpressionStatementSyntax stmt) =>
-        stmt is
-        {
-            Expression: FunctionCallExpressionSyntax
+    // Box._type.PinName(Box);  /  Box._type.PinName(Box, N);  (dynamic control-in slot N)
+    private static UserGraphStmt? TryMatchFireControlIn(ExpressionStatementSyntax stmt)
+    {
+        if (stmt is not
             {
-                Expression: MemberAccessExpressionSyntax { Expression: MemberAccessExpressionSyntax { MemberName.Text: "_type" } typeTarget, MemberName.Text: var pinName },
-            },
-        } && TryParseBoxRef(typeTarget.Expression) is { } box
-            ? new FireControlInStmt(box, pinName)
-            : null;
+                Expression: FunctionCallExpressionSyntax
+                {
+                    Expression: MemberAccessExpressionSyntax { Expression: MemberAccessExpressionSyntax { MemberName.Text: "_type" } typeTarget, MemberName.Text: var pinName },
+                    Argument: ExpressionListFunctionArgumentSyntax { Expressions: var args },
+                },
+            }
+            || TryParseBoxRef(typeTarget.Expression) is not { } box
+            || args.Count is < 1 or > 2
+            || TryParseBoxRef(args[0]) != box)
+        {
+            return null;
+        }
+        if (args.Count == 1)
+        {
+            return new FireControlInStmt(box, pinName);
+        }
+        return AsInt(args[1]) is { } index ? new FireControlInStmt(box, pinName, (int)index) : null;
+    }
 
     // self:PinName();  (fire own exposed control-out pin)
     private static UserGraphStmt? TryMatchFireOwnPin(ExpressionStatementSyntax stmt) =>
@@ -202,6 +215,31 @@ public static class UserGraphParser
         && TryParseWireTarget(value, out string? handler)
             ? new WireControlOutStmt(box, pinName, (int)idx, handler)
             : null;
+
+    // Box._DynamicAnchors = { Pin = N, };
+    private static UserGraphStmt? TryMatchDynamicAnchors(AssignmentStatementSyntax stmt)
+    {
+        if (stmt is not
+            {
+                Variables: [MemberAccessExpressionSyntax { MemberName.Text: "_DynamicAnchors" } target],
+                EqualsValues.Values: [TableConstructorExpressionSyntax table],
+            }
+            || TryParseBoxRef(target.Expression) is not { } box)
+        {
+            return null;
+        }
+
+        var counts = new List<KeyValuePair<string, int>>();
+        foreach (TableFieldSyntax field in table.Fields)
+        {
+            if (field is not IdentifierKeyedTableFieldSyntax { Identifier.Text: var pin, Value: var value } || AsInt(value) is not { } count)
+            {
+                return null;
+            }
+            counts.Add(new(pin, (int)count));
+        }
+        return new SetDynamicAnchorsStmt(box, counts);
+    }
 
     // Box.PinName = self._type.f_N_...;  /  Box.PinName = DummyFunction;  /  Box.ParamName = value;
     private static UserGraphStmt? TryMatchBoxFieldAssignment(AssignmentStatementSyntax stmt)

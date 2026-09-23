@@ -1,6 +1,7 @@
 using JackAll.Cli.Commands;
 using JackAll.Cli.Commands.Archive;
 using JackAll.Cli.Commands.DepLoad;
+using JackAll.Cli.Commands.Domino;
 using JackAll.Cli.Commands.Fc2Model;
 using JackAll.Cli.Commands.Fcb;
 using JackAll.Cli.Commands.Mgb;
@@ -188,6 +189,16 @@ app.Configure(config =>
         mgb.AddCommand<MgbVerifyCommand>("verify")
             .WithDescription("Check that a .mgb, or the XML it is built from, references only names it declares.")
             .WithExample("mgb", "verify", "fcse.mgb.xml", "--page", "FCSE_PAGE");
+    });
+
+    // --- Domino mission scripts ------------------------------------------
+    config.AddBranch("domino", domino =>
+    {
+        domino.AddCommand<DominoCheckCommand>("check")
+            .WithDescription(
+                "Check Domino user graphs for what would break in game: the reconstruction proved against "
+                + "each graph's debug twin, the writer's round trip, and the lint rules.")
+            .WithExample("domino", "check", @"extracted\domino\user", "--summary");
     });
 
     // --- depload.dat dependency index ------------------------------------

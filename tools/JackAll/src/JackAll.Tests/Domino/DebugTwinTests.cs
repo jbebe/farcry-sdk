@@ -17,11 +17,12 @@ public class DebugTwinTests
     {
         DominoDebugTwin? twin = TwinOf($$"""
             export = { };
-            function export:Init(cbox)
+            function export:f_box_SCRIPTEDPAWN_WAIT_BECKON_GREET_1_Greet_finished()
                 CDominoManager_GetInstance():TraceConnection("{{Container}}",
                     "box_SCRIPTEDPAWN_WAIT_BECKON_GREET_1.Greet finished",
                     "box_SCRIPTEDPAWN_DIALOG_INTERACT_2.Start",
                     self.box_SCRIPTEDPAWN_WAIT_BECKON_GREET_1, self.box_SCRIPTEDPAWN_DIALOG_INTERACT_2);
+                self.box_SCRIPTEDPAWN_DIALOG_INTERACT_2._type.Start(self.box_SCRIPTEDPAWN_DIALOG_INTERACT_2);
             end;
             """);
 
@@ -35,6 +36,7 @@ public class DebugTwinTests
         Assert.Equal("Greet finished", connection.SourcePinLabel);
         Assert.Equal("box_SCRIPTEDPAWN_DIALOG_INTERACT_2", connection.TargetBox);
         Assert.Equal("Start", connection.TargetPinLabel);
+        Assert.Equal(0, connection.FireOrdinal);
     }
 
     [Fact]
@@ -59,9 +61,10 @@ public class DebugTwinTests
     {
         DominoDebugTwin? twin = TwinOf($$"""
             export = { };
-            function export:Init(cbox)
+            function export:Start()
                 CDominoManager_GetInstance():TraceConnection("{{Container}}",
                     "Start", "box_SetMissionBarkBankState_0.Load", self, self.box_SetMissionBarkBankState_0);
+                self.box_SetMissionBarkBankState_0._type.Load(self.box_SetMissionBarkBankState_0);
             end;
             """);
 
@@ -76,10 +79,11 @@ public class DebugTwinTests
     {
         DominoDebugTwin? twin = TwinOf($$"""
             export = { };
-            function export:Init(cbox)
+            function export:f_box_Set_Entity_2_Out()
                 CDominoManager_GetInstance():TraceConnection("{{Container}}",
                     "box_Set_Entity_2.Out", "box_Simple_Node_0.In",
                     Boxes[PathID("Domino/System/SetEntity.lua")], Boxes[PathID("Domino/System/SimpleNode.lua")]);
+                Boxes[PathID("Domino/System/SimpleNode.lua")]._type.In(Boxes[PathID("Domino/System/SimpleNode.lua")]);
             end;
             """);
 
@@ -108,115 +112,131 @@ public class DebugTwinTests
         Assert.False(DominoDebugTwin.IsTwinPath(@"domino\user\a1bu00_tutorial.a1bu00_swap.lua"));
     }
 
+    private const string Release = """
+        export = { };
+        function export:Init(cbox)
+            self[0] = cbox:CreateBox("Domino/System/SetMissionBarkBankState.lua");
+            self[0].Out = self._type.f_0_Out;
+            self[1] = cbox:CreateBox("Domino/System/Delay.lua");
+        end;
+        function export:Start()
+            self[0]._type.Load(self[0]);
+        end;
+        function export:f_0_Out()
+            self = self._graph;
+            self[1]._type.Start(self[1]);
+        end;
+        """;
+
+    /// <summary><see cref="Release"/>'s debug twin, with <paramref name="delay"/> as the box the second
+    /// trace names and <paramref name="fire"/> as the pin box 0's continuation fires.</summary>
+    private static string Twin(string delay = "box_Delay_1", string fire = "Start") => $$"""
+        export = { };
+        function export:Init(cbox)
+            self.box_SetMissionBarkBankState_0 = cbox:CreateBox("Domino/System/SetMissionBarkBankState.lua");
+            self.box_SetMissionBarkBankState_0.Out = self._type.f_box_SetMissionBarkBankState_0_Out;
+            self.box_Delay_1 = cbox:CreateBox("Domino/System/Delay.lua");
+        end;
+        function export:Start()
+            CDominoManager_GetInstance():TraceConnection("{{Container}}",
+                "Start", "box_SetMissionBarkBankState_0.Load", self, self.box_SetMissionBarkBankState_0);
+            self.box_SetMissionBarkBankState_0._type.Load(self.box_SetMissionBarkBankState_0);
+        end;
+        function export:f_box_SetMissionBarkBankState_0_Out()
+            self = self._graph;
+            CDominoManager_GetInstance():TraceConnection("{{Container}}",
+                "box_SetMissionBarkBankState_0.Out", "{{delay}}.Start",
+                self.box_SetMissionBarkBankState_0, self.box_Delay_1);
+            self.box_Delay_1._type.{{fire}}(self.box_Delay_1);
+        end;
+        """;
+
+    private static TwinValidation Validate(string release, string twin) =>
+        GraphBuilder.Build(Classify(release), catalog: null, TwinOf(twin)).Twin!;
+
     [Fact]
     public void Names_reconstructed_nodes_from_the_twins_box_names()
     {
-        const string release = """
-            export = { };
-            function export:Init(cbox)
-                self[0] = cbox:CreateBox("Domino/System/SetMissionBarkBankState.lua");
-                self[0].Out = self._type.f_0_Out;
-                self[1] = cbox:CreateBox("Domino/System/Delay.lua");
-            end;
-            function export:f_0_Out()
-                self = self._graph;
-                self[1]._type.Start(self[1]);
-            end;
-            """;
-        DominoDebugTwin? twin = TwinOf($$"""
-            export = { };
-            function export:Init(cbox)
-                CDominoManager_GetInstance():TraceConnection("{{Container}}",
-                    "box_SetMissionBarkBankState_0.Out", "box_Delay_1.Start",
-                    self.box_SetMissionBarkBankState_0, self.box_Delay_1);
-            end;
-            """);
-
-        ReconstructedGraph graph = GraphBuilder.Build(Classify(release), catalog: null, twin);
+        ReconstructedGraph graph = GraphBuilder.Build(Classify(Release), catalog: null, TwinOf(Twin()));
 
         Assert.Equal("box_SetMissionBarkBankState_0", graph.Nodes.Single(n => n.Id == "p:0").OriginalName);
         Assert.Equal("box_Delay_1", graph.Nodes.Single(n => n.Id == "p:1").OriginalName);
     }
 
     [Fact]
-    public void Validation_matches_a_reconstruction_against_its_twin()
+    public void Validation_matches_every_traced_fire_including_the_entry_pins()
     {
-        const string release = """
-            export = { };
-            function export:Init(cbox)
-                self[0] = cbox:CreateBox("Domino/System/SetMissionBarkBankState.lua");
-                self[0].Out = self._type.f_0_Out;
-                self[1] = cbox:CreateBox("Domino/System/Delay.lua");
-            end;
-            function export:f_0_Out()
-                self = self._graph;
-                self[1]._type.Start(self[1]);
-            end;
-            """;
-        DominoDebugTwin? twin = TwinOf($$"""
-            export = { };
-            function export:Init(cbox)
-                CDominoManager_GetInstance():TraceConnection("{{Container}}",
-                    "box_SetMissionBarkBankState_0.Out", "box_Delay_1.Start",
-                    self.box_SetMissionBarkBankState_0, self.box_Delay_1);
-            end;
-            """);
+        TwinValidation result = Validate(Release, Twin());
 
-        ReconstructedGraph graph = GraphBuilder.Build(Classify(release), catalog: null, twin);
-        TwinValidation result = DebugTwinValidator.Validate(graph, twin!);
-
-        Assert.Equal(1, result.Matched);
-        Assert.True(result.IsClean);
-        Assert.Empty(result.Details);
+        Assert.Equal(2, result.TracedFires);
+        Assert.Equal(2, result.Matched);
+        Assert.True(result.IsClean, string.Join('\n', result.Problems));
     }
 
     [Fact]
-    public void Validation_reports_a_connection_the_twin_has_but_the_reconstruction_missed()
+    public void Validation_reports_a_fire_the_twin_traces_to_another_box()
     {
-        // The release file wires nothing, so the traced connection has no counterpart.
-        const string release = """
-            export = { };
-            function export:Init(cbox)
-                self[0] = cbox:CreateBox("Domino/System/SetMissionBarkBankState.lua");
-                self[0].Out = DummyFunction;
-                self[1] = cbox:CreateBox("Domino/System/Delay.lua");
-            end;
-            """;
-        DominoDebugTwin? twin = TwinOf($$"""
-            export = { };
-            function export:Init(cbox)
-                CDominoManager_GetInstance():TraceConnection("{{Container}}",
-                    "box_SetMissionBarkBankState_0.Out", "box_Delay_1.Start",
-                    self.box_SetMissionBarkBankState_0, self.box_Delay_1);
-            end;
-            """);
-
-        ReconstructedGraph graph = GraphBuilder.Build(Classify(release), catalog: null, twin);
-        TwinValidation result = DebugTwinValidator.Validate(graph, twin!);
+        TwinValidation result = Validate(Release, Twin(delay: "box_Delay_2"));
 
         Assert.False(result.IsClean);
-        Assert.Equal(1, result.MissingFromReconstruction);
-        Assert.Contains(result.Details, d => d.StartsWith("missing:", StringComparison.Ordinal));
+        Assert.Equal(1, result.Matched);
+        Assert.Contains(result.Problems, p => p.StartsWith("disagrees:", StringComparison.Ordinal));
     }
 
-    /// <summary>The control edges <see cref="GraphBuilder"/> infers from a release file must match the
-    /// connections the editor recorded in its twin. A mismatch is a reconstruction bug, not a test to
-    /// loosen.</summary>
+    [Fact]
+    public void Validation_refuses_a_twin_whose_code_differs_from_the_release_file()
+    {
+        TwinValidation result = Validate(Release, Twin(fire: "Stop"));
+
+        Assert.Equal(0, result.Matched);
+        Assert.Contains(result.Problems, p => p.Contains("differs from its twin", StringComparison.Ordinal));
+    }
+
+    [Fact]
+    public void A_pooled_box_nothing_else_names_takes_its_id_from_the_twin()
+    {
+        const string release = """
+            export = { };
+            function export:Start()
+                Boxes[PathID("Domino/System/SetMalaria.lua")]._graph = self;
+                Boxes[PathID("Domino/System/SetMalaria.lua")].Out = DummyFunction;
+                Boxes[PathID("Domino/System/SetMalaria.lua")]._type.In(Boxes[PathID("Domino/System/SetMalaria.lua")]);
+            end;
+            """;
+        string twin = $$"""
+            export = { };
+            function export:Start()
+                Boxes[PathID("Domino/System/SetMalaria.lua")]._graph = self;
+                Boxes[PathID("Domino/System/SetMalaria.lua")].Out = DummyFunction;
+                CDominoManager_GetInstance():TraceConnection("{{Container}}",
+                    "Start", "box_Set_Malaria_38.In", self, Boxes[PathID("Domino/System/SetMalaria.lua")]);
+                Boxes[PathID("Domino/System/SetMalaria.lua")]._type.In(Boxes[PathID("Domino/System/SetMalaria.lua")]);
+            end;
+            """;
+
+        ReconstructedGraph graph = GraphBuilder.Build(Classify(release), catalog: null, TwinOf(twin));
+
+        GraphNode node = Assert.Single(graph.Nodes);
+        Assert.Equal("q:38", node.Id);
+        Assert.Equal(BoxIdSource.Twin, node.IdSource);
+        Assert.Equal(1, graph.Twin!.NamedFromTwin);
+    }
+
+    /// <summary>Every fire the twin traces must be one of the reconstruction's edges, pooled boxes and
+    /// entry pins included. A mismatch is a reconstruction bug, not a test to loosen.</summary>
     [Theory]
     [InlineData(DominoFixtures.FastTravel)]
-    [InlineData(DominoFixtures.TaxiRide)]
-    public void A_reconstruction_agrees_with_its_debug_twin_on_box_to_box_control_flow(string release)
+    [InlineData(DominoFixtures.HealthEven)]
+    [InlineData(DominoFixtures.SafehouseTut)]
+    [InlineData(DominoFixtures.PrisonMission)]
+    public void A_reconstruction_agrees_with_every_fire_its_debug_twin_traces(string release)
     {
         if (Fixture.ReadText(release) is not { } source
             || Fixture.ReadText(DominoDebugTwin.TwinPathFor(release)) is not { } twinSource) return;
 
-        DominoDebugTwin? twin = DominoDebugTwin.FromGraph(Classify(twinSource));
-        Assert.NotNull(twin);
-        ReconstructedGraph graph = GraphBuilder.Build(Classify(source), catalog: null, twin);
-        TwinValidation result = DebugTwinValidator.Validate(graph, twin);
+        TwinValidation result = Validate(source, twinSource);
 
-        Assert.True(result.IsClean,
-            $"-{result.MissingFromReconstruction} +{result.ExtraInReconstruction} ({result.Matched} matched):\n"
-            + string.Join('\n', result.Details.Take(5)));
+        Assert.True(result.IsClean, string.Join('\n', result.Problems.Take(5)));
+        Assert.Equal(result.TracedFires, result.Matched);
     }
 }

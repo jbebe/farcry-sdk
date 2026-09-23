@@ -27,12 +27,7 @@ public sealed record DataEvent(
     string? SourceNodeId,
     string? SourcePin,
     string FunctionName,
-    int Order)
-{
-    /// <summary>The producing box's node type, used to recognize several occurrences of one repeated
-    /// operation as a single logical source rather than as competing producers.</summary>
-    public string? NodeTypePath { get; init; }
-}
+    int Order);
 
 /// <summary>
 /// Joins <see cref="DataEvent"/>s into <see cref="DataEdge"/>s, resolving the graph-variable
@@ -48,20 +43,18 @@ public sealed record DataEvent(
 /// <list type="number">
 /// <item>A producer earlier in the <em>same</em> handler is the answer - the read-then-use idiom, and
 /// unambiguous.</item>
-/// <item>Otherwise control flow decides. The generated code splits producer and consumer across
-/// handlers by construction (`f_M_Out` reads box M's output into a variable, then `en_N` pushes it into
-/// box N), so the producer is nearly always a box that control flow passes through on the way here.
-/// Walking control edges backwards from the consumer and taking the closest producer picks that one
-/// out; only a genuine tie at the same distance, or a producer no control path reaches, stays
-/// ambiguous.</item>
+/// <item>Otherwise control flow decides, as reaching definitions: walking control edges backwards from
+/// the consumer, every writer met before another writer of the same variable is a source. Writers on
+/// different branches are all sources, each for the path through it; only when no control path from any
+/// writer arrives is the edge ambiguous.</item>
 /// <item>No producer at all means the variable is a graph input
 /// (<see cref="DataEdgeKind.GraphInput"/>).</item>
 /// </list>
 /// </summary>
 public static class DataFlowResolver
 {
-    /// <param name="controlEdges">Node-to-node control flow, used to rank candidate producers by how
-    /// far upstream they are. Pass an empty list to fall back on statement order alone.</param>
+    /// <param name="controlEdges">Node-to-node control flow, which decides which writers reach a
+    /// consumer. Pass an empty list to fall back on statement order alone.</param>
     public static IReadOnlyList<DataEdge> Resolve(
         IReadOnlyList<DataEvent> events,
         IReadOnlyList<(string From, string To)> controlEdges)
@@ -71,7 +64,6 @@ public static class DataFlowResolver
             .ToLookup(e => e.Variable!, StringComparer.Ordinal);
 
         var predecessors = controlEdges.ToLookup(e => e.To, e => e.From, StringComparer.Ordinal);
-        var distanceCache = new Dictionary<string, Dictionary<string, int>>(StringComparer.Ordinal);
 
         var edges = new List<DataEdge>();
 
@@ -86,7 +78,7 @@ public static class DataFlowResolver
                     break;
 
                 case DataEventKind.Consume when consumer.Variable is { } variable:
-                    edges.AddRange(ResolveThroughVariable(consumer, variable, producersByVariable, predecessors, distanceCache));
+                    edges.AddRange(ResolveThroughVariable(consumer, variable, producersByVariable, predecessors));
                     break;
             }
         }
@@ -98,8 +90,7 @@ public static class DataFlowResolver
         DataEvent consumer,
         string variable,
         ILookup<string, DataEvent> producersByVariable,
-        ILookup<string, string> predecessors,
-        Dictionary<string, Dictionary<string, int>> distanceCache)
+        ILookup<string, string> predecessors)
     {
         var candidates = producersByVariable[variable].ToList();
         if (candidates.Count == 0)
@@ -132,70 +123,47 @@ public static class DataFlowResolver
             return [Edge(distinct[0], consumer, variable, ambiguous: false)];
         }
 
-        Dictionary<string, int> distance = UpstreamDistances(consumer.NodeId, predecessors, distanceCache);
-
-        // Repeated-operation check first: if every writer is the same node type writing the same pin,
-        // they are one logical source duplicated across branches, not rival producers. Report the
-        // nearest occurrence and record how many there were.
-        if (distinct.GroupBy(p => (p.NodeTypePath, p.Pin)).Count() == 1)
-        {
-            DataEvent nearestOccurrence = distinct
-                .OrderBy(p => distance.TryGetValue(p.NodeId, out int d) ? d : int.MaxValue)
-                .ThenBy(p => p.Order)
-                .First();
-            return [Edge(nearestOccurrence, consumer, variable, ambiguous: false) with { SourceOccurrences = distinct.Count }];
-        }
-
-        // Rule 2: genuinely different producers - rank by how far upstream each sits in control flow.
-        var reachable = distinct.Where(p => distance.ContainsKey(p.NodeId)).ToList();
-
-        if (reachable.Count == 0)
+        // Rule 2: the writers whose value can still be in the variable when some control path arrives
+        // here - each one a real source, on its own branch.
+        var reaching = ReachingProducers(consumer.NodeId, distinct, predecessors);
+        if (reaching.Count == 0)
         {
             // No control path from any writer reaches here - nothing to choose between.
             return distinct.Select(p => Edge(p, consumer, variable, ambiguous: true));
         }
-
-        int nearest = reachable.Min(p => distance[p.NodeId]);
-        var winners = reachable.Where(p => distance[p.NodeId] == nearest).ToList();
-        bool ambiguous = winners.Count > 1;
-        return winners.Select(p => Edge(p, consumer, variable, ambiguous));
+        return reaching.Select(p => Edge(p, consumer, variable, ambiguous: false) with { SourceOccurrences = reaching.Count });
     }
 
     private static DataEdge Edge(DataEvent producer, DataEvent consumer, string variable, bool ambiguous) =>
         new(producer.NodeId, producer.Pin, consumer.NodeId, consumer.Pin, variable, DataEdgeKind.NodeToNode, ambiguous);
 
-    /// <summary>Breadth-first distance from every node that can reach <paramref name="target"/> through
-    /// control edges. Cached per target because a graph fires the same box from many places, so the same
-    /// walk would otherwise repeat once per parameter that box takes.</summary>
-    private static Dictionary<string, int> UpstreamDistances(
-        string target,
-        ILookup<string, string> predecessors,
-        Dictionary<string, Dictionary<string, int>> cache)
+    /// <summary>The writers met walking control edges backwards from <paramref name="consumer"/>, the walk
+    /// stopping at each writer since an earlier value is overwritten there.</summary>
+    private static List<DataEvent> ReachingProducers(string consumer, List<DataEvent> producers, ILookup<string, string> predecessors)
     {
-        if (cache.TryGetValue(target, out Dictionary<string, int>? cached))
-        {
-            return cached;
-        }
-
-        var distance = new Dictionary<string, int>(StringComparer.Ordinal);
-        var queue = new Queue<(string Node, int Depth)>();
-        queue.Enqueue((target, 0));
-        distance[target] = 0;
+        var byNode = producers.ToLookup(p => p.NodeId, StringComparer.Ordinal);
+        var reaching = new List<DataEvent>();
+        var seen = new HashSet<string>(StringComparer.Ordinal);
+        var queue = new Queue<string>(predecessors[consumer]);
 
         while (queue.Count > 0)
         {
-            (string node, int depth) = queue.Dequeue();
+            string node = queue.Dequeue();
+            if (!seen.Add(node))
+            {
+                continue;
+            }
+            if (byNode.Contains(node))
+            {
+                reaching.AddRange(byNode[node]);
+                continue;
+            }
             foreach (string previous in predecessors[node])
             {
-                if (distance.TryAdd(previous, depth + 1))
-                {
-                    queue.Enqueue((previous, depth + 1));
-                }
+                queue.Enqueue(previous);
             }
         }
-
-        cache[target] = distance;
-        return distance;
+        return reaching;
     }
 
     /// <summary>Classifies a `Box.Param = value;` assignment's right-hand side. Returns the graph

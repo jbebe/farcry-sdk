@@ -3,9 +3,18 @@ using Loretta.CodeAnalysis.Lua.Syntax;
 namespace JackAll.Tools.Domino.Graphs;
 
 /// <summary>One classified statement from inside a `user\` graph's generated function body. Every real
-/// statement is one of these seven mechanical shapes or, if not, falls back to <see cref="OtherStmt"/> so
+/// statement is one of these mechanical shapes or, if not, falls back to <see cref="OtherStmt"/> so
 /// nothing is silently dropped.</summary>
-public abstract record UserGraphStmt;
+public abstract record UserGraphStmt
+{
+    /// <summary>The parsed statement this was classified from, trivia included; null for one built in
+    /// code. Not part of equality.</summary>
+    public StatementSyntax? Syntax { get; init; }
+
+    public virtual bool Equals(UserGraphStmt? other) => other is not null && EqualityContract == other.EqualityContract;
+
+    public override int GetHashCode() => EqualityContract.GetHashCode();
+}
 
 /// <summary>`cbox:RegisterBox("Domino/System/X.lua");` — a node-type dependency declaration, in `Create()`.</summary>
 public sealed record RegisterBoxStmt(string Path) : UserGraphStmt;
@@ -30,8 +39,13 @@ public sealed record SetParamStmt(BoxRef Box, string ParamName, ExpressionSyntax
 /// `Box.PinName[N] = ...` — a runtime-sized fan-out, one wire per array slot (see `outputorder.lua`).</summary>
 public sealed record WireControlOutStmt(BoxRef Box, string PinName, int? Index, string? TargetHandler) : UserGraphStmt;
 
-/// <summary>`Box._type.PinName(Box);` — fires a box's named control-in pin (its entry point).</summary>
-public sealed record FireControlInStmt(BoxRef Box, string PinName) : UserGraphStmt;
+/// <summary>`Box._type.PinName(Box);` — fires a box's named control-in pin (its entry point).
+/// <see cref="Index"/> is set for a `Dynamic="True"` control-in fired as `Box._type.PinName(Box, N);`.</summary>
+public sealed record FireControlInStmt(BoxRef Box, string PinName, int? Index = null) : UserGraphStmt;
+
+/// <summary>`Box._DynamicAnchors = { Pin = N, };` — how many slots each of a box's `Dynamic="True"` pins
+/// has.</summary>
+public sealed record SetDynamicAnchorsStmt(BoxRef Box, IReadOnlyList<KeyValuePair<string, int>> Counts) : UserGraphStmt;
 
 /// <summary>`self._type.HandlerName(self);` — the graph calling one of its own generated helper
 /// functions (an `en_N` parameter setter, an `ex_N` exit helper, or an `OnEnter_box_X`/`OnExit_box_X`
@@ -85,10 +99,18 @@ public sealed record UserGraphFunction(
     string Name,
     IReadOnlyList<string> Parameters,
     IReadOnlyList<UserGraphStmt> Body,
-    int SpanStart);
+    int SpanStart)
+{
+    /// <summary>The parsed declaration, trivia included; null for a function built in code.</summary>
+    public FunctionDeclarationStatementSyntax? Syntax { get; init; }
+}
 
 /// <summary>A fully classified `user\` mission graph file. <see cref="TopLevelOther"/> holds everything
 /// outside a function body — the auto-generated header comment, `export = {};`, `_compilerVersion = 3;`.</summary>
 public sealed record UserGraph(
     IReadOnlyList<UserGraphFunction> Functions,
-    IReadOnlyList<StatementSyntax> TopLevelOther);
+    IReadOnlyList<StatementSyntax> TopLevelOther)
+{
+    /// <summary>Whatever follows the last statement - trailing comments and blank lines.</summary>
+    public string EndOfFile { get; init; } = "";
+}

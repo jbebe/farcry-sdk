@@ -169,11 +169,9 @@ public sealed class DominoNodeCatalog
             .Select(f => new DataOutPin(f, UnknownType))
             .ToList();
 
-        var controlIns = graph.Functions
-            .Select(fn => fn.Name)
-            .Where(name => !IsLifecycle(name) && !IsGenerated(name) && !controlOuts.Contains(name, StringComparer.Ordinal))
-            .Distinct(StringComparer.Ordinal)
-            .Select(name => new ControlInPin(name, Dynamic: false))
+        var controlIns = GraphFunctions.Classify(graph).Values
+            .Where(fn => fn.Role == FunctionRole.Entry && !controlOuts.Contains(fn.Name, StringComparer.Ordinal))
+            .Select(fn => new ControlInPin(fn.Name, Dynamic: false))
             .ToList();
 
         return new NodeSignature(
@@ -199,23 +197,6 @@ public sealed class DominoNodeCatalog
     private static NodeSignature EmptySignature(string nodeTypePath) => new(
         nodeTypePath, NodeSignature.ShortNameFor(nodeTypePath), SubGraphCategory,
         [], [], [], [], Stateless: false, SignatureOrigin.Inferred);
-
-    private static bool IsLifecycle(string name) =>
-        name is "Create" or "Init" or "ShutDown" or "LuaDependencies";
-
-    private static bool IsGenerated(string name) =>
-        name.StartsWith("f_", StringComparison.Ordinal)
-        || name.StartsWith("OnEnter_", StringComparison.Ordinal)
-        || name.StartsWith("OnExit_", StringComparison.Ordinal)
-        || IsIndexedHelper(name, "en_")
-        || IsIndexedHelper(name, "ex_");
-
-    /// <summary>Matches `en_12`/`ex_3` but not a real pin that merely starts with those letters - the
-    /// suffix must be all digits.</summary>
-    private static bool IsIndexedHelper(string name, string prefix) =>
-        name.StartsWith(prefix, StringComparison.Ordinal)
-        && name.Length > prefix.Length
-        && name.AsSpan(prefix.Length).ToString().All(char.IsAsciiDigit);
 
     internal static bool IsDummyFunction(ExpressionSyntax expr) =>
         expr is IdentifierNameSyntax { Name: "DummyFunction" };

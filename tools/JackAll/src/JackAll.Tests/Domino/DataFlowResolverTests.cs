@@ -64,10 +64,10 @@ public class DataFlowResolverTests
     }
 
     [Fact]
-    public void Reports_every_candidate_producer_as_ambiguous_when_they_are_genuinely_different_boxes()
+    public void Reports_every_candidate_producer_as_ambiguous_when_no_control_path_decides()
     {
-        // Two different node types writing the same variable really is unresolvable from the flattened
-        // script, so both are reported rather than one being guessed at.
+        // Nothing connects either writer to the reader, so both are reported rather than one being
+        // guessed at.
         var graph = Build("""
             export = { };
             function export:Init(cbox)
@@ -91,35 +91,64 @@ public class DataFlowResolverTests
         Assert.Equal(["p:0", "p:2"], graph.DataEdges.Select(e => e.SourceNodeId).Order());
     }
 
+    /// <summary>Box 0 and box 2 each write Player on their own story branch, and the delay's continuation
+    /// reads it. <paramref name="afterBoxZero"/> is what box 0's branch fires next.</summary>
+    private static string Branches(string afterBoxZero) => $$"""
+        export = { };
+        function export:Init(cbox)
+            self[0] = cbox:CreateBox("Domino/System/GetLocalPlayer.lua");
+            self[0].Out = self._type.f_0_Out;
+            self[1] = cbox:CreateBox("Domino/System/LookAtTarget.lua");
+            self[2] = cbox:CreateBox("Domino/System/GetLocalPlayer.lua");
+            self[2].Out = self._type.f_2_Out;
+            self[3] = cbox:CreateBox("Domino/System/Delay.lua");
+            self[3].TimeElapsed = self._type.f_3_TimeElapsed;
+        end;
+        function export:BranchA()
+            self[0]._type.In(self[0]);
+        end;
+        function export:BranchB()
+            self[2]._type.In(self[2]);
+        end;
+        function export:f_0_Out()
+            self = self._graph;
+            self.Player = self[0].LocalPlayer;
+            {{afterBoxZero}}
+        end;
+        function export:f_2_Out()
+            self = self._graph;
+            self.Player = self[2].LocalPlayer;
+            self[3]._type.Start(self[3]);
+        end;
+        function export:f_3_TimeElapsed()
+            self = self._graph;
+            self[1].Pawn = self.Player;
+            self[1]._type.Start(self[1]);
+        end;
+        """;
+
     [Fact]
-    public void Collapses_repeated_occurrences_of_one_operation_into_a_single_unambiguous_source()
+    public void Reports_every_writer_that_reaches_the_consumer_on_its_own_branch()
     {
-        // A mission that runs the same sequence per story branch writes the same variable from several
-        // occurrences of the same node type. They aren't rival producers - they compute the same thing -
-        // so one edge states the provenance instead of N interchangeable wires per consumer.
-        var graph = Build("""
-            export = { };
-            function export:Init(cbox)
-                self[0] = cbox:CreateBox("Domino/System/GetLocalPlayer.lua");
-                self[1] = cbox:CreateBox("Domino/System/LookAtTarget.lua");
-                self[2] = cbox:CreateBox("Domino/System/GetLocalPlayer.lua");
-            end;
-            function export:BranchA()
-                self.Player = self[0].LocalPlayer;
-            end;
-            function export:BranchB()
-                self.Player = self[2].LocalPlayer;
-            end;
-            function export:Look()
-                self[1].Pawn = self.Player;
-            end;
-            """);
+        var graph = Build(Branches("self[3]._type.Start(self[3]);"));
+
+        Assert.Equal(["p:0", "p:2"], graph.DataEdges.Select(e => e.SourceNodeId).Order());
+        Assert.All(graph.DataEdges, e =>
+        {
+            Assert.False(e.Ambiguous);
+            Assert.Equal(2, e.SourceOccurrences);
+        });
+    }
+
+    [Fact]
+    public void A_later_writer_on_the_same_path_hides_an_earlier_one()
+    {
+        // Branch A now runs box 0 and then box 2, so box 2 overwrites what box 0 wrote.
+        var graph = Build(Branches("self[2]._type.In(self[2]);"));
 
         DataEdge edge = Assert.Single(graph.DataEdges);
-        Assert.False(edge.Ambiguous);
-        Assert.True(edge.RepeatedSource);
-        Assert.Equal(2, edge.SourceOccurrences);
-        Assert.Equal("LocalPlayer", edge.SourcePin);
+        Assert.Equal("p:2", edge.SourceNodeId);
+        Assert.Equal(1, edge.SourceOccurrences);
     }
 
     [Fact]
@@ -188,7 +217,7 @@ public class DataFlowResolverTests
             end;
             """));
 
-        GraphEdge control = Assert.Single(graph.Edges);
+        GraphEdge control = Assert.Single(graph.Edges, e => !e.FromEntry);
         Assert.Equal(EdgeTarget.Node, control.Target);
         Assert.Equal("Out", control.SourcePin);
         Assert.Equal("Start", control.TargetPin);

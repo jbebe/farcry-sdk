@@ -20,17 +20,13 @@ public enum DataEdgeKind
 /// handler, `self[18].Pawn = self.BuddyPawn;` in another - so <see cref="ViaVariable"/> names the field
 /// the value travelled through, and is null only for the rare direct form.
 ///
-/// <see cref="Ambiguous"/> marks an edge whose producer could not be pinned down to one box: several
-/// genuinely different boxes write the same variable, and nothing in the flattened script says which one
-/// ran. Every candidate gets its own edge rather than the resolver picking one and presenting a guess as
-/// fact.
+/// <see cref="Ambiguous"/> marks an edge whose producer could not be pinned down: several boxes write the
+/// same variable and no control path from any of them arrives here. Every candidate gets its own edge
+/// rather than the resolver presenting a guess as fact.
 ///
-/// <see cref="RepeatedSource"/> is the far more common near-miss, and deliberately not treated as
-/// ambiguity: the candidates are all the same operation repeated - four `GetLocalPlayer` occurrences
-/// feeding `self.Player`, one per branch of a mission that runs four story variants. Which occurrence
-/// ran depends on the path taken, but they compute the same thing from the same node type's same pin, so
-/// one edge from the nearest of them states the provenance correctly instead of drawing four
-/// interchangeable wires into every consumer.
+/// <see cref="SourceOccurrences"/> above 1 is not ambiguity: that many writers each reach the consumer on
+/// their own control path - four `GetLocalPlayer` boxes feeding `self.Player`, one per story variant - and
+/// which one supplied the value depends on the path taken.
 /// </summary>
 public sealed record DataEdge(
     string? SourceNodeId,
@@ -41,9 +37,6 @@ public sealed record DataEdge(
     DataEdgeKind Kind,
     bool Ambiguous)
 {
-    /// <summary>How many interchangeable occurrences of this same operation write the variable; 1 for an
-    /// ordinary edge.</summary>
+    /// <summary>How many writers reach the consumer through the same variable, this one included.</summary>
     public int SourceOccurrences { get; init; } = 1;
-
-    public bool RepeatedSource => SourceOccurrences > 1;
 }

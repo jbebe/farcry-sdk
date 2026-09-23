@@ -18,6 +18,15 @@ public sealed class DominoFixtures
     // Sets a bark bank from a literal mission tag.
     public const string ReapSewBriefing = "Domino/user/a1lm02_reapsew.a1lm02_briefingsubvpawnbrief.lua";
 
+    // Pooled boxes read in their own continuation, a pooled en_0, a MultipleAND fired by slot, two entry pins.
+    public const string HealthEven = "Domino/user/a1bu00_tutorial.a1bu00_healtheven.lua";
+
+    // A pooled box fired twice in one handler, en_ prologues with unwired outs, pooled boxes only the twin names.
+    public const string SafehouseTut = "Domino/user/a1bu00_tutorial.a1bu00_safehousetut.lua";
+
+    // ex_32 shared by two handlers, a Globals write, entry pins In and In_Story.
+    public const string PrisonMission = "Domino/user/a1bu01_prison.a1bu01_mission.lua";
+
     // A system node with every pin kind and a delayed control out.
     public const string ProximityTrigger = "Domino/system/proximitytrigger.lua";
 
@@ -27,5 +36,6 @@ public sealed class DominoFixtures
     [Fact]
     [Trait("Category", "RequiresFixture")]
     public void The_fixtures_were_actually_found() => Fixture.AssertPresent(
-        FastTravel, FastTravelTwin, TaxiRide, TaxiRideTwin, ReapSewBriefing, ProximityTrigger, BypassMissionStatus);
+        FastTravel, FastTravelTwin, TaxiRide, TaxiRideTwin, ReapSewBriefing, HealthEven, SafehouseTut, PrisonMission,
+        ProximityTrigger, BypassMissionStatus);
 }

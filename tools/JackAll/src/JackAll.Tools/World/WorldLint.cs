@@ -4,6 +4,7 @@ namespace JackAll.Tools.World;
 
 public enum LintSeverity
 {
+    Info,
     Warning,
     Error,
 }
