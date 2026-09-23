@@ -139,19 +139,22 @@ public static class SugiyamaLayout
             HashSet<string> outs = Bucket(outputs, node.Id);
             if (node.Signature is { } signature)
             {
-                foreach (var pin in signature.ControlIns) ins.Add(pin.Name);
+                foreach (var pin in signature.ControlIns) ins.UnionWith(node.PortsOf(pin.Name, pin.Dynamic));
                 foreach (var pin in signature.DataIns) ins.Add(pin.Name);
-                foreach (var pin in signature.ControlOuts) outs.Add(pin.Name);
+                foreach (var pin in signature.ControlOuts) outs.UnionWith(node.PortsOf(pin.Name, pin.Dynamic));
                 foreach (var pin in signature.DataOuts) outs.Add(pin.Name);
             }
         }
 
         foreach (GraphEdge edge in graph.Edges)
         {
-            Bucket(outputs, edge.SourceNodeId).Add(edge.SourcePin);
+            if (edge.SourceNodeId is { } source)
+            {
+                Bucket(outputs, source).Add(GraphNode.PortName(edge.SourcePin, edge.Index));
+            }
             if (edge.Target == EdgeTarget.Node && edge.TargetNodeId is not null && edge.TargetPin is not null)
             {
-                Bucket(inputs, edge.TargetNodeId).Add(edge.TargetPin);
+                Bucket(inputs, edge.TargetNodeId).Add(GraphNode.PortName(edge.TargetPin, edge.TargetIndex));
             }
         }
 
@@ -207,6 +210,7 @@ public static class SugiyamaLayout
         foreach (GraphEdge edge in graph.Edges)
         {
             if (edge.Target == EdgeTarget.Node
+                && edge.SourceNodeId is not null
                 && edge.TargetNodeId is not null
                 && index.TryGetValue(edge.SourceNodeId, out int from)
                 && index.TryGetValue(edge.TargetNodeId, out int to)

@@ -5,6 +5,7 @@ using JackAll.App.Audio;
 using JackAll.Tools.Domino.Graphs;
 using JackAll.Tools.Domino;
 using JackAll.Tools.Domino.Nodes;
+using JackAll.Tools.World;
 
 namespace JackAll.App.FileHandlers.Domino;
 
@@ -13,8 +14,9 @@ namespace JackAll.App.FileHandlers.Domino;
 /// full pin interface its node type declares - including pins this graph never wired, which the canvas
 /// shows as bare ports but doesn't explain.
 ///
-/// Below that, the graph-level facts the model carries but no node owns: the node types `Create()`
-/// registers and the engine resources it loads directly, bypassing the box system.
+/// Below that, the graph-level facts the model carries but no node owns: whether it matches its debug
+/// twin, what the lint found, the node types `Create()` registers and the engine resources it loads
+/// directly, bypassing the box system.
 /// </summary>
 public partial class DominoInspector : UserControl
 {
@@ -27,6 +29,24 @@ public partial class DominoInspector : UserControl
     {
         public bool HasNote => Note is not null;
     }
+
+    private sealed record ProblemRow(DominoFinding Finding)
+    {
+        public string Label => Finding.Severity switch
+        {
+            LintSeverity.Error => "error",
+            LintSeverity.Warning => "warning",
+            _ => "note",
+        };
+
+        public string Rule => Finding.Rule;
+        public string Message => Finding.Message;
+        public string? Where => Finding.Function;
+        public bool HasWhere => Where is not null;
+    }
+
+    /// <summary>Raised when a problem is clicked, to go to what it is about.</summary>
+    public event Action<DominoFinding>? ProblemActivated;
 
     private ReconstructedGraph? _graph;
     private DominoValueActions? _values;
@@ -41,7 +61,8 @@ public partial class DominoInspector : UserControl
 
     /// <summary>Fills in the graph-level sections, which don't change with selection.</summary>
     /// <param name="values">Resolves and acts on parameter values; null leaves them as plain text.</param>
-    public void ShowGraph(ReconstructedGraph? graph, DominoDebugTwin? twin, string statusText, DominoValueActions? values)
+    public void ShowGraph(ReconstructedGraph? graph, DominoDebugTwin? twin, string statusText, DominoValueActions? values,
+        IReadOnlyList<DominoFinding> findings)
     {
         _graph = graph;
         _values = values;
@@ -49,7 +70,16 @@ public partial class DominoInspector : UserControl
             ? statusText
             : $"{graph.Nodes.Count} boxes, {graph.Edges.Count} control edges, {graph.DataEdges.Count} data edges"
               + (twin?.GraphName is { } name ? $"\n{name}" : "")
-              + (twin?.DocumentPath is { } doc ? $"\n{doc}" : "");
+              + (twin?.DocumentPath is { } doc ? $"\n{doc}" : "")
+              + (graph.Twin is { } check
+                  ? check.IsClean
+                      ? $"\nEvery one of the {check.TracedFires} fires its debug twin traces matches this graph."
+                      : $"\nThe debug twin disagrees: {string.Join("; ", check.Problems.Take(3))}"
+                  : "");
+
+        var problems = ProblemRows(findings.OrderByDescending(f => f.Severity));
+        GraphProblemList.ItemsSource = problems;
+        GraphProblemsHeader.Visibility = problems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         if (graph is not null && graph.RegisteredDependencies.Count > 0)
         {
@@ -97,7 +127,11 @@ public partial class DominoInspector : UserControl
             node.Signature?.Doc is null ? Visibility.Collapsed : Visibility.Visible;
         NodeActions.Content = nodeActions;
         NodeTypePath.Text = node.NodeTypePath;
-        NodeInstance.Text = vm.Subtitle;
+        NodeInstance.Text = IdSourceNote(node) is { } how ? $"{vm.Subtitle}\n{how}" : vm.Subtitle;
+
+        var problems = ProblemRows(vm.Problems);
+        NodeProblemList.ItemsSource = problems;
+        NodeProblemsHeader.Visibility = problems.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
 
         SignatureNotice.Visibility = node.Signature is null || node.Signature.Origin == SignatureOrigin.Inferred
             ? Visibility.Visible
@@ -191,6 +225,28 @@ public partial class DominoInspector : UserControl
         rows.AddRange(signature.DataIns.Select(p => new PinRow("in ●", p.Name, DominoTypes.Describe(p.Type), signature.NoteFor(p.Name))));
         rows.AddRange(signature.DataOuts.Select(p => new PinRow("out ●", p.Name, DominoTypes.Describe(p.Type), signature.NoteFor(p.Name))));
         return rows;
+    }
+
+    /// <summary>How a pooled box's editor ID was recovered, since the release code never states it.</summary>
+    private static string? IdSourceNote(GraphNode node) => node.IdSource switch
+    {
+        BoxIdSource.Wire => "Pooled; the ID is the one its control-out handler is named after.",
+        BoxIdSource.Prologue => "Pooled; the ID is the one its en_ prologue is named after.",
+        BoxIdSource.Continuation => "Pooled; the ID is the one the continuation that fires it is named after.",
+        BoxIdSource.Twin => "Pooled; nothing in the release code names it, the ID is the debug twin's.",
+        BoxIdSource.None => "Pooled; nothing names it and there is no debug twin, so its editor ID is unknown.",
+        _ => null,
+    };
+
+    private static List<ProblemRow> ProblemRows(IEnumerable<DominoFinding> findings) =>
+        [.. findings.Select(f => new ProblemRow(f))];
+
+    private void Problem_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is FrameworkElement { DataContext: ProblemRow row })
+        {
+            ProblemActivated?.Invoke(row.Finding);
+        }
     }
 
     private static string ReadersText(DominoNodeViewModel boundary, DominoGraphViewModel? canvas)

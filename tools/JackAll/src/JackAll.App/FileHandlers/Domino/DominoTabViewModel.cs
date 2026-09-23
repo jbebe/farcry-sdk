@@ -1,6 +1,7 @@
 using JackAll.Tools.Domino;
 using JackAll.Tools.Domino.Graphs;
 using JackAll.Tools.Domino.Nodes;
+using JackAll.Tools.World;
 
 namespace JackAll.App.FileHandlers.Domino;
 
@@ -12,7 +13,8 @@ namespace JackAll.App.FileHandlers.Domino;
 ///
 /// Two things beyond the graph itself get pulled in through <see cref="Services"/>, both
 /// optional and both silently skipped when unavailable: the node type scripts each box refers to (for
-/// pin signatures) and the `*.debug.lua` twin (for the editor's original box and pin names).
+/// pin signatures and the lint) and the `*.debug.lua` twin (for the editor's original box and pin names,
+/// and to check the reconstruction against).
 /// </summary>
 public sealed class DominoTabViewModel
 {
@@ -22,6 +24,9 @@ public sealed class DominoTabViewModel
     public DominoGraphViewModel? Canvas { get; }
     public DominoDebugTwin? Twin { get; }
     public string? ParseError { get; }
+
+    /// <summary>What the lint found wrong with the graph.</summary>
+    public IReadOnlyList<DominoFinding> Findings { get; } = [];
 
     /// <summary>Null when the tab was opened without the rest of JackAll behind it.</summary>
     public DominoServices? Services { get; }
@@ -43,7 +48,8 @@ public sealed class DominoTabViewModel
             Twin = LoadTwin(gamePath, readByPath);
 
             Graph = GraphBuilder.Build(userGraph, catalog, Twin);
-            Canvas = new DominoGraphViewModel(Graph, SugiyamaLayout.Order(Graph), Twin);
+            Findings = DominoLint.Run(Graph);
+            Canvas = new DominoGraphViewModel(Graph, SugiyamaLayout.Order(Graph), Twin, Findings);
         }
         catch (Exception ex)
         {
@@ -88,12 +94,20 @@ public sealed class DominoTabViewModel
             }
 
             int boxes = Graph.Nodes.Count;
-            string twin = Twin is null ? "no debug twin" : $"{Twin.Connections.Count} traced connections";
+            string twin = Graph.Twin switch
+            {
+                null => "no debug twin",
+                { IsClean: true } t => $"twin: all {t.Matched} fires match",
+                { } t => $"twin: {t.Problems.Count} disagreements",
+            };
             string ambiguous = Canvas.AmbiguousDataWireCount > 0 ? $", {Canvas.AmbiguousDataWireCount} ambiguous" : "";
             string chips = Canvas.ChipCount > 0 ? $" (+{Canvas.ChipCount} via variable chips)" : "";
+            int errors = Findings.Count(f => f.Severity == LintSeverity.Error);
+            int warnings = Findings.Count(f => f.Severity == LintSeverity.Warning);
+            string problems = errors + warnings == 0 ? "no problems" : $"{errors} errors, {warnings} warnings";
 
             return $"{boxes} boxes · {Canvas.ControlWireCount} control wires · {Canvas.DataWireCount} data wires{ambiguous}{chips} · "
-                 + $"{Canvas.UnwiredPinCount} unwired, {Canvas.DeadEndPinCount} dead-end pins · {twin}";
+                 + $"{Canvas.UnwiredPinCount} unwired, {Canvas.DeadEndPinCount} dead-end pins · {twin} · {problems}";
         }
     }
 }

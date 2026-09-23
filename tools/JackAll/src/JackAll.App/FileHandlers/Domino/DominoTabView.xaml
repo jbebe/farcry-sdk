@@ -79,6 +79,9 @@
                             <TextBlock Text="{Binding Title}" FontSize="11"
                                        Foreground="{Binding Converter={StaticResource PortBrush}}"
                                        TextTrimming="CharacterEllipsis" MaxWidth="200" />
+                            <!-- Wired, but what it runs fires nothing: unlike an unwired pin, it does run. -->
+                            <TextBlock Text="⊣" FontSize="11" Margin="3,0,0,0" Foreground="#5A6472"
+                                       Visibility="{Binding EndsHere, Converter={StaticResource BoolToVisibility}}" />
                             <!-- A hub announces its reach, since its wires aren't drawn. -->
                             <Border Background="#F7EBC8" BorderBrush="#C79F45" BorderThickness="1"
                                     CornerRadius="7" Padding="5,0" Margin="4,0,0,0"
@@ -261,7 +264,11 @@
                             <Rectangle Width="14" Height="2" Fill="#2E7D32" VerticalAlignment="Center" />
                             <TextBlock Text="data (colored by type)" FontSize="{StaticResource FontSizeTiny}" Margin="4,0,10,0" />
                             <Rectangle Width="14" Height="2" Fill="#B08A3C" VerticalAlignment="Center" />
-                            <TextBlock Text="ambiguous producer" FontSize="{StaticResource FontSizeTiny}" Margin="4,0,0,0" />
+                            <TextBlock Text="ambiguous producer" FontSize="{StaticResource FontSizeTiny}" Margin="4,0,10,0" />
+                            <TextBlock Text="⊣" FontSize="{StaticResource FontSizeTiny}" Foreground="#5A6472" />
+                            <TextBlock Text="runs, fires nothing" FontSize="{StaticResource FontSizeTiny}" Margin="4,0,10,0" />
+                            <Border Width="10" Height="10" BorderBrush="#C62828" BorderThickness="1.5" />
+                            <TextBlock Text="has an error" FontSize="{StaticResource FontSizeTiny}" Margin="4,0,0,0" />
                         </StackPanel>
                     </StackPanel>
                 </Border>

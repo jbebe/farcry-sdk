@@ -1,18 +1,20 @@
 using System.Collections.ObjectModel;
 using System.Windows;
+using JackAll.Tools.Domino;
 using JackAll.Tools.Domino.Graphs;
 using JackAll.Tools.Domino.Nodes;
+using JackAll.Tools.World;
 
 namespace JackAll.App.FileHandlers.Domino;
 
 /// <summary>What a node on the canvas represents.</summary>
 public enum NodeRole
 {
-    /// <summary>A reconstructed box - one `self[N]`/`self.box_X` instance, or one pooled occurrence.</summary>
+    /// <summary>A reconstructed editor box, persistent or pooled.</summary>
     Box,
 
     /// <summary>Not a box: this graph's own boundary, drawn so its interface is visible. A data input it
-    /// receives from a parent graph, or a control-out pin it exposes.</summary>
+    /// receives from a parent graph, or a control pin it exposes.</summary>
     Boundary,
 }
 
@@ -60,6 +62,16 @@ public sealed class DominoNodeViewModel : Observable
             : new DominoNodeViewModel(variable, $"graph variable  ·  {kind} = {initValue}",
                 $"self.{variable} ({kind}): set to {initValue} when the graph starts (in Init), then read by the boxes wired to it.");
         vm.Output.Add(new DominoConnectorViewModel(variable, PortKind.Data, type) { Title = variable });
+        return vm;
+    }
+
+    /// <summary>A boundary node standing for one of the graph's own control-in pins - what a parent
+    /// graph, or the engine for a mission's top graph, fires to start the chain behind it.</summary>
+    public static DominoNodeViewModel GraphEntry(string pin)
+    {
+        var vm = new DominoNodeViewModel(pin, "graph entry pin",
+            $"{pin}: an input this graph exposes. A parent graph using this one as a box fires it; what is wired from here runs.");
+        vm.Output.Add(new DominoConnectorViewModel(pin, PortKind.Control) { Title = pin });
         return vm;
     }
 
@@ -130,4 +142,9 @@ public sealed class DominoNodeViewModel : Observable
     /// <summary>True when the node type's script couldn't be read, so there is no pin list - the node is
     /// drawn from whatever the graph itself referenced rather than from a signature.</summary>
     public bool SignatureMissing => Role == NodeRole.Box && Node?.Signature is null;
+
+    /// <summary>What the lint found wrong with this box.</summary>
+    public IReadOnlyList<DominoFinding> Problems { get; set; } = [];
+
+    public bool HasErrors => Problems.Any(p => p.Severity == LintSeverity.Error);
 }

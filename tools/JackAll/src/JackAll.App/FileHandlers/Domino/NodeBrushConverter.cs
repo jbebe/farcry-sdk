@@ -7,8 +7,9 @@ namespace JackAll.App.FileHandlers.Domino;
 /// <summary>
 /// Picks a node's fill or border by what kind of box it is, keeping the palette the previous canvas
 /// established: blue for a persistent instance, amber for a pooled occurrence, green for a sub-graph,
-/// grey for the graph's own boundary. A node whose type script couldn't be read gets a warning border,
-/// because "this box has no ports" should look like missing information rather than a box with no pins.
+/// grey for the graph's own boundary. A box the lint finds an error in gets a red border; one whose type
+/// script couldn't be read gets a warning border, because "this box has no ports" should look like
+/// missing information rather than a box with no pins.
 ///
 /// Pass "border" as the converter parameter for the outline, anything else for the fill.
 /// </summary>
@@ -23,6 +24,7 @@ public sealed class NodeBrushConverter : IValueConverter
     private static readonly SolidColorBrush BoundaryFill = Frozen(0xEF, 0xEF, 0xEF);
     private static readonly SolidColorBrush BoundaryBorder = Frozen(0xAA, 0xAA, 0xAA);
     private static readonly SolidColorBrush MissingBorder = Frozen(0xC0, 0x8A, 0x00);
+    private static readonly SolidColorBrush ErrorBorder = Frozen(0xC6, 0x28, 0x28);
 
     public object Convert(object? value, Type targetType, object? parameter, CultureInfo culture)
     {
@@ -32,6 +34,10 @@ public sealed class NodeBrushConverter : IValueConverter
             return border ? PersistentBorder : PersistentFill;
         }
 
+        if (border && node.HasErrors)
+        {
+            return ErrorBorder;
+        }
         if (border && node.SignatureMissing)
         {
             return MissingBorder;

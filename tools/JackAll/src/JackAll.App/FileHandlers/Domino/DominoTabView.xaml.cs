@@ -37,7 +37,8 @@ public partial class DominoTabView : UserControl
         SourceView.ShowPlainText(vm.SourceText);
         StatusText.Text = vm.StatusText;
         _values = vm.Services is { } services ? new DominoValueActions(services, Inspector.Play, SelectUses) : null;
-        Inspector.ShowGraph(vm.Graph, vm.Twin, vm.StatusText, _values);
+        Inspector.ShowGraph(vm.Graph, vm.Twin, vm.StatusText, _values, vm.Findings);
+        Inspector.ProblemActivated += GoToProblem;
         PreviewKeyDown += OnPreviewKeyDown;
         Editor.AddHandler(PreviewMouseRightButtonDownEvent, new MouseButtonEventHandler(Editor_RightButtonDown), true);
         Editor.AddHandler(MouseRightButtonUpEvent, new MouseButtonEventHandler(Editor_RightButtonUp), true);
@@ -232,7 +233,7 @@ public partial class DominoTabView : UserControl
     }
 
     /// <summary>Where the box is configured in the Lua: its parameter assignments that share a block
-    /// with the first one, or else the first mention of the box.</summary>
+    /// with the first one, or else the first statement that touches it.</summary>
     private (int Start, int Length)? LuaRangeOf(GraphNode node)
     {
         var statements = node.Params.Values
@@ -245,16 +246,29 @@ public partial class DominoTabView : UserControl
             var block = statements.Where(st => st.Parent == statements[0].Parent).ToList();
             return (block[0].SpanStart, block[^1].Span.End - block[0].SpanStart);
         }
+        return node.SourcePositions.Count > 0 ? LineAt(node.SourcePositions[0]) : null;
+    }
 
-        string? mention = node.Ref switch
+    /// <summary>The rest of the source line starting at <paramref name="start"/>.</summary>
+    private (int Start, int Length) LineAt(int start)
+    {
+        int end = _vm.SourceText.IndexOfAny(['\r', '\n'], start);
+        return (start, (end < 0 ? _vm.SourceText.Length : end) - start);
+    }
+
+    /// <summary>Goes to what a clicked problem is about: its box on the canvas, else its statement.</summary>
+    private void GoToProblem(DominoFinding finding)
+    {
+        DominoNodeViewModel? node = finding.NodeId is null ? null : _vm.Canvas?.Nodes.FirstOrDefault(n => n.Node?.Id == finding.NodeId);
+        if (node is not null)
         {
-            InstanceBoxRef instance => $"self[{instance.Slot}]",
-            NamedInstanceBoxRef named => $"self.{named.FieldName}",
-            PooledBoxRef pooled => pooled.Path,
-            _ => null,
-        };
-        int at = mention is null ? -1 : _vm.SourceText.IndexOf(mention, StringComparison.Ordinal);
-        return at < 0 ? null : (at, mention!.Length);
+            Reveal(node);
+        }
+        else if (finding.Position is { } position)
+        {
+            (int start, int length) = LineAt(position);
+            ShowInLua(start, length);
+        }
     }
 
     private void ShowInLua(int start, int length)

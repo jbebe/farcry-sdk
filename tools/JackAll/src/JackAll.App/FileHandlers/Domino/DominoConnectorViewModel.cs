@@ -64,6 +64,10 @@ public sealed class DominoConnectorViewModel : Observable
         set => Set(ref _isConnected, value);
     }
 
+    /// <summary>A control-out wired to a handler that fires nothing further - it runs, and the chain ends
+    /// there - as opposed to one left unwired in the editor.</summary>
+    public bool EndsHere { get; set; }
+
     /// <summary>
     /// Marks this consumer port as fed by a suppressed hub source, naming the graph variable the value
     /// arrives through so a chip can be shown in place of a canvas-spanning wire.
@@ -133,5 +137,7 @@ public sealed class DominoConnectorViewModel : Observable
           + (IsHub ? $"\nRead by {FanOut} boxes; wires are suppressed to keep the graph readable." : "")
         : Name
           + (Note is null ? "" : $"\n{Note}")
-          + (Delayed ? "\nDelayed: fires on a later frame, not immediately." : "");
+          + (Delayed ? "\nDelayed: fires on a later frame, not immediately." : "")
+          + (!Declared ? "\nNot declared by this box type - the graph uses it anyway." : "")
+          + (EndsHere ? "\nWired, but what it runs fires nothing further - the chain ends here." : "");
 }

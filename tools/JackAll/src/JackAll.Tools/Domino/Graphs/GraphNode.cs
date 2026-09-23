@@ -51,6 +51,15 @@ public sealed record GraphNode(
     /// <summary>How many slots each `Dynamic="True"` pin has, from `_DynamicAnchors`.</summary>
     public IReadOnlyDictionary<string, int> DynamicSlots { get; init; } = new Dictionary<string, int>();
 
+    /// <summary>The ports a pin is drawn as: one per slot for a dynamic pin, else the pin itself.</summary>
+    public IEnumerable<string> PortsOf(string pin, bool dynamic) =>
+        dynamic && DynamicSlots.TryGetValue(pin, out int count) && count > 0
+            ? Enumerable.Range(0, count).Select(i => PortName(pin, i))
+            : [pin];
+
+    /// <summary>`Condition[1]` for slot 1 of a dynamic pin, the bare pin otherwise.</summary>
+    public static string PortName(string pin, int? slot) => slot is { } i ? $"{pin}[{i}]" : pin;
+
     /// <summary>Where in the file each statement that configures, fires or reads this box starts.</summary>
     public IReadOnlyList<int> SourcePositions { get; init; } = [];
 

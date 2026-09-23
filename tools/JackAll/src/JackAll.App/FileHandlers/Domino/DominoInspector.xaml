@@ -7,6 +7,38 @@
         <Style x:Key="FieldValue" TargetType="TextBlock" BasedOn="{StaticResource MonoSmall}">
             <Setter Property="Margin" Value="0,0,0,4" />
         </Style>
+        <!-- One finding; clicking it goes to the box or the statement it is about. -->
+        <DataTemplate x:Key="ProblemRow">
+            <Button Click="Problem_Click" Cursor="Hand" Padding="0" BorderThickness="0" Background="Transparent"
+                    HorizontalContentAlignment="Left" Margin="0,0,0,4" ToolTip="{Binding Rule}">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="Auto" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{Binding Label}" FontWeight="SemiBold" FontSize="{StaticResource FontSizeSecondary}" Margin="0,0,6,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{DynamicResource TextSecondaryBrush}" />
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Label}" Value="error">
+                                        <Setter Property="Foreground" Value="{DynamicResource DangerBrush}" />
+                                    </DataTrigger>
+                                    <DataTrigger Binding="{Binding Label}" Value="warning">
+                                        <Setter Property="Foreground" Value="{DynamicResource WarningTextBrush}" />
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding Message}" FontSize="{StaticResource FontSizeSecondary}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Where}" Style="{StaticResource Caption}"
+                                   Visibility="{Binding HasWhere, Converter={StaticResource BoolToVisibility}}" />
+                    </StackPanel>
+                </Grid>
+            </Button>
+        </DataTemplate>
         <!-- One button per action a value or box offers; the click runs the bound DominoAction. -->
         <DataTemplate x:Key="ActionButtons">
             <ItemsControl ItemsSource="{Binding}">
@@ -53,6 +85,9 @@
                 <TextBlock x:Name="NodeInstance" Style="{StaticResource FieldValue}" Foreground="{DynamicResource TextSecondaryBrush}" />
                 <TextBlock x:Name="SignatureNotice" Style="{StaticResource FieldValue}" Foreground="{DynamicResource WarningTextBrush}"
                            Visibility="Collapsed" />
+
+                <TextBlock x:Name="NodeProblemsHeader" Text="PROBLEMS" Style="{StaticResource SectionHeader}" Visibility="Collapsed" />
+                <ItemsControl x:Name="NodeProblemList" ItemTemplate="{StaticResource ProblemRow}" />
 
                 <TextBlock x:Name="ParamsHeader" Text="PARAMETERS" Style="{StaticResource SectionHeader}" />
                 <ItemsControl x:Name="ParamList">
@@ -109,6 +144,9 @@
             <StackPanel x:Name="GraphSection">
                 <TextBlock Text="GRAPH" Style="{StaticResource SectionHeader}" />
                 <TextBlock x:Name="GraphSummary" Style="{StaticResource FieldValue}" Foreground="{DynamicResource TextSecondaryBrush}" />
+
+                <TextBlock x:Name="GraphProblemsHeader" Text="PROBLEMS" Style="{StaticResource SectionHeader}" Visibility="Collapsed" />
+                <ItemsControl x:Name="GraphProblemList" ItemTemplate="{StaticResource ProblemRow}" />
 
                 <TextBlock x:Name="DepsHeader" Text="REGISTERED NODE TYPES" Style="{StaticResource SectionHeader}"
                            Visibility="Collapsed" />

@@ -16,13 +16,14 @@ namespace JackAll.App.FileHandlers.Domino;
 /// or a sub-graph pin inference missed - the port is created on demand and flagged undeclared, so the
 /// wire still lands somewhere visible instead of silently disappearing.
 ///
-/// The graph's own boundary gets nodes too: one per graph variable boxes read but no box writes, one
-/// per control-out pin it exposes. Without them a sub-graph's interface is invisible, and nodify has no
-/// second anchor to draw those connections against.
+/// The graph's own boundary gets nodes too: one per control-in pin it exposes (where each chain starts),
+/// one per graph variable boxes read but no box writes, one per control-out pin it exposes. Without them
+/// a graph's interface is invisible, and nodify has no second anchor to draw those connections against.
 /// </summary>
 public sealed class DominoGraphViewModel : Observable
 {
     private readonly Dictionary<string, DominoNodeViewModel> _byNodeId = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DominoNodeViewModel> _graphEntries = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DominoNodeViewModel> _graphInputs = new(StringComparer.Ordinal);
     private readonly Dictionary<string, DominoNodeViewModel> _graphExits = new(StringComparer.Ordinal);
     private readonly Dictionary<string, List<string>> _neighbours = new(StringComparer.Ordinal);
@@ -70,14 +71,16 @@ public sealed class DominoGraphViewModel : Observable
     public int DeadEndPinCount { get; private set; }
     public int AmbiguousDataWireCount { get; private set; }
 
-    public DominoGraphViewModel(ReconstructedGraph graph, LayeredLayout layout, DominoDebugTwin? twin)
+    /// <param name="findings">What the lint found, shown on the boxes it is about.</param>
+    public DominoGraphViewModel(ReconstructedGraph graph, LayeredLayout layout, DominoDebugTwin? twin, IReadOnlyList<DominoFinding> findings)
     {
         _layout = layout;
         IReadOnlyDictionary<(string Box, string Pin), string> labels = BuildPinLabels(twin);
+        var problems = findings.Where(f => f.NodeId is not null).ToLookup(f => f.NodeId!, StringComparer.Ordinal);
 
         foreach (PositionedNode positioned in SugiyamaLayout.Place(layout, n => layout.Estimated[n.Id]))
         {
-            var vm = new DominoNodeViewModel(positioned.Node, positioned);
+            var vm = new DominoNodeViewModel(positioned.Node, positioned) { Problems = [.. problems[positioned.Node.Id]] };
             AddDeclaredPorts(vm, positioned.Node, labels);
             _byNodeId[positioned.Node.Id] = vm;
             Nodes.Add(vm);
@@ -112,8 +115,8 @@ public sealed class DominoGraphViewModel : Observable
         return true;
     }
 
-    /// <summary>Stacks graph inputs in a column left of the boxes and graph outputs right of them, both
-    /// centred on the boxes' average height.</summary>
+    /// <summary>Stacks entry pins and graph inputs in a column left of the boxes and graph outputs right of
+    /// them, both centred on the boxes' average height.</summary>
     private void PlaceBoundaries(Func<DominoNodeViewModel, Size> sizeOf)
     {
         var boxes = _byNodeId.Values.ToList();
@@ -121,7 +124,7 @@ public sealed class DominoGraphViewModel : Observable
         double maxX = boxes.Count > 0 ? boxes.Max(n => n.Location.X + sizeOf(n).Width) : 0;
         double midY = boxes.Count > 0 ? boxes.Average(n => n.Location.Y) : 0;
 
-        var inputs = _graphInputs.Values.ToList();
+        List<DominoNodeViewModel> inputs = [.. _graphEntries.Values, .. _graphInputs.Values];
         double inputX = minX - SugiyamaLayout.ColumnGap - (inputs.Count > 0 ? inputs.Max(n => sizeOf(n).Width) : 0);
         Stack(inputs, inputX);
         Stack([.. _graphExits.Values], maxX + SugiyamaLayout.ColumnGap);
@@ -152,11 +155,14 @@ public sealed class DominoGraphViewModel : Observable
 
         foreach (ControlInPin pin in signature.ControlIns)
         {
-            vm.Input.Add(new DominoConnectorViewModel(pin.Name, PortKind.Control)
+            foreach (string port in node.PortsOf(pin.Name, pin.Dynamic))
             {
-                Title = Label(labels, node, pin.Name),
-                Note = signature.NoteFor(pin.Name),
-            });
+                vm.Input.Add(new DominoConnectorViewModel(port, PortKind.Control)
+                {
+                    Title = Label(labels, node, pin.Name) + port[pin.Name.Length..],
+                    Note = signature.NoteFor(pin.Name),
+                });
+            }
         }
         foreach (DataInPin pin in signature.DataIns)
         {
@@ -168,11 +174,14 @@ public sealed class DominoGraphViewModel : Observable
         }
         foreach (ControlOutPin pin in signature.ControlOuts)
         {
-            vm.Output.Add(new DominoConnectorViewModel(pin.Name, PortKind.Control, type: null, pin.Delayed)
+            foreach (string port in node.PortsOf(pin.Name, pin.Dynamic))
             {
-                Title = Label(labels, node, pin.Name),
-                Note = signature.NoteFor(pin.Name),
-            });
+                vm.Output.Add(new DominoConnectorViewModel(port, PortKind.Control, type: null, pin.Delayed)
+                {
+                    Title = Label(labels, node, pin.Name) + port[pin.Name.Length..],
+                    Note = signature.NoteFor(pin.Name),
+                });
+            }
         }
         foreach (DataOutPin pin in signature.DataOuts)
         {
@@ -211,51 +220,53 @@ public sealed class DominoGraphViewModel : Observable
     {
         foreach (GraphEdge edge in graph.Edges)
         {
-            if (!_byNodeId.TryGetValue(edge.SourceNodeId, out DominoNodeViewModel? source))
+            DominoNodeViewModel? source = edge.SourceNodeId is null
+                ? BoundaryEntry(edge.SourcePin)
+                : _byNodeId.GetValueOrDefault(edge.SourceNodeId);
+            if (source is null)
             {
                 continue;
             }
+            // Made even for an unwired pin, so the pin is still drawn.
+            DominoConnectorViewModel sourcePort = edge.FromEntry
+                ? source.Output[0]
+                : Port(source.Output, GraphNode.PortName(edge.SourcePin, edge.Index), PortKind.Control);
 
             switch (edge.Target)
             {
                 case EdgeTarget.Node when edge.TargetNodeId is not null && edge.TargetPin is not null
                                        && _byNodeId.TryGetValue(edge.TargetNodeId, out DominoNodeViewModel? target):
-                    Connections.Add(new DominoConnectionViewModel
-                    {
-                        Source = Port(source.Output, edge.SourcePin, PortKind.Control),
-                        Target = Port(target.Input, edge.TargetPin, PortKind.Control),
-                        Kind = PortKind.Control,
-                        SourceNode = source,
-                        TargetNode = target,
-                    });
-                    ControlWireCount++;
+                    AddControlWire(sourcePort, source, Port(target.Input, GraphNode.PortName(edge.TargetPin, edge.TargetIndex), PortKind.Control), target);
                     break;
 
                 case EdgeTarget.GraphExit when edge.GraphExitPin is not null:
                     DominoNodeViewModel exit = BoundaryExit(edge.GraphExitPin);
-                    Connections.Add(new DominoConnectionViewModel
-                    {
-                        Source = Port(source.Output, edge.SourcePin, PortKind.Control),
-                        Target = exit.Input[0],
-                        Kind = PortKind.Control,
-                        SourceNode = source,
-                        TargetNode = exit,
-                    });
-                    ControlWireCount++;
+                    AddControlWire(sourcePort, source, exit.Input[0], exit);
                     break;
 
                 case EdgeTarget.Unwired:
-                    // The pin exists but was never connected in the editor. Make sure it's still drawn.
-                    Port(source.Output, edge.SourcePin, PortKind.Control);
                     UnwiredPinCount++;
                     break;
 
                 case EdgeTarget.DeadEnd:
-                    Port(source.Output, edge.SourcePin, PortKind.Control);
+                    sourcePort.EndsHere = true;
                     DeadEndPinCount++;
                     break;
             }
         }
+    }
+
+    private void AddControlWire(DominoConnectorViewModel sourcePort, DominoNodeViewModel source, DominoConnectorViewModel targetPort, DominoNodeViewModel target)
+    {
+        Connections.Add(new DominoConnectionViewModel
+        {
+            Source = sourcePort,
+            Target = targetPort,
+            Kind = PortKind.Control,
+            SourceNode = source,
+            TargetNode = target,
+        });
+        ControlWireCount++;
     }
 
     private void AddDataWires(ReconstructedGraph graph)
@@ -366,16 +377,17 @@ public sealed class DominoGraphViewModel : Observable
         return vm;
     }
 
-    private DominoNodeViewModel BoundaryExit(string pin)
-    {
-        if (_graphExits.TryGetValue(pin, out DominoNodeViewModel? existing))
-        {
-            return existing;
-        }
+    private DominoNodeViewModel BoundaryEntry(string pin) => Boundary(_graphEntries, pin, DominoNodeViewModel.GraphEntry);
 
-        var vm = DominoNodeViewModel.GraphExit(pin);
-        _graphExits[pin] = vm;
-        Nodes.Add(vm);
+    private DominoNodeViewModel BoundaryExit(string pin) => Boundary(_graphExits, pin, DominoNodeViewModel.GraphExit);
+
+    private DominoNodeViewModel Boundary(Dictionary<string, DominoNodeViewModel> column, string pin, Func<string, DominoNodeViewModel> create)
+    {
+        if (!column.TryGetValue(pin, out DominoNodeViewModel? vm))
+        {
+            column[pin] = vm = create(pin);
+            Nodes.Add(vm);
+        }
         return vm;
     }
 
