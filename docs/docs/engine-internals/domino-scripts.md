@@ -147,9 +147,58 @@ shipped build. The generated code is rigidly mechanical, which is what makes rec
 | `self[M]._type.Pin(self[M])` | Firing box `M`'s named control-in. |
 | `self[N].Pin = DummyFunction` | An out-pin left unconnected in the editor. |
 | `export:en_N()` | A generated "enter node N" prologue that pushes every data-in onto box `N` immediately before it fires. 2,725 of these. |
+| `export:ex_N()` | An "exit node N" epilogue that copies box `N`'s data-outs into graph variables, called from box `N`'s handlers. |
+| `self[M]._type.Condition(self[M], k)` | Firing slot `k` of a `Dynamic="True"` control-in. 569 of these, all on MultipleAND. |
+| `self[M]._DynamicAnchors = { Condition = 2, }` | How many slots each dynamic pin has - `Condition`, `Out` and `Output`. |
+| `self._sld_<Pin>_<N>` | A generated temporary holding box `N`'s data-out for a direct box-to-box data link. |
 
 Graph sizes: median 10 boxes, p90 48, maximum 232
 (`a1bu00_tutorial.a1bu00_storymission.lua`).
+
+### Every generated name carries an editor box ID
+
+BlackBox names each function after the box it serves: `f_N_Pin` runs when box `N`'s control-out `Pin`
+fires, `en_N` configures box `N`, `ex_N` reads box `N`'s outputs. This holds for pooled boxes too, and it
+is the only place a pooled box's identity survives in the release file:
+
+- A pooled slot wired as `Boxes[...].Out = self._type.f_1_Out` is editor box 1, whatever handler it is
+  configured in. Across the corpus, all 8,047 persistent wires `self[M].Pin = self._type.f_N_...` have
+  `N = M`.
+- Every one of the 4,536 `self._type.en_N(self);` calls followed by a persistent fire fires `self[N]`.
+- A handler reads the pooled slot it continues before it configures anything: `f_2_Out` reading
+  `Boxes[PathID("…SetEntity.lua")].Target` is reading box 2's output, even when the same handler then
+  configures the slot again as box 1.
+- BlackBox writes a pooled box's configuration inline only when one function fires it; a box fired from
+  several functions gets an `en_N` prologue instead. So an inline configuration with no wire naming it is
+  still exactly one editor box.
+
+Retail uses 16,768 boxes. JackAll recovers the ID of 16,738 of them from the release code alone, or
+from the debug twin for the 871 pooled boxes nothing else names. The 30 left over sit in the 21 graphs
+that ship without a twin.
+
+### A graph's own pins
+
+A user graph is itself a box with pins:
+
+- **Control-ins** are its exported functions that are neither lifecycle (`Create`, `Init`, `ShutDown`,
+  `LuaDependencies`) nor generated (`f_`, `en_`, `ex_`), for example `In`, `Start`, `Cancel`, `Enable` and
+  `Disable`. A parent graph fires them, or the engine does for a mission's top graph.
+- **Control-outs** are declared as `self.Pin = DummyFunction;` in `Init`, left for a parent to overwrite,
+  with an empty `function export:Pin() end` stub under `-- Empty out anchor definitions`. The graph fires
+  one with `self:Pin();`.
+
+211 of the 427 graphs have more than one control-in. Each starts its own chain, which is why one file
+often reads as several unconnected graphs.
+
+### Pooled slots are shared, and keep their values
+
+`Boxes[PathID(path)]` is one runtime instance per node type, shared by every box of that type. A box
+that leaves a data-in unset runs with whatever value the slot last held, set by any graph. BlackBox
+normally writes `nil` for every data-in left empty, but not always:
+
+- 147 pooled `ObjectiveState` boxes never set `ShowPopup`, which the node declares, so each runs with
+  whatever `ShowPopup` the last `ObjectiveState` left on the slot.
+- 38 `SetMusicState` boxes set `MissionId`, which the node doesn't declare (it takes `WorldId`).
 
 ### Data flows through graph variables, not box to box
 
@@ -167,16 +216,21 @@ end;
 
 There are ~1,700 such producer reads and ~5,300 consumer writes. Neither statement is an edge on its
 own, so any tool that wants to show data flow has to join them through the variable name. Two wrinkles
-matter: a variable no box writes is the graph's own **data input** supplied by a parent graph, and a
-variable written by several handlers needs control-flow reachability to attribute — with the important
-special case that those writers are usually several occurrences of *the same operation* repeated per
-story branch (four `GetLocalPlayer` boxes all feeding `self.Player`), which is one logical source
-rather than four rival ones.
+matter:
+
+- A variable no box writes is the graph's own **data input**, supplied by a parent graph.
+- A variable written by several handlers needs reaching definitions to attribute. Walking control flow
+  backwards from the consumer, every writer met before another writer of the same variable is a source.
+  Writers on different story branches are therefore all sources, each for its own branch, as with four
+  `GetLocalPlayer` boxes all feeding `self.Player`. Writers on parallel event chains, which no control
+  path connects to the reader, stay genuinely undetermined: the value is whichever ran last.
 
 ### The `.debug.lua` twins are a topology oracle
 
 Every graph ships twice, `name.lua` and `name.debug.lua`. The twin is the same graph compiled with
-instrumentation that restates every control connection verbatim — **16,005 of them across the corpus**:
+instrumentation that restates every control connection verbatim. Each `TraceConnection` sits directly
+before the fire it describes, so the twin traces every fire, **21,625 of them across the corpus**, entry
+pins and pooled boxes included. Graph exits (`self:Pin();`) are never traced:
 
 ```lua
 CDominoManager_GetInstance():TraceConnection(
@@ -200,8 +254,35 @@ That recovers four things the release file discards:
 
 Twins cover control connections only; data links never appear in them.
 
-**As a check on reconstruction this is decisive**: across all 406 extracted graphs that have a twin,
-the control edges inferred from the release file match the twin's connection table exactly, with no
-disagreements. `tools/JackAll` runs that comparison as a test
-(`DebugTwinTests.Every_reconstruction_agrees_with_its_debug_twin_on_box_to_box_control_flow`); point it
-at a full extraction with `JACKALL_DOMINO_CORPUS`.
+A twin's functions come in the same order as the release file's. With the traces dropped, each twin
+function says exactly what its release counterpart says once the twin's names are rewritten:
+`self.box_X_N` becomes `self[N]`, `f_box_X_N_Pin` becomes `f_N_Pin`, `OnEnter_box_X_N`/`OnExit_box_X_N`
+become `en_N`/`ex_N`, `_sld_Pin_box_X_N` becomes `_sld_Pin_N`, and sub-graphs named `X.debug.lua` become
+`X.lua`. That makes trace *k* of a function the description of the function's *k*-th fire.
+
+**As a check on reconstruction this is decisive**: in all 406 graphs that have a twin, every one of the
+21,625 traced fires matches the reconstructed edge that fires it, source and target alike. That
+includes pooled boxes and the graph's own control-ins. `jackall-cli domino check <extracted>\domino\user`
+repeats the comparison over a full extraction, and `DebugTwinTests` runs it on named fixtures.
+
+### Checking a graph before it ships
+
+`jackall-cli domino check` and `jackall-cli mod lint` check user graphs with the rules below. For a graph
+a mod layer replaces, `mod lint` reports only what the edit introduced. Counts are over the 427 retail
+graphs. A rule is an error when what it finds breaks at runtime; every error-level hit in retail is a
+real bug.
+
+| Rule | Severity | Retail | What it finds |
+|---|---|---|---|
+| `undeclared-in` | error | 3 | A fire on a control-in the box type doesn't declare, which calls nil. All 3 are in the QA gym `gym_testsubvertbriefing.briefingsubv`, which fires `GameElementObjective.SetAsOpen`/`SetAsSucceeded`. |
+| `dynamic-index-range` | error | 0 | A dynamic slot beyond what `_DynamicAnchors` gives the pin. |
+| `unregistered-box` | error | 0 | A box type `Create` doesn't register. |
+| `stateful-pooled` | error | 0 | A box type that isn't `<Stateless/>` on a shared pooled slot. |
+| `identity-conflict`, `bare-fire`, `unbound-read`, `wire-conflict` | error | 0 | Pooled box use the naming rule above can't account for. |
+| `undefined-handler`, `undefined-box` | error | 0 | A wire or call to a function that doesn't exist, or a box that is never created. |
+| `stale-slot` | warning | 147 | A pooled box that leaves a declared data-in unset. |
+| `undeclared-param` | warning | 38 | A parameter the box type doesn't declare. |
+| `unused-slot` | warning | 2 | A MultipleAND slot nothing fires, so it can never complete. |
+| `undeclared-out`, `literal-type` | warning | 0 | A wire on an undeclared control-out, or a literal of the wrong kind for its data-in. |
+| `stale-twin` | warning | 0 | A debug twin that no longer matches its release file. |
+| `unfired-out-anchor` | info | 160 | A declared control-out the graph never fires. |
