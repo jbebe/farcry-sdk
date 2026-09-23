@@ -50,6 +50,14 @@ public enum FcbMemberType
 /// of the values an enum index member can take, and the engine's C++ value type.</summary>
 public sealed record FcbMember(string? Name, FcbMemberType Type, IReadOnlyList<string>? Labels = null, string? Cpp = null)
 {
+    /// <summary>Prefixes the name of the plain text the original editor kept beside a hashed member,
+    /// as in <c>text_fileName</c>. The engine never reads it.</summary>
+    public const string TextPrefix = "text_";
+
+    /// <summary>The member <paramref name="name"/> holds the plain text of, or null.</summary>
+    public static string? TextOf(string? name)
+        => name?.StartsWith(TextPrefix, StringComparison.Ordinal) == true ? name[TextPrefix.Length..] : null;
+
     /// <summary>Whether the value is an archive path's hash (<c>CPathID</c>).</summary>
     public bool IsPath => Cpp?.StartsWith("CPathID", StringComparison.Ordinal) == true;
 
@@ -138,7 +146,8 @@ public sealed class FcbClass : IFcbClassScope
         }
     }
 
-    /// <summary>Finds a member by hash, walking the superclass chain (members aren't nested, unlike classes).</summary>
+    /// <summary>Finds a member by hash, walking the superclass chain (members aren't nested, unlike
+    /// classes); an undeclared hash may still be a named member's text.</summary>
     public FcbMember? FindMember(uint hash)
     {
         for (FcbClass? current = this; current is not null; current = current.Super)
@@ -146,6 +155,49 @@ public sealed class FcbClass : IFcbClassScope
             if (current.Members.TryGetValue(hash, out FcbMember? member))
             {
                 return member;
+            }
+        }
+        return TextName(hash) is { } twin ? new FcbMember(twin, FcbMemberType.String) : null;
+    }
+
+    /// <summary>Names each hash-only member that is the text twin of a member in this class's chain.</summary>
+    internal void NameTextMembers()
+    {
+        foreach ((uint hash, FcbMember member) in Members.Where(m => m.Value.Name is null).ToList())
+        {
+            if (TextName(hash) is { } twin)
+            {
+                Members[hash] = member with { Name = twin };
+            }
+        }
+    }
+
+    private Dictionary<uint, string>? _ownTextNames;
+
+    /// <summary>The <see cref="FcbMember.TextPrefix"/> twin of each member this class names, by hash.</summary>
+    private Dictionary<uint, string> OwnTextNames => _ownTextNames ??= BuildOwnTextNames();
+
+    private Dictionary<uint, string> BuildOwnTextNames()
+    {
+        var twins = new Dictionary<uint, string>();
+        foreach (FcbMember member in Members.Values)
+        {
+            if (member.Name is { } name)
+            {
+                string twin = FcbMember.TextPrefix + name;
+                twins.TryAdd(FcbClassDefinitions.Crc32Ascii(twin), twin);
+            }
+        }
+        return twins;
+    }
+
+    private string? TextName(uint hash)
+    {
+        for (FcbClass? current = this; current is not null; current = current.Super)
+        {
+            if (current.OwnTextNames.TryGetValue(hash, out string? twin))
+            {
+                return twin;
             }
         }
         return null;
@@ -204,6 +256,11 @@ public sealed class FcbClassDefinitions : IFcbClassScope
         foreach (SchemaClass schemaClass in schemaClasses)
         {
             AddSchemaMembers(defs._topLevel[Crc32Ascii(schemaClass.Name)], schemaClass.Members);
+        }
+        // Last, so a twin of a member the schema added is named too.
+        foreach (FcbClass cls in defs.AllClasses())
+        {
+            cls.NameTextMembers();
         }
         return defs;
     }

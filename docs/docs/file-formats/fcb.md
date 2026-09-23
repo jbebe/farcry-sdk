@@ -97,6 +97,31 @@ consistent with it counting something narrower than "every named field," though 
 proven beyond the pool-usage argument. This has no bearing on correctness — nothing in `FcbDocument.cs`
 depends on this field's precise meaning; it's written on output purely for structural completeness.
 
+## Member names and their `text_` twins
+
+A value's `nameHash` is the CRC32 of the member's name as raw, case-sensitive ASCII: no lowercasing,
+no path normalization.
+
+Beside a member that stores a hash, the original editor also wrote the plain text it hashed, under the
+same name prefixed with `text_`:
+
+| Member | Type | Example value |
+|---|---|---|
+| `text_fileName` | string | `graphics\vehicles\land\quad\quad_single.xml` |
+| `fileName` | hash | `9E468864`, the path hash of the line above |
+| `text_matimpSmallCollisionImpact` | string | `Vehicle.sparks_col_small` |
+| `matimpSmallCollisionImpact` | hash | `B09DB7A8`, the CRC32 of the line above |
+
+The engine reads only the hash. Neither `Dunia.dll` nor the Linux server contains a single `text_`
+string, so no code can look the twin up, and the engine's property registry never lists one. Editing a
+`text_` value changes nothing in game; edit its hashed member instead.
+
+This is established from the data, not traced in the engine. In `world1`'s `entitylibrary_full.fcb`,
+194 of the 195 distinct unnamed string members hold text whose CRC32 is the value of a sibling member,
+and the `text_` rule names every one of them. Applied to the 225 member hashes `binary_classes.xml`
+left unnamed, it names 218 with no ambiguous candidate. The one string it does not name, `9816A342` on
+`Malfunction`, holds values like `0x00456C42`.
+
 ## Unknowns
 
 - The exact original semantics of `totalValueCount` — would need either a real sample with a nonzero

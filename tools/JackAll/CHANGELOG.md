@@ -62,6 +62,10 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **Add and remove components** in the Map tab's inspector. A component shows every property it
   registers; unset ones are faint and keep the engine's default until edited. Collapsing a
   component folds away everything inside it, its groups and slots included.
+- **Name the editor's text fields** — almost every `hash XXXXXXXX` string row in an entity is the
+  plain text the original editor kept beside a hashed field. It now reads `text_fileName`,
+  `text_matimpSmallCollisionImpact` and so on, and is greyed out: the game never reads it, so edit
+  the field it names instead. `fcb decode` writes the same names.
 
 ### Changed
 - **The Map tab resolves archetypes against `entitylibrary.fcb`**, the library single-player reads

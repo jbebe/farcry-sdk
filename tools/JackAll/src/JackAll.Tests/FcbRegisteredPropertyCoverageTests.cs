@@ -10,8 +10,8 @@ namespace JackAll.Tests;
 /// </summary>
 /// <remarks>
 /// The vocabulary genuinely matches - most member hashes in real entity libraries are names the
-/// registry knows - but the XML already names almost all of those, and the values it cannot name are
-/// ones the registry does not know either: they are keys derived from content, not property names.
+/// registry knows - but the XML already names almost all of those, and the <c>text_</c> twins it
+/// derives cover the rest; the registry never held those, since the engine does not read them.
 /// The registry reaches JackAll through <see cref="ComponentSchema"/> for its types, enum labels and
 /// unset properties instead. These tests pin the measurement so any improvement upstream shows up here.
 /// </remarks>
@@ -51,13 +51,13 @@ public class FcbRegisteredPropertyCoverageTests
     }
 
     /// <summary>
-    /// Of the values <c>binary_classes.xml</c> leaves unnamed, the registry names a negligible share.
-    /// The scoped count is zero because the registry's declaring class is not the .fcb node's own
-    /// type - only its member names transfer, not its class scoping.
+    /// The few values left unnamed are all names the registry knows, but never under the node's own
+    /// class: the registry's declaring class is not the .fcb node's type, so only its member names
+    /// transfer, not its class scoping.
     /// </summary>
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_registry_names_almost_none_of_what_binary_classes_leaves_unnamed()
+    public void The_few_values_left_unnamed_are_registry_names_from_another_class()
     {
         if (!InputsPresent) return;
 
@@ -94,7 +94,7 @@ public class FcbRegisteredPropertyCoverageTests
         }
 
         Assert.Equal(596574, values);
-        Assert.Equal(61355, unnamed);
+        Assert.Equal(10, unnamed);
         Assert.Equal(0, scopedHits);
         Assert.Equal(10, flatHits);
     }

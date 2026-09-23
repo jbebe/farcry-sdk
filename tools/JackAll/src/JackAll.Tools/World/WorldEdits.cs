@@ -135,7 +135,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         WorldSectorDocument sector = SectorAt(centre) ?? placed[0].HomeSector;
         (ulong id, string name) = NewIdentity("Prefab");
         FcbObject node = NewEntityNode(id, name, centre);
-        node.Values[WorldHashes.EntityClassName] = FcbEntityFields.StringBytes(EntityGroups.PrefabClass);
+        node.Values[WorldHashes.TextHidEntityClass] = FcbEntityFields.StringBytes(EntityGroups.PrefabClass);
         node.Values[WorldHashes.HidEntityClass] = BitConverter.GetBytes(FcbClassDefinitions.Crc32Ascii(EntityGroups.PrefabClass));
         node.Values[WorldHashes.HidResourceCount] = BitConverter.GetBytes(0u);
         node.Values[WorldHashes.HidConstEntity] = [0];

@@ -39,8 +39,8 @@ public static class WorldHashes
     public static readonly uint HidAngles = FcbClassDefinitions.Crc32Ascii("hidAngles");
     public static readonly uint HidEntityClass = FcbClassDefinitions.Crc32Ascii("hidEntityClass");
 
-    /// <summary>The class name a class-bound entity such as a prefab carries beside <see cref="HidEntityClass"/>.</summary>
-    public const uint EntityClassName = 0xD2B3429E;
+    /// <summary>The class name <see cref="HidEntityClass"/> hashes, which a class-bound entity such as a prefab carries.</summary>
+    public static readonly uint TextHidEntityClass = FcbClassDefinitions.Crc32Ascii("text_hidEntityClass");
     public static readonly uint HidResourceCount = FcbClassDefinitions.Crc32Ascii("hidResourceCount");
     public static readonly uint HidConstEntity = FcbClassDefinitions.Crc32Ascii("hidConstEntity");
 

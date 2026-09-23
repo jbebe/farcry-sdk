@@ -125,6 +125,13 @@ public sealed class PropertyRow : INotifyPropertyChanged
 
     public string DisplayName => Name ?? $"hash {NameHash:X8}";
 
+    /// <summary>Why this row is greyed, when it is editor-only text the engine never reads.</summary>
+    public string? EditorTextTip => FcbMember.TextOf(Name) is { } read
+        ? $"Editor-only text: the game never reads it. Edit {read} instead."
+        : null;
+
+    public bool IsEditorText => FcbMember.TextOf(Name) is not null;
+
     public ScalarField? Scalar { get; private set; }
     public BoolField? Bool { get; private set; }
     public VectorFieldGroup? Vector { get; private set; }

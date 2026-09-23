@@ -206,9 +206,9 @@
         </StackPanel>
     </DataTemplate>
 
-    <!-- One field of an edited node. Inherited is greyed and unset fainter still; an override is marked
-         on the left and can be reverted; a value that differs from the document's baseline is tinted
-         and can be restored. -->
+    <!-- One field of an edited node. Inherited is greyed, unset and editor-only text fainter still; an
+         override is marked on the left and can be reverted; a value that differs from the document's
+         baseline is tinted and can be restored. -->
     <DataTemplate DataType="{x:Type fcbEditor:FieldView}">
         <Border BorderThickness="3,0,0,0" Padding="4,1,0,1" Margin="0,0,0,1">
             <Border.Style>
@@ -227,6 +227,10 @@
                         </DataTrigger>
                         <DataTrigger Binding="{Binding Origin}" Value="Overridden">
                             <Setter Property="BorderBrush" Value="{DynamicResource WarningAccentBrush}" />
+                        </DataTrigger>
+                        <DataTrigger Binding="{Binding Row.IsEditorText}" Value="True">
+                            <Setter Property="Opacity" Value="0.4" />
+                            <Setter Property="ToolTip" Value="{Binding Row.EditorTextTip}" />
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
