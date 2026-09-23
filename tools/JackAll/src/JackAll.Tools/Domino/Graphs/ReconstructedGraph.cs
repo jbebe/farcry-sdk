@@ -26,7 +26,5 @@ public sealed record ReconstructedGraph(
     /// <summary>The reconstruction checked against the debug twin, when there was one.</summary>
     public TwinValidation? Twin { get; init; }
 
-    public IEnumerable<GraphFunction> EntryPins => Functions.Values.Where(f => f.Role == FunctionRole.Entry);
-
     public IEnumerable<GraphFunction> OutAnchors => Functions.Values.Where(f => f.Role == FunctionRole.OutAnchor);
 }

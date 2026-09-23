@@ -131,7 +131,7 @@ public static class UserGraphWriter
     private static string WireTarget(string? targetHandler) =>
         targetHandler is null ? "DummyFunction" : $"self._type.{targetHandler}";
 
-    private static string Ref(BoxRef box) => box switch
+    internal static string Ref(BoxRef box) => box switch
     {
         InstanceBoxRef i => $"self[{i.Slot}]",
         NamedInstanceBoxRef n => $"self.{n.FieldName}",

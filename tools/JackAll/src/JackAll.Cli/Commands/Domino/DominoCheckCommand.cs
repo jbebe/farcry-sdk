@@ -35,6 +35,8 @@ public sealed class DominoCheckCommand : CliCommand<DominoCheckCommand.Settings>
         public bool Json { get; init; }
     }
 
+    private sealed record RuleTotal(string Severity, int Count);
+
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
         List<string> files = File.Exists(settings.Path)
@@ -48,33 +50,59 @@ public sealed class DominoCheckCommand : CliCommand<DominoCheckCommand.Settings>
             ? null
             : new DominoNodeCatalog(vfsPath => System.IO.Path.Combine(root, vfsPath) is var full && File.Exists(full) ? File.ReadAllText(full) : null);
 
-        var results = new List<(string File, DominoCheckResult Result)>();
+        // Only the findings and the counts outlive each graph; the graphs themselves hold their whole
+        // syntax trees.
+        var findings = new List<(string File, IReadOnlyList<DominoFinding> Findings)>();
+        var twins = new List<TwinValidation>();
+        var identity = new SortedDictionary<string, int>(StringComparer.Ordinal);
         foreach (string file in files)
         {
             string twinPath = DominoDebugTwin.TwinPathFor(file);
             string? twin = File.Exists(twinPath) ? File.ReadAllText(twinPath) : null;
-            results.Add((file, DominoCheck.Run(File.ReadAllText(file), twin, catalog)));
+            DominoCheckResult result = DominoCheck.Run(File.ReadAllText(file), twin, catalog);
+
+            findings.Add((file, result.Findings));
+            if (result.Graph?.Twin is { } validation)
+            {
+                twins.Add(validation);
+            }
+            foreach (GraphNode node in result.Graph?.Nodes ?? [])
+            {
+                identity[node.IdSource.ToString()] = identity.GetValueOrDefault(node.IdSource.ToString()) + 1;
+            }
         }
 
-        var totals = Totals(results);
-        int errors = results.Sum(r => r.Result.Findings.Count(f => f.Severity == LintSeverity.Error));
+        var rules = new SortedDictionary<string, RuleTotal>(StringComparer.Ordinal);
+        foreach (var byRule in findings.SelectMany(r => r.Findings).GroupBy(f => f.Rule))
+        {
+            rules[byRule.Key] = new RuleTotal(byRule.First().Severity.ToString(), byRule.Count());
+        }
+        var twinTotals = new
+        {
+            graphs = twins.Count,
+            clean = twins.Count(t => t.IsClean),
+            tracedFires = twins.Sum(t => t.TracedFires),
+            matched = twins.Sum(t => t.Matched),
+            namedFromTwin = twins.Sum(t => t.NamedFromTwin),
+        };
+        int errors = findings.Sum(r => r.Findings.Count(f => f.Severity == LintSeverity.Error));
 
         if (settings.Json)
         {
             JsonOutput.Write(new
             {
                 ok = true,
-                graphs = results.Count,
+                graphs = files.Count,
                 errors,
-                totals.Rules,
-                totals.Twin,
-                totals.Identity,
-                findings = settings.Summary ? null : results
-                    .Where(r => r.Result.Findings.Count > 0)
+                rules,
+                twin = twinTotals,
+                identity,
+                findings = settings.Summary ? null : findings
+                    .Where(r => r.Findings.Count > 0)
                     .Select(r => new
                     {
                         path = System.IO.Path.GetRelativePath(settings.Path, r.File),
-                        findings = r.Result.Findings.Select(f => new { severity = f.Severity.ToString(), f.Rule, f.Message, f.Function, f.Position }),
+                        findings = r.Findings.Select(DominoFindingOutput.Json),
                     }),
             });
             return errors > 0 ? 1 : 0;
@@ -82,60 +110,28 @@ public sealed class DominoCheckCommand : CliCommand<DominoCheckCommand.Settings>
 
         if (!settings.Summary)
         {
-            foreach ((string file, DominoCheckResult result) in results)
+            foreach ((string file, IReadOnlyList<DominoFinding> graphFindings) in findings)
             {
-                var shown = result.Findings.Where(f => f.Severity != LintSeverity.Info).ToList();
-                if (shown.Count == 0)
+                var shown = graphFindings.Where(f => f.Severity != LintSeverity.Info).ToList();
+                if (shown.Count > 0)
                 {
-                    continue;
-                }
-                AnsiConsole.MarkupLine($"[blue]{file.EscapeMarkup()}[/]");
-                foreach (DominoFinding f in shown)
-                {
-                    string colour = f.Severity == LintSeverity.Error ? "red" : "yellow";
-                    string where = f.Function is null ? "" : $"{f.Function}: ";
-                    AnsiConsole.MarkupLine($"  [{colour}]{f.Rule}[/] {where.EscapeMarkup()}{f.Message.EscapeMarkup()}");
+                    DominoFindingOutput.Print(file, shown);
                 }
             }
         }
 
         var table = new Table().AddColumns("Rule", "Severity", "Findings");
-        foreach (var rule in totals.Rules)
+        foreach (var rule in rules)
         {
             table.AddRow(rule.Key.EscapeMarkup(), rule.Value.Severity, rule.Value.Count.ToString("N0"));
         }
         AnsiConsole.Write(table);
         AnsiConsole.MarkupLine(
-            $"{results.Count:N0} graph(s); twin: {totals.Twin.Clean:N0}/{totals.Twin.Graphs:N0} clean, " +
-            $"{totals.Twin.Matched:N0}/{totals.Twin.TracedFires:N0} traced fires matched ({totals.Twin.NamedFromTwin:N0} named by the twin)");
-        AnsiConsole.MarkupLine("box IDs: " + string.Join(", ", totals.Identity.Select(i => $"{i.Key} {i.Value:N0}")));
+            $"{files.Count:N0} graph(s); twin: {twinTotals.clean:N0}/{twinTotals.graphs:N0} clean, " +
+            $"{twinTotals.matched:N0}/{twinTotals.tracedFires:N0} traced fires matched ({twinTotals.namedFromTwin:N0} named by the twin)");
+        AnsiConsole.MarkupLine("box IDs: " + string.Join(", ", identity.Select(i => $"{i.Key} {i.Value:N0}")));
         AnsiConsole.MarkupLine(errors > 0 ? $"[red]{errors:N0} error(s)[/]" : "[green]No errors[/]");
         return errors > 0 ? 1 : 0;
-    }
-
-    private sealed record TwinTotals(int Graphs, int Clean, int TracedFires, int Matched, int NamedFromTwin);
-
-    private sealed record RuleTotal(string Severity, int Count);
-
-    private static (SortedDictionary<string, RuleTotal> Rules, TwinTotals Twin, SortedDictionary<string, int> Identity)
-        Totals(List<(string File, DominoCheckResult Result)> results)
-    {
-        var rules = new SortedDictionary<string, RuleTotal>(StringComparer.Ordinal);
-        foreach (var byRule in results.SelectMany(r => r.Result.Findings).GroupBy(f => f.Rule))
-        {
-            rules[byRule.Key] = new RuleTotal(byRule.Max(f => f.Severity).ToString(), byRule.Count());
-        }
-
-        var twins = results.Select(r => r.Result.Graph?.Twin).OfType<TwinValidation>().ToList();
-        var twin = new TwinTotals(twins.Count, twins.Count(t => t.IsClean), twins.Sum(t => t.TracedFires),
-            twins.Sum(t => t.Matched), twins.Sum(t => t.NamedFromTwin));
-
-        var identity = new SortedDictionary<string, int>(StringComparer.Ordinal);
-        foreach (GraphNode node in results.SelectMany(r => r.Result.Graph?.Nodes ?? []))
-        {
-            identity[node.IdSource.ToString()] = identity.GetValueOrDefault(node.IdSource.ToString()) + 1;
-        }
-        return (rules, twin, identity);
     }
 
     /// <summary>The folder above <paramref name="path"/> that holds `domino\`, where node types are read from.</summary>

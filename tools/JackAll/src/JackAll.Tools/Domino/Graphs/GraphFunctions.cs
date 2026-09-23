@@ -26,7 +26,7 @@ public enum FunctionRole
 }
 
 /// <summary>A function's role, and for the generated ones the editor box ID they belong to.</summary>
-public sealed record GraphFunction(string Name, FunctionRole Role, long? BoxId, string? Pin);
+public sealed record GraphFunction(string Name, FunctionRole Role, long? BoxId);
 
 /// <summary>
 /// Reads a function's role from its name. BlackBox names every generated function after the editor box it
@@ -53,15 +53,15 @@ public static partial class GraphFunctions
     {
         if (name is "LuaDependencies" or "Create" or "Init" or "ShutDown")
         {
-            return new(name, FunctionRole.Lifecycle, null, null);
+            return new(name, FunctionRole.Lifecycle, null);
         }
         if (isOutAnchor)
         {
-            return new(name, FunctionRole.OutAnchor, null, null);
+            return new(name, FunctionRole.OutAnchor, null);
         }
         if (HandlerName().Match(name) is { Success: true } handler)
         {
-            return new(name, FunctionRole.Handler, long.Parse(handler.Groups["id"].Value), handler.Groups["pin"].Value);
+            return new(name, FunctionRole.Handler, long.Parse(handler.Groups["id"].Value));
         }
         if (name.StartsWith("f_box_", StringComparison.Ordinal))
         {
@@ -70,20 +70,20 @@ public static partial class GraphFunctions
                 ?? splits.LastOrDefault();
             if (split is not null)
             {
-                return new(name, FunctionRole.Handler, long.Parse(split.Groups["id"].Value), name[(split.Index + split.Length + 1)..]);
+                return new(name, FunctionRole.Handler, long.Parse(split.Groups["id"].Value));
             }
         }
         if (HelperName().Match(name) is { Success: true } helper)
         {
             FunctionRole role = helper.Groups["kind"].Value is "en" or "OnEnter" ? FunctionRole.Prologue : FunctionRole.Epilogue;
-            return new(name, role, long.Parse(helper.Groups["id"].Value), null);
+            return new(name, role, long.Parse(helper.Groups["id"].Value));
         }
-        return new(name, FunctionRole.Entry, null, null);
+        return new(name, FunctionRole.Entry, null);
     }
 
     /// <summary>The control-outs a graph declares: `self.Pin = DummyFunction;` in `Init`, until the parent
     /// wires them.</summary>
-    public static HashSet<string> OutAnchorsOf(UserGraph graph) =>
+    private static HashSet<string> OutAnchorsOf(UserGraph graph) =>
         graph.Functions
             .Where(fn => fn.Name == "Init")
             .SelectMany(fn => fn.Body)
@@ -93,7 +93,7 @@ public static partial class GraphFunctions
             .ToHashSet(StringComparer.Ordinal);
 
     /// <summary>Every `box_X_N` name a debug twin states: its named boxes and its traced connections.</summary>
-    public static HashSet<string> TwinBoxNamesOf(UserGraph graph)
+    private static HashSet<string> TwinBoxNamesOf(UserGraph graph)
     {
         var names = new HashSet<string>(StringComparer.Ordinal);
         foreach (UserGraphStmt stmt in graph.Functions.SelectMany(fn => fn.Body))
@@ -106,10 +106,9 @@ public static partial class GraphFunctions
                 case TraceConnectionStmt trace:
                     foreach (string label in (string[])[trace.SourcePinLabel, trace.TargetPinLabel])
                     {
-                        int dot = label.IndexOf('.');
-                        if (dot > 0)
+                        if (DominoDebugTwin.SplitPinLabel(label).Box is { } box)
                         {
-                            names.Add(label[..dot]);
+                            names.Add(box);
                         }
                     }
                     break;
@@ -118,7 +117,7 @@ public static partial class GraphFunctions
         return names;
     }
 
-    [GeneratedRegex(@"^f_(?<id>\d+)_(?<pin>.+)$")]
+    [GeneratedRegex(@"^f_(?<id>\d+)_")]
     private static partial Regex HandlerName();
 
     // Each place a twin handler name could split into `box_..._N` and a pin.

@@ -38,7 +38,7 @@ public static class GraphBuilder
         public BoxIdSource IdSource;
         public readonly Dictionary<string, ExpressionSyntax> Params = new(StringComparer.Ordinal);
         public readonly Dictionary<string, int> DynamicSlots = new(StringComparer.Ordinal);
-        public readonly List<int> Positions = [];
+        public readonly HashSet<int> Positions = [];
     }
 
     /// <summary>A pooled box's configuration since its slot was last fired, held until the fire says
@@ -52,18 +52,17 @@ public static class GraphBuilder
 
     private enum TerminalKind { Node, Exit }
 
-    private sealed record Terminal(TerminalKind Kind, string? NodeId, string Pin, int? Index, string? FiredIn, int? FireOrdinal);
+    private sealed record Terminal(TerminalKind Kind, string? NodeId, string Pin, int? Index, string FiredIn, int? FireOrdinal);
 
-    private sealed record Wire(string SourceNodeId, string Pin, int? Index, string? Handler, int? Position);
+    private sealed record Wire(string SourceNodeId, string Pin, int? Index, string? Handler, StatementSyntax? At);
 
     private sealed class Builder
     {
         private readonly UserGraph _graph;
         private readonly Dictionary<string, UserGraphFunction> _functions = new(StringComparer.Ordinal);
         private readonly IReadOnlyDictionary<string, GraphFunction> _roles;
-        private readonly HashSet<string> _twinBoxNames;
-        private readonly DominoDebugTwin? _twin;
         private readonly TwinAlignment? _alignment;
+        private readonly Dictionary<string, int> _anonymousCount = new(StringComparer.Ordinal);
 
         private readonly Dictionary<string, NodeState> _nodes = new(StringComparer.Ordinal);
         private readonly Dictionary<BoxRef, string> _persistentIds = new();
@@ -86,9 +85,7 @@ public static class GraphBuilder
                 _functions.TryAdd(fn.Name, fn);
             }
             _roles = GraphFunctions.Classify(graph);
-            _twinBoxNames = GraphFunctions.TwinBoxNamesOf(graph);
-            _twin = twin;
-            _alignment = twin is null ? null : new TwinAlignment(graph, twin);
+            _alignment = twin is null ? null : new TwinAlignment(graph, _roles, twin);
         }
 
         public ReconstructedGraph Build(DominoNodeCatalog? catalog)
@@ -134,7 +131,7 @@ public static class GraphBuilder
                         NamedInstanceBoxRef n when DominoDebugTwin.TryParseBoxId(n.FieldName, out long parsed) => parsed,
                         _ => null,
                     };
-                    string nodeId = id is { } editorId ? $"p:{editorId}" : $"p:{Label(create.Box)}";
+                    string nodeId = id is { } editorId ? $"p:{editorId}" : $"p:{UserGraphWriter.Ref(create.Box)}";
                     if (_nodes.ContainsKey(nodeId))
                     {
                         Report(LintSeverity.Error, "identity-conflict", $"box {nodeId} is created twice", fn.Name, create.Syntax);
@@ -193,7 +190,7 @@ public static class GraphBuilder
         {
             GraphFunction role = _roles.TryGetValue(handler, out GraphFunction? known)
                 ? known
-                : GraphFunctions.Classify(handler, isOutAnchor: false, _twinBoxNames);
+                : GraphFunctions.Classify(handler, isOutAnchor: false);
             return role.Role == FunctionRole.Handler ? role.BoxId : null;
         }
 
@@ -245,7 +242,8 @@ public static class GraphBuilder
 
         private NodeState AnonymousNode(string path, string function)
         {
-            int seq = _nodes.Keys.Count(k => k.StartsWith($"q?:{function}#", StringComparison.Ordinal));
+            int seq = _anonymousCount.GetValueOrDefault(function);
+            _anonymousCount[function] = seq + 1;
             var node = new NodeState
             {
                 Id = $"q?:{function}#{seq}",
@@ -336,7 +334,7 @@ public static class GraphBuilder
 
                     case WireControlOutStmt w:
                         Configure(w.Box, stmt, prologueOf, node =>
-                            b._wires.Add(new Wire(node.Id, w.PinName, w.Index, w.TargetHandler, stmt.Syntax?.SpanStart)));
+                            b._wires.Add(new Wire(node.Id, w.PinName, w.Index, w.TargetHandler, stmt.Syntax)));
                         if (w.Box is PooledBoxRef wired && w.TargetHandler is { } handler && b.HandlerBox(handler) is { } named)
                         {
                             Nominate(_open[wired.Path], named, BoxIdSource.Wire, fn.Name, stmt);
@@ -360,7 +358,7 @@ public static class GraphBuilder
                         break;
 
                     case OtherStmt when fn.Name != "LuaDependencies":
-                        b.Report(LintSeverity.Warning, "unrepresented",
+                        b.Report(LintSeverity.Warning, "unrepresented-statement",
                             "a statement the graph view does not show", fn.Name, stmt.Syntax);
                         break;
                 }
@@ -467,9 +465,9 @@ public static class GraphBuilder
                 {
                     node = again;
                 }
-                else if (owner is { } id && b._pathOf.GetValueOrDefault(id) == path)
+                else if (Continued(path, owner, f) is { } continued)
                 {
-                    node = b.PooledNode(id, path, BoxIdSource.Continuation, root.Name, f.Syntax);
+                    node = continued;
                 }
                 else
                 {
@@ -528,7 +526,7 @@ public static class GraphBuilder
                 }
                 else if (!read.Target.ToString().StartsWith("Globals.", StringComparison.Ordinal))
                 {
-                    b.Report(LintSeverity.Warning, "unrepresented",
+                    b.Report(LintSeverity.Warning, "unrepresented-read",
                         $"{read.Target} is written from a box output", fn.Name, read.Syntax);
                 }
             }
@@ -545,20 +543,26 @@ public static class GraphBuilder
                 {
                     return fired;
                 }
-                if (owner is { } id && b._pathOf.GetValueOrDefault(id) == pooled.Path)
+                if (Continued(pooled.Path, owner, stmt) is { } continued)
                 {
-                    return b.PooledNode(id, pooled.Path, BoxIdSource.Continuation, root.Name, stmt.Syntax);
+                    return continued;
                 }
                 b.Report(LintSeverity.Error, "unbound-read",
                     $"{Short(pooled.Path)}'s output is read outside its own continuation", root.Name, stmt.Syntax);
                 return null;
             }
 
+            /// <summary>The box this handler or epilogue belongs to, when it is a pooled box of this type.</summary>
+            private NodeState? Continued(string path, long? owner, UserGraphStmt stmt) =>
+                owner is { } id && b._pathOf.GetValueOrDefault(id) == path
+                    ? b.PooledNode(id, path, BoxIdSource.Continuation, root.Name, stmt.Syntax)
+                    : null;
+
             private static void Note(NodeState node, UserGraphStmt stmt) => Note(node, stmt.Syntax?.SpanStart);
 
             private static void Note(NodeState node, int? position)
             {
-                if (position is { } p && !node.Positions.Contains(p))
+                if (position is { } p)
                 {
                     node.Positions.Add(p);
                 }
@@ -571,7 +575,7 @@ public static class GraphBuilder
             {
                 return _nodes[id];
             }
-            Report(LintSeverity.Error, "undefined-box", $"{Label(box)} is used but never created", function, stmt.Syntax);
+            Report(LintSeverity.Error, "undefined-box", $"{UserGraphWriter.Ref(box)} is used but never created", function, stmt.Syntax);
             return null;
         }
 
@@ -595,7 +599,7 @@ public static class GraphBuilder
                     if (earlier != wire.Handler)
                     {
                         Report(LintSeverity.Error, "wire-conflict",
-                            $"{wire.Pin} is wired to both {earlier ?? "nothing"} and {wire.Handler ?? "nothing"}", null, null, wire.SourceNodeId);
+                            $"{wire.Pin} is wired to both {earlier ?? "nothing"} and {wire.Handler ?? "nothing"}", null, wire.At, wire.SourceNodeId);
                     }
                     continue;
                 }
@@ -609,7 +613,7 @@ public static class GraphBuilder
                 if (!_functions.ContainsKey(wire.Handler))
                 {
                     Report(LintSeverity.Error, "undefined-handler",
-                        $"{wire.Pin} is wired to {wire.Handler}, which is not defined", null, null, wire.SourceNodeId);
+                        $"{wire.Pin} is wired to {wire.Handler}, which is not defined", null, wire.At, wire.SourceNodeId);
                 }
                 edges.AddRange(EdgesTo(wire.SourceNodeId, wire.Pin, wire.Index, wire.Handler));
             }
@@ -651,7 +655,7 @@ public static class GraphBuilder
 
         private ReconstructedGraph Assemble(List<GraphEdge> edges, DominoNodeCatalog? catalog)
         {
-            IReadOnlyDictionary<long, string>? twinNames = _twin?.BoxNamesById;
+            IReadOnlyDictionary<long, string>? twinNames = _alignment?.Twin.BoxNamesById;
             var nodes = _nodes.Values
                 .Select(n => new GraphNode(n.Id, n.Ref, n.Path, n.Kind, n.Params)
                 {
@@ -680,25 +684,25 @@ public static class GraphBuilder
             {
                 Functions = _roles,
                 Findings = _findings,
-                Twin = _alignment is null ? null : Validate(edges),
+                Twin = _alignment is null ? null : Validate(_alignment, edges),
             };
         }
 
         /// <summary>Checks every traced fire in the twin against the edge that fires it.</summary>
-        private TwinValidation Validate(List<GraphEdge> edges)
+        private TwinValidation Validate(TwinAlignment alignment, List<GraphEdge> edges)
         {
-            var problems = _alignment!.Problems.Select(p => $"twin: {p}").ToList();
-            int traced = _twin!.Connections.Count;
-            if (!_alignment.IsProven)
+            var problems = alignment.Problems.Select(p => $"twin: {p}").ToList();
+            int traced = alignment.Twin.Connections.Count;
+            if (!alignment.IsProven)
             {
-                return new TwinValidation(traced, 0, 0, problems);
+                return new TwinValidation(false, traced, 0, 0, problems);
             }
 
             var matched = new HashSet<TracedConnection>();
             int namedFromTwin = 0;
             foreach (GraphEdge edge in edges.Where(e => e.Target == EdgeTarget.Node))
             {
-                TracedConnection? trace = _alignment.TraceFor(edge.FiredIn!, edge.FireOrdinal!.Value);
+                TracedConnection? trace = alignment.TraceFor(edge.FiredIn!, edge.FireOrdinal!.Value);
                 if (trace is null)
                 {
                     problems.Add($"untraced: {Describe(edge)}");
@@ -711,7 +715,7 @@ public static class GraphBuilder
                     : trace.SourceBox is { } sourceBox
                       && DominoDebugTwin.TryParseBoxId(sourceBox, out long sourceId)
                       && sourceId == _nodes[edge.SourceNodeId!].EditorId
-                      && PinAgrees(trace.SourcePinLabel, edge.SourcePin, edge.Index);
+                      && DominoDebugTwin.ToIdentifier(trace.SourcePinLabel) == edge.SourcePin;
                 bool targetAgrees = trace.TargetBox is { } targetBox
                     && DominoDebugTwin.TryParseBoxId(targetBox, out long targetId)
                     && targetId == target.EditorId
@@ -730,19 +734,11 @@ public static class GraphBuilder
                 }
             }
 
-            foreach (TracedConnection trace in _twin.Connections.Where(t => !matched.Contains(t)))
+            foreach (TracedConnection trace in alignment.Twin.Connections.Where(t => !matched.Contains(t)))
             {
                 problems.Add($"not reconstructed: {trace.SourceBox}.{trace.SourcePinLabel} -> {trace.TargetBox}.{trace.TargetPinLabel} ({trace.Function})");
             }
-            return new TwinValidation(traced, matched.Count, namedFromTwin, problems);
-        }
-
-        /// <summary>A traced source pin against a wired one; a dynamic out's slot shows in the twin's
-        /// label as a suffix.</summary>
-        private static bool PinAgrees(string label, string pin, int? index)
-        {
-            string traced = DominoDebugTwin.ToIdentifier(label);
-            return traced == pin || (index is { } i && traced == $"{pin}_{i}");
+            return new TwinValidation(true, traced, matched.Count, namedFromTwin, problems);
         }
 
         private string Describe(GraphEdge edge) =>
@@ -756,14 +752,6 @@ public static class GraphBuilder
                 NodeId = nodeId,
             });
     }
-
-    private static string Label(BoxRef box) => box switch
-    {
-        InstanceBoxRef i => $"self[{i.Slot}]",
-        NamedInstanceBoxRef n => $"self.{n.FieldName}",
-        PooledBoxRef p => p.Path,
-        _ => box.ToString(),
-    };
 
     private static string Short(string path) => NodeSignature.ShortNameFor(path);
 }

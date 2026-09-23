@@ -280,9 +280,12 @@ real bug.
 | `stateful-pooled` | error | 0 | A box type that isn't `<Stateless/>` on a shared pooled slot. |
 | `identity-conflict`, `bare-fire`, `unbound-read`, `wire-conflict` | error | 0 | Pooled box use the naming rule above can't account for. |
 | `undefined-handler`, `undefined-box` | error | 0 | A wire or call to a function that doesn't exist, or a box that is never created. |
+| `twin-disagrees` | error | 0 | A fire the debug twin traces differently although its code matches - a reconstruction defect. |
+| `parse`, `round-trip` | error | 0 | A file that doesn't parse, or that JackAll's writer can't reproduce. |
+| `non-blackbox-shape`, `unrepresented-statement`, `unrepresented-read` | warning | 0 | Code outside the shapes BlackBox writes, which the graph view can't show. |
 | `stale-slot` | warning | 147 | A pooled box that leaves a declared data-in unset. |
 | `undeclared-param` | warning | 38 | A parameter the box type doesn't declare. |
 | `unused-slot` | warning | 2 | A MultipleAND slot nothing fires, so it can never complete. |
 | `undeclared-out`, `literal-type` | warning | 0 | A wire on an undeclared control-out, or a literal of the wrong kind for its data-in. |
-| `stale-twin` | warning | 0 | A debug twin that no longer matches its release file. |
+| `stale-twin`, `unparseable-twin` | warning | 0 | A debug twin whose code no longer matches its release file, or that doesn't parse. |
 | `unfired-out-anchor` | info | 160 | A declared control-out the graph never fires. |

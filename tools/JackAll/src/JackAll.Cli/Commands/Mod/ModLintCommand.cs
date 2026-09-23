@@ -1,5 +1,6 @@
 using System.ComponentModel;
 using System.Text;
+using JackAll.Cli.Commands.Domino;
 using JackAll.Cli.Infrastructure;
 using JackAll.Core;
 using JackAll.Core.Mods;
@@ -82,12 +83,18 @@ public sealed class ModLintCommand : CliCommand<ModLintCommand.Settings>
                     continue;
                 }
 
+                string edited = Text(layer.Read(hash))!;
+                string? retail = Text(vfs.ReadOriginal(hash));
+                if (edited == retail)
+                {
+                    continue;
+                }
+
                 string? twin = Text(vfs.ReadByPath(DominoDebugTwin.TwinPathFor(path)));
-                DominoCheckResult edited = DominoCheck.Run(Text(layer.Read(hash))!, twin, catalog);
-                DominoCheckResult? original = Text(vfs.ReadOriginal(hash)) is { } retail
-                    ? DominoCheck.Run(retail, twin, catalog)
-                    : null;
-                var added = DominoCheck.NewSince(edited, original).Where(f => f.Severity != LintSeverity.Info).ToList();
+                DominoCheckResult? original = retail is null ? null : DominoCheck.Run(retail, twin, catalog);
+                var added = DominoCheck.NewSince(DominoCheck.Run(edited, twin, catalog), original)
+                    .Where(f => f.Severity != LintSeverity.Info)
+                    .ToList();
                 if (added.Count > 0)
                 {
                     results.Add(new GraphFindings(layer.Name, path, added));
@@ -96,7 +103,8 @@ public sealed class ModLintCommand : CliCommand<ModLintCommand.Settings>
         }
         return results;
 
-        static string? Text(byte[]? bytes) => bytes is null ? null : Encoding.UTF8.GetString(bytes);
+        // As File.ReadAllText reads it, so a graph checks the same here as with `domino check`.
+        static string? Text(byte[]? bytes) => bytes is null ? null : Encoding.UTF8.GetString(bytes).TrimStart('﻿');
     }
 
     private int Report(Settings settings, List<IModLayer> layers, IReadOnlyList<DeadEdit> dead, List<GraphFindings> domino)
@@ -119,7 +127,7 @@ public sealed class ModLintCommand : CliCommand<ModLintCommand.Settings>
                 {
                     layer = g.Layer,
                     path = g.Path,
-                    findings = g.Findings.Select(f => new { severity = f.Severity.ToString(), f.Rule, f.Message, f.Function }),
+                    findings = g.Findings.Select(DominoFindingOutput.Json),
                 }),
             });
             return 0;
@@ -127,13 +135,7 @@ public sealed class ModLintCommand : CliCommand<ModLintCommand.Settings>
 
         foreach (GraphFindings graph in domino)
         {
-            AnsiConsole.MarkupLine($"[blue]{graph.Layer.EscapeMarkup()}[/] {graph.Path.EscapeMarkup()}");
-            foreach (DominoFinding f in graph.Findings)
-            {
-                string colour = f.Severity == LintSeverity.Error ? "red" : "yellow";
-                string where = f.Function is null ? "" : $"{f.Function}: ";
-                AnsiConsole.MarkupLine($"  [{colour}]{f.Rule}[/] {where.EscapeMarkup()}{f.Message.EscapeMarkup()}");
-            }
+            DominoFindingOutput.Print($"{graph.Layer} {graph.Path}", graph.Findings);
         }
 
         if (dead.Count == 0)

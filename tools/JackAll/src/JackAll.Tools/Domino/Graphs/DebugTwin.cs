@@ -169,7 +169,7 @@ public sealed record DominoDebugTwin(
 
     /// <summary>`"box_Set_Entity_2.FromEntity"` splits into box and pin; a label with no dot is one of
     /// the graph's own pins, so the box is null.</summary>
-    private static (string? Box, string Pin) SplitPinLabel(string label)
+    internal static (string? Box, string Pin) SplitPinLabel(string label)
     {
         int dot = label.IndexOf('.');
         return dot < 0 ? (null, label) : (label[..dot], label[(dot + 1)..]);
@@ -188,10 +188,13 @@ internal sealed partial class TwinAlignment
     private readonly Dictionary<string, string> _twinByRelease = new(StringComparer.Ordinal);
     private readonly Dictionary<(string Function, int Ordinal), TracedConnection> _traces = new();
 
+    public DominoDebugTwin Twin { get; }
+
     public List<string> Problems { get; } = [];
 
-    public TwinAlignment(UserGraph release, DominoDebugTwin twin)
+    public TwinAlignment(UserGraph release, IReadOnlyDictionary<string, GraphFunction> releaseRoles, DominoDebugTwin twin)
     {
+        Twin = twin;
         IReadOnlyList<UserGraphFunction> releaseFns = release.Functions;
         IReadOnlyList<UserGraphFunction> twinFns = twin.Graph.Functions;
         if (releaseFns.Count != twinFns.Count)
@@ -200,7 +203,6 @@ internal sealed partial class TwinAlignment
             return;
         }
 
-        var releaseRoles = GraphFunctions.Classify(release);
         var twinRoles = GraphFunctions.Classify(twin.Graph);
         var releaseByTwin = new Dictionary<string, string>(StringComparer.Ordinal);
         for (int i = 0; i < releaseFns.Count; i++)
@@ -268,11 +270,14 @@ internal sealed partial class TwinAlignment
 }
 
 /// <summary>
-/// The outcome of checking a reconstruction against its debug twin. Every traced fire has to be one
-/// of the reconstruction's edges, source and target alike; <see cref="NamedFromTwin"/> counts the ones
-/// whose target box only got its ID from the twin itself, so agree by construction.
+/// The outcome of checking a reconstruction against its debug twin. <see cref="Aligned"/> is false when
+/// the twin's code differs from the release file's, so it is not this file's twin any more and nothing
+/// was compared. Once aligned, every traced fire has to be one of the reconstruction's edges, source and
+/// target alike, and a disagreement is a reconstruction defect. <see cref="NamedFromTwin"/> counts the
+/// fires whose target box only got its ID from the twin itself, so agree by construction.
 /// </summary>
 public sealed record TwinValidation(
+    bool Aligned,
     int TracedFires,
     int Matched,
     int NamedFromTwin,

@@ -10,7 +10,7 @@
         <!-- One finding; clicking it goes to the box or the statement it is about. -->
         <DataTemplate x:Key="ProblemRow">
             <Button Click="Problem_Click" Cursor="Hand" Padding="0" BorderThickness="0" Background="Transparent"
-                    HorizontalContentAlignment="Left" Margin="0,0,0,4" ToolTip="{Binding Rule}">
+                    HorizontalContentAlignment="Left" Margin="0,0,0,4" ToolTip="{Binding Finding.Rule}">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto" />
@@ -32,7 +32,7 @@
                         </TextBlock.Style>
                     </TextBlock>
                     <StackPanel Grid.Column="1">
-                        <TextBlock Text="{Binding Message}" FontSize="{StaticResource FontSizeSecondary}" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Finding.Message}" FontSize="{StaticResource FontSizeSecondary}" TextWrapping="Wrap" />
                         <TextBlock Text="{Binding Where}" Style="{StaticResource Caption}"
                                    Visibility="{Binding HasWhere, Converter={StaticResource BoolToVisibility}}" />
                     </StackPanel>

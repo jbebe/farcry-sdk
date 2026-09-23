@@ -48,36 +48,39 @@ public static class DominoLint
                 continue;
             }
 
-            var dataIns = signature.DataIns.ToDictionary(p => p.Name, p => p.Type, StringComparer.Ordinal);
             foreach ((string param, ExpressionSyntax value) in node.Params)
             {
-                if (!dataIns.TryGetValue(param, out string? type))
+                if (signature.DataIns.FirstOrDefault(p => p.Name == param) is not { } dataIn)
                 {
                     Add(LintSeverity.Warning, "undeclared-param", $"{param} is not one of {signature.Title}'s data-ins", node);
                 }
-                else if (!LiteralFits(value, type))
+                else if (!LiteralFits(value, dataIn.Type))
                 {
-                    Add(LintSeverity.Warning, "literal-type", $"{param} is {type} but is set to {value}", node);
+                    Add(LintSeverity.Warning, "literal-type", $"{param} is {dataIn.Type} but is set to {value}", node);
                 }
             }
         }
 
         foreach (GraphEdge edge in graph.Edges)
         {
-            GraphNode? source = edge.SourceNodeId is null ? null : nodes[edge.SourceNodeId];
-            if (source?.Signature is { } sourceSignature && !sourceSignature.ControlOuts.Any(p => p.Name == edge.SourcePin))
+            if (edge.SourceNodeId is { } sourceId)
             {
-                Add(LintSeverity.Warning, "undeclared-out", $"{edge.SourcePin} is not a control-out of {sourceSignature.Title}, so it never fires", source);
-            }
-            if (source is not null && edge.Index is { } outSlot && !SlotInRange(source, edge.SourcePin, outSlot))
-            {
-                Add(LintSeverity.Error, "dynamic-index-range", $"{edge.SourcePin}[{outSlot}] is beyond the slots _DynamicAnchors gives it", source);
+                GraphNode source = nodes[sourceId];
+                if (source.Signature is { } sourceSignature && !sourceSignature.ControlOuts.Any(p => p.Name == edge.SourcePin))
+                {
+                    Add(LintSeverity.Warning, "undeclared-out", $"{edge.SourcePin} is not a control-out of {sourceSignature.Title}, so it never fires", source);
+                }
+                if (edge.Index is { } outSlot && !SlotInRange(source, edge.SourcePin, outSlot))
+                {
+                    Add(LintSeverity.Error, "dynamic-index-range", $"{edge.SourcePin}[{outSlot}] is beyond the slots _DynamicAnchors gives it", source);
+                }
             }
 
-            if (edge.TargetNodeId is null || nodes[edge.TargetNodeId] is not { } target)
+            if (edge.TargetNodeId is not { } targetId)
             {
                 continue;
             }
+            GraphNode target = nodes[targetId];
             if (target.Signature is { } targetSignature && !targetSignature.ControlIns.Any(p => p.Name == edge.TargetPin))
             {
                 Add(LintSeverity.Error, "undeclared-in", $"{edge.TargetPin} is not a control-in of {targetSignature.Title}; firing it calls nil", target);
@@ -97,9 +100,18 @@ public static class DominoLint
             Add(LintSeverity.Info, "unfired-out-anchor", $"control-out {anchor.Name} is never fired");
         }
 
+        // A twin whose code differs is simply out of date; one that matches but disagrees on a fire means the
+        // reconstruction itself is wrong.
         if (graph.Twin is { IsClean: false } twin)
         {
-            Add(LintSeverity.Warning, "stale-twin", $"the debug twin no longer matches: {twin.Problems[0]}");
+            if (twin.Aligned)
+            {
+                Add(LintSeverity.Error, "twin-disagrees", $"the reconstruction disagrees with the debug twin: {twin.Problems[0]}");
+            }
+            else
+            {
+                Add(LintSeverity.Warning, "stale-twin", $"the debug twin no longer matches: {twin.Problems[0]}");
+            }
         }
         return findings;
     }
@@ -164,7 +176,7 @@ public static class DominoLint
         {
             "Core|bool" => kind is SyntaxKind.TrueLiteralExpression or SyntaxKind.FalseLiteralExpression
                            || literal.Token.Text is "0" or "1",
-            "Core|int" => kind == SyntaxKind.NumericalLiteralExpression && long.TryParse(literal.Token.Text, out _),
+            "Core|int" => UserGraphParser.AsInt(value) is not null,
             "Core|float" => kind == SyntaxKind.NumericalLiteralExpression,
             "Core|string" or "Nomad|entity" => kind == SyntaxKind.StringLiteralExpression,
             _ => true,

@@ -38,17 +38,23 @@ public sealed class DominoTabViewModel
         Title = title;
         SourceText = sourceText;
         Services = services;
-        Func<string, string?>? readByPath = services is null ? null : services.ReadText;
+        // A twin has no twin of its own.
+        string? twinSource = gamePath is null || services is null || DominoDebugTwin.IsTwinPath(gamePath)
+            ? null
+            : services.ReadText(DominoDebugTwin.TwinPathFor(gamePath));
 
         try
         {
-            UserGraph userGraph = UserGraphParser.Parse(DominoLuaSource.Parse(sourceText));
-
-            DominoNodeCatalog? catalog = readByPath is null ? null : new DominoNodeCatalog(readByPath);
-            Twin = LoadTwin(gamePath, readByPath);
-
-            Graph = GraphBuilder.Build(userGraph, catalog, Twin);
-            Findings = DominoLint.Run(Graph);
+            DominoCheckResult check = DominoCheck.Run(sourceText, twinSource,
+                services is null ? null : new DominoNodeCatalog(services.ReadText));
+            Findings = check.Findings;
+            Twin = check.Twin;
+            Graph = check.Graph;
+            if (Graph is null)
+            {
+                ParseError = Findings[0].Message;
+                return;
+            }
             Canvas = new DominoGraphViewModel(Graph, SugiyamaLayout.Order(Graph), Twin, Findings);
         }
         catch (Exception ex)
@@ -56,26 +62,6 @@ public sealed class DominoTabViewModel
             Graph = null;
             Canvas = null;
             ParseError = ex.Message;
-        }
-    }
-
-    /// <summary>Loads the graph's `*.debug.lua` sibling. Absent, unreadable or unparseable is normal -
-    /// a debug twin is a bonus, never a requirement - so every failure here is swallowed.</summary>
-    private static DominoDebugTwin? LoadTwin(string? gamePath, Func<string, string?>? readByPath)
-    {
-        if (gamePath is null || readByPath is null || DominoDebugTwin.IsTwinPath(gamePath))
-        {
-            return null;
-        }
-
-        try
-        {
-            string? twinSource = readByPath(DominoDebugTwin.TwinPathFor(gamePath));
-            return twinSource is null ? null : DominoDebugTwin.FromGraph(UserGraphParser.Parse(DominoLuaSource.Parse(twinSource)));
-        }
-        catch (Exception)
-        {
-            return null;
         }
     }
 

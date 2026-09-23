@@ -39,8 +39,6 @@ public partial class DominoInspector : UserControl
             _ => "note",
         };
 
-        public string Rule => Finding.Rule;
-        public string Message => Finding.Message;
         public string? Where => Finding.Function;
         public bool HasWhere => Where is not null;
     }

@@ -153,16 +153,22 @@ public sealed class DominoGraphViewModel : Observable
             return; // ports get created on demand from whatever the graph actually references
         }
 
-        foreach (ControlInPin pin in signature.ControlIns)
+        // A dynamic pin gets one port per slot, titled `Condition[1]`.
+        void AddControlPorts(ObservableCollection<DominoConnectorViewModel> ports, string pin, bool dynamic, bool delayed)
         {
-            foreach (string port in node.PortsOf(pin.Name, pin.Dynamic))
+            foreach (string port in node.PortsOf(pin, dynamic))
             {
-                vm.Input.Add(new DominoConnectorViewModel(port, PortKind.Control)
+                ports.Add(new DominoConnectorViewModel(port, PortKind.Control, type: null, delayed)
                 {
-                    Title = Label(labels, node, pin.Name) + port[pin.Name.Length..],
-                    Note = signature.NoteFor(pin.Name),
+                    Title = Label(labels, node, pin) + port[pin.Length..],
+                    Note = signature.NoteFor(pin),
                 });
             }
+        }
+
+        foreach (ControlInPin pin in signature.ControlIns)
+        {
+            AddControlPorts(vm.Input, pin.Name, pin.Dynamic, delayed: false);
         }
         foreach (DataInPin pin in signature.DataIns)
         {
@@ -174,14 +180,7 @@ public sealed class DominoGraphViewModel : Observable
         }
         foreach (ControlOutPin pin in signature.ControlOuts)
         {
-            foreach (string port in node.PortsOf(pin.Name, pin.Dynamic))
-            {
-                vm.Output.Add(new DominoConnectorViewModel(port, PortKind.Control, type: null, pin.Delayed)
-                {
-                    Title = Label(labels, node, pin.Name) + port[pin.Name.Length..],
-                    Note = signature.NoteFor(pin.Name),
-                });
-            }
+            AddControlPorts(vm.Output, pin.Name, pin.Dynamic, pin.Delayed);
         }
         foreach (DataOutPin pin in signature.DataOuts)
         {

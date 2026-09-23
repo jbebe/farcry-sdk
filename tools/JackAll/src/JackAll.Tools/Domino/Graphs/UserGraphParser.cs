@@ -328,7 +328,7 @@ public static class UserGraphParser
     /// decodes numeric literals as <see cref="double"/>, which silently loses precision on the
     /// 19-digit entity-ID-sized integers this corpus sometimes uses (box slots themselves are always
     /// small, but this keeps the helper correct for any numeric literal, not just the common case).</summary>
-    private static long? AsInt(ExpressionSyntax expr) =>
+    internal static long? AsInt(ExpressionSyntax expr) =>
         expr is LiteralExpressionSyntax lit && lit.Kind() == SyntaxKind.NumericalLiteralExpression && long.TryParse(lit.Token.Text, out long v)
             ? v
             : null;

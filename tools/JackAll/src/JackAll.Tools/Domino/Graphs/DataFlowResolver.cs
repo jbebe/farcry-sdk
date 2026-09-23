@@ -64,6 +64,7 @@ public static class DataFlowResolver
             .ToLookup(e => e.Variable!, StringComparer.Ordinal);
 
         var predecessors = controlEdges.ToLookup(e => e.To, e => e.From, StringComparer.Ordinal);
+        var reachingCache = new Dictionary<(string Node, string Variable), List<DataEvent>>();
 
         var edges = new List<DataEdge>();
 
@@ -78,7 +79,7 @@ public static class DataFlowResolver
                     break;
 
                 case DataEventKind.Consume when consumer.Variable is { } variable:
-                    edges.AddRange(ResolveThroughVariable(consumer, variable, producersByVariable, predecessors));
+                    edges.AddRange(ResolveThroughVariable(consumer, variable, producersByVariable, predecessors, reachingCache));
                     break;
             }
         }
@@ -90,7 +91,8 @@ public static class DataFlowResolver
         DataEvent consumer,
         string variable,
         ILookup<string, DataEvent> producersByVariable,
-        ILookup<string, string> predecessors)
+        ILookup<string, string> predecessors,
+        Dictionary<(string Node, string Variable), List<DataEvent>> reachingCache)
     {
         var candidates = producersByVariable[variable].ToList();
         if (candidates.Count == 0)
@@ -125,7 +127,10 @@ public static class DataFlowResolver
 
         // Rule 2: the writers whose value can still be in the variable when some control path arrives
         // here - each one a real source, on its own branch.
-        var reaching = ReachingProducers(consumer.NodeId, distinct, predecessors);
+        if (!reachingCache.TryGetValue((consumer.NodeId, variable), out List<DataEvent>? reaching))
+        {
+            reachingCache[(consumer.NodeId, variable)] = reaching = ReachingProducers(consumer.NodeId, distinct, predecessors);
+        }
         if (reaching.Count == 0)
         {
             // No control path from any writer reaches here - nothing to choose between.
