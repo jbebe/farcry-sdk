@@ -27,6 +27,9 @@ internal static class XbgFixtures
     // Body and roof each ship as STATE01 and STATE02.
     public const string SwampBoat = "Xbg/swampboat.xbg";
 
+    // A wardrobe whose clothes carry two LOD suffixes, P_WC_LB_JEANS03_LOD00_LOD0.
+    public const string FemaleCivilianKit = "Xbg/female_civilian_kit.xbg";
+
     /// <summary>One mesh for each of the three vertex formats that ship: skinned, static and grass.</summary>
     public static TheoryData<string> Formats => new() { Bat, Fence, Grass };
 }

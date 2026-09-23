@@ -387,6 +387,43 @@ Sampler bindings are `t0` `MaskTexture1`, `t1` `DiffuseTexture1`, `t2` `DiffuseT
 `[3]` `DiffuseColor2`, `[7]` `DiffuseTilingAndGroup1`, `[8]` `DiffuseTilingAndGroup2`,
 `[11]` `MaskTilingAndGroup1`.
 
+### The `Cloth` and `Skin` pixel shaders
+
+:::info[Verified via reverse engineering]
+Disassembled from the `obj10` objects that name `FabricTexture` and `SkinColor` (for example
+`shadernumber_1c5dcae1` and `shadernumber_e837c335`). Neither shader has an option-free permutation,
+so they are found by constant name rather than by `CRC32("Cloth")`.
+:::
+
+Character clothing and skin use their own templates rather than `Generic`. `uvG(n)` is the UV set that
+`UVGroupMapChannel<n>` names; unlike `Generic`, each texture's group is fixed by the shader.
+
+```
+Cloth
+  fabric = tex2D(FabricTexture, uvG(1) * FabricTiling)
+  mask   = tex2D(MaskTexture1,  uvG(0))
+  print  = tex2D(PrintTexture,  uvG(2) * PrintTiling)
+  blood  = tex2D(BloodTexture,  uvG(3) * BloodTiling)
+  layer1 = fabric.rgb * lerp(BaseColor1, BaseColor2, vertexColour.b)
+  albedo = lerp(layer1, print.rgb, mask.g * vertexColour.g) * lerp(1, blood.rgb, vertexColour.r)
+  alpha  = fabric.a
+  spec   = lerp(SpecularColorBase * mask.b, SpecularTexture1 * SpecularColor1, mask.r)
+
+Skin
+  skin   = tex2D(SkinTexture,  uvG(1))
+  mask   = tex2D(MaskTexture1, uvG(0))
+  blood  = tex2D(BloodTexture, uvG(2) * BloodTiling)
+  albedo = skin.rgb * lerp(PalmColor, SkinColor, vertexColour.b) * lerp(1, blood.rgb, vertexColour.g)
+  spec   = mask.g * (SpecularColorBase at SpecularPower + SpecularColor1 at PeekSpecularPower)
+```
+
+Unlike `Generic`, the tint pair is weighted by the vertex colour alone, not by the mask. `Cloth`'s
+print texture is not tinted. `BloodTexture` is dirt on most retail clothing (`c_cm_dirt_02_d`), and a
+character kit swaps it for a beard on a face (see
+[kit picks](../engine-internals/entity-instancing.md#kit-picks-recolour-and-retexture-parts)).
+`Hair` is `Generic`-shaped: `DiffuseTexture1 × DiffuseColor1`, with a highlight from
+`SpecularTexture1 × SpecularColor1`.
+
 ### Tiling and the "group" half
 
 Each `…TilingAndGroup` constant is `float4(tilingU, tilingV, groupU, groupV)`. The `.xy` half scales

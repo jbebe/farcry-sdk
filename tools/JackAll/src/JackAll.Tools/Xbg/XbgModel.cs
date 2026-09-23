@@ -68,7 +68,9 @@ public sealed class XbgSubmesh
 /// </remarks>
 public sealed partial class XbgModel
 {
-    [GeneratedRegex(@"_LOD\d+$", RegexOptions.IgnoreCase)]
+    /// <summary>Every trailing LOD suffix, not just the last: the female civilian kit names its
+    /// clothes <c>P_WC_LB_JEANS03_LOD00_LOD0</c>, and entities wear them as <c>P_WC_LB_JEANS03</c>.</summary>
+    [GeneratedRegex(@"(_LOD\d+)+$", RegexOptions.IgnoreCase)]
     private static partial Regex LodSuffixRegex();
 
     public required IReadOnlyList<string> Materials { get; init; }

@@ -88,5 +88,5 @@ public sealed class XbgFileTests
     public void The_fixtures_were_actually_found()
         => Fixture.AssertPresent(
             XbgFixtures.Bat, XbgFixtures.Fence, XbgFixtures.Grass, XbgFixtures.Ak47, XbgFixtures.Character,
-            XbgFixtures.Prop, XbgFixtures.Buggy, XbgFixtures.SwampBoat);
+            XbgFixtures.Prop, XbgFixtures.Buggy, XbgFixtures.SwampBoat, XbgFixtures.FemaleCivilianKit);
 }

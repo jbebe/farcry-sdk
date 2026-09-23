@@ -150,17 +150,13 @@ public class WorldModelsTests
         Assert.All(set.Models.SelectMany(m => m.MaterialRanges), r => Assert.Null(r.DiffuseTexturePath));
     }
 
-    /// <summary>The albedo slot differs per material template: DiffuseTexture1 outranks Skin,
-    /// Skin outranks Fabric.</summary>
+    /// <summary>DiffuseTexture1 outranks any other DiffuseTexture slot; a material naming none has
+    /// no layer 1.</summary>
     [Fact]
-    public void The_diffuse_slot_priority_follows_the_material_templates()
+    public void The_diffuse_slot_prefers_layer_one()
     {
         Assert.Equal(@"a\d.xbt", WorldModels.DiffuseTextureOf(
-            Material(textures: [("FabricTexture", @"a\f.xbt"), ("DiffuseTexture1", @"a\d.xbt"), ("SkinTexture", @"a\s.xbt")])));
-        Assert.Equal(@"a\s.xbt", WorldModels.DiffuseTextureOf(
-            Material(textures: [("NormalTexture1", @"a\n.xbt"), ("SkinTexture", @"a\s.xbt")])));
-        Assert.Equal(@"a\f.xbt", WorldModels.DiffuseTextureOf(
-            Material(textures: [("MaskTexture1", @"a\m.xbt"), ("FabricTexture", @"a\f.xbt")])));
+            Material(textures: [("DiffuseTexture2", @"a\d2.xbt"), ("DiffuseTexture1", @"a\d.xbt")])));
         Assert.Equal(@"a\d2.xbt", WorldModels.DiffuseTextureOf(Material(textures: [("DiffuseTexture2", @"a\d2.xbt")])));
         Assert.Null(WorldModels.DiffuseTextureOf(Material(textures: [("NormalTexture1", @"a\n.xbt")])));
     }
@@ -350,19 +346,17 @@ public class WorldModelsTests
     }
 
     /// <summary>
-    /// The wardrobe cap counts outfits, not pieces. A vehicle's slots all belong to one entity, so
-    /// however many it has they are one outfit and it keeps every one of them - the bug this exists
-    /// to prevent left a Land Rover drawing nothing but its grille.
+    /// A vehicle's slots all belong to one entity, so however many it has they bake as one model
+    /// that keeps every one of them - an earlier per-slot count left a Land Rover drawing nothing
+    /// but its grille.
     /// </summary>
     [Fact]
-    public void A_vehicles_many_pieces_are_one_outfit_and_survive_the_cap()
+    public void A_vehicles_many_pieces_bake_as_one_model()
     {
         if (Fixture.Read(Buggy) is not { } buggy) return;
 
-        // The buggy's own 18 pieces, comfortably past the cap and every one a separate slot.
+        // The buggy's own 18 pieces, every one a separate slot.
         string[] pieces = PartsOf(buggy);
-        Assert.True(pieces.Length > WorldModels.MaxOutfitsPerMesh,
-            $"the buggy should carry more pieces than the cap, found {pieces.Length}");
 
         WorldModelSet set = LoadVehicles(Buggy, buggy, pieces, copies: 3);
 
@@ -464,51 +458,17 @@ public class WorldModelsTests
             path => path.EndsWith(".xbm", StringComparison.OrdinalIgnoreCase) ? null : mesh);
     }
 
-    /// <summary>A handful of outfits over one mesh is cheap, so each entity keeps its own.</summary>
+    /// <summary>Outfits over a mesh that is not a kit each keep their own geometry.</summary>
     [Fact]
-    public void A_few_outfits_over_one_mesh_each_keep_their_own_geometry()
+    public void Outfits_over_a_non_kit_mesh_each_keep_their_own_geometry()
     {
         if (Fixture.Read(Boat) is not { } boat) return;
 
         string[] parts = PartsOf(boat);
-        WorldModelSet set = LoadOutfits(boat, Outfits(parts, 3));
+        WorldModelSet set = LoadOutfits(boat, [parts[0], parts[1], $"{parts[0]};{parts[1]}"]);
 
         Assert.Equal(3, set.Models.Count);
     }
-
-    /// <summary>
-    /// Past the cap they all collapse onto the most common one. Without this a wardrobe file bakes
-    /// once per outfit worn anywhere in the world - 682 of them for the mercenaries of world 1,
-    /// turning a 2 MB mesh into 137 MB.
-    /// </summary>
-    [Fact]
-    public void Too_many_outfits_over_one_mesh_collapse_onto_the_most_common()
-    {
-        if (Fixture.Read(Boat) is not { } boat) return;
-
-        string[] parts = PartsOf(boat);
-        List<string> outfits = Outfits(parts, WorldModels.MaxOutfitsPerMesh + 4);
-
-        // One of them is worn twice, so it is the one everybody ends up in.
-        string favourite = outfits[2];
-        outfits.Add(favourite);
-
-        WorldModelSet set = LoadOutfits(boat, outfits);
-        Assert.Single(set.Models);
-
-        WorldModel expected = WorldModels.Bake(
-            Boat, XbgModel.Parse(boat), WorldModels.FineTriangleBudget,
-            onlyParts: new HashSet<string>(favourite.Split(';'), StringComparer.OrdinalIgnoreCase))!;
-        Assert.Equal(expected.Indices.Length, set.Models[0].Indices.Length);
-
-        // Every entity still draws, just all of them in the same clothes.
-        Assert.Equal(outfits.Count, set.ModelIndicesByEntity.Count);
-    }
-
-    /// <summary>Distinct non-empty part lists, taken as the bit patterns of 1, 2, 3...</summary>
-    private static List<string> Outfits(string[] parts, int count)
-        => [.. Enumerable.Range(1, count).Select(n => MeshRef.ParseParts(
-            string.Join(';', parts.Where((_, i) => i < 30 && (n & (1 << i)) != 0))))];
 
     private static WorldModelSet LoadOutfits(byte[] mesh, IReadOnlyList<string> outfits)
     {
@@ -537,12 +497,12 @@ public class WorldModelsTests
 
     private static ArchetypeIndex EmptyIndex() => ArchetypeIndex.Load([new ArchetypeLayer("missing.fcb")], _ => null);
 
-    private static List<WorldEntity> BuildEntities(byte[] sector)
+    internal static List<WorldEntity> BuildEntities(byte[] sector, int sectorId = 56)
     {
         var doc = new WorldSectorDocument
         {
-            SourcePath = SectorFixture,
-            SectorId = 56,
+            SourcePath = $"worldsector{sectorId}.data.fcb",
+            SectorId = sectorId,
             PristineRoot = FcbDocument.Deserialize(sector),
         };
         return [.. doc.PristineRoot.Children
@@ -554,6 +514,8 @@ public class WorldModelsTests
                 Node = node,
                 HomeSector = doc,
                 LayerPathId = "main",
+                Name = FcbEntityFields.ReadString(node, WorldHashes.HidName),
+                ArchetypeName = FcbEntityFields.ReadString(node, WorldHashes.TplCreatureType),
                 Position = FcbEntityFields.ReadVector3(node, WorldHashes.HidPos)
                     ?? FcbEntityFields.ReadVector3(node, WorldHashes.HidPosPrecise),
             })];

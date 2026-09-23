@@ -23,20 +23,25 @@ public enum MaterialAlpha
     Blend,
 }
 
+/// <summary>The engine pixel shaders a material can name that the map draws differently. Every
+/// other template draws as <see cref="Generic"/>.</summary>
+public enum MaterialTemplate
+{
+    Generic,
+    Cloth,
+    Skin,
+    Hair,
+}
+
 /// <summary>
-/// What one .xbm contributes to a draw, in the terms the engine's own <c>Generic</c> pixel shader
-/// uses. Two diffuse layers and a mask, where the mask decides both how much of each layer shows and
-/// which of the first layer's two tints it takes:
-/// <code>
-/// layer1 = diffuse1 * lerp(TintBase, Tint, mask.b * vertexColour.b)
-/// layer2 = diffuse2 * SecondTint
-/// albedo = lerp(layer1, layer2, mask.g * vertexColour.g)
-/// </code>
-/// Decoded from the retail shader objects rather than inferred - see the notes on
-/// <see cref="WorldModels.SurfaceOf"/>.
+/// What one .xbm contributes to a draw, in the terms of the engine's own pixel shaders: two diffuse
+/// layers, a mask and a multiplied blood map, which each template fills from its own slots. The
+/// decoded shaders are in docs/docs/file-formats/xbm-xbg.md.
 /// </summary>
 public readonly record struct MaterialSurface
 {
+    public MaterialTemplate Template { get; init; }
+
     /// <summary>Layer 1's albedo, and the only layer whose alpha is coverage.</summary>
     public string? DiffuseTexturePath { get; init; }
 
@@ -46,6 +51,10 @@ public readonly record struct MaterialSurface
     /// <summary>The mask driving both blends. Null makes the material a plain tinted layer 1, which
     /// is what the engine gets when the mask samples white.</summary>
     public string? MaskPath { get; init; }
+
+    /// <summary>A character's blood or dirt, multiplied over the albedo. Null on anything but Cloth
+    /// and Skin.</summary>
+    public string? BloodPath { get; init; }
 
     public MaterialAlpha Alpha { get; init; }
 
@@ -61,6 +70,11 @@ public readonly record struct MaterialSurface
     public Vector2 DiffuseTiling { get; init; }
     public Vector2 SecondDiffuseTiling { get; init; }
     public Vector2 MaskTiling { get; init; }
+    public Vector2 BloodTiling { get; init; }
+
+    /// <summary>Which UV set, 0 or 1, layer 1, layer 2, the mask and the blood map read, in that
+    /// order. All zero on Generic.</summary>
+    public Vector4 UvSets { get; init; }
 
     /// <summary>
     /// The material draws as a card that turns to face the camera. Exactly two of the 2,208 retail
@@ -70,9 +84,8 @@ public readonly record struct MaterialSurface
     /// </summary>
     public bool Billboard { get; init; }
 
-    /// <summary>The pair the highlight's colour lerps between, on the same mask weight as the
-    /// diffuse tint. Kept as authored and never capped - 466 retail materials run past 1, to 2.0 -
-    /// because the engine also multiplies a spec map into this and the renderer tames it instead.</summary>
+    /// <summary>The highlight's colour pair, weighted per template. Kept as authored and never capped
+    /// - 466 retail materials run past 1 - because the renderer tames it instead.</summary>
     public Vector3 SpecularBase { get; init; }
     public Vector3 SpecularColour { get; init; }
 
@@ -92,6 +105,7 @@ public readonly record struct MaterialSurface
         DiffuseTiling = Vector2.One,
         SecondDiffuseTiling = Vector2.One,
         MaskTiling = Vector2.One,
+        BloodTiling = Vector2.One,
         SpecularBase = Vector3.Zero,
         SpecularColour = Vector3.Zero,
         SpecularPower = 0f,
@@ -135,11 +149,12 @@ public sealed record MaterialRange(int Start, int Count, string MaterialName, Ma
 
 /// <summary>
 /// One unique .xbg a world references, baked into GPU-ready arrays: interleaved
-/// [px py pz nx ny nz u v maskG maskB] vertices and a triangle index list holding two detail tiers.
+/// [px py pz nx ny nz u0 v0 u1 v1 r g b] vertices - both UV sets and the vertex colour - and a
+/// triangle index list holding two detail tiers.
 /// </summary>
 public sealed class WorldModel
 {
-    public const int FloatsPerVertex = 10;
+    public const int FloatsPerVertex = 13;
 
     public required string Path { get; init; }
     public required float[] Vertices { get; init; }
@@ -173,6 +188,27 @@ public sealed class WorldModel
     public Vector2? BillboardFacing { get; init; }
 
     public int VertexCount => Vertices.Length / FloatsPerVertex;
+
+    /// <summary>The same geometry, sharing its arrays, with every range's material restyled.</summary>
+    public WorldModel Restyled(Func<MaterialSurface, MaterialSurface> restyle)
+    {
+        List<MaterialRange> fine = [.. MaterialRanges.Select(r => r with { Surface = restyle(r.Surface) })];
+        return new WorldModel
+        {
+            Path = Path,
+            Vertices = Vertices,
+            Indices = Indices,
+            Fine = Fine,
+            Coarse = Coarse,
+            MaterialRanges = fine,
+            CoarseMaterialRanges = ReferenceEquals(CoarseMaterialRanges, MaterialRanges)
+                ? fine
+                : [.. CoarseMaterialRanges.Select(r => r with { Surface = restyle(r.Surface) })],
+            LocalMin = LocalMin,
+            LocalMax = LocalMax,
+            BillboardFacing = BillboardFacing,
+        };
+    }
 }
 
 /// <summary>Every entity resolved to renderable geometry, plus what the status line reports.</summary>
@@ -180,8 +216,9 @@ public sealed class WorldModelSet
 {
     public required IReadOnlyList<WorldModel> Models { get; init; }
 
-    /// <summary>Indices into <see cref="Models"/> per entity - one per graphics slot it filled. An
-    /// entity absent here keeps its billboard marker. A paste adds its copy under the original's.</summary>
+    /// <summary>Indices into <see cref="Models"/> per entity - one per mesh it draws, or per part
+    /// for a kit character. An entity absent here keeps its billboard marker. A paste adds its copy
+    /// under the original's.</summary>
     public required Dictionary<WorldEntity, int[]> ModelIndicesByEntity { get; init; }
 
     /// <summary>Referenced paths the VFS missed or the parser could not turn into triangles.</summary>
@@ -276,9 +313,9 @@ public static class WorldModels
     {
         Func<string, MaterialSurface?> surfaceByMaterial = SurfaceResolver(readByPath);
 
-        // A few hundred archetypes cover ~90k entities, so the fallback walk runs once per name.
-        var archetypeMeshRefs = new Dictionary<string, IReadOnlyList<MeshRef>>(StringComparer.OrdinalIgnoreCase);
-        var refsByEntity = new Dictionary<WorldEntity, IReadOnlyList<MeshRef>>();
+        // A few hundred archetypes cover ~90k entities, so each is looked up once per name.
+        var byArchetype = new Dictionary<string, ArchetypeGraphics>(StringComparer.OrdinalIgnoreCase);
+        var refsByEntity = new Dictionary<WorldEntity, IReadOnlyList<(MeshRef Mesh, PartLook Look)>>();
         int withoutMesh = 0;
         foreach (WorldEntity entity in entities)
         {
@@ -287,34 +324,36 @@ public static class WorldModels
                 continue;
             }
 
-            IReadOnlyList<MeshRef> refs = MeshRefs(entity.Node);
-            if (refs.Count == 0 && entity.ArchetypeName.Length > 0)
+            if (!byArchetype.TryGetValue(entity.ArchetypeName, out ArchetypeGraphics? archetype))
             {
-                if (!archetypeMeshRefs.TryGetValue(entity.ArchetypeName, out IReadOnlyList<MeshRef>? cached))
-                {
-                    cached = archetypes.Winner(entity.ArchetypeName) is { } winner ? MeshRefs(winner.Node) : [];
-                    archetypeMeshRefs[entity.ArchetypeName] = cached;
-                }
-
-                refs = cached;
+                FcbObject? node = entity.ArchetypeName.Length > 0 ? archetypes.Winner(entity.ArchetypeName)?.Node : null;
+                byArchetype[entity.ArchetypeName] = archetype = new ArchetypeGraphics(
+                    node,
+                    node is null ? null : GraphicKit.Of(node),
+                    node is null ? [] : Plain(MeshRefs(node)));
             }
 
-            if (refs.Count > 0)
+            IReadOnlyList<MeshRef> own = MeshRefs(entity.Node);
+            IReadOnlyList<(MeshRef Mesh, PartLook Look)> refs = own.Count > 0 ? Plain(own) : archetype.Refs;
+            if (refs.Count == 0)
+            {
+                withoutMesh++;
+            }
+            else if (archetype.Kit is null
+                && FcbEntityFields.FindComponent(entity.Node, WorldHashes.CGraphicKitComponent) is null)
             {
                 refsByEntity[entity] = refs;
             }
             else
             {
-                withoutMesh++;
+                refsByEntity[entity] = KitRefs(entity.Node, refs, archetype);
             }
         }
 
-        CollapseCrowdedWardrobes(refsByEntity);
-
-        // Keyed by slot rather than by path, because two entities wearing different outfits out of
-        // one wardrobe file bake to different geometry. The parse is still shared per path, so a
-        // file every mercenary in the world references is read and parsed exactly once.
-        List<MeshRef> unique = [.. refsByEntity.Values.SelectMany(r => r).Distinct()];
+        // Keyed by slot rather than by path, because two entities wearing different parts of one
+        // wardrobe file bake to different geometry. The parse is still shared per path, so a file
+        // every mercenary in the world references is read and parsed exactly once.
+        List<MeshRef> unique = [.. refsByEntity.Values.SelectMany(r => r).Select(r => r.Mesh).Distinct()];
         var parsed = new ConcurrentDictionary<string, XbgModel?>(StringComparer.OrdinalIgnoreCase);
         var baked = new ConcurrentDictionary<MeshRef, WorldModel?>();
         int done = 0;
@@ -354,38 +393,85 @@ public static class WorldModels
         });
 
         var models = new List<WorldModel>();
-        var indexByPath = new Dictionary<MeshRef, int>();
+        var indexByRef = new Dictionary<(MeshRef Mesh, PartLook Look), int>();
         foreach (MeshRef slot in unique)
         {
             if (baked[slot] is { } model)
             {
-                indexByPath[slot] = models.Count;
+                indexByRef[(slot, default)] = models.Count;
                 models.Add(model);
             }
         }
+        int bakedCount = models.Count;
 
         var modelIndicesByEntity = new Dictionary<WorldEntity, int[]>(refsByEntity.Count);
-        foreach ((WorldEntity entity, IReadOnlyList<MeshRef> refs) in refsByEntity)
+        foreach ((WorldEntity entity, IReadOnlyList<(MeshRef Mesh, PartLook Look)> refs) in refsByEntity)
         {
-            int[] indices = [.. refs
-                .Select(r => indexByPath.TryGetValue(r, out int index) ? index : -1)
-                .Where(index => index >= 0)];
-            if (indices.Length > 0)
+            var indices = new List<int>(refs.Count);
+            foreach ((MeshRef Mesh, PartLook Look) slot in refs)
             {
-                modelIndicesByEntity[entity] = indices;
+                if (indexByRef.TryGetValue(slot, out int index))
+                {
+                    indices.Add(index);
+                }
+                else if (indexByRef.TryGetValue((slot.Mesh, default), out int plain))
+                {
+                    // A kit look restyles the part's own bake, so looks cost ranges, not geometry. A
+                    // look that repaints nothing - a colour on a Generic part - keeps the plain bake.
+                    WorldModel restyled = models[plain].Restyled(slot.Look.Apply);
+                    index = restyled.MaterialRanges.SequenceEqual(models[plain].MaterialRanges)
+                        && restyled.CoarseMaterialRanges.SequenceEqual(models[plain].CoarseMaterialRanges)
+                            ? plain
+                            : models.Count;
+                    if (index != plain)
+                    {
+                        models.Add(restyled);
+                    }
+                    indexByRef[slot] = index;
+                    indices.Add(index);
+                }
+            }
+
+            if (indices.Count > 0)
+            {
+                modelIndicesByEntity[entity] = [.. indices];
             }
         }
 
         progress?.Report(
-            $"Baked {models.Count:N0} of {unique.Count:N0} meshes for {modelIndicesByEntity.Count:N0} entities");
+            $"Baked {bakedCount:N0} of {unique.Count:N0} meshes for {modelIndicesByEntity.Count:N0} entities");
         return new WorldModelSet
         {
             Models = models,
             ModelIndicesByEntity = modelIndicesByEntity,
-            FailedPathCount = unique.Count - models.Count,
+            FailedPathCount = unique.Count - bakedCount,
             EntitiesWithoutMesh = withoutMesh,
         };
     }
+
+    /// <summary>
+    /// A kit character's slots split into one per part, each carrying the look its kit picks.
+    /// </summary>
+    /// <remarks>
+    /// Per part rather than per outfit because outfits do not repeat: world1's 709 mercenaries wear
+    /// 682 of them, and a bake per outfit is 137 MB of copies of one file. Split, the file bakes
+    /// once, part by part, however many NPCs wear it.
+    /// </remarks>
+    private static List<(MeshRef Mesh, PartLook Look)> KitRefs(
+        FcbObject entity, IReadOnlyList<(MeshRef Mesh, PartLook Look)> refs, ArchetypeGraphics archetype)
+    {
+        Dictionary<string, PartLook> looks = archetype.Kit?.LooksOf(entity, archetype.Node) ?? [];
+        return [.. refs.SelectMany(r => r.Mesh.Parts.Length == 0
+            ? [r]
+            : r.Mesh.Parts.Split(';').Select(part => (new MeshRef(r.Mesh.Path, part), looks.GetValueOrDefault(part))))];
+    }
+
+    private static List<(MeshRef Mesh, PartLook Look)> Plain(IReadOnlyList<MeshRef> refs)
+        => [.. refs.Select(r => (r, default(PartLook)))];
+
+    /// <summary>What <see cref="Load"/> needs of an archetype, looked up once per name.</summary>
+    private sealed record ArchetypeGraphics(
+        FcbObject? Node, GraphicKit? Kit, IReadOnlyList<(MeshRef Mesh, PartLook Look)> Refs);
 
     /// <summary>The two kinds of file a graphics slot or a scatter list names that carry geometry.</summary>
     public static bool IsGeometry(string path)
@@ -497,79 +583,6 @@ public static class WorldModels
         return facing.LengthSquared() > 1e-6f ? Vector2.Normalize(facing) : -Vector2.UnitY;
     }
 
-    /// <summary>Parts do not all carry the same LOD levels - a wall or a wheel often stops at a
-    /// finer one than the body it belongs to - so a part with nothing at the requested level falls
-    /// back to its own nearest rather than dropping out of the model.</summary>
-    /// <summary>
-    /// How many different part lists one mesh may bake before they all collapse to one.
-    /// </summary>
-    /// <remarks>
-    /// Filtering parts out never costs memory - it is the number of copies that does. Each distinct
-    /// outfit is a separate bake of the same file, so a mesh worn one way is 2 MB and the same mesh
-    /// worn 682 ways is 137 MB. A handful of variants is free and worth keeping; a wardrobe with
-    /// hundreds is not, and every NPC wearing one default outfit still beats drawing the whole rack.
-    /// </remarks>
-    public const int MaxOutfitsPerMesh = 16;
-
-    /// <summary>
-    /// Holds the per-entity outfits of any mesh with few enough of them, and gives every entity
-    /// wearing a more crowded one its most common outfit instead. Ties break on the part list so a
-    /// world always loads the same way.
-    /// </summary>
-    /// <remarks>
-    /// An outfit is one entity's whole part list for one mesh, which is why <see cref="MeshRefs"/>
-    /// has to merge an entity's slots first. Counting slots instead reads a vehicle's 33 pieces as 33
-    /// ways to wear a Land Rover and leaves every one of them wearing a single door.
-    /// </remarks>
-    private static void CollapseCrowdedWardrobes(Dictionary<WorldEntity, IReadOnlyList<MeshRef>> refsByEntity)
-    {
-        var uses = new Dictionary<string, Dictionary<string, int>>(StringComparer.OrdinalIgnoreCase);
-        foreach (MeshRef slot in refsByEntity.Values.SelectMany(refs => refs))
-        {
-            if (slot.Parts.Length == 0)
-            {
-                continue;
-            }
-
-            if (!uses.TryGetValue(slot.Path, out Dictionary<string, int>? outfits))
-            {
-                uses[slot.Path] = outfits = new Dictionary<string, int>(StringComparer.Ordinal);
-            }
-
-            outfits[slot.Parts] = outfits.GetValueOrDefault(slot.Parts) + 1;
-        }
-
-        var defaults = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        foreach ((string path, Dictionary<string, int> outfits) in uses)
-        {
-            if (outfits.Count > MaxOutfitsPerMesh)
-            {
-                defaults[path] = outfits
-                    .OrderByDescending(o => o.Value).ThenBy(o => o.Key, StringComparer.Ordinal)
-                    .First().Key;
-            }
-        }
-
-        if (defaults.Count == 0)
-        {
-            return;
-        }
-
-        foreach (WorldEntity entity in refsByEntity.Keys.ToList())
-        {
-            IReadOnlyList<MeshRef> refs = refsByEntity[entity];
-            if (!refs.Any(r => r.Parts.Length > 0 && defaults.ContainsKey(r.Path)))
-            {
-                continue;
-            }
-
-            refsByEntity[entity] = [.. refs.Select(r =>
-                r.Parts.Length > 0 && defaults.TryGetValue(r.Path, out string? only)
-                    ? r with { Parts = only }
-                    : r)];
-        }
-    }
-
     /// <summary>The <c>STATE&lt;n&gt;</c> tag a part name carries, anywhere in the name.</summary>
     private static readonly Regex StateToken =
         new(@"_?STATE(\d+)", RegexOptions.IgnoreCase | RegexOptions.Compiled);
@@ -674,9 +687,9 @@ public static class WorldModels
                 Vector3 p = first.Place(first.Positions[i]);
                 Vector3 n = first.PlaceNormal(normals[i]);
                 Vector2 uv = first.Uvs is { } uvs ? uvs[i] : Vector2.Zero;
-                // Two of the vertex colour's channels reach the diffuse: green weights the blend
-                // between the material's two layers, blue the lerp between layer 1's two tints. Both
-                // are multiplied by a mask channel in the shader. Absent, the engine reads white.
+                Vector2 uv1 = first.Uvs1 is { } uvs1 ? uvs1[i] : uv;
+                // The vertex colour weights the templates' blends: blue the tint pair, green the
+                // second layer or Skin's blood, red Cloth's blood. Absent, the engine reads white.
                 Vector4 colour = first.Colours is { } colours ? colours[i] : Vector4.One;
                 vertices.Add(p.X);
                 vertices.Add(p.Y);
@@ -686,6 +699,9 @@ public static class WorldModels
                 vertices.Add(n.Z);
                 vertices.Add(uv.X);
                 vertices.Add(uv.Y);
+                vertices.Add(uv1.X);
+                vertices.Add(uv1.Y);
+                vertices.Add(colour.X);
                 vertices.Add(colour.Y);
                 vertices.Add(colour.Z);
             }
@@ -745,7 +761,8 @@ public static class WorldModels
     }
 
     /// <summary>
-    /// What one material draws as, following the retail <c>Generic</c> pixel shader.
+    /// What one material draws as, following the retail <c>Generic</c>, <c>Cloth</c> and <c>Skin</c>
+    /// pixel shaders.
     /// </summary>
     /// <remarks>
     /// Decoded from <c>shadersobj\engine\shaders\obj10</c>, which ships the D3D10 build of the
@@ -753,33 +770,65 @@ public static class WorldModels
     /// survive and <c>fxc /dumpbin</c> reads them straight out. The sibling <c>obj</c> tree is the
     /// same shaders built for D3D9 with the names stripped.
     /// <para>
-    /// One simplification: the engine pairs every tiling with a "group" that picks which of the two
-    /// UV sets the texture reads. Group 0 maps to UV set 0 on every retail material, and layer 1
-    /// always sits on group 0, so layer 1 is exact. Which group the mask and layer 2 use is not
-    /// recorded in the .xbm - only the group-to-channel table is - so both are read off UV set 0
-    /// too, which is right wherever their group also maps to channel 0.
+    /// One simplification on Generic: which UV group its mask and layer 2 use is not recorded in the
+    /// .xbm, so both are read off UV set 0. Cloth and Skin fix each texture's group in the shader, so
+    /// theirs are exact.
     /// </para>
     /// </remarks>
     public static MaterialSurface SurfaceOf(XbmMaterial material)
     {
-        (Vector3 tintBase, Vector3 tint) = TintsOf(material);
         (Vector3 specularBase, Vector3 specular) = SpecularsOf(material);
-        return new MaterialSurface
+        MaterialTemplate template = Enum.TryParse(material.Template, ignoreCase: true, out MaterialTemplate named)
+            ? named
+            : MaterialTemplate.Generic;
+        MaterialSurface shared = MaterialSurface.None with
         {
-            DiffuseTexturePath = DiffuseTextureOf(material),
-            SecondDiffusePath = TextureSlot(material, "DiffuseTexture2"),
+            Template = template,
             MaskPath = TextureSlot(material, "MaskTexture1"),
             Alpha = AlphaOf(material),
-            TintBase = tintBase,
-            Tint = tint,
-            SecondTint = ColourProperty(material, "DiffuseColor2") ?? Vector3.One,
-            DiffuseTiling = TilingProperty(material, "DiffuseTiling1"),
-            SecondDiffuseTiling = TilingProperty(material, "DiffuseTiling2"),
-            MaskTiling = TilingProperty(material, "MaskTiling1"),
             Billboard = BoolProperty(material, "Billboard"),
             SpecularBase = specularBase,
             SpecularColour = specular,
             SpecularPower = Math.Clamp(ScalarProperty(material, "SpecularPower") ?? 0f, 0f, 128f),
+        };
+
+        // Each texture reads the UV set its group maps to; the shader fixes which group that is.
+        float Group(int group) => ScalarProperty(material, $"UVGroupMapChannel{group}") is 1f ? 1f : 0f;
+        (Vector3 tintBase, Vector3 tint) = TintsOf(material);
+        return template switch
+        {
+            MaterialTemplate.Cloth => shared with
+            {
+                DiffuseTexturePath = TextureSlot(material, "FabricTexture"),
+                SecondDiffusePath = TextureSlot(material, "PrintTexture"),
+                BloodPath = TextureSlot(material, "BloodTexture"),
+                TintBase = ColourProperty(material, "BaseColor1") ?? Vector3.One,
+                Tint = ColourProperty(material, "BaseColor2") ?? Vector3.One,
+                DiffuseTiling = TilingProperty(material, "FabricTiling"),
+                SecondDiffuseTiling = TilingProperty(material, "PrintTiling"),
+                BloodTiling = TilingProperty(material, "BloodTiling"),
+                UvSets = new Vector4(Group(1), Group(2), Group(0), Group(3)),
+            },
+            MaterialTemplate.Skin => shared with
+            {
+                DiffuseTexturePath = TextureSlot(material, "SkinTexture"),
+                BloodPath = TextureSlot(material, "BloodTexture"),
+                TintBase = ColourProperty(material, "PalmColor") ?? Vector3.One,
+                Tint = ColourProperty(material, "SkinColor") ?? Vector3.One,
+                BloodTiling = TilingProperty(material, "BloodTiling"),
+                UvSets = new Vector4(Group(1), 0f, Group(0), Group(2)),
+            },
+            _ => shared with
+            {
+                DiffuseTexturePath = DiffuseTextureOf(material),
+                SecondDiffusePath = TextureSlot(material, "DiffuseTexture2"),
+                TintBase = tintBase,
+                Tint = tint,
+                SecondTint = ColourProperty(material, "DiffuseColor2") ?? Vector3.One,
+                DiffuseTiling = TilingProperty(material, "DiffuseTiling1"),
+                SecondDiffuseTiling = TilingProperty(material, "DiffuseTiling2"),
+                MaskTiling = TilingProperty(material, "MaskTiling1"),
+            },
         };
     }
 
@@ -888,12 +937,11 @@ public static class WorldModels
             : MaterialAlpha.Opaque;
     }
 
-    /// <summary>The albedo across the material templates: Generic and Hair bind DiffuseTexture1,
-    /// Skin puts it in SkinTexture, Cloth in FabricTexture.</summary>
+    /// <summary>Layer 1's albedo on every template but Cloth and Skin: DiffuseTexture1, else the
+    /// first DiffuseTexture slot the material names.</summary>
     public static string? DiffuseTextureOf(XbmMaterial material)
     {
-        if ((TextureSlot(material, "DiffuseTexture1") ?? TextureSlot(material, "SkinTexture")
-            ?? TextureSlot(material, "FabricTexture")) is { } named)
+        if (TextureSlot(material, "DiffuseTexture1") is { } named)
         {
             return named;
         }

@@ -220,8 +220,11 @@ draw**, semicolon-delimited with empty ends:
  P_MC_DUMMYARMDEALERBEARD;P_MC_LB_BOOT02;P_MC_CAUC_HAIR01;…;P_MC_EYES_CAUCASIAN_HEAD03;
 ```
 
-The names match the mesh's `DNKS` part names exactly. Empty — which it is on almost everything —
-means draw the whole file.
+The names match the mesh's `DNKS` part names with every trailing `_LOD<n>` suffix removed. Most parts
+carry one; the female civilian kit's clothes carry two (`P_WC_LB_JEANS03_LOD00_LOD0`), and entities
+still wear them as `P_WC_LB_JEANS03`. Across the retail corpus 76 part names in 8 character files are
+doubled this way, and stripping every suffix never merges two distinct parts. Empty — which it is on
+almost everything — means draw the whole file.
 
 It matters for exactly the files where it is set. `merc_kit.xbg` is a 111-part wardrobe referenced by
 469 campaign sector files; without the list every mercenary in the game renders all 111 parts at
@@ -233,6 +236,38 @@ the flat form finds nothing.
 
 Outfits are effectively unique per NPC — 709 mercenaries in `world1` wear 682 distinct part lists —
 so a tool that bakes geometry per outfit is baking almost per entity.
+
+## Kit picks recolour and retexture parts
+
+:::info[Verified via reverse engineering]
+Traced in `FarCry2_server`: `CGraphicKitComponent::GetSelectedColors` (`0x094b7a50`),
+`UpdateColorInMaterial` (`0x094b5080`) and `UpdateTextureInMaterial` (`0x094bca60`).
+:::
+
+A character's archetype embeds its kit descriptor as an Rml value in
+`CFileDescriptorComponent.hidDescriptor` — `merc_kit.xml`, `female_civilian_kit.xml`. The descriptor
+lists every part by slot (`HEAD`, `SHIRT`, `PANTS`, …) with a `meshName`, an `id`, and a `colors` and
+`textures` element that each name a library and say whether picks may `overwrite` from it. The
+libraries follow: `<color color1 color2/>` pairs and `<texture path tiling/>` entries.
+
+The NPC's own `CGraphicKitComponent.PartOverwrite` holds the picks, one `ActivePartOverwrite` per
+part: `PartID` (CRC32 of the part's exact-case `id`), `TextureIndex` and `ColorIndex`. A pick applies
+only when the part allows overwrites from that library and the index is not -1. Nothing is randomised
+at draw time; the randomisation that chose the picks happened when the entity was authored.
+
+A colour is a decimal `0x00BBGGRR`, red in the low byte. The pair and a texture land on material
+parameters by the part's shader template:
+
+| Template | `color1` | `color2` | Texture, tiling |
+|---|---|---|---|
+| `Cloth` | `BaseColor1` | `BaseColor2` | `PrintTexture`, `PrintTiling` |
+| `Skin` | `PalmColor` | `SkinColor` | `BloodTexture`, `BloodTiling` |
+| `Hair` | `DiffuseColor1` | `SpecularColor1` | `DiffuseTexture1`, `DiffuseTiling1` |
+| anything else | `BaseColor1` | `BaseColor2` | `DiffuseTexture1`, `DiffuseTiling1` |
+
+On a `Generic` material the colour pair lands on parameters its shader never reads, so only the
+texture shows. Beard textures reach a face as its `BloodTexture`. A skin tone is a `Skin` part's
+`colors` pick from the `caucasian`, `nubian` or `arabskin` library.
 
 ## Where entities are actually placed
 

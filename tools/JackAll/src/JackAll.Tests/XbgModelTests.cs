@@ -311,6 +311,22 @@ public class XbgModelTests
             onlyParts: new HashSet<string>(["NO_SUCH_PART"], StringComparer.OrdinalIgnoreCase)));
     }
 
+    /// <summary>The outfit a retail female civilian wears (worldsector3944) bakes every piece of
+    /// it, clothes included, although the file names the clothes with a doubled LOD suffix.</summary>
+    [Fact]
+    public void A_part_named_with_two_lod_suffixes_is_worn_by_its_bare_name()
+    {
+        if (Fixture.Read(XbgFixtures.FemaleCivilianKit) is not { } bytes) return;
+
+        XbgModel model = XbgModel.Parse(bytes);
+        string[] outfit = MeshRef.ParseParts(
+            ";P_MC_WOMENCIVIL_HEAD01;P_WC_UB_SHIRT_TSHIRT01;P_WC_TOP_BODY_TSHIRT;P_WC_LB_JEANS03;P_CW_LEGS_LONG_SKIRT;P_MC_HAIRSTYLE6;P_CW_BRACELET02;")
+            .Split(';');
+
+        Assert.All(outfit, part => Assert.Contains(model.Submeshes, s => s.LodLevel == 0 && s.PartName == part));
+        Assert.Contains(model.Submeshes, s => s.LodLevel == 3 && s.PartName == "P_WC_LB_JEANS03");
+    }
+
     /// <summary>Retail meshes carry two UV sets, and nearly all of them have the second one. It is
     /// what the "group" half of a material's tiling vector reads, so dropping it silently costs the
     /// mask and the second diffuse layer their coordinates.</summary>
@@ -330,24 +346,25 @@ public class XbgModelTests
     }
 
     /// <summary>
-    /// The bake hands the shader both channels the diffuse blend multiplies the mask by: green
-    /// weights the two layers against each other, blue moves layer 1's tint from Base to Color1.
-    /// Ten floats a vertex, and the last two are those, in that order.
+    /// The bake hands the shader the vertex colour its blends weigh by: blue moves the tint pair,
+    /// green the second layer or Skin's blood, red Cloth's blood. Thirteen floats a vertex, and the
+    /// last three are those, in RGB order.
     /// </summary>
     [Fact]
-    public void Baked_vertices_carry_both_mask_channels()
+    public void Baked_vertices_carry_the_vertex_colour()
     {
         if (Model(XbgFixtures.Prop) is not { } model) return;
 
         WorldModel baked = WorldModels.Bake(XbgFixtures.Prop, model, WorldModels.FineTriangleBudget)!;
 
-        Assert.Equal(10, WorldModel.FloatsPerVertex);
+        Assert.Equal(13, WorldModel.FloatsPerVertex);
         Assert.Equal(0, baked.Vertices.Length % WorldModel.FloatsPerVertex);
 
         XbgSubmesh source = model.Submeshes.First(s => s.LodLevel == 0 && s.Colours is not null);
         Vector4 first = source.Colours![source.Indices[0]];
-        Assert.Equal(first.Y, baked.Vertices[8], 3);
-        Assert.Equal(first.Z, baked.Vertices[9], 3);
+        Assert.Equal(first.X, baked.Vertices[10], 3);
+        Assert.Equal(first.Y, baked.Vertices[11], 3);
+        Assert.Equal(first.Z, baked.Vertices[12], 3);
     }
 
     /// <summary>

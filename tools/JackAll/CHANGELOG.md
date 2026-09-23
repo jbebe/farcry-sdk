@@ -76,8 +76,14 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   read. "Overridden only" became "Modded only", and the "Reads as" picker is gone.
 - **`mod lint` checks the library single-player reads** — it used to default to
   `entitylibrary_full.fcb`; the `--profile` option is removed.
+- **Map tab characters wear their own look** — every NPC draws the exact outfit it was placed with
+  (mercenaries used to share the single most common one), in the skin tone, clothing colours, shirt
+  prints and beard its kit picked, and clothing and skin draw through the engine's own Cloth and Skin
+  shaders.
 
 ### Fixed
+- **Female civilians drew only a head and shoulders in the Map tab** — their clothes, and the eyes
+  of one mercenary head, are named with a doubled LOD suffix the part lookup did not strip.
 - **Saving map edits with nothing added left them pending** — a save of only moves or deletes now
   clears them like any other.
 - **A moved entity that had no `hidAngles` of its own lost a rotation** given to it.

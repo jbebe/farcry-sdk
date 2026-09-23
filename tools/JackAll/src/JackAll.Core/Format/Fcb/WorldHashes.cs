@@ -76,4 +76,18 @@ public static class WorldHashes
 
     /// <summary>The per-slot child a library archetype's graphics component nests its fields in.</summary>
     public static readonly uint GraphicObject = FcbClassDefinitions.Crc32Ascii("object");
+
+    /// <summary>A character's kit picks: one <see cref="ActivePartOverwrite"/> per part, naming it by
+    /// <see cref="PartID"/> and choosing a <see cref="TextureIndex"/> and <see cref="ColorIndex"/>
+    /// into the kit's libraries.</summary>
+    public static readonly uint CGraphicKitComponent = FcbClassDefinitions.Crc32Ascii("CGraphicKitComponent");
+    public static readonly uint PartOverwrite = FcbClassDefinitions.Crc32Ascii("PartOverwrite");
+    public static readonly uint ActivePartOverwrite = FcbClassDefinitions.Crc32Ascii("ActivePartOverwrite");
+    public static readonly uint PartID = FcbClassDefinitions.Crc32Ascii("PartID");
+    public static readonly uint TextureIndex = FcbClassDefinitions.Crc32Ascii("TextureIndex");
+    public static readonly uint ColorIndex = FcbClassDefinitions.Crc32Ascii("ColorIndex");
+
+    /// <summary>Where an archetype embeds its kit descriptor, as an Rml <see cref="HidDescriptor"/>.</summary>
+    public static readonly uint CFileDescriptorComponent = FcbClassDefinitions.Crc32Ascii("CFileDescriptorComponent");
+    public static readonly uint HidDescriptor = FcbClassDefinitions.Crc32Ascii("hidDescriptor");
 }

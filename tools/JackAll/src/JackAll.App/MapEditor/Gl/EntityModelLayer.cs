@@ -31,7 +31,8 @@ public sealed class EntityModelLayer : IDisposable
         layout(location = 3) in vec3 instancePosition;
         layout(location = 4) in vec3 instanceAngles;
         layout(location = 5) in vec3 tint;
-        layout(location = 6) in vec2 vertexMask;
+        layout(location = 6) in vec3 vertexColour;
+        layout(location = 7) in vec2 uv1;
         uniform mat4 viewProjection;
         uniform vec3 cameraPosition;
         // Which way this mesh's card looks in model space, or zero for ordinary geometry that
@@ -79,11 +80,12 @@ public sealed class EntityModelLayer : IDisposable
         /// </summary>
         public required int[] Opaque;
         public required int[] Blended;
-        /// <summary>Live GL handles per range, one array per sampler the Generic shader binds; 0
-        /// where that map is absent or still streaming.</summary>
+        /// <summary>Live GL handles per range, one array per sampler the shader binds; 0 where that
+        /// map is absent or still streaming.</summary>
         public required int[] Handles;
         public required int[] SecondHandles;
         public required int[] MaskHandles;
+        public required int[] BloodHandles;
 
         public static Tier Of(IReadOnlyList<MaterialRange> ranges) => new()
         {
@@ -93,6 +95,7 @@ public sealed class EntityModelLayer : IDisposable
             Handles = new int[ranges.Count],
             SecondHandles = new int[ranges.Count],
             MaskHandles = new int[ranges.Count],
+            BloodHandles = new int[ranges.Count],
         };
     }
 
@@ -124,6 +127,8 @@ public sealed class EntityModelLayer : IDisposable
 
     private readonly ShaderProgram _program;
     private readonly Mesh[] _meshes;
+    /// <summary>Vertex and index buffers per baked array; a kit look shares its part's.</summary>
+    private readonly Dictionary<float[], (int Vertex, int Index)> _buffers = new(ReferenceEqualityComparer.Instance);
     private readonly Dictionary<WorldEntity, Row> _rows;
     private readonly Func<string, byte[]?> _readByPath;
     /// <summary>Diffuse handle per path: -1 decoding, 0 failed for good, else the GL texture.</summary>
@@ -145,6 +150,10 @@ public sealed class EntityModelLayer : IDisposable
     private readonly int _uMaskTiling;
     private readonly int _uUseSecond;
     private readonly int _uUseMask;
+    private readonly int _uUseBlood;
+    private readonly int _uMaterialTemplate;
+    private readonly int _uBloodTiling;
+    private readonly int _uUvSets;
     private readonly int _uSpecularBase;
     private readonly int _uSpecularColour;
     private readonly int _uSpecularPower;
@@ -160,6 +169,7 @@ public sealed class EntityModelLayer : IDisposable
     private readonly int _dCameraPosition;
     private readonly int _dBillboardFacing;
     private readonly int _dDiffuseTiling;
+    private readonly int _dDiffuseUvSet;
     private readonly int _dUseTexture;
     private readonly int _dAlphaMode;
 
@@ -235,12 +245,17 @@ public sealed class EntityModelLayer : IDisposable
                 blended.Add(mesh);
             }
 
-            mesh.VertexBuffer = GL.GenBuffer();
-            GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.VertexBuffer);
-            GL.BufferData(BufferTarget.ArrayBuffer, model.Vertices.Length * sizeof(float),
-                model.Vertices, BufferUsageHint.StaticDraw);
+            bool fresh = !_buffers.TryGetValue(model.Vertices, out (int Vertex, int Index) shared);
+            if (fresh)
+            {
+                shared = _buffers[model.Vertices] = (GL.GenBuffer(), GL.GenBuffer());
+                GL.BindBuffer(BufferTarget.ArrayBuffer, shared.Vertex);
+                GL.BufferData(BufferTarget.ArrayBuffer, model.Vertices.Length * sizeof(float),
+                    model.Vertices, BufferUsageHint.StaticDraw);
+            }
+            mesh.VertexBuffer = shared.Vertex;
+            mesh.IndexBuffer = shared.Index;
 
-            mesh.IndexBuffer = GL.GenBuffer();
             mesh.InstanceBuffer = GL.GenBuffer();
             GL.BindBuffer(BufferTarget.ArrayBuffer, mesh.InstanceBuffer);
             GL.BufferData(BufferTarget.ArrayBuffer, Math.Max(1, capacity[i]) * InstanceStrideBytes,
@@ -255,8 +270,10 @@ public sealed class EntityModelLayer : IDisposable
             GL.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, VertexStrideBytes, 12);
             GL.EnableVertexAttribArray(2);
             GL.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, VertexStrideBytes, 24);
+            GL.EnableVertexAttribArray(7);
+            GL.VertexAttribPointer(7, 2, VertexAttribPointerType.Float, false, VertexStrideBytes, 32);
             GL.EnableVertexAttribArray(6);
-            GL.VertexAttribPointer(6, 2, VertexAttribPointerType.Float, false, VertexStrideBytes, 32);
+            GL.VertexAttribPointer(6, 3, VertexAttribPointerType.Float, false, VertexStrideBytes, 40);
             GL.EnableVertexAttribArray(3);
             GL.EnableVertexAttribArray(4);
             GL.EnableVertexAttribArray(5);
@@ -265,8 +282,11 @@ public sealed class EntityModelLayer : IDisposable
             GL.VertexAttribDivisor(4, 1);
             GL.VertexAttribDivisor(5, 1);
             GL.BindBuffer(BufferTarget.ElementArrayBuffer, mesh.IndexBuffer);
-            GL.BufferData(BufferTarget.ElementArrayBuffer, model.Indices.Length * sizeof(int),
-                model.Indices, BufferUsageHint.StaticDraw);
+            if (fresh)
+            {
+                GL.BufferData(BufferTarget.ElementArrayBuffer, model.Indices.Length * sizeof(int),
+                    model.Indices, BufferUsageHint.StaticDraw);
+            }
 
             _meshes[i] = mesh;
         }
@@ -279,9 +299,11 @@ public sealed class EntityModelLayer : IDisposable
             {{TransformGlsl}}
             invariant gl_Position;
             out vec2 texUv;
+            out vec2 texUv1;
             void main()
             {
                 texUv = uv;
+                texUv1 = uv1;
                 gl_Position =
                     viewProjection * vec4(instanceRotation() * position + instancePosition, 1.0);
             }
@@ -289,8 +311,10 @@ public sealed class EntityModelLayer : IDisposable
             """
             #version 330 core
             in vec2 texUv;
+            in vec2 texUv1;
             uniform sampler2D diffuse;
             uniform vec2 diffuseTiling;
+            uniform float diffuseUvSet;
             uniform float useTexture;
             uniform int alphaMode;
             void main()
@@ -298,7 +322,7 @@ public sealed class EntityModelLayer : IDisposable
                 // The same coverage test the lit pass makes. Without it a tree casts the shadow of
                 // the cards its leaves are painted on.
                 if (useTexture > 0.5 && alphaMode == 1
-                    && texture(diffuse, texUv * diffuseTiling).a < 0.5)
+                    && texture(diffuse, mix(texUv, texUv1, diffuseUvSet) * diffuseTiling).a < 0.5)
                 {
                     discard;
                 }
@@ -308,6 +332,7 @@ public sealed class EntityModelLayer : IDisposable
         _dCameraPosition = _depthProgram.UniformLocation("cameraPosition");
         _dBillboardFacing = _depthProgram.UniformLocation("billboardFacing");
         _dDiffuseTiling = _depthProgram.UniformLocation("diffuseTiling");
+        _dDiffuseUvSet = _depthProgram.UniformLocation("diffuseUvSet");
         _dUseTexture = _depthProgram.UniformLocation("useTexture");
         _dAlphaMode = _depthProgram.UniformLocation("alphaMode");
 
@@ -320,7 +345,8 @@ public sealed class EntityModelLayer : IDisposable
             out vec3 worldPosition;
             out vec3 baseColour;
             out vec2 texUv;
-            out vec2 maskWeights;
+            out vec2 texUv1;
+            out vec3 vertexWeights;
             void main()
             {
                 mat3 rotation = instanceRotation();
@@ -329,7 +355,8 @@ public sealed class EntityModelLayer : IDisposable
                 worldNormal = rotation * normal;
                 baseColour = tint;
                 texUv = uv;
-                maskWeights = vertexMask;
+                texUv1 = uv1;
+                vertexWeights = vertexColour;
                 gl_Position = viewProjection * vec4(worldPosition, 1.0);
             }
             """,
@@ -339,59 +366,73 @@ public sealed class EntityModelLayer : IDisposable
             in vec3 worldPosition;
             in vec3 baseColour;
             in vec2 texUv;
-            in vec2 maskWeights;
+            in vec2 texUv1;
+            in vec3 vertexWeights;
             uniform vec3 cameraPosition;
             uniform vec3 sunDirection;
             uniform float useTexture;
             uniform int alphaMode;
+            // MaterialTemplate as drawn: 0 Generic (Hair included), 1 Cloth, 2 Skin.
+            uniform int materialTemplate;
             uniform vec3 tintBase;
             uniform vec3 tintColour;
             uniform vec3 tintSecond;
             uniform vec2 diffuseTiling;
             uniform vec2 secondTiling;
             uniform vec2 maskTiling;
+            uniform vec2 bloodTiling;
+            uniform vec4 uvSets;
             uniform float useSecond;
             uniform float useMask;
+            uniform float useBlood;
             uniform vec3 specularBase;
             uniform vec3 specularColour;
             uniform float specularPower;
             uniform sampler2D diffuse;
             uniform sampler2D diffuse2;
             uniform sampler2D maskMap;
+            uniform sampler2D bloodMap;
             out vec4 fragment;
             {{SceneLighting.SkyGlsl}}
             {{SceneLighting.SurfaceGlsl}}
             {{SceneLighting.ShadowGlsl}}
+            vec2 uvOf(float set) { return mix(texUv, texUv1, set); }
             void main()
             {
                 vec3 albedo = baseColour;
                 float coverage = 1.0;
                 vec4 texel = vec4(1.0);
-                vec2 weights = vec2(0.0);
+                vec4 mask = vec4(1.0);
+                vec3 weights = clamp(vertexWeights, 0.0, 1.0);
                 if (useTexture > 0.5)
                 {
-                    texel = texture(diffuse, texUv * diffuseTiling);
+                    texel = texture(diffuse, uvOf(uvSets.x) * diffuseTiling);
                     // Only materials that asked for it read alpha as coverage; on the rest it is a
                     // gloss or spec mask and would erase the surface.
                     if (alphaMode == 1 && texel.a < 0.5) { discard; }
                     if (alphaMode == 2) { coverage = texel.a; }
 
-                    // The engine's Generic shader, decoded from its own bytecode. The mask gates
-                    // both blends: green picks how much of layer 2 shows, blue how far layer 1's
-                    // tint travels from Base to Color1. A material with no mask samples white, which
-                    // is why an unmasked surface takes its tint in full.
-                    weights = clamp(maskWeights, 0.0, 1.0);
+                    // The engine's own shaders, decoded from their bytecode. A material with no
+                    // mask samples white, which is why an unmasked surface takes its tint in full.
                     if (useMask > 0.5)
                     {
-                        weights *= texture(maskMap, texUv * maskTiling).gb;
+                        mask = texture(maskMap, uvOf(uvSets.z) * maskTiling);
                     }
 
-                    albedo = srgbToLinear(texel.rgb) * mix(tintBase, tintColour, weights.y);
+                    // Generic gates its tint pair by the mask as well as the vertex; Cloth and Skin
+                    // by the vertex alone.
+                    float tintWeight = weights.b * (materialTemplate == 0 ? mask.b : 1.0);
+                    albedo = srgbToLinear(texel.rgb) * mix(tintBase, tintColour, tintWeight);
                     if (useSecond > 0.5)
                     {
-                        vec3 layer2 =
-                            srgbToLinear(texture(diffuse2, texUv * secondTiling).rgb) * tintSecond;
-                        albedo = mix(albedo, layer2, weights.x);
+                        vec3 layer2 = srgbToLinear(
+                            texture(diffuse2, uvOf(uvSets.y) * secondTiling).rgb) * tintSecond;
+                        albedo = mix(albedo, layer2, mask.g * weights.g);
+                    }
+                    if (useBlood > 0.5)
+                    {
+                        vec3 blood = srgbToLinear(texture(bloodMap, uvOf(uvSets.w) * bloodTiling).rgb);
+                        albedo *= mix(vec3(1.0), blood, materialTemplate == 1 ? weights.r : weights.g);
                     }
                 }
                 else
@@ -415,12 +456,12 @@ public sealed class EntityModelLayer : IDisposable
                     return;
                 }
 
-                // An opaque material's diffuse alpha is its gloss mask - the same fact the coverage
-                // branch above steps around. A flipped normal is a guess about which way a shell
-                // faces: good enough for diffuse, not good enough to hang a mirror highlight on, so
-                // the inside of a shell stays matte.
-                float specMask = (useTexture > 0.5 && alphaMode == 0 && !flipped) ? texel.a : 0.0;
-                vec3 spec = mix(specularBase, specularColour, weights.y) * specMask;
+                // An opaque Generic material's diffuse alpha is its gloss mask. A flipped normal is
+                // only a guess at which way a shell faces, so the inside of a shell stays matte.
+                vec3 spec = materialTemplate == 1 ? mix(specularBase * mask.b, specularColour, mask.r)
+                    : materialTemplate == 2 ? specularBase * mask.g
+                    : mix(specularBase, specularColour, weights.b * mask.b) * (alphaMode == 0 ? texel.a : 0.0);
+                spec *= (useTexture > 0.5 && !flipped) ? 1.0 : 0.0;
 
                 vec3 toEye = normalize(cameraPosition - worldPosition);
                 float viewDistance = distance(cameraPosition, worldPosition);
@@ -449,6 +490,10 @@ public sealed class EntityModelLayer : IDisposable
         _uMaskTiling = _program.UniformLocation("maskTiling");
         _uUseSecond = _program.UniformLocation("useSecond");
         _uUseMask = _program.UniformLocation("useMask");
+        _uUseBlood = _program.UniformLocation("useBlood");
+        _uMaterialTemplate = _program.UniformLocation("materialTemplate");
+        _uBloodTiling = _program.UniformLocation("bloodTiling");
+        _uUvSets = _program.UniformLocation("uvSets");
         _uSpecularBase = _program.UniformLocation("specularBase");
         _uSpecularColour = _program.UniformLocation("specularColour");
         _uSpecularPower = _program.UniformLocation("specularPower");
@@ -457,6 +502,7 @@ public sealed class EntityModelLayer : IDisposable
         GL.Uniform1(_program.UniformLocation("diffuse"), 0);
         GL.Uniform1(_program.UniformLocation("diffuse2"), 1);
         GL.Uniform1(_program.UniformLocation("maskMap"), 2);
+        GL.Uniform1(_program.UniformLocation("bloodMap"), 3);
     }
 
     /// <summary>
@@ -630,12 +676,12 @@ public sealed class EntityModelLayer : IDisposable
     {
         foreach (MaterialRange range in tier.Ranges)
         {
-            // All three of the Generic shader's maps, because the mask is what decides how much of
-            // the tint and of layer 2 reaches the surface - without it a material renders as its
-            // fully-tinted first layer.
+            // Every map, because the mask is what decides how much of the tint and of layer 2
+            // reaches the surface - without it a material renders as its fully-tinted first layer.
             Request(range.Surface.DiffuseTexturePath);
             Request(range.Surface.SecondDiffusePath);
             Request(range.Surface.MaskPath);
+            Request(range.Surface.BloodPath);
         }
         StartDecoders();
 
@@ -705,11 +751,16 @@ public sealed class EntityModelLayer : IDisposable
         GL.Enable(EnableCap.DepthTest);
         GL.ActiveTexture(TextureUnit.Texture0);
 
-        float lastUseTexture = -1f, lastUseSecond = -1f, lastUseMask = -1f;
+        float lastUseTexture = -1f, lastUseSecond = -1f, lastUseMask = -1f, lastUseBlood = -1f;
         int lastAlphaMode = -1;
         MaterialSurface lastSurface = default;
-        void SetSurface(int handle, int second, int mask, MaterialSurface surface)
+        void SetSurface(int handle, int second, int mask, int blood, MaterialSurface surface)
         {
+            float useBlood = blood > 0 ? 1f : 0f;
+            if (lastUseBlood != useBlood)
+            {
+                GL.Uniform1(_uUseBlood, lastUseBlood = useBlood);
+            }
             float useTexture = handle > 0 ? 1f : 0f;
             if (lastUseTexture != useTexture)
             {
@@ -743,6 +794,9 @@ public sealed class EntityModelLayer : IDisposable
                 GL.Uniform2(_uDiffuseTiling, surface.DiffuseTiling.X, surface.DiffuseTiling.Y);
                 GL.Uniform2(_uSecondTiling, surface.SecondDiffuseTiling.X, surface.SecondDiffuseTiling.Y);
                 GL.Uniform2(_uMaskTiling, surface.MaskTiling.X, surface.MaskTiling.Y);
+                GL.Uniform2(_uBloodTiling, surface.BloodTiling.X, surface.BloodTiling.Y);
+                GL.Uniform4(_uUvSets, surface.UvSets.X, surface.UvSets.Y, surface.UvSets.Z, surface.UvSets.W);
+                GL.Uniform1(_uMaterialTemplate, surface.Template == MaterialTemplate.Hair ? 0 : (int)surface.Template);
                 GL.Uniform3(_uSpecularBase, surface.SpecularBase.X, surface.SpecularBase.Y, surface.SpecularBase.Z);
                 GL.Uniform3(_uSpecularColour,
                     surface.SpecularColour.X, surface.SpecularColour.Y, surface.SpecularColour.Z);
@@ -761,23 +815,24 @@ public sealed class EntityModelLayer : IDisposable
                 int handle = tier.Handles[i];
                 int second = tier.SecondHandles[i];
                 int mask = tier.MaskHandles[i];
-                SetSurface(handle, second, mask, range.Surface);
-                if (handle > 0)
-                {
-                    GL.ActiveTexture(TextureUnit.Texture0);
-                    GL.BindTexture(TextureTarget.Texture2D, handle);
-                }
-                if (second > 0)
-                {
-                    GL.ActiveTexture(TextureUnit.Texture1);
-                    GL.BindTexture(TextureTarget.Texture2D, second);
-                }
-                if (mask > 0)
-                {
-                    GL.ActiveTexture(TextureUnit.Texture2);
-                    GL.BindTexture(TextureTarget.Texture2D, mask);
-                }
+                int blood = tier.BloodHandles[i];
+                SetSurface(handle, second, mask, blood, range.Surface);
+                Bind(0, handle);
+                Bind(1, second);
+                Bind(2, mask);
+                Bind(3, blood);
                 DrawRange(new IndexRange(range.Start, range.Count), instanceCount);
+            }
+        }
+
+        // Units 0-3 are this layer's own, so what it bound last is still bound.
+        int[] bound = [0, 0, 0, 0];
+        void Bind(int unit, int handle)
+        {
+            if (handle > 0 && bound[unit] != handle)
+            {
+                GL.ActiveTexture(TextureUnit.Texture0 + unit);
+                GL.BindTexture(TextureTarget.Texture2D, bound[unit] = handle);
             }
         }
 
@@ -839,6 +894,7 @@ public sealed class EntityModelLayer : IDisposable
                     tier.Handles[i] = Resolve(surface.DiffuseTexturePath);
                     tier.SecondHandles[i] = Resolve(surface.SecondDiffusePath);
                     tier.MaskHandles[i] = Resolve(surface.MaskPath);
+                    tier.BloodHandles[i] = Resolve(surface.BloodPath);
                 }
             }
         }
@@ -889,6 +945,7 @@ public sealed class EntityModelLayer : IDisposable
                 {
                     GL.Uniform2(_dDiffuseTiling,
                         range.Surface.DiffuseTiling.X, range.Surface.DiffuseTiling.Y);
+                    GL.Uniform1(_dDiffuseUvSet, range.Surface.UvSets.X);
                     GL.ActiveTexture(TextureUnit.Texture0);
                     GL.BindTexture(TextureTarget.Texture2D, handle);
                 }
@@ -1001,9 +1058,12 @@ public sealed class EntityModelLayer : IDisposable
         foreach (Mesh mesh in _meshes)
         {
             GL.DeleteVertexArray(mesh.Vao);
-            GL.DeleteBuffer(mesh.VertexBuffer);
-            GL.DeleteBuffer(mesh.IndexBuffer);
             GL.DeleteBuffer(mesh.InstanceBuffer);
+        }
+        foreach ((int vertex, int index) in _buffers.Values)
+        {
+            GL.DeleteBuffer(vertex);
+            GL.DeleteBuffer(index);
         }
         foreach (int handle in _textures.Values)
         {
