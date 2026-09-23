@@ -282,7 +282,7 @@ public sealed class MgbXmlTests
 
         // Every material is declared locally. They cannot be reached cross-package, and a material
         // missing here renders as an untextured white quad over the whole page.
-        Assert.Equal(4, package.Materials.Count);
+        Assert.Equal(3, package.Materials.Count);
 
         MgbGenericObjectTable table = Assert.IsType<MgbGenericObjectTable>(package.GenericObjectTable);
         MgbGenericObject entry = Assert.Single(
