@@ -43,7 +43,7 @@ public sealed class OutlineNode : TreeNodeBase<OutlineNode>
 
     /// <param name="original">The document's baseline, or null when there is nothing to compare against.</param>
     public static OutlineNode Build(FcbObject root, FcbObject? original, FcbEditContext context, IEntityBases entities)
-        => BuildNode(root, null, original, context.Definitions.GetClass(root.TypeHash), context, entities, original is not null)!;
+        => BuildNode(root, null, original, context.Definitions.Resolve(root), context, entities, original is not null)!;
 
     /// <summary>The row for <paramref name="obj"/>, or null when it is neither an entity nor above one.</summary>
     private static OutlineNode? BuildNode(
@@ -59,7 +59,7 @@ public sealed class OutlineNode : TreeNodeBase<OutlineNode>
             {
                 FcbObject child = obj.Children[i];
                 FcbObject? partner = partners is null || partners[i] < 0 ? null : original!.Children[partners[i]];
-                if (BuildNode(child, obj, partner, cls.Resolve(child.TypeHash), context, entities, compared) is { } row)
+                if (BuildNode(child, obj, partner, cls.Resolve(child), context, entities, compared) is { } row)
                 {
                     rows.Add(row);
                 }

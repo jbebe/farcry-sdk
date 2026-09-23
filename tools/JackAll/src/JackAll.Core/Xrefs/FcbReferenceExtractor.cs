@@ -32,7 +32,7 @@ public sealed class FcbReferenceExtractor : IReferenceExtractor
 
     private static void Walk(FcbObject obj, IFcbClassScope scope, ReferenceSink sink)
     {
-        FcbClass ownClass = scope.Resolve(obj.TypeHash);
+        FcbClass ownClass = scope.Resolve(obj);
 
         foreach ((uint nameHash, byte[] value) in obj.Values)
         {

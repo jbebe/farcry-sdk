@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Globalization;
 using System.IO.Hashing;
 using System.Xml.Linq;
@@ -64,19 +65,21 @@ public sealed record FcbMember(string? Name, FcbMemberType Type, IReadOnlyList<s
 }
 
 /// <summary>
-/// Something that can resolve a class hash relative to some scope — either <see cref="FcbClass"/>
+/// Something that can resolve an object's class relative to some scope — either <see cref="FcbClass"/>
 /// itself (nested-class-aware, used while descending into an object's children) or the top-level
 /// <see cref="FcbClassDefinitions"/> (flat lookup, used for a tree's root object).
 /// </summary>
 public interface IFcbClassScope
 {
-    FcbClass Resolve(uint hash);
+    /// <summary>The class <paramref name="obj"/> reads as: its tag's, extended by the concrete class
+    /// a polymorphic pointer names in <c>hid_DTCTH_ClassName</c>.</summary>
+    FcbClass Resolve(FcbObject obj);
 }
 
 /// <summary>
 /// One class definition: a name (if known), its declared members, an optional superclass, and any
 /// classes nested inside it in the config (used to shadow the flat top-level list — see
-/// <see cref="Resolve"/>).
+/// <see cref="Resolve(uint)"/>).
 /// </summary>
 public sealed class FcbClass : IFcbClassScope
 {
@@ -87,8 +90,8 @@ public sealed class FcbClass : IFcbClassScope
     public string? Name { get; internal set; }
     public FcbClass? Super { get; internal set; }
     internal string? SuperName { get; set; }
-    internal Dictionary<uint, FcbMember> Members { get; } = [];
-    internal Dictionary<uint, FcbClass> Nested { get; } = [];
+    internal Dictionary<uint, FcbMember> Members { get; init; } = [];
+    internal Dictionary<uint, FcbClass> Nested { get; init; } = [];
 
     /// <summary>
     /// Resolves a class hash the way Gibbed's exporter does when descending into a child object:
@@ -114,6 +117,9 @@ public sealed class FcbClass : IFcbClassScope
 
         return Master.GetClass(hash);
     }
+
+    /// <inheritdoc/>
+    public FcbClass Resolve(FcbObject obj) => Master.Concrete(Resolve(obj.TypeHash), obj);
 
     /// <summary>Every member this class declares or inherits; a redeclared hash comes out once, from
     /// the nearest class.</summary>
@@ -162,7 +168,11 @@ public sealed class FcbClass : IFcbClassScope
 /// </remarks>
 public sealed class FcbClassDefinitions : IFcbClassScope
 {
+    /// <summary>The field a polymorphic pointer's concrete class name is saved under.</summary>
+    public static readonly uint ClassTag = Crc32Ascii("hid_DTCTH_ClassName");
+
     private readonly Dictionary<uint, FcbClass> _topLevel = [];
+    private readonly ConcurrentDictionary<(FcbClass Tagged, FcbClass Concrete), FcbClass> _concrete = [];
     private readonly FcbClass _unknown;
 
     private FcbClassDefinitions() => _unknown = new FcbClass(this) { Name = null };
@@ -261,8 +271,21 @@ public sealed class FcbClassDefinitions : IFcbClassScope
     /// <summary>Flat top-level lookup - never null, falls back to an unnamed placeholder class.</summary>
     public FcbClass GetClass(uint hash) => _topLevel.GetValueOrDefault(hash, _unknown);
 
-    /// <inheritdoc cref="IFcbClassScope.Resolve"/>
-    FcbClass IFcbClassScope.Resolve(uint hash) => GetClass(hash);
+    /// <inheritdoc/>
+    public FcbClass Resolve(FcbObject obj) => Concrete(GetClass(obj.TypeHash), obj);
+
+    /// <summary><paramref name="tagged"/> with the class <paramref name="obj"/>'s class tag names as
+    /// its superclass, or <paramref name="tagged"/> itself when there is no known tag.</summary>
+    internal FcbClass Concrete(FcbClass tagged, FcbObject obj)
+        => FcbEntityFields.ReadU32(obj, ClassTag) is { } tag && _topLevel.TryGetValue(tag, out FcbClass? concrete)
+            ? _concrete.GetOrAdd((tagged, concrete), static (key, master) => new FcbClass(master)
+            {
+                Name = key.Tagged.Name,
+                Super = key.Concrete,
+                Members = key.Tagged.Members,
+                Nested = key.Tagged.Nested,
+            }, this)
+            : tagged;
 
     /// <summary>Every class, nested ones included.</summary>
     public IEnumerable<FcbClass> AllClasses()

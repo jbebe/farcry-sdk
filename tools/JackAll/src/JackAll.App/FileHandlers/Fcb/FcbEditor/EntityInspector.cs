@@ -70,7 +70,7 @@ public sealed class EntityInspector : Observable
     private void Build()
     {
         var sections = new List<NodeView>();
-        AddSections(new ScopedNode(_entity, _baseline, _context.Definitions.GetClass(_entity.TypeHash)), true, sections);
+        AddSections(new ScopedNode(_entity, _baseline, _context.Definitions.Resolve(_entity.Shown)), true, sections);
         Sections = sections;
 
         HashSet<uint> present = [.. ComponentsNode()?.Children.Select(c => c.TypeHash) ?? []];

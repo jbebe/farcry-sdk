@@ -88,7 +88,7 @@ public class FcbRegisteredPropertyCoverageTests
 
                 foreach (FcbObject child in node.Children)
                 {
-                    Walk(child, cls.Resolve(child.TypeHash));
+                    Walk(child, cls.Resolve(child));
                 }
             }
         }

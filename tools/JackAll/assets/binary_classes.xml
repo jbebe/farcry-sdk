@@ -958,7 +958,10 @@ RegEx Search/Replace Pairs
 	<class name="CBargeDelimiter" extends="CGameAIObject" />
 	<class name="CBarkManagerService" extends="IGameModeService" />
 	<class name="CBarkResourceContainer" extends="CResourceContainer" />
-	<class name="CBaseEvent" extends="CNomadObject" />
+	<class name="CBaseEvent" extends="CNomadObject">
+		<member name="hidEventName">String</member>
+		<member name="eventMask">UInt32</member>
+	</class>
 	<class name="CBaseGraphicComponent" extends="CRenderableComponent">
 		<member hash="0D9C8B1A">String</member>
 		<member hash="BF9B3A5C">String</member>
@@ -1136,7 +1139,9 @@ RegEx Search/Replace Pairs
 	<class name="CCompoundPhysComponentSingleBodyNode" extends="CCompoundPhysComponentNode" />
 	<class name="CCompoundPhysComponentStateNode" extends="CCompoundPhysComponentNode" />
 	<class name="CCompoundPhysDestroyEvent" extends="CEntityEvent" />
-	<class name="CCompoundPhysForceStateEvent" extends="CEntityEvent" />
+	<class name="CCompoundPhysForceStateEvent" extends="CEntityEvent">
+		<member name="nIndex">UInt32</member>
+	</class>
 	<class name="CCompoundPhysNetworkComponent" extends="CNetworkComponent">
 		<member name="fPawnToCloseRadius">Float</member>
 		<member name="fRespawnTime">Float</member>
@@ -1266,7 +1271,9 @@ RegEx Search/Replace Pairs
 		<member name="hidHasAliasName">Bool</member>
 	</class>
 	<class name="CEntityDieEvent" extends="CEntityEvent" />
-	<class name="CEntityEvent" extends="CBaseEvent" />
+	<class name="CEntityEvent" extends="CBaseEvent">
+		<member name="hidTargetEntityId">Int64</member>
+	</class>
 	<class name="CEntityEventAddContainer" extends="CEntityEvent" />
 	<class name="CEntityEventBlackboardUpdate" extends="CEntityEvent" />
 	<class name="CEntityEventCanContain" extends="CEntityEvent" />
@@ -1297,7 +1304,19 @@ RegEx Search/Replace Pairs
 	<class name="CEnvironmentWind" extends="CNomadObject" />
 	<class name="CEquipmentBase" extends="CGameObject" />
 	<class name="CEquipmentUseStrategy" extends="CNomadObject" />
-	<class name="CEventComponent" extends="CEntityComponent" />
+	<class name="CEventComponent" extends="CEntityComponent">
+		<class name="hidLinks">
+			<class name="Link">
+				<member name="InputEvent">String</member>
+				<member name="TargetEntityId">Int64</member>
+				<!-- The rest of an event's fields come from the class hid_DTCTH_ClassName names. -->
+				<class name="Event">
+					<member name="text_hid_DTCTH_ClassName">String</member>
+					<member name="hid_DTCTH_ClassName">Hash</member>
+				</class>
+			</class>
+		</class>
+	</class>
 	<class name="CEventDriveReportLostOccupant" extends="CAIEvent" />
 	<class name="CExplosive" extends="CGameObject">
 		<member name="archStickyFireFlame">String</member>
@@ -1933,7 +1952,9 @@ RegEx Search/Replace Pairs
 	<class name="CLANLoginOperation" extends="CLoginOperation" />
 	<class name="CLayerResource" extends="CResourceContainer" />
 	<class name="CLeaderboardService" extends="IGameModeService" />
-	<class name="CLightEvent" extends="CEntityEvent" />
+	<class name="CLightEvent" extends="CEntityEvent">
+		<member name="hidType">Int32</member>
+	</class>
 	<class name="CLinearPathFollower" extends="CPathFollower" />
 	<class name="CLiquidPropaneTank" extends="CEntityComponent">
 		<member name="vectorCenterPoint">Vector3</member>
@@ -1978,7 +1999,9 @@ RegEx Search/Replace Pairs
 		<member name="selType">UInt32</member>
 		<member name="selState">UInt32</member>
 	</class>
-	<class name="CMapElementEvent" extends="CEntityEvent" />
+	<class name="CMapElementEvent" extends="CEntityEvent">
+		<member name="selState">UInt32</member>
+	</class>
 	<class name="CMapElementStateChangedEvent" extends="CEntityEvent" />
 	<class name="CMapIntelligence" extends="CEntityComponent">
 		<member name="selType">UInt32</member>
@@ -2005,7 +2028,9 @@ RegEx Search/Replace Pairs
 		<member name="hidCategory">Hash</member>
 		<member name="ForceMerge">Bool</member>
 	</class>	
-	<class name="CMissionHandlerEvent" extends="CScriptEvent" />
+	<class name="CMissionHandlerEvent" extends="CScriptEvent">
+		<member name="Parameters">BinHex</member>
+	</class>
 	<class name="CMortarIncoming" extends="CEntityEvent" />
 	<class name="CMountedWeapon" extends="CEntityComponent">
 		<member name="archWeapon">String</member>
@@ -2871,7 +2896,9 @@ RegEx Search/Replace Pairs
 			<member name="entSpectatedSTP">Int64</member>
 		</class>
 	</class>
-	<class name="CSmartTerrainEvent" extends="CEntityEvent" />
+	<class name="CSmartTerrainEvent" extends="CEntityEvent">
+		<member name="hidType">Int32</member>
+	</class>
 	<class name="CSmartTerrainManager" extends="CSingletonEntity" />
 	<class name="CSniperPoint" extends="CGameAIObject">
 		<member name="fBroadcastRange">Float</member>
@@ -2887,7 +2914,13 @@ RegEx Search/Replace Pairs
 	<class name="CSoundComponent" extends="CEntityComponent">
 		<member name="sndptSoundPoint">Hash</member>
 	</class>
-	<class name="CSoundEvent" extends="CEntityEvent" />
+	<class name="CSoundEvent" extends="CEntityEvent">
+		<member name="sndSound">String</member>
+		<member name="sndtpType">Int32</member>
+		<member name="bAssignOnEntity">Bool</member>
+		<member name="bInterruptible">Bool</member>
+		<member name="bAlwaysTrigger">Bool</member>
+	</class>
 	<class name="CSoundLineComponent" extends="CBasicShapeComponent">
 		<member name="hidShapePoints">Vector3Array</member>
 		<member name="fAudibleDistance">Float</member>
@@ -3185,9 +3218,14 @@ RegEx Search/Replace Pairs
 	<class name="CTriggerComponent" extends="CEntityComponent">
 		<member name="static">Bool</member>
 	</class>
-	<class name="CTriggerEnableEvent" extends="CEntityEvent" />
+	<class name="CTriggerEnableEvent" extends="CEntityEvent">
+		<member name="bEnable">Bool</member>
+	</class>
 	<class name="CTriggerEvent" extends="CEntityEvent" />
-	<class name="CTriggerSimpleEvent" extends="CEntityEvent" />
+	<class name="CTriggerSimpleEvent" extends="CEntityEvent">
+		<member name="text_sType">String</member>
+		<member name="sType">Hash</member>
+	</class>
 	<class name="CTutorial" extends="CChallenge" />
 	<class name="CUbisoftLoginOperation" extends="CRendezVousOperation" />
 	<class name="CUGCLoginOperation" extends="CLoginOperation" />
@@ -3798,7 +3836,6 @@ RegEx Search/Replace Pairs
 	</class>
 	<class name="hidConnectivity" />
 	<class name="hidEffectBones" />
-	<class name="hidLinks" />
 	<class name="hidMasks">
 		<class name="hidMask">
 			<member name="hidValue">Int32</member>
@@ -4883,7 +4920,7 @@ RegEx Search/Replace Pairs
 		<member name="NameId">Hash</member>
 		<member hash="D854F1C7">String</member>
 		<member name="Template">Hash</member>
-		<member hash="CF68E402">String</member>
+		<member name="text_hid_DTCTH_ClassName">String</member>
 		<member name="hid_DTCTH_ClassName">Hash</member>
 		<member name="bEnable">Bool</member>
 		<member name="bEnabled">Bool</member>

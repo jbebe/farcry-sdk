@@ -428,22 +428,38 @@ child. The 847 unresolved children most likely sit in sectors of neighbouring le
 All 320 links in `w1_b_2`'s 250 sectors. `ige_map.managers.fcb` carries 25 `hidLinks`, all empty.
 :::
 
-`CEventComponent/hidLinks` is a list of `Link` records. Each one wires an event the owning entity
-raises to an event sent to a target entity.
+`CEventComponent/hidLinks` is a list of `Link` records, each a `CEventComponent::CEventLink`. Each
+one wires an event the owning entity raises to an event sent to a target entity.
 
-| where | name or hash | type | meaning |
+| where | name | type | meaning |
 |---|---|---|---|
-| `Link` | `AB7AED5F` | string | the output raised, e.g. `OnStateChange`, `STPSpecialActionTriggered` |
-| `Link` | `7D1A6B64` | Int64 | target `disEntityId` |
-| `Link` | `Event` | child | the event sent |
-| `Event` | `CF68E402` | string | event class, e.g. `CLightEvent` |
-| `Event` | `25368426` | u32 | CRC32 of that class name |
-| `Event` | `hidEventName` | string | e.g. `DeactivateLight`, `PlaySound` |
-| `Event` | `83F9B027` | u32 | 1 in all 320 |
-| `Event` | `DCC35857` | Int64 | the target id again, equal in all 320 |
-| `Event` | `hidType` | u32 | |
+| `Link` | `InputEvent` | string | the event raised, e.g. `OnStateChange`, `STPSpecialActionTriggered` |
+| `Link` | `TargetEntityId` | Int64 | target `disEntityId` |
+| `Link` | `Event` | child | the event sent, a `CEntityEvent*` |
+| `Event` | `text_hid_DTCTH_ClassName` | string | event class, e.g. `CLightEvent` |
+| `Event` | `hid_DTCTH_ClassName` | u32 | CRC32 of that class name |
+| `Event` | `hidEventName` | string | `CBaseEvent`; e.g. `DeactivateLight`, `PlaySound` |
+| `Event` | `eventMask` | u32 | `CBaseEvent`; 1 in all 320 |
+| `Event` | `hidTargetEntityId` | Int64 | `CEntityEvent`; the target id again, equal in all 320 |
 
-Some event classes append their own parameters, `CSoundEvent` five of them. 313 of the 320 targets
+`Event` is saved through `DynamicTypeCreatorTypeHandler`, which writes the concrete class as
+`hid_DTCTH_ClassName` ahead of that class's own members. The members below are the event classes' own:
+
+| event class | members |
+|---|---|
+| `CLightEvent`, `CSmartTerrainEvent` | `hidType` |
+| `CSoundEvent` | `sndSound`, `sndtpType`, `bAssignOnEntity`, `bInterruptible`, `bAlwaysTrigger` |
+| `CTriggerEnableEvent` | `bEnable` |
+| `CTriggerSimpleEvent` | `sType`, `text_sType` |
+| `CCompoundPhysForceStateEvent` | `nIndex` |
+| `CMapElementEvent` | `selState` |
+| `CMissionHandlerEvent` | `Parameters` |
+
+That table covers every event class in the links of all retail worlds. `hidType` and `sType` are read
+off their classes' `RegisterProperties`; the rest are CRC32 matches, `nIndex` against a guessed name
+rather than a string in the binary.
+
+313 of the 320 targets
 resolve inside the level, 309 in the source's own sector file. Link sources are mostly AI smart
 terrain points, compound physics objects and time-of-day or relay triggers.
 

@@ -8,19 +8,18 @@ public sealed record EntityLink(string Output, ulong TargetId, string EventClass
 
 /// <summary>
 /// Reads and writes the event links on an entity's <c>CEventComponent/hidLinks</c>. The layout is in
-/// docs/docs/engine-internals/entity-instancing.md; the unnamed fields are kept as their hashes.
+/// docs/docs/engine-internals/entity-instancing.md.
 /// </summary>
 public static class EntityLinks
 {
     private static readonly uint Link = FcbClassDefinitions.Crc32Ascii("Link");
     private static readonly uint Event = FcbClassDefinitions.Crc32Ascii("Event");
     private static readonly uint EventName = FcbClassDefinitions.Crc32Ascii("hidEventName");
-    private const uint Output = 0xAB7AED5F;
-    private const uint Target = 0x7D1A6B64;
-    private const uint EventClass = 0xCF68E402;
-    private const uint EventClassHash = 0x25368426;
-    private const uint EventFlag = 0x83F9B027;
-    private const uint EventTarget = 0xDCC35857;
+    private static readonly uint InputEvent = FcbClassDefinitions.Crc32Ascii("InputEvent");
+    private static readonly uint TargetEntityId = FcbClassDefinitions.Crc32Ascii("TargetEntityId");
+    private static readonly uint EventClassName = FcbClassDefinitions.Crc32Ascii("text_hid_DTCTH_ClassName");
+    private static readonly uint EventMask = FcbClassDefinitions.Crc32Ascii("eventMask");
+    private static readonly uint EventTargetEntityId = FcbClassDefinitions.Crc32Ascii("hidTargetEntityId");
 
     public static IReadOnlyList<EntityLink> Read(FcbObject entity)
         => LinksNode(entity) is { } links
@@ -32,16 +31,16 @@ public static class EntityLinks
     {
         FcbObject links = LinksNode(entity) ?? CreateLinksNode(entity);
         var ev = new FcbObject { TypeHash = Event };
-        ev.Values[EventClass] = FcbEntityFields.StringBytes(link.EventClass);
-        ev.Values[EventClassHash] = BitConverter.GetBytes(FcbClassDefinitions.Crc32Ascii(link.EventClass));
+        ev.Values[EventClassName] = FcbEntityFields.StringBytes(link.EventClass);
+        ev.Values[FcbClassDefinitions.ClassTag] = BitConverter.GetBytes(FcbClassDefinitions.Crc32Ascii(link.EventClass));
         ev.Values[EventName] = FcbEntityFields.StringBytes(link.EventName);
-        ev.Values[EventFlag] = BitConverter.GetBytes(1u);
-        ev.Values[EventTarget] = BitConverter.GetBytes(link.TargetId);
+        ev.Values[EventMask] = BitConverter.GetBytes(1u);
+        ev.Values[EventTargetEntityId] = BitConverter.GetBytes(link.TargetId);
         ev.Values[WorldHashes.HidType] = BitConverter.GetBytes(1u);
 
         var node = new FcbObject { TypeHash = Link };
-        node.Values[Output] = FcbEntityFields.StringBytes(link.Output);
-        node.Values[Target] = BitConverter.GetBytes(link.TargetId);
+        node.Values[InputEvent] = FcbEntityFields.StringBytes(link.Output);
+        node.Values[TargetEntityId] = BitConverter.GetBytes(link.TargetId);
         node.Children.Add(ev);
         links.Children.Add(node);
     }
@@ -58,12 +57,12 @@ public static class EntityLinks
     {
         foreach (FcbObject link in LinksNode(entity)?.Children.Where(l => l.TypeHash == Link) ?? [])
         {
-            if (ids.TryGetValue(FcbEntityFields.ReadU64(link, Target), out ulong id))
+            if (ids.TryGetValue(FcbEntityFields.ReadU64(link, TargetEntityId), out ulong id))
             {
-                link.Values[Target] = BitConverter.GetBytes(id);
-                if (link.Children.FirstOrDefault(c => c.TypeHash == Event) is { } ev && ev.Values.ContainsKey(EventTarget))
+                link.Values[TargetEntityId] = BitConverter.GetBytes(id);
+                if (link.Children.FirstOrDefault(c => c.TypeHash == Event) is { } ev && ev.Values.ContainsKey(EventTargetEntityId))
                 {
-                    ev.Values[EventTarget] = BitConverter.GetBytes(id);
+                    ev.Values[EventTargetEntityId] = BitConverter.GetBytes(id);
                 }
             }
         }
@@ -73,8 +72,8 @@ public static class EntityLinks
     {
         FcbObject ev = link.Children.FirstOrDefault(c => c.TypeHash == Event) ?? new FcbObject();
         return new EntityLink(
-            FcbEntityFields.ReadString(link, Output), FcbEntityFields.ReadU64(link, Target),
-            FcbEntityFields.ReadString(ev, EventClass), FcbEntityFields.ReadString(ev, EventName));
+            FcbEntityFields.ReadString(link, InputEvent), FcbEntityFields.ReadU64(link, TargetEntityId),
+            FcbEntityFields.ReadString(ev, EventClassName), FcbEntityFields.ReadString(ev, EventName));
     }
 
     private static FcbObject? LinksNode(FcbObject entity)

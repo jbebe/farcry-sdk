@@ -1,3 +1,5 @@
+using System.Xml.Linq;
+using JackAll.Core;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.World;
 
@@ -72,6 +74,22 @@ public class EntityLinksTests
             l => l.TargetId == 2058516086820713175 && l.EventName == "DeactivateLight");
         Assert.Equal(("OnStateChange", "CLightEvent"), (link.Output, link.EventClass));
         Assert.Contains(entities.SelectMany(EntityGroups.ChildrenOf), c => c is { Name: "SpotLight_646", Id: 2058516086820713175 });
+    }
+
+    /// <summary>Each event's fields come from the class its tag names, so a light's <c>hidType</c> resolves.</summary>
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void Every_field_of_a_retail_link_decodes_by_name()
+    {
+        if (!File.Exists(RetailSector)) return;
+
+        XElement sector = XElement.Parse(FcbXml.ToXml(
+            FcbDocument.Deserialize(File.ReadAllBytes(RetailSector)), BundledAssets.LoadFcbClasses()));
+
+        List<XElement> links = [.. sector.Descendants("object").Where(o => (string?)o.Attribute("type") == "Link")];
+        Assert.NotEmpty(links);
+        Assert.All(links.Descendants("value"), v => Assert.NotNull(v.Attribute("name")));
+        Assert.Contains(links.Descendants("value"), v => (string?)v.Attribute("name") == "hidType");
     }
 
     /// <summary>A grouped prefab is built with the class fields every retail one carries.</summary>

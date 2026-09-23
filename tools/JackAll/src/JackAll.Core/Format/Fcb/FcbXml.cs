@@ -149,7 +149,7 @@ public static class FcbXml
 
     private static XElement WriteObject(FcbObject obj, IFcbClassScope scope, IFcbNames? fallback)
     {
-        FcbClass ownClass = scope.Resolve(obj.TypeHash);
+        FcbClass ownClass = scope.Resolve(obj);
         var el = new XElement("object");
         if (FcbNames.ClassNameOf(ownClass, obj.TypeHash, fallback) is { } className)
         {

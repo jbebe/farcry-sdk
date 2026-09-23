@@ -85,7 +85,7 @@ internal sealed record ScopedNode(MergedNode Node, MergedNode? Baseline, FcbClas
         int[]? partners = Baseline is null ? null : MergedNode.PairByTag(children, Baseline.Children, c => c.TypeHash);
         for (int i = 0; i < children.Count; i++)
         {
-            FcbClass cls = Class.Resolve(children[i].TypeHash);
+            FcbClass cls = Class.Resolve(children[i].Shown);
             if (!Enums.Groups.Contains(cls.Name ?? ""))
             {
                 yield return new ScopedNode(

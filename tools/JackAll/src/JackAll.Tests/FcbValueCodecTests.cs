@@ -49,7 +49,7 @@ public class FcbValueCodecTests
 
     private static void AssertRoundTrips(FcbObject obj, IFcbClassScope scope, ref int checkedCount, ref int fallbackCount)
     {
-        FcbClass ownClass = scope.Resolve(obj.TypeHash);
+        FcbClass ownClass = scope.Resolve(obj);
 
         foreach ((uint nameHash, byte[] originalBytes) in obj.Values)
         {
