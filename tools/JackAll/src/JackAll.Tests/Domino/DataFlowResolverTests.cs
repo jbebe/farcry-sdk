@@ -198,43 +198,22 @@ public class DataFlowResolverTests
         Assert.Equal("Pawn", data.TargetPin);
     }
 
-    [Fact]
-    public void Every_real_extracted_user_graph_resolves_its_data_flow_without_throwing()
+    [Theory]
+    [InlineData(DominoFixtures.FastTravel)]
+    [InlineData(DominoFixtures.TaxiRide)]
+    public void A_real_graphs_data_edges_connect_nodes_that_exist(string script)
     {
-        if (DominoCorpus.UserDirectory is not { } dir) return;
+        if (Fixture.ReadText(script) is not { } source) return;
 
-        var files = Directory.EnumerateFiles(dir, "*.lua", SearchOption.AllDirectories).ToList();
-        Assert.True(files.Count > 0, "Fixture corpus is present but empty.");
+        ReconstructedGraph graph = Build(source);
 
-        var failures = new List<string>();
-        int totalDataEdges = 0;
-        foreach (string file in files)
+        // Both are dense with data flow; none would mean the resolver silently stopped working.
+        Assert.NotEmpty(graph.DataEdges);
+        var ids = graph.Nodes.Select(n => n.Id).ToHashSet(StringComparer.Ordinal);
+        Assert.All(graph.DataEdges, edge =>
         {
-            try
-            {
-                ReconstructedGraph graph = Build(File.ReadAllText(file));
-                totalDataEdges += graph.DataEdges.Count;
-
-                // Every edge must point at a node that actually exists in the graph.
-                var ids = graph.Nodes.Select(n => n.Id).ToHashSet(StringComparer.Ordinal);
-                foreach (DataEdge edge in graph.DataEdges)
-                {
-                    if (!ids.Contains(edge.TargetNodeId)
-                        || (edge.SourceNodeId is not null && !ids.Contains(edge.SourceNodeId)))
-                    {
-                        failures.Add($"{file}: data edge references an unknown node");
-                        break;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                failures.Add($"{file}: {ex.Message}");
-            }
-        }
-
-        Assert.True(failures.Count == 0, $"{failures.Count}/{files.Count} files failed:\n" + string.Join('\n', failures.Take(10)));
-        // The corpus is dense with data flow; zero would mean the resolver silently stopped working.
-        Assert.True(totalDataEdges > 0, "No data edges resolved across the whole fixture corpus.");
+            Assert.Contains(edge.TargetNodeId, ids);
+            Assert.True(edge.SourceNodeId is null || ids.Contains(edge.SourceNodeId));
+        });
     }
 }

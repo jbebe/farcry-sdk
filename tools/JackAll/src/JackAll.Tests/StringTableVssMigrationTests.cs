@@ -14,12 +14,8 @@ namespace JackAll.Tests;
 /// A real mod against a known-good target is worth more than any synthetic case, and it needs no
 /// game launch: if the strings match, the game cannot tell the difference.
 /// </remarks>
-[Trait("Category", "RequiresFixture")]
 public sealed class StringTableVssMigrationTests
 {
-    private static string Vanilla =>
-        Path.Combine(Fc2Corpus.Root, "patch", "languages", "english", "oasisstrings.rml");
-
     private static string ModLayer =>
         Path.Combine(TestSupport.RepositoryRoot, "mods", "vss-vintorez", "layer");
 
@@ -45,17 +41,16 @@ public sealed class StringTableVssMigrationTests
 
     /// <summary>
     /// The mod's one patch document, taken through the real layer scan rather than parsed here: this
-    /// is the path a build takes, so it gates the expansion into per-string fragments too.
+    /// is the path a build takes, so it covers the expansion into per-string fragments too.
     /// </summary>
     [Fact]
     public void The_vss_fragments_rename_only_the_strings_they_mean_to()
     {
-        if (!File.Exists(Vanilla) || !File.Exists(PatchDocument))
+        if (Fixture.Read(StringTableContainerSplitterTests.English) is not { } vanilla || !File.Exists(PatchDocument))
         {
             return;
         }
 
-        byte[] vanilla = File.ReadAllBytes(Vanilla);
         var layer = new FolderModLayer(ModLayer, "vss-vintorez");
 
         IReadOnlyList<FragmentOverride> staged =

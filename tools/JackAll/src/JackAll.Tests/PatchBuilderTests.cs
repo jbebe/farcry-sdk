@@ -12,16 +12,13 @@ namespace JackAll.Tests;
 
 /// <summary>
 /// The builder writes to the user's game folder, so these tests run against a throwaway copy built
-/// from a checked-in patch.dat/.fat fixture (extracted from a real install) rather than the game
-/// folder itself. What's being pinned down here is the property the whole safety story rests on:
-/// the output depends only on the vanilla backup and the enabled layers, never on what is currently
+/// from the patch.dat/.fat fixture (extracted from a real install) rather than the game folder
+/// itself. What's being pinned down here is the property the whole safety story rests on: the
+/// output depends only on the vanilla backup and the enabled layers, never on what is currently
 /// sitting in patch.dat.
 /// </summary>
-[Trait("Category", "RequiresFixture")]
 public class PatchBuilderTests : IDisposable
 {
-    private const string FixturesDir = "Fixtures/Patch";
-
     private readonly string _sandbox;
     private readonly GameInstall? _install;
 
@@ -29,12 +26,8 @@ public class PatchBuilderTests : IDisposable
     {
         _sandbox = Path.Combine(Path.GetTempPath(), "fc2mm-tests", Guid.NewGuid().ToString("N"));
 
-        string fixtureFat = Path.Combine(FixturesDir, "patch.fat");
-        string fixtureDat = Path.Combine(FixturesDir, "patch.dat");
-        if (!File.Exists(fixtureFat) || !File.Exists(fixtureDat))
-        {
-            return;
-        }
+        if (Fixture.Locate(FatArchiveTests.Fat) is not { } fixtureFat
+            || Fixture.Locate(FatArchiveTests.Dat) is not { } fixtureDat) return;
 
         // A fake install: real patch.dat/.fat (the thing under test), stub exe, nothing else. This
         // keeps the copy at a few MB instead of the ~5 GB the whole game would cost.
@@ -46,12 +39,6 @@ public class PatchBuilderTests : IDisposable
 
         _install = GameInstall.TryOpen(_sandbox, out _);
     }
-
-    [Fact]
-    public void The_fixture_files_were_actually_found()
-        => Assert.True(
-            File.Exists(Path.Combine(FixturesDir, "patch.fat")) && File.Exists(Path.Combine(FixturesDir, "patch.dat")),
-            $"{FixturesDir} had no patch.fat/patch.dat, so every test in this class silently no-opped.");
 
     [Fact]
     public void Building_with_no_mods_reproduces_the_vanilla_patch_exactly()
@@ -221,7 +208,7 @@ public class PatchBuilderTests : IDisposable
         string fragmentPath = $"{container.Path}\\{fragmentId}";
         var mod = MakeZipMod("fragment_mod", ($"mods/{fragmentPath}", System.Text.Encoding.UTF8.GetBytes(replacementXml)));
 
-        using (var vfsForRead = GameVfs.Load(_install, names))
+        using (var vfsForRead = GameVfs.OpenForOriginalsOnly(_install, names))
         {
             PatchBuilder.Build(_install, [mod], vfsForRead.ReadOriginal);
         }
@@ -263,14 +250,15 @@ public class PatchBuilderTests : IDisposable
             originalChildCount = FcbDocument.Deserialize(vfs.ReadOriginal((uint)container.Hash)!).Children.Count;
         }
 
-        var addition = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
+        // EntityLibraryGroup
+        var addition = new FcbObject { TypeHash = 0xE0BDB3DB };
         addition.Values.Add(0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
         string additionXml = FcbXml.ToXml(addition, FcbClassDefinitions.Empty);
 
         string newFragmentPath = $"{container.Path}\\does_not_exist_in_vanilla.xml";
         var mod = MakeZipMod("add_mod", ($"mods/{newFragmentPath}", System.Text.Encoding.UTF8.GetBytes(additionXml)));
 
-        using (var vfsForRead = GameVfs.Load(_install, names))
+        using (var vfsForRead = GameVfs.OpenForOriginalsOnly(_install, names))
         {
             PatchBuilder.Build(_install, [mod], vfsForRead.ReadOriginal);
         }
@@ -311,7 +299,8 @@ public class PatchBuilderTests : IDisposable
         }
         if (TestSupport.TwoDistantEditPaths(vanillaFragment) is not { } paths)
         {
-            return; // fixture too small to prove non-overlapping edits safely
+            // Fixture too small to prove non-overlapping edits safely
+            return;
         }
 
         string fragmentPath = $"{container.Path}\\{fragmentId}";
@@ -320,7 +309,7 @@ public class PatchBuilderTests : IDisposable
         var modB = MakeZipMod("fragment_mod_b",
             ($"mods/{fragmentPath}", TestSupport.RenderWithValueSetAt(vanillaFragment, paths.B, 0xAAAA0002, [0x02, 0x00, 0x00, 0x00])));
 
-        using (var vfsForRead = GameVfs.Load(_install, names))
+        using (var vfsForRead = GameVfs.OpenForOriginalsOnly(_install, names))
         {
             PatchBuilder.Build(_install, [modA, modB], vfsForRead.ReadOriginal, FcbClassDefinitions.Empty);
         }
@@ -371,7 +360,8 @@ public class PatchBuilderTests : IDisposable
         FcbObject target = TestSupport.NodeAt(vanillaFragment, targetPath);
         uint existingHash = target.Values.Keys.FirstOrDefault(
             k => k != WorldHashes.HidName && k != WorldHashes.DisEntityId);
-        if (existingHash == 0) return; // fixture has nothing existing to collide on
+        // Fixture has nothing existing to collide on
+        if (existingHash == 0) return;
         string fragmentPath = $"{container.Path}\\{fragmentId}";
         var modA = MakeZipMod("mod_a",
             ($"mods/{fragmentPath}", TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x01, 0x00, 0x00, 0x00])));
@@ -379,7 +369,7 @@ public class PatchBuilderTests : IDisposable
             ($"mods/{fragmentPath}", TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x02, 0x00, 0x00, 0x00])));
 
         BuildResult result;
-        using (var vfsForRead = GameVfs.Load(_install, names))
+        using (var vfsForRead = GameVfs.OpenForOriginalsOnly(_install, names))
         {
             result = PatchBuilder.Build(_install, [modA, modB], vfsForRead.ReadOriginal,
                 resolveFragmentConflictsWithLoadOrder: true);
@@ -426,7 +416,8 @@ public class PatchBuilderTests : IDisposable
         int[] targetPath = vanillaFragment.Values.Count > 0 ? [] : [0];
         uint existingHash = TestSupport.NodeAt(vanillaFragment, targetPath).Values.Keys.FirstOrDefault(
             k => k != WorldHashes.HidName && k != WorldHashes.DisEntityId);
-        if (existingHash == 0) return; // fixture has nothing existing to collide on
+        // Fixture has nothing existing to collide on
+        if (existingHash == 0) return;
 
         string hashAddressedPath = $"_hash\\{container.Hash:x8}.fcb\\{fragmentId}";
         var modA = MakeZipMod("mod_a", ($"mods/{hashAddressedPath}",
@@ -435,7 +426,7 @@ public class PatchBuilderTests : IDisposable
             TestSupport.RenderWithValueSetAt(vanillaFragment, targetPath, existingHash, [0x02, 0x00, 0x00, 0x00])));
 
         BuildResult result;
-        using (var vfsForRead = GameVfs.Load(_install, names))
+        using (var vfsForRead = GameVfs.OpenForOriginalsOnly(_install, names))
         {
             result = PatchBuilder.Build(_install, [modA, modB], vfsForRead.ReadOriginal,
                 resolveFragmentConflictsWithLoadOrder: true);
@@ -535,7 +526,8 @@ public class PatchBuilderTests : IDisposable
 
         VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
         VfsFile container = vfs.Files[fragment.ContainerHash!.Value];
-        Assert.Equal("patch", container.SourceName); // sanity: confirms the non-cacheable setup above.
+        // Sanity: confirms the non-cacheable setup above.
+        Assert.Equal("patch", container.SourceName);
 
         string workspaceDir = Path.Combine(_sandbox, "workspace");
         Directory.CreateDirectory(workspaceDir);

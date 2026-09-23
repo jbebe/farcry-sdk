@@ -17,105 +17,77 @@ public sealed partial class SubmeshSelectionTests
     [GeneratedRegex(@"_?STATE(\d+)", RegexOptions.IgnoreCase)]
     private static partial Regex StateToken();
 
-    [Fact]
-    public void One_damage_state_draws_not_all_of_them()
+    [Theory]
+    [InlineData(XbgFixtures.Fence)]
+    [InlineData(XbgFixtures.SwampBoat)]
+    public void One_damage_state_draws_not_all_of_them(string fixture)
     {
-        int withStates = 0;
-        List<string> failures = [];
-
-        foreach (string path in Fc2Corpus.Find(".xbg"))
+        if (Fixture.Read(fixture) is not { } bytes)
         {
-            XbgModel model = WorldModels.Triangulate(path, File.ReadAllBytes(path));
-            if (!model.Submeshes.Any(s => StateToken().IsMatch(s.PartName)))
-            {
-                continue;
-            }
-
-            withStates++;
-            foreach (int lod in model.LodLevels)
-            {
-                // Every part left standing must be the only state of its group.
-                IEnumerable<IGrouping<string, int>> states = WorldModels.SubmeshesAt(model, lod)
-                    .Where(s => StateToken().IsMatch(s.PartName))
-                    .GroupBy(
-                        s => StateToken().Replace(s.PartName, ""),
-                        s => int.Parse(StateToken().Match(s.PartName).Groups[1].Value),
-                        StringComparer.OrdinalIgnoreCase);
-
-                foreach (IGrouping<string, int> group in states.Where(g => g.Distinct().Count() > 1))
-                {
-                    failures.Add(
-                        $"{Path.GetFileName(path)} LOD{lod}: '{group.Key}' draws states "
-                        + string.Join(", ", group.Distinct().Order()));
-                }
-            }
+            return;
         }
 
-        Assert.True(
-            withStates > 0 || !Fc2Corpus.Present,
-            "No shipped mesh carries a damage state, so this never exercised the case.");
-        Assert.True(
-            failures.Count == 0,
-            $"{withStates} meshes carry damage states. First failures:{Environment.NewLine}"
-            + string.Join(Environment.NewLine, failures.Take(5)));
+        XbgModel model = WorldModels.Triangulate(fixture, bytes);
+        Assert.Contains(model.Submeshes, s => StateToken().IsMatch(s.PartName));
+
+        foreach (int lod in model.LodLevels)
+        {
+            // Every part left standing must be the only state of its group.
+            IEnumerable<IGrouping<string, int>> states = WorldModels.SubmeshesAt(model, lod)
+                .Where(s => StateToken().IsMatch(s.PartName))
+                .GroupBy(
+                    s => StateToken().Replace(s.PartName, ""),
+                    s => int.Parse(StateToken().Match(s.PartName).Groups[1].Value),
+                    StringComparer.OrdinalIgnoreCase);
+
+            foreach (IGrouping<string, int> group in states)
+            {
+                Assert.True(
+                    group.Distinct().Count() == 1,
+                    $"LOD{lod}: '{group.Key}' draws states {string.Join(", ", group.Distinct().Order())}");
+            }
+        }
     }
 
     /// <summary>
     /// A part absent from the selected LOD falls back to its nearest, rather than vanishing the way
-    /// an exact match on the level drops it.
+    /// an exact match on the level drops it. Both meshes have parts missing from some of their LODs.
     /// </summary>
-    [Fact]
-    public void Every_part_draws_at_every_lod()
+    [Theory]
+    [InlineData(XbgFixtures.Fence)]
+    [InlineData(XbgFixtures.Ak47)]
+    public void Every_part_draws_at_every_lod(string fixture)
     {
-        int recovered = 0;
-        List<string> failures = [];
-
-        foreach (string path in Fc2Corpus.Find(".xbg"))
+        if (Fixture.Read(fixture) is not { } bytes)
         {
-            XbgModel model = WorldModels.Triangulate(path, File.ReadAllBytes(path));
-            if (model.Submeshes.Count == 0)
-            {
-                continue;
-            }
+            return;
+        }
 
-            int expected = WorldModels.SubmeshesAt(model, model.LodLevels[0])
+        XbgModel model = WorldModels.Triangulate(fixture, bytes);
+        int expected = WorldModels.SubmeshesAt(model, model.LodLevels[0])
+            .Select(s => s.PartName)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Count();
+
+        int recovered = 0;
+        foreach (int lod in model.LodLevels)
+        {
+            int drawn = WorldModels.SubmeshesAt(model, lod)
+                .Select(s => s.PartName)
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Count();
+            int exact = model.Submeshes
+                .Where(s => s.LodLevel == lod && s.Indices.Length > 0)
                 .Select(s => s.PartName)
                 .Distinct(StringComparer.OrdinalIgnoreCase)
                 .Count();
 
-            foreach (int lod in model.LodLevels)
-            {
-                int drawn = WorldModels.SubmeshesAt(model, lod)
-                    .Select(s => s.PartName)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Count();
-                int exact = model.Submeshes
-                    .Where(s => s.LodLevel == lod && s.Indices.Length > 0)
-                    .Select(s => s.PartName)
-                    .Distinct(StringComparer.OrdinalIgnoreCase)
-                    .Count();
-
-                if (drawn != expected)
-                {
-                    failures.Add($"{Path.GetFileName(path)} LOD{lod}: {drawn} parts, expected {expected}");
-                }
-                recovered += Math.Max(0, drawn - exact);
-            }
+            Assert.True(drawn == expected, $"LOD{lod}: {drawn} parts, expected {expected}");
+            recovered += Math.Max(0, drawn - exact);
         }
 
-        Assert.True(
-            failures.Count == 0,
-            $"First failures:{Environment.NewLine}" + string.Join(Environment.NewLine, failures.Take(5)));
-
-        // If this were zero the fallback would never fire and the shared rule would be
-        // indistinguishable from the exact filter it replaced.
-        Assert.True(
-            recovered > 0 || !Fc2Corpus.Present,
-            "No part was ever recovered from a neighbouring LOD, so the fallback is untested.");
+        // Zero would mean the fallback never fired, leaving it indistinguishable from the exact
+        // filter it replaced.
+        Assert.True(recovered > 0, "No part was recovered from a neighbouring LOD.");
     }
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_corpus_was_actually_found()
-        => Assert.True(Fc2Corpus.Find(".xbg").Any(), Fc2Corpus.MissingMessage(".xbg"));
 }

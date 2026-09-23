@@ -8,36 +8,32 @@ namespace JackAll.Tests;
 /// </summary>
 public sealed class MoveStateIndexTests
 {
-    public static TheoryData<string> CorpusFiles()
-    {
-        TheoryData<string> data = [];
-        foreach (string path in Fc2Corpus.Find(".bin").Where(p =>
-            Path.GetDirectoryName(p)?.EndsWith("move", StringComparison.OrdinalIgnoreCase) == true
-            && !Path.GetFileNameWithoutExtension(p)
-                .EndsWith("named", StringComparison.OrdinalIgnoreCase)))
-        {
-            data.Add(path);
-        }
+    public const string Manager = "Move/movemgr.bin";
+    public const string Dlc = "Move/dlc1.bin";
 
-        if (data.Count == 0)
-        {
-            data.Add(string.Empty);
-        }
+    /// <summary>The base game's graph with its names kept: the only source of the channel table.</summary>
+    public const string Named = "Move/movemgrnamed.bin";
 
-        return data;
-    }
+    /// <summary>The two kinds of loadable graph: the base game's, and an expansion's that has no
+    /// manager of its own. The named twin is the authoring form - only ~90% decoded, and the engine
+    /// refuses it - so it is not one of them.</summary>
+    public static TheoryData<string> Graphs => new() { Manager, Dlc };
+
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Manager, Dlc, Named);
 
     /// <summary>
-    /// The identity gate the split turns on: a fragment is keyed by <c>m_stateNameHash</c>, so every
+    /// The identity the split turns on: a fragment is keyed by <c>m_stateNameHash</c>, so every
     /// listed state must have one and no two may share it.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(Graphs))]
     public void Every_state_has_a_distinct_name_hash(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } graph) return;
 
-        MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(File.ReadAllBytes(path)));
+        MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(graph));
 
         List<uint?> hashes = [.. index.Slots.Select(MoveStateIndex.NameHashOf)];
         Assert.All(hashes, h => Assert.NotNull(h));
@@ -49,12 +45,12 @@ public sealed class MoveStateIndexTests
     /// emit 1,687 for <c>movemgr.bin</c> and corrupt the file.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(Graphs))]
     public void Nested_states_hold_a_slot_without_owning_a_fragment(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } graph) return;
 
-        MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(File.ReadAllBytes(path)));
+        MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(graph));
 
         int topLevel = index.TopLevelStates.Count();
         Assert.Equal((uint)index.Slots.Count, index.StateMachine.Field("nbState"));
@@ -67,12 +63,12 @@ public sealed class MoveStateIndexTests
     /// file offset - which is what lets a fragment reference across its own boundary.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(Graphs))]
     public void Every_object_addresses_and_resolves_back_to_itself(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } graph) return;
 
-        MoveFile file = MoveCodec.Load(File.ReadAllBytes(path));
+        MoveFile file = MoveCodec.Load(graph);
         MoveStateIndex index = MoveStateIndex.Build(file);
 
         int addressed = 0;
@@ -99,12 +95,12 @@ public sealed class MoveStateIndexTests
     /// that leave a state land deep inside another one, not on its root.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(Graphs))]
     public void References_that_leave_a_state_are_addressable(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } graph) return;
 
-        MoveFile file = MoveCodec.Load(File.ReadAllBytes(path));
+        MoveFile file = MoveCodec.Load(graph);
         MoveStateIndex index = MoveStateIndex.Build(file);
 
         int crossing = 0;
@@ -125,6 +121,6 @@ public sealed class MoveStateIndexTests
             }
         }
 
-        Assert.True(crossing > 0, "the corpus is expected to cross state boundaries");
+        Assert.True(crossing > 0, "the graph is expected to cross state boundaries");
     }
 }

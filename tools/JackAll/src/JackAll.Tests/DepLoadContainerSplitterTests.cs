@@ -8,8 +8,8 @@ namespace JackAll.Tests;
 
 /// <summary>
 /// `depload.dat` as a splitting container: one fragment per parent, so a mod declares the one
-/// dependency list it cares about instead of shipping a 220 KB manifest. The gate is the same shape
-/// the `.fcb` splitter has - a real shipped file, taken apart and put back together unchanged.
+/// dependency list it cares about instead of shipping a 220 KB manifest. A retail file taken apart
+/// and put back together comes out unchanged.
 /// </summary>
 public class DepLoadContainerSplitterTests : IDisposable
 {
@@ -31,8 +31,6 @@ public class DepLoadContainerSplitterTests : IDisposable
     {
         try { Directory.Delete(_sandbox, recursive: true); } catch { /* best effort */ }
     }
-
-    public static TheoryData<string> CorpusFiles() => DepLoadDocumentTests.CorpusFiles();
 
     [Theory]
     [InlineData("world1_depload.dat", true)]
@@ -68,12 +66,11 @@ public class DepLoadContainerSplitterTests : IDisposable
     /// parent depends on belongs to that parent's fragment, and losing one does not.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void A_skeleton_is_the_parent_order_and_nothing_a_fragment_carries(string path)
+    [MemberData(nameof(DepLoadDocumentTests.DepLoads), MemberType = typeof(DepLoadDocumentTests))]
+    public void A_skeleton_is_the_parent_order_and_nothing_a_fragment_carries(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         DepLoadFile file = DepLoadDocument.Decode(original);
         string shape = _splitter.Open(original).Skeleton(_ => true)!;
 
@@ -94,16 +91,15 @@ public class DepLoadContainerSplitterTests : IDisposable
     }
 
     /// <summary>
-    /// Taking every parent out as a fragment and putting them all back has to reproduce the file -
-    /// the same round trip the binary codec is gated on, one level up.
+    /// Taking every parent out as a fragment and putting them all back reproduces the file - the
+    /// binary codec's round trip, one level up.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Every_parent_extracts_and_splices_back_unchanged(string path)
+    [MemberData(nameof(DepLoadDocumentTests.DepLoads), MemberType = typeof(DepLoadDocumentTests))]
+    public void Every_parent_extracts_and_splices_back_unchanged(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = _splitter.Open(original);
 
         Dictionary<string, string> everyFragment = DepLoadDocument.Decode(original).Parents
@@ -111,19 +107,15 @@ public class DepLoadContainerSplitterTests : IDisposable
                 p => tree.Extract(DepLoadContainerSplitter.IdOf(p.Hash))!);
         byte[] rebuilt = _splitter.Apply(original, everyFragment);
 
-        int at = Fc2Corpus.FirstDifference(original, rebuilt);
-        Assert.True(at < 0, Fc2Corpus.DescribeDifference(path, original, rebuilt));
+        Fixture.AssertSameBytes(fixture, original, rebuilt);
     }
 
-    [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Splicing_one_fragment_leaves_every_other_parent_alone(string path)
+    [Fact]
+    public void Splicing_one_fragment_leaves_every_other_parent_alone()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(DepLoadDocumentTests.World1) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         DepLoadFile before = DepLoadDocument.Decode(original);
-        if (before.Parents.All(p => p.Hash != Dragunov)) return;
 
         DepLoadParent edited = before.Parents.First(p => p.Hash == Dragunov);
         edited = edited with { Children = [.. edited.Children, new DepLoadChild(0x11641D75, Animation)] };
@@ -232,12 +224,12 @@ public class DepLoadContainerSplitterTests : IDisposable
     /// a second, phantom row for the same resource.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void A_listed_id_and_a_labelled_one_are_the_same_fragment(string path)
+    [MemberData(nameof(DepLoadDocumentTests.DepLoads), MemberType = typeof(DepLoadDocumentTests))]
+    public void A_listed_id_and_a_labelled_one_are_the_same_fragment(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } content) return;
 
-        foreach (DepLoadParent parent in DepLoadDocument.Decode(File.ReadAllBytes(path)).Parents.Take(300))
+        foreach (DepLoadParent parent in DepLoadDocument.Decode(content).Parents.Take(300))
         {
             string listed = DepLoadContainerSplitter.IdOf(parent.Hash);
             string staged = DepLoadContainerSplitter.IdOf(parent.Hash, "whatever_a_mod_called_it");

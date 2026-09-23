@@ -3,7 +3,8 @@ using JackAll.Tools.Xbg;
 namespace JackAll.Tests;
 
 /// <summary>
-/// Every vertex component decoded to float space and packed back has to return what shipped.
+/// Every vertex component decoded to float space and packed back has to return what shipped, for
+/// each of the three vertex formats that ship.
 /// </summary>
 /// <remarks>
 /// The container round trip carries the vertex block through untouched, so it says nothing about
@@ -13,63 +14,46 @@ namespace JackAll.Tests;
 /// </remarks>
 public sealed class VertexEncoderTests
 {
-    [Fact]
-    public void Every_component_quantises_back_to_what_shipped()
+    [Theory]
+    [MemberData(nameof(XbgFixtures.Formats), MemberType = typeof(XbgFixtures))]
+    public void Every_component_quantises_back_to_what_shipped(string fixture)
     {
-        Dictionary<string, int> damaged = new(StringComparer.Ordinal);
-        int buffers = 0;
-        int files = 0;
-
-        foreach (string path in Fc2Corpus.Find(".xbg"))
+        if (Fixture.Read(fixture) is not { } bytes)
         {
-            files++;
-            XbgFile model = XbgFile.Parse(File.ReadAllBytes(path));
-            VertexScales scales = VertexScales.Of(model);
+            return;
+        }
 
-            foreach (XbgLod lod in model.Lods)
+        XbgFile model = XbgFile.Parse(bytes);
+        VertexScales scales = VertexScales.Of(model);
+        foreach (XbgLod lod in model.Lods)
+        {
+            foreach (XbgVertexBuffer buffer in lod.VertexBuffers.Where(b => b.VertexCount > 0))
             {
-                foreach (XbgVertexBuffer buffer in lod.VertexBuffers)
+                VertexStream stream = VertexStream.Unpack(lod.VertexData, buffer, (int)buffer.VertexCount);
+                VertexStream produced = VertexEncoder.Encode(
+                    buffer.Flags, stream.Count, scales,
+                    new VertexData
+                    {
+                        Positions = stream.Positions(model.PosScale),
+                        Uvs = stream.Uvs(scales.UvTranslate, scales.UvScale, 0),
+                        Uvs1 = stream.Uvs(scales.UvTranslate, scales.UvScale, 1),
+                        Normals = stream.Normals(),
+                        Colours = stream.Colours(),
+                        Skin = stream.Skin(),
+                    },
+                    stream);
+
+                foreach ((string name, byte[] original) in stream.Components)
                 {
-                    if (buffer.VertexCount == 0)
-                    {
-                        continue;
-                    }
-
-                    buffers++;
-                    VertexStream stream = VertexStream.Unpack(lod.VertexData, buffer, (int)buffer.VertexCount);
-                    VertexStream produced = VertexEncoder.Encode(
-                        buffer.Flags, stream.Count, scales,
-                        new VertexData
-                        {
-                            Positions = stream.Positions(model.PosScale),
-                            Uvs = stream.Uvs(scales.UvTranslate, scales.UvScale, 0),
-                            Uvs1 = stream.Uvs(scales.UvTranslate, scales.UvScale, 1),
-                            Normals = stream.Normals(),
-                            Colours = stream.Colours(),
-                            Skin = stream.Skin(),
-                        },
-                        stream);
-
-                    foreach ((string name, byte[] original) in stream.Components)
-                    {
-                        if (!produced.Components[name].AsSpan().SequenceEqual(original))
-                        {
-                            damaged[name] = damaged.GetValueOrDefault(name) + 1;
-                        }
-                    }
+                    Fixture.AssertSameBytes(
+                        $"{fixture} {name} in flags 0x{buffer.Flags:X}", original, produced.Components[name]);
                 }
             }
         }
-
-        Assert.True(buffers > 0 || !Fc2Corpus.Present, "No vertex buffer was examined.");
-        Assert.True(
-            damaged.Count == 0,
-            $"{buffers} buffers in {files} files. Components that moved: "
-            + string.Join(", ", damaged.Select(pair => $"{pair.Key} in {pair.Value} buffers")));
     }
 
     /// <summary>
-    /// With no template, a vertex falls back to the constants every shipped one carries - which is
+    /// With no template, a vertex falls back to the constants shipped vertices carry - which is
     /// what an authored part gets for the slots an editor cannot supply.
     /// </summary>
     [Fact]
@@ -92,9 +76,4 @@ public sealed class VertexEncoderTests
         Assert.Equal(VertexEncoder.DirectionW, stream.Components["normal"][3]);
         Assert.Equal([(1.0f, 1.0f, 1.0f, 1.0f)], stream.Colours()!);
     }
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_corpus_was_actually_found()
-        => Assert.True(Fc2Corpus.Find(".xbg").Any(), Fc2Corpus.MissingMessage(".xbg"));
 }

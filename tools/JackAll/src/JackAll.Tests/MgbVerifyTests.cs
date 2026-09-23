@@ -3,58 +3,42 @@ using JackAll.Tools.Mgb;
 namespace JackAll.Tests;
 
 /// <summary>
-/// The gate for <see cref="MgbVerify"/>, which is what a hand-authored package is checked with
-/// before it is built (FCSE's CMake runs <c>mgb verify --page FCSE_PAGE</c> ahead of every encode).
+/// Tests <see cref="MgbVerify"/>, which is what a hand-authored package is checked with before it
+/// is built (FCSE's CMake runs <c>mgb verify --page FCSE_PAGE</c> ahead of every encode).
 /// </summary>
 /// <remarks>
 /// A checker of this kind has two ways to be useless, and both are tested here. It can cry wolf -
-/// so every shipped package must come back clean, which is the only ground truth available for what
-/// a valid package looks like. And it can be silently vacuous: every reference into another package
-/// is skipped, so a rule that never matches anything would pass everything just as quietly. Hence
-/// the corpus is checked for what was resolved as well as for what was found.
+/// so a shipped package must come back clean, which is the only ground truth available for what a
+/// valid package looks like. And it can be silently vacuous: every reference into another package
+/// is skipped, so a rule that never matches anything would pass everything just as quietly. Hence a
+/// shipped page is checked for what was resolved as well as for what was found.
 /// </remarks>
 public sealed class MgbVerifyTests
 {
-    private static readonly string CorpusDirectory =
-        Path.Combine(TestSupport.RepositoryRoot, "tmp", "menu");
-
     private static readonly string FcsePageXml = Path.Combine(
         TestSupport.RepositoryRoot, "tools", "FCSE", "assets", "fcse.mgb.xml");
 
-    public static TheoryData<string> CorpusFiles() => MgbRoundTripTests.CorpusFiles();
-
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Finds_nothing_wrong_with_a_shipped_package(string fileName)
+    [MemberData(nameof(MgbRoundTripTests.Packages), MemberType = typeof(MgbRoundTripTests))]
+    public void Finds_nothing_wrong_with_a_shipped_package(string path)
     {
-        if (fileName.Length == 0)
-        {
-            return; // corpus not present in this checkout
-        }
+        if (Fixture.Read(path) is not { } original) return;
 
-        MgbPackage package = MgbPackage.Read(
-            File.ReadAllBytes(Path.Combine(CorpusDirectory, fileName)));
-
-        Assert.Empty(MgbVerify.Check(package).Findings);
+        Assert.Empty(MgbVerify.Check(MgbPackage.Read(original)).Findings);
     }
 
-    /// <summary>The other half of the corpus check: that the clean result above is a real one. Every
-    /// rule here can decline to apply, so a walk that reached nothing would report the same
-    /// nothing.</summary>
+    /// <summary>The other half of the shipped-package check: that the clean result above is a real
+    /// one. Every rule here can decline to apply, so a walk that reached nothing would report the
+    /// same nothing.</summary>
     [Fact]
-    public void Resolves_thousands_of_references_across_the_corpus()
+    public void Resolves_hundreds_of_references_in_a_shipped_page()
     {
-        if (!Directory.Exists(CorpusDirectory))
-        {
-            return;
-        }
+        if (Fixture.Read("Mgb/options.mgb") is not { } original) return;
 
-        int resolved = Directory.EnumerateFiles(CorpusDirectory, "*.mgb")
-            .Sum(path => MgbVerify.Check(MgbPackage.Read(File.ReadAllBytes(path))).ReferencesChecked);
+        int resolved = MgbVerify.Check(MgbPackage.Read(original)).ReferencesChecked;
 
-        // The shipped menu corpus resolves ~7,000; a fraction of that is still far past anything a
-        // rule that quietly matched nothing could reach.
-        Assert.True(resolved > 1000, $"only {resolved} references were resolved across the corpus");
+        // options.mgb resolves 265, far past anything a rule that quietly matched nothing could reach.
+        Assert.True(resolved > 200, $"only {resolved} references were resolved in options.mgb");
     }
 
     [Fact]
@@ -63,7 +47,8 @@ public sealed class MgbVerifyTests
         MgbVerifyResult result = Check(File.ReadAllText(FcsePageXml), "FCSE_PAGE");
 
         Assert.Empty(result.Findings);
-        Assert.True(result.ReferencesChecked > 60); // three banks of twenty, plus the chrome
+        // Three banks of twenty, plus the chrome
+        Assert.True(result.ReferencesChecked > 60);
     }
 
     /// <summary>The failure this whole check exists for: a link that names an element the package

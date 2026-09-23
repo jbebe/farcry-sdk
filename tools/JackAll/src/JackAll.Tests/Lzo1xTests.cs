@@ -4,20 +4,16 @@ namespace JackAll.Tests;
 
 /// <summary>
 /// The LZO decompressor is hand-written, so it gets held to the strongest available standard: run
-/// it over every compressed entry the checked-in patch fixture ships and check each result against
-/// the length the .fat index independently recorded. A decoder with a bit-level bug does not
-/// survive that many real streams agreeing on their output size.
+/// it over every compressed entry the patch fixture ships and check each result against the length
+/// the .fat index independently recorded. A decoder with a bit-level bug does not survive that many
+/// real streams agreeing on their output size.
 /// </summary>
-[Trait("Category", "RequiresFixture")]
 public class Lzo1xTests
 {
-    private const string FixturesDir = "Fixtures/Patch";
-
     [Fact]
     public void Every_compressed_entry_decompresses_to_the_length_the_index_claims()
     {
-        string fatPath = Path.Combine(FixturesDir, "patch.fat");
-        if (!File.Exists(fatPath)) return;
+        if (Fixture.Locate(FatArchiveTests.Fat) is not { } fatPath) return;
 
         using var archive = DuniaArchive.Open(fatPath);
 
@@ -45,8 +41,7 @@ public class Lzo1xTests
         // A correct length can in principle come out of an incorrect decoder, so pin one entry to
         // its actual bytes: gamemodesconfig.xml is LZO-compressed in patch.dat and must come back
         // as real, parseable content.
-        string fatPath = Path.Combine(FixturesDir, "patch.fat");
-        if (!File.Exists(fatPath)) return;
+        if (Fixture.Locate(FatArchiveTests.Fat) is not { } fatPath) return;
 
         using var patch = DuniaArchive.Open(fatPath);
 

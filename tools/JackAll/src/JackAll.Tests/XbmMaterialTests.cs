@@ -3,67 +3,33 @@ using JackAll.Tools.Xbm;
 namespace JackAll.Tests;
 
 /// <summary>
-/// Run against the real .xbm samples in Fixtures/Xbm (extracted from
-/// research/reference-files/format-samples/graphics_xbm_swap_example.zip) rather than a synthetic
-/// fixture, for the same reason as <see cref="XbtTextureTests"/>: the only authority on what the
-/// engine actually writes is what it actually shipped. These four were also cross-checked against
-/// all 2,286 .xbm files in a real Far Cry 2 install - every one parsed without error.
+/// Run against real .xbm files rather than a synthetic fixture, for the same reason as
+/// <see cref="XbtTextureTests"/>: the only authority on what the engine actually writes is what it
+/// actually shipped.
 /// </summary>
 public class XbmMaterialTests
 {
-    private static string? FindSamplesDir()
-    {
-        string dir = @".\Fixtures\Xbm";
-        return Directory.Exists(dir) ? dir : null;
-    }
-
-    public static TheoryData<string> SampleFiles()
-    {
-        var data = new TheoryData<string>();
-        string? dir = FindSamplesDir();
-        if (dir is null)
-        {
-            data.Add(string.Empty); // keeps xUnit from erroring on an empty theory
-            return data;
-        }
-        foreach (string file in Directory.EnumerateFiles(dir, "*.xbm"))
-        {
-            data.Add(file);
-        }
-        return data;
-    }
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_sample_files_were_actually_found()
-    {
-        Assert.True(
-            FindSamplesDir() is not null,
-            ".\\Fixtures\\Xbm was not found, so every sample-backed test in " +
-            "this class silently no-opped.");
-    }
-
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void A_shipped_xbm_parses_with_a_non_empty_name_and_template(string path)
+    [InlineData(XbmFixtures.Wood)]
+    [InlineData(XbmFixtures.Metal)]
+    public void A_shipped_xbm_parses_with_a_non_empty_name_and_template(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        XbmMaterial material = XbmMaterial.Parse(File.ReadAllBytes(path));
+        XbmMaterial material = XbmMaterial.Parse(bytes);
 
         Assert.False(string.IsNullOrWhiteSpace(material.Name));
         Assert.False(string.IsNullOrWhiteSpace(material.Template));
     }
 
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void Every_texture_slot_points_at_an_xbt(string path)
+    [InlineData(XbmFixtures.Wood)]
+    [InlineData(XbmFixtures.Metal)]
+    public void Every_texture_slot_points_at_an_xbt(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        XbmMaterial material = XbmMaterial.Parse(File.ReadAllBytes(path));
+        XbmMaterial material = XbmMaterial.Parse(bytes);
 
         Assert.NotEmpty(material.Textures);
         Assert.All(material.Textures, tex => Assert.EndsWith(".xbt", tex.Value, StringComparison.OrdinalIgnoreCase));

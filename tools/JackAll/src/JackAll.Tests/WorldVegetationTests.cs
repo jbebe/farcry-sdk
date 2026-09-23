@@ -9,8 +9,6 @@ namespace JackAll.Tests;
 /// </summary>
 public class WorldVegetationTests
 {
-    private const string MeshFixture = "Fixtures/Xbg/chairbar01.xbg";
-
     /// <summary>
     /// A resource id is the CRC32 of the resource's own normalized path - the same hash the .fat
     /// index keys on. That is what makes the scatter drawable at all: 84 of 84 ids across world 1's
@@ -36,10 +34,9 @@ public class WorldVegetationTests
     /// <summary>Instances whose resource resolves to a mesh become drawable models; the rest come
     /// back as markers, and none are lost on the way.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_split_draws_what_it_can_and_marks_the_rest()
     {
-        if (!File.Exists(MeshFixture)) return;
+        if (Fixture.Read(XbgFixtures.Prop) is not { } bytes) return;
 
         const string Mesh = @"graphics\props\chair.xbg";
         uint known = NameHash.Compute(Mesh);
@@ -52,7 +49,6 @@ public class WorldVegetationTests
             new(new Vector3(7, 8, 9), Unknown),
         ];
 
-        byte[] bytes = File.ReadAllBytes(MeshFixture);
         ScatterSet scatter = WorldVegetation.Split(
             instances,
             new Dictionary<uint, string> { [known] = Mesh },

@@ -12,33 +12,30 @@ namespace JackAll.Tests;
 
 /// <summary>
 /// A "legacy mod" here is built by running <see cref="PatchBuilder"/> itself against a throwaway copy
-/// of the checked-in patch.dat/.fat fixture, then zipping up its output - that's exactly what the old
+/// of the patch.dat/.fat fixture, then zipping up its output - that's exactly what the old
 /// build_patch.bat-style workflow produces: a full replacement patch.dat/.fat, mostly vanilla bytes,
 /// with the mod's actual edits mixed in. A second, untouched copy of the same fixture stands in for
 /// "the base game" the import diffs against.
 /// </summary>
 public class LegacyPatchImporterTests : IDisposable
 {
-    private const string FixturesDir = "Fixtures/Patch";
-
     private readonly string _sandbox;
-    private readonly GameInstall? _legacySourceInstall;
-    private readonly GameInstall? _cleanInstall;
+    private readonly Lazy<(GameInstall Legacy, GameInstall Clean)?> _installs;
 
     public LegacyPatchImporterTests()
     {
         _sandbox = Path.Combine(Path.GetTempPath(), "fc2mm-tests", Guid.NewGuid().ToString("N"));
-
-        string fixtureFat = Path.Combine(FixturesDir, "patch.fat");
-        string fixtureDat = Path.Combine(FixturesDir, "patch.dat");
-        if (!File.Exists(fixtureFat) || !File.Exists(fixtureDat))
-        {
-            return;
-        }
-
-        _legacySourceInstall = MakeFakeInstall("legacy_source", fixtureFat, fixtureDat);
-        _cleanInstall = MakeFakeInstall("clean", fixtureFat, fixtureDat);
+        _installs = new(() =>
+            Fixture.Locate(FatArchiveTests.Fat) is { } fixtureFat && Fixture.Locate(FatArchiveTests.Dat) is { } fixtureDat
+                ? (MakeFakeInstall("legacy_source", fixtureFat, fixtureDat), MakeFakeInstall("clean", fixtureFat, fixtureDat))
+                : null);
     }
+
+    /// <summary>The install a legacy patch is built in, copied from the fixture on first use.</summary>
+    private GameInstall? LegacySourceInstall => _installs.Value?.Legacy;
+
+    /// <summary>An untouched copy of the same fixture: the base game an import diffs against.</summary>
+    private GameInstall? CleanInstall => _installs.Value?.Clean;
 
     private GameInstall MakeFakeInstall(string name, string fixtureFat, string fixtureDat)
     {
@@ -52,17 +49,9 @@ public class LegacyPatchImporterTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_fixture_files_were_actually_found()
-        => Assert.True(
-            File.Exists(Path.Combine(FixturesDir, "patch.fat")) && File.Exists(Path.Combine(FixturesDir, "patch.dat")),
-            $"{FixturesDir} had no patch.fat/patch.dat, so every test in this class silently no-opped.");
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Only_the_whole_file_and_fragment_changes_survive_the_import()
     {
-        if (_legacySourceInstall is null || _cleanInstall is null) return;
+        if (LegacySourceInstall is null || CleanInstall is null) return;
 
         NameDatabase names = TestSupport.LoadNames();
 
@@ -72,7 +61,7 @@ public class LegacyPatchImporterTests : IDisposable
         VfsFile container;
         string fragmentId;
         byte[] fragmentReplacementXml;
-        using (var vfs = GameVfs.Load(_legacySourceInstall, names))
+        using (var vfs = GameVfs.Load(LegacySourceInstall, names))
         {
             VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
             container = vfs.Files[fragment.ContainerHash!.Value];
@@ -86,32 +75,11 @@ public class LegacyPatchImporterTests : IDisposable
             fragmentReplacementXml = TestSupport.RenderWithValueSetAt(vanillaFragment, [], 0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
         }
 
-        var mod = MakeZipMod(
+        string legacyZipPath = BuildLegacyPatch("legacy_mod", names, MakeZipMod(
             "legacy_mod_source",
             (wholeFilePath, wholeFileContent),
-            ($"{container.Path}\\{fragmentId}", fragmentReplacementXml));
-
-        using (var vfsForRead = GameVfs.Load(_legacySourceInstall, names))
-        {
-            PatchBuilder.Build(_legacySourceInstall, [mod], vfsForRead.ReadOriginal);
-        }
-
-        // Zip up the just-built "legacy" patch.dat/.fat - stands in for the old-style mod a user would
-        // have downloaded and copied straight into Data_Win32 by hand.
-        string legacyZipPath = Path.Combine(_sandbox, "legacy_mod.zip");
-        using (var zip = ZipFile.Open(legacyZipPath, ZipArchiveMode.Create))
-        {
-            zip.CreateEntryFromFile(_legacySourceInstall.PatchFat, "Data_Win32/patch.fat");
-            zip.CreateEntryFromFile(_legacySourceInstall.PatchDat, "Data_Win32/patch.dat");
-        }
-
-        string workspaceDir = Path.Combine(_sandbox, "workspace");
-        Directory.CreateDirectory(workspaceDir);
-        var workspace = new FolderModLayer(workspaceDir, "workspace");
-
-        using var cleanVfs = GameVfs.Load(_cleanInstall, names);
-        LegacyImportResult result = LegacyPatchImporter.Import(
-            legacyZipPath, workspace, names, FcbClassDefinitions.Empty, cleanVfs.ReadOriginal, cleanVfs.ReadOriginalHash);
+            ($"{container.Path}\\{fragmentId}", fragmentReplacementXml)));
+        (LegacyImportResult result, FolderModLayer workspace) = ImportLegacy(legacyZipPath, "workspace", names);
 
         // Exactly the whole-file change and the one touched fragment get staged - every other archive
         // entry, plus every untouched sibling fragment of the container that was touched, is identical
@@ -119,8 +87,6 @@ public class LegacyPatchImporterTests : IDisposable
         Assert.Equal(1, result.Imported);
         Assert.Equal(1, result.FragmentsImported);
         Assert.True(result.Skipped > 0);
-
-        workspace.Rescan();
 
         uint wholeFileHash = NameHash.Compute(wholeFilePath);
         Assert.Contains(wholeFileHash, workspace.Hashes);
@@ -139,10 +105,9 @@ public class LegacyPatchImporterTests : IDisposable
     /// not as the whole manifest - the granularity two mods need in order to coexist.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_changed_depload_imports_as_the_resource_that_changed()
     {
-        if (_legacySourceInstall is null || _cleanInstall is null) return;
+        if (LegacySourceInstall is null || CleanInstall is null) return;
 
         NameDatabase names = TestSupport.LoadNames();
         const string containerPath = "worlds\\tmpla\\generated\\tmpla_depload.dat";
@@ -150,7 +115,7 @@ public class LegacyPatchImporterTests : IDisposable
 
         byte[] edited;
         string fragmentId;
-        using (var vfs = GameVfs.Load(_cleanInstall, names))
+        using (var vfs = GameVfs.OpenForOriginalsOnly(CleanInstall, names))
         {
             byte[] vanilla = vfs.ReadOriginal(containerHash)!;
             DepLoadParent parent = DepLoadDocument.Decode(vanilla).Parents.First(p => p.Children.Count > 0);
@@ -181,19 +146,19 @@ public class LegacyPatchImporterTests : IDisposable
     /// the branches it actually changed - and rebuilds to the very bytes the legacy patch carried.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_changed_move_graph_imports_as_the_states_that_changed()
     {
-        if (_legacySourceInstall is null || _cleanInstall is null || VssMoveFragments() is not { } vss)
+        if (LegacySourceInstall is null || CleanInstall is null
+            || Fixture.Read(MoveStateIndexTests.Manager) is not { } vanillaGraph)
         {
             return;
         }
 
         NameDatabase names = TestSupport.LoadNames();
-        byte[] vanillaGraph = File.ReadAllBytes(VanillaMoveGraph);
+        Dictionary<string, string> vss = VssMoveFragments();
         byte[] editedGraph = MoveContainerSplitter.Instance.Apply(vanillaGraph, vss);
 
-        Seed(_cleanInstall, names, MakeZipMod("move_vanilla", (MoveGraphPath, vanillaGraph)));
+        Seed(CleanInstall, names, MakeZipMod("move_vanilla", (MoveGraphPath, vanillaGraph)));
         string zipPath = BuildLegacyPatch(
             "move", names, MakeZipMod("move_source", (MoveGraphPath, editedGraph)));
         (LegacyImportResult result, FolderModLayer workspace) = ImportLegacy(zipPath, "move_ws", names);
@@ -219,16 +184,15 @@ public class LegacyPatchImporterTests : IDisposable
     /// a whole-file override of one is last-wins against every other animation mod, silently.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_move_graph_a_fragment_cannot_express_is_left_out_rather_than_overridden_whole()
     {
-        if (_legacySourceInstall is null || _cleanInstall is null || !File.Exists(VanillaMoveGraph))
+        if (LegacySourceInstall is null || CleanInstall is null
+            || Fixture.Read(MoveStateIndexTests.Manager) is not { } vanillaGraph)
         {
             return;
         }
 
         NameDatabase names = TestSupport.LoadNames();
-        byte[] vanillaGraph = File.ReadAllBytes(VanillaMoveGraph);
 
         // Two states swap places in the machine's slot list. Every fragment still says the same
         // thing; the order they sit in is the container's own, and no override carries one.
@@ -240,14 +204,14 @@ public class LegacyPatchImporterTests : IDisposable
         (machine.Ops[slots[^1]], machine.Ops[slots[^2]]) = (machine.Ops[slots[^2]], machine.Ops[slots[^1]]);
         byte[] reorderedGraph = MoveCodec.Save(graph);
 
-        Seed(_cleanInstall, names, MakeZipMod("reorder_vanilla", (MoveGraphPath, vanillaGraph)));
+        Seed(CleanInstall, names, MakeZipMod("reorder_vanilla", (MoveGraphPath, vanillaGraph)));
         string zipPath = BuildLegacyPatch(
             "reorder", names, MakeZipMod("reorder_source", (MoveGraphPath, reorderedGraph)));
 
         // Without this the refusal below would pass for the wrong reason - "no copy to compare
         // against" rather than "this change won't fit in a fragment".
         uint containerHash = NameHash.Compute(MoveGraphPath);
-        using (var vfs = GameVfs.Load(_cleanInstall, names))
+        using (var vfs = GameVfs.OpenForOriginalsOnly(CleanInstall, names))
         {
             Assert.NotNull(vfs.ReadOriginal(containerHash));
         }
@@ -264,8 +228,6 @@ public class LegacyPatchImporterTests : IDisposable
     private const string SectorPath =
         @"levels\mp_14_woodlands\generated\worldsectors\worldsector56.data.fcb";
 
-    private const string SectorFixture = "Fixtures/WorldSector/worldsector56.data.fcb";
-
     /// <summary>
     /// The pattern behind nearly every whole-file fallback the two largest community mods produce:
     /// entities moved out of <c>main</c> into a mission layer the mod adds. It imports as the moved
@@ -273,13 +235,12 @@ public class LegacyPatchImporterTests : IDisposable
     /// whole sector.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_reparented_entity_imports_as_its_fragment_plus_a_layout()
     {
-        if (_legacySourceInstall is null || _cleanInstall is null || !File.Exists(SectorFixture)) return;
+        if (LegacySourceInstall is null || CleanInstall is null
+            || Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } vanillaSector) return;
 
         NameDatabase names = TestSupport.LoadNames();
-        byte[] vanillaSector = File.ReadAllBytes(SectorFixture);
         const string addedLayer = @"missions\outposts\test\zone_01";
 
         FcbObject moved = FcbDocument.Deserialize(vanillaSector);
@@ -293,7 +254,7 @@ public class LegacyPatchImporterTests : IDisposable
         DeclareLayer(entity, NameHash.Compute(addedLayer));
         moved.Children.Insert(0, NewLayer(addedLayer, entity));
 
-        Seed(_cleanInstall, names, MakeZipMod("reparent_vanilla", (SectorPath, vanillaSector)));
+        Seed(CleanInstall, names, MakeZipMod("reparent_vanilla", (SectorPath, vanillaSector)));
         string zipPath = BuildLegacyPatch(
             "reparent", names, MakeZipMod("reparent_source", (SectorPath, FcbDocument.Serialize(moved))));
 
@@ -302,7 +263,8 @@ public class LegacyPatchImporterTests : IDisposable
         Assert.Empty(result.Refused);
         Assert.Empty(result.WholeFile);
         Assert.Equal(0, result.Imported);
-        Assert.Equal(2, result.FragmentsImported); // the entity, and the sector's layout
+        // The entity, and the sector's layout
+        Assert.Equal(2, result.FragmentsImported);
 
         uint containerHash = NameHash.Compute(SectorPath);
         Assert.DoesNotContain(containerHash, workspace.Hashes);
@@ -322,13 +284,12 @@ public class LegacyPatchImporterTests : IDisposable
     /// <summary>A sector whose entities were only shuffled inside one layer is not a reparent, so it
     /// still falls back - and the fallback still says so.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_reordered_sector_still_stages_whole_and_says_so()
     {
-        if (_legacySourceInstall is null || _cleanInstall is null || !File.Exists(SectorFixture)) return;
+        if (LegacySourceInstall is null || CleanInstall is null
+            || Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } vanillaSector) return;
 
         NameDatabase names = TestSupport.LoadNames();
-        byte[] vanillaSector = File.ReadAllBytes(SectorFixture);
 
         FcbObject reordered = FcbDocument.Deserialize(vanillaSector);
         FcbObject main = reordered.Children.First(c =>
@@ -336,7 +297,7 @@ public class LegacyPatchImporterTests : IDisposable
             && MissionLayers.IsMain(FcbEntityFields.ReadString(c, WorldHashes.TextPathId)));
         (main.Children[0], main.Children[1]) = (main.Children[1], main.Children[0]);
 
-        Seed(_cleanInstall, names, MakeZipMod("reorder_vanilla_sector", (SectorPath, vanillaSector)));
+        Seed(CleanInstall, names, MakeZipMod("reorder_vanilla_sector", (SectorPath, vanillaSector)));
         string zipPath = BuildLegacyPatch(
             "reorder_sector", names, MakeZipMod("reorder_sector_source", (SectorPath, FcbDocument.Serialize(reordered))));
 
@@ -373,18 +334,13 @@ public class LegacyPatchImporterTests : IDisposable
 
     private const string MoveGraphPath = "graphics\\move\\movemgr.bin";
 
-    private static string VanillaMoveGraph =>
-        Path.Combine(Fc2Corpus.Root, "common", "graphics", "move", "movemgr.bin");
-
-    /// <summary>The repo's own VSS Vintorez MOVE fragments, or null when either half of the pair is
-    /// missing - the same real-mod-against-a-known-target pair MoveVssMigrationTests uses.</summary>
-    private static Dictionary<string, string>? VssMoveFragments()
+    /// <summary>The repo's own VSS Vintorez MOVE fragments - the same real-mod-against-a-known-target
+    /// pair MoveVssMigrationTests uses.</summary>
+    private static Dictionary<string, string> VssMoveFragments()
     {
         string dir = Path.Combine(TestSupport.RepositoryRoot, "mods", "vss-vintorez", "layer", "mods",
             "graphics", "move", "movemgr.bin");
-        return File.Exists(VanillaMoveGraph) && Directory.Exists(dir)
-            ? Directory.EnumerateFiles(dir, "*.xml").ToDictionary(f => Path.GetFileName(f)!, File.ReadAllText)
-            : null;
+        return Directory.EnumerateFiles(dir, "*.xml").ToDictionary(f => Path.GetFileName(f)!, File.ReadAllText);
     }
 
     /// <summary>
@@ -392,17 +348,16 @@ public class LegacyPatchImporterTests : IDisposable
     /// same unit a sector's deleted entity gets, keyed on the archetype's path-shaped id.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_deleted_archetype_imports_as_a_layout_that_names_it()
     {
-        if (_legacySourceInstall is null || _cleanInstall is null) return;
+        if (LegacySourceInstall is null || CleanInstall is null) return;
 
         NameDatabase names = TestSupport.LoadNames();
 
         VfsFile container;
         byte[] withOneArchetypeRemoved;
         string removedId;
-        using (var vfs = GameVfs.Load(_legacySourceInstall, names))
+        using (var vfs = GameVfs.Load(LegacySourceInstall, names))
         {
             VfsFile fragment = vfs.Files.Values.First(f => TestSupport.IsFcbFragment(f) && f.NameIsKnown);
             container = vfs.Files[fragment.ContainerHash!.Value];
@@ -415,31 +370,14 @@ public class LegacyPatchImporterTests : IDisposable
             withOneArchetypeRemoved = FcbDocument.Serialize(tree);
         }
 
-        var mod = MakeZipMod("deletion_source", (container.Path, withOneArchetypeRemoved));
-        using (var vfsForRead = GameVfs.Load(_legacySourceInstall, names))
-        {
-            PatchBuilder.Build(_legacySourceInstall, [mod], vfsForRead.ReadOriginal);
-        }
-
-        string legacyZipPath = Path.Combine(_sandbox, "deletion_mod.zip");
-        using (var zip = ZipFile.Open(legacyZipPath, ZipArchiveMode.Create))
-        {
-            zip.CreateEntryFromFile(_legacySourceInstall.PatchFat, "Data_Win32/patch.fat");
-            zip.CreateEntryFromFile(_legacySourceInstall.PatchDat, "Data_Win32/patch.dat");
-        }
-
-        string workspaceDir = Path.Combine(_sandbox, "deletion_workspace");
-        Directory.CreateDirectory(workspaceDir);
-        var workspace = new FolderModLayer(workspaceDir, "workspace");
-
-        using var cleanVfs = GameVfs.Load(_cleanInstall, names);
-        LegacyImportResult result = LegacyPatchImporter.Import(
-            legacyZipPath, workspace, names, FcbClassDefinitions.Empty, cleanVfs.ReadOriginal, cleanVfs.ReadOriginalHash);
+        string legacyZipPath = BuildLegacyPatch(
+            "deletion_mod", names, MakeZipMod("deletion_source", (container.Path, withOneArchetypeRemoved)));
+        (LegacyImportResult result, FolderModLayer workspace) =
+            ImportLegacy(legacyZipPath, "deletion_workspace", names);
 
         Assert.Equal(0, result.Imported);
         Assert.Empty(result.WholeFile);
 
-        workspace.Rescan();
         Assert.DoesNotContain((uint)container.Hash, workspace.Hashes);
         IReadOnlyList<FragmentOverride>? staged = workspace.FragmentOverrides[(uint)container.Hash];
 
@@ -450,37 +388,26 @@ public class LegacyPatchImporterTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Importing_an_extracted_folder_matches_importing_the_same_mod_as_a_zip()
     {
-        if (_legacySourceInstall is null || _cleanInstall is null) return;
+        if (LegacySourceInstall is null || CleanInstall is null) return;
 
         NameDatabase names = TestSupport.LoadNames();
         const string wholeFilePath = "engine/gamemodes/gamemodesconfig.xml";
         byte[] wholeFileContent = "legacy whole-file change"u8.ToArray();
 
-        var mod = MakeZipMod("folder_vs_zip_source", (wholeFilePath, wholeFileContent));
-        using (var vfsForRead = GameVfs.Load(_legacySourceInstall, names))
-        {
-            PatchBuilder.Build(_legacySourceInstall, [mod], vfsForRead.ReadOriginal);
-        }
-
         // The same built patch, offered two ways: still zipped, and already extracted the way a mod
         // manager hands it over. The directory overload is the real body now, so this pins that the
         // zip wrapper didn't grow a behaviour of its own.
-        string legacyZipPath = Path.Combine(_sandbox, "folder_vs_zip.zip");
-        using (var zip = ZipFile.Open(legacyZipPath, ZipArchiveMode.Create))
-        {
-            zip.CreateEntryFromFile(_legacySourceInstall.PatchFat, "Data_Win32/patch.fat");
-            zip.CreateEntryFromFile(_legacySourceInstall.PatchDat, "Data_Win32/patch.dat");
-        }
+        string legacyZipPath = BuildLegacyPatch(
+            "folder_vs_zip", names, MakeZipMod("folder_vs_zip_source", (wholeFilePath, wholeFileContent)));
 
         string extractedDir = Path.Combine(_sandbox, "extracted", "Data_Win32");
         Directory.CreateDirectory(extractedDir);
-        File.Copy(_legacySourceInstall.PatchFat, Path.Combine(extractedDir, "patch.fat"));
-        File.Copy(_legacySourceInstall.PatchDat, Path.Combine(extractedDir, "patch.dat"));
+        File.Copy(LegacySourceInstall.PatchFat, Path.Combine(extractedDir, "patch.fat"));
+        File.Copy(LegacySourceInstall.PatchDat, Path.Combine(extractedDir, "patch.dat"));
 
-        using var cleanVfs = GameVfs.Load(_cleanInstall, names);
+        using var cleanVfs = GameVfs.OpenForOriginalsOnly(CleanInstall, names);
 
         LegacyImportResult fromZip = LegacyPatchImporter.Import(
             legacyZipPath, MakeWorkspace("ws_zip"), names, FcbClassDefinitions.Empty, cleanVfs.ReadOriginal,
@@ -528,12 +455,12 @@ public class LegacyPatchImporterTests : IDisposable
     /// </summary>
     private string BuildLegacyPatch(string name, NameDatabase names, params ZipModLayer[] layers)
     {
-        Seed(_legacySourceInstall!, names, layers);
+        Seed(LegacySourceInstall!, names, layers);
 
         string zipPath = Path.Combine(_sandbox, $"{name}.zip");
         using var zip = ZipFile.Open(zipPath, ZipArchiveMode.Create);
-        zip.CreateEntryFromFile(_legacySourceInstall!.PatchFat, "Data_Win32/patch.fat");
-        zip.CreateEntryFromFile(_legacySourceInstall.PatchDat, "Data_Win32/patch.dat");
+        zip.CreateEntryFromFile(LegacySourceInstall!.PatchFat, "Data_Win32/patch.fat", CompressionLevel.NoCompression);
+        zip.CreateEntryFromFile(LegacySourceInstall.PatchDat, "Data_Win32/patch.dat", CompressionLevel.NoCompression);
         return zipPath;
     }
 
@@ -545,7 +472,7 @@ public class LegacyPatchImporterTests : IDisposable
     /// </summary>
     private static void Seed(GameInstall install, NameDatabase names, params ZipModLayer[] layers)
     {
-        using (var vfs = GameVfs.Load(install, names))
+        using (var vfs = GameVfs.OpenForOriginalsOnly(install, names))
         {
             PatchBuilder.Build(install, layers, vfs.ReadOriginal);
         }
@@ -558,7 +485,7 @@ public class LegacyPatchImporterTests : IDisposable
         string zipPath, string workspaceName, NameDatabase names)
     {
         FolderModLayer workspace = MakeWorkspace(workspaceName);
-        using var cleanVfs = GameVfs.Load(_cleanInstall!, names);
+        using var cleanVfs = GameVfs.OpenForOriginalsOnly(CleanInstall!, names);
         LegacyImportResult result = LegacyPatchImporter.Import(
             zipPath, workspace, names, FcbClassDefinitions.Empty,
             cleanVfs.ReadOriginal, cleanVfs.ReadOriginalHash);

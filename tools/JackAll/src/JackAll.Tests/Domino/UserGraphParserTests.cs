@@ -157,33 +157,18 @@ public class UserGraphParserTests
         Assert.Equal("WagerStart", f2.FieldName);
     }
 
-    [Fact]
-    public void Real_corpus_statements_are_almost_entirely_classified()
+    [Theory]
+    [InlineData(DominoFixtures.FastTravel)]
+    [InlineData(DominoFixtures.FastTravelTwin)]
+    public void A_real_graphs_statements_are_almost_entirely_classified(string script)
     {
-        if (DominoCorpus.UserDirectory is not { } dir) return;
+        if (Fixture.ReadText(script) is not { } source) return;
 
-        var files = Directory.EnumerateFiles(dir, "*.lua", SearchOption.AllDirectories).ToList();
-        Assert.True(files.Count > 0, "Fixture corpus is present but empty.");
+        var statements = Classify(source).Functions.SelectMany(f => f.Body).ToList();
+        int other = statements.Count(s => s is OtherStmt);
 
-        long total = 0, other = 0;
-        foreach (var file in files)
-        {
-            var graph = Classify(File.ReadAllText(file));
-            foreach (var fn in graph.Functions)
-            {
-                foreach (var stmt in fn.Body)
-                {
-                    total++;
-                    if (stmt is OtherStmt)
-                    {
-                        other++;
-                    }
-                }
-            }
-        }
-
-        double unclassifiedFraction = total == 0 ? 0 : (double)other / total;
+        double unclassifiedFraction = (double)other / statements.Count;
         Assert.True(unclassifiedFraction < 0.02,
-            $"{other}/{total} ({unclassifiedFraction:P2}) statements unclassified - expected under 2%.");
+            $"{other}/{statements.Count} ({unclassifiedFraction:P2}) statements unclassified - expected under 2%.");
     }
 }

@@ -208,33 +208,17 @@ public class EntityMergeTests
         Assert.Equal([1, 0, 2, -1], MergedNode.PairByTag(left, right, t => t));
     }
 
-    private static string SectorPath => Path.Combine(
-        Fc2Corpus.Root, @"worlds\worlds\levels\w1_b_2\generated\worldsectors\worldsector4027.data.fcb");
-
-    private static string LibraryPath => Path.Combine(
-        Fc2Corpus.Root, @"worlds\worlds\worlds\world1\generated\entitylibrary.fcb");
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_retail_sector_and_library_were_actually_found()
-    {
-        Assert.True(File.Exists(SectorPath), $"{SectorPath} was not found - the retail merge test silently no-opped.");
-        Assert.True(File.Exists(LibraryPath), $"{LibraryPath} was not found - the retail merge test silently no-opped.");
-    }
-
     /// <summary>
     /// Every archetype-bound entity in a retail outpost sector merges over its world1 archetype: its
     /// own fields read as its own, everything else as inherited, and nothing is lost either way.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Every_retail_instance_merges_over_its_archetype()
     {
-        if (!File.Exists(SectorPath) || !File.Exists(LibraryPath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector4027) is not { } sectorBytes
+            || ArchetypeChainTests.SinglePlayer.Value is not { } index) return;
 
-        ArchetypeIndex index = ArchetypeIndex.Load(
-            [new ArchetypeLayer(@"worlds\world1\generated\entitylibrary.fcb")], _ => File.ReadAllBytes(LibraryPath));
-        FcbObject sector = FcbDocument.Deserialize(File.ReadAllBytes(SectorPath));
+        FcbObject sector = FcbDocument.Deserialize(sectorBytes);
 
         int merged = 0;
         foreach (FcbObject instance in sector.Children.SelectMany(layer => layer.Children))

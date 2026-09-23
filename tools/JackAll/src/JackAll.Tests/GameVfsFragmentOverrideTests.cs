@@ -14,11 +14,8 @@ namespace JackAll.Tests;
 /// attribution and <see cref="GameVfs.Read"/> — leaving the on-disk build itself to
 /// <c>PatchBuilderTests</c>.
 /// </summary>
-[Trait("Category", "RequiresFixture")]
 public class GameVfsFragmentOverrideTests : IDisposable
 {
-    private const string FixturesDir = "Fixtures/Patch";
-
     /// <summary>
     /// A fragment row's structural parent, which its id deliberately does not record - so the file
     /// browser can show it rather than leaving the user to guess.
@@ -107,12 +104,8 @@ public class GameVfsFragmentOverrideTests : IDisposable
         _workspaceDir = Path.Combine(_sandbox, "workspace");
         Directory.CreateDirectory(_workspaceDir);
 
-        string fixtureFat = Path.Combine(FixturesDir, "patch.fat");
-        string fixtureDat = Path.Combine(FixturesDir, "patch.dat");
-        if (!File.Exists(fixtureFat) || !File.Exists(fixtureDat))
-        {
-            return;
-        }
+        if (Fixture.Locate(FatArchiveTests.Fat) is not { } fixtureFat
+            || Fixture.Locate(FatArchiveTests.Dat) is not { } fixtureDat) return;
 
         // Mounted under a name other than "patch" - GameVfs treats install.PatchFat as the volatile,
         // never-cached archive, and this suite wants the ordinary cacheable path. patch.fat/.dat still
@@ -130,7 +123,8 @@ public class GameVfsFragmentOverrideTests : IDisposable
 
     private static byte[] BuildReplacementFragmentXml()
     {
-        var replacement = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
+        // EntityLibraryGroup
+        var replacement = new FcbObject { TypeHash = 0xE0BDB3DB };
         replacement.Values.Add(0xDEADBEEF, [0x2A, 0x00, 0x00, 0x00]);
         string xml = FcbXml.ToXml(replacement, FcbClassDefinitions.Empty);
         return System.Text.Encoding.UTF8.GetBytes(xml);
@@ -255,7 +249,8 @@ public class GameVfsFragmentOverrideTests : IDisposable
             && FcbFragments.IdComparer.Equals(f.FragmentId, "does_not_exist_in_vanilla.xml"));
         Assert.True(added.IsFragment);
         Assert.True(added.IsModded);
-        Assert.False(added.IsOverriding); // not overriding an existing child - there wasn't one
+        // Not overriding an existing child - there wasn't one
+        Assert.False(added.IsOverriding);
         Assert.Equal("workspace", added.SourceName);
         Assert.Equal(addition, vfs.Read(added.Hash));
 
@@ -313,7 +308,8 @@ public class GameVfsFragmentOverrideTests : IDisposable
         FcbObject vanilla = VanillaFragmentObject(vfs, fragment);
         if (TestSupport.TwoDistantEditPaths(vanilla) is not { } paths)
         {
-            return; // fixture too small to prove non-overlapping edits safely
+            // Fixture too small to prove non-overlapping edits safely
+            return;
         }
 
         var zipDir = Path.Combine(_sandbox, "zip_src");
@@ -359,7 +355,8 @@ public class GameVfsFragmentOverrideTests : IDisposable
         // A prototype fragment's own value table can be empty - its Entity child's never is.
         int[] targetPath = vanilla.Values.Count > 0 ? [] : [0];
         FcbObject target = TestSupport.NodeAt(vanilla, targetPath);
-        if (target.Values.Count == 0) return; // fixture has nothing existing to collide on
+        // Fixture has nothing existing to collide on
+        if (target.Values.Count == 0) return;
 
         uint existingHash = target.Values.Keys.First();
 

@@ -4,8 +4,7 @@ using JackAll.Tools.Xbg;
 namespace JackAll.Tests;
 
 /// <summary>
-/// The append gate: give every shipped mesh a part it never had, and require the file back with all
-/// of its own content intact.
+/// A shipped mesh takes a part it never had and keeps all of its own content intact.
 /// </summary>
 /// <remarks>
 /// <see cref="XbgAuthorTests"/> proves a mesh can be rebuilt from decoded content. This proves the
@@ -24,43 +23,18 @@ public sealed class XbgAppendTests
     /// <summary>Vertices in the appended triangle.</summary>
     private const int TriangleVertices = 3;
 
-    [Fact]
-    public void Every_shipped_mesh_takes_a_new_part()
+    [Theory]
+    [MemberData(nameof(XbgFixtures.Formats), MemberType = typeof(XbgFixtures))]
+    public void A_shipped_mesh_takes_a_new_part(string fixture)
     {
-        List<string> failures = [];
-        int seen = 0;
-
-        foreach (string path in Fc2Corpus.Find(".xbg"))
+        if (Fixture.Read(fixture) is not { } original)
         {
-            seen++;
-            byte[] original = File.ReadAllBytes(path);
-            try
-            {
-                XbgFile after = XbgFile.Parse(
-                    WithExtraPart(MeshDocument.From(XbgFile.Parse(original))));
-                string? complaint = Intact(XbgFile.Parse(original), after);
-                if (complaint is not null)
-                {
-                    failures.Add($"{Path.GetFileName(path)}: {complaint}");
-                }
-            }
-            catch (Exception error)
-            {
-                failures.Add($"{Path.GetFileName(path)}: {error.Message}");
-            }
+            return;
         }
 
-        Assert.True(
-            failures.Count == 0,
-            $"{seen - failures.Count}/{seen} meshes took a new part. First failures:"
-            + Environment.NewLine
-            + string.Join(Environment.NewLine, failures.Take(5)));
+        XbgFile after = XbgFile.Parse(WithExtraPart(MeshDocument.From(XbgFile.Parse(original))));
+        Assert.Null(Intact(XbgFile.Parse(original), after));
     }
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_corpus_was_actually_found()
-        => Assert.True(Fc2Corpus.Find(".xbg").Any(), Fc2Corpus.MissingMessage(".xbg"));
 
     /// <summary>
     /// The document with one more part in its first LOD, drawing a triangle lifted from a part

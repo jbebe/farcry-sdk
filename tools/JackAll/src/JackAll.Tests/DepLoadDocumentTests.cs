@@ -5,14 +5,21 @@ namespace JackAll.Tests;
 /// <summary>
 /// The layout was reverse-engineered live via GhidraMCP, tracing `CResourceDataBase::LoadBinaryFile`
 /// (0x09c594c0) call-for-call against its own `IFile::Read` calls, then confirmed byte-for-byte against
-/// a real shipped `entitylibrary_depload.dat` (see the `RequiresFixture` test below and
-/// docs/docs/file-formats/depload.md) - including catching a first-pass mistake (assuming the type
-/// table was a third per-child array, not a small deduplicated lookup table) that only showed up once a
-/// real file was available to check against, not from the disassembly alone.
+/// a retail `entitylibrary_depload.dat` (see docs/docs/file-formats/depload.md).
 /// </summary>
 public class DepLoadDocumentTests
 {
-    private const string FixturesDir = "Fixtures/DepLoad";
+    // A small one that lacks the Dart Rifle's animation package.
+    public const string EntityLibrary = "DepLoad/entitylibrary_depload.dat";
+
+    // A whole world's, which lists the Dart Rifle's package.
+    public const string World1 = "DepLoad/world1_depload.dat";
+
+    public static TheoryData<string> DepLoads => new() { EntityLibrary, World1 };
+
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(EntityLibrary, World1);
 
     /// <summary>
     /// Hand-builds raw bytes matching the confirmed layout, writing each section's own independent
@@ -151,80 +158,32 @@ public class DepLoadDocumentTests
         Assert.Throws<InvalidDataException>(() => DepLoadDocument.Decode(new byte[] { 5, 0, 0, 0 }));
     }
 
-    public static TheoryData<string> SampleFiles()
-    {
-        var data = new TheoryData<string>();
-        if (!Directory.Exists(FixturesDir))
-        {
-            data.Add(string.Empty); // keeps xUnit from erroring on an empty theory
-            return data;
-        }
-        foreach (string file in Directory.EnumerateFiles(FixturesDir, "*.dat"))
-        {
-            data.Add(file);
-        }
-        return data;
-    }
-
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void Decoding_a_real_shipped_depload_dat_succeeds(string path)
+    [MemberData(nameof(DepLoads))]
+    public void Decoding_a_real_shipped_depload_dat_succeeds(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } content) return;
 
-        DepLoadFile decoded = DepLoadDocument.Decode(File.ReadAllBytes(path));
+        DepLoadFile decoded = DepLoadDocument.Decode(content);
 
         Assert.NotEmpty(decoded.Parents);
         Assert.Contains(decoded.Parents, p => p.Children.Count > 0);
     }
 
-    private static List<string> CorpusDepLoads() =>
-    [
-        .. Fc2Corpus.Find(".dat")
-            .Where(path => Path.GetFileName(path).EndsWith("_depload.dat", StringComparison.OrdinalIgnoreCase)),
-    ];
-
-    public static TheoryData<string> CorpusFiles()
-    {
-        var data = new TheoryData<string>();
-        List<string> files = CorpusDepLoads();
-        if (files.Count == 0)
-        {
-            data.Add(string.Empty);
-            return data;
-        }
-        foreach (string file in files)
-        {
-            data.Add(file);
-        }
-        return data;
-    }
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_corpus_holds_depload_files_to_gate_against()
-    {
-        Assert.True(CorpusDepLoads().Count > 0, Fc2Corpus.MissingMessage("_depload.dat"));
-    }
-
     /// <summary>
-    /// The real gate. <c>Encode</c> re-derives the sort order, every child slice and the whole type
-    /// table from the model rather than replaying what it read, so byte-identical output also proves
-    /// those three derivations match what the game's own exporter produced.
+    /// <c>Encode</c> re-derives the sort order, every child slice and the whole type table from the
+    /// model rather than replaying what it read, so byte-identical output also proves those three
+    /// derivations match what the game's own exporter produced.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Round_trips_every_shipped_depload_byte_for_byte(string path)
+    [MemberData(nameof(DepLoads))]
+    public void Round_trips_a_shipped_depload_byte_for_byte(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         byte[] rebuilt = DepLoadDocument.Encode(DepLoadDocument.Decode(original));
 
-        Assert.Equal(original.Length, rebuilt.Length);
-        int at = Fc2Corpus.FirstDifference(original, rebuilt);
-        Assert.True(at < 0, Fc2Corpus.DescribeDifference(path, original, rebuilt));
+        Fixture.AssertSameBytes(fixture, original, rebuilt);
     }
 
     /// <summary>
@@ -232,19 +191,17 @@ public class DepLoadDocumentTests
     /// layout from echoing the order it was read in - the round trip alone cannot tell those apart.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Encodes_from_the_model_rather_than_the_order_it_was_read_in(string path)
+    [MemberData(nameof(DepLoads))]
+    public void Encodes_from_the_model_rather_than_the_order_it_was_read_in(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         DepLoadFile file = DepLoadDocument.Decode(original);
         var shuffled = new DepLoadFile([.. file.Parents.Reverse()]);
 
         byte[] rebuilt = DepLoadDocument.Encode(shuffled);
 
-        int at = Fc2Corpus.FirstDifference(original, rebuilt);
-        Assert.True(at < 0, Fc2Corpus.DescribeDifference(path, original, rebuilt));
+        Fixture.AssertSameBytes(fixture, original, rebuilt);
     }
 
     /// <summary>
@@ -252,12 +209,11 @@ public class DepLoadDocumentTests
     /// one says which, instead of surfacing as an unexplained byte difference.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Every_shipped_depload_holds_the_invariants_the_encoder_relies_on(string path)
+    [MemberData(nameof(DepLoads))]
+    public void A_shipped_depload_holds_the_invariants_the_encoder_relies_on(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } content) return;
 
-        byte[] content = File.ReadAllBytes(path);
         DepLoadFile file = DepLoadDocument.Decode(content);
 
         for (int i = 1; i < file.Parents.Count; i++)

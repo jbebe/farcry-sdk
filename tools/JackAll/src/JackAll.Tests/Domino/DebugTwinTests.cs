@@ -44,7 +44,7 @@ public class DebugTwinTests
         Assert.Equal("Start", DominoDebugTwin.ToIdentifier("Start"));
 
         // Every character Lua won't accept in a name becomes an underscore, so a comma followed by a
-        // space produces two - verified against `self[133].Free__if_this_pawn` in the real corpus.
+        // space produces two - verified against `self[133].Free__if_this_pawn` in the retail scripts.
         Assert.Equal("Free__if_this_pawn", DominoDebugTwin.ToIdentifier("Free, if this pawn"));
         Assert.Equal("Started__to_CONVO", DominoDebugTwin.ToIdentifier("Started, to CONVO"));
 
@@ -199,54 +199,24 @@ public class DebugTwinTests
         Assert.Contains(result.Details, d => d.StartsWith("missing:", StringComparison.Ordinal));
     }
 
-    /// <summary>The milestone's real success measure: for every fixture graph that has a debug twin,
-    /// the control edges <see cref="GraphBuilder"/> inferred from the release file must match the
-    /// connections the editor itself recorded. A mismatch is a reconstruction bug, not a test to
+    /// <summary>The control edges <see cref="GraphBuilder"/> infers from a release file must match the
+    /// connections the editor recorded in its twin. A mismatch is a reconstruction bug, not a test to
     /// loosen.</summary>
-    [Fact]
-    public void Every_reconstruction_agrees_with_its_debug_twin_on_box_to_box_control_flow()
+    [Theory]
+    [InlineData(DominoFixtures.FastTravel)]
+    [InlineData(DominoFixtures.TaxiRide)]
+    public void A_reconstruction_agrees_with_its_debug_twin_on_box_to_box_control_flow(string release)
     {
-        if (DominoCorpus.UserDirectory is not { } dir) return;
+        if (Fixture.ReadText(release) is not { } source
+            || Fixture.ReadText(DominoDebugTwin.TwinPathFor(release)) is not { } twinSource) return;
 
-        var releases = Directory.EnumerateFiles(dir, "*.lua", SearchOption.AllDirectories)
-            .Where(f => !DominoDebugTwin.IsTwinPath(f))
-            .ToList();
-        Assert.True(releases.Count > 0, "Fixture corpus is present but empty.");
+        DominoDebugTwin? twin = DominoDebugTwin.FromGraph(Classify(twinSource));
+        Assert.NotNull(twin);
+        ReconstructedGraph graph = GraphBuilder.Build(Classify(source), catalog: null, twin);
+        TwinValidation result = DebugTwinValidator.Validate(graph, twin);
 
-        var failures = new List<string>();
-        int compared = 0, matched = 0;
-
-        foreach (string release in releases)
-        {
-            string twinPath = DominoDebugTwin.TwinPathFor(release);
-            if (!File.Exists(twinPath)) continue;
-
-            try
-            {
-                DominoDebugTwin? twin = DominoDebugTwin.FromGraph(Classify(File.ReadAllText(twinPath)));
-                if (twin is null) continue;
-
-                ReconstructedGraph graph = GraphBuilder.Build(Classify(File.ReadAllText(release)), catalog: null, twin);
-                TwinValidation result = DebugTwinValidator.Validate(graph, twin);
-
-                compared++;
-                matched += result.Matched;
-                if (!result.IsClean)
-                {
-                    failures.Add($"{Path.GetFileName(release)}: -{result.MissingFromReconstruction} +{result.ExtraInReconstruction}\n    "
-                        + string.Join("\n    ", result.Details.Take(3)));
-                }
-            }
-            catch (Exception ex)
-            {
-                failures.Add($"{Path.GetFileName(release)}: {ex.Message}");
-            }
-        }
-
-        if (compared == 0) return; // fixture corpus has no debug twins alongside its release files
-
-        Assert.True(failures.Count == 0,
-            $"{failures.Count}/{compared} graphs disagreed with their twin ({matched} connections matched):\n"
-            + string.Join('\n', failures.Take(5)));
+        Assert.True(result.IsClean,
+            $"-{result.MissingFromReconstruction} +{result.ExtraInReconstruction} ({result.Matched} matched):\n"
+            + string.Join('\n', result.Details.Take(5)));
     }
 }

@@ -13,41 +13,29 @@ namespace JackAll.Tests;
 /// </summary>
 public class ArchetypeIndexTests
 {
-    private const string FixturesDir = "Fixtures/Fcb";
     private const string BasePath = @"worlds\world1\generated\entitylibrary.fcb";
     private const string PatchPath = @"generated\entitylibrarypatchoverride.fcb";
+    private const string BaseFixture = FcbDocumentTests.Worlds;
+    private const string PatchFixture = FcbDocumentTests.PatchOverride;
 
     /// <summary>Names both fixtures declare, so the patch override shadows the base's copy.</summary>
     private const int ContestedNames = 160;
 
     private static readonly Dictionary<string, string> LayerFixtures = new(StringComparer.OrdinalIgnoreCase)
     {
-        [BasePath] = "worlds_entitylibrary.fcb",
-        [PatchPath] = "patch_entitylibrarypatchoverride.fcb",
+        [BasePath] = BaseFixture,
+        [PatchPath] = PatchFixture,
     };
-
-    private static bool FixturesPresent
-        => LayerFixtures.Values.All(f => File.Exists(Path.Combine(FixturesDir, f)));
 
     /// <summary>Stands in for the VFS: resolves only the two layers under test, misses everything else.</summary>
     private static byte[]? ReadFixture(string path)
-        => LayerFixtures.TryGetValue(path, out string? file)
-            ? File.ReadAllBytes(Path.Combine(FixturesDir, file))
-            : null;
+        => LayerFixtures.TryGetValue(path, out string? file) ? Fixture.Read(file) : null;
 
-    private static ArchetypeIndex LoadChain()
-        => ArchetypeIndex.Load(ArchetypeIndex.LayerPaths("world1"), ReadFixture);
+    private static readonly Lazy<ArchetypeIndex> Chain
+        = new(() => ArchetypeIndex.Load(ArchetypeIndex.LayerPaths("world1"), ReadFixture));
 
     private static ArchetypeIndex LoadSingle(string path)
         => ArchetypeIndex.Load([new ArchetypeLayer(path)], ReadFixture);
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_fixture_files_were_actually_found()
-        => Assert.True(
-            FixturesPresent,
-            $"{FixturesDir} is missing {string.Join(" / ", LayerFixtures.Values)}, so every "
-            + "fixture-backed test in this class silently no-opped.");
 
     /// <summary>The name hashes the whole resolution rests on, as read out of the shipped binaries.</summary>
     [Fact]
@@ -66,12 +54,11 @@ public class ArchetypeIndexTests
     /// library but not world1's (that one declares 1,419).
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_chain_resolves_the_expected_archetype_counts()
     {
-        if (!FixturesPresent) return;
+        if (!Fixture.Present(BaseFixture, PatchFixture)) return;
 
-        ArchetypeIndex chain = LoadChain();
+        ArchetypeIndex chain = Chain.Value;
         Assert.Equal(
             (650, 915, 1405, ContestedNames),
             (LoadSingle(BasePath).Count, LoadSingle(PatchPath).Count, chain.Count, chain.Overridden.Count()));
@@ -79,12 +66,11 @@ public class ArchetypeIndexTests
 
     /// <summary>Every contested name resolves to the patch override, because it loads last.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_last_library_loaded_wins_every_contested_name()
     {
-        if (!FixturesPresent) return;
+        if (!Fixture.Present(BaseFixture, PatchFixture)) return;
 
-        ArchetypeIndex index = LoadChain();
+        ArchetypeIndex index = Chain.Value;
         Assert.NotEmpty(index.Overridden);
         foreach (string name in index.Overridden)
         {
@@ -97,12 +83,11 @@ public class ArchetypeIndexTests
 
     /// <summary>CNoCaseStringID: a name differing only in case is the same archetype.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Names_resolve_case_insensitively()
     {
-        if (!FixturesPresent) return;
+        if (!Fixture.Present(BaseFixture, PatchFixture)) return;
 
-        ArchetypeIndex index = LoadChain();
+        ArchetypeIndex index = Chain.Value;
         string name = index.Names.First(n => n.Any(char.IsLetter));
 
         Assert.NotNull(index.Winner(name.ToUpperInvariant()));
@@ -111,12 +96,11 @@ public class ArchetypeIndexTests
 
     /// <summary>A declaration carries the fragment a mod would have to override to change it.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Every_declaration_is_attributed_to_a_container_and_fragment()
     {
-        if (!FixturesPresent) return;
+        if (!Fixture.Present(BaseFixture, PatchFixture)) return;
 
-        ArchetypeIndex index = LoadChain();
+        ArchetypeIndex index = Chain.Value;
         foreach (string name in index.Names)
         {
             foreach (ArchetypeDefinition definition in index.DefinitionsOf(name))
@@ -129,12 +113,11 @@ public class ArchetypeIndexTests
 
     /// <summary>The lint primitive: the base's contested declarations are dead, the winner's are not.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Dead_declarations_are_the_shadowed_ones_only()
     {
-        if (!FixturesPresent) return;
+        if (!Fixture.Present(BaseFixture, PatchFixture)) return;
 
-        ArchetypeIndex index = LoadChain();
+        ArchetypeIndex index = Chain.Value;
         uint baseHash = NameHash.Compute(BasePath);
         uint patchHash = NameHash.Compute(PatchPath);
 
@@ -159,12 +142,11 @@ public class ArchetypeIndexTests
     /// otherwise a stem shows up twice, as both a folder and its own leaf.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_variant_stays_beside_its_stem_instead_of_nesting_under_it()
     {
-        if (!FixturesPresent) return;
+        if (!Fixture.Present(BaseFixture, PatchFixture)) return;
 
-        ArchetypeIndex index = LoadChain();
+        ArchetypeIndex index = Chain.Value;
         var declared = index.Names.ToHashSet(StringComparer.OrdinalIgnoreCase);
 
         string? LongestDeclaredPrefix(string name)
@@ -199,14 +181,13 @@ public class ArchetypeIndexTests
     /// and the same edit staged against the patch override is not.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_lint_reports_edits_that_land_on_a_shadowed_declaration()
     {
-        if (!FixturesPresent) return;
+        if (!Fixture.Present(BaseFixture, PatchFixture)) return;
 
         // DiscoverWorlds has to find world1 for the lint to resolve any chain at all.
         string[] knownPaths = [BasePath, PatchPath];
-        ArchetypeIndex index = LoadChain();
+        ArchetypeIndex index = Chain.Value;
         uint baseHash = NameHash.Compute(BasePath);
 
         ArchetypeDefinition shadowed = index.Names
@@ -228,12 +209,11 @@ public class ArchetypeIndexTests
 
     /// <summary>A staged fragment is attributed to the declaration living in it, and to no other copy.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_staged_fragment_names_the_mod_on_the_declaration_it_edits()
     {
-        if (!FixturesPresent) return;
+        if (!Fixture.Present(BaseFixture, PatchFixture)) return;
 
-        ArchetypeIndex index = LoadChain();
+        ArchetypeIndex index = Chain.Value;
         ArchetypeDefinition shadowed = index.Overridden.Select(index.DefinitionsOf).First()[0];
 
         string sandbox = Path.Combine(Path.GetTempPath(), "jackall-staged-" + Guid.NewGuid().ToString("N"));
@@ -262,20 +242,16 @@ public class ArchetypeIndexTests
     /// The engine's own walk is exactly two levels - group, then prototype - so anything nested deeper
     /// would be indexed here and never instantiated in game.
     /// </summary>
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void Prototypes_sit_exactly_two_levels_below_the_library_root()
+    [Theory]
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void Prototypes_sit_exactly_two_levels_below_the_library_root(string fixture)
     {
-        if (!FixturesPresent) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        foreach (string file in Directory.EnumerateFiles(FixturesDir, "*.fcb"))
-        {
-            FcbObject root = FcbDocument.Deserialize(File.ReadAllBytes(file));
-            var depths = new HashSet<int>();
-            CollectPrototypeDepths(root, 0, depths);
+        var depths = new HashSet<int>();
+        CollectPrototypeDepths(FcbDocument.Deserialize(bytes), 0, depths);
 
-            Assert.Equal([2], depths);
-        }
+        Assert.Equal([2], depths);
     }
 
     private static void CollectPrototypeDepths(FcbObject node, int depth, HashSet<int> depths)

@@ -6,7 +6,6 @@ using static JackAll.Tests.WorldEditSessionTests;
 namespace JackAll.Tests;
 
 /// <summary>The Map tab's check, over edits made to the retail sector the session tests use.</summary>
-[Trait("Category", "RequiresFixture")]
 public class WorldLintTests
 {
     private static readonly Vector3 InSector = new(400f, 350f, 12f);
@@ -17,9 +16,9 @@ public class WorldLintTests
     [Fact]
     public void A_placement_of_an_archetype_the_world_lacks_is_an_error()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, _) = Load();
+        (WorldEditSession session, _, _) = Load(sector);
         WorldEntity placed = session.Place(Crate, InSector, MissionLayers.MainName);
 
         Assert.Contains(Run(session), f => f.Entity == placed && f is { Kind: "Unknown archetype", Severity: LintSeverity.Error });
@@ -28,9 +27,9 @@ public class WorldLintTests
     [Fact]
     public void A_character_in_a_sector_without_navmesh_is_an_error_and_with_one_is_fine()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, _) = Load();
+        (WorldEditSession session, _, _) = Load(sector);
         WorldEntity placed = session.Place(Crate, InSector, MissionLayers.MainName);
         placed.Node.Children.Single(c => c.TypeHash == WorldHashes.Components)
             .Children.Add(new FcbObject { TypeHash = FcbClassDefinitions.Crc32Ascii("CPawn") });
@@ -42,9 +41,9 @@ public class WorldLintTests
     [Fact]
     public void An_edited_entity_moved_out_of_its_sector_is_flagged_and_an_untouched_one_is_not()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         Assert.DoesNotContain(Run(session), f => f.Kind == "Wrong sector");
 
         entities[0].Position = new Vector3(10f, 10f, 0f);
@@ -57,9 +56,9 @@ public class WorldLintTests
     [Fact]
     public void A_link_to_nothing_is_flagged_on_the_entity_that_was_edited_to_carry_it()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         EntityLinks.Add(session.EditableNode(entities[0]), new EntityLink("OnStateChange", 12345, "CLightEvent", "ActivateLight"));
         session.Edited(entities[0]);
 
@@ -70,9 +69,9 @@ public class WorldLintTests
     [Fact]
     public void Deleting_a_link_target_flags_the_link()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         EntityLinks.Add(session.EditableNode(entities[0]), new EntityLink("OnStateChange", entities[1].Id, "CLightEvent", "ActivateLight"));
         session.Edited(entities[0]);
         session.Saved();
@@ -86,9 +85,9 @@ public class WorldLintTests
     [Fact]
     public void Deleting_a_prefab_member_flags_the_prefab()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         EntityGroups.SetChildren(session.EditableNode(entities[0]), [new PrefabChild(entities[1].Name, entities[1].Id)]);
         session.Edited(entities[0]);
         session.Saved();

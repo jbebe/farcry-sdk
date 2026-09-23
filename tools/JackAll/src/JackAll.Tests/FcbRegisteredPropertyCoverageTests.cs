@@ -1,4 +1,5 @@
 using System.Text.Json;
+using JackAll.Core;
 using JackAll.Core.Format.Fcb;
 
 namespace JackAll.Tests;
@@ -17,28 +18,22 @@ namespace JackAll.Tests;
 /// </remarks>
 public class FcbRegisteredPropertyCoverageTests
 {
-    private const string FixturesDir = "Fixtures/Fcb";
-    private const string ClassesFixture = "Fixtures/Fcb/binary_classes.xml";
+    private static readonly string[] Libraries =
+        [FcbDocumentTests.Worlds, FcbDocumentTests.PatchOverride, FcbDocumentTests.Dlc1];
 
     private static string RegisteredPropertiesPath
         => Path.Combine(TestSupport.RepositoryRoot, "tools", "fc2re", "out", "register_properties.jsonl");
 
-    private static bool InputsPresent
-        => File.Exists(RegisteredPropertiesPath)
-           && File.Exists(ClassesFixture)
-           && Directory.EnumerateFiles(FixturesDir, "*.fcb").Any();
+    private static bool InputsPresent => File.Exists(RegisteredPropertiesPath) && Fixture.Present(Libraries);
 
+    // The registry dump is gitignored like the fixtures, so its absence would no-op these tests too.
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_measurement_inputs_were_actually_found()
-        => Assert.True(
-            InputsPresent,
-            $"Needs {RegisteredPropertiesPath}, {ClassesFixture} and .fcb samples; the coverage "
-            + "measurement silently no-opped.");
+    public void The_registry_dump_was_actually_found()
+        => Assert.True(File.Exists(RegisteredPropertiesPath), $"{RegisteredPropertiesPath} is missing.");
 
     /// <summary>The registry's names are the same vocabulary real .fcb member hashes are CRC32 of.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_registrys_member_names_are_the_same_vocabulary_as_fcb_member_names()
     {
         if (!InputsPresent) return;
@@ -56,19 +51,20 @@ public class FcbRegisteredPropertyCoverageTests
     /// transfer, not its class scoping.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_few_values_left_unnamed_are_registry_names_from_another_class()
     {
         if (!InputsPresent) return;
 
-        FcbClassDefinitions defs = FcbClassDefinitions.Load(ClassesFixture);
+        // The XML alone, without the schema BundledAssets merges in: that is what is being measured.
+        FcbClassDefinitions defs = FcbClassDefinitions.Load(
+            BundledAssets.FindAsset(".fcbclasses", Path.Combine("assets", "binary_classes.xml"))!);
         (Dictionary<(uint Class, uint Member), string> scoped, Dictionary<uint, string> flat) = LoadRegistry();
 
         int values = 0, unnamed = 0, scopedHits = 0, flatHits = 0;
 
-        foreach (string file in Directory.EnumerateFiles(FixturesDir, "*.fcb"))
+        foreach (string file in Libraries)
         {
-            FcbObject root = FcbDocument.Deserialize(File.ReadAllBytes(file));
+            FcbObject root = FcbDocument.Deserialize(Fixture.Read(file)!);
             Walk(root, defs.GetClass(root.TypeHash));
 
             void Walk(FcbObject node, FcbClass cls)
@@ -93,18 +89,18 @@ public class FcbRegisteredPropertyCoverageTests
             }
         }
 
-        Assert.Equal(596574, values);
-        Assert.Equal(10, unnamed);
+        Assert.Equal(483004, values);
+        Assert.Equal(7, unnamed);
         Assert.Equal(0, scopedHits);
-        Assert.Equal(10, flatHits);
+        Assert.Equal(7, flatHits);
     }
 
     private static HashSet<uint> DistinctMemberHashesInFixtures()
     {
         HashSet<uint> present = [];
-        foreach (string file in Directory.EnumerateFiles(FixturesDir, "*.fcb"))
+        foreach (string file in Libraries)
         {
-            Collect(FcbDocument.Deserialize(File.ReadAllBytes(file)));
+            Collect(FcbDocument.Deserialize(Fixture.Read(file)!));
         }
         return present;
 

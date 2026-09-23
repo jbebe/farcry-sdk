@@ -12,8 +12,6 @@ public sealed class MoveContainerSplitterTests
 {
     private readonly MoveContainerSplitter _splitter = MoveContainerSplitter.Instance;
 
-    public static TheoryData<string> CorpusFiles() => MoveStateIndexTests.CorpusFiles();
-
     [Theory]
     [InlineData("movemgr.bin", true)]
     [InlineData("dlc1.bin", true)]
@@ -26,25 +24,23 @@ public sealed class MoveContainerSplitterTests
         => Assert.Equal(expected, MoveContainerSplitter.IsMoveGraph(fileName));
 
     /// <summary>
-    /// The gate the whole design turns on. The writer renumbers every back-reference from object
+    /// The property the whole design turns on. The writer renumbers every back-reference from object
     /// identity, so a byte-identical result also proves the fragment id model is right - one
     /// mis-scoped subtree derails the walk within a few hundred bytes.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void Every_state_extracts_and_splices_back_unchanged(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = _splitter.Open(original);
 
         Dictionary<string, string> everyFragment = tree.List()
             .ToDictionary(row => row.Id, row => tree.Extract(row.Id)!);
         byte[] rebuilt = _splitter.Apply(original, everyFragment);
 
-        int at = Fc2Corpus.FirstDifference(original, rebuilt);
-        Assert.True(at < 0, Fc2Corpus.DescribeDifference(path, original, rebuilt));
+        Fixture.AssertSameBytes(path, original, rebuilt);
     }
 
     /// <summary>
@@ -52,12 +48,11 @@ public sealed class MoveContainerSplitterTests
     /// weapon whose branches that state holds.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void Every_state_and_weapon_branch_is_listed_as_a_fragment(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(original));
         IContainerTree tree = _splitter.Open(original);
 
@@ -65,7 +60,7 @@ public sealed class MoveContainerSplitterTests
         int expected = index.TopLevelStates.Sum(
             s => MoveUnits.UnitsOf(s, MoveStateIndex.NameHashOf(s)!.Value).Count);
         Assert.Equal(expected + sections, tree.List().Count);
-        Assert.True(expected > index.TopLevelStates.Count(), "the corpus is expected to hold branches");
+        Assert.True(expected > index.TopLevelStates.Count(), "the graph is expected to hold branches");
         Assert.All(tree.List(), row => Assert.NotNull(tree.Extract(row.Id)));
 
         foreach (MoveObject nested in index.Slots.Where(index.IsNested))
@@ -86,12 +81,11 @@ public sealed class MoveContainerSplitterTests
     /// number that only the base graph meets.
     /// </remarks>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void Splitting_a_state_at_its_branches_shrinks_the_largest_fragment(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(original));
         IContainerTree tree = _splitter.Open(original);
 
@@ -122,12 +116,11 @@ public sealed class MoveContainerSplitterTests
     /// weapon mod actually needs.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void Splicing_one_fragment_leaves_every_other_state_alone(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = _splitter.Open(original);
         (string id, string xml, uint clip) = FirstFragmentWithAClip(tree);
 
@@ -150,12 +143,11 @@ public sealed class MoveContainerSplitterTests
     /// <summary>A state the graph does not have is appended, and the machine's slot count grows with
     /// it.</summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void A_state_the_container_lacks_is_appended_and_nbState_grows(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = _splitter.Open(original);
         MoveStateIndex before = MoveStateIndex.Build(MoveCodec.Load(original));
 
@@ -178,12 +170,11 @@ public sealed class MoveContainerSplitterTests
     }
 
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void A_fragment_filed_under_the_wrong_id_is_refused(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = _splitter.Open(original);
         (string _, string xml, uint _) = FirstFragmentWithAClip(tree);
 
@@ -202,12 +193,12 @@ public sealed class MoveContainerSplitterTests
         => Assert.Equal(3882209901u, MoveContainerSplitter.UnitOf(id));
 
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void A_fragment_reads_by_its_label_and_binds_by_its_number(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        IContainerTree tree = _splitter.Open(File.ReadAllBytes(path));
+        IContainerTree tree = _splitter.Open(original);
         // A reserved section id has no number to bind by, so this rule is about the other rows.
         string bare = tree.List().First(r => !r.Id.StartsWith('_')).Id;
         uint hash = MoveContainerSplitter.UnitOf(bare)!.Value;
@@ -217,12 +208,12 @@ public sealed class MoveContainerSplitterTests
     }
 
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void Canonicalizing_normalises_formatting_before_a_merge_sees_it(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        IContainerTree tree = _splitter.Open(File.ReadAllBytes(path));
+        IContainerTree tree = _splitter.Open(original);
         string xml = tree.Extract(tree.List().First(r => !r.Id.StartsWith((char)95)).Id)!;
 
         string reflowed = xml.Replace("  <", "      <").Replace("\r\n", "\n");
@@ -239,12 +230,11 @@ public sealed class MoveContainerSplitterTests
     /// manager at all - offers none of them.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void Manager_sections_are_listed_only_when_the_graph_has_a_manager(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = _splitter.Open(original);
         bool hasManager = MoveCodec.Load(original).Objects.Any(o => o.ClassName == "CMoveMgr");
 
@@ -258,15 +248,14 @@ public sealed class MoveContainerSplitterTests
     }
 
     /// <summary>The section a mod actually edits: registering a new weapon's animation package.</summary>
-    [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void A_package_can_be_added_without_touching_any_state(string path)
+    [Fact]
+    public void A_package_can_be_added_without_touching_any_state()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(MoveStateIndexTests.Manager) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = _splitter.Open(original);
-        if (tree.Extract("_packages.xml") is not { } packages) return;
+        string? packages = tree.Extract("_packages.xml");
+        Assert.NotNull(packages);
 
         uint before = uint.Parse(Between(packages, "<u32 n=\"size\" v=\"", "\""));
         MoveFile after = MoveCodec.Load(_splitter.Apply(
@@ -284,15 +273,14 @@ public sealed class MoveContainerSplitterTests
     /// against a hardcoded 105 and drops the file otherwise, which in game is no animation at all and
     /// no diagnostic.
     /// </summary>
-    [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void A_channel_table_that_is_not_105_channels_is_refused(string path)
+    [Fact]
+    public void A_channel_table_that_is_not_105_channels_is_refused()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(MoveStateIndexTests.Manager) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = _splitter.Open(original);
-        if (tree.Extract("_channels.xml") is not { } channels) return;
+        string? channels = tree.Extract("_channels.xml");
+        Assert.NotNull(channels);
 
         string broken = channels.Replace(
             "<u32 n=\"ms_iNumMoveValue\" v=\"105\" />", "<u32 n=\"ms_iNumMoveValue\" v=\"104\" />");
@@ -329,12 +317,11 @@ public sealed class MoveContainerSplitterTests
     /// per-fragment overrides can carry a change at all.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void A_skeleton_ignores_what_fragments_say_but_not_where_they_sit(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = _splitter.Open(original);
         string shape = tree.Skeleton(_ => true)!;
         Assert.Equal(shape, _splitter.Open(original).Skeleton(_ => true));
@@ -361,15 +348,14 @@ public sealed class MoveContainerSplitterTests
     /// not disturb the shape - the trap being that a section's content lives in objects the manager
     /// only points at, which a walk over the graph would otherwise count as scaffolding.
     /// </summary>
-    [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void A_section_edit_leaves_the_skeleton_alone(string path)
+    [Fact]
+    public void A_section_edit_leaves_the_skeleton_alone()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(MoveStateIndexTests.Manager) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = _splitter.Open(original);
-        if (tree.Extract("_packages.xml") is not { } packages) return;
+        string? packages = tree.Extract("_packages.xml");
+        Assert.NotNull(packages);
 
         byte[] after = _splitter.Apply(
             original, new Dictionary<string, string> { ["_packages.xml"] = WithPackageAdded(packages) });

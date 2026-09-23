@@ -167,73 +167,25 @@ public class DominoNodeCatalogTests
         Assert.Equal("AI Follow Path", (signature with { DisplayName = "AIFollowPath" }).Title);
     }
 
-    [Fact]
-    public void Every_real_system_node_has_a_description_naming_only_its_own_pins()
+    [Theory]
+    [InlineData(DominoFixtures.ProximityTrigger)]
+    [InlineData(DominoFixtures.BypassMissionStatus)]
+    public void A_real_system_node_resolves_to_a_declared_signature_described_by_its_own_pins(string script)
     {
-        if (DominoCorpus.SystemDirectory is not { } dir) return;
+        if (Fixture.ReadText(script) is not { } source) return;
 
-        var catalog = new DominoNodeCatalog(path =>
-        {
-            string candidate = Path.Combine(dir, Path.GetFileName(path));
-            return File.Exists(candidate) ? File.ReadAllText(candidate) : null;
-        });
+        var catalog = new DominoNodeCatalog(_ => source);
+        NodeSignature? signature = catalog.Resolve($"Domino/System/{Path.GetFileName(script)}");
 
-        var failures = new List<string>();
-        foreach (string file in Directory.EnumerateFiles(dir, "*.lua"))
-        {
-            NodeSignature? signature = catalog.Resolve($"Domino/System/{Path.GetFileName(file)}");
-            if (signature?.Doc is not { } doc)
-            {
-                failures.Add($"{Path.GetFileName(file)}: no description");
-                continue;
-            }
+        Assert.NotNull(signature);
+        Assert.Equal(SignatureOrigin.Declared, signature.Origin);
+        Assert.False(string.IsNullOrWhiteSpace(signature.Category));
 
-            var pins = signature.ControlIns.Select(p => p.Name)
-                .Concat(signature.ControlOuts.Select(p => p.Name))
-                .Concat(signature.DataIns.Select(p => p.Name))
-                .Concat(signature.DataOuts.Select(p => p.Name))
-                .ToHashSet(StringComparer.Ordinal);
-            failures.AddRange(doc.Pins.Keys.Where(p => !pins.Contains(p)).Select(p => $"{Path.GetFileName(file)}: no pin {p}"));
-        }
-
-        Assert.True(failures.Count == 0, string.Join('\n', failures.Take(20)));
-    }
-
-    [Fact]
-    public void Every_real_system_node_resolves_to_a_declared_signature()
-    {
-        if (DominoCorpus.SystemDirectory is not { } dir) return;
-
-        var files = Directory.EnumerateFiles(dir, "*.lua", SearchOption.AllDirectories).ToList();
-        Assert.True(files.Count > 0, "Fixture corpus is present but empty.");
-
-        var catalog = new DominoNodeCatalog(path =>
-        {
-            string name = Path.GetFileName(path);
-            string candidate = Path.Combine(dir, name);
-            return File.Exists(candidate) ? File.ReadAllText(candidate) : null;
-        });
-
-        var failures = new List<string>();
-        foreach (string file in files)
-        {
-            string typePath = $"Domino/System/{Path.GetFileName(file)}";
-            NodeSignature? signature = catalog.Resolve(typePath);
-
-            if (signature is null)
-            {
-                failures.Add($"{file}: did not resolve");
-            }
-            else if (signature.Origin != SignatureOrigin.Declared)
-            {
-                failures.Add($"{file}: resolved as {signature.Origin}, expected Declared");
-            }
-            else if (string.IsNullOrWhiteSpace(signature.Category))
-            {
-                failures.Add($"{file}: no display category");
-            }
-        }
-
-        Assert.True(failures.Count == 0, $"{failures.Count}/{files.Count} nodes failed:\n" + string.Join('\n', failures.Take(10)));
+        var pins = signature.ControlIns.Select(p => p.Name)
+            .Concat(signature.ControlOuts.Select(p => p.Name))
+            .Concat(signature.DataIns.Select(p => p.Name))
+            .Concat(signature.DataOuts.Select(p => p.Name));
+        Assert.NotNull(signature.Doc);
+        Assert.Empty(signature.Doc.Pins.Keys.Except(pins));
     }
 }

@@ -15,17 +15,17 @@ public sealed class MoveWeaponsTests
 {
     private const int DartRifle = 39;
 
-    private static string BasePath =>
-        Path.Combine(Fc2Corpus.Root, "common", "graphics", "move", "movemgr.bin");
+    /// <summary>One parse shared by the tests that only read the graph.</summary>
+    private static readonly Lazy<MoveFile?> Graph = new(Load);
 
-    private static MoveFile Load() => MoveCodec.Load(File.ReadAllBytes(BasePath));
+    /// <summary>A fresh parse, for a test that rewrites the graph.</summary>
+    private static MoveFile? Load()
+        => Fixture.Read(MoveStateIndexTests.Manager) is { } graph ? MoveCodec.Load(graph) : null;
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Scopes_a_weapon_to_its_own_clips_not_the_whole_container()
     {
-        Assert.True(File.Exists(BasePath), Fc2Corpus.MissingMessage("movemgr.bin"));
-        MoveFile file = Load();
+        if (Graph.Value is not { } file) return;
 
         IReadOnlyList<MoveClip> clips = MoveWeapons.ClipsFor(file, DartRifle);
         int total = MoveWeapons.AllClipReferences(file).Count;
@@ -39,11 +39,11 @@ public sealed class MoveWeaponsTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Flags_the_clips_another_weapon_also_plays()
     {
-        Assert.True(File.Exists(BasePath), Fc2Corpus.MissingMessage("movemgr.bin"));
-        IReadOnlyList<MoveClip> clips = MoveWeapons.ClipsFor(Load(), DartRifle);
+        if (Graph.Value is not { } file) return;
+
+        IReadOnlyList<MoveClip> clips = MoveWeapons.ClipsFor(file, DartRifle);
 
         Assert.Equal(49, clips.Count(c => c.IsExclusive));
 
@@ -64,11 +64,9 @@ public sealed class MoveWeaponsTests
     /// The AK-47 loses seven of its 63 clips to that blind spot.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Counts_clips_pinned_by_DesiredWeapon_too()
     {
-        Assert.True(File.Exists(BasePath), Fc2Corpus.MissingMessage("movemgr.bin"));
-        MoveFile file = Load();
+        if (Graph.Value is not { } file) return;
 
         Assert.Equal(63, MoveWeapons.ClipsFor(file, 2).Count);
 
@@ -84,11 +82,9 @@ public sealed class MoveWeaponsTests
     /// rewrite by hash across the whole graph is what silently changes how the MGL-140 draws.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Retargets_only_the_sites_the_weapon_governs()
     {
-        Assert.True(File.Exists(BasePath), Fc2Corpus.MissingMessage("movemgr.bin"));
-        MoveFile file = Load();
+        if (Load() is not { } file) return;
 
         MoveRepointResult result = MoveRepoint.Apply(
             file, DartRifle, new Dictionary<uint, uint> { [0xB4B65546] = 0xDEADBEEF });
@@ -106,24 +102,23 @@ public sealed class MoveWeaponsTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Reports_a_mapped_clip_the_graph_never_names()
     {
-        Assert.True(File.Exists(BasePath), Fc2Corpus.MissingMessage("movemgr.bin"));
+        if (Load() is not { } file) return;
 
         MoveRepointResult result = MoveRepoint.Apply(
-            Load(), DartRifle, new Dictionary<uint, uint> { [0x1234_5678] = 0xDEADBEEF });
+            file, DartRifle, new Dictionary<uint, uint> { [0x1234_5678] = 0xDEADBEEF });
 
         Assert.Equal(0, result.Rewritten);
         Assert.Equal([0x1234_5678u], result.Unreferenced);
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Finds_every_weapon_index_that_scopes_clips()
     {
-        Assert.True(File.Exists(BasePath), Fc2Corpus.MissingMessage("movemgr.bin"));
-        IReadOnlyList<int> indices = MoveWeapons.Indices(Load());
+        if (Graph.Value is not { } file) return;
+
+        IReadOnlyList<int> indices = MoveWeapons.Indices(file);
 
         Assert.Contains(DartRifle, indices);
         Assert.Contains(2, indices);

@@ -7,7 +7,7 @@ namespace JackAll.Tests;
 /// <see cref="ImaAdpcm"/> is a byte-for-byte port of Dunia.dll's real decoder functions (traced live
 /// via GhidraMCP - see its remarks), so these tests lean on two kinds of evidence: synthetic streams
 /// whose output is predictable from the algorithm itself, and the real `FlatCopy` audio inside
-/// Fixtures/Spk/004e1ccc_1644b214.spk (one mono record, one stereo - the same two files whose header
+/// <see cref="SpkPackageTests.WithAudio"/> (one mono record, one stereo - the same two files whose header
 /// bytes were checked by hand against the decompile before this port was written).
 /// </summary>
 public class ImaAdpcmTests
@@ -45,7 +45,8 @@ public class ImaAdpcmTests
         // for the smallest step-table entry (7); step-index also stays clamped at 0 (index delta -1,
         // already at the floor) - so this is a fixed point, not a coincidence of the first sample only.
         byte[] header = BuildHeader(stereo: false, predictorA: 0, stepIndexA: 0);
-        byte[] stream = header.Concat(new byte[16]).ToArray(); // sixteen 0x00 bytes -> 32 zero nibbles
+        // Sixteen 0x00 bytes -> 32 zero nibbles
+        byte[] stream = header.Concat(new byte[16]).ToArray();
 
         ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(stream);
 
@@ -76,28 +77,29 @@ public class ImaAdpcmTests
         ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(stream);
 
         Assert.Equal(2, decoded.Channels);
-        Assert.Equal(body.Length * 2, decoded.Samples.Length); // L,R per byte = 2 samples per byte
+        // L,R per byte = 2 samples per byte
+        Assert.Equal(body.Length * 2, decoded.Samples.Length);
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Decodes_the_real_mono_FlatCopy_record_end_to_end()
     {
-        string path = "Fixtures/Spk/004e1ccc_1644b214.spk";
-        if (!File.Exists(path)) return; // no-op if the fixture wasn't restored, matching SpkPackageTests' convention
+        if (Fixture.Read(SpkPackageTests.WithAudio) is not { } bank) return;
 
-        SpkPackage package = SpkPackage.Parse(File.ReadAllBytes(path));
+        SpkPackage package = SpkPackage.Parse(bank);
         SpkRecord mono = package.Records.Single(r => r.Id == 0x004e1cba);
 
         Assert.NotNull(mono.FlatCopyAudioStream);
         Assert.Equal(ImaAdpcm.ExpectedVersion, mono.FlatCopyAudioStream![0]);
-        Assert.Equal(0, mono.FlatCopyAudioStream[0x0c]); // mono flag
+        // Mono flag
+        Assert.Equal(0, mono.FlatCopyAudioStream[0x0c]);
 
         ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(mono.FlatCopyAudioStream);
 
         Assert.Equal(1, decoded.Channels);
         Assert.Equal((mono.FlatCopyAudioStream.Length - ImaAdpcm.HeaderSize) * 2, decoded.Samples.Length);
-        Assert.Contains(decoded.Samples, s => s != 0); // real audio, not a silent/degenerate stream
+        // Real audio, not a silent/degenerate stream
+        Assert.Contains(decoded.Samples, s => s != 0);
     }
 
     [Fact]
@@ -109,7 +111,8 @@ public class ImaAdpcmTests
         ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(stream);
 
         Assert.Equal(ImaAdpcm.ExpectedVersion, stream[0]);
-        Assert.Equal(0, stream[0x0c]); // mono flag
+        // Mono flag
+        Assert.Equal(0, stream[0x0c]);
         Assert.Equal(1, decoded.Channels);
         Assert.Equal(mono.Length, decoded.Samples.Length);
     }
@@ -137,7 +140,8 @@ public class ImaAdpcmTests
         }
 
         byte[] stream = ImaAdpcm.Encode(interleaved, channels: 2);
-        Assert.NotEqual(0, stream[0x0c]); // stereo flag
+        // Stereo flag
+        Assert.NotEqual(0, stream[0x0c]);
 
         ImaAdpcm.DecodedAudio roundTripped = ImaAdpcm.Decode(stream);
 
@@ -149,7 +153,8 @@ public class ImaAdpcmTests
     public void Encoding_an_odd_number_of_mono_samples_still_produces_a_whole_number_of_bytes()
     {
         short[] samples = BuildSineWave(frequency: 440, sampleRate: 8000, seconds: 0.1, amplitude: 12000);
-        short[] odd = samples[..(samples.Length - 1)]; // force an odd count
+        // Force an odd count
+        short[] odd = samples[..(samples.Length - 1)];
         Assert.True(odd.Length % 2 == 1);
 
         byte[] stream = ImaAdpcm.Encode(odd, channels: 1);
@@ -161,13 +166,11 @@ public class ImaAdpcmTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Re_encoding_a_real_records_decoded_audio_stays_close_to_the_original()
     {
-        string path = "Fixtures/Spk/004e1ccc_1644b214.spk";
-        if (!File.Exists(path)) return;
+        if (Fixture.Read(SpkPackageTests.WithAudio) is not { } bank) return;
 
-        SpkPackage package = SpkPackage.Parse(File.ReadAllBytes(path));
+        SpkPackage package = SpkPackage.Parse(bank);
         SpkRecord mono = package.Records.Single(r => r.Id == 0x004e1cba);
         ImaAdpcm.DecodedAudio original = ImaAdpcm.Decode(mono.FlatCopyAudioStream!);
 

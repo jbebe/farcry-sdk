@@ -11,10 +11,21 @@ namespace JackAll.Tests;
 /// longer stages â€” or conflicts over â€” the whole sector. The fixture is a median-sized sector
 /// extracted from the dedicated server's worlds.fat (12 entities over 2 mission layers).
 /// </summary>
-[Trait("Category", "RequiresFixture")]
 public class WorldSectorFragmentTests : IDisposable
 {
-    private const string FixturePath = "Fixtures/WorldSector/worldsector56.data.fcb";
+    // An MP sector of 12 entities over 2 mission layers, whose only tagged entity carries a real layer id.
+    public const string Sector56 = "WorldSector/worldsector56.data.fcb";
+
+    // A landmark whose every entity carries the unset layer value.
+    public const string Landmark4427 = "WorldSector/landmarknear4427.data.fcb";
+
+    // A campaign sector with event links, prefabs and a dozen entities naming their real layer.
+    public const string Sector3859 = "WorldSector/worldsector3859.data.fcb";
+
+    // A campaign outpost sector.
+    public const string Sector4027 = "WorldSector/worldsector4027.data.fcb";
+
+    public static TheoryData<string> LayerTaggedSectors => new() { Sector56, Landmark4427, Sector3859 };
 
     /// <summary>The fixture's real in-archive path, so staged override paths hash to the same
     /// container hash the VFS would use.</summary>
@@ -24,16 +35,16 @@ public class WorldSectorFragmentTests : IDisposable
         Path.Combine(Path.GetTempPath(), "jackall-worldsector-fragment", Guid.NewGuid().ToString("N"));
 
     [Fact]
-    public void The_fixture_file_was_actually_found()
-        => Assert.True(File.Exists(FixturePath),
-            $"{FixturePath} was not found - every test in this class silently no-opped.");
+    [Trait("Category", "RequiresFixture")]
+    public void The_fixtures_were_actually_found()
+        => Fixture.AssertPresent(Sector56, Landmark4427, Sector3859, Sector4027);
 
     [Fact]
     public void Every_entity_with_a_disEntityId_gets_one_uniquely_addressable_fragment()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } bytes) return;
 
-        FcbObject root = FcbDocument.Deserialize(File.ReadAllBytes(FixturePath));
+        FcbObject root = FcbDocument.Deserialize(bytes);
         IReadOnlyList<FcbFragment> fragments = FcbFragments.List(root);
 
         int addressableEntities = root.Children
@@ -57,9 +68,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void Replacing_one_entity_changes_only_that_entity()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
         IReadOnlyList<FcbFragment> fragments = FcbFragments.List(original);
 
@@ -89,9 +99,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void An_override_staged_under_a_renamed_entity_still_resolves_by_its_numeric_id()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
         FcbFragment target = FcbFragments.List(original)[0];
         ulong disEntityId = BitConverter.ToUInt64(target.Node.Values[WorldHashes.DisEntityId], 0);
@@ -114,9 +123,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void A_new_entity_id_is_appended_into_a_mission_layer_not_at_the_root()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
 
         var addition = new FcbObject { TypeHash = WorldHashes.Entity };
@@ -143,9 +151,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void Two_layers_overriding_different_entities_of_one_sector_both_survive_a_build()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbObject vanillaRoot = FcbDocument.Deserialize(baseFcb);
         IReadOnlyList<FcbFragment> fragments = FcbFragments.List(vanillaRoot);
         Assert.True(fragments.Count >= 2);
@@ -179,9 +186,9 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void A_staged_entity_override_round_trips_through_the_mod_layer_scan()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } bytes) return;
 
-        FcbObject root = FcbDocument.Deserialize(File.ReadAllBytes(FixturePath));
+        FcbObject root = FcbDocument.Deserialize(bytes);
         FcbFragment fragment = FcbFragments.List(root)[0];
 
         FolderModLayer layer = MakeLayer("roundtrip", fragment.Id, "<object hash=\"0984415E\" />"u8.ToArray());
@@ -196,9 +203,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void A_layout_moves_an_entity_between_the_fixtures_two_layers()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         var splitter = new FcbContainerSplitter(FcbClassDefinitions.Empty);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
 
@@ -234,9 +240,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void A_layout_moving_several_entities_out_of_one_layer_moves_all_of_them()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
         const string added = @"missions\outposts\test\zone_03";
 
@@ -265,9 +270,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void A_layout_creates_a_missing_mission_layer_where_it_says_to()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
         FcbFragment target = FcbFragments.List(original)[0];
         const string added = @"missions\outposts\test\zone_01";
@@ -297,9 +301,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void A_created_layer_keeps_the_header_values_the_layout_gave_it()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         const string added = @"missions\outposts\test\headers";
         const uint headerHash = 0xBEEF0001;
 
@@ -325,9 +328,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void A_new_entity_listed_in_a_layout_is_routed_to_that_layer_rather_than_main()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         const ulong newId = 424242424242UL;
         const string added = @"missions\outposts\test\zone_02";
 
@@ -349,9 +351,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void Applying_a_containers_own_layout_changes_nothing()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         var splitter = new FcbContainerSplitter(FcbClassDefinitions.Empty);
         string own = splitter.Open(baseFcb).Extract(ContainerLayout.Id)!;
 
@@ -377,9 +378,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void A_layout_naming_an_entity_the_sector_does_not_have_is_ignored()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         byte[] assembled = FcbAssembler.Apply(baseFcb, new Dictionary<string, string>
         {
             [ContainerLayout.Id] = Layout("<layer path=\"main\"><entity id=\"999999999999\" /></layer>"),
@@ -396,9 +396,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void Two_mods_moving_different_entities_of_one_sector_both_survive()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
         ulong[] ids = [.. FcbFragments.List(original)
             .Where(f => MissionLayers.IsMain(LayerOf(original, f.Node)))
@@ -427,9 +426,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void Two_mods_moving_one_entity_to_different_layers_conflict_without_losing_their_other_moves()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
         ulong[] ids = [.. FcbFragments.List(original).Select(f => IdOf(f.Node)).Take(2)];
         var splitter = new FcbContainerSplitter(FcbClassDefinitions.Empty);
@@ -457,9 +455,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void A_layout_removes_an_emptied_layer_but_never_one_still_holding_entities()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
         FcbObject doomed = original.Children.First(c =>
             c.TypeHash == WorldHashes.MissionLayer
@@ -494,9 +491,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void A_layout_deletes_the_entity_it_names_and_leaves_the_rest_alone()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
         IReadOnlyList<FcbFragment> before = FcbFragments.List(original);
         ulong doomed = IdOf(before[0].Node);
@@ -528,9 +524,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void An_entity_that_is_both_deleted_and_edited_is_kept_and_named()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbFragment target = FcbFragments.List(FcbDocument.Deserialize(baseFcb))[0];
         ulong id = IdOf(target.Node);
 
@@ -587,10 +582,10 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void Every_entity_reports_the_mission_layer_it_sits_under()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } bytes) return;
 
-        FcbObject root = FcbDocument.Deserialize(File.ReadAllBytes(FixturePath));
-        IContainerTree tree = new FcbContainerSplitter(FcbClassDefinitions.Empty).Open(File.ReadAllBytes(FixturePath));
+        FcbObject root = FcbDocument.Deserialize(bytes);
+        IContainerTree tree = new FcbContainerSplitter(FcbClassDefinitions.Empty).Open(bytes);
 
         foreach (FcbObject layer in root.Children.Where(c => c.TypeHash == WorldHashes.MissionLayer))
         {
@@ -613,9 +608,9 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void No_vanilla_entity_disagrees_with_the_layer_it_sits_under()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } bytes) return;
 
-        IContainerTree tree = new FcbContainerSplitter(FcbClassDefinitions.Empty).Open(File.ReadAllBytes(FixturePath));
+        IContainerTree tree = new FcbContainerSplitter(FcbClassDefinitions.Empty).Open(bytes);
         IReadOnlyList<FcbFragmentInfo> rows = tree.List();
 
         Assert.NotEmpty(rows);
@@ -631,9 +626,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void An_entity_declaring_no_layer_at_all_is_not_a_mismatch()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
         FcbFragment target = FcbFragments.List(original)
             .First(f => MissionLayers.IsMain(LayerOf(original, f.Node)));
@@ -651,52 +645,20 @@ public class WorldSectorFragmentTests : IDisposable
         Assert.False(ancestry.IsLayerMismatch);
     }
 
-    /// <summary>
-    /// The check that would have caught the sentinel: nothing in the shipped game reads as a layer
-    /// mismatch. The fixture alone could not, being one MP sector whose only tagged entity carries a
-    /// real id, while most retail entities carry the unset value instead.
-    /// </summary>
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void No_entity_in_the_shipped_game_reads_as_a_layer_mismatch()
+    /// <summary>The check that would have caught the sentinel: no retail entity reads as a layer mismatch.</summary>
+    [Theory]
+    [MemberData(nameof(LayerTaggedSectors))]
+    public void No_retail_entity_reads_as_a_layer_mismatch(string sector)
     {
-        string[] sectors = [.. Fc2Corpus.Find(".fcb")
-            .Where(p => Path.GetFileName(p).StartsWith("worldsector", StringComparison.OrdinalIgnoreCase)
-                     || Path.GetFileName(p).StartsWith("landmark", StringComparison.OrdinalIgnoreCase))
-            .Where((_, i) => i % 100 == 0)];
+        if (Fixture.Read(sector) is not { } bytes) return;
 
-        if (sectors.Length == 0) return;
-
-        var splitter = new FcbContainerSplitter(FcbClassDefinitions.Empty);
-        List<string> mismatched = [];
-        int declaringNothing = 0;
-
-        foreach (string path in sectors)
-        {
-            IContainerTree tree = splitter.Open(File.ReadAllBytes(path));
-            foreach (FcbFragmentInfo row in tree.List())
-            {
-                if (tree.AncestryOf(row.Id) is not { Kind: FragmentParentKind.MissionLayer } ancestry)
-                {
-                    continue;
-                }
-                if (ancestry.DeclaredPathId is null)
-                {
-                    declaringNothing++;
-                }
-                if (ancestry.IsLayerMismatch)
-                {
-                    mismatched.Add($"{Path.GetFileName(path)}\\{row.Id} sits under \"{ancestry.ParentName}\"");
-                }
-            }
-        }
+        IContainerTree tree = new FcbContainerSplitter(FcbClassDefinitions.Empty).Open(bytes);
+        string[] mismatched = [.. tree.List()
+            .Select(row => (row.Id, Ancestry: tree.AncestryOf(row.Id)))
+            .Where(r => r.Ancestry is { Kind: FragmentParentKind.MissionLayer, IsLayerMismatch: true })
+            .Select(r => $"{r.Id} sits under \"{r.Ancestry!.ParentName}\"")];
 
         Assert.Empty(mismatched);
-
-        // Without this the assertion above passes on a scan that read nothing worth reading.
-        Assert.True(
-            declaringNothing > 0,
-            $"{sectors.Length} shipped sectors held no entity that declares no layer, so the -1 case went untested.");
     }
 
     /// <summary>The silently-wrong edit this whole feature exists to catch: the component says one
@@ -704,9 +666,8 @@ public class WorldSectorFragmentTests : IDisposable
     [Fact]
     public void A_component_naming_another_layer_is_reported_as_a_mismatch()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(Sector56) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
         FcbFragment target = FcbFragments.List(original)
             .First(f => MissionLayers.IsMain(LayerOf(original, f.Node)));

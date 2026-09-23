@@ -10,16 +10,12 @@ namespace JackAll.Tests;
 /// </summary>
 public class WorldEnvironmentTests
 {
-    private const string Fixture = @".\Fixtures\WorldDescriptor\mp_17_dunes.game.xml";
-
     /// <summary>The retail values, read end to end through the descriptor loader.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_retail_descriptor_yields_its_authored_fog()
     {
-        if (!File.Exists(Fixture)) return;
+        if (Fixture.Read(WorldDescriptorSplitterTests.Compiled) is not { } bytes) return;
 
-        byte[] bytes = File.ReadAllBytes(Fixture);
         WorldEnvironment environment = WorldEnvironment.Load(
             "mp_17_dunes", path => path.EndsWith("mp_17_dunes.game.xml") ? bytes : null);
 

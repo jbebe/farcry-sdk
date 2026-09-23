@@ -5,38 +5,29 @@ using JackAll.Core.Naming;
 namespace JackAll.Tests;
 
 /// <summary>
-/// The XML layer's gate is the same one the binary codec has: a shipped file has to survive the trip
-/// out to text and back. Names are resolved on the way out, so the run also covers the path-labelled
-/// form a mod author actually edits, not just bare hashes.
+/// A retail file survives the trip out to text and back. Names are resolved on the way out, so the run
+/// also covers the path-labelled form a mod author actually edits, not just bare hashes.
 /// </summary>
 public class DepLoadXmlTests
 {
     private static readonly NameDatabase Names = BundledAssets.LoadNames();
 
-    public static TheoryData<string> CorpusFiles() => DepLoadDocumentTests.CorpusFiles();
-
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Round_trips_every_shipped_depload_through_xml(string path)
+    [MemberData(nameof(DepLoadDocumentTests.DepLoads), MemberType = typeof(DepLoadDocumentTests))]
+    public void Round_trips_a_shipped_depload_through_xml(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         byte[] rebuilt = DepLoadXml.Encode(DepLoadXml.Decode(original, Names));
 
-        Assert.Equal(original.Length, rebuilt.Length);
-        int at = Fc2Corpus.FirstDifference(original, rebuilt);
-        Assert.True(at < 0, Fc2Corpus.DescribeDifference(path, original, rebuilt));
+        Fixture.AssertSameBytes(fixture, original, rebuilt);
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_hashlist_is_present_so_the_named_form_is_actually_covered()
-    {
-        Assert.True(Names.Count > 0,
-            "No hashlist beside the test binary, so every ID attribute was skipped and the "
-            + "path-labelled form went untested. Build the CLI once to copy assets/fc2.hashlist.");
-    }
+        => Assert.True(Names.Count > 0,
+            "No assets/fc2.hashlist was found, so every ID attribute was skipped and the path-labelled "
+            + "form went untested.");
 
     [Fact]
     public void A_child_is_tagged_with_its_resource_class()

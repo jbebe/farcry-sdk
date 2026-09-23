@@ -12,19 +12,19 @@ public sealed class MoveRulesTests
 {
     private const int DartRifle = 39;
 
-    private static string BasePath =>
-        Path.Combine(Fc2Corpus.Root, "common", "graphics", "move", "movemgr.bin");
+    /// <summary>The retail graph's bytes, or null when this checkout lacks it.</summary>
+    internal static byte[]? RetailGraph => Retail.Value?.Graph;
 
-    private static string NamedPath =>
-        Path.Combine(Fc2Corpus.Root, "common", "graphics", "move", "movemgrnamed.bin");
+    private static readonly Lazy<(byte[] Graph, IReadOnlyList<MoveChannel> Channels, MoveNames Names)?> Retail = new(() =>
+        Fixture.Read(MoveStateIndexTests.Manager) is { } graph && Fixture.Read(MoveStateIndexTests.Named) is { } named
+            ? (graph, MoveCodec.ChannelTable(named), BundledAssets.LoadMoveNames())
+            : null);
 
-    internal static MoveEditSession OpenRetail()
-    {
-        Assert.True(File.Exists(BasePath), Fc2Corpus.MissingMessage("movemgr.bin"));
-        byte[] graph = File.ReadAllBytes(BasePath);
-        return new MoveEditSession(
-            graph, graph, BundledAssets.LoadMoveNames(), MoveCodec.ChannelTable(File.ReadAllBytes(NamedPath)));
-    }
+    /// <summary>A fresh session over the retail graph, or null when this checkout lacks it.</summary>
+    internal static MoveEditSession? OpenRetail()
+        => Retail.Value is { } retail
+            ? new MoveEditSession(retail.Graph, retail.Graph, retail.Names, retail.Channels)
+            : null;
 
     internal static int ChannelNamed(MoveEditSession session, string name)
         => Enumerable.Range(0, session.Channels.Count).Single(i => session.Channels.NameOf(i) == name);
@@ -36,13 +36,11 @@ public sealed class MoveRulesTests
         => session.Rules.RulesOf(session.Index.ByHash(MoveNames.HashOf("Pawn_Generic_Reload"))!);
 
     [Theory]
-    [MemberData(nameof(MoveStateIndexTests.CorpusFiles), MemberType = typeof(MoveStateIndexTests))]
-    [Trait("Category", "RequiresFixture")]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void Every_clip_in_the_graph_is_reachable_from_a_rule(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } graph) return;
 
-        byte[] graph = File.ReadAllBytes(path);
         MoveEditSession session = new MoveEditSession(graph, graph, MoveNames.Empty, null);
         HashSet<MoveObject> reached =
         [
@@ -54,10 +52,9 @@ public sealed class MoveRulesTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_weapons_rules_reach_every_clip_its_branches_play()
     {
-        MoveEditSession session = OpenRetail();
+        if (OpenRetail() is not { } session) return;
         HashSet<uint> reached =
         [
             .. session.Rules.States.SelectMany(session.Rules.RulesOf)
@@ -70,10 +67,9 @@ public sealed class MoveRulesTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Reload_reads_as_the_three_situations_the_graph_distinguishes()
     {
-        MoveEditSession session = OpenRetail();
+        if (OpenRetail() is not { } session) return;
         List<string> dartRifle =
         [
             .. Reload(session)
@@ -92,10 +88,9 @@ public sealed class MoveRulesTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_situation_picks_the_first_rule_whose_tests_pass()
     {
-        MoveEditSession session = OpenRetail();
+        if (OpenRetail() is not { } session) return;
         IReadOnlyList<MoveRule> rules = Reload(session);
         int camera = ChannelNamed(session, "CameraPlacement");
         int stance = ChannelNamed(session, "Stance");
@@ -130,11 +125,10 @@ public sealed class MoveRulesTests
     /// the jump state" rule, which only wins when the jump state finds something.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_go_to_rule_only_wins_when_the_state_it_enters_does()
     {
         const int Makarov = 20;
-        MoveEditSession session = OpenRetail();
+        if (OpenRetail() is not { } session) return;
         MoveObject aim = session.Index.ByHash(MoveNames.HashOf("Pawn_Generic_Aim"))!;
         MoveObject aimFirst = session.Index.ByHash(MoveNames.HashOf("Pawn_Generic_Aim_First"))!;
         Assert.Contains(aimFirst, session.Rules.Reachable(aim));

@@ -5,7 +5,8 @@ using JackAll.Tools.Xbt;
 namespace JackAll.Tests;
 
 /// <summary>
-/// The pack's texture gate.
+/// A shipped texture decodes to the pixels a <c>.fc2model</c> carries and rebuilds around them with
+/// the header, codec and mip split it shipped with.
 /// </summary>
 /// <remarks>
 /// Block compression is lossy, so unlike every other format here this one cannot be held to
@@ -15,91 +16,43 @@ namespace JackAll.Tests;
 /// </remarks>
 public sealed class TextureDocumentTests
 {
-    /// <summary>
-    /// The textures a model can actually reference.
-    /// </summary>
-    /// <remarks>
-    /// Only the graphics tree, because the corpus also holds 14,964 <c>.xbt</c> under <c>sdat</c>
-    /// that are not colour images at all - 32 bits carrying two 16-bit channels (masks
-    /// <c>0x0000FFFF</c> and <c>0xFFFF0000</c>), which is terrain data wearing a texture's
-    /// extension. Nothing a model names resolves there.
-    /// </remarks>
-    private static IEnumerable<string> ModelTextures()
-        => Fc2Corpus.Find(".xbt").Where(path =>
-            path.Contains($"{Path.DirectorySeparatorChar}graphics{Path.DirectorySeparatorChar}",
-                StringComparison.OrdinalIgnoreCase));
+    // DXT1, with its top level split into a _mip0 companion.
+    private const string Split = "Texture/woodweapons_02_d.xbt";
 
-    /// <summary>Textures the corpus holds by their own path, for resolving companions.</summary>
-    private static Func<string, byte[]?> Reader()
-    {
-        Dictionary<string, string> byName = [];
-        foreach (string path in ModelTextures())
-        {
-            byName[Path.GetFileName(path).ToLowerInvariant()] = path;
-        }
-        return wanted =>
-        {
-            string name = Path.GetFileName(wanted.Replace('\\', '/')).ToLowerInvariant();
-            return byName.TryGetValue(name, out string? found) ? File.ReadAllBytes(found) : null;
-        };
-    }
+    // The companion holding Split's top level.
+    private const string SplitCompanion = "Texture/woodweapons_02_d_mip0.xbt";
+
+    // DXT5, in one file.
+    private const string Dxt5 = "Texture/fuelpilefuelgauge_d.xbt";
+
+    // Plain 32-bit pixels, which only two sky-dome textures ship as.
+    private const string Uncompressed = "Texture/sun_flare.xbt";
+
+    // DXT1, in one file.
+    private const string Dxt1 = XbtStreamedMipTests.Standalone;
+
+    private static readonly Func<string, byte[]?> ReadByPath = Fixture.ByFileName("Texture");
 
     /// <summary>
-    /// Every shipped texture decodes, and its pixels survive PNG exactly - which is the half of the
+    /// A shipped texture decodes, and its pixels survive PNG exactly - which is the half of the
     /// trip that has to be lossless.
     /// </summary>
-    [Fact]
-    public void Every_shipped_texture_decodes_and_survives_png()
+    [Theory]
+    [InlineData(Split)]
+    [InlineData(Dxt5)]
+    [InlineData(Uncompressed)]
+    public void A_shipped_texture_decodes_and_survives_png(string fixture)
     {
-        Func<string, byte[]?> read = Reader();
-        List<string> failures = [];
-        int checkedFiles = 0;
-        int paired = 0;
-
-        foreach (string path in ModelTextures())
+        if (Fixture.Read(fixture) is not { } xbt)
         {
-            // A companion is not a texture in its own right; it is read through its base.
-            if (Path.GetFileNameWithoutExtension(path).EndsWith("_mip0", StringComparison.OrdinalIgnoreCase))
-            {
-                continue;
-            }
-
-            checkedFiles++;
-            try
-            {
-                TextureDocument document = TextureDocument.From(File.ReadAllBytes(path), read);
-                paired += document.CompanionHeader is not null ? 1 : 0;
-
-                (byte[] rgba, int width, int height) = PngImage.Decode(document.ToPng());
-                if (width != document.Width || height != document.Height)
-                {
-                    failures.Add($"{Path.GetFileName(path)}: PNG came back {width}x{height}, not {document.Width}x{document.Height}");
-                }
-                else if (!rgba.AsSpan().SequenceEqual(document.Rgba))
-                {
-                    failures.Add($"{Path.GetFileName(path)}: pixels changed through PNG");
-                }
-            }
-            catch (Exception error)
-            {
-                failures.Add($"{Path.GetFileName(path)}: {error.Message}");
-            }
+            return;
         }
 
-        Assert.True(
-            checkedFiles > 0 || !Fc2Corpus.Present,
-            $"{Fc2Corpus.Root} holds no *.xbt, so this gate asserted nothing.");
+        TextureDocument document = TextureDocument.From(xbt, ReadByPath);
+        (byte[] rgba, int width, int height) = PngImage.Decode(document.ToPng());
 
-        // If nothing were paired the mip merge would never run, and half the corpus is split.
-        Assert.True(
-            paired > 0 || !Fc2Corpus.Present,
-            "No texture named a companion, so the merge was never exercised.");
-
-        Assert.True(
-            failures.Count == 0,
-            $"{checkedFiles - failures.Count}/{checkedFiles} textures decoded, {paired} with a "
-            + $"companion. First failures:{Environment.NewLine}"
-            + string.Join(Environment.NewLine, failures.Take(5)));
+        Assert.Equal((document.Width, document.Height), (width, height));
+        Fixture.AssertSameBytes($"{fixture} through PNG", document.Rgba, rgba);
     }
 
     /// <summary>
@@ -110,16 +63,12 @@ public sealed class TextureDocumentTests
     [Fact]
     public void A_split_texture_rebuilds_with_its_top_level_in_the_companion()
     {
-        Func<string, byte[]?> read = Reader();
-        string? path = ModelTextures()
-            .FirstOrDefault(p => !Path.GetFileNameWithoutExtension(p).EndsWith("_mip0", StringComparison.OrdinalIgnoreCase)
-                                 && XbtTexture.CompanionPath(XbtTexture.Split(File.ReadAllBytes(p)).Header) is not null);
-        if (path is null)
+        if (Fixture.Read(Split) is not { } xbt)
         {
             return;
         }
 
-        TextureDocument document = TextureDocument.From(File.ReadAllBytes(path), read);
+        TextureDocument document = TextureDocument.From(xbt, ReadByPath);
         (byte[] rebuilt, byte[]? companion) = document.ToXbt();
         Assert.NotNull(companion);
 
@@ -142,52 +91,30 @@ public sealed class TextureDocumentTests
     /// is already block-compressed should be close to a no-op, because the four palette colours of
     /// a block are the best fit of themselves.
     /// </summary>
-    [Fact]
-    public void Re_encoding_a_texture_stays_close_to_what_shipped()
+    [Theory]
+    [InlineData(Dxt1)]
+    [InlineData(Dxt5)]
+    public void Re_encoding_a_texture_stays_close_to_what_shipped(string fixture)
     {
-        Func<string, byte[]?> read = Reader();
-        List<string> sampled = [.. ModelTextures()
-            .Where(p => !Path.GetFileNameWithoutExtension(p).EndsWith("_mip0", StringComparison.OrdinalIgnoreCase))
-            .Take(24)];
-        if (sampled.Count == 0)
+        if (Fixture.Read(fixture) is not { } xbt)
         {
             return;
         }
 
-        double worst = double.MaxValue;
-        string worstName = "";
-        foreach (string path in sampled)
-        {
-            TextureDocument document = TextureDocument.From(File.ReadAllBytes(path), read);
-            (byte[] rebuilt, _) = document.ToXbt();
-            if (XbtPixels.TryDecode(rebuilt) is not { } again)
-            {
-                continue;
-            }
+        TextureDocument document = TextureDocument.From(xbt, ReadByPath);
+        (byte[] rebuilt, _) = document.ToXbt();
+        (byte[] Rgba, int Width, int Height) again = XbtPixels.TryDecode(rebuilt)
+            ?? throw new InvalidDataException("The re-encoded texture does not decode.");
 
-            // The base starts one level down when there is a companion, so compare like with like.
-            if (again.Width != document.Width || again.Height != document.Height)
-            {
-                continue;
-            }
-
-            double psnr = Psnr(document.Rgba, again.Rgba);
-            if (psnr < worst)
-            {
-                worst = psnr;
-                worstName = Path.GetFileName(path);
-            }
-        }
-
-        Assert.True(
-            worst is double.MaxValue or > 30.0,
-            $"Worst re-encode was {worst:0.0} dB on {worstName}; expected better than 30 dB.");
+        Assert.Equal((document.Width, document.Height), (again.Width, again.Height));
+        double psnr = Psnr(document.Rgba, again.Rgba);
+        Assert.True(psnr > 30.0, $"Re-encoding cost {psnr:0.0} dB; expected better than 30 dB.");
     }
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_corpus_was_actually_found()
-        => Assert.True(Fc2Corpus.Find(".xbt").Any(), Fc2Corpus.MissingMessage(".xbt"));
+    public void The_fixtures_were_actually_found()
+        => Fixture.AssertPresent(Split, SplitCompanion, Dxt5, Uncompressed);
 
     private static double Psnr(byte[] expected, byte[] actual)
     {

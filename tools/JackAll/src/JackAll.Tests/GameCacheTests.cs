@@ -23,10 +23,8 @@ public class GameCacheTests : IDisposable
         _cachePath = Path.Combine(_cacheDir, ".cache");
     }
 
-    private const string FixturesDir = "Fixtures/Patch";
-
     /// <summary>
-    /// Builds a throwaway install from just the checked-in patch.dat/.fat fixture, instead of a real
+    /// Builds a throwaway install from just the patch.dat/.fat fixture, instead of a real
     /// (tens-of-thousands-of-files) game folder. GameVfs treats whatever sits at install.PatchFat as
     /// the volatile, never-cached archive, so the fixture is mounted under a different name — mounting
     /// it as "patch.fat" would make every entry uncacheable and this suite couldn't prove anything.
@@ -35,12 +33,8 @@ public class GameCacheTests : IDisposable
     /// </summary>
     private static GameInstall? OpenFixtureInstall(string sandbox)
     {
-        string fixtureFat = Path.Combine(FixturesDir, "patch.fat");
-        string fixtureDat = Path.Combine(FixturesDir, "patch.dat");
-        if (!File.Exists(fixtureFat) || !File.Exists(fixtureDat))
-        {
-            return null;
-        }
+        if (Fixture.Locate(FatArchiveTests.Fat) is not { } fixtureFat
+            || Fixture.Locate(FatArchiveTests.Dat) is not { } fixtureDat) return null;
 
         Directory.CreateDirectory(Path.Combine(sandbox, "bin"));
         Directory.CreateDirectory(Path.Combine(sandbox, "Data_Win32"));
@@ -56,7 +50,6 @@ public class GameCacheTests : IDisposable
     // ------------------------------------------------------------------ type section
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_warm_cache_yields_the_identical_merged_view_and_skips_the_header_reads()
     {
         string sandbox = Path.Combine(Path.GetTempPath(), "jackall-cache-install", Guid.NewGuid().ToString("N"));
@@ -109,7 +102,6 @@ public class GameCacheTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Saving_over_an_existing_cache_leaves_no_temp_file_behind()
     {
         string sandbox = Path.Combine(Path.GetTempPath(), "jackall-cache-install", Guid.NewGuid().ToString("N"));
@@ -144,7 +136,8 @@ public class GameCacheTests : IDisposable
         var cache = new GameCache();
 
         cache.Set(0x11111111, [new FcbFragmentInfo("01_A.xml", 120), new FcbFragmentInfo("02_B.xml", 340)]);
-        cache.Set(0x22222222, []); // "doesn't split" is a real, cacheable answer too
+        // "doesn't split" is a real, cacheable answer too
+        cache.Set(0x22222222, []);
 
         Assert.True(cache.TryGet(0x11111111, out var withFragments));
         Assert.Equal([new FcbFragmentInfo("01_A.xml", 120), new FcbFragmentInfo("02_B.xml", 340)], withFragments);
@@ -183,34 +176,14 @@ public class GameCacheTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_warm_cache_yields_identical_fragment_rows_to_a_cold_decode()
     {
-        // A real install has tens of thousands of files across every archive, far more than this
-        // test needs to prove the cache round-trips correctly, so it mounts only the checked-in
-        // patch.dat/.fat fixture instead.
-        string fixtureFat = Path.Combine(FixturesDir, "patch.fat");
-        string fixtureDat = Path.Combine(FixturesDir, "patch.dat");
-        if (!File.Exists(fixtureFat) || !File.Exists(fixtureDat)) return;
-
         string sandbox = Path.Combine(Path.GetTempPath(), "jackall-fcbcache-install", Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(Path.Combine(sandbox, "bin"));
-        Directory.CreateDirectory(Path.Combine(sandbox, "Data_Win32"));
-        File.WriteAllText(Path.Combine(sandbox, "bin", "FarCry2.exe"), "stub");
-
-        // GameVfs treats whatever sits at install.PatchFat as the volatile, never-cached archive
-        // (it's the one the builder rewrites on every run), so the fixture can't be mounted under
-        // that name or none of its .fcb entries would ever make it into the cache. patch.fat/.dat
-        // just need to exist to satisfy GameInstall.TryOpen; GameVfs silently skips them when they
-        // fail to parse.
-        File.WriteAllText(Path.Combine(sandbox, "Data_Win32", "patch.fat"), "not a real archive");
-        File.WriteAllText(Path.Combine(sandbox, "Data_Win32", "patch.dat"), "not a real archive");
-        File.Copy(fixtureFat, Path.Combine(sandbox, "Data_Win32", "common.fat"));
-        File.Copy(fixtureDat, Path.Combine(sandbox, "Data_Win32", "common.dat"));
+        var install = OpenFixtureInstall(sandbox);
+        if (install is null) return;
 
         try
         {
-            var install = GameInstall.TryOpen(sandbox, out _)!;
             NameDatabase names = TestSupport.LoadNames();
 
             var cold = GameCache.Load(_cachePath);
@@ -271,7 +244,8 @@ public class GameCacheTests : IDisposable
         Assert.Equal(0xAAAABBBBCCCCDDDDUL, first);
 
         Assert.True(cache.TryGetContentHash(0x22222222, out ulong second));
-        Assert.Equal(0UL, second); // zero is a real, cacheable hash value, not "missing"
+        // Zero is a real, cacheable hash value, not "missing"
+        Assert.Equal(0UL, second);
 
         Assert.False(cache.TryGetContentHash(0x33333333, out _));
         Assert.True(cache.IsDirty);
@@ -296,7 +270,6 @@ public class GameCacheTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_warm_content_hash_cache_lets_GameVfs_ReadOriginalHash_skip_decompression()
     {
         string sandbox = Path.Combine(Path.GetTempPath(), "jackall-hashcache-install", Guid.NewGuid().ToString("N"));

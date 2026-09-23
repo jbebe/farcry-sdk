@@ -1,3 +1,4 @@
+using JackAll.Core;
 using JackAll.Core.Format.Fcb;
 
 namespace JackAll.Tests;
@@ -5,7 +6,7 @@ namespace JackAll.Tests;
 /// <summary>A hashed member's <c>text_</c> twin is named from the member, declared or not.</summary>
 public class FcbTextMemberTests
 {
-    private static readonly Lazy<FcbClassDefinitions> Defs = new(() => FcbClassDefinitions.Load("Fixtures/Fcb/binary_classes.xml"));
+    private static readonly Lazy<FcbClassDefinitions> Defs = new(BundledAssets.LoadFcbClasses);
 
     private static uint H(string name) => FcbClassDefinitions.Crc32Ascii(name);
 

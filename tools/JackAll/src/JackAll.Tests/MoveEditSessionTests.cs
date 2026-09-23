@@ -11,7 +11,6 @@ namespace JackAll.Tests;
 /// The strongest check available without a game launch is the shipped VSS Vintorez: redoing its
 /// clip swaps as rule edits has to produce the very fragments the mod ships.
 /// </remarks>
-[Trait("Category", "RequiresFixture")]
 public sealed class MoveEditSessionTests
 {
     private const int DartRifle = 39;
@@ -23,8 +22,8 @@ public sealed class MoveEditSessionTests
     [Fact]
     public void Redoing_the_vss_clip_swaps_stages_exactly_the_fragments_it_ships()
     {
-        MoveEditSession session = MoveRulesTests.OpenRetail();
-        byte[] vanilla = MoveCodec.Save(session.File);
+        if (MoveRulesTests.OpenRetail() is not { } session) return;
+        byte[] vanilla = MoveRulesTests.RetailGraph!;
         Dictionary<string, string> shipped = Directory.EnumerateFiles(VssFragments, "*.xml")
             .ToDictionary(p => Path.GetFileName(p), File.ReadAllText);
         MoveFile vss = MoveCodec.Load(MoveContainerSplitter.Instance.Apply(vanilla, shipped));
@@ -47,8 +46,8 @@ public sealed class MoveEditSessionTests
     [Fact]
     public void Duplicating_then_deleting_a_rule_gives_the_graph_back()
     {
-        MoveEditSession session = MoveRulesTests.OpenRetail();
-        byte[] vanilla = MoveCodec.Save(session.File);
+        if (MoveRulesTests.OpenRetail() is not { } session) return;
+        byte[] vanilla = MoveRulesTests.RetailGraph!;
         MoveRule rule = MoveRulesTests.Reload(session).First(r => r.Pin?.Weapon == DartRifle);
         int before = MoveRulesTests.Reload(session).Count;
 
@@ -65,8 +64,8 @@ public sealed class MoveEditSessionTests
     [Fact]
     public void Moving_a_rule_reorders_its_group_and_moving_it_back_restores_it()
     {
-        MoveEditSession session = MoveRulesTests.OpenRetail();
-        byte[] vanilla = MoveCodec.Save(session.File);
+        if (MoveRulesTests.OpenRetail() is not { } session) return;
+        byte[] vanilla = MoveRulesTests.RetailGraph!;
         MoveRule second = session.Rules.States
             .SelectMany(session.Rules.RulesOf)
             .First(r => r.Order > 0 && session.Rules.RulesOf(r.State)[r.Order - 1].Parent == r.Parent);
@@ -84,8 +83,8 @@ public sealed class MoveEditSessionTests
     [Fact]
     public void A_condition_can_be_added_changed_and_removed()
     {
-        MoveEditSession session = MoveRulesTests.OpenRetail();
-        byte[] vanilla = MoveCodec.Save(session.File);
+        if (MoveRulesTests.OpenRetail() is not { } session) return;
+        byte[] vanilla = MoveRulesTests.RetailGraph!;
         MoveRule rule = MoveRulesTests.Reload(session).First(r => r.Pin?.Weapon == DartRifle);
         int jammed = MoveRulesTests.ChannelNamed(session, "Jammed");
 
@@ -112,7 +111,7 @@ public sealed class MoveEditSessionTests
     [Fact]
     public void A_weapon_pin_cannot_be_edited_away()
     {
-        MoveEditSession session = MoveRulesTests.OpenRetail();
+        if (MoveRulesTests.OpenRetail() is not { } session) return;
         MoveRule rule = MoveRulesTests.Reload(session).First(r => r.Pin?.Weapon == DartRifle);
         MoveCondition pin = MoveCondition.Of(rule.PinOwner!).Single(c => c.Criterion == MoveUnits.PinCriterionOf(rule.PinOwner!));
 
@@ -125,8 +124,8 @@ public sealed class MoveEditSessionTests
     [Fact]
     public void Deleting_a_rule_something_else_refers_to_is_refused()
     {
-        MoveEditSession session = MoveRulesTests.OpenRetail();
-        byte[] vanilla = MoveCodec.Save(session.File);
+        if (MoveRulesTests.OpenRetail() is not { } session) return;
+        byte[] vanilla = MoveRulesTests.RetailGraph!;
         HashSet<MoveObject> referenced =
         [
             .. session.File.Objects.SelectMany(o => o.Ops)
@@ -143,7 +142,7 @@ public sealed class MoveEditSessionTests
     [Fact]
     public void A_timing_edit_survives_a_round_trip()
     {
-        MoveEditSession session = MoveRulesTests.OpenRetail();
+        if (MoveRulesTests.OpenRetail() is not { } session) return;
         MoveClipSite site = MoveRulesTests.Reload(session).First(r => r.Pin?.Weapon == DartRifle).Clips[0];
 
         session.SetFloat(site.Owner, "m_flBlendTime", 0.25f);
@@ -156,7 +155,7 @@ public sealed class MoveEditSessionTests
     public void Copying_a_weapons_set_gives_the_new_index_the_donors_clips()
     {
         const int NewWeapon = 44;
-        MoveEditSession session = MoveRulesTests.OpenRetail();
+        if (MoveRulesTests.OpenRetail() is not { } session) return;
         IReadOnlySet<uint> donorClips = MoveWeapons.ClipsByWeapon(session.File)[DartRifle];
         int packages = (int)session.File.Objects.Single(o => o.ClassName == "CMoveMgr").Field("size")!.Value;
 

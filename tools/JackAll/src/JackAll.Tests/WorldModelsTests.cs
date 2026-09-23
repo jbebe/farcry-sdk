@@ -13,21 +13,40 @@ namespace JackAll.Tests;
 /// </summary>
 public class WorldModelsTests
 {
-    private const string SectorFixture = "Fixtures/WorldSector/worldsector56.data.fcb";
-    private const string LibraryFixture = "Fixtures/Fcb/worlds_entitylibrary.fcb";
-    private const string MeshFixture = "Fixtures/Xbg/andrehyppolite.xbg";
+    private const string SectorFixture = WorldSectorFragmentTests.Sector56;
+    private const string LibraryFixture = FcbDocumentTests.Worlds;
     private const string LibraryPath = @"worlds\world1\generated\entitylibrary.fcb";
 
-    private static bool FixturesPresent
-        => File.Exists(SectorFixture) && File.Exists(LibraryFixture) && File.Exists(MeshFixture);
+    // Any mesh at all, served for every path a sector names.
+    private const string MeshFixture = XbgFixtures.Character;
+
+    // A vehicle of 18 separately slotted pieces, with two states of its bumper and water tank.
+    private const string Buggy = XbgFixtures.Buggy;
+
+    // A mesh with enough named parts to make more distinct outfits than the cap allows.
+    private const string Boat = XbgFixtures.SwampBoat;
+
+    // A layered material whose two diffuse layers are different swatches.
+    private const string Swaps = "XbmSwatch/swaps.xbm";
+
+    // A layered material pointing both layers at the same swatch.
+    private const string Flat = "XbmSwatch/flat.xbm";
+
+    // An opaque material, the shape most of the retail set has.
+    private const string OpaqueMaterial = "Xbm/ggauthier-m-1337050735309082.xbm";
+
+    // An alpha-blended material.
+    private const string BlendedMaterial = "XbmAlpha/blended.xbm";
+
+    // An alpha-tested material.
+    private const string MaskedMaterial = "XbmAlpha/masked.xbm";
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_fixture_files_were_actually_found()
-        => Assert.True(
-            FixturesPresent,
-            $"{SectorFixture} / {LibraryFixture} / {MeshFixture} missing, so every fixture-backed "
-            + "test in this class silently no-opped.");
+    public void The_fixtures_were_actually_found()
+        => Fixture.AssertPresent(
+            SectorFixture, LibraryFixture, MeshFixture, Buggy, Boat, Swaps, Flat,
+            OpaqueMaterial, BlendedMaterial, MaskedMaterial);
 
     /// <summary>The hashes the resolution rests on.</summary>
     [Fact]
@@ -43,12 +62,11 @@ public class WorldModelsTests
 
     /// <summary>Worldsector shape: the slot fields sit flat on the CGraphicComponent.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Sector_entities_resolve_their_flat_mesh_paths()
     {
-        if (!FixturesPresent) return;
+        if (Fixture.Read(SectorFixture) is not { } sector) return;
 
-        List<string> paths = [.. SectorEntities().SelectMany(WorldModels.MeshPaths)];
+        List<string> paths = [.. BuildEntities(sector).Select(e => e.Node).SelectMany(WorldModels.MeshPaths)];
 
         Assert.Equal(10, paths.Count);
         Assert.All(paths, p => Assert.EndsWith(".xbg", p));
@@ -58,10 +76,9 @@ public class WorldModelsTests
 
     /// <summary>Entity-library shape: the slot fields sit in a nested "object" child.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Library_archetypes_resolve_their_nested_mesh_paths()
     {
-        if (!FixturesPresent) return;
+        if (!Fixture.Present(LibraryFixture)) return;
 
         ArchetypeIndex index = ArchetypeIndex.Load([new ArchetypeLayer(LibraryPath)], ReadLibrary);
         List<string> paths = [.. index.Names.SelectMany(n => WorldModels.MeshPaths(index.Winner(n)!.Node))];
@@ -74,10 +91,9 @@ public class WorldModelsTests
     /// separate files - hidMeshName is what differs between them - so an archetype with several
     /// slots still resolves to the single .xbg its component draws.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Several_slots_on_one_component_resolve_to_a_single_mesh()
     {
-        if (!FixturesPresent) return;
+        if (!Fixture.Present(LibraryFixture)) return;
 
         ArchetypeIndex index = ArchetypeIndex.Load([new ArchetypeLayer(LibraryPath)], ReadLibrary);
         List<FcbObject> multiSlot = [.. index.Names
@@ -90,12 +106,11 @@ public class WorldModelsTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_reader_that_misses_everything_fails_every_path_without_throwing()
     {
-        if (!FixturesPresent) return;
+        if (Fixture.Read(SectorFixture) is not { } sector) return;
 
-        WorldModelSet set = WorldModels.Load(BuildEntities(), EmptyIndex(), _ => null);
+        WorldModelSet set = WorldModels.Load(BuildEntities(sector), EmptyIndex(), _ => null);
 
         Assert.Empty(set.Models);
         Assert.Empty(set.ModelIndicesByEntity);
@@ -103,13 +118,11 @@ public class WorldModelsTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_reader_that_serves_a_real_mesh_maps_every_resolving_entity()
     {
-        if (!FixturesPresent) return;
+        if (Fixture.Read(SectorFixture) is not { } sector || Fixture.Read(MeshFixture) is not { } mesh) return;
 
-        byte[] mesh = File.ReadAllBytes(MeshFixture);
-        List<WorldEntity> entities = BuildEntities();
+        List<WorldEntity> entities = BuildEntities(sector);
         WorldModelSet set = WorldModels.Load(
             entities, EmptyIndex(),
             path => path.EndsWith(".xbm", StringComparison.OrdinalIgnoreCase) ? null : mesh);
@@ -124,14 +137,12 @@ public class WorldModelsTests
     /// <summary>Foreign or corrupt bytes behind a referenced material path must cost the range its
     /// texture, not the load.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Foreign_bytes_behind_a_material_path_do_not_disturb_the_load()
     {
-        if (!FixturesPresent) return;
+        if (Fixture.Read(SectorFixture) is not { } sector || Fixture.Read(MeshFixture) is not { } mesh) return;
 
-        byte[] mesh = File.ReadAllBytes(MeshFixture);
         WorldModelSet set = WorldModels.Load(
-            BuildEntities(), EmptyIndex(),
+            BuildEntities(sector), EmptyIndex(),
             path => path.EndsWith(".xbm", StringComparison.OrdinalIgnoreCase) ? [0, 1, 2, 3, 255] : mesh);
 
         Assert.NotEmpty(set.Models);
@@ -270,13 +281,11 @@ public class WorldModelsTests
     /// <summary>The same over real .xbm bytes, because the layers only reach the shader if the
     /// parser surfaces every slot under the key the lookup expects.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Real_layered_materials_resolve_through_the_parser()
     {
-        const string Fixture = @".\Fixtures\XbmSwatch\swaps.xbm";
-        if (!File.Exists(Fixture)) return;
+        if (Fixture.Read(Swaps) is not { } swaps) return;
 
-        MaterialSurface surface = WorldModels.SurfaceOf(XbmMaterial.Parse(File.ReadAllBytes(Fixture)));
+        MaterialSurface surface = WorldModels.SurfaceOf(XbmMaterial.Parse(swaps));
 
         Assert.EndsWith("grey.xbt", surface.DiffuseTexturePath, StringComparison.OrdinalIgnoreCase);
         Assert.EndsWith("clay02_d.xbt", surface.SecondDiffusePath, StringComparison.OrdinalIgnoreCase);
@@ -284,10 +293,9 @@ public class WorldModelsTests
 
         // The other fixture points both layers at the same swatch, which is a real and legitimate
         // shape: the mask still decides the tint even when there is nothing to blend to.
-        const string Flat = @".\Fixtures\XbmSwatch\flat.xbm";
-        if (!File.Exists(Flat)) return;
+        if (Fixture.Read(Flat) is not { } flatBytes) return;
 
-        MaterialSurface flat = WorldModels.SurfaceOf(XbmMaterial.Parse(File.ReadAllBytes(Flat)));
+        MaterialSurface flat = WorldModels.SurfaceOf(XbmMaterial.Parse(flatBytes));
         Assert.EndsWith("grey.xbt", flat.DiffuseTexturePath, StringComparison.OrdinalIgnoreCase);
         Assert.EndsWith("grey.xbt", flat.SecondDiffusePath, StringComparison.OrdinalIgnoreCase);
     }
@@ -296,28 +304,19 @@ public class WorldModelsTests
     /// <see cref="WorldModels.AlphaOf"/> if the .xbm parser surfaces them as plain integers. The
     /// opaque case is the one that matters most: most of the retail set is opaque, and reading its
     /// alpha as coverage erases the surface.</summary>
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void Real_materials_classify_through_the_parser()
+    [Theory]
+    [InlineData(OpaqueMaterial, MaterialAlpha.Opaque)]
+    [InlineData(BlendedMaterial, MaterialAlpha.Blend)]
+    [InlineData(MaskedMaterial, MaterialAlpha.Mask)]
+    public void Real_materials_classify_through_the_parser(string fixture, MaterialAlpha expected)
     {
-        foreach (string path in Directory.EnumerateFiles(@".\Fixtures\Xbm", "*.xbm"))
-        {
-            Assert.Equal(MaterialAlpha.Opaque, WorldModels.AlphaOf(XbmMaterial.Parse(File.ReadAllBytes(path))));
-        }
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        AssertFixtureAlpha(@".\Fixtures\XbmAlpha\blended.xbm", MaterialAlpha.Blend);
-        AssertFixtureAlpha(@".\Fixtures\XbmAlpha\masked.xbm", MaterialAlpha.Mask);
-    }
-
-    private static void AssertFixtureAlpha(string path, MaterialAlpha expected)
-    {
-        if (!File.Exists(path)) return;
-
-        Assert.Equal(expected, WorldModels.AlphaOf(XbmMaterial.Parse(File.ReadAllBytes(path))));
+        Assert.Equal(expected, WorldModels.AlphaOf(XbmMaterial.Parse(bytes)));
     }
 
     private static byte[]? ReadLibrary(string path)
-        => path.Equals(LibraryPath, StringComparison.OrdinalIgnoreCase) ? File.ReadAllBytes(LibraryFixture) : null;
+        => path.Equals(LibraryPath, StringComparison.OrdinalIgnoreCase) ? Fixture.Read(LibraryFixture) : null;
 
     /// <summary>
     /// Every retail vehicle fills one graphics slot per wheel, panel and light - 18 on the buggy, 45
@@ -356,24 +355,23 @@ public class WorldModelsTests
     /// to prevent left a Land Rover drawing nothing but its grille.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_vehicles_many_pieces_are_one_outfit_and_survive_the_cap()
     {
-        if (!File.Exists(BuggyFixture)) return;
+        if (Fixture.Read(Buggy) is not { } buggy) return;
 
         // The buggy's own 18 pieces, comfortably past the cap and every one a separate slot.
-        string[] pieces = PartsOf(BuggyFixture);
+        string[] pieces = PartsOf(buggy);
         Assert.True(pieces.Length > WorldModels.MaxOutfitsPerMesh,
             $"the buggy should carry more pieces than the cap, found {pieces.Length}");
 
-        WorldModelSet set = LoadVehicles(BuggyFixture, pieces, copies: 3);
+        WorldModelSet set = LoadVehicles(Buggy, buggy, pieces, copies: 3);
 
         Assert.Single(set.Models);
         Assert.Equal(3, set.ModelIndicesByEntity.Count);
 
         // The whole vehicle, not one piece of it: the merged bake matches asking for all the parts.
         WorldModel expected = WorldModels.Bake(
-            BuggyFixture, XbgModel.Parse(File.ReadAllBytes(BuggyFixture)), WorldModels.FineTriangleBudget,
+            Buggy, XbgModel.Parse(buggy), WorldModels.FineTriangleBudget,
             onlyParts: new HashSet<string>(pieces, StringComparer.OrdinalIgnoreCase))!;
         Assert.Equal(expected.Indices.Length, set.Models[0].Indices.Length);
         Assert.True(expected.Indices.Length > 0);
@@ -384,19 +382,18 @@ public class WorldModelsTests
     /// a part's variants, so the bumper keeps one of its two and the wheels keep all four.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_merged_vehicle_keeps_every_wheel_and_one_bumper()
     {
-        if (!File.Exists(BuggyFixture)) return;
+        if (Fixture.Read(Buggy) is not { } buggy) return;
 
-        string[] pieces = PartsOf(BuggyFixture);
-        XbgModel mesh = XbgModel.Parse(File.ReadAllBytes(BuggyFixture));
+        string[] pieces = PartsOf(buggy);
+        XbgModel mesh = XbgModel.Parse(buggy);
         WorldModel model = WorldModels.Bake(
-            BuggyFixture, mesh, WorldModels.FineTriangleBudget,
+            Buggy, mesh, WorldModels.FineTriangleBudget,
             onlyParts: new HashSet<string>(pieces, StringComparer.OrdinalIgnoreCase))!;
 
         int Triangles(string part) => WorldModels.Bake(
-            BuggyFixture, mesh, WorldModels.FineTriangleBudget,
+            Buggy, mesh, WorldModels.FineTriangleBudget,
             onlyParts: new HashSet<string> { part })?.Fine.Count / 3 ?? 0;
 
         int wheels = Triangles("WHEELBACK_L_STATE01") + Triangles("WHEELBACK_R_STATE01")
@@ -413,10 +410,8 @@ public class WorldModelsTests
             "both bumper states should not draw at once");
     }
 
-    private const string BuggyFixture = "Fixtures/Xbg/buggy.xbg";
-
-    private static string[] PartsOf(string fixture)
-        => [.. XbgModel.Parse(File.ReadAllBytes(fixture)).Submeshes
+    private static string[] PartsOf(byte[] mesh)
+        => [.. XbgModel.Parse(mesh).Submeshes
             .Select(s => s.PartName).Where(p => p.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)
             .Order(StringComparer.Ordinal)];
 
@@ -448,7 +443,7 @@ public class WorldModelsTests
         return node;
     }
 
-    private static WorldModelSet LoadVehicles(string fixture, IReadOnlyList<string> pieces, int copies)
+    private static WorldModelSet LoadVehicles(string fixture, byte[] mesh, IReadOnlyList<string> pieces, int copies)
     {
         var doc = new WorldSectorDocument
         {
@@ -457,7 +452,6 @@ public class WorldModelsTests
             PristineRoot = new FcbObject { TypeHash = WorldHashes.Entity },
         };
 
-        byte[] mesh = File.ReadAllBytes(fixture);
         List<WorldEntity> entities = [.. Enumerable.Range(0, copies).Select(_ => new WorldEntity
         {
             Node = VehicleNode(fixture, pieces),
@@ -472,13 +466,12 @@ public class WorldModelsTests
 
     /// <summary>A handful of outfits over one mesh is cheap, so each entity keeps its own.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_few_outfits_over_one_mesh_each_keep_their_own_geometry()
     {
-        if (!File.Exists(BoatFixture)) return;
+        if (Fixture.Read(Boat) is not { } boat) return;
 
-        string[] parts = BoatParts();
-        WorldModelSet set = LoadOutfits(Outfits(parts, 3));
+        string[] parts = PartsOf(boat);
+        WorldModelSet set = LoadOutfits(boat, Outfits(parts, 3));
 
         Assert.Equal(3, set.Models.Count);
     }
@@ -489,23 +482,22 @@ public class WorldModelsTests
     /// turning a 2 MB mesh into 137 MB.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Too_many_outfits_over_one_mesh_collapse_onto_the_most_common()
     {
-        if (!File.Exists(BoatFixture)) return;
+        if (Fixture.Read(Boat) is not { } boat) return;
 
-        string[] parts = BoatParts();
+        string[] parts = PartsOf(boat);
         List<string> outfits = Outfits(parts, WorldModels.MaxOutfitsPerMesh + 4);
 
         // One of them is worn twice, so it is the one everybody ends up in.
         string favourite = outfits[2];
         outfits.Add(favourite);
 
-        WorldModelSet set = LoadOutfits(outfits);
+        WorldModelSet set = LoadOutfits(boat, outfits);
         Assert.Single(set.Models);
 
         WorldModel expected = WorldModels.Bake(
-            BoatFixture, XbgModel.Parse(File.ReadAllBytes(BoatFixture)), WorldModels.FineTriangleBudget,
+            Boat, XbgModel.Parse(boat), WorldModels.FineTriangleBudget,
             onlyParts: new HashSet<string>(favourite.Split(';'), StringComparer.OrdinalIgnoreCase))!;
         Assert.Equal(expected.Indices.Length, set.Models[0].Indices.Length);
 
@@ -513,32 +505,24 @@ public class WorldModelsTests
         Assert.Equal(outfits.Count, set.ModelIndicesByEntity.Count);
     }
 
-    private const string BoatFixture = "Fixtures/Xbg/swampboat.xbg";
-
-    private static string[] BoatParts()
-        => [.. XbgModel.Parse(File.ReadAllBytes(BoatFixture)).Submeshes
-            .Select(s => s.PartName).Where(p => p.Length > 0).Distinct(StringComparer.OrdinalIgnoreCase)
-            .Order(StringComparer.Ordinal)];
-
     /// <summary>Distinct non-empty part lists, taken as the bit patterns of 1, 2, 3...</summary>
     private static List<string> Outfits(string[] parts, int count)
         => [.. Enumerable.Range(1, count).Select(n => MeshRef.ParseParts(
             string.Join(';', parts.Where((_, i) => i < 30 && (n & (1 << i)) != 0))))];
 
-    private static WorldModelSet LoadOutfits(IReadOnlyList<string> outfits)
+    private static WorldModelSet LoadOutfits(byte[] mesh, IReadOnlyList<string> outfits)
     {
         var doc = new WorldSectorDocument
         {
-            SourcePath = BoatFixture,
+            SourcePath = Boat,
             SectorId = 0,
             PristineRoot = new FcbObject { TypeHash = WorldHashes.Entity },
         };
 
-        byte[] mesh = File.ReadAllBytes(BoatFixture);
         List<WorldEntity> entities = [.. outfits.Select(parts =>
         {
             var graphics = new FcbObject { TypeHash = WorldHashes.CGraphicComponent };
-            graphics.Values[WorldHashes.TextObjModel] = System.Text.Encoding.UTF8.GetBytes(BoatFixture);
+            graphics.Values[WorldHashes.TextObjModel] = System.Text.Encoding.UTF8.GetBytes(Boat);
             graphics.Values[WorldHashes.HidMeshName] = System.Text.Encoding.UTF8.GetBytes(parts);
             var components = new FcbObject { TypeHash = WorldHashes.Components };
             components.Children.Add(graphics);
@@ -553,19 +537,13 @@ public class WorldModelsTests
 
     private static ArchetypeIndex EmptyIndex() => ArchetypeIndex.Load([new ArchetypeLayer("missing.fcb")], _ => null);
 
-    private static IEnumerable<FcbObject> SectorEntities()
-        => FcbDocument.Deserialize(File.ReadAllBytes(SectorFixture)).Children
-            .Where(layer => layer.TypeHash == WorldHashes.MissionLayer)
-            .SelectMany(layer => layer.Children)
-            .Where(node => node.TypeHash == WorldHashes.Entity);
-
-    private static List<WorldEntity> BuildEntities()
+    private static List<WorldEntity> BuildEntities(byte[] sector)
     {
         var doc = new WorldSectorDocument
         {
             SourcePath = SectorFixture,
             SectorId = 56,
-            PristineRoot = FcbDocument.Deserialize(File.ReadAllBytes(SectorFixture)),
+            PristineRoot = FcbDocument.Deserialize(sector),
         };
         return [.. doc.PristineRoot.Children
             .Where(layer => layer.TypeHash == WorldHashes.MissionLayer)

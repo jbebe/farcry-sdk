@@ -12,18 +12,16 @@ public class DepLoadEditTests
     private const uint Animation = 0xB0604725;
     private const uint DartRifle = 115510436;
 
-    public static TheoryData<string> CorpusFiles() => DepLoadDocumentTests.CorpusFiles();
-
     private static Dictionary<uint, uint[]> ChildrenByParent(DepLoadFile file)
         => file.Parents.ToDictionary(p => p.Hash, p => p.Children.Select(c => c.Hash).ToArray());
 
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Adding_a_clip_disturbs_nothing_else_and_still_encodes(string path)
+    [MemberData(nameof(DepLoadDocumentTests.DepLoads), MemberType = typeof(DepLoadDocumentTests))]
+    public void Adding_a_clip_disturbs_nothing_else_and_still_encodes(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } content) return;
 
-        DepLoadFile before = DepLoadDocument.Decode(File.ReadAllBytes(path));
+        DepLoadFile before = DepLoadDocument.Decode(content);
         const uint newClip = 0x11641D75;
 
         DepLoadFile after = DepLoadDocument.Decode(
@@ -42,12 +40,12 @@ public class DepLoadEditTests
     }
 
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Adding_the_same_clip_twice_lists_it_once(string path)
+    [MemberData(nameof(DepLoadDocumentTests.DepLoads), MemberType = typeof(DepLoadDocumentTests))]
+    public void Adding_the_same_clip_twice_lists_it_once(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } content) return;
 
-        DepLoadFile file = DepLoadDocument.Decode(File.ReadAllBytes(path));
+        DepLoadFile file = DepLoadDocument.Decode(content);
         const uint newClip = 0x11641D75;
 
         DepLoadFile once = DepLoadEdit.AddChild(file, DartRifle, newClip, Animation);

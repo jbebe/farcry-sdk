@@ -10,8 +10,8 @@ namespace JackAll.Tests;
 
 /// <summary>
 /// `oasisstrings.rml` as a splitting container: one fragment per string, expanded out of the one
-/// patch document a mod authors. The gate is the one every other splitter has - every shipped table
-/// taken apart and put back together unchanged.
+/// patch document a mod authors. As with every other splitter, a shipped table taken apart and put
+/// back together has to come out unchanged.
 /// </summary>
 public class StringTableContainerSplitterTests : IDisposable
 {
@@ -32,29 +32,16 @@ public class StringTableContainerSplitterTests : IDisposable
         try { Directory.Delete(_sandbox, recursive: true); } catch { /* best effort */ }
     }
 
-    /// <summary>Every `oasisstrings.rml` the local game export has, both archives.</summary>
-    public static TheoryData<string> CorpusFiles()
-    {
-        var data = new TheoryData<string>();
-        string[] files = [.. Fc2Corpus.Find(OasisStringsPatch.TableFileName)];
-        if (files.Length == 0)
-        {
-            data.Add(string.Empty);
-            return data;
-        }
-        foreach (string file in files)
-        {
-            data.Add(file);
-        }
-        return data;
-    }
+    public const string English = "StringTable/english/oasisstrings.rml";
+    public const string Chinese = "StringTable/chinese/oasisstrings.rml";
+
+    /// <summary>Two shipped tables: English, nearly all single-byte text, and Chinese, nearly all
+    /// multi-byte UTF-8.</summary>
+    public static TheoryData<string> Tables => new() { English, Chinese };
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_corpus_holds_string_tables_to_gate_against()
-        => Assert.True(
-            Fc2Corpus.Find(OasisStringsPatch.TableFileName).Any(),
-            Fc2Corpus.MissingMessage(OasisStringsPatch.TableFileName));
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(English, Chinese);
 
     [Theory]
     [InlineData("oasisstrings.rml", true)]
@@ -70,13 +57,11 @@ public class StringTableContainerSplitterTests : IDisposable
     /// <summary>The bar: rewrite every string with the value it already has, and the table is the
     /// bytes it came from.</summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void Every_shipped_table_re_encodes_byte_for_byte(string path)
+    [MemberData(nameof(Tables))]
+    public void A_shipped_table_re_encodes_byte_for_byte(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         Dictionary<string, string> everything = StringTableContainerSplitter
             .Strings(RmlDocument.Deserialize(original))
             .ToDictionary(StringTableContainerSplitter.IdOf, OasisStringsPatch.FragmentToXml);
@@ -84,20 +69,18 @@ public class StringTableContainerSplitterTests : IDisposable
         Assert.NotEmpty(everything);
         byte[] rebuilt = _splitter.Apply(original, everything);
 
-        int at = Fc2Corpus.FirstDifference(original, rebuilt);
-        Assert.True(at < 0, Fc2Corpus.DescribeDifference(path, original, rebuilt));
+        Fixture.AssertSameBytes(path, original, rebuilt);
     }
 
     /// <summary>A string is addressed by (section, enum), so no two may collide within one table.</summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    [Trait("Category", "RequiresFixture")]
+    [MemberData(nameof(Tables))]
     public void Every_string_in_a_table_has_its_own_id(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
         string[] ids = [.. StringTableContainerSplitter
-            .Strings(RmlDocument.Deserialize(File.ReadAllBytes(path)))
+            .Strings(RmlDocument.Deserialize(original))
             .Select(StringTableContainerSplitter.IdOf)];
 
         Assert.NotEmpty(ids);
@@ -107,20 +90,19 @@ public class StringTableContainerSplitterTests : IDisposable
     /// <summary>Every extracted string round-trips through the fragment form unchanged - including
     /// the 200 that carry a newline, which is why a value is an attribute and not element text.</summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    [Trait("Category", "RequiresFixture")]
+    [MemberData(nameof(Tables))]
     public void Every_shipped_string_survives_the_fragment_form(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
         int withNewlines = 0;
-        foreach (OasisStringEdit edit in StringTableContainerSplitter.Strings(RmlDocument.Deserialize(File.ReadAllBytes(path))))
+        foreach (OasisStringEdit edit in StringTableContainerSplitter.Strings(RmlDocument.Deserialize(original)))
         {
             if (edit.Value.Contains('\n')) withNewlines++;
             Assert.Equal(edit, OasisStringsPatch.FragmentFromXml(OasisStringsPatch.FragmentToXml(edit)));
         }
 
-        Assert.True(withNewlines > 0, $"{Path.GetFileName(path)} carries no multi-line value to gate against.");
+        Assert.True(withNewlines > 0, $"{Path.GetFileName(path)} carries no multi-line value.");
     }
 
     /// <summary>The table is addressable, not browsable: 11,394 rows per language is not a file tree,

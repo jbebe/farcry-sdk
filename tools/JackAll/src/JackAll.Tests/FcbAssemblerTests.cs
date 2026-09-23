@@ -9,33 +9,14 @@ namespace JackAll.Tests;
 /// strongest available check that splicing a fragment override back into a container reproduces
 /// exactly the container the game would have if you replaced that one child by hand and recompiled.
 /// </summary>
-[Trait("Category", "RequiresFixture")]
 public class FcbAssemblerTests
 {
-    private const string FixturesDir = "Fixtures/Fcb";
-
-    public static TheoryData<string> SampleFiles()
-    {
-        var data = new TheoryData<string>();
-        if (!Directory.Exists(FixturesDir))
-        {
-            data.Add(string.Empty);
-            return data;
-        }
-        foreach (string file in Directory.EnumerateFiles(FixturesDir, "*.fcb"))
-        {
-            data.Add(file);
-        }
-        return data;
-    }
-
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    public void Applying_no_overrides_returns_the_exact_same_bytes_unchanged(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void Applying_no_overrides_returns_the_exact_same_bytes_unchanged(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(path);
         byte[] result = FcbAssembler.Apply(baseFcb, new Dictionary<string, string>());
 
         Assert.Same(baseFcb, result); // no decode/encode round trip at all - not just byte-equal
@@ -44,12 +25,11 @@ public class FcbAssemblerTests
     /// <summary>A library has grouping too, and it is equally invisible from the id - an archetype's
     /// id is its dotted name, which need not match the group declaring it.</summary>
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    public void An_archetype_reports_the_library_group_that_declares_it(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void An_archetype_reports_the_library_group_that_declares_it(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(path);
         FcbObject root = FcbDocument.Deserialize(baseFcb);
         IContainerTree tree = new FcbContainerSplitter(FcbClassDefinitions.Empty).Open(baseFcb);
 
@@ -75,12 +55,11 @@ public class FcbAssemblerTests
     }
 
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    public void Replacing_one_archetype_changes_only_that_fragment_and_leaves_every_other_one_identical(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void Replacing_one_archetype_changes_only_that_fragment_and_leaves_every_other_one_identical(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(path);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
         IReadOnlyList<FcbFragment> fragments = FcbFragments.List(original);
         Assert.NotEmpty(fragments); // every fixture here is an entity library full of archetypes
@@ -123,12 +102,11 @@ public class FcbAssemblerTests
     /// fragment here and lands as new content. (Staging one is refused a level up, in
     /// <c>ModPathHashing</c> — this pins that the assembler itself grants it nothing.)</summary>
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    public void A_pre_deep_group_id_is_not_an_alias_and_appends_as_new_content(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void A_pre_deep_group_id_is_not_an_alias_and_appends_as_new_content(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(path);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
 
         string groupId = TestSupport.PreDeepGroupId(original, 0);
@@ -149,12 +127,11 @@ public class FcbAssemblerTests
     }
 
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    public void A_plain_fragment_id_with_no_match_is_appended_at_the_root(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void A_plain_fragment_id_with_no_match_is_appended_at_the_root(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(path);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
 
         var addition = new FcbObject { TypeHash = 0xE0BDB3DB }; // EntityLibraryGroup
@@ -179,12 +156,11 @@ public class FcbAssemblerTests
     /// <summary>A brand-new archetype (a path-shaped id matching nothing) joins the library's last
     /// group, not the root — the shape-defined append parent (<see cref="FcbFragments.AppendTarget"/>).</summary>
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    public void A_new_archetype_id_is_appended_into_the_last_group(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void A_new_archetype_id_is_appended_into_the_last_group(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } baseFcb) return;
 
-        byte[] baseFcb = File.ReadAllBytes(path);
         FcbObject original = FcbDocument.Deserialize(baseFcb);
 
         var addition = new FcbObject { TypeHash = WorldHashes.EntityPrototype };

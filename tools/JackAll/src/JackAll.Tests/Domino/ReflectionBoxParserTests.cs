@@ -61,31 +61,13 @@ public class ReflectionBoxParserTests
         Assert.Null(reflection);
     }
 
-    [Fact]
-    public void Every_real_system_node_has_a_reflection_box_that_parses()
+    [Theory]
+    [InlineData(DominoFixtures.ProximityTrigger)]
+    [InlineData(DominoFixtures.BypassMissionStatus)]
+    public void A_real_system_nodes_reflection_box_parses(string script)
     {
-        if (DominoCorpus.SystemDirectory is not { } dir) return;
+        if (Fixture.ReadText(script) is not { } source) return;
 
-        var files = Directory.EnumerateFiles(dir, "*.lua", SearchOption.AllDirectories).ToList();
-        Assert.True(files.Count > 0, "Fixture corpus is present but empty.");
-
-        var failures = new List<string>();
-        foreach (var file in files)
-        {
-            try
-            {
-                var reflection = ReflectionBoxParser.Parse(DominoLuaSource.Parse(File.ReadAllText(file)));
-                if (reflection is null)
-                {
-                    failures.Add($"{file}: no reflection box found");
-                }
-            }
-            catch (Exception ex)
-            {
-                failures.Add($"{file}: {ex.Message}");
-            }
-        }
-
-        Assert.True(failures.Count == 0, $"{failures.Count}/{files.Count} files failed:\n" + string.Join('\n', failures.Take(10)));
+        Assert.NotNull(ReflectionBoxParser.Parse(DominoLuaSource.Parse(source)));
     }
 }

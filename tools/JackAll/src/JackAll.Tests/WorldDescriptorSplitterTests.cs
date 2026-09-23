@@ -10,82 +10,58 @@ namespace JackAll.Tests;
 /// every mod that adds a mission or a mission layer has to touch, so without a split they all
 /// last-wins over each other on one shared file.
 /// </summary>
-[Trait("Category", "RequiresFixture")]
 public class WorldDescriptorSplitterTests
 {
     private static readonly WorldDescriptorContainerSplitter Splitter = WorldDescriptorContainerSplitter.Instance;
 
-    /// <summary>Every compiled descriptor. The one shipped plain-text descriptor is excluded here
-    /// rather than skipped inside each test, since the splitter declines it by design.</summary>
-    public static TheoryData<string> Descriptors()
-    {
-        var data = new TheoryData<string>();
-        foreach (string path in Fc2Corpus.Find(".game.xml").Where(IsCompiled))
-        {
-            data.Add(path);
-        }
-        if (data.Count == 0)
-        {
-            data.Add(string.Empty);
-        }
-        return data;
-    }
+    /// <summary>A compiled map descriptor: six missions and three sections.</summary>
+    public const string Compiled = "WorldDescriptor/mp_17_dunes.game.xml";
 
-    private static bool IsCompiled(string path)
-        => RmlDocument.TryDeserialize(File.ReadAllBytes(path), out _);
+    /// <summary>The multiplayer template, the one descriptor that ships as plain text.</summary>
+    public const string PlainText = "WorldDescriptor/tmpla.game.xml";
 
     [Fact]
-    public void A_descriptor_was_actually_found()
-        => Assert.True(Fc2Corpus.Find(".game.xml").Any(IsCompiled), Fc2Corpus.MissingMessage(".game.xml"));
+    [Trait("Category", "RequiresFixture")]
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Compiled, PlainText);
 
     /// <summary>A descriptor this cannot round-trip is refused outright, so it keeps the whole-file
     /// override rather than being half-split.</summary>
     [Fact]
     public void A_plain_text_descriptor_is_declined_rather_than_mangled()
     {
-        string? plain = Fc2Corpus.Find(".game.xml").FirstOrDefault(p => !IsCompiled(p));
-        if (plain is null) return;
+        if (Fixture.Read(PlainText) is not { } plain) return;
 
-        InvalidDataException error = Assert.Throws<InvalidDataException>(
-            () => Splitter.Open(File.ReadAllBytes(plain)));
+        InvalidDataException error = Assert.Throws<InvalidDataException>(() => Splitter.Open(plain));
 
         Assert.Contains("plain XML", error.Message);
     }
 
     /// <summary>
-    /// The gate the whole design turns on: every mission extracted and spliced straight back has to
-    /// reproduce the file it came from, byte for byte. It also exercises the rebuilt layer index,
-    /// since that is regenerated on every apply rather than carried by a fragment.
+    /// Every mission extracted and spliced straight back reproduces the file it came from, byte for
+    /// byte. It also exercises the rebuilt layer index, since that is regenerated on every apply rather
+    /// than carried by a fragment.
     /// </summary>
-    [Theory]
-    [MemberData(nameof(Descriptors))]
-    public void Every_mission_extracts_and_splices_back_unchanged(string path)
+    [Fact]
+    public void Every_mission_extracts_and_splices_back_unchanged()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(Compiled) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = Splitter.Open(original);
-        IReadOnlyList<FcbFragmentInfo> rows = tree.List();
-        if (rows.Count == 0) return;
-
-        Dictionary<string, string> everyMission = rows.ToDictionary(
+        Dictionary<string, string> everyMission = tree.List().ToDictionary(
             r => r.Id, r => tree.Extract(r.Id)!, FcbFragments.IdComparer);
 
         byte[] rebuilt = Splitter.Apply(original, everyMission);
 
-        Assert.Equal(-1, Fc2Corpus.FirstDifference(original, rebuilt));
+        Fixture.AssertSameBytes(Compiled, original, rebuilt);
     }
 
-    [Theory]
-    [MemberData(nameof(Descriptors))]
-    public void Replacing_one_mission_changes_only_that_mission(string path)
+    [Fact]
+    public void Replacing_one_mission_changes_only_that_mission()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(Compiled) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = Splitter.Open(original);
         IReadOnlyList<FcbFragmentInfo> rows = tree.List();
-        if (rows.Count == 0) return;
 
         string targetId = rows[0].Id;
         XElement edited = XElement.Parse(tree.Extract(targetId)!);
@@ -104,15 +80,12 @@ public class WorldDescriptorSplitterTests
 
     /// <summary>What an outpost mod does: a mission nobody shipped, with its own layer. The flat
     /// index has to gain that layer too, since the engine reads the index and not the mission.</summary>
-    [Theory]
-    [MemberData(nameof(Descriptors))]
-    public void A_new_mission_is_added_and_reaches_the_layer_index(string path)
+    [Fact]
+    public void A_new_mission_is_added_and_reaches_the_layer_index()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(Compiled) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = Splitter.Open(original);
-        if (tree.List().Count == 0) return;
 
         const string name = "Missions/Outposts/Test/Zone_01";
         const string layerPath = @"missions\outposts\test\zone_01";
@@ -138,34 +111,26 @@ public class WorldDescriptorSplitterTests
             index.Elements("Layer").Count());
     }
 
-    [Theory]
-    [MemberData(nameof(Descriptors))]
-    public void A_mission_staged_under_another_missions_name_is_refused(string path)
+    [Fact]
+    public void A_mission_staged_under_another_missions_name_is_refused()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(Compiled) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = Splitter.Open(original);
-        IReadOnlyList<FcbFragmentInfo> rows = tree.List();
-        if (rows.Count == 0) return;
 
         InvalidDataException error = Assert.Throws<InvalidDataException>(() => Splitter.Apply(
             original,
-            new Dictionary<string, string> { ["Missions\\Not\\ThisOne.xml"] = tree.Extract(rows[0].Id)! }));
+            new Dictionary<string, string> { ["Missions\\Not\\ThisOne.xml"] = tree.Extract(tree.List()[0].Id)! }));
 
         Assert.Contains("ThisOne", error.Message);
     }
 
     /// <summary>Two mods adding different missions to one world both survive, which is the entire
     /// point of splitting this file.</summary>
-    [Theory]
-    [MemberData(nameof(Descriptors))]
-    public void Two_mods_adding_different_missions_both_survive(string path)
+    [Fact]
+    public void Two_mods_adding_different_missions_both_survive()
     {
-        if (path.Length == 0) return;
-
-        byte[] original = File.ReadAllBytes(path);
-        if (Splitter.Open(original).List().Count == 0) return;
+        if (Fixture.Read(Compiled) is not { } original) return;
 
         Dictionary<string, string> staged = [];
         foreach (string name in (string[])["Missions/Outposts/ModA/One", "Missions/Outposts/ModB/Two"])
@@ -181,16 +146,13 @@ public class WorldDescriptorSplitterTests
 
     /// <summary>A descriptor nobody edited compares equal to itself, and one mission's change shows
     /// up as exactly that mission differing.</summary>
-    [Theory]
-    [MemberData(nameof(Descriptors))]
-    public void The_skeleton_hides_mission_content_but_not_a_missing_mission(string path)
+    [Fact]
+    public void The_skeleton_hides_mission_content_but_not_a_missing_mission()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(Compiled) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = Splitter.Open(original);
         IReadOnlyList<FcbFragmentInfo> rows = tree.List();
-        if (rows.Count == 0) return;
 
         var ids = new HashSet<string>(rows.Select(r => r.Id), FcbFragments.IdComparer);
         string shape = tree.Skeleton(ids.Contains)!;
@@ -209,19 +171,15 @@ public class WorldDescriptorSplitterTests
     /// <summary>The same missions applied in a different order have to give the same bytes: a build
     /// regenerates the patch from scratch every time, so an assembly that followed the caller's
     /// enumeration order would rewrite the archive on every build.</summary>
-    [Theory]
-    [MemberData(nameof(Descriptors))]
-    public void The_order_missions_are_staged_in_does_not_reach_the_bytes(string path)
+    [Fact]
+    public void The_order_missions_are_staged_in_does_not_reach_the_bytes()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(Compiled) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = Splitter.Open(original);
-        IReadOnlyList<FcbFragmentInfo> rows = tree.List();
-        if (rows.Count < 2) return;
 
         Dictionary<string, string> forward = new(FcbFragments.IdComparer);
-        foreach (FcbFragmentInfo row in rows.Take(8))
+        foreach (FcbFragmentInfo row in tree.List().Take(8))
         {
             XElement edited = XElement.Parse(tree.Extract(row.Id)!);
             edited.SetAttributeValue("State", "3");
@@ -233,22 +191,18 @@ public class WorldDescriptorSplitterTests
         Assert.Equal(Splitter.Apply(original, forward), Splitter.Apply(original, backward));
     }
 
-    /// <summary>Every section splices straight back, the same gate the missions have to pass.</summary>
-    [Theory]
-    [MemberData(nameof(Descriptors))]
-    public void Every_section_extracts_and_splices_back_unchanged(string path)
+    /// <summary>Every section splices straight back unchanged, as every mission does.</summary>
+    [Fact]
+    public void Every_section_extracts_and_splices_back_unchanged()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(Compiled) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = Splitter.Open(original);
-        string[] sections = [.. tree.List().Select(r => r.Id).Where(id => id.StartsWith('_'))];
-        if (sections.Length == 0) return;
+        Dictionary<string, string> staged = tree.List().Select(r => r.Id).Where(id => id.StartsWith('_'))
+            .ToDictionary(id => id, id => tree.Extract(id)!, FcbFragments.IdComparer);
 
-        Dictionary<string, string> staged = sections.ToDictionary(
-            id => id, id => tree.Extract(id)!, FcbFragments.IdComparer);
-
-        Assert.Equal(original, Splitter.Apply(original, staged));
+        Assert.NotEmpty(staged);
+        Fixture.AssertSameBytes(Compiled, original, Splitter.Apply(original, staged));
     }
 
     /// <summary>
@@ -256,20 +210,15 @@ public class WorldDescriptorSplitterTests
     /// cost a mod the whole file: Scubrah's Patch raises the shadow radius and view distance in
     /// Environment, which no mission fragment could carry.
     /// </summary>
-    [Theory]
-    [MemberData(nameof(Descriptors))]
-    public void An_environment_edit_is_a_fragment_of_its_own(string path)
+    [Fact]
+    public void An_environment_edit_is_a_fragment_of_its_own()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(Compiled) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = Splitter.Open(original);
         const string id = "_environment.xml";
-        if (tree.Extract(id) is not { } environment) return;
-
-        XElement edited = XElement.Parse(environment);
-        if (edited.Element("Shadow") is not { } shadow) return;
-        shadow.SetAttributeValue("DynamicShadowRadius", "1000");
+        XElement edited = XElement.Parse(tree.Extract(id)!);
+        edited.Element("Shadow")!.SetAttributeValue("DynamicShadowRadius", "1000");
 
         byte[] applied = Splitter.Apply(
             original, new Dictionary<string, string> { [id] = edited.ToString() });
@@ -287,19 +236,16 @@ public class WorldDescriptorSplitterTests
     /// A section change no longer moves the skeleton, so an importer can now express it per fragment
     /// instead of falling back to a whole-file override of the descriptor.
     /// </summary>
-    [Theory]
-    [MemberData(nameof(Descriptors))]
-    public void A_section_edit_leaves_the_skeleton_alone(string path)
+    [Fact]
+    public void A_section_edit_leaves_the_skeleton_alone()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(Compiled) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = Splitter.Open(original);
         const string id = "_environment.xml";
-        if (tree.Extract(id) is not { } environment) return;
 
         var ids = new HashSet<string>(tree.List().Select(r => r.Id), FcbFragments.IdComparer);
-        XElement edited = XElement.Parse(environment);
+        XElement edited = XElement.Parse(tree.Extract(id)!);
         edited.SetAttributeValue("ModAdded", "1");
 
         IContainerTree changed = Splitter.Open(
@@ -309,14 +255,12 @@ public class WorldDescriptorSplitterTests
     }
 
     /// <summary>A section staged under the wrong id is refused rather than written somewhere odd.</summary>
-    [Theory]
-    [MemberData(nameof(Descriptors))]
-    public void A_section_staged_under_another_sections_name_is_refused(string path)
+    [Fact]
+    public void A_section_staged_under_another_sections_name_is_refused()
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(Compiled) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
-        if (Splitter.Open(original).Extract("_environment.xml") is not { } environment) return;
+        string environment = Splitter.Open(original).Extract("_environment.xml")!;
 
         InvalidDataException error = Assert.Throws<InvalidDataException>(() => Splitter.Apply(
             original, new Dictionary<string, string> { ["_grids.xml"] = environment }));

@@ -21,8 +21,6 @@ public sealed class MoveFragmentPipelineTests : IDisposable
 
     public void Dispose() => Directory.Delete(_root, recursive: true);
 
-    public static TheoryData<string> CorpusFiles() => MoveStateIndexTests.CorpusFiles();
-
     [Fact]
     public void A_staged_move_fragment_classifies_against_its_container()
     {
@@ -45,12 +43,11 @@ public sealed class MoveFragmentPipelineTests : IDisposable
     /// compose without either noticing.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void Two_mods_editing_different_states_both_survive(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree vanilla = MoveContainerSplitter.Instance.Open(original);
         (string firstId, string firstEdit) = EditAClip(vanilla, 0, 0x0BADC0DE);
         (string secondId, string secondEdit) = EditAClip(vanilla, 1, 0x0DEFACED);
@@ -72,12 +69,11 @@ public sealed class MoveFragmentPipelineTests : IDisposable
     /// it, so the losing edit is named rather than vanishing the way a whole-file override would.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void Two_mods_editing_one_state_collide_loudly(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree vanilla = MoveContainerSplitter.Instance.Open(original);
         (string id, string mine) = EditAClip(vanilla, 0, 0x0BADC0DE);
         (string _, string theirs) = EditAClip(vanilla, 0, 0x0DEFACED);

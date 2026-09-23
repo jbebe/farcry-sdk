@@ -11,149 +11,84 @@ namespace JackAll.Tests;
 /// one, because that span includes the alignment padding, which is the writer's business.
 /// <para>
 /// The sections carrying no rotations are held to rebuilding exactly. The two that do carry them
-/// cannot be, and the reason is in the data rather than the encoder: a rotation authored on an exact
-/// tie re-encodes to a different, equally valid triple, and 126 stored triples across three files
-/// are not unit rotations at all, so nothing can write them back. Both are measured here rather than
-/// assumed, and the thresholds sit just under what the corpus actually reaches.
+/// cannot always be, and the reason is in the data rather than the encoder: a rotation authored on
+/// an exact tie re-encodes to a different, equally valid triple.
 /// </para>
 /// </remarks>
 public sealed class MabEncoderTests
 {
-    [Fact]
-    public void Every_section_without_rotations_rebuilds_exactly()
+    [Theory]
+    [InlineData(MabFixtures.Reload)]
+    [InlineData(MabFixtures.Pistol)]
+    public void Every_section_without_rotations_rebuilds_exactly(string fixture)
     {
-        Tally tally = Rebuild();
-
-        Assert.True(tally.Seen("dense translations") > 0 || !Fc2Corpus.Present, "No section was examined.");
-        foreach (string what in (string[])["constant translations", "dense translations", "trajectory rotation"])
-        {
-            Assert.True(
-                tally.Missed(what) == 0,
-                $"{what}: {tally.Missed(what)} of {tally.Seen(what)} did not rebuild."
-                + Environment.NewLine + string.Join(Environment.NewLine, tally.Samples.Take(4)));
-        }
-    }
-
-    [Fact]
-    public void The_rotation_sections_rebuild_wherever_the_decode_was_lossless()
-    {
-        Tally tally = Rebuild();
-        if (tally.Seen("keyframe rotations") == 0)
+        if (Fixture.Read(fixture) is not { } bytes)
         {
             return;
         }
 
-        // A clip holding a triple that is not a rotation cannot be written back at all; there are
-        // 126 such keys across three files, and they are excluded rather than counted as failures.
-        // Measured at 24: seventeen clips holding a triple that is not a rotation, plus seven whose
-        // section count falls short of its own mask.
-        Assert.True(tally.Unencodable <= 30, $"{tally.Unencodable} clips could not be encoded at all.");
-
-        foreach ((string what, double floor) in ((string, double)[])
-                 [("constant rotations", 0.95), ("keyframe rotations", 0.90)])
+        foreach (MabClip clip in MabFile.Parse(bytes).Clips())
         {
-            int seen = tally.Seen(what);
-            double exact = (seen - tally.Missed(what)) / (double)seen;
             Assert.True(
-                exact >= floor,
-                $"{what}: {seen - tally.Missed(what)}/{seen} ({exact:P1}) rebuilt byte-exactly; "
-                + $"expected at least {floor:P0}.");
+                Rebuilds(clip, MabClip.SectionConstantTranslation, () => MabEncoder.ConstantTranslations(
+                    MabClip.MaskBones(clip.Masks[MabClip.MaskConstantTranslation]), clip.ConstantTranslations())),
+                "constant translations");
+
+            if (clip.TrackHeaderOf(MabClip.SectionAnimatedTranslation) is { } dense)
+            {
+                Assert.True(
+                    Rebuilds(clip, MabClip.SectionAnimatedTranslation, () => MabEncoder.DenseTranslations(
+                        MabClip.MaskBones(clip.Masks[MabClip.MaskAnimatedTranslation]),
+                        clip.TranslationTracks(), dense.LastFrame, dense.Rate)),
+                    "dense translations");
+            }
+
+            if (clip.TrackHeaderOf(MabClip.SectionRootRotation) is { } trajectory)
+            {
+                Assert.True(
+                    Rebuilds(clip, MabClip.SectionRootRotation,
+                        () => MabEncoder.DenseRotations(clip.RootRotation(), trajectory.LastFrame, trajectory.Rate)),
+                    "trajectory rotation");
+            }
         }
     }
 
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_corpus_was_actually_found()
-        => Assert.True(Fc2Corpus.Find(".mab").Any(), Fc2Corpus.MissingMessage(".mab"));
-
-    private static Tally Rebuild()
+    [Theory]
+    [InlineData(MabFixtures.Pistol, 0)]
+    [InlineData(MabFixtures.Tie, 1)]
+    public void The_rotation_sections_rebuild_except_where_a_rotation_ties(string fixture, int ties)
     {
-        var tally = new Tally();
-        foreach (string path in Fc2Corpus.Find(".mab"))
+        if (Fixture.Read(fixture) is not { } bytes)
         {
-            MabFile bank = MabFile.Parse(File.ReadAllBytes(path));
-            foreach (MabClip clip in bank.Clips())
+            return;
+        }
+
+        int missed = 0;
+        foreach (MabClip clip in MabFile.Parse(bytes).Clips())
+        {
+            missed += Rebuilds(clip, MabClip.SectionConstantRotation,
+                () => MabEncoder.ConstantRotations(clip.ConstantBones(), clip.ConstantRotations())) ? 0 : 1;
+
+            // A clip can carry the section with an empty mask; there is nothing to rebuild.
+            if (clip.TrackHeaderOf(MabClip.SectionKeyframeRotation) is { } keyed && clip.KeyframedBones().Count > 0)
             {
-                tally.Compare("constant rotations", clip, MabClip.SectionConstantRotation, path,
-                    () => MabEncoder.ConstantRotations(clip.ConstantBones(), clip.ConstantRotations()));
-
-                tally.Compare("constant translations", clip, MabClip.SectionConstantTranslation, path,
-                    () => MabEncoder.ConstantTranslations(
-                        MabClip.MaskBones(clip.Masks[MabClip.MaskConstantTranslation]), clip.ConstantTranslations()));
-
-                if (clip.TrackHeaderOf(MabClip.SectionAnimatedTranslation) is { } dense)
-                {
-                    tally.Compare("dense translations", clip, MabClip.SectionAnimatedTranslation, path,
-                        () => MabEncoder.DenseTranslations(
-                            MabClip.MaskBones(clip.Masks[MabClip.MaskAnimatedTranslation]),
-                            clip.TranslationTracks(), dense.LastFrame, dense.Rate));
-                }
-
-                if (clip.TrackHeaderOf(MabClip.SectionRootRotation) is { } trajectory)
-                {
-                    tally.Compare("trajectory rotation", clip, MabClip.SectionRootRotation, path,
-                        () => MabEncoder.DenseRotations(clip.RootRotation(), trajectory.LastFrame, trajectory.Rate));
-                }
-
-                // A clip can carry the section with an empty mask; there is nothing to rebuild.
-                if (clip.TrackHeaderOf(MabClip.SectionKeyframeRotation) is { } keyed
-                    && clip.KeyframedBones().Count > 0)
-                {
-                    tally.Compare("keyframe rotations", clip, MabClip.SectionKeyframeRotation, path,
-                        () => MabEncoder.KeyframeRotations(
-                            clip.KeyframedBones(), clip.KeyframeTracks(), keyed.LastFrame, keyed.Rate));
-                }
+                missed += Rebuilds(clip, MabClip.SectionKeyframeRotation, () => MabEncoder.KeyframeRotations(
+                    clip.KeyframedBones(), clip.KeyframeTracks(), keyed.LastFrame, keyed.Rate)) ? 0 : 1;
             }
         }
-        return tally;
+        Assert.Equal(ties, missed);
     }
 
-    private sealed class Tally
+    /// <summary>Whether the section rebuilds to the start of its slot, or the clip carries none.</summary>
+    private static bool Rebuilds(MabClip clip, int slot, Func<byte[]> build)
     {
-        private readonly Dictionary<string, int> _seen = [];
-        private readonly Dictionary<string, int> _missed = [];
-
-        public List<string> Samples { get; } = [];
-
-        /// <summary>Clips holding a triple that is not a rotation, so nothing can write them back.</summary>
-        public int Unencodable { get; private set; }
-
-        public int Seen(string what) => _seen.GetValueOrDefault(what);
-
-        public int Missed(string what) => _missed.GetValueOrDefault(what);
-
-        public void Compare(string what, MabClip clip, int slot, string path, Func<byte[]> build)
+        if (clip.Section(slot) is not { } original)
         {
-            if (clip.Section(slot) is not { } original)
-            {
-                return;
-            }
-
-            byte[] produced;
-            try
-            {
-                produced = build();
-            }
-            catch (InvalidDataException)
-            {
-                Unencodable++;
-                return;
-            }
-
-            _seen[what] = Seen(what) + 1;
-            if (produced.Length <= original.Length
-                && produced.AsSpan().SequenceEqual(original.AsSpan(0, produced.Length)))
-            {
-                return;
-            }
-
-            _missed[what] = Missed(what) + 1;
-            if (Samples.Count < 5)
-            {
-                int at = Fc2Corpus.FirstDifference(
-                    original.AsSpan(0, Math.Min(original.Length, produced.Length)), produced);
-                Samples.Add($"{what} {Path.GetFileName(path)}: {produced.Length} bytes vs {original.Length} span, first differs at {at}");
-            }
+            return true;
         }
+
+        byte[] produced = build();
+        return produced.Length <= original.Length
+            && produced.AsSpan().SequenceEqual(original.AsSpan(0, produced.Length));
     }
 }

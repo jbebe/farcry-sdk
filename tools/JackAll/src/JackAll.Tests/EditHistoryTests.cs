@@ -6,7 +6,6 @@ using static JackAll.Tests.WorldEditSessionTests;
 namespace JackAll.Tests;
 
 /// <summary>The Map tab's undo and redo, over the same retail sector the session tests use.</summary>
-[Trait("Category", "RequiresFixture")]
 public class EditHistoryTests
 {
     private static readonly Vector3 InSector = new(400f, 350f, 12f);
@@ -15,9 +14,9 @@ public class EditHistoryTests
     [Fact]
     public void Undoing_a_move_puts_the_entity_back_and_redo_moves_it_again()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         var history = new EditHistory();
         WorldEntity entity = entities[0];
         Placement before = Placement.Of(entity);
@@ -32,9 +31,9 @@ public class EditHistoryTests
     [Fact]
     public void A_new_step_clears_what_could_be_redone()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         var history = new EditHistory();
         Move(session, history, entities[0], InSector);
         history.Undo();
@@ -46,9 +45,9 @@ public class EditHistoryTests
     [Fact]
     public void Keystrokes_into_one_field_are_one_step_and_another_field_is_another()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         var history = new EditHistory();
         WorldEntity entity = entities[0];
         FcbObject node = session.EditableNode(entity);
@@ -72,9 +71,9 @@ public class EditHistoryTests
     [Fact]
     public void Two_goes_at_the_same_field_a_while_apart_are_two_steps()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         DateTime clock = new(2026, 1, 1);
         var history = new EditHistory(() => clock);
         Edit(session, history, entities[0], f => f.Values[Field] = BitConverter.GetBytes(1f));
@@ -91,9 +90,9 @@ public class EditHistoryTests
     [Fact]
     public void Undoing_a_field_edit_rewrites_the_node_the_inspector_holds()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         var history = new EditHistory();
         WorldEntity entity = entities[0];
         FcbObject held = session.EditableNode(entity);
@@ -108,9 +107,9 @@ public class EditHistoryTests
     [Fact]
     public void Undoing_a_delete_restores_the_entity_and_leaves_nothing_pending()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         var history = new EditHistory();
         WorldEntity doomed = entities[0];
         history.Push(PresenceStep.Deleted(session, [session.Delete(doomed)]));
@@ -127,9 +126,9 @@ public class EditHistoryTests
     [Fact]
     public void Undoing_a_delete_keeps_the_edits_the_entity_had()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         var history = new EditHistory();
         WorldEntity entity = entities[0];
         Edit(session, history, entity, f => f.Values[Field] = [1, 0, 0, 0]);
@@ -146,9 +145,9 @@ public class EditHistoryTests
     [Fact]
     public void Undoing_a_saved_delete_restages_the_entity()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         var history = new EditHistory();
         WorldEntity doomed = entities[0];
         history.Push(PresenceStep.Deleted(session, [session.Delete(doomed)]));
@@ -166,9 +165,9 @@ public class EditHistoryTests
     [Fact]
     public void Undoing_an_add_removes_it_and_redo_brings_it_back_as_new()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         var history = new EditHistory();
         WorldEntity pasted = session.Paste(CopiedEntity.Of(entities[1], "mp_14_woodlands"), InSector)[0];
         history.Push(PresenceStep.Added(session, [pasted]));
@@ -186,9 +185,9 @@ public class EditHistoryTests
     [Fact]
     public void Undoing_a_saved_add_deletes_it()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         var history = new EditHistory();
         WorldEntity pasted = session.Paste(CopiedEntity.Of(entities[1], "mp_14_woodlands"), InSector)[0];
         history.Push(PresenceStep.Added(session, [pasted]));
@@ -202,9 +201,9 @@ public class EditHistoryTests
     [Fact]
     public void Undoing_a_move_after_a_save_restages_the_entity()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         var history = new EditHistory();
         Move(session, history, entities[0], InSector);
         session.Saved();

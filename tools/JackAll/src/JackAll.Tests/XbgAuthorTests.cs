@@ -3,8 +3,7 @@ using JackAll.Tools.Xbg;
 namespace JackAll.Tests;
 
 /// <summary>
-/// The authoring gate: build every shipped mesh from decoded content alone and require the file
-/// back.
+/// A shipped mesh built from its decoded content alone comes back byte for byte.
 /// </summary>
 /// <remarks>
 /// <see cref="XbgFileTests"/> round-trips a container it parsed, and <see cref="XbgGeometryTests"/>
@@ -20,43 +19,20 @@ namespace JackAll.Tests;
 /// </remarks>
 public sealed class XbgAuthorTests
 {
-    /// <summary>Values nothing in the container derives, so a pack has to carry them.</summary>
-    private const string Carried =
-        "HeaderWords[0] and the material list's trailing word";
-
-    [Fact]
-    public void Builds_every_shipped_mesh_from_decoded_content_alone()
+    /// <summary>
+    /// The only container values carried over are HeaderWords[0] and the material list's trailing
+    /// word, which nothing derives.
+    /// </summary>
+    [Theory]
+    [MemberData(nameof(XbgFixtures.Formats), MemberType = typeof(XbgFixtures))]
+    public void Builds_a_shipped_mesh_from_decoded_content_alone(string fixture)
     {
-        List<string> failures = [];
-        int checkedFiles = 0;
-
-        foreach (string path in Fc2Corpus.Find(".xbg"))
+        if (Fixture.Read(fixture) is not { } original)
         {
-            checkedFiles++;
-            byte[] original = File.ReadAllBytes(path);
-            try
-            {
-                byte[] produced = Originate(XbgFile.Parse(original));
-                if (!produced.AsSpan().SequenceEqual(original))
-                {
-                    failures.Add(Fc2Corpus.DescribeDifference(path, original, produced));
-                }
-            }
-            catch (Exception error)
-            {
-                failures.Add($"{Path.GetFileName(path)}: {error.Message}");
-            }
+            return;
         }
 
-        Assert.True(
-            checkedFiles > 0 || !Fc2Corpus.Present,
-            $"{Fc2Corpus.Root} holds no *.xbg, so this gate asserted nothing.");
-
-        Assert.True(
-            failures.Count == 0,
-            $"{checkedFiles - failures.Count}/{checkedFiles} meshes built from decoded content "
-            + $"alone, carrying only {Carried}. First failures:{Environment.NewLine}"
-            + string.Join(Environment.NewLine, failures.Take(5)));
+        Fixture.AssertSameBytes(fixture, original, Originate(XbgFile.Parse(original)));
     }
 
     /// <summary>

@@ -11,14 +11,10 @@ namespace JackAll.Tests;
 /// A real mod against a known-good target is worth more than any synthetic case, and it needs no
 /// game launch: if the bytes match, the game cannot tell the difference.
 /// </remarks>
-[Trait("Category", "RequiresFixture")]
 public sealed class MoveVssMigrationTests
 {
-    private static string Vanilla =>
-        Path.Combine(Fc2Corpus.Root, "common", "graphics", "move", "movemgr.bin");
-
     private static string StagedFragments =>
-        Path.Combine(RepoRoot(), "mods", "vss-vintorez", "layer", "mods",
+        Path.Combine(TestSupport.RepositoryRoot, "mods", "vss-vintorez", "layer", "mods",
             "graphics", "move", "movemgr.bin");
 
     /// <summary>
@@ -30,12 +26,8 @@ public sealed class MoveVssMigrationTests
     [Fact]
     public void The_vss_fragments_change_only_the_clips_they_mean_to()
     {
-        if (!File.Exists(Vanilla) || !Directory.Exists(StagedFragments))
-        {
-            return;
-        }
+        if (Fixture.Read(MoveStateIndexTests.Manager) is not { } vanilla) return;
 
-        byte[] vanilla = File.ReadAllBytes(Vanilla);
         Dictionary<string, string> staged = Directory.EnumerateFiles(StagedFragments, "*.xml")
             .ToDictionary(Path.GetFileName, File.ReadAllText)!;
         Assert.NotEmpty(staged);
@@ -70,16 +62,5 @@ public sealed class MoveVssMigrationTests
         }
 
         Assert.Equal(ExpectedClipEdits, changed);
-    }
-
-    private static string RepoRoot()
-    {
-        DirectoryInfo? at = new(AppContext.BaseDirectory);
-        while (at is not null && !Directory.Exists(Path.Combine(at.FullName, "mods")))
-        {
-            at = at.Parent;
-        }
-
-        return at?.FullName ?? AppContext.BaseDirectory;
     }
 }

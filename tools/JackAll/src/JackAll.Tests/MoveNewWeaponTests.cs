@@ -19,9 +19,8 @@ public sealed class MoveNewWeaponTests
     /// <summary>The first free EquippedWeapon index: retail names 0-43.</summary>
     private const int NewWeapon = 44;
 
-    private const int DonorWeapon = 39;   // Dart_Rifle, the slot the VSS already proves out
-
-    public static TheoryData<string> CorpusFiles() => MoveStateIndexTests.CorpusFiles();
+    /// <summary>Dart_Rifle, the slot the VSS already proves out.</summary>
+    private const int DonorWeapon = 39;
 
     /// <summary>
     /// Cloning one weapon's branch onto a new index works, and costs the state fragment as well as
@@ -29,12 +28,11 @@ public sealed class MoveNewWeaponTests
     /// branch necessarily edits the state around it.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void A_new_weapon_branch_can_be_cloned_onto_an_existing_state(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = MoveContainerSplitter.Instance.Open(original);
         if (SmallestDonor(tree) is not var (stateId, branchId, stateHash)) return;
 
@@ -82,12 +80,11 @@ public sealed class MoveNewWeaponTests
     /// the two fragments disagree and the build says so rather than dropping the branch.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void A_branch_with_no_marker_in_its_state_is_refused(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = MoveContainerSplitter.Instance.Open(original);
         if (SmallestDonor(tree) is not var (_, branchId, stateHash)) return;
 
@@ -109,12 +106,12 @@ public sealed class MoveNewWeaponTests
     /// marker lives in, plus the branch itself.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void Adding_a_branch_costs_the_state_fragment_too(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } original) return;
 
-        IContainerTree tree = MoveContainerSplitter.Instance.Open(File.ReadAllBytes(path));
+        IContainerTree tree = MoveContainerSplitter.Instance.Open(original);
         if (SmallestDonor(tree) is not var (stateId, branchId, _)) return;
 
         long state = tree.Extract(stateId)!.Length;

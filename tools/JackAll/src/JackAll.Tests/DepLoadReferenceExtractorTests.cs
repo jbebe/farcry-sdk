@@ -15,19 +15,12 @@ namespace JackAll.Tests;
 /// </summary>
 public class DepLoadReferenceExtractorTests
 {
-    public static TheoryData<string> CorpusFiles() => DepLoadDocumentTests.CorpusFiles();
-
-    /// <summary>The campaign world, or null on a checkout with no game export to read.</summary>
-    private static string? World1()
-        => Fc2Corpus.Find("_depload.dat")
-            .FirstOrDefault(p => Path.GetFileName(p).Equals("world1_depload.dat", StringComparison.OrdinalIgnoreCase));
-
-    private static (IReadOnlyList<RefEdge> Edges, DepLoadFile File) Extract(string path)
+    private static (IReadOnlyList<RefEdge> Edges, DepLoadFile File) Extract(byte[] content)
     {
-        byte[] content = File.ReadAllBytes(path);
+        const string path = @"worlds\w\generated\w_depload.dat";
         var sink = new ReferenceSink(FcbClassDefinitions.Empty);
         var file = new VfsFile(
-            Hash: NameHash.Compute(path), Path: @"worlds\w\generated\w_depload.dat",
+            Hash: NameHash.Compute(path), Path: path,
             Type: new FileType("misc", "dat"), Size: content.Length, SourceName: "test",
             SourceKind: SourceKind.Archive, IsOverriding: false, NameIsKnown: true);
 
@@ -55,12 +48,12 @@ public class DepLoadReferenceExtractorTests
     /// "what this resource needs" into "everything in this world".
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Every_dependency_becomes_an_edge_sited_by_the_resource_that_declares_it(string path)
+    [MemberData(nameof(DepLoadDocumentTests.DepLoads), MemberType = typeof(DepLoadDocumentTests))]
+    public void Every_dependency_becomes_an_edge_sited_by_the_resource_that_declares_it(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } content) return;
 
-        (IReadOnlyList<RefEdge> edges, DepLoadFile file) = Extract(path);
+        (IReadOnlyList<RefEdge> edges, DepLoadFile file) = Extract(content);
 
         RefEdge[] dependencies = [.. edges.Where(e => e.Kind == RefKind.DepLoadDependency)];
         Assert.Equal(file.Parents.Sum(p => p.Children.Count), dependencies.Length);
@@ -79,7 +72,7 @@ public class DepLoadReferenceExtractorTests
     [Fact]
     public void A_dependency_resolves_back_to_the_resource_that_lists_it()
     {
-        if (World1() is not { } world1) return;
+        if (Fixture.Read(DepLoadDocumentTests.World1) is not { } world1) return;
 
         const uint DartRifle = 115510436;    // CAnimationPackageResource "dart_rifle"
         const uint DartReload = 0x70AEAAE4;  // ...\pneu_dart_model_389\1stge_uppb_reload_+000fw_sp389_i1.mab
@@ -100,7 +93,7 @@ public class DepLoadReferenceExtractorTests
     [Fact]
     public void A_dependencys_resource_class_is_indexed_alongside_it()
     {
-        if (World1() is not { } world1) return;
+        if (Fixture.Read(DepLoadDocumentTests.World1) is not { } world1) return;
 
         (IReadOnlyList<RefEdge> edges, _) = Extract(world1);
 

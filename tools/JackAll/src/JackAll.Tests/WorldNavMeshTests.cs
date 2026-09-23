@@ -8,7 +8,8 @@ namespace JackAll.Tests;
 /// not at all.</summary>
 public class WorldNavMeshTests
 {
-    private const string Folder = @".\Fixtures\Nvm";
+    /// <summary>Two neighbouring retail sectors, so links across the seam between them resolve.</summary>
+    private static readonly string[] Sectors = ["Nvm/nv_2576.nvm", "Nvm/nv_2577.nvm"];
 
     private static readonly uint[] None = [NavMeshSector.NoLink, NavMeshSector.NoLink, NavMeshSector.NoLink];
 
@@ -175,12 +176,14 @@ public class WorldNavMeshTests
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Sectors);
+
+    [Fact]
     public void EveryRetailNodeSitsAtTheCentreOfItsTriangle()
     {
-        if (!Directory.Exists(Folder)) return;
+        if (!Fixture.Present(Sectors)) return;
 
-        NavMeshSector[] sectors = [.. new[] { "nv_2576.nvm", "nv_2577.nvm" }
-            .Select(name => WorldNavMesh.ReadSector(File.ReadAllBytes(Path.Combine(Folder, name)))!)];
+        NavMeshSector[] sectors = [.. Sectors.Select(s => WorldNavMesh.ReadSector(Fixture.Read(s)!)!)];
 
         foreach (NavMeshSector sector in sectors)
         {

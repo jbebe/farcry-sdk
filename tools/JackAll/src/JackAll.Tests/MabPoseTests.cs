@@ -7,8 +7,6 @@ namespace JackAll.Tests;
 
 public class MabPoseTests
 {
-    private const string Reload = "3rdge_uppb_reload_nodir_prak4_i1.mab";
-
     /// <summary>
     /// The AK-47 reload: the character's left hand reaches out, and the rifle's magazine bone
     /// travels about a metre from the rifle's root as it is dropped - the measurement the format
@@ -17,17 +15,16 @@ public class MabPoseTests
     [Fact]
     public void Reload_moves_the_hand_and_drops_the_magazine()
     {
-        string? bankPath = Fc2Corpus.Named(".mab", Reload);
-        string? pelvisPath = Fc2Corpus.Named(".skeleton", "pelvis_ref.skeleton");
-        string? riflePath = Fc2Corpus.Named(".skeleton", "ak47_ref.skeleton");
-        if (bankPath is null || pelvisPath is null || riflePath is null)
+        if (Fixture.Read(MabFixtures.Reload) is not { } bankBytes
+            || Fixture.Read(MabFixtures.CharacterRig) is not { } pelvisBytes
+            || Fixture.Read(MabFixtures.RifleRig) is not { } rifleBytes)
         {
             return;
         }
 
-        MabFile bank = MabFile.Parse(File.ReadAllBytes(bankPath));
-        SkeletonFile pelvis = SkeletonFile.Parse(File.ReadAllBytes(pelvisPath));
-        SkeletonFile rifle = SkeletonFile.Parse(File.ReadAllBytes(riflePath));
+        MabFile bank = MabFile.Parse(bankBytes);
+        SkeletonFile pelvis = SkeletonFile.Parse(pelvisBytes);
+        SkeletonFile rifle = SkeletonFile.Parse(rifleBytes);
 
         var character = new MabPose(pelvis, bank);
         int hand = pelvis.BoneByName("L Hand")!.Id;
@@ -59,33 +56,28 @@ public class MabPoseTests
     [Fact]
     public void Reload_resolves_the_pelvis_and_the_rifle_rig()
     {
-        string? bankPath = Fc2Corpus.Named(".mab", Reload);
-        if (bankPath is null)
+        if (Fixture.Read(MabFixtures.Reload) is not { } bankBytes)
         {
             return;
         }
 
-        // The corpus keeps each archive in its own folder; the game path starts at graphics\.
-        static string GamePath(string diskPath)
-            => diskPath[diskPath.IndexOf("graphics", StringComparison.OrdinalIgnoreCase)..].Replace('/', '\\');
-        Dictionary<string, string> rigs = new(StringComparer.OrdinalIgnoreCase);
-        foreach (string disk in Fc2Corpus.Find(".skeleton").Where(p => p.Contains("graphics", StringComparison.OrdinalIgnoreCase)))
+        // Each rig's game path, and the fixture holding it.
+        Dictionary<string, string> rigs = new(StringComparer.OrdinalIgnoreCase)
         {
-            rigs.TryAdd(GamePath(disk), disk);
-        }
+            // A second rig beside the pelvis, listed first so the search has to prefer the pelvis.
+            [@"graphics\characters\_common\singlebone_ref.skeleton"] = MabFixtures.SingleBoneRig,
+            [@"graphics\characters\_common\pelvis_ref.skeleton"] = MabFixtures.CharacterRig,
+            [@"graphics\weapons\primary\ak47\ak47_ref.skeleton"] = MabFixtures.RifleRig,
+        };
 
-        MabFile bank = MabFile.Parse(File.ReadAllBytes(bankPath));
-        BankRigs found = ClipSearch.RigsFor(GamePath(bankPath), bank, rigs.Keys,
-            path => rigs.TryGetValue(path, out string? disk) ? File.ReadAllBytes(disk) : null);
+        MabFile bank = MabFile.Parse(bankBytes);
+        BankRigs found = ClipSearch.RigsFor(
+            @"graphics\characters\_common\animations\weapons\primary\ak47\3rdge_uppb_reload_nodir_prak4_i1.mab",
+            bank, rigs.Keys, path => rigs.TryGetValue(path, out string? fixture) ? Fixture.Read(fixture) : null);
 
         Assert.NotNull(found.Owner);
         Assert.NotNull(found.Owner.BoneByName("Pelvis"));
         Assert.True(MabPose.Fits(found.Owner, bank));
         Assert.NotNull(found.Participants["ak47"].BoneByName("CLIP"));
     }
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_corpus_was_actually_found()
-        => Assert.True(Fc2Corpus.Named(".mab", Reload) is not null, Fc2Corpus.MissingMessage(".mab"));
 }

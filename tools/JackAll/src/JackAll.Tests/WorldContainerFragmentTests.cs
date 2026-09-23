@@ -9,42 +9,34 @@ namespace JackAll.Tests;
 /// <c>*.omnis.fcb</c>, <c>*.managers.fcb</c> and <c>*.mapsdata.fcb</c>. They split per placed entity
 /// the way a sector does; mapsdata groups its layers one level down, under a node per level cell.
 /// </summary>
-[Trait("Category", "RequiresFixture")]
 public class WorldContainerFragmentTests
 {
-    private static readonly string[] Kinds = [".omnis.fcb", ".managers.fcb", ".mapsdata.fcb"];
+    // A campaign world's omnis.
+    private const string Omnis = "World/world1.omnis.fcb";
 
-    public static TheoryData<string> Containers()
-    {
-        var data = new TheoryData<string>();
-        foreach (string path in Kinds.SelectMany(Fc2Corpus.Find).Order())
-        {
-            data.Add(path);
-        }
-        if (data.Count == 0)
-        {
-            data.Add(string.Empty);
-        }
-        return data;
-    }
+    // An MP map's managers.
+    private const string Managers = "World/mp_17_dunes.managers.fcb";
+
+    // A campaign world's mapsdata, so it spans many level cells.
+    private const string MapsData = "World/world2.mapsdata.fcb";
+
+    public static TheoryData<string> Containers => new() { Omnis, Managers, MapsData };
 
     private static FcbContainerSplitter Splitter => new(BundledAssets.LoadFcbClasses());
 
     [Fact]
-    public void The_corpus_actually_holds_these_containers()
-        => Assert.True(
-            Kinds.All(k => Fc2Corpus.Find(k).Any()),
-            Fc2Corpus.MissingMessage(".mapsdata.fcb"));
+    [Trait("Category", "RequiresFixture")]
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Omnis, Managers, MapsData);
 
     /// <summary>Each of the three is recognised, and every entity in it is addressable.</summary>
     [Theory]
     [MemberData(nameof(Containers))]
-    public void Every_placed_entity_gets_one_uniquely_addressable_fragment(string path)
+    public void Every_placed_entity_gets_one_uniquely_addressable_fragment(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        FcbObject root = FcbDocument.Deserialize(File.ReadAllBytes(path));
-        Assert.True(FcbFragments.IsLayerBearing(root), $"{Path.GetFileName(path)} was not recognised.");
+        FcbObject root = FcbDocument.Deserialize(bytes);
+        Assert.True(FcbFragments.IsLayerBearing(root), $"{fixture} was not recognised.");
 
         int entities = FcbFragments.LayersOf(root)
             .SelectMany(l => l.Children)
@@ -57,19 +49,17 @@ public class WorldContainerFragmentTests
     }
 
     /// <summary>
-    /// The gate the whole split turns on: every fragment extracted and spliced straight back has to
-    /// reproduce the container it came from.
+    /// Every fragment extracted and spliced straight back reproduces the container it came from.
     /// </summary>
     [Theory]
     [MemberData(nameof(Containers))]
-    public void Every_fragment_extracts_and_splices_back_unchanged(string path)
+    public void Every_fragment_extracts_and_splices_back_unchanged(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         IContainerTree tree = Splitter.Open(original);
         IReadOnlyList<FcbFragmentInfo> rows = tree.List();
-        if (rows.Count == 0) return;
+        Assert.NotEmpty(rows);
 
         Dictionary<string, string> everyFragment = rows.ToDictionary(
             r => r.Id, r => tree.Extract(r.Id)!, FcbFragments.IdComparer);
@@ -84,14 +74,11 @@ public class WorldContainerFragmentTests
     /// mod state only what it changed.</summary>
     [Theory]
     [MemberData(nameof(Containers))]
-    public void Applying_a_containers_own_layout_changes_nothing(string path)
+    public void Applying_a_containers_own_layout_changes_nothing(string fixture)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(fixture) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         FcbObject root = FcbDocument.Deserialize(original);
-        if (!FcbFragments.LayersOf(root).Any()) return;
-
         ContainerLayout layout = ContainerLayout.Of(root);
         Assert.Null(ContainerLayout.Diff(
             root,
@@ -100,20 +87,18 @@ public class WorldContainerFragmentTests
     }
 
     /// <summary>
-    /// mapsdata holds one <c>main</c> per level cell - 25 of them in world1 - so a layer's path alone
-    /// does not identify it. This is what the cell-qualified key exists for.
+    /// mapsdata holds one <c>main</c> per level cell, so a layer's path alone does not identify it.
+    /// This is what the cell-qualified key exists for.
     /// </summary>
     [Fact]
     public void A_mapsdata_layers_identity_includes_its_level_cell()
     {
-        string? path = Fc2Corpus.Find(".mapsdata.fcb")
-            .FirstOrDefault(p => Path.GetFileName(p).StartsWith("world", StringComparison.OrdinalIgnoreCase));
-        if (path is null) return;
+        if (Fixture.Read(MapsData) is not { } bytes) return;
 
-        ContainerLayout layout = ContainerLayout.Of(FcbDocument.Deserialize(File.ReadAllBytes(path)));
+        ContainerLayout layout = ContainerLayout.Of(FcbDocument.Deserialize(bytes));
         LayerSpec[] mains = [.. layout.Layers.Where(l => MissionLayers.IsMain(l.Path))];
 
-        Assert.True(mains.Length > 1, $"{Path.GetFileName(path)} has only {mains.Length} 'main' layer(s).");
+        Assert.True(mains.Length > 1, $"{MapsData} has only {mains.Length} 'main' layer(s).");
         Assert.All(mains, l => Assert.NotNull(l.Under));
         Assert.Equal(mains.Length, mains.Select(l => l.Key).Distinct(StringComparer.OrdinalIgnoreCase).Count());
     }
@@ -122,11 +107,8 @@ public class WorldContainerFragmentTests
     [Fact]
     public void A_layout_creates_a_mapsdata_layer_under_the_cell_it_names()
     {
-        string? path = Fc2Corpus.Find(".mapsdata.fcb")
-            .FirstOrDefault(p => Path.GetFileName(p).StartsWith("world", StringComparison.OrdinalIgnoreCase));
-        if (path is null) return;
+        if (Fixture.Read(MapsData) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         FcbObject root = FcbDocument.Deserialize(original);
         string cell = ContainerLayout.CellKey(FcbFragments.LayerParentsOf(root).First());
         const string added = @"missions\ghostpatrols\test\patrol_01";

@@ -5,8 +5,8 @@ using JackAll.Tools.Xbg;
 namespace JackAll.Tests;
 
 /// <summary>
-/// The pack's mesh gate: decode every shipped mesh to the format-free document a
-/// <c>.fc2model</c> carries, build it back, and require the file.
+/// A shipped mesh decodes to the format-free document a <c>.fc2model</c> carries and builds back to
+/// its bytes.
 /// </summary>
 /// <remarks>
 /// This is the claim the whole pack design rests on - that a mesh can travel as names, transforms,
@@ -16,45 +16,24 @@ namespace JackAll.Tests;
 /// </remarks>
 public sealed class MeshDocumentTests
 {
-    // The options a pack actually writes with, so this gate covers the shape that ships rather
-    // than a shape only it uses.
+    // The options a pack actually writes with, so this covers the shape that ships rather than a
+    // shape only it uses.
     private static readonly JsonSerializerOptions Json = Fc2ModelJson.Compact;
 
-    [Fact]
-    public void Every_shipped_mesh_survives_the_trip_through_the_document()
+    [Theory]
+    [MemberData(nameof(XbgFixtures.Formats), MemberType = typeof(XbgFixtures))]
+    public void A_shipped_mesh_survives_the_trip_through_the_document(string fixture)
     {
-        List<string> failures = [];
-        int checkedFiles = 0;
-
-        foreach (string path in Fc2Corpus.Find(".xbg"))
+        if (Fixture.Read(fixture) is not { } original)
         {
-            checkedFiles++;
-            byte[] original = File.ReadAllBytes(path);
-            try
-            {
-                // Through JSON, because that is how it travels - a member the serialiser drops
-                // has to fail here rather than in a mod nobody can explain.
-                string text = JsonSerializer.Serialize(MeshDocument.From(XbgFile.Parse(original)), Json);
-                byte[] produced = JsonSerializer.Deserialize<MeshDocument>(text, Json)!.ToXbg().Write();
-                if (!produced.AsSpan().SequenceEqual(original))
-                {
-                    failures.Add(Fc2Corpus.DescribeDifference(path, original, produced));
-                }
-            }
-            catch (Exception error)
-            {
-                failures.Add($"{Path.GetFileName(path)}: {error.Message}");
-            }
+            return;
         }
 
-        Assert.True(
-            checkedFiles > 0 || !Fc2Corpus.Present,
-            $"{Fc2Corpus.Root} holds no *.xbg, so this gate asserted nothing.");
-
-        Assert.True(
-            failures.Count == 0,
-            $"{checkedFiles - failures.Count}/{checkedFiles} meshes survived. First failures:"
-            + Environment.NewLine + string.Join(Environment.NewLine, failures.Take(5)));
+        // Through JSON, because that is how it travels - a member the serialiser drops has to fail
+        // here rather than in a mod nobody can explain.
+        string text = JsonSerializer.Serialize(MeshDocument.From(XbgFile.Parse(original)), Json);
+        Fixture.AssertSameBytes(
+            fixture, original, JsonSerializer.Deserialize<MeshDocument>(text, Json)!.ToXbg().Write());
     }
 
     /// <summary>
@@ -64,14 +43,12 @@ public sealed class MeshDocumentTests
     [Fact]
     public void The_document_carries_no_container_bookkeeping()
     {
-        string? path = Fc2Corpus.Find(".xbg")
-            .FirstOrDefault(p => Path.GetFileName(p).Equals("ak47.xbg", StringComparison.OrdinalIgnoreCase));
-        if (path is null)
+        if (Fixture.Read(XbgFixtures.Ak47) is not { } bytes)
         {
             return;
         }
 
-        MeshDocument document = MeshDocument.From(XbgFile.Parse(File.ReadAllBytes(path)));
+        MeshDocument document = MeshDocument.From(XbgFile.Parse(bytes));
 
         // Only the two rare chunks travel as bytes; the ten mandatory ones are all decoded.
         Assert.All(document.Chunks, chunk => Assert.Empty(chunk.Body));
@@ -88,9 +65,4 @@ public sealed class MeshDocumentTests
             Assert.All(geometry.Positions, coordinate => Assert.True(Math.Abs(coordinate) < 2.0f));
         }
     }
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_corpus_was_actually_found()
-        => Assert.True(Fc2Corpus.Find(".xbg").Any(), Fc2Corpus.MissingMessage(".xbg"));
 }

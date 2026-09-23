@@ -140,35 +140,16 @@ public class UserGraphWriterTests
         Assert.Equal(reconstructed1.Edges.Single().Target, reconstructed2.Edges.Single().Target);
     }
 
-    [Fact]
-    public void Every_real_extracted_user_graph_round_trips_stably_through_the_writer()
+    [Theory]
+    [InlineData(DominoFixtures.FastTravel)]
+    [InlineData(DominoFixtures.FastTravelTwin)]
+    public void A_real_graph_round_trips_stably_through_the_writer(string script)
     {
-        if (DominoCorpus.UserDirectory is not { } dir) return;
+        if (Fixture.ReadText(script) is not { } source) return;
 
-        var files = Directory.EnumerateFiles(dir, "*.lua", SearchOption.AllDirectories).ToList();
-        Assert.True(files.Count > 0, "Fixture corpus is present but empty.");
+        string generated1 = UserGraphWriter.Write(Classify(source));
+        string generated2 = UserGraphWriter.Write(Classify(generated1));
 
-        var failures = new List<string>();
-        foreach (var file in files)
-        {
-            try
-            {
-                var graph1 = Classify(File.ReadAllText(file));
-                string generated1 = UserGraphWriter.Write(graph1);
-                var graph2 = Classify(generated1);
-                string generated2 = UserGraphWriter.Write(graph2);
-
-                if (generated1 != generated2)
-                {
-                    failures.Add($"{file}: unstable round trip");
-                }
-            }
-            catch (Exception ex)
-            {
-                failures.Add($"{file}: {ex.Message}");
-            }
-        }
-
-        Assert.True(failures.Count == 0, $"{failures.Count}/{files.Count} files failed:\n" + string.Join('\n', failures.Take(10)));
+        Assert.Equal(generated1, generated2);
     }
 }

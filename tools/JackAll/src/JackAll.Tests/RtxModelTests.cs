@@ -12,31 +12,27 @@ namespace JackAll.Tests;
 /// </summary>
 public class RtxModelTests
 {
-    private const string Folder = @".\Fixtures\Rtx";
+    // A card species: a tapering trunk hung with flat leaf cards.
+    public const string Acacia = "Rtx/rt_tree_acacia.rtx";
 
-    private static RtxModel? Species(string name)
-    {
-        string path = Path.Combine(Folder, name);
-        return File.Exists(path) ? RtxModel.Parse(File.ReadAllBytes(path)) : null;
-    }
+    // A modelled species: leaf meshes with three levels each, and no cards.
+    public const string BigLeaf = "Rtx/hy_bigleaf.rtx";
+
+    public static TheoryData<string> Kinds => new() { Acacia, BigLeaf };
+
+    private static RtxModel? Species(string fixture)
+        => Fixture.Read(fixture) is { } bytes ? RtxModel.Parse(bytes) : null;
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_fixtures_were_actually_found()
-    {
-        if (!Directory.Exists(Folder)) return;
-
-        Assert.NotNull(Species("rt_tree_acacia.rtx"));
-        Assert.NotNull(Species("hy_bigleaf.rtx"));
-    }
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Acacia, BigLeaf);
 
     /// <summary>The acacia is the shape the whole savannah is built from: a trunk that tapers, and
     /// foliage hung on it as flat cards.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_card_species_reads_as_a_tapering_trunk_hung_with_cards()
     {
-        if (Species("rt_tree_acacia.rtx") is not { } tree) return;
+        if (Species(Acacia) is not { } tree) return;
 
         Assert.Equal(@"graphics\Vegetation\Savannah\Realtrees\rt_tree_acacia.rta", tree.Name);
         Assert.Equal(126, tree.Nodes.Count);
@@ -54,10 +50,9 @@ public class RtxModelTests
 
     /// <summary>The jungle plants model their leaves instead, and ship three levels of each.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_modelled_species_reads_as_leaf_meshes_with_their_own_levels()
     {
-        if (Species("hy_bigleaf.rtx") is not { } plant) return;
+        if (Species(BigLeaf) is not { } plant) return;
 
         Assert.Empty(plant.LeafCards);
         Assert.Equal(6, plant.HybridLeaves.Count);
@@ -84,9 +79,7 @@ public class RtxModelTests
     /// off by one and the last node of every limb goes missing.
     /// </summary>
     [Theory]
-    [Trait("Category", "RequiresFixture")]
-    [InlineData("rt_tree_acacia.rtx")]
-    [InlineData("hy_bigleaf.rtx")]
+    [MemberData(nameof(RtxModelTests.Kinds), MemberType = typeof(RtxModelTests))]
     public void The_branches_cover_every_node_exactly_once(string name)
     {
         if (Species(name) is not { } tree) return;
@@ -107,10 +100,9 @@ public class RtxModelTests
     /// <summary>A node's length is the gap to the next node along its limb, which is what lets the
     /// chain be drawn as one tube rather than a string of disconnected stubs.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_nodes_length_reaches_the_next_node()
     {
-        if (Species("rt_tree_acacia.rtx") is not { } tree) return;
+        if (Species(Acacia) is not { } tree) return;
 
         foreach (RtxBranch branch in tree.Branches)
         {
@@ -127,11 +119,10 @@ public class RtxModelTests
     /// kind of foliage the species carries. A species fills exactly one of the two foliage slots.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Each_species_names_a_bark_material_and_one_foliage_material()
     {
-        if (Species("rt_tree_acacia.rtx") is not { } tree ||
-            Species("hy_bigleaf.rtx") is not { } plant)
+        if (Species(Acacia) is not { } tree ||
+            Species(BigLeaf) is not { } plant)
         {
             return;
         }
@@ -148,13 +139,10 @@ public class RtxModelTests
     /// <summary>The arena walk is checked against the size the header declares, so a file it cannot
     /// account for is refused rather than read as whatever the strides happen to land on.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_file_the_walk_cannot_account_for_is_refused()
     {
-        string path = Path.Combine(Folder, "rt_tree_acacia.rtx");
-        if (!File.Exists(path)) return;
+        if (Fixture.Read(Acacia) is not { } bytes) return;
 
-        byte[] bytes = File.ReadAllBytes(path);
         // One more node than the arena was packed for.
         bytes[0x118 + 0x10]++;
 
@@ -169,25 +157,18 @@ public class RtxModelTests
 /// <summary>Turning a RealTree skeleton into the triangles the map draws.</summary>
 public class RtxMeshTests
 {
-    private const string Folder = @".\Fixtures\Rtx";
-
-    private static WorldModel? Baked(string name)
-    {
-        string path = Path.Combine(Folder, name);
-        return File.Exists(path)
-            ? WorldModels.Bake(name, RtxMesh.ToMesh(RtxModel.Parse(File.ReadAllBytes(path))),
+    private static WorldModel? Baked(string fixture)
+        => Fixture.Read(fixture) is { } bytes
+            ? WorldModels.Bake(Path.GetFileName(fixture), RtxMesh.ToMesh(RtxModel.Parse(bytes)),
                 WorldModels.FineTriangleBudget)
             : null;
-    }
 
     /// <summary>
     /// A species bakes to the same thing an .xbg does, so the scatter draws it through the model
     /// layer unchanged: two tiers, the far one cheaper, and one material range per kind of surface.
     /// </summary>
     [Theory]
-    [Trait("Category", "RequiresFixture")]
-    [InlineData("rt_tree_acacia.rtx")]
-    [InlineData("hy_bigleaf.rtx")]
+    [MemberData(nameof(RtxModelTests.Kinds), MemberType = typeof(RtxModelTests))]
     public void A_species_bakes_to_two_tiers_over_bark_and_foliage(string name)
     {
         if (Baked(name) is not { } model) return;
@@ -202,15 +183,12 @@ public class RtxMeshTests
     /// <summary>The path the map editor actually takes: a scatter naming a RealTree has to come back
     /// as a placement of real geometry, not as a marker.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_scatter_places_a_realtree_as_geometry()
     {
-        string path = Path.Combine(Folder, "rt_tree_acacia.rtx");
-        if (!File.Exists(path)) return;
+        if (Fixture.Read(RtxModelTests.Acacia) is not { } bytes) return;
 
         const string Resource = @"graphics\vegetation\savannah\realtrees\rt_tree_acacia.rtx";
         uint id = NameHash.Compute(Resource);
-        byte[] bytes = File.ReadAllBytes(path);
 
         ScatterSet scatter = WorldVegetation.Split(
             [new VegetationInstance(new Vector3(1, 2, 3), id)],
@@ -225,10 +203,9 @@ public class RtxMeshTests
     /// <summary>Whether the geometry is the species rather than a stand-in is a question about its
     /// size, so the acacia is measured against an acacia.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_acacia_comes_out_acacia_sized()
     {
-        if (Baked("rt_tree_acacia.rtx") is not { } model) return;
+        if (Baked(RtxModelTests.Acacia) is not { } model) return;
 
         Vector3 size = model.LocalMax - model.LocalMin;
         Assert.InRange(size.Z, 5f, 12f);

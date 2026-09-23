@@ -9,10 +9,8 @@ namespace JackAll.Tests;
 /// The Map tab's paste, move and delete, carried through the same assembler a mod build runs, over a
 /// retail sector (12 entities in two mission layers, sector 56 of a 10-wide map).
 /// </summary>
-[Trait("Category", "RequiresFixture")]
 public class WorldEditSessionTests
 {
-    internal const string FixturePath = "Fixtures/WorldSector/worldsector56.data.fcb";
     private const string SectorPath = @"levels\mp_14_woodlands\generated\worldsectors\worldsector56.data.fcb";
     private const int SectorsPerSide = 10;
 
@@ -20,16 +18,11 @@ public class WorldEditSessionTests
     private static readonly Vector3 InSector = new(400f, 350f, 12f);
 
     [Fact]
-    public void The_fixture_file_was_actually_found()
-        => Assert.True(File.Exists(FixturePath),
-            $"{FixturePath} was not found - every test in this class silently no-opped.");
-
-    [Fact]
     public void A_paste_lands_in_main_as_a_new_entity_and_leaves_the_original_alone()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load(sector);
         WorldEntity original = entities.First(e => e.LayerPathId != MissionLayers.MainName);
         WorldEntity pasted = session.Paste(CopiedEntity.Of(original, "mp_14_woodlands"), InSector)[0];
 
@@ -50,9 +43,9 @@ public class WorldEditSessionTests
     [Fact]
     public void A_move_rewrites_only_the_moved_entity_position()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load(sector);
         WorldEntity moved = entities[0];
         moved.Position = InSector;
         session.Moved(moved);
@@ -70,9 +63,9 @@ public class WorldEditSessionTests
     [Fact]
     public void A_delete_becomes_a_layout_delete_and_an_unsaved_paste_just_disappears()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load(sector);
         WorldEntity doomed = entities[0];
         session.Delete(doomed);
         WorldEntity pasted = session.Paste(CopiedEntity.Of(entities[1], "mp_14_woodlands"), InSector)[0];
@@ -93,9 +86,9 @@ public class WorldEditSessionTests
     [Fact]
     public void A_paste_outside_every_loaded_sector_is_refused()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         Assert.Throws<InvalidOperationException>(() =>
             session.Paste(CopiedEntity.Of(entities[0], "mp_14_woodlands"), new Vector3(10f, 10f, 0f)));
     }
@@ -103,9 +96,9 @@ public class WorldEditSessionTests
     [Fact]
     public void Grouping_makes_a_prefab_at_the_members_centre_listing_them_in_their_layer()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         List<WorldEntity> members = [.. entities.Where(e => e.LayerPathId == MissionLayers.MainName).Take(2)];
         WorldEntity prefab = session.Group(members);
 
@@ -118,9 +111,9 @@ public class WorldEditSessionTests
     [Fact]
     public void Grouping_across_mission_layers_is_refused()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         WorldEntity inMain = entities.First(e => e.LayerPathId == MissionLayers.MainName);
         WorldEntity elsewhere = entities.First(e => e.LayerPathId != MissionLayers.MainName);
 
@@ -132,9 +125,9 @@ public class WorldEditSessionTests
     [Fact]
     public void Pasting_a_prefab_brings_its_members_with_new_ids_where_they_stood_relative_to_it()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         List<WorldEntity> members = [.. entities.Where(e => e.LayerPathId == MissionLayers.MainName).Take(2)];
         EntityLinks.Add(session.EditableNode(members[0]), new EntityLink("OnStateChange", members[1].Id, "CLightEvent", "ActivateLight"));
         WorldEntity prefab = session.Group(members);
@@ -153,9 +146,9 @@ public class WorldEditSessionTests
     [Fact]
     public void A_prefab_bundle_reads_back_as_the_copy_it_was_written_from()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         WorldEntity prefab = session.Group([.. entities.Where(e => e.LayerPathId == MissionLayers.MainName).Take(2)]);
         CopiedEntity copy = session.Copy(prefab);
 
@@ -173,9 +166,9 @@ public class WorldEditSessionTests
     [Fact]
     public void A_pasted_prefab_never_lists_the_originals_members()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, _, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
         WorldEntity prefab = session.Group([.. entities.Where(e => e.LayerPathId == MissionLayers.MainName).Take(2)]);
 
         WorldEntity pasted = session.Paste(CopiedEntity.Of(prefab, "mp_14_woodlands"), InSector)[0];
@@ -218,9 +211,9 @@ public class WorldEditSessionTests
     [Fact]
     public void A_field_edit_stages_the_entity_with_the_edit_and_everything_else_it_had()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load(sector);
         WorldEntity edited = entities[0];
         uint field = FcbClassDefinitions.Crc32Ascii("bEditedByTest");
         MergedNode.Of(session.EditableNode(edited), null).SetValue(field, [1]);
@@ -235,14 +228,14 @@ public class WorldEditSessionTests
         Assert.Equal(edited.Node.Children.Count, staged.Children.Count);
     }
 
-    /// <summary>A placement carries the fields every shipped archetype-bound instance does, and lands
+    /// <summary>A placement carries the fields every retail archetype-bound instance does, and lands
     /// under the mission layer it was dropped on once the sector's layout files it there.</summary>
     [Fact]
     public void A_placement_is_a_minimal_instance_filed_under_its_mission_layer()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load(sector);
         string layer = entities.First(e => e.LayerPathId != MissionLayers.MainName).LayerPathId;
         var archetype = new ArchetypeDefinition(
             "OA_Props.Props.Crate01", new ArchetypeLayer("library.fcb"), 0, null, new FcbObject { TypeHash = WorldHashes.Entity });
@@ -271,9 +264,9 @@ public class WorldEditSessionTests
     [Fact]
     public void A_turn_saves_its_angles()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load();
+        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load(sector);
         WorldEntity turned = entities[0];
         turned.Angles = new System.Numerics.Vector3(5f, -10f, 135f);
         session.Moved(turned);
@@ -284,9 +277,9 @@ public class WorldEditSessionTests
         Assert.Equal(turned.Angles, FcbEntityFields.ReadVector3(staged, WorldHashes.HidAngles));
     }
 
-    internal static (WorldEditSession Session, byte[] BaseFcb, List<WorldEntity> Entities) Load()
+    /// <summary>A session over <see cref="WorldSectorFragmentTests.Sector56"/>'s bytes.</summary>
+    internal static (WorldEditSession Session, byte[] BaseFcb, List<WorldEntity> Entities) Load(byte[] baseFcb)
     {
-        byte[] baseFcb = File.ReadAllBytes(FixturePath);
         var map = new TerrainMap
         {
             Name = "mp_14_woodlands",

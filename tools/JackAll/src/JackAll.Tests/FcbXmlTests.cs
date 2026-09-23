@@ -1,97 +1,65 @@
 using System.Xml.Linq;
+using JackAll.Core;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Format.Rml;
 
 namespace JackAll.Tests;
 
 /// <summary>
-/// Runs against the same real shipped .fcb files as <see cref="FcbDocumentTests"/>, plus the real
-/// binary_classes.xml config (bundled from tools/Gibbed.Dunia's own copy) - this is the strongest
-/// available check that <see cref="FcbXml"/>'s value-type decoding matches the real config's member
-/// declarations without throwing on any of them, and that a full ToXml -> FromXml round trip
-/// reproduces the exact same tree.
+/// <see cref="FcbXml"/> against the retail .fcb files of <see cref="FcbDocumentTests"/> and the bundled
+/// binary_classes.xml: every declared member decodes, and ToXml -> FromXml reproduces the same tree.
 /// </summary>
 public class FcbXmlTests
 {
-    private const string FixturesDir = "Fixtures/Fcb";
-    private const string ClassesPath = "Fixtures/Fcb/binary_classes.xml";
-
-    public static TheoryData<string> SampleFiles()
-    {
-        var data = new TheoryData<string>();
-        if (!Directory.Exists(FixturesDir))
-        {
-            data.Add(string.Empty);
-            return data;
-        }
-        foreach (string file in Directory.EnumerateFiles(FixturesDir, "*.fcb"))
-        {
-            data.Add(file);
-        }
-        return data;
-    }
-
-    [Fact]
-    public void The_real_binary_classes_config_was_actually_found()
-        => Assert.True(File.Exists(ClassesPath), $"{ClassesPath} was not found - every config-backed test in this class silently no-opped.");
+    private static readonly Lazy<FcbClassDefinitions> Classes = new(BundledAssets.LoadFcbClasses);
 
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void A_real_shipped_fcb_converts_to_xml_and_back_to_the_same_tree(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void A_real_shipped_fcb_converts_to_xml_and_back_to_the_same_tree(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        FcbClassDefinitions defs = File.Exists(ClassesPath)
-            ? FcbClassDefinitions.Load(ClassesPath)
-            : FcbClassDefinitions.Empty;
+        FcbObject original = FcbDocument.Deserialize(bytes);
 
-        FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
-
-        FcbObject reparsed = FcbXml.FromXml(FcbXml.ToXml(original, defs));
+        FcbObject reparsed = FcbXml.FromXml(FcbXml.ToXml(original, Classes.Value));
 
         TestSupport.AssertSameShape(original, reparsed, AssertSameValueIgnoringSignedZero);
     }
 
     /// <summary>
-    /// Confirms the trailing-pad-byte handling in <c>TryDecodeRml</c>/<c>ReadRml</c> actually engages
-    /// on real data, not just the hand-built case: every one of the ~2,300 real Rml-typed values across
-    /// these 4 fixtures (mostly `hidDescriptor`) decodes to a nested element rather than falling back to
-    /// hex - verified directly while building this feature (JackAll.Core/Format/Fcb/FcbXml.cs's
-    /// TryDecodeRml remarks), locked in here so a future change can't silently regress it back to "every
-    /// real value falls back to hex" without a test noticing.
+    /// The trailing-pad-byte handling in <c>TryDecodeRml</c>/<c>ReadRml</c> engages on retail data:
+    /// each Rml-typed value (mostly `hidDescriptor`) decodes to a nested element, not hex.
     /// </summary>
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void Every_real_Rml_typed_value_decodes_to_nested_xml_not_hex(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void Every_real_Rml_typed_value_decodes_to_nested_xml_not_hex(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        FcbClassDefinitions defs = FcbClassDefinitions.Load(ClassesPath);
-        FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
-        string all = FcbXml.ToXml(original, defs);
+        FcbObject original = FcbDocument.Deserialize(bytes);
+        string all = FcbXml.ToXml(original, Classes.Value);
 
         int rmlValueCount = 0, index = 0;
         while ((index = all.IndexOf("type=\"Rml\"", index, StringComparison.Ordinal)) >= 0)
         {
             rmlValueCount++;
             int tagEnd = all.IndexOf('>', index);
-            Assert.True(tagEnd >= 0 && all[(tagEnd + 1)..].TrimStart().StartsWith('<'),
-                $"A Rml-typed value in {path} fell back to hex instead of decoding to nested XML.");
+            if (tagEnd < 0 || !all.AsSpan(tagEnd + 1).TrimStart().StartsWith('<'))
+            {
+                Assert.Fail($"A Rml-typed value in {fixture} fell back to hex instead of decoding to nested XML.");
+            }
             index = tagEnd;
         }
-        Assert.True(rmlValueCount > 0, $"{path} has no Rml-typed values - this test proves nothing without at least one.");
+        Assert.True(rmlValueCount > 0, $"{fixture} has no Rml-typed values - this test proves nothing without at least one.");
     }
 
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void Every_entitylibrary_fixture_renders_inline_as_one_document(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void Every_entitylibrary_fixture_renders_inline_as_one_document(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        FcbObject original = FcbDocument.Deserialize(bytes);
         // The round trip itself is pinned by A_real_shipped_fcb_converts_to_xml_and_back_to_the_same_tree.
         Assert.DoesNotContain("external=", FcbXml.ToXml(original, FcbClassDefinitions.Empty));
     }
@@ -100,13 +68,12 @@ public class FcbXmlTests
     /// the library's distinct <c>hidName</c> count, and no two ids collide under the canonical
     /// comparer, so every archetype is individually addressable.</summary>
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void An_entity_library_lists_one_uniquely_addressable_fragment_per_archetype(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void An_entity_library_lists_one_uniquely_addressable_fragment_per_archetype(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        FcbObject original = FcbDocument.Deserialize(bytes);
         List<string> ids = [.. FcbFragments.List(original).Select(f => f.Id)];
 
         var archetypeNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -133,13 +100,12 @@ public class FcbXmlTests
     /// <summary>The pre-deep-fragment group ids are not an alias for anything: every id the old
     /// group-per-file naming would have produced resolves to nothing.</summary>
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void A_pre_deep_fragment_group_id_resolves_to_nothing(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void A_pre_deep_fragment_group_id_resolves_to_nothing(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        FcbObject original = FcbDocument.Deserialize(bytes);
 
         for (int i = 0; i < original.Children.Count; i++)
         {
@@ -149,13 +115,12 @@ public class FcbXmlTests
     }
 
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void ListFragmentsWithSize_reports_each_fragments_fully_expanded_size(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void ListFragmentsWithSize_reports_each_fragments_fully_expanded_size(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        FcbObject original = FcbDocument.Deserialize(bytes);
         IReadOnlyList<FcbFragmentInfo> fragments = FcbXml.ListFragmentsWithSize(original);
         IReadOnlyList<FcbFragment> nodes = FcbFragments.List(original);
 
@@ -192,7 +157,7 @@ public class FcbXmlTests
     [Fact]
     public void Real_class_definitions_resolve_the_root_EntityLibrary_type_by_name()
     {
-        FcbClassDefinitions defs = FcbClassDefinitions.Load(ClassesPath);
+        FcbClassDefinitions defs = Classes.Value;
 
         // <class hash="256A1FF9"> in binary_classes.xml is commented "Entity library category" but
         // has no name attribute (config quirk - it's identified by hash, not a name string), so this
@@ -398,13 +363,12 @@ public class FcbXmlTests
     /// content the game never reads.
     /// </summary>
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void A_superseded_declaration_is_neither_listed_nor_part_of_the_shape(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void A_superseded_declaration_is_neither_listed_nor_part_of_the_shape(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        FcbObject original = FcbDocument.Deserialize(bytes);
         IReadOnlyList<FcbFragment> fragments = FcbFragments.List(original);
         if (fragments.Count == 0) return;
 
@@ -414,12 +378,12 @@ public class FcbXmlTests
         // One container declares the first archetype a second time in the last group, the way a mod
         // that merged two library sources does; the other genuinely moves it there. The superseded
         // copy is unreachable, so the two must read the same.
-        FcbObject duplicated = FcbDocument.Deserialize(File.ReadAllBytes(path));
-        FcbObject moved = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        FcbObject duplicated = FcbDocument.Deserialize(bytes);
+        FcbObject moved = FcbDocument.Deserialize(bytes);
 
         // A separate decode, so the twin is a distinct node carrying identical content - the shape a
         // merged library really has, and the one a reference-keyed walk can tell apart.
-        FcbObject donor = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        FcbObject donor = FcbDocument.Deserialize(bytes);
         duplicated.Children[^1].Children.Add(FcbFragments.List(donor)[0].Node);
 
         FcbObject original0 = FcbFragments.List(moved)[0].Node;

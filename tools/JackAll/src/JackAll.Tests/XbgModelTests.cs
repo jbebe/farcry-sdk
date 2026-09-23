@@ -5,51 +5,35 @@ using JackAll.Tools.World;
 namespace JackAll.Tests;
 
 /// <summary>
-/// Pins <see cref="XbgModel"/> against two retail meshes (a skinned character and a static prop)
-/// now that the map renders through it. The exact counts are regression pins recorded from a
-/// known-good parse; a change in any of them means the chunk walk drifted, not that the fixtures
-/// changed.
+/// Pins <see cref="XbgModel"/> against retail meshes now that the map renders through it. The exact
+/// counts are regression pins recorded from a known-good parse; a change in any of them means the
+/// chunk walk drifted, not that the fixtures changed.
 /// </summary>
 public class XbgModelTests
 {
-    private const string FixturesDir = "Fixtures/Xbg";
-    private const string Character = "andrehyppolite.xbg";
-    private const string Prop = "chairbar01.xbg";
-    private const string Vehicle = "buggy.xbg";
+    private static readonly Dictionary<string, Lazy<XbgModel?>> Parsed =
+        new[] { XbgFixtures.Character, XbgFixtures.Prop, XbgFixtures.Buggy, XbgFixtures.SwampBoat }.ToDictionary(
+            fixture => fixture,
+            fixture => new Lazy<XbgModel?>(() => Fixture.Read(fixture) is { } bytes ? XbgModel.Parse(bytes) : null));
 
-    private static bool FixturesPresent
-        => File.Exists(Path.Combine(FixturesDir, Character)) && File.Exists(Path.Combine(FixturesDir, Prop));
-
-    private static XbgModel ParseFixture(string name)
-        => XbgModel.Parse(File.ReadAllBytes(Path.Combine(FixturesDir, name)));
+    /// <summary>The fixture parsed once for the whole class, or null when this checkout lacks it.</summary>
+    private static XbgModel? Model(string fixture) => Parsed[fixture].Value;
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_fixture_files_were_actually_found()
-        => Assert.True(
-            FixturesPresent,
-            $"{FixturesDir} is missing {Character} / {Prop} (linked from tmp\\graphics when the "
-            + "game export exists), so every fixture-backed test in this class silently no-opped.");
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_character_parses_to_the_recorded_shape()
     {
-        if (!FixturesPresent) return;
+        if (Model(XbgFixtures.Character) is not { } model) return;
 
-        XbgModel model = ParseFixture(Character);
         Assert.Equal(
             (46, 4, 14, 17175),
             (model.Submeshes.Count, model.LodLevels.Count, model.Materials.Count, TotalVertices(model)));
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_prop_parses_to_the_recorded_shape()
     {
-        if (!FixturesPresent) return;
+        if (Model(XbgFixtures.Prop) is not { } model) return;
 
-        XbgModel model = ParseFixture(Prop);
         Assert.Equal(
             (5, 3, 2, 912),
             (model.Submeshes.Count, model.LodLevels.Count, model.Materials.Count, TotalVertices(model)));
@@ -58,14 +42,12 @@ public class XbgModelTests
     /// <summary>Retail material entries are archive paths, which is what the map's texture
     /// resolution reads them as.</summary>
     [Theory]
-    [InlineData(Character)]
-    [InlineData(Prop)]
-    [Trait("Category", "RequiresFixture")]
+    [InlineData(XbgFixtures.Character)]
+    [InlineData(XbgFixtures.Prop)]
     public void Material_entries_are_xbm_archive_paths(string fixture)
     {
-        if (!FixturesPresent) return;
+        if (Model(fixture) is not { } model) return;
 
-        XbgModel model = ParseFixture(fixture);
         Assert.NotEmpty(model.Materials);
         Assert.All(model.Materials, m => Assert.EndsWith(".xbm", m, StringComparison.OrdinalIgnoreCase));
         Assert.All(model.Materials, m => Assert.StartsWith(@"GRAPHICS\", m, StringComparison.OrdinalIgnoreCase));
@@ -74,25 +56,23 @@ public class XbgModelTests
     /// <summary>A person is under 2.5 m in any direction; a blown-up extent means the PMCP
     /// position scale stopped being applied.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_character_has_a_person_sized_nondegenerate_extent()
     {
-        if (!FixturesPresent) return;
+        if (Model(XbgFixtures.Character) is not { } model) return;
 
-        (Vector3 min, Vector3 max) = XbgModel.Bounds(ParseFixture(Character).Submeshes);
+        (Vector3 min, Vector3 max) = XbgModel.Bounds(model.Submeshes);
         Assert.True(min.X < max.X && min.Y < max.Y && min.Z < max.Z, $"degenerate bounds {min}..{max}");
         Assert.True((max - min).Length() < 5f, $"implausible extent {(max - min).Length()}m");
     }
 
     [Theory]
-    [InlineData(Character)]
-    [InlineData(Prop)]
-    [Trait("Category", "RequiresFixture")]
+    [InlineData(XbgFixtures.Character)]
+    [InlineData(XbgFixtures.Prop)]
     public void Every_submesh_is_structurally_sound(string fixture)
     {
-        if (!FixturesPresent) return;
+        if (Model(fixture) is not { } model) return;
 
-        foreach (XbgSubmesh submesh in ParseFixture(fixture).Submeshes)
+        foreach (XbgSubmesh submesh in model.Submeshes)
         {
             Assert.Equal(0, submesh.Indices.Length % 3);
             Assert.All(submesh.Indices, i => Assert.InRange(i, 0, submesh.Positions.Length - 1));
@@ -104,14 +84,12 @@ public class XbgModelTests
     }
 
     [Theory]
-    [InlineData(Character)]
-    [InlineData(Prop)]
-    [Trait("Category", "RequiresFixture")]
+    [InlineData(XbgFixtures.Character)]
+    [InlineData(XbgFixtures.Prop)]
     public void Uvs_match_their_positions_and_stay_finite(string fixture)
     {
-        if (!FixturesPresent) return;
+        if (Model(fixture) is not { } model) return;
 
-        XbgModel model = ParseFixture(fixture);
         Assert.Contains(model.Submeshes, s => s.Uvs is not null);
         foreach (XbgSubmesh submesh in model.Submeshes)
         {
@@ -128,12 +106,11 @@ public class XbgModelTests
     /// <summary>The prop's V bounds, read off its raw PMCU pair. They're asymmetric, so re-flipping
     /// V into bottom-up image space would move them to [-2.367, 1.664] and fail here.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Uvs_stay_in_the_games_top_down_texture_space()
     {
-        if (!FixturesPresent) return;
+        if (Model(XbgFixtures.Prop) is not { } model) return;
 
-        Vector2[] uvs = ParseFixture(Prop).Submeshes
+        Vector2[] uvs = model.Submeshes
             .Where(s => s.Uvs is not null).SelectMany(s => s.Uvs!).ToArray();
 
         Assert.Equal(-0.664, uvs.Min(uv => uv.Y), 3);
@@ -154,21 +131,19 @@ public class XbgModelTests
     /// <summary>Each tier draws at least its target LOD's triangles - more when a part has nothing
     /// at that level and falls back to its own nearest.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Bake_picks_the_finest_lod_that_fits_the_budget()
     {
-        if (!FixturesPresent) return;
+        if (Model(XbgFixtures.Character) is not { } model) return;
 
-        XbgModel model = ParseFixture(Character);
         int finest = model.LodLevels.Max(l => TrianglesAt(model, l));
         int coarsest = model.LodLevels.Min(l => TrianglesAt(model, l));
 
-        WorldModel unbounded = WorldModels.Bake(Character, model, int.MaxValue)!;
+        WorldModel unbounded = WorldModels.Bake(XbgFixtures.Character, model, int.MaxValue)!;
         Assert.InRange(unbounded.Fine.Count / 3, finest, finest + coarsest);
         Assert.InRange(unbounded.Coarse.Count / 3, coarsest, finest);
 
         // A budget nothing fits falls back to the coarsest LOD rather than to nothing.
-        WorldModel squeezed = WorldModels.Bake(Character, model, 1)!;
+        WorldModel squeezed = WorldModels.Bake(XbgFixtures.Character, model, 1)!;
         Assert.InRange(squeezed.Fine.Count / 3, coarsest, finest);
     }
 
@@ -209,12 +184,11 @@ public class XbgModelTests
     /// skeleton they render stacked inside the chassis. Placed, they sit at the four corners.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Rigid_parts_are_placed_by_the_bone_that_shares_their_name()
     {
-        if (!File.Exists(Path.Combine(FixturesDir, Vehicle))) return;
+        if (Model(XbgFixtures.Buggy) is not { } model) return;
 
-        List<IGrouping<string, XbgSubmesh>> wheels = [.. ParseFixture(Vehicle).Submeshes
+        List<IGrouping<string, XbgSubmesh>> wheels = [.. model.Submeshes
             .Where(s => s.LodLevel == 0 && s.PartName.StartsWith("Wheel", StringComparison.OrdinalIgnoreCase))
             .GroupBy(s => s.PartName)];
 
@@ -253,14 +227,13 @@ public class XbgModelTests
     };
 
     [Theory]
-    [InlineData(Character)]
-    [InlineData(Prop)]
-    [Trait("Category", "RequiresFixture")]
+    [InlineData(XbgFixtures.Character)]
+    [InlineData(XbgFixtures.Prop)]
     public void Baked_arrays_are_internally_consistent(string fixture)
     {
-        if (!FixturesPresent) return;
+        if (Model(fixture) is not { } model) return;
 
-        WorldModel baked = WorldModels.Bake(fixture, ParseFixture(fixture), WorldModels.FineTriangleBudget)!;
+        WorldModel baked = WorldModels.Bake(fixture, model, WorldModels.FineTriangleBudget)!;
 
         Assert.Equal(0, baked.Vertices.Length % WorldModel.FloatsPerVertex);
         Assert.Equal(0, baked.Indices.Length % 3);
@@ -274,13 +247,12 @@ public class XbgModelTests
 
     /// <summary>The material resolver's answer must land on the range that named the material.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Baked_material_ranges_carry_their_resolved_diffuse_texture()
     {
-        if (!FixturesPresent) return;
+        if (Model(XbgFixtures.Character) is not { } model) return;
 
         WorldModel baked = WorldModels.Bake(
-            Character, ParseFixture(Character), WorldModels.FineTriangleBudget,
+            XbgFixtures.Character, model, WorldModels.FineTriangleBudget,
             name => MaterialSurface.None with { DiffuseTexturePath = $@"tex\{name}.xbt" })!;
 
         Assert.NotEmpty(baked.MaterialRanges);
@@ -294,19 +266,16 @@ public class XbgModelTests
     /// inside the whole one.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Only_the_intact_state_of_a_part_is_baked()
     {
-        const string Boat = FixturesDir + "/swampboat.xbg";
-        if (!File.Exists(Boat)) return;
+        if (Model(XbgFixtures.SwampBoat) is not { } model) return;
 
-        XbgModel model = XbgModel.Parse(File.ReadAllBytes(Boat));
         string[] all = [.. model.Submeshes.Select(s => s.PartName).Distinct()];
         Assert.Contains("BODY_STATE01", all);
         Assert.Contains("BODY_STATE02", all);
 
-        WorldModel whole = WorldModels.Bake(Boat, model, WorldModels.FineTriangleBudget)!;
-        WorldModel state01Only = WorldModels.Bake(Boat, model, WorldModels.FineTriangleBudget,
+        WorldModel whole = WorldModels.Bake(XbgFixtures.SwampBoat, model, WorldModels.FineTriangleBudget)!;
+        WorldModel state01Only = WorldModels.Bake(XbgFixtures.SwampBoat, model, WorldModels.FineTriangleBudget,
             onlyParts: new HashSet<string>(all.Where(p => !p.EndsWith("STATE02", StringComparison.OrdinalIgnoreCase)),
                 StringComparer.OrdinalIgnoreCase))!;
 
@@ -321,18 +290,16 @@ public class XbgModelTests
     /// the triangles of the outfit it should be wearing.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_named_part_list_bakes_only_those_parts()
     {
-        if (!FixturesPresent) return;
+        if (Model(XbgFixtures.Prop) is not { } model) return;
 
-        XbgModel model = ParseFixture(Prop);
         string[] parts = [.. model.Submeshes.Where(s => s.LodLevel == 0)
             .Select(s => s.PartName).Where(p => p.Length > 0).Distinct()];
         if (parts.Length == 0) return;
 
-        WorldModel whole = WorldModels.Bake(Prop, model, WorldModels.FineTriangleBudget)!;
-        WorldModel one = WorldModels.Bake(Prop, model, WorldModels.FineTriangleBudget,
+        WorldModel whole = WorldModels.Bake(XbgFixtures.Prop, model, WorldModels.FineTriangleBudget)!;
+        WorldModel one = WorldModels.Bake(XbgFixtures.Prop, model, WorldModels.FineTriangleBudget,
             onlyParts: new HashSet<string>([parts[0]], StringComparer.OrdinalIgnoreCase))!;
 
         Assert.True(one.Indices.Length <= whole.Indices.Length);
@@ -340,27 +307,25 @@ public class XbgModelTests
 
         // A list naming nothing the file has leaves no geometry at all, rather than falling back to
         // the whole mesh - the caller only passes a list the entity actually stated.
-        Assert.Null(WorldModels.Bake(Prop, model, WorldModels.FineTriangleBudget,
+        Assert.Null(WorldModels.Bake(XbgFixtures.Prop, model, WorldModels.FineTriangleBudget,
             onlyParts: new HashSet<string>(["NO_SUCH_PART"], StringComparer.OrdinalIgnoreCase)));
     }
 
-    /// <summary>Retail meshes carry two UV sets, and 99% of the corpus has the second one. It is
+    /// <summary>Retail meshes carry two UV sets, and nearly all of them have the second one. It is
     /// what the "group" half of a material's tiling vector reads, so dropping it silently costs the
     /// mask and the second diffuse layer their coordinates.</summary>
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void Both_uv_sets_survive_the_parse()
+    [Theory]
+    [InlineData(XbgFixtures.Character)]
+    [InlineData(XbgFixtures.Prop)]
+    public void Both_uv_sets_survive_the_parse(string fixture)
     {
-        if (!FixturesPresent) return;
+        if (Model(fixture) is not { } model) return;
 
-        foreach (string name in new[] { Character, Prop })
+        foreach (XbgSubmesh submesh in model.Submeshes.Where(s => s.LodLevel == 0))
         {
-            foreach (XbgSubmesh submesh in ParseFixture(name).Submeshes.Where(s => s.LodLevel == 0))
-            {
-                Assert.NotNull(submesh.Uvs);
-                Assert.NotNull(submesh.Uvs1);
-                Assert.Equal(submesh.Uvs!.Length, submesh.Uvs1!.Length);
-            }
+            Assert.NotNull(submesh.Uvs);
+            Assert.NotNull(submesh.Uvs1);
+            Assert.Equal(submesh.Uvs!.Length, submesh.Uvs1!.Length);
         }
     }
 
@@ -370,13 +335,11 @@ public class XbgModelTests
     /// Ten floats a vertex, and the last two are those, in that order.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Baked_vertices_carry_both_mask_channels()
     {
-        if (!FixturesPresent) return;
+        if (Model(XbgFixtures.Prop) is not { } model) return;
 
-        XbgModel model = ParseFixture(Prop);
-        WorldModel baked = WorldModels.Bake(Prop, model, WorldModels.FineTriangleBudget)!;
+        WorldModel baked = WorldModels.Bake(XbgFixtures.Prop, model, WorldModels.FineTriangleBudget)!;
 
         Assert.Equal(10, WorldModel.FloatsPerVertex);
         Assert.Equal(0, baked.Vertices.Length % WorldModel.FloatsPerVertex);
@@ -394,43 +357,41 @@ public class XbgModelTests
     /// is showing by testing against the eye rather than trusting <c>gl_FrontFacing</c>. Reversing
     /// the index order here - or culling on GL's default winding - would erase the sun term.
     /// </summary>
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void Triangles_are_wound_clockwise_around_their_authored_normal()
+    [Theory]
+    [InlineData(XbgFixtures.Character)]
+    [InlineData(XbgFixtures.Prop)]
+    public void Triangles_are_wound_clockwise_around_their_authored_normal(string fixture)
     {
-        if (!FixturesPresent) return;
+        if (Model(fixture) is not { } model) return;
 
-        foreach (string name in new[] { Character, Prop })
+        int matchesWinding = 0, opposesWinding = 0;
+        foreach (XbgSubmesh submesh in model.Submeshes.Where(s => s.LodLevel == 0))
         {
-            int matchesWinding = 0, opposesWinding = 0;
-            foreach (XbgSubmesh submesh in ParseFixture(name).Submeshes.Where(s => s.LodLevel == 0))
+            if (submesh.Normals is null) continue;
+
+            for (int i = 0; i + 2 < submesh.Indices.Length; i += 3)
             {
-                if (submesh.Normals is null) continue;
+                int a = submesh.Indices[i], b = submesh.Indices[i + 1], c = submesh.Indices[i + 2];
+                Vector3 wound = Vector3.Cross(
+                    submesh.Positions[b] - submesh.Positions[a],
+                    submesh.Positions[c] - submesh.Positions[a]);
+                Vector3 authored = submesh.Normals[a] + submesh.Normals[b] + submesh.Normals[c];
+                if (wound.LengthSquared() < 1e-12f || authored.LengthSquared() < 1e-12f) continue;
 
-                for (int i = 0; i + 2 < submesh.Indices.Length; i += 3)
+                if (Vector3.Dot(Vector3.Normalize(wound), Vector3.Normalize(authored)) > 0)
                 {
-                    int a = submesh.Indices[i], b = submesh.Indices[i + 1], c = submesh.Indices[i + 2];
-                    Vector3 wound = Vector3.Cross(
-                        submesh.Positions[b] - submesh.Positions[a],
-                        submesh.Positions[c] - submesh.Positions[a]);
-                    Vector3 authored = submesh.Normals[a] + submesh.Normals[b] + submesh.Normals[c];
-                    if (wound.LengthSquared() < 1e-12f || authored.LengthSquared() < 1e-12f) continue;
-
-                    if (Vector3.Dot(Vector3.Normalize(wound), Vector3.Normalize(authored)) > 0)
-                    {
-                        matchesWinding++;
-                    }
-                    else
-                    {
-                        opposesWinding++;
-                    }
+                    matchesWinding++;
+                }
+                else
+                {
+                    opposesWinding++;
                 }
             }
-
-            // Not every triangle: a handful of degenerate slivers land either way.
-            Assert.True(opposesWinding > (matchesWinding + opposesWinding) * 0.95,
-                $"{name}: only {opposesWinding} of {matchesWinding + opposesWinding} triangles wind clockwise");
         }
+
+        // Not every triangle: a handful of degenerate slivers land either way.
+        Assert.True(opposesWinding > (matchesWinding + opposesWinding) * 0.95,
+            $"{fixture}: only {opposesWinding} of {matchesWinding + opposesWinding} triangles wind clockwise");
     }
 
     private static int TotalVertices(XbgModel model)

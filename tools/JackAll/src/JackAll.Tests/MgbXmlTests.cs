@@ -4,7 +4,7 @@ using JackAll.Tools.Mgb;
 namespace JackAll.Tests;
 
 /// <summary>
-/// The correctness gate for the <c>.mgb</c> XML interchange format.
+/// Round-trips shipped packages through the <c>.mgb</c> XML interchange format.
 /// </summary>
 /// <remarks>
 /// <c>Encode(Decode(x)) == x</c> is the whole contract: the XML is only useful as an editing
@@ -12,68 +12,48 @@ namespace JackAll.Tests;
 /// driven by the same <c>Serialize</c> descriptions as the binary codec, a field that reads and
 /// writes correctly in binary but is unrepresentable in text shows up here and nowhere else -
 /// float bit patterns, non-text string bytes, and null-versus-zero being the ones that bite.
-///
-/// Shares the corpus, and the skip-when-absent behaviour, with <see cref="MgbRoundTripTests"/>. The
-/// tests that reach for one named corpus file rather than enumerating what is there have nothing to
-/// skip on, so they carry <c>Category=RequiresFixture</c> instead and CI filters them out.
 /// </remarks>
 public sealed class MgbXmlTests
 {
-    private static readonly string CorpusDirectory =
-        Path.Combine(TestSupport.RepositoryRoot, "tmp", "menu");
-
-    public static TheoryData<string> CorpusFiles() => MgbRoundTripTests.CorpusFiles();
-
-    private static byte[] Corpus(string fileName) =>
-        File.ReadAllBytes(Path.Combine(CorpusDirectory, fileName));
-
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Round_trips_every_corpus_file_through_xml_byte_for_byte(string fileName)
+    [MemberData(nameof(MgbRoundTripTests.Packages), MemberType = typeof(MgbRoundTripTests))]
+    public void Round_trips_a_package_through_xml_byte_for_byte(string path)
     {
-        if (fileName.Length == 0)
-        {
-            return;
-        }
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = Corpus(fileName);
-        string xml = MgbXml.Decode(original);
-        byte[] rebuilt = MgbXml.Encode(xml);
+        byte[] rebuilt = MgbXml.Encode(MgbXml.Decode(original));
 
-        Assert.Equal(original.Length, rebuilt.Length);
-        Assert.True(original.AsSpan().SequenceEqual(rebuilt), $"{fileName} differs after an XML round trip");
+        Fixture.AssertSameBytes(path, original, rebuilt);
     }
 
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Exports_a_readable_document_rooted_at_MagmaPackage(string fileName)
+    [MemberData(nameof(MgbRoundTripTests.Packages), MemberType = typeof(MgbRoundTripTests))]
+    public void Exports_a_readable_document_rooted_at_MagmaPackage(string path)
     {
-        if (fileName.Length == 0)
-        {
-            return;
-        }
+        if (Fixture.Read(path) is not { } original) return;
 
-        XElement root = XDocument.Parse(MgbXml.Decode(Corpus(fileName))).Root!;
+        XElement root = XDocument.Parse(MgbXml.Decode(original)).Root!;
 
         Assert.Equal("MagmaPackage", root.Name.LocalName);
         Assert.NotNull(root.Element("TYPES"));
         Assert.NotNull(root.Element("CHILDREN"));
 
         // Counts are never stored: the areas the document declares are exactly its child elements.
-        MgbPackage package = MgbPackage.Read(Corpus(fileName));
+        MgbPackage package = MgbPackage.Read(original);
         Assert.Equal(package.Areas.Count, root.Element("CHILDREN")!.Elements("Area").Count());
         Assert.Equal(package.Types.RawIds.Count, root.Element("TYPES")!.Elements("TYPE").Count());
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Resolves_names_only_when_they_re_hash_to_the_stored_value()
     {
+        if (Fixture.Read("Mgb/options.mgb") is not { } options) return;
+
         // Every name the exporter writes must survive being hashed again - that verification is
         // what makes substituting a recovered name safe rather than a guess.
-        XElement root = XDocument.Parse(MgbXml.Decode(Corpus("options.mgb"))).Root!;
+        XElement root = XDocument.Parse(MgbXml.Decode(options)).Root!;
 
-        MgbPackage package = MgbPackage.Read(Corpus("options.mgb"));
+        MgbPackage package = MgbPackage.Read(options);
         HashSet<uint> real = [.. package.Areas.Select(a => a.UserData.NameId)];
 
         int resolved = 0;
@@ -114,13 +94,20 @@ public sealed class MgbXmlTests
     }
 
     [Theory]
-    [InlineData(0x00000000u)] // +0
-    [InlineData(0x3F800000u)] // 1
-    [InlineData(0xBF800000u)] // -1
-    [InlineData(0x80000000u)] // -0, which "0" would not reproduce
-    [InlineData(0x00000001u)] // smallest denormal
-    [InlineData(0x7F800000u)] // +Infinity
-    [InlineData(0x7FC00001u)] // NaN with a payload, which decimal text cannot carry
+    // +0
+    [InlineData(0x00000000u)]
+    // 1
+    [InlineData(0x3F800000u)]
+    // -1
+    [InlineData(0xBF800000u)]
+    // -0, which "0" would not reproduce
+    [InlineData(0x80000000u)]
+    // Smallest denormal
+    [InlineData(0x00000001u)]
+    // +Infinity
+    [InlineData(0x7F800000u)]
+    // NaN with a payload, which decimal text cannot carry
+    [InlineData(0x7FC00001u)]
     [InlineData(0xFFFFFFFFu)]
     public void Preserves_every_float_bit_pattern(uint bits)
     {
@@ -211,12 +198,13 @@ public sealed class MgbXmlTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Names_the_missing_field_when_one_is_misspelled()
     {
+        if (Fixture.Read("Mgb/options.mgb") is not { } options) return;
+
         // The reader must survive its own unwinding: an earlier revision validated leftovers from
         // Dispose, so this reported a list-length mismatch while the real error was in flight.
-        string xml = MgbXml.Decode(Corpus("options.mgb")).Replace("HIDDEN=", "HIDEN=");
+        string xml = MgbXml.Decode(options).Replace("HIDDEN=", "HIDEN=");
 
         MgbFormatException error = Assert.Throws<MgbFormatException>(() => MgbXml.Encode(xml));
         Assert.Contains("HIDDEN", error.Message);
@@ -224,22 +212,22 @@ public sealed class MgbXmlTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Rejects_an_attribute_the_format_does_not_define()
     {
-        string xml = MgbXml.Decode(Corpus("options.mgb"))
-            .Replace("<TYPES>", "<TYPES stowaway=\"1\">");
+        if (Fixture.Read("Mgb/options.mgb") is not { } options) return;
+
+        string xml = MgbXml.Decode(options).Replace("<TYPES>", "<TYPES stowaway=\"1\">");
 
         MgbFormatException error = Assert.Throws<MgbFormatException>(() => MgbXml.Encode(xml));
         Assert.Contains("stowaway", error.Message);
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Rejects_an_element_the_format_does_not_define()
     {
-        string xml = MgbXml.Decode(Corpus("options.mgb"))
-            .Replace("</MagmaPackage>", "<STOWAWAY /></MagmaPackage>");
+        if (Fixture.Read("Mgb/options.mgb") is not { } options) return;
+
+        string xml = MgbXml.Decode(options).Replace("</MagmaPackage>", "<STOWAWAY /></MagmaPackage>");
 
         MgbFormatException error = Assert.Throws<MgbFormatException>(() => MgbXml.Encode(xml));
         Assert.Contains("STOWAWAY", error.Message);
@@ -256,8 +244,7 @@ public sealed class MgbXmlTests
     /// <summary>
     /// FCSE's settings-page package is committed as XML only - its build encodes it with
     /// <c>mgb encode</c> - so this checks the source still builds into the package FCSE's native
-    /// code expects to find. It is the one mgb test that needs no game corpus, so it runs on a
-    /// fresh checkout.
+    /// code expects to find. It needs no retail fixture, so it runs on a fresh checkout.
     /// </summary>
     /// <remarks>
     /// The wiring these assertions cover generically - that every link resolves to something the
@@ -266,8 +253,10 @@ public sealed class MgbXmlTests
     /// general checker can know: the shape FCSE's own C++ was written against.
     /// </remarks>
     [Theory]
-    [InlineData("fcse", 1024, 768)]              // the `pc` UI set
-    [InlineData("fcse_widescreen", 1280, 800)]   // the `pcwidescreen` set
+    // The `pc` UI set
+    [InlineData("fcse", 1024, 768)]
+    // The `pcwidescreen` set
+    [InlineData("fcse_widescreen", 1280, 800)]
     public void The_fcse_page_package_builds_from_its_xml_in_the_shape_fcse_expects(
         string stem, ushort pageWidth, ushort pageHeight)
     {
@@ -330,7 +319,8 @@ public sealed class MgbXmlTests
         Assert.Equal(20, linked.Count(p => valueBank.Contains(p.Key)));
         Assert.Equal(20, linked.Count(p => sliderBank.Contains(p.Key)));
         Assert.Equal(20, linked.Count(p => editBank.Contains(p.Key)));
-        Assert.Equal(61, linked.Count); // three banks plus SETTING_LABEL_LIST, and nothing else
+        // Three banks plus SETTING_LABEL_LIST, and nothing else
+        Assert.Equal(61, linked.Count);
 
         // The text fields are bare EditBox elements rather than instances of a cell area - there is
         // no edit-box cell in common.mgb and no AddEditBoxSetting in CSettingsPage, so this is the
@@ -357,10 +347,10 @@ public sealed class MgbXmlTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void An_edit_made_in_xml_survives_the_rebuild()
     {
-        byte[] original = Corpus("options.mgb");
+        if (Fixture.Read("Mgb/options.mgb") is not { } original) return;
+
         MgbPackage before = MgbPackage.Read(original);
 
         string xml = MgbXml.Decode(original);

@@ -19,6 +19,20 @@ namespace JackAll.Tests;
 /// </remarks>
 public sealed class ReferenceExtractorTests
 {
+    private const string DepLoadFixture = DepLoadDocumentTests.EntityLibrary;
+    private const string XbmFixture = "Xbm/ggauthier-m-1337050735309082.xbm";
+    private const string SpkFixture = "Spk/004e1ccc_1644b214.spk";
+    private const string MgbFixture = "Mgb/fonts.mgb";
+    private const string FcbFixture = FcbDocumentTests.Dlc1;
+    private const string RtxFixture = RtxModelTests.Acacia;
+    private const string MoveFixture = "Move/movemgr.bin";
+
+    /// <summary>A terrain texture whose header names a <c>_mip0</c> companion.</summary>
+    private const string StreamedXbtFixture = "XbtStreamed/stiresjunk01_d.xbt";
+
+    /// <summary>One whose header names none.</summary>
+    private const string PlainXbtFixture = "XbtStreamed/desert_sand_still_d.xbt";
+
     /// <summary>A stand-in for a real VFS entry: only the path, hash and type matter to an
     /// extractor, and building a whole <see cref="GameVfs"/> per test would just be slower.</summary>
     private static VfsFile FileFor(string path) => new(
@@ -44,11 +58,9 @@ public sealed class ReferenceExtractorTests
     [Fact]
     public void Depload_extractor_reports_every_parent_child_pair()
     {
-        string path = Path.Combine("Fixtures", "DepLoad", "entitylibrary_depload.dat");
-        if (!File.Exists(path)) return; // fixture not present in this checkout
+        if (Fixture.Read(DepLoadFixture) is not { } content) return;
 
-        ReferenceSink sink = Extract(new DepLoadReferenceExtractor(), "worlds\\x\\entitylibrary_depload.dat",
-            File.ReadAllBytes(path));
+        ReferenceSink sink = Extract(new DepLoadReferenceExtractor(), "worlds\\x\\entitylibrary_depload.dat", content);
 
         // 433 parents / 1314 children, the counts DepLoadDocument's own remarks record for this file.
         // Every child yields two edges: the dependency itself and its type tag.
@@ -67,11 +79,9 @@ public sealed class ReferenceExtractorTests
     [Fact]
     public void Xbm_extractor_reports_texture_slots_by_name()
     {
-        string? path = FirstFixture(Path.Combine("Fixtures", "Xbm"), "*.xbm");
-        if (path is null) return; // fixture not present in this checkout
+        if (Fixture.Read(XbmFixture) is not { } content) return;
 
-        ReferenceSink sink = Extract(new XbmReferenceExtractor(), "graphics\\_materials\\test.xbm",
-            File.ReadAllBytes(path!));
+        ReferenceSink sink = Extract(new XbmReferenceExtractor(), "graphics\\_materials\\test.xbm", content);
 
         Assert.NotEmpty(sink.Edges);
         Assert.All(sink.Edges, e =>
@@ -88,11 +98,9 @@ public sealed class ReferenceExtractorTests
     [Fact]
     public void Spk_extractor_defines_every_record_id()
     {
-        string? path = FirstFixture(Path.Combine("Fixtures", "Spk"), "*.spk");
-        if (path is null) return; // fixture not present in this checkout
+        if (Fixture.Read(SpkFixture) is not { } content) return;
 
-        ReferenceSink sink = Extract(new SpkReferenceExtractor(), "soundbinary\\0000abcd.spk",
-            File.ReadAllBytes(path!));
+        ReferenceSink sink = Extract(new SpkReferenceExtractor(), "soundbinary\\0000abcd.spk", content);
 
         Assert.NotEmpty(sink.Definitions);
         Assert.All(sink.Definitions, d => Assert.Equal(RefSpace.SoundResource, d.Space));
@@ -101,10 +109,9 @@ public sealed class ReferenceExtractorTests
     [Fact]
     public void Mgb_extractor_reports_name_ids_and_texture_paths()
     {
-        string? path = FirstFixture(Path.Combine(TestSupport.RepositoryRoot, "tmp", "menu"), "*.mgb");
-        if (path is null) return; // fixture not present in this checkout
+        if (Fixture.Read(MgbFixture) is not { } content) return;
 
-        ReferenceSink sink = Extract(new MgbReferenceExtractor(), "ui\\test.mgb", File.ReadAllBytes(path!));
+        ReferenceSink sink = Extract(new MgbReferenceExtractor(), "ui\\test.mgb", content);
 
         // A package with no NameId at all would mean the visitor codec never reached the body.
         Assert.Contains(sink.Edges, e => e.Kind == RefKind.MgbNameId);
@@ -115,13 +122,12 @@ public sealed class ReferenceExtractorTests
     [Fact]
     public void Fcb_extractor_reports_string_paths_and_hash_values()
     {
-        string? path = FirstFixture(Path.Combine("Fixtures", "Fcb"), "*.fcb");
-        if (path is null) return; // fixture not present in this checkout
+        if (Fixture.Read(FcbFixture) is not { } content) return;
 
         var sink = new ReferenceSink(BundledClasses.Value);
         VfsFile file = FileFor("worlds\\x\\generated\\entitylibrary.fcb");
         sink.BeginFile((uint)file.Hash);
-        new FcbReferenceExtractor().Extract(file, File.ReadAllBytes(path!), sink);
+        new FcbReferenceExtractor().Extract(file, content, sink);
 
         // Without the class definitions every value is opaque, so this doubles as a check that the
         // bundled binary_classes.xml is actually being found by the test host.
@@ -150,11 +156,10 @@ public sealed class ReferenceExtractorTests
     [Fact]
     public void Xbt_extractor_reports_the_mip0_companion_and_nothing_else()
     {
-        string path = Path.Combine("Fixtures", "XbtStreamed", "stiresjunk01_d.xbt");
-        if (!File.Exists(path)) return; // fixture not present in this checkout
+        if (Fixture.Read(StreamedXbtFixture) is not { } content) return;
 
         ReferenceSink sink = Extract(new XbtReferenceExtractor(),
-            "graphics\\terrain\\_textures\\savannah\\stiresjunk01_d.xbt", File.ReadAllBytes(path));
+            "graphics\\terrain\\_textures\\savannah\\stiresjunk01_d.xbt", content);
 
         RefEdge edge = Assert.Single(sink.Edges);
         Assert.Equal(RefKind.XbtMipCompanion, edge.Kind);
@@ -166,11 +171,9 @@ public sealed class ReferenceExtractorTests
     [Fact]
     public void Xbt_extractor_is_silent_for_a_texture_with_no_companion()
     {
-        string path = Path.Combine("Fixtures", "XbtStreamed", "desert_sand_still_d.xbt");
-        if (!File.Exists(path)) return; // fixture not present in this checkout
+        if (Fixture.Read(PlainXbtFixture) is not { } content) return;
 
-        ReferenceSink sink = Extract(new XbtReferenceExtractor(),
-            "graphics\\test\\desert_sand_still_d.xbt", File.ReadAllBytes(path));
+        ReferenceSink sink = Extract(new XbtReferenceExtractor(), "graphics\\test\\desert_sand_still_d.xbt", content);
 
         Assert.Empty(sink.Edges);
     }
@@ -178,10 +181,8 @@ public sealed class ReferenceExtractorTests
     [Fact]
     public void Rtx_extractor_rewrites_each_material_slot_to_its_shipped_xbm()
     {
-        string path = Path.Combine("Fixtures", "Rtx", "rt_tree_acacia.rtx");
-        if (!File.Exists(path)) return; // fixture not present in this checkout
+        if (Fixture.Read(RtxFixture) is not { } content) return;
 
-        byte[] content = File.ReadAllBytes(path);
         ReferenceSink sink = Extract(new RtxReferenceExtractor(),
             "graphics\\vegetation\\rt_tree_acacia.rtx", content);
 
@@ -201,13 +202,10 @@ public sealed class ReferenceExtractorTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Move_extractor_reports_every_distinct_clip_of_the_retail_graph()
     {
-        string path = Path.Combine(Fc2Corpus.Root, "common", "graphics", "move", "movemgr.bin");
-        Assert.True(File.Exists(path), Fc2Corpus.MissingMessage("movemgr.bin"));
+        if (Fixture.Read(MoveFixture) is not { } content) return;
 
-        byte[] content = File.ReadAllBytes(path);
         ReferenceSink sink = Extract(new MoveReferenceExtractor(), "graphics\\move\\movemgr.bin", content);
 
         Assert.Equal(MoveWeapons.AllClipReferences(MoveCodec.Load(content)).Count, sink.Edges.Count);
@@ -219,11 +217,6 @@ public sealed class ReferenceExtractorTests
             Assert.Equal(RefSpace.FilePath, e.TargetSpace);
         });
     }
-
-    private static string? FirstFixture(string directory, string pattern)
-        => Directory.Exists(directory)
-            ? Directory.EnumerateFiles(directory, pattern).Order().FirstOrDefault()
-            : null;
 
     private static readonly Lazy<FcbClassDefinitions> BundledClasses = new(JackAll.Core.BundledAssets.LoadFcbClasses);
 }

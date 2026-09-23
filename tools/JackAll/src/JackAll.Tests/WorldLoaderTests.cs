@@ -48,11 +48,9 @@ public class WorldLoaderTests
     /// drawn by other layers - loading those would put a marker on every sector corner in the map.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_landmark_file_contributes_its_buildings_and_nothing_else()
     {
-        const string Fixture = @".\Fixtures\WorldSector\landmarknear4427.data.fcb";
-        if (!File.Exists(Fixture)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Landmark4427) is not { } landmark) return;
 
         var map = new TerrainMap
         {
@@ -63,7 +61,7 @@ public class WorldLoaderTests
 
         Fc2World world = WorldLoader.Load(map, path => path.EndsWith(
             @"landmarknear4427.data.fcb", StringComparison.OrdinalIgnoreCase)
-                ? File.ReadAllBytes(Fixture)
+                ? landmark
                 : null);
 
         Assert.All(world.Entities, e => Assert.StartsWith("StaticObject_", e.Name, StringComparison.Ordinal));

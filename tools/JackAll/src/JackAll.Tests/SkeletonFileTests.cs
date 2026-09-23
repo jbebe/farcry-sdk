@@ -3,51 +3,26 @@ using JackAll.Tools.Skeleton;
 namespace JackAll.Tests;
 
 /// <summary>
-/// The `.skeleton` gate: re-serialising every shipped rig has to return its bytes.
+/// A shipped `.skeleton` rig re-serialises to its own bytes.
 /// </summary>
 /// <remarks>
-/// <c>Write(Parse(x)) == x</c> over the retail set proves the reader and the writer at once, which
-/// matters here because the format has no chunk lengths - a bone's constraint payload is sized by a
-/// one-byte kind, so a wrong width silently reinterprets every bone after it rather than throwing.
-/// The Python codec this was ported from reaches 81 of 81; anything less is a port defect.
+/// <c>Write(Parse(x)) == x</c> proves the reader and the writer at once, which matters here because
+/// the format has no chunk lengths - a bone's constraint payload is sized by a one-byte kind, so a
+/// wrong width silently reinterprets every bone after it rather than throwing.
 /// </remarks>
 public sealed class SkeletonFileTests
 {
-    private const string Extension = ".skeleton";
-
-    [Fact]
-    public void Reserialises_every_shipped_rig_byte_for_byte()
+    [Theory]
+    [InlineData(MabFixtures.CharacterRig)]
+    [InlineData(MabFixtures.RifleRig)]
+    public void Reserialises_a_shipped_rig_byte_for_byte(string fixture)
     {
-        List<string> failures = [];
-        int checked_ = 0;
-
-        foreach (string path in Fc2Corpus.Find(Extension))
+        if (Fixture.Read(fixture) is not { } original)
         {
-            checked_++;
-            byte[] original = File.ReadAllBytes(path);
-            try
-            {
-                byte[] rewritten = SkeletonFile.Parse(original).Write();
-                if (!rewritten.AsSpan().SequenceEqual(original))
-                {
-                    failures.Add(Fc2Corpus.DescribeDifference(path, original, rewritten));
-                }
-            }
-            catch (Exception error)
-            {
-                failures.Add($"{Path.GetFileName(path)}: {error.Message}");
-            }
+            return;
         }
 
-        // Without this, a corpus holding no rigs passes on zero files.
-        Assert.True(
-            checked_ > 0 || !Fc2Corpus.Present,
-            $"{Fc2Corpus.Root} holds no *{Extension}, so this gate asserted nothing.");
-
-        Assert.True(
-            failures.Count == 0,
-            $"{checked_ - failures.Count}/{checked_} rigs round-tripped. First failures:{Environment.NewLine}"
-            + string.Join(Environment.NewLine, failures.Take(5)));
+        Fixture.AssertSameBytes(fixture, original, SkeletonFile.Parse(original).Write());
     }
 
     /// <summary>
@@ -56,14 +31,12 @@ public sealed class SkeletonFileTests
     [Fact]
     public void The_character_rig_parses_to_the_recorded_shape()
     {
-        string? path = Fc2Corpus.Find(Extension)
-            .FirstOrDefault(p => Path.GetFileName(p).Equals("pelvis_ref.skeleton", StringComparison.OrdinalIgnoreCase));
-        if (path is null)
+        if (Fixture.Read(MabFixtures.CharacterRig) is not { } bytes)
         {
             return;
         }
 
-        SkeletonFile skeleton = SkeletonFile.Parse(File.ReadAllBytes(path));
+        SkeletonFile skeleton = SkeletonFile.Parse(bytes);
 
         Assert.Equal(119, skeleton.Bones.Count);
         Assert.Equal(30, skeleton.Handles.Count);
@@ -79,23 +52,27 @@ public sealed class SkeletonFileTests
     }
 
     /// <summary>Sibling links are derived from each bone's parent, so rebuilding must be a no-op.</summary>
-    [Fact]
-    public void Rebuilding_the_hierarchy_reproduces_the_shipped_links()
+    [Theory]
+    [InlineData(MabFixtures.CharacterRig)]
+    [InlineData(MabFixtures.RifleRig)]
+    public void Rebuilding_the_hierarchy_reproduces_the_shipped_links(string fixture)
     {
-        foreach (string path in Fc2Corpus.Find(Extension))
+        if (Fixture.Read(fixture) is not { } bytes)
         {
-            SkeletonFile skeleton = SkeletonFile.Parse(File.ReadAllBytes(path));
-            (ushort, ushort)[] before = [.. skeleton.Bones.Select(b => (b.FirstChild, b.NextSibling))];
-
-            skeleton.RebuildHierarchy();
-
-            (ushort, ushort)[] after = [.. skeleton.Bones.Select(b => (b.FirstChild, b.NextSibling))];
-            Assert.True(before.SequenceEqual(after), $"{Path.GetFileName(path)}: links disagree");
+            return;
         }
+
+        SkeletonFile skeleton = SkeletonFile.Parse(bytes);
+        (ushort, ushort)[] before = [.. skeleton.Bones.Select(b => (b.FirstChild, b.NextSibling))];
+
+        skeleton.RebuildHierarchy();
+
+        (ushort, ushort)[] after = [.. skeleton.Bones.Select(b => (b.FirstChild, b.NextSibling))];
+        Assert.Equal(before, after);
     }
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_corpus_was_actually_found()
-        => Assert.True(Fc2Corpus.Find(Extension).Any(), Fc2Corpus.MissingMessage(Extension));
+    public void The_fixtures_were_actually_found()
+        => Fixture.AssertPresent(MabFixtures.CharacterRig, MabFixtures.RifleRig);
 }

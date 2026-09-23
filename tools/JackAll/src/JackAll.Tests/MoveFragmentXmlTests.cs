@@ -8,19 +8,17 @@ namespace JackAll.Tests;
 /// </summary>
 public sealed class MoveFragmentXmlTests
 {
-    public static TheoryData<string> CorpusFiles() => MoveStateIndexTests.CorpusFiles();
-
     /// <summary>
     /// Every state renders, parses back, and renders identically - the text is a fixed point, which
     /// is what <c>FragmentMerge</c> needs when it compares a vanilla ancestor against a mod's copy.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void Every_state_renders_and_parses_back_to_the_same_text(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } graph) return;
 
-        MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(File.ReadAllBytes(path)));
+        MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(graph));
 
         int checked_ = 0;
         foreach (MoveObject state in index.TopLevelStates)
@@ -39,12 +37,12 @@ public sealed class MoveFragmentXmlTests
     /// nothing is silently dropped on the way through the text.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void A_parsed_fragment_holds_the_whole_subtree(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } graph) return;
 
-        MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(File.ReadAllBytes(path)));
+        MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(graph));
 
         foreach (MoveObject state in index.TopLevelStates)
         {
@@ -69,12 +67,12 @@ public sealed class MoveFragmentXmlTests
     /// state hashes, never an index into the file it was cut from.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void A_fragment_carries_no_whole_file_stream_indices(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } graph) return;
 
-        MoveFile file = MoveCodec.Load(File.ReadAllBytes(path));
+        MoveFile file = MoveCodec.Load(graph);
         MoveStateIndex index = MoveStateIndex.Build(file);
 
         // The biggest state is the one most likely to reference outside itself.
@@ -99,12 +97,12 @@ public sealed class MoveFragmentXmlTests
     /// object against the graph they came from.
     /// </summary>
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
+    [MemberData(nameof(MoveStateIndexTests.Graphs), MemberType = typeof(MoveStateIndexTests))]
     public void An_external_reference_survives_as_an_address(string path)
     {
-        if (path.Length == 0) return;
+        if (Fixture.Read(path) is not { } graph) return;
 
-        MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(File.ReadAllBytes(path)));
+        MoveStateIndex index = MoveStateIndex.Build(MoveCodec.Load(graph));
 
         int external = 0;
         foreach (MoveObject state in index.TopLevelStates)
@@ -117,6 +115,6 @@ public sealed class MoveFragmentXmlTests
             }
         }
 
-        Assert.True(external > 0, "the corpus is expected to reference across states");
+        Assert.True(external > 0, "the graph is expected to reference across states");
     }
 }

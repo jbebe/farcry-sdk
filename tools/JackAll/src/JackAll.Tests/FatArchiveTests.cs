@@ -3,69 +3,25 @@ using JackAll.Core.Format;
 namespace JackAll.Tests;
 
 /// <summary>
-/// These run against the real shipped archives. Everything the tool does — every override, every
-/// rebuilt patch — rests on this bit-packing being exactly right, and the only authority on "right"
-/// is what Ubisoft actually shipped. A synthetic fixture would just test our own assumptions back
-/// at us.
+/// Everything the tool does — every override, every rebuilt patch — rests on this bit-packing being
+/// exactly right, and the only authority on "right" is what Ubisoft actually shipped, so the format
+/// tests run against a shipped <c>patch.fat</c>. A synthetic fixture would just test our own
+/// assumptions back at us.
 /// </summary>
 public class FatArchiveTests
 {
-    /// <summary>
-    /// Skips (rather than fails) when the game isn't installed, so the suite stays green on a
-    /// machine without a copy of FC2.
-    /// </summary>
-    private static string? FindDataDir()
-    {
-        string[] candidates =
-        [
-            @"C:\Program Files (x86)\Steam\steamapps\common\Far Cry 2",
-            @"D:\Steam\steamapps\common\Far Cry 2",
-        ];
-        return candidates
-            .Select(root => Path.Combine(root, "Data_Win32"))
-            .FirstOrDefault(Directory.Exists);
-    }
-
-    public static TheoryData<string> ShippedFats()
-    {
-        var data = new TheoryData<string>();
-        string? dataDir = FindDataDir();
-        if (dataDir is null)
-        {
-            data.Add(string.Empty); // keeps xUnit from erroring on an empty theory
-            return data;
-        }
-        foreach (string fat in Directory.EnumerateFiles(dataDir, "*.fat", SearchOption.AllDirectories))
-        {
-            data.Add(fat);
-        }
-        return data;
-    }
-
-    /// <summary>
-    /// xUnit v2 has no first-class skip, so the archive-backed theories no-op when FC2 isn't
-    /// installed. That means a green run on a machine without the game proves nothing about the
-    /// format — which is why <see cref="The_shipped_archives_were_actually_found"/> exists to make
-    /// that state visible instead of silently passing.
-    /// </summary>
-    private static bool GameNotInstalled(string fatPath) => string.IsNullOrEmpty(fatPath);
+    /// <summary>A shipped patch archive, which every test built on a real install stands up from.</summary>
+    public const string Fat = "Patch/patch.fat";
+    public const string Dat = "Patch/patch.dat";
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_shipped_archives_were_actually_found()
-    {
-        Assert.True(
-            FindDataDir() is not null,
-            "Far Cry 2 was not found, so every archive-backed test in this class silently no-opped. " +
-            "The format tests are only meaningful against the real shipped .fat files.");
-    }
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Fat, Dat);
 
-    [Theory]
-    [MemberData(nameof(ShippedFats))]
-    [Trait("Category", "RequiresFixture")]
-    public void Reserializing_a_shipped_fat_reproduces_it_byte_for_byte(string fatPath)
+    [Fact]
+    public void Reserializing_a_shipped_fat_reproduces_it_byte_for_byte()
     {
-        if (GameNotInstalled(fatPath)) return;
+        if (Fixture.Locate(Fat) is not { } fatPath) return;
 
         byte[] original = File.ReadAllBytes(fatPath);
 
@@ -77,12 +33,10 @@ public class FatArchiveTests
         Assert.Equal(original, rewritten.ToArray());
     }
 
-    [Theory]
-    [MemberData(nameof(ShippedFats))]
-    [Trait("Category", "RequiresFixture")]
-    public void Shipped_entries_are_sorted_by_hash_and_obey_the_engines_invariants(string fatPath)
+    [Fact]
+    public void Shipped_entries_are_sorted_by_hash_and_obey_the_engines_invariants()
     {
-        if (GameNotInstalled(fatPath)) return;
+        if (Fixture.Locate(Fat) is not { } fatPath) return;
 
         var archive = FatArchive.Read(fatPath);
 

@@ -9,20 +9,12 @@ namespace JackAll.Tests;
 /// </summary>
 public class DxtSectorTransposeTests
 {
-    private const string Fixture = @".\Fixtures\Sdat\atlas5126_diffuse.xbt";
+    private const string AtlasFixture = "Sdat/atlas5126_diffuse.xbt";
     private const int AtlasSide = 128;
     private const int SectorSide = 64;
 
     private static DdsSurface? Atlas()
-    {
-        if (!File.Exists(Fixture))
-        {
-            return null;
-        }
-
-        (_, byte[] dds) = XbtTexture.Split(File.ReadAllBytes(Fixture));
-        return DdsSurface.TryParse(dds);
-    }
+        => Fixture.Read(AtlasFixture) is { } bytes ? DdsSurface.TryParse(XbtTexture.Split(bytes).Dds) : null;
 
     /// <summary>Where a shader reads a world texel from, given the stored layout.</summary>
     private static (int X, int Y) Swapped(int x, int y)
@@ -42,10 +34,9 @@ public class DxtSectorTransposeTests
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_fixture_was_actually_found()
+    public void The_fixtures_were_actually_found()
     {
-        if (!Directory.Exists(@".\Fixtures\Sdat")) return;
-
+        Fixture.AssertPresent(AtlasFixture);
         Assert.NotNull(Atlas());
     }
 
@@ -55,7 +46,6 @@ public class DxtSectorTransposeTests
     /// the move of whole blocks and the mirror of the grid inside each.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Mirroring_up_front_reads_the_same_as_swapping_at_every_tap()
     {
         if (Atlas() is not { } atlas) return;
@@ -74,7 +64,6 @@ public class DxtSectorTransposeTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Mirroring_twice_gives_the_bytes_back()
     {
         if (Atlas() is not { } atlas) return;
@@ -91,7 +80,6 @@ public class DxtSectorTransposeTests
     /// than it does inside either one. Stored, that seam is a cliff.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_sector_seam_only_disappears_once_the_transpose_is_undone()
     {
         if (Atlas() is not { } atlas) return;

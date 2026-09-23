@@ -7,17 +7,13 @@ namespace JackAll.Tests;
 /// family, with every entity filed exactly once.</summary>
 public class EntityHierarchyTests
 {
-    private const string FixturePath = "Fixtures/WorldSector/worldsector56.data.fcb";
     private const string SectorPath = @"levels\mp_14_woodlands\generated\worldsectors\worldsector56.data.fcb";
 
     private static readonly ArchetypeIndex NoLibrary =
         ArchetypeIndex.Load([new ArchetypeLayer("missing.fcb")], _ => null);
 
-    private static List<WorldEntity> Entities() => [.. World().Entities];
-
-    private static Fc2World World()
+    private static Fc2World World(byte[] bytes)
     {
-        byte[] bytes = File.ReadAllBytes(FixturePath);
         var map = new TerrainMap
         {
             Name = "mp_14_woodlands",
@@ -31,12 +27,11 @@ public class EntityHierarchyTests
         => group.Entities.Concat(group.Groups.SelectMany(All));
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Layers_come_first_with_main_at_the_top()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        List<WorldEntity> entities = Entities();
+        List<WorldEntity> entities = [.. World(sector).Entities];
         IReadOnlyList<HierarchyGroup> layers = EntityHierarchy.Build(entities, NoLibrary);
 
         Assert.Equal(MissionLayers.MainName, layers[0].LayerPathId);
@@ -50,12 +45,11 @@ public class EntityHierarchyTests
     /// <summary>A prefab's row holds it and its members, ending on the prefab so a click on the row
     /// makes the prefab the primary selection; the members appear nowhere else.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_prefab_is_a_group_of_its_members_ending_on_itself()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        Fc2World world = World();
+        Fc2World world = World(sector);
         List<WorldEntity> entities = world.Entities;
         var session = new WorldEditSession(world, 10);
         List<WorldEntity> members = [.. entities.Where(e => e.LayerPathId == MissionLayers.MainName).Take(2)];
@@ -69,12 +63,11 @@ public class EntityHierarchyTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Every_entity_is_filed_exactly_once()
     {
-        if (!File.Exists(FixturePath)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
 
-        List<WorldEntity> entities = Entities();
+        List<WorldEntity> entities = [.. World(sector).Entities];
         List<WorldEntity> filed = [.. EntityHierarchy.Build(entities, NoLibrary).SelectMany(All)];
 
         Assert.Equal(entities.Count, filed.Count);

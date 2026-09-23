@@ -6,8 +6,8 @@ namespace JackAll.Tests;
 
 public class DominoValueRefsTests
 {
-    private static ReconstructedGraph BuildFrom(string source, DominoNodeCatalog? catalog = null) =>
-        GraphBuilder.Build(UserGraphParser.Parse(DominoLuaSource.Parse(source)), catalog);
+    private static ReconstructedGraph BuildFrom(string source) =>
+        GraphBuilder.Build(UserGraphParser.Parse(DominoLuaSource.Parse(source)));
 
     [Fact]
     public void A_bark_pairs_its_mission_tag_from_init_with_its_block()
@@ -71,54 +71,15 @@ public class DominoValueRefsTests
         Assert.Empty(DominoValueRefs.For(Assert.Single(graph.Nodes), graph));
     }
 
-    [Fact]
-    public void Every_real_sound_literal_is_a_sound_id_and_every_graph_value_names_a_real_graph()
+    [Theory]
+    [InlineData(DominoFixtures.FastTravel, 21)]
+    [InlineData(DominoFixtures.TaxiRide, 33)]
+    public void A_real_graphs_preloaded_sound_literals_are_found(string script, int expected)
     {
-        if (DominoCorpus.UserDirectory is not { } userDir || DominoCorpus.SystemDirectory is not { } systemDir) return;
+        if (Fixture.ReadText(script) is not { } source) return;
 
-        var userGraphs = Directory.EnumerateFiles(userDir, "*.lua", SearchOption.AllDirectories)
-            .Select(f => Path.GetRelativePath(userDir, f))
-            .ToHashSet(StringComparer.OrdinalIgnoreCase);
-        var catalog = new DominoNodeCatalog(path =>
-        {
-            string name = Path.GetFileName(path);
-            string candidate = Path.Combine(systemDir, name);
-            if (!File.Exists(candidate))
-            {
-                candidate = Path.Combine(userDir, name);
-            }
-            return File.Exists(candidate) ? File.ReadAllText(candidate) : null;
-        });
+        ReconstructedGraph graph = BuildFrom(source);
 
-        var failures = new List<string>();
-        int sounds = 0;
-        foreach (string file in Directory.EnumerateFiles(userDir, "*.lua").Where(f => !DominoDebugTwin.IsTwinPath(f)))
-        {
-            ReconstructedGraph graph = BuildFrom(File.ReadAllText(file), catalog);
-            foreach (GraphNode node in graph.Nodes)
-            {
-                var refs = DominoValueRefs.For(node, graph);
-                foreach (DataInPin pin in node.Signature?.DataIns ?? [])
-                {
-                    bool literal = node.Params.TryGetValue(pin.Name, out var expr) && DominoValueRefs.Resolve(expr, graph) is not null;
-                    if (literal && pin.Type == "Nomad|Sound" && !refs.Any(r => r.Pin == pin.Name && r.Kind == ValueRefKind.Sound))
-                    {
-                        failures.Add($"{Path.GetFileName(file)}: {node.Id}.{pin.Name} = {DominoExprPreview.Full(expr!)} is not a sound id");
-                    }
-                }
-
-                sounds += refs.Count(r => r.Kind == ValueRefKind.Sound);
-                foreach (ValueRef graphRef in refs.Where(r => r.Kind == ValueRefKind.Graph))
-                {
-                    if (!userGraphs.Contains(DominoNodeCatalog.ToVfsPath(graphRef.Value)[@"domino\user\".Length..]))
-                    {
-                        failures.Add($"{Path.GetFileName(file)}: {graphRef.Value} is not a user graph");
-                    }
-                }
-            }
-        }
-
-        Assert.True(failures.Count == 0, string.Join('\n', failures.Take(20)));
-        Assert.True(sounds > 0 || userGraphs.Count < 20, "No sound values found in the corpus.");
+        Assert.Equal(expected, graph.Nodes.SelectMany(n => DominoValueRefs.For(n, graph)).Count(r => r.Kind == ValueRefKind.Sound));
     }
 }

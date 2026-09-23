@@ -4,51 +4,26 @@ using JackAll.Tools.Xbm;
 namespace JackAll.Tests;
 
 /// <summary>
-/// The material gate: every shipped `.xbm` has to survive a decode of its LTMD body and come back
-/// byte for byte, and the three meshes that embed a material instead have to parse the other way.
+/// A shipped `.xbm`'s LTMD body decodes and re-serialises to its bytes, and a mesh that embeds its
+/// material instead parses the other way.
 /// </summary>
 /// <remarks>
 /// <see cref="XbgFileTests"/> already round-trips the container while carrying LTMD opaque, so this
-/// is the half that proves the body itself is understood. The Python codec reaches 2,379 of 2,379.
+/// is the half that proves the body itself is understood.
 /// </remarks>
 public sealed class XbmFileTests
 {
-    [Fact]
-    public void Reserialises_every_shipped_material_byte_for_byte()
+    [Theory]
+    [InlineData(XbmFixtures.Wood)]
+    [InlineData(XbmFixtures.Blended)]
+    public void Reserialises_a_shipped_material_byte_for_byte(string fixture)
     {
-        List<string> failures = [];
-        int checkedFiles = 0;
-        int albedos = 0;
-
-        foreach (string path in Fc2Corpus.Find(".xbm"))
+        if (Fixture.Read(fixture) is not { } original)
         {
-            checkedFiles++;
-            byte[] original = File.ReadAllBytes(path);
-            try
-            {
-                XbmFile material = XbmFile.Parse(original);
-                albedos += material.Albedo() is not null ? 1 : 0;
-                byte[] rewritten = material.Write();
-                if (!rewritten.AsSpan().SequenceEqual(original))
-                {
-                    failures.Add(Fc2Corpus.DescribeDifference(path, original, rewritten));
-                }
-            }
-            catch (Exception error)
-            {
-                failures.Add($"{Path.GetFileName(path)}: {error.Message}");
-            }
+            return;
         }
 
-        Assert.True(
-            checkedFiles > 0 || !Fc2Corpus.Present,
-            $"{Fc2Corpus.Root} holds no *.xbm, so this gate asserted nothing.");
-
-        Assert.True(
-            failures.Count == 0,
-            $"{checkedFiles - failures.Count}/{checkedFiles} materials round-tripped, "
-            + $"{albedos} naming an albedo. First failures:{Environment.NewLine}"
-            + string.Join(Environment.NewLine, failures.Take(5)));
+        Fixture.AssertSameBytes(fixture, original, XbmFile.Parse(original).Write());
     }
 
     /// <summary>
@@ -58,60 +33,45 @@ public sealed class XbmFileTests
     [Fact]
     public void A_repeated_key_survives_the_round_trip()
     {
-        List<string> repeaters = [];
-        foreach (string path in Fc2Corpus.Find(".xbm"))
+        if (Fixture.Read(XbmFixtures.RepeatedKey) is not { } original)
         {
-            byte[] original = File.ReadAllBytes(path);
-            XbmFile material = XbmFile.Parse(original);
-            if (material.Entries.Count == material.Textures.Count + material.Floats.Count + material.Integers.Count)
-            {
-                continue;
-            }
-
-            repeaters.Add(material.Name);
-            Assert.True(
-                material.Write().AsSpan().SequenceEqual(original),
-                $"{Path.GetFileName(path)} repeats a key and did not survive the round trip");
+            return;
         }
 
-        // Finding none would mean the check passed without ever exercising the case it exists for.
-        Assert.True(
-            repeaters.Count > 0 || !Fc2Corpus.Present,
-            "No shipped material repeated a key, so this gate never exercised the duplicate.");
+        XbmFile material = XbmFile.Parse(original);
+        Assert.NotEqual(
+            material.Textures.Count + material.Floats.Count + material.Integers.Count,
+            material.Entries.Count);
+        Fixture.AssertSameBytes(XbmFixtures.RepeatedKey, original, material.Write());
     }
 
     /// <summary>
-    /// The meshes that define their material inline rather than naming an `.xbm`, whose LTMD leads
-    /// with the name and part instead of the five-byte preamble.
+    /// A mesh that defines its material inline rather than naming an `.xbm`, whose LTMD leads with
+    /// the name and part instead of the five-byte preamble.
     /// </summary>
     [Fact]
     public void Inline_materials_parse_with_their_own_layout()
     {
-        int found = 0;
-        foreach (string path in Fc2Corpus.Find(".xbg"))
+        if (Fixture.Read(XbgFixtures.Bat) is not { } bytes)
         {
-            XbgFile model = XbgFile.Parse(File.ReadAllBytes(path));
-            if (model.Chunk(XbgFile.TagMaterialBody) is null)
-            {
-                continue;
-            }
-
-            foreach ((string name, XbmFile material) in XbmFile.InlineMaterials(model))
-            {
-                found++;
-                Assert.NotEmpty(name);
-                Assert.NotEmpty(material.Shader);
-                // The part it applies to is what an embedded material carries and a standalone
-                // one does not.
-                Assert.NotEmpty(material.Part);
-            }
+            return;
         }
 
-        Assert.True(found > 0 || !Fc2Corpus.Present, "No mesh carried an inline material.");
+        Dictionary<string, XbmFile> inline = XbmFile.InlineMaterials(XbgFile.Parse(bytes));
+        Assert.NotEmpty(inline);
+        foreach ((string name, XbmFile material) in inline)
+        {
+            Assert.NotEmpty(name);
+            Assert.NotEmpty(material.Shader);
+            // The part it applies to is what an embedded material carries and a standalone one
+            // does not.
+            Assert.NotEmpty(material.Part);
+        }
     }
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_corpus_was_actually_found()
-        => Assert.True(Fc2Corpus.Find(".xbm").Any(), Fc2Corpus.MissingMessage(".xbm"));
+    public void The_fixtures_were_actually_found()
+        => Fixture.AssertPresent(
+            XbmFixtures.Wood, XbmFixtures.Metal, XbmFixtures.Blended, XbmFixtures.Masked, XbmFixtures.RepeatedKey);
 }

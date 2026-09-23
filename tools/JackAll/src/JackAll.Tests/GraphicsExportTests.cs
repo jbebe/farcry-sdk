@@ -5,49 +5,25 @@ using JackAll.Tools.Xbt;
 namespace JackAll.Tests;
 
 /// <summary>
-/// Full-chain validation against the real game's exported graphics tree (tmp/graphics, absent on
-/// CI): mesh -> material archive path -> .xbm -> albedo .xbt -> uploadable DXT surface. This is
-/// the chain the map's model layer runs; the per-format details are pinned by the narrower
-/// fixture tests, this proves they compose on retail data.
+/// The whole chain the map's model layer runs, on a retail prop: mesh -> material archive path ->
+/// .xbm -> albedo .xbt -> uploadable DXT surface. The per-format details are pinned by the narrower
+/// fixture tests; this proves they compose.
 /// </summary>
 public class GraphicsExportTests
 {
-    private static readonly string? Root = FindRoot();
+    // The prop's materials and albedos, looked up by file name.
+    private static readonly Func<string, byte[]?> ReadByPath = Fixture.ByFileName("GraphicsExport");
 
-    private static string? FindRoot()
+    [Fact]
+    public void A_retail_mesh_resolves_every_material_to_a_decodable_texture()
     {
-        for (DirectoryInfo? dir = new(AppContext.BaseDirectory); dir is not null; dir = dir.Parent)
+        if (Fixture.Read(XbgFixtures.Prop) is not { } bytes)
         {
-            string candidate = Path.Combine(dir.FullName, "tmp", "graphics");
-            if (Directory.Exists(candidate))
-            {
-                return candidate;
-            }
+            return;
         }
-        return null;
-    }
 
-    /// <summary>Maps an archive path like graphics\actors\...\x.xbt onto the export folder.</summary>
-    private static byte[]? ReadByPath(string gamePath)
-    {
-        string relative = gamePath.StartsWith(@"graphics\", StringComparison.OrdinalIgnoreCase)
-            ? gamePath[9..]
-            : gamePath;
-        string full = Path.Combine(Root!, relative);
-        return File.Exists(full) ? File.ReadAllBytes(full) : null;
-    }
-
-    [Theory]
-    [InlineData(@"actors\buddy_andrehyppolite\andrehyppolite.xbg")]
-    [InlineData(@"objects\furnitures\chairs\chairbar01.xbg")]
-    [Trait("Category", "RequiresFixture")]
-    public void A_retail_mesh_resolves_every_material_to_a_decodable_texture(string mesh)
-    {
-        if (Root is null) return;
-
-        XbgModel model = XbgModel.Parse(File.ReadAllBytes(Path.Combine(Root, mesh)));
         WorldModel baked = WorldModels.Bake(
-            mesh, model, WorldModels.FineTriangleBudget, WorldModels.SurfaceResolver(ReadByPath))!;
+            XbgFixtures.Prop, XbgModel.Parse(bytes), WorldModels.FineTriangleBudget, WorldModels.SurfaceResolver(ReadByPath))!;
 
         Assert.NotEmpty(baked.MaterialRanges);
         foreach (MaterialRange range in baked.MaterialRanges)
@@ -56,11 +32,18 @@ public class GraphicsExportTests
                 $"material {range.MaterialName} resolved no albedo texture");
 
             byte[]? xbt = ReadByPath(range.DiffuseTexturePath!);
-            Assert.False(xbt is null, $"albedo {range.DiffuseTexturePath} not found in the export");
+            Assert.False(xbt is null, $"albedo {range.DiffuseTexturePath} is not among the fixtures");
 
             (_, byte[] dds) = XbtTexture.Split(xbt!);
             Assert.False(DdsSurface.TryParse(dds) is null,
                 $"albedo {range.DiffuseTexturePath} is not a plain DXT surface");
         }
     }
+
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void The_fixtures_were_actually_found()
+        => Fixture.AssertPresent(
+            "GraphicsExport/trodrigue-060927-56723838.xbm", "GraphicsExport/trodrigue-061024-47283710.xbm",
+            "GraphicsExport/metalburned_01_d.xbt", "GraphicsExport/fabrickevlar_01_d.xbt");
 }

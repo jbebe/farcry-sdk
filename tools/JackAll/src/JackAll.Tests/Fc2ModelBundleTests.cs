@@ -1,10 +1,9 @@
 using JackAll.Tools.Fc2Model;
-using JackAll.Tools.Xbg;
 
 namespace JackAll.Tests;
 
 /// <summary>
-/// Building a pack for a shipped model and applying it back.
+/// A pack built for a shipped model carries everything it names and applies back without loss.
 /// </summary>
 /// <remarks>
 /// The pack is the point of the whole exercise: one model, decoded, with no Dunia format inside it,
@@ -118,9 +117,7 @@ public sealed class Fc2ModelBundleTests
             }
 
             compared++;
-            Assert.True(
-                output.Content.AsSpan().SequenceEqual(read(output.Path)),
-                Fc2Corpus.DescribeDifference(output.Path, read(output.Path)!, output.Content));
+            Fixture.AssertSameBytes(output.Path, read(output.Path), output.Content);
         }
 
         Assert.True(compared >= 3, $"Only {compared} lossless entries were compared.");
@@ -146,7 +143,6 @@ public sealed class Fc2ModelBundleTests
             Assert.Throws<InvalidOperationException>(() => Fc2ModelApplier.Outputs(bundle));
         Assert.Contains(shared.Path, error.Message, StringComparison.Ordinal);
     }
-
 
     /// <summary>
     /// A weapon's motion is not named by anything in its mesh - it lives in a bank filed under the
@@ -191,41 +187,25 @@ public sealed class Fc2ModelBundleTests
                 Fc2ModelApplier.Outputs(loaded, onlyModified: false),
                 output => output.Path == Reload);
 
-            Assert.True(
-                written.Content.AsSpan().SequenceEqual(read(Reload)),
-                Fc2Corpus.DescribeDifference(Reload, read(Reload)!, written.Content));
+            Fixture.AssertSameBytes(Reload, read(Reload), written.Content);
         }
         finally
         {
             File.Delete(path);
         }
     }
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_corpus_was_actually_found()
-        => Assert.True(Reader() is not null, Fc2Corpus.MissingMessage(".xbg"));
 
-    /// <summary>Reads a game path out of the corpus, matching on the tail of the path.</summary>
+    /// <summary>Reads the rifle's closure from the folder each extension selects; null without the rifle.</summary>
     private static Func<string, byte[]?>? Reader()
-    {
-        if (!Fc2Corpus.Present)
-        {
-            return null;
-        }
+        => Fixture.Present(XbgFixtures.Ak47) ? ReadByExtension : null;
 
-        Dictionary<string, string> byTail = new(StringComparer.OrdinalIgnoreCase);
-        foreach (string extension in (string[])[".xbg", ".xbm", ".xbt", ".skeleton", ".mab"])
+    private static byte[]? ReadByExtension(string gamePath)
+        => Fixture.ByFileName(Path.GetExtension(gamePath).ToLowerInvariant() switch
         {
-            foreach (string path in Fc2Corpus.Find(extension))
-            {
-                byTail[Path.GetFileName(path)] = path;
-            }
-        }
-
-        return wanted =>
-        {
-            string name = Path.GetFileName(wanted.Replace('\\', '/'));
-            return byTail.TryGetValue(name, out string? found) ? File.ReadAllBytes(found) : null;
-        };
-    }
+            ".xbg" => "Xbg",
+            ".xbm" => "Xbm",
+            ".xbt" => "Texture",
+            ".skeleton" => "Skeleton",
+            _ => "Mab",
+        })(gamePath);
 }

@@ -5,50 +5,42 @@ using JackAll.Core.Format.Fcb;
 namespace JackAll.Tests;
 
 /// <summary>
-/// Runs against real, shipped .fcb files (extracted directly from the game's own archives:
-/// patch/worlds/dlc1/dlc_jungle entitylibrary trees, plus the patch-override tree) rather than a
-/// synthetic fixture, for the same reason as <see cref="XbtTextureTests"/> - the only authority on
+/// Runs against retail .fcb files (a world's entity library, a DLC map's, and the patch
+/// override) rather than a synthetic fixture, for the same reason as <see cref="XbtTextureTests"/> - the only authority on
 /// what the engine actually writes is what it actually shipped. Every parsing rule asserted here was
 /// independently confirmed against the real engine parser in Dunia.dll (Fcb_ParseObject @
 /// 0x10234d60, Fcb_ReadHeader @ 0x10235080) via GhidraMCP - see reverse/dunia/fcb_format.md.
 /// </summary>
 public class FcbDocumentTests
 {
-    private const string FixturesDir = "Fixtures/Fcb";
-
     /// <summary>Root type hash shared by every entitylibrary tree in these fixtures (CRC32("EntityLibrary")).</summary>
     private const uint EntityLibraryTypeHash = 0xBCDD10B4;
 
-    public static TheoryData<string> SampleFiles()
-    {
-        var data = new TheoryData<string>();
-        if (!Directory.Exists(FixturesDir))
-        {
-            data.Add(string.Empty); // keeps xUnit from erroring on an empty theory
-            return data;
-        }
-        foreach (string file in Directory.EnumerateFiles(FixturesDir, "*.fcb"))
-        {
-            data.Add(file);
-        }
-        return data;
-    }
+    // The base game's library.
+    public const string Worlds = "Fcb/worlds_entitylibrary.fcb";
+
+    // A DLC map's library.
+    public const string Dlc1 = "Fcb/dlc1_entitylibrary.fcb";
+
+    // The patch override, which redefines archetypes the other two already carry.
+    public const string PatchOverride = "Fcb/patch_entitylibrarypatchoverride.fcb";
+
+    // world1's own library, the one single-player resolves placed entities against.
+    public const string World1 = "Fcb/world1_entitylibrary.fcb";
+
+    public static TheoryData<string> EntityLibraries => new() { Worlds, Dlc1, PatchOverride };
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_fixture_files_were_actually_found()
-        => Assert.True(
-            Directory.Exists(FixturesDir) && Directory.EnumerateFiles(FixturesDir, "*.fcb").Any(),
-            $"{FixturesDir} had no .fcb samples, so every sample-backed test in this class silently no-opped.");
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Worlds, Dlc1, PatchOverride, World1);
 
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void Deserializing_a_real_shipped_fcb_produces_the_expected_root_shape(string path)
+    [MemberData(nameof(EntityLibraries))]
+    public void Deserializing_a_real_shipped_fcb_produces_the_expected_root_shape(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        FcbObject root = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        FcbObject root = FcbDocument.Deserialize(bytes);
 
         Assert.Equal(EntityLibraryTypeHash, root.TypeHash);
         Assert.True(root.Children.Count > 0);
@@ -62,13 +54,11 @@ public class FcbDocumentTests
     /// same number the file itself claims.
     /// </summary>
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void The_headers_object_count_matches_the_number_of_distinct_parsed_objects(string path)
+    [MemberData(nameof(EntityLibraries))]
+    public void The_headers_object_count_matches_the_number_of_distinct_parsed_objects(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } data) return;
 
-        byte[] data = File.ReadAllBytes(path);
         uint headerObjectCount = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(8, 4));
 
         FcbObject root = FcbDocument.Deserialize(data);
@@ -80,13 +70,12 @@ public class FcbDocumentTests
     }
 
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    [Trait("Category", "RequiresFixture")]
-    public void Deserializing_then_serializing_a_real_shipped_fcb_reproduces_the_same_tree(string path)
+    [MemberData(nameof(EntityLibraries))]
+    public void Deserializing_then_serializing_a_real_shipped_fcb_reproduces_the_same_tree(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        FcbObject original = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        FcbObject original = FcbDocument.Deserialize(bytes);
         byte[] rebuilt = FcbDocument.Serialize(original);
         FcbObject reparsed = FcbDocument.Deserialize(rebuilt);
 

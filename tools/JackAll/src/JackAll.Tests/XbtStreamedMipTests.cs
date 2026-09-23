@@ -9,36 +9,25 @@ namespace JackAll.Tests;
 /// </summary>
 public class XbtStreamedMipTests
 {
-    private const string Folder = @".\Fixtures\XbtStreamed";
-    private const string Streamed = "stiresjunk01_d.xbt";
-    private const string Companion = "stiresjunk01_d_mip0.xbt";
-    private const string Standalone = "desert_sand_still_d.xbt";
+    // A texture whose top level lives in a _mip0 companion.
+    private const string Streamed = "XbtStreamed/stiresjunk01_d.xbt";
 
-    private static byte[]? Fixture(string name)
-    {
-        string path = Path.Combine(Folder, name);
-        return File.Exists(path) ? File.ReadAllBytes(path) : null;
-    }
+    // Streamed's top level.
+    private const string Companion = "XbtStreamed/stiresjunk01_d_mip0.xbt";
 
-    /// <summary>Resolves the companion by file name, standing in for the archive lookup.</summary>
-    private static byte[]? ReadByPath(string path) => Fixture(Path.GetFileName(path));
+    // A DXT1 texture of the same 256 side that keeps its top level in one file.
+    internal const string Standalone = "XbtStreamed/desert_sand_still_d.xbt";
+
+    private static readonly Func<string, byte[]?> ReadByPath = Fixture.ByFileName("XbtStreamed");
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_fixtures_were_actually_found()
-    {
-        if (!Directory.Exists(Folder)) return;
-
-        Assert.NotNull(Fixture(Streamed));
-        Assert.NotNull(Fixture(Companion));
-        Assert.NotNull(Fixture(Standalone));
-    }
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Streamed, Companion, Standalone);
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_streamed_texture_names_its_companion_in_its_header()
     {
-        if (Fixture(Streamed) is not { } xbt) return;
+        if (Fixture.Read(Streamed) is not { } xbt) return;
 
         (byte[] header, _) = XbtTexture.Split(xbt);
 
@@ -47,10 +36,9 @@ public class XbtStreamedMipTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_texture_that_keeps_its_top_level_names_no_companion()
     {
-        if (Fixture(Standalone) is not { } xbt) return;
+        if (Fixture.Read(Standalone) is not { } xbt) return;
 
         (byte[] header, _) = XbtTexture.Split(xbt);
 
@@ -60,10 +48,9 @@ public class XbtStreamedMipTests
     /// <summary>The point of the whole exercise: reading the named file alone gives half the
     /// texture in each axis, and nothing about it looks wrong until it fills the screen.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Reading_a_streamed_texture_puts_the_companions_level_back_on_top()
     {
-        if (Fixture(Streamed) is not { } xbt) return;
+        if (Fixture.Read(Streamed) is not { } xbt) return;
 
         (_, byte[] dds) = XbtTexture.Split(xbt);
         DdsSurface alone = DdsSurface.TryParse(dds)!;
@@ -77,10 +64,9 @@ public class XbtStreamedMipTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_texture_with_no_companion_reads_exactly_as_it_is()
     {
-        if (Fixture(Standalone) is not { } xbt) return;
+        if (Fixture.Read(Standalone) is not { } xbt) return;
 
         DdsSurface surface = XbtSurface.TryRead(xbt, ReadByPath)!;
 
@@ -91,10 +77,9 @@ public class XbtStreamedMipTests
     /// <summary>A companion that cannot be read leaves the smaller chain rather than failing the
     /// texture: half resolution beats no ground at all.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void An_unreachable_companion_leaves_the_chain_it_found()
     {
-        if (Fixture(Streamed) is not { } xbt) return;
+        if (Fixture.Read(Streamed) is not { } xbt) return;
 
         DdsSurface surface = XbtSurface.TryRead(xbt, _ => null)!;
 
@@ -102,10 +87,9 @@ public class XbtStreamedMipTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_companion_that_is_not_twice_the_size_is_refused()
     {
-        if (Fixture(Streamed) is not { } xbt || Fixture(Standalone) is not { } wrong) return;
+        if (Fixture.Read(Streamed) is not { } xbt || Fixture.Read(Standalone) is not { } wrong) return;
 
         (_, byte[] dds) = XbtTexture.Split(xbt);
         DdsSurface surface = DdsSurface.TryParse(dds)!;

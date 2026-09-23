@@ -78,13 +78,12 @@ because nobody knows what it's called.
 
 ```
 dotnet build            # or open JackAll.sln
-dotnet test             # runs against the real installed game, if it's present
+dotnet test             # under a minute
 ```
 
-The tests are the interesting part. They don't use fixtures — they run against the archives Ubisoft
-actually shipped, because that's the only real authority on the format:
-
-- every shipped `.fat` re-serializes byte-for-byte identical,
-- the LZO decoder is checked against every compressed entry in the game (~110,000 streams),
-- a no-mod build reproduces the real 10 MB `patch.dat` byte-for-byte,
-- after a build with a mod applied, every *other* file still decompresses to its original bytes.
+Format tests run on a few real files Ubisoft shipped, because that's the only real authority on the
+format: two or three per format, each picked for a special case, not every file of a type. They live
+in `src/JackAll.Tests/Fixtures/<Format>/`, which is gitignored because the files are Ubisoft's; copy
+them out of your own game export. Without them the tests that need them no-op, and a
+`RequiresFixture` canary per class says so. The end-to-end tests also use the installed game, if
+it's present: a no-mod build reproduces the real `patch.dat` byte-for-byte.

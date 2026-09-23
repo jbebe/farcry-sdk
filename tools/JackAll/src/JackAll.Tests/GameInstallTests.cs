@@ -8,8 +8,6 @@ namespace JackAll.Tests;
 /// </summary>
 public class GameInstallTests : IDisposable
 {
-    private const string FixturesDir = "Fixtures/Patch";
-
     private readonly string _sandbox = Path.Combine(Path.GetTempPath(), "fc2mm-tests", Guid.NewGuid().ToString("N"));
 
     [Fact]
@@ -23,7 +21,6 @@ public class GameInstallTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void EnsureVanillaBackup_without_a_confirmation_delegate_does_not_refuse_a_modded_patch()
     {
         GameInstall? install = MakeInstall("suspicious");
@@ -46,7 +43,6 @@ public class GameInstallTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void EnsureVanillaBackup_refuses_a_modded_patch_when_the_caller_declines_to_confirm()
     {
         GameInstall? install = MakeInstall("declined");
@@ -59,7 +55,6 @@ public class GameInstallTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Restore_puts_the_backed_up_bytes_back()
     {
         GameInstall? install = MakeInstall("restore");
@@ -75,7 +70,6 @@ public class GameInstallTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void BackupWouldCaptureMods_flags_exactly_the_modded_no_backup_state()
     {
         GameInstall? install = MakeInstall("capture-check");
@@ -91,7 +85,6 @@ public class GameInstallTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void TryCountPatchEntries_reads_the_index_and_reports_unreadable_as_minus_one()
     {
         GameInstall? install = MakeInstall("count");
@@ -104,7 +97,6 @@ public class GameInstallTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void EnumerateArchiveFats_excludes_the_vanilla_backup_pair()
     {
         GameInstall? install = MakeInstall("enumerate");
@@ -118,7 +110,6 @@ public class GameInstallTests : IDisposable
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void ReadBaseGameHashes_reads_the_backup_not_the_live_patch_once_one_exists()
     {
         GameInstall? install = MakeInstall("base-hashes");
@@ -151,12 +142,8 @@ public class GameInstallTests : IDisposable
 
     private GameInstall? MakeInstall(string name)
     {
-        string fixtureFat = Path.Combine(FixturesDir, "patch.fat");
-        string fixtureDat = Path.Combine(FixturesDir, "patch.dat");
-        if (!File.Exists(fixtureFat) || !File.Exists(fixtureDat))
-        {
-            return null;
-        }
+        if (Fixture.Locate(FatArchiveTests.Fat) is not { } fixtureFat
+            || Fixture.Locate(FatArchiveTests.Dat) is not { } fixtureDat) return null;
 
         string root = Path.Combine(_sandbox, name);
         Directory.CreateDirectory(Path.Combine(root, "bin"));

@@ -8,9 +8,6 @@ namespace JackAll.Tests;
 /// <summary>Event links and prefab members, written and read back, and read off a retail sector.</summary>
 public class EntityLinksTests
 {
-    private static readonly string RetailSector = Path.Combine(
-        Fc2Corpus.Root, "worlds", "worlds", "levels", "w1_b_2", "generated", "worldsectors", "worldsector3859.data.fcb");
-
     [Fact]
     public void A_link_added_to_an_entity_without_events_reads_back_as_written()
     {
@@ -62,12 +59,11 @@ public class EntityLinksTests
 
     /// <summary>The link documented in entity-instancing.md: a light switched off on a state change.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_retail_link_and_its_prefab_read_as_documented()
     {
-        if (!File.Exists(RetailSector)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector3859) is not { } bytes) return;
 
-        List<FcbObject> entities = [.. FcbDocument.Deserialize(File.ReadAllBytes(RetailSector)).Children
+        List<FcbObject> entities = [.. FcbDocument.Deserialize(bytes).Children
             .SelectMany(layer => layer.Children).Where(e => e.TypeHash == WorldHashes.Entity)];
 
         EntityLink link = Assert.Single(entities.SelectMany(EntityLinks.Read),
@@ -78,13 +74,11 @@ public class EntityLinksTests
 
     /// <summary>Each event's fields come from the class its tag names, so a light's <c>hidType</c> resolves.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Every_field_of_a_retail_link_decodes_by_name()
     {
-        if (!File.Exists(RetailSector)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector3859) is not { } bytes) return;
 
-        XElement sector = XElement.Parse(FcbXml.ToXml(
-            FcbDocument.Deserialize(File.ReadAllBytes(RetailSector)), BundledAssets.LoadFcbClasses()));
+        XElement sector = XElement.Parse(FcbXml.ToXml(FcbDocument.Deserialize(bytes), BundledAssets.LoadFcbClasses()));
 
         List<XElement> links = [.. sector.Descendants("object").Where(o => (string?)o.Attribute("type") == "Link")];
         Assert.NotEmpty(links);
@@ -94,12 +88,11 @@ public class EntityLinksTests
 
     /// <summary>A grouped prefab is built with the class fields every retail one carries.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void Every_retail_prefab_names_its_class_as_a_new_group_does()
     {
-        if (!File.Exists(RetailSector)) return;
+        if (Fixture.Read(WorldSectorFragmentTests.Sector3859) is not { } bytes) return;
 
-        List<FcbObject> prefabs = [.. FcbDocument.Deserialize(File.ReadAllBytes(RetailSector)).Children
+        List<FcbObject> prefabs = [.. FcbDocument.Deserialize(bytes).Children
             .SelectMany(layer => layer.Children).Where(EntityGroups.IsPrefab)];
 
         Assert.NotEmpty(prefabs);

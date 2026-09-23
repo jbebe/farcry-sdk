@@ -3,7 +3,7 @@ using JackAll.Tools.Mgb;
 namespace JackAll.Tests;
 
 /// <summary>
-/// The correctness gate for the whole <c>.mgb</c> codec.
+/// Round-trips the <c>.mgb</c> codec over shipped packages.
 /// </summary>
 /// <remarks>
 /// <c>Write(Read(x)) == x</c> over real files proves the reader and the writer simultaneously: any
@@ -11,65 +11,34 @@ namespace JackAll.Tests;
 /// It matters far more than a "parses without throwing" check, because this format has no lengths,
 /// no alignment and no sentinels - a wrong field silently reinterprets everything after it, and a
 /// broken decoder can still land on a plausible-looking offset by coincidence.
-///
-/// The corpus lives in <c>tmp/menu/</c>, which is gitignored, so these tests skip rather than fail
-/// when it is absent - a fresh checkout should not report failures for data it was never given.
 /// </remarks>
 public sealed class MgbRoundTripTests
 {
-    private static readonly string CorpusDirectory =
-        Path.Combine(TestSupport.RepositoryRoot, "tmp", "menu");
+    /// <summary>A full menu page, a small one, and a fonts-only package whose one page is empty.</summary>
+    public static TheoryData<string> Packages => new() { "Mgb/options.mgb", "Mgb/controller.mgb", "Mgb/fonts.mgb" };
 
-    public static TheoryData<string> CorpusFiles()
+    [Fact]
+    [Trait("Category", "RequiresFixture")]
+    public void The_fixtures_were_actually_found()
+        => Fixture.AssertPresent("Mgb/options.mgb", "Mgb/controller.mgb", "Mgb/fonts.mgb");
+
+    [Theory]
+    [MemberData(nameof(Packages))]
+    public void Reserialises_a_package_byte_for_byte(string path)
     {
-        var data = new TheoryData<string>();
-        if (Directory.Exists(CorpusDirectory))
-        {
-            foreach (string path in Directory.EnumerateFiles(CorpusDirectory, "*.mgb").Order())
-            {
-                data.Add(Path.GetFileName(path));
-            }
-        }
-        if (data.Count == 0)
-        {
-            data.Add(string.Empty); // keeps xUnit from erroring on an empty theory
-        }
-        return data;
+        if (Fixture.Read(path) is not { } original) return;
+
+        byte[] rewritten = MgbPackage.Read(original).Write();
+
+        Fixture.AssertSameBytes(path, original, rewritten);
     }
 
     [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Reserialises_every_corpus_file_byte_for_byte(string fileName)
+    [MemberData(nameof(Packages))]
+    public void Reads_every_area_and_element_of_a_package(string path)
     {
-        if (fileName.Length == 0)
-        {
-            return; // corpus not present in this checkout
-        }
+        if (Fixture.Read(path) is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(Path.Combine(CorpusDirectory, fileName));
-        MgbPackage package = MgbPackage.Read(original);
-        byte[] rewritten = package.Write();
-
-        Assert.Equal(original.Length, rewritten.Length);
-        int firstDifference = FirstDifference(original, rewritten);
-        if (firstDifference >= 0)
-        {
-            Assert.Fail(
-                $"{fileName}: first byte difference at offset 0x{firstDifference:X} " +
-                $"(original 0x{original[firstDifference]:X2}, rewritten 0x{rewritten[firstDifference]:X2})");
-        }
-    }
-
-    [Theory]
-    [MemberData(nameof(CorpusFiles))]
-    public void Reads_every_area_and_element_of_every_corpus_file(string fileName)
-    {
-        if (fileName.Length == 0)
-        {
-            return;
-        }
-
-        byte[] original = File.ReadAllBytes(Path.Combine(CorpusDirectory, fileName));
         MgbPackage package = MgbPackage.Read(original);
 
         // Every area and element resolved to a real class - the reader throws otherwise, but
@@ -95,13 +64,8 @@ public sealed class MgbRoundTripTests
     [Fact]
     public void An_edited_value_survives_a_round_trip_without_moving_anything_else()
     {
-        string path = Path.Combine(CorpusDirectory, "controller.mgb");
-        if (!File.Exists(path))
-        {
-            return;
-        }
+        if (Fixture.Read("Mgb/controller.mgb") is not { } original) return;
 
-        byte[] original = File.ReadAllBytes(path);
         MgbPackage package = MgbPackage.Read(original);
 
         MgbArea area = package.Areas[0];
@@ -109,7 +73,8 @@ public sealed class MgbRoundTripTests
         area.FrameRate = before + 7;
 
         byte[] edited = package.Write();
-        Assert.Equal(original.Length, edited.Length); // a u32 in place changes no sizes
+        // A u32 in place changes no sizes.
+        Assert.Equal(original.Length, edited.Length);
 
         MgbPackage reread = MgbPackage.Read(edited);
         Assert.Equal(before + 7, reread.Areas[0].FrameRate);
@@ -122,7 +87,8 @@ public sealed class MgbRoundTripTests
                 differing++;
             }
         }
-        Assert.InRange(differing, 1, 4); // the one u32 field, nothing more
+        // The one u32 field, nothing more.
+        Assert.InRange(differing, 1, 4);
     }
 
     /// <summary>Declaring a class the file doesn't already list must append a type-table entry and
@@ -130,13 +96,9 @@ public sealed class MgbRoundTripTests
     [Fact]
     public void Declaring_a_new_class_grows_the_type_table_and_still_round_trips()
     {
-        string path = Path.Combine(CorpusDirectory, "controller.mgb");
-        if (!File.Exists(path))
-        {
-            return;
-        }
+        if (Fixture.Read("Mgb/controller.mgb") is not { } original) return;
 
-        MgbPackage package = MgbPackage.Read(File.ReadAllBytes(path));
+        MgbPackage package = MgbPackage.Read(original);
         int before = package.Types.RawIds.Count;
 
         // Shipped files carry a build-wide superset of the type table, so most classes are already
@@ -162,19 +124,7 @@ public sealed class MgbRoundTripTests
         MgbPackage reread = MgbPackage.Read(grown);
         Assert.Equal(absent, reread.Types.NameForSlot(newSlot));
         Assert.Equal(package.Areas.Count, reread.Areas.Count);
-        Assert.Equal(4, grown.Length - new FileInfo(path).Length); // one extra u32 in the table
-    }
-
-    private static int FirstDifference(byte[] a, byte[] b)
-    {
-        int shared = Math.Min(a.Length, b.Length);
-        for (int i = 0; i < shared; i++)
-        {
-            if (a[i] != b[i])
-            {
-                return i;
-            }
-        }
-        return a.Length == b.Length ? -1 : shared;
+        // One extra u32 in the table.
+        Assert.Equal(4, grown.Length - original.Length);
     }
 }

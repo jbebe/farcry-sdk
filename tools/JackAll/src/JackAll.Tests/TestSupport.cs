@@ -66,7 +66,9 @@ internal static class TestSupport
     /// find the repo's checked-in <c>assets\fc2.hashlist</c> — it only ever lives under
     /// JackAll.App's output, not this project's own, so every caller needs to search for it rather
     /// than assuming a fixed relative path.</summary>
-    public static NameDatabase LoadNames()
+    public static NameDatabase LoadNames() => Names.Value;
+
+    private static readonly Lazy<NameDatabase> Names = new(() =>
     {
         string dir = AppContext.BaseDirectory;
         while (dir is not null && !File.Exists(Path.Combine(dir, "assets", "fc2.hashlist")))
@@ -74,7 +76,7 @@ internal static class TestSupport
             dir = Path.GetDirectoryName(dir)!;
         }
         return NameDatabase.Load(Path.Combine(dir!, "assets", "fc2.hashlist"));
-    }
+    });
 
     /// <summary>What <paramref name="obj"/> would serialize to on its own, fully expanded (no
     /// backreference dedup - <see cref="FcbDocument.Serialize"/> never emits it). Reuses the public

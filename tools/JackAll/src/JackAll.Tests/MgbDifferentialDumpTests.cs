@@ -5,8 +5,8 @@ using JackAll.Tools.Mgb;
 namespace JackAll.Tests;
 
 /// <summary>
-/// Emits a canonical, line-oriented dump of every corpus package so it can be diffed against the
-/// independently-written Python reference implementation
+/// Emits a canonical, line-oriented dump of the <c>Fixtures\Mgb</c> packages so it can be diffed
+/// against the independently-written Python reference implementation
 /// (<c>tools/misc/mgb-python-reference/mgb_parser.py</c>).
 /// </summary>
 /// <remarks>
@@ -20,7 +20,7 @@ namespace JackAll.Tests;
 public sealed class MgbDifferentialDumpTests
 {
     [Fact]
-    public void Dump_corpus_when_requested()
+    public void Dump_fixtures_when_requested()
     {
         string? outputPath = Environment.GetEnvironmentVariable("MGB_DUMP");
         if (string.IsNullOrEmpty(outputPath))
@@ -28,14 +28,14 @@ public sealed class MgbDifferentialDumpTests
             return;
         }
 
-        string corpus = Path.Combine(TestSupport.RepositoryRoot, "tmp", "menu");
         var text = new StringBuilder();
-        // Ordinal, not the culture-aware default: the Python reference sorts by raw code point, and
-        // '.' vs '_' orders differently under culture rules, which would shuffle whole file blocks.
-        foreach (string file in Directory.EnumerateFiles(corpus, "*.mgb").Order(StringComparer.Ordinal))
+        // In ordinal file-name order, the order the Python reference sorts by.
+        foreach (string file in new[] { "Mgb/controller.mgb", "Mgb/fonts.mgb", "Mgb/options.mgb" })
         {
-            MgbPackage package = MgbPackage.Read(File.ReadAllBytes(file));
-            text.Append(Dump(Path.GetFileName(file), package));
+            if (Fixture.Read(file) is { } bytes)
+            {
+                text.Append(Dump(Path.GetFileName(file), MgbPackage.Read(bytes)));
+            }
         }
         File.WriteAllText(outputPath, text.ToString());
     }

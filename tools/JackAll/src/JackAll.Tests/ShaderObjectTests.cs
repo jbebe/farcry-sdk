@@ -3,97 +3,63 @@ using JackAll.Tools.Shader;
 namespace JackAll.Tests;
 
 /// <summary>
-/// Runs against the shipped <c>shadersobj</c> export rather than a synthetic fixture: the only
-/// authority on the container is what the game actually ships, and the whole point of the reader is
-/// that a rebuilt object is byte-identical to the one it replaced.
+/// Runs against shipped <c>shadersobj</c> files rather than synthetic ones: the only authority on the
+/// container is what the game actually ships, and the whole point of the reader is that a rebuilt
+/// object is byte-identical to the one it replaced.
 /// </summary>
 public class ShaderObjectTests
 {
-    private static string ObjDirectory => Path.Combine(
-        Fc2Corpus.Root, "shadersobj", "engine", "shaders", "obj");
-
-    private static IEnumerable<string> Objects()
-        => Directory.Exists(ObjDirectory)
-            ? Directory.EnumerateFiles(ObjDirectory, "shadernumber_*", SearchOption.AllDirectories)
-                .Where(f => !f.EndsWith(".rs", StringComparison.OrdinalIgnoreCase))
-                .Order()
-            : [];
+    private const string Pixel = "Shader/h11/shadernumber_4cf23f91.pso";
+    private const string Vertex = "Shader/h30/shadernumber_3aa04cb0.vso";
+    private const string Index = "Shader/index.pso";
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_shader_objects_were_actually_found()
-        => Assert.True(Objects().Any(), Fc2Corpus.MissingMessage(".pso"));
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Pixel, Vertex, Index);
 
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void Every_shipped_object_round_trips_byte_identically()
+    [Theory]
+    [InlineData(Pixel)]
+    [InlineData(Vertex)]
+    public void A_shipped_object_round_trips_byte_identically(string fixture)
     {
-        var failures = new List<string>();
-        int parsed = 0;
+        if (Fixture.Read(fixture) is not { } original) return;
 
-        foreach (string path in Objects())
-        {
-            byte[] original = File.ReadAllBytes(path);
-            byte[] rebuilt = ShaderObject.Parse(original).Build();
-            parsed++;
+        byte[] rebuilt = ShaderObject.Parse(original).Build();
 
-            int difference = Fc2Corpus.FirstDifference(original, rebuilt);
-            if (difference >= 0 || original.Length != rebuilt.Length)
-            {
-                failures.Add($"{Path.GetFileName(path)} at byte {difference}");
-            }
-        }
+        Assert.True(Fixture.FirstDifference(original, rebuilt) < 0,
+            Fixture.DescribeDifference(fixture, original, rebuilt));
+    }
 
-        Assert.True(failures.Count == 0, $"{failures.Count} of {parsed} objects changed: "
-            + string.Join(", ", failures.Take(10)));
+    [Theory]
+    [InlineData(Pixel, "ps_3_0")]
+    [InlineData(Vertex, "vs_3_0")]
+    public void A_shipped_object_declares_a_shader_model_3_profile(string fixture, string profile)
+    {
+        if (Fixture.Read(fixture) is not { } bytes) return;
+
+        Assert.Equal(profile, ShaderObject.Parse(bytes).Profile);
+    }
+
+    [Theory]
+    [InlineData(Pixel)]
+    [InlineData(Vertex)]
+    public void An_objects_bucket_folder_is_its_hash_low_seven_bits(string fixture)
+    {
+        uint hash = uint.Parse(
+            Path.GetFileNameWithoutExtension(fixture)["shadernumber_".Length..],
+            System.Globalization.NumberStyles.HexNumber);
+
+        Assert.Equal(
+            Path.Combine(Path.GetFileName(Path.GetDirectoryName(fixture)!), Path.GetFileName(fixture)),
+            ShaderIndex.PathOf(hash, Path.GetExtension(fixture).TrimStart('.')));
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void Every_shipped_object_declares_a_shader_model_3_profile()
-    {
-        string[] unexpected = Objects()
-            .Select(path => (path, ShaderObject.Parse(File.ReadAllBytes(path)).Profile))
-            .Where(x => x.Profile != (x.path.EndsWith(".vso", StringComparison.OrdinalIgnoreCase)
-                ? "vs_3_0"
-                : "ps_3_0"))
-            .Select(x => $"{Path.GetFileName(x.path)} is {x.Profile}")
-            .Take(10)
-            .ToArray();
-
-        Assert.True(unexpected.Length == 0, string.Join(", ", unexpected));
-    }
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void An_objects_bucket_folder_is_its_hash_low_seven_bits()
-    {
-        string[] misfiled = Objects()
-            .Where(path =>
-            {
-                uint hash = uint.Parse(
-                    Path.GetFileNameWithoutExtension(path)["shadernumber_".Length..],
-                    System.Globalization.NumberStyles.HexNumber);
-                return ShaderIndex.PathOf(hash, Path.GetExtension(path).TrimStart('.'))
-                    != Path.Combine(Path.GetFileName(Path.GetDirectoryName(path)!), Path.GetFileName(path));
-            })
-            .Take(10)
-            .ToArray();
-
-        Assert.True(misfiled.Length == 0, string.Join(", ", misfiled));
-    }
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_shaders_no_option_permutation_keys_on_the_crc32_of_its_name()
     {
-        string index = Path.Combine(ObjDirectory, "index.pso");
-        if (!File.Exists(index))
-        {
-            return;
-        }
+        if (Fixture.Read(Index) is not { } index) return;
 
-        ShaderIndex table = ShaderIndex.Parse(File.ReadAllBytes(index));
+        ShaderIndex table = ShaderIndex.Parse(index);
         string[] unresolved =
             ["celestialbody", "skydome", "starsphere", "skydisk", "cloudnoisecombine", "cloudnoiseblur"];
 
@@ -122,18 +88,16 @@ public class ShaderObjectTests
         Assert.Equal(shader.Build(), restored.Build());
     }
 
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void No_shipped_object_carries_a_constant_table_to_strip()
+    [Theory]
+    [InlineData(Pixel)]
+    [InlineData(Vertex)]
+    public void A_shipped_object_carries_no_constant_table_to_strip(string fixture)
     {
-        string[] changed = Objects()
-            .Select(path => (path, Bytecode: ShaderObject.Parse(File.ReadAllBytes(path)).Bytecode))
-            .Where(x => ShaderObject.StripConstantTable(x.Bytecode).Length != x.Bytecode.Length)
-            .Select(x => Path.GetFileName(x.path))
-            .Take(10)
-            .ToArray();
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        Assert.True(changed.Length == 0, string.Join(", ", changed));
+        byte[] bytecode = ShaderObject.Parse(bytes).Bytecode;
+
+        Assert.Equal(bytecode.Length, ShaderObject.StripConstantTable(bytecode).Length);
     }
 
     [Fact]

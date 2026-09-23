@@ -1,48 +1,27 @@
+using JackAll.Core;
 using JackAll.Core.Format.Fcb;
 
 namespace JackAll.Tests;
 
 /// <summary>
-/// Decodes and re-encodes every single value in real shipped fragments and checks the bytes come back
-/// byte-for-byte identical - the strongest available check that <see cref="FcbValueCodec"/>'s byte
-/// layouts actually match <see cref="FcbDocument"/>'s binary format, not just each other.
+/// Each value in a retail library decodes and re-encodes byte for byte: <see cref="FcbValueCodec"/>'s
+/// layouts match <see cref="FcbDocument"/>'s binary format, not just each other.
 /// </summary>
-[Trait("Category", "RequiresFixture")]
 public class FcbValueCodecTests
 {
-    private const string FixturesDir = "Fixtures/Fcb";
-    private const string ClassesPath = "Fixtures/Fcb/binary_classes.xml";
-
-    public static TheoryData<string> SampleFiles()
-    {
-        var data = new TheoryData<string>();
-        if (!Directory.Exists(FixturesDir))
-        {
-            data.Add(string.Empty);
-            return data;
-        }
-        foreach (string file in Directory.EnumerateFiles(FixturesDir, "*.fcb"))
-        {
-            data.Add(file);
-        }
-        return data;
-    }
+    private static readonly Lazy<FcbClassDefinitions> Classes = new(BundledAssets.LoadFcbClasses);
 
     [Theory]
-    [MemberData(nameof(SampleFiles))]
-    public void Every_value_in_a_real_fcb_survives_decode_then_encode_byte_for_byte(string path)
+    [MemberData(nameof(FcbDocumentTests.EntityLibraries), MemberType = typeof(FcbDocumentTests))]
+    public void Every_value_in_a_real_fcb_survives_decode_then_encode_byte_for_byte(string fixture)
     {
-        if (string.IsNullOrEmpty(path)) return;
+        if (Fixture.Read(fixture) is not { } bytes) return;
 
-        FcbClassDefinitions defs = File.Exists(ClassesPath)
-            ? FcbClassDefinitions.Load(ClassesPath)
-            : FcbClassDefinitions.Empty;
-
-        FcbObject root = FcbDocument.Deserialize(File.ReadAllBytes(path));
+        FcbObject root = FcbDocument.Deserialize(bytes);
 
         int checkedCount = 0;
         int fallbackCount = 0;
-        AssertRoundTrips(root, defs, ref checkedCount, ref fallbackCount);
+        AssertRoundTrips(root, Classes.Value, ref checkedCount, ref fallbackCount);
 
         Assert.True(checkedCount > 1000, $"Only checked {checkedCount} values - fixture may be empty/unreadable.");
     }
@@ -66,8 +45,7 @@ public class FcbValueCodecTests
 
             byte[] reEncoded = FcbValueCodec.Encode(type, decoded);
 
-            Assert.True(originalBytes.AsSpan().SequenceEqual(reEncoded),
-                $"Value {nameHash:X8} (type {type}, {originalBytes.Length} bytes) didn't round-trip through FcbValueCodec.");
+            Fixture.AssertSameBytes($"value {nameHash:X8} ({type})", originalBytes, reEncoded);
 
             checkedCount++;
             if (type == FcbMemberType.BinHex && declaredType != FcbMemberType.BinHex)

@@ -12,39 +12,31 @@ namespace JackAll.Tests;
 /// </summary>
 public class VegetationBillboardTests
 {
-    private const string Folder = @".\Fixtures\Billboard";
+    // The impostor's card mesh.
+    private const string Mesh = "Billboard/facingbush.xbg";
 
-    private static byte[]? Fixture(string name)
-        => File.Exists(Path.Combine(Folder, name)) ? File.ReadAllBytes(Path.Combine(Folder, name)) : null;
-
-    [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void The_fixtures_were_actually_found()
-    {
-        if (!Directory.Exists(Folder)) return;
-
-        Assert.NotNull(Fixture("facingbush.xbg"));
-        Assert.NotNull(Fixture("facingbush.xbm"));
-    }
+    // The impostor's material, which declares it a billboard.
+    private const string Material = "Billboard/facingbush.xbm";
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(Mesh, Material);
+
+    [Fact]
     public void The_impostors_material_declares_itself_a_billboard()
     {
-        if (Fixture("facingbush.xbm") is not { } xbm) return;
+        if (Fixture.Read(Material) is not { } xbm) return;
 
         Assert.True(WorldModels.SurfaceOf(XbmMaterial.Parse(xbm)).Billboard);
     }
 
     /// <summary>Ordinary geometry has to come back false, or every mesh would spin to the camera.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void An_ordinary_material_does_not()
     {
-        string path = @".\Fixtures\XbmAlpha\masked.xbm";
-        if (!File.Exists(path)) return;
+        if (Fixture.Read(XbmFixtures.Masked) is not { } xbm) return;
 
-        Assert.False(WorldModels.SurfaceOf(XbmMaterial.Parse(File.ReadAllBytes(path))).Billboard);
+        Assert.False(WorldModels.SurfaceOf(XbmMaterial.Parse(xbm)).Billboard);
     }
 
     /// <summary>
@@ -52,10 +44,9 @@ public class VegetationBillboardTests
     /// measures it - and why this pins the measurement against a real file.
     /// </summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void The_impostors_card_is_measured_looking_along_negative_y()
     {
-        if (Fixture("facingbush.xbg") is not { } xbg || Fixture("facingbush.xbm") is not { } xbm) return;
+        if (Fixture.Read(Mesh) is not { } xbg || Fixture.Read(Material) is not { } xbm) return;
 
         MaterialSurface surface = WorldModels.SurfaceOf(XbmMaterial.Parse(xbm));
         WorldModel model = WorldModels.Bake(
@@ -68,10 +59,9 @@ public class VegetationBillboardTests
     }
 
     [Fact]
-    [Trait("Category", "RequiresFixture")]
     public void A_mesh_no_material_marks_has_no_facing()
     {
-        if (Fixture("facingbush.xbg") is not { } xbg) return;
+        if (Fixture.Read(Mesh) is not { } xbg) return;
 
         WorldModel model = WorldModels.Bake(
             "facingbush.xbg", XbgModel.Parse(xbg), WorldModels.FineTriangleBudget, _ => MaterialSurface.None)!;

@@ -59,13 +59,11 @@ public class EulerZxyTests
 
     /// <summary>Every orientation a retail sector ships survives, including its large and odd ones.</summary>
     [Fact]
-    [Trait("Category", "RequiresFixture")]
-    public void Every_shipped_orientation_in_the_fixture_sector_round_trips()
+    public void Every_orientation_in_a_retail_sector_round_trips()
     {
-        const string fixture = "Fixtures/WorldSector/worldsector56.data.fcb";
-        Assert.True(File.Exists(fixture), $"{fixture} was not found.");
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } bytes) return;
 
-        FcbObject root = FcbDocument.Deserialize(File.ReadAllBytes(fixture));
+        FcbObject root = FcbDocument.Deserialize(bytes);
         int checkedCount = 0;
         foreach (FcbObject entity in root.Children.SelectMany(layer => layer.Children))
         {
