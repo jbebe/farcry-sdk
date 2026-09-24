@@ -24,6 +24,11 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Fetch the bundled ffmpeg
+        # checkout leaves LFS files as pointers; only this one is shipped, the Ghidra exports are not.
+        working-directory: ${{ github.workspace }}
+        run: git lfs pull --include "tools/JackAll/assets/ffmpeg.exe"
+
       - name: Prepare the release
         id: release
         uses: ./.github/actions/prepare-release
