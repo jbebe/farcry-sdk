@@ -1,8 +1,6 @@
-// Grass lit by the sun, in place of the vertex shader the engine builds for its lit grass. Every
-// clump still turns to face the camera and is placed, swayed, fogged and shadowed exactly as the
-// engine's own does it, operation for operation, so it lands on the depth its depth pass wrote. Only
-// the light handed to the engine's pixel shader is ours, built from what a clump's turn leaves
-// alone: the height up a blade, the tuft's sides, the blade's lean, the sun and the eye.
+// Grass lit by the sun, in place of the vertex shader the engine builds for it. Placement, sway,
+// fog and shadow are the engine's operation for operation; the light is ours, built only from what
+// a clump's turn toward the camera leaves alone. See docs/docs/file-formats/shader-objects.md.
 
 float4x4 ViewProjectionMatrix : register(c4);
 // The camera's heading, which every clump is turned by.
@@ -30,9 +28,9 @@ float2 DiffuseTiling1 : register(c81);
 // y  how far a clump's sides turn toward or away from the sun
 // z  the shine along blades
 // w  the sunlight through a blade the sun stands behind
-float4 Grass : register(c90);
+float4 Grass : register(c110);
 // x  how narrow the shine along blades is
-float4 GrassSheen : register(c91);
+float4 GrassSheen : register(c111);
 
 // The box instance positions are packed into.
 static const float3 WORLD_BOX = float3(5120.0f, 5120.0f, 256.0f);

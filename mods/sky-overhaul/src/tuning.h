@@ -1,5 +1,6 @@
-// Every value the clouds, the glare, the night, the cloud shadows, the ambient occlusion, the grade
-// and the grass are tuned by, kept in bin\sky-overhaul.ini and edited in DevTools' overlay.
+// Every value the clouds, the glare, the night, the cloud shadows, the ambient occlusion, the grade,
+// the grass and the leaves are tuned by, kept in bin\sky-overhaul.ini and edited in DevTools'
+// overlay.
 #pragma once
 
 namespace SkyOverhaul::Tuning {
@@ -18,6 +19,8 @@ struct Values {
     float cloudThickness;
     float cloudSize;
     float cloudWind;
+
+    float duskFogBrightness;
 
     float glareStrength;
     float glareSpread;
@@ -60,6 +63,12 @@ struct Values {
     float grassSheen;
     float grassSheenNarrowness;
     float grassGlow;
+
+    float leafCrownShade;
+    float leafCrownThickness;
+    float leafTilt;
+    float leafGlint;
+    float leafGlow;
 };
 
 // What the effects draw with.

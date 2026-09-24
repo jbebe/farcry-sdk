@@ -66,7 +66,13 @@ set(SHADER_PASSES
   "occlusion.fx:BlurPS:ps_3_0:occlusion_blur_ps.h:g_occlusionBlurPixelShader"
   "occlusion.fx:ApplyPS:ps_3_0:occlusion_apply_ps.h:g_occlusionApplyPixelShader"
   "grass.fx:MainVS:vs_3_0:grass_vs.h:g_grassVertexShader"
-  "grass.fx:CascadedVS:vs_3_0:grass_cascaded_vs.h:g_grassCascadedVertexShader")
+  "grass.fx:CascadedVS:vs_3_0:grass_cascaded_vs.h:g_grassCascadedVertexShader"
+  "leaves.fx:ShadowedVS:vs_3_0:leaves_shadowed_vs.h:g_leavesShadowedVertexShader"
+  "leaves.fx:ShadowedCopiesVS:vs_3_0:leaves_shadowed_copies_vs.h:g_leavesShadowedCopiesVertexShader"
+  "leaves.fx:CascadedVS:vs_3_0:leaves_cascaded_vs.h:g_leavesCascadedVertexShader"
+  "leaves.fx:CascadedCopiesVS:vs_3_0:leaves_cascaded_copies_vs.h:g_leavesCascadedCopiesVertexShader"
+  "leaves.fx:UnshadowedVS:vs_3_0:leaves_unshadowed_vs.h:g_leavesUnshadowedVertexShader"
+  "leaves.fx:UnshadowedCopiesVS:vs_3_0:leaves_unshadowed_copies_vs.h:g_leavesUnshadowedCopiesVertexShader")
 
 # Included by more than one shader source, so any change to them recompiles them all.
 set(SHADER_INCLUDES
@@ -98,13 +104,15 @@ add_library(SkyOverhaul SHARED
   "src/main.cpp"
   "src/clouds.cpp"
   "src/dazzle.cpp"
-  "src/foliage.cpp"
   "src/grade.cpp"
+  "src/grass.cpp"
+  "src/leaves.cpp"
   "src/night.cpp"
   "src/occlusion.cpp"
   "src/shadows.cpp"
   "src/sky.cpp"
   "src/sky_model.cpp"
+  "src/sun_shadows.cpp"
   "src/tuning.cpp"
   "src/engine/camera.cpp"
   "src/engine/cloud_layer.cpp"

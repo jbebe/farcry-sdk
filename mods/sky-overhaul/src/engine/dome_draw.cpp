@@ -1,6 +1,8 @@
 #include "engine/dome_draw.h"
 
+#include "engine/com.h"
 #include "engine/depth_texture.h"
+#include "engine/fog_tint.h"
 #include "engine/frame.h"
 #include "engine/known_shaders.h"
 #include "engine/solid_depth.h"
@@ -49,6 +51,10 @@ namespace {
     // Saturation, ColorRemapData and ContrastData, a register each.
     constexpr UINT kGradeRegisters = 3;
 
+    // Where our foliage shaders' own registers start, above every register the engine's lit grass
+    // and leaves read.
+    constexpr UINT kFoliageParameters = 110;
+
     using DrawIndexedPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, INT,
                                                        UINT, UINT, UINT, UINT);
     using DrawPrimitiveFn = HRESULT(__stdcall*)(IDirect3DDevice9*, D3DPRIMITIVETYPE, UINT, UINT);
@@ -58,7 +64,8 @@ namespace {
     SkyOverhaul::DomeDraw::SubstituteFn g_substitute = nullptr;
     SkyOverhaul::DomeDraw::SubstituteFn g_maskSubstitute = nullptr;
     SkyOverhaul::DomeDraw::GradeFn g_grade = nullptr;
-    SkyOverhaul::DomeDraw::FoliageFn g_foliage = nullptr;
+    SkyOverhaul::DomeDraw::FoliageFn g_grass = nullptr;
+    SkyOverhaul::DomeDraw::FoliageFn g_leaves = nullptr;
     bool g_watchDepth = false;
     SkyOverhaul::DomeDraw::Mode g_mode = SkyOverhaul::DomeDraw::Mode::Engine;
 
@@ -156,21 +163,66 @@ namespace {
         return SkyOverhaul::KnownShaders::Bound(device).kind == Kind::Moon;
     }
 
+    // Which of ours draws this kind of lit foliage, if any.
+    SkyOverhaul::DomeDraw::FoliageFn Lighter(SkyOverhaul::KnownShaders::VertexKind kind) {
+        using SkyOverhaul::KnownShaders::VertexKind;
+        switch (kind) {
+        case VertexKind::LitGrass:
+        case VertexKind::LitGrassCascaded:
+            return g_grass;
+        case VertexKind::ShadowedLeaves:
+        case VertexKind::ShadowedLeafCopies:
+        case VertexKind::CascadedLeaves:
+        case VertexKind::CascadedLeafCopies:
+        case VertexKind::UnshadowedLeaves:
+        case VertexKind::UnshadowedLeafCopies:
+            return g_leaves;
+        default:
+            return nullptr;
+        }
+    }
+
+    // Lit foliage through our vertex shader and its registers, with the engine's put back after.
+    template <class Draw>
+    HRESULT DrawFoliage(IDirect3DDevice9* device, SkyOverhaul::DomeDraw::FoliageFn light,
+                        SkyOverhaul::KnownShaders::VertexKind kind, Draw draw) {
+        constexpr UINT kRegisters = SkyOverhaul::DomeDraw::kFoliageParameterRegisters;
+        float parameters[kRegisters * 4] = {};
+        float engineParameters[kRegisters * 4] = {};
+        IDirect3DVertexShader9* engine = nullptr;
+        IDirect3DVertexShader9* ours = light(device, kind, parameters);
+        if (ours == nullptr || FAILED(device->GetVertexShader(&engine)) ||
+            FAILED(device->GetVertexShaderConstantF(kFoliageParameters, engineParameters,
+                                                    kRegisters))) {
+            SkyOverhaul::Release(engine);
+            return draw();
+        }
+        device->SetVertexShader(ours);
+        device->SetVertexShaderConstantF(kFoliageParameters, parameters, kRegisters);
+        const HRESULT drawn = draw();
+        device->SetVertexShaderConstantF(kFoliageParameters, engineParameters, kRegisters);
+        device->SetVertexShader(engine);
+        SkyOverhaul::Release(engine);
+        return drawn;
+    }
+
     // The draws named by their shaders: one of the world's depth pass is drawn again into the solid
-    // depth, grass and leaves are handed over whole, a depth reader shows the linear depth texture,
-    // and the grade is drawn with our values and its own put back. `draw` is the engine's call.
+    // depth, lit grass and leaves are drawn through our vertex shaders, a depth reader shows the
+    // linear depth texture, and the grade is drawn with our values and its own put back. `draw` is
+    // the engine's call.
     template <class Draw>
     HRESULT WatchShaders(IDirect3DDevice9* device, UINT primitives, Draw draw) {
-        using SkyOverhaul::KnownShaders::Foliage;
         using SkyOverhaul::KnownShaders::Kind;
         if (SkyOverhaul::SolidDepth::Begin(device)) {
             draw();
             SkyOverhaul::SolidDepth::End(device);
         }
-        if (g_foliage != nullptr) {
-            const Foliage kind = SkyOverhaul::KnownShaders::FoliageBound(device);
-            if (kind != Foliage::None) {
-                return g_foliage(device, kind, SkyOverhaul::DomeDraw::EngineDraw(draw));
+        if (g_grass != nullptr || g_leaves != nullptr) {
+            const SkyOverhaul::KnownShaders::VertexKind vertex =
+                SkyOverhaul::KnownShaders::VertexBound(device);
+            const SkyOverhaul::DomeDraw::FoliageFn light = Lighter(vertex);
+            if (light != nullptr) {
+                return DrawFoliage(device, light, vertex, draw);
             }
         }
         const bool gradeShape = g_grade != nullptr && primitives <= kScreenPrimitives;
@@ -197,6 +249,7 @@ namespace {
 
     HRESULT __stdcall DrawPrimitiveDetour(IDirect3DDevice9* device, D3DPRIMITIVETYPE type,
                                           UINT startVertex, UINT primitiveCount) {
+        SkyOverhaul::FogTint::BeforeDraw(device);
         return WatchShaders(device, primitiveCount, [&] {
             return g_originalPlain(device, type, startVertex, primitiveCount);
         });
@@ -206,6 +259,7 @@ namespace {
                                                  INT baseVertexIndex, UINT minVertexIndex,
                                                  UINT numVertices, UINT startIndex,
                                                  UINT primitiveCount) {
+        SkyOverhaul::FogTint::BeforeDraw(device);
         if (Substitute(device, type, numVertices, primitiveCount) ||
             SubstituteMask(device, type)) {
             return D3D_OK;
@@ -282,8 +336,12 @@ void SkyOverhaul::DomeDraw::SetGrade(GradeFn grade) {
     g_grade = grade;
 }
 
-void SkyOverhaul::DomeDraw::SetFoliage(FoliageFn foliage) {
-    g_foliage = foliage;
+void SkyOverhaul::DomeDraw::SetGrass(FoliageFn grass) {
+    g_grass = grass;
+}
+
+void SkyOverhaul::DomeDraw::SetLeaves(FoliageFn leaves) {
+    g_leaves = leaves;
 }
 
 void SkyOverhaul::DomeDraw::SetWatchDepth(bool watch) {

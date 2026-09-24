@@ -100,6 +100,59 @@ The grass material places its instances from vertex data, so its per-instance wi
 never appear as constants; the combination above is what is left to find it by. The tree trunk binds
 `DistanceFactors` and `LevelLOD` too, which is why the trunk's own constants rule it out.
 
+### Grass lit by the sun is built at runtime
+
+:::info[Verified via reverse engineering]
+Measured on GOG in savannah and jungle, by the bytecode of every grass draw, over three launches
+that gave the same CRCs.
+:::
+
+The 39 grass `.vso` draw grass only into depth: the linear depth pass, and its alpha-tested near
+grass. Grass lit in the HDR scene pass comes through vertex shaders that match no object, which the
+engine builds for itself:
+
+| Vertex shader | Pixel shader | Draws |
+| --- | --- | --- |
+| `736F4429` | `D26F57AE`, `B65F81B2` with alpha | lit by the sun, one shadow map slice |
+| `50B69F13` | `FA083E8F` | lit by the sun, shadow cascades |
+| `0701D375` | `D26F57AE` | the same for bent clumps, placed through a rotation from the instance data |
+| `A08FE8BF`, `7601537E` | `ABB7093C` | lit without a shadow |
+| `05D4DC7E`, `94B54206` | `5D532300` | an additive light pass, depth test equal |
+
+Every grass vertex shader, shipped or built, turns each clump by `GrassCylindricalBillboardMatrix` at
+`c32` to `c34`, reading only `xyz`: one camera heading shared by every clump, so each faces the eye.
+The savannah meshes are flat sheets whose blades all face within about 22° of one direction, which
+is why the turn is needed.
+
+The lit pair splits the work so that the vertex shader holds all the light. The pixel shader draws
+`texture × (TEXCOORD1.rgb + TEXCOORD2.rgb × shadow)`, fogged by the two `.w` values. Per vertex,
+`736F4429` computes:
+
+- ambient: `(instance colour × 2.5 + the clump's sky occlusion) × SkyColor × ½`;
+- sun: `saturate(ground normal · sun) × LightColor`, plus a glint `pow(…, 7)` on a pattern built from
+  position and wind rather than a normal;
+- both × instance colour × vertex colour × 4, and × `1 +` a wave from the wind's lean.
+
+Its registers match the prototype's global table (`ViewProjectionMatrix` `c4`, `CameraPosition`
+`c45`, `FogColorVector` `c48`, `FogValues` `c51`, `FogHeightValues` `c52`, `WindSimParamsX` and
+`WindSimParamsY` `c65` and `c66`) and then `ShadowProjectionMatrix` `c71` to `c73`,
+`MeshDecompression` `c74`, `LightColor` `c75`, `LightDirectionWS` `c76`, the shadow's fades `c77`
+to `c79`, `SkyColor` `c80` and `DiffuseTiling1` `c81`. The shadowless pair moves `LightColor`,
+`LightDirectionWS` and `SkyColor` to `c72` to `c74`. A replacement that repeats `736F4429`'s
+placement instruction for instruction lands on the depth the depth pass wrote; Sky Overhaul's
+`grass.fx` does.
+
+### How a shadow read spreads its samples
+
+Every one of the 272 retail pixel shaders that binds `ShadowMapSize` reads the shadow map 8 times
+around the point and averages, with the samples `ShadowMapSize.zw`, one texel, apart times a
+factor. The 158 that pick their cascade per pixel carry the factor in one `def` (encoded
+`0x05000051`): `0.5, 1/6, 1/3, 1`, the near, middle and far slice's spread in its own texels,
+chosen by a `dp4` against the one-hot slice. Of the 114 others, 87 bind `CascadedShadowTexelScale`
+and take the factor from its `x`, set per draw; the remaining 27 were not examined. No other
+register is read with `ShadowMapSize.zw`, so scaling it widens every shadow alike; scaling the `def`
+widens the farther slices alone.
+
 A row's registers-occupied field is nonzero for many viewport globals in every shader searched, the
 water reflection constants in grass among them, so a global's row alone does not show that a
 shader reads it. The material's own parameters are the ones to search by.

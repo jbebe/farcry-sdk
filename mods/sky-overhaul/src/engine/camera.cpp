@@ -1,5 +1,7 @@
 #include "engine/camera.h"
 
+#include "engine/fog_tint.h"
+
 #include <cstdint>
 #include <cstring>
 
@@ -63,6 +65,8 @@ bool SkyOverhaul::Camera::Read(IDirect3DDevice9* device, View& out) {
     Copy3(block + kFogColourVector, out.fogColourVector);
     Copy3(block + kFogColour, out.fogColour);
     Copy3(block + kFogColourRange, out.fogColourRange);
+    // The registers hold the land's fog by now, and the sky meets the horizon in the engine's.
+    FogTint::Engine(out.fogColour, out.fogColourRange);
     Copy3(block + kFogValues, out.fogValues);
     std::memcpy(out.fogHeightValues, block + kFogHeightValues, sizeof(out.fogHeightValues));
     out.bloom = block[kBloom];

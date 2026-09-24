@@ -12,126 +12,153 @@ namespace {
     constexpr size_t kSetVertexConstantSlot = 94;
     constexpr size_t kSetPixelConstantSlot = 109;
 
-    // The near end of the fog's colour ramp and the distance from it to the far end. The engine
-    // reads the ramp by heading against its own fog vector, so a horizon is one colour looking
-    // along that vector and another looking against it.
+    // The heading the fog's colour ramp runs along, its near end, and the distance from there to
+    // the far end: the engine reads the ramp by heading against the first, so one end faces along
+    // it and the other away. The engine turns the heading round with the view, so which end faces
+    // the sun changes from one upload to the next.
+    constexpr UINT kFogVector = 48;
     constexpr UINT kFogColour = 49;
     constexpr UINT kFogColourRange = 50;
-
-    // How much darker than the engine's own fog the land is kept.
-    constexpr float kShade = 0.6f;
-    // The most one channel of the sky's hue may ask for.
-    constexpr float kHueCap = 3.0f;
-    // A sky darker than this has no hue to lend.
-    constexpr float kHuelessSky = 1.0e-3f;
+    constexpr UINT kFogRegisters = 3;
 
     using SetConstantFn = HRESULT(__stdcall*)(IDirect3DDevice9*, UINT, const float*, UINT);
 
     SetConstantFn g_originalVertex = nullptr;
     SetConstantFn g_originalPixel = nullptr;
 
-    // The sky's horizon hue at a luminance of one, along the fog heading and against it, and whether
-    // each end has one.
-    struct Horizon {
-        float towardHue[3];
-        float awayHue[3];
-        bool towardHasHue;
-        bool awayHasHue;
+    struct Dusk {
+        float dusk;
+        float brightness;
+        // Toward the sun, flat.
+        float sun[2];
+    };
+
+    // One of the two constant files the fog is carried in: its three registers as the engine last
+    // set them, the colour and range we wrote over them, and whether either holds ours now.
+    struct Path {
+        bool pixel;
+        float engine[kFogRegisters * 4];
+        bool have[kFogRegisters];
+        float written[8];
+        bool ours;
     };
 
     // Written once a frame by the sky and read on whatever thread uploads constants.
-    SkyOverhaul::Seqlock<Horizon> g_horizon;
+    SkyOverhaul::Seqlock<Dusk> g_dusk;
     bool g_have = false;
+    // Whether the sun is set far enough for the land's fog to change, kept for the draws to test.
+    bool g_dusky = false;
     uint32_t g_tints = 0;
+    uint32_t g_restores = 0;
+    Path g_vertex = {false};
+    Path g_pixel = {true};
 
-    float Luminance(const float colour[3]) {
-        return colour[0] * 0.299f + colour[1] * 0.587f + colour[2] * 0.114f;
+    HRESULT Set(IDirect3DDevice9* device, const Path& path, const float* values) {
+        return (path.pixel ? g_originalPixel : g_originalVertex)(device, kFogColour, values, 2);
     }
 
-    // A colour at a luminance of one, each channel capped. False, with nothing written, for a colour
-    // too dark to have a hue.
-    bool Hue(const float colour[3], float out[3]) {
-        const float luminance = Luminance(colour);
-        if (luminance < kHuelessSky) {
-            return false;
+    // Writes the dusk's fog over the engine's, or puts the engine's back once there is none. Sends
+    // the two registers again rather than editing an upload on its way past: the engine hands over
+    // a block whose length it chose, and two registers of our own cannot disturb anything else.
+    void Write(IDirect3DDevice9* device, Path& path) {
+        if (!path.have[0] || !path.have[1] || !path.have[2]) {
+            return;
         }
+        const float* engine = path.engine + 4;
+        Dusk dusk;
+        if (!g_have || !g_dusk.Latest(dusk) || dusk.dusk <= 0.0f) {
+            if (path.ours) {
+                Set(device, path, engine);
+                path.ours = false;
+            }
+            return;
+        }
+
+        // The end of the ramp toward the sun turns to the colour of the other end, and both dim.
+        const bool sunNear = path.engine[0] * dusk.sun[0] + path.engine[1] * dusk.sun[1] >= 0.0f;
+        const float shade = 1.0f + (dusk.brightness - 1.0f) * dusk.dusk;
         for (size_t i = 0; i < 3; i++) {
-            const float hue = colour[i] / luminance;
-            out[i] = hue < kHueCap ? hue : kHueCap;
+            float nearEnd = engine[i];
+            float farEnd = engine[i] + engine[4 + i];
+            float& sunward = sunNear ? nearEnd : farEnd;
+            sunward += ((sunNear ? farEnd : nearEnd) - sunward) * dusk.dusk;
+            path.written[i] = nearEnd * shade;
+            path.written[4 + i] = (farEnd - nearEnd) * shade;
         }
-        return true;
-    }
-
-    // The engine's fog colour at its own brightness in the sky's hue, shaded, or the engine's own
-    // where the sky has no hue.
-    void Shade(const float engine[3], const float hue[3], bool hasHue, float out[3]) {
-        if (!hasHue) {
-            std::copy_n(engine, 3, out);
-            return;
-        }
-        const float brightness = Luminance(engine) * kShade;
-        for (size_t i = 0; i < 3; i++) {
-            out[i] = hue[i] * brightness;
-        }
-    }
-
-    // Sends the two registers again rather than editing the upload on its way past. The engine
-    // hands over a block whose length it chose, and rewriting a copy of all of it would mean
-    // guessing how long that can be; two registers of our own cost one small upload and cannot
-    // disturb anything the caller was not already writing there.
-    void Replace(IDirect3DDevice9* device, UINT start, const float* data, UINT count,
-                 SetConstantFn set) {
-        if (!g_have) {
-            return;
-        }
-        // Any upload that covers both ends of the ramp, wherever it starts. The engine sets these
-        // from more than one place and not every one of them begins at the camera block, which is
-        // what a narrower test missed: the colour was replaced while the world loaded and written
-        // over on every frame after it.
-        if (start > kFogColour || start + count <= kFogColourRange) {
-            return;
-        }
-
-        Horizon horizon;
-        if (!g_horizon.Latest(horizon)) {
-            return;
-        }
-
-        const float* colour = data + (kFogColour - start) * 4;
-        const float* range = data + (kFogColourRange - start) * 4;
-        const float engineAway[3] = {colour[0] + range[0], colour[1] + range[1],
-                                     colour[2] + range[2]};
-
-        float toward[3];
-        float away[3];
-        Shade(colour, horizon.towardHue, horizon.towardHasHue, toward);
-        Shade(engineAway, horizon.awayHue, horizon.awayHasHue, away);
-
-        // Both ends are replaced and the ramp rebuilt between them, because the second register is
-        // the distance from one colour to another rather than a colour itself.
-        const float replaced[8] = {toward[0],
-                                   toward[1],
-                                   toward[2],
-                                   colour[3],
-                                   away[0] - toward[0],
-                                   away[1] - toward[1],
-                                   away[2] - toward[2],
-                                   range[3]};
-        set(device, kFogColour, replaced, 2);
+        path.written[3] = engine[3];
+        path.written[7] = engine[7];
+        Set(device, path, path.written);
+        path.ours = true;
         g_tints++;
+    }
+
+    // The engine sets the three registers together from some places and one at a time from
+    // others, so each is remembered as it last set it and the colour and range are written back
+    // after any of them.
+    void Replace(IDirect3DDevice9* device, UINT start, const float* data, UINT count, Path& path) {
+        bool any = false;
+        for (UINT i = 0; i < kFogRegisters; i++) {
+            const UINT reg = kFogVector + i;
+            if (start > reg || start + count <= reg) {
+                continue;
+            }
+            std::copy_n(data + (reg - start) * 4, 4, path.engine + i * 4);
+            path.have[i] = true;
+            any = true;
+        }
+        if (!any) {
+            return;
+        }
+        // Both colour registers are the engine's again only if it set both.
+        if (start <= kFogColour && start + count > kFogColourRange) {
+            path.ours = false;
+        }
+        Write(device, path);
+    }
+
+    // What a draw is about to find in the fog's registers, if it is not what the engine and we last
+    // left there, is taken as the engine's and written over again.
+    void Check(IDirect3DDevice9* device, Path& path) {
+        if (!g_dusky && !path.ours) {
+            return;
+        }
+        float current[kFogRegisters * 4];
+        const HRESULT read =
+            path.pixel ? device->GetPixelShaderConstantF(kFogVector, current, kFogRegisters)
+                       : device->GetVertexShaderConstantF(kFogVector, current, kFogRegisters);
+        if (FAILED(read)) {
+            return;
+        }
+        const bool vectorKept = std::equal(current, current + 4, path.engine);
+        const bool coloursKept =
+            path.ours ? std::equal(current + 4, current + 12, path.written)
+                      : std::equal(current + 4, current + 12, path.engine + 4);
+        if (vectorKept && coloursKept && g_dusky == path.ours) {
+            return;
+        }
+        if (path.ours && !coloursKept) {
+            g_restores++;
+        }
+        std::copy_n(current, 4, path.engine);
+        if (!coloursKept) {
+            std::copy_n(current + 4, 8, path.engine + 4);
+            path.ours = false;
+        }
+        std::fill(path.have, path.have + kFogRegisters, true);
+        Write(device, path);
     }
 
     HRESULT __stdcall SetVertexConstantDetour(IDirect3DDevice9* device, UINT start,
                                               const float* data, UINT count) {
         const HRESULT result = g_originalVertex(device, start, data, count);
-        Replace(device, start, data, count, g_originalVertex);
+        Replace(device, start, data, count, g_vertex);
         return result;
     }
 
     HRESULT __stdcall SetPixelConstantDetour(IDirect3DDevice9* device, UINT start,
                                              const float* data, UINT count) {
         const HRESULT result = g_originalPixel(device, start, data, count);
-        Replace(device, start, data, count, g_originalPixel);
+        Replace(device, start, data, count, g_pixel);
         return result;
     }
 
@@ -161,18 +188,35 @@ bool SkyOverhaul::FogTint::Install() {
     return true;
 }
 
-void SkyOverhaul::FogTint::SetHorizon(const float toward[3], const float away[3]) {
-    Horizon horizon = {};
-    horizon.towardHasHue = Hue(toward, horizon.towardHue);
-    horizon.awayHasHue = Hue(away, horizon.awayHue);
-    g_horizon.Publish(horizon);
+void SkyOverhaul::FogTint::SetDusk(float dusk, float brightness, const float sun[3]) {
+    g_dusk.Publish({dusk, brightness, {sun[0], sun[1]}});
     g_have = true;
+    g_dusky = dusk > 0.0f;
+}
+
+void SkyOverhaul::FogTint::BeforeDraw(IDirect3DDevice9* device) {
+    Check(device, g_vertex);
+    Check(device, g_pixel);
+}
+
+void SkyOverhaul::FogTint::Engine(float colour[3], float range[3]) {
+    if (g_vertex.have[1]) {
+        std::copy_n(g_vertex.engine + 4, 3, colour);
+    }
+    if (g_vertex.have[2]) {
+        std::copy_n(g_vertex.engine + 8, 3, range);
+    }
 }
 
 void SkyOverhaul::FogTint::Forget() {
     g_have = false;
+    g_dusky = false;
 }
 
 uint32_t SkyOverhaul::FogTint::TintCount() {
     return g_tints;
+}
+
+uint32_t SkyOverhaul::FogTint::RestoreCount() {
+    return g_restores;
 }

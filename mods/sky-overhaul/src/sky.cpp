@@ -10,6 +10,7 @@
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "fcse_api.h"
+#include "tuning.h"
 
 #include "sky_ps.h"
 
@@ -35,14 +36,18 @@ namespace {
     // What the sun is worth in the shader.
     constexpr float kSunIntensity = 41.4f;
 
+    // The sun's height, as a sine, over which the land's fog darkens for the dusk: from seven degrees
+    // up, when the land already lies in long shadow, to a degree and a half.
+    constexpr float kDuskStart = 0.122f;
+    constexpr float kDuskEnd = 0.026f;
+
     bool g_enabled = false;
 
     // What the last dome was drawn from and what the model made of it, kept for the heartbeat.
     struct Drawn {
         SkyOverhaul::Camera::View view;
         SkyOverhaul::CloudLayer::Lighting lighting;
-        float towardColour[3];
-        float awayColour[3];
+        float dusk;
         float zenithLift;
     };
 
@@ -111,17 +116,9 @@ namespace {
         const float haze = SkyOverhaul::SkyModel::Haze(storminess);
         const float intensity = kSunIntensity * SkyOverhaul::SkyModel::SunShare(storminess);
 
-        // What our air comes to at the horizon, along the engine's own fog heading and against it:
-        // the two ends of the ramp whose hue the land's fog takes. Before the exposure, as the
-        // engine's own fog colour is.
-        float toward[3];
-        FogHeading(view, toward);
-        const float away[3] = {-toward[0], -toward[1], 0.0f};
-        SkyOverhaul::SkyModel::Radiance(toward, lighting.sunDirection, view.eye[2], haze, intensity,
-                                        drawn.towardColour);
-        SkyOverhaul::SkyModel::Radiance(away, lighting.sunDirection, view.eye[2], haze, intensity,
-                                        drawn.awayColour);
-        SkyOverhaul::FogTint::SetHorizon(drawn.towardColour, drawn.awayColour);
+        drawn.dusk = SmoothStep(kDuskStart, kDuskEnd, lighting.sunDirection[2]);
+        SkyOverhaul::FogTint::SetDusk(drawn.dusk, SkyOverhaul::Tuning::Current().duskFogBrightness,
+                                      lighting.sunDirection);
 
         drawn.zenithLift = ZenithLift(lighting.sunDirection, view.eye[2], intensity);
         g_last = drawn;
@@ -175,15 +172,12 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
     float moonMultiplier = 0.0f;
     DomeDraw::MoonParameters(moonVisibility, moonMultiplier);
     FCSE::Logf("sky f%u: %u domes replaced, %u moons unfogged (visibility %.3f x%.2f), %u fog "
-               "uploads retinted | night %.2f storm %.2f exposure %.2f zenith x%.2f",
+               "uploads retinted, %u restored | night %.2f storm %.2f exposure %.2f zenith x%.2f",
                pass.frame, DomeDraw::SubstituteCount(), DomeDraw::UnfoggedMoonCount(),
-               moonVisibility, moonMultiplier, FogTint::TintCount(), light.night, light.storm,
-               view.bloom, g_last.zenithLift);
-    FCSE::Logf("sky f%u: sun %+.1f deg, fog heading %.0f deg off it | model toward "
-               "(%.3f %.3f %.3f) away (%.3f %.3f %.3f)",
-               pass.frame, elevation, headingOffset, g_last.towardColour[0], g_last.towardColour[1],
-               g_last.towardColour[2], g_last.awayColour[0], g_last.awayColour[1],
-               g_last.awayColour[2]);
+               moonVisibility, moonMultiplier, FogTint::TintCount(), FogTint::RestoreCount(),
+               light.night, light.storm, view.bloom, g_last.zenithLift);
+    FCSE::Logf("sky f%u: sun %+.1f deg, fog heading %.0f deg off it, dusk %.2f", pass.frame,
+               elevation, headingOffset, g_last.dusk);
     FCSE::Logf("sky f%u: engine fog toward (%.3f %.3f %.3f) away (%.3f %.3f %.3f)", pass.frame,
                view.fogColour[0], view.fogColour[1], view.fogColour[2],
                view.fogColour[0] + view.fogColourRange[0],

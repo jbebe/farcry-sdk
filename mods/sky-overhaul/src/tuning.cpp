@@ -53,7 +53,7 @@ namespace {
     };
 
     constexpr Category kSun = {"Sun"};
-    // Holds no rows, only the moments.
+    // Holds the moments, and under them the fog.
     constexpr Category kSky = {"Sky"};
     constexpr Category kClouds = {"Clouds"};
     constexpr Category kNight = {"Night"};
@@ -65,6 +65,7 @@ namespace {
     constexpr const Category* kTabs[] = {&kSun,     &kSky,   &kClouds,  &kNight,
                                          &kShadows, &kGrade, &kFoliage};
 
+    constexpr Group kFog = {"Fog", &kSky};
     constexpr Group kCloudLayer = {"Cloud layer", &kClouds};
     constexpr Group kHighCloud = {"High cloud", &kClouds};
     constexpr Group kSunGlare = {"Sun glare", &kSun};
@@ -74,9 +75,15 @@ namespace {
     constexpr Group kAmbientOcclusion = {"Ambient occlusion", &kShadows};
     constexpr Group kColourGrade = {"Colour grade", &kGrade};
     constexpr Group kGrass = {"Grass", &kFoliage};
+    constexpr Group kLeaves = {"Leaves", &kFoliage};
 
     // In the order the file and the window list them.
     constexpr Parameter kParameters[] = {
+        {"Dusk fog brightness", &kFog, offsetof(Values, duskFogBrightness), 0.4f, 0.0f, 1.0f,
+         "%.2f",
+         "How bright the fog over the land is kept once the sun is down, against the engine's. "
+         "The land then lies in the earth's shadow, and only the sky above it still glows."},
+
         {"Cloud coverage", &kCloudLayer, offsetof(Values, cloudCoverage), 0.44f, 0.0f, 1.0f, "%.2f",
          "How much of the sky the layer fills."},
         {"Cloud density", &kCloudLayer, offsetof(Values, cloudDensity), 0.021f, 0.005f, 0.3f, "%.3f",
@@ -187,6 +194,17 @@ namespace {
          40.0f, "%.1f", "How tight the angle is at which blades shine."},
         {"Grass glow", &kGrass, offsetof(Values, grassGlow), 0.6f, 0.0f, 3.0f, "%.2f",
          "How much sunlight comes through blades with the sun behind them."},
+
+        {"Leaf crown shade", &kLeaves, offsetof(Values, leafCrownShade), 0.75f, 0.0f, 1.0f,
+         "%.2f", "How much of the sunlight a tree's crown takes from its own far side and inside."},
+        {"Leaf crown thickness", &kLeaves, offsetof(Values, leafCrownThickness), 1.5f, 0.2f, 6.0f,
+         "%.2f", "How quickly sunlight fades on its way through the crown."},
+        {"Leaf tilt", &kLeaves, offsetof(Values, leafTilt), 0.4f, 0.0f, 1.5f, "%.2f",
+         "How far each leaf turns its own way, so neighbours catch the sun differently."},
+        {"Leaf glint", &kLeaves, offsetof(Values, leafGlint), 3.0f, 0.0f, 8.0f, "%.2f",
+         "How bright the shine off leaves facing the sun is. The engine's is 1.5."},
+        {"Leaf glow", &kLeaves, offsetof(Values, leafGlow), 1.5f, 0.0f, 4.0f, "%.2f",
+         "How much sunlight comes through leaves with the sun behind them, against the engine's."},
     };
 
     constexpr Moment kMoments[] = {
@@ -377,9 +395,8 @@ void SkyOverhaul::Tuning::DrawWindow(void*) {
             }
             if (category == &kSky) {
                 DrawMoments();
-            } else {
-                g_unsaved |= DrawGroups(*category);
             }
+            g_unsaved |= DrawGroups(*category);
             if (category == &kGrade) {
                 DrawGreys();
             }

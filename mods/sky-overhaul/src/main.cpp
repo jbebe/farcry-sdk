@@ -15,12 +15,14 @@
 #include "engine/known_shaders.h"
 #include "engine/screen_draw.h"
 #include "engine/solid_depth.h"
-#include "foliage.h"
 #include "grade.h"
+#include "grass.h"
+#include "leaves.h"
 #include "night.h"
 #include "occlusion.h"
 #include "shadows.h"
 #include "sky.h"
+#include "sun_shadows.h"
 #include "tuning.h"
 
 #include <iterator>
@@ -36,7 +38,8 @@ namespace {
         SkyOverhaul::SolidDepth::ReleaseDeviceObjects();
         SkyOverhaul::DepthTexture::ReleaseDeviceObjects();
         SkyOverhaul::DrawGuard::ReleaseDeviceObjects();
-        SkyOverhaul::Foliage::ReleaseDeviceObjects();
+        SkyOverhaul::Grass::ReleaseDeviceObjects();
+        SkyOverhaul::Leaves::ReleaseDeviceObjects();
         SkyOverhaul::KnownShaders::Forget();
     }
 
@@ -50,12 +53,14 @@ namespace {
         SkyOverhaul::Occlusion::OnScenePass(pass);
         SkyOverhaul::Dazzle::OnScenePass(pass);
         SkyOverhaul::Night::OnScenePass(pass);
+        SkyOverhaul::SunShadows::OnScenePass(pass);
     }
 
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
         SkyOverhaul::Dazzle::OnFinalPass(pass);
         SkyOverhaul::Grade::OnFinalPass(pass);
-        SkyOverhaul::Foliage::OnFinalPass(pass);
+        SkyOverhaul::Grass::OnFinalPass(pass);
+        SkyOverhaul::Leaves::OnFinalPass(pass);
         SkyOverhaul::SolidDepth::OnFinalPass(pass);
     }
 
@@ -110,7 +115,15 @@ namespace {
     }
 
     void __cdecl OnGrassChanged(const FCSE_SettingValue* value, void*) {
-        SkyOverhaul::Foliage::SetEnabled(value->asChoice == 1);
+        SkyOverhaul::Grass::SetEnabled(value->asChoice == 1);
+    }
+
+    void __cdecl OnLeavesChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Leaves::SetEnabled(value->asChoice == 1);
+    }
+
+    void __cdecl OnSunShadowsChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::SunShadows::SetEnabled(value->asChoice == 1);
     }
 }
 
@@ -137,7 +150,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         // Watches the draws inside a pass rather than the passes themselves, because that is where
         // the dome is and a sky has to go under everything drawn after it.
         SkyOverhaul::Sky::Install();
-        SkyOverhaul::Foliage::Install();
     }
 
     // The publisher every effect reads, which draws nothing: the sun, the moon and the weather as
@@ -159,6 +171,8 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Occlusion", FCSE_CHOICE(0), &OnOcclusionChanged, nullptr, kOcclusionModes,
          std::size(kOcclusionModes)},
         {"Grass", FCSE_CHOICE(1), &OnGrassChanged, nullptr, kModes, std::size(kModes)},
+        {"Leaves", FCSE_CHOICE(1), &OnLeavesChanged, nullptr, kModes, std::size(kModes)},
+        {"Sun shadows", FCSE_CHOICE(1), &OnSunShadowsChanged, nullptr, kModes, std::size(kModes)},
     };
     // Registered under the module name: the mod menu lists every loaded plugin and then every group
     // that matched none, so a group named apart from its DLL would arrive twice, once empty.

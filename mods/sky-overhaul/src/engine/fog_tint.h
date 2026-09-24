@@ -1,13 +1,13 @@
-// The colour the whole world fades into at distance, changed on its way to the shaders that use it.
+// The colour the land fades into at distance, changed on its way to the shaders that use it.
 //
-// The horizon a player sees is not the sky. It is the land, fogged out, and the engine fogs it to a
-// colour of its own - so a sky recoloured on its own meets that land at a seam, and the colour that
-// wins is the engine's. This intercepts the two registers that colour is carried in and gives it
-// the hue of the sky's own horizon at the engine's brightness, shaded, so the land reads as the
-// shadowed side under the lit sky.
+// Once the sun is down the air over the land lies in the earth's shadow and only the sky high above
+// still catches its light, but the engine's fog keeps the sunset's colour toward the sun. This
+// intercepts the two registers that colour is carried in and, as the sun sets, turns the side
+// toward it to the colour of the side away and dims both. While the sun is up it leaves them alone.
 #pragma once
 
 #include <cstdint>
+#include <d3d9.h>
 
 namespace SkyOverhaul::FogTint {
 
@@ -15,17 +15,25 @@ namespace SkyOverhaul::FogTint {
 // be found, proved or taken, which it logs, and nothing is left hooked.
 bool Install();
 
-// What the sky comes to at the horizon, looking along the engine's own fog heading and against it -
-// the two ends of the ramp the engine already colours its fog by. Published once a frame from the
-// sky, which is the only thing that knows.
-void SetHorizon(const float toward[3], const float away[3]);
+// How far the sun has set, from nought while it is up to one once the land lies in the earth's
+// shadow, how bright the land's fog is kept by then against the engine's, and toward the sun.
+// Published once a frame from the sky.
+void SetDusk(float dusk, float brightness, const float sun[3]);
 
-// Stops replacing anything until a horizon is published again, for when there is no sky of ours to
-// agree with.
+// Call before each of the engine's draws. Puts the land's fog back over the engine's wherever the
+// engine restored its own some way the setters never saw.
+void BeforeDraw(IDirect3DDevice9* device);
+
+// The fog colour and range as the engine last set them, before they were changed; left as they are
+// where the engine has set nothing yet. The sky and clouds meet the horizon in these.
+void Engine(float colour[3], float range[3]);
+
+// Stops changing anything until a dusk is published again, for when there is no sky of ours.
 void Forget();
 
-// How many uploads have been changed. A count that stops climbing is a fog colour that is being
-// reached once and then written over.
+// How many times the land's fog has been written, and how many of those put it back over the
+// engine's own found before a draw.
 uint32_t TintCount();
+uint32_t RestoreCount();
 
 }

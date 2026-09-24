@@ -161,6 +161,24 @@ casts shadows:
 4. The eased angle becomes a rotation, combined with `CSky`'s own rotations. The negated direction is
    written to `+0x318`–`+0x320`, and the angle to `+0x324` and back to `+0x94`.
 
+In the Steam `Dunia.dll` the same function is `0x1018C260`; its angle fields sit `0x10` further on
+(`+0xA0`, `+0x328`–`+0x334`). It reads the two settings from floats at `0x10F94404` (start) and
+`0x10F94408` (end) every time it runs, so writing either changes the next frame. Retail ships 50 and
+25: from a sun at 50° down, shadows ease toward 25° and lie at about 33° when the sun sets, as long
+as mid-morning's. Because the eased angle is written back over the day angle, what the rest of the
+frame takes for the sun's height stays up there too. With 15 and 8, measured in game, shadows follow
+the sun to 15° and lie at about 10° at sunset.
+
+The cascade ranges live in `CRenderConfig`, a `0x884`-byte singleton whose pointer is at
+`0x11609560` in the Steam `Dunia.dll`. Its shadow section sits at `+0x778` and holds
+`SunShadowFadeRange` at `+0x3C` and `SunShadowRange0` to `2` at `+0x40` to `+0x48`. The renderer
+does not draw from it: the renderer object (pointer at `0x11607C90`, `0x3B8` bytes) copies the whole
+`CRenderConfig` when it is created and keeps the copy's pointer at `+0x2C`. Writing the global's
+`SunShadowRange0` was measured to have no visible effect in game, while the `gfx_SunShadowRange0`
+console setting takes effect at once. Raised much past its retail 4, measured in game, the cascades
+stop joining up: looking away from a low sun, stretches of ground lose their shadow as if the
+casters were culled. 18 is about the most that stays continuous with 15 and 8 for the angles.
+
 ## The clouds are lit from a stretched clock
 
 `UpdateSky` (`0x091601A0`) evaluates the cloud material from the cloud preset, the storm's cloud

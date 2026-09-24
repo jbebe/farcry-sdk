@@ -107,7 +107,7 @@ bool SkyOverhaul::SolidDepth::Begin(IDirect3DDevice9* device) {
     const bool scene = depth == g_sceneDepth;
     Release(depth);
     if (!scene || FAILED(device->GetRenderState(D3DRS_STENCILENABLE, &state)) || state != FALSE ||
-        KnownShaders::FoliageBound(device) != KnownShaders::Foliage::None) {
+        KnownShaders::VertexBound(device) != KnownShaders::VertexKind::Other) {
         return false;
     }
 
