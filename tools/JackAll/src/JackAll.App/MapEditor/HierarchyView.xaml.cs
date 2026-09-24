@@ -55,6 +55,20 @@ public partial class HierarchyView : UserControl
         }
     }
 
+    /// <summary>Up and Down act as a click on the neighbouring entity row.</summary>
+    private void Tree_PreviewKeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key is not (Key.Up or Key.Down) || Model.Step(e.Key == Key.Down ? 1 : -1) is not { } row)
+        {
+            return;
+        }
+
+        Model.Click(row, ModifierKeys.None);
+        BringIntoView(row);
+        EntityClicked?.Invoke(row.Entity!);
+        e.Handled = true;
+    }
+
     /// <summary>Raised after a click on an entity's own row, with that entity.</summary>
     public event Action<Tools.World.WorldEntity>? EntityClicked;
 

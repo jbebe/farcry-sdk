@@ -169,6 +169,26 @@ public sealed class HierarchyViewModel : Observable
         }
     }
 
+    /// <summary>The next shown entity row after the last clicked row, or before it for a negative
+    /// <paramref name="direction"/>; group and deleted rows are stepped over.</summary>
+    public EntityTreeNode? Step(int direction)
+    {
+        List<EntityTreeNode> shown = [.. Roots.SelectMany(Shown)];
+        int at = _anchor is null ? -1 : shown.IndexOf(_anchor);
+        if (at < 0)
+        {
+            at = direction > 0 ? -1 : shown.Count;
+        }
+        for (int i = at + direction; i >= 0 && i < shown.Count; i += direction)
+        {
+            if (shown[i] is { IsEntity: true, IsDeleted: false })
+            {
+                return shown[i];
+            }
+        }
+        return null;
+    }
+
     /// <summary>The row for <paramref name="entity"/>, with the path to it expanded.</summary>
     public EntityTreeNode? Reveal(WorldEntity entity)
     {
