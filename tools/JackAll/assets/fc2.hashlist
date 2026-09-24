@@ -1116,6 +1116,8 @@ F50C13BD	domino\user\ubidays.playdemo.lua
 450E2C71	downloadcontent\dlc1\generated\entitylibrary.fcb
 BE6A1594	downloadcontent\dlc1\generated\entitylibrary_depload.dat
 29AFA8B0	downloadcontent\dlc1\generated\entitylibrary_deploadnewparticles.rml
+20C23D45	downloadcontent\fortunes\descimage.xbt
+B76A85E1	downloadcontent\jungle\descimage.xbt
 0407D0F1	engine\gamemodes\gamemodesconfig.xml
 D01FED30	engine\online\agora\agoraleaderboard.xml
 EC069E7C	engine\online\agora\agoraleaderboard_xenon.xml
@@ -69150,7 +69152,9 @@ CEAD1010	graphics\_materials\jfcarrier2-m-1704200842779160.xbm
 65E19274	graphics\_materials\jfcarrier2-m-1704200845761426.xbm
 5DE869FC	graphics\_materials\jfcarrier2-m-1708200746783136.xbm
 7514D17A	graphics\_materials\jfcarrier2-m-1711200855837624.xbm
+E0F0C72A	graphics\_materials\jfcarrier2-m-1711200855837624.xbm.dep
 4F31AF7B	graphics\_materials\jfcarrier2-m-1711200856518995.xbm
+28DCEC40	graphics\_materials\jfcarrier2-m-1711200856518995.xbm.dep
 0A207EFE	graphics\_materials\jfcarrier2-m-1811200757923538.xbm
 1569FE74	graphics\_materials\jfcarrier2-m-2002200760689956.xbm
 78DA2B0F	graphics\_materials\jfcarrier2-m-2003200828227271.xbm
@@ -70874,6 +70878,7 @@ C0676F2B	graphics\_textures\diffuse\misc\alcoolmedic_d.xbt
 937549F1	graphics\_textures\diffuse\misc\ballpointpen_d.xbt
 CD4FB136	graphics\_textures\diffuse\misc\birdcage_d.xbt
 89C1C839	graphics\_textures\diffuse\misc\boatpasssign_d.xbt
+525E2F20	graphics\_textures\diffuse\misc\boatpasssign_d_mip0.xbt
 5674B698	graphics\_textures\diffuse\misc\book_01_d.xbt
 25C1DBEC	graphics\_textures\diffuse\misc\books_01_d.xbt
 5355D49D	graphics\_textures\diffuse\misc\books_01_d_mip0.xbt
@@ -84790,11 +84795,13 @@ B667FA65	graphics\vehicles\air\c130\c130window_d.xbt
 DF318FE4	graphics\vehicles\air\veh_glider\glider_m.xbt
 7CDD7D4E	graphics\vehicles\air\veh_glider\glider_m_mip0.xbt
 C49E398A	graphics\vehicles\air\veh_glider\intel_d.xbt
+BC6DA34E	graphics\vehicles\air\veh_glider\intel_d.xbt.dep
 19D474E3	graphics\vehicles\air\veh_glider\intel_d_mip0.xbt
 6FC17058	graphics\vehicles\air\veh_glider\veh_glider.hkx
 2F2D6594	graphics\vehicles\air\veh_glider\veh_glider.xbg
 7E025D2F	graphics\vehicles\air\veh_glider\veh_glider_intel.hkx
 3EEE48E3	graphics\vehicles\air\veh_glider\veh_glider_intel.xbg
+DD277B54	graphics\vehicles\air\veh_glider\veh_glider_intel.xbg.dep
 088E5A53	graphics\vehicles\air\veh_glider\veh_glider_ref.skeleton
 E2C808D2	graphics\vehicles\land\bigtruck\bigtruck.hkx
 A2241D1E	graphics\vehicles\land\bigtruck\bigtruck.xbg
@@ -97324,6 +97331,7 @@ B427E6BE	levels\mp_dlc01_resort\generated\worldsectors\zonesector98.zsr
 8947CF0E	levels\mp_dlc01_resort\generated\worldsectors\zonesector99.zsr
 F9660034	levels\mp_dlc01_resort\mapcompass.xbt
 EA3F1F6B	levels\mp_dlc01_resort\mapcompass_mip0.xbt
+66D8CF53	levels\mp_dlc01_resort\topviewmap.xbt
 B8BD5D3B	levels\mp_dlc02_lake\generated\moviedata.xml
 0F7BF5D0	levels\mp_dlc02_lake\generated\sdat\atlas0_color.xbt
 96CEFE0C	levels\mp_dlc02_lake\generated\sdat\atlas0_diffuse.xbt
@@ -98061,6 +98069,7 @@ BA231990	levels\mp_dlc02_lake\generated\worldsectors\zonesector97.zsr
 0513A7F1	levels\mp_dlc02_lake\generated\worldsectors\zonesector99.zsr
 8F50EAA6	levels\mp_dlc02_lake\mapcompass.xbt
 A1B88D15	levels\mp_dlc02_lake\mapcompass_mip0.xbt
+10EE25C1	levels\mp_dlc02_lake\topviewmap.xbt
 22DE33BE	levels\mp_dlc04_bridge\generated\moviedata.xml
 DAFF0B93	levels\mp_dlc04_bridge\generated\sdat\atlas0_color.xbt
 179FE855	levels\mp_dlc04_bridge\generated\sdat\atlas0_diffuse.xbt
@@ -98713,6 +98722,7 @@ ED443BFD	levels\mp_dlc04_bridge\generated\worldsectors\zonesector97.zsr
 5274859C	levels\mp_dlc04_bridge\generated\worldsectors\zonesector99.zsr
 101FDDC7	levels\mp_dlc04_bridge\mapcompass.xbt
 E5094FD8	levels\mp_dlc04_bridge\mapcompass_mip0.xbt
+8FA112A0	levels\mp_dlc04_bridge\topviewmap.xbt
 48A73181	levels\mp_dlc05_clinic\generated\moviedata.xml
 EE22688E	levels\mp_dlc05_clinic\generated\sdat\atlas0_color.xbt
 3C488076	levels\mp_dlc05_clinic\generated\sdat\atlas0_diffuse.xbt
@@ -99415,6 +99425,7 @@ C8F5CF19	levels\mp_dlc05_clinic\generated\worldsectors\zonesector98.zsr
 F595E6A9	levels\mp_dlc05_clinic\generated\worldsectors\zonesector99.zsr
 EDB80032	levels\mp_dlc05_clinic\mapcompass.xbt
 CCC625A4	levels\mp_dlc05_clinic\mapcompass_mip0.xbt
+7206CF55	levels\mp_dlc05_clinic\topviewmap.xbt
 9B691102	levels\mp_dlc09_jungle\generated\moviedata.xml
 199CA966	levels\mp_dlc09_jungle\generated\sdat\atlas0_color.xbt
 468CFC0A	levels\mp_dlc09_jungle\generated\sdat\atlas0_diffuse.xbt
@@ -100077,6 +100088,7 @@ AA2E0C6B	levels\mp_dlc09_jungle\generated\worldsectors\zonesector97.zsr
 5A0D3870	levels\mp_dlc09_jungle\mapcompass.xbt
 B37BFA47	levels\mp_dlc09_jungle\mapcompass_mip0.xbt
 92E2B712	levels\mp_dlc09_jungle\mp_dlc09_jungle.nomad
+C5B3F717	levels\mp_dlc09_jungle\topviewmap.xbt
 3E6E61B6	levels\mp_dlc_gym\generated\moviedata.xml
 028A814E	levels\mp_dlc_gym\generated\sdat\atlas0_color.xbt
 2E64E14C	levels\mp_dlc_gym\generated\sdat\atlas0_diffuse.xbt
