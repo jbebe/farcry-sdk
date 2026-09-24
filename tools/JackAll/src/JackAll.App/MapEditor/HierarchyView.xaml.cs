@@ -18,9 +18,6 @@ public partial class HierarchyView : UserControl
     /// <summary>Raised when an archetype is dropped on a layer row, with the archetype and the layer.</summary>
     public event Action<string, string>? PlaceRequested;
 
-    /// <summary>Raised for Del with the tree focused.</summary>
-    public event Action? DeleteRequested;
-
     /// <summary>Scrolls the row for <paramref name="node"/> into view once its path is expanded.</summary>
     public void BringIntoView(EntityTreeNode node)
         => Dispatcher.BeginInvoke(
@@ -90,13 +87,23 @@ public partial class HierarchyView : UserControl
     private void OnlyMain_Click(object sender, RoutedEventArgs e)
         => Model.SetAllLayers(Core.Format.Fcb.MissionLayers.IsMain);
 
-    private void Tree_KeyDown(object sender, KeyEventArgs e)
+    /// <summary>The menu items for a row, or none for a row that has no menu.</summary>
+    public Func<EntityTreeNode, IReadOnlyList<Control>>? MenuFor { get; set; }
+
+    /// <summary>A right-click on an unselected entity selects it first; one inside the selection keeps it.</summary>
+    private void Tree_ContextMenuOpening(object sender, ContextMenuEventArgs e)
     {
-        if (e.Key == Key.Delete)
+        IReadOnlyList<Control> items = [];
+        if (TreeViewBehaviors.Ancestor<TreeViewItem>(e.OriginalSource as DependencyObject) is { DataContext: EntityTreeNode node })
         {
-            DeleteRequested?.Invoke();
-            e.Handled = true;
+            if (node is { IsEntity: true, IsSelected: false })
+            {
+                Model.Click(node, ModifierKeys.None);
+            }
+            items = MenuFor?.Invoke(node) ?? [];
         }
+        Tree.ContextMenu.ItemsSource = items;
+        e.Handled = items.Count == 0;
     }
 
     private void Row_DragOver(object sender, DragEventArgs e)

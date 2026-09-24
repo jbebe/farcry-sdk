@@ -354,12 +354,7 @@ public partial class DominoTabView : UserControl
         }
         foreach (ValueRef value in values)
         {
-            var item = new MenuItem { Header = new TextBlock { Text = $"{value.Pin}: {value.Value}" } };
-            foreach (DominoAction action in _values!.For(value))
-            {
-                item.Items.Add(MenuItemFor(action));
-            }
-            menu.Items.Add(item);
+            menu.Items.Add(MenuItems.Submenu($"{value.Pin}: {value.Value}", _values!.For(value).Select(MenuItemFor)));
         }
 
         // After nodify has finished with the click and let go of the mouse, or the menu closes at once.
@@ -383,13 +378,7 @@ public partial class DominoTabView : UserControl
         return null;
     }
 
-    // A TextBlock header, because a string header reads an underscore as an access key.
-    private static MenuItem MenuItemFor(DominoAction action)
-    {
-        var item = new MenuItem { Header = new TextBlock { Text = action.Label } };
-        item.Click += (_, _) => action.Run();
-        return item;
-    }
+    private static MenuItem MenuItemFor(DominoAction action) => MenuItems.Create(action.Label, action.Run);
 
     // ------------------------------------------------------------------ find
 

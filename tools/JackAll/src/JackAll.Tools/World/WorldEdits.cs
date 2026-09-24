@@ -29,8 +29,9 @@ public sealed record EntityFragment(string ContainerPath, string FragmentId, Fcb
 public sealed record DeletedEntity(string ContainerPath, ulong Id, string Name);
 
 /// <summary>A deleted entity and the session state it had: its edited node, whether it was pending a
-/// save, and the source it was added from when it was new.</summary>
-public sealed record DeletedRecord(WorldEntity Entity, FcbObject? Working, bool WasTouched, CopiedEntity? Source);
+/// save, the source it was added from when it was new, and the layer it was loaded in when refiled.</summary>
+public sealed record DeletedRecord(
+    WorldEntity Entity, FcbObject? Working, bool WasTouched, CopiedEntity? Source, string? LoadedLayer);
 
 /// <summary>
 /// The Map tab's unsaved edits to one loaded world: entities added, moved, field-edited and deleted.
@@ -46,6 +47,9 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     private readonly Dictionary<WorldEntity, CopiedEntity> _added = [];
     private readonly HashSet<WorldEntity> _restored = [];
 
+    /// <summary>Each loaded entity filed under another mission layer, with the layer it was loaded in.</summary>
+    private readonly Dictionary<WorldEntity, string> _loadedLayer = [];
+
     /// <summary>Each field-edited entity's own copy of its node; kept past a save so a later edit
     /// builds on the saved one.</summary>
     private readonly Dictionary<WorldEntity, FcbObject> _working = [];
@@ -59,44 +63,46 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     /// <summary>The live entity with this id, or null when the world places none.</summary>
     public WorldEntity? EntityById(ulong id) => _byId.GetValueOrDefault(id);
 
-    public bool IsDirty => _touched.Count + _deleted.Count + _added.Count > 0;
+    public bool IsDirty => _touched.Count + _deleted.Count + _added.Count + _loadedLayer.Count > 0;
 
     /// <summary>Deleted since the last save.</summary>
     public IReadOnlyCollection<WorldEntity> Deleted => _deleted;
 
-    /// <summary>Added, moved or field-edited since the last save.</summary>
-    public bool IsModified(WorldEntity entity) => _added.ContainsKey(entity) || _touched.Contains(entity);
+    /// <summary>Added, moved, field-edited or refiled under another layer since the last save.</summary>
+    public bool IsModified(WorldEntity entity)
+        => _added.ContainsKey(entity) || _touched.Contains(entity) || _loadedLayer.ContainsKey(entity);
 
     /// <summary>Copies an entity with its edits, and a prefab with the members it lists.</summary>
     public CopiedEntity Copy(WorldEntity entity)
     {
-        FcbObject node = CurrentNode(entity);
         Vector3 origin = entity.Position ?? default;
-        return new CopiedEntity(node.Clone(), world.Name)
+        return new CopiedEntity(CurrentNode(entity).Clone(), world.Name)
         {
-            Members = [.. EntityGroups.ChildrenOf(node)
-                .Select(child => EntityById(child.Id))
-                .OfType<WorldEntity>()
+            Members = [.. MembersOf(entity)
                 .Where(m => m.Position is not null)
                 .Select(m => new CopiedMember(CurrentNode(m).Clone(), m.Position!.Value - origin, m))],
         };
     }
 
+    /// <summary>The live entities a prefab lists; none for anything else.</summary>
+    public IEnumerable<WorldEntity> MembersOf(WorldEntity prefab)
+        => EntityGroups.ChildrenOf(CurrentNode(prefab)).Select(child => EntityById(child.Id)).OfType<WorldEntity>();
+
     /// <summary>
-    /// Adds a clone of <paramref name="copy"/> at <paramref name="position"/>, filed under <c>main</c>
-    /// in the sector file that position falls in, and its members around it. Every clone gets a new id
-    /// and name, and the prefab's list and any links between them follow. Returns the root, then each
-    /// member in the copy's order.
+    /// Adds a clone of <paramref name="copy"/> at <paramref name="position"/>, filed under
+    /// <paramref name="layerPathId"/> in the sector file that position falls in, and its members around
+    /// it. Every clone gets a new id and name, and the prefab's list and any links between them follow.
+    /// Returns the root, then each member in the copy's order.
     /// </summary>
-    public IReadOnlyList<WorldEntity> Paste(CopiedEntity copy, Vector3 position)
+    public IReadOnlyList<WorldEntity> Paste(CopiedEntity copy, Vector3 position, string layerPathId = MissionLayers.MainName)
     {
         WorldSectorDocument sector = SectorAt(position) ?? throw NoSector();
         var ids = new Dictionary<ulong, ulong>();
-        List<WorldEntity> pasted = [AddClone(copy, sector, position, ids)];
+        List<WorldEntity> pasted = [AddClone(copy, sector, layerPathId, position, ids)];
         foreach (CopiedMember member in copy.Members)
         {
             Vector3 at = position + member.Offset;
-            pasted.Add(AddClone(new CopiedEntity(member.Node, copy.SourceWorld), SectorAt(at) ?? sector, at, ids));
+            pasted.Add(AddClone(new CopiedEntity(member.Node, copy.SourceWorld), SectorAt(at) ?? sector, layerPathId, at, ids));
         }
 
         if (EntityGroups.IsPrefab(pasted[0].Node))
@@ -132,16 +138,59 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         }
 
         Vector3 centre = placed.Aggregate(Vector3.Zero, (sum, m) => sum + m.Position!.Value) / placed.Count;
-        WorldSectorDocument sector = SectorAt(centre) ?? placed[0].HomeSector;
-        (ulong id, string name) = NewIdentity("Prefab");
-        FcbObject node = NewEntityNode(id, name, centre);
-        node.Values[WorldHashes.TextHidEntityClass] = FcbEntityFields.StringBytes(EntityGroups.PrefabClass);
-        node.Values[WorldHashes.HidEntityClass] = BitConverter.GetBytes(FcbClassDefinitions.Crc32Ascii(EntityGroups.PrefabClass));
-        node.Values[WorldHashes.HidResourceCount] = BitConverter.GetBytes(0u);
-        node.Values[WorldHashes.HidConstEntity] = [0];
-        EntityGroups.SetChildren(node, placed.Select(m => new PrefabChild(m.Name, m.Id)));
-        return Add(new CopiedEntity(node, world.Name), node, sector, placed[0].LayerPathId, id, name, centre);
+        return AddPrefab(SectorAt(centre) ?? placed[0].HomeSector, placed[0].LayerPathId, centre, placed);
     }
+
+    /// <summary>A prefab with no members yet.</summary>
+    public WorldEntity NewPrefab(Vector3 position, string layerPathId)
+        => AddPrefab(SectorAt(position) ?? throw NoSector(), layerPathId, position, []);
+
+    private WorldEntity AddPrefab(WorldSectorDocument sector, string layerPathId, Vector3 position, IReadOnlyList<WorldEntity> members)
+    {
+        WorldEntity prefab = AddClassBound(sector, layerPathId, position, EntityGroups.PrefabClass, "Prefab");
+        prefab.Node.Values[WorldHashes.HidResourceCount] = BitConverter.GetBytes(0u);
+        prefab.Node.Values[WorldHashes.HidConstEntity] = [0];
+        EntityGroups.SetChildren(prefab.Node, members.Select(m => new PrefabChild(m.Name, m.Id)));
+        return prefab;
+    }
+
+    /// <summary>A bare entity of class <paramref name="className"/>, with no archetype.</summary>
+    public WorldEntity NewStandalone(string className, Vector3 position, string layerPathId)
+        => AddClassBound(SectorAt(position) ?? throw NoSector(), layerPathId, position, className,
+            className.StartsWith('C') ? className[1..] : className);
+
+    private WorldEntity AddClassBound(
+        WorldSectorDocument sector, string layerPathId, Vector3 position, string className, string stem)
+    {
+        (ulong id, string name) = NewIdentity(stem);
+        FcbObject node = NewEntityNode(id, name, position);
+        node.Values[WorldHashes.TextHidEntityClass] = FcbEntityFields.StringBytes(className);
+        node.Values[WorldHashes.HidEntityClass] = BitConverter.GetBytes(FcbClassDefinitions.Crc32Ascii(className));
+        return Add(new CopiedEntity(node, world.Name), node, sector, layerPathId, id, name, position);
+    }
+
+    /// <summary>The classes the world's standalone entities are bound to, prefabs aside.</summary>
+    public IReadOnlyList<string> StandaloneClasses => _standaloneClasses ??= [.. world.Entities
+        .Where(e => e.ArchetypeName.Length == 0)
+        .Select(e => FcbEntityFields.ReadString(e.Node, WorldHashes.TextHidEntityClass))
+        .Where(c => c.Length > 0 && c != EntityGroups.PrefabClass)
+        .Distinct(StringComparer.Ordinal)
+        .Order(StringComparer.OrdinalIgnoreCase)];
+
+    private IReadOnlyList<string>? _standaloneClasses;
+
+    /// <summary>Every mission layer the world's sector files declare, <c>main</c> first.</summary>
+    public IReadOnlyList<string> Layers => _layers ??= [.. PristineLayers()
+        .Select(MissionLayers.NameOf)
+        .Append(MissionLayers.MainName)
+        .Distinct(StringComparer.OrdinalIgnoreCase)
+        .OrderBy(l => !MissionLayers.IsMain(l))
+        .ThenBy(l => l, StringComparer.OrdinalIgnoreCase)];
+
+    private IReadOnlyList<string>? _layers;
+
+    private IEnumerable<FcbObject> PristineLayers()
+        => world.SectorsById.Values.SelectMany(sector => FcbFragments.LayersOf(sector.PristineRoot));
 
     /// <summary>
     /// Adds a new instance of <paramref name="archetype"/> at <paramref name="position"/>, filed under
@@ -179,14 +228,44 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
 
     /// <summary>Adds a clone of <paramref name="source"/>'s node under a new id and name, recording the id it
     /// replaces in <paramref name="ids"/>.</summary>
-    private WorldEntity AddClone(CopiedEntity source, WorldSectorDocument sector, Vector3 position, Dictionary<ulong, ulong> ids)
+    private WorldEntity AddClone(
+        CopiedEntity source, WorldSectorDocument sector, string layerPathId, Vector3 position, Dictionary<ulong, ulong> ids)
     {
         (ulong id, string name) = NewIdentity(FcbEntityFields.ReadString(source.Node, WorldHashes.HidName));
         FcbObject clone = source.Node.Clone();
         ids[FcbEntityFields.ReadU64(source.Node, WorldHashes.DisEntityId)] = id;
         clone.Values[WorldHashes.DisEntityId] = BitConverter.GetBytes(id);
         clone.Values[WorldHashes.HidName] = FcbEntityFields.StringBytes(name);
-        return Add(source, clone, sector, MissionLayers.MainName, id, name, position);
+        return Add(source, clone, sector, layerPathId, id, name, position);
+    }
+
+    /// <summary>Files the entity under another mission layer, keeping its id and name.</summary>
+    public void MoveToLayer(WorldEntity entity, string layerPathId)
+    {
+        string loaded = _loadedLayer.GetValueOrDefault(entity) ?? entity.LayerPathId;
+        entity.LayerPathId = layerPathId;
+        if (_added.ContainsKey(entity) || loaded.Equals(layerPathId, StringComparison.OrdinalIgnoreCase))
+        {
+            _loadedLayer.Remove(entity);
+            return;
+        }
+        _loadedLayer[entity] = loaded;
+    }
+
+    /// <summary><paramref name="entities"/> with every prefab's members, which share its layer. A member
+    /// without its prefab is refused.</summary>
+    public IReadOnlyList<WorldEntity> WithMembers(IEnumerable<WorldEntity> entities)
+    {
+        List<WorldEntity> all = [.. entities.SelectMany(e => MembersOf(e).Prepend(e)).Distinct()];
+        var included = new HashSet<WorldEntity>(all);
+        foreach (WorldEntity prefab in world.Entities.Where(e => !included.Contains(e) && EntityGroups.IsPrefab(CurrentNode(e))))
+        {
+            if (MembersOf(prefab).FirstOrDefault(included.Contains) is { } member)
+            {
+                throw new InvalidOperationException($"{member.Name} belongs to {prefab.Name} - move the prefab instead.");
+            }
+        }
+        return all;
     }
 
     /// <summary>An unsaved paste follows its position into whichever sector file it lands in; any other
@@ -234,11 +313,13 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     public DeletedRecord Delete(WorldEntity entity)
     {
         var record = new DeletedRecord(
-            entity, _working.GetValueOrDefault(entity), _touched.Contains(entity), _added.GetValueOrDefault(entity));
+            entity, _working.GetValueOrDefault(entity), _touched.Contains(entity), _added.GetValueOrDefault(entity),
+            _loadedLayer.GetValueOrDefault(entity));
         Untrack(entity);
         _touched.Remove(entity);
         _working.Remove(entity);
         _restored.Remove(entity);
+        _loadedLayer.Remove(entity);
         if (!_added.Remove(entity))
         {
             _deleted.Add(entity);
@@ -255,6 +336,10 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         if (record.Working is { } working)
         {
             _working[entity] = working;
+        }
+        if (record.LoadedLayer is { } loaded)
+        {
+            _loadedLayer[entity] = loaded;
         }
         if (record.Source is { } source)
         {
@@ -279,13 +364,12 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     /// <summary>Every source a pending addition was built from.</summary>
     public IEnumerable<CopiedEntity> Additions => _added.Values;
 
-    /// <summary>
-    /// The mission layers pending additions outside <c>main</c> must be filed under, per sector file.
-    /// A fragment carries no layer, so without these a new entity lands in <c>main</c>.
-    /// </summary>
+    /// <summary>The mission layers to file entities under, per sector file: pending additions outside
+    /// <c>main</c>, and loaded entities refiled under another layer.</summary>
     public IReadOnlyList<(string ContainerPath, LayerSpec Layer)> LayerPlacements()
         => [.. _added.Keys
             .Where(e => !MissionLayers.IsMain(e.LayerPathId))
+            .Concat(_loadedLayer.Keys)
             .GroupBy(e => (e.HomeSector.SourcePath, e.LayerPathId))
             .Select(g => (g.Key.SourcePath, new LayerSpec(
                 g.Key.LayerPathId, PathIdOf(g.Key.LayerPathId), Before: null, Values: [],
@@ -315,6 +399,7 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
         _touched.Clear();
         _deleted.Clear();
         _restored.Clear();
+        _loadedLayer.Clear();
     }
 
     /// <summary>The entity's node with its edits and placement written in; the node itself is left
@@ -363,15 +448,12 @@ public sealed class WorldEditSession(Fc2World world, int sectorsPerSide)
     /// not always the hash of its path.</summary>
     private uint PathIdOf(string path)
     {
-        foreach (WorldSectorDocument sector in world.SectorsById.Values)
+        foreach (FcbObject layer in PristineLayers())
         {
-            foreach (FcbObject layer in FcbFragments.LayersOf(sector.PristineRoot))
+            if (MissionLayers.NameOf(layer).Equals(path, StringComparison.OrdinalIgnoreCase)
+                && MissionLayers.PathIdOf(layer) is { } id)
             {
-                if (MissionLayers.NameOf(layer).Equals(path, StringComparison.OrdinalIgnoreCase)
-                    && MissionLayers.PathIdOf(layer) is { } id)
-                {
-                    return id;
-                }
+                return id;
             }
         }
         return NameHash.Compute(path);

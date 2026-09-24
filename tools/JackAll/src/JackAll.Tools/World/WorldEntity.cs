@@ -14,7 +14,7 @@ public sealed class WorldEntity
     public required WorldSectorDocument HomeSector { get; set; }
 
     /// <summary>The owning MissionLayer's text_PathId, e.g. "main" - where a rebuild re-files this entity.</summary>
-    public required string LayerPathId { get; init; }
+    public required string LayerPathId { get; set; }
 
     /// <summary>disEntityId; the stable identity mission scripts reference entities by.</summary>
     public ulong Id { get; init; }

@@ -163,9 +163,9 @@ public partial class MapTabView : UserControl
             RefreshSaveButton();
             OverlaysChanged();
         };
-        Hierarchy.DeleteRequested += DeleteSelected;
         Hierarchy.PlaceRequested += PlaceAtViewCentre;
         Hierarchy.EntityClicked += Focus;
+        Hierarchy.MenuFor = HierarchyMenuFor;
         Inspector.ShowArchetypeRequested += ShowArchetype;
         Inspector.OpenSectorRequested += OpenSector;
         Inspector.CopyRequested += CopySelected;
@@ -324,6 +324,7 @@ public partial class MapTabView : UserControl
     protected override void OnPreviewKeyDown(KeyEventArgs e)
     {
         bool viewport = Viewport.IsKeyboardFocused;
+        bool tree = Hierarchy.Tree.IsKeyboardFocusWithin;
         if (e.Key == Key.Escape && IsDragging)
         {
             EndDrag(revert: true);
@@ -359,9 +360,16 @@ public partial class MapTabView : UserControl
             }
             e.Handled = true;
         }
-        else if (viewport && Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.C)
+        else if ((viewport || tree) && Keyboard.Modifiers == ModifierKeys.Control && e.Key is Key.C or Key.X)
         {
-            CopySelected();
+            if (e.Key == Key.C)
+            {
+                CopySelected();
+            }
+            else
+            {
+                CutSelected();
+            }
             e.Handled = true;
         }
         else if (viewport && Keyboard.Modifiers == ModifierKeys.Control && e.Key == Key.V)
@@ -369,7 +377,7 @@ public partial class MapTabView : UserControl
             PasteAt(Mouse.GetPosition(Viewport));
             e.Handled = true;
         }
-        else if (viewport && e.Key == Key.Delete)
+        else if ((viewport || tree) && e.Key == Key.Delete)
         {
             DeleteSelected();
             e.Handled = true;

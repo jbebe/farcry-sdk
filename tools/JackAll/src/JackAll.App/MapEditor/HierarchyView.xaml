@@ -58,7 +58,11 @@
                   VirtualizingStackPanel.IsVirtualizing="True"
                   VirtualizingStackPanel.VirtualizationMode="Recycling"
                   ScrollViewer.CanContentScroll="True"
-                  KeyDown="Tree_KeyDown">
+                  ContextMenuOpening="Tree_ContextMenuOpening">
+            <!-- One menu for the whole tree, filled for the row it opens on. -->
+            <TreeView.ContextMenu>
+                <ContextMenu />
+            </TreeView.ContextMenu>
             <TreeView.ItemTemplate>
                 <HierarchicalDataTemplate DataType="{x:Type mapEditor:EntityTreeNode}" ItemsSource="{Binding Children}">
                     <DockPanel>

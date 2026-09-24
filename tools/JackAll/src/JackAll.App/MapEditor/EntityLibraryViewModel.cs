@@ -68,9 +68,14 @@ public sealed class EntityLibraryViewModel : Observable
         private set => Set(ref _countText, value);
     }
 
-    public void Load(ArchetypeIndex index)
+    /// <summary>The loaded archetypes' tree, for another view to share rather than rebuild.</summary>
+    public ArchetypeTreeNode? Root => _root;
+
+    public void Load(ArchetypeIndex index) => Load(ArchetypeTreeNode.Build(index));
+
+    public void Load(ArchetypeTreeNode root)
     {
-        _root = ArchetypeTreeNode.Build(index);
+        _root = root;
         _folder = null;
         OnPropertyChanged(nameof(Folders));
         Refresh();

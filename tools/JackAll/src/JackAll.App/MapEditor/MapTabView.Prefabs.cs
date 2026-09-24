@@ -19,12 +19,9 @@ public partial class MapTabView
 
         foreach (WorldEntity prefab in entities)
         {
-            foreach (PrefabChild child in EntityGroups.ChildrenOf(edits.CurrentNode(prefab)))
+            foreach (WorldEntity member in edits.MembersOf(prefab))
             {
-                if (edits.EntityById(child.Id) is { } member)
-                {
-                    members.TryAdd(member, prefab);
-                }
+                members.TryAdd(member, prefab);
             }
         }
         return members;

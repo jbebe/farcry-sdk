@@ -62,6 +62,50 @@ public sealed class MoveStep(
     }
 }
 
+/// <summary>Entities refiled under another mission layer.</summary>
+public sealed class LayerStep : IEditStep
+{
+    private readonly WorldEditSession _session;
+    private readonly IReadOnlyDictionary<WorldEntity, string> _from;
+    private readonly string _to;
+
+    private LayerStep(WorldEditSession session, IReadOnlyDictionary<WorldEntity, string> from, string to)
+    {
+        _session = session;
+        _from = from;
+        _to = to;
+    }
+
+    /// <summary>Moves <paramref name="entities"/>, and any prefab's members with it, to
+    /// <paramref name="layerPathId"/>, and returns the step that did it.</summary>
+    public static LayerStep Move(WorldEditSession session, IEnumerable<WorldEntity> entities, string layerPathId)
+    {
+        var step = new LayerStep(session, session.WithMembers(entities).ToDictionary(e => e, e => e.LayerPathId), layerPathId);
+        step.Redo();
+        return step;
+    }
+
+    public string Label => _from.Count == 1 ? $"Move {_from.Keys.First().Name} to {_to}" : $"Move {_from.Count} entities to {_to}";
+
+    public IReadOnlyCollection<WorldEntity> Entities => [.. _from.Keys];
+
+    public bool ChangesMembership => true;
+
+    public void Undo() => Apply(entity => _from[entity]);
+
+    public void Redo() => Apply(_ => _to);
+
+    public bool TryMerge(IEditStep next) => false;
+
+    private void Apply(Func<WorldEntity, string> layerOf)
+    {
+        foreach (WorldEntity entity in _from.Keys)
+        {
+            _session.MoveToLayer(entity, layerOf(entity));
+        }
+    }
+}
+
 /// <summary>A change to an entity's node: a field, a component added or removed, a handle dragged.</summary>
 public sealed class NodeEditStep(WorldEditSession session, WorldEntity entity, FcbObject before, FcbObject after, string label)
     : IEditStep

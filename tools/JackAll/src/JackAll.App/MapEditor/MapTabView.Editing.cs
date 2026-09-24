@@ -392,18 +392,32 @@ public partial class MapTabView
 
     private void PasteAt(Point point)
     {
+        if (_clipboard is not null && GroundAt(point, "Point the cursor at the ground to paste") is { } ground)
+        {
+            PasteClipboard(ground, Core.Format.Fcb.MissionLayers.MainName);
+        }
+    }
+
+    /// <summary>The ground under a viewport point, or null with <paramref name="missing"/> in the status bar.</summary>
+    private Vector3? GroundAt(Point point, string missing)
+    {
+        Vector3? ground = TerrainUnder(point);
+        if (ground is null)
+        {
+            StatusText.Text = missing;
+        }
+        return ground;
+    }
+
+    private void PasteClipboard(Vector3 at, string layer)
+    {
         if (_clipboard is not { } clip || _edits is not { } edits)
         {
             return;
         }
-        if (TerrainUnder(point) is not { } ground)
+        if (Add(() => edits.Paste(clip.Copy, at, layer), [clip.Original, .. clip.Copy.Members.Select(m => m.Original)]) is [var pasted, ..])
         {
-            StatusText.Text = "Point the cursor at the ground to paste";
-            return;
-        }
-        if (Add(() => edits.Paste(clip.Copy, ground), [clip.Original, .. clip.Copy.Members.Select(m => m.Original)]) is [var pasted, ..])
-        {
-            StatusText.Text = $"Pasted {pasted.Name} into sector {pasted.HomeSector.SectorId}";
+            StatusText.Text = $"Pasted {pasted.Name} into {layer}, sector {pasted.HomeSector.SectorId}";
         }
     }
 
@@ -424,18 +438,13 @@ public partial class MapTabView
     }
 
     /// <summary>Places an archetype dropped on a hierarchy layer at the ground in the middle of the view.</summary>
-    private void PlaceAtViewCentre(string archetype, string layer)
-        => Place(archetype, layer, new Point(Viewport.ActualWidth / 2, Viewport.ActualHeight / 2));
+    private void PlaceAtViewCentre(string archetype, string layer) => Place(archetype, layer, ViewCentre);
 
     private void Place(string archetypeName, string layer, Point point)
     {
-        if (_edits is not { } edits || _archetypes?.Winner(archetypeName) is not { } archetype)
+        if (_edits is not { } edits || _archetypes?.Winner(archetypeName) is not { } archetype
+            || GroundAt(point, "There is no ground at that spot to place on") is not { } ground)
         {
-            return;
-        }
-        if (TerrainUnder(point) is not { } ground)
-        {
-            StatusText.Text = "There is no ground at that spot to place on";
             return;
         }
 

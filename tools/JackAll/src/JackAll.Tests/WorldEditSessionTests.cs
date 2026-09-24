@@ -277,6 +277,151 @@ public class WorldEditSessionTests
         Assert.Equal(turned.Angles, FcbEntityFields.ReadVector3(staged, WorldHashes.HidAngles));
     }
 
+    [Fact]
+    public void A_new_prefab_is_an_empty_prefab_filed_under_prefabs_in_its_layer()
+    {
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
+
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
+        string layer = entities.First(e => e.LayerPathId != MissionLayers.MainName).LayerPathId;
+        WorldEntity prefab = session.NewPrefab(InSector, layer);
+
+        Assert.True(EntityGroups.IsPrefab(prefab.Node));
+        Assert.Empty(EntityGroups.ChildrenOf(prefab.Node));
+        Assert.Equal(layer, prefab.LayerPathId);
+        HierarchyGroup row = EntityHierarchy.Build([prefab], NoLibrary).Single().Groups.Single();
+        Assert.Equal(EntityHierarchy.Prefabs, row.Label);
+    }
+
+    [Fact]
+    public void A_new_standalone_entity_carries_its_class_and_no_archetype()
+    {
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
+
+        (WorldEditSession session, _, _) = Load(sector);
+        string className = session.StandaloneClasses[0];
+        WorldEntity created = session.NewStandalone(className, InSector, MissionLayers.MainName);
+
+        Assert.Equal(className, FcbEntityFields.ReadString(created.Node, WorldHashes.TextHidEntityClass));
+        Assert.Equal(FcbClassDefinitions.Crc32Ascii(className), FcbEntityFields.ReadU32(created.Node, WorldHashes.HidEntityClass));
+        Assert.False(created.Node.Values.ContainsKey(WorldHashes.TplCreatureType));
+        Assert.StartsWith(className[1..] + "_", created.Name);
+        HierarchyGroup row = EntityHierarchy.Build([created], NoLibrary).Single().Groups.Single();
+        Assert.Equal(EntityHierarchy.Standalone, row.Label);
+    }
+
+    [Fact]
+    public void A_paste_into_a_layer_is_filed_under_that_layer()
+    {
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
+
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
+        string layer = entities.First(e => e.LayerPathId != MissionLayers.MainName).LayerPathId;
+        WorldEntity pasted = session.Paste(CopiedEntity.Of(entities[0], "mp_14_woodlands"), InSector, layer)[0];
+
+        Assert.Equal(layer, pasted.LayerPathId);
+        (_, LayerSpec spec) = Assert.Single(session.LayerPlacements());
+        Assert.Equal([pasted.Id], spec.Entities);
+    }
+
+    [Fact]
+    public void A_layer_move_keeps_the_entity_and_refiles_it_through_the_layout()
+    {
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
+
+        (WorldEditSession session, byte[] baseFcb, List<WorldEntity> entities) = Load(sector);
+        WorldEntity moved = entities.First(e => e.LayerPathId == MissionLayers.MainName);
+        string layer = entities.First(e => e.LayerPathId != MissionLayers.MainName).LayerPathId;
+        session.MoveToLayer(moved, layer);
+
+        Assert.True(session.IsModified(moved));
+        Assert.Empty(session.Pending().Fragments);
+        (string container, LayerSpec spec) = Assert.Single(session.LayerPlacements());
+        Assert.Equal(SectorPath, container);
+        Assert.Equal([moved.Id], spec.Entities);
+
+        FcbObject root = FcbDocument.Deserialize(FcbAssembler.Apply(
+            baseFcb, new Dictionary<string, string> { [ContainerLayout.Id] = new ContainerLayout([spec]).Render() }));
+        Assert.Contains(LayerNamed(root, layer).Children, e => FcbEntityFields.ReadU64(e, WorldHashes.DisEntityId) == moved.Id);
+        Assert.Equal(entities.Count, EntitiesOf(root).Count());
+    }
+
+    [Fact]
+    public void A_layer_move_to_main_is_listed_and_one_back_to_where_it_was_loaded_is_not()
+    {
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
+
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
+        WorldEntity moved = entities.First(e => e.LayerPathId != MissionLayers.MainName);
+        string loaded = moved.LayerPathId;
+
+        session.MoveToLayer(moved, MissionLayers.MainName);
+        Assert.Equal(MissionLayers.MainName, Assert.Single(session.LayerPlacements()).Layer.Path);
+
+        session.MoveToLayer(moved, loaded);
+        Assert.Empty(session.LayerPlacements());
+        Assert.False(session.IsModified(moved));
+        Assert.False(session.IsDirty);
+    }
+
+    [Fact]
+    public void Undoing_a_layer_step_puts_each_entity_back_in_its_own_layer()
+    {
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
+
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
+        WorldEntity inMain = entities.First(e => e.LayerPathId == MissionLayers.MainName);
+        WorldEntity elsewhere = entities.First(e => e.LayerPathId != MissionLayers.MainName);
+        string other = elsewhere.LayerPathId;
+        const string target = "test_layer";
+
+        LayerStep step = LayerStep.Move(session, [inMain, elsewhere], target);
+        Assert.All([inMain, elsewhere], e => Assert.Equal(target, e.LayerPathId));
+
+        step.Undo();
+        Assert.Equal(MissionLayers.MainName, inMain.LayerPathId);
+        Assert.Equal(other, elsewhere.LayerPathId);
+        Assert.False(session.IsDirty);
+
+        step.Redo();
+        Assert.Equal(new[] { inMain.Id, elsewhere.Id }.Order(), Assert.Single(session.LayerPlacements()).Layer.Entities.Order());
+    }
+
+    [Fact]
+    public void A_layer_move_takes_a_prefabs_members_along_and_refuses_a_member_alone()
+    {
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
+
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
+        List<WorldEntity> members = [.. entities.Where(e => e.LayerPathId == MissionLayers.MainName).Take(2)];
+        WorldEntity prefab = session.Group(members);
+        const string target = "test_layer";
+
+        Assert.Throws<InvalidOperationException>(() => LayerStep.Move(session, [members[0]], target));
+        Assert.Equal(MissionLayers.MainName, members[0].LayerPathId);
+
+        LayerStep.Move(session, [prefab], target);
+        Assert.All([prefab, .. members], e => Assert.Equal(target, e.LayerPathId));
+    }
+
+    [Fact]
+    public void Undoing_the_delete_of_a_moved_entity_brings_its_move_back()
+    {
+        if (Fixture.Read(WorldSectorFragmentTests.Sector56) is not { } sector) return;
+
+        (WorldEditSession session, _, List<WorldEntity> entities) = Load(sector);
+        WorldEntity moved = entities.First(e => e.LayerPathId == MissionLayers.MainName);
+        session.MoveToLayer(moved, "test_layer");
+
+        DeletedRecord record = session.Delete(moved);
+        Assert.Empty(session.LayerPlacements());
+
+        session.Restore(record);
+        Assert.Equal([moved.Id], Assert.Single(session.LayerPlacements()).Layer.Entities);
+    }
+
+    private static readonly ArchetypeIndex NoLibrary = ArchetypeIndex.Load([new ArchetypeLayer("missing.fcb")], _ => null);
+
     /// <summary>A session over <see cref="WorldSectorFragmentTests.Sector56"/>'s bytes.</summary>
     internal static (WorldEditSession Session, byte[] BaseFcb, List<WorldEntity> Entities) Load(byte[] baseFcb)
     {

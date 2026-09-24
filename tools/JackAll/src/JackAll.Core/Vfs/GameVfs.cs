@@ -278,20 +278,18 @@ public sealed class GameVfs : IDisposable
             }
         }
 
-        // GroupBy, not ToDictionary: archive names aren't guaranteed unique (e.g. DLC folders can
-        // duplicate a base-game archive's name) - every other by-name lookup in this class already
-        // tolerates that ambiguity via `.First(a => a.Name == ...)`, so this matches that leniency
-        // instead of throwing on a duplicate key.
+        // GroupBy, not ToDictionary: archive names aren't unique (dlc1 and dlc_jungle each ship "menus").
         vfs._archiveIsVolatile = vfs._archives
             .GroupBy(a => a.Name)
             .ToDictionary(g => g.Key, g => g.Any(vfs.IsVolatile));
 
-        vfs._archivesByName = vfs._archives
-            .GroupBy(a => a.Name)
-            .ToDictionary(g => g.Key, g => g.ToArray());
+        vfs._archivesByName = IndexByName(vfs._archives);
 
         return vfs;
     }
+
+    private static Dictionary<string, DuniaArchive[]> IndexByName(List<DuniaArchive> archives)
+        => archives.GroupBy(a => a.Name).ToDictionary(g => g.Key, g => g.ToArray());
 
     private bool IsVolatile(DuniaArchive archive)
         => string.Equals(
@@ -325,6 +323,7 @@ public sealed class GameVfs : IDisposable
 
             DuniaArchive stale = _archives[index];
             _archives[index] = DuniaArchive.Open(stale.FatPath);
+            _archivesByName = IndexByName(_archives);
             stale.Dispose();
 
             // A build also calls install.EnsureVanillaBackup(), so the very first deploy of this
@@ -956,30 +955,24 @@ public sealed class GameVfs : IDisposable
     /// </summary>
     public string DisplayModuleName(VfsFile file)
     {
-        if (file.SourceKind != SourceKind.Archive
-            || !_archivesByName.TryGetValue(file.SourceName, out DuniaArchive[]? candidates)
-            || candidates.Length == 0)
+        if (file.SourceKind != SourceKind.Archive)
         {
             return file.SourceName;
         }
 
-        DuniaArchive archive;
-        if (candidates.Length == 1)
-        {
-            archive = candidates[0];
-        }
-        else
-        {
-            // Several archives share this bare name - a fragment/link row's own hash is synthetic
-            // (not a real archive entry), so probe with whichever ancestor hash actually lives in one
-            // of their FAT indexes instead.
-            uint probeHash = file.ContainerHash ?? file.EngineHash;
-            archive = candidates.FirstOrDefault(a => a.Contains(probeHash)) ?? candidates[0];
-        }
-
+        // A fragment/link row's own hash is synthetic, so probe with its container's instead.
+        DuniaArchive archive = ArchiveFor(file.SourceName, file.ContainerHash ?? file.EngineHash);
         return archive.Folder.Equals("base", StringComparison.OrdinalIgnoreCase)
             ? file.SourceName
             : $"{archive.Folder}/{archive.Name}";
+    }
+
+    /// <summary>The archive named <paramref name="name"/> that won <paramref name="hash"/> - bare
+    /// names collide (dlc1 and dlc_jungle each ship a "menus"), and the last one mounted wins.</summary>
+    private DuniaArchive ArchiveFor(string name, uint hash)
+    {
+        DuniaArchive[] candidates = _archivesByName[name];
+        return candidates.LastOrDefault(a => a.Contains(hash)) ?? candidates[^1];
     }
 
     private byte[] ReadFromSource(VfsFile file)
@@ -990,8 +983,7 @@ public sealed class GameVfs : IDisposable
             return layer.Read(file.EngineHash);
         }
 
-        var archive = _archives.First(a => a.Name == file.SourceName);
-        return archive.Read(file.EngineHash);
+        return ArchiveFor(file.SourceName, file.EngineHash).Read(file.EngineHash);
     }
 
     /// <summary>

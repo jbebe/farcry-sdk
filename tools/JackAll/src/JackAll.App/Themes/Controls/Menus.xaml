@@ -19,7 +19,7 @@
         </Setter>
     </Style>
 
-    <!-- A leaf item only: no menu in the app nests a submenu. -->
+    <!-- A context-menu item; one with items of its own opens them in a popup to its right. -->
     <Style TargetType="MenuItem">
         <Setter Property="Foreground" Value="{DynamicResource TextPrimaryBrush}" />
         <Setter Property="Padding" Value="10,4" />
@@ -27,9 +27,28 @@
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
                     <Border x:Name="Bd" Background="Transparent" Padding="{TemplateBinding Padding}" SnapsToDevicePixels="True">
-                        <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" />
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <ContentPresenter ContentSource="Header" RecognizesAccessKey="True" />
+                            <TextBlock x:Name="Chevron" Grid.Column="1" Visibility="Collapsed" Margin="16,0,0,0" VerticalAlignment="Center"
+                                       FontFamily="Segoe MDL2 Assets" FontSize="8" Text="&#xE76C;" />
+                            <Popup x:Name="PART_Popup" PlacementTarget="{Binding ElementName=Bd}" Placement="Right"
+                                   IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   AllowsTransparency="True" Focusable="False" PopupAnimation="None">
+                                <Border Background="{DynamicResource SurfaceBrush}" BorderBrush="{DynamicResource ControlBorderBrush}"
+                                        BorderThickness="1" Padding="2">
+                                    <StackPanel IsItemsHost="True" KeyboardNavigation.DirectionalNavigation="Cycle" />
+                                </Border>
+                            </Popup>
+                        </Grid>
                     </Border>
                     <ControlTemplate.Triggers>
+                        <Trigger Property="Role" Value="SubmenuHeader">
+                            <Setter TargetName="Chevron" Property="Visibility" Value="Visible" />
+                        </Trigger>
                         <Trigger Property="IsHighlighted" Value="True">
                             <Setter TargetName="Bd" Property="Background" Value="{DynamicResource SelectionBrush}" />
                             <Setter Property="Foreground" Value="{DynamicResource SelectionTextBrush}" />
