@@ -11,11 +11,13 @@
 // moon without the fog the engine hides a low moon in.
 //
 // It also watches the draws named by their shaders, in DrawPrimitive too: those that read the linear
-// depth, the final pass's colour grade, which it can draw with values of our own, and the world's
-// depth pass, which it draws again into the solid depth.
+// depth, the final pass's colour grade, which it can draw with values of our own, the world's
+// depth pass, which it draws again into the solid depth, and grass and leaves.
 //
 // See docs/docs/engine-internals/presentation-and-input.md for what named that call.
 #pragma once
+
+#include "engine/known_shaders.h"
 
 #include <cstdint>
 #include <d3d9.h>
@@ -52,6 +54,25 @@ void SetGrade(GradeFn grade);
 
 // Whether the draws that read the linear depth are watched for its texture.
 void SetWatchDepth(bool watch);
+
+// The engine's own draw call, which whoever is handed it makes once, around state of its own.
+class EngineDraw {
+public:
+    template <class Draw>
+    explicit EngineDraw(const Draw& draw)
+        : m_draw(&draw), m_call([](const void* d) { return (*static_cast<const Draw*>(d))(); }) {}
+
+    HRESULT operator()() const { return m_call(m_draw); }
+
+private:
+    const void* m_draw;
+    HRESULT (*m_call)(const void*);
+};
+
+// Makes every draw of grass or tree leaves in place of the engine, in every pass.
+using FoliageFn = HRESULT (*)(IDirect3DDevice9* device, KnownShaders::Foliage kind,
+                              const EngineDraw& draw);
+void SetFoliage(FoliageFn foliage);
 
 // How many domes have been replaced. A count that stops climbing while the mode is Overhaul is a
 // dome that stopped being recognised, which is the one failure that would otherwise be silent.

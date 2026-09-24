@@ -64,7 +64,9 @@ set(SHADER_PASSES
   "shadows.fx:ApplyPS:ps_3_0:shadows_apply_ps.h:g_shadowsApplyPixelShader"
   "occlusion.fx:GtaoPS:ps_3_0:occlusion_gtao_ps.h:g_occlusionGtaoPixelShader"
   "occlusion.fx:BlurPS:ps_3_0:occlusion_blur_ps.h:g_occlusionBlurPixelShader"
-  "occlusion.fx:ApplyPS:ps_3_0:occlusion_apply_ps.h:g_occlusionApplyPixelShader")
+  "occlusion.fx:ApplyPS:ps_3_0:occlusion_apply_ps.h:g_occlusionApplyPixelShader"
+  "grass.fx:MainVS:vs_3_0:grass_vs.h:g_grassVertexShader"
+  "grass.fx:CascadedVS:vs_3_0:grass_cascaded_vs.h:g_grassCascadedVertexShader")
 
 # Included by more than one shader source, so any change to them recompiles them all.
 set(SHADER_INCLUDES
@@ -96,6 +98,7 @@ add_library(SkyOverhaul SHARED
   "src/main.cpp"
   "src/clouds.cpp"
   "src/dazzle.cpp"
+  "src/foliage.cpp"
   "src/grade.cpp"
   "src/night.cpp"
   "src/occlusion.cpp"

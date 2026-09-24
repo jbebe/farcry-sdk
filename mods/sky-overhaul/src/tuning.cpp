@@ -59,9 +59,11 @@ namespace {
     constexpr Category kNight = {"Night"};
     constexpr Category kShadows = {"Shadows"};
     constexpr Category kGrade = {"Grade"};
+    constexpr Category kFoliage = {"Foliage"};
 
     // The window's tabs, in order.
-    constexpr const Category* kTabs[] = {&kSun, &kSky, &kClouds, &kNight, &kShadows, &kGrade};
+    constexpr const Category* kTabs[] = {&kSun,     &kSky,   &kClouds,  &kNight,
+                                         &kShadows, &kGrade, &kFoliage};
 
     constexpr Group kCloudLayer = {"Cloud layer", &kClouds};
     constexpr Group kHighCloud = {"High cloud", &kClouds};
@@ -71,6 +73,7 @@ namespace {
     constexpr Group kCloudShadows = {"Cloud shadows", &kShadows};
     constexpr Group kAmbientOcclusion = {"Ambient occlusion", &kShadows};
     constexpr Group kColourGrade = {"Colour grade", &kGrade};
+    constexpr Group kGrass = {"Grass", &kFoliage};
 
     // In the order the file and the window list them.
     constexpr Parameter kParameters[] = {
@@ -172,6 +175,18 @@ namespace {
          "Above zero warms the picture, below cools it. The engine's 0.23 is its yellow cast."},
         {"Grade tint", &kColourGrade, offsetof(Values, gradeTint), -0.07f, -0.5f, 0.5f, "%.2f",
          "Below zero turns the picture green, above turns it magenta."},
+
+        {"Grass root shade", &kGrass, offsetof(Values, grassRootShade), 0.35f, 0.0f, 1.0f, "%.2f",
+         "How much of the light the foot of a blade keeps against its tip."},
+        {"Grass side light", &kGrass, offsetof(Values, grassSideLight), 0.6f, 0.0f, 1.5f, "%.2f",
+         "How far a clump's sides turn toward or away from the sun. Zero lights it like the "
+         "ground."},
+        {"Grass sheen", &kGrass, offsetof(Values, grassSheen), 1.0f, 0.0f, 4.0f, "%.2f",
+         "How bright the shine along blades is, strongest with a low sun and blades seen across."},
+        {"Grass sheen narrowness", &kGrass, offsetof(Values, grassSheenNarrowness), 8.0f, 1.0f,
+         40.0f, "%.1f", "How tight the angle is at which blades shine."},
+        {"Grass glow", &kGrass, offsetof(Values, grassGlow), 0.6f, 0.0f, 3.0f, "%.2f",
+         "How much sunlight comes through blades with the sun behind them."},
     };
 
     constexpr Moment kMoments[] = {

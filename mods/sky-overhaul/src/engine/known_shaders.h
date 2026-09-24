@@ -28,8 +28,18 @@ struct Known {
 // each one pays for reading its bytecode.
 Known Bound(IDirect3DDevice9* device);
 
+enum class Foliage {
+    None,
+    // Any of the engine's shipped grass shaders, which draw it into depth and by other lights.
+    Grass,
+    // Grass lit by the sun through one shadow map slice, or through cascades.
+    LitGrass,
+    LitGrassCascaded,
+    Leaves,
+};
+
 // Whether the bound vertex shader is grass's or tree leaves'. Remembered per shader, like Bound.
-bool IsFoliageBound(IDirect3DDevice9* device);
+Foliage FoliageBound(IDirect3DDevice9* device);
 
 // Forgets every shader seen, whose addresses a new device may reuse.
 void Forget();

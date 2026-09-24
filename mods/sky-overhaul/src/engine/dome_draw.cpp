@@ -58,6 +58,7 @@ namespace {
     SkyOverhaul::DomeDraw::SubstituteFn g_substitute = nullptr;
     SkyOverhaul::DomeDraw::SubstituteFn g_maskSubstitute = nullptr;
     SkyOverhaul::DomeDraw::GradeFn g_grade = nullptr;
+    SkyOverhaul::DomeDraw::FoliageFn g_foliage = nullptr;
     bool g_watchDepth = false;
     SkyOverhaul::DomeDraw::Mode g_mode = SkyOverhaul::DomeDraw::Mode::Engine;
 
@@ -156,14 +157,21 @@ namespace {
     }
 
     // The draws named by their shaders: one of the world's depth pass is drawn again into the solid
-    // depth, a depth reader shows the linear depth texture, and the grade is drawn with our values
-    // and its own put back. `draw` is the engine's call.
+    // depth, grass and leaves are handed over whole, a depth reader shows the linear depth texture,
+    // and the grade is drawn with our values and its own put back. `draw` is the engine's call.
     template <class Draw>
     HRESULT WatchShaders(IDirect3DDevice9* device, UINT primitives, Draw draw) {
+        using SkyOverhaul::KnownShaders::Foliage;
         using SkyOverhaul::KnownShaders::Kind;
         if (SkyOverhaul::SolidDepth::Begin(device)) {
             draw();
             SkyOverhaul::SolidDepth::End(device);
+        }
+        if (g_foliage != nullptr) {
+            const Foliage kind = SkyOverhaul::KnownShaders::FoliageBound(device);
+            if (kind != Foliage::None) {
+                return g_foliage(device, kind, SkyOverhaul::DomeDraw::EngineDraw(draw));
+            }
         }
         const bool gradeShape = g_grade != nullptr && primitives <= kScreenPrimitives;
         if (!g_watchDepth && !gradeShape) {
@@ -272,6 +280,10 @@ void SkyOverhaul::DomeDraw::SetMaskSubstitute(SubstituteFn mask) {
 
 void SkyOverhaul::DomeDraw::SetGrade(GradeFn grade) {
     g_grade = grade;
+}
+
+void SkyOverhaul::DomeDraw::SetFoliage(FoliageFn foliage) {
+    g_foliage = foliage;
 }
 
 void SkyOverhaul::DomeDraw::SetWatchDepth(bool watch) {

@@ -15,6 +15,7 @@
 #include "engine/known_shaders.h"
 #include "engine/screen_draw.h"
 #include "engine/solid_depth.h"
+#include "foliage.h"
 #include "grade.h"
 #include "night.h"
 #include "occlusion.h"
@@ -35,6 +36,7 @@ namespace {
         SkyOverhaul::SolidDepth::ReleaseDeviceObjects();
         SkyOverhaul::DepthTexture::ReleaseDeviceObjects();
         SkyOverhaul::DrawGuard::ReleaseDeviceObjects();
+        SkyOverhaul::Foliage::ReleaseDeviceObjects();
         SkyOverhaul::KnownShaders::Forget();
     }
 
@@ -53,6 +55,7 @@ namespace {
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
         SkyOverhaul::Dazzle::OnFinalPass(pass);
         SkyOverhaul::Grade::OnFinalPass(pass);
+        SkyOverhaul::Foliage::OnFinalPass(pass);
         SkyOverhaul::SolidDepth::OnFinalPass(pass);
     }
 
@@ -105,6 +108,10 @@ namespace {
         SkyOverhaul::Occlusion::SetEnabled(g_occlusion);
         WatchDepth();
     }
+
+    void __cdecl OnGrassChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Foliage::SetEnabled(value->asChoice == 1);
+    }
 }
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
@@ -130,6 +137,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         // Watches the draws inside a pass rather than the passes themselves, because that is where
         // the dome is and a sky has to go under everything drawn after it.
         SkyOverhaul::Sky::Install();
+        SkyOverhaul::Foliage::Install();
     }
 
     // The publisher every effect reads, which draws nothing: the sun, the moon and the weather as
@@ -150,6 +158,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Grade", FCSE_CHOICE(1), &OnGradeChanged, nullptr, kModes, std::size(kModes)},
         {"Occlusion", FCSE_CHOICE(0), &OnOcclusionChanged, nullptr, kOcclusionModes,
          std::size(kOcclusionModes)},
+        {"Grass", FCSE_CHOICE(1), &OnGrassChanged, nullptr, kModes, std::size(kModes)},
     };
     // Registered under the module name: the mod menu lists every loaded plugin and then every group
     // that matched none, so a group named apart from its DLL would arrive twice, once empty.
