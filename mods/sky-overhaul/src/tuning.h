@@ -1,6 +1,6 @@
-// Every value the clouds, the glare, the night, the cloud shadows, the ambient occlusion, the grade,
-// the grass and the leaves are tuned by, kept in bin\sky-overhaul.ini and edited in DevTools'
-// overlay.
+// Every value the clouds, the glare, the night, the sun and cloud shadows, the ambient occlusion,
+// the grade, the grass and the leaves are tuned by, kept in bin\sky-overhaul.ini and edited in
+// DevTools' overlay.
 #pragma once
 
 namespace SkyOverhaul::Tuning {
@@ -43,6 +43,12 @@ struct Values {
     float nightPurkinje;
     float nightMoonColour;
     float nightNoise;
+
+    float sunShadowStartAngle;
+    float sunShadowEndAngle;
+    float sunShadowRange0;
+    float sunShadowRange1;
+    float sunShadowRange2;
 
     float shadowStrength;
 

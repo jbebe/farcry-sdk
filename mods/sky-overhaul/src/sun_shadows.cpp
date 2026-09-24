@@ -1,6 +1,7 @@
 #include "sun_shadows.h"
 
 #include "fcse_api.h"
+#include "tuning.h"
 
 #include <cstdint>
 
@@ -26,15 +27,6 @@ namespace {
     constexpr size_t kRenderConfigOffset = 0x2C;
     constexpr size_t kRangesOffset = 0x778 + 0x40;
 
-    // Shadows follow the sun down to fifteen degrees and lie no flatter than about ten at sunset,
-    // where the engine's fifty and twenty-five hold them at mid-morning all afternoon.
-    constexpr float kStart = 15.0f;
-    constexpr float kEnd = 8.0f;
-
-    // Each cascade's reach, where the engine has 4, 20 and 140. Past about eighteen metres for the
-    // first, whole stretches of ground lose their shadow looking away from a low sun.
-    constexpr float kRanges[3] = {18.0f, 100.0f, 500.0f};
-
     // One of the engine's settings, held at our value while the part is on and given back after.
     struct Held {
         float ours;
@@ -43,9 +35,9 @@ namespace {
     };
 
     bool g_enabled = false;
-    Held g_start = {kStart};
-    Held g_end = {kEnd};
-    Held g_ranges[3] = {{kRanges[0]}, {kRanges[1]}, {kRanges[2]}};
+    Held g_start = {};
+    Held g_end = {};
+    Held g_ranges[3] = {};
 
     // The global an instruction found by `code` addresses, `at` bytes into it.
     template <class T>
@@ -71,14 +63,16 @@ namespace {
                                  : reinterpret_cast<float*>(config + kRangesOffset) + cascade;
     }
 
-    void Hold(float* setting, Held& held) {
+    // Anything but what we wrote last is the engine's own value, set since.
+    void Hold(float* setting, Held& held, float value) {
         if (setting == nullptr) {
             return;
         }
-        if (*setting != held.ours) {
+        if (!held.written || *setting != held.ours) {
             held.engine = *setting;
-            *setting = held.ours;
         }
+        held.ours = value;
+        *setting = value;
         held.written = true;
     }
 
@@ -106,11 +100,14 @@ void SkyOverhaul::SunShadows::OnScenePass(const Frame::Pass& pass) {
     if (!g_enabled || !pass.sky) {
         return;
     }
+    const Tuning::Values values = Tuning::Current();
+    const float ranges[3] = {values.sunShadowRange0, values.sunShadowRange1,
+                             values.sunShadowRange2};
     const bool first = !g_start.written;
-    Hold(StartAngle(), g_start);
-    Hold(EndAngle(), g_end);
+    Hold(StartAngle(), g_start, values.sunShadowStartAngle);
+    Hold(EndAngle(), g_end, values.sunShadowEndAngle);
     for (size_t cascade = 0; cascade < 3; cascade++) {
-        Hold(Range(cascade), g_ranges[cascade]);
+        Hold(Range(cascade), g_ranges[cascade], ranges[cascade]);
     }
     if (first) {
         FCSE::Logf("sun shadows: angles %s (engine %.0f and %.0f), ranges %s (engine %.0f, %.0f "

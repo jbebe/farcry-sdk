@@ -71,6 +71,7 @@ namespace {
     constexpr Group kSunGlare = {"Sun glare", &kSun};
     constexpr Group kAfterimage = {"Afterimage", &kSun};
     constexpr Group kNightVision = {"Night vision", &kNight};
+    constexpr Group kSunShadows = {"Sun shadows", &kShadows};
     constexpr Group kCloudShadows = {"Cloud shadows", &kShadows};
     constexpr Group kAmbientOcclusion = {"Ambient occlusion", &kShadows};
     constexpr Group kColourGrade = {"Colour grade", &kGrade};
@@ -152,6 +153,20 @@ namespace {
         {"Night noise", &kNightVision, offsetof(Values, nightNoise), 1.0f, 0.0f, 1.0f, "%.2f",
          "Faint moving grain in the darkest parts of the view."},
 
+        {"Sun shadow start angle", &kSunShadows, offsetof(Values, sunShadowStartAngle), 15.0f,
+         0.0f, 90.0f, "%.0f deg",
+         "The sun's elevation below which shadows stop following it and ease toward the end "
+         "angle. The engine's is 50."},
+        {"Sun shadow end angle", &kSunShadows, offsetof(Values, sunShadowEndAngle), 8.0f, 0.0f,
+         90.0f, "%.0f deg", "The flattest angle shadows are cast at. The engine's is 25."},
+        {"Sun shadow range 0", &kSunShadows, offsetof(Values, sunShadowRange0), 51.0f, 1.0f,
+         600.0f, "%.0f m", "How far the nearest, sharpest cascade reaches. The engine's is 4."},
+        {"Sun shadow range 1", &kSunShadows, offsetof(Values, sunShadowRange1), 100.0f, 1.0f,
+         1000.0f, "%.0f m", "How far the middle cascade reaches. The engine's is 20."},
+        {"Sun shadow range 2", &kSunShadows, offsetof(Values, sunShadowRange2), 207.0f, 1.0f,
+         2000.0f, "%.0f m",
+         "How far the last, softest cascade reaches. The engine's is 140."},
+
         {"Cloud shadow strength", &kCloudShadows, offsetof(Values, shadowStrength), 0.5f, 0.0f, 1.0f,
          "%.2f", "How much of the light on sunlit ground a cloud overhead takes away."},
 
@@ -183,27 +198,27 @@ namespace {
         {"Grade tint", &kColourGrade, offsetof(Values, gradeTint), -0.07f, -0.5f, 0.5f, "%.2f",
          "Below zero turns the picture green, above turns it magenta."},
 
-        {"Grass root shade", &kGrass, offsetof(Values, grassRootShade), 0.35f, 0.0f, 1.0f, "%.2f",
+        {"Grass root shade", &kGrass, offsetof(Values, grassRootShade), 0.9f, 0.0f, 1.0f, "%.2f",
          "How much of the light the foot of a blade keeps against its tip."},
-        {"Grass side light", &kGrass, offsetof(Values, grassSideLight), 0.6f, 0.0f, 1.5f, "%.2f",
+        {"Grass side light", &kGrass, offsetof(Values, grassSideLight), 0.1f, 0.0f, 1.5f, "%.2f",
          "How far a clump's sides turn toward or away from the sun. Zero lights it like the "
          "ground."},
-        {"Grass sheen", &kGrass, offsetof(Values, grassSheen), 1.0f, 0.0f, 4.0f, "%.2f",
+        {"Grass sheen", &kGrass, offsetof(Values, grassSheen), 0.45f, 0.0f, 4.0f, "%.2f",
          "How bright the shine along blades is, strongest with a low sun and blades seen across."},
-        {"Grass sheen narrowness", &kGrass, offsetof(Values, grassSheenNarrowness), 8.0f, 1.0f,
+        {"Grass sheen narrowness", &kGrass, offsetof(Values, grassSheenNarrowness), 2.0f, 1.0f,
          40.0f, "%.1f", "How tight the angle is at which blades shine."},
-        {"Grass glow", &kGrass, offsetof(Values, grassGlow), 0.6f, 0.0f, 3.0f, "%.2f",
+        {"Grass glow", &kGrass, offsetof(Values, grassGlow), 0.35f, 0.0f, 3.0f, "%.2f",
          "How much sunlight comes through blades with the sun behind them."},
 
-        {"Leaf crown shade", &kLeaves, offsetof(Values, leafCrownShade), 0.75f, 0.0f, 1.0f,
+        {"Leaf crown shade", &kLeaves, offsetof(Values, leafCrownShade), 0.7f, 0.0f, 1.0f,
          "%.2f", "How much of the sunlight a tree's crown takes from its own far side and inside."},
-        {"Leaf crown thickness", &kLeaves, offsetof(Values, leafCrownThickness), 1.5f, 0.2f, 6.0f,
+        {"Leaf crown thickness", &kLeaves, offsetof(Values, leafCrownThickness), 3.1f, 0.2f, 6.0f,
          "%.2f", "How quickly sunlight fades on its way through the crown."},
-        {"Leaf tilt", &kLeaves, offsetof(Values, leafTilt), 0.4f, 0.0f, 1.5f, "%.2f",
+        {"Leaf tilt", &kLeaves, offsetof(Values, leafTilt), 0.07f, 0.0f, 1.5f, "%.2f",
          "How far each leaf turns its own way, so neighbours catch the sun differently."},
-        {"Leaf glint", &kLeaves, offsetof(Values, leafGlint), 3.0f, 0.0f, 8.0f, "%.2f",
+        {"Leaf glint", &kLeaves, offsetof(Values, leafGlint), 5.04f, 0.0f, 8.0f, "%.2f",
          "How bright the shine off leaves facing the sun is. The engine's is 1.5."},
-        {"Leaf glow", &kLeaves, offsetof(Values, leafGlow), 1.5f, 0.0f, 4.0f, "%.2f",
+        {"Leaf glow", &kLeaves, offsetof(Values, leafGlow), 0.7f, 0.0f, 4.0f, "%.2f",
          "How much sunlight comes through leaves with the sun behind them, against the engine's."},
     };
 

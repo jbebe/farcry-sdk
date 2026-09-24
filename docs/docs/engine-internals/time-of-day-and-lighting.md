@@ -177,7 +177,8 @@ does not draw from it: the renderer object (pointer at `0x11607C90`, `0x3B8` byt
 `SunShadowRange0` was measured to have no visible effect in game, while the `gfx_SunShadowRange0`
 console setting takes effect at once. Raised much past its retail 4, measured in game, the cascades
 stop joining up: looking away from a low sun, stretches of ground lose their shadow as if the
-casters were culled. 18 is about the most that stays continuous with 15 and 8 for the angles.
+casters were culled. 18 is about the most that stays continuous with 15 and 8 for the angles and the
+other two ranges at their retail 20 and 140.
 
 ## The clouds are lit from a stretched clock
 
