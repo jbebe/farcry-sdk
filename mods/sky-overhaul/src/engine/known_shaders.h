@@ -48,14 +48,8 @@ enum class VertexKind {
     UnshadowedLeafCopies,
 };
 
-struct KnownVertex {
-    VertexKind kind;
-    // The bytecode's CRC-32, or 0 if the device would not hand it over.
-    uint32_t crc;
-};
-
 // What the vertex shader bound right now is. Remembered per shader, like Bound.
-KnownVertex VertexBound(IDirect3DDevice9* device);
+VertexKind VertexBound(IDirect3DDevice9* device);
 
 // Forgets every shader seen, whose addresses a new device may reuse.
 void Forget();

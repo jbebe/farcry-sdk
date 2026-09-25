@@ -129,10 +129,8 @@ namespace {
         SkyOverhaul::SunShadows::SetEnabled(value->asChoice == 1);
     }
 
-    const char* const kRockModes[] = {"Engine", "Overhaul", "Census", "Parity", "Blink", "Grid"};
-
     void __cdecl OnRocksChanged(const FCSE_SettingValue* value, void*) {
-        SkyOverhaul::Rocks::SetMode(static_cast<SkyOverhaul::Rocks::Mode>(value->asChoice));
+        SkyOverhaul::Rocks::SetEnabled(value->asChoice == 1);
     }
 }
 
@@ -182,7 +180,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Grass", FCSE_CHOICE(1), &OnGrassChanged, nullptr, kModes, std::size(kModes)},
         {"Leaves", FCSE_CHOICE(1), &OnLeavesChanged, nullptr, kModes, std::size(kModes)},
         {"Sun shadows", FCSE_CHOICE(1), &OnSunShadowsChanged, nullptr, kModes, std::size(kModes)},
-        {"Rocks", FCSE_CHOICE(1), &OnRocksChanged, nullptr, kRockModes, std::size(kRockModes)},
+        {"Rocks", FCSE_CHOICE(1), &OnRocksChanged, nullptr, kModes, std::size(kModes)},
     };
     // Registered under the module name: the mod menu lists every loaded plugin and then every group
     // that matched none, so a group named apart from its DLL would arrive twice, once empty.

@@ -241,9 +241,7 @@ namespace {
             return draw();
         }
         device->SetPixelShader(ours.pixel);
-        if (ours.vertex != nullptr) {
-            device->SetVertexShader(ours.vertex);
-        }
+        device->SetVertexShader(ours.vertex);
         device->SetPixelShaderConstantF(kOwnParameters, ours.parameters, kRegisters);
         constexpr DWORD sampler = SkyOverhaul::DomeDraw::kRockSampler;
         IDirect3DBaseTexture9* engineTexture = nullptr;
@@ -252,7 +250,10 @@ namespace {
             device->GetTexture(sampler, &engineTexture);
             for (size_t i = 0; i < std::size(kRockSampling); i++) {
                 device->GetSamplerState(sampler, kRockSampling[i].type, &engineSampling[i]);
-                device->SetSamplerState(sampler, kRockSampling[i].type, kRockSampling[i].value);
+                if (engineSampling[i] != kRockSampling[i].value) {
+                    device->SetSamplerState(sampler, kRockSampling[i].type,
+                                            kRockSampling[i].value);
+                }
             }
             device->SetTexture(sampler, ours.texture);
         }
@@ -260,14 +261,14 @@ namespace {
         if (ours.texture != nullptr) {
             device->SetTexture(sampler, engineTexture);
             for (size_t i = 0; i < std::size(kRockSampling); i++) {
-                device->SetSamplerState(sampler, kRockSampling[i].type, engineSampling[i]);
+                if (engineSampling[i] != kRockSampling[i].value) {
+                    device->SetSamplerState(sampler, kRockSampling[i].type, engineSampling[i]);
+                }
             }
             SkyOverhaul::Release(engineTexture);
         }
         device->SetPixelShaderConstantF(kOwnParameters, engineParameters, kRegisters);
-        if (ours.vertex != nullptr) {
-            device->SetVertexShader(engineVertex);
-        }
+        device->SetVertexShader(engineVertex);
         device->SetPixelShader(engine);
         SkyOverhaul::Release(engine);
         SkyOverhaul::Release(engineVertex);
@@ -275,9 +276,9 @@ namespace {
     }
 
     // The draws named by their shaders: one of the world's depth pass is drawn again into the solid
-    // depth, lit grass and leaves are drawn through our vertex shaders, a depth reader shows the
-    // linear depth texture, and the grade is drawn with our values and its own put back. `draw` is
-    // the engine's call.
+    // depth, lit grass and leaves are drawn through our vertex shaders, rock through shaders of
+    // ours, a depth reader shows the linear depth texture, and the grade is drawn with our values
+    // and its own put back. `draw` is the engine's call.
     template <class Draw>
     HRESULT WatchShaders(IDirect3DDevice9* device, UINT primitives, Draw draw) {
         using SkyOverhaul::KnownShaders::Kind;
@@ -287,7 +288,7 @@ namespace {
         }
         if (g_grass != nullptr || g_leaves != nullptr) {
             const SkyOverhaul::KnownShaders::VertexKind vertex =
-                SkyOverhaul::KnownShaders::VertexBound(device).kind;
+                SkyOverhaul::KnownShaders::VertexBound(device);
             const SkyOverhaul::DomeDraw::FoliageFn light = Lighter(vertex);
             if (light != nullptr) {
                 return DrawFoliage(device, light, vertex, draw);

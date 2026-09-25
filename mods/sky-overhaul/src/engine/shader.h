@@ -3,7 +3,24 @@
 
 #include <d3d9.h>
 
+#include <vector>
+
 namespace SkyOverhaul {
+
+// A shader's bytecode as the device hands it back, which is what shadersobj ships; empty if the
+// device will not.
+template <class Interface>
+std::vector<DWORD> Bytecode(Interface* shader) {
+    UINT size = 0;
+    if (FAILED(shader->GetFunction(nullptr, &size)) || size == 0) {
+        return {};
+    }
+    std::vector<DWORD> tokens(size / sizeof(DWORD));
+    if (FAILED(shader->GetFunction(tokens.data(), &size))) {
+        return {};
+    }
+    return tokens;
+}
 
 // A shader built into the plugin, created on whichever device asks for it. A device that refuses it
 // is logged once and not asked again until the shader is released.

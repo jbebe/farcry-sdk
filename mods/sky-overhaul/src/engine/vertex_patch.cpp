@@ -50,7 +50,7 @@ std::vector<DWORD> SkyOverhaul::VertexPatch::WithPosition(const DWORD* tokens, s
     UINT freeTemp = 0;
 
     size_t i = 1;
-    while (i < count && end == 0) {
+    while (i < count) {
         const DWORD token = tokens[i];
         if (token == kEnd) {
             end = i;

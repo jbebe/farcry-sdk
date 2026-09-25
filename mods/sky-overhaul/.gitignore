@@ -1,3 +1,5 @@
 # CMake's build tree, and the built plugin the layer only carries as a build artefact.
 out/
 layer/plugins/*.dll
+# Poly Haven source maps; rocks/scripts/make_detail.py downloads them again when missing.
+rocks/work/

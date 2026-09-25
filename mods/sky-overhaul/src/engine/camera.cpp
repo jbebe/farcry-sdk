@@ -9,7 +9,7 @@ namespace {
     // Where the engine binds these for every shader in the frame.
     constexpr uint32_t kViewProjectionRegister = 4;
     constexpr uint32_t kCameraDistancesRegister = 40;
-    constexpr uint32_t kCameraBlockRegister = 45;
+    constexpr uint32_t kCameraBlockRegister = SkyOverhaul::Camera::kPositionRegister;
 
     // c4 through c11: the view-projection and then the projection.
     constexpr UINT kViewProjectionCount = 8;

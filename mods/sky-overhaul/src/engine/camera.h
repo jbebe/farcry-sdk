@@ -8,6 +8,10 @@
 
 namespace SkyOverhaul::Camera {
 
+// The vertex shader register the engine binds the camera's position to, for every shader in the
+// frame.
+constexpr UINT kPositionRegister = 45;
+
 struct View {
     // World to clip, as the engine's own shaders transform by, row by row.
     float viewProjection[16];

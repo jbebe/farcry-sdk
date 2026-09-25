@@ -9,7 +9,7 @@
 
 namespace SkyOverhaul::KnownTextures {
 
-// The rock normal map a texture is, by file name, or null for any other texture.
-const char* RockNormal(IDirect3DBaseTexture9* texture);
+// Whether a texture is one of the rock normal maps.
+bool IsRockNormal(IDirect3DBaseTexture9* texture);
 
 }

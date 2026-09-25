@@ -1,6 +1,7 @@
 #include "engine/known_shaders.h"
 
 #include "engine/crc32.h"
+#include "engine/shader.h"
 
 #include <algorithm>
 #include <cstdint>
@@ -11,7 +12,6 @@
 namespace {
     using SkyOverhaul::KnownShaders::Kind;
     using SkyOverhaul::KnownShaders::Known;
-    using SkyOverhaul::KnownShaders::KnownVertex;
     using SkyOverhaul::KnownShaders::VertexKind;
 
     struct Named {
@@ -117,21 +117,14 @@ namespace {
     };
 
     Cache<IDirect3DPixelShader9, Known> g_pixelShaders;
-    Cache<IDirect3DVertexShader9, KnownVertex> g_vertexShaders;
+    Cache<IDirect3DVertexShader9, VertexKind> g_vertexShaders;
 
     // The CRC-32 of a shader's bytecode, or false if the device would not hand it over.
     template <class Shader>
     bool BytecodeCrc(Shader* shader, uint32_t& crc) {
-        UINT size = 0;
-        if (FAILED(shader->GetFunction(nullptr, &size)) || size == 0) {
-            return false;
-        }
-        std::vector<uint8_t> bytecode(size);
-        if (FAILED(shader->GetFunction(bytecode.data(), &size))) {
-            return false;
-        }
-        crc = SkyOverhaul::Crc32(bytecode.data(), bytecode.size());
-        return true;
+        const std::vector<DWORD> tokens = SkyOverhaul::Bytecode(shader);
+        crc = SkyOverhaul::Crc32(tokens.data(), tokens.size() * sizeof(DWORD));
+        return !tokens.empty();
     }
 
     Known Classify(IDirect3DPixelShader9* shader) {
@@ -149,21 +142,20 @@ namespace {
         return known;
     }
 
-    KnownVertex ClassifyVertex(IDirect3DVertexShader9* shader) {
+    VertexKind ClassifyVertex(IDirect3DVertexShader9* shader) {
         uint32_t crc = 0;
         if (!BytecodeCrc(shader, crc)) {
-            return {VertexKind::Other, 0};
+            return VertexKind::Other;
         }
         const auto named =
             std::find_if(std::begin(kNamedVertex), std::end(kNamedVertex),
                          [crc](const NamedVertex& entry) { return entry.crc == crc; });
         if (named != std::end(kNamedVertex)) {
-            return {named->kind, crc};
+            return named->kind;
         }
-        return {std::binary_search(std::begin(kFoliage), std::end(kFoliage), crc)
-                    ? VertexKind::Foliage
-                    : VertexKind::Other,
-                crc};
+        return std::binary_search(std::begin(kFoliage), std::end(kFoliage), crc)
+                   ? VertexKind::Foliage
+                   : VertexKind::Other;
     }
 }
 
@@ -177,10 +169,10 @@ Known SkyOverhaul::KnownShaders::Bound(IDirect3DDevice9* device) {
     return g_pixelShaders.Get(shader, Classify);
 }
 
-KnownVertex SkyOverhaul::KnownShaders::VertexBound(IDirect3DDevice9* device) {
+VertexKind SkyOverhaul::KnownShaders::VertexBound(IDirect3DDevice9* device) {
     IDirect3DVertexShader9* shader = nullptr;
     if (FAILED(device->GetVertexShader(&shader)) || shader == nullptr) {
-        return {VertexKind::Other, 0};
+        return VertexKind::Other;
     }
     shader->Release();
     return g_vertexShaders.Get(shader, ClassifyVertex);

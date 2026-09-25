@@ -1,12 +1,7 @@
-"""Builds the rock detail map Sky Overhaul embeds, from Poly Haven's CC0 `rock_face` scan.
+"""Builds src/textures/rock_detail.dds, the rock detail map Sky Overhaul embeds, from Poly Haven's
+CC0 `rock_face` scan: an A8R8G8B8 DDS whose every mip level is a plain average of the one above.
 
-The map is neutral, so it suits every biome's rock over the retail colour: red and green are the
-relief as a DirectX-convention normal's x and y, blue the cavity and alpha the grain, both as a
-ratio to their own average halved, so 128 changes nothing. Every mip level is a plain average,
-which flattens the relief and evens the ratios out with distance instead of letting them shimmer.
-
-Needs numpy and pillow. Downloads the 2K maps into rocks/work/ the first time; writes
-src/textures/rock_detail.dds, an uncompressed A8R8G8B8 DDS with its whole mip chain.
+Needs numpy and pillow; downloads the 2K maps into rocks/work/ the first time.
 """
 
 import pathlib
@@ -25,7 +20,6 @@ GRAIN_WIDTH = 1 / 16
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 WORK = ROOT / "rocks" / "work" / ASSET
 OUTPUT = ROOT / "src" / "textures" / "rock_detail.dds"
-MAPS = {"diff": "diff", "nor_dx": "nor_dx", "ao": "ao"}
 
 
 def fetch(kind):
@@ -69,15 +63,15 @@ def reduce_to(image, size):
 
 
 def detail():
-    diffuse = linear(fetch(MAPS["diff"]))
+    diffuse = linear(fetch("diff"))
     luminance = diffuse @ np.array([0.2126, 0.7152, 0.0722])
     sigma = GRAIN_WIDTH * SOURCE_SIZE
     grain = luminance / np.maximum(blur(luminance, sigma), 1e-4)
 
-    occlusion = fetch(MAPS["ao"])[..., 0]
+    occlusion = fetch("ao")[..., 0]
     cavity = occlusion / occlusion.mean()
 
-    normal = fetch(MAPS["nor_dx"]) * 2 - 1
+    normal = fetch("nor_dx") * 2 - 1
     relief = normal[..., :2] / np.linalg.norm(normal, axis=-1, keepdims=True)
 
     texels = np.dstack([relief * 0.5 + 0.5, cavity * 0.5, grain * 0.5])
