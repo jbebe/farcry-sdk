@@ -19,6 +19,10 @@ endif()
 
 project ("SkyOverhaul")
 
+# For the rock detail map in src/sky_overhaul.rc: a .rc added to a project without RC enabled is
+# skipped silently, and the plugin would build without it.
+enable_language(RC)
+
 if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
   message(FATAL_ERROR "SkyOverhaul must be built 32-bit (x86) - Far Cry 2 is a 32-bit process and a "
                       "64-bit DLL cannot load into it. Select the x86-debug/x86-release preset.")
@@ -72,7 +76,21 @@ set(SHADER_PASSES
   "leaves.fx:CascadedVS:vs_3_0:leaves_cascaded_vs.h:g_leavesCascadedVertexShader"
   "leaves.fx:CascadedCopiesVS:vs_3_0:leaves_cascaded_copies_vs.h:g_leavesCascadedCopiesVertexShader"
   "leaves.fx:UnshadowedVS:vs_3_0:leaves_unshadowed_vs.h:g_leavesUnshadowedVertexShader"
-  "leaves.fx:UnshadowedCopiesVS:vs_3_0:leaves_unshadowed_copies_vs.h:g_leavesUnshadowedCopiesVertexShader")
+  "leaves.fx:UnshadowedCopiesVS:vs_3_0:leaves_unshadowed_copies_vs.h:g_leavesUnshadowedCopiesVertexShader"
+  "rocks.fx:CensusPS:ps_3_0:rocks_census_ps.h:g_rocksCensusPixelShader"
+  "rocks.fx:CascadedParityPS:ps_3_0:rocks_cascaded_parity_ps.h:g_rocksCascadedParityPixelShader"
+  "rocks.fx:SingleParityPS:ps_3_0:rocks_single_parity_ps.h:g_rocksSingleParityPixelShader"
+  "rocks.fx:VertexAmbientParityPS:ps_3_0:rocks_vertex_ambient_parity_ps.h:g_rocksVertexAmbientParityPixelShader"
+  "rocks.fx:RiverParityPS:ps_3_0:rocks_river_parity_ps.h:g_rocksRiverParityPixelShader"
+  "rocks.fx:ShadowlessParityPS:ps_3_0:rocks_shadowless_parity_ps.h:g_rocksShadowlessParityPixelShader"
+  "rocks.fx:Grid7PS:ps_3_0:rocks_grid7_ps.h:g_rocksGrid7PixelShader"
+  "rocks.fx:Grid8PS:ps_3_0:rocks_grid8_ps.h:g_rocksGrid8PixelShader"
+  "rocks.fx:Grid9PS:ps_3_0:rocks_grid9_ps.h:g_rocksGrid9PixelShader"
+  "rocks.fx:CascadedPS:ps_3_0:rocks_cascaded_ps.h:g_rocksCascadedPixelShader"
+  "rocks.fx:SinglePS:ps_3_0:rocks_single_ps.h:g_rocksSinglePixelShader"
+  "rocks.fx:VertexAmbientPS:ps_3_0:rocks_vertex_ambient_ps.h:g_rocksVertexAmbientPixelShader"
+  "rocks.fx:RiverPS:ps_3_0:rocks_river_ps.h:g_rocksRiverPixelShader"
+  "rocks.fx:ShadowlessPS:ps_3_0:rocks_shadowless_ps.h:g_rocksShadowlessPixelShader")
 
 # Included by more than one shader source, so any change to them recompiles them all.
 set(SHADER_INCLUDES
@@ -102,6 +120,7 @@ endforeach()
 
 add_library(SkyOverhaul SHARED
   "src/main.cpp"
+  "src/sky_overhaul.rc"
   "src/clouds.cpp"
   "src/dazzle.cpp"
   "src/grade.cpp"
@@ -109,6 +128,7 @@ add_library(SkyOverhaul SHARED
   "src/leaves.cpp"
   "src/night.cpp"
   "src/occlusion.cpp"
+  "src/rocks.cpp"
   "src/shadows.cpp"
   "src/sky.cpp"
   "src/sky_model.cpp"
@@ -121,6 +141,7 @@ add_library(SkyOverhaul SHARED
   "src/engine/dome_draw.cpp"
   "src/engine/fog_tint.cpp"
   "src/engine/known_shaders.cpp"
+  "src/engine/known_textures.cpp"
   "src/engine/noise.cpp"
   "src/engine/frame.cpp"
   "src/engine/screen_draw.cpp"
@@ -128,6 +149,7 @@ add_library(SkyOverhaul SHARED
   "src/engine/solid_depth.cpp"
   "src/engine/sun_occlusion.cpp"
   "src/engine/time_of_day.cpp"
+  "src/engine/vertex_patch.cpp"
   "src/engine/vtable.cpp"
   ${SHADER_HEADERS}
 )
@@ -149,6 +171,10 @@ target_link_libraries(SkyOverhaul PRIVATE d3d9 imgui)
 # No "lib" prefix and no decoration: bin\plugins\SkyOverhaul.dll is what the player installs and
 # what fcse.log names in every line this plugin writes.
 set_target_properties(SkyOverhaul PROPERTIES OUTPUT_NAME "SkyOverhaul" PREFIX "")
+
+# rc.exe reports no dependency on the file an RCDATA line embeds.
+set_source_files_properties("src/sky_overhaul.rc" PROPERTIES
+  OBJECT_DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/src/textures/rock_detail.dds")
 
 if (CMAKE_VERSION VERSION_GREATER 3.12)
   set_property(TARGET SkyOverhaul PROPERTY CXX_STANDARD 20)

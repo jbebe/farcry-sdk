@@ -1,0 +1,2 @@
+// The rock detail map, built by rocks/scripts/make_detail.py.
+ROCK_DETAIL RCDATA "textures/rock_detail.dds"

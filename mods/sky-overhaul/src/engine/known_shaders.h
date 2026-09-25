@@ -4,6 +4,7 @@
 // object. See docs/docs/file-formats/shader-objects.md.
 #pragma once
 
+#include <cstdint>
 #include <d3d9.h>
 
 namespace SkyOverhaul::KnownShaders {
@@ -22,6 +23,8 @@ struct Known {
     Kind kind;
     // Where a grade's three registers start.
     UINT firstRegister;
+    // The bytecode's CRC-32, or 0 if the device would not hand it over.
+    uint32_t crc;
 };
 
 // What the pixel shader bound right now is. Remembered per shader, so only the first draw through
@@ -45,8 +48,14 @@ enum class VertexKind {
     UnshadowedLeafCopies,
 };
 
+struct KnownVertex {
+    VertexKind kind;
+    // The bytecode's CRC-32, or 0 if the device would not hand it over.
+    uint32_t crc;
+};
+
 // What the vertex shader bound right now is. Remembered per shader, like Bound.
-VertexKind VertexBound(IDirect3DDevice9* device);
+KnownVertex VertexBound(IDirect3DDevice9* device);
 
 // Forgets every shader seen, whose addresses a new device may reuse.
 void Forget();

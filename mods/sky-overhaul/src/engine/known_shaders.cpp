@@ -1,7 +1,8 @@
 #include "engine/known_shaders.h"
 
+#include "engine/crc32.h"
+
 #include <algorithm>
-#include <array>
 #include <cstdint>
 #include <iterator>
 #include <unordered_map>
@@ -10,6 +11,7 @@
 namespace {
     using SkyOverhaul::KnownShaders::Kind;
     using SkyOverhaul::KnownShaders::Known;
+    using SkyOverhaul::KnownShaders::KnownVertex;
     using SkyOverhaul::KnownShaders::VertexKind;
 
     struct Named {
@@ -87,18 +89,6 @@ namespace {
 
     constexpr Known kOther = {Kind::Other, 0};
 
-    constexpr std::array<uint32_t, 256> kCrcTable = [] {
-        std::array<uint32_t, 256> table = {};
-        for (uint32_t i = 0; i < 256; i++) {
-            uint32_t crc = i;
-            for (int bit = 0; bit < 8; bit++) {
-                crc = (crc >> 1) ^ (0xEDB88320u & (0u - (crc & 1u)));
-            }
-            table[i] = crc;
-        }
-        return table;
-    }();
-
     // What each shader seen was classified as, by its address. Consecutive draws mostly share a
     // shader, which spares the map.
     template <class Shader, class Value>
@@ -127,7 +117,7 @@ namespace {
     };
 
     Cache<IDirect3DPixelShader9, Known> g_pixelShaders;
-    Cache<IDirect3DVertexShader9, VertexKind> g_vertexShaders;
+    Cache<IDirect3DVertexShader9, KnownVertex> g_vertexShaders;
 
     // The CRC-32 of a shader's bytecode, or false if the device would not hand it over.
     template <class Shader>
@@ -140,11 +130,7 @@ namespace {
         if (FAILED(shader->GetFunction(bytecode.data(), &size))) {
             return false;
         }
-        crc = 0xFFFFFFFFu;
-        for (uint8_t byte : bytecode) {
-            crc = kCrcTable[(crc ^ byte) & 0xFF] ^ (crc >> 8);
-        }
-        crc = ~crc;
+        crc = SkyOverhaul::Crc32(bytecode.data(), bytecode.size());
         return true;
     }
 
@@ -154,27 +140,30 @@ namespace {
             return kOther;
         }
         if (std::binary_search(std::begin(kDepthReaders), std::end(kDepthReaders), crc)) {
-            return {Kind::DepthReader, 0};
+            return {Kind::DepthReader, 0, crc};
         }
         const auto named = std::find_if(std::begin(kNamed), std::end(kNamed),
                                         [crc](const Named& entry) { return entry.crc == crc; });
-        return named != std::end(kNamed) ? named->known : kOther;
+        Known known = named != std::end(kNamed) ? named->known : kOther;
+        known.crc = crc;
+        return known;
     }
 
-    VertexKind ClassifyVertex(IDirect3DVertexShader9* shader) {
+    KnownVertex ClassifyVertex(IDirect3DVertexShader9* shader) {
         uint32_t crc = 0;
         if (!BytecodeCrc(shader, crc)) {
-            return VertexKind::Other;
+            return {VertexKind::Other, 0};
         }
         const auto named =
             std::find_if(std::begin(kNamedVertex), std::end(kNamedVertex),
                          [crc](const NamedVertex& entry) { return entry.crc == crc; });
         if (named != std::end(kNamedVertex)) {
-            return named->kind;
+            return {named->kind, crc};
         }
-        return std::binary_search(std::begin(kFoliage), std::end(kFoliage), crc)
-                   ? VertexKind::Foliage
-                   : VertexKind::Other;
+        return {std::binary_search(std::begin(kFoliage), std::end(kFoliage), crc)
+                    ? VertexKind::Foliage
+                    : VertexKind::Other,
+                crc};
     }
 }
 
@@ -188,10 +177,10 @@ Known SkyOverhaul::KnownShaders::Bound(IDirect3DDevice9* device) {
     return g_pixelShaders.Get(shader, Classify);
 }
 
-VertexKind SkyOverhaul::KnownShaders::VertexBound(IDirect3DDevice9* device) {
+KnownVertex SkyOverhaul::KnownShaders::VertexBound(IDirect3DDevice9* device) {
     IDirect3DVertexShader9* shader = nullptr;
     if (FAILED(device->GetVertexShader(&shader)) || shader == nullptr) {
-        return VertexKind::Other;
+        return {VertexKind::Other, 0};
     }
     shader->Release();
     return g_vertexShaders.Get(shader, ClassifyVertex);

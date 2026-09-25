@@ -12,8 +12,8 @@
 //
 // It also watches the draws named by their shaders, in DrawPrimitive too: those that read the
 // linear depth, the final pass's colour grade, which it can draw with values of our own, the world's depth
-// pass, which it draws again into the solid depth, and lit grass and leaves, which it can draw with
-// vertex shaders of ours.
+// pass, which it draws again into the solid depth, lit grass and leaves, which it can draw with
+// vertex shaders of ours, and rock, which it can draw with pixel shaders of ours.
 //
 // See docs/docs/engine-internals/presentation-and-input.md for what named that call.
 #pragma once
@@ -66,6 +66,27 @@ using FoliageFn = IDirect3DVertexShader9* (*)(IDirect3DDevice9* device,
                                                float parameters[kFoliageParameterRegisters * 4]);
 void SetGrass(FoliageFn grass);
 void SetLeaves(FoliageFn leaves);
+
+// How many registers of their own the pixel shaders drawing rock in the engine's place read.
+constexpr UINT kRockParameterRegisters = 8;
+
+// The sampler a rock draw's own texture is bound to, one no Generic pixel shader reads.
+constexpr DWORD kRockSampler = 7;
+
+// What a rock draw is drawn with in place of the engine's.
+struct RockDraw {
+    IDirect3DPixelShader9* pixel;
+    // Null keeps the engine's.
+    IDirect3DVertexShader9* vertex;
+    // Bound to kRockSampler, wrapping and filtered, if not null.
+    IDirect3DBaseTexture9* texture;
+    float parameters[kRockParameterRegisters * 4];
+};
+
+// Fills `draw` for a draw to be drawn with shaders of ours; false leaves it the engine's. Asked of
+// every draw the foliage did not take.
+using RockFn = bool (*)(IDirect3DDevice9* device, RockDraw& draw);
+void SetRocks(RockFn rocks);
 
 // How many domes have been replaced. A count that stops climbing while the mode is Overhaul is a
 // dome that stopped being recognised, which is the one failure that would otherwise be silent.

@@ -60,10 +60,11 @@ namespace {
     constexpr Category kShadows = {"Shadows"};
     constexpr Category kGrade = {"Grade"};
     constexpr Category kFoliage = {"Foliage"};
+    constexpr Category kRock = {"Rock"};
 
     // The window's tabs, in order.
     constexpr const Category* kTabs[] = {&kSun,     &kSky,   &kClouds,  &kNight,
-                                         &kShadows, &kGrade, &kFoliage};
+                                         &kShadows, &kGrade, &kFoliage, &kRock};
 
     constexpr Group kFog = {"Fog", &kSky};
     constexpr Group kCloudLayer = {"Cloud layer", &kClouds};
@@ -77,6 +78,8 @@ namespace {
     constexpr Group kColourGrade = {"Colour grade", &kGrade};
     constexpr Group kGrass = {"Grass", &kFoliage};
     constexpr Group kLeaves = {"Leaves", &kFoliage};
+    constexpr Group kRockShading = {"Rock and cliff", &kRock};
+    constexpr Group kRockDetail = {"Detail", &kRock};
 
     // In the order the file and the window list them.
     constexpr Parameter kParameters[] = {
@@ -220,6 +223,26 @@ namespace {
          "How bright the shine off leaves facing the sun is. The engine's is 1.5."},
         {"Leaf glow", &kLeaves, offsetof(Values, leafGlow), 0.7f, 0.0f, 4.0f, "%.2f",
          "How much sunlight comes through leaves with the sun behind them, against the engine's."},
+
+        {"Rock smoothness", &kRockShading, offsetof(Values, rockSmoothness), 0.0f, 0.0f, 1.0f,
+         "%.2f",
+         "How far rock is lit back toward the engine's smooth surface. Zero lights every "
+         "triangle flat; one is the engine's shading, without its sheen."},
+        {"Rock glint", &kRockShading, offsetof(Values, rockGlint), 1.0f, 0.0f, 25.0f, "%.2f",
+         "How bright the small glint of the sun off the triangles is. One is what bare stone "
+         "reflects, the same on every rock."},
+        {"Rock glint sharpness", &kRockShading, offsetof(Values, rockGlintSharpness), 40.0f, 2.0f,
+         200.0f, "%.0f",
+         "How tight the glint is: higher is a smaller, harder spot. The engine's sheen is 5."},
+
+        {"Detail size", &kRockDetail, offsetof(Values, rockDetailSize), 2.4f, 0.5f, 8.0f, "%.1f m",
+         "How wide one repeat of the detail map is on rock. The scan it is made from is 2.4 m."},
+        {"Detail relief", &kRockDetail, offsetof(Values, rockDetailRelief), 1.0f, 0.0f, 3.0f,
+         "%.2f", "How deep the cracks and bumps of the detail map are."},
+        {"Detail grain", &kRockDetail, offsetof(Values, rockDetailGrain), 0.5f, 0.0f, 1.0f, "%.2f",
+         "How much the detail map's light and dark grain shows through the rock's own colour."},
+        {"Cavity", &kRockDetail, offsetof(Values, rockCavity), 0.7f, 0.0f, 1.0f, "%.2f",
+         "How much the detail map's cracks darken the light rock takes from the sky."},
     };
 
     constexpr Moment kMoments[] = {
