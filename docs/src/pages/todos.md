@@ -82,10 +82,9 @@ uncovered in the engine. The reasoning and the verdict per target are in the
 
 ### Checks before building anything
 
-- [ ] **Underwater listen.** Dive while an NPC fires. If gunfire turns dull rather than only quieter,
-  DARE's software low-pass works on a modern PC and distance filtering by plugin is viable.
-- [ ] **DSOAL experiment.** Put 32-bit `dsound.dll` + `dsoal-aldrv.dll` in `bin\` and A/B the
-  authored reverb in a hangar, a normal building, jungle and desert. It decides the reverb route.
+- [ ] **DSOAL experiment.** Install `mods/sound-overhaul` (it bundles DSOAL r695) and A/B the
+  authored reverb in a hangar, a normal building, jungle and desert. It decides the reverb route. DSOAL
+  before r689 fails to open a device in FC2 at all; the plugin carries a fix for that too.
 
 ### Gunshots
 
@@ -133,11 +132,21 @@ uncovered in the engine. The reasoning and the verdict per target are in the
 
 - [ ] **Air absorption** (plugin). Drive DARE's per-voice Butterworth low-pass by distance for
   positioned types (weapons, explosions, barks, vehicles, animals), so a merc yelling 80 m away sounds
-  far, not just quiet.
+  far, not just quiet. Hook the per-type occlusion callback `FUN_10621880`, which writes each sound's
+  obstruction, and mark playing sounds dirty as the listener moves: DARE caches occlusion per sound
+  object. The low-pass is confirmed working on PC (underwater listen, 2026-09-25).
+- [ ] **Soften the obstruction curve** (data). `7fffffff.bao` maps obstruction onto 20–3,200 Hz, so
+  any obstruction means a cutoff under 3.2 kHz. Raise the maximum (`+0xB4`) for gentle distance
+  dulling, and retune underwater and building filters to match.
 - [ ] **Terrain and cover occlusion outdoors** (plugin). Two outdoor points are never occluded today; a
   ray test from listener to source can feed the same low-pass.
-- [ ] **Stronger building occlusion filters** (data). `fOcclusionFilter` is 0 on most buildings and
-  `fSoundOcclusionFilter` on 97% of entrances, so walls only lower the volume.
+- [ ] **Set building occlusion filters** (data). `fOcclusionFilter` is 0 on 391 of 623 buildings and
+  `fSoundOcclusionFilter` on 97% of entrances. Those walls do nothing to gunfire from inside them: the
+  filter is the only path to it, and `fOcclusionVolume` reaches only outdoor ambience.
+- [ ] **Walls that lower gunfire volume** (plugin or data). No path makes a gunshot quieter through a
+  wall today; decide whether one should.
+- [ ] **Material-aware occlusion** (plugin + data). DARE can band-pass by occlusion material, but the
+  project declares no materials and the game's callback never passes any.
 - [ ] **Widen the occlusion mix preset.** `Compatible.VolumeLinesToLowerInsideForOcclusion` touches
   only ambience types 0, 23 and 24; decide which other types it should muffle when the listener is
   indoors.
@@ -145,8 +154,8 @@ uncovered in the engine. The reasoning and the verdict per target are in the
   gunfire carry realistically far, and give events their own curves where sharing is wrong.
 - [ ] **Raise the voice cap.** `NB_AUDIBLE_VOICES=64` in `DARE.INI`; distant gunfire loses out in big
   fights. The −48 dB distance cull is code.
-- [ ] **`occmul_pc` = 1.0 against 50.0 on consoles.** Find what it multiplies, then decide whether PC
-  occlusion should match the consoles.
+- [ ] **`occmul_pc` = 1.0 against 50.0 on consoles.** It multiplies every sound's obstruction, and 50
+  saturates any occlusion to full. Decide whether PC should be harsher than 1.0.
 - [ ] **Distant voices.** Barks get air absorption through the plugin above; also check their rolloff
   curves.
 - [ ] **HRTF for headphones.** OpenAL Soft behind DSOAL can render DS3D voices with HRTF.
@@ -209,12 +218,11 @@ uncovered in the engine. The reasoning and the verdict per target are in the
 
 - [ ] **Emitter `GetPosition` slot in `Dunia.dll`** (`+8` in the server's interface): a prerequisite of
   the first prototype.
-- [ ] **Where the PC build turns `ComputeOcclusion` into DARE's per-voice filter amount**: the hook
-  point for air absorption.
-- [ ] **The low-pass's minimum and maximum cutoffs** that obstruction maps between.
 - [ ] **Whether DS3D's own distance rolloff is neutralised**, or doubles DARE's curves.
-- [ ] **Where the occlusion materials live**, and their values.
-- [ ] **What `occmul_pc` multiplies.**
+- [ ] **What `ApplyListenerFactor` returns** when the listener is inside a building and the source is
+  not.
+- [ ] **What marks a sound object's cached occlusion dirty**, besides its creation (vtable slot `+8`,
+  `0x10a537d0`). The air-absorption plugin needs a way to refresh playing sounds.
 - [ ] **The fourth DARE private effect.**
 - [ ] **How `fAngle` is converted** in the fly-by (default 90, retail 1.25).
 - [ ] **Event types `2`, `3`, `4` and `10`**: only partly traced.

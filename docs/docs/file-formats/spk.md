@@ -291,6 +291,34 @@ A multilayer's parameter is answered by the playing object. The game parameters 
 declared in `7fffffff.bao`. One of them, `0x00440259` (0–250), is used by no entity, bank or XML in
 retail.
 
+## The project descriptor
+
+:::info[Verified via reverse engineering and against the retail file]
+`FUN_10a54b20` in `Dunia.dll` loads it. The values are read from retail
+`common/soundbinary/7fffffff.bao`.
+:::
+
+`7fffffff.bao` is one `LargeFixed256` object: DARE's project-wide settings and tables. After the 40-byte
+core comes the 256-byte sub-header; offsets below are from its start, file offset `0x28`. The loader
+checks the load mode string at `+0x04` (`ATOMIC`; `PACKAGE` is the other mode) and copies these fields:
+
+| Offset | Retail | Meaning |
+| --- | --- | --- |
+| `+0xAC` | `1` | obstruction drives the per-voice low-pass; `0` would turn it into a volume drop |
+| `+0xB0` | `20.0` | low-pass cutoff at full obstruction, Hz |
+| `+0xB4` | `3200.0` | low-pass cutoff as obstruction approaches zero, Hz |
+| `+0xB8`, `+0xBC` | offset `0`, count `63` | reverb presets, `0x70` bytes each (`EAXREVERBPROPERTIES`) |
+| `+0xC0`, `+0xC4` | count `0` | occlusion materials, `0x2C` bytes each **(inferred from the size the band-pass reads)** |
+| `+0xC8`, `+0xCC` | count `12` | 4-byte ids, not identified |
+| `+0xD0`, `+0xD4` | count `0` | 16-byte records, not identified |
+| `+0xD8`, `+0xDC` | count `15` | game-parameter ranges, 12 bytes each |
+
+The table offsets count from the end of the sub-header (file offset `0x128`), and the tables follow one
+another to the end of the file. The low-pass curve these values feed is on
+[audio runtime](../engine-internals/audio-runtime.md#the-software-filters). Other fields the loader
+copies (`+0x84`, `+0x88`, `+0x8C`, `+0x90`, `+0x94`, `+0xA8` and two 16-byte blocks at `+0xE0` and
+`+0xF0`) are not identified.
+
 ## Preamble words and the `extra` field
 
 Each record's preamble (the count-prefixed word list before its payload) is copied into a small

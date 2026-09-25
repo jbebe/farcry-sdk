@@ -4,7 +4,8 @@ sidebar_position: 1
 
 # Realistic Sound
 
-**Status:** research done (2026-09-25). Nothing built yet. The next steps are the
+**Status:** research done (2026-09-25). The [free listen](#before-anything-a-free-listen) confirmed the
+software low-pass works on PC. Nothing built yet. The next steps are the
 [DSOAL experiment](#experiment-bring-eax-back-with-dsoal), then the
 [first prototype](#first-prototype-sound-travels-at-340-ms).
 
@@ -39,8 +40,9 @@ the verdicts:
 - **Loudness over distance is data.** Every positioned event has a rolloff curve, a piecewise table of
   decibels against metres ending in a hard cut. All 96 curves sit in one bank. Nothing else changes with
   distance: no filter, and **no delay**.
-- **DARE has a per-voice low-pass and band-pass in software.** They run on a modern PC. Today only
-  occlusion and mix presets drive them.
+- **DARE has a per-voice low-pass and band-pass in software.** They run on a modern PC. The game drives
+  the low-pass per sound from building zones and the mix presets' filter. The band-pass gets no input in
+  retail.
 - **Reverb exists only as EAX 4**, and it is authored almost everywhere: 63 presets, one per building
   class and per biome and intensity. On a PC without EAX all of it is silent.
 - **Occlusion is zones, not rays.** A building and its doorways muffle what crosses them; nothing
@@ -116,15 +118,20 @@ Nothing on the list is impossible.
 
 ### 3. Distance and occlusion — plugin (+ data)
 
-- **Air absorption: plugin.** Each voice has a 12 dB/octave Butterworth low-pass whose cutoff follows an
-  "obstruction" amount **(RE-verified)**. No distance feeds it. A plugin that raises the amount with
-  distance, for positioned types only, gives far guns and far voices their dullness. The exact hook
-  point is still to trace: the PC glue between the game's per-object occlusion (`ComputeOcclusion`) and
-  DARE's voice block is not traced.
-- **Behind walls: data, within limits.** Building zones and their doorways already attenuate and filter,
-  from `fOcclusionVolume`/`fOcclusionFilter` and the entrance values. Retail uses them almost only as a
-  volume drop: the filter is 0 on most buildings and 97% of entrances **(seen in data)**. Raising the
-  filters is data.
+- **Air absorption: plugin, plus one data value.** Each voice has a 12 dB/octave Butterworth low-pass
+  whose cutoff follows an "obstruction" amount **(RE-verified)**. No distance feeds it. The game writes
+  that amount once per sound in the per-type occlusion callback (`FUN_10621880`), which is the hook
+  point: add a distance term there, for the types flagged `occlusion`. DARE caches the result per sound
+  object, so the plugin must also mark playing sounds dirty as the listener moves. The low-pass itself
+  is confirmed working on PC **(heard in game)**. The other catch is the curve. Retail
+  maps obstruction onto 20–3,200 Hz so steeply that any amount at all means a cutoff under 3.2 kHz.
+  Gentle dulling at mid range needs the maximum in `7fffffff.bao` raised, say to 20 kHz. That also
+  softens the existing occlusion: underwater would go from about 90 Hz to about 460 Hz, and a building
+  filter of 0.01 from 1.2 kHz to 7.4 kHz **(computed from the traced curve)**.
+- **Behind walls: data, within limits.** A sound from inside a building is low-passed by that building's
+  `fOcclusionFilter` **(RE-verified)**. A wall never makes a gunshot quieter: `fOcclusionVolume` reaches
+  only the outdoor ambience types. The filter is 0 on 391 of 623 buildings and 97% of entrances
+  **(seen in data)**; where it is set, even 0.01 means a cutoff near 1.2 kHz. Setting filters is data.
 - **Behind terrain or cover: plugin.** Two outdoor points are never occluded. A ray test from listener to
   source, feeding the same low-pass, is plugin work.
 - **Voices: the same path.** Barks are a positioned, occluded sound type, so they get the same curves,
@@ -180,10 +187,29 @@ containers. The plugin route and the DSOAL experiment need no new assets.
 
 ## Before anything: a free listen
 
-No install needed. **Is the software low-pass alive on this PC?** Stand near water while an NPC fires or
-a vehicle runs, then dive. `Exclusive.Underwater` puts filter 0.8 on most types. If gunfire turns dull
-rather than just quieter, the software filter reaches DARE on your machine, and air absorption by plugin
-(target 3) is viable.
+**Done 2026-09-25, on GOG: the software low-pass works.**
+
+Air absorption (target 3) rests on one link: a filter amount set by the game reaches DARE's low-pass.
+That link is traced end to end **(RE-verified)**. Diving applies `Exclusive.Underwater`, which sets
+dialog and vehicles to 0 dB and NPC weapons, explosions and 3D effects to −10 dB, all with filter 0.8:
+obstruction 0.8, a cutoff near 90 Hz.
+
+What was heard:
+
+1. Under water, NPC gunfire, voice lines and explosions are silent, even up close.
+2. Applying the preset from the console on dry land (`#StartSoundMixingFromLua("Exclusive.Underwater")`)
+   lowered the ambience but left an already-running car engine unchanged.
+3. Removing only the preset while under water (`#StopSoundMixingFromLua("Exclusive.Underwater")`)
+   brought the outside world back.
+
+The third run is the proof. It keeps everything else about being under water and takes away one thing.
+Voices sit at 0 dB in the preset, so their silence is the filter. The start event under water is only
+two water loops **(seen in data)**, and no other underwater code mutes anything **(RE-verified)**.
+
+The second run changes the plugin plan. DARE caches each sound object's occlusion and asks the game
+again only when the object is marked dirty (see
+[audio runtime](../engine-internals/audio-runtime.md#the-occlusion-is-cached-per-sound-object)). A
+distance filter that must follow a moving listener has to refresh sounds that are already playing.
 
 ## Experiment: bring EAX back with DSOAL
 
@@ -193,16 +219,18 @@ shipped `eax.dll` needs Creative's drivers, so DARE falls back to `DirectSoundCr
 call instead. If it also answers the EAX 4 probe, the authored reverb plays without any change to the
 game.
 
-**Setup.** This works on either install; pick one and keep the other as the control.
+**First run, 2026-09-25 (GOG): no sound at all.** DSOAL r649 (March 2025) in `bin\` made the game
+open with its "Your Sound-Driver is currently used by an other application" box. DARE's device open
+continues only if `DirectSoundEnumerateA` returns exactly 0, and its callback stops the enumeration at
+the first real device **(RE-verified)**. DSOAL returned `S_FALSE` in that case until commit `4dbbffa`
+(14 Oct 2025, first in build r689). DSOAL's log stopped right after listing the devices, before any
+device was created **(seen in the log)**.
 
-1. Take the **32-bit** `dsound.dll` and `dsoal-aldrv.dll` from a current DSOAL build (FC2 is a 32-bit
-   process). FC2 asks for EAX 4 specifically (`EAXPROPERTYID_EAX40_FXSlot0`), so a build that only
-   emulates EAX 2 will not switch it on.
-2. Copy both into the install's `bin\` folder, next to `Dunia.dll` and `FarCry2.exe`. Change nothing
-   else. To undo, delete the two files.
-3. Optionally turn on DSOAL's and OpenAL Soft's logs to see the EAX calls: `DSOAL_LOGLEVEL`,
-   `DSOAL_LOGFILE`, `ALSOFT_LOGLEVEL` and `ALSOFT_LOGFILE`. Check the names against DSOAL's README.
-4. Launch as usual.
+**Setup.** Install the Sound Overhaul plugin (`mods/sound-overhaul`): it bundles DSOAL r695 and loads it from its own plugin folder, and also flips the enumeration check so an
+older DSOAL works too. FC2 asks for EAX 4 specifically (`EAXPROPERTYID_EAX40_FXSlot0`), which DSOAL
+provides. Remove any `dsound.dll` from `bin\`, or the plugin leaves that one in charge. To see the EAX
+calls, launch from a shell with `DSOAL_LOGLEVEL`, `DSOAL_LOGFILE`, `ALSOFT_LOGLEVEL` and
+`ALSOFT_LOGFILE` set.
 
 **Listen, with and without the DLLs:**
 
@@ -216,8 +244,8 @@ game.
 
 **Read the result.**
 
-- **Clear tails:** EAX is live, target 2's reverb is solved by a two-DLL install, and the backend route
-  becomes adopting DSOAL.
+- **Clear tails:** EAX is live, target 2's reverb is solved by the bundled DSOAL, and the backend route
+  becomes adopting it.
 - **No difference:** check the log first. No DSOAL log at all means the DLLs were not picked up. A log
   without EAX property calls means the EAX 4 probe failed.
 - **Crashes or stutter:** a compatibility question for DSOAL, not for us.
@@ -273,7 +301,10 @@ arrives. A hotkey toggle lets you A/B it in the same fight.
 - **One bank for all distances.** `common/soundbinary/2fffffff.spk` holds every rolloff curve. The most
   used one, shared by 949 events, cuts at 80 m.
 - **Hit markers** exist only on the multiplayer weapons.
-- `soundconfig.xml` sets `occmul_pc` to 1.0 against 50.0 on consoles. What it multiplies is not traced.
+- `soundconfig.xml` sets `occmul_pc` to 1.0 against 50.0 on consoles. It multiplies every sound's
+  obstruction, so on consoles any occlusion at all becomes full obstruction.
+- **Walls filter gunfire but never make it quieter**, and only where a building's `fOcclusionFilter` is
+  set. The retail values look negligible (0.01) but, on the cutoff curve, mean about 1.2 kHz.
 
 ## Tooling this needs
 
@@ -290,3 +321,5 @@ JackAll can replace audio inside existing `.spk` records. The data route needs i
 - 2026-09-25: sound is the first module of the realism work, ahead of combat-number tuning.
 - 2026-09-25: this pass is research only. No mod code until the DSOAL experiment and the free listen
   are in.
+- 2026-09-25: the free listen is in. The software low-pass works on PC, so air absorption stays on the
+  plugin route, through the occlusion callback.

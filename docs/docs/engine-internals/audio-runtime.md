@@ -28,7 +28,9 @@ the listener is inside a building. What each layer can and cannot do decides wha
 - Distance attenuation comes from a **per-event rolloff curve**: a piecewise-linear table of metres
   against decibels, ending in a hard cut to −96 dB.
 - DARE has a real **per-voice software filter chain**: a 12 dB/octave Butterworth low-pass driven by an
-  obstruction amount, and a band-pass driven by occlusion materials. It runs on any PC.
+  obstruction amount, and a band-pass driven by occlusion materials. It runs on any PC. The game drives
+  the low-pass, from building zones and the mix presets' filter, for every type flagged `occlusion`.
+  Retail maps obstruction onto a 20–3,200 Hz cutoff and gives the band-pass no input.
 - It has **no software reverb, delay line, EQ, compressor or limiter**. The only reverb is an
   **EAX 4** listener effect, and a PC without an EAX device (Windows Vista or later, without DSOAL or
   Creative's ALchemy) runs FC2 with **no reverb at all**.
@@ -83,7 +85,11 @@ DARE's output renderer is built by `FUN_10a4ede0` and reads the `[Renderer DS3D 
 `DARE.INI`. `FUN_10a4c8f0` opens the device:
 
 1. `DirectSoundEnumerateA`, then `EAX.DLL!EAXDirectSoundCreate8`. If that fails it falls back to
-   `DSOUND.DLL!DirectSoundCreate8`.
+   `DSOUND.DLL!DirectSoundCreate8`. The enumeration callback (`0x10a49d20`) stops at the first real
+   device, and the open goes on only if `DirectSoundEnumerateA` returned exactly 0. A DirectSound that
+   returns `S_FALSE` there fails the whole open, and every failure of this function shows the same
+   "Your Sound-Driver is currently used by an other application" box (`FUN_10a4cf70`).
+   `Dunia.dll` imports both DirectSound functions by ordinal, 11 and 2.
 2. Priority cooperative level, a primary buffer with `DSBCAPS_CTRL3D`, and an
    `IDirectSound3DListener8` on it.
 3. A 400 ms looping software buffer (`LOCSOFTWARE`, volume/pan/frequency control) that DARE fills with
@@ -181,10 +187,28 @@ come from the voice's occlusion block:
 - **Occlusion materials**, a weighted list. Each material is a DARE project resource (`FUN_10a54510`)
   carrying both a software band (centre, width, gain, flags) and an EAX occlusion set. `FUN_10a62540`
   intersects the materials' pass bands into one band-pass and adds their gains. Two materials whose
-  bands do not overlap give −96 dB.
-- **Obstruction**, one amount. `FUN_10a62c30` turns it into the low-pass cutoff, interpolated between a
-  minimum and a maximum held in DARE's settings through a `pow` curve, and switches the low-pass on
-  when the amount is above zero. The minimum and maximum cutoffs are not traced.
+  bands do not overlap give −96 dB. **Retail uses none**: the project descriptor declares no materials
+  **(seen in data)** and the game's occlusion callback always passes an empty list **(RE-verified)**, so
+  the band-pass never engages.
+- **Obstruction**, one amount from 0 to 1. `FUN_10a62c30` turns it into the low-pass cutoff and switches
+  the low-pass on when the amount is above zero:
+
+  ```
+  cutoff = min + (max − min) × (1 − obstruction^0.1)
+  ```
+
+  `min` and `max` come from the DARE project descriptor, `common/soundbinary/7fffffff.bao`: 20 Hz and
+  3,200 Hz in retail (see [the project descriptor](../file-formats/spk.md#the-project-descriptor)).
+
+The curve is steep. Any obstruction above zero puts the cutoff under 3.2 kHz:
+
+| Obstruction | 0 | 0.001 | 0.01 | 0.1 | 0.5 | 0.8 | 1 |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| Cutoff | off | 1.6 kHz | 1.2 kHz | 674 Hz | 233 Hz | 90 Hz | 20 Hz |
+
+The project descriptor also decides what obstruction does. Retail sets it to drive the low-pass. Set
+the other way, `FUN_10a4fed0` would turn obstruction into a volume drop instead, and the low-pass would
+stay off (`FUN_10a34630`). With the low-pass on, obstruction never lowers the volume.
 
 The flag that would switch the software filters off (`DAT_11656c48`) is never written, so they run
 whether or not EAX is present. On an EAX card both paths would act **(inferred)**.
@@ -218,12 +242,15 @@ It also registers the building's entrances as **holes**, each carrying `fSoundOc
 `fSoundOcclusionFilter` and `fSoundRange` from `CEntranceInfoComponent`, and the links between connected
 buildings.
 
-Retail's placed buildings use these mostly as a volume drop:
+Retail's values **(seen in data)**:
 
 - **Buildings** (623 placed): `fOcclusionVolume` is mostly 0.3–0.7. `fOcclusionFilter` is 0 on 391 of
   them and 0.01 or less on most of the rest; only 27 go to 0.3 or higher. `fEchoLength` is 0 on 620.
 - **Entrances** (1,967 placed): `fSoundOcclusionVolume` is 0.2 on about half, and
   `fSoundOcclusionFilter` is 0 on 97%.
+
+The small filter values are not small in effect. Because of the cutoff curve, 0.01 is a low-pass near
+1.2 kHz.
 
 `CSoundOcclusionManager::Update` (`0x099bb5d0`) runs every 0.25 s from the listener's position:
 
@@ -238,18 +265,62 @@ Retail's placed buildings use these mostly as a volume drop:
    `Compatible.VolumeLinesToLowerInsideForOcclusion`, which lists only the outdoor ambience types 0, 23
    and 24.
 
-Per sound, `CSoundSystem::ComputeOcclusion` returns `1 − objectFactor × passThrough[type]`, where
-`passThrough` is the mixer's current filter for the sound's type. `ApplyListenerFactor` makes the object
-factor depend on whether the source is in the listener's zone. The per-voice amount this produces is
-what reaches DARE's filters **(inferred: the PC glue between `ComputeOcclusion` and DARE's voice block
-is not traced)**.
+### From zone to filter, per sound
 
-So a gunshot is muffled when one of the two is inside a building and the other is not. Two outdoor
-points are never occluded from each other, however much rock lies between them.
+At start-up `FUN_10622d70` registers each sound type with DARE. A type flagged `occlusion` in
+`soundconfig.xml` gets an occlusion callback, `FUN_10621950` → `FUN_10621880`. DARE calls it for every
+sound of that type, and it writes one number into the voice's obstruction **(RE-verified)**:
 
-`soundconfig.xml` sets `occmul_pc="1.0"` against `occmul_xenon="50.0"` and `occmul_ps3="50.0"`.
-`CSoundSystem::LoadConfigFile` (`0x106233b0` in `Dunia.dll`) reads the PC value, but the code that
-applies it is not traced.
+```
+obstruction = clamp((1 − objectFactor × passThrough[type]) × occmul_pc, 0, 1)
+```
+
+- `passThrough[type]` is what `CMixingManager::Update` keeps per type: (1 − the absolute preset's
+  filter) × (1 − the strongest relative preset's filter). With no filtering preset it is 1.
+- `objectFactor` comes from the sound object's `GetOcclusionFactor`. For the default callbacks it is
+  1 − `fOcclusionFilter` of the building the source stands in, blended toward the nearest hole's value
+  near a door, and 1 for a source outside every building. It is re-evaluated every 0.5 s when the source
+  has moved, adjusted by `ApplyListenerFactor` for whether the listener shares the zone, and faded over
+  `occfade` seconds **(RE-verified in the server build, which carries the symbols; the PC callback calls
+  the same interface slot)**.
+- `occmul_pc` is 1.0. `LoadConfigFile` (`0x106233b0`) stores it at `CSoundSystem+0x24`, where this
+  callback reads it. The consoles' 50.0 turns any non-zero amount into full obstruction.
+
+The result drives only the low-pass. The callback never sets occlusion materials, and obstruction never
+lowers the volume. `CSoundSystem::ComputeOcclusion` is a function of its own in the server build; in
+`Dunia.dll` it is inlined into this callback.
+
+What that means in retail:
+
+- A sound outdoors, with no filtering preset active, gets obstruction 0: no filter.
+- A gunshot from inside a building with a non-zero `fOcclusionFilter` is low-passed. At 0.01 the cutoff
+  is near 1.2 kHz.
+- A wall never makes a gunshot quieter. `fOcclusionVolume` reaches only the types in the occlusion mix
+  preset, the outdoor ambience types 0, 23 and 24.
+- `Exclusive.Underwater` sets filter 0.8 on the types it lists, so their obstruction becomes 0.8 and the
+  cutoff about 90 Hz.
+
+Two outdoor points are never occluded from each other, however much rock lies between them.
+
+:::info[Heard in game (GOG, 2026-09-25)]
+Under water, NPC gunfire, voice lines and explosions are inaudible. Removing only the preset from the
+console while still under water (`#StopSoundMixingFromLua("Exclusive.Underwater")`) brings them back.
+The preset sets voices to 0 dB, so the silence is the low-pass: the path above works on a PC without
+EAX.
+:::
+
+### The occlusion is cached per sound object
+
+DARE does not ask the callback every frame. Each frame, every playing instance reads its occlusion
+through `DARE_Object_QueryOcclusion` (`FUN_10a53750`, from `FUN_10a3d2e0` → `FUN_10a3cc60` →
+`FUN_10a3c4d0`). That calls the game only when the object's dirty bit (`+0x20 & 2`) is set, and clears
+it. Otherwise it returns the stored block **(RE-verified)**. The bit is set when the object is created,
+by vtable slot `+8` (`0x10a537d0`); what else sets it is not traced.
+
+In game, a preset applied from the console above water left an already-running vehicle engine
+unchanged, while it lowered the ambience's volume at once **(heard in game)**. That fits a cache that is
+refreshed only for new sound objects **(inferred)**. Volume goes through `SetTypeVolume` and applies
+immediately.
 
 `fOcclusionEvaluatorWeight` on `CAISoundAndFXComponent` is not audio. It is one of the AI **vision**
 weights (distance, FOV, vegetation, stance, speed, ambient light) in the visibility evaluator.
@@ -479,6 +550,15 @@ Entity fields name a preset by the CRC of its `hidName` (`crc_hidName` in the XM
 
 `ApplyPreset(name, duration)` starts or extends one and plays its `sndStart`. The Domino box
 `SoundMixing` (`StartSoundMixingFromLua`/`StopSoundMixingFromLua`) lets a mission script do the same.
+Both are global Lua functions, so the game's console reaches them through its `#` Lua prefix. That is
+a quick way to audition a preset in game:
+
+```
+#StartSoundMixingFromLua("Exclusive.Underwater")
+#StopSoundMixingFromLua("Exclusive.Underwater")
+```
+
+The name is the preset's `hidName`. A preset started this way stays until it is stopped.
 
 Retail uses this for its big moments:
 
@@ -496,7 +576,7 @@ The player component wires presets to its state **(seen in data)**:
 | `mixHealthFailurePreset` | `Exclusive.Health_Critical` | **empty** |
 | `mixLowStaminaPreset`, `mixMediumStaminaPreset` | `Compatible.Stamina_Low`, `…_Medium` | **empty** |
 | `mixReduceSoundPreset` | `Exclusive.Healing` | **empty** |
-| `mixUnderwaterSoundPreset` | `Exclusive.Underwater` | most types −10 to −15 dB, filter 0.8 |
+| `mixUnderwaterSoundPreset` | `Exclusive.Underwater` | 0 to −15 dB and filter 0.8 on 13 types, among them dialog, vehicles, NPC weapons and explosions |
 | `mixRunningPreset`, `mixCrouchedPreset`, `mixIronsightPreset` | none | — |
 
 So the game switches presets on low health, stamina and healing, but in retail those presets change
@@ -532,7 +612,7 @@ nothing. `Compatible.Ironsight` and `Compatible.Running` exist in the library bu
 | `soundregions.xml` | `SoundRegion` levels | per-biome ambience, `fEchoLenght`, `sndReverb`, the occlusion preset |
 | `databases/materialimpacts/materialimpacts.xml` | `MaterialImpact` | impact events, particles and decals |
 | `databases/materials/logicmaterials.xml` | material settings | the material switch group and each material's switch value |
-| `soundbinary/7fffffff.bao` | DARE project descriptor | reverb presets, multitrack channels, game-parameter ranges |
+| `soundbinary/7fffffff.bao` | DARE project descriptor | reverb presets, the obstruction cutoff range, multitrack channels, game-parameter ranges |
 | `soundbinary/2fffffff.spk` | rolloff pack | all 96 rolloff curves |
 | `engine\settings\DefaultSoundConfig.xml`, `OverrideSoundConfig.xml` | `CSoundConfig` | the player's sound options |
 
@@ -540,9 +620,8 @@ The XML and bank paths are under `common/` in the extracted data.
 
 ## Open
 
-- The minimum and maximum low-pass cutoffs that obstruction maps between.
-- Where the occlusion materials live and what they hold.
 - Whether DS3D's own distance rolloff is neutralised.
-- What `occmul_pc` multiplies.
+- What `ApplyListenerFactor` returns when the listener is in a building and the source is not.
+- What, besides creating a sound object, marks its cached occlusion dirty.
 - The fourth private effect.
 - How `fAngle` is converted in the fly-by.
