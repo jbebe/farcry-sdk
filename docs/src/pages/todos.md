@@ -82,9 +82,8 @@ uncovered in the engine. The reasoning and the verdict per target are in the
 
 ### Checks before building anything
 
-- [ ] **DSOAL experiment.** Install `mods/sound-overhaul` (it bundles DSOAL r695) and A/B the
-  authored reverb in a hangar, a normal building, jungle and desert. It decides the reverb route. DSOAL
-  before r689 fails to open a device in FC2 at all; the plugin carries a fix for that too.
+- [ ] **Walls with EAX live.** With DSOAL, DARE's EAX occlusion and obstruction now act on top of the
+  software low-pass. Listen at doorways and inside buildings for sound muffled twice.
 
 ### Gunshots
 
@@ -113,8 +112,8 @@ uncovered in the engine. The reasoning and the verdict per target are in the
 
 ### Environment tail
 
-- [ ] **Bring the authored reverb back.** If DSOAL works, adopt it and have JackAll deploy the two
-  DLLs. If not, the fallback is a software reverb in a plugin, or our own renderer (very expensive).
+- [ ] **Ship Sound Overhaul's reverb.** It works in game (DSOAL plus the `PlaySoundReverb` body); it
+  still needs a release (CI and release workflows, Nexus page) and the diagnostic reverb log removed.
 - [ ] **Retune the reverb presets** in `common/soundbinary/7fffffff.bao` (63 presets, EAX form).
 - [ ] **Give the 84 reverb-less placed buildings a reverb.**
 - [ ] **Wake the player's echo.** Fill `sndSingleBulletShotEcho` and `sndStart/StopAutoBulletShotEcho`

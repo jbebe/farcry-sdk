@@ -33,7 +33,9 @@ the listener is inside a building. What each layer can and cannot do decides wha
   Retail maps obstruction onto a 20–3,200 Hz cutoff and gives the band-pass no input.
 - It has **no software reverb, delay line, EQ, compressor or limiter**. The only reverb is an
   **EAX 4** listener effect, and a PC without an EAX device (Windows Vista or later, without DSOAL or
-  Creative's ALchemy) runs FC2 with **no reverb at all**.
+  Creative's ALchemy) runs FC2 with **no reverb at all**. Even with one, retail **never switches
+  reverb**: `CSoundSystem::PlaySoundReverb` is an empty function, so DARE keeps the reverb it starts
+  with everywhere.
 - Occlusion is **zone-based**. A building is a zone and its doors and windows are holes. Nothing is
   ray-cast, so terrain and walls between two outdoor points do not muffle anything.
 - Loudness per category comes from **25 sound types** and a **snapshot mixer** (`CMixingManager`) whose
@@ -222,10 +224,13 @@ After opening the device, `FUN_10a4acb0` creates an 11 kHz mono dummy DS3D buffe
 (renderer `+0x168`) and load the reverb. Every EAX write checks that flag first.
 
 The `bin\eax.dll` that ships with the game is Creative's "EAX Unified" 3.062. Its
-`EAXDirectSoundCreate8` is a COM shim: it looks up and instantiates the `EAXUnified8` class that
-Creative's drivers register. On a PC without them it fails, DARE falls back to plain
-`DirectSoundCreate8`, and Windows' software DirectSound answers no to the EAX query **(inferred for the
-shim failing; the fallback and the probe are traced)**.
+`EAXDirectSoundCreate8` does not fail on a PC without Creative's drivers: it creates an ordinary
+DirectSound through COM instead. The DLL carries `CLSID_DirectSound8` and imports `CoCreateInstance`
+**(seen in the binary)**, and with DSOAL answering `Dunia.dll`'s own `DirectSoundCreate8`, DARE
+never called it **(seen in DSOAL's log)**. COM loads the registered Windows `dsound.dll`, so DARE's
+device is Windows' software DirectSound, which answers no to the EAX query. A replacement
+DirectSound has to take over `EAX.DLL`'s entry too; Sound Overhaul points it at DSOAL's
+`DirectSoundCreate8`. The fallback and the probe are traced; the shim's own code is not.
 
 ## Occlusion
 
@@ -340,6 +345,16 @@ The whole path:
 
 There is no second path. On a PC without EAX the reverb is silent, and so are DARE's EAX occlusion,
 obstruction and room sends. The software filters are not affected.
+
+Step 2 never happens in retail. `CSoundSystem::PlaySoundReverb` (vtable `+0x98`) is empty: a bare
+`ret 4` in `Dunia.dll`, and an empty body in the server build's symbols **(RE-verified)**. No
+building, region or mix preset ever reaches DARE, which keeps the reverb it sets when EAX starts, the
+same everywhere **(heard in game with DSOAL, 2026-09-25)**. Sound Overhaul gives the slot a body that
+plays the reverb event through `PlaySound` (vtable `+0x9c`) as sound type 12, and the authored reverbs
+then switch as the player moves: a hangar gets its long tail **(heard in game)**.
+
+Each voice's room send is full or off, from word `[9]` of its sample's header (`FUN_10a68640`): 1 on
+97% of retail samples, all 137 bullet-impact samples included **(seen in data)**.
 
 The reverb effects are not records in any `.spk` bank. They are 63 presets in EAX form inside
 `common/soundbinary/7fffffff.bao`, the DARE project descriptor, and retail's 17 distinct type-`8`

@@ -4,9 +4,10 @@ sidebar_position: 1
 
 # Realistic Sound
 
-**Status:** research done (2026-09-25). The [free listen](#before-anything-a-free-listen) confirmed the
-software low-pass works on PC. Nothing built yet. The next steps are the
-[DSOAL experiment](#experiment-bring-eax-back-with-dsoal), then the
+**Status:** the authored reverb plays (2026-09-25). The [free listen](#before-anything-a-free-listen)
+confirmed the software low-pass works on PC, and the
+[DSOAL experiment](#experiment-bring-eax-back-with-dsoal) became `mods/sound-overhaul`: bundled DSOAL
+plus a fix for the game never switching reverb. The next step is the
 [first prototype](#first-prototype-sound-travels-at-340-ms).
 
 ## The goal
@@ -213,11 +214,9 @@ distance filter that must follow a moving listener has to refresh sounds that ar
 
 ## Experiment: bring EAX back with DSOAL
 
-**Hypothesis.** FC2's reverb and EAX occlusion are silent only because DARE finds no EAX device. The
-shipped `eax.dll` needs Creative's drivers, so DARE falls back to `DirectSoundCreate8` from the system
-`dsound.dll`. A [DSOAL](https://github.com/kcat/dsoal) `dsound.dll` placed next to the game answers that
-call instead. If it also answers the EAX 4 probe, the authored reverb plays without any change to the
-game.
+**Hypothesis.** FC2's reverb and EAX occlusion are silent only because DARE finds no EAX device. A
+[DSOAL](https://github.com/kcat/dsoal) device answers the EAX 4 probe, so if DARE's device is DSOAL's,
+the authored reverb plays without any change to the game's data.
 
 **First run, 2026-09-25 (GOG): no sound at all.** DSOAL r649 (March 2025) in `bin\` made the game
 open with its "Your Sound-Driver is currently used by an other application" box. DARE's device open
@@ -225,6 +224,20 @@ continues only if `DirectSoundEnumerateA` returns exactly 0, and its callback st
 the first real device **(RE-verified)**. DSOAL returned `S_FALSE` in that case until commit `4dbbffa`
 (14 Oct 2025, first in build r689). DSOAL's log stopped right after listing the devices, before any
 device was created **(seen in the log)**.
+
+**Second run, 2026-09-25 (GOG): sound, but still no reverb.** With the plugin and DSOAL r695 the
+game started normally, but DSOAL's log again ended after the device list, and OpenAL never started.
+DARE tries `EAX.DLL!EAXDirectSoundCreate8` first, and without Creative's drivers the shipped `eax.dll`
+builds a Windows DirectSound through COM, so DARE never reached DSOAL **(seen in the log and the
+binary)**. The plugin now points that entry at DSOAL too.
+
+**Third run: one reverb everywhere.** With DSOAL now in charge, every shot had the same tail, in a
+hangar, a field or a concrete tube. A hook on `DARE_SetReverb` logged no call at all during the walk:
+`CSoundSystem::PlaySoundReverb` is empty, so the game never asks DARE for a reverb, and DARE keeps the
+one it sets when EAX starts **(RE-verified)**.
+
+**Fourth run: it works.** With the plugin giving `PlaySoundReverb` a body, hangars get their long tail
+**(heard in game, GOG)**. Target 2's authored reverb is solved by DSOAL plus that fix.
 
 **Setup.** Install the Sound Overhaul plugin (`mods/sound-overhaul`): it bundles DSOAL r695 and loads it from its own plugin folder, and also flips the enumeration check so an
 older DSOAL works too. FC2 asks for EAX 4 specifically (`EAXPROPERTYID_EAX40_FXSlot0`), which DSOAL
@@ -323,3 +336,5 @@ JackAll can replace audio inside existing `.spk` records. The data route needs i
   are in.
 - 2026-09-25: the free listen is in. The software low-pass works on PC, so air absorption stays on the
   plugin route, through the occlusion callback.
+- 2026-09-25: the reverb route is DSOAL, bundled in `mods/sound-overhaul`, plus the plugin's body for
+  the empty `PlaySoundReverb`. No own renderer is needed.

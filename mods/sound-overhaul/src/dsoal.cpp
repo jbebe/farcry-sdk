@@ -1,28 +1,17 @@
-// DSOAL, the DirectSound replacement that brings EAX to a PC without Creative hardware, loaded from
-// dsoal\ beside this plugin instead of from bin\.
-//
-// Windows has already bound Dunia.dll's DSOUND.dll imports to the system DirectSound by the time a
-// plugin loads, so each import slot is rewritten to DSOAL's export of the same ordinal or name.
+// Loads DSOAL from dsoal\ beside this plugin and points Dunia.dll's DirectSound imports at it.
 #include "fcse_api.h"
 
 #include <windows.h>
 
+#include <algorithm>
 #include <string>
-#include <utility>
 #include <vector>
 
-namespace {
-    // The OpenAL driver goes first: DSOAL loads it by bare name as it initialises, which then finds
-    // the module already loaded.
-    const wchar_t* const kLoadOrder[] = {L"dsoal-aldrv.dll", L"dsound.dll"};
+extern "C" IMAGE_DOS_HEADER __ImageBase;
 
-    HMODULE ModuleAt(const void* address) {
-        HMODULE module = nullptr;
-        GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
-                               GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
-                           static_cast<LPCWSTR>(address), &module);
-        return module;
-    }
+namespace {
+    constexpr WORD kEaxDirectSoundCreate8 = 6;
+    constexpr WORD kDirectSoundCreate8 = 11;
 
     // With its trailing backslash.
     std::wstring DirectoryOf(HMODULE module) {
@@ -32,7 +21,24 @@ namespace {
         return full.substr(0, full.find_last_of(L'\\') + 1);
     }
 
-    const IMAGE_IMPORT_DESCRIPTOR* DsoundImports(uintptr_t base) {
+    // The directory of the module holding `address`, or empty when no module does.
+    std::wstring DirectoryAt(uintptr_t address) {
+        HMODULE module = nullptr;
+        if (!GetModuleHandleExW(GET_MODULE_HANDLE_EX_FLAG_FROM_ADDRESS |
+                                    GET_MODULE_HANDLE_EX_FLAG_UNCHANGED_REFCOUNT,
+                                reinterpret_cast<LPCWSTR>(address), &module)) {
+            return {};
+        }
+        return DirectoryOf(module);
+    }
+
+    bool IsSystemDirectory(const std::wstring& directory) {
+        wchar_t system[MAX_PATH];
+        const UINT length = GetSystemDirectoryW(system, MAX_PATH);
+        return _wcsicmp(directory.c_str(), (std::wstring(system, length) + L"\\").c_str()) == 0;
+    }
+
+    const IMAGE_IMPORT_DESCRIPTOR* ImportsOf(uintptr_t base, const char* dll) {
         const auto* dos = reinterpret_cast<const IMAGE_DOS_HEADER*>(base);
         const auto* nt = reinterpret_cast<const IMAGE_NT_HEADERS32*>(base + dos->e_lfanew);
         const IMAGE_DATA_DIRECTORY& imports =
@@ -41,11 +47,23 @@ namespace {
         for (auto* entry =
                  reinterpret_cast<const IMAGE_IMPORT_DESCRIPTOR*>(base + imports.VirtualAddress);
              entry->Name != 0; ++entry) {
-            if (_stricmp(reinterpret_cast<const char*>(base + entry->Name), "DSOUND.dll") == 0) {
-                return entry;
+            if (_stricmp(reinterpret_cast<const char*>(base + entry->Name), dll) == 0) {
+                return entry->OriginalFirstThunk != 0 ? entry : nullptr;
             }
         }
         return nullptr;
+    }
+
+    // The ordinal each slot imports, in slot order; 0 for an import by name.
+    std::vector<WORD> OrdinalsOf(uintptr_t base, const IMAGE_IMPORT_DESCRIPTOR& imports) {
+        std::vector<WORD> ordinals;
+        for (auto* name = reinterpret_cast<const IMAGE_THUNK_DATA32*>(base + imports.OriginalFirstThunk);
+             name->u1.AddressOfData != 0; ++name) {
+            ordinals.push_back(IMAGE_SNAP_BY_ORDINAL32(name->u1.Ordinal)
+                                   ? static_cast<WORD>(IMAGE_ORDINAL32(name->u1.Ordinal))
+                                   : 0);
+        }
+        return ordinals;
     }
 }
 
@@ -53,56 +71,68 @@ void LoadDsoal() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     const uintptr_t base = api->duniaBase;
 
-    const IMAGE_IMPORT_DESCRIPTOR* imports = DsoundImports(base);
-    if (imports == nullptr || imports->OriginalFirstThunk == 0) {
+    const IMAGE_IMPORT_DESCRIPTOR* dsound = ImportsOf(base, "DSOUND.dll");
+    const IMAGE_IMPORT_DESCRIPTOR* eax = ImportsOf(base, "EAX.DLL");
+    if (dsound == nullptr || eax == nullptr) {
         api->Log("DSOAL: Dunia.dll's DirectSound imports were not found - Windows DirectSound stays");
         return;
     }
 
-    auto* slots = reinterpret_cast<IMAGE_THUNK_DATA32*>(base + imports->FirstThunk);
-    const auto* names =
-        reinterpret_cast<const IMAGE_THUNK_DATA32*>(base + imports->OriginalFirstThunk);
-
-    // A dsound.dll next to the game is someone's own replacement, DSOAL or not.
-    if (DirectoryOf(ModuleAt(reinterpret_cast<const void*>(slots->u1.Function))) ==
-        DirectoryOf(GetModuleHandleW(nullptr))) {
-        api->Log("DSOAL: a dsound.dll in bin\\ already replaces DirectSound - left in charge");
+    auto* dsoundSlots = reinterpret_cast<DWORD*>(base + dsound->FirstThunk);
+    const std::wstring bound = DirectoryAt(*dsoundSlots);
+    if (!IsSystemDirectory(bound)) {
+        FCSE::Logf("DSOAL: DirectSound is already replaced (%ls) - left in charge",
+                   bound.empty() ? L"not by a module" : bound.c_str());
         return;
     }
 
     const std::wstring directory =
-        DirectoryOf(ModuleAt(reinterpret_cast<const void*>(&LoadDsoal))) + L"dsoal\\";
-    HMODULE dsoal = nullptr;
-    for (const wchar_t* file : kLoadOrder) {
-        dsoal = LoadLibraryW((directory + file).c_str());
-        if (dsoal == nullptr) {
+        DirectoryOf(reinterpret_cast<HMODULE>(&__ImageBase)) + L"dsoal\\";
+    const auto load = [&directory](const wchar_t* file) {
+        HMODULE module = LoadLibraryW((directory + file).c_str());
+        if (module == nullptr) {
             FCSE::Logf("DSOAL: %ls could not be loaded (error %lu) - Windows DirectSound stays",
                        file, GetLastError());
-            return;
         }
+        return module;
+    };
+
+    // OpenAL Soft reads its settings from beside DSOAL, unless the player names a file of their own.
+    if (GetEnvironmentVariableW(L"ALSOFT_CONF", nullptr, 0) == 0) {
+        SetEnvironmentVariableW(L"ALSOFT_CONF", (directory + L"alsoft.ini").c_str());
     }
 
-    // Every replacement is found before any slot is written, so the game never mixes the two.
-    std::vector<std::pair<DWORD*, FARPROC>> redirects;
-    for (; names->u1.AddressOfData != 0; ++names, ++slots) {
-        const char* function =
-            IMAGE_SNAP_BY_ORDINAL32(names->u1.Ordinal)
-                ? MAKEINTRESOURCEA(IMAGE_ORDINAL32(names->u1.Ordinal))
-                : reinterpret_cast<const IMAGE_IMPORT_BY_NAME*>(base + names->u1.AddressOfData)
-                      ->Name;
-        const FARPROC replacement = GetProcAddress(dsoal, function);
-        if (replacement == nullptr) {
-            api->Log("DSOAL: it lacks a function Dunia.dll imports - Windows DirectSound stays");
-            return;
-        }
-        redirects.emplace_back(&slots->u1.Function, replacement);
+    // The OpenAL driver first: DSOAL loads it by bare name as it initialises.
+    const HMODULE dsoal = load(L"dsoal-aldrv.dll") ? load(L"dsound.dll") : nullptr;
+    if (dsoal == nullptr) {
+        return;
     }
 
-    for (const auto& [slot, replacement] : redirects) {
-        if (!api->Patch(slot, &replacement, sizeof(replacement))) {
-            return;
-        }
+    // DSOUND.dll's slots take DSOAL's export of the same ordinal. They are contiguous, so one write
+    // redirects them all or none.
+    std::vector<FARPROC> replacements;
+    for (const WORD ordinal : OrdinalsOf(base, *dsound)) {
+        replacements.push_back(ordinal != 0 ? GetProcAddress(dsoal, MAKEINTRESOURCEA(ordinal))
+                                            : nullptr);
     }
-    FCSE::Logf("DSOAL: %zu DirectSound imports now go through %ls", redirects.size(),
-               directory.c_str());
+
+    // DARE tries EAXDirectSoundCreate8 first, and without Creative's drivers it builds a Windows
+    // DirectSound through COM. DSOAL's DirectSoundCreate8 takes the same arguments.
+    const std::vector<WORD> eaxOrdinals = OrdinalsOf(base, *eax);
+    const auto eaxCreate = std::find(eaxOrdinals.begin(), eaxOrdinals.end(), kEaxDirectSoundCreate8);
+    const FARPROC create = GetProcAddress(dsoal, MAKEINTRESOURCEA(kDirectSoundCreate8));
+
+    if (std::find(replacements.begin(), replacements.end(), nullptr) != replacements.end() ||
+        eaxCreate == eaxOrdinals.end() || create == nullptr) {
+        api->Log("DSOAL: an import could not be matched to it - Windows DirectSound stays");
+        return;
+    }
+
+    DWORD* eaxCreateSlot =
+        reinterpret_cast<DWORD*>(base + eax->FirstThunk) + (eaxCreate - eaxOrdinals.begin());
+    if (api->Patch(dsoundSlots, replacements.data(), replacements.size() * sizeof(FARPROC)) &&
+        api->Patch(eaxCreateSlot, &create, sizeof(create))) {
+        FCSE::Logf("DSOAL: DirectSound and EAX.DLL's device creation now go through %ls",
+                   directory.c_str());
+    }
 }

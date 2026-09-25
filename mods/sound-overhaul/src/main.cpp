@@ -1,10 +1,14 @@
 // Sound Overhaul - Far Cry 2's sound, closer to a serious shooter. See README.md.
 #include "fcse_api.h"
 
-// DARE rejects a DirectSound whose device enumeration returns S_FALSE, and shows no sound at all.
+// Lets DARE open a DirectSound whose device enumeration returns S_FALSE.
 void ApplyEnumerationFix();
 // Points Dunia.dll's DirectSound imports at the DSOAL shipped beside this plugin.
 void LoadDsoal();
+// CSoundSystem::PlaySoundReverb ships empty, so the game never changes DARE's reverb.
+void ApplyReverbFix();
+// Logs every reverb DARE switches to.
+void InstallReverbLog();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION) {
@@ -15,9 +19,9 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         return false;
     }
 
-    // FCSE_Load runs before any Dunia.dll engine code, so both are in place before DARE opens its
-    // device.
     ApplyEnumerationFix();
     LoadDsoal();
+    ApplyReverbFix();
+    InstallReverbLog();
     return true;
 }

@@ -11,8 +11,7 @@
 
 .PARAMETER Install
     Path to the game's bin folder (the one holding FarCry2.exe and FCSE.exe). The staged
-    layer\plugins\sound-overhaul\ folder is copied to its plugins\sound-overhaul\. The layer holds no
-    game data, so nothing is built into patch.dat. Off by default.
+    layer\plugins\sound-overhaul\ folder is copied to its plugins\sound-overhaul\. Off by default.
 
 .EXAMPLE
     .\build.ps1
@@ -49,12 +48,8 @@ if ($Install -and -not (Test-Path (Join-Path $Install "FarCry2.exe"))) {
     throw "$Install does not look like the game's bin folder - no FarCry2.exe in it."
 }
 
-Write-Host "Configuring ($Preset)..." -ForegroundColor Cyan
-& cmd /c "`"$VcVarsAll`" x86 >nul 2>nul && cd /d `"$ProjectRoot`" && cmake --preset $Preset"
-if ($LASTEXITCODE -ne 0) { throw "CMake configure failed (exit $LASTEXITCODE)." }
-
 Write-Host "Building ($Preset)..." -ForegroundColor Cyan
-& cmd /c "`"$VcVarsAll`" x86 >nul 2>nul && cmake --build `"$BuildDir`""
+& cmd /c "`"$VcVarsAll`" x86 >nul 2>nul && cd /d `"$ProjectRoot`" && cmake --preset $Preset && cmake --build `"$BuildDir`""
 if ($LASTEXITCODE -ne 0) { throw "Build failed (exit $LASTEXITCODE)." }
 
 Copy-Item (Join-Path $BuildDir "SoundOverhaul.dll") (Join-Path $Staged "SoundOverhaul.dll") -Force
@@ -66,8 +61,6 @@ if ($Install) {
     Copy-Item (Join-Path $Staged "*") $PluginDir -Recurse -Force
     Write-Host "Installed: $PluginDir" -ForegroundColor Green
 
-    # Dunia.dll binds to a dsound.dll next to the game before any plugin loads, and the plugin then
-    # leaves it in charge.
     if (Test-Path (Join-Path $Install "dsound.dll")) {
         Write-Warning "$Install\dsound.dll replaces DirectSound itself; remove it to use the bundled DSOAL."
     }
