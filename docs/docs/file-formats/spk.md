@@ -81,10 +81,10 @@ version of the data*"), confirming the declared-size field really is a hardcoded
 | `0x10000000` | `SimpleFixed68` | Fixed 68-byte sub-header, remainder copied verbatim. | 34% |
 | `0x20000000` | `TransformedFixed128` | Fixed 128-byte sub-header, then a dedicated post-load transform — the only fixed-size type that does more than copy. | 39% |
 | `0x30000000` | `FlatCopy` | No sub-header — entire remainder copied verbatim. Where the compressed audio bytes live. | 27% |
-| `0x40000000` | `LargeFixed256` | Fixed 256-byte sub-header, plain copy. | never seen in a real install |
+| `0x40000000` | `LargeFixed256` | Fixed 256-byte sub-header, plain copy. | never in a `.spk`; the one retail object is `common/soundbinary/7fffffff.bao`, the DARE project descriptor (`ATOMIC` load mode), which holds the reverb presets |
 | `0x50000000` | `Streamed` | Rejected outright when loading bank data ("*Can't load atomic object id (0x%X) because it's a streamed sound data*"). Streamed sounds exist only as standalone `<id>.sbao`/`<id>.bao` files. | 0% (by definition) |
 | `0x60000000` | `CountPrefixedList` | Reads a leading count, consumes `count*4 + 4` bytes — a count-prefixed reference list, likely a randomized-variation group. | never seen in a real install |
-| `0x70000000` | `SelfReferential` | Plain copy, but the first two fields of the copy are then read as `{offset, flag}`: if `flag != 0`, `offset` is rewritten to an absolute pointer into the copy — an internal fixup. | 0.2% |
+| `0x70000000` | `SelfReferential` | Plain copy, but the first two fields of the copy are then read as `{offset, flag}`: if `flag != 0`, `offset` is rewritten to an absolute pointer into the copy — an internal fixup. Every retail record of this type is a [rolloff curve](#rolloff-curves). | 0.2% |
 
 Real `.spk` banks only ever contain `SimpleFixed68`/`TransformedFixed128`/`FlatCopy` plus rare
 `SelfReferential`. Banks tend to hold matched sets: 80% of files whose record count is a multiple of 3
@@ -101,28 +101,32 @@ ERROR: Cannot init binary event, unknown event type.
 ```
 
 That fixup switches on sub-header **word[1]**, which is the **event type**, not a variant count. The
-rest of the sub-header is a union keyed by it. Three functions read the type and together define what
+rest of the sub-header is a union keyed by it. Four functions read the type and together define what
 each one means:
 
 - **`FUN_10a3ebd0`** — the post-load fixup. Rewrites each type's id-shaped fields into live pointers
   via `FUN_10a419f0` → `FUN_10a40aa0(id, 1)`, a registry lookup that also takes a reference (the
   counters behind `Atomic Object 0x%x should have its internal counters to zero (RefCount = %d,
   LoadCount = %d)`).
-- **`FUN_10a38d20`** — the play dispatcher.
+- **`FUN_10a3c9c0`** — the play dispatcher.
+- **`FUN_10a38d20`** — the resource enumerator: lists every resource an event can reach, which is why it
+  walks every entry of a type `11` as well as a type `12`. It is not what plays them.
 - **`FUN_10a391e0`** — duration; logs `Invalid sound event type.` for anything it does not handle.
 
-| Type | Fixup resolves | On play | Duration | Records |
+| Type | Fixup resolves | On play (`FUN_10a3c9c0`) | Duration | Records |
 |---|---|---|---|---|
-| `1` | `[2]`, `[7]` | starts a voice | real | 4,149 |
-| `2` | `[2]` | no-op | `-1` | 241 |
-| `3`, `8`, `10` | nothing | no-op | `-1` | 18 (`8` only) |
-| `4` | `[2]`, `[3]` | starts a voice, after an extra step | `-1` | 60 |
+| `1` | `[2]`, `[7]` | starts a voice on `[2]`, attenuated by the rolloff curve in `[7]` | real | 4,149 |
+| `2` | `[2]` | acts on the event in `[2]` with the Q16.16 value in `[3]` (retail: 1.0, 0.3, 0.5, 3.0) — reads as stop-with-fade **(inferred)** | `-1` | 241 |
+| `3` | nothing | acts on the event in `[2]` **(inferred: stop family)** | `-1` | — |
+| `4` | `[2]`, `[3]` | starts a child instance from the linked events; not traced further | `-1` | 60 |
 | `5`, `6`, `7`, `9` | `[2]`, `[6]` | starts a voice | real | — |
-| `11` | `[4]`; then a table at byte offset `[5]`, `[6]` entries of 3 words | iterates **every** entry, recursing | `-1` | 8 |
-| `12` | an array at byte offset `[2]`, `[3]` entries of 1 word | iterates **every** entry, recursing | `-1` | 65 |
+| `8` | nothing | **sets the listener reverb** to the effect in `[2]`, a DARE project resource rather than a bank record; audible only with EAX (see [audio runtime](../engine-internals/audio-runtime.md#reverb)) | `-1` | 18 |
+| `10` | nothing | applies a Q16.16 dB value over a duration to a target — a volume fade **(inferred)** | `-1` | — |
+| `11` | `[4]`; then a table at byte offset `[5]`, `[6]` entries of 3 words | plays the **one** entry whose key matches the object's current value for switch `[3]`, else the default event `[4]` | `-1` | 8 |
+| `12` | an array at byte offset `[2]`, `[3]` entries of 1 word | starts **every** entry at the same moment, grouped under one instance | `-1` | 65 |
 
 Counts are over 4,895 extracted `.spk` files, which is not a full install — they are proportions, not
-totals. Types `5`/`6`/`7`/`9` appear in none of them.
+totals. Types `3`/`5`/`6`/`7`/`9`/`10` appear in none of them.
 
 ### Types `11` and `12` carry a tail
 
@@ -140,11 +144,20 @@ record. The arithmetic closes exactly: `[2] + [3]*4` equals the tail size in all
 and `[5] + [6]*12` in all 8 type-`11` records. Every type-`12` tail id is a real bank id, and none of
 the 70 records carrying a tail holds any audio of its own.
 
-The play dispatcher iterates the whole list and calls itself on each entry — no random selection, no
-break on first success — so a type-`12` event fires **all** of its children. It is a layered
-composite, and that is what the data shows: 43 of the type-`12` events have exactly two children, and
-one child is shared across many weapons (`0x004565A6` appears in 8 of them, `0x004B291E` in 9) — a
-common layer mixed under a per-weapon one. Nesting is supported by the recursion but never used.
+A type-`12` event plays through `FUN_10a3b090` (its log calls it a "MultiEvent"), which dispatches every
+entry in turn — no random selection, no break on first success — and groups the voices under one
+instance, so it fires **all** of its children at the same moment. There is no per-child offset: a layer
+cannot be made to start later than its siblings. It is a layered composite, and that is what the data
+shows: 43 of the type-`12` events have exactly two children, and one child is shared across many
+weapons (`0x004565A6` appears in 8 of them, `0x004B291E` in 9) — a common layer mixed under a per-weapon
+one. Nesting is supported by the recursion but never used.
+
+A type-`11` event is a **switch**. `FUN_10a3ae70` reads the playing object's current value for the
+switch group in word `[3]` and `FUN_10a37200` plays the one entry whose third word equals it; if none
+does, the default event in word `[4]` plays. In retail the groups are the surface material
+(`0x00440260`, whose values `0x00440261`… are the `sndswvlSoundSwitchValue`s in
+`databases/materials/logicmaterials.xml`) and water depth (`0x00455A7F`). Most switching happens one
+level down, in switch resources (see [`TransformedFixed128`](#transformedfixed128-sub-header-128-bytes-u3232)).
 
 :::warning[Tools that read word[2] as a link will show a dead end]
 A type-`12` event's word[2] is a byte offset, so anything that prints it as a "linked id" reports `0`
@@ -198,18 +211,47 @@ Inferred from the absence of a load-on-miss path rather than tested with a delib
 | `[1]` | `+0x04` | the event type above |
 | `[2]` | `+0x08` | the sound resource this event plays — resolved to a live pointer by the fixup |
 | `[4]` | `+0x10` | constant `0x00010000` = `1.0` in Q16.16 fixed point — plausibly an identity gain/scale default |
-| `[7]` | `+0x1C` | a second object reference, also resolved by the fixup; `0xFFFFFFFF` sentinel only 14% of the time, the rest clustering on a handful of ids (one accounts for 29% of all records) — reads like a shared category/template |
+| `[7]` | `+0x1C` | the event's **rolloff curve**, resolved by the fixup and validated as a `"Rolloff"` object (`FUN_10a3fcd0`); see [rolloff curves](#rolloff-curves). `0xFFFFFFFF` means none: an unpositioned sound. In the retail banks 2,483 of 4,087 distinct type-`1` events point at one of the 96 curves, and the rest carry the sentinel. The heavy reuse is shared curves: one 80 m curve serves 949 events |
 | `[9]` | `+0x24` | `0` in 90% of records; when nonzero, always exactly `+100` or `-100` — a discrete signed flag |
 | `[16]` | `+0x40` | boolean — `0` in 84%, `1` in 16% |
 
 (All other words are `0` in every sample checked.)
+
+## Rolloff curves
+
+:::info[Verified via reverse engineering and against the retail corpus]
+The evaluator is `FUN_10a55440`, called from `FUN_10a66740` with the listener distance. All 96
+`SelfReferential` records in the retail banks decode as curves, and every type-`1` word `[7]` that is not
+the sentinel points at one of them.
+:::
+
+A rolloff curve is a `SelfReferential` record whose payload, after the 40-byte core, is:
+
+```
+u32   offset          // 0 in retail; fixed up to a pointer at load
+u32   count
+{ f32 distance_m; f32 gain_dB }[count]
+```
+
+All 96 live in one bank, `common/soundbinary/2fffffff.spk`: the rolloff pack, whose id
+`CSoundSystem::GetRollOffPackId` returns.
+
+The engine interpolates linearly between points and holds the last value past the last point. Every
+retail curve ends with a point at −96 dB, so the last distance is the event's audible range. A curve can
+start below 0 dB (`0 m: −3.8 dB`), and a flat run keeps a sound at full level out to some distance
+(`0 m: 0 dB, 150 m: 0 dB, …`).
+
+Ranges in retail run from 4 m to 1,000 m. The most used curve, `0x00442C37`, serves 949 events: −3.8 dB
+at 0 m, −9.2 dB at 20 m, −19 dB at 56 m, −34.9 dB at 74 m, cut at 80 m. The longest, `0x004E1D0F`,
+reaches −51.8 dB at 914 m and cuts at 1,000 m. Because curves are shared, editing one retunes every event
+that points at it; giving one event its own falloff means a new curve record and a new word `[7]`.
 
 ## `TransformedFixed128` sub-header (128 bytes, `u32[32]`)
 
 | Word | Offset | Meaning |
 |---|---|---|
 | `[0]` | `+0x00` | echoes the record's own id |
-| `[1]` | `+0x04` | `1` |
+| `[1]` | `+0x04` | resource kind: `1` for a sample, which the rest of this table describes; see [resource containers](#resource-containers) for the others |
 | `[2]` | `+0x08` | **the sibling `FlatCopy`'s audio byte length** — its payload size minus the 40-byte core. Exact in all 3,211 records that pair with a sibling, both codecs |
 | `[5]` | `+0x14` | negative Q16.16 fixed-point value when nonzero (e.g. `-12.0`, `-8.0`) — plausibly a gain/dB adjustment applied by this type's post-load transform |
 | `[7]` | `+0x1C` | an id-reference: matches the positionally-preceding record 59% of the time, some id in the same file 72% of the time |
@@ -221,6 +263,33 @@ Inferred from the absence of a load-on-miss path rather than tested with a delib
 | `[25]` | `+0x64` | `4` (81%) or `3` (19%) |
 | `[28]` | `+0x70` | `7` (99.8%) |
 | `[31]` | `+0x7C` | `0xFFFFFFFF` (99.9%) |
+
+### Resource containers
+
+:::info[Verified against the retail corpus]
+Kinds and layouts below are read from the data across every retail bank. The code that reads them is
+not traced.
+:::
+
+Word `[1]` also marks resources that hold other resources rather than audio:
+
+| Kind | Records | What it is |
+| --- | --- | --- |
+| `1` | 13,322 | a sample (the table above) |
+| `3` | 107 | a **switch**: word `[8]` is the switch group, `[9]` the default child, `[7]` the entry count, then `{child, value}` pairs |
+| `4` | 502 | a **random container**, with Q16.16 weights |
+| `6` | 6 | multitrack ambience channels |
+| `7` | 143 | a **multilayer**: each layer follows a game parameter through a curve of (parameter value, dB) points, e.g. desert wind on parameter `0x0044025C` (0–250) runs from −96 dB at 0 to 0 dB at 250 |
+| `2`, `8` | 42, 18 | not identified |
+
+Switch resources key on the same groups as switch events, plus weapon status (`0x004402A7`), vehicle
+reliability, footstep speed, infamy, stamina and perspective. A bullet impact is one: `Weapon.Bullet`'s
+event `0x004565A3` plays resource `0x004565A4`, a material switch with 36 entries, each a random
+container of 2–7 clips.
+
+A multilayer's parameter is answered by the playing object. The game parameters and their ranges are
+declared in `7fffffff.bao`. One of them, `0x00440259` (0–250), is used by no entity, bank or XML in
+retail.
 
 ## Preamble words and the `extra` field
 
@@ -364,15 +433,8 @@ length is **not** tested in game.
   unidentified. Possibly a secondary id, spatial/priority data, or similar.
 - The concrete game-design meaning of each record type (one-shot vs. looping vs. 3D-positioned sounds)
   and most of `TransformedFixed128`'s untabulated sub-header words.
-- What `SimpleFixed68` word `[7]`'s small cluster of heavily-reused "category" ids represents.
-- What separates the playable leaf event types (`1`, and the unseen `5`/`6`/`7`/`9`) from each other,
-  and what the no-op types (`2`, `3`, `8`, `10`) are for — they resolve references and then decline to
-  play.
-- What a type-`11` event's third column keys on. The keys are a shared, dense id range (`0x00440261`–
-  `0x0044027D` across six of the eight records) and word `[3]` holds the id immediately below that
-  range — consistent with a switch group and its values, matching the archetype fields
-  `sndswtpCloseFarSoundSwitchType` / `sndswvlCloseSoundSwitchValue`, but not traced to the code that
-  reads them.
+- What separates the playable leaf event types (`1`, and the unseen `5`/`6`/`7`/`9`) from each other.
+- Types `2`, `3`, `4` and `10` are only partly traced; see the [event type table](#binary-event-objects).
 - The unidentified bytes in the 28-byte ADPCM stream header.
 - Whether the channel-mode byte can represent channel counts above 2 directly, or whether >2-channel
   audio is always built from multiple sub-streams.

@@ -86,8 +86,12 @@ query which zone it's in.
 - **How the per-cell values relate to the `SSoundRegion*` records.** `SSoundRegion` contains a
   `std::string` member (a name/virtual-name field) — a runtime C++ object with a heap pointer can't
   survive a direct `memcpy`-to-disk-and-back round trip, so the raw 1024-byte `.srl` blob is very
-  unlikely to be a literal array of live `SSoundRegion` objects. Where the richer `SSoundRegion*`
-  family is reconstructed from at load time is not resolved.
+  unlikely to be a literal array of live `SSoundRegion` objects. The records themselves are
+  `common/soundregions.xml`: seven regions with `disUniqueId` 0 Desert, 1 Jungle, 2 Savannah, 3–5 the
+  transitions between them and 6 Lake, each with levels keyed at `iIntensity` 0, 1, 5, 10 and 15. In
+  the sectors sampled the low nibble only ever takes 0–6 and the high nibble spans 0–15, which fits a
+  cell byte of `(intensity << 4) | region` **(seen in data; the reader is not traced)**. The levels'
+  reverb and echo length are on [audio runtime](../engine-internals/audio-runtime.md#reverb).
 - Whether `.zsr`'s `CZoneLogicRegion` records serialize any more directly — `CBasicRegionEntity`'s own
   fields are not traced.
 - The exact meaning of `CZoneLogicRegion`'s three default-`1.0` floats.

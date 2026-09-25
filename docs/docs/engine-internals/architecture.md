@@ -122,7 +122,7 @@ is presumably how the editor/server/client trim which phases run. Categorized:
 | **Animation** | `MSAnim::Update` |
 | **Ambient / vegetation** | `CDynamicAmbientUpdateManager::UpdatePrePhysics` / `UpdatePostPhysics`, `CAmbianceManager::Update`, `RTxcManager` tick + `PostUpdate` — `RTxcManager` ("Real Tree" component manager) is what reads the `.rtx` vegetation files — see [`.rtx`](../file-formats/rtx.md) |
 | **Rendering-adjacent** | `CMovieSystem::Update` (cutscenes), `CDecalManager::Update`, `CSky`/fog (via `CDynamicEnvironmentManager`), `CBufferFrameID::Increment3DFrameID` |
-| **Audio** | `GetSoundSystem()->Update()` (opaque interface call — the concrete class isn't named in this binary; likely the DARE middleware named in [the sound section of the file manifest](../modding/file-manifest.md#7-audio--partial)), `CSubtitleManager::Update` |
+| **Audio** | `GetSoundSystem()->Update()` — `CSoundSystem::Update`, vtable `+0x50`, the game-side front of the DARE middleware; see [audio runtime](./audio-runtime.md) — and `CSubtitleManager::Update` |
 | **Networking** | `Echo::CNetEngine::Update` (confirms `Echo` is the network-engine namespace), `CSessionManager::Update`, `CCommandRequestManager::Update`, `CCommandManager::Update` |
 | **Console / debug** | `CXConsole` update, `CDebugInfoManager::Update`, `CErrorImpl::Update`, `FatalError::Display()` (polled — see threading below) |
 | **Async job join** | `CJobScheduler::Wait(...)` + `CParticlesSystemMgr::FinalizeUpdate()` — the main thread blocks here for particle work queued on the job system |

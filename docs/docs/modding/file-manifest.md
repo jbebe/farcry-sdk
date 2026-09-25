@@ -105,7 +105,7 @@ Voice, SFX, and ambient sound — both a top-level archive pair and packed sound
 - `worlds.fat/**/*.sbao` — soundbinary objects
 - `scripts/game/barkdata/*.bank`
 
-Active community `.spk` editing exists ("enough to mod them, but not everything" — Gabor). `DARE.INI` pairs with `bin/eax.dll` (Creative EAX) but is not researched in depth.
+Active community `.spk` editing exists ("enough to mod them, but not everything" — Gabor). What `DARE.INI`, `bin/eax.dll`, `config/soundconfig.xml` and `databases/soundmixing/soundmixings.xml` control is on the [audio runtime](../engine-internals/audio-runtime.md#configuration) page.
 
 :::info[Verified via reverse engineering]
 `.spk`'s container format is reverse-engineered and tooled — see [the `.spk` format
