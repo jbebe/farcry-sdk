@@ -13,9 +13,7 @@ namespace {
     constexpr size_t kSetPixelConstantSlot = 109;
 
     // The heading the fog's colour ramp runs along, its near end, and the distance from there to
-    // the far end: the engine reads the ramp by heading against the first, so one end faces along
-    // it and the other away. The engine turns the heading round with the view, so which end faces
-    // the sun changes from one upload to the next.
+    // the far end. See docs/docs/engine-internals/sky-and-clouds.md for which end faces the sun.
     constexpr UINT kFogVector = 48;
     constexpr UINT kFogColour = 49;
     constexpr UINT kFogColourRange = 50;
@@ -45,7 +43,6 @@ namespace {
 
     // Written once a frame by the sky and read on whatever thread uploads constants.
     SkyOverhaul::Seqlock<Dusk> g_dusk;
-    bool g_have = false;
     // Whether the sun is set far enough for the land's fog to change, kept for the draws to test.
     bool g_dusky = false;
     uint32_t g_tints = 0;
@@ -57,16 +54,15 @@ namespace {
         return (path.pixel ? g_originalPixel : g_originalVertex)(device, kFogColour, values, 2);
     }
 
-    // Writes the dusk's fog over the engine's, or puts the engine's back once there is none. Sends
-    // the two registers again rather than editing an upload on its way past: the engine hands over
-    // a block whose length it chose, and two registers of our own cannot disturb anything else.
+    // Writes the dusk's fog over the engine's, or puts the engine's back once there is none, as two
+    // registers of our own sent after the engine's upload.
     void Write(IDirect3DDevice9* device, Path& path) {
         if (!path.have[0] || !path.have[1] || !path.have[2]) {
             return;
         }
         const float* engine = path.engine + 4;
         Dusk dusk;
-        if (!g_have || !g_dusk.Latest(dusk) || dusk.dusk <= 0.0f) {
+        if (!g_dusky || !g_dusk.Latest(dusk) || dusk.dusk <= 0.0f) {
             if (path.ours) {
                 Set(device, path, engine);
                 path.ours = false;
@@ -77,13 +73,10 @@ namespace {
         // The end of the ramp toward the sun turns to the colour of the other end, and both dim.
         const bool sunNear = path.engine[0] * dusk.sun[0] + path.engine[1] * dusk.sun[1] >= 0.0f;
         const float shade = 1.0f + (dusk.brightness - 1.0f) * dusk.dusk;
+        const float nearMoves = sunNear ? dusk.dusk : 0.0f;
         for (size_t i = 0; i < 3; i++) {
-            float nearEnd = engine[i];
-            float farEnd = engine[i] + engine[4 + i];
-            float& sunward = sunNear ? nearEnd : farEnd;
-            sunward += ((sunNear ? farEnd : nearEnd) - sunward) * dusk.dusk;
-            path.written[i] = nearEnd * shade;
-            path.written[4 + i] = (farEnd - nearEnd) * shade;
+            path.written[i] = (engine[i] + engine[4 + i] * nearMoves) * shade;
+            path.written[4 + i] = engine[4 + i] * (1.0f - dusk.dusk) * shade;
         }
         path.written[3] = engine[3];
         path.written[7] = engine[7];
@@ -190,7 +183,6 @@ bool SkyOverhaul::FogTint::Install() {
 
 void SkyOverhaul::FogTint::SetDusk(float dusk, float brightness, const float sun[3]) {
     g_dusk.Publish({dusk, brightness, {sun[0], sun[1]}});
-    g_have = true;
     g_dusky = dusk > 0.0f;
 }
 
@@ -209,7 +201,6 @@ void SkyOverhaul::FogTint::Engine(float colour[3], float range[3]) {
 }
 
 void SkyOverhaul::FogTint::Forget() {
-    g_have = false;
     g_dusky = false;
 }
 

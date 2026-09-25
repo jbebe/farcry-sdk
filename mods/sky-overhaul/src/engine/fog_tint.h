@@ -1,9 +1,5 @@
-// The colour the land fades into at distance, changed on its way to the shaders that use it.
-//
-// Once the sun is down the air over the land lies in the earth's shadow and only the sky high above
-// still catches its light, but the engine's fog keeps the sunset's colour toward the sun. This
-// intercepts the two registers that colour is carried in and, as the sun sets, turns the side
-// toward it to the colour of the side away and dims both. While the sun is up it leaves them alone.
+// The colour the land fades into at distance, changed on its way to the shaders: as the sun sets,
+// the end of the fog's ramp toward it takes the far end's colour and both dim.
 #pragma once
 
 #include <cstdint>

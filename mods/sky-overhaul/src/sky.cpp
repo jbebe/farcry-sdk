@@ -37,7 +37,7 @@ namespace {
     constexpr float kSunIntensity = 41.4f;
 
     // The sun's height, as a sine, over which the land's fog darkens for the dusk: from seven degrees
-    // up, when the land already lies in long shadow, to a degree and a half.
+    // up to a degree and a half.
     constexpr float kDuskStart = 0.122f;
     constexpr float kDuskEnd = 0.026f;
 
@@ -47,7 +47,6 @@ namespace {
     struct Drawn {
         SkyOverhaul::Camera::View view;
         SkyOverhaul::CloudLayer::Lighting lighting;
-        float dusk;
         float zenithLift;
     };
 
@@ -64,18 +63,6 @@ namespace {
     float SmoothStep(float from, float to, float value) {
         const float t = std::clamp((value - from) / (to - from), 0.0f, 1.0f);
         return t * t * (3.0f - 2.0f * t);
-    }
-
-    // The engine's fog heading, flat and unit length: the direction its fog ramp starts from.
-    void FogHeading(const SkyOverhaul::Camera::View& view, float out[3]) {
-        float length = std::sqrt(view.fogColourVector[0] * view.fogColourVector[0] +
-                                 view.fogColourVector[1] * view.fogColourVector[1]);
-        if (length < 0.0001f) {
-            length = 1.0f;
-        }
-        out[0] = view.fogColourVector[0] / length;
-        out[1] = view.fogColourVector[1] / length;
-        out[2] = 0.0f;
     }
 
     // How many times brighter the zenith has to be drawn to look as it would under an overhead sun,
@@ -116,8 +103,8 @@ namespace {
         const float haze = SkyOverhaul::SkyModel::Haze(storminess);
         const float intensity = kSunIntensity * SkyOverhaul::SkyModel::SunShare(storminess);
 
-        drawn.dusk = SmoothStep(kDuskStart, kDuskEnd, lighting.sunDirection[2]);
-        SkyOverhaul::FogTint::SetDusk(drawn.dusk, SkyOverhaul::Tuning::Current().duskFogBrightness,
+        SkyOverhaul::FogTint::SetDusk(SmoothStep(kDuskStart, kDuskEnd, lighting.sunDirection[2]),
+                                      SkyOverhaul::Tuning::Current().duskFogBrightness,
                                       lighting.sunDirection);
 
         drawn.zenithLift = ZenithLift(lighting.sunDirection, view.eye[2], intensity);
@@ -157,11 +144,11 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
     // The fog heading is the direction the engine's fog ramp starts from, measured against the sun:
     // near zero means the ramp's first colour is the sun's side, as its name says.
     float headingOffset = -1.0f;
-    const float sunAcross = std::sqrt(sun[0] * sun[0] + sun[1] * sun[1]);
-    if (sunAcross > 0.0001f) {
-        float toward[3];
-        FogHeading(view, toward);
-        const float cosine = (toward[0] * sun[0] + toward[1] * sun[1]) / sunAcross;
+    const float* heading = view.fogColourVector;
+    const float across = std::sqrt(sun[0] * sun[0] + sun[1] * sun[1]) *
+                         std::sqrt(heading[0] * heading[0] + heading[1] * heading[1]);
+    if (across > 0.0001f) {
+        const float cosine = (heading[0] * sun[0] + heading[1] * sun[1]) / across;
         headingOffset = std::acos(std::clamp(cosine, -1.0f, 1.0f)) * kDegrees;
     }
     const float elevation = std::asin(std::clamp(sun[2], -1.0f, 1.0f)) * kDegrees;
@@ -177,7 +164,7 @@ void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
                moonVisibility, moonMultiplier, FogTint::TintCount(), FogTint::RestoreCount(),
                light.night, light.storm, view.bloom, g_last.zenithLift);
     FCSE::Logf("sky f%u: sun %+.1f deg, fog heading %.0f deg off it, dusk %.2f", pass.frame,
-               elevation, headingOffset, g_last.dusk);
+               elevation, headingOffset, SmoothStep(kDuskStart, kDuskEnd, sun[2]));
     FCSE::Logf("sky f%u: engine fog toward (%.3f %.3f %.3f) away (%.3f %.3f %.3f)", pass.frame,
                view.fogColour[0], view.fogColour[1], view.fogColour[2],
                view.fogColour[0] + view.fogColourRange[0],

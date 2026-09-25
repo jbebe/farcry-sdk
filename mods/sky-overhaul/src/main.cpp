@@ -15,9 +15,8 @@
 #include "engine/known_shaders.h"
 #include "engine/screen_draw.h"
 #include "engine/solid_depth.h"
+#include "foliage.h"
 #include "grade.h"
-#include "grass.h"
-#include "leaves.h"
 #include "night.h"
 #include "occlusion.h"
 #include "rocks.h"
@@ -39,8 +38,7 @@ namespace {
         SkyOverhaul::SolidDepth::ReleaseDeviceObjects();
         SkyOverhaul::DepthTexture::ReleaseDeviceObjects();
         SkyOverhaul::DrawGuard::ReleaseDeviceObjects();
-        SkyOverhaul::Grass::ReleaseDeviceObjects();
-        SkyOverhaul::Leaves::ReleaseDeviceObjects();
+        SkyOverhaul::Foliage::ReleaseDeviceObjects();
         SkyOverhaul::Rocks::ReleaseDeviceObjects();
         SkyOverhaul::KnownShaders::Forget();
     }
@@ -61,8 +59,7 @@ namespace {
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
         SkyOverhaul::Dazzle::OnFinalPass(pass);
         SkyOverhaul::Grade::OnFinalPass(pass);
-        SkyOverhaul::Grass::OnFinalPass(pass);
-        SkyOverhaul::Leaves::OnFinalPass(pass);
+        SkyOverhaul::Foliage::OnFinalPass(pass);
         SkyOverhaul::Rocks::OnFinalPass(pass);
         SkyOverhaul::SolidDepth::OnFinalPass(pass);
     }
@@ -118,11 +115,11 @@ namespace {
     }
 
     void __cdecl OnGrassChanged(const FCSE_SettingValue* value, void*) {
-        SkyOverhaul::Grass::SetEnabled(value->asChoice == 1);
+        SkyOverhaul::Foliage::SetGrass(value->asChoice == 1);
     }
 
     void __cdecl OnLeavesChanged(const FCSE_SettingValue* value, void*) {
-        SkyOverhaul::Leaves::SetEnabled(value->asChoice == 1);
+        SkyOverhaul::Foliage::SetLeaves(value->asChoice == 1);
     }
 
     void __cdecl OnSunShadowsChanged(const FCSE_SettingValue* value, void*) {

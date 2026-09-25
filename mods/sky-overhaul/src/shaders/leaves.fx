@@ -2,15 +2,12 @@
 // shadow are the engine's operation for operation; the light is ours: the crown shades itself away
 // from the sun, and every leaf tilts its own way. See docs/docs/file-formats/shader-objects.md.
 
+#include "foliage.inc.fx"
+
 float4x4 ViewRotProjectionMatrix : register(c0);
-// w  how the engine scales distances
-float4 CameraPosition : register(c45);
 float3 ViewPoint : register(c47);
-float3 FogColorVector : register(c48);
 float3 FogColor : register(c49);
 float3 FogColorRange : register(c50);
-float3 FogValues : register(c51);
-float4 FogHeightValues : register(c52);
 float BloomAdaptationFactor : register(c58);
 float4 CurvedHorizonFactors : register(c60);
 // Per scale equation: the distances it holds between, its slope and its offset.
@@ -23,9 +20,6 @@ float4 LeavesEquations[6] : register(c71);
 float4 Leaves : register(c110);
 // x  the sunlight through leaves the sun stands behind
 float4 LeavesGlow : register(c111);
-
-// How far the glint reaches, per metre past the first twenty.
-static const float GLINT_FADE = 0.004f;
 
 struct Vertex
 {
@@ -80,8 +74,7 @@ struct Shadow
     bool cascaded;
     // zw  how a point's distance from the map's edge fades its shadow
     float4 edgeFade;
-    // A single slice keeps the map's extent in [0] and the fade over depth in [1]; cascades keep
-    // the fade over depth in [0] and their extent, which differs on each side of the centre, in [1].
+    // See ShadowShown.
     float4 fade[2];
 };
 
@@ -161,13 +154,9 @@ Light Shade(Vertex v, Tree t, float3 world, float3 local, float3 centre)
     float eyeDistance = length(toEye);
     float3 eye = toEye / eyeDistance;
 
-    float2 heading = normalize(toEye.xy);
-    float facing = dot(-heading, FogColorVector.xy);
-    float rampPlace = (facing * -0.0675179511f + 0.5f) * sqrt(max(1.0f - facing, 0.0f));
-    float fog = saturate(eyeDistance * FogValues.x + FogValues.y) * FogValues.z *
-                (saturate(world.z * FogHeightValues.x + FogHeightValues.y) * FogHeightValues.z +
-                 FogHeightValues.w);
-    o.fog = float4((rampPlace * FogColorRange + FogColor) * fog, 1.0f - fog) * BloomAdaptationFactor;
+    float fog = FogAmount(eyeDistance, world.z);
+    o.fog = float4((FogRampPlace(toEye) * FogColorRange + FogColor) * fog, 1.0f - fog) *
+            BloomAdaptationFactor;
 
     // The engine's own measure of how hidden a leaf is: its vertex colour, its depth in the crown
     // and which way its spoke points.
@@ -199,7 +188,7 @@ Light Shade(Vertex v, Tree t, float3 world, float3 local, float3 centre)
 
     // Wrapped, since light reaches round a leaf's edge.
     float direct = saturate((dot(o.normal, toSun) + 0.3f) / 1.3f) * crown;
-    float near = min(exp((20.0f - eyeDistance) * GLINT_FADE), 1.0f);
+    float near = min(exp((20.0f - eyeDistance) * 0.004f), 1.0f);
     float glint = pow(saturate(dot(normalize(eye + toSun), o.normal)), t.fakeSpecularPower);
     o.sun = float4(direct * t.lightColor * occlusion, glint * near * Leaves.w * crown * occlusion);
 
@@ -241,23 +230,10 @@ ShadowedLit Shadowed(Vertex v, Tree t, Shadow s)
     o.fog = light.fog;
     o.ambient = light.ambient;
     o.sun = light.sun;
-    float2 edge;
-    float4 depth;
-    if (s.cascaded)
-    {
-        edge = projected.xy * lerp(s.fade[1].zw, s.fade[1].xy, projected.xy >= 0.0f);
-        depth = s.fade[0];
-    }
-    else
-    {
-        edge = projected.xy * s.fade[0].xy + s.fade[0].zw;
-        depth = s.fade[1];
-    }
-    float centred = max(abs(edge.x), abs(edge.y));
+    float centred;
+    float shown = ShadowShown(projected, s.cascaded, s.edgeFade, s.fade[0], s.fade[1], centred);
     o.shadow = float4(projected, s.cascaded ? centred : 1.0f);
-    float fade = saturate(depth.x * projected.z + depth.y) *
-                 saturate(centred * s.edgeFade.z + s.edgeFade.w);
-    o.through = float4(light.through, 1.0f - fade);
+    o.through = float4(light.through, shown);
     o.normal = light.normal;
     o.uv = v.corner.zw;
     return o;

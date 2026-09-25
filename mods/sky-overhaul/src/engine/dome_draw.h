@@ -10,10 +10,7 @@
 // what it lets through, so that the mask follows our clouds rather than the engine's, and draws the
 // moon without the fog the engine hides a low moon in.
 //
-// It also watches the draws named by their shaders, in DrawPrimitive too: those that read the
-// linear depth, the final pass's colour grade, which it can draw with values of our own, the world's depth
-// pass, which it draws again into the solid depth, lit grass and leaves, which it can draw with
-// vertex shaders of ours, and rock, which it can draw with shaders of ours.
+// It also watches the draws named by their shaders, in DrawPrimitive too, for the effects below.
 //
 // See docs/docs/engine-internals/presentation-and-input.md for what named that call.
 #pragma once
@@ -64,8 +61,7 @@ constexpr UINT kFoliageParameterRegisters = 2;
 using FoliageFn = IDirect3DVertexShader9* (*)(IDirect3DDevice9* device,
                                                KnownShaders::VertexKind kind,
                                                float parameters[kFoliageParameterRegisters * 4]);
-void SetGrass(FoliageFn grass);
-void SetLeaves(FoliageFn leaves);
+void SetFoliage(FoliageFn foliage);
 
 // How many registers of their own the pixel shaders drawing rock in the engine's place read.
 constexpr UINT kRockParameterRegisters = 4;

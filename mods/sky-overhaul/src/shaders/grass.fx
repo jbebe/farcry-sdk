@@ -2,13 +2,11 @@
 // fog and shadow are the engine's operation for operation; the light is ours, built only from what
 // a clump's turn toward the camera leaves alone. See docs/docs/file-formats/shader-objects.md.
 
+#include "foliage.inc.fx"
+
 float4x4 ViewProjectionMatrix : register(c4);
 // The camera's heading, which every clump is turned by.
 float3x3 GrassCylindricalBillboardMatrix : register(c32);
-float4 CameraPosition : register(c45);
-float3 FogColorVector : register(c48);
-float3 FogValues : register(c51);
-float4 FogHeightValues : register(c52);
 float4 WindSimParamsX : register(c65);
 float4 WindSimParamsY : register(c66);
 float4x3 ShadowProjectionMatrix : register(c71);
@@ -18,8 +16,7 @@ float3 LightColor : register(c75);
 float3 LightDirectionWS : register(c76);
 // zw  how a point's distance from the shadow map's edge fades its shadow
 float4 ShadowEdgeFade : register(c77);
-// A single slice keeps the map's extent in [0] and the fade over depth in [1]; cascades keep the
-// fade over depth in [0] and their extent, which differs on each side of the centre, in [1].
+// See ShadowShown.
 float4 ShadowFade[2] : register(c78);
 float3 SkyColor : register(c80);
 float2 DiffuseTiling1 : register(c81);
@@ -116,12 +113,8 @@ Lit Light(Vertex v, Placed p)
     o.position = mul(float4(p.world, 1.0f), ViewProjectionMatrix);
 
     float3 toEye = CameraPosition.xyz - p.world;
-    float2 heading = normalize(toEye.xy);
-    float facing = dot(-heading, FogColorVector.xy);
-    float rampPlace = (facing * -0.0675179511f + 0.5f) * sqrt(max(1.0f - facing, 0.0f));
-    float fog = saturate(p.distance * FogValues.x + FogValues.y) * FogValues.z *
-                (saturate(p.world.z * FogHeightValues.x + FogHeightValues.y) * FogHeightValues.z +
-                 FogHeightValues.w);
+    float rampPlace = FogRampPlace(toEye);
+    float fog = FogAmount(p.distance, p.world.z);
 
     float3 toSun = -LightDirectionWS;
     toEye = normalize(toEye);
@@ -158,28 +151,23 @@ Lit Light(Vertex v, Placed p)
     return o;
 }
 
-// How much of the shadow shows at a point `edge` from the map's centre, in extents.
-float ShadowShown(float edge, float depthFade, float4 depth)
+// Cascades pick their slice by the point's distance from the map's centre.
+Lit Shadowed(Vertex v, bool cascaded)
 {
-    return 1.0f - saturate(depth.x * depthFade + depth.y) *
-                  saturate(edge * ShadowEdgeFade.z + ShadowEdgeFade.w);
+    Lit o = Light(v, Place(v));
+    float centred;
+    o.uvFade.z = ShadowShown(o.shadow.xyz, cascaded, ShadowEdgeFade, ShadowFade[0], ShadowFade[1],
+                             centred);
+    o.shadow.w = cascaded ? centred : 1.0f;
+    return o;
 }
 
-// One shadow map slice.
 Lit MainVS(Vertex v)
 {
-    Lit o = Light(v, Place(v));
-    float2 edge = o.shadow.xy * ShadowFade[0].xy + ShadowFade[0].zw;
-    o.uvFade.z = ShadowShown(max(abs(edge.x), abs(edge.y)), o.shadow.z, ShadowFade[1]);
-    return o;
+    return Shadowed(v, false);
 }
 
-// Cascades, which pick their slice by the point's distance from the centre.
 Lit CascadedVS(Vertex v)
 {
-    Lit o = Light(v, Place(v));
-    float2 edge = o.shadow.xy * lerp(ShadowFade[1].zw, ShadowFade[1].xy, o.shadow.xy >= 0.0f);
-    o.shadow.w = max(abs(edge.x), abs(edge.y));
-    o.uvFade.z = ShadowShown(o.shadow.w, o.shadow.z, ShadowFade[0]);
-    return o;
+    return Shadowed(v, true);
 }
