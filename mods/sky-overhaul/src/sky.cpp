@@ -33,8 +33,10 @@ namespace {
     constexpr float kZenithHoldLow = 0.087f;
     constexpr float kZenithHoldHigh = 0.423f;
 
-    // What the sun is worth in the shader.
+    // What the sun is worth in the shader, and what a clear day's high sun is cut to so the sky no
+    // longer clips.
     constexpr float kSunIntensity = 41.4f;
+    constexpr float kDaylight = 0.5f;
 
     // The sun's height, as a sine, over which the land's fog darkens for the dusk: from seven degrees
     // up to a degree and a half.
@@ -101,7 +103,9 @@ namespace {
         // The weather is folded in here, so what crosses into the shader is already finished.
         const float storminess = SkyOverhaul::SkyModel::Storminess(lighting.storm);
         const float haze = SkyOverhaul::SkyModel::Haze(storminess);
-        const float intensity = kSunIntensity * SkyOverhaul::SkyModel::SunShare(storminess);
+        const float intensity =
+            kSunIntensity * SkyOverhaul::SkyModel::SunShare(storminess) *
+            SkyOverhaul::SkyModel::DaylightCut(lighting.sunDirection[2], storminess, kDaylight);
 
         SkyOverhaul::FogTint::SetDusk(SmoothStep(kDuskStart, kDuskEnd, lighting.sunDirection[2]),
                                       SkyOverhaul::Tuning::Current().duskFogBrightness,

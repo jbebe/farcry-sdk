@@ -54,8 +54,10 @@ namespace {
     // How much further the sun sinks, as a sine, while the moonlight comes up to full.
     constexpr float kMoonRising = 0.13f;
 
-    // How bright sunlight is on the clouds where our air lets all of it through.
+    // How bright sunlight is on the clouds where our air lets all of it through, and what a clear
+    // day's high sun is cut to so their lit faces no longer clip.
     constexpr float kSunlight = 6.6f;
+    constexpr float kDaylight = 0.25f;
 
     // Moonlight at full strength, the share of either light a thin edge lets through, and how
     // brightly the air glows around the moon.
@@ -142,7 +144,9 @@ namespace {
         SkyOverhaul::SkyModel::Sunlight(lighting.sunDirection,
                                         v.cloudBase + 0.5f * v.cloudThickness,
                                         SkyOverhaul::SkyModel::Haze(storminess), sunlight);
-        const float sunBrightness = kSunlight * SkyOverhaul::SkyModel::SunShare(storminess);
+        const float sunBrightness =
+            kSunlight * SkyOverhaul::SkyModel::SunShare(storminess) *
+            SkyOverhaul::SkyModel::DaylightCut(lighting.sunDirection[2], storminess, kDaylight);
 
         Light light;
         for (int c = 0; c < 3; c++) {

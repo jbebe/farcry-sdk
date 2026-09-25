@@ -23,6 +23,11 @@ float MoonRise(float moonHeight);
 // How far the sky's colour is drained toward grey at that storminess.
 float Grey(float storminess);
 
+// What clear daylight is drawn at against the model's, for a sun at `sunHeight` (a sine): all of it
+// below about five degrees, `full` from twenty-five, and all of it again as a storm dims the light
+// itself.
+float DaylightCut(float sunHeight, float storminess, float full);
+
 // What one look along `ray` comes back with, given a sun direction, the eye's height in metres,
 // how much haze the air carries and how bright the sun is. Both directions are unit length, Z up.
 void Radiance(const float ray[3], const float sun[3], float eyeHeight, float mie, float intensity,

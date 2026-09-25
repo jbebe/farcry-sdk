@@ -78,17 +78,18 @@ float4 MainPS(float2 uv : TEXCOORD0) : COLOR0
     float reach = max(radial, Shape.z);
 
     // Spreading to the whole frame only as the dazzle approaches total is what makes looking
-    // straight at the sun wash out to white while a sun off to one side stays a local glare.
-    float wash = saturate(Sun.z * lerp(reach, 1.0f, Sun.z * Sun.z));
+    // straight at the sun wash out to white while a sun off to one side stays a local glare. The
+    // bleaching and contrast follow the same reach, so shade away from the sun keeps its tones.
+    float dazzle = Sun.z * lerp(reach, 1.0f, pow(Sun.z, 4.0f));
 
     // Bleaching drains colour the way a dazzled eye loses hue before it loses shape - and it runs
     // before the contrast, not after. Pushing a colour away from mid grey stretches its chroma
     // along with everything else, so contrast on a coloured picture makes it more colourful, which
     // is the opposite of what heavy sunlight does. On an already grey picture it stays grey.
-    colour = lerp(colour, dot(colour, grey).xxx, saturate(Shape.w * Sun.z));
+    colour = lerp(colour, dot(colour, grey).xxx, saturate(Shape.w * dazzle));
 
-    colour = saturate((colour - 0.5f) * (1.0f + Sun.w * Sun.z) + 0.5f);
-    colour = lerp(colour, 1.0f, wash);
+    colour = saturate((colour - 0.5f) * (1.0f + Sun.w * dazzle) + 0.5f);
+    colour = lerp(colour, 1.0f, saturate(dazzle));
 
     // The eye's range is compressed while it recovers, so everything behind the afterimage loses a
     // little colour and a little contrast. This is what makes it read as an eye that has been

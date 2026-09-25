@@ -31,6 +31,10 @@ namespace {
     // How high the moon climbs, as a sine, while its light comes up to full.
     constexpr float kMoonUp = 0.2f;
 
+    // The sun's height, as a sine, over which the daylight cut comes in: five to twenty-five degrees.
+    constexpr float kDaylightLow = 0.087f;
+    constexpr float kDaylightHigh = 0.423f;
+
     float Dot(const float a[3], const float b[3]) {
         return a[0] * b[0] + a[1] * b[1] + a[2] * b[2];
     }
@@ -106,6 +110,13 @@ float SkyOverhaul::SkyModel::MoonRise(float moonHeight) {
 
 float SkyOverhaul::SkyModel::Grey(float storminess) {
     return storminess * kStormGrey;
+}
+
+float SkyOverhaul::SkyModel::DaylightCut(float sunHeight, float storminess, float full) {
+    const float t =
+        std::clamp((sunHeight - kDaylightLow) / (kDaylightHigh - kDaylightLow), 0.0f, 1.0f);
+    const float high = t * t * (3.0f - 2.0f * t) * (1.0f - storminess);
+    return 1.0f + (full - 1.0f) * high;
 }
 
 void SkyOverhaul::SkyModel::Radiance(const float ray[3], const float sun[3], float eyeHeight,

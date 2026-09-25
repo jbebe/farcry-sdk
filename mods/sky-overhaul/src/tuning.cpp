@@ -83,7 +83,7 @@ namespace {
 
     // In the order the file and the window list them.
     constexpr Parameter kParameters[] = {
-        {"Dusk fog brightness", &kFog, offsetof(Values, duskFogBrightness), 0.4f, 0.0f, 1.0f,
+        {"Dusk fog brightness", &kFog, offsetof(Values, duskFogBrightness), 0.34f, 0.0f, 1.0f,
          "%.2f",
          "How bright the fog over the land is kept once the sun is down, against the engine's. "
          "The land then lies in the earth's shadow, and only the sky above it still glows."},
@@ -118,7 +118,7 @@ namespace {
          "%.0f deg", "How far off centre the sun gets before the glare reaches nothing."},
         {"Sun glare falloff", &kSunGlare, offsetof(Values, glareFalloff), 1.3f, 1.0f, 8.0f, "%.1f",
          "How sharply the glare falls away from dead centre."},
-        {"Sun glare veil", &kSunGlare, offsetof(Values, glareVeil), 1.0f, 0.0f, 1.0f, "%.2f",
+        {"Sun glare veil", &kSunGlare, offsetof(Values, glareVeil), 0.15f, 0.0f, 1.0f, "%.2f",
          "How much of the glare covers the frame wherever the sun sits in it."},
         {"Sun glare contrast", &kSunGlare, offsetof(Values, glareContrast), 1.95f, 0.0f, 4.0f,
          "%.2f", "How hard the contrast is pushed at full dazzle."},
@@ -170,15 +170,15 @@ namespace {
          2000.0f, "%.0f m",
          "How far the last, softest cascade reaches. The engine's is 140."},
 
-        {"Cloud shadow strength", &kCloudShadows, offsetof(Values, shadowStrength), 0.5f, 0.0f, 1.0f,
+        {"Cloud shadow strength", &kCloudShadows, offsetof(Values, shadowStrength), 0.4f, 0.0f, 1.0f,
          "%.2f", "How much of the light on sunlit ground a cloud overhead takes away."},
 
-        {"Occlusion strength", &kAmbientOcclusion, offsetof(Values, occlusionStrength), 0.5f, 0.0f,
+        {"Occlusion strength", &kAmbientOcclusion, offsetof(Values, occlusionStrength), 0.81f, 0.0f,
          1.0f, "%.2f",
          "How much of the light a fully occluded point loses. Zero turns it off."},
-        {"Occlusion radius", &kAmbientOcclusion, offsetof(Values, occlusionRadius), 0.8f, 0.1f, 3.0f,
+        {"Occlusion radius", &kAmbientOcclusion, offsetof(Values, occlusionRadius), 2.37f, 0.1f, 3.0f,
          "%.2f m", "How far from a point the surfaces around it still hide the sky from it."},
-        {"Occlusion screen limit", &kAmbientOcclusion, offsetof(Values, occlusionScreenLimit), 32.0f,
+        {"Occlusion screen limit", &kAmbientOcclusion, offsetof(Values, occlusionScreenLimit), 39.0f,
          2.0f, 128.0f, "%.0f px",
          "The most half-resolution pixels the radius may cover, so a wall at arm's length does not "
          "spread its occlusion across the screen."},
@@ -192,11 +192,11 @@ namespace {
 
         {"Grade saturation", &kColourGrade, offsetof(Values, gradeSaturation), 0.57f, 0.0f, 1.5f,
          "%.2f", "How much colour the final picture keeps. One is the scene's own; the engine's 0.5."},
-        {"Grade contrast", &kColourGrade, offsetof(Values, gradeContrast), 0.13f, -0.5f, 1.0f, "%.2f",
+        {"Grade contrast", &kColourGrade, offsetof(Values, gradeContrast), 0.28f, -0.5f, 1.0f, "%.2f",
          "How hard the S-curve bends the picture's tones. Zero leaves them straight."},
-        {"Grade brightness", &kColourGrade, offsetof(Values, gradeBrightness), 1.09f, 0.5f, 2.0f,
+        {"Grade brightness", &kColourGrade, offsetof(Values, gradeBrightness), 0.82f, 0.5f, 2.0f,
          "%.2f", "Above one darkens the mid tones, below one lifts them. The engine's is about 1.12."},
-        {"Grade warmth", &kColourGrade, offsetof(Values, gradeWarmth), 0.05f, -0.5f, 0.5f, "%.2f",
+        {"Grade warmth", &kColourGrade, offsetof(Values, gradeWarmth), 0.03f, -0.5f, 0.5f, "%.2f",
          "Above zero warms the picture, below cools it. The engine's 0.23 is its yellow cast."},
         {"Grade tint", &kColourGrade, offsetof(Values, gradeTint), -0.07f, -0.5f, 0.5f, "%.2f",
          "Below zero turns the picture green, above turns it magenta."},
@@ -206,7 +206,7 @@ namespace {
         {"Grass side light", &kGrass, offsetof(Values, grassSideLight), 0.1f, 0.0f, 1.5f, "%.2f",
          "How far a clump's sides turn toward or away from the sun. Zero lights it like the "
          "ground."},
-        {"Grass sheen", &kGrass, offsetof(Values, grassSheen), 0.45f, 0.0f, 4.0f, "%.2f",
+        {"Grass sheen", &kGrass, offsetof(Values, grassSheen), 0.6f, 0.0f, 4.0f, "%.2f",
          "How bright the shine along blades is, strongest with a low sun and blades seen across."},
         {"Grass sheen narrowness", &kGrass, offsetof(Values, grassSheenNarrowness), 2.0f, 1.0f,
          40.0f, "%.1f", "How tight the angle is at which blades shine."},
@@ -224,24 +224,24 @@ namespace {
         {"Leaf glow", &kLeaves, offsetof(Values, leafGlow), 0.7f, 0.0f, 4.0f, "%.2f",
          "How much sunlight comes through leaves with the sun behind them, against the engine's."},
 
-        {"Rock smoothness", &kRockShading, offsetof(Values, rockSmoothness), 0.0f, 0.0f, 1.0f,
+        {"Rock smoothness", &kRockShading, offsetof(Values, rockSmoothness), 0.5f, 0.0f, 1.0f,
          "%.2f",
          "How far rock is lit back toward the engine's smooth surface. Zero lights every "
          "triangle flat; one is the engine's shading, without its sheen."},
-        {"Rock glint", &kRockShading, offsetof(Values, rockGlint), 1.0f, 0.0f, 25.0f, "%.2f",
+        {"Rock glint", &kRockShading, offsetof(Values, rockGlint), 8.05f, 0.0f, 25.0f, "%.2f",
          "How bright the small glint of the sun off the triangles is. One is what bare stone "
          "reflects, the same on every rock."},
-        {"Rock glint sharpness", &kRockShading, offsetof(Values, rockGlintSharpness), 40.0f, 2.0f,
+        {"Rock glint sharpness", &kRockShading, offsetof(Values, rockGlintSharpness), 5.0f, 2.0f,
          200.0f, "%.0f",
          "How tight the glint is: higher is a smaller, harder spot. The engine's sheen is 5."},
 
-        {"Detail size", &kRockDetail, offsetof(Values, rockDetailSize), 2.4f, 0.5f, 8.0f, "%.1f m",
+        {"Detail size", &kRockDetail, offsetof(Values, rockDetailSize), 0.7f, 0.5f, 8.0f, "%.1f m",
          "How wide one repeat of the detail map is on rock. The scan it is made from is 2.4 m."},
-        {"Detail relief", &kRockDetail, offsetof(Values, rockDetailRelief), 1.0f, 0.0f, 3.0f,
+        {"Detail relief", &kRockDetail, offsetof(Values, rockDetailRelief), 2.29f, 0.0f, 3.0f,
          "%.2f", "How deep the cracks and bumps of the detail map are."},
         {"Detail grain", &kRockDetail, offsetof(Values, rockDetailGrain), 0.5f, 0.0f, 1.0f, "%.2f",
          "How much the detail map's light and dark grain shows through the rock's own colour."},
-        {"Cavity", &kRockDetail, offsetof(Values, rockCavity), 0.7f, 0.0f, 1.0f, "%.2f",
+        {"Cavity", &kRockDetail, offsetof(Values, rockCavity), 0.5f, 0.0f, 1.0f, "%.2f",
          "How much the detail map's cracks darken the light rock takes from the sky."},
     };
 
