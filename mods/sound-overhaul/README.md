@@ -16,21 +16,41 @@ the audio runtime page, `docs/docs/engine-internals/audio-runtime.md`.
 - **Switches the reverb as the player moves** (`src/reverb.cpp`). `CSoundSystem::PlaySoundReverb`
   ships empty, so buildings, regions and mix presets never reached DARE and one reverb played
   everywhere. The plugin gives it a body that plays the reverb event.
+- **Lets the player's own sounds take the room** (`src/player_reverb.cpp`). DARE gives every voice
+  the same reverb send, which the player's shots and reloads, playing at full volume, bury under
+  their dry sound. The plugin raises the send of 2D voices by 1,000 mB, the most EAX allows.
+- **Gives the Makarov a dry first-person shot and an outdoor echo** (`layer\mods\soundbinary\004569c9.spk`
+  and the `WeaponProperties.Secondary.Makarov` fragments under `layer\mods\worlds\`). Indoors the room
+  reverb supplies the tail. Outdoors the weapon's dormant `sndSingleBulletShotEcho` plays the rest of
+  the recording, trimmed by the game to the region's echo length.
 - **Lets an older or Wine-derived `dsound.dll` open a device at all** (`src/enumeration_fix.cpp`).
   The bundled DSOAL does not need it.
-- **Logs every reverb switch to `fcse.log`** (`src/reverb_log.cpp`), a diagnostic that goes before a
-  release.
+- **Logs every reverb switch and every gunshot echo length to `fcse.log`** (`src/reverb_log.cpp`,
+  `src/echo_log.cpp`), diagnostics that go before a release.
 
 ## Layout
 
 ```
-layer\plugins\sound-overhaul\
-├─ SoundOverhaul.dll          built, gitignored
-└─ dsoal\
-   ├─ dsound.dll              DSOAL, Win32
-   ├─ dsoal-aldrv.dll         OpenAL Soft, renamed as DSOAL expects
-   ├─ alsoft.ini              OpenAL Soft's settings: plain stereo, so headphones get no HRTF
-   └─ Documentation\          licenses and exact versions
+layer\
+├─ plugins\sound-overhaul\
+│  ├─ SoundOverhaul.dll       built, gitignored
+│  └─ dsoal\
+│     ├─ dsound.dll           DSOAL, Win32
+│     ├─ dsoal-aldrv.dll      OpenAL Soft, renamed as DSOAL expects
+│     ├─ alsoft.ini           OpenAL Soft's settings: plain stereo, so headphones get no HRTF
+│     └─ Documentation\       licenses and exact versions
+└─ mods\
+   ├─ soundbinary\            sound banks replacing retail ones
+   └─ worlds\world1|world2\   weapon archetype fragments pointing at the echo events
+assets\weapon-sounds\         the recordings the banks are made from
+```
+
+A bank is the retail one with its audio swapped, which also rewrites the length the game plays to. An
+echo adds the shot's event, sample and audio records again under new ids, the audio imported the same
+way:
+
+```
+jackall-cli spk import 004569c9.spk 0x004bf596 assets\weapon-sounds\makarov\close_1_trimmed.wav
 ```
 
 FCSE also offers the two DLLs in `dsoal\` as plugins and logs them as skipped; that is expected.
@@ -47,6 +67,12 @@ license texts ship beside them. To update, replace `dsoal\` from a newer archive
 ```
 .\build.ps1                                   # x86 release, staged into layer\plugins\sound-overhaul\
 .\build.ps1 -Install "C:\Games\Far Cry 2\bin"   # copies it to bin\plugins\sound-overhaul\
+```
+
+The sound banks go into `patch.dat`, together with any other layer you play with:
+
+```
+jackall-cli mod build --game "C:\Games\Far Cry 2" --layer layer
 ```
 
 `bin\fcse.log` reports both parts. To see DSOAL's own calls, launch with `DSOAL_LOGLEVEL=3` and

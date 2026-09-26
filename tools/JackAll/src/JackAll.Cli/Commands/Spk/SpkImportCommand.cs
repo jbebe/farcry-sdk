@@ -14,9 +14,9 @@ namespace JackAll.Cli.Commands.Spk;
 /// <c>sbao build</c>): an Ogg-backed record needs an already-Ogg-Vorbis replacement (ideally at its
 /// own rate/channel count - a mismatch is only a warning, since the container swap itself is lossless
 /// either way); an IMA-ADPCM-backed record needs a 16-bit PCM <c>.wav</c>, encoded natively via
-/// <see cref="ImaAdpcm.Encode"/>. Only the target record's payload changes - ids, preamble words, and
-/// every other record are carried forward byte-for-byte via
-/// <see cref="SpkPackage.ReplaceRecordPayload"/> - and the result is round-tripped back through
+/// <see cref="ImaAdpcm.Encode"/>. Only the target record's payload and its descriptor's declared
+/// length change - ids, preamble words, and every other record are carried forward byte-for-byte via
+/// <see cref="SpkPackage.ReplaceAudio"/> - and the result is round-tripped back through
 /// <see cref="SpkPackage.Parse"/> as a validity check before being written.
 /// </summary>
 public sealed class SpkImportCommand : CliCommand<SpkImportCommand.Settings>
@@ -60,8 +60,7 @@ public sealed class SpkImportCommand : CliCommand<SpkImportCommand.Settings>
             ? BuildOggReplacement(replacement, id, currentVorbis)
             : BuildImaAdpcmReplacement(replacement, currentAudio, package, record);
 
-        byte[] newPayload = [.. record.Payload[..SpkRecordCore.Size], .. newAudioStream];
-        byte[] patched = SpkPackage.ReplaceRecordPayload(original, id, newPayload);
+        byte[] patched = package.ReplaceAudio(original, record, newAudioStream);
         SpkPackage.Parse(patched); // validity check, same as the App before staging
 
         string outPath = settings.Out ?? settings.Input;

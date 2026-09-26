@@ -73,9 +73,7 @@ internal static class SpkFormat
         return r.Core is null ? "too short for the 40-byte record core" : $"{r.Payload.Length:N0} bytes";
     }
 
-    /// <summary>Flags an audio record whose descriptor sibling still declares a different stream's
-    /// length - what every JackAll audio import leaves behind, since neither importer rewrites that
-    /// field. See <see cref="SpkPackage.DeclaredAudioLengthMatches"/>.</summary>
+    /// <summary>Flags an audio record whose descriptor declares a different length than its stream.</summary>
     private static string DescribeLengthMismatch(SpkPackage package, SpkRecord r) =>
         package.DeclaredAudioLengthMatches(r) == false && package.TryGetAudioDescriptor(r) is { } t128
             ? $"  (!) descriptor declares {t128.AudioByteLength:N0} B"

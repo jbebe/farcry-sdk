@@ -417,12 +417,7 @@ public partial class SpkFileHandler : UserControl
             : $"{r.Payload.Length:N0} bytes";
     }
 
-    /// <summary>Flags an audio record whose descriptor sibling still declares the length of a
-    /// *different* stream - which is what every JackAll audio import leaves behind, since neither
-    /// importer rewrites that field. Shipped records always agree, so a mismatch here means this
-    /// record has been edited. See <see cref="SpkPackage.DeclaredAudioLengthMatches"/> for how far the
-    /// consequences are actually understood (not far: it is a strong candidate for the trailing-noise
-    /// symptom, not a confirmed cause).</summary>
+    /// <summary>Flags an audio record whose descriptor declares a different length than its stream.</summary>
     private static string DescribeLengthMismatch(SpkPackage package, SpkRecord r) =>
         package.DeclaredAudioLengthMatches(r) == false && package.TryGetAudioDescriptor(r) is { } t128
             ? $"  ⚠ descriptor declares {t128.AudioByteLength:N0} B"
@@ -665,15 +660,8 @@ public partial class SpkFileHandler : UserControl
 
                 WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(await File.ReadAllBytesAsync(tempWav));
 
-                // Pad with trailing silence (zero PCM samples, through the same encoder) up to the
-                // original clip's own sample count if the replacement decodes shorter. What actually
-                // governs the engine's total playback length isn't fully traced - it isn't simply "walk
-                // the IMA-ADPCM stream to its natural end" (see spk.md's "Playback length" section for
-                // what was and wasn't confirmed), and it lives deep in generic DARE voice-construction
-                // plumbing several objects past what's been mapped so far. Never shrinking the encoded
-                // byte length below the original sidesteps that uncertainty entirely: whatever the real
-                // mechanism turns out to be, it can't run past a same-or-longer buffer. The audible
-                // result is "your replacement, then silence" instead of "your replacement, then noise."
+                // Pads a shorter replacement with silence to the original's sample count, keeping the
+                // descriptor's declared length - the length the game plays - true without rewriting it.
                 short[] samples = pcm.Samples;
                 if (samples.Length < currentDecoded.Samples.Length)
                 {

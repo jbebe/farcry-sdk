@@ -9,6 +9,10 @@ void LoadDsoal();
 void ApplyReverbFix();
 // Logs every reverb DARE switches to.
 void InstallReverbLog();
+// Logs every echo length a gunshot echo is trimmed to.
+void InstallEchoLog();
+// Raises the reverb send of 2D voices, the player's own sounds among them.
+void ApplyPlayerReverb();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION) {
@@ -23,5 +27,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     LoadDsoal();
     ApplyReverbFix();
     InstallReverbLog();
+    InstallEchoLog();
+    ApplyPlayerReverb();
     return true;
 }

@@ -178,10 +178,8 @@ public sealed class TransformedFixed128SubHeader
     public required uint OwnId { get; init; }
 
     /// <summary>word[2] (+0x08) - the sibling <see cref="SpkRecordType.FlatCopy"/> record's audio byte
-    /// length (its payload size minus the 40-byte core). Exact in all 3,211 records that pair with a
-    /// sibling across the corpus checked, for both codecs. Nothing in JackAll rewrites it when audio is
-    /// replaced, so a record whose audio has been swapped will disagree with its sibling - see
-    /// <see cref="SpkPackage.DeclaredAudioLengthMatches"/>.</summary>
+    /// length (its payload size minus the 40-byte core), which the engine plays to. Exact in all 3,211
+    /// records that pair with a sibling across the corpus checked, for both codecs.</summary>
     public required uint AudioByteLength { get; init; }
 
     /// <summary>word[22] (+0x58) - the same value as <see cref="AudioByteLength"/>, or `0`. Never a
@@ -384,29 +382,15 @@ public sealed class SpkPackage
     /// <see cref="SpkRecordType.FlatCopy"/> record - the sibling whose
     /// <see cref="TransformedFixed128SubHeader.FlatCopySiblingId"/> points back at it, or null if this
     /// bank holds no such record.</summary>
-    public TransformedFixed128SubHeader? TryGetAudioDescriptor(SpkRecord flatCopyRecord)
-    {
-        foreach (SpkRecord r in Records)
-        {
-            if (r.TransformedFixed128?.FlatCopySiblingId == flatCopyRecord.Id)
-            {
-                return r.TransformedFixed128;
-            }
-        }
+    public TransformedFixed128SubHeader? TryGetAudioDescriptor(SpkRecord flatCopyRecord) =>
+        AudioDescriptorRecord(flatCopyRecord)?.TransformedFixed128;
 
-        return null;
-    }
+    private SpkRecord? AudioDescriptorRecord(SpkRecord flatCopyRecord) =>
+        Records.FirstOrDefault(r => r.TransformedFixed128?.FlatCopySiblingId == flatCopyRecord.Id);
 
-    /// <summary>Whether a <see cref="SpkRecordType.FlatCopy"/> record's actual audio length agrees with
-    /// the length its descriptor sibling declares in
-    /// <see cref="TransformedFixed128SubHeader.AudioByteLength"/>. True in every shipped record; false
-    /// means the audio has been replaced by a tool that didn't rewrite the descriptor (JackAll's own
-    /// importers among them). Null when there is no descriptor sibling to compare against.
-    ///
-    /// Whether the engine actually reads this as a playback-length gate is untested - it is the best
-    /// remaining candidate for the trailing-noise symptom documented on the `.spk` docs page, but the
-    /// field that was tried and ruled out was word[20], not this one. Surfaced so a mismatch is visible
-    /// rather than silently shipped.</summary>
+    /// <summary>Whether a <see cref="SpkRecordType.FlatCopy"/> record's audio length matches its
+    /// descriptor's <see cref="TransformedFixed128SubHeader.AudioByteLength"/>; null without a
+    /// descriptor.</summary>
     public bool? DeclaredAudioLengthMatches(SpkRecord flatCopyRecord) =>
         flatCopyRecord.FlatCopyAudioStream is { } audio && TryGetAudioDescriptor(flatCopyRecord) is { } t128
             ? t128.AudioByteLength == (uint)audio.Length
@@ -473,6 +457,29 @@ public sealed class SpkPackage
         }
 
         throw new InvalidDataException($"No record with id 0x{recordId:x8} in this .spk.");
+    }
+
+    /// <summary><see cref="ReplaceRecordPayload"/> for a <see cref="SpkRecordType.FlatCopy"/> record's
+    /// audio, also rewriting its descriptor's <see cref="TransformedFixed128SubHeader.AudioByteLength"/>
+    /// and, where the bank sets it, the mirror.</summary>
+    public byte[] ReplaceAudio(byte[] originalFile, SpkRecord flatCopyRecord, byte[] newAudioStream)
+    {
+        byte[] patched = ReplaceRecordPayload(originalFile, flatCopyRecord.Id,
+            [.. flatCopyRecord.Payload[..SpkRecordCore.Size], .. newAudioStream]);
+        if (AudioDescriptorRecord(flatCopyRecord) is not { } descriptor)
+        {
+            return patched;
+        }
+
+        byte[] payload = [.. descriptor.Payload];
+        Span<byte> sub = payload.AsSpan(SpkRecordCore.Size);
+        BinaryPrimitives.WriteUInt32LittleEndian(sub[0x08..], (uint)newAudioStream.Length);
+        if (BinaryPrimitives.ReadUInt32LittleEndian(sub[0x58..]) != 0)
+        {
+            BinaryPrimitives.WriteUInt32LittleEndian(sub[0x58..], (uint)newAudioStream.Length);
+        }
+
+        return ReplaceRecordPayload(patched, descriptor.Id, payload);
     }
 
     private static int PadLength(int length) => (4 - length % 4) % 4;
