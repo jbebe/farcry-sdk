@@ -390,7 +390,8 @@ A bullet weapon's sound fields live on `CWeaponFireBulletProperties` (vtable `0x
 `CWeaponFireBulletStrategy` (vtable `0x10e1ea18`):
 
 - `ApplyDelayBullet` (`FUN_10115680`) handles each shot's result and plays the single-shot sounds.
-- `StartUse` (`FUN_10113580`) and `PreStopUse` (`0x1010f210`) handle automatic fire.
+- `StartUse` (`FUN_10113580`), `StopUse` (`FUN_101146e0`) and `PreStopUse` (`0x1010f210`) handle
+  automatic fire; see [automatic fire](#automatic-fire).
 
 Every play call passes a volume in dB, which is 0 on these paths. None passes a delay.
 
@@ -431,12 +432,56 @@ type, and the handle goes to vtable `+0xa8` with `CAmbianceManager::GetEchoLengt
 **(heard in game, 2026-09-26)**, and `GetEchoLength` returned 0.00 s for shots inside a hangar and
 6.10 s outside **(logged)**.
 
-Automatic fire does the same with a loop:
+### Automatic fire
 
-- `StartUse` starts `sndStartAutoBulletShot` and `sndStartAutoBulletShotEcho`.
-- `PreStopUse` stops the loop with a fade: `fAutoBulletShotFadeOutMultiplier` × the time left to the
-  next round, but at least `fAutoBulletShotMinFadeOut`. It then plays `sndStopAutoBulletShot`, and
-  plays `sndStopAutoBulletShotEcho` trimmed by the echo length.
+A weapon's `selFireRateMode` (`SingleShot` 0, `FullAuto` 1, `PrepareShot` 2) picks one of two sound
+paths, never both. `FUN_1012eec0` tests the mode against CRC32("singleshot") and
+CRC32("prepareshot"). When it is true, `ApplyDelayBullet` plays `sndSingleBulletShot` for every round.
+When it is false (`FullAuto`), no per-round sound plays at all: the trigger press starts a loop and
+the release stops it **(RE-verified)**. The `FullAutoSounds` group is only registered for `FullAuto`
+weapons (`IsFullAuto` in the server's `RegisterProperties`).
+
+`world1` has 43 `FullAuto` archetypes: the AK47, FAL, G3, M16, MP5, USAS-12, MAC-10, Uzi, PKM, M249,
+M2 and MK19 families. The MK19s set `sndSingleBulletShot` anyway, and it never plays.
+
+For the local player:
+
+- `StartUse` records the press time (`+0x108`), plays `sndStartAutoBulletShot` on the first-person
+  emitter (`+0x124`) and keeps its handle (`+0x10c`). It also plays `sndStartAutoBulletShotEcho`, with
+  no emitter, and **discards that handle**: nothing ever stops it, so it must be a one-shot.
+- `StopUse` calls `PreStopUse` while the loop handle is live. With `p = 60 / iFireRate` and `t` the time
+  since the press, the loop is stopped with a fade of
+  `fAutoBulletShotFadeOutMultiplier × (ceil(t / p) × p − t)`, raised to `fAutoBulletShotMinFadeOut`: the
+  time left until the next round, stretched by the multiplier. It then plays `sndStopAutoBulletShot` on
+  the same emitter, and `sndStopAutoBulletShotEcho` stopped with a fade of the echo length.
+
+The fade formula assumes the loop's shots fall exactly on the fire-rate grid, starting at its first
+sample. The loop is never re-synchronized to the rounds actually fired; it just runs from the press.
+
+For everyone else, `StartUse` plays the `ThirdPerson` `sndStartAutoBulletShot` on the weapon's
+`CFireBulletCB` emitter (`+0x110`) and keeps no handle. `StopUse` plays the `ThirdPerson`
+`sndStopAutoBulletShot` on the same emitter and does nothing else. Code never stops an NPC's loop.
+The data does: every retail third-person stop event is a type-`4` "StopNGo" event (see
+[`.spk`](../file-formats/spk.md#binary-event-objects)). It stops the start event on that emitter and
+plays a tail **(RE-verified)**.
+
+The AK47, as retail ships it **(seen in data)**:
+
+| Field | Event | What it holds |
+| --- | --- | --- |
+| `sndStartAutoBulletShot` | `0x00448CD8` | a list event → leaf → sample `0x004BF577`: stereo, 48 kHz, 0.800 s, a looping sample; 8 shots exactly 100 ms apart (600 RPM) |
+| `sndStopAutoBulletShot` | `0x004B2901` | a list event of two layers: the AK tail `0x00448CD4` (stereo, 2.24 s, starts 10 dB under the loop's shots and decays) and `0x004B291E`, the brass |
+| `fAutoBulletShotFadeOutMultiplier`, `fAutoBulletShotMinFadeOut` | | `1.2`, `0.09` s |
+| `ThirdPerson` start | `0x00455337` | sample `0x004BF578`: mono, 48 kHz, 0.901 s, looping; 9 shots 100 ms apart |
+| `ThirdPerson` stop | `0x00455338` | StopNGo: stop `0x00455337`, play `0x00455336`: mono, 0.856 s, one shot and its decay |
+
+`0x004B291E` plays a material switch (group `0x00440260`, 34 entries), which the player's shell
+emitter answers by casting down: brass landing on whatever the player stands on **(inferred)**. Every
+automatic weapon's first-person stop shares it, except the M2, which uses the single-shot brass layer
+`0x004565A6`. Every third-person stop is a StopNGo on its own start event.
+
+A single tap therefore sounds as the loop's first shot, faded out by the next round (0.09–0.12 s on the
+AK), plus the tail and brass from the stop event.
 
 ### Everyone else's shot
 

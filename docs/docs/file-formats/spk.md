@@ -117,7 +117,7 @@ each one means:
 | `1` | `[2]`, `[7]` | starts a voice on `[2]`, attenuated by the rolloff curve in `[7]` | real | 4,149 |
 | `2` | `[2]` | acts on the event in `[2]` with the Q16.16 value in `[3]` (retail: 1.0, 0.3, 0.5, 3.0) — reads as stop-with-fade **(inferred)** | `-1` | 241 |
 | `3` | nothing | acts on the event in `[2]` **(inferred: stop family)** | `-1` | — |
-| `4` | `[2]`, `[3]` | starts a child instance from the linked events; not traced further | `-1` | 60 |
+| `4` | `[2]`, `[3]` | **StopNGo** (the engine's own name, from `Cannot launch StopNGo event correctly`; `FUN_10a3acf0`): stops the event in `[2]` on the same object, then plays the event in `[3]`. With `[4]` nonzero and `[6]` zero, the play waits until the stopped instance has ended. Every retail third-person auto-fire stop is one, with `[2]` its own start loop, `[4]` `0.05` (Q16.16) and `[6]` `1`; see [automatic fire](../engine-internals/audio-runtime.md#automatic-fire) | `-1` | 60 |
 | `5`, `6`, `7`, `9` | `[2]`, `[6]` | starts a voice | real | — |
 | `8` | nothing | **sets the listener reverb** to the effect in `[2]`, a DARE project resource rather than a bank record; audible only with EAX (see [audio runtime](../engine-internals/audio-runtime.md#reverb)) | `-1` | 18 |
 | `10` | nothing | applies a Q16.16 dB value over a duration to a target — a volume fade **(inferred)** | `-1` | — |
@@ -262,8 +262,10 @@ that points at it; giving one event its own falloff means a new curve record and
 | `[9]` | — | boolean, `1` in 97% |
 | `[17]` | `+0x44` | `1` (94%) or `2` (~2%) — correlates with the sibling `FlatCopy` payload's size (~11× larger average when `2`), consistent with a **channel-count field** |
 | `[19]` | `+0x4C` | **sample rate** — always a standard real-world rate: `32000` (44%), `22050` (42%), `48000` (10%), `44100` (3%), rarer `24000`/`16000`/`12000`/`8000`/`6000` |
+| `[13]` | `+0x34` | **loop flag**: `1` on the 219 samples that must loop, such as every automatic weapon's fire loop, `0` on the other 5,170. It decides which of the two length pairs below is filled **(seen in data; the reading code is not traced)** |
 | `[20]` | `+0x50` | irregular values in the low thousands, not a rate (equals `[19]` in only 0.1%) — reads like a decoded sample/frame count or output buffer size |
-| `[22]` | `+0x58` | the same audio byte length as `[2]`, or `0`. Never a third value: of 3,211 paired records, 2,971 match `[2]` exactly and the remaining 240 are `0` |
+| `[21]`, `[22]` | `+0x54`, `+0x58` | one-shot length: `[21]` the sample count less 29–30, `[22]` the byte length, equal to `[2]`. Both `0` when `[13]` is `1` |
+| `[23]`, `[24]` | `+0x5C`, `+0x60` | loop length, the same pair: set only when `[13]` is `1`, and `0` otherwise. Across all 5,389 retail samples the split has no exception |
 | `[25]` | `+0x64` | `4` (81%) or `3` (19%) |
 | `[28]` | `+0x70` | `7` (99.8%) |
 | `[31]` | `+0x7C` | `0xFFFFFFFF` (99.9%) |
@@ -448,7 +450,9 @@ at `+0x30` in `TImaAdpcm_DecodeStream` (`0x10a7f9e0`) is not a remaining length 
 decoder's look-ahead buffer, refilled and drained every call.
 
 `jackall-cli spk import` rewrites `[2]` and `[22]`, and `spk list` flags any record whose descriptor
-disagrees with its stream. The App's importer does not: it pads a shorter IMA-ADPCM clip with silence
+disagrees with its stream. On a looping sample it rewrites only `[2]`, leaving `[23]`/`[24]` at the old
+length. Whether the engine reads them is untested. A replacement loop with exactly the original's
+frame count encodes to the same byte length and leaves nothing stale. The App's importer does not: it pads a shorter IMA-ADPCM clip with silence
 up to the original's sample count, which keeps the old length true, but a longer clip or any Ogg
 replacement ships a stale length. Whether Ogg Vorbis records are also cut at `[2]` is untested.
 
