@@ -19,6 +19,8 @@ add_library(SoundOverhaul SHARED
   "src/reverb_log.cpp"
   "src/echo_log.cpp"
   "src/player_reverb.cpp"
+  "src/per_round_shots.cpp"
+  "src/last_echo.cpp"
 )
 
 target_include_directories(SoundOverhaul PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include")

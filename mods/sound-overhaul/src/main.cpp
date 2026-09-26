@@ -13,6 +13,10 @@ void InstallReverbLog();
 void InstallEchoLog();
 // Raises the reverb send of 2D voices, the player's own sounds among them.
 void ApplyPlayerReverb();
+// Plays a loop-less full-auto weapon's single shot on every round.
+void ApplyPerRoundShots();
+// Lets only the last echo of a burst ring out.
+void ApplyLastEcho();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION) {
@@ -29,5 +33,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     InstallReverbLog();
     InstallEchoLog();
     ApplyPlayerReverb();
+    ApplyPerRoundShots();
+    ApplyLastEcho();
     return true;
 }

@@ -3,6 +3,9 @@
     "ghidra": {
       "command": "uv",
       "args": ["run", "--directory", "C:\\Programs\\ghidra-mcp\\ghidra-mcp", "bridge-mcp-ghidra"]
+    },
+    "audacity": {
+      "command": "audacity-mcp"
     }
   }
 }
