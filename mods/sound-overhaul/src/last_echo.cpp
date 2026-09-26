@@ -2,6 +2,8 @@
 // echoes a burst plays, one per round, only the last rings out. Each new round's echo fades out the
 // previous one from the same shooter, so a burst ends with one echo however it ends - release, empty
 // magazine or reload.
+#include "mutes.h"
+
 #include "fcse_api.h"
 
 #include <windows.h>
@@ -90,13 +92,18 @@ namespace {
     }
 
     void OnPlayerEcho(FCSE_MidHookContext* ctx) {
+        if (SoundOverhaul::Mutes::echoes) {
+            void* system = g_getSoundSystem();
+            Slot<StopSoundFn>(system, kStopSound)(system, static_cast<uint32_t>(ctx->eax), 0.0f, 0);
+            return;
+        }
         OnEcho(ctx->edi, static_cast<uint32_t>(ctx->eax));
     }
 
     void OnNpcShot(FCSE_MidHookContext* ctx) {
         const uintptr_t properties = *reinterpret_cast<const uintptr_t*>(ctx->edi + kFireProperties);
         const uint32_t echoId = *reinterpret_cast<const uint32_t*>(properties + kEcho);
-        if (echoId == kNoSound) {
+        if (echoId == kNoSound || SoundOverhaul::Mutes::echoes) {
             return;
         }
 

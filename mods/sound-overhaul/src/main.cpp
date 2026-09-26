@@ -1,5 +1,8 @@
 // Sound Overhaul - Far Cry 2's sound, closer to a serious shooter. See README.md.
+#include "devtools_api.h"
 #include "fcse_api.h"
+
+#include "mutes.h"
 
 // Lets DARE open a DirectSound whose device enumeration returns S_FALSE.
 void ApplyEnumerationFix();
@@ -35,5 +38,11 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     ApplyPlayerReverb();
     ApplyPerRoundShots();
     ApplyLastEcho();
+    SoundOverhaul::Mutes::Install();
     return true;
+}
+
+// Runs after every plugin's FCSE_Load, so DevTools has loaded by now if it is installed at all.
+extern "C" __declspec(dllexport) void FCSE_OnRegisterFunctions(const FCSE_PluginAPI*) {
+    DevTools::Overlay::AddWindow("Sound Overhaul", 340.0f, 150.0f, &SoundOverhaul::Mutes::DrawWindow);
 }

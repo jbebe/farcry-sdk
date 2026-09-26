@@ -11,6 +11,11 @@ if (NOT CMAKE_SIZEOF_VOID_P EQUAL 4)
                       "Select the x86-debug/x86-release preset.")
 endif()
 
+# DevTools' overlay contract and the Dear ImGui it pins. The window they add appears only with DevTools
+# installed; without it the plugin runs unchanged.
+set(DEVTOOLS_INCLUDE_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../DevTools/include")
+include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
+
 add_library(SoundOverhaul SHARED
   "src/main.cpp"
   "src/dsoal.cpp"
@@ -21,7 +26,13 @@ add_library(SoundOverhaul SHARED
   "src/player_reverb.cpp"
   "src/per_round_shots.cpp"
   "src/last_echo.cpp"
+  "src/mutes.cpp"
 )
 
-target_include_directories(SoundOverhaul PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include")
+target_include_directories(SoundOverhaul PRIVATE
+  "${CMAKE_CURRENT_SOURCE_DIR}/../../tools/FCSE/include"
+  "${DEVTOOLS_INCLUDE_DIR}"
+)
 target_compile_features(SoundOverhaul PRIVATE cxx_std_20)
+# Dear ImGui is the core alone, drawing into DevTools' context - the backends are DevTools'.
+target_link_libraries(SoundOverhaul PRIVATE imgui)
