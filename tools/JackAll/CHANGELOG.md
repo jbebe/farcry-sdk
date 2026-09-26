@@ -2,95 +2,34 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.2.0] - 2026-09-26
 
 ### Added
-- **Pick files from the archives** — a field that holds a game file's path or its hash has a …
-  button that opens a file picker over the merged archives: a folder tree, the file list, search with
-  the Files tab's `ext:`/`arch:`/`hash:` words, and a File name box that takes a typed path. It sits
-  on an entity's model, skeleton, effect and other path fields, on its `snd…` sound fields (picking a
-  `soundbinary\` bank writes its id), on the Animations tab's clip path (replacing the suggestion
-  list), and on a Magma material's texture. A path hash or sound id now shows the file it names under
-  the value.
-- **Play a `.mab`** — selecting an animation bank in the Files tab draws the rigs it drives as
-  stick figures: the bank's own rig in blue, each weapon or prop the tag table names in orange, hung
-  from the bone it says. Play, scrub with the slider, orbit and zoom. The same player sits under the
-  Animations tab's clip path, so a retargeted clip can be seen before it is applied.
-- **Animations tab: edit the MOVE graph as rules** — replaces the Move graphs tab. Pick a weapon and
-  a state, set what the character is doing, and every rule is marked as playing, possibly playing or
-  beaten by an earlier one, the way the engine searches a state. Retarget a rule's clips, change its
-  timing and conditions, copy it as a variant, move it earlier or later, delete it, or copy a
-  weapon's whole set of animations to a new index. Save stages only the fragments the edits touch,
-  after checking they rebuild the edited graph exactly. The raw object tree is still there behind
-  **Raw graph**.
-- **The Map tab is laid out like a scene editor** — a hierarchy of every placed entity under its
-  mission layer on the left, the viewport in the middle, an inspector on the right and the world's
-  entity library along the bottom. The layer toggles moved into a Layers menu over the viewport.
-- **Select several entities, move and rotate them** — Ctrl and Shift in the hierarchy, Ctrl+click in
-  the viewport; T and R switch between the move arrows and the rotate rings, which act on the whole
-  selection. A turn saves as `hidAngles`.
-- **Edit an entity's fields** — the inspector shows the instance merged over its archetype, the way
-  the game reads it: inherited values greyed, the instance's own overrides marked, each one
-  revertable. An edit is staged as that entity's fragment on Save.
-- **Place new entities from the library** — drag an archetype onto the ground, or onto a mission
-  layer in the hierarchy. The new instance carries only what every shipped instance does and
-  inherits the rest; its archetype and meshes are staged the way a paste's are.
-- **Hide and lock** entities for the session, and **Modified only** lists what the session changed.
-- **Undo and redo on the Map tab** — Ctrl+Z and Ctrl+Y, or the toolbar buttons, over moves, turns,
-  field edits, added components, placements, pastes and deletes. Typing into one field is one step.
-  Undoing past a Save restages the entity, and an undone delete takes its staged delete back out.
-- **Move on a plane** — the move gizmo has a square between each pair of arrows that drags the
-  selection across that plane.
-- **Check** — lists what would fail silently in game: an archetype the world doesn't declare, a
-  character in a sector with no navmesh (which crashes the game), links and prefab members pointing
-  at deleted entities, a moved entity outside the sector it's filed in, and a new mesh no depload
-  lists. Save runs it first and asks before saving errors. An untouched retail world reports nothing.
-- **Resize triggers and lights in the viewport** — a selected trigger box has a handle on each face,
-  a light a ring for its radius, and a spot its cone rims. A colour field such as `clrColor` gets a
-  swatch with a slider per channel.
-- **Event links** — an **Event links** layer draws a line from each entity to every entity its links
-  send to. The inspector lists the selected entity's links, removes them, and adds one by picking the
-  target in the viewport, offering the outputs and events the world's own links use.
-- **Prefabs** — the hierarchy files each prefab with its members. Moving, turning, copying and
-  deleting a prefab carries its members along. **Group** (Ctrl+G) makes the selection a new prefab
-  and **Ungroup** removes one. **Save prefab** keeps it in the entity library's Prefabs, to drag into
-  any world.
-- **Component properties from the engine itself** — `.fcb` names, types and enum dropdowns now also
-  come from the properties Far Cry 2 registers for every entity and component class
-  (`assets/component_schema.json`), filling in what `binary_classes.xml` lacks. The XML still wins
-  wherever it already defines a member.
-- **Add and remove components** in the Map tab's inspector. A component shows every property it
-  registers; unset ones are faint and keep the engine's default until edited. Collapsing a
-  component folds away everything inside it, its groups and slots included.
-- **Name the editor's text fields** — almost every `hash XXXXXXXX` string row in an entity is the
-  plain text the original editor kept beside a hashed field. It now reads `text_fileName`,
-  `text_matimpSmallCollisionImpact` and so on, and is greyed out: the game never reads it, so edit
-  the field it names instead. `fcb decode` writes the same names.
+- **The Map tab is a scene editor** — hierarchy, inspector and entity library around the viewport;
+  select, move, rotate and place entities, edit their fields and components, with undo and redo.
+- **Map tab tools** — trigger and light handles, event links, prefabs, a navmesh layer, and a
+  **Check** that lists what would fail silently in game.
+- **Animations tab** — edit the MOVE graph as rules, replacing the Move graphs tab.
+- **`.mab` player** — plays an animation bank's rigs as stick figures.
+- **File picker** over the merged archives for any path, hash or sound field.
+- **Component properties from the engine** — names, types and enum dropdowns for every class.
+- **Domino checks** — entry pins, dead ends and lint problems in the viewer, and `domino check`.
+- **Shader CLI** — `shader extract`, `index` and `build`.
+- **Dark theme.**
+- `.spk` and `.xbt` previews on `.fcb` fields; editor `text_` fields named and greyed out.
 
 ### Changed
-- **The Map tab resolves archetypes against `entitylibrary.fcb`**, the library single-player reads
-  and the one a save stages into, instead of `entitylibrary_full.fcb`.
-- **The Library tab shows which mods edit an archetype** instead of which game library overrides
-  which. Each archetype opens on the definition the game reads; the side panel lists the enabled
-  mods editing it in load order, marking an edit dead when it lands on a copy the game doesn't
-  read. "Overridden only" became "Modded only", and the "Reads as" picker is gone.
-- **`mod lint` checks the library single-player reads** — it used to default to
-  `entitylibrary_full.fcb`; the `--profile` option is removed.
-- **Map tab characters wear their own look** — every NPC draws the exact outfit it was placed with
-  (mercenaries used to share the single most common one), in the skin tone, clothing colours, shirt
-  prints and beard its kit picked, and clothing and skin draw through the engine's own Cloth and Skin
-  shaders.
+- The Map tab and `mod lint` read `entitylibrary.fcb`, the library single-player uses.
+- The Library tab shows which mods edit an archetype.
+- Map tab characters wear their own outfit, skin and colours.
 
 ### Fixed
-- **Female civilians drew only a head and shoulders in the Map tab** — their clothes, and the eyes
-  of one mercenary head, are named with a doubled LOD suffix the part lookup did not strip.
-- **Saving map edits with nothing added left them pending** — a save of only moves or deletes now
-  clears them like any other.
-- **A moved entity that had no `hidAngles` of its own lost a rotation** given to it.
-- **A MOVE fragment that reshaped a state holding a nested state failed to build**, or could point
-  the state machine's slot at the wrong object — the slot is now rebuilt by name only.
-- **The released app named no MOVE states** — it did not ship the MOVE names table, so states and
-  their fragments showed as bare hashes outside a source checkout.
+- Female civilians drew only a head and shoulders in the Map tab.
+- Map edits with only moves or deletes stayed pending after a save.
+- A moved entity without its own `hidAngles` lost its rotation.
+- Some MOVE fragments that reshaped a nested state failed to build.
+- The released app showed MOVE states as bare hashes.
+- `spk import` now writes the imported sound's length.
 
 ## [1.1.0-beta] - 2026-09-04
 
