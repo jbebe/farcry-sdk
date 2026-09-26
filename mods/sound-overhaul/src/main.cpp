@@ -15,7 +15,7 @@ void InstallEchoLog();
 void ApplyPlayerReverb();
 // Plays a loop-less full-auto weapon's single shot on every round.
 void ApplyPerRoundShots();
-// Lets only the last echo of a burst ring out.
+// Gives NPC shots an echo, and lets only the last echo of a burst ring out.
 void ApplyLastEcho();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
