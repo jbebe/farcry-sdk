@@ -43,6 +43,9 @@ public static class ImaAdpcm
 
     private const int MaxStepIndex = 0x58; // 88 - the last valid index into StepTable (89 entries)
 
+    // Enough for the step index to climb from 0 to its maximum and settle.
+    private const int TailFrames = 64;
+
     /// <summary>The canonical IMA-ADPCM step-index adjustment table - confirmed byte-for-byte at
     /// Dunia.dll VA 0x10ee3928 (stored there as int32, not the more common int16).</summary>
     private static readonly int[] IndexTable = [-1, -1, -1, -1, 2, 4, 6, 8, -1, -1, -1, -1, 2, 4, 6, 8];
@@ -110,27 +113,47 @@ public static class ImaAdpcm
     /// <summary>
     /// Encodes 16-bit PCM samples (mono, or interleaved `L,R,L,R,...` for stereo) into a `TImaAdpcm`
     /// stream - a full 28-byte header followed by packed nibbles, ready to drop straight into an
-    /// `.spk` `FlatCopy` record's payload (after that record's unchanged 40-byte core). Always starts
-    /// from a fresh predictor/step-index of `0`/`0` - a valid starting point for any IMA-ADPCM stream
-    /// (real files sometimes start from a different, presumably encoder-chosen point, but there's
-    /// nothing that requires it).
+    /// `.spk` `FlatCopy` record's payload (after that record's unchanged 40-byte core). A one-shot
+    /// starts from a predictor/step-index of `0`/`0`; a <paramref name="looping"/> clip starts from the
+    /// state its own tail leaves, so each restart continues the wave instead of slewing up from zero.
     /// </summary>
-    public static byte[] Encode(short[] samples, int channels)
+    public static byte[] Encode(short[] samples, int channels, bool looping = false)
     {
         if (channels is not (1 or 2))
         {
             throw new ArgumentOutOfRangeException(nameof(channels), channels, "Only mono (1) or stereo (2) audio is supported.");
         }
 
-        byte[] header = new byte[HeaderSize]; // zero-initialized: only the version and channel-flag bytes need setting
+        (int predictorA, int stepIndexA) = looping ? TailState(samples, channels, channel: 0) : (0, 0);
+        (int predictorB, int stepIndexB) = looping && channels == 2 ? TailState(samples, channels, channel: 1) : (0, 0);
+
+        byte[] header = new byte[HeaderSize];
         header[0] = ExpectedVersion;
         header[ChannelFlagOffset] = (byte)(channels - 1);
+        BinaryPrimitives.WriteInt16LittleEndian(header.AsSpan(PredictorAOffset), (short)predictorA);
+        header[StepIndexAOffset] = (byte)stepIndexA;
+        BinaryPrimitives.WriteInt16LittleEndian(header.AsSpan(PredictorBOffset), (short)predictorB);
+        header[StepIndexBOffset] = (byte)stepIndexB;
 
         byte[] body = channels == 2
-            ? EncodeStereoInterleaved(samples, predictorA: 0, stepIndexA: 0, predictorB: 0, stepIndexB: 0)
-            : EncodeMono(samples, predictor: 0, stepIndex: 0);
+            ? EncodeStereoInterleaved(samples, predictorA, stepIndexA, predictorB, stepIndexB)
+            : EncodeMono(samples, predictorA, stepIndexA);
 
         return [.. header, .. body];
+    }
+
+    /// <summary>The encoder's predictor/step-index after the last <see cref="TailFrames"/> frames of one
+    /// channel, starting from `0`/`0`.</summary>
+    private static (int Predictor, int StepIndex) TailState(short[] interleaved, int channels, int channel)
+    {
+        int frames = interleaved.Length / channels;
+        int predictor = 0, stepIndex = 0, step = StepTable[0];
+        for (int f = Math.Max(0, frames - TailFrames); f < frames; f++)
+        {
+            EncodeNibble(interleaved[f * channels + channel], ref predictor, ref stepIndex, ref step);
+        }
+
+        return (predictor, stepIndex);
     }
 
     /// <summary>Mono block decode - byte-for-byte port of `Dunia.dll`'s `0x10a85150`: each input byte

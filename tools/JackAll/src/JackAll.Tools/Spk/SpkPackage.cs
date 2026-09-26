@@ -200,6 +200,9 @@ public sealed class TransformedFixed128SubHeader
     /// stereo one.</summary>
     public required uint ChannelCountGuess { get; init; }
 
+    /// <summary>word[13] (+0x34) - `1` on a sample that loops, such as an automatic weapon's fire loop.</summary>
+    public required bool IsLooping { get; init; }
+
     /// <summary>word[19] (+0x4C) - the sibling `FlatCopy` audio's sample rate. Always a standard
     /// real-world rate across a real install (32000/22050/48000/44100/24000/16000/12000/8000/6000).</summary>
     public required uint SampleRate { get; init; }
@@ -578,6 +581,7 @@ public sealed class SpkPackage
             GainQ16_16 = BinaryPrimitives.ReadInt32LittleEndian(sub[0x14..]),
             FlatCopySiblingId = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x1C..]),
             ChannelCountGuess = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x44..]),
+            IsLooping = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x34..]) == 1,
             SampleRate = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x4C..]),
             Word20 = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x50..]),
             Word25 = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x64..]),

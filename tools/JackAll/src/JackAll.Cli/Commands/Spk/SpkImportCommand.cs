@@ -93,7 +93,8 @@ public sealed class SpkImportCommand : CliCommand<SpkImportCommand.Settings>
     private static byte[] BuildImaAdpcmReplacement(byte[] replacement, byte[] currentAudio, SpkPackage package, SpkRecord record)
     {
         int channels = ImaAdpcm.Decode(currentAudio).Channels;
-        int sampleRate = package.TryGetFlatCopySampleRate(record) ?? SpkFormat.FallbackSampleRateHz;
+        TransformedFixed128SubHeader? descriptor = package.TryGetAudioDescriptor(record);
+        int sampleRate = (int?)descriptor?.SampleRate ?? SpkFormat.FallbackSampleRateHz;
 
         WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(replacement);
         if (pcm.Channels != channels || pcm.SampleRate != sampleRate)
@@ -104,6 +105,6 @@ public sealed class SpkImportCommand : CliCommand<SpkImportCommand.Settings>
                 "exact match - this CLI encodes whatever you give it as-is.");
         }
 
-        return ImaAdpcm.Encode(pcm.Samples, pcm.Channels);
+        return ImaAdpcm.Encode(pcm.Samples, pcm.Channels, looping: descriptor?.IsLooping == true);
     }
 }

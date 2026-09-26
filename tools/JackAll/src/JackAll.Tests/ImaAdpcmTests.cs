@@ -150,6 +150,30 @@ public class ImaAdpcmTests
     }
 
     [Fact]
+    public void A_one_shot_header_starts_from_zero()
+    {
+        short[] samples = BuildSineWave(frequency: 400, sampleRate: 8000, seconds: 0.25, amplitude: 12000, phase: Math.PI / 2);
+
+        byte[] stream = ImaAdpcm.Encode(samples, channels: 1);
+
+        Assert.All(stream[0x10..0x18], b => Assert.Equal(0, b));
+    }
+
+    [Fact]
+    public void A_looping_clip_restarts_from_its_tail_without_a_slew()
+    {
+        // A cosine that fits the clip a whole number of times, so the restart lands mid-wave at full amplitude.
+        short[] loop = BuildSineWave(frequency: 400, sampleRate: 8000, seconds: 0.25, amplitude: 12000, phase: Math.PI / 2);
+
+        short[] primed = ImaAdpcm.Decode(ImaAdpcm.Encode(loop, channels: 1, looping: true)).Samples;
+        short[] unprimed = ImaAdpcm.Decode(ImaAdpcm.Encode(loop, channels: 1)).Samples;
+
+        int steadyState = MaxError(loop, primed, 32, loop.Length);
+        Assert.True(MaxError(loop, primed, 0, 32) <= steadyState * 3 / 2);
+        Assert.True(MaxError(loop, unprimed, 0, 32) > steadyState * 4);
+    }
+
+    [Fact]
     public void Encoding_an_odd_number_of_mono_samples_still_produces_a_whole_number_of_bytes()
     {
         short[] samples = BuildSineWave(frequency: 440, sampleRate: 8000, seconds: 0.1, amplitude: 12000);
@@ -179,16 +203,27 @@ public class ImaAdpcmTests
         AssertClose(original.Samples, roundTripped.Samples, maxRmsError: 600);
     }
 
-    private static short[] BuildSineWave(double frequency, int sampleRate, double seconds, short amplitude)
+    private static short[] BuildSineWave(double frequency, int sampleRate, double seconds, short amplitude, double phase = 0)
     {
         int count = (int)(sampleRate * seconds);
         var samples = new short[count];
         for (int i = 0; i < count; i++)
         {
-            samples[i] = (short)(amplitude * Math.Sin(2 * Math.PI * frequency * i / sampleRate));
+            samples[i] = (short)(amplitude * Math.Sin(2 * Math.PI * frequency * i / sampleRate + phase));
         }
 
         return samples;
+    }
+
+    private static int MaxError(short[] expected, short[] actual, int from, int to)
+    {
+        int max = 0;
+        for (int i = from; i < to; i++)
+        {
+            max = Math.Max(max, Math.Abs(expected[i] - actual[i]));
+        }
+
+        return max;
     }
 
     /// <summary>IMA-ADPCM is lossy by design (4 bits per sample) and, being a running predictor with a

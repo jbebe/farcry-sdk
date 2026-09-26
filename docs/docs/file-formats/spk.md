@@ -418,6 +418,11 @@ initial predictor and step index **(RE-verified)**. It checks the flag against t
 fails with the "Incoherency" error on a mismatch. The constant bytes above are from all 2,885 retail
 IMA-ADPCM streams **(seen in data)**.
 
+Retail headers that start on a loud sample are primed: the predictor sits near the clip's first sample
+with a large step index (the MAC-10's loop: `22836`/`80` against a first sample of `32767`), so decoding
+does not slew up from zero **(seen in data)**. `spk import` primes a sample whose loop flag is set with
+the state its own tail ends on, so the restart continues the wave. It starts a one-shot from `0`/`0`.
+
 **Verified against real data**: checked against two real IMA-ADPCM `FlatCopy` payloads (one mono, one
 stereo) — version byte `5` in both, channel-mode flag correctly predicted mono/stereo (matching the
 `TransformedFixed128` word `[17]` channel-count correlation found independently from statistics). A
