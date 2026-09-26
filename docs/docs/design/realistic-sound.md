@@ -4,11 +4,13 @@ sidebar_position: 1
 
 # Realistic Sound
 
-**Status:** the authored reverb plays (2026-09-25). The [free listen](#before-anything-a-free-listen)
-confirmed the software low-pass works on PC, and the
-[DSOAL experiment](#experiment-bring-eax-back-with-dsoal) became `mods/sound-overhaul`: bundled DSOAL
-plus a fix for the game never switching reverb. The next step is the
-[first prototype](#first-prototype-sound-travels-at-340-ms).
+**Status:** the authored reverb plays (2026-09-25), on the player's own shots too (2026-09-26). The
+[free listen](#before-anything-a-free-listen) confirmed the software low-pass works on PC, and the
+[DSOAL experiment](#experiment-bring-eax-back-with-dsoal) became `mods/sound-overhaul`: bundled DSOAL,
+a fix for the game never switching reverb, and a stronger reverb send for the player's own sounds. The
+Makarov's first-person shot is the first dry sample, with an outdoor echo. What comes next is the
+step-by-step listening list on the [todo page](/farcry-sdk/todos): distant enemy fire, distant voices,
+vehicle engines, interior reverbs, then every weapon's own shot.
 
 ## The goal
 
@@ -82,6 +84,24 @@ Nothing on the list is impossible.
 
 ### 1. Layered gunshots — data + plugin
 
+- **The shot samples carry their own environment, and must lose it first.** Each shot clip holds
+  1–2 s of recorded tail after the crack, echoes included **(seen in data)**:
+
+  | Sample | Length | Below −20 dB after | Below −40 dB after | Echoes |
+  | --- | --- | --- | --- | --- |
+  | Dragunov, player and NPC | 3.0 s | 0.4 s | 1.0 s | small bumps near 0.95 s and 1.2 s |
+  | Ithaca, player and NPC | 2.8 s | 0.8 s | 2.0 s | a slapback near 0.55 s |
+
+  The NPC clip is the player's recording in mono. That tail plays in a hangar and in an open field
+  alike, so no location can sound different until it is gone. The engine was built for the split:
+  a dry shot, and a separate echo layer (`sndSingleBulletShotEcho`, `sndStart/StopAutoBulletShotEcho`)
+  that the region's echo length trims and a building's zero echo length silences. Retail baked the
+  echo into the shot and left the echo fields empty. The plan: cut each clip after the crack, move the
+  tail into the player weapon's echo field, and give NPC weapons the dry shot, with EAX supplying the
+  room. A dry clip can be shorter than the original once its descriptor declares the new length (see
+  [`.spk`](../file-formats/spk.md#playback-length-comes-from-the-descriptor)). The Makarov's
+  first-person shot is now a 0.24 s dry recording in place of the 1.32 s original, and with the
+  player's reverb send raised it takes the room's tail **(heard in game, 2026-09-26)**.
 - **Close layers: data.** A multi-event (event type `12`) starts all its children together.
   First-person shots already are one: the weapon's sample plus a shared, surface-switched layer, which is
   probably the shell casings **(inferred)**. More layers mean more children, in new banks with
@@ -113,7 +133,11 @@ Nothing on the list is impossible.
 - **The player's echo: data.** `sndSingleBulletShotEcho` and the auto-fire pair play at the shot, and
   the listener's echo length trims them: the sound region's `fEchoLenght` (1.2–6.1 s), or the building's
   **(RE-verified)**. The fields are empty on every weapon, so filling them wakes the path. The echo starts
-  with the shot, so any slapback delay has to be in the sample.
+  with the shot, so any slapback delay has to be in the sample. Done for the Makarov: its echo is the
+  rest of the recording its dry shot was cut from, so shot plus echo is the whole recording outdoors
+  **(heard in game, 2026-09-26)**. Inside a hangar the echo length is 0 **(logged)**, which leaves the
+  dry shot to the room's reverb. The echo records sit in the shot's own bank, so no `depload` work was
+  needed.
 - **NPC echoes, and terrain-aware slapback: plugin.** An NPC's shot never plays an echo
   **(RE-verified)**. Echo length follows the biome region, not the hills around you.
 
@@ -239,6 +263,14 @@ one it sets when EAX starts **(RE-verified)**.
 **Fourth run: it works.** With the plugin giving `PlaySoundReverb` a body, hangars get their long tail
 **(heard in game, GOG)**. Target 2's authored reverb is solved by DSOAL plus that fix.
 
+**Fifth run, 2026-09-26: the player's own shots.** With a dry Makarov, the player's shots and reloads
+sounded dry in a hangar. They are 2D voices, and they do reach the reverb: with every voice's direct
+sound muted, they came through as a faint tail **(heard in game)**. DARE gives every voice the same full
+send, so a sound at full volume with no distance loss buries its own tail. The plugin raises the send
+of 2D voices by 1,000 mB, the most EAX allows per voice, and the tail is now heard in normal play
+**(heard in game)**. Crickets and bullet casings kept their dry sound through the muted test, so they
+bypass DARE's per-voice reverb setup **(inferred)**.
+
 **Setup.** Install the Sound Overhaul plugin (`mods/sound-overhaul`): it bundles DSOAL r695 and loads it from its own plugin folder, and also flips the enumeration check so an
 older DSOAL works too. FC2 asks for EAX 4 specifically (`EAXPROPERTYID_EAX40_FXSlot0`), which DSOAL
 provides. Remove any `dsound.dll` from `bin\`, or the plugin leaves that one in charge. To see the EAX
@@ -338,3 +370,9 @@ JackAll can replace audio inside existing `.spk` records. The data route needs i
   plugin route, through the occlusion callback.
 - 2026-09-25: the reverb route is DSOAL, bundled in `mods/sound-overhaul`, plus the plugin's body for
   the empty `PlaySoundReverb`. No own renderer is needed.
+- 2026-09-26: the player's own (2D) sounds send 1,000 mB more to the reverb than DARE gives them; 3D
+  sounds keep DARE's send.
+- 2026-09-26: dry shot samples ship in Sound Overhaul's layer at their own length, with the
+  descriptor rewritten, not padded to the original.
+- 2026-09-26: no sound manager of our own. The work is data and small hooks on the engine's own
+  systems, ordered by what must be heard in game (the step-by-step list on the todo page).

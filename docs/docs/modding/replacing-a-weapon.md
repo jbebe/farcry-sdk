@@ -1238,20 +1238,16 @@ jackall-cli spk import 004bf5eb.spk 0x004bf5f2 tp.wav
 file verbatim for an Ogg-backed one. `spk extract` on the original tells you which you are dealing
 with. Both files go in the layer at `mods/soundbinary/<id>.spk`.
 
-### Rewrite the descriptor's length, because the importer doesn't
+### The descriptor's length is the playback length
 
-Each audio record has a sibling descriptor whose `word[2]` is that audio's byte length, exact in
-every shipped record. Neither importer updates it, so a swap leaves the descriptor describing the
-*old* clip. `spk list` flags the mismatch:
+Each audio record has a sibling descriptor whose `word[2]` is that audio's byte length, and the game
+plays the audio [to that length](../file-formats/spk.md#playback-length-comes-from-the-descriptor), not
+to the end of the new clip. `spk import` rewrites it, and `word[22]` with it. A bank edited any other
+way keeps the *old* clip's length, which plays noise past a shorter clip's end; `spk list` flags it:
 
 ```
 0x004bf5f3  Audio  Stereo - 44100 Hz - IMA-ADPCM - 16 KB  (!) descriptor declares 9,766 B
 ```
-
-Whether the engine reads it as a playback-length gate is
-[untested](../file-formats/spk.md#playback-length-shorter-ima-adpcm-replacements-decode-as-trailing-noise),
-but it is the best candidate for the known trailing-noise symptom. Patch `word[2]` and `word[22]` to
-the real length.
 
 Both banks are overrides of paths the game already ships, so they need no registration, exactly like
 a texture. That does **not** generalise to a new bank: a sound is requested by id against a registry

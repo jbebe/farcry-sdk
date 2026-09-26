@@ -80,6 +80,49 @@ uncovered in the engine. The reasoning and the verdict per target are in the
 [design log](/farcry-sdk/docs/design/realistic-sound). How the engine works is on
 [audio runtime](/farcry-sdk/docs/engine-internals/audio-runtime).
 
+### What you should hear, step by step
+
+The direction (2026-09-26): data and small hooks on the engine's own systems, no sound manager of our
+own. A step is done when it is heard in game.
+
+- [ ] **1. Distant enemy fire is a crack and an echo.** From far away an enemy's shot sounds like a
+  firing range heard on a hike: a sharp crack, then the echo rolling off the land. Walking closer, it
+  blends into the full close shot.
+  - The weapon field for it exists: `sndmlDistanceFromShootingSoundToPlayerMultilayer` fades layers by
+    the shooter's distance in metres **(RE-verified)**, and it is empty on all 91 weapons. Give each
+    weapon, or each calibre class, a multilayer (kind `7`): the dry close shot near, a recording of
+    distant gunfire far. The echo goes in the far sample, because an NPC's shot never plays one.
+  - Needs dry third-person shots, distant-gunfire recordings, and a way to write a multilayer into a
+    bank. Appending records to a bank already works (the Makarov's echo).
+  - Then the report arrives late, at 340 m/s: see **Sound travels** below.
+- [ ] **2. Voices sound as far away as the speaker.** A merc talking 60 m away is quiet and dull, and
+  comes from where he stands. Today distant NPCs sound like they stand next to you.
+  - All 2,587 localized dialog samples are mono **(seen in data)**, so they can get a 3D voice. The
+    cause is elsewhere: the dialog events' rolloff curves, an emitter with no position, or DS3D. Find
+    which first, then add **Air absorption** below.
+- [ ] **3. Vehicles have an engine you hear.** An idling car rumbles, the engine rises with speed and
+  load, and the tyres sit under it. Today the rolling wheels dominate and a stopped car is silent.
+  - Vehicles carry `sndEngineIdle`, `sndEngineLoop`, `sndPlayEngineIdleLoop`, ignition and stop sounds,
+    and two multilayers, `sndmlRPMSoundMultilayer` (`0x00440256`) and `sndmlWheelSlipSoundMultilayer`
+    (`0x00440257`) **(seen in data)**. Find what plays at idle, and whether the RPM layer drops the
+    engine at low revs or the samples are weak.
+- [ ] **4. Every interior has the right room.** A shack short and dark, a hangar long, and no outdoor
+  reverb indoors. Some interiors sound wrong today (reported 2026-09-26); note which, with the reverb
+  log running.
+  - Suspects: the 84 placed buildings with no reverb may keep the outdoor one; the +1,000 mB send on
+    the player's own sounds; the conversion of DARE's preset layout to EAX, which is not traced.
+- [ ] **5. Your own shots are dry indoors and echo outdoors, on every weapon.** Each weapon needs a
+  dry shot at its own length (`spk import` rewrites the descriptor) and 1–3 echo variants, which a
+  random container on `sndSingleBulletShotEcho` picks from. Automatic fire has its own pair,
+  `sndStart/StopAutoBulletShotEcho`.
+  - Choosing the echo by environment needs a hook on its one play call: it plays with no emitter, so
+    no switch can choose **(inferred)**.
+  - Echoes shared by all weapons need a bank every weapon loads, such as the rolloff-curve bank
+    `2fffffff.spk` (untested).
+- [x] **The authored reverb switches by place** (DSOAL and the `PlaySoundReverb` body, 2026-09-25).
+- [x] **Your own shots take the room** (+1,000 mB send on 2D voices, 2026-09-26).
+- [x] **The Makarov's first-person shot is dry, with an outdoor echo** (2026-09-26).
+
 ### Checks before building anything
 
 - [ ] **Walls with EAX live.** With DSOAL, DARE's EAX occlusion and obstruction now act on top of the
@@ -97,12 +140,6 @@ uncovered in the engine. The reasoning and the verdict per target are in the
   per player, not per weapon, so a calibre-aware crack needs a plugin.
 - [ ] **Close layers per weapon.** Add transient, mechanical (bolt, spring) and body layers as children
   of the first- and third-person multi-events (type `12`), in new banks with `depload` entries.
-- [ ] **Far layer for NPC shots.** Fill `sndmlDistanceFromShootingSoundToPlayerMultilayer` (empty on
-  all 91 weapons) and author a multilayer resource (kind `7`) that fades close → far over the
-  shooter's distance. Candidate parameter: the unused `0x00440259` (range 0–250).
-- [ ] **Pre-filter the far layer in the sample**, so the low-passed boom needs no code.
-- [ ] **Replace the single-clip third-person shots.** The AK47's third-person auto shot is one mono
-  clip; give every NPC weapon a layered close/far pair.
 - [ ] **Malfunction sounds on every weapon.** `sndMalfunction*` is set only on the Carl Gustaf.
 - [ ] **Weapon wear in the shot sound.** 41 switch resources key on the weapon-status switch
   (`0x004402A7`), but `WeaponStatusSwitchValues` is empty on all 101 weapons. Check whether wear is
@@ -112,18 +149,14 @@ uncovered in the engine. The reasoning and the verdict per target are in the
 
 ### Environment tail
 
-- [ ] **Ship Sound Overhaul's reverb.** It works in game (DSOAL plus the `PlaySoundReverb` body); it
-  still needs a release (CI and release workflows, Nexus page) and the diagnostic reverb log removed.
+- [ ] **Ship Sound Overhaul's reverb.** It works in game (DSOAL, the `PlaySoundReverb` body and the
+  player's stronger send); it still needs a release (CI and release workflows, Nexus page) and the
+  diagnostic reverb log removed.
 - [ ] **Retune the reverb presets** in `common/soundbinary/7fffffff.bao` (63 presets, EAX form).
-- [ ] **Give the 84 reverb-less placed buildings a reverb.**
-- [ ] **Wake the player's echo.** Fill `sndSingleBulletShotEcho` and `sndStart/StopAutoBulletShotEcho`
-  (empty on every weapon) with real echo tails. Any slapback delay goes in the sample, because the
-  echo starts with the shot.
 - [ ] **Building echo lengths.** `fEchoLength` is 0 on 620 of 623 placed buildings; set it per
   building class.
 - [ ] **Retune region echo lengths and reverbs** per biome and intensity in `common/soundregions.xml`
   (`fEchoLenght` 1.2–6.1 s today).
-- [ ] **Echo on NPC gunshots** (plugin). An NPC's shot never plays an echo.
 - [ ] **Terrain-aware slapback** (plugin). Ray-cast from the shot to nearby hills and cliffs to set the
   delay and direction of the echo, instead of a per-biome length.
 
@@ -155,8 +188,6 @@ uncovered in the engine. The reasoning and the verdict per target are in the
   fights. The −48 dB distance cull is code.
 - [ ] **`occmul_pc` = 1.0 against 50.0 on consoles.** It multiplies every sound's obstruction, and 50
   saturates any occlusion to full. Decide whether PC should be harsher than 1.0.
-- [ ] **Distant voices.** Barks get air absorption through the plugin above; also check their rolloff
-  curves.
 - [ ] **HRTF for headphones.** OpenAL Soft behind DSOAL can render DS3D voices with HRTF.
 
 ### Near misses and ricochets

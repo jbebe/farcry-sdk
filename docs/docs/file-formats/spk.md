@@ -17,11 +17,10 @@ decoder run against real extracted payloads. Companion page: [`.sbao`](./sbao.md
 ("Ubisoft's proprietary audio middleware, config in `Data_Win32/SoundBinary/DARE.INI`") resource
 records, each identified by its own id.
 
-:::note["Spk"/"SPK" means three different things in `Dunia.dll`]
-A string search for `spk`/`SPK` also turns up two unrelated subsystems: `scripts\game\BarkData\<N>.spk`
-(decimal-numbered, the AI dialogue/bark script system) and `fNearLimitSpkDist`/`fFarLimitSpkDist`
-(tuning properties on an in-editor "SpeakerSet" sound-emitter entity — "Spk" short for "Speaker").
-Neither is the sound-bank container documented below.
+:::note[Two things named "spk" that are not hash-named banks]
+The decimal-numbered `scripts\game\BarkData\loc\<N>.spk` files are this same container, holding NPC
+voice lines; see [bark banks](./bark-banks.md). `fNearLimitSpkDist`/`fFarLimitSpkDist` are unrelated:
+tuning properties on an in-editor "SpeakerSet" sound-emitter entity, "Spk" short for "Speaker".
 :::
 
 ## Container format
@@ -203,6 +202,11 @@ the event resolves to null and the weapon is silent.
 Inferred from the absence of a load-on-miss path rather than tested with a deliberately unlisted bank.
 :::
 
+The other way round is tested. Records appended to a bank that is already listed are registered when
+it loads and play with no `depload` change: an echo event, sample and audio added to the Makarov's
+`004569c9.spk` as `0x00FC0001`–`0x00FC0003` play in game **(heard, 2026-09-26)**. The new records
+copied their siblings' preamble words and got fresh random core fields.
+
 ### Leaf fields (type `1`, 91% of records)
 
 | Word | Offset | Meaning |
@@ -252,7 +256,7 @@ that points at it; giving one event its own falloff means a new curve record and
 |---|---|---|
 | `[0]` | `+0x00` | echoes the record's own id |
 | `[1]` | `+0x04` | resource kind: `1` for a sample, which the rest of this table describes; see [resource containers](#resource-containers) for the others |
-| `[2]` | `+0x08` | **the sibling `FlatCopy`'s audio byte length** — its payload size minus the 40-byte core. Exact in all 3,211 records that pair with a sibling, both codecs |
+| `[2]` | `+0x08` | **the sibling `FlatCopy`'s audio byte length** — its payload size minus the 40-byte core. Exact in all 3,211 records that pair with a sibling, both codecs. The game plays the audio to this length; see [playback length](#playback-length-comes-from-the-descriptor) |
 | `[5]` | `+0x14` | negative Q16.16 fixed-point value when nonzero (e.g. `-12.0`, `-8.0`) — plausibly a gain/dB adjustment applied by this type's post-load transform |
 | `[7]` | `+0x1C` | an id-reference: matches the positionally-preceding record 59% of the time, some id in the same file 72% of the time |
 | `[9]` | — | boolean, `1` in 97% |
@@ -393,9 +397,11 @@ switching into steady-state decode:
 | Offset | Size | Meaning |
 |---|---|---|
 | `0x00` | 1 | version — must be exactly `5` |
-| `0x01` | 11 | unidentified |
+| `0x01` | 11 | `0` in every retail stream |
 | `0x0C` | 1 | channel-mode flag (`0` = mono, `1` = stereo) |
-| `0x0D` | 3 | unidentified |
+| `0x0D` | 1 | `0` in every retail stream |
+| `0x0E` | 1 | `10` in every retail stream; the header parse never reads it |
+| `0x0F` | 1 | `0` in every retail stream |
 | `0x10` | 2 | initial predictor, channel A (u16 LE) |
 | `0x12` | 1 | initial step-index, channel A (u8) |
 | `0x13` | 1 | unidentified/padding |
@@ -404,6 +410,11 @@ switching into steady-state decode:
 | `0x17` | 5 | unidentified/padding (header total `0x1C` = 28 bytes) |
 
 After the header, the rest of the stream is packed IMA-ADPCM nibbles.
+
+The header parse (at `0x10a7fbae`) reads only the version, the channel-mode flag, and each channel's
+initial predictor and step index **(RE-verified)**. It checks the flag against the channel count and
+fails with the "Incoherency" error on a mismatch. The constant bytes above are from all 2,885 retail
+IMA-ADPCM streams **(seen in data)**.
 
 **Verified against real data**: checked against two real IMA-ADPCM `FlatCopy` payloads (one mono, one
 stereo) — version byte `5` in both, channel-mode flag correctly predicted mono/stereo (matching the
@@ -422,38 +433,24 @@ DARE's own string `"Adpcm allows only sound files with 1, 2, 4 and 6 channels"` 
 above 2 are supported somewhere, presumably by combining multiple mono/stereo sub-streams rather than a
 single stream with a channel-mode byte above 1 — not verified against a real sample.
 
-## Playback length: shorter IMA-ADPCM replacements decode as trailing noise
+## Playback length comes from the descriptor
 
-Modding symptom: replace a `FlatCopy` record's IMA-ADPCM audio with a shorter clip (payload bytes and
-the container `size` field both correctly rewritten) and the game plays the replacement correctly for
-its own duration, then decodes a burst of noise for the *remainder of the original clip's duration*
-instead of stopping cleanly. Whatever governs total playback length is not simply "decode until the
-reader runs out of input bytes."
+An IMA-ADPCM `FlatCopy` record plays for the length its descriptor declares in `TransformedFixed128`
+word `[2]`, not for the length of its stream. Replace the audio with a shorter clip and leave `[2]`
+alone, and the game plays the clip, then decodes a burst of noise for the rest of the original clip's
+duration. Rewrite `[2]`, and `[22]` where it mirrors it, to the new stream's byte length and the clip
+ends cleanly: a 0.24 s replacement of the Makarov's 1.32 s first-person shot plays with no crack and
+no trailing noise **(heard in game, 2026-09-26)**. That clip was not also played without the rewrite;
+the noise is the symptom reported before.
 
-`TImaAdpcm_DecodeStream` (`0x10a7f9e0`) carries a counter at offset `+0x30`, decremented every decode
-call. It is **not** a "total remaining samples" gate seeded from `TransformedFixed128` word `[20]` —
-patching word `[20]` to the replacement's real sample count has no effect on the symptom. It is an
-internal look-ahead **buffer** counter — decoded samples
-sitting in a scratch buffer waiting to be handed to the caller, refilled from the byte-stream reader and
-drained every call, unrelated to total clip length.
+Word `[20]` is not it: patching it to the replacement's real sample count changes nothing. The counter
+at `+0x30` in `TImaAdpcm_DecodeStream` (`0x10a7f9e0`) is not a remaining length either, but the
+decoder's look-ahead buffer, refilled and drained every call.
 
-`TImaAdpcm` construction goes through a codec-selector dispatch (`FUN_10a7ae40`) reached from a generic
-multi-stage "voice" construction function (`FUN_10a6ff20`) wiring up several DARE-pipeline sub-objects
-(decoder plus at least three more unidentified stages) — shared machinery across all DARE codecs. Where
-(or whether) an actual total-length value gets set within that pipeline is unresolved.
-
-**Practical workaround**: JackAll's `.spk` audio importer (`SpkFileHandler.ImportAudio_Click`) pads a
-shorter IMA-ADPCM replacement with trailing digital silence up to the original clip's own sample count
-before encoding, rather than declaring a shorter length. This keeps the encoded byte length
-same-or-longer than the original, so whatever the real length-governing mechanism is, it can't run past
-the buffer. Ogg Vorbis records need no such workaround — the container is self-describing.
-
-**Untested candidate**: `TransformedFixed128` word `[2]` is the sibling's audio byte length, exactly,
-in all 3,211 paired records — a far better-behaved field than word `[20]`. Neither JackAll's importer
-nor `jackall-cli spk import` updates it, so a replacement ships a descriptor still declaring the
-*original* clip's length. That is exactly the shape of a read-length gate, and it would explain the
-symptom directly. Rewriting `[2]` (and `[22]`, which mirrors it) to the replacement's real stream
-length is **not** tested in game.
+`jackall-cli spk import` rewrites `[2]` and `[22]`, and `spk list` flags any record whose descriptor
+disagrees with its stream. The App's importer does not: it pads a shorter IMA-ADPCM clip with silence
+up to the original's sample count, which keeps the old length true, but a longer clip or any Ogg
+replacement ships a stale length. Whether Ogg Vorbis records are also cut at `[2]` is untested.
 
 ## Unknowns
 
@@ -463,10 +460,5 @@ length is **not** tested in game.
   and most of `TransformedFixed128`'s untabulated sub-header words.
 - What separates the playable leaf event types (`1`, and the unseen `5`/`6`/`7`/`9`) from each other.
 - Types `2`, `3`, `4` and `10` are only partly traced; see the [event type table](#binary-event-objects).
-- The unidentified bytes in the 28-byte ADPCM stream header.
 - Whether the channel-mode byte can represent channel counts above 2 directly, or whether >2-channel
   audio is always built from multiple sub-streams.
-- What actually governs an IMA-ADPCM `FlatCopy` record's total playback length — confirmed not
-  `TransformedFixed128` word `[20]`, traced as far as the DARE "voice" construction pipeline with
-  several unidentified sub-objects, not resolved to a concrete field or instruction. Word `[2]` is an
-  untested candidate; see [above](#playback-length-shorter-ima-adpcm-replacements-decode-as-trailing-noise).

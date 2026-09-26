@@ -356,6 +356,12 @@ then switch as the player moves: a hangar gets its long tail **(heard in game)**
 Each voice's room send is full or off, from word `[9]` of its sample's header (`FUN_10a68640`): 1 on
 97% of retail samples, all 137 bullet-impact samples included **(seen in data)**.
 
+A full send is 0 mB for every voice, 2D or 3D. The player's own shots and reloads are 2D voices at full
+volume, so their tail sits far below their dry sound: with the direct path muted it is there, but faint
+**(heard in game with DSOAL, 2026-09-26)**. Sound Overhaul raises a 2D voice's full send by 1,000 mB,
+the most `EAXSOURCE_ROOM` allows. An ambience loop and bullet casings kept their dry sound in that test,
+so some voices never pass through `FUN_10a68640` **(inferred)**.
+
 The reverb effects are not records in any `.spk` bank. They are 63 presets in EAX form inside
 `common/soundbinary/7fffffff.bao`, the DARE project descriptor, and retail's 17 distinct type-`8`
 events each point at one. The game was built to reverberate almost everywhere:
@@ -408,9 +414,22 @@ default position)**. At the same moment it plays `sndSingleBulletShotEcho` at th
 the listener, and immediately calls `StopSound(echo, GetEchoLength())`.
 
 The echo starts with the shot, with no delay. How long its tail lasts is set by the listener's echo
-length: the sound region's `fEchoLenght`, blended with the building zone's `fEchoLength` when the
-listener is inside one. That time is passed to DARE's stop call; it reads as a fade-out time
-**(inferred)**. Nothing about the terrain around the player enters it.
+length: the sound region's `fEchoLenght` outdoors, blended toward the building zone's `fEchoLength` as
+the listener goes inside one. That time is a fade-out: the stop call (`FUN_10a38600`) converts it to
+16.16 fixed point and `FUN_10a37ed0` starts a fade on the playing instance. A length of 0 stops the
+echo at once, and a shorter fade can only cut a running one short **(RE-verified)**. Nothing about the
+terrain around the player enters it.
+
+Outdoors the length falls as the region's intensity rises: desert 6.1 s at intensity 1 down to 4 s at
+15, savannah 6.1 to 2.5 s, jungle 5.5 to 1.2 s. Intensity 0 and 16 have none **(seen in data)**. With
+the intensity read from the map grid (see [reverb](#reverb)), it stands in for how open the ground is
+**(inferred)**.
+
+The echo is played with `PlaySoundAtPosition` (`+0xa0`) at the shot's origin, with the shot's own sound
+type, and the handle goes to vtable `+0xa8` with `CAmbianceManager::GetEchoLength` (`0x10505820`)
+**(RE-verified)**. Filling the Makarov's `sndSingleBulletShotEcho` wakes it: the echo plays outdoors
+**(heard in game, 2026-09-26)**, and `GetEchoLength` returned 0.00 s for shots inside a hangar and
+6.10 s outside **(logged)**.
 
 Automatic fire does the same with a loop:
 
@@ -607,9 +626,10 @@ nothing. `Compatible.Ironsight` and `Compatible.Running` exist in the library bu
   `RecordBulletHit` and `RecordExplosion`, and keeps a danger level **(inferred from the names)**.
 - **`CPlayerSoundAndFXComponent`**: player footsteps, damage sounds, the underwater ambience and
   `PlayBulletPassBySound`.
-- **`CBarkManagerService`** picks AI barks from the `scripts\game\BarkData` banks. A bark is a
-  `Bark_NPC` sound, a positioned type with occlusion, so it gets the same curves and zone occlusion as
-  any other 3D sound **(inferred: the bark play call is not traced)**.
+- **`CBarkManagerService`** picks AI barks from the `scripts\game\BarkData`
+  [bark banks](../file-formats/bark-banks.md). A bark is a `Bark_NPC` sound, a positioned type with
+  occlusion, so it gets the same curves and zone occlusion as any other 3D sound **(inferred: the bark
+  play call is not traced)**.
 - **`CWaterSoundManager`**: splashes, with switch values for object size, speed and water depth.
 
 ## Configuration
