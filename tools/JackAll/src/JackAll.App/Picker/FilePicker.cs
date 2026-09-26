@@ -27,8 +27,15 @@ public static class FilePicker
     /// <inheritdoc cref="MainViewModel.PathOf"/>
     public static string? PathOf(uint hash) => _source?.PathOf(hash);
 
+    public static VfsFile? FileOf(uint hash) => _source?.FindByHash(hash);
+
+    public static byte[] Read(VfsFile file) => _source!.Read(file);
+
+    /// <inheritdoc cref="MainViewModel.ResolveSoundResource"/>
+    public static VfsFile? ResolveSound(uint id) => _source?.ResolveSoundResource(id);
+
     /// <summary>The bank a sound id names, or the one that defines it.</summary>
-    public static string? SoundBankOf(uint id) => _source?.ResolveSoundResource(id)?.Path;
+    public static string? SoundBankOf(uint id) => ResolveSound(id)?.Path;
 
     /// <summary>Shows the picker over the window holding <paramref name="anchor"/>; null when cancelled.</summary>
     public static VfsFile? Show(DependencyObject anchor, FilePickerRequest request)

@@ -63,7 +63,6 @@
         <StackPanel>
             <TextBlock x:Name="PlayerLabel" Style="{StaticResource MonoSmall}" Margin="0,0,0,4" />
             <audio:AudioPreviewPanel x:Name="Player" />
-            <TextBlock x:Name="PlayerStatus" Style="{StaticResource Caption}" Foreground="{DynamicResource WarningTextBrush}" TextWrapping="Wrap" />
         </StackPanel>
     </Border>
     <ScrollViewer VerticalScrollBarVisibility="Auto" Padding="10,8">

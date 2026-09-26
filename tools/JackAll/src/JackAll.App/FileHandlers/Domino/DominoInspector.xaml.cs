@@ -1,7 +1,6 @@
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Media;
-using JackAll.App.Audio;
 using JackAll.Tools.Domino.Graphs;
 using JackAll.Tools.Domino;
 using JackAll.Tools.Domino.Nodes;
@@ -48,13 +47,10 @@ public partial class DominoInspector : UserControl
 
     private ReconstructedGraph? _graph;
     private DominoValueActions? _values;
-    private string? _playing;
-    private int _playRequest;
 
     public DominoInspector()
     {
         InitializeComponent();
-        Unloaded += (_, _) => StopPlayer();
     }
 
     /// <summary>Fills in the graph-level sections, which don't change with selection.</summary>
@@ -172,40 +168,12 @@ public partial class DominoInspector : UserControl
         }
     }
 
-    /// <summary>Decodes a sound with <paramref name="makeWav"/> and plays it in the docked player. A
-    /// newer request supersedes one still decoding.</summary>
-    public async void Play(string label, Func<Task<string>> makeWav)
+    /// <summary>Decodes a sound with <paramref name="makeWav"/> and plays it in the docked player.</summary>
+    public void Play(string label, Func<Task<string>> makeWav)
     {
-        int request = ++_playRequest;
-        StopPlayer();
         PlayerSection.Visibility = Visibility.Visible;
         PlayerLabel.Text = label;
-        PlayerStatus.Text = "Decoding…";
-
-        try
-        {
-            string wav = await makeWav();
-            if (request != _playRequest)
-            {
-                SoundPreview.TryDelete(wav);
-                return;
-            }
-            _playing = wav;
-            PlayerStatus.Text = "";
-            Player.Open(wav);
-            Player.Play();
-        }
-        catch (Exception ex) when (request == _playRequest)
-        {
-            PlayerStatus.Text = ex.Message;
-        }
-    }
-
-    private void StopPlayer()
-    {
-        Player.Reset();
-        SoundPreview.TryDelete(_playing);
-        _playing = null;
+        Player.Play(makeWav);
     }
 
     private static List<PinRow> BuildPinRows(NodeSignature? signature)

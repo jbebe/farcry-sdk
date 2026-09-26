@@ -26,8 +26,6 @@ public sealed class DominoValueActions(
     Action<string, Func<Task<string>>> play,
     Action<ValueRef> selectUses)
 {
-    private readonly Dictionary<string, ImageSource?> _thumbnails = new(StringComparer.OrdinalIgnoreCase);
-
     /// <summary>Starts reading the bark banks; <paramref name="ready"/> runs on the calling thread once they are in.</summary>
     public void LoadBarks(Action ready) =>
         services.Barks.Value.ContinueWith(_ => ready(), TaskScheduler.FromCurrentSynchronizationContext());
@@ -104,18 +102,9 @@ public sealed class DominoValueActions(
 
     /// <summary>A small preview of a texture value, or null.</summary>
     public ImageSource? Thumbnail(ValueRef value)
-    {
-        if (value.Kind != ValueRefKind.Texture)
-        {
-            return null;
-        }
-        if (!_thumbnails.TryGetValue(value.Value, out ImageSource? image))
-        {
-            image = services.FindByPath(value.Value) is { } file ? XbtImage.TryDecode(services.Read(file), out _) : null;
-            _thumbnails[value.Value] = image;
-        }
-        return image;
-    }
+        => value.Kind == ValueRefKind.Texture && services.FindByPath(value.Value) is { } file
+            ? XbtImage.Thumbnail(file, services.Read)
+            : null;
 
     /// <summary>Opens the graph a sub-graph box or StartScript value names, when it is loaded.</summary>
     public DominoAction? OpenGraphAction(string nodeTypePath) =>
@@ -127,9 +116,8 @@ public sealed class DominoValueActions(
 
     private DominoAction ShowInFiles(VfsFile file) => new("Show in Files", () => services.ShowInFiles(file));
 
-    // Decoding reads and parses whole banks, so it runs off the UI thread.
     private DominoAction PlaySound(string label, uint id) => new("▶ Play", () =>
-        play(label, () => Task.Run(() => SoundPreview.SoundIdToTempWavAsync(id, services.ResolveSound, services.Read))));
+        play(label, () => SoundPreview.SoundIdToTempWavAsync(id, services.ResolveSound, services.Read)));
 
     private (uint Bank, IReadOnlyList<BarkEntry> Barks)? BankOf(ValueRef value) =>
         services.Barks.Value is { IsCompletedSuccessfully: true } barks ? barks.Result.ForMission(value.Value) : null;
@@ -188,12 +176,12 @@ public sealed class DominoValueActions(
 
     /// <summary>A line's sound ID is an event in the bank's own sound pack, not a file of its own.</summary>
     private DominoAction PlayBarkLine(string label, string title, uint bank, uint soundId) => new(label, () =>
-        play(title, () => Task.Run(() =>
+        play(title, () =>
         {
             byte[] sounds = services.ReadBytes(BarkBank.SoundsPath(bank))
                 ?? throw new InvalidOperationException($"{BarkBank.SoundsPath(bank)} isn't in the loaded game files.");
             return SoundPreview.SoundIdToTempWavAsync(soundId, services.ResolveSound, services.Read, SpkPackage.Parse(sounds));
-        })));
+        }));
 
     private VfsFile? SoundFile(ValueRef value) => value.SoundId is { } id ? services.ResolveSound(id) : null;
 

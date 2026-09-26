@@ -1,6 +1,9 @@
 using System.Globalization;
 using System.IO;
 using System.Windows;
+using System.Windows.Controls;
+using JackAll.App.Audio;
+using JackAll.App.FileHandlers.Audio;
 using JackAll.App.Picker;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.Fcb;
@@ -65,6 +68,22 @@ public partial class PropertyEditorTemplates : ResourceDictionary
             FileRef.PathHash => FcbFieldFormat.Format(FcbMemberType.Hash, file.EngineHash),
             _ => file.Path,
         };
+    }
+
+    /// <summary>Plays what the field names now, in a player opened under the field on first use.</summary>
+    private void PlaySound_Click(object sender, RoutedEventArgs e)
+    {
+        var button = (FrameworkElement)sender;
+        if (button.DataContext is not ScalarField { SoundId: { } id } || button.Tag is not ContentControl host)
+        {
+            return;
+        }
+
+        if (host.Content is not AudioPreviewPanel player)
+        {
+            host.Content = player = new AudioPreviewPanel { Margin = new Thickness(0, 4, 0, 0) };
+        }
+        player.Play(() => SoundPreview.SoundIdToTempWavAsync(id, FilePicker.ResolveSound, FilePicker.Read));
     }
 
     private void AddNumberArrayItem_Click(object sender, RoutedEventArgs e)

@@ -19,6 +19,17 @@
             <TextBlock x:Name="TimeText" Grid.Column="1" Margin="8,0,0,0" Style="{StaticResource Mono}"
                        VerticalAlignment="Center" Text="0:00 / 0:00" />
         </Grid>
+        <TextBlock x:Name="Status" Foreground="{DynamicResource WarningTextBrush}" TextWrapping="Wrap">
+            <TextBlock.Style>
+                <Style TargetType="TextBlock" BasedOn="{StaticResource Caption}">
+                    <Style.Triggers>
+                        <Trigger Property="Text" Value="">
+                            <Setter Property="Visibility" Value="Collapsed" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </TextBlock.Style>
+        </TextBlock>
         <MediaElement x:Name="Player" Visibility="Collapsed"
                       LoadedBehavior="Manual" UnloadedBehavior="Manual"
                       MediaOpened="Player_MediaOpened" MediaEnded="Player_MediaEnded" />

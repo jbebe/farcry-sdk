@@ -2,8 +2,11 @@ using System.ComponentModel;
 using System.Globalization;
 using System.Runtime.CompilerServices;
 using System.Windows.Media;
+using JackAll.App.FileHandlers.Xbt;
 using JackAll.App.Picker;
+using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
+using JackAll.Core.Vfs;
 using JackAll.Tools.Fcb;
 
 namespace JackAll.App.FileHandlers.Fcb.FcbEditor;
@@ -56,6 +59,21 @@ public sealed class ScalarField : INotifyPropertyChanged
         _ => null,
     };
 
+    public uint? SoundId => FileRef == FileRef.SoundId && TryParseSoundId(Text, out uint id) ? id : null;
+
+    public bool IsSound => SoundId is not null;
+
+    /// <summary>The texture the value names; read off the UI thread through an async binding.</summary>
+    public ImageSource? Thumbnail
+        => ReferencedFile is { Type.Extension: "xbt" } file ? XbtImage.Thumbnail(file, FilePicker.Read) : null;
+
+    private VfsFile? ReferencedFile => FileRef switch
+    {
+        FileRef.PathHash when IsValid && Value is uint hash => FilePicker.FileOf(hash),
+        FileRef.Path when Text.Trim() is { Length: > 0 } path => FilePicker.FileOf(NameHash.Compute(path)),
+        _ => null,
+    };
+
     public ScalarField(
         FcbMemberType type, object initialValue, string? label = null, IReadOnlyList<string>? enumChoices = null,
         FileRef fileRef = FileRef.None)
@@ -83,7 +101,12 @@ public sealed class ScalarField : INotifyPropertyChanged
             Revalidate();
             OnPropertyChanged();
             OnPropertyChanged(nameof(SelectedEnumIndex));
-            OnPropertyChanged(nameof(ResolvedPath));
+            if (IsFilePath)
+            {
+                OnPropertyChanged(nameof(ResolvedPath));
+                OnPropertyChanged(nameof(IsSound));
+                OnPropertyChanged(nameof(Thumbnail));
+            }
             if (IsColour)
             {
                 OnPropertyChanged(nameof(Swatch));

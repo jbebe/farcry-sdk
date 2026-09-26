@@ -1,4 +1,6 @@
+using JackAll.Core.Vfs;
 using JackAll.Tools.Xbt;
+using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
@@ -28,6 +30,30 @@ public static class XbtImage
 
         error = null;
         return ToBitmap(decoded.Rgba, decoded.Width, decoded.Height);
+    }
+
+    /// <summary>A texture scaled to fit <see cref="ThumbnailSize"/>, decoded once per file row; null when
+    /// it doesn't decode. Safe to call off the UI thread.</summary>
+    public static ImageSource? Thumbnail(VfsFile file, Func<VfsFile, byte[]> read)
+        => Thumbnails.GetValue(file, f => TryDecode(read(f), out _) is { } full ? Shrink(full) : null);
+
+    private const int ThumbnailSize = 160;
+
+    /// <summary>Keyed by row instance, so a rebuilt filesystem drops the stale ones.</summary>
+    private static readonly ConditionalWeakTable<VfsFile, ImageSource?> Thumbnails = new();
+
+    private static ImageSource Shrink(BitmapSource full)
+    {
+        double scale = Math.Min(1.0, (double)ThumbnailSize / Math.Max(full.PixelWidth, full.PixelHeight));
+        if (scale >= 1.0)
+        {
+            return full;
+        }
+
+        // A copy, so the full-size decode isn't kept alive behind the scaled view.
+        var small = new WriteableBitmap(new TransformedBitmap(full, new ScaleTransform(scale, scale)));
+        small.Freeze();
+        return small;
     }
 
     /// <summary>

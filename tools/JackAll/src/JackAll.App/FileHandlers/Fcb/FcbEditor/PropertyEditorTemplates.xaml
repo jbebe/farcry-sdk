@@ -31,6 +31,20 @@
                     </Style>
                 </Button.Style>
             </Button>
+            <Button DockPanel.Dock="Right" Content="▶" Margin="4,0,0,0" VerticalAlignment="Top"
+                    Click="PlaySound_Click" Tag="{Binding ElementName=SoundHost}" ToolTip="Play the sound"
+                    AutomationProperties.AutomationId="FcbPlaySound">
+                <Button.Style>
+                    <Style TargetType="Button" BasedOn="{StaticResource DenseButton}">
+                        <Setter Property="Visibility" Value="Collapsed" />
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding IsSound}" Value="True">
+                                <Setter Property="Visibility" Value="Visible" />
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
             <!-- A colour's swatch, which opens a slider per channel. -->
             <Grid DockPanel.Dock="Left" Margin="0,0,4,0" VerticalAlignment="Center">
                 <Grid.Style>
@@ -61,6 +75,24 @@
                     </Border>
                 </Popup>
             </Grid>
+            <!-- The player, once the sound is first played; bottom docks stack upwards, so it sits lowest. -->
+            <ContentControl x:Name="SoundHost" DockPanel.Dock="Bottom" />
+            <Image DockPanel.Dock="Bottom" MaxWidth="128" MaxHeight="128" Stretch="Uniform" HorizontalAlignment="Left"
+                   Margin="0,4,0,0">
+                <Image.Style>
+                    <Style TargetType="Image">
+                        <Style.Triggers>
+                            <!-- Bound only on file rows, so no other row queues an async read. -->
+                            <DataTrigger Binding="{Binding IsFilePath}" Value="True">
+                                <Setter Property="Source" Value="{Binding Thumbnail, IsAsync=True}" />
+                            </DataTrigger>
+                            <Trigger Property="Source" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Collapsed" />
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Image.Style>
+            </Image>
             <!-- The file a path hash names, under its hex. -->
             <TextBlock DockPanel.Dock="Bottom" Text="{Binding ResolvedPath}" ToolTip="{Binding ResolvedPath}"
                        TextTrimming="CharacterEllipsis" Margin="0,1,0,0">

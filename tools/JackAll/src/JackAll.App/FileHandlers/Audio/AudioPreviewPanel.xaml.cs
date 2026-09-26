@@ -2,31 +2,61 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Threading;
+using JackAll.App.Audio;
 
 namespace JackAll.App.FileHandlers.Audio;
 
 /// <summary>
-/// The play/pause/stop/seek player the Sbao and Spk handlers share. Hosts hand it a media file path
-/// via <see cref="Open"/>; everything else — transport buttons, seeking, the position timer — is
-/// self-contained.
+/// The play/pause/stop/seek player every audio preview shares. Hosts either hand it a media file path
+/// via <see cref="Open"/>, or a decoder via <see cref="Play"/>; everything else —
+/// transport buttons, seeking, the position timer — is self-contained.
 /// </summary>
 public partial class AudioPreviewPanel : UserControl
 {
     private readonly DispatcherTimer _timer;
     private bool _isUserSeeking;
     private bool _updatingSlider;
+    private string? _ownedWav;
+    private int _playRequest;
 
     public AudioPreviewPanel()
     {
         InitializeComponent();
         _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
         _timer.Tick += OnTimerTick;
-        _timer.Start();
+        Loaded += (_, _) => _timer.Start();
         Unloaded += (_, _) =>
         {
             _timer.Stop();
             Reset();
         };
+    }
+
+    /// <summary>Decodes a sound with <paramref name="makeWav"/> off the UI thread and plays it, deleting the
+    /// temp .wav on the next request. A newer request supersedes one still decoding.</summary>
+    public async void Play(Func<Task<string>> makeWav)
+    {
+        int request = ++_playRequest;
+        Reset();
+        Status.Text = "Decoding…";
+
+        try
+        {
+            string wav = await Task.Run(makeWav);
+            if (request != _playRequest)
+            {
+                SoundPreview.TryDelete(wav);
+                return;
+            }
+            _ownedWav = wav;
+            Status.Text = "";
+            Open(wav);
+            Player.Play();
+        }
+        catch (Exception ex) when (request == _playRequest)
+        {
+            Status.Text = ex.Message;
+        }
     }
 
     /// <summary>Points the player at a playable file (a temp .wav) and enables Play. The caller
@@ -37,14 +67,15 @@ public partial class AudioPreviewPanel : UserControl
         PlayButton.IsEnabled = true;
     }
 
-    public void Play() => Player.Play();
-
     /// <summary>Stops playback, releases the media file, and disables the transport.</summary>
     public void Reset()
     {
         Player.Stop();
         Player.Close();
         Player.Source = null;
+        SoundPreview.TryDelete(_ownedWav);
+        _ownedWav = null;
+        Status.Text = "";
         SeekBar.Value = 0;
         SeekBar.IsEnabled = false;
         TimeText.Text = "0:00 / 0:00";
