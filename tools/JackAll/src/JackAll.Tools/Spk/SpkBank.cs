@@ -47,6 +47,9 @@ public sealed class SpkBankRecord
     /// <summary>Null for the bank's own preamble.</summary>
     public uint[]? Preamble { get; set; }
 
+    /// <summary>Non-zero bytes aligning the next record, kept while the payload keeps its length; null pads with zeros.</summary>
+    public byte[]? Padding { get; set; }
+
     /// <summary>The sub-header words; the derived ones are recomputed on write.</summary>
     public uint[] Words { get; set; } = [];
 
@@ -165,6 +168,10 @@ public sealed class SpkBank
             {
                 read.Preamble = [.. record.PreambleWords];
             }
+            if (record.Padding.Any(b => b != 0))
+            {
+                read.Padding = record.Padding;
+            }
             bank.Records.Add(read);
         }
 
@@ -195,7 +202,14 @@ public sealed class SpkBank
             byte[] payload = Payload(record);
             output.WriteU32((uint)payload.Length);
             output.WriteRaw(payload);
-            output.Align(4, AlignFill.Zero);
+            if (record.Padding is { } padding && (output.Length + padding.Length) % 4 == 0)
+            {
+                output.WriteRaw(padding);
+            }
+            else
+            {
+                output.Align(4, AlignFill.Zero);
+            }
         }
         return output.ToArray();
     }

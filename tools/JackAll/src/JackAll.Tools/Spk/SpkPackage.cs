@@ -250,6 +250,10 @@ public sealed class SpkRecord
     public required uint Id { get; init; }
     public required IReadOnlyList<uint> PreambleWords { get; init; }
     public required byte[] Payload { get; init; }
+
+    /// <summary>The bytes aligning the next record: zero in every sound bank, not always in a bark bank.</summary>
+    public byte[] Padding { get; init; } = [];
+
     public required SpkRecordCore? Core { get; init; }
     public SimpleFixed68SubHeader? SimpleFixed68 { get; init; }
     public TransformedFixed128SubHeader? TransformedFixed128 { get; init; }
@@ -370,7 +374,7 @@ public sealed class SpkPackage
 
             byte[] payload = cursor.ReadBytes((int)size);
             // next record is 4-byte aligned
-            cursor.Position += PadLength(cursor.Position);
+            byte[] padding = cursor.ReadBytes(Math.Min(PadLength(cursor.Position), cursor.Remaining));
 
             SpkRecordCore? core = ParseCore(payload);
             records.Add(new SpkRecord
@@ -378,6 +382,7 @@ public sealed class SpkPackage
                 Id = ids[i],
                 PreambleWords = preamble,
                 Payload = payload,
+                Padding = padding,
                 Core = core,
                 SimpleFixed68 = core?.Type == SpkRecordType.SimpleFixed68 ? ParseSimpleFixed68(payload) : null,
                 TransformedFixed128 = core?.Type == SpkRecordType.TransformedFixed128

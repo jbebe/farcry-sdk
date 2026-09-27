@@ -80,6 +80,15 @@ public static partial class SpkBankXml
     private static XElement ToElement(SpkBankRecord record, Action<string, byte[]> writeFile)
     {
         var element = new XElement(record.Element, new XAttribute("id", Id(record.Id)));
+        if (record.Preamble is { } preamble)
+        {
+            element.Add(new XAttribute("preamble", Ids(preamble)));
+        }
+        if (record.Padding is { } padding)
+        {
+            element.Add(new XAttribute("pad", Convert.ToHexString(padding)));
+        }
+
         if (record.Raw)
         {
             element.Add(new XAttribute("type", Id((uint)record.Type)));
@@ -90,10 +99,6 @@ public static partial class SpkBankXml
         if (record.Key is { } key)
         {
             element.Add(new XAttribute("key", Convert.ToHexString(key)));
-        }
-        if (record.Preamble is { } preamble)
-        {
-            element.Add(new XAttribute("preamble", Ids(preamble)));
         }
 
         if (record.IsAudio)
@@ -241,24 +246,24 @@ public static partial class SpkBankXml
     {
         XElement element = reader.Element;
         string name = element.Name.LocalName;
-        uint id = ParseUInt(reader.Required("id"));
+        var record = new SpkBankRecord
+        {
+            Id = ParseUInt(reader.Required("id")), Type = SpkRecordType.SimpleFixed68,
+            Preamble = reader.Optional("preamble") is { } preamble ? ParseIds(preamble) : null,
+            Padding = reader.Optional("pad") is { } pad ? Convert.FromHexString(pad) : null,
+        };
+        uint id = record.Id;
         if (name == "Record")
         {
-            return new SpkBankRecord
-            {
-                Id = id, Raw = true, Type = (SpkRecordType)ParseUInt(reader.Required("type")),
-                Data = ReadBytes(reader, "data", readFile),
-            };
+            record.Raw = true;
+            record.Type = (SpkRecordType)ParseUInt(reader.Required("type"));
+            record.Data = ReadBytes(reader, "data", readFile);
+            return record;
         }
 
-        var record = new SpkBankRecord { Id = id, Type = SpkRecordType.SimpleFixed68 };
         if (reader.Optional("key") is { } key)
         {
             record.Key = Convert.FromHexString(key);
-        }
-        if (reader.Optional("preamble") is { } preamble)
-        {
-            record.Preamble = ParseIds(preamble);
         }
 
         if (name == "Audio")

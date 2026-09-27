@@ -15,11 +15,14 @@ public class SpkBankTests
     /// <summary>Bullet impacts: a material switch over random containers, the bank a ricochet mod edits.</summary>
     public const string Impacts = "Spk/004565a3.spk";
 
-    public static TheoryData<string> Banks => new() { PassBy, Multilayer, Impacts };
+    /// <summary>A bark bank: one preamble per record, and non-zero bytes padding some records.</summary>
+    public const string Bark = "Spk/bark_1820776.spk";
+
+    public static TheoryData<string> Banks => new() { PassBy, Multilayer, Impacts, Bark };
 
     [Fact]
     [Trait("Category", "RequiresFixture")]
-    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(PassBy, Multilayer, Impacts);
+    public void The_fixtures_were_actually_found() => Fixture.AssertPresent(PassBy, Multilayer, Impacts, Bark);
 
     [Theory]
     [MemberData(nameof(Banks))]
