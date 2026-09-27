@@ -39,6 +39,23 @@ public class AiTuningTests
     }
 
     [Fact]
+    public void A_distance_accuracy_curve_reads_edits_and_evaluates_linearly()
+    {
+        if (World1.Value?.Winner("Curves.ShootingSystem.DistanceAccuracy")?.Node is not { } shipped) return;
+
+        FcbObject curve = shipped.Clone();
+        IReadOnlyList<CurvePoint> points = AiCurve.Read(curve);
+        Assert.Equal(18, points.Count);
+        Assert.Equal(new CurvePoint(0, 0.9973f, 0), points[0]);
+
+        Assert.True(AiCurve.Write(curve, 1, 10, 0.5f));
+        IReadOnlyList<CurvePoint> edited = AiCurve.Read(curve);
+        Assert.Equal((10f, 0.5f), (edited[1].X, edited[1].Y));
+        Assert.Equal(0.9973f + (0.5f - 0.9973f) / 2, AiCurve.Evaluate(edited, 5), 4);
+        Assert.Equal(edited[^1].Y, AiCurve.Evaluate(edited, 10_000));
+    }
+
+    [Fact]
     public void The_unnamed_vision_cone_members_are_length_and_angle()
     {
         if (World1.Value?.Winner(Assault)?.Node is not { } entity) return;
@@ -67,17 +84,17 @@ public class AiTuningTests
     {
         if (Fixture.Read(FcbDocumentTests.World1) is not { } library || World1.Value?.Winner(Assault) is not { } assault) return;
 
-        TuningCopy copy = Assert.Single(TuningLibrary.Open(SoldierFields.Catalog, [assault], library, library));
+        TuningCopy copy = Assert.Single(TuningLibrary.Open([assault], library, library));
         FcbClassDefinitions definitions = BundledAssets.LoadFcbClasses();
         TuningField reaction = Field("Reaction time (s)");
         double shipped = reaction.Read(copy.Entity)!.Value;
 
         reaction.Write(copy.Entity, shipped + 1);
-        Assert.True(copy.IsEdited);
+        Assert.True(copy.DiffersIn(SoldierFields.All));
         Assert.False(copy.Plan(definitions).IsVanilla);
 
         reaction.Write(copy.Entity, shipped);
-        Assert.False(copy.IsEdited);
+        Assert.False(copy.DiffersIn(SoldierFields.All));
         Assert.True(copy.Plan(definitions).IsVanilla);
     }
 

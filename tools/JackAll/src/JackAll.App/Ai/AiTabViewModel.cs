@@ -8,6 +8,7 @@ public enum AiSection
 {
     Soldiers,
     Weapons,
+    Curves,
     Behaviors,
     Brains,
 }
@@ -26,9 +27,10 @@ public sealed class AiTabViewModel : Observable
         Weapons = new AiArchetypesModel(vm, WeaponFields.Catalog,
             "How soldiers fire each weapon. The player's own weapon behaviour is not affected. Tick several to tune them together.",
             "After a hit on the player the shooter is forced to miss a number of shots drawn between the two values for the game's difficulty - on Infamous the shipped weapons use 0, so hits can chain. Bold rows differ from the base game.");
+        Curves = new AiCurvesModel(vm);
         Behaviors = new AiBehaviorsModel(vm);
         Brains = new AiBrainsModel(vm);
-        foreach (INotifyPropertyChanged section in (INotifyPropertyChanged[])[Soldiers, Weapons, Behaviors, Brains])
+        foreach (INotifyPropertyChanged section in (INotifyPropertyChanged[])[Soldiers, Weapons, Curves, Behaviors, Brains])
         {
             section.PropertyChanged += (_, e) =>
             {
@@ -43,6 +45,8 @@ public sealed class AiTabViewModel : Observable
     public AiArchetypesModel Soldiers { get; }
 
     public AiArchetypesModel Weapons { get; }
+
+    public AiCurvesModel Curves { get; }
 
     public AiBehaviorsModel Behaviors { get; }
 
@@ -62,7 +66,7 @@ public sealed class AiTabViewModel : Observable
         }
     }
 
-    public bool IsDirty => Soldiers.IsDirty || Weapons.IsDirty || Behaviors.IsDirty || Brains.IsDirty;
+    public bool IsDirty => Soldiers.IsDirty || Weapons.IsDirty || Curves.IsDirty || Behaviors.IsDirty || Brains.IsDirty;
 
     public bool CanSave => IsDirty && !IsBusy;
 
@@ -71,6 +75,7 @@ public sealed class AiTabViewModel : Observable
     {
         AiSection.Soldiers when !Soldiers.IsLoaded => Busy(() => Soldiers.LoadAsync(new Progress<string>(s => Status = s))),
         AiSection.Weapons when !Weapons.IsLoaded => Busy(() => Weapons.LoadAsync(new Progress<string>(s => Status = s))),
+        AiSection.Curves when !Curves.IsLoaded => Busy(() => Curves.LoadAsync(new Progress<string>(s => Status = s))),
         AiSection.Behaviors when !Behaviors.IsLoaded => Busy(() =>
         {
             Behaviors.Load();
@@ -107,6 +112,10 @@ public sealed class AiTabViewModel : Observable
                     saved.Add($"{await archetypes.SaveAsync()} archetype(s)");
                 }
             }
+            if (Curves.IsDirty)
+            {
+                saved.Add($"{await Curves.SaveAsync()} curve(s)");
+            }
             if (Behaviors.IsDirty)
             {
                 Behaviors.Save();
@@ -131,6 +140,10 @@ public sealed class AiTabViewModel : Observable
             {
                 await archetypes.LoadAsync(new Progress<string>(s => Status = s));
             }
+        }
+        if (Curves.IsDirty)
+        {
+            await Curves.LoadAsync(new Progress<string>(s => Status = s));
         }
         if (Behaviors.IsDirty)
         {

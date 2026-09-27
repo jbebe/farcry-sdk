@@ -1,18 +1,14 @@
 using System.Collections.ObjectModel;
 using System.Globalization;
-using JackAll.App.FileHandlers.Fcb;
-using JackAll.Core.Format.Fcb;
-using JackAll.Core.Vfs;
 using JackAll.Tools.Ai;
-using JackAll.Tools.World;
 
 namespace JackAll.App.Ai;
 
-/// <summary>One soldier archetype, with its copy in every single-player world that declares it.</summary>
-public sealed class TunedArchetype(string name, string group, IReadOnlyList<TuningCopy> copies) : Observable
+/// <summary>One tuned archetype, with its copy in every single-player world that declares it.</summary>
+public sealed class TunedArchetype(string name, string group, IReadOnlyList<TuningCopy> copies, Func<TuningCopy, bool> isEdited) : Observable
 {
     private bool _isSelected;
-    private bool _isEdited = copies.Any(c => c.IsEdited);
+    private bool _isEdited = copies.Any(isEdited);
 
     public string Name { get; } = name;
 
@@ -30,7 +26,7 @@ public sealed class TunedArchetype(string name, string group, IReadOnlyList<Tuni
     /// <summary>Differs from the base game.</summary>
     public bool IsEdited { get => _isEdited; private set => Set(ref _isEdited, value); }
 
-    internal void RefreshEdited() => IsEdited = Copies.Any(c => c.IsEdited);
+    internal void RefreshEdited() => IsEdited = Copies.Any(isEdited);
 }
 
 /// <summary>One tunable, showing the value the selected archetypes share and writing to all of them.</summary>
@@ -114,7 +110,7 @@ public sealed class AiArchetypesModel(MainViewModel vm, TuningCatalog catalog, s
     public string FieldNote { get; } = fieldNote;
 
     private IReadOnlyList<TunedArchetype> _archetypes = [];
-    private Dictionary<uint, VfsFile> _containers = [];
+    private AiLibrarySet _set = AiLibrarySet.Empty;
     private string _filter = "";
     private bool _isLoaded;
     private bool _selecting;
@@ -148,33 +144,12 @@ public sealed class AiArchetypesModel(MainViewModel vm, TuningCatalog catalog, s
 
     public async Task LoadAsync(IProgress<string> progress)
     {
-        List<string> worlds = [.. ArchetypeIndex.DiscoverWorlds(vm.AllKnownPaths).Where(w => w.StartsWith("world", StringComparison.OrdinalIgnoreCase))];
-        List<TuningCopy> copies = [];
-        var containers = new Dictionary<uint, VfsFile>();
-
-        foreach (string world in worlds)
-        {
-            progress.Report($"Reading {world}'s archetypes…");
-            ArchetypeIndex index = await vm.ArchetypesOf(world, progress);
-            foreach (IGrouping<uint, ArchetypeDefinition> library in index.Names
-                         .Select(index.Winner).OfType<ArchetypeDefinition>()
-                         .Where(d => catalog.Covers(d.Node))
-                         .GroupBy(d => d.ContainerHash))
-            {
-                if (vm.FindByHash(library.Key) is { } container)
-                {
-                    containers[library.Key] = container;
-                    copies.AddRange(await Task.Run(() => TuningLibrary.Open(catalog, library, vm.Read(container), vm.ReadOriginal(container))));
-                }
-            }
-        }
-
-        _containers = containers;
+        _set = await AiLibrarySet.LoadAsync(vm, catalog.Covers, progress);
         _archetypes =
         [
-            .. copies
+            .. _set.Copies
                 .GroupBy(c => c.Definition.Name)
-                .Select(g => new TunedArchetype(g.Key, catalog.GroupOf(g.Key), [.. g]))
+                .Select(g => new TunedArchetype(g.Key, catalog.GroupOf(g.Key), [.. g], c => c.DiffersIn(catalog.Fields)))
                 .OrderBy(a => a.Group switch { "Enemies" => 0, "Multiplayer" => 2, _ => 1 })
                 .ThenBy(a => a.Group, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase),
@@ -195,7 +170,7 @@ public sealed class AiArchetypesModel(MainViewModel vm, TuningCatalog catalog, s
         RefreshRows();
         IsLoaded = true;
         OnPropertyChanged(nameof(IsDirty));
-        progress.Report($"{_archetypes.Count} archetypes across {string.Join(" and ", worlds)}");
+        progress.Report($"{_archetypes.Count} archetypes across {string.Join(" and ", _set.Worlds)}");
     }
 
     /// <summary>Ticks every visible archetype, or clears them all.</summary>
@@ -258,15 +233,8 @@ public sealed class AiArchetypesModel(MainViewModel vm, TuningCatalog catalog, s
     /// <summary>Stages every edited archetype's fragment in each world; a copy back to vanilla is unstaged.</summary>
     public async Task<int> SaveAsync()
     {
-        FcbClassDefinitions definitions = FcbDefinitionsProvider.Value.Value;
         List<TunedArchetype> dirty = [.. _archetypes.Where(a => a.IsDirty)];
-        var plans = await Task.Run(() => dirty
-            .SelectMany(a => a.Copies)
-            .GroupBy(c => c.Definition.ContainerHash)
-            .Select(g => (Container: _containers[g.Key], Fragments: (IEnumerable<(string, string, bool)>)[.. g.Select(c => c.Plan(definitions))]))
-            .ToList());
-
-        vm.StageFragments(plans);
+        await _set.StageAsync(vm, dirty.SelectMany(a => a.Copies));
         foreach (TunedArchetype archetype in dirty)
         {
             archetype.IsDirty = false;

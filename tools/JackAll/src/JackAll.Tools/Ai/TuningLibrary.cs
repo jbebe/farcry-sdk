@@ -4,23 +4,21 @@ using JackAll.Tools.World;
 namespace JackAll.Tools.Ai;
 
 /// <summary>
-/// One world's copy of a tuned archetype: its prototype fragment, being edited, beside the base game's
-/// values for every field of its <see cref="TuningCatalog"/>.
+/// One world's copy of a tuned archetype: its prototype fragment, being edited, beside the base
+/// game's copy of the same entity.
 /// </summary>
 public sealed class TuningCopy
 {
     private readonly FcbObject _vanillaRoot;
-    private readonly IReadOnlyList<TuningField> _fields;
-    private readonly Dictionary<TuningField, double?> _vanilla;
+    private readonly Dictionary<TuningField, double?> _vanilla = [];
 
-    internal TuningCopy(TuningCatalog catalog, ArchetypeDefinition definition, FcbObject root, FcbObject entity, FcbObject vanillaRoot, FcbObject vanillaEntity)
+    internal TuningCopy(ArchetypeDefinition definition, FcbObject root, FcbObject entity, FcbObject vanillaRoot, FcbObject vanillaEntity)
     {
         Definition = definition;
         Root = root;
         Entity = entity;
         _vanillaRoot = vanillaRoot;
-        _fields = catalog.Fields;
-        _vanilla = _fields.ToDictionary(f => f, f => f.Read(vanillaEntity));
+        VanillaEntity = vanillaEntity;
     }
 
     public ArchetypeDefinition Definition { get; }
@@ -30,9 +28,18 @@ public sealed class TuningCopy
 
     public FcbObject Entity { get; }
 
-    public double? Vanilla(TuningField field) => _vanilla.GetValueOrDefault(field);
+    public FcbObject VanillaEntity { get; }
 
-    public bool IsEdited => _fields.Any(f => f.Read(Entity) != Vanilla(f));
+    public double? Vanilla(TuningField field)
+    {
+        if (!_vanilla.TryGetValue(field, out double? value))
+        {
+            _vanilla[field] = value = field.Read(VanillaEntity);
+        }
+        return value;
+    }
+
+    public bool DiffersIn(IEnumerable<TuningField> fields) => fields.Any(f => f.Read(Entity) != Vanilla(f));
 
     /// <summary>The fragment to stage, and whether it is back to the base game's text.</summary>
     public (string FragmentId, string Xml, bool IsVanilla) Plan(FcbClassDefinitions definitions)
@@ -49,7 +56,7 @@ public static class TuningLibrary
     /// <paramref name="original"/> is the base game's library; null or identical means the base game
     /// is what <paramref name="merged"/> holds.
     /// </summary>
-    public static IReadOnlyList<TuningCopy> Open(TuningCatalog catalog, IEnumerable<ArchetypeDefinition> archetypes, byte[] merged, byte[]? original)
+    public static IReadOnlyList<TuningCopy> Open(IEnumerable<ArchetypeDefinition> archetypes, byte[] merged, byte[]? original)
     {
         Dictionary<string, FcbObject> prototypes = ById(FcbDocument.Deserialize(merged));
         Dictionary<string, FcbObject>? vanillaPrototypes = original is null || original.AsSpan().SequenceEqual(merged)
@@ -66,7 +73,7 @@ public static class TuningLibrary
             FcbObject vanillaRoot = vanillaPrototypes?.GetValueOrDefault(id) ?? root.Clone();
             if (EntityNamed(root, definition.Name) is { } entity && EntityNamed(vanillaRoot, definition.Name) is { } vanillaEntity)
             {
-                copies.Add(new TuningCopy(catalog, definition, root, entity, vanillaRoot, vanillaEntity));
+                copies.Add(new TuningCopy(definition, root, entity, vanillaRoot, vanillaEntity));
             }
         }
         return copies;

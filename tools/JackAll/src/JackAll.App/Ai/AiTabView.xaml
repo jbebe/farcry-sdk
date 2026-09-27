@@ -54,6 +54,85 @@
                 <ai:ArchetypeTuningView DataContext="{Binding Weapons}" />
             </TabItem>
 
+            <!-- ============================= CURVES ============================= -->
+            <TabItem Header="Curves" x:Name="CurvesSection">
+                <Grid Margin="0,6,0,0" IsEnabled="{Binding Curves.IsLoaded}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="320" MinWidth="220" />
+                        <ColumnDefinition Width="{StaticResource SplitterSize}" />
+                        <ColumnDefinition Width="*" MinWidth="420" />
+                    </Grid.ColumnDefinitions>
+
+                    <DockPanel Grid.Column="0">
+                        <TextBlock DockPanel.Dock="Top" Text="Curves" Style="{StaticResource PanelTitle}" />
+                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Note}" Margin="0,2,0,8"
+                                   Text="The curves weapon properties name. DistanceAccuracy_* is a weapon's hit-chance factor against distance in metres; GroupNumber the factor against how many soldiers already shoot at the same target." />
+                        <TextBox DockPanel.Dock="Top" Style="{StaticResource SearchBox}" Margin="0,0,0,6" Tag="Filter by name"
+                                 Text="{Binding Curves.Filter, UpdateSourceTrigger=PropertyChanged}"
+                                 AutomationProperties.AutomationId="AiCurveFilter" />
+                        <ListBox ItemsSource="{Binding Curves.Visible}" SelectedItem="{Binding Curves.Selected}"
+                                 AutomationProperties.AutomationId="AiCurveList">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate DataType="{x:Type ai:TunedArchetype}">
+                                    <TextBlock Text="{Binding Label}" ToolTip="{Binding Name}">
+                                        <TextBlock.Style>
+                                            <Style TargetType="TextBlock">
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsEdited}" Value="True">
+                                                        <Setter Property="FontWeight" Value="SemiBold" />
+                                                        <Setter Property="Foreground" Value="{DynamicResource OkTextBrush}" />
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </TextBlock.Style>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </DockPanel>
+
+                    <GridSplitter Grid.Column="1" />
+
+                    <Grid Grid.Column="2">
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto" />
+                            <RowDefinition Height="220" />
+                            <RowDefinition Height="*" />
+                        </Grid.RowDefinitions>
+                        <TextBlock Grid.Row="0" Style="{StaticResource Note}" Margin="0,0,0,6"
+                                   Text="Knots are joined by straight lines and the curve holds its end values outside them. The dashed line is the base game. Edit the numbers below; each edit goes to both worlds' copies." />
+                        <Border Grid.Row="1" Style="{StaticResource InertFrame}" Margin="0,0,0,8">
+                            <Canvas x:Name="CurveChart" ClipToBounds="True" SizeChanged="CurveChart_SizeChanged"
+                                    AutomationProperties.AutomationId="AiCurveChart" />
+                        </Border>
+                        <DataGrid Grid.Row="2" ItemsSource="{Binding Curves.Rows}" AutoGenerateColumns="False"
+                                  CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
+                                  HeadersVisibility="Column" RowStyle="{StaticResource ChangedRow}"
+                                  AutomationProperties.AutomationId="AiCurvePoints">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="#" Binding="{Binding Index}" Width="40" IsReadOnly="True" ElementStyle="{StaticResource Muted}" />
+                                <DataGridTemplateColumn Header="Input" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="{x:Type ai:CurvePointRow}">
+                                            <TextBox Text="{Binding X, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Value" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="{x:Type ai:CurvePointRow}">
+                                            <TextBox Text="{Binding Y, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="Base game" Binding="{Binding Vanilla}" Width="*" IsReadOnly="True"
+                                                    ElementStyle="{StaticResource Muted}" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                    </Grid>
+                </Grid>
+            </TabItem>
+
             <!-- ========================= BEHAVIOUR ODDS ========================= -->
             <TabItem Header="Behaviour odds" x:Name="BehaviorsSection">
                 <DockPanel Margin="0,6,0,0" IsEnabled="{Binding Behaviors.IsLoaded}">
