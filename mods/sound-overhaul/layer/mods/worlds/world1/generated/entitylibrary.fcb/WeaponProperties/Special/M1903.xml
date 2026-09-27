@@ -656,7 +656,7 @@
                 <value name="sndtpHitPlayerHeadSoundType" type="Int32">-1</value>
                 <value name="sndmlDistanceFromShootingSoundToPlayerMultilayer" type="Hash">FFFFFFFF</value>
                 <value name="sndSingleBulletShot" type="String">0x00449364</value>
-                <value name="sndSingleBulletShotEcho" type="String">0x00FC0104</value>
+                <value name="sndSingleBulletShotEcho" type="String">0x00FC0110</value>
                 <value name="sndtpSingleBulletShotType" type="Int32">8</value>
                 <object type="ThirdPerson">
                   <value name="sndSingleBulletShot" type="String">0x0045535E</value>

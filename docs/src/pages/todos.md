@@ -73,6 +73,10 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 - [ ] The correct scale for `Game:SetHealth` — 100 and 25 both kill the player
 
+## Mod ideas
+
+- [ ] Binoculars with a distance meter
+
 ## Sound
 
 The realistic-sound goal: every improvement found so far, whether from the original brief or
