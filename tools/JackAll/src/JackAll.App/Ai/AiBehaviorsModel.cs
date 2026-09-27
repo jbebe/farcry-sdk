@@ -1,5 +1,5 @@
 using System.Globalization;
-using JackAll.Core.Format;
+using JackAll.Core.Vfs;
 using JackAll.Tools.Ai;
 
 namespace JackAll.App.Ai;
@@ -69,6 +69,7 @@ public sealed class BehaviorRow : Observable
 /// <summary>The Behaviour odds view of the AI tab: the adaptive-behaviour table of gamemodesconfig.xml.</summary>
 public sealed class AiBehaviorsModel(MainViewModel vm) : Observable
 {
+    private VfsFile? _file;
     private string? _xml;
     private bool _isDirty;
 
@@ -78,19 +79,17 @@ public sealed class AiBehaviorsModel(MainViewModel vm) : Observable
 
     public bool IsDirty { get => _isDirty; private set => Set(ref _isDirty, value); }
 
-    public event Action? DirtyChanged;
-
     public void Load()
     {
-        _xml = vm.ReadByPath(AdaptiveBehaviors.Path) is { } bytes ? AppText.DecodeUtf8(bytes) : null;
-        byte[]? original = vm.FindByHash(NameHash.Compute(AdaptiveBehaviors.Path)) is { } file ? vm.ReadOriginal(file) : null;
-        Dictionary<string, AdaptiveBehavior> vanilla = original is null
-            ? []
-            : AdaptiveBehaviors.Read(AppText.DecodeUtf8(original)).ToDictionary(b => b.Name);
+        _file = vm.FindByPath(AdaptiveBehaviors.Path);
+        _xml = _file is null ? null : AppText.DecodeUtf8(vm.Read(_file));
+        Dictionary<string, AdaptiveBehavior> vanilla = _file is not null && vm.ReadOriginal(_file) is { } original
+            ? AdaptiveBehaviors.Read(AppText.DecodeUtf8(original)).ToDictionary(b => b.Name)
+            : [];
 
         Rows = _xml is null
             ? []
-            : [.. AdaptiveBehaviors.Read(_xml).Select(b => new BehaviorRow(b, vanilla.GetValueOrDefault(b.Name), MarkDirty))];
+            : [.. AdaptiveBehaviors.Read(_xml).Select(b => new BehaviorRow(b, vanilla.GetValueOrDefault(b.Name), () => IsDirty = true))];
         OnPropertyChanged(nameof(Rows));
         OnPropertyChanged(nameof(IsLoaded));
         IsDirty = false;
@@ -98,19 +97,12 @@ public sealed class AiBehaviorsModel(MainViewModel vm) : Observable
 
     public void Save()
     {
-        if (_xml is null || !IsDirty || vm.FindByHash(NameHash.Compute(AdaptiveBehaviors.Path)) is not { } file)
+        if (_file is null || _xml is null || !IsDirty)
         {
             return;
         }
         _xml = AdaptiveBehaviors.Write(_xml, Rows.Select(r => new AdaptiveBehavior(r.Name, r.Chances)));
-        vm.Replace(file, AppText.EncodeUtf8(_xml));
+        vm.Replace(_file, AppText.EncodeUtf8(_xml));
         IsDirty = false;
-        DirtyChanged?.Invoke();
-    }
-
-    private void MarkDirty()
-    {
-        IsDirty = true;
-        DirtyChanged?.Invoke();
     }
 }

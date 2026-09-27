@@ -37,9 +37,11 @@ public partial class MainWindow : Window
         SourceInitialized += (_, _) => ThemeManager.ApplyTitleBar(this);
         DataContext = _vm;
         MoveTab.Attach(_vm);
-        MoveTab.DirtyChanged += () => ItemState.SetIsChanged(MoveTabItem, MoveTab.IsDirty);
         AiTab.Attach(_vm);
-        AiTab.DirtyChanged += () => ItemState.SetIsChanged(AiTabItem, AiTab.IsDirty);
+        foreach ((TabItem item, ISavableTab tab) in SavableTabs)
+        {
+            tab.DirtyChanged += () => ItemState.SetIsChanged(item, tab.IsDirty);
+        }
         Loaded += OnLoaded;
         Closing += OnClosing;
         _vm.PropertyChanged += OnViewModelPropertyChanged;
@@ -162,34 +164,36 @@ public partial class MainWindow : Window
     /// <summary>Set once the unsaved-edits prompt has been answered, so the second close goes through.</summary>
     private bool _closeConfirmed;
 
+    /// <summary>The fixed tabs that hold unsaved edits of their own, beside the tab item that shows them.</summary>
+    private (TabItem Item, ISavableTab Tab)[] SavableTabs => [(MoveTabItem, MoveTab), (AiTabItem, AiTab)];
+
     /// <summary>
-    /// The Animations and AI tabs are fixed tabs with no close of their own, so their unsaved edits are
-    /// asked about here. Saving is asynchronous, so the first close is cancelled and repeated once it is done.
+    /// Fixed tabs have no close of their own, so their unsaved edits are asked about here. Saving is
+    /// asynchronous, so the first close is cancelled and repeated once it is done.
     /// </summary>
     private async void OnClosing(object? sender, CancelEventArgs e)
     {
-        (string Name, Func<Task<string?>> Save)[] dirty =
-        [
-            .. MoveTab.IsDirty ? [("Animations", (Func<Task<string?>>)MoveTab.SaveAsync)] : Array.Empty<(string, Func<Task<string?>>)>(),
-            .. AiTab.IsDirty ? [("AI", (Func<Task<string?>>)AiTab.SaveAsync)] : Array.Empty<(string, Func<Task<string?>>)>(),
-        ];
-        if (!_closeConfirmed && dirty.Length > 0)
+        List<(TabItem Item, ISavableTab Tab)> dirty = [.. SavableTabs.Where(t => t.Tab.IsDirty)];
+        if (!_closeConfirmed && dirty.Count > 0)
         {
             e.Cancel = true;
             MessageBoxResult choice = MessageBox.Show(this,
-                $"The {string.Join(" and ", dirty.Select(d => d.Name))} tab has unsaved changes.\n\nSave before closing?",
+                $"The {string.Join(" and ", dirty.Select(d => d.Item.Header))} tab has unsaved changes.\n\nSave before closing?",
                 "Unsaved changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
             if (choice == MessageBoxResult.Cancel)
             {
                 return;
             }
 
-            foreach ((string _, Func<Task<string?>> save) in choice == MessageBoxResult.Yes ? dirty : [])
+            if (choice == MessageBoxResult.Yes)
             {
-                if (await save() is { } error)
+                foreach ((TabItem _, ISavableTab tab) in dirty)
                 {
-                    MessageBox.Show(this, error, "Not saved", MessageBoxButton.OK, MessageBoxImage.Warning);
-                    return;
+                    if (await tab.SaveAsync() is { } error)
+                    {
+                        MessageBox.Show(this, error, "Not saved", MessageBoxButton.OK, MessageBoxImage.Warning);
+                        return;
+                    }
                 }
             }
 

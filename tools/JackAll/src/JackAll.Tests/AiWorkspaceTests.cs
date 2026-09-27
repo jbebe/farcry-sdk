@@ -47,6 +47,18 @@ public class AiWorkspaceTests
     }
 
     [Fact]
+    public void Compiling_a_shipped_source_rebuilds_its_workspace()
+    {
+        if (Fixture.Read(Stoopid) is not { } original) return;
+
+        AiWorkspaceFile shipped = AiWorkspaceFile.Read(original);
+        AiWorkspaceFile compiled = AiWorkspaceFile.Read(AiWorkspaceFile.Compile(shipped.Source));
+
+        Assert.Null(AiPackedRepository.Read(shipped.Packed).FirstDifference(AiPackedRepository.Read(compiled.Packed)));
+        Assert.Equal(shipped.Source.ToString(), compiled.Source.ToString());
+    }
+
+    [Fact]
     public void A_task_names_the_plan_that_adds_it_then_its_exits()
     {
         if (Fixture.Read(Stoopid) is not { } original) return;

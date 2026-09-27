@@ -275,7 +275,7 @@ public sealed partial class MoveRulesViewModel(MainViewModel vm) : Observable
         try
         {
             byte[] graph = vm.ReadByPath(path) ?? throw new MoveFormatException($"{path} could not be read");
-            byte[]? vanilla = vm.FindByHash(NameHash.Compute(path)) is { } file ? vm.ReadOriginal(file) : null;
+            byte[]? vanilla = vm.FindByPath(path) is { } file ? vm.ReadOriginal(file) : null;
 
             // Channel names live only in the base graph's authoring twin; an expansion has no table of its own.
             byte[]? named = vm.ReadByPath(Path.Combine(Path.GetDirectoryName(path) ?? string.Empty, "movemgrnamed.bin"));
@@ -459,7 +459,7 @@ public sealed partial class MoveRulesViewModel(MainViewModel vm) : Observable
     public async Task<string?> SaveAsync()
     {
         if (_session is not { IsDirty: true } session
-            || vm.FindByHash(NameHash.Compute(_graphPath!)) is not { } container)
+            || vm.FindByPath(_graphPath!) is not { } container)
         {
             return null;
         }

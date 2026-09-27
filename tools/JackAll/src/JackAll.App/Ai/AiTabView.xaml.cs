@@ -11,9 +11,9 @@ namespace JackAll.App.Ai;
 /// The AI tab: tune soldier archetypes, the odds of optional behaviours, and the task parameters of
 /// the brain workspaces. Each section loads the first time it is shown.
 /// </summary>
-public partial class AiTabView : UserControl
+public partial class AiTabView : UserControl, ISavableTab
 {
-    private AiTabViewModel? _model;
+    private AiTabViewModel _model = null!;
     private bool _initialized;
 
     public AiTabView()
@@ -23,12 +23,12 @@ public partial class AiTabView : UserControl
         {
             if (e.NewValue is true)
             {
-                await LoadSectionAsync();
+                await ShowSectionAsync();
             }
         };
     }
 
-    public bool IsDirty => _model?.IsDirty == true;
+    public bool IsDirty => _model.IsDirty;
 
     public event Action? DirtyChanged;
 
@@ -57,61 +57,41 @@ public partial class AiTabView : UserControl
     public async Task InitializeAsync()
     {
         _initialized = true;
-        _model?.Brains.Initialize();
         if (IsVisible)
         {
-            await LoadSectionAsync();
+            await ShowSectionAsync();
         }
     }
 
-    /// <summary>Stages the unsaved edits; the text is why they could not be, or null.</summary>
-    public Task<string?> SaveAsync() => _model?.SaveAsync() ?? Task.FromResult<string?>(null);
+    public Task<string?> SaveAsync() => _model.SaveAsync();
 
     private async void Sections_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (e.OriginalSource == Sections)
         {
-            await LoadSectionAsync();
+            await ShowSectionAsync();
         }
     }
 
-    private async Task LoadSectionAsync()
+    private async Task ShowSectionAsync()
     {
-        if (_model is not { IsBusy: false } model || !_initialized)
+        if (!_initialized)
         {
             return;
         }
-
-        model.IsBusy = true;
-        try
+        AiSection section = Sections.SelectedItem == BehaviorsSection ? AiSection.Behaviors
+            : Sections.SelectedItem == BrainsSection ? AiSection.Brains
+            : AiSection.Soldiers;
+        await _model.ShowAsync(section);
+        if (section == AiSection.Brains && _model.Brains.LoadedPath is null && BrainPicker.Items.Count > 0)
         {
-            if (Sections.SelectedItem == SoldiersSection && !model.Soldiers.IsLoaded)
-            {
-                await model.Soldiers.LoadAsync(new Progress<string>(s => model.Status = s));
-            }
-            else if (Sections.SelectedItem == BehaviorsSection && !model.Behaviors.IsLoaded)
-            {
-                model.Behaviors.Load();
-                model.Status = $"{model.Behaviors.Rows.Count} adaptive behaviours";
-            }
-            else if (Sections.SelectedItem == BrainsSection && model.Brains.LoadedPath is null && BrainPicker.Items.Count > 0)
-            {
-                BrainPicker.SelectedIndex = 0;
-            }
-        }
-        catch (Exception ex)
-        {
-            model.Status = $"Couldn't load: {ex.Message}";
-        }
-        finally
-        {
-            model.IsBusy = false;
+            BrainPicker.SelectedIndex = 0;
         }
     }
 
     private async void Save_Click(object sender, RoutedEventArgs e)
     {
-        if (_model is not null && await _model.SaveAsync() is { } error)
+        if (await _model.SaveAsync() is { } error)
         {
             MessageBox.Show(Window.GetWindow(this), error, "Not saved", MessageBoxButton.OK, MessageBoxImage.Warning);
         }
@@ -119,34 +99,10 @@ public partial class AiTabView : UserControl
 
     private async void Revert_Click(object sender, RoutedEventArgs e)
     {
-        if (_model is not { } model
-            || MessageBox.Show(Window.GetWindow(this), "Throw away the AI edits made since the last save?", "Revert",
-                MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
+        if (MessageBox.Show(Window.GetWindow(this), "Throw away the AI edits made since the last save?", "Revert",
+                MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
         {
-            return;
-        }
-
-        model.IsBusy = true;
-        try
-        {
-            if (model.Soldiers.IsDirty)
-            {
-                await model.Soldiers.LoadAsync(new Progress<string>(s => model.Status = s));
-            }
-            if (model.Behaviors.IsDirty)
-            {
-                model.Behaviors.Load();
-            }
-            if (model.Brains is { IsDirty: true, LoadedPath: { } path })
-            {
-                await model.Brains.LoadAsync(path);
-            }
-            model.Status = "Reverted to the last save";
-        }
-        finally
-        {
-            model.IsBusy = false;
-            DirtyChanged?.Invoke();
+            await _model.RevertAsync();
         }
     }
 
@@ -158,9 +114,9 @@ public partial class AiTabView : UserControl
         }
     }
 
-    private void SelectShown_Click(object sender, RoutedEventArgs e) => _model?.Soldiers.SelectAll(true);
+    private void SelectShown_Click(object sender, RoutedEventArgs e) => _model.Soldiers.SelectAll(true);
 
-    private void SelectNone_Click(object sender, RoutedEventArgs e) => _model?.Soldiers.SelectAll(false);
+    private void SelectNone_Click(object sender, RoutedEventArgs e) => _model.Soldiers.SelectAll(false);
 
     /// <summary>One column per progression level, bound to that level's cell of each row.</summary>
     private void BuildLevelColumns()
@@ -174,8 +130,8 @@ public partial class AiTabView : UserControl
             var changed = new DataTrigger { Binding = new Binding($"Cells[{level}].IsChanged"), Value = true };
             changed.Setters.Add(new Setter(TextBlock.FontWeightProperty, FontWeights.Bold));
             var style = new Style(typeof(TextBlock)) { Triggers = { changed } };
-            style.Setters.Add(new Setter(TextBlock.ToolTipProperty, new Binding($"Cells[{level}].Tip")));
-            style.Setters.Add(new Setter(TextBlock.HorizontalAlignmentProperty, HorizontalAlignment.Right));
+            style.Setters.Add(new Setter(ToolTipProperty, new Binding($"Cells[{level}].Tip")));
+            style.Setters.Add(new Setter(HorizontalAlignmentProperty, HorizontalAlignment.Right));
 
             BehaviorGrid.Columns.Add(new DataGridTextColumn
             {
@@ -199,38 +155,23 @@ public partial class AiTabView : UserControl
 
     private async void BrainPicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_model is not { } model || BrainPicker.SelectedItem is not string path || path == model.Brains.LoadedPath)
+        if (BrainPicker.SelectedItem is not string path || path == _model.Brains.LoadedPath)
         {
             return;
         }
-        if (model.Brains.IsDirty
+        if (_model.Brains.IsDirty
             && MessageBox.Show(Window.GetWindow(this), "Discard the unsaved edits to this brain?", "Switch brain",
                 MessageBoxButton.OKCancel, MessageBoxImage.Question) != MessageBoxResult.OK)
         {
-            BrainPicker.SelectedItem = model.Brains.LoadedPath;
+            BrainPicker.SelectedItem = _model.Brains.LoadedPath;
             return;
         }
-
-        model.IsBusy = true;
-        model.Status = $"Reading {path}…";
-        try
-        {
-            await model.Brains.LoadAsync(path);
-            model.Status = $"{model.Brains.NodeCount:N0} nodes in {System.IO.Path.GetFileName(path)}";
-        }
-        catch (Exception ex)
-        {
-            model.Status = $"Couldn't read {path}: {ex.Message}";
-        }
-        finally
-        {
-            model.IsBusy = false;
-        }
+        await _model.LoadBrainAsync(path);
     }
 
     private void BrainTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
-        if (_model is not null && e.NewValue is BrainTreeItem { Node: { } node })
+        if (e.NewValue is BrainTreeItem { Node: { } node })
         {
             _model.Brains.Selected = node;
         }
@@ -238,7 +179,7 @@ public partial class AiTabView : UserControl
 
     private void SearchList_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_model is not null && SearchList.SelectedItem is AiNode node)
+        if (SearchList.SelectedItem is AiNode node)
         {
             _model.Brains.Selected = node;
         }
@@ -246,7 +187,7 @@ public partial class AiTabView : UserControl
 
     private void Link_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (_model is not null && sender is ListBox { SelectedItem: BrainLinkRow link })
+        if (sender is ListBox { SelectedItem: BrainLinkRow link })
         {
             _model.Brains.Selected = link.Target;
         }

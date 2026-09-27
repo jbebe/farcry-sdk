@@ -161,7 +161,7 @@ public sealed class FilePickerViewModel : Observable
         {
             return null;
         }
-        if (Allowed(_vm.FindByHash(NameHash.Compute(text))) is { } named)
+        if (Allowed(_vm.FindByPath(text)) is { } named)
         {
             return named;
         }

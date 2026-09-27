@@ -1,3 +1,4 @@
+using JackAll.Core;
 using JackAll.Core.Format.Fcb;
 using JackAll.Tools.Ai;
 using JackAll.Tools.World;
@@ -23,7 +24,7 @@ public class AiTuningTests
         if (World1.Value?.Winner(Assault)?.Node is not { } entity) return;
 
         Assert.True(SoldierFields.IsSoldier(entity));
-        Assert.Empty(SoldierFields.All.Where(f => f.Read(entity) is null).Select(f => f.Key));
+        Assert.Empty(SoldierFields.All.Where(f => f.Read(entity) is null).Select(f => f.Label));
     }
 
     [Fact]
@@ -48,6 +49,25 @@ public class AiTuningTests
 
         Assert.Equal(0.9, reaction.Read(entity)!.Value, 5);
         Assert.DoesNotContain(SoldierFields.All, f => f != reaction && f.Read(entity) != f.Read(shipped));
+    }
+
+    [Fact]
+    public void A_soldier_edited_back_to_its_base_value_plans_a_vanilla_fragment()
+    {
+        if (Fixture.Read(FcbDocumentTests.World1) is not { } library || World1.Value?.Winner(Assault) is not { } assault) return;
+
+        SoldierCopy copy = Assert.Single(SoldierLibrary.Open([assault], library, library));
+        FcbClassDefinitions definitions = BundledAssets.LoadFcbClasses();
+        SoldierField reaction = Field("Reaction time (s)");
+        double shipped = reaction.Read(copy.Entity)!.Value;
+
+        reaction.Write(copy.Entity, shipped + 1);
+        Assert.True(copy.IsEdited);
+        Assert.False(copy.Plan(definitions).IsVanilla);
+
+        reaction.Write(copy.Entity, shipped);
+        Assert.False(copy.IsEdited);
+        Assert.True(copy.Plan(definitions).IsVanilla);
     }
 
     [Fact]

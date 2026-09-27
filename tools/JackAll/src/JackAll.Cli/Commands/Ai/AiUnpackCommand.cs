@@ -24,13 +24,12 @@ public sealed class AiUnpackCommand : CliCommand<AiUnpackCommand.Settings>
     {
         AiWorkspaceFile file = AiWorkspaceFile.Read(CliIO.ReadInput(settings.Input));
         string stem = Path.GetFileName(settings.Input).Replace(".ai.rml", "", StringComparison.OrdinalIgnoreCase);
-        string dir = Path.GetDirectoryName(Path.GetFullPath(settings.Input))!;
 
-        string sourcePath = Path.Combine(dir, stem + ".source.xml");
+        string sourcePath = CliIO.ResolveOutput(null, settings.Input, stem + ".source.xml");
         CliIO.WriteOutput(sourcePath, file.Source.ToString());
         CliIO.ReportWrote(sourcePath);
 
-        string packedPath = Path.Combine(dir, stem + ".packed.xml");
+        string packedPath = CliIO.ResolveOutput(null, settings.Input, stem + ".packed.xml");
         CliIO.WriteOutput(packedPath, Dump(AiPackedRepository.Read(file.Packed), file.Source).ToString());
         CliIO.ReportWrote(packedPath);
         return 0;

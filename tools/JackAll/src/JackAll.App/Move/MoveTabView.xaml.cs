@@ -13,7 +13,7 @@ namespace JackAll.App.Move;
 /// The Animations tab: pick a weapon and a situation, see which rule the engine picks, and change
 /// what a rule plays, when it plays, or where it sits in the search.
 /// </summary>
-public partial class MoveTabView : UserControl
+public partial class MoveTabView : UserControl, ISavableTab
 {
     private MainViewModel? _vm;
     private MoveRulesViewModel? _model;

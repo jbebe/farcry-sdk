@@ -114,7 +114,7 @@ public partial class MainWindow
     /// </summary>
     private void OpenSectorEditorTab(string sectorPath, ulong entityId)
     {
-        if (_vm.FindByHash(NameHash.Compute(sectorPath)) is not { } file)
+        if (_vm.FindByPath(sectorPath) is not { } file)
         {
             Warn($"'{sectorPath}' isn't in the merged filesystem.");
             return;
@@ -226,7 +226,7 @@ public partial class MainWindow
     private DominoServices DominoServices => _dominoServices ??= new(
         _vm.ReadByPath,
         _vm.Read,
-        path => _vm.FindByHash(NameHash.Compute(path)),
+        _vm.FindByPath,
         _vm.ResolveSoundResource,
         _vm.FindEntityFragment,
         file =>

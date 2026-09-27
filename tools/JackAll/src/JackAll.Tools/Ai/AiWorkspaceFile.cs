@@ -1,5 +1,5 @@
-using System.Buffers.Binary;
 using System.Xml.Linq;
+using JackAll.Core.Format;
 using JackAll.Core.Format.Rml;
 
 namespace JackAll.Tools.Ai;
@@ -15,29 +15,34 @@ public sealed record AiWorkspaceFile(byte[] Packed, XElement Source)
     /// <summary>The header kind the engine loads without recompiling the source.</summary>
     private const uint PackedKind = 4;
 
+    public static bool IsWorkspace(string path)
+        => path.StartsWith(Folder, StringComparison.OrdinalIgnoreCase) && path.EndsWith(".ai.rml", StringComparison.OrdinalIgnoreCase);
+
     public static AiWorkspaceFile Read(byte[] data)
     {
-        uint kind = BinaryPrimitives.ReadUInt32LittleEndian(data);
-        int packed = (int)BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(4));
-        int source = (int)BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(8));
-        if (kind != PackedKind || 12 + packed + source != data.Length)
+        var r = new ByteCursor(data);
+        uint kind = r.ReadU32();
+        int packed = (int)r.ReadU32();
+        int source = (int)r.ReadU32();
+        if (kind != PackedKind || r.Remaining != packed + source)
         {
             throw new InvalidDataException("Not a packed .ai.rml brain workspace.");
         }
-        return new AiWorkspaceFile(
-            data.AsSpan(12, packed).ToArray(),
-            RmlDocument.Deserialize(data.AsSpan(12 + packed, source).ToArray()));
+        return new AiWorkspaceFile(r.ReadBytes(packed), RmlDocument.Deserialize(r.ReadBytes(source)));
     }
+
+    /// <summary>A workspace for <paramref name="source"/>, with its compiled half built from it.</summary>
+    public static byte[] Compile(XElement source) => new AiWorkspaceFile(AiWorkspacePacker.Pack(source), source).Write();
 
     public byte[] Write()
     {
         byte[] source = RmlDocument.Serialize(Source);
-        byte[] data = new byte[12 + Packed.Length + source.Length];
-        BinaryPrimitives.WriteUInt32LittleEndian(data, PackedKind);
-        BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(4), (uint)Packed.Length);
-        BinaryPrimitives.WriteUInt32LittleEndian(data.AsSpan(8), (uint)source.Length);
-        Packed.CopyTo(data, 12);
-        source.CopyTo(data, 12 + Packed.Length);
-        return data;
+        var w = new ByteWriter();
+        w.WriteU32(PackedKind);
+        w.WriteU32((uint)Packed.Length);
+        w.WriteU32((uint)source.Length);
+        w.WriteRaw(Packed);
+        w.WriteRaw(source);
+        return w.ToArray();
     }
 }

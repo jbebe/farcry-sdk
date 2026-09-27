@@ -42,7 +42,7 @@ public sealed partial class MainViewModel
     /// the background pass has finished, which is why it isn't the primary route.
     /// </remarks>
     public VfsFile? ResolveSoundResource(uint id)
-        => SoundPaths(id).Select(path => FindByHash(NameHash.Compute(path))).FirstOrDefault(f => f is not null)
+        => SoundPaths(id).Select(FindByPath).FirstOrDefault(f => f is not null)
             ?? ResolveReference(RefSpace.SoundResource, id);
 
     private static IEnumerable<string> SoundPaths(uint id) =>
@@ -60,6 +60,9 @@ public sealed partial class MainViewModel
 
     /// <inheritdoc cref="GameVfs.ReadByPath"/>
     public byte[]? ReadByPath(string path) => _vfs?.ReadByPath(path);
+
+    /// <summary>The row of a plain file by its game path, or null when no archive or mod has it.</summary>
+    public VfsFile? FindByPath(string path) => FindByHash(NameHash.Compute(path));
 
     /// <summary>Selects <paramref name="file"/> as if the user had clicked it directly — used by a
     /// dependency-link row's "Go to file" button. Goes through <see cref="SetSelectedFiles"/> (not a
@@ -224,6 +227,19 @@ public sealed partial class MainViewModel
     /// retail text has the workspace's copy dropped instead, unless an enabled mod overrides it.
     /// </summary>
     public void StageFragments(VfsFile container, IEnumerable<(string Id, string Xml, bool IsVanilla)> fragments)
+        => StageFragments([(container, fragments)]);
+
+    /// <summary>The same for fragments of several containers, still with a single reindex.</summary>
+    public void StageFragments(IEnumerable<(VfsFile Container, IEnumerable<(string Id, string Xml, bool IsVanilla)> Fragments)> containers)
+    {
+        foreach ((VfsFile container, IEnumerable<(string, string, bool)> fragments) in containers)
+        {
+            StageFragmentsOf(container, fragments);
+        }
+        Reindex();
+    }
+
+    private void StageFragmentsOf(VfsFile container, IEnumerable<(string Id, string Xml, bool IsVanilla)> fragments)
     {
         FolderModLayer workspace = Workspace!;
         IReadOnlyDictionary<string, VfsFile> rows = FragmentsOf(container.EngineHash);
@@ -243,8 +259,6 @@ public sealed partial class MainViewModel
                 workspace.Stage(FolderModLayer.StorageKeyOf(path), path, "xml", AppText.EncodeUtf8(xml));
             }
         }
-
-        Reindex();
     }
 
     /// <summary>

@@ -37,7 +37,8 @@ public static partial class AdaptiveBehaviors
     public static IReadOnlyList<AdaptiveBehavior> Read(string xml)
     {
         var rows = new List<AdaptiveBehavior>();
-        foreach (Match item in Items(xml))
+        Match block = Block().Match(xml);
+        foreach (Match item in ItemElement().Matches(block.Success ? block.Value : ""))
         {
             double[] chances = new double[Levels];
             foreach (Match level in LevelAttribute().Matches(item.Value))
@@ -74,12 +75,6 @@ public static partial class AdaptiveBehaviors
     }
 
     private static string Format(double value) => value.ToString("0.0##", CultureInfo.InvariantCulture);
-
-    private static IEnumerable<Match> Items(string xml)
-    {
-        Match block = Block().Match(xml);
-        return block.Success ? ItemElement().Matches(block.Value) : [];
-    }
 
     [GeneratedRegex(@"<AdaptativeBehavior>.*?</AdaptativeBehavior>", RegexOptions.Singleline)]
     private static partial Regex Block();

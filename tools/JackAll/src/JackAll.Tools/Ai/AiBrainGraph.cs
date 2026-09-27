@@ -6,19 +6,19 @@ namespace JackAll.Tools.Ai;
 public sealed record AiLink(string Kind, string From, AiNode Target, string TargetAnchor);
 
 /// <summary>A brain's filter: while the C++ brain reports this behaviour, <see cref="Target"/> runs.</summary>
-public sealed record AiSelectable(string Filter, AiNode? Target);
+public sealed record AiSelectable(string Filter, AiNode Target);
 
 /// <summary>One instance of a <c>BlackBox.AI</c> workspace: a brain, plan, scanner or task.</summary>
 public sealed class AiNode(XElement element)
 {
     public XElement Element { get; } = element;
 
-    public string Name => (string)Element.Attribute("Name")!;
+    public string Name { get; } = (string)element.Attribute("Name")!;
 
     /// <summary>The last segment of <see cref="Name"/>, which is what the designers named it.</summary>
     public string ShortName => Name[(Name.LastIndexOf('/') + 1)..];
 
-    public string Class => (string?)Element.Attribute("Class") ?? "";
+    public string Class { get; } = (string?)element.Attribute("Class") ?? "";
 
     /// <summary>Brain, Plan, Scanner or Task.</summary>
     public string Kind => Element.Name.LocalName;
@@ -32,10 +32,6 @@ public sealed class AiNode(XElement element)
     public List<AiSelectable> Selectables { get; } = [];
 
     public List<AiLink> Links { get; } = [];
-
-    public IEnumerable<XElement> Parameters => Element.Elements("Parameter");
-
-    public override string ToString() => $"{ShortName} ({Class})";
 }
 
 /// <summary>
@@ -55,6 +51,7 @@ public sealed class AiBrainGraph
             _byName.TryAdd(node.Name, node);
         }
 
+        var selected = new HashSet<AiNode>();
         foreach (AiNode node in _byName.Values)
         {
             foreach (XElement child in node.Element.Elements())
@@ -65,8 +62,9 @@ public sealed class AiBrainGraph
                         node.Children.Add(added);
                         added.Parents.Add(node);
                         break;
-                    case "Selectable":
-                        node.Selectables.Add(new AiSelectable((string)child.Attribute("Filter")!, Find((string?)child.Attribute("Task"))));
+                    case "Selectable" when Find((string?)child.Attribute("Task")) is { } target:
+                        node.Selectables.Add(new AiSelectable((string)child.Attribute("Filter")!, target));
+                        selected.Add(target);
                         break;
                     case "Anchor" or "Exit" or "Event":
                         foreach (XElement connection in child.Elements("Connection"))
@@ -82,13 +80,14 @@ public sealed class AiBrainGraph
             }
         }
 
-        Roots = [.. _byName.Values.Where(n => n.Parents.Count == 0 && n.Kind == "Brain"
-            && !_byName.Values.Any(o => o.Selectables.Any(s => s.Target == n)))];
+        Roots = [.. _byName.Values.Where(n => n.Kind == "Brain" && n.Parents.Count == 0 && !selected.Contains(n))];
     }
 
     public XElement Source { get; }
 
     public IEnumerable<AiNode> Nodes => _byName.Values;
+
+    public int Count => _byName.Count;
 
     /// <summary>The top-level brains: those no plan adds and no other brain selects.</summary>
     public IReadOnlyList<AiNode> Roots { get; }

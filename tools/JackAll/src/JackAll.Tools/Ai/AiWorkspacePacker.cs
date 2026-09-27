@@ -1,4 +1,5 @@
 using System.Xml.Linq;
+using JackAll.Core.Format;
 using JackAll.Core.Format.Fcb;
 using JackAll.Core.Format.Rml;
 
@@ -11,52 +12,9 @@ namespace JackAll.Tools.Ai;
 /// </summary>
 public static class AiWorkspacePacker
 {
-    public static byte[] Pack(XElement source)
-    {
-        var repo = new AiPackedRepository();
-        var blobIndex = new Dictionary<(uint, string), ushort>();
-        var tasks = new Dictionary<uint, TaskData>();
-        var instances = source.Elements().ToList();
+    public static byte[] Pack(XElement source) => new Packing(source).Write();
 
-        foreach (XElement instance in instances)
-        {
-            uint cls = Hash((string?)instance.Attribute("Class") ?? "");
-            byte[] rml = RmlDocument.Serialize(ParametersOf(instance));
-            var key = (cls, Convert.ToBase64String(rml));
-            if (!blobIndex.TryGetValue(key, out ushort blob))
-            {
-                blob = (ushort)repo.Blobs.Count;
-                blobIndex.Add(key, blob);
-                repo.Blobs.Add(new AiParameterBlob(cls, rml));
-            }
-            string name = (string)instance.Attribute("Name")!;
-            tasks.TryAdd(Hash(name), new TaskData(name, blob));
-        }
-
-        List<TaskData> sorted = [.. tasks.Values.OrderBy(t => t.Hash)];
-        for (int i = 0; i < sorted.Count; i++)
-        {
-            sorted[i].Index = (ushort)i;
-        }
-
-        foreach (XElement instance in instances)
-        {
-            TaskData task = tasks[Hash((string)instance.Attribute("Name")!)];
-            foreach (XElement child in instance.Elements())
-            {
-                AddConnections(repo, tasks, task, child);
-            }
-        }
-
-        var buffer = new List<byte>();
-        foreach (TaskData t in sorted)
-        {
-            repo.Tasks.Add(new AiPackedTask(t.Hash, t.Name, t.Blob, (uint)buffer.Count, (ushort)t.Connections.Count));
-            buffer.AddRange(t.Connections);
-        }
-        repo.Connections = [.. buffer];
-        return repo.Write();
-    }
+    private static uint Hash(string name) => FcbClassDefinitions.Crc32Ascii(name);
 
     /// <summary>The <c>Parameters</c> node <c>LoadInstance</c> builds: flags as attributes, then one
     /// attribute per parameter and a child element for each parameter that has sub-parameters.</summary>
@@ -89,63 +47,6 @@ public static class AiWorkspacePacker
         }
     }
 
-    private static void AddConnections(AiPackedRepository repo, Dictionary<uint, TaskData> tasks, TaskData task, XElement child)
-    {
-        switch (child.Name.LocalName)
-        {
-            case "Selectable" when tasks.GetValueOrDefault(Hash((string?)child.Attribute("Task") ?? "")) is { } target:
-                task.Connections.Add((byte)AiConnectionKind.Selectable);
-                WriteU16(task.Connections, target.Index);
-                WriteU16(task.Connections, AnchorIndex(repo, (string)child.Attribute("Filter")!));
-                break;
-
-            case "Anchor" or "Exit" or "Event" when child.HasElements:
-                var kind = child.Name.LocalName switch
-                {
-                    "Anchor" => AiConnectionKind.Anchor,
-                    "Exit" => AiConnectionKind.Exit,
-                    _ => AiConnectionKind.Event,
-                };
-                var connections = child.Elements().ToList();
-                task.Connections.Add((byte)kind);
-                WriteU16(task.Connections, AnchorIndex(repo, (string)child.Attribute("Name")!));
-                WriteU16(task.Connections, (ushort)connections.Count);
-                foreach (XElement connection in connections)
-                {
-                    string target = (string)connection.Attribute("Target")!;
-                    WriteU16(task.Connections, tasks[Hash(target)].Index);
-                    WriteU16(task.Connections, AnchorIndex(repo, (string)connection.Attribute("TargetAnchor")!));
-                    // 1 when the target lives inside this task, 2 otherwise.
-                    task.Connections.Add((byte)(target.StartsWith(task.Name, StringComparison.Ordinal) ? 1 : 2));
-                }
-                break;
-
-            case "Add" when tasks.GetValueOrDefault(Hash((string)child.Attribute("Task")!)) is { } added:
-                added.Connections.InsertRange(0, [(byte)AiConnectionKind.Owner, (byte)task.Index, (byte)(task.Index >> 8)]);
-                break;
-        }
-    }
-
-    private static ushort AnchorIndex(AiPackedRepository repo, string name)
-    {
-        uint hash = Hash(name);
-        int index = repo.Anchors.IndexOf(hash);
-        if (index < 0)
-        {
-            index = repo.Anchors.Count;
-            repo.Anchors.Add(hash);
-        }
-        return (ushort)index;
-    }
-
-    private static void WriteU16(List<byte> bytes, ushort value)
-    {
-        bytes.Add((byte)value);
-        bytes.Add((byte)(value >> 8));
-    }
-
-    private static uint Hash(string name) => FcbClassDefinitions.Crc32Ascii(name);
-
     private sealed class TaskData(string name, ushort blob)
     {
         public string Name { get; } = name;
@@ -156,6 +57,120 @@ public static class AiWorkspacePacker
 
         public ushort Index { get; set; }
 
-        public List<byte> Connections { get; } = [];
+        /// <summary>The plans that add this task, in the order they were met.</summary>
+        public List<ushort> Owners { get; } = [];
+
+        public ByteWriter Body { get; } = new();
+    }
+
+    private sealed class Packing
+    {
+        private readonly AiPackedRepository _repo = new();
+        private readonly Dictionary<uint, TaskData> _tasks = [];
+        private readonly Dictionary<uint, ushort> _anchors = [];
+        private readonly List<TaskData> _sorted;
+
+        public Packing(XElement source)
+        {
+            var blobs = new Dictionary<(uint, string), ushort>();
+            List<(XElement Instance, TaskData Task)> instances = [];
+            foreach (XElement instance in source.Elements())
+            {
+                uint cls = Hash((string?)instance.Attribute("Class") ?? "");
+                byte[] rml = RmlDocument.Serialize(ParametersOf(instance));
+                if (!blobs.TryGetValue((cls, Convert.ToBase64String(rml)), out ushort blob))
+                {
+                    blob = (ushort)_repo.Blobs.Count;
+                    blobs.Add((cls, Convert.ToBase64String(rml)), blob);
+                    _repo.Blobs.Add(new AiParameterBlob(cls, rml));
+                }
+                var task = new TaskData((string)instance.Attribute("Name")!, blob);
+                instances.Add((instance, _tasks.TryAdd(task.Hash, task) ? task : _tasks[task.Hash]));
+            }
+
+            _sorted = [.. _tasks.Values.OrderBy(t => t.Hash)];
+            for (int i = 0; i < _sorted.Count; i++)
+            {
+                _sorted[i].Index = (ushort)i;
+            }
+
+            foreach ((XElement instance, TaskData task) in instances)
+            {
+                foreach (XElement child in instance.Elements())
+                {
+                    AddConnections(task, child);
+                }
+            }
+        }
+
+        public byte[] Write()
+        {
+            var buffer = new ByteWriter();
+            foreach (TaskData task in _sorted)
+            {
+                int offset = buffer.Length;
+                // Each owner's record was prepended as it was met, so the last one comes first.
+                foreach (ushort owner in Enumerable.Reverse(task.Owners))
+                {
+                    buffer.WriteU8((byte)AiConnectionKind.Owner);
+                    buffer.WriteU16(owner);
+                }
+                buffer.WriteRaw(task.Body.ToArray());
+                _repo.Tasks.Add(new AiPackedTask(task.Hash, task.Name, task.Blob, (uint)offset, (ushort)(buffer.Length - offset)));
+            }
+            _repo.Connections = buffer.ToArray();
+            return _repo.Write();
+        }
+
+        private void AddConnections(TaskData task, XElement child)
+        {
+            ByteWriter w = task.Body;
+            switch (child.Name.LocalName)
+            {
+                case "Selectable" when Find((string?)child.Attribute("Task")) is { } target:
+                    w.WriteU8((byte)AiConnectionKind.Selectable);
+                    w.WriteU16(target.Index);
+                    w.WriteU16(AnchorIndex((string)child.Attribute("Filter")!));
+                    break;
+
+                case "Anchor" or "Exit" or "Event" when child.HasElements:
+                    List<XElement> connections = [.. child.Elements()];
+                    w.WriteU8((byte)(child.Name.LocalName switch
+                    {
+                        "Anchor" => AiConnectionKind.Anchor,
+                        "Exit" => AiConnectionKind.Exit,
+                        _ => AiConnectionKind.Event,
+                    }));
+                    w.WriteU16(AnchorIndex((string)child.Attribute("Name")!));
+                    w.WriteU16((ushort)connections.Count);
+                    foreach (XElement connection in connections)
+                    {
+                        string target = (string)connection.Attribute("Target")!;
+                        w.WriteU16(_tasks[Hash(target)].Index);
+                        w.WriteU16(AnchorIndex((string)connection.Attribute("TargetAnchor")!));
+                        // 1 when the target lives inside this task, 2 otherwise.
+                        w.WriteU8((byte)(target.StartsWith(task.Name, StringComparison.Ordinal) ? 1 : 2));
+                    }
+                    break;
+
+                case "Add" when Find((string?)child.Attribute("Task")) is { } added:
+                    added.Owners.Add(task.Index);
+                    break;
+            }
+        }
+
+        private TaskData? Find(string? name) => name is null ? null : _tasks.GetValueOrDefault(Hash(name));
+
+        private ushort AnchorIndex(string name)
+        {
+            uint hash = Hash(name);
+            if (!_anchors.TryGetValue(hash, out ushort index))
+            {
+                index = (ushort)_repo.Anchors.Count;
+                _anchors.Add(hash, index);
+                _repo.Anchors.Add(hash);
+            }
+            return index;
+        }
     }
 }

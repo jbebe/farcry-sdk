@@ -1,5 +1,4 @@
-using System.Buffers.Binary;
-using System.Text;
+using JackAll.Core.Format;
 
 namespace JackAll.Tools.Ai;
 
@@ -27,74 +26,60 @@ public sealed class AiPackedRepository
 
     public static AiPackedRepository Read(byte[] data)
     {
-        var r = new Reader(data);
+        var r = new ByteCursor(data);
         var repo = new AiPackedRepository();
 
-        uint blobs = r.U32();
+        uint blobs = r.ReadU32();
         for (uint i = 0; i < blobs; i++)
         {
-            uint cls = r.U32();
-            repo.Blobs.Add(new AiParameterBlob(cls, r.Bytes((int)r.U32())));
+            uint cls = r.ReadU32();
+            repo.Blobs.Add(new AiParameterBlob(cls, r.ReadBytes((int)r.ReadU32())));
         }
 
-        repo.Connections = r.Bytes((int)r.U32());
+        repo.Connections = r.ReadBytes((int)r.ReadU32());
+        repo.Anchors.AddRange(r.ReadU32Array((int)r.ReadU32()));
 
-        uint anchors = r.U32();
-        for (uint i = 0; i < anchors; i++)
-        {
-            repo.Anchors.Add(r.U32());
-        }
-
-        uint tasks = r.U32();
+        uint tasks = r.ReadU32();
         for (uint i = 0; i < tasks; i++)
         {
-            uint name = r.U32();
-            string text = Encoding.ASCII.GetString(r.Bytes((int)r.U32()));
-            ushort blob = (ushort)r.U32();
-            uint offset = r.U32();
-            ushort length = (ushort)r.U32();
-            repo.Tasks.Add(new AiPackedTask(name, text, blob, offset, length));
+            (uint hash, string name) = r.ReadStringId();
+            ushort blob = (ushort)r.ReadU32();
+            uint offset = r.ReadU32();
+            repo.Tasks.Add(new AiPackedTask(hash, name, blob, offset, (ushort)r.ReadU32()));
         }
 
-        if (!r.AtEnd)
+        if (r.Remaining != 0)
         {
-            throw new InvalidDataException($"Packed AI repository has {data.Length - r.Position} trailing bytes.");
+            throw new InvalidDataException($"Packed AI repository has {r.Remaining} trailing bytes.");
         }
         return repo;
     }
 
     public byte[] Write()
     {
-        using var s = new MemoryStream();
-        WriteU32(s, (uint)Blobs.Count);
+        var w = new ByteWriter();
+        w.WriteU32((uint)Blobs.Count);
         foreach (AiParameterBlob blob in Blobs)
         {
-            WriteU32(s, blob.ClassHash);
-            WriteU32(s, (uint)blob.Rml.Length);
-            s.Write(blob.Rml);
+            w.WriteU32(blob.ClassHash);
+            w.WriteU32((uint)blob.Rml.Length);
+            w.WriteRaw(blob.Rml);
         }
 
-        WriteU32(s, (uint)Connections.Length);
-        s.Write(Connections);
+        w.WriteU32((uint)Connections.Length);
+        w.WriteRaw(Connections);
+        w.WriteU32((uint)Anchors.Count);
+        w.WriteU32Array([.. Anchors]);
 
-        WriteU32(s, (uint)Anchors.Count);
-        foreach (uint anchor in Anchors)
-        {
-            WriteU32(s, anchor);
-        }
-
-        WriteU32(s, (uint)Tasks.Count);
+        w.WriteU32((uint)Tasks.Count);
         foreach (AiPackedTask task in Tasks)
         {
-            WriteU32(s, task.NameHash);
-            byte[] name = Encoding.ASCII.GetBytes(task.Name);
-            WriteU32(s, (uint)name.Length);
-            s.Write(name);
-            WriteU32(s, task.Blob);
-            WriteU32(s, task.ConnectionOffset);
-            WriteU32(s, task.ConnectionLength);
+            w.WriteStringId(task.Name, task.NameHash);
+            w.WriteU32(task.Blob);
+            w.WriteU32(task.ConnectionOffset);
+            w.WriteU32(task.ConnectionLength);
         }
-        return s.ToArray();
+        return w.ToArray();
     }
 
     /// <summary>
@@ -137,31 +122,29 @@ public sealed class AiPackedRepository
         return null;
     }
 
-    private ReadOnlySpan<byte> Slice(AiPackedTask task) => Connections.AsSpan((int)task.ConnectionOffset, task.ConnectionLength);
-
     /// <summary>The connection records of <paramref name="task"/>, as <c>CTaskRepository::GetTask</c> reads them.</summary>
     public IReadOnlyList<AiConnectionRecord> ConnectionsOf(AiPackedTask task)
     {
-        var r = new Reader(Slice(task).ToArray());
+        var r = new ByteCursor(Slice(task));
         var records = new List<AiConnectionRecord>();
-        while (!r.AtEnd)
+        while (r.Remaining > 0)
         {
-            var kind = (AiConnectionKind)r.U8();
+            var kind = (AiConnectionKind)r.ReadU8();
             switch (kind)
             {
                 case AiConnectionKind.Owner:
-                    records.Add(new AiConnectionRecord(kind, r.U16(), []));
+                    records.Add(new AiConnectionRecord(kind, r.ReadU16(), []));
                     break;
                 case AiConnectionKind.Selectable:
-                    ushort target = r.U16();
-                    records.Add(new AiConnectionRecord(kind, r.U16(), [new AiConnectionTarget(target, 0, 0)]));
+                    ushort target = r.ReadU16();
+                    records.Add(new AiConnectionRecord(kind, r.ReadU16(), [new AiConnectionTarget(target, 0, 0)]));
                     break;
                 case AiConnectionKind.Anchor or AiConnectionKind.Exit or AiConnectionKind.Event:
-                    ushort source = r.U16();
-                    var targets = new AiConnectionTarget[r.U16()];
+                    ushort source = r.ReadU16();
+                    var targets = new AiConnectionTarget[r.ReadU16()];
                     for (int i = 0; i < targets.Length; i++)
                     {
-                        targets[i] = new AiConnectionTarget(r.U16(), r.U16(), r.U8());
+                        targets[i] = new AiConnectionTarget(r.ReadU16(), r.ReadU16(), r.ReadU8());
                     }
                     records.Add(new AiConnectionRecord(kind, source, targets));
                     break;
@@ -172,42 +155,7 @@ public sealed class AiPackedRepository
         return records;
     }
 
-    private static void WriteU32(Stream s, uint value)
-    {
-        Span<byte> b = stackalloc byte[4];
-        BinaryPrimitives.WriteUInt32LittleEndian(b, value);
-        s.Write(b);
-    }
-
-    private sealed class Reader(byte[] data)
-    {
-        public int Position { get; private set; }
-
-        public bool AtEnd => Position >= data.Length;
-
-        public byte U8() => data[Position++];
-
-        public ushort U16()
-        {
-            ushort v = BinaryPrimitives.ReadUInt16LittleEndian(data.AsSpan(Position));
-            Position += 2;
-            return v;
-        }
-
-        public uint U32()
-        {
-            uint v = BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(Position));
-            Position += 4;
-            return v;
-        }
-
-        public byte[] Bytes(int count)
-        {
-            byte[] v = data.AsSpan(Position, count).ToArray();
-            Position += count;
-            return v;
-        }
-    }
+    private ReadOnlySpan<byte> Slice(AiPackedTask task) => Connections.AsSpan((int)task.ConnectionOffset, task.ConnectionLength);
 }
 
 public enum AiConnectionKind : byte

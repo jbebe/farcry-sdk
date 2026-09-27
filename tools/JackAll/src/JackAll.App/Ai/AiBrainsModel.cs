@@ -1,7 +1,7 @@
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Xml.Linq;
-using JackAll.Core.Format;
+using JackAll.Core.Vfs;
 using JackAll.Tools.Ai;
 
 namespace JackAll.App.Ai;
@@ -15,7 +15,6 @@ public sealed class BrainTreeItem : Observable
 {
     private static readonly BrainTreeItem Placeholder = new();
     private bool _isExpanded;
-    private bool _isSelected;
 
     private BrainTreeItem()
     {
@@ -42,8 +41,6 @@ public sealed class BrainTreeItem : Observable
 
     public ObservableCollection<BrainTreeItem> Children { get; } = [];
 
-    public bool IsSelected { get => _isSelected; set => Set(ref _isSelected, value); }
-
     public bool IsExpanded
     {
         get => _isExpanded;
@@ -52,10 +49,10 @@ public sealed class BrainTreeItem : Observable
             if (Set(ref _isExpanded, value) && value && Children.Count == 1 && Children[0] == Placeholder && Node is { } node)
             {
                 Children.Clear();
-                HashSet<AiNode> selected = [.. node.Selectables.Select(s => s.Target).OfType<AiNode>()];
-                foreach (AiSelectable selectable in node.Selectables.Where(s => s.Target is not null))
+                HashSet<AiNode> selected = [.. node.Selectables.Select(s => s.Target)];
+                foreach (AiSelectable selectable in node.Selectables)
                 {
-                    Children.Add(new BrainTreeItem(selectable.Target!, selectable.Filter));
+                    Children.Add(new BrainTreeItem(selectable.Target, selectable.Filter));
                 }
                 foreach (AiNode child in node.Children.Where(c => !selected.Contains(c)))
                 {
@@ -105,10 +102,9 @@ public sealed record BrainLinkRow(string Text, AiNode Target);
 /// <summary>The Brains view of the AI tab: browse a brain workspace and edit its task parameters.</summary>
 public sealed class AiBrainsModel(MainViewModel vm) : Observable
 {
-    private AiWorkspaceFile? _file;
+    private VfsFile? _file;
     private AiBrainGraph? _graph;
-    private AiBrainGraph? _vanilla;
-    private string? _path;
+    private Dictionary<string, XElement> _vanilla = [];
     private AiNode? _selected;
     private string _search = "";
     private bool _isDirty;
@@ -117,7 +113,7 @@ public sealed class AiBrainsModel(MainViewModel vm) : Observable
 
     public ObservableCollection<BrainTreeItem> Tree { get; } = [];
 
-    public ObservableCollection<AiNode> SearchResults { get; } = [];
+    public IReadOnlyList<AiNode> SearchResults { get; private set; } = [];
 
     public IReadOnlyList<BrainParameterRow> Parameters { get; private set; } = [];
 
@@ -125,11 +121,11 @@ public sealed class AiBrainsModel(MainViewModel vm) : Observable
 
     public IReadOnlyList<BrainLinkRow> UsedBy { get; private set; } = [];
 
-    public string? LoadedPath => _path;
+    public string? LoadedPath => _file?.Path;
+
+    public int NodeCount => _graph?.Count ?? 0;
 
     public bool IsDirty { get => _isDirty; private set => Set(ref _isDirty, value); }
-
-    public event Action? DirtyChanged;
 
     public AiNode? Selected
     {
@@ -166,8 +162,7 @@ public sealed class AiBrainsModel(MainViewModel vm) : Observable
         Brains =
         [
             .. vm.AllKnownPaths
-                .Where(p => p.StartsWith(AiWorkspaceFile.Folder, StringComparison.OrdinalIgnoreCase)
-                            && p.EndsWith(".ai.rml", StringComparison.OrdinalIgnoreCase))
+                .Where(AiWorkspaceFile.IsWorkspace)
                 .OrderBy(p => !p.EndsWith("mercbrain.ai.rml", StringComparison.OrdinalIgnoreCase))
                 .ThenBy(p => p, StringComparer.OrdinalIgnoreCase),
         ];
@@ -176,19 +171,22 @@ public sealed class AiBrainsModel(MainViewModel vm) : Observable
 
     public async Task LoadAsync(string path)
     {
-        byte[] bytes = vm.ReadByPath(path) ?? throw new InvalidDataException($"{path} could not be read");
-        byte[]? original = vm.FindByHash(NameHash.Compute(path)) is { } row ? vm.ReadOriginal(row) : null;
-        (AiWorkspaceFile file, AiBrainGraph graph, AiBrainGraph? vanilla) = await Task.Run(() =>
+        VfsFile file = vm.FindByPath(path) ?? throw new InvalidDataException($"{path} is not in the game files");
+        (AiBrainGraph graph, Dictionary<string, XElement> vanilla) = await Task.Run(() =>
         {
-            AiWorkspaceFile opened = AiWorkspaceFile.Read(bytes);
-            return (opened, new AiBrainGraph(opened.Source),
-                original is null ? null : new AiBrainGraph(AiWorkspaceFile.Read(original).Source));
+            byte[] bytes = vm.Read(file);
+            byte[]? original = vm.ReadOriginal(file);
+            XElement source = AiWorkspaceFile.Read(bytes).Source;
+            XElement baseGame = original is null || original.AsSpan().SequenceEqual(bytes)
+                ? new XElement(source)
+                : AiWorkspaceFile.Read(original).Source;
+            return (new AiBrainGraph(source),
+                baseGame.Elements().DistinctBy(e => (string)e.Attribute("Name")!).ToDictionary(e => (string)e.Attribute("Name")!, StringComparer.Ordinal));
         });
 
         _file = file;
         _graph = graph;
         _vanilla = vanilla;
-        _path = path;
         Tree.Clear();
         foreach (AiNode root in graph.Roots)
         {
@@ -200,31 +198,25 @@ public sealed class AiBrainsModel(MainViewModel vm) : Observable
         OnPropertyChanged(nameof(LoadedPath));
     }
 
-    public int NodeCount => _graph?.Nodes.Count() ?? 0;
-
     /// <summary>Recompiles the workspace and stages it.</summary>
     public async Task SaveAsync()
     {
-        if (_file is null || _path is null || !IsDirty || vm.FindByHash(NameHash.Compute(_path)) is not { } row)
+        if (_file is null || _graph is null || !IsDirty)
         {
             return;
         }
-        XElement source = _file.Source;
-        byte[] bytes = await Task.Run(() => new AiWorkspaceFile(AiWorkspacePacker.Pack(source), source).Write());
-        vm.Replace(row, bytes);
+        XElement source = _graph.Source;
+        vm.Replace(_file, await Task.Run(() => AiWorkspaceFile.Compile(source)));
         IsDirty = false;
-        DirtyChanged?.Invoke();
     }
 
     private void ShowSelected()
     {
-        AiNode? vanilla = _selected is null ? null : _vanilla?.Find(_selected.Name);
-        Parameters = _selected is null ? [] : [.. Flatten(_selected.Element, vanilla?.Element, "")];
+        Parameters = _selected is null ? [] : [.. Flatten(_selected.Element, _vanilla.GetValueOrDefault(_selected.Name), "")];
         Links = _selected is null
             ? []
             : [
-                .. _selected.Selectables.Where(s => s.Target is not null)
-                    .Select(s => new BrainLinkRow($"when {s.Filter} → runs {s.Target!.ShortName}", s.Target)),
+                .. _selected.Selectables.Select(s => new BrainLinkRow($"when {s.Filter} → runs {s.Target.ShortName}", s.Target)),
                 .. _selected.Links.Select(l => new BrainLinkRow($"{Describe(l)} → {l.TargetAnchor.ToLowerInvariant()} {l.Target.ShortName}", l.Target)),
                 .. _selected.Children.Select(c => new BrainLinkRow($"adds {c.ShortName} ({c.Class})", c)),
             ];
@@ -242,7 +234,7 @@ public sealed class AiBrainsModel(MainViewModel vm) : Observable
         {
             string name = (string)parameter.Attribute("Name")!;
             XElement? vanilla = vanillaOwner?.Elements("Parameter").FirstOrDefault(p => (string?)p.Attribute("Name") == name);
-            yield return new BrainParameterRow(parameter, prefix + name, (string?)vanilla?.Attribute("Value"), MarkDirty);
+            yield return new BrainParameterRow(parameter, prefix + name, (string?)vanilla?.Attribute("Value"), () => IsDirty = true);
             foreach (BrainParameterRow nested in Flatten(parameter, vanilla, $"{prefix}{name}."))
             {
                 yield return nested;
@@ -252,25 +244,14 @@ public sealed class AiBrainsModel(MainViewModel vm) : Observable
 
     private void RunSearch()
     {
-        SearchResults.Clear();
         string[] words = _search.Split(' ', StringSplitOptions.RemoveEmptyEntries);
-        if (_graph is null || words.Length == 0)
-        {
-            return;
-        }
-        foreach (AiNode node in _graph.Nodes
-                     .Where(n => words.All(w => n.Name.Contains(w, StringComparison.OrdinalIgnoreCase)
-                                                || n.Class.Contains(w, StringComparison.OrdinalIgnoreCase)))
-                     .Take(300))
-        {
-            SearchResults.Add(node);
-        }
-    }
-
-    private void MarkDirty()
-    {
-        IsDirty = true;
-        DirtyChanged?.Invoke();
+        SearchResults = _graph is null || words.Length == 0
+            ? []
+            : [.. _graph.Nodes
+                .Where(n => words.All(w => n.Name.Contains(w, StringComparison.OrdinalIgnoreCase)
+                                           || n.Class.Contains(w, StringComparison.OrdinalIgnoreCase)))
+                .Take(300)];
+        OnPropertyChanged(nameof(SearchResults));
     }
 
     private static string Describe(AiLink link) => link.Kind switch

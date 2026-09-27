@@ -19,21 +19,19 @@ public sealed record SoldierField(
     SoldierFieldKind Kind = SoldierFieldKind.Number, string[]? Choices = null)
 {
     private readonly uint _member = FcbClassDefinitions.Crc32Ascii(Member);
-
-    public string Key => $"{string.Join('/', Path)}/{Member}";
+    private readonly uint[] _path = [.. Path.Select(FcbClassDefinitions.Crc32Ascii)];
 
     public double? Read(FcbObject entity)
     {
-        if (Owner(entity)?.Values.GetValueOrDefault(_member) is not { } bytes)
+        if (Owner(entity) is not { } owner || !owner.Values.ContainsKey(_member))
         {
             return null;
         }
         return Kind switch
         {
-            SoldierFieldKind.Number when bytes.Length >= 4 => BitConverter.ToSingle(bytes),
-            SoldierFieldKind.Whole or SoldierFieldKind.Choice when bytes.Length >= 4 => BitConverter.ToUInt32(bytes),
-            SoldierFieldKind.Toggle when bytes.Length >= 1 => bytes[0] != 0 ? 1 : 0,
-            _ => null,
+            SoldierFieldKind.Number => FcbEntityFields.ReadFloat(owner, _member),
+            SoldierFieldKind.Toggle => FcbEntityFields.ReadBool(owner, _member) ? 1 : 0,
+            _ => FcbEntityFields.ReadU32(owner, _member),
         };
     }
 
@@ -56,11 +54,10 @@ public sealed record SoldierField(
 
     private FcbObject? Owner(FcbObject entity)
     {
-        FcbObject? node = FcbEntityFields.FindComponent(entity, FcbClassDefinitions.Crc32Ascii(Path[0]));
-        foreach (string step in Path.Skip(1))
+        FcbObject? node = FcbEntityFields.FindComponent(entity, _path[0]);
+        for (int i = 1; i < _path.Length && node is not null; i++)
         {
-            uint hash = FcbClassDefinitions.Crc32Ascii(step);
-            node = node?.Children.FirstOrDefault(c => c.TypeHash == hash);
+            node = node.Children.Find(c => c.TypeHash == _path[i]);
         }
         return node;
     }
@@ -69,13 +66,13 @@ public sealed record SoldierField(
 /// <summary>The archetype tunables the AI tab offers, grouped the way a designer thinks about a soldier.</summary>
 public static class SoldierFields
 {
-    public const string Perception = "Spotting";
-    public const string Vision = "Vision cones";
-    public const string Marksmanship = "Marksmanship";
-    public const string Detection = "Detection thresholds";
-    public const string Movement = "Movement";
-    public const string Toughness = "Toughness";
-    public const string Role = "Role";
+    private const string Perception = "Spotting";
+    private const string Vision = "Vision cones";
+    private const string Marksmanship = "Marksmanship";
+    private const string Detection = "Detection thresholds";
+    private const string Movement = "Movement";
+    private const string Toughness = "Toughness";
+    private const string Role = "Role";
 
     private static readonly string[] Agent = ["CFCXAIComponent", "AIObject", "CPawnAgent"];
     private static readonly string[] Shooting = [.. Agent, "ShootingSystem"];
@@ -156,7 +153,10 @@ public static class SoldierFields
     ];
 
     /// <summary>Whether <paramref name="entity"/> runs a soldier brain - the archetypes this catalogue fits.</summary>
-    public static bool IsSoldier(FcbObject entity) => All[0].Read(entity) is not null;
+    public static bool IsSoldier(FcbObject entity) => Marker.Read(entity) is not null;
+
+    /// <summary>A member only a <c>CPawnAgent</c> with a sensory system carries.</summary>
+    private static readonly SoldierField Marker = new("", "", "", [.. Multipliers], "fPreCombatMultiplier");
 
     /// <summary>The pair <c>CPawnAgent::SetVisibilityValues</c> installs when the brain enters a state.</summary>
     private static IEnumerable<SoldierField> Thresholds(string state, string prefix)
