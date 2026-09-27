@@ -85,43 +85,51 @@ uncovered in the engine. The reasoning and the verdict per target are in the
 The direction (2026-09-26): data and small hooks on the engine's own systems, no sound manager of our
 own. A step is done when it is heard in game.
 
-- [ ] **1. Distant enemy fire is a crack and an echo.** From far away an enemy's shot sounds like a
-  firing range heard on a hike: a sharp crack, then the echo rolling off the land. Walking closer, it
-  blends into the full close shot.
+- [ ] **1. Distant enemy fire turns into a crack.** Dunia's own distance handling is the baseline, and
+  since NPC shots play their weapon's echo (2026-09-26) distant fire already sounds right. What is
+  left: far away, the dry shot must become a crack, like a distant firing range or shooting in war
+  footage, not a clear gunshot turned down. Not only lower the dry shot with distance, fade a crack in.
   - The weapon field for it exists: `sndmlDistanceFromShootingSoundToPlayerMultilayer` fades layers by
     the shooter's distance in metres **(RE-verified)**, and it is empty on all 91 weapons. Give each
-    weapon, or each calibre class, a multilayer (kind `7`): the dry close shot near, a recording of
-    distant gunfire far. The echo goes in the far sample, because an NPC's shot never plays one.
-  - Needs dry third-person shots, distant-gunfire recordings, and a way to write a multilayer into a
-    bank. Appending records to a bank already works (the Makarov's echo).
+    weapon a multilayer (kind `7`), either the dry shot near and a crack far, or the echo near and a
+    single crack-plus-echo sample far.
+  - Needs a way to write a multilayer into a bank.
   - Then the report arrives late, at 340 m/s: see **Sound travels** below.
-- [ ] **2. Voices sound as far away as the speaker.** A merc talking 60 m away is quiet and dull, and
-  comes from where he stands. Today distant NPCs sound like they stand next to you.
-  - All 2,587 localized dialog samples are mono **(seen in data)**, so they can get a 3D voice. The
-    cause is elsewhere: the dialog events' rolloff curves, an emitter with no position, or DS3D. Find
-    which first, then add **Air absorption** below.
-- [ ] **3. Vehicles have an engine you hear.** An idling car rumbles, the engine rises with speed and
-  load, and the tyres sit under it. Today the rolling wheels dominate and a stopped car is silent.
+- [ ] **2. Voices fall off as fast as real speech.** Today a merc 40 m away is heard at normal speech
+  level. The dialog events need a far stronger rolloff curve.
+  - All 2,587 localized dialog samples are mono **(seen in data)**, so they can get a 3D voice. Then
+    add **Air absorption** below.
+- [ ] **3. Vehicles have an engine you hear.** The vehicle engines sound awful today and need fixing.
+  An idling car rumbles, the engine rises with speed and load, and the tyres sit under it. Today the
+  rolling wheels dominate and a stopped car is silent.
   - Vehicles carry `sndEngineIdle`, `sndEngineLoop`, `sndPlayEngineIdleLoop`, ignition and stop sounds,
     and two multilayers, `sndmlRPMSoundMultilayer` (`0x00440256`) and `sndmlWheelSlipSoundMultilayer`
     (`0x00440257`) **(seen in data)**. Find what plays at idle, and whether the RPM layer drops the
     engine at low revs or the samples are weak.
-- [ ] **4. Every interior has the right room.** A shack short and dark, a hangar long, and no outdoor
-  reverb indoors. Some interiors sound wrong today (reported 2026-09-26); note which, with the reverb
-  log running.
+- [ ] **4. Every interior's reverb matches its size.** A shack short and dark, a hangar long, and no
+  outdoor reverb indoors. Today the railyard hangar is right, but a train carriage gets a similarly
+  strong reverb.
   - Suspects: the 84 placed buildings with no reverb may keep the outdoor one; the +1,000 mB send on
     the player's own sounds; the conversion of DARE's preset layout to EAX, which is not traced.
-- [ ] **5. Your own shots are dry indoors and echo outdoors, on every weapon.** Each weapon needs a
-  dry shot at its own length (`spk import` rewrites the descriptor) and 1–3 echo variants, which a
-  random container on `sndSingleBulletShotEcho` picks from. Automatic fire has its own pair,
-  `sndStart/StopAutoBulletShotEcho`.
+- [ ] **5. Shooting in a small room sounds like it.** The close, hard room sound of gunfire indoors in
+  Tarkov or Insurgency. Check how gunshots sound in small interiors today first.
+- [ ] **6. Every weapon gets a new shot.** The retail shots are dated and lack kick; replace all of
+  them, one weapon at a time.
+  - The method, from the G3KA4: pick the cut by Audacity A/B, loudness-match it to retail by the
+    loudest 50 ms rather than by peak, and write it at its own length (`spk import` rewrites the
+    descriptor). Full-auto plays per-round shots (`per_round_shots.cpp`).
+  - Choose each weapon's echo by how loud it is: a weaker, a medium or a louder echo, shared between
+    weapons. An echo in its own top-level bank loads with no `depload` entry; the M1903 reuses the
+    G3KA4's.
   - Choosing the echo by environment needs a hook on its one play call: it plays with no emitter, so
     no switch can choose **(inferred)**.
-  - Echoes shared by all weapons need a bank every weapon loads, such as the rolloff-curve bank
-    `2fffffff.spk` (untested).
 - [x] **The authored reverb switches by place** (DSOAL and the `PlaySoundReverb` body, 2026-09-25).
 - [x] **Your own shots take the room** (+1,000 mB send on 2D voices, 2026-09-26).
 - [x] **The Makarov's first-person shot is dry, with an outdoor echo** (2026-09-26).
+- [x] **The G3KA4 has new first- and third-person shots, per-round full-auto and an echo**
+  (2026-09-26).
+- [x] **NPC shots play their weapon's echo**, and only a burst's last echo rings (2026-09-26).
+- [x] **The M1903 has an echo** (2026-09-26).
 
 ### Checks before building anything
 
@@ -130,10 +138,11 @@ own. A step is done when it is heard in game.
 
 ### Gunshots
 
-- [ ] **Sound travels.** First prototype: an FCSE plugin that holds back `Weapon_NPC`
-  plays by distance ÷ speed of sound (hook `CSoundSystem::PlaySound` `+0x9c`, flush in `Update`
-  `+0x50`, vtable `0x10e82d10`). Nothing in the engine delays a sound today.
-- [ ] **Delay explosions too** (sound type 10), once their emitters are known to outlive the delay.
+- [ ] **Sound travels.** Every distant sound arrives late: shots, explosions, all of it. Nothing in the
+  engine delays a sound today.
+  - First prototype: an FCSE plugin that holds back `Weapon_NPC` plays by distance ÷ speed of sound
+    (hook `CSoundSystem::PlaySound` `+0x9c`, flush in `Update` `+0x50`, vtable `0x10e82d10`).
+  - Explosions (sound type 10) once their emitters are known to outlive the delay.
 - [ ] **Crack before report.** Comes with the delay, because fly-bys are not delayed. It needs better
   crack samples.
 - [ ] **No crack from subsonic or silenced weapons** (silenced Makarov, Dart Rifle). The fly-by sound is
@@ -151,7 +160,7 @@ own. A step is done when it is heard in game.
 
 - [ ] **Ship Sound Overhaul's reverb.** It works in game (DSOAL, the `PlaySoundReverb` body and the
   player's stronger send); it still needs a release (CI and release workflows, Nexus page) and the
-  diagnostic reverb log removed.
+  diagnostic logs removed (`reverb_log.cpp`, `echo_log.cpp`).
 - [ ] **Retune the reverb presets** in `common/soundbinary/7fffffff.bao` (63 presets, EAX form).
 - [ ] **Building echo lengths.** `fEchoLength` is 0 on 620 of 623 placed buildings; set it per
   building class.
@@ -188,7 +197,8 @@ own. A step is done when it is heard in game.
   fights. The −48 dB distance cull is code.
 - [ ] **`occmul_pc` = 1.0 against 50.0 on consoles.** It multiplies every sound's obstruction, and 50
   saturates any occlusion to full. Decide whether PC should be harsher than 1.0.
-- [ ] **HRTF for headphones.** OpenAL Soft behind DSOAL can render DS3D voices with HRTF.
+- [ ] **HRTF for headphones.** OpenAL Soft behind DSOAL can render DS3D voices with HRTF, but as it is
+  now it feels awful; it needs a major reconfiguration before it is ever enabled.
 
 ### Near misses and ricochets
 
@@ -220,6 +230,8 @@ own. A step is done when it is heard in game.
 - [ ] **A quiet world.** Lower the ambience types with a permanent preset, or with sample gain and
   rolloffs, so a gunshot is the loudest thing you hear. Check whether the empty `Exclusive.Normal`
   preset is the one applied by default.
+- [ ] **Revise the ambience.** It is Hollywood today. Crickets can stay; distant dog barks go, and so
+  do distant jackals, which the game has none of.
 - [ ] **Duck music and ambience under gunfire** (plugin + data). A new preset in `soundmixings.xml`,
   applied through `CMixingManager::ApplyPreset` whenever shots are fired near the player.
 - [ ] **Brief suppression on a close fly-by** (plugin + data): a short muffle or duck preset triggered
@@ -230,8 +242,8 @@ own. A step is done when it is heard in game.
   are empty fields; `Compatible.Ironsight` and `Compatible.Running` exist unused.
 - [ ] **Headroom and gain staging.** DARE has no compressor or limiter, so louder shots need headroom
   taken from every other type.
-- [ ] **Music under combat.** `CMusicManager` reacts to shots, pass-bys, hits and explosions; decide
-  whether combat music should back off for tension.
+- [ ] **Music for calm moments only.** The music is good, but it should be off most of the time.
+  `CMusicManager` reacts to shots, pass-bys, hits and explosions.
 - [ ] **Sub-mixes.** All 25 sound types go to one line, `Master`; separate lines would allow group
   volumes.
 
@@ -242,7 +254,12 @@ own. A step is done when it is heard in game.
   multilayers (kind `7`).
 - [ ] **Rolloff curve editor** for `2fffffff.spk`.
 - [ ] **Reverb preset editor** for `7fffffff.bao`, including new game-parameter declarations.
-- [ ] **`depload` entries** for every new bank chain, since an unlisted bank plays silent.
+- [ ] **`depload` updates implicitly.** Creating or deleting a bank updates `depload` without asking,
+  and an insert adds the entry to world1 and world2 too. An unlisted child bank plays silent; a
+  top-level id loads its own bank without one (2026-09-26), which the danger box on the
+  [`.spk` page](/farcry-sdk/docs/file-formats/spk) still contradicts.
+- [ ] **The App's `.spk` import keeps the replacement's own length**, as `jackall-cli spk import`
+  does; today it pads.
 
 ### Open reverse-engineering questions
 
