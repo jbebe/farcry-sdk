@@ -73,6 +73,11 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 - [ ] The correct scale for `Game:SetHealth` — 100 and 25 both kill the player
 
+## Mods/vehicle-overhaul
+
+- [ ] A mod that overhauls vehicles. Not started; the engine sound's options are in the
+      [design log](/farcry-sdk/docs/design/realistic-sound#7-vehicle-engines--data-plugin-for-a-real-rpm)
+
 ## Mod ideas
 
 - [ ] Binoculars with a distance meter
