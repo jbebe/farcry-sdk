@@ -74,10 +74,10 @@ public sealed class SpkNewCommand : CliCommand<SpkNewCommand.Settings>
             CliIO.WriteOutput(Path.Combine(dir, file), CliIO.ReadInput(source));
             bank.Records.Add(new SpkBankRecord { Id = audioId, Type = SpkRecordType.FlatCopy, File = file });
 
-            uint[] words = Words(SpkLayout.Sample, SpkLayout.ResourceWords, likeSample);
-            words[5] = (uint)(int)Math.Round(settings.Gain * 0x10000);
-            words[7] = audioId;
-            words[13] = settings.Loop ? 1u : 0u;
+            uint[] words = Words(SpkLayout.Sample, likeSample);
+            words[SpkLayout.SampleGain] = SpkLayout.ToQ16(settings.Gain);
+            words[SpkLayout.SampleAudio] = audioId;
+            words[SpkLayout.SampleLoop] = settings.Loop ? 1u : 0u;
             samples.Add(new SpkBankRecord
             {
                 Id = sampleId, Type = SpkRecordType.TransformedFixed128, Kind = (uint)SpkResourceKind.Sample, Words = words,
@@ -90,12 +90,12 @@ public sealed class SpkNewCommand : CliCommand<SpkNewCommand.Settings>
             bank.Records.Add(new SpkBankRecord
             {
                 Id = randomId, Type = SpkRecordType.TransformedFixed128, Kind = (uint)SpkResourceKind.Random,
-                Words = new uint[SpkLayout.ResourceWords],
-                Entries = [.. samples.Select(s => new SpkEntry(s.Id, (uint)(0x10000 / samples.Count)))],
+                Words = SpkLayout.Random.NewWords(),
+                Entries = [.. samples.Select(s => new SpkEntry(s.Id, SpkLayout.One / (uint)samples.Count))],
             });
         }
 
-        uint[] play = Words(SpkLayout.Play, SpkLayout.EventWords, likePlay);
+        uint[] play = Words(SpkLayout.Play, likePlay);
         play[2] = random ?? samples[0].Id;
         play[7] = settings.Rolloff is { } rolloff ? SpkFormat.ParseRecordId(rolloff) : likePlay?.Word(7) ?? SpkLayout.NoId;
         bank.Records.Add(new SpkBankRecord
@@ -111,20 +111,14 @@ public sealed class SpkNewCommand : CliCommand<SpkNewCommand.Settings>
     }
 
     /// <summary>A layout's defaults, with a template record's unnamed words over them.</summary>
-    private static uint[] Words(SpkLayout layout, int count, SpkBankRecord? like)
+    private static uint[] Words(SpkLayout layout, SpkBankRecord? like)
     {
-        uint[] words = new uint[count];
-        foreach ((int index, uint value) in layout.Defaults)
+        uint[] words = layout.NewWords();
+        for (int i = 0; like is not null && i < words.Length; i++)
         {
-            words[index] = value;
-        }
-
-        if (like is not null)
-        {
-            var named = layout.Fields.Select(f => f.Index).Concat(layout.Derived).ToHashSet();
-            for (int i = 0; i < count; i++)
+            if (!layout.IsNamed(i))
             {
-                words[i] = named.Contains(i) ? words[i] : like.Word(i);
+                words[i] = like.Word(i);
             }
         }
         return words;

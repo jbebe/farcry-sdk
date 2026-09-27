@@ -1,3 +1,4 @@
+using JackAll.Cli.Infrastructure;
 using JackAll.Tools.Audio;
 using JackAll.Tools.Sbao;
 using JackAll.Tools.Spk;
@@ -20,14 +21,8 @@ internal static class SpkFormat
     {
         null => "(malformed)",
         { Type: SpkRecordType.FlatCopy } => "Audio",
-        { Type: SpkRecordType.TransformedFixed128 } => r.TransformedFixed128?.Kind switch
-        {
-            (uint)SpkResourceKind.Sample => "Sample",
-            (uint)SpkResourceKind.Switch => "Switch",
-            (uint)SpkResourceKind.Random => "Random",
-            (uint)SpkResourceKind.Multilayer => "Multilayer",
-            var kind => $"Resource (kind {kind})",
-        },
+        { Type: SpkRecordType.TransformedFixed128 } when r.TransformedFixed128 is { Kind: var kind } =>
+            SpkLayout.ForResource(kind) is { Kind: not null, Element: var element } ? element : $"Resource (kind {kind})",
         { Type: SpkRecordType.SimpleFixed68 } => r.SimpleFixed68?.KnownEventType switch
         {
             SpkEventType.List => "Event list",
@@ -108,8 +103,7 @@ internal static class SpkFormat
 
     /// <summary>The id a bank file is loaded by, from its name (<c>004569c9.spk</c>), or null for any other name.</summary>
     public static uint? BankId(string path) =>
-        uint.TryParse(Path.GetFileNameWithoutExtension(path), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint id)
-        && Path.GetFileNameWithoutExtension(path).Length == 8 ? id : null;
+        Path.GetFileNameWithoutExtension(path) is { Length: 8 } stem ? CliIO.TryParseHash(stem) : null;
 
     /// <summary>Prints what <see cref="SpkBankLint"/> found; false when any of it is an error.</summary>
     public static bool Report(IReadOnlyList<SpkProblem> problems)

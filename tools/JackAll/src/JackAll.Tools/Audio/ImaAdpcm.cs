@@ -69,6 +69,9 @@ public static class ImaAdpcm
         public required int Channels { get; init; }
     }
 
+    /// <summary>The channel count a stream's header declares.</summary>
+    public static int Channels(ReadOnlySpan<byte> stream) => stream[ChannelFlagOffset] != 0 ? 2 : 1;
+
     /// <summary>
     /// Parses the 28-byte `TImaAdpcm` stream header and decodes every packed nibble that follows it.
     /// Throws if the version byte isn't <see cref="ExpectedVersion"/> - matching the engine's own
@@ -90,7 +93,7 @@ public static class ImaAdpcm
                 $"TImaAdpcm: IMA-ADPCM version seems to be too old (got {version}, expected {ExpectedVersion}).");
         }
 
-        bool stereo = stream[ChannelFlagOffset] != 0;
+        bool stereo = Channels(stream) == 2;
         short predictorA = (short)BinaryPrimitives.ReadUInt16LittleEndian(stream.AsSpan(PredictorAOffset));
         int stepIndexA = stream[StepIndexAOffset];
 

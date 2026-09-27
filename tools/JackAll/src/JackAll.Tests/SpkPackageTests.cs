@@ -145,7 +145,6 @@ public class SpkPackageTests
         }
     }
 
-
     [Fact]
     public void ReplaceRecordPayload_rejects_an_id_not_present_in_the_file()
     {

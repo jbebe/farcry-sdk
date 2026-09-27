@@ -49,7 +49,6 @@ public sealed class SpkImportCommand : CliCommand<SpkImportCommand.Settings>
             throw new InvalidDataException($"Record 0x{id:x8} is not audio - only FlatCopy records hold audio.");
         }
 
-        SpkBankRecord[] samples = [.. bank.Records.Where(r => r.Layout == SpkLayout.Sample && r.Word(7) == id)];
         byte[] replacement = CliIO.ReadInput(settings.AudioFile);
         if (current.Ogg)
         {
@@ -58,22 +57,18 @@ public sealed class SpkImportCommand : CliCommand<SpkImportCommand.Settings>
                     $"Record 0x{id:x8} is Ogg-backed, but the replacement file isn't a recognizable Ogg Vorbis " +
                     "stream - this CLI doesn't transcode.");
             WarnIfChanged(current.SampleRate, current.Channels, vorbis.SampleRate, vorbis.Channels);
-            audio.Data = replacement;
+            bank.ReplaceAudio(audio, replacement, null);
         }
         else
         {
             WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(replacement);
             WarnIfChanged(current.SampleRate, current.Channels, pcm.SampleRate, pcm.Channels);
-            audio.Data = ImaAdpcm.Encode(pcm.Samples, pcm.Channels, looping: samples.Any(s => s.Word(13) == 1));
-            audio.SampleRate = pcm.SampleRate;
-        }
-
-        foreach (SpkBankRecord sample in samples)
-        {
-            sample.Pins.Clear();
+            bool looping = bank.SamplesPlaying(id).Any(s => s.Word(SpkLayout.SampleLoop) == 1);
+            bank.ReplaceAudio(audio, ImaAdpcm.Encode(pcm.Samples, pcm.Channels, looping), pcm.SampleRate);
         }
 
         byte[] patched = bank.Write();
+        // A read-back check, as encode does: a bank that fails to parse is never written.
         SpkBank.Parse(patched);
         string outPath = settings.Out ?? settings.Input;
         CliIO.WriteOutput(outPath, patched);

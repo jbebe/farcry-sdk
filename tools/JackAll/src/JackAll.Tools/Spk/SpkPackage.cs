@@ -404,7 +404,8 @@ public sealed class SpkPackage
         AudioDescriptorRecord(flatCopyRecord)?.TransformedFixed128;
 
     private SpkRecord? AudioDescriptorRecord(SpkRecord flatCopyRecord) =>
-        Records.FirstOrDefault(r => r.TransformedFixed128?.FlatCopySiblingId == flatCopyRecord.Id);
+        Records.FirstOrDefault(r => r.TransformedFixed128 is { Kind: (uint)SpkResourceKind.Sample } t128
+            && t128.FlatCopySiblingId == flatCopyRecord.Id);
 
     /// <summary>Whether a <see cref="SpkRecordType.FlatCopy"/> record's audio length matches its
     /// descriptor's <see cref="TransformedFixed128SubHeader.AudioByteLength"/>; null without a

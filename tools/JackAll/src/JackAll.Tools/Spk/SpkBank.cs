@@ -1,5 +1,6 @@
 using System.Buffers.Binary;
 using System.Security.Cryptography;
+using JackAll.Core.Format;
 using JackAll.Tools.Audio;
 using JackAll.Tools.Sbao;
 
@@ -82,34 +83,28 @@ public sealed class SpkBankRecord
 
     public SpkLayout? Layout => IsEvent ? SpkLayout.ForEvent(Kind) : IsResource ? SpkLayout.ForResource(Kind) : null;
 
+    /// <summary>The XML element this record is written as.</summary>
+    public string Element => Raw ? "Record" : IsAudio ? "Audio" : IsRolloff ? "Rolloff" : Layout!.Element;
+
     public uint Word(int index) => index < Words.Length ? Words[index] : 0;
 
     /// <summary>The ids this record points at, and what each should be.</summary>
     public IEnumerable<(uint Id, SpkReference Kind)> References()
     {
-        SpkLayout? layout = Layout;
-        IEnumerable<(uint, SpkReference)> links = layout switch
+        if (Layout is not { } layout)
         {
-            _ when layout == SpkLayout.Play => [(Word(2), SpkReference.Resource), (Word(7), SpkReference.Rolloff)],
-            _ when layout == SpkLayout.StopNGo => [(Word(2), SpkReference.Event), (Word(3), SpkReference.Event)],
-            _ when layout == SpkLayout.SwitchEvent => [(Word(4), SpkReference.Event), .. Children(SpkReference.Event)],
-            _ when layout == SpkLayout.MultiEvent => Children(SpkReference.Event),
-            _ when layout == SpkLayout.OtherEvent => Kind switch
-            {
-                (uint)SpkEventType.NoOpLinked => [(Word(2), SpkReference.Event)],
-                5 or 6 or 7 or 9 => [(Word(2), SpkReference.Resource)],
-                _ => [],
-            },
-            _ when layout == SpkLayout.Sample => [(Word(7), SpkReference.Audio)],
-            _ when layout == SpkLayout.Switch => [(Word(9), SpkReference.Resource), .. Children(SpkReference.Resource)],
-            _ when layout == SpkLayout.Random => Children(SpkReference.Resource),
-            _ when layout == SpkLayout.Multilayer => Layers.Select(l => (l.Resource, SpkReference.Resource)),
-            _ => [],
-        };
-        return links.Where(l => l.Item1 is not (0 or SpkLayout.NoId));
-    }
+            return [];
+        }
 
-    private IEnumerable<(uint, SpkReference)> Children(SpkReference kind) => Entries.Select(e => (e.Ref, kind));
+        IEnumerable<(uint, SpkReference)> fields = layout.Fields
+            .Select(f => (f.Index, Refers: f.Refers ?? (layout == SpkLayout.OtherEvent ? SpkLayout.TargetOf(Kind) : null)))
+            .Where(f => f.Refers is not null)
+            .Select(f => (Word(f.Index), f.Refers!.Value));
+        IEnumerable<(uint, SpkReference)> children = layout.Children is { } shape
+            ? Entries.Select(e => (e.Ref, shape.Refers))
+            : Layers.Select(l => (l.Resource, SpkReference.Resource));
+        return fields.Concat(children).Where(l => l.Item1 is not (0 or SpkLayout.NoId));
+    }
 }
 
 /// <summary>
@@ -141,6 +136,24 @@ public sealed class SpkBank
 
     public SpkBankRecord? Find(uint id) => Records.Find(r => r.Id == id);
 
+    /// <summary>The samples that play an audio record.</summary>
+    public IEnumerable<SpkBankRecord> SamplesPlaying(uint audioId) =>
+        Records.Where(r => r.Layout == SpkLayout.Sample && r.Word(SpkLayout.SampleAudio) == audioId);
+
+    /// <summary>Swaps an audio record's stream; the samples playing it re-derive their audio words from it.</summary>
+    public void ReplaceAudio(SpkBankRecord audio, byte[] stream, int? sampleRate)
+    {
+        audio.Data = stream;
+        audio.SampleRate = sampleRate;
+        foreach (SpkBankRecord sample in SamplesPlaying(audio.Id))
+        {
+            foreach (int index in SpkLayout.Sample.Derived)
+            {
+                sample.Pins.Remove(index);
+            }
+        }
+    }
+
     public static SpkBank Parse(byte[] data)
     {
         SpkPackage package = SpkPackage.Parse(data);
@@ -156,12 +169,9 @@ public sealed class SpkBank
         }
 
         // An IMA-ADPCM stream's rate lives only in the samples that play it.
-        foreach (SpkBankRecord sample in bank.Records.Where(r => r.Layout == SpkLayout.Sample))
+        foreach (SpkBankRecord audio in bank.Records.Where(r => DescribeAudio(r) is { Ogg: false }))
         {
-            if (bank.Find(sample.Word(7)) is { IsAudio: true } audio && DescribeAudio(audio) is { Ogg: false })
-            {
-                audio.SampleRate ??= (int)sample.Word(SpkLayout.SampleRate);
-            }
+            audio.SampleRate = bank.SamplesPlaying(audio.Id).Select(s => (int?)s.Word(SpkLayout.SampleRate)).FirstOrDefault();
         }
 
         for (int i = 0; i < bank.Records.Count; i++)
@@ -173,28 +183,28 @@ public sealed class SpkBank
 
     public byte[] Write()
     {
-        var output = new List<byte>();
-        Append(output, SpkPackage.Magic);
-        Append(output, (uint)Records.Count);
-        Records.ForEach(r => Append(output, r.Id));
+        var output = new ByteWriter();
+        output.WriteU32(SpkPackage.Magic);
+        output.WriteU32((uint)Records.Count);
+        Records.ForEach(r => output.WriteU32(r.Id));
         foreach (SpkBankRecord record in Records)
         {
             uint[] preamble = record.Preamble ?? Preamble;
-            Append(output, (uint)preamble.Length);
-            Array.ForEach(preamble, w => Append(output, w));
+            output.WriteU32((uint)preamble.Length);
+            output.WriteU32Array(preamble);
             byte[] payload = Payload(record);
-            Append(output, (uint)payload.Length);
-            output.AddRange(payload);
-            output.AddRange(new byte[(4 - output.Count % 4) % 4]);
+            output.WriteU32((uint)payload.Length);
+            output.WriteRaw(payload);
+            output.Align(4, AlignFill.Zero);
         }
-        return [.. output];
+        return output.ToArray();
     }
 
     /// <summary>The words <see cref="Write"/> stores for this record: its own, then the derived ones, then its pins.</summary>
     public uint[] DerivedWords(SpkBankRecord record)
     {
         SpkLayout layout = record.Layout ?? throw new InvalidOperationException("Only events and resources have words.");
-        uint[] words = new uint[record.IsEvent ? SpkLayout.EventWords : SpkLayout.ResourceWords];
+        uint[] words = new uint[layout.WordCount];
         record.Words.AsSpan(0, Math.Min(record.Words.Length, words.Length)).CopyTo(words);
         foreach (int index in layout.Derived)
         {
@@ -203,22 +213,13 @@ public sealed class SpkBank
 
         words[0] = record.Id;
         words[1] = record.Kind;
-        int children = record.Layers.Count + record.Entries.Count;
-        if (layout == SpkLayout.MultiEvent)
+        if (layout.ChildCount is { } count)
         {
-            words[3] = (uint)children;
+            words[count] = (uint)(record.Entries.Count + record.Layers.Count);
         }
-        else if (layout == SpkLayout.SwitchEvent)
+        if (layout == SpkLayout.Sample)
         {
-            words[6] = (uint)children;
-        }
-        else if (layout == SpkLayout.Sample)
-        {
-            DeriveSample(words, Find(words[7]));
-        }
-        else if (layout.Derived.Contains(7))
-        {
-            words[7] = (uint)children;
+            DeriveSample(words, Find(words[SpkLayout.SampleAudio]));
         }
 
         foreach ((int index, uint value) in record.Pins)
@@ -228,7 +229,7 @@ public sealed class SpkBank
         return words;
     }
 
-    /// <summary>What a sample's audio record holds, or null when it is not an audio record in this bank.</summary>
+    /// <summary>What a sample's audio record holds, or null when it is not an audio record.</summary>
     public static (bool Ogg, int Channels, int SampleRate, long Frames)? DescribeAudio(SpkBankRecord? audio)
     {
         if (audio is not { IsAudio: true, Data: var data })
@@ -245,12 +246,12 @@ public sealed class SpkBank
         {
             return null;
         }
-        int channels = data[0x0C] == 0 ? 1 : 2;
+        int channels = ImaAdpcm.Channels(data);
         long frames = Math.Max(0, (data.Length - ImaAdpcm.HeaderSize) * 2L / channels - ImaFrameShortfall);
         return (false, channels, audio.SampleRate ?? 0, frames);
     }
 
-    private void DeriveSample(uint[] words, SpkBankRecord? audio)
+    private static void DeriveSample(uint[] words, SpkBankRecord? audio)
     {
         if (DescribeAudio(audio) is not { } info)
         {
@@ -259,7 +260,7 @@ public sealed class SpkBank
 
         uint length = (uint)audio!.Data.Length;
         uint frames = (uint)info.Frames;
-        bool loop = words[13] == 1;
+        bool loop = words[SpkLayout.SampleLoop] == 1;
         words[SpkLayout.SampleByteLength] = length;
         words[SpkLayout.SampleChannels] = (uint)info.Channels;
         words[SpkLayout.SampleRate] = (uint)info.SampleRate;
@@ -287,40 +288,40 @@ public sealed class SpkBank
     private static SpkBankRecord Read(SpkRecord record)
     {
         byte[] payload = record.Payload;
-        var read = new SpkBankRecord { Id = record.Id, Type = (SpkRecordType)(record.Core?.RawType ?? 0) };
-        bool standard = record.Core is { HasStandardDeclaredSize: true, ReservedZero18: 0, ReservedZero1C: 0, ReservedTwo24: CoreTrailer }
-            && BinaryPrimitives.ReadUInt32LittleEndian(payload) == CoreMagic;
-        byte[] body = standard ? payload[SpkRecordCore.Size..] : [];
-        read.Key = standard ? payload[KeyOffset..(KeyOffset + KeyLength)] : null;
-
-        bool understood = standard && read.Type switch
+        var type = (SpkRecordType)(record.Core?.RawType ?? 0);
+        var raw = new SpkBankRecord { Id = record.Id, Type = type, Raw = true, Data = payload };
+        if (record.Core is not { HasStandardDeclaredSize: true, ReservedZero18: 0, ReservedZero1C: 0, ReservedTwo24: CoreTrailer }
+            || ByteCursor.U32(payload, 0) != CoreMagic)
         {
-            SpkRecordType.FlatCopy => Assign(() => read.Data = body),
+            return raw;
+        }
+
+        var read = new SpkBankRecord { Id = record.Id, Type = type, Key = payload[KeyOffset..(KeyOffset + KeyLength)] };
+        byte[] body = payload[SpkRecordCore.Size..];
+        bool understood = type switch
+        {
+            SpkRecordType.FlatCopy => ReadAudio(read, body),
             SpkRecordType.SelfReferential => ReadRolloff(read, body),
             SpkRecordType.SimpleFixed68 => ReadWords(read, body, SpkLayout.EventWords),
             SpkRecordType.TransformedFixed128 => ReadWords(read, body, SpkLayout.ResourceWords),
             _ => false,
         };
-        if (!understood)
-        {
-            return new SpkBankRecord { Id = record.Id, Type = read.Type, Raw = true, Data = payload };
-        }
-        return read;
+        return understood ? read : raw;
     }
 
-    private static bool Assign(Action set)
+    private static bool ReadAudio(SpkBankRecord read, byte[] body)
     {
-        set();
+        read.Data = body;
         return true;
     }
 
     private static bool ReadRolloff(SpkBankRecord read, byte[] body)
     {
-        if (body.Length < 8 || U32(body, 0) != 0 || U32(body, 4) * (long)PointSize != body.Length - 8)
+        if (body.Length < 8 || ByteCursor.U32(body, 0) != 0 || ByteCursor.U32(body, 4) * (long)PointSize != body.Length - 8)
         {
             return false;
         }
-        read.Points = [.. Enumerable.Range(0, (int)U32(body, 4)).Select(i => Point(body, 8 + i * PointSize))];
+        read.Points = [.. Enumerable.Range(0, (int)ByteCursor.U32(body, 4)).Select(i => Point(body, 8 + i * PointSize))];
         return true;
     }
 
@@ -331,7 +332,7 @@ public sealed class SpkBank
             return false;
         }
 
-        read.Words = [.. Enumerable.Range(0, wordCount).Select(i => U32(body, i * 4))];
+        read.Words = [.. Enumerable.Range(0, wordCount).Select(i => ByteCursor.U32(body, i * 4))];
         read.Kind = read.Words[1];
         byte[] tail = body[(wordCount * 4)..];
         if (!ReadChildren(read, tail) && tail.Length > 0)
@@ -345,18 +346,14 @@ public sealed class SpkBank
     private static bool ReadChildren(SpkBankRecord read, byte[] tail)
     {
         SpkLayout layout = read.Layout!;
-        int stride = layout == SpkLayout.MultiEvent ? 4
-            : layout == SpkLayout.SwitchEvent ? 12
-            : layout == SpkLayout.Switch ? 8
-            : layout == SpkLayout.Random ? 16
-            : 0;
-        if (stride != 0)
+        if (layout.Children is { } shape)
         {
-            if (tail.Length % stride != 0)
+            if (tail.Length % shape.Stride != 0)
             {
                 return false;
             }
-            read.Entries = [.. Enumerable.Range(0, tail.Length / stride).Select(i => Entry(layout, tail, i * stride))];
+            read.Entries = [.. Enumerable.Range(0, tail.Length / shape.Stride).Select(i => i * shape.Stride).Select(at =>
+                new SpkEntry(ByteCursor.U32(tail, at), Column(tail, at, shape.ValueAt), Column(tail, at, shape.ExtraAt)))];
             return true;
         }
 
@@ -376,22 +373,18 @@ public sealed class SpkBank
         }
     }
 
-    private static SpkEntry Entry(SpkLayout layout, byte[] tail, int at) =>
-        layout == SpkLayout.MultiEvent ? new SpkEntry(U32(tail, at))
-        : layout == SpkLayout.SwitchEvent ? new SpkEntry(U32(tail, at), U32(tail, at + 8))
-        : layout == SpkLayout.Switch ? new SpkEntry(U32(tail, at), U32(tail, at + 4))
-        : new SpkEntry(U32(tail, at), U32(tail, at + 4), U32(tail, at + 8));
+    private static uint Column(byte[] tail, int entry, int at) => at < 0 ? 0 : ByteCursor.U32(tail, entry + at);
 
     private static SpkLayer Layer(byte[] tail, int at)
     {
-        uint curveCount = U32(tail, at + 4);
-        int curves = (int)U32(tail, at + 8);
-        return new SpkLayer(U32(tail, at), [.. Enumerable.Range(0, (int)curveCount).Select(j =>
+        uint curveCount = ByteCursor.U32(tail, at + 4);
+        int curves = (int)ByteCursor.U32(tail, at + 8);
+        return new SpkLayer(ByteCursor.U32(tail, at), [.. Enumerable.Range(0, (int)curveCount).Select(j =>
         {
             int curve = curves + j * CurveSize;
-            int points = (int)U32(tail, curve + 12);
-            return new SpkCurve(U32(tail, curve), U32(tail, curve + 4),
-                [.. Enumerable.Range(0, (int)U32(tail, curve + 8)).Select(k => Point(tail, points + k * PointSize))]);
+            int points = (int)ByteCursor.U32(tail, curve + 12);
+            return new SpkCurve(ByteCursor.U32(tail, curve), ByteCursor.U32(tail, curve + 4),
+                [.. Enumerable.Range(0, (int)ByteCursor.U32(tail, curve + 8)).Select(k => Point(tail, points + k * PointSize))]);
         })]);
     }
 
@@ -429,31 +422,31 @@ public sealed class SpkBank
             return record.Data;
         }
 
-        var payload = new List<byte>();
-        Append(payload, CoreMagic);
-        Append(payload, (uint)SpkRecordCore.Size);
-        payload.AddRange(record.Key ?? DerivedKey(record.Id));
-        Append(payload, 0);
-        Append(payload, 0);
-        Append(payload, (uint)record.Type);
-        Append(payload, CoreTrailer);
+        var payload = new ByteWriter();
+        payload.WriteU32(CoreMagic);
+        payload.WriteU32(SpkRecordCore.Size);
+        payload.WriteRaw(record.Key ?? DerivedKey(record.Id));
+        payload.WriteU32(0);
+        payload.WriteU32(0);
+        payload.WriteU32((uint)record.Type);
+        payload.WriteU32(CoreTrailer);
 
         if (record.IsAudio)
         {
-            payload.AddRange(record.Data);
+            payload.WriteRaw(record.Data);
         }
         else if (record.IsRolloff)
         {
-            Append(payload, 0);
-            Append(payload, (uint)record.Points.Count);
-            record.Points.ForEach(p => AppendPoint(payload, p));
+            payload.WriteU32(0);
+            payload.WriteU32((uint)record.Points.Count);
+            record.Points.ForEach(p => WritePoint(payload, p));
         }
         else
         {
-            Array.ForEach(DerivedWords(record), w => Append(payload, w));
-            payload.AddRange(Tail(record));
+            payload.WriteU32Array(DerivedWords(record));
+            payload.WriteRaw(Tail(record));
         }
-        return [.. payload];
+        return payload.ToArray();
     }
 
     private static byte[] Tail(SpkBankRecord record)
@@ -463,54 +456,46 @@ public sealed class SpkBank
             return stored;
         }
 
-        var tail = new List<byte>();
-        SpkLayout layout = record.Layout!;
-        foreach (SpkEntry entry in record.Entries)
+        var tail = new ByteWriter();
+        if (record.Layout!.Children is { } shape)
         {
-            Append(tail, entry.Ref);
-            if (layout == SpkLayout.SwitchEvent)
+            foreach (SpkEntry entry in record.Entries)
             {
-                Append(tail, 0);
-                Append(tail, entry.Value);
+                byte[] row = new byte[shape.Stride];
+                BinaryPrimitives.WriteUInt32LittleEndian(row, entry.Ref);
+                if (shape.ValueAt >= 0)
+                {
+                    BinaryPrimitives.WriteUInt32LittleEndian(row.AsSpan(shape.ValueAt), entry.Value);
+                }
+                if (shape.ExtraAt >= 0)
+                {
+                    BinaryPrimitives.WriteUInt32LittleEndian(row.AsSpan(shape.ExtraAt), entry.Extra);
+                }
+                tail.WriteRaw(row);
             }
-            else if (layout == SpkLayout.Switch)
-            {
-                Append(tail, entry.Value);
-            }
-            else if (layout == SpkLayout.Random)
-            {
-                Append(tail, entry.Value);
-                Append(tail, entry.Extra);
-                Append(tail, 0);
-            }
+            return tail.ToArray();
         }
 
         // Layers, then every curve in layer order, then every point; offsets count from the tail's start.
         int curveStart = record.Layers.Count * LayerSize;
         int pointStart = curveStart + record.Layers.Sum(l => l.Curves.Count) * CurveSize;
-        var curves = new List<byte>();
-        var points = new List<byte>();
+        var curves = new ByteWriter();
+        var points = new ByteWriter();
         foreach (SpkLayer layer in record.Layers)
         {
-            Append(tail, layer.Resource);
-            Append(tail, (uint)layer.Curves.Count);
-            Append(tail, (uint)(curveStart + curves.Count));
-            Append(tail, SpkLayout.NoId);
-            Append(tail, 0);
-            Append(tail, 0);
-            Append(tail, 0);
+            tail.WriteU32(layer.Resource);
+            tail.WriteU32((uint)layer.Curves.Count);
+            tail.WriteU32((uint)(curveStart + curves.Length));
+            tail.WriteU32Array([SpkLayout.NoId, 0, 0, 0]);
             foreach (SpkCurve curve in layer.Curves)
             {
-                Append(curves, curve.Target);
-                Append(curves, curve.Parameter);
-                Append(curves, (uint)curve.Points.Count);
-                Append(curves, (uint)(pointStart + points.Count));
-                Append(curves, 0);
-                Append(curves, 0);
-                curve.Points.ForEach(p => AppendPoint(points, p));
+                curves.WriteU32Array([curve.Target, curve.Parameter, (uint)curve.Points.Count, (uint)(pointStart + points.Length), 0, 0]);
+                curve.Points.ForEach(p => WritePoint(points, p));
             }
         }
-        return [.. tail, .. curves, .. points];
+        tail.WriteRaw(curves.ToArray());
+        tail.WriteRaw(points.ToArray());
+        return tail.ToArray();
     }
 
     /// <summary>Stands in for the unidentified core bytes of a new record: stable per id, so a rebuild is identical.</summary>
@@ -521,22 +506,11 @@ public sealed class SpkBank
         return SHA256.HashData(bytes)[..KeyLength];
     }
 
-    private static uint U32(byte[] data, int at) => BinaryPrimitives.ReadUInt32LittleEndian(data.AsSpan(at, 4));
+    private static SpkPoint Point(byte[] data, int at) => new(ByteCursor.F32(data, at), ByteCursor.F32(data, at + 4));
 
-    private static SpkPoint Point(byte[] data, int at) => new(
-        BinaryPrimitives.ReadSingleLittleEndian(data.AsSpan(at, 4)),
-        BinaryPrimitives.ReadSingleLittleEndian(data.AsSpan(at + 4, 4)));
-
-    private static void Append(List<byte> output, uint value)
+    private static void WritePoint(ByteWriter output, SpkPoint point)
     {
-        Span<byte> bytes = stackalloc byte[4];
-        BinaryPrimitives.WriteUInt32LittleEndian(bytes, value);
-        output.AddRange(bytes);
-    }
-
-    private static void AppendPoint(List<byte> output, SpkPoint point)
-    {
-        Append(output, BitConverter.SingleToUInt32Bits(point.X));
-        Append(output, BitConverter.SingleToUInt32Bits(point.Y));
+        output.WriteF32(point.X);
+        output.WriteF32(point.Y);
     }
 }

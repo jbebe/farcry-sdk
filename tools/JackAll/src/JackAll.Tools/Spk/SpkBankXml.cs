@@ -21,8 +21,6 @@ public static partial class SpkBankXml
     /// <summary>A raw blob larger than this goes to a file instead of a hex attribute.</summary>
     private const int InlineBytesLimit = 4096;
 
-    private const double WeightOne = 0x10000;
-
     /// <summary>Weights summing to within this of 1.0 are probabilities rather than relative weights.</summary>
     private const double ProbabilityTolerance = 0.001;
 
@@ -68,7 +66,7 @@ public static partial class SpkBankXml
         // A .wav loops seamlessly only when encoded knowing it loops, which the samples playing it say.
         foreach ((SpkBankRecord audio, WavAudio.Pcm16Audio pcm) in wavs)
         {
-            bool looping = bank.Records.Any(r => r.Layout == SpkLayout.Sample && r.Word(7) == audio.Id && r.Word(13) == 1);
+            bool looping = bank.SamplesPlaying(audio.Id).Any(s => s.Word(SpkLayout.SampleLoop) == 1);
             audio.Data = ImaAdpcm.Encode(pcm.Samples, pcm.Channels, looping);
             audio.SampleRate = pcm.SampleRate;
         }
@@ -81,12 +79,7 @@ public static partial class SpkBankXml
 
     private static XElement ToElement(SpkBankRecord record, Action<string, byte[]> writeFile)
     {
-        SpkLayout? layout = record.Layout;
-        string name = record.Raw ? "Record"
-            : record.IsAudio ? "Audio"
-            : record.IsRolloff ? "Rolloff"
-            : layout!.Element;
-        var element = new XElement(name, new XAttribute("id", Id(record.Id)));
+        var element = new XElement(record.Element, new XAttribute("id", Id(record.Id)));
         if (record.Raw)
         {
             element.Add(new XAttribute("type", Id((uint)record.Type)));
@@ -125,16 +118,13 @@ public static partial class SpkBankXml
             return element;
         }
 
-        if (layout == SpkLayout.OtherEvent)
+        SpkLayout layout = record.Layout!;
+        if (layout.KindAttribute is { } kindAttribute)
         {
-            element.Add(new XAttribute("type", record.Kind));
-        }
-        else if (layout == SpkLayout.OtherResource)
-        {
-            element.Add(new XAttribute("kind", record.Kind));
+            element.Add(new XAttribute(kindAttribute, record.Kind));
         }
 
-        foreach (SpkWordField field in layout!.Fields.Where(f => f.Format != SpkWordFormat.Weight))
+        foreach (SpkWordField field in layout.Fields.Where(f => f.Format != SpkWordFormat.Weight))
         {
             uint value = record.Word(field.Index);
             if (value != layout.Default(field.Index))
@@ -143,11 +133,10 @@ public static partial class SpkBankXml
             }
         }
 
-        var named = layout.Fields.Select(f => f.Index).Concat(layout.Derived).ToHashSet();
         for (int i = 0; i < record.Words.Length; i++)
         {
             uint? value = record.Pins.TryGetValue(i, out uint pin) ? pin
-                : !named.Contains(i) && record.Words[i] != layout.Default(i) ? record.Words[i]
+                : !layout.IsNamed(i) && record.Words[i] != layout.Default(i) ? record.Words[i]
                 : null;
             if (value is { } word)
             {
@@ -167,10 +156,12 @@ public static partial class SpkBankXml
             return element;
         }
 
-        element.Add(record.Entries.Select(e =>
-            layout == SpkLayout.MultiEvent ? new XElement("Child", new XAttribute("event", Id(e.Ref)))
-            : layout == SpkLayout.SwitchEvent ? new XElement("Case", new XAttribute("value", Id(e.Value)), new XAttribute("event", Id(e.Ref)))
-            : new XElement("Case", new XAttribute("value", Id(e.Value)), new XAttribute("resource", Id(e.Ref)))));
+        if (layout.Children is { } shape)
+        {
+            element.Add(record.Entries.Select(e => new XElement(shape.Element,
+                shape.ValueAt >= 0 ? new XAttribute("value", Id(e.Value)) : null,
+                new XAttribute(shape.RefAttribute, Id(e.Ref)))));
+        }
         element.Add(record.Layers.Select(l => new XElement("Layer", new XAttribute("resource", Id(l.Resource)),
             l.Curves.Select(c => new XElement("Curve",
                 new XAttribute("target", c.Target switch { 0 => "volume", 1 => "pitch", _ => c.Target.ToString(Invariant) }),
@@ -189,7 +180,7 @@ public static partial class SpkBankXml
         uint[] raw = [.. record.Entries.Select(e => e.Value)];
         int slots = raw.Length + (silence == 0 ? 0 : 1);
         bool equal = raw.Length > 0 && raw.All(w => w == raw[0]) && (silence == 0 || silence == raw[0])
-            && raw[0] == (uint)(WeightOne / slots);
+            && raw[0] == SpkLayout.One / (uint)slots;
 
         string?[] weights;
         string? silenceText;
@@ -222,7 +213,7 @@ public static partial class SpkBankXml
         }
     }
 
-    private static string Probability(uint raw) => (raw / WeightOne).ToString("0.######", Invariant);
+    private static string Probability(uint raw) => (raw / (double)SpkLayout.One).ToString("0.######", Invariant);
 
     /// <summary>Q16.16 weights for the entries and then silence: raw when written as hex, else
     /// probabilities when they sum to 1.0, else relative weights normalized to 1.0.</summary>
@@ -241,8 +232,8 @@ public static partial class SpkBankXml
             throw new InvalidDataException("A random container's weights must be non-negative and not all zero.");
         }
         return Math.Abs(total - 1) <= ProbabilityTolerance
-            ? [.. values.Select(v => (uint)Math.Round(v * WeightOne))]
-            : [.. values.Select(v => (uint)Math.Floor(v * WeightOne / total))];
+            ? [.. values.Select(v => (uint)Math.Round(v * SpkLayout.One))]
+            : [.. values.Select(v => (uint)Math.Floor(v * SpkLayout.One / total))];
     }
 
     private static SpkBankRecord FromElement(AttributeReader reader, Func<string, byte[]> readFile,
@@ -296,13 +287,11 @@ public static partial class SpkBankXml
             return record;
         }
 
-        (SpkLayout layout, bool isEvent) = LayoutOf(name, reader, record);
-        record.Type = isEvent ? SpkRecordType.SimpleFixed68 : SpkRecordType.TransformedFixed128;
-        record.Words = new uint[isEvent ? SpkLayout.EventWords : SpkLayout.ResourceWords];
-        foreach ((int index, uint value) in layout.Defaults)
-        {
-            record.Words[index] = value;
-        }
+        SpkLayout layout = SpkLayout.All.FirstOrDefault(l => l.Element == name)
+            ?? throw new InvalidDataException($"<{name}> is not a sound bank record.");
+        record.Type = layout.IsEvent ? SpkRecordType.SimpleFixed68 : SpkRecordType.TransformedFixed128;
+        record.Kind = layout.Kind ?? ParseUInt(reader.Required(layout.KindAttribute!));
+        record.Words = layout.NewWords();
 
         foreach (SpkWordField field in layout.Fields.Where(f => f.Format != SpkWordFormat.Weight))
         {
@@ -347,15 +336,10 @@ public static partial class SpkBankXml
             record.Entries = [.. choices.Select((c, i) => new SpkEntry(ParseUInt(c.Required("resource")), raw[i],
                 c.Optional("w2") is { } extra ? ParseUInt(extra) : 0))];
         }
-        else if (layout == SpkLayout.MultiEvent)
+        else if (layout.Children is { } shape)
         {
-            record.Entries = [.. Children(reader, "Child").Select(c => new SpkEntry(ParseUInt(c.Required("event"))))];
-        }
-        else if (layout == SpkLayout.SwitchEvent || layout == SpkLayout.Switch)
-        {
-            string target = layout == SpkLayout.SwitchEvent ? "event" : "resource";
-            record.Entries = [.. Children(reader, "Case").Select(c =>
-                new SpkEntry(ParseUInt(c.Required(target)), ParseUInt(c.Required("value"))))];
+            record.Entries = [.. Children(reader, shape.Element).Select(c => new SpkEntry(
+                ParseUInt(c.Required(shape.RefAttribute)), shape.ValueAt >= 0 ? ParseUInt(c.Required("value")) : 0))];
         }
         else if (layout == SpkLayout.Multilayer)
         {
@@ -370,33 +354,6 @@ public static partial class SpkBankXml
             throw new InvalidDataException($"<{name} id=\"{Id(id)}\"> takes no child elements.");
         }
         return record;
-    }
-
-    private static (SpkLayout Layout, bool IsEvent) LayoutOf(string name, AttributeReader reader, SpkBankRecord record)
-    {
-        SpkLayout[] events = [SpkLayout.Play, SpkLayout.StopNGo, SpkLayout.SetReverb, SpkLayout.SwitchEvent, SpkLayout.MultiEvent];
-        SpkLayout[] resources = [SpkLayout.Sample, SpkLayout.Switch, SpkLayout.Random, SpkLayout.Multilayer];
-        if (name == SpkLayout.OtherEvent.Element)
-        {
-            record.Kind = ParseUInt(reader.Required("type"));
-            return (SpkLayout.OtherEvent, true);
-        }
-        if (name == SpkLayout.OtherResource.Element)
-        {
-            record.Kind = ParseUInt(reader.Required("kind"));
-            return (SpkLayout.OtherResource, false);
-        }
-        if (events.FirstOrDefault(l => l.Element == name) is { } eventLayout)
-        {
-            record.Kind = (uint)Enumerable.Range(1, 12).First(t => SpkLayout.ForEvent((uint)t) == eventLayout);
-            return (eventLayout, true);
-        }
-        if (resources.FirstOrDefault(l => l.Element == name) is { } resourceLayout)
-        {
-            record.Kind = (uint)Enumerable.Range(1, 8).First(k => SpkLayout.ForResource((uint)k) == resourceLayout);
-            return (resourceLayout, false);
-        }
-        throw new InvalidDataException($"<{name}> is not a sound bank record.");
     }
 
     private static AttributeReader[] Children(AttributeReader parent, string name) =>
@@ -421,14 +378,14 @@ public static partial class SpkBankXml
 
     private static string FormatWord(SpkWordFormat format, uint value) => format switch
     {
-        SpkWordFormat.Q16 => ((int)value / WeightOne).ToString("R", Invariant),
+        SpkWordFormat.Q16 => SpkLayout.FromQ16(value).ToString("R", Invariant),
         SpkWordFormat.Bool => value == 1 ? "true" : Id(value),
         _ => Id(value),
     };
 
     private static uint ParseWord(SpkWordFormat format, string text) => format switch
     {
-        SpkWordFormat.Q16 => (uint)(int)Math.Round(ParseDouble(text) * WeightOne),
+        SpkWordFormat.Q16 => SpkLayout.ToQ16(ParseDouble(text)),
         SpkWordFormat.Bool => text switch { "true" => 1u, "false" => 0u, _ => ParseUInt(text) },
         _ => ParseUInt(text),
     };

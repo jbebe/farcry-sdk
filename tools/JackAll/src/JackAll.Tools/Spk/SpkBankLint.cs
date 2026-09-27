@@ -12,9 +12,6 @@ public sealed record SpkProblem(SpkProblemSeverity Severity, string Message);
 /// <summary>What would make a bank fail or misbehave in game, found before it is built.</summary>
 public static class SpkBankLint
 {
-    private static readonly HashSet<SpkLayout?> Composites =
-        [SpkLayout.MultiEvent, SpkLayout.SwitchEvent, SpkLayout.Switch, SpkLayout.Random, SpkLayout.Multilayer];
-
     /// <param name="bankId">The id the bank is loaded by: the game opens <c>soundbinary\&lt;id&gt;.spk</c>.</param>
     public static IReadOnlyList<SpkProblem> Check(SpkBank bank, uint? bankId)
     {
@@ -30,7 +27,7 @@ public static class SpkBankLint
 
         foreach (SpkBankRecord record in bank.Records)
         {
-            string name = $"{record.Layout?.Element ?? (record.IsAudio ? "Audio" : "Record")} 0x{record.Id:x8}";
+            string name = $"{record.Element} 0x{record.Id:x8}";
             foreach ((uint target, SpkReference kind) in record.References())
             {
                 if (bank.Find(target) is not { } found)
@@ -46,16 +43,20 @@ public static class SpkBankLint
                 }
             }
 
-            if (record.IsAudio && SpkBank.DescribeAudio(record) is null)
+            if (record.IsAudio)
             {
-                Add(SpkProblemSeverity.Error, $"{name} is neither Ogg Vorbis nor an IMA-ADPCM stream.");
-            }
-            else if (record.IsAudio && SpkBank.DescribeAudio(record) is { Ogg: false } && record.SampleRate is null)
-            {
-                Add(SpkProblemSeverity.Error, $"{name} is IMA-ADPCM, which does not carry its sample rate: give it a rate.");
+                switch (SpkBank.DescribeAudio(record))
+                {
+                    case null:
+                        Add(SpkProblemSeverity.Error, $"{name} is neither Ogg Vorbis nor an IMA-ADPCM stream.");
+                        break;
+                    case { Ogg: false } when record.SampleRate is null:
+                        Add(SpkProblemSeverity.Error, $"{name} is IMA-ADPCM, which does not carry its sample rate: give it a rate.");
+                        break;
+                }
             }
 
-            if (Composites.Contains(record.Layout) && record.Tail is null && record.Entries.Count + record.Layers.Count == 0)
+            if (record.Layout?.ChildCount is not null && record.Tail is null && record.Entries.Count + record.Layers.Count == 0)
             {
                 Add(SpkProblemSeverity.Warning, $"{name} has no children, so it plays nothing.");
             }
@@ -97,7 +98,7 @@ public static class SpkBankLint
 
         if (record.Layout == SpkLayout.Sample)
         {
-            if (SpkBank.DescribeAudio(bank.Find(record.Word(7))) is { Channels: > 1 })
+            if (SpkBank.DescribeAudio(bank.Find(record.Word(SpkLayout.SampleAudio))) is { Channels: > 1 })
             {
                 yield return resource;
             }

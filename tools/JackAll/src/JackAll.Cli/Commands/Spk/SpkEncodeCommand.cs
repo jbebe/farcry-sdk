@@ -33,6 +33,7 @@ public sealed class SpkEncodeCommand : CliCommand<SpkEncodeCommand.Settings>
         }
 
         byte[] bytes = bank.Write();
+        // A read-back check: a bank that fails to parse is never written.
         SpkBank.Parse(bytes);
         CliIO.WriteOutput(outPath, bytes);
         CliIO.ReportWrote(outPath);
