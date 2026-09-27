@@ -61,6 +61,9 @@
     <Content Include="..\..\assets\fc2.movenames.tsv" Link=".movenames">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>
+    <Content Include="..\..\assets\ai_tasks.tsv" Link=".aitasks">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
   </ItemGroup>
 
 </Project>

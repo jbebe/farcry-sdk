@@ -226,5 +226,17 @@ Others ship only in the buddy and special-character brains, never in a soldier's
 `CTaskCoverAttack`, `CTaskCheckUsingCover`, `CTaskCheckTargetRange`, `CTaskCheckThreatDistance`,
 `CTaskCheckCombatMercInRadius`, `CScannerAgentIsVisible`, `CScannerVisualThreat`.
 
-Their parameters are not known yet: a task's parameters are read in its `LoadFromXML`, not declared
-in `RegisterProperties`, so each needs its own trace before a brain can use it.
+## Task parameters
+
+A task's parameters are not declared in `RegisterProperties`. Its `LoadFromXML` reads each one by name
+through the workspace serializer, after its base class's `LoadFromXML` has read the inherited ones. The
+getter it calls gives the type: int, uint, float, bool, string, or fact (a blackboard fact name).
+Some parameters are groups: a position is a `RefType` plus a `RefName`, and a few tasks read
+`Value`/`Enabled` pairs (`CTaskComputeProjectileTrajectory`'s `MaxFlyingTime`) or one bool per
+sense (`CScannerPawnSenses`). Every class's list is in JackAll's `assets/ai_tasks.tsv`. It covers
+every class the shipped brains use, including the unused ones above.
+
+A parameter is looked up by the CStringID of its exact name, so case matters, and a name the class
+does not read is silently ignored. The shipped brains have one such typo: 799 of the soldier brain's
+`CTaskUpdateBlackboard` nodes set `UpdateWho`, but the task reads `updateWho`, so every one of them
+runs with the default. `jackall-cli ai lint <brain.ai.rml>` lists these.

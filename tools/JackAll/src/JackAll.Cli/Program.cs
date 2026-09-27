@@ -163,6 +163,9 @@ app.Configure(config =>
         ai.AddCommand<AiVerifyCommand>("verify")
             .WithDescription("Recompile brain workspaces from their source and compare with the shipped compiled half.")
             .WithExample("ai", "verify", "mercbrain.ai.rml");
+        ai.AddCommand<AiLintCommand>("lint")
+            .WithDescription("List the parameters a brain sets that their task class never reads.")
+            .WithExample("ai", "lint", "mercbrain.ai.rml");
     });
 
     // --- .fcb object trees ----------------------------------------------

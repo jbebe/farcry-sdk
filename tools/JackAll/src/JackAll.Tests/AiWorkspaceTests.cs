@@ -59,6 +59,23 @@ public class AiWorkspaceTests
     }
 
     [Fact]
+    public void The_task_schema_knows_every_class_the_soldier_brain_uses()
+    {
+        if (Fixture.Read(Merc) is not { } original) return;
+
+        AiBrainGraph graph = new(AiWorkspaceFile.Read(original).Source);
+
+        Assert.DoesNotContain(graph.Nodes, n => !AiTaskSchema.Bundled.Knows(n.Class));
+        Assert.Equal(
+            [
+                new("Name", "fact"), new("Looping", "bool"), new("Independent", "bool"),
+                new("timeToWait", "float"), new("waitTimeFact", "fact"), new("randomStartDelay", "float"),
+            ],
+            AiTaskSchema.Bundled.ParametersOf("CTaskWait"));
+        Assert.NotNull(AiTaskSchema.Bundled.Find("CTaskOperateOnFlagField", "FlagFieldValue"));
+    }
+
+    [Fact]
     public void A_task_names_the_plan_that_adds_it_then_its_exits()
     {
         if (Fixture.Read(Stoopid) is not { } original) return;

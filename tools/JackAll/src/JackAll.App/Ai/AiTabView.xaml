@@ -242,11 +242,45 @@
                                       CanUserAddRows="False" CanUserDeleteRows="False" HeadersVisibility="Column"
                                       RowStyle="{StaticResource ChangedRow}" AutomationProperties.AutomationId="AiBrainParameters">
                                 <DataGrid.Columns>
-                                    <DataGridTextColumn Header="Parameter" Binding="{Binding Name}" Width="240" IsReadOnly="True" />
+                                    <DataGridTemplateColumn Header="Parameter" Width="240" IsReadOnly="True">
+                                        <DataGridTemplateColumn.CellTemplate>
+                                            <DataTemplate DataType="{x:Type ai:BrainParameterRow}">
+                                                <TextBlock Text="{Binding Name}" VerticalAlignment="Center">
+                                                    <TextBlock.Style>
+                                                        <Style TargetType="TextBlock">
+                                                            <Style.Triggers>
+                                                                <DataTrigger Binding="{Binding IsRead}" Value="False">
+                                                                    <Setter Property="Foreground" Value="{DynamicResource TextMutedBrush}" />
+                                                                    <Setter Property="TextDecorations" Value="Strikethrough" />
+                                                                    <Setter Property="ToolTip" Value="This task class never reads a parameter of this name, so the engine ignores it." />
+                                                                </DataTrigger>
+                                                            </Style.Triggers>
+                                                        </Style>
+                                                    </TextBlock.Style>
+                                                </TextBlock>
+                                            </DataTemplate>
+                                        </DataGridTemplateColumn.CellTemplate>
+                                    </DataGridTemplateColumn>
+                                    <DataGridTextColumn Header="Type" Binding="{Binding Type}" Width="70" IsReadOnly="True"
+                                                        ElementStyle="{StaticResource Muted}" />
                                     <DataGridTemplateColumn Header="Value" Width="*">
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate DataType="{x:Type ai:BrainParameterRow}">
-                                                <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                                <Grid>
+                                                    <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown">
+                                                        <TextBox.Style>
+                                                            <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding HasChoices}" Value="True">
+                                                                        <Setter Property="Visibility" Value="Collapsed" />
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBox.Style>
+                                                    </TextBox>
+                                                    <ComboBox ItemsSource="{Binding Choices}" SelectedValue="{Binding Value, UpdateSourceTrigger=PropertyChanged}" SelectedValuePath="Value"
+                                                              Visibility="{Binding HasChoices, Converter={StaticResource Visible}}" />
+                                                </Grid>
                                             </DataTemplate>
                                         </DataGridTemplateColumn.CellTemplate>
                                     </DataGridTemplateColumn>

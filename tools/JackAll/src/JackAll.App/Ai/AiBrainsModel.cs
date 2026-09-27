@@ -72,11 +72,22 @@ public sealed class BrainTreeItem : Observable
 }
 
 /// <summary>A parameter of the selected node; editing it edits the workspace source.</summary>
-public sealed class BrainParameterRow(XElement parameter, string label, string? vanilla, Action changed) : Observable
+public sealed class BrainParameterRow(XElement parameter, string label, string? vanilla, AiParameterSpec? spec, bool isRead,
+    IReadOnlyList<AiChoice>? choices, Action changed) : Observable
 {
     public string Name { get; } = label;
 
     public string? Vanilla { get; } = vanilla;
+
+    /// <summary>What the engine reads it as, or blank for a nested part.</summary>
+    public string Type { get; } = spec?.Type ?? "";
+
+    /// <summary>False when the task class never reads a parameter of this name: editing it changes nothing.</summary>
+    public bool IsRead { get; } = isRead;
+
+    public IReadOnlyList<AiChoice>? Choices { get; } = choices;
+
+    public bool HasChoices => Choices is not null;
 
     public string Value
     {
@@ -142,7 +153,7 @@ public sealed class AiBrainsModel(MainViewModel vm) : Observable
     public string Heading => _selected is { } n ? n.ShortName : "Pick a node in the tree";
 
     public string Summary => _selected is { } n
-        ? $"{BrainTreeItem.KindOf(n)}{(n.Looping ? " · loops" : "")}\n{n.Name}\n{AiTaskHelp.Describe(n.Class)}"
+        ? $"{BrainTreeItem.KindOf(n)}{(n.Looping ? " · loops" : "")}\n{n.Name}\n{AiTaskHelp.Describe(n.Class)}{Defaults(n)}"
         : "The tree starts at the brain. Each 'when …' row is a behaviour the C++ brain can pick; under it is the plan that runs, and under a plan the tasks it starts.";
 
     public string Search
@@ -212,7 +223,7 @@ public sealed class AiBrainsModel(MainViewModel vm) : Observable
 
     private void ShowSelected()
     {
-        Parameters = _selected is null ? [] : [.. Flatten(_selected.Element, _vanilla.GetValueOrDefault(_selected.Name), "")];
+        Parameters = _selected is null ? [] : [.. Flatten(_selected, _selected.Element, _vanilla.GetValueOrDefault(_selected.Name), "")];
         Links = _selected is null
             ? []
             : [
@@ -228,18 +239,35 @@ public sealed class AiBrainsModel(MainViewModel vm) : Observable
         OnPropertyChanged(nameof(Summary));
     }
 
-    private IEnumerable<BrainParameterRow> Flatten(XElement owner, XElement? vanillaOwner, string prefix)
+    private IEnumerable<BrainParameterRow> Flatten(AiNode node, XElement owner, XElement? vanillaOwner, string prefix)
     {
         foreach (XElement parameter in owner.Elements("Parameter"))
         {
             string name = (string)parameter.Attribute("Name")!;
             XElement? vanilla = vanillaOwner?.Elements("Parameter").FirstOrDefault(p => (string?)p.Attribute("Name") == name);
-            yield return new BrainParameterRow(parameter, prefix + name, (string?)vanilla?.Attribute("Value"), () => IsDirty = true);
-            foreach (BrainParameterRow nested in Flatten(parameter, vanilla, $"{prefix}{name}."))
+            AiParameterSpec? spec = prefix.Length == 0 ? Schema.Find(node.Class, name) : null;
+            bool isRead = prefix.Length > 0 || spec is not null || !Schema.Knows(node.Class);
+            yield return new BrainParameterRow(parameter, prefix + name, (string?)vanilla?.Attribute("Value"), spec, isRead,
+                AiFlags.ChoicesFor(node.Class, name, spec?.Type), () => IsDirty = true);
+            foreach (BrainParameterRow nested in Flatten(node, parameter, vanilla, $"{prefix}{name}."))
             {
                 yield return nested;
             }
         }
+    }
+
+    private static AiTaskSchema Schema => AiTaskSchema.Bundled;
+
+    /// <summary>The parameters the class reads that this node leaves out, so the engine's defaults apply.</summary>
+    private static string Defaults(AiNode node)
+    {
+        HashSet<string> set =
+        [
+            .. node.Element.Elements("Parameter").Select(p => (string)p.Attribute("Name")!),
+            .. node.Element.Attributes().Select(a => a.Name.LocalName),
+        ];
+        List<string> missing = [.. Schema.ParametersOf(node.Class).Select(p => p.Name).Where(p => !set.Contains(p)).Distinct()];
+        return missing.Count == 0 ? "" : $"\nLeft at the engine default: {string.Join(", ", missing)}";
     }
 
     private void RunSearch()
