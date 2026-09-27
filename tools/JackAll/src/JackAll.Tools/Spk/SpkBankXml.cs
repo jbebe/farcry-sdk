@@ -214,7 +214,7 @@ public static partial class SpkBankXml
             SpkEntry entry = record.Entries[i];
             element.Add(new XElement("Choice", new XAttribute("resource", Id(entry.Ref)),
                 weights[i] is { } weight ? new XAttribute("weight", weight) : null,
-                entry.Extra != 0 ? new XAttribute("w2", Id(entry.Extra)) : null));
+                entry.Extra != 0 ? new XAttribute("repeat", FormatWord(SpkWordFormat.Bool, entry.Extra)) : null));
         }
     }
 
@@ -339,7 +339,7 @@ public static partial class SpkBankXml
             uint[] raw = ReadWeights([.. choices.Select(c => c.Optional("weight"))], reader.Optional("silence"));
             record.Words[8] = raw[^1];
             record.Entries = [.. choices.Select((c, i) => new SpkEntry(ParseUInt(c.Required("resource")), raw[i],
-                c.Optional("w2") is { } extra ? ParseUInt(extra) : 0))];
+                c.Optional("repeat") is { } repeat ? ParseWord(SpkWordFormat.Bool, repeat) : 0))];
         }
         else if (layout.Children is { } shape)
         {

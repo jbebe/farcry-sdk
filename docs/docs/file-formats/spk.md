@@ -259,7 +259,7 @@ that points at it; giving one event its own falloff means a new curve record and
 | `[0]` | `+0x00` | echoes the record's own id |
 | `[1]` | `+0x04` | resource kind: `1` for a sample, which the rest of this table describes; see [resource containers](#resource-containers) for the others |
 | `[2]` | `+0x08` | **the sibling `FlatCopy`'s audio byte length** — its payload size minus the 40-byte core. Exact in all 3,211 records that pair with a sibling, both codecs. The game plays the audio to this length; see [playback length](#playback-length-comes-from-the-descriptor) |
-| `[5]` | `+0x14` | negative Q16.16 fixed-point value when nonzero (e.g. `-12.0`, `-8.0`) — plausibly a gain/dB adjustment applied by this type's post-load transform |
+| `[5]` | `+0x14` | **gain** in dB, Q16.16: added to the voice's volume when the resource plays (RE-verified, `FUN_10a52370`); `-12.0` and `-8.0` are common |
 | `[7]` | `+0x1C` | an id-reference: matches the positionally-preceding record 59% of the time, some id in the same file 72% of the time |
 | `[9]` | — | boolean, `1` in 97% |
 | `[17]` | `+0x44` | `1` (94%) or `2` (~2%) — correlates with the sibling `FlatCopy` payload's size (~11× larger average when `2`), consistent with a **channel-count field** |
@@ -290,12 +290,28 @@ Word `[1]` also marks resources that hold other resources rather than audio:
 | `7` | 143 | a **multilayer**: each layer follows a game parameter through a curve of (parameter value, dB) points, e.g. desert wind on parameter `0x0044025C` (0–250) runs from −96 dB at 0 to 0 dB at 250 |
 | `2`, `8` | 42, 18 | not identified |
 
-A random container's weights are Q16.16 fractions. In every retail container, the entry weights plus
-word `[8]` sum to 1.0. Equal weights are `floor(1.0 / n)`: three entries weigh `0x5555` each. The
-bullet pass-by crack `0x00448BD1` has 12 entries and `[8]` all at 1/13 (`0x13B1`). Reading `[8]` as
-the chance of playing nothing follows from that sum; the picker is not traced. Word `[9]` (`1` in 17
-containers) and `[10]` (`1` in 274) are flags, not identified, and so is an entry's third word (`1`
-in 10 entries).
+### How a random container picks
+
+:::info[Verified via reverse engineering]
+The transform is `FUN_10a559f0` → `FUN_10a55800`, the picker `FUN_10a55f50`, reached from the
+resource player `FUN_10a52370` through `FUN_10a56130`. Traced in the Steam `Dunia.dll`.
+:::
+
+A random container's weights are Q16.16 fractions, and in every retail container the entry weights
+plus word `[8]` sum to 1.0. Equal weights are `floor(1.0 / n)`: three entries weigh `0x5555` each.
+Word `[3]` is the byte offset of the entries within the tail, `0` in retail.
+
+On each play the picker draws a number from 0 to 65535:
+- **Below `[8]`, nothing plays.** `[8]` is the chance of silence. The bullet pass-by crack
+  `0x00448BD1` has 12 entries and `[8]` all at 1/13 (`0x13B1`), so one crack in 13 is silent.
+- **Silence is never picked twice in a row**, unless `[9]` is `1` (17 retail containers).
+- **Otherwise the weights are walked in order** until the draw falls inside one.
+- **The entry that played last is skipped**, unless its own third word is `1` (10 retail entries).
+- **Word `[10]` = `1` makes the container a sequence** (274 retail containers). It keeps a position
+  per playing object: the first play starts at a random entry, and each later play takes the next
+  one, wrapping around. Weights and silence are ignored in this mode.
+
+Every resource kind's word `[5]` is added to the voice's volume in dB, clamped at −96 dB.
 
 A multilayer's tail holds three runs, and every offset counts from the start of the tail:
 1. one 28-byte layer per `[7]`: `{child, curve count, curves offset, 0xFFFFFFFF, 0, 0, 0}`;

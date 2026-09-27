@@ -80,10 +80,13 @@ public sealed class SpkLayout
         [Gain, new("group", 8, SpkWordFormat.Id), new("default", 9, SpkWordFormat.Id, SpkReference.Resource)],
         childCount: 7, children: new(8, 4, -1, "Case", "resource", SpkReference.Resource));
 
-    /// <summary>Word [8] is the weight of playing nothing: with it, the entry weights sum to 1.0.</summary>
+    /// <summary>Word [8] is the chance of playing nothing: with it, the entry weights sum to 1.0.
+    /// <c>repeatSilence</c> allows two silent plays in a row; <c>sequence</c> steps through the entries
+    /// per emitter from a random start, ignoring weights and silence. Word [3] is the entries' offset.</summary>
     public static readonly SpkLayout Random = new("Random", (uint)SpkResourceKind.Random,
-        [Gain, new("silence", 8, SpkWordFormat.Weight)],
-        childCount: 7, children: new(16, 4, 8, "Choice", "resource", SpkReference.Resource));
+        [Gain, new("silence", 8, SpkWordFormat.Weight), new("repeatSilence", 9, SpkWordFormat.Bool),
+            new("sequence", 10, SpkWordFormat.Bool)],
+        derived: [3], childCount: 7, children: new(16, 4, 8, "Choice", "resource", SpkReference.Resource));
 
     /// <summary>Its layers are written by hand: each nests curves of points.</summary>
     public static readonly SpkLayout Multilayer = new("Multilayer", (uint)SpkResourceKind.Multilayer, [Gain], childCount: 7);

@@ -10,7 +10,7 @@ public readonly record struct SpkPoint(float X, float Y);
 
 /// <summary>One child of a composite: an event of a multi-event or switch event, or a resource of a
 /// switch or random container. <see cref="Value"/> is the switch value or the Q16.16 weight;
-/// <see cref="Extra"/> is a random entry's unidentified second word.</summary>
+/// <see cref="Extra"/> is a random entry's flag letting it play twice in a row.</summary>
 public sealed record SpkEntry(uint Ref, uint Value = 0, uint Extra = 0);
 
 /// <summary>One curve of a multilayer layer: <see cref="Target"/> 0 maps the game parameter to dB,

@@ -75,9 +75,13 @@ A `<Random>` picks one `<Choice>` each time it plays:
 - Weights are relative. Here the two choices and `silence` weigh 1, 2 and 1: a quarter of the time
   the first plays, half the time the second, and a quarter of the time nothing plays. Weights
   written as probabilities that sum to 1 are read as they stand. Choices without a weight weigh 1.
-- The game stores each weight as a Q16.16 fraction, and every retail container's weights plus
-  `silence` sum to 1.0 **(seen in data, 502 containers)**. That `silence` is the chance of playing
-  nothing is read from that sum, not traced in the code.
+- **The choice that played last is skipped** on the next play, so two variations already alternate.
+  A `<Choice repeat="true">` may play twice in a row.
+- **Silence never comes twice in a row**, unless the container has `repeatSilence="true"`.
+- **`sequence="true"` plays the choices in order** instead, from a random start per emitter, and
+  ignores the weights and silence.
+
+These rules are traced in `Dunia.dll`; see [how a random container picks](../file-formats/spk.md#how-a-random-container-picks).
 
 The quickest route is `spk new`, which scaffolds an event over one clip, or a random container when
 given several:
