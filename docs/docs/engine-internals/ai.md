@@ -6,8 +6,9 @@ sidebar_position: 18
 
 :::info[Verified via reverse engineering]
 Traced through GhidraMCP against the symbolized `FarCry2_server`; the brain contents are read out of
-the shipped `mercbrain.ai.rml`. See [intro](../intro.md) for how RE-verified and community-reported
-claims are distinguished.
+the shipped `mercbrain.ai.rml`. The workspace loader, `GetChanceOfSuccess` and `ManageIntuition` were
+matched in the retail PC `Dunia.dll` (Steam) and behave the same. See [intro](../intro.md) for how
+RE-verified and community-reported claims are distinguished.
 :::
 
 A soldier's behaviour is split between C++ and data. C++ decides **which** behaviour runs and how
@@ -17,7 +18,7 @@ this page is about how the pieces decide.
 
 | Layer | Where it lives | Editable |
 |---|---|---|
-| Which behaviour runs | `CBrainMerc*` classes | no - C++ |
+| Which behaviour runs | `CBrainMerc*` classes, fed by agent flags and squad orders | partly - through the flags |
 | What a behaviour does | plans and tasks in [`mercbrain.ai.rml`](../file-formats/ai-rml.md) | yes |
 | How far and how well he sees | `SensorySystem` of the archetype's `CPawnAgent` | yes |
 | How often he hits | `ShootingSystem` of the archetype's `CPawnAgent`, and the weapon | yes |
@@ -41,6 +42,37 @@ among 41 filters: `CombatLongFireRange`, `CombatMediumFireRange`, `CombatShortFi
 `Relocate`, `GrenadeEscape`, `EscapeFlameThrower` and others. The choice is C++; the plan each one
 runs - where to move, when to crouch, how to fire, what to say - is data.
 
+### How combat picks a behaviour
+
+`CBrainMercCombat::DoStart` walks a fixed priority chain and hands the first match to the brain with
+`CTask::DispatchConnection(brain, ANCHOR_SELECTABLE, filter)`. Most links of the chain test one of
+the agent's 64 *flags* - requests, several of which the chain clears as it acts on them. Flags are set
+by C++ (squad orders, senses) and by the brain itself through `CTaskOperateOnFlagField`
+(`FlagFieldValue` is the index), so a plan can ask for any of these on the next update:
+
+| Flag | Selects | Set by |
+|---|---|---|
+| 14 | `ShootFlare` | squad order `SendFlare` |
+| 15 | `CombatSelectBestTarget` | `SetNewBestTarget` tasks |
+| 16 | `GrenadeEscape` | projectile seen |
+| 17 | `SwitchToFireAlert` | fire nearby |
+| 19 / 59 | `EscapeVehicle` / `EscapeFriendlyVehicle` | vehicle coming at him |
+| 25 | `MercBhvHurt` | `SetPlayHurt` |
+| 32 | `MountedWeapon` | on a mounted gun |
+| 43 | `CombatRushTarget` | squad order `RushTarget` |
+| 45 | `Relocate` | `SetNeedToRelocate` |
+| 53 | `CombatRushClashPoint` | code (not traced) |
+| 55 | `CombatNoCoverRunToThreat` | brain tasks |
+| 56 | `CombatHigherTarget` | `SetTargetHigher` |
+| 57 | `FallBackToStartPosition` | squad order `Fallback`, `SetFallback` tasks |
+| 61 | `ScriptedShootAtTarget` | Domino |
+| 63 | `ShotByAnotherTarget` | code (not traced) |
+
+Links without a flag are situations: first contact (`CombatFirstTime`), starting from social,
+trespass or a vehicle, sniping, a building, reload, target too close, the range bands below, and
+`CombatNothing` as the fallback. The flag meanings are read off the names of the tasks that set and
+test them; the chain's order and the flag checks are read out of the code.
+
 A plan starts the tasks wired to its `OnStart` anchor and each task's exits (`Success`, `Failure`,
 class-specific ones) start the next. Scanners are tasks that watch a condition and fire an exit when
 it changes; they interrupt plans the same way. Tasks share state through the agent's *blackboard*
@@ -62,6 +94,22 @@ it changes; they interrupt plans the same way. Tasks share state through the age
 `ComputeCurrentFireRange` computes it only in the combat states (army-member states 3-5), both for
 the target's current position and for its blackboard `BestTargetLastPosSeen`. The bands are
 constants in code.
+
+## Squads
+
+Every army is run by a `CDispatcherSquadLieutenant`, a C++ commander above the individual brains. It
+tracks its members and their targets, and orders them through `CEventMercCommand*` events
+(`SetSquadRole`, `SetSquadAction`, `SquadImmediateAction`, `RushTarget`, `CombatTarget`,
+`SetRallyPoint`, `SendFlare`, `LaunchGrenadeInBuilding`, `Fallback`, `LastManStanding` and more).
+It decides who suppresses (`IsNeededAsSuppress`, per range band), when a member switches to assault
+(`IsSwitchToAssaultNeeded`), runs rush patterns, picks who fires the flare, and calls in
+reinforcements.
+
+`FindRoleDistribution` splits a squad of *n* between its two combat roles by difficulty: on the
+lowest setting one member takes the first role and the rest the second; on the two middle settings
+70 % of the squad takes the first role, on the highest 90 %. The soldier brains never read the roles
+directly - `CTaskCheckSquadRole` and `CTaskCheckSquadAction` exist but are unused - so the roles act
+only through the orders and flags the lieutenant sends.
 
 ## Seeing
 
@@ -89,6 +137,16 @@ That visibility is compared with two thresholds that depend on the brain state.
 *Fuzzy* is where he starts to sense something, *clear* where he positively sees the player. One
 caller path lowers *clear* to *fuzzy*, so the first hint is already a sighting.
 
+### Intuition
+
+Whenever a soldier (re)acquires his target - `UpdateBestTargetInfo`, a squad `CombatTarget` order,
+or the `CTaskSelectBestTarget` task - `ResetIntuitionTimer` starts a window. For the next **6
+seconds**, in the combat states, `CPawnAgent::ManageIntuition` copies the target's true position and
+velocity into `BestTargetLastPosSeen`, `BestTargetLastPosSeenHigh` (1.5 m higher) and
+`BestTargetLastVelSeen`, seen or not. Breaking line of sight therefore does not break the track for
+six seconds; searching starts from where the player *is*, not where he was last seen. The 6 is a
+constant in code (`Dunia.dll` Steam: the `MOVSS` at `0x1096e83b` reads it from a shared constant).
+
 ## Shooting
 
 Whether a shot may hit is decided by `CShootingSystem::GetChanceOfSuccess`, then
@@ -108,13 +166,33 @@ Whether a shot may hit is decided by `CShootingSystem::GetChanceOfSuccess`, then
   Every shot misses before then.
 - **Hit cap** - 0 once the target has taken `uiMaxHitPerSecondFactor` hits in the current second.
 
-Inside `fPointBlankDistance`, once `fTimerToPointBlank` has run out, the status, weapon and group
-factors are skipped: only the timer to miss and the hit cap remain.
+Inside `fPointBlankDistance`, once `fTimerToPointBlank` has run out, a soldier's chance is simply
+1: every shot hits, with no timer to miss, no hit cap and no forced misses.
+
+`GenerateShootAtPosition` then rolls **the average of three uniform random numbers** against the
+chance. The average clusters around 0.5, so the roll exaggerates both ends: a chance of 0.7 hits
+about 88 % of the time, 0.3 about 12 %.
+
+**Forced misses.** After a hit, beyond point blank, the shooter misses the next *N* shots outright.
+*N* is drawn between two fields of the weapon's `CWeaponPropertiesCommon`, per difficulty -
+`nForcedFailureMin`/`nForcedFailureMax` × `Causal`, `Experimented`, `Hardcore`, `Infamous` - using the
+game's difficulty when the target is the player and the normal values otherwise. The AK-47 ships
+4-8, 2-4, 1-1 and 0-0: on Infamous nothing breaks up a run of hits. The same properties name the
+weapon's range curve (`archTargetDistanceCurve`, e.g. `Curves.ShootingSystem.DistanceAccuracy_AK47`)
+and `archSuccessfulHitCurve`.
 
 Missed shots land in a `fMissWidth` × `fMissHeight` box around the target.
 
-`GetDifficultyFactor` and `GetProgressionFactor` exist and are multiplied in, but both are compiled
-to `return 1`: difficulty and campaign progress have no say in accuracy.
+`GetDifficultyFactor` and `GetProgressionFactor` are multiplied in but return 1 in both builds (the
+PC build inlines them as constants). Difficulty reaches accuracy only through the forced misses.
+
+### Where difficulty acts
+
+| What | How |
+|---|---|
+| Accuracy | forced misses per weapon (`nForcedFailure…`) |
+| Squad roles | `FindRoleDistribution`'s split |
+| Everything else in this page | not at all - archetypes, cones, thresholds and behaviour odds are the same on every setting |
 
 ## Adaptive behaviours
 
@@ -132,9 +210,8 @@ enemy weapon packs, not the difficulty setting. The twelve shipped behaviours:
 The task factory registers every class below, and no shipped brain instantiates any of them:
 
 - **Squads:** `CTaskCheckSquadAction`, `CTaskCheckSquadRole`, `CTaskCheckArmyRoleAction`,
-  `CScannerArmyMemberRole`. `CPawnAgent` has the matching orders (`CommandSetSquadRole`,
-  `CommandSetSquadAction`, `CommandSetLeaderTarget`, `CommandSetRallyPoint`), and
-  `CTaskManageArmy` appears only 4 times in `mercbrain`.
+  `CScannerArmyMemberRole` - the brain side of the [squad orders](#squads), which the lieutenant
+  sends but no plan branches on.
 - **Awareness:** `CTaskCheckVisibleByPlayer`, `CTaskCheckSeeFriendNearby`, `CScannerSideLookOpening`,
   `CScannerAgentAimingAt`, `CScannerAgentHasRaisedWeapon`, `CScannerAgentStaredown`,
   `CScannerAgentSocialProximity`.
