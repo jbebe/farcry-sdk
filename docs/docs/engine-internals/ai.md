@@ -54,19 +54,32 @@ by C++ (squad orders, senses) and by the brain itself through `CTaskOperateOnFla
 |---|---|---|
 | 14 | `ShootFlare` | squad order `SendFlare` |
 | 15 | `CombatSelectBestTarget` | `SetNewBestTarget` tasks |
-| 16 | `GrenadeEscape` | projectile seen |
-| 17 | `SwitchToFireAlert` | fire nearby |
-| 19 / 59 | `EscapeVehicle` / `EscapeFriendlyVehicle` | vehicle coming at him |
+| 16 | `GrenadeEscape` | `CPawnAgent::EscapeThreat`; a vehicle's `CommandEscapeProjectile` |
+| 17 | `SwitchToFireAlert` | `CScannerFireProximity`, the threat search |
+| 19 / 59 | `EscapeVehicle` / `EscapeFriendlyVehicle` | `CPawnAgent::CheckIncomingVehicle` |
 | 25 | `MercBhvHurt` | `SetPlayHurt` |
-| 32 | `MountedWeapon` | on a mounted gun |
+| 32 | `MountedWeapon` | the `UseMountedWeapon` plans |
 | 43 | `CombatRushTarget` | squad order `RushTarget` |
-| 45 | `Relocate` | `SetNeedToRelocate` |
-| 53 | `CombatRushClashPoint` | code (not traced) |
-| 55 | `CombatNoCoverRunToThreat` | brain tasks |
-| 56 | `CombatHigherTarget` | `SetTargetHigher` |
+| 45 | `Relocate` | `SetNeedToRelocate`, the `ScanRelocate` scanners |
+| 53 | `CombatRushClashPoint` | the squad lieutenant, only in the Town Escape mission |
+| 55 | `CombatNoCoverRunToThreat` | the `NoCoverMoveAttack` and `NoCoverOrNoPathFailure` plans |
+| 56 | `CombatHigherTarget` | `SetTargetHigher` in the `CheckHeightDiff` plans |
 | 57 | `FallBackToStartPosition` | squad order `Fallback`, `SetFallback` tasks |
 | 61 | `ScriptedShootAtTarget` | Domino |
-| 63 | `ShotByAnotherTarget` | code (not traced) |
+| 63 | `ShotByAnotherTarget` | `CSensorySystem::SetShotByTarget` |
+
+Two of these are narrower than their names suggest. `CDispatcherSquadLieutenant::CheckSpecialMissionBehaviour`
+sets 53 on every squad member without a long-range weapon, and only while the army's mission type is 6.
+The story-mission scripts set that type: 1 Defence Reversal, 4 Buddy Betrayal, 5 Barge Assault,
+6 Town Escape, 7 Dental Plan, 8 Jack's Buddy. So the rush to a clash point is the Town Escape set
+piece and nothing else. `SetShotByTarget` sets 63 only when the shooter is the player and the
+soldier's current target is someone else or no one. He must also be in combat (army-member states 3-5)
+or alert after combat (state 2 with flag 7). The branch turns him onto the player.
+
+C++ also sets and clears flags that no filter tests, so they only matter to the plans that check them:
+`CTaskShoot` raises 50 while firing and sets 49 when it gives up on a blocked shot; `SetIsInPathFollow` sets 54;
+the smart-terrain executor sets 60; each brain's `DoStart` sets 26. `CBrainMercThreshold` clears
+most of the combat flags when a wounded soldier recovers.
 
 Links without a flag are situations: first contact (`CombatFirstTime`), starting from social,
 trespass or a vehicle, sniping, a building, reload, target too close, the range bands below, and
