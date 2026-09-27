@@ -38,6 +38,8 @@ public partial class MainWindow : Window
         DataContext = _vm;
         MoveTab.Attach(_vm);
         MoveTab.DirtyChanged += () => ItemState.SetIsChanged(MoveTabItem, MoveTab.IsDirty);
+        AiTab.Attach(_vm);
+        AiTab.DirtyChanged += () => ItemState.SetIsChanged(AiTabItem, AiTab.IsDirty);
         Loaded += OnLoaded;
         Closing += OnClosing;
         _vm.PropertyChanged += OnViewModelPropertyChanged;
@@ -161,26 +163,34 @@ public partial class MainWindow : Window
     private bool _closeConfirmed;
 
     /// <summary>
-    /// The Animations tab is a fixed tab with no close of its own, so its unsaved edits are asked about
-    /// here. Saving is asynchronous, so the first close is cancelled and repeated once it is done.
+    /// The Animations and AI tabs are fixed tabs with no close of their own, so their unsaved edits are
+    /// asked about here. Saving is asynchronous, so the first close is cancelled and repeated once it is done.
     /// </summary>
     private async void OnClosing(object? sender, CancelEventArgs e)
     {
-        if (!_closeConfirmed && MoveTab.IsDirty)
+        (string Name, Func<Task<string?>> Save)[] dirty =
+        [
+            .. MoveTab.IsDirty ? [("Animations", (Func<Task<string?>>)MoveTab.SaveAsync)] : Array.Empty<(string, Func<Task<string?>>)>(),
+            .. AiTab.IsDirty ? [("AI", (Func<Task<string?>>)AiTab.SaveAsync)] : Array.Empty<(string, Func<Task<string?>>)>(),
+        ];
+        if (!_closeConfirmed && dirty.Length > 0)
         {
             e.Cancel = true;
             MessageBoxResult choice = MessageBox.Show(this,
-                "The Animations tab has unsaved changes.\n\nSave before closing?",
+                $"The {string.Join(" and ", dirty.Select(d => d.Name))} tab has unsaved changes.\n\nSave before closing?",
                 "Unsaved changes", MessageBoxButton.YesNoCancel, MessageBoxImage.Warning);
             if (choice == MessageBoxResult.Cancel)
             {
                 return;
             }
 
-            if (choice == MessageBoxResult.Yes && await MoveTab.SaveAsync() is { } error)
+            foreach ((string _, Func<Task<string?>> save) in choice == MessageBoxResult.Yes ? dirty : [])
             {
-                MessageBox.Show(this, error, "Not saved", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                if (await save() is { } error)
+                {
+                    MessageBox.Show(this, error, "Not saved", MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
             }
 
             _closeConfirmed = true;
@@ -213,6 +223,7 @@ public partial class MainWindow : Window
         await MapTab.InitializeAsync(_vm);
         LibraryTab.Initialize(_vm);
         MoveTab.Initialize();
+        await AiTab.InitializeAsync();
 
         // The Map tab owns neither the Library tab nor the editor registry, so it asks.
         MapTab.ArchetypeRequested += async (world, archetype) =>

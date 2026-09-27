@@ -6,6 +6,7 @@
         xmlns:mapEditor="clr-namespace:JackAll.App.MapEditor"
         xmlns:library="clr-namespace:JackAll.App.Library"
         xmlns:move="clr-namespace:JackAll.App.Move"
+        xmlns:ai="clr-namespace:JackAll.App.Ai"
         Title="JackAll - Far Cry 2 Mod Manager" Height="720" Width="1180"
         WindowStartupLocation="CenterScreen"
         Background="{DynamicResource SurfaceBrush}" Foreground="{DynamicResource TextPrimaryBrush}">
@@ -615,6 +616,11 @@
             <!-- ========================== MOVE GRAPHS ========================== -->
             <TabItem Header="Animations" x:Name="MoveTabItem">
                 <move:MoveTabView x:Name="MoveTab" Margin="6" />
+            </TabItem>
+
+            <!-- ================================ AI ================================ -->
+            <TabItem Header="AI" x:Name="AiTabItem">
+                <ai:AiTabView x:Name="AiTab" Margin="6" />
             </TabItem>
 
             <!-- Document tabs open after this; shown only while one is (see EditorTabs). -->
