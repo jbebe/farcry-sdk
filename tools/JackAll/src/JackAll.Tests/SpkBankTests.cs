@@ -156,6 +156,50 @@ public class SpkBankTests
         Assert.Contains(problems, p => p.Severity == SpkProblemSeverity.Warning && p.Message.Contains("stereo"));
     }
 
+    [Fact]
+    public void A_variation_wraps_a_lone_sample_in_a_random_container()
+    {
+        SpkBank bank = SpkBankXml.FromXml("""
+            <SoundBank preamble="0x00fc0200">
+              <Audio id="0x00fc0202" file="a.wav" />
+              <Sample id="0x00fc0201" audio="0x00fc0202" gainDb="-3" />
+              <Play id="0x00fc0200" sound="0x00fc0201" />
+            </SoundBank>
+            """, _ => Wav(frames: 100, channels: 1, rate: 22050));
+        SpkBankRecord play = bank.Find(0x00fc0200)!;
+
+        SpkBankRecord random = bank.RandomFor(play, 0x00fc0200);
+        SpkBankRecord added = bank.AddVariation(random, bank.Find(0x00fc0202)!.Data, 22050, 0x00fc0200);
+
+        Assert.Equal(random.Id, play.Word(2));
+        Assert.Equal([0x8000u, 0x8000u], random.Entries.Select(e => e.Value));
+        Assert.InRange(added.Id, 0x10000000u + 0x00fc0200u * 32, 0x10000000u + 0x00fc0200u * 32 + 31);
+        Assert.Equal(SpkLayout.ToQ16(-3), added.Word(SpkLayout.SampleGain));
+        Assert.DoesNotContain(SpkBankLint.Check(bank, 0x00fc0200), p => p.Severity != SpkProblemSeverity.Note);
+    }
+
+    [Fact]
+    public void Setting_one_chance_rescales_the_others_and_removing_a_choice_drops_its_sample()
+    {
+        if (Fixture.Read(PassBy) is not { } bytes) return;
+
+        SpkBank bank = SpkBank.Parse(bytes);
+        SpkBankRecord random = bank.Records.Single(r => r.Layout == SpkLayout.Random);
+        SpkBankEdits.SetChance(random, 0, 0.5);
+
+        Assert.Equal(0.5, SpkBankEdits.Chance(random, 0), 3);
+        Assert.Equal(0.5 / 12, SpkBankEdits.Chance(random, null), 3);
+
+        uint removed = random.Entries[1].Ref;
+        uint audio = bank.Find(removed)!.Word(SpkLayout.SampleAudio);
+        bank.RemoveChoice(random, 1);
+
+        Assert.Null(bank.Find(removed));
+        Assert.Null(bank.Find(audio));
+        Assert.Equal(11, random.Entries.Count);
+        SpkBank.Parse(bank.Write());
+    }
+
     private static XElement Decode(byte[] bytes) => XElement.Parse(SpkBankXml.ToXml(SpkBank.Parse(bytes), (_, _) => { }));
 
     private static byte[] Wav(int frames, int channels, int rate) =>
