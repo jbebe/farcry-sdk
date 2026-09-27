@@ -152,6 +152,18 @@ app.Configure(config =>
         spk.AddCommand<SpkImportCommand>("import")
             .WithDescription("Replace one record's audio with an already-encoded .ogg/.wav file.")
             .WithExample("spk", "import", "004e1c52.spk", "0x004e1c50", "replacement.wav");
+        spk.AddCommand<SpkDecodeCommand>("decode")
+            .WithDescription("Write a bank as editable XML, its audio beside it.")
+            .WithExample("spk", "decode", "00448bd2.spk", "-o", "00448bd2");
+        spk.AddCommand<SpkEncodeCommand>("encode")
+            .WithDescription("Check and build an XML document back into an .spk bank.")
+            .WithExample("spk", "encode", "00448bd2/00448bd2.xml", "-o", "00448bd2.spk");
+        spk.AddCommand<SpkVerifyCommand>("verify")
+            .WithDescription("Check that a bank survives decode and encode byte for byte.")
+            .WithExample("spk", "verify", "00448bd2.spk");
+        spk.AddCommand<SpkNewCommand>("new")
+            .WithDescription("Scaffold a bank's XML: an event playing one clip, or a random pick of several.")
+            .WithExample("spk", "new", "0x00fc0200", "shot_a.wav", "shot_b.wav", "--rolloff", "0x00442c37");
     });
 
     // --- .ai.rml brain workspaces ----------------------------------------

@@ -2,6 +2,7 @@ using JackAll.Tools.Audio;
 using JackAll.Tools.Sbao;
 using JackAll.Tools.Spk;
 using System.Globalization;
+using Spectre.Console;
 
 namespace JackAll.Cli.Commands.Spk;
 
@@ -19,7 +20,14 @@ internal static class SpkFormat
     {
         null => "(malformed)",
         { Type: SpkRecordType.FlatCopy } => "Audio",
-        { Type: SpkRecordType.TransformedFixed128 } => "Audio params",
+        { Type: SpkRecordType.TransformedFixed128 } => r.TransformedFixed128?.Kind switch
+        {
+            (uint)SpkResourceKind.Sample => "Sample",
+            (uint)SpkResourceKind.Switch => "Switch",
+            (uint)SpkResourceKind.Random => "Random",
+            (uint)SpkResourceKind.Multilayer => "Multilayer",
+            var kind => $"Resource (kind {kind})",
+        },
         { Type: SpkRecordType.SimpleFixed68 } => r.SimpleFixed68?.KnownEventType switch
         {
             SpkEventType.List => "Event list",
@@ -52,9 +60,14 @@ internal static class SpkFormat
             }
         }
 
-        if (r.TransformedFixed128 is { } t128)
+        if (r.TransformedFixed128 is { Kind: (uint)SpkResourceKind.Sample } t128)
         {
             return $"-> audio 0x{t128.FlatCopySiblingId:x8} - {t128.SampleRate} Hz";
+        }
+
+        if (r.TransformedFixed128 is not null)
+        {
+            return "a container - `spk decode` shows its children";
         }
 
         if (r.SimpleFixed68 is { } s68)
@@ -92,6 +105,27 @@ internal static class SpkFormat
         >= 1024 => $"{bytes / 1024.0:0.#} KB",
         _ => $"{bytes} B",
     };
+
+    /// <summary>The id a bank file is loaded by, from its name (<c>004569c9.spk</c>), or null for any other name.</summary>
+    public static uint? BankId(string path) =>
+        uint.TryParse(Path.GetFileNameWithoutExtension(path), NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint id)
+        && Path.GetFileNameWithoutExtension(path).Length == 8 ? id : null;
+
+    /// <summary>Prints what <see cref="SpkBankLint"/> found; false when any of it is an error.</summary>
+    public static bool Report(IReadOnlyList<SpkProblem> problems)
+    {
+        foreach (SpkProblem problem in problems)
+        {
+            string label = problem.Severity switch
+            {
+                SpkProblemSeverity.Error => "[red]error[/]",
+                SpkProblemSeverity.Warning => "[yellow]warning[/]",
+                _ => "[grey]note[/]",
+            };
+            AnsiConsole.MarkupLine($"  {label} {problem.Message.EscapeMarkup()}");
+        }
+        return problems.All(p => p.Severity != SpkProblemSeverity.Error);
+    }
 
     /// <summary>Parses a record id as given on the command line - "0x004e1c50" or bare "004e1c50",
     /// matching however it's shown by `spk list`/the App. Always hex; ids are never meaningfully

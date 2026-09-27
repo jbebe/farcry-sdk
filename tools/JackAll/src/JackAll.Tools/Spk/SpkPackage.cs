@@ -65,8 +65,8 @@ public enum SpkEventType : uint
     /// <summary>Resolves nothing and no-ops.</summary>
     NoOp3 = 3,
 
-    /// <summary>Plays, after an extra dispatcher step; resolves word[2] and word[3].</summary>
-    LeafExtraStep = 4,
+    /// <summary>Stops the event in word[2] on the same object, then plays the one in word[3].</summary>
+    StopNGo = 4,
 
     /// <summary>Plays; resolves word[2] and word[6]. Absent from the corpus checked.</summary>
     Leaf5 = 5,
@@ -77,8 +77,8 @@ public enum SpkEventType : uint
     /// <inheritdoc cref="Leaf5"/>
     Leaf7 = 7,
 
-    /// <summary>Resolves nothing and no-ops.</summary>
-    NoOp8 = 8,
+    /// <summary>Sets the listener reverb to the DARE project effect in word[2].</summary>
+    SetReverb = 8,
 
     /// <inheritdoc cref="Leaf5"/>
     Leaf9 = 9,
@@ -94,6 +94,17 @@ public enum SpkEventType : uint
     /// and recurses into each - it fires *all* of them, so this is a layered composite rather than a
     /// random-variation picker.</summary>
     List = 12,
+}
+
+/// <summary>A <see cref="SpkRecordType.TransformedFixed128"/> record's word[1]: what the resource
+/// holds. Kinds 2, 6 and 8 are not identified.</summary>
+public enum SpkResourceKind : uint
+{
+    Sample = 1,
+    Switch = 3,
+    Random = 4,
+    Multitrack = 6,
+    Multilayer = 7,
 }
 
 /// <summary><see cref="SpkRecordType.SimpleFixed68"/>'s 68-byte sub-header - a *binary event object*
@@ -177,6 +188,9 @@ public sealed class TransformedFixed128SubHeader
     /// <summary>word[0] (+0x00) - echoes the record's own id.</summary>
     public required uint OwnId { get; init; }
 
+    /// <summary>word[1] (+0x04) - what the resource holds; the fields below describe a <see cref="SpkResourceKind.Sample"/>.</summary>
+    public required uint Kind { get; init; }
+
     /// <summary>word[2] (+0x08) - the sibling <see cref="SpkRecordType.FlatCopy"/> record's audio byte
     /// length (its payload size minus the 40-byte core), which the engine plays to. Exact in all 3,211
     /// records that pair with a sibling across the corpus checked, for both codecs.</summary>
@@ -250,7 +264,8 @@ public sealed class SpkRecord
     /// <summary>The IDs this record plays: a composite event's children, else its one link.</summary>
     public IReadOnlyList<uint> Links =>
         SimpleFixed68 is { IsComposite: true } composite ? composite.ChildIds
-        : (TransformedFixed128?.FlatCopySiblingId ?? SimpleFixed68?.LinkedId) is { } link ? [link]
+        : (TransformedFixed128 is { Kind: (uint)SpkResourceKind.Sample } sample ? sample.FlatCopySiblingId
+            : SimpleFixed68?.LinkedId) is { } link ? [link]
         : [];
 }
 
@@ -462,29 +477,6 @@ public sealed class SpkPackage
         throw new InvalidDataException($"No record with id 0x{recordId:x8} in this .spk.");
     }
 
-    /// <summary><see cref="ReplaceRecordPayload"/> for a <see cref="SpkRecordType.FlatCopy"/> record's
-    /// audio, also rewriting its descriptor's <see cref="TransformedFixed128SubHeader.AudioByteLength"/>
-    /// and, where the bank sets it, the mirror.</summary>
-    public byte[] ReplaceAudio(byte[] originalFile, SpkRecord flatCopyRecord, byte[] newAudioStream)
-    {
-        byte[] patched = ReplaceRecordPayload(originalFile, flatCopyRecord.Id,
-            [.. flatCopyRecord.Payload[..SpkRecordCore.Size], .. newAudioStream]);
-        if (AudioDescriptorRecord(flatCopyRecord) is not { } descriptor)
-        {
-            return patched;
-        }
-
-        byte[] payload = [.. descriptor.Payload];
-        Span<byte> sub = payload.AsSpan(SpkRecordCore.Size);
-        BinaryPrimitives.WriteUInt32LittleEndian(sub[0x08..], (uint)newAudioStream.Length);
-        if (BinaryPrimitives.ReadUInt32LittleEndian(sub[0x58..]) != 0)
-        {
-            BinaryPrimitives.WriteUInt32LittleEndian(sub[0x58..], (uint)newAudioStream.Length);
-        }
-
-        return ReplaceRecordPayload(patched, descriptor.Id, payload);
-    }
-
     private static int PadLength(int length) => (4 - length % 4) % 4;
 
     private static SpkRecordCore? ParseCore(byte[] payload)
@@ -576,6 +568,7 @@ public sealed class SpkPackage
         return new TransformedFixed128SubHeader
         {
             OwnId = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x00..]),
+            Kind = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x04..]),
             AudioByteLength = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x08..]),
             AudioByteLengthMirror = BinaryPrimitives.ReadUInt32LittleEndian(sub[0x58..]),
             GainQ16_16 = BinaryPrimitives.ReadInt32LittleEndian(sub[0x14..]),

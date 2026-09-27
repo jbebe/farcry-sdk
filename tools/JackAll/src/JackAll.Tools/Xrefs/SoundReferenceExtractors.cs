@@ -52,7 +52,7 @@ public sealed class SpkReferenceExtractor : IReferenceExtractor
                 sink.Add(RefSpace.SoundResource, simple.CategoryId, RefKind.SpkCategory, record.Id);
             }
 
-            if (record.TransformedFixed128 is { } transformed)
+            if (record.TransformedFixed128 is { Kind: (uint)SpkResourceKind.Sample } transformed)
             {
                 sink.Add(RefSpace.SoundResource, transformed.FlatCopySiblingId, RefKind.SpkFlatCopySibling, record.Id);
             }

@@ -145,20 +145,6 @@ public class SpkPackageTests
         }
     }
 
-    [Fact]
-    public void ReplaceAudio_rewrites_the_descriptors_declared_length()
-    {
-        if (Fixture.Read(WithAudio) is not { } original) return;
-
-        SpkPackage before = SpkPackage.Parse(original);
-        SpkRecord flatCopy = before.Records.Single(r => r.Core!.Type == SpkRecordType.FlatCopy);
-
-        SpkPackage after = SpkPackage.Parse(before.ReplaceAudio(original, flatCopy, new byte[3]));
-        TransformedFixed128SubHeader descriptor = after.TryGetAudioDescriptor(flatCopy)!;
-
-        Assert.Equal(3u, descriptor.AudioByteLength);
-        Assert.Equal(3u, descriptor.AudioByteLengthMirror);
-    }
 
     [Fact]
     public void ReplaceRecordPayload_rejects_an_id_not_present_in_the_file()
