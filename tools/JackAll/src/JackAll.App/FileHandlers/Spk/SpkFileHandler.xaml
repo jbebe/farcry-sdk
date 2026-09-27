@@ -1,67 +1,203 @@
 <UserControl x:Class="JackAll.App.FileHandlers.Spk.SpkFileHandler"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:app="clr-namespace:JackAll.App"
+             xmlns:spk="clr-namespace:JackAll.App.FileHandlers.Spk"
              xmlns:audio="clr-namespace:JackAll.App.FileHandlers.Audio">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
-    </UserControl.Resources>
-    <DockPanel Margin="16">
-        <Border x:Name="AudioPanel" DockPanel.Dock="Bottom" Margin="0,16,0,0" Style="{StaticResource InertFrame}"
-                Padding="12" Visibility="Collapsed">
-            <StackPanel>
-                <TextBlock Text="Audio preview" FontWeight="Bold" Margin="0,0,0,8" />
-                <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
-                    <Button x:Name="ExportAudioButton" Content="Export as .wav…" Click="ExportAudio_Click"
-                            Margin="0,0,8,0" IsEnabled="False" />
-                    <Button x:Name="ImportAudioButton" Content="Import…" Click="ImportAudio_Click"
-                            IsEnabled="False" />
-                </StackPanel>
-                <audio:AudioPreviewPanel x:Name="AudioPreview" />
-                <TextBlock x:Name="AudioStatusText" Margin="0,8,0,0" Style="{StaticResource MonoNote}" />
+        <HierarchicalDataTemplate DataType="{x:Type spk:SpkNode}" ItemsSource="{Binding Children}">
+            <StackPanel Orientation="Horizontal">
+                <TextBlock Text="{Binding Label}" Style="{StaticResource Mono}" />
+                <TextBlock Text="{Binding Detail}" Style="{StaticResource Muted}" Margin="10,0,0,0" />
             </StackPanel>
+        </HierarchicalDataTemplate>
+
+        <!-- One inspector field: a text box, or a check box for a yes/no word. -->
+        <DataTemplate x:Key="FieldTemplate" DataType="{x:Type spk:SpkFieldRow}">
+            <Grid Margin="0,0,0,4">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="150" />
+                    <ColumnDefinition Width="*" />
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="{Binding Label}" VerticalAlignment="Center" Style="{StaticResource Secondary}" />
+                <TextBox Grid.Column="1" Text="{Binding Text, UpdateSourceTrigger=LostFocus}" IsReadOnly="{Binding IsReadOnly}"
+                         KeyDown="ValueBox_KeyDown" AutomationProperties.Name="{Binding Label}">
+                    <TextBox.Style>
+                        <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding IsBool}" Value="True">
+                                    <Setter Property="Visibility" Value="Collapsed" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+                <CheckBox Grid.Column="1" IsChecked="{Binding IsChecked}" VerticalAlignment="Center" HorizontalAlignment="Left"
+                          AutomationProperties.Name="{Binding Label}"
+                          Visibility="{Binding IsBool, Converter={StaticResource BoolToVis}}" />
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <DockPanel Margin="16">
+        <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8">
+            <TextBlock x:Name="HeaderText" FontWeight="Bold" />
+            <TextBlock x:Name="StatusText" Style="{StaticResource Note}" AutomationProperties.AutomationId="SpkStatus" />
+        </StackPanel>
+
+        <Border x:Name="ProblemsPanel" DockPanel.Dock="Bottom" Style="{StaticResource WarningCallout}" Margin="0,8,0,0"
+                Visibility="Collapsed">
+            <ItemsControl x:Name="ProblemsList" AutomationProperties.AutomationId="SpkProblems">
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" />
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
         </Border>
 
-        <TextBlock x:Name="HeaderText" DockPanel.Dock="Top" FontWeight="Bold" Margin="0,0,0,8" />
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="2*" MinHeight="80" />
+                <RowDefinition Height="{StaticResource SplitterSize}" />
+                <RowDefinition Height="3*" MinHeight="120" />
+            </Grid.RowDefinitions>
 
-        <CheckBox x:Name="ShowRawDetailsCheckBox" DockPanel.Dock="Top" Content="Show raw technical details"
-                  Margin="0,0,0,8" Checked="ShowRawDetailsCheckBox_Changed" Unchecked="ShowRawDetailsCheckBox_Changed" />
+            <TreeView x:Name="BankTree" ItemContainerStyle="{StaticResource BoundTreeItem}"
+                      SelectedItemChanged="BankTree_SelectedItemChanged" AutomationProperties.AutomationId="SpkTree" />
+            <GridSplitter Grid.Row="1" HorizontalAlignment="Stretch" />
 
-        <DockPanel LastChildFill="True">
-            <Border x:Name="RawDetailsPanel" DockPanel.Dock="Bottom" Margin="0,8,0,0" Style="{StaticResource PreviewFrame}"
-                    Padding="10" MaxHeight="220" Visibility="Collapsed">
-                <ScrollViewer VerticalScrollBarVisibility="Auto">
-                    <TextBlock x:Name="RawDetailsText" Style="{StaticResource MonoSmall}" />
-                </ScrollViewer>
-            </Border>
+            <ScrollViewer Grid.Row="2" VerticalScrollBarVisibility="Auto" Margin="0,8,0,0">
+                <StackPanel x:Name="Inspector">
+                    <DockPanel Margin="0,0,0,8">
+                        <Button x:Name="GoToButton" DockPanel.Dock="Right" Content="Go to →" Click="GoTo_Click"
+                                Style="{StaticResource DenseButton}" Visibility="Collapsed" />
+                        <StackPanel>
+                            <TextBlock x:Name="InspectorTitle" FontWeight="Bold" Style="{StaticResource Mono}" />
+                            <TextBlock x:Name="InspectorDetail" Style="{StaticResource Secondary}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </DockPanel>
 
-            <DataGrid x:Name="RecordsGrid" CanUserReorderColumns="False"
-                      SelectionMode="Single" SelectionChanged="RecordsGrid_SelectionChanged">
-                <DataGrid.GroupStyle>
-                    <GroupStyle>
-                        <GroupStyle.HeaderTemplate>
-                            <DataTemplate>
-                                <TextBlock Text="{Binding Name}" FontWeight="Bold" Margin="0,12,0,4" />
-                            </DataTemplate>
-                        </GroupStyle.HeaderTemplate>
-                    </GroupStyle>
-                </DataGrid.GroupStyle>
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="#" Binding="{Binding IndexLabel}" Width="40" />
-                    <DataGridTextColumn Header="Id" Binding="{Binding IdHex}" Width="110" ElementStyle="{StaticResource Mono}" />
-                    <DataGridTextColumn Header="Kind" Binding="{Binding Kind}" Width="120" />
-                    <DataGridTextColumn Header="Summary" Binding="{Binding Summary}" Width="*" />
-                    <DataGridTemplateColumn Header="" Width="90">
-                        <DataGridTemplateColumn.CellTemplate>
-                            <DataTemplate>
-                                <Button Content="{Binding LinkButtonText}" Click="GoToLink_Click"
-                                        IsEnabled="{Binding CanNavigateLink}"
-                                        Visibility="{Binding ShowLinkButton, Converter={StaticResource BoolToVis}}"
-                                        Style="{StaticResource DenseButton}" FontSize="{StaticResource FontSizeSecondary}" />
-                            </DataTemplate>
-                        </DataGridTemplateColumn.CellTemplate>
-                    </DataGridTemplateColumn>
-                </DataGrid.Columns>
-            </DataGrid>
-        </DockPanel>
+                    <ItemsControl x:Name="FieldsList" ItemTemplate="{StaticResource FieldTemplate}" Margin="0,0,0,8" />
+
+                    <StackPanel x:Name="ChoicesSection" Visibility="Collapsed" Margin="0,0,0,8">
+                        <TextBlock Text="Variations" FontWeight="Bold" Margin="0,0,0,4" />
+                        <DataGrid x:Name="ChoicesGrid" AutoGenerateColumns="False" CanUserAddRows="False"
+                                  CanUserDeleteRows="False" CanUserSortColumns="False" HeadersVisibility="Column"
+                                  SelectionMode="Single" MaxHeight="260" AutomationProperties.AutomationId="SpkChoices">
+                            <DataGrid.Columns>
+                                <DataGridTextColumn Header="Plays" Binding="{Binding Label}" IsReadOnly="True"
+                                                    ElementStyle="{StaticResource Mono}" Width="170" />
+                                <DataGridTemplateColumn Header="Chance %" Width="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="{x:Type spk:SpkChoiceRow}">
+                                            <TextBox Text="{Binding Chance, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="May repeat" Width="80">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="{x:Type spk:SpkChoiceRow}">
+                                            <CheckBox IsChecked="{Binding Repeat, UpdateSourceTrigger=PropertyChanged}"
+                                                      HorizontalAlignment="Center" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTextColumn Header="" Binding="{Binding Detail}" IsReadOnly="True"
+                                                    ElementStyle="{StaticResource GridMutedText}" Width="*" />
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <Button x:Name="RemoveChoiceButton" Content="Remove variation" Click="RemoveChoice_Click" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel x:Name="VariationSection" Visibility="Collapsed" Orientation="Horizontal" Margin="0,0,0,8">
+                        <Button x:Name="AddVariationButton" Content="Add variation…" Click="AddVariation_Click"
+                                AutomationProperties.AutomationId="SpkAddVariation" />
+                    </StackPanel>
+
+                    <StackPanel x:Name="CasesSection" Visibility="Collapsed" Margin="0,0,0,8">
+                        <TextBlock x:Name="CasesTitle" FontWeight="Bold" Margin="0,0,0,4" />
+                        <DataGrid x:Name="CasesGrid" AutoGenerateColumns="False" CanUserAddRows="False"
+                                  CanUserDeleteRows="False" CanUserSortColumns="False" HeadersVisibility="Column"
+                                  SelectionMode="Single" MaxHeight="260">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn x:Name="CaseValueColumn" Header="When" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="{x:Type spk:SpkCaseRow}">
+                                            <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn Header="Plays" Width="*">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="{x:Type spk:SpkCaseRow}">
+                                            <TextBox Text="{Binding Target, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <Button Content="Add" Click="AddCase_Click" Margin="0,0,8,0" />
+                            <Button Content="Remove" Click="RemoveCase_Click" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel x:Name="CurveSection" Visibility="Collapsed" Margin="0,0,0,8">
+                        <ComboBox x:Name="CurvePicker" Margin="0,0,0,6" SelectionChanged="CurvePicker_SelectionChanged" />
+                        <Border Style="{StaticResource InertFrame}" Height="180" Margin="0,0,0,6">
+                            <app:CurvePlot x:Name="CurveChart" AutomationProperties.AutomationId="SpkCurveChart" />
+                        </Border>
+                        <DataGrid x:Name="PointsGrid" AutoGenerateColumns="False" CanUserAddRows="False"
+                                  CanUserDeleteRows="False" CanUserSortColumns="False" HeadersVisibility="Column"
+                                  SelectionMode="Single" MaxHeight="220">
+                            <DataGrid.Columns>
+                                <DataGridTemplateColumn x:Name="PointXColumn" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="{x:Type spk:SpkPointRow}">
+                                            <TextBox Text="{Binding X, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                                <DataGridTemplateColumn x:Name="PointYColumn" Width="120">
+                                    <DataGridTemplateColumn.CellTemplate>
+                                        <DataTemplate DataType="{x:Type spk:SpkPointRow}">
+                                            <TextBox Text="{Binding Y, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                        </DataTemplate>
+                                    </DataGridTemplateColumn.CellTemplate>
+                                </DataGridTemplateColumn>
+                            </DataGrid.Columns>
+                        </DataGrid>
+                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
+                            <Button Content="Add point" Click="AddPoint_Click" Margin="0,0,8,0" />
+                            <Button Content="Remove point" Click="RemovePoint_Click" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border x:Name="AudioPanel" Style="{StaticResource InertFrame}" Padding="12" Margin="0,0,0,8"
+                            Visibility="Collapsed">
+                        <StackPanel>
+                            <StackPanel Orientation="Horizontal" Margin="0,0,0,8">
+                                <Button x:Name="PlayPickButton" Content="▶ Play a pick" Click="PlayPick_Click" Margin="0,0,8,0"
+                                        AutomationProperties.AutomationId="SpkPlayPick" />
+                                <Button x:Name="ExportAudioButton" Content="Export…" Click="ExportAudio_Click" Margin="0,0,8,0" />
+                                <Button x:Name="ImportAudioButton" Content="Import…" Click="ImportAudio_Click" />
+                            </StackPanel>
+                            <audio:AudioPreviewPanel x:Name="AudioPreview" />
+                        </StackPanel>
+                    </Border>
+
+                    <CheckBox x:Name="ShowRawDetailsCheckBox" Content="Show raw technical details" Margin="0,4,0,8"
+                              Checked="ShowRawDetails_Changed" Unchecked="ShowRawDetails_Changed" />
+                    <StackPanel x:Name="RawPanel" Visibility="Collapsed">
+                        <ItemsControl x:Name="RawFieldsList" ItemTemplate="{StaticResource FieldTemplate}" />
+                        <TextBlock x:Name="RawDetailsText" Style="{StaticResource MonoSmall}" TextWrapping="Wrap" Margin="0,4,0,0" />
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
     </DockPanel>
 </UserControl>

@@ -111,48 +111,6 @@ public class SpkPackageTests
         Assert.Equal(44100, package.TryGetFlatCopySampleRate(flatCopy));
     }
 
-    [Fact]
-    public void ReplaceRecordPayload_swaps_only_the_target_records_bytes()
-    {
-        if (Fixture.Read(WithAudio) is not { } original) return;
-
-        SpkPackage before = SpkPackage.Parse(original);
-        SpkRecord flatCopy = before.Records.Single(r => r.Core!.Type == SpkRecordType.FlatCopy);
-
-        // Shorter, arbitrary replacement
-        byte[] newPayload = [.. flatCopy.Payload[..SpkRecordCore.Size], .. new byte[3]];
-        byte[] patched = SpkPackage.ReplaceRecordPayload(original, flatCopy.Id, newPayload);
-
-        SpkPackage after = SpkPackage.Parse(patched);
-        Assert.Equal(before.Records.Count, after.Records.Count);
-
-        for (int i = 0; i < before.Records.Count; i++)
-        {
-            SpkRecord b = before.Records[i];
-            SpkRecord a = after.Records[i];
-            Assert.Equal(b.Id, a.Id);
-            Assert.Equal(b.PreambleWords, a.PreambleWords);
-
-            if (b.Id == flatCopy.Id)
-            {
-                Assert.Equal(newPayload, a.Payload);
-            }
-            else
-            {
-                // Every other record's bytes are untouched
-                Assert.Equal(b.Payload, a.Payload);
-            }
-        }
-    }
-
-    [Fact]
-    public void ReplaceRecordPayload_rejects_an_id_not_present_in_the_file()
-    {
-        if (Fixture.Read(WithAudio) is not { } original) return;
-
-        Assert.Throws<InvalidDataException>(() => SpkPackage.ReplaceRecordPayload(original, 0xdeadbeef, []));
-    }
-
     /// <summary>The bank behind the Dart Rifle's first-person shot, and the reason this case is worth
     /// a fixture: it holds one record, that record holds no audio, and the word a leaf event uses to
     /// point at its sound is `0` here - so read as a leaf it looks like a file leading nowhere. It is

@@ -1,131 +1,61 @@
+using System.Globalization;
+using System.IO;
+using System.Text;
+using System.Windows;
+using System.Windows.Controls;
+using System.Windows.Input;
 using JackAll.App.Audio;
 using JackAll.Core.Vfs;
 using JackAll.Tools.Audio;
-using JackAll.Tools.Sbao;
 using JackAll.Tools.Spk;
 using Microsoft.Win32;
-using System.IO;
-using System.Text;
-using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows;
 
 namespace JackAll.App.FileHandlers.Spk;
 
 /// <summary>
-/// The file handler for .spk sound-bank containers. Grouped, not flat: each `FlatCopy` record (the one
-/// holding actual audio) is its own group header, with any `SimpleFixed68`/`TransformedFixed128` record
-/// that chains back to it (directly or through one hop, following the same `LinkedId`/
-/// `FlatCopySiblingId` cross-reference the "Go to" button below uses) nested under it as an indented
-/// child row - a real bank is almost always exactly one such group, so this usually turns "three
-/// disconnected hex rows" into "one sound, with its own parameters right underneath it." Anything that
-/// doesn't chain to an audio record actually present in this file (an orphaned metadata record, a rare
-/// type, or one of the no-audio-of-its-own "alias" banks - see docs/docs/file-formats/spk.md) falls
-/// into a trailing "Other records" group instead of being force-fit somewhere misleading.
-///
-/// A `SimpleFixed68` record is an *event*, not a sound, and the two composite event kinds
-/// (<see cref="SpkEventType.List"/>/<see cref="SpkEventType.Switch"/>) hold no audio at all - they
-/// dispatch to ids in *other* banks, listed in the bytes after their sub-header. Those get a group of
-/// their own headed "plays N sounds", with one indented row per child carrying its own "Go to". Before
-/// that, such a bank rendered as a single "Sound params → 0x00000000" row in "Other records", because
-/// the word a leaf event uses as a link is a byte offset here - which made a perfectly ordinary
-/// one-entry list event (the Dart Rifle's first-person shot, say) look like a file leading nowhere.
-///
-/// Every row is still decoded in plain language rather than raw hex - format/duration/size for audio,
-/// which other record it points to plus its gain for the two metadata types. Every record's own
-/// byte-level fields (the confirmed constants, the four still-unidentified core fields, full
-/// sub-header words, preamble) are still available - just behind the "Show raw technical details"
-/// checkbox for the currently selected row, rather than always on screen. See
-/// <see cref="SpkPackage"/>'s remarks for what each field means and how confident that meaning is.
-///
-/// Selecting a row with audio drives the play/export/import panel directly (no separate picker).
-/// `FlatCopy` turns out to hold either of two codecs, not just one - real files split roughly
-/// 74%/26% Ogg Vorbis / IMA-ADPCM - detected per record by whether its bytes parse as a Vorbis
-/// identification header (<see cref="SbaoAudio.TryReadVorbisId"/>, the exact same check
-/// <c>SbaoFileHandler</c> uses for `.sbao`'s own Ogg payload) before falling back to
-/// <see cref="ImaAdpcm"/>. An Ogg-backed stream is already a complete file - preview/export/import
-/// just shells out to ffmpeg (transcode-to-wav for preview, verbatim bytes for export, transcode-to-
-/// Ogg-at-the-same-rate for import); an IMA-ADPCM stream is decoded/encoded natively, with ffmpeg only
-/// doing format/rate/channel transcoding to and from raw PCM. Importing replaces only the selected
-/// record's payload via <see cref="SpkPackage.ReplaceRecordPayload"/> - everything else in the file is
-/// carried forward byte-for-byte, and the replacement audio is transcoded to whatever codec/sample
-/// rate/channel count that record already used (there's no single required format the way `.sbao`
-/// music has one).
-///
-/// A row's own cross-reference gets a "Go to" action too, the same jump mechanism
-/// <c>DepLoadFileHandler</c> uses for a dependency: if the id matches another record already in this
-/// same bank, it just selects that row (typically a no-op click for a grouped child, since it's
-/// already visible right there - the real value is for a reference that *isn't* grouped, i.e. doesn't
-/// resolve within this file); otherwise it goes through <c>resolveSoundId</c>, which turns the id into
-/// the bank filename the engine itself would (<c>soundbinary\&lt;id:08x&gt;.spk</c>) and jumps there.
-/// That callback must resolve a **sound id**, not a path hash: passing this id to a path-hash lookup
-/// finds nothing and reports a bank that plainly exists as missing.
+/// The .spk panel: the bank as a tree of what plays what, an inspector over the selected record, and
+/// the problems <c>spk encode</c> would report. Every edit goes through <see cref="SpkBank"/> and is
+/// staged at once, unless it leaves an error.
 /// </summary>
+/// <remarks>
+/// A record sits under whatever plays it, so a bank reads event → container → sample → audio; an id
+/// held by another bank is a leaf with "Go to". Imported audio is transcoded to the format of the
+/// audio it joins or replaces, and the samples playing it re-derive their lengths from it.
+/// </remarks>
 public partial class SpkFileHandler : UserControl
 {
-    private const int PayloadPreviewBytes = 16;
+    private static readonly CultureInfo Invariant = CultureInfo.InvariantCulture;
+
+    private const string AudioFilter = "Audio files|*.ogg;*.mp3;*.wav;*.flac;*.m4a;*.aac;*.wma;*.opus;*.aiff|All files|*.*";
+
+    private static readonly Dictionary<string, string> FieldLabels = new()
+    {
+        ["sound"] = "Plays", ["rolloff"] = "Rolloff curve", ["gainDb"] = "Gain (dB)", ["audio"] = "Audio",
+        ["loop"] = "Loops", ["silence"] = "Silence (%)", ["repeatSilence"] = "Silence may repeat",
+        ["sequence"] = "Play in order", ["group"] = "Switch group", ["default"] = "Default",
+        ["stop"] = "Stops", ["play"] = "Then plays", ["effect"] = "Reverb effect", ["target"] = "Target",
+    };
 
     private readonly string _fileName;
     private readonly Action<byte[]> _replaceContent;
     private readonly Func<uint, VfsFile?> _resolveSoundId;
     private readonly Action<VfsFile> _navigateTo;
-    private SpkPackage? _package;
-    private byte[]? _originalContent;
-    private List<Row> _rows = [];
+    private readonly SpkBank? _bank;
+
+    /// <summary>The id the game loads this bank by, from a hex file name; null for a bark bank.</summary>
+    private readonly uint? _loadId;
+
+    /// <summary>The id new records' ids derive from: <see cref="_loadId"/>, else the first event's.</summary>
+    private readonly uint _bankId;
+
+    /// <summary>Where the panel was, per file: staging an edit rebuilds the file list, which opens a
+    /// fresh panel on the staged file, and it picks up here.</summary>
+    private static readonly Dictionary<string, (uint? Selected, int Curve, string Status)> Remembered = [];
+
+    private SpkNode? _selected;
+    private SpkBankRecord? _audio;
     private string? _tempWavPath;
-
-    /// <summary>One row of the records grid - a plain-language view of a single record, decoded as far
-    /// as we understand its type. <see cref="LinkedId"/> is this record's own outgoing cross-reference
-    /// (a `SimpleFixed68`'s `LinkedId` or a `TransformedFixed128`'s `FlatCopySiblingId`), if it has one;
-    /// <see cref="LinkedInSameFile"/>/<see cref="LinkedExternalFile"/> say where (if anywhere) it
-    /// actually resolves to, computed once when the row is built.</summary>
-    private sealed class Row
-    {
-        public required int DisplayIndex { get; init; }
-
-        /// <summary>The "#" column: a record's position in the file, blank for a
-        /// <see cref="IsReference"/> row, which has no position of its own.</summary>
-        public string IndexLabel => IsReference ? "" : DisplayIndex.ToString();
-
-        public required string IdHex { get; init; }
-        public required string Kind { get; init; }
-        public required string Summary { get; init; }
-
-        /// <summary>The record this row shows, or null for a <see cref="IsReference"/> row - one of a
-        /// composite event's children, which is an id in *another* bank and so has no record here.</summary>
-        public required SpkRecord? Record { get; init; }
-
-        /// <summary>True for a synthetic row standing in for one entry of a composite event's child
-        /// list (see <see cref="SimpleFixed68SubHeader.ChildIds"/>). It has no record of its own, is
-        /// never playable, and exists so each child gets its own "Go to" - the alternative was one
-        /// button for a list that usually has two entries.</summary>
-        public required bool IsReference { get; init; }
-
-        public required bool IsPlayable { get; init; }
-        public required uint? LinkedId { get; init; }
-        public required bool LinkedInSameFile { get; init; }
-        public required VfsFile? LinkedExternalFile { get; init; }
-
-        /// <summary>Whether this row is nested under an audio group's <c>FlatCopy</c> parent (see
-        /// <see cref="BuildRows"/>) rather than being a top-level/ungrouped entry. A grouped child's
-        /// own link target is already visible right there, so its "Go to" button would be a no-op -
-        /// only entries with no parent in this file get one (see <see cref="ShowLinkButton"/>).</summary>
-        public required bool IsChild { get; init; }
-
-        /// <summary>The DataGrid's own grouping key (see <see cref="BuildRows"/>) - the owning
-        /// `FlatCopy` record's own group label for anything that chains back to one, or the fixed
-        /// "Other records" label for anything that doesn't.</summary>
-        public required string GroupKey { get; init; }
-
-        public bool CanNavigateLink => LinkedInSameFile || LinkedExternalFile is not null;
-
-        /// <summary>A reference row exists only to be navigated from, so it always shows its button
-        /// even though it is indented like a grouped child; a real record only shows one when its own
-        /// link isn't already visible right beneath it.</summary>
-        public bool ShowLinkButton => LinkedId is not null && (IsReference || !IsChild);
-
-        public string LinkButtonText => ShowLinkButton ? (CanNavigateLink ? "Go to →" : "Not found") : "";
-    }
+    private int _curveIndex;
 
     public SpkFileHandler(
         string fileName, byte[] content, Action<byte[]> replaceContent,
@@ -137,450 +67,479 @@ public partial class SpkFileHandler : UserControl
         _resolveSoundId = resolveSoundId;
         _navigateTo = navigateTo;
 
-        // Release the temp .wav before deleting it - the panel resets itself on Unloaded too, but
-        // child/parent Unloaded order isn't guaranteed.
+        // Release the temp .wav before deleting it: child and parent Unloaded order isn't guaranteed.
         Unloaded += (_, _) =>
         {
             AudioPreview.Reset();
             DeleteTempFile();
         };
 
-        Load(content);
-    }
-
-    private void Load(byte[] content, uint? reselectRecordId = null)
-    {
         try
         {
-            _package = SpkPackage.Parse(content);
-            _originalContent = content;
-
-            _rows = BuildRows(_package);
-            HeaderText.Text = $"{_fileName} — {_package.Records.Count} record(s)";
-
-            var groupedView = new ListCollectionView(_rows);
-            groupedView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(Row.GroupKey)));
-            RecordsGrid.ItemsSource = groupedView;
-            AudioPanel.Visibility = _rows.Any(r => r.IsPlayable) ? Visibility.Visible : Visibility.Collapsed;
-
-            Row? toSelect = reselectRecordId is { } id
-                ? _rows.FirstOrDefault(r => r.Record?.Id == id)
-                : _rows.FirstOrDefault(r => r.IsPlayable);
-            RecordsGrid.SelectedItem = toSelect; // triggers SelectionChanged -> loads the preview, if any
+            _bank = SpkBank.Parse(content);
         }
         catch (Exception ex)
         {
-            _package = null;
-            _originalContent = null;
-            _rows = [];
             HeaderText.Text = $"Couldn't read this file: {ex.Message}";
-            RecordsGrid.ItemsSource = null;
-            AudioPanel.Visibility = Visibility.Collapsed;
-            AudioPreview.Reset();
-        }
-    }
-
-    private const string OtherRecordsGroup = "Other records";
-
-    /// <summary>
-    /// Builds one row per record, ordered and keyed for grouping: every `FlatCopy` record starts its
-    /// own group, immediately followed by any record that chains back to it - directly (a
-    /// `TransformedFixed128` whose own `FlatCopySiblingId` matches it) or one hop further (a
-    /// `SimpleFixed68` linked to that `TransformedFixed128`) - via ids actually present in this file.
-    /// Anything that never reaches a local `FlatCopy` (an orphaned metadata record, a rare/unknown
-    /// type, or a no-audio "alias" bank whose only record's link points entirely outside this file)
-    /// goes in a trailing <see cref="OtherRecordsGroup"/> bucket instead.
-    /// </summary>
-    private List<Row> BuildRows(SpkPackage package)
-    {
-        Dictionary<uint, SpkRecord> byId = package.Records
-            .GroupBy(r => r.Id).ToDictionary(g => g.Key, g => g.First()); // ids should be unique; first-wins if not
-        Dictionary<uint, int> originalIndex = package.Records
-            .Select((r, i) => (r, i)).GroupBy(x => x.r.Id).ToDictionary(g => g.Key, g => g.First().i);
-
-        // Which local FlatCopy (if any) does this record ultimately point to? One hop for
-        // TransformedFixed128->FlatCopy, two hops for SimpleFixed68->TransformedFixed128->FlatCopy.
-        uint? FindGroupRoot(SpkRecord r, HashSet<uint> visited)
-        {
-            if (r.Core?.Type == SpkRecordType.FlatCopy)
-            {
-                return r.Id;
-            }
-
-            uint? next = r.TransformedFixed128?.FlatCopySiblingId ?? r.SimpleFixed68?.LinkedId;
-            if (next is not { } nextId || !visited.Add(nextId) || !byId.TryGetValue(nextId, out SpkRecord? target))
-            {
-                return null;
-            }
-
-            return FindGroupRoot(target, visited);
-        }
-
-        var ordered = new List<(SpkRecord Record, bool IsChild, string GroupKey)>();
-        var handled = new HashSet<uint>();
-        int soundNumber = 0;
-
-        foreach (SpkRecord audio in package.Records.Where(r => r.Core?.Type == SpkRecordType.FlatCopy))
-        {
-            soundNumber++;
-            string groupKey = $"Sound {soundNumber} — 0x{audio.Id:x8}";
-            ordered.Add((audio, false, groupKey));
-            handled.Add(audio.Id);
-
-            foreach (SpkRecord child in package.Records.Where(r => r.Id != audio.Id))
-            {
-                if (handled.Contains(child.Id) || FindGroupRoot(child, [child.Id]) != audio.Id)
-                {
-                    continue;
-                }
-
-                ordered.Add((child, true, groupKey));
-                handled.Add(child.Id);
-            }
-        }
-
-        // A composite event holds no audio, so the loop above never claims it - and its children are
-        // ids in other banks, not records here. Give each one its own group so the bank reads as what
-        // it is ("this event fires these two sounds") instead of landing in "Other records" looking
-        // like a dead end.
-        foreach (SpkRecord ev in package.Records.Where(r =>
-            !handled.Contains(r.Id) && r.SimpleFixed68 is { IsComposite: true }))
-        {
-            ordered.Add((ev, false, $"Event 0x{ev.Id:x8} — {DescribeChildCount(ev.SimpleFixed68!)}"));
-            handled.Add(ev.Id);
-        }
-
-        foreach (SpkRecord r in package.Records.Where(r => !handled.Contains(r.Id)))
-        {
-            ordered.Add((r, false, OtherRecordsGroup));
-        }
-
-        var rows = new List<Row>(ordered.Count);
-        foreach ((SpkRecord r, bool isChild, string groupKey) in ordered)
-        {
-            uint? linkedId = r.TransformedFixed128?.FlatCopySiblingId ?? r.SimpleFixed68?.LinkedId;
-            bool linkedInSameFile = linkedId is { } id && byId.ContainsKey(id);
-            VfsFile? linkedExternalFile = linkedId is { } id2 && !linkedInSameFile ? _resolveSoundId(id2) : null;
-
-            rows.Add(new Row
-            {
-                DisplayIndex = originalIndex[r.Id] + 1,
-                IdHex = $"0x{r.Id:x8}",
-                Kind = (isChild ? "↳ " : "") + DescribeKind(r),
-                Summary = DescribeSummary(package, r),
-                Record = r,
-                IsReference = false,
-                IsPlayable = r.FlatCopyAudioStream is not null,
-                LinkedId = linkedId,
-                LinkedInSameFile = linkedInSameFile,
-                LinkedExternalFile = linkedExternalFile,
-                IsChild = isChild,
-                GroupKey = groupKey,
-            });
-
-            if (r.SimpleFixed68 is not { IsComposite: true } composite)
-            {
-                continue;
-            }
-
-            for (int i = 0; i < composite.ChildIds.Count; i++)
-            {
-                uint childId = composite.ChildIds[i];
-                bool inSameFile = byId.ContainsKey(childId);
-                VfsFile? external = inSameFile ? null : _resolveSoundId(childId);
-                string key = composite.SwitchKeys.Count > i ? $" · when 0x{composite.SwitchKeys[i]:x8}" : "";
-
-                rows.Add(new Row
-                {
-                    DisplayIndex = originalIndex[r.Id] + 1,
-                    IdHex = $"0x{childId:x8}",
-                    Kind = "↳ plays",
-                    Summary = (inSameFile ? "in this bank"
-                        : external is { } f ? f.Path
-                        : $"soundbinary\\{childId:x8}.spk — not in the loaded filesystem") + key,
-                    Record = null,
-                    IsReference = true,
-                    IsPlayable = false,
-                    LinkedId = childId,
-                    LinkedInSameFile = inSameFile,
-                    LinkedExternalFile = external,
-                    IsChild = true,
-                    GroupKey = groupKey,
-                });
-            }
-        }
-
-        return rows;
-    }
-
-    private static string DescribeChildCount(SimpleFixed68SubHeader s68) =>
-        s68.ChildIds.Count == 1 ? "plays 1 sound" : $"plays {s68.ChildIds.Count} sounds";
-
-    private void GoToLink_Click(object sender, RoutedEventArgs e)
-    {
-        if (((FrameworkElement)sender).DataContext is not Row row)
-        {
             return;
         }
 
-        if (row.LinkedInSameFile && row.LinkedId is { } id)
+        string stem = Path.GetFileNameWithoutExtension(fileName);
+        _loadId = stem.Length == 8 && uint.TryParse(stem, NumberStyles.HexNumber, Invariant, out uint id) ? id : null;
+        _bankId = _loadId ?? _bank.Records.FirstOrDefault(r => r.IsEvent)?.Id ?? _bank.Records.FirstOrDefault()?.Id ?? 0;
+        ShowProblems();
+        (uint? selected, _curveIndex, StatusText.Text) = Remembered.GetValueOrDefault(fileName, (null, 0, ""));
+        Refresh(selected);
+    }
+
+    private void Remember() => Remembered[_fileName] = (_selected?.Record?.Id, _curveIndex, StatusText.Text);
+
+    private void Refresh(uint? select)
+    {
+        HeaderText.Text = $"{_fileName} — {_bank!.Records.Count} record(s)";
+        List<SpkNode> roots = BuildTree();
+        BankTree.ItemsSource = roots;
+        if (((select is { } id ? SpkNode.Select(roots, id) : null) ?? roots.FirstOrDefault()) is { } node)
         {
-            // The record row, never a reference row that happens to name the same id.
-            RecordsGrid.SelectedItem = _rows.FirstOrDefault(r => r.Record?.Id == id);
-        }
-        else if (row.LinkedExternalFile is { } file)
-        {
-            _navigateTo(file);
+            node.IsSelected = true;
         }
     }
 
-    private static string DescribeKind(SpkRecord r) => r.Core switch
+    // --- tree ------------------------------------------------------------------------------------
+
+    /// <summary>Every record nothing in the bank plays is a root; the rest sit under what plays them.</summary>
+    private List<SpkNode> BuildTree()
     {
-        null => "(malformed)",
-        { Type: SpkRecordType.FlatCopy } => "▶ Audio",
-        { Type: SpkRecordType.TransformedFixed128 } => "Audio params",
-        { Type: SpkRecordType.SimpleFixed68 } => DescribeEventKind(r.SimpleFixed68),
-        { Type: { } t } => t.ToString(),
-        _ => $"Unknown (0x{r.Core.RawType:x8})",
-    };
-
-    /// <summary>A `SimpleFixed68` record is an event object, and which kind matters: a list or switch
-    /// event holds no sound of its own and dispatches to other banks entirely, so calling every one of
-    /// them "Sound params" (as this handler used to) hid the distinction that explains why such a bank
-    /// looks empty.</summary>
-    private static string DescribeEventKind(SimpleFixed68SubHeader? s68) => s68?.KnownEventType switch
-    {
-        null when s68 is not null => $"Event (type {s68.EventType}?)",
-        SpkEventType.List => "Event list",
-        SpkEventType.Switch => "Event switch",
-        _ => "Sound event",
-    };
-
-    private string DescribeSummary(SpkPackage package, SpkRecord r)
-    {
-        if (r.FlatCopyAudioStream is { } audio)
-        {
-            if (SbaoAudio.TryReadVorbisId(audio) is { } vorbis)
-            {
-                string channelLabel = vorbis.Channels == 2 ? "Stereo" : vorbis.Channels == 1 ? "Mono" : $"{vorbis.Channels}ch";
-                return $"{channelLabel} · {vorbis.SampleRate} Hz · Ogg Vorbis · {FormatBytes(audio.Length)}{DescribeLengthMismatch(package, r)}";
-            }
-
-            try
-            {
-                ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(audio);
-                int? sampleRate = package.TryGetFlatCopySampleRate(r);
-                int rate = sampleRate ?? SoundPreview.FallbackSampleRateHz;
-                int frames = decoded.Samples.Length / decoded.Channels;
-                string channelLabel = decoded.Channels == 2 ? "Stereo" : "Mono";
-                string rateLabel = sampleRate is { } hz ? $"{hz} Hz" : $"~{SoundPreview.FallbackSampleRateHz} Hz (no rate on record)";
-                return $"{channelLabel} · {rateLabel} · IMA-ADPCM · {FormatTime(TimeSpan.FromSeconds((double)frames / rate))} · {FormatBytes(audio.Length)}{DescribeLengthMismatch(package, r)}";
-            }
-            catch (Exception ex)
-            {
-                return $"⚠ couldn't decode: {ex.Message}";
-            }
-        }
-
-        if (r.TransformedFixed128 is { } t128)
-        {
-            return $"→ audio 0x{t128.FlatCopySiblingId:x8} · {t128.SampleRate} Hz · gain {FormatQ16_16(t128.GainQ16_16)}";
-        }
-
-        if (r.SimpleFixed68 is { } s68)
-        {
-            if (s68.IsComposite)
-            {
-                string children = s68.ChildIds.Count == 0
-                    ? "(empty list)"
-                    : string.Join(", ", s68.ChildIds.Select(id => $"0x{id:x8}"));
-                return $"{DescribeChildCount(s68)} → {children}";
-            }
-
-            var extras = new List<string>();
-            if (s68.SignedHundredFlag != 0)
-            {
-                extras.Add($"flag {s68.SignedHundredFlag}");
-            }
-
-            if (s68.BoolFlag != 0)
-            {
-                extras.Add("flagged");
-            }
-
-            string extra = extras.Count > 0 ? " · " + string.Join(" · ", extras) : "";
-            return $"→ 0x{s68.LinkedId:x8} · gain {FormatQ16_16(unchecked((int)s68.IdentityGainQ16_16))}{extra}";
-        }
-
-        return r.Core is null
-            ? "too short for the 40-byte record core"
-            : $"{r.Payload.Length:N0} bytes";
+        var played = _bank!.Records.SelectMany(r => r.References()).Select(l => l.Id).ToHashSet();
+        return [.. _bank.Records.Where(r => !played.Contains(r.Id)).Select(r => Node(r, [], ""))];
     }
 
-    /// <summary>Flags an audio record whose descriptor declares a different length than its stream.</summary>
-    private static string DescribeLengthMismatch(SpkPackage package, SpkRecord r) =>
-        package.DeclaredAudioLengthMatches(r) == false && package.TryGetAudioDescriptor(r) is { } t128
-            ? $"  ⚠ descriptor declares {t128.AudioByteLength:N0} B"
+    private SpkNode Node(SpkBankRecord record, HashSet<uint> path, string role)
+    {
+        var node = new SpkNode
+        {
+            Id = record.Id, Record = record, Label = $"{record.Element} 0x{record.Id:x8}",
+            Detail = Join(role, Describe(record)), IsExpanded = path.Count < 3,
+        };
+        if (!path.Add(record.Id))
+        {
+            return node;
+        }
+
+        foreach ((uint id, SpkReference kind) in record.References())
+        {
+            string childRole = RoleOf(record, id);
+            node.Add(_bank!.Find(id) is { } child ? Node(child, [.. path], childRole) : Outside(id, kind, childRole));
+        }
+        return node;
+    }
+
+    private SpkNode Outside(uint id, SpkReference kind, string role)
+    {
+        VfsFile? file = kind == SpkReference.Rolloff ? null : _resolveSoundId(id);
+        string where = kind == SpkReference.Rolloff ? "the rolloff pack, common\\soundbinary\\2fffffff.spk"
+            : file is not null ? file.Path
+            : "another bank, not in the loaded game files";
+        return new SpkNode { Id = id, External = file, Label = $"0x{id:x8}", Detail = Join(role, $"{kind} in {where}") };
+    }
+
+    /// <summary>What a child is to a container: its chance, or the switch value it answers.</summary>
+    private static string RoleOf(SpkBankRecord parent, uint child)
+    {
+        int index = parent.Entries.FindIndex(e => e.Ref == child);
+        return index < 0 ? ""
+            : parent.Layout == SpkLayout.Random ? $"{SpkBankEdits.Chance(parent, index):P0}"
+            : parent.Layout?.Children is { ValueAt: >= 0 } ? $"when 0x{parent.Entries[index].Value:x8}"
             : "";
-
-    private static string FormatQ16_16(int fixedPoint) => (fixedPoint / 65536.0).ToString("0.###");
-
-    private static string FormatBytes(long bytes)
-    {
-        if (bytes >= 1024 * 1024)
-        {
-            return $"{bytes / (1024.0 * 1024.0):0.#} MB";
-        }
-
-        if (bytes >= 1024)
-        {
-            return $"{bytes / 1024.0:0.#} KB";
-        }
-
-        return $"{bytes} B";
     }
 
-    private void RecordsGrid_SelectionChanged(object sender, SelectionChangedEventArgs e)
-    {
-        Row? row = RecordsGrid.SelectedItem as Row;
-        UpdateRawDetails(row);
+    private static string Join(params string[] parts) => string.Join(" · ", parts.Where(p => p.Length > 0));
 
-        if (row is not { IsPlayable: true })
+    private string Describe(SpkBankRecord record)
+    {
+        SpkLayout? layout = record.Layout;
+        int children = record.Entries.Count + record.Layers.Count;
+        return record switch
         {
-            AudioPreview.Reset();
-            ImportAudioButton.IsEnabled = false;
-            ExportAudioButton.IsEnabled = false;
-            return;
-        }
-
-        ImportAudioButton.IsEnabled = true;
-        _ = PreparePreviewAsync(row.Record!); // IsPlayable is only ever set on a row backed by a record
-    }
-
-    private void ShowRawDetailsCheckBox_Changed(object sender, RoutedEventArgs e)
-    {
-        RawDetailsPanel.Visibility = ShowRawDetailsCheckBox.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
-    }
-
-    private void UpdateRawDetails(Row? row)
-    {
-        RawDetailsText.Text = row switch
-        {
-            null => "(no record selected)",
-            { IsReference: true } => $"0x{row.IdHex[2..]} is a child of the event above, not a record in this " +
-                                     $"file — it lives in its own bank ({row.Summary}). Use \"Go to →\" to open it.",
-            { Record: { } record } => BuildRawDetails(row.DisplayIndex - 1, record),
-            _ => "(no record selected)",
+            { Raw: true } => $"{record.Data.Length:N0} bytes, not decoded",
+            { IsAudio: true } => DescribeAudio(record),
+            { IsRolloff: true } => record.Points.Count == 0 ? "no points" : $"gone at {record.Points[^1].X:0.#} m",
+            _ when layout == SpkLayout.Play => record.Word(7) == SpkLayout.NoId ? "unpositioned" : $"rolloff 0x{record.Word(7):x8}",
+            _ when layout == SpkLayout.Sample => Join(
+                record.Word(SpkLayout.SampleGain) != 0 ? $"{SpkLayout.FromQ16(record.Word(SpkLayout.SampleGain)):0.#} dB" : "",
+                record.Word(SpkLayout.SampleLoop) == 1 ? "loops" : ""),
+            _ when layout == SpkLayout.Random => record.Word(10) == 1 ? $"{children} in order"
+                : $"{children} choices" + (record.Word(8) != 0 ? $" · {SpkBankEdits.Chance(record, null):P0} silence" : ""),
+            _ when layout == SpkLayout.Switch || layout == SpkLayout.SwitchEvent => $"{children} cases",
+            _ when layout == SpkLayout.MultiEvent => $"starts {children} together",
+            _ when layout == SpkLayout.Multilayer => $"{children} layers",
+            _ => layout?.KindAttribute is not null ? $"{layout.KindAttribute} {record.Kind}" : "",
         };
     }
 
-    /// <summary>The full byte-level breakdown for one record - every core/sub-header field (including
-    /// the ones folded into <see cref="DescribeSummary"/> already, plus the still-unidentified ones),
-    /// preamble words, and a hex preview for anything we don't have a decoded meaning for at all.</summary>
-    private static string BuildRawDetails(int index, SpkRecord r)
+    private static string DescribeAudio(SpkBankRecord audio)
     {
-        var sb = new StringBuilder();
-        sb.AppendLine($"[{index}] id=0x{r.Id:x8}  size={r.Payload.Length:N0}");
-        sb.AppendLine($"preamble=[{string.Join(", ", r.PreambleWords.Select(w => $"0x{w:x8}"))}]");
-
-        if (r.Core is not { } core)
+        if (SpkBank.DescribeAudio(audio) is not { } info)
         {
-            sb.Append("(too short for the 40-byte record core)");
-            return sb.ToString();
+            return "not Ogg Vorbis or IMA-ADPCM";
         }
-
-        string typeName = core.Type?.ToString() ?? $"unknown (0x{core.RawType:x8})";
-        sb.AppendLine(
-            $"type={typeName}" +
-            (core.HasStandardDeclaredSize ? "" : $"  !! declaredSize=0x{core.DeclaredSize:x} (expected 0x28)") +
-            $"  unknown=[0x{core.Unknown08:x8}, 0x{core.Unknown0C:x8}, 0x{core.Unknown10:x8}, 0x{core.Unknown14:x8}]" +
-            $"  reserved=[0x{core.ReservedZero18:x8}, 0x{core.ReservedZero1C:x8}, 0x{core.ReservedTwo24:x8}]");
-
-        if (r.SimpleFixed68 is { } s68)
-        {
-            string eventLabel = s68.KnownEventType is { } known
-                ? $"{(uint)known} ({known})"
-                : $"{s68.EventType} (unknown — the engine rejects this at load)";
-            sb.AppendLine(
-                $"SimpleFixed68 (binary event): ownId=0x{s68.OwnId:x8}  eventType={eventLabel}  " +
-                $"categoryId=0x{s68.CategoryId:x8}  gain={FormatQ16_16(unchecked((int)s68.IdentityGainQ16_16))}  " +
-                $"flag100={s68.SignedHundredFlag}  bool={s68.BoolFlag}");
-
-            if (s68.IsComposite)
-            {
-                IEnumerable<string> entries = s68.ChildIds.Select((id, i) =>
-                    s68.SwitchKeys.Count > i ? $"0x{id:x8}@0x{s68.SwitchKeys[i]:x8}" : $"0x{id:x8}");
-                sb.AppendLine(
-                    $"  children (tail offset {s68.RawWord2}, {s68.ChildIds.Count}): {string.Join(", ", entries)}");
-            }
-            else
-            {
-                sb.AppendLine($"  linkedId=0x{s68.LinkedId:x8}");
-            }
-        }
-
-        if (r.TransformedFixed128 is { } t128)
-        {
-            sb.AppendLine(
-                $"TransformedFixed128: ownId=0x{t128.OwnId:x8}  flatCopySibling=0x{t128.FlatCopySiblingId:x8}  " +
-                $"declaredAudioLength={t128.AudioByteLength:N0} B (mirror {t128.AudioByteLengthMirror:N0})  " +
-                $"gain={FormatQ16_16(t128.GainQ16_16)}  channelsGuess={t128.ChannelCountGuess}  " +
-                $"sampleRate={t128.SampleRate} Hz  word20={t128.Word20}  word25={t128.Word25}  " +
-                $"word28={t128.Word28}  word31=0x{t128.Word31:x8}");
-        }
-
-        if (r.FlatCopyAudioStream is { } audio)
-        {
-            string codec = SbaoAudio.TryReadVorbisId(audio) is { } v
-                ? $"Ogg Vorbis, {v.SampleRate} Hz {v.Channels}ch"
-                : "TImaAdpcm (28-byte header + nibbles)";
-            sb.Append($"FlatCopy audio stream: {audio.Length:N0} bytes ({codec})");
-        }
-        else
-        {
-            byte[] remainder = r.Payload[SpkRecordCore.Size..];
-            int previewLen = Math.Min(PayloadPreviewBytes, remainder.Length);
-            string hex = string.Join(" ", remainder.Take(previewLen).Select(b => b.ToString("x2")));
-            sb.Append($"payload (after core): {hex}{(previewLen < remainder.Length ? " ..." : "")}");
-        }
-
-        return sb.ToString();
+        string channels = info.Channels == 1 ? "Mono" : info.Channels == 2 ? "Stereo" : $"{info.Channels} ch";
+        string length = info.SampleRate > 0 ? $" · {info.Frames / (double)info.SampleRate:0.00} s" : "";
+        return $"{channels} · {info.SampleRate} Hz · {(info.Ogg ? "Ogg Vorbis" : "IMA-ADPCM")}{length} · {FormatBytes(audio.Data.Length)}";
     }
 
-    private async Task PreparePreviewAsync(SpkRecord record)
+    // --- inspector -------------------------------------------------------------------------------
+
+    private void BankTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
+    {
+        _selected = e.NewValue as SpkNode;
+        if (_selected?.Record is not null)
+        {
+            Remember();
+        }
+        ShowInspector();
+    }
+
+    private void ShowInspector()
     {
         AudioPreview.Reset();
         DeleteTempFile();
-        ExportAudioButton.IsEnabled = false;
-        AudioStatusText.Text = "";
+        _audio = null;
+        foreach (UIElement section in new UIElement[] { ChoicesSection, VariationSection, CasesSection, CurveSection, AudioPanel, GoToButton })
+        {
+            section.Visibility = Visibility.Collapsed;
+        }
 
+        SpkNode? node = _selected;
+        InspectorTitle.Text = node?.Label ?? "";
+        InspectorDetail.Text = node?.Detail ?? "";
+        FieldsList.ItemsSource = null;
+        if (node?.Record is not { } record)
+        {
+            GoToButton.Visibility = node?.External is null ? Visibility.Collapsed : Visibility.Visible;
+            ShowRaw(null);
+            return;
+        }
+
+        FieldsList.ItemsSource = Fields(record);
+        SpkLayout? layout = record.Layout;
+        if (layout == SpkLayout.Random)
+        {
+            ShowChoices(record);
+        }
+        if (layout == SpkLayout.Random || (layout == SpkLayout.Play && _bank!.Find(record.Word(2))?.Layout is { } sound
+            && (sound == SpkLayout.Sample || sound == SpkLayout.Random)))
+        {
+            VariationSection.Visibility = Visibility.Visible;
+        }
+        if (layout?.Children is not null && layout != SpkLayout.Random)
+        {
+            ShowCases(record);
+        }
+        if (record.IsRolloff || layout == SpkLayout.Multilayer)
+        {
+            ShowCurve(record);
+        }
+        ShowAudio(record);
+        ShowRaw(record);
+    }
+
+    private List<SpkFieldRow> Fields(SpkBankRecord record)
+    {
+        var rows = new List<SpkFieldRow>();
+        if (record.IsAudio && SpkBank.DescribeAudio(record) is { Ogg: false })
+        {
+            rows.Add(new SpkFieldRow("Sample rate (Hz)", () => record.SampleRate?.ToString(Invariant) ?? "",
+                text => Edit(() => record.SampleRate = int.Parse(text, Invariant))));
+        }
+        if (record.Layout is not { } layout)
+        {
+            return rows;
+        }
+
+        foreach (SpkWordField field in layout.Fields)
+        {
+            int index = field.Index;
+            string label = Label(field.Name);
+            rows.Add(field.Format switch
+            {
+                SpkWordFormat.Bool => new SpkFieldRow(label, () => (record.Word(index) == 1).ToString(),
+                    text => Edit(() => record.Words[index] = bool.Parse(text) ? 1u : 0u)) { IsBool = true },
+                SpkWordFormat.Q16 => new SpkFieldRow(label, () => SpkLayout.FromQ16(record.Word(index)).ToString("0.###", Invariant),
+                    text => Edit(() => record.Words[index] = SpkLayout.ToQ16(ParseNumber(text)))),
+                SpkWordFormat.Weight => new SpkFieldRow(label, () => Percent(SpkBankEdits.Chance(record, null)),
+                    text => Edit(() => SpkBankEdits.SetChance(record, null, ParseNumber(text) / 100))),
+                _ => new SpkFieldRow(label, () => FormatId(record.Word(index)),
+                    text => Edit(() => record.Words[index] = ParseId(text, layout.Default(index)))),
+            });
+        }
+        return rows;
+    }
+
+    private void ShowChoices(SpkBankRecord random)
+    {
+        ChoicesSection.Visibility = Visibility.Visible;
+        ChoicesGrid.ItemsSource = random.Entries.Select((entry, i) =>
+        {
+            SpkBankRecord? child = _bank!.Find(entry.Ref);
+            return new SpkChoiceRow(
+                child is null ? $"0x{entry.Ref:x8}" : $"{child.Element} 0x{child.Id:x8}",
+                child is null ? "in another bank" : Describe(child),
+                () => Percent(SpkBankEdits.Chance(random, i)),
+                text => Edit(() => SpkBankEdits.SetChance(random, i, ParseNumber(text) / 100)),
+                entry.Extra == 1,
+                repeat => Edit(() => random.Entries[i] = random.Entries[i] with { Extra = repeat ? 1u : 0u }));
+        }).ToList();
+    }
+
+    private void ShowCases(SpkBankRecord record)
+    {
+        SpkChildren shape = record.Layout!.Children!;
+        bool keyed = shape.ValueAt >= 0;
+        CasesSection.Visibility = Visibility.Visible;
+        CasesTitle.Text = keyed ? "Cases" : "Starts together";
+        CaseValueColumn.Visibility = keyed ? Visibility.Visible : Visibility.Collapsed;
+        CasesGrid.ItemsSource = record.Entries.Select((entry, i) => new SpkCaseRow(
+            () => FormatId(record.Entries[i].Ref),
+            text => Edit(() => record.Entries[i] = record.Entries[i] with { Ref = ParseId(text, 0) }),
+            keyed ? () => FormatId(record.Entries[i].Value) : null,
+            keyed ? text => Edit(() => record.Entries[i] = record.Entries[i] with { Value = ParseId(text, 0) }) : null)).ToList();
+    }
+
+    private void AddCase_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selected?.Record is { } record)
+        {
+            Edit(() => record.Entries.Add(new SpkEntry(0)));
+        }
+    }
+
+    private void RemoveCase_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selected?.Record is { } record && CasesGrid.SelectedIndex is >= 0 and var index)
+        {
+            Edit(() => record.Entries.RemoveAt(index));
+        }
+    }
+
+    // --- curves ----------------------------------------------------------------------------------
+
+    /// <summary>The curves a record holds: a rolloff's one, or every curve of every multilayer layer.</summary>
+    private static List<(string Name, List<SpkPoint> Points, string X, string Y)> CurvesOf(SpkBankRecord record) =>
+        record.IsRolloff
+            ? [("Rolloff", record.Points, "Distance (m)", "dB")]
+            : [.. record.Layers.SelectMany((layer, l) => layer.Curves.Select(curve => (
+                $"Layer {l + 1} · {(curve.Target == 1 ? "pitch" : "volume")} on 0x{curve.Parameter:x8}",
+                curve.Points, "Parameter", curve.Target == 1 ? "Pitch ratio" : "dB")))];
+
+    private void ShowCurve(SpkBankRecord record)
+    {
+        var curves = CurvesOf(record);
+        CurveSection.Visibility = Visibility.Visible;
+        CurvePicker.Visibility = curves.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
+        CurvePicker.ItemsSource = curves.Select(c => c.Name).ToList();
+        _curveIndex = Math.Clamp(_curveIndex, 0, Math.Max(0, curves.Count - 1));
+        CurvePicker.SelectedIndex = curves.Count == 0 ? -1 : _curveIndex;
+        DrawCurve(curves);
+    }
+
+    private void CurvePicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
+    {
+        if (CurvePicker.SelectedIndex >= 0 && _selected?.Record is { } record)
+        {
+            _curveIndex = CurvePicker.SelectedIndex;
+            Remember();
+            DrawCurve(CurvesOf(record));
+        }
+    }
+
+    private void DrawCurve(List<(string Name, List<SpkPoint> Points, string X, string Y)> curves)
+    {
+        if (curves.Count == 0)
+        {
+            CurveChart.Show([]);
+            PointsGrid.ItemsSource = null;
+            return;
+        }
+
+        (_, List<SpkPoint> points, string x, string y) = curves[_curveIndex];
+        PointXColumn.Header = x;
+        PointYColumn.Header = y;
+        CurveChart.Show([new CurveSeries([.. points.Select(p => new Point(p.X, p.Y))], "AccentBrush")]);
+        PointsGrid.ItemsSource = points.Select((point, i) => new SpkPointRow(
+            () => points[i].X.ToString("0.###", Invariant),
+            () => points[i].Y.ToString("0.###", Invariant),
+            (px, py) => Edit(() => points[i] = new SpkPoint((float)ParseNumber(px), (float)ParseNumber(py))))).ToList();
+    }
+
+    private List<SpkPoint>? SelectedCurve() =>
+        _selected?.Record is { } record && CurvesOf(record) is { Count: > 0 } curves ? curves[_curveIndex].Points : null;
+
+    private void AddPoint_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedCurve() is { } points)
+        {
+            SpkPoint last = points.LastOrDefault();
+            Edit(() => points.Add(new SpkPoint(last.X + 10, last.Y)));
+        }
+    }
+
+    private void RemovePoint_Click(object sender, RoutedEventArgs e)
+    {
+        if (SelectedCurve() is { } points && PointsGrid.SelectedIndex is >= 0 and var index)
+        {
+            Edit(() => points.RemoveAt(index));
+        }
+    }
+
+    // --- variations ------------------------------------------------------------------------------
+
+    private void RemoveChoice_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selected?.Record is not { } random)
+        {
+            return;
+        }
+        if (ChoicesGrid.SelectedIndex is not (>= 0 and var index))
+        {
+            StatusText.Text = "Select a variation to remove first.";
+            return;
+        }
+        Edit(() => _bank!.RemoveChoice(random, index));
+    }
+
+    /// <summary>Adds one choice per picked file, each transcoded to the format of the sample it joins;
+    /// a Play over a lone sample gets a random container around it first.</summary>
+    private async void AddVariation_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selected?.Record is not { } owner)
+        {
+            return;
+        }
+
+        var dialog = new OpenFileDialog { Title = "Add variations - any format ffmpeg supports", Filter = AudioFilter, Multiselect = true };
+        if (dialog.ShowDialog(Window.GetWindow(this)) != true)
+        {
+            return;
+        }
+
+        SpkBankRecord? sound = owner.Layout == SpkLayout.Random ? owner : _bank!.Find(owner.Word(2));
+        SpkBankRecord? template = sound?.Layout == SpkLayout.Random ? _bank!.TemplateSample(sound) : sound;
+        SpkBankRecord? like = template is null ? null : _bank!.Find(template.Word(SpkLayout.SampleAudio));
+        bool looping = template?.Word(SpkLayout.SampleLoop) == 1;
+
+        AddVariationButton.IsEnabled = false;
         try
         {
-            _tempWavPath = await SoundPreview.RecordToTempWavAsync(_package!, record);
-            AudioPreview.Open(_tempWavPath);
-            ExportAudioButton.IsEnabled = true;
+            var encoded = new List<(byte[] Stream, int? Rate)>();
+            foreach (string file in dialog.FileNames)
+            {
+                StatusText.Text = $"Encoding {Path.GetFileName(file)}…";
+                encoded.Add(await EncodeLikeAsync(like, file, looping));
+            }
+            EditSelecting(() =>
+            {
+                SpkBank bank = _bank!;
+                SpkBankRecord random = bank.RandomFor(owner, _bankId);
+                encoded.ForEach(clip => bank.AddVariation(random, clip.Stream, clip.Rate, _bankId));
+                return random.Id;
+            });
         }
         catch (Exception ex)
         {
-            AudioStatusText.Text = $"Couldn't decode this record's audio: {ex.Message}";
+            StatusText.Text = $"Couldn't add a variation: {ex.Message}";
+        }
+        finally
+        {
+            AddVariationButton.IsEnabled = true;
+        }
+    }
+
+    /// <summary>Transcodes a file to the codec, rate and channels of <paramref name="like"/>, or to
+    /// 44.1 kHz mono IMA-ADPCM when there is nothing to match.</summary>
+    private static async Task<(byte[] Stream, int? Rate)> EncodeLikeAsync(SpkBankRecord? like, string source, bool looping)
+    {
+        var info = SpkBank.DescribeAudio(like);
+        string ogg = SoundPreview.TempPath(".ogg");
+        string wav = SoundPreview.TempPath(".wav");
+        try
+        {
+            if (info is { Ogg: true })
+            {
+                await FfmpegAudio.TranscodeToOggAsync(source, ogg, info.Value.SampleRate, info.Value.Channels);
+                return (await File.ReadAllBytesAsync(ogg), null);
+            }
+
+            int rate = info is { SampleRate: > 0 } ? info.Value.SampleRate : 44100;
+            await FfmpegAudio.TranscodeToPcmWavAsync(source, wav, rate, info?.Channels ?? 1);
+            WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(await File.ReadAllBytesAsync(wav));
+            return (ImaAdpcm.Encode(pcm.Samples, pcm.Channels, looping), pcm.SampleRate);
+        }
+        finally
+        {
+            SoundPreview.TryDelete(ogg);
+            SoundPreview.TryDelete(wav);
+        }
+    }
+
+    // --- audio -----------------------------------------------------------------------------------
+
+    private void ShowAudio(SpkBankRecord record)
+    {
+        _audio = record.IsAudio ? record
+            : record.Layout == SpkLayout.Sample && _bank!.Find(record.Word(SpkLayout.SampleAudio)) is { IsAudio: true } audio ? audio
+            : null;
+        bool reaches = _audio is not null || SoundPreview.PickAudio(_bank!, record, []) is not null;
+        AudioPanel.Visibility = reaches ? Visibility.Visible : Visibility.Collapsed;
+        PlayPickButton.Visibility = _audio is null ? Visibility.Visible : Visibility.Collapsed;
+        ExportAudioButton.Visibility = ImportAudioButton.Visibility = _audio is null ? Visibility.Collapsed : Visibility.Visible;
+        if (_audio is not null)
+        {
+            _ = PreparePreviewAsync(_audio);
+        }
+    }
+
+    private async Task PreparePreviewAsync(SpkBankRecord audio)
+    {
+        try
+        {
+            string wav = await SoundPreview.AudioToTempWavAsync(audio);
+            if (_audio != audio)
+            {
+                SoundPreview.TryDelete(wav);
+                return;
+            }
+            _tempWavPath = wav;
+            AudioPreview.Open(wav);
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = $"Couldn't decode this audio: {ex.Message}";
+        }
+    }
+
+    /// <summary>Plays what the selected record reaches, a random container picking afresh each time.</summary>
+    private void PlayPick_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selected?.Record is { } record && SoundPreview.PickAudio(_bank!, record, []) is { } audio)
+        {
+            AudioPreview.Play(() => SoundPreview.AudioToTempWavAsync(audio));
         }
     }
 
     private void ExportAudio_Click(object sender, RoutedEventArgs e)
     {
-        if (RecordsGrid.SelectedItem is not Row { IsPlayable: true, Record: { } record })
+        if (_audio is not { } audio)
         {
             return;
         }
 
-        byte[] stream = record.FlatCopyAudioStream!;
-        bool isOgg = SbaoAudio.TryReadVorbisId(stream) is not null;
-
+        bool ogg = SpkBank.DescribeAudio(audio) is { Ogg: true };
         var dialog = new SaveFileDialog
         {
             Title = "Export audio",
-            FileName = isOgg ? $"{record.Id:x8}.ogg" : $"{record.Id:x8}.wav",
-            Filter = isOgg ? "Ogg Vorbis file|*.ogg" : "WAV file|*.wav",
+            FileName = $"{audio.Id:x8}{(ogg ? ".ogg" : ".wav")}",
+            Filter = ogg ? "Ogg Vorbis file|*.ogg" : "WAV file|*.wav",
         };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true)
         {
@@ -589,122 +548,208 @@ public partial class SpkFileHandler : UserControl
 
         try
         {
-            if (isOgg)
-            {
-                // The record's own bytes already are a complete Ogg Vorbis file - export verbatim
-                // rather than re-encoding through anything lossy.
-                File.WriteAllBytes(dialog.FileName, stream);
-                AudioStatusText.Text = $"Exported to:\n{dialog.FileName}";
-            }
-            else
-            {
-                byte[] wav = SoundPreview.ImaAdpcmToWav(_package!, record, out int sampleRate);
-                File.WriteAllBytes(dialog.FileName, wav);
-                AudioStatusText.Text = $"Exported to:\n{dialog.FileName}\n({sampleRate} Hz)";
-            }
+            // An Ogg stream already is a complete file: exported as is rather than re-encoded.
+            File.WriteAllBytes(dialog.FileName, ogg ? audio.Data : SoundPreview.ImaAdpcmToWav(audio, out _));
+            StatusText.Text = $"Exported to {dialog.FileName}";
         }
         catch (Exception ex)
         {
-            MessageBox.Show(Window.GetWindow(this), $"Couldn't export: {ex.Message}", "JackAll",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            StatusText.Text = $"Couldn't export: {ex.Message}";
         }
     }
 
     private async void ImportAudio_Click(object sender, RoutedEventArgs e)
     {
-        if (_package is null || _originalContent is null ||
-            RecordsGrid.SelectedItem is not Row { IsPlayable: true, Record: { } record })
+        if (_audio is not { } audio)
         {
             return;
         }
 
-        byte[] currentStream = record.FlatCopyAudioStream!;
-        (int SampleRate, int Channels)? currentVorbis = SbaoAudio.TryReadVorbisId(currentStream);
-
-        var dialog = new OpenFileDialog
-        {
-            Title = "Import replacement audio - any format ffmpeg supports",
-            Filter = "Audio files|*.ogg;*.mp3;*.wav;*.flac;*.m4a;*.aac;*.wma;*.opus;*.aiff|All files|*.*",
-        };
+        var dialog = new OpenFileDialog { Title = "Import replacement audio - any format ffmpeg supports", Filter = AudioFilter };
         if (dialog.ShowDialog(Window.GetWindow(this)) != true)
         {
             return;
         }
 
         ImportAudioButton.IsEnabled = false;
-        string tempBase = SoundPreview.TempPath("");
-        string tempOgg = tempBase + ".ogg";
-        string tempWav = tempBase + ".wav";
         try
         {
-            byte[] newAudioStream;
-
-            // Preserve this record's own current format (codec, rate, channel count) rather than
-            // imposing a fixed target - there's no single required format the way .sbao music has
-            // one, and every other record's metadata (which describes THIS record) would otherwise
-            // go stale.
-            if (currentVorbis is { } vorbis)
-            {
-                AudioStatusText.Text = $"Transcoding to {vorbis.SampleRate} Hz, {vorbis.Channels}-channel Ogg Vorbis…";
-                await FfmpegAudio.TranscodeToOggAsync(dialog.FileName, tempOgg, vorbis.SampleRate, vorbis.Channels);
-                newAudioStream = await File.ReadAllBytesAsync(tempOgg);
-            }
-            else
-            {
-                ImaAdpcm.DecodedAudio currentDecoded = ImaAdpcm.Decode(currentStream);
-                int channels = currentDecoded.Channels;
-                int sampleRate = SoundPreview.SampleRateOf(_package, record);
-
-                AudioStatusText.Text = $"Transcoding to {sampleRate} Hz, {channels}-channel PCM…";
-                await FfmpegAudio.TranscodeToPcmWavAsync(dialog.FileName, tempWav, sampleRate, channels);
-
-                WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(await File.ReadAllBytesAsync(tempWav));
-
-                // Pads a shorter replacement with silence to the original's sample count, keeping the
-                // descriptor's declared length - the length the game plays - true without rewriting it.
-                short[] samples = pcm.Samples;
-                if (samples.Length < currentDecoded.Samples.Length)
-                {
-                    var padded = new short[currentDecoded.Samples.Length];
-                    samples.CopyTo(padded, 0);
-                    samples = padded;
-                }
-
-                newAudioStream = ImaAdpcm.Encode(samples, pcm.Channels);
-            }
-
-            byte[] newPayload = [.. record.Payload[..SpkRecordCore.Size], .. newAudioStream];
-            byte[] patched = SpkPackage.ReplaceRecordPayload(_originalContent, record.Id, newPayload);
-
-            // Round-trips the freshly built file back through Parse as a validity check.
-            SpkPackage.Parse(patched);
-
-            _replaceContent(patched);
-            Load(patched, reselectRecordId: record.Id);
-            AudioStatusText.Text = $"Imported from:\n{dialog.FileName}\n\nStaged in your workspace.";
+            StatusText.Text = "Encoding…";
+            bool looping = _bank!.SamplesPlaying(audio.Id).Any(s => s.Word(SpkLayout.SampleLoop) == 1);
+            (byte[] stream, int? rate) = await EncodeLikeAsync(audio, dialog.FileName, looping);
+            Edit(() => _bank.ReplaceAudio(audio, stream, rate));
         }
         catch (Exception ex)
         {
-            MessageBox.Show(Window.GetWindow(this), $"Couldn't import: {ex.Message}", "JackAll",
-                MessageBoxButton.OK, MessageBoxImage.Warning);
+            StatusText.Text = $"Couldn't import: {ex.Message}";
         }
         finally
         {
-            SoundPreview.TryDelete(tempOgg);
-            SoundPreview.TryDelete(tempWav);
             ImportAudioButton.IsEnabled = true;
         }
     }
 
-    private static string FormatTime(TimeSpan t) => $"{(int)t.TotalMinutes}:{t.Seconds:D2}";
+    // --- raw details -----------------------------------------------------------------------------
 
-    private void DeleteTempFile()
+    private void ShowRawDetails_Changed(object sender, RoutedEventArgs e) =>
+        RawPanel.Visibility = ShowRawDetailsCheckBox.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
+
+    /// <summary>Every word by index: unnamed ones editable, derived ones as written.</summary>
+    private void ShowRaw(SpkBankRecord? record)
     {
-        if (_tempWavPath is null)
+        RawFieldsList.ItemsSource = null;
+        if (record is null)
         {
+            RawDetailsText.Text = "";
             return;
         }
 
+        var text = new StringBuilder();
+        if (record.Layout is { } layout)
+        {
+            uint[] written = _bank!.DerivedWords(record);
+            RawFieldsList.ItemsSource = Enumerable.Range(0, written.Length)
+                .Where(i => !layout.Fields.Any(f => f.Index == i))
+                .Select(i => layout.Derived.Contains(i)
+                    ? new SpkFieldRow($"[{i}] derived", () => $"0x{written[i]:x8}", null)
+                    : new SpkFieldRow($"[{i}]", () => $"0x{record.Word(i):x8}", value => Edit(() => record.Words[i] = ParseId(value, 0))))
+                .ToList();
+            if (record.Pins.Count > 0)
+            {
+                text.AppendLine($"pinned: {string.Join(", ", record.Pins.Select(p => $"[{p.Key}]=0x{p.Value:x8}"))}");
+            }
+            if (record.Tail is { } tail)
+            {
+                text.AppendLine($"tail kept as stored: {tail.Length:N0} bytes");
+            }
+        }
+
+        text.AppendLine($"preamble: {string.Join(" ", (record.Preamble ?? _bank!.Preamble).Select(w => $"0x{w:x8}"))}");
+        if (record.Key is { } key)
+        {
+            text.AppendLine($"core key: {Convert.ToHexString(key)}");
+        }
+        if (record.IsAudio || record.Raw)
+        {
+            text.AppendLine($"{(record.Raw ? "payload" : "stream")}: {record.Data.Length:N0} bytes, " +
+                            $"starting {Convert.ToHexString(record.Data.AsSpan(0, Math.Min(16, record.Data.Length)))}");
+        }
+        RawDetailsText.Text = text.ToString().TrimEnd();
+    }
+
+    // --- editing ---------------------------------------------------------------------------------
+
+    private void Edit(Action change) => EditSelecting(() =>
+    {
+        change();
+        return (uint?)null;
+    });
+
+    /// <summary>
+    /// Applies a change and, unless it leaves an error, stages the rebuilt bank. The rebuild waits for
+    /// the input that caused it to finish; <paramref name="change"/> may name the record to select.
+    /// </summary>
+    private void EditSelecting(Func<uint?> change)
+    {
+        uint? keep = _selected?.Record?.Id;
+        uint? select;
+        try
+        {
+            select = change() ?? keep;
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = ex.Message;
+            Dispatcher.BeginInvoke(() => Refresh(keep));
+            return;
+        }
+
+        Dispatcher.BeginInvoke(() =>
+        {
+            if (ShowProblems())
+            {
+                byte[] bytes = _bank!.Write();
+                SpkBank.Parse(bytes);
+                StatusText.Text = "Staged in your workspace.";
+                Remembered[_fileName] = (select, _curveIndex, StatusText.Text);
+                _replaceContent(bytes);
+            }
+            else
+            {
+                StatusText.Text = "Not staged: fix the errors below first.";
+            }
+            Refresh(select);
+        });
+    }
+
+    /// <summary>Lists errors and warnings, and counts the ids other banks must supply; false on an error.</summary>
+    private bool ShowProblems()
+    {
+        IReadOnlyList<SpkProblem> problems = SpkBankLint.Check(_bank!, _loadId);
+        var lines = problems.Where(p => p.Severity != SpkProblemSeverity.Note)
+            .Select(p => $"{(p.Severity == SpkProblemSeverity.Error ? "Error" : "Warning")}: {p.Message}").ToList();
+        int notes = problems.Count(p => p.Severity == SpkProblemSeverity.Note);
+        if (notes > 0)
+        {
+            lines.Add($"{notes} reference(s) point into other banks, which must be loaded for them to play.");
+        }
+        ProblemsList.ItemsSource = lines;
+        ProblemsPanel.Visibility = lines.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        return problems.All(p => p.Severity != SpkProblemSeverity.Error);
+    }
+
+    private void GoTo_Click(object sender, RoutedEventArgs e)
+    {
+        if (_selected?.External is { } file)
+        {
+            _navigateTo(file);
+        }
+    }
+
+    private void ValueBox_KeyDown(object sender, KeyEventArgs e)
+    {
+        if (e.Key == Key.Enter && sender is TextBox box)
+        {
+            box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
+        }
+    }
+
+    // --- formatting ------------------------------------------------------------------------------
+
+    private static string Label(string field) => FieldLabels.GetValueOrDefault(field, field);
+
+    private static string Percent(double chance) => (chance * 100).ToString("0.##", Invariant);
+
+    private static string FormatId(uint id) => id == SpkLayout.NoId ? "" : $"0x{id:x8}";
+
+    /// <summary>A hex id, with or without 0x; blank is the field's default.</summary>
+    private static uint ParseId(string text, uint blank)
+    {
+        string trimmed = text.Trim();
+        if (trimmed.Length == 0)
+        {
+            return blank;
+        }
+        string hex = trimmed.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? trimmed[2..] : trimmed;
+        return uint.TryParse(hex, NumberStyles.HexNumber, Invariant, out uint id)
+            ? id
+            : throw new FormatException($"'{text}' is not a hex id.");
+    }
+
+    private static double ParseNumber(string text) =>
+        double.TryParse(text.Trim().TrimEnd('%').Replace(',', '.'), NumberStyles.Float, Invariant, out double value)
+            ? value
+            : throw new FormatException($"'{text}' is not a number.");
+
+    private static string FormatBytes(long bytes) => bytes switch
+    {
+        >= 1024 * 1024 => $"{bytes / (1024.0 * 1024.0):0.#} MB",
+        >= 1024 => $"{bytes / 1024.0:0.#} KB",
+        _ => $"{bytes} B",
+    };
+
+    private void DeleteTempFile()
+    {
         SoundPreview.TryDelete(_tempWavPath);
         _tempWavPath = null;
     }

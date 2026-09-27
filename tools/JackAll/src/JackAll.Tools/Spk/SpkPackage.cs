@@ -420,69 +420,6 @@ public sealed class SpkPackage
             ? t128.AudioByteLength == (uint)audio.Length
             : null;
 
-    /// <summary>
-    /// Rebuilds this .spk file's raw bytes with one record's payload replaced by
-    /// <paramref name="newPayload"/> - everything else (ids, preamble words, every other record, and
-    /// this record's own placement relative to them) is copied byte-for-byte from
-    /// <paramref name="originalFile"/> unchanged; only the target record's `size` field, payload
-    /// bytes, and trailing 4-byte alignment padding are rewritten.
-    ///
-    /// Deliberately narrow rather than a full "build a package from a list of records" API: plenty of
-    /// this format is still only partially understood (the four unidentified core fields, most of each
-    /// sub-header, whether the preamble/id cross-references are load-bearing at runtime) - copying
-    /// everything but the one thing being replaced forward untouched is the safest option, since it
-    /// never requires reconstructing anything we can't already read byte-for-byte off a real file.
-    /// </summary>
-    public static byte[] ReplaceRecordPayload(byte[] originalFile, uint recordId, byte[] newPayload)
-    {
-        if (originalFile.Length < 8 || BinaryPrimitives.ReadUInt32LittleEndian(originalFile.AsSpan(0)) != Magic)
-        {
-            throw new InvalidDataException("Not a Far Cry 2 .spk (no 0x53504B01 header).");
-        }
-
-        uint count = BinaryPrimitives.ReadUInt32LittleEndian(originalFile.AsSpan(4));
-        var cursor = new ByteCursor(originalFile);
-        cursor.Position = 8 + checked((int)count * 4);
-
-        for (int i = 0; i < count; i++)
-        {
-            uint id = ByteCursor.U32(originalFile, 8 + i * 4);
-
-            uint preambleWordCount = cursor.ReadU32();
-            cursor.Position += checked((int)preambleWordCount) * 4;
-
-            int sizeFieldPos = cursor.Position;
-            uint size = cursor.ReadU32();
-            cursor.Position += (int)size;
-            // next record (or end of file) is 4-byte aligned
-            cursor.Position += PadLength(cursor.Position);
-
-            if (id != recordId)
-            {
-                continue;
-            }
-
-            // the record's old size field + payload + padding, replaced as one chunk
-            int oldChunkLength = cursor.Position - sizeFieldPos;
-            int newChunkLength = 4 + newPayload.Length + PadLength(newPayload.Length);
-            var result = new byte[originalFile.Length - oldChunkLength + newChunkLength];
-
-            int w = 0;
-            Array.Copy(originalFile, 0, result, w, sizeFieldPos);
-            w += sizeFieldPos;
-            BinaryPrimitives.WriteUInt32LittleEndian(result.AsSpan(w), (uint)newPayload.Length);
-            w += 4;
-            Array.Copy(newPayload, 0, result, w, newPayload.Length);
-            // padding bytes stay zero (fresh array)
-            w += newPayload.Length + PadLength(newPayload.Length);
-            Array.Copy(originalFile, cursor.Position, result, w, originalFile.Length - cursor.Position);
-
-            return result;
-        }
-
-        throw new InvalidDataException($"No record with id 0x{recordId:x8} in this .spk.");
-    }
-
     private static int PadLength(int length) => (4 - length % 4) % 4;
 
     private static SpkRecordCore? ParseCore(byte[] payload)

@@ -180,7 +180,7 @@ public sealed class DominoValueActions(
         {
             byte[] sounds = services.ReadBytes(BarkBank.SoundsPath(bank))
                 ?? throw new InvalidOperationException($"{BarkBank.SoundsPath(bank)} isn't in the loaded game files.");
-            return SoundPreview.SoundIdToTempWavAsync(soundId, services.ResolveSound, services.Read, SpkPackage.Parse(sounds));
+            return SoundPreview.SoundIdToTempWavAsync(soundId, services.ResolveSound, services.Read, SpkBank.Parse(sounds));
         }));
 
     private VfsFile? SoundFile(ValueRef value) => value.SoundId is { } id ? services.ResolveSound(id) : null;

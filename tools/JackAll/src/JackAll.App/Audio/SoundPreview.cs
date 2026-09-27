@@ -15,9 +15,6 @@ public static class SoundPreview
 
     private const int MaxHops = 8;
 
-    public static int SampleRateOf(SpkPackage package, SpkRecord record) =>
-        package.TryGetFlatCopySampleRate(record) ?? FallbackSampleRateHz;
-
     public static async Task<string> OggToTempWavAsync(byte[] ogg)
     {
         string tempOgg = TempPath(".ogg");
@@ -34,72 +31,100 @@ public static class SoundPreview
         }
     }
 
-    /// <summary>A `FlatCopy` record's stream, which is either a complete Ogg Vorbis file or IMA-ADPCM.</summary>
-    public static async Task<string> RecordToTempWavAsync(SpkPackage package, SpkRecord record)
+    /// <summary>An audio record's stream, which is either a complete Ogg Vorbis file or IMA-ADPCM.</summary>
+    public static async Task<string> AudioToTempWavAsync(SpkBankRecord audio)
     {
-        if (record.FlatCopyAudioStream is { } stream && SbaoAudio.TryReadVorbisId(stream) is not null)
+        if (SpkBank.DescribeAudio(audio) is { Ogg: true })
         {
-            return await OggToTempWavAsync(stream);
+            return await OggToTempWavAsync(audio.Data);
         }
 
         string wav = TempPath(".wav");
-        await File.WriteAllBytesAsync(wav, ImaAdpcmToWav(package, record, out _));
+        await File.WriteAllBytesAsync(wav, ImaAdpcmToWav(audio, out _));
         return wav;
     }
 
-    public static byte[] ImaAdpcmToWav(SpkPackage package, SpkRecord record, out int sampleRate)
+    public static byte[] ImaAdpcmToWav(SpkBankRecord audio, out int sampleRate)
     {
-        byte[] stream = record.FlatCopyAudioStream
-            ?? throw new InvalidOperationException("This record holds no audio.");
-        ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(stream);
-        sampleRate = SampleRateOf(package, record);
+        ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(audio.Data);
+        sampleRate = audio.SampleRate ?? FallbackSampleRateHz;
         return WavAudio.Write(decoded.Samples, decoded.Channels, sampleRate);
     }
 
-    /// <summary>The first audio a sound ID plays, following each record's <see cref="SpkRecord.Links"/>
-    /// within its bank first, then through <paramref name="resolve"/>.</summary>
+    /// <summary>
+    /// The audio <paramref name="start"/> reaches inside its bank, a random container taking one of its
+    /// choices at random, or null; <paramref name="elsewhere"/> collects the ids it reaches in other banks.
+    /// </summary>
+    public static SpkBankRecord? PickAudio(SpkBank bank, SpkBankRecord start, List<uint> elsewhere)
+    {
+        var seen = new HashSet<uint>();
+        SpkBankRecord? Walk(SpkBankRecord record)
+        {
+            if (record.IsAudio || !seen.Add(record.Id))
+            {
+                return record.IsAudio ? record : null;
+            }
+
+            IEnumerable<uint> links = record.References().Where(l => l.Kind != SpkReference.Rolloff).Select(l => l.Id);
+            if (record.Layout == SpkLayout.Random)
+            {
+                links = links.OrderBy(_ => Random.Shared.Next());
+            }
+            foreach (uint link in links)
+            {
+                if (bank.Find(link) is not { } next)
+                {
+                    elsewhere.Add(link);
+                }
+                else if (Walk(next) is { } audio)
+                {
+                    return audio;
+                }
+            }
+            return null;
+        }
+        return Walk(start);
+    }
+
+    /// <summary>The audio a sound ID plays, followed within its bank first, then through
+    /// <paramref name="resolve"/>; a random container plays one of its choices at random.</summary>
     /// <param name="bank">Where to look for <paramref name="soundId"/> first, when it names a record
     /// rather than a file.</param>
     public static async Task<string> SoundIdToTempWavAsync(
-        uint soundId, Func<uint, VfsFile?> resolve, Func<VfsFile, byte[]> read, SpkPackage? bank = null)
+        uint soundId, Func<uint, VfsFile?> resolve, Func<VfsFile, byte[]> read, SpkBank? bank = null)
     {
-        var pending = new Queue<(uint Id, SpkPackage? Bank)>([(soundId, bank)]);
+        var pending = new Queue<(uint Id, SpkBank? Bank)>([(soundId, bank)]);
         var seen = new HashSet<uint> { soundId };
         uint? missing = null;
 
         for (int hops = 0; pending.Count > 0 && hops < MaxHops; hops++)
         {
-            (uint id, SpkPackage? within) = pending.Dequeue();
-            SpkPackage package;
-            IReadOnlyList<SpkRecord> records;
-            if (within?.Records.FirstOrDefault(r => r.Id == id) is { } record)
-            {
-                package = within;
-                records = [record];
-            }
-            else if (resolve(id) is { } file)
+            (uint id, SpkBank? within) = pending.Dequeue();
+            SpkBankRecord? start = within?.Find(id);
+            if (start is null && resolve(id) is { } file)
             {
                 byte[] bytes = read(file);
                 if (file.Path.EndsWith(".sbao", StringComparison.OrdinalIgnoreCase))
                 {
                     return await OggToTempWavAsync(SbaoAudio.Split(bytes).Ogg);
                 }
-                package = SpkPackage.Parse(bytes);
-                records = package.Records;
+                within = SpkBank.Parse(bytes);
+                start = within.Find(id) ?? within.Records.FirstOrDefault(r => r.IsEvent) ?? within.Records.FirstOrDefault();
             }
-            else
+            if (start is null || within is null)
             {
                 missing ??= id;
                 continue;
             }
 
-            if (records.FirstOrDefault(r => r.FlatCopyAudioStream is not null) is { } audio)
+            var elsewhere = new List<uint>();
+            if (PickAudio(within, start, elsewhere) is { } audio)
             {
-                return await RecordToTempWavAsync(package, audio);
+                return await AudioToTempWavAsync(audio);
             }
-            foreach (uint link in records.SelectMany(r => r.Links).Where(l => l != 0 && seen.Add(l)))
+            foreach (uint link in elsewhere.Where(seen.Add))
             {
-                pending.Enqueue((link, package));
+                pending.Enqueue((link, within));
             }
         }
 
