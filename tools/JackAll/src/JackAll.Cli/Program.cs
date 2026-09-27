@@ -1,4 +1,5 @@
 using JackAll.Cli.Commands;
+using JackAll.Cli.Commands.Ai;
 using JackAll.Cli.Commands.Archive;
 using JackAll.Cli.Commands.DepLoad;
 using JackAll.Cli.Commands.Domino;
@@ -151,6 +152,17 @@ app.Configure(config =>
         spk.AddCommand<SpkImportCommand>("import")
             .WithDescription("Replace one record's audio with an already-encoded .ogg/.wav file.")
             .WithExample("spk", "import", "004e1c52.spk", "0x004e1c50", "replacement.wav");
+    });
+
+    // --- .ai.rml brain workspaces ----------------------------------------
+    config.AddBranch("ai", ai =>
+    {
+        ai.AddCommand<AiUnpackCommand>("unpack")
+            .WithDescription("Split a brain workspace into its BlackBox.AI source and a dump of the compiled repository.")
+            .WithExample("ai", "unpack", "mercbrain.ai.rml");
+        ai.AddCommand<AiVerifyCommand>("verify")
+            .WithDescription("Recompile brain workspaces from their source and compare with the shipped compiled half.")
+            .WithExample("ai", "verify", "mercbrain.ai.rml");
     });
 
     // --- .fcb object trees ----------------------------------------------

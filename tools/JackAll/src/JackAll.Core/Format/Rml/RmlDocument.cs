@@ -1,6 +1,7 @@
 using System.Buffers.Binary;
 using System.Diagnostics.CodeAnalysis;
 using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace JackAll.Core.Format.Rml;
@@ -122,6 +123,10 @@ public static class RmlDocument
         }
     }
 
+    /// <summary>An RML node or attribute name as a legal XML name; <see cref="Serialize"/> decodes it back.
+    /// Brain parameter names can hold spaces.</summary>
+    public static string EncodeName(string name) => XmlConvert.EncodeLocalName(name);
+
     public static byte[] Serialize(XElement root)
     {
         var stringTable = new StringTableWriter();
@@ -199,7 +204,7 @@ public static class RmlDocument
             return false;
         }
 
-        var result = new XElement(name);
+        var result = new XElement(EncodeName(name));
 
         foreach ((uint nameOffset, uint valueOffset) in node.Attributes)
         {
@@ -207,7 +212,7 @@ public static class RmlDocument
             {
                 return false;
             }
-            result.SetAttributeValue(attrName, attrValue);
+            result.SetAttributeValue(EncodeName(attrName), attrValue);
         }
 
         foreach (RawNode child in node.Children)
@@ -260,7 +265,7 @@ public static class RmlDocument
         XElement element, Stream output, StringTableWriter stringTable,
         ref uint totalNodeCount, ref uint totalAttributeCount)
     {
-        WritePackedU32(output, stringTable.Write(element.Name.LocalName));
+        WritePackedU32(output, stringTable.Write(XmlConvert.DecodeName(element.Name.LocalName)));
         WritePackedU32(output, stringTable.Write(element.Value));
 
         XAttribute[] attributes = [.. element.Attributes()];
@@ -275,7 +280,7 @@ public static class RmlDocument
         foreach (XAttribute attribute in attributes)
         {
             WritePackedU32(output, 0);
-            WritePackedU32(output, stringTable.Write(attribute.Name.LocalName));
+            WritePackedU32(output, stringTable.Write(XmlConvert.DecodeName(attribute.Name.LocalName)));
             WritePackedU32(output, stringTable.Write(attribute.Value));
         }
 
