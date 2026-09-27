@@ -79,6 +79,7 @@ play dispatcher. The dispatcher is `FUN_10a3c9c0`.
 | 4 | Near misses and ricochets | **data + plugin** | Fly-bys exist; the near-impact wizz is empty and needs a volume fix; ricochets need adding |
 | 5 | Impacts per material | **data** | The per-material switch already exists |
 | 6 | Mix and dynamic range | **data + plugin** | The mixer exists; nothing triggers it on gunfire |
+| 7 | Vehicle engines | **data** (plugin for a real RPM) | RPM bands × throttle is plain multilayer data; the RPM itself is faked from speed |
 
 Nothing on the list is impossible.
 
@@ -196,6 +197,41 @@ an NPC bullet hitting the player plays no impact sound **(RE-verified)**.
   free. So would a Domino script, if a trigger exists.
 - **No limiter.** DARE has no compressor or limiter, so louder shots need headroom taken from everything
   else. That makes the mix a data job.
+
+### 7. Vehicle engines — data (plugin for a real RPM)
+
+How the game drives a vehicle's sound is on
+[audio runtime](../engine-internals/audio-runtime.md#vehicle-sounds). Retail engines are one or two
+loops swept in pitch over the whole range. The format allows far more.
+
+- **RPM bands: data.** A multilayer layer has a volume curve and a pitch curve, each on any game
+  parameter **(seen in data)**. Four to six loops recorded at steady RPMs can each peak at their own RPM
+  and crossfade into their neighbours. Each is pitched by `rpm / recorded rpm`, which is exact, since
+  pitch is proportional to RPM, so no loop is stretched far from where it was recorded. Only the
+  fishing boat does this in retail, with two bands, which shows the runtime handles it.
+- **On-load and off-load: data.** `sndEngineLoop` runs for as long as the engine does, while
+  `sndThrustPedal` runs only while the throttle is down and fades on release **(RE-verified)**. Putting
+  the off-load (overrun) band set in the first, with a volume curve on the throttle parameter that
+  takes it down as the pedal goes in, and the on-load set in the second gives the strained sound under
+  throttle and the burble on lift-off. Alternatively, one event can nest two band sets under
+  a throttle crossfade, since multilayers multiply.
+- **Gear changes: data.** The empty `sndGearShift_*` slots are live. A non-looping shift sound makes the
+  RPM glide from the old gear's value to the new one over the sound's length, instead of jumping
+  **(RE-verified)**. The shift sample's duration is the shift time.
+- **The gearing the sound hears: data.** `GearEmulation` feeds only the sound and the rev needle, not the
+  physics **(RE-verified)**. Its three gears can be respaced per vehicle so the RPM covers the whole speed
+  range. Retail's Rover tops out its RPM at 54 km/h.
+- **Extras: data.** Wheel slip drives tyre scrub, extra torque drives a straining layer on climbs,
+  damage drives a rattle or misfire, all on parameters the game already answers.
+- **What data cannot fix.** The car's RPM follows road speed: no flare on wheelspin, in the air or when
+  revving in place, and three gears at most. Havok's own wheel-driven RPM sits unread on the physics
+  object. A plugin that writes it into the sound's RPM field after `Update` would give a real rev
+  counter. Whether that value behaves well in game is untested. Boats already follow their physics RPM.
+- **Budget.** Every layer is probably a voice of its own **(inferred)**, against a cap of 64
+  (`NB_AUDIBLE_VOICES`). Five bands × two loads plus extras is about 14 per car, so three bands per load is
+  the safer start, or the cap goes up in the INI.
+- **Stay inside retail's pitch range.** Retail never goes outside 0.55–1.5, and DARE's pitch limit is
+  not traced. Bands spaced so each plays within about 0.8–1.25 stay clear of both limits.
 
 ## Routes
 

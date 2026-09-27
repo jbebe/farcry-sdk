@@ -45,6 +45,10 @@ the listener is inside a building. What each layer can and cannot do decides wha
   gunshot driven by its distance from the player. **Retail sets neither**: every weapon's echo and
   distance-multilayer fields are empty. Bullet fly-bys are geometric, and there is no ricochet sound
   anywhere.
+- A car's engine RPM, as the sound hears it, is **emulated from road speed** through three fake gears.
+  Havok's own engine RPM is never read. A gear change plays the gear-shift event and glides the RPM
+  over that sound's length, but retail leaves every gear-shift event empty, so the RPM jumps. Boats
+  are the exception: their sound follows the physics RPM.
 
 ## From event to speaker
 
@@ -576,6 +580,105 @@ There is **no ricochet** anywhere: no event, field, string or code. The only bou
 being hit. `ApplyDelayBullet` plays one, unpositioned, on the first pawn a local player's shot hits:
 the head sound when the hit location is the head, the other sound otherwise. Retail sets them only on the
 18 multiplayer (`.Multi`) weapon archetypes.
+
+## Vehicle sounds
+
+A wheeled vehicle's sound is run by `CVehicleTypeWheeled`: `Update` (server `0x08f22850`), `UpdateSounds`
+(server `0x08f1fc30`, Dunia `0x101ad900`) and the sound object callback
+`CVehicleTypeWheeledSoundCB::GetMultiLayer` (server `0x08f1dc10`, Dunia `0x101aecd0`). The retail
+code matches the server's line for line; only field offsets differ (`+0x3C` for the `sndml…` ids,
+`+0x40` for the gear state, the playing-sound handles and the throttle settings). The sound fields sit in the archetype's `SoundSettings` and
+`Sound` blocks, with sound type 13 (`Vehicles`) on every vehicle.
+
+### What plays when
+
+`UpdateSounds` starts and stops the events on state changes, not per frame:
+
+| Moment | Events |
+| --- | --- |
+| A driver gets in | `sndEngineIgnition` |
+| The engine starts | `sndPlayEngineIdleLoop`, `sndEngineLoop` and `sndExtraTorqueEngineLoop`, all together; they run until it stops |
+| The engine stops | `sndTurnOffEngine`, `sndStopEngineIdleLoop`, and the two loops above are stopped |
+| Accelerator above `fThrustPedalStopThreshold` (0.1) | `sndThrustPedal`, held while the pedal stays down |
+| Accelerator back below the threshold | `sndThrustPedal` stops with a `fThrustPedalStopFadeOut` fade (1–2 s in retail) |
+| Pedal below −0.5 (braking) | `sndBrake`, at a random wheel, until the pedal comes back |
+| A gear change | `sndGearShift_New`, `_MinorDamage` or `_MajorDamage`, picked by the vehicle's reliability |
+
+So the engine sound is a set of loops that play for as long as the engine runs. Everything that
+changes while driving changes through multilayer curves. `sndThrustPedal` is the one layer that
+exists only while the player is on the throttle.
+
+### The parameters it answers
+
+A [multilayer](../file-formats/spk.md#resource-containers) asks its playing object for a game
+parameter. `GetMultiLayer` matches the parameter id against the archetype's `sndml…` fields
+**(RE-verified in both builds)**:
+
+| Field | Parameter | Declared range | What the vehicle returns |
+| --- | --- | --- | --- |
+| `sndmlSpeedSoundMultilayer` | `0x00440255` | 0–20 | `CVehicle::GetSpeed`: the length of the velocity vector, m/s, never negative |
+| `sndmlRPMSoundMultilayer` | `0x00440256` | 0–10,000 | the emulated RPM below |
+| `sndmlThrustPedalSoundMultilayer` | `0x0044F4D0` | 0–100 | the physics pedal (−1…1), clamped to 0…1, × 100 |
+| `sndmlExtraTorqueSoundMultilayer` | `0x0044025B` | 0–100 | the physics `GetCurrentExtraClimbFactor` × 100 |
+| `sndmlWheelSlipSoundMultilayer` | `0x00440257` | 0–15 | the largest slip speed of any wheel on the ground, √(side² + forward²) |
+| `sndmlDamageSoundMultilayer` | `0x00450C23` | 0–100 | a value from the vehicle's physics component × 100 |
+
+The ranges are the ones declared in `7fffffff.bao`. Speed is an unsigned magnitude, so reversing
+sounds like driving forward, and a car in the air keeps the speed it had.
+
+### The RPM is emulated from speed
+
+`ComputeRPM` (server `0x08f1b930`, Dunia `0x101acd70`) turns speed into RPM from the archetype's
+`GearEmulation` block: within gear *g*,
+
+```
+t   = clamp((speed − fMinSpeed[g]) / (fMaxSpeed[g] − fMinSpeed[g]), 0, 1)
+rpm = fMinRPM[g] + (fMaxRPM[g] − fMinRPM[g]) × t
+```
+
+`Update` keeps its own gear index, 0 to 2. It moves up one gear when the speed passes the current gear's
+`fMaxSpeed` and down one when it drops below `fMinSpeed`. The overlap between gears (the Rover's gear 0
+ends at 4 m/s, gear 1 starts at 3.8) is the only hysteresis. The Havok vehicle has an RPM of its own
+(`CPhysWheeledVehicleEntity::GetRPM`); Havok's default transmission derives it from the driven wheels'
+spin and the current gear ratio **(inferred: that Dunia uses the default transmission is not checked)**.
+Nothing in the sound or gauge code reads it. `GearEmulation` is read by `ComputeRPM` and by
+`UpdateGauges` for the rev needle, and by nothing in physics.
+
+What follows from that:
+
+- **The RPM tracks road speed, not the engine.** It does not rise with wheelspin, in the air or when
+  revving in place, and there is no neutral.
+- **Above the top gear's `fMaxSpeed` the RPM is flat.** The Rover's gear 2 ends at 15 m/s (54 km/h)
+  and 11,000 RPM, beyond the parameter's 10,000, while the car reaches about 31 m/s.
+- **A gear change is timed by its sound.** On a change, `Update` plays the gear-shift event. While that
+  sound is playing, the RPM is a blend from the old gear's value to the new gear's, weighted by the
+  sound's elapsed time over its duration. With no shift sound (event `0xFFFFFFFF`, as on every retail
+  vehicle), the RPM jumps to the new gear's value in one frame. A looping or unknown-length shift sound
+  (duration −1) freezes the RPM for as long as it plays.
+
+### Boats follow the physics RPM
+
+`CVehicleTypeFloatingSoundCB::GetMultiLayer` (server `0x08f152b0`) returns the physics
+`GetCurrentRPM` × 2, capped at 10,000, for the RPM parameter, and |desired RPM / max RPM| × 100 for
+the thrust parameter. The floating physics moves its current RPM toward the desired one at its own
+rev-up and rev-down rates, so a boat's engine sound revs up with throttle even when the boat is standing
+still.
+
+### What retail does with it
+
+The 91 vehicle archetypes share 11 sound setups **(seen in data)**. Each engine event is its own bank,
+named after the event, in the `worlds` archive's `soundbinary/`. A typical car engine is two loops, each swept in pitch
+over the whole RPM range by a 2-point curve. The Land Rover's `sndEngineLoop` (`0x0044F143`) has:
+
+- one loop that fades in with RPM, pitched 0.90 at 0 RPM to 1.08 at 10,000;
+- one loop that fades in with speed, pitched 0.85 to 1.13 by RPM;
+- a damage layer that fades out as damage rises.
+
+Its `sndThrustPedal` (`0x0044F150`) is a multilayer inside a multilayer: throttle drives the inner
+layer's volume and pitch, and the outer layer fades it out above 15 m/s. Across all vehicle banks, pitch
+curves stay between 0.55 and 1.5. Only the fishing boat's engine (`0x0045D2D7`) crossfades two recordings
+by RPM, trading a low loop for a high one between 3,500 and 5,000. `sndGearShift_*` are empty on every
+vehicle, and `sndExtraTorqueEngineLoop` is set only on the buggy.
 
 ## Mixing
 

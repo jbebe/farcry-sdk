@@ -287,7 +287,7 @@ Word `[1]` also marks resources that hold other resources rather than audio:
 | `3` | 107 | a **switch**: word `[8]` is the switch group, `[9]` the default child, `[7]` the entry count, then `{child, value}` pairs |
 | `4` | 502 | a **random container**: `[7]` the entry count, `[8]` a remaining weight, then `{child, weight, flag, 0}` entries |
 | `6` | 6 | multitrack ambience channels |
-| `7` | 143 | a **multilayer**: each layer follows a game parameter through a curve of (parameter value, dB) points, e.g. desert wind on parameter `0x0044025C` (0–250) runs from −96 dB at 0 to 0 dB at 250 |
+| `7` | 143 | a **multilayer**: each layer plays a resource under a volume curve of (parameter value, dB) points and, optionally, a pitch curve of (parameter value, pitch ratio) points, each on its own game parameter; e.g. desert wind on parameter `0x0044025C` (0–250) runs from −96 dB at 0 to 0 dB at 250. A layer's resource can itself be a multilayer, which multiplies the two volume curves |
 | `2`, `8` | 42, 18 | not identified |
 
 ### How a random container picks

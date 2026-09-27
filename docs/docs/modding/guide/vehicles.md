@@ -117,6 +117,13 @@ DLC vehicles - 2_vehicle.xml \< entitylibrary.fcb (\patch_unpack\downloadcontent
 
 Land vehicle gearing is controlled by the stats in the “GearEmulation” section. I don’t know exactly how these work but you can increase the stats for better acceleration and to make it easier to reach top speed. Every land vehicle is controlled by three gears, no matter how many are listed elsewhere.
 
+:::info[Verified via reverse engineering]
+Reverse engineering contradicts this. `GearEmulation` is read only by the engine sound's RPM and by
+the rev needle, never by the physics, so it cannot change acceleration or top speed. Its three gears
+map road speed onto the RPM the engine sound and the gauge follow; see
+[vehicle sounds](../../engine-internals/audio-runtime.md#vehicle-sounds).
+:::
+
 Editing these isn’t too bad but it’s a bit complicated to describe.
 
 The first thing to notice is that each gear overlaps, the max speed of one gear is faster than the minimum speed of the next. Make sure your gears overlap the same when you’re done!
