@@ -1,7 +1,8 @@
 <UserControl x:Class="JackAll.App.Ai.ArchetypeTuningView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-             xmlns:ai="clr-namespace:JackAll.App.Ai">
+             xmlns:ai="clr-namespace:JackAll.App.Ai"
+             xmlns:app="clr-namespace:JackAll.App">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="Visible" />
 
@@ -105,7 +106,7 @@
                                 <Grid>
                                     <TextBox Text="{Binding Text, UpdateSourceTrigger=LostFocus}" ToolTip="{Binding Help}"
                                              Visibility="{Binding IsNumber, Converter={StaticResource Visible}}"
-                                             KeyDown="ValueBox_KeyDown" />
+                                             app:CommitOnEnter.IsEnabled="True" />
                                     <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Choice, UpdateSourceTrigger=PropertyChanged}" ToolTip="{Binding Help}">
                                         <ComboBox.Style>
                                             <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">

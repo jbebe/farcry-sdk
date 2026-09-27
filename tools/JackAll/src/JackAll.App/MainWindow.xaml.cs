@@ -88,7 +88,7 @@ public partial class MainWindow : Window
         {
             // The background index just finished (or advanced): the panel is showing a status line
             // for the current file and needs to become the real lists.
-            RefreshPreview();
+            XrefsPanel.Show(_vm, _vm.SelectedFile);
         }
     }
 
@@ -141,13 +141,32 @@ public partial class MainWindow : Window
         previousFocus?.Focus();
     }
 
+    /// <summary>The path the open preview just staged an edit to. The reindex staging causes selects
+    /// that path again, and the preview, which already shows what it staged, is kept, not rebuilt.</summary>
+    private string? _stagedByPreview;
+
     /// <summary>Asks FileHandlerCatalog for the view that matches the selected file's type, if any.</summary>
     private void RefreshPreview()
     {
         VfsFile? file = _vm.SelectedFile;
+        bool keep = file is not null && PreviewHost.Content is not null
+            && string.Equals(file.Path, _stagedByPreview, StringComparison.OrdinalIgnoreCase);
+        _stagedByPreview = null;
+        if (keep)
+        {
+            XrefsPanel.Show(_vm, file);
+            return;
+        }
+
         UserControl? view = file is not null
             ? FileHandlerCatalog.CreateView(
-                file, () => _vm.Read(file), bytes => ReplaceGuarded(file, bytes), () => OpenFcbEditorTab(file),
+                file, () => _vm.Read(file), bytes =>
+                {
+                    if (ReplaceGuarded(file, bytes))
+                    {
+                        _stagedByPreview = file.Path;
+                    }
+                }, () => OpenFcbEditorTab(file),
                 () => _vm.ReadOriginal(file), id => _vm.ResolveSoundResource(id), _vm.NavigateTo, () => OpenDominoEditorTab(file),
                 () => OpenMgbEditorTab(file), bank => _vm.FindRigs(file.Path, bank))
             : null;

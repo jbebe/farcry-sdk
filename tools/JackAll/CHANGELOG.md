@@ -17,9 +17,15 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   build, and every retail bank rebuilds byte for byte. `spk new` scaffolds a bank that plays one clip
   or a random pick of several. `spk encode` checks references, rates and stereo samples under a rolloff.
 
+- **Sound bank editor** — the `.spk` panel shows a bank as a tree of what plays what and edits it:
+  fields, random container chances, variations added from any audio file, switch cases, rolloff and
+  multilayer curves, with the same checks as `spk encode`. "Play a pick" auditions a random choice.
+
 ### Changed
 - `spk import` re-derives every audio word of the samples it touches, the loop length and the rate
-  included, instead of only the byte length.
+  included, instead of only the byte length. The App's Import… does the same instead of padding.
+- Staging an edit keeps its file selected, so its preview stays open.
+- The `.fcb` and Domino sound previews play a random choice of a random container.
 - `spk list` names resource kinds (Sample, Random, Switch, Multilayer).
 
 ### Fixed

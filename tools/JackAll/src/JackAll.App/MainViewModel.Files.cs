@@ -162,6 +162,10 @@ public sealed partial class MainViewModel
     /// <summary>Called from code-behind whenever the Files tab's grid selection changes.</summary>
     public void SetSelectedFiles(IReadOnlyList<VfsFile> files)
     {
+        if (_refilling && files.Count == 0)
+        {
+            return;
+        }
         _selectedFiles = files;
         SelectedFile = files.Count == 1 ? files[0] : null;
         OnPropertyChanged(nameof(SelectedFiles));
@@ -491,6 +495,8 @@ public sealed partial class MainViewModel
     /// staging an edit from a preview leaves that preview open.</summary>
     private string? _reselectPath;
 
+    private bool _refilling;
+
     /// <summary>
     /// Kicks off (re)computing the file list without blocking the caller. <paramref name="debounce"/>
     /// is for the filter textbox specifically — every keystroke calls this, and without a short delay
@@ -577,6 +583,9 @@ public sealed partial class MainViewModel
 
         if (token.IsCancellationRequested) return;
 
+        // Emptying the list empties the grid's selection; while a reselect is pending that must not
+        // reach SelectedFile, or the preview closes before the file comes back.
+        _refilling = _reselectPath is not null;
         VisibleFiles.Clear();
         if (matches is not null)
         {
@@ -585,14 +594,13 @@ public sealed partial class MainViewModel
                 VisibleFiles.Add(file);
             }
         }
+        _refilling = false;
 
         if (_reselectPath is { } path)
         {
             _reselectPath = null;
-            if (VisibleFiles.FirstOrDefault(f => string.Equals(f.Path, path, StringComparison.OrdinalIgnoreCase)) is { } again)
-            {
-                SetSelectedFiles([again]);
-            }
+            VfsFile? again = VisibleFiles.FirstOrDefault(f => string.Equals(f.Path, path, StringComparison.OrdinalIgnoreCase));
+            SetSelectedFiles(again is null ? [] : [again]);
         }
     }
 }

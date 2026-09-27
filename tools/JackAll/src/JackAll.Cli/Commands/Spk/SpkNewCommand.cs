@@ -51,7 +51,7 @@ public sealed class SpkNewCommand : CliCommand<SpkNewCommand.Settings>
             throw new InvalidDataException("Give at least one audio file.");
         }
 
-        uint eventId = SpkFormat.ParseRecordId(settings.EventId);
+        uint eventId = SpkBank.ParseId(settings.EventId);
         string dir = settings.Out ?? $"{eventId:x8}";
         CliIO.EnsureDirectory(dir);
         (SpkBankRecord? likePlay, SpkBankRecord? likeSample) = Template(settings.Like);
@@ -97,7 +97,7 @@ public sealed class SpkNewCommand : CliCommand<SpkNewCommand.Settings>
 
         uint[] play = Words(SpkLayout.Play, likePlay);
         play[2] = random ?? samples[0].Id;
-        play[7] = settings.Rolloff is { } rolloff ? SpkFormat.ParseRecordId(rolloff) : likePlay?.Word(7) ?? SpkLayout.NoId;
+        play[7] = settings.Rolloff is { } rolloff ? SpkBank.ParseId(rolloff) : likePlay?.Word(7) ?? SpkLayout.NoId;
         bank.Records.Add(new SpkBankRecord
         {
             Id = eventId, Type = SpkRecordType.SimpleFixed68, Kind = (uint)SpkEventType.Leaf, Words = play,
@@ -133,7 +133,7 @@ public sealed class SpkNewCommand : CliCommand<SpkNewCommand.Settings>
         }
 
         SpkBank bank = SpkBank.Parse(CliIO.ReadInput(path));
-        SpkBankRecord? play = (SpkFormat.BankId(path) is { } id ? bank.Find(id) : null) is { Layout: var layout } named
+        SpkBankRecord? play = (SpkBank.LoadIdOf(path) is { } id ? bank.Find(id) : null) is { Layout: var layout } named
             && layout == SpkLayout.Play ? named : bank.Records.Find(r => r.Layout == SpkLayout.Play);
         SpkBankRecord? sample = bank.Find(play?.Word(2) ?? 0) is { } sound && sound.Layout == SpkLayout.Sample
             ? sound : bank.Records.Find(r => r.Layout == SpkLayout.Sample);

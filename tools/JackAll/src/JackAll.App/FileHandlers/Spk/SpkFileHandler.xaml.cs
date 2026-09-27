@@ -3,7 +3,7 @@ using System.IO;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Input;
+using System.Windows.Threading;
 using JackAll.App.Audio;
 using JackAll.Core.Vfs;
 using JackAll.Tools.Audio;
@@ -14,8 +14,8 @@ namespace JackAll.App.FileHandlers.Spk;
 
 /// <summary>
 /// The .spk panel: the bank as a tree of what plays what, an inspector over the selected record, and
-/// the problems <c>spk encode</c> would report. Every edit goes through <see cref="SpkBank"/> and is
-/// staged at once, unless it leaves an error.
+/// the problems <c>spk encode</c> would report. Every edit goes through <see cref="SpkBank"/>; the
+/// bank is staged once edits settle, unless it has an error.
 /// </summary>
 /// <remarks>
 /// A record sits under whatever plays it, so a bank reads event → container → sample → audio; an id
@@ -36,6 +36,9 @@ public partial class SpkFileHandler : UserControl
         ["stop"] = "Stops", ["play"] = "Then plays", ["effect"] = "Reverb effect", ["target"] = "Target",
     };
 
+    /// <summary>One editable curve of a record: a rolloff's, or one of a multilayer layer's.</summary>
+    private sealed record Curve(string Name, List<SpkPoint> Points, string X, string Y);
+
     private readonly string _fileName;
     private readonly Action<byte[]> _replaceContent;
     private readonly Func<uint, VfsFile?> _resolveSoundId;
@@ -48,13 +51,12 @@ public partial class SpkFileHandler : UserControl
     /// <summary>The id new records' ids derive from: <see cref="_loadId"/>, else the first event's.</summary>
     private readonly uint _bankId;
 
-    /// <summary>Where the panel was, per file: staging an edit rebuilds the file list, which opens a
-    /// fresh panel on the staged file, and it picks up here.</summary>
-    private static readonly Dictionary<string, (uint? Selected, int Curve, string Status)> Remembered = [];
+    /// <summary>Stages the bank once edits pause: every stage reindexes the whole game.</summary>
+    private readonly DispatcherTimer _stageTimer = new() { Interval = TimeSpan.FromMilliseconds(600) };
 
     private SpkNode? _selected;
-    private SpkBankRecord? _audio;
     private string? _tempWavPath;
+    private List<Curve> _curves = [];
     private int _curveIndex;
 
     public SpkFileHandler(
@@ -66,10 +68,15 @@ public partial class SpkFileHandler : UserControl
         _replaceContent = replaceContent;
         _resolveSoundId = resolveSoundId;
         _navigateTo = navigateTo;
+        _stageTimer.Tick += (_, _) => Stage();
 
         // Release the temp .wav before deleting it: child and parent Unloaded order isn't guaranteed.
         Unloaded += (_, _) =>
         {
+            if (_stageTimer.IsEnabled)
+            {
+                Stage();
+            }
             AudioPreview.Reset();
             DeleteTempFile();
         };
@@ -84,15 +91,11 @@ public partial class SpkFileHandler : UserControl
             return;
         }
 
-        string stem = Path.GetFileNameWithoutExtension(fileName);
-        _loadId = stem.Length == 8 && uint.TryParse(stem, NumberStyles.HexNumber, Invariant, out uint id) ? id : null;
+        _loadId = SpkBank.LoadIdOf(fileName);
         _bankId = _loadId ?? _bank.Records.FirstOrDefault(r => r.IsEvent)?.Id ?? _bank.Records.FirstOrDefault()?.Id ?? 0;
         ShowProblems();
-        (uint? selected, _curveIndex, StatusText.Text) = Remembered.GetValueOrDefault(fileName, (null, 0, ""));
-        Refresh(selected);
+        Refresh(null);
     }
-
-    private void Remember() => Remembered[_fileName] = (_selected?.Record?.Id, _curveIndex, StatusText.Text);
 
     private void Refresh(uint? select)
     {
@@ -118,7 +121,7 @@ public partial class SpkFileHandler : UserControl
     {
         var node = new SpkNode
         {
-            Id = record.Id, Record = record, Label = $"{record.Element} 0x{record.Id:x8}",
+            Record = record, Label = $"{record.Element} 0x{record.Id:x8}",
             Detail = Join(role, Describe(record)), IsExpanded = path.Count < 3,
         };
         if (!path.Add(record.Id))
@@ -137,10 +140,10 @@ public partial class SpkFileHandler : UserControl
     private SpkNode Outside(uint id, SpkReference kind, string role)
     {
         VfsFile? file = kind == SpkReference.Rolloff ? null : _resolveSoundId(id);
-        string where = kind == SpkReference.Rolloff ? "the rolloff pack, common\\soundbinary\\2fffffff.spk"
+        string where = kind == SpkReference.Rolloff ? $"the rolloff pack, {SpkBank.RolloffPackPath}"
             : file is not null ? file.Path
             : "another bank, not in the loaded game files";
-        return new SpkNode { Id = id, External = file, Label = $"0x{id:x8}", Detail = Join(role, $"{kind} in {where}") };
+        return new SpkNode { External = file, Label = $"0x{id:x8}", Detail = Join(role, $"{kind} in {where}") };
     }
 
     /// <summary>What a child is to a container: its chance, or the switch value it answers.</summary>
@@ -155,7 +158,7 @@ public partial class SpkFileHandler : UserControl
 
     private static string Join(params string[] parts) => string.Join(" · ", parts.Where(p => p.Length > 0));
 
-    private string Describe(SpkBankRecord record)
+    private static string Describe(SpkBankRecord record)
     {
         SpkLayout? layout = record.Layout;
         int children = record.Entries.Count + record.Layers.Count;
@@ -169,7 +172,7 @@ public partial class SpkFileHandler : UserControl
                 record.Word(SpkLayout.SampleGain) != 0 ? $"{SpkLayout.FromQ16(record.Word(SpkLayout.SampleGain)):0.#} dB" : "",
                 record.Word(SpkLayout.SampleLoop) == 1 ? "loops" : ""),
             _ when layout == SpkLayout.Random => record.Word(10) == 1 ? $"{children} in order"
-                : $"{children} choices" + (record.Word(8) != 0 ? $" · {SpkBankEdits.Chance(record, null):P0} silence" : ""),
+                : Join($"{children} choices", record.Word(8) != 0 ? $"{SpkBankEdits.Chance(record, null):P0} silence" : ""),
             _ when layout == SpkLayout.Switch || layout == SpkLayout.SwitchEvent => $"{children} cases",
             _ when layout == SpkLayout.MultiEvent => $"starts {children} together",
             _ when layout == SpkLayout.Multilayer => $"{children} layers",
@@ -184,8 +187,9 @@ public partial class SpkFileHandler : UserControl
             return "not Ogg Vorbis or IMA-ADPCM";
         }
         string channels = info.Channels == 1 ? "Mono" : info.Channels == 2 ? "Stereo" : $"{info.Channels} ch";
-        string length = info.SampleRate > 0 ? $" · {info.Frames / (double)info.SampleRate:0.00} s" : "";
-        return $"{channels} · {info.SampleRate} Hz · {(info.Ogg ? "Ogg Vorbis" : "IMA-ADPCM")}{length} · {FormatBytes(audio.Data.Length)}";
+        string length = info.SampleRate > 0 ? $"{info.Frames / (double)info.SampleRate:0.00} s" : "";
+        return Join(channels, $"{info.SampleRate} Hz", info.Ogg ? "Ogg Vorbis" : "IMA-ADPCM", length,
+            MainViewModel.FormatSize(audio.Data.Length));
     }
 
     // --- inspector -------------------------------------------------------------------------------
@@ -193,55 +197,46 @@ public partial class SpkFileHandler : UserControl
     private void BankTree_SelectedItemChanged(object sender, RoutedPropertyChangedEventArgs<object> e)
     {
         _selected = e.NewValue as SpkNode;
-        if (_selected?.Record is not null)
-        {
-            Remember();
-        }
         ShowInspector();
     }
+
+    /// <summary>The audio a sample or audio record plays in this bank.</summary>
+    private SpkBankRecord? AudioOf(SpkBankRecord? record) =>
+        record is { IsAudio: true } ? record
+        : record?.Layout == SpkLayout.Sample && _bank!.Find(record.Word(SpkLayout.SampleAudio)) is { IsAudio: true } audio ? audio
+        : null;
+
+    private static Visibility Vis(bool visible) => visible ? Visibility.Visible : Visibility.Collapsed;
 
     private void ShowInspector()
     {
         AudioPreview.Reset();
         DeleteTempFile();
-        _audio = null;
-        foreach (UIElement section in new UIElement[] { ChoicesSection, VariationSection, CasesSection, CurveSection, AudioPanel, GoToButton })
-        {
-            section.Visibility = Visibility.Collapsed;
-        }
+        SpkBankRecord? record = _selected?.Record;
+        SpkLayout? layout = record?.Layout;
+        SpkBankRecord? audio = AudioOf(record);
 
-        SpkNode? node = _selected;
-        InspectorTitle.Text = node?.Label ?? "";
-        InspectorDetail.Text = node?.Detail ?? "";
-        FieldsList.ItemsSource = null;
-        if (node?.Record is not { } record)
-        {
-            GoToButton.Visibility = node?.External is null ? Visibility.Collapsed : Visibility.Visible;
-            ShowRaw(null);
-            return;
-        }
+        InspectorTitle.Text = _selected?.Label ?? "";
+        InspectorDetail.Text = _selected?.Detail ?? "";
+        GoToButton.Visibility = Vis(_selected?.External is not null);
+        ChoicesSection.Visibility = Vis(layout == SpkLayout.Random);
+        AddVariationButton.Visibility = Vis(record is not null && _bank!.SoundFor(record) is not null);
+        bool cases = layout?.Children is not null && layout != SpkLayout.Random;
+        CasesSection.Visibility = Vis(cases);
+        CurveSection.Visibility = Vis(record is { IsRolloff: true } || layout == SpkLayout.Multilayer);
+        AudioPanel.Visibility = Vis(record is not null && _bank!.PickAudio(record) is not null);
+        PlayPickButton.Visibility = Vis(audio is null);
+        ExportAudioButton.Visibility = ImportAudioButton.Visibility = Vis(audio is not null);
 
-        FieldsList.ItemsSource = Fields(record);
-        SpkLayout? layout = record.Layout;
-        if (layout == SpkLayout.Random)
-        {
-            ShowChoices(record);
-        }
-        if (layout == SpkLayout.Random || (layout == SpkLayout.Play && _bank!.Find(record.Word(2))?.Layout is { } sound
-            && (sound == SpkLayout.Sample || sound == SpkLayout.Random)))
-        {
-            VariationSection.Visibility = Visibility.Visible;
-        }
-        if (layout?.Children is not null && layout != SpkLayout.Random)
-        {
-            ShowCases(record);
-        }
-        if (record.IsRolloff || layout == SpkLayout.Multilayer)
-        {
-            ShowCurve(record);
-        }
-        ShowAudio(record);
+        FieldsList.ItemsSource = record is null ? null : Fields(record);
+        ChoicesGrid.ItemsSource = layout == SpkLayout.Random ? Choices(record!) : null;
+        CasesGrid.ItemsSource = cases ? Cases(record!) : null;
+        ShowCurves(record);
         ShowRaw(record);
+        if (audio is not null)
+        {
+            _ = PreparePreviewAsync(audio);
+        }
     }
 
     private List<SpkFieldRow> Fields(SpkBankRecord record)
@@ -260,7 +255,7 @@ public partial class SpkFileHandler : UserControl
         foreach (SpkWordField field in layout.Fields)
         {
             int index = field.Index;
-            string label = Label(field.Name);
+            string label = FieldLabels.GetValueOrDefault(field.Name, field.Name);
             rows.Add(field.Format switch
             {
                 SpkWordFormat.Bool => new SpkFieldRow(label, () => (record.Word(index) == 1).ToString(),
@@ -276,10 +271,8 @@ public partial class SpkFileHandler : UserControl
         return rows;
     }
 
-    private void ShowChoices(SpkBankRecord random)
-    {
-        ChoicesSection.Visibility = Visibility.Visible;
-        ChoicesGrid.ItemsSource = random.Entries.Select((entry, i) =>
+    private List<SpkChoiceRow> Choices(SpkBankRecord random) =>
+        [.. random.Entries.Select((entry, i) =>
         {
             SpkBankRecord? child = _bank!.Find(entry.Ref);
             return new SpkChoiceRow(
@@ -289,21 +282,18 @@ public partial class SpkFileHandler : UserControl
                 text => Edit(() => SpkBankEdits.SetChance(random, i, ParseNumber(text) / 100)),
                 entry.Extra == 1,
                 repeat => Edit(() => random.Entries[i] = random.Entries[i] with { Extra = repeat ? 1u : 0u }));
-        }).ToList();
-    }
+        })];
 
-    private void ShowCases(SpkBankRecord record)
+    private List<SpkCaseRow> Cases(SpkBankRecord record)
     {
-        SpkChildren shape = record.Layout!.Children!;
-        bool keyed = shape.ValueAt >= 0;
-        CasesSection.Visibility = Visibility.Visible;
+        bool keyed = record.Layout!.Children!.ValueAt >= 0;
         CasesTitle.Text = keyed ? "Cases" : "Starts together";
-        CaseValueColumn.Visibility = keyed ? Visibility.Visible : Visibility.Collapsed;
-        CasesGrid.ItemsSource = record.Entries.Select((entry, i) => new SpkCaseRow(
+        CaseValueColumn.Visibility = Vis(keyed);
+        return [.. record.Entries.Select((_, i) => new SpkCaseRow(
             () => FormatId(record.Entries[i].Ref),
             text => Edit(() => record.Entries[i] = record.Entries[i] with { Ref = ParseId(text, 0) }),
             keyed ? () => FormatId(record.Entries[i].Value) : null,
-            keyed ? text => Edit(() => record.Entries[i] = record.Entries[i] with { Value = ParseId(text, 0) }) : null)).ToList();
+            keyed ? text => Edit(() => record.Entries[i] = record.Entries[i] with { Value = ParseId(text, 0) }) : null))];
     }
 
     private void AddCase_Click(object sender, RoutedEventArgs e)
@@ -324,60 +314,42 @@ public partial class SpkFileHandler : UserControl
 
     // --- curves ----------------------------------------------------------------------------------
 
-    /// <summary>The curves a record holds: a rolloff's one, or every curve of every multilayer layer.</summary>
-    private static List<(string Name, List<SpkPoint> Points, string X, string Y)> CurvesOf(SpkBankRecord record) =>
-        record.IsRolloff
-            ? [("Rolloff", record.Points, "Distance (m)", "dB")]
-            : [.. record.Layers.SelectMany((layer, l) => layer.Curves.Select(curve => (
+    /// <summary>Lists a record's curves in the picker, which draws the one picked.</summary>
+    private void ShowCurves(SpkBankRecord? record)
+    {
+        _curves = record is null ? []
+            : record.IsRolloff ? [new Curve("Rolloff", record.Points, "Distance (m)", "dB")]
+            : [.. record.Layers.SelectMany((layer, l) => layer.Curves.Select(curve => new Curve(
                 $"Layer {l + 1} · {(curve.Target == 1 ? "pitch" : "volume")} on 0x{curve.Parameter:x8}",
                 curve.Points, "Parameter", curve.Target == 1 ? "Pitch ratio" : "dB")))];
-
-    private void ShowCurve(SpkBankRecord record)
-    {
-        var curves = CurvesOf(record);
-        CurveSection.Visibility = Visibility.Visible;
-        CurvePicker.Visibility = curves.Count > 1 ? Visibility.Visible : Visibility.Collapsed;
-        CurvePicker.ItemsSource = curves.Select(c => c.Name).ToList();
-        _curveIndex = Math.Clamp(_curveIndex, 0, Math.Max(0, curves.Count - 1));
-        CurvePicker.SelectedIndex = curves.Count == 0 ? -1 : _curveIndex;
-        DrawCurve(curves);
+        CurvePicker.Visibility = Vis(_curves.Count > 1);
+        CurvePicker.ItemsSource = _curves;
+        CurvePicker.SelectedIndex = _curves.Count == 0 ? -1 : Math.Min(_curveIndex, _curves.Count - 1);
     }
 
     private void CurvePicker_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
-        if (CurvePicker.SelectedIndex >= 0 && _selected?.Record is { } record)
-        {
-            _curveIndex = CurvePicker.SelectedIndex;
-            Remember();
-            DrawCurve(CurvesOf(record));
-        }
-    }
-
-    private void DrawCurve(List<(string Name, List<SpkPoint> Points, string X, string Y)> curves)
-    {
-        if (curves.Count == 0)
+        if (CurvePicker.SelectedItem is not Curve curve)
         {
             CurveChart.Show([]);
             PointsGrid.ItemsSource = null;
             return;
         }
 
-        (_, List<SpkPoint> points, string x, string y) = curves[_curveIndex];
-        PointXColumn.Header = x;
-        PointYColumn.Header = y;
+        _curveIndex = CurvePicker.SelectedIndex;
+        List<SpkPoint> points = curve.Points;
+        PointXColumn.Header = curve.X;
+        PointYColumn.Header = curve.Y;
         CurveChart.Show([new CurveSeries([.. points.Select(p => new Point(p.X, p.Y))], "AccentBrush")]);
-        PointsGrid.ItemsSource = points.Select((point, i) => new SpkPointRow(
+        PointsGrid.ItemsSource = points.Select((_, i) => new SpkPointRow(
             () => points[i].X.ToString("0.###", Invariant),
             () => points[i].Y.ToString("0.###", Invariant),
-            (px, py) => Edit(() => points[i] = new SpkPoint((float)ParseNumber(px), (float)ParseNumber(py))))).ToList();
+            (x, y) => Edit(() => points[i] = new SpkPoint((float)ParseNumber(x), (float)ParseNumber(y))))).ToList();
     }
-
-    private List<SpkPoint>? SelectedCurve() =>
-        _selected?.Record is { } record && CurvesOf(record) is { Count: > 0 } curves ? curves[_curveIndex].Points : null;
 
     private void AddPoint_Click(object sender, RoutedEventArgs e)
     {
-        if (SelectedCurve() is { } points)
+        if (CurvePicker.SelectedItem is Curve { Points: var points })
         {
             SpkPoint last = points.LastOrDefault();
             Edit(() => points.Add(new SpkPoint(last.X + 10, last.Y)));
@@ -386,7 +358,7 @@ public partial class SpkFileHandler : UserControl
 
     private void RemovePoint_Click(object sender, RoutedEventArgs e)
     {
-        if (SelectedCurve() is { } points && PointsGrid.SelectedIndex is >= 0 and var index)
+        if (CurvePicker.SelectedItem is Curve { Points: var points } && PointsGrid.SelectedIndex is >= 0 and var index)
         {
             Edit(() => points.RemoveAt(index));
         }
@@ -412,7 +384,7 @@ public partial class SpkFileHandler : UserControl
     /// a Play over a lone sample gets a random container around it first.</summary>
     private async void AddVariation_Click(object sender, RoutedEventArgs e)
     {
-        if (_selected?.Record is not { } owner)
+        if (_selected?.Record is not { } owner || _bank!.SoundFor(owner) is not { } sound)
         {
             return;
         }
@@ -423,9 +395,8 @@ public partial class SpkFileHandler : UserControl
             return;
         }
 
-        SpkBankRecord? sound = owner.Layout == SpkLayout.Random ? owner : _bank!.Find(owner.Word(2));
-        SpkBankRecord? template = sound?.Layout == SpkLayout.Random ? _bank!.TemplateSample(sound) : sound;
-        SpkBankRecord? like = template is null ? null : _bank!.Find(template.Word(SpkLayout.SampleAudio));
+        SpkBankRecord? template = sound.Layout == SpkLayout.Random ? _bank!.TemplateSample(sound) : sound;
+        SpkBankRecord? like = AudioOf(template);
         bool looping = template?.Word(SpkLayout.SampleLoop) == 1;
 
         AddVariationButton.IsEnabled = false;
@@ -484,27 +455,12 @@ public partial class SpkFileHandler : UserControl
 
     // --- audio -----------------------------------------------------------------------------------
 
-    private void ShowAudio(SpkBankRecord record)
-    {
-        _audio = record.IsAudio ? record
-            : record.Layout == SpkLayout.Sample && _bank!.Find(record.Word(SpkLayout.SampleAudio)) is { IsAudio: true } audio ? audio
-            : null;
-        bool reaches = _audio is not null || SoundPreview.PickAudio(_bank!, record, []) is not null;
-        AudioPanel.Visibility = reaches ? Visibility.Visible : Visibility.Collapsed;
-        PlayPickButton.Visibility = _audio is null ? Visibility.Visible : Visibility.Collapsed;
-        ExportAudioButton.Visibility = ImportAudioButton.Visibility = _audio is null ? Visibility.Collapsed : Visibility.Visible;
-        if (_audio is not null)
-        {
-            _ = PreparePreviewAsync(_audio);
-        }
-    }
-
     private async Task PreparePreviewAsync(SpkBankRecord audio)
     {
         try
         {
             string wav = await SoundPreview.AudioToTempWavAsync(audio);
-            if (_audio != audio)
+            if (!IsLoaded || AudioOf(_selected?.Record) != audio)
             {
                 SoundPreview.TryDelete(wav);
                 return;
@@ -521,7 +477,7 @@ public partial class SpkFileHandler : UserControl
     /// <summary>Plays what the selected record reaches, a random container picking afresh each time.</summary>
     private void PlayPick_Click(object sender, RoutedEventArgs e)
     {
-        if (_selected?.Record is { } record && SoundPreview.PickAudio(_bank!, record, []) is { } audio)
+        if (_selected?.Record is { } record && _bank!.PickAudio(record) is { } audio)
         {
             AudioPreview.Play(() => SoundPreview.AudioToTempWavAsync(audio));
         }
@@ -529,7 +485,7 @@ public partial class SpkFileHandler : UserControl
 
     private void ExportAudio_Click(object sender, RoutedEventArgs e)
     {
-        if (_audio is not { } audio)
+        if (AudioOf(_selected?.Record) is not { } audio)
         {
             return;
         }
@@ -549,7 +505,7 @@ public partial class SpkFileHandler : UserControl
         try
         {
             // An Ogg stream already is a complete file: exported as is rather than re-encoded.
-            File.WriteAllBytes(dialog.FileName, ogg ? audio.Data : SoundPreview.ImaAdpcmToWav(audio, out _));
+            File.WriteAllBytes(dialog.FileName, ogg ? audio.Data : SoundPreview.ImaAdpcmToWav(audio));
             StatusText.Text = $"Exported to {dialog.FileName}";
         }
         catch (Exception ex)
@@ -560,7 +516,7 @@ public partial class SpkFileHandler : UserControl
 
     private async void ImportAudio_Click(object sender, RoutedEventArgs e)
     {
-        if (_audio is not { } audio)
+        if (AudioOf(_selected?.Record) is not { } audio)
         {
             return;
         }
@@ -575,8 +531,7 @@ public partial class SpkFileHandler : UserControl
         try
         {
             StatusText.Text = "Encoding…";
-            bool looping = _bank!.SamplesPlaying(audio.Id).Any(s => s.Word(SpkLayout.SampleLoop) == 1);
-            (byte[] stream, int? rate) = await EncodeLikeAsync(audio, dialog.FileName, looping);
+            (byte[] stream, int? rate) = await EncodeLikeAsync(audio, dialog.FileName, _bank!.Loops(audio.Id));
             Edit(() => _bank.ReplaceAudio(audio, stream, rate));
         }
         catch (Exception ex)
@@ -590,9 +545,6 @@ public partial class SpkFileHandler : UserControl
     }
 
     // --- raw details -----------------------------------------------------------------------------
-
-    private void ShowRawDetails_Changed(object sender, RoutedEventArgs e) =>
-        RawPanel.Visibility = ShowRawDetailsCheckBox.IsChecked == true ? Visibility.Visible : Visibility.Collapsed;
 
     /// <summary>Every word by index: unnamed ones editable, derived ones as written.</summary>
     private void ShowRaw(SpkBankRecord? record)
@@ -646,8 +598,8 @@ public partial class SpkFileHandler : UserControl
     });
 
     /// <summary>
-    /// Applies a change and, unless it leaves an error, stages the rebuilt bank. The rebuild waits for
-    /// the input that caused it to finish; <paramref name="change"/> may name the record to select.
+    /// Applies a change, shows the bank as it now is and schedules staging. The rebuild waits for the
+    /// input that caused it to finish; <paramref name="change"/> may name the record to select.
     /// </summary>
     private void EditSelecting(Func<uint?> change)
     {
@@ -664,22 +616,27 @@ public partial class SpkFileHandler : UserControl
             return;
         }
 
-        Dispatcher.BeginInvoke(() =>
+        StatusText.Text = "Staging…";
+        _stageTimer.Stop();
+        _stageTimer.Start();
+        Dispatcher.BeginInvoke(() => Refresh(select));
+    }
+
+    /// <summary>Stages the bank unless it has an error; the host keeps this panel over the file it staged.</summary>
+    private void Stage()
+    {
+        _stageTimer.Stop();
+        if (!ShowProblems())
         {
-            if (ShowProblems())
-            {
-                byte[] bytes = _bank!.Write();
-                SpkBank.Parse(bytes);
-                StatusText.Text = "Staged in your workspace.";
-                Remembered[_fileName] = (select, _curveIndex, StatusText.Text);
-                _replaceContent(bytes);
-            }
-            else
-            {
-                StatusText.Text = "Not staged: fix the errors below first.";
-            }
-            Refresh(select);
-        });
+            StatusText.Text = "Not staged: fix the errors below first.";
+            return;
+        }
+
+        byte[] bytes = _bank!.Write();
+        // A read-back check: a bank that fails to parse is never staged.
+        SpkBank.Parse(bytes);
+        _replaceContent(bytes);
+        StatusText.Text = "Staged in your workspace.";
     }
 
     /// <summary>Lists errors and warnings, and counts the ids other banks must supply; false on an error.</summary>
@@ -694,7 +651,7 @@ public partial class SpkFileHandler : UserControl
             lines.Add($"{notes} reference(s) point into other banks, which must be loaded for them to play.");
         }
         ProblemsList.ItemsSource = lines;
-        ProblemsPanel.Visibility = lines.Count > 0 ? Visibility.Visible : Visibility.Collapsed;
+        ProblemsPanel.Visibility = Vis(lines.Count > 0);
         return problems.All(p => p.Severity != SpkProblemSeverity.Error);
     }
 
@@ -706,47 +663,19 @@ public partial class SpkFileHandler : UserControl
         }
     }
 
-    private void ValueBox_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter && sender is TextBox box)
-        {
-            box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
-        }
-    }
-
     // --- formatting ------------------------------------------------------------------------------
-
-    private static string Label(string field) => FieldLabels.GetValueOrDefault(field, field);
 
     private static string Percent(double chance) => (chance * 100).ToString("0.##", Invariant);
 
     private static string FormatId(uint id) => id == SpkLayout.NoId ? "" : $"0x{id:x8}";
 
-    /// <summary>A hex id, with or without 0x; blank is the field's default.</summary>
-    private static uint ParseId(string text, uint blank)
-    {
-        string trimmed = text.Trim();
-        if (trimmed.Length == 0)
-        {
-            return blank;
-        }
-        string hex = trimmed.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? trimmed[2..] : trimmed;
-        return uint.TryParse(hex, NumberStyles.HexNumber, Invariant, out uint id)
-            ? id
-            : throw new FormatException($"'{text}' is not a hex id.");
-    }
+    /// <summary>A hex id; blank is the field's default.</summary>
+    private static uint ParseId(string text, uint blank) => string.IsNullOrWhiteSpace(text) ? blank : SpkBank.ParseId(text);
 
     private static double ParseNumber(string text) =>
         double.TryParse(text.Trim().TrimEnd('%').Replace(',', '.'), NumberStyles.Float, Invariant, out double value)
             ? value
             : throw new FormatException($"'{text}' is not a number.");
-
-    private static string FormatBytes(long bytes) => bytes switch
-    {
-        >= 1024 * 1024 => $"{bytes / (1024.0 * 1024.0):0.#} MB",
-        >= 1024 => $"{bytes / 1024.0:0.#} KB",
-        _ => $"{bytes} B",
-    };
 
     private void DeleteTempFile()
     {

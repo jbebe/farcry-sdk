@@ -139,9 +139,80 @@ public sealed class SpkBank
 
     public SpkBankRecord? Find(uint id) => Records.Find(r => r.Id == id);
 
+    /// <summary>Where the retail rolloff curves live, for an id no bank holds.</summary>
+    public const string RolloffPackPath = @"common\soundbinary\2fffffff.spk";
+
+    /// <summary>The rate for an IMA-ADPCM stream nothing declares one for: the commonest retail rate.</summary>
+    public const int FallbackSampleRate = 32000;
+
+    /// <summary>A record id as hex, with or without 0x.</summary>
+    public static uint ParseId(string text)
+    {
+        string trimmed = text.Trim();
+        string hex = trimmed.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? trimmed[2..] : trimmed;
+        return uint.TryParse(hex, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out uint id)
+            ? id
+            : throw new FormatException($"'{text}' is not a hex id (e.g. 0x004e1c50).");
+    }
+
+    /// <summary>The id the game loads a bank file by, from its name (<c>004569c9.spk</c>); null for any other name.</summary>
+    public static uint? LoadIdOf(string path) =>
+        Path.GetFileNameWithoutExtension(path) is { Length: 8 } stem
+        && uint.TryParse(stem, System.Globalization.NumberStyles.HexNumber, System.Globalization.CultureInfo.InvariantCulture, out uint id)
+            ? id
+            : null;
+
     /// <summary>The samples that play an audio record.</summary>
     public IEnumerable<SpkBankRecord> SamplesPlaying(uint audioId) =>
         Records.Where(r => r.Layout == SpkLayout.Sample && r.Word(SpkLayout.SampleAudio) == audioId);
+
+    /// <summary>Whether a sample playing this audio loops, so its stream is encoded to restart seamlessly.</summary>
+    public bool Loops(uint audioId) => SamplesPlaying(audioId).Any(s => s.Word(SpkLayout.SampleLoop) == 1);
+
+    /// <summary>
+    /// The audio <paramref name="start"/> reaches inside this bank, a random container taking a choice
+    /// by its weights, or null; <paramref name="elsewhere"/> collects the ids it reaches in other banks.
+    /// </summary>
+    public SpkBankRecord? PickAudio(SpkBankRecord start, List<uint>? elsewhere = null)
+    {
+        var seen = new HashSet<uint>();
+        SpkBankRecord? Walk(SpkBankRecord record)
+        {
+            if (record.IsAudio || !seen.Add(record.Id))
+            {
+                return record.IsAudio ? record : null;
+            }
+
+            foreach (uint link in Playable(record))
+            {
+                if (Find(link) is not { } next)
+                {
+                    elsewhere?.Add(link);
+                }
+                else if (Walk(next) is { } audio)
+                {
+                    return audio;
+                }
+            }
+            return null;
+        }
+        return Walk(start);
+    }
+
+    /// <summary>What a record plays, a random container's weighted pick first.</summary>
+    private static IEnumerable<uint> Playable(SpkBankRecord record)
+    {
+        IEnumerable<uint> links = record.References().Where(l => l.Kind != SpkReference.Rolloff).Select(l => l.Id);
+        if (record.Layout != SpkLayout.Random || record.Entries.Count == 0)
+        {
+            return links;
+        }
+
+        double draw = System.Random.Shared.NextDouble() * record.Entries.Sum(e => (double)e.Value);
+        int pick = record.Entries.FindIndex(e => (draw -= e.Value) < 0);
+        uint first = record.Entries[pick < 0 ? 0 : pick].Ref;
+        return links.Where(l => l == first).Take(1).Concat(links.Where(l => l != first));
+    }
 
     /// <summary>Swaps an audio record's stream; the samples playing it re-derive their audio words from it.</summary>
     public void ReplaceAudio(SpkBankRecord audio, byte[] stream, int? sampleRate)

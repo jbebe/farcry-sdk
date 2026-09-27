@@ -10,8 +10,6 @@ public sealed class SpkNode : TreeNodeBase<SpkNode>
 
     public required string Detail { get; init; }
 
-    public required uint Id { get; init; }
-
     /// <summary>Null for an id this bank does not hold.</summary>
     public SpkBankRecord? Record { get; init; }
 
@@ -23,7 +21,7 @@ public sealed class SpkNode : TreeNodeBase<SpkNode>
     /// <summary>The name UI Automation and screen readers give the row.</summary>
     public override string ToString() => $"{Label} {Detail}";
 
-    /// <summary>Selects the first node for <paramref name="id"/>, expanding the way down to it.</summary>
+    /// <summary>Selects the first node for record <paramref name="id"/>, expanding the way down to it.</summary>
     public static SpkNode? Select(IEnumerable<SpkNode> roots, uint id) =>
-        roots.Select(root => Reveal(root, n => n.Id == id && n.Record is not null)).FirstOrDefault(n => n is not null);
+        roots.Select(root => Reveal(root, n => n.Record?.Id == id)).FirstOrDefault(n => n is not null);
 }

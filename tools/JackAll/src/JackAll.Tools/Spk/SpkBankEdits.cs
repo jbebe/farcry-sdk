@@ -21,26 +21,23 @@ public static class SpkBankEdits
         throw new InvalidOperationException($"All {IdsPerBank} ids for new records in bank 0x{bankId:x8} are taken.");
     }
 
-    /// <summary>The random container new variations of <paramref name="owner"/> go into: the Random
-    /// itself, the one a Play plays, or a new one wrapping the sample a Play plays.</summary>
+    /// <summary>What variations of <paramref name="owner"/> build on: a Random itself, or the Random or
+    /// Sample in this bank a Play plays; null for anything else.</summary>
+    public static SpkBankRecord? SoundFor(this SpkBank bank, SpkBankRecord owner) =>
+        owner.Layout == SpkLayout.Random ? owner
+        : owner.Layout == SpkLayout.Play && bank.Find(owner.Word(2)) is { } sound
+            && (sound.Layout == SpkLayout.Random || sound.Layout == SpkLayout.Sample) ? sound
+        : null;
+
+    /// <summary>The random container new variations of <paramref name="owner"/> go into, wrapping the
+    /// sample a Play plays in a new one when it has none.</summary>
     public static SpkBankRecord RandomFor(this SpkBank bank, SpkBankRecord owner, uint bankId)
     {
-        if (owner.Layout == SpkLayout.Random)
-        {
-            return owner;
-        }
-
-        if (owner.Layout != SpkLayout.Play || bank.Find(owner.Word(2)) is not { } sound)
-        {
-            throw new InvalidOperationException("Variations go on a Play event or a Random container in this bank.");
-        }
+        SpkBankRecord sound = bank.SoundFor(owner)
+            ?? throw new InvalidOperationException("Variations go on a Random container, or a Play over a sample or one, in this bank.");
         if (sound.Layout == SpkLayout.Random)
         {
             return sound;
-        }
-        if (sound.Layout != SpkLayout.Sample)
-        {
-            throw new InvalidOperationException($"This event plays a {sound.Element}, not a sample or a random container.");
         }
 
         var random = new SpkBankRecord
@@ -84,7 +81,7 @@ public static class SpkBankEdits
         uint removed = random.Entries[index].Ref;
         random.Entries.RemoveAt(index);
         Normalize(random);
-        if (bank.Find(removed) is { Layout: var layout } sample && layout == SpkLayout.Sample && !IsReferenced(bank, removed))
+        if (bank.Find(removed) is { } sample && sample.Layout == SpkLayout.Sample && !IsReferenced(bank, removed))
         {
             bank.Records.Remove(sample);
             if (bank.Find(sample.Word(SpkLayout.SampleAudio)) is { } audio && !IsReferenced(bank, audio.Id))
@@ -98,7 +95,7 @@ public static class SpkBankEdits
     /// keep their proportions.</summary>
     public static void SetChance(SpkBankRecord random, int? index, double chance)
     {
-        double[] weights = [.. random.Entries.Select(e => (double)e.Value), random.Word(8)];
+        double[] weights = Weights(random);
         int slot = index ?? weights.Length - 1;
         chance = Math.Clamp(chance, 0, 1);
         double others = weights.Where((_, i) => i != slot).Sum();
@@ -114,13 +111,16 @@ public static class SpkBankEdits
     /// <summary>A choice's or silence's share of every play.</summary>
     public static double Chance(SpkBankRecord random, int? index)
     {
-        double total = random.Entries.Sum(e => (double)e.Value) + random.Word(8);
-        return total == 0 ? 0 : (index is { } i ? random.Entries[i].Value : random.Word(8)) / total;
+        double[] weights = Weights(random);
+        double total = weights.Sum();
+        return total == 0 ? 0 : weights[index ?? weights.Length - 1] / total;
     }
 
+    /// <summary>The entries' weights, then silence's.</summary>
+    private static double[] Weights(SpkBankRecord random) => [.. random.Entries.Select(e => (double)e.Value), random.Word(8)];
+
     /// <summary>Rescales the weights and silence to sum to 1.0.</summary>
-    private static void Normalize(SpkBankRecord random) =>
-        Store(random, [.. random.Entries.Select(e => (double)e.Value), random.Word(8)]);
+    private static void Normalize(SpkBankRecord random) => Store(random, Weights(random));
 
     private static void Store(SpkBankRecord random, double[] weights)
     {

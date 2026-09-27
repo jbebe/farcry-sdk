@@ -24,8 +24,26 @@ jackall-cli spk encode passby\00448bd2.xml -o 00448bd2.spk     # checks, then bu
 jackall-cli spk verify soundbinary\00448bd2.spk               # decode + encode, byte for byte
 ```
 
-Every retail bank (7,513 of them) rebuilds byte for byte, so an unedited decode changes nothing. The
-built bank goes in your layer at `mods/soundbinary/<id>.spk`.
+Every retail bank rebuilds byte for byte (7,513 sound banks and 860 bark banks), so an unedited
+decode changes nothing. The built bank goes in your layer at `mods/soundbinary/<id>.spk`.
+
+## In the App
+
+Select an `.spk` on the Files tab. The panel shows the bank as a tree of what plays what, and edits
+the selected record in place:
+- **Fields:** a Play's sound and rolloff; a sample's gain and loop; a container's silence and flags.
+- **Random containers:** each choice's chance as a percentage, with the others rescaling to keep
+  their proportions. **Add variation…** imports any audio file as a new choice, transcoded to the
+  format of the samples already there. On a Play over a single sample, it first wraps that sample
+  in a random container.
+- **Switches and multi-events:** add, remove or repoint cases.
+- **Curves:** rolloff and multilayer curves are drawn, and their points are editable.
+- **Audio:** **Play a pick** draws a fresh random choice on each click. **Import…** replaces a
+  sample's audio, and the sample's lengths follow the new clip.
+- **Checks:** errors and warnings from the list below show under the panel. An edit is staged in
+  the workspace at once, unless it leaves an error.
+
+New records get ids from `0x10000000 + bank id × 32`, a block per bank that no retail id reaches.
 
 ## What is in a bank
 

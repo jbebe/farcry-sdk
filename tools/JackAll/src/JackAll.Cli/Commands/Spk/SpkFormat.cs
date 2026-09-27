@@ -1,8 +1,6 @@
-using JackAll.Cli.Infrastructure;
 using JackAll.Tools.Audio;
 using JackAll.Tools.Sbao;
 using JackAll.Tools.Spk;
-using System.Globalization;
 using Spectre.Console;
 
 namespace JackAll.Cli.Commands.Spk;
@@ -15,8 +13,6 @@ namespace JackAll.Cli.Commands.Spk;
 /// </summary>
 internal static class SpkFormat
 {
-    public const int FallbackSampleRateHz = 32000; // most common real-install TransformedFixed128 rate
-
     public static string DescribeKind(SpkRecord r) => r.Core switch
     {
         null => "(malformed)",
@@ -46,7 +42,7 @@ internal static class SpkFormat
             {
                 ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(audio);
                 int? sampleRate = package.TryGetFlatCopySampleRate(r);
-                string rateLabel = sampleRate is { } hz ? $"{hz} Hz" : $"~{FallbackSampleRateHz} Hz (no rate on record)";
+                string rateLabel = sampleRate is { } hz ? $"{hz} Hz" : $"~{SpkBank.FallbackSampleRate} Hz (no rate on record)";
                 return $"{DescribeChannels(decoded.Channels)} - {rateLabel} - IMA-ADPCM - {FormatBytes(audio.Length)}{DescribeLengthMismatch(package, r)}";
             }
             catch (Exception ex)
@@ -101,10 +97,6 @@ internal static class SpkFormat
         _ => $"{bytes} B",
     };
 
-    /// <summary>The id a bank file is loaded by, from its name (<c>004569c9.spk</c>), or null for any other name.</summary>
-    public static uint? BankId(string path) =>
-        Path.GetFileNameWithoutExtension(path) is { Length: 8 } stem ? CliIO.TryParseHash(stem) : null;
-
     /// <summary>Prints what <see cref="SpkBankLint"/> found; false when any of it is an error.</summary>
     public static bool Report(IReadOnlyList<SpkProblem> problems)
     {
@@ -119,20 +111,5 @@ internal static class SpkFormat
             AnsiConsole.MarkupLine($"  {label} {problem.Message.EscapeMarkup()}");
         }
         return problems.All(p => p.Severity != SpkProblemSeverity.Error);
-    }
-
-    /// <summary>Parses a record id as given on the command line - "0x004e1c50" or bare "004e1c50",
-    /// matching however it's shown by `spk list`/the App. Always hex; ids are never meaningfully
-    /// decimal in this format.</summary>
-    public static uint ParseRecordId(string text)
-    {
-        string trimmed = text.Trim();
-        string hex = trimmed.StartsWith("0x", StringComparison.OrdinalIgnoreCase) ? trimmed[2..] : trimmed;
-        if (uint.TryParse(hex, NumberStyles.HexNumber, CultureInfo.InvariantCulture, out uint value))
-        {
-            return value;
-        }
-
-        throw new FormatException($"Not a valid record id: {text} (expected hex, e.g. 0x004e1c50 or 004e1c50).");
     }
 }

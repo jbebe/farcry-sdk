@@ -106,14 +106,14 @@
                                 <DataGridTemplateColumn Header="Input" Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="{x:Type ai:CurvePointRow}">
-                                            <TextBox Text="{Binding X, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                            <TextBox Text="{Binding X, UpdateSourceTrigger=LostFocus}" app:CommitOnEnter.IsEnabled="True" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
                                 <DataGridTemplateColumn Header="Value" Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="{x:Type ai:CurvePointRow}">
-                                            <TextBox Text="{Binding Y, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                            <TextBox Text="{Binding Y, UpdateSourceTrigger=LostFocus}" app:CommitOnEnter.IsEnabled="True" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -259,7 +259,7 @@
                                         <DataGridTemplateColumn.CellTemplate>
                                             <DataTemplate DataType="{x:Type ai:BrainParameterRow}">
                                                 <Grid>
-                                                    <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown">
+                                                    <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" app:CommitOnEnter.IsEnabled="True">
                                                         <TextBox.Style>
                                                             <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
                                                                 <Style.Triggers>

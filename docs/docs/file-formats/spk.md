@@ -490,13 +490,11 @@ Word `[20]` is not it: patching it to the replacement's real sample count change
 at `+0x30` in `TImaAdpcm_DecodeStream` (`0x10a7f9e0`) is not a remaining length either, but the
 decoder's look-ahead buffer, refilled and drained every call.
 
-`jackall-cli spk import` and `spk encode` derive every audio word of the samples that play the new
-stream: `[2]`, the one-shot or loop pair, the rate, the channels and the codec. `spk list` flags any
-record whose descriptor disagrees with its stream. Whether the engine reads the loop pair
-`[23]`/`[24]` is untested. The App's importer does not rewrite the descriptor: it pads a shorter
-IMA-ADPCM clip with silence up to the original's sample count, which keeps the old length true, but a
-longer clip or any Ogg replacement ships a stale length. Whether Ogg Vorbis records are also cut at
-`[2]` is untested.
+`jackall-cli spk import` and `spk encode`, and the App's Import…, derive every audio word of the
+samples that play the new stream: `[2]`, the one-shot or loop pair, the rate, the channels and the
+codec. `spk list` flags any record whose descriptor disagrees with its stream. Whether the engine
+reads the loop pair `[23]`/`[24]` is untested, and so is whether Ogg Vorbis records are also cut at
+`[2]`.
 
 ## Unknowns
 

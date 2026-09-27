@@ -2,7 +2,6 @@ using System.Globalization;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
-using System.Windows.Input;
 using JackAll.Tools.Ai;
 
 namespace JackAll.App.Ai;
@@ -112,14 +111,6 @@ public partial class AiTabView : UserControl, ISavableTab
                 MessageBoxButton.OKCancel, MessageBoxImage.Question) == MessageBoxResult.OK)
         {
             await _model.RevertAsync();
-        }
-    }
-
-    private void ValueBox_KeyDown(object sender, KeyEventArgs e)
-    {
-        if (e.Key == Key.Enter && sender is TextBox box)
-        {
-            box.GetBindingExpression(TextBox.TextProperty)?.UpdateSource();
         }
     }
 

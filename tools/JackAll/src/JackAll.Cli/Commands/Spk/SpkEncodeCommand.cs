@@ -27,7 +27,7 @@ public sealed class SpkEncodeCommand : CliCommand<SpkEncodeCommand.Settings>
 
         string dir = Path.GetDirectoryName(Path.GetFullPath(settings.Input))!;
         SpkBank bank = SpkBankXml.FromXml(CliIO.ReadInputText(settings.Input), file => CliIO.ReadInput(Path.Combine(dir, file)));
-        if (!SpkFormat.Report(SpkBankLint.Check(bank, SpkFormat.BankId(outPath))))
+        if (!SpkFormat.Report(SpkBankLint.Check(bank, SpkBank.LoadIdOf(outPath))))
         {
             return 1;
         }

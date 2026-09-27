@@ -36,7 +36,7 @@ public sealed class SpkExtractCommand : CliCommand<SpkExtractCommand.Settings>
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
-        uint id = SpkFormat.ParseRecordId(settings.RecordId);
+        uint id = SpkBank.ParseId(settings.RecordId);
         SpkPackage package = SpkPackage.Parse(CliIO.ReadInput(settings.Input));
         SpkRecord record = package.Records.FirstOrDefault(r => r.Id == id)
             ?? throw new InvalidDataException($"No record with id 0x{id:x8} in {settings.Input}.");
@@ -58,12 +58,12 @@ public sealed class SpkExtractCommand : CliCommand<SpkExtractCommand.Settings>
 
         ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(audio);
         int? sampleRate = package.TryGetFlatCopySampleRate(record);
-        byte[] wav = WavAudio.Write(decoded.Samples, decoded.Channels, sampleRate ?? SpkFormat.FallbackSampleRateHz);
+        byte[] wav = WavAudio.Write(decoded.Samples, decoded.Channels, sampleRate ?? SpkBank.FallbackSampleRate);
 
         string wavPath = CliIO.ResolveOutput(settings.Out, settings.Input, $"{id:x8}.wav");
         CliIO.WriteOutput(wavPath, wav);
         CliIO.ReportWrote(wavPath);
-        AnsiConsole.MarkupLine($"  IMA-ADPCM, {sampleRate ?? SpkFormat.FallbackSampleRateHz} Hz, {decoded.Channels} ch"
+        AnsiConsole.MarkupLine($"  IMA-ADPCM, {sampleRate ?? SpkBank.FallbackSampleRate} Hz, {decoded.Channels} ch"
             + (sampleRate is null ? " [yellow](no sibling TransformedFixed128 rate found - guessed)[/]" : ""));
         return 0;
     }

@@ -10,9 +10,6 @@ namespace JackAll.App.Audio;
 /// returned file and removes it with <see cref="TryDelete"/>.</summary>
 public static class SoundPreview
 {
-    /// <summary>The rate for an IMA-ADPCM record with no descriptor: the commonest one in a real install.</summary>
-    public const int FallbackSampleRateHz = 32000;
-
     private const int MaxHops = 8;
 
     public static async Task<string> OggToTempWavAsync(byte[] ogg)
@@ -40,54 +37,18 @@ public static class SoundPreview
         }
 
         string wav = TempPath(".wav");
-        await File.WriteAllBytesAsync(wav, ImaAdpcmToWav(audio, out _));
+        await File.WriteAllBytesAsync(wav, ImaAdpcmToWav(audio));
         return wav;
     }
 
-    public static byte[] ImaAdpcmToWav(SpkBankRecord audio, out int sampleRate)
+    public static byte[] ImaAdpcmToWav(SpkBankRecord audio)
     {
         ImaAdpcm.DecodedAudio decoded = ImaAdpcm.Decode(audio.Data);
-        sampleRate = audio.SampleRate ?? FallbackSampleRateHz;
-        return WavAudio.Write(decoded.Samples, decoded.Channels, sampleRate);
-    }
-
-    /// <summary>
-    /// The audio <paramref name="start"/> reaches inside its bank, a random container taking one of its
-    /// choices at random, or null; <paramref name="elsewhere"/> collects the ids it reaches in other banks.
-    /// </summary>
-    public static SpkBankRecord? PickAudio(SpkBank bank, SpkBankRecord start, List<uint> elsewhere)
-    {
-        var seen = new HashSet<uint>();
-        SpkBankRecord? Walk(SpkBankRecord record)
-        {
-            if (record.IsAudio || !seen.Add(record.Id))
-            {
-                return record.IsAudio ? record : null;
-            }
-
-            IEnumerable<uint> links = record.References().Where(l => l.Kind != SpkReference.Rolloff).Select(l => l.Id);
-            if (record.Layout == SpkLayout.Random)
-            {
-                links = links.OrderBy(_ => Random.Shared.Next());
-            }
-            foreach (uint link in links)
-            {
-                if (bank.Find(link) is not { } next)
-                {
-                    elsewhere.Add(link);
-                }
-                else if (Walk(next) is { } audio)
-                {
-                    return audio;
-                }
-            }
-            return null;
-        }
-        return Walk(start);
+        return WavAudio.Write(decoded.Samples, decoded.Channels, audio.SampleRate ?? SpkBank.FallbackSampleRate);
     }
 
     /// <summary>The audio a sound ID plays, followed within its bank first, then through
-    /// <paramref name="resolve"/>; a random container plays one of its choices at random.</summary>
+    /// <paramref name="resolve"/>; a random container plays a choice picked by its weights.</summary>
     /// <param name="bank">Where to look for <paramref name="soundId"/> first, when it names a record
     /// rather than a file.</param>
     public static async Task<string> SoundIdToTempWavAsync(
@@ -118,7 +79,7 @@ public static class SoundPreview
             }
 
             var elsewhere = new List<uint>();
-            if (PickAudio(within, start, elsewhere) is { } audio)
+            if (within.PickAudio(start, elsewhere) is { } audio)
             {
                 return await AudioToTempWavAsync(audio);
             }

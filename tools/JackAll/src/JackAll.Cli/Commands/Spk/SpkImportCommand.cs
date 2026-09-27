@@ -40,7 +40,7 @@ public sealed class SpkImportCommand : CliCommand<SpkImportCommand.Settings>
 
     protected override int Run(Settings settings, CancellationToken cancellationToken)
     {
-        uint id = SpkFormat.ParseRecordId(settings.RecordId);
+        uint id = SpkBank.ParseId(settings.RecordId);
         SpkBank bank = SpkBank.Parse(CliIO.ReadInput(settings.Input));
         SpkBankRecord audio = bank.Find(id)
             ?? throw new InvalidDataException($"No record with id 0x{id:x8} in {settings.Input}.");
@@ -63,7 +63,7 @@ public sealed class SpkImportCommand : CliCommand<SpkImportCommand.Settings>
         {
             WavAudio.Pcm16Audio pcm = WavAudio.ReadPcm16(replacement);
             WarnIfChanged(current.SampleRate, current.Channels, pcm.SampleRate, pcm.Channels);
-            bool looping = bank.SamplesPlaying(id).Any(s => s.Word(SpkLayout.SampleLoop) == 1);
+            bool looping = bank.Loops(id);
             bank.ReplaceAudio(audio, ImaAdpcm.Encode(pcm.Samples, pcm.Channels, looping), pcm.SampleRate);
         }
 

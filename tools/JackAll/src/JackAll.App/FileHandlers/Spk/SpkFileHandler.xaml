@@ -6,6 +6,14 @@
              xmlns:audio="clr-namespace:JackAll.App.FileHandlers.Audio">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="BoolToVis" />
+        <Style x:Key="EditGrid" TargetType="DataGrid" BasedOn="{StaticResource {x:Type DataGrid}}">
+            <Setter Property="AutoGenerateColumns" Value="False" />
+            <Setter Property="CanUserAddRows" Value="False" />
+            <Setter Property="CanUserDeleteRows" Value="False" />
+            <Setter Property="CanUserSortColumns" Value="False" />
+            <Setter Property="HeadersVisibility" Value="Column" />
+            <Setter Property="SelectionMode" Value="Single" />
+        </Style>
         <HierarchicalDataTemplate DataType="{x:Type spk:SpkNode}" ItemsSource="{Binding Children}">
             <StackPanel Orientation="Horizontal">
                 <TextBlock Text="{Binding Label}" Style="{StaticResource Mono}" />
@@ -22,7 +30,7 @@
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="{Binding Label}" VerticalAlignment="Center" Style="{StaticResource Secondary}" />
                 <TextBox Grid.Column="1" Text="{Binding Text, UpdateSourceTrigger=LostFocus}" IsReadOnly="{Binding IsReadOnly}"
-                         KeyDown="ValueBox_KeyDown" AutomationProperties.Name="{Binding Label}">
+                         app:CommitOnEnter.IsEnabled="True" AutomationProperties.Name="{Binding Label}">
                     <TextBox.Style>
                         <Style TargetType="TextBox" BasedOn="{StaticResource {x:Type TextBox}}">
                             <Style.Triggers>
@@ -83,16 +91,15 @@
 
                     <StackPanel x:Name="ChoicesSection" Visibility="Collapsed" Margin="0,0,0,8">
                         <TextBlock Text="Variations" FontWeight="Bold" Margin="0,0,0,4" />
-                        <DataGrid x:Name="ChoicesGrid" AutoGenerateColumns="False" CanUserAddRows="False"
-                                  CanUserDeleteRows="False" CanUserSortColumns="False" HeadersVisibility="Column"
-                                  SelectionMode="Single" MaxHeight="260" AutomationProperties.AutomationId="SpkChoices">
+                        <DataGrid x:Name="ChoicesGrid" Style="{StaticResource EditGrid}"
+                                  MaxHeight="260" AutomationProperties.AutomationId="SpkChoices">
                             <DataGrid.Columns>
                                 <DataGridTextColumn Header="Plays" Binding="{Binding Label}" IsReadOnly="True"
                                                     ElementStyle="{StaticResource Mono}" Width="170" />
                                 <DataGridTemplateColumn Header="Chance %" Width="80">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="{x:Type spk:SpkChoiceRow}">
-                                            <TextBox Text="{Binding Chance, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                            <TextBox Text="{Binding Chance, UpdateSourceTrigger=LostFocus}" app:CommitOnEnter.IsEnabled="True" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -108,33 +115,28 @@
                                                     ElementStyle="{StaticResource GridMutedText}" Width="*" />
                             </DataGrid.Columns>
                         </DataGrid>
-                        <StackPanel Orientation="Horizontal" Margin="0,6,0,0">
-                            <Button x:Name="RemoveChoiceButton" Content="Remove variation" Click="RemoveChoice_Click" />
-                        </StackPanel>
+                        <Button Content="Remove variation" Click="RemoveChoice_Click" HorizontalAlignment="Left" Margin="0,6,0,0" />
                     </StackPanel>
 
-                    <StackPanel x:Name="VariationSection" Visibility="Collapsed" Orientation="Horizontal" Margin="0,0,0,8">
-                        <Button x:Name="AddVariationButton" Content="Add variation…" Click="AddVariation_Click"
-                                AutomationProperties.AutomationId="SpkAddVariation" />
-                    </StackPanel>
+                    <Button x:Name="AddVariationButton" Content="Add variation…" Click="AddVariation_Click" Visibility="Collapsed"
+                            HorizontalAlignment="Left" Margin="0,0,0,8" AutomationProperties.AutomationId="SpkAddVariation" />
 
                     <StackPanel x:Name="CasesSection" Visibility="Collapsed" Margin="0,0,0,8">
                         <TextBlock x:Name="CasesTitle" FontWeight="Bold" Margin="0,0,0,4" />
-                        <DataGrid x:Name="CasesGrid" AutoGenerateColumns="False" CanUserAddRows="False"
-                                  CanUserDeleteRows="False" CanUserSortColumns="False" HeadersVisibility="Column"
-                                  SelectionMode="Single" MaxHeight="260">
+                        <DataGrid x:Name="CasesGrid" Style="{StaticResource EditGrid}"
+                                  MaxHeight="260">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn x:Name="CaseValueColumn" Header="When" Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="{x:Type spk:SpkCaseRow}">
-                                            <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                            <TextBox Text="{Binding Value, UpdateSourceTrigger=LostFocus}" app:CommitOnEnter.IsEnabled="True" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
                                 <DataGridTemplateColumn Header="Plays" Width="*">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="{x:Type spk:SpkCaseRow}">
-                                            <TextBox Text="{Binding Target, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                            <TextBox Text="{Binding Target, UpdateSourceTrigger=LostFocus}" app:CommitOnEnter.IsEnabled="True" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -147,25 +149,25 @@
                     </StackPanel>
 
                     <StackPanel x:Name="CurveSection" Visibility="Collapsed" Margin="0,0,0,8">
-                        <ComboBox x:Name="CurvePicker" Margin="0,0,0,6" SelectionChanged="CurvePicker_SelectionChanged" />
+                        <ComboBox x:Name="CurvePicker" Margin="0,0,0,6" DisplayMemberPath="Name"
+                                  SelectionChanged="CurvePicker_SelectionChanged" />
                         <Border Style="{StaticResource InertFrame}" Height="180" Margin="0,0,0,6">
                             <app:CurvePlot x:Name="CurveChart" AutomationProperties.AutomationId="SpkCurveChart" />
                         </Border>
-                        <DataGrid x:Name="PointsGrid" AutoGenerateColumns="False" CanUserAddRows="False"
-                                  CanUserDeleteRows="False" CanUserSortColumns="False" HeadersVisibility="Column"
-                                  SelectionMode="Single" MaxHeight="220">
+                        <DataGrid x:Name="PointsGrid" Style="{StaticResource EditGrid}"
+                                  MaxHeight="220">
                             <DataGrid.Columns>
                                 <DataGridTemplateColumn x:Name="PointXColumn" Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="{x:Type spk:SpkPointRow}">
-                                            <TextBox Text="{Binding X, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                            <TextBox Text="{Binding X, UpdateSourceTrigger=LostFocus}" app:CommitOnEnter.IsEnabled="True" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
                                 <DataGridTemplateColumn x:Name="PointYColumn" Width="120">
                                     <DataGridTemplateColumn.CellTemplate>
                                         <DataTemplate DataType="{x:Type spk:SpkPointRow}">
-                                            <TextBox Text="{Binding Y, UpdateSourceTrigger=LostFocus}" KeyDown="ValueBox_KeyDown" />
+                                            <TextBox Text="{Binding Y, UpdateSourceTrigger=LostFocus}" app:CommitOnEnter.IsEnabled="True" />
                                         </DataTemplate>
                                     </DataGridTemplateColumn.CellTemplate>
                                 </DataGridTemplateColumn>
@@ -190,9 +192,8 @@
                         </StackPanel>
                     </Border>
 
-                    <CheckBox x:Name="ShowRawDetailsCheckBox" Content="Show raw technical details" Margin="0,4,0,8"
-                              Checked="ShowRawDetails_Changed" Unchecked="ShowRawDetails_Changed" />
-                    <StackPanel x:Name="RawPanel" Visibility="Collapsed">
+                    <CheckBox x:Name="ShowRawDetailsCheckBox" Content="Show raw technical details" Margin="0,4,0,8" />
+                    <StackPanel Visibility="{Binding IsChecked, ElementName=ShowRawDetailsCheckBox, Converter={StaticResource BoolToVis}}">
                         <ItemsControl x:Name="RawFieldsList" ItemTemplate="{StaticResource FieldTemplate}" />
                         <TextBlock x:Name="RawDetailsText" Style="{StaticResource MonoSmall}" TextWrapping="Wrap" Margin="0,4,0,0" />
                     </StackPanel>
