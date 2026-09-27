@@ -3,7 +3,6 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Data;
 using System.Windows.Input;
-using System.Windows.Shapes;
 using JackAll.Tools.Ai;
 
 namespace JackAll.App.Ai;
@@ -150,53 +149,16 @@ public partial class AiTabView : UserControl, ISavableTab
         }
     }
 
-    private void CurveChart_SizeChanged(object sender, SizeChangedEventArgs e) => DrawCurve();
-
     /// <summary>The selected curve over its knots' range, with the base game's dashed behind it.</summary>
     private void DrawCurve()
     {
-        CurveChart.Children.Clear();
         (IReadOnlyList<CurvePoint> current, IReadOnlyList<CurvePoint> vanilla) = _model.Curves.Shape;
-        double width = CurveChart.ActualWidth, height = CurveChart.ActualHeight;
-        if (current.Count == 0 || width < 20 || height < 20)
-        {
-            return;
-        }
-
-        IEnumerable<CurvePoint> all = current.Concat(vanilla);
-        double minX = all.Min(p => p.X), maxX = Math.Max(all.Max(p => p.X), minX + 1e-3);
-        double minY = Math.Min(0, all.Min(p => p.Y)), maxY = Math.Max(all.Max(p => p.Y), minY + 1e-3) * 1.1;
-        const double pad = 24;
-        Point At(double x, double y) => new(pad + (x - minX) / (maxX - minX) * (width - 2 * pad),
-                                             height - pad - (y - minY) / (maxY - minY) * (height - 2 * pad));
-
-        Polyline Line(IReadOnlyList<CurvePoint> points, string brush, double thickness)
-        {
-            var line = new Polyline { StrokeThickness = thickness };
-            line.SetResourceReference(Shape.StrokeProperty, brush);
-            foreach (CurvePoint p in points)
-            {
-                line.Points.Add(At(p.X, p.Y));
-            }
-            return line;
-        }
-
-        Polyline baseGame = Line(vanilla, "TextMutedBrush", 1);
-        baseGame.StrokeDashArray = [4, 3];
-        CurveChart.Children.Add(baseGame);
-        CurveChart.Children.Add(Line(current, "AccentBrush", 2));
-        AddLabel($"{minX:0.#}", 2, height - pad + 4);
-        AddLabel($"{maxX:0.#}", width - pad - 20, height - pad + 4);
-        AddLabel($"{maxY / 1.1:0.##}", 2, 2);
-    }
-
-    private void AddLabel(string text, double left, double top)
-    {
-        var label = new TextBlock { Text = text, FontSize = 10 };
-        label.SetResourceReference(TextBlock.ForegroundProperty, "TextMutedBrush");
-        Canvas.SetLeft(label, left);
-        Canvas.SetTop(label, top);
-        CurveChart.Children.Add(label);
+        static Point[] Points(IReadOnlyList<CurvePoint> curve) => [.. curve.Select(p => new Point(p.X, p.Y))];
+        CurveChart.Show(current.Count == 0 ? [] :
+        [
+            new CurveSeries(Points(vanilla), "TextMutedBrush", 1, Dashed: true),
+            new CurveSeries(Points(current), "AccentBrush"),
+        ]);
     }
 
     private void Fill_Click(object sender, RoutedEventArgs e)

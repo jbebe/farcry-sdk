@@ -2,6 +2,7 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:ai="clr-namespace:JackAll.App.Ai"
+             xmlns:app="clr-namespace:JackAll.App"
              xmlns:tools="clr-namespace:JackAll.Tools.Ai;assembly=JackAll.Tools">
     <UserControl.Resources>
         <BooleanToVisibilityConverter x:Key="Visible" />
@@ -93,7 +94,7 @@
                         <TextBlock Grid.Row="0" Style="{StaticResource Note}" Margin="0,0,0,6"
                                    Text="Knots are joined by straight lines and the curve holds its end values outside them. The dashed line is the base game. Edit the numbers below; each edit goes to both worlds' copies." />
                         <Border Grid.Row="1" Style="{StaticResource InertFrame}" Margin="0,0,0,8">
-                            <Canvas x:Name="CurveChart" ClipToBounds="True" SizeChanged="CurveChart_SizeChanged"
+                            <app:CurvePlot x:Name="CurveChart"
                                     AutomationProperties.AutomationId="AiCurveChart" />
                         </Border>
                         <DataGrid Grid.Row="2" ItemsSource="{Binding Curves.Rows}" AutoGenerateColumns="False"

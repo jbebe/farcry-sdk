@@ -487,6 +487,10 @@ public sealed partial class MainViewModel
     private CancellationTokenSource? _refreshCts;
     private const int FilterDebounceMilliseconds = 250;
 
+    /// <summary>The file selected before a reindex, selected again once the rebuilt list holds it, so
+    /// staging an edit from a preview leaves that preview open.</summary>
+    private string? _reselectPath;
+
     /// <summary>
     /// Kicks off (re)computing the file list without blocking the caller. <paramref name="debounce"/>
     /// is for the filter textbox specifically — every keystroke calls this, and without a short delay
@@ -579,6 +583,15 @@ public sealed partial class MainViewModel
             foreach (VfsFile file in matches)
             {
                 VisibleFiles.Add(file);
+            }
+        }
+
+        if (_reselectPath is { } path)
+        {
+            _reselectPath = null;
+            if (VisibleFiles.FirstOrDefault(f => string.Equals(f.Path, path, StringComparison.OrdinalIgnoreCase)) is { } again)
+            {
+                SetSelectedFiles([again]);
             }
         }
     }

@@ -200,6 +200,7 @@ public sealed partial class MainViewModel
         if (_vfs is null) return;
 
         Workspace?.Rescan();
+        _reselectPath = SelectedFile?.Path;
         GameVfs vfs = _vfs;
         IReadOnlyList<IModLayer> layers = Layers;
         try
