@@ -12,6 +12,19 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
   typed as the engine reads them, with named flags and yes/no choices and the ignored ones struck out.
 - **`.ai.rml` brain workspaces** — read, recompiled from their source on save, and `ai unpack` /
   `ai verify` / `ai lint` on the command line.
+- **`.spk` sound banks as XML** — `spk decode` / `encode` / `verify` edit events, samples, random
+  containers, switches, multilayers and rolloff curves; lengths, counts and offsets are derived on
+  build, and every retail bank rebuilds byte for byte. `spk new` scaffolds a bank that plays one clip
+  or a random pick of several. `spk encode` checks references, rates and stereo samples under a rolloff.
+
+### Changed
+- `spk import` re-derives every audio word of the samples it touches, the loop length and the rate
+  included, instead of only the byte length.
+- `spk list` names resource kinds (Sample, Random, Switch, Multilayer).
+
+### Fixed
+- Random, switch and multilayer resources no longer read as a link to their child count in the
+  xref index and the sound preview.
 
 ## [1.2.0] - 2026-09-26
 

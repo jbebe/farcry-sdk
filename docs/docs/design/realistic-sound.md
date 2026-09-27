@@ -353,13 +353,12 @@ arrives. A hotkey toggle lets you A/B it in the same fight.
 
 ## Tooling this needs
 
-JackAll can replace audio inside existing `.spk` records. The data route needs it to also write:
+Since 2026-09-27 JackAll edits whole `.spk` banks as XML: `spk decode`/`encode`/`new`. That covers
+events, switches, random containers, multilayers and rolloff curves (see
+[editing sound banks](../modding/editing-sound-banks.md)). What the data route still needs:
 
-- new events: leaves (type `1`) and multi-events (type `12`);
-- resource containers: switches (kind `3`), random containers (kind `4`) and multilayers (kind `7`);
-- rolloff curves in `2fffffff.spk`;
 - reverb presets in `7fffffff.bao`;
-- the `depload` entries for any new bank chain.
+- the `depload` entries for a chain that spans banks.
 
 ## Decisions
 

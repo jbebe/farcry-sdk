@@ -160,7 +160,7 @@ level down, in switch resources (see [`TransformedFixed128`](#transformedfixed12
 
 :::warning[Tools that read word[2] as a link will show a dead end]
 A type-`12` event's word[2] is a byte offset, so anything that prints it as a "linked id" reports `0`
-and never reaches the tail. `jackall-cli spk list` does exactly this. A one-entry list event — such as
+and never reaches the tail. A one-entry list event — such as
 the Dart Rifle's first-person shot, `0x004BF5EA` → `0x004BF5E9` — therefore looks like a bank
 containing nothing but a parameter record pointing nowhere.
 :::
@@ -191,15 +191,17 @@ points at `004e1b35`, and `804e1b35` is that id's localized variant — the high
 listed here are exactly the three whose record preambles carry `0x004BF5EA` — see
 [preamble words](#preamble-words-and-the-extra-field).
 
-:::danger[For sound, `depload` is a requirement, not a prefetch hint]
-The [`depload` page](./depload.md) notes that a missing entry costs a texture only streaming warmth,
-while an animation genuinely fails to load. **Sound behaves like animation, and for a sharper reason**:
-a texture is asked for by path, so the resource system can still find it, but a sound is only ever
-asked for by id against a registry that cannot load. Replacing audio inside an existing chain is safe —
-the entries already exist. Pointing a weapon at a *new* bank chain needs the `depload` entry added, or
-the event resolves to null and the weapon is silent.
+:::danger[`depload` is needed for a child bank, not for the bank an `.fcb` field names]
+A sound id an `.fcb` field names is turned into `soundbinary\<id>.spk` by
+`CSoundResource::GetFromSoundId` and loaded by that path (RE-verified on the Linux server). So a new
+bank named after a new event loads with no `depload` entry. The G3KA4's per-round shots in
+`mods/sound-overhaul` are such banks, `00fc0101.spk` and `00fc0107.spk`, which nothing lists
+**(heard, 2026-09-26)**.
 
-Inferred from the absence of a load-on-miss path rather than tested with a deliberately unlisted bank.
+What the registry cannot load is an id reached only from inside a bank: a child in a tail, or a
+resource another bank's event points at. That id must be in the same bank or in a bank `depload`
+lists as a child, or it resolves to null and plays nothing. That half is inferred from the absence of
+a load-on-miss path rather than tested with a deliberately unlisted child.
 :::
 
 The other way round is tested. Records appended to a bank that is already listed are registered when
@@ -263,10 +265,10 @@ that points at it; giving one event its own falloff means a new curve record and
 | `[17]` | `+0x44` | `1` (94%) or `2` (~2%) — correlates with the sibling `FlatCopy` payload's size (~11× larger average when `2`), consistent with a **channel-count field** |
 | `[19]` | `+0x4C` | **sample rate** — always a standard real-world rate: `32000` (44%), `22050` (42%), `48000` (10%), `44100` (3%), rarer `24000`/`16000`/`12000`/`8000`/`6000` |
 | `[13]` | `+0x34` | **loop flag**: `1` on the 219 samples that must loop, such as every automatic weapon's fire loop, `0` on the other 5,170. It decides which of the two length pairs below is filled **(seen in data; the reading code is not traced)** |
-| `[20]` | `+0x50` | irregular values in the low thousands, not a rate (equals `[19]` in only 0.1%) — reads like a decoded sample/frame count or output buffer size |
-| `[21]`, `[22]` | `+0x54`, `+0x58` | one-shot length: `[21]` the sample count less 29–30, `[22]` the byte length, equal to `[2]`. Both `0` when `[13]` is `1` |
+| `[20]` | `+0x50` | the average **byte rate**: `floor(bytes × rate / frames)` in 91% of samples, off by 1–2 in the rest. The game does not read it (see [playback length](#playback-length-comes-from-the-descriptor)) |
+| `[21]`, `[22]` | `+0x54`, `+0x58` | one-shot length: `[21]` the frame count, `[22]` the byte length, equal to `[2]`. Both `0` when `[13]` is `1`. For Ogg Vorbis the frame count is the last page's granule position exactly; for IMA-ADPCM it is the stream's frames less 29 or 30 |
 | `[23]`, `[24]` | `+0x5C`, `+0x60` | loop length, the same pair: set only when `[13]` is `1`, and `0` otherwise. Across all 5,389 retail samples the split has no exception |
-| `[25]` | `+0x64` | `4` (81%) or `3` (19%) |
+| `[25]` | `+0x64` | **codec**: `3` for IMA-ADPCM, `4` for Ogg Vorbis, without exception |
 | `[28]` | `+0x70` | `7` (99.8%) |
 | `[31]` | `+0x7C` | `0xFFFFFFFF` (99.9%) |
 
@@ -283,10 +285,28 @@ Word `[1]` also marks resources that hold other resources rather than audio:
 | --- | --- | --- |
 | `1` | 13,322 | a sample (the table above) |
 | `3` | 107 | a **switch**: word `[8]` is the switch group, `[9]` the default child, `[7]` the entry count, then `{child, value}` pairs |
-| `4` | 502 | a **random container**, with Q16.16 weights |
+| `4` | 502 | a **random container**: `[7]` the entry count, `[8]` a remaining weight, then `{child, weight, flag, 0}` entries |
 | `6` | 6 | multitrack ambience channels |
 | `7` | 143 | a **multilayer**: each layer follows a game parameter through a curve of (parameter value, dB) points, e.g. desert wind on parameter `0x0044025C` (0–250) runs from −96 dB at 0 to 0 dB at 250 |
 | `2`, `8` | 42, 18 | not identified |
+
+A random container's weights are Q16.16 fractions. In every retail container, the entry weights plus
+word `[8]` sum to 1.0. Equal weights are `floor(1.0 / n)`: three entries weigh `0x5555` each. The
+bullet pass-by crack `0x00448BD1` has 12 entries and `[8]` all at 1/13 (`0x13B1`). Reading `[8]` as
+the chance of playing nothing follows from that sum; the picker is not traced. Word `[9]` (`1` in 17
+containers) and `[10]` (`1` in 274) are flags, not identified, and so is an entry's third word (`1`
+in 10 entries).
+
+A multilayer's tail holds three runs, and every offset counts from the start of the tail:
+1. one 28-byte layer per `[7]`: `{child, curve count, curves offset, 0xFFFFFFFF, 0, 0, 0}`;
+2. every curve in layer order, 24 bytes each: `{target, parameter, point count, points offset, 0, 0}`;
+3. every point, as `{f32 x, f32 y}`.
+
+A curve's target is `0` for volume in dB, or `1` for a pitch ratio (read from the values: `0.9` to
+`1.1` across the parameter's range). Kinds `2` and `6` carry tails that are not decoded.
+
+All 7,513 retail banks rebuild byte for byte from these layouts. `jackall-cli spk decode` and
+`encode` edit banks through them; see [editing sound banks](../modding/editing-sound-banks.md).
 
 Switch resources key on the same groups as switch events, plus weapon status (`0x004402A7`), vehicle
 reliability, footstep speed, infamy, stamina and perspective. A bullet impact is one: `Weapon.Bullet`'s
@@ -454,12 +474,13 @@ Word `[20]` is not it: patching it to the replacement's real sample count change
 at `+0x30` in `TImaAdpcm_DecodeStream` (`0x10a7f9e0`) is not a remaining length either, but the
 decoder's look-ahead buffer, refilled and drained every call.
 
-`jackall-cli spk import` rewrites `[2]` and `[22]`, and `spk list` flags any record whose descriptor
-disagrees with its stream. On a looping sample it rewrites only `[2]`, leaving `[23]`/`[24]` at the old
-length. Whether the engine reads them is untested. A replacement loop with exactly the original's
-frame count encodes to the same byte length and leaves nothing stale. The App's importer does not: it pads a shorter IMA-ADPCM clip with silence
-up to the original's sample count, which keeps the old length true, but a longer clip or any Ogg
-replacement ships a stale length. Whether Ogg Vorbis records are also cut at `[2]` is untested.
+`jackall-cli spk import` and `spk encode` derive every audio word of the samples that play the new
+stream: `[2]`, the one-shot or loop pair, the rate, the channels and the codec. `spk list` flags any
+record whose descriptor disagrees with its stream. Whether the engine reads the loop pair
+`[23]`/`[24]` is untested. The App's importer does not rewrite the descriptor: it pads a shorter
+IMA-ADPCM clip with silence up to the original's sample count, which keeps the old length true, but a
+longer clip or any Ogg replacement ships a stale length. Whether Ogg Vorbis records are also cut at
+`[2]` is untested.
 
 ## Unknowns
 

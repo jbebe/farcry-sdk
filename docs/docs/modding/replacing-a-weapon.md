@@ -1213,7 +1213,7 @@ jackall-cli spk list soundbinary\004bf5ea.spk
   0x004bf5ea  Event list  plays 1 -> 0x004bf5e9      ← follow this
 jackall-cli spk list soundbinary\004bf5eb.spk
   0x004bf5eb  Sound event   -> 0x004bf5f0
-  0x004bf5f0  Audio params  -> audio 0x004bf5f2 - 44100 Hz
+  0x004bf5f0  Sample  -> audio 0x004bf5f2 - 44100 Hz
   0x004bf5f2  Audio  Mono - 44100 Hz - IMA-ADPCM - 4.8 KB   ← this is the record to import into
 ```
 
@@ -1250,8 +1250,9 @@ way keeps the *old* clip's length, which plays noise past a shorter clip's end; 
 ```
 
 Both banks are overrides of paths the game already ships, so they need no registration, exactly like
-a texture. That does **not** generalise to a new bank: a sound is requested by id against a registry
-with no load-on-miss path, so an unlisted bank resolves to null and plays nothing.
+a texture. A new bank named after a new event id that a weapon field names loads the same way. What
+has no load-on-miss path is an id reached only from *inside* a bank, so keep a new chain in one bank.
+To add variations or author a bank of your own, see [editing sound banks](./editing-sound-banks.md).
 
 :::note[The third-person file may be dead weight in a single-player mod]
 The third-person shot only plays when something other than the player's own first-person view fires
