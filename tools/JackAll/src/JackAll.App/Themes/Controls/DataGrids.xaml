@@ -113,4 +113,14 @@
             </MultiTrigger>
         </Style.Triggers>
     </Style>
+
+    <!-- Bold where the row's IsChanged is set. Not BasedOn the stock row style: its Background setter
+         would then count as set and stop the grid's RowBackground reaching the row. -->
+    <Style x:Key="ChangedRow" TargetType="DataGridRow">
+        <Style.Triggers>
+            <DataTrigger Binding="{Binding IsChanged}" Value="True">
+                <Setter Property="FontWeight" Value="SemiBold" />
+            </DataTrigger>
+        </Style.Triggers>
+    </Style>
 </ResourceDictionary>

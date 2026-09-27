@@ -21,15 +21,6 @@
                 <PropertyGroupDescription PropertyName="Group" />
             </CollectionViewSource.GroupDescriptions>
         </CollectionViewSource>
-
-        <!-- Bold where a value differs from the base game. -->
-        <Style x:Key="ChangedRow" TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
-            <Style.Triggers>
-                <DataTrigger Binding="{Binding IsChanged}" Value="True">
-                    <Setter Property="FontWeight" Value="SemiBold" />
-                </DataTrigger>
-            </Style.Triggers>
-        </Style>
     </UserControl.Resources>
 
     <Grid Margin="0,6,0,0" IsEnabled="{Binding IsLoaded}">
