@@ -2,6 +2,15 @@
 
 Notable changes to JackAll, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **AI tab** — tune every soldier archetype's spotting, vision cones, marksmanship, detection,
+  movement and toughness, several at once and in both worlds; set the odds of optional behaviours
+  per progression level; browse the brain workspaces as a behaviour tree and edit task parameters.
+- **`.ai.rml` brain workspaces** — read, recompiled from their source on save, and `ai unpack` /
+  `ai verify` on the command line.
+
 ## [1.2.0] - 2026-09-26
 
 ### Added

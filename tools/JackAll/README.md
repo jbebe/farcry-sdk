@@ -23,6 +23,9 @@ ordinary patch archives, so they're shareable with people who don't use this too
   listing every game file it will touch first. See
   [`.fc2model`](../../docs/docs/file-formats/fc2model.md) and
   [`tools/BlenderFC2`](../BlenderFC2/README.md).
+- **AI tab** — how the NPCs see, shoot, move and take damage, tuned per archetype or many at once;
+  how often they use optional tactics such as grenades and flares; and the brain workspaces as a
+  behaviour tree whose task parameters you edit. See [AI](../../docs/docs/engine-internals/ai.md).
 
 JackAll is also where every Dunia format actually lives — `.xbg`, `.xbm`, `.xbt`, `.skeleton`, `.mab`
 and the rest, each with a corpus gate beside it that holds the codec to the shipped bytes.
