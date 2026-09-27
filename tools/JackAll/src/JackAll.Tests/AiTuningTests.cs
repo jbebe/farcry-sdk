@@ -23,8 +23,19 @@ public class AiTuningTests
     {
         if (World1.Value?.Winner(Assault)?.Node is not { } entity) return;
 
-        Assert.True(SoldierFields.IsSoldier(entity));
+        Assert.True(SoldierFields.Catalog.Covers(entity));
         Assert.Empty(SoldierFields.All.Where(f => f.Read(entity) is null).Select(f => f.Label));
+    }
+
+    [Fact]
+    public void Every_weapon_field_resolves_and_the_ak_lets_hits_chain_on_infamous()
+    {
+        if (World1.Value?.Winner("WeaponProperties.Primary.AK47")?.Node is not { } ak) return;
+
+        Assert.True(WeaponFields.Catalog.Covers(ak));
+        Assert.False(WeaponFields.Catalog.Covers(World1.Value!.Winner(Assault)!.Node));
+        Assert.Empty(WeaponFields.All.Where(f => f.Read(ak) is null).Select(f => f.Label));
+        Assert.Equal([4.0, 8, 2, 4, 1, 1, 0, 0], WeaponFields.All.Take(8).Select(f => f.Read(ak)!.Value));
     }
 
     [Fact]
@@ -44,7 +55,7 @@ public class AiTuningTests
         if (World1.Value?.Winner(Assault)?.Node is not { } shipped) return;
 
         FcbObject entity = shipped.Clone();
-        SoldierField reaction = Field("Reaction time (s)");
+        TuningField reaction = Field("Reaction time (s)");
         Assert.True(reaction.Write(entity, 0.9));
 
         Assert.Equal(0.9, reaction.Read(entity)!.Value, 5);
@@ -56,9 +67,9 @@ public class AiTuningTests
     {
         if (Fixture.Read(FcbDocumentTests.World1) is not { } library || World1.Value?.Winner(Assault) is not { } assault) return;
 
-        SoldierCopy copy = Assert.Single(SoldierLibrary.Open([assault], library, library));
+        TuningCopy copy = Assert.Single(TuningLibrary.Open(SoldierFields.Catalog, [assault], library, library));
         FcbClassDefinitions definitions = BundledAssets.LoadFcbClasses();
-        SoldierField reaction = Field("Reaction time (s)");
+        TuningField reaction = Field("Reaction time (s)");
         double shipped = reaction.Read(copy.Entity)!.Value;
 
         reaction.Write(copy.Entity, shipped + 1);
@@ -98,5 +109,5 @@ public class AiTuningTests
         Assert.Equal(10, reread.Single(r => r.Name == "GrenadeAndBuilding").Chances[0]);
     }
 
-    private static SoldierField Field(string label) => SoldierFields.All.Single(f => f.Label == label);
+    private static TuningField Field(string label) => SoldierFields.All.Single(f => f.Label == label);
 }

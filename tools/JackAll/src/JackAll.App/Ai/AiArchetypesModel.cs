@@ -9,7 +9,7 @@ using JackAll.Tools.World;
 namespace JackAll.App.Ai;
 
 /// <summary>One soldier archetype, with its copy in every single-player world that declares it.</summary>
-public sealed class SoldierArchetype(string name, string group, IReadOnlyList<SoldierCopy> copies) : Observable
+public sealed class TunedArchetype(string name, string group, IReadOnlyList<TuningCopy> copies) : Observable
 {
     private bool _isSelected;
     private bool _isEdited = copies.Any(c => c.IsEdited);
@@ -20,7 +20,7 @@ public sealed class SoldierArchetype(string name, string group, IReadOnlyList<So
 
     public string Group { get; } = group;
 
-    public IReadOnlyList<SoldierCopy> Copies { get; } = copies;
+    public IReadOnlyList<TuningCopy> Copies { get; } = copies;
 
     public bool IsSelected { get => _isSelected; set => Set(ref _isSelected, value); }
 
@@ -34,13 +34,13 @@ public sealed class SoldierArchetype(string name, string group, IReadOnlyList<So
 }
 
 /// <summary>One tunable, showing the value the selected archetypes share and writing to all of them.</summary>
-public sealed class SoldierFieldRow(SoldierField field, AiSoldiersModel owner) : Observable
+public sealed class TuningFieldRow(TuningField field, AiArchetypesModel owner) : Observable
 {
     private string _text = "";
     private string _vanilla = "";
     private bool _isChanged;
 
-    public SoldierField Field { get; } = field;
+    public TuningField Field { get; } = field;
 
     public string Group => Field.Group;
 
@@ -51,8 +51,8 @@ public sealed class SoldierFieldRow(SoldierField field, AiSoldiersModel owner) :
     /// <summary>The picks of a choice or yes/no field; null for a number.</summary>
     public string[]? Choices { get; } = field.Kind switch
     {
-        SoldierFieldKind.Toggle => ["No", "Yes"],
-        SoldierFieldKind.Choice => field.Choices,
+        TuningFieldKind.Toggle => ["No", "Yes"],
+        TuningFieldKind.Choice => field.Choices,
         _ => null,
     };
 
@@ -102,20 +102,26 @@ public sealed class SoldierFieldRow(SoldierField field, AiSoldiersModel owner) :
 }
 
 /// <summary>
-/// The Soldiers view of the AI tab: perception, marksmanship, movement and toughness of every soldier
-/// archetype, edited in each single-player world's winning declaration at once.
+/// One tuning view of the AI tab - soldiers or weapons: the archetypes <paramref name="catalog"/> covers,
+/// edited in each single-player world's winning declaration at once.
 /// </summary>
-public sealed class AiSoldiersModel(MainViewModel vm) : Observable
+public sealed class AiArchetypesModel(MainViewModel vm, TuningCatalog catalog, string listNote, string fieldNote) : Observable
 {
-    private IReadOnlyList<SoldierArchetype> _archetypes = [];
+    /// <summary>What the archetype list holds, shown above it.</summary>
+    public string ListNote { get; } = listNote;
+
+    /// <summary>How to read the fields, shown above them.</summary>
+    public string FieldNote { get; } = fieldNote;
+
+    private IReadOnlyList<TunedArchetype> _archetypes = [];
     private Dictionary<uint, VfsFile> _containers = [];
     private string _filter = "";
     private bool _isLoaded;
     private bool _selecting;
 
-    public ObservableCollection<SoldierArchetype> Visible { get; } = [];
+    public ObservableCollection<TunedArchetype> Visible { get; } = [];
 
-    public IReadOnlyList<SoldierFieldRow> Rows { get; private set; } = [];
+    public IReadOnlyList<TuningFieldRow> Rows { get; private set; } = [];
 
     public bool IsLoaded { get => _isLoaded; private set => Set(ref _isLoaded, value); }
 
@@ -143,7 +149,7 @@ public sealed class AiSoldiersModel(MainViewModel vm) : Observable
     public async Task LoadAsync(IProgress<string> progress)
     {
         List<string> worlds = [.. ArchetypeIndex.DiscoverWorlds(vm.AllKnownPaths).Where(w => w.StartsWith("world", StringComparison.OrdinalIgnoreCase))];
-        List<SoldierCopy> copies = [];
+        List<TuningCopy> copies = [];
         var containers = new Dictionary<uint, VfsFile>();
 
         foreach (string world in worlds)
@@ -152,13 +158,13 @@ public sealed class AiSoldiersModel(MainViewModel vm) : Observable
             ArchetypeIndex index = await vm.ArchetypesOf(world, progress);
             foreach (IGrouping<uint, ArchetypeDefinition> library in index.Names
                          .Select(index.Winner).OfType<ArchetypeDefinition>()
-                         .Where(d => SoldierFields.IsSoldier(d.Node))
+                         .Where(d => catalog.Covers(d.Node))
                          .GroupBy(d => d.ContainerHash))
             {
                 if (vm.FindByHash(library.Key) is { } container)
                 {
                     containers[library.Key] = container;
-                    copies.AddRange(await Task.Run(() => SoldierLibrary.Open(library, vm.Read(container), vm.ReadOriginal(container))));
+                    copies.AddRange(await Task.Run(() => TuningLibrary.Open(catalog, library, vm.Read(container), vm.ReadOriginal(container))));
                 }
             }
         }
@@ -168,35 +174,35 @@ public sealed class AiSoldiersModel(MainViewModel vm) : Observable
         [
             .. copies
                 .GroupBy(c => c.Definition.Name)
-                .Select(g => new SoldierArchetype(g.Key, GroupOf(g.Key), [.. g]))
-                .OrderBy(a => a.Group == "Enemies" ? 0 : 1)
+                .Select(g => new TunedArchetype(g.Key, catalog.GroupOf(g.Key), [.. g]))
+                .OrderBy(a => a.Group switch { "Enemies" => 0, "Multiplayer" => 2, _ => 1 })
                 .ThenBy(a => a.Group, StringComparer.OrdinalIgnoreCase)
                 .ThenBy(a => a.Name, StringComparer.OrdinalIgnoreCase),
         ];
-        foreach (SoldierArchetype archetype in _archetypes)
+        foreach (TunedArchetype archetype in _archetypes)
         {
             archetype.PropertyChanged += (_, e) =>
             {
-                if (e.PropertyName == nameof(SoldierArchetype.IsSelected) && !_selecting)
+                if (e.PropertyName == nameof(TunedArchetype.IsSelected) && !_selecting)
                 {
                     RefreshRows();
                 }
             };
         }
-        Rows = [.. SoldierFields.All.Select(f => new SoldierFieldRow(f, this))];
+        Rows = [.. catalog.Fields.Select(f => new TuningFieldRow(f, this))];
         OnPropertyChanged(nameof(Rows));
         ApplyFilter();
         RefreshRows();
         IsLoaded = true;
         OnPropertyChanged(nameof(IsDirty));
-        progress.Report($"{_archetypes.Count} soldier archetypes across {string.Join(" and ", worlds)}");
+        progress.Report($"{_archetypes.Count} archetypes across {string.Join(" and ", worlds)}");
     }
 
     /// <summary>Ticks every visible archetype, or clears them all.</summary>
     public void SelectAll(bool selected)
     {
         _selecting = true;
-        foreach (SoldierArchetype archetype in selected ? Visible : _archetypes)
+        foreach (TunedArchetype archetype in selected ? Visible : _archetypes)
         {
             archetype.IsSelected = selected;
         }
@@ -204,7 +210,7 @@ public sealed class AiSoldiersModel(MainViewModel vm) : Observable
         RefreshRows();
     }
 
-    internal bool TryWrite(SoldierFieldRow row, string text)
+    internal bool TryWrite(TuningFieldRow row, string text)
     {
         if (!double.TryParse(text.Replace(',', '.'), NumberStyles.Float, CultureInfo.InvariantCulture, out double value))
         {
@@ -212,9 +218,9 @@ public sealed class AiSoldiersModel(MainViewModel vm) : Observable
         }
 
         bool wrote = false;
-        foreach (SoldierArchetype archetype in _archetypes.Where(a => a.IsSelected))
+        foreach (TunedArchetype archetype in _archetypes.Where(a => a.IsSelected))
         {
-            foreach (SoldierCopy copy in archetype.Copies)
+            foreach (TuningCopy copy in archetype.Copies)
             {
                 if (row.Field.Read(copy.Entity) != value && row.Field.Write(copy.Entity, value))
                 {
@@ -230,12 +236,12 @@ public sealed class AiSoldiersModel(MainViewModel vm) : Observable
         return wrote;
     }
 
-    internal void RefreshRow(SoldierFieldRow row)
+    internal void RefreshRow(TuningFieldRow row)
     {
         var values = new HashSet<double?>();
         var vanilla = new HashSet<double?>();
         bool changed = false;
-        foreach (SoldierCopy copy in _archetypes.Where(a => a.IsSelected).SelectMany(a => a.Copies))
+        foreach (TuningCopy copy in _archetypes.Where(a => a.IsSelected).SelectMany(a => a.Copies))
         {
             double? value = row.Field.Read(copy.Entity);
             double? original = copy.Vanilla(row.Field);
@@ -253,7 +259,7 @@ public sealed class AiSoldiersModel(MainViewModel vm) : Observable
     public async Task<int> SaveAsync()
     {
         FcbClassDefinitions definitions = FcbDefinitionsProvider.Value.Value;
-        List<SoldierArchetype> dirty = [.. _archetypes.Where(a => a.IsDirty)];
+        List<TunedArchetype> dirty = [.. _archetypes.Where(a => a.IsDirty)];
         var plans = await Task.Run(() => dirty
             .SelectMany(a => a.Copies)
             .GroupBy(c => c.Definition.ContainerHash)
@@ -261,7 +267,7 @@ public sealed class AiSoldiersModel(MainViewModel vm) : Observable
             .ToList());
 
         vm.StageFragments(plans);
-        foreach (SoldierArchetype archetype in dirty)
+        foreach (TunedArchetype archetype in dirty)
         {
             archetype.IsDirty = false;
         }
@@ -271,7 +277,7 @@ public sealed class AiSoldiersModel(MainViewModel vm) : Observable
 
     private void RefreshRows()
     {
-        foreach (SoldierFieldRow row in Rows)
+        foreach (TuningFieldRow row in Rows)
         {
             RefreshRow(row);
         }
@@ -282,18 +288,11 @@ public sealed class AiSoldiersModel(MainViewModel vm) : Observable
     {
         string[] words = _filter.Split(' ', StringSplitOptions.RemoveEmptyEntries);
         Visible.Clear();
-        foreach (SoldierArchetype archetype in _archetypes.Where(a => words.All(w => a.Name.Contains(w, StringComparison.OrdinalIgnoreCase))))
+        foreach (TunedArchetype archetype in _archetypes.Where(a => words.All(w => a.Name.Contains(w, StringComparison.OrdinalIgnoreCase))))
         {
             Visible.Add(archetype);
         }
     }
-
-    private static string GroupOf(string name) => name.Split('.')[0] switch
-    {
-        "enemy_archetypes" => "Enemies",
-        "buddies" => "Buddies and civilians",
-        string other => other,
-    };
 
     private static string Format(double? value)
         => value is { } v ? v.ToString("0.###", CultureInfo.InvariantCulture) : "";

@@ -1,16 +1,18 @@
 using System.ComponentModel;
 using System.IO;
+using JackAll.Tools.Ai;
 
 namespace JackAll.App.Ai;
 
 public enum AiSection
 {
     Soldiers,
+    Weapons,
     Behaviors,
     Brains,
 }
 
-/// <summary>The AI tab: soldier archetypes, behaviour odds and brain workspaces, saved together.</summary>
+/// <summary>The AI tab: soldier and weapon archetypes, behaviour odds and brain workspaces, saved together.</summary>
 public sealed class AiTabViewModel : Observable
 {
     private string _status = "";
@@ -18,10 +20,15 @@ public sealed class AiTabViewModel : Observable
 
     public AiTabViewModel(MainViewModel vm)
     {
-        Soldiers = new AiSoldiersModel(vm);
+        Soldiers = new AiArchetypesModel(vm, SoldierFields.Catalog,
+            "Every soldier type the single-player worlds declare. Tick several to tune them together; each edit goes to both worlds' copies.",
+            "Hover a setting to see what it does. Bold rows differ from the base game. Marksmanship is the aim model: every shot's hit chance is the product of the own and player's factors, gated by the reaction time.");
+        Weapons = new AiArchetypesModel(vm, WeaponFields.Catalog,
+            "How soldiers fire each weapon. The player's own weapon behaviour is not affected. Tick several to tune them together.",
+            "After a hit on the player the shooter is forced to miss a number of shots drawn between the two values for the game's difficulty - on Infamous the shipped weapons use 0, so hits can chain. Bold rows differ from the base game.");
         Behaviors = new AiBehaviorsModel(vm);
         Brains = new AiBrainsModel(vm);
-        foreach (INotifyPropertyChanged section in (INotifyPropertyChanged[])[Soldiers, Behaviors, Brains])
+        foreach (INotifyPropertyChanged section in (INotifyPropertyChanged[])[Soldiers, Weapons, Behaviors, Brains])
         {
             section.PropertyChanged += (_, e) =>
             {
@@ -33,7 +40,9 @@ public sealed class AiTabViewModel : Observable
         }
     }
 
-    public AiSoldiersModel Soldiers { get; }
+    public AiArchetypesModel Soldiers { get; }
+
+    public AiArchetypesModel Weapons { get; }
 
     public AiBehaviorsModel Behaviors { get; }
 
@@ -53,7 +62,7 @@ public sealed class AiTabViewModel : Observable
         }
     }
 
-    public bool IsDirty => Soldiers.IsDirty || Behaviors.IsDirty || Brains.IsDirty;
+    public bool IsDirty => Soldiers.IsDirty || Weapons.IsDirty || Behaviors.IsDirty || Brains.IsDirty;
 
     public bool CanSave => IsDirty && !IsBusy;
 
@@ -61,6 +70,7 @@ public sealed class AiTabViewModel : Observable
     public Task ShowAsync(AiSection section) => section switch
     {
         AiSection.Soldiers when !Soldiers.IsLoaded => Busy(() => Soldiers.LoadAsync(new Progress<string>(s => Status = s))),
+        AiSection.Weapons when !Weapons.IsLoaded => Busy(() => Weapons.LoadAsync(new Progress<string>(s => Status = s))),
         AiSection.Behaviors when !Behaviors.IsLoaded => Busy(() =>
         {
             Behaviors.Load();
@@ -90,9 +100,12 @@ public sealed class AiTabViewModel : Observable
         await Busy(async () =>
         {
             Status = "Saving…";
-            if (Soldiers.IsDirty)
+            foreach (AiArchetypesModel archetypes in (AiArchetypesModel[])[Soldiers, Weapons])
             {
-                saved.Add($"{await Soldiers.SaveAsync()} archetype(s)");
+                if (archetypes.IsDirty)
+                {
+                    saved.Add($"{await archetypes.SaveAsync()} archetype(s)");
+                }
             }
             if (Behaviors.IsDirty)
             {
@@ -112,9 +125,12 @@ public sealed class AiTabViewModel : Observable
     /// <summary>Throws away the edits made since the last save.</summary>
     public Task RevertAsync() => Busy(async () =>
     {
-        if (Soldiers.IsDirty)
+        foreach (AiArchetypesModel archetypes in (AiArchetypesModel[])[Soldiers, Weapons])
         {
-            await Soldiers.LoadAsync(new Progress<string>(s => Status = s));
+            if (archetypes.IsDirty)
+            {
+                await archetypes.LoadAsync(new Progress<string>(s => Status = s));
+            }
         }
         if (Behaviors.IsDirty)
         {

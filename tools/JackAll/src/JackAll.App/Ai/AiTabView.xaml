@@ -11,18 +11,6 @@
             <Setter Property="VerticalAlignment" Value="Center" />
         </Style>
 
-        <CollectionViewSource x:Key="ArchetypeView" Source="{Binding Soldiers.Visible}">
-            <CollectionViewSource.GroupDescriptions>
-                <PropertyGroupDescription PropertyName="Group" />
-            </CollectionViewSource.GroupDescriptions>
-        </CollectionViewSource>
-
-        <CollectionViewSource x:Key="FieldView" Source="{Binding Soldiers.Rows}">
-            <CollectionViewSource.GroupDescriptions>
-                <PropertyGroupDescription PropertyName="Group" />
-            </CollectionViewSource.GroupDescriptions>
-        </CollectionViewSource>
-
         <!-- Bold where a value differs from the base game. -->
         <Style x:Key="ChangedRow" TargetType="DataGridRow" BasedOn="{StaticResource {x:Type DataGridRow}}">
             <Style.Triggers>
@@ -58,120 +46,12 @@
         <TabControl x:Name="Sections" SelectionChanged="Sections_SelectionChanged" AutomationProperties.AutomationId="AiSections">
             <!-- ============================ SOLDIERS ============================ -->
             <TabItem Header="Soldiers" x:Name="SoldiersSection">
-                <Grid Margin="0,6,0,0" IsEnabled="{Binding Soldiers.IsLoaded}">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="300" MinWidth="220" />
-                        <ColumnDefinition Width="{StaticResource SplitterSize}" />
-                        <ColumnDefinition Width="*" MinWidth="420" />
-                    </Grid.ColumnDefinitions>
+                <ai:ArchetypeTuningView DataContext="{Binding Soldiers}" />
+            </TabItem>
 
-                    <DockPanel Grid.Column="0">
-                        <TextBlock DockPanel.Dock="Top" Text="Archetypes" Style="{StaticResource PanelTitle}" />
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Note}" Margin="0,2,0,8"
-                                   Text="Every soldier type the single-player worlds declare. Tick several to tune them together; each edit goes to both worlds' copies." />
-                        <TextBox DockPanel.Dock="Top" Style="{StaticResource SearchBox}" Margin="0,0,0,6" Tag="Filter, e.g. Red Sniper"
-                                 Text="{Binding Soldiers.Filter, UpdateSourceTrigger=PropertyChanged}"
-                                 AutomationProperties.AutomationId="AiArchetypeFilter" />
-                        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Margin="0,0,0,6">
-                            <Button Content="Tick shown" Style="{StaticResource DenseButton}" Click="SelectShown_Click" />
-                            <Button Content="Clear" Style="{StaticResource DenseButton}" Margin="6,0,0,0" Click="SelectNone_Click" />
-                        </StackPanel>
-                        <ListBox ItemsSource="{Binding Source={StaticResource ArchetypeView}}" AutomationProperties.AutomationId="AiArchetypeList"
-                                 VirtualizingPanel.IsVirtualizingWhenGrouping="True">
-                            <ListBox.GroupStyle>
-                                <GroupStyle>
-                                    <GroupStyle.HeaderTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Name}" Style="{StaticResource SectionHeader}" Margin="4,10,0,2" />
-                                        </DataTemplate>
-                                    </GroupStyle.HeaderTemplate>
-                                </GroupStyle>
-                            </ListBox.GroupStyle>
-                            <ListBox.ItemTemplate>
-                                <DataTemplate DataType="{x:Type ai:SoldierArchetype}">
-                                    <CheckBox IsChecked="{Binding IsSelected}" ToolTip="{Binding Name}">
-                                        <TextBlock Text="{Binding Label}">
-                                            <TextBlock.Style>
-                                                <Style TargetType="TextBlock">
-                                                    <Style.Triggers>
-                                                        <DataTrigger Binding="{Binding IsEdited}" Value="True">
-                                                            <Setter Property="FontWeight" Value="SemiBold" />
-                                                            <Setter Property="Foreground" Value="{DynamicResource OkTextBrush}" />
-                                                        </DataTrigger>
-                                                    </Style.Triggers>
-                                                </Style>
-                                            </TextBlock.Style>
-                                        </TextBlock>
-                                    </CheckBox>
-                                </DataTemplate>
-                            </ListBox.ItemTemplate>
-                        </ListBox>
-                    </DockPanel>
-
-                    <GridSplitter Grid.Column="1" />
-
-                    <DockPanel Grid.Column="2">
-                        <TextBlock DockPanel.Dock="Top" Text="{Binding Soldiers.SelectionSummary}" Style="{StaticResource PanelTitle}" />
-                        <TextBlock DockPanel.Dock="Top" Style="{StaticResource Note}" Margin="0,2,0,8"
-                                   Text="Hover a setting to see what it does. Bold rows differ from the base game. Marksmanship is the aim model: every shot's hit chance is the product of the own and player's factors, gated by the reaction time." />
-                        <DataGrid ItemsSource="{Binding Source={StaticResource FieldView}}" AutoGenerateColumns="False"
-                                  CanUserAddRows="False" CanUserDeleteRows="False" CanUserSortColumns="False"
-                                  HeadersVisibility="Column" RowStyle="{StaticResource ChangedRow}"
-                                  VirtualizingPanel.IsVirtualizingWhenGrouping="True"
-                                  AutomationProperties.AutomationId="AiSoldierFields">
-                            <DataGrid.GroupStyle>
-                                <GroupStyle>
-                                    <GroupStyle.HeaderTemplate>
-                                        <DataTemplate>
-                                            <TextBlock Text="{Binding Name}" Style="{StaticResource SectionHeader}" Margin="4,12,0,4" />
-                                        </DataTemplate>
-                                    </GroupStyle.HeaderTemplate>
-                                </GroupStyle>
-                            </DataGrid.GroupStyle>
-                            <DataGrid.Columns>
-                                <DataGridTemplateColumn Header="Setting" Width="260" IsReadOnly="True">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate DataType="{x:Type ai:SoldierFieldRow}">
-                                            <TextBlock Text="{Binding Label}" ToolTip="{Binding Help}" VerticalAlignment="Center" />
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTemplateColumn Header="Value" Width="150">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate DataType="{x:Type ai:SoldierFieldRow}">
-                                            <Grid>
-                                                <TextBox Text="{Binding Text, UpdateSourceTrigger=LostFocus}" ToolTip="{Binding Help}"
-                                                         Visibility="{Binding IsNumber, Converter={StaticResource Visible}}"
-                                                         KeyDown="ValueBox_KeyDown" />
-                                                <ComboBox ItemsSource="{Binding Choices}" SelectedItem="{Binding Choice}" ToolTip="{Binding Help}">
-                                                    <ComboBox.Style>
-                                                        <Style TargetType="ComboBox" BasedOn="{StaticResource {x:Type ComboBox}}">
-                                                            <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsNumber}" Value="True">
-                                                                    <Setter Property="Visibility" Value="Collapsed" />
-                                                                </DataTrigger>
-                                                            </Style.Triggers>
-                                                        </Style>
-                                                    </ComboBox.Style>
-                                                </ComboBox>
-                                            </Grid>
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                                <DataGridTextColumn Header="Base game" Binding="{Binding Vanilla}" Width="100" IsReadOnly="True"
-                                                    ElementStyle="{StaticResource Muted}" />
-                                <DataGridTemplateColumn Header="What it does" Width="*" IsReadOnly="True">
-                                    <DataGridTemplateColumn.CellTemplate>
-                                        <DataTemplate DataType="{x:Type ai:SoldierFieldRow}">
-                                            <TextBlock Text="{Binding Help}" ToolTip="{Binding Help}" Style="{StaticResource Caption}"
-                                                       TextTrimming="CharacterEllipsis" VerticalAlignment="Center" />
-                                        </DataTemplate>
-                                    </DataGridTemplateColumn.CellTemplate>
-                                </DataGridTemplateColumn>
-                            </DataGrid.Columns>
-                        </DataGrid>
-                    </DockPanel>
-                </Grid>
+            <!-- ============================ WEAPONS ============================= -->
+            <TabItem Header="Weapons" x:Name="WeaponsSection">
+                <ai:ArchetypeTuningView DataContext="{Binding Weapons}" />
             </TabItem>
 
             <!-- ========================= BEHAVIOUR ODDS ========================= -->

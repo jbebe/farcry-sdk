@@ -1,67 +1,4 @@
-using JackAll.Core.Format.Fcb;
-
 namespace JackAll.Tools.Ai;
-
-public enum SoldierFieldKind
-{
-    Number,
-    Whole,
-    Toggle,
-    Choice,
-}
-
-/// <summary>
-/// One tunable of an NPC archetype: the member at <see cref="Path"/> below one of the entity's components,
-/// named and explained for someone who has never seen the FCB tree.
-/// </summary>
-public sealed record SoldierField(
-    string Group, string Label, string Help, string[] Path, string Member,
-    SoldierFieldKind Kind = SoldierFieldKind.Number, string[]? Choices = null)
-{
-    private readonly uint _member = FcbClassDefinitions.Crc32Ascii(Member);
-    private readonly uint[] _path = [.. Path.Select(FcbClassDefinitions.Crc32Ascii)];
-
-    public double? Read(FcbObject entity)
-    {
-        if (Owner(entity) is not { } owner || !owner.Values.ContainsKey(_member))
-        {
-            return null;
-        }
-        return Kind switch
-        {
-            SoldierFieldKind.Number => FcbEntityFields.ReadFloat(owner, _member),
-            SoldierFieldKind.Toggle => FcbEntityFields.ReadBool(owner, _member) ? 1 : 0,
-            _ => FcbEntityFields.ReadU32(owner, _member),
-        };
-    }
-
-    /// <summary>Writes <paramref name="value"/>; false when this archetype doesn't carry the member.</summary>
-    public bool Write(FcbObject entity, double value)
-    {
-        FcbObject? owner = Owner(entity);
-        if (owner is null || !owner.Values.ContainsKey(_member))
-        {
-            return false;
-        }
-        owner.Values[_member] = Kind switch
-        {
-            SoldierFieldKind.Number => BitConverter.GetBytes((float)value),
-            SoldierFieldKind.Toggle => [(byte)(value != 0 ? 1 : 0)],
-            _ => BitConverter.GetBytes((uint)Math.Max(0, Math.Round(value))),
-        };
-        return true;
-    }
-
-    private FcbObject? Owner(FcbObject entity)
-    {
-        FcbObject? node = FcbEntityFields.FindComponent(entity, _path[0]);
-        for (int i = 1; i < _path.Length && node is not null; i++)
-        {
-            node = node.Children.Find(c => c.TypeHash == _path[i]);
-        }
-        return node;
-    }
-}
 
 /// <summary>The archetype tunables the AI tab offers, grouped the way a designer thinks about a soldier.</summary>
 public static class SoldierFields
@@ -84,7 +21,7 @@ public static class SoldierFields
     private static readonly string[] Gait = ["CFCXAIComponent", "AIObject", "CGameAgent"];
     private static readonly string[] Counters = ["CFCXCountersComponentAI"];
 
-    public static IReadOnlyList<SoldierField> All { get; } =
+    public static IReadOnlyList<TuningField> All { get; } =
     [
         new(Perception, "Unaware", "How far the soldier sees before anything has alarmed him, as a multiple of the vision cones. Lower makes stealth easier.", Multipliers, "fPreCombatMultiplier"),
         new(Perception, "In combat", "Vision cone multiplier while fighting.", Multipliers, "fCombatMultiplier"),
@@ -141,32 +78,34 @@ public static class SoldierFields
         new(Movement, "Fast acceleration", "Acceleration when in a hurry.", Gait, "fAccelerationsFast"),
 
         new(Toughness, "Health", "Hit points; -1 takes the default from the stim-effect table.", Counters, "fAgentHealth"),
-        new(Toughness, "Hit locations", "Whether head, torso and limb hits are told apart.", Counters, "bEnableHitLocations", SoldierFieldKind.Toggle),
+        new(Toughness, "Hit locations", "Whether head, torso and limb hits are told apart.", Counters, "bEnableHitLocations", TuningFieldKind.Toggle),
         new(Toughness, "Torso hit, wounded state", "How strongly a torso hit pushes a soldier towards the wounded (health failure) state.", Counters, "fHealthFailureTorsoHitModifier"),
         new(Toughness, "Limb hit, wounded state", "How strongly a limb hit pushes a soldier towards the wounded state.", Counters, "fHealthFailureLimbsHitModifier"),
         new(Toughness, "Wounded grace (s)", "How long a soldier who just entered the wounded state cannot be killed.", Counters, "fHealthFailureCantDieDuration"),
         new(Toughness, "Weapon jam scale", "Multiplies his weapons' jam chance.", Counters, "WeaponJamProbabilityScale"),
 
-        new(Role, "Has a long-range weapon", "Treated as a marksman by the brain: engages from farther and seeks sniper points.", Agent, "bHasALongRangeWeapon", SoldierFieldKind.Toggle),
-        new(Role, "Squad role", "The role the squad logic gives him.", Agent, "selODU", SoldierFieldKind.Choice, ["Grunt", "Medic", "Boss", "Engineer", "Sniper"]),
-        new(Role, "Infamy reaction", "Whether he reacts to the player's infamy as low, high or randomly.", Agent, "selAIInfamyMode", SoldierFieldKind.Choice, ["Always low", "Always high", "Random"]),
+        new(Role, "Has a long-range weapon", "Treated as a marksman by the brain: engages from farther and seeks sniper points.", Agent, "bHasALongRangeWeapon", TuningFieldKind.Toggle),
+        new(Role, "Unit type", "What kind of soldier he is to the AI - grunt, medic, boss, engineer or sniper. Not the combat role the squad lieutenant hands out.", Agent, "selODU", TuningFieldKind.Choice, ["Grunt", "Medic", "Boss", "Engineer", "Sniper"]),
+        new(Role, "Infamy reaction", "Whether he reacts to the player's infamy as low, high or randomly.", Agent, "selAIInfamyMode", TuningFieldKind.Choice, ["Always low", "Always high", "Random"]),
     ];
 
-    /// <summary>Whether <paramref name="entity"/> runs a soldier brain - the archetypes this catalogue fits.</summary>
-    public static bool IsSoldier(FcbObject entity) => Marker.Read(entity) is not null;
-
-    /// <summary>A member only a <c>CPawnAgent</c> with a sensory system carries.</summary>
-    private static readonly SoldierField Marker = new("", "", "", [.. Multipliers], "fPreCombatMultiplier");
+    /// <summary>Every archetype whose <c>CPawnAgent</c> has a sensory system.</summary>
+    public static TuningCatalog Catalog { get; } = new(All, All[0], name => name.Split('.')[0] switch
+    {
+        "enemy_archetypes" => "Enemies",
+        "buddies" => "Buddies and civilians",
+        string other => other,
+    });
 
     /// <summary>The pair <c>CPawnAgent::SetVisibilityValues</c> installs when the brain enters a state.</summary>
-    private static IEnumerable<SoldierField> Thresholds(string state, string prefix)
+    private static IEnumerable<TuningField> Thresholds(string state, string prefix)
     {
         string where = state == "In a vehicle" ? "in a vehicle" : $"in the {state.ToLowerInvariant()} state";
         yield return new(Detection, $"{state}: senses something at", $"How visible (0-1) the player must be before a soldier {where} starts to notice. Lower detects sooner.", Agent, prefix + "FuzzyVal");
         yield return new(Detection, $"{state}: sees you at", $"How visible (0-1) the player must be before a soldier {where} positively spots him. Lower detects sooner.", Agent, prefix + "ClearVal");
     }
 
-    private static IEnumerable<SoldierField> Cones(string biome, string node)
+    private static IEnumerable<TuningField> Cones(string biome, string node)
     {
         string[] fov = [.. Senses, "FOVParameters", node];
         yield return new(Vision, $"{biome}: focus range (m)", $"How far he sees straight ahead in {biome.ToLowerInvariant()} terrain.", [.. fov, "FocusFOV"], "fLength");
@@ -175,7 +114,7 @@ public static class SoldierFields
         yield return new(Vision, $"{biome}: side angle (°)", "Width of the peripheral cone.", [.. fov, "PeripheralFOV"], "fAngle");
     }
 
-    private static IEnumerable<SoldierField> Status(string who, string node, string whose)
+    private static IEnumerable<TuningField> Status(string who, string node, string whose)
     {
         string[] path = [.. Shooting, node];
         string help = $"Multiplies his hit chance by {whose} situation.";
@@ -191,6 +130,6 @@ public static class SoldierFields
         yield return new(Marksmanship, $"{who} speed: sprinting", help, path, "fMoveSpeedSprintFactor");
         yield return new(Marksmanship, $"{who}: driving", help, path, "fDrivingFactor");
         yield return new(Marksmanship, $"{who}: swimming", help, path, "fSwimmingFactor");
-        yield return new(Marksmanship, $"{who}: hits per second cap", "Once the player takes this many hits in a second, further shots are not allowed to hit.", path, "uiMaxHitPerSecondFactor", SoldierFieldKind.Whole);
+        yield return new(Marksmanship, $"{who}: hits per second cap", "Once the player takes this many hits in a second, further shots are not allowed to hit.", path, "uiMaxHitPerSecondFactor", TuningFieldKind.Whole);
     }
 }

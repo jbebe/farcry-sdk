@@ -4,21 +4,23 @@ using JackAll.Tools.World;
 namespace JackAll.Tools.Ai;
 
 /// <summary>
-/// One world's copy of a soldier archetype: its prototype fragment, being edited, beside the base
-/// game's values for every <see cref="SoldierFields"/> tunable.
+/// One world's copy of a tuned archetype: its prototype fragment, being edited, beside the base game's
+/// values for every field of its <see cref="TuningCatalog"/>.
 /// </summary>
-public sealed class SoldierCopy
+public sealed class TuningCopy
 {
     private readonly FcbObject _vanillaRoot;
-    private readonly Dictionary<SoldierField, double?> _vanilla;
+    private readonly IReadOnlyList<TuningField> _fields;
+    private readonly Dictionary<TuningField, double?> _vanilla;
 
-    internal SoldierCopy(ArchetypeDefinition definition, FcbObject root, FcbObject entity, FcbObject vanillaRoot, FcbObject vanillaEntity)
+    internal TuningCopy(TuningCatalog catalog, ArchetypeDefinition definition, FcbObject root, FcbObject entity, FcbObject vanillaRoot, FcbObject vanillaEntity)
     {
         Definition = definition;
         Root = root;
         Entity = entity;
         _vanillaRoot = vanillaRoot;
-        _vanilla = SoldierFields.All.ToDictionary(f => f, f => f.Read(vanillaEntity));
+        _fields = catalog.Fields;
+        _vanilla = _fields.ToDictionary(f => f, f => f.Read(vanillaEntity));
     }
 
     public ArchetypeDefinition Definition { get; }
@@ -28,9 +30,9 @@ public sealed class SoldierCopy
 
     public FcbObject Entity { get; }
 
-    public double? Vanilla(SoldierField field) => _vanilla.GetValueOrDefault(field);
+    public double? Vanilla(TuningField field) => _vanilla.GetValueOrDefault(field);
 
-    public bool IsEdited => SoldierFields.All.Any(f => f.Read(Entity) != Vanilla(f));
+    public bool IsEdited => _fields.Any(f => f.Read(Entity) != Vanilla(f));
 
     /// <summary>The fragment to stage, and whether it is back to the base game's text.</summary>
     public (string FragmentId, string Xml, bool IsVanilla) Plan(FcbClassDefinitions definitions)
@@ -40,30 +42,31 @@ public sealed class SoldierCopy
     }
 }
 
-public static class SoldierLibrary
+public static class TuningLibrary
 {
     /// <summary>
-    /// The soldiers' prototypes out of one entity library, decoded once. <paramref name="original"/> is
-    /// the base game's library; null or identical means the base game is what <paramref name="merged"/> holds.
+    /// The prototypes of <paramref name="archetypes"/> out of one entity library, decoded once.
+    /// <paramref name="original"/> is the base game's library; null or identical means the base game
+    /// is what <paramref name="merged"/> holds.
     /// </summary>
-    public static IReadOnlyList<SoldierCopy> Open(IEnumerable<ArchetypeDefinition> soldiers, byte[] merged, byte[]? original)
+    public static IReadOnlyList<TuningCopy> Open(TuningCatalog catalog, IEnumerable<ArchetypeDefinition> archetypes, byte[] merged, byte[]? original)
     {
         Dictionary<string, FcbObject> prototypes = ById(FcbDocument.Deserialize(merged));
         Dictionary<string, FcbObject>? vanillaPrototypes = original is null || original.AsSpan().SequenceEqual(merged)
             ? null
             : ById(FcbDocument.Deserialize(original));
 
-        List<SoldierCopy> copies = [];
-        foreach (ArchetypeDefinition definition in soldiers)
+        List<TuningCopy> copies = [];
+        foreach (ArchetypeDefinition definition in archetypes)
         {
             if (definition.FragmentId is not { } id || !prototypes.TryGetValue(id, out FcbObject? root))
             {
                 continue;
             }
-            FcbObject vanillaRoot = vanillaPrototypes is null ? root.Clone() : vanillaPrototypes.GetValueOrDefault(id) ?? root.Clone();
+            FcbObject vanillaRoot = vanillaPrototypes?.GetValueOrDefault(id) ?? root.Clone();
             if (EntityNamed(root, definition.Name) is { } entity && EntityNamed(vanillaRoot, definition.Name) is { } vanillaEntity)
             {
-                copies.Add(new SoldierCopy(definition, root, entity, vanillaRoot, vanillaEntity));
+                copies.Add(new TuningCopy(catalog, definition, root, entity, vanillaRoot, vanillaEntity));
             }
         }
         return copies;

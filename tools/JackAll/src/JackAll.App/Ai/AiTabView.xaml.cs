@@ -79,7 +79,8 @@ public partial class AiTabView : UserControl, ISavableTab
         {
             return;
         }
-        AiSection section = Sections.SelectedItem == BehaviorsSection ? AiSection.Behaviors
+        AiSection section = Sections.SelectedItem == WeaponsSection ? AiSection.Weapons
+            : Sections.SelectedItem == BehaviorsSection ? AiSection.Behaviors
             : Sections.SelectedItem == BrainsSection ? AiSection.Brains
             : AiSection.Soldiers;
         await _model.ShowAsync(section);
@@ -114,9 +115,6 @@ public partial class AiTabView : UserControl, ISavableTab
         }
     }
 
-    private void SelectShown_Click(object sender, RoutedEventArgs e) => _model.Soldiers.SelectAll(true);
-
-    private void SelectNone_Click(object sender, RoutedEventArgs e) => _model.Soldiers.SelectAll(false);
 
     /// <summary>One column per progression level, bound to that level's cell of each row.</summary>
     private void BuildLevelColumns()
