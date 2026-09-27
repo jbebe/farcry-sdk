@@ -72,7 +72,7 @@ public static class SoldierFields
     public const string Perception = "Spotting";
     public const string Vision = "Vision cones";
     public const string Marksmanship = "Marksmanship";
-    public const string Reactions = "Reactions";
+    public const string Detection = "Detection thresholds";
     public const string Movement = "Movement";
     public const string Toughness = "Toughness";
     public const string Role = "Role";
@@ -128,16 +128,12 @@ public static class SoldierFields
         .. Status("Own", "ShooterStatus", "his own"),
         .. Status("Player's", "TargetStatus", "the player's"),
 
-        new(Reactions, "Idle: enter", "Brain threshold for the idle state. Engine semantics of the fuzzy/clear pair are not traced yet.", Agent, "m_IdleFuzzyVal"),
-        new(Reactions, "Idle: clear", "Brain threshold for the idle state.", Agent, "m_IdleClearVal"),
-        new(Reactions, "Social: enter", "Brain threshold for the social state.", Agent, "m_SocialFuzzyVal"),
-        new(Reactions, "Social: clear", "Brain threshold for the social state.", Agent, "m_SocialClearVal"),
-        new(Reactions, "Alert: enter", "Brain threshold for the alert state.", Agent, "m_AlertFuzzyVal"),
-        new(Reactions, "Alert: clear", "Brain threshold for the alert state.", Agent, "m_AlertClearVal"),
-        new(Reactions, "Combat: enter", "Brain threshold for the combat state.", Agent, "m_CombatFuzzyVal"),
-        new(Reactions, "Combat: clear", "Brain threshold for the combat state.", Agent, "m_CombatClearVal"),
-        new(Reactions, "Wounded: enter", "Brain threshold for the threshold (wounded, rescue) state.", Agent, "m_ThresholdFuzzyVal"),
-        new(Reactions, "Wounded: clear", "Brain threshold for the threshold state.", Agent, "m_ThresholdClearVal"),
+        .. Thresholds("Idle", "m_Idle"),
+        .. Thresholds("Social", "m_Social"),
+        .. Thresholds("Alert", "m_Alert"),
+        .. Thresholds("Combat", "m_Combat"),
+        .. Thresholds("Wounded", "m_Threshold"),
+        .. Thresholds("In a vehicle", "m_Vehicle"),
 
         new(Movement, "Walk speed (m/s)", "Speed of a patrol walk.", Gait, "fSpeedsWalk"),
         new(Movement, "Jog speed (m/s)", "Speed when moving with purpose.", Gait, "fSpeedsJog"),
@@ -161,6 +157,14 @@ public static class SoldierFields
 
     /// <summary>Whether <paramref name="entity"/> runs a soldier brain - the archetypes this catalogue fits.</summary>
     public static bool IsSoldier(FcbObject entity) => All[0].Read(entity) is not null;
+
+    /// <summary>The pair <c>CPawnAgent::SetVisibilityValues</c> installs when the brain enters a state.</summary>
+    private static IEnumerable<SoldierField> Thresholds(string state, string prefix)
+    {
+        string where = state == "In a vehicle" ? "in a vehicle" : $"in the {state.ToLowerInvariant()} state";
+        yield return new(Detection, $"{state}: senses something at", $"How visible (0-1) the player must be before a soldier {where} starts to notice. Lower detects sooner.", Agent, prefix + "FuzzyVal");
+        yield return new(Detection, $"{state}: sees you at", $"How visible (0-1) the player must be before a soldier {where} positively spots him. Lower detects sooner.", Agent, prefix + "ClearVal");
+    }
 
     private static IEnumerable<SoldierField> Cones(string biome, string node)
     {
