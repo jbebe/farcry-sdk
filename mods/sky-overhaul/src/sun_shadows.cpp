@@ -3,6 +3,7 @@
 #include "fcse_api.h"
 #include "tuning.h"
 
+#include <algorithm>
 #include <cstdint>
 
 namespace {
@@ -22,6 +23,32 @@ namespace {
     constexpr size_t kRendererOperand = 27;
     constexpr size_t kRenderConfigOffset = 0x2C;
     constexpr size_t kRangesOffset = 0x778 + 0x40;
+
+    // CSky::UpdateShadow, which aims the shadows every frame. Its prologue asks a manager for the
+    // scene state it writes to: the manager's address and that call's displacement are read from it.
+    FCSE::Relocation<uint8_t*> g_updateShadow{FCSE::Pattern(
+        "55 8B EC 83 E4 F0 81 EC F4 00 00 00 53 56 57 8B F9 6A 01 57 B9 ?? ?? ?? ?? "
+        "E8 ?? ?? ?? ?? 8A 5D 08 84 DB")};
+    constexpr size_t kManagerOperand = 21;
+    constexpr size_t kCallOperand = 26;
+    constexpr size_t kShadowDirection = 0x328;
+
+    // How far the sun turns before the shadows follow it: half a degree, as a cosine. The cascades
+    // snap to a texel grid that the turning sun slides, so thin shadows crawl unless it holds still.
+    constexpr float kStepCosine = 0.99996192f;
+
+    // __fastcall stands in for __thiscall, which MSVC will not let a free function be.
+    using UpdateShadowFn = void(__fastcall*)(void* sky, void* unused, uint32_t isSunLight);
+    using WritableStateFn = uint8_t*(__fastcall*)(void* manager, void* unused, void* sky,
+                                                   uint32_t writable);
+
+    UpdateShadowFn g_originalUpdateShadow = nullptr;
+    WritableStateFn g_writableState = nullptr;
+    void* g_manager = nullptr;
+
+    // The direction the shadows are held at, once there is one.
+    float g_aim[3] = {};
+    bool g_holding = false;
 
     // One of the engine's settings, held at our value while the part is on and given back after.
     struct Held {
@@ -76,6 +103,45 @@ namespace {
         }
         held.written = false;
     }
+
+    // Asking for the state again in the same frame returns the copy the original just wrote.
+    void __fastcall UpdateShadowDetour(void* sky, void* unused, uint32_t isSunLight) {
+        g_originalUpdateShadow(sky, unused, isSunLight);
+        if (!g_enabled) {
+            g_holding = false;
+            return;
+        }
+        float* aimed =
+            reinterpret_cast<float*>(g_writableState(g_manager, nullptr, sky, 1) + kShadowDirection);
+        const float along = aimed[0] * g_aim[0] + aimed[1] * g_aim[1] + aimed[2] * g_aim[2];
+        if (!g_holding || along < kStepCosine) {
+            std::copy(aimed, aimed + 3, g_aim);
+            g_holding = true;
+        }
+        std::copy(g_aim, g_aim + 3, aimed);
+    }
+}
+
+bool SkyOverhaul::SunShadows::Install() {
+    const FCSE_PluginAPI* api = FCSE::ApiPointer();
+    uint8_t* code = g_updateShadow ? g_updateShadow.get() : nullptr;
+    if (code == nullptr) {
+        api->Log("sun shadows: the shadow aim was not found in this build, shadows turn every frame");
+        return false;
+    }
+    g_manager = *reinterpret_cast<void**>(code + kManagerOperand);
+    const int32_t displacement = *reinterpret_cast<int32_t*>(code + kCallOperand);
+    g_writableState =
+        reinterpret_cast<WritableStateFn>(code + kCallOperand + sizeof(int32_t) + displacement);
+
+    if (!api->Hook(code, reinterpret_cast<void*>(&UpdateShadowDetour),
+                   reinterpret_cast<void**>(&g_originalUpdateShadow))) {
+        api->Log("sun shadows: the shadow aim could not be hooked, shadows turn every frame");
+        return false;
+    }
+    FCSE::Logf("sun shadows: shadow aim hooked at 0x%08zX on %s",
+               reinterpret_cast<size_t>(code), api->gameBuildId);
+    return true;
 }
 
 void SkyOverhaul::SunShadows::SetEnabled(bool enabled) {

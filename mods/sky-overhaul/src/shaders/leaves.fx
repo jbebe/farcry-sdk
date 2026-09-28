@@ -171,7 +171,10 @@ Light Shade(Vertex v, Tree t, float3 world, float3 local, float3 centre)
     float3 outward = normalize(offset);
     float3 tilt = frac(sin(dot(centre, float3(12.9898f, 78.233f, 37.719f))) *
                        float3(43758.5453f, 22578.1459f, 19642.349f)) * 2.0f - 1.0f;
-    o.normal = normalize(outward + tilt * Leaves.z);
+    // Never facing further down than the engine lets a leaf: a palm's trunk is dressed in leaf
+    // cards far below its crown's centre.
+    float3 upturned = normalize(float3(outward.xy, max(outward.z, 0.6f)));
+    o.normal = normalize(upturned + tilt * Leaves.z);
 
     // How much crown the sunlight crosses to reach the leaf, in radii.
     float3 toSun = -normalize(t.lightDirection);

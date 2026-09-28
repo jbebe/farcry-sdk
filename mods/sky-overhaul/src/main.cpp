@@ -159,6 +159,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // The publisher every effect reads, which draws nothing: the sun, the moon and the weather as
     // the cloud layer is lit by them.
     SkyOverhaul::CloudLayer::Install();
+    SkyOverhaul::SunShadows::Install();
 
     // Before any engine code runs, so the first frame already draws with the stored values.
     SkyOverhaul::Tuning::Load();
