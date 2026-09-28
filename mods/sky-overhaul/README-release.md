@@ -13,11 +13,14 @@ through the whole day, the weather and the night.
 - **Cloud shadows** on the ground.
 - **The night**: a smaller moon lit on the clouds, darker nights with moonlight that throws shadows,
   and the world's colour draining where it is dark.
-- **A neutral colour grade** in place of the game's yellow cast.
+- **A neutral colour grade** in place of the game's yellow cast, and ambient occlusion in corners
+  and creases.
+- **The world in that light**: grass and tree leaves lit by the sun, rocks and cliffs shaded as
+  faceted stone, and sun shadows that reach further and follow a low sun toward the horizon.
 
 Each part switches back to the engine's own in the **Mod Configuration** menu. Every effect's values
 are in `bin\sky-overhaul.ini`, and with DevTools installed its overlay has a window of sliders for
-them.
+them. **Upgrading from 1.1.0**, delete that file once so the new values take effect.
 
 ## Requirements
 
@@ -42,8 +45,8 @@ jackall-cli mod restore --game "C:\Games\Far Cry 2"
 
 ## Compatibility
 
-- **Lighting, fog and weather mods** conflict: the night lighting ships as the world's whole preset
-  library, and the moon and storm changes as its whole environment block.
+- **Lighting, fog and weather mods** conflict: the night and clear-day lighting ship as the world's
+  whole preset library, and the moon and storm changes as its whole environment block.
 - **Other rendering plugins** that hook the same Direct3D calls are refused by FCSE. DevTools and
   UFCP work alongside it.
 

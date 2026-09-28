@@ -5,9 +5,10 @@ frame as the player looks toward the sun, and a retinal afterimage left behind w
 
 **The layer ships two data fragments per campaign world.** The world descriptor's `<Environment>`
 halves the moon's size and points the storm's fog at the clear preset, and is otherwise retail. The
-preset library in `managers.fcb` changes only the night in the clear, jungle, storm and cloudy
+preset library in `managers.fcb` changes the night in the clear, jungle, storm and cloudy
 lighting: a dimmer blue-grey ambient, no rim light, and a brighter moon that lights the ground only
-once it has risen, so moonlit ground has shading and shadows. It replaces the whole library, so it
+once it has risen, so moonlit ground has shading and shadows. By day it lifts only the clear preset's
+ambient, up to 1.7 times at noon. It replaces the whole library, so it
 collides with any other mod that edits a preset. Nothing here changes how the sun itself looks.
 
 ## What it does
@@ -55,7 +56,8 @@ collides with any other mod that edits a preset. Nothing here changes how the su
   state.
 - **Switching each part.** The mod menu, and the `[SkyOverhaul]` group in `fcse.ini`, holds only
   which parts are on: Sky (Engine or Overhaul), Clouds (Engine, Off or Overhaul), Sun (Engine, or
-  Overhaul for the glare and the afterimage), Night, Shadows and Grade (each Engine or Overhaul).
+  Overhaul for the glare and the afterimage), Night, Shadows, Grade, Grass, Leaves, Sun shadows and
+  Rocks (each Engine or Overhaul), and Occlusion (Off or On).
 - **Tuning.** Every effect's values are kept in `bin\sky-overhaul.ini`, beside `fcse.ini`, which is
   written on the first launch. The sky has none: it follows the sun alone. `src/tuning.cpp`.
 - **A window in DevTools' overlay.** With [DevTools](../DevTools) installed, Home shows a Sky Overhaul
