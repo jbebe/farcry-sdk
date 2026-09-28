@@ -2,18 +2,25 @@ Replaces Far Cry 2's sky, clouds and the light they cast with an atmosphere that
 
 [size=4][b]What it changes[/b][/size]
 [list]
-[*][b]The sky[/b] - the engine's painted dome is replaced by a sky worked out from the sun's position: deep blue at noon, orange and purple sunsets, a lingering twilight, and stars that stay out all night. The land's distant fog takes on the sky's own horizon colour.[/*]
+[*][b]The sky[/b] - the engine's painted dome is replaced by a sky worked out from the sun's position: deep blue at noon, orange and purple sunsets, a lingering twilight, and stars that stay out all night. The land's distant fog takes on the sky's own horizon colour, and darkens with it at dusk.[/*]
 [*][b]Volumetric clouds[/b] - a layer of real, lit cumulus with silver linings and dark bases, a high sheet of cirrus above it, and aircraft trails.[/*]
 [*][b]A sky that belongs to your save[/b] - the clouds drift with the game's clock, so loading a save shows the sky you left, and the hours you spend (or sleep through) move it on. Every midnight rolls a new set of one to three aircraft trails.[/*]
 [*][b]Storms[/b] - the clouds thicken, the cirrus closes over the whole sky and the light goes grey, without the land drowning in grey fog.[/*]
-[*][b]The sun[/b] - light shafts that stop where the clouds stand, a glare that washes over the view when you look toward the sun and that clouds cover, and a fading afterimage if you stare at it.[/*]
+[*][b]Clear days that aren't blown out[/b] - once the sun is well up, the sky stays blue instead of clipping to white-cyan, clouds keep their form, and shade is lit enough to read.[/*]
+[*][b]The sun[/b] - light shafts that stop where the clouds stand, a glare around the sun that clouds cover and that washes out the whole view only when you look straight at it, and a fading afterimage if you stare.[/*]
 [*][b]Cloud shadows[/b] - the ground under a cloud loses the sun as it drifts over.[/*]
+[*][b]Sun shadows[/b] - they reach further from you and follow a low sun toward the horizon, and they turn with the sun in small steps, so thin shadows on buildings hold still instead of crawling.[/*]
 [*][b]Ambient occlusion[/b] - the corners and creases the light doesn't reach darken, worked out from a depth of the world drawn a second time without its grass, leaves or your own weapon.[/*]
+[*][b]Grass[/b] - lit by the sun, with dark roots, a sheen across the blades and light glowing through them.[/*]
+[*][b]Tree leaves[/b] - lit one by one: a crown shades its own far side, each leaf tilts its own way, and leaves glint in the sun and glow with it behind them.[/*]
+[*][b]Rocks and cliffs[/b] - shaded as the faceted stone their meshes are, with a fine detail texture from a CC0 rock scan by Poly Haven and a tight glint off their faces.[/*]
 [*][b]The night[/b] - a smaller moon lit on the clouds and no longer hidden by fog, darker blue-grey nights with moonlight that throws shadows once the moon is up, and the world's colour draining where it is dark while fires and lamps keep theirs.[/*]
 [*][b]The colour grade[/b] - the game's yellow cast replaced by a neutral grade you can tune.[/*]
 [/list]
 
-Each part can be switched back to the engine's own in the [b]Mod Configuration[/b] menu: Sky, Clouds, Sun, Night, Shadows, Occlusion and Grade. Every effect's values sit in [b]bin\sky-overhaul.ini[/b], and with [b]DevTools[/b] installed a window with sliders for all of them opens in its overlay.
+Each part can be switched back to the engine's own in the [b]Mod Configuration[/b] menu: Sky, Clouds, Sun, Night, Shadows, Occlusion, Grade, Grass, Leaves, Sun shadows and Rocks. Every effect's values sit in [b]bin\sky-overhaul.ini[/b], and with [b]DevTools[/b] installed a window with sliders for all of them opens in its overlay.
+
+[b]Upgrading from 1.1.0:[/b] delete [b]bin\sky-overhaul.ini[/b] once, or it keeps the old values and the new glare and grade won't take effect.
 
 [size=4][b]Requirements[/b][/size]
 [list]
@@ -32,7 +39,7 @@ The download is a JackAll layer, which both installers read as-is:
 
 [size=4][b]Compatibility[/b][/size]
 [list]
-[*][b]Lighting, fog and weather mods[/b] - the night lighting ships as the world's whole preset library, and the moon and storm changes as the world's whole environment block, so any other mod that edits either will conflict. Whichever loads last wins.[/*]
+[*][b]Lighting, fog and weather mods[/b] - the night and clear-day lighting ship as the world's whole preset library, and the moon and storm changes as the world's whole environment block, so any other mod that edits either will conflict. Whichever loads last wins.[/*]
 [*][b]Other rendering plugins[/b] - FCSE gives each Direct3D hook to one plugin, so a second plugin that draws into the frame the same way will be refused. DevTools and UFCP work alongside it.[/*]
 [/list]
 
