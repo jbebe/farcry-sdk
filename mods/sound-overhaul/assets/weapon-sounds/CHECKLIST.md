@@ -22,8 +22,8 @@ which the plugin plays for NPC shots.
 
 | Tier | Id | Built | Near / far | Weapons |
 |---|---|---|---|---|
-| Big | `0x00FC0140` | [~] | DS `_gunfire/stereo/rpg` `echo_1` / `tail_1`, loudest 50 ms -15 dB (-10 was too loud) | rifles, MGs, shotguns, Desert Eagle, RPG-7, Carl Gustaf |
-| Small | `0x00FC0120` | [~] | DS `_gunfire/stereo/rpg` `echo_2` / `tail_2`, loudest 50 ms -29 dB (14 dB under big) | Makarov, Star .45, Uzi, MAC-10, M79, MGL-140, MK19 |
+| Big | `0x00FC0140` | [~] | DS `_gunfire/stereo/rpg` `echo_1` / `tail_1`, loudest 50 ms -18 dB (-10 and -15 were too loud) | rifles, MGs, shotguns, Desert Eagle, RPG-7, Carl Gustaf |
+| Small | `0x00FC0120` | [~] | DS `_gunfire/stereo/rpg` `echo_2` / `tail_2`, loudest 50 ms -29 dB (11 dB under big) | Makarov, Star .45, Uzi, MAC-10, M79, MGL-140, MK19 |
 | None | | | | 6P9, MP5, Dart Rifle, silenced shotgun, flare gun, crossbow |
 
 Automatics play their echo only once they fire per round, from the user's cut of their fire loop.
@@ -35,7 +35,7 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | Makarov | [x] | [~] | [~] | JSRS pm close_3, curved fade from 128.7 ms (1P) and from 143.3 ms (NPC, mono close_3, a separate take). Echo: small caliber |
 | 6P9 (silenced Makarov) | [~] | [~] | none | DS `_sd` 9_2 sd_close_3, curved fade from 94.9 ms (NPC: its mono downmix), at the original's loudness |
 | Star .45 | [~] | [~] | [~] | DS 1911 close_1, curved fade from 138.6 ms, 1P at -1.5 dB (the original's -4.1 was weak). NPC: mono close_1, a separate take, curved fade from 152.5 ms, at the original's loudness. Echo: small |
-| Desert Eagle | [~] | [~] | [~] | JSRS deagle close_3, curved fade from 140 ms (NPC: mono close_3). 1P at the original's loudness, NPC at -3 dB. DS deagle's takes sounded like a drum kick. Echo: big |
+| Desert Eagle | [x] | [~] | [~] | JSRS deagle close_3, curved fade from 140 ms (NPC: mono close_3). 1P at the original's loudness, NPC at -3 dB. DS deagle's takes sounded like a drum kick. Echo: big |
 | Uzi | [ ] | [ ] | [ ] | |
 | MAC-10 | [ ] | [ ] | [ ] | |
 | M79 | [ ] | [ ] | [ ] | |
