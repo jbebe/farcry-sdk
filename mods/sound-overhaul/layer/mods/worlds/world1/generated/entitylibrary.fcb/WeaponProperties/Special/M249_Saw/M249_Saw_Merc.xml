@@ -660,7 +660,7 @@
                 <value name="sndStartAutoBulletShot" type="String">0xFFFFFFFF</value>
                 <value name="sndStopAutoBulletShot" type="String">0xFFFFFFFF</value>
                 <value name="sndStartAutoBulletShotEcho" type="String">0xFFFFFFFF</value>
-                <value name="sndStopAutoBulletShotEcho" type="String">0xFFFFFFFF</value>
+                <value name="sndStopAutoBulletShotEcho" type="String">0x004B291E</value>
                 <value name="sndtpAutoBulletShotType" type="Int32">8</value>
                 <value name="fAutoBulletShotFadeOutMultiplier" type="Float">1.2</value>
                 <value name="fAutoBulletShotMinFadeOut" type="Float">0.07</value>
