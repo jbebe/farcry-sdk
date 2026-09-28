@@ -13,11 +13,23 @@ Sources: Dark Signal (`DS`), JSRS (`JSRS`). Retail's own first-person event play
 (`0x004565A6` for single shots, `0x004B291E` on release for automatics) beside the gun's sound; replacing only
 the gun's audio keeps it.
 
+## Echoes
+
+Shared by every weapon of a tier, for the player's shots and NPCs' alike. Each is an unpositioned event
+(`spk new --unpositioned`): the player's echo plays through a first-person sound type, where a positioned
+event plays nothing.
+
+| Tier | Built | Source |
+|---|---|---|
+| Small caliber (pistols, SMGs) | [x] | DS `_shared/stereo/reflectors/9/reflector_1`, edited by the user; mono, unpositioned, full gain |
+| Big caliber | [ ] | |
+| Suppressed | none | |
+
 ## Sidearms
 
 | Weapon | 1P | NPC | Echo | Source |
 |---|---|---|---|---|
-| Makarov | [x] | [ ] | [ ] | 1P: JSRS pm close_3, cut 128.7 ms |
+| Makarov | [x] | [x] | [x] | 1P: JSRS pm close_3, cut 128.7 ms. NPC: DS mono pm close_1, cut 185 ms. Echo: small caliber |
 | 6P9 (silenced Makarov) | [ ] | [ ] | [ ] | |
 | Star .45 | [ ] | [ ] | [ ] | |
 | Desert Eagle | [ ] | [ ] | [ ] | |
