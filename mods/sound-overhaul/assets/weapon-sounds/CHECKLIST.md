@@ -23,7 +23,7 @@ which the plugin plays for NPC shots.
 | Tier | Id | Built | Near / far | Weapons |
 |---|---|---|---|---|
 | Big | `0x00FC0140` | [~] | DS `_gunfire/stereo/rpg` `echo_1` / `tail_1`, loudest 50 ms -10 dB | rifles, MGs, shotguns, Desert Eagle, RPG-7, Carl Gustaf |
-| Small | `0x00FC0120` | [~] | DS `_gunfire/stereo/rpg` `echo_2` / `tail_2`, 4 dB under big | Makarov, Star .45, Uzi, MAC-10, M79, MGL-140, MK19 |
+| Small | `0x00FC0120` | [~] | DS `_gunfire/stereo/rpg` `echo_2` / `tail_2`, loudest 50 ms -18 dB (8 dB under big) | Makarov, Star .45, Uzi, MAC-10, M79, MGL-140, MK19 |
 | None | | | | 6P9, MP5, Dart Rifle, silenced shotgun, flare gun, crossbow |
 
 Automatics play their echo only once they fire per round, from the user's cut of their fire loop.
