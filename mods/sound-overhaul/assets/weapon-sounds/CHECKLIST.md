@@ -15,21 +15,24 @@ the gun's audio keeps it.
 
 ## Echoes
 
-Shared by every weapon of a tier, for the player's shots and NPCs' alike. Each is an unpositioned event
-(`spk new --unpositioned`): the player's echo plays through a first-person sound type, where a positioned
-event plays nothing.
+Built by `build/echoes.py`. Each tier's bank holds the player's echo at the tier's id (the near echo, stereo,
+unpositioned: a positioned event plays nothing through a first-person sound type) and NPCs' at the id +
+`0x10` (a mono near echo and a mono far tail, positioned, crossing over at 40 m, the near gone by 80 m),
+which the plugin plays for NPC shots.
 
-| Tier | Built | Source |
-|---|---|---|
-| Small caliber (pistols, SMGs) | [~] | DS `_shared/stereo/reflectors/9/reflector_1`, re-edited by the user to 3.87 s (2026-09-28); mono, unpositioned, full gain |
-| Big caliber | [ ] | |
-| Suppressed | none | |
+| Tier | Id | Built | Near / far | Weapons |
+|---|---|---|---|---|
+| Big | `0x00FC0140` | [~] | DS `_gunfire/stereo/rpg` `echo_1` / `tail_1`, loudest 50 ms -10 dB | rifles, MGs, shotguns, Desert Eagle, RPG-7, Carl Gustaf |
+| Small | `0x00FC0120` | [~] | DS `_gunfire/stereo/rpg` `echo_2` / `tail_2`, 4 dB under big | Makarov, Star .45, Uzi, MAC-10, M79, MGL-140, MK19 |
+| None | | | | 6P9, MP5, Dart Rifle, silenced shotgun, flare gun, crossbow |
+
+Automatics play their echo only once they fire per round, from the user's cut of their fire loop.
 
 ## Sidearms
 
 | Weapon | 1P | NPC | Echo | Source |
 |---|---|---|---|---|
-| Makarov | [x] | [x] | [x] | 1P: JSRS pm close_3, cut 128.7 ms. NPC: DS mono pm close_1, cut 185 ms. Echo: small caliber |
+| Makarov | [x] | [x] | [~] | 1P: JSRS pm close_3, cut 128.7 ms. NPC: DS mono pm close_1, cut 185 ms. Echo: small caliber |
 | 6P9 (silenced Makarov) | [ ] | [ ] | [ ] | |
 | Star .45 | [ ] | [ ] | [ ] | |
 | Desert Eagle | [ ] | [ ] | [ ] | |

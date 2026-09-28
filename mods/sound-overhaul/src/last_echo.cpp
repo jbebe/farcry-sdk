@@ -1,5 +1,5 @@
-// Echoes: NPC shots play the weapon's echo too, which the game only does for the player's, and of the
-// echoes a burst plays, one per round, only the last rings out. Each new round's echo fades out the
+// Echoes: NPC shots play the weapon's echo too, which the game only does for the player's - its NPC version
+// when the echo's bank holds one - and of the echoes a burst plays, one per round, only the last rings out. Each new round's echo fades out the
 // previous one from the same shooter, so a burst ends with one echo however it ends - release, empty
 // magazine or reload.
 #include "mutes.h"
@@ -34,6 +34,9 @@ namespace {
     // The delayed bullet in EBX starts with its origin at +4.
     constexpr uintptr_t kShotOrigin = 0x4;
     constexpr uint32_t kNoSound = 0xFFFFFFFF;
+    // An echo bank may hold an NPC version of its echo at this offset: positioned, so it fades with distance,
+    // which the player's own echo cannot be, as it plays through a first-person sound type.
+    constexpr uint32_t kNpcEchoOffset = 0x10;
 
     constexpr uintptr_t kPlaySoundAtPosition = 0xA0;
     constexpr uintptr_t kStopSound = 0xA8;
@@ -108,9 +111,15 @@ namespace {
         }
 
         void* system = g_getSoundSystem();
-        const uint32_t echo = Slot<PlaySoundAtPositionFn>(system, kPlaySoundAtPosition)(
-            system, echoId, *reinterpret_cast<const int32_t*>(properties + kThirdPersonSingleShotType),
-            reinterpret_cast<const void*>(ctx->ebx + kShotOrigin), 0, 0.0f);
+        const auto play = [&](uint32_t id) {
+            return Slot<PlaySoundAtPositionFn>(system, kPlaySoundAtPosition)(
+                system, id, *reinterpret_cast<const int32_t*>(properties + kThirdPersonSingleShotType),
+                reinterpret_cast<const void*>(ctx->ebx + kShotOrigin), 0, 0.0f);
+        };
+        uint32_t echo = play(echoId + kNpcEchoOffset);
+        if (echo == kNoSound) {
+            echo = play(echoId);
+        }
         Slot<StopSoundFn>(system, kStopSound)(system, echo, g_getEchoLength(*g_ambianceManager), 0);
         OnEcho(ctx->edi, echo);
     }
