@@ -209,6 +209,9 @@ is only reachable by naming a save that is not there.
 The shipped `FC2BenchmarkTool.exe` composes exactly these, e.g.
 `-benchmark playback -world <w> -benchmarkinputname "<name>" -benchmarkloop <n> -benchmarkdisableai`.
 
+A playback file is a demo recorded in ordinary gameplay with <kbd>Numpad 8</kbd>; see
+[demo recording and playback](./demo-recording.md).
+
 Observed sub-mode behaviour:
 
 - **`sectors`** — loads the world and sweeps a moving camera through it. Working set ~851 MB versus
