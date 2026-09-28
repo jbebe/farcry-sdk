@@ -53,9 +53,9 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | Dragunov (AI, Merc, Mike's rusty, persistent) | [x] | [x] | [x] | Retail's own, kept by the user, curved fade from 115 ms, where its crack and blast drop, to lose its baked-in echo. At the original's loudness. Echo: big |
 | AS50 (and persistent) | [x] | [x] | [x] | Retail's own, kept by the user, curved fade from 120 ms, where its highs drop, before its boom rings on for 400 ms. At the original's loudness. Echo: big |
 | Ithaca 37 | [x] | [x] | [x] | DS mp133 Close_2, curved fade from 165 ms, where the boom drops into the room, at -3.5 dB (the original's -7.5 is 4 dB under the rifles). NPC: mono close_4 (not the same recording), from 160 ms, at -4 dB. Echo: big |
-| SPAS-12 (and persistent) | [~] | [~] | [~] | DS spas12 Close_1, curved fade from 110 ms, where the blast drops, before the room rings on until 250 ms, at -3.5 dB. NPC (also the USAS-12's single shot): mono Close_3 (not the same recording), same fade, at -4 dB. Echo: big |
-| USAS-12 (and persistent) | [~] | [~] | [~] | JSRS usas12 close_2, curved fade from 60 ms, before the room's bump at 110-160 ms (NPC: its mono). 1P at -4.5 dB, NPC at -5 dB, as the take starts 10.2 dB down. Per round from banks `0x00FC0270`/`0x00FC0274`. Echo: big |
-| MGL-140 (and persistent) | [~] | [~] | [~] | JSRS ugl close_1, 28 ms trimmed, curved fade from 75 ms, where the launch drops, before the room's plateau (NPC: its mono, the same). Both at -6 dB, as the take starts 12 dB down (the original's -1.9 would need a 10 dB lift). Echo: small |
+| SPAS-12 (and persistent) | [x] | [x] | [x] | DS spas12 Close_1, curved fade from 110 ms, where the blast drops, before the room rings on until 250 ms, at -3.5 dB. NPC (also the USAS-12's single shot): mono Close_3 (not the same recording), same fade, at -4 dB. Echo: big |
+| USAS-12 (and persistent) | [x] | [x] | [x] | JSRS usas12 close_2, curved fade from 60 ms, before the room's bump at 110-160 ms (NPC: its mono). 1P at -4.5 dB, NPC at -5 dB, as the take starts 10.2 dB down. Per round from banks `0x00FC0270`/`0x00FC0274`. Echo: big |
+| MGL-140 (and persistent) | [x] | [x] | [x] | JSRS ugl close_1, 28 ms trimmed, curved fade from 75 ms, where the launch drops, before the room's plateau (NPC: its mono, the same). Both at -6 dB, as the take starts 12 dB down (the original's -1.9 would need a 10 dB lift). Echo: small |
 
 ## Special
 
