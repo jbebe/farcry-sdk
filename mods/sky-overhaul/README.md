@@ -62,10 +62,8 @@ collides with any other mod that edits a preset. Nothing here changes how the su
   written on the first launch. The sky has none: it follows the sun alone. `src/tuning.cpp`.
 - **A window in DevTools' overlay.** With [DevTools](../DevTools) installed, Home shows a Sky Overhaul
   window that edits that file in Sun, Clouds, Night, Shadows and Grade tabs of sliders,
-  saving each edit when it is let go.
-  Its Sky tab holds a tab per key moment of the sun's day - Night, Dawn, Sunrise, Morning, Noon,
-  Afternoon, Sunset and Dusk - and picking one sets the game's clock to its hour, from which the day
-  runs on. Without DevTools, `fcse.log` says so once and the file is the only way in.
+  saving each edit when it is let go. Without DevTools, `fcse.log` says so once and the file is the
+  only way in.
 
 ## How it is put together
 

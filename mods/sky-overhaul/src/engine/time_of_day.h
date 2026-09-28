@@ -1,4 +1,4 @@
-// The game's clock: read from the environment manager, and set through DevTools' console.
+// The game's clock, read from the environment manager.
 #pragma once
 
 namespace SkyOverhaul::TimeOfDay {
@@ -13,8 +13,5 @@ bool Elapsed(double& seconds);
 
 // How many clock seconds pass in one second of game time, or 0 when the manager was not found.
 float Scale();
-
-// Sets the clock to minutes past midnight, from which the day runs on. Does nothing without DevTools.
-void Set(int minutes);
 
 }

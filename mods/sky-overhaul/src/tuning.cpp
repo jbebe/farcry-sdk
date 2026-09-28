@@ -3,7 +3,6 @@
 #include "grade.h"
 
 #include "engine/cloud_layer.h"
-#include "engine/time_of_day.h"
 #include "fcse_api.h"
 
 #include "imgui.h"
@@ -13,7 +12,6 @@
 #include <cstddef>
 #include <filesystem>
 #include <fstream>
-#include <iterator>
 #include <string>
 #include <string_view>
 
@@ -46,14 +44,8 @@ namespace {
         const char* help;
     };
 
-    // A named hour in the sun's day, which has sunrise at 06:00 and sunset at 18:00.
-    struct Moment {
-        const char* name;
-        int hour;
-    };
-
     constexpr Category kSun = {"Sun"};
-    // Holds the moments, and under them the fog.
+    // Holds the sun's time, and under it the fog.
     constexpr Category kSky = {"Sky"};
     constexpr Category kClouds = {"Clouds"};
     constexpr Category kNight = {"Night"};
@@ -245,14 +237,7 @@ namespace {
          "How much the detail map's cracks darken the light rock takes from the sky."},
     };
 
-    constexpr Moment kMoments[] = {
-        {"Night", 0}, {"Dawn", 5},       {"Sunrise", 6}, {"Morning", 8},
-        {"Noon", 12}, {"Afternoon", 16}, {"Sunset", 18}, {"Dusk", 19},
-    };
-
     Values g_values = {};
-    // The moment whose tab was open when the moments last drew, or -1 before they first did.
-    int g_openMoment = -1;
     // Set by an edit and cleared by the save that follows once nothing is held, so a slider writes
     // the file when it is let go rather than on every frame it moves.
     bool g_unsaved = false;
@@ -364,29 +349,6 @@ namespace {
         const int minutes = static_cast<int>(lighting.timeOfDay * 24.0f * 60.0f) % (24 * 60);
         ImGui::Text("Sun's time %02d:%02d", minutes / 60, minutes % 60);
     }
-
-    // A tab per moment. Picking one sends the game's clock to its hour, from which the day runs on.
-    void DrawMoments() {
-        DrawNow();
-
-        // Eight moments do not fit across the window, so they scroll rather than cut their names.
-        if (!ImGui::BeginTabBar("moments", ImGuiTabBarFlags_FittingPolicyScroll |
-                                               ImGuiTabBarFlags_TabListPopupButton)) {
-            return;
-        }
-        for (int i = 0; i < static_cast<int>(std::size(kMoments)); i++) {
-            if (!ImGui::BeginTabItem(kMoments[i].name)) {
-                continue;
-            }
-            if (g_openMoment >= 0 && g_openMoment != i) {
-                SkyOverhaul::TimeOfDay::Set(kMoments[i].hour * 60);
-            }
-            g_openMoment = i;
-            ImGui::Text("At %02d:00", kMoments[i].hour);
-            ImGui::EndTabItem();
-        }
-        ImGui::EndTabBar();
-    }
 }
 
 SkyOverhaul::Tuning::Values SkyOverhaul::Tuning::Current() {
@@ -432,7 +394,7 @@ void SkyOverhaul::Tuning::DrawWindow(void*) {
                 continue;
             }
             if (category == &kSky) {
-                DrawMoments();
+                DrawNow();
             }
             g_unsaved |= DrawGroups(*category);
             if (category == &kGrade) {

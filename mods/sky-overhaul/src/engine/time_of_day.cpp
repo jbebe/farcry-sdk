@@ -1,12 +1,10 @@
 #include "engine/time_of_day.h"
 
-#include "devtools_api.h"
 #include "fcse_api.h"
 
 #include <cmath>
 #include <cstddef>
 #include <cstdint>
-#include <cstdio>
 
 namespace {
     // Inside the environment manager.
@@ -66,12 +64,4 @@ bool SkyOverhaul::TimeOfDay::Elapsed(double& seconds) {
 float SkyOverhaul::TimeOfDay::Scale() {
     const uint8_t* manager = Manager();
     return manager != nullptr ? *reinterpret_cast<const float*>(manager + kTimeScale) : 0.0f;
-}
-
-void SkyOverhaul::TimeOfDay::Set(int minutes) {
-    char line[96];
-    std::snprintf(line, sizeof(line),
-                  "#CDynamicEnvironmentManager_GetInstance():SetScriptedTimeOfDay(%d, %d)",
-                  minutes / 60, minutes % 60);
-    DevTools::Overlay::PostLine(line);
 }
