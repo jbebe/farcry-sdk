@@ -25,6 +25,13 @@ public static class SpkBankLint
                 $"The game loads this bank for id 0x{id:x8}, but no record has that id; name the file after the event it plays.");
         }
 
+        // Retail sound banks list their records by id; bark banks do not, and still play.
+        if (bankId is { } loadId && bank.Find(loadId)?.IsEvent == true
+            && bank.Records.Zip(bank.Records.Skip(1)).Any(pair => pair.Second.Id < pair.First.Id))
+        {
+            Add(SpkProblemSeverity.Note, "The records are not in ascending id order, as every retail sound bank's are.");
+        }
+
         foreach (SpkBankRecord record in bank.Records)
         {
             string name = $"{record.Element} 0x{record.Id:x8}";
@@ -66,7 +73,7 @@ public static class SpkBankLint
                 Add(SpkProblemSeverity.Error, $"{name}: its distances must increase.");
             }
 
-            if (record.Layout == SpkLayout.Play && record.Word(7) != SpkLayout.NoId
+            if (record.Layout == SpkLayout.Play && record.Word(SpkLayout.PlayRolloff) != SpkLayout.NoId
                 && StereoSamples(bank, record.Word(2), []).Select(id => (uint?)id).FirstOrDefault() is { } stereo)
             {
                 Add(SpkProblemSeverity.Warning,

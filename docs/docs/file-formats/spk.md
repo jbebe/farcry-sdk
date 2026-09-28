@@ -219,9 +219,14 @@ copied their siblings' preamble words and got fresh random core fields.
 | `[4]` | `+0x10` | constant `0x00010000` = `1.0` in Q16.16 fixed point — plausibly an identity gain/scale default |
 | `[7]` | `+0x1C` | the event's **rolloff curve**, resolved by the fixup and validated as a `"Rolloff"` object (`FUN_10a3fcd0`); see [rolloff curves](#rolloff-curves). `0xFFFFFFFF` means none: an unpositioned sound. In the retail banks 2,483 of 4,087 distinct type-`1` events point at one of the 96 curves, and the rest carry the sentinel. The heavy reuse is shared curves: one 80 m curve serves 949 events |
 | `[9]` | `+0x24` | `0` in 90% of records; when nonzero, always exactly `+100` or `-100` — a discrete signed flag |
+| `[14]` | `+0x38` | **positioned** (suspected): `1` on every retail event with a rolloff (2,483 of 2,483) and on 5 without one; `0` on the other 1,599. An event with it set fails to play through a first-person sound type: the player's shot echo returned handle `0xFFFFFFFF` until it was cleared **(heard, 2026-09-28)**. The code that reads it is not traced |
 | `[16]` | `+0x40` | boolean — `0` in 84%, `1` in 16% |
 
 (All other words are `0` in every sample checked.)
+
+Records are listed in ascending id order in every retail sound bank but the rolloff pack, which holds no
+events (7,512 of 7,513). Bark banks list the event first, then its audio and sample, and play all the
+same, so the engine does not need the order.
 
 ## Rolloff curves
 

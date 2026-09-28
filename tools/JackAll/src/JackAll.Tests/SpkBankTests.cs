@@ -86,10 +86,10 @@ public class SpkBankTests
     {
         SpkBank bank = SpkBankXml.FromXml("""
             <SoundBank preamble="0x00fc0200">
-              <Audio id="0x00fc0204" file="a.wav" />
+              <Play id="0x00fc0200" sound="0x00fc0203" rolloff="0x00fc0205" positioned="true" />
               <Sample id="0x00fc0203" audio="0x00fc0204" gainDb="-3" />
+              <Audio id="0x00fc0204" file="a.wav" />
               <Rolloff id="0x00fc0205"><Point m="0" db="0" /><Point m="80" db="-96" /></Rolloff>
-              <Play id="0x00fc0200" sound="0x00fc0203" rolloff="0x00fc0205" />
             </SoundBank>
             """, _ => Wav(frames: 1000, channels: 1, rate: 44100));
 
@@ -157,13 +157,42 @@ public class SpkBankTests
     }
 
     [Fact]
+    public void Lint_notes_a_sound_bank_out_of_id_order_but_not_a_bark_bank()
+    {
+        SpkBank reversed = SpkBankXml.FromXml("""
+            <SoundBank preamble="0x00fc0200">
+              <Audio id="0x00fc0202" file="a.wav" />
+              <Sample id="0x00fc0201" audio="0x00fc0202" />
+              <Play id="0x00fc0200" sound="0x00fc0201" />
+            </SoundBank>
+            """, _ => Wav(frames: 100, channels: 1, rate: 22050));
+
+        Assert.Contains(SpkBankLint.Check(reversed, 0x00fc0200), p => p.Message.Contains("ascending id order"));
+
+        if (Fixture.Read(Bark) is not { } bark) return;
+        Assert.DoesNotContain(SpkBankLint.Check(SpkBank.Parse(bark), 1820776), p => p.Message.Contains("ascending id order"));
+    }
+
+    [Fact]
+    public void A_positioned_event_names_its_flag()
+    {
+        if (Fixture.Read(PassBy) is not { } bytes) return;
+
+        XElement play = Decode(bytes).Elements("Play").Single();
+
+        Assert.NotNull(play.Attribute("rolloff"));
+        Assert.Equal("true", (string?)play.Attribute("positioned"));
+        Assert.Null(play.Attribute("w14"));
+    }
+
+    [Fact]
     public void A_variation_wraps_a_lone_sample_in_a_random_container()
     {
         SpkBank bank = SpkBankXml.FromXml("""
             <SoundBank preamble="0x00fc0200">
-              <Audio id="0x00fc0202" file="a.wav" />
-              <Sample id="0x00fc0201" audio="0x00fc0202" gainDb="-3" />
               <Play id="0x00fc0200" sound="0x00fc0201" />
+              <Sample id="0x00fc0201" audio="0x00fc0202" gainDb="-3" />
+              <Audio id="0x00fc0202" file="a.wav" />
             </SoundBank>
             """, _ => Wav(frames: 100, channels: 1, rate: 22050));
         SpkBankRecord play = bank.Find(0x00fc0200)!;
@@ -171,6 +200,7 @@ public class SpkBankTests
         SpkBankRecord random = bank.RandomFor(play, 0x00fc0200);
         SpkBankRecord added = bank.AddVariation(random, bank.Find(0x00fc0202)!.Data, 22050, 0x00fc0200);
 
+        Assert.Equal(bank.Records.Select(r => r.Id).Order(), bank.Records.Select(r => r.Id));
         Assert.Equal(random.Id, play.Word(2));
         Assert.Equal([0x8000u, 0x8000u], random.Entries.Select(e => e.Value));
         Assert.InRange(added.Id, 0x10000000u + 0x00fc0200u * 32, 0x10000000u + 0x00fc0200u * 32 + 31);

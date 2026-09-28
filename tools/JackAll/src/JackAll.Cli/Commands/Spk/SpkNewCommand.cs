@@ -27,6 +27,11 @@ public sealed class SpkNewCommand : CliCommand<SpkNewCommand.Settings>
         [Description("The rolloff curve that fades it with distance (default: --like's, else none: unpositioned).")]
         public string? Rolloff { get; init; }
 
+        [CommandOption("--unpositioned")]
+        [Description("Not positioned even with a rolloff, for a sound played through a first-person sound type, " +
+                     "such as the player's shot echo: a positioned event fails to play there.")]
+        public bool Unpositioned { get; init; }
+
         [CommandOption("--gain <dB>")]
         [Description("Each sample's gain in dB (default 0).")]
         public double Gain { get; init; }
@@ -72,7 +77,7 @@ public sealed class SpkNewCommand : CliCommand<SpkNewCommand.Settings>
             uint audioId = next++;
             string file = $"{audioId:x8}{extension}";
             CliIO.WriteOutput(Path.Combine(dir, file), CliIO.ReadInput(source));
-            bank.Records.Add(new SpkBankRecord { Id = audioId, Type = SpkRecordType.FlatCopy, File = file });
+            bank.Insert(new SpkBankRecord { Id = audioId, Type = SpkRecordType.FlatCopy, File = file });
 
             uint[] words = Words(SpkLayout.Sample, likeSample);
             words[SpkLayout.SampleGain] = SpkLayout.ToQ16(settings.Gain);
@@ -83,11 +88,11 @@ public sealed class SpkNewCommand : CliCommand<SpkNewCommand.Settings>
                 Id = sampleId, Type = SpkRecordType.TransformedFixed128, Kind = (uint)SpkResourceKind.Sample, Words = words,
             });
         }
-        bank.Records.AddRange(samples);
+        samples.ForEach(bank.Insert);
 
         if (random is { } randomId)
         {
-            bank.Records.Add(new SpkBankRecord
+            bank.Insert(new SpkBankRecord
             {
                 Id = randomId, Type = SpkRecordType.TransformedFixed128, Kind = (uint)SpkResourceKind.Random,
                 Words = SpkLayout.Random.NewWords(),
@@ -97,8 +102,10 @@ public sealed class SpkNewCommand : CliCommand<SpkNewCommand.Settings>
 
         uint[] play = Words(SpkLayout.Play, likePlay);
         play[2] = random ?? samples[0].Id;
-        play[7] = settings.Rolloff is { } rolloff ? SpkBank.ParseId(rolloff) : likePlay?.Word(7) ?? SpkLayout.NoId;
-        bank.Records.Add(new SpkBankRecord
+        play[SpkLayout.PlayRolloff] = settings.Rolloff is { } rolloff ? SpkBank.ParseId(rolloff)
+            : likePlay?.Word(SpkLayout.PlayRolloff) ?? SpkLayout.NoId;
+        play[SpkLayout.PlayPositioned] = play[SpkLayout.PlayRolloff] != SpkLayout.NoId && !settings.Unpositioned ? 1u : 0u;
+        bank.Insert(new SpkBankRecord
         {
             Id = eventId, Type = SpkRecordType.SimpleFixed68, Kind = (uint)SpkEventType.Leaf, Words = play,
         });

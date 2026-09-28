@@ -48,11 +48,17 @@ public sealed class SpkLayout
 
     public const int SampleGain = 5, SampleAudio = 7, SampleLoop = 13;
 
+    /// <summary>A Play's rolloff curve, and whether it plays at a position. Retail sets <c>positioned</c> on
+    /// every event with a rolloff; one that is set fails to play through a first-person sound type.</summary>
+    public const int PlayRolloff = 7, PlayPositioned = 14;
+
     private static readonly SpkWordField Gain = new("gainDb", SampleGain, SpkWordFormat.Q16);
 
     public static readonly SpkLayout Play = new("Play", (uint)SpkEventType.Leaf,
-        [new("sound", 2, SpkWordFormat.Id, SpkReference.Resource), new("rolloff", 7, SpkWordFormat.Id, SpkReference.Rolloff)],
-        defaults: new() { [4] = One, [7] = NoId });
+        [new("sound", 2, SpkWordFormat.Id, SpkReference.Resource),
+            new("rolloff", PlayRolloff, SpkWordFormat.Id, SpkReference.Rolloff),
+            new("positioned", PlayPositioned, SpkWordFormat.Bool)],
+        defaults: new() { [4] = One, [PlayRolloff] = NoId });
 
     public static readonly SpkLayout StopNGo = new("StopNGo", (uint)SpkEventType.StopNGo,
         [new("stop", 2, SpkWordFormat.Id, SpkReference.Event), new("play", 3, SpkWordFormat.Id, SpkReference.Event)]);

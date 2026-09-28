@@ -27,6 +27,11 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - Staging an edit keeps its file selected, so its preview stays open.
 - The `.fcb` and Domino sound previews play a random choice of a random container.
 - `spk list` names resource kinds (Sample, Random, Switch, Multilayer).
+- A Play's word 14 is named `positioned`, in the XML and as a checkbox in the App. `spk new` sets it
+  from the rolloff, and `--unpositioned` clears it for a sound played through a first-person sound
+  type, such as the player's shot echo, where a positioned event plays nothing.
+- `spk new` and the App's variations write records in ascending id order, as retail sound banks list
+  them; `spk encode` notes a bank that is not.
 
 ### Fixed
 - Random, switch and multilayer resources no longer read as a link to their child count in the

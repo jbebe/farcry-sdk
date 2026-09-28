@@ -270,6 +270,9 @@ own. A step is done when it is heard in game.
   [`.spk` page](/farcry-sdk/docs/file-formats/spk) still contradicts.
 - [ ] **The App's `.spk` import keeps the replacement's own length**, as `jackall-cli spk import`
   does; today it pads.
+- [x] **Records in ascending id order.** `spk new` and the App's variations write records by id, and
+  the checks note a sound bank that is not. Not what broke the Makarov's echo: bark banks play out of
+  order, and sorting alone left the echo silent. The cause was event word `[14]`, now `positioned`.
 
 ### Open reverse-engineering questions
 

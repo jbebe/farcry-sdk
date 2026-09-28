@@ -31,7 +31,8 @@ decode changes nothing. The built bank goes in your layer at `mods/soundbinary/<
 
 Select an `.spk` on the Files tab. The panel shows the bank as a tree of what plays what, and edits
 the selected record in place:
-- **Fields:** a Play's sound and rolloff; a sample's gain and loop; a container's silence and flags.
+- **Fields:** a Play's sound, rolloff and whether it is positioned; a sample's gain and loop; a
+  container's silence and flags. Records a variation adds go where their id falls.
 - **Random containers:** each choice's chance as a percentage, with the others rescaling to keep
   their proportions. **Add variation…** imports any audio file as a new choice, transcoded to the
   format of the samples already there. On a Play over a single sample, it first wraps that sample
@@ -51,7 +52,7 @@ One element per record, in file order:
 
 | Element | Record | What you edit |
 | --- | --- | --- |
-| `<Play>` | event type 1 | `sound` (the resource it plays), `rolloff` (the distance curve; none means unpositioned) |
+| `<Play>` | event type 1 | `sound` (the resource it plays), `rolloff` (the distance curve), `positioned` (whether it plays at a position; see below) |
 | `<MultiEvent>` | event type 12 | `<Child event>` per event it starts, all at once |
 | `<SwitchEvent>` | event type 11 | `group`, `default`, `<Case value event>` per switch value |
 | `<StopNGo>` | event type 4 | `stop`, `play` |
@@ -110,9 +111,15 @@ jackall-cli spk new 0x00fc0200 shot_a.wav shot_b.wav shot_c.wav --rolloff 0x0044
 jackall-cli spk encode 00fc0200\00fc0200.xml
 ```
 
-Ids run on from the event's: the container, then a sample and its audio per clip. `--like` copies the
-unidentified words of a retail event and sample, which is how a weapon shot should start. The audio
-is copied in beside the XML, so the folder is the source you keep.
+Ids run on from the event's: the container, then a sample and its audio per clip, and the records are
+written in that order, as retail sound banks list theirs. `--like` copies the unidentified words of a
+retail event and sample, which is how a weapon shot should start. The audio is copied in beside the
+XML, so the folder is the source you keep.
+
+`positioned` follows the rolloff, as it does on every retail event. A sound the game plays through a
+first-person sound type needs `--unpositioned` even with a rolloff: a positioned event fails to play
+there. The player's shot echo is one **(heard, 2026-09-28)**; the same event, unpositioned, also serves
+NPC shots.
 
 To randomise a retail sound instead, decode its bank. Add a `<Sample>` and an `<Audio>` per new
 variation. Then put a `<Random>` between the event and the samples, or add `<Choice>`s to the one
@@ -129,7 +136,10 @@ where a ricochet variant goes (`004565a3.spk`).
   - an event bank with no record of the id it is named after;
   - a `<Play>` with a rolloff over a stereo sample. Stereo plays unpositioned, so the curve is
     ignored **(heard, 2026-09-27)**.
-- **Notes:** ids the bank points at but does not hold. Another loaded bank has to supply them.
+- **Notes:**
+  - ids the bank points at but does not hold. Another loaded bank has to supply them;
+  - records out of ascending id order in a bank named after its event. Retail sound banks keep that
+    order; the game plays banks out of it too.
 
 ## How the game finds a bank
 

@@ -45,7 +45,7 @@ public static class SpkBankEdits
             Id = bank.NewId(bankId), Type = SpkRecordType.TransformedFixed128, Kind = (uint)SpkResourceKind.Random,
             Words = SpkLayout.Random.NewWords(), Entries = [new SpkEntry(sound.Id, SpkLayout.One)],
         };
-        bank.Records.Insert(bank.Records.IndexOf(owner), random);
+        bank.Insert(random);
         owner.Words[2] = random.Id;
         return random;
     }
@@ -59,7 +59,7 @@ public static class SpkBankEdits
     public static SpkBankRecord AddVariation(this SpkBank bank, SpkBankRecord random, byte[] stream, int? sampleRate, uint bankId)
     {
         var audio = new SpkBankRecord { Id = bank.NewId(bankId), Type = SpkRecordType.FlatCopy, Data = stream, SampleRate = sampleRate };
-        bank.Records.Insert(bank.Records.IndexOf(random), audio);
+        bank.Insert(audio);
 
         uint[] words = bank.TemplateSample(random)?.Words is { } template ? [.. template] : SpkLayout.Sample.NewWords();
         words[SpkLayout.SampleAudio] = audio.Id;
@@ -67,7 +67,7 @@ public static class SpkBankEdits
         {
             Id = bank.NewId(bankId), Type = SpkRecordType.TransformedFixed128, Kind = (uint)SpkResourceKind.Sample, Words = words,
         };
-        bank.Records.Insert(bank.Records.IndexOf(random), sample);
+        bank.Insert(sample);
 
         uint average = random.Entries.Count == 0 ? SpkLayout.One : (uint)random.Entries.Average(e => e.Value);
         random.Entries.Add(new SpkEntry(sample.Id, average));
@@ -131,6 +131,13 @@ public static class SpkBankEdits
             random.Entries[i] = random.Entries[i] with { Value = Q16(weights[i]) };
         }
         random.Words[8] = Q16(weights[^1]);
+    }
+
+    /// <summary>Adds a record where its id falls, as retail sound banks list their records.</summary>
+    public static void Insert(this SpkBank bank, SpkBankRecord record)
+    {
+        int after = bank.Records.FindIndex(r => r.Id > record.Id);
+        bank.Records.Insert(after < 0 ? bank.Records.Count : after, record);
     }
 
     private static bool IsReferenced(SpkBank bank, uint id) =>

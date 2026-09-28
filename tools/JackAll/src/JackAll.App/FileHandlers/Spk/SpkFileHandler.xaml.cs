@@ -30,7 +30,7 @@ public partial class SpkFileHandler : UserControl
 
     private static readonly Dictionary<string, string> FieldLabels = new()
     {
-        ["sound"] = "Plays", ["rolloff"] = "Rolloff curve", ["gainDb"] = "Gain (dB)", ["audio"] = "Audio",
+        ["sound"] = "Plays", ["rolloff"] = "Rolloff curve", ["positioned"] = "Positioned", ["gainDb"] = "Gain (dB)", ["audio"] = "Audio",
         ["loop"] = "Loops", ["silence"] = "Silence (%)", ["repeatSilence"] = "Silence may repeat",
         ["sequence"] = "Play in order", ["group"] = "Switch group", ["default"] = "Default",
         ["stop"] = "Stops", ["play"] = "Then plays", ["effect"] = "Reverb effect", ["target"] = "Target",
@@ -167,7 +167,9 @@ public partial class SpkFileHandler : UserControl
             { Raw: true } => $"{record.Data.Length:N0} bytes, not decoded",
             { IsAudio: true } => DescribeAudio(record),
             { IsRolloff: true } => record.Points.Count == 0 ? "no points" : $"gone at {record.Points[^1].X:0.#} m",
-            _ when layout == SpkLayout.Play => record.Word(7) == SpkLayout.NoId ? "unpositioned" : $"rolloff 0x{record.Word(7):x8}",
+            _ when layout == SpkLayout.Play => Join(
+                record.Word(SpkLayout.PlayPositioned) == 1 ? "positioned" : "unpositioned",
+                record.Word(SpkLayout.PlayRolloff) != SpkLayout.NoId ? $"rolloff 0x{record.Word(SpkLayout.PlayRolloff):x8}" : ""),
             _ when layout == SpkLayout.Sample => Join(
                 record.Word(SpkLayout.SampleGain) != 0 ? $"{SpkLayout.FromQ16(record.Word(SpkLayout.SampleGain)):0.#} dB" : "",
                 record.Word(SpkLayout.SampleLoop) == 1 ? "loops" : ""),
