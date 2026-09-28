@@ -50,9 +50,9 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | G3KA4 | [x] | [x] | [x] | JSRS g3 close_1, 1 ms trimmed, curved fade from 75 ms, before the room's reflections at 100-120 ms, at -3.5 dB. NPC: its mono, the same, at -4 dB. Per round from banks `0x00FC0240`/`0x00FC0244`. Echo: big |
 | M16 (and persistent) | [x] | [x] | [x] | DS lr300 close_4, 9 ms trimmed, curved fade from 65 ms, before the room's reflection at 80-100 ms, at -3.5 dB. NPC: mono close_4 (not the same recording), trimmed to its crack, same fade, at -5 dB. Per round from banks `0x00FC0250`/`0x00FC0254`. Echo: big |
 | MP5 (suppressed; Mike's rusty, persistent) | [x] | [x] | none | DS `_sd` smg9 sd_close_4, 16 ms trimmed; it fires a second round 44 ms later, so faded from 28 ms at 1 dB/ms. NPC: its mono, the same, on the suppressed rolloff. 1P at -6 dB, NPC at -8 dB, a little over retail's loops (-10 dB was too quiet). Per round from banks `0x00FC0260`/`0x00FC0264` |
-| Dragunov (AI, Merc, Mike's rusty, persistent) | [~] | [~] | [~] | Retail's own, kept by the user, curved fade from 115 ms, where its crack and blast drop, to lose its baked-in echo. At the original's loudness. Echo: big |
-| AS50 (and persistent) | [~] | [~] | [~] | Retail's own, kept by the user, curved fade from 120 ms, where its highs drop, before its boom rings on for 400 ms. At the original's loudness. Echo: big |
-| Ithaca 37 | [~] | [~] | [~] | DS mp133 Close_2, curved fade from 165 ms, where the boom drops into the room, at -3.5 dB (the original's -7.5 is 4 dB under the rifles). NPC: mono close_4 (not the same recording), from 160 ms, at -4 dB. Echo: big |
+| Dragunov (AI, Merc, Mike's rusty, persistent) | [x] | [x] | [x] | Retail's own, kept by the user, curved fade from 115 ms, where its crack and blast drop, to lose its baked-in echo. At the original's loudness. Echo: big |
+| AS50 (and persistent) | [x] | [x] | [x] | Retail's own, kept by the user, curved fade from 120 ms, where its highs drop, before its boom rings on for 400 ms. At the original's loudness. Echo: big |
+| Ithaca 37 | [x] | [x] | [x] | DS mp133 Close_2, curved fade from 165 ms, where the boom drops into the room, at -3.5 dB (the original's -7.5 is 4 dB under the rifles). NPC: mono close_4 (not the same recording), from 160 ms, at -4 dB. Echo: big |
 | SPAS-12 | [ ] | [ ] | [ ] | |
 | USAS-12 | [ ] | [ ] | [ ] | |
 | MGL-140 | [ ] | [ ] | [ ] | |
