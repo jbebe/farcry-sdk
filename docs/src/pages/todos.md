@@ -82,6 +82,13 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 
 - [ ] Binoculars with a distance meter
 - [ ] Flashlight
+- [ ] **Downed enemies soak too much lead; change it in some way.** A shot that takes a soldier to
+  49 health or below can down him instead of killing him. His health is then set to 49, even when
+  the shot would have killed him. For 0.4 s after that, hits do nothing
+  (`fHealthFailureCantDieDuration`). After that, torso hits do half damage and limb hits a fifth
+  (`fHealthFailureTorsoHitModifier` 0.5, `fHealthFailureLimbsHitModifier` 0.2, on
+  `CFCXCountersComponentAI` of all 135 soldier archetypes). Traced in the server build
+  (`CFCXCountersComponentAI::DamageHealth`); not cross-checked in `Dunia.dll`
 
 ## Sound
 
