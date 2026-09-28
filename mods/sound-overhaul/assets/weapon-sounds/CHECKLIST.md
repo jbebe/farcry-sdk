@@ -46,7 +46,7 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | Weapon | 1P | NPC | Echo | Source |
 |---|---|---|---|---|
 | AK-47 (and gold) | [x] | [x] | [x] | DS ak103 close_4, 5 ms trimmed, curved fade from 80 ms, before the room's reflection at 93 ms, at -3.5 dB. NPC: mono close_1 (no mono close_4 is the same recording), trimmed to its shot, same fade, at -3 dB. Per round from banks `0x00FC0220`/`0x00FC0224`. Echo: big |
-| FAL (and persistent) | [~] | [~] | [~] | DS scar close_3, 9 ms trimmed, curved fade from 85 ms, before the room's reflection at 90 ms, at -3.5 dB. NPC: mono close_3 (not the same recording), same fade, at -5 dB. Per round from banks `0x00FC0230`/`0x00FC0234`. Echo: big |
+| FAL (and persistent) | [x] | [x] | [x] | DS scar close_3, 9 ms trimmed, curved fade from 85 ms, before the room's reflection at 90 ms, at -3.5 dB. NPC: mono close_3 (not the same recording), same fade, at -5 dB. Per round from banks `0x00FC0230`/`0x00FC0234`. Echo: big |
 | G3KA4 | [ ] | [ ] | [ ] | |
 | M16 | [ ] | [ ] | [ ] | |
 | MP5 (suppressed) | [ ] | [ ] | [ ] | |
