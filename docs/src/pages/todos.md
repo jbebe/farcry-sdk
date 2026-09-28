@@ -81,6 +81,7 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 ## Mod ideas
 
 - [ ] Binoculars with a distance meter
+- [ ] Flashlight
 
 ## Sound
 
