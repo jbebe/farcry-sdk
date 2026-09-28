@@ -36,7 +36,7 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | 6P9 (silenced Makarov) | [~] | [~] | none | DS `_sd` 9_2 sd_close_3, curved fade from 94.9 ms (NPC: its mono downmix), at the original's loudness |
 | Star .45 | [~] | [~] | [~] | DS 1911 close_1, curved fade from 138.6 ms, 1P at -1.5 dB (the original's -4.1 was weak). NPC: mono close_1, a separate take, curved fade from 152.5 ms, at the original's loudness. Echo: small |
 | Desert Eagle | [x] | [~] | [~] | JSRS deagle close_3, curved fade from 140 ms (NPC: mono close_3). 1P at the original's loudness, NPC at -3 dB. DS deagle's takes sounded like a drum kick. Echo: big |
-| Uzi | [ ] | [ ] | [ ] | |
+| Uzi | [~] | [~] | [~] | DS bizon close_4b, curved fade from 110 ms (NPC: mono close_4, the closest take, from 115 ms), both at -3 dB, played per round from banks `0x00FC0200`/`0x00FC0204`. Echo: small |
 | MAC-10 | [ ] | [ ] | [ ] | |
 | M79 | [ ] | [ ] | [ ] | |
 | Flare gun | [ ] | [ ] | [ ] | |
