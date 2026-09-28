@@ -38,7 +38,7 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | Desert Eagle | [x] | [~] | [~] | JSRS deagle close_3, curved fade from 140 ms (NPC: mono close_3). 1P at the original's loudness, NPC undriven at -9 dB (-3 dB was very over-amped). DS deagle's takes sounded like a drum kick. Echo: big |
 | Uzi | [x] | [x] | [x] | DS bizon close_4b, curved fade from 110 ms (NPC: mono close_4, the closest take, from 115 ms), both at -3 dB, played per round from banks `0x00FC0200`/`0x00FC0204`. Echo: small |
 | MAC-10 (and Mike's rusty) | [x] | [x] | [x] | JSRS ump close_2, curved fade from 85 ms (NPC: its mono), both at -3 dB (DS ump close_1 never sounded right, however driven or filtered). Per round from banks `0x00FC0210`/`0x00FC0214`. Echo: small |
-| M79 (and Mike's rusty) | [~] | [~] | [~] | DS ugl close_1, 112 ms of mechanism noise trimmed, curved fade from 145 ms (NPC: mono close_1, a separate take, trimmed to its launch and faded from 95 ms). Both at the original's loudness. Echo: small |
+| M79 (and Mike's rusty) | [x] | [x] | [x] | DS ugl close_1, 112 ms of mechanism noise trimmed, curved fade from 145 ms (NPC: mono close_1, a separate take, trimmed to its launch and faded from 95 ms). Both at the original's loudness. Echo: small |
 | Flare gun | [ ] | [ ] | [ ] | |
 
 ## Primary
