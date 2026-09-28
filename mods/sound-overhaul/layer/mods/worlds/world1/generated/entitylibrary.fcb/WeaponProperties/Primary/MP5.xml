@@ -1,8 +1,8 @@
     <object hash="256A1FF9">
-      <value name="Name" type="String">Primary.M16.Persistent</value>
+      <value name="Name" type="String">Primary.MP5</value>
       <object type="Entity">
-        <value name="hidName" type="String">WeaponProperties.Primary.M16.Persistent</value>
-        <value name="disEntityId" type="Int64">5492</value>
+        <value name="hidName" type="String">WeaponProperties.Primary.MP5</value>
+        <value name="disEntityId" type="Int64">5496</value>
         <value name="text_hidEntityClass" type="String">CEntity</value>
         <value name="hidEntityClass" type="Hash">50C95067</value>
         <value name="hidResourceCount" type="UInt32">0</value>
@@ -26,13 +26,13 @@
           <object type="CWeaponProperties">
             <value name="hidHasAliasName" type="Bool">False</value>
             <object type="CommonProperties">
-              <value name="sName" type="String">m16</value>
-              <value name="sDisplayName" type="String">AR-16</value>
+              <value name="sName" type="String">mp5</value>
+              <value name="sDisplayName" type="String">MP-5</value>
               <value name="fReloadTime" type="Float">0</value>
               <value name="bAutoReload" type="Bool">True</value>
               <value name="bIsSilent" type="Bool">False</value>
               <value name="bVisibleHolstered" type="Bool">True</value>
-              <value name="bEmitLight" type="Bool">True</value>
+              <value name="bEmitLight" type="Bool">False</value>
               <value name="selReloadType" type="UInt32">0</value>
               <value name="selWeaponClass" type="UInt32">2</value>
               <value name="selFireStrategy" type="UInt32">0</value>
@@ -48,16 +48,16 @@
                 <x>60</x>
                 <y>75</y>
               </value>
-              <value name="fUnjamTime" type="Float">2.83</value>
+              <value name="fUnjamTime" type="Float">2.7</value>
               <value name="selJamType" type="UInt32">0</value>
-              <value name="iClipsForSelfDestruct" type="UInt32">30</value>
+              <value name="iClipsForSelfDestruct" type="UInt32">40</value>
               <value name="bIsIndestructible" type="Bool">False</value>
               <value name="bIsBreakable" type="Bool">True</value>
               <value name="fLookSensitivityFactor" type="Float">1</value>
               <value name="fMoveSpeedFactor" type="Float">1</value>
-              <value name="fForcedReliability" type="Float">72</value>
+              <value name="fForcedReliability" type="Float">0</value>
               <value name="fInitialJamCounter" type="Float">0</value>
-              <value name="archPickupArchetype" type="String">pickups.Weapons.M16_new.Persistent</value>
+              <value name="archPickupArchetype" type="String">pickups.Weapons.MP5_new.Dropped</value>
               <value name="fShootingAngle" type="Float">45</value>
               <value name="fShootingIronsightAngle" type="Float">60</value>
               <value name="bSingleHitHealthFailure" type="Bool">False</value>
@@ -147,7 +147,7 @@
               </object>
               <object type="FireRate">
                 <value name="fBusyDuration" type="Float">0</value>
-                <value name="iFireRate" type="Float">750</value>
+                <value name="iFireRate" type="Float">700</value>
                 <value name="selFireRateMode" type="UInt32">1</value>
                 <object type="enumFireRateMode">
                   <object type="enum">
@@ -174,9 +174,9 @@
               </object>
               <object type="Recoil">
                 <value name="iRecoilRecoveryLevel" type="Int32">1</value>
-                <value name="fRecoilAchieveTime" type="Float">0.2</value>
+                <value name="fRecoilAchieveTime" type="Float">0.15</value>
                 <value name="fRecoilAnimationWeight" type="Float">1</value>
-                <value name="fRecoilMax" type="Float">35</value>
+                <value name="fRecoilMax" type="Float">30</value>
                 <object type="RecoilIK">
                   <value name="fIKRecoilBurstSpeedIn" type="Float">0</value>
                   <value name="fIKRecoilBurstPitchRandom" type="Float">0</value>
@@ -193,10 +193,10 @@
                 <value name="fMoveSpeedFactor" type="Float">0.5</value>
                 <value name="bCanIronsight" type="Bool">True</value>
                 <value name="fLookSensitivityFactor" type="Float">0.29</value>
-                <value name="fIronsightFOV" type="Float">0.6</value>
-                <value name="fIronsightTransitionTime" type="Float">0.3</value>
-                <value name="fIronsightRecoilFactor" type="Float">0.65</value>
-                <value name="fIronsightPrepareDelay" type="Float">0.5</value>
+                <value name="fIronsightFOV" type="Float">0.95</value>
+                <value name="fIronsightTransitionTime" type="Float">0.2</value>
+                <value name="fIronsightRecoilFactor" type="Float">0.5</value>
+                <value name="fIronsightPrepareDelay" type="Float">0.3</value>
                 <value name="bIronsightCanPrepare" type="Bool">False</value>
                 <value name="archTransitionCurve" type="String">weapons.AimCurves.IronsightFOVCurve</value>
                 <value name="archAnimPlaybackCurve" type="String">weapons.AimCurves.IronsightFOVCurve</value>
@@ -218,14 +218,14 @@
                 <value name="archTargetDistanceCurve" type="String">Curves.ShootingSystem.DistanceAccuracy</value>
                 <value name="archSuccessfulHitCurve" type="String">Curves.ShootingSystem.SuccessfulHit</value>
                 <value name="fSuccessfulBulletHitTimer" type="Float">1</value>
-                <value name="nForcedFailureMinCausal" type="UInt32">1</value>
-                <value name="nForcedFailureMaxCausal" type="UInt32">3</value>
-                <value name="nForcedFailureMinExperimented" type="UInt32">1</value>
-                <value name="nForcedFailureMaxExperimented" type="UInt32">2</value>
-                <value name="nForcedFailureMinHardcore" type="UInt32">1</value>
-                <value name="nForcedFailureMaxHardcore" type="UInt32">1</value>
-                <value name="nForcedFailureMinInfamous" type="UInt32">0</value>
-                <value name="nForcedFailureMaxInfamous" type="UInt32">0</value>
+                <value name="nForcedFailureMinCausal" type="UInt32">3</value>
+                <value name="nForcedFailureMaxCausal" type="UInt32">5</value>
+                <value name="nForcedFailureMinExperimented" type="UInt32">3</value>
+                <value name="nForcedFailureMaxExperimented" type="UInt32">5</value>
+                <value name="nForcedFailureMinHardcore" type="UInt32">3</value>
+                <value name="nForcedFailureMaxHardcore" type="UInt32">5</value>
+                <value name="nForcedFailureMinInfamous" type="UInt32">3</value>
+                <value name="nForcedFailureMaxInfamous" type="UInt32">5</value>
                 <value name="fBurstLengthLong_Max" type="Float">1.2</value>
                 <value name="fBurstLengthLong_Min" type="Float">0.8</value>
                 <value name="fBurstLengthMid_Max" type="Float">0.8</value>
@@ -254,8 +254,8 @@
                 </object>
               </object>
               <object type="AICurve">
-                <value name="archDamageMultiplierVisibleCurve" type="String">Curves.AIWeapon.AssaultDamageMultiplierVisible</value>
-                <value name="archDamageMultiplierNotVisibleCurve" type="String">Curves.AIWeapon.AssaultDamageMultiplierNotVisible</value>
+                <value name="archDamageMultiplierVisibleCurve" type="String"></value>
+                <value name="archDamageMultiplierNotVisibleCurve" type="String"></value>
                 <value name="archPrimaryBulletChanceOfSuccessCurve" type="String"></value>
                 <value name="archSecondaryBulletChanceOfSuccessCurve" type="String"></value>
               </object>
@@ -263,10 +263,10 @@
             <object type="FireStrategyProperties">
               <value name="bUseAngleSpread" type="Bool">False</value>
               <value name="iBulletsShot" type="UInt32">1</value>
-              <value name="iBurstLength" type="UInt32">3</value>
+              <value name="iBurstLength" type="UInt32">0</value>
               <value name="fAngleYawBulletSpread" type="Float">2</value>
               <value name="fAnglePitchBulletSpread" type="Float">2</value>
-              <value name="bHasMuzzleLight" type="Bool">True</value>
+              <value name="bHasMuzzleLight" type="Bool">False</value>
               <value name="text_matimpShellImpactFx" type="String">Weapon.MetalShellMedium</value>
               <value name="matimpShellImpactFx" type="Hash">561ED150</value>
               <value name="text_matimpBulletImpactFx" type="String">Weapon.Bullet</value>
@@ -283,10 +283,10 @@
                 <value name="text_sDetail" type="String">BulletImpact</value>
                 <value name="sDetail" type="Hash">AB3FB98A</value>
                 <value name="selType" type="UInt32">3</value>
-                <value name="nLevel" type="UInt32">13</value>
+                <value name="nLevel" type="UInt32">8</value>
                 <value name="hidShowType" type="Bool">True</value>
                 <value name="hidShowRadius" type="Bool">False</value>
-                <value name="fPhysImpulse" type="Float">50</value>
+                <value name="fPhysImpulse" type="Float">25</value>
                 <object type="enumType">
                   <object type="enum">
                     <value name="Value" type="String">None</value>
@@ -345,8 +345,8 @@
                     <value name="text_sDetail" type="String"></value>
                     <value name="sDetail" type="Hash">FFFFFFFF</value>
                     <value name="selType" type="UInt32">1</value>
-                    <value name="nLevel" type="UInt32">8</value>
-                    <value name="fRadius" type="Float">75</value>
+                    <value name="nLevel" type="UInt32">3</value>
+                    <value name="fRadius" type="Float">5</value>
                     <value name="bFalloff" type="Bool">True</value>
                     <value name="nFalloffMinLevel" type="UInt32">1</value>
                     <value name="hidShowType" type="Bool">True</value>
@@ -463,8 +463,8 @@
                     <value name="text_sDetail" type="String"></value>
                     <value name="sDetail" type="Hash">FFFFFFFF</value>
                     <value name="selType" type="UInt32">1</value>
-                    <value name="nLevel" type="UInt32">4</value>
-                    <value name="fRadius" type="Float">5</value>
+                    <value name="nLevel" type="UInt32">3</value>
+                    <value name="fRadius" type="Float">4</value>
                     <value name="bFalloff" type="Bool">True</value>
                     <value name="nFalloffMinLevel" type="UInt32">1</value>
                     <value name="hidShowType" type="Bool">True</value>
@@ -575,12 +575,12 @@
                 <object type="RangeMultiplierCasual">
                   <object type="RangeMultiplierDifficulty">
                     <object type="RangeMultiplier">
-                      <value name="iMultiplier" type="Int32">8</value>
+                      <value name="iMultiplier" type="Int32">7</value>
                       <value name="fMinRange" type="Float">0</value>
                       <value name="fMaxRange" type="Float">2</value>
                     </object>
                     <object type="RangeMultiplier">
-                      <value name="iMultiplier" type="Int32">4</value>
+                      <value name="iMultiplier" type="Int32">3</value>
                       <value name="fMinRange" type="Float">2</value>
                       <value name="fMaxRange" type="Float">5</value>
                     </object>
@@ -599,7 +599,7 @@
                 <object type="RangeMultiplierExperimented">
                   <object type="RangeMultiplierDifficulty">
                     <object type="RangeMultiplier">
-                      <value name="iMultiplier" type="Int32">4</value>
+                      <value name="iMultiplier" type="Int32">3</value>
                       <value name="fMinRange" type="Float">0</value>
                       <value name="fMaxRange" type="Float">2</value>
                     </object>
@@ -654,18 +654,18 @@
                 <value name="sndHitPlayerHeadSound" type="String">0xFFFFFFFF</value>
                 <value name="sndtpHitPlayerHeadSoundType" type="Int32">-1</value>
                 <value name="sndmlDistanceFromShootingSoundToPlayerMultilayer" type="Hash">FFFFFFFF</value>
-                <value name="sndSingleBulletShot" type="String">0x00FC0250</value>
-                <value name="sndSingleBulletShotEcho" type="String">0x00FC0140</value>
+                <value name="sndSingleBulletShot" type="String">0x00FC0260</value>
+                <value name="sndSingleBulletShotEcho" type="String">0xFFFFFFFF</value>
                 <value name="sndtpSingleBulletShotType" type="Int32">8</value>
                 <value name="sndStartAutoBulletShot" type="String">0xFFFFFFFF</value>
                 <value name="sndStopAutoBulletShot" type="String">0xFFFFFFFF</value>
                 <value name="sndStartAutoBulletShotEcho" type="String">0xFFFFFFFF</value>
                 <value name="sndStopAutoBulletShotEcho" type="String">0x004B291E</value>
                 <value name="sndtpAutoBulletShotType" type="Int32">8</value>
-                <value name="fAutoBulletShotFadeOutMultiplier" type="Float">1.3</value>
-                <value name="fAutoBulletShotMinFadeOut" type="Float">0.07</value>
+                <value name="fAutoBulletShotFadeOutMultiplier" type="Float">1.4</value>
+                <value name="fAutoBulletShotMinFadeOut" type="Float">0.09</value>
                 <object type="ThirdPerson">
-                  <value name="sndSingleBulletShot" type="String">0x00FC0254</value>
+                  <value name="sndSingleBulletShot" type="String">0x00FC0264</value>
                   <value name="sndtpSingleBulletShotType" type="Int32">9</value>
                   <value name="sndStartAutoBulletShot" type="String">0xFFFFFFFF</value>
                   <value name="sndStopAutoBulletShot" type="String">0xFFFFFFFF</value>
@@ -673,10 +673,10 @@
                 </object>
               </object>
               <object type="Particles">
-                <value name="text_psMuzzleParticlesId" type="String">weapons.weapons.pl_muzzleflash_ak47</value>
-                <value name="psMuzzleParticlesId" type="Hash">1CCBF728</value>
-                <value name="text_psMuzzleParticlesId_3rd" type="String">weapons.weapons.muzzleflash_ak47</value>
-                <value name="psMuzzleParticlesId_3rd" type="Hash">E0AC1190</value>
+                <value name="text_psMuzzleParticlesId" type="String">weapons.weapons.pl_muzzleflash_sniper_riffle</value>
+                <value name="psMuzzleParticlesId" type="Hash">4A671433</value>
+                <value name="text_psMuzzleParticlesId_3rd" type="String">weapons.weapons.muzzleflash_sniper_riffle</value>
+                <value name="psMuzzleParticlesId_3rd" type="Hash">D025F159</value>
                 <value name="text_MuzzleBone" type="String">FX_FIRE</value>
                 <value name="MuzzleBone" type="Hash">AF2676DA</value>
                 <value name="text_psBulletCaseParticleId" type="String">weapons.weapons.brass_ak47</value>
@@ -690,27 +690,27 @@
               </object>
               <object type="FirstPerson">
                 <value name="fBulletSpread_MovementModifier" type="Float">1.25</value>
-                <value name="fBulletSpread_StabilizationTime" type="Float">0.2</value>
-                <value name="fBulletSpread_MinimumSpreadPercentage" type="Float">0.7</value>
+                <value name="fBulletSpread_StabilizationTime" type="Float">0.5</value>
+                <value name="fBulletSpread_MinimumSpreadPercentage" type="Float">0.8</value>
                 <object type="BulletSpread">
-                  <value name="fAmplitude" type="Float">2.2</value>
-                  <value name="fFrequency" type="Float">15</value>
+                  <value name="fAmplitude" type="Float">2</value>
+                  <value name="fFrequency" type="Float">10</value>
                 </object>
                 <object type="BulletSpread_IronSight">
                   <value name="fAmplitude" type="Float">0.4</value>
-                  <value name="fFrequency" type="Float">15</value>
+                  <value name="fFrequency" type="Float">10</value>
                 </object>
                 <object type="BulletSpreadCrouch">
                   <value name="fAmplitude" type="Float">1</value>
-                  <value name="fFrequency" type="Float">15</value>
+                  <value name="fFrequency" type="Float">10</value>
                 </object>
                 <object type="BulletSpreadCrouch_IronSight">
                   <value name="fAmplitude" type="Float">0.38</value>
-                  <value name="fFrequency" type="Float">15</value>
+                  <value name="fFrequency" type="Float">10</value>
                 </object>
                 <object type="BulletSpreadJump">
-                  <value name="fAmplitude" type="Float">3.2</value>
-                  <value name="fFrequency" type="Float">15</value>
+                  <value name="fAmplitude" type="Float">3</value>
+                  <value name="fFrequency" type="Float">10</value>
                 </object>
               </object>
               <object type="BulletTracer">
@@ -723,7 +723,7 @@
                 <value name="fLengthDistortion" type="Float">50</value>
                 <value name="fWidth" type="Float">0.02</value>
                 <value name="fOffset" type="Float">0.5</value>
-                <value name="iFrequency" type="Int32">3</value>
+                <value name="iFrequency" type="Int32">5</value>
               </object>
             </object>
           </object>
