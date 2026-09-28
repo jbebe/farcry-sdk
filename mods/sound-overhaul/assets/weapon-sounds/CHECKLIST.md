@@ -33,7 +33,7 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | Weapon | 1P | NPC | Echo | Source |
 |---|---|---|---|---|
 | Makarov | [x] | [x] | [~] | 1P: JSRS pm close_3, cut 128.7 ms. NPC: DS mono pm close_1, cut 185 ms. Echo: small caliber |
-| 6P9 (silenced Makarov) | [ ] | [ ] | [ ] | |
+| 6P9 (silenced Makarov) | [~] | [~] | none | DS `_sd` 9_2 sd_close_3, cut 94.9 ms, at the original's loudness |
 | Star .45 | [ ] | [ ] | [ ] | |
 | Desert Eagle | [ ] | [ ] | [ ] | |
 | Uzi | [ ] | [ ] | [ ] | |
