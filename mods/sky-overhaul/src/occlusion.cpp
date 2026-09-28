@@ -4,7 +4,6 @@
 #include "tuning.h"
 
 #include "engine/camera.h"
-#include "engine/clock.h"
 #include "engine/com.h"
 #include "engine/depth_texture.h"
 #include "engine/render_target.h"
@@ -47,9 +46,6 @@ namespace {
     SkyOverhaul::PixelShader g_gtaoShader{"occlusion", g_occlusionGtaoPixelShader};
     SkyOverhaul::PixelShader g_blurShader{"occlusion blur", g_occlusionBlurPixelShader};
     SkyOverhaul::PixelShader g_applyShader{"occlusion apply", g_occlusionApplyPixelShader};
-
-    SkyOverhaul::Stopwatch g_clock;
-    SkyOverhaul::Heartbeat g_heartbeat{2.0f};
 
     void ReleaseTargets() {
         for (Target& target : g_halves) {
@@ -173,11 +169,9 @@ void SkyOverhaul::Occlusion::OnScenePass(const Frame::Pass& pass) {
     SolidDepth::Found solid = {};
     DepthTexture::Found engine = {};
     Camera::View view;
-    const bool drawn = wanted && SolidDepth::Latest(solid) && DepthTexture::Latest(engine) &&
-                       Camera::Read(pass.device, view) && Draw(pass, view, engine, solid, v);
-
-    if (g_heartbeat.Due(g_clock.Lap())) {
-        FCSE::Logf("occlusion f%u: drawn %d", pass.frame, drawn ? 1 : 0);
+    if (wanted && SolidDepth::Latest(solid) && DepthTexture::Latest(engine) &&
+        Camera::Read(pass.device, view)) {
+        Draw(pass, view, engine, solid, v);
     }
 }
 

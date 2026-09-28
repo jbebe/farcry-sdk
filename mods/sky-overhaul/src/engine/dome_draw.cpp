@@ -71,11 +71,6 @@ namespace {
     bool g_watchDepth = false;
     SkyOverhaul::DomeDraw::Mode g_mode = SkyOverhaul::DomeDraw::Mode::Engine;
 
-    uint32_t g_substitutions = 0;
-    uint32_t g_unfoggedMoons = 0;
-    float g_moonVisibility = 0.0f;
-    float g_moonMultiplier = 0.0f;
-
     // Which pass was last drawn into, rather than which frame: a frame can hold more than one sky
     // pass - the world's own and the one behind an open menu - and each of them needs its own sky.
     // No pass has this serial, so the first dome of the session is not mistaken for a second one.
@@ -112,7 +107,6 @@ namespace {
         const bool drawn = g_substitute(device);
         if (drawn) {
             g_drawnPass = pass;
-            g_substitutions++;
         }
         return drawn;
     }
@@ -325,8 +319,6 @@ namespace {
         if (IsMoon(device, numVertices, primitiveCount) &&
             SUCCEEDED(device->GetVertexShaderConstantF(kFogValues, fog, 1)) &&
             SUCCEEDED(device->GetPixelShaderConstantF(kMoonParams, params, 1))) {
-            g_moonVisibility = params[1];
-            g_moonMultiplier = params[2];
             const float peak = params[1] * params[2];
             float held[4] = {params[0], params[1], params[2], params[3]};
             if (peak > kMoonPeak) {
@@ -339,7 +331,6 @@ namespace {
                                              numVertices, startIndex, primitiveCount);
             device->SetPixelShaderConstantF(kMoonParams, params, 1);
             device->SetVertexShaderConstantF(kFogValues, fog, 1);
-            g_unfoggedMoons++;
             return drawn;
         }
         return WatchShaders(device, primitiveCount, [&] {
@@ -364,8 +355,6 @@ bool SkyOverhaul::DomeDraw::Install(SubstituteFn substitute) {
     }
 
     g_substitute = substitute;
-    FCSE::Logf("dome: watching for %u vertices and %u triangles at the far plane", kDomeVertices,
-               kDomePrimitives);
 
     // The final pass draws its grade through it. Not worth refusing the sky over.
     void* plain = Vtable::Slot(kDrawPrimitiveSlot);
@@ -398,17 +387,4 @@ void SkyOverhaul::DomeDraw::SetRocks(RockFn rocks) {
 
 void SkyOverhaul::DomeDraw::SetWatchDepth(bool watch) {
     g_watchDepth = watch;
-}
-
-uint32_t SkyOverhaul::DomeDraw::SubstituteCount() {
-    return g_substitutions;
-}
-
-uint32_t SkyOverhaul::DomeDraw::UnfoggedMoonCount() {
-    return g_unfoggedMoons;
-}
-
-void SkyOverhaul::DomeDraw::MoonParameters(float& visibility, float& multiplier) {
-    visibility = g_moonVisibility;
-    multiplier = g_moonMultiplier;
 }

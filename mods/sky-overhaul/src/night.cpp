@@ -69,7 +69,6 @@ namespace {
     SkyOverhaul::PixelShader g_shader{"night", g_nightPixelShader};
 
     SkyOverhaul::Stopwatch g_clock;
-    SkyOverhaul::Heartbeat g_heartbeat{2.0f};
     float g_grainTime = 0.0f;
 
     void ReleaseResolves() {
@@ -109,8 +108,6 @@ namespace {
             return nullptr;
         }
         empty->desc = target;
-        FCSE::Logf("night: grading %ux%u, format %u", target.Width, target.Height,
-                   static_cast<unsigned>(target.Format));
         return empty;
     }
 
@@ -189,13 +186,8 @@ void SkyOverhaul::Night::OnScenePass(const Frame::Pass& pass) {
     }
     const Values v = Tuning::Current();
     const Gate gate = Measure(lighting, v);
-    const bool drawn = (gate.drain > kFaintest || gate.grain > kFaintest) && Draw(pass, gate, v);
-
-    if (g_heartbeat.Due(elapsed)) {
-        FCSE::Logf("night f%u: sun %+.3f moon %+.3f storm %.2f night %.2f | dusk %.2f "
-                   "moonlight %.2f drain %.2f grain %.4f | drawn %d",
-                   pass.frame, lighting.sunDirection[2], lighting.moonDirection[2], lighting.storm,
-                   lighting.night, gate.dusk, gate.moonlight, gate.drain, gate.grain, drawn ? 1 : 0);
+    if (gate.drain > kFaintest || gate.grain > kFaintest) {
+        Draw(pass, gate, v);
     }
 }
 

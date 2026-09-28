@@ -2,15 +2,10 @@
 // The engine's pixel shaders still shadow, texture and fog them.
 #pragma once
 
-#include "engine/frame.h"
-
 namespace SkyOverhaul::Foliage {
 
 void SetGrass(bool enabled);
 void SetLeaves(bool enabled);
-
-// Logs how many grass and leaf draws were lit by ours since the last time.
-void OnFinalPass(const Frame::Pass& pass);
 
 void ReleaseDeviceObjects();
 

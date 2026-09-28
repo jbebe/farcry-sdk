@@ -8,7 +8,6 @@
 
 namespace {
     // Inside the environment manager.
-    constexpr size_t kTimeScale = 0x25C;
     constexpr size_t kSecondsFromMidnight = 0x260;
     constexpr size_t kCumulatedDays = 0x4EC;
 
@@ -61,7 +60,3 @@ bool SkyOverhaul::TimeOfDay::Elapsed(double& seconds) {
     return true;
 }
 
-float SkyOverhaul::TimeOfDay::Scale() {
-    const uint8_t* manager = Manager();
-    return manager != nullptr ? *reinterpret_cast<const float*>(manager + kTimeScale) : 0.0f;
-}

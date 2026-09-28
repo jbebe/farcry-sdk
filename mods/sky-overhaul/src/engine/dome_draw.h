@@ -83,14 +83,4 @@ struct RockDraw {
 using RockFn = bool (*)(IDirect3DDevice9* device, RockDraw& draw);
 void SetRocks(RockFn rocks);
 
-// How many domes have been replaced. A count that stops climbing while the mode is Overhaul is a
-// dome that stopped being recognised, which is the one failure that would otherwise be silent.
-uint32_t SubstituteCount();
-
-// How many moons have been drawn without the engine's fog.
-uint32_t UnfoggedMoonCount();
-
-// The visibility and HDR multiplier the engine handed the last moon drawn, before the cap.
-void MoonParameters(float& visibility, float& multiplier);
-
 }

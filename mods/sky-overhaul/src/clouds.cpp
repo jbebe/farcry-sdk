@@ -3,14 +3,12 @@
 #include "sky_model.h"
 
 #include "engine/camera.h"
-#include "engine/clock.h"
 #include "engine/cloud_layer.h"
 #include "engine/dome_draw.h"
 #include "engine/noise.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
 #include "engine/time_of_day.h"
-#include "fcse_api.h"
 #include "tuning.h"
 
 #include "clouds_cover_ps.h"
@@ -108,8 +106,6 @@ namespace {
     SkyOverhaul::PixelShader g_coverShader{"clouds cover", g_cloudsCoverPixelShader};
     SkyOverhaul::PixelShader g_maskShader{"clouds mask", g_cloudsMaskPixelShader};
     SkyOverhaul::PixelShader g_shadowShader{"clouds shadow", g_cloudsShadowPixelShader};
-    SkyOverhaul::Stopwatch g_clock;
-    SkyOverhaul::Heartbeat g_heartbeat{2.0f};
 
     // The one light the shader marches toward, and the glow of the air around the moon.
     struct Light {
@@ -158,22 +154,6 @@ namespace {
         return light;
     }
 
-    void LogPass(const SkyOverhaul::Frame::Pass& pass, const SkyOverhaul::Camera::View& view,
-                 const Light& light, const Values& v, float storm, float elapsed,
-                 double gameSeconds, const float drift[2]) {
-        FCSE::Logf("clouds f%u: eye (%.1f %.1f %.1f) base %.0f | dir (%.2f %.2f %.2f) "
-                   "bloom %.2f | %.2f ms",
-                   pass.frame, view.eye[0], view.eye[1], view.eye[2], v.cloudBase,
-                   view.direction[0], view.direction[1], view.direction[2], view.bloom,
-                   elapsed * 1000.0f);
-        FCSE::Logf("clouds f%u: storm %.2f coverage %.2f density %.3f cirrus %.2f opacity %.2f "
-                   "| light (%.3f %.3f %.3f)",
-                   pass.frame, storm, v.cloudCoverage, v.cloudDensity, v.cirrus, v.cirrusOpacity,
-                   light.colour[0], light.colour[1], light.colour[2]);
-        FCSE::Logf("clouds f%u: clock %.0f s at scale %.1f | drift (%.0f %.0f)", pass.frame,
-                   gameSeconds, SkyOverhaul::TimeOfDay::Scale(), drift[0], drift[1]);
-    }
-
     // Where the layer has drifted to, in metres, by `gameSeconds`, round the circle the turning wind
     // traces.
     void Drift(double gameSeconds, const Values& v, float out[2]) {
@@ -185,7 +165,7 @@ namespace {
 
     // Day `day`'s aircraft trails, as the shader's registers take them: one to three, each through a
     // random point over the world in a random direction.
-    int RollTrails(int day, float out[kTrailCount * 4]) {
+    void RollTrails(int day, float out[kTrailCount * 4]) {
         using SkyOverhaul::Noise::Random;
         const int count = 1 + (std::min)(static_cast<int>(Random(day, 0, 0, kTrailSeed) * 3.0f), 2);
         for (int i = 0; i < static_cast<int>(kTrailCount); i++) {
@@ -198,7 +178,6 @@ namespace {
             line[2] = (line[0] * x + line[1] * y) * kCirrusGrain;
             line[3] = i < count ? 0.05f + 0.9f * Random(day, i, 4, kTrailSeed) : 0.0f;
         }
-        return count;
     }
 
     // The shader, this frame's constants and the noise, sampled the way the shape expects.
@@ -279,14 +258,10 @@ void SkyOverhaul::Clouds::Install() {
 }
 
 void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
-    // Every scene pass arrives here and only one of them is the sky, so the clock is read after
-    // the test rather than before it: ticking on all of them would leave the heartbeat measuring
-    // the gap between two passes instead of the time between two frames.
     if (!g_enabled || !pass.sky || !pass.live) {
         return;
     }
     g_drawn = false;
-    const float elapsed = g_clock.Lap();
 
     IDirect3DPixelShader9* shader = g_shader.Get(pass.device);
     Camera::View view;
@@ -306,13 +281,8 @@ void SkyOverhaul::Clouds::OnScenePass(const Frame::Pass& pass) {
     }
     const int day = static_cast<int>(gameSeconds / 86400.0);
     float trails[kTrailCount * 4];
-    const int trailCount = RollTrails(day, trails);
+    RollTrails(day, trails);
     Draw(pass.device, shader, view, lighting, light, v, storminess, drift, trails);
-
-    if (g_heartbeat.Due(elapsed)) {
-        LogPass(pass, view, light, v, lighting.storm, elapsed, gameSeconds, drift);
-        FCSE::Logf("clouds f%u: day %d holds %d trail(s)", pass.frame, day, trailCount);
-    }
 }
 
 bool SkyOverhaul::Clouds::DrawCover(IDirect3DDevice9* device, float left, float top, float right,

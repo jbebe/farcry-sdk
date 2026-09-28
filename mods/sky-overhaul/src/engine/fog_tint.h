@@ -2,7 +2,6 @@
 // the end of the fog's ramp toward it takes the far end's colour and both dim.
 #pragma once
 
-#include <cstdint>
 #include <d3d9.h>
 
 namespace SkyOverhaul::FogTint {
@@ -26,10 +25,5 @@ void Engine(float colour[3], float range[3]);
 
 // Stops changing anything until a dusk is published again, for when there is no sky of ours.
 void Forget();
-
-// How many times the land's fog has been written, and how many of those put it back over the
-// engine's own found before a draw.
-uint32_t TintCount();
-uint32_t RestoreCount();
 
 }

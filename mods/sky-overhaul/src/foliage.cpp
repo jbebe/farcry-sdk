@@ -1,9 +1,7 @@
 #include "foliage.h"
 
-#include "engine/clock.h"
 #include "engine/dome_draw.h"
 #include "engine/shader.h"
-#include "fcse_api.h"
 #include "tuning.h"
 
 #include "grass_cascaded_vs.h"
@@ -45,11 +43,6 @@ namespace {
 
     bool g_grass = false;
     bool g_leaves = false;
-    uint32_t g_litGrass = 0;
-    uint32_t g_litLeaves = 0;
-
-    SkyOverhaul::Stopwatch g_clock;
-    SkyOverhaul::Heartbeat g_heartbeat{10.0f};
 
     // Grass and GrassSheen in grass.fx, or Leaves and LeavesGlow in leaves.fx.
     IDirect3DVertexShader9* Light(
@@ -71,7 +64,6 @@ namespace {
         const float leaves[] = {v.leafCrownShade, v.leafCrownThickness, v.leafTilt, v.leafGlint,
                                 v.leafGlow};
         std::copy_n(found->leaves ? leaves : grass, std::size(grass), parameters);
-        (found->leaves ? g_litLeaves : g_litGrass)++;
         return shader;
     }
 
@@ -88,15 +80,6 @@ void SkyOverhaul::Foliage::SetGrass(bool enabled) {
 void SkyOverhaul::Foliage::SetLeaves(bool enabled) {
     g_leaves = enabled;
     Install();
-}
-
-void SkyOverhaul::Foliage::OnFinalPass(const Frame::Pass& pass) {
-    if (!(g_grass || g_leaves) || !pass.live || !g_heartbeat.Due(g_clock.Lap())) {
-        return;
-    }
-    FCSE::Logf("foliage: %u grass and %u leaf draws lit by ours", g_litGrass, g_litLeaves);
-    g_litGrass = 0;
-    g_litLeaves = 0;
 }
 
 void SkyOverhaul::Foliage::ReleaseDeviceObjects() {

@@ -45,8 +45,6 @@ namespace {
     SkyOverhaul::Seqlock<Dusk> g_dusk;
     // Whether the sun is set far enough for the land's fog to change, kept for the draws to test.
     bool g_dusky = false;
-    uint32_t g_tints = 0;
-    uint32_t g_restores = 0;
     Path g_vertex = {false};
     Path g_pixel = {true};
 
@@ -82,7 +80,6 @@ namespace {
         path.written[7] = engine[7];
         Set(device, path, path.written);
         path.ours = true;
-        g_tints++;
     }
 
     // The engine sets the three registers together from some places and one at a time from
@@ -129,9 +126,6 @@ namespace {
         if (vectorKept && coloursKept && g_dusky == path.ours) {
             return;
         }
-        if (path.ours && !coloursKept) {
-            g_restores++;
-        }
         std::copy_n(current, 4, path.engine);
         if (!coloursKept) {
             std::copy_n(current + 4, 8, path.engine + 4);
@@ -176,8 +170,6 @@ bool SkyOverhaul::FogTint::Install() {
                    "colour");
         return false;
     }
-    FCSE::Logf("fog: following the %s%s%s constant upload", vertex ? "vertex" : "",
-               vertex && pixel ? " and " : "", pixel ? "pixel" : "");
     return true;
 }
 
@@ -202,12 +194,4 @@ void SkyOverhaul::FogTint::Engine(float colour[3], float range[3]) {
 
 void SkyOverhaul::FogTint::Forget() {
     g_dusky = false;
-}
-
-uint32_t SkyOverhaul::FogTint::TintCount() {
-    return g_tints;
-}
-
-uint32_t SkyOverhaul::FogTint::RestoreCount() {
-    return g_restores;
 }

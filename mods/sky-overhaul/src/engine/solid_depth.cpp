@@ -79,7 +79,6 @@ namespace {
         }
         g_width = width;
         g_height = height;
-        FCSE::Logf("solid depth: %ux%u INTZ depth with a NULL target", width, height);
         return true;
     }
 

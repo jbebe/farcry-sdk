@@ -11,7 +11,4 @@ bool Install();
 // frame, and only while a world is drawn.
 bool Elapsed(double& seconds);
 
-// How many clock seconds pass in one second of game time, or 0 when the manager was not found.
-float Scale();
-
 }

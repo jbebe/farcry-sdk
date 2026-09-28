@@ -25,14 +25,6 @@ namespace {
     uint32_t g_passSerial = 0;
     uint32_t g_lastSubmitCount = 0;
     bool g_live = false;
-    bool g_deviceLost = false;
-
-    // What the plugin would have to rebuild anything it holds on the device against. The back
-    // buffer's surface is replaced by a reset even when its size does not change, so its identity
-    // is what says a reset happened; the device's identity says the whole device was rebuilt.
-    IDirect3DDevice9* g_device = nullptr;
-    IDirect3DSurface9* g_backBufferSurface = nullptr;
-    D3DSURFACE_DESC g_backBufferDesc = {};
 
     struct SurfaceRef {
         IDirect3DSurface9* surface = nullptr;
@@ -44,40 +36,9 @@ namespace {
         }
     };
 
-    void WatchDevice(IDirect3DDevice9* device, IDirect3DSurface9* surface,
-                     const D3DSURFACE_DESC& desc) {
-        if (device == g_device && surface == g_backBufferSurface &&
-            desc.Width == g_backBufferDesc.Width && desc.Height == g_backBufferDesc.Height &&
-            desc.Format == g_backBufferDesc.Format &&
-            desc.MultiSampleType == g_backBufferDesc.MultiSampleType) {
-            return;
-        }
-
-        FCSE::Logf("device: frame %u, device %p (was %p), back buffer %p (was %p) "
-                   "%ux%u fmt %u ms %u",
-                   g_frame, static_cast<void*>(device), static_cast<void*>(g_device),
-                   static_cast<void*>(surface), static_cast<void*>(g_backBufferSurface),
-                   desc.Width, desc.Height, static_cast<unsigned>(desc.Format),
-                   static_cast<unsigned>(desc.MultiSampleType));
-
-        g_device = device;
-        g_backBufferSurface = surface;
-        g_backBufferDesc = desc;
-    }
-
     void Observe(IDirect3DDevice9* device) {
-        const HRESULT cooperative = device->TestCooperativeLevel();
-        if (cooperative != D3D_OK) {
-            if (!g_deviceLost) {
-                g_deviceLost = true;
-                FCSE::Logf("device: not usable, TestCooperativeLevel 0x%08lX",
-                           static_cast<unsigned long>(cooperative));
-            }
+        if (device->TestCooperativeLevel() != D3D_OK) {
             return;
-        }
-        if (g_deviceLost) {
-            g_deviceLost = false;
-            FCSE::Logf("device: usable again at frame %u", g_frame);
         }
 
         SurfaceRef target;
@@ -94,7 +55,6 @@ namespace {
         }
         D3DSURFACE_DESC backBufferDesc = {};
         backBuffer.surface->GetDesc(&backBufferDesc);
-        WatchDevice(device, backBuffer.surface, backBufferDesc);
 
         SurfaceRef depth;
         const bool haveDepth = SUCCEEDED(device->GetDepthStencilSurface(&depth.surface)) &&
@@ -184,8 +144,6 @@ bool SkyOverhaul::Frame::Install(PassFn onScenePass, PassFn onFinalPass) {
 
     g_onScenePass = onScenePass;
     g_onFinalPass = onFinalPass;
-
-    FCSE::Logf("frame: following EndScene at 0x%08zX", reinterpret_cast<size_t>(endScene));
     return true;
 }
 

@@ -46,7 +46,6 @@ namespace {
     // Each effect decides for itself whether the pass is one it wants. The sky has already drawn
     // itself from inside the pass by the time this runs.
     void OnScenePass(const SkyOverhaul::Frame::Pass& pass) {
-        SkyOverhaul::Sky::OnScenePass(pass);
         SkyOverhaul::Clouds::OnScenePass(pass);
         SkyOverhaul::Shadows::OnScenePass(pass);
         SkyOverhaul::SolidDepth::OnScenePass(pass);
@@ -58,9 +57,6 @@ namespace {
 
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
         SkyOverhaul::Dazzle::OnFinalPass(pass);
-        SkyOverhaul::Grade::OnFinalPass(pass);
-        SkyOverhaul::Foliage::OnFinalPass(pass);
-        SkyOverhaul::Rocks::OnFinalPass(pass);
         SkyOverhaul::SolidDepth::OnFinalPass(pass);
     }
 
@@ -142,8 +138,6 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (!FCSE::Bind(api)) {
         return false;
     }
-
-    api->Log("Sky Overhaul loaded");
 
     // The effects draw into a frame the engine owns and hold objects on its device, so none is
     // installed without the seam that follows the frame and the one that lets go before a reset:

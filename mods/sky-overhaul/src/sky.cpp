@@ -3,19 +3,17 @@
 #include "sky_model.h"
 
 #include "engine/camera.h"
-#include "engine/clock.h"
 #include "engine/cloud_layer.h"
 #include "engine/dome_draw.h"
 #include "engine/fog_tint.h"
+#include "engine/frame.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
-#include "fcse_api.h"
 #include "tuning.h"
 
 #include "sky_ps.h"
 
 #include <algorithm>
-#include <cmath>
 
 namespace {
     // Above the engine's own globals, which occupy c0 to c64 and would be read back stale by the
@@ -23,8 +21,6 @@ namespace {
     // one call, and each puts back what it found.
     constexpr UINT kFirstConstant = 71;
     constexpr UINT kConstantCount = 6;
-
-    constexpr float kDegrees = 57.29578f;
 
     // The most the zenith may be lifted, and the height of the sun over which that lift is let go,
     // as sines of its elevation: held in full above twenty-five degrees, gone by five, so that
@@ -43,20 +39,7 @@ namespace {
     constexpr float kDuskStart = 0.122f;
     constexpr float kDuskEnd = 0.026f;
 
-    bool g_enabled = false;
-
-    // What the last dome was drawn from and what the model made of it, kept for the heartbeat.
-    struct Drawn {
-        SkyOverhaul::Camera::View view;
-        SkyOverhaul::CloudLayer::Lighting lighting;
-        float zenithLift;
-    };
-
-    Drawn g_last = {};
-
     SkyOverhaul::PixelShader g_shader{"sky", g_skyPixelShader};
-    SkyOverhaul::Stopwatch g_clock;
-    SkyOverhaul::Heartbeat g_heartbeat{5.0f};
 
     float Luminance(const float colour[3]) {
         return colour[0] * 0.299f + colour[1] * 0.587f + colour[2] * 0.114f;
@@ -92,13 +75,12 @@ namespace {
     // dome left behind.
     bool Draw(IDirect3DDevice9* device) {
         IDirect3DPixelShader9* shader = g_shader.Get(device);
-        Drawn drawn;
-        if (shader == nullptr || !SkyOverhaul::Camera::Read(device, drawn.view) ||
-            !SkyOverhaul::CloudLayer::Latest(drawn.lighting)) {
+        SkyOverhaul::Camera::View view;
+        SkyOverhaul::CloudLayer::Lighting lighting;
+        if (shader == nullptr || !SkyOverhaul::Camera::Read(device, view) ||
+            !SkyOverhaul::CloudLayer::Latest(lighting)) {
             return false;
         }
-        const SkyOverhaul::Camera::View& view = drawn.view;
-        const SkyOverhaul::CloudLayer::Lighting& lighting = drawn.lighting;
 
         // The weather is folded in here, so what crosses into the shader is already finished.
         const float storminess = SkyOverhaul::SkyModel::Storminess(lighting.storm);
@@ -111,14 +93,12 @@ namespace {
                                       SkyOverhaul::Tuning::Current().duskFogBrightness,
                                       lighting.sunDirection);
 
-        drawn.zenithLift = ZenithLift(lighting.sunDirection, view.eye[2], intensity);
-        g_last = drawn;
-
         const float constants[kConstantCount * 4] = {
             view.eye[0], view.eye[1], view.eye[2], view.bloom,
             lighting.sunDirection[0], lighting.sunDirection[1], lighting.sunDirection[2],
             lighting.night,
-            haze, intensity, drawn.zenithLift, SkyOverhaul::SkyModel::Grey(storminess),
+            haze, intensity, ZenithLift(lighting.sunDirection, view.eye[2], intensity),
+            SkyOverhaul::SkyModel::Grey(storminess),
             view.fogColour[0], view.fogColour[1], view.fogColour[2], 0.0f,
             view.fogColourRange[0], view.fogColourRange[1], view.fogColourRange[2], 0.0f,
             view.fogColourVector[0], view.fogColourVector[1], 0.0f, 0.0f};
@@ -137,62 +117,11 @@ void SkyOverhaul::Sky::Install() {
     DomeDraw::Install(&Draw);
 }
 
-void SkyOverhaul::Sky::OnScenePass(const Frame::Pass& pass) {
-    if (!g_enabled || !pass.sky || !pass.live || !g_heartbeat.Due(g_clock.Lap())) {
-        return;
-    }
-    const Camera::View& view = g_last.view;
-    const CloudLayer::Lighting& light = g_last.lighting;
-    const float* sun = light.sunDirection;
-
-    // The fog heading is the direction the engine's fog ramp starts from, measured against the sun:
-    // near zero means the ramp's first colour is the sun's side, as its name says.
-    float headingOffset = -1.0f;
-    const float* heading = view.fogColourVector;
-    const float across = std::sqrt(sun[0] * sun[0] + sun[1] * sun[1]) *
-                         std::sqrt(heading[0] * heading[0] + heading[1] * heading[1]);
-    if (across > 0.0001f) {
-        const float cosine = (heading[0] * sun[0] + heading[1] * sun[1]) / across;
-        headingOffset = std::acos(std::clamp(cosine, -1.0f, 1.0f)) * kDegrees;
-    }
-    const float elevation = std::asin(std::clamp(sun[2], -1.0f, 1.0f)) * kDegrees;
-
-    // Counts that stand still are the ways this fails without anything else saying so: a dome or a
-    // moon that stopped being recognised, and a fog colour that is never being reached.
-    float moonVisibility = 0.0f;
-    float moonMultiplier = 0.0f;
-    DomeDraw::MoonParameters(moonVisibility, moonMultiplier);
-    FCSE::Logf("sky f%u: %u domes replaced, %u moons unfogged (visibility %.3f x%.2f), %u fog "
-               "uploads retinted, %u restored | night %.2f storm %.2f exposure %.2f zenith x%.2f",
-               pass.frame, DomeDraw::SubstituteCount(), DomeDraw::UnfoggedMoonCount(),
-               moonVisibility, moonMultiplier, FogTint::TintCount(), FogTint::RestoreCount(),
-               light.night, light.storm, view.bloom, g_last.zenithLift);
-    FCSE::Logf("sky f%u: sun %+.1f deg, fog heading %.0f deg off it, dusk %.2f", pass.frame,
-               elevation, headingOffset, SmoothStep(kDuskStart, kDuskEnd, sun[2]));
-    FCSE::Logf("sky f%u: engine fog toward (%.3f %.3f %.3f) away (%.3f %.3f %.3f)", pass.frame,
-               view.fogColour[0], view.fogColour[1], view.fogColour[2],
-               view.fogColour[0] + view.fogColourRange[0],
-               view.fogColour[1] + view.fogColourRange[1],
-               view.fogColour[2] + view.fogColourRange[2]);
-    // Distance: per metre, offset, amount. Height: per metre, offset, then the value at the bottom of
-    // the height band and how much more the top adds - so the fog on the lowest geometry is the
-    // amount times the third height value.
-    FCSE::Logf("sky f%u: engine fog distance (%.5f %.3f %.3f) height (%.5f %.3f %.3f %.3f)",
-               pass.frame, view.fogValues[0], view.fogValues[1], view.fogValues[2],
-               view.fogHeightValues[0], view.fogHeightValues[1], view.fogHeightValues[2],
-               view.fogHeightValues[3]);
-    FCSE::Logf("sky f%u: cloud ambient (%.3f %.3f %.3f) moon (%.3f %.3f %.3f) moon z %+.2f",
-               pass.frame, light.ambientColour[0], light.ambientColour[1], light.ambientColour[2],
-               light.moonColour[0], light.moonColour[1], light.moonColour[2],
-               light.moonDirection[2]);
-}
-
 void SkyOverhaul::Sky::ReleaseDeviceObjects() {
     g_shader.Release();
 }
 
 void SkyOverhaul::Sky::SetEnabled(bool enabled) {
-    g_enabled = enabled;
     DomeDraw::SetMode(enabled ? DomeDraw::Mode::Overhaul : DomeDraw::Mode::Engine);
     // With the engine drawing its own sky there is nothing for the world's fog to agree with, so it
     // goes back to the colour the engine chose.

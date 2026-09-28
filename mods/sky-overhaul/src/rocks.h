@@ -4,14 +4,9 @@
 // kept, patched to hand on its position.
 #pragma once
 
-#include "engine/frame.h"
-
 namespace SkyOverhaul::Rocks {
 
 void SetEnabled(bool enabled);
-
-// Logs how many rock draws went through each of the engine's shaders since the last time.
-void OnFinalPass(const Frame::Pass& pass);
 
 void ReleaseDeviceObjects();
 

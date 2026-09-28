@@ -129,9 +129,6 @@ bool SkyOverhaul::CloudLayer::Install() {
         api->Log("clouds unavailable: the cloud-layer submission could not be hooked");
         return false;
     }
-
-    FCSE::Logf("clouds: cloud-layer submission hooked at 0x%08zX on %s",
-               static_cast<size_t>(target), api->gameBuildId);
     return true;
 }
 
@@ -145,8 +142,4 @@ uint32_t SkyOverhaul::CloudLayer::SubmitCount() {
 
 void SkyOverhaul::CloudLayer::SetMode(Mode mode) {
     g_mode = mode;
-    FCSE::Logf("clouds: %s", mode == Mode::Engine   ? "the engine draws its own clouds"
-                             : mode == Mode::Off    ? "the engine's clouds are suppressed"
-                                                    : "the engine's clouds are suppressed but for "
-                                                      "the god-ray mask");
 }

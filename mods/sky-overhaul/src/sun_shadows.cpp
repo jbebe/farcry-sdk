@@ -61,7 +61,6 @@ namespace {
     constexpr size_t kSettings = 5;
 
     bool g_enabled = false;
-    bool g_logged = false;
     Held g_held[kSettings] = {};
 
     // The global an instruction found by `code` addresses, `at` bytes into it.
@@ -139,8 +138,6 @@ bool SkyOverhaul::SunShadows::Install() {
         api->Log("sun shadows: the shadow aim could not be hooked, shadows turn every frame");
         return false;
     }
-    FCSE::Logf("sun shadows: shadow aim hooked at 0x%08zX on %s",
-               reinterpret_cast<size_t>(code), api->gameBuildId);
     return true;
 }
 
@@ -164,12 +161,5 @@ void SkyOverhaul::SunShadows::OnScenePass(const Frame::Pass& pass) {
     for (size_t i = 0; i < kSettings; i++) {
         Hold(Setting(i), g_held[i], ours[i]);
     }
-    if (!g_logged) {
-        g_logged = true;
-        FCSE::Logf("sun shadows: angles %s (engine %.0f and %.0f), ranges %s (engine %.0f, %.0f "
-                   "and %.0f m)",
-                   g_held[0].written ? "held" : "not found in this build", g_held[0].engine,
-                   g_held[1].engine, g_held[2].written ? "held" : "not found in this build",
-                   g_held[2].engine, g_held[3].engine, g_held[4].engine);
-    }
 }
+

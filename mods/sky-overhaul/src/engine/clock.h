@@ -26,23 +26,4 @@ private:
     LARGE_INTEGER m_last = {};
 };
 
-// True once for every `period` seconds of the time handed to it.
-class Heartbeat {
-public:
-    explicit constexpr Heartbeat(float period) : m_period(period) {}
-
-    bool Due(float elapsed) {
-        m_since += elapsed;
-        if (m_since < m_period) {
-            return false;
-        }
-        m_since = 0.0f;
-        return true;
-    }
-
-private:
-    float m_period;
-    float m_since = 0.0f;
-};
-
 }

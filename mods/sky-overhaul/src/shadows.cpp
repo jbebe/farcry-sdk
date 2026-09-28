@@ -4,7 +4,6 @@
 #include "depth_constants.h"
 
 #include "engine/camera.h"
-#include "engine/clock.h"
 #include "engine/cloud_layer.h"
 #include "engine/com.h"
 #include "engine/depth_texture.h"
@@ -54,9 +53,6 @@ namespace {
 
     SkyOverhaul::PixelShader g_blurShader{"shadows blur", g_shadowsBlurPixelShader};
     SkyOverhaul::PixelShader g_applyShader{"shadows apply", g_shadowsApplyPixelShader};
-
-    SkyOverhaul::Stopwatch g_clock;
-    SkyOverhaul::Heartbeat g_heartbeat{2.0f};
 
     void ReleaseTargets() {
         for (Target& target : g_halves) {
@@ -170,7 +166,6 @@ void SkyOverhaul::Shadows::OnScenePass(const Frame::Pass& pass) {
     if (!g_enabled || !pass.sky || !pass.live) {
         return;
     }
-    const float elapsed = g_clock.Lap();
 
     DepthTexture::Found depth = {};
     if (!DepthTexture::Latest(depth)) {
@@ -187,11 +182,7 @@ void SkyOverhaul::Shadows::OnScenePass(const Frame::Pass& pass) {
     }
     const float sun =
         std::clamp((lighting.sunDirection[2] - kSunLow) / (kSunHigh - kSunLow), 0.0f, 1.0f);
-    const bool drawn = Draw(pass, view, depth, Tuning::Current().shadowStrength, sun);
-
-    if (g_heartbeat.Due(elapsed)) {
-        FCSE::Logf("shadows f%u: sun %.2f | drawn %d", pass.frame, sun, drawn ? 1 : 0);
-    }
+    Draw(pass, view, depth, Tuning::Current().shadowStrength, sun);
 }
 
 void SkyOverhaul::Shadows::ReleaseDeviceObjects() {

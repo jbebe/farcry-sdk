@@ -1,7 +1,6 @@
 #include "rocks.h"
 
 #include "engine/camera.h"
-#include "engine/clock.h"
 #include "engine/com.h"
 #include "engine/crc32.h"
 #include "engine/dome_draw.h"
@@ -24,7 +23,6 @@
 #include <cmath>
 #include <cstring>
 #include <iterator>
-#include <string>
 #include <vector>
 
 extern "C" IMAGE_DOS_HEADER __ImageBase;
@@ -93,13 +91,6 @@ namespace {
     constexpr size_t kDdsLevels = 28;
     constexpr size_t kDdsBitsPerTexel = 88;
     constexpr size_t kDdsTexels = 128;
-
-    // Rock draws since the last heartbeat, by variant.
-    uint32_t g_drawn[std::size(g_variants)] = {};
-    bool g_enabled = false;
-
-    SkyOverhaul::Stopwatch g_clock;
-    SkyOverhaul::Heartbeat g_heartbeat{10.0f};
 
     Variant* VariantOf(uint32_t pixel) {
         const auto found =
@@ -204,8 +195,6 @@ namespace {
             patched.ours = nullptr;
         } else {
             patched.light = light->reg;
-            FCSE::Logf("rocks: vertex shader %08X hands on its position through TEXCOORD%u", crc,
-                       semantic);
         }
         g_patched.push_back(patched);
         return patched;
@@ -249,28 +238,12 @@ namespace {
             detail[2] = v.rockDetailGrain;
             detail[3] = v.rockCavity;
         }
-        g_drawn[variant - g_variants]++;
         return true;
     }
 }
 
 void SkyOverhaul::Rocks::SetEnabled(bool enabled) {
-    g_enabled = enabled;
     DomeDraw::SetRocks(enabled ? &Draw : nullptr);
-}
-
-void SkyOverhaul::Rocks::OnFinalPass(const Frame::Pass& pass) {
-    if (!g_enabled || !pass.live || !g_heartbeat.Due(g_clock.Lap())) {
-        return;
-    }
-    std::string line;
-    for (size_t i = 0; i < std::size(g_variants); i++) {
-        char text[32] = {};
-        sprintf_s(text, " %08X %u,", g_variants[i].crc, g_drawn[i]);
-        line += text;
-    }
-    FCSE::Logf("rocks: draws by shader%s %zu vertex shaders seen", line.c_str(), g_patched.size());
-    std::fill(std::begin(g_drawn), std::end(g_drawn), 0u);
 }
 
 void SkyOverhaul::Rocks::ReleaseDeviceObjects() {

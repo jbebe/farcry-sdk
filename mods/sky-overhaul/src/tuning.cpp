@@ -361,7 +361,6 @@ void SkyOverhaul::Tuning::Load() {
     }
 
     std::ifstream file(File());
-    FCSE::Logf("tuning: %s %s", file.is_open() ? "reading" : "creating", Path());
 
     // A value that is not a number leaves its row at the default.
     std::string line;

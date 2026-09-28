@@ -255,8 +255,6 @@ bool SkyOverhaul::Noise::Ensure(IDirect3DDevice9* device) {
                    "drawn");
         return false;
     }
-
-    FCSE::Logf("clouds: noise ready, shape %d cubed, detail %d cubed", kShapeSize, kDetailSize);
     return true;
 }
 
