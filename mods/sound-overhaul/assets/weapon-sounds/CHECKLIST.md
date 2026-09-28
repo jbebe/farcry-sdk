@@ -21,7 +21,7 @@ event plays nothing.
 
 | Tier | Built | Source |
 |---|---|---|
-| Small caliber (pistols, SMGs) | [x] | DS `_shared/stereo/reflectors/9/reflector_1`, edited by the user; mono, unpositioned, full gain |
+| Small caliber (pistols, SMGs) | [~] | DS `_shared/stereo/reflectors/9/reflector_1`, re-edited by the user to 3.87 s (2026-09-28); mono, unpositioned, full gain |
 | Big caliber | [ ] | |
 | Suppressed | none | |
 
