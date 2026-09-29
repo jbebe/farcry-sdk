@@ -61,9 +61,9 @@ Automatics play their echo only once they fire per round, from the user's cut of
 
 | Weapon | 1P | NPC | Echo | Source |
 |---|---|---|---|---|
-| M1903 (and Merc) | [~] | [~] | [~] | DS mosin close_3, curved fade from 110 ms, after the crack's highs drop, before its baked-in boom (within 2 dB of peak until 200 ms), at -3.5 dB. NPC: mono close_4 (not the same recording), same fade, at -4 dB. Echo: big |
-| Dart Rifle (suppressed sniper) | [~] | [~] | none | JSRS `_sd` dmr sd_close_4, curved fade from 60 ms, before a reflection at 80 ms (NPC: its mono). At the original's loudness |
-| PKM (Mike's rusty, Merc) | [~] | [~] | [~] | JSRS m60 close_1, 24 ms trimmed, curved fade from 65 ms, before the room's reflection at 100 ms (NPC: its mono, the same). 1P at -3.5 dB, NPC at -4.5 dB. Per round from banks `0x00FC0280`/`0x00FC0284`. Echo: big |
+| M1903 (and Merc) | [~] | [~] | [~] | DS mosin close_3, curved fade from 110 ms, after the crack's highs drop, before its baked-in boom (within 2 dB of peak until 200 ms), at -1.5 dB. NPC: mono close_4 (not the same recording), same fade, at -2.5 dB (the rifles' -3.5/-4 was too quiet). Echo: big |
+| Dart Rifle (suppressed sniper) | [~] | [~] | none | JSRS `_sd` dmr sd_close_4, curved fade from 60 ms, before a reflection at 80 ms (NPC: its mono). Both at -5 dB (the original's -7.3/-6.7 was too quiet) |
+| PKM (Mike's rusty, Merc) | [~] | [~] | [~] | JSRS m60 close_1, 24 ms trimmed, curved fade from 65 ms, before the room's reflection at 100 ms (NPC: its mono, the same). 1P at -2 dB, NPC at -3 dB (-3.5/-4.5 was too quiet). Per round from banks `0x00FC0280`/`0x00FC0284`. Echo: big |
 | M249 | [ ] | [ ] | [ ] | |
 | M2 | [ ] | [ ] | [ ] | |
 | MK19 | [ ] | [ ] | [ ] | |
