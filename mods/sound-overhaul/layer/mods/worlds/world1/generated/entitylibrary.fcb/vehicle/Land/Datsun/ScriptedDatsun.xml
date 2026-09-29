@@ -2350,21 +2350,21 @@
               <object type="GearEmulation">
                 <object type="Gear0">
                   <value name="fMinSpeed" type="Float">0</value>
-                  <value name="fMaxSpeed" type="Float">6</value>
+                  <value name="fMaxSpeed" type="Float">4.5</value>
                   <value name="fMinRPM" type="Float">500</value>
-                  <value name="fMaxRPM" type="Float">8500</value>
+                  <value name="fMaxRPM" type="Float">8000</value>
                 </object>
                 <object type="Gear1">
-                  <value name="fMinSpeed" type="Float">5.5</value>
-                  <value name="fMaxSpeed" type="Float">14</value>
+                  <value name="fMinSpeed" type="Float">4.2</value>
+                  <value name="fMaxSpeed" type="Float">9</value>
                   <value name="fMinRPM" type="Float">3000</value>
-                  <value name="fMaxRPM" type="Float">8500</value>
+                  <value name="fMaxRPM" type="Float">8000</value>
                 </object>
                 <object type="Gear2">
-                  <value name="fMinSpeed" type="Float">13.5</value>
-                  <value name="fMaxSpeed" type="Float">30</value>
-                  <value name="fMinRPM" type="Float">3000</value>
-                  <value name="fMaxRPM" type="Float">9500</value>
+                  <value name="fMinSpeed" type="Float">8.7</value>
+                  <value name="fMaxSpeed" type="Float">13</value>
+                  <value name="fMinRPM" type="Float">3500</value>
+                  <value name="fMaxRPM" type="Float">9000</value>
                 </object>
               </object>
             </object>
