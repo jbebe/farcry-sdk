@@ -179,6 +179,42 @@ bound explicitly for the draw. Far Cry 2 ends a scene several times a frame and 
 through DirectInput, and both of those shape the result — see
 [presenting a frame](../../docs/docs/engine-internals/presentation-and-input.md).
 
+### Diagnostics
+
+The Diagnostics tab, next to `All`, measures what the game costs to run, so a mod's cost can be read
+against the game without it.
+
+- **Frames.** The frame rate and frame time, plus the GPU's time per frame from Direct3D timestamp
+  queries, each plotted over the last 512 frames. While the CPU is the bottleneck, the GPU's time
+  includes the time it spent waiting for commands, so it only equals the GPU's cost when the GPU is
+  the bottleneck.
+- **GPU usage and VRAM.** When Windows provides them, these are the GPU usage and VRAM figures Task
+  Manager shows for the process.
+- **CPU.** How busy the engine's own thread keeps one core, and the whole process's share of the
+  machine. A hint says whether the frame is waiting on the GPU or on the engine thread.
+- **Address space.** How much of the 4 GB is in use (2 GB without large-address-aware), what is
+  committed and private, and the largest free block. Far Cry 2 is a 32-bit process, and it fails an
+  allocation when no free block is big enough, even while plenty is free in total. So the largest
+  free block turns amber below 256 MB and red below 128 MB. The worst value of each since launch is
+  kept.
+
+The tab's own measurements run on a thread of their own once a second, or cost next to nothing per
+frame. They run whether the overlay is open or not.
+
+**Comparing against the game as it shipped:**
+
+1. Leave only `DevTools.dll` in `bin\plugins\`, turn vsync off, load a save, and set the clock on
+   the Environment tab.
+2. Choose a duration, press **Start**, then press Home. The capture begins once the overlay closes.
+3. When it has run, open the overlay and press **Save as baseline**. That writes
+   `bin\DevTools-baseline.ini`.
+4. Put the mods back, and capture again from the same save, time and spot.
+
+The table then shows the baseline, the capture and the change for each measure, coloured where it
+moved more than 5%. The table warns when vsync was on, when the overlay was open during the capture,
+or when the resolution differs, and it lists the plugins loaded when they differ from the baseline's.
+Every finished capture is also written to `fcse.log` as one line.
+
 ### Adding a window from another plugin
 
 `include/devtools_api.h` is the contract, the way `fcse_api.h` is FCSE's, and says what DevTools does

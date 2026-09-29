@@ -5,6 +5,8 @@
 // EndScene is in docs/docs/engine-internals/presentation-and-input.md.
 #pragma once
 
+#include "engine/frame_stats.h"
+
 struct IDirect3DDevice9;
 
 namespace DevTools::Renderer {
@@ -12,12 +14,15 @@ namespace DevTools::Renderer {
 // What to draw, called once per frame with the back buffer bound and a scene open.
 using DrawFn = void (*)(IDirect3DDevice9* device);
 
+// Called with every frame presented, drawn on or not, before the draw.
+using FrameFn = void (*)(const FrameStats::Frame& frame);
+
 // Called before the device is reset, which happens on a resize or an alt-tab. Everything held on
 // the device has to go; the next draw builds it again.
 using DeviceLostFn = void (*)();
 
 // Takes over the device's Present and Reset. Call once from FCSE_Load. False means the overlay
 // cannot draw, which it logs, and nothing is left hooked.
-bool Install(DrawFn draw, DeviceLostFn onDeviceLost);
+bool Install(DrawFn draw, FrameFn onFrame, DeviceLostFn onDeviceLost);
 
 }

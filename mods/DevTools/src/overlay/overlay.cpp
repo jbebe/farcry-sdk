@@ -12,9 +12,12 @@
 #include "engine/console.h"
 #include "engine/game_thread.h"
 #include "engine/input.h"
+#include "engine/process_stats.h"
 #include "engine/renderer.h"
 #include "engine/weather.h"
 #include "fcse_api.h"
+#include "overlay/capture.h"
+#include "overlay/diagnostics.h"
 
 #include "imgui.h"
 #include "imgui_impl_dx9.h"
@@ -39,6 +42,9 @@ namespace {
     using DevTools::Commands::Command;
 
     constexpr int kToggleKey = VK_HOME;
+
+    // A tab of its own rather than a command category, so it has no commands under it.
+    constexpr const char* kDiagnostics = "Diagnostics";
     constexpr size_t kHistoryMax = 12;
 
     struct QueuedMessage {
@@ -217,6 +223,7 @@ namespace {
 
     void BuildCategories() {
         g_categories.push_back("All");
+        g_categories.push_back(kDiagnostics);
         for (const Command& command : DevTools::Commands::All()) {
             bool seen = false;
             for (const char* known : g_categories) {
@@ -461,6 +468,8 @@ namespace {
                     ImGui::BeginChild("tab", ImVec2(0.0f, -historyHeight));
                     if (std::strcmp(g_categories[category], "Environment") == 0) {
                         DrawEnvironment();
+                    } else if (std::strcmp(g_categories[category], kDiagnostics) == 0) {
+                        DevTools::Diagnostics::Draw();
                     } else {
                         DrawCommandTable();
                     }
@@ -588,6 +597,11 @@ namespace {
         ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
     }
 
+    // Every frame, overlay up or not, so a capture runs on while it is hidden.
+    void OnFrame(const DevTools::FrameStats::Frame& frame) {
+        DevTools::Capture::Add(frame, Visible());
+    }
+
     void OnDeviceLost() {
         if (g_running) {
             ImGui_ImplDX9_InvalidateDeviceObjects();
@@ -598,7 +612,10 @@ namespace {
 namespace DevTools::Overlay {
 
 bool Install() {
-    g_installed = Renderer::Install(&Draw, &OnDeviceLost);
+    g_installed = Renderer::Install(&Draw, &OnFrame, &OnDeviceLost);
+    if (g_installed) {
+        ProcessStats::Start();
+    }
 
     // DevTools' own window is added the way any plugin's is, and first, since every FCSE_Load runs
     // before any plugin can add one.

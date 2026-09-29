@@ -80,6 +80,8 @@ bool Install() {
 
 bool IsCurrent() { return GetCurrentThreadId() == g_threadId; }
 
+unsigned long Id() { return g_threadId; }
+
 void Post(std::function<void()> job) {
     // Install already said there is no frame; repeating it per job would only fill the log.
     if (g_originalUpdate == nullptr) {

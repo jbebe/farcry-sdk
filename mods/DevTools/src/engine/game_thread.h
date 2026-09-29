@@ -16,6 +16,9 @@ bool Install();
 // True on the thread the engine updates from, once it has updated at least once.
 bool IsCurrent();
 
+// The engine's thread id, or 0 before it has updated once.
+unsigned long Id();
+
 // Runs `job` at the end of the next frame. Safe from any thread, and from inside a job - one posted
 // while the queue is draining runs on the frame after.
 void Post(std::function<void()> job);

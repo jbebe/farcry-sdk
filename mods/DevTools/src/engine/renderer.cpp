@@ -27,6 +27,7 @@ namespace {
     ResetFn g_originalReset = nullptr;
 
     DevTools::Renderer::DrawFn g_draw = nullptr;
+    DevTools::Renderer::FrameFn g_onFrame = nullptr;
     DevTools::Renderer::DeviceLostFn g_onDeviceLost = nullptr;
     bool g_inDraw = false;
 
@@ -57,6 +58,8 @@ namespace {
 
     HRESULT __stdcall PresentDetour(IDirect3DDevice9* device, const RECT* source,
                                     const RECT* destination, HWND window, const RGNDATA* dirty) {
+        g_onFrame(DevTools::FrameStats::Presenting());
+
         // A draw that presented a frame of its own would otherwise recurse for as long as it kept
         // drawing.
         if (!g_inDraw) {
@@ -64,10 +67,13 @@ namespace {
             DrawToBackBuffer(device);
             g_inDraw = false;
         }
-        return g_originalPresent(device, source, destination, window, dirty);
+        const HRESULT presented = g_originalPresent(device, source, destination, window, dirty);
+        DevTools::FrameStats::Presented(device);
+        return presented;
     }
 
     HRESULT __stdcall ResetDetour(IDirect3DDevice9* device, D3DPRESENT_PARAMETERS* params) {
+        DevTools::FrameStats::DeviceLost();
         g_onDeviceLost();
         return g_originalReset(device, params);
     }
@@ -105,9 +111,10 @@ namespace {
 
 namespace DevTools::Renderer {
 
-bool Install(DrawFn draw, DeviceLostFn onDeviceLost) {
+bool Install(DrawFn draw, FrameFn onFrame, DeviceLostFn onDeviceLost) {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
     g_draw = draw;
+    g_onFrame = onFrame;
     g_onDeviceLost = onDeviceLost;
 
     void* present = nullptr;
