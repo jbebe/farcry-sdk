@@ -85,8 +85,8 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | Weapon | 1P | NPC | Echo | Source |
 |---|---|---|---|---|
 | Crossbow | [ ] | [ ] | [ ] | |
-| Sawed-off shotgun | [ ] | [ ] | [ ] | |
-| Silenced shotgun | [ ] | [ ] | [ ] | |
+| Sawed-off shotgun | [~] | [~] | [~] | DS toz34 Close_3, 89 ms trimmed to the main blast, curved fade from 95 ms, before the room's reflection at 140 ms, at -3.5 dB. NPC: mono Close_2 (not the same recording), 22 ms trimmed to its blast, faded from 70 ms, at -4 dB. Echo: big, but in its fragment, which the DLC's own entitylibrary may override |
+| Silenced shotgun | [~] | [~] | none | DS `_sd` shotgun sd_close_1, 17 ms trimmed, curved fade from 60 ms, leaving the action's click at 130 ms 14 dB down (NPC: its mono, the same). 1P at -8 dB, NPC at -9 dB, over the original's -14.3/-12.8 |
 
 ## Explosions and thrown
 
