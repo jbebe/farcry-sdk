@@ -68,7 +68,7 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | M249 (Merc, persistent) | [x] | [x] | [x] | JSRS m249 close_3, curved fade from 50 ms, before the room's reflection at 80 ms (NPC: its mono). 1P at -2 dB, NPC at -3.5 dB. Per round from banks `0x00FC0290`/`0x00FC0294`. Echo: big |
 | M2 | [x] | [x] | [x] | JSRS m82 close_4, 12 ms trimmed, curved fade from 55 ms, where the body drops. NPC: mono close_2 (not the same recording). 1P at -1.5 dB, NPC at -2.5 dB. Per round from banks `0x00FC02A0`/`0x00FC02A4`. Echo: big |
 | MK19 | [x] | [x] | [x] | DS ugl close_1 (the M79's take), 83 ms trimmed, curved fade from 165 ms, where the thump drops. NPC: mono close_1, a separate take, 20 ms trimmed to line up, faded from 110 ms. 1P at -2.5 dB, NPC at -3 dB. Per round from banks `0x00FC02B0`/`0x00FC02B4`. Echo: small |
-| RPG-7 | [ ] | [ ] | [ ] | |
+| RPG-7 | [~] | [~] | [~] | Launch: DS rpg close_1 (NPC: its mono), clipped as far as it is over full scale (9 / 4.2 dB), faded slowly from 250 ms so the rocket still leaves, at the original's loudness. Echo: big |
 | Carl Gustaf | [ ] | [ ] | [ ] | |
 | LPO-50 flamethrower | [ ] | [ ] | [ ] | |
 | Mortar | [ ] | [ ] | [ ] | |
@@ -96,5 +96,5 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | M67 grenade (also M79 and MGL-140 rounds) | [~] | `build/blasts.py`: close bang JSRS frag close_distance_4 on land, its peaks hard-clipped 5.8 dB (clean, it sounded smoothed out; neither OpenAL Soft's limiter nor the reverb was the cause), faded from 300 ms at 0.1 dB/ms, at retail's -3.3 dB (-1.5 distorted) plus a +3 dB sample gain (no retail sample exceeds 0 dB: under test), falling off like retail's up close to 120 m (a steeper curve was too quiet); retail's water takes on water; medium_distance_4 20-220 m and far_distance_4 60-600 m; DS `_boom` reflector_4 as its echo, whole (4.4 s), 9 dB under the bang, to 600 m (retail's rumble was too big and died too soon, frag reflector_2 too low and dark). All in bank `00455b16` |
 | Molotov | [ ] | |
 | IED | [ ] | |
-| Rocket (RPG-7, Carl Gustaf) | [ ] | |
+| Rocket (RPG-7, Carl Gustaf) | [~] | `build/blasts.py`, as the grenade: close bang DS `_boom` rpg close_distance_1 on land, clipped 4.3 dB, faded from 350 ms, at retail's -2.8 dB plus the +3 dB sample gain; retail's water takes on water; medium_distance_1 and far_distance_1; the grenade's echo. Banks `004b65df` and, for the unstable rocket, `00455bdb` |
 | Mortar shell | [ ] | |
