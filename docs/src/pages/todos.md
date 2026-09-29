@@ -95,6 +95,7 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 - [ ] Reuse the taxi driver as a quest giver
 - [ ] **Revamp the map to be more realistic.** Generate a real map from the cartoonish one with AI.
   Make the right hand point at where we are, or point at it with the GPS antenna
+- [ ] Full-body first person: look down and see your legs
 
 ## Sound
 
