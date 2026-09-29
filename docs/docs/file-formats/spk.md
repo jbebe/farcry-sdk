@@ -252,6 +252,10 @@ retail curve ends with a point at −96 dB, so the last distance is the event's 
 start below 0 dB (`0 m: −3.8 dB`), and a flat run keeps a sound at full level out to some distance
 (`0 m: 0 dB, 150 m: 0 dB, …`).
 
+Every retail curve starts at 0 m, and a curve must: one whose first point was at 60 m crashed the game
+(an access violation reading the point before the first) as soon as its sound played nearer than 60 m. To
+keep a layer silent up close, start it with `0 m: −96 dB`. `spk encode` refuses a curve that does not.
+
 Ranges in retail run from 4 m to 1,000 m. The most used curve, `0x00442C37`, serves 949 events: −3.8 dB
 at 0 m, −9.2 dB at 20 m, −19 dB at 56 m, −34.9 dB at 74 m, cut at 80 m. The longest, `0x004E1D0F`,
 reaches −51.8 dB at 914 m and cuts at 1,000 m. Because curves are shared, editing one retunes every event

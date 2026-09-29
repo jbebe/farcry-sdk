@@ -73,6 +73,11 @@ public static class SpkBankLint
                 Add(SpkProblemSeverity.Error, $"{name}: its distances must increase.");
             }
 
+            if (record.IsRolloff && record.Points is [{ X: not 0 }, ..])
+            {
+                Add(SpkProblemSeverity.Error, $"{name} must start at 0 m: the game crashes when its sound plays nearer than the first point.");
+            }
+
             if (record.Layout == SpkLayout.Play && record.Word(SpkLayout.PlayRolloff) != SpkLayout.NoId
                 && StereoSamples(bank, record.Word(2), []).Select(id => (uint?)id).FirstOrDefault() is { } stereo)
             {

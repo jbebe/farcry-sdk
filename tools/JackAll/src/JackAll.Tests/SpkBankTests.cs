@@ -157,6 +157,18 @@ public class SpkBankTests
     }
 
     [Fact]
+    public void Lint_refuses_a_rolloff_that_does_not_start_at_0_m()
+    {
+        SpkBank bank = SpkBankXml.FromXml("""
+            <SoundBank>
+              <Rolloff id="0x1"><Point m="60" db="-96" /><Point m="600" db="-96" /></Rolloff>
+            </SoundBank>
+            """, _ => []);
+
+        Assert.Contains(SpkBankLint.Check(bank, null), p => p.Severity == SpkProblemSeverity.Error && p.Message.Contains("0 m"));
+    }
+
+    [Fact]
     public void Lint_notes_a_sound_bank_out_of_id_order_but_not_a_bark_bank()
     {
         SpkBank reversed = SpkBankXml.FromXml("""

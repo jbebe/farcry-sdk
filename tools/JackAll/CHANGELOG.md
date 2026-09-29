@@ -15,7 +15,8 @@ Notable changes to JackAll, loosely following [Keep a Changelog](https://keepach
 - **`.spk` sound banks as XML** — `spk decode` / `encode` / `verify` edit events, samples, random
   containers, switches, multilayers and rolloff curves; lengths, counts and offsets are derived on
   build, and every retail bank rebuilds byte for byte. `spk new` scaffolds a bank that plays one clip
-  or a random pick of several. `spk encode` checks references, rates and stereo samples under a rolloff.
+  or a random pick of several. `spk encode` checks references, rates and stereo samples under a rolloff,
+  and refuses a rolloff curve that does not start at 0 m.
 
 - **Sound bank editor** — the `.spk` panel shows a bank as a tree of what plays what and edits it:
   fields, random container chances, variations added from any audio file, switch cases, rolloff and

@@ -353,8 +353,8 @@ public partial class SpkFileHandler : UserControl
     {
         if (CurvePicker.SelectedItem is Curve { Points: var points })
         {
-            SpkPoint last = points.LastOrDefault();
-            Edit(() => points.Add(new SpkPoint(last.X + 10, last.Y)));
+            SpkPoint next = points is [.., var last] ? new SpkPoint(last.X + 10, last.Y) : new SpkPoint(0, 0);
+            Edit(() => points.Add(next));
         }
     }
 
