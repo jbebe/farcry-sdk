@@ -68,7 +68,7 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | M249 (Merc, persistent) | [x] | [x] | [x] | JSRS m249 close_3, curved fade from 50 ms, before the room's reflection at 80 ms (NPC: its mono). 1P at -2 dB, NPC at -3.5 dB. Per round from banks `0x00FC0290`/`0x00FC0294`. Echo: big |
 | M2 | [x] | [x] | [x] | JSRS m82 close_4, 12 ms trimmed, curved fade from 55 ms, where the body drops. NPC: mono close_2 (not the same recording). 1P at -1.5 dB, NPC at -2.5 dB. Per round from banks `0x00FC02A0`/`0x00FC02A4`. Echo: big |
 | MK19 | [x] | [x] | [x] | DS ugl close_1 (the M79's take), 83 ms trimmed, curved fade from 165 ms, where the thump drops. NPC: mono close_1, a separate take, 20 ms trimmed to line up, faded from 110 ms. 1P at -2.5 dB, NPC at -3 dB. Per round from banks `0x00FC02B0`/`0x00FC02B4`. Echo: small |
-| RPG-7 | [~] | [~] | [~] | Launch: DS rpg close_1 (NPC: its mono), clipped as far as it is over full scale (9 / 4.2 dB), faded slowly from 250 ms so the rocket still leaves, at the original's loudness. Echo: big |
+| RPG-7 | [x] | [~] | [x] | Launch: DS rpg close_1 (NPC: its mono), clipped as far as it is over full scale (9 / 4.2 dB), faded slowly from 250 ms so the rocket still leaves, at the original's loudness. Echo: big |
 | Carl Gustaf | retail | retail | retail | Launch kept retail; its impact is the new rocket explosion |
 | LPO-50 flamethrower | retail | retail | none | Kept retail |
 | Mortar | retail | retail | none | Kept retail |
