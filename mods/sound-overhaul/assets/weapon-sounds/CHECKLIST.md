@@ -40,7 +40,7 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | Uzi | [x] | [x] | [x] | DS bizon close_4b, curved fade from 110 ms (NPC: mono close_4, the closest take, from 115 ms), both at -3 dB, played per round from banks `0x00FC0200`/`0x00FC0204`. Echo: small |
 | MAC-10 (and Mike's rusty) | [x] | [x] | [x] | JSRS ump close_2, curved fade from 85 ms (NPC: its mono), both at -3 dB (DS ump close_1 never sounded right, however driven or filtered). Per round from banks `0x00FC0210`/`0x00FC0214`. Echo: small |
 | M79 (and Mike's rusty) | [x] | [x] | [x] | DS ugl close_1, 112 ms of mechanism noise trimmed, curved fade from 145 ms (NPC: mono close_1, a separate take, trimmed to its launch and faded from 95 ms). Both at the original's loudness. Echo: small |
-| Flare gun | [ ] | [ ] | [ ] | |
+| Flare gun | retail | retail | none | Kept retail: no pack has one |
 
 ## Primary
 
@@ -69,9 +69,9 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | M2 | [x] | [x] | [x] | JSRS m82 close_4, 12 ms trimmed, curved fade from 55 ms, where the body drops. NPC: mono close_2 (not the same recording). 1P at -1.5 dB, NPC at -2.5 dB. Per round from banks `0x00FC02A0`/`0x00FC02A4`. Echo: big |
 | MK19 | [x] | [x] | [x] | DS ugl close_1 (the M79's take), 83 ms trimmed, curved fade from 165 ms, where the thump drops. NPC: mono close_1, a separate take, 20 ms trimmed to line up, faded from 110 ms. 1P at -2.5 dB, NPC at -3 dB. Per round from banks `0x00FC02B0`/`0x00FC02B4`. Echo: small |
 | RPG-7 | [~] | [~] | [~] | Launch: DS rpg close_1 (NPC: its mono), clipped as far as it is over full scale (9 / 4.2 dB), faded slowly from 250 ms so the rocket still leaves, at the original's loudness. Echo: big |
-| Carl Gustaf | [ ] | [ ] | [ ] | |
-| LPO-50 flamethrower | [ ] | [ ] | [ ] | |
-| Mortar | [ ] | [ ] | [ ] | |
+| Carl Gustaf | retail | retail | retail | Launch kept retail; its impact is the new rocket explosion |
+| LPO-50 flamethrower | retail | retail | none | Kept retail |
+| Mortar | retail | retail | none | Kept retail |
 
 ## Mounted
 
@@ -85,7 +85,7 @@ Automatics play their echo only once they fire per round, from the user's cut of
 
 | Weapon | 1P | NPC | Echo | Source |
 |---|---|---|---|---|
-| Crossbow | [ ] | [ ] | [ ] | |
+| Crossbow | retail | retail | none | Kept retail: no gunshot |
 | Sawed-off shotgun | [x] | [x] | [x] | DS toz34 Close_3, 89 ms trimmed to the main blast, curved fade from 95 ms, before the room's reflection at 140 ms, at -2.5 dB. NPC: mono Close_2 (not the same recording), 22 ms trimmed to its blast, faded from 70 ms, at -3 dB. Echo: big, but in its fragment, which the DLC's own entitylibrary may override |
 | Silenced shotgun | [x] | [x] | none | DS `_sd` shotgun sd_close_1, 17 ms trimmed, curved fade from 60 ms, leaving the action's click at 130 ms 14 dB down (NPC: its mono, the same). 1P at -3.5 dB, NPC at -4.5 dB, the shotguns' level (-8/-9 was almost silent) |
 
@@ -93,8 +93,8 @@ Automatics play their echo only once they fire per round, from the user's cut of
 
 | Device | Sound | Source |
 |---|---|---|
-| M67 grenade (also M79 and MGL-140 rounds) | [~] | `build/blasts.py`: close bang JSRS frag close_distance_4 on land, its peaks hard-clipped 5.8 dB (clean, it sounded smoothed out; neither OpenAL Soft's limiter nor the reverb was the cause), faded from 300 ms at 0.1 dB/ms, at retail's -3.3 dB (-1.5 distorted) plus a +3 dB sample gain (no retail sample exceeds 0 dB: under test), falling off like retail's up close to 120 m (a steeper curve was too quiet); retail's water takes on water; medium_distance_4 20-220 m and far_distance_4 60-600 m; DS `_boom` reflector_4 as its echo, whole (4.4 s), 9 dB under the bang, to 600 m (retail's rumble was too big and died too soon, frag reflector_2 too low and dark). All in bank `00455b16` |
-| Molotov | [ ] | |
-| IED | [ ] | |
+| M67 grenade (also M79 and MGL-140 rounds) | [x] | `build/blasts.py`: close bang JSRS frag close_distance_4 on land, its peaks hard-clipped 5.8 dB (clean, it sounded smoothed out; neither OpenAL Soft's limiter nor the reverb was the cause), faded from 300 ms at 0.1 dB/ms, at retail's -3.3 dB (-1.5 distorted) plus a +3 dB sample gain (no retail sample exceeds 0 dB: under test), falling off like retail's up close to 120 m (a steeper curve was too quiet); retail's water takes on water; medium_distance_4 20-220 m and far_distance_4 60-600 m; DS `_boom` reflector_4 as its echo, whole (4.4 s), 9 dB under the bang, to 600 m (retail's rumble was too big and died too soon, frag reflector_2 too low and dark). All in bank `00455b16` |
+| Molotov | retail | Kept retail |
+| IED | retail | Kept retail (2026-09-29: the user called the weapons done without it) |
 | Rocket (RPG-7, Carl Gustaf) | [~] | `build/blasts.py`, as the grenade: close bang DS `_boom` rpg close_distance_1 on land, clipped 4.3 dB, faded from 350 ms, at retail's -2.8 dB plus the +3 dB sample gain; retail's water takes on water; medium_distance_1 and far_distance_1; the grenade's echo. Banks `004b65df` and, for the unstable rocket, `00455bdb` |
-| Mortar shell | [ ] | |
+| Mortar shell | retail | Kept retail |
