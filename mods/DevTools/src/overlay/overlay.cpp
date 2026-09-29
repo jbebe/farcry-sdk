@@ -9,6 +9,7 @@
 
 #include "commands/catalog.h"
 #include "devtools_api.h"
+#include "engine/benchmark.h"
 #include "engine/console.h"
 #include "engine/game_thread.h"
 #include "engine/input.h"
@@ -597,9 +598,9 @@ namespace {
         ImGui_ImplDX9_RenderDrawData(ImGui::GetDrawData());
     }
 
-    // Every frame, overlay up or not, so a capture runs on while it is hidden.
+    // Every frame, overlay up or not, so a benchmark is measured whether or not it is open.
     void OnFrame(const DevTools::FrameStats::Frame& frame) {
-        DevTools::Capture::Add(frame, Visible());
+        DevTools::Capture::Add(frame);
     }
 
     void OnDeviceLost() {
@@ -615,6 +616,7 @@ bool Install() {
     g_installed = Renderer::Install(&Draw, &OnFrame, &OnDeviceLost);
     if (g_installed) {
         ProcessStats::Start();
+        Benchmark::Install(&Capture::Report);
     }
 
     // DevTools' own window is added the way any plugin's is, and first, since every FCSE_Load runs

@@ -41,6 +41,7 @@ include("${DEVTOOLS_INCLUDE_DIR}/devtools_imgui.cmake")
 add_library(DevTools SHARED
   "src/main.cpp"
   "src/commands/catalog.cpp"
+  "src/engine/benchmark.cpp"
   "src/engine/camera.cpp"
   "src/engine/console.cpp"
   "src/engine/debug_camera.cpp"

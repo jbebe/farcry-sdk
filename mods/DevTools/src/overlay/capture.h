@@ -1,11 +1,12 @@
-// A timed run of frame, CPU and memory measurements, summarised, and the baseline it is compared
-// against. Everything here is on the thread that presents.
+// The engine's benchmark runs, measured while the benchmark counts frames and saved as one file per
+// run under bin\DevTools-benchmarks\, and every saved run to compare.
 #pragma once
 
 #include "engine/frame_stats.h"
 
 #include <array>
 #include <string>
+#include <vector>
 
 namespace DevTools::Capture {
 
@@ -28,7 +29,7 @@ enum Metric {
 };
 
 struct MetricInfo {
-    // The key in the baseline file.
+    // The key in a run's file.
     const char* key;
     const char* label;
     const char* format;
@@ -46,37 +47,27 @@ constexpr Values Unmeasured() {
     return values;
 }
 
-struct Summary {
-    bool valid = false;
+struct Run {
+    // -benchmarkid, or the date when none was given; also the file's name.
+    std::string id;
     std::string date;
     float seconds = 0.0f;
+    unsigned loops = 0;
     FrameStats::Display display;
-    // The overlay was open for part of the run, so its own drawing is in the frame times.
-    bool overlaySeen = false;
     std::string plugins;
     Values values = Unmeasured();
 };
 
-enum class State { Idle, Armed, Running };
+// Call once a frame, on the thread that presents.
+void Add(const FrameStats::Frame& frame);
 
-// Arms a capture, which starts once the overlay closes. Zero seconds runs until Stop.
-void Start(float seconds);
-void Stop();
+// Call when the benchmark has written a loop's report. Saves the run so far.
+void Report();
 
-// Call once a frame, whether or not the overlay is up.
-void Add(const FrameStats::Frame& frame, bool overlayVisible);
+// Seconds this session's benchmark has measured, 0 when none has run.
+float Measured();
 
-State Status();
-float Elapsed();
-float Duration();
-
-// The last finished capture this session.
-const Summary& Last();
-
-// Read from bin\DevTools-baseline.ini the first time it is asked for.
-const Summary& Baseline();
-
-// Makes the last capture the baseline and writes it to the file.
-void SaveBaseline();
+// Every saved run, oldest first, this session's included.
+std::vector<Run> Runs();
 
 }

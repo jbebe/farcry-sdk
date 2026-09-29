@@ -201,19 +201,25 @@ against the game without it.
 The tab's own measurements run on a thread of their own once a second, or cost next to nothing per
 frame. They run whether the overlay is open or not.
 
-**Comparing against the game as it shipped:**
+**Benchmark runs.** The game's own benchmark provides the repeatable test. Launch through FCSE with
+`-benchmark` and a `-benchmarkid` naming the run, for example:
 
-1. Leave only `DevTools.dll` in `bin\plugins\`, turn vsync off, load a save, and set the clock on
-   the Environment tab.
-2. Choose a duration, press **Start**, then press Home. The capture begins once the overlay closes.
-3. When it has run, open the overlay and press **Save as baseline**. That writes
-   `bin\DevTools-baseline.ini`.
-4. Put the mods back, and capture again from the same save, time and spot.
+```
+-benchmark path -world world1 -benchmarkinputname "Benchmark_Small" -benchmarkloop 1
+-benchmarkid "Vanilla" -RenderProfile_VSync 0
+```
 
-The table then shows the baseline, the capture and the change for each measure, coloured where it
-moved more than 5%. The table warns when vsync was on, when the overlay was open during the capture,
-or when the resolution differs, and it lists the plugins loaded when they differ from the baseline's.
-Every finished capture is also written to `fcse.log` as one line.
+DevTools measures only while the benchmark itself counts frames: from the end of its warm-up to the
+report it writes at the end of each loop. Every loop is part of one run. The run is saved to
+`bin\DevTools-benchmarks\<id>.ini` at each report, because the game quits after the last loop, and
+it is also written to `fcse.log` as one line. A second run with the same id replaces the first. With
+no `-benchmarkid`, the run is named after the time it started.
+
+To compare against the game as it shipped, run the benchmark once with only `DevTools.dll` in
+`bin\plugins\`, then again with the mods, under a different id. The Diagnostics tab lists every saved
+run. It compares the newest run with the one before it until you pick others. For each measure the
+table shows both values and the change, coloured where it moved more than 5%. It warns when either
+run had vsync on or the resolutions differ, and it lists both plugin sets when they differ.
 
 ### Adding a window from another plugin
 

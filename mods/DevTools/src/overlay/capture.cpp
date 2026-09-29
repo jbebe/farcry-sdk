@@ -1,26 +1,30 @@
 // Frames are kept whole for the percentiles; the once-a-second process samples are folded in as they
-// land, so a capture holds one float per frame and nothing else that grows.
+// land. A run spans every loop of the benchmark, and is saved again at each loop's report, since the
+// engine quits after the last one.
+//
+// Frames arrive on the thread that presents and reports on the engine's, so both take the lock.
 #include "overlay/capture.h"
 
+#include "engine/benchmark.h"
 #include "engine/process_stats.h"
 #include "fcse_api.h"
 
 #include <algorithm>
 #include <cmath>
 #include <cstdlib>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <limits>
 #include <map>
+#include <mutex>
 #include <numeric>
-#include <vector>
 #include <windows.h>
 #include <psapi.h>
 
 namespace {
     using DevTools::Capture::MetricInfo;
-    using DevTools::Capture::State;
-    using DevTools::Capture::Summary;
+    using DevTools::Capture::Run;
     using DevTools::FrameStats::kUnmeasured;
     using DevTools::ProcessStats::Megabytes;
 
@@ -55,7 +59,7 @@ namespace {
         float Get() const { return count == 0 ? kUnmeasured : static_cast<float>(sum / count); }
     };
 
-    // What the process samples of one capture add up to.
+    // What the process samples of one run add up to.
     struct Process {
         unsigned lastSerial = 0;
         Average engine;
@@ -68,24 +72,22 @@ namespace {
         uint64_t addressLimit = 0;
     };
 
-    State g_state = State::Idle;
-    float g_duration = 0.0f;
+    std::mutex g_lock;
+    bool g_running = false;
+    unsigned g_loops = 0;
     double g_elapsedMs = 0.0;
-    bool g_overlaySeen = false;
     std::vector<float> g_frames;
     std::vector<float> g_gpu;
     Process g_process;
 
-    Summary g_last;
-
     // Beside fcse.ini, in the folder the process was started from.
-    const std::filesystem::path& File() {
-        static const std::filesystem::path file = [] {
+    const std::filesystem::path& Folder() {
+        static const std::filesystem::path folder = [] {
             std::wstring exe(32768, L'\0');
             exe.resize(GetModuleFileNameW(nullptr, exe.data(), static_cast<DWORD>(exe.size())));
-            return std::filesystem::path(exe).parent_path() / L"DevTools-baseline.ini";
+            return std::filesystem::path(exe).parent_path() / L"DevTools-benchmarks";
         }();
-        return file;
+        return folder;
     }
 
     // The file names of the DLLs loaded from bin\plugins\, joined.
@@ -112,14 +114,33 @@ namespace {
         return plugins;
     }
 
+    std::string Now(char timeSeparator) {
+        SYSTEMTIME now{};
+        GetLocalTime(&now);
+        char text[32];
+        snprintf(text, sizeof(text), "%04u-%02u-%02u %02u%c%02u", now.wYear, now.wMonth, now.wDay,
+                 now.wHour, timeSeparator, now.wMinute);
+        return text;
+    }
+
+    // The run's id, or the time it started when -benchmarkid was not given, as a file name.
+    const std::string& RunId() {
+        static const std::string id = [] {
+            std::string name = DevTools::Benchmark::Id().empty() ? Now('-')
+                                                                 : DevTools::Benchmark::Id();
+            for (char& c : name) {
+                c = std::strchr("\\/:*?\"<>|", c) != nullptr ? '_' : c;
+            }
+            return name;
+        }();
+        return id;
+    }
+
     void Begin() {
-        g_state = State::Running;
-        g_elapsedMs = 0.0;
-        g_overlaySeen = false;
-        // Two minutes at 300 fps, so a normal capture never reallocates mid-run.
+        g_running = true;
+        // Two minutes at 300 fps, so a typical run never reallocates mid-measurement.
         g_frames.reserve(120 * 300);
         g_gpu.reserve(120 * 300);
-        g_process = {};
         g_process.lastSerial = DevTools::ProcessStats::Read().serial;
     }
 
@@ -155,44 +176,22 @@ namespace {
                               : sorted[std::min(sorted.size() - 1, sorted.size() * 99 / 100)];
     }
 
-    std::string Today() {
-        SYSTEMTIME now{};
-        GetLocalTime(&now);
-        char text[32];
-        snprintf(text, sizeof(text), "%04u-%02u-%02u %02u:%02u", now.wYear, now.wMonth, now.wDay,
-                 now.wHour, now.wMinute);
-        return text;
-    }
-
-    void Log(const Summary& summary) {
-        std::string line = "capture: " + std::to_string(static_cast<int>(summary.seconds)) + " s";
-        for (size_t metric = 0; metric < std::size(kMetrics); ++metric) {
-            if (!std::isnan(summary.values[metric])) {
-                char value[64];
-                snprintf(value, sizeof(value), " %s=%.2f", kMetrics[metric].key,
-                         summary.values[metric]);
-                line += value;
-            }
-        }
-        FCSE::Logf("%s", line.c_str());
-    }
-
-    void Finish() {
+    Run Summarise() {
         using namespace DevTools::Capture;
 
         std::sort(g_frames.begin(), g_frames.end());
         std::sort(g_gpu.begin(), g_gpu.end());
 
-        Summary summary;
-        summary.valid = !g_frames.empty();
-        summary.date = Today();
-        summary.seconds = static_cast<float>(g_elapsedMs / 1000.0);
-        summary.display = DevTools::FrameStats::ReadDisplay();
-        summary.overlaySeen = g_overlaySeen;
-        summary.plugins = Plugins();
+        Run run;
+        run.id = RunId();
+        run.date = Now(':');
+        run.seconds = static_cast<float>(g_elapsedMs / 1000.0);
+        run.loops = g_loops;
+        run.display = DevTools::FrameStats::ReadDisplay();
+        run.plugins = Plugins();
 
         const bool sampled = g_process.cpu.count > 0;
-        Values& values = summary.values;
+        Values& values = run.values;
         values[FrameMs] = Mean(g_frames.begin(), g_frames.end());
         values[FrameMsP99] = Slowest(g_frames);
         values[Fps] = 1000.0f / values[FrameMs];
@@ -210,21 +209,52 @@ namespace {
         values[AddressLimit] = sampled ? Megabytes(g_process.addressLimit) : kUnmeasured;
         values[VramPeak] =
             g_process.gpuUsage.count > 0 ? Megabytes(g_process.vramPeak) : kUnmeasured;
-
-        // The address space the tab watches is not left holding a capture's worth of frames.
-        g_state = State::Idle;
-        std::vector<float>().swap(g_frames);
-        std::vector<float>().swap(g_gpu);
-
-        if (summary.valid) {
-            g_last = summary;
-            Log(summary);
-        }
+        return run;
     }
 
-    Summary Load() {
+    void Save(const Run& run) {
+        std::error_code ignored;
+        std::filesystem::create_directories(Folder(), ignored);
+        const std::filesystem::path path = Folder() / (run.id + ".ini");
+
+        std::ofstream file(path, std::ios::trunc);
+        file << "; A benchmark run measured by DevTools, compared on the overlay's Diagnostics "
+                "tab.\n";
+        file << "date = " << run.date << "\n";
+        file << "seconds = " << run.seconds << "\n";
+        file << "loops = " << run.loops << "\n";
+        file << "width = " << run.display.width << "\n";
+        file << "height = " << run.display.height << "\n";
+        file << "vsync = " << (run.display.vsync ? 1 : 0) << "\n";
+        file << "plugins = " << run.plugins << "\n";
+        for (size_t metric = 0; metric < std::size(kMetrics); ++metric) {
+            if (!std::isnan(run.values[metric])) {
+                file << kMetrics[metric].key << " = " << run.values[metric] << "\n";
+            }
+        }
+        file.close();
+
+        if (!file) {
+            FCSE::Logf("capture: %s could not be written", path.string().c_str());
+            return;
+        }
+
+        std::string line = "capture: run '" + run.id + "', loop " + std::to_string(run.loops) +
+                           ", " + std::to_string(static_cast<int>(run.seconds)) + " s";
+        for (size_t metric = 0; metric < std::size(kMetrics); ++metric) {
+            if (!std::isnan(run.values[metric])) {
+                char value[64];
+                snprintf(value, sizeof(value), " %s=%.2f", kMetrics[metric].key,
+                         run.values[metric]);
+                line += value;
+            }
+        }
+        FCSE::Logf("%s", line.c_str());
+    }
+
+    Run Load(const std::filesystem::path& path) {
         std::map<std::string, std::string> entries;
-        std::ifstream file(File());
+        std::ifstream file(path);
         for (std::string line; std::getline(file, line);) {
             const size_t equals = line.find('=');
             if (line.empty() || line[0] == ';' || equals == std::string::npos) {
@@ -236,33 +266,41 @@ namespace {
                 valueStart == std::string::npos ? "" : line.substr(valueStart);
         }
 
-        Summary summary;
-        if (entries.empty()) {
-            return summary;
-        }
-
         const auto number = [&](const char* key) {
             const auto found = entries.find(key);
             return found == entries.end() ? kUnmeasured
                                           : std::strtof(found->second.c_str(), nullptr);
         };
 
-        summary.valid = true;
-        summary.date = entries["date"];
-        summary.plugins = entries["plugins"];
-        summary.seconds = number("seconds");
-        summary.display = {true, static_cast<unsigned>(number("width")),
-                           static_cast<unsigned>(number("height")), number("vsync") != 0.0f};
-        summary.overlaySeen = number("overlay") != 0.0f;
+        Run run;
+        run.id = path.stem().string();
+        run.date = entries["date"];
+        run.plugins = entries["plugins"];
+        run.seconds = number("seconds");
+        run.loops = static_cast<unsigned>(number("loops"));
+        run.display = {true, static_cast<unsigned>(number("width")),
+                       static_cast<unsigned>(number("height")), number("vsync") != 0.0f};
         for (size_t metric = 0; metric < std::size(kMetrics); ++metric) {
-            summary.values[metric] = number(kMetrics[metric].key);
+            run.values[metric] = number(kMetrics[metric].key);
         }
-        return summary;
+        return run;
     }
 
-    Summary& StoredBaseline() {
-        static Summary baseline = Load();
-        return baseline;
+    // Read from the folder once, and kept up to date by this session's reports.
+    std::vector<Run>& StoredRuns() {
+        static std::vector<Run> runs = [] {
+            std::vector<Run> found;
+            std::error_code error;
+            for (const auto& entry : std::filesystem::directory_iterator(Folder(), error)) {
+                if (entry.path().extension() == L".ini") {
+                    found.push_back(Load(entry.path()));
+                }
+            }
+            std::sort(found.begin(), found.end(),
+                      [](const Run& a, const Run& b) { return a.date < b.date; });
+            return found;
+        }();
+        return runs;
     }
 }
 
@@ -270,26 +308,15 @@ namespace DevTools::Capture {
 
 const MetricInfo& Describe(Metric metric) { return kMetrics[metric]; }
 
-void Start(float seconds) {
-    g_duration = seconds;
-    g_state = State::Armed;
-}
-
-void Stop() {
-    if (g_state == State::Running) {
-        Finish();
-    }
-    g_state = State::Idle;
-}
-
-void Add(const FrameStats::Frame& frame, bool overlayVisible) {
-    if (g_state == State::Armed && !overlayVisible) {
-        Begin();
-    }
-    if (g_state != State::Running) {
+void Add(const FrameStats::Frame& frame) {
+    if (!Benchmark::Measuring()) {
         return;
     }
 
+    std::lock_guard<std::mutex> held(g_lock);
+    if (!g_running) {
+        Begin();
+    }
     if (!std::isnan(frame.ms)) {
         g_frames.push_back(frame.ms);
         g_elapsedMs += frame.ms;
@@ -297,52 +324,32 @@ void Add(const FrameStats::Frame& frame, bool overlayVisible) {
     if (!std::isnan(frame.gpuMs)) {
         g_gpu.push_back(frame.gpuMs);
     }
-    g_overlaySeen = g_overlaySeen || overlayVisible;
     Fold(ProcessStats::Read());
-
-    if (g_duration > 0.0f && g_elapsedMs >= g_duration * 1000.0) {
-        Finish();
-    }
 }
 
-State Status() { return g_state; }
-
-float Elapsed() { return static_cast<float>(g_elapsedMs / 1000.0); }
-
-float Duration() { return g_duration; }
-
-const Summary& Last() { return g_last; }
-
-const Summary& Baseline() { return StoredBaseline(); }
-
-void SaveBaseline() {
-    if (!g_last.valid) {
+void Report() {
+    std::lock_guard<std::mutex> held(g_lock);
+    if (!g_running || g_frames.empty()) {
         return;
     }
 
-    std::ofstream file(File(), std::ios::trunc);
-    file << "; DevTools diagnostics baseline, written by Save as baseline on the overlay's "
-            "Diagnostics tab.\n";
-    file << "date = " << g_last.date << "\n";
-    file << "plugins = " << g_last.plugins << "\n";
-    file << "seconds = " << g_last.seconds << "\n";
-    file << "width = " << g_last.display.width << "\n";
-    file << "height = " << g_last.display.height << "\n";
-    file << "vsync = " << (g_last.display.vsync ? 1 : 0) << "\n";
-    file << "overlay = " << (g_last.overlaySeen ? 1 : 0) << "\n";
-    for (size_t metric = 0; metric < std::size(kMetrics); ++metric) {
-        if (!std::isnan(g_last.values[metric])) {
-            file << kMetrics[metric].key << " = " << g_last.values[metric] << "\n";
-        }
-    }
-    file.close();
-    if (!file) {
-        FCSE::Logf("capture: %s could not be written", File().string().c_str());
-        return;
-    }
+    ++g_loops;
+    const Run run = Summarise();
+    Save(run);
 
-    StoredBaseline() = g_last;
-    FCSE::Logf("capture: saved as the baseline in %s", File().string().c_str());
+    std::vector<Run>& runs = StoredRuns();
+    std::erase_if(runs, [&](const Run& saved) { return saved.id == run.id; });
+    runs.push_back(run);
+}
+
+float Measured() {
+    std::lock_guard<std::mutex> held(g_lock);
+    return static_cast<float>(g_elapsedMs / 1000.0);
+}
+
+std::vector<Run> Runs() {
+    std::lock_guard<std::mutex> held(g_lock);
+    return StoredRuns();
 }
 
 }

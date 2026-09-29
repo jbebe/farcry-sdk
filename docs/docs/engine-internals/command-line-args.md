@@ -222,6 +222,35 @@ Observed sub-mode behaviour:
 - **`path`** — needs a playback file under `Benchmarks\Playbacks\`. With none present, it reaches a
   loading screen and then exits.
 
+### How a run is measured
+
+:::info[Verified via reverse engineering]
+Traced statically in the Steam `Dunia.dll`, with names from the dedicated server. Not yet watched in
+a running benchmark.
+:::
+
+A run plays in the game-rules state `CFCXGRStateBenchmark`, after `CFCXGRStateBenchmarkWaitForLoad`
+has seen the world load.
+
+- **Each frame:** the state advances the benchmark mode, and shows `(Loop i/n)-(ESC to Cancel)`.
+- **When the mode says a loop is over:** the state has the mode write its report. If loops remain
+  (`-benchmarkloop`), it resets the mode and counts the loop. After the last loop it asks `CXGame` to
+  quit.
+- **`-benchmarkfixedframerate`:** the state locks the timer to 30 fps on entry.
+
+Every mode counts frames with `CFCXBenchmarkFrameBasedCollector`. Its Steam vtable is `0x10E8F924`.
+
+| Slot | Function | What it does |
+|---|---|---|
+| 0 | `Initialize` (`0x10741790`) | Empties both sample arrays, sized for 20,000 frames. Sets a warm-up of 10 frames at `+0x20` |
+| 1 | `Update` (`0x107417E0`) | Counts nothing until the warm-up runs out, and resets `CRenderStats` when it does. After that it records each frame's time from `CRenderStats`, and a rolling one-second frame rate. Draws `FPS`, `Frame` and `Time(s)` as debug text |
+| 2 | `SaveToFile` (`0x10741A10`) | Writes `frame(id), fps(last_second), end_time(s)`, one row per counted frame |
+
+The file is `BenchmarkReport<loop>.csv`, in a `Results\` folder under the benchmark output path.
+Each mode has its own report function that names it: `0x1067B100`, and `0x108A5210` for the camera
+path. `Update` is reached only through the vtable, so the address library has no entry for it.
+DevTools' Diagnostics tab finds it by pattern instead, and measures over this same window.
+
 ## Networking (`DispatchNetworkMode` `0x10663af0` → `CreateHostNode` `0x10662440` / `CreateClientNode` `0x10662b40`)
 
 `CreateHostNode` aborts if `-login` is absent (`"Invalid parameters for -host, missing (-login)"`).
