@@ -7,6 +7,7 @@
 
 #include <array>
 #include <cstdint>
+#include <cstdio>
 
 namespace {
     // The Datsun's sndEngineLoop multilayer.
@@ -30,11 +31,24 @@ namespace {
         "55 8B EC 83 E4 F8 81 EC CC 00 00 00 D9 EE 53 D9 54 24 38 56 D9 54 24 40 57 D9 54 24 48 8B F9")};
     constexpr uintptr_t kGetProjectCall = 0x35;
 
+    // The voice manager's per-update refresh of its instance list (ECX = the manager), before it applies the
+    // voice budget.
+    FCSE::Relocation<uint8_t*> g_voiceBudget{FCSE::Pattern(
+        "56 8B F1 8B 46 0C 39 46 14 57 73 23 8B 4E 10 6A 00 6A 00 03 C0 6A 00 89 46 14")};
+    // The manager's instance list: nodes of {next, ?, entry}; an entry's instance handle, state (1 playing,
+    // 2 virtual, 4 stopped) and loudness after distance, dB Q16.16.
+    constexpr uintptr_t kInstanceList = 0x4;
+    constexpr uintptr_t kEntryInstance = 0x14;
+    constexpr uintptr_t kEntryState = 0x28;
+    constexpr uintptr_t kEntryLoudness = 0x60;
+
     // A wheeled vehicle's fields: the parameter ids it answers, its emulated RPM and gear.
     constexpr uintptr_t kVehicle = 0xC;
     constexpr uintptr_t kSpeedId = 0x250;
     constexpr uintptr_t kRpmId = 0x254;
     constexpr uintptr_t kGear = 0x36C;
+    // The gear table's top gear maximum speed: 13 m/s in retail, 30 in the mod.
+    constexpr uintptr_t kTopGearMaxSpeed = 0x348 + 2 * sizeof(float);
 
     // A multilayer instance: its resource index, and one voice handle per layer (-1 when it has none).
     constexpr uintptr_t kResourceIndex = 0x0;
@@ -52,10 +66,14 @@ namespace {
     float g_rpm = 0.0f;
     float g_speed = 0.0f;
     int g_gear = -1;
+    float g_topSpeed = 0.0f;
 
     struct Engine {
         uintptr_t instance = 0;
         std::array<float, kLayers> volume{};
+        std::array<int, kLayers> handle{-1, -1, -1};
+        std::array<int, kLayers> state{};
+        std::array<float, kLayers> loudness{};
         ULONGLONG logged = 0;
     };
     std::array<Engine, 4> g_engines;
@@ -67,6 +85,7 @@ namespace {
             if (parameter == *reinterpret_cast<const uint32_t*>(vehicle + kRpmId)) {
                 g_rpm = value;
                 g_gear = *reinterpret_cast<const int*>(vehicle + kGear);
+                g_topSpeed = *reinterpret_cast<const float*>(vehicle + kTopGearMaxSpeed);
             } else if (parameter == *reinterpret_cast<const uint32_t*>(vehicle + kSpeedId)) {
                 g_speed = value;
             }
@@ -114,6 +133,7 @@ namespace {
         const int* handles = Handles(engine->instance);
         int last = -1;
         for (int i = 0; i < kLayers; ++i) {
+            engine->handle[i] = handles[i];
             if (handles[i] != -1) {
                 last = i;
             }
@@ -123,11 +143,35 @@ namespace {
             return;
         }
         engine->logged = now;
-        FCSE::Logf("engine %08X: rpm %5.0f  speed %5.1f m/s  gear %d | low %6.1f dB %s | medium %6.1f dB %s | "
-                   "max %6.1f dB %s", static_cast<unsigned>(engine->instance), g_rpm, g_speed, g_gear,
-                   engine->volume[0], handles[0] == -1 ? "NO VOICE" : "voice", engine->volume[1],
-                   handles[1] == -1 ? "NO VOICE" : "voice", engine->volume[2],
-                   handles[2] == -1 ? "NO VOICE" : "voice");
+        char layers[kLayers][64];
+        for (int i = 0; i < kLayers; ++i) {
+            const char* state = engine->handle[i] == -1 ? "none"
+                                : engine->state[i] == 1 ? "playing"
+                                : engine->state[i] == 2 ? "VIRTUAL"
+                                : engine->state[i] == 4 ? "STOPPED"
+                                                        : "?";
+            std::snprintf(layers[i], sizeof(layers[i]), "%6.1f dB %-7s (heard %6.1f dB, state %d)",
+                          engine->volume[i], state, engine->loudness[i], engine->state[i]);
+        }
+        FCSE::Logf("engine %08X: rpm %5.0f  speed %5.1f m/s  gear %d (table to %.0f m/s) | low %s | medium %s | max %s",
+                   static_cast<unsigned>(engine->instance), g_rpm, g_speed, g_gear, g_topSpeed, layers[0], layers[1], layers[2]);
+    }
+
+    // Records the voice state of every engine layer from the voice manager's instance list.
+    void OnVoiceBudget(FCSE_MidHookContext* ctx) {
+        for (auto node = *reinterpret_cast<const uintptr_t*>(ctx->ecx + kInstanceList); node != 0;
+             node = *reinterpret_cast<const uintptr_t*>(node)) {
+            const uintptr_t entry = *reinterpret_cast<const uintptr_t*>(node + 8);
+            const int instance = *reinterpret_cast<const int*>(entry + kEntryInstance);
+            for (Engine& engine : g_engines) {
+                for (int i = 0; i < kLayers; ++i) {
+                    if (engine.instance != 0 && engine.handle[i] != -1 && engine.handle[i] == instance) {
+                        engine.state[i] = *reinterpret_cast<const int*>(entry + kEntryState);
+                        engine.loudness[i] = *reinterpret_cast<const int32_t*>(entry + kEntryLoudness) / 65536.0f;
+                    }
+                }
+            }
+        }
     }
 
     void OnForgetVoice(FCSE_MidHookContext* ctx) {
@@ -147,7 +191,7 @@ namespace {
 void InstallEngineLog() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
-    if (!g_getMultiLayer || !g_layerUpdate || !g_multilayerUpdate) {
+    if (!g_getMultiLayer || !g_layerUpdate || !g_multilayerUpdate || !g_voiceBudget) {
         api->Log("engine log: the vehicle or multilayer code was not found in this build");
         return;
     }
@@ -158,5 +202,6 @@ void InstallEngineLog() {
               reinterpret_cast<void**>(&g_original));
     api->MidHook(g_layerUpdate.get() + kPushToVoice, &OnPushToVoice);
     api->MidHook(g_layerUpdate.get() + kForgetVoice, &OnForgetVoice);
+    api->MidHook(g_voiceBudget.get(), &OnVoiceBudget);
     api->Log("engine log: logging the Datsun's engine layers");
 }
