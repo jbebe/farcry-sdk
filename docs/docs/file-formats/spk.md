@@ -204,6 +204,15 @@ lists as a child, or it resolves to null and plays nothing. That half is inferre
 a load-on-miss path rather than tested with a deliberately unlisted child.
 :::
 
+A play from code does not load either. `CStaticSoundManager::PlayStaticSound` (`0x1062bd20`) takes a
+reference through `GetFromSoundId` (`0x106242f0`, cdecl: the reference out, the id, a language) and
+returns `-1` while the resource's loaded half-word at `+0x8` is 0; the reference it dropped never asked
+for a load. An event that no field names therefore plays only once something holds a reference and has
+called the resource's slot `+0x8`, which requests the load (slot `+0xC` releases it). The same event as
+an extra record in a bank that is loaded does not help either: a play looks for the bank named after
+the id **(heard, 2026-09-29: sound-overhaul's NPC echo `0x00FC0150` failed from inside `00fc0140.spk`
+and from a bank of its own, and plays once the plugin holds that bank)**.
+
 The other way round is tested. Records appended to a bank that is already listed are registered when
 it loads and play with no `depload` change: an echo event, sample and audio added to the Makarov's
 `004569c9.spk` as `0x00FC0001`–`0x00FC0003` play in game **(heard, 2026-09-26)**. The new records

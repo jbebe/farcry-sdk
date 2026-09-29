@@ -1,13 +1,13 @@
 // Echoes: NPC shots play the weapon's echo too, which the game only does for the player's - its NPC version
-// when the echo's bank holds one - and of the echoes a burst plays, one per round, only the last rings out. Each new round's echo fades out the
-// previous one from the same shooter, so a burst ends with one echo however it ends - release, empty
-// magazine or reload.
+// at the echo's id + 0x10 when that bank exists, held loaded here - and of the echoes a burst plays, one per
+// round, only the last rings out: each new round's echo fades out the previous one from the same shooter.
 #include "mutes.h"
 
 #include "fcse_api.h"
 
 #include <windows.h>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 
@@ -21,6 +21,12 @@ namespace {
     FCSE::Relocation<uint8_t*> g_npcShot{FCSE::Pattern(
         "E8 ?? ?? ?? ?? D9 EE 8B 4F 50 8B 10 8B 92 9C 00 00 00 51 D9 1C 24 56 8B B1 88 04 00 00 "
         "8B 89 7C 04 00 00")};
+
+    // CSoundResource::GetFromSoundId: a counted reference to the bank named after a sound id, created
+    // unloaded when nothing holds it yet.
+    FCSE::Relocation<uint8_t*> g_getFromSoundId{FCSE::Pattern(
+        "8B 44 24 08 81 EC 0C 01 00 00 3B 05 ?? ?? ?? ?? 74 4B 8B 8C 24 18 01 00 00 51 50 8D 54 24 10 52 "
+        "E8 ?? ?? ?? ?? 83 C4 0C 84 C0 74 31 56 8B 35 ?? ?? ?? ?? 57")};
 
     // In g_playerEcho: `call GetSoundSystem`, the ambiance manager in `mov ecx, [..]`, and
     // `call CAmbianceManager::GetEchoLength`.
@@ -51,6 +57,18 @@ namespace {
                                                         const void* position, uint32_t unused, float volume);
     using StopSoundFn = void(__thiscall*)(void* system, uint32_t handle, float fade, uint32_t flags);
 
+    struct SoundResourceRef {
+        void* resource = nullptr;
+        bool requested = false;
+    };
+    using GetFromSoundIdFn = SoundResourceRef*(__cdecl*)(SoundResourceRef* out, uint32_t id, const char* language);
+    using RequestLoadFn = void(__thiscall*)(void* resource);
+    constexpr uintptr_t kRequestLoad = 0x8;
+
+    // The NPC echo banks held loaded. Nothing in the data names them, and a play loads nothing: it fails
+    // until a reference has requested the bank.
+    std::array<uint32_t, 8> g_heldEchoes{};
+
     GetSoundSystemFn g_getSoundSystem = nullptr;
     GetEchoLengthFn g_getEchoLength = nullptr;
     void** g_ambianceManager = nullptr;
@@ -70,6 +88,25 @@ namespace {
 
     const uint8_t* CallTarget(const uint8_t* call) {
         return call + 5 + *reinterpret_cast<const int32_t*>(call + 1);
+    }
+
+    // Takes a reference to `id`'s bank and requests it, once, and never lets it go.
+    void HoldLoaded(uint32_t id) {
+        if (!g_getFromSoundId ||
+            std::find(g_heldEchoes.begin(), g_heldEchoes.end(), id) != g_heldEchoes.end()) {
+            return;
+        }
+        const auto free = std::find(g_heldEchoes.begin(), g_heldEchoes.end(), 0u);
+        if (free == g_heldEchoes.end()) {
+            return;
+        }
+        *free = id;
+
+        SoundResourceRef ref;
+        reinterpret_cast<GetFromSoundIdFn>(g_getFromSoundId.get())(&ref, id, nullptr);
+        if (ref.resource != nullptr) {
+            Slot<RequestLoadFn>(ref.resource, kRequestLoad)(ref.resource);
+        }
     }
 
     void OnEcho(uintptr_t strategy, uint32_t echo) {
@@ -116,6 +153,7 @@ namespace {
                 system, id, *reinterpret_cast<const int32_t*>(properties + kThirdPersonSingleShotType),
                 reinterpret_cast<const void*>(ctx->ebx + kShotOrigin), 0, 0.0f);
         };
+        HoldLoaded(echoId + kNpcEchoOffset);
         uint32_t echo = play(echoId + kNpcEchoOffset);
         if (echo == kNoSound) {
             echo = play(echoId);
@@ -137,6 +175,10 @@ void ApplyLastEcho() {
     g_getSoundSystem = reinterpret_cast<GetSoundSystemFn>(CallTarget(site + kGetSoundSystemCall));
     g_getEchoLength = reinterpret_cast<GetEchoLengthFn>(CallTarget(site + kGetEchoLengthCall));
     g_ambianceManager = *reinterpret_cast<void** const*>(site + kAmbianceManager);
+
+    if (!g_getFromSoundId) {
+        api->Log("echoes: GetFromSoundId was not found in this build - NPC echoes fall back to the player's");
+    }
 
     if (api->MidHook(g_playerEcho.get(), &OnPlayerEcho) && api->MidHook(g_npcShot.get(), &OnNpcShot)) {
         api->Log("echoes: NPC shots echo, and a burst's echo rings out only after its last round");
