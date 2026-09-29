@@ -92,6 +92,7 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 - [ ] Better explosion effects
 - [ ] Better smoke during a bushfire and from an exploded car
 - [ ] Tracer round effect. US tracers are red/orange, Soviet ones green
+- [ ] Reuse the taxi driver as a quest giver
 
 ## Sound
 
