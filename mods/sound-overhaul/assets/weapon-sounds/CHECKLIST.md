@@ -61,9 +61,9 @@ Automatics play their echo only once they fire per round, from the user's cut of
 
 | Weapon | 1P | NPC | Echo | Source |
 |---|---|---|---|---|
-| M1903 | [ ] | [ ] | [ ] | |
-| Dart Rifle | [ ] | [ ] | [ ] | |
-| PKM | [ ] | [ ] | [ ] | |
+| M1903 (and Merc) | [~] | [~] | [~] | DS mosin close_3, curved fade from 110 ms, after the crack's highs drop, before its baked-in boom (within 2 dB of peak until 200 ms), at -3.5 dB. NPC: mono close_4 (not the same recording), same fade, at -4 dB. Echo: big |
+| Dart Rifle (suppressed sniper) | [~] | [~] | none | JSRS `_sd` dmr sd_close_4, curved fade from 60 ms, before a reflection at 80 ms (NPC: its mono). At the original's loudness |
+| PKM (Mike's rusty, Merc) | [~] | [~] | [~] | JSRS m60 close_1, 24 ms trimmed, curved fade from 65 ms, before the room's reflection at 100 ms (NPC: its mono, the same). 1P at -3.5 dB, NPC at -4.5 dB. Per round from banks `0x00FC0280`/`0x00FC0284`. Echo: big |
 | M249 | [ ] | [ ] | [ ] | |
 | M2 | [ ] | [ ] | [ ] | |
 | MK19 | [ ] | [ ] | [ ] | |
