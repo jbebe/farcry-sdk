@@ -109,16 +109,10 @@ uncovered in the engine. The reasoning and the verdict per target are in the
 The direction (2026-09-26): data and small hooks on the engine's own systems, no sound manager of our
 own. A step is done when it is heard in game.
 
-- [ ] **1. Distant enemy fire turns into a crack.** Dunia's own distance handling is the baseline, and
-  since NPC shots play their weapon's echo (2026-09-26) distant fire already sounds right. What is
-  left: far away, the dry shot must become a crack, like a distant firing range or shooting in war
-  footage, not a clear gunshot turned down. Not only lower the dry shot with distance, fade a crack in.
-  - The weapon field for it exists: `sndmlDistanceFromShootingSoundToPlayerMultilayer` fades layers by
-    the shooter's distance in metres **(RE-verified)**, and it is empty on all 91 weapons. Give each
-    weapon a multilayer (kind `7`), either the dry shot near and a crack far, or the echo near and a
-    single crack-plus-echo sample far.
-  - Needs a way to write a multilayer into a bank.
-  - Then the report arrives late, at 340 m/s: see **Sound travels** below.
+- [x] **1. Distant enemy fire turns into a crack** (2026-09-29, heard on the M1903). An NPC's echo is a
+  near echo to 55 m and a crack with its echo from 40 m out to 900 m, and every NPC shot of a gun with an
+  echo fades out by 80 m, so from afar the crack is all there is. The report still arrives at once: see
+  **Sound travels** below.
 - [ ] **2. Voices fall off as fast as real speech.** Today a merc 40 m away is heard at normal speech
   level. The dialog events need a far stronger rolloff curve.
   - All 2,587 localized dialog samples are mono **(seen in data)**, so they can get a 3D voice. Then
