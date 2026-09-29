@@ -108,6 +108,17 @@ namespace {
                          params.PresentationInterval != D3DPRESENT_INTERVAL_IMMEDIATE};
         }
         chain->Release();
+
+        IDirect3D9* d3d = nullptr;
+        D3DDEVICE_CREATION_PARAMETERS created{};
+        D3DADAPTER_IDENTIFIER9 adapter{};
+        if (SUCCEEDED(device->GetDirect3D(&d3d))) {
+            if (SUCCEEDED(device->GetCreationParameters(&created)) &&
+                SUCCEEDED(d3d->GetAdapterIdentifier(created.AdapterOrdinal, 0, &adapter))) {
+                g_display.gpu = adapter.Description;
+            }
+            d3d->Release();
+        }
     }
 
     template <typename T> bool Ready(IDirect3DQuery9* query, T& value) {

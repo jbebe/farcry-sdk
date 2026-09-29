@@ -181,45 +181,45 @@ through DirectInput, and both of those shape the result — see
 
 ### Diagnostics
 
-The Diagnostics tab, next to `All`, measures what the game costs to run, so a mod's cost can be read
-against the game without it.
+The Diagnostics tab, next to `All`, is always live. It shows what the game costs to run right now,
+beside a baseline this rig measured running the game as it shipped, so a mod's cost reads as a
+change from that baseline.
 
-- **Frames.** The frame rate and frame time, plus the GPU's time per frame from Direct3D timestamp
-  queries, each plotted over the last 512 frames. While the CPU is the bottleneck, the GPU's time
-  includes the time it spent waiting for commands, so it only equals the GPU's cost when the GPU is
-  the bottleneck.
-- **GPU usage and VRAM.** When Windows provides them, these are the GPU usage and VRAM figures Task
-  Manager shows for the process.
-- **CPU.** How busy the engine's own thread keeps one core, and the whole process's share of the
-  machine. A hint says whether the frame is waiting on the GPU or on the engine thread.
-- **Address space.** How much of the 4 GB is in use (2 GB without large-address-aware), what is
-  committed and private, and the largest free block. Far Cry 2 is a 32-bit process, and it fails an
-  allocation when no free block is big enough, even while plenty is free in total. So the largest
-  free block turns amber below 256 MB and red below 128 MB. The worst value of each since launch is
-  kept.
+- **Frames.** Frame time and GPU time per frame, plotted over the last 512 frames, with a hint
+  saying whether the frame is waiting on the GPU or on the engine thread. GPU time comes from
+  Direct3D timestamp queries. While the CPU is the bottleneck it includes the time the GPU spent
+  waiting for commands, so it only equals the GPU's cost when the GPU is the bottleneck.
+- **Address space.** How much of the 4 GB is in use (2 GB without large-address-aware), and the
+  largest free block, with the worst of each since launch. Far Cry 2 is a 32-bit process, and it
+  fails an allocation when no free block is big enough, even while plenty is free in total. So the
+  largest free block turns amber below 256 MB and red below 128 MB.
+- **The table.** Each measure now, the baseline's value and the change, coloured where it moved more
+  than 5%. The measures are:
+  - frame time and frame rate, averaged and at the slowest 1%, over the last 512 frames
+  - GPU time, averaged and at the slowest 1%, over the same frames
+  - GPU usage and VRAM, the figures Task Manager shows for the process, when Windows provides them
+  - how busy the engine thread keeps one core, and the process's share of all cores
+  - committed memory, private bytes and the largest free block
 
-The tab's own measurements run on a thread of their own once a second, or cost next to nothing per
-frame. They run whether the overlay is open or not.
+The measurements run on a thread of their own once a second, or cost next to nothing per frame.
+They run whether the overlay is open or not.
 
-**Benchmark runs.** The game's own benchmark provides the repeatable test. Launch through FCSE with
-`-benchmark` and a `-benchmarkid` naming the run, for example:
+**The baseline** is measured by the game's own benchmark, once per rig. Launch through FCSE with only
+`DevTools.dll` in `bin\plugins\`, vsync off, and `-benchmark`, for example:
 
 ```
 -benchmark path -world world1 -benchmarkinputname "Benchmark_Small" -benchmarkloop 1
--benchmarkid "Vanilla" -RenderProfile_VSync 0
+-RenderProfile_VSync 0
 ```
 
-DevTools measures only while the benchmark itself counts frames: from the end of its warm-up to the
-report it writes at the end of each loop. Every loop is part of one run. The run is saved to
-`bin\DevTools-benchmarks\<id>.ini` at each report, because the game quits after the last loop, and
-it is also written to `fcse.log` as one line. A second run with the same id replaces the first. With
-no `-benchmarkid`, the run is named after the time it started.
+DevTools measures only while the benchmark counts frames: from the end of its warm-up to the report
+it writes at the end of each loop, across every loop. Memory is kept as the worst of the run, and
+everything else as its average. At each report the run is saved to `bin\DevTools-baseline.ini`,
+because the game quits after the last loop, and is written to `fcse.log` as one line. Every benchmark
+run replaces the baseline.
 
-To compare against the game as it shipped, run the benchmark once with only `DevTools.dll` in
-`bin\plugins\`, then again with the mods, under a different id. The Diagnostics tab lists every saved
-run. It compares the newest run with the one before it until you pick others. For each measure the
-table shows both values and the change, coloured where it moved more than 5%. It warns when either
-run had vsync on or the resolutions differ, and it lists both plugin sets when they differ.
+The baseline records the GPU, CPU, resolution and plugins it was measured with. The tab warns when
+the GPU or CPU differ from this rig's, when the resolution differs, and when vsync was on for either.
 
 ### Adding a window from another plugin
 

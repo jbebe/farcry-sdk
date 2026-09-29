@@ -218,4 +218,19 @@ Snapshot Read() {
     return g_snapshot;
 }
 
+const std::string& CpuName() {
+    static const std::string name = [] {
+        char text[256] = {};
+        DWORD bytes = sizeof(text);
+        RegGetValueA(HKEY_LOCAL_MACHINE, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0",
+                     "ProcessorNameString", RRF_RT_REG_SZ, nullptr, text, &bytes);
+        const std::string_view view(text);
+        const size_t first = view.find_first_not_of(' ');
+        return first == std::string_view::npos
+                   ? std::string()
+                   : std::string(view.substr(first, view.find_last_not_of(' ') - first + 1));
+    }();
+    return name;
+}
+
 }

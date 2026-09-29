@@ -1,5 +1,5 @@
-// The Diagnostics tab: frame, CPU, GPU and memory measurements live, and the engine's benchmark
-// runs compared against each other.
+// The Diagnostics tab: frame, CPU, GPU and memory measurements live, with this rig's benchmark
+// baseline beside them.
 #pragma once
 
 namespace DevTools::Diagnostics {

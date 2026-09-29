@@ -17,7 +17,7 @@
 #include "engine/renderer.h"
 #include "engine/weather.h"
 #include "fcse_api.h"
-#include "overlay/capture.h"
+#include "overlay/baseline.h"
 #include "overlay/diagnostics.h"
 
 #include "imgui.h"
@@ -600,7 +600,7 @@ namespace {
 
     // Every frame, overlay up or not, so a benchmark is measured whether or not it is open.
     void OnFrame(const DevTools::FrameStats::Frame& frame) {
-        DevTools::Capture::Add(frame);
+        DevTools::Baseline::Add(frame);
     }
 
     void OnDeviceLost() {
@@ -616,7 +616,7 @@ bool Install() {
     g_installed = Renderer::Install(&Draw, &OnFrame, &OnDeviceLost);
     if (g_installed) {
         ProcessStats::Start();
-        Benchmark::Install(&Capture::Report);
+        Benchmark::Install(&Baseline::Report);
     }
 
     // DevTools' own window is added the way any plugin's is, and first, since every FCSE_Load runs

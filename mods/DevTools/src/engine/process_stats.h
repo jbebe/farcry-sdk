@@ -4,6 +4,7 @@
 
 #include <cstdint>
 #include <limits>
+#include <string>
 
 namespace DevTools::ProcessStats {
 
@@ -44,6 +45,9 @@ void Start();
 
 // Safe from any thread.
 Snapshot Read();
+
+// The processor's name as Windows reports it.
+const std::string& CpuName();
 
 inline float Megabytes(uint64_t bytes) { return static_cast<float>(bytes) / (1024.0f * 1024.0f); }
 

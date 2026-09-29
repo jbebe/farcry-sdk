@@ -5,6 +5,7 @@
 #pragma once
 
 #include <limits>
+#include <string>
 
 struct IDirect3DDevice9;
 
@@ -20,12 +21,14 @@ struct Frame {
     float gpuMs;
 };
 
-// The swap chain the frames are presented through, as of the last device reset.
+// The swap chain the frames are presented through, and the GPU behind it, as of the last device
+// reset.
 struct Display {
     bool known = false;
     unsigned width = 0;
     unsigned height = 0;
     bool vsync = false;
+    std::string gpu;
 };
 
 // The newest few hundred values of one series, oldest at `offset`, as ImGui::PlotLines takes them.

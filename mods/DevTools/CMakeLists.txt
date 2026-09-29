@@ -67,7 +67,7 @@ add_library(DevTools SHARED
   "src/options/options.cpp"
   "src/options/skip_system_detection.cpp"
   "src/options/unlock_all_weapons.cpp"
-  "src/overlay/capture.cpp"
+  "src/overlay/baseline.cpp"
   "src/overlay/diagnostics.cpp"
   "src/overlay/overlay.cpp"
   "${imgui_SOURCE_DIR}/backends/imgui_impl_dx9.cpp"
