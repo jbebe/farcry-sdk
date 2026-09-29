@@ -23,6 +23,9 @@ the audio runtime page, `docs/docs/engine-internals/audio-runtime.md`.
   and the `WeaponProperties.Secondary.Makarov` fragments under `layer\mods\worlds\`). Indoors the room
   reverb supplies the tail. Outdoors the weapon's dormant `sndSingleBulletShotEcho` plays the rest of
   the recording, trimmed by the game to the region's echo length.
+- **Lets distant sound arrive late** (`src/sound_delay.cpp`). An NPC's shot and an explosion play
+  when their sound would reach the player, at 340 m/s: 1 s from 340 m away, 3 s at most. Everything
+  else plays at once.
 - **Lets an older or Wine-derived `dsound.dll` open a device at all** (`src/enumeration_fix.cpp`).
   The bundled DSOAL does not need it.
 - **Logs every reverb switch and every gunshot echo length to `fcse.log`** (`src/reverb_log.cpp`,

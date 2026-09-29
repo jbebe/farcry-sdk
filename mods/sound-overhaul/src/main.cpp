@@ -20,6 +20,8 @@ void ApplyPlayerReverb();
 void ApplyPerRoundShots();
 // Gives NPC shots an echo, and lets only the last echo of a burst ring out.
 void ApplyLastEcho();
+// Delays NPC shots and explosions by the time their sound takes to reach the listener.
+void ApplySoundDelay();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION) {
@@ -38,6 +40,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     ApplyPlayerReverb();
     ApplyPerRoundShots();
     ApplyLastEcho();
+    ApplySoundDelay();
     SoundOverhaul::Mutes::Install();
     return true;
 }
