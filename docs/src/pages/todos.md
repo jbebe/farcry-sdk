@@ -91,7 +91,7 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
   (`CFCXCountersComponentAI::DamageHealth`); not cross-checked in `Dunia.dll`
 - [ ] Better explosion effects
 - [ ] Better smoke during a bushfire and from an exploded car
-- [ ] Tracer round effect
+- [ ] Tracer round effect. US tracers are red/orange, Soviet ones green
 
 ## Sound
 
