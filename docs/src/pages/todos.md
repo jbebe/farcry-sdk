@@ -112,10 +112,8 @@ own. A step is done when it is heard in game.
 - [x] **1. Distant enemy fire turns into a crack** (2026-09-29, heard on the M1903). An NPC's echo is a
   near echo to 55 m and a crack with its echo from 40 m out to 900 m, and every NPC shot of a gun with an
   echo fades out by 80 m, so from afar the crack is all there is.
-- [ ] **2. Voices fall off as fast as real speech.** Today a merc 40 m away is heard at normal speech
-  level. The dialog events need a far stronger rolloff curve.
-  - All 2,587 localized dialog samples are mono **(seen in data)**, so they can get a 3D voice. Then
-    add **Air absorption** below.
+- [x] **2. Voices fall off as fast as real speech** (2026-09-27, heard). The dialog curves in
+  `2fffffff.spk` fall to −15 dB at 20 m, −32 dB at 40 m and silence at 50 m.
 - [ ] **3. Vehicles have an engine you hear.** The vehicle engines sound awful today and need fixing.
   An idling car rumbles, the engine rises with speed and load, and the tyres sit under it. Today the
   rolling wheels dominate and a stopped car is silent.
