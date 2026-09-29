@@ -111,8 +111,7 @@ own. A step is done when it is heard in game.
 
 - [x] **1. Distant enemy fire turns into a crack** (2026-09-29, heard on the M1903). An NPC's echo is a
   near echo to 55 m and a crack with its echo from 40 m out to 900 m, and every NPC shot of a gun with an
-  echo fades out by 80 m, so from afar the crack is all there is. The report still arrives at once: see
-  **Sound travels** below.
+  echo fades out by 80 m, so from afar the crack is all there is.
 - [ ] **2. Voices fall off as fast as real speech.** Today a merc 40 m away is heard at normal speech
   level. The dialog events need a far stronger rolloff curve.
   - All 2,587 localized dialog samples are mono **(seen in data)**, so they can get a 3D voice. Then
@@ -149,13 +148,6 @@ own. A step is done when it is heard in game.
 
 ### Gunshots
 
-- [ ] **Sound travels.** Every distant sound arrives late: shots, explosions, all of it. Nothing in the
-  engine delays a sound today.
-  - First prototype: an FCSE plugin that holds back `Weapon_NPC` plays by distance ÷ speed of sound
-    (hook `CSoundSystem::PlaySound` `+0x9c`, flush in `Update` `+0x50`, vtable `0x10e82d10`).
-  - Explosions (sound type 10) once their emitters are known to outlive the delay.
-- [ ] **Crack before report.** Comes with the delay, because fly-bys are not delayed. It needs better
-  crack samples.
 - [ ] **No crack from subsonic or silenced weapons** (silenced Makarov, Dart Rifle). The fly-by sound is
   per player, not per weapon, so a calibre-aware crack needs a plugin.
 - [ ] **Close layers per weapon.** Add transient, mechanical (bolt, spring) and body layers as children

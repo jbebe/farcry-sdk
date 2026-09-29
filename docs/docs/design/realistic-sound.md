@@ -114,11 +114,10 @@ Nothing on the list is impossible.
   Retail sets the field on no weapon. The AK47's third-person shot is a single mono clip. The unused game
   parameter `0x00440259` (0–250) looks like the one intended for this **(inferred)**. A far layer can
   also be pre-filtered in the sample, so the low-pass needs no code.
-- **Late arrival: plugin.** Nothing in DARE or the game delays a sound by distance **(RE-verified)**, and
-  a multi-event cannot offset a child. Only a plugin can hold the report back by `d / 343`.
-- **Crack before report: comes with the delay.** The fly-by fires at the player the moment a bullet's
-  path is resolved **(RE-verified)**. Once reports are delayed, a far shot that passes close gives crack,
-  then report, with no extra code. The crack's sound is data (`sndPassBy…` on the player).
+- **Late arrival: dropped (2026-09-29).** Nothing in DARE or the game delays a sound by distance
+  **(RE-verified)**. A plugin that held NPC shots and explosions back by `d / 340` was built, then
+  removed unheard: FC2's fights are too close for the delay to mean anything, and it costs a hook on
+  every sound played. Crack-before-report went with it.
 
 ### 2. Environment tail — backend + data (plugin for NPC echoes)
 
@@ -330,46 +329,6 @@ calls, launch from a shell with `DSOAL_LOGLEVEL`, `DSOAL_LOGFILE`, `ALSOFT_LOGLE
 - **No difference:** check the log first. No DSOAL log at all means the DLLs were not picked up. A log
   without EAX property calls means the EAX 4 probe failed.
 - **Crashes or stutter:** a compatibility question for DSOAL, not for us.
-
-## First prototype: sound travels at 340 m/s
-
-**What.** An FCSE plugin that holds back every NPC gunshot by its distance divided by 340 m/s.
-
-**Why this one.**
-
-- It is the cue that most separates a serious shooter from an arcade one: the flash across the valley,
-  then the report.
-- It has no engine support at all, so no data change can fake it.
-- It needs no new assets.
-- It is small.
-- It proves the one capability the plugin route depends on: owning *when* a game sound plays. Delayed
-  far layers, NPC echoes, ricochets and gunfire ducking all build on that.
-- It brings target 1's crack-before-report with it, because the fly-by is not delayed.
-
-**How.**
-
-1. Hook `CSoundSystem::PlaySound` (vtable `0x10e82d10` `+0x9c`: event, sound type, emitter callbacks,
-   volume in dB) and `CSoundSystem::Update` (`+0x50`).
-2. In `PlaySound`, for sound type 9 (`Weapon_NPC`) only:
-   - get the emitter's position from its callbacks (`GetPosition`, slot `+8` in the server's
-     interface; confirm it in `Dunia.dll` first);
-   - get the listener's position from `GetListenerCallbacks` (`+0xc`) and the same slot;
-   - queue the call if `d / 340` is above a few tens of milliseconds, and return no handle.
-
-   The third-person single and auto-start plays do not keep their handle **(RE-verified)**, so returning
-   none is safe for them.
-3. In `Update`, play every due entry through the original `PlaySound` before the original `Update`
-   runs. Both happen on the game thread.
-4. Cap the delay (1.5 s, about 500 m) and log counts to `fcse.log`. The emitter lives inside the
-   weapon's fire strategy, so a weapon destroyed within the delay would leave a stale pointer. The cap
-   keeps that window small.
-
-Explosions (type 10) come next, once the emitters they use are known to outlive the delay.
-
-**Test, once built.** Find an outpost across open ground at 150–300 m and start a fight. Without the
-plugin, the report and the muzzle flash coincide. With it, each report lands 0.45–0.9 s after its
-flash, and automatic fire keeps its rhythm, shifted. Bullets that pass close crack before the report
-arrives. A hotkey toggle lets you A/B it in the same fight.
 
 ## Found along the way
 
