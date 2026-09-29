@@ -93,7 +93,7 @@ Automatics play their echo only once they fire per round, from the user's cut of
 
 | Device | Sound | Source |
 |---|---|---|
-| M67 grenade (also M79 and MGL-140 rounds) | [ ] | |
+| M67 grenade (also M79 and MGL-140 rounds) | [~] | `build/blasts.py`: close bang JSRS frag close_distance_4 on land, faded from 300 ms at 0.1 dB/ms, at retail's -3.3 dB, to 110 m; retail's water takes on water; medium_distance_4 20-220 m and far_distance_4 60-600 m; retail's rumble, now positioned, to 600 m. All in bank `00455b16` |
 | Molotov | [ ] | |
 | IED | [ ] | |
 | Rocket (RPG-7, Carl Gustaf) | [ ] | |
