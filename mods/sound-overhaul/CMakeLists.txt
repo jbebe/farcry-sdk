@@ -27,6 +27,7 @@ add_library(SoundOverhaul SHARED
   "src/per_round_shots.cpp"
   "src/last_echo.cpp"
   "src/mutes.cpp"
+  "src/engine_log.cpp"
 )
 
 target_include_directories(SoundOverhaul PRIVATE
