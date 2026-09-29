@@ -137,16 +137,9 @@ own. A step is done when it is heard in game.
     the player's own sounds; the conversion of DARE's preset layout to EAX, which is not traced.
 - [ ] **5. Shooting in a small room sounds like it.** The close, hard room sound of gunfire indoors in
   Tarkov or Insurgency. Check how gunshots sound in small interiors today first.
-- [ ] **6. Every weapon gets a new shot.** The retail shots are dated and lack kick; replace all of
-  them, one weapon at a time.
-  - The method, from the G3KA4: pick the cut by Audacity A/B, loudness-match it to retail by the
-    loudest 50 ms rather than by peak, and write it at its own length (`spk import` rewrites the
-    descriptor). Full-auto plays per-round shots (`per_round_shots.cpp`).
-  - Choose each weapon's echo by how loud it is: a weaker, a medium or a louder echo, shared between
-    weapons. An echo in its own top-level bank loads with no `depload` entry; the M1903 reuses the
-    G3KA4's.
-  - Choosing the echo by environment needs a hook on its one play call: it plays with no emitter, so
-    no switch can choose **(inferred)**.
+- [x] **Every weapon has a new shot** (2026-09-29): every single-player gun, the grenade and the
+  rocket, with a big and a small echo, full-auto per round. The player's shots are heard in game; NPC
+  shots and the rocket's impact are not yet.
 - [x] **The authored reverb switches by place** (DSOAL and the `PlaySoundReverb` body, 2026-09-25).
 - [x] **Your own shots take the room** (+1,000 mB send on 2D voices, 2026-09-26).
 - [x] **The Makarov's first-person shot is dry, with an outdoor echo** (2026-09-26).
@@ -182,6 +175,8 @@ own. A step is done when it is heard in game.
 
 ### Environment tail
 
+- [ ] **A weapon's echo by environment.** Each weapon has one echo today. Choosing it by place needs a
+  hook on its one play call: it plays with no emitter, so no switch can choose **(inferred)**.
 - [ ] **Ship Sound Overhaul's reverb.** It works in game (DSOAL, the `PlaySoundReverb` body and the
   player's stronger send); it still needs a release (CI and release workflows, Nexus page) and the
   diagnostic logs removed (`reverb_log.cpp`, `echo_log.cpp`).
