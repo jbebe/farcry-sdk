@@ -64,9 +64,9 @@ Automatics play their echo only once they fire per round, from the user's cut of
 | M1903 (and Merc) | [~] | [~] | [~] | Retail's own, kept by the user after two rounds of candidates, curved fade from 120 ms, where it drops 6 dB, before its tail rings on 5-9 dB down. At the original's loudness. Echo: big |
 | Dart Rifle (suppressed sniper) | [x] | [x] | none | JSRS `_sd` dmr sd_close_4, curved fade from 60 ms, before a reflection at 80 ms (NPC: its mono). Both at -5 dB (the original's -7.3/-6.7 was too quiet) |
 | PKM (Mike's rusty, Merc) | [x] | [x] | [x] | JSRS m60 close_1, 24 ms trimmed, curved fade from 65 ms, before the room's reflection at 100 ms (NPC: its mono, the same). 1P at -2 dB, NPC at -3 dB (-3.5/-4.5 was too quiet). Per round from banks `0x00FC0280`/`0x00FC0284`. Echo: big |
-| M249 | [ ] | [ ] | [ ] | |
-| M2 | [ ] | [ ] | [ ] | |
-| MK19 | [ ] | [ ] | [ ] | |
+| M249 (Merc, persistent) | [~] | [~] | [~] | JSRS m249 close_3, curved fade from 50 ms, before the room's reflection at 80 ms (NPC: its mono). 1P at -2 dB, NPC at -3.5 dB. Per round from banks `0x00FC0290`/`0x00FC0294`. Echo: big |
+| M2 | [~] | [~] | [~] | JSRS m82 close_4, 12 ms trimmed, curved fade from 55 ms, where the body drops. NPC: mono close_2 (not the same recording). 1P at -1.5 dB, NPC at -2.5 dB. Per round from banks `0x00FC02A0`/`0x00FC02A4`. Echo: big |
+| MK19 | [~] | [~] | [~] | DS ugl close_1 (the M79's take), 83 ms trimmed, curved fade from 165 ms, where the thump drops. NPC: mono close_1, a separate take, 20 ms trimmed to line up, faded from 110 ms. 1P at -2.5 dB, NPC at -3 dB. Per round from banks `0x00FC02B0`/`0x00FC02B4`. Echo: small |
 | RPG-7 | [ ] | [ ] | [ ] | |
 | Carl Gustaf | [ ] | [ ] | [ ] | |
 | LPO-50 flamethrower | [ ] | [ ] | [ ] | |
@@ -76,9 +76,9 @@ Automatics play their echo only once they fire per round, from the user's cut of
 
 | Weapon | 1P | NPC | Echo | Source |
 |---|---|---|---|---|
-| M2 | [ ] | [ ] | [ ] | |
-| M249 | [ ] | [ ] | [ ] | |
-| MK19 | [ ] | [ ] | [ ] | |
+| M2 | [~] | [~] | [~] | The handheld M2's per-round shots |
+| M249 | [~] | [~] | [~] | The handheld M249's per-round shots |
+| MK19 | [~] | [~] | [~] | The handheld MK19's per-round shots |
 
 ## DLC
 
