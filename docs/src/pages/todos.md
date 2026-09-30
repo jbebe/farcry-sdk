@@ -114,13 +114,8 @@ own. A step is done when it is heard in game.
   echo fades out by 80 m, so from afar the crack is all there is.
 - [x] **2. Voices fall off as fast as real speech** (2026-09-27, heard). The dialog curves in
   `2fffffff.spk` fall to −15 dB at 20 m, −32 dB at 40 m and silence at 50 m.
-- [ ] **3. Vehicles have an engine you hear.** The vehicle engines sound awful today and need fixing.
-  An idling car rumbles, the engine rises with speed and load, and the tyres sit under it. Today the
-  rolling wheels dominate and a stopped car is silent.
-  - Vehicles carry `sndEngineIdle`, `sndEngineLoop`, `sndPlayEngineIdleLoop`, ignition and stop sounds,
-    and two multilayers, `sndmlRPMSoundMultilayer` (`0x00440256`) and `sndmlWheelSlipSoundMultilayer`
-    (`0x00440257`) **(seen in data)**. Find what plays at idle, and whether the RPM layer drops the
-    engine at low revs or the samples are weak.
+- [x] **3. Vehicles have an engine you hear** — dropped (2026-09-30). The Datsun got a rougher, quieter
+  idle; its engine rebuilds were abandoned and the retail engine stays.
 - [ ] **4. Every interior's reverb matches its size.** A shack short and dark, a hangar long, and no
   outdoor reverb indoors. Today the railyard hangar is right, but a train carriage gets a similarly
   strong reverb.
