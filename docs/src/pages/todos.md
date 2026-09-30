@@ -120,8 +120,10 @@ own. A step is done when it is heard in game.
   `room_reverb.cpp` gives every building a reverb by structure type and size as it loads: small room
   0.4 s, medium 0.8 s, large 0.9 s, hall 1.7 s, hangar 3.1 s, metal box 1.0 s, on presets retail
   authored but never used.
-- [ ] **5. Shooting in a small room sounds like it.** The close, hard room sound of gunfire indoors in
-  Tarkov or Insurgency. Check how gunshots sound in small interiors today first.
+- [x] **5. Shooting in a small room sounds like it** (2026-09-30, heard). The room presets' early
+  reflections are raised and brought forward in `7fffffff.bao`: +400/+600 mB at 3–4 ms in small rooms
+  and metal boxes, softer and later up to the hangar. Measured offline through DSOAL, the slap sits
+  9–12 dB under the shot in small rooms; the user kept it light.
 - [x] **Every weapon has a new shot** (2026-09-29): every single-player gun, the grenade and the
   rocket, with a big and a small echo, full-auto per round. The player's shots are heard in game; NPC
   shots and the rocket's impact are not yet.
