@@ -205,8 +205,8 @@ own. A step is done when it is heard in game.
   within 5 m get a whiz before the impact (`fPassByWizzTiming` 0.15 s). The field alone is not enough:
   that sequence plays at volume `0.0` → −96 dB (`0x100faea0`), so the constant needs patching to `1.0`
   at the same time, or close impacts go silent.
-- [ ] **Better fly-by sounds.** Replace `sndPassByRegularSound`/`NearSound`/`UnderwaterSound` on the
-  player component with real cracks and whizzes.
+- [x] **Better fly-by sounds** — kept retail (2026-09-30). Compared against JSRS's `wizz` set by ear: the
+  game's own regular (12) and near (7) whizzes and its impacts are good as they are.
 - [ ] **Retune the fly-by geometry.** `fNormalRadius` 2.7, `fSmallerRadius` 0.6, `fAngle` 1.25,
   `fSoundDuration` 0.5, and `fMinImpactDistance` 5, which suppresses fly-bys for rounds landing near
   the player.
