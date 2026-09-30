@@ -229,8 +229,9 @@ own. A step is done when it is heard in game.
 - [ ] **A quiet world.** Lower the ambience types with a permanent preset, or with sample gain and
   rolloffs, so a gunshot is the loudest thing you hear. Check whether the empty `Exclusive.Normal`
   preset is the one applied by default.
-- [ ] **Revise the ambience.** It is Hollywood today. Crickets can stay; distant dog barks go, and so
-  do distant jackals, which the game has none of.
+- [x] **Revise the ambience** (2026-09-30). The distant dogs were one random-fx set, `0x004E4D2D`, used only
+  by the savannah's daytime 40–120 m calls (`004b89d8.spk`); it is removed with its four clips, and the
+  other animals are kept.
 - [ ] **Duck music and ambience under gunfire** (plugin + data). A new preset in `soundmixings.xml`,
   applied through `CMixingManager::ApplyPreset` whenever shots are fired near the player.
 - [ ] **Brief suppression on a close fly-by** (plugin + data): a short muffle or duck preset triggered
