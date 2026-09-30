@@ -16,6 +16,10 @@ the audio runtime page, `docs/docs/engine-internals/audio-runtime.md`.
 - **Switches the reverb as the player moves** (`src/reverb.cpp`). `CSoundSystem::PlaySoundReverb`
   ships empty, so buildings, regions and mix presets never reached DARE and one reverb played
   everywhere. The plugin gives it a body that plays the reverb event.
+- **Gives every building a reverb that fits it** (`src/room_reverb.cpp` and the `00fc090*` banks). Retail
+  picked one of four by hand, so a bus rang for 2.5 s and 84 buildings had none. As each building loads,
+  the plugin picks by its structure type and size: small, medium and large rooms, a hall, a hangar and a
+  bright metal box, on presets retail authored but never used.
 - **Lets the player's own sounds take the room** (`src/player_reverb.cpp`). DARE gives every voice
   the same reverb send, which the player's shots and reloads, playing at full volume, bury under
   their dry sound. The plugin raises the send of 2D voices by 1,000 mB, the most EAX allows.

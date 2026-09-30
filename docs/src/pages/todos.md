@@ -116,11 +116,10 @@ own. A step is done when it is heard in game.
   `2fffffff.spk` fall to −15 dB at 20 m, −32 dB at 40 m and silence at 50 m.
 - [x] **3. Vehicles have an engine you hear** — dropped (2026-09-30). The Datsun got a rougher, quieter
   idle; its engine rebuilds were abandoned and the retail engine stays.
-- [ ] **4. Every interior's reverb matches its size.** A shack short and dark, a hangar long, and no
-  outdoor reverb indoors. Today the railyard hangar is right, but a train carriage gets a similarly
-  strong reverb.
-  - Suspects: the 84 placed buildings with no reverb may keep the outdoor one; the +1,000 mB send on
-    the player's own sounds; the conversion of DARE's preset layout to EAX, which is not traced.
+- [x] **4. Every interior's reverb matches its size** (2026-09-30, heard). Sound Overhaul's
+  `room_reverb.cpp` gives every building a reverb by structure type and size as it loads: small room
+  0.4 s, medium 0.8 s, large 0.9 s, hall 1.7 s, hangar 3.1 s, metal box 1.0 s, on presets retail
+  authored but never used.
 - [ ] **5. Shooting in a small room sounds like it.** The close, hard room sound of gunfire indoors in
   Tarkov or Insurgency. Check how gunshots sound in small interiors today first.
 - [x] **Every weapon has a new shot** (2026-09-29): every single-player gun, the grenade and the

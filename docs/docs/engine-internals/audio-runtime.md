@@ -247,6 +247,17 @@ DirectSound has to take over `EAX.DLL`'s entry too; Sound Overhaul points it at 
 - `sndReverb` and `fEchoLength`,
 - `sndEnter`/`sndExit` sounds.
 
+A zone is an oriented box: the building's `vectorSize`, centred on the entity and turned with it. The
+listener is inside when its position, rotated into the box's frame, lies within the half-sizes
+(`CSoundOcclusionManager::IsInZone`, server `0x099bb110`). `ResizeBoundingBox` (server `0x08b9ead0`,
+Dunia `0x1068b7a0`), the component's `SerializationEvent`, sets the entity's box from `vectorSize` and
+registers the `SZoneParam`'s sounds as the entity's resources, which is what loads a building's reverb
+event **(RE-verified)**. The component's fields sit at the same offsets in both builds: `vectorSize`
+`+0x10`, `selStructureType` `+0x20` (`Generic`, `Shanty_Shack`, `Stationary_Barge`,
+`Passenger_Rail_Car`, `Box_Car`, `Shipping_Container`, `Warehouse`, `Hangar`, `Hut`, `New_Urban`,
+`Old_Colonial`, `Mud_Hut`, `Dung_Hut`, `Stationary_Bus`), `SoundParams` `+0x64`, its `sndReverb` 8
+bytes in. Buildings have no archetype: each placed one carries these fields in its world sector file.
+
 It also registers the building's entrances as **holes**, each carrying `fSoundOcclusionVolume`,
 `fSoundOcclusionFilter` and `fSoundRange` from `CEntranceInfoComponent`, and the links between connected
 buildings.
@@ -386,6 +397,36 @@ intensity; the [`.srl`](../file-formats/srl-zsr.md) grid appears to store `(inte
 per cell **(seen in data: every low nibble sampled is 0–6, the seven regions; not traced in code)**.
 Each level carries an `fEchoLenght` (1.2–6.1 s, 0 at intensity 0) and a `sndReverb`. 84 placed buildings
 have no reverb. No retail mix preset sets one.
+
+The reverb is chosen by hand per building, never from its size or type. Retail's choices by structure
+type **(seen in data, all 623 placed buildings)**: the 2.5 s dark preset on every shanty, bus, passenger
+rail car and shipping container and on some box cars; the 0.4 s small room on almost every other type,
+from 3 m huts to 50 m generic buildings; warehouses a mix of 0.4, 2.5 and 6.8 s.
+
+A preset record is `0x70` bytes. `DARE_DS3D_SetEaxReverbProps` (`0x10a49a40`) copies it into
+`EAXREVERBPROPERTIES` field by field, so its order is DARE's own **(RE-verified)**:
+
+| Offset | Field | Offset | Field |
+| --- | --- | --- | --- |
+| `+0x00` | preset id | `+0x34` | reverb, mB |
+| `+0x04` | room, mB | `+0x38` | reverb delay |
+| `+0x08` | room HF, mB | `+0x3C` | reverb pan (3 floats) |
+| `+0x0C` | room LF, mB | `+0x48` | environment size |
+| `+0x10` | room rolloff factor | `+0x4C` | diffusion |
+| `+0x14` | decay time | `+0x50` | echo time |
+| `+0x18` | decay HF ratio | `+0x54` | echo depth |
+| `+0x1C` | decay LF ratio | `+0x58` | modulation time |
+| `+0x20` | reflections, mB | `+0x5C` | modulation depth |
+| `+0x24` | reflections delay | `+0x60` | HF reference |
+| `+0x28` | reflections pan (3 floats) | `+0x64` | LF reference |
+| | | `+0x68` | air absorption HF |
+| | | `+0x6C` | flags |
+
+The environment id is always sent as 26 (undefined). Of the 63 presets, 29 (`0x00440237`…`0x00440253`)
+are muted placeholders and 17 are authored but used by no event, among them rooms of 0.8–3.1 s
+(`0x004BE3BB`, `0x004BE3C8`, `0x004BE3C7`, `0x004BE3BF`) and a small bright 1.0 s room
+(`0x004BE3C3`) **(seen in data)**. A reverb event is a one-record bank named after its id, a
+`SetReverb` holding the preset id.
 
 ## Weapon sounds
 
