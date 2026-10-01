@@ -7,16 +7,14 @@ sidebar_position: 19
 :::info[Verified via reverse engineering]
 Traced in the Steam v1.03 `Dunia.dll` and cross-checked against the symbol-bearing Linux
 `FarCry2_server`, which names the classes and methods the PC build only numbers. Addresses are
-Steam; the FCSE hooks below resolve through its address library on both PC builds. In a running
-game (GOG), the console capture was confirmed, and it showed the gap this page now covers: scripts
-log through `System:Log`, not `print`.
+Steam.
 :::
 
 Retail Far Cry 2 keeps producing log output. Mission scripts call `System:Log` constantly, the
 console formats every line it shows, the script system formats every Lua error, Lua's `print`
-writes to the C runtime's stdout, and a handful of sites call `OutputDebugStringA`. What the retail build lost is the far end: nothing consumes any of
-it. This page is the inventory of what still writes, where each path ends, and which of them FCSE
-picks up into `bin\Dunia.log`.
+writes to the C runtime's stdout, and a handful of sites call `OutputDebugStringA`. What the retail
+build lost is the far end: nothing consumes any of it. This page is the inventory of what still
+writes and where each path ends.
 
 ## The console: `CXConsole::AddLine`
 
@@ -32,9 +30,8 @@ the text with spaces, then:
 
 The observer list is the engine's own extension point for exactly this, and `RegisterOutputObserver`
 exists in the server binary — but nothing in either build registers one, so in retail the ring is
-the only place a console line ends up. FCSE hooks `AddLine` itself rather than adding an observer,
-because the vector is a `CryVector` with a packed capacity field and an inline hook at the function
-is both simpler and build-agnostic.
+the only place a console line ends up. The vector is a `CryVector` with a packed capacity field, so
+hooking `AddLine` itself is simpler than adding an observer.
 
 Callers of `PrintLine` on PC, for the record: `ExecuteCommand` and `RunBatch` (errors and echoes),
 `CCryEngine::Initialize`, `ConsoleCmdSetSetting`, `PBsdk_Out` (PunkBuster), `PrintToConsole`
@@ -136,7 +133,7 @@ server, but `CError::SetLog`, the only way to plug one in, is never called.
 
 ## Files the engine still writes
 
-Not console output, and not captured: each of these is its own file with its own trigger.
+Not console output: each of these is its own file with its own trigger.
 
 | File | Writer | Trigger |
 |---|---|---|
@@ -144,20 +141,3 @@ Not console output, and not captured: each of these is its own file with its own
 | `sound_dep.log`, `benchmark_sectors.log`, `lb_<...>.log` | sound dependencies, the sector benchmark, leaderboards | their respective tools |
 | network log | `Echo::CNetworkLog` | `net_log_enable` console command; multiplayer |
 | online services log | `Os::LoggerImpl` with `LogAppender`s | `logFileName` in the online engine registry (`SetupOnlineEngineRegistery`); Demonware/Agora |
-
-## What FCSE captures
-
-`bin\Dunia.log` (see `tools/FCSE/src/engine/dunia_log.cpp`) is fed from these points, each tagged:
-
-| Tag | Point | How |
-|---|---|---|
-| `script` | `System:Log`, `System:LogToConsole` | inline hooks; the first argument is read off the Lua stack as above, then the original runs |
-| `console` | `CXConsole::AddLine` | inline hook, before the engine's own handling; the wide string is written as UTF-8 |
-| `lua` | `CScriptSystem::OnScriptError` | inline hook; the message, then ` - in function <f> (<source>:<line>)` when known, one log line per line of traceback |
-| `stdout`, `stderr` | `fputs`, `fputc`, `fwrite`, `printf`, `fprintf`, `vfprintf` | `Dunia.dll`'s import slots for `MSVCR80.dll`, redirected; a write to either standard stream is assembled into lines and logged, any other `FILE*` passes through |
-| `debug` | `OutputDebugStringA` | the `kernel32.dll` import slot, redirected; assembled into lines the same way, then forwarded so a debugger still sees it |
-
-The inline hooks go through the address library and are therefore build-agnostic. The import slots
-are found by name in the mapped image, so they need no addresses at all, and each one installs on
-its own: GOG has no `fputc` import, and that costs nothing, since nothing in that build calls it.
-Anything missing on a build is logged in `fcse.log` and the rest still install.
