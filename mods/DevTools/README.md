@@ -221,6 +221,17 @@ run replaces the baseline.
 The baseline records the GPU, CPU, resolution and plugins it was measured with. The tab warns when
 the GPU or CPU differ from this rig's, when the resolution differs, and when vsync was on for either.
 
+### Lua
+
+The Lua tab, next to Diagnostics, runs a line of Lua in the game's own script state and shows what
+Lua reports back. **Run** executes the line as a chunk. **Evaluate** reads it as an expression and
+prints its value as `tostring` renders it, so a script's global or `GetLocalPlayerId()` can be
+inspected without a visible side effect. Both run at the end of the next frame.
+
+The retail build drops script errors and `System:Log` lines. Both are caught here instead, with the
+failing function, file and line for an error, and are written to `fcse.log` as well, so they survive
+a crash that follows them.
+
 ### Adding a window from another plugin
 
 `include/devtools_api.h` is the contract, the way `fcse_api.h` is FCSE's, and says what DevTools does

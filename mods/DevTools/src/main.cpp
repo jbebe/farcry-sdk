@@ -23,6 +23,7 @@
 #include "engine/game_profile.h"
 #include "engine/game_thread.h"
 #include "engine/keys.h"
+#include "engine/lua.h"
 #include "engine/pawn_tick.h"
 #include "engine/player.h"
 #include "engine/weather.h"
@@ -120,8 +121,9 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     // flag for itself.
     if (DevTools::GameThread::Install() && DevTools::Console::Install() &&
         DevTools::Overlay::Install()) {
-        // Only the overlay forces weather, so there is nothing to hook without it.
+        // Only the overlay forces weather or reads Lua, so there is nothing to hook without it.
         DevTools::Weather::Install();
+        DevTools::Lua::Install();
     }
 
     // The player, the flags hung off their profile, and the frame all of it runs on. Subscribers are

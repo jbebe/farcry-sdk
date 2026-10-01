@@ -14,10 +14,12 @@ end;
 
 -- Init runs on every load, In only on the first: either may come before the player exists.
 function export:Init()
+	System:Log("flashlight: Init");
 	self._type.Listen(self);
 end;
 
 function export:In()
+	System:Log("flashlight: In");
 	self._type.Listen(self);
 end;
 
@@ -42,10 +44,11 @@ function export:Listen()
 	if (player ~= nil and IsEntityLoaded(player) == 1) then
 		self.Player = player;
 		self.Toggle = CScriptCallbackSystem_GetInstance():RegisterEventCallback(player, self, "OnToggle", "InputDominoMove");
-		System:Log("Flashlight: listening");
+		System:Log("flashlight: listening");
 		return;
 	end;
 
+	System:Log("flashlight: waiting for the player");
 	if (self.Retry == nil) then
 		self.Retry = CDominoDelayManager_GetInstance():CreateDelay(1, self, "OnRetry");
 		CDominoDelayManager_GetInstance():SendCommand(self.Retry, "start");
@@ -59,6 +62,7 @@ function export:OnRetry()
 end;
 
 function export:OnToggle(entity)
+	System:Log("flashlight: pressed");
 	CDominoSoundManager_GetInstance():PlaySound(self.Player, "0x004e1ccf", 15, self, "OnSound");
 end;
 

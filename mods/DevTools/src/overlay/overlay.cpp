@@ -19,6 +19,7 @@
 #include "fcse_api.h"
 #include "overlay/baseline.h"
 #include "overlay/diagnostics.h"
+#include "overlay/lua_console.h"
 
 #include "imgui.h"
 #include "imgui_impl_dx9.h"
@@ -44,8 +45,9 @@ namespace {
 
     constexpr int kToggleKey = VK_HOME;
 
-    // A tab of its own rather than a command category, so it has no commands under it.
+    // Tabs of their own rather than command categories, so they have no commands under them.
     constexpr const char* kDiagnostics = "Diagnostics";
+    constexpr const char* kLua = "Lua";
     constexpr size_t kHistoryMax = 12;
 
     struct QueuedMessage {
@@ -225,6 +227,7 @@ namespace {
     void BuildCategories() {
         g_categories.push_back("All");
         g_categories.push_back(kDiagnostics);
+        g_categories.push_back(kLua);
         for (const Command& command : DevTools::Commands::All()) {
             bool seen = false;
             for (const char* known : g_categories) {
@@ -471,6 +474,8 @@ namespace {
                         DrawEnvironment();
                     } else if (std::strcmp(g_categories[category], kDiagnostics) == 0) {
                         DevTools::Diagnostics::Draw();
+                    } else if (std::strcmp(g_categories[category], kLua) == 0) {
+                        DevTools::LuaConsole::Draw();
                     } else {
                         DrawCommandTable();
                     }
