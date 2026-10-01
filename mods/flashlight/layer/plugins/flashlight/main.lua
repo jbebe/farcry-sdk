@@ -140,7 +140,7 @@ local function magma_id(name)
       crc = bit.band(crc, 1) ~= 0 and bit.bxor(bit.rshift(crc, 1), 0xEDB88320) or bit.rshift(crc, 1)
     end
   end
-  return bit.bnot(crc)
+  return bit.bnot(crc) % 0x100000000
 end
 
 -- The live object a name exports, or nil while no loaded package exports it.
@@ -149,7 +149,7 @@ local function hud_object(name)
   if server == nil then
     return nil
   end
-  local generic = find_generic(server, magma_id(name))
+  local generic = find_generic(server, ffi.new('uint32_t[1]', magma_id(name)))
   if generic == nil then
     return nil
   end
@@ -279,7 +279,7 @@ local function resolve_hud()
   end
 
   generic_server = fcse.mem.read_u32(get_keyframe + GENERIC_SERVER)
-  find_generic = fcse.fn('void*(__thiscall*)(void*, uint32_t)', find)
+  find_generic = fcse.fn('void*(__thiscall*)(void*, const uint32_t*)', find)
   generic_target = fcse.fn('void*(__thiscall*)(void*)', target)
   set_visible = fcse.fn('void(__thiscall*)(void*, int32_t)', visible)
   set_time = fcse.fn('uint8_t(__thiscall*)(void*, uint32_t, bool, bool)', time)
