@@ -22,6 +22,8 @@ void ApplyPerRoundShots();
 void ApplyLastEcho();
 // Gives every building a reverb by its type and size, and a muffle by its material.
 void ApplyRooms();
+// Registers the Combat music setting, and silences the combat music states while it is off.
+void ApplyCombatMusic();
 
 extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     if (api->apiVersion != FCSE_API_VERSION) {
@@ -41,6 +43,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
     ApplyPerRoundShots();
     ApplyLastEcho();
     ApplyRooms();
+    ApplyCombatMusic();
     SoundOverhaul::Mutes::Install();
     return true;
 }

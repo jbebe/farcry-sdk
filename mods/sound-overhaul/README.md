@@ -23,6 +23,10 @@ the audio runtime page, `docs/docs/engine-internals/audio-runtime.md`.
   material, from concrete and mud down to a bus's open windows; buildings retail muffled harder, such as
   the armories, keep theirs. Open doors and windows reach into the room by their size, about 4 m for a
   window, so a house with its windows open is barely muffled inside while a closed one stays walled off.
+- **Can turn combat music off** (`src/combat_music.cpp`). A *Combat music* Yes/No setting, on Sound
+  Overhaul's page of the Mod Configuration Menu and in `bin\fcse.ini`. With it off, the chase, battle,
+  fight and suspense states still take over from the calm music but play nothing, so enemies can be heard;
+  the calm music returns when the fight ends. The game's own Music setting still turns all music off.
 - **Lets the player's own sounds take the room** (`src/player_reverb.cpp`). DARE gives every voice
   the same reverb send, which the player's shots and reloads, playing at full volume, bury under
   their dry sound. The plugin raises the send of 2D voices by 1,000 mB, the most EAX allows.

@@ -28,6 +28,7 @@ add_library(SoundOverhaul SHARED
   "src/last_echo.cpp"
   "src/mutes.cpp"
   "src/rooms.cpp"
+  "src/combat_music.cpp"
 )
 
 target_include_directories(SoundOverhaul PRIVATE
