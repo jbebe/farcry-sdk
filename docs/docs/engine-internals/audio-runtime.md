@@ -258,6 +258,12 @@ event **(RE-verified)**. The component's fields sit at the same offsets in both 
 `Old_Colonial`, `Mud_Hut`, `Dung_Hut`, `Stationary_Bus`), `SoundParams` `+0x64`, its `sndReverb` 8
 bytes in. Buildings have no archetype: each placed one carries these fields in its world sector file.
 
+Only the hole whose centre is closest counts. Within its `fSoundRange` of the hole's box, the zone's values
+blend toward the hole's by squared distance over squared range, and inside the box they are the hole's
+(`GetClosestHole`, server `0x099baec0`); `AddHole` is Dunia `0x10626a30` **(RE-verified)**. Retail's
+ranges are 1–2 m on 1,541 of 1,942 entrances and 0 on 330, so the full wall muffle starts a step away from
+an open window **(seen in data)**.
+
 It also registers the building's entrances as **holes**, each carrying `fSoundOcclusionVolume`,
 `fSoundOcclusionFilter` and `fSoundRange` from `CEntranceInfoComponent`, and the links between connected
 buildings.

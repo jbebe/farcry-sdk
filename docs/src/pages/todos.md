@@ -183,10 +183,12 @@ own. A step is done when it is heard in game.
 - [x] **Your own pickups are never muffled** (2026-10-01, heard). The safehouse ammo, explosive and fuel
   piles and some mission pickups played their first-person grab as `Effect_3D` (type 11), which a room's
   occlusion muffles; Sound Overhaul's fragments set it to `Foley_Player` (15), as on every other pickup.
-- [x] **Set building occlusion filters** (2026-10-01, not yet heard). `fOcclusionFilter` was 0 on most of
-  the 623 buildings. Sound Overhaul's `rooms.cpp` raises it by material as each building loads, never
-  below retail's: 0.05 concrete, brick and mud, 0.03 generic, down to 0.001 for a bus. Entrances keep their
-  retail `fSoundOcclusionFilter` (0 on 97%), so an open doorway still lets sound through.
+- [x] **Set building occlusion filters** (2026-10-01, heard). `fOcclusionFilter` was 0 on most of the 623
+  buildings. Sound Overhaul's `rooms.cpp` raises it by material as each building loads, never below
+  retail's: 0.05 concrete, brick and mud, 0.03 generic, down to 0.001 for a bus. Open doors and windows
+  (filter 0) reach 2 m + 1.5 × the side of their area, about 4 m for a window and at most 8 m, instead of
+  retail's 1–2 m, through a hook on `AddHole` (Dunia `0x10626a30`), so a house with its windows open is
+  barely muffled inside.
 - [ ] **Walls that lower gunfire volume** (plugin or data). No path makes a gunshot quieter through a
   wall today; decide whether one should.
 - [ ] **Material-aware occlusion** (plugin + data). DARE can band-pass by occlusion material, but the
