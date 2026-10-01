@@ -426,4 +426,12 @@ TEST_F(SettingsRegistryTest, RegistrationsFromTwoPluginsStayInTheirOwnGroups) {
     EXPECT_EQ(SettingsRegistry::FindGroup("gamma"), nullptr);
 }
 
+// The menu looks groups up by module name, and an installer may have lowercased the DLL.
+TEST_F(SettingsRegistryTest, FindGroupIgnoresCase) {
+    Init();
+    ASSERT_TRUE(Register("SkyOverhaul", {Checkbox("Sky", true)}));
+
+    EXPECT_EQ(SettingsRegistry::FindGroup("skyoverhaul"), &SettingsRegistry::Groups()[0]);
+}
+
 } // namespace

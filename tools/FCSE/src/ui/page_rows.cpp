@@ -6,6 +6,7 @@
 #include "ui/menu_item_handler.h"
 #include "util/seh.h"
 
+#include <algorithm>
 #include <cstdint>
 #include <cstdio>
 #include <string>
@@ -501,9 +502,13 @@ namespace {
         static std::vector<PlanRow> plan;
         plan.clear();
 
-        const std::vector<std::string>& plugins = PluginLoader::LoadedNames();
-        for (const std::string& plugin : plugins) {
-            PlanGroup(plan, plugin, SettingsRegistry::FindGroup(plugin));
+        // A matched group is captioned with the name it registered under, which keeps the author's
+        // casing when an installer has lowercased the DLL.
+        std::vector<const SettingsRegistry::Group*> shown;
+        for (const std::string& plugin : PluginLoader::LoadedNames()) {
+            const SettingsRegistry::Group* group = SettingsRegistry::FindGroup(plugin);
+            shown.push_back(group);
+            PlanGroup(plan, group != nullptr ? group->pluginName : plugin, group);
         }
 
         // A mod can reach this page without being a loaded DLL at all. LoadedNames() is plugin
@@ -512,18 +517,11 @@ namespace {
         // group matched nothing above, and showing it under the name it chose beats hiding settings
         // that exist in fcse.ini.
         //
-        // This loop must run even when `plugins` is empty: returning early on "no DLLs" is what used
+        // This loop must run even when no DLL is loaded: returning early on "no DLLs" is what used
         // to make a script-only install look like an empty page, with the script's rows sitting in
         // the registry unread.
         for (const SettingsRegistry::Group& group : SettingsRegistry::Groups()) {
-            bool alreadyShown = false;
-            for (const std::string& plugin : plugins) {
-                if (plugin == group.pluginName) {
-                    alreadyShown = true;
-                    break;
-                }
-            }
-            if (!alreadyShown) {
+            if (std::find(shown.begin(), shown.end(), &group) == shown.end()) {
                 PlanGroup(plan, group.pluginName, &group);
             }
         }

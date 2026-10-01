@@ -61,9 +61,8 @@ public:
     // Every group, in registration order. Read by fcse_page.cpp each time the menu is rebuilt.
     static const std::vector<Group>& Groups();
 
-    // The group registered under `pluginName`, or nullptr if that plugin registered no settings.
-    // Note this matches on the name the plugin *chose*, which it is free to make something other
-    // than its module name - see fcse_page.cpp's AppendRows for how the menu reconciles the two.
+    // The group registered under `pluginName`, ignoring case, or nullptr if there is none. Case is
+    // ignored because the menu matches it against module names, which installers may lowercase.
     static const Group* FindGroup(const std::string& pluginName);
 
     // Stores a new value, fires the setting's callback and persists the file. What the in-game page

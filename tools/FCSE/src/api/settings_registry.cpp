@@ -369,7 +369,7 @@ const std::vector<SettingsRegistry::Group>& SettingsRegistry::Groups() { return 
 
 const SettingsRegistry::Group* SettingsRegistry::FindGroup(const std::string& pluginName) {
     for (const Group& group : g_groups) {
-        if (group.pluginName == pluginName) {
+        if (_stricmp(group.pluginName.c_str(), pluginName.c_str()) == 0) {
             return &group;
         }
     }
