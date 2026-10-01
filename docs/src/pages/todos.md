@@ -102,3 +102,4 @@ implementation — see the [Tooling roadmap](/todos/roadmap).
 - [ ] Full-body first person: look down and see your legs
 - [ ] **Some kind of platformer on a computer.** Opening the computer brings up a Magma UI that
   lets you play a platformer game, with a high score and such
+- [ ] **Radio(s).** A host created with ElevenLabs, for example
