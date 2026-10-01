@@ -8,8 +8,11 @@
 #include "engine/game_thread.h"
 #include "fcse_api.h"
 
+#include <algorithm>
 #include <cstdint>
+#include <cstdio>
 #include <cstring>
+#include <iterator>
 #include <deque>
 #include <mutex>
 
@@ -33,6 +36,18 @@ namespace {
     FCSE::Relocation<OnScriptErrorFn> g_onScriptErrorSite{FCSE::Uplay(0x002A9AE0)};
     FCSE::Relocation<SystemLogFn> g_systemLogSite{FCSE::Uplay(0x005F8C70)};
     FCSE::Relocation<GetParamCountFn> g_getParamCountSite{FCSE::Uplay(0x002BE150)};
+
+    // CDominoInputListener::Execute: __thiscall(listener, const CActionValue*, SContext*). It hands
+    // InputDominoMove, the one signal Domino scripts can hear, to the player as a script event.
+    using DominoInputFn = void(__fastcall*)(void* listener, void* edx, const uint32_t* value,
+                                            void* context);
+    FCSE::Relocation<DominoInputFn> g_dominoInputSite{FCSE::Pattern(
+        "8B 4C 24 08 8B 09 83 EC 34 56 8D 44 24 04 50 E8 ?? ?? ?? ?? 8B 44 24 04 83 78 0C 00 0F 84 "
+        "?? ?? ?? ?? 8B 0D ?? ?? ?? ?? F6 C1 01 75 ?? 83 C9 01 89 0D ?? ?? ?? ?? C7 05 ?? ?? ?? ?? "
+        "52 82 65 62")};
+    DominoInputFn g_originalDominoInput = nullptr;
+
+    constexpr uint32_t kInputDominoMove = 0x62658252;
 
     GetScriptSystemFn g_getScriptSystem = nullptr;
     ExecuteBufferFn g_executeBuffer = nullptr;
@@ -97,6 +112,25 @@ namespace {
         return g_originalSystemLog(system, edx, handler);
     }
 
+    // Every signal the Domino listener is offered, once each, and InputDominoMove every time.
+    void __fastcall DominoInputDetour(void* listener, void* edx, const uint32_t* value,
+                                      void* context) {
+        static uint32_t seen[64];
+        static size_t seenCount = 0;
+
+        const uint32_t signal = *value;
+        if (signal == kInputDominoMove) {
+            AddLines("input", "InputDominoMove reached the Domino listener");
+        } else if (seenCount < std::size(seen) &&
+                   std::find(seen, seen + seenCount, signal) == seen + seenCount) {
+            seen[seenCount++] = signal;
+            char text[48];
+            std::snprintf(text, sizeof(text), "signal %08X", signal);
+            AddLines("input", text);
+        }
+        g_originalDominoInput(listener, edx, value, context);
+    }
+
     // Runs on the game thread. False when the chunk did not run, or raised an error.
     bool Run(const std::string& code) {
         void* scripts = g_executeBuffer != nullptr ? g_getScriptSystem() : nullptr;
@@ -140,6 +174,8 @@ void Install() {
     HookSite(g_onScriptErrorSite, &OnScriptErrorDetour, g_originalOnScriptError,
              "CScriptSystem::OnScriptError");
     HookSite(g_systemLogSite, &SystemLogDetour, g_originalSystemLog, "System:Log");
+    HookSite(g_dominoInputSite, &DominoInputDetour, g_originalDominoInput,
+             "CDominoInputListener::Execute");
 }
 
 void Post(const std::string& code) {

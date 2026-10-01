@@ -215,8 +215,7 @@
     <Binding input="kb:h" action="press" signal="heal"/>
 		<Binding input="kb:q" action="press" signal="throw_grenade"/>
 		<Binding input="kb:f" action="press" signal="select_next_throw_gadget"/>
-		<!--Flashlight: InputDominoMove is the one signal the engine hands to Domino scripts-->
-		<Binding input="kb:l" action="press" signal="InputDominoMove"/>
+		<Binding input="kb:l" action="press" signal="toggle_flashlight"/>
 
 		<!--Demo keys-->		
 		<Binding input="kb:^" action="press" signal="start_rain_demo" />
