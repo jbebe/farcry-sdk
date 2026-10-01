@@ -28,36 +28,38 @@ function export:ShutDown()
 		CScriptCallbackSystem_GetInstance():RemoveCallback(self.Player, self.Toggle);
 		self.Toggle = nil;
 	end;
-	if (self.Retry ~= nil) then
-		CDominoDelayManager_GetInstance():RemoveDelay(self.Retry);
-		self.Retry = nil;
+	if (self.Spawn ~= nil) then
+		CScriptCallbackSystem_GetInstance():RemoveCallback(self.Player, self.Spawn);
+		self.Spawn = nil;
 	end;
 end;
 
--- Registers for the key on the local player, retrying each second until the player is loaded.
+-- Registers for the key on the local player, or for the player's spawn while it is not loaded yet.
 function export:Listen()
 	if (self.Toggle ~= nil) then
 		return;
 	end;
 
 	local player = GetLocalPlayerId();
-	if (player ~= nil and IsEntityLoaded(player) == 1) then
-		self.Player = player;
+	local loaded = IsEntityLoaded(player);
+	System:Log("flashlight: player " .. tostring(player) .. ", loaded " .. tostring(loaded));
+	self.Player = player;
+	if (loaded == 1) then
 		self.Toggle = CScriptCallbackSystem_GetInstance():RegisterEventCallback(player, self, "OnToggle", "InputDominoMove");
-		System:Log("flashlight: listening");
+		System:Log("flashlight: listening, callback " .. tostring(self.Toggle));
 		return;
 	end;
 
-	System:Log("flashlight: waiting for the player");
-	if (self.Retry == nil) then
-		self.Retry = CDominoDelayManager_GetInstance():CreateDelay(1, self, "OnRetry");
-		CDominoDelayManager_GetInstance():SendCommand(self.Retry, "start");
-	else
-		CDominoDelayManager_GetInstance():SendCommand(self.Retry, "restart");
+	if (self.Spawn == nil) then
+		self.Spawn = CScriptCallbackSystem_GetInstance():RegisterOnSpawnCallback(player, self, "OnPlayerSpawn");
+		System:Log("flashlight: waiting for the player, callback " .. tostring(self.Spawn));
 	end;
 end;
 
-function export:OnRetry()
+function export:OnPlayerSpawn()
+	System:Log("flashlight: player spawned");
+	CScriptCallbackSystem_GetInstance():RemoveCallback(self.Player, self.Spawn);
+	self.Spawn = nil;
 	self._type.Listen(self);
 end;
 
