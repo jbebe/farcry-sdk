@@ -32,7 +32,7 @@ local SHADOW_FACTOR = 1.0
 -- Seconds from the click to the light switching, and for the light to come up to full, easing in
 -- like a bulb.
 local SWITCH_DELAY = 0.1
-local FADE_IN = 0.15
+local FADE_IN = 0.3
 
 -- Where the lamp sits relative to the eye, in metres: a little above and to the right, so what it
 -- lights shows some shape rather than lying flat under a light at the viewpoint.
