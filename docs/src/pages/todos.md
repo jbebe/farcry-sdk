@@ -117,7 +117,7 @@ own. A step is done when it is heard in game.
 - [x] **3. Vehicles have an engine you hear** — dropped (2026-09-30). The Datsun got a rougher, quieter
   idle; its engine rebuilds were abandoned and the retail engine stays.
 - [x] **4. Every interior's reverb matches its size** (2026-09-30, heard). Sound Overhaul's
-  `room_reverb.cpp` gives every building a reverb by structure type and size as it loads: small room
+  `rooms.cpp` gives every building a reverb by structure type and size as it loads: small room
   0.4 s, medium 0.8 s, large 0.9 s, hall 1.7 s, hangar 3.1 s, metal box 1.0 s, on presets retail
   authored but never used.
 - [x] **5. Shooting in a small room sounds like it** (2026-09-30, heard). The room presets' early
@@ -183,9 +183,10 @@ own. A step is done when it is heard in game.
 - [x] **Your own pickups are never muffled** (2026-10-01, heard). The safehouse ammo, explosive and fuel
   piles and some mission pickups played their first-person grab as `Effect_3D` (type 11), which a room's
   occlusion muffles; Sound Overhaul's fragments set it to `Foley_Player` (15), as on every other pickup.
-- [ ] **Set building occlusion filters** (data). `fOcclusionFilter` is 0 on 391 of 623 buildings and
-  `fSoundOcclusionFilter` on 97% of entrances. Those walls do nothing to gunfire from inside them: the
-  filter is the only path to it, and `fOcclusionVolume` reaches only outdoor ambience.
+- [x] **Set building occlusion filters** (2026-10-01, not yet heard). `fOcclusionFilter` was 0 on most of
+  the 623 buildings. Sound Overhaul's `rooms.cpp` raises it by material as each building loads, never
+  below retail's: 0.05 concrete, brick and mud, 0.03 generic, down to 0.001 for a bus. Entrances keep their
+  retail `fSoundOcclusionFilter` (0 on 97%), so an open doorway still lets sound through.
 - [ ] **Walls that lower gunfire volume** (plugin or data). No path makes a gunshot quieter through a
   wall today; decide whether one should.
 - [ ] **Material-aware occlusion** (plugin + data). DARE can band-pass by occlusion material, but the

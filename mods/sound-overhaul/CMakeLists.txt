@@ -27,7 +27,7 @@ add_library(SoundOverhaul SHARED
   "src/per_round_shots.cpp"
   "src/last_echo.cpp"
   "src/mutes.cpp"
-  "src/room_reverb.cpp"
+  "src/rooms.cpp"
 )
 
 target_include_directories(SoundOverhaul PRIVATE

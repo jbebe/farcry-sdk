@@ -1,6 +1,6 @@
-// Room reverb: every building's reverb follows its structure type and size, set as the building loads,
-// before its reverb event is registered to load. Retail picked one of four by hand, so a bus rang like a
-// shanty for 2.5 s and 84 buildings kept the outdoor reverb.
+// Rooms: every building's reverb follows its structure type and size, and its walls muffle sound from outside by
+// their material, set as the building loads, before its reverb event is registered to load. Retail picked one of
+// four reverbs by hand, so a bus rang like a shanty for 2.5 s, and 472 buildings muffled nothing.
 #include "fcse_api.h"
 
 #include <algorithm>
@@ -15,7 +15,8 @@ namespace {
 
     constexpr uintptr_t kSize = 0x10;
     constexpr uintptr_t kStructureType = 0x20;
-    // SoundParams at +0x64, its sndReverb 8 bytes in.
+    // SoundParams at +0x64: fOcclusionFilter 4 bytes in, sndReverb 8.
+    constexpr uintptr_t kFilter = 0x64 + 0x4;
     constexpr uintptr_t kReverb = 0x64 + 0x8;
 
     // selStructureType, in the order of its enum.
@@ -58,22 +59,54 @@ namespace {
         }
     }
 
+    // The walls' filter, eyeballed by material. The low-pass on sound from outside falls steeply with it:
+    // 0.001 cuts above about 1.6 kHz, 0.01 about 1.2 kHz, 0.05 about 840 Hz, 1.0 (retail's armory) 20 Hz.
+    float FilterFor(uint32_t type) {
+        switch (type) {
+        case NewUrban:
+        case OldColonial:
+        case MudHut:
+        case DungHut:
+            return 0.05f;
+        case Generic:
+            return 0.03f;
+        case Warehouse:
+            return 0.02f;
+        case BoxCar:
+        case ShippingContainer:
+        case Hangar:
+            return 0.01f;
+        case Hut:
+            return 0.005f;
+        case PassengerRailCar:
+        case StationaryBarge:
+            return 0.003f;
+        case ShantyShack:
+            return 0.002f;
+        default:
+            return 0.001f;
+        }
+    }
+
     void OnResizeBoundingBox(FCSE_MidHookContext* ctx) {
         const auto* size = reinterpret_cast<const float*>(ctx->ecx + kSize);
         const uint32_t type = *reinterpret_cast<const uint32_t*>(ctx->ecx + kStructureType);
         *reinterpret_cast<uint32_t*>(ctx->ecx + kReverb) = ReverbFor(type, (std::max)(size[0], size[1]));
+        // Never below retail's: its strong walls, the armory's among them, were set by hand.
+        auto* filter = reinterpret_cast<float*>(ctx->ecx + kFilter);
+        *filter = (std::max)(*filter, FilterFor(type));
     }
 }
 
-void ApplyRoomReverb() {
+void ApplyRooms() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
     if (!g_resizeBoundingBox) {
-        api->Log("room reverb: CBuildingInfoComponent::ResizeBoundingBox was not found in this build");
+        api->Log("rooms: CBuildingInfoComponent::ResizeBoundingBox was not found in this build");
         return;
     }
 
     if (api->MidHook(g_resizeBoundingBox.get(), &OnResizeBoundingBox)) {
-        api->Log("room reverb: buildings take their reverb from their type and size");
+        api->Log("rooms: buildings take their reverb from their type and size, and their muffle from their material");
     }
 }
