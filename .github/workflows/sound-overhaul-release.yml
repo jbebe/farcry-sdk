@@ -7,11 +7,11 @@ permissions:
   contents: write
 
 env:
-  # The Nexus mod page, once it exists: NEXUS_MOD_ID is the internal ID that v3/games/farcry2/mods/<id>
-  # answers with, not the <id> in the URL; the file ID is on the mod's Files tab under "API Info". An
-  # empty file ID skips the upload.
-  NEXUS_MOD_ID: ''
-  NEXUS_FILE_SOUND_OVERHAUL: ''
+  # https://www.nexusmods.com/farcry2/mods/380. NEXUS_MOD_ID is the internal ID that
+  # v3/games/farcry2/mods/380 answers with, not the 380 in the URL; the file ID is on the mod's Files
+  # tab under "API Info". An empty file ID skips the upload.
+  NEXUS_MOD_ID: '6317896892796'
+  NEXUS_FILE_SOUND_OVERHAUL: '8061555'
 
 jobs:
   release:
