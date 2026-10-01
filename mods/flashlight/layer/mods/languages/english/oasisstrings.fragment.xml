@@ -1,0 +1,5 @@
+<oasisstrings>
+  <section name="Actions">
+    <string enum="toggle_flashlight" value="Flashlight" />
+  </section>
+</oasisstrings>
