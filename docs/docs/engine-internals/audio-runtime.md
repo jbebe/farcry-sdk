@@ -303,6 +303,13 @@ obstruction = clamp((1 − objectFactor × passThrough[type]) × occmul_pc, 0, 1
   has moved, adjusted by `ApplyListenerFactor` for whether the listener shares the zone, and faded over
   `occfade` seconds **(RE-verified in the server build, which carries the symbols; the PC callback calls
   the same interface slot)**.
+- `ApplyListenerFactor` (server `0x099b9000`) gives a source in the listener's own zone, or a linked one,
+  no occlusion when both are inside it; near a hole it blends by the hole distance. A source outside
+  every zone, or in an unlinked one, is multiplied by the listener's zone factor, so from inside a
+  building with `fOcclusionFilter` 1.0 every such sound is cut to 20 Hz **(RE-verified)**. A sound the
+  player makes counts as outside unless its type has no occlusion: retail's pickup piles played their
+  first-person grab as `Effect_3D` (11) instead of `Foley_Player` (15), so it was muffled indoors
+  **(heard in game)**.
 - `occmul_pc` is 1.0. `LoadConfigFile` (`0x106233b0`) stores it at `CSoundSystem+0x24`, where this
   callback reads it. The consoles' 50.0 turns any non-zero amount into full obstruction.
 

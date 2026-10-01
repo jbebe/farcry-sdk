@@ -180,6 +180,9 @@ own. A step is done when it is heard in game.
   dulling, and retune underwater and building filters to match.
 - [ ] **Terrain and cover occlusion outdoors** (plugin). Two outdoor points are never occluded today; a
   ray test from listener to source can feed the same low-pass.
+- [x] **Your own pickups are never muffled** (2026-10-01, heard). The safehouse ammo, explosive and fuel
+  piles and some mission pickups played their first-person grab as `Effect_3D` (type 11), which a room's
+  occlusion muffles; Sound Overhaul's fragments set it to `Foley_Player` (15), as on every other pickup.
 - [ ] **Set building occlusion filters** (data). `fOcclusionFilter` is 0 on 391 of 623 buildings and
   `fSoundOcclusionFilter` on 97% of entrances. Those walls do nothing to gunfire from inside them: the
   filter is the only path to it, and `fOcclusionVolume` reaches only outdoor ambience.
