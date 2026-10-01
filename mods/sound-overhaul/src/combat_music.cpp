@@ -61,7 +61,7 @@ void ApplyCombatMusic() {
     const FCSE_PluginAPI* api = FCSE::ApiPointer();
 
     const FCSE_Setting setting{"Combat music", FCSE_CHECKBOX(true), &OnChanged, nullptr};
-    api->RegisterSettings("Sound Overhaul", &setting, 1);
+    api->RegisterSettings("SoundOverhaul", &setting, 1);
 
     if (!g_start || !g_stop) {
         api->Log("combat music: the music state's start or stop was not found in this build - always on");
