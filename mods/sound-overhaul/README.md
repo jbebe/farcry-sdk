@@ -21,7 +21,8 @@ the audio runtime page, `docs/docs/engine-internals/audio-runtime.md`.
   the plugin picks by its structure type and size: small, medium and large rooms, a hall, a hangar and a
   bright metal box, on presets retail authored but never used. Its walls also muffle sound from outside by
   material, from concrete and mud down to a bus's open windows; buildings retail muffled harder, such as
-  the armories, keep theirs.
+  the armories, keep theirs. Open doors and windows reach into the room by their size, about 4 m for a
+  window, so a house with its windows open is barely muffled inside while a closed one stays walled off.
 - **Lets the player's own sounds take the room** (`src/player_reverb.cpp`). DARE gives every voice
   the same reverb send, which the player's shots and reloads, playing at full volume, bury under
   their dry sound. The plugin raises the send of 2D voices by 1,000 mB, the most EAX allows.
