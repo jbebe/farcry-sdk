@@ -435,6 +435,13 @@ A preset record is `0x70` bytes. `DARE_DS3D_SetEaxReverbProps` (`0x10a49a40`) co
 | | | `+0x68` | air absorption HF |
 | | | `+0x6C` | flags |
 
+Echo time and echo depth have no audible effect through the bundled DSOAL: the desert preset renders
+the same with depth 1.0 or 0 **(measured offline, 2026-10-01)**.
+
+Every voice gets the active FX slots {none, primary} right after its room send, in `FUN_10a68640`
+**(RE-verified)**. FX slots 2 and 3 stay free. Through DSOAL, slot 2 accepts EAX's echo effect and a
+second reverb **(measured offline)**; slot 1 is locked to chorus.
+
 The environment id is always sent as 26 (undefined). Of the 63 presets, 29 (`0x00440237`…`0x00440253`)
 are muted placeholders and 17 are authored but used by no event, among them rooms of 0.8–3.1 s
 (`0x004BE3BB`, `0x004BE3C8`, `0x004BE3C7`, `0x004BE3BF`) and a small bright 1.0 s room

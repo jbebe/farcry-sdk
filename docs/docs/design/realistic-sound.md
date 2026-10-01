@@ -140,6 +140,12 @@ Nothing on the list is impossible.
   needed.
 - **NPC echoes, and terrain-aware slapback: plugin.** An NPC's shot never plays an echo
   **(RE-verified)**. Echo length follows the biome region, not the hills around you.
+- **An echo from the effects engine instead of recordings: dropped (2026-10-01).**
+  - The reverb's echo time and depth do nothing through DSOAL **(measured offline)**.
+  - EAX's echo effect does work in a free FX slot, but it ping-pongs.
+  - A second, long reverb in that slot rings like a metal cauldron on a gunshot **(heard offline)**.
+
+  The recorded tails, swept noise that fades away, stay.
 
 ### 3. Distance and occlusion — plugin (+ data)
 
