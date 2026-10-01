@@ -70,6 +70,11 @@ for a small, complete plugin exercising all three tiers.
 2. Go to Tools/FCSE and set it as the default launcher
 3. Start the game from Vortex by pressing the 'Play' button.
 
+## Installing with JackAll
+
+[Installing mods with JackAll](/jackall/installing-mods#fcse-and-plugins) covers FCSE and the mods
+whose plugins JackAll deploys for you, step by step.
+
 ## Installing manually
 
 0. Download the latest FCSE version from here: [nexusmods.com](https://www.nexusmods.com/farcry2/mods/368)

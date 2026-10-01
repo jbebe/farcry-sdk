@@ -20,6 +20,9 @@ converters and a batch file.
 `jackall-<version>.zip` is the app, `jackall-cli-<version>.zip` is the command line version. Both are
 a single exe. You don't need .NET installed and there is nothing to set up.
 
+**Just want to install a mod?** [Installing mods with JackAll](/jackall/installing-mods) walks you
+through it step by step, FCSE and its plugins included.
+
 Source code: [`tools/JackAll`](https://github.com/jbebe/farcry-sdk/tree/main/tools/JackAll).
 
 ## What it can do
