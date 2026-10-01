@@ -481,7 +481,11 @@ the listener, and immediately calls `StopSound(echo, GetEchoLength())`.
 
 The echo starts with the shot, with no delay. How long its tail lasts is set by the listener's echo
 length: the sound region's `fEchoLenght` outdoors, blended toward the building zone's `fEchoLength` as
-the listener goes inside one. That time is a fade-out: the stop call (`FUN_10a38600`) converts it to
+the listener goes inside one. The weight is the closest hole's blend, the same squared distance over
+squared range that fades the muffle: the full region length at an opening, the building's beyond the
+hole's range **(RE-verified, `GetOcclusionFactor` stores it negated at the occlusion manager's `+0x14`)**.
+A longer hole range therefore lets the outdoor echo into more of the room. Sound Overhaul extends the
+ranges for the muffle, so it sets the weight to 1 anywhere inside a building. That time is a fade-out: the stop call (`FUN_10a38600`) converts it to
 16.16 fixed point and `FUN_10a37ed0` starts a fade on the playing instance. A length of 0 stops the
 echo at once, and a shorter fade can only cut a running one short **(RE-verified)**. Nothing about the
 terrain around the player enters it.

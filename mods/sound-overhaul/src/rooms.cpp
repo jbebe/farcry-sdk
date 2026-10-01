@@ -25,6 +25,13 @@ namespace {
     constexpr uintptr_t kHoleFilter = 0x2C;
     constexpr uintptr_t kHoleRange = 0x30;
 
+    // CAmbianceManager::GetEchoLength's `movss [esp], xmm0`, with XMM0 the weight of the building's echo length
+    // over the region's: how far from the closest opening the listener stands inside a building, 0 outside.
+    FCSE::Relocation<uint8_t*> g_echoWeight{FCSE::Pattern(
+        "51 A1 ?? ?? ?? ?? F3 0F 10 48 14 0F 57 D2 0F 2F D1 72 2E F3 0F 10 05 ?? ?? ?? ?? F3 0F 5C C1 "
+        "0F 2F C2 F3 0F 11 04 24 76 18 D9 E8 D9 04 24 DC E9 D9 C9 D8 89 AC 03 00 00")};
+    constexpr uintptr_t kStoreWeight = 0x22;
+
     constexpr uintptr_t kSize = 0x10;
     constexpr uintptr_t kStructureType = 0x20;
     // SoundParams at +0x64: fOcclusionFilter 4 bytes in, sndReverb 8.
@@ -123,6 +130,14 @@ namespace {
         auto* range = reinterpret_cast<float*>(ctx->esp + kHoleRange);
         *range = (std::max)(*range, (std::min)(2.0f + 1.5f * std::sqrt(area), 8.0f));
     }
+
+    // Inside a building a shot's echo takes the building's length, mostly 0, however near an opening: with the
+    // longer reach above, the outdoor echo would otherwise ring through a whole small room.
+    void OnEchoWeight(FCSE_MidHookContext* ctx) {
+        if (ctx->xmm0.f32[0] > 0.0f) {
+            ctx->xmm0.f32[0] = 1.0f;
+        }
+    }
 }
 
 void ApplyRooms() {
@@ -141,5 +156,11 @@ void ApplyRooms() {
         api->Log("rooms: CSoundOcclusionManager::AddHole was not found in this build - doors and windows keep their reach");
     } else if (api->MidHook(g_addHole.get(), &OnAddHole)) {
         api->Log("rooms: open doors and windows reach into the room by their size");
+    }
+
+    if (!g_echoWeight) {
+        api->Log("rooms: CAmbianceManager::GetEchoLength was not found in this build - echoes fade in by doorways");
+    } else if (api->MidHook(g_echoWeight.get() + kStoreWeight, &OnEchoWeight)) {
+        api->Log("rooms: inside a building, shots take its echo length");
     }
 }
