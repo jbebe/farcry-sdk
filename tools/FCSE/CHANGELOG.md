@@ -2,16 +2,13 @@
 
 Notable changes to FCSE, loosely following [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.2.1] - 2026-10-01
 
-### Added
-- **`bin\Dunia.log` — the engine's own output.** Retail `Dunia.dll` still writes console lines,
-  formats every Lua error and prints to stdout, but sends none of it anywhere. `System:Log`, which
-  every mission script logs through, has had its body compiled out. FCSE now captures each of those
-  sinks into one file next to `fcse.log`, tagged `script`, `console`, `lua`, `stdout`, `stderr` or
-  `debug`. Mission-graph log lines, Lua `print` and script errors with their function and file all
-  land there. A plugin that hooks `CXConsole::AddLine`, `CScriptSystem::OnScriptError`,
-  `System:Log` or `System:LogToConsole` itself will now find FCSE holding them first.
+### Fixed
+- **A plugin's settings stay under its own heading when its DLL is renamed to lowercase.** Some
+  installers lowercase file names, and the Mod Configuration Menu then showed the plugin twice: once
+  with no settings, once under the name it registered. It now matches the two ignoring case and
+  shows one heading, in the plugin's own casing.
 
 ## [1.2.0] - 2026-09-14
 
