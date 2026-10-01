@@ -3,7 +3,7 @@
 Notable changes to Sky Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
-## [Unreleased]
+## [1.3.0] - 2026-10-01
 
 ### Added
 - **Film grain**, faint and grey; **Grain** in the Mod Configuration menu turns it off. Its

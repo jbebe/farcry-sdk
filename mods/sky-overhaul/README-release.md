@@ -13,8 +13,8 @@ through the whole day, the weather and the night.
 - **Cloud shadows** on the ground.
 - **The night**: a smaller moon lit on the clouds, darker nights with moonlight that throws shadows,
   and the world's colour draining where it is dark.
-- **A neutral colour grade** in place of the game's yellow cast, and ambient occlusion in corners
-  and creases.
+- **A neutral colour grade** in place of the game's yellow cast, a faint film grain, and ambient
+  occlusion in corners and creases.
 - **The world in that light**: grass and tree leaves lit by the sun, rocks and cliffs shaded as
   faceted stone, and sun shadows that reach further and follow a low sun toward the horizon.
 
