@@ -29,6 +29,11 @@ local COLOUR = { 1.0, 0.957, 0.820 }
 local INTENSITY = 3.0
 local SHADOW_FACTOR = 1.0
 
+-- Seconds from the click to the light switching, and for the light to come up to full, easing in
+-- like a bulb.
+local SWITCH_DELAY = 0.1
+local FADE_IN = 0.15
+
 -- Where the lamp sits relative to the eye, in metres: a little above and to the right, so what it
 -- lights shows some shape rather than lying flat under a light at the viewpoint.
 local ABOVE = 0.03
@@ -64,10 +69,14 @@ local get_sound_system, get_from_sound_id
 local handle = ffi.new('flashlight_handle', { -1, -1 })
 local owner = nil
 local on = false
+-- What the last press asked for, and the seconds left until the light follows it.
+local wanted = false
+local switch_in = nil
+-- Seconds since the light came on, while it fades in.
+local lit_for = 0
 local toggles = 0
 local cast_shadows = true
 local click_bank = nil
-local trace = false
 
 local function call_target(call)
   return call + 5 + fcse.mem.read_i32(call + 1)
@@ -105,12 +114,8 @@ local function click()
   if system == nil then
     return
   end
-  local played = method(system, SOUND_PLAY_SLOT,
-                        'uint32_t(__thiscall*)(void*, uint32_t, int32_t, void*, float)')(
+  method(system, SOUND_PLAY_SLOT, 'uint32_t(__thiscall*)(void*, uint32_t, int32_t, void*, float)')(
     system, CLICK, SOUND_FOLEY_PLAYER, nil, 0.0)
-  local loaded = click_bank.resource ~= nil and
-                 ffi.cast('uint16_t*', ffi.cast('char*', click_bank.resource) + 8)[0] or -1
-  fcse.log(('flashlight: click %08X, bank loaded %d'):format(played, loaded))
 end
 
 local function light()
@@ -126,7 +131,6 @@ local function configure()
   ffi.cast('int32_t*', l + LIGHT_TYPE)[0] = SPOT
   ffi.cast('float*', l + LIGHT_RANGE)[0] = RANGE
   write_vec3(l, LIGHT_COLOUR, COLOUR[1], COLOUR[2], COLOUR[3])
-  ffi.cast('float*', l + LIGHT_INTENSITY)[0] = INTENSITY
   ffi.cast('uint8_t*', l + LIGHT_CAST_SHADOW)[0] = cast_shadows and 1 or 0
   ffi.cast('float*', l + LIGHT_SHADOW_FACTOR)[0] = SHADOW_FACTOR
   ffi.cast('float*', l + LIGHT_OUTER_ANGLE)[0] = OUTER_ANGLE
@@ -145,10 +149,11 @@ local function forget()
     destroy_light(container, handle.index, handle.generation)
     handle.index, handle.generation = -1, -1
   end
-  on = false
+  on, wanted, switch_in = false, false, nil
 end
 
-local function place(player)
+-- Places the light at the camera, at `intensity`.
+local function place(player, intensity)
   local scene = fcse.mem.read_ptr(tonumber(ffi.cast('uintptr_t', player)) + PLAYER_SCENE)
   if scene == 0 then
     return
@@ -168,11 +173,7 @@ local function place(player)
   local rx, ry, rz = read_vec3(c, CAMERA_RIGHT)
 
   local l = light()
-  if trace then
-    trace = false
-    fcse.log(('flashlight: light %d/%d at %s, camera at %.2f %.2f %.2f facing %.2f %.2f %.2f up %.2f %.2f %.2f')
-             :format(handle.index, handle.generation, tostring(l), px, py, pz, fx, fy, fz, ux, uy, uz))
-  end
+  ffi.cast('float*', l + LIGHT_INTENSITY)[0] = intensity
   write_vec3(l, LIGHT_POSITION, px + ux * ABOVE + rx * RIGHT, py + uy * ABOVE + ry * RIGHT,
              pz + uz * ABOVE + rz * RIGHT)
   write_vec3(l, LIGHT_DIRECTION, fx, fy, fz)
@@ -230,7 +231,7 @@ fcse.on('load', function()
     end
   end)
 
-  fcse.on('update', function()
+  fcse.on('update', function(dt)
     local player = get_local_player()
     if player == nil then
       if owner ~= nil then
@@ -247,20 +248,33 @@ fcse.on('load', function()
     end
     hold_click()
 
-    if toggles > 0 then
-      on = not on
-      if on then
-        configure()
-        trace = true
-      end
-      set_enabled(on)
+    -- The click is at once; the light follows it.
+    for _ = 1, toggles do
+      wanted = not wanted
       click()
-      fcse.log('flashlight: ' .. (on and 'on' or 'off'))
+      switch_in = SWITCH_DELAY
     end
     toggles = 0
 
+    if switch_in ~= nil then
+      switch_in = switch_in - dt
+      if switch_in <= 0 then
+        switch_in = nil
+        if wanted ~= on then
+          on = wanted
+          if on then
+            configure()
+            lit_for = 0
+          end
+          set_enabled(on)
+        end
+      end
+    end
+
     if on then
-      place(player)
+      lit_for = math.min(lit_for + dt, FADE_IN)
+      local t = lit_for / FADE_IN
+      place(player, INTENSITY * (1 - (1 - t) * (1 - t)))
     end
   end)
 end)
