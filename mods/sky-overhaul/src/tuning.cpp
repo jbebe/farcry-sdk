@@ -27,7 +27,11 @@ namespace {
     struct Group {
         const char* name;
         const Category* category;
+        // Drawn under its rows, if set.
+        void (*drawAfter)() = nullptr;
     };
+
+    void DrawGreys();
 
     struct Parameter {
         // The key in the file and the label in the window.
@@ -50,13 +54,14 @@ namespace {
     constexpr Category kClouds = {"Clouds"};
     constexpr Category kNight = {"Night"};
     constexpr Category kShadows = {"Shadows"};
-    constexpr Category kGrade = {"Grade"};
+    // Everything drawn over the finished picture.
+    constexpr Category kPostFx = {"Post FX"};
     constexpr Category kFoliage = {"Foliage"};
     constexpr Category kRock = {"Rock"};
 
     // The window's tabs, in order.
-    constexpr const Category* kTabs[] = {&kSun,     &kSky,   &kClouds,  &kNight,
-                                         &kShadows, &kGrade, &kFoliage, &kRock};
+    constexpr const Category* kTabs[] = {&kSun,     &kSky,    &kClouds,  &kNight,
+                                         &kShadows, &kPostFx, &kFoliage, &kRock};
 
     constexpr Group kFog = {"Fog", &kSky};
     constexpr Group kCloudLayer = {"Cloud layer", &kClouds};
@@ -67,7 +72,8 @@ namespace {
     constexpr Group kSunShadows = {"Sun shadows", &kShadows};
     constexpr Group kCloudShadows = {"Cloud shadows", &kShadows};
     constexpr Group kAmbientOcclusion = {"Ambient occlusion", &kShadows};
-    constexpr Group kColourGrade = {"Colour grade", &kGrade};
+    constexpr Group kColourGrade = {"Colour grade", &kPostFx, &DrawGreys};
+    constexpr Group kFilmGrain = {"Film grain", &kPostFx};
     constexpr Group kGrass = {"Grass", &kFoliage};
     constexpr Group kLeaves = {"Leaves", &kFoliage};
     constexpr Group kRockShading = {"Rock and cliff", &kRock};
@@ -193,6 +199,13 @@ namespace {
         {"Grade tint", &kColourGrade, offsetof(Values, gradeTint), -0.07f, -0.5f, 0.5f, "%.2f",
          "Below zero turns the picture green, above turns it magenta."},
 
+        {"Grain strength", &kFilmGrain, offsetof(Values, grainStrength), 0.25f, 0.0f, 1.0f, "%.2f",
+         "How strongly the grain shows, most in the mid tones and least toward black and white."},
+        {"Grain size", &kFilmGrain, offsetof(Values, grainSize), 1.5f, 1.0f, 4.0f, "%.1f px",
+         "How wide one grain is."},
+        {"Grain colour", &kFilmGrain, offsetof(Values, grainColour), 0.3f, 0.0f, 1.0f, "%.2f",
+         "How much each colour's grain differs from the others'. Zero is grey grain."},
+
         {"Grass root shade", &kGrass, offsetof(Values, grassRootShade), 0.9f, 0.0f, 1.0f, "%.2f",
          "How much of the light the foot of a blade keeps against its tip."},
         {"Grass side light", &kGrass, offsetof(Values, grassSideLight), 0.1f, 0.0f, 1.5f, "%.2f",
@@ -289,26 +302,6 @@ namespace {
         }
     }
 
-    // Every row of a category, under a heading wherever the group changes. True when one changed.
-    bool DrawGroups(const Category& category) {
-        bool changed = false;
-        const Group* group = nullptr;
-        for (const Parameter& parameter : kParameters) {
-            if (parameter.group->category != &category) {
-                continue;
-            }
-            if (parameter.group != group) {
-                group = parameter.group;
-                ImGui::SeparatorText(group->name);
-            }
-            changed |= ImGui::SliderFloat(parameter.key, Field(parameter), parameter.min,
-                                          parameter.max, parameter.format,
-                                          ImGuiSliderFlags_AlwaysClamp);
-            ImGui::SetItemTooltip("%s", parameter.help);
-        }
-        return changed;
-    }
-
     // A ramp from black to white as the scene holds it, and under it as the grade would leave it.
     void DrawGreys() {
         // Odd, so the middle step is mid grey.
@@ -338,6 +331,34 @@ namespace {
         ImGui::Dummy({width, 2.0f * height});
         ImGui::Text("Mid grey becomes %.0f %.0f %.0f", mid[0] * 255.0f, mid[1] * 255.0f,
                     mid[2] * 255.0f);
+    }
+
+    void EndGroup(const Group* group) {
+        if (group != nullptr && group->drawAfter != nullptr) {
+            group->drawAfter();
+        }
+    }
+
+    // Every row of a category, under a heading wherever the group changes. True when one changed.
+    bool DrawGroups(const Category& category) {
+        bool changed = false;
+        const Group* group = nullptr;
+        for (const Parameter& parameter : kParameters) {
+            if (parameter.group->category != &category) {
+                continue;
+            }
+            if (parameter.group != group) {
+                EndGroup(group);
+                group = parameter.group;
+                ImGui::SeparatorText(group->name);
+            }
+            changed |= ImGui::SliderFloat(parameter.key, Field(parameter), parameter.min,
+                                          parameter.max, parameter.format,
+                                          ImGuiSliderFlags_AlwaysClamp);
+            ImGui::SetItemTooltip("%s", parameter.help);
+        }
+        EndGroup(group);
+        return changed;
     }
 
     void DrawNow() {
@@ -396,9 +417,6 @@ void SkyOverhaul::Tuning::DrawWindow(void*) {
                 DrawNow();
             }
             g_unsaved |= DrawGroups(*category);
-            if (category == &kGrade) {
-                DrawGreys();
-            }
             ImGui::EndTabItem();
         }
         ImGui::EndTabBar();

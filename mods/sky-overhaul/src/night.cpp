@@ -32,12 +32,10 @@ namespace {
     // Where a pixel starts keeping any colour, as a share of the brightness at which it keeps all.
     constexpr float kKneeSoftness = 0.3f;
 
-    // The grain at full noise as a share of that same brightness, the share of it a full moon's
-    // light takes away, how often its pattern changes, and how many patterns it cycles through.
+    // The grain at full noise as a share of that same brightness, and the share of it a full
+    // moon's light takes away.
     constexpr float kGrainShare = 0.15f;
     constexpr float kMoonlitGrain = 0.5f;
-    constexpr float kGrainHertz = 24.0f;
-    constexpr float kGrainSteps = 256.0f;
 
     // Below this the grade changes nothing a player could see.
     constexpr float kFaintest = 0.002f;
@@ -68,8 +66,7 @@ namespace {
     bool g_refused = false;
     SkyOverhaul::PixelShader g_shader{"night", g_nightPixelShader};
 
-    SkyOverhaul::Stopwatch g_clock;
-    float g_grainTime = 0.0f;
+    SkyOverhaul::GrainClock g_grain;
 
     void ReleaseResolves() {
         for (Resolve& resolve : g_resolves) {
@@ -155,7 +152,7 @@ namespace {
             v.nightColourAbove * kKneeSoftness,
 
             gate.grain,
-            std::floor(g_grainTime * kGrainHertz),
+            g_grain.Pattern(),
             1.0f / static_cast<float>(desc.Width),
             1.0f / static_cast<float>(desc.Height)};
 
@@ -177,8 +174,7 @@ void SkyOverhaul::Night::OnScenePass(const Frame::Pass& pass) {
     if (!g_enabled || !pass.sky || !pass.live) {
         return;
     }
-    const float elapsed = g_clock.Lap();
-    g_grainTime = std::fmod(g_grainTime + elapsed, kGrainSteps / kGrainHertz);
+    g_grain.Advance();
 
     CloudLayer::Lighting lighting;
     if (!CloudLayer::Latest(lighting)) {

@@ -8,6 +8,7 @@
 #include "engine/clock.h"
 #include "engine/cloud_layer.h"
 #include "engine/com.h"
+#include "engine/frame_copy.h"
 #include "engine/render_target.h"
 #include "engine/screen_draw.h"
 #include "engine/shader.h"
@@ -178,11 +179,9 @@ namespace {
         return true;
     }
 
-    // A copy of the finished frame to read while overwriting it, and the shader that does the
-    // overwriting. Both belong to the device and are surrendered before it is reset.
+    // What the eye has burned in, the shaders that burn and paint it, and the size they were made
+    // at. All belong to the device and are surrendered before it is reset.
     IDirect3DDevice9* g_owner = nullptr;
-    IDirect3DTexture9* g_sceneCopy = nullptr;
-    IDirect3DSurface9* g_sceneCopySurface = nullptr;
     IDirect3DTexture9* g_burn = nullptr;
     IDirect3DSurface9* g_burnSurface = nullptr;
     IDirect3DTexture9* g_bleach = nullptr;
@@ -190,7 +189,7 @@ namespace {
     SkyOverhaul::PixelShader g_shader{"dazzle", g_dazzlePixelShader};
     SkyOverhaul::PixelShader g_accumulateShader{"dazzle accumulate", g_dazzleAccumulatePixelShader};
     SkyOverhaul::PixelShader g_bleachShader{"dazzle bleach", g_dazzleBleachPixelShader};
-    D3DSURFACE_DESC g_copyDesc = {};
+    D3DSURFACE_DESC g_burnDesc = {};
 
     // Nothing has been burned in yet, so there is nothing to show. Without this the first
     // afterimage would be whatever the texture's memory happened to hold.
@@ -200,9 +199,7 @@ namespace {
     // fading up from what a previous dazzle left behind.
     bool g_burnRestart = false;
 
-    void ReleaseCopy() {
-        SkyOverhaul::Release(g_sceneCopySurface);
-        SkyOverhaul::Release(g_sceneCopy);
+    void ReleaseBurn() {
         SkyOverhaul::Release(g_burnSurface);
         SkyOverhaul::Release(g_burn);
         SkyOverhaul::Release(g_bleachSurface);
@@ -215,8 +212,9 @@ namespace {
     enum class Blend { Mean, Peak };
 
     // Draws one accumulation pass into `into`, then puts the pass's own target back.
-    void AccumulateInto(const SkyOverhaul::Frame::Pass& pass, IDirect3DSurface9* into,
-                        IDirect3DPixelShader9* shader, const float* constants, Blend blend) {
+    void AccumulateInto(const SkyOverhaul::Frame::Pass& pass, IDirect3DTexture9* scene,
+                        IDirect3DSurface9* into, IDirect3DPixelShader9* shader,
+                        const float* constants, Blend blend) {
         IDirect3DDevice9* device = pass.device;
         if (FAILED(device->SetRenderTarget(0, into))) {
             return;
@@ -225,7 +223,7 @@ namespace {
         {
             SkyOverhaul::ScreenDraw draw(device, 0, kConstantRegisters);
             device->SetPixelShader(shader);
-            device->SetTexture(0, g_sceneCopy);
+            device->SetTexture(0, scene);
 
             // A maximum takes the source whole, so it must not be weighted by the alpha the
             // running mean rides on.
@@ -246,7 +244,7 @@ namespace {
 
     bool EnsureDeviceObjects(IDirect3DDevice9* device, const D3DSURFACE_DESC& backBuffer) {
         if (g_owner != device) {
-            ReleaseCopy();
+            ReleaseBurn();
             g_owner = device;
         }
 
@@ -255,23 +253,21 @@ namespace {
             return false;
         }
 
-        if (g_sceneCopy != nullptr && g_copyDesc.Width == backBuffer.Width &&
-            g_copyDesc.Height == backBuffer.Height && g_copyDesc.Format == backBuffer.Format) {
+        if (g_burn != nullptr && g_burnDesc.Width == backBuffer.Width &&
+            g_burnDesc.Height == backBuffer.Height && g_burnDesc.Format == backBuffer.Format) {
             return true;
         }
 
-        ReleaseCopy();
-        const HRESULT copy =
-            SkyOverhaul::CreateTarget(device, backBuffer, &g_sceneCopy, &g_sceneCopySurface);
+        ReleaseBurn();
         const HRESULT burn = SkyOverhaul::CreateTarget(device, backBuffer, &g_burn, &g_burnSurface);
         const HRESULT bleach =
             SkyOverhaul::CreateTarget(device, backBuffer, &g_bleach, &g_bleachSurface);
-        if (FAILED(copy) || FAILED(burn) || FAILED(bleach)) {
-            ReleaseCopy();
+        if (FAILED(burn) || FAILED(bleach)) {
+            ReleaseBurn();
             return false;
         }
 
-        g_copyDesc = backBuffer;
+        g_burnDesc = backBuffer;
         return true;
     }
 
@@ -421,8 +417,8 @@ namespace {
         if (!EnsureDeviceObjects(pass.device, pass.backBuffer)) {
             return;
         }
-        if (FAILED(pass.device->StretchRect(pass.target, nullptr, g_sceneCopySurface, nullptr,
-                                            D3DTEXF_NONE))) {
+        IDirect3DTexture9* scene = SkyOverhaul::FrameCopy::Take(pass);
+        if (scene == nullptr) {
             return;
         }
 
@@ -473,20 +469,20 @@ namespace {
         // what puts a dark spot where the sun was rather than a white one.
         if (g_dazzled) {
             g_burnRestart = false;
-            AccumulateInto(pass, g_burnSurface, g_accumulateShader.Get(pass.device), constants,
-                           Blend::Mean);
+            AccumulateInto(pass, scene, g_burnSurface, g_accumulateShader.Get(pass.device),
+                           constants, Blend::Mean);
 
             // The bleach keeps the most light that fell on each part of the view rather than the
             // average of it: a burned retina does not un-burn when the sun moves on. A mean could
             // not do it anyway, since at a few hundred frames a second its weight rounds to nothing
             // against an eight-bit target.
-            AccumulateInto(pass, g_bleachSurface, g_bleachShader.Get(pass.device), constants,
-                           restart ? Blend::Mean : Blend::Peak);
+            AccumulateInto(pass, scene, g_bleachSurface, g_bleachShader.Get(pass.device),
+                           constants, restart ? Blend::Mean : Blend::Peak);
         }
 
         SkyOverhaul::ScreenDraw draw(pass.device, 0, kConstantRegisters);
         pass.device->SetPixelShader(g_shader.Get(pass.device));
-        pass.device->SetTexture(0, g_sceneCopy);
+        pass.device->SetTexture(0, scene);
         pass.device->SetTexture(1, g_burn);
         pass.device->SetTexture(2, g_bleach);
         pass.device->SetPixelShaderConstantF(0, constants, kConstantRegisters);
@@ -533,7 +529,7 @@ void SkyOverhaul::Dazzle::OnFinalPass(const Frame::Pass& pass) {
 }
 
 void SkyOverhaul::Dazzle::ReleaseDeviceObjects() {
-    ReleaseCopy();
+    ReleaseBurn();
     g_shader.Release();
     g_accumulateShader.Release();
     g_bleachShader.Release();

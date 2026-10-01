@@ -11,12 +11,14 @@
 #include "engine/depth_texture.h"
 #include "engine/device_reset.h"
 #include "engine/dome_draw.h"
+#include "engine/frame_copy.h"
 #include "engine/frame.h"
 #include "engine/known_shaders.h"
 #include "engine/screen_draw.h"
 #include "engine/solid_depth.h"
 #include "foliage.h"
 #include "grade.h"
+#include "grain.h"
 #include "night.h"
 #include "occlusion.h"
 #include "rocks.h"
@@ -37,9 +39,11 @@ namespace {
         SkyOverhaul::Occlusion::ReleaseDeviceObjects();
         SkyOverhaul::SolidDepth::ReleaseDeviceObjects();
         SkyOverhaul::DepthTexture::ReleaseDeviceObjects();
+        SkyOverhaul::FrameCopy::ReleaseDeviceObjects();
         SkyOverhaul::DrawGuard::ReleaseDeviceObjects();
         SkyOverhaul::Foliage::ReleaseDeviceObjects();
         SkyOverhaul::Rocks::ReleaseDeviceObjects();
+        SkyOverhaul::Grain::ReleaseDeviceObjects();
         SkyOverhaul::KnownShaders::Forget();
     }
 
@@ -57,12 +61,14 @@ namespace {
 
     void OnFinalPass(const SkyOverhaul::Frame::Pass& pass) {
         SkyOverhaul::Dazzle::OnFinalPass(pass);
+        SkyOverhaul::Grain::OnFinalPass(pass);
         SkyOverhaul::SolidDepth::OnFinalPass(pass);
     }
 
     // Index order is what the callbacks below switch on; fcse.ini stores the label.
     const char* const kModes[] = {"Engine", "Overhaul"};
     const char* const kCloudModes[] = {"Engine", "Off", "Overhaul"};
+    const char* const kSwitchModes[] = {"Off", "On"};
 
     void __cdecl OnSkyChanged(const FCSE_SettingValue* value, void*) {
         SkyOverhaul::Sky::SetEnabled(value->asChoice == 1);
@@ -102,7 +108,9 @@ namespace {
         SkyOverhaul::Grade::SetEnabled(value->asChoice == 1);
     }
 
-    const char* const kOcclusionModes[] = {"Off", "On"};
+    void __cdecl OnGrainChanged(const FCSE_SettingValue* value, void*) {
+        SkyOverhaul::Grain::SetEnabled(value->asChoice == 1);
+    }
 
     void __cdecl OnOcclusionChanged(const FCSE_SettingValue* value, void*) {
         g_occlusion = value->asChoice == 1;
@@ -167,8 +175,9 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Night", FCSE_CHOICE(1), &OnNightChanged, nullptr, kModes, std::size(kModes)},
         {"Shadows", FCSE_CHOICE(1), &OnShadowsChanged, nullptr, kModes, std::size(kModes)},
         {"Grade", FCSE_CHOICE(1), &OnGradeChanged, nullptr, kModes, std::size(kModes)},
-        {"Occlusion", FCSE_CHOICE(0), &OnOcclusionChanged, nullptr, kOcclusionModes,
-         std::size(kOcclusionModes)},
+        {"Grain", FCSE_CHOICE(0), &OnGrainChanged, nullptr, kSwitchModes, std::size(kSwitchModes)},
+        {"Occlusion", FCSE_CHOICE(0), &OnOcclusionChanged, nullptr, kSwitchModes,
+         std::size(kSwitchModes)},
         {"Grass", FCSE_CHOICE(1), &OnGrassChanged, nullptr, kModes, std::size(kModes)},
         {"Leaves", FCSE_CHOICE(1), &OnLeavesChanged, nullptr, kModes, std::size(kModes)},
         {"Sun shadows", FCSE_CHOICE(1), &OnSunShadowsChanged, nullptr, kModes, std::size(kModes)},

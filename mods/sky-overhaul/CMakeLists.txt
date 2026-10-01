@@ -51,8 +51,9 @@ if (NOT FXC_EXECUTABLE)
 endif()
 
 # source file : entry point : profile : generated header : array name. The dazzle's MainPS needs
-# ps_2_b for its instruction count and the accumulation passes fit in ps_2_0; everything drawn inside
-# a world pass needs ps_3_0, which in turn needs the vs_3_0 ClipQuad draws through.
+# ps_2_b for its instruction count, as does the grain, and the accumulation passes fit in ps_2_0;
+# everything drawn inside a world pass needs ps_3_0, which in turn needs the vs_3_0 ClipQuad draws
+# through.
 set(SHADER_PASSES
   "dazzle.fx:MainPS:ps_2_b:dazzle_ps.h:g_dazzlePixelShader"
   "dazzle.fx:AccumulatePS:ps_2_0:dazzle_accumulate_ps.h:g_dazzleAccumulatePixelShader"
@@ -64,6 +65,7 @@ set(SHADER_PASSES
   "clouds.fx:ShadowPS:ps_3_0:clouds_shadow_ps.h:g_cloudsShadowPixelShader"
   "sky.fx:MainPS:ps_3_0:sky_ps.h:g_skyPixelShader"
   "night.fx:MainPS:ps_3_0:night_ps.h:g_nightPixelShader"
+  "grain.fx:MainPS:ps_2_b:grain_ps.h:g_grainPixelShader"
   "shadows.fx:BlurPS:ps_3_0:shadows_blur_ps.h:g_shadowsBlurPixelShader"
   "shadows.fx:ApplyPS:ps_3_0:shadows_apply_ps.h:g_shadowsApplyPixelShader"
   "occlusion.fx:GtaoPS:ps_3_0:occlusion_gtao_ps.h:g_occlusionGtaoPixelShader"
@@ -117,6 +119,7 @@ add_library(SkyOverhaul SHARED
   "src/dazzle.cpp"
   "src/foliage.cpp"
   "src/grade.cpp"
+  "src/grain.cpp"
   "src/night.cpp"
   "src/occlusion.cpp"
   "src/rocks.cpp"
@@ -135,6 +138,7 @@ add_library(SkyOverhaul SHARED
   "src/engine/known_textures.cpp"
   "src/engine/noise.cpp"
   "src/engine/frame.cpp"
+  "src/engine/frame_copy.cpp"
   "src/engine/screen_draw.cpp"
   "src/engine/shader.cpp"
   "src/engine/solid_depth.cpp"

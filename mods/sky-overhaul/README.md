@@ -51,19 +51,22 @@ collides with any other mod that edits a preset. Nothing here changes how the su
 - **The colour grade.** The final pass's saturation, per-channel powers and contrast curve drawn with
   values of our own, recognised by its shader and put back after its draw. Replaces the weather
   preset's grade in every weather. `src/grade.cpp`.
+- **Film grain.** Animated grain painted over the composite after the glare, under the heads-up
+  display, strongest in the mid tones and changing pattern at film's 24 a second. `src/grain.cpp`
+  and `src/shaders/grain.fx`.
 - **Staying out of menus.** The cloud-layer hook reports whether the engine drew a world at all
   this frame, at every hour of the night too; a frame without one gets nothing. No guessing at game
   state.
 - **Switching each part.** The mod menu, and the `[SkyOverhaul]` group in `fcse.ini`, holds only
   which parts are on: Sky (Engine or Overhaul), Clouds (Engine, Off or Overhaul), Sun (Engine, or
   Overhaul for the glare and the afterimage), Night, Shadows, Grade, Grass, Leaves, Sun shadows and
-  Rocks (each Engine or Overhaul), and Occlusion (Off or On).
+  Rocks (each Engine or Overhaul), and Occlusion and Grain (each Off or On).
 - **Tuning.** Every effect's values are kept in `bin\sky-overhaul.ini`, beside `fcse.ini`, which is
   written on the first launch. The sky has none: it follows the sun alone. `src/tuning.cpp`.
 - **A window in DevTools' overlay.** With [DevTools](../DevTools) installed, Home shows a Sky Overhaul
-  window that edits that file in Sun, Clouds, Night, Shadows and Grade tabs of sliders,
-  saving each edit when it is let go. Without DevTools, `fcse.log` says so once and the file is the
-  only way in.
+  window that edits that file in Sun, Sky, Clouds, Night, Shadows, Post FX, Foliage and Rock tabs
+  of sliders, saving each edit when it is let go. Without DevTools, `fcse.log` says so once and the
+  file is the only way in.
 
 ## How it is put together
 

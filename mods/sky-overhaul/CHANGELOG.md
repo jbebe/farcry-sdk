@@ -3,6 +3,12 @@
 Notable changes to Sky Overhaul, loosely following
 [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
+## [Unreleased]
+
+### Added
+- **Film grain**, off by default: turn it on with **Grain** in the Mod Configuration menu. Its
+  strength, size and colour are under **Post FX** in the DevTools window, the tab that was **Grade**.
+
 ## [1.2.0] - 2026-09-28
 
 Upgrading: delete `bin\sky-overhaul.ini` once. A file kept from 1.1.0 holds the old values, so the
