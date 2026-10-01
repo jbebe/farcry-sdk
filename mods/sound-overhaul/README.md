@@ -36,8 +36,6 @@ the audio runtime page, `docs/docs/engine-internals/audio-runtime.md`.
   the recording, trimmed by the game to the region's echo length.
 - **Lets an older or Wine-derived `dsound.dll` open a device at all** (`src/enumeration_fix.cpp`).
   The bundled DSOAL does not need it.
-- **Logs every reverb switch and every gunshot echo length to `fcse.log`** (`src/reverb_log.cpp`,
-  `src/echo_log.cpp`), diagnostics that go before a release.
 
 ## Layout
 

@@ -21,8 +21,6 @@ add_library(SoundOverhaul SHARED
   "src/dsoal.cpp"
   "src/enumeration_fix.cpp"
   "src/reverb.cpp"
-  "src/reverb_log.cpp"
-  "src/echo_log.cpp"
   "src/player_reverb.cpp"
   "src/per_round_shots.cpp"
   "src/last_echo.cpp"
