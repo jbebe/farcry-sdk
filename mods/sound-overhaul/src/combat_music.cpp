@@ -3,6 +3,8 @@
 // calm music comes back when it ends.
 #include "fcse_api.h"
 
+#include <algorithm>
+#include <array>
 #include <cstdint>
 
 namespace {
@@ -24,9 +26,28 @@ namespace {
 
     bool g_combatMusic = true;
 
-    void Silence(FCSE_MidHookContext* ctx) {
+    // The states whose start was silenced. Only theirs is their stop: a state's stop event is what ends its
+    // music, so one that started playing - the setting turned off mid-fight - must still get its stop.
+    std::array<uintptr_t, 32> g_silenced{};
+
+    void OnStart(FCSE_MidHookContext* ctx) {
         const int32_t priority = *reinterpret_cast<const int32_t*>(ctx->edi + kPriority);
-        if (!g_combatMusic && priority >= kFirstCombat && priority <= kLastCombat) {
+        if (g_combatMusic || priority < kFirstCombat || priority > kLastCombat) {
+            return;
+        }
+        ctx->eax = kNoSound;
+        if (std::find(g_silenced.begin(), g_silenced.end(), ctx->edi) == g_silenced.end()) {
+            const auto free = std::find(g_silenced.begin(), g_silenced.end(), 0u);
+            if (free != g_silenced.end()) {
+                *free = ctx->edi;
+            }
+        }
+    }
+
+    void OnStop(FCSE_MidHookContext* ctx) {
+        const auto silenced = std::find(g_silenced.begin(), g_silenced.end(), ctx->edi);
+        if (silenced != g_silenced.end()) {
+            *silenced = 0;
             ctx->eax = kNoSound;
         }
     }
@@ -46,7 +67,7 @@ void ApplyCombatMusic() {
         api->Log("combat music: the music state's start or stop was not found in this build - always on");
         return;
     }
-    if (api->MidHook(g_start.get() + kAfterLoad, &Silence) && api->MidHook(g_stop.get() + kAfterLoad, &Silence)) {
+    if (api->MidHook(g_start.get() + kAfterLoad, &OnStart) && api->MidHook(g_stop.get() + kAfterLoad, &OnStop)) {
         api->Log("combat music: follows its setting");
     }
 }
