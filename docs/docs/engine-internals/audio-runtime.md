@@ -438,7 +438,7 @@ A preset record is `0x70` bytes. `DARE_DS3D_SetEaxReverbProps` (`0x10a49a40`) co
 Echo time and echo depth have no audible effect through the bundled DSOAL: the desert preset renders
 the same with depth 1.0 or 0 **(measured offline, 2026-10-01)**.
 
-Every voice gets the active FX slots {none, primary} right after its room send, in `FUN_10a68640`
+Every voice gets the active FX slots `{none, primary}` right after its room send, in `FUN_10a68640`
 **(RE-verified)**. FX slots 2 and 3 stay free. Through DSOAL, slot 2 accepts EAX's echo effect and a
 second reverb **(measured offline)**; slot 1 is locked to chorus.
 
