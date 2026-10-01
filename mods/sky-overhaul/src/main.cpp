@@ -175,7 +175,7 @@ extern "C" __declspec(dllexport) bool FCSE_Load(const FCSE_PluginAPI* api) {
         {"Night", FCSE_CHOICE(1), &OnNightChanged, nullptr, kModes, std::size(kModes)},
         {"Shadows", FCSE_CHOICE(1), &OnShadowsChanged, nullptr, kModes, std::size(kModes)},
         {"Grade", FCSE_CHOICE(1), &OnGradeChanged, nullptr, kModes, std::size(kModes)},
-        {"Grain", FCSE_CHOICE(0), &OnGrainChanged, nullptr, kSwitchModes, std::size(kSwitchModes)},
+        {"Grain", FCSE_CHOICE(1), &OnGrainChanged, nullptr, kSwitchModes, std::size(kSwitchModes)},
         {"Occlusion", FCSE_CHOICE(0), &OnOcclusionChanged, nullptr, kSwitchModes,
          std::size(kSwitchModes)},
         {"Grass", FCSE_CHOICE(1), &OnGrassChanged, nullptr, kModes, std::size(kModes)},

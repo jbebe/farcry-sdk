@@ -14,7 +14,7 @@ identification and the address table.
 Retail Far Cry 2 ships a working developer console. It is constructed on the boot path, populated
 with commands, bound to a key in the shipped input maps, and reachable by a player on an unmodified
 install with no patching. Only the *logging* facility is gone from the retail build (see
-[command-line args](./command-line-args.md)); the console is a separate subsystem.
+[where log output goes](./engine-logging.md)); the console is a separate subsystem.
 
 ## Opening it
 

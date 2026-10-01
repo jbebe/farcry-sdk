@@ -6,7 +6,7 @@ Notable changes to Sky Overhaul, loosely following
 ## [Unreleased]
 
 ### Added
-- **Film grain**, off by default: turn it on with **Grain** in the Mod Configuration menu. Its
+- **Film grain**, faint and grey; **Grain** in the Mod Configuration menu turns it off. Its
   strength, size and colour are under **Post FX** in the DevTools window, the tab that was **Grade**.
 
 ## [1.2.0] - 2026-09-28

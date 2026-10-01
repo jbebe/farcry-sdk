@@ -199,11 +199,11 @@ namespace {
         {"Grade tint", &kColourGrade, offsetof(Values, gradeTint), -0.07f, -0.5f, 0.5f, "%.2f",
          "Below zero turns the picture green, above turns it magenta."},
 
-        {"Grain strength", &kFilmGrain, offsetof(Values, grainStrength), 0.25f, 0.0f, 1.0f, "%.2f",
+        {"Grain strength", &kFilmGrain, offsetof(Values, grainStrength), 0.14f, 0.0f, 1.0f, "%.2f",
          "How strongly the grain shows, most in the mid tones and least toward black and white."},
-        {"Grain size", &kFilmGrain, offsetof(Values, grainSize), 1.5f, 1.0f, 4.0f, "%.1f px",
+        {"Grain size", &kFilmGrain, offsetof(Values, grainSize), 1.3f, 1.0f, 4.0f, "%.1f px",
          "How wide one grain is."},
-        {"Grain colour", &kFilmGrain, offsetof(Values, grainColour), 0.3f, 0.0f, 1.0f, "%.2f",
+        {"Grain colour", &kFilmGrain, offsetof(Values, grainColour), 0.0f, 0.0f, 1.0f, "%.2f",
          "How much each colour's grain differs from the others'. Zero is grey grain."},
 
         {"Grass root shade", &kGrass, offsetof(Values, grassRootShade), 0.9f, 0.0f, 1.0f, "%.2f",
