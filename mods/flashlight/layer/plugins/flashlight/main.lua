@@ -24,16 +24,16 @@ local CLICK_TYPES = { 15, 12, 20 }
 local NO_SOUND = 0xFFFFFFFF
 
 local RANGE = 25.0
-local OUTER_ANGLE = math.rad(32)
-local INNER_ANGLE = math.rad(12)
+local OUTER_ANGLE = math.rad(45)
+local INNER_ANGLE = math.rad(20)
 -- The player headlight's warm white.
 local COLOUR = { 1.0, 0.957, 0.820 }
-local INTENSITY = 2.0
+local INTENSITY = 3.0
 local SHADOW_FACTOR = 1.0
 
 -- Where the lamp sits relative to the eye, in metres: a little above and to the right, so what it
 -- lights shows some shape rather than lying flat under a light at the viewpoint.
-local ABOVE = 0.08
+local ABOVE = 0.03
 local RIGHT = 0.12
 
 -- CSceneLight.
@@ -67,7 +67,7 @@ local handle = ffi.new('flashlight_handle', { -1, -1 })
 local owner = nil
 local on = false
 local toggles = 0
-local cast_shadows = false
+local cast_shadows = true
 local click_held = false
 local trace = false
 
@@ -109,11 +109,13 @@ local function click()
   if system ~= nil then
     local play = method(system, SOUND_PLAY_SLOT,
                         'uint32_t(__thiscall*)(void*, uint32_t, int32_t, void*, float)')
-    for _, type in ipairs(CLICK_TYPES) do
-      local played = play(system, CLICK, type, nil, 0.0)
-      fcse.log(('flashlight: click through type %d: %08X'):format(type, played))
-      if played ~= NO_SOUND then
-        return
+    for _, id in ipairs({ CLICK, 0x004E7C77, 0x00455CFF }) do
+      for _, type in ipairs(CLICK_TYPES) do
+        local played = play(system, id, type, nil, 0.0)
+        fcse.log(('flashlight: %08X through type %d: %08X'):format(id, type, played))
+        if played ~= NO_SOUND then
+          return
+        end
       end
     end
   end
@@ -273,7 +275,7 @@ end)
 
 fcse.setting{
   name = 'Shadows',
-  default = false,
+  default = true,
   on_changed = function(value)
     cast_shadows = value
     if on then
