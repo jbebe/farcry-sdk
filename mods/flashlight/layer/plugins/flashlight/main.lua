@@ -17,9 +17,11 @@ typedef struct { void* resource; bool requested; } flashlight_sound_ref;
 -- CRC32 of the signal the control sends, as the input system hashes it.
 local SIGNAL_TOGGLE = 0x78D9863A
 
--- The BazaarComputer's button click, played through the player's own foley.
+-- The BazaarComputer's button click, and the sound types to try it through: player foley,
+-- unlocalised effect, interface.
 local CLICK = 0x004E1CCF
-local SOUND_FOLEY_PLAYER = 15
+local CLICK_TYPES = { 15, 12, 20 }
+local NO_SOUND = 0xFFFFFFFF
 
 local RANGE = 25.0
 local OUTER_ANGLE = math.rad(32)
@@ -42,8 +44,8 @@ local LIGHT_CAST_SHADOW, LIGHT_SHADOW_FACTOR = 0x48, 0x4C
 local LIGHT_OUTER_ANGLE, LIGHT_INNER_ANGLE = 0x5C, 0x60
 local SPOT = 3
 
--- The render camera: a CSceneObject header, then CSimpleCamera's position and axes.
-local CAMERA_POSITION, CAMERA_FRONT, CAMERA_UP, CAMERA_RIGHT = 0x04, 0x48, 0x54, 0x60
+-- The render camera's position and axes, as CSceneCamera lays them out.
+local CAMERA_POSITION, CAMERA_FRONT, CAMERA_UP, CAMERA_RIGHT = 0x08, 0x48, 0x54, 0x60
 
 -- The local player's scene, and the camera manager embedded in it.
 local PLAYER_SCENE = 0x04
@@ -67,6 +69,7 @@ local on = false
 local toggles = 0
 local cast_shadows = false
 local click_held = false
+local trace = false
 
 local function call_target(call)
   return call + 5 + fcse.mem.read_i32(call + 1)
@@ -95,6 +98,7 @@ local function hold_click()
   click_held = true
   local ref = ffi.new('flashlight_sound_ref')
   get_from_sound_id(ref, CLICK, nil)
+  fcse.log('flashlight: click bank ' .. tostring(ref.resource))
   if ref.resource ~= nil then
     method(ref.resource, SOUND_REQUEST_LOAD_SLOT, 'void(__thiscall*)(void*)')(ref.resource)
   end
@@ -103,8 +107,15 @@ end
 local function click()
   local system = get_sound_system()
   if system ~= nil then
-    method(system, SOUND_PLAY_SLOT, 'uint32_t(__thiscall*)(void*, uint32_t, int32_t, void*, float)')(
-      system, CLICK, SOUND_FOLEY_PLAYER, nil, 0.0)
+    local play = method(system, SOUND_PLAY_SLOT,
+                        'uint32_t(__thiscall*)(void*, uint32_t, int32_t, void*, float)')
+    for _, type in ipairs(CLICK_TYPES) do
+      local played = play(system, CLICK, type, nil, 0.0)
+      fcse.log(('flashlight: click through type %d: %08X'):format(type, played))
+      if played ~= NO_SOUND then
+        return
+      end
+    end
   end
 end
 
@@ -163,6 +174,11 @@ local function place(player)
   local rx, ry, rz = read_vec3(c, CAMERA_RIGHT)
 
   local l = light()
+  if trace then
+    trace = false
+    fcse.log(('flashlight: light %d/%d at %s, camera at %.2f %.2f %.2f facing %.2f %.2f %.2f up %.2f %.2f %.2f')
+             :format(handle.index, handle.generation, tostring(l), px, py, pz, fx, fy, fz, ux, uy, uz))
+  end
   write_vec3(l, LIGHT_POSITION, px + ux * ABOVE + rx * RIGHT, py + uy * ABOVE + ry * RIGHT,
              pz + uz * ABOVE + rz * RIGHT)
   write_vec3(l, LIGHT_DIRECTION, fx, fy, fz)
@@ -241,6 +257,7 @@ fcse.on('load', function()
       on = not on
       if on then
         configure()
+        trace = true
       end
       set_enabled(on)
       click()
