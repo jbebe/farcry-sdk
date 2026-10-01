@@ -1,0 +1,750 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">PickupPiles.ExplosivePile.Level3</value>
+      <object type="Entity">
+        <value name="hidName" type="String">pile_archetypes.PickupPiles.ExplosivePile.Level3</value>
+        <value name="disEntityId" type="Int64">4875</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">5</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CPickupPile">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bEnable" type="Bool">True</value>
+            <value name="fRespawnTime" type="Float">0</value>
+            <value name="bCustomBoundingBox" type="Bool">True</value>
+            <value name="vectorBoundingBoxSize" type="Vector3">
+              <x>1.5</x>
+              <y>1</y>
+              <z>1</z>
+            </value>
+            <value name="vectorBoundingBoxOffset" type="Vector3">
+              <x>0</x>
+              <y>0</y>
+              <z>0.55</z>
+            </value>
+            <value name="bAffectedLightPickup" type="Bool">True</value>
+            <value name="bPickable" type="Bool">True</value>
+            <value name="sUsageString" type="String"></value>
+            <value name="objGeometryPreload" type="String"></value>
+            <value name="Priority" type="UInt32">0</value>
+            <value name="bCanBeScouted" type="Bool">False</value>
+            <value name="fFiringDuration" type="Float">0.6</value>
+            <value name="fObjectRespawnTime" type="Float">0</value>
+            <value name="bGiveAmmo" type="Bool">True</value>
+            <value name="bGiveGadgets" type="Bool">True</value>
+            <value name="bDestroyableEvenIfEmtpy" type="Bool">True</value>
+            <object type="Sounds">
+              <value name="sndPickupGrabSound_1st" type="String">0x004554F1</value>
+              <value name="sndtpPickupGrabSoundType_1st" type="Int32">15</value>
+              <value name="sndPickupGrabSound_3rd" type="String">0x004554F1</value>
+              <value name="sndtpPickupGrabSoundType_3rd" type="Int32">11</value>
+              <value name="sndPickupEquipSound_1st" type="String">0xFFFFFFFF</value>
+              <value name="sndtpPickupEquipSoundType_1st" type="Int32">-1</value>
+              <value name="sndPickupEquipSound_3rd" type="String">0xFFFFFFFF</value>
+              <value name="sndtpPickupEquipSoundType_3rd" type="Int32">-1</value>
+            </object>
+            <object type="Ammunitions">
+              <object type="AmmoEntry">
+                <value name="text_ammoAmmoType" type="String">rocket</value>
+                <value name="ammoAmmoType" type="Hash">CEB9BB1E</value>
+              </object>
+              <object type="AmmoEntry">
+                <value name="text_ammoAmmoType" type="String">mortar</value>
+                <value name="ammoAmmoType" type="Hash">4EE9BFD6</value>
+              </object>
+              <object type="AmmoEntry">
+                <value name="text_ammoAmmoType" type="String">m79</value>
+                <value name="ammoAmmoType" type="Hash">704CA95D</value>
+              </object>
+              <object type="AmmoEntry">
+                <value name="text_ammoAmmoType" type="String">mgl140</value>
+                <value name="ammoAmmoType" type="Hash">E710123D</value>
+              </object>
+              <object type="AmmoEntry">
+                <value name="text_ammoAmmoType" type="String">ied</value>
+                <value name="ammoAmmoType" type="Hash">EA12131E</value>
+              </object>
+              <object type="AmmoEntry">
+                <value name="text_ammoAmmoType" type="String">none</value>
+                <value name="ammoAmmoType" type="Hash">7F9000CF</value>
+              </object>
+            </object>
+            <object type="Gadgets">
+              <object type="GadgetEntry">
+                <value name="archGadgetType" type="String">gadgets.Grenades.M67</value>
+              </object>
+              <object type="GadgetEntry">
+                <value name="archGadgetType" type="String"></value>
+              </object>
+            </object>
+          </object>
+          <object type="CAIShootMeObject">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="vectorBoxSize" type="Vector3">
+              <x>2</x>
+              <y>2</y>
+              <z>2</z>
+            </value>
+            <value name="bUsedByAI" type="Bool">True</value>
+            <value name="selShootMeObjectType" type="UInt32">3</value>
+            <value name="entEntranceEntity" type="Int64">-1</value>
+            <object type="enumShootMeObjectType">
+              <object type="enum">
+                <value name="Value" type="String">Generic</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">AmmoPile</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">FuelPile</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">ExplosivePile</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">RadioTower</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">NitrousOxTanks</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">500lbBomb</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">NaturalGasTankRailCar</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">GasPump</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">DirectionBarrel</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">ThinPropaneTank</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">SmallPropaneTank</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">RedExplosiveBarrel</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">JerryCan</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">OilTank</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Generator</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">LiquidPropaneTank</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Barge</value>
+              </object>
+            </object>
+          </object>
+          <object type="CMapIntelligence">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selType" type="UInt32">3</value>
+            <value name="fMarkerZ" type="Float">0.0001</value>
+            <value name="bDisplayOnMap" type="Bool">True</value>
+            <value name="vInitialPos" type="Vector3">
+              <x>0</x>
+              <y>0</y>
+              <z>0</z>
+            </value>
+            <object type="enumType">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">MedKit</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">AmmoPile</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">ExplosivePile</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">FuelPile</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">MountedWeapon</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">SniperPoint</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">LandVehicle</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">WaterVehicle</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">AirVehicle</value>
+              </object>
+            </object>
+          </object>
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\weapons\ammunitions\explosivepile_pickup.xml</value>
+            <value name="fileName" type="Hash">BECCE3C8</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <object index="0" meshName="ExplosivePile_State02" boneName="ExplosivePile_State02" bboxMin="-0.802488,-0.391478,0.000115364" bboxMax="0.791355,0.43153,0.351007" />
+                  <object index="1" meshName="ExplosivePile_State01" boneName="ExplosivePile_State01" bboxMin="-1.14608,-0.384385,5.94854e-007" bboxMax="1.01781,0.430107,0.88323" />
+                  <object index="2" meshName="Pickup01" boneName="Pickup01" bboxMin="-0.0949,-0.152421,-0.160534" bboxMax="0.0949024,0.152421,0.00434698" />
+                  <object index="3" meshName="Pickup02" boneName="Pickup02" bboxMin="-0.0949018,-0.15242,-0.157527" bboxMax="0.0949006,0.152421,0.00434637" />
+                  <object index="4" meshName="Pickup03" boneName="Pickup03" bboxMin="-0.0949024,-0.152421,-0.160534" bboxMax="0.0949,0.15242,0.00434698" />
+                  <resource fileName="graphics\Weapons\Ammunitions\ExplosivePile_Pickup.xbg" bboxMin="-1.14608,-0.391478,5.94854e-007" bboxMax="1.01781,0.43153,0.92835" />
+                  <skeleton name="ExplosivePile_Pickup" pos="0,0,0" rot="1,-0,-0,-0">
+                    <bone name="ExplosivePile_State" pos="-0.739095,-0.052428,0" rot="1,0,0,0">
+                      <bone name="ExplosivePile_State02" pos="0.739095,0.052428,0" rot="1,0,0,0">
+                        <bone name="State02_FX" pos="0,0,0" rot="1,0,0,0" />
+                      </bone>
+                      <bone name="ExplosivePile_State01" pos="0.739095,0.052428,0" rot="1,0,0,0">
+                        <bone name="State01_FX" pos="0,0,0" rot="1,0,0,0" />
+                      </bone>
+                      <bone name="Pickup01" pos="1.02964,0.114688,0.908751" rot="0.991445,0,0,-0.130526" />
+                      <bone name="Pickup02" pos="0.735789,0.103201,0.924003" rot="-0.0436193,0,0,0.999048" />
+                      <bone name="Pickup03" pos="0.417842,0.08357,0.907791" rot="0.999048,0,0,-0.0436194" />
+                    </bone>
+                  </skeleton>
+                </component>
+                <component class="CompoundPhysComponent">
+                  <nodes stateIndexStart="5" hasStatic="1">
+                    <stateNode boneIndex="1" index="5" name="ExplosivePile_State">
+                      <state index="0">
+                        <body index="0" objectIndex="1" boneIndex="4" name="ExplosivePile_State01">
+                          <fx boneIndex="5" />
+                        </body>
+                        <body index="2" objectIndex="2" boneIndex="6" name="Pickup01" />
+                        <body index="3" objectIndex="3" boneIndex="7" name="Pickup02" />
+                        <body index="4" objectIndex="4" boneIndex="8" name="Pickup03" />
+                      </state>
+                      <state index="1">
+                        <body index="1" objectIndex="0" boneIndex="2" name="ExplosivePile_State02">
+                          <fx boneIndex="3" />
+                        </body>
+                      </state>
+                    </stateNode>
+                  </nodes>
+                  <resource fileName="graphics\Weapons\Ammunitions\ExplosivePile_Pickup.hkx" />
+                </component>
+                <component class="ParticleFXComponent">
+                  <State02_FX psEmitter="" />
+                  <State01_FX psEmitter="" />
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000101</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\weapons\ammunitions\explosivepile_pickup.xbg</value>
+              <value name="objModel" type="Hash">AE86268F</value>
+              <value name="hidMeshName" type="String">ExplosivePile_State02</value>
+              <value name="text_hidNodeName" type="String">ExplosivePile_State02</value>
+              <value name="hidNodeName" type="Hash">4210BA06</value>
+              <value name="text_hidNodeNameLOD0" type="String">ExplosivePile_State02_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">474FED7B</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">1</value>
+              <value name="text_objModel" type="String">graphics\weapons\ammunitions\explosivepile_pickup.xbg</value>
+              <value name="objModel" type="Hash">AE86268F</value>
+              <value name="hidMeshName" type="String">ExplosivePile_State01</value>
+              <value name="text_hidNodeName" type="String">ExplosivePile_State01</value>
+              <value name="hidNodeName" type="Hash">DB19EBBC</value>
+              <value name="text_hidNodeNameLOD0" type="String">ExplosivePile_State01_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">C1DB9FD5</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">2</value>
+              <value name="text_objModel" type="String">graphics\weapons\ammunitions\explosivepile_pickup.xbg</value>
+              <value name="objModel" type="Hash">AE86268F</value>
+              <value name="hidMeshName" type="String">Pickup01</value>
+              <value name="text_hidNodeName" type="String">Pickup01</value>
+              <value name="hidNodeName" type="Hash">C8201006</value>
+              <value name="text_hidNodeNameLOD0" type="String">Pickup01_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">809E814B</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">3</value>
+              <value name="text_objModel" type="String">graphics\weapons\ammunitions\explosivepile_pickup.xbg</value>
+              <value name="objModel" type="Hash">AE86268F</value>
+              <value name="hidMeshName" type="String">Pickup02</value>
+              <value name="text_hidNodeName" type="String">Pickup02</value>
+              <value name="hidNodeName" type="Hash">512941BC</value>
+              <value name="text_hidNodeNameLOD0" type="String">Pickup02_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">060AF3E5</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">4</value>
+              <value name="text_objModel" type="String">graphics\weapons\ammunitions\explosivepile_pickup.xbg</value>
+              <value name="objModel" type="Hash">AE86268F</value>
+              <value name="hidMeshName" type="String">Pickup03</value>
+              <value name="text_hidNodeName" type="String">Pickup03</value>
+              <value name="hidNodeName" type="Hash">262E712A</value>
+              <value name="text_hidNodeNameLOD0" type="String">Pickup03_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">CD562040</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CCompoundPhysComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_hidResourceId" type="String">graphics\weapons\ammunitions\explosivepile_pickup.hkx</value>
+            <value name="hidResourceId" type="Hash">EE6A3343</value>
+            <value name="bAnimateable" type="Bool">False</value>
+            <value name="bCreateAsStatic" type="Bool">False</value>
+            <value name="bUseMaxTerrainSlope" type="Bool">False</value>
+            <value name="bUseFastCollision" type="Bool">True</value>
+            <value name="bAnimatedControlPos" type="Bool">False</value>
+            <value name="fSelfCollOverrideSpeed" type="Float">200</value>
+            <value name="hidHasStatic" type="Bool">True</value>
+            <value name="hidNodeType" type="UInt32">0</value>
+            <value name="sndExitSound" type="String">0xFFFFFFFF</value>
+            <value name="sndExitGroupSound" type="String">0xFFFFFFFF</value>
+            <value name="sndtpSoundType" type="Int32">-1</value>
+            <object type="Damage">
+              <value name="bDamageable" type="Bool">True</value>
+              <value name="bPlayerOnly" type="Bool">False</value>
+            </object>
+            <object type="RootNode">
+              <value name="text_disName" type="String">ExplosivePile_State</value>
+              <value name="disName" type="Hash">20F80B7C</value>
+              <value name="FirstStateIndex" type="UInt32">0</value>
+              <value name="hidBoneIndex" type="UInt32">1</value>
+              <object type="States">
+                <object type="State">
+                  <value name="disIndex" type="UInt32">0</value>
+                  <value name="hidNodeType" type="Int32">3</value>
+                  <object type="StateSubNode">
+                    <value name="text_disName" type="String"></value>
+                    <value name="disName" type="Hash">FFFFFFFF</value>
+                    <value name="bHealthByAverage" type="Bool">False</value>
+                    <object type="hidNodeTypes">
+                      <object type="hidNode">
+                        <value name="hidType" type="Int32">1</value>
+                      </object>
+                      <object type="hidNode">
+                        <value name="hidType" type="Int32">1</value>
+                      </object>
+                      <object type="hidNode">
+                        <value name="hidType" type="Int32">1</value>
+                      </object>
+                      <object type="hidNode">
+                        <value name="hidType" type="Int32">1</value>
+                      </object>
+                    </object>
+                    <object type="NodeList">
+                      <object type="Node">
+                        <value name="text_disName" type="String">ExplosivePile_State01</value>
+                        <value name="disName" type="Hash">DB19EBBC</value>
+                        <value name="fHealth" type="Float">500</value>
+                        <value name="sndInitSound" type="String">0xFFFFFFFF</value>
+                        <value name="sndExitSound" type="String">0x0044F606</value>
+                        <value name="sndExitGroupSound" type="String">0xFFFFFFFF</value>
+                        <value name="sndtpSoundType" type="Int32">11</value>
+                        <value name="bSoundMustFollowEntity" type="Bool">False</value>
+                        <value name="vectorCenterOfMassOffset" type="Vector3">
+                          <x>0</x>
+                          <y>0</y>
+                          <z>0</z>
+                        </value>
+                        <value name="fFloatingScale" type="Float">1</value>
+                        <value name="fWaterFriction" type="Float">2</value>
+                        <value name="bStartEffectsOnCreate" type="Bool">False</value>
+                        <value name="bExplodes" type="Bool">False</value>
+                        <value name="hidResIndex" type="UInt32">0</value>
+                        <value name="hidGraphicIndex" type="UInt32">1</value>
+                        <value name="index" type="UInt32">0</value>
+                        <object type="Stim">
+                          <value name="bPierceStim" type="Bool">True</value>
+                          <value name="bCrushStim" type="Bool">True</value>
+                          <value name="bBurnStim" type="Bool">True</value>
+                          <value name="fBulletImpulseScale" type="Float">1</value>
+                          <value name="fExplosionImpulseScale" type="Float">1</value>
+                        </object>
+                        <object type="hidEffectBones">
+                          <object type="hidBone">
+                            <value name="hidIndex" type="UInt32">5</value>
+                          </object>
+                        </object>
+                      </object>
+                      <object type="Node">
+                        <value name="text_disName" type="String">Pickup01</value>
+                        <value name="disName" type="Hash">C8201006</value>
+                        <value name="fHealth" type="Float">200</value>
+                        <value name="sndInitSound" type="String">0xFFFFFFFF</value>
+                        <value name="sndExitSound" type="String">0xFFFFFFFF</value>
+                        <value name="sndExitGroupSound" type="String">0xFFFFFFFF</value>
+                        <value name="sndtpSoundType" type="Int32">-1</value>
+                        <value name="bSoundMustFollowEntity" type="Bool">False</value>
+                        <value name="vectorCenterOfMassOffset" type="Vector3">
+                          <x>0</x>
+                          <y>0</y>
+                          <z>0</z>
+                        </value>
+                        <value name="fFloatingScale" type="Float">1</value>
+                        <value name="fWaterFriction" type="Float">2</value>
+                        <value name="bStartEffectsOnCreate" type="Bool">False</value>
+                        <value name="bExplodes" type="Bool">False</value>
+                        <value name="hidResIndex" type="UInt32">2</value>
+                        <value name="hidGraphicIndex" type="UInt32">2</value>
+                        <value name="index" type="UInt32">1</value>
+                        <object type="Stim">
+                          <value name="bPierceStim" type="Bool">True</value>
+                          <value name="bCrushStim" type="Bool">True</value>
+                          <value name="bBurnStim" type="Bool">True</value>
+                          <value name="fBulletImpulseScale" type="Float">1</value>
+                          <value name="fExplosionImpulseScale" type="Float">1</value>
+                        </object>
+                        <object type="hidEffectBones" />
+                      </object>
+                      <object type="Node">
+                        <value name="text_disName" type="String">Pickup02</value>
+                        <value name="disName" type="Hash">512941BC</value>
+                        <value name="fHealth" type="Float">200</value>
+                        <value name="sndInitSound" type="String">0xFFFFFFFF</value>
+                        <value name="sndExitSound" type="String">0xFFFFFFFF</value>
+                        <value name="sndExitGroupSound" type="String">0xFFFFFFFF</value>
+                        <value name="sndtpSoundType" type="Int32">-1</value>
+                        <value name="bSoundMustFollowEntity" type="Bool">False</value>
+                        <value name="vectorCenterOfMassOffset" type="Vector3">
+                          <x>0</x>
+                          <y>0</y>
+                          <z>0</z>
+                        </value>
+                        <value name="fFloatingScale" type="Float">1</value>
+                        <value name="fWaterFriction" type="Float">2</value>
+                        <value name="bStartEffectsOnCreate" type="Bool">False</value>
+                        <value name="bExplodes" type="Bool">False</value>
+                        <value name="hidResIndex" type="UInt32">3</value>
+                        <value name="hidGraphicIndex" type="UInt32">3</value>
+                        <value name="index" type="UInt32">2</value>
+                        <object type="Stim">
+                          <value name="bPierceStim" type="Bool">True</value>
+                          <value name="bCrushStim" type="Bool">True</value>
+                          <value name="bBurnStim" type="Bool">True</value>
+                          <value name="fBulletImpulseScale" type="Float">1</value>
+                          <value name="fExplosionImpulseScale" type="Float">1</value>
+                        </object>
+                        <object type="hidEffectBones" />
+                      </object>
+                      <object type="Node">
+                        <value name="text_disName" type="String">Pickup03</value>
+                        <value name="disName" type="Hash">262E712A</value>
+                        <value name="fHealth" type="Float">200</value>
+                        <value name="sndInitSound" type="String">0xFFFFFFFF</value>
+                        <value name="sndExitSound" type="String">0xFFFFFFFF</value>
+                        <value name="sndExitGroupSound" type="String">0xFFFFFFFF</value>
+                        <value name="sndtpSoundType" type="Int32">-1</value>
+                        <value name="bSoundMustFollowEntity" type="Bool">False</value>
+                        <value name="vectorCenterOfMassOffset" type="Vector3">
+                          <x>0</x>
+                          <y>0</y>
+                          <z>0</z>
+                        </value>
+                        <value name="fFloatingScale" type="Float">1</value>
+                        <value name="fWaterFriction" type="Float">2</value>
+                        <value name="bStartEffectsOnCreate" type="Bool">False</value>
+                        <value name="bExplodes" type="Bool">False</value>
+                        <value name="hidResIndex" type="UInt32">4</value>
+                        <value name="hidGraphicIndex" type="UInt32">4</value>
+                        <value name="index" type="UInt32">3</value>
+                        <object type="Stim">
+                          <value name="bPierceStim" type="Bool">True</value>
+                          <value name="bCrushStim" type="Bool">True</value>
+                          <value name="bBurnStim" type="Bool">True</value>
+                          <value name="fBulletImpulseScale" type="Float">1</value>
+                          <value name="fExplosionImpulseScale" type="Float">1</value>
+                        </object>
+                        <object type="hidEffectBones" />
+                      </object>
+                    </object>
+                  </object>
+                  <object type="OnDamage">
+                    <value name="selNextState" type="UInt32">2</value>
+                    <object type="enumNextState">
+                      <object type="enum">
+                        <value name="Value" type="String">Destroy</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Stay</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Next</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Specify...</value>
+                      </object>
+                    </object>
+                  </object>
+                  <object type="OnEvent">
+                    <value name="bTriggerEffects" type="Bool">False</value>
+                    <value name="selNextState" type="UInt32">2</value>
+                    <value name="sndExitSound" type="String">0xFFFFFFFF</value>
+                    <value name="sndExitGroupSound" type="String">0xFFFFFFFF</value>
+                    <value name="sndtpSoundType" type="Int32">-1</value>
+                    <value name="bSoundMustFollowEntity" type="Bool">False</value>
+                    <value name="bExplodes" type="Bool">False</value>
+                    <object type="enumNextState">
+                      <object type="enum">
+                        <value name="Value" type="String">Destroy</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Stay</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Next</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Specify...</value>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+                <object type="State">
+                  <value name="disIndex" type="UInt32">1</value>
+                  <value name="hidNodeType" type="Int32">1</value>
+                  <object type="StateSubNode">
+                    <value name="text_disName" type="String">ExplosivePile_State02</value>
+                    <value name="disName" type="Hash">4210BA06</value>
+                    <value name="fHealth" type="Float">100</value>
+                    <value name="sndInitSound" type="String">0xFFFFFFFF</value>
+                    <value name="sndExitSound" type="String">0xFFFFFFFF</value>
+                    <value name="sndExitGroupSound" type="String">0xFFFFFFFF</value>
+                    <value name="sndtpSoundType" type="Int32">-1</value>
+                    <value name="bSoundMustFollowEntity" type="Bool">False</value>
+                    <value name="vectorCenterOfMassOffset" type="Vector3">
+                      <x>0</x>
+                      <y>0</y>
+                      <z>0</z>
+                    </value>
+                    <value name="fFloatingScale" type="Float">1</value>
+                    <value name="fWaterFriction" type="Float">2</value>
+                    <value name="bStartEffectsOnCreate" type="Bool">True</value>
+                    <value name="bExplodes" type="Bool">False</value>
+                    <value name="hidResIndex" type="UInt32">1</value>
+                    <value name="hidGraphicIndex" type="UInt32">0</value>
+                    <object type="Stim">
+                      <value name="bPierceStim" type="Bool">True</value>
+                      <value name="bCrushStim" type="Bool">True</value>
+                      <value name="bBurnStim" type="Bool">True</value>
+                      <value name="fBulletImpulseScale" type="Float">1</value>
+                      <value name="fExplosionImpulseScale" type="Float">1</value>
+                    </object>
+                    <object type="hidEffectBones">
+                      <object type="hidBone">
+                        <value name="hidIndex" type="UInt32">3</value>
+                      </object>
+                    </object>
+                  </object>
+                  <object type="OnDamage">
+                    <value name="selNextState" type="UInt32">1</value>
+                    <object type="enumNextState">
+                      <object type="enum">
+                        <value name="Value" type="String">Destroy</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Stay</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Next</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Specify...</value>
+                      </object>
+                    </object>
+                  </object>
+                  <object type="OnEvent">
+                    <value name="bTriggerEffects" type="Bool">False</value>
+                    <value name="selNextState" type="UInt32">1</value>
+                    <value name="sndExitSound" type="String">0xFFFFFFFF</value>
+                    <value name="sndExitGroupSound" type="String">0xFFFFFFFF</value>
+                    <value name="sndtpSoundType" type="Int32">-1</value>
+                    <value name="bSoundMustFollowEntity" type="Bool">False</value>
+                    <value name="bExplodes" type="Bool">False</value>
+                    <object type="enumNextState">
+                      <object type="enum">
+                        <value name="Value" type="String">Destroy</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Stay</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Next</value>
+                      </object>
+                      <object type="enum">
+                        <value name="Value" type="String">Specify...</value>
+                      </object>
+                    </object>
+                  </object>
+                </object>
+              </object>
+            </object>
+          </object>
+          <object type="CParticleFXComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <object type="ParticleSystems">
+              <object type="ParticleSystem">
+                <value name="text_psEmitter" type="String">explosions.explosives.explosive_pile</value>
+                <value name="psEmitter" type="Hash">ED967348</value>
+                <value name="bFollowEntity" type="Bool">True</value>
+                <value name="text_disFXName" type="String">State02_FX</value>
+                <value name="disFXName" type="Hash">1FC9DD74</value>
+              </object>
+              <object type="ParticleSystem">
+                <value name="text_psEmitter" type="String"></value>
+                <value name="psEmitter" type="Hash">FFFFFFFF</value>
+                <value name="bFollowEntity" type="Bool">False</value>
+                <value name="text_disFXName" type="String">State01_FX</value>
+                <value name="disFXName" type="Hash">0D7C729A</value>
+              </object>
+            </object>
+          </object>
+          <object type="CPickupPileNetworkComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="fRespawnTime" type="Float">60</value>
+            <value name="fPawnToCloseRadius" type="Float">25</value>
+          </object>
+          <object type="CCountersComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="archStimEffectTable" type="String">tables.StimEffectTables.ObjectDefault</value>
+          </object>
+          <object type="CRandomShooterComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="vectorRelativePosition" type="Vector3">
+              <x>0</x>
+              <y>0</y>
+              <z>2</z>
+            </value>
+            <value name="bFireBullets" type="Bool">False</value>
+            <value name="bFireProjectiles" type="Bool">True</value>
+            <value name="fMinProjectileFireDelay" type="Float">0.1</value>
+            <value name="fMaxProjectileFireDelay" type="Float">0.1</value>
+            <object type="Projectiles">
+              <object type="Projectile">
+                <value name="archProjectileArchetype" type="String">weapons.Rockets.RPG7RocketUnstable</value>
+                <value name="bProjectileMalfunction" type="Bool">True</value>
+                <value name="iMinNumberOfProjectileSpawn" type="Int32">4</value>
+                <value name="iMaxNumberOfProjectileSpawn" type="Int32">4</value>
+                <value name="fMinImpulseStrength" type="Float">20</value>
+                <value name="fMaxImpulseStrength" type="Float">50</value>
+                <value name="vectorMinAngularImpulse" type="Vector3">
+                  <x>14</x>
+                  <y>25</y>
+                  <z>45</z>
+                </value>
+                <value name="vectorMaxAngularImpulse" type="Vector3">
+                  <x>90</x>
+                  <y>45</y>
+                  <z>50</z>
+                </value>
+                <value name="fMinProjectilePitch" type="Float">0</value>
+                <value name="fMaxProjectilePitch" type="Float">80</value>
+                <value name="fMinProjectileYaw" type="Float">0</value>
+                <value name="fMaxProjectileYaw" type="Float">360</value>
+              </object>
+              <object type="Projectile">
+                <value name="archProjectileArchetype" type="String"></value>
+                <value name="bProjectileMalfunction" type="Bool">False</value>
+                <value name="iMinNumberOfProjectileSpawn" type="Int32">0</value>
+                <value name="iMaxNumberOfProjectileSpawn" type="Int32">0</value>
+                <value name="fMinImpulseStrength" type="Float">0</value>
+                <value name="fMaxImpulseStrength" type="Float">10</value>
+                <value name="vectorMinAngularImpulse" type="Vector3">
+                  <x>0</x>
+                  <y>0</y>
+                  <z>0</z>
+                </value>
+                <value name="vectorMaxAngularImpulse" type="Vector3">
+                  <x>0</x>
+                  <y>0</y>
+                  <z>0</z>
+                </value>
+                <value name="fMinProjectilePitch" type="Float">0</value>
+                <value name="fMaxProjectilePitch" type="Float">90</value>
+                <value name="fMinProjectileYaw" type="Float">0</value>
+                <value name="fMaxProjectileYaw" type="Float">360</value>
+              </object>
+            </object>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">1</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CSoundComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="sndptSoundPoint" type="Hash">FFFFFFFF</value>
+          </object>
+          <object type="CMissionComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_hidMissionLayerPath" type="String"></value>
+            <value name="hidMissionLayerPath" type="Hash">FFFFFFFF</value>
+            <value name="text_hidCategory" type="String"></value>
+            <value name="hidCategory" type="Hash">FFFFFFFF</value>
+            <value name="ForceMerge" type="Bool">True</value>
+          </object>
+        </object>
+      </object>
+    </object>

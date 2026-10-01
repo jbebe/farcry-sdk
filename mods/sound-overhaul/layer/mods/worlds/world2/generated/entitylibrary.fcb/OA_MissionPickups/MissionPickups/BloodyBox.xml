@@ -1,0 +1,176 @@
+    <object hash="256A1FF9">
+      <value name="Name" type="String">MissionPickups.BloodyBox</value>
+      <object type="Entity">
+        <value name="hidName" type="String">OA_MissionPickups.MissionPickups.BloodyBox</value>
+        <value name="disEntityId" type="Int64">4403</value>
+        <value name="text_hidEntityClass" type="String">CEntity</value>
+        <value name="hidEntityClass" type="Hash">50C95067</value>
+        <value name="hidResourceCount" type="UInt32">3</value>
+        <value name="hidPos" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidAngles" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidPos_precise" type="Vector3">
+          <x>0</x>
+          <y>0</y>
+          <z>0</z>
+        </value>
+        <value name="hidConstEntity" type="Bool">False</value>
+        <object type="Components">
+          <object type="CPickupMissionItem">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bEnable" type="Bool">True</value>
+            <value name="fRespawnTime" type="Float">0</value>
+            <value name="bCustomBoundingBox" type="Bool">False</value>
+            <value name="vectorBoundingBoxSize" type="Vector3">
+              <x>0</x>
+              <y>0</y>
+              <z>0</z>
+            </value>
+            <value name="vectorBoundingBoxOffset" type="Vector3">
+              <x>0</x>
+              <y>0</y>
+              <z>0</z>
+            </value>
+            <value name="bAffectedLightPickup" type="Bool">True</value>
+            <value name="bPickable" type="Bool">True</value>
+            <value name="sUsageString" type="String"></value>
+            <value name="objGeometryPreload" type="String"></value>
+            <value name="Priority" type="UInt32">0</value>
+            <value name="bCanBeScouted" type="Bool">False</value>
+            <value name="bAddToDiamondIndicator" type="Bool">False</value>
+            <object type="Sounds">
+              <value name="sndPickupGrabSound_1st" type="String">0x004E1FF8</value>
+              <value name="sndtpPickupGrabSoundType_1st" type="Int32">15</value>
+              <value name="sndPickupGrabSound_3rd" type="String">0xFFFFFFFF</value>
+              <value name="sndtpPickupGrabSoundType_3rd" type="Int32">-1</value>
+              <value name="sndPickupEquipSound_1st" type="String">0xFFFFFFFF</value>
+              <value name="sndtpPickupEquipSoundType_1st" type="Int32">-1</value>
+              <value name="sndPickupEquipSound_3rd" type="String">0xFFFFFFFF</value>
+              <value name="sndtpPickupEquipSoundType_3rd" type="Int32">-1</value>
+            </object>
+            <object type="Sounds">
+              <value name="sndPickupSound" type="String">0xFFFFFFFF</value>
+              <value name="sndtpPickupSoundType" type="Int32">-1</value>
+            </object>
+          </object>
+          <object type="CFileDescriptorComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_fileName" type="String">graphics\objects\industrial\boxes\bloodycardbox.xml</value>
+            <value name="fileName" type="Hash">BE86B2F3</value>
+            <value name="hidDescriptor" type="Rml">
+              <hidDescriptor>
+                <component class="GraphicComponent" version="2" detail="0">
+                  <object index="0" boneName="BloodyCardBox_LOD0" bboxMin="-0.155912,-0.0975898,-0.310319" bboxMax="0.233167,0.276767,-0.0133116" />
+                  <resource fileName="graphics\Objects\Industrial\Boxes\BloodyCardBox.xbg" bboxMin="-0.155912,-0.0975898,-0.310319" bboxMax="0.233167,0.276767,-0.0133116" />
+                  <skeleton name="BloodyCardBox" pos="0,0,0" rot="1,-0,-0,-0" />
+                </component>
+                <component class="StaticPhysComponent">
+                  <resource fileName="graphics\Objects\Industrial\Boxes\BloodyCardBox.hkx" />
+                </component>
+              </hidDescriptor>
+            </value>
+          </object>
+          <object type="CGraphicComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="bCastShadow" type="Bool">True</value>
+            <value name="bReceiveShadow" type="Bool">True</value>
+            <value name="bCastAmbientShadow" type="Bool">True</value>
+            <value name="olgLightGroup" type="Hash">00000001</value>
+            <value name="bAllowCullBySize" type="Bool">True</value>
+            <value name="agAmbientGroup" type="Hash">00000000</value>
+            <value name="bBehaveLikeAPickup" type="Bool">False</value>
+            <value name="bShowInReflection" type="Bool">True</value>
+            <value name="bAlwaysShowInReflection" type="Bool">False</value>
+            <value name="bOverrideLODSphere" type="Bool">False</value>
+            <value name="fLODSphereRadius" type="Float">0</value>
+            <value name="hidSkyOcclusion0" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion1" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion2" type="Hash">FFFFFFFF</value>
+            <value name="hidSkyOcclusion3" type="Hash">FFFFFFFF</value>
+            <value name="hidGroundColor" type="Hash">FFFFFFFF</value>
+            <value name="hidObjectHeight" type="Float">3</value>
+            <value name="hidHeightAbove" type="Float">0</value>
+            <value name="hidHasAmbientValues" type="Bool">False</value>
+            <object type="object">
+              <value name="hidIndex" type="UInt32">0</value>
+              <value name="text_objModel" type="String">graphics\objects\industrial\boxes\bloodycardbox.xbg</value>
+              <value name="objModel" type="Hash">AECC77B4</value>
+              <value name="hidMeshName" type="String"></value>
+              <value name="text_hidNodeName" type="String">BloodyCardBox</value>
+              <value name="hidNodeName" type="Hash">E01593D3</value>
+              <value name="text_hidNodeNameLOD0" type="String">BloodyCardBox_LOD0</value>
+              <value name="hidNodeNameLOD0" type="Hash">419AE166</value>
+              <value name="hidDetailObject" type="Bool">False</value>
+            </object>
+          </object>
+          <object type="CStaticPhysComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="text_hidResourceId" type="String">graphics\objects\industrial\boxes\bloodycardbox.hkx</value>
+            <value name="hidResourceId" type="Hash">EE206278</value>
+            <value name="bUseMaxTerrainSlope" type="Bool">False</value>
+            <value name="bIgnoreInExplosions" type="Bool">False</value>
+            <value name="bAnimateable" type="Bool">False</value>
+            <value name="bLargeEntity" type="Bool">False</value>
+            <value name="hidResourceIndex" type="Int32">0</value>
+          </object>
+          <object type="CObjectSoundAndFXComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <object type="Impact">
+              <value name="text_matimpDropImpact" type="String"></value>
+              <value name="matimpDropImpact" type="Hash">FFFFFFFF</value>
+              <value name="fSpeedForMaxDropImpactVolume" type="Float">0</value>
+              <value name="fMinimalCollisionSpeed" type="Float">1</value>
+              <value name="bIsSingleDropImpactObject" type="Bool">False</value>
+              <object type="MovementSound">
+                <value name="sndRollingSound" type="String">0xFFFFFFFF</value>
+                <value name="sndRollingSoundEnd" type="String">0xFFFFFFFF</value>
+                <value name="sndtpRollingSoundType" type="Int32">-1</value>
+                <value name="sndSlidingSound" type="String">0xFFFFFFFF</value>
+                <value name="sndSlidingSoundEnd" type="String">0xFFFFFFFF</value>
+                <value name="sndtpSlidingSoundType" type="Int32">-1</value>
+                <value name="sndmlObjectMovementMultilayer" type="Hash">FFFFFFFF</value>
+              </object>
+            </object>
+            <object type="Falling">
+              <value name="bAllowAfterCollision" type="Bool">False</value>
+              <value name="sndFallingSound" type="String">0xFFFFFFFF</value>
+              <value name="sndtpFallingType" type="Int32">-1</value>
+              <value name="fSpeedToPlayFallingSound" type="Float">0</value>
+            </object>
+            <object type="Water">
+              <value name="fZSpeedToTriggerSplash" type="Float">0</value>
+              <value name="fZSpeedForMaxSplashVolume" type="Float">0</value>
+            </object>
+          </object>
+          <object type="CPersistComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="selLevel" type="UInt32">3</value>
+            <object type="enumLevel">
+              <object type="enum">
+                <value name="Value" type="String">None</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Limited</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Full</value>
+              </object>
+              <object type="enum">
+                <value name="Value" type="String">Critical</value>
+              </object>
+            </object>
+          </object>
+          <object type="CSoundComponent">
+            <value name="hidHasAliasName" type="Bool">False</value>
+            <value name="sndptSoundPoint" type="Hash">FFFFFFFF</value>
+          </object>
+        </object>
+      </object>
+    </object>
