@@ -62,9 +62,21 @@ local HEADLIGHT_MODIFY_CALL = 0x5F
 local SOUND_PLAY_SLOT = 0x9C
 local SOUND_REQUEST_LOAD_SLOT = 0x08
 
+-- The names this layer's hud.mgb exports: the icon's area, and an icon for each state.
+local HUD_AREA, HUD_ON, HUD_OFF = 'HUD_FLASHLIGHT', 'HUD_FLASHLIGHT_ON', 'HUD_FLASHLIGHT_OFF'
+-- The frame the icon's timeline fades in from; frame 0 is where it rests, hidden.
+local HUD_SHOW_FRAME = 1
+-- magma::Area's milliseconds per frame.
+local AREA_FRAME_TIME = 0x18
+-- In CMagmaFacade::GetGenericObject<Keyframe>: `mov ecx, [<GenericObjectServer>]`.
+local GENERIC_SERVER = 0x06
+-- What a magma::GenericObject resolves to sits at this offset in it.
+local GENERIC_OBJECT = 0x0C
+
 local container, create_light, modify_light, destroy_light
 local get_local_player, active_camera, render_camera
 local get_sound_system, get_from_sound_id
+local generic_server, find_generic, generic_target, set_visible, set_time, set_playing
 
 local handle = ffi.new('flashlight_handle', { -1, -1 })
 local owner = nil
@@ -77,6 +89,7 @@ local lit_for = 0
 local toggles = 0
 local cast_shadows = true
 local click_bank = nil
+local hud_ready = false
 
 local function call_target(call)
   return call + 5 + fcse.mem.read_i32(call + 1)
@@ -116,6 +129,46 @@ local function click()
   end
   method(system, SOUND_PLAY_SLOT, 'uint32_t(__thiscall*)(void*, uint32_t, int32_t, void*, float)')(
     system, CLICK, SOUND_FOLEY_PLAYER, nil, 0.0)
+end
+
+-- magma::Id: the CRC32 of a name.
+local function magma_id(name)
+  local crc = 0xFFFFFFFF
+  for i = 1, #name do
+    crc = bit.bxor(crc, name:byte(i))
+    for _ = 1, 8 do
+      crc = bit.band(crc, 1) ~= 0 and bit.bxor(bit.rshift(crc, 1), 0xEDB88320) or bit.rshift(crc, 1)
+    end
+  end
+  return bit.bnot(crc)
+end
+
+-- The live object a name exports, or nil while no loaded package exports it.
+local function hud_object(name)
+  local server = ffi.cast('void**', generic_server)[0]
+  if server == nil then
+    return nil
+  end
+  local generic = find_generic(server, magma_id(name))
+  if generic == nil then
+    return nil
+  end
+  local object = generic_target(ffi.cast('char*', generic) + GENERIC_OBJECT)
+  return object ~= nil and object or nil
+end
+
+-- Shows the icon for `lit` and plays its fade, the way the HUD shows the pills.
+local function show_icon(lit)
+  local area, shown, hidden = hud_object(HUD_AREA), hud_object(lit and HUD_ON or HUD_OFF),
+                              hud_object(lit and HUD_OFF or HUD_ON)
+  if area == nil or shown == nil or hidden == nil then
+    return
+  end
+  set_visible(shown, 1)
+  set_visible(hidden, 0)
+  local frame_time = ffi.cast('uint16_t*', ffi.cast('char*', area) + AREA_FRAME_TIME)[0]
+  set_time(area, frame_time * HUD_SHOW_FRAME, true, false)
+  set_playing(area, true, false)
 end
 
 local function light()
@@ -212,10 +265,36 @@ local function resolve()
   return true
 end
 
+-- The HUD icon is optional: without it the flashlight still works, silently unmarked.
+local function resolve_hud()
+  local get_keyframe = fcse.uplay(0x00534500)
+  local find = fcse.uplay(0x00AA6F60)
+  local target = fcse.uplay(0x00AA65C0)
+  local visible = fcse.uplay(0x00AB13F0)
+  local time = fcse.uplay(0x00A973E0)
+  local playing = fcse.uplay(0x00A973A0)
+  if not (get_keyframe and find and target and visible and time and playing) or
+     fcse.mem.read_u16(get_keyframe + GENERIC_SERVER - 2) ~= 0x0D8B then
+    return false
+  end
+
+  generic_server = fcse.mem.read_u32(get_keyframe + GENERIC_SERVER)
+  find_generic = fcse.fn('void*(__thiscall*)(void*, uint32_t)', find)
+  generic_target = fcse.fn('void*(__thiscall*)(void*)', target)
+  set_visible = fcse.fn('void(__thiscall*)(void*, int32_t)', visible)
+  set_time = fcse.fn('uint8_t(__thiscall*)(void*, uint32_t, bool, bool)', time)
+  set_playing = fcse.fn('void(__thiscall*)(void*, bool, bool)', playing)
+  return true
+end
+
 fcse.on('load', function()
   if not resolve() then
     fcse.log('flashlight: the light or camera calls were not found in this build - disabled')
     return
+  end
+  hud_ready = resolve_hud()
+  if not hud_ready then
+    fcse.log('flashlight: the HUD calls were not found in this build - no icon')
   end
 
   -- The game's signal dispatcher, one instruction in: the signal is the first stack argument.
@@ -253,6 +332,9 @@ fcse.on('load', function()
       wanted = not wanted
       click()
       switch_in = SWITCH_DELAY
+    end
+    if toggles > 0 and hud_ready then
+      show_icon(wanted)
     end
     toggles = 0
 
